@@ -13,7 +13,7 @@
     "dev:raw": "NODE_OPTIONS='--max-old-space-size=12288' next dev",
     "dev:op": "pnpm dev",
     "typecheck:op": "op run --env-file=../../.op-env.local -- pnpm typecheck",
-    "env:check": "op run --env-file=../../.op-env.local -- node ../../scripts/check-op-env.mjs",
+    "env:check": "op run --env-file=../../.op-env.local -- pnpm exec tsx ../../scripts/env/check-env.ts",
     "build": "NODE_OPTIONS='--max-old-space-size=12288' next build",
     "start": "next start",
     "check": "pnpm typecheck && pnpm lint && pnpm test:run",

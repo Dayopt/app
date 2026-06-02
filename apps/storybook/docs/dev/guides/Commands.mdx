@@ -92,9 +92,11 @@ npm run types:generate:local    # ローカルから packages/database に型生
 ### 環境変数
 
 ```bash
-npm run env:check           # secret 値を表示せず env の存在確認
-npm run vercel:env          # Vercel 環境変数一覧
-npm run vercel:env:pull:unsafe  # apps/product/.env.local に一時同期
+pnpm env:check           # secret 値を表示せず env の存在確認
+pnpm secrets:check       # tracked files と untracked .env* の literal secret 検出
+pnpm 1password:check     # 1Password schema の vault/item/field 存在確認
+pnpm vercel:env          # Vercel 環境変数一覧
+pnpm vercel:env:pull:unsafe  # apps/product/.env.local に一時同期
 ```
 
 ### i18n

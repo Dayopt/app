@@ -88,129 +88,142 @@ echo "  [Dayopt-Staging]"
 
 run item create --category=apicredential --vault=Dayopt-Staging --title=supabase \
   --tags=dayopt,staging notesPlain="$NOTES" \
-  'url[text]=' \
-  'anon-key[concealed]=' \
-  'service-role-key[concealed]=' \
-  'send-email-hook-secret[concealed]=' \
-  'cron-secret[concealed]=' \
-  'db-password[concealed]=' \
-  'access-token[concealed]=' \
+  'NEXT_PUBLIC_SUPABASE_URL[text]=' \
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY[concealed]=' \
+  'SUPABASE_SERVICE_ROLE_KEY[concealed]=' \
+  'SEND_EMAIL_HOOK_SECRET[concealed]=' \
+  'CRON_SECRET[concealed]=' \
+  'SUPABASE_DB_PASSWORD[concealed]=' \
+  'SUPABASE_ACCESS_TOKEN[concealed]=' \
   'project-ref[text]='
 
 run item create --category=apicredential --vault=Dayopt-Staging --title=upstash \
   --tags=dayopt,staging notesPlain="$NOTES" \
-  'rest-url[text]=' \
-  'rest-token[concealed]='
-
-run item create --category=apicredential --vault=Dayopt-Staging --title=recaptcha \
-  --tags=dayopt,staging notesPlain="$NOTES" \
-  'secret-v3[concealed]=' \
-  'secret-v2[concealed]=' \
-  'site-key-v3[text]=' \
-  'site-key-v2[text]='
+  'UPSTASH_REDIS_REST_URL[text]=' \
+  'UPSTASH_REDIS_REST_TOKEN[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Staging --title=stripe-test \
   --tags=dayopt,staging notesPlain="$NOTES" \
-  'secret-key[concealed]=' \
-  'webhook-signing-secret[concealed]=' \
-  'pro-price-id[text]=' \
+  'STRIPE_SECRET_KEY[concealed]=' \
+  'STRIPE_WEBHOOK_SECRET[concealed]=' \
+  'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID[text]=' \
   'publishable-key[text]='
 
 run item create --category=apicredential --vault=Dayopt-Staging --title=resend \
   --tags=dayopt,staging notesPlain="$NOTES" \
-  'webhook-secret[concealed]='
+  'RESEND_WEBHOOK_SECRET[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Staging --title=sentry \
   --tags=dayopt,staging notesPlain="$NOTES" \
-  'dsn[text]=' \
-  'org-slug[text]=' \
-  'project-slug[text]='
+  'NEXT_PUBLIC_SENTRY_DSN[text]=' \
+  'SENTRY_ORG[text]=' \
+  'SENTRY_PROJECT[text]='
 
 run item create --category=apicredential --vault=Dayopt-Staging --title=slack \
   --tags=dayopt,staging notesPlain="$NOTES" \
-  'billing-webhook-url[concealed]='
+  'SLACK_BILLING_WEBHOOK_URL[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Staging --title=app \
   --tags=dayopt,staging notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
-  'url[text]=' \
-  'recovery-code-pepper[concealed]='
+  'NEXT_PUBLIC_APP_URL[text]=' \
+  'NEXT_PUBLIC_SITE_URL[text]=' \
+  'RECOVERY_CODE_PEPPER[concealed]='
 
 # ----- Dayopt-Production -----
 echo "  [Dayopt-Production]"
 
 run item create --category=apicredential --vault=Dayopt-Production --title=supabase \
   --tags=dayopt,production notesPlain="$NOTES" \
-  'url[text]=' \
-  'anon-key[concealed]=' \
-  'service-role-key[concealed]=' \
-  'send-email-hook-secret[concealed]=' \
-  'cron-secret[concealed]=' \
-  'db-password[concealed]=' \
-  'access-token[concealed]=' \
+  'NEXT_PUBLIC_SUPABASE_URL[text]=' \
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY[concealed]=' \
+  'SUPABASE_SERVICE_ROLE_KEY[concealed]=' \
+  'SEND_EMAIL_HOOK_SECRET[concealed]=' \
+  'CRON_SECRET[concealed]=' \
+  'SUPABASE_DB_PASSWORD[concealed]=' \
+  'SUPABASE_ACCESS_TOKEN[concealed]=' \
   'project-ref[text]='
 
 run item create --category=apicredential --vault=Dayopt-Production --title=upstash \
   --tags=dayopt,production notesPlain="$NOTES" \
-  'rest-url[text]=' \
-  'rest-token[concealed]='
-
-run item create --category=apicredential --vault=Dayopt-Production --title=recaptcha \
-  --tags=dayopt,production notesPlain="$NOTES" \
-  'secret-v3[concealed]=' \
-  'secret-v2[concealed]=' \
-  'site-key-v3[text]=' \
-  'site-key-v2[text]='
+  'UPSTASH_REDIS_REST_URL[text]=' \
+  'UPSTASH_REDIS_REST_TOKEN[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Production --title=stripe-live \
   --tags=dayopt,production notesPlain="$NOTES"$'\n⚠️ 本番 Stripe キー。ローカル .env.local からは参照しない' \
-  'secret-key[concealed]=' \
-  'webhook-signing-secret[concealed]=' \
-  'pro-price-id[text]=' \
+  'STRIPE_SECRET_KEY[concealed]=' \
+  'STRIPE_WEBHOOK_SECRET[concealed]=' \
+  'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID[text]=' \
   'publishable-key[text]='
 
 run item create --category=apicredential --vault=Dayopt-Production --title=resend \
   --tags=dayopt,production notesPlain="$NOTES" \
-  'webhook-secret[concealed]='
+  'RESEND_WEBHOOK_SECRET[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Production --title=sentry \
   --tags=dayopt,production notesPlain="$NOTES" \
-  'dsn[text]=' \
-  'org-slug[text]=' \
-  'project-slug[text]='
+  'NEXT_PUBLIC_SENTRY_DSN[text]=' \
+  'SENTRY_ORG[text]=' \
+  'SENTRY_PROJECT[text]='
 
 run item create --category=apicredential --vault=Dayopt-Production --title=slack \
   --tags=dayopt,production notesPlain="$NOTES" \
-  'billing-webhook-url[concealed]='
+  'SLACK_BILLING_WEBHOOK_URL[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Production --title=app \
   --tags=dayopt,production notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
-  'url[text]=' \
-  'recovery-code-pepper[concealed]='
+  'NEXT_PUBLIC_APP_URL[text]=' \
+  'NEXT_PUBLIC_SITE_URL[text]=' \
+  'RECOVERY_CODE_PEPPER[concealed]='
 
 # ----- Dayopt-Shared -----
 echo "  [Dayopt-Shared]"
 
 run item create --category=apicredential --vault=Dayopt-Shared --title=anthropic \
   --tags=dayopt,shared notesPlain="$NOTES" \
-  'api-key-dev[concealed]=' \
-  'api-key-prod[concealed]='
+  'ANTHROPIC_API_KEY[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Shared --title=resend \
   --tags=dayopt,shared notesPlain="$NOTES"$'\nwebhook secret は Dayopt-Staging/resend, Dayopt-Production/resend に別途' \
-  'api-key-dev[concealed]=' \
-  'api-key-prod[concealed]=' \
-  'from-email[text]='
+  'RESEND_API_KEY[concealed]=' \
+  'RESEND_FROM_EMAIL[text]='
+
+run item create --category=apicredential --vault=Dayopt-Shared --title=sentry \
+  --tags=dayopt,shared notesPlain="$NOTES" \
+  'SENTRY_AUTH_TOKEN[concealed]='
+
+run item create --category=apicredential --vault=Dayopt-Shared --title=turnstile \
+  --tags=dayopt,shared notesPlain="$NOTES" \
+  'NEXT_PUBLIC_TURNSTILE_SITE_KEY[text]=' \
+  'TURNSTILE_SECRET_KEY[concealed]='
+
+run item create --category=apicredential --vault=Dayopt-Shared --title=github-contact-pat \
+  --tags=dayopt,shared notesPlain="$NOTES" \
+  'GITHUB_TOKEN[concealed]=' \
+  'GITHUB_CONTACT_REPO[text]='
+
+run item create --category=login --vault=Dayopt-Shared --title=github-login \
+  --tags=dayopt,shared notesPlain="$NOTES"$'\nGitHub account login item. 既存 item がある場合は move + merge する。' \
+  'username=' \
+  'password[concealed]=' \
+  'recovery-codes[concealed]=' \
+  '2fa-notes[text]='
+
+run item create --category=securenote --vault=Dayopt-Shared --title=github-ssh \
+  --tags=dayopt,shared \
+  notesPlain="GitHub SSH key operational item. 既存 item がある場合は move + merge する。"
 
 run item create --category=apicredential --vault=Dayopt-Shared --title=vercel \
   --tags=dayopt,shared notesPlain="$NOTES" \
-  'token[concealed]=' \
-  'team-id[text]=' \
-  'project-id-staging[text]=' \
-  'project-id-production[text]='
+  'VERCEL_TOKEN[concealed]=' \
+  'VERCEL_TEAM_ID[text]=' \
+  'VERCEL_PROJECT_ID_STAGING[text]=' \
+  'VERCEL_PROJECT_ID_PRODUCTION[text]='
 
 run item create --category=apicredential --vault=Dayopt-Shared --title=google \
   --tags=dayopt,shared notesPlain="$NOTES" \
-  'site-verification[text]='
+  'GOOGLE_SITE_VERIFICATION[text]=' \
+  'YANDEX_VERIFICATION[text]=' \
+  'YAHOO_VERIFICATION[text]='
 
 run item create --category=login --vault=Dayopt-Shared --title=domain \
   --tags=dayopt,shared notesPlain="$NOTES"$'\n⚠️ レジストラ乗っ取られたら事業終了。recovery codes を別メディアに二重バックアップ' \
@@ -233,7 +246,7 @@ apple:
 google:
 anthropic: "
 
-# github / github-ssh / apple-developer は既存 item move または後日 GUI 作成推奨 (Phase 3 参照)
+# github / apple-developer は既存 item move または後日 GUI 作成推奨 (Phase 3 参照)
 echo ""
 
 # =========================================================
@@ -245,16 +258,18 @@ cat <<'EOF'
 以下は Development / ワーク vault の既存 item を Dayopt-Shared に移動する候補。
 GUI で item を右クリック → Move → Dayopt-Shared を選択するのが最も安全。
 
-  Development/GitHub PAT - Dayopt Website Contact  →  Dayopt-Shared/github にリネーム
-      (既に Dayopt 専用 PAT なので、move + rename + "contact-repo" field 追加)
+  Development/GitHub PAT - Dayopt Website Contact  →  Dayopt-Shared/github-contact-pat にリネーム
+      (既に Dayopt 専用 PAT なので、move + rename + "GITHUB_CONTACT_REPO" field 追加)
 
   Development/GitHub (SSH_KEY)  →  Dayopt-Shared/github-ssh にリネーム
       ※ Dayopt commit にこの key を使っているか確認してから移動する
       ※ 別用途でも使っているなら、Dayopt 用に新規 SSH key 発行を推奨
 
+  Development/GitHub (LOGIN)  →  Dayopt-Shared/github-login にリネーム
+      ※ skeleton 作成済みの場合は既存 item の値を merge する
+
 以下は移動せず既存 vault に残す (アカウント本体は分散させない方針):
 
-  Development/GitHub (LOGIN)       → 残す (TOTP + recovery codes の正本)
   Development/Supabase (LOGIN)     → 残す
   Development/Sentry (LOGIN)       → 残す
   Development/Vercel (LOGIN)       → 残す

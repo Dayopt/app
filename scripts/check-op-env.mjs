@@ -1,18 +1,7 @@
-const requiredEnvNames = [
-  'NEXT_PUBLIC_SUPABASE_URL',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'NEXT_PUBLIC_APP_URL',
-];
+import { spawnSync } from 'node:child_process';
 
-let hasMissing = false;
+const result = spawnSync('pnpm', ['exec', 'tsx', 'scripts/env/check-env.ts'], {
+  stdio: 'inherit',
+});
 
-for (const name of requiredEnvNames) {
-  const exists = Boolean(process.env[name]);
-  console.log(`${name}: ${exists ? 'OK' : 'MISSING'}`);
-  if (!exists) hasMissing = true;
-}
-
-if (hasMissing) {
-  process.exitCode = 1;
-}
+process.exitCode = result.status ?? 1;
