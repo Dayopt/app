@@ -1,15 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
 
 /**
- * 開始時刻変更時に終了時刻を自動調整するカスタムフック
+ * 開始時刻のユーザー編集時に終了時刻を自動調整するカスタムフック
  *
  * 動作:
- * - 開始時刻変更時: 終了時刻が未設定なら+1時間、設定済みなら時間幅を保持
- * - 終了時刻を手動変更: 自動調整を停止
- * - 開始時刻を再変更: 自動調整を再開
+ * - 開始時刻をユーザーが編集した時: 終了時刻が未設定なら+1時間、設定済みなら時間幅を保持
+ * - 終了時刻の手動変更: 何もしない（恒等関数）
  *
- * @param startTime - 開始時刻 (HH:MM形式)
- * @param endTime - 終了時刻 (HH:MM形式)
+ * 重要: 自動調整は **ユーザーが開始時刻を編集した時だけ**（`handleStartTimeChange`
+ * 呼び出し時に同期的に）行う。旧実装は `startTime` を監視する useEffect だったが、
+ * Inspector を開いた時の `startTime: '' → entry値`、エントリ切替、refetch などの
+ * プログラム的な startTime 変化でも発火し、未来 planned エントリで planned 終了の
+ * 保存が走る → server 側 normalizeUpdateInput が actual を planned に reset するため
+ * 直前に延長した記録(actual)が消えるバグを生んでいた。
+ * ハンドラ内で同期処理にすることで、プログラム的変化では一切発火しない
+ * （effect / フラグ ref を持たないため「同値編集でフラグが残る」類の競合も発生しない）。
+ *
+ * @param startTime - 現在の開始時刻 (HH:MM形式)
+ * @param endTime - 現在の終了時刻 (HH:MM形式)
  * @param onEndTimeChange - 終了時刻変更コールバック
  * @returns handleStartTimeChange, handleEndTimeChange
  */
@@ -18,21 +26,18 @@ export function useAutoAdjustEndTime(
   endTime: string,
   onEndTimeChange: (time: string) => void,
 ) {
-  const [isEndTimeManuallySet, setIsEndTimeManuallySet] = useState(false);
-  // refで前回の開始時刻を追跡（再レンダー不要）
-  const previousStartTimeRef = useRef(startTime);
+  // 開始時刻変更ハンドラー（ユーザー入力時のみ呼ばれる）
+  const handleStartTimeChange = useCallback(
+    (time: string) => {
+      // 値が変わらない編集（mobile picker の同値確定など）では何もしない
+      if (!time || time === startTime) return time;
 
-  // 開始時刻が変更されたら、終了時刻を自動調整（時間幅保持）
-  useEffect(() => {
-    if (startTime && startTime !== previousStartTimeRef.current && !isEndTimeManuallySet) {
       try {
-        const [startHour, startMin] = startTime.split(':').map(Number);
+        const [startHour, startMin] = time.split(':').map(Number);
 
         if (endTime) {
           // 終了時刻が既に設定されている場合: 時間幅を保持
-          const [prevStartHour, prevStartMin] = (previousStartTimeRef.current || startTime)
-            .split(':')
-            .map(Number);
+          const [prevStartHour, prevStartMin] = (startTime || time).split(':').map(Number);
           const [endHour, endMin] = endTime.split(':').map(Number);
 
           const prevStartMinutes = prevStartHour! * 60 + prevStartMin!;
@@ -53,25 +58,17 @@ export function useAutoAdjustEndTime(
           const calculatedEndTime = `${newEndHour.toString().padStart(2, '0')}:${startMin!.toString().padStart(2, '0')}`;
           onEndTimeChange(calculatedEndTime);
         }
-
-        previousStartTimeRef.current = startTime;
       } catch {
         // パースエラーの場合は何もしない
       }
-    }
-  }, [startTime, endTime, isEndTimeManuallySet, onEndTimeChange]);
 
-  // 開始時刻変更ハンドラー
-  const handleStartTimeChange = (time: string) => {
-    setIsEndTimeManuallySet(false); // 開始時刻を変更したら自動計算を再開
-    return time;
-  };
+      return time;
+    },
+    [startTime, endTime, onEndTimeChange],
+  );
 
-  // 終了時刻変更ハンドラー
-  const handleEndTimeChange = (time: string) => {
-    setIsEndTimeManuallySet(true); // 終了時刻を手動で変更したら自動計算を停止
-    return time;
-  };
+  // 終了時刻変更ハンドラー（恒等。API 互換のため残す）
+  const handleEndTimeChange = useCallback((time: string) => time, []);
 
   return {
     handleStartTimeChange,
