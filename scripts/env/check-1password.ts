@@ -25,7 +25,7 @@ type ItemResult =
 
 const vaultCache = new Map<string, boolean>();
 const itemCache = new Map<string, ItemResult>();
-const opTimeoutMs = 5_000;
+const opTimeoutMs = 20_000;
 
 function runOp(args: string[]): CommandResult {
   const result = spawnSync('op', args, {

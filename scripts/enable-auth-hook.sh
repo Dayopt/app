@@ -8,8 +8,8 @@
 #
 # 前提:
 #   - マイグレーション適用済み（custom_access_token_hook 関数が存在すること）
-#     ※ db push は --project-ref 非対応。リンク済みプロジェクトに対して別途実行:
-#       supabase link --project-ref <ref> && supabase db push
+#     ※ 通常は Supabase GitHub integration が migration を適用する。
+#       手動 db push は emergency only。
 #   - SUPABASE_ACCESS_TOKEN が設定済み
 #     発行: https://supabase.com/dashboard/account/tokens
 #
@@ -17,7 +17,8 @@
 #   chmod +x scripts/enable-auth-hook.sh
 #   ./scripts/enable-auth-hook.sh
 #
-# 現在は単一 project 運用のため、引数なしで Production project に適用する。
+# dayopt project の Production 環境に対して実行する。
+# PR Preview / staging 相当で有効化する場合は Supabase Dashboard 側で branch context を確認する。
 # ========================================
 
 set -euo pipefail
@@ -42,7 +43,7 @@ fi
 # ========================================
 # Auth Hook 有効化
 # ========================================
-echo "[Production] custom_access_token hook を有効化中..."
+echo "[dayopt/Production] custom_access_token hook を有効化中..."
 
 HTTP_STATUS=$(curl -s -o /tmp/auth-hook-response.json -w "%{http_code}" \
   -X PATCH \
@@ -55,7 +56,7 @@ HTTP_STATUS=$(curl -s -o /tmp/auth-hook-response.json -w "%{http_code}" \
   }')
 
 if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
-  echo "[Production] Auth Hook 有効化完了 (HTTP $HTTP_STATUS)"
+  echo "[dayopt/Production] Auth Hook 有効化完了 (HTTP $HTTP_STATUS)"
 else
   echo "エラー: Auth Hook の有効化に失敗しました (HTTP $HTTP_STATUS)"
   cat /tmp/auth-hook-response.json
@@ -67,7 +68,7 @@ fi
 # ========================================
 echo ""
 echo "=== 完了 ==="
-echo "環境: Production ($PROJECT_REF)"
+echo "環境: dayopt / Production ($PROJECT_REF)"
 echo "Hook: custom_access_token_hook"
 echo ""
 echo "既存ユーザーのJWTは最大1時間で自動リフレッシュされ、"

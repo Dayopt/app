@@ -1,6 +1,6 @@
 ---
 name: supabase
-description: 新規 Supabase migration ファイル(`supabase/migrations/*.sql`)を追加する時、既存 schema に RLS ポリシーを設計・変更する時、Storage バケットポリシーを編集する時、Realtime 購読(`postgres_changes`)を新規実装する時、Edge Functions(`supabase/functions/`)を追加・デプロイする時、Production project への DB 変更を適用する時に発動。単一 project 運用(ローンチ前)の安全パターンを適用する。アプリケーション層のみの変更では発動しない。
+description: 新規 Supabase migration ファイル(`supabase/migrations/*.sql`)を追加する時、既存 schema に RLS ポリシーを設計・変更する時、Storage バケットポリシーを編集する時、Realtime 購読(`postgres_changes`)を新規実装する時、Edge Functions(`supabase/functions/`)を追加・デプロイする時、production main への DB 変更を適用する時に発動。Supabase Branching による local → PR Preview → production 運用パターンを適用する。アプリケーション層のみの変更では発動しない。
 effort: high
 maxTurns: 25
 ---
@@ -9,19 +9,17 @@ maxTurns: 25
 
 Dayoptでの Supabase 運用パターンを支援するスキル。
 
-> ## ⚠️ 現状: 単一 project 運用（ローンチ前）
+> ## 現状: Supabase Branching 運用
 >
-> 現在は **単一 Supabase project (`yvglwblxrnrenfifsnje`)** のみで運用している（dev / preview / production すべて同じ DB を参照）。以下の branching に関する記述は**ローンチ後の target state** であり、現時点では該当しない。
+> Dayopt は **1 Supabase project (`dayopt`, ref `yvglwblxrnrenfifsnje`) + PR ごとの Preview Branch** で運用する。標準ルートは `local → PR Preview → production`。
 >
 > **現状で守ること**:
 >
-> - migration は main merge で GitHub Actions が Production に自動適用
-> - 手動 `db push` は緊急時のみ（整合性のため極力避ける）
-> - preview / dev が production DB を直接触るため `db reset` 厳禁
-> - Edge Functions は Production project にデプロイ（`--use-api` 必須）
-> - RLS を信頼して分離する前提
->
-> **target state**（Pro plan + GitHub integration 後）: 以下の branch 運用に移行する。
+> - migration owner は Supabase GitHub integration
+> - Vercel Preview は PR 用 Supabase Preview Branch を参照
+> - GitHub Actions から `supabase db push` しない
+> - 手動 `db push` は emergency only
+> - PR Preview credentials は 1Password に保存しない
 
 ## When to Use
 
@@ -44,22 +42,22 @@ Dayoptでの Supabase 運用パターンを支援するスキル。
 
 ### 原則
 
-**1 Supabase project + persistent staging branch + ephemeral preview branches**
+**1 Supabase project + ephemeral PR Preview branches**
 
 git の世界観と揃える:
 
 - `main` = production
-- `staging` = persistent staging branch
+- persistent staging = 固定URLが必要な時だけ追加
 - `feat/*` = preview branch(PR単位、自動生成・自動破棄)
 
 ### 環境マップ
 
-| 環境           | 実体                        | ライフサイクル            | 用途                                               |
-| -------------- | --------------------------- | ------------------------- | -------------------------------------------------- |
-| **Preview**    | Supabase preview branch     | PR open〜close(ephemeral) | 日常の開発・PR検証                                 |
-| **Staging**    | persistent branch `staging` | 長命・固定URL             | Stripe webhook検証、hotfix検証、closed beta        |
-| **Production** | main project                | 永続                      | 実ユーザー                                         |
-| **Local**      | `supabase start`            | 任意                      | 緊急避難用(オフライン時等、デフォルトでは使わない) |
+| 環境           | 実体                    | ライフサイクル            | 用途                                            |
+| -------------- | ----------------------- | ------------------------- | ----------------------------------------------- |
+| **Preview**    | Supabase preview branch | PR open〜close(ephemeral) | 日常の開発・PR検証                              |
+| **Staging**    | persistent branch       | 必要時のみ                | Stripe webhook検証、OAuth callback、closed beta |
+| **Production** | main project            | 永続                      | 実ユーザー                                      |
+| **Local**      | `supabase start`        | 任意                      | 手元の開発                                      |
 
 ### 守るもの・捨てるもの
 

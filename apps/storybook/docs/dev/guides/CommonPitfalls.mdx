@@ -154,7 +154,9 @@ supabase functions deploy --use-api
 
 ### db push の --project-ref
 
-`supabase db push` は `--project-ref` を受け付けない。リンク済みプロジェクトに対して実行される。
+通常の migration 適用は Supabase GitHub integration が担当する。手動 `supabase db push` は emergency only。
+
+実行する場合も `supabase db push` は `--project-ref` を受け付けない。リンク済みプロジェクトに対して実行されるため、事前に `supabase link --project-ref ...` の対象を確認する。
 
 ---
 

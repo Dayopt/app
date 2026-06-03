@@ -57,8 +57,6 @@ export const envSchema: EnvSchemaEntry[] = [
   envEntry('SENTRY_PROJECT', false, 'public', 'staging', staging, 'sentry'),
   envEntry('SENTRY_AUTH_TOKEN', false, 'secret', 'shared', shared, 'sentry'),
 
-  envEntry('SLACK_BILLING_WEBHOOK_URL', false, 'secret', 'staging', staging, 'slack'),
-
   envEntry('NEXT_PUBLIC_APP_URL', true, 'public', 'local', staging, 'app'),
   envEntry('NEXT_PUBLIC_SITE_URL', false, 'public', 'staging', staging, 'app'),
   envEntry('RECOVERY_CODE_PEPPER', false, 'secret', 'staging', staging, 'app'),
@@ -104,7 +102,6 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
   envEntry('NEXT_PUBLIC_SENTRY_DSN', false, 'public', 'production', production, 'sentry'),
   envEntry('SENTRY_ORG', false, 'public', 'production', production, 'sentry'),
   envEntry('SENTRY_PROJECT', false, 'public', 'production', production, 'sentry'),
-  envEntry('SLACK_BILLING_WEBHOOK_URL', false, 'secret', 'production', production, 'slack'),
   envEntry('NEXT_PUBLIC_APP_URL', false, 'public', 'production', production, 'app'),
   envEntry('NEXT_PUBLIC_SITE_URL', false, 'public', 'production', production, 'app'),
   envEntry('RECOVERY_CODE_PEPPER', false, 'secret', 'production', production, 'app'),

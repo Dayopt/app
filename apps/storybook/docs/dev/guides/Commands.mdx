@@ -19,7 +19,7 @@ npm run test:run            # ユニットテスト実行
 npm run check               # typecheck + lint + test:run（一括）
 ```
 
-> **Secrets**: 実値は `.env.local` に置かず、1Password master と `.op-env.local` の `op://` 参照を `pnpm dev` で注入する。素の起動が必要な一時作業だけ `pnpm dev:raw` を使う。詳細は `apps/storybook/docs/operations/secrets.mdx`。
+> **Secrets**: 実値は `.env.local` に置かず、1Password master と `.op-env.local` の `op://` 参照を `pnpm dev` で注入する。`pnpm dev` は通常 Supabase local を参照する。素の起動が必要な一時作業だけ `pnpm dev:raw`、`.op-env.local` の Supabase refs をそのまま使う時だけ `DAYOPT_SUPABASE_TARGET=op pnpm dev` を使う。詳細は `apps/storybook/docs/operations/secrets.mdx`。
 > 開発サーバー（`pnpm dev`, `npm run storybook`）の起動・停止はユーザー責務。
 
 ---
@@ -79,13 +79,14 @@ npm run test:e2e:headed     # ブラウザ表示付きE2E
 
 ```bash
 npm run db:reset            # ローカルDB リセット
-npm run db:reset-preview    # Preview Supabase リセット
+npm run db:reset-linked:unsafe # 手動リンク先をリセット（緊急時のみ）
 npm run db:seed             # 開発データ投入
 npm run db:fresh            # リセット + シード
 npm run migration:create    # マイグレーション作成
 npm run migration:list      # マイグレーション一覧
 npm run migration:status    # DB差分確認
-npm run types:generate          # Production DB から packages/database に型生成
+npm run types:generate          # Supabase production main から packages/database に型生成
+npm run types:generate:production # production main から packages/database に型生成
 npm run types:generate:local    # ローカルから packages/database に型生成
 ```
 

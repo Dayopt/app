@@ -5,8 +5,8 @@
 # ========================================
 # 使い方:
 #   chmod +x scripts/seed-dev-data.sh
-#   ./scripts/seed-dev-data.sh           # Preview Supabase（デフォルト）
-#   USE_LOCAL_DB=true ./scripts/seed-dev-data.sh  # ローカルDB
+#   ./scripts/seed-dev-data.sh                 # ローカルDB（デフォルト）
+#   USE_LINKED_DB=true ./scripts/seed-dev-data.sh  # linked DB（緊急時のみ）
 # ========================================
 
 set -e
@@ -17,22 +17,22 @@ set -e
 LOCAL_URL="http://127.0.0.1:54321"
 LOCAL_ANON_KEY="sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH"
 
-if [ "$USE_LOCAL_DB" = "true" ]; then
-  echo "🔧 ローカルDB モード"
-  SUPABASE_URL="$LOCAL_URL"
-  ANON_KEY="$LOCAL_ANON_KEY"
-  DB_TARGET="--local"
-else
-  echo "☁️  Preview Supabase モード"
+if [ "${USE_LINKED_DB:-}" = "true" ]; then
+  echo "☁️  linked Supabase モード（緊急時のみ）"
   SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-}"
   ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
 
   if [ -z "$SUPABASE_URL" ] || [ -z "$ANON_KEY" ]; then
     echo "❌ NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY が未設定です"
-    echo "   op run --env-file=.op-env.local -- pnpm db:seed を実行してください"
+    echo "   op run --env-file=.op-env.local -- env USE_LINKED_DB=true pnpm db:seed を実行してください"
     exit 1
   fi
   DB_TARGET="--linked"
+else
+  echo "🔧 ローカルDB モード"
+  SUPABASE_URL="$LOCAL_URL"
+  ANON_KEY="$LOCAL_ANON_KEY"
+  DB_TARGET="--local"
 fi
 
 echo "  URL: $SUPABASE_URL"

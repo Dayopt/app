@@ -14,9 +14,11 @@ Next.js 15 (App Router) / React 19 / TypeScript strict / Tailwind CSS v4 / Zusta
 
 ```bash
 # 開発（AIは実行しない）
-pnpm dev              # 開発サーバー（apps/product/.env.local を参照）
-pnpm dev:op           # 1Password op-run 経由（.op-env.local、Phase 1）
-pnpm env:check        # op references の解決確認
+pnpm dev              # 1Password op-run 経由（.op-env.local）
+pnpm dev:raw          # op run なしの緊急 escape hatch
+pnpm env:check        # 値を出さない env 存在確認
+pnpm secrets:check    # literal secret 検出（値は redacted）
+pnpm 1password:check  # 1Password schema 確認（値は表示しない）
 pnpm storybook        # Storybook
 
 # 検証（AI必須：コード変更後）
@@ -32,7 +34,9 @@ pnpm test:integration # 統合テスト
 pnpm test:e2e:smoke   # E2Eスモークテスト
 
 # 型生成・DB
-pnpm types:generate          # Supabase型生成（Production project）
+pnpm types:generate          # Supabase型生成（production main、互換 alias）
+pnpm types:generate:production # Supabase型生成（production main）
+pnpm types:generate:local    # Supabase型生成（local）
 pnpm migration:create        # マイグレーション作成
 pnpm db:fresh                # ローカルDB初期化+シード
 

@@ -4,12 +4,12 @@
 # 各設定値には「なぜそうしたか」を記載。
 # 公式リファレンス: https://supabase.com/docs/guides/local-development/cli/config
 #
-# 運用モデル: 単一 project 運用（ローンチ前の簡易構成）
+# 運用モデル: local → PR Preview → production
 #   - Local:      supabase start（この config.toml を使用）
-#   - Production: yvglwblxrnrenfifsnje（dev / preview / production 全てここを向く）
+#   - PR Preview: Supabase GitHub integration が PR ごとに Preview Branch を作成
+#   - Production: dayopt main (ref: yvglwblxrnrenfifsnje)
 #
-# 将来計画: Pro plan + GitHub integration + persistent staging branch +
-#   ephemeral preview branches への移行（ローンチ後）。
+# persistent staging は常設しない。固定URLが必要な検証時だけ追加する。
 # 詳細: apps/storybook/docs/dev/guides/MigrationChecklist.mdx / .claude/skills/supabase/SKILL.md
 # ============================================================
 
