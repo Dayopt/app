@@ -25,7 +25,16 @@ INSERT INTO auth.users (
   updated_at,
   role,
   aud,
-  confirmation_token
+  confirmation_token,
+  recovery_token,
+  email_change_token_new,
+  email_change,
+  email_change_token_current,
+  phone,
+  phone_change,
+  phone_change_token,
+  reauthentication_token,
+  email_change_confirm_status
 ) VALUES (
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000000',
@@ -38,7 +47,16 @@ INSERT INTO auth.users (
   now(),
   'authenticated',
   'authenticated',
-  ''
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  0
 );
 
 -- identityも作成（ログインに必要）
