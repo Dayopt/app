@@ -17,6 +17,7 @@ import { useTranslations } from 'next-intl';
 import type { InteractionState } from '../../../../domain/interaction/types';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { getAdjustedStyle, getPreviewTime } from '../utils/interactionHelpers';
+import { ConflictOverlay } from './ConflictOverlay';
 
 // ========================================
 // Types
@@ -226,13 +227,14 @@ export const EntryRenderer = React.memo(function EntryRenderer({
             isNewEntry(entry.id) && 'animate-entry-pop',
           )}
         />
-        {/* リサイズ中に重複していたら、destructive な「重複しています」表示で上書きする（all-red 規範） */}
-        {isResizingOverlap && (
-          <div className="bg-destructive-tint text-destructive pointer-events-none absolute inset-0 flex flex-col gap-1 overflow-hidden rounded-lg p-2">
-            <span className="text-sm leading-tight font-medium">
-              {t('entry.errors.timeOverlap')}
-            </span>
-          </div>
+        {/* リサイズ中に重複していたら、destructive な重複表示で上書きする（all-red 規範）。
+            ドラッグ時のゴースト（ConflictOverlay）と同一 UI に統一する。 */}
+        {isResizingOverlap && interactionState.mode === 'resizing' && (
+          <ConflictOverlay
+            previewTime={interactionState.previewTime}
+            message={t('entry.errors.timeOverlap')}
+            className="pointer-events-none absolute inset-0"
+          />
         )}
       </div>
     </div>
