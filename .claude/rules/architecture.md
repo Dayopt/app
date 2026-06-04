@@ -1,6 +1,6 @@
 ---
 paths:
-  - 'src/**/*.{ts,tsx}'
+  - 'apps/product/src/**/*.{ts,tsx}'
 ---
 
 # アーキテクチャ・設計
@@ -38,7 +38,7 @@ grep -rn "useOldStoreName" src .storybook tests 2>/dev/null
 
 - **`.storybook/mocks/stores.tsx`** — `STORE_REGISTRY` の key と import path
 - **`.storybook/decorators/`** — decorator で直接参照していないか
-- **Feature barrel** (`src/features/*/index.ts`) — re-export を消した場合、consumer 側が `@/features/xxx` から import し続けていないか
+- **Feature barrel** (`apps/product/src/features/*/index.ts`) — re-export を消した場合、consumer 側が `@/features/xxx` から import し続けていないか
 - **Story ファイル** (`*.stories.tsx`) の `parameters.storeMocks` キー
 
 typecheck では `.storybook/` 配下の未 import ファイルが listFiles に乗らないケースがあるため、grep が第一防衛線。
@@ -52,12 +52,12 @@ messages/ 配下の `{namespace}.json` を削除・リネームする時、以�
 grep -rnE "useTranslations\(['\"]{ns}['\"]|getTranslations\(['\"]{ns}['\"]" src .storybook
 
 # namespace リストへのハードコード
-grep -rn "['\"]{ns}['\"]" src/app/\*\*/layout.tsx src/lib/i18n/
+grep -rn "['\"]{ns}['\"]" apps/product/src/app/\*\*/layout.tsx apps/product/src/lib/i18n/
 ```
 
 特に要チェック:
 
-- **`APP_NAMESPACES` / `AUTH_NAMESPACES` 等の namespace 配列** — `src/app/[locale]/*/layout.tsx`
+- **`APP_NAMESPACES` / `AUTH_NAMESPACES` 等の namespace 配列** — `apps/product/src/app/[locale]/*/layout.tsx`
 - **グローバルに mount される component** — `Toaster` / `GlobalOverlays` / `IntlProvider` 等、失敗するとアプリ全体が落ちる
 - **`.storybook/mocks/` / `decorators/`** — storybook の i18n mock
 
@@ -66,13 +66,13 @@ grep -rn "['\"]{ns}['\"]" src/app/\*\*/layout.tsx src/lib/i18n/
 Router → Service → Supabase の3層構造。feature-colocated で配置。
 
 ```
-src/features/{feature}/server/
+apps/product/src/features/{feature}/server/
 ├── router.ts              # ルーター（Zodバリデーション + エラーハンドリング）
 ├── {feature}-service.ts   # サービス層（ビジネスロジック）
 └── __tests__/
 ```
 
-- ルーター集約: `src/lib/trpc/root.ts`
+- ルーター集約: `apps/product/src/lib/trpc/root.ts`
 - 共通: `@/lib/trpc/procedures`（createTRPCRouter, protectedProcedure）、`@/lib/trpc/errors`（handleServiceError）
 - 詳細: `.claude/skills/trpc-router-creating/SKILL.md`
 
@@ -97,7 +97,7 @@ src/features/{feature}/server/
 - ローカル開発は Vercel env を `vercel env pull` で取得し、Production project に接続
 - オフライン開発が必要な場合のみ `USE_LOCAL_DB=true` でローカル Supabase（127.0.0.1:54321）にフォールバック
 - マイグレーションは main merge で GitHub Actions が Production に適用
-- 環境変数は `src/env.ts` で Zod バリデーション（サーバーサイドのみ）
+- 環境変数は `apps/product/src/env.ts` で Zod バリデーション（サーバーサイドのみ）
 - **破壊的操作の制限**: preview / dev が production DB を直接触るため、`db reset` 等は厳禁。RLS 信頼前提
 - **将来計画**: Pro plan + GitHub integration + persistent staging branch + ephemeral preview branches への移行（ローンチ後）
 - 詳細: `.claude/skills/supabase/SKILL.md` / `apps/storybook/docs/dev/guides/MigrationChecklist.mdx`

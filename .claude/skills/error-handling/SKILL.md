@@ -311,10 +311,10 @@ ErrorBoundary配置時：
 ## 関連ファイル
 
 ```
-src/lib/errors/                  # エラーコード・パターン定義
-src/lib/sentry/             # Sentry連携（integration.ts, performance.ts, trace.ts）
-src/lib/trpc/errors.ts      # tRPCエラーハンドリング（handleServiceError）
-src/lib/tanstack-query/          # TanStack Queryキャッシュ・楽観的更新
+apps/product/src/lib/errors/                  # エラーコード・パターン定義
+apps/product/src/lib/sentry/             # Sentry連携（integration.ts, performance.ts, trace.ts）
+apps/product/src/lib/trpc/errors.ts      # tRPCエラーハンドリング（handleServiceError）
+apps/product/src/lib/tanstack-query/          # TanStack Queryキャッシュ・楽観的更新
 ```
 
 ## 関連スキル

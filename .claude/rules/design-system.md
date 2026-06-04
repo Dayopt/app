@@ -1,7 +1,7 @@
 ---
 paths:
-  - 'src/**/*.tsx'
-  - 'src/**/*.css'
+  - 'apps/product/src/**/*.tsx'
+  - 'apps/product/src/**/*.css'
 ---
 
 # デザインシステムルール
@@ -11,8 +11,8 @@ paths:
 - **semantic token経由のみ**使用可。直接Tailwind色クラス (`text-red-500`, `bg-zinc-800` 等) / hex / rgb / oklch リテラル禁止
 - 許可されるクラス: `bg-primary`, `text-foreground`, `border-border`, `bg-tag-blue`, `bg-chronotype-peak` 等、`tailwind-theme.css` で定義済みのもの
 - **例外**:
-  - メールテンプレート (`src/emails/`): CSS変数が使えない環境のためhex許容。`src/emails/styles.ts` に集約
-  - OG画像 (`src/app/opengraph-image.tsx`): Satori制約のため `src/lib/og-colors.ts` の定数を参照
+  - メールテンプレート (`apps/product/src/emails/`): CSS変数が使えない環境のためhex許容。`apps/product/src/emails/styles.ts` に集約
+  - OG画像 (`apps/product/src/app/opengraph-image.tsx`): Satori制約のため `apps/product/src/lib/og-colors.ts` の定数を参照
 
 ## Elevation / Shadow
 

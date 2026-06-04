@@ -1,6 +1,6 @@
 ---
 paths:
-  - 'src/**/*.{ts,tsx}'
+  - 'apps/product/src/**/*.{ts,tsx}'
   - 'package.json'
 ---
 

@@ -116,7 +116,7 @@ npm version ${VERSION} --no-git-tag-version
 ### Phase 0.3: コード品質
 
 ```bash
-npm run lint && npm run typecheck && npm run test:run && npm run build
+pnpm lint && pnpm typecheck && pnpm test:run && pnpm build
 ```
 
 ### Phase 1.1: mainブランチ最新取得

@@ -1,13 +1,13 @@
 ---
 name: docs-writing
-description: 新機能実装完了後のユーザー向けドキュメント（`content/docs/**/*.mdx`）執筆時、リリース完了後のリリースノート（`content/releases/{en,ja}/*.mdx`）作成時、アーキテクチャ意思決定確定後の ADR（`docs/adr/ADR-*.md`）作成時、Breaking change を含む変更の merge 前の技術ドキュメント更新時、`docs-audit` skill からの docs gap フィードバック受領時に発動。AI 生成時は `draft: true` 初期値を適用する。コード内コメントや一時メモでは発動しない。
+description: 新機能実装完了後のユーザー向けドキュメント（`apps/web/content/docs/**/*.mdx`）執筆時、リリース完了後のリリースノート（`apps/web/content/releases/{en,ja}/*.mdx`）作成時、アーキテクチャ意思決定確定後の ADR（`docs/adr/ADR-*.md`）作成時、Breaking change を含む変更の merge 前の技術ドキュメント更新時、`docs-audit` skill からの docs gap フィードバック受領時に発動。AI 生成時は `draft: true` 初期値を適用する。コード内コメントや一時メモでは発動しない。
 effort: high
 maxTurns: 25
 ---
 
 # ユーザー向けドキュメント執筆スキル
 
-web側（`~/Desktop/web/content/`）へのユーザー向けコンテンツを執筆するスキル。
+web側（`apps/web/content/`）へのユーザー向けコンテンツを執筆するスキル。
 app側の技術ドキュメント（`docs/`）とは別物。
 
 ## When to Use
@@ -17,7 +17,7 @@ app側の技術ドキュメント（`docs/`）とは別物。
 **上位イベント起点（何が確定したか）:**
 
 - 新機能の public API 仕様が確定し、ユーザー向け使い方ドキュメントが必要になった時
-- リリース作業完了後、`content/releases/{en,ja}/*.mdx` にリリースノートを書く時
+- リリース作業完了後、`apps/web/content/releases/{en,ja}/*.mdx` にリリースノートを書く時
 - アーキテクチャ意思決定が確定し、`docs/adr/ADR-{n}-{title}.md` に ADR を書く時
 - Breaking change を含む変更を merge する前、影響を受ける技術ドキュメントの更新が必要な時
 
@@ -52,11 +52,11 @@ AI が記事を作成する場合は必ず `draft: true` で作成し、開発�
 
 ## 対象コンテンツ種別
 
-| 種別         | ディレクトリ                     | 用途                                                    |
-| ------------ | -------------------------------- | ------------------------------------------------------- |
-| **docs**     | `content/docs/**/*.mdx`          | 機能ドキュメント（Getting Started, Features, Guides等） |
-| **blog**     | `content/blog/{en,ja}/*.mdx`     | ブログ記事（機能紹介、Tips、開発裏話等）                |
-| **releases** | `content/releases/{en,ja}/*.mdx` | リリースノート                                          |
+| 種別         | ディレクトリ                              | 用途                                                    |
+| ------------ | ----------------------------------------- | ------------------------------------------------------- |
+| **docs**     | `apps/web/content/docs/**/*.mdx`          | 機能ドキュメント（Getting Started, Features, Guides等） |
+| **blog**     | `content/blog/{en,ja}/*.mdx`              | ブログ記事（機能紹介、Tips、開発裏話等）                |
+| **releases** | `apps/web/content/releases/{en,ja}/*.mdx` | リリースノート                                          |
 
 ---
 
@@ -88,7 +88,7 @@ URL構造:
 ## ファイル配置ルール
 
 ```
-~/Desktop/web/content/
+apps/web/content/
 ├── docs/
 │   ├── en/                    # 英語版（必須）
 │   └── ja/                    # 日本語版（必須）
@@ -112,7 +112,7 @@ URL構造:
 
 ## navigation.ts の更新
 
-新しいドキュメントページを追加した場合、`~/Desktop/web/src/lib/navigation.ts` の `generateDocsNavigation()` にもエントリを追加する。
+新しいドキュメントページを追加した場合、`apps/web/src/shell/navigation.ts` の `generateDocsNavigation()` にもエントリを追加する。
 
 ---
 
@@ -134,7 +134,7 @@ URL構造:
 - [ ] 日付は ISO 8601 形式（`YYYY-MM-DD`）
 - [ ] `tags` は 3-6個（空配列 `[]` は禁止、不要なら省略）
 - [ ] `ai.relatedQuestions` は 3-5個（手動で記述）
-- [ ] `npm run validate:content` でエラーがないことを確認した
+- [ ] `pnpm --filter @dayopt/web validate:content` でエラーがないことを確認した
 
 ### コンテンツ
 
@@ -188,7 +188,7 @@ app側の技術ドキュメント・ADR・APIドキュメントもこのスキ�
 
 ## 参考ファイル
 
-| ファイル                                              | 用途                          |
-| ----------------------------------------------------- | ----------------------------- |
-| `~/Desktop/web/content/docs/ja/features/calendar.mdx` | 模範例（Feature Doc）         |
-| `~/Desktop/web/content/CLAUDE.md`                     | Frontmatterスキーマの正式定義 |
+| ファイル                                         | 用途                          |
+| ------------------------------------------------ | ----------------------------- |
+| `apps/web/content/docs/ja/features/calendar.mdx` | 模範例（Feature Doc）         |
+| `apps/web/content/CLAUDE.md`                     | Frontmatterスキーマの正式定義 |

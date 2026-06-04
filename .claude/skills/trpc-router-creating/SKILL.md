@@ -1,6 +1,6 @@
 ---
 name: trpc-router-creating
-description: 新規 feature の `src/features/{feature}/server/router.ts` と service を作成する時、既存 router に procedure を追加する時、ビジネスロジックが router に混在していて service 層への分離が必要と判断した時に発動。feature-colocated 構造、Zod 入力検証、サービス層分離、エラーハンドリングを適用する。型定義のみの変更時や、auth 境界のみの変更時（`security` skill の領域）は発動しない。
+description: 新規 feature の `apps/product/src/features/{feature}/server/router.ts` と service を作成する時、既存 router に procedure を追加する時、ビジネスロジックが router に混在していて service 層への分離が必要と判断した時に発動。feature-colocated 構造、Zod 入力検証、サービス層分離、エラーハンドリングを適用する。型定義のみの変更時や、auth 境界のみの変更時（`security` skill の領域）は発動しない。
 effort: medium
 maxTurns: 15
 ---
@@ -13,7 +13,7 @@ DayoptプロジェクトのtRPC v11ルーターを規約に沿って作成する
 
 以下の状況で発動:
 
-- 新規 feature に `src/features/{feature}/server/router.ts` と `{feature}-service.ts` を追加する時
+- 新規 feature に `apps/product/src/features/{feature}/server/router.ts` と `{feature}-service.ts` を追加する時
 - 既存 router に新規 procedure（query / mutation）を追加する時
 - 大規模 feature で `router-index.ts` / `service-index.ts` によるマージ構造が必要になった時
 - 新規 procedure 作成時に Zod schema の input validation 設計が必要になった時
@@ -28,7 +28,7 @@ DayoptプロジェクトのtRPC v11ルーターを規約に沿って作成する
 ## ルーター構造（feature-colocated）
 
 ```
-src/features/{feature}/server/
+apps/product/src/features/{feature}/server/
 ├── router.ts              # ルーター定義
 ├── {feature}-service.ts   # ビジネスロジック
 ├── types.ts               # feature内の型定義（optional）
@@ -39,7 +39,7 @@ src/features/{feature}/server/
 大規模featureの場合（例: entry）:
 
 ```
-src/features/entry/server/
+apps/product/src/features/entry/server/
 ├── router.ts              # 個別ルーター
 ├── router-index.ts        # ルーターのマージ・エクスポート
 ├── entry-service.ts       # メインサービス
@@ -54,7 +54,7 @@ src/features/entry/server/
 ### 1. サービス層（ビジネスロジック）
 
 ```typescript
-// src/features/{feature}/server/{feature}-service.ts
+// apps/product/src/features/{feature}/server/{feature}-service.ts
 import type { Database } from '@/lib/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -126,7 +126,7 @@ export function create{Entity}Service(supabase: SupabaseClient<Database>) {
 ### 2. ルーター定義
 
 ```typescript
-// src/features/{feature}/server/router.ts
+// apps/product/src/features/{feature}/server/router.ts
 import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
@@ -199,7 +199,7 @@ export const {feature}Router = createTRPCRouter({
 ### 3. メインルーターに登録
 
 ```typescript
-// src/lib/trpc/root.ts
+// apps/product/src/lib/trpc/root.ts
 import { {feature}Router } from '@/features/{feature}/server/router';
 
 export const appRouter = createTRPCRouter({
@@ -231,18 +231,18 @@ import type { Database } from '@/lib/database.types';
 
 ## チェックリスト
 
-- [ ] サービス層を `src/features/{feature}/server/{feature}-service.ts` に作成
-- [ ] ルーターを `src/features/{feature}/server/router.ts` に作成
+- [ ] サービス層を `apps/product/src/features/{feature}/server/{feature}-service.ts` に作成
+- [ ] ルーターを `apps/product/src/features/{feature}/server/router.ts` に作成
 - [ ] `protectedProcedure` を使用（認証必須）
 - [ ] `handleServiceError` でエラーハンドリング
 - [ ] `user_id` でフィルタリング（マルチテナント）
 - [ ] テストファイル作成
-- [ ] `src/lib/trpc/root.ts` に登録
+- [ ] `apps/product/src/lib/trpc/root.ts` に登録
 
 ## 既存ルーター参考
 
 ```
-src/features/
+apps/product/src/features/
 ├── entry/server/      # 最も大規模な例（router-index + service-index）
 ├── tags/server/       # 標準的なCRUD例
 ├── auth/server/       # ユーザー管理

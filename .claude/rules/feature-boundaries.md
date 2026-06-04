@@ -1,8 +1,8 @@
 ---
 paths:
-  - 'src/features/**'
-  - 'src/app/**'
-  - 'src/shell/**'
+  - 'apps/product/src/features/**'
+  - 'apps/product/src/app/**'
+  - 'apps/product/src/lib/**'
 ---
 
 # Feature Boundaries
@@ -60,7 +60,7 @@ RPC row の snake_case shape に密結合した変換（snake → camel rename /
 
 settings → 他 feature の deep import は composition の責務上必要なので許容するが、優先順を守る:
 
-1. **`src/lib/stores/*` から取得できる場合は lib 経由を優先**（例: `useUserPreferenceStore`）
+1. **`apps/product/src/lib/stores/*` から取得できる場合は lib 経由を優先**（例: `useUserPreferenceStore`）
 2. **feature の barrel に export されている場合は barrel 経由を優先**（例: `@/features/chronotype` 経由の `useChronotypeSettingsStore`）
 3. **本当に deep import が必要なケースに限定**（例: barrel に出ていない `useCalendarSettingsStore`）
 
@@ -77,11 +77,11 @@ settings → 他 feature の deep import は composition の責務上必要な�
 ## Colocation
 
 feature固有のモジュール（hooks, stores, schemas）は feature内に配置。
-複数featureで使う型のみ `src/types/` に残す。
+複数featureで使う型のみ `apps/product/src/lib/types/` に残す。
 
 ## Cross-cutting UI state
 
-複数 feature から参照される global UI state（例: date/timezone settings, calendar navigation state）は `src/lib/stores/` に置く。feature 内の store を他 feature から直接 import するのは禁止（feature の内部 state 形に依存してしまい、refactor blast radius が読めなくなる）。
+複数 feature から参照される global UI state（例: date/timezone settings, calendar navigation state）は `apps/product/src/lib/stores/` に置く。feature 内の store を他 feature から直接 import するのは禁止（feature の内部 state 形に依存してしまい、refactor blast radius が読めなくなる）。
 
 例:
 
@@ -93,16 +93,18 @@ feature は `@/lib/stores/*` から直接 import する。calendar feature も�
 
 ## Composition Layer
 
-| 層                     | パス                                       |
-| ---------------------- | ------------------------------------------ |
-| Logic Composition      | `src/app/*/_composition/`                  |
-| Layout Composition     | `src/shell/layout/`                        |
-| Provider Composition   | `src/shell/providers/`                     |
-| Shell State / Contexts | `src/shell/stores/`, `src/shell/contexts/` |
+旧 `src/shell/` ディレクトリはモノレポ移行で解体され、ルーティング合成（`app/`）と再利用層（`lib/`）に吸収された。現在の合成箇所:
+
+| 層                   | パス                                                                                                                                                |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Logic Composition    | `apps/product/src/app/**/_composition/`                                                                                                             |
+| Layout Composition   | `apps/product/src/app/**/layout.tsx`                                                                                                                |
+| Provider Composition | `apps/product/src/app/[locale]/(app)/_providers/Providers.tsx`（concern 別 Provider は `apps/product/src/lib/**`、例: `lib/i18n/IntlProvider.tsx`） |
+| Shell State          | `apps/product/src/lib/stores/`（例: `useShellStore`）                                                                                               |
 
 ## Composition Hub
 
-一部の feature は「機能単位」ではなく「ページ全体を合成する hub」として機能する。これらは Composition Layer（`src/app/*/page.tsx` / `src/app/*/_composition/`）からのみ import され、**他 feature からは import しない**。
+一部の feature は「機能単位」ではなく「ページ全体を合成する hub」として機能する。これらは Composition Layer（`apps/product/src/app/*/page.tsx` / `apps/product/src/app/*/_composition/`）からのみ import され、**他 feature からは import しない**。
 
 現在該当する hub:
 
@@ -143,4 +145,4 @@ features/{name}/
 
 - feature内部を編集する時、同層・上位featureを見る必要がない
 - barrel export を変えない限り外部に影響しない
-- `npm run lint:boundaries` で違反数の増加を自動ブロック
+- `pnpm lint:boundaries` で違反数の増加を自動ブロック

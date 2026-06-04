@@ -162,7 +162,7 @@ NOT 条件が他 skill の領域ではなく `CLAUDE.md` / `.claude/rules/` 配�
 
 対象例:
 
-- `src/lib/supabase/types.ts`（`types:generate` 結果）
+- `packages/database/src/generated/database.types.ts`（`types:generate` 結果）
 - `.next/` build artifact
 - `coverage/` test coverage report
 - Zod からの型 inference 結果

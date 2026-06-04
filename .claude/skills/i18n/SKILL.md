@@ -1,6 +1,6 @@
 ---
 name: i18n
-description: UI テキストを含む component の新規実装・編集時、ハードコードされた日本語/英語の文字列リテラルを検出した時、`messages/en/*.json` / `messages/ja/*.json` 翻訳ファイルを編集する時、新規 locale namespace を `src/lib/i18n/request.ts` に追加する時に発動。next-intl v4 の `useTranslations` / `getTranslations` パターンを適用する。内部ログやエラーコードなど非 UI 文字列には発動しない。
+description: UI テキストを含む component の新規実装・編集時、ハードコードされた日本語/英語の文字列リテラルを検出した時、`apps/product/messages/en/*.json` / `apps/product/messages/ja/*.json` 翻訳ファイルを編集する時、新規 locale namespace を `apps/product/src/lib/i18n/request.ts` に追加する時に発動。next-intl v4 の `useTranslations` / `getTranslations` パターンを適用する。内部ログやエラーコードなど非 UI 文字列には発動しない。
 effort: low
 maxTurns: 10
 ---
@@ -14,8 +14,8 @@ Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 以下の状況で発動:
 
 - 新規 component で UI テキスト（ボタン文言、ラベル、placeholder、aria-label）を書く時
-- `messages/en/*.json` / `messages/ja/*.json` に新規キーを追加する時
-- 新規 namespace を `src/lib/i18n/request.ts` の `NAMESPACES` 配列に登録する時
+- `apps/product/messages/en/*.json` / `apps/product/messages/ja/*.json` に新規キーを追加する時
+- 新規 namespace を `apps/product/src/lib/i18n/request.ts` の `NAMESPACES` 配列に登録する時
 - 既存 component で日本語/英語のハードコード文字列リテラル（`"記録"` / `"Save"` など）を検出した時
 - en / ja のキー不整合（片方にしか存在しないキー、`lint:i18n` で検出される類）が発生した時
 
@@ -38,12 +38,12 @@ Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 
 ### 全ネームスペースのマージ
 
-`src/lib/i18n/request.ts` が全ネームスペースを一括ロードし、`Object.assign` でルートレベルにマージする。
+`apps/product/src/lib/i18n/request.ts` が全ネームスペースを一括ロードし、`Object.assign` でルートレベルにマージする。
 
 ```
-messages/en/common.json  → { common: {...}, actions: {...}, confirm: {...}, ... }
-messages/en/plan.json    → { plan: {...} }
-messages/en/calendar.json → { calendar: {...} }
+apps/product/messages/en/common.json  → { common: {...}, actions: {...}, confirm: {...}, ... }
+apps/product/messages/en/plan.json    → { plan: {...} }
+apps/product/messages/en/calendar.json → { calendar: {...} }
 ...
 ↓ Object.assign で全てマージ
 { common: {...}, actions: {...}, confirm: {...}, plan: {...}, calendar: {...}, ... }
@@ -53,7 +53,7 @@ messages/en/calendar.json → { calendar: {...} }
 
 ### ロードされるネームスペース
 
-`src/lib/i18n/request.ts` の `NAMESPACES` 配列に登録されたファイルのみロードされる:
+`apps/product/src/lib/i18n/request.ts` の `NAMESPACES` 配列に登録されたファイルのみロードされる:
 
 ```typescript
 const NAMESPACES = [
@@ -223,7 +223,7 @@ t('items', { count: 5 }); // → "5 items"
 **必ず en と ja の両方に追加する。キー構造は完全一致させる。**
 
 ```json
-// messages/en/plan.json — 追加
+// apps/product/messages/en/plan.json — 追加
 {
   "plan": {
     "toast": {
@@ -232,7 +232,7 @@ t('items', { count: 5 }); // → "5 items"
   }
 }
 
-// messages/ja/plan.json — 追加
+// apps/product/messages/ja/plan.json — 追加
 {
   "plan": {
     "toast": {
@@ -245,8 +245,8 @@ t('items', { count: 5 }); // → "5 items"
 ### 3. 検証
 
 ```bash
-npm run i18n:check    # en/ja のキー差分チェック
-npm run i18n:unused   # 未使用キーの検出
+pnpm i18n:check    # en/ja のキー差分チェック
+pnpm i18n:unused   # 未使用キーの検出
 ```
 
 ## 禁止事項
@@ -289,14 +289,14 @@ t('actions.save');
 
 ```
 // ❌ en のみ追加、ja を忘れる
-// → npm run i18n:check でエラーになる
+// → pnpm i18n:check でエラーになる
 ```
 
 ### ❌ NAMESPACES 未登録のファイルを使用
 
 ```
-// ❌ messages/en/myFeature.json を作成したが NAMESPACES に追加していない
-// → src/i18n/request.ts の NAMESPACES 配列に追加が必要
+// ❌ apps/product/messages/en/myFeature.json を作成したが NAMESPACES に追加していない
+// → apps/product/src/lib/i18n/request.ts の NAMESPACES 配列に追加が必要
 ```
 
 ### ❌ 直接インポート
@@ -319,19 +319,19 @@ const t = useTranslations();
 - [ ] 機能固有キーは feature ファイルに置いたか（common.json に混ぜていない）
 - [ ] キー名は意味のあるドット記法か（例: `plan.toast.created`）
 - [ ] 変数がある場合は `{variable}` 形式か
-- [ ] `npm run i18n:check` が通るか
+- [ ] `pnpm i18n:check` が通るか
 
 ## 言語検出の仕組み
 
 1. URLパスから言語を検出（`/ja/*` → 日本語）
 2. デフォルトは英語（プレフィックスなし）
-3. ミドルウェア（`src/lib/supabase/middleware.ts`）が自動処理
+3. ミドルウェア（`apps/product/src/lib/supabase/middleware.ts`）が自動処理
 
 ## 関連ファイル
 
-- `src/lib/i18n/routing.ts` - ルーティング設定
-- `src/lib/i18n/request.ts` - メッセージローダー（NAMESPACES 定義）
-- `src/lib/i18n/navigation.ts` - ナビゲーションユーティリティ
-- `src/lib/supabase/middleware.ts` - 言語検出 + Auth ミドルウェア
-- `src/lib/i18n/scripts/check-keys.ts` - キー差分チェック（`npm run i18n:check`）
-- `src/lib/i18n/scripts/find-unused.ts` - 未使用キー検出（`npm run i18n:unused`）
+- `apps/product/src/lib/i18n/routing.ts` - ルーティング設定
+- `apps/product/src/lib/i18n/request.ts` - メッセージローダー（NAMESPACES 定義）
+- `apps/product/src/lib/i18n/navigation.ts` - ナビゲーションユーティリティ
+- `apps/product/src/lib/supabase/middleware.ts` - 言語検出 + Auth ミドルウェア
+- `apps/product/src/lib/i18n/scripts/check-keys.ts` - キー差分チェック（`pnpm i18n:check`）
+- `apps/product/src/lib/i18n/scripts/find-unused.ts` - 未使用キー検出（`pnpm i18n:unused`）

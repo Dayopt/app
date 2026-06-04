@@ -37,7 +37,7 @@ Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下�
   - Docker Desktop 起動後に `npx supabase status` で前提状態を確認する
   - `nc -vz 127.0.0.1 54321` で HTTP endpoint の待ち受けを確認する
   - MCP tool の `list_tables` が通れば利用可能と判断する
-- **境界ケース**: `npm run types:generate` を走らせる前に、MCP でスキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。現在は単一 project 運用のため dev / preview / production すべて同じ Production project を参照する。
+- **境界ケース**: `pnpm types:generate` を走らせる前に、MCP でスキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。現在は単一 project 運用のため dev / preview / production すべて同じ Production project を参照する。
 
 ### Context7 (`mcp__context7__*`)
 

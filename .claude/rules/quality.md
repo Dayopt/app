@@ -1,7 +1,7 @@
 ---
 paths:
-  - 'src/**/*.{ts,tsx}'
-  - 'src/**/*.test.{ts,tsx}'
+  - 'apps/product/src/**/*.{ts,tsx}'
+  - 'apps/product/src/**/*.test.{ts,tsx}'
 ---
 
 # 品質・テスト・パフォーマンス
@@ -11,8 +11,8 @@ paths:
 優先順位: ビジネスロジック > カスタムフック > 複雑なコンポーネント > ユーティリティ
 
 ```bash
-npm run test          # 全体実行
-npm run test -- path  # 特定ファイル
+pnpm test          # 全体実行
+pnpm test -- path  # 特定ファイル
 ```
 
 詳細: `.claude/skills/test/SKILL.md`
