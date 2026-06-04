@@ -4,8 +4,7 @@
 
 ## 1. 情報収集
 
-- `git log --oneline --since="00:00" --all` で今日のコミットを取得（app リポジトリ）
-- `git -C ~/Desktop/web log --oneline --since="00:00" --all` で web リポジトリのコミットも取得
+- `git log --oneline --since="00:00" --all` で今日のコミットを取得（monorepo 全体。apps/product / apps/web / apps/storybook / packages を含む）
 - `git diff --stat $(git log --since="00:00" --format=%H | tail -1)^..HEAD` で変更規模を把握
 - 既存のセッションログがあれば `apps/storybook/docs/dev/sessions/` を確認
 
