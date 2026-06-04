@@ -4,72 +4,71 @@ import { describe, expect, it, vi } from 'vitest';
 import { useAutoAdjustEndTime } from '../useAutoAdjustEndTime';
 
 describe('useAutoAdjustEndTime', () => {
-  describe('開始時刻変更時の自動調整', () => {
+  describe('開始時刻のユーザー編集時の自動調整', () => {
     it('終了時刻が未設定の場合、開始時刻+1時間を設定する', () => {
       const onEndTimeChange = vi.fn();
+      const { result } = renderHook(() => useAutoAdjustEndTime('09:00', '', onEndTimeChange));
 
-      const { rerender } = renderHook(
-        ({ startTime, endTime }) => useAutoAdjustEndTime(startTime, endTime, onEndTimeChange),
-        { initialProps: { startTime: '09:00', endTime: '' } },
-      );
-
-      // 開始時刻を変更
-      rerender({ startTime: '10:00', endTime: '' });
+      act(() => {
+        result.current.handleStartTimeChange('10:00');
+      });
 
       expect(onEndTimeChange).toHaveBeenCalledWith('11:00');
     });
 
     it('終了時刻が設定済みの場合、時間幅を保持する', () => {
       const onEndTimeChange = vi.fn();
-
-      const { rerender } = renderHook(
-        ({ startTime, endTime }) => useAutoAdjustEndTime(startTime, endTime, onEndTimeChange),
-        { initialProps: { startTime: '09:00', endTime: '10:30' } },
-      );
+      const { result } = renderHook(() => useAutoAdjustEndTime('09:00', '10:30', onEndTimeChange));
 
       // 開始時刻を1時間ずらす → 終了時刻も1時間ずれるべき（90分の幅を保持）
-      rerender({ startTime: '10:00', endTime: '10:30' });
+      act(() => {
+        result.current.handleStartTimeChange('10:00');
+      });
 
       expect(onEndTimeChange).toHaveBeenCalledWith('11:30');
     });
 
     it('23時以降の場合、日をまたいで計算する（24時間制ラップ）', () => {
       const onEndTimeChange = vi.fn();
+      const { result } = renderHook(() => useAutoAdjustEndTime('22:00', '', onEndTimeChange));
 
-      const { rerender } = renderHook(
-        ({ startTime, endTime }) => useAutoAdjustEndTime(startTime, endTime, onEndTimeChange),
-        { initialProps: { startTime: '22:00', endTime: '' } },
-      );
-
-      rerender({ startTime: '23:30', endTime: '' });
+      act(() => {
+        result.current.handleStartTimeChange('23:30');
+      });
 
       expect(onEndTimeChange).toHaveBeenCalledWith('00:30');
     });
-  });
 
-  describe('手動変更による自動調整の停止', () => {
-    it('終了時刻を手動変更すると自動調整が停止する', () => {
+    it('同じ開始時刻（同値編集・mobile picker の同値確定など）では呼ばない', () => {
       const onEndTimeChange = vi.fn();
+      const { result } = renderHook(() => useAutoAdjustEndTime('09:00', '10:00', onEndTimeChange));
 
-      const { result, rerender } = renderHook(
-        ({ startTime, endTime }) => useAutoAdjustEndTime(startTime, endTime, onEndTimeChange),
-        { initialProps: { startTime: '09:00', endTime: '10:00' } },
-      );
-
-      // 手動で終了時刻を変更
       act(() => {
-        result.current.handleEndTimeChange('12:00');
+        result.current.handleStartTimeChange('09:00');
       });
 
-      onEndTimeChange.mockClear();
+      expect(onEndTimeChange).not.toHaveBeenCalled();
+    });
+  });
 
-      // 開始時刻を変更しても自動調整されない
-      rerender({ startTime: '10:00', endTime: '12:00' });
+  describe('プログラム的な開始時刻変化では発火しない（回帰: 記録延長が再オープンで戻るバグ）', () => {
+    it('handleStartTimeChange を経ない startTime 変化（初期ロード／エントリ切替／refetch）では onEndTimeChange を呼ばない', () => {
+      const onEndTimeChange = vi.fn();
+
+      const { rerender } = renderHook(
+        ({ startTime, endTime }) => useAutoAdjustEndTime(startTime, endTime, onEndTimeChange),
+        { initialProps: { startTime: '', endTime: '' } },
+      );
+
+      // entry ロードで startTime が '' → '13:00' に遷移（ユーザー編集ではない）
+      rerender({ startTime: '13:00', endTime: '14:30' });
+      // 別エントリへ切替で startTime が変化（ユーザー編集ではない）
+      rerender({ startTime: '09:00', endTime: '10:00' });
 
       expect(onEndTimeChange).not.toHaveBeenCalled();
     });
 
-    it('開始時刻を変更すると自動調整が再開する', () => {
+    it('同値の開始時刻編集後にプログラム的な startTime 変化が来ても発火しない（flag-leak 回帰）', () => {
       const onEndTimeChange = vi.fn();
 
       const { result, rerender } = renderHook(
@@ -77,22 +76,14 @@ describe('useAutoAdjustEndTime', () => {
         { initialProps: { startTime: '09:00', endTime: '10:00' } },
       );
 
-      // 手動で終了時刻を変更（自動調整を停止）
+      // mobile picker で同値を確定（onChange が同値で呼ばれる相当）→ 何も起きない
       act(() => {
-        result.current.handleEndTimeChange('12:00');
+        result.current.handleStartTimeChange('09:00');
       });
+      // その後にエントリ切替などプログラム的な startTime 変化
+      rerender({ startTime: '15:00', endTime: '16:00' });
 
-      // handleStartTimeChangeを呼ぶと自動調整が再開
-      act(() => {
-        result.current.handleStartTimeChange('11:00');
-      });
-
-      onEndTimeChange.mockClear();
-
-      // 開始時刻を変更すると自動調整される
-      rerender({ startTime: '11:00', endTime: '12:00' });
-
-      expect(onEndTimeChange).toHaveBeenCalled();
+      expect(onEndTimeChange).not.toHaveBeenCalled();
     });
   });
 
@@ -101,11 +92,14 @@ describe('useAutoAdjustEndTime', () => {
       const onEndTimeChange = vi.fn();
       const { result } = renderHook(() => useAutoAdjustEndTime('09:00', '10:00', onEndTimeChange));
 
-      const returned = result.current.handleStartTimeChange('11:00');
-      expect(returned).toBe('11:00');
+      let returned: string;
+      act(() => {
+        returned = result.current.handleStartTimeChange('11:00');
+      });
+      expect(returned!).toBe('11:00');
     });
 
-    it('handleEndTimeChangeは入力値をそのまま返す', () => {
+    it('handleEndTimeChangeは入力値をそのまま返し、onEndTimeChange を呼ばない', () => {
       const onEndTimeChange = vi.fn();
       const { result } = renderHook(() => useAutoAdjustEndTime('09:00', '10:00', onEndTimeChange));
 
@@ -114,21 +108,6 @@ describe('useAutoAdjustEndTime', () => {
         returned = result.current.handleEndTimeChange('12:00');
       });
       expect(returned!).toBe('12:00');
-    });
-  });
-
-  describe('エッジケース', () => {
-    it('同じ開始時刻の場合は変更されない', () => {
-      const onEndTimeChange = vi.fn();
-
-      const { rerender } = renderHook(
-        ({ startTime, endTime }) => useAutoAdjustEndTime(startTime, endTime, onEndTimeChange),
-        { initialProps: { startTime: '09:00', endTime: '10:00' } },
-      );
-
-      // 同じ値で再レンダリング
-      rerender({ startTime: '09:00', endTime: '10:00' });
-
       expect(onEndTimeChange).not.toHaveBeenCalled();
     });
   });
