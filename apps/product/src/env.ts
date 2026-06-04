@@ -63,12 +63,15 @@ const serverSchema = z
   })
   .refine(
     (data) => {
+      if (!(data.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production')) {
+        return true;
+      }
       const hasKey = !!data.STRIPE_SECRET_KEY;
       const hasWebhook = !!data.STRIPE_WEBHOOK_SECRET;
       return hasKey === hasWebhook;
     },
     {
-      message: 'STRIPE_SECRET_KEY と STRIPE_WEBHOOK_SECRET はペアで設定してください',
+      message: 'STRIPE_SECRET_KEY と STRIPE_WEBHOOK_SECRET は本番環境ではペアで設定してください',
       path: ['STRIPE_WEBHOOK_SECRET'],
     },
   )
