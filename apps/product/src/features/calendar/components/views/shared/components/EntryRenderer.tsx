@@ -234,6 +234,8 @@ export const EntryRenderer = React.memo(function EntryRenderer({
             previewTime={interactionState.previewTime}
             message={t('entry.errors.timeOverlap')}
             className="pointer-events-none absolute inset-0"
+            // EntryCard root は z-index 10（選択中 30）を持つため、その上に重ねる
+            style={{ zIndex: 40 }}
           />
         )}
       </div>

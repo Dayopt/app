@@ -9,6 +9,8 @@
  * className で呼び出し側に委ねる。
  */
 
+import type React from 'react';
+
 import { cn } from '@/lib/utils';
 
 import type { TimeRange } from '../../../../domain/interaction/types';
@@ -18,10 +20,13 @@ export function ConflictOverlay({
   previewTime,
   message,
   className,
+  style,
 }: {
   previewTime: TimeRange;
   message: string;
   className?: string;
+  /** リサイズ時に EntryCard より前面へ重ねるための z-index 等を渡す */
+  style?: React.CSSProperties;
 }) {
   const startH = previewTime.start.getHours();
   const startM = String(previewTime.start.getMinutes()).padStart(2, '0');
@@ -33,6 +38,7 @@ export function ConflictOverlay({
         'bg-destructive-tint text-destructive flex flex-col gap-1 overflow-hidden rounded-lg p-2',
         className,
       )}
+      style={style}
     >
       <span className="text-sm leading-tight font-medium">{message}</span>
       <span className="text-xs leading-tight tabular-nums">
