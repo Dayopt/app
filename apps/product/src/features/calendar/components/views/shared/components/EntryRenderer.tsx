@@ -233,7 +233,9 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           <ConflictOverlay
             previewTime={interactionState.previewTime}
             message={t('entry.errors.timeOverlap')}
-            className="pointer-events-none absolute inset-0"
+            // EntryCard は rounded-r-lg（左角は四角）なので左角を揃える。
+            // rounded-lg のままだと左角が丸まり背面のカード角がはみ出す。
+            className="pointer-events-none absolute inset-0 rounded-l-none"
             // EntryCard root は z-index 10（選択中 30）を持つため、その上に重ねる
             style={{ zIndex: 40 }}
           />
