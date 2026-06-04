@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 
 import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
 import { entryTintColor } from '@/features/entry';
-import { getTagColorClasses } from '@/features/tags';
+import { getTagColorClasses, TagIcon } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeString } from '@/lib/date';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 
 import { useTagDraftStore, type TagDraft } from '../../../../stores/useTagDraftStore';
 import { Z_INDEX } from '../constants/grid.constants';
+import { ConflictOverlay } from './ConflictOverlay';
 
 /** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */
 function isEntriesListQuery(query: { queryKey: unknown }): boolean {
@@ -178,64 +179,69 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
             : {}),
         }}
       >
-        {/* 左 accent strip — past unplanned 風の時は描画しない */}
-        {!(isPast && !hasConflict) && (
-          <div
-            className={cn('shrink-0', hasConflict ? 'bg-destructive' : 'opacity-70')}
-            style={{ width: '3px', ...(hasConflict ? {} : { backgroundColor: accentColor }) }}
+        {hasConflict ? (
+          // drag/resize/新規選択と同一の ConflictOverlay に統一。
+          // ブロックは rounded-r-lg（左角四角 + 3px アクセント）なので左角を四角にして全面を覆う。
+          <ConflictOverlay
+            message={t('entry.errors.timeOverlap')}
+            timeLabel={timeLabel}
+            compact={height < 40}
+            className="absolute inset-0 rounded-l-none"
           />
+        ) : (
+          <>
+            {/* 左 accent strip — past unplanned 風の時は描画しない */}
+            {!isPast && (
+              <div
+                className="shrink-0 opacity-70"
+                style={{ width: '3px', backgroundColor: accentColor }}
+              />
+            )}
+            {/* card 本体 — past は透明背景（破線枠で囲うのみ） */}
+            <div
+              className={cn(
+                'relative min-w-0 flex-1 overflow-hidden',
+                isPast ? 'rounded-lg' : 'rounded-r-lg',
+              )}
+              style={isPast ? undefined : { backgroundColor: tintColor }}
+            >
+              {height < 40 ? (
+                <div className="flex h-full items-center gap-1 px-2">
+                  {draft.tag.icon && (
+                    <TagIcon
+                      icon={draft.tag.icon}
+                      color={draft.tag.color}
+                      size="sm"
+                      className="shrink-0"
+                    />
+                  )}
+                  <span className="text-foreground truncate text-xs font-normal">
+                    <ColonTagLabel name={draft.tag.name} />
+                  </span>
+                </div>
+              ) : (
+                <div className="flex h-full flex-col gap-1 p-2">
+                  <div className="flex items-center gap-1">
+                    {draft.tag.icon && (
+                      <TagIcon
+                        icon={draft.tag.icon}
+                        color={draft.tag.color}
+                        size="sm"
+                        className="shrink-0"
+                      />
+                    )}
+                    <span className="text-foreground min-w-0 text-sm leading-tight font-normal">
+                      <ColonTagLabel name={draft.tag.name} />
+                    </span>
+                  </div>
+                  <span className="text-muted-foreground text-xs leading-tight tabular-nums">
+                    {timeLabel}
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
         )}
-        {/* card 本体 — 重複時は destructive-tint、past は透明背景（破線枠で囲うのみ） */}
-        <div
-          className={cn(
-            'relative min-w-0 flex-1 overflow-hidden',
-            isPast && !hasConflict ? 'rounded-lg' : 'rounded-r-lg',
-            hasConflict && 'bg-destructive-tint',
-          )}
-          style={
-            hasConflict || (isPast && !hasConflict) ? undefined : { backgroundColor: tintColor }
-          }
-        >
-          {height < 40 ? (
-            <div className="flex h-full items-center px-2">
-              <span
-                className={cn(
-                  'truncate text-xs font-normal',
-                  hasConflict ? 'text-destructive' : 'text-foreground',
-                )}
-              >
-                {hasConflict ? (
-                  t('entry.errors.timeOverlap')
-                ) : (
-                  <ColonTagLabel name={draft.tag.name} />
-                )}
-              </span>
-            </div>
-          ) : (
-            <div className="flex h-full flex-col gap-1 p-2">
-              <span
-                className={cn(
-                  'text-sm leading-tight font-normal',
-                  hasConflict ? 'text-destructive' : 'text-foreground',
-                )}
-              >
-                {hasConflict ? (
-                  t('entry.errors.timeOverlap')
-                ) : (
-                  <ColonTagLabel name={draft.tag.name} />
-                )}
-              </span>
-              <span
-                className={cn(
-                  'text-xs leading-tight tabular-nums',
-                  hasConflict ? 'text-destructive' : 'text-muted-foreground',
-                )}
-              >
-                {timeLabel}
-              </span>
-            </div>
-          )}
-        </div>
         {/* resize pill — pointer-events を有効化 */}
         <span
           aria-hidden

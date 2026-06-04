@@ -39,6 +39,7 @@ import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore
 
 import { Z_INDEX } from '../../constants/grid.constants';
 import { DRAG_CONSTANTS } from '../CalendarDragSelection/types';
+import { ConflictOverlay } from '../ConflictOverlay';
 
 /** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */
 function isEntriesListQuery(query: { queryKey: unknown }): boolean {
@@ -489,82 +490,63 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
           }}
           onPointerDown={handleBodyPointerDown}
         >
-          {/* 左アクセントストリップ — past unplanned 風の時は描画しない */}
-          {!(isPast && !hasConflict) && (
-            <div
-              className={cn(
-                'shrink-0 transition-colors duration-150',
-                hasConflict ? 'bg-destructive' : 'opacity-70',
-              )}
-              style={{
-                width: '3px',
-                ...(hasConflict ? {} : { backgroundColor: accentColor }),
-              }}
+          {hasConflict ? (
+            // drag/resize/新規選択と同一の ConflictOverlay に統一。
+            // ブロックは rounded-r-lg（左角四角 + 3px アクセント）なので左角を四角にして全面を覆う。
+            <ConflictOverlay
+              message={tEntry('errors.timeOverlap')}
+              timeLabel={timeLabel}
+              compact={selectionHeight < 40}
+              className="absolute inset-0 rounded-l-none"
             />
+          ) : (
+            <>
+              {/* 左アクセントストリップ — past unplanned 風の時は描画しない */}
+              {!isPast && (
+                <div
+                  className="shrink-0 opacity-70 transition-colors duration-150"
+                  style={{ width: '3px', backgroundColor: accentColor }}
+                />
+              )}
+              {/* カード本体 — past は透明背景（破線枠で囲うのみ） */}
+              <div
+                className={cn(
+                  'min-w-0 flex-1 overflow-hidden transition-colors duration-150',
+                  isPast ? 'rounded-lg' : 'rounded-r-lg',
+                )}
+                style={isPast ? undefined : { backgroundColor: tintColor }}
+              >
+                {selectionHeight < 40 ? (
+                  <div className="flex h-full items-center px-2">
+                    <span
+                      className={cn(
+                        'truncate text-xs',
+                        hoveredTag
+                          ? 'text-foreground font-normal'
+                          : 'text-muted-foreground tabular-nums',
+                      )}
+                    >
+                      {hoveredTag ? <ColonTagLabel name={displayName} /> : timeLabel}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex h-full flex-col gap-1 p-2">
+                    <span
+                      className={cn(
+                        'text-sm leading-tight font-normal',
+                        hoveredTag ? 'text-foreground' : 'text-muted-foreground',
+                      )}
+                    >
+                      {hoveredTag ? <ColonTagLabel name={displayName} /> : displayName}
+                    </span>
+                    <span className="text-muted-foreground text-xs leading-tight tabular-nums">
+                      {timeLabel}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </>
           )}
-          {/* カード本体 — 重複時は destructive-tint、past は透明背景（破線枠で囲うのみ） */}
-          <div
-            className={cn(
-              'min-w-0 flex-1 overflow-hidden transition-colors duration-150',
-              isPast && !hasConflict ? 'rounded-lg' : 'rounded-r-lg',
-              hasConflict && 'bg-destructive-tint',
-            )}
-            style={
-              hasConflict || (isPast && !hasConflict) ? undefined : { backgroundColor: tintColor }
-            }
-          >
-            {selectionHeight < 40 ? (
-              <div className="flex h-full items-center px-2">
-                <span
-                  className={cn(
-                    'truncate text-xs',
-                    hasConflict
-                      ? 'text-destructive font-normal'
-                      : hoveredTag
-                        ? 'text-foreground font-normal'
-                        : 'text-muted-foreground tabular-nums',
-                  )}
-                >
-                  {hasConflict ? (
-                    tEntry('errors.timeOverlap')
-                  ) : hoveredTag ? (
-                    <ColonTagLabel name={displayName} />
-                  ) : (
-                    timeLabel
-                  )}
-                </span>
-              </div>
-            ) : (
-              <div className="flex h-full flex-col gap-1 p-2">
-                <span
-                  className={cn(
-                    'text-sm leading-tight font-normal',
-                    hasConflict
-                      ? 'text-destructive'
-                      : hoveredTag
-                        ? 'text-foreground'
-                        : 'text-muted-foreground',
-                  )}
-                >
-                  {hasConflict ? (
-                    tEntry('errors.timeOverlap')
-                  ) : hoveredTag ? (
-                    <ColonTagLabel name={displayName} />
-                  ) : (
-                    displayName
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    'text-xs leading-tight tabular-nums',
-                    hasConflict ? 'text-destructive' : 'text-muted-foreground',
-                  )}
-                >
-                  {timeLabel}
-                </span>
-              </div>
-            )}
-          </div>
           {/* 下端 visual indicator pill */}
           <span
             aria-hidden
