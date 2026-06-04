@@ -1,0 +1,34 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Strategy/Journal/2026-06" />
+
+# 2026年6月 Diary
+
+---
+
+## 2026-06-04
+
+### モノレポ移行後の .claude/ 一括監査と Supabase Preview Branching 導入の日
+
+8 コミット。変更ファイルは 50 本超。午前は Supabase Preview Branching への移行（PR #1256、#1257）、午後は `.claude/` 全体の monorepo 対応監査（PR #1258）を実施。インフラ層と AI 支援層の両方を一日で整備した。
+
+#### やったこと
+
+- **Supabase Preview Branching 移行 (2 commits)**: `supabase/config.toml` を preview branching 対応に更新。`supabase-migration.yml` GitHub Actions ワークフローを廃止し Supabase CLI の preview branch 機能に一本化。Auth SMTP を preview 環境で無効化し、seed をpreview-safe defaults に更新。production migration history の欠損も同日復元
+- **.claude/ monorepo 対応 (6 commits → PR #1258)**: `.mcp.json` に playwright・github MCP を追加。`skill/` と `rules/` 全体のパス（`src/` → `apps/product/src/`）、コマンド（`npm run` → `pnpm`）、別リポジトリ参照を一括修正。skill 許可リストの stale エントリ（`less-permission-prompts`）を実名（`fewer-permission-prompts`）に整合。コードレビュー指摘の grep パスと vitest 引数も修正
+
+#### なぜ今日この作業をしたか
+
+Supabase Preview Branching は、PR ごとにマイグレーションを独立した環境で検証できる仕組みで、「本番 DB を直接触らずに migration を確認する」という長期的な安全弁として重要だった。旧来の `supabase-migration.yml` は CI 上で production に直接 push する構造であり、リスクの高い運用だった。移行後は preview branch がマイグレーション確認の主経路となり、production push は明示的な merge 操作のみに絞られる。
+
+`.claude/` 監査は monorepo 移行（単一 Next.js app → apps/product + apps/web + packages/\*）が完了した後に積み残されていたメンテナンス負債の解消だった。旧構造のパス参照が残ったままでは Claude の skill/rules がコードベースと乖離し続ける。今日一括で直したことで、以降の AI セッションで正確なパス案内ができるようになった。playwright・github MCP の追加は、「UI 変更の視覚確認を Claude Code に任せる」「PR 参照を URL コピペなしで取得する」という運用改善の第一歩。
+
+#### Claudeの所感
+
+**AI 支援系の設定ファイルにも技術的負債が積む**: `.claude/` 配下の rules・skills は「AI への指示書」だが、コードと同じく旧構造への参照が残り続ける。今回の監査で 26 ファイル・154 行の変更が必要だったことは、monorepo 移行後の整理が後回しになっていた規模の大きさを示している。AI 支援ファイルは通常のコードと同じ保守コストを持つという認識が必要。
+
+**Preview Branching は「migration を PR レビューで止められる」唯一の構造**: 旧来の GitHub Actions 直 push は「merge されたら即 production 反映」だった。Preview Branching では Supabase の branch merge が別操作になるため、「コードのレビュー」と「DB 変更のレビュー」を分離できる。これは solo dev でも有効で、後日見返す際にも migration の意図が PR に残る。
+
+**Auth SMTP の preview 無効化は見落としやすいトラップ**: Preview Branch はローカル supabase とは別の Supabase project instance を持つが、Auth SMTP 設定はそのまま引き継がれる。preview 環境で実際にメールを送信しようとすると SMTP エラーになる。今回 `config.toml` で明示的に無効化したが、この挙動は Supabase のドキュメントには目立たない形でしか書かれておらず、実際に遭遇して初めて分かる類のものだった。
+
+---
