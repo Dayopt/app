@@ -31,7 +31,7 @@ Zustand でグローバル、useState でローカル。セレクタで必要な
 `useXxxStore` を別 store に統合・別 path へ移動・削除する時、以下を必ず grep で確認する。見落とすと Storybook preview が無限リロードに陥る（2026-04-22 の事故事例）:
 
 ```bash
-grep -rn "useOldStoreName" src .storybook tests 2>/dev/null
+grep -rn "useOldStoreName" apps/product/src apps/storybook 2>/dev/null
 ```
 
 特に要チェック:
@@ -49,7 +49,7 @@ messages/ 配下の `{namespace}.json` を削除・リネームする時、以�
 
 ```bash
 # useTranslations / getTranslations の namespace 参照
-grep -rnE "useTranslations\(['\"]{ns}['\"]|getTranslations\(['\"]{ns}['\"]" src .storybook
+grep -rnE "useTranslations\(['\"]{ns}['\"]|getTranslations\(['\"]{ns}['\"]" apps/product/src apps/storybook
 
 # namespace リストへのハードコード
 grep -rn "['\"]{ns}['\"]" apps/product/src/app/\*\*/layout.tsx apps/product/src/lib/i18n/

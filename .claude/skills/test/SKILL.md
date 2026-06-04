@@ -57,8 +57,8 @@ apps/product/src/features/{feature}/
 # 単一ファイル
 pnpm test -- path/to/file.test.ts
 
-# 特定のディレクトリ
-pnpm test -- apps/product/src/features/calendar/
+# 特定のディレクトリ（pnpm test は apps/product 内で vitest を起動するため package-relative）
+pnpm test -- src/features/calendar/
 
 # 全体
 pnpm test
