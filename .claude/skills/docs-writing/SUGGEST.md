@@ -57,7 +57,7 @@
 
 | 対象 | 操作 | 理由 |
 |------|------|------|
-| `content/docs/features/plans.mdx` | 更新 | 機能の変更内容を反映 |
+| `apps/web/content/docs/features/plans.mdx` | 更新 | 機能の変更内容を反映 |
 
 `/write-docs` コマンドで執筆を開始できます。
 

@@ -81,7 +81,7 @@ npx tsx scripts/eagle-sync.ts --version v0.25    # バージョンタグ付き
 ### 撮影+同期ワンコマンド
 
 ```bash
-npm run eagle:sync:capture
+pnpm eagle:sync:capture
 ```
 
 ### 検索（eagle-lookup）
@@ -185,4 +185,4 @@ Archive/
 ## 設計書
 
 詳細は Storybook ドキュメントを参照:
-`src/stories/docs/guides/EagleAssetManagement.mdx`
+`apps/storybook/docs/dev/guides/EagleAssetManagement.mdx`

@@ -144,9 +144,9 @@ commit 前に必ず `git diff --cached` で index 内容を確認する。Edit �
 
 中規模以上の作業では以下を必ず pass:
 
-- `npm run typecheck`
-- `npm run lint`（lint:boundaries 含む）
-- `npm run build`（routing / layout 変更時）
+- `pnpm typecheck`
+- `pnpm lint`（lint:boundaries 含む）
+- `pnpm build`（routing / layout 変更時）
 
 ### Storybook 視覚確認
 

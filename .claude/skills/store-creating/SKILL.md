@@ -13,7 +13,7 @@ DayoptプロジェクトのZustand storeを規約に沿って作成するスキ�
 
 以下の状況で発動:
 
-- `src/stores/` 配下に新規 Zustand store を追加する時
+- `apps/product/src/lib/stores/` 配下に新規 Zustand store を追加する時
 - 新規 feature に UI の client-side 共有状態（モーダル開閉、選択状態、ウィザード state）が必要になった時
 - persist middleware で localStorage に永続化したい state を定義する時
 - devtools / persist middleware を既存 store に追加・変更する時
@@ -211,10 +211,10 @@ export const useEntityFilterStore = create<FilterState>()(
 ## 既存ストア参考
 
 ```
-src/features/tags/stores/
+apps/product/src/features/tags/stores/
 └── useTagCacheStore.ts      # Realtime競合防止フラグ（isMutating）
 
-src/features/calendar/stores/
+apps/product/src/features/calendar/stores/
 ├── useCalendarFilterStore.ts  # フィルター
 ├── useCalendarScrollStore.ts  # スクロール位置
 └── useCalendarDragStore.ts    # ドラッグ状態

@@ -2,7 +2,7 @@
 
 Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下の場面では積極的に MCP を呼ぶこと。推測より確認を優先する。
 
-接続済みサーバーは `.mcp.json` を参照（eagle / supabase-local / context7 / sentry）。`.claude/settings.local.json` の `enabledMcpjsonServers` でも4つすべてを明示的に有効化する。Playwright / GitHub は未接続だが将来追加を想定して方針のみ記載する。
+接続済みサーバーは `.mcp.json` を参照（eagle / supabase-local / context7 / sentry / playwright / github）。`enabledMcpjsonServers` を `.claude/settings.local.json` に設定している場合は、追加した playwright / github も忘れず有効化する。
 
 ## 運用方針
 
@@ -37,7 +37,7 @@ Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下�
   - Docker Desktop 起動後に `npx supabase status` で前提状態を確認する
   - `nc -vz 127.0.0.1 54321` で HTTP endpoint の待ち受けを確認する
   - MCP tool の `list_tables` が通れば利用可能と判断する
-- **境界ケース**: `npm run types:generate` を走らせる前に、MCP でスキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。現在は単一 project 運用のため dev / preview / production すべて同じ Production project を参照する。
+- **境界ケース**: `pnpm types:generate` を走らせる前に、MCP でスキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。現在は単一 project 運用のため dev / preview / production すべて同じ Production project を参照する。
 
 ### Context7 (`mcp__context7__*`)
 
@@ -61,22 +61,25 @@ Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下�
   - `GET http://127.0.0.1:41596/mcp` が `405 Method Not Allowed` を返せば endpoint は生存している
 - **境界ケース**: スクリーンショット撮影は「タグごと」に行うルール（push ごとではない）。詳細は `eagle-dayopt` skill に従う。
 
-## 未接続 MCP サーバー（将来追加予定）
+### Playwright (`mcp__playwright__*`)
 
-### Playwright — Status: not yet connected
-
-- **Invoke when** (接続後):
+- **Invoke when**:
   - UI 変更実装後、Stats ページ / Hero / block-visual 等のビジュアル結果をスクリーンショットで確認する
-  - E2E スモークが失敗した際の再現状況を撮影する
+  - E2E スモーク（`apps/product` / `apps/web` の `playwright.config.ts`）が失敗した際の再現状況を撮影する
   - Storybook の variant レンダリングを検証する
+- **Before use**:
+  - 検証対象（`pnpm storybook` の localhost:6006、または `pnpm dev` の app）が起動していることを確認する
+  - 初回は `@playwright/mcp` がブラウザバイナリを取得するため、`browser_navigate` の初回呼び出しが遅延しうる
 - **境界ケース**: 「型チェック・lint は通った」だけで完了報告しない。UI 変更は Playwright スクリーンショットで視覚確認するまでが完了。
 
-### GitHub — Status: not yet connected
+### GitHub (`mcp__github__*`)
 
-- **Invoke when** (接続後):
+- **Invoke when**:
   - ユーザーが PR / issue / commit を番号や URL で参照したら、本文をペーストしてもらう前に MCP で取得する
   - リリースノート作成時にマージ済み PR 一覧を構造化データで取得する
   - 複数 PR や issue の横断集計を行う時
+- **Before use**:
+  - 初回は OAuth 承認（`/mcp` で承認フロー）が必要。token は repo に置かない
 - **境界ケース**: 単純な単一取得（`gh pr view N`）は `gh` CLI で十分。構造化抽出や横断集計が必要なときに MCP を使う。
 
 ## 共通原則

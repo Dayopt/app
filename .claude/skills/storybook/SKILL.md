@@ -15,7 +15,7 @@ maxTurns: 15
 - 既存 component に props / variant / state を追加した後、Story 側に反映する時
 - Figma デザイン変更を component に反映した後、AllPatterns Story を更新する時
 - 新しい Foundation / Pattern（トークン、レイアウト規則）を定義して Storybook で可視化する時
-- `src/components/` 配下の UI component を新規追加する時
+- `apps/product/src/lib/components/` 配下の UI component を新規追加する時
 
 ## When NOT to Use
 
@@ -36,7 +36,7 @@ maxTurns: 15
 
 ### UI Component
 
-**パス**: `src/components/ui/`, `src/components/common/`, `src/shell/components/`
+**パス**: `apps/product/src/lib/components/ui/`, `apps/product/src/lib/components/common/`, `apps/product/src/lib/components/shell/`
 **title**: `Components/UI/` or `Components/Common/` or `Components/Shell/`
 **layout**: `centered`
 **モック**: 不要（props only）
@@ -95,7 +95,7 @@ export const Default: Story = {
 
 ### Feature Component
 
-**パス**: `src/features/*/components/`
+**パス**: `apps/product/src/features/*/components/`
 **title**: `Features/{feature名}/`
 **layout**: `padded`
 **モック**: `parameters.trpcMocks` + `parameters.storeMocks` で宣言
@@ -168,7 +168,7 @@ export const AllPatterns: Story = {
 
 ### Foundation
 
-**パス**: `src/styles/tokens/`
+**パス**: `apps/product/src/lib/styles/tokens/`
 **title**: `Foundations/`
 **layout**: `fullscreen`
 **モック**: 不要
@@ -223,7 +223,7 @@ export const Surfaces: Story = {
 
 ### Pattern
 
-**パス**: `src/stories/patterns/`
+**パス**: `apps/storybook/.storybook/stories/patterns/`
 **title**: `Patterns/`
 **layout**: `fullscreen`
 **モック**: 不要

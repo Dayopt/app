@@ -36,7 +36,7 @@ Dayoptのテスト作成を支援するスキル。Vitest + Testing Libraryを�
 ## テスト配置ルール
 
 ```
-src/features/{feature}/
+apps/product/src/features/{feature}/
 ├── components/
 │   ├── MyComponent.tsx
 │   └── __tests__/
@@ -55,16 +55,16 @@ src/features/{feature}/
 
 ```bash
 # 単一ファイル
-npm run test -- path/to/file.test.ts
+pnpm test -- path/to/file.test.ts
 
-# 特定のディレクトリ
-npm run test -- src/features/calendar/
+# 特定のディレクトリ（pnpm test は apps/product 内で vitest を起動するため package-relative）
+pnpm test -- src/features/calendar/
 
 # 全体
-npm run test
+pnpm test
 
 # ウォッチモード
-npm run test -- --watch
+pnpm test -- --watch
 ```
 
 ## テストパターン
@@ -264,7 +264,7 @@ describe('useCalendarDrag', () => {
 
 テスト実行時：
 
-- [ ] `npm run test` が通るか
+- [ ] `pnpm test` が通るか
 - [ ] 新しいテストが既存テストを壊していないか
 
 ## 関連スキル

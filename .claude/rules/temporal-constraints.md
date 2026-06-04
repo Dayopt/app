@@ -1,7 +1,7 @@
 ---
 paths:
-  - 'src/features/entry/**'
-  - 'src/features/calendar/**'
+  - 'apps/product/src/features/entry/**'
+  - 'apps/product/src/features/calendar/**'
 ---
 
 # Temporal Constraints（時間制約）
@@ -16,7 +16,7 @@ paths:
 | **active**   | `start_time <= now < end_time` |
 | **past**     | `end_time <= now`              |
 
-判定: `getEntryState()` (`src/features/entry/lib/entry-status.ts`)
+判定: `getEntryState()` (`apps/product/src/features/entry/lib/entry-status.ts`)
 
 ## 操作制約
 
