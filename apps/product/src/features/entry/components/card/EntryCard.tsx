@@ -45,6 +45,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   entry,
   tagName = null,
   tagColor = null,
+  tagIcon = null,
   position,
   onClick,
   onContextMenu,
@@ -538,6 +539,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             <EntryCardContent
               plan={entry}
               tagName={tagName}
+              tagColor={tagColor}
+              tagIcon={tagIcon}
               isCompact={actualLayerHeight < 40}
               showTime={actualLayerHeight >= 30}
               previewTime={previewTime}
@@ -569,6 +572,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           <EntryCardContent
             plan={entry}
             tagName={tagName}
+            tagColor={tagColor}
+            tagIcon={tagIcon}
             isCompact={contentLayerHeight < 40}
             showTime={contentLayerHeight >= 30}
             previewTime={previewTime}

@@ -196,6 +196,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           entry={entry}
           tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
           tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
+          tagIcon={entry.tagId ? (getTagById(entry.tagId)?.icon ?? null) : null}
           onAnchorRect={setAnchorRect}
           isMobile={isMobile}
           position={{ top: 0, left: 0, width: 100, height: finalHeight }}

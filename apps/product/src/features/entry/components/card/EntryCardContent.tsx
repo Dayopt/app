@@ -8,6 +8,7 @@ import { memo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { TagIcon } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeRange } from '@/lib/date';
 import type { CalendarEvent } from '../../types/calendar-event';
@@ -15,6 +16,8 @@ import type { CalendarEvent } from '../../types/calendar-event';
 interface EntryCardContentProps {
   plan: CalendarEvent;
   tagName: string | null;
+  tagColor?: string | null;
+  tagIcon?: string | null;
   isCompact?: boolean;
   showTime?: boolean;
   timeFormat?: '12h' | '24h';
@@ -37,6 +40,8 @@ function parseEndDate(plan: CalendarEvent): Date | null {
 export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardContent({
   plan,
   tagName,
+  tagColor = null,
+  tagIcon = null,
   isCompact = false,
   showTime = true,
   timeFormat = '24h',
@@ -57,6 +62,7 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
   if (isCompact) {
     return (
       <div className="flex h-full items-center gap-1">
+        {tagIcon && <TagIcon icon={tagIcon} color={tagColor} size="sm" className="shrink-0" />}
         {tagName ? (
           <ColonTagLabel
             name={tagName}
@@ -73,7 +79,8 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
 
   return (
     <div className="relative flex h-full flex-col gap-1 overflow-hidden">
-      <div className="flex flex-shrink-0 items-baseline gap-1 text-sm leading-tight font-normal">
+      <div className="flex flex-shrink-0 items-center gap-1 text-sm leading-tight font-normal">
+        {tagIcon && <TagIcon icon={tagIcon} color={tagColor} size="sm" className="shrink-0" />}
         {tagName ? (
           <ColonTagLabel name={tagName} className="text-foreground" />
         ) : (

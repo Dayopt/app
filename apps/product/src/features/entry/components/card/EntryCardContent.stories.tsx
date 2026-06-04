@@ -137,6 +137,36 @@ export const ColonTagCompact: Story = {
   ),
 };
 
+/** タグアイコンあり。タグ名の前に lucide アイコンをタグ色で表示。 */
+export const WithTagIcon: Story = {
+  render: () => (
+    <CardSlot>
+      <EntryCardContent
+        plan={baseEntry}
+        tagName="仕事"
+        tagColor="blue"
+        tagIcon="briefcase"
+        timeFormat="24h"
+      />
+    </CardSlot>
+  ),
+};
+
+/** タグアイコンあり・コンパクト。 */
+export const WithTagIconCompact: Story = {
+  render: () => (
+    <div className="bg-card relative h-7 w-48 overflow-hidden rounded-r-lg px-2 text-xs">
+      <EntryCardContent
+        plan={baseEntry}
+        tagName="仕事"
+        tagColor="blue"
+        tagIcon="briefcase"
+        isCompact
+      />
+    </div>
+  ),
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
@@ -205,6 +235,32 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-1 text-xs">コロンタグ・Compact</p>
         <div className="bg-card relative h-7 w-48 overflow-hidden rounded-r-lg px-2 text-xs">
           <EntryCardContent plan={baseEntry} tagName="開発:API" isCompact />
+        </div>
+      </section>
+
+      <section>
+        <p className="text-muted-foreground mb-1 text-xs">タグアイコンあり</p>
+        <CardSlot>
+          <EntryCardContent
+            plan={baseEntry}
+            tagName="仕事"
+            tagColor="blue"
+            tagIcon="briefcase"
+            timeFormat="24h"
+          />
+        </CardSlot>
+      </section>
+
+      <section>
+        <p className="text-muted-foreground mb-1 text-xs">タグアイコンあり・Compact</p>
+        <div className="bg-card relative h-7 w-48 overflow-hidden rounded-r-lg px-2 text-xs">
+          <EntryCardContent
+            plan={baseEntry}
+            tagName="仕事"
+            tagColor="blue"
+            tagIcon="briefcase"
+            isCompact
+          />
         </div>
       </section>
     </div>

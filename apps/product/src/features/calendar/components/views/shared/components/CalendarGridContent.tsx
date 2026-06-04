@@ -220,6 +220,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
           entry={ghostEntry}
           tagName={tag?.name ?? null}
           tagColor={tag?.color ?? null}
+          tagIcon={tag?.icon ?? null}
           isMobile={isMobile}
           position={{ top: 0, left: 0, width: 100, height: ghostHeight }}
           plannedHeight={ghostHeight}

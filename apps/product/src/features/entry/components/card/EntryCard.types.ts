@@ -14,6 +14,8 @@ export interface EntryCardProps {
   tagName?: string | null | undefined;
   /** 解決済みタグカラー名（null = デフォルト色） */
   tagColor?: string | null | undefined;
+  /** 解決済みタグアイコン名（null = アイコンなし） */
+  tagIcon?: string | null | undefined;
   position?: EntryCardPosition | undefined;
   onClick?: ((entry: CalendarEvent) => void) | undefined;
   onContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
