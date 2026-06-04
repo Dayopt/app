@@ -14,6 +14,7 @@ import { useTranslations } from 'next-intl';
 import { entryTintColor } from '@/features/entry';
 
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
+import { ConflictOverlay } from '../ConflictOverlay';
 
 import type { TimeRange } from './types';
 
@@ -57,27 +58,16 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   endDateTime.setHours(selection.endHour, selection.endMinute, 0, 0);
   const isPast = endDateTime.getTime() <= nowForPastCheck;
 
-  // 重複時は全面 destructive 化（他の overlap visual と同じ規範）
+  // 重複時は全面 destructive 化（drag/resize のゴーストと同一の ConflictOverlay に統一）
   if (isOverlapping) {
-    const isCompact = height < 40;
     return (
-      <div
-        className="bg-destructive-tint text-destructive pointer-events-none absolute right-0 left-0 overflow-hidden rounded-lg"
+      <ConflictOverlay
+        message={tEntry('errors.timeOverlap')}
+        timeLabel={timeLabel}
+        compact={height < 40}
+        className="pointer-events-none absolute right-0 left-0"
         style={{ top, height, zIndex: 1000 }}
-      >
-        {isCompact ? (
-          <div className="flex h-full items-center px-2">
-            <span className="truncate text-xs font-normal">{tEntry('errors.timeOverlap')}</span>
-          </div>
-        ) : (
-          <div className="flex h-full flex-col gap-1 p-2">
-            <span className="text-sm leading-tight font-medium">
-              {tEntry('errors.timeOverlap')}
-            </span>
-            <span className="text-xs leading-tight tabular-nums">{timeLabel}</span>
-          </div>
-        )}
-      </div>
+      />
     );
   }
 
