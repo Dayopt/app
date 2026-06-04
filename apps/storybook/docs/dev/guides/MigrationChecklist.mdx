@@ -6,114 +6,114 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 運用モデル
 
-Dayopt は単一 Supabase project で運用する（ローンチ前の簡易構成）。
+Dayopt の標準ルートは `local → PR Preview → production`。
 
-- **プロジェクト ref**: `yvglwblxrnrenfifsnje`（Supabase Dashboard 上の表示名: `Production`）
-- **dev / preview / production** すべて同じ project を参照する
-- **ローカル**のみ `supabase start` で独立した環境
+- **Supabase project**: `dayopt`
+- **Project ref**: `yvglwblxrnrenfifsnje`
+- **Local**: `supabase start` と `pnpm dev` (`op run`) を使う
+- **PR Preview**: PR ごとの Supabase Preview Branch と Vercel Preview を使う
+- **Production**: `main` merge 後だけ Supabase main と Vercel Production に反映する
 
-| 環境           | 実体                   | 用途                                        |
-| -------------- | ---------------------- | ------------------------------------------- |
-| **Local**      | `supabase start`       | オフライン開発（デフォルトでは使わない）    |
-| **Production** | `yvglwblxrnrenfifsnje` | dev / preview / production すべてここを向く |
+| 環境           | Supabase                          | Vercel                         | 用途                         |
+| -------------- | --------------------------------- | ------------------------------ | ---------------------------- |
+| **Local**      | `supabase start`                  | `pnpm dev`                     | 手元の開発                   |
+| **PR Preview** | PR ごとの Supabase Preview Branch | Vercel Preview URL (`product`) | migration / 機能の本番前検証 |
+| **Production** | `dayopt` main                     | Production deployment          | 実ユーザー                   |
 
-> **将来計画**: Pro plan に移行して GitHub integration + branching を有効化すると、preview branch（PR 毎に ephemeral）と staging branch（persistent）が追加される。詳細は `.claude/skills/supabase/SKILL.md` の target state 節。
+persistent staging は標準ルートでは使わない。固定 URL が必要な Stripe / OAuth / closed beta 検証が発生した時だけ、Vercel staging と Supabase persistent branch を追加する。
+
+## Integration Setup
+
+Supabase Dashboard で `dayopt` project に GitHub integration を接続する。
+
+- Repository: `Dayopt/dayopt`
+- Working directory: `.`
+- Production branch: `main`
+- Automatic branching: enabled
+- Deploy to production: enabled
+- Preview Branch seed: `supabase/seed.sql`
+
+Supabase Vercel integration は `product` Vercel project のみに接続する。`web` は今回の Supabase Preview Branch 切替対象外。
+
+GitHub branch protection では Supabase integration の required check を有効化する。これにより、Preview Branch への migration 適用が失敗した PR は merge できない。
 
 ## リリースフロー全体像
 
-```
+```txt
 feature branch → PR open
-                  └── Vercel: preview deploy（Production DB を参照）
+                  ├── Supabase: Preview Branch 作成 + migration 適用 + seed
+                  └── Vercel: product Preview が Preview Branch env を参照
 
-feature branch → main merge
-                  ├── Vercel: 本番デプロイ
-                  └── GitHub Actions: Production に migration を自動適用
+PR review → checks pass → main merge
+                  ├── Supabase: main/production に migration 適用
+                  └── Vercel: product Production deploy
 ```
 
-> ⚠️ **単一 project 運用のリスク**: preview / dev が production DB を直接触るため、破壊的操作（`db reset`, 大量 delete）は厳禁。
-> RLS を信頼して分離する前提。
+Vercel Preview は production Supabase DB を参照しない。PR close / merge 後の Preview Branch は Supabase 側で削除または停止される。
 
 ## マイグレーション手順
 
 ### 1. 作成
 
 ```bash
-# 差分確認
-supabase db diff
-
-# ファイル生成
 npm run migration:create <migration_name>
-
 # supabase/migrations/YYYYMMDDHHMMSS_<migration_name>.sql を編集
 ```
 
 ### 2. ローカル検証
 
 ```bash
-# ローカル DB に適用
+supabase start
 npm run db:reset
-
-# seed 投入
-npm run db:seed   # db:fresh = reset + seed のショートカット
-
-# アプリで動作確認
+npm run db:seed
 pnpm dev
 ```
 
-### 3. Production 適用
+### 3. PR Preview 検証
 
-main merge で GitHub Actions (`.github/workflows/supabase-migration.yml`) が自動で `supabase db push` を実行する。
+PR を作成すると Supabase GitHub integration が Preview Branch を作成し、`supabase/migrations/**` を適用する。Vercel integration が `product` の Preview deployment に対応する Supabase env vars を注入する。
 
-手動で先行適用したい場合:
+確認すること:
+
+- Supabase PR check が green
+- Vercel Preview が production DB ではなく Preview Branch を参照している
+- migration に依存する機能が Preview URL で動く
+- seed data だけで動作確認でき、本番データを必要としない
+
+### 4. Production 適用
+
+`main` merge 後、Supabase GitHub integration が production に migration を適用する。GitHub Actions から `supabase db push` は実行しない。
+
+## Emergency Runbook
+
+通常運用では手動 `supabase db push` を使わない。Supabase integration 障害などで緊急対応が必要な場合だけ、Production の 1Password secret を使い、作業ログに理由を残して実行する。
 
 ```bash
 supabase link --project-ref yvglwblxrnrenfifsnje
+supabase db push --dry-run
 supabase db push
 ```
 
-> **注意**: `db push` は `--project-ref` 非対応。リンク済み project に対して実行される。
-
 ## マイグレーション統合時の注意
 
-マイグレーションファイルをリナンバー / 統合する場合:
+- [ ] RLS が有効で、`auth.uid() = user_id` の境界が維持されている
+- [ ] `IF NOT EXISTS` / `IF EXISTS` で冪等化している
+- [ ] ローカルで `db:reset` が通る
+- [ ] Supabase Preview Branch check が green
+- [ ] Production 適用前に Vercel Preview で主要導線を確認した
 
-- [ ] 全マイグレーションの意味が統合後も保持されているか確認
-- [ ] `IF NOT EXISTS` / `IF EXISTS` で冪等化
-- [ ] ローカルで `db:reset` → 既存機能の動作確認
-- [ ] 統合前後で `supabase db diff` が空になることを確認
-
-## リリース手順
-
-### 通常リリース
-
-1. feature branch で開発
-2. PR を作成 → Vercel preview で検証
-3. レビュー通過後 main merge → Vercel 本番デプロイ + migration 自動適用
-4. Production で動作確認
-
-### バージョンタグ（任意）
-
-```bash
-# 記録目的のみ
-git tag v0.X.0
-git push origin v0.X.0
-# → GitHub Actions が GitHub Release を自動作成
-```
-
-タグは**デプロイトリガーではない**。main merge がデプロイトリガー。
-
-### スキーマ変更を含むリリースの順序
+## スキーマ変更を含むリリースの順序
 
 | 変更種別         | 順序の原則                                   |
 | ---------------- | -------------------------------------------- |
-| 新カラム追加     | **先に DB**、後にアプリ（デフォルト値必須）  |
-| カラム削除       | **先にアプリ**（参照除去）、後に DB          |
+| 新カラム追加     | 先に DB、後にアプリ（デフォルト値必須）      |
+| カラム削除       | 先にアプリ（参照除去）、後に DB              |
 | 型変更           | 2 段階（新カラム追加 → backfill → 旧削除）   |
 | NOT NULL 追加    | 先に backfill で全行埋める → 制約追加        |
 | RLS ポリシー変更 | 新ポリシー追加 → アプリ更新 → 旧ポリシー削除 |
 
 ## 関連
 
-- skill: `.claude/skills/supabase/SKILL.md`
-- rule: `.claude/rules/architecture.md` の「環境構成」節
-- workflow: `.github/workflows/supabase-migration.yml`
+- skill: `.agents/skills/supabase/SKILL.md`
+- architecture: `apps/storybook/docs/dev/architecture/Environments.mdx`
+- secrets: `apps/storybook/docs/operations/secrets.mdx`

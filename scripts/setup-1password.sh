@@ -119,10 +119,6 @@ run item create --category=apicredential --vault=Dayopt-Staging --title=sentry \
   'SENTRY_ORG[text]=' \
   'SENTRY_PROJECT[text]='
 
-run item create --category=apicredential --vault=Dayopt-Staging --title=slack \
-  --tags=dayopt,staging notesPlain="$NOTES" \
-  'SLACK_BILLING_WEBHOOK_URL[concealed]='
-
 run item create --category=apicredential --vault=Dayopt-Staging --title=app \
   --tags=dayopt,staging notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
   'NEXT_PUBLIC_APP_URL[text]=' \
@@ -164,10 +160,6 @@ run item create --category=apicredential --vault=Dayopt-Production --title=sentr
   'NEXT_PUBLIC_SENTRY_DSN[text]=' \
   'SENTRY_ORG[text]=' \
   'SENTRY_PROJECT[text]='
-
-run item create --category=apicredential --vault=Dayopt-Production --title=slack \
-  --tags=dayopt,production notesPlain="$NOTES" \
-  'SLACK_BILLING_WEBHOOK_URL[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Production --title=app \
   --tags=dayopt,production notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \

@@ -23,7 +23,8 @@
 #     bash scripts/admin-set-user-password.sh
 #
 # 環境:
-#   現在は単一 project 運用のため Production project に対して実行される。
+#   `.op-env.local` で注入された Supabase project に対して実行される。
+#   通常は local / PR Preview の検証用。Production で使う場合は手動作業ログを残す。
 # ========================================
 
 set -euo pipefail

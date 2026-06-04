@@ -44,7 +44,7 @@
     "test:watch": "vitest --watch",
     "test:integration": "vitest run --config vitest.config.integration.ts",
     "db:reset": "supabase db reset --local",
-    "db:reset-preview": "supabase db reset --linked",
+    "db:reset-linked:unsafe": "supabase db reset --linked",
     "db:seed": "../../scripts/seed-dev-data.sh",
     "db:fresh": "pnpm db:reset && pnpm db:seed",
     "test:e2e": "playwright test",

@@ -49,4 +49,55 @@ EOF
   exit 1
 fi
 
+SUPABASE_TARGET="${DAYOPT_SUPABASE_TARGET:-local}"
+
+if [[ "$SUPABASE_TARGET" == "local" ]]; then
+  if ! local_supabase_env="$(supabase status -o env 2>/dev/null)"; then
+    error "Supabase local が起動していません。"
+    cat >&2 <<EOF
+
+通常の local dev は Supabase local を参照します。
+先に Supabase を起動してください:
+  supabase start
+
+一時的に 1Password の Supabase refs をそのまま使う場合:
+  DAYOPT_SUPABASE_TARGET=op pnpm dev
+EOF
+    exit 1
+  fi
+
+  get_local_supabase_env() {
+    local key="$1"
+    printf '%s\n' "$local_supabase_env" | awk -F= -v key="$key" '
+      $1 == key {
+        value = substr($0, index($0, "=") + 1)
+        gsub(/^"/, "", value)
+        gsub(/"$/, "", value)
+        print value
+        exit
+      }
+    '
+  }
+
+  LOCAL_SUPABASE_URL="$(get_local_supabase_env API_URL)"
+  LOCAL_SUPABASE_ANON_KEY="$(get_local_supabase_env ANON_KEY)"
+  LOCAL_SUPABASE_SERVICE_ROLE_KEY="$(get_local_supabase_env SERVICE_ROLE_KEY)"
+
+  if [[ -z "$LOCAL_SUPABASE_URL" || -z "$LOCAL_SUPABASE_ANON_KEY" || -z "$LOCAL_SUPABASE_SERVICE_ROLE_KEY" ]]; then
+    error "Supabase local の URL / key を取得できませんでした。"
+    exit 1
+  fi
+
+  exec op run --env-file="$OP_ENV_PATH" -- env \
+    NEXT_PUBLIC_SUPABASE_URL="$LOCAL_SUPABASE_URL" \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY="$LOCAL_SUPABASE_ANON_KEY" \
+    SUPABASE_SERVICE_ROLE_KEY="$LOCAL_SUPABASE_SERVICE_ROLE_KEY" \
+    pnpm --filter @dayopt/product dev:raw
+fi
+
+if [[ "$SUPABASE_TARGET" != "op" ]]; then
+  error "DAYOPT_SUPABASE_TARGET は local または op を指定してください。"
+  exit 1
+fi
+
 exec op run --env-file="$OP_ENV_PATH" -- pnpm --filter @dayopt/product dev:raw

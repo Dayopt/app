@@ -10,12 +10,13 @@ Supabase CLIを使用して、データベーススキーマからTypeScript型�
 
 ## コマンド
 
-| コマンド                       | ソース        | 用途                                      |
-| ------------------------------ | ------------- | ----------------------------------------- |
-| `npm run types:generate`       | Production DB | リモート DB から生成（推奨）              |
-| `npm run types:generate:local` | Local DB      | ローカルから生成（`supabase start` 必要） |
+| コマンド                            | ソース          | 用途                                      |
+| ----------------------------------- | --------------- | ----------------------------------------- |
+| `npm run types:generate`            | production main | `types:generate:production` の互換 alias  |
+| `npm run types:generate:production` | production main | production main から生成                  |
+| `npm run types:generate:local`      | Local DB        | ローカルから生成（`supabase start` 必要） |
 
-> 現在は単一 Supabase project 運用のため、リモート生成は Production project 1 つのみ。
+PR Preview Branch の schema は Supabase integration check で検証する。型生成は production main か local のどちらかを明示して行う。
 
 全コマンドとも `packages/database/src/generated/database.types.ts` に出力。
 
@@ -39,18 +40,20 @@ Supabase CLIを使用して、データベーススキーマからTypeScript型�
 ## ワークフロー
 
 ```bash
-# 1. マイグレーション作成・適用
+# 1. マイグレーション作成
 npm run migration:create add_new_table
 # マイグレーションファイルを編集
-supabase db push
 
-# 2. 型を再生成
-npm run types:generate
+# 2. ローカルで適用確認
+npm run db:reset
 
-# 3. 型チェック
+# 3. 型を再生成
+npm run types:generate:local
+
+# 4. 型チェック
 npm run typecheck
 
-# 4. コミット
+# 5. コミット
 git add packages/database/src/generated/database.types.ts
 git commit -m "chore(types): supabase型定義を更新"
 ```
@@ -75,8 +78,8 @@ export type TagRow = Database['public']['Tables']['tags']['Row'];
 
 ## トラブルシューティング
 
-| エラー                 | 対処                                                                         |
-| ---------------------- | ---------------------------------------------------------------------------- |
-| `project_id not found` | Supabase プロジェクトの存在を確認                                            |
-| `connection refused`   | ローカル: `supabase start` を実行 / リモート: ネットワーク確認               |
-| 生成された型がおかしい | 最新のマイグレーションが適用されているか確認。`supabase db reset` でリセット |
+| エラー                 | 対処                                                                                         |
+| ---------------------- | -------------------------------------------------------------------------------------------- |
+| `project_id not found` | Supabase プロジェクトの存在を確認                                                            |
+| `connection refused`   | ローカル: `supabase start` を実行 / リモート: ネットワーク確認                               |
+| 生成された型がおかしい | production main か local のどちらから生成したか確認。local は `supabase db reset` でリセット |

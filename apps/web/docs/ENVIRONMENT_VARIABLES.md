@@ -15,6 +15,8 @@ op run --env-file=../../.op-env.local -- npm run dev
 
 `.env.local` に実値を置く運用は廃止。Vercel CLI などで生成された `.env.local` は unsafe / temporary として扱い、作業後に削除する。
 
+product app の `pnpm dev` は通常 Supabase local を参照する。`.op-env.local` の Supabase refs をそのまま使う一時作業では `DAYOPT_SUPABASE_TARGET=op pnpm dev` を使う。
+
 ---
 
 ## 1Password / Replica
@@ -78,6 +80,10 @@ Turnstile は canonical bot protection provider。reCAPTCHA の env は旧方式
 Vercel Env は 1Password master から手動同期される replica。Vercel Dashboard で直接値を変更した場合は、同じ変更を 1Password に戻す。
 
 GitHub Actions Secrets と Supabase Dashboard secrets も同じく replica として扱う。
+
+`product` の Vercel Preview は Supabase Vercel integration が PR 用 Supabase Preview Branch credentials を注入する。Preview scope に production Supabase credentials を手動設定しない。
+
+`web` は今回の Supabase Preview Branch integration 対象外。contact form / bot protection / rate limit などの長寿命 secrets は従来通り 1Password master から Vercel Env へ手動同期する。
 
 ---
 
