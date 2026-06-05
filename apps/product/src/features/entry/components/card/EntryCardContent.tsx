@@ -88,6 +88,10 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
 
       {showTime != null && (
         <div className="event-time text-muted-foreground pointer-events-none flex flex-shrink-0 items-center gap-1 text-xs leading-tight">
+          {/* タイトル行のアイコン分だけ字下げし、時間をタイトル文言の開始位置に揃える */}
+          {tagIcon && (
+            <TagIcon icon={tagIcon} color={tagColor} size="sm" className="invisible shrink-0" />
+          )}
           <span className="mr-1 tabular-nums">
             {previewTime
               ? formatTimeRange(previewTime.start, previewTime.end, timeFormat)
