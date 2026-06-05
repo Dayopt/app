@@ -521,11 +521,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       {!renderAsPlanOnly && (
         <div
           data-entry-actual-layer
-          className={cn('absolute right-0 left-0 flex', isUnplanned && 'rounded-r-lg')}
+          className="absolute right-0 left-0 flex"
           style={{
             top: `${actualLayerTop}px`,
             height: `${actualLayerHeight}px`,
-            ...(isUnplanned ? unplannedBorderStyle : {}),
           }}
         >
           {/* 左アクセントストリップ（actual=記録のサイン。予定外にも表示）
@@ -556,6 +555,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             style={{
               borderRadius: actualBodyBorderRadius,
               backgroundColor: actualBackgroundColor,
+              // 予定外は破線枠を本体（アクセントの右）に当て、アクセントを横切らない
+              ...(isUnplanned ? unplannedBorderStyle : {}),
             }}
           >
             {isUnplanned && (
