@@ -92,7 +92,7 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
           {tagIcon && (
             <TagIcon icon={tagIcon} color={tagColor} size="sm" className="invisible shrink-0" />
           )}
-          <span className="mr-1 tabular-nums">
+          <span className="mr-1 whitespace-nowrap tabular-nums">
             {previewTime
               ? formatTimeRange(previewTime.start, previewTime.end, timeFormat)
               : displayStart && displayEnd
