@@ -392,7 +392,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           style={{
             top: `${plannedLayerTop}px`,
             height: `${plannedHeight}px`,
-            backgroundColor: plannedBackgroundColor,
+            // upcoming は記録(actual)と地の色を揃える（差は左アクセントの有無だけにする）。
+            backgroundColor: renderAsPlanOnly ? actualBackgroundColor : plannedBackgroundColor,
           }}
         />
       )}
