@@ -403,7 +403,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         >
           <div
             data-entry-overtime-accent
-            className={cn('absolute left-0', colorClasses ? colorClasses.dot : 'bg-entry-default')}
+            className={cn(
+              'absolute left-0',
+              isActiveEntry ? 'opacity-100' : 'opacity-70',
+              colorClasses ? colorClasses.dot : 'bg-entry-default',
+            )}
             style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
           />
         </div>
@@ -418,7 +422,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         >
           <div
             data-entry-overtime-accent
-            className={cn('absolute left-0', colorClasses ? colorClasses.dot : 'bg-entry-default')}
+            className={cn(
+              'absolute left-0',
+              isActiveEntry ? 'opacity-100' : 'opacity-70',
+              colorClasses ? colorClasses.dot : 'bg-entry-default',
+            )}
             style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
           />
         </div>
