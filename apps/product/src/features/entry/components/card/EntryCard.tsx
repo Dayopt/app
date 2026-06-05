@@ -590,8 +590,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           )}
           style={{
             top: `${contentLayerTop}px`,
-            // 予定UI（upcoming）は左アクセントが無いので、その分まで左に詰めて広げる。
-            left: renderAsPlanOnly ? 0 : `${accentWidth}px`,
+            // アクセントの有無で文言位置がずれないよう、upcoming も accent 幅分を確保して揃える。
+            left: `${accentWidth}px`,
             height: `${contentLayerHeight}px`,
           }}
         >
