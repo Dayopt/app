@@ -9,7 +9,6 @@ import { memo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { TagIcon } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeRange } from '@/lib/date';
 import type { CalendarEvent } from '../../types/calendar-event';
 
@@ -64,10 +63,9 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
       <div className="flex h-full items-center gap-1">
         {tagIcon && <TagIcon icon={tagIcon} color={tagColor} size="sm" className="shrink-0" />}
         {tagName ? (
-          <ColonTagLabel
-            name={tagName}
-            className="text-foreground text-sm leading-tight font-normal"
-          />
+          <span className="text-foreground truncate text-sm leading-tight font-normal">
+            {tagName}
+          </span>
         ) : (
           <span className="text-foreground truncate text-sm leading-tight font-normal">
             {fallbackLabel}
@@ -82,7 +80,7 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
       <div className="flex flex-shrink-0 items-center gap-1 text-sm leading-tight font-normal">
         {tagIcon && <TagIcon icon={tagIcon} color={tagColor} size="sm" className="shrink-0" />}
         {tagName ? (
-          <ColonTagLabel name={tagName} className="text-foreground" />
+          <span className="text-foreground truncate">{tagName}</span>
         ) : (
           <span className="text-foreground line-clamp-2">{fallbackLabel}</span>
         )}

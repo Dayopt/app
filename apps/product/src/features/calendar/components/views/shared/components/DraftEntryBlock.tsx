@@ -8,7 +8,6 @@ import { useTranslations } from 'next-intl';
 import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
 import { entryTintColor } from '@/features/entry';
 import { getTagColorClasses, TagIcon } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeString } from '@/lib/date';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
@@ -216,7 +215,7 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
                     />
                   )}
                   <span className="text-foreground truncate text-xs font-normal">
-                    <ColonTagLabel name={draft.tag.name} />
+                    {draft.tag.name}
                   </span>
                 </div>
               ) : (
@@ -230,8 +229,8 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
                         className="shrink-0"
                       />
                     )}
-                    <span className="text-foreground min-w-0 text-sm leading-tight font-normal">
-                      <ColonTagLabel name={draft.tag.name} />
+                    <span className="text-foreground min-w-0 truncate text-sm leading-tight font-normal">
+                      {draft.tag.name}
                     </span>
                   </div>
                   <span className="text-muted-foreground text-xs leading-tight tabular-nums">

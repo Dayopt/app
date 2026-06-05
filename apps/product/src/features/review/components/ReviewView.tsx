@@ -10,7 +10,6 @@ import { useEffect, useMemo } from 'react';
 import { resolveTagColor, TagIcon } from '@/features/tags';
 import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
@@ -231,10 +230,9 @@ export function ReviewView({ className }: ReviewViewProps) {
                     onClick={() => handleTagClick(tag.tagId)}
                   >
                     <TagIcon icon={tag.tagIcon ?? null} color={tag.tagColor} size="sm" />
-                    <ColonTagLabel
-                      name={tag.tagName}
-                      className="text-foreground min-w-0 flex-1 truncate text-sm"
-                    />
+                    <span className="text-foreground min-w-0 flex-1 truncate text-sm">
+                      {tag.tagName}
+                    </span>
                     <span className="text-foreground font-mono text-sm tabular-nums">
                       {formatMinutesDuration(tag.minutes)}
                     </span>
@@ -432,7 +430,7 @@ function VarianceHighlight({ label, item }: { label: string; item: PlanActualSum
       <TagIcon icon={item.tagIcon ?? null} color={item.tagColor} size="sm" />
       <div className="min-w-0 flex-1">
         <div className="text-muted-foreground text-xs">{label}</div>
-        <ColonTagLabel name={item.tagName} className="text-foreground block truncate text-sm" />
+        <span className="text-foreground block truncate text-sm">{item.tagName}</span>
       </div>
       <span className="text-muted-foreground font-mono text-sm tabular-nums">
         {formatSignedDuration(item.diffMinutes)}

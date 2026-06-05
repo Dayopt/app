@@ -1,7 +1,6 @@
 'use client';
 
 import { TagIcon } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { cn } from '@/lib/utils';
 
 import { formatMinutesDuration } from '../data/timePL.presentation';
@@ -44,7 +43,7 @@ export function StackedView({
         {[...allTags.entries()].map(([tagId, tag]) => (
           <span key={tagId} className="inline-flex items-center gap-1 text-xs">
             <TagIcon icon={tag.tagIcon ?? null} color={tag.tagColor} size="sm" />
-            <ColonTagLabel name={tag.tagName} className="text-muted-foreground" />
+            <span className="text-muted-foreground truncate">{tag.tagName}</span>
           </span>
         ))}
       </div>

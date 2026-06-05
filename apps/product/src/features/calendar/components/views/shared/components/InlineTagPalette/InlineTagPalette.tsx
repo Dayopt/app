@@ -26,7 +26,6 @@ import {
   TagQuickSelector,
   useCreateTag,
 } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
@@ -535,7 +534,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
                           : 'text-muted-foreground tabular-nums',
                       )}
                     >
-                      {hoveredTag ? <ColonTagLabel name={displayName} /> : timeLabel}
+                      {hoveredTag ? displayName : timeLabel}
                     </span>
                   </div>
                 ) : (
@@ -551,11 +550,11 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
                       )}
                       <span
                         className={cn(
-                          'min-w-0 text-sm leading-tight font-normal',
+                          'min-w-0 truncate text-sm leading-tight font-normal',
                           hoveredTag ? 'text-foreground' : 'text-muted-foreground',
                         )}
                       >
-                        {hoveredTag ? <ColonTagLabel name={displayName} /> : displayName}
+                        {displayName}
                       </span>
                     </div>
                     <span className="text-muted-foreground text-xs leading-tight tabular-nums">

@@ -1,7 +1,6 @@
 'use client';
 
 import { TagIcon } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { cn } from '@/lib/utils';
 
 import {
@@ -49,7 +48,7 @@ function ComparisonRow({ row, maxMinutes }: { row: BarComparisonRow; maxMinutes:
       <div className="mb-1 flex items-center justify-between">
         <span className="inline-flex items-center gap-1.5 text-sm">
           <TagIcon icon={row.tagIcon ?? null} color={row.tagColor} size="sm" />
-          <ColonTagLabel name={row.tagName} className="text-foreground" />
+          <span className="text-foreground truncate">{row.tagName}</span>
         </span>
         <span className={cn('font-mono text-xs tabular-nums', varianceColor)}>
           {row.variancePercent !== null ? formatVariance(row.varianceMinutes) : 'new'}
