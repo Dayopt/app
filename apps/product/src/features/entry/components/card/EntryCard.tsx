@@ -528,11 +528,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               : isMobile
                 ? 'flex items-start gap-1 px-2 pt-2 text-sm'
                 : 'p-2 text-sm',
-            isUnplanned && 'bg-background',
           )}
           style={{
             borderRadius: actualBodyBorderRadius,
-            ...(isUnplanned ? {} : { backgroundColor: actualBackgroundColor }),
+            backgroundColor: actualBackgroundColor,
           }}
         >
           {isUnplanned && (

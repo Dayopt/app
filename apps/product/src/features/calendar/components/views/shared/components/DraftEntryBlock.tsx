@@ -168,13 +168,19 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
       <div
         className={cn(
           'animate-in fade-in-0 absolute right-0 left-0 flex motion-reduce:animate-none',
-          isPast && !hasConflict ? 'rounded-lg' : 'rounded-r-lg',
+          'rounded-r-lg',
         )}
         style={{
           top,
           height,
+          // past（unplanned 風）も確定後カードと同じ作り: 左アクセント + tint 塗り + 3 辺破線
           ...(isPast && !hasConflict
-            ? { border: `2px dashed ${accentColor}`, borderRadius: '8px' }
+            ? {
+                borderTop: `2px dashed ${accentColor}`,
+                borderRight: `2px dashed ${accentColor}`,
+                borderBottom: `2px dashed ${accentColor}`,
+                borderRadius: '0 8px 8px 0',
+              }
             : {}),
         }}
       >
@@ -189,20 +195,15 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
           />
         ) : (
           <>
-            {/* 左 accent strip — past unplanned 風の時は描画しない */}
-            {!isPast && (
-              <div
-                className="shrink-0 opacity-70"
-                style={{ width: '3px', backgroundColor: accentColor }}
-              />
-            )}
-            {/* card 本体 — past は透明背景（破線枠で囲うのみ） */}
+            {/* 左 accent strip（past も確定後カードと揃えて常に描画） */}
             <div
-              className={cn(
-                'relative min-w-0 flex-1 overflow-hidden',
-                isPast ? 'rounded-lg' : 'rounded-r-lg',
-              )}
-              style={isPast ? undefined : { backgroundColor: tintColor }}
+              className="shrink-0 opacity-70"
+              style={{ width: '3px', backgroundColor: accentColor }}
+            />
+            {/* card 本体 — past も確定後カードと同じ tint 塗り */}
+            <div
+              className={cn('relative min-w-0 flex-1 overflow-hidden', 'rounded-r-lg')}
+              style={{ backgroundColor: tintColor }}
             >
               {height < 40 ? (
                 <div className="flex h-full items-center gap-1 px-2">

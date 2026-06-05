@@ -478,14 +478,20 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
           ref={highlightRef}
           className={cn(
             'animate-in fade-in-0 pointer-events-auto absolute right-0 left-0 flex transition-colors duration-150 motion-reduce:animate-none',
-            isPast && !hasConflict ? 'rounded-lg' : 'rounded-r-lg',
+            'rounded-r-lg',
           )}
           style={{
             top: selectionTop,
             height: selectionHeight,
             touchAction: 'none',
+            // past（unplanned 風）も確定後カードと同じ作り: 左アクセント + tint 塗り + 3 辺破線
             ...(isPast && !hasConflict
-              ? { border: `2px dashed ${accentColor}`, borderRadius: '8px' }
+              ? {
+                  borderTop: `2px dashed ${accentColor}`,
+                  borderRight: `2px dashed ${accentColor}`,
+                  borderBottom: `2px dashed ${accentColor}`,
+                  borderRadius: '0 8px 8px 0',
+                }
               : {}),
           }}
           onPointerDown={handleBodyPointerDown}
@@ -501,20 +507,18 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
             />
           ) : (
             <>
-              {/* 左アクセントストリップ — past unplanned 風の時は描画しない */}
-              {!isPast && (
-                <div
-                  className="shrink-0 opacity-70 transition-colors duration-150"
-                  style={{ width: '3px', backgroundColor: accentColor }}
-                />
-              )}
-              {/* カード本体 — past は透明背景（破線枠で囲うのみ） */}
+              {/* 左アクセントストリップ（past も確定後カードと揃えて常に描画） */}
+              <div
+                className="shrink-0 opacity-70 transition-colors duration-150"
+                style={{ width: '3px', backgroundColor: accentColor }}
+              />
+              {/* カード本体 — past も確定後カードと同じ tint 塗り */}
               <div
                 className={cn(
                   'min-w-0 flex-1 overflow-hidden transition-colors duration-150',
-                  isPast ? 'rounded-lg' : 'rounded-r-lg',
+                  'rounded-r-lg',
                 )}
-                style={isPast ? undefined : { backgroundColor: tintColor }}
+                style={{ backgroundColor: tintColor }}
               >
                 {selectionHeight < 40 ? (
                   <div className="flex h-full items-center gap-1 px-2">

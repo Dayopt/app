@@ -12,6 +12,7 @@ import { memo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { entryTintColor } from '@/features/entry';
+import { cn } from '@/lib/utils';
 
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 import { ConflictOverlay } from '../ConflictOverlay';
@@ -71,37 +72,16 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
     );
   }
 
-  // 通常時: EntryCardと同じデザイン（左アクセント + 右角丸 + タグ名 + 時間）
-  // 過去時間帯は unplanned 風（タグ色なしの破線枠）
+  // 通常時: EntryCardと同じデザイン（左アクセント + tint 塗り + 右角丸 + 時間）
+  // 過去時間帯（unplanned 風）も確定後カードと同じ作り: アクセント + tint 塗り + 3 辺破線のみ差分
   const isCompact = height < 40;
-
-  if (isPast) {
-    return (
-      <div
-        className="border-entry-default pointer-events-none absolute right-0 left-0 overflow-hidden rounded-lg border-2 border-dashed"
-        style={{ top, height, zIndex: 1000 }}
-      >
-        {isCompact ? (
-          <div className="flex h-full items-center px-2">
-            <span className="text-muted-foreground truncate text-xs tabular-nums">{timeLabel}</span>
-          </div>
-        ) : (
-          <div className="flex h-full flex-col gap-1 p-2">
-            <span className="text-muted-foreground text-sm leading-tight font-normal">
-              {tCalendar('event.selectTag')}
-            </span>
-            <span className="text-muted-foreground text-xs leading-tight tabular-nums">
-              {timeLabel}
-            </span>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <div
-      className="pointer-events-none absolute right-0 left-0 flex rounded-r-lg"
+      className={cn(
+        'pointer-events-none absolute right-0 left-0 flex rounded-r-lg',
+        isPast && 'border-entry-default border-t-2 border-r-2 border-b-2 border-dashed',
+      )}
       style={{
         top,
         height,
