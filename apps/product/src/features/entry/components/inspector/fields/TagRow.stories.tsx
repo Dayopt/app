@@ -36,14 +36,6 @@ const blueTag: TagColorEntry = {
   cssVarTint: 'var(--tag-blue-tint)',
 };
 
-const redTag: TagColorEntry = {
-  dot: 'bg-tag-red',
-  border: 'border-tag-red',
-  tint: 'bg-tag-red-tint',
-  cssVar: 'var(--tag-red)',
-  cssVarTint: 'var(--tag-red-tint)',
-};
-
 const greenTag: TagColorEntry = {
   dot: 'bg-tag-green',
   border: 'border-tag-green',
@@ -100,22 +92,6 @@ export const WithMenu: Story = {
         tagId="tag-blue-id"
         tagName="仕事"
         tagColorClasses={blueTag}
-        onTagChange={fn()}
-        onCreateAndSelect={fn()}
-        menuItems={fullPlannedMenu}
-      />
-    </div>
-  ),
-};
-
-/** コロン記法タグ。›セパレーター表示される。 */
-export const ColonTag: Story = {
-  render: () => (
-    <div className="w-72">
-      <TagRow
-        tagId="tag-red-id"
-        tagName="開発:API"
-        tagColorClasses={redTag}
         onTagChange={fn()}
         onCreateAndSelect={fn()}
         menuItems={fullPlannedMenu}
@@ -222,17 +198,6 @@ export const AllPatterns: Story = {
           onTagChange={fn()}
           onCreateAndSelect={fn()}
           menuItems={upcomingPlannedMenu}
-        />
-      </div>
-      <div className="space-y-1">
-        <p className="text-muted-foreground text-xs">コロン記法タグ</p>
-        <TagRow
-          tagId="tag-3"
-          tagName="開発:API"
-          tagColorClasses={greenTag}
-          onTagChange={fn()}
-          onCreateAndSelect={fn()}
-          menuItems={fullPlannedMenu}
         />
       </div>
       <div className="space-y-1">

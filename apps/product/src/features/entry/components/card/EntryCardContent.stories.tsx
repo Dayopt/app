@@ -119,24 +119,6 @@ export const NoTime: Story = {
   ),
 };
 
-/** コロンタグ（separator 表示）。prefix が薄字 + › + suffix。 */
-export const ColonTag: Story = {
-  render: () => (
-    <CardSlot>
-      <EntryCardContent plan={baseEntry} tagName="開発:API" timeFormat="24h" />
-    </CardSlot>
-  ),
-};
-
-/** コロンタグ・コンパクト。 */
-export const ColonTagCompact: Story = {
-  render: () => (
-    <div className="bg-card relative h-7 w-48 overflow-hidden rounded-r-lg px-2 text-xs">
-      <EntryCardContent plan={baseEntry} tagName="開発:API" isCompact />
-    </div>
-  ),
-};
-
 /** タグアイコンあり。タグ名の前に lucide アイコンをタグ色で表示。 */
 export const WithTagIcon: Story = {
   render: () => (
@@ -222,20 +204,6 @@ export const AllPatterns: Story = {
             tagName="メモ"
           />
         </CardSlot>
-      </section>
-
-      <section>
-        <p className="text-muted-foreground mb-1 text-xs">コロンタグ（separator 表示）</p>
-        <CardSlot>
-          <EntryCardContent plan={baseEntry} tagName="開発:API" timeFormat="24h" />
-        </CardSlot>
-      </section>
-
-      <section>
-        <p className="text-muted-foreground mb-1 text-xs">コロンタグ・Compact</p>
-        <div className="bg-card relative h-7 w-48 overflow-hidden rounded-r-lg px-2 text-xs">
-          <EntryCardContent plan={baseEntry} tagName="開発:API" isCompact />
-        </div>
       </section>
 
       <section>
