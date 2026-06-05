@@ -22,6 +22,7 @@ import type { HoveredTagInfo } from '@/features/tags';
 import {
   getTagColorClasses,
   resolveTagColor,
+  TagIcon,
   TagQuickSelector,
   useCreateTag,
 } from '@/features/tags';
@@ -517,7 +518,15 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
                 style={isPast ? undefined : { backgroundColor: tintColor }}
               >
                 {selectionHeight < 40 ? (
-                  <div className="flex h-full items-center px-2">
+                  <div className="flex h-full items-center gap-1 px-2">
+                    {hoveredTag?.icon && (
+                      <TagIcon
+                        icon={hoveredTag.icon}
+                        color={hoveredTag.color}
+                        size="sm"
+                        className="shrink-0"
+                      />
+                    )}
                     <span
                       className={cn(
                         'truncate text-xs',
@@ -531,14 +540,24 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
                   </div>
                 ) : (
                   <div className="flex h-full flex-col gap-1 p-2">
-                    <span
-                      className={cn(
-                        'text-sm leading-tight font-normal',
-                        hoveredTag ? 'text-foreground' : 'text-muted-foreground',
+                    <div className="flex items-center gap-1">
+                      {hoveredTag?.icon && (
+                        <TagIcon
+                          icon={hoveredTag.icon}
+                          color={hoveredTag.color}
+                          size="sm"
+                          className="shrink-0"
+                        />
                       )}
-                    >
-                      {hoveredTag ? <ColonTagLabel name={displayName} /> : displayName}
-                    </span>
+                      <span
+                        className={cn(
+                          'min-w-0 text-sm leading-tight font-normal',
+                          hoveredTag ? 'text-foreground' : 'text-muted-foreground',
+                        )}
+                      >
+                        {hoveredTag ? <ColonTagLabel name={displayName} /> : displayName}
+                      </span>
+                    </div>
                     <span className="text-muted-foreground text-xs leading-tight tabular-nums">
                       {timeLabel}
                     </span>

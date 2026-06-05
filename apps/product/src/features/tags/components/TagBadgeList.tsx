@@ -30,6 +30,7 @@ export interface TagBadgeListHoverInfo {
   id: string;
   name: string;
   color: string | null;
+  icon: string | null;
 }
 
 export interface TagBadgeListProps {
@@ -81,7 +82,9 @@ function TagBadgeCell({
       type="button"
       onClick={onSelect}
       onMouseEnter={
-        onHover ? () => onHover({ id: tag.id, name: tag.name, color: tag.color }) : undefined
+        onHover
+          ? () => onHover({ id: tag.id, name: tag.name, color: tag.color, icon: tag.icon })
+          : undefined
       }
       onMouseLeave={onHoverEnd}
       role={asRadio ? 'radio' : undefined}
