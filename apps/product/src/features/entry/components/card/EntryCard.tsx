@@ -81,6 +81,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const isPast = entry.entryState === 'past';
   // 予定外エントリかどうか（全体を破線枠で表示）
   const isUnplanned = entry.origin === 'unplanned';
+  // 未来の予定は「予定UI」(薄い planned layer のみ・左線なし)。
+  // active/past の予定、および unplanned は「記録UI」(actual layer + 左線)。
+  const renderAsPlanOnly = !isUnplanned && entry.entryState === 'upcoming';
   // 予定 vs 記録の差分オーバーレイ
   const overlay = useMemo(
     () => computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
@@ -399,7 +402,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         <div
           aria-hidden="true"
           className="pointer-events-none absolute right-0 left-0 overflow-hidden"
-          style={{ top: 0, height: `${overlay.topHeight}px`, ...topOvertimeBorderStyle }}
+          style={{ top: 0, height: `${overlay.topHeight}px` }}
         >
           <div
             data-entry-overtime-accent
@@ -410,6 +413,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             )}
             style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
           />
+          {/* 破線枠はアクセントの右端から開始（アクセントを横切らない） */}
+          <div
+            className="absolute top-0 right-0 bottom-0"
+            style={{ left: `${accentWidth}px`, ...topOvertimeBorderStyle }}
+          />
         </div>
       )}
 
@@ -418,7 +426,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         <div
           aria-hidden="true"
           className="pointer-events-none absolute right-0 left-0 overflow-hidden"
-          style={{ bottom: 0, height: `${overlay.bottomHeight}px`, ...bottomOvertimeBorderStyle }}
+          style={{ bottom: 0, height: `${overlay.bottomHeight}px` }}
         >
           <div
             data-entry-overtime-accent
@@ -428,6 +436,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               colorClasses ? colorClasses.dot : 'bg-entry-default',
             )}
             style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
+          />
+          {/* 破線枠はアクセントの右端から開始（アクセントを横切らない） */}
+          <div
+            className="absolute top-0 right-0 bottom-0"
+            style={{ left: `${accentWidth}px`, ...bottomOvertimeBorderStyle }}
           />
         </div>
       )}
@@ -502,59 +515,63 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         </div>
       )}
 
-      {/* Layer 2: actual — 既存の記録カード表現を維持。 */}
-      <div
-        data-entry-actual-layer
-        className={cn('absolute right-0 left-0 flex', isUnplanned && 'rounded-r-lg')}
-        style={{
-          top: `${actualLayerTop}px`,
-          height: `${actualLayerHeight}px`,
-          ...(isUnplanned ? unplannedBorderStyle : {}),
-        }}
-      >
-        {/* 左アクセントストリップ（actual=記録のサイン。予定外にも表示）
-            active 中は full intensity、それ以外は 70% で背景に引かせる（animation なしで brighter を表現） */}
+      {/* Layer 2: actual — 既存の記録カード表現を維持。
+          未来の予定（renderAsPlanOnly）では記録がまだ無いため描画せず、
+          planned layer + content layer だけの「予定UI」(薄い・左線なし) にする。 */}
+      {!renderAsPlanOnly && (
         <div
-          data-entry-actual-accent
-          className={cn(
-            'relative shrink-0',
-            isActiveEntry ? 'opacity-100' : 'opacity-70',
-            colorClasses ? colorClasses.dot : 'bg-entry-default',
-          )}
-          style={{ width: `${accentWidth}px` }}
-        />
-
-        {/* カード本体 — actual recorded を main として強調（planned bg 8% に対して 18%） */}
-        <div
-          data-entry-actual-body
-          className={cn(
-            'relative min-w-0 flex-1 overflow-hidden',
-            actualLayerHeight < 40
-              ? isMobile
-                ? 'flex items-center px-2 text-xs'
-                : 'flex items-center px-2 text-xs'
-              : isMobile
-                ? 'flex items-start gap-1 px-2 pt-2 text-sm'
-                : 'p-2 text-sm',
-          )}
+          data-entry-actual-layer
+          className={cn('absolute right-0 left-0 flex', isUnplanned && 'rounded-r-lg')}
           style={{
-            borderRadius: actualBodyBorderRadius,
-            backgroundColor: actualBackgroundColor,
+            top: `${actualLayerTop}px`,
+            height: `${actualLayerHeight}px`,
+            ...(isUnplanned ? unplannedBorderStyle : {}),
           }}
         >
-          {isUnplanned && (
-            <EntryCardContent
-              plan={entry}
-              tagName={tagName}
-              tagColor={tagColor}
-              tagIcon={tagIcon}
-              isCompact={actualLayerHeight < 40}
-              showTime={actualLayerHeight >= 30}
-              previewTime={previewTime}
-            />
-          )}
+          {/* 左アクセントストリップ（actual=記録のサイン。予定外にも表示）
+              active 中は full intensity、それ以外は 70% で背景に引かせる（animation なしで brighter を表現） */}
+          <div
+            data-entry-actual-accent
+            className={cn(
+              'relative shrink-0',
+              isActiveEntry ? 'opacity-100' : 'opacity-70',
+              colorClasses ? colorClasses.dot : 'bg-entry-default',
+            )}
+            style={{ width: `${accentWidth}px` }}
+          />
+
+          {/* カード本体 — actual recorded を main として強調（planned bg 8% に対して 18%） */}
+          <div
+            data-entry-actual-body
+            className={cn(
+              'relative min-w-0 flex-1 overflow-hidden',
+              actualLayerHeight < 40
+                ? isMobile
+                  ? 'flex items-center px-2 text-xs'
+                  : 'flex items-center px-2 text-xs'
+                : isMobile
+                  ? 'flex items-start gap-1 px-2 pt-2 text-sm'
+                  : 'p-2 text-sm',
+            )}
+            style={{
+              borderRadius: actualBodyBorderRadius,
+              backgroundColor: actualBackgroundColor,
+            }}
+          >
+            {isUnplanned && (
+              <EntryCardContent
+                plan={entry}
+                tagName={tagName}
+                tagColor={tagColor}
+                tagIcon={tagIcon}
+                isCompact={actualLayerHeight < 40}
+                showTime={actualLayerHeight >= 30}
+                previewTime={previewTime}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      )}
       {/* /actual layer */}
 
       {!isUnplanned && (
@@ -572,7 +589,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           )}
           style={{
             top: `${contentLayerTop}px`,
-            left: `${accentWidth}px`,
+            // 予定UI（upcoming）は左アクセントが無いので、その分まで左に詰めて広げる。
+            left: renderAsPlanOnly ? 0 : `${accentWidth}px`,
             height: `${contentLayerHeight}px`,
           }}
         >
