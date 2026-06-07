@@ -383,12 +383,17 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         </div>
       )}
 
-      {/* Layer 1: planned — Google Calendar 風の薄い背景だけ。 */}
+      {/* Layer 1: planned — Google Calendar 風の薄い背景だけ。
+          予定UI（renderAsPlanOnly）では左端を罫線にピタッと載せるため左角を直角にする
+          （記録ブロックの左アクセント帯と同じく左辺をまっすぐ揃える）。 */}
       {!isUnplanned && (
         <div
           data-entry-planned-layer
           aria-hidden="true"
-          className="pointer-events-none absolute right-0 left-0 rounded-lg"
+          className={cn(
+            'pointer-events-none absolute right-0 left-0',
+            renderAsPlanOnly ? 'rounded-r-lg' : 'rounded-lg',
+          )}
           style={{
             top: `${plannedLayerTop}px`,
             height: `${plannedHeight}px`,

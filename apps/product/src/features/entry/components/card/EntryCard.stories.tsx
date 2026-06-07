@@ -173,6 +173,117 @@ export const DraggingState: Story = {
 };
 
 // ---------------------------------------------------------------------------
+// 時間状態による 予定UI / 記録UI の切り替え（entryState 駆動）
+// ---------------------------------------------------------------------------
+
+/** 未来の予定（upcoming）。薄い planned layer のみ・左縦線なしの「予定UI」。 */
+export const UpcomingPlan: Story = {
+  render: () => (
+    <Slot>
+      <EntryCard
+        entry={{
+          ...baseEntry,
+          entryState: 'upcoming',
+          origin: 'planned',
+          actualStartDate: new Date('2024-01-15T10:00:00'),
+          actualEndDate: new Date('2024-01-15T11:00:00'),
+        }}
+        tagName="仕事"
+        tagColor="blue"
+        position={basePosition}
+        hourHeight={72}
+      />
+    </Slot>
+  ),
+};
+
+/** 進行中（active）。開始時刻を過ぎたら左縦線が現れ、濃い「記録UI」になる。 */
+export const ActivePlan: Story = {
+  render: () => (
+    <Slot>
+      <EntryCard
+        entry={{
+          ...baseEntry,
+          entryState: 'active',
+          origin: 'planned',
+          actualStartDate: new Date('2024-01-15T10:00:00'),
+          actualEndDate: new Date('2024-01-15T11:00:00'),
+        }}
+        tagName="仕事"
+        tagColor="blue"
+        position={basePosition}
+        hourHeight={72}
+      />
+    </Slot>
+  ),
+};
+
+/** 同一エントリの時間遷移比較: 未来=予定UI（薄・線なし） / 進行中・過去=記録UI（濃・線あり）。 */
+export const PlanToRecordByTime: Story = {
+  render: () => (
+    <div className="flex flex-col gap-4">
+      <div>
+        <p className="text-muted-foreground mb-1 text-xs">upcoming（予定UI・左線なし）</p>
+        <Slot>
+          <EntryCard
+            entry={{
+              ...baseEntry,
+              entryState: 'upcoming',
+              origin: 'planned',
+              actualStartDate: new Date('2024-01-15T10:00:00'),
+              actualEndDate: new Date('2024-01-15T11:00:00'),
+            }}
+            tagName="仕事"
+            tagColor="blue"
+            position={basePosition}
+            hourHeight={72}
+          />
+        </Slot>
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-1 text-xs">active（記録UI・左線あり）</p>
+        <Slot>
+          <EntryCard
+            entry={{
+              ...baseEntry,
+              entryState: 'active',
+              origin: 'planned',
+              actualStartDate: new Date('2024-01-15T10:00:00'),
+              actualEndDate: new Date('2024-01-15T11:00:00'),
+            }}
+            tagName="仕事"
+            tagColor="blue"
+            position={basePosition}
+            hourHeight={72}
+          />
+        </Slot>
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-1 text-xs">past（記録UI・左線あり・差分維持）</p>
+        <Slot height={142}>
+          <EntryCard
+            entry={{
+              ...baseEntry,
+              entryState: 'past',
+              origin: 'planned',
+              endDate: new Date('2024-01-15T12:00:00'),
+              displayEndDate: new Date('2024-01-15T12:00:00'),
+              duration: 120,
+              actualStartDate: new Date('2024-01-15T10:00:00'),
+              actualEndDate: new Date('2024-01-15T11:00:00'),
+            }}
+            tagName="仕事"
+            tagColor="blue"
+            position={{ ...basePosition, height: 142 }}
+            hourHeight={72}
+          />
+        </Slot>
+      </div>
+    </div>
+  ),
+};
+
+// ---------------------------------------------------------------------------
 // 予定 vs 記録の差分オーバーレイ
 // ---------------------------------------------------------------------------
 
