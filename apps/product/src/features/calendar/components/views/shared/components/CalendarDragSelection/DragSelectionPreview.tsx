@@ -88,8 +88,11 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
         zIndex: 1000,
       }}
     >
-      {/* 左アクセントストリップ — タグ未選択なので entry-default。確定後カードと同じ opacity-70 */}
-      <div className="bg-entry-default shrink-0 opacity-70" style={{ width: '3px' }} />
+      {/* upcoming はアクセント無し。文言位置を合わせる 3px スペーサーのみ（本体と同色で不可視）。 */}
+      <div
+        className="shrink-0"
+        style={{ width: '3px', backgroundColor: entryTintColor('var(--entry-default)') }}
+      />
       {/* カード本体 — EntryCard と同じ 18% color-mix tint（neutral base） */}
       <div
         className="min-w-0 flex-1 overflow-hidden rounded-r-lg"

@@ -195,11 +195,9 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
           />
         ) : (
           <>
-            {/* 左 accent strip（past も確定後カードと揃えて常に描画） */}
-            <div
-              className="shrink-0 opacity-70"
-              style={{ width: '3px', backgroundColor: accentColor }}
-            />
+            {/* upcoming はアクセント無しで揃える。確定後カードと文言位置を合わせるための
+                3px スペーサーのみ残す（色は本体と同じで不可視）。 */}
+            <div className="shrink-0" style={{ width: '3px', backgroundColor: tintColor }} />
             {/* card 本体 — past も確定後カードと同じ tint 塗り */}
             <div
               className={cn('relative min-w-0 flex-1 overflow-hidden', 'rounded-r-lg')}

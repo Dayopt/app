@@ -507,10 +507,10 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
             />
           ) : (
             <>
-              {/* 左アクセントストリップ（past も確定後カードと揃えて常に描画） */}
+              {/* upcoming はアクセント無しで揃える。文言位置を合わせる 3px スペーサーのみ（不可視）。 */}
               <div
-                className="shrink-0 opacity-70 transition-colors duration-150"
-                style={{ width: '3px', backgroundColor: accentColor }}
+                className="shrink-0 transition-colors duration-150"
+                style={{ width: '3px', backgroundColor: tintColor }}
               />
               {/* カード本体 — past も確定後カードと同じ tint 塗り */}
               <div
