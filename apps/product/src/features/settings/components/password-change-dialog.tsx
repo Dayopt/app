@@ -28,6 +28,16 @@ interface PasswordChangeDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+function isCurrentPasswordError(error: Error): boolean {
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('current_password') ||
+    message.includes('current password') ||
+    message.includes('invalid password') ||
+    message.includes('incorrect password')
+  );
+}
+
 /**
  * パスワード変更ダイアログ
  *
@@ -83,11 +93,12 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
       setIsLoading(true);
 
       try {
-        // Step 1: Re-authenticate with current password
         if (!user?.email) {
           throw new Error(t('common.errors.auth.emailNotFound'));
         }
 
+        // Step 1: Verify current password explicitly so preview/local
+        // environments stay safe even if Auth config has not been synced yet.
         const { error: reAuthError } = await supabase.auth.signInWithPassword({
           email: user.email,
           password: currentPassword,
@@ -103,12 +114,17 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
           throw new Error(t('settings.account.passwordPwned'));
         }
 
-        // Step 3: Update password
+        // Step 3: Update password. Supabase secure password change validates
+        // the current password server-side when `current_password` is provided.
         const { error: updateError } = await supabase.auth.updateUser({
           password: newPassword,
+          current_password: currentPassword,
         });
 
         if (updateError) {
+          if (isCurrentPasswordError(updateError)) {
+            throw new Error(t('settings.account.passwordIncorrect'));
+          }
           throw new Error(updateError.message);
         }
 

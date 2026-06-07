@@ -188,7 +188,7 @@ enable_signup = true
 double_confirm_changes = true
 # ローカルではメール確認不要（Inbucket使用）。本番はAuth Hook経由でResendから送信
 enable_confirmations = false
-# If enabled, users will need to reauthenticate or have logged in recently to change their password.
+# If enabled, users must provide their current password when changing to a new password.
 secure_password_change = true
 # ローカルでは即送信（テスト用）。本番ではレート制限で保護
 max_frequency = "1s"
