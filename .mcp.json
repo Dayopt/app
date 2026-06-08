@@ -22,6 +22,19 @@
         "SENTRY_ACCESS_TOKEN": "${SENTRY_ACCESS_TOKEN}"
       }
     },
+    "supabase": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--read-only",
+        "--project-ref=yvglwblxrnrenfifsnje"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
+    },
     "playwright": {
       "type": "stdio",
       "command": "npx",
@@ -31,6 +44,10 @@
     "github": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/"
+    },
+    "vercel": {
+      "type": "http",
+      "url": "https://mcp.vercel.com"
     }
   }
 }
