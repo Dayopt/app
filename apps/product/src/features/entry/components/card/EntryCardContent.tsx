@@ -6,6 +6,7 @@
 
 import { memo } from 'react';
 
+import { Clock, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { TagIcon } from '@/features/tags';
@@ -160,16 +161,25 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
       {showTime != null && (
         <div className="event-time pointer-events-none flex flex-shrink-0 flex-col items-start gap-0.5 text-xs leading-tight">
           {timeRows.map((row) => (
-            <div key={row.key} className="flex max-w-full min-w-0 items-center gap-1">
-              <span
-                className={
-                  row.isActual
-                    ? 'text-foreground shrink-0 font-medium'
-                    : 'text-muted-foreground shrink-0 font-medium'
-                }
-              >
-                {row.label}
-              </span>
+            <div
+              key={row.key}
+              data-entry-time-kind={row.isActual ? 'actual' : 'planned'}
+              className="flex max-w-full min-w-0 items-center gap-1"
+            >
+              <span className="sr-only">{row.label}</span>
+              {row.isActual ? (
+                <Play
+                  aria-hidden="true"
+                  className="text-foreground size-3 shrink-0"
+                  strokeWidth={2}
+                />
+              ) : (
+                <Clock
+                  aria-hidden="true"
+                  className="text-muted-foreground size-3 shrink-0"
+                  strokeWidth={2}
+                />
+              )}
               <span className="text-muted-foreground min-w-0 truncate whitespace-nowrap tabular-nums">
                 {row.start && row.end
                   ? formatTimeRange(row.start, row.end, timeFormat)
