@@ -10,7 +10,7 @@ import { Clock, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { TagIcon } from '@/features/tags';
-import { formatTimeRange } from '@/lib/date';
+import { formatTime } from '@/lib/date';
 import type { CalendarEvent } from '../../types/calendar-event';
 
 interface EntryCardContentProps {
@@ -52,6 +52,10 @@ function sameTime(
   return (
     firstStart.getTime() === secondStart.getTime() && firstEnd.getTime() === secondEnd.getTime()
   );
+}
+
+function formatCardTimeRange(start: Date, end: Date, timeFormat: '12h' | '24h'): string {
+  return `${formatTime(start, timeFormat)} 〜 ${formatTime(end, timeFormat)}`;
 }
 
 /** エントリカードの内部コンテンツ（タグ名・時間範囲・リマインダーアイコン） */
@@ -182,7 +186,7 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
               )}
               <span className="text-muted-foreground min-w-0 truncate whitespace-nowrap tabular-nums">
                 {row.start && row.end
-                  ? formatTimeRange(row.start, row.end, timeFormat)
+                  ? formatCardTimeRange(row.start, row.end, timeFormat)
                   : t('calendar.event.noTimeSet')}
               </span>
             </div>

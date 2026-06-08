@@ -39,8 +39,8 @@ describe('EntryCardContent', () => {
     expect(container.querySelector('[data-entry-time-kind="actual"]')).toBeInTheDocument();
     expect(screen.getByText('entry.inspector.time.planned')).toHaveClass('sr-only');
     expect(screen.getByText('entry.inspector.time.actual')).toHaveClass('sr-only');
-    expect(screen.getByText(/13:00.*15:00/)).toBeInTheDocument();
-    expect(screen.getByText(/13:30.*16:45/)).toBeInTheDocument();
+    expect(screen.getByText('13:00 〜 15:00')).toBeInTheDocument();
+    expect(screen.getByText('13:30 〜 16:45')).toBeInTheDocument();
   });
 
   it('予定だけの planned entry は予定アイコン行だけを表示する', () => {
