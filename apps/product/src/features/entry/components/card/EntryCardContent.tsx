@@ -35,6 +35,24 @@ function parseEndDate(plan: CalendarEvent): Date | null {
   return null;
 }
 
+function parseOptionalDate(date: Date | null | undefined): Date | null {
+  if (date instanceof Date) return date;
+  if (date) return new Date(date);
+  return null;
+}
+
+function sameTime(
+  firstStart: Date | null,
+  firstEnd: Date | null,
+  secondStart: Date | null,
+  secondEnd: Date | null,
+): boolean {
+  if (!firstStart || !firstEnd || !secondStart || !secondEnd) return false;
+  return (
+    firstStart.getTime() === secondStart.getTime() && firstEnd.getTime() === secondEnd.getTime()
+  );
+}
+
 /** エントリカードの内部コンテンツ（タグ名・時間範囲・リマインダーアイコン） */
 export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardContent({
   plan,
@@ -50,11 +68,64 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
 
   const planStart = parseStartDate(plan);
   const planEnd = parseEndDate(plan);
+  const plannedStart = parseOptionalDate(plan.plannedStartDate) ?? planStart;
+  const plannedEnd = parseOptionalDate(plan.plannedEndDate) ?? planEnd;
+  const actualStart = parseOptionalDate(plan.actualStartDate);
+  const actualEnd = parseOptionalDate(plan.actualEndDate);
 
   // 実績時間があればそちらを優先（片方のみの場合は予定時間でフォールバック）
-  const hasActual = plan.actualStartDate != null || plan.actualEndDate != null;
-  const displayStart = hasActual ? (plan.actualStartDate ?? planStart) : planStart;
-  const displayEnd = hasActual ? (plan.actualEndDate ?? planEnd) : planEnd;
+  const hasActual = actualStart != null || actualEnd != null;
+  const displayStart = hasActual ? (actualStart ?? planStart) : planStart;
+  const displayEnd = hasActual ? (actualEnd ?? planEnd) : planEnd;
+  const actualDisplayStart = actualStart ?? planStart;
+  const actualDisplayEnd = actualEnd ?? planEnd;
+  const showBothTimes =
+    plan.origin === 'planned' &&
+    hasActual &&
+    !sameTime(plannedStart, plannedEnd, actualDisplayStart, actualDisplayEnd);
+  const previewLabel =
+    plan.origin === 'unplanned'
+      ? t('entry.inspector.time.actual')
+      : t('entry.inspector.time.planned');
+  const timeRows = previewTime
+    ? [
+        {
+          key: 'preview',
+          label: previewLabel,
+          start: previewTime.start,
+          end: previewTime.end,
+          isActual: plan.origin === 'unplanned',
+        },
+      ]
+    : showBothTimes
+      ? [
+          {
+            key: 'planned',
+            label: t('entry.inspector.time.planned'),
+            start: plannedStart,
+            end: plannedEnd,
+            isActual: false,
+          },
+          {
+            key: 'actual',
+            label: t('entry.inspector.time.actual'),
+            start: actualDisplayStart,
+            end: actualDisplayEnd,
+            isActual: true,
+          },
+        ]
+      : [
+          {
+            key: hasActual || plan.origin === 'unplanned' ? 'actual' : 'planned',
+            label:
+              hasActual || plan.origin === 'unplanned'
+                ? t('entry.inspector.time.actual')
+                : t('entry.inspector.time.planned'),
+            start: displayStart,
+            end: displayEnd,
+            isActual: hasActual || plan.origin === 'unplanned',
+          },
+        ];
 
   const fallbackLabel = plan.title || t('common.tags.add');
 
@@ -87,15 +158,25 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
       </div>
 
       {showTime != null && (
-        <div className="event-time text-muted-foreground pointer-events-none flex flex-shrink-0 items-center gap-1 text-xs leading-tight">
-          {/* 時間は左端フラッシュ（Google カレンダー流）。字下げせず全幅を使い 1 行で収める。 */}
-          <span className="mr-1 whitespace-nowrap tabular-nums">
-            {previewTime
-              ? formatTimeRange(previewTime.start, previewTime.end, timeFormat)
-              : displayStart && displayEnd
-                ? formatTimeRange(displayStart, displayEnd, timeFormat)
-                : t('calendar.event.noTimeSet')}
-          </span>
+        <div className="event-time pointer-events-none flex flex-shrink-0 flex-col items-start gap-0.5 text-xs leading-tight">
+          {timeRows.map((row) => (
+            <div key={row.key} className="flex max-w-full min-w-0 items-center gap-1">
+              <span
+                className={
+                  row.isActual
+                    ? 'text-foreground shrink-0 font-medium'
+                    : 'text-muted-foreground shrink-0 font-medium'
+                }
+              >
+                {row.label}
+              </span>
+              <span className="text-muted-foreground min-w-0 truncate whitespace-nowrap tabular-nums">
+                {row.start && row.end
+                  ? formatTimeRange(row.start, row.end, timeFormat)
+                  : t('calendar.event.noTimeSet')}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>

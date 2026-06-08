@@ -106,6 +106,25 @@ export const WithPreviewTime: Story = {
   ),
 };
 
+/** 予定と記録がずれた状態。 */
+export const PlannedWithActual: Story = {
+  render: () => (
+    <CardSlot>
+      <EntryCardContent
+        plan={{
+          ...baseEntry,
+          plannedStartDate: new Date('2024-01-15T10:00:00'),
+          plannedEndDate: new Date('2024-01-15T11:00:00'),
+          actualStartDate: new Date('2024-01-15T10:30:00'),
+          actualEndDate: new Date('2024-01-15T12:15:00'),
+        }}
+        tagName="仕事"
+        timeFormat="24h"
+      />
+    </CardSlot>
+  ),
+};
+
 /** 時刻未設定エントリ。「時刻未設定」テキストが表示される。 */
 export const NoTime: Story = {
   render: () => (
@@ -192,6 +211,23 @@ export const AllPatterns: Story = {
               start: new Date('2024-01-15T14:30:00'),
               end: new Date('2024-01-15T15:30:00'),
             }}
+          />
+        </CardSlot>
+      </section>
+
+      <section>
+        <p className="text-muted-foreground mb-1 text-xs">PlannedWithActual（予定/記録）</p>
+        <CardSlot>
+          <EntryCardContent
+            plan={{
+              ...baseEntry,
+              plannedStartDate: new Date('2024-01-15T10:00:00'),
+              plannedEndDate: new Date('2024-01-15T11:00:00'),
+              actualStartDate: new Date('2024-01-15T10:30:00'),
+              actualEndDate: new Date('2024-01-15T12:15:00'),
+            }}
+            tagName="仕事"
+            timeFormat="24h"
           />
         </CardSlot>
       </section>
