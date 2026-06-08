@@ -47,10 +47,11 @@ function actualDiffersFromPlanned(entry: CalendarEvent): boolean {
   return rangeDiffers(plannedStart, plannedEnd, entry.actualStartDate, entry.actualEndDate);
 }
 
-function minutesToSelection(
+export function minutesToSelection(
   date: Date,
   startMinutes: number,
   endMinutes: number,
+  creationSource?: DateTimeSelection['creationSource'],
 ): DateTimeSelection {
   const normalizedStart = Math.max(0, Math.min(startMinutes, 24 * 60 - 1));
   const normalizedEnd = Math.max(normalizedStart + 1, Math.min(endMinutes, 24 * 60 - 1));
@@ -60,6 +61,7 @@ function minutesToSelection(
     startMinute: normalizedStart % 60,
     endHour: Math.floor(normalizedEnd / 60),
     endMinute: normalizedEnd % 60,
+    ...(creationSource ? { creationSource } : {}),
   };
 }
 
@@ -301,7 +303,9 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
                       if (minutesToDate(date, endMinutes).getTime() > gapCreationCutoffMs) {
                         return;
                       }
-                      onTimeRangeSelect(minutesToSelection(date, startMinutes, endMinutes));
+                      onTimeRangeSelect(
+                        minutesToSelection(date, startMinutes, endMinutes, 'planned-gap'),
+                      );
                     }
                   : undefined
               }

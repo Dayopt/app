@@ -105,6 +105,38 @@ function renderPlanOnlyEntryRenderer() {
   );
 }
 
+function renderEntryRendererWith({
+  entry,
+  entries,
+  onGapClick,
+}: {
+  entry: CalendarEvent;
+  entries: CalendarEvent[];
+  onGapClick?: (startMinutes: number, endMinutes: number) => void;
+}) {
+  return render(
+    <EntryRenderer
+      entry={entry}
+      style={{ top: '100px', height: '60px' }}
+      hourHeight={60}
+      enableCrossDayDrag={false}
+      dayIndex={0}
+      isDragging={false}
+      isResizing={false}
+      entryDragging={false}
+      entryResizing={false}
+      interactionState={{ mode: 'idle' }}
+      globalDraggedEntryId={null}
+      isSourceColumnMovingAway={false}
+      onPointerDown={vi.fn()}
+      onTouchStart={vi.fn()}
+      onResizeStart={vi.fn()}
+      onGapClick={onGapClick}
+      entries={entries}
+    />,
+  );
+}
+
 describe('EntryRenderer', () => {
   it('リサイズ中はplanned layerとresize frameをpreview高さへ追従させる', () => {
     const { container } = renderEntryRenderer();
@@ -133,5 +165,42 @@ describe('EntryRenderer', () => {
       height: '60px',
     });
     expect(container.querySelector('[data-entry-actual-layer]')).toBeNull();
+  });
+
+  it('planned の前半 gap が既存の予定外記録で埋まっている場合は作成導線を隠す', () => {
+    const plannedEntry: CalendarEvent = {
+      ...baseEntry,
+      startDate: new Date(2026, 0, 15, 10, 0),
+      endDate: new Date(2026, 0, 15, 11, 0),
+      actualStartDate: new Date(2026, 0, 15, 10, 30),
+      actualEndDate: new Date(2026, 0, 15, 11, 0),
+      displayStartDate: new Date(2026, 0, 15, 10, 0),
+      displayEndDate: new Date(2026, 0, 15, 11, 0),
+    };
+    const gapRecord: CalendarEvent = {
+      ...baseEntry,
+      id: 'gap-record',
+      origin: 'unplanned',
+      startDate: new Date(2026, 0, 15, 10, 0),
+      endDate: new Date(2026, 0, 15, 10, 30),
+      actualStartDate: new Date(2026, 0, 15, 10, 0),
+      actualEndDate: new Date(2026, 0, 15, 10, 30),
+      displayStartDate: new Date(2026, 0, 15, 10, 0),
+      displayEndDate: new Date(2026, 0, 15, 10, 30),
+      duration: 30,
+    };
+    const onGapClick = vi.fn();
+
+    const { container } = renderEntryRendererWith({
+      entry: plannedEntry,
+      entries: [plannedEntry, gapRecord],
+      onGapClick,
+    });
+
+    const topGap = container.querySelector<HTMLElement>('[data-entry-gap="top"]');
+
+    expect(topGap).toHaveAttribute('aria-hidden', 'true');
+    expect(topGap).not.toHaveAttribute('role');
+    expect(container.querySelector('[data-entry-gap-action]')).not.toBeInTheDocument();
   });
 });

@@ -354,6 +354,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   if (date && !isSameDay(date, pendingSelection.date)) return null;
 
   const { startHour, startMinute, endHour, endMinute } = pendingSelection;
+  const isPlannedGapSelection = pendingSelection.creationSource === 'planned-gap';
 
   // 選択範囲のピクセル計算
   const startMinutes = startHour * 60 + startMinute;
@@ -477,11 +478,13 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         <div
           ref={highlightRef}
           className={cn(
-            'animate-in fade-in-0 pointer-events-auto absolute right-0 left-0 flex transition-colors duration-150 motion-reduce:animate-none',
+            'animate-in fade-in-0 pointer-events-auto absolute flex transition-colors duration-150 motion-reduce:animate-none',
             'rounded-r-lg',
           )}
           style={{
             top: selectionTop,
+            left: isPlannedGapSelection ? '50%' : 0,
+            right: 0,
             height: selectionHeight,
             touchAction: 'none',
             // past（unplanned 風）も確定後カードと同じ作り: 左アクセント + tint 塗り + 3 辺破線
@@ -507,10 +510,10 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
             />
           ) : (
             <>
-              {/* upcoming はアクセント無しで揃える。文言位置を合わせる 3px スペーサーのみ（不可視）。 */}
+              {/* past は確定後の unplanned と同じ左アクセント、upcoming は文言位置合わせのスペーサー。 */}
               <div
                 className="shrink-0 transition-colors duration-150"
-                style={{ width: '3px', backgroundColor: tintColor }}
+                style={{ width: '3px', backgroundColor: isPast ? accentColor : tintColor }}
               />
               {/* カード本体 — past も確定後カードと同じ tint 塗り */}
               <div

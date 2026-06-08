@@ -10,6 +10,7 @@
 
 import React, { memo, startTransition, useCallback, useEffect, useMemo } from 'react';
 
+import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses } from '@/features/tags';
@@ -37,6 +38,7 @@ const MIN_EVENT_HEIGHT = 14;
  * 15分連続ブロックが隙間なく並ぶと描画が 8px/個重なるが、実運用で稀なため許容。
  */
 const MIN_EVENT_HEIGHT_MOBILE = 28;
+const MIN_VISIBLE_GAP_ACTION_HEIGHT = 24;
 
 /** Z-index層 */
 const Z_INDEX = {
@@ -70,6 +72,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   plannedHeight: plannedHeightProp,
   overlayPositionApplied = false,
   onGapClick,
+  isGapAvailable,
   gapCreationCutoffMs,
 }) {
   const t = useTranslations();
@@ -103,18 +106,47 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         : computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
     [entry, hourHeightProp, renderAsPlanOnly],
   );
+  const topGapStartMinutes =
+    entry.startDate &&
+    entry.actualStartDate &&
+    entry.startDate.getTime() < entry.actualStartDate.getTime()
+      ? toMinutesOfDay(entry.startDate)
+      : null;
+  const topGapEndMinutes =
+    entry.startDate &&
+    entry.actualStartDate &&
+    entry.startDate.getTime() < entry.actualStartDate.getTime()
+      ? toMinutesOfDay(entry.actualStartDate)
+      : null;
+  const bottomGapStartMinutes =
+    entry.actualEndDate && entry.endDate && entry.actualEndDate.getTime() < entry.endDate.getTime()
+      ? toMinutesOfDay(entry.actualEndDate)
+      : null;
+  const bottomGapEndMinutes =
+    entry.actualEndDate && entry.endDate && entry.actualEndDate.getTime() < entry.endDate.getTime()
+      ? toMinutesOfDay(entry.endDate)
+      : null;
+  const topGapAvailable =
+    topGapStartMinutes != null && topGapEndMinutes != null
+      ? (isGapAvailable?.(topGapStartMinutes, topGapEndMinutes) ?? true)
+      : false;
+  const bottomGapAvailable =
+    bottomGapStartMinutes != null && bottomGapEndMinutes != null
+      ? (isGapAvailable?.(bottomGapStartMinutes, bottomGapEndMinutes) ?? true)
+      : false;
   const topGapClickEnabled =
     !!onGapClick &&
-    !!entry.startDate &&
-    !!entry.actualStartDate &&
-    entry.startDate.getTime() < entry.actualStartDate.getTime() &&
+    topGapAvailable &&
+    topGapEndMinutes != null &&
+    entry.actualStartDate != null &&
     (gapCreationCutoffMs == null || entry.actualStartDate.getTime() <= gapCreationCutoffMs);
   const bottomGapClickEnabled =
     !!onGapClick &&
-    !!entry.actualEndDate &&
-    !!entry.endDate &&
-    entry.actualEndDate.getTime() < entry.endDate.getTime() &&
+    bottomGapAvailable &&
+    bottomGapEndMinutes != null &&
+    entry.endDate != null &&
     (gapCreationCutoffMs == null || entry.endDate.getTime() <= gapCreationCutoffMs);
+  const hasGapCreateLane = topGapClickEnabled || bottomGapClickEnabled;
 
   // positionが未定義の場合のデフォルト値
   const safePosition = useMemo(
@@ -498,7 +530,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           role={topGapClickEnabled ? 'button' : undefined}
           aria-label={topGapClickEnabled ? t('calendar.event.diff.addRecordToGap') : undefined}
           className={cn(
-            'absolute right-0 left-0 flex items-center justify-center rounded-t-lg',
+            'absolute right-0 left-0 rounded-t-lg',
             topGapClickEnabled ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
           )}
           style={{ top: `${plannedLayerTop}px`, height: `${overlay.topHeight}px` }}
@@ -516,9 +548,13 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               : undefined
           }
         >
-          {overlay.topHeight >= 32 && topGapClickEnabled && (
-            <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
-              +
+          {overlay.topHeight >= MIN_VISIBLE_GAP_ACTION_HEIGHT && topGapClickEnabled && (
+            <span
+              data-entry-gap-action
+              className="bg-background/95 text-foreground border-border hover:bg-state-hover absolute top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm transition-colors"
+              style={{ right: 'calc(25% - 10px)' }}
+            >
+              <Plus aria-hidden="true" className="size-3.5" strokeWidth={2.25} />
             </span>
           )}
         </div>
@@ -531,7 +567,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           role={bottomGapClickEnabled ? 'button' : undefined}
           aria-label={bottomGapClickEnabled ? t('calendar.event.diff.addRecordToGap') : undefined}
           className={cn(
-            'absolute right-0 left-0 flex items-center justify-center rounded-b-lg',
+            'absolute right-0 left-0 rounded-b-lg',
             bottomGapClickEnabled ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
           )}
           style={{
@@ -552,9 +588,13 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               : undefined
           }
         >
-          {overlay.bottomHeight >= 32 && bottomGapClickEnabled && (
-            <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
-              +
+          {overlay.bottomHeight >= MIN_VISIBLE_GAP_ACTION_HEIGHT && bottomGapClickEnabled && (
+            <span
+              data-entry-gap-action
+              className="bg-background/95 text-foreground border-border hover:bg-state-hover absolute top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm transition-colors"
+              style={{ right: 'calc(25% - 10px)' }}
+            >
+              <Plus aria-hidden="true" className="size-3.5" strokeWidth={2.25} />
             </span>
           )}
         </div>
@@ -637,6 +677,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             top: `${contentLayerTop}px`,
             // アクセントの有無で文言位置がずれないよう、upcoming も accent 幅分を確保して揃える。
             left: `${accentWidth}px`,
+            right: hasGapCreateLane ? '50%' : '0px',
             height: `${contentLayerHeight}px`,
           }}
         >

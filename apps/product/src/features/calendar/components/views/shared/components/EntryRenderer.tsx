@@ -117,6 +117,19 @@ export const EntryRenderer = React.memo(function EntryRenderer({
     entryResizing && interactionState.mode === 'resizing'
       ? interactionState.snappedHeight
       : currentHeight;
+  const isGapAvailable = React.useCallback(
+    (startMinutes: number, endMinutes: number) =>
+      !entries.some((candidate) => {
+        if (candidate.id === entry.id || candidate.origin !== 'unplanned') return false;
+        const start = candidate.actualStartDate ?? candidate.startDate;
+        const end = candidate.actualEndDate ?? candidate.endDate;
+        if (!start || !end) return false;
+        const candidateStartMinutes = start.getHours() * 60 + start.getMinutes();
+        const candidateEndMinutes = end.getHours() * 60 + end.getMinutes();
+        return startMinutes < candidateEndMinutes && endMinutes > candidateStartMinutes;
+      }),
+    [entries, entry.id],
+  );
 
   if (enableCrossDayDrag) {
     const overlay = computeActualTimeDiffOverlay(entry, hourHeight);
@@ -220,6 +233,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           previewTime={getPreviewTime(entry.id, interactionState)}
           hourHeight={hourHeight}
           onGapClick={onGapClick}
+          isGapAvailable={isGapAvailable}
           gapCreationCutoffMs={gapCreationCutoffMs}
           {...(enableCrossDayDrag ? { overlayPositionApplied: true } : {})}
           className={cn(

@@ -166,6 +166,99 @@ describe('EntryCard', () => {
       expect(container.querySelector('.pattern-hatch')).not.toBeInTheDocument();
     });
 
+    it('actual 開始が遅れた前半 gap から予定外記録の作成範囲を返す', () => {
+      const onGapClick = vi.fn();
+      const { container } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            origin: 'planned',
+            actualStartDate: new Date('2025-01-15T10:30:00'),
+            actualEndDate: mockEvent.endDate,
+          }}
+          position={mockPosition}
+          hourHeight={60}
+          onGapClick={onGapClick}
+        />,
+      );
+
+      const topGap = container.querySelector<HTMLElement>('[data-entry-gap="top"]');
+      const gapAction = topGap?.querySelector<HTMLElement>('[data-entry-gap-action]');
+
+      expect(topGap).toHaveAttribute('role', 'button');
+      expect(topGap).toHaveStyle({ top: '0px', height: '30px' });
+      expect(gapAction).toBeInTheDocument();
+      expect(gapAction).toHaveStyle({ right: 'calc(25% - 10px)' });
+      expect(container.querySelector<HTMLElement>('[data-entry-content-layer]')).toHaveStyle({
+        right: '50%',
+      });
+
+      fireEvent.click(topGap!);
+
+      expect(onGapClick).toHaveBeenCalledTimes(1);
+      expect(onGapClick).toHaveBeenCalledWith(600, 630);
+    });
+
+    it('既に別の記録で埋まっている前半 gap は作成導線を隠す', () => {
+      const onGapClick = vi.fn();
+      const { container } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            origin: 'planned',
+            actualStartDate: new Date('2025-01-15T10:30:00'),
+            actualEndDate: mockEvent.endDate,
+          }}
+          position={mockPosition}
+          hourHeight={60}
+          onGapClick={onGapClick}
+          isGapAvailable={() => false}
+        />,
+      );
+
+      const topGap = container.querySelector<HTMLElement>('[data-entry-gap="top"]');
+
+      expect(topGap).toHaveAttribute('aria-hidden', 'true');
+      expect(topGap).not.toHaveAttribute('role');
+      expect(container.querySelector('[data-entry-gap-action]')).not.toBeInTheDocument();
+      expect(container.querySelector<HTMLElement>('[data-entry-content-layer]')).toHaveStyle({
+        right: '0px',
+      });
+
+      fireEvent.click(topGap!);
+
+      expect(onGapClick).not.toHaveBeenCalled();
+    });
+
+    it('未来に終わる前半 gap は作成導線を無効にする', () => {
+      const onGapClick = vi.fn();
+      const { container } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            startDate: new Date('2030-01-15T10:00:00'),
+            endDate: new Date('2030-01-15T11:00:00'),
+            origin: 'planned',
+            actualStartDate: new Date('2030-01-15T10:30:00'),
+            actualEndDate: new Date('2030-01-15T11:00:00'),
+          }}
+          position={mockPosition}
+          hourHeight={60}
+          onGapClick={onGapClick}
+          gapCreationCutoffMs={new Date('2026-01-15T00:00:00').getTime()}
+        />,
+      );
+
+      const topGap = container.querySelector<HTMLElement>('[data-entry-gap="top"]');
+
+      expect(topGap).toHaveAttribute('aria-hidden', 'true');
+      expect(topGap).not.toHaveAttribute('role');
+
+      fireEvent.click(topGap!);
+
+      expect(onGapClick).not.toHaveBeenCalled();
+    });
+
     it('actual が planned 内でズレた場合は planned 背景と actual card が別レイヤーで見える', () => {
       const { container } = render(
         <EntryCard

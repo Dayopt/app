@@ -64,6 +64,8 @@ export interface EntryCardProps {
   overlayPositionApplied?: boolean | undefined;
   /** 空き枠（unexecuted）クリック時のコールバック。引数は空き時間の開始・終了（分 of day） */
   onGapClick?: ((startMinutes: number, endMinutes: number) => void) | undefined;
+  /** 空き枠が既に別の記録で埋まっている場合などに、gap 作成導線を隠す */
+  isGapAvailable?: ((startMinutes: number, endMinutes: number) => boolean) | undefined;
   /** 空き枠クリックを許可する上限時刻。未来の予定外記録作成を防ぐために使用 */
   gapCreationCutoffMs?: number | undefined;
 }
