@@ -116,4 +116,36 @@ describe('useDayView', () => {
     expect(parseFloat(style1?.width?.toString() ?? '100')).toBe(50);
     expect(parseFloat(style2?.width?.toString() ?? '100')).toBe(50);
   });
+
+  it('同じ時間帯では予定外記録を planned より前面にする', () => {
+    const unplanned = createMockEntry({
+      id: 'gap-record',
+      origin: 'unplanned',
+      startDate: new Date('2026-03-30T10:00:00'),
+      endDate: new Date('2026-03-30T10:30:00'),
+      displayStartDate: new Date('2026-03-30T10:00:00'),
+      displayEndDate: new Date('2026-03-30T10:30:00'),
+    });
+    const planned = createMockEntry({
+      id: 'planned',
+      origin: 'planned',
+      startDate: new Date('2026-03-30T10:00:00'),
+      endDate: new Date('2026-03-30T11:00:00'),
+      displayStartDate: new Date('2026-03-30T10:00:00'),
+      displayEndDate: new Date('2026-03-30T11:00:00'),
+    });
+
+    const { result } = renderHook(() =>
+      useDayView({
+        date: baseDate,
+        entries: [unplanned, planned],
+        timezone: 'UTC',
+      }),
+    );
+
+    const recordZIndex = Number(result.current.entryStyles['gap-record']?.zIndex);
+    const plannedZIndex = Number(result.current.entryStyles.planned?.zIndex);
+
+    expect(recordZIndex).toBeGreaterThan(plannedZIndex);
+  });
 });

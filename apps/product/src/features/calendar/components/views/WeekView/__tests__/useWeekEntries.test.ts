@@ -114,4 +114,36 @@ describe('useWeekEntries', () => {
     expect(result.current.entryPositions).toHaveLength(2);
     expect(result.current.maxConcurrentEntries).toBe(2);
   });
+
+  it('同じ時間帯では予定外記録を planned より前面にする', () => {
+    const unplanned = createMockEntry({
+      id: 'gap-record',
+      origin: 'unplanned',
+      startDate: new Date('2026-03-30T10:00:00'),
+      endDate: new Date('2026-03-30T10:30:00'),
+      displayStartDate: new Date('2026-03-30T10:00:00'),
+      displayEndDate: new Date('2026-03-30T10:30:00'),
+    });
+    const planned = createMockEntry({
+      id: 'planned',
+      origin: 'planned',
+      startDate: new Date('2026-03-30T10:00:00'),
+      endDate: new Date('2026-03-30T11:00:00'),
+      displayStartDate: new Date('2026-03-30T10:00:00'),
+      displayEndDate: new Date('2026-03-30T11:00:00'),
+    });
+
+    const { result } = renderHook(() =>
+      useWeekEntries({
+        weekDates,
+        events: [unplanned, planned],
+        timezone: 'UTC',
+      }),
+    );
+
+    const recordPosition = result.current.entryPositions.find((p) => p.plan.id === 'gap-record');
+    const plannedPosition = result.current.entryPositions.find((p) => p.plan.id === 'planned');
+
+    expect(recordPosition?.zIndex).toBeGreaterThan(plannedPosition?.zIndex ?? 0);
+  });
 });
