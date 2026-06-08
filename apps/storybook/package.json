@@ -14,14 +14,14 @@
     "@dayopt/design": "workspace:*",
     "@dayopt/product": "workspace:*",
     "@dayopt/ui": "workspace:*",
-    "@tanstack/react-query": "^5.100.14",
+    "@tanstack/react-query": "^5.101.0",
     "@trpc/client": "^11.17.0",
     "@trpc/server": "^11.17.0",
     "lucide-react": "^0.577.0",
-    "next": "^16.2.6",
+    "next": "^16.2.7",
     "next-intl": "^4.13.0",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
