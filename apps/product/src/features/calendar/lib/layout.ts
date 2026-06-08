@@ -136,15 +136,16 @@ export function calculateGroupLayout(entries: TimedEntry[]): EntryLayout[] {
     conflicts.set(entry1.id, conflictSet);
   });
 
-  // 最大同時重複数を計算
-  const maxConcurrent = calculateMaxConcurrent(entries);
-
   // 各エントリにカラムを割り当て
   const assignments = new Map<string, number>();
 
-  // 開始時刻順にソートしてカラムを割り当て
+  // planned を左、unplanned を右に安定配置するため、origin を優先してから開始時刻順に割り当てる。
   const sortedForAssignment = [...entries].sort((a, b) => {
-    return new Date(a.start).getTime() - new Date(b.start).getTime();
+    if (a.origin === 'planned' && b.origin === 'unplanned') return -1;
+    if (a.origin === 'unplanned' && b.origin === 'planned') return 1;
+    const timeDiff = new Date(a.start).getTime() - new Date(b.start).getTime();
+    if (timeDiff !== 0) return timeDiff;
+    return 0;
   });
 
   sortedForAssignment.forEach((entry) => {
@@ -163,6 +164,11 @@ export function calculateGroupLayout(entries: TimedEntry[]): EntryLayout[] {
 
     assignments.set(entry.id, column);
   });
+
+  const maxConcurrent = Math.max(
+    1,
+    ...Array.from(assignments.values()).map((column) => column + 1),
+  );
 
   // レイアウト情報を生成
   entries.forEach((entry) => {

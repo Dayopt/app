@@ -105,6 +105,87 @@ describe('calculateEntryLayouts', () => {
     expect(layouts[1]!.width).toBe(50);
   });
 
+  it('planned の未実行前半 gap に作った unplanned は右側に横割りする', () => {
+    const unplannedGapRecord = createTimedEntry({
+      id: 'gap-record',
+      start: new Date('2026-01-15T10:00:00'),
+      end: new Date('2026-01-15T10:30:00'),
+      actualStartDate: new Date('2026-01-15T10:00:00'),
+      actualEndDate: new Date('2026-01-15T10:30:00'),
+      origin: 'unplanned',
+    });
+    const planned = createTimedEntry({
+      id: 'planned',
+      start: new Date('2026-01-15T10:00:00'),
+      end: new Date('2026-01-15T11:00:00'),
+      plannedStartDate: new Date('2026-01-15T10:00:00'),
+      plannedEndDate: new Date('2026-01-15T11:00:00'),
+      actualStartDate: new Date('2026-01-15T10:30:00'),
+      actualEndDate: new Date('2026-01-15T11:00:00'),
+      origin: 'planned',
+    });
+
+    const layouts = calculateEntryLayouts([unplannedGapRecord, planned]);
+    const plannedLayout = layouts.find((layout) => layout.entry.id === 'planned');
+    const recordLayout = layouts.find((layout) => layout.entry.id === 'gap-record');
+
+    expect(plannedLayout).toMatchObject({ column: 0, left: 0, width: 50, totalColumns: 2 });
+    expect(recordLayout).toMatchObject({ column: 1, left: 50, width: 50, totalColumns: 2 });
+  });
+
+  it('planned の actual 範囲に重なる unplanned は従来通り横割りする', () => {
+    const planned = createTimedEntry({
+      id: 'planned',
+      start: new Date('2026-01-15T10:00:00'),
+      end: new Date('2026-01-15T11:00:00'),
+      plannedStartDate: new Date('2026-01-15T10:00:00'),
+      plannedEndDate: new Date('2026-01-15T11:00:00'),
+      actualStartDate: new Date('2026-01-15T10:30:00'),
+      actualEndDate: new Date('2026-01-15T11:00:00'),
+      origin: 'planned',
+    });
+    const overlappingRecord = createTimedEntry({
+      id: 'overlap-record',
+      start: new Date('2026-01-15T10:15:00'),
+      end: new Date('2026-01-15T10:45:00'),
+      actualStartDate: new Date('2026-01-15T10:15:00'),
+      actualEndDate: new Date('2026-01-15T10:45:00'),
+      origin: 'unplanned',
+    });
+
+    const layouts = calculateEntryLayouts([planned, overlappingRecord]);
+
+    expect(layouts).toHaveLength(2);
+    layouts.forEach((layout) => {
+      expect(layout.totalColumns).toBe(2);
+      expect(layout.width).toBe(50);
+    });
+  });
+
+  it('unplanned が少し早く始まっても planned を左、unplanned を右に配置する', () => {
+    const unplanned = createTimedEntry({
+      id: 'unplanned',
+      start: new Date('2026-01-15T09:45:00'),
+      end: new Date('2026-01-15T10:15:00'),
+      actualStartDate: new Date('2026-01-15T09:45:00'),
+      actualEndDate: new Date('2026-01-15T10:15:00'),
+      origin: 'unplanned',
+    });
+    const planned = createTimedEntry({
+      id: 'planned',
+      start: new Date('2026-01-15T10:00:00'),
+      end: new Date('2026-01-15T11:00:00'),
+      origin: 'planned',
+    });
+
+    const layouts = calculateEntryLayouts([unplanned, planned]);
+    const plannedLayout = layouts.find((layout) => layout.entry.id === 'planned');
+    const unplannedLayout = layouts.find((layout) => layout.entry.id === 'unplanned');
+
+    expect(plannedLayout).toMatchObject({ column: 0, left: 0, width: 50, totalColumns: 2 });
+    expect(unplannedLayout).toMatchObject({ column: 1, left: 50, width: 50, totalColumns: 2 });
+  });
+
   it('重複しない2エントリは各自full width', () => {
     const entry1 = createTimedEntry({
       id: 'a',
