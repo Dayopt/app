@@ -15,7 +15,11 @@ import { useTranslations } from 'next-intl';
 import { getTagColorClasses } from '@/features/tags';
 import { cn } from '@/lib/utils';
 
-import { computeActualTimeDiffOverlay, toMinutesOfDay } from '../../lib/actual-time-overlay';
+import {
+  computeActualTimeDiffOverlay,
+  NO_OVERLAY,
+  toMinutesOfDay,
+} from '../../lib/actual-time-overlay';
 
 import type { EntryCardProps } from './EntryCard.types';
 import { EntryCardContent } from './EntryCardContent';
@@ -56,6 +60,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   onAnchorRect,
   isDragging = false,
   isSelected = false,
+  isResizing = false,
   isActive = false,
   isMobile = false,
   className = '',
@@ -81,13 +86,22 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const isPast = entry.entryState === 'past';
   // 予定外エントリかどうか（全体を破線枠で表示）
   const isUnplanned = entry.origin === 'unplanned';
-  // 未来の予定は「予定UI」(薄い planned layer のみ・左線なし)。
-  // active/past の予定、および unplanned は「記録UI」(actual layer + 左線)。
-  const renderAsPlanOnly = !isUnplanned && entry.entryState === 'upcoming';
+  // upcoming planned は記録が確定していないため、actual 値が入っていても予定UIにする。
+  // past/active では actual が両方 null の planned entry だけ予定UIとして扱う。
+  const renderAsPlanOnly =
+    entry.origin === 'planned' &&
+    (entry.entryState === 'upcoming' ||
+      (entry.actualStartDate == null && entry.actualEndDate == null));
+  const contentEntry = renderAsPlanOnly
+    ? { ...entry, actualStartDate: null, actualEndDate: null }
+    : entry;
   // 予定 vs 記録の差分オーバーレイ
   const overlay = useMemo(
-    () => computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
-    [entry, hourHeightProp],
+    () =>
+      renderAsPlanOnly
+        ? NO_OVERLAY
+        : computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
+    [entry, hourHeightProp, renderAsPlanOnly],
   );
   const topGapClickEnabled =
     !!onGapClick &&
@@ -122,12 +136,26 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const accentWidth = 3;
 
   const minHeight = isMobile ? MIN_EVENT_HEIGHT_MOBILE : MIN_EVENT_HEIGHT;
+  const planOnlyGridHeight = useMemo(() => {
+    if (!renderAsPlanOnly || !hourHeightProp || isResizing) return null;
+
+    const start = entry.displayStartDate ?? entry.startDate;
+    const end = entry.displayEndDate ?? entry.endDate;
+    if (!start || !end) return null;
+
+    const startMinutes = toMinutesOfDay(start);
+    const endMinutes = toMinutesOfDay(end);
+    if (endMinutes <= startMinutes) return null;
+
+    return ((endMinutes - startMinutes) * hourHeightProp) / 60;
+  }, [entry, hourHeightProp, isResizing, renderAsPlanOnly]);
   const visualHeight = Math.max(
-    safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0),
+    planOnlyGridHeight ?? safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0),
     minHeight,
   );
   const plannedHeight = Math.max(
-    plannedHeightProp ??
+    planOnlyGridHeight ??
+      plannedHeightProp ??
       (overlayPositionApplied ? safePosition.height - overlay.heightDelta : safePosition.height),
     minHeight,
   );
@@ -141,6 +169,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   );
   const contentLayerTop = isUnplanned ? actualLayerTop : plannedLayerTop;
   const contentLayerHeight = isUnplanned ? actualLayerHeight : plannedHeight;
+  const alignPlannedLayerToGrid = entry.origin === 'planned' && !renderAsPlanOnly;
   // planned bg は「context」として後ろに引かせ、actual body が「main」として前に出る intensity 階層
   const plannedBackgroundColor = `color-mix(in oklch, ${accentColor} 8%, var(--background))`;
   const actualBackgroundColor = `color-mix(in oklch, ${accentColor} 18%, var(--background))`;
@@ -150,14 +179,23 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     () => ({
       position: 'absolute' as const,
       top: `${safePosition.top - (applyPositionAdjust ? overlay.topShift : 0)}px`,
-      left: `${safePosition.left}%`,
-      width: `calc(${safePosition.width}% - 8px)`,
+      left: renderAsPlanOnly ? `calc(${safePosition.left}% - 1px)` : `${safePosition.left}%`,
+      width: `calc(${safePosition.width}% - ${renderAsPlanOnly ? 7 : 8}px)`,
       height: `${visualHeight}px`,
       zIndex: isSelected || isDragging ? Z_INDEX.DRAGGING : Z_INDEX.EVENTS,
       cursor: isDragging ? 'grabbing' : 'pointer',
       ...style,
     }),
-    [safePosition, overlay, applyPositionAdjust, isSelected, isDragging, style, visualHeight],
+    [
+      safePosition,
+      overlay,
+      applyPositionAdjust,
+      isSelected,
+      isDragging,
+      renderAsPlanOnly,
+      style,
+      visualHeight,
+    ],
   );
 
   const unplannedBorderStyle: React.CSSProperties = {
@@ -384,18 +422,19 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       )}
 
       {/* Layer 1: planned — Google Calendar 風の薄い背景だけ。
-          予定UI（renderAsPlanOnly）では左端を罫線にピタッと載せるため左角を直角にする
+          planned layer は左端を罫線にピタッと載せるため左角を直角にする
           （記録ブロックの左アクセント帯と同じく左辺をまっすぐ揃える）。 */}
       {!isUnplanned && (
         <div
           data-entry-planned-layer
           aria-hidden="true"
           className={cn(
-            'pointer-events-none absolute right-0 left-0',
-            renderAsPlanOnly ? 'rounded-r-lg' : 'rounded-lg',
+            'pointer-events-none absolute right-0',
+            entry.origin === 'planned' ? 'rounded-r-lg' : 'rounded-lg',
           )}
           style={{
             top: `${plannedLayerTop}px`,
+            left: alignPlannedLayerToGrid ? '-1px' : '0px',
             height: `${plannedHeight}px`,
             // upcoming は記録(actual)と地の色を揃える（差は左アクセントの有無だけにする）。
             backgroundColor: renderAsPlanOnly ? actualBackgroundColor : plannedBackgroundColor,
@@ -567,7 +606,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           >
             {isUnplanned && (
               <EntryCardContent
-                plan={entry}
+                plan={contentEntry}
                 tagName={tagName}
                 tagColor={tagColor}
                 tagIcon={tagIcon}
@@ -602,7 +641,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           }}
         >
           <EntryCardContent
-            plan={entry}
+            plan={contentEntry}
             tagName={tagName}
             tagColor={tagColor}
             tagIcon={tagIcon}

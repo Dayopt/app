@@ -247,12 +247,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   return (
     <div
-      className={cn(
-        'relative flex-1',
-        enableCrossDayDrag && isDragging ? 'overflow-visible' : 'overflow-hidden',
-        enableCrossDayDrag && 'h-full',
-        className,
-      )}
+      className={cn('relative flex-1 overflow-visible', enableCrossDayDrag && 'h-full', className)}
       data-calendar-grid
       data-calendar-day-index={dayIndex}
     >

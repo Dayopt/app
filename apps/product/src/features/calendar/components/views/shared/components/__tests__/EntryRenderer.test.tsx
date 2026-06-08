@@ -75,6 +75,36 @@ function renderEntryRenderer() {
   );
 }
 
+function renderPlanOnlyEntryRenderer() {
+  const planOnlyEntry: CalendarEvent = {
+    ...baseEntry,
+    entryState: 'past',
+    actualStartDate: null,
+    actualEndDate: null,
+  };
+
+  return render(
+    <EntryRenderer
+      entry={planOnlyEntry}
+      style={{ top: '100px', height: '60px' }}
+      hourHeight={60}
+      enableCrossDayDrag={false}
+      dayIndex={0}
+      isDragging={false}
+      isResizing={false}
+      entryDragging={false}
+      entryResizing={false}
+      interactionState={{ mode: 'idle' }}
+      globalDraggedEntryId={null}
+      isSourceColumnMovingAway={false}
+      onPointerDown={vi.fn()}
+      onTouchStart={vi.fn()}
+      onResizeStart={vi.fn()}
+      entries={[planOnlyEntry]}
+    />,
+  );
+}
+
 describe('EntryRenderer', () => {
   it('リサイズ中はplanned layerとresize frameをpreview高さへ追従させる', () => {
     const { container } = renderEntryRenderer();
@@ -85,5 +115,23 @@ describe('EntryRenderer', () => {
     expect(container.querySelector<HTMLElement>('[data-entry-resize-frame]')).toHaveStyle({
       height: '120px',
     });
+  });
+
+  it('actual が無い planned entry は予定レイヤーだけをグリッド高さに揃える', () => {
+    const { container } = renderPlanOnlyEntryRenderer();
+
+    expect(container.querySelector<HTMLElement>('[data-entry-wrapper="true"]')).toHaveStyle({
+      top: '100px',
+      height: '60px',
+    });
+    expect(container.querySelector<HTMLElement>('[data-entry-card]')).toHaveStyle({
+      top: '0px',
+      height: '60px',
+    });
+    expect(container.querySelector<HTMLElement>('[data-entry-planned-layer]')).toHaveStyle({
+      top: '0px',
+      height: '60px',
+    });
+    expect(container.querySelector('[data-entry-actual-layer]')).toBeNull();
   });
 });

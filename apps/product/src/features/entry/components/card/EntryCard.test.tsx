@@ -78,11 +78,70 @@ describe('EntryCard', () => {
       expect(plannedLayer).toBeInTheDocument();
       expect(actualLayer).toBeInTheDocument();
       expect(contentLayer).toBeInTheDocument();
-      expect(plannedLayer).toHaveClass('rounded-lg');
+      expect(plannedLayer).toHaveClass('rounded-r-lg');
       expect(plannedLayer).not.toHaveClass('pattern-hatch');
       expect(plannedLayer?.style.border).toBe('');
+      expect(plannedLayer).toHaveStyle({ left: '-1px' });
       expect(actualLayer).toHaveStyle({ top: '0px', height: '60px' });
       expect(contentLayer).toHaveStyle({ top: '0px', height: '60px' });
+    });
+
+    it('upcoming planned entry は actual があっても予定UIとして表示する', () => {
+      const { container } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            origin: 'planned',
+            entryState: 'upcoming',
+            actualStartDate: new Date('2025-01-15T10:15:00'),
+            actualEndDate: mockEvent.endDate,
+          }}
+          position={mockPosition}
+          hourHeight={60}
+        />,
+      );
+
+      const root = screen.getByLabelText(/entry: テストイベント/i);
+      const plannedLayer = container.querySelector<HTMLElement>('[data-entry-planned-layer]');
+      const contentLayer = container.querySelector<HTMLElement>('[data-entry-content-layer]');
+
+      expect(root).toHaveStyle({
+        top: '100px',
+        left: 'calc(10% - 1px)',
+        width: 'calc(80% - 7px)',
+        height: '60px',
+      });
+      expect(plannedLayer).toHaveClass('rounded-r-lg');
+      expect(plannedLayer).toHaveStyle({ top: '0px', left: '0px', height: '60px' });
+      expect(contentLayer).toHaveStyle({ top: '0px', height: '60px' });
+      expect(container.querySelector('[data-entry-actual-layer]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-entry-actual-accent]')).not.toBeInTheDocument();
+    });
+
+    it('upcoming planned entry はグリッドdurationの高さに揃える', () => {
+      const { container } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            origin: 'planned',
+            entryState: 'upcoming',
+            actualStartDate: new Date('2025-01-15T10:15:00'),
+            actualEndDate: mockEvent.endDate,
+          }}
+          position={{ ...mockPosition, height: 58 }}
+          hourHeight={60}
+        />,
+      );
+
+      const root = screen.getByLabelText(/entry: テストイベント/i);
+      const plannedLayer = container.querySelector<HTMLElement>('[data-entry-planned-layer]');
+      const contentLayer = container.querySelector<HTMLElement>('[data-entry-content-layer]');
+      const resizeFrame = container.querySelector<HTMLElement>('[data-entry-resize-frame]');
+
+      expect(root).toHaveStyle({ height: '60px' });
+      expect(plannedLayer).toHaveStyle({ height: '60px' });
+      expect(contentLayer).toHaveStyle({ height: '60px' });
+      expect(resizeFrame).toHaveStyle({ height: '60px' });
     });
 
     it('actual が planned より短い場合は planned 背景が露出する', () => {
@@ -102,7 +161,7 @@ describe('EntryCard', () => {
       const plannedLayer = container.querySelector<HTMLElement>('[data-entry-planned-layer]');
       const actualLayer = container.querySelector<HTMLElement>('[data-entry-actual-layer]');
 
-      expect(plannedLayer).toHaveStyle({ top: '0px', height: '60px' });
+      expect(plannedLayer).toHaveStyle({ top: '0px', left: '-1px', height: '60px' });
       expect(actualLayer).toHaveStyle({ top: '15px', height: '30px' });
       expect(container.querySelector('.pattern-hatch')).not.toBeInTheDocument();
     });
@@ -130,7 +189,7 @@ describe('EntryCard', () => {
       const contentLayer = container.querySelector<HTMLElement>('[data-entry-content-layer]');
 
       expect(root).toHaveStyle({ top: '100px', height: '120px' });
-      expect(plannedLayer).toHaveStyle({ top: '0px', height: '120px' });
+      expect(plannedLayer).toHaveStyle({ top: '0px', left: '-1px', height: '120px' });
       expect(actualLayer).toHaveStyle({ top: '30px', height: '60px' });
       expect(contentLayer).toHaveStyle({ top: '0px', height: '120px' });
     });
@@ -156,17 +215,18 @@ describe('EntryCard', () => {
       const overtimeAccent = container.querySelector<HTMLElement>('[data-entry-overtime-accent]');
 
       expect(root).toHaveStyle({ top: '70px', height: '90px' });
-      expect(plannedLayer).toHaveStyle({ top: '30px', height: '60px' });
+      expect(plannedLayer).toHaveStyle({ top: '30px', left: '-1px', height: '60px' });
       expect(actualLayer).toHaveStyle({ top: '30px', height: '60px' });
       expect(actualBody).toHaveStyle({ borderRadius: '0 0 8px 0' });
       expect(overtimeAccent).toBeInTheDocument();
       expect(overtimeAccent).toHaveClass('left-0');
       expect(overtimeAccent).toHaveStyle({ width: '3px' });
-      expect(overtimeAccent?.parentElement).toHaveStyle({ borderRadius: '0 8px 0 0' });
-      expect(overtimeAccent?.parentElement?.style.borderTopStyle).toBe('dashed');
-      expect(overtimeAccent?.parentElement?.style.borderRightStyle).toBe('dashed');
-      expect(overtimeAccent?.parentElement?.style.borderBottomStyle).toBe('dashed');
-      expect(overtimeAccent?.parentElement?.style.borderLeftStyle).toBe('');
+      const overtimeFrame = overtimeAccent?.parentElement?.lastElementChild as HTMLElement | null;
+      expect(overtimeFrame).toHaveStyle({ borderRadius: '0 8px 0 0' });
+      expect(overtimeFrame?.style.borderTopStyle).toBe('dashed');
+      expect(overtimeFrame?.style.borderRightStyle).toBe('dashed');
+      expect(overtimeFrame?.style.borderBottomStyle).toBe('dashed');
+      expect(overtimeFrame?.style.borderLeftStyle).toBe('');
     });
 
     it('unplanned entry は planned 背景を描かず点線の actual のみ表示する', () => {
@@ -184,6 +244,7 @@ describe('EntryCard', () => {
 
       const actualLayer = container.querySelector<HTMLElement>('[data-entry-actual-layer]');
       const actualAccent = container.querySelector<HTMLElement>('[data-entry-actual-accent]');
+      const actualBody = container.querySelector<HTMLElement>('[data-entry-actual-body]');
 
       expect(screen.getByLabelText(/entry: テストイベント/i)).toHaveStyle({
         left: '10%',
@@ -193,10 +254,10 @@ describe('EntryCard', () => {
       expect(container.querySelector('[data-entry-content-layer]')).not.toBeInTheDocument();
       expect(actualLayer).toBeInTheDocument();
       expect(actualAccent).toBeInTheDocument();
-      expect(actualLayer?.style.borderTopStyle).toBe('dashed');
-      expect(actualLayer?.style.borderRightStyle).toBe('dashed');
-      expect(actualLayer?.style.borderBottomStyle).toBe('dashed');
-      expect(actualLayer?.style.borderLeftStyle).toBe('');
+      expect(actualBody?.style.borderTopStyle).toBe('dashed');
+      expect(actualBody?.style.borderRightStyle).toBe('dashed');
+      expect(actualBody?.style.borderBottomStyle).toBe('dashed');
+      expect(actualBody?.style.borderLeftStyle).toBe('');
     });
   });
 
