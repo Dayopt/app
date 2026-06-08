@@ -18,6 +18,7 @@ import {
 import { CalendarGridContent } from '../../shared/components/CalendarGridContent';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import { useWeekEntries } from '../hooks/useWeekEntries';
+import { toWeekDayEntryPosition } from '../utils/weekEntryPosition';
 
 import type { WeekGridProps } from '../../../../types/week-view.types';
 
@@ -83,18 +84,7 @@ export const WeekGrid = ({
 
   // entryPositions → entryStyles 変換（全日分をまとめて計算）
   const normalizedPositions = React.useMemo(
-    () =>
-      entryPositions.map((pos) => ({
-        plan: pos.plan,
-        top: pos.top,
-        height: pos.height,
-        left: 0,
-        width: 100,
-        zIndex: pos.zIndex,
-        column: pos.column,
-        totalColumns: pos.totalColumns,
-        opacity: 1.0,
-      })),
+    () => entryPositions.map((pos) => toWeekDayEntryPosition(pos)),
     [entryPositions],
   );
   const entryStyles = useEntryStyles(normalizedPositions);
