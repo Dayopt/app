@@ -53,7 +53,8 @@ function initSentry(dsn: string) {
   Sentry.init({
     dsn,
     environment: VERCEL_ENV,
-    ...(process.env.NEXT_PUBLIC_APP_VERSION && { release: process.env.NEXT_PUBLIC_APP_VERSION }),
+    // release は withSentryConfig が build 時に注入する（next.config の release.name = VERCEL_GIT_COMMIT_SHA）。
+    // ここで明示すると source map upload 時の release と runtime がズレるため上書きしない。
 
     // サンプリングレート（環境別）
     tracesSampleRate: IS_PRODUCTION ? 0.1 : VERCEL_ENV === 'preview' ? 0.5 : 1.0,
@@ -67,8 +68,9 @@ function initSentry(dsn: string) {
     // デバッグモード（開発環境のみ）
     debug: !IS_PRODUCTION && process.env.NEXT_PUBLIC_SENTRY_DEBUG === 'true',
 
-    // 本番・プレビュー環境のみ有効
-    enabled: IS_PRODUCTION || VERCEL_ENV === 'preview',
+    // 本番環境のみ有効。preview は NODE_ENV=production だが VERCEL_ENV=preview なので除外
+    // （IS_PRODUCTION では preview を除外できない）。
+    enabled: VERCEL_ENV === 'production',
 
     // エラーフィルタリング + PII スクラビング
     // withPIIScrub は exception message / URL / breadcrumbs / contexts など

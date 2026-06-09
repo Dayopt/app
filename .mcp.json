@@ -8,6 +8,10 @@
       "type": "http",
       "url": "http://127.0.0.1:54321/mcp"
     },
+    "storybook": {
+      "type": "http",
+      "url": "http://localhost:6006/mcp"
+    },
     "context7": {
       "type": "stdio",
       "command": "npx",
@@ -22,6 +26,19 @@
         "SENTRY_ACCESS_TOKEN": "${SENTRY_ACCESS_TOKEN}"
       }
     },
+    "supabase": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--read-only",
+        "--project-ref=yvglwblxrnrenfifsnje"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
+    },
     "playwright": {
       "type": "stdio",
       "command": "npx",
@@ -30,7 +47,14 @@
     },
     "github": {
       "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_MCP_PAT}"
+      }
+    },
+    "vercel": {
+      "type": "http",
+      "url": "https://mcp.vercel.com"
     }
   }
 }
