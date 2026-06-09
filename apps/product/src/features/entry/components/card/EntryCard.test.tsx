@@ -119,6 +119,29 @@ describe('EntryCard', () => {
       expect(container.querySelector('[data-entry-actual-accent]')).toBeInTheDocument();
     });
 
+    it('予定と actual が一致する upcoming planned entry は予定表示にする', () => {
+      const { container } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            origin: 'planned',
+            entryState: 'upcoming',
+            plannedStartDate: mockEvent.startDate,
+            plannedEndDate: mockEvent.endDate,
+            actualStartDate: mockEvent.startDate,
+            actualEndDate: mockEvent.endDate,
+          }}
+          position={mockPosition}
+          hourHeight={60}
+        />,
+      );
+
+      expect(container.querySelector('[data-entry-actual-layer]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-entry-actual-accent]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-entry-time-kind="planned"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-entry-time-kind="actual"]')).not.toBeInTheDocument();
+    });
+
     it('actual がない upcoming planned entry はグリッドdurationの高さに揃える', () => {
       const { container } = render(
         <EntryCard

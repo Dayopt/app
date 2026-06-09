@@ -89,10 +89,21 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const isPast = entry.entryState === 'past';
   // 予定外エントリかどうか（全体を破線枠で表示）
   const isUnplanned = entry.origin === 'unplanned';
-  // actual がまだ無い planned entry だけを予定UIとして扱う。
-  // upcoming でも actual がある場合は、記録レイヤーと予定外部分を表示する。
+  const plannedStart = entry.plannedStartDate ?? entry.startDate;
+  const plannedEnd = entry.plannedEndDate ?? entry.endDate;
+  const upcomingActualMatchesPlan =
+    entry.entryState === 'upcoming' &&
+    plannedStart != null &&
+    plannedEnd != null &&
+    entry.actualStartDate != null &&
+    entry.actualEndDate != null &&
+    plannedStart.getTime() === entry.actualStartDate.getTime() &&
+    plannedEnd.getTime() === entry.actualEndDate.getTime();
+  // actual が無い予定と、予定/記録が一致する upcoming は予定UIとして扱う。
+  // upcoming でも実際に差分がある場合は、記録レイヤーと予定外部分を維持する。
   const renderAsPlanOnly =
-    entry.origin === 'planned' && entry.actualStartDate == null && entry.actualEndDate == null;
+    entry.origin === 'planned' &&
+    ((entry.actualStartDate == null && entry.actualEndDate == null) || upcomingActualMatchesPlan);
   const contentEntry = renderAsPlanOnly
     ? { ...entry, actualStartDate: null, actualEndDate: null }
     : entry;
