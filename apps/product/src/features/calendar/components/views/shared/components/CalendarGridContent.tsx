@@ -58,6 +58,52 @@ export function getGhostEntryHeight(style: React.CSSProperties | undefined): num
   return Number.isFinite(height) && height > 0 ? height : 20;
 }
 
+function shiftOptionalDate(
+  date: Date | null | undefined,
+  deltaMs: number,
+): Date | null | undefined {
+  if (date == null) return date;
+  return new Date(date.getTime() + deltaMs);
+}
+
+export function buildDragPreviewEntry(
+  entry: CalendarEvent,
+  previewTime: { start: Date; end: Date },
+): CalendarEvent {
+  const baseStart = entry.startDate ?? entry.plannedStartDate ?? entry.displayStartDate;
+  const deltaMs = baseStart ? previewTime.start.getTime() - baseStart.getTime() : 0;
+  const duration = Math.max(
+    1,
+    Math.round((previewTime.end.getTime() - previewTime.start.getTime()) / 60000),
+  );
+
+  if (entry.origin === 'unplanned') {
+    return {
+      ...entry,
+      startDate: previewTime.start,
+      endDate: previewTime.end,
+      displayStartDate: previewTime.start,
+      displayEndDate: previewTime.end,
+      duration,
+      actualStartDate: previewTime.start,
+      actualEndDate: previewTime.end,
+    };
+  }
+
+  return {
+    ...entry,
+    startDate: previewTime.start,
+    endDate: previewTime.end,
+    displayStartDate: previewTime.start,
+    displayEndDate: previewTime.end,
+    duration,
+    plannedStartDate: previewTime.start,
+    plannedEndDate: previewTime.end,
+    actualStartDate: shiftOptionalDate(entry.actualStartDate, deltaMs),
+    actualEndDate: shiftOptionalDate(entry.actualEndDate, deltaMs),
+  };
+}
+
 /** CalendarGridContent コンポーネントのプロパティ */
 export interface CalendarGridContentProps {
   /** この列が担当する日付 */
@@ -170,18 +216,18 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     ({ entryId, previewTime }: { entryId: string; previewTime: { start: Date; end: Date } }) => {
       const entry = entries.find((e) => e.id === entryId);
       if (!entry) return null;
+      const previewEntry = buildDragPreviewEntry(entry, previewTime);
       const tag = entry.tagId ? getTagById(entry.tagId) : null;
       const ghostHeight = getGhostEntryHeight(entryStyles[entryId]);
       return (
         <EntryCard
-          entry={entry}
+          entry={previewEntry}
           tagName={tag?.name ?? null}
           tagColor={tag?.color ?? null}
           tagIcon={tag?.icon ?? null}
           isMobile={isMobile}
           position={{ top: 0, left: 0, width: 100, height: ghostHeight }}
           plannedHeight={ghostHeight}
-          previewTime={previewTime}
           hourHeight={HOUR_HEIGHT}
           style={{ position: 'relative', height: '100%' }}
         />
