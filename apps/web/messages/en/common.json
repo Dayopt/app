@@ -311,6 +311,14 @@
     "landing": {
       "subtitle": "Get started with Dayopt using our documentation and guides"
     },
+    "categories": {
+      "getting-started": "Getting Started",
+      "features": "Features",
+      "guides": "Guides",
+      "troubleshooting": "Troubleshooting",
+      "account": "Account",
+      "faq": "FAQ"
+    },
     "toc": {
       "onThisPage": "On This Page",
       "loading": "Loading...",

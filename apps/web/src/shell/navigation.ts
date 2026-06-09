@@ -1,3 +1,7 @@
+import { getAllContent } from '@/lib/mdx';
+import type { ContentData } from '@/types/content';
+import { getTranslations } from 'next-intl/server';
+
 export interface NavItem {
   name: string;
   href?: string;
@@ -24,65 +28,74 @@ export interface NavigationSection {
   items: NavigationItem[];
 }
 
-// Generate docs navigation structure
-export function generateDocsNavigation(): NavigationSection[] {
-  return [
-    {
-      title: 'Getting Started',
-      items: [
-        { title: 'Introduction', href: '/docs' },
-        { title: 'Quick Start', href: '/docs/getting-started/quick-start' },
-        { title: 'UI Overview', href: '/docs/getting-started/ui-overview' },
-      ],
-    },
-    {
-      title: 'Features',
-      items: [
-        { title: 'Plans', href: '/docs/features/plans' },
-        { title: 'Records', href: '/docs/features/records' },
-        { title: 'Calendar', href: '/docs/features/calendar' },
-        { title: 'Tags', href: '/docs/features/tags' },
-        { title: 'Stats', href: '/docs/features/stats' },
-        { title: 'Search', href: '/docs/features/search' },
-        { title: 'Keyboard Shortcuts', href: '/docs/features/shortcuts' },
-      ],
-    },
-    {
-      title: 'Guides',
-      items: [
-        { title: 'Timeboxing', href: '/docs/guides/timeboxing' },
-        { title: 'Weekly Review', href: '/docs/guides/weekly-review' },
-        { title: 'Data Export', href: '/docs/guides/data-export' },
-      ],
-    },
-    {
-      title: 'Troubleshooting',
-      items: [
-        { title: 'Overview', href: '/docs/troubleshooting' },
-        { title: 'Account & Login', href: '/docs/troubleshooting/account' },
-        { title: 'App Issues', href: '/docs/troubleshooting/app' },
-        { title: 'Sync Issues', href: '/docs/troubleshooting/sync' },
-      ],
-    },
-    {
-      title: 'Account',
-      items: [
-        { title: 'Profile', href: '/docs/account/profile' },
-        { title: 'Notifications', href: '/docs/account/notifications' },
-      ],
-    },
-    {
-      title: 'FAQ',
-      items: [
-        { title: 'Overview', href: '/docs/faq' },
-        { title: 'Features', href: '/docs/faq/features' },
-        { title: 'Comparisons', href: '/docs/faq/comparison' },
-        { title: 'Privacy & Security', href: '/docs/faq/privacy-security' },
-        { title: 'Pricing', href: '/docs/faq/pricing' },
-        { title: 'Technical', href: '/docs/faq/technical' },
-        { title: 'Philosophy', href: '/docs/faq/philosophy' },
-        { title: 'General', href: '/docs/faq/general' },
-      ],
-    },
-  ];
+/** nav に出すカテゴリーの表示順。ここに無いカテゴリーは末尾にアルファベット順で続く。 */
+const CATEGORY_ORDER = [
+  'getting-started',
+  'features',
+  'guides',
+  'troubleshooting',
+  'account',
+  'faq',
+] as const;
+
+/** i18n キーが無いカテゴリーの fallback 表示名（kebab-case → Title Case） */
+function toTitleCase(slug: string): string {
+  return slug
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+/**
+ * docs ナビゲーションを実在コンテンツから生成する。
+ *
+ * `content/docs/{locale}/` に実在する mdx だけが nav に出るため、リンク切れ（404）が
+ * 構造的に発生しない。コンテンツを追加・削除すれば nav に自動反映され、ハードコードした
+ * placeholder リンクが drift する余地が無い。
+ */
+export async function generateDocsNavigation(locale: string): Promise<NavigationSection[]> {
+  const allContent = await getAllContent(locale);
+  const t = await getTranslations({ locale, namespace: 'docs' });
+
+  // カテゴリー（トップレベルのディレクトリ）ごとにグループ化
+  const byCategory = new Map<string, ContentData[]>();
+  for (const content of allContent) {
+    // トップレベル index.mdx は /docs ランディング自身なので nav から除外
+    if (content.slug === 'index') continue;
+    const items = byCategory.get(content.frontMatter.category) ?? [];
+    items.push(content);
+    byCategory.set(content.frontMatter.category, items);
+  }
+
+  // カテゴリーを表示順に並べる（CATEGORY_ORDER 優先、残りはアルファベット順）
+  const orderedCategories = [...byCategory.keys()].sort((a, b) => {
+    const ia = CATEGORY_ORDER.indexOf(a as (typeof CATEGORY_ORDER)[number]);
+    const ib = CATEGORY_ORDER.indexOf(b as (typeof CATEGORY_ORDER)[number]);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
+  return orderedCategories.map((category) => {
+    // getAllContent は category → order でソート済みなので push 順がそのまま order 昇順になる
+    const contents = byCategory.get(category) ?? [];
+    // カテゴリーの index.mdx は overview として先頭に固定（href は /docs/{category} に解決される）
+    const indexContent = contents.find((c) => c.slug === `${category}/index`);
+    const rest = contents.filter((c) => c.slug !== `${category}/index`);
+
+    const items: NavigationItem[] = [];
+    if (indexContent) {
+      items.push({ title: indexContent.frontMatter.title, href: `/docs/${category}` });
+    }
+    for (const content of rest) {
+      items.push({ title: content.frontMatter.title, href: `/docs/${content.slug}` });
+    }
+
+    const sectionTitle = t.has(`categories.${category}`)
+      ? t(`categories.${category}`)
+      : toTitleCase(category);
+
+    return { title: sectionTitle, items };
+  });
 }

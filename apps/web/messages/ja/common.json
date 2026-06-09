@@ -280,6 +280,14 @@
     "landing": {
       "subtitle": "ドキュメントとガイドでDayoptを始めましょう"
     },
+    "categories": {
+      "getting-started": "はじめに",
+      "features": "機能",
+      "guides": "ガイド",
+      "troubleshooting": "トラブルシューティング",
+      "account": "アカウント",
+      "faq": "よくある質問"
+    },
     "toc": {
       "onThisPage": "このページの内容",
       "loading": "読み込み中...",

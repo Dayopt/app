@@ -42,7 +42,7 @@ export default async function DocsPage({ params }: PageProps) {
   const tCommon = await getTranslations({ locale, namespace: 'common' });
   const tDocs = await getTranslations({ locale, namespace: 'docs' });
 
-  const navigation = generateDocsNavigation();
+  const navigation = await generateDocsNavigation(locale);
 
   return (
     <div className="space-y-12 px-6 py-8 lg:px-8">
