@@ -2,8 +2,15 @@ import { ClientSidebar, DocsHeader } from '@/features/docs';
 import { Footer } from '@/shell/layout/Footer';
 import { generateDocsNavigation } from '@/shell/navigation';
 
-export default function DocsLayout({ children }: { children: React.ReactNode }) {
-  const navigation = generateDocsNavigation();
+export default async function DocsLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const navigation = await generateDocsNavigation(locale);
 
   return (
     <div className="bg-background fixed inset-0 flex flex-col overflow-hidden">
