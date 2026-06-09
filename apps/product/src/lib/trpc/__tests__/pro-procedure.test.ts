@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
@@ -48,6 +48,16 @@ function createProTestContext(
 }
 
 describe('proProcedure', () => {
+  // 既定（enforcement 無効）では全 status が素通りするため、enforcement の挙動を
+  // 検証する既存テストは BILLING_ENFORCED='true' を前提にする。
+  beforeEach(() => {
+    vi.stubEnv('BILLING_ENFORCED', 'true');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   describe('アクセス許可（Pro機能利用可能）', () => {
     it.each([
       { status: 'active', label: 'active' },
@@ -162,6 +172,25 @@ describe('proProcedure', () => {
 
     it('支払い失敗→回復中: past_due でアクセス維持', async () => {
       const ctx = createProTestContext('past_due');
+      const caller = createCaller(ctx as never);
+
+      const result = await caller.ping();
+      expect(result).toBe('pong');
+    });
+  });
+
+  describe('enforcement 無効時（既定・全機能無料）', () => {
+    beforeEach(() => {
+      // 親の 'true' を上書き。未設定（既定）相当として 'false' を明示する。
+      vi.stubEnv('BILLING_ENFORCED', 'false');
+    });
+
+    it.each([
+      { status: 'free', label: 'free' },
+      { status: 'canceled', label: 'canceled' },
+      { status: null, label: 'null（未設定）' },
+    ])('$label でも素通りする（Pro ゲートを踏まない）', async ({ status }) => {
+      const ctx = createProTestContext(status);
       const caller = createCaller(ctx as never);
 
       const result = await caller.ping();

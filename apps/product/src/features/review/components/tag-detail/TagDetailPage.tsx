@@ -17,6 +17,8 @@ import { formatMetricValue } from '../../lib/metrics';
 import type { ReviewGranularity } from '../../stores/useReviewFilterStore';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
 
+import { TagDetailTitle } from './TagDetailTitle';
+
 interface TagDetailPageProps {
   tagId: string;
   initialGranularity: ReviewGranularity;
@@ -284,10 +286,14 @@ export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: Tag
   return (
     <div className="scrollbar-stable flex-1 overflow-y-auto">
       <div className="flex flex-col gap-5 p-4">
-        <div className="flex min-w-0 items-center gap-2">
-          <TagIcon icon={data.tag.icon} color={data.tag.color} size="md" className="shrink-0" />
-          <h1 className="text-foreground min-w-0 truncate text-xl font-medium">{data.tag.name}</h1>
-        </div>
+        <TagDetailTitle
+          tagId={tagId}
+          tagName={data.tag.name}
+          tagIcon={data.tag.icon}
+          tagColor={data.tag.color}
+          granularity={granularity}
+          dateStr={initialDateStr}
+        />
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
