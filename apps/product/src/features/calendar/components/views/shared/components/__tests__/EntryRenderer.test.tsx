@@ -167,6 +167,37 @@ describe('EntryRenderer', () => {
     expect(container.querySelector('[data-entry-actual-layer]')).toBeNull();
   });
 
+  it('actual が予定範囲の外へ出た planned entry は予定と記録を別ブロックで表示する', () => {
+    const detachedEntry: CalendarEvent = {
+      ...baseEntry,
+      startDate: new Date(2026, 0, 15, 15, 0),
+      endDate: new Date(2026, 0, 15, 17, 0),
+      actualStartDate: new Date(2026, 0, 15, 13, 30),
+      actualEndDate: new Date(2026, 0, 15, 16, 45),
+      displayStartDate: new Date(2026, 0, 15, 15, 0),
+      displayEndDate: new Date(2026, 0, 15, 17, 0),
+      plannedStartDate: new Date(2026, 0, 15, 15, 0),
+      plannedEndDate: new Date(2026, 0, 15, 17, 0),
+      duration: 120,
+    };
+
+    const { container } = renderEntryRendererWith({
+      entry: detachedEntry,
+      entries: [detachedEntry],
+    });
+
+    const plannedSegment = container.querySelector<HTMLElement>('[data-entry-segment="planned"]');
+    const actualSegment = container.querySelector<HTMLElement>('[data-entry-segment="actual"]');
+
+    expect(plannedSegment).toBeInTheDocument();
+    expect(actualSegment).toBeInTheDocument();
+    expect(plannedSegment).toHaveStyle({ top: '100px', height: '60px' });
+    expect(actualSegment).toHaveStyle({ top: '810px', height: '193px' });
+    expect(plannedSegment?.querySelector('[data-entry-actual-layer]')).not.toBeInTheDocument();
+    expect(actualSegment?.querySelector('[data-entry-actual-layer]')).toBeInTheDocument();
+    expect(actualSegment?.querySelector('[data-entry-resize-frame]')).not.toBeInTheDocument();
+  });
+
   it('planned の前半 gap が既存の予定外記録で埋まっている場合は作成導線を隠す', () => {
     const plannedEntry: CalendarEvent = {
       ...baseEntry,

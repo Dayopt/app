@@ -63,6 +63,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   isDragging = false,
   isSelected = false,
   isResizing = false,
+  disableResize = false,
   isActive = false,
   isMobile = false,
   className = '',
@@ -705,7 +706,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
            Mobile: Inspector 開いている entry（isActive）のみ render し、pill は常時表示。
            PC の当たり判定は card 内に収め、直下のグリッド選択を塞がない。
            card 本体の overflow-hidden 外に置くことで pill icon が短い card でも visible。 */}
-      {!isDraft && (!isMobile || isActive) && (
+      {!disableResize && !isDraft && (!isMobile || isActive) && (
         <div
           data-entry-resize-frame
           className="pointer-events-none absolute right-0 left-0"

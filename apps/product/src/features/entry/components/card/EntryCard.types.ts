@@ -49,6 +49,8 @@ export interface EntryCardProps {
   isDragging?: boolean | undefined;
   isSelected?: boolean | undefined;
   isResizing?: boolean | undefined;
+  /** 表示専用セグメントなど、カード下端リサイズを出さない場合に true */
+  disableResize?: boolean | undefined;
   /** Inspector で開いているエントリかどうか */
   isActive?: boolean | undefined;
   /** モバイルレイアウト */
