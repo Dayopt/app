@@ -3,7 +3,6 @@
     "placeholder": "Search articles, tags, documentation...",
     "recentSearches": "Recent Searches",
     "popularTags": "Popular Tags",
-    "popularPages": "Popular Pages",
     "searchResultsFor": "Search results for",
     "pressEnterToSearch": "Press Enter to search",
     "searchFor": "Search for",
@@ -16,27 +15,8 @@
     "blog": "Blog",
     "release": "Release",
     "toSelect": "to select",
-    "toNavigate": "to navigate",
     "toClose": "to close",
     "close": "Close search",
-    "poweredBy": "Powered by Dayopt Search",
-    "quickLinks": {
-      "quickStart": {
-        "title": "Quick Start",
-        "description": "Get started with Dayopt in 5 minutes"
-      },
-      "apiReference": {
-        "title": "API Reference",
-        "description": "Authentication and API usage"
-      },
-      "latestRelease": {
-        "title": "Latest Release",
-        "description": "New features in v2.1.0"
-      },
-      "saasStrategy": {
-        "title": "SaaS Strategy",
-        "description": "Business strategy for 2024"
-      }
-    }
+    "poweredBy": "Powered by Dayopt Search"
   }
 }

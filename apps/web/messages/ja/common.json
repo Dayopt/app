@@ -278,22 +278,7 @@
       "backToDocs": "ドキュメントに戻る"
     },
     "landing": {
-      "subtitle": "ドキュメントとガイドでDayoptを始めましょう",
-      "quickStart": {
-        "title": "クイックスタート",
-        "description": "数分でDayoptを始めましょう",
-        "link": "ガイドを読む →"
-      },
-      "apiReference": {
-        "title": "APIリファレンス",
-        "description": "APIドキュメントを探索する",
-        "link": "ドキュメントを見る →"
-      },
-      "guides": {
-        "title": "ガイド",
-        "description": "ステップバイステップのチュートリアル",
-        "link": "ガイドを見る →"
-      }
+      "subtitle": "ドキュメントとガイドでDayoptを始めましょう"
     },
     "toc": {
       "onThisPage": "このページの内容",

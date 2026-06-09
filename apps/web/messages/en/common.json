@@ -309,22 +309,7 @@
       "backToDocs": "Back to Documentation"
     },
     "landing": {
-      "subtitle": "Get started with Dayopt using our documentation and guides",
-      "quickStart": {
-        "title": "Quick Start",
-        "description": "Get started with Dayopt in minutes",
-        "link": "Read guide →"
-      },
-      "apiReference": {
-        "title": "API Reference",
-        "description": "Explore our API documentation",
-        "link": "View docs →"
-      },
-      "guides": {
-        "title": "Guides",
-        "description": "Step-by-step tutorials",
-        "link": "Browse guides →"
-      }
+      "subtitle": "Get started with Dayopt using our documentation and guides"
     },
     "toc": {
       "onThisPage": "On This Page",
