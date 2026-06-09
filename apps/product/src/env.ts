@@ -49,6 +49,9 @@ const serverSchema = z
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),
     NEXT_PUBLIC_MAINTENANCE_MODE: z.enum(['true', 'false']).optional(),
+    // 課金 enforcement。未設定（既定）= 無効＝全機能無料。
+    // Phase B（成熟・ローンチ前）に production を 'true' にして Free/Pro 棲み分けを復活させる。
+    BILLING_ENFORCED: z.enum(['true', 'false']).optional(),
     VERCEL_URL: z.string().optional(),
     VERCEL_ENV: z.string().optional(),
     SKIP_AUTH_IN_DEV: z.string().optional(),
