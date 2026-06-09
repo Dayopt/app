@@ -16,6 +16,12 @@ vi.mock('../../../hooks/useTagDetailData', () => ({
   useTagDashboardData: mocks.useTagDashboardData,
 }));
 
+// 見出しのタグ切替（TagQuickSelector / useCreateTag / useRouter 依存）は別関心。
+// ここでは TagDetailPage のセクション表示が主眼なので見出しを簡易モックする。
+vi.mock('../TagDetailTitle', () => ({
+  TagDetailTitle: ({ tagName }: { tagName: string }) => <h1>{tagName}</h1>,
+}));
+
 vi.mock('../../../stores/useReviewFilterStore', () => ({
   useReviewFilterStore: (selector: (state: unknown) => unknown) =>
     selector({
