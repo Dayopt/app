@@ -261,6 +261,37 @@ describe('EntryRenderer', () => {
     expect(onEntryClick).toHaveBeenCalledWith(detachedEntry);
   });
 
+  it('分割された記録ブロックの余白クリックでも元 entry の Inspector を開ける', () => {
+    const detachedEntry: CalendarEvent = {
+      ...baseEntry,
+      startDate: new Date(2026, 0, 15, 15, 0),
+      endDate: new Date(2026, 0, 15, 17, 0),
+      actualStartDate: new Date(2026, 0, 15, 13, 30),
+      actualEndDate: new Date(2026, 0, 15, 16, 45),
+      displayStartDate: new Date(2026, 0, 15, 15, 0),
+      displayEndDate: new Date(2026, 0, 15, 17, 0),
+      plannedStartDate: new Date(2026, 0, 15, 15, 0),
+      plannedEndDate: new Date(2026, 0, 15, 17, 0),
+      duration: 120,
+    };
+    const onEntryClick = vi.fn();
+
+    const { container } = renderEntryRendererWith({
+      entry: detachedEntry,
+      entries: [detachedEntry],
+      onEntryClick,
+    });
+
+    const actualBlock = container.querySelector<HTMLElement>(
+      '[data-entry-segment="actual"] [data-entry-block]',
+    );
+
+    expect(actualBlock).toBeInTheDocument();
+    fireEvent.click(actualBlock!);
+    expect(onEntryClick).toHaveBeenCalledTimes(1);
+    expect(onEntryClick).toHaveBeenCalledWith(detachedEntry);
+  });
+
   it('planned の前半 gap が既存の予定外記録で埋まっている場合は作成導線を隠す', () => {
     const plannedEntry: CalendarEvent = {
       ...baseEntry,

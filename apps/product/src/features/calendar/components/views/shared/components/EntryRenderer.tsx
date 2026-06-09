@@ -219,6 +219,19 @@ export const EntryRenderer = React.memo(function EntryRenderer({
     onEntryContextMenu?.(p, e);
   };
 
+  const openEntryFromBlock = (targetEntry: CalendarEvent, element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    setAnchorRect({
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+    });
+    onEntryClick?.(targetEntry);
+  };
+
   if (shouldSplitPlannedActual(entry) && !entryDragging && !entryResizing) {
     const plannedSegmentEntry = toPlannedSegmentEntry(entry);
     const actualSegmentEntry = toActualSegmentEntry(entry);
@@ -264,16 +277,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
             aria-label={entry.title || t('entry.untitled')}
             onClick={(e) => {
               e.stopPropagation();
-              const rect = e.currentTarget.getBoundingClientRect();
-              setAnchorRect({
-                top: rect.top,
-                right: rect.right,
-                bottom: rect.bottom,
-                left: rect.left,
-                width: rect.width,
-                height: rect.height,
-              });
-              onEntryClick?.(entry);
+              openEntryFromBlock(entry, e.currentTarget);
             }}
             onContextMenu={(e) => {
               e.preventDefault();
@@ -358,6 +362,15 @@ export const EntryRenderer = React.memo(function EntryRenderer({
             tabIndex={0}
             role="button"
             aria-label={entry.title || t('entry.untitled')}
+            onClick={(e) => {
+              e.stopPropagation();
+              openEntryFromBlock(entry, e.currentTarget);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleContextMenu(entry, e);
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
