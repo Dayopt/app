@@ -266,6 +266,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const actualBodyBorderRadius = `0 ${overlay.topKind === 'overtime' ? '0' : '8px'} ${
     overlay.bottomKind === 'overtime' ? '0' : '8px'
   } 0`;
+  const resizeHandleHeight = isMobile
+    ? 44
+    : Math.min(32, Math.max(MIN_EVENT_HEIGHT, safePosition.height));
+  const resizeHandleBottom = isMobile ? -40 : 0;
 
   // イベントハンドラー
   const handleClick = useCallback(
@@ -696,7 +700,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       {/* 下端リサイズハンドル（Draft は非表示）
            PC: 常時 render、hover で pill 出現。
            Mobile: Inspector 開いている entry（isActive）のみ render し、pill は常時表示。
-           短いカード（< 40px）は height=44px・bottom=-40px でブロック外側に張り出す。
+           PC の当たり判定は card 内に収め、直下のグリッド選択を塞がない。
            card 本体の overflow-hidden 外に置くことで pill icon が短い card でも visible。 */}
       {!isDraft && (!isMobile || isActive) && (
         <div
@@ -731,9 +735,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             onKeyDown={handleResizeKeyDown}
             style={{
               // Mobile は touch target 規約 (min-h-11) に合わせて常に 44px。
-              // PC は短い card のときのみ 44px、通常 32px。
-              height: isMobile || safePosition.height < 40 ? '44px' : '32px',
-              bottom: isMobile || safePosition.height < 40 ? '-40px' : '-12px',
+              // PC は card 内の下端だけを掴む。短い予定の直下に予定を作れるよう外へ張り出さない。
+              height: `${resizeHandleHeight}px`,
+              bottom: `${resizeHandleBottom}px`,
               zIndex: 10,
             }}
             title={t('calendar.event.adjustEndTime')}

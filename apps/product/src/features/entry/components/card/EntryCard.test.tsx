@@ -485,6 +485,35 @@ describe('EntryCard', () => {
         mockPosition,
       );
     });
+
+    it('PC の短い予定ではリサイズハンドルがカード下へ張り出さない', () => {
+      render(<EntryCard entry={mockEvent} position={{ ...mockPosition, height: 25 }} />);
+
+      const resizeHandle = screen.getByRole('slider', { name: /Resize entry duration/i });
+
+      expect(resizeHandle).toHaveStyle({
+        height: '25px',
+        bottom: '0px',
+      });
+    });
+
+    it('Mobile のアクティブ予定では指向けのリサイズ当たり判定を維持する', () => {
+      render(
+        <EntryCard
+          entry={mockEvent}
+          position={{ ...mockPosition, height: 25 }}
+          isMobile
+          isActive
+        />,
+      );
+
+      const resizeHandle = screen.getByRole('slider', { name: /Resize entry duration/i });
+
+      expect(resizeHandle).toHaveStyle({
+        height: '44px',
+        bottom: '-40px',
+      });
+    });
   });
 
   describe('スタイリング', () => {
