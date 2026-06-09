@@ -89,12 +89,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const isPast = entry.entryState === 'past';
   // 予定外エントリかどうか（全体を破線枠で表示）
   const isUnplanned = entry.origin === 'unplanned';
-  // upcoming planned は記録が確定していないため、actual 値が入っていても予定UIにする。
-  // past/active では actual が両方 null の planned entry だけ予定UIとして扱う。
+  // actual がまだ無い planned entry だけを予定UIとして扱う。
+  // upcoming でも actual がある場合は、記録レイヤーと予定外部分を表示する。
   const renderAsPlanOnly =
-    entry.origin === 'planned' &&
-    (entry.entryState === 'upcoming' ||
-      (entry.actualStartDate == null && entry.actualEndDate == null));
+    entry.origin === 'planned' && entry.actualStartDate == null && entry.actualEndDate == null;
   const contentEntry = renderAsPlanOnly
     ? { ...entry, actualStartDate: null, actualEndDate: null }
     : entry;
@@ -615,7 +613,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       )}
 
       {/* Layer 2: actual — 既存の記録カード表現を維持。
-          未来の予定（renderAsPlanOnly）では記録がまだ無いため描画せず、
+          actual がまだ無い planned entry では描画せず、
           planned layer + content layer だけの「予定UI」(薄い・左線なし) にする。 */}
       {!renderAsPlanOnly && (
         <div

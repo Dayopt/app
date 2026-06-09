@@ -86,7 +86,7 @@ describe('EntryCard', () => {
       expect(contentLayer).toHaveStyle({ top: '0px', height: '60px' });
     });
 
-    it('upcoming planned entry は actual があっても予定UIとして表示する', () => {
+    it('upcoming planned entry でも actual があれば記録レイヤーを表示する', () => {
       const { container } = render(
         <EntryCard
           entry={{
@@ -103,30 +103,31 @@ describe('EntryCard', () => {
 
       const root = screen.getByLabelText(/entry: テストイベント/i);
       const plannedLayer = container.querySelector<HTMLElement>('[data-entry-planned-layer]');
+      const actualLayer = container.querySelector<HTMLElement>('[data-entry-actual-layer]');
       const contentLayer = container.querySelector<HTMLElement>('[data-entry-content-layer]');
 
       expect(root).toHaveStyle({
         top: '100px',
-        left: 'calc(10% - 1px)',
-        width: 'calc(80% - 7px)',
+        left: '10%',
+        width: 'calc(80% - 8px)',
         height: '60px',
       });
       expect(plannedLayer).toHaveClass('rounded-r-lg');
-      expect(plannedLayer).toHaveStyle({ top: '0px', left: '0px', height: '60px' });
+      expect(plannedLayer).toHaveStyle({ top: '0px', left: '-1px', height: '60px' });
+      expect(actualLayer).toHaveStyle({ top: '15px', height: '45px' });
       expect(contentLayer).toHaveStyle({ top: '0px', height: '60px' });
-      expect(container.querySelector('[data-entry-actual-layer]')).not.toBeInTheDocument();
-      expect(container.querySelector('[data-entry-actual-accent]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-entry-actual-accent]')).toBeInTheDocument();
     });
 
-    it('upcoming planned entry はグリッドdurationの高さに揃える', () => {
+    it('actual がない upcoming planned entry はグリッドdurationの高さに揃える', () => {
       const { container } = render(
         <EntryCard
           entry={{
             ...mockEvent,
             origin: 'planned',
             entryState: 'upcoming',
-            actualStartDate: new Date('2025-01-15T10:15:00'),
-            actualEndDate: mockEvent.endDate,
+            actualStartDate: null,
+            actualEndDate: null,
           }}
           position={{ ...mockPosition, height: 58 }}
           hourHeight={60}
@@ -142,6 +143,32 @@ describe('EntryCard', () => {
       expect(plannedLayer).toHaveStyle({ height: '60px' });
       expect(contentLayer).toHaveStyle({ height: '60px' });
       expect(resizeFrame).toHaveStyle({ height: '60px' });
+    });
+
+    it('upcoming planned entry の actual 超過部分も予定外表示を維持する', () => {
+      const { container } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            origin: 'planned',
+            entryState: 'upcoming',
+            actualStartDate: mockEvent.startDate,
+            actualEndDate: new Date('2025-01-15T11:30:00'),
+          }}
+          position={mockPosition}
+          hourHeight={60}
+        />,
+      );
+
+      const root = screen.getByLabelText(/entry: テストイベント/i);
+      const plannedLayer = container.querySelector<HTMLElement>('[data-entry-planned-layer]');
+      const actualLayer = container.querySelector<HTMLElement>('[data-entry-actual-layer]');
+      const overtimeAccent = container.querySelector<HTMLElement>('[data-entry-overtime-accent]');
+
+      expect(root).toHaveStyle({ top: '100px', height: '90px' });
+      expect(plannedLayer).toHaveStyle({ top: '0px', left: '-1px', height: '60px' });
+      expect(actualLayer).toHaveStyle({ top: '0px', height: '60px' });
+      expect(overtimeAccent).toBeInTheDocument();
     });
 
     it('actual が planned より短い場合は planned 背景が露出する', () => {
