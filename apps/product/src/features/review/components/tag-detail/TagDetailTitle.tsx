@@ -93,7 +93,7 @@ export function TagDetailTitle({
         ref={buttonRef}
         type="button"
         onClick={() => setSelectorOpen(true)}
-        className="hover:bg-state-hover -ml-2 flex min-w-0 items-center gap-2 rounded-lg px-2 py-1 transition-colors"
+        className="hover:bg-state-hover -ml-2 flex max-w-full min-w-0 items-center gap-2 self-start rounded-lg px-2 py-1 transition-colors"
         aria-label={`${t('common.tags.change')}: ${tagName}`}
       >
         <TagIcon icon={tagIcon} color={tagColor} size="md" className="shrink-0" />
