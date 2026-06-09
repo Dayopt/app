@@ -191,6 +191,11 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
         }
         return 3600000; // default 1h
       },
+      getResizeMinEndMinutes: (entryId: string) => {
+        const event = r.events.find((candidate) => candidate.id === entryId);
+        if (!hasCalendarActualRangeDiff(event) || !event?.actualStartDate) return null;
+        return event.actualStartDate.getHours() * 60 + event.actualStartDate.getMinutes();
+      },
       checkOverlap: (entryId: string, start: Date, end: Date) => {
         return checkClientSideOverlap(r.allEvents, entryId, start, end);
       },

@@ -472,6 +472,11 @@ function handlePointerMove(
     case 'resizing': {
       const deltaY = action.point.clientY - state.startPoint.clientY;
       const minHeight = (ctx.hourHeight / 60) * interval;
+      const resizeMinEndMinutes = ctx.getResizeMinEndMinutes?.(state.entryId) ?? null;
+      const resizeMinEndTop =
+        resizeMinEndMinutes == null
+          ? 0
+          : (Math.ceil(resizeMinEndMinutes / interval) * interval * ctx.hourHeight) / 60;
       // upper cap: end が当日内に収まる範囲
       const startSnap = snapToGrid(state.originalPosition.top, ctx.hourHeight, interval);
       const maxHeight = Math.max(minHeight, 24 * ctx.hourHeight - startSnap.snappedTop);
@@ -479,6 +484,7 @@ function handlePointerMove(
         24 * ctx.hourHeight,
         Math.max(
           startSnap.snappedTop + minHeight,
+          resizeMinEndTop,
           state.originalPosition.top + state.originalPosition.height + deltaY,
         ),
       );
