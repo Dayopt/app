@@ -229,7 +229,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
           position={{ top: 0, left: 0, width: 100, height: ghostHeight }}
           plannedHeight={ghostHeight}
           hourHeight={HOUR_HEIGHT}
-          style={{ position: 'relative', height: '100%' }}
+          style={{ position: 'relative' }}
         />
       );
     },

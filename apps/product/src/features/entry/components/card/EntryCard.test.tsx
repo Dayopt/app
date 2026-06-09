@@ -171,6 +171,27 @@ describe('EntryCard', () => {
       expect(overtimeAccent).toBeInTheDocument();
     });
 
+    it('drag preview の relative 配置でも actual 超過分の高さを維持する', () => {
+      const { container } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            origin: 'planned',
+            entryState: 'upcoming',
+            actualStartDate: mockEvent.startDate,
+            actualEndDate: new Date('2025-01-15T11:30:00'),
+          }}
+          position={mockPosition}
+          plannedHeight={mockPosition.height}
+          hourHeight={60}
+          style={{ position: 'relative' }}
+        />,
+      );
+
+      expect(screen.getByLabelText(/entry: テストイベント/i)).toHaveStyle({ height: '90px' });
+      expect(container.querySelector('[data-entry-overtime-accent]')).toBeInTheDocument();
+    });
+
     it('actual が planned より短い場合は planned 背景が露出する', () => {
       const { container } = render(
         <EntryCard
