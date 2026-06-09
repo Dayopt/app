@@ -53,7 +53,8 @@ function initSentry(dsn: string) {
   Sentry.init({
     dsn,
     environment: VERCEL_ENV,
-    ...(process.env.NEXT_PUBLIC_APP_VERSION && { release: process.env.NEXT_PUBLIC_APP_VERSION }),
+    // release は withSentryConfig が build 時に注入する（Vercel env SENTRY_RELEASE=$VERCEL_GIT_COMMIT_SHA）。
+    // ここで明示すると source map upload 時の release と runtime がズレるため上書きしない。
 
     // サンプリングレート（環境別）
     tracesSampleRate: IS_PRODUCTION ? 0.1 : VERCEL_ENV === 'preview' ? 0.5 : 1.0,
