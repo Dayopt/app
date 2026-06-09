@@ -58,20 +58,9 @@ export const WeekGrid = ({
       updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
     ) => {
       if (!onEventUpdate) return;
-      // resetActualTime フラグがある場合は (id, updates) 形式で直接渡す
-      if (updates.resetActualTime) {
-        return onEventUpdate(eventId, updates);
-      }
-      const entry = events.find((e) => e.id === eventId);
-      if (!entry) return;
-      // 返り値を伝播（繰り返しエントリ編集時の skipToast フラグ用）
-      return onEventUpdate({
-        ...entry,
-        startDate: updates.startTime,
-        endDate: updates.endTime,
-      });
+      return onEventUpdate(eventId, updates);
     },
-    [onEventUpdate, events],
+    [onEventUpdate],
   );
 
   // エントリ位置計算（TZ変換済みの日付グルーピングも取得）

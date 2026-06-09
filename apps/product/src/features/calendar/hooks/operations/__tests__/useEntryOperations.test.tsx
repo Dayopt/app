@@ -180,7 +180,7 @@ describe('useEntryOperations', () => {
       });
     });
 
-    it('actual差分があるplannedはresetなしならplanned rangeのみを送る', async () => {
+    it('actual差分があるplannedはresetなしならズレを保ってactualも同じ移動量で送る', async () => {
       getByIdGetData.mockReturnValue({
         id: 'entry-1',
         origin: 'planned',
@@ -200,6 +200,8 @@ describe('useEntryOperations', () => {
       expect(callArgs.data).toEqual({
         start_time: '2026-04-25T01:00:00.000Z',
         end_time: '2026-04-25T02:00:00.000Z',
+        actual_start_time: '2026-04-25T01:15:00.000Z',
+        actual_end_time: '2026-04-25T01:45:00.000Z',
       });
     });
 
