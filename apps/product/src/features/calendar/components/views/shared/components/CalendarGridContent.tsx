@@ -128,7 +128,12 @@ export interface CalendarGridContentProps {
   onEventUpdate?:
     | ((
         eventId: string,
-        updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+        updates: {
+          startTime: Date;
+          endTime: Date;
+          resetActualTime?: boolean;
+          keepActualTime?: boolean;
+        },
       ) => Promise<void | { skipToast: true }> | void)
     | undefined;
   /** 時間範囲選択 */
@@ -172,7 +177,15 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   const enableCrossDayDrag = viewMode !== 'day';
 
   const wrappedOnEventUpdate = useCallback(
-    (eventId: string, updates: { startTime: Date; endTime: Date; resetActualTime?: boolean }) => {
+    (
+      eventId: string,
+      updates: {
+        startTime: Date;
+        endTime: Date;
+        resetActualTime?: boolean;
+        keepActualTime?: boolean;
+      },
+    ) => {
       return onEventUpdate?.(eventId, updates);
     },
     [onEventUpdate],

@@ -75,7 +75,12 @@ export function MultiDayView({
   const handleEventUpdate = React.useCallback(
     async (
       eventId: string,
-      updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+      updates: {
+        startTime: Date;
+        endTime: Date;
+        resetActualTime?: boolean;
+        keepActualTime?: boolean;
+      },
     ) => {
       if (!onUpdateEntry) return;
       return onUpdateEntry(eventId, updates);

@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { EntryRect } from '../../domain/interaction/types';
 import type { CalendarEvent } from '../../types/calendar.types';
@@ -99,6 +99,37 @@ describe('useInteraction handleResizeStart guard', () => {
     });
 
     expect(result.current.state.mode).toBe('resizing');
+  });
+});
+
+describe('useInteraction resize completion', () => {
+  it('resize 完了時は actual 固定フラグを渡す', () => {
+    const onEventUpdate = vi.fn();
+    const { result } = renderHook(() => useInteraction(makeProps({ onEventUpdate })));
+
+    act(() => {
+      result.current.dispatch({
+        type: 'RESIZE_START',
+        entryId: 'entry-1',
+        direction: 'bottom',
+        point: { clientX: 100, clientY: 600 },
+        originalPosition: rect,
+      });
+    });
+    act(() => {
+      result.current.dispatch({
+        type: 'POINTER_MOVE',
+        point: { clientX: 100, clientY: 615 },
+      });
+    });
+    act(() => {
+      result.current.dispatch({ type: 'POINTER_UP' });
+    });
+
+    expect(onEventUpdate).toHaveBeenCalledWith(
+      'entry-1',
+      expect.objectContaining({ keepActualTime: true }),
+    );
   });
 });
 

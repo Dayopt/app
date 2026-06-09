@@ -107,7 +107,12 @@ export const useEntryOperations = () => {
   const handleUpdateEntry = useCallback(
     async (
       entryIdOrEntry: string | CalendarEvent,
-      updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+      updates?: {
+        startTime: Date;
+        endTime: Date;
+        resetActualTime?: boolean;
+        keepActualTime?: boolean;
+      },
     ) => {
       try {
         if (typeof entryIdOrEntry === 'string' && updates) {
@@ -126,6 +131,7 @@ export const useEntryOperations = () => {
                 updates.startTime,
                 updates.endTime,
                 updates.resetActualTime,
+                updates.keepActualTime,
               ),
             },
             {

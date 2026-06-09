@@ -16,7 +16,7 @@ import { useTranslations } from 'next-intl';
 
 import type { InteractionState } from '../../../../domain/interaction/types';
 import type { CalendarEvent } from '../../../../types/calendar.types';
-import { getAdjustedStyle, getPreviewTime } from '../utils/interactionHelpers';
+import { getAdjustedStyle } from '../utils/interactionHelpers';
 import { ConflictOverlay } from './ConflictOverlay';
 
 // ========================================
@@ -61,6 +61,40 @@ interface EntryRendererProps {
   entries: CalendarEvent[];
 }
 
+export function buildResizePreviewEntry(
+  entry: CalendarEvent,
+  interactionState: InteractionState,
+): CalendarEvent {
+  if (interactionState.mode !== 'resizing' || interactionState.entryId !== entry.id) return entry;
+
+  const { start, end } = interactionState.previewTime;
+  const duration = Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000));
+
+  if (entry.origin === 'unplanned') {
+    return {
+      ...entry,
+      startDate: start,
+      endDate: end,
+      displayStartDate: start,
+      displayEndDate: end,
+      actualStartDate: start,
+      actualEndDate: end,
+      duration,
+    };
+  }
+
+  return {
+    ...entry,
+    startDate: start,
+    endDate: end,
+    displayStartDate: start,
+    displayEndDate: end,
+    plannedStartDate: start,
+    plannedEndDate: end,
+    duration,
+  };
+}
+
 // ========================================
 // Component
 // ========================================
@@ -97,6 +131,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
 
   const currentTop = parseFloat(style.top?.toString() || '0');
   const currentHeight = parseFloat(style.height?.toString() || '20');
+  const renderedEntry = buildResizePreviewEntry(entry, interactionState);
 
   // リサイズ中のこの entry が他とオーバーラップしている時、赤リング + not-allowed を表示する。
   // drag は GhostRenderer 側で描くため、ここでは resize のみを担当する。
@@ -132,7 +167,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   );
 
   if (enableCrossDayDrag) {
-    const overlay = computeActualTimeDiffOverlay(entry, hourHeight);
+    const overlay = computeActualTimeDiffOverlay(renderedEntry, hourHeight);
     const overlayAdjustedStyle = {
       ...adjustedStyle,
       top: `${parseFloat(adjustedStyle.top?.toString() || '0') - overlay.topShift}px`,
@@ -206,7 +241,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
         }}
       >
         <EntryCard
-          entry={entry}
+          entry={renderedEntry}
           tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
           tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
           tagIcon={entry.tagId ? (getTagById(entry.tagId)?.icon ?? null) : null}
@@ -230,7 +265,6 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           isDragging={entryDragging}
           isResizing={entryResizing}
           isActive={isInspectorOpen && inspectorEntryId === entry.id}
-          previewTime={getPreviewTime(entry.id, interactionState)}
           hourHeight={hourHeight}
           onGapClick={onGapClick}
           isGapAvailable={isGapAvailable}

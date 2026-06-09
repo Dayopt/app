@@ -55,7 +55,12 @@ export const WeekGrid = ({
   const handleEventUpdate = React.useCallback(
     async (
       eventId: string,
-      updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+      updates: {
+        startTime: Date;
+        endTime: Date;
+        resetActualTime?: boolean;
+        keepActualTime?: boolean;
+      },
     ) => {
       if (!onEventUpdate) return;
       return onEventUpdate(eventId, updates);

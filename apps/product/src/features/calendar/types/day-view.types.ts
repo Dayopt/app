@@ -33,7 +33,12 @@ export interface DayContentProps {
   onEventUpdate?:
     | ((
         eventId: string,
-        updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+        updates: {
+          startTime: Date;
+          endTime: Date;
+          resetActualTime?: boolean;
+          keepActualTime?: boolean;
+        },
       ) => Promise<void | { skipToast: true }>)
     | undefined; // D&D用
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;

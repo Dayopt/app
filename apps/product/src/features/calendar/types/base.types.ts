@@ -45,7 +45,12 @@ export interface GridViewProps extends BaseViewProps {
   onUpdateEntry?:
     | ((
         entryIdOrEntry: string | CalendarEvent,
-        updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+        updates?: {
+          startTime: Date;
+          endTime: Date;
+          resetActualTime?: boolean;
+          keepActualTime?: boolean;
+        },
       ) => void | Promise<void> | Promise<{ skipToast: true } | void>)
     | undefined;
   onDeleteEntry?: ((entryId: string) => void) | undefined;

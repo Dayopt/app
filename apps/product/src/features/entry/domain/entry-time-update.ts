@@ -54,6 +54,7 @@ export function hasActualRangeDiff(entry: EntryLike | null | undefined): boolean
  * ルール:
  * - `entry.origin === 'planned' && resetActualTime`: planned / actual 両方を新時刻に揃える
  * - `entry.origin === 'unplanned'`: actual だけ更新（planned は触らない）
+ * - `entry.origin === 'planned' && keepActualTime`: planned だけ更新し、actual は事実として固定する
  * - `entry.origin === 'planned' && hasActualRangeDiff && !resetActualTime`: planned と actual を同じ移動量で平行移動
  * - `entry.origin === 'planned'` で actual と一致している、または `entry` が null（新規）: planned / actual 両方を新時刻に揃える
  * - その他（origin が不明など）: actual のみ更新
@@ -63,6 +64,7 @@ export function buildTimeUpdateData(
   startTime: Date,
   endTime: Date,
   resetActualTime = false,
+  keepActualTime = false,
 ): EntryTimeUpdateData {
   const startISO = startTime.toISOString();
   const endISO = endTime.toISOString();
@@ -80,6 +82,13 @@ export function buildTimeUpdateData(
     return {
       actual_start_time: startISO,
       actual_end_time: endISO,
+    };
+  }
+
+  if (entry?.origin === 'planned' && keepActualTime) {
+    return {
+      start_time: startISO,
+      end_time: endISO,
     };
   }
 

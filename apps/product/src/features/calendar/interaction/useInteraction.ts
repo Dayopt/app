@@ -56,7 +56,12 @@ export interface UseInteractionProps {
   /** Callback when an event is moved or resized */
   onEventUpdate?: (
     eventId: string,
-    updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+    updates: {
+      startTime: Date;
+      endTime: Date;
+      resetActualTime?: boolean;
+      keepActualTime?: boolean;
+    },
   ) => Promise<void | { skipToast: true }> | void;
   /** Callback when an event is clicked (not dragged) */
   onEventClick?: (event: CalendarEvent) => void;
@@ -244,6 +249,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           r.onEventUpdate?.(effect.entryId, {
             startTime: effect.time.start,
             endTime: effect.time.end,
+            keepActualTime: true,
           });
           break;
 

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { InteractionState } from '../../../../../domain/interaction/types';
 import type { CalendarEvent } from '../../../../../types/calendar.types';
 
-import { EntryRenderer } from '../EntryRenderer';
+import { buildResizePreviewEntry, EntryRenderer } from '../EntryRenderer';
 
 vi.mock('@/features/tags', () => ({
   getTagColorClasses: () => ({
@@ -147,6 +147,50 @@ describe('EntryRenderer', () => {
     expect(container.querySelector<HTMLElement>('[data-entry-resize-frame]')).toHaveStyle({
       height: '120px',
     });
+  });
+
+  it('planned のリサイズ preview は actual を固定して超過量を再計算する', () => {
+    const overtimeEntry: CalendarEvent = {
+      ...baseEntry,
+      actualEndDate: new Date('2026-01-15T11:10:00.000Z'),
+    };
+    const previewState: InteractionState = {
+      ...resizingState,
+      snappedHeight: 65,
+      previewTime: {
+        start: new Date('2026-01-15T10:00:00.000Z'),
+        end: new Date('2026-01-15T11:05:00.000Z'),
+      },
+    };
+    const previewEntry = buildResizePreviewEntry(overtimeEntry, previewState);
+
+    expect(previewEntry.endDate?.toISOString()).toBe('2026-01-15T11:05:00.000Z');
+    expect(previewEntry.actualEndDate?.toISOString()).toBe('2026-01-15T11:10:00.000Z');
+
+    const { container } = render(
+      <EntryRenderer
+        entry={overtimeEntry}
+        style={{ top: '100px', height: '70px' }}
+        hourHeight={60}
+        enableCrossDayDrag={false}
+        dayIndex={0}
+        isDragging={false}
+        isResizing={true}
+        entryDragging={false}
+        entryResizing={true}
+        interactionState={previewState}
+        globalDraggedEntryId={null}
+        isSourceColumnMovingAway={false}
+        onPointerDown={vi.fn()}
+        onTouchStart={vi.fn()}
+        onResizeStart={vi.fn()}
+        entries={[overtimeEntry]}
+      />,
+    );
+
+    expect(
+      container.querySelector<HTMLElement>('[data-entry-overtime-accent]')?.parentElement,
+    ).toHaveStyle({ height: '5px' });
   });
 
   it('actual が無い planned entry は予定レイヤーだけをグリッド高さに揃える', () => {

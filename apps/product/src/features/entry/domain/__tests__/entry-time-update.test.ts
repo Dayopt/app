@@ -163,6 +163,21 @@ describe('buildTimeUpdateData', () => {
     });
   });
 
+  it('planned origin で keepActualTime=true なら planned だけ更新する', () => {
+    const entry: EntryLike = {
+      origin: 'planned',
+      start_time: PLANNED_START,
+      end_time: PLANNED_END,
+      actual_start_time: ACTUAL_START,
+      actual_end_time: ACTUAL_END,
+    };
+    const result = buildTimeUpdateData(entry, NEW_START, NEW_END, false, true);
+    expect(result).toEqual({
+      start_time: NEW_START_ISO,
+      end_time: NEW_END_ISO,
+    });
+  });
+
   it('planned origin で actual と一致しているなら planned/actual 両方を新時刻に揃える', () => {
     const entry: EntryLike = {
       origin: 'planned',
