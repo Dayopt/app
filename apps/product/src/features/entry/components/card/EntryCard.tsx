@@ -483,7 +483,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         <div
           aria-hidden="true"
           className="pointer-events-none absolute right-0 left-0 overflow-hidden"
-          style={{ top: 0, height: `${overlay.topHeight}px` }}
+          style={{
+            top: 0,
+            height: `${overlay.topHeight}px`,
+            backgroundColor: actualBackgroundColor,
+          }}
         >
           <div
             data-entry-overtime-accent
@@ -508,7 +512,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         <div
           aria-hidden="true"
           className="pointer-events-none absolute right-0 left-0 overflow-hidden"
-          style={{ bottom: 0, height: `${overlay.bottomHeight}px` }}
+          style={{
+            bottom: 0,
+            height: `${overlay.bottomHeight}px`,
+            backgroundColor: actualBackgroundColor,
+          }}
         >
           <div
             data-entry-overtime-accent

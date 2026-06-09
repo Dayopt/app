@@ -322,6 +322,45 @@ describe('EntryCard', () => {
       expect(overtimeFrame?.style.borderLeftStyle).toBe('');
     });
 
+    it('actual が planned を超過した部分の地色は予定外 entry と揃える', () => {
+      const { container: plannedContainer } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            origin: 'planned',
+            actualStartDate: new Date('2025-01-15T09:30:00'),
+            actualEndDate: mockEvent.endDate,
+          }}
+          position={mockPosition}
+          hourHeight={60}
+        />,
+      );
+      const { container: unplannedContainer } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            id: 'unplanned-entry',
+            origin: 'unplanned',
+            actualStartDate: mockEvent.startDate,
+            actualEndDate: mockEvent.endDate,
+          }}
+          position={mockPosition}
+        />,
+      );
+
+      const overtimeAccent = plannedContainer.querySelector<HTMLElement>(
+        '[data-entry-overtime-accent]',
+      );
+      const overtimeLayer = overtimeAccent?.parentElement as HTMLElement | null;
+      const unplannedBody = unplannedContainer.querySelector<HTMLElement>(
+        '[data-entry-actual-body]',
+      );
+
+      expect(overtimeLayer).toHaveStyle({
+        backgroundColor: unplannedBody?.style.backgroundColor,
+      });
+    });
+
     it('unplanned entry は planned 背景を描かず点線の actual のみ表示する', () => {
       const { container } = render(
         <EntryCard
