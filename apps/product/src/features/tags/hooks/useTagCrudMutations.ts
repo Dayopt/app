@@ -1,11 +1,11 @@
 // タグCRUD用ミューテーションフック（作成・更新・削除・リネーム・色変更・並び替え）
 
 import { toast } from '@/lib/toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import {
   generateTempId,
-  replaceInPaginatedList,
   snapshotQuery,
   updatePaginatedList,
 } from '@/lib/tanstack-query/optimistic-mutation';
@@ -14,7 +14,7 @@ import type { TagColorName } from '../lib/tag-colors';
 import { DEFAULT_TAG_COLOR } from '../lib/tag-colors';
 
 import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
-import type { Tag } from '../types';
+import type { Tag, TagTreeNode } from '../types';
 
 // 新しい入力型（tRPC形式）
 interface TrpcTagUpdateInput {
@@ -28,17 +28,81 @@ interface TrpcTagUpdateInput {
 /** タグ更新の入力型 */
 export type UpdateTagInput = TrpcTagUpdateInput;
 
+type TagListData = {
+  data: Tag[];
+  count: number;
+};
+
+function isTagsListQuery(query: { queryKey: unknown }): boolean {
+  const key = query.queryKey;
+  return (
+    Array.isArray(key) &&
+    key.length >= 1 &&
+    Array.isArray(key[0]) &&
+    key[0][0] === 'tags' &&
+    key[0][1] === 'list'
+  );
+}
+
+export function upsertTagInListCache(
+  oldData: TagListData | undefined,
+  tag: Tag,
+  replaceId?: string,
+): TagListData {
+  if (!oldData) return { data: [tag], count: 1 };
+
+  const existingIndex = oldData.data.findIndex((item) =>
+    replaceId ? item.id === replaceId || item.id === tag.id : item.id === tag.id,
+  );
+
+  if (existingIndex >= 0) {
+    return {
+      ...oldData,
+      data: oldData.data.map((item, index) => (index === existingIndex ? tag : item)),
+    };
+  }
+
+  return {
+    ...oldData,
+    data: [tag, ...oldData.data],
+    count: oldData.count + 1,
+  };
+}
+
+export function upsertTagInHierarchyCache(
+  oldData: TagTreeNode[] | undefined,
+  tag: Tag,
+  replaceId?: string,
+): TagTreeNode[] {
+  const flat = oldData ? flattenTagTree(oldData) : [];
+  const existingIndex = flat.findIndex((item) =>
+    replaceId ? item.id === replaceId || item.id === tag.id : item.id === tag.id,
+  );
+  const nextFlat =
+    existingIndex >= 0
+      ? flat.map((item, index) => (index === existingIndex ? tag : item))
+      : [tag, ...flat];
+
+  return buildTagTree(nextFlat);
+}
+
 /**
  * タグ作成フック（楽観的更新付き）
  * @param showToast - トースト通知を表示するか。インラインタグ作成時はfalseで重複防止
  */
 export function useCreateTag({ showToast = true }: { showToast?: boolean } = {}) {
   const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
   const t = useTranslations('tags');
 
   return trpc.tags.create.useMutation({
     onMutate: async (input) => {
-      const listSnapshot = await snapshotQuery(utils.tags.list);
+      await Promise.all([utils.tags.list.cancel(), utils.tags.listHierarchy.cancel()]);
+      const previousListQueries = queryClient.getQueriesData<TagListData>({
+        predicate: isTagsListQuery,
+      });
+      const defaultListSnapshot = utils.tags.list.getData();
+      const hierarchySnapshot = utils.tags.listHierarchy.getData();
 
       const tempId = generateTempId('tag');
       const tempTag: Tag = {
@@ -54,28 +118,45 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
         updated_at: new Date().toISOString(),
       };
 
-      utils.tags.list.setData(undefined, (old) => {
-        if (!old) return { data: [tempTag], count: 1 };
-        return { ...old, data: [tempTag, ...old.data], count: old.count + 1 };
-      });
+      queryClient.setQueriesData<TagListData>({ predicate: isTagsListQuery }, (old) =>
+        upsertTagInListCache(old, tempTag),
+      );
+      utils.tags.list.setData(undefined, (old) => upsertTagInListCache(old, tempTag));
+      utils.tags.listHierarchy.setData(undefined, (old) => upsertTagInHierarchyCache(old, tempTag));
 
       // Calendar filter store の sync は useCalendarData / CalendarFilterList の effect が
       // utils.tags.list 変更を検知して syncWithTags 経由で行う（Layer 0 境界を保つため、
       // tags hook からは calendar store を直接触らない）。
-      return { listSnapshot, tempId, tagName: input.name };
+      return {
+        previousListQueries,
+        defaultListSnapshot,
+        hierarchySnapshot,
+        tempId,
+        tagName: input.name,
+      };
     },
     onSuccess: (result, _input, context) => {
-      if (!context?.tempId) return;
-
+      queryClient.setQueriesData<TagListData>({ predicate: isTagsListQuery }, (old) =>
+        upsertTagInListCache(old, result, context?.tempId),
+      );
       utils.tags.list.setData(undefined, (old) =>
-        replaceInPaginatedList(old, 'id', context.tempId, result),
+        upsertTagInListCache(old, result, context?.tempId),
+      );
+      utils.tags.listHierarchy.setData(undefined, (old) =>
+        upsertTagInHierarchyCache(old, result, context?.tempId),
       );
       utils.tags.getById.setData({ id: result.id }, result);
 
       if (showToast) toast.success(t('toast.created', { name: result.name }));
     },
     onError: (_err, _input, context) => {
-      context?.listSnapshot?.restore();
+      if (context?.previousListQueries) {
+        for (const [queryKey, data] of context.previousListQueries) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+      utils.tags.list.setData(undefined, context?.defaultListSnapshot);
+      utils.tags.listHierarchy.setData(undefined, context?.hierarchySnapshot);
       if (showToast) toast.error(t('toast.createFailed'));
     },
     onSettled: () => {
