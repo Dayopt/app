@@ -222,17 +222,27 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   if (shouldSplitPlannedActual(entry) && !entryDragging && !entryResizing) {
     const plannedSegmentEntry = toPlannedSegmentEntry(entry);
     const actualSegmentEntry = toActualSegmentEntry(entry);
+    const plannedStart = plannedSegmentEntry.displayStartDate;
+    const plannedEnd = plannedSegmentEntry.displayEndDate;
     const actualStart = actualSegmentEntry.displayStartDate;
     const actualEnd = actualSegmentEntry.displayEndDate;
+    const plannedPosition = layoutEntryToVerticalPosition(plannedStart, plannedEnd, hourHeight);
     const actualPosition = layoutEntryToVerticalPosition(actualStart, actualEnd, hourHeight);
     const isMovingToOtherDate = isSourceColumnMovingAway && globalDraggedEntryId === entry.id;
-    const plannedStyle = isMovingToOtherDate ? { ...adjustedStyle, opacity: 0.65 } : adjustedStyle;
+    const splitBaseStyle = isMovingToOtherDate
+      ? { ...adjustedStyle, opacity: 0.65 }
+      : adjustedStyle;
+    const plannedStyle: React.CSSProperties = {
+      ...splitBaseStyle,
+      top: `${plannedPosition.top}px`,
+      height: `${plannedPosition.height}px`,
+    };
     const plannedZIndex =
       typeof plannedStyle.zIndex === 'number'
         ? plannedStyle.zIndex
         : Number.parseInt(plannedStyle.zIndex?.toString() ?? '10', 10) || 10;
     const actualStyle: React.CSSProperties = {
-      ...plannedStyle,
+      ...splitBaseStyle,
       top: `${actualPosition.top}px`,
       height: `${actualPosition.height}px`,
       zIndex: plannedZIndex + 1,
@@ -281,7 +291,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
                 onPointerDown(
                   entry.id,
                   e,
-                  { top: currentTop, left: 0, width: 100, height: currentHeight },
+                  { top: plannedPosition.top, left: 0, width: 100, height: plannedPosition.height },
                   enableCrossDayDrag ? dayIndex : undefined,
                 );
               }
@@ -290,7 +300,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
               onTouchStart(
                 entry.id,
                 e,
-                { top: currentTop, left: 0, width: 100, height: currentHeight },
+                { top: plannedPosition.top, left: 0, width: 100, height: plannedPosition.height },
                 enableCrossDayDrag ? dayIndex : undefined,
               );
             }}
@@ -302,8 +312,9 @@ export const EntryRenderer = React.memo(function EntryRenderer({
               tagIcon={entry.tagId ? (getTagById(entry.tagId)?.icon ?? null) : null}
               onAnchorRect={setAnchorRect}
               isMobile={isMobile}
-              position={{ top: 0, left: 0, width: 100, height: previewPlannedHeight }}
-              plannedHeight={previewPlannedHeight}
+              position={{ top: 0, left: 0, width: 100, height: plannedPosition.height }}
+              plannedHeight={plannedPosition.height}
+              onClick={() => onEntryClick?.(entry)}
               onContextMenu={handleContextMenu}
               onResizeStart={(
                 p: CalendarEvent,
@@ -311,10 +322,10 @@ export const EntryRenderer = React.memo(function EntryRenderer({
                 e: React.MouseEvent | React.TouchEvent,
               ) =>
                 onResizeStart(p.id, direction, e, {
-                  top: currentTop,
+                  top: plannedPosition.top,
                   left: 0,
                   width: 100,
-                  height: currentHeight,
+                  height: plannedPosition.height,
                 })
               }
               isDragging={entryDragging}
@@ -363,6 +374,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
               isMobile={isMobile}
               position={{ top: 0, left: 0, width: 100, height: actualPosition.height }}
               plannedHeight={actualPosition.height}
+              onClick={() => onEntryClick?.(entry)}
               onContextMenu={handleContextMenu}
               isActive={isInspectorOpen && inspectorEntryId === entry.id}
               hourHeight={hourHeight}
