@@ -67,8 +67,8 @@ function initSentry(dsn: string) {
     // デバッグモード（開発環境のみ）
     debug: !IS_PRODUCTION && process.env.NEXT_PUBLIC_SENTRY_DEBUG === 'true',
 
-    // 本番・プレビュー環境のみ有効
-    enabled: IS_PRODUCTION || VERCEL_ENV === 'preview',
+    // 本番環境のみ有効（preview は signal を汚すため送信しない）
+    enabled: IS_PRODUCTION,
 
     // エラーフィルタリング + PII スクラビング
     // withPIIScrub は exception message / URL / breadcrumbs / contexts など
