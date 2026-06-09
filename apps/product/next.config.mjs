@@ -285,6 +285,14 @@ const sentryOptions = {
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
 
+  // release 名: Vercel が build 時に自動提供する commit SHA を明示する。
+  // source map upload と runtime（init では上書きしない）を同一 release に揃え、
+  // stack trace 解決を担保する。Vercel 外（ローカル build 等）では未定義のため
+  // plugin の自動検出にフォールバックする。
+  ...(process.env.VERCEL_GIT_COMMIT_SHA && {
+    release: { name: process.env.VERCEL_GIT_COMMIT_SHA },
+  }),
+
   // ソースマップ設定
   sourcemaps: {
     // ソースマップを自動削除（本番環境でソースコード露出防止）

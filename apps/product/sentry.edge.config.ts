@@ -22,7 +22,7 @@ if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
     environment: VERCEL_ENV,
-    // release は withSentryConfig が build 時に注入する（Vercel env SENTRY_RELEASE=$VERCEL_GIT_COMMIT_SHA）。
+    // release は withSentryConfig が build 時に注入する（next.config の release.name = VERCEL_GIT_COMMIT_SHA）。
     // ここで明示すると source map upload 時の release と runtime がズレるため上書きしない。
 
     // Edge環境は軽量設定
