@@ -255,7 +255,19 @@
         "blankTime": "Blank time",
         "blankTimeDesc": "Time without a name",
         "blankTimeNote": "Check detailed analysis for blank-time patterns",
-        "availableTime": "{time} available"
+        "availableTime": "{time} available",
+        "planAccuracy": "Plan accuracy",
+        "planAccuracyDesc": "How closely actuals matched the plan",
+        "unplanned": "Unplanned"
+      },
+      "rhythm": {
+        "dayOfWeek": "By day of week",
+        "dayOfWeekDesc": "Which days your time gathered on",
+        "hourly": "By hour",
+        "hourlyDesc": "Which hours your time gathered in"
+      },
+      "nextAction": {
+        "planNextWeek": "Plan next week"
       },
       "review": {
         "emptyTitle": "No review data yet",

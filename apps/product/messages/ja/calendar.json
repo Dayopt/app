@@ -255,7 +255,19 @@
         "blankTime": "空白の時間",
         "blankTimeDesc": "名前が付いていない時間",
         "blankTimeNote": "時間帯別の空白は詳細分析で確認",
-        "availableTime": "可処分 {time}"
+        "availableTime": "可処分 {time}",
+        "planAccuracy": "計画達成率",
+        "planAccuracyDesc": "予定と実績の一致度",
+        "unplanned": "予定外"
+      },
+      "rhythm": {
+        "dayOfWeek": "曜日別の記録",
+        "dayOfWeekDesc": "どの曜日に時間が集まったか",
+        "hourly": "時間帯別の記録",
+        "hourlyDesc": "どの時間帯に時間が集まったか"
+      },
+      "nextAction": {
+        "planNextWeek": "来週の計画を立てる"
       },
       "review": {
         "emptyTitle": "新しい1週間が始まりました",

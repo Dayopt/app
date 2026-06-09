@@ -1,8 +1,9 @@
 'use client';
 
-import { BarChart3, CalendarClock, Clock3, Gauge, Trophy } from 'lucide-react';
+import { BarChart3, CalendarClock, CalendarDays, Clock3, Gauge, Trophy } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import type { ComponentType, ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
@@ -11,16 +12,29 @@ import { resolveTagColor, TagIcon } from '@/features/tags';
 import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
+import { addWeeks } from '@/lib/date/core';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
-import { deriveStatement } from '@/features/review/domain/timePL/derivers';
-import type { TimePLInput } from '@/features/review/domain/timePL/types';
+import {
+  deriveAccuracy,
+  deriveBarComparison,
+  deriveStatement,
+} from '@/features/review/domain/timePL/derivers';
 import { useReviewPageData } from '../../hooks/useReviewPageData';
 import { useTimePLData } from '../../hooks/useTimePLData';
+import { getMetricTrend } from '../../lib/metrics';
+import { evaluateRuleInsights, type MetricValues } from '../../lib/ruleInsights';
+import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
+import type { MetricTrend } from '../../types/metrics.types';
 import type { ReviewViewProps } from '../../types/review.types';
+import { DowRhythmChart, HourlyRhythmChart } from '../review/RhythmCharts';
 import { TagBreakdownBar } from '../review/TagBreakdownBar';
+import { InsightSlot } from '../shared/InsightSlot';
+import { NextActionLink } from '../shared/NextActionLink';
+import { TrendBadge } from '../shared/TrendBadge';
 import { formatMinutesDuration } from '../time-pl/data/timePL.presentation';
+import { BarComparisonView } from '../time-pl/views/BarComparisonView';
 
 interface TagSummaryRow {
   tagId: string;
@@ -31,36 +45,19 @@ interface TagSummaryRow {
   percentage: number;
 }
 
-interface PlanActualSummary {
-  plannedMinutes: number;
-  actualMinutes: number;
-  diffMinutes: number;
-  under: {
-    tagId: string;
-    tagName: string;
-    tagColor: ReturnType<typeof resolveTagColor>;
-    tagIcon: string | null;
-    diffMinutes: number;
-  } | null;
-  over: {
-    tagId: string;
-    tagName: string;
-    tagColor: ReturnType<typeof resolveTagColor>;
-    tagIcon: string | null;
-    diffMinutes: number;
-  } | null;
-}
-
 /**
  * WeeklyReview - 週次振り返りビュー
  *
- * Review の入口として、期間内の時間の流れを要約する。
- * 深掘りはタグ詳細や今後の詳細ページに委ね、ここでは判断材料だけを並べる。
+ * 「時間をどこに使い、計画とどれだけずれたか」に答える振り返りの主戦場。
+ * 所見 → KPI 行 → Time P/L（主役）+ タグバランス → 週のリズム → 還流導線
+ * の順で構成する（review-granularity-redesign 設計書 §5.2）。
  */
 export function WeeklyReview({ className }: ReviewViewProps) {
   const t = useTranslations('calendar.stats');
+  const tCommon = useTranslations('common');
   const locale = useLocale();
   const router = useRouter();
+  const currentDate = useReviewFilterStore((s) => s.currentDate);
 
   const {
     data: pageData,
@@ -81,8 +78,13 @@ export function WeeklyReview({ className }: ReviewViewProps) {
     },
   );
 
-  const planActualSummary = useMemo(() => derivePlanActualSummary(timePLData), [timePLData]);
-  const totalTrackedMinutes = pageData?.overview.totalMinutes ?? planActualSummary.actualMinutes;
+  // ── Time P/L 導出 ──
+  const statement = useMemo(() => (timePLData ? deriveStatement(timePLData) : null), [timePLData]);
+  const accuracy = useMemo(() => (timePLData ? deriveAccuracy(timePLData) : null), [timePLData]);
+  const barRows = useMemo(() => (timePLData ? deriveBarComparison(timePLData) : []), [timePLData]);
+
+  // ── タグバランス ──
+  const totalTrackedMinutes = pageData?.overview.totalMinutes ?? statement?.actualTotal ?? 0;
   const fallbackTimeByTag = fallbackTimeByTagQuery.data;
   const timeByTag = pageData?.timeByTag?.length ? pageData.timeByTag : fallbackTimeByTag;
   const tagRows = useMemo<TagSummaryRow[]>(() => {
@@ -125,15 +127,60 @@ export function WeeklyReview({ className }: ReviewViewProps) {
     minutes: tag.minutes,
   }));
   const topTag = tagRows[0] ?? null;
-  const blankMinutes = useMemo(() => {
-    if (timePLData) {
-      return Math.max(0, timePLData.availableMinutes - planActualSummary.actualMinutes);
+
+  // ── KPI トレンド（前の同期間の自分とだけ比較する）──
+  const trackedTrend =
+    pageData && pageData.prevOverview.totalMinutes > 0
+      ? getMetricTrend(pageData.overview.totalMinutes, pageData.prevOverview.totalMinutes, 'up')
+      : null;
+  const accuracyTrend =
+    accuracy?.prevRate != null ? getMetricTrend(accuracy.rate, accuracy.prevRate, 'up') : null;
+
+  // ── 研究者の所見（severity 最上位の 1 件だけ。なければ沈黙）──
+  const insight = useMemo(() => {
+    if (!pageData) return null;
+
+    const current: MetricValues = {
+      totalTime: pageData.overview.totalMinutes,
+      entryRate: pageData.overview.planRate,
+      contextSwitches: pageData.contextSwitches.avgPerDay,
+      blankRate: pageData.blankRate.blankRate,
+    };
+    if (pageData.overview.avgFulfillment != null) {
+      current.avgFulfillment = pageData.overview.avgFulfillment;
     }
 
-    const blankRate = pageData?.blankRate;
-    if (!blankRate) return 0;
-    return Math.max(0, blankRate.availableMinutes - blankRate.scheduledMinutes);
-  }, [timePLData, planActualSummary.actualMinutes, pageData?.blankRate]);
+    const previous: MetricValues = {
+      totalTime: pageData.prevOverview.totalMinutes,
+      entryRate: pageData.prevOverview.planRate,
+    };
+    if (pageData.prevOverview.avgFulfillment != null) {
+      previous.avgFulfillment = pageData.prevOverview.avgFulfillment;
+    }
+
+    return evaluateRuleInsights(current, previous)[0] ?? null;
+  }, [pageData]);
+
+  const insightContent = useMemo(() => {
+    if (!insight) return null;
+    const params = { ...insight.messageParams };
+    // trendWorse / trendBetter の {label} は英語定数なので locale 済みのメトリクス名に差し替える
+    if (params.label != null) {
+      params.label = t(`metrics.${insight.metricId}`);
+    }
+    return {
+      text: t(`insights.${insight.messageKey}`, params),
+      detail: insight.detailKey
+        ? t(`insights.${insight.detailKey}`, insight.detailParams)
+        : undefined,
+    };
+  }, [insight, t]);
+
+  // ── 還流導線（来週の計画へ）──
+  const nextWeekHref = `/${locale}/calendar/week?date=${format(addWeeks(currentDate, 1), 'yyyy-MM-dd')}`;
+
+  // ── 週のリズム ──
+  const weekdayLabels = tCommon.raw('dates.weekdaysNarrow') as string[];
 
   // タグ詳細ルートをプリフェッチ（クリック前にRSCペイロードを準備）
   const tagIds = useMemo(() => tagRows.map((tag) => tag.tagId), [tagRows]);
@@ -179,12 +226,28 @@ export function WeeklyReview({ className }: ReviewViewProps) {
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       <div className="scrollbar-stable flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 p-4">
+          {insightContent && (
+            <InsightSlot text={insightContent.text} detail={insightContent.detail} />
+          )}
+
           <section className="grid gap-3 sm:grid-cols-3">
             <SummaryCard
               icon={Clock3}
               label={t('overview.trackedTime')}
               value={formatMinutesDuration(totalTrackedMinutes)}
               description={t('overview.trackedTimeDesc')}
+              trend={trackedTrend}
+            />
+            <SummaryCard
+              icon={Gauge}
+              label={t('overview.planAccuracy')}
+              value={
+                accuracy && !isTimePLPending
+                  ? `${Math.round(accuracy.rate * 100)}%`
+                  : t('metrics.noData')
+              }
+              description={t('overview.planAccuracyDesc')}
+              trend={accuracyTrend}
             />
             <SummaryCard
               icon={Trophy}
@@ -196,30 +259,45 @@ export function WeeklyReview({ className }: ReviewViewProps) {
                   : t('noTagData')
               }
             />
-            <SummaryCard
-              icon={Gauge}
-              label={t('overview.planDiff')}
-              value={
-                isTimePLPending
-                  ? t('metrics.noData')
-                  : formatSignedDuration(planActualSummary.diffMinutes)
-              }
-              description={
-                planActualSummary.diffMinutes === 0
-                  ? t('overview.planDiffEven')
-                  : planActualSummary.diffMinutes > 0
-                    ? t('overview.planDiffOver')
-                    : t('overview.planDiffUnder')
-              }
-            />
           </section>
 
           <section className="grid gap-4 lg:grid-cols-3">
             <OverviewPanel
+              title={t('overview.planActual')}
+              description={t('overview.planActualDesc')}
+              icon={<CalendarClock className="size-4" />}
+              className="lg:col-span-2"
+            >
+              {statement && barRows.length > 0 ? (
+                <>
+                  <div className="mb-4 grid grid-cols-3 gap-3">
+                    <PlanActualStat
+                      label={t('overview.planned')}
+                      value={formatMinutesDuration(statement.budgetTotal)}
+                    />
+                    <PlanActualStat
+                      label={t('overview.actual')}
+                      value={formatMinutesDuration(statement.actualTotal)}
+                    />
+                    <PlanActualStat
+                      label={t('overview.diff')}
+                      value={formatSignedDuration(statement.netVarianceMinutes)}
+                      emphasized
+                    />
+                  </div>
+                  <BarComparisonView rows={barRows} />
+                </>
+              ) : (
+                <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
+                  {t('metrics.noData')}
+                </div>
+              )}
+            </OverviewPanel>
+
+            <OverviewPanel
               title={t('overview.tagTime')}
               description={t('overview.tagTimeDesc')}
               icon={<BarChart3 className="size-4" />}
-              className="lg:col-span-2"
             >
               <TagBreakdownBar segments={tagSegments} onTagClick={handleTagClick} />
               <div className="divide-border mt-3 divide-y">
@@ -245,105 +323,40 @@ export function WeeklyReview({ className }: ReviewViewProps) {
                 ))}
               </div>
             </OverviewPanel>
-
-            <div className="flex flex-col gap-4">
-              <OverviewPanel
-                title={t('overview.planActual')}
-                description={t('overview.planActualDesc')}
-                icon={<CalendarClock className="size-4" />}
-              >
-                <div className="space-y-3">
-                  <PlanActualRow
-                    label={t('overview.planned')}
-                    value={formatMinutesDuration(planActualSummary.plannedMinutes)}
-                  />
-                  <PlanActualRow
-                    label={t('overview.actual')}
-                    value={formatMinutesDuration(planActualSummary.actualMinutes)}
-                  />
-                  <PlanActualRow
-                    label={t('overview.diff')}
-                    value={formatSignedDuration(planActualSummary.diffMinutes)}
-                    emphasized
-                  />
-                  <VarianceHighlight
-                    label={t('overview.lessThanPlanned')}
-                    item={planActualSummary.under}
-                  />
-                  <VarianceHighlight
-                    label={t('overview.moreThanPlanned')}
-                    item={planActualSummary.over}
-                  />
-                </div>
-              </OverviewPanel>
-
-              <OverviewPanel
-                title={t('overview.blankTime')}
-                description={t('overview.blankTimeDesc')}
-                icon={<Clock3 className="size-4" />}
-              >
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <div className="text-foreground font-mono text-3xl font-medium tabular-nums">
-                      {formatMinutesDuration(blankMinutes)}
-                    </div>
-                    <p className="text-muted-foreground mt-1 text-sm">
-                      {t('overview.blankTimeNote')}
-                    </p>
-                  </div>
-                  <div className="text-muted-foreground text-right text-xs">
-                    {timePLData
-                      ? t('overview.availableTime', {
-                          time: formatMinutesDuration(timePLData.availableMinutes),
-                        })
-                      : t('metrics.noData')}
-                  </div>
-                </div>
-              </OverviewPanel>
-            </div>
           </section>
+
+          <section className="grid gap-4 lg:grid-cols-2">
+            <OverviewPanel
+              title={t('rhythm.dayOfWeek')}
+              description={t('rhythm.dayOfWeekDesc')}
+              icon={<CalendarDays className="size-4" />}
+            >
+              <DowRhythmChart
+                data={pageData?.dow}
+                weekdayLabels={weekdayLabels}
+                isLoading={isPending && !isStatsError}
+              />
+            </OverviewPanel>
+            <OverviewPanel
+              title={t('rhythm.hourly')}
+              description={t('rhythm.hourlyDesc')}
+              icon={<Clock3 className="size-4" />}
+            >
+              <HourlyRhythmChart data={pageData?.hourly} isLoading={isPending && !isStatsError} />
+            </OverviewPanel>
+          </section>
+
+          <NextActionLink href={nextWeekHref} label={t('nextAction.planNextWeek')} />
         </div>
       </div>
     </div>
   );
 }
 
-function derivePlanActualSummary(input: TimePLInput | null | undefined): PlanActualSummary {
-  if (!input) {
-    return {
-      plannedMinutes: 0,
-      actualMinutes: 0,
-      diffMinutes: 0,
-      under: null,
-      over: null,
-    };
-  }
-
-  const statement = deriveStatement(input);
-  const rows = input.tags
-    .filter((tag) => tag.budgetMinutes > 0 || tag.actualMinutes > 0)
-    .map((tag) => ({
-      tagId: tag.tagId,
-      tagName: tag.tagName,
-      tagColor: tag.tagColor,
-      tagIcon: tag.tagIcon ?? null,
-      diffMinutes: tag.actualMinutes - tag.budgetMinutes,
-    }))
-    .sort((a, b) => Math.abs(b.diffMinutes) - Math.abs(a.diffMinutes));
-
-  return {
-    plannedMinutes: statement.budgetTotal,
-    actualMinutes: statement.actualTotal,
-    diffMinutes: statement.actualTotal - statement.budgetTotal,
-    under: rows.find((row) => row.diffMinutes < 0) ?? null,
-    over: rows.find((row) => row.diffMinutes > 0) ?? null,
-  };
-}
-
 function formatSignedDuration(minutes: number): string {
   if (minutes === 0) return '±0';
   const sign = minutes > 0 ? '+' : '-';
-  return `${sign}${formatMinutesDuration(minutes)}`;
+  return `${sign}${formatMinutesDuration(Math.abs(minutes))}`;
 }
 
 function SummaryCard({
@@ -351,11 +364,13 @@ function SummaryCard({
   label,
   value,
   description,
+  trend,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
   value: string;
   description: string;
+  trend?: MetricTrend | null | undefined;
 }) {
   return (
     <div className="border-border-subtle bg-card flex min-h-32 flex-col justify-between rounded-lg border p-4">
@@ -364,7 +379,10 @@ function SummaryCard({
         <span>{label}</span>
       </div>
       <div>
-        <div className="text-foreground truncate text-2xl font-medium">{value}</div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-foreground truncate text-2xl font-medium">{value}</span>
+          {trend && <TrendBadge trend={trend} />}
+        </div>
         <p className="text-muted-foreground mt-1 text-sm">{description}</p>
       </div>
     </div>
@@ -400,7 +418,7 @@ function OverviewPanel({
   );
 }
 
-function PlanActualRow({
+function PlanActualStat({
   label,
   value,
   emphasized = false,
@@ -410,33 +428,16 @@ function PlanActualRow({
   emphasized?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="text-muted-foreground text-sm">{label}</span>
-      <span
+    <div>
+      <div className="text-muted-foreground text-xs">{label}</div>
+      <div
         className={cn(
-          'font-mono text-sm tabular-nums',
-          emphasized ? 'text-foreground font-medium' : 'text-muted-foreground',
+          'mt-1 font-mono text-lg tabular-nums',
+          emphasized ? 'text-foreground font-medium' : 'text-foreground',
         )}
       >
         {value}
-      </span>
-    </div>
-  );
-}
-
-function VarianceHighlight({ label, item }: { label: string; item: PlanActualSummary['under'] }) {
-  if (!item) return null;
-
-  return (
-    <div className="border-border-subtle flex min-w-0 items-center gap-2 rounded-lg border p-2">
-      <TagIcon icon={item.tagIcon ?? null} color={item.tagColor} size="sm" />
-      <div className="min-w-0 flex-1">
-        <div className="text-muted-foreground text-xs">{label}</div>
-        <ColonTagLabel name={item.tagName} className="text-foreground block truncate text-sm" />
       </div>
-      <span className="text-muted-foreground font-mono text-sm tabular-nums">
-        {formatSignedDuration(item.diffMinutes)}
-      </span>
     </div>
   );
 }
