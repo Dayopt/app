@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
 import type { InteractionState } from '../../../../domain/interaction/types';
+import { hasCalendarActualRangeDiff } from '../../../../lib/entry-time';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { getAdjustedStyle } from '../utils/interactionHelpers';
 import { ConflictOverlay } from './ConflictOverlay';
@@ -83,6 +84,8 @@ export function buildResizePreviewEntry(
     };
   }
 
+  const keepActualTime = hasCalendarActualRangeDiff(entry);
+
   return {
     ...entry,
     startDate: start,
@@ -91,6 +94,8 @@ export function buildResizePreviewEntry(
     displayEndDate: end,
     plannedStartDate: start,
     plannedEndDate: end,
+    actualStartDate: keepActualTime ? entry.actualStartDate : start,
+    actualEndDate: keepActualTime ? entry.actualEndDate : end,
     duration,
   };
 }

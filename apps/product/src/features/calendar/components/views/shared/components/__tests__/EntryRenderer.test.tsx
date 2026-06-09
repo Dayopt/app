@@ -147,6 +147,7 @@ describe('EntryRenderer', () => {
     expect(container.querySelector<HTMLElement>('[data-entry-resize-frame]')).toHaveStyle({
       height: '120px',
     });
+    expect(container.querySelector('[data-entry-overtime-accent]')).not.toBeInTheDocument();
   });
 
   it('planned のリサイズ preview は actual を固定して超過量を再計算する', () => {

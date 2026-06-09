@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 import type { CalendarEvent } from '../types/calendar.types';
 
+import { hasCalendarActualRangeDiff } from '../lib/entry-time';
 import { checkClientSideOverlap } from '../lib/overlap';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
@@ -245,13 +246,15 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           // Snap-back animation handled by GhostRenderer
           break;
 
-        case 'RESIZE_COMPLETE':
+        case 'RESIZE_COMPLETE': {
+          const event = r.events.find((candidate) => candidate.id === effect.entryId);
           r.onEventUpdate?.(effect.entryId, {
             startTime: effect.time.start,
             endTime: effect.time.end,
-            keepActualTime: true,
+            ...(hasCalendarActualRangeDiff(event) ? { keepActualTime: true } : {}),
           });
           break;
+        }
 
         case 'RESIZE_REJECTED':
           // Visual feedback handled by state.isOverlapping
