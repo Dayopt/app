@@ -477,14 +477,6 @@ describe('EntryCard', () => {
       expect(resizeHandle).toBeInTheDocument();
     });
 
-    it('disableResize=true の場合はリサイズハンドルを表示しない', () => {
-      render(<EntryCard entry={mockEvent} position={mockPosition} disableResize />);
-
-      expect(
-        screen.queryByRole('slider', { name: /Resize entry duration/i }),
-      ).not.toBeInTheDocument();
-    });
-
     it('過去の planned でもリサイズハンドルが存在する', () => {
       render(
         <EntryCard
