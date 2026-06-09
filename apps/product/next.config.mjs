@@ -31,6 +31,9 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '',
     NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version || '0.0.0',
+    // client 側で Vercel 環境を判別するため露出。preview は NODE_ENV=production だが
+    // VERCEL_ENV=preview なので、Sentry を production のみ有効化する gate に必要。
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV || '',
   },
 
   // TypeScript設定

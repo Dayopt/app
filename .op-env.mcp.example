@@ -9,7 +9,10 @@
 #        claude() { op run --env-file="$HOME/.config/claude/op-env.mcp" -- command claude "$@"; }
 #   3. zsh から `claude` を起動 → MCP にトークンが注入される
 #
-# GitHub / Vercel の MCP は OAuth 承認方式（/mcp で承認）のためトークン不要。ここには書かない。
+# Vercel の MCP は OAuth 承認方式（/mcp で承認）のためトークン不要。ここには書かない。
+# GitHub は OAuth(dynamic client registration)非対応のため、PAT を Authorization ヘッダーで渡す
+# （.mcp.json の github.headers）。1Password に github-mcp-pat（credential フィールド）を作成して参照する。
 
 SENTRY_ACCESS_TOKEN=op://Dayopt-Shared/sentry/SENTRY_AUTH_TOKEN
 SUPABASE_ACCESS_TOKEN=op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN
+GITHUB_MCP_PAT=op://Dayopt-Shared/github-mcp-pat/credential

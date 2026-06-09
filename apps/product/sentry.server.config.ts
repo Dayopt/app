@@ -38,8 +38,9 @@ if (SENTRY_DSN) {
     // デバッグモード（開発環境のみ）
     debug: !IS_PRODUCTION && process.env.SENTRY_DEBUG === 'true',
 
-    // 本番環境のみ有効（preview は signal を汚すため送信しない）
-    enabled: IS_PRODUCTION,
+    // 本番環境のみ有効。preview は NODE_ENV=production だが VERCEL_ENV=preview なので除外
+    // （IS_PRODUCTION では preview を除外できない）。
+    enabled: VERCEL_ENV === 'production',
 
     // エラーフィルタリング + PII スクラビング
     // withPIIScrub は exception message / URL / breadcrumbs / contexts など

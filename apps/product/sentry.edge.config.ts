@@ -32,8 +32,9 @@ if (SENTRY_DSN) {
     // デバッグモード無効（Edgeは軽量に）
     debug: false,
 
-    // 本番環境のみ有効（preview は signal を汚すため送信しない）
-    enabled: IS_PRODUCTION,
+    // 本番環境のみ有効。preview は NODE_ENV=production だが VERCEL_ENV=preview なので除外
+    // （IS_PRODUCTION では preview を除外できない）。
+    enabled: VERCEL_ENV === 'production',
 
     // Edge のフィルタリング + PII スクラビング
     beforeSend: withPIIScrub((event) => {
