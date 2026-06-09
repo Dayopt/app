@@ -352,6 +352,44 @@ describe('EntryCard', () => {
       expect(actualBody?.style.borderBottomStyle).toBe('dashed');
       expect(actualBody?.style.borderLeftStyle).toBe('');
     });
+
+    it('active entry は左アクセントに現在中の明滅クラスを付ける', () => {
+      const { container } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            origin: 'planned',
+            entryState: 'active',
+            actualStartDate: mockEvent.startDate,
+            actualEndDate: mockEvent.endDate,
+          }}
+          position={mockPosition}
+        />,
+      );
+
+      const actualAccent = container.querySelector<HTMLElement>('[data-entry-actual-accent]');
+
+      expect(actualAccent).toHaveClass('entry-live-accent');
+    });
+
+    it('active ではない entry は左アクセントを明滅させない', () => {
+      const { container } = render(
+        <EntryCard
+          entry={{
+            ...mockEvent,
+            origin: 'planned',
+            entryState: 'past',
+            actualStartDate: mockEvent.startDate,
+            actualEndDate: mockEvent.endDate,
+          }}
+          position={mockPosition}
+        />,
+      );
+
+      const actualAccent = container.querySelector<HTMLElement>('[data-entry-actual-accent]');
+
+      expect(actualAccent).not.toHaveClass('entry-live-accent');
+    });
   });
 
   describe('インタラクション', () => {

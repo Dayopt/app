@@ -490,6 +490,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             className={cn(
               'absolute left-0',
               isActiveEntry ? 'opacity-100' : 'opacity-70',
+              isActiveEntry && 'entry-live-accent',
               colorClasses ? colorClasses.dot : 'bg-entry-default',
             )}
             style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
@@ -514,6 +515,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             className={cn(
               'absolute left-0',
               isActiveEntry ? 'opacity-100' : 'opacity-70',
+              isActiveEntry && 'entry-live-accent',
               colorClasses ? colorClasses.dot : 'bg-entry-default',
             )}
             style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
@@ -623,6 +625,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             className={cn(
               'relative shrink-0',
               isActiveEntry ? 'opacity-100' : 'opacity-70',
+              isActiveEntry && 'entry-live-accent',
               colorClasses ? colorClasses.dot : 'bg-entry-default',
             )}
             style={{ width: `${accentWidth}px` }}
