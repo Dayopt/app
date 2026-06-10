@@ -4,45 +4,86 @@ import { headers } from 'next/headers';
 
 import { createServerHelpers, dehydrate } from '@/lib/trpc/server';
 
-import { computePreviousDateRange, computeStatsDateRange } from './compute-date-range';
+import type { ReviewGranularity } from '../stores/useReviewFilterStore';
+import {
+  computeMonthCount,
+  computePreviousDateRange,
+  computeStatsDateRange,
+} from './compute-date-range';
+
+interface PrefetchReviewOptions {
+  granularity?: ReviewGranularity | undefined;
+  /** YYYY-MM-DD（URL の ?d=）。省略時は今日 */
+  dateStr?: string | undefined;
+}
+
+/** YYYY-MM-DD を正午基準で解釈（TZ ずれで日付が前後しにくい基準値） */
+function parseDateParam(value: string | undefined): Date {
+  if (!value) return new Date();
+  const parsed = new Date(`${value}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
 
 /**
  * Review ページ用 prefetch
  *
- * 4 クエリで Review 画面に必要なデータを事前取得:
- * 1. getStatsPageData: 統合クエリ（Review 表示データ）
- * 2. getStreak: 連続記録日数（期間非依存のため統合不可）
- * 3. getDailyHours: 年間ヒートマップ（年パラメータが動的なため統合不可）
- * 4. getTimePL: Time P/L データ（デフォルト week 粒度）
+ * URL の粒度・日付（?g=&d=）に合わせてクライアントと同じクエリキーで事前取得する:
+ * - day: entries.list（当日 + 前日。日次ビューは Free データのみで構成）
+ * - week: getStatsPageData + getTimePL + getStreak + getDailyHours
+ * - month / year: getStatsPageData + getStreak + getDailyHours
  */
-export async function prefetchReviewData() {
+export async function prefetchReviewData(options: PrefetchReviewOptions = {}) {
   const helpers = await createServerHelpers();
 
-  const now = new Date();
+  const granularity = options.granularity ?? 'week';
+  const baseDate = parseDateParam(options.dateStr);
   const headersList = await headers();
   const serverTimezone = headersList.get('x-user-timezone') ?? 'UTC';
-  const dateRange = computeStatsDateRange(now, 'week', serverTimezone);
-  const prevDateRange = computePreviousDateRange(now, 'week', serverTimezone);
+  const dateRange = computeStatsDateRange(baseDate, granularity, serverTimezone);
+  const prevDateRange = computePreviousDateRange(baseDate, granularity, serverTimezone);
 
   try {
-    await Promise.all([
-      helpers.entries.getStatsPageData.prefetch({
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-        prevStart: prevDateRange.startDate,
-        prevEnd: prevDateRange.endDate,
-        year: now.getFullYear(),
-        monthlyMonths: 3,
-      }),
-      helpers.entries.getStreak.prefetch(),
-      helpers.entries.getDailyHours.prefetch({ year: now.getFullYear() }),
-      helpers.entries.getTimePL.prefetch({
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-        prevStart: prevDateRange.startDate,
-        prevEnd: prevDateRange.endDate,
-      }),
-    ]);
+    if (granularity === 'day') {
+      // DailyReview（useEntries）と同じ入力でキャッシュキーを一致させる
+      await Promise.all([
+        helpers.entries.list.prefetch({
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate,
+          sortBy: 'start_time',
+          sortOrder: 'asc',
+          limit: 100,
+        }),
+        helpers.entries.list.prefetch({
+          startDate: prevDateRange.startDate,
+          endDate: prevDateRange.endDate,
+          limit: 100,
+        }),
+      ]);
+    } else {
+      const prefetches = [
+        helpers.entries.getStatsPageData.prefetch({
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate,
+          prevStart: prevDateRange.startDate,
+          prevEnd: prevDateRange.endDate,
+          year: baseDate.getFullYear(),
+          monthlyMonths: computeMonthCount(granularity) ?? 12,
+        }),
+        helpers.entries.getStreak.prefetch(),
+        helpers.entries.getDailyHours.prefetch({ year: baseDate.getFullYear() }),
+      ];
+      if (granularity === 'week') {
+        prefetches.push(
+          helpers.entries.getTimePL.prefetch({
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate,
+            prevStart: prevDateRange.startDate,
+            prevEnd: prevDateRange.endDate,
+          }),
+        );
+      }
+      await Promise.all(prefetches);
+    }
   } catch {
     // 認証エラー等はスキップ（クライアント側でリトライ）
   }
