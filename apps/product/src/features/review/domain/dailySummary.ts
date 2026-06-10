@@ -25,6 +25,8 @@ export interface DailySummary {
   avgFulfillment: number | null;
   /** 平均見積もりずれ（実績 − 予定、分）。両方持つエントリが無ければ null */
   estimationBiasMinutes: number | null;
+  /** 見積もりずれの母数（予定と実績の両方を持つエントリ数）。所見の信頼性ガードに使う */
+  estimationSampleCount: number;
 }
 
 function durationMinutes(start: string | null, end: string | null): number | null {
@@ -72,5 +74,6 @@ export function computeDailySummary(entries: DailySummaryEntry[]): DailySummary 
     planAccuracy,
     avgFulfillment: fulfillmentCount > 0 ? fulfillmentTotal / fulfillmentCount : null,
     estimationBiasMinutes: biasCount > 0 ? biasTotal / biasCount : null,
+    estimationSampleCount: biasCount,
   };
 }

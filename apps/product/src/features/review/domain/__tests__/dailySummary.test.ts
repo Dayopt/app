@@ -22,6 +22,7 @@ describe('computeDailySummary', () => {
       planAccuracy: 1,
       avgFulfillment: null,
       estimationBiasMinutes: null,
+      estimationSampleCount: 0,
     });
   });
 
@@ -87,6 +88,7 @@ describe('computeDailySummary', () => {
       }),
     ]);
     expect(result.estimationBiasMinutes).toBeCloseTo(10);
+    expect(result.estimationSampleCount).toBe(2);
   });
 
   it('充実度はスコア付きエントリだけで平均する', () => {

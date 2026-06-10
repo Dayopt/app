@@ -346,6 +346,7 @@
         "dayEstimationOver": "予定より長くかかる傾向の1日でした（平均 +{bias} 分）",
         "dayEstimationUnder": "予定より早く終わる傾向の1日でした（平均 -{bias} 分）",
         "periodTopTag": "最も時間を使ったタグは {tag} です（合計 {hours} 時間）",
+        "lowDataNote": "この期間は記録が少ないため、傾向は参考値です",
         "estimationBiasOver": "このタグは平均 +{bias} 分超過する傾向があります",
         "estimationBiasUnder": "このタグは平均 {bias} 分早く終わる傾向があります",
         "hourlyFulfillmentHigh": "この時間帯の充実度は平均より高い傾向があります",

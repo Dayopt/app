@@ -32,6 +32,8 @@ import { formatMinutesDuration } from '../time-pl/data/timePL.presentation';
 
 /** 所見を出す見積もりずれの下限（分） */
 const ESTIMATION_BIAS_THRESHOLD = 10;
+/** 所見を出す見積もりずれの最小サンプル数（1-2 件では傾向と言えない） */
+const ESTIMATION_MIN_SAMPLES = 3;
 const DAY_MINUTES = 24 * 60;
 
 /**
@@ -94,15 +96,16 @@ export function DailyReview({ className }: ReviewViewProps) {
       ? getMetricTrend(summary.avgFulfillment, prevSummary.avgFulfillment, 'up')
       : null;
 
-  // ── 研究者の所見（見積もりずれが閾値を超えた日だけ）──
+  // ── 研究者の所見（見積もりずれが閾値超 + サンプル数が十分な日だけ）──
   const insightText = useMemo(() => {
     const bias = summary.estimationBiasMinutes;
     if (bias == null || Math.abs(bias) < ESTIMATION_BIAS_THRESHOLD) return null;
+    if (summary.estimationSampleCount < ESTIMATION_MIN_SAMPLES) return null;
     const params = { bias: Math.abs(Math.round(bias)) };
     return bias > 0
       ? t('insights.dayEstimationOver', params)
       : t('insights.dayEstimationUnder', params);
-  }, [summary.estimationBiasMinutes, t]);
+  }, [summary.estimationBiasMinutes, summary.estimationSampleCount, t]);
 
   // ── タイムラインのブロック化（日の開始からの分オフセットに変換）──
   const dayStartMs = useMemo(() => new Date(dateRange.startDate).getTime(), [dateRange.startDate]);

@@ -23,6 +23,7 @@ import type { ReviewViewProps } from '../../types/review.types';
 import { EstimationAccuracyList } from '../month/EstimationAccuracyList';
 import { MonthlyDailyChart } from '../month/MonthlyDailyChart';
 import { TagBalancePanel } from '../review/TagBalancePanel';
+import { InsightSlot } from '../shared/InsightSlot';
 import { NextActionLink } from '../shared/NextActionLink';
 import { OverviewPanel } from '../shared/OverviewPanel';
 import { RuleInsightSlot } from '../shared/RuleInsightSlot';
@@ -51,7 +52,7 @@ export function MonthlyReview({ className }: ReviewViewProps) {
     dateRange,
   } = useReviewPageData();
 
-  const insight = useStatsRuleInsight(pageData);
+  const { insight, isLowData } = useStatsRuleInsight(pageData);
   const {
     rows: tagRows,
     isFallbackPending,
@@ -137,7 +138,11 @@ export function MonthlyReview({ className }: ReviewViewProps) {
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       <div className="scrollbar-stable flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 p-4">
-          <RuleInsightSlot insight={insight} />
+          {isLowData ? (
+            <InsightSlot text={t('insights.lowDataNote')} />
+          ) : (
+            <RuleInsightSlot insight={insight} />
+          )}
 
           <section className="grid gap-3 sm:grid-cols-3">
             <SummaryCard

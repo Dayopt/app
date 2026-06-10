@@ -28,6 +28,7 @@ import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
 import type { ReviewViewProps } from '../../types/review.types';
 import { DowRhythmChart, HourlyRhythmChart } from '../review/RhythmCharts';
 import { TagBalancePanel, type TagBalanceRow } from '../review/TagBalancePanel';
+import { InsightSlot } from '../shared/InsightSlot';
 import { NextActionLink } from '../shared/NextActionLink';
 import { OverviewPanel } from '../shared/OverviewPanel';
 import { RuleInsightSlot } from '../shared/RuleInsightSlot';
@@ -120,8 +121,8 @@ export function WeeklyReview({ className }: ReviewViewProps) {
   const accuracyTrend =
     accuracy?.prevRate != null ? getMetricTrend(accuracy.rate, accuracy.prevRate, 'up') : null;
 
-  // ── 研究者の所見（severity 最上位の 1 件だけ。なければ沈黙）──
-  const insight = useStatsRuleInsight(pageData);
+  // ── 研究者の所見（severity 最上位の 1 件だけ。記録が少ない期間は言い切らない）──
+  const { insight, isLowData } = useStatsRuleInsight(pageData);
 
   // ── 還流導線（来週の計画へ）──
   const nextWeekHref = `/${locale}/calendar/week?date=${format(addWeeks(currentDate, 1), 'yyyy-MM-dd')}`;
@@ -191,7 +192,11 @@ export function WeeklyReview({ className }: ReviewViewProps) {
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       <div className="scrollbar-stable flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 p-4">
-          <RuleInsightSlot insight={insight} />
+          {isLowData ? (
+            <InsightSlot text={t('insights.lowDataNote')} />
+          ) : (
+            <RuleInsightSlot insight={insight} />
+          )}
 
           <section className="grid gap-3 sm:grid-cols-3">
             <SummaryCard

@@ -346,6 +346,7 @@
         "dayEstimationOver": "Entries tended to run long today (avg +{bias} min)",
         "dayEstimationUnder": "Entries tended to finish early today (avg -{bias} min)",
         "periodTopTag": "Most time went to {tag} ({hours}h total)",
+        "lowDataNote": "Records are sparse in this period, so trends are indicative only",
         "estimationBiasOver": "This tag tends to run +{bias} min over estimate",
         "estimationBiasUnder": "This tag tends to finish {bias} min early",
         "hourlyFulfillmentHigh": "Fulfillment tends to be above average at this hour",
