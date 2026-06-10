@@ -7,6 +7,75 @@
 
 import { hasTwoLayerTimeConflict, type TwoLayerOverlapTarget } from '@/lib/time/two-layer-overlap';
 import type { CalendarEvent } from '../types/calendar.types';
+import { hasCalendarActualRangeDiff } from './entry-time';
+
+export type CalendarInteractionOperation = 'drag' | 'resize';
+
+function shiftDate(date: Date, deltaMs: number): Date {
+  return new Date(date.getTime() + deltaMs);
+}
+
+export function buildInteractionOverlapTarget(
+  event: CalendarEvent,
+  previewStartTime: Date,
+  previewEndTime: Date,
+  operation: CalendarInteractionOperation,
+  now: number = Date.now(),
+): TwoLayerOverlapTarget {
+  if (event.origin === 'unplanned') {
+    return {
+      id: event.id,
+      plannedStart: null,
+      plannedEnd: null,
+      actualStart: previewStartTime,
+      actualEnd: previewEndTime,
+      forbidFutureActual: true,
+      now,
+    };
+  }
+
+  const hasActualRange = event.actualStartDate != null && event.actualEndDate != null;
+  if (!hasActualRange) {
+    return {
+      id: event.id,
+      plannedStart: previewStartTime,
+      plannedEnd: previewEndTime,
+      actualStart: null,
+      actualEnd: null,
+      allowMissingActual: true,
+    };
+  }
+
+  if (hasCalendarActualRangeDiff(event)) {
+    if (operation === 'resize') {
+      return {
+        id: event.id,
+        plannedStart: previewStartTime,
+        plannedEnd: previewEndTime,
+        actualStart: event.actualStartDate,
+        actualEnd: event.actualEndDate,
+      };
+    }
+
+    const plannedStart = event.plannedStartDate ?? event.startDate;
+    const deltaMs = plannedStart ? previewStartTime.getTime() - plannedStart.getTime() : 0;
+    return {
+      id: event.id,
+      plannedStart: previewStartTime,
+      plannedEnd: previewEndTime,
+      actualStart: shiftDate(event.actualStartDate!, deltaMs),
+      actualEnd: shiftDate(event.actualEndDate!, deltaMs),
+    };
+  }
+
+  return {
+    id: event.id,
+    plannedStart: previewStartTime,
+    plannedEnd: previewEndTime,
+    actualStart: previewStartTime,
+    actualEnd: previewEndTime,
+  };
+}
 
 export function buildNewEntryOverlapTarget(
   startTime: Date,
@@ -38,26 +107,30 @@ export function checkClientSideOverlap(
   draggedEventId: string,
   previewStartTime: Date,
   previewEndTime: Date,
+  operation: CalendarInteractionOperation = 'drag',
 ): boolean {
   const now = Date.now();
   const draggedEvent = events.find((event) => event.id === draggedEventId);
-  // planned entry は upcoming だけでなく active 状態でも planned 範囲を持つので
-  // 移動先の planned 範囲 overlap を check する。
-  // (サーバー側 ensureNoOverlaps も `origin === 'planned'` で planned 重複を検証する。
-  //  client 側で skip すると server 拒否で snap-back / TIME_OVERLAP toast が出るため UX が悪化する)
-  const shouldCheckPlanned = draggedEvent?.origin === 'planned';
+  // 保存時と同じ規則で planned / actual の操作後rangeを組み立てる。
+  // drag はactual差分を平行移動し、resizeは差分があるactualを固定する。
   const target =
     draggedEventId === ''
       ? buildNewEntryOverlapTarget(previewStartTime, previewEndTime, now)
-      : {
-          id: draggedEventId,
-          plannedStart: shouldCheckPlanned ? previewStartTime : null,
-          plannedEnd: shouldCheckPlanned ? previewEndTime : null,
-          actualStart: previewStartTime,
-          actualEnd: previewEndTime,
-          forbidFutureActual: draggedEvent?.origin === 'unplanned',
-          now,
-        };
+      : draggedEvent
+        ? buildInteractionOverlapTarget(
+            draggedEvent,
+            previewStartTime,
+            previewEndTime,
+            operation,
+            now,
+          )
+        : {
+            id: draggedEventId,
+            plannedStart: previewStartTime,
+            plannedEnd: previewEndTime,
+            actualStart: previewStartTime,
+            actualEnd: previewEndTime,
+          };
 
   return hasTwoLayerTimeConflict(
     events.map((event) => {
@@ -65,8 +138,14 @@ export function checkClientSideOverlap(
         event.plannedStartDate ?? (event.origin === 'planned' ? event.startDate : null);
       const plannedEnd =
         event.plannedEndDate ?? (event.origin === 'planned' ? event.endDate : null);
-      const actualStart = event.actualStartDate ?? event.startDate;
-      const actualEnd = event.actualEndDate ?? event.endDate;
+      const actualStart =
+        event.actualStartDate === undefined
+          ? event.startDate
+          : (event.actualStartDate ?? (event.origin === 'unplanned' ? event.startDate : null));
+      const actualEnd =
+        event.actualEndDate === undefined
+          ? event.endDate
+          : (event.actualEndDate ?? (event.origin === 'unplanned' ? event.endDate : null));
 
       return {
         id: event.id,

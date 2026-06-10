@@ -4,7 +4,11 @@ import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 
 import type { CalendarEvent } from '../../types/calendar.types';
 
-import { buildNewEntryOverlapTarget, checkClientSideOverlap } from '../overlap';
+import {
+  buildInteractionOverlapTarget,
+  buildNewEntryOverlapTarget,
+  checkClientSideOverlap,
+} from '../overlap';
 
 function createEvent(
   overrides: Partial<CalendarEvent> & { id: string; startDate: Date; endDate: Date },
@@ -319,5 +323,125 @@ describe('checkClientSideOverlap', () => {
         new Date('2026-01-15T10:45'),
       ),
     ).toBe(true);
+  });
+
+  it('ズレた planned の drag は actual も平行移動した範囲で衝突判定する', () => {
+    const dragged = createEvent({
+      id: 'dragged',
+      startDate: new Date('2026-01-15T13:00'),
+      endDate: new Date('2026-01-15T15:00'),
+      plannedStartDate: new Date('2026-01-15T13:00'),
+      plannedEndDate: new Date('2026-01-15T15:00'),
+      actualStartDate: new Date('2026-01-15T13:30'),
+      actualEndDate: new Date('2026-01-15T16:45'),
+    });
+    const blocker = createEvent({
+      id: 'blocker',
+      startDate: new Date('2026-01-15T19:00'),
+      endDate: new Date('2026-01-15T20:00'),
+      plannedStartDate: new Date('2026-01-15T19:00'),
+      plannedEndDate: new Date('2026-01-15T20:00'),
+      actualStartDate: new Date('2026-01-15T17:30'),
+      actualEndDate: new Date('2026-01-15T18:00'),
+    });
+
+    expect(
+      checkClientSideOverlap(
+        [dragged, blocker],
+        dragged.id,
+        new Date('2026-01-15T15:00'),
+        new Date('2026-01-15T17:00'),
+        'drag',
+      ),
+    ).toBe(true);
+  });
+
+  it('ズレた planned の resize は固定actual範囲で衝突判定する', () => {
+    const resized = createEvent({
+      id: 'resized',
+      startDate: new Date('2026-01-15T13:00'),
+      endDate: new Date('2026-01-15T15:00'),
+      plannedStartDate: new Date('2026-01-15T13:00'),
+      plannedEndDate: new Date('2026-01-15T15:00'),
+      actualStartDate: new Date('2026-01-15T13:30'),
+      actualEndDate: new Date('2026-01-15T16:45'),
+    });
+    const blocker = createEvent({
+      id: 'blocker',
+      startDate: new Date('2026-01-15T18:00'),
+      endDate: new Date('2026-01-15T19:00'),
+      plannedStartDate: new Date('2026-01-15T18:00'),
+      plannedEndDate: new Date('2026-01-15T19:00'),
+      actualStartDate: new Date('2026-01-15T16:30'),
+      actualEndDate: new Date('2026-01-15T17:00'),
+    });
+
+    expect(
+      checkClientSideOverlap(
+        [resized, blocker],
+        resized.id,
+        new Date('2026-01-15T13:00'),
+        new Date('2026-01-15T15:15'),
+        'resize',
+      ),
+    ).toBe(true);
+  });
+
+  it('resize後のplannedだけが他entryのactualと交差しても衝突にしない', () => {
+    const resized = createEvent({
+      id: 'resized',
+      startDate: new Date('2026-01-15T13:00'),
+      endDate: new Date('2026-01-15T15:00'),
+      plannedStartDate: new Date('2026-01-15T13:00'),
+      plannedEndDate: new Date('2026-01-15T15:00'),
+      actualStartDate: new Date('2026-01-15T13:30'),
+      actualEndDate: new Date('2026-01-15T14:30'),
+    });
+    const other = createEvent({
+      id: 'other',
+      startDate: new Date('2026-01-15T18:00'),
+      endDate: new Date('2026-01-15T19:00'),
+      plannedStartDate: new Date('2026-01-15T18:00'),
+      plannedEndDate: new Date('2026-01-15T19:00'),
+      actualStartDate: new Date('2026-01-15T15:00'),
+      actualEndDate: new Date('2026-01-15T15:30'),
+    });
+
+    expect(
+      checkClientSideOverlap(
+        [resized, other],
+        resized.id,
+        new Date('2026-01-15T13:00'),
+        new Date('2026-01-15T16:00'),
+        'resize',
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('buildInteractionOverlapTarget', () => {
+  it('planned-only の操作targetはactualを持たない', () => {
+    const entry = createEvent({
+      id: 'planned-only',
+      startDate: new Date('2026-01-15T10:00'),
+      endDate: new Date('2026-01-15T11:00'),
+      actualStartDate: null,
+      actualEndDate: null,
+    });
+
+    expect(
+      buildInteractionOverlapTarget(
+        entry,
+        new Date('2026-01-15T12:00'),
+        new Date('2026-01-15T13:00'),
+        'drag',
+      ),
+    ).toMatchObject({
+      plannedStart: new Date('2026-01-15T12:00'),
+      plannedEnd: new Date('2026-01-15T13:00'),
+      actualStart: null,
+      actualEnd: null,
+      allowMissingActual: true,
+    });
   });
 });

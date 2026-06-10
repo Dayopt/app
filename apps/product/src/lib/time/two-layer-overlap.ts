@@ -14,6 +14,8 @@ export interface TwoLayerOverlapTarget {
   plannedEnd?: RangeInput;
   actualStart?: RangeInput;
   actualEnd?: RangeInput;
+  /** 既存の予定だけ entry など、actual range が両方 null の target を許可する。 */
+  allowMissingActual?: boolean | undefined;
   forbidFutureActual?: boolean | undefined;
   now?: number | undefined;
 }
@@ -62,9 +64,12 @@ export function hasTwoLayerTimeConflict(
   entries: TwoLayerOverlapEntry[],
   target: TwoLayerOverlapTarget,
 ): boolean {
+  const actualRangeMissing = target.actualStart == null && target.actualEnd == null;
   if (
     hasInvalidTargetRange(target.plannedStart, target.plannedEnd) ||
-    hasInvalidRequiredTargetRange(target.actualStart, target.actualEnd)
+    (target.allowMissingActual && actualRangeMissing
+      ? target.plannedStart == null || target.plannedEnd == null
+      : hasInvalidRequiredTargetRange(target.actualStart, target.actualEnd))
   ) {
     return true;
   }

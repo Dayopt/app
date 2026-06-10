@@ -196,8 +196,8 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
         if (!hasCalendarActualRangeDiff(event) || !event?.actualStartDate) return null;
         return event.actualStartDate.getHours() * 60 + event.actualStartDate.getMinutes();
       },
-      checkOverlap: (entryId: string, start: Date, end: Date) => {
-        return checkClientSideOverlap(r.allEvents, entryId, start, end);
+      checkOverlap: (entryId: string, start: Date, end: Date, operation: 'drag' | 'resize') => {
+        return checkClientSideOverlap(r.allEvents, entryId, start, end, operation);
       },
     };
   }
