@@ -26,22 +26,33 @@ type EntryLike = {
  */
 export function getEntryState(entry: EntryLike, now?: Date): EntryState {
   const currentTime = now ?? new Date();
-  const start = entry.origin === 'unplanned' ? entry.actual_start_time : entry.start_time;
-  const end = entry.origin === 'unplanned' ? entry.actual_end_time : entry.end_time;
+  const plannedStart = entry.start_time ? new Date(entry.start_time) : null;
+  const plannedEnd = entry.end_time ? new Date(entry.end_time) : null;
+  const actualStart = entry.actual_start_time ? new Date(entry.actual_start_time) : null;
+  const actualEnd = entry.actual_end_time ? new Date(entry.actual_end_time) : null;
 
-  if (!start || !end) {
+  if (entry.origin === 'unplanned') {
+    if (!actualStart || !actualEnd) return 'upcoming';
+    if (actualStart > currentTime) return 'upcoming';
+    return actualEnd > currentTime ? 'active' : 'past';
+  }
+
+  if (!plannedStart || !plannedEnd) {
     return 'upcoming';
   }
 
-  const startTime = new Date(start);
-  const endTime = new Date(end);
-
-  if (startTime > currentTime) {
-    return 'upcoming';
-  }
-
-  if (endTime > currentTime) {
+  const plannedIsActive = plannedStart <= currentTime && currentTime < plannedEnd;
+  const actualIsActive =
+    actualStart != null &&
+    actualEnd != null &&
+    actualStart <= currentTime &&
+    currentTime < actualEnd;
+  if (plannedIsActive || actualIsActive) {
     return 'active';
+  }
+
+  if (plannedStart > currentTime) {
+    return 'upcoming';
   }
 
   return 'past';

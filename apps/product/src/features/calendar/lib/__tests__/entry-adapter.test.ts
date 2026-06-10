@@ -288,6 +288,22 @@ describe('entryToCalendarEvent', () => {
       expect(event!.status).toBe('open');
       expect(event!.entryState).toBe('active');
     });
+
+    it('予定終了後でも actual が継続中なら status=open / entryState=active', () => {
+      const event = entryToCalendarEvent(
+        makeEntry({
+          id: 'e1',
+          start_time: '2026-04-27T01:00:00.000Z',
+          end_time: '2026-04-27T02:00:00.000Z',
+          actual_start_time: '2026-04-27T01:15:00.000Z',
+          actual_end_time: '2026-04-27T03:30:00.000Z',
+        }),
+        TZ,
+      );
+
+      expect(event!.status).toBe('open');
+      expect(event!.entryState).toBe('active');
+    });
   });
 
   it('tagId / fulfillmentScore / actualStart/EndDate を伝播する', () => {
