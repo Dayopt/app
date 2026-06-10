@@ -266,12 +266,20 @@
         "hourly": "By hour",
         "hourlyDesc": "Which hours your time gathered in"
       },
+      "daily": {
+        "timelineDesc": "See where the day diverged from the plan",
+        "openCalendar": "Open in calendar"
+      },
       "nextAction": {
-        "planNextWeek": "Plan next week"
+        "planNextWeek": "Plan next week",
+        "planTomorrow": "Plan tomorrow",
+        "recordDay": "Record your first block"
       },
       "review": {
         "emptyTitle": "No review data yet",
         "emptyDescription": "Record entries to review your week",
+        "dayEmptyTitle": "A fresh day",
+        "dayEmptyDescription": "Record your first block to get started",
         "errorTitle": "Failed to load review data",
         "errorDescription": "Please try again later"
       },
@@ -317,6 +325,8 @@
         "blankRateHigh": "This period had a lot of free time",
         "trendWorse": "{label} decreased by {pct}% from previous period",
         "trendBetter": "{label} improved by {pct}% from previous period",
+        "dayEstimationOver": "Entries tended to run long today (avg +{bias} min)",
+        "dayEstimationUnder": "Entries tended to finish early today (avg -{bias} min)",
         "estimationBiasOver": "This tag tends to run +{bias} min over estimate",
         "estimationBiasUnder": "This tag tends to finish {bias} min early",
         "hourlyFulfillmentHigh": "Fulfillment tends to be above average at this hour",

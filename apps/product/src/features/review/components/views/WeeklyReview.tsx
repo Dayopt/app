@@ -5,7 +5,6 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import type { ComponentType, ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 
 import { resolveTagColor, TagIcon } from '@/features/tags';
@@ -26,13 +25,13 @@ import { useTimePLData } from '../../hooks/useTimePLData';
 import { getMetricTrend } from '../../lib/metrics';
 import { evaluateRuleInsights, type MetricValues } from '../../lib/ruleInsights';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
-import type { MetricTrend } from '../../types/metrics.types';
 import type { ReviewViewProps } from '../../types/review.types';
 import { DowRhythmChart, HourlyRhythmChart } from '../review/RhythmCharts';
 import { TagBreakdownBar } from '../review/TagBreakdownBar';
 import { InsightSlot } from '../shared/InsightSlot';
 import { NextActionLink } from '../shared/NextActionLink';
-import { TrendBadge } from '../shared/TrendBadge';
+import { OverviewPanel } from '../shared/OverviewPanel';
+import { SummaryCard } from '../shared/SummaryCard';
 import { formatMinutesDuration } from '../time-pl/data/timePL.presentation';
 import { BarComparisonView } from '../time-pl/views/BarComparisonView';
 
@@ -357,65 +356,6 @@ function formatSignedDuration(minutes: number): string {
   if (minutes === 0) return '±0';
   const sign = minutes > 0 ? '+' : '-';
   return `${sign}${formatMinutesDuration(Math.abs(minutes))}`;
-}
-
-function SummaryCard({
-  icon: Icon,
-  label,
-  value,
-  description,
-  trend,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  description: string;
-  trend?: MetricTrend | null | undefined;
-}) {
-  return (
-    <div className="border-border-subtle bg-card flex min-h-32 flex-col justify-between rounded-lg border p-4">
-      <div className="text-muted-foreground flex items-center gap-2 text-sm">
-        <Icon className="size-4" />
-        <span>{label}</span>
-      </div>
-      <div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-foreground truncate text-2xl font-medium">{value}</span>
-          {trend && <TrendBadge trend={trend} />}
-        </div>
-        <p className="text-muted-foreground mt-1 text-sm">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function OverviewPanel({
-  title,
-  description,
-  icon,
-  className,
-  children,
-}: {
-  title: string;
-  description: string;
-  icon: ReactNode;
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className={cn('border-border-subtle bg-card rounded-lg border p-4', className)}>
-      <div className="mb-4 flex items-start gap-3">
-        <div className="bg-secondary text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <h2 className="text-foreground text-base font-medium">{title}</h2>
-          <p className="text-muted-foreground mt-0.5 text-sm">{description}</p>
-        </div>
-      </div>
-      {children}
-    </section>
-  );
 }
 
 function PlanActualStat({

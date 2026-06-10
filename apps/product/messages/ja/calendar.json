@@ -266,12 +266,20 @@
         "hourly": "時間帯別の記録",
         "hourlyDesc": "どの時間帯に時間が集まったか"
       },
+      "daily": {
+        "timelineDesc": "予定と現実のずれを並べて見る",
+        "openCalendar": "カレンダーで開く"
+      },
       "nextAction": {
-        "planNextWeek": "来週の計画を立てる"
+        "planNextWeek": "来週の計画を立てる",
+        "planTomorrow": "明日の計画を立てる",
+        "recordDay": "最初のブロックを記録する"
       },
       "review": {
         "emptyTitle": "新しい1週間が始まりました",
         "emptyDescription": "エントリーを記録すると、ここに振り返りが表示されます",
+        "dayEmptyTitle": "まっさらな1日です",
+        "dayEmptyDescription": "最初のブロックを記録しましょう",
         "errorTitle": "振り返りデータを読み込めませんでした",
         "errorDescription": "しばらくしてからもう一度お試しください"
       },
@@ -317,6 +325,8 @@
         "blankRateHigh": "空白時間が多めの期間でした",
         "trendWorse": "{label} が前期間より {pct}% 低下しました",
         "trendBetter": "{label} が前期間より {pct}% 改善しました",
+        "dayEstimationOver": "予定より長くかかる傾向の1日でした（平均 +{bias} 分）",
+        "dayEstimationUnder": "予定より早く終わる傾向の1日でした（平均 -{bias} 分）",
         "estimationBiasOver": "このタグは平均 +{bias} 分超過する傾向があります",
         "estimationBiasUnder": "このタグは平均 {bias} 分早く終わる傾向があります",
         "hourlyFulfillmentHigh": "この時間帯の充実度は平均より高い傾向があります",
