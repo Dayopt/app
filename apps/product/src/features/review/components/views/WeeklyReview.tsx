@@ -11,6 +11,7 @@ import { resolveTagColor } from '@/features/tags';
 import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
 import { addWeeks } from '@/lib/date/core';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
@@ -47,6 +48,7 @@ export function WeeklyReview({ className }: ReviewViewProps) {
   const locale = useLocale();
   const router = useRouter();
   const currentDate = useReviewFilterStore((s) => s.currentDate);
+  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
 
   const {
     data: pageData,
@@ -126,6 +128,24 @@ export function WeeklyReview({ className }: ReviewViewProps) {
 
   // ── 週のリズム ──
   const weekdayLabels = tCommon.raw('dates.weekdaysNarrow') as string[];
+
+  // 前期間の分布は prevEnergyMap（hour × dow）から導出する。
+  // energy_map と hourly / dow は同じ集計方式（start_time 起点）なので追加クエリ不要
+  const prevEnergyMap = pageData?.prevEnergyMap;
+  const prevRhythm = useMemo(() => {
+    if (!prevEnergyMap || prevEnergyMap.length === 0) return { dow: undefined, hourly: undefined };
+
+    const dowMap = new Map<number, number>();
+    const hourMap = new Map<number, number>();
+    for (const row of prevEnergyMap) {
+      dowMap.set(row.dow, (dowMap.get(row.dow) ?? 0) + row.totalMinutes);
+      hourMap.set(row.hour, (hourMap.get(row.hour) ?? 0) + row.totalMinutes);
+    }
+    return {
+      dow: [...dowMap].map(([dow, totalMinutes]) => ({ dow, totalMinutes })),
+      hourly: [...hourMap].map(([hour, totalMinutes]) => ({ hour, totalMinutes })),
+    };
+  }, [prevEnergyMap]);
 
   // タグ詳細ルートをプリフェッチ（クリック前にRSCペイロードを準備）
   const tagIds = useMemo(() => tagRows.map((tag) => tag.tagId), [tagRows]);
@@ -254,7 +274,9 @@ export function WeeklyReview({ className }: ReviewViewProps) {
             >
               <DowRhythmChart
                 data={pageData?.dow}
+                prevData={prevRhythm.dow}
                 weekdayLabels={weekdayLabels}
+                weekStartsOn={weekStartsOn}
                 isLoading={isPending && !isStatsError}
               />
             </OverviewPanel>
@@ -263,7 +285,11 @@ export function WeeklyReview({ className }: ReviewViewProps) {
               description={t('rhythm.hourlyDesc')}
               icon={<Clock3 className="size-4" />}
             >
-              <HourlyRhythmChart data={pageData?.hourly} isLoading={isPending && !isStatsError} />
+              <HourlyRhythmChart
+                data={pageData?.hourly}
+                prevData={prevRhythm.hourly}
+                isLoading={isPending && !isStatsError}
+              />
             </OverviewPanel>
           </section>
 

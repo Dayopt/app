@@ -279,7 +279,9 @@
         "dayOfWeek": "曜日別の記録",
         "dayOfWeekDesc": "どの曜日に時間が集まったか",
         "hourly": "時間帯別の記録",
-        "hourlyDesc": "どの時間帯に時間が集まったか"
+        "hourlyDesc": "どの時間帯に時間が集まったか",
+        "currentPeriod": "この期間",
+        "previousPeriod": "前の期間"
       },
       "daily": {
         "timelineDesc": "予定と現実のずれを並べて見る",

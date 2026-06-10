@@ -51,6 +51,42 @@ export const Hourly: Story = {
   render: () => <HourlyRhythmChart data={HOURLY_DATA} isLoading={false} />,
 };
 
+const PREV_DOW_DATA = [
+  { dow: 0, totalMinutes: 30 },
+  { dow: 1, totalMinutes: 360 },
+  { dow: 2, totalMinutes: 420 },
+  { dow: 3, totalMinutes: 300 },
+  { dow: 4, totalMinutes: 360 },
+  { dow: 5, totalMinutes: 180 },
+  { dow: 6, totalMinutes: 200 },
+];
+
+const PREV_HOURLY_DATA = [
+  { hour: 9, totalMinutes: 120 },
+  { hour: 10, totalMinutes: 180 },
+  { hour: 14, totalMinutes: 240 },
+  { hour: 16, totalMinutes: 200 },
+  { hour: 21, totalMinutes: 60 },
+];
+
+/** 前期間ゴースト付き（曜日別） */
+export const DayOfWeekWithGhost: Story = {
+  args: {
+    data: DOW_DATA,
+    prevData: PREV_DOW_DATA,
+    weekdayLabels: WEEKDAY_LABELS,
+    isLoading: false,
+  },
+};
+
+/** 前期間ゴースト付き（時間帯別） */
+export const HourlyWithGhost: Story = {
+  args: { data: DOW_DATA, weekdayLabels: WEEKDAY_LABELS, isLoading: false },
+  render: () => (
+    <HourlyRhythmChart data={HOURLY_DATA} prevData={PREV_HOURLY_DATA} isLoading={false} />
+  ),
+};
+
 /** データなし */
 export const Empty: Story = {
   args: {
