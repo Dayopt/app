@@ -634,7 +634,7 @@ describe('EntryCard', () => {
       );
     });
 
-    it('PC の短い予定ではリサイズハンドルがカード下へ張り出さない', () => {
+    it('PC の短い予定では右端だけをリサイズ領域にしてクリック領域を残す', () => {
       render(<EntryCard entry={mockEvent} position={{ ...mockPosition, height: 25 }} />);
 
       const resizeHandle = screen.getByRole('slider', { name: /Resize entry duration/i });
@@ -642,7 +642,31 @@ describe('EntryCard', () => {
       expect(resizeHandle).toHaveStyle({
         height: '25px',
         bottom: '0px',
+        left: 'auto',
+        width: '32px',
       });
+    });
+
+    it('最短 entry のカード本体をクリックすると Inspector 用 onClick が発火する', () => {
+      const onClick = vi.fn();
+      render(
+        <EntryCard
+          entry={mockEvent}
+          position={{ ...mockPosition, height: 14 }}
+          onClick={onClick}
+        />,
+      );
+
+      fireEvent.click(screen.getByLabelText(/entry: テストイベント/i));
+
+      expect(onClick).toHaveBeenCalledWith(mockEvent);
+      expect(screen.getByRole('slider')).toHaveStyle({ left: 'auto', width: '32px' });
+    });
+
+    it('通常高さの予定では下端全幅のリサイズ領域を維持する', () => {
+      render(<EntryCard entry={mockEvent} position={mockPosition} />);
+
+      expect(screen.getByRole('slider')).toHaveStyle({ left: '0px', width: 'auto' });
     });
 
     it('Mobile のアクティブ予定では指向けのリサイズ当たり判定を維持する', () => {
