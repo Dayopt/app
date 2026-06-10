@@ -15,8 +15,10 @@ import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
 import type { InteractionState } from '../../../../domain/interaction/types';
+import { hasCalendarActualRangeDiff } from '../../../../lib/entry-time';
 import type { CalendarEvent } from '../../../../types/calendar.types';
-import { getAdjustedStyle, getPreviewTime } from '../utils/interactionHelpers';
+import { getAdjustedStyle } from '../utils/interactionHelpers';
+import { ConflictOverlay } from './ConflictOverlay';
 
 // ========================================
 // Types
@@ -60,6 +62,44 @@ interface EntryRendererProps {
   entries: CalendarEvent[];
 }
 
+export function buildResizePreviewEntry(
+  entry: CalendarEvent,
+  interactionState: InteractionState,
+): CalendarEvent {
+  if (interactionState.mode !== 'resizing' || interactionState.entryId !== entry.id) return entry;
+
+  const { start, end } = interactionState.previewTime;
+  const duration = Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000));
+
+  if (entry.origin === 'unplanned') {
+    return {
+      ...entry,
+      startDate: start,
+      endDate: end,
+      displayStartDate: start,
+      displayEndDate: end,
+      actualStartDate: start,
+      actualEndDate: end,
+      duration,
+    };
+  }
+
+  const keepActualTime = hasCalendarActualRangeDiff(entry);
+
+  return {
+    ...entry,
+    startDate: start,
+    endDate: end,
+    displayStartDate: start,
+    displayEndDate: end,
+    plannedStartDate: start,
+    plannedEndDate: end,
+    actualStartDate: keepActualTime ? entry.actualStartDate : start,
+    actualEndDate: keepActualTime ? entry.actualEndDate : end,
+    duration,
+  };
+}
+
 // ========================================
 // Component
 // ========================================
@@ -96,6 +136,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
 
   const currentTop = parseFloat(style.top?.toString() || '0');
   const currentHeight = parseFloat(style.height?.toString() || '20');
+  const renderedEntry = buildResizePreviewEntry(entry, interactionState);
 
   // リサイズ中のこの entry が他とオーバーラップしている時、赤リング + not-allowed を表示する。
   // drag は GhostRenderer 側で描くため、ここでは resize のみを担当する。
@@ -116,9 +157,22 @@ export const EntryRenderer = React.memo(function EntryRenderer({
     entryResizing && interactionState.mode === 'resizing'
       ? interactionState.snappedHeight
       : currentHeight;
+  const isGapAvailable = React.useCallback(
+    (startMinutes: number, endMinutes: number) =>
+      !entries.some((candidate) => {
+        if (candidate.id === entry.id || candidate.origin !== 'unplanned') return false;
+        const start = candidate.actualStartDate ?? candidate.startDate;
+        const end = candidate.actualEndDate ?? candidate.endDate;
+        if (!start || !end) return false;
+        const candidateStartMinutes = start.getHours() * 60 + start.getMinutes();
+        const candidateEndMinutes = end.getHours() * 60 + end.getMinutes();
+        return startMinutes < candidateEndMinutes && endMinutes > candidateStartMinutes;
+      }),
+    [entries, entry.id],
+  );
 
   if (enableCrossDayDrag) {
-    const overlay = computeActualTimeDiffOverlay(entry, hourHeight);
+    const overlay = computeActualTimeDiffOverlay(renderedEntry, hourHeight);
     const overlayAdjustedStyle = {
       ...adjustedStyle,
       top: `${parseFloat(adjustedStyle.top?.toString() || '0') - overlay.topShift}px`,
@@ -192,9 +246,10 @@ export const EntryRenderer = React.memo(function EntryRenderer({
         }}
       >
         <EntryCard
-          entry={entry}
+          entry={renderedEntry}
           tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
           tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
+          tagIcon={entry.tagId ? (getTagById(entry.tagId)?.icon ?? null) : null}
           onAnchorRect={setAnchorRect}
           isMobile={isMobile}
           position={{ top: 0, left: 0, width: 100, height: finalHeight }}
@@ -215,9 +270,9 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           isDragging={entryDragging}
           isResizing={entryResizing}
           isActive={isInspectorOpen && inspectorEntryId === entry.id}
-          previewTime={getPreviewTime(entry.id, interactionState)}
           hourHeight={hourHeight}
           onGapClick={onGapClick}
+          isGapAvailable={isGapAvailable}
           gapCreationCutoffMs={gapCreationCutoffMs}
           {...(enableCrossDayDrag ? { overlayPositionApplied: true } : {})}
           className={cn(
@@ -226,13 +281,18 @@ export const EntryRenderer = React.memo(function EntryRenderer({
             isNewEntry(entry.id) && 'animate-entry-pop',
           )}
         />
-        {/* リサイズ中に重複していたら、destructive な「重複しています」表示で上書きする（all-red 規範） */}
-        {isResizingOverlap && (
-          <div className="bg-destructive-tint text-destructive pointer-events-none absolute inset-0 flex flex-col gap-1 overflow-hidden rounded-lg p-2">
-            <span className="text-sm leading-tight font-medium">
-              {t('entry.errors.timeOverlap')}
-            </span>
-          </div>
+        {/* リサイズ中に重複していたら、destructive な重複表示で上書きする（all-red 規範）。
+            ドラッグ時のゴースト（ConflictOverlay）と同一 UI に統一する。 */}
+        {isResizingOverlap && interactionState.mode === 'resizing' && (
+          <ConflictOverlay
+            previewTime={interactionState.previewTime}
+            message={t('entry.errors.timeOverlap')}
+            // EntryCard は rounded-r-lg（左角は四角）なので左角を揃える。
+            // rounded-lg のままだと左角が丸まり背面のカード角がはみ出す。
+            className="pointer-events-none absolute inset-0 rounded-l-none"
+            // EntryCard root は z-index 10（選択中 30）を持つため、その上に重ねる
+            style={{ zIndex: 40 }}
+          />
         )}
       </div>
     </div>

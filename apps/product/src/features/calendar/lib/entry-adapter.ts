@@ -35,12 +35,12 @@ function truncateToMinute(date: Date): Date {
  * - title が空の場合はカレンダー側で「(無題)」表示
  */
 export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): CalendarEvent | null {
-  if (!entry.actual_start_time || !entry.actual_end_time) {
-    return null;
-  }
-
   const isUnplanned = isUnplannedEntry(entry);
   const isPlanned = isPlannedEntry(entry);
+
+  if (isUnplanned && (!entry.actual_start_time || !entry.actual_end_time)) {
+    return null;
+  }
 
   if (isPlanned && (!entry.start_time || !entry.end_time)) {
     return null;
@@ -48,12 +48,16 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
 
   const plannedStartDate = entry.start_time ? truncateToMinute(new Date(entry.start_time)) : null;
   const plannedEndDate = entry.end_time ? truncateToMinute(new Date(entry.end_time)) : null;
-  const actualStartDate = truncateToMinute(new Date(entry.actual_start_time));
-  const actualEndDate = truncateToMinute(new Date(entry.actual_end_time));
+  const actualStartDate = entry.actual_start_time
+    ? truncateToMinute(new Date(entry.actual_start_time))
+    : null;
+  const actualEndDate = entry.actual_end_time
+    ? truncateToMinute(new Date(entry.actual_end_time))
+    : null;
 
   // planned は予定位置、unplanned は実績位置をカレンダー上の表示位置に使う。
-  const startDate = isUnplanned ? actualStartDate : plannedStartDate!;
-  const endDate = isUnplanned ? actualEndDate : plannedEndDate!;
+  const startDate = isUnplanned ? actualStartDate! : plannedStartDate!;
+  const endDate = isUnplanned ? actualEndDate! : plannedEndDate!;
 
   const createdAt = entry.created_at ? new Date(entry.created_at) : new Date();
   const updatedAt = entry.updated_at ? new Date(entry.updated_at) : new Date();

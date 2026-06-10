@@ -6,6 +6,7 @@ import type { CalendarEvent } from '@/features/entry';
 const updateMutate = vi.fn();
 const deleteMutate = vi.fn();
 const getByIdGetData = vi.fn();
+const getQueriesData = vi.fn();
 const toastSuccess = vi.fn();
 const loggerError = vi.fn();
 
@@ -31,6 +32,12 @@ vi.mock('@/lib/trpc', () => ({
       },
     }),
   },
+}));
+
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({
+    getQueriesData,
+  }),
 }));
 
 vi.mock('@/lib/toast', () => ({
@@ -79,8 +86,10 @@ describe('useEntryOperations', () => {
     updateMutate.mockReset();
     deleteMutate.mockReset();
     getByIdGetData.mockReset();
+    getQueriesData.mockReset();
     toastSuccess.mockReset();
     loggerError.mockReset();
+    getQueriesData.mockReturnValue([]);
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-26T00:00:00.000Z'));
   });
@@ -155,6 +164,30 @@ describe('useEntryOperations', () => {
       });
     });
 
+    it('keepActualTime=true の planned resize は actual を送らない', async () => {
+      getByIdGetData.mockReturnValue({
+        id: 'entry-1',
+        origin: 'planned',
+        start_time: '2026-04-25T00:00:00.000Z',
+        end_time: '2026-04-25T01:00:00.000Z',
+        actual_start_time: '2026-04-25T00:00:00.000Z',
+        actual_end_time: '2026-04-25T01:10:00.000Z',
+      });
+
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleUpdateEntry('entry-1', {
+        startTime: new Date('2026-04-25T00:00:00.000Z'),
+        endTime: new Date('2026-04-25T01:05:00.000Z'),
+        keepActualTime: true,
+      });
+
+      const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
+      expect(callArgs.data).toEqual({
+        start_time: '2026-04-25T00:00:00.000Z',
+        end_time: '2026-04-25T01:05:00.000Z',
+      });
+    });
+
     it('actual未変更のplannedは過去でもplannedとactualを同じ範囲で送る', async () => {
       getByIdGetData.mockReturnValue({
         id: 'entry-1',
@@ -180,7 +213,7 @@ describe('useEntryOperations', () => {
       });
     });
 
-    it('actual差分があるplannedはresetなしならplanned rangeのみを送る', async () => {
+    it('actual差分があるplannedはresetなしならズレを保ってactualも同じ移動量で送る', async () => {
       getByIdGetData.mockReturnValue({
         id: 'entry-1',
         origin: 'planned',
@@ -200,6 +233,41 @@ describe('useEntryOperations', () => {
       expect(callArgs.data).toEqual({
         start_time: '2026-04-25T01:00:00.000Z',
         end_time: '2026-04-25T02:00:00.000Z',
+        actual_start_time: '2026-04-25T01:15:00.000Z',
+        actual_end_time: '2026-04-25T01:45:00.000Z',
+      });
+    });
+
+    it('getById キャッシュが無くても list キャッシュから actual のズレを保って移動する', async () => {
+      getByIdGetData.mockReturnValue(null);
+      getQueriesData.mockReturnValue([
+        [
+          [['entries', 'list'], { input: { startDate: '2026-04-25' }, type: 'query' }],
+          [
+            {
+              id: 'entry-1',
+              origin: 'planned',
+              start_time: '2026-04-25T00:00:00.000Z',
+              end_time: '2026-04-25T01:00:00.000Z',
+              actual_start_time: '2026-04-25T00:15:00.000Z',
+              actual_end_time: '2026-04-25T00:45:00.000Z',
+            },
+          ],
+        ],
+      ]);
+
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleUpdateEntry('entry-1', {
+        startTime: new Date('2026-04-25T01:00:00.000Z'),
+        endTime: new Date('2026-04-25T02:00:00.000Z'),
+      });
+
+      const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
+      expect(callArgs.data).toEqual({
+        start_time: '2026-04-25T01:00:00.000Z',
+        end_time: '2026-04-25T02:00:00.000Z',
+        actual_start_time: '2026-04-25T01:15:00.000Z',
+        actual_end_time: '2026-04-25T01:45:00.000Z',
       });
     });
 

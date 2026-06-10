@@ -106,6 +106,25 @@ export const WithPreviewTime: Story = {
   ),
 };
 
+/** 予定と記録がずれた状態。 */
+export const PlannedWithActual: Story = {
+  render: () => (
+    <CardSlot>
+      <EntryCardContent
+        plan={{
+          ...baseEntry,
+          plannedStartDate: new Date('2024-01-15T10:00:00'),
+          plannedEndDate: new Date('2024-01-15T11:00:00'),
+          actualStartDate: new Date('2024-01-15T10:30:00'),
+          actualEndDate: new Date('2024-01-15T12:15:00'),
+        }}
+        tagName="仕事"
+        timeFormat="24h"
+      />
+    </CardSlot>
+  ),
+};
+
 /** 時刻未設定エントリ。「時刻未設定」テキストが表示される。 */
 export const NoTime: Story = {
   render: () => (
@@ -119,20 +138,32 @@ export const NoTime: Story = {
   ),
 };
 
-/** コロンタグ（separator 表示）。prefix が薄字 + › + suffix。 */
-export const ColonTag: Story = {
+/** タグアイコンあり。タグ名の前に lucide アイコンをタグ色で表示。 */
+export const WithTagIcon: Story = {
   render: () => (
     <CardSlot>
-      <EntryCardContent plan={baseEntry} tagName="開発:API" timeFormat="24h" />
+      <EntryCardContent
+        plan={baseEntry}
+        tagName="仕事"
+        tagColor="blue"
+        tagIcon="briefcase"
+        timeFormat="24h"
+      />
     </CardSlot>
   ),
 };
 
-/** コロンタグ・コンパクト。 */
-export const ColonTagCompact: Story = {
+/** タグアイコンあり・コンパクト。 */
+export const WithTagIconCompact: Story = {
   render: () => (
     <div className="bg-card relative h-7 w-48 overflow-hidden rounded-r-lg px-2 text-xs">
-      <EntryCardContent plan={baseEntry} tagName="開発:API" isCompact />
+      <EntryCardContent
+        plan={baseEntry}
+        tagName="仕事"
+        tagColor="blue"
+        tagIcon="briefcase"
+        isCompact
+      />
     </div>
   ),
 };
@@ -185,6 +216,23 @@ export const AllPatterns: Story = {
       </section>
 
       <section>
+        <p className="text-muted-foreground mb-1 text-xs">PlannedWithActual（予定/記録）</p>
+        <CardSlot>
+          <EntryCardContent
+            plan={{
+              ...baseEntry,
+              plannedStartDate: new Date('2024-01-15T10:00:00'),
+              plannedEndDate: new Date('2024-01-15T11:00:00'),
+              actualStartDate: new Date('2024-01-15T10:30:00'),
+              actualEndDate: new Date('2024-01-15T12:15:00'),
+            }}
+            tagName="仕事"
+            timeFormat="24h"
+          />
+        </CardSlot>
+      </section>
+
+      <section>
         <p className="text-muted-foreground mb-1 text-xs">時刻未設定</p>
         <CardSlot>
           <EntryCardContent
@@ -195,16 +243,28 @@ export const AllPatterns: Story = {
       </section>
 
       <section>
-        <p className="text-muted-foreground mb-1 text-xs">コロンタグ（separator 表示）</p>
+        <p className="text-muted-foreground mb-1 text-xs">タグアイコンあり</p>
         <CardSlot>
-          <EntryCardContent plan={baseEntry} tagName="開発:API" timeFormat="24h" />
+          <EntryCardContent
+            plan={baseEntry}
+            tagName="仕事"
+            tagColor="blue"
+            tagIcon="briefcase"
+            timeFormat="24h"
+          />
         </CardSlot>
       </section>
 
       <section>
-        <p className="text-muted-foreground mb-1 text-xs">コロンタグ・Compact</p>
+        <p className="text-muted-foreground mb-1 text-xs">タグアイコンあり・Compact</p>
         <div className="bg-card relative h-7 w-48 overflow-hidden rounded-r-lg px-2 text-xs">
-          <EntryCardContent plan={baseEntry} tagName="開発:API" isCompact />
+          <EntryCardContent
+            plan={baseEntry}
+            tagName="仕事"
+            tagColor="blue"
+            tagIcon="briefcase"
+            isCompact
+          />
         </div>
       </section>
     </div>

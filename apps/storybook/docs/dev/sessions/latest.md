@@ -23,6 +23,5 @@ files_of_note:
 
 next:
 
-- [ ] Storybook に @dayopt/assets の Symbol / Wordmark story を追加
-- [ ] @dayopt/ui の product 実利用を他 shadcn primitives にも展開
-- [ ] packages/config の残り hardcode 置換
+- [ ] EntryCard 未コミット変更（planned layer 左角直角化、renderAsPlanOnly 対応）をコミット
+- [ ] feat/calendar-ui-polish ブランチの残り作業を確認してPRを作成

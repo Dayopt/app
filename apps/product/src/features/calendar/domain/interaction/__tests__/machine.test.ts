@@ -615,6 +615,21 @@ describe('POINTER_MOVE while resizing', () => {
       expect(state.snappedHeight).toBe(15); // minimum = (60/60)*15 = 15px
     }
   });
+
+  it('予定と記録がズレた entry は planned end を actual start より前へ縮めない', () => {
+    const movedPoint = { clientX: origin.clientX, clientY: origin.clientY - 60 };
+    const { state } = dispatch(
+      resizingState,
+      { type: 'POINTER_MOVE', point: movedPoint },
+      createCtx({ getResizeMinEndMinutes: () => 9 * 60 + 30 }),
+    );
+
+    if (state.mode === 'resizing') {
+      expect(state.snappedHeight).toBe(30);
+      expect(state.previewTime.end.getHours()).toBe(9);
+      expect(state.previewTime.end.getMinutes()).toBe(30);
+    }
+  });
 });
 
 // ========================================

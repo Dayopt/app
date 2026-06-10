@@ -12,8 +12,10 @@ import { memo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { entryTintColor } from '@/features/entry';
+import { cn } from '@/lib/utils';
 
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
+import { ConflictOverlay } from '../ConflictOverlay';
 
 import type { TimeRange } from './types';
 
@@ -57,69 +59,40 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   endDateTime.setHours(selection.endHour, selection.endMinute, 0, 0);
   const isPast = endDateTime.getTime() <= nowForPastCheck;
 
-  // 重複時は全面 destructive 化（他の overlap visual と同じ規範）
+  // 重複時は全面 destructive 化（drag/resize のゴーストと同一の ConflictOverlay に統一）
   if (isOverlapping) {
-    const isCompact = height < 40;
     return (
-      <div
-        className="bg-destructive-tint text-destructive pointer-events-none absolute right-0 left-0 overflow-hidden rounded-lg"
+      <ConflictOverlay
+        message={tEntry('errors.timeOverlap')}
+        timeLabel={timeLabel}
+        compact={height < 40}
+        className="pointer-events-none absolute right-0 left-0"
         style={{ top, height, zIndex: 1000 }}
-      >
-        {isCompact ? (
-          <div className="flex h-full items-center px-2">
-            <span className="truncate text-xs font-normal">{tEntry('errors.timeOverlap')}</span>
-          </div>
-        ) : (
-          <div className="flex h-full flex-col gap-1 p-2">
-            <span className="text-sm leading-tight font-medium">
-              {tEntry('errors.timeOverlap')}
-            </span>
-            <span className="text-xs leading-tight tabular-nums">{timeLabel}</span>
-          </div>
-        )}
-      </div>
+      />
     );
   }
 
-  // 通常時: EntryCardと同じデザイン（左アクセント + 右角丸 + タグ名 + 時間）
-  // 過去時間帯は unplanned 風（タグ色なしの破線枠）
+  // 通常時: EntryCardと同じデザイン（左アクセント + tint 塗り + 右角丸 + 時間）
+  // 過去時間帯（unplanned 風）も確定後カードと同じ作り: アクセント + tint 塗り + 3 辺破線のみ差分
   const isCompact = height < 40;
-
-  if (isPast) {
-    return (
-      <div
-        className="border-entry-default pointer-events-none absolute right-0 left-0 overflow-hidden rounded-lg border-2 border-dashed"
-        style={{ top, height, zIndex: 1000 }}
-      >
-        {isCompact ? (
-          <div className="flex h-full items-center px-2">
-            <span className="text-muted-foreground truncate text-xs tabular-nums">{timeLabel}</span>
-          </div>
-        ) : (
-          <div className="flex h-full flex-col gap-1 p-2">
-            <span className="text-muted-foreground text-sm leading-tight font-normal">
-              {tCalendar('event.selectTag')}
-            </span>
-            <span className="text-muted-foreground text-xs leading-tight tabular-nums">
-              {timeLabel}
-            </span>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <div
-      className="pointer-events-none absolute right-0 left-0 flex rounded-r-lg"
+      className={cn(
+        'pointer-events-none absolute right-0 left-0 flex rounded-r-lg',
+        isPast && 'border-entry-default border-t-2 border-r-2 border-b-2 border-dashed',
+      )}
       style={{
         top,
         height,
         zIndex: 1000,
       }}
     >
-      {/* 左アクセントストリップ — タグ未選択なので entry-default。確定後カードと同じ opacity-70 */}
-      <div className="bg-entry-default shrink-0 opacity-70" style={{ width: '3px' }} />
+      {/* upcoming はアクセント無し。文言位置を合わせる 3px スペーサーのみ（本体と同色で不可視）。 */}
+      <div
+        className="shrink-0"
+        style={{ width: '3px', backgroundColor: entryTintColor('var(--entry-default)') }}
+      />
       {/* カード本体 — EntryCard と同じ 18% color-mix tint（neutral base） */}
       <div
         className="min-w-0 flex-1 overflow-hidden rounded-r-lg"

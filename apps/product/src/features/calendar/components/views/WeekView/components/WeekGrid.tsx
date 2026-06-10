@@ -18,6 +18,7 @@ import {
 import { CalendarGridContent } from '../../shared/components/CalendarGridContent';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import { useWeekEntries } from '../hooks/useWeekEntries';
+import { toWeekDayEntryPosition } from '../utils/weekEntryPosition';
 
 import type { WeekGridProps } from '../../../../types/week-view.types';
 
@@ -54,23 +55,17 @@ export const WeekGrid = ({
   const handleEventUpdate = React.useCallback(
     async (
       eventId: string,
-      updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+      updates: {
+        startTime: Date;
+        endTime: Date;
+        resetActualTime?: boolean;
+        keepActualTime?: boolean;
+      },
     ) => {
       if (!onEventUpdate) return;
-      // resetActualTime フラグがある場合は (id, updates) 形式で直接渡す
-      if (updates.resetActualTime) {
-        return onEventUpdate(eventId, updates);
-      }
-      const entry = events.find((e) => e.id === eventId);
-      if (!entry) return;
-      // 返り値を伝播（繰り返しエントリ編集時の skipToast フラグ用）
-      return onEventUpdate({
-        ...entry,
-        startDate: updates.startTime,
-        endDate: updates.endTime,
-      });
+      return onEventUpdate(eventId, updates);
     },
-    [onEventUpdate, events],
+    [onEventUpdate],
   );
 
   // エントリ位置計算（TZ変換済みの日付グルーピングも取得）
@@ -83,18 +78,7 @@ export const WeekGrid = ({
 
   // entryPositions → entryStyles 変換（全日分をまとめて計算）
   const normalizedPositions = React.useMemo(
-    () =>
-      entryPositions.map((pos) => ({
-        plan: pos.plan,
-        top: pos.top,
-        height: pos.height,
-        left: 0,
-        width: 100,
-        zIndex: pos.zIndex,
-        column: pos.column,
-        totalColumns: pos.totalColumns,
-        opacity: 1.0,
-      })),
+    () => entryPositions.map((pos) => toWeekDayEntryPosition(pos)),
     [entryPositions],
   );
   const entryStyles = useEntryStyles(normalizedPositions);

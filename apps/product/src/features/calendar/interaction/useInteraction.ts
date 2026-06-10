@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 import type { CalendarEvent } from '../types/calendar.types';
 
+import { hasCalendarActualRangeDiff } from '../lib/entry-time';
 import { checkClientSideOverlap } from '../lib/overlap';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
@@ -56,7 +57,12 @@ export interface UseInteractionProps {
   /** Callback when an event is moved or resized */
   onEventUpdate?: (
     eventId: string,
-    updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+    updates: {
+      startTime: Date;
+      endTime: Date;
+      resetActualTime?: boolean;
+      keepActualTime?: boolean;
+    },
   ) => Promise<void | { skipToast: true }> | void;
   /** Callback when an event is clicked (not dragged) */
   onEventClick?: (event: CalendarEvent) => void;
@@ -185,8 +191,13 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
         }
         return 3600000; // default 1h
       },
-      checkOverlap: (entryId: string, start: Date, end: Date) => {
-        return checkClientSideOverlap(r.allEvents, entryId, start, end);
+      getResizeMinEndMinutes: (entryId: string) => {
+        const event = r.events.find((candidate) => candidate.id === entryId);
+        if (!hasCalendarActualRangeDiff(event) || !event?.actualStartDate) return null;
+        return event.actualStartDate.getHours() * 60 + event.actualStartDate.getMinutes();
+      },
+      checkOverlap: (entryId: string, start: Date, end: Date, operation: 'drag' | 'resize') => {
+        return checkClientSideOverlap(r.allEvents, entryId, start, end, operation);
       },
     };
   }
@@ -240,12 +251,15 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           // Snap-back animation handled by GhostRenderer
           break;
 
-        case 'RESIZE_COMPLETE':
+        case 'RESIZE_COMPLETE': {
+          const event = r.events.find((candidate) => candidate.id === effect.entryId);
           r.onEventUpdate?.(effect.entryId, {
             startTime: effect.time.start,
             endTime: effect.time.end,
+            ...(hasCalendarActualRangeDiff(event) ? { keepActualTime: true } : {}),
           });
           break;
+        }
 
         case 'RESIZE_REJECTED':
           // Visual feedback handled by state.isOverlapping
