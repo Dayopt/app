@@ -258,7 +258,22 @@
         "availableTime": "可処分 {time}",
         "planAccuracy": "計画達成率",
         "planAccuracyDesc": "予定と実績の一致度",
-        "unplanned": "予定外"
+        "unplanned": "予定外",
+        "recordedDays": "記録した日数",
+        "recordedDaysDesc": "記録が1件以上ある日",
+        "daysValue": "{count}日"
+      },
+      "monthly": {
+        "dailyTitle": "日別の記録",
+        "dailyDesc": "1か月の記録の波",
+        "estimationTitle": "見積もり精度（タグ別）",
+        "estimationDesc": "どのタグの見積もりがずれやすいか"
+      },
+      "yearly": {
+        "heatmapTitle": "1年の記録マップ",
+        "heatmapDesc": "記録の濃淡で1年を俯瞰する",
+        "monthlyTitle": "月別の記録",
+        "monthlyDesc": "月ごとの記録時間の推移"
       },
       "rhythm": {
         "dayOfWeek": "曜日別の記録",
@@ -273,6 +288,7 @@
       "nextAction": {
         "planNextWeek": "来週の計画を立てる",
         "planTomorrow": "明日の計画を立てる",
+        "planNextMonth": "来月の計画を立てる",
         "recordDay": "最初のブロックを記録する"
       },
       "review": {
@@ -327,6 +343,7 @@
         "trendBetter": "{label} が前期間より {pct}% 改善しました",
         "dayEstimationOver": "予定より長くかかる傾向の1日でした（平均 +{bias} 分）",
         "dayEstimationUnder": "予定より早く終わる傾向の1日でした（平均 -{bias} 分）",
+        "periodTopTag": "最も時間を使ったタグは {tag} です（合計 {hours} 時間）",
         "estimationBiasOver": "このタグは平均 +{bias} 分超過する傾向があります",
         "estimationBiasUnder": "このタグは平均 {bias} 分早く終わる傾向があります",
         "hourlyFulfillmentHigh": "この時間帯の充実度は平均より高い傾向があります",

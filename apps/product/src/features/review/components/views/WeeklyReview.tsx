@@ -7,10 +7,9 @@ import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 
-import { resolveTagColor, TagIcon } from '@/features/tags';
+import { resolveTagColor } from '@/features/tags';
 import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { addWeeks } from '@/lib/date/core';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
@@ -21,28 +20,19 @@ import {
   deriveStatement,
 } from '@/features/review/domain/timePL/derivers';
 import { useReviewPageData } from '../../hooks/useReviewPageData';
+import { useStatsRuleInsight } from '../../hooks/useStatsRuleInsight';
 import { useTimePLData } from '../../hooks/useTimePLData';
 import { getMetricTrend } from '../../lib/metrics';
-import { evaluateRuleInsights, type MetricValues } from '../../lib/ruleInsights';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
 import type { ReviewViewProps } from '../../types/review.types';
 import { DowRhythmChart, HourlyRhythmChart } from '../review/RhythmCharts';
-import { TagBreakdownBar } from '../review/TagBreakdownBar';
-import { InsightSlot } from '../shared/InsightSlot';
+import { TagBalancePanel, type TagBalanceRow } from '../review/TagBalancePanel';
 import { NextActionLink } from '../shared/NextActionLink';
 import { OverviewPanel } from '../shared/OverviewPanel';
+import { RuleInsightSlot } from '../shared/RuleInsightSlot';
 import { SummaryCard } from '../shared/SummaryCard';
 import { formatMinutesDuration } from '../time-pl/data/timePL.presentation';
 import { BarComparisonView } from '../time-pl/views/BarComparisonView';
-
-interface TagSummaryRow {
-  tagId: string;
-  tagName: string;
-  tagColor: ReturnType<typeof resolveTagColor>;
-  tagIcon: string | null;
-  minutes: number;
-  percentage: number;
-}
 
 /**
  * WeeklyReview - 週次振り返りビュー
@@ -86,7 +76,7 @@ export function WeeklyReview({ className }: ReviewViewProps) {
   const totalTrackedMinutes = pageData?.overview.totalMinutes ?? statement?.actualTotal ?? 0;
   const fallbackTimeByTag = fallbackTimeByTagQuery.data;
   const timeByTag = pageData?.timeByTag?.length ? pageData.timeByTag : fallbackTimeByTag;
-  const tagRows = useMemo<TagSummaryRow[]>(() => {
+  const tagRows = useMemo<TagBalanceRow[]>(() => {
     if (!timeByTag && !timePLData) return [];
 
     const rows = timeByTag
@@ -118,13 +108,6 @@ export function WeeklyReview({ className }: ReviewViewProps) {
       .sort((a, b) => b.minutes - a.minutes);
   }, [timeByTag, timePLData, totalTrackedMinutes]);
 
-  const tagSegments = tagRows.map((tag) => ({
-    tagId: tag.tagId,
-    tagName: tag.tagName,
-    tagColor: tag.tagColor,
-    tagIcon: tag.tagIcon,
-    minutes: tag.minutes,
-  }));
   const topTag = tagRows[0] ?? null;
 
   // ── KPI トレンド（前の同期間の自分とだけ比較する）──
@@ -136,44 +119,7 @@ export function WeeklyReview({ className }: ReviewViewProps) {
     accuracy?.prevRate != null ? getMetricTrend(accuracy.rate, accuracy.prevRate, 'up') : null;
 
   // ── 研究者の所見（severity 最上位の 1 件だけ。なければ沈黙）──
-  const insight = useMemo(() => {
-    if (!pageData) return null;
-
-    const current: MetricValues = {
-      totalTime: pageData.overview.totalMinutes,
-      entryRate: pageData.overview.planRate,
-      contextSwitches: pageData.contextSwitches.avgPerDay,
-      blankRate: pageData.blankRate.blankRate,
-    };
-    if (pageData.overview.avgFulfillment != null) {
-      current.avgFulfillment = pageData.overview.avgFulfillment;
-    }
-
-    const previous: MetricValues = {
-      totalTime: pageData.prevOverview.totalMinutes,
-      entryRate: pageData.prevOverview.planRate,
-    };
-    if (pageData.prevOverview.avgFulfillment != null) {
-      previous.avgFulfillment = pageData.prevOverview.avgFulfillment;
-    }
-
-    return evaluateRuleInsights(current, previous)[0] ?? null;
-  }, [pageData]);
-
-  const insightContent = useMemo(() => {
-    if (!insight) return null;
-    const params = { ...insight.messageParams };
-    // trendWorse / trendBetter の {label} は英語定数なので locale 済みのメトリクス名に差し替える
-    if (params.label != null) {
-      params.label = t(`metrics.${insight.metricId}`);
-    }
-    return {
-      text: t(`insights.${insight.messageKey}`, params),
-      detail: insight.detailKey
-        ? t(`insights.${insight.detailKey}`, insight.detailParams)
-        : undefined,
-    };
-  }, [insight, t]);
+  const insight = useStatsRuleInsight(pageData);
 
   // ── 還流導線（来週の計画へ）──
   const nextWeekHref = `/${locale}/calendar/week?date=${format(addWeeks(currentDate, 1), 'yyyy-MM-dd')}`;
@@ -205,7 +151,7 @@ export function WeeklyReview({ className }: ReviewViewProps) {
   // 空状態判定
   const isAllLoaded = !isPending && !isTimePLPending && !fallbackTimeByTagQuery.isPending;
   const hasNoData =
-    isAllLoaded && !isFetching && !fallbackTimeByTagQuery.isFetching && tagSegments.length === 0;
+    isAllLoaded && !isFetching && !fallbackTimeByTagQuery.isFetching && tagRows.length === 0;
 
   if (hasNoData) {
     return (
@@ -225,9 +171,7 @@ export function WeeklyReview({ className }: ReviewViewProps) {
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       <div className="scrollbar-stable flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 p-4">
-          {insightContent && (
-            <InsightSlot text={insightContent.text} detail={insightContent.detail} />
-          )}
+          <RuleInsightSlot insight={insight} />
 
           <section className="grid gap-3 sm:grid-cols-3">
             <SummaryCard
@@ -298,29 +242,7 @@ export function WeeklyReview({ className }: ReviewViewProps) {
               description={t('overview.tagTimeDesc')}
               icon={<BarChart3 className="size-4" />}
             >
-              <TagBreakdownBar segments={tagSegments} onTagClick={handleTagClick} />
-              <div className="divide-border mt-3 divide-y">
-                {tagRows.map((tag) => (
-                  <button
-                    key={tag.tagId}
-                    type="button"
-                    className="hover:bg-state-hover flex min-h-11 w-full min-w-0 items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors"
-                    onClick={() => handleTagClick(tag.tagId)}
-                  >
-                    <TagIcon icon={tag.tagIcon ?? null} color={tag.tagColor} size="sm" />
-                    <ColonTagLabel
-                      name={tag.tagName}
-                      className="text-foreground min-w-0 flex-1 truncate text-sm"
-                    />
-                    <span className="text-foreground font-mono text-sm tabular-nums">
-                      {formatMinutesDuration(tag.minutes)}
-                    </span>
-                    <span className="text-muted-foreground w-10 text-right font-mono text-sm tabular-nums">
-                      {tag.percentage}%
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <TagBalancePanel rows={tagRows} onTagClick={handleTagClick} />
             </OverviewPanel>
           </section>
 

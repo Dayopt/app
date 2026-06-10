@@ -258,7 +258,22 @@
         "availableTime": "{time} available",
         "planAccuracy": "Plan accuracy",
         "planAccuracyDesc": "How closely actuals matched the plan",
-        "unplanned": "Unplanned"
+        "unplanned": "Unplanned",
+        "recordedDays": "Days recorded",
+        "recordedDaysDesc": "Days with at least one record",
+        "daysValue": "{count} days"
+      },
+      "monthly": {
+        "dailyTitle": "Daily record",
+        "dailyDesc": "The month's rhythm day by day",
+        "estimationTitle": "Estimation accuracy by tag",
+        "estimationDesc": "Which tags tend to drift from estimates"
+      },
+      "yearly": {
+        "heatmapTitle": "Year in records",
+        "heatmapDesc": "A bird's-eye view of the year in record density",
+        "monthlyTitle": "Monthly record",
+        "monthlyDesc": "Recorded hours by month"
       },
       "rhythm": {
         "dayOfWeek": "By day of week",
@@ -273,6 +288,7 @@
       "nextAction": {
         "planNextWeek": "Plan next week",
         "planTomorrow": "Plan tomorrow",
+        "planNextMonth": "Plan next month",
         "recordDay": "Record your first block"
       },
       "review": {
@@ -327,6 +343,7 @@
         "trendBetter": "{label} improved by {pct}% from previous period",
         "dayEstimationOver": "Entries tended to run long today (avg +{bias} min)",
         "dayEstimationUnder": "Entries tended to finish early today (avg -{bias} min)",
+        "periodTopTag": "Most time went to {tag} ({hours}h total)",
         "estimationBiasOver": "This tag tends to run +{bias} min over estimate",
         "estimationBiasUnder": "This tag tends to finish {bias} min early",
         "hourlyFulfillmentHigh": "Fulfillment tends to be above average at this hour",

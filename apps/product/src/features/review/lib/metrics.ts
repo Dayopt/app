@@ -227,3 +227,21 @@ export function getMetricProgress(value: number, definition: MetricDefinition): 
 
   return Math.min(Math.max(value / warning, 0), 1);
 }
+
+/**
+ * タグ別見積もり精度から全体の加重平均ずれ（分）を算出
+ *
+ * エントリ数で重み付けした avgDeviationMinutes の平均。
+ * データが無ければ null。
+ */
+export function computeAvgDeviation(
+  data: { avgDeviationMinutes: number; entryCount: number }[] | undefined,
+): number | null {
+  if (!data || data.length === 0) return null;
+  const totalDeviation = data.reduce(
+    (sum, item) => sum + item.avgDeviationMinutes * item.entryCount,
+    0,
+  );
+  const totalEntries = data.reduce((sum, item) => sum + item.entryCount, 0);
+  return totalEntries > 0 ? totalDeviation / totalEntries : 0;
+}
