@@ -2,7 +2,9 @@
   "entry": {
     "untitled": "Untitled",
     "errors": {
-      "timeOverlap": "This time slot is already taken"
+      "timeOverlap": "This time slot is already taken",
+      "timeOverlapAutoRecord": "This time slot is covered by an auto-recorded plan",
+      "skipAndRecord": "Skip and record"
     },
     "toast": {
       "created": "\"{title}\" created",
@@ -25,6 +27,9 @@
       "deletedCount": "{count, plural, one {1 item} other {# items}} deleted",
       "restored": "Restored",
       "restoreFailed": "Failed to restore",
+      "skipped": "Skipped",
+      "skipFailed": "Failed to skip. Please try again",
+      "unskipped": "Skip undone",
       "conflict": "This entry was modified elsewhere. Reload to see the latest version.",
       "placed": "Added {name} at {time}",
       "overlapError": "{time} overlaps with an existing block"
@@ -109,6 +114,8 @@
       },
       "markUnplanned": "Mark as unplanned",
       "restorePlanned": "Restore plan",
+      "skip": "Skip",
+      "unskip": "Undo skip",
       "unplanned": "Unplanned",
       "note": {
         "label": "Note",
