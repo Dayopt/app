@@ -737,14 +737,13 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           <span
             aria-hidden
             className={cn(
-              'bg-muted-foreground pointer-events-none absolute bottom-0 h-1 rounded-full transition-opacity duration-150',
-              useCompactResizeHandle ? 'right-1 w-5' : 'left-1/2 w-8 -translate-x-1/2',
+              'bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-150',
               isMobile && isActive ? 'opacity-100' : 'opacity-0 group-hover/entry:opacity-100',
             )}
             style={{ zIndex: 11 }}
           />
           <div
-            className="focus:ring-ring pointer-events-auto absolute right-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
+            className="focus:ring-ring pointer-events-auto absolute cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
             role="slider"
             tabIndex={0}
             aria-label="Resize entry duration"
@@ -760,8 +759,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               // PC は card 内の下端だけを掴む。短い予定の直下に予定を作れるよう外へ張り出さない。
               height: `${resizeHandleHeight}px`,
               bottom: `${resizeHandleBottom}px`,
-              left: useCompactResizeHandle ? 'auto' : '0px',
+              left: useCompactResizeHandle ? '50%' : '0px',
+              right: useCompactResizeHandle ? 'auto' : '0px',
               width: useCompactResizeHandle ? '32px' : 'auto',
+              transform: useCompactResizeHandle ? 'translateX(-50%)' : 'none',
               zIndex: 10,
             }}
             title={t('calendar.event.adjustEndTime')}

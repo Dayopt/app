@@ -634,7 +634,7 @@ describe('EntryCard', () => {
       );
     });
 
-    it('PC の短い予定では右端だけをリサイズ領域にしてクリック領域を残す', () => {
+    it('PC の短い予定では中央ハンドル以外にクリック領域を残す', () => {
       render(<EntryCard entry={mockEvent} position={{ ...mockPosition, height: 25 }} />);
 
       const resizeHandle = screen.getByRole('slider', { name: /Resize entry duration/i });
@@ -642,8 +642,10 @@ describe('EntryCard', () => {
       expect(resizeHandle).toHaveStyle({
         height: '25px',
         bottom: '0px',
-        left: 'auto',
+        left: '50%',
+        right: 'auto',
         width: '32px',
+        transform: 'translateX(-50%)',
       });
     });
 
@@ -660,13 +662,21 @@ describe('EntryCard', () => {
       fireEvent.click(screen.getByLabelText(/entry: テストイベント/i));
 
       expect(onClick).toHaveBeenCalledWith(mockEvent);
-      expect(screen.getByRole('slider')).toHaveStyle({ left: 'auto', width: '32px' });
+      expect(screen.getByRole('slider')).toHaveStyle({
+        left: '50%',
+        right: 'auto',
+        width: '32px',
+      });
     });
 
     it('通常高さの予定では下端全幅のリサイズ領域を維持する', () => {
       render(<EntryCard entry={mockEvent} position={mockPosition} />);
 
-      expect(screen.getByRole('slider')).toHaveStyle({ left: '0px', width: 'auto' });
+      expect(screen.getByRole('slider')).toHaveStyle({
+        left: '0px',
+        right: '0px',
+        width: 'auto',
+      });
     });
 
     it('Mobile のアクティブ予定では指向けのリサイズ当たり判定を維持する', () => {
