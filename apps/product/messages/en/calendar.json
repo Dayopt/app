@@ -285,7 +285,8 @@
       },
       "daily": {
         "timelineDesc": "See where the day diverged from the plan",
-        "openCalendar": "Open in calendar"
+        "openCalendar": "Open in calendar",
+        "scoreFulfillment": "Score fulfillment"
       },
       "nextAction": {
         "planNextWeek": "Plan next week",

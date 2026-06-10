@@ -59,6 +59,20 @@ export const ActualOnly: Story = {
   },
 };
 
+/** 採点可能（実績ブロックをタップで充実度入力。未採点は Smile が薄く出る） */
+export const Scorable: Story = {
+  args: {
+    planned: PLANNED,
+    actual: [
+      { ...ACTUAL[0]!, fulfillmentScore: 3 },
+      { ...ACTUAL[1]!, fulfillmentScore: null },
+      { ...ACTUAL[2]!, fulfillmentScore: 1 },
+    ],
+    formatTime,
+    onScoreChange: () => {},
+  },
+};
+
 /** 短いブロック（最小高さの確認） */
 export const CompactBlocks: Story = {
   args: {

@@ -285,7 +285,8 @@
       },
       "daily": {
         "timelineDesc": "予定と現実のずれを並べて見る",
-        "openCalendar": "カレンダーで開く"
+        "openCalendar": "カレンダーで開く",
+        "scoreFulfillment": "充実度を記録"
       },
       "nextAction": {
         "planNextWeek": "来週の計画を立てる",

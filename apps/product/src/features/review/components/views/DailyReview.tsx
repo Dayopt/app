@@ -9,7 +9,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
-import { useEntries } from '@/features/entry';
+import type { FulfillmentScore } from '@/features/entry';
+import { useEntries, useEntryMutations } from '@/features/entry';
 import { resolveTagColor, useTagsMap } from '@/features/tags';
 import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
@@ -76,6 +77,7 @@ export function DailyReview({ className }: ReviewViewProps) {
   });
 
   const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data]);
+  const { updateEntry } = useEntryMutations();
   const summary = useMemo(() => computeDailySummary(entries), [entries]);
   const prevSummary = useMemo(
     () => computeDailySummary(prevEntriesQuery.data ?? []),
@@ -117,6 +119,7 @@ export function DailyReview({ className }: ReviewViewProps) {
     const build = (
       getStart: (e: (typeof entries)[number]) => string | null,
       getEnd: (e: (typeof entries)[number]) => string | null,
+      withScore: boolean,
     ): TimelineBlock[] =>
       entries
         .filter((e) => getStart(e) && getEnd(e))
@@ -126,6 +129,9 @@ export function DailyReview({ className }: ReviewViewProps) {
           startMin: clampMin(getStart(e)!),
           endMin: clampMin(getEnd(e)!),
           color: resolveTagColor(e.tagId ? tagsMap.get(e.tagId)?.color : null),
+          ...(withScore
+            ? { fulfillmentScore: (e.fulfillment_score ?? null) as FulfillmentScore | null }
+            : {}),
         }))
         .filter((b) => b.endMin > b.startMin);
 
@@ -133,13 +139,20 @@ export function DailyReview({ className }: ReviewViewProps) {
       planned: build(
         (e) => e.start_time,
         (e) => e.end_time,
+        false,
       ),
       actual: build(
         (e) => e.actual_start_time,
         (e) => e.actual_end_time,
+        true,
       ),
     };
   }, [entries, dayStartMs, tagsMap]);
+
+  // 実績ブロックのその場採点（楽観的更新は useEntryMutations が担う）
+  const handleScoreChange = (entryId: string, score: FulfillmentScore | null) => {
+    updateEntry.mutate({ id: entryId, data: { fulfillment_score: score } });
+  };
 
   const formatTime = useMemo(
     () => (minutesFromDayStart: number) =>
@@ -245,6 +258,7 @@ export function DailyReview({ className }: ReviewViewProps) {
               planned={toBlocks.planned}
               actual={toBlocks.actual}
               formatTime={formatTime}
+              onScoreChange={handleScoreChange}
             />
           </OverviewPanel>
 
