@@ -35,20 +35,15 @@ function sanitizeMetadata(metadata: Record<string, unknown>): Record<string, unk
 /**
  * ServiceErrorをSentryに報告
  */
-export function reportToSentry(
-  error: ServiceError,
-  userContext?: { userId?: string; ip?: string; userAgent?: string },
-): void {
+export function reportToSentry(error: ServiceError, userContext?: { userId?: string }): void {
   Sentry.withScope((scope) => {
     scope.setTag('errorCode', error.code);
     scope.setFingerprint(['dayopt', error.code]);
     scope.setContext('errorInfo', sanitizeMetadata({ code: error.code, message: error.message }));
 
+    // GDPR データ最小化: 識別子(userId)のみ。ip / userAgent は載せない
     if (userContext?.userId) {
-      scope.setUser({
-        id: userContext.userId,
-        ...(userContext.ip && { ip_address: userContext.ip }),
-      });
+      scope.setUser({ id: userContext.userId });
     }
 
     Sentry.captureException(error);

@@ -22,7 +22,8 @@ if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
     environment: VERCEL_ENV,
-    ...(process.env.NEXT_PUBLIC_APP_VERSION && { release: process.env.NEXT_PUBLIC_APP_VERSION }),
+    // release は withSentryConfig が build 時に注入する（next.config の release.name = VERCEL_GIT_COMMIT_SHA）。
+    // ここで明示すると source map upload 時の release と runtime がズレるため上書きしない。
 
     // Edge環境は軽量設定
     // トレースサンプリングを低めに設定（コスト最適化）
@@ -31,8 +32,9 @@ if (SENTRY_DSN) {
     // デバッグモード無効（Edgeは軽量に）
     debug: false,
 
-    // 本番・プレビュー環境のみ有効
-    enabled: IS_PRODUCTION || VERCEL_ENV === 'preview',
+    // 本番環境のみ有効。preview は NODE_ENV=production だが VERCEL_ENV=preview なので除外
+    // （IS_PRODUCTION では preview を除外できない）。
+    enabled: VERCEL_ENV === 'production',
 
     // Edge のフィルタリング + PII スクラビング
     beforeSend: withPIIScrub((event) => {

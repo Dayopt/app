@@ -20,6 +20,7 @@ import {
   canAccessProFeatures,
   type ProductAccessLevel,
 } from '@/lib/auth/domain';
+import { isBillingEnforced } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
 // 循環依存防止: barrel `@/lib/mcp` は trpc-bridge を再 export し、それが appRouter →
 // feature router → procedures.ts と辿るため、ここでは auth.ts を直 import する。
@@ -360,6 +361,12 @@ export const protectedProcedure = t.procedure
  * past_due: Stripe dunning（回収リトライ）期間中はアクセス維持。
  */
 export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async ({ ctx, next }) => {
+  // 課金 enforcement が無効（既定）の間は Pro ゲートを素通りさせ、全機能を無料提供する。
+  // proProcedure 注釈は将来の課金対象マーカーとして温存する（Phase B でフラグを 'true' に）。
+  if (!isBillingEnforced()) {
+    return next({ ctx });
+  }
+
   // OAuth 経路は claim cache を信用せず、毎リクエスト DB lookup を強制する
   let status = ctx.authMode === 'oauth' ? undefined : ctx.subscriptionStatus;
 

@@ -31,6 +31,9 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '',
     NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version || '0.0.0',
+    // client 側で Vercel 環境を判別するため露出。preview は NODE_ENV=production だが
+    // VERCEL_ENV=preview なので、Sentry を production のみ有効化する gate に必要。
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV || '',
   },
 
   // TypeScript設定
@@ -284,6 +287,14 @@ const sentryOptions = {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // release 名: Vercel が build 時に自動提供する commit SHA を明示する。
+  // source map upload と runtime（init では上書きしない）を同一 release に揃え、
+  // stack trace 解決を担保する。Vercel 外（ローカル build 等）では未定義のため
+  // plugin の自動検出にフォールバックする。
+  ...(process.env.VERCEL_GIT_COMMIT_SHA && {
+    release: { name: process.env.VERCEL_GIT_COMMIT_SHA },
+  }),
 
   // ソースマップ設定
   sourcemaps: {

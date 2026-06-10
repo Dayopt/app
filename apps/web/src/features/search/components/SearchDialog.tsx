@@ -18,40 +18,14 @@ interface SearchDialogProps {
   locale: string;
 }
 
-interface QuickLinkConfig {
-  key: 'quickStart' | 'apiReference' | 'latestRelease' | 'saasStrategy';
-  href: string;
-  type: string;
-}
-
-const QUICK_LINK_CONFIGS: QuickLinkConfig[] = [
-  { key: 'quickStart', href: '/docs/quick-start', type: 'docs' },
-  { key: 'apiReference', href: '/docs/api-reference', type: 'docs' },
-  { key: 'latestRelease', href: '/releases/v2.1.0', type: 'release' },
-  { key: 'saasStrategy', href: '/blog/saas-strategy-2024', type: 'blog' },
-];
-
 export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) {
   const t = useTranslations('search');
   const [query, setQuery] = useState('');
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [popularTags, setPopularTags] = useState<PopularTag[]>([]);
   const [previewResults, setPreviewResults] = useState<SearchResponse['results']>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // クイックリンクを翻訳から生成（メモ化）
-  const QUICK_LINKS = useMemo(
-    () =>
-      QUICK_LINK_CONFIGS.map((config) => ({
-        title: t(`quickLinks.${config.key}.title`),
-        description: t(`quickLinks.${config.key}.description`),
-        href: `/${locale}${config.href}`,
-        type: config.type,
-      })),
-    [t, locale],
-  );
 
   // タグフィルタリング（メモ化）
   const matchedTags = useMemo(() => {
@@ -163,7 +137,6 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
       }, 100);
     } else {
       setQuery('');
-      setSelectedIndex(0);
     }
   }, [open]);
 
@@ -188,23 +161,8 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
       return;
     }
 
-    if (e.key === 'Enter') {
-      if (query.trim()) {
-        handleSearch(query);
-      } else if (QUICK_LINKS[selectedIndex]) {
-        onOpenChange(false);
-        router.push(QUICK_LINKS[selectedIndex].href);
-      }
-    }
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIndex((prev) => Math.min(prev + 1, QUICK_LINKS.length - 1));
-    }
-
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIndex((prev) => Math.max(prev - 1, 0));
+    if (e.key === 'Enter' && query.trim()) {
+      handleSearch(query);
     }
   };
 
@@ -285,45 +243,6 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
                       count={tag.count}
                       onClick={() => handleTagClick(tag.name)}
                     />
-                  ))}
-                </div>
-              </div>
-
-              {/* クイックリンク */}
-              <div>
-                <h3 className="text-muted-foreground mb-4 text-xs font-medium tracking-wide uppercase">
-                  {t('popularPages')}
-                </h3>
-                <div className="space-y-1">
-                  {QUICK_LINKS.map((link, index) => (
-                    <Button
-                      key={index}
-                      onClick={() => {
-                        onOpenChange(false);
-                        router.push(link.href);
-                      }}
-                      variant="ghost"
-                      className={`flex h-auto w-full items-start justify-start gap-4 p-4 ${
-                        selectedIndex === index ? 'bg-state-active border-primary border' : ''
-                      }`}
-                    >
-                      <div className="mt-1">{getTypeIcon(link.type)}</div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-foreground truncate text-sm font-medium">
-                          {link.title}
-                        </div>
-                        <div className="text-muted-foreground mt-1 text-xs">{link.description}</div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Badge variant="outline" className="px-2 py-1 text-xs">
-                          {link.type === 'docs'
-                            ? t('docs')
-                            : link.type === 'blog'
-                              ? t('blog')
-                              : t('release')}
-                        </Badge>
-                      </div>
-                    </Button>
                   ))}
                 </div>
               </div>
@@ -462,12 +381,6 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
                   Enter
                 </kbd>
                 <span>{t('toSelect')}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <kbd className="bg-muted border-border text-foreground rounded border px-2 py-1 font-mono text-xs">
-                  ↑↓
-                </kbd>
-                <span>{t('toNavigate')}</span>
               </div>
               <div className="flex items-center gap-1">
                 <kbd className="bg-muted border-border text-foreground rounded border px-2 py-1 font-mono text-xs">

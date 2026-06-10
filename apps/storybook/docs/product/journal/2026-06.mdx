@@ -6,6 +6,36 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-06-08
+
+### 予定だけエントリの表示完全修正と認証セキュリティ強化の日
+
+14 コミット（内 6 件は dependabot 自動更新）。手動実装は entry / calendar / auth の 3 領域。午前は認証セキュリティ修正と EntryCard の UI 改善、午後はカレンダーの「予定だけエントリ」表示バグを根本から修正した。
+
+#### やったこと
+
+- **予定だけエントリの表示修正 (3 commits)**: `entry-adapter.ts` で `actual_start_time` が null の場合 `return null` していた旧実装を削除し、`planned` origin なら `start_time` / `end_time` を表示位置として使うよう変更。`CalendarGridContent` の `overflow-hidden` を `overflow-visible` に変更して予定レイヤーの高さ揃えを修正。`EntryCard` の planned レイヤーがグリッドサイズに揃うようコンポーネント側も調整。テスト追加（`entry-adapter.test.ts` / `EntryRenderer.test.tsx` / `EntryCard.test.tsx`）
+- **EntryCard UI 改善 (2 commits)**: 予定ブロックの左上角・左下角を直角化（`rounded-tl-none rounded-bl-none`）。時間表示を左端フラッシュに変更して Day / Week / 複数 View での統一感を確保。Storybook story に時間状態バリアント（predicted / actual / plan-only）を追加
+- **認証セキュリティ修正 (2 commits)**: パスワード変更前に `signInWithPassword` で現在パスワードを検証するフローを追加。Supabase の `updateUser` は再認証を要求しないため、ユーザーが意図した変更かどうかを手前で確認する。テスト 142 行追加
+- **作成プレビュースタイル統一 (1 commit)**: `DraftEntryBlock` の左アクセントボーダー（`border-l-2`）を削除し upcoming エントリと視覚的に統一
+- **依存パッケージ更新 (6 dependabot PRs)**: production 28 件、dev/testing/storybook/linting/types/other の各グループをまとめて更新
+
+#### なぜ今日この作業をしたか
+
+「予定だけエントリ」の修正は、Dayopt の中核的な差別化要素である「計画 × 記録の一体化」に直結するバグだった。ユーザーが事前に予定を入れても（origin: 'planned'）、実際の記録（actual_start_time）がない限りカレンダーに一切表示されない状態が続いていた。これは「タイムボクシングした予定が見えない」という重大な UX の穴であり、計画フェーズでのカレンダー活用を妨げていた。修正は entry-adapter 1 ファイルの null ガード削除が起点だったが、表示崩れ防止のために CalendarGridContent と EntryCard 側の調整も必要で、3 コミットに分かれた。
+
+認証のパスワード再確認は、セキュリティ上の漏れを塞ぐ修正だった。Supabase の `updateUser` は有効なセッショントークンさえあれば現パスワード検証なしで変更できる。この設計は PKCE フローにおける session 継続を前提としており、ウェブアプリの UX では一見問題ないが、「画面ロック中に第三者が操作できる」などのリスクを残す。今回 `signInWithPassword` による現パスワード検証を挟むことで、Supabase が持つ session 継続の仕様に依存せずに安全な変更フローを実現した。
+
+#### Claudeの所感
+
+**「null ガード = 安全」という思い込みが機能バグになる例**: `entry-adapter.ts` の `return null` は「不完全なデータを表示しない」という防御的コードに見える。しかし planned エントリにとって `actual_start_time` が null であることは「エラー状態」ではなく「まだ記録していない正常な状態」だった。型レベルで `planned` origin の場合は `actual_*` が null でも valid であることを表現できていれば、このバグは早期に気づけた可能性がある。DB スキーマと型定義の semantic gap がバグの温床になった事例。
+
+**`overflow-hidden` はレイアウト系バグの隠れた原因になりやすい**: 絶対配置された子要素がグリッドからはみ出ることを期待するコンポーネント（リサイズハンドル、ドラッグプレビュー）には `overflow-hidden` が致命的な影響を与える。今回の修正で `overflow-visible` に変更したが、これはクロスデイドラッグ時に別のはみ出し制御が必要だった旧実装の残骸だった。機能削除時に関連する CSS も一緒に削除するルールの重要性を示している。
+
+**テストのモックビルダーで `null` と `undefined` を区別するパターン**: `makeEntry` 関数で `overrides.actual_start_time ?? entry.start_time` の書き方は、呼び出し元が `actual_start_time: null` を渡しても null を無視して `entry.start_time` にフォールバックしてしまう。`Object.prototype.hasOwnProperty.call(overrides, key)` で「キーが存在するかどうか」を判定することで、null の明示的な指定と未指定を区別できる。テストの表現力に直結するテクニック。
+
+---
+
 ## 2026-06-05
 
 ### カレンダーUI大ポリッシュデー——ConflictOverlay統一とEntryCard全面磨き直し
