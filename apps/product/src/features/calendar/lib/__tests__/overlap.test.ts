@@ -26,7 +26,7 @@ function createEvent(
 }
 
 describe('buildNewEntryOverlapTarget', () => {
-  it('未来の新規予定はplanned/actualに同じ範囲を入れる', () => {
+  it('未来の新規予定はplannedのみ占有する（actualは未編集 = null）', () => {
     const start = new Date('2030-01-15T10:00');
     const end = new Date('2030-01-15T11:00');
     const target = buildNewEntryOverlapTarget(start, end, new Date('2026-01-15T09:00').getTime());
@@ -35,8 +35,8 @@ describe('buildNewEntryOverlapTarget', () => {
       id: '',
       plannedStart: start,
       plannedEnd: end,
-      actualStart: start,
-      actualEnd: end,
+      actualStart: null,
+      actualEnd: null,
     });
     expect(hasTwoLayerTimeConflict([], target)).toBe(false);
   });

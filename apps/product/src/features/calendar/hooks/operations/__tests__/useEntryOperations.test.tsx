@@ -121,15 +121,13 @@ describe('useEntryOperations', () => {
           data: {
             start_time: '2026-04-27T01:00:00.000Z',
             end_time: '2026-04-27T02:00:00.000Z',
-            actual_start_time: '2026-04-27T01:00:00.000Z',
-            actual_end_time: '2026-04-27T02:00:00.000Z',
           },
         },
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
     });
 
-    it('resetActualTime=true でも actual_start_time / actual_end_time は新範囲で送る', async () => {
+    it('resetActualTime=true なら planned を更新し actual を未編集（null）に戻す', async () => {
       getByIdGetData.mockReturnValue({
         id: 'entry-1',
         origin: 'planned',
@@ -150,12 +148,12 @@ describe('useEntryOperations', () => {
       expect(callArgs.data).toMatchObject({
         start_time: '2026-04-25T01:00:00.000Z',
         end_time: '2026-04-25T02:00:00.000Z',
-        actual_start_time: '2026-04-25T01:00:00.000Z',
-        actual_end_time: '2026-04-25T02:00:00.000Z',
+        actual_start_time: null,
+        actual_end_time: null,
       });
     });
 
-    it('actual未変更のplannedは過去でもplannedとactualを同じ範囲で送る', async () => {
+    it('actual未変更のplannedは過去でもplanned rangeのみを送る（actualは自動記録に追従）', async () => {
       getByIdGetData.mockReturnValue({
         id: 'entry-1',
         origin: 'planned',
@@ -175,8 +173,6 @@ describe('useEntryOperations', () => {
       expect(callArgs.data).toEqual({
         start_time: '2026-04-25T01:00:00.000Z',
         end_time: '2026-04-25T02:00:00.000Z',
-        actual_start_time: '2026-04-25T01:00:00.000Z',
-        actual_end_time: '2026-04-25T02:00:00.000Z',
       });
     });
 
@@ -203,7 +199,7 @@ describe('useEntryOperations', () => {
       });
     });
 
-    it('キャッシュが無い場合は planned と actual を同じ範囲で送る', async () => {
+    it('キャッシュが無い場合は planned range のみ送る（actual は未編集のまま）', async () => {
       getByIdGetData.mockReturnValue(null);
 
       const { result } = renderHook(() => useEntryOperations());
@@ -216,8 +212,6 @@ describe('useEntryOperations', () => {
       expect(callArgs.data).toMatchObject({
         start_time: '2026-04-27T01:00:00.000Z',
         end_time: '2026-04-27T02:00:00.000Z',
-        actual_start_time: '2026-04-27T01:00:00.000Z',
-        actual_end_time: '2026-04-27T02:00:00.000Z',
       });
     });
 
@@ -288,8 +282,6 @@ describe('useEntryOperations', () => {
           data: {
             start_time: '2026-04-27T01:00:00.000Z',
             end_time: '2026-04-27T02:00:00.000Z',
-            actual_start_time: '2026-04-27T01:00:00.000Z',
-            actual_end_time: '2026-04-27T02:00:00.000Z',
           },
         },
         expect.objectContaining({ onSuccess: expect.any(Function) }),

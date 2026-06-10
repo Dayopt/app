@@ -30,6 +30,8 @@ export interface Entry {
   actual_end_time: string | null;
   duration_minutes: number | null;
   fulfillment_score: FulfillmentScore | null;
+  /** 計画したがやらなかった（自動記録モデル）。非 null = 実績集計から除外 */
+  skipped_at: string | null;
   created_at: string | null;
   updated_at: string | null;
 }

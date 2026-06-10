@@ -53,19 +53,19 @@ function hasInvalidTargetRange(start: RangeInput, end: RangeInput): boolean {
   return startMs == null || endMs == null || endMs <= startMs;
 }
 
-function hasInvalidRequiredTargetRange(start: RangeInput, end: RangeInput): boolean {
-  if (start == null || end == null) return true;
-  return hasInvalidTargetRange(start, end);
-}
-
 export function hasTwoLayerTimeConflict(
   entries: TwoLayerOverlapEntry[],
   target: TwoLayerOverlapTarget,
 ): boolean {
+  // 自動記録モデル: 未来の planned は actual レイヤーを占有しない（actual NULL = 未編集）。
+  // target は少なくともどちらか一方のレイヤーを占有していなければならない。
   if (
     hasInvalidTargetRange(target.plannedStart, target.plannedEnd) ||
-    hasInvalidRequiredTargetRange(target.actualStart, target.actualEnd)
+    hasInvalidTargetRange(target.actualStart, target.actualEnd)
   ) {
+    return true;
+  }
+  if (target.plannedStart == null && target.actualStart == null) {
     return true;
   }
 

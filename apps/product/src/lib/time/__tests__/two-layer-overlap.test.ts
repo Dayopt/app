@@ -70,12 +70,34 @@ describe('hasTwoLayerTimeConflict', () => {
     ).toBe(true);
   });
 
-  it('actual rangeがないtargetは無効として衝突にする', () => {
+  it('actual rangeがなくてもplanned rangeがあれば有効（自動記録モデル: 未来plannedはactual未編集）', () => {
     expect(
       hasTwoLayerTimeConflict([], {
         plannedStart: '2026-01-15T10:00:00.000Z',
         plannedEnd: '2026-01-15T11:00:00.000Z',
         actualStart: null,
+        actualEnd: null,
+      }),
+    ).toBe(false);
+  });
+
+  it('planned/actual両方ないtargetは無効として衝突にする', () => {
+    expect(
+      hasTwoLayerTimeConflict([], {
+        plannedStart: null,
+        plannedEnd: null,
+        actualStart: null,
+        actualEnd: null,
+      }),
+    ).toBe(true);
+  });
+
+  it('actualが片側だけのtargetは無効として衝突にする', () => {
+    expect(
+      hasTwoLayerTimeConflict([], {
+        plannedStart: '2026-01-15T10:00:00.000Z',
+        plannedEnd: '2026-01-15T11:00:00.000Z',
+        actualStart: '2026-01-15T10:00:00.000Z',
         actualEnd: null,
       }),
     ).toBe(true);

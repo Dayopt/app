@@ -194,7 +194,11 @@ export class EntryService {
   }
 
   /**
-   * actual range の時間重複をチェック
+   * effective actual range の時間重複をチェック
+   *
+   * 自動記録モデルでは「過去の planned（actual 未編集・未スキップ）」も
+   * 実績レイヤーを占有する。DB の EXCLUDE 制約は actual NULL の行を見ないため、
+   * 自動記録との二重計上はこのチェックが唯一の防衛線になる。
    */
   async checkActualTimeOverlap(options: {
     userId: string;
@@ -203,16 +207,21 @@ export class EntryService {
     excludeEntryId?: string;
   }): Promise<string[]> {
     const { userId, startTime, endTime, excludeEntryId } = options;
+    const nowIso = new Date().toISOString();
 
     let query = this.supabase
       .from('entries')
       .select('id')
       .eq('user_id', userId)
       .is('deleted_at', null)
-      .not('actual_start_time', 'is', null)
-      .not('actual_end_time', 'is', null)
-      .lt('actual_start_time', endTime)
-      .gt('actual_end_time', startTime);
+      .or(
+        [
+          // ユーザーが確定した実績
+          `and(actual_start_time.lt.${endTime},actual_end_time.gt.${startTime})`,
+          // 自動記録（過去の planned、actual 未編集・未スキップ）
+          `and(origin.eq.planned,skipped_at.is.null,actual_start_time.is.null,start_time.lt.${endTime},end_time.gt.${startTime},end_time.lte.${nowIso})`,
+        ].join(','),
+      );
 
     if (excludeEntryId) {
       query = query.neq('id', excludeEntryId);
@@ -353,9 +362,13 @@ export class EntryService {
     }
 
     this.validateRange(oldData.start_time, oldData.end_time, 'INVALID_TIME_RANGE');
-    this.validateRange(oldData.actual_start_time, oldData.actual_end_time, 'INVALID_TIME_RANGE');
 
-    if (new Date(oldData.actual_end_time!).getTime() > Date.now()) {
+    // 自動記録モデル: actual 未編集の planned は plan range が実績（effective actual）
+    const actualStart = oldData.actual_start_time ?? oldData.start_time;
+    const actualEnd = oldData.actual_end_time ?? oldData.end_time;
+    this.validateRange(actualStart, actualEnd, 'INVALID_TIME_RANGE');
+
+    if (new Date(actualEnd!).getTime() > Date.now()) {
       throw new EntryServiceError(
         'UNPLANNED_IN_FUTURE',
         'Unplanned entries cannot end in the future.',
@@ -368,6 +381,9 @@ export class EntryService {
       start_time: null,
       end_time: null,
       duration_minutes: null,
+      actual_start_time: actualStart,
+      actual_end_time: actualEnd,
+      skipped_at: null,
     } as EntryRow;
 
     this.validateEntryShape(finalEntry);
@@ -379,6 +395,9 @@ export class EntryService {
         origin: 'unplanned',
         start_time: null,
         end_time: null,
+        actual_start_time: actualStart,
+        actual_end_time: actualEnd,
+        skipped_at: null,
       })
       .eq('id', entryId)
       .eq('user_id', userId)
@@ -492,6 +511,86 @@ export class EntryService {
     return { success: true };
   }
 
+  /**
+   * planned エントリをスキップ（計画したがやらなかった）
+   *
+   * 計画履歴は残し、実績集計から除外する。実績レイヤーが空くので、
+   * 同じ時間帯に予定外記録を入れられるようになる。可逆（unskip で解除）。
+   */
+  async skip(options: DeleteEntryOptions): Promise<EntryRow> {
+    const { userId, entryId } = options;
+    const oldData = await this.getExistingEntry(entryId, userId);
+
+    if (!oldData) {
+      throw new EntryServiceError('NOT_FOUND', 'Entry not found');
+    }
+
+    if (oldData.origin !== 'planned') {
+      throw new EntryServiceError('INVALID_ENTRY_SHAPE', 'Only planned entries can be skipped.');
+    }
+
+    if (oldData.end_time && new Date(oldData.end_time).getTime() > Date.now()) {
+      throw new EntryServiceError(
+        'SKIP_IN_FUTURE',
+        'Future planned entries cannot be skipped. Delete the entry instead.',
+      );
+    }
+
+    // entries_skip_shape 制約: skipped は actual 未編集のみ。編集済み actual は破棄する
+    const { data, error } = await this.supabase
+      .from('entries')
+      .update({
+        skipped_at: new Date().toISOString(),
+        actual_start_time: null,
+        actual_end_time: null,
+      })
+      .eq('id', entryId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new EntryServiceError('UPDATE_FAILED', `Failed to skip entry: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * スキップを解除（自動記録が復活する）
+   *
+   * 解除すると plan range が実績レイヤーを再占有するため、
+   * スキップ後に入れた予定外記録と重複する場合は拒否する。
+   */
+  async unskip(options: DeleteEntryOptions): Promise<EntryRow> {
+    const { userId, entryId } = options;
+    const oldData = await this.getExistingEntry(entryId, userId);
+
+    if (!oldData) {
+      throw new EntryServiceError('NOT_FOUND', 'Entry not found');
+    }
+
+    if (!oldData.skipped_at) {
+      return oldData;
+    }
+
+    await this.ensureNoOverlaps(userId, { ...oldData, skipped_at: null }, entryId);
+
+    const { data, error } = await this.supabase
+      .from('entries')
+      .update({ skipped_at: null })
+      .eq('id', entryId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new EntryServiceError('UPDATE_FAILED', `Failed to unskip entry: ${error.message}`);
+    }
+
+    return data;
+  }
+
   // ========================================
   // プライベートメソッド
   // ========================================
@@ -511,14 +610,17 @@ export class EntryService {
     const selectedRange = this.resolveCreateRange(input, timezone);
     const origin = determineEntryOrigin(selectedRange.end);
 
+    // 自動記録モデル: actual はユーザーが編集・確定した時だけ値が入る。
+    // planned は actual NULL で作成し、過去になったら読み取り側が
+    // plan range を実績として扱う（effective actual）。
     const normalized: NormalizedEntryInput = {
       user_id: userId,
       title: input.title,
       description: input.description ?? null,
       origin,
       fulfillment_score: input.fulfillment_score ?? null,
-      actual_start_time: selectedRange.start,
-      actual_end_time: selectedRange.end,
+      actual_start_time: origin === 'unplanned' ? selectedRange.start : null,
+      actual_end_time: origin === 'unplanned' ? selectedRange.end : null,
       start_time: origin === 'planned' ? selectedRange.start : null,
       end_time: origin === 'planned' ? selectedRange.end : null,
     };
@@ -556,12 +658,12 @@ export class EntryService {
         },
         timezone,
       );
+      // 自動記録モデル: 未来 planned の時間変更は plan range のみ。
+      // actual へのコピーはしない（actual NULL = 未編集を維持する）。
       return removeUndefinedFields({
         ...baseInput,
         start_time: plannedRange.start,
         end_time: plannedRange.end,
-        actual_start_time: baseInput.actual_start_time ?? plannedRange.start,
-        actual_end_time: baseInput.actual_end_time ?? plannedRange.end,
       });
     }
 
@@ -608,11 +710,18 @@ export class EntryService {
     actual_start_time?: string | null;
     actual_end_time?: string | null;
   }): void {
-    this.validateRange(
-      entry.actual_start_time ?? null,
-      entry.actual_end_time ?? null,
-      'INVALID_TIME_RANGE',
-    );
+    // 自動記録モデル: actual は「両方 NULL（未編集）」か「両方あり」のみ
+    const hasActualStart = entry.actual_start_time != null;
+    const hasActualEnd = entry.actual_end_time != null;
+    if (hasActualStart !== hasActualEnd) {
+      throw new EntryServiceError(
+        'INVALID_ENTRY_SHAPE',
+        'Actual time range must be set or cleared together.',
+      );
+    }
+    if (hasActualStart && hasActualEnd) {
+      this.validateRange(entry.actual_start_time!, entry.actual_end_time!, 'INVALID_TIME_RANGE');
+    }
 
     if (entry.origin === 'planned') {
       this.validateRange(entry.start_time ?? null, entry.end_time ?? null, 'INVALID_TIME_RANGE');
@@ -620,6 +729,12 @@ export class EntryService {
     }
 
     if (entry.origin === 'unplanned') {
+      if (!hasActualStart || !hasActualEnd) {
+        throw new EntryServiceError(
+          'INVALID_ENTRY_SHAPE',
+          'Unplanned entries must have an actual time range.',
+        );
+      }
       if (entry.start_time !== null || entry.end_time !== null) {
         throw new EntryServiceError(
           'INVALID_ENTRY_SHAPE',
@@ -658,6 +773,7 @@ export class EntryService {
       end_time?: string | null;
       actual_start_time?: string | null;
       actual_end_time?: string | null;
+      skipped_at?: string | null;
     },
     excludeEntryId?: string,
   ): Promise<void> {
@@ -677,11 +793,28 @@ export class EntryService {
       }
     }
 
-    if (entry.actual_start_time && entry.actual_end_time) {
+    // この entry が実績レイヤーで占有する range（effective actual）。
+    // 確定済み actual か、自動記録（過去の planned・未編集・未スキップ）の plan range。
+    let effectiveStart = entry.actual_start_time ?? null;
+    let effectiveEnd = entry.actual_end_time ?? null;
+    if (
+      !effectiveStart &&
+      !effectiveEnd &&
+      entry.origin === 'planned' &&
+      !entry.skipped_at &&
+      entry.start_time &&
+      entry.end_time &&
+      new Date(entry.end_time).getTime() <= Date.now()
+    ) {
+      effectiveStart = entry.start_time;
+      effectiveEnd = entry.end_time;
+    }
+
+    if (effectiveStart && effectiveEnd) {
       const actualOverlappingIds = await this.checkActualTimeOverlap({
         userId,
-        startTime: entry.actual_start_time,
-        endTime: entry.actual_end_time,
+        startTime: effectiveStart,
+        endTime: effectiveEnd,
         ...(excludeEntryId !== undefined && { excludeEntryId }),
       });
 

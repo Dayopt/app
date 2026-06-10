@@ -23,8 +23,16 @@ function entryFromCalendarEvent(event: CalendarEvent): EntryLike {
     origin: event.origin ?? null,
     start_time: plannedStartDate?.toISOString() ?? null,
     end_time: plannedEndDate?.toISOString() ?? null,
-    actual_start_time: (event.actualStartDate ?? event.startDate)?.toISOString() ?? null,
-    actual_end_time: (event.actualEndDate ?? event.endDate)?.toISOString() ?? null,
+    // 自動記録モデル: actual はユーザー確定値のみ（NULL = 未編集）。
+    // unplanned だけは表示位置 = actual なので startDate を fallback に使う
+    actual_start_time:
+      (
+        event.actualStartDate ?? (event.origin === 'unplanned' ? event.startDate : null)
+      )?.toISOString() ?? null,
+    actual_end_time:
+      (
+        event.actualEndDate ?? (event.origin === 'unplanned' ? event.endDate : null)
+      )?.toISOString() ?? null,
   };
 }
 

@@ -5,10 +5,14 @@ import {
   getActualMinutes,
   getActualRange,
   getDiffMinutes,
+  getEffectiveActualMinutes,
+  getEffectiveActualRange,
   getPlannedMinutes,
   getPlannedRange,
   hasPlannedActualDiff,
+  isAutoRecorded,
   isPlannedEntry,
+  isSkipped,
   isUnplannedEntry,
 } from '../entry-time-model';
 
@@ -231,5 +235,73 @@ describe('hasPlannedActualDiff', () => {
       end_time: '2026-03-12T10:00:00Z',
     };
     expect(hasPlannedActualDiff(entry)).toBe(false);
+  });
+});
+
+describe('getEffectiveActualRange / isAutoRecorded / isSkipped（自動記録モデル）', () => {
+  const pastPlanned = {
+    origin: 'planned',
+    start_time: '2026-03-12T10:00:00Z',
+    end_time: PAST, // NOW より前に終了
+    actual_start_time: null,
+    actual_end_time: null,
+    skipped_at: null,
+  };
+
+  it('actual 確定済みなら actual をそのまま返す（自動記録ではない）', () => {
+    const entry = {
+      ...pastPlanned,
+      actual_start_time: '2026-03-12T10:10:00Z',
+      actual_end_time: '2026-03-12T10:50:00Z',
+    };
+    const range = getEffectiveActualRange(entry, NOW);
+    expect(range?.start.toISOString()).toBe('2026-03-12T10:10:00.000Z');
+    expect(range?.end.toISOString()).toBe('2026-03-12T10:50:00.000Z');
+    expect(isAutoRecorded(entry, NOW)).toBe(false);
+  });
+
+  it('過去の planned（actual 未編集・未スキップ）は plan range が自動記録になる', () => {
+    const range = getEffectiveActualRange(pastPlanned, NOW);
+    expect(range?.start.toISOString()).toBe('2026-03-12T10:00:00.000Z');
+    expect(range?.end.toISOString()).toBe(new Date(PAST).toISOString());
+    expect(isAutoRecorded(pastPlanned, NOW)).toBe(true);
+    expect(getEffectiveActualMinutes(pastPlanned, NOW)).toBe(60);
+  });
+
+  it('未来の planned は実績なし（null）', () => {
+    const entry = {
+      ...pastPlanned,
+      start_time: NOW.toISOString(),
+      end_time: FUTURE,
+    };
+    expect(getEffectiveActualRange(entry, NOW)).toBeNull();
+    expect(isAutoRecorded(entry, NOW)).toBe(false);
+    expect(getEffectiveActualMinutes(entry, NOW)).toBeNull();
+  });
+
+  it('skipped の planned は過去でも実績なし（null）', () => {
+    const entry = { ...pastPlanned, skipped_at: '2026-03-12T11:30:00Z' };
+    expect(isSkipped(entry)).toBe(true);
+    expect(getEffectiveActualRange(entry, NOW)).toBeNull();
+    expect(isAutoRecorded(entry, NOW)).toBe(false);
+  });
+
+  it('unplanned は actual がそのまま effective actual', () => {
+    const entry = {
+      origin: 'unplanned',
+      start_time: null,
+      end_time: null,
+      actual_start_time: '2026-03-12T10:00:00Z',
+      actual_end_time: PAST,
+      skipped_at: null,
+    };
+    const range = getEffectiveActualRange(entry, NOW);
+    expect(range?.start.toISOString()).toBe('2026-03-12T10:00:00.000Z');
+    expect(isAutoRecorded(entry, NOW)).toBe(false);
+  });
+
+  it('end がちょうど now の planned は自動記録になる（end <= now 境界）', () => {
+    const entry = { ...pastPlanned, start_time: PAST, end_time: NOW.toISOString() };
+    expect(getEffectiveActualRange(entry, NOW)).not.toBeNull();
   });
 });

@@ -106,17 +106,15 @@ describe('hasActualRangeDiff', () => {
 });
 
 describe('buildTimeUpdateData', () => {
-  it('entry が null（新規作成）なら planned/actual 両方を新時刻に揃える', () => {
+  it('entry が null（新規作成）なら planned range のみ渡す（actual は未編集 = NULL のまま）', () => {
     const result = buildTimeUpdateData(null, NEW_START, NEW_END);
     expect(result).toEqual({
       start_time: NEW_START_ISO,
       end_time: NEW_END_ISO,
-      actual_start_time: NEW_START_ISO,
-      actual_end_time: NEW_END_ISO,
     });
   });
 
-  it('planned origin で resetActualTime=true なら planned/actual 両方を新時刻に揃える', () => {
+  it('planned origin で resetActualTime=true なら planned を更新し actual を未編集（NULL）に戻す', () => {
     const entry: EntryLike = {
       origin: 'planned',
       start_time: PLANNED_START,
@@ -128,8 +126,8 @@ describe('buildTimeUpdateData', () => {
     expect(result).toEqual({
       start_time: NEW_START_ISO,
       end_time: NEW_END_ISO,
-      actual_start_time: NEW_START_ISO,
-      actual_end_time: NEW_END_ISO,
+      actual_start_time: null,
+      actual_end_time: null,
     });
   });
 
@@ -161,7 +159,7 @@ describe('buildTimeUpdateData', () => {
     });
   });
 
-  it('planned origin で actual と一致しているなら planned/actual 両方を新時刻に揃える', () => {
+  it('planned origin は planned のみ更新（確定済み actual は保持される）', () => {
     const entry: EntryLike = {
       origin: 'planned',
       start_time: PLANNED_START,
@@ -173,8 +171,6 @@ describe('buildTimeUpdateData', () => {
     expect(result).toEqual({
       start_time: NEW_START_ISO,
       end_time: NEW_END_ISO,
-      actual_start_time: NEW_START_ISO,
-      actual_end_time: NEW_END_ISO,
     });
   });
 
@@ -227,7 +223,7 @@ describe('buildUndoTimeUpdateData', () => {
     });
   });
 
-  it('resetActualTime=true で 1 フィールドでも欠けていれば null', () => {
+  it('resetActualTime=true で actual が欠けていても planned があれば書き戻せる（actual は NULL = 未編集）', () => {
     const entry: EntryLike = {
       origin: 'planned',
       start_time: PLANNED_START,
@@ -235,10 +231,15 @@ describe('buildUndoTimeUpdateData', () => {
       actual_start_time: ACTUAL_START,
       // actual_end_time 欠落
     };
-    expect(buildUndoTimeUpdateData(entry, true)).toBeNull();
+    expect(buildUndoTimeUpdateData(entry, true)).toEqual({
+      start_time: PLANNED_START,
+      end_time: PLANNED_END,
+      actual_start_time: ACTUAL_START,
+      actual_end_time: null,
+    });
   });
 
-  it('planned origin で actual に差分があれば planned のみ書き戻す', () => {
+  it('planned origin: planned と actual（確定値そのまま）を書き戻す', () => {
     const entry: EntryLike = {
       origin: 'planned',
       start_time: PLANNED_START,
@@ -249,6 +250,8 @@ describe('buildUndoTimeUpdateData', () => {
     expect(buildUndoTimeUpdateData(entry, false)).toEqual({
       start_time: PLANNED_START,
       end_time: PLANNED_END,
+      actual_start_time: ACTUAL_START,
+      actual_end_time: ACTUAL_END,
     });
   });
 

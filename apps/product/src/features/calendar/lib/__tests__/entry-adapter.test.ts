@@ -18,16 +18,12 @@ function makeEntry(overrides: Partial<EntryWithTags> & { id: string }): EntryWit
     actual_end_time: null,
     duration_minutes: null,
     fulfillment_score: null,
+    skipped_at: null,
     created_at: '2026-04-26T00:00:00.000Z',
     updated_at: '2026-04-26T00:00:00.000Z',
     tagId: null,
     ...overrides,
   };
-
-  if (entry.origin === 'planned') {
-    entry.actual_start_time = overrides.actual_start_time ?? entry.start_time;
-    entry.actual_end_time = overrides.actual_end_time ?? entry.end_time;
-  }
 
   return entry;
 }
