@@ -8,9 +8,9 @@ import { useCallback } from 'react';
 import { DateNavigator } from '@/lib/components/common/DateNavigator';
 import { DateRangeDisplay } from '@/lib/components/common/DateRangeDisplay';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
-import { addDays, addMonths, addWeeks } from '@/lib/date/core';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
+import { writeReviewSearchParams } from '../lib/date-param';
 import type { ReviewGranularity } from '../stores/useReviewFilterStore';
 import { useReviewFilterStore } from '../stores/useReviewFilterStore';
 import { MobileReviewHeader } from './layout/MobileReviewHeader';
@@ -23,10 +23,6 @@ const TODAY_LABEL_KEYS: Record<ReviewGranularity, string> = {
   month: 'common.time.thisMonth',
   year: 'calendar.stats.thisYear',
 };
-
-function formatDateParam(date: Date): string {
-  return date.toISOString().split('T')[0]!;
-}
 
 interface ReviewLayoutProps {
   showGranularity?: boolean;
@@ -55,40 +51,13 @@ export function ReviewLayout({
   const todayLabel = t(TODAY_LABEL_KEYS[granularity]);
   const dateDisplayProps = useReviewDateDisplayProps(currentDate, granularity);
 
+  // store 更新 → 更新後の状態を URL に書く、を常にセットで行う。
+  // 日付計算は store の navigate() に一本化（ここで switch を再実装しない）
   const handleNavigate = useCallback(
     (direction: 'prev' | 'next' | 'today') => {
-      const store = useReviewFilterStore.getState();
-      const current = store.currentDate;
-      const g = store.granularity;
-
-      let newDate: Date;
-      if (direction === 'today') {
-        newDate = new Date();
-      } else {
-        const delta = direction === 'next' ? 1 : -1;
-        switch (g) {
-          case 'day':
-            newDate = addDays(current, delta);
-            break;
-          case 'week':
-            newDate = addWeeks(current, delta);
-            break;
-          case 'month':
-            newDate = addMonths(current, delta);
-            break;
-          case 'year':
-            newDate = new Date(current);
-            newDate.setFullYear(newDate.getFullYear() + delta);
-            break;
-        }
-      }
-
-      store.setCurrentDate(newDate);
-
-      const params = new URLSearchParams(window.location.search);
-      params.set('g', g);
-      params.set('d', formatDateParam(newDate));
-      window.history.replaceState(null, '', `${pathname}?${params.toString()}`);
+      useReviewFilterStore.getState().navigate(direction);
+      const next = useReviewFilterStore.getState();
+      writeReviewSearchParams(pathname, next.granularity, next.currentDate);
     },
     [pathname],
   );
@@ -96,11 +65,7 @@ export function ReviewLayout({
   const handleGranularityChange = useCallback(
     (newGranularity: ReviewGranularity) => {
       setGranularity(newGranularity);
-
-      const params = new URLSearchParams(window.location.search);
-      params.set('g', newGranularity);
-      params.set('d', formatDateParam(currentDate));
-      window.history.replaceState(null, '', `${pathname}?${params.toString()}`);
+      writeReviewSearchParams(pathname, newGranularity, currentDate);
     },
     [setGranularity, currentDate, pathname],
   );
@@ -108,11 +73,7 @@ export function ReviewLayout({
   const handleDateSelect = useCallback(
     (date: Date) => {
       useReviewFilterStore.getState().setCurrentDate(date);
-
-      const params = new URLSearchParams(window.location.search);
-      params.set('g', granularity);
-      params.set('d', formatDateParam(date));
-      window.history.replaceState(null, '', `${pathname}?${params.toString()}`);
+      writeReviewSearchParams(pathname, granularity, date);
     },
     [granularity, pathname],
   );

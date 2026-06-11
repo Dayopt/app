@@ -10,18 +10,12 @@ import {
   computePreviousDateRange,
   computeStatsDateRange,
 } from './compute-date-range';
+import { parseReviewDateParam } from './date-param';
 
 interface PrefetchReviewOptions {
   granularity?: ReviewGranularity | undefined;
   /** YYYY-MM-DD（URL の ?d=）。省略時は今日 */
   dateStr?: string | undefined;
-}
-
-/** YYYY-MM-DD を正午基準で解釈（TZ ずれで日付が前後しにくい基準値） */
-function parseDateParam(value: string | undefined): Date {
-  if (!value) return new Date();
-  const parsed = new Date(`${value}T12:00:00`);
-  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
 /**
@@ -36,7 +30,7 @@ export async function prefetchReviewData(options: PrefetchReviewOptions = {}) {
   const helpers = await createServerHelpers();
 
   const granularity = options.granularity ?? 'week';
-  const baseDate = parseDateParam(options.dateStr);
+  const baseDate = parseReviewDateParam(options.dateStr);
   const headersList = await headers();
   const serverTimezone = headersList.get('x-user-timezone') ?? 'UTC';
   const dateRange = computeStatsDateRange(baseDate, granularity, serverTimezone);

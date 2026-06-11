@@ -2,18 +2,13 @@
 
 import { useState } from 'react';
 
+import { parseReviewDateParam } from '../lib/date-param';
 import { useReviewFilterStore } from '../stores/useReviewFilterStore';
 import type { ReviewViewRootProps } from '../types/review.types';
 import { DailyReview } from './views/DailyReview';
 import { MonthlyReview } from './views/MonthlyReview';
 import { WeeklyReview } from './views/WeeklyReview';
 import { YearlyReview } from './views/YearlyReview';
-
-/** YYYY-MM-DD を正午基準で解釈（TZ ずれで日付が前後しにくい基準値） */
-function parseDateParam(value: string): Date {
-  const parsed = new Date(`${value}T12:00:00`);
-  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-}
 
 /**
  * ReviewView - 粒度別ビューの dispatcher
@@ -31,7 +26,7 @@ export function ReviewView({ className, initialGranularity, initialDateStr }: Re
     if (initialGranularity || initialDateStr) {
       useReviewFilterStore.setState({
         ...(initialGranularity ? { granularity: initialGranularity } : {}),
-        ...(initialDateStr ? { currentDate: parseDateParam(initialDateStr) } : {}),
+        ...(initialDateStr ? { currentDate: parseReviewDateParam(initialDateStr) } : {}),
       });
     }
   });

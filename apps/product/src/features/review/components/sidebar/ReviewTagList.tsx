@@ -37,6 +37,7 @@ import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
+import { buildReviewMainPath, buildReviewTagPath } from '../../lib/date-param';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
 import { ReviewTagActionsMenu } from '../ReviewTagActionsMenu';
 
@@ -225,34 +226,9 @@ function moveTagTree(nodes: TagTreeNode[], activeId: string, overId: string): Ta
   return nextNodes;
 }
 
-function formatDateParam(date: Date): string {
-  return date.toISOString().split('T')[0]!;
-}
-
 function findActiveTagId(pathname: string): string | null {
   const match = pathname.match(/\/review\/tags\/([^/?#]+)/);
   return match?.[1] ? decodeURIComponent(match[1]) : null;
-}
-
-function buildReviewTagPath(
-  locale: string,
-  tagId: string,
-  date: Date,
-  granularity: string,
-): string {
-  const params = new URLSearchParams({
-    g: granularity,
-    d: formatDateParam(date),
-  });
-  return `/${locale}/review/tags/${tagId}?${params.toString()}`;
-}
-
-function buildReviewPath(locale: string, date: Date, granularity: string): string {
-  const params = new URLSearchParams({
-    g: granularity,
-    d: formatDateParam(date),
-  });
-  return `/${locale}/review?${params.toString()}`;
 }
 
 interface TagRowProps {
@@ -615,7 +591,7 @@ export function ReviewTagList() {
   );
 
   const handleOverallNavigate = () => {
-    router.push(buildReviewPath(locale, currentDate, granularity));
+    router.push(buildReviewMainPath(locale, currentDate, granularity));
   };
 
   const handleNavigate = (tagId: string) => {

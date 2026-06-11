@@ -10,12 +10,9 @@ import { TagDeleteStrategyDialog, TagIcon, useDeleteTag, useTags, type Tag } fro
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
+import { buildReviewMainPath, buildReviewTagPath } from '../../lib/date-param';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
 import { ReviewTagActionsMenu } from '../ReviewTagActionsMenu';
-
-function formatDateParam(date: Date): string {
-  return date.toISOString().split('T')[0]!;
-}
 
 function sortActiveTags(tags: Tag[] | undefined): Tag[] {
   if (!tags) return [];
@@ -25,27 +22,6 @@ function sortActiveTags(tags: Tag[] | undefined): Tag[] {
 function findActiveTagId(pathname: string): string | null {
   const match = pathname.match(/\/review\/tags\/([^/?#]+)/);
   return match?.[1] ? decodeURIComponent(match[1]) : null;
-}
-
-function buildReviewTagPath(
-  locale: string,
-  tagId: string,
-  date: Date,
-  granularity: string,
-): string {
-  const params = new URLSearchParams({
-    g: granularity,
-    d: formatDateParam(date),
-  });
-  return `/${locale}/review/tags/${tagId}?${params.toString()}`;
-}
-
-function buildReviewPath(locale: string, date: Date, granularity: string): string {
-  const params = new URLSearchParams({
-    g: granularity,
-    d: formatDateParam(date),
-  });
-  return `/${locale}/review?${params.toString()}`;
 }
 
 /**
@@ -146,7 +122,7 @@ export function ReviewTagChipRow({ className }: { className?: string }) {
           role="listitem"
           aria-current={isOverallActive ? 'page' : undefined}
           onClick={() => {
-            router.push(buildReviewPath(locale, currentDate, granularity));
+            router.push(buildReviewMainPath(locale, currentDate, granularity));
           }}
           className={cn(
             'hover:bg-state-hover flex h-12 min-w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-2 transition-colors duration-150',
