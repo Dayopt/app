@@ -326,6 +326,31 @@ export const OverlayOvertimeOnGrid: Story = {
 };
 
 // ---------------------------------------------------------------------------
+// スキップ（計画したがやらなかった）
+// ---------------------------------------------------------------------------
+
+/** スキップ済みエントリ。muted + 打ち消し線で「実行されなかった計画」を表現。
+ * 実績レイヤーの強調（アクセント / 18% 背景）は消え、計画レイヤー相当の見た目に落ちる。 */
+export const Skipped: Story = {
+  render: () => (
+    <Slot>
+      <EntryCard
+        entry={{
+          ...baseEntry,
+          entryState: 'past',
+          origin: 'planned',
+          isSkipped: true,
+        }}
+        tagName="Deep Work"
+        tagColor="blue"
+        position={basePosition}
+        hourHeight={72}
+      />
+    </Slot>
+  ),
+};
+
+// ---------------------------------------------------------------------------
 // 予定外（origin='unplanned'）
 // ---------------------------------------------------------------------------
 
@@ -527,6 +552,27 @@ export const AllPatterns: Story = {
             tagColor="blue"
             position={basePosition}
             isDragging
+          />
+        </Slot>
+      </section>
+
+      {/* --- スキップ --- */}
+      <section>
+        <p className="text-muted-foreground mb-2 text-xs">
+          Skipped（計画したがやらなかった → muted + 打ち消し線）
+        </p>
+        <Slot>
+          <EntryCard
+            entry={{
+              ...baseEntry,
+              entryState: 'past',
+              origin: 'planned',
+              isSkipped: true,
+            }}
+            tagName="Deep Work"
+            tagColor="blue"
+            position={basePosition}
+            hourHeight={72}
           />
         </Slot>
       </section>
