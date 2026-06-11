@@ -10,6 +10,7 @@ export type EntryLike = {
   actual_start_time?: string | null;
   actual_end_time?: string | null;
   duration_minutes?: number | null;
+  skipped_at?: string | null;
 };
 
 /** end <= now なら 'unplanned'、それ以外は 'planned'。now を注入できるのでテストが決定論的になる。 */
@@ -45,6 +46,47 @@ export function getPlannedMinutes(entry: EntryLike): number | null {
   return (
     entry.duration_minutes ?? Math.round((range.end.getTime() - range.start.getTime()) / 60000)
   );
+}
+
+/** 計画したがやらなかった planned エントリかどうか。 */
+export function isSkipped(entry: EntryLike): boolean {
+  return entry.skipped_at != null;
+}
+
+/**
+ * effective actual range（自動記録モデルの実績）。
+ *
+ * DB 側の唯一の定義は entries_effective view（supabase/migrations/
+ * 20260610000000_entry_auto_record_model.sql）。本関数はその同義実装:
+ * - actual が両方ある → その値（ユーザーが編集・確定した実績）
+ * - planned かつ未スキップかつ end <= now → plan range（自動記録）
+ * - それ以外（未来の planned / skipped）→ null（実績なし）
+ */
+export function getEffectiveActualRange(
+  entry: EntryLike,
+  now: Date = new Date(),
+): TimeRange | null {
+  const actual = getActualRange(entry);
+  if (actual) return actual;
+
+  if (entry.origin === 'planned' && !isSkipped(entry)) {
+    const planned = getPlannedRange(entry);
+    if (planned && planned.end.getTime() <= now.getTime()) return planned;
+  }
+
+  return null;
+}
+
+/** effective actual range が plan の自動転写（ユーザー未編集）かどうか。 */
+export function isAutoRecorded(entry: EntryLike, now: Date = new Date()): boolean {
+  return getActualRange(entry) === null && getEffectiveActualRange(entry, now) !== null;
+}
+
+/** effective actual 所要時間（分）。実績なし（未来・skipped）は null。 */
+export function getEffectiveActualMinutes(entry: EntryLike, now: Date = new Date()): number | null {
+  const range = getEffectiveActualRange(entry, now);
+  if (!range) return null;
+  return Math.round((range.end.getTime() - range.start.getTime()) / 60000);
 }
 
 /** actual 所要時間（分）。常に actual_start/actual_end から算出する。 */

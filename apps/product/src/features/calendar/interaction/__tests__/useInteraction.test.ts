@@ -142,7 +142,7 @@ describe('useInteraction resize completion', () => {
     );
   });
 
-  it('予定と記録がズレた entry の resize 完了時だけ actual 固定フラグを渡す', () => {
+  it('予定と記録がズレた entry の resize 完了時も actual 固定フラグは渡さない（自動記録モデルでは planned のみ更新）', () => {
     const onEventUpdate = vi.fn();
     const overtimeEntry: CalendarEvent = {
       ...baseEvent,
@@ -173,7 +173,7 @@ describe('useInteraction resize completion', () => {
 
     expect(onEventUpdate).toHaveBeenCalledWith(
       'entry-1',
-      expect.objectContaining({ keepActualTime: true }),
+      expect.not.objectContaining({ keepActualTime: true }),
     );
   });
 });

@@ -38,6 +38,8 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
   const isUnplanned = isUnplannedEntry(entry);
   const isPlanned = isPlannedEntry(entry);
 
+  // 自動記録モデル: planned は actual NULL（未編集）でも plan 位置に表示する。
+  // unplanned は actual が表示位置そのものなので必須。
   if (isUnplanned && (!entry.actual_start_time || !entry.actual_end_time)) {
     return null;
   }
@@ -91,6 +93,7 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
     actualEndDate,
     plannedStartDate,
     plannedEndDate,
+    isSkipped: entry.skipped_at != null,
   };
 }
 

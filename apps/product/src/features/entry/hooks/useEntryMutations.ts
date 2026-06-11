@@ -15,7 +15,7 @@ import { api } from '@/lib/trpc';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRef } from 'react';
-import { determineEntryOrigin } from '../domain';
+import { determineEntryOrigin, getEffectiveActualRange, isAutoRecorded } from '../domain';
 import { clearNew, markNew } from '../lib/new-entry-tracker';
 import type { UpdateEntryInput } from '../schemas/entry';
 import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
@@ -62,6 +62,53 @@ export function useEntryMutations(options?: {
     return latestUpdateSeqByIdRef.current.get(id) === mutationSeq;
   };
 
+  /**
+   * 予定外記録の作成が TIME_OVERLAP で拒否された時、衝突相手が「自動記録
+   * （過去の planned・actual 未編集・未スキップ）だけ」で、かつ新記録が
+   * その plan range を完全に覆う場合に、スキップで解決できる entry ID を返す。
+   *
+   * 部分重複や確定済み実績との衝突が混ざる場合は空配列（実績トリムは
+   * インスペクターで行う）。
+   */
+  const findSkippableAutoRecords = (input: {
+    start_time?: string | null | undefined;
+    end_time?: string | null | undefined;
+    actual_start_time?: string | null | undefined;
+    actual_end_time?: string | null | undefined;
+  }): string[] => {
+    const startIso = input.actual_start_time ?? input.start_time;
+    const endIso = input.actual_end_time ?? input.end_time;
+    if (!startIso || !endIso) return [];
+    // スキップで空くのは実績レイヤーのみ。planned 同士の衝突は解決できない
+    if (determineEntryOrigin(endIso) !== 'unplanned') return [];
+
+    const start = new Date(startIso).getTime();
+    const end = new Date(endIso).getTime();
+
+    type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
+    const lists = queryClient.getQueriesData<EntryListData>({ predicate: isEntriesListQuery });
+    const byId = new Map<string, EntryListData[number]>();
+    for (const [, data] of lists) {
+      for (const entry of data ?? []) byId.set(entry.id, entry);
+    }
+
+    const skippable: string[] = [];
+    for (const entry of byId.values()) {
+      const range = getEffectiveActualRange(entry);
+      if (!range) continue;
+      const s = range.start.getTime();
+      const e = range.end.getTime();
+      if (!(s < end && e > start)) continue;
+      if (isAutoRecorded(entry) && s >= start && e <= end) {
+        skippable.push(entry.id);
+      } else {
+        // 確定済み実績 or 部分重複の自動記録が混ざる → ワンタップでは解決しない
+        return [];
+      }
+    }
+    return skippable;
+  };
+
   // 作成（楽観的更新付き）
   const createEntry = api.entries.create.useMutation({
     onMutate: async (input) => {
@@ -87,11 +134,13 @@ export function useEntryMutations(options?: {
         origin,
         start_time: origin === 'planned' ? selectedStart : null,
         end_time: origin === 'planned' ? selectedEnd : null,
-        actual_start_time: selectedStart,
-        actual_end_time: selectedEnd,
+        // 自動記録モデル: actual はユーザー編集時のみ。planned は NULL で作成される
+        actual_start_time: origin === 'unplanned' ? selectedStart : null,
+        actual_end_time: origin === 'unplanned' ? selectedEnd : null,
         duration_minutes: null,
         fulfillment_score: input.fulfillment_score ?? null,
         deleted_at: null,
+        skipped_at: null,
         user_id: '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -157,7 +206,7 @@ export function useEntryMutations(options?: {
         { ...newEntry, tagId: input.tagId ?? null },
       );
     },
-    onError: (error, _input, context) => {
+    onError: (error, input, context) => {
       logger.error('[mutation:create] onError', error);
 
       // 新規作成アニメーションをクリア
@@ -177,6 +226,28 @@ export function useEntryMutations(options?: {
         error.message.includes('既にエントリがあります') ||
         error.message.includes('TIME_OVERLAP')
       ) {
+        // 衝突相手が自動記録だけなら「スキップして記録」のワンタップ解決を出す
+        const skippableIds = findSkippableAutoRecords(input);
+        if (skippableIds.length > 0) {
+          toast.error(t('entry.errors.timeOverlapAutoRecord'), {
+            action: {
+              label: t('entry.errors.skipAndRecord'),
+              onClick: () => {
+                void (async () => {
+                  try {
+                    for (const id of skippableIds) {
+                      await skipEntry.mutateAsync({ id });
+                    }
+                    createEntry.mutate(input);
+                  } catch {
+                    // skip 失敗時は skipEntry.onError が toast 済み
+                  }
+                })();
+              },
+            },
+          });
+          return;
+        }
         toast.error(t('entry.errors.timeOverlap'));
         return;
       }
@@ -569,6 +640,135 @@ export function useEntryMutations(options?: {
     },
   });
 
+  // スキップ解除（Undo用 — skipped_at をクリアして自動記録を復活させる）
+  const unskipEntry = api.entries.unskip.useMutation({
+    onMutate: async ({ id }) => {
+      logger.debug('[mutation:unskip] onMutate', { id });
+
+      await utils.entries.list.cancel();
+      await utils.entries.getById.cancel({ id });
+
+      type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
+      const previousEntriesList = queryClient.getQueriesData<EntryListData>({
+        predicate: isEntriesListQuery,
+      });
+      const previousEntry = utils.entries.getById.getData({ id });
+
+      queryClient.setQueriesData<EntryListData>({ predicate: isEntriesListQuery }, (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map((entry) => (entry.id === id ? { ...entry, skipped_at: null } : entry));
+      });
+      utils.entries.getById.setData({ id }, (oldData) => {
+        if (!oldData) return undefined;
+        return { ...oldData, skipped_at: null };
+      });
+
+      return { id, previousEntriesList, previousEntry };
+    },
+    onSuccess: (_, { id }) => {
+      logger.debug('[mutation:unskip] onSuccess', { id });
+      toast.success(t('entry.toast.unskipped'));
+    },
+    onError: (err, _variables, context) => {
+      logger.error('[mutation:unskip] onError', err);
+
+      // スキップ後に入れた記録と重なる場合、自動記録は復活できない
+      if (err.message.includes('TIME_OVERLAP') || err.message.includes('重複')) {
+        toast.error(t('entry.errors.timeOverlap'));
+      } else {
+        toast.error(t('entry.toast.updateFailed'));
+      }
+
+      if (context?.previousEntriesList) {
+        for (const [queryKey, data] of context.previousEntriesList) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+      if (context?.previousEntry) {
+        utils.entries.getById.setData({ id: context.id }, context.previousEntry);
+      }
+    },
+    onSettled: (_, __, variables) => {
+      void utils.entries.list.invalidate();
+      if (variables?.id) {
+        void utils.entries.getById.invalidate({ id: variables.id });
+      }
+    },
+  });
+
+  // スキップ（計画したがやらなかった。実績集計から除外、計画履歴は残る）
+  const skipEntry = api.entries.skip.useMutation({
+    onMutate: async ({ id }) => {
+      logger.debug('[mutation:skip] onMutate', { id });
+
+      await utils.entries.list.cancel();
+      await utils.entries.getById.cancel({ id });
+
+      type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
+      const previousEntriesList = queryClient.getQueriesData<EntryListData>({
+        predicate: isEntriesListQuery,
+      });
+      const previousEntry = utils.entries.getById.getData({ id });
+
+      // entries_skip_shape 制約に合わせ、編集済み actual も楽観的にクリアする
+      const skip = <
+        T extends {
+          skipped_at?: string | null;
+          actual_start_time?: string | null;
+          actual_end_time?: string | null;
+        },
+      >(
+        entry: T,
+      ): T => ({
+        ...entry,
+        skipped_at: new Date().toISOString(),
+        actual_start_time: null,
+        actual_end_time: null,
+      });
+
+      queryClient.setQueriesData<EntryListData>({ predicate: isEntriesListQuery }, (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map((entry) => (entry.id === id ? skip(entry) : entry));
+      });
+      utils.entries.getById.setData({ id }, (oldData) => {
+        if (!oldData) return undefined;
+        return skip(oldData);
+      });
+
+      return { id, previousEntriesList, previousEntry };
+    },
+    onSuccess: (_, { id }) => {
+      logger.debug('[mutation:skip] onSuccess', { id });
+      toast.success(t('entry.toast.skipped'), {
+        action: {
+          label: t('common.undo'),
+          onClick: () => {
+            unskipEntry.mutate({ id });
+          },
+        },
+      });
+    },
+    onError: (err, _variables, context) => {
+      logger.error('[mutation:skip] onError', err);
+      toast.error(t('entry.toast.skipFailed'));
+
+      if (context?.previousEntriesList) {
+        for (const [queryKey, data] of context.previousEntriesList) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+      if (context?.previousEntry) {
+        utils.entries.getById.setData({ id: context.id }, context.previousEntry);
+      }
+    },
+    onSettled: (_, __, variables) => {
+      void utils.entries.list.invalidate();
+      if (variables?.id) {
+        void utils.entries.getById.invalidate({ id: variables.id });
+      }
+    },
+  });
+
   // 復元（Undo用 — soft-deleteされたエントリのdeleted_atをクリア）
   const restoreEntry = api.entries.restore.useMutation({
     onSuccess: (_, { id }) => {
@@ -763,6 +963,8 @@ export function useEntryMutations(options?: {
     updateEntry,
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,
+    skipEntry,
+    unskipEntry,
     restoreEntry,
     deleteEntry,
     bulkUpdateEntries,

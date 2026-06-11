@@ -60,6 +60,8 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
     updateEntry,
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,
+    skipEntry,
+    unskipEntry,
     prepareForStructuralMutation,
     finishStructuralMutation,
   } = actions;
@@ -138,6 +140,37 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
     convertUnplannedToPlanned,
   ]);
 
+  const isSkipped = entry?.skipped_at != null;
+
+  // スキップは actual を破棄する構造変更なので、pending 保存を flush してから実行する
+  const handleSkip = useCallback(() => {
+    if (!entryId || !isPlanned) return;
+    void prepareForStructuralMutation()
+      .then(() => {
+        return skipEntry.mutateAsync({ id: entryId });
+      })
+      .catch(() => {
+        // 保存側で toast 済み。古いデータのままスキップしない。
+      })
+      .finally(() => {
+        finishStructuralMutation();
+      });
+  }, [entryId, isPlanned, prepareForStructuralMutation, finishStructuralMutation, skipEntry]);
+
+  const handleUnskip = useCallback(() => {
+    if (!entryId || !isSkipped) return;
+    void prepareForStructuralMutation()
+      .then(() => {
+        return unskipEntry.mutateAsync({ id: entryId });
+      })
+      .catch(() => {
+        // 保存側で toast 済み
+      })
+      .finally(() => {
+        finishStructuralMutation();
+      });
+  }, [entryId, isSkipped, prepareForStructuralMutation, finishStructuralMutation, unskipEntry]);
+
   const handleFulfillmentChange = useCallback(
     (score: FulfillmentScore | null) => {
       if (!entryId) return;
@@ -188,9 +221,12 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
     origin: entry.origin,
     tagId: selectedTagId,
     isUpcoming: getEntryState(entry) === 'upcoming',
+    isSkipped,
     onViewStats: onViewStats && selectedTagId ? handleViewStats : undefined,
-    onMarkUnplanned: isPlanned ? handleMarkUnplanned : undefined,
+    onMarkUnplanned: isPlanned && !isSkipped ? handleMarkUnplanned : undefined,
     onRestorePlanned: isUnplanned ? handleRestorePlanned : undefined,
+    onSkip: isPlanned ? handleSkip : undefined,
+    onUnskip: isPlanned ? handleUnskip : undefined,
     onDelete: handleDelete,
   });
 
@@ -256,6 +292,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
             onEndChange={(time) => {
               handleActualEndChange(time);
             }}
+            disabled={isSkipped}
             testId="entry-inspector-actual-time"
           />
 

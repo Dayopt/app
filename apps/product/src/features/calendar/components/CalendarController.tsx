@@ -66,7 +66,6 @@ export interface CalendarControllerProps {
       startTime: Date;
       endTime: Date;
       resetActualTime?: boolean;
-      keepActualTime?: boolean;
     },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
   onDeleteEntry: (entryId: string) => void;

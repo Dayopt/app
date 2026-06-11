@@ -64,6 +64,8 @@ vi.mock('@/lib/trpc', () => {
         update: makeMutation('update'),
         convertPlannedToUnplanned: makeMutation('convertPlannedToUnplanned'),
         convertUnplannedToPlanned: makeMutation('convertUnplannedToPlanned'),
+        skip: makeMutation('skip'),
+        unskip: makeMutation('unskip'),
         delete: makeMutation('delete'),
         restore: makeMutation('restore'),
         bulkUpdate: makeMutation('bulkUpdate'),
@@ -508,6 +510,92 @@ describe('useEntryMutations.convertUnplannedToPlanned', () => {
       actual_start_time: '2026-04-27T01:00:00.000Z',
       actual_end_time: '2026-04-27T02:00:00.000Z',
     });
+  });
+});
+
+// =============================================================================
+// skip / unskip
+// =============================================================================
+
+describe('useEntryMutations.skipEntry', () => {
+  it('onMutate: skipped_at を立てて actual をクリアする（entries_skip_shape 準拠）', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [
+      {
+        id: 'e1',
+        origin: 'planned',
+        start_time: '2026-04-27T01:00:00.000Z',
+        end_time: '2026-04-27T02:00:00.000Z',
+        actual_start_time: '2026-04-27T01:10:00.000Z',
+        actual_end_time: '2026-04-27T02:10:00.000Z',
+        skipped_at: null,
+      },
+    ]);
+
+    await captured.skip!.onMutate!({ id: 'e1' });
+
+    const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)!;
+    expect(cached[0]?.skipped_at).toEqual(expect.any(String));
+    expect(cached[0]).toMatchObject({
+      actual_start_time: null,
+      actual_end_time: null,
+      start_time: '2026-04-27T01:00:00.000Z',
+      end_time: '2026-04-27T02:00:00.000Z',
+    });
+  });
+
+  it('onSuccess: undo action 付き toast を出し、クリックで unskip.mutate({id}) が呼ばれる', () => {
+    renderUseEntryMutations();
+
+    captured.skip!.onSuccess!({ id: 'e1' }, { id: 'e1' }, undefined);
+
+    expect(toastSuccess).toHaveBeenCalledWith(
+      'entry.toast.skipped',
+      expect.objectContaining({ action: expect.objectContaining({ label: 'common.undo' }) }),
+    );
+    const action = (toastSuccess.mock.calls[0]?.[1] as { action: { onClick: () => void } }).action;
+    action.onClick();
+    expect(mutateMocks.unskip).toHaveBeenCalledWith({ id: 'e1' });
+  });
+
+  it('onError: snapshot からロールバックし skipFailed toast を出す', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [{ id: 'e1', origin: 'planned', skipped_at: null }]);
+
+    const ctx = await captured.skip!.onMutate!({ id: 'e1' });
+    captured.skip!.onError!({ message: 'fail' }, { id: 'e1' }, ctx);
+
+    expect(toastError).toHaveBeenCalledWith('entry.toast.skipFailed');
+    const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)!;
+    expect(cached[0]?.skipped_at).toBeNull();
+  });
+});
+
+describe('useEntryMutations.unskipEntry', () => {
+  it('onMutate: skipped_at をクリアする（自動記録の復活）', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [
+      { id: 'e1', origin: 'planned', skipped_at: '2026-04-27T03:00:00.000Z' },
+    ]);
+
+    await captured.unskip!.onMutate!({ id: 'e1' });
+
+    const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)!;
+    expect(cached[0]?.skipped_at).toBeNull();
+  });
+
+  it('onError: 重複（スキップ後に入れた記録と衝突）は timeOverlap toast を出してロールバック', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [
+      { id: 'e1', origin: 'planned', skipped_at: '2026-04-27T03:00:00.000Z' },
+    ]);
+
+    const ctx = await captured.unskip!.onMutate!({ id: 'e1' });
+    captured.unskip!.onError!({ message: 'TIME_OVERLAP: 実績時間が重複' }, { id: 'e1' }, ctx);
+
+    expect(toastError).toHaveBeenCalledWith('entry.errors.timeOverlap');
+    const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)!;
+    expect(cached[0]?.skipped_at).toBe('2026-04-27T03:00:00.000Z');
   });
 });
 

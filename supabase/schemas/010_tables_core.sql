@@ -32,6 +32,9 @@ CREATE TABLE public.profiles (
 -- origin='planned' → 事前に計画したタイムボックス
 -- origin='unplanned' → 実行後に記録した時間
 -- fulfillment_score IS NOT NULL → レビュー済み
+-- 自動記録モデル（20260610000000）: actual_* は「ユーザーが編集・確定した実績」のみ
+-- （NULL = 未編集）。過去になった planned は読み取り時に plan range を実績として扱う
+-- （entries_effective view が唯一の定義）。skipped_at は「計画したがやらなかった」
 CREATE TABLE public.entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -51,6 +54,7 @@ CREATE TABLE public.entries (
     END
   ) STORED,
   fulfillment_score INTEGER,      -- 充実度 1-3（低/中/高）
+  skipped_at TIMESTAMPTZ,         -- 計画したがやらなかった（自動記録・実績集計から除外）
   deleted_at TIMESTAMPTZ,         -- ソフトデリート
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

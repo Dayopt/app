@@ -29,8 +29,11 @@ export function rangesMatch(
 }
 
 /**
- * planned origin の entry で、planned range (start_time/end_time) と actual range
- * (actual_start_time/actual_end_time) の時刻 ISO が**完全一致していない**かどうか。
+ * planned origin の entry で、ユーザーが確定した actual range が planned range と
+ * **異なっている**かどうか。
+ *
+ * 自動記録モデルでは actual NULL = 未編集（実績は plan に追従する自動記録）なので、
+ * actual が無い場合は diff なしとして扱う。
  *
  * 注意: `hasPlannedActualDiff` (entry-time-model) は duration の差分を見ているのに対し、
  * こちらは ISO 文字列の完全一致を見る。同じ duration で時刻だけシフトしているケースは
@@ -39,6 +42,7 @@ export function rangesMatch(
  */
 export function hasActualRangeDiff(entry: EntryLike | null | undefined): boolean {
   if (entry?.origin !== 'planned') return false;
+  if (!entry.actual_start_time || !entry.actual_end_time) return false;
   return !rangesMatch(
     entry.start_time,
     entry.end_time,
@@ -51,12 +55,11 @@ export function hasActualRangeDiff(entry: EntryLike | null | undefined): boolean
  * Drag / resize / 新規作成時の時刻 patch を構築する。entry.origin と
  * actual range の状態に応じて、planned / actual の片方だけ更新するか両方更新するかを決める。
  *
- * ルール:
- * - `entry.origin === 'planned' && resetActualTime`: planned / actual 両方を新時刻に揃える
+ * ルール（自動記録モデル: actual NULL = 未編集、実績は plan に追従する）:
+ * - `entry.origin === 'planned' && resetActualTime`: planned を新時刻にし、actual を NULL（未編集）に戻す
  * - `entry.origin === 'unplanned'`: actual だけ更新（planned は触らない）
- * - `entry.origin === 'planned' && keepActualTime`: planned だけ更新し、actual は事実として固定する
- * - `entry.origin === 'planned' && hasActualRangeDiff && !resetActualTime`: planned と actual を同じ移動量で平行移動
- * - `entry.origin === 'planned'` で actual と一致している、または `entry` が null（新規）: planned / actual 両方を新時刻に揃える
+ * - `entry.origin === 'planned'`: planned のみ更新（確定済み actual は保持、未編集 actual は NULL のまま）
+ * - `entry` が null（新規）: planned range として渡す（origin はサーバーが時間位置から決定）
  * - その他（origin が不明など）: actual のみ更新
  */
 export function buildTimeUpdateData(
@@ -64,7 +67,6 @@ export function buildTimeUpdateData(
   startTime: Date,
   endTime: Date,
   resetActualTime = false,
-  keepActualTime = false,
 ): EntryTimeUpdateData {
   const startISO = startTime.toISOString();
   const endISO = endTime.toISOString();
@@ -73,8 +75,8 @@ export function buildTimeUpdateData(
     return {
       start_time: startISO,
       end_time: endISO,
-      actual_start_time: startISO,
-      actual_end_time: endISO,
+      actual_start_time: null,
+      actual_end_time: null,
     };
   }
 
@@ -85,40 +87,10 @@ export function buildTimeUpdateData(
     };
   }
 
-  if (entry?.origin === 'planned' && keepActualTime) {
-    return {
-      start_time: startISO,
-      end_time: endISO,
-    };
-  }
-
-  if (entry?.origin === 'planned' && hasActualRangeDiff(entry) && !resetActualTime) {
-    if (entry.start_time && entry.actual_start_time && entry.actual_end_time) {
-      const deltaMs = startTime.getTime() - new Date(entry.start_time).getTime();
-      return {
-        start_time: startISO,
-        end_time: endISO,
-        actual_start_time: new Date(
-          new Date(entry.actual_start_time).getTime() + deltaMs,
-        ).toISOString(),
-        actual_end_time: new Date(
-          new Date(entry.actual_end_time).getTime() + deltaMs,
-        ).toISOString(),
-      };
-    }
-
-    return {
-      start_time: startISO,
-      end_time: endISO,
-    };
-  }
-
   if (entry?.origin === 'planned' || !entry) {
     return {
       start_time: startISO,
       end_time: endISO,
-      actual_start_time: startISO,
-      actual_end_time: endISO,
     };
   }
 
@@ -132,12 +104,12 @@ export function buildTimeUpdateData(
  * `buildTimeUpdateData` の逆操作。直前の entry スナップショットから、Undo で書き戻すべき
  * 時刻 patch を構築する。元の時刻が一部欠けていて復元不可能な場合は null を返す。
  *
- * ルール:
+ * ルール（自動記録モデル: actual NULL も「未編集」という復元可能な状態）:
  * - `entry === null`: null（復元不可）
  * - `entry.origin === 'unplanned'`: 元の actual_start/end を書き戻す。欠落していれば null
- * - `resetActualTime === true`: planned / actual の 4 フィールドすべて書き戻す。欠落していれば null
- * - `entry.origin === 'planned' && hasActualRangeDiff`: planned / actual の 4 フィールドすべて書き戻す
- * - その他: planned / actual の 4 フィールドすべて書き戻す
+ * - `resetActualTime === true` または planned: planned range と actual（NULL 含む）を書き戻す。
+ *   planned range が欠落していれば null
+ * - その他（origin 不明）: actual（NULL 含む）だけ書き戻す
  */
 export function buildUndoTimeUpdateData(
   entry: EntryLike | null | undefined,
@@ -153,47 +125,18 @@ export function buildUndoTimeUpdateData(
     };
   }
 
-  if (resetActualTime) {
-    if (
-      !entry.start_time ||
-      !entry.end_time ||
-      !entry.actual_start_time ||
-      !entry.actual_end_time
-    ) {
-      return null;
-    }
+  if (resetActualTime || entry.origin === 'planned') {
+    if (!entry.start_time || !entry.end_time) return null;
     return {
       start_time: entry.start_time,
       end_time: entry.end_time,
-      actual_start_time: entry.actual_start_time,
-      actual_end_time: entry.actual_end_time,
+      actual_start_time: entry.actual_start_time ?? null,
+      actual_end_time: entry.actual_end_time ?? null,
     };
   }
 
-  if (entry.origin === 'planned' && hasActualRangeDiff(entry)) {
-    if (
-      !entry.start_time ||
-      !entry.end_time ||
-      !entry.actual_start_time ||
-      !entry.actual_end_time
-    ) {
-      return null;
-    }
-    return {
-      start_time: entry.start_time,
-      end_time: entry.end_time,
-      actual_start_time: entry.actual_start_time,
-      actual_end_time: entry.actual_end_time,
-    };
-  }
-
-  if (!entry.start_time || !entry.end_time || !entry.actual_start_time || !entry.actual_end_time) {
-    return null;
-  }
   return {
-    start_time: entry.start_time,
-    end_time: entry.end_time,
-    actual_start_time: entry.actual_start_time,
-    actual_end_time: entry.actual_end_time,
+    actual_start_time: entry.actual_start_time ?? null,
+    actual_end_time: entry.actual_end_time ?? null,
   };
 }

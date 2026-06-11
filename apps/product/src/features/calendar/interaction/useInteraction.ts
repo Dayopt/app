@@ -61,7 +61,6 @@ export interface UseInteractionProps {
       startTime: Date;
       endTime: Date;
       resetActualTime?: boolean;
-      keepActualTime?: boolean;
     },
   ) => Promise<void | { skipToast: true }> | void;
   /** Callback when an event is clicked (not dragged) */
@@ -196,8 +195,10 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
         if (!hasCalendarActualRangeDiff(event) || !event?.actualStartDate) return null;
         return event.actualStartDate.getHours() * 60 + event.actualStartDate.getMinutes();
       },
-      checkOverlap: (entryId: string, start: Date, end: Date, operation: 'drag' | 'resize') => {
-        return checkClientSideOverlap(r.allEvents, entryId, start, end, operation);
+      // 自動記録モデルでは drag / resize とも「planned のみ移動・確定済み actual は固定」で
+      // 重複判定が同一なため operation は使わない（machine の API 形状だけ維持する）
+      checkOverlap: (entryId: string, start: Date, end: Date, _operation: 'drag' | 'resize') => {
+        return checkClientSideOverlap(r.allEvents, entryId, start, end);
       },
     };
   }
@@ -252,11 +253,12 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           break;
 
         case 'RESIZE_COMPLETE': {
-          const event = r.events.find((candidate) => candidate.id === effect.entryId);
+          // 自動記録モデル: planned の resize は planned のみ更新（確定済み actual は固定、
+          // 未編集 actual は NULL のまま）。buildTimeUpdateData が origin 別に処理するため
+          // ここで actual の扱いを指定する必要はない。
           r.onEventUpdate?.(effect.entryId, {
             startTime: effect.time.start,
             endTime: effect.time.end,
-            ...(hasCalendarActualRangeDiff(event) ? { keepActualTime: true } : {}),
           });
           break;
         }

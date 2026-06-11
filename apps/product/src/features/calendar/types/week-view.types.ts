@@ -29,7 +29,6 @@ export interface WeekGridProps {
           startTime: Date;
           endTime: Date;
           resetActualTime?: boolean;
-          keepActualTime?: boolean;
         },
       ) => void | Promise<void> | Promise<{ skipToast: true } | void>)
     | undefined;
@@ -48,7 +47,6 @@ export interface UseWeekViewOptions {
       startTime: Date;
       endTime: Date;
       resetActualTime?: boolean;
-      keepActualTime?: boolean;
     },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
 }

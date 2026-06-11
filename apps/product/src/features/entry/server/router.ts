@@ -231,6 +231,32 @@ export const entriesCoreRouter = createTRPCRouter({
       }
     }),
 
+  /** planned エントリをスキップ（計画したがやらなかった。実績集計から除外） */
+  skip: protectedProcedure
+    .meta({ description: 'planned エントリをスキップ（実績集計から除外、計画履歴は残る）' })
+    .input(entryIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const service = createEntryService(ctx.supabase);
+      try {
+        return await service.skip({ userId: ctx.userId, entryId: input.id });
+      } catch (error) {
+        handleServiceError(error);
+      }
+    }),
+
+  /** スキップを解除（自動記録が復活。Undo用） */
+  unskip: protectedProcedure
+    .meta({ description: 'エントリのスキップ解除（自動記録が復活）' })
+    .input(entryIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const service = createEntryService(ctx.supabase);
+      try {
+        return await service.unskip({ userId: ctx.userId, entryId: input.id });
+      } catch (error) {
+        handleServiceError(error);
+      }
+    }),
+
   // ---------------------------------------------------------------------------
   // Bulk Operations
   // ---------------------------------------------------------------------------

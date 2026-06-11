@@ -37,7 +37,6 @@ export interface DayContentProps {
           startTime: Date;
           endTime: Date;
           resetActualTime?: boolean;
-          keepActualTime?: boolean;
         },
       ) => Promise<void | { skipToast: true }>)
     | undefined; // D&D用

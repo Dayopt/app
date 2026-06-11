@@ -321,7 +321,7 @@ describe('EntryService.update', () => {
     );
   });
 
-  it('future planned更新でactual未指定ならplannedと同じ範囲で補完する', async () => {
+  it('future planned更新はplanned rangeのみ更新し、actualへコピーしない（自動記録モデル）', async () => {
     const existing = createMockEntry({
       id: 'entry-1',
       origin: 'planned',
@@ -358,14 +358,11 @@ describe('EntryService.update', () => {
       timezone: 'UTC',
     });
 
-    expect(updateMock.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        start_time: '2030-03-17T11:00:00Z',
-        end_time: '2030-03-17T12:00:00Z',
-        actual_start_time: '2030-03-17T11:00:00Z',
-        actual_end_time: '2030-03-17T12:00:00Z',
-      }),
-    );
+    // 自動記録モデル: planned の時間変更は plan range のみ。actual はコピーしない
+    expect(updateMock.update).toHaveBeenCalledWith({
+      start_time: '2030-03-17T11:00:00Z',
+      end_time: '2030-03-17T12:00:00Z',
+    });
   });
 });
 
@@ -415,6 +412,10 @@ describe('EntryService.convertPlannedToUnplanned', () => {
       origin: 'unplanned',
       start_time: null,
       end_time: null,
+      // 確定済み actual はそのまま引き継ぐ（unplanned は actual 必須）
+      actual_start_time: '2026-03-17T09:15:00Z',
+      actual_end_time: '2026-03-17T09:45:00Z',
+      skipped_at: null,
     });
   });
 
