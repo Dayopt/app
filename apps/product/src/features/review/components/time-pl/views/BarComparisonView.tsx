@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { TagIcon } from '@/features/tags';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +19,7 @@ interface BarComparisonViewProps {
 
 /** 横棒 予実比較 — タグごとに Budget vs Actual を横棒で比較 */
 export function BarComparisonView({ rows }: BarComparisonViewProps) {
+  const t = useTranslations('calendar.stats.overview');
   const maxMinutes = Math.max(...rows.map((r) => Math.max(r.budgetMinutes, r.actualMinutes)), 1);
 
   return (
@@ -27,11 +30,11 @@ export function BarComparisonView({ rows }: BarComparisonViewProps) {
       <div className="mt-2 flex justify-center gap-4">
         <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
           <span className="bg-primary/30 inline-block h-2 w-4 rounded-lg" />
-          予算
+          {t('planned')}
         </span>
         <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
           <span className="bg-primary inline-block h-2 w-4 rounded-lg" />
-          実績
+          {t('actual')}
         </span>
       </div>
     </div>
@@ -39,6 +42,7 @@ export function BarComparisonView({ rows }: BarComparisonViewProps) {
 }
 
 function ComparisonRow({ row, maxMinutes }: { row: BarComparisonRow; maxMinutes: number }) {
+  const t = useTranslations('calendar.stats.overview');
   const budgetPct = (row.budgetMinutes / maxMinutes) * 100;
   const actualPct = (row.actualMinutes / maxMinutes) * 100;
   const varianceColor = getVarianceColor(row.variancePercent);
@@ -51,7 +55,7 @@ function ComparisonRow({ row, maxMinutes }: { row: BarComparisonRow; maxMinutes:
           <span className="text-foreground truncate">{row.tagName}</span>
         </span>
         <span className={cn('font-mono text-xs tabular-nums', varianceColor)}>
-          {row.variancePercent !== null ? formatVariance(row.varianceMinutes) : 'new'}
+          {row.variancePercent !== null ? formatVariance(row.varianceMinutes) : t('unplanned')}
         </span>
       </div>
       <Bar pct={budgetPct} minutes={row.budgetMinutes} variant="budget" />

@@ -13,6 +13,7 @@ import { formatDateShort, formatDurationMinutes, formatTimeRange } from '@/lib/d
 import { cn } from '@/lib/utils';
 
 import { useTagDashboardData } from '../../hooks/useTagDetailData';
+import { parseReviewDateParam } from '../../lib/date-param';
 import { formatMetricValue } from '../../lib/metrics';
 import type { ReviewGranularity } from '../../stores/useReviewFilterStore';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
@@ -28,11 +29,6 @@ interface TagDetailPageProps {
 type DashboardData = NonNullable<ReturnType<typeof useTagDashboardData>['data']>;
 type DashboardEntry = DashboardData['entries'][number];
 type DailyRow = DashboardData['dailyRows'][number];
-
-function parseDateParam(value: string): Date {
-  const parsed = new Date(value + 'T00:00:00');
-  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-}
 
 function formatSignedMinutes(minutes: number): string {
   if (minutes === 0) return '0m';
@@ -249,7 +245,7 @@ export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: Tag
   const locale = useLocale();
 
   const granularity = initialGranularity;
-  const currentDate = useMemo(() => parseDateParam(initialDateStr), [initialDateStr]);
+  const currentDate = useMemo(() => parseReviewDateParam(initialDateStr), [initialDateStr]);
 
   const syncGranularity = useReviewFilterStore((s) => s.setGranularity);
   const syncCurrentDate = useReviewFilterStore((s) => s.setCurrentDate);

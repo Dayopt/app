@@ -1,5 +1,7 @@
+import { formatInTimeZone } from 'date-fns-tz';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
@@ -12,9 +14,13 @@ import { HydrationBoundary } from '@/lib/trpc/server';
 export const dynamic = 'force-dynamic';
 
 const VALID_GRANULARITIES = new Set(['day', 'week', 'month', 'year']);
+const DATE_PARAM_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-function formatDateParam(date: Date): string {
-  return date.toISOString().split('T')[0]!;
+/** ?d= 省略時の「今日」をユーザー TZ で決める（サーバー TZ 基準だと日付がずれる） */
+async function defaultDateStr(): Promise<string> {
+  const headersList = await headers();
+  const timezone = headersList.get('x-user-timezone') ?? 'UTC';
+  return formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
 }
 
 export async function generateMetadata({
@@ -63,7 +69,7 @@ const TagDetailRoute = async ({
 
   const granularity: ReviewGranularity =
     g && VALID_GRANULARITIES.has(g) ? (g as ReviewGranularity) : 'week';
-  const dateStr = d ?? formatDateParam(new Date());
+  const dateStr = d && DATE_PARAM_PATTERN.test(d) ? d : await defaultDateStr();
 
   return (
     <Suspense fallback={<Skeleton className="h-full w-full" />}>

@@ -45,6 +45,7 @@ export function buildReviewPath(locale: string, options?: { granularity?: string
 
   const params = new URLSearchParams();
   if (options.granularity) params.set('g', options.granularity);
-  if (options.date) params.set('d', options.date.toISOString().split('T')[0]!);
+  // ローカル日付で書く（toISOString は UTC 基準のため JST の朝に前日へずれる）
+  if (options.date) params.set('d', formatCalendarDateParam(options.date));
   return `${basePath}?${params.toString()}`;
 }

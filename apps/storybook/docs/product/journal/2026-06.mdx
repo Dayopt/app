@@ -34,6 +34,43 @@ Daily Review の「確認待ちリスト」は、「計画どおりに記録さ�
 
 ---
 
+## 2026-06-10
+
+### Review の粒度別ビュー完全再設計の日
+
+11 コミット、41 ファイル変更（3682 行追加 / 481 行削除）。review 機能のみに集中した一日。`feat/review-granularity-redesign` ブランチで、`ReviewView` の全面再設計から各粒度ビュー（日/週/月/年）の新規実装、信頼性ガード、URL 復元、Storybook story、E2E smoke まで一気に実装した。
+
+#### やったこと
+
+- **ReviewView の dispatcher 化 (1 refactor commit)**: 442 行あった `ReviewView.tsx` を 51 行の粒度 dispatcher に縮小。データ取得ロジックを各粒度コンポーネントへ移譲し、ReviewView は「現在の粒度に応じて DailyReview / WeeklyReview / MonthlyReview / YearlyReview を切り替える」純粋な router 構造に
+- **週次ビュー刷新 (1 feat commit)**: 所見（InsightSlot）+ KPI 行 + Time P/L + TagBalance + RhythmCharts + NextActionLink の構成で `WeeklyReview.tsx`（336 行）を新設。Time P/L（計画 vs 実績の損益）を最上位セクションに昇格させ、「記録合計 + トップタグ」は KPI 行の 1 指標に降格
+- **日次ビュー新設 (2 feat commits)**: `DayTimelineComparison.tsx`（290 行）を中心に構成した `DailyReview.tsx`（270 行）を新設。計画 vs 実績のタイムラインを並べて表示し、充実度採点 UI を追加してインラインで評価を記録できるようにした
+- **月次・年次ビュー新設 (1 feat commit)**: `MonthlyReview.tsx`（211 行）と `YearlyReview.tsx`（179 行）を新設。月次はパターン分析（EstimationAccuracy / TagBalance / MonthlyDailyChart）、年次は俯瞰（YearHeatmap / MonthlyTrendChart）の構成
+- **週のリズム拡充 (1 feat commit)**: `RhythmCharts.tsx` の曜日別分布を週開始曜日（settings 依存）対応にし、前期間データをゴースト表示（グレー棒）で重ねられるように拡張
+- **所見の信頼性ガード (1 feat commit)**: `InsightSlot` に `confidence` prop を追加。記録数が少ない期間は所見を表示せず、「沈黙も人格の一部」という copywriting.md の方針をコードに反映
+- **URL 復元と prefetch 対応 (1 feat commit)**: `?g=&d=` URL パラメータを SSR hydration 時に prefetch と同期させ、deep link で正しい粒度・日付のページが表示される
+- **Storybook story 追加 (1 test commit)**: DayTimelineComparison / MonthCharts / RhythmCharts / TagBalancePanel / InsightSlot / SummaryCard / NextActionLink の 7 コンポーネント分の story を追加
+- **E2E スモーク (1 test commit)**: `/review` の 4 粒度 deep link が正しく描画されることを Playwright で検証（`review-granularity.spec.ts`、54 行）
+- **設計書追加 (1 docs commit)**: `apps/storybook/docs/product/projects/review-granularity-redesign/overview.md`（271 行）にユーザー合意済みの設計方針を記録
+
+#### なぜ今日この作業をしたか
+
+Review ページは 5 月に Stats 4 タブ → 単一ページへ集約したが、「全粒度で同じレイアウトを見せる」という構造上の課題が残っていた。日次で「空き時間の大きな数字」を見せても意味は薄く、年次でタグ別詳細リストを見せるのは重い。粒度ごとに「答えるべき問い」が違うのに、同じ composition を使い回すのは UX として間違っていた。
+
+設計書を先に確定し実装はその後というワークフローを採用した。`overview.md`（271 行）を最初のコミットとして積むことで、「なぜこの構成なのか」の根拠を git 履歴に残した。設計フェーズでの議論（タブ再導入 vs 粒度別 composition、AI 生成所見 vs rule-based 所見）の決着も設計書に収録されている。
+
+Time P/L を主役に据えた判断は、Dayopt の差別化軸の明確化でもある。Toggl は actual しか持たず、Google カレンダーは planned しか持たない。両方を持つ Dayopt だけが「計画と現実のずれ」を見せられる。この差別化データを Review の最上位セクションに置くことで、ユーザーが Review ページを開いた瞬間に Dayopt の独自価値に触れる設計にした。
+
+#### Claudeの所感
+
+**442 行→51 行の refactor が設計の正しさを測る尺度に**: `ReviewView.tsx` が 442 行になっていた根本原因は、「全粒度共通の composition」という暗黙の仮定が守れていなかったから。粒度ごとに if/switch で分岐するコードが肥大化した結果だった。dispatcher に縮小できたのは、「粒度 = 別の問い」という設計原則を徹底したから。コンポーネントのサイズは、設計の明確さのプロキシとして機能する。
+
+**信頼性ガードは「沈黙を選ぶ UI」の実装**: copywriting.md には「データが不足しているとき、研究者は何も言わない」と書いてある。`InsightSlot` の `confidence` prop はこれをコードで表現したもの。「条件を満たさない場合は null を返す」ではなく、「confidence が LOW なら表示しない」という設計は、UI コンポーネントが copywriting の人格をコントロールする責任を明示的に持つことを示す。デザインシステムと voice/tone の統合の一例。
+
+**E2E smoke を最後に置く意味**: 粒度切替のような URL state × SSR × hydration が絡む機能は、unit test だけでは「動いているか」を確認しきれない。`review-granularity.spec.ts` を最後のコミットとして積むことで、実装が完了した後にシステム全体として動作することを明示的に証明した。smoke test は「実装した」から「動いている」への橋渡し。
+
+---
+
 ## 2026-06-08
 
 ### 予定だけエントリの表示完全修正と認証セキュリティ強化の日

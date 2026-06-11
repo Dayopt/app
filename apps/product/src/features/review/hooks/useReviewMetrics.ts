@@ -7,6 +7,7 @@ import { api } from '@/lib/trpc';
 import { METRIC_DEFINITIONS, METRIC_ORDER } from '../lib/metricDefinitions';
 import {
   calculateDeepUtilization,
+  computeAvgDeviation,
   formatMetricValueParts,
   getMetricProgress,
   getMetricTrend,
@@ -35,18 +36,6 @@ function computeDeepFromEnergyMap(
   const e = new Date(endDate);
   const daysInRange = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)));
   return calculateDeepUtilization(data, defaultDeepZones, daysInRange);
-}
-
-function computeAvgDeviation(
-  data: { avgDeviationMinutes: number; entryCount: number }[] | undefined,
-): number | null {
-  if (!data || data.length === 0) return null;
-  const totalDeviation = data.reduce(
-    (sum, item) => sum + item.avgDeviationMinutes * item.entryCount,
-    0,
-  );
-  const totalEntries = data.reduce((sum, item) => sum + item.entryCount, 0);
-  return totalEntries > 0 ? totalDeviation / totalEntries : 0;
 }
 
 function computeTrend(

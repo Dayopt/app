@@ -255,11 +255,54 @@
         "blankTime": "空白の時間",
         "blankTimeDesc": "名前が付いていない時間",
         "blankTimeNote": "時間帯別の空白は詳細分析で確認",
-        "availableTime": "可処分 {time}"
+        "availableTime": "可処分 {time}",
+        "planAccuracy": "計画達成率",
+        "planAccuracyDesc": "予定と実績の一致度",
+        "unplanned": "予定外",
+        "recordedDays": "記録した日数",
+        "recordedDaysDesc": "記録が1件以上ある日",
+        "daysValue": "{count}日",
+        "unplannedTime": "計画外の時間",
+        "unplannedCountValue": "{count} 件の計画外の記録"
+      },
+      "monthly": {
+        "dailyTitle": "日別の記録",
+        "dailyDesc": "1か月の記録の波",
+        "estimationTitle": "見積もり精度（タグ別）",
+        "estimationDesc": "どのタグの見積もりがずれやすいか"
+      },
+      "yearly": {
+        "heatmapTitle": "1年の記録マップ",
+        "heatmapDesc": "記録の濃淡で1年を俯瞰する",
+        "monthlyTitle": "月別の記録",
+        "monthlyDesc": "月ごとの記録時間の推移"
+      },
+      "rhythm": {
+        "dayOfWeek": "曜日別の記録",
+        "dayOfWeekDesc": "どの曜日に時間が集まったか",
+        "hourly": "時間帯別の記録",
+        "hourlyDesc": "どの時間帯に時間が集まったか",
+        "currentPeriod": "この期間",
+        "previousPeriod": "前の期間"
+      },
+      "daily": {
+        "timelineDesc": "予定と現実のずれを並べて見る",
+        "openCalendar": "カレンダーで開く",
+        "scoreFulfillment": "充実度を記録",
+        "unconfirmedTitle": "確認待ちの予定",
+        "unconfirmedDesc": "計画どおりだったか、タップで記録しましょう"
+      },
+      "nextAction": {
+        "planNextWeek": "来週の計画を立てる",
+        "planTomorrow": "明日の計画を立てる",
+        "planNextMonth": "来月の計画を立てる",
+        "recordDay": "最初のブロックを記録する"
       },
       "review": {
         "emptyTitle": "新しい1週間が始まりました",
         "emptyDescription": "エントリーを記録すると、ここに振り返りが表示されます",
+        "dayEmptyTitle": "まっさらな1日です",
+        "dayEmptyDescription": "最初のブロックを記録しましょう",
         "errorTitle": "振り返りデータを読み込めませんでした",
         "errorDescription": "しばらくしてからもう一度お試しください"
       },
@@ -305,6 +348,10 @@
         "blankRateHigh": "空白時間が多めの期間でした",
         "trendWorse": "{label} が前期間より {pct}% 低下しました",
         "trendBetter": "{label} が前期間より {pct}% 改善しました",
+        "dayEstimationOver": "予定より長くかかる傾向の1日でした（平均 +{bias} 分）",
+        "dayEstimationUnder": "予定より早く終わる傾向の1日でした（平均 -{bias} 分）",
+        "periodTopTag": "最も時間を使ったタグは {tag} です（合計 {hours} 時間）",
+        "lowDataNote": "この期間は記録が少ないため、傾向は参考値です",
         "estimationBiasOver": "このタグは平均 +{bias} 分超過する傾向があります",
         "estimationBiasUnder": "このタグは平均 {bias} 分早く終わる傾向があります",
         "hourlyFulfillmentHigh": "この時間帯の充実度は平均より高い傾向があります",

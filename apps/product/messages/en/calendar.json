@@ -255,11 +255,54 @@
         "blankTime": "Blank time",
         "blankTimeDesc": "Time without a name",
         "blankTimeNote": "Check detailed analysis for blank-time patterns",
-        "availableTime": "{time} available"
+        "availableTime": "{time} available",
+        "planAccuracy": "Plan accuracy",
+        "planAccuracyDesc": "How closely actuals matched the plan",
+        "unplanned": "Unplanned",
+        "recordedDays": "Days recorded",
+        "recordedDaysDesc": "Days with at least one record",
+        "daysValue": "{count} days",
+        "unplannedTime": "Unplanned time",
+        "unplannedCountValue": "{count} unplanned records"
+      },
+      "monthly": {
+        "dailyTitle": "Daily record",
+        "dailyDesc": "The month's rhythm day by day",
+        "estimationTitle": "Estimation accuracy by tag",
+        "estimationDesc": "Which tags tend to drift from estimates"
+      },
+      "yearly": {
+        "heatmapTitle": "Year in records",
+        "heatmapDesc": "A bird's-eye view of the year in record density",
+        "monthlyTitle": "Monthly record",
+        "monthlyDesc": "Recorded hours by month"
+      },
+      "rhythm": {
+        "dayOfWeek": "By day of week",
+        "dayOfWeekDesc": "Which days your time gathered on",
+        "hourly": "By hour",
+        "hourlyDesc": "Which hours your time gathered in",
+        "currentPeriod": "This period",
+        "previousPeriod": "Previous period"
+      },
+      "daily": {
+        "timelineDesc": "See where the day diverged from the plan",
+        "openCalendar": "Open in calendar",
+        "scoreFulfillment": "Score fulfillment",
+        "unconfirmedTitle": "Awaiting confirmation",
+        "unconfirmedDesc": "Were these as planned? Tap to score"
+      },
+      "nextAction": {
+        "planNextWeek": "Plan next week",
+        "planTomorrow": "Plan tomorrow",
+        "planNextMonth": "Plan next month",
+        "recordDay": "Record your first block"
       },
       "review": {
         "emptyTitle": "No review data yet",
         "emptyDescription": "Record entries to review your week",
+        "dayEmptyTitle": "A fresh day",
+        "dayEmptyDescription": "Record your first block to get started",
         "errorTitle": "Failed to load review data",
         "errorDescription": "Please try again later"
       },
@@ -305,6 +348,10 @@
         "blankRateHigh": "This period had a lot of free time",
         "trendWorse": "{label} decreased by {pct}% from previous period",
         "trendBetter": "{label} improved by {pct}% from previous period",
+        "dayEstimationOver": "Entries tended to run long today (avg +{bias} min)",
+        "dayEstimationUnder": "Entries tended to finish early today (avg -{bias} min)",
+        "periodTopTag": "Most time went to {tag} ({hours}h total)",
+        "lowDataNote": "Records are sparse in this period, so trends are indicative only",
         "estimationBiasOver": "This tag tends to run +{bias} min over estimate",
         "estimationBiasUnder": "This tag tends to finish {bias} min early",
         "hourlyFulfillmentHigh": "Fulfillment tends to be above average at this hour",
