@@ -132,7 +132,6 @@ export interface CalendarGridContentProps {
           startTime: Date;
           endTime: Date;
           resetActualTime?: boolean;
-          keepActualTime?: boolean;
         },
       ) => Promise<void | { skipToast: true }> | void)
     | undefined;
@@ -183,7 +182,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
         startTime: Date;
         endTime: Date;
         resetActualTime?: boolean;
-        keepActualTime?: boolean;
       },
     ) => {
       return onEventUpdate?.(eventId, updates);

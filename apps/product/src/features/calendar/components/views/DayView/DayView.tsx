@@ -58,7 +58,6 @@ export const DayView = ({
         startTime: Date;
         endTime: Date;
         resetActualTime?: boolean;
-        keepActualTime?: boolean;
       },
     ) => {
       if (onUpdateEntry) {

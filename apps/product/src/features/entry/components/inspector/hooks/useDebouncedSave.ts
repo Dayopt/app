@@ -34,10 +34,16 @@ interface UseDebouncedSaveOptions {
 export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   const suppressSaveErrorToastRef = useRef(false);
   const suppressResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { updateEntry, convertPlannedToUnplanned, convertUnplannedToPlanned, deleteEntry } =
-    useEntryMutations({
-      suppressUpdateErrorToast: () => suppressSaveErrorToastRef.current,
-    });
+  const {
+    updateEntry,
+    convertPlannedToUnplanned,
+    convertUnplannedToPlanned,
+    skipEntry,
+    unskipEntry,
+    deleteEntry,
+  } = useEntryMutations({
+    suppressUpdateErrorToast: () => suppressSaveErrorToastRef.current,
+  });
   const { setEntryTags } = useEntryTags();
   const updateTagsInCache = useUpdateEntityTagsInCache('entries');
   const utils = api.useUtils();
@@ -311,6 +317,8 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     updateEntry,
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,
+    skipEntry,
+    unskipEntry,
     deleteEntry,
     updateTagsInCache,
   };

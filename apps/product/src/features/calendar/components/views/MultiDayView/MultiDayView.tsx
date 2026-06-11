@@ -79,7 +79,6 @@ export function MultiDayView({
         startTime: Date;
         endTime: Date;
         resetActualTime?: boolean;
-        keepActualTime?: boolean;
       },
     ) => {
       if (!onUpdateEntry) return;

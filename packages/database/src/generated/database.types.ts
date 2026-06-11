@@ -44,6 +44,7 @@ export type Database = {
           fulfillment_score: number | null;
           id: string;
           origin: string;
+          skipped_at: string | null;
           start_time: string | null;
           tag_id: string | null;
           title: string;
@@ -61,6 +62,7 @@ export type Database = {
           fulfillment_score?: number | null;
           id?: string;
           origin?: string;
+          skipped_at?: string | null;
           start_time?: string | null;
           tag_id?: string | null;
           title: string;
@@ -78,6 +80,7 @@ export type Database = {
           fulfillment_score?: number | null;
           id?: string;
           origin?: string;
+          skipped_at?: string | null;
           start_time?: string | null;
           tag_id?: string | null;
           title?: string;

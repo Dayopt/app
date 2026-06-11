@@ -45,6 +45,8 @@ export function useEntryForm() {
     updateEntry,
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,
+    skipEntry,
+    unskipEntry,
     deleteEntry,
   } = useDebouncedSave({
     entryId,
@@ -133,6 +135,8 @@ export function useEntryForm() {
       updateEntry,
       convertPlannedToUnplanned,
       convertUnplannedToPlanned,
+      skipEntry,
+      unskipEntry,
       handleDelete,
       save,
       saveImmediate,

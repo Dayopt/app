@@ -7,75 +7,6 @@
 
 import { hasTwoLayerTimeConflict, type TwoLayerOverlapTarget } from '@/lib/time/two-layer-overlap';
 import type { CalendarEvent } from '../types/calendar.types';
-import { hasCalendarActualRangeDiff } from './entry-time';
-
-export type CalendarInteractionOperation = 'drag' | 'resize';
-
-function shiftDate(date: Date, deltaMs: number): Date {
-  return new Date(date.getTime() + deltaMs);
-}
-
-export function buildInteractionOverlapTarget(
-  event: CalendarEvent,
-  previewStartTime: Date,
-  previewEndTime: Date,
-  operation: CalendarInteractionOperation,
-  now: number = Date.now(),
-): TwoLayerOverlapTarget {
-  if (event.origin === 'unplanned') {
-    return {
-      id: event.id,
-      plannedStart: null,
-      plannedEnd: null,
-      actualStart: previewStartTime,
-      actualEnd: previewEndTime,
-      forbidFutureActual: true,
-      now,
-    };
-  }
-
-  const hasActualRange = event.actualStartDate != null && event.actualEndDate != null;
-  if (!hasActualRange) {
-    return {
-      id: event.id,
-      plannedStart: previewStartTime,
-      plannedEnd: previewEndTime,
-      actualStart: null,
-      actualEnd: null,
-      allowMissingActual: true,
-    };
-  }
-
-  if (hasCalendarActualRangeDiff(event)) {
-    if (operation === 'resize') {
-      return {
-        id: event.id,
-        plannedStart: previewStartTime,
-        plannedEnd: previewEndTime,
-        actualStart: event.actualStartDate,
-        actualEnd: event.actualEndDate,
-      };
-    }
-
-    const plannedStart = event.plannedStartDate ?? event.startDate;
-    const deltaMs = plannedStart ? previewStartTime.getTime() - plannedStart.getTime() : 0;
-    return {
-      id: event.id,
-      plannedStart: previewStartTime,
-      plannedEnd: previewEndTime,
-      actualStart: shiftDate(event.actualStartDate!, deltaMs),
-      actualEnd: shiftDate(event.actualEndDate!, deltaMs),
-    };
-  }
-
-  return {
-    id: event.id,
-    plannedStart: previewStartTime,
-    plannedEnd: previewEndTime,
-    actualStart: previewStartTime,
-    actualEnd: previewEndTime,
-  };
-}
 
 export function buildNewEntryOverlapTarget(
   startTime: Date,
@@ -84,12 +15,14 @@ export function buildNewEntryOverlapTarget(
 ): TwoLayerOverlapTarget {
   const willBeUnplanned = endTime.getTime() <= now;
 
+  // 自動記録モデル: 未来の planned は actual NULL で作成されるため
+  // planned レイヤーだけを占有する。unplanned は actual レイヤーのみ。
   return {
     id: '',
     plannedStart: willBeUnplanned ? null : startTime,
     plannedEnd: willBeUnplanned ? null : endTime,
-    actualStart: startTime,
-    actualEnd: endTime,
+    actualStart: willBeUnplanned ? startTime : null,
+    actualEnd: willBeUnplanned ? endTime : null,
   };
 }
 
@@ -107,54 +40,79 @@ export function checkClientSideOverlap(
   draggedEventId: string,
   previewStartTime: Date,
   previewEndTime: Date,
-  operation: CalendarInteractionOperation = 'drag',
 ): boolean {
   const now = Date.now();
   const draggedEvent = events.find((event) => event.id === draggedEventId);
-  // 保存時と同じ規則で planned / actual の操作後rangeを組み立てる。
-  // drag はactual差分を平行移動し、resizeは差分があるactualを固定する。
+  // planned entry は upcoming だけでなく active 状態でも planned 範囲を持つので
+  // 移動先の planned 範囲 overlap を check する。
+  // (サーバー側 ensureNoOverlaps も `origin === 'planned'` で planned 重複を検証する。
+  //  client 側で skip すると server 拒否で snap-back / TIME_OVERLAP toast が出るため UX が悪化する)
+  const shouldCheckPlanned = draggedEvent?.origin === 'planned';
+
+  // ドラッグ対象が実績レイヤーで占有する range（effective actual）:
+  // - unplanned: 移動先 = actual
+  // - planned で actual 確定済み: plan の移動は actual を動かさない → actual レイヤーは不変（null）
+  // - planned で actual 未編集・未スキップ: 移動先が過去なら自動記録として actual レイヤーを占有
+  const hasConfirmedActual = draggedEvent?.actualStartDate != null;
+  const previewIsPast = previewEndTime.getTime() <= now;
+  const plannedOccupiesActual =
+    shouldCheckPlanned && !hasConfirmedActual && !draggedEvent?.isSkipped && previewIsPast;
+  const targetActualStart = shouldCheckPlanned
+    ? plannedOccupiesActual
+      ? previewStartTime
+      : null
+    : previewStartTime;
+  const targetActualEnd = shouldCheckPlanned
+    ? plannedOccupiesActual
+      ? previewEndTime
+      : null
+    : previewEndTime;
+
   const target =
     draggedEventId === ''
       ? buildNewEntryOverlapTarget(previewStartTime, previewEndTime, now)
-      : draggedEvent
-        ? buildInteractionOverlapTarget(
-            draggedEvent,
-            previewStartTime,
-            previewEndTime,
-            operation,
-            now,
-          )
-        : {
-            id: draggedEventId,
-            plannedStart: previewStartTime,
-            plannedEnd: previewEndTime,
-            actualStart: previewStartTime,
-            actualEnd: previewEndTime,
-          };
+      : {
+          id: draggedEventId,
+          plannedStart: shouldCheckPlanned ? previewStartTime : null,
+          plannedEnd: shouldCheckPlanned ? previewEndTime : null,
+          actualStart: targetActualStart,
+          actualEnd: targetActualEnd,
+          forbidFutureActual: draggedEvent?.origin === 'unplanned',
+          now,
+        };
 
   return hasTwoLayerTimeConflict(
-    events.map((event) => {
-      const plannedStart =
-        event.plannedStartDate ?? (event.origin === 'planned' ? event.startDate : null);
-      const plannedEnd =
-        event.plannedEndDate ?? (event.origin === 'planned' ? event.endDate : null);
-      const actualStart =
-        event.actualStartDate === undefined
-          ? event.startDate
-          : (event.actualStartDate ?? (event.origin === 'unplanned' ? event.startDate : null));
-      const actualEnd =
-        event.actualEndDate === undefined
-          ? event.endDate
-          : (event.actualEndDate ?? (event.origin === 'unplanned' ? event.endDate : null));
-
-      return {
-        id: event.id,
-        plannedStart,
-        plannedEnd,
-        actualStart,
-        actualEnd,
-      };
-    }),
+    events.map((event) => toOverlapEntry(event, now)),
     target,
   );
+}
+
+/**
+ * CalendarEvent を重複判定用の2レイヤー表現に変換する。
+ * actual レイヤーは effective actual（確定済み actual、なければ過去 planned の自動記録）。
+ */
+function toOverlapEntry(event: CalendarEvent, now: number) {
+  const plannedStart =
+    event.plannedStartDate ?? (event.origin === 'planned' ? event.startDate : null);
+  const plannedEnd = event.plannedEndDate ?? (event.origin === 'planned' ? event.endDate : null);
+
+  const isAutoRecorded =
+    event.origin === 'planned' &&
+    event.actualStartDate == null &&
+    !event.isSkipped &&
+    plannedEnd != null &&
+    plannedEnd.getTime() <= now;
+
+  const fallbackActualStart =
+    event.origin === 'unplanned' ? event.startDate : isAutoRecorded ? plannedStart : null;
+  const fallbackActualEnd =
+    event.origin === 'unplanned' ? event.endDate : isAutoRecorded ? plannedEnd : null;
+
+  return {
+    id: event.id,
+    plannedStart,
+    plannedEnd,
+    actualStart: event.actualStartDate ?? fallbackActualStart,
+    actualEnd: event.actualEndDate ?? fallbackActualEnd,
+  };
 }

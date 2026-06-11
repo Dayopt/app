@@ -59,7 +59,6 @@ export const WeekGrid = ({
         startTime: Date;
         endTime: Date;
         resetActualTime?: boolean;
-        keepActualTime?: boolean;
       },
     ) => {
       if (!onEventUpdate) return;

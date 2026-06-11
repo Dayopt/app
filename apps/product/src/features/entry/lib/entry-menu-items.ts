@@ -9,11 +9,17 @@
  */
 
 import type { LucideIcon } from 'lucide-react';
-import { BarChart3, CalendarOff, RotateCcw, Trash2 } from 'lucide-react';
+import { BarChart3, CalendarOff, CircleSlash, RotateCcw, Trash2 } from 'lucide-react';
 
 import type { EntryOrigin } from '../types/entry';
 
-export type EntryMenuItemKey = 'viewStats' | 'markUnplanned' | 'restorePlanned' | 'delete';
+export type EntryMenuItemKey =
+  | 'viewStats'
+  | 'markUnplanned'
+  | 'restorePlanned'
+  | 'skip'
+  | 'unskip'
+  | 'delete';
 
 export interface EntryMenuItem {
   key: EntryMenuItemKey;
@@ -32,9 +38,13 @@ interface EntryMenuItemsArgs {
    * 未来の予定はまだ記録が存在し得ないため「予定外にする」を表示しない。
    */
   isUpcoming?: boolean | undefined;
+  /** スキップ済み（skipped_at あり）か。skip / unskip の表示切替に使う */
+  isSkipped?: boolean | undefined;
   onViewStats?: (() => void) | undefined;
   onMarkUnplanned?: (() => void) | undefined;
   onRestorePlanned?: (() => void) | undefined;
+  onSkip?: (() => void) | undefined;
+  onUnskip?: (() => void) | undefined;
   onDelete?: (() => void) | undefined;
 }
 
@@ -42,9 +52,12 @@ export function getEntryMenuItems({
   origin,
   tagId,
   isUpcoming = false,
+  isSkipped = false,
   onViewStats,
   onMarkUnplanned,
   onRestorePlanned,
+  onSkip,
+  onUnskip,
   onDelete,
 }: EntryMenuItemsArgs): EntryMenuItem[] {
   const isUnplanned = origin === 'unplanned';
@@ -76,6 +89,25 @@ export function getEntryMenuItems({
           icon: RotateCcw,
           dangerous: false,
           onSelect: onRestorePlanned,
+        }
+      : null,
+    // 過去の planned のみスキップ可能（未来の予定は削除で対応する）
+    onSkip && isPlanned && !isUpcoming && !isSkipped
+      ? {
+          key: 'skip',
+          labelKey: 'entry.inspector.skip',
+          icon: CircleSlash,
+          dangerous: false,
+          onSelect: onSkip,
+        }
+      : null,
+    onUnskip && isPlanned && isSkipped
+      ? {
+          key: 'unskip',
+          labelKey: 'entry.inspector.unskip',
+          icon: RotateCcw,
+          dangerous: false,
+          onSelect: onUnskip,
         }
       : null,
     onDelete

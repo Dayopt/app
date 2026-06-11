@@ -89,6 +89,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const isPast = entry.entryState === 'past';
   // 予定外エントリかどうか（全体を破線枠で表示）
   const isUnplanned = entry.origin === 'unplanned';
+  // スキップ済み（計画したがやらなかった）。計画レイヤーに muted で残し、実績の強調を消す
+  const isSkippedEntry = entry.isSkipped === true;
   const plannedStart = entry.plannedStartDate ?? entry.startDate;
   const plannedEnd = entry.plannedEndDate ?? entry.endDate;
   const upcomingActualMatchesPlan =
@@ -424,6 +426,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     isDragging && 'opacity-30',
     // past entry の subtle fade（draft / dragging には適用しない）
     !isDraft && !isDragging && isPast && 'opacity-90',
+    // skipped entry: 計画したがやらなかった。muted で「実行されなかった計画」を伝える
+    !isDraft && !isDragging && isSkippedEntry && 'opacity-60',
     isDraft ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-pointer',
     className,
   );
@@ -483,7 +487,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             left: alignPlannedLayerToGrid ? '-1px' : '0px',
             height: `${plannedHeight}px`,
             // upcoming は記録(actual)と地の色を揃える（差は左アクセントの有無だけにする）。
-            backgroundColor: renderAsPlanOnly ? actualBackgroundColor : plannedBackgroundColor,
+            backgroundColor:
+              renderAsPlanOnly && !isSkippedEntry ? actualBackgroundColor : plannedBackgroundColor,
           }}
         />
       )}
@@ -642,7 +647,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             data-entry-actual-accent
             className={cn(
               'relative shrink-0',
-              isActiveEntry ? 'opacity-100' : 'opacity-70',
+              isSkippedEntry ? 'opacity-30' : isActiveEntry ? 'opacity-100' : 'opacity-70',
               isActiveEntry && 'entry-live-accent',
               colorClasses ? colorClasses.dot : 'bg-entry-default',
             )}
@@ -697,6 +702,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               : isMobile
                 ? 'flex items-start gap-1 px-2 pt-2 text-sm'
                 : 'p-2 text-sm',
+            isSkippedEntry && 'text-muted-foreground line-through',
           )}
           style={{
             top: `${contentLayerTop}px`,

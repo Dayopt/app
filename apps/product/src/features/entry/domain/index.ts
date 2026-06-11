@@ -3,10 +3,14 @@ export {
   getActualMinutes,
   getActualRange,
   getDiffMinutes,
+  getEffectiveActualMinutes,
+  getEffectiveActualRange,
   getPlannedMinutes,
   getPlannedRange,
   hasPlannedActualDiff,
+  isAutoRecorded,
   isPlannedEntry,
+  isSkipped,
   isUnplannedEntry,
 } from './entry-time-model';
 export type { EntryLike, TimeRange } from './entry-time-model';

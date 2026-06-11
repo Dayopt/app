@@ -14,8 +14,6 @@ export interface TwoLayerOverlapTarget {
   plannedEnd?: RangeInput;
   actualStart?: RangeInput;
   actualEnd?: RangeInput;
-  /** 既存の予定だけ entry など、actual range が両方 null の target を許可する。 */
-  allowMissingActual?: boolean | undefined;
   forbidFutureActual?: boolean | undefined;
   now?: number | undefined;
 }
@@ -55,22 +53,19 @@ function hasInvalidTargetRange(start: RangeInput, end: RangeInput): boolean {
   return startMs == null || endMs == null || endMs <= startMs;
 }
 
-function hasInvalidRequiredTargetRange(start: RangeInput, end: RangeInput): boolean {
-  if (start == null || end == null) return true;
-  return hasInvalidTargetRange(start, end);
-}
-
 export function hasTwoLayerTimeConflict(
   entries: TwoLayerOverlapEntry[],
   target: TwoLayerOverlapTarget,
 ): boolean {
-  const actualRangeMissing = target.actualStart == null && target.actualEnd == null;
+  // 自動記録モデル: 未来の planned は actual レイヤーを占有しない（actual NULL = 未編集）。
+  // target は少なくともどちらか一方のレイヤーを占有していなければならない。
   if (
     hasInvalidTargetRange(target.plannedStart, target.plannedEnd) ||
-    (target.allowMissingActual && actualRangeMissing
-      ? target.plannedStart == null || target.plannedEnd == null
-      : hasInvalidRequiredTargetRange(target.actualStart, target.actualEnd))
+    hasInvalidTargetRange(target.actualStart, target.actualEnd)
   ) {
+    return true;
+  }
+  if (target.plannedStart == null && target.actualStart == null) {
     return true;
   }
 

@@ -33,6 +33,8 @@ export interface CalendarEvent {
   plannedStartDate?: Date | null | undefined;
   /** 予定の終了時刻（end_time から変換。unplanned では null） */
   plannedEndDate?: Date | null | undefined;
+  /** 計画したがやらなかった（skipped_at あり）。実績集計から除外される */
+  isSkipped?: boolean | undefined;
   // Optional properties used in various contexts
   userId?: string | undefined; // 所有者ID
   location?: string | undefined; // 場所
