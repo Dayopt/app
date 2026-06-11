@@ -82,6 +82,28 @@ describe('Entry Status Utilities', () => {
         const result = getEntryState(entry, referenceTime);
         expect(result).toBe('active');
       });
+
+      it('planned終了後でもactual超過中ならactive', () => {
+        const entry = {
+          origin: 'planned',
+          start_time: '2026-03-12T10:00:00Z',
+          end_time: '2026-03-12T11:00:00Z',
+          actual_start_time: '2026-03-12T10:15:00Z',
+          actual_end_time: '2026-03-12T12:30:00Z',
+        };
+        expect(getEntryState(entry, referenceTime)).toBe('active');
+      });
+
+      it('planned開始前でもactualが早く始まっていればactive', () => {
+        const entry = {
+          origin: 'planned',
+          start_time: '2026-03-12T13:00:00Z',
+          end_time: '2026-03-12T14:00:00Z',
+          actual_start_time: '2026-03-12T11:30:00Z',
+          actual_end_time: '2026-03-12T12:30:00Z',
+        };
+        expect(getEntryState(entry, referenceTime)).toBe('active');
+      });
     });
 
     describe('past entry (end <= now)', () => {

@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { useInlineCreateStore } from '../../../stores/useInlineCreateStore';
 
 import type { CalendarEvent } from '../../../types/calendar.types';
+import type { DateTimeSelection } from '../../views/shared';
 
 /** エントリクリック・時間範囲選択など、カレンダー共通のUIイベントハンドラーを提供するフック */
 export function useCalendarHandlers() {
@@ -36,13 +37,7 @@ export function useCalendarHandlers() {
   // 統一された時間範囲選択ハンドラー（全ビュー共通）
   // ドラッグ/ダブルクリック/タップ → InlineTagPalette 表示
   const handleDateTimeRangeSelect = useCallback(
-    (selection: {
-      date: Date;
-      startHour: number;
-      startMinute: number;
-      endHour: number;
-      endMinute: number;
-    }) => {
+    (selection: DateTimeSelection) => {
       // 最小15分制約の適用
       const startMinutes = selection.startHour * 60 + selection.startMinute;
       let endMinutes = selection.endHour * 60 + selection.endMinute;
@@ -62,6 +57,7 @@ export function useCalendarHandlers() {
         startMinute: selection.startMinute,
         endHour: Math.floor(endMinutes / 60),
         endMinute: endMinutes % 60,
+        creationSource: selection.creationSource,
       });
     },
     [setPendingSelection],

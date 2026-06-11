@@ -17,6 +17,7 @@ interface PendingSelection {
   startMinute: number;
   endHour: number;
   endMinute: number;
+  creationSource?: 'planned-gap' | undefined;
 }
 
 interface InlineCreateState {

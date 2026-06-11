@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 import type { CalendarEvent } from '../types/calendar.types';
 
+import { hasCalendarActualRangeDiff } from '../lib/entry-time';
 import { checkClientSideOverlap } from '../lib/overlap';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
@@ -56,7 +57,11 @@ export interface UseInteractionProps {
   /** Callback when an event is moved or resized */
   onEventUpdate?: (
     eventId: string,
-    updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+    updates: {
+      startTime: Date;
+      endTime: Date;
+      resetActualTime?: boolean;
+    },
   ) => Promise<void | { skipToast: true }> | void;
   /** Callback when an event is clicked (not dragged) */
   onEventClick?: (event: CalendarEvent) => void;
@@ -185,7 +190,14 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
         }
         return 3600000; // default 1h
       },
-      checkOverlap: (entryId: string, start: Date, end: Date) => {
+      getResizeMinEndMinutes: (entryId: string) => {
+        const event = r.events.find((candidate) => candidate.id === entryId);
+        if (!hasCalendarActualRangeDiff(event) || !event?.actualStartDate) return null;
+        return event.actualStartDate.getHours() * 60 + event.actualStartDate.getMinutes();
+      },
+      // 自動記録モデルでは drag / resize とも「planned のみ移動・確定済み actual は固定」で
+      // 重複判定が同一なため operation は使わない（machine の API 形状だけ維持する）
+      checkOverlap: (entryId: string, start: Date, end: Date, _operation: 'drag' | 'resize') => {
         return checkClientSideOverlap(r.allEvents, entryId, start, end);
       },
     };
@@ -240,12 +252,16 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           // Snap-back animation handled by GhostRenderer
           break;
 
-        case 'RESIZE_COMPLETE':
+        case 'RESIZE_COMPLETE': {
+          // 自動記録モデル: planned の resize は planned のみ更新（確定済み actual は固定、
+          // 未編集 actual は NULL のまま）。buildTimeUpdateData が origin 別に処理するため
+          // ここで actual の扱いを指定する必要はない。
           r.onEventUpdate?.(effect.entryId, {
             startTime: effect.time.start,
             endTime: effect.time.end,
           });
           break;
+        }
 
         case 'RESIZE_REJECTED':
           // Visual feedback handled by state.isOverlapping

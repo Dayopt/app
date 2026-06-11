@@ -62,7 +62,11 @@ export interface CalendarControllerProps {
   // --- Entry CRUD ---
   onUpdateEntry: (
     entryIdOrEntry: string | CalendarEvent,
-    updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+    updates?: {
+      startTime: Date;
+      endTime: Date;
+      resetActualTime?: boolean;
+    },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
   onDeleteEntry: (entryId: string) => void;
 

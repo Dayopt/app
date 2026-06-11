@@ -7,6 +7,7 @@ import { applyTimezoneToDisplayDates } from '../../../../lib/plan-data-adapter';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
 import { HOUR_HEIGHT as DEFAULT_HOUR_HEIGHT } from '../constants/grid.constants';
+import { getEntryStackIndex } from '../utils/entryStacking';
 
 import { useEntryLayoutCalculator, type EntryLayout } from './useEntryLayoutCalculator';
 import type { EntryPosition } from './useViewEntries';
@@ -125,7 +126,7 @@ export function useMultiDayEntryPositions({
         height,
         left: layout.left,
         width: layout.width,
-        zIndex: 10 + index,
+        zIndex: getEntryStackIndex(entry, index),
         column: layout.column,
         totalColumns: layout.totalColumns,
         opacity: layout.totalColumns > 1 ? 0.95 : 1.0,

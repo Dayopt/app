@@ -52,6 +52,28 @@ describe('entryToCalendarEvent', () => {
     expect(event!.endDate!.toISOString()).toBe('2026-04-27T02:00:00.000Z');
   });
 
+  it('planned エントリは actual 時間が無くても予定位置で表示する', () => {
+    const event = entryToCalendarEvent(
+      makeEntry({
+        id: 'plan-only',
+        origin: 'planned',
+        start_time: '2026-04-27T01:00:00.000Z',
+        end_time: '2026-04-27T02:00:00.000Z',
+        actual_start_time: null,
+        actual_end_time: null,
+      }),
+      TZ,
+    );
+
+    expect(event).not.toBeNull();
+    expect(event!.startDate!.toISOString()).toBe('2026-04-27T01:00:00.000Z');
+    expect(event!.endDate!.toISOString()).toBe('2026-04-27T02:00:00.000Z');
+    expect(event!.displayStartDate.toISOString()).toBe('2026-04-27T01:00:00.000Z');
+    expect(event!.displayEndDate.toISOString()).toBe('2026-04-27T02:00:00.000Z');
+    expect(event!.actualStartDate).toBeNull();
+    expect(event!.actualEndDate).toBeNull();
+  });
+
   it('unplanned エントリは actual_start_time / actual_end_time を表示位置として使う', () => {
     const event = entryToCalendarEvent(
       makeEntry({
@@ -251,6 +273,22 @@ describe('entryToCalendarEvent', () => {
           id: 'e1',
           start_time: '2026-04-27T02:30:00.000Z',
           end_time: '2026-04-27T03:30:00.000Z',
+        }),
+        TZ,
+      );
+
+      expect(event!.status).toBe('open');
+      expect(event!.entryState).toBe('active');
+    });
+
+    it('予定終了後でも actual が継続中なら status=open / entryState=active', () => {
+      const event = entryToCalendarEvent(
+        makeEntry({
+          id: 'e1',
+          start_time: '2026-04-27T01:00:00.000Z',
+          end_time: '2026-04-27T02:00:00.000Z',
+          actual_start_time: '2026-04-27T01:15:00.000Z',
+          actual_end_time: '2026-04-27T03:30:00.000Z',
         }),
         TZ,
       );

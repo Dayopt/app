@@ -2,7 +2,6 @@
 
 import type { TagColorName } from '@/features/tags';
 import { TagIcon } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { cn } from '@/lib/utils';
 
 interface TagSegment {
@@ -81,7 +80,7 @@ export function TagBreakdownBar({
                 onClick={() => onTagClick?.(seg.tagId)}
               >
                 <TagIcon icon={seg.tagIcon ?? null} color={seg.tagColor} size="sm" />
-                <ColonTagLabel name={seg.tagName} className="text-foreground" />
+                <span className="text-foreground truncate">{seg.tagName}</span>
                 <span className="text-muted-foreground">
                   {formatMinutes(seg.minutes)} ({pct}%)
                 </span>

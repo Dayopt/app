@@ -9,9 +9,21 @@ import {
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import type { CalendarEvent } from '../../types/calendar.types';
+
+function isEntriesListQuery(query: { queryKey: unknown }): boolean {
+  const key = query.queryKey;
+  return (
+    Array.isArray(key) &&
+    key.length >= 1 &&
+    Array.isArray(key[0]) &&
+    key[0][0] === 'entries' &&
+    key[0][1] === 'list'
+  );
+}
 
 function entryFromCalendarEvent(event: CalendarEvent): EntryLike {
   const plannedStartDate =
@@ -36,6 +48,22 @@ function entryFromCalendarEvent(event: CalendarEvent): EntryLike {
   };
 }
 
+function findEntryInListCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  entryId: string,
+): EntryLike | null {
+  const cachedLists = queryClient.getQueriesData<Array<{ id: string } & EntryLike>>({
+    predicate: isEntriesListQuery,
+  });
+
+  for (const [, entries] of cachedLists) {
+    const entry = entries?.find((candidate) => candidate.id === entryId);
+    if (entry) return entry;
+  }
+
+  return null;
+}
+
 /**
  * エントリー操作（CRUD）を提供するフック
  * エントリーの削除、復元、更新を管理
@@ -43,6 +71,7 @@ function entryFromCalendarEvent(event: CalendarEvent): EntryLike {
 export const useEntryOperations = () => {
   const { updateEntry, deleteEntry } = useEntryMutations();
   const utils = api.useUtils();
+  const queryClient = useQueryClient();
   const t = useTranslations();
 
   /**
@@ -86,14 +115,20 @@ export const useEntryOperations = () => {
   const handleUpdateEntry = useCallback(
     async (
       entryIdOrEntry: string | CalendarEvent,
-      updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+      updates?: {
+        startTime: Date;
+        endTime: Date;
+        resetActualTime?: boolean;
+      },
     ) => {
       try {
         if (typeof entryIdOrEntry === 'string' && updates) {
           const entryId = entryIdOrEntry;
 
           // Undo用に現在の時間をキャッシュから取得
-          const cachedEntry = utils.entries.getById.getData({ id: entryId });
+          const cachedEntry =
+            utils.entries.getById.getData({ id: entryId }) ??
+            findEntryInListCaches(queryClient, entryId);
 
           updateEntry.mutate(
             {
@@ -120,7 +155,9 @@ export const useEntryOperations = () => {
           }
 
           // Undo用に現在の時間をキャッシュから取得
-          const cachedEntry = utils.entries.getById.getData({ id: updatedEntry.id });
+          const cachedEntry =
+            utils.entries.getById.getData({ id: updatedEntry.id }) ??
+            findEntryInListCaches(queryClient, updatedEntry.id);
           const currentEntry = cachedEntry ?? entryFromCalendarEvent(updatedEntry);
 
           updateEntry.mutate(
@@ -139,7 +176,7 @@ export const useEntryOperations = () => {
         logger.error('エントリー更新に失敗:', error);
       }
     },
-    [updateEntry, utils, showTimeChangeUndoToast],
+    [updateEntry, utils, queryClient, showTimeChangeUndoToast],
   );
 
   return {

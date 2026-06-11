@@ -15,7 +15,6 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 
 import { resolveTagColor, TagIcon, TagQuickSelector, useCreateTag } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { toast } from '@/lib/toast';
 
 import type { ReviewGranularity } from '../../stores/useReviewFilterStore';
@@ -97,10 +96,7 @@ export function TagDetailTitle({
         aria-label={`${t('common.tags.change')}: ${tagName}`}
       >
         <TagIcon icon={tagIcon} color={tagColor} size="md" className="shrink-0" />
-        <ColonTagLabel
-          name={tagName}
-          className="text-foreground min-w-0 truncate text-xl font-medium"
-        />
+        <span className="text-foreground min-w-0 truncate text-xl font-medium">{tagName}</span>
         <ChevronDown className="text-muted-foreground size-4 shrink-0" aria-hidden />
       </button>
 

@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { EntryRect } from '../../domain/interaction/types';
 import type { CalendarEvent } from '../../types/calendar.types';
@@ -99,6 +99,82 @@ describe('useInteraction handleResizeStart guard', () => {
     });
 
     expect(result.current.state.mode).toBe('resizing');
+  });
+});
+
+describe('useInteraction resize completion', () => {
+  it('通常 entry の resize 完了時は actual 固定フラグを渡さない', () => {
+    const onEventUpdate = vi.fn();
+    const matchingEntry: CalendarEvent = {
+      ...baseEvent,
+      origin: 'planned',
+      plannedStartDate: baseEvent.startDate,
+      plannedEndDate: baseEvent.endDate,
+      actualStartDate: baseEvent.startDate,
+      actualEndDate: baseEvent.endDate,
+    };
+    const { result } = renderHook(() =>
+      useInteraction(makeProps({ events: [matchingEntry], onEventUpdate })),
+    );
+
+    act(() => {
+      result.current.dispatch({
+        type: 'RESIZE_START',
+        entryId: 'entry-1',
+        direction: 'bottom',
+        point: { clientX: 100, clientY: 600 },
+        originalPosition: rect,
+      });
+    });
+    act(() => {
+      result.current.dispatch({
+        type: 'POINTER_MOVE',
+        point: { clientX: 100, clientY: 615 },
+      });
+    });
+    act(() => {
+      result.current.dispatch({ type: 'POINTER_UP' });
+    });
+
+    expect(onEventUpdate).toHaveBeenCalledWith(
+      'entry-1',
+      expect.not.objectContaining({ keepActualTime: true }),
+    );
+  });
+
+  it('予定と記録がズレた entry の resize 完了時も actual 固定フラグは渡さない（自動記録モデルでは planned のみ更新）', () => {
+    const onEventUpdate = vi.fn();
+    const overtimeEntry: CalendarEvent = {
+      ...baseEvent,
+      origin: 'planned',
+      plannedStartDate: baseEvent.startDate,
+      plannedEndDate: baseEvent.endDate,
+      actualStartDate: baseEvent.startDate,
+      actualEndDate: new Date('2026-01-15T10:10:00'),
+    };
+    const { result } = renderHook(() =>
+      useInteraction(makeProps({ events: [overtimeEntry], onEventUpdate })),
+    );
+
+    act(() => {
+      result.current.dispatch({
+        type: 'RESIZE_START',
+        entryId: 'entry-1',
+        direction: 'bottom',
+        point: { clientX: 100, clientY: 600 },
+        originalPosition: rect,
+      });
+      result.current.dispatch({
+        type: 'POINTER_MOVE',
+        point: { clientX: 100, clientY: 615 },
+      });
+      result.current.dispatch({ type: 'POINTER_UP' });
+    });
+
+    expect(onEventUpdate).toHaveBeenCalledWith(
+      'entry-1',
+      expect.not.objectContaining({ keepActualTime: true }),
+    );
   });
 });
 

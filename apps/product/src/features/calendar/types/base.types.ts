@@ -5,6 +5,7 @@
 
 // CalendarEvent, ViewDateRange, CalendarViewType を Source of Truth から直接エクスポート
 export type { CalendarEvent, CalendarViewType, ViewDateRange } from './calendar.types';
+import type { DateTimeSelection } from '../components/views/shared';
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from './calendar.types';
 
 /**
@@ -44,19 +45,15 @@ export interface GridViewProps extends BaseViewProps {
   onUpdateEntry?:
     | ((
         entryIdOrEntry: string | CalendarEvent,
-        updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+        updates?: {
+          startTime: Date;
+          endTime: Date;
+          resetActualTime?: boolean;
+        },
       ) => void | Promise<void> | Promise<{ skipToast: true } | void>)
     | undefined;
   onDeleteEntry?: ((entryId: string) => void) | undefined;
-  onTimeRangeSelect?:
-    | ((selection: {
-        date: Date;
-        startHour: number;
-        startMinute: number;
-        endHour: number;
-        endMinute: number;
-      }) => void)
-    | undefined;
+  onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
 
   // Navigation handlers
   onViewChange?: ((viewType: CalendarViewType) => void) | undefined;

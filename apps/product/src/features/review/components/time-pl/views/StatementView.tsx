@@ -1,7 +1,6 @@
 'use client';
 
 import { TagIcon } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { cn } from '@/lib/utils';
 
 import {
@@ -50,7 +49,7 @@ function Section({ label, rows, total }: { label: string; rows: TimePLRow[]; tot
           <td className="py-1 pr-2 pl-4">
             <span className="inline-flex items-center gap-1.5">
               <TagIcon icon={row.tagIcon ?? null} color={row.tagColor} size="sm" />
-              <ColonTagLabel name={row.tagName} className="text-foreground" />
+              <span className="text-foreground truncate">{row.tagName}</span>
             </span>
           </td>
           <td className="text-foreground py-1 pr-4 text-right font-mono text-sm tabular-nums">
@@ -94,7 +93,7 @@ function VarianceSection({ rows, net }: { rows: TimePLVarianceRow[]; net: number
             <td className="py-1 pr-2 pl-4">
               <span className="inline-flex items-center gap-1.5">
                 <TagIcon icon={row.tagIcon ?? null} color={row.tagColor} size="sm" />
-                <ColonTagLabel name={row.tagName} className="text-foreground" />
+                <span className="text-foreground truncate">{row.tagName}</span>
               </span>
             </td>
             <td className={cn('py-1 pr-4 text-right font-mono text-sm tabular-nums', color)}>

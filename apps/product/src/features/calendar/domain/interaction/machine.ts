@@ -206,7 +206,12 @@ export function interactionReducer(
       );
       const targetDate = resolveTargetDate(ctx, state.dateIndex);
       const previewTime = buildDragTimeRange(targetDate, startSnap, endSnap, interval);
-      const isOverlapping = ctx.checkOverlap(state.entryId, previewTime.start, previewTime.end);
+      const isOverlapping = ctx.checkOverlap(
+        state.entryId,
+        previewTime.start,
+        previewTime.end,
+        'drag',
+      );
 
       effects.push({ type: 'HAPTIC', pattern: 'impact' });
       effects.push({
@@ -254,7 +259,7 @@ export function interactionReducer(
         (ctx.hourHeight / 60) * interval,
         endSnap.snappedTop - startSnap.snappedTop,
       );
-      const isOverlapping = ctx.checkOverlap(action.entryId, start, end);
+      const isOverlapping = ctx.checkOverlap(action.entryId, start, end, 'resize');
 
       return {
         state: {
@@ -402,7 +407,12 @@ function handlePointerMove(
       const targetDateIndex = action.targetDateIndex ?? state.dateIndex;
       const targetDate = resolveTargetDate(ctx, targetDateIndex);
       const previewTime = buildDragTimeRange(targetDate, startSnap, endSnap, interval);
-      const isOverlapping = ctx.checkOverlap(state.entryId, previewTime.start, previewTime.end);
+      const isOverlapping = ctx.checkOverlap(
+        state.entryId,
+        previewTime.start,
+        previewTime.end,
+        'drag',
+      );
 
       effects.push({
         type: 'DRAG_STORE_START',
@@ -449,7 +459,12 @@ function handlePointerMove(
       const targetDateIndex = action.targetDateIndex ?? state.targetDateIndex;
       const targetDate = resolveTargetDate(ctx, targetDateIndex);
       const previewTime = buildDragTimeRange(targetDate, startSnap, endSnap, interval);
-      const isOverlapping = ctx.checkOverlap(state.entryId, previewTime.start, previewTime.end);
+      const isOverlapping = ctx.checkOverlap(
+        state.entryId,
+        previewTime.start,
+        previewTime.end,
+        'drag',
+      );
 
       if (startSnap.snappedTop !== state.snappedTop) {
         effects.push({ type: 'HAPTIC', pattern: 'tap' });
@@ -472,6 +487,11 @@ function handlePointerMove(
     case 'resizing': {
       const deltaY = action.point.clientY - state.startPoint.clientY;
       const minHeight = (ctx.hourHeight / 60) * interval;
+      const resizeMinEndMinutes = ctx.getResizeMinEndMinutes?.(state.entryId) ?? null;
+      const resizeMinEndTop =
+        resizeMinEndMinutes == null
+          ? 0
+          : (Math.ceil(resizeMinEndMinutes / interval) * interval * ctx.hourHeight) / 60;
       // upper cap: end が当日内に収まる範囲
       const startSnap = snapToGrid(state.originalPosition.top, ctx.hourHeight, interval);
       const maxHeight = Math.max(minHeight, 24 * ctx.hourHeight - startSnap.snappedTop);
@@ -479,6 +499,7 @@ function handlePointerMove(
         24 * ctx.hourHeight,
         Math.max(
           startSnap.snappedTop + minHeight,
+          resizeMinEndTop,
           state.originalPosition.top + state.originalPosition.height + deltaY,
         ),
       );
@@ -498,7 +519,7 @@ function handlePointerMove(
       end.setHours(endSnap.hour, endSnap.minute, 0, 0);
 
       const previewTime: TimeRange = { start, end };
-      const isOverlapping = ctx.checkOverlap(state.entryId, start, end);
+      const isOverlapping = ctx.checkOverlap(state.entryId, start, end, 'resize');
 
       return {
         state: {

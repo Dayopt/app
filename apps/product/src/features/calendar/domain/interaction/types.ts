@@ -176,8 +176,10 @@ export interface InteractionContext {
   snapIntervalMinutes?: number;
   /** Get entry duration in milliseconds by ID */
   getEntryDurationMs: (entryId: string) => number;
+  /** planned resize の終了時刻に必要な下限（分 of day）。未指定なら通常の最小durationのみ。 */
+  getResizeMinEndMinutes?: (entryId: string) => number | null;
   /** Check if a time range overlaps with other same-origin entries */
-  checkOverlap: (entryId: string, start: Date, end: Date) => boolean;
+  checkOverlap: (entryId: string, start: Date, end: Date, operation: 'drag' | 'resize') => boolean;
 }
 
 // ========================================

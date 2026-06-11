@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { DateRow, TimeConflictAlert, TimeRow } from '@/features/entry';
 import { TagIcon } from '@/features/tags';
 import { Button } from '@/lib/components/ui/button';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { cn } from '@/lib/utils';
 
 export interface TagEntryCreateFormProps {
@@ -69,7 +68,7 @@ export function TagEntryCreateForm({
       <div className="flex min-h-9 items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <TagIcon icon={tag.icon} color={tag.color} size="sm" />
-          <ColonTagLabel name={tag.name} variant="separator" className="text-base font-medium" />
+          <span className="truncate text-base font-medium">{tag.name}</span>
         </div>
         <button
           type="button"

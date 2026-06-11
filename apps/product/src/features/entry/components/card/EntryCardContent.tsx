@@ -6,15 +6,18 @@
 
 import { memo } from 'react';
 
+import { Clock, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
-import { formatTimeRange } from '@/lib/date';
+import { TagIcon } from '@/features/tags';
+import { formatTime } from '@/lib/date';
 import type { CalendarEvent } from '../../types/calendar-event';
 
 interface EntryCardContentProps {
   plan: CalendarEvent;
   tagName: string | null;
+  tagColor?: string | null;
+  tagIcon?: string | null;
   isCompact?: boolean;
   showTime?: boolean;
   timeFormat?: '12h' | '24h';
@@ -33,10 +36,34 @@ function parseEndDate(plan: CalendarEvent): Date | null {
   return null;
 }
 
+function parseOptionalDate(date: Date | null | undefined): Date | null {
+  if (date instanceof Date) return date;
+  if (date) return new Date(date);
+  return null;
+}
+
+function sameTime(
+  firstStart: Date | null,
+  firstEnd: Date | null,
+  secondStart: Date | null,
+  secondEnd: Date | null,
+): boolean {
+  if (!firstStart || !firstEnd || !secondStart || !secondEnd) return false;
+  return (
+    firstStart.getTime() === secondStart.getTime() && firstEnd.getTime() === secondEnd.getTime()
+  );
+}
+
+function formatCardTimeRange(start: Date, end: Date, timeFormat: '12h' | '24h'): string {
+  return `${formatTime(start, timeFormat)} 〜 ${formatTime(end, timeFormat)}`;
+}
+
 /** エントリカードの内部コンテンツ（タグ名・時間範囲・リマインダーアイコン） */
 export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardContent({
   plan,
   tagName,
+  tagColor = null,
+  tagIcon = null,
   isCompact = false,
   showTime = true,
   timeFormat = '24h',
@@ -46,22 +73,75 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
 
   const planStart = parseStartDate(plan);
   const planEnd = parseEndDate(plan);
+  const plannedStart = parseOptionalDate(plan.plannedStartDate) ?? planStart;
+  const plannedEnd = parseOptionalDate(plan.plannedEndDate) ?? planEnd;
+  const actualStart = parseOptionalDate(plan.actualStartDate);
+  const actualEnd = parseOptionalDate(plan.actualEndDate);
 
   // 実績時間があればそちらを優先（片方のみの場合は予定時間でフォールバック）
-  const hasActual = plan.actualStartDate != null || plan.actualEndDate != null;
-  const displayStart = hasActual ? (plan.actualStartDate ?? planStart) : planStart;
-  const displayEnd = hasActual ? (plan.actualEndDate ?? planEnd) : planEnd;
+  const hasActual = actualStart != null || actualEnd != null;
+  const displayStart = hasActual ? (actualStart ?? planStart) : planStart;
+  const displayEnd = hasActual ? (actualEnd ?? planEnd) : planEnd;
+  const actualDisplayStart = actualStart ?? planStart;
+  const actualDisplayEnd = actualEnd ?? planEnd;
+  const showBothTimes =
+    plan.origin === 'planned' &&
+    hasActual &&
+    !sameTime(plannedStart, plannedEnd, actualDisplayStart, actualDisplayEnd);
+  const previewLabel =
+    plan.origin === 'unplanned'
+      ? t('entry.inspector.time.actual')
+      : t('entry.inspector.time.planned');
+  const timeRows = previewTime
+    ? [
+        {
+          key: 'preview',
+          label: previewLabel,
+          start: previewTime.start,
+          end: previewTime.end,
+          isActual: plan.origin === 'unplanned',
+        },
+      ]
+    : showBothTimes
+      ? [
+          {
+            key: 'planned',
+            label: t('entry.inspector.time.planned'),
+            start: plannedStart,
+            end: plannedEnd,
+            isActual: false,
+          },
+          {
+            key: 'actual',
+            label: t('entry.inspector.time.actual'),
+            start: actualDisplayStart,
+            end: actualDisplayEnd,
+            isActual: true,
+          },
+        ]
+      : [
+          {
+            key: hasActual || plan.origin === 'unplanned' ? 'actual' : 'planned',
+            label:
+              hasActual || plan.origin === 'unplanned'
+                ? t('entry.inspector.time.actual')
+                : t('entry.inspector.time.planned'),
+            start: displayStart,
+            end: displayEnd,
+            isActual: hasActual || plan.origin === 'unplanned',
+          },
+        ];
 
   const fallbackLabel = plan.title || t('common.tags.add');
 
   if (isCompact) {
     return (
       <div className="flex h-full items-center gap-1">
+        {tagIcon && <TagIcon icon={tagIcon} color={tagColor} size="sm" className="shrink-0" />}
         {tagName ? (
-          <ColonTagLabel
-            name={tagName}
-            className="text-foreground text-sm leading-tight font-normal"
-          />
+          <span className="text-foreground truncate text-sm leading-tight font-normal">
+            {tagName}
+          </span>
         ) : (
           <span className="text-foreground truncate text-sm leading-tight font-normal">
             {fallbackLabel}
@@ -73,23 +153,44 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
 
   return (
     <div className="relative flex h-full flex-col gap-1 overflow-hidden">
-      <div className="flex flex-shrink-0 items-baseline gap-1 text-sm leading-tight font-normal">
+      <div className="flex flex-shrink-0 items-center gap-1 text-sm leading-tight font-normal">
+        {tagIcon && <TagIcon icon={tagIcon} color={tagColor} size="sm" className="shrink-0" />}
         {tagName ? (
-          <ColonTagLabel name={tagName} className="text-foreground" />
+          <span className="text-foreground truncate">{tagName}</span>
         ) : (
           <span className="text-foreground line-clamp-2">{fallbackLabel}</span>
         )}
       </div>
 
       {showTime != null && (
-        <div className="event-time text-muted-foreground pointer-events-none flex flex-shrink-0 items-center gap-1 text-xs leading-tight">
-          <span className="mr-1 tabular-nums">
-            {previewTime
-              ? formatTimeRange(previewTime.start, previewTime.end, timeFormat)
-              : displayStart && displayEnd
-                ? formatTimeRange(displayStart, displayEnd, timeFormat)
-                : t('calendar.event.noTimeSet')}
-          </span>
+        <div className="event-time pointer-events-none flex flex-shrink-0 flex-col items-start gap-0.5 text-xs leading-tight">
+          {timeRows.map((row) => (
+            <div
+              key={row.key}
+              data-entry-time-kind={row.isActual ? 'actual' : 'planned'}
+              className="flex max-w-full min-w-0 items-center gap-1"
+            >
+              <span className="sr-only">{row.label}</span>
+              {row.isActual ? (
+                <Play
+                  aria-hidden="true"
+                  className="text-foreground size-3 shrink-0"
+                  strokeWidth={2}
+                />
+              ) : (
+                <Clock
+                  aria-hidden="true"
+                  className="text-muted-foreground size-3 shrink-0"
+                  strokeWidth={2}
+                />
+              )}
+              <span className="text-muted-foreground min-w-0 truncate whitespace-nowrap tabular-nums">
+                {row.start && row.end
+                  ? formatCardTimeRange(row.start, row.end, timeFormat)
+                  : t('calendar.event.noTimeSet')}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>

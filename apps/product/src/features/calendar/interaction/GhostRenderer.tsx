@@ -20,6 +20,7 @@ import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 
+import { ConflictOverlay } from '../components/views/shared/components/ConflictOverlay';
 import type { InteractionState, TimeRange } from '../domain/interaction/types';
 
 // ========================================
@@ -60,26 +61,6 @@ const SNAP_BACK_DURATION = 200;
  * 最小 40px に底上げすることで「掴めるチップ」として視認できる。
  */
 const MIN_GHOST_HEIGHT_MOBILE = 40;
-
-// ========================================
-// Helpers
-// ========================================
-
-/** 重複時に表示する destructive 変種ゴースト */
-function ConflictGhost({ previewTime, message }: { previewTime: TimeRange; message: string }) {
-  const startH = previewTime.start.getHours();
-  const startM = String(previewTime.start.getMinutes()).padStart(2, '0');
-  const endH = previewTime.end.getHours();
-  const endM = String(previewTime.end.getMinutes()).padStart(2, '0');
-  return (
-    <div className="bg-destructive-tint text-destructive flex h-full flex-col gap-1 rounded-lg p-2">
-      <span className="text-sm leading-tight font-medium">{message}</span>
-      <span className="text-xs leading-tight tabular-nums">
-        {startH}:{startM} – {endH}:{endM}
-      </span>
-    </div>
-  );
-}
 
 // ========================================
 // Component
@@ -132,7 +113,11 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
 
     // スナップバック中は overlap 状態を視覚的に残す
     const content = (
-      <ConflictGhost previewTime={prev.previewTime} message={t('errors.timeOverlap')} />
+      <ConflictOverlay
+        previewTime={prev.previewTime}
+        message={t('errors.timeOverlap')}
+        className="h-full"
+      />
     );
 
     setSnapBack({
@@ -205,7 +190,11 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
 
   // 重複時は全面 destructive、そうでなければ通常 ghost を描画
   const content = state.isOverlapping ? (
-    <ConflictGhost previewTime={state.previewTime} message={t('errors.timeOverlap')} />
+    <ConflictOverlay
+      previewTime={state.previewTime}
+      message={t('errors.timeOverlap')}
+      className="h-full"
+    />
   ) : (
     renderGhost?.({
       entryId: state.entryId,

@@ -7,7 +7,6 @@
  * クリックで現在時刻にエントリを配置。
  */
 
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { cn } from '@/lib/utils';
 
 /** BlockItem の menuSlot 内ボタンに共通適用するクラス（ホバー時のみ表示） */
@@ -63,7 +62,7 @@ export function BlockItem({
         {iconSlot}
 
         {/* タグ名 */}
-        <ColonTagLabel name={tagName} className="text-foreground min-w-0" />
+        <span className="text-foreground min-w-0 truncate">{tagName}</span>
 
         {/* duration（タグ名の隣） */}
         <span className="text-muted-foreground shrink-0 text-xs tabular-nums">

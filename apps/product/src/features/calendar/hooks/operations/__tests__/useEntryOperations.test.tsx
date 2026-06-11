@@ -6,6 +6,7 @@ import type { CalendarEvent } from '@/features/entry';
 const updateMutate = vi.fn();
 const deleteMutate = vi.fn();
 const getByIdGetData = vi.fn();
+const getQueriesData = vi.fn(() => []);
 const toastSuccess = vi.fn();
 const loggerError = vi.fn();
 
@@ -31,6 +32,12 @@ vi.mock('@/lib/trpc', () => ({
       },
     }),
   },
+}));
+
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({
+    getQueriesData,
+  }),
 }));
 
 vi.mock('@/lib/toast', () => ({

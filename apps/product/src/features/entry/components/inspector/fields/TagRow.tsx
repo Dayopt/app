@@ -18,7 +18,6 @@ import { useTranslations } from 'next-intl';
 import type { EntryMenuItem } from '@/features/entry/lib/entry-menu-items';
 import type { TagColorEntry } from '@/features/tags';
 import { TagIcon, TagQuickSelector } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -101,7 +100,7 @@ export function TagRow({
             size="md"
             className="flex-shrink-0"
           />
-          <ColonTagLabel name={tagName} className="text-foreground" />
+          <span className="text-foreground truncate">{tagName}</span>
           <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
         </button>
 
