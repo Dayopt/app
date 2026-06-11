@@ -3,7 +3,6 @@
 import type { FulfillmentScore } from '@/features/entry';
 import type { TagColorName } from '@/features/tags';
 import { TagIcon } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 
 import { FulfillmentScoreButtons } from './FulfillmentScoreButtons';
 
@@ -39,7 +38,7 @@ export function UnconfirmedPlanList({
         <div key={row.id} className="flex min-h-11 min-w-0 items-center gap-3 px-2 py-1">
           <TagIcon icon={row.icon} color={row.color} size="sm" />
           <div className="min-w-0 flex-1">
-            <ColonTagLabel name={row.title} className="text-foreground block truncate text-sm" />
+            <span className="text-foreground block truncate text-sm">{row.title}</span>
             <p className="text-muted-foreground font-mono text-xs tabular-nums">{row.timeLabel}</p>
           </div>
           <FulfillmentScoreButtons score={null} onChange={(score) => onScore(row.id, score)} />

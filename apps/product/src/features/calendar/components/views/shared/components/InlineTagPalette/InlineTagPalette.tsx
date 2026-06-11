@@ -22,10 +22,10 @@ import type { HoveredTagInfo } from '@/features/tags';
 import {
   getTagColorClasses,
   resolveTagColor,
+  TagIcon,
   TagQuickSelector,
   useCreateTag,
 } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
@@ -39,6 +39,7 @@ import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore
 
 import { Z_INDEX } from '../../constants/grid.constants';
 import { DRAG_CONSTANTS } from '../CalendarDragSelection/types';
+import { ConflictOverlay } from '../ConflictOverlay';
 
 /** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */
 function isEntriesListQuery(query: { queryKey: unknown }): boolean {
@@ -353,6 +354,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   if (date && !isSameDay(date, pendingSelection.date)) return null;
 
   const { startHour, startMinute, endHour, endMinute } = pendingSelection;
+  const isPlannedGapSelection = pendingSelection.creationSource === 'planned-gap';
 
   // 選択範囲のピクセル計算
   const startMinutes = startHour * 60 + startMinute;
@@ -476,95 +478,100 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         <div
           ref={highlightRef}
           className={cn(
-            'animate-in fade-in-0 pointer-events-auto absolute right-0 left-0 flex transition-colors duration-150 motion-reduce:animate-none',
-            isPast && !hasConflict ? 'rounded-lg' : 'rounded-r-lg',
+            'animate-in fade-in-0 pointer-events-auto absolute flex transition-colors duration-150 motion-reduce:animate-none',
+            'rounded-r-lg',
           )}
           style={{
             top: selectionTop,
+            left: isPlannedGapSelection ? '50%' : 0,
+            right: 0,
             height: selectionHeight,
             touchAction: 'none',
+            // past（unplanned 風）も確定後カードと同じ作り: 左アクセント + tint 塗り + 3 辺破線
             ...(isPast && !hasConflict
-              ? { border: `2px dashed ${accentColor}`, borderRadius: '8px' }
+              ? {
+                  borderTop: `2px dashed ${accentColor}`,
+                  borderRight: `2px dashed ${accentColor}`,
+                  borderBottom: `2px dashed ${accentColor}`,
+                  borderRadius: '0 8px 8px 0',
+                }
               : {}),
           }}
           onPointerDown={handleBodyPointerDown}
         >
-          {/* 左アクセントストリップ — past unplanned 風の時は描画しない */}
-          {!(isPast && !hasConflict) && (
-            <div
-              className={cn(
-                'shrink-0 transition-colors duration-150',
-                hasConflict ? 'bg-destructive' : 'opacity-70',
-              )}
-              style={{
-                width: '3px',
-                ...(hasConflict ? {} : { backgroundColor: accentColor }),
-              }}
+          {hasConflict ? (
+            // drag/resize/新規選択と同一の ConflictOverlay に統一。
+            // ブロックは rounded-r-lg（左角四角 + 3px アクセント）なので左角を四角にして全面を覆う。
+            <ConflictOverlay
+              message={tEntry('errors.timeOverlap')}
+              timeLabel={timeLabel}
+              compact={selectionHeight < 40}
+              className="absolute inset-0 rounded-l-none"
             />
+          ) : (
+            <>
+              {/* past は確定後の unplanned と同じ左アクセント、upcoming は文言位置合わせのスペーサー。 */}
+              <div
+                className="shrink-0 transition-colors duration-150"
+                style={{ width: '3px', backgroundColor: isPast ? accentColor : tintColor }}
+              />
+              {/* カード本体 — past も確定後カードと同じ tint 塗り */}
+              <div
+                className={cn(
+                  'min-w-0 flex-1 overflow-hidden transition-colors duration-150',
+                  'rounded-r-lg',
+                )}
+                style={{ backgroundColor: tintColor }}
+              >
+                {selectionHeight < 40 ? (
+                  <div className="flex h-full items-center gap-1 px-2">
+                    {hoveredTag?.icon && (
+                      <TagIcon
+                        icon={hoveredTag.icon}
+                        color={hoveredTag.color}
+                        size="sm"
+                        className="shrink-0"
+                      />
+                    )}
+                    <span
+                      className={cn(
+                        'truncate text-xs',
+                        hoveredTag
+                          ? 'text-foreground font-normal'
+                          : 'text-muted-foreground tabular-nums',
+                      )}
+                    >
+                      {hoveredTag ? displayName : timeLabel}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex h-full flex-col gap-1 p-2">
+                    <div className="flex items-center gap-1">
+                      {hoveredTag?.icon && (
+                        <TagIcon
+                          icon={hoveredTag.icon}
+                          color={hoveredTag.color}
+                          size="sm"
+                          className="shrink-0"
+                        />
+                      )}
+                      <span
+                        className={cn(
+                          'min-w-0 truncate text-sm leading-tight font-normal',
+                          hoveredTag ? 'text-foreground' : 'text-muted-foreground',
+                        )}
+                      >
+                        {displayName}
+                      </span>
+                    </div>
+                    <span className="text-muted-foreground text-xs leading-tight tabular-nums">
+                      {timeLabel}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </>
           )}
-          {/* カード本体 — 重複時は destructive-tint、past は透明背景（破線枠で囲うのみ） */}
-          <div
-            className={cn(
-              'min-w-0 flex-1 overflow-hidden transition-colors duration-150',
-              isPast && !hasConflict ? 'rounded-lg' : 'rounded-r-lg',
-              hasConflict && 'bg-destructive-tint',
-            )}
-            style={
-              hasConflict || (isPast && !hasConflict) ? undefined : { backgroundColor: tintColor }
-            }
-          >
-            {selectionHeight < 40 ? (
-              <div className="flex h-full items-center px-2">
-                <span
-                  className={cn(
-                    'truncate text-xs',
-                    hasConflict
-                      ? 'text-destructive font-normal'
-                      : hoveredTag
-                        ? 'text-foreground font-normal'
-                        : 'text-muted-foreground tabular-nums',
-                  )}
-                >
-                  {hasConflict ? (
-                    tEntry('errors.timeOverlap')
-                  ) : hoveredTag ? (
-                    <ColonTagLabel name={displayName} />
-                  ) : (
-                    timeLabel
-                  )}
-                </span>
-              </div>
-            ) : (
-              <div className="flex h-full flex-col gap-1 p-2">
-                <span
-                  className={cn(
-                    'text-sm leading-tight font-normal',
-                    hasConflict
-                      ? 'text-destructive'
-                      : hoveredTag
-                        ? 'text-foreground'
-                        : 'text-muted-foreground',
-                  )}
-                >
-                  {hasConflict ? (
-                    tEntry('errors.timeOverlap')
-                  ) : hoveredTag ? (
-                    <ColonTagLabel name={displayName} />
-                  ) : (
-                    displayName
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    'text-xs leading-tight tabular-nums',
-                    hasConflict ? 'text-destructive' : 'text-muted-foreground',
-                  )}
-                >
-                  {timeLabel}
-                </span>
-              </div>
-            )}
-          </div>
           {/* 下端 visual indicator pill */}
           <span
             aria-hidden

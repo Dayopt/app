@@ -246,6 +246,24 @@
   animation: petal-scatter-8 570ms 35ms ease-out both;
 }
 
+/* 現在進行中エントリ: 左アクセントだけを呼吸させ、実行中のリアル感を出す */
+@keyframes entry-live-accent-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  45% {
+    opacity: 0.58;
+    filter: brightness(1.35);
+  }
+}
+
+.entry-live-accent {
+  animation: entry-live-accent-pulse 1.6s ease-in-out infinite;
+  will-change: opacity, filter;
+}
+
 /* カレンダー用カスタムスクロールバー（16px幅、8pxグリッド準拠） */
 @layer utilities {
   .calendar-scrollbar::-webkit-scrollbar {
@@ -312,5 +330,12 @@
 
   .entry-petals {
     display: none !important;
+  }
+
+  .entry-live-accent {
+    animation: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+    will-change: auto !important;
   }
 }

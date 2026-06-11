@@ -291,6 +291,59 @@ describeWithEnv('Entry two-layer planned/unplanned flow', () => {
     expect(entries.filter((entry) => entry.origin === 'unplanned')).toHaveLength(1);
   });
 
+  test('plannedのactual開始遅れ後、前半空き枠からunplannedを作れる', async ({ page }) => {
+    const dateParam = offsetDateParam(-8);
+    await seedEntry(adminSupabase, {
+      user_id: TEST_USER_ID,
+      tag_id: tagId,
+      title: TEST_TAG_NAME,
+      origin: 'planned',
+      start_time: isoAt(dateParam, '10:00'),
+      end_time: isoAt(dateParam, '11:00'),
+      actual_start_time: isoAt(dateParam, '10:00'),
+      actual_end_time: isoAt(dateParam, '11:00'),
+      duration_minutes: 60,
+    });
+
+    await selectEntry(page, dateParam);
+    const actualStart = page.getByTestId('entry-inspector-actual-time-start');
+    await actualStart.fill('10:30');
+    await actualStart.press('Enter');
+
+    await waitForEntries(adminSupabase, ([entry]) =>
+      isSameInstant(entry?.actual_start_time, isoAt(dateParam, '10:30')),
+    );
+    await expect(
+      page.getByRole('button', { name: /空き時間に記録を追加|Add record to open time/ }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    await selectTagFromGap(page);
+
+    const entries = await waitForEntries(
+      adminSupabase,
+      (rows) =>
+        rows.length === 2 &&
+        rows.some(
+          (entry) =>
+            entry.origin === 'planned' &&
+            isSameInstant(entry.start_time, isoAt(dateParam, '10:00')) &&
+            isSameInstant(entry.end_time, isoAt(dateParam, '11:00')) &&
+            isSameInstant(entry.actual_start_time, isoAt(dateParam, '10:30')) &&
+            isSameInstant(entry.actual_end_time, isoAt(dateParam, '11:00')),
+        ) &&
+        rows.some(
+          (entry) =>
+            entry.origin === 'unplanned' &&
+            entry.start_time === null &&
+            entry.end_time === null &&
+            isSameInstant(entry.actual_start_time, isoAt(dateParam, '10:00')) &&
+            isSameInstant(entry.actual_end_time, isoAt(dateParam, '10:30')),
+        ),
+    );
+
+    expect(entries.filter((entry) => entry.origin === 'unplanned')).toHaveLength(1);
+  });
+
   test('unplannedは未来へドラッグできない', async ({ page }) => {
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();

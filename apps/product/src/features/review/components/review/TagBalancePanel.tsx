@@ -2,7 +2,6 @@
 
 import type { TagColorName } from '@/features/tags';
 import { TagIcon } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 
 import { formatMinutesDuration } from '../time-pl/data/timePL.presentation';
 import { TagBreakdownBar } from './TagBreakdownBar';
@@ -50,10 +49,7 @@ export function TagBalancePanel({
             onClick={() => onTagClick(tag.tagId)}
           >
             <TagIcon icon={tag.tagIcon ?? null} color={tag.tagColor} size="sm" />
-            <ColonTagLabel
-              name={tag.tagName}
-              className="text-foreground min-w-0 flex-1 truncate text-sm"
-            />
+            <span className="text-foreground min-w-0 flex-1 truncate text-sm">{tag.tagName}</span>
             <span className="text-foreground font-mono text-sm tabular-nums">
               {formatMinutesDuration(tag.minutes)}
             </span>

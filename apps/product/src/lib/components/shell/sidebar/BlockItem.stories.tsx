@@ -81,15 +81,6 @@ export const WithMenuSlot: Story = {
   },
 };
 
-/** コロンタグ（separator 表示）。prefix が薄字 + › + suffix。 */
-export const ColonTag: Story = {
-  args: {
-    tagName: '開発:API',
-    iconSlot: <TagIcon icon="code" color="blue" size="sm" />,
-    durationMinutes: 60,
-  },
-};
-
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   args: {

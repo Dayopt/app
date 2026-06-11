@@ -14,6 +14,7 @@ import type {
 } from '../../../../types/week-view.types';
 import { getDateKey, isValidEvent, sortEventsByDateKeys } from '../../shared';
 import { HOUR_HEIGHT } from '../../shared/constants/grid.constants';
+import { getEntryStackIndex } from '../../shared/utils/entryStacking';
 
 /**
  * 週ビューでのエントリ位置計算専用フック
@@ -122,7 +123,7 @@ export function useWeekEntries({
           height,
           left,
           width,
-          zIndex: 20 + index,
+          zIndex: getEntryStackIndex(entry, index, 20),
           column: layout.column,
           totalColumns: layout.totalColumns,
         });

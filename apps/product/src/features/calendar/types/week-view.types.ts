@@ -25,7 +25,12 @@ export interface WeekGridProps {
   onEventUpdate?:
     | ((
         entryIdOrEntry: string | CalendarEvent,
-        updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+        updates?: {
+          startTime: Date;
+          endTime: Date;
+          resetActualTime?: boolean;
+          keepActualTime?: boolean;
+        },
       ) => void | Promise<void> | Promise<{ skipToast: true } | void>)
     | undefined;
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
@@ -39,7 +44,12 @@ export interface UseWeekViewOptions {
   weekStartsOn?: 0 | 1 | 6;
   onEventUpdate?: (
     entryIdOrEntry: string | CalendarEvent,
-    updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+    updates?: {
+      startTime: Date;
+      endTime: Date;
+      resetActualTime?: boolean;
+      keepActualTime?: boolean;
+    },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
 }
 

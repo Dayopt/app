@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 
 import { resolveTagColor, TagIcon } from '@/features/tags';
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { cn } from '@/lib/utils';
 
 import { formatMinutesDuration } from '../time-pl/data/timePL.presentation';
@@ -64,10 +63,7 @@ export function EstimationAccuracyList({
         return (
           <div key={row.tagId} className="flex min-h-11 min-w-0 items-center gap-3 px-2 py-2">
             <TagIcon icon={null} color={resolveTagColor(row.tagColor)} size="sm" />
-            <ColonTagLabel
-              name={row.tagName}
-              className="text-foreground min-w-0 flex-1 truncate text-sm"
-            />
+            <span className="text-foreground min-w-0 flex-1 truncate text-sm">{row.tagName}</span>
             <span className="text-muted-foreground font-mono text-sm tabular-nums">
               {formatMinutesDuration(Math.round(row.avgPlannedMinutes))} →{' '}
               {formatMinutesDuration(Math.round(row.avgActualMinutes))}

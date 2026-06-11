@@ -28,6 +28,14 @@ describe('useInlineCreateStore', () => {
       expect(state.pendingSelection).toEqual(mockSelection);
     });
 
+    it('planned gap 由来の選択元を保持できる', () => {
+      useInlineCreateStore
+        .getState()
+        .setPendingSelection({ ...mockSelection, creationSource: 'planned-gap' });
+
+      expect(useInlineCreateStore.getState().pendingSelection?.creationSource).toBe('planned-gap');
+    });
+
     it('既存の選択を上書きできる', () => {
       useInlineCreateStore.getState().setPendingSelection(mockSelection);
       const newSelection = { ...mockSelection, startHour: 14, endHour: 15 };

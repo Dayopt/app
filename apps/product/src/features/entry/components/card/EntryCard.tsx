@@ -10,12 +10,17 @@
 
 import React, { memo, startTransition, useCallback, useEffect, useMemo } from 'react';
 
+import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses } from '@/features/tags';
 import { cn } from '@/lib/utils';
 
-import { computeActualTimeDiffOverlay, toMinutesOfDay } from '../../lib/actual-time-overlay';
+import {
+  computeActualTimeDiffOverlay,
+  NO_OVERLAY,
+  toMinutesOfDay,
+} from '../../lib/actual-time-overlay';
 
 import type { EntryCardProps } from './EntryCard.types';
 import { EntryCardContent } from './EntryCardContent';
@@ -33,6 +38,7 @@ const MIN_EVENT_HEIGHT = 14;
  * 15分連続ブロックが隙間なく並ぶと描画が 8px/個重なるが、実運用で稀なため許容。
  */
 const MIN_EVENT_HEIGHT_MOBILE = 28;
+const MIN_VISIBLE_GAP_ACTION_HEIGHT = 24;
 
 /** Z-index層 */
 const Z_INDEX = {
@@ -45,6 +51,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   entry,
   tagName = null,
   tagColor = null,
+  tagIcon = null,
   position,
   onClick,
   onContextMenu,
@@ -55,6 +62,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   onAnchorRect,
   isDragging = false,
   isSelected = false,
+  isResizing = false,
   isActive = false,
   isMobile = false,
   className = '',
@@ -64,6 +72,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   plannedHeight: plannedHeightProp,
   overlayPositionApplied = false,
   onGapClick,
+  isGapAvailable,
   gapCreationCutoffMs,
 }) {
   const t = useTranslations();
@@ -80,23 +89,73 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const isPast = entry.entryState === 'past';
   // 予定外エントリかどうか（全体を破線枠で表示）
   const isUnplanned = entry.origin === 'unplanned';
+  const plannedStart = entry.plannedStartDate ?? entry.startDate;
+  const plannedEnd = entry.plannedEndDate ?? entry.endDate;
+  const upcomingActualMatchesPlan =
+    entry.entryState === 'upcoming' &&
+    plannedStart != null &&
+    plannedEnd != null &&
+    entry.actualStartDate != null &&
+    entry.actualEndDate != null &&
+    plannedStart.getTime() === entry.actualStartDate.getTime() &&
+    plannedEnd.getTime() === entry.actualEndDate.getTime();
+  // actual が無い予定と、予定/記録が一致する upcoming は予定UIとして扱う。
+  // upcoming でも実際に差分がある場合は、記録レイヤーと予定外部分を維持する。
+  const renderAsPlanOnly =
+    entry.origin === 'planned' &&
+    ((entry.actualStartDate == null && entry.actualEndDate == null) || upcomingActualMatchesPlan);
+  const contentEntry = renderAsPlanOnly
+    ? { ...entry, actualStartDate: null, actualEndDate: null }
+    : entry;
   // 予定 vs 記録の差分オーバーレイ
   const overlay = useMemo(
-    () => computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
-    [entry, hourHeightProp],
+    () =>
+      renderAsPlanOnly
+        ? NO_OVERLAY
+        : computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
+    [entry, hourHeightProp, renderAsPlanOnly],
   );
+  const topGapStartMinutes =
+    entry.startDate &&
+    entry.actualStartDate &&
+    entry.startDate.getTime() < entry.actualStartDate.getTime()
+      ? toMinutesOfDay(entry.startDate)
+      : null;
+  const topGapEndMinutes =
+    entry.startDate &&
+    entry.actualStartDate &&
+    entry.startDate.getTime() < entry.actualStartDate.getTime()
+      ? toMinutesOfDay(entry.actualStartDate)
+      : null;
+  const bottomGapStartMinutes =
+    entry.actualEndDate && entry.endDate && entry.actualEndDate.getTime() < entry.endDate.getTime()
+      ? toMinutesOfDay(entry.actualEndDate)
+      : null;
+  const bottomGapEndMinutes =
+    entry.actualEndDate && entry.endDate && entry.actualEndDate.getTime() < entry.endDate.getTime()
+      ? toMinutesOfDay(entry.endDate)
+      : null;
+  const topGapAvailable =
+    topGapStartMinutes != null && topGapEndMinutes != null
+      ? (isGapAvailable?.(topGapStartMinutes, topGapEndMinutes) ?? true)
+      : false;
+  const bottomGapAvailable =
+    bottomGapStartMinutes != null && bottomGapEndMinutes != null
+      ? (isGapAvailable?.(bottomGapStartMinutes, bottomGapEndMinutes) ?? true)
+      : false;
   const topGapClickEnabled =
     !!onGapClick &&
-    !!entry.startDate &&
-    !!entry.actualStartDate &&
-    entry.startDate.getTime() < entry.actualStartDate.getTime() &&
+    topGapAvailable &&
+    topGapEndMinutes != null &&
+    entry.actualStartDate != null &&
     (gapCreationCutoffMs == null || entry.actualStartDate.getTime() <= gapCreationCutoffMs);
   const bottomGapClickEnabled =
     !!onGapClick &&
-    !!entry.actualEndDate &&
-    !!entry.endDate &&
-    entry.actualEndDate.getTime() < entry.endDate.getTime() &&
+    bottomGapAvailable &&
+    bottomGapEndMinutes != null &&
+    entry.endDate != null &&
     (gapCreationCutoffMs == null || entry.endDate.getTime() <= gapCreationCutoffMs);
+  const hasGapCreateLane = topGapClickEnabled || bottomGapClickEnabled;
 
   // positionが未定義の場合のデフォルト値
   const safePosition = useMemo(
@@ -118,12 +177,26 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const accentWidth = 3;
 
   const minHeight = isMobile ? MIN_EVENT_HEIGHT_MOBILE : MIN_EVENT_HEIGHT;
+  const planOnlyGridHeight = useMemo(() => {
+    if (!renderAsPlanOnly || !hourHeightProp || isResizing) return null;
+
+    const start = entry.displayStartDate ?? entry.startDate;
+    const end = entry.displayEndDate ?? entry.endDate;
+    if (!start || !end) return null;
+
+    const startMinutes = toMinutesOfDay(start);
+    const endMinutes = toMinutesOfDay(end);
+    if (endMinutes <= startMinutes) return null;
+
+    return ((endMinutes - startMinutes) * hourHeightProp) / 60;
+  }, [entry, hourHeightProp, isResizing, renderAsPlanOnly]);
   const visualHeight = Math.max(
-    safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0),
+    planOnlyGridHeight ?? safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0),
     minHeight,
   );
   const plannedHeight = Math.max(
-    plannedHeightProp ??
+    planOnlyGridHeight ??
+      plannedHeightProp ??
       (overlayPositionApplied ? safePosition.height - overlay.heightDelta : safePosition.height),
     minHeight,
   );
@@ -137,6 +210,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   );
   const contentLayerTop = isUnplanned ? actualLayerTop : plannedLayerTop;
   const contentLayerHeight = isUnplanned ? actualLayerHeight : plannedHeight;
+  const alignPlannedLayerToGrid = entry.origin === 'planned' && !renderAsPlanOnly;
   // planned bg は「context」として後ろに引かせ、actual body が「main」として前に出る intensity 階層
   const plannedBackgroundColor = `color-mix(in oklch, ${accentColor} 8%, var(--background))`;
   const actualBackgroundColor = `color-mix(in oklch, ${accentColor} 18%, var(--background))`;
@@ -146,14 +220,23 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     () => ({
       position: 'absolute' as const,
       top: `${safePosition.top - (applyPositionAdjust ? overlay.topShift : 0)}px`,
-      left: `${safePosition.left}%`,
-      width: `calc(${safePosition.width}% - 8px)`,
+      left: renderAsPlanOnly ? `calc(${safePosition.left}% - 1px)` : `${safePosition.left}%`,
+      width: `calc(${safePosition.width}% - ${renderAsPlanOnly ? 7 : 8}px)`,
       height: `${visualHeight}px`,
       zIndex: isSelected || isDragging ? Z_INDEX.DRAGGING : Z_INDEX.EVENTS,
       cursor: isDragging ? 'grabbing' : 'pointer',
       ...style,
     }),
-    [safePosition, overlay, applyPositionAdjust, isSelected, isDragging, style, visualHeight],
+    [
+      safePosition,
+      overlay,
+      applyPositionAdjust,
+      isSelected,
+      isDragging,
+      renderAsPlanOnly,
+      style,
+      visualHeight,
+    ],
   );
 
   const unplannedBorderStyle: React.CSSProperties = {
@@ -192,6 +275,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const actualBodyBorderRadius = `0 ${overlay.topKind === 'overtime' ? '0' : '8px'} ${
     overlay.bottomKind === 'overtime' ? '0' : '8px'
   } 0`;
+  const resizeHandleHeight = isMobile
+    ? 44
+    : Math.min(32, Math.max(MIN_EVENT_HEIGHT, safePosition.height));
+  const resizeHandleBottom = isMobile ? -40 : 0;
+  const useCompactResizeHandle = !isMobile && safePosition.height <= 32;
 
   // イベントハンドラー
   const handleClick = useCallback(
@@ -379,16 +467,23 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         </div>
       )}
 
-      {/* Layer 1: planned — Google Calendar 風の薄い背景だけ。 */}
+      {/* Layer 1: planned — Google Calendar 風の薄い背景だけ。
+          planned layer は左端を罫線にピタッと載せるため左角を直角にする
+          （記録ブロックの左アクセント帯と同じく左辺をまっすぐ揃える）。 */}
       {!isUnplanned && (
         <div
           data-entry-planned-layer
           aria-hidden="true"
-          className="pointer-events-none absolute right-0 left-0 rounded-lg"
+          className={cn(
+            'pointer-events-none absolute right-0',
+            entry.origin === 'planned' ? 'rounded-r-lg' : 'rounded-lg',
+          )}
           style={{
             top: `${plannedLayerTop}px`,
+            left: alignPlannedLayerToGrid ? '-1px' : '0px',
             height: `${plannedHeight}px`,
-            backgroundColor: plannedBackgroundColor,
+            // upcoming は記録(actual)と地の色を揃える（差は左アクセントの有無だけにする）。
+            backgroundColor: renderAsPlanOnly ? actualBackgroundColor : plannedBackgroundColor,
           }}
         />
       )}
@@ -398,12 +493,26 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         <div
           aria-hidden="true"
           className="pointer-events-none absolute right-0 left-0 overflow-hidden"
-          style={{ top: 0, height: `${overlay.topHeight}px`, ...topOvertimeBorderStyle }}
+          style={{
+            top: 0,
+            height: `${overlay.topHeight}px`,
+            backgroundColor: actualBackgroundColor,
+          }}
         >
           <div
             data-entry-overtime-accent
-            className={cn('absolute left-0', colorClasses ? colorClasses.dot : 'bg-entry-default')}
+            className={cn(
+              'absolute left-0',
+              isActiveEntry ? 'opacity-100' : 'opacity-70',
+              isActiveEntry && 'entry-live-accent',
+              colorClasses ? colorClasses.dot : 'bg-entry-default',
+            )}
             style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
+          />
+          {/* 破線枠はアクセントの右端から開始（アクセントを横切らない） */}
+          <div
+            className="absolute top-0 right-0 bottom-0"
+            style={{ left: `${accentWidth}px`, ...topOvertimeBorderStyle }}
           />
         </div>
       )}
@@ -413,12 +522,26 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         <div
           aria-hidden="true"
           className="pointer-events-none absolute right-0 left-0 overflow-hidden"
-          style={{ bottom: 0, height: `${overlay.bottomHeight}px`, ...bottomOvertimeBorderStyle }}
+          style={{
+            bottom: 0,
+            height: `${overlay.bottomHeight}px`,
+            backgroundColor: actualBackgroundColor,
+          }}
         >
           <div
             data-entry-overtime-accent
-            className={cn('absolute left-0', colorClasses ? colorClasses.dot : 'bg-entry-default')}
+            className={cn(
+              'absolute left-0',
+              isActiveEntry ? 'opacity-100' : 'opacity-70',
+              isActiveEntry && 'entry-live-accent',
+              colorClasses ? colorClasses.dot : 'bg-entry-default',
+            )}
             style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
+          />
+          {/* 破線枠はアクセントの右端から開始（アクセントを横切らない） */}
+          <div
+            className="absolute top-0 right-0 bottom-0"
+            style={{ left: `${accentWidth}px`, ...bottomOvertimeBorderStyle }}
           />
         </div>
       )}
@@ -431,7 +554,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           role={topGapClickEnabled ? 'button' : undefined}
           aria-label={topGapClickEnabled ? t('calendar.event.diff.addRecordToGap') : undefined}
           className={cn(
-            'absolute right-0 left-0 flex items-center justify-center rounded-t-lg',
+            'absolute right-0 left-0 rounded-t-lg',
             topGapClickEnabled ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
           )}
           style={{ top: `${plannedLayerTop}px`, height: `${overlay.topHeight}px` }}
@@ -449,9 +572,13 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               : undefined
           }
         >
-          {overlay.topHeight >= 32 && topGapClickEnabled && (
-            <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
-              +
+          {overlay.topHeight >= MIN_VISIBLE_GAP_ACTION_HEIGHT && topGapClickEnabled && (
+            <span
+              data-entry-gap-action
+              className="bg-background/95 text-foreground border-border hover:bg-state-hover absolute top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm transition-colors"
+              style={{ right: 'calc(25% - 10px)' }}
+            >
+              <Plus aria-hidden="true" className="size-3.5" strokeWidth={2.25} />
             </span>
           )}
         </div>
@@ -464,7 +591,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           role={bottomGapClickEnabled ? 'button' : undefined}
           aria-label={bottomGapClickEnabled ? t('calendar.event.diff.addRecordToGap') : undefined}
           className={cn(
-            'absolute right-0 left-0 flex items-center justify-center rounded-b-lg',
+            'absolute right-0 left-0 rounded-b-lg',
             bottomGapClickEnabled ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
           )}
           style={{
@@ -485,66 +612,77 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               : undefined
           }
         >
-          {overlay.bottomHeight >= 32 && bottomGapClickEnabled && (
-            <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
-              +
+          {overlay.bottomHeight >= MIN_VISIBLE_GAP_ACTION_HEIGHT && bottomGapClickEnabled && (
+            <span
+              data-entry-gap-action
+              className="bg-background/95 text-foreground border-border hover:bg-state-hover absolute top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm transition-colors"
+              style={{ right: 'calc(25% - 10px)' }}
+            >
+              <Plus aria-hidden="true" className="size-3.5" strokeWidth={2.25} />
             </span>
           )}
         </div>
       )}
 
-      {/* Layer 2: actual — 既存の記録カード表現を維持。 */}
-      <div
-        data-entry-actual-layer
-        className={cn('absolute right-0 left-0 flex', isUnplanned && 'rounded-r-lg')}
-        style={{
-          top: `${actualLayerTop}px`,
-          height: `${actualLayerHeight}px`,
-          ...(isUnplanned ? unplannedBorderStyle : {}),
-        }}
-      >
-        {/* 左アクセントストリップ（actual=記録のサイン。予定外にも表示）
-            active 中は full intensity、それ以外は 70% で背景に引かせる（animation なしで brighter を表現） */}
+      {/* Layer 2: actual — 既存の記録カード表現を維持。
+          actual がまだ無い planned entry では描画せず、
+          planned layer + content layer だけの「予定UI」(薄い・左線なし) にする。 */}
+      {!renderAsPlanOnly && (
         <div
-          data-entry-actual-accent
-          className={cn(
-            'relative shrink-0',
-            isActiveEntry ? 'opacity-100' : 'opacity-70',
-            colorClasses ? colorClasses.dot : 'bg-entry-default',
-          )}
-          style={{ width: `${accentWidth}px` }}
-        />
-
-        {/* カード本体 — actual recorded を main として強調（planned bg 8% に対して 18%） */}
-        <div
-          data-entry-actual-body
-          className={cn(
-            'relative min-w-0 flex-1 overflow-hidden',
-            actualLayerHeight < 40
-              ? isMobile
-                ? 'flex items-center px-2 text-xs'
-                : 'flex items-center px-2 text-xs'
-              : isMobile
-                ? 'flex items-start gap-1 px-2 pt-2 text-sm'
-                : 'p-2 text-sm',
-            isUnplanned && 'bg-background',
-          )}
+          data-entry-actual-layer
+          className="absolute right-0 left-0 flex"
           style={{
-            borderRadius: actualBodyBorderRadius,
-            ...(isUnplanned ? {} : { backgroundColor: actualBackgroundColor }),
+            top: `${actualLayerTop}px`,
+            height: `${actualLayerHeight}px`,
           }}
         >
-          {isUnplanned && (
-            <EntryCardContent
-              plan={entry}
-              tagName={tagName}
-              isCompact={actualLayerHeight < 40}
-              showTime={actualLayerHeight >= 30}
-              previewTime={previewTime}
-            />
-          )}
+          {/* 左アクセントストリップ（actual=記録のサイン。予定外にも表示）
+              active 中は full intensity、それ以外は 70% で背景に引かせる（animation なしで brighter を表現） */}
+          <div
+            data-entry-actual-accent
+            className={cn(
+              'relative shrink-0',
+              isActiveEntry ? 'opacity-100' : 'opacity-70',
+              isActiveEntry && 'entry-live-accent',
+              colorClasses ? colorClasses.dot : 'bg-entry-default',
+            )}
+            style={{ width: `${accentWidth}px` }}
+          />
+
+          {/* カード本体 — actual recorded を main として強調（planned bg 8% に対して 18%） */}
+          <div
+            data-entry-actual-body
+            className={cn(
+              'relative min-w-0 flex-1 overflow-hidden',
+              actualLayerHeight < 40
+                ? isMobile
+                  ? 'flex items-center px-2 text-xs'
+                  : 'flex items-center px-2 text-xs'
+                : isMobile
+                  ? 'flex items-start gap-1 px-2 pt-2 text-sm'
+                  : 'p-2 text-sm',
+            )}
+            style={{
+              borderRadius: actualBodyBorderRadius,
+              backgroundColor: actualBackgroundColor,
+              // 予定外は破線枠を本体（アクセントの右）に当て、アクセントを横切らない
+              ...(isUnplanned ? unplannedBorderStyle : {}),
+            }}
+          >
+            {isUnplanned && (
+              <EntryCardContent
+                plan={contentEntry}
+                tagName={tagName}
+                tagColor={tagColor}
+                tagIcon={tagIcon}
+                isCompact={actualLayerHeight < 40}
+                showTime={actualLayerHeight >= 30}
+                previewTime={previewTime}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      )}
       {/* /actual layer */}
 
       {!isUnplanned && (
@@ -562,13 +700,17 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           )}
           style={{
             top: `${contentLayerTop}px`,
+            // アクセントの有無で文言位置がずれないよう、upcoming も accent 幅分を確保して揃える。
             left: `${accentWidth}px`,
+            right: hasGapCreateLane ? '50%' : '0px',
             height: `${contentLayerHeight}px`,
           }}
         >
           <EntryCardContent
-            plan={entry}
+            plan={contentEntry}
             tagName={tagName}
+            tagColor={tagColor}
+            tagIcon={tagIcon}
             isCompact={contentLayerHeight < 40}
             showTime={contentLayerHeight >= 30}
             previewTime={previewTime}
@@ -579,7 +721,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       {/* 下端リサイズハンドル（Draft は非表示）
            PC: 常時 render、hover で pill 出現。
            Mobile: Inspector 開いている entry（isActive）のみ render し、pill は常時表示。
-           短いカード（< 40px）は height=44px・bottom=-40px でブロック外側に張り出す。
+           PC の当たり判定は card 内に収め、直下のグリッド選択を塞がない。
            card 本体の overflow-hidden 外に置くことで pill icon が短い card でも visible。 */}
       {!isDraft && (!isMobile || isActive) && (
         <div
@@ -601,7 +743,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             style={{ zIndex: 11 }}
           />
           <div
-            className="focus:ring-ring pointer-events-auto absolute right-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
+            className="focus:ring-ring pointer-events-auto absolute cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
             role="slider"
             tabIndex={0}
             aria-label="Resize entry duration"
@@ -614,9 +756,13 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             onKeyDown={handleResizeKeyDown}
             style={{
               // Mobile は touch target 規約 (min-h-11) に合わせて常に 44px。
-              // PC は短い card のときのみ 44px、通常 32px。
-              height: isMobile || safePosition.height < 40 ? '44px' : '32px',
-              bottom: isMobile || safePosition.height < 40 ? '-40px' : '-12px',
+              // PC は card 内の下端だけを掴む。短い予定の直下に予定を作れるよう外へ張り出さない。
+              height: `${resizeHandleHeight}px`,
+              bottom: `${resizeHandleBottom}px`,
+              left: useCompactResizeHandle ? '50%' : '0px',
+              right: useCompactResizeHandle ? 'auto' : '0px',
+              width: useCompactResizeHandle ? '32px' : 'auto',
+              transform: useCompactResizeHandle ? 'translateX(-50%)' : 'none',
               zIndex: 10,
             }}
             title={t('calendar.event.adjustEndTime')}

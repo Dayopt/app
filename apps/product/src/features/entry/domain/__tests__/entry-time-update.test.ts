@@ -146,7 +146,7 @@ describe('buildTimeUpdateData', () => {
     });
   });
 
-  it('planned origin で actual に差分があり resetActualTime=false なら planned のみ更新', () => {
+  it('planned origin で actual に差分があり resetActualTime=false なら actual も同じ移動量で動かす', () => {
     const entry: EntryLike = {
       origin: 'planned',
       start_time: PLANNED_START,
@@ -155,6 +155,23 @@ describe('buildTimeUpdateData', () => {
       actual_end_time: ACTUAL_END,
     };
     const result = buildTimeUpdateData(entry, NEW_START, NEW_END, false);
+    expect(result).toEqual({
+      start_time: NEW_START_ISO,
+      end_time: NEW_END_ISO,
+      actual_start_time: '2026-03-12T14:05:00.000Z',
+      actual_end_time: '2026-03-12T15:10:00.000Z',
+    });
+  });
+
+  it('planned origin で keepActualTime=true なら planned だけ更新する', () => {
+    const entry: EntryLike = {
+      origin: 'planned',
+      start_time: PLANNED_START,
+      end_time: PLANNED_END,
+      actual_start_time: ACTUAL_START,
+      actual_end_time: ACTUAL_END,
+    };
+    const result = buildTimeUpdateData(entry, NEW_START, NEW_END, false, true);
     expect(result).toEqual({
       start_time: NEW_START_ISO,
       end_time: NEW_END_ISO,
@@ -238,7 +255,7 @@ describe('buildUndoTimeUpdateData', () => {
     expect(buildUndoTimeUpdateData(entry, true)).toBeNull();
   });
 
-  it('planned origin で actual に差分があれば planned のみ書き戻す', () => {
+  it('planned origin で actual に差分があれば planned/actual を書き戻す', () => {
     const entry: EntryLike = {
       origin: 'planned',
       start_time: PLANNED_START,
@@ -249,6 +266,8 @@ describe('buildUndoTimeUpdateData', () => {
     expect(buildUndoTimeUpdateData(entry, false)).toEqual({
       start_time: PLANNED_START,
       end_time: PLANNED_END,
+      actual_start_time: ACTUAL_START,
+      actual_end_time: ACTUAL_END,
     });
   });
 

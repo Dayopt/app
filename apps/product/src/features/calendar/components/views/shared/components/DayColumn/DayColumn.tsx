@@ -109,6 +109,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
               entry={entry}
               tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
               tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
+              tagIcon={entry.tagId ? (getTagById(entry.tagId)?.icon ?? null) : null}
               onAnchorRect={setAnchorRect}
               isMobile={isMobile}
               position={position} // undefinedでも大丈夫（EntryCard側で対応済み）

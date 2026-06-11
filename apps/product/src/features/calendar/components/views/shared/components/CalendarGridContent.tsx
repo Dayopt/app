@@ -3,12 +3,10 @@
 import React, { useCallback, useState } from 'react';
 
 import { isSameDay } from 'date-fns';
-import { useTranslations } from 'next-intl';
 
 import { EntryCard } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
@@ -28,29 +26,11 @@ import { InlineTagPalette } from './InlineTagPalette';
 // Types
 // ========================================
 
-function rangeDiffers(
-  firstStart: Date | null | undefined,
-  firstEnd: Date | null | undefined,
-  secondStart: Date | null | undefined,
-  secondEnd: Date | null | undefined,
-): boolean {
-  if (!firstStart || !firstEnd || !secondStart || !secondEnd) return false;
-  return (
-    firstStart.getTime() !== secondStart.getTime() || firstEnd.getTime() !== secondEnd.getTime()
-  );
-}
-
-function actualDiffersFromPlanned(entry: CalendarEvent): boolean {
-  if (entry.origin !== 'planned') return false;
-  const plannedStart = entry.plannedStartDate ?? entry.startDate;
-  const plannedEnd = entry.plannedEndDate ?? entry.endDate;
-  return rangeDiffers(plannedStart, plannedEnd, entry.actualStartDate, entry.actualEndDate);
-}
-
-function minutesToSelection(
+export function minutesToSelection(
   date: Date,
   startMinutes: number,
   endMinutes: number,
+  creationSource?: DateTimeSelection['creationSource'],
 ): DateTimeSelection {
   const normalizedStart = Math.max(0, Math.min(startMinutes, 24 * 60 - 1));
   const normalizedEnd = Math.max(normalizedStart + 1, Math.min(endMinutes, 24 * 60 - 1));
@@ -60,6 +40,7 @@ function minutesToSelection(
     startMinute: normalizedStart % 60,
     endHour: Math.floor(normalizedEnd / 60),
     endMinute: normalizedEnd % 60,
+    ...(creationSource ? { creationSource } : {}),
   };
 }
 
@@ -75,6 +56,52 @@ export function getGhostEntryHeight(style: React.CSSProperties | undefined): num
   const height =
     typeof rawHeight === 'number' ? rawHeight : parseFloat(rawHeight?.toString() ?? '');
   return Number.isFinite(height) && height > 0 ? height : 20;
+}
+
+function shiftOptionalDate(
+  date: Date | null | undefined,
+  deltaMs: number,
+): Date | null | undefined {
+  if (date == null) return date;
+  return new Date(date.getTime() + deltaMs);
+}
+
+export function buildDragPreviewEntry(
+  entry: CalendarEvent,
+  previewTime: { start: Date; end: Date },
+): CalendarEvent {
+  const baseStart = entry.startDate ?? entry.plannedStartDate ?? entry.displayStartDate;
+  const deltaMs = baseStart ? previewTime.start.getTime() - baseStart.getTime() : 0;
+  const duration = Math.max(
+    1,
+    Math.round((previewTime.end.getTime() - previewTime.start.getTime()) / 60000),
+  );
+
+  if (entry.origin === 'unplanned') {
+    return {
+      ...entry,
+      startDate: previewTime.start,
+      endDate: previewTime.end,
+      displayStartDate: previewTime.start,
+      displayEndDate: previewTime.end,
+      duration,
+      actualStartDate: previewTime.start,
+      actualEndDate: previewTime.end,
+    };
+  }
+
+  return {
+    ...entry,
+    startDate: previewTime.start,
+    endDate: previewTime.end,
+    displayStartDate: previewTime.start,
+    displayEndDate: previewTime.end,
+    duration,
+    plannedStartDate: previewTime.start,
+    plannedEndDate: previewTime.end,
+    actualStartDate: shiftOptionalDate(entry.actualStartDate, deltaMs),
+    actualEndDate: shiftOptionalDate(entry.actualEndDate, deltaMs),
+  };
 }
 
 /** CalendarGridContent コンポーネントのプロパティ */
@@ -101,7 +128,12 @@ export interface CalendarGridContentProps {
   onEventUpdate?:
     | ((
         eventId: string,
-        updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+        updates: {
+          startTime: Date;
+          endTime: Date;
+          resetActualTime?: boolean;
+          keepActualTime?: boolean;
+        },
       ) => Promise<void | { skipToast: true }> | void)
     | undefined;
   /** 時間範囲選択 */
@@ -131,7 +163,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   disabledEntryId,
   className,
 }: CalendarGridContentProps) {
-  const t = useTranslations();
   const [gapCreationCutoffMs] = useState(() => Date.now());
   const { getTagById } = useTagsMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
@@ -145,33 +176,20 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
 
-  // 記録付きエントリのドラッグ確認ダイアログ（予定だけ移動、記録はそのまま）
-  const [pendingDrop, setPendingDrop] = useState<{
-    entryId: string;
-    updates: { startTime: Date; endTime: Date };
-  } | null>(null);
-
   const wrappedOnEventUpdate = useCallback(
-    (eventId: string, updates: { startTime: Date; endTime: Date; resetActualTime?: boolean }) => {
-      const entry = entries.find((e) => e.id === eventId);
-      if (entry && actualDiffersFromPlanned(entry)) {
-        setPendingDrop({ entryId: eventId, updates });
-        return;
-      }
+    (
+      eventId: string,
+      updates: {
+        startTime: Date;
+        endTime: Date;
+        resetActualTime?: boolean;
+        keepActualTime?: boolean;
+      },
+    ) => {
       return onEventUpdate?.(eventId, updates);
     },
-    [entries, onEventUpdate],
+    [onEventUpdate],
   );
-
-  const handleConfirmDrop = useCallback(() => {
-    if (!pendingDrop) return;
-    onEventUpdate?.(pendingDrop.entryId, { ...pendingDrop.updates, resetActualTime: true });
-    setPendingDrop(null);
-  }, [pendingDrop, onEventUpdate]);
-
-  const handleCancelDrop = useCallback(() => {
-    setPendingDrop(null);
-  }, []);
 
   // 自カラムに関係するドラッグ状態のみ購読（プリミティブ値で参照安定性を確保）
   const globalDraggedEntryId = useCalendarDragStore((s) =>
@@ -211,24 +229,24 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     ({ entryId, previewTime }: { entryId: string; previewTime: { start: Date; end: Date } }) => {
       const entry = entries.find((e) => e.id === entryId);
       if (!entry) return null;
+      const previewEntry = buildDragPreviewEntry(entry, previewTime);
       const tag = entry.tagId ? getTagById(entry.tagId) : null;
-      // ゴーストは予定部分のみ表示（実績時間を除外してオーバーレイを抑制）
-      const ghostEntry = { ...entry, actualStartDate: null, actualEndDate: null };
       const ghostHeight = getGhostEntryHeight(entryStyles[entryId]);
       return (
         <EntryCard
-          entry={ghostEntry}
+          entry={previewEntry}
           tagName={tag?.name ?? null}
           tagColor={tag?.color ?? null}
+          tagIcon={tag?.icon ?? null}
           isMobile={isMobile}
           position={{ top: 0, left: 0, width: 100, height: ghostHeight }}
           plannedHeight={ghostHeight}
-          previewTime={previewTime}
-          style={{ position: 'relative', height: '100%' }}
+          hourHeight={HOUR_HEIGHT}
+          style={{ position: 'relative' }}
         />
       );
     },
-    [entries, entryStyles, getTagById, isMobile],
+    [entries, entryStyles, getTagById, isMobile, HOUR_HEIGHT],
   );
 
   // 時間グリッド
@@ -246,12 +264,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   return (
     <div
-      className={cn(
-        'relative flex-1',
-        enableCrossDayDrag && isDragging ? 'overflow-visible' : 'overflow-hidden',
-        enableCrossDayDrag && 'h-full',
-        className,
-      )}
+      className={cn('relative flex-1 overflow-visible', enableCrossDayDrag && 'h-full', className)}
       data-calendar-grid
       data-calendar-day-index={dayIndex}
     >
@@ -305,7 +318,9 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
                       if (minutesToDate(date, endMinutes).getTime() > gapCreationCutoffMs) {
                         return;
                       }
-                      onTimeRangeSelect(minutesToSelection(date, startMinutes, endMinutes));
+                      onTimeRangeSelect(
+                        minutesToSelection(date, startMinutes, endMinutes, 'planned-gap'),
+                      );
                     }
                   : undefined
               }
@@ -324,17 +339,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
       {/* React Portal ゴースト（DOM clone廃止） */}
       <GhostRenderer state={state} renderGhost={renderGhost} />
-
-      {/* 記録付きエントリのドラッグ確認ダイアログ */}
-      <ConfirmDialog
-        open={pendingDrop !== null}
-        onClose={handleCancelDrop}
-        onConfirm={handleConfirmDrop}
-        title={t('calendar.event.moveWithRecord.title')}
-        description={t('calendar.event.moveWithRecord.description')}
-        variant="warning"
-        confirmLabel={t('calendar.event.moveWithRecord.confirm')}
-      />
     </div>
   );
 });

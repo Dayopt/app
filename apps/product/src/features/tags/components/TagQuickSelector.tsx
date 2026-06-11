@@ -41,6 +41,7 @@ export interface HoveredTagInfo {
   id: string;
   name: string;
   color: string | null;
+  icon: string | null;
 }
 
 interface TagQuickSelectorProps {

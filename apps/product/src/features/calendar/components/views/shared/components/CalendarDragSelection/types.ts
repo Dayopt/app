@@ -15,6 +15,8 @@ export interface TimeRange {
 /** 日付を含む時間範囲選択結果 */
 export interface DateTimeSelection extends TimeRange {
   date: Date;
+  /** 選択の発生元。planned gap 由来の作成だけ preview を記録レーンに寄せる。 */
+  creationSource?: 'planned-gap' | undefined;
 }
 
 /** CalendarDragSelection コンポーネントのプロパティ */

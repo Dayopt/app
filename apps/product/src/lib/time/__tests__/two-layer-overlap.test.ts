@@ -81,6 +81,18 @@ describe('hasTwoLayerTimeConflict', () => {
     ).toBe(true);
   });
 
+  it('allowMissingActual=true なら planned-only target を許可する', () => {
+    expect(
+      hasTwoLayerTimeConflict([], {
+        plannedStart: '2026-01-15T10:00:00.000Z',
+        plannedEnd: '2026-01-15T11:00:00.000Z',
+        actualStart: null,
+        actualEnd: null,
+        allowMissingActual: true,
+      }),
+    ).toBe(false);
+  });
+
   it('片側nullやend <= startのtarget rangeは無効として衝突にする', () => {
     expect(
       hasTwoLayerTimeConflict([], {
