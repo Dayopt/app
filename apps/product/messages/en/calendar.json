@@ -261,7 +261,9 @@
         "unplanned": "Unplanned",
         "recordedDays": "Days recorded",
         "recordedDaysDesc": "Days with at least one record",
-        "daysValue": "{count} days"
+        "daysValue": "{count} days",
+        "unplannedTime": "Unplanned time",
+        "unplannedCountValue": "{count} unplanned records"
       },
       "monthly": {
         "dailyTitle": "Daily record",
@@ -286,7 +288,9 @@
       "daily": {
         "timelineDesc": "See where the day diverged from the plan",
         "openCalendar": "Open in calendar",
-        "scoreFulfillment": "Score fulfillment"
+        "scoreFulfillment": "Score fulfillment",
+        "unconfirmedTitle": "Awaiting confirmation",
+        "unconfirmedDesc": "Were these as planned? Tap to score"
       },
       "nextAction": {
         "planNextWeek": "Plan next week",

@@ -261,7 +261,9 @@
         "unplanned": "予定外",
         "recordedDays": "記録した日数",
         "recordedDaysDesc": "記録が1件以上ある日",
-        "daysValue": "{count}日"
+        "daysValue": "{count}日",
+        "unplannedTime": "計画外の時間",
+        "unplannedCountValue": "{count} 件の計画外の記録"
       },
       "monthly": {
         "dailyTitle": "日別の記録",
@@ -286,7 +288,9 @@
       "daily": {
         "timelineDesc": "予定と現実のずれを並べて見る",
         "openCalendar": "カレンダーで開く",
-        "scoreFulfillment": "充実度を記録"
+        "scoreFulfillment": "充実度を記録",
+        "unconfirmedTitle": "確認待ちの予定",
+        "unconfirmedDesc": "計画どおりだったか、タップで記録しましょう"
       },
       "nextAction": {
         "planNextWeek": "来週の計画を立てる",

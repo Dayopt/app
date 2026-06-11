@@ -7,6 +7,7 @@
 
 /** 計算に必要な最小のエントリ形 */
 export interface DailySummaryEntry {
+  origin: string | null;
   start_time: string | null;
   end_time: string | null;
   actual_start_time: string | null;
@@ -27,6 +28,10 @@ export interface DailySummary {
   estimationBiasMinutes: number | null;
   /** 見積もりずれの母数（予定と実績の両方を持つエントリ数）。所見の信頼性ガードに使う */
   estimationSampleCount: number;
+  /** 計画外（origin='unplanned'）の実績合計（分） */
+  unplannedMinutes: number;
+  /** 計画外の記録件数 */
+  unplannedCount: number;
 }
 
 function durationMinutes(start: string | null, end: string | null): number | null {
@@ -44,6 +49,8 @@ export function computeDailySummary(entries: DailySummaryEntry[]): DailySummary 
   let biasCount = 0;
   let fulfillmentTotal = 0;
   let fulfillmentCount = 0;
+  let unplannedMinutes = 0;
+  let unplannedCount = 0;
 
   for (const entry of entries) {
     const planned = durationMinutes(entry.start_time, entry.end_time);
@@ -58,6 +65,10 @@ export function computeDailySummary(entries: DailySummaryEntry[]): DailySummary 
     if (entry.fulfillment_score != null) {
       fulfillmentTotal += entry.fulfillment_score;
       fulfillmentCount += 1;
+    }
+    if (entry.origin === 'unplanned' && actual != null) {
+      unplannedMinutes += actual;
+      unplannedCount += 1;
     }
   }
 
@@ -75,5 +86,29 @@ export function computeDailySummary(entries: DailySummaryEntry[]): DailySummary 
     avgFulfillment: fulfillmentCount > 0 ? fulfillmentTotal / fulfillmentCount : null,
     estimationBiasMinutes: biasCount > 0 ? biasTotal / biasCount : null,
     estimationSampleCount: biasCount,
+    unplannedMinutes: Math.round(unplannedMinutes),
+    unplannedCount,
   };
+}
+
+/**
+ * ユーザー未確認の planned エントリかどうか。
+ *
+ * 現行モデルでは entry 作成時に actual が plan からコピーされるため、
+ * 「actual が plan と完全一致 かつ 未採点 かつ 終了済み」を
+ * 「計画どおりだったかユーザーがまだ確認していない」とみなす。
+ * 採点・実績編集のどちらかが行われた時点で確認済みになる。
+ *
+ * 自動記録モデル（skipped_at + effective actual）のマージ後は、
+ * この関数の中身を isAutoRecorded(entry) && !isSkipped(entry) && 未採点 に
+ * 差し替える（呼び出し側は不変）。
+ */
+export function isUnconfirmedPlanned(entry: DailySummaryEntry, now: Date = new Date()): boolean {
+  if (entry.origin !== 'planned') return false;
+  if (entry.fulfillment_score != null) return false;
+  if (!entry.start_time || !entry.end_time) return false;
+  if (entry.start_time !== entry.actual_start_time || entry.end_time !== entry.actual_end_time) {
+    return false;
+  }
+  return new Date(entry.end_time).getTime() <= now.getTime();
 }

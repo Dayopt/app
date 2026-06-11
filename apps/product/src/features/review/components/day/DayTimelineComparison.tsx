@@ -1,12 +1,14 @@
 'use client';
 
-import { Frown, Meh, Smile } from 'lucide-react';
+import { Smile } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import type { FulfillmentScore } from '@/features/entry';
 import type { TagColorName } from '@/features/tags';
 import { Popover, PopoverContent, PopoverTrigger } from '@/lib/components/ui/popover';
 import { cn } from '@/lib/utils';
+
+import { FulfillmentScoreButtons, SCORE_ICONS } from './FulfillmentScoreButtons';
 
 /** タイムライン上の 1 ブロック（時刻は日の開始からの分オフセット） */
 export interface TimelineBlock {
@@ -38,22 +40,6 @@ const MINUTE_PX = 0.8;
 const TICK_INTERVAL = 120;
 /** ブロックの最小描画高さ（px） */
 const MIN_BLOCK_PX = 18;
-
-const SCORE_OPTIONS: {
-  score: FulfillmentScore;
-  icon: typeof Smile;
-  labelKey: 'fulfillmentTooltipLow' | 'fulfillmentTooltipMedium' | 'fulfillmentTooltipHigh';
-}[] = [
-  { score: 1, icon: Frown, labelKey: 'fulfillmentTooltipLow' },
-  { score: 2, icon: Meh, labelKey: 'fulfillmentTooltipMedium' },
-  { score: 3, icon: Smile, labelKey: 'fulfillmentTooltipHigh' },
-];
-
-const SCORE_ICONS: Record<FulfillmentScore, typeof Smile> = {
-  1: Frown,
-  2: Meh,
-  3: Smile,
-};
 
 /**
  * DayTimelineComparison — 計画 vs 実績の 2 列ミニタイムライン
@@ -185,7 +171,6 @@ function ScorableBlock({
   onScoreChange: (entryId: string, score: FulfillmentScore | null) => void;
 }) {
   const t = useTranslations('calendar.stats');
-  const tFulfillment = useTranslations('entry.inspector.time');
   const currentScore = block.fulfillmentScore ?? null;
   const ScoreIcon = currentScore != null ? SCORE_ICONS[currentScore] : Smile;
 
@@ -217,29 +202,10 @@ function ScorableBlock({
       </PopoverTrigger>
       <PopoverContent side="right" align="start" className="w-auto p-2">
         <p className="text-muted-foreground mb-1 px-1 text-xs">{t('daily.scoreFulfillment')}</p>
-        <div className="flex items-center gap-1">
-          {SCORE_OPTIONS.map(({ score, icon: Icon, labelKey }) => {
-            const isSelected = currentScore === score;
-            return (
-              <button
-                key={score}
-                type="button"
-                aria-label={tFulfillment(labelKey)}
-                aria-pressed={isSelected}
-                onClick={() => onScoreChange(block.id, isSelected ? null : score)}
-                className={cn(
-                  'flex size-10 items-center justify-center rounded-lg transition-colors',
-                  'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-                  isSelected
-                    ? 'bg-state-selected text-foreground'
-                    : 'text-muted-foreground hover:bg-state-hover hover:text-foreground',
-                )}
-              >
-                <Icon className="size-5" />
-              </button>
-            );
-          })}
-        </div>
+        <FulfillmentScoreButtons
+          score={currentScore}
+          onChange={(score) => onScoreChange(block.id, score)}
+        />
       </PopoverContent>
     </Popover>
   );

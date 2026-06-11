@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarClock, Clock3, Gauge, Smile } from 'lucide-react';
+import { CalendarClock, Clock3, Gauge, ListChecks, Smile, Zap } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { format } from 'date-fns';
@@ -19,12 +19,13 @@ import { addDays } from '@/lib/date/core';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { cn } from '@/lib/utils';
 
-import { computeDailySummary } from '../../domain/dailySummary';
+import { computeDailySummary, isUnconfirmedPlanned } from '../../domain/dailySummary';
 import { computePreviousDateRange, computeStatsDateRange } from '../../lib/compute-date-range';
 import { getMetricTrend } from '../../lib/metrics';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
 import type { ReviewViewProps } from '../../types/review.types';
 import { DayTimelineComparison, type TimelineBlock } from '../day/DayTimelineComparison';
+import { UnconfirmedPlanList, type UnconfirmedPlanRow } from '../day/UnconfirmedPlanList';
 import { InsightSlot } from '../shared/InsightSlot';
 import { NextActionLink } from '../shared/NextActionLink';
 import { OverviewPanel } from '../shared/OverviewPanel';
@@ -154,6 +155,24 @@ export function DailyReview({ className }: ReviewViewProps) {
     updateEntry.mutate({ id: entryId, data: { fulfillment_score: score } });
   };
 
+  // ── 確認待ちの予定（採点 = 確認で 1 件ずつ消える Daily Close の儀式）──
+  const unconfirmedRows = useMemo<UnconfirmedPlanRow[]>(() => {
+    const now = new Date();
+    const formatIso = (iso: string) => formatInTimeZone(new Date(iso), timezone, 'H:mm');
+    return entries
+      .filter((e) => isUnconfirmedPlanned(e, now))
+      .map((e) => {
+        const tag = e.tagId ? tagsMap.get(e.tagId) : undefined;
+        return {
+          id: e.id,
+          title: e.title,
+          timeLabel: `${formatIso(e.start_time!)}–${formatIso(e.end_time!)}`,
+          color: resolveTagColor(tag?.color),
+          icon: tag?.icon ?? null,
+        };
+      });
+  }, [entries, tagsMap, timezone]);
+
   const formatTime = useMemo(
     () => (minutesFromDayStart: number) =>
       formatInTimeZone(new Date(dayStartMs + minutesFromDayStart * 60_000), timezone, 'H:mm'),
@@ -209,7 +228,7 @@ export function DailyReview({ className }: ReviewViewProps) {
         <div className="flex flex-col gap-4 p-4">
           {insightText && <InsightSlot text={insightText} />}
 
-          <section className="grid gap-3 sm:grid-cols-3">
+          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <SummaryCard
               icon={Clock3}
               label={t('overview.trackedTime')}
@@ -239,6 +258,12 @@ export function DailyReview({ className }: ReviewViewProps) {
               description={t('metrics.avgFulfillmentDesc')}
               trend={fulfillmentTrend}
             />
+            <SummaryCard
+              icon={Zap}
+              label={t('overview.unplannedTime')}
+              value={formatMinutesDuration(summary.unplannedMinutes)}
+              description={t('overview.unplannedCountValue', { count: summary.unplannedCount })}
+            />
           </section>
 
           <OverviewPanel
@@ -261,6 +286,16 @@ export function DailyReview({ className }: ReviewViewProps) {
               onScoreChange={handleScoreChange}
             />
           </OverviewPanel>
+
+          {unconfirmedRows.length > 0 && (
+            <OverviewPanel
+              title={t('daily.unconfirmedTitle')}
+              description={t('daily.unconfirmedDesc')}
+              icon={<ListChecks className="size-4" />}
+            >
+              <UnconfirmedPlanList rows={unconfirmedRows} onScore={handleScoreChange} />
+            </OverviewPanel>
+          )}
 
           <NextActionLink href={tomorrowHref} label={t('nextAction.planTomorrow')} />
         </div>
