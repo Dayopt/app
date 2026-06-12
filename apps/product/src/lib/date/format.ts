@@ -201,8 +201,6 @@ export function formatDurationMinutes(totalMinutes: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-export const KNIP_CI_PROBE = true;
-
 // ========================================
 // 曜日
 // ========================================
