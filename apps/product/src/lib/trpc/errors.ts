@@ -35,7 +35,7 @@ function hasErrorCode(error: unknown): error is Error & { code: string } {
 }
 
 /** tRPCエラーコードの型定義 */
-export type TRPCErrorCode =
+type TRPCErrorCode =
   | 'INTERNAL_SERVER_ERROR'
   | 'NOT_FOUND'
   | 'BAD_REQUEST'
@@ -48,7 +48,7 @@ export type TRPCErrorCode =
  *
  * 全サービスのエラーコードを一元管理
  */
-export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
+const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // ===== 共通エラー =====
   FETCH_FAILED: 'INTERNAL_SERVER_ERROR',
   NOT_FOUND: 'NOT_FOUND',

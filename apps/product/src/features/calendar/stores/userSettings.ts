@@ -37,7 +37,7 @@ const CHRONOTYPE_SETTINGS_KEYS = [
 ] as const satisfies ReadonlyArray<keyof ChronotypeSettings>;
 
 /** 統合 partial を 3 ストアに振り分ける純粋ユーティリティ（テスト/外部用途向け） */
-export function splitUserSettings(partial: Partial<UserSettings>): {
+function splitUserSettings(partial: Partial<UserSettings>): {
   preference: Partial<UserPreference>;
   calendar: Partial<CalendarSettings>;
   chronotype: Partial<ChronotypeSettings>;

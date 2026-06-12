@@ -8,13 +8,13 @@
 import { MS_PER_MINUTE } from '@/lib/date';
 
 /** SSRフォールバック用デフォルトの1時間高さ(px) */
-export const DEFAULT_HOUR_HEIGHT = 72;
+const DEFAULT_HOUR_HEIGHT = 72;
 
 /** イベントの最小高さ(px) — 1 分粒度 entry でも視認できる程度に低く設定 */
 export const MIN_EVENT_HEIGHT = 14;
 
 /** イベントスタイルの戻り値型（React.CSSProperties互換だがReact非依存） */
-export interface EventStyle {
+interface EventStyle {
   position: 'absolute';
   top: string;
   height: string;
@@ -174,7 +174,7 @@ export function layoutEntryToVerticalPosition(
 // ========================================
 
 /** タイムスロット — 15分単位の時間区画 */
-export interface TimeSlot {
+interface TimeSlot {
   time: string;
   hour: number;
   minute: number;
@@ -221,7 +221,7 @@ export function generateTimeSlots(
 // ========================================
 
 /** エントリ位置情報 */
-export interface EntryPositionInput {
+interface EntryPositionInput {
   id: string;
   top: number;
   height: number;

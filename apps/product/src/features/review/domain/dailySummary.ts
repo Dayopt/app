@@ -15,7 +15,7 @@ export interface DailySummaryEntry {
   fulfillment_score: number | null;
 }
 
-export interface DailySummary {
+interface DailySummary {
   /** 予定の合計（分） */
   plannedMinutes: number;
   /** 実績の合計（分） */

@@ -105,7 +105,7 @@ export function buildDragPreviewEntry(
 }
 
 /** CalendarGridContent コンポーネントのプロパティ */
-export interface CalendarGridContentProps {
+interface CalendarGridContentProps {
   /** この列が担当する日付 */
   date: Date;
   /** 表示するエントリ一覧 */

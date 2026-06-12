@@ -8,11 +8,11 @@
  * props drilling なしでアクセスできるようにする。
  */
 
-import { createContext, useContext } from 'react';
+import { createContext } from 'react';
 
 import type { CalendarEvent } from '../types/calendar.types';
 
-export interface CalendarEntryActions {
+interface CalendarEntryActions {
   onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
   onEntryContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
   onUpdateEntry?:
@@ -52,8 +52,4 @@ export function CalendarEntryActionsProvider({
       {children}
     </CalendarEntryActionsContext.Provider>
   );
-}
-
-export function useCalendarEntryActions(): CalendarEntryActions {
-  return useContext(CalendarEntryActionsContext);
 }

@@ -4,8 +4,6 @@
  * メトリクス定義マスター型 + tRPCレスポンス型
  */
 
-import type { TagColorName } from '@/features/tags';
-
 // =============================================================================
 // Metric Definition System（定義マスター型）
 // =============================================================================
@@ -62,42 +60,6 @@ export interface MetricData {
   id: MetricId;
   value: number | null;
   trend: MetricTrend | null;
-}
-
-// =============================================================================
-// tRPC Response Types（DB関数のレスポンス型）
-// =============================================================================
-
-/** エントリー率の tRPC レスポンス型 */
-export interface EntryRateData {
-  totalEntries: number;
-  plannedEntries: number;
-  entryRate: number;
-}
-
-/** 見積もり精度のタグ別 tRPC レスポンス型 */
-export interface EstimationAccuracyData {
-  tagId: string;
-  tagName: string;
-  tagColor: TagColorName;
-  avgPlannedMinutes: number;
-  avgActualMinutes: number;
-  avgDeviationMinutes: number;
-  entryCount: number;
-}
-
-/** コンテキストスイッチ数の tRPC レスポンス型 */
-export interface ContextSwitchData {
-  totalSwitches: number;
-  avgPerDay: number;
-}
-
-/** 空き時間率の tRPC レスポンス型 */
-export interface BlankRateData {
-  availableMinutes: number;
-  scheduledMinutes: number;
-  blankMinutes: number;
-  blankRate: number;
 }
 
 /** ピーク時間帯活用率の計算結果型 */

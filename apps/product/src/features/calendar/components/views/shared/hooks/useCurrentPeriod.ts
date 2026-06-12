@@ -12,7 +12,7 @@ import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { getTodayIndex } from '../utils/dateHelpers';
 
 /** useCurrentPeriod フックのオプション */
-export interface UseCurrentPeriodOptions {
+interface UseCurrentPeriodOptions {
   dates: Date[];
   referenceDate?: Date | undefined; // 基準日（デフォルト: 今日）
   periodType: 'day' | 'week' | 'threeday' | 'fiveday' | 'multiday';
@@ -20,7 +20,7 @@ export interface UseCurrentPeriodOptions {
 }
 
 /** useCurrentPeriod フックの戻り値 */
-export interface UseCurrentPeriodReturn {
+interface UseCurrentPeriodReturn {
   isCurrentPeriod: boolean;
   todayIndex: number; // -1 if not in period
   currentWeekIndex?: number | undefined; // 複数週ビューでのみ使用

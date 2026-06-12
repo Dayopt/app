@@ -46,9 +46,7 @@ export {
 // useUserPreferenceStore は app-wide な user preference のため @/lib/stores/ 配下に残る。
 export { useCalendarNavigationStore } from './stores/useCalendarNavigationStore';
 export { useCalendarSettingsStore } from './stores/useCalendarSettingsStore';
-export type { CalendarSettings } from './stores/useCalendarSettingsStore';
 export type { UserSettings } from './stores/userSettings';
-
 // =============================================================================
 // Hooks
 // =============================================================================

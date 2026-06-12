@@ -126,7 +126,7 @@ const buttonVariants = cva(
 /** 公開用のサイズ型（内部の _square-* は除外） */
 type ButtonSize = 'sm' | 'default' | 'lg';
 
-export interface ButtonProps
+interface ButtonProps
   extends React.ComponentProps<'button'>, Omit<VariantProps<typeof buttonVariants>, 'size'> {
   /** ボタンのサイズ */
   size?: ButtonSize | null;

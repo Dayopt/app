@@ -16,7 +16,7 @@ export interface TagDashboardEntryRow {
   tag_id: string | null;
 }
 
-export interface TagDashboardInput {
+interface TagDashboardInput {
   tag: TagDashboardTagRow;
   rows: TagDashboardEntryRow[];
   limit: number;

@@ -1,5 +1,5 @@
 /** カレンダービューコンポーネントをプリロードしてナビゲーションを高速化する */
-export const preloadCalendarViews = () => {
+const preloadCalendarViews = () => {
   // 最もよく使うビューを先読み（絶対パスで指定）
   import('@/features/calendar/components/views/DayView');
   import('@/features/calendar/components/views/WeekView');

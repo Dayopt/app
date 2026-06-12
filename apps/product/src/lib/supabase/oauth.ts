@@ -34,20 +34,6 @@ import type { Database } from '@dayopt/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * OAuth 2.1トークン検証結果
- */
-export interface OAuthVerificationResult {
-  /** 認証されたユーザーID */
-  userId: string;
-  /** ユーザー情報付きSupabaseクライアント */
-  client: SupabaseClient<Database>;
-  /** アクセストークン（再利用用） */
-  accessToken: string;
-  /** トークンの有効期限（Unix timestamp） */
-  expiresAt: number;
-}
-
-/**
  * OAuth 2.1エラー
  */
 export class OAuthError extends Error {
@@ -87,82 +73,6 @@ export function extractBearerToken(authHeader: string | null): string {
   }
 
   return match[1];
-}
-
-/**
- * OAuth 2.1トークンを検証し、ユーザー情報を取得
- *
- * Supabase Auth の getUser() を使用してトークンを検証します。
- * Resource Indicators (RFC 8707) に対応し、トークンが正しいリソース向けであることを確認します。
- *
- * @param accessToken - アクセストークン
- * @param options - 検証オプション
- * @returns 検証結果（ユーザーID、クライアント等）
- * @throws {OAuthError} トークンが無効な場合
- *
- * @example
- * ```ts
- * const result = await verifyOAuthToken(token, {
- *   resourceIndicator: 'https://api.dayopt.app'
- * })
- * console.log(result.userId) // "uuid-..."
- * ```
- */
-export async function verifyOAuthToken(
-  accessToken: string,
-  options?: {
-    /**
-     * Resource Indicator (RFC 8707)
-     * トークンが特定のリソース向けであることを確認
-     * @default undefined（リソース検証なし）
-     */
-    resourceIndicator?: string;
-  },
-): Promise<OAuthVerificationResult> {
-  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  // トークン付きクライアント作成
-  const client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  });
-
-  // トークン検証 + ユーザー情報取得
-  const { data, error } = await client.auth.getUser(accessToken);
-
-  if (error || !data.user) {
-    throw new OAuthError('INVALID_TOKEN', error?.message || 'Token verification failed');
-  }
-
-  // Resource Indicators (RFC 8707) 検証
-  if (options?.resourceIndicator) {
-    // トークンのカスタムクレームから対象リソースを確認
-    const tokenResource = data.user.app_metadata?.resource_indicator as string | undefined;
-
-    if (tokenResource && tokenResource !== options.resourceIndicator) {
-      throw new OAuthError(
-        'INVALID_RESOURCE',
-        `Token is not valid for resource: ${options.resourceIndicator}`,
-      );
-    }
-  }
-
-  // トークンの有効期限を確認
-  const expiresAt = data.user.user_metadata?.exp as number | undefined;
-  if (expiresAt && expiresAt * 1000 < Date.now()) {
-    throw new OAuthError('EXPIRED_TOKEN', 'Access token has expired');
-  }
-
-  return {
-    userId: data.user.id,
-    client,
-    accessToken,
-    expiresAt: expiresAt || 0,
-  };
 }
 
 /**
@@ -208,38 +118,6 @@ export function createServiceRoleClient(): SupabaseClient<Database> {
       },
     },
   });
-}
-
-/**
- * OAuth 2.1スコープの検証
- *
- * トークンに含まれるスコープが要求されたスコープを満たすか確認します。
- * 最小権限の原則に従い、必要なスコープのみを要求してください。
- *
- * @param client - 検証済みSupabaseクライアント
- * @param requiredScopes - 要求されるスコープ（例: ['read:plans', 'write:plans']）
- * @returns スコープが満たされている場合true
- *
- * @example
- * ```ts
- * const hasScope = await verifyScopes(client, ['read:plans', 'write:tags'])
- * if (!hasScope) {
- *   throw new Error('Insufficient permissions')
- * }
- * ```
- */
-export async function verifyScopes(
-  client: SupabaseClient<Database>,
-  requiredScopes: string[],
-): Promise<boolean> {
-  const { data } = await client.auth.getUser();
-  if (!data.user) return false;
-
-  // トークンのカスタムクレームからスコープを取得
-  const tokenScopes = (data.user.app_metadata?.scopes as string[]) || [];
-
-  // すべての要求されたスコープが含まれているか確認
-  return requiredScopes.every((scope) => tokenScopes.includes(scope));
 }
 
 /**

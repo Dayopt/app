@@ -16,9 +16,9 @@ export const api = createTRPCReact<AppRouter>();
 
 /**
  * APIの型定義をエクスポート
+ * @public Storybook の型安全な tRPC mock が参照する。
  */
 export type { AppRouter } from '@/lib/trpc/root';
-
 /**
  * SSR/CSR共通のベースURL取得関数
  */

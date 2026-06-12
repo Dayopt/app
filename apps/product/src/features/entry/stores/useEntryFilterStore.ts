@@ -8,16 +8,14 @@ type EntryStatus = 'open' | 'closed';
 /**
  * リマインダーフィルタータイプ
  */
-export type ReminderFilter = 'all' | 'yes' | 'no';
+type ReminderFilter = 'all' | 'yes' | 'no';
 
 /**
  * スケジュールフィルタータイプ
  */
-export type ScheduleFilter = 'all' | 'scheduled' | 'unscheduled';
+type ScheduleFilter = 'all' | 'scheduled' | 'unscheduled';
 
 // DateRangeFilter は @/lib/date から再エクスポート
-export type { DateRangeFilter };
-
 /**
  * Entry フィルタ状態
  */

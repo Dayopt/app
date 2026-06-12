@@ -63,7 +63,7 @@ interface ReviewMetricCard {
 }
 
 /** useReviewMetrics の戻り値型 */
-export interface UseStatsMetricsResult {
+interface UseStatsMetricsResult {
   /** レンダリング可能なメトリクスカードデータ */
   cards: ReviewMetricCard[];
   /** いずれかの統合クエリが読み込み中 */

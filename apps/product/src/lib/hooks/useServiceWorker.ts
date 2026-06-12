@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { logger } from '@/lib/logger';
 
-export interface ServiceWorkerState {
+interface ServiceWorkerState {
   /** Service Workerがサポートされているか */
   isSupported: boolean;
   /** 登録済みか */
@@ -17,7 +17,7 @@ export interface ServiceWorkerState {
   error: Error | null;
 }
 
-export interface UseServiceWorkerResult extends ServiceWorkerState {
+interface UseServiceWorkerResult extends ServiceWorkerState {
   /** 手動で更新を適用 */
   applyUpdate: () => void;
   /** キャッシュをクリア */

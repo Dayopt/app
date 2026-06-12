@@ -120,7 +120,7 @@ export function findOverlapGroups(entries: TimedEntry[]): OverlapGroup[] {
  * 1. Plan（type !== 'record'）を左側（column: 0）に配置
  * 2. Record（type === 'record'）を右側に配置
  */
-export function calculateGroupLayout(entries: TimedEntry[]): EntryLayout[] {
+function calculateGroupLayout(entries: TimedEntry[]): EntryLayout[] {
   const layouts: EntryLayout[] = [];
 
   // 各エントリの「競合リスト」を作成
@@ -229,9 +229,6 @@ export function calculateMaxConcurrent(entries: TimedEntry[]): number {
 // エントリカード配置
 // ========================================
 
-/** @deprecated isOverlapping を使用 */
-export const entriesOverlap = isOverlapping;
-
 /**
  * エントリグループを検出（重複するエントリをグループ化）
  */
@@ -271,24 +268,6 @@ export function calculateEntryPosition(
 
   const top = (startMinutes * hourHeight) / 60;
   const height = Math.max(((endMinutes - startMinutes) * hourHeight) / 60, MIN_EVENT_HEIGHT);
-
-  const width = 100 / column.totalColumns;
-  const left = width * column.columnIndex;
-
-  return { top, height, left, width };
-}
-
-/**
- * エントリの表示位置を計算（折りたたみ考慮版）
- */
-export function calculateEntryPositionWithCollapse(
-  entry: TimedEntry,
-  column: EntryColumn,
-  timeToPixelsFn: (time: Date) => number,
-): { top: number; height: number; left: number; width: number } {
-  const top = timeToPixelsFn(entry.start);
-  const bottom = timeToPixelsFn(entry.end);
-  const height = Math.max(bottom - top, MIN_EVENT_HEIGHT);
 
   const width = 100 / column.totalColumns;
   const left = width * column.columnIndex;

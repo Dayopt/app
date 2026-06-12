@@ -5,6 +5,7 @@
  * DB 非依存の純粋なロジックだけを切り出している。
  */
 
+/** @public Pending domain barrel contract cleanup in I-08. */
 export interface RpcErrorLike {
   message: string;
   code?: string | null;

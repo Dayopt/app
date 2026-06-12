@@ -37,6 +37,7 @@ export function flattenTagTree(nodes: TagTreeNode[]): Tag[] {
   return result;
 }
 
+/** @public Pending domain barrel contract cleanup in I-08. */
 export interface TagHierarchyUpdate {
   id: string;
   parent_id: string | null;

@@ -7,7 +7,6 @@
 
 import { Component, ErrorInfo, ReactNode } from 'react';
 
-import { logger } from '@/lib/logger';
 import { handleReactError, SentryErrorHandler } from '@/lib/sentry';
 import { useTranslations } from 'next-intl';
 
@@ -105,7 +104,7 @@ export function FeatureErrorFallback({ featureName }: { featureName: string }) {
   );
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
   };
@@ -155,38 +154,6 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
-}
-
-/**
- * 開発環境用詳細エラー表示
- */
-export function DetailedErrorBoundary({
-  children,
-  componentName,
-}: {
-  children: ReactNode;
-  componentName?: string;
-}) {
-  return (
-    <ErrorBoundary
-      onError={(error, errorInfo) => {
-        logger.error(
-          `🚨 Error in ${componentName || 'Unknown Component'}`,
-          'Error:',
-          error,
-          'Component Stack:',
-          errorInfo.componentStack,
-        );
-      }}
-      fallback={
-        process.env.NODE_ENV === 'development' ? (
-          <DevErrorFallback componentName={componentName} />
-        ) : undefined
-      }
-    >
-      {children}
-    </ErrorBoundary>
-  );
 }
 
 /**

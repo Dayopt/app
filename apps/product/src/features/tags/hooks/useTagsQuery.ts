@@ -29,17 +29,3 @@ export function useTagsHierarchy() {
     staleTime: 5 * 60 * 1000,
   });
 }
-
-/**
- * 単一タグ取得フック（ID別、5分キャッシュ）
- * @param id - 取得するタグのID
- */
-export function useTag(id: string) {
-  return trpc.tags.getById.useQuery(
-    { id },
-    {
-      enabled: !!id,
-      staleTime: 5 * 60 * 1000,
-    },
-  );
-}

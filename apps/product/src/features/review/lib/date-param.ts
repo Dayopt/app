@@ -10,7 +10,7 @@ import type { ReviewGranularity } from '../stores/useReviewFilterStore';
  */
 
 /** YYYY-MM-DD（ローカル日付）で ?d= 用文字列を作る */
-export function formatReviewDateParam(date: Date): string {
+function formatReviewDateParam(date: Date): string {
   return format(date, 'yyyy-MM-dd');
 }
 

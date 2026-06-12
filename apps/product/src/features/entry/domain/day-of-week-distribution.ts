@@ -5,13 +5,13 @@
  * から DB 非依存の純粋な集計だけを切り出している。
  */
 
-export interface DayOfWeekRow {
+interface DayOfWeekRow {
   /** 0=日, 1=月, ..., 6=土 (Postgres `EXTRACT(DOW FROM ...)` の慣習) */
   dow: number;
   total_minutes: number;
 }
 
-export interface DayOfWeekSlot {
+interface DayOfWeekSlot {
   /** 日本語 1 文字の曜日名 ('月', '火', ...) */
   day: string;
   /** その曜日の合計時間（時間単位） */

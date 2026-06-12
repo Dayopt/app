@@ -17,7 +17,7 @@
  *   prefetchデータの無駄な再フェッチを防ぐ。
  * gcTime=10分: ナビゲーション時のキャッシュ活用のため長めに設定
  */
-export const activeCache = {
+const activeCache = {
   staleTime: 5 * 60 * 1000, // 5分
   gcTime: 10 * 60 * 1000, // 10分
 };
@@ -27,7 +27,7 @@ export const activeCache = {
  * - タグ（頻繁に変更されない）
  * - タグ関連付け
  */
-export const standardCache = {
+const standardCache = {
   staleTime: 5 * 60 * 1000, // 5分
   gcTime: 10 * 60 * 1000, // 10分
 };
@@ -37,7 +37,7 @@ export const standardCache = {
  * - ユーザー設定
  * - システム設定
  */
-export const staticCache = {
+const staticCache = {
   staleTime: 60 * 60 * 1000, // 1時間
   gcTime: 2 * 60 * 60 * 1000, // 2時間
 };
@@ -47,7 +47,7 @@ export const staticCache = {
  * - タグ使用数（頻繁に更新される可能性）
  * - プランアクティビティ（履歴は少し遅れてもOK）
  */
-export const shortTermCache = {
+const shortTermCache = {
   staleTime: 60 * 1000, // 1分
   gcTime: 5 * 60 * 1000, // 5分
 };
@@ -73,12 +73,3 @@ export const cacheStrategies = {
   sessions: activeCache,
   profile: staticCache, // プロフィールはめったに変更されない
 } as const;
-
-/**
- * 機能名からキャッシュ戦略（staleTime/gcTime）を取得する
- * @param feature cacheStrategiesのキー
- * @returns キャッシュ設定オブジェクト
- */
-export function getCacheStrategy(feature: keyof typeof cacheStrategies) {
-  return cacheStrategies[feature];
-}

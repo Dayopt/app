@@ -3,7 +3,6 @@
  */
 export { IntlProvider } from './IntlProvider';
 export type { Locale } from './routing';
-export * from './types';
 
 /**
  * メッセージオブジェクトから指定したnamespaceだけを抽出する

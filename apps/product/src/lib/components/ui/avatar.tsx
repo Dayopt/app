@@ -334,5 +334,4 @@ function formatBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(0))} ${sizes[i]}`;
 }
 
-export { Avatar, AvatarFallback, AvatarImage, AvatarUpload, avatarVariants };
-export type { AvatarUploadProps };
+export { Avatar, AvatarFallback, AvatarImage, AvatarUpload };

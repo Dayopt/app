@@ -6,7 +6,7 @@ import { Button } from '@dayopt/ui';
 
 import { cn } from '@/lib/utils';
 
-export interface EmptyStateProps {
+interface EmptyStateProps {
   /** タイトル */
   title: string;
   /** 説明文 */

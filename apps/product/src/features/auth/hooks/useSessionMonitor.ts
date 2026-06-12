@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/client';
 
 import { useAuthStore } from '../stores/useAuthStore';
 
-export interface SessionMonitorState {
+interface SessionMonitorState {
   /** セッションが有効かどうか */
   isSessionValid: boolean;
   /** タイムアウト警告を表示すべきか */

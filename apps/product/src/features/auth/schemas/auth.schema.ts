@@ -18,7 +18,7 @@ export type LoginFormData = z.infer<typeof loginSchema>;
  * config.toml の password_requirements = "letters_digits" と一致。
  * 構成ルールのバリデーションは Supabase config.toml 側で実施。
  */
-export const passwordSchema = z
+const passwordSchema = z
   .string()
   .min(8, 'パスワードは8文字以上で入力')
   .max(64, 'パスワードは64文字以内で入力');

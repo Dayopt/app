@@ -11,4 +11,4 @@
  * See apps/storybook/docs/product/projects/mcp-server/overview.mdx (Decision 9).
  */
 
-export { extractBearerToken, verifyAccessToken, type VerifiedAccessToken } from './auth';
+export { extractBearerToken, verifyAccessToken } from './auth';

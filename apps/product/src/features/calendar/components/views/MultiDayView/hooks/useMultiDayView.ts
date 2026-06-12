@@ -4,7 +4,7 @@ import type { CalendarEvent } from '../../../../types/calendar.types';
 import { useCurrentPeriod, useDateUtilities, useEntriesByDate } from '../../shared';
 
 /** useMultiDayView フックのオプション */
-export interface UseMultiDayViewOptions {
+interface UseMultiDayViewOptions {
   centerDate: Date;
   dayCount: number;
   events?: CalendarEvent[];
@@ -12,7 +12,7 @@ export interface UseMultiDayViewOptions {
 }
 
 /** useMultiDayView フックの戻り値 */
-export interface UseMultiDayViewReturn {
+interface UseMultiDayViewReturn {
   displayDates: Date[];
   eventsByDate: Record<string, CalendarEvent[]>;
   centerIndex: number;

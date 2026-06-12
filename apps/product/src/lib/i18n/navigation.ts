@@ -20,4 +20,4 @@ import { routing } from './routing';
  * // usePathname: /ja/about → /about（言語プレフィックスなし）
  * ```
  */
-export const { Link, redirect, usePathname, useRouter, getPathname } = createNavigation(routing);
+export const { Link, redirect, usePathname, useRouter } = createNavigation(routing);

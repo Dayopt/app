@@ -95,7 +95,7 @@ const serverSchema = z
     },
   );
 
-export type ServerEnv = z.infer<typeof serverSchema>;
+type ServerEnv = z.infer<typeof serverSchema>;
 
 let _validated = false;
 

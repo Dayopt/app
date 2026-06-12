@@ -9,7 +9,7 @@ import { parseRequestedScope, type SupportedScope } from './scopes';
  * Phase 1 では PKCE S256 と response_type=code のみ受け付ける。
  * client_id / redirect_uri は static allowlist 照合 (Phase 2 で DCR に置換)。
  */
-export interface AuthorizeInput {
+interface AuthorizeInput {
   response_type?: string | undefined;
   client_id?: string | undefined;
   redirect_uri?: string | undefined;
@@ -26,7 +26,7 @@ export type AuthorizeValidationError =
   | 'missing_pkce'
   | 'invalid_scope';
 
-export type AuthorizeValidationResult =
+type AuthorizeValidationResult =
   | {
       ok: true;
       client: OAuthClient;

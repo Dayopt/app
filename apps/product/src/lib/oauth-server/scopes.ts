@@ -7,7 +7,7 @@ import 'server-only';
 export const SUPPORTED_SCOPES = ['read:entries', 'read:tags', 'read:stats'] as const;
 export type SupportedScope = (typeof SUPPORTED_SCOPES)[number];
 
-export const DEFAULT_SCOPES: SupportedScope[] = ['read:entries'];
+const DEFAULT_SCOPES: SupportedScope[] = ['read:entries'];
 
 /**
  * 戻り値:

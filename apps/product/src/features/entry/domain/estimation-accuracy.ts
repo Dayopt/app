@@ -19,7 +19,7 @@ export interface EstimationAccuracyDbRow {
   entry_count: number;
 }
 
-export interface EstimationAccuracyItem {
+interface EstimationAccuracyItem {
   tagId: string;
   tagName: string;
   /** 空文字の場合は 'indigo' にフォールバック */

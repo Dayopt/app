@@ -1,8 +1,6 @@
 import { isProSubscriptionStatus } from '@dayopt/billing';
 
-import { isAdminRole, type ProductRole } from './roles';
-
-export const protectedProductPaths = [
+const protectedProductPaths = [
   '/tasks',
   '/settings',
   '/calendar',
@@ -16,25 +14,14 @@ export const protectedProductPaths = [
   '/oauth/consent',
 ] as const;
 
-export const authProductPaths = ['/login', '/signup', '/auth'] as const;
+const authProductPaths = ['/login', '/signup', '/auth'] as const;
 
-export const publicProductPaths = [
-  '/',
-  '/about',
-  '/privacy',
-  '/terms',
-  '/contact',
-  '/pricing',
-] as const;
+const publicProductPaths = ['/', '/about', '/privacy', '/terms', '/contact', '/pricing'] as const;
 
-export const publicRewritePaths = ['/mcp', '/oauth/token'] as const;
+const publicRewritePaths = ['/mcp', '/oauth/token'] as const;
 
 export function canAccessProFeatures(status: string | null | undefined): boolean {
   return isProSubscriptionStatus(status);
-}
-
-export function canAccessAdminFeatures(role: ProductRole | null | undefined): boolean {
-  return isAdminRole(role);
 }
 
 export function isProtectedProductPath(pathname: string): boolean {

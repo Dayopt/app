@@ -14,7 +14,7 @@ interface ThemeContextType {
   isPending: boolean;
 }
 
-/** @internal Storybook グローバルデコレータ用にexport */
+/** @public Storybook グローバルデコレータ用に export。 */
 export const ThemeContext = createContext<ThemeContextType | null>(null);
 
 /** テーマコンテキストを取得するフック */

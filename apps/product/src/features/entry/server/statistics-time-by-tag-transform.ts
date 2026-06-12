@@ -10,7 +10,7 @@
  */
 
 /** RPC `get_time_by_tag` が返す snake_case 行 */
-export interface TimeByTagRpcRow {
+interface TimeByTagRpcRow {
   tag_id: string;
   tag_name: string;
   tag_color: string;
@@ -18,7 +18,7 @@ export interface TimeByTagRpcRow {
 }
 
 /** tRPC response item (tag_ 接頭辞除去 + camelCase) */
-export interface TimeByTagItem {
+interface TimeByTagItem {
   tagId: string;
   name: string;
   color: string;

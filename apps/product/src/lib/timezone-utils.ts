@@ -10,7 +10,7 @@
 // ========================================
 
 /** 日本語ラベル付きタイムゾーン情報（設定UI用） */
-export interface TimezoneInfoJa {
+interface TimezoneInfoJa {
   value: string;
   label: string;
   offset: number;

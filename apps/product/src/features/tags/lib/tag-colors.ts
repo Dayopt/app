@@ -15,12 +15,6 @@
 /** タグ名の最大文字数（バックエンドと一致: z.string().max(50)） */
 export const TAG_NAME_MAX_LENGTH = 50;
 
-/** タグの説明の最大文字数 */
-export const TAG_DESCRIPTION_MAX_LENGTH = 100;
-
-/** グループ名の最大文字数（タグ名と同じ） */
-export const TAG_GROUP_NAME_MAX_LENGTH = 50;
-
 // ========================================
 // カラー名一覧
 // ========================================
@@ -101,8 +95,6 @@ export const TAG_COLOR_MAP: Record<TagColorName, TagColorEntry> = {
 
 /** タグのデフォルトカラー */
 export const DEFAULT_TAG_COLOR: TagColorName = 'blue';
-/** タググループのデフォルトカラー */
-export const DEFAULT_GROUP_COLOR: TagColorName = 'gray';
 
 // ========================================
 // ブリッジ関数（HEX / 名前 / null → TagColorName）
@@ -146,15 +138,3 @@ export function resolveTagColor(color: string | null | undefined): TagColorName 
 export function getTagColorClasses(color: string | null | undefined): TagColorEntry {
   return TAG_COLOR_MAP[resolveTagColor(color)];
 }
-
-// ========================================
-// 後方互換（TAG_COLOR_PALETTE）
-// ========================================
-
-/**
- * カラー名配列
- *
- * 旧 TAG_COLOR_PALETTE（HEX配列）の代替。
- * color-palette-picker 等で使用。
- */
-export const TAG_COLOR_PALETTE = TAG_COLOR_NAMES;

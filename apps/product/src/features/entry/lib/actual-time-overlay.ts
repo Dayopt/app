@@ -9,7 +9,7 @@
 import type { CalendarEvent } from '../types/calendar-event';
 
 /** 予定 vs 記録の差分オーバーレイ情報 */
-export interface ActualTimeDiffOverlay {
+interface ActualTimeDiffOverlay {
   /** 上部: 開始差分（unexecuted=未実行で斜線, overtime=超過で左アクセント点線） */
   topKind: 'unexecuted' | 'overtime' | 'none';
   topHeight: number; // px

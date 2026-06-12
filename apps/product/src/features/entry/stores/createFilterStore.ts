@@ -14,7 +14,7 @@ export interface BaseFilterState {
 /**
  * フィルターストアのアクション型
  */
-export interface BaseFilterActions {
+interface BaseFilterActions {
   setIsSearchOpen: (isOpen: boolean) => void;
   reset: () => void;
 }
@@ -22,7 +22,7 @@ export interface BaseFilterActions {
 /**
  * フィルターストアファクトリーのオプション
  */
-export interface CreateFilterStoreOptions<TState extends BaseFilterState, TExtra = object> {
+interface CreateFilterStoreOptions<TState extends BaseFilterState, TExtra = object> {
   /** ストア名（LocalStorageキー） */
   name: string;
   /** 初期状態 */

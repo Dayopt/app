@@ -23,7 +23,7 @@ import {
 // Types
 // =============================================================================
 
-export interface CalendarCrudHandlersInput {
+interface CalendarCrudHandlersInput {
   /** Inspector で選択中の Entry ID */
   selectedEntryId: string | null;
   /** フィルタ済みイベント一覧（キーボード操作でタイトル取得に使用） */
@@ -32,7 +32,7 @@ export interface CalendarCrudHandlersInput {
   currentDate: Date;
 }
 
-export interface CalendarCrudHandlersResult {
+interface CalendarCrudHandlersResult {
   disabledEntryId: string | null;
   onEntryClick: (entry: CalendarEvent) => void;
   onTimeRangeSelect: (selection: {

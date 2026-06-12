@@ -76,7 +76,7 @@ export interface UseInteractionProps {
 }
 
 /** useInteraction フックの戻り値 */
-export interface UseInteractionReturn {
+interface UseInteractionReturn {
   /** Current interaction state (discriminated union) */
   state: InteractionState;
   /** Low-level dispatch for custom integrations */
@@ -86,7 +86,7 @@ export interface UseInteractionReturn {
 }
 
 /** DOM要素にアタッチするインタラクションハンドラー群 */
-export interface InteractionHandlers {
+interface InteractionHandlers {
   handlePointerDown: (
     entryId: string,
     e: React.MouseEvent,

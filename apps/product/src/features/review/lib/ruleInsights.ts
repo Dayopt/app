@@ -35,7 +35,7 @@ export interface RuleInsight {
 export type MetricValues = Partial<Record<MetricId, number>>;
 
 /** ルールインサイトの判定閾値設定 */
-export interface RuleThresholds {
+interface RuleThresholds {
   entryRate: { low: number };
   deepUtilization: { low: number };
   contextSwitches: { high: number };

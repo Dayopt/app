@@ -16,7 +16,7 @@ const DISMISS_DURATION = 7 * 24 * 60 * 60 * 1000; // 7日間
 
 const IOS_GUIDE_DISMISS_KEY = 'dayopt-ios-install-guide-dismissed';
 
-export interface UseInstallPromptResult {
+interface UseInstallPromptResult {
   /** インストール可能か（Android / Chrome 系のみ true） */
   canPrompt: boolean;
   /** すでにPWAとしてインストール済みか */

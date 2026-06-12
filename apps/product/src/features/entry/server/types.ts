@@ -20,11 +20,6 @@ export type ServiceSupabaseClient = SupabaseClient<Database>;
 export type EntryRow = Row<'entries'>;
 
 /**
- * タグのデータベース行型
- */
-export type TagRow = Row<'tags'>;
-
-/**
  * エントリ（タグID付き）
  * entries.tag_id が直接存在するので、tagId はエイリアス
  */

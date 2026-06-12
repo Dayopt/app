@@ -7,6 +7,7 @@
 
 import { parseColonTag } from './tag-colon';
 
+/** @public Pending domain barrel contract cleanup in I-08. */
 export interface TagSuffixEntry<TTag> {
   /** 元のタグ（DB row） */
   tag: TTag;
@@ -33,6 +34,7 @@ export function extractTagSuffixes<TTag extends { name: string }>(
   });
 }
 
+/** @public Pending domain barrel contract cleanup in I-08. */
 export interface PartitionedSuffixes<TTag> {
   /** 同名の既存タグが存在するため衝突するエントリ */
   conflicts: Array<TagSuffixEntry<TTag>>;

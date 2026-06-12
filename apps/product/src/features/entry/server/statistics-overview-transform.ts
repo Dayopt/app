@@ -37,7 +37,7 @@ export interface StatsKpiSummaryRpcResult {
  * `avgFulfillment.avgFulfillment` は null → undefined に変換される。
  * その他の missing field は 0 にフォールバックされる。
  */
-export interface StatsOverviewResult {
+interface StatsOverviewResult {
   cumulativeTime: { totalMinutes: number };
   avgFulfillment: { avgFulfillment: number | undefined; entryCount: number };
   entryRate: { totalEntries: number; plannedEntries: number; entryRate: number };

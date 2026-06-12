@@ -9,7 +9,7 @@
 // Types
 // =============================================================================
 export type { CalendarEvent } from './types/calendar-event';
-export type { EntryOrigin, EntryState, EntryWithTags, FulfillmentScore } from './types/entry';
+export type { EntryWithTags, FulfillmentScore } from './types/entry';
 
 // =============================================================================
 // Hooks
@@ -33,19 +33,10 @@ export { entryTintColor } from './lib/entry-tint';
 export {
   buildTimeUpdateData,
   buildUndoTimeUpdateData,
-  determineEntryOrigin,
-  getActualMinutes,
-  getActualRange,
-  getDiffMinutes,
-  getPlannedMinutes,
-  getPlannedRange,
-  hasActualRangeDiff,
-  hasPlannedActualDiff,
   isPlannedEntry,
   isUnplannedEntry,
-  rangesMatch,
 } from './domain';
-export type { EntryLike, EntryTimeUpdateData, TimeRange } from './domain';
+export type { EntryLike } from './domain';
 
 // =============================================================================
 // Lib (entry-status utilities)
@@ -66,8 +57,6 @@ export { isNewEntry } from './lib/new-entry-tracker';
 // Lib (entry menu items — 右クリック / Inspector メニュー共通の項目定義)
 // =============================================================================
 export { getEntryMenuItems } from './lib/entry-menu-items';
-export type { EntryMenuItem, EntryMenuItemKey } from './lib/entry-menu-items';
-
 // =============================================================================
 // Components (EntryCard)
 // =============================================================================

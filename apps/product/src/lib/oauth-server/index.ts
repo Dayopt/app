@@ -5,42 +5,10 @@
  * See apps/storybook/docs/product/projects/mcp-server/overview.mdx (Decision 1, 9).
  */
 
-export {
-  validateAuthorizeInput,
-  type AuthorizeInput,
-  type AuthorizeValidationError,
-  type AuthorizeValidationResult,
-} from './authorize-validation';
-export {
-  isAllowedRedirectUri,
-  resolveClient,
-  type OAuthClient,
-  type OAuthClientId,
-} from './clients';
-export {
-  ACCESS_TOKEN_TTL_SEC,
-  REFRESH_TOKEN_TTL_SEC,
-  exchangeAuthorizationCode,
-  refreshAccessToken,
-  type ExchangeAuthorizationCodeInput,
-  type RefreshAccessTokenInput,
-  type TokenResponse,
-} from './code-exchange';
-export { createOAuthDbClient, type OAuthSupabaseClient } from './db';
-export { OAuthServerError, type OAuthErrorCode } from './errors';
-export { buildAuthorizationServerMetadata, buildProtectedResourceMetadata } from './metadata';
-export {
-  DEFAULT_SCOPES,
-  SUPPORTED_SCOPES,
-  parseRequestedScope,
-  type SupportedScope,
-} from './scopes';
-export {
-  generateAuthorizationCode,
-  generateOpaqueToken,
-  hashToken,
-  verifyPkceS256,
-  type IssuedAuthorizationCode,
-  type IssuedToken,
-  type TokenType,
-} from './tokens';
+export { validateAuthorizeInput, type AuthorizeValidationError } from './authorize-validation';
+export { resolveClient, type OAuthClientId } from './clients';
+export { exchangeAuthorizationCode, refreshAccessToken } from './code-exchange';
+export { createOAuthDbClient } from './db';
+export { OAuthServerError } from './errors';
+export { type SupportedScope } from './scopes';
+export { generateAuthorizationCode, hashToken } from './tokens';

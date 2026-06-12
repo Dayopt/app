@@ -57,7 +57,7 @@ interface SnapshotItem<TData, TInput = undefined> {
 }
 
 /** キャッシュスナップショットとロールバック関数を持つオブジェクト */
-export interface Snapshot {
+interface Snapshot {
   restore: () => void;
 }
 

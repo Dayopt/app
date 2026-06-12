@@ -39,7 +39,7 @@ import { createJSONStorage } from 'zustand/middleware';
 // ---------------------------------------------------------------------------
 
 /** ストレージバックエンドのインターフェース（StateStorage互換） */
-export interface StorageBackend {
+interface StorageBackend {
   getItem: (name: string) => string | null | Promise<string | null>;
   setItem: (name: string, value: string) => void | Promise<void>;
   removeItem: (name: string) => void | Promise<void>;
@@ -61,17 +61,7 @@ const localStorageBackend: StorageBackend = {
   },
 };
 
-let currentBackend: StorageBackend = localStorageBackend;
-
-/**
- * ストレージバックエンドを差し替える
- *
- * React Native 移行時に AsyncStorage 等を注入するためのエントリポイント。
- * アプリ起動時（ストア初期化前）に1度だけ呼ぶこと。
- */
-export function setPlatformStorageBackend(backend: StorageBackend): void {
-  currentBackend = backend;
-}
+const currentBackend: StorageBackend = localStorageBackend;
 
 // ---------------------------------------------------------------------------
 // StateStorage ラッパー（currentBackend に委譲）
@@ -81,7 +71,7 @@ export function setPlatformStorageBackend(backend: StorageBackend): void {
  * currentBackend に委譲する StateStorage 実装
  *
  * Zustand の createJSONStorage に渡すための低レベルアダプター。
- * バックエンドが差し替えられても、既存のストアが自動で新バックエンドを使用する。
+ * 既存ストアから localStorage backend を共通利用する。
  */
 const backendStorage: StateStorage = {
   getItem: (name) => {
@@ -118,7 +108,7 @@ export function platformStorage<S>(): PersistStorage<S> | undefined {
 // ---------------------------------------------------------------------------
 
 /** カスタムシリアライズ/デシリアライズオプション */
-export interface CustomStorageOptions<TState> {
+interface CustomStorageOptions<TState> {
   /** 永続化前にstateを変換（Set→Array等） */
   serialize: (state: TState) => unknown;
   /** 復元時にstateを変換（Array→Set等） */

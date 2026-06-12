@@ -22,18 +22,16 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AnyRouter } from '@trpc/server';
-import { expect, vi } from 'vitest';
+import { vi } from 'vitest';
 
 import { createCallerFactory, type Context } from '@/lib/trpc/procedures';
 import type { Database } from '@dayopt/database';
 
 // Re-export factories for backward compatibility
-export { createMockEntry, createMockTag } from '@/lib/test/factories';
-
 /**
  * モックコンテキストのオプション
  */
-export interface MockContextOptions {
+interface MockContextOptions {
   userId?: string | undefined;
   sessionId?: string | undefined;
   supabaseOverrides?: Partial<MockSupabaseClient>;
@@ -42,21 +40,13 @@ export interface MockContextOptions {
 /**
  * モックSupabaseクライアントの型
  */
-export interface MockSupabaseClient {
+interface MockSupabaseClient {
   from: ReturnType<typeof vi.fn>;
   auth: {
     getSession: ReturnType<typeof vi.fn>;
     getUser: ReturnType<typeof vi.fn>;
   };
   rpc: ReturnType<typeof vi.fn>;
-}
-
-/**
- * Supabaseクエリビルダーのモック結果
- */
-export interface MockQueryResult<T> {
-  data: T | null;
-  error: { message: string; code: string } | null;
 }
 
 /**
@@ -118,16 +108,6 @@ export function createMockContext(options: MockContextOptions = {}): Context {
 }
 
 /**
- * 認証済みユーザーのモックコンテキストを作成
- */
-export function createAuthenticatedContext(
-  userId: string = 'test-user-id',
-  options: Omit<MockContextOptions, 'userId'> = {},
-): Context {
-  return createMockContext({ ...options, userId });
-}
-
-/**
  * tRPCテスト用のcallerを作成
  *
  * アプリ本体と同じtRPCインスタンスの createCallerFactory を使用し、
@@ -146,129 +126,6 @@ export function createAuthenticatedContext(
 export function createTestCaller<TRouter extends AnyRouter>(router: TRouter, ctx: Context) {
   const caller = createCallerFactory(router);
   return caller(ctx);
-}
-
-/**
- * Supabaseクエリの成功レスポンスをモック
- */
-export function mockSupabaseSuccess<T>(
-  mockFrom: MockSupabaseClient['from'],
-  tableName: string,
-  data: T,
-): void {
-  mockFrom.mockImplementation((table: string) => {
-    if (table === tableName) {
-      return {
-        select: vi.fn().mockReturnThis(),
-        insert: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        neq: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        or: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        range: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data, error: null }),
-        maybeSingle: vi.fn().mockResolvedValue({ data, error: null }),
-        then: vi
-          .fn()
-          .mockImplementation((resolve: (value: unknown) => void) =>
-            resolve({ data: Array.isArray(data) ? data : [data], error: null }),
-          ),
-      };
-    }
-    // デフォルトのモックQueryBuilder を返す
-    return {
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      neq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
-      or: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      range: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-      then: vi
-        .fn()
-        .mockImplementation((resolve: (value: unknown) => void) =>
-          resolve({ data: [], error: null }),
-        ),
-    };
-  });
-}
-
-/**
- * Supabaseクエリのエラーレスポンスをモック
- */
-export function mockSupabaseError(
-  mockFrom: MockSupabaseClient['from'],
-  tableName: string,
-  errorMessage: string,
-  errorCode: string = 'PGRST116',
-): void {
-  mockFrom.mockImplementation((table: string) => {
-    if (table === tableName) {
-      return {
-        select: vi.fn().mockReturnThis(),
-        insert: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        neq: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        or: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        range: vi.fn().mockReturnThis(),
-        single: vi
-          .fn()
-          .mockResolvedValue({ data: null, error: { message: errorMessage, code: errorCode } }),
-        maybeSingle: vi
-          .fn()
-          .mockResolvedValue({ data: null, error: { message: errorMessage, code: errorCode } }),
-        then: vi
-          .fn()
-          .mockImplementation((resolve: (value: unknown) => void) =>
-            resolve({ data: null, error: { message: errorMessage, code: errorCode } }),
-          ),
-      };
-    }
-    // デフォルトのモックQueryBuilder を返す
-    return {
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      neq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
-      or: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      range: vi.fn().mockReturnThis(),
-      single: vi
-        .fn()
-        .mockResolvedValue({ data: null, error: { message: errorMessage, code: errorCode } }),
-      maybeSingle: vi
-        .fn()
-        .mockResolvedValue({ data: null, error: { message: errorMessage, code: errorCode } }),
-      then: vi
-        .fn()
-        .mockImplementation((resolve: (value: unknown) => void) =>
-          resolve({ data: null, error: { message: errorMessage, code: errorCode } }),
-        ),
-    };
-  });
 }
 
 /**
@@ -318,12 +175,4 @@ export function createChainableMock(
   });
 
   return mock;
-}
-
-/**
- * TRPCErrorをアサート
- */
-export function expectTRPCError(error: unknown, code: string): void {
-  expect(error).toBeDefined();
-  expect((error as { code?: string }).code).toBe(code);
 }

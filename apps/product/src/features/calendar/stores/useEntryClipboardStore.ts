@@ -24,7 +24,7 @@ export interface ClipboardEntry {
  * 最後にクリックした日付（Googleカレンダー互換のペースト用）
  * 時刻はコピー元のものを使用するため、日付のみ記憶
  */
-export interface LastClickedPosition {
+interface LastClickedPosition {
   date: Date;
 }
 

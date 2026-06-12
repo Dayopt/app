@@ -20,7 +20,7 @@ type TRPCUtils = ReturnType<typeof api.useUtils>;
 /**
  * エンティティタグフックファクトリーのオプション
  */
-export interface CreateEntityTagsHookOptions {
+interface CreateEntityTagsHookOptions {
   /** エンティティ名 */
   entityName: 'entries';
   /** エンティティIDフィールド名 */
@@ -32,7 +32,7 @@ export interface CreateEntityTagsHookOptions {
 /**
  * エンティティタグフック
  */
-export interface EntityTagsHook {
+interface EntityTagsHook {
   isLoading: boolean;
   error: string | null;
   addTag: (entityId: string, tagId: string) => Promise<boolean>;

@@ -33,6 +33,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "@vueless/storybook-dark-mode": "^10.0.8",
     "eslint-plugin-storybook": "^10.4.2",
+    "mermaid": "^11.15.0",
     "remark-gfm": "^4.0.1",
     "storybook": "^10.4.2",
     "typescript": "^5",

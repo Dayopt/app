@@ -6,15 +6,13 @@
  */
 
 // --- Types ---
-export type { ChronotypeType, ProductivityZone } from './types/chronotype';
+export { ChronotypeSettings as ChronotypeSettingsPanel } from './components/chronotype-settings';
+export type { ChronotypeType } from './types/chronotype';
+/** @public Referenced through the calendar grid's public type contract. */
+export type { ProductivityZone } from './types/chronotype';
 
 // --- Components ---
-export { ChronotypeQuiz } from './components/chronotype-quiz';
-export { ChronotypeSettings as ChronotypeSettingsPanel } from './components/chronotype-settings';
-
 // --- Constants ---
-export { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from './lib/constants';
-
 // --- Hooks ---
 export { useActiveZoneLevel } from './hooks/useActiveZoneLevel';
 export { useChronotypeGradient } from './hooks/useChronotypeGradient';

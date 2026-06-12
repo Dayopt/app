@@ -139,19 +139,3 @@ export const createServerHelpers = cache(async () => {
   // スプレッド演算子ではtRPCのプロキシプロパティが失われる
   return Object.assign(helpers, { queryClient });
 });
-
-/**
- * 認証済みかどうかを確認するヘルパー
- * prefetch前に認証チェックが必要な場合に使用
- */
-export async function getServerAuthStatus() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return {
-    isAuthenticated: !!user,
-    userId: user?.id,
-  };
-}

@@ -2,9 +2,7 @@ import type { Row } from '@dayopt/database';
 
 type TagRow = Row<'tags'>;
 
-/**
- * テスト用のタグデータを生成
- */
+/** @public Storybook preset factory. */
 export function createMockTag(overrides: Partial<TagRow> = {}): TagRow {
   const now = new Date().toISOString();
   return {

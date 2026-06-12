@@ -54,10 +54,3 @@ export async function isEntryCreateLimited(userId: string): Promise<boolean> {
 
   return recent.length > DAILY_LIMIT;
 }
-
-/**
- * テスト用: in-memory fallback をクリアする
- */
-export function resetEntryCreateLimitForTest(): void {
-  inMemoryLog.clear();
-}

@@ -11,10 +11,3 @@ export interface DateDisplayProps {
   onClick?: ((date: Date) => void) | undefined;
   onDoubleClick?: ((date: Date) => void) | undefined;
 }
-
-/** DateDisplay のスタイル計算に使用するプロパティ */
-export interface DateDisplayStyleProps {
-  isToday: boolean;
-  isSelected: boolean;
-  isWeekend?: boolean | undefined;
-}

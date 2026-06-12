@@ -68,7 +68,7 @@ interface TraceResult<T> {
  * })
  * ```
  */
-export async function withTrace<T>(
+async function withTrace<T>(
   name: string,
   fn: () => Promise<T>,
   options?: Omit<TraceOptions, 'name'>,
@@ -84,7 +84,7 @@ export async function withTrace<T>(
  * })
  * ```
  */
-export function withTrace<T>(
+function withTrace<T>(
   name: string,
   fn: () => T,
   options?: Omit<TraceOptions, 'name'>,
@@ -93,7 +93,7 @@ export function withTrace<T>(
 /**
  * 関数実装（オーバーロード統合）
  */
-export function withTrace<T>(
+function withTrace<T>(
   name: string,
   fn: () => T | Promise<T>,
   options?: Omit<TraceOptions, 'name'>,
@@ -161,25 +161,6 @@ export function withTrace<T>(
 }
 
 /**
- * API呼び出しのパフォーマンス計測（ヘルパー）
- *
- * @example
- * ```tsx
- * const tasks = await traceApiCall('GET /tasks', async () => {
- *   return await api.get('/tasks')
- * })
- * ```
- */
-export async function traceApiCall<T>(endpoint: string, fn: () => Promise<T>): Promise<T> {
-  const { result } = await withTrace(endpoint, fn, {
-    op: 'http.client',
-    tags: { endpoint },
-  });
-
-  return result;
-}
-
-/**
  * データベースクエリのパフォーマンス計測（ヘルパー）
  *
  * @example
@@ -193,32 +174,6 @@ export async function traceDbQuery<T>(queryName: string, fn: () => Promise<T>): 
   const { result } = await withTrace(queryName, fn, {
     op: 'db.query',
     tags: { query: queryName },
-  });
-
-  return result;
-}
-
-/**
- * React Server Componentのパフォーマンス計測（ヘルパー）
- *
- * @example
- * ```tsx
- * const Component = async () => {
- *   const data = await traceServerComponent('DashboardPage', async () => {
- *     return await fetchDashboardData()
- *   })
- *
- *   return <div>{data}</div>
- * }
- * ```
- */
-export async function traceServerComponent<T>(
-  componentName: string,
-  fn: () => Promise<T>,
-): Promise<T> {
-  const { result } = await withTrace(`RSC: ${componentName}`, fn, {
-    op: 'server-component',
-    tags: { component: componentName },
   });
 
   return result;

@@ -10,7 +10,7 @@
  * - 過去 PR `statistics-time-by-tag-transform.ts` (#1229) と同じ配置パターン
  */
 
-export interface EnergyMapRpcRow {
+interface EnergyMapRpcRow {
   hour: number;
   dow: number;
   avg_fulfillment: number | null;
@@ -18,7 +18,7 @@ export interface EnergyMapRpcRow {
   entry_count: number;
 }
 
-export interface EnergyMapItem {
+interface EnergyMapItem {
   hour: number;
   dow: number;
   avgFulfillment: number | null;

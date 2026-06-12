@@ -16,7 +16,7 @@ import { useCallback, useMemo } from 'react';
 import { useTags } from './useTagsQuery';
 
 /** タグの表示情報（ID・名前・色） */
-export type TagInfo = {
+type TagInfo = {
   id: string;
   name: string;
   color: string;

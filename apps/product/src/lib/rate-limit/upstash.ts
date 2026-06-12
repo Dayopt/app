@@ -208,53 +208,6 @@ function getClientIdentifier(request: Request): string {
 }
 
 /**
- * セットアップガイド
- *
- * ## 1. Upstashアカウント作成
- * https://console.upstash.com/
- *
- * ## 2. Redisデータベース作成
- * - Region: 近い地域を選択（東京推奨）
- * - Type: Regional（グローバル不要）
- *
- * ## 3. 環境変数設定
- * ```env
- * UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
- * UPSTASH_REDIS_REST_TOKEN=AXXXxxx
- * ```
- *
- * ## 4. このファイルを使用開始
- * - 環境変数が設定されると自動的にUpstash版が有効化
- * - 未設定の場合は既存のインメモリ実装にフォールバック
- *
- * 詳細: ./docs/upstash-setup.md
- */
-
-/**
- * アルゴリズムの選択
- *
- * Upstash Ratelimitは複数のアルゴリズムをサポート:
- *
- * 1. **Sliding Window** (推奨)
- *    - 最も正確
- *    - メモリ効率的
- *    - バースト対策に最適
- *
- * 2. **Fixed Window**
- *    - シンプル
- *    - 境界でのバースト許可
- *
- * 3. **Token Bucket**
- *    - バースト許容
- *    - 柔軟性高い
- */
-export const RATE_LIMIT_ALGORITHMS = {
-  slidingWindow: 'Sliding Window（推奨）',
-  fixedWindow: 'Fixed Window',
-  tokenBucket: 'Token Bucket',
-} as const;
-
-/**
  * レート制限プリセット
  *
  * 一般的な用途に応じた設定例
@@ -317,18 +270,4 @@ export const UPSTASH_COST_ESTIMATE = {
   pricePerHundredThousand: 0.2,
   estimatedMonthlyRequests: 3_000_000,
   estimatedMonthlyCost: 6,
-} as const;
-
-/**
- * パフォーマンス
- *
- * - Upstash Redis: グローバルエッジネットワーク
- * - レイテンシ: <10ms（同一リージョン）
- * - 可用性: 99.99%
- * - 自動スケーリング
- */
-export const UPSTASH_PERFORMANCE = {
-  latency: '<10ms',
-  availability: '99.99%',
-  scaling: 'automatic',
 } as const;

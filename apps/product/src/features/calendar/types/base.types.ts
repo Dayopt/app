@@ -12,7 +12,7 @@ import type { CalendarEvent, CalendarViewType, ViewDateRange } from './calendar.
  * 全ビューで共通する最小限のプロパティ
  * リスト表示ビュー向け
  */
-export interface BaseViewProps {
+interface BaseViewProps {
   // Core data
   entries: CalendarEvent[];
   currentDate: Date;
@@ -75,18 +75,4 @@ export interface BaseEntryPosition {
   zIndex: number;
   column: number;
   totalColumns: number;
-}
-
-/**
- * ビュー設定の基本型
- * 4箇所で重複していた ViewSettings を統一
- */
-export interface BaseViewSettings {
-  startHour: number;
-  endHour: number;
-  timeInterval: 15 | 30 | 60;
-  showQuarterLines: boolean;
-  showCurrentTime: boolean;
-  maxEntryColumns: number;
-  entryMinHeight: number;
 }

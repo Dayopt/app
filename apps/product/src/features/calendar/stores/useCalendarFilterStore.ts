@@ -11,7 +11,7 @@ import { persist } from 'zustand/middleware';
 import { createPlatformStorage } from '@/lib/zustand/storage';
 
 /** カレンダーフィルターの状態インターフェース */
-export interface CalendarFilterState {
+interface CalendarFilterState {
   /** タグIDごとの表示設定（デフォルト: すべて表示） */
   visibleTagIds: Set<string>;
 
@@ -20,7 +20,7 @@ export interface CalendarFilterState {
 }
 
 /** カレンダーフィルターのアクションインターフェース */
-export interface CalendarFilterActions {
+interface CalendarFilterActions {
   /** タグの表示切替 */
   toggleTag: (tagId: string) => void;
 

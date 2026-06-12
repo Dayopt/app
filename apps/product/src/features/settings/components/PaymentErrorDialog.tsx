@@ -74,4 +74,3 @@ function PaymentErrorDialog({ open, onClose }: PaymentErrorDialogProps) {
 }
 
 export { PaymentErrorDialog };
-export type { PaymentErrorDialogProps };

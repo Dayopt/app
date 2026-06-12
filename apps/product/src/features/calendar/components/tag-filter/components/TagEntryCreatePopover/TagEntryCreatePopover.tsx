@@ -41,7 +41,7 @@ function defaultStartHHMM(forDate: Date): string {
   return '09:00';
 }
 
-export interface TagEntryCreatePopoverProps {
+interface TagEntryCreatePopoverProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tag: TagEntryCreateFormProps['tag'];

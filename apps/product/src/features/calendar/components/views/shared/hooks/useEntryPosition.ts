@@ -11,13 +11,8 @@ import { HOUR_HEIGHT } from '../constants/grid.constants';
 
 import { useEntryLayoutCalculator } from './useEntryLayoutCalculator';
 
-export interface UseEntryPositionOptions {
+interface UseEntryPositionOptions {
   hourHeight?: number;
-}
-
-/** 位置情報が付加されたエントリ型 */
-export interface PositionedEntry extends TimedEntry {
-  position: EntryCardPosition;
 }
 
 /** エントリのグリッド上の配置位置（top/height/left/width）をMapで返すフック */
@@ -52,28 +47,4 @@ export function useEntryPosition(entries: TimedEntry[], options: UseEntryPositio
   }, [layouts, hourHeight]);
 
   return entryPositions;
-}
-
-/**
- * エントリと位置を結合して配置済みエントリを返すフック
- */
-/** エントリに位置情報を結合して配置済みエントリ配列を返すフック */
-export function usePositionedEntries(
-  entries: TimedEntry[],
-  options: UseEntryPositionOptions = {},
-): PositionedEntry[] {
-  const positions = useEntryPosition(entries, options);
-
-  return useMemo(() => {
-    return entries.map((entry) => ({
-      ...entry,
-      position: positions.get(entry.id) || {
-        top: 0,
-        left: 0,
-        width: 100,
-        height: 20,
-        zIndex: 10,
-      },
-    }));
-  }, [entries, positions]);
 }

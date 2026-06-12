@@ -12,14 +12,9 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { initTRPC, TRPCError } from '@trpc/server';
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 import superjson from 'superjson';
-import { z } from 'zod';
 
 import { env } from '@/env';
-import {
-  canAccessAdminFeatures,
-  canAccessProFeatures,
-  type ProductAccessLevel,
-} from '@/lib/auth/domain';
+import { canAccessProFeatures, type ProductAccessLevel } from '@/lib/auth/domain';
 import { isBillingEnforced } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
 // 循環依存防止: barrel `@/lib/mcp` は trpc-bridge を再 export し、それが appRouter →
@@ -35,7 +30,7 @@ import { databaseTables, type Database } from '@dayopt/database';
 /**
  * プロシージャメタデータ（API仕様書自動生成用）
  */
-export interface ProcedureMeta {
+interface ProcedureMeta {
   /** OpenAPI description */
   description?: string;
   /** 認証レベル */
@@ -87,7 +82,7 @@ export interface Context {
  * 2. oauth: OAuth 2.1トークン認証（MCP用）
  * 3. service-role: Service Role Key認証（管理者用）
  */
-export async function createTRPCContext(opts: {
+async function createTRPCContext(opts: {
   req: TrpcRequestLike;
   res: TrpcResponseLike;
 }): Promise<Context> {
@@ -264,11 +259,6 @@ const t = initTRPC
   });
 
 /**
- * 公開プロシージャ（認証不要）
- */
-export const publicProcedure = t.procedure.meta({ auth: 'public' });
-
-/**
  * per-userId レート制限（100 req/min）
  *
  * Upstash 有効時は Redis ベース（分散環境対応）、
@@ -405,26 +395,6 @@ export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async (
 });
 
 /**
- * 管理者権限が必要なプロシージャ
- */
-export const adminProcedure = protectedProcedure
-  .meta({ auth: 'admin' })
-  .use(async ({ ctx, next }) => {
-    // ここで管理者権限の確認を行う
-    const isAdmin = await checkAdminPermission(ctx.userId);
-
-    if (!isAdmin) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'Admin permission required',
-        cause: new ServiceError('FORBIDDEN', 'Admin permission required'),
-      });
-    }
-
-    return next({ ctx });
-  });
-
-/**
  * ルーター作成関数
  */
 export const createTRPCRouter = t.router;
@@ -440,17 +410,6 @@ export const mergeRouters = t.mergeRouters;
 export const createCallerFactory = t.createCallerFactory;
 
 /**
- * ヘルパー関数
- */
-
-async function checkAdminPermission(_userId: string): Promise<boolean> {
-  // TODO: 管理機能が必要になった時点で実装する
-  // 候補: ADMIN_USER_IDS 環境変数によるホワイトリスト or profiles.is_admin カラム
-  // 現在 adminProcedure を使用するルーターは存在しない（deny-by-default で安全）
-  return canAccessAdminFeatures(null);
-}
-
-/**
  * タイミング攻撃耐性のある文字列比較
  */
 function safeCompare(a: string, b: string): boolean {
@@ -458,26 +417,6 @@ function safeCompare(a: string, b: string): boolean {
   const hashB = createHash('sha256').update(b).digest();
   return timingSafeEqual(hashA, hashB);
 }
-
-/**
- * 入力スキーマ用のヘルパー
- */
-export const createInputSchema = <T extends z.ZodRawShape>(shape: T) => {
-  return z.object(shape).strict(); // 厳密モードで未知のプロパティを拒否
-};
-
-/**
- * ページネーション用の共通スキーマ
- */
-export const paginationSchema = z.object({
-  page: z.number().min(1).default(1),
-  limit: z.number().min(1).max(100).default(20),
-  sortBy: z.string().optional(),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-});
-
-/** ページネーション入力の型定義 */
-export type PaginationInput = z.infer<typeof paginationSchema>;
 
 function createRequestLike(req: Request): TrpcRequestLike {
   const headers = Object.fromEntries(

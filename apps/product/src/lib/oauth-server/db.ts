@@ -23,7 +23,7 @@ type OAuthOnlyDatabase = {
   };
 };
 
-export type OAuthSupabaseClient = SupabaseClient<OAuthOnlyDatabase>;
+type OAuthSupabaseClient = SupabaseClient<OAuthOnlyDatabase>;
 
 export function createOAuthDbClient(): OAuthSupabaseClient {
   return createClient<OAuthOnlyDatabase>(

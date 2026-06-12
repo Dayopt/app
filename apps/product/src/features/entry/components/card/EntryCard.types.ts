@@ -78,26 +78,3 @@ export interface EntryCardPosition {
   height: number; // px
   zIndex?: number;
 }
-
-/** EntryCardのインタラクション状態（選択・ドラッグ・リサイズ） */
-export interface EntryInteractionState {
-  isSelected: boolean;
-  isDragging: boolean;
-  isResizing: boolean;
-}
-
-/** ドラッグ操作の対象エントリと開始位置・元の時間を保持するデータ型 */
-export interface EntryDragData {
-  entryId: string;
-  startPosition: { x: number; y: number };
-  originalStart: Date;
-  originalEnd: Date;
-}
-
-/** リサイズ操作の対象エントリと方向・元の時間を保持するデータ型 */
-export interface EntryResizeData {
-  entryId: string;
-  resizeDirection: 'top' | 'bottom';
-  originalStart: Date;
-  originalEnd: Date;
-}

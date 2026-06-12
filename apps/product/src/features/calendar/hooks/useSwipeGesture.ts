@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
-export interface SwipeGestureOptions {
+interface SwipeGestureOptions {
   /** スワイプと判定する最小距離（px）。未指定時は画面幅の12%を使用 */
   threshold?: number;
   /** 垂直移動に対する水平移動の最小比率 */
@@ -21,7 +21,7 @@ const getResponsiveThreshold = (): number => {
   return Math.min(Math.max(calculated, 40), 80);
 };
 
-export interface SwipeGestureResult {
+interface SwipeGestureResult {
   /** スワイプ方向を検出するハンドラーを取得 */
   handlers: {
     onTouchStart: (e: React.TouchEvent | TouchEvent) => void;
