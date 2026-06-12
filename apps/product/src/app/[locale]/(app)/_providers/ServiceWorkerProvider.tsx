@@ -10,10 +10,8 @@ import { Button, Card } from '@dayopt/ui';
 import { InstallBanner } from '@/lib/components/shell/InstallBanner';
 import { IOSInstallGuide } from '@/lib/components/shell/IOSInstallGuide';
 import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
-import { useOfflineToast } from '@/lib/hooks/useOfflineToast';
 import { usePWAInit } from '@/lib/hooks/usePWA';
 import { useServiceWorker } from '@/lib/hooks/useServiceWorker';
-import { useSyncProcessor } from '@/lib/hooks/useSyncProcessor';
 
 /**
  * Service Worker プロバイダー
@@ -28,12 +26,6 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
 
   // PWA 共通初期化（iOS workarounds, SW keep-alive等）
   usePWAInit();
-
-  // 同期プロセッサー初期化（tRPC vanillaクライアント経由でオフラインmutationを再送）
-  useSyncProcessor();
-
-  // オフライン/オンライン切り替え時のtoast通知
-  useOfflineToast();
 
   // updateAvailable が一度 true になったら表示を維持（ユーザーが「後で」で閉じるまで）
   const [dismissed, setDismissed] = useState(false);

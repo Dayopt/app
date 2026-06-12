@@ -19,15 +19,12 @@ interface InlineBannerState {
 /**
  * InlineBanner の app-level composition フック
  *
- * lib 層の useInlineBanner（sync/offline/update）に加え、
+ * lib 層の Service Worker 更新状態に、
  * feature 層の billing 状態（past_due）を合成する。
  *
  * 優先度（高→低）:
- * 1. 同期エラー（データ損失リスク）
- * 2. 決済エラー（Pro失効リスク）
- * 3. コンフリクト検出（未実装）
- * 4. オフライン中（操作制限）
- * 5. アプリ更新あり（緊急性低）
+ * 1. 決済エラー（Pro失効リスク）
+ * 2. アプリ更新あり（緊急性低）
  */
 export function useAppInlineBanner(): InlineBannerState {
   const t = useTranslations('common.inlineBanner');
@@ -47,13 +44,7 @@ export function useAppInlineBanner(): InlineBannerState {
   const isPastDue = billingQuery.data?.billingInfo.subscriptionStatus === 'past_due';
 
   return useMemo(() => {
-    // base hook handles priority 1 (sync error) internally.
-    // If sync error is active, it takes precedence over payment error.
-    if (base.visible && base.message === t('syncError')) {
-      return base;
-    }
-
-    // Priority 2: 決済エラー
+    // Priority 1: 決済エラー
     if (isPastDue) {
       return {
         visible: true,
@@ -65,7 +56,7 @@ export function useAppInlineBanner(): InlineBannerState {
       };
     }
 
-    // Priority 3-5: base hook handles the rest (offline, update)
+    // Priority 2: Service Worker 更新
     return base;
   }, [base, isPastDue, t, createPortal]);
 }
