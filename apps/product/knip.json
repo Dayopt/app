@@ -1,7 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
-    "src/app/**/{page,layout,loading,error,not-found,default,template,route,global-error,opengraph-image,sitemap}.{ts,tsx}"
+    "src/app/**/{page,layout,loading,error,not-found,default,template,route,global-error,opengraph-image,sitemap}.{ts,tsx}",
+    "src/lib/i18n/request.ts"
   ],
   "project": ["src/**/*.{ts,tsx}"],
   "ignore": [
@@ -18,6 +19,10 @@
     "@storybook/*",
     "@vueless/storybook-dark-mode",
     "husky",
-    "storybook"
+    "storybook",
+    "@dayopt/*",
+    "sharp",
+    "tw-animate-css",
+    "@tailwindcss/typography"
   ]
 }
