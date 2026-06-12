@@ -150,16 +150,16 @@
 
 ### Low（ついでに直さない。独立した小タスクとして処理）
 
-| ID  | 対象                                                                               | 備考                                                                                                              |
-| --- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| L1  | eslint-disable 43 件                                                               | 大半は正当化済み。Phase 7 で棚卸し                                                                                |
-| L2  | `lib/date-utils.ts`（再エクスポート + parseDateString のみ。命名規約違反でもある） | Phase 2 で `lib/date/` へ吸収                                                                                     |
-| L3  | 各 feature `domain/index.ts` barrel の未参照                                       | barrel 整理（Phase 2）に内包                                                                                      |
-| L4  | 未使用疑い script                                                                  | ~~parse-filename.ts~~ は **eagle-sync.ts:46 から使用中と判明し除外**。I-01 の棚卸しで真の未使用が出た場合のみ対応 |
-| L5  | `@typescript-eslint/no-unused-vars` off                                            | TS compiler 依存で実害小。Phase 7 で再評価                                                                        |
-| L6  | `packages/domain/src/index.ts` の barrel 未整備（直接 path import 1 件）           | 利用が最小。**要確認 Q6**（現状維持推奨）                                                                         |
-| L7  | `entries.duration_minutes` が `start/end_time` と並存（導出可能値の実体化）        | 不変条件がどこで守られているか Phase 0 で確認のみ（変更しない）                                                   |
-| L8  | `user_settings.chronotype_settings` / `personalization` が型のない Json 列         | Zod 検証の有無を Phase 0 で確認。列昇格は別 plan（schema 変更のため本計画外）                                     |
+| ID  | 対象                                                                               | 備考                                                                                                                                                                                                                                |
+| --- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L1  | eslint-disable 43 件                                                               | 大半は正当化済み。Phase 7 で棚卸し                                                                                                                                                                                                  |
+| L2  | `lib/date-utils.ts`（再エクスポート + parseDateString のみ。命名規約違反でもある） | Phase 2 で `lib/date/` へ吸収                                                                                                                                                                                                       |
+| L3  | 各 feature `domain/index.ts` barrel の未参照                                       | barrel 整理（Phase 2）に内包                                                                                                                                                                                                        |
+| L4  | 未使用疑い script                                                                  | ~~parse-filename.ts~~ は **eagle-sync.ts:46 から使用中と判明し除外**。I-01 の棚卸しで真の未使用が出た場合のみ対応                                                                                                                   |
+| L5  | `@typescript-eslint/no-unused-vars` off                                            | TS compiler 依存で実害小。Phase 7 で再評価                                                                                                                                                                                          |
+| L6  | `packages/domain/src/index.ts` の barrel 未整備（直接 path import 1 件）           | 利用が最小。**要確認 Q6**（現状維持推奨）                                                                                                                                                                                           |
+| L7  | `entries.duration_minutes` が `start/end_time` と並存（導出可能値の実体化）        | 不変条件がどこで守られているか Phase 0 で確認のみ（変更しない）。**既存 issue #1285（`planned_duration_minutes` への rename）が別途存在** — schema 変更を含むため本リファクタの範囲外。I-03 の確認結果は #1285 の判断材料として共有 |
+| L8  | `user_settings.chronotype_settings` / `personalization` が型のない Json 列         | Zod 検証の有無を Phase 0 で確認。列昇格は別 plan（schema 変更のため本計画外）                                                                                                                                                       |
 
 ### 健全と確認できた領域（触らない根拠）
 
