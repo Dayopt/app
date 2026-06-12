@@ -1,5 +1,3 @@
-import type { CSSProperties } from 'react';
-
 import type { BaseEntryPosition, GridViewProps } from './base.types';
 import type { CalendarEvent } from './calendar.types';
 
@@ -78,49 +76,4 @@ export interface UseWeekEntriesReturn {
 /** 週ビューでのエントリ位置情報（BaseEntryPosition に dayIndex を追加） */
 export interface WeekEntryPosition extends BaseEntryPosition {
   dayIndex: number;
-}
-
-/** 週ビューの時間スロット情報 */
-export interface WeekTimeSlot {
-  time: string;
-  hour: number;
-  minute: number;
-  label: string;
-  isHour: boolean;
-  isHalfHour: boolean;
-  isQuarterHour: boolean;
-}
-
-/** 週ビューの表示設定 */
-export interface WeekViewSettings {
-  startHour: number;
-  endHour: number;
-  timeInterval: 15 | 30 | 60; // minutes
-  showQuarterLines: boolean;
-  showCurrentTime: boolean;
-  maxEventColumns: number;
-  eventMinHeight: number;
-  dayColumnWidth: number; // 各日の列幅（%）
-  showWeekends: boolean;
-  weekStartsOn: 0 | 1 | 6;
-}
-
-/** 週ビューの日付ヘッダー情報 */
-export interface WeekDateDisplay {
-  date: Date;
-  dayName: string;
-  dayNumber: number;
-  isToday: boolean;
-  isWeekend: boolean;
-  events: CalendarEvent[];
-  eventCount: number;
-}
-
-/** 週ビューのイベントスタイル情報 */
-export interface WeekEventStyle {
-  position: CSSProperties;
-  color: string;
-  textColor: string;
-  borderColor: string;
-  opacity: number;
 }

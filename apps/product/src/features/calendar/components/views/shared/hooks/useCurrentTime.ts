@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 
-export interface UseCurrentTimeOptions {
+interface UseCurrentTimeOptions {
   updateInterval?: number; // 更新間隔（ミリ秒）
   enabled?: boolean; // 更新を有効にするか
 }

@@ -35,7 +35,6 @@
  */
 
 import { createBrowserClient } from '@supabase/ssr';
-import type { SupabaseClient as SupabaseClientType } from '@supabase/supabase-js';
 
 import type { Database } from '@dayopt/database';
 
@@ -50,8 +49,3 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 }
-
-/**
- * 型定義
- */
-export type SupabaseClient = SupabaseClientType<Database>;

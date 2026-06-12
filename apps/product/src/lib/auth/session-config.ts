@@ -59,31 +59,6 @@ export const SESSION_CONFIG = {
 } as const;
 
 /**
- * Cookie設定
- */
-export const COOKIE_CONFIG = {
-  /**
-   * セッションCookie名
-   */
-  sessionCookie: 'session',
-
-  /**
-   * Remember Me Cookie名
-   */
-  rememberMeCookie: 'remember_me',
-
-  /**
-   * Cookie属性
-   */
-  attributes: {
-    httpOnly: true, // XSS対策: JavaScriptからアクセス不可
-    secure: process.env.NODE_ENV === 'production', // HTTPS のみ
-    sameSite: 'lax' as const, // CSRF対策
-    path: '/',
-  },
-} as const;
-
-/**
  * セッションセキュリティ設定
  */
 export const SESSION_SECURITY = {
@@ -118,34 +93,6 @@ export const SESSION_SECURITY = {
 } as const;
 
 /**
- * セッションストレージ設定
- */
-export const SESSION_STORAGE = {
-  /**
-   * ストレージタイプ
-   * - 'cookie': Cookie only（小規模データ）
-   * - 'database': Database（大規模データ、Supabase使用）
-   */
-  type: 'database' as const,
-
-  /**
-   * セッションデータの暗号化
-   */
-  encrypt: true,
-
-  /**
-   * セッションメタデータ
-   */
-  metadata: {
-    trackLoginTime: true,
-    trackLastActivity: true,
-    trackIpAddress: true,
-    trackUserAgent: true,
-    trackDeviceId: true,
-  },
-} as const;
-
-/**
  * 型定義
  */
 export interface SessionData {
@@ -170,14 +117,13 @@ export enum SessionStatus {
   EXPIRED = 'expired',
   IDLE_TIMEOUT = 'idle_timeout',
   ABSOLUTE_TIMEOUT = 'absolute_timeout',
-  INVALIDATED = 'invalidated', // 手動無効化
   CONCURRENT_LIMIT = 'concurrent_limit', // 同時セッション制限
 }
 
 /**
  * セッション検証結果
  */
-export interface SessionValidation {
+interface SessionValidation {
   isValid: boolean;
   status: SessionStatus;
   remainingTime?: number; // 秒

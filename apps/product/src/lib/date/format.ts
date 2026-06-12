@@ -14,14 +14,14 @@
  * ```
  */
 
-import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE } from './constants';
+import { MS_PER_HOUR, MS_PER_MINUTE } from './constants';
 
 // ========================================
 // 日付フォーマット
 // ========================================
 
 /** `formatDate` 関数に渡すオプション */
-export interface DateFormatOptions {
+interface DateFormatOptions {
   /** 年を含めるか（デフォルト: true） */
   includeYear?: boolean;
   /** 曜日を含めるか（デフォルト: false） */
@@ -87,7 +87,7 @@ export function formatDateISO(date: Date): string {
 // ========================================
 
 /** 時刻フォーマットの種別（12時間制 or 24時間制） */
-export type TimeFormat = '12h' | '24h';
+type TimeFormat = '12h' | '24h';
 
 /**
  * 時刻をフォーマット
@@ -149,96 +149,6 @@ export function formatTimeRange(start: Date, end: Date, format: TimeFormat = '24
 }
 
 // ========================================
-// 日時フォーマット
-// ========================================
-
-/**
- * 日時をフォーマット
- *
- * @example
- * ```typescript
- * formatDateTime(new Date(), 'ja', '24h'); // "2025年1月22日 14:30"
- * ```
- */
-export function formatDateTime(
-  date: Date,
-  locale: string = 'ja',
-  timeFormat: TimeFormat = '24h',
-): string {
-  return `${formatDate(date, locale)} ${formatTime(date, timeFormat)}`;
-}
-
-// ========================================
-// 相対時間フォーマット
-// ========================================
-
-/** `formatRelativeTime` 関数に渡すオプション */
-export interface RelativeTimeOptions {
-  /** 基準日時（デフォルト: now） */
-  baseDate?: Date;
-  /** ロケール（デフォルト: 'ja'） */
-  locale?: string;
-}
-
-/**
- * 相対時間をフォーマット（〜前、〜後）
- *
- * @param date - フォーマットする日付
- * @param options - オプション
- * @returns 相対時間文字列
- *
- * @example
- * ```typescript
- * formatRelativeTime(new Date(Date.now() - 60000)); // "1分前"
- * formatRelativeTime(new Date(Date.now() - 3600000)); // "1時間前"
- * formatRelativeTime(new Date(Date.now() - 86400000)); // "1日前"
- * ```
- */
-export function formatRelativeTime(date: Date, options: RelativeTimeOptions = {}): string {
-  const { baseDate = new Date(), locale = 'ja' } = options;
-  const diffMs = baseDate.getTime() - date.getTime();
-  const absDiffMs = Math.abs(diffMs);
-  const isPast = diffMs > 0;
-
-  // Intl.RelativeTimeFormat を使用
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-
-  if (absDiffMs < MS_PER_MINUTE) {
-    // 1分未満
-    const seconds = Math.floor(absDiffMs / 1000);
-    return rtf.format(isPast ? -seconds : seconds, 'second');
-  }
-
-  if (absDiffMs < MS_PER_HOUR) {
-    // 1時間未満
-    const minutes = Math.floor(absDiffMs / MS_PER_MINUTE);
-    return rtf.format(isPast ? -minutes : minutes, 'minute');
-  }
-
-  if (absDiffMs < MS_PER_DAY) {
-    // 1日未満
-    const hours = Math.floor(absDiffMs / MS_PER_HOUR);
-    return rtf.format(isPast ? -hours : hours, 'hour');
-  }
-
-  if (absDiffMs < MS_PER_DAY * 30) {
-    // 30日未満
-    const days = Math.floor(absDiffMs / MS_PER_DAY);
-    return rtf.format(isPast ? -days : days, 'day');
-  }
-
-  if (absDiffMs < MS_PER_DAY * 365) {
-    // 1年未満
-    const months = Math.floor(absDiffMs / (MS_PER_DAY * 30));
-    return rtf.format(isPast ? -months : months, 'month');
-  }
-
-  // 1年以上
-  const years = Math.floor(absDiffMs / (MS_PER_DAY * 365));
-  return rtf.format(isPast ? -years : years, 'year');
-}
-
-// ========================================
 // 期間フォーマット
 // ========================================
 
@@ -294,27 +204,3 @@ export function formatDurationMinutes(totalMinutes: number): string {
 // ========================================
 // 曜日
 // ========================================
-
-/**
- * 曜日を取得
- */
-export function getWeekdayName(
-  date: Date,
-  locale: string = 'ja',
-  format: 'long' | 'short' = 'short',
-): string {
-  return new Intl.DateTimeFormat(locale, { weekday: format }).format(date);
-}
-
-/**
- * 曜日インデックス（0=日曜, 1=月曜, ...）から曜日名を取得
- */
-export function getWeekdayNameByIndex(
-  index: number,
-  locale: string = 'ja',
-  format: 'long' | 'short' = 'short',
-): string {
-  // 2024-01-07 は日曜日
-  const baseDate = new Date(2024, 0, 7 + index);
-  return getWeekdayName(baseDate, locale, format);
-}

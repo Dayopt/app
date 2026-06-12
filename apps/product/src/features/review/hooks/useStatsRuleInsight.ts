@@ -6,7 +6,7 @@ import { evaluateRuleInsights, type MetricValues, type RuleInsight } from '../li
 import type { StatsPageData } from '../types/metrics.types';
 
 /** 所見を言い切るのに必要な最小記録件数（これ未満は傾向の信頼性が低い） */
-export const LOW_DATA_ENTRY_THRESHOLD = 5;
+const LOW_DATA_ENTRY_THRESHOLD = 5;
 
 interface StatsRuleInsightResult {
   /** severity 最上位の所見 1 件。該当なし・データ不足は null */

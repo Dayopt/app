@@ -8,9 +8,9 @@ const REFRESH_PREFIX = 'dop_rt_';
 /** Bytes of entropy for tokens / codes (= 256 bits). */
 const ENTROPY_BYTES = 32;
 
-export type TokenType = 'access' | 'refresh';
+type TokenType = 'access' | 'refresh';
 
-export interface IssuedToken {
+interface IssuedToken {
   /** Plain token shown to client once (DB stores only the hash). */
   token: string;
   /** SHA-256 hex digest stored in oauth_tokens.token_hash. */
@@ -28,7 +28,7 @@ export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-export interface IssuedAuthorizationCode {
+interface IssuedAuthorizationCode {
   /** Plain code returned to redirect_uri. */
   code: string;
   /** SHA-256 hex digest stored in oauth_authorization_codes.code_hash. */

@@ -10,7 +10,7 @@ import { platformStorage } from '@/lib/zustand/storage';
 // ── Sheet Types ──
 
 /** タグマージモーダルで渡す source tag の identity */
-export interface TagMergeSourceTag {
+interface TagMergeSourceTag {
   id: string;
   name: string;
   color?: string | null;
@@ -52,7 +52,7 @@ export interface TagCreateContext {
  * shell 全体で「1 つしか開かない overlay」として統一管理する（旧 useModalStore
  * を統合、P2-2）。
  */
-export type SheetType =
+type SheetType =
   | { type: 'contact' }
   | { type: 'settings'; category: SettingsCategory }
   | { type: 'tagMerge'; sourceTag: TagMergeSourceTag }

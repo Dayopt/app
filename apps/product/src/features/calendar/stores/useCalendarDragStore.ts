@@ -9,7 +9,7 @@ import type { CalendarEvent } from '../types/calendar.types';
  * ドラッグ状態を共有する
  */
 
-export interface CalendarDragState {
+interface CalendarDragState {
   /** ドラッグ中のエントリーID */
   draggedEntryId: string | null;
   /** ドラッグ中のエントリーデータ */

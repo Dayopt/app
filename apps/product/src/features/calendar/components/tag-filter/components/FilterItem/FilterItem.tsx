@@ -20,7 +20,7 @@ import { FilterItemMenu, UntaggedItemMenu } from './FilterItemMenu';
 import { useFilterItemEdit } from './useFilterItemEdit';
 
 /** フィルターアイテムコンポーネントのプロパティ */
-export interface FilterItemProps {
+interface FilterItemProps {
   label: string;
   tagId?: string;
   checkboxColor?: string | undefined;

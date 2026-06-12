@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 import { TagEntryCreatePopover } from '../TagEntryCreatePopover';
 
-export interface TagChipRowProps {
+interface TagChipRowProps {
   /**
    * タップ動作:
    * - `'create'`（default）: タップで `TagEntryCreatePopover` を開く（calendar context）

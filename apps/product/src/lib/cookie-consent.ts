@@ -8,10 +8,10 @@
  */
 
 /** Cookieのカテゴリ種別 */
-export type CookieCategory = 'necessary' | 'analytics' | 'marketing';
+type CookieCategory = 'necessary' | 'analytics' | 'marketing';
 
 /** Cookie同意の状態を表すインターフェース */
-export interface CookieConsent {
+interface CookieConsent {
   necessary: boolean; // 常にtrue（無効化不可）
   analytics: boolean;
   marketing: boolean;
@@ -130,41 +130,10 @@ export const isCookieCategoryEnabled = (category: CookieCategory): boolean => {
 };
 
 /**
- * 分析Cookieが有効か確認（Sentry用）
- */
-export const isAnalyticsEnabled = (): boolean => {
-  return isCookieCategoryEnabled('analytics');
-};
-
-/**
  * Cookie同意が必要か確認（バナー表示判定用）
  *
  * @returns 同意未取得の場合true
  */
 export const needsCookieConsent = (): boolean => {
   return getCookieConsent() === null;
-};
-
-/**
- * Cookie同意状態変更イベントをリッスン
- *
- * @param callback 同意状態変更時のコールバック
- * @returns クリーンアップ関数
- */
-export const onCookieConsentChange = (
-  callback: (consent: CookieConsent | null) => void,
-): (() => void) => {
-  if (typeof window === 'undefined') {
-    return () => {}; // SSR対応
-  }
-
-  const handler = (event: CustomEvent<CookieConsent | null>) => {
-    callback(event.detail);
-  };
-
-  window.addEventListener('cookieConsentChanged', handler as EventListener);
-
-  return () => {
-    window.removeEventListener('cookieConsentChanged', handler as EventListener);
-  };
 };

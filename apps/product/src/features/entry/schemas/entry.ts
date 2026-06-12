@@ -3,10 +3,10 @@ import { z } from 'zod';
 // Entry 用 Zod スキーマ
 
 /** エントリ発生源スキーマ */
-export const entryOriginSchema = z.enum(['planned', 'unplanned']);
+const entryOriginSchema = z.enum(['planned', 'unplanned']);
 
 /** 充実度スコアスキーマ（3段階: 1=微妙, 2=普通, 3=良い） */
-export const fulfillmentScoreSchema = z.number().int().min(1).max(3);
+const fulfillmentScoreSchema = z.number().int().min(1).max(3);
 
 // 時間順序の検証（end >= start）
 const timeOrderRefine = <T extends Record<string, unknown>>(data: T, ctx: z.RefinementCtx) => {
@@ -84,7 +84,7 @@ export const entryFilterSchema = z.object({
 });
 
 /** リレーション取得オプションスキーマ */
-export const entryIncludeSchema = z.object({
+const entryIncludeSchema = z.object({
   tags: z.boolean().optional(),
 });
 
@@ -111,11 +111,3 @@ export type CreateEntryInput = z.infer<typeof createEntrySchema>;
 export type UpdateEntryInput = z.infer<typeof updateEntrySchema>;
 /** エントリフィルター型 */
 export type EntryFilter = z.infer<typeof entryFilterSchema>;
-/** エントリインクルードオプション型 */
-export type EntryInclude = z.infer<typeof entryIncludeSchema>;
-/** getById 入力型 */
-export type GetEntryByIdInput = z.infer<typeof getEntryByIdSchema>;
-/** 一括更新入力型 */
-export type BulkUpdateEntryInput = z.infer<typeof bulkUpdateEntrySchema>;
-/** 一括削除入力型 */
-export type BulkDeleteEntryInput = z.infer<typeof bulkDeleteEntrySchema>;

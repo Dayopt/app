@@ -62,77 +62,9 @@ export function convertFromTimezone(zonedDate: Date, timezone: string): Date {
 // タイムゾーン対応フォーマット
 // ========================================
 
-/**
- * 日時を指定タイムゾーンでフォーマット
- *
- * @param date - フォーマットする日時
- * @param timezone - タイムゾーン
- * @param formatString - フォーマット文字列（date-fns形式）
- * @returns フォーマットされた文字列
- *
- * @example
- * ```typescript
- * formatInTimezone(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd HH:mm');
- * // => "2025-01-22 14:30"
- * ```
- */
-export function formatInTimezone(date: Date, timezone: string, formatString: string): string {
-  return formatInTimeZone(date, timezone, formatString);
-}
-
-/**
- * 日時をフォーマット（タイムゾーンオプション付き）
- *
- * @param date - フォーマットする日時
- * @param formatString - フォーマット文字列
- * @param timezone - オプションのタイムゾーン（省略時はローカル）
- */
-export function formatDateWithTimezone(
-  date: Date,
-  formatString: string,
-  timezone?: string,
-): string {
-  if (timezone) {
-    return formatInTimeZone(date, timezone, formatString);
-  }
-  return format(date, formatString);
-}
-
-/**
- * 時刻をタイムゾーン対応でフォーマット
- *
- * @param date - フォーマットする日時
- * @param timeFormat - '12h' または '24h'
- * @param timezone - オプションのタイムゾーン
- */
-export function formatTimeWithTimezone(
-  date: Date,
-  timeFormat: '12h' | '24h',
-  timezone?: string,
-): string {
-  const formatString = timeFormat === '24h' ? 'HH:mm' : 'h:mm a';
-
-  if (timezone) {
-    return formatInTimeZone(date, timezone, formatString);
-  }
-  return format(date, formatString);
-}
-
 // ========================================
 // ユーザータイムゾーン
 // ========================================
-
-/**
- * ブラウザのタイムゾーンを取得
- *
- * ストアに保存されたユーザー設定ではなく、ブラウザが報告するタイムゾーンを返す。
- * ユーザーのタイムゾーンが必要な場合は Zustand ストアの timezone を使用すること。
- *
- * @returns タイムゾーン文字列（例: 'Asia/Tokyo'）
- */
-export function getBrowserTimezone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
 
 /**
  * タイムゾーンの略称を取得
@@ -217,42 +149,6 @@ export function parseISOToUserTimezone(isoString: string, timezone: string): Dat
     throw new Error(`Invalid ISO datetime: ${isoString}`);
   }
   return toZonedTime(utcDate, timezone);
-}
-
-// ========================================
-// タイムゾーンリスト
-// ========================================
-
-/** タイムゾーン情報 */
-export interface TimezoneInfo {
-  value: string;
-  label: string;
-  offset: number;
-}
-
-/**
- * よく使われるタイムゾーンのリストを取得
- */
-export function getCommonTimezones(): TimezoneInfo[] {
-  return [
-    { value: 'Pacific/Honolulu', label: 'Honolulu (GMT-10)', offset: -10 },
-    { value: 'America/Anchorage', label: 'Anchorage (GMT-9)', offset: -9 },
-    { value: 'America/Los_Angeles', label: 'Los Angeles (GMT-8)', offset: -8 },
-    { value: 'America/Denver', label: 'Denver (GMT-7)', offset: -7 },
-    { value: 'America/Chicago', label: 'Chicago (GMT-6)', offset: -6 },
-    { value: 'America/New_York', label: 'New York (GMT-5)', offset: -5 },
-    { value: 'America/Sao_Paulo', label: 'São Paulo (GMT-3)', offset: -3 },
-    { value: 'Europe/London', label: 'London (GMT+0)', offset: 0 },
-    { value: 'Europe/Paris', label: 'Paris (GMT+1)', offset: 1 },
-    { value: 'Europe/Moscow', label: 'Moscow (GMT+3)', offset: 3 },
-    { value: 'Asia/Dubai', label: 'Dubai (GMT+4)', offset: 4 },
-    { value: 'Asia/Kolkata', label: 'Kolkata (GMT+5:30)', offset: 5.5 },
-    { value: 'Asia/Singapore', label: 'Singapore (GMT+8)', offset: 8 },
-    { value: 'Asia/Shanghai', label: 'Shanghai (GMT+8)', offset: 8 },
-    { value: 'Asia/Tokyo', label: 'Tokyo (GMT+9)', offset: 9 },
-    { value: 'Australia/Sydney', label: 'Sydney (GMT+10)', offset: 10 },
-    { value: 'Pacific/Auckland', label: 'Auckland (GMT+12)', offset: 12 },
-  ].sort((a, b) => a.offset - b.offset);
 }
 
 // ========================================
@@ -344,16 +240,6 @@ export function tzMonthEnd(date: Date, timezone: string): string {
 }
 
 /**
- * ユーザーTZの"今日"をYYYY-MM-DD文字列で返す
- *
- * @param timezone - ユーザーのタイムゾーン
- * @returns YYYY-MM-DD形式の文字列
- */
-export function tzToday(timezone: string): string {
-  return formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
-}
-
-/**
  * 2つのUTC DateがユーザーTZで同じ日かどうか
  *
  * @param a - 比較対象1
@@ -382,15 +268,4 @@ export function tzIsSameDay(a: Date, b: Date, timezone: string): boolean {
  */
 export function isTodayInTimezone(date: Date, timezone: string, now: Date = new Date()): boolean {
   return tzIsSameDay(date, now, timezone);
-}
-
-/**
- * ユーザーTZでの日付キー (YYYY-MM-DD)
- *
- * @param date - 対象日時
- * @param timezone - ユーザーのタイムゾーン
- * @returns YYYY-MM-DD形式の文字列
- */
-export function tzGetDateKey(date: Date, timezone: string): string {
-  return formatInTimeZone(date, timezone, 'yyyy-MM-dd');
 }

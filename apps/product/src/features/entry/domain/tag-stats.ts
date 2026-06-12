@@ -8,13 +8,13 @@
  * 組み立てる別概念で、入力 / 出力 / 消費者が異なるため並置している。
  */
 
-export interface TagStatsRow {
+interface TagStatsRow {
   tag_id: string;
   entry_count: number;
   last_used: string | null;
 }
 
-export interface TagStatsResult {
+interface TagStatsResult {
   /** tagId → entry_count の Record */
   counts: Record<string, number>;
   /** tagId → last_used 日付文字列。null だった row は含まない */

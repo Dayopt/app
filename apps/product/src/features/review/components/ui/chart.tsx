@@ -1,8 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Legend, ResponsiveContainer, Tooltip } from 'recharts';
-import type { LegendPayload } from 'recharts/types/component/DefaultLegendContent';
+import { ResponsiveContainer, Tooltip } from 'recharts';
 
 import { cn } from '@/lib/utils';
 
@@ -309,70 +308,6 @@ function ChartTooltipContent({
   );
 }
 
-/** recharts Legend の再エクスポート */
-const ChartLegend = Legend;
-
-type ChartLegendContentProps = {
-  className?: string;
-  hideIcon?: boolean;
-  payload?: LegendPayload[];
-  verticalAlign?: 'top' | 'bottom' | 'middle';
-  nameKey?: string;
-};
-
-/** カスタム凡例コンテンツ（アイコン・ラベル対応） */
-function ChartLegendContent({
-  className,
-  hideIcon = false,
-  payload,
-  verticalAlign = 'bottom',
-  nameKey,
-}: ChartLegendContentProps) {
-  const { config } = useChart();
-
-  if (!payload?.length) {
-    return null;
-  }
-
-  return (
-    <div
-      className={cn(
-        'flex items-center justify-center gap-4',
-        verticalAlign === 'top' ? 'pb-4' : 'pt-4',
-        className,
-      )}
-    >
-      {payload
-        .filter((item) => item.type !== 'none')
-        .map((item) => {
-          const key = `${nameKey || item.dataKey || 'value'}`;
-          const itemConfig = getPayloadConfigFromPayload(config, item, key);
-
-          return (
-            <div
-              key={item.value}
-              className={cn(
-                '[&>svg]:text-muted-foreground flex items-center gap-2 [&>svg]:h-3 [&>svg]:w-3',
-              )}
-            >
-              {itemConfig?.icon && !hideIcon ? (
-                <itemConfig.icon />
-              ) : (
-                <div
-                  className="h-2 w-2 shrink-0 rounded-lg"
-                  style={{
-                    backgroundColor: item.color,
-                  }}
-                />
-              )}
-              {itemConfig?.label}
-            </div>
-          );
-        })}
-    </div>
-  );
-}
-
 // Helper to extract item config from a payload.
 function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key: string) {
   if (typeof payload !== 'object' || payload === null) {
@@ -399,11 +334,4 @@ function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key:
   return configLabelKey in config ? config[configLabelKey] : config[key as keyof typeof config];
 }
 
-export {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartStyle,
-  ChartTooltip,
-  ChartTooltipContent,
-};
+export { ChartContainer, ChartTooltip, ChartTooltipContent };

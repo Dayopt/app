@@ -37,7 +37,7 @@ export class UserServiceError extends ServiceError {
 /**
  * アカウント削除オプション
  */
-export interface DeleteAccountOptions {
+interface DeleteAccountOptions {
   userId: string;
   userEmail: string;
   password: string;
@@ -47,14 +47,14 @@ export interface DeleteAccountOptions {
 /**
  * データエクスポートオプション
  */
-export interface ExportDataOptions {
+interface ExportDataOptions {
   userId: string;
 }
 
 /**
  * アカウント削除レスポンス
  */
-export interface DeleteAccountResult {
+interface DeleteAccountResult {
   success: true;
 }
 
@@ -63,7 +63,7 @@ type LegacyEmptyRows = Array<Record<string, never>>;
 /**
  * データエクスポートレスポンス
  */
-export interface ExportDataResult {
+interface ExportDataResult {
   exportedAt: string;
   userId: string;
   data: {

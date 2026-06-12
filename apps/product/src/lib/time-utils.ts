@@ -33,21 +33,3 @@ export function formatDurationDisplay(minutes: number): string {
   if (h > 0) return `${h}h`;
   return `${m}m`;
 }
-
-/**
- * 次のインターバル境界にスナップ
- *
- * @param date - 基準日時
- * @param intervalMinutes - インターバル（分）。デフォルト15分
- * @returns スナップされた Date（秒・ミリ秒はゼロ）
- */
-export function snapToNextInterval(date: Date, intervalMinutes = 15): Date {
-  const snapped = new Date(date);
-  const minutes = snapped.getMinutes();
-  const remainder = minutes % intervalMinutes;
-  if (remainder > 0) {
-    snapped.setMinutes(minutes + (intervalMinutes - remainder));
-  }
-  snapped.setSeconds(0, 0);
-  return snapped;
-}

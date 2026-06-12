@@ -737,7 +737,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
 // Types for unified stats response
 // ---------------------------------------------------------------------------
 
-export interface StatsPageData {
+interface StatsPageData {
   overview: {
     totalMinutes: number;
     avgFulfillment: number | null;
@@ -820,7 +820,7 @@ export interface StatsPageData {
 }
 
 /** get_time_pl_data DB関数のレスポンス型 */
-export interface TimePLResponse {
+interface TimePLResponse {
   tags: Array<{
     tagId: string;
     tagName: string;

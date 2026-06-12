@@ -11,7 +11,7 @@
 import type { EntryLike } from './entry-time-model';
 
 /** `entries.update` mutation に渡せる時間関連フィールドの部分集合。 */
-export type EntryTimeUpdateData = {
+type EntryTimeUpdateData = {
   start_time?: string | null;
   end_time?: string | null;
   actual_start_time?: string | null;

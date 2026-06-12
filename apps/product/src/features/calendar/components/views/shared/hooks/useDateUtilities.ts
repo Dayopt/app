@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import { addDays, startOfWeek, subDays } from '@/lib/date';
 
 /** useDateUtilities フックのオプション */
-export interface UseDateUtilitiesOptions {
+interface UseDateUtilitiesOptions {
   referenceDate: Date;
   viewType: 'week' | 'threeday' | 'fiveday' | 'multiday';
   weekStartsOn?: 0 | 1 | 6;
@@ -17,7 +17,7 @@ export interface UseDateUtilitiesOptions {
 }
 
 /** useDateUtilities フックの戻り値 */
-export interface UseDateUtilitiesReturn {
+interface UseDateUtilitiesReturn {
   dates: Date[];
   startDate: Date;
   endDate: Date;

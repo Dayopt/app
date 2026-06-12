@@ -1,5 +1,3 @@
-import { dayoptUrls } from '@dayopt/config';
-
 /**
  * アプリのベースURLを取得する
  * 優先順位: NEXT_PUBLIC_APP_URL > VERCEL_URL > localhost
@@ -16,5 +14,3 @@ export function getAppUrl(): string {
 
   return 'http://localhost:3000';
 }
-
-export const PRODUCT_APP_URL = dayoptUrls.product;

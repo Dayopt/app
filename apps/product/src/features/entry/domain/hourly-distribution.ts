@@ -5,12 +5,12 @@
  * から DB 非依存の純粋な集計だけを切り出している。
  */
 
-export interface HourlyDistributionRow {
+interface HourlyDistributionRow {
   hour: number;
   total_minutes: number;
 }
 
-export interface HourlySlot {
+interface HourlySlot {
   /** "HH:00" 形式の slot 先頭時刻 */
   timeSlot: string;
   /** その 2h slot 合計時間（時間単位、分 → 時換算済み） */

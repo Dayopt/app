@@ -31,7 +31,7 @@ import { useCalendarNavHandlers } from './useCalendarNavHandlers';
 // Types
 // =============================================================================
 
-export interface CalendarCompositionInput {
+interface CalendarCompositionInput {
   /** 現在のビュータイプ */
   viewType: CalendarViewType;
   /** 現在の表示日付 */
@@ -44,7 +44,7 @@ export interface CalendarCompositionInput {
   changeView: (view: CalendarViewType) => void;
 }
 
-export interface CalendarCompositionResult {
+interface CalendarCompositionResult {
   // === Data ===
   viewDateRange: ReturnType<typeof useCalendarDataLayer>['viewDateRange'];
   filteredEvents: ReturnType<typeof useCalendarDataLayer>['filteredEvents'];

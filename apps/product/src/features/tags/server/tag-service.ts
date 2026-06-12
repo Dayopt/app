@@ -48,7 +48,7 @@ function transformDbTag(dbTag: DbTagRow): Tag {
 }
 
 /** タグ作成入力 */
-export interface CreateTagInput {
+interface CreateTagInput {
   name: string;
   color?: string | undefined;
   icon?: string | undefined;
@@ -56,7 +56,7 @@ export interface CreateTagInput {
 }
 
 /** タグ更新入力 */
-export interface UpdateTagInput {
+interface UpdateTagInput {
   name?: string | undefined;
   color?: string | undefined;
   icon?: string | null | undefined;
@@ -64,14 +64,14 @@ export interface UpdateTagInput {
 }
 
 /** タグ一覧取得オプション */
-export interface ListTagsOptions {
+interface ListTagsOptions {
   userId: string;
   sortField?: 'name' | 'created_at' | 'updated_at' | 'tag_number' | 'sort_order' | undefined;
   sortOrder?: 'asc' | 'desc' | undefined;
 }
 
 /** タグマージオプション */
-export interface MergeTagsOptions {
+interface MergeTagsOptions {
   userId: string;
   sourceTagId: string;
   targetTagId: string;
@@ -80,14 +80,14 @@ export interface MergeTagsOptions {
 }
 
 /** タグマージ結果 */
-export interface MergeTagsResult {
+interface MergeTagsResult {
   success: true;
   mergedAssociations: number;
   targetTag: Tag;
 }
 
 /** タグ並び替え更新 */
-export interface ReorderTagUpdate {
+interface ReorderTagUpdate {
   id: string;
   parent_id: string | null;
   sort_order: number;
@@ -997,10 +997,8 @@ export class TagService {
   }
 }
 
-export type { TagDeleteStrategy } from '../types';
-
 /** タグ統計の型 */
-export interface TagStatsRow {
+interface TagStatsRow {
   id: string;
   name: string;
   color: string | null;

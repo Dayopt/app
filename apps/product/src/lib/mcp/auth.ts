@@ -10,7 +10,7 @@ import {
 } from '@/lib/oauth-server';
 import { databaseTables } from '@dayopt/database';
 
-export interface VerifiedAccessToken {
+interface VerifiedAccessToken {
   /** oauth_tokens.id (chain 追跡用)。 */
   tokenId: string;
   /** Dayopt user (auth.users.id)。tRPC service 層で `ctx.userId` として使う。 */

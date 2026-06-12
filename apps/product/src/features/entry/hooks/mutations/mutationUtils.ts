@@ -56,7 +56,7 @@ export function createListQueryPredicate(entityName: 'entries') {
 /**
  * エンティティキャッシュ無効化オプション
  */
-export interface InvalidateEntityCachesOptions {
+interface InvalidateEntityCachesOptions {
   /** 個別エンティティID（省略時は全体のみ） */
   entityId?: string;
   /** refetchType（default: 'active'） */

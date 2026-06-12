@@ -11,26 +11,9 @@ export type TimedEntry = CalendarEvent & {
   isReadOnly?: boolean;
 };
 
-/** 重複グループ化されたエントリ群 */
-export interface EntryGroup {
-  entries: CalendarEvent[];
-  columns: EntryColumn[];
-}
-
 /** カラム割り当て済みのエントリ列情報 */
 export interface EntryColumn {
   entries: CalendarEvent[];
   columnIndex: number;
   totalColumns: number;
 }
-
-/** エントリのインタラクションハンドラー型 */
-export type EntryInteractionHandler = {
-  onClick?: (entry: CalendarEvent) => void;
-  onContextMenu?: (entry: CalendarEvent, e: React.MouseEvent) => void;
-  onDragStart?: (entry: CalendarEvent) => void;
-  onDragEnd?: (entry: CalendarEvent) => void;
-  onDragOver?: (entry: CalendarEvent, date: Date, time: Date) => void;
-  onDrop?: (entry: CalendarEvent, date: Date, time: Date) => void;
-  onResize?: (entry: CalendarEvent, newStart: Date, newEnd: Date) => void;
-};

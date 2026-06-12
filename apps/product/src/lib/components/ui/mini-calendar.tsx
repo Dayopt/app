@@ -35,7 +35,7 @@ import {
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { cn } from '@/lib/utils';
 
-export interface MiniCalendarProps {
+interface MiniCalendarProps {
   selectedDate?: Date | undefined;
   onDateSelect?: ((date: Date | undefined) => void) | undefined;
   onMonthChange?: ((date: Date) => void) | undefined;

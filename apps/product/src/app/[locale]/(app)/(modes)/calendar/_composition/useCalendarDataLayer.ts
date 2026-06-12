@@ -19,12 +19,12 @@ import { useTranslations } from 'next-intl';
 // Types
 // =============================================================================
 
-export interface CalendarDataLayerInput {
+interface CalendarDataLayerInput {
   viewType: CalendarViewType;
   currentDate: Date;
 }
 
-export interface CalendarDataLayerResult {
+interface CalendarDataLayerResult {
   viewDateRange: ViewDateRange;
   filteredEvents: CalendarEvent[];
   allCalendarEvents: CalendarEvent[];

@@ -82,8 +82,3 @@ export const CURATED_ICONS: readonly string[] = [
   'pencil',
   'sparkles',
 ] as const;
-
-/** キュレートアイコンかどうかチェック */
-export function isCuratedIcon(name: string): boolean {
-  return CURATED_ICONS.includes(name);
-}

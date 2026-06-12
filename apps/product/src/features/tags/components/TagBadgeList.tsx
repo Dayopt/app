@@ -26,14 +26,14 @@ import { TagIcon } from './TagIcon';
 
 import type { Tag } from '../types';
 
-export interface TagBadgeListHoverInfo {
+interface TagBadgeListHoverInfo {
   id: string;
   name: string;
   color: string | null;
   icon: string | null;
 }
 
-export interface TagBadgeListProps {
+interface TagBadgeListProps {
   tags: Tag[];
   selectedId?: string | null | undefined;
   onSelect: (tagId: string, tagName: string) => void;

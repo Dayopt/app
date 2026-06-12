@@ -66,4 +66,3 @@ function TrialEndedDialog({ open, onClose }: TrialEndedDialogProps) {
 }
 
 export { TrialEndedDialog };
-export type { TrialEndedDialogProps };

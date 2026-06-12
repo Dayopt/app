@@ -1,6 +1,6 @@
 type RangeInput = Date | string | null | undefined;
 
-export interface TwoLayerOverlapEntry {
+interface TwoLayerOverlapEntry {
   id: string;
   plannedStart?: RangeInput;
   plannedEnd?: RangeInput;

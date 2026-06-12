@@ -10,7 +10,7 @@
  * budgetMinutes === 0 の時は除算ゼロ回避のため Math.max(budget, 1) で分母化する。
  */
 
-export interface VarianceResult {
+interface VarianceResult {
   varianceMinutes: number;
   /** 計画外のみのタグ (`isPlanned === false`) では null */
   variancePercent: number | null;

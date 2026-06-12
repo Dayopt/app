@@ -8,13 +8,13 @@
  * 受け取る前提（domain 層は TZ 非依存）。
  */
 
-export interface MonthlyTrendRow {
+interface MonthlyTrendRow {
   /** "YYYY-MM" 形式の月キー */
   month: string;
   hours: number;
 }
 
-export interface MonthTrendSlot {
+interface MonthTrendSlot {
   /** "YYYY-MM" 形式の月キー */
   month: string;
   /** 月の数値部分（leading zero なし）。"2026-05" → "5" / "2026-12" → "12" */

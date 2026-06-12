@@ -12,9 +12,9 @@ export { MFAVerifyForm } from './components/MFAVerifyForm';
 export { PasswordResetForm } from './components/PasswordResetForm';
 export { ResetPasswordForm } from './components/ResetPasswordForm';
 export { SessionMonitorProvider } from './components/SessionMonitorProvider';
+/** @public Storybook security pattern uses the feature-level component contract. */
 export { SessionTimeoutDialog } from './components/SessionTimeoutDialog';
 export { SignupForm } from './components/SignupForm';
-
 // --- Stores ---
 export { AuthStoreInitializer } from './stores/AuthStoreInitializer';
 export { useAuthStore } from './stores/useAuthStore';

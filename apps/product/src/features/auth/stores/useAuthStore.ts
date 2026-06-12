@@ -361,15 +361,5 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
-/** ユーザー情報を選択するセレクター */
-export const selectUser = (state: AuthState) => state.user;
-/** セッション情報を選択するセレクター */
-export const selectSession = (state: AuthState) => state.session;
-/** ローディング状態を選択するセレクター */
-export const selectLoading = (state: AuthState) => state.loading;
-/** エラーメッセージ（i18nキー）を選択するセレクター */
-export const selectError = (state: AuthState) => state.error;
-/** 認証済みかどうかを選択するセレクター */
-export const selectIsAuthenticated = (state: AuthState) => !!state.user;
 /** セッション失効フラグを選択するセレクター */
 export const selectSessionExpired = (state: AuthState) => state._sessionExpired;

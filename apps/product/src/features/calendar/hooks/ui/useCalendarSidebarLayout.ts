@@ -5,11 +5,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { BREAKPOINT_VALUES } from '@/lib/breakpoints';
 
 /** カレンダーのレイアウトモード */
-export type LayoutMode = 'default' | 'compact' | 'fullscreen';
+type LayoutMode = 'default' | 'compact' | 'fullscreen';
 /** サイドバーの表示幅状態 */
-export type SidebarWidth = 'full' | 'collapsed' | 'hidden';
+type SidebarWidth = 'full' | 'collapsed' | 'hidden';
 /** レスポンシブブレークポイント */
-export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
+type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
 interface CalendarSidebarLayoutState {
   sidebarOpen: boolean;

@@ -21,7 +21,7 @@ import { PasswordChangeDialog } from './password-change-dialog';
 import { type MFASectionProps, MFASection } from './sections/MFASection';
 
 /** AccountSettings のプロップス定義 */
-export interface AccountSettingsProps {
+interface AccountSettingsProps {
   /**
    * テスト・Storybook用 MFASection 差し替え。
    * 省略時は本物の MFASection を使用。

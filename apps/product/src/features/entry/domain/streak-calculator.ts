@@ -10,7 +10,7 @@ import { formatInTimeZone } from 'date-fns-tz';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MAX_LOOKBACK_DAYS = 365;
 
-export interface StreakInput {
+interface StreakInput {
   /** "YYYY-MM-DD" 形式の active 日付配列（DB から取得済み） */
   activeDates: ReadonlyArray<string>;
   /** ユーザー TZ における今日の "YYYY-MM-DD" */

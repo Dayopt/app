@@ -102,28 +102,9 @@ export const TOUCH_TARGET = {
 } as const;
 
 /**
- * Tailwindクラス用のタッチターゲットサイズ
- *
- * @example
- * ```tsx
- * <button className={`${TOUCH_TARGET_CLASS.standard} ...`}>
- *   <Icon className="size-6" />
- * </button>
- * ```
- */
-export const TOUCH_TARGET_CLASS = {
-  /** 最小サイズ: h-11 w-11 (44px) */
-  minimum: 'h-11 min-w-11',
-  /** 標準サイズ: h-12 w-12 (48px) */
-  standard: 'h-12 min-w-12',
-  /** 大型サイズ: h-14 w-14 (56px) */
-  large: 'h-14 min-w-14',
-} as const;
-
-/**
  * デバイスタイプ判定用のヘルパー型
  */
-export type DeviceType = 'mobile' | 'tablet' | 'desktop';
+type DeviceType = 'mobile' | 'tablet' | 'desktop';
 
 /**
  * ブレークポイントに基づくデバイスタイプを取得

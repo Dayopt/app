@@ -15,7 +15,7 @@ const DEFAULT_EXTENSION = 'png';
 /**
  * ストレージ操作エラーコード
  */
-export const STORAGE_ERROR_CODES = {
+const STORAGE_ERROR_CODES = {
   INVALID_FILE_TYPE: 'STORAGE_INVALID_FILE_TYPE',
   FILE_TOO_LARGE: 'STORAGE_FILE_TOO_LARGE',
   INVALID_FILE_NAME: 'STORAGE_INVALID_FILE_NAME',
@@ -27,7 +27,7 @@ export const STORAGE_ERROR_CODES = {
 /**
  * ストレージエラークラス
  */
-export class StorageError extends Error {
+class StorageError extends Error {
   constructor(
     message: string,
     public readonly code: string,

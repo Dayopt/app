@@ -12,14 +12,6 @@ const Sheet = ({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) =
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
 };
 
-const SheetTrigger = ({ ...props }: React.ComponentProps<typeof SheetPrimitive.Trigger>) => {
-  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />;
-};
-
-const SheetClose = ({ ...props }: React.ComponentProps<typeof SheetPrimitive.Close>) => {
-  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />;
-};
-
 const SheetPortal = ({ ...props }: React.ComponentProps<typeof SheetPrimitive.Portal>) => {
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />;
 };
@@ -106,16 +98,6 @@ const SheetHeader = ({ className, ...props }: React.ComponentProps<'div'>) => {
   );
 };
 
-const SheetFooter = ({ className, ...props }: React.ComponentProps<'div'>) => {
-  return (
-    <div
-      data-slot="sheet-footer"
-      className={cn('mt-auto flex flex-col gap-2 p-4', className)}
-      {...props}
-    />
-  );
-};
-
 const SheetTitle = ({ className, ...props }: React.ComponentProps<typeof SheetPrimitive.Title>) => {
   return (
     <SheetPrimitive.Title
@@ -126,26 +108,4 @@ const SheetTitle = ({ className, ...props }: React.ComponentProps<typeof SheetPr
   );
 };
 
-const SheetDescription = ({
-  className,
-  ...props
-}: React.ComponentProps<typeof SheetPrimitive.Description>) => {
-  return (
-    <SheetPrimitive.Description
-      data-slot="sheet-description"
-      className={cn('text-muted-foreground text-sm', className)}
-      {...props}
-    />
-  );
-};
-
-export {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-};
+export { Sheet, SheetContent, SheetHeader, SheetTitle };

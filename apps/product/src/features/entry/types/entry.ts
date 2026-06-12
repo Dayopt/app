@@ -18,7 +18,7 @@ export type { EntryOrigin, EntryState, FulfillmentScore };
  * - 過去の時間帯 = 記録（past）
  * ステータスは時間位置から自動判定（getEntryState）
  */
-export interface Entry {
+interface Entry {
   id: string;
   user_id: string;
   title: string;
@@ -42,47 +42,4 @@ export interface Entry {
  */
 export interface EntryWithTags extends Entry {
   tagId: string | null;
-}
-
-/**
- * エントリ作成入力
- */
-export interface CreateEntryInput {
-  title: string;
-  description?: string;
-  origin?: EntryOrigin;
-  start_time?: string;
-  end_time?: string;
-  fulfillment_score?: FulfillmentScore;
-}
-
-/**
- * エントリ更新入力
- */
-export interface UpdateEntryInput {
-  title?: string;
-  description?: string;
-  origin?: EntryOrigin;
-  start_time?: string;
-  end_time?: string;
-  actual_start_time?: string | null;
-  actual_end_time?: string | null;
-  fulfillment_score?: FulfillmentScore | null;
-}
-
-/**
- * フィルター条件
- */
-export interface EntryFilters {
-  origin?: EntryOrigin;
-  search?: string;
-  tagId?: string;
-  startDate?: string;
-  endDate?: string;
-  fulfillmentScoreMin?: FulfillmentScore;
-  fulfillmentScoreMax?: FulfillmentScore;
-  sortBy?: 'created_at' | 'updated_at' | 'title' | 'start_time';
-  sortOrder?: 'asc' | 'desc';
-  limit?: number;
-  offset?: number;
 }

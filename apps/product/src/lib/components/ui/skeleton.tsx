@@ -35,4 +35,3 @@ function Skeleton({ className, variant = 'pulse', ...props }: SkeletonProps) {
 }
 
 export { Skeleton };
-export type { SkeletonAnimation, SkeletonProps };

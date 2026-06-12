@@ -8,9 +8,9 @@
  * - endDiffMin > 0   → 遅く終了（overtime / 点線）
  */
 
-export type DiffKind = 'unexecuted' | 'overtime' | 'none';
+type DiffKind = 'unexecuted' | 'overtime' | 'none';
 
-export interface TimeDiffResult {
+interface TimeDiffResult {
   /** 開始差分の種類。unexecuted=遅れ, overtime=早め */
   topKind: DiffKind;
   /** 開始差分（分、符号付き: 正=遅れ, 負=早め） */

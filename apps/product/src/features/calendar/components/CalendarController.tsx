@@ -32,7 +32,7 @@ initializePreload();
 // =============================================================================
 
 /** CalendarController コンポーネントのプロパティ */
-export interface CalendarControllerProps {
+interface CalendarControllerProps {
   /** ビュータイプ */
   viewType: CalendarViewType;
   /** 現在の表示日付 */

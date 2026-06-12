@@ -1,17 +1,4 @@
-import type {
-  ChronotypeProfile,
-  PresetChronotypeType,
-  ProductivityLevel,
-} from '../types/chronotype';
-
-/** 生産性レベルの表示順 */
-export const CHRONOTYPE_LEVEL_ORDER: ProductivityLevel[] = [
-  'warmup',
-  'deep',
-  'ease',
-  'recovery',
-  'winddown',
-];
+import type { ChronotypeProfile, PresetChronotypeType } from '../types/chronotype';
 
 /** ユーザーが選択可能なプリセットクロノタイプの一覧 */
 export const CHRONOTYPE_SELECTABLE_TYPES: PresetChronotypeType[] = [

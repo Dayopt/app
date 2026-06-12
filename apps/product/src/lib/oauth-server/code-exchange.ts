@@ -8,10 +8,10 @@ import type { SupportedScope } from './scopes';
 import { generateOpaqueToken, hashToken, verifyPkceS256 } from './tokens';
 
 /** Phase 1 token TTLs (Decision 1). */
-export const ACCESS_TOKEN_TTL_SEC = 300; // 5 min
-export const REFRESH_TOKEN_TTL_SEC = 30 * 24 * 60 * 60; // 30 day
+const ACCESS_TOKEN_TTL_SEC = 300; // 5 min
+const REFRESH_TOKEN_TTL_SEC = 30 * 24 * 60 * 60; // 30 day
 
-export interface TokenResponse {
+interface TokenResponse {
   access_token: string;
   token_type: 'Bearer';
   expires_in: number;
@@ -19,7 +19,7 @@ export interface TokenResponse {
   scope: string;
 }
 
-export interface ExchangeAuthorizationCodeInput {
+interface ExchangeAuthorizationCodeInput {
   code: string;
   /** 呼び出し元 (token route) で resolveClient による allowlist 照合済みである前提。 */
   client_id: OAuthClientId;
@@ -77,7 +77,7 @@ export async function exchangeAuthorizationCode(
   });
 }
 
-export interface RefreshAccessTokenInput {
+interface RefreshAccessTokenInput {
   refresh_token: string;
   /** 呼び出し元 (token route) で resolveClient による allowlist 照合済みである前提。 */
   client_id: OAuthClientId;

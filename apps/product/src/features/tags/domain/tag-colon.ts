@@ -8,6 +8,7 @@
 
 import type { Tag } from '../types';
 
+/** @public Pending domain barrel contract cleanup in I-08. */
 export interface ParsedColonTag {
   /** コロンの前の部分（グループ名）。コロンがなければタグ名全体 */
   prefix: string;
@@ -34,6 +35,7 @@ export function parseColonTag(name: string): ParsedColonTag {
   };
 }
 
+/** @public Pending domain barrel contract cleanup in I-08. */
 export interface GroupedTags {
   /** コロン接頭辞でグループ化されたタグ（Map<prefix, Tag[]>） */
   grouped: Map<string, Tag[]>;
@@ -114,6 +116,7 @@ export function buildColonTagName(prefix: string, suffix?: string): string {
  * @param excludeTagId - 除外するタグID（更新時の自分自身）
  * @returns 衝突がある場合true
  */
+/** @public Pending domain barrel contract cleanup in I-08. */
 export function hasGroupNameConflict(
   name: string,
   existingTags: { id: string; name: string }[],

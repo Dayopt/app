@@ -1,7 +1,7 @@
 import type { CalendarViewType } from '@/features/calendar';
 import { formatCalendarDateParam } from '@/features/calendar';
 
-export type AppMode = 'calendar' | 'review' | 'other';
+type AppMode = 'calendar' | 'review' | 'other';
 
 /**
  * pathname から現在の app モードを判定する。

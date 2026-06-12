@@ -8,7 +8,7 @@
  * 認証不要なページ（/auth/、/legal/、/error/）で使用。
  */
 
-import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useCallback, useEffect, useState } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -20,15 +20,6 @@ interface PublicThemeContextType {
 }
 
 const PublicThemeContext = createContext<PublicThemeContextType | null>(null);
-
-/** 公開ページ用テーマコンテキストを取得するフック */
-export function usePublicTheme() {
-  const context = useContext(PublicThemeContext);
-  if (!context) {
-    throw new Error('usePublicTheme must be used within a PublicThemeProvider');
-  }
-  return context;
-}
 
 interface PublicThemeProviderProps {
   children: ReactNode;

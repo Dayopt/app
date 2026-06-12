@@ -46,4 +46,4 @@ function InlineBanner({ visible, message, action }: InlineBannerProps) {
 }
 
 export { InlineBanner };
-export type { InlineBannerAction, InlineBannerProps };
+export type { InlineBannerAction };

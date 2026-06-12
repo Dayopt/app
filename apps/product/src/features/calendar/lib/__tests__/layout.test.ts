@@ -10,7 +10,6 @@ import {
   calculateMaxConcurrent,
   computeActualTimeDiffOverlay,
   detectOverlapGroups,
-  entriesOverlap,
   filterEntriesByDate,
   findOverlapGroups,
   isOverlapping,
@@ -262,7 +261,7 @@ describe('findOverlapGroups', () => {
 });
 
 // ========================================
-// isOverlapping / entriesOverlap
+// isOverlapping
 // ========================================
 
 describe('isOverlapping', () => {
@@ -306,36 +305,6 @@ describe('isOverlapping', () => {
       end: new Date('2026-01-15T15:00'),
     });
     expect(isOverlapping(a, b)).toBe(false);
-  });
-});
-
-describe('entriesOverlap', () => {
-  it('区間が交差するエントリはtrue', () => {
-    const a = createTimedEntry({
-      id: 'a',
-      start: new Date('2026-01-15T10:00'),
-      end: new Date('2026-01-15T11:00'),
-    });
-    const b = createTimedEntry({
-      id: 'b',
-      start: new Date('2026-01-15T10:30'),
-      end: new Date('2026-01-15T11:30'),
-    });
-    expect(entriesOverlap(a, b)).toBe(true);
-  });
-
-  it('接触のみはfalse', () => {
-    const a = createTimedEntry({
-      id: 'a',
-      start: new Date('2026-01-15T10:00'),
-      end: new Date('2026-01-15T11:00'),
-    });
-    const b = createTimedEntry({
-      id: 'b',
-      start: new Date('2026-01-15T11:00'),
-      end: new Date('2026-01-15T12:00'),
-    });
-    expect(entriesOverlap(a, b)).toBe(false);
   });
 });
 

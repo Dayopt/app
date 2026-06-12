@@ -35,22 +35,6 @@ function DrawerHandle({
   );
 }
 
-function DrawerOverlay({
-  className,
-  ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Overlay>) {
-  return (
-    <DrawerPrimitive.Overlay
-      data-slot="drawer-overlay"
-      className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-overlay z-sheet fixed inset-0 backdrop-blur-md data-[state=closed]:pointer-events-none',
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
 function DrawerContent({
   className,
   children,
@@ -127,10 +111,7 @@ export {
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
-  DrawerHandle,
   DrawerHeader,
-  DrawerOverlay,
-  DrawerPortal,
   DrawerTitle,
   DrawerTrigger,
 };

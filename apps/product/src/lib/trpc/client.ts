@@ -40,25 +40,3 @@ export function getBaseUrl() {
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`; // Vercel
   return `http://localhost:${process.env.PORT ?? 3000}`; // 開発環境
 }
-
-/**
- * クライアント設定のファクトリ関数
- */
-export function createTRPCClientConfig() {
-  return {
-    transformer: superjson,
-    links: [
-      loggerLink({
-        enabled: (opts) => opts.direction === 'down' && opts.result instanceof Error,
-      }),
-      httpBatchLink({
-        url: `${getBaseUrl()}/api/trpc`,
-        headers() {
-          return {
-            'x-trpc-source': 'react',
-          };
-        },
-      }),
-    ],
-  };
-}

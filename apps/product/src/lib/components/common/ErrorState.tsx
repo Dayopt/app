@@ -7,7 +7,7 @@ import { Button } from '@dayopt/ui';
 
 import { cn } from '@/lib/utils';
 
-export interface ErrorStateProps {
+interface ErrorStateProps {
   /** エラータイトル */
   title: string;
   /** エラー説明文 */

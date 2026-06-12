@@ -16,7 +16,7 @@ import { appRouter } from '@/lib/trpc/root';
  * 認証は `authMode: 'oauth'` でセットされるので proProcedure 側が毎リクエスト
  * profiles.subscription_status を DB lookup する (Decision 1)。
  */
-export interface McpTrpcContextInput {
+interface McpTrpcContextInput {
   userId: string;
   clientId: OAuthClientId;
   scopes: SupportedScope[];

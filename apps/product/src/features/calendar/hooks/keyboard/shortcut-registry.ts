@@ -42,7 +42,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
  * キーコンボを正規化する
  * イベントのキー情報から「Cmd+Shift+C」のような正規化文字列を生成
  */
-export function normalizeKeyCombo(event: KeyboardEvent): string {
+function normalizeKeyCombo(event: KeyboardEvent): string {
   const parts: string[] = [];
 
   if (event.metaKey || event.ctrlKey) {
@@ -131,30 +131,6 @@ export function registerShortcuts(defs: ShortcutDef[]): () => void {
       unregister();
     }
   };
-}
-
-/**
- * 登録済みショートカットマップを取得する（ヘルプダイアログ等）
- */
-export function getShortcutMap(): Map<
-  string,
-  ReadonlyArray<{ key: string; description: string; priority: number }>
-> {
-  const result = new Map<
-    string,
-    ReadonlyArray<{ key: string; description: string; priority: number }>
-  >();
-  for (const [key, entries] of registry) {
-    result.set(
-      key,
-      entries.map((e) => ({
-        key: e.def.key,
-        description: e.def.description,
-        priority: e.def.priority ?? 0,
-      })),
-    );
-  }
-  return result;
 }
 
 /**

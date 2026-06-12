@@ -13,12 +13,14 @@
 import { DEFAULT_DRAG_SNAP_MINUTES } from '../precision';
 
 /** 時刻入力（hour: 0-23, minute: 0-59） */
+/** @public Pending domain barrel contract cleanup in I-08. */
 export interface HourMinute {
   hour: number;
   minute: number;
 }
 
 /** 時間範囲（hour / minute 表現） */
+/** @public Pending domain barrel contract cleanup in I-08. */
 export interface SelectionRange {
   startHour: number;
   startMinute: number;
@@ -27,6 +29,7 @@ export interface SelectionRange {
 }
 
 /** 日付を含む時間範囲選択結果 */
+/** @public Pending domain barrel contract cleanup in I-08. */
 export interface DateSelectionRange extends SelectionRange {
   date: Date;
 }

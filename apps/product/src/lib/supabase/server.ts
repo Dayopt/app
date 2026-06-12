@@ -101,8 +101,3 @@ export async function createClient() {
     },
   );
 }
-
-/**
- * 型定義
- */
-export type SupabaseClient = ReturnType<typeof createClient>;

@@ -35,7 +35,7 @@ interface GhostRendererProps {
 }
 
 /** GhostRendererのrenderGhostコールバックに渡されるパラメータ */
-export interface GhostRenderParams {
+interface GhostRenderParams {
   entryId: string;
   previewTime: TimeRange;
   isOverlapping: boolean;

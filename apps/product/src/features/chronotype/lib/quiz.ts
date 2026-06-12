@@ -1,7 +1,7 @@
 import type { PresetChronotypeType } from '../types/chronotype';
 
 /** 各選択肢のスコア配分 */
-export interface QuizOptionScores {
+interface QuizOptionScores {
   lion: number;
   bear: number;
   wolf: number;
@@ -9,7 +9,7 @@ export interface QuizOptionScores {
 }
 
 /** クイズの1問 */
-export interface ChronotypeQuizQuestion {
+interface ChronotypeQuizQuestion {
   /** i18nキーのサフィックス (e.g., "wakeTime") */
   id: string;
   /** 選択肢のi18nキーサフィックスとスコア */

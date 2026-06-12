@@ -1,8 +1,6 @@
 import type { EntryOrigin, TimeRange } from '@dayopt/domain';
 import { determineEntryOrigin as determineDomainEntryOrigin } from '@dayopt/domain';
 
-export type { TimeRange } from '@dayopt/domain';
-
 export type EntryLike = {
   origin?: string | null;
   start_time?: string | null;

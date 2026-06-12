@@ -36,16 +36,6 @@ export interface CalendarDragSelectionProps {
   plans?: CalendarEvent[] | undefined;
 }
 
-/** ドラッグ状態 */
-export interface DragSelectionState {
-  isSelecting: boolean;
-  selection: TimeRange | null;
-  selectionStart: { hour: number; minute: number } | null;
-  showSelectionPreview: boolean;
-  isLongPressActive: boolean;
-  dropTime: string | null;
-}
-
 /** 定数 */
 export const DRAG_CONSTANTS = {
   /** 長押し検出時間（Google/Apple標準: 300-500ms） */

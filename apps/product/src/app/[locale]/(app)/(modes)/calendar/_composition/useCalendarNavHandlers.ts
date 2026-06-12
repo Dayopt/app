@@ -21,7 +21,7 @@ import { useUserSettings } from '@/features/settings';
 // Types
 // =============================================================================
 
-export interface CalendarNavHandlersInput {
+interface CalendarNavHandlersInput {
   viewType: CalendarViewType;
   currentDate: Date;
   navigateRelative: (direction: 'prev' | 'next' | 'today') => void;
@@ -29,7 +29,7 @@ export interface CalendarNavHandlersInput {
   changeView: (view: CalendarViewType) => void;
 }
 
-export interface CalendarNavHandlersResult {
+interface CalendarNavHandlersResult {
   showWeekends: boolean;
   onNavigate: (direction: 'prev' | 'next' | 'today') => void;
   onViewChange: (newView: CalendarViewType) => void;

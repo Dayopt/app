@@ -20,7 +20,7 @@ import { MobileCalendarHeader } from './Header/MobileCalendarHeader';
 import { ViewSwitcher } from './Header/ViewSwitcher';
 
 /** CalendarLayout コンポーネントのプロパティ */
-export interface CalendarLayoutProps {
+interface CalendarLayoutProps {
   children: React.ReactNode;
   className?: string | undefined;
 

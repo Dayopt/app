@@ -35,7 +35,7 @@ function sanitizeMetadata(metadata: Record<string, unknown>): Record<string, unk
 /**
  * ServiceErrorをSentryに報告
  */
-export function reportToSentry(error: ServiceError, userContext?: { userId?: string }): void {
+function reportToSentry(error: ServiceError, userContext?: { userId?: string }): void {
   Sentry.withScope((scope) => {
     scope.setTag('errorCode', error.code);
     scope.setFingerprint(['dayopt', error.code]);
@@ -111,33 +111,6 @@ export function handleReactError(
   SentryErrorHandler.handleError(error, { errorInfo, type: 'react' });
 }
 
-/**
- * APIルートのエラーハンドリング
- *
- * @example
- * ```typescript
- * export async function GET(request: Request) {
- *   try {
- *     const data = await fetchData()
- *     return Response.json(data)
- *   } catch (error) {
- *     handleApiError(error as Error, { endpoint: '/api/data', method: 'GET' })
- *     return Response.json({ error: 'Internal Server Error' }, { status: 500 })
- *   }
- * }
- * ```
- */
-export function handleApiError(error: Error, context?: Record<string, unknown>): void {
-  SentryErrorHandler.handleError(error, { ...context, type: 'api' });
-}
-
-/**
- * Sentryの初期化状態を確認
- */
-export function isSentryInitialized(): boolean {
-  return !!Sentry.getClient();
-}
-
 // ─── Observability ヘルパー ──────────────────────────
 
 /**
@@ -169,31 +142,4 @@ export function captureBusinessEvent(
     tags: { eventName, ...stringifyTags(tags) },
     fingerprint: ['dayopt', 'business-event', eventName],
   });
-}
-
-/**
- * ユーザー操作のbreadcrumbを追加
- *
- * エラー発生前の操作コンテキストを残すために使用。
- */
-export function addUserActionBreadcrumb(
-  message: string,
-  data?: Record<string, unknown>,
-  category = 'user.action',
-): void {
-  Sentry.addBreadcrumb({
-    message,
-    category,
-    level: 'info',
-    ...(data && { data }),
-  });
-}
-
-/**
- * ユーザーのプランタグをグローバルに設定
- *
- * 以降のすべてのイベント/エラーに `user.plan` タグが付与される。
- */
-export function setUserPlanTag(plan: string): void {
-  Sentry.setTag('user.plan', plan);
 }

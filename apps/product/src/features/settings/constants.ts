@@ -13,7 +13,7 @@ import type { SettingsCategory } from './types';
  * 設定カテゴリのメタデータ
  * アイコンと翻訳キーを定義
  */
-export interface SettingsCategoryMeta {
+interface SettingsCategoryMeta {
   id: SettingsCategory;
   icon: LucideIcon;
   labelKey: string;
