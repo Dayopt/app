@@ -51,7 +51,13 @@ jobs:
         run: pnpm lint:i18n
 
       - name: Dead code check
-        run: pnpm quality:deadcode:ci 2>&1 | tee /dev/stderr | head -3 >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          set +e
+          pnpm quality:deadcode:ci 2>&1 | tee /tmp/knip-output
+          status=${PIPESTATUS[0]}
+          set -e
+          head -3 /tmp/knip-output >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
 
   typecheck:
     name: "\U0001F524 TypeScript"
