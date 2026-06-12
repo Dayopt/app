@@ -579,6 +579,50 @@
         "x-auth-level": "protected"
       }
     },
+    "/entries.skip": {
+      "post": {
+        "operationId": "entries.skip",
+        "tags": ["entries"],
+        "summary": "planned エントリをスキップ（実績集計から除外、計画履歴は残る）",
+        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/entries_skip_input" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "Success（SuperJSON形式）" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "description": "Too Many Requests（100 req/min）" }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
+    "/entries.unskip": {
+      "post": {
+        "operationId": "entries.unskip",
+        "tags": ["entries"],
+        "summary": "エントリのスキップ解除（自動記録が復活）",
+        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/entries_unskip_input" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Success（SuperJSON形式）" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "description": "Too Many Requests（100 req/min）" }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
     "/entries.bulkUpdate": {
       "post": {
         "operationId": "entries.bulkUpdate",
@@ -1205,327 +1249,6 @@
         },
         "x-rate-limit": "100 req/min",
         "x-auth-level": "protected"
-      }
-    },
-    "/entries.getTagOverview": {
-      "get": {
-        "operationId": "entries.getTagOverview",
-        "tags": ["entries"],
-        "summary": "タグ詳細ページ用統合概要データ",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getTagOverview_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getTagTimeline": {
-      "get": {
-        "operationId": "entries.getTagTimeline",
-        "tags": ["entries"],
-        "summary": "タグ詳細ページ用タイムラインデータ",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getTagTimeline_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getTagCumulativeTime": {
-      "get": {
-        "operationId": "entries.getTagCumulativeTime",
-        "tags": ["entries"],
-        "summary": "タグ別合計時間",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getTagCumulativeTime_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getTagAvgFulfillment": {
-      "get": {
-        "operationId": "entries.getTagAvgFulfillment",
-        "tags": ["entries"],
-        "summary": "タグ別平均充実度",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getTagAvgFulfillment_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getTagPlanRate": {
-      "get": {
-        "operationId": "entries.getTagPlanRate",
-        "tags": ["entries"],
-        "summary": "タグ別計画率",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getTagPlanRate_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getTagHourlyDistribution": {
-      "get": {
-        "operationId": "entries.getTagHourlyDistribution",
-        "tags": ["entries"],
-        "summary": "タグ別時間帯分布",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getTagHourlyDistribution_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getTagDowDistribution": {
-      "get": {
-        "operationId": "entries.getTagDowDistribution",
-        "tags": ["entries"],
-        "summary": "タグ別曜日分布",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getTagDowDistribution_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getChildTagBreakdown": {
-      "get": {
-        "operationId": "entries.getChildTagBreakdown",
-        "tags": ["entries"],
-        "summary": "子タグ内訳",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getChildTagBreakdown_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getTagFulfillmentDistribution": {
-      "get": {
-        "operationId": "entries.getTagFulfillmentDistribution",
-        "tags": ["entries"],
-        "summary": "タグ別充実度分布",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/entries_getTagFulfillmentDistribution_input"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getTagAccuracyTrend": {
-      "get": {
-        "operationId": "entries.getTagAccuracyTrend",
-        "tags": ["entries"],
-        "summary": "タグ別見積もり精度推移",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getTagAccuracyTrend_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getTagRecentEntries": {
-      "get": {
-        "operationId": "entries.getTagRecentEntries",
-        "tags": ["entries"],
-        "summary": "タグの直近エントリ一覧",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getTagRecentEntries_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
       }
     },
     "/tags.list": {
@@ -2204,6 +1927,18 @@
         "required": ["id"],
         "additionalProperties": false
       },
+      "entries_skip_input": {
+        "type": "object",
+        "properties": { "id": { "type": "string", "format": "uuid" } },
+        "required": ["id"],
+        "additionalProperties": false
+      },
+      "entries_unskip_input": {
+        "type": "object",
+        "properties": { "id": { "type": "string", "format": "uuid" } },
+        "required": ["id"],
+        "additionalProperties": false
+      },
       "entries_bulkUpdate_input": {
         "type": "object",
         "properties": {
@@ -2450,118 +2185,6 @@
           "limit": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 }
         },
         "required": ["tagId", "startDate", "endDate"],
-        "additionalProperties": false
-      },
-      "entries_getTagOverview_input": {
-        "type": "object",
-        "properties": {
-          "tagId": { "type": "string", "format": "uuid" },
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "required": ["tagId"],
-        "additionalProperties": false
-      },
-      "entries_getTagTimeline_input": {
-        "type": "object",
-        "properties": {
-          "tagId": { "type": "string", "format": "uuid" },
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" },
-          "bucket": { "type": "string", "enum": ["week", "month", "day"] },
-          "recentLimit": { "type": "integer", "minimum": 1, "maximum": 50 }
-        },
-        "required": ["tagId"],
-        "additionalProperties": false
-      },
-      "entries_getTagCumulativeTime_input": {
-        "type": "object",
-        "properties": {
-          "tagId": { "type": "string", "format": "uuid" },
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "required": ["tagId"],
-        "additionalProperties": false
-      },
-      "entries_getTagAvgFulfillment_input": {
-        "type": "object",
-        "properties": {
-          "tagId": { "type": "string", "format": "uuid" },
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "required": ["tagId"],
-        "additionalProperties": false
-      },
-      "entries_getTagPlanRate_input": {
-        "type": "object",
-        "properties": {
-          "tagId": { "type": "string", "format": "uuid" },
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "required": ["tagId"],
-        "additionalProperties": false
-      },
-      "entries_getTagHourlyDistribution_input": {
-        "type": "object",
-        "properties": {
-          "tagId": { "type": "string", "format": "uuid" },
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "required": ["tagId"],
-        "additionalProperties": false
-      },
-      "entries_getTagDowDistribution_input": {
-        "type": "object",
-        "properties": {
-          "tagId": { "type": "string", "format": "uuid" },
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "required": ["tagId"],
-        "additionalProperties": false
-      },
-      "entries_getChildTagBreakdown_input": {
-        "type": "object",
-        "properties": {
-          "parentTagId": { "type": "string", "format": "uuid" },
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "required": ["parentTagId"],
-        "additionalProperties": false
-      },
-      "entries_getTagFulfillmentDistribution_input": {
-        "type": "object",
-        "properties": {
-          "tagId": { "type": "string", "format": "uuid" },
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "required": ["tagId"],
-        "additionalProperties": false
-      },
-      "entries_getTagAccuracyTrend_input": {
-        "type": "object",
-        "properties": {
-          "tagId": { "type": "string", "format": "uuid" },
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" },
-          "bucket": { "type": "string", "enum": ["week", "month", "day"] }
-        },
-        "required": ["tagId"],
-        "additionalProperties": false
-      },
-      "entries_getTagRecentEntries_input": {
-        "type": "object",
-        "properties": {
-          "tagId": { "type": "string", "format": "uuid" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 50 }
-        },
-        "required": ["tagId"],
         "additionalProperties": false
       },
       "tags_list_input": {
