@@ -502,20 +502,6 @@ export type Database = {
         };
         Returns: Json;
       };
-      get_child_tag_breakdown: {
-        Args: {
-          p_end_date?: string;
-          p_parent_tag_id: string;
-          p_start_date?: string;
-          p_user_id: string;
-        };
-        Returns: {
-          hours: number;
-          tag_color: string;
-          tag_id: string;
-          tag_name: string;
-        }[];
-      };
       get_context_switches: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
         Returns: Json;
@@ -607,95 +593,6 @@ export type Database = {
           p_year: number;
         };
         Returns: Json;
-      };
-      get_tag_accuracy_trend: {
-        Args: {
-          p_bucket?: string;
-          p_end_date?: string;
-          p_start_date?: string;
-          p_tag_id: string;
-          p_user_id: string;
-        };
-        Returns: {
-          avg_deviation: number;
-          bucket: string;
-          entry_count: number;
-        }[];
-      };
-      get_tag_avg_fulfillment: {
-        Args: {
-          p_end_date?: string;
-          p_start_date?: string;
-          p_tag_id: string;
-          p_user_id: string;
-        };
-        Returns: Json;
-      };
-      get_tag_cumulative_time: {
-        Args: {
-          p_end_date?: string;
-          p_start_date?: string;
-          p_tag_id: string;
-          p_user_id: string;
-        };
-        Returns: Json;
-      };
-      get_tag_dow_distribution: {
-        Args: {
-          p_end_date?: string;
-          p_start_date?: string;
-          p_tag_id: string;
-          p_user_id: string;
-        };
-        Returns: {
-          dow: number;
-          total_minutes: number;
-        }[];
-      };
-      get_tag_fulfillment_distribution: {
-        Args: {
-          p_end_date?: string;
-          p_start_date?: string;
-          p_tag_id: string;
-          p_user_id: string;
-        };
-        Returns: {
-          count: number;
-          score: number;
-        }[];
-      };
-      get_tag_hourly_distribution: {
-        Args: {
-          p_end_date?: string;
-          p_start_date?: string;
-          p_tag_id: string;
-          p_user_id: string;
-        };
-        Returns: {
-          hour: number;
-          total_minutes: number;
-        }[];
-      };
-      get_tag_plan_rate: {
-        Args: {
-          p_end_date?: string;
-          p_start_date?: string;
-          p_tag_id: string;
-          p_user_id: string;
-        };
-        Returns: Json;
-      };
-      get_tag_recent_entries: {
-        Args: { p_limit?: number; p_tag_id: string; p_user_id: string };
-        Returns: {
-          duration_minutes: number;
-          end_time: string;
-          entry_id: string;
-          fulfillment_score: number;
-          planned_minutes: number;
-          start_time: string;
-          title: string;
-        }[];
       };
       get_tag_stats: {
         Args: { p_user_id: string };
