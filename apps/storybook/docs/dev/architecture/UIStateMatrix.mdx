@@ -134,15 +134,15 @@ Auth=unauthenticated のとき Entry/Plan は無関係 → 実効 **~330通り**
 
 ### 2-F. Offline × 各操作
 
-**関連ファイル**: `src/shell/providers/OfflineIndicator.tsx`, `src/hooks/useOnlineStatus.ts`
+**関連ファイル**: `src/app/offline/page.tsx`, `src/lib/tanstack-query/persist-storage.ts`
 
-| Network          | 操作              | 対応                                                          |
-| ---------------- | ----------------- | ------------------------------------------------------------- |
-| offline          | バナー表示        | EXPLICIT                                                      |
-| offline → online | pending sync 通知 | EXPLICIT — `toast.info`                                       |
-| offline          | mutation 実行     | **GAP** — error toast + offline バナーの二重表示 (M4)         |
-| offline          | Inspector 展開    | **GAP** — query 無限ローディング、offline メッセージなし (M3) |
-| offline          | auth loading      | ~~GAP~~ → **FIXED** (C3) — timeout 延長                       |
+| Network | 操作                     | 対応                                                          |
+| ------- | ------------------------ | ------------------------------------------------------------- |
+| offline | キャッシュ済みページ表示 | EXPLICIT — Service Worker / query cache を使用                |
+| offline | 未キャッシュページ表示   | EXPLICIT — `/offline` fallback                                |
+| offline | mutation 実行            | EXPLICIT — 永続化・再送せず通常の online error path           |
+| offline | Inspector 展開           | **GAP** — query 無限ローディング、offline メッセージなし (M3) |
+| offline | auth loading             | ~~GAP~~ → **FIXED** (C3) — timeout 延長                       |
 
 ---
 

@@ -1,7 +1,5 @@
 'use client';
 
-import { SyncStatusIndicator } from '@/lib/components/shell/SyncStatusIndicator';
-
 interface AppHeaderProps {
   /** 左スロット: 戻るボタン等 */
   leftSlot?: React.ReactNode;
@@ -34,10 +32,7 @@ export function AppHeader({ leftSlot, children, rightSlot }: AppHeaderProps) {
         <div className="flex min-w-0 items-center">{children}</div>
 
         {/* 右側 */}
-        <div className="flex items-center justify-end gap-2">
-          <SyncStatusIndicator />
-          {rightSlot}
-        </div>
+        <div className="flex items-center justify-end gap-2">{rightSlot}</div>
       </div>
     </header>
   );

@@ -155,10 +155,7 @@
       "success": "成功",
       "error": "エラー",
       "warning": "警告",
-      "info": "情報",
-      "offline": "オフライン。変更は接続復帰後に同期されます",
-      "syncing": "{count}件の変更を同期中...",
-      "syncComplete": "同期完了"
+      "info": "情報"
     },
     "time": {
       "today": "今日",
@@ -234,13 +231,10 @@
       "later": "後で確認する"
     },
     "inlineBanner": {
-      "syncError": "同期できません",
-      "retry": "リトライ",
       "paymentError": "お支払いに問題があります",
       "checkPayment": "支払い情報を確認",
       "conflict": "他で変更がありました",
       "reload": "再読み込み",
-      "offline": "オフラインです",
       "updateAvailable": "新しいバージョンがあります",
       "update": "更新",
       "mobileReadOnly": "編集機能は PC 版でお使いいただけます"
@@ -254,16 +248,6 @@
       "iosInstallDescription": "アプリとしてインストールすると、より快適に使えます",
       "iosStep1": "共有ボタンをタップ",
       "iosStep2": "「ホーム画面に追加」を選択"
-    },
-    "sync": {
-      "offline": "オフライン",
-      "pending": "同期待ち {count}件",
-      "failed": "同期失敗 {count}件",
-      "clearFailed": "クリア",
-      "offlineToast": "オフライン。変更は保存され、再接続時に同期されます",
-      "onlineToast": "オンラインに復帰しました。変更を同期中...",
-      "lastSynced": "最後の同期: {time}",
-      "lastSyncedNever": "未同期"
     },
     "insights": {
       "noRecords": "新しい1週間が始まりました",

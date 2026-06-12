@@ -155,10 +155,7 @@
       "success": "Success",
       "error": "Error",
       "warning": "Warning",
-      "info": "Info",
-      "offline": "You are offline. Changes will sync when connection is restored.",
-      "syncing": "Syncing {count} change(s)...",
-      "syncComplete": "Sync complete."
+      "info": "Info"
     },
     "time": {
       "today": "Today",
@@ -234,13 +231,10 @@
       "later": "Check later"
     },
     "inlineBanner": {
-      "syncError": "Unable to sync",
-      "retry": "Retry",
       "paymentError": "There is a payment issue",
       "checkPayment": "Check payment info",
       "conflict": "Changes were made elsewhere",
       "reload": "Reload",
-      "offline": "You are offline",
       "updateAvailable": "A new version is available",
       "update": "Update",
       "mobileReadOnly": "Editing is available on desktop"
@@ -254,16 +248,6 @@
       "iosInstallDescription": "Install the app for a faster, full-screen experience.",
       "iosStep1": "Tap the Share button",
       "iosStep2": "Select \"Add to Home Screen\""
-    },
-    "sync": {
-      "offline": "Offline",
-      "pending": "{count, plural, one {# change pending} other {# changes pending}}",
-      "failed": "{count, plural, one {# sync failed} other {# syncs failed}}",
-      "clearFailed": "Clear",
-      "offlineToast": "You're offline. Changes will be saved and synced when you reconnect.",
-      "onlineToast": "Back online. Syncing changes...",
-      "lastSynced": "Last synced {time}",
-      "lastSyncedNever": "Not synced yet"
     },
     "insights": {
       "noRecords": "No records this week.",

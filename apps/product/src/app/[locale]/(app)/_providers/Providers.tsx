@@ -35,8 +35,6 @@ import {
   queryPersister,
 } from '@/lib/tanstack-query/persist-storage';
 
-import { handleOfflineMutationError } from '@/lib/pwa/offline-mutation';
-
 // axe-core アクセシビリティチェッカー: 開発環境のみ
 const AxeAccessibilityChecker =
   process.env.NODE_ENV === 'development'
@@ -60,7 +58,7 @@ const SessionMonitorProvider = dynamic(
   { ssr: false },
 );
 
-// ServiceWorkerProviderを遅延ロード（PWAオフライン対応）
+// ServiceWorkerProviderを遅延ロード（PWAインストール・静的キャッシュ・更新通知）
 const ServiceWorkerProvider = dynamic(
   () => import('./ServiceWorkerProvider').then((mod) => mod.ServiceWorkerProvider),
   { ssr: false },
@@ -136,10 +134,7 @@ export function Providers({ children }: ProvidersProps) {
           onError: (error) => handleAuthError(error),
         }),
         mutationCache: new MutationCache({
-          onError: (error, variables, _context, mutation) => {
-            handleAuthError(error);
-            handleOfflineMutationError(error, variables, mutation.options.mutationKey);
-          },
+          onError: (error) => handleAuthError(error),
         }),
         defaultOptions: {
           queries: {
@@ -147,7 +142,7 @@ export function Providers({ children }: ProvidersProps) {
             staleTime: 5 * 60 * 1000, // 5分（一般的なデータのデフォルト）
             // PERSIST_MAX_AGE_MS（2時間）以上にする必要がある。
             // 永続化から復元されたデータが GC される前に読み込まれるために必須。
-            gcTime: PERSIST_MAX_AGE_MS, // 2時間（IndexedDB 永続化と同期）
+            gcTime: PERSIST_MAX_AGE_MS, // 2時間（query cache の IndexedDB 永続化）
             refetchOnWindowFocus: true, // 業界標準：タブ切り替え時にstaleなデータのみ再フェッチ
             refetchOnReconnect: 'always',
             retry: (failureCount, error) => {
@@ -160,7 +155,6 @@ export function Providers({ children }: ProvidersProps) {
             retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
           },
           mutations: {
-            networkMode: 'offlineFirst', // オフライン中はpause→復帰時に自動再送
             retry: (failureCount, error) => {
               // 認証エラーはリトライしない
               if (isAuthError(error)) return false;
@@ -211,7 +205,7 @@ export function Providers({ children }: ProvidersProps) {
           shouldDehydrateQuery: (query) =>
             // 成功・データあり のクエリのみ永続化（エラー状態は永続化しない）
             query.state.status === 'success' && query.state.data !== undefined,
-          // mutation は永続化しない（sync queue で別管理）
+          // mutation は永続化しない
           shouldDehydrateMutation: () => false,
         },
       }}
