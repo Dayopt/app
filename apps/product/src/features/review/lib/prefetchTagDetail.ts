@@ -10,8 +10,7 @@ import { computeStatsDateRange } from './compute-date-range';
 /**
  * タグ詳細ページ用 prefetch
  *
- * 旧: 個別8本のRPC → 新: getTagOverview (7並列) + getTagTimeline (2並列) の2本。
- * クライアント側と同じクエリキーでプリフェッチ → キャッシュヒット保証。
+ * getTagDashboard をクライアント側と同じクエリキーでプリフェッチ → キャッシュヒット保証。
  */
 export async function prefetchTagDetailData(
   tagId: string,
