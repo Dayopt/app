@@ -35,7 +35,7 @@
     "perf:lighthouse": "lhci autorun",
     "quality:full": "pnpm lint && pnpm license:check && pnpm perf:lighthouse && pnpm typecheck",
     "quality:deadcode": "knip --config knip.json --reporter json",
-    "quality:deadcode:ci": "knip --config knip.json --no-exit-code",
+    "quality:deadcode:ci": "knip --config knip.json --exclude files,unlisted,binaries",
     "test": "vitest --project unit",
     "test:run": "vitest --project unit run",
     "test:ui": "vitest --ui",
