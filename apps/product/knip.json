@@ -21,13 +21,6 @@
     "husky",
     "storybook",
     "@dayopt/*",
-    "@commitlint/cli",
-    "@commitlint/config-conventional",
-    "lint-staged",
-    "culori",
-    "zod-to-json-schema",
-    "prettier-plugin-organize-imports",
-    "prettier-plugin-tailwindcss",
     "sharp",
     "tw-animate-css",
     "@tailwindcss/typography"

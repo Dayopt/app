@@ -17,12 +17,19 @@
       "file": "package.json",
       "dependencies": [{ "name": "@tanstack/react-virtual", "line": 115, "col": 6, "pos": 5950 }],
       "devDependencies": [
+        { "name": "@commitlint/cli", "line": 150, "col": 6, "pos": 6968 },
+        { "name": "@commitlint/config-conventional", "line": 151, "col": 6, "pos": 7002 },
         { "name": "@eslint/eslintrc", "line": 152, "col": 6, "pos": 7052 },
         { "name": "@tailwindcss/vite", "line": 164, "col": 6, "pos": 7497 },
         { "name": "@typescript-eslint/parser", "line": 173, "col": 6, "pos": 7829 },
+        { "name": "culori", "line": 181, "col": 6, "pos": 8145 },
         { "name": "lightningcss", "line": 191, "col": 6, "pos": 8455 },
+        { "name": "lint-staged", "line": 192, "col": 6, "pos": 8486 },
         { "name": "mermaid", "line": 194, "col": 6, "pos": 8539 },
-        { "name": "remark-gfm", "line": 201, "col": 6, "pos": 8773 }
+        { "name": "prettier-plugin-organize-imports", "line": 199, "col": 6, "pos": 8678 },
+        { "name": "prettier-plugin-tailwindcss", "line": 200, "col": 6, "pos": 8728 },
+        { "name": "remark-gfm", "line": 201, "col": 6, "pos": 8773 },
+        { "name": "zod-to-json-schema", "line": 211, "col": 6, "pos": 9041 }
       ],
       "optionalPeerDependencies": [],
       "unlisted": [],
