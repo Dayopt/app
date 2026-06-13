@@ -40,6 +40,8 @@
     "docs:check": "pnpm --filter @dayopt/product docs:check",
     "api:spec": "pnpm --filter @dayopt/product api:spec",
     "api:spec:check": "pnpm --filter @dayopt/product api:spec:check",
+    "rls:snapshot": "tsx scripts/generate-rls-snapshot.ts",
+    "rls:snapshot:check": "tsx scripts/generate-rls-snapshot.ts --check",
     "license:check": "pnpm --filter @dayopt/product license:check",
     "license:check-risks": "pnpm --filter @dayopt/product license:check-risks",
     "license:audit": "pnpm --filter @dayopt/product license:audit",
