@@ -21,6 +21,8 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
+import { format as formatWithPrettier } from 'prettier';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const OUTPUT_PATH = resolve(ROOT, 'apps/storybook/docs/dev/db/rls-snapshot.md');
@@ -130,10 +132,13 @@ function render(policies: PolicyRow[], rlsTables: RlsRow[]): string {
   return lines.join('\n');
 }
 
-function main(): void {
+async function main(): Promise<void> {
   let content: string;
   try {
-    content = render(fetchPolicies(), fetchRlsTables());
+    const raw = render(fetchPolicies(), fetchRlsTables());
+    // commit 時の lint-staged prettier と同一整形を施し、--check の drift を防ぐ
+    // （raw のままだと prettier がテーブルを整列して常に差分になる）
+    content = await formatWithPrettier(raw, { parser: 'markdown', printWidth: 100 });
   } catch (error) {
     console.error(
       '❌ RLS snapshot 生成に失敗しました。DATABASE_URL と DB 起動を確認してください。',
@@ -153,8 +158,8 @@ function main(): void {
     return;
   }
 
-  writeFileSync(OUTPUT_PATH, content + '\n');
+  writeFileSync(OUTPUT_PATH, content);
   console.log(`✅ RLS snapshot を生成しました: ${OUTPUT_PATH}`);
 }
 
-main();
+void main();
