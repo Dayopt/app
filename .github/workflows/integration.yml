@@ -77,6 +77,13 @@ jobs:
           NODE_ENV: test
           CI: true
 
+      # migration から構築した DB の RLS が、committed snapshot と一致するか検証する。
+      # drift（migration 変更で snapshot 未更新）を CI で検出する。更新は `pnpm rls:snapshot`。
+      - name: Check RLS snapshot drift
+        run: pnpm rls:snapshot:check
+        env:
+          DATABASE_URL: ${{ steps.supabase.outputs.db_url }}
+
       - name: Stop Supabase
         if: always()
         run: supabase stop
