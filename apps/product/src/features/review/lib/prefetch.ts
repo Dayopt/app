@@ -23,8 +23,7 @@ interface PrefetchReviewOptions {
  *
  * URL の粒度・日付（?g=&d=）に合わせてクライアントと同じクエリキーで事前取得する:
  * - day: entries.list（当日 + 前日。日次ビューは Free データのみで構成）
- * - week: getStatsPageData + getTimePL + getStreak + getDailyHours
- * - month / year: getStatsPageData + getStreak + getDailyHours
+ * - week: getStatsPageData + getTimePL
  */
 export async function prefetchReviewData(options: PrefetchReviewOptions = {}) {
   const helpers = await createServerHelpers();
@@ -54,29 +53,23 @@ export async function prefetchReviewData(options: PrefetchReviewOptions = {}) {
         }),
       ]);
     } else {
-      const prefetches = [
+      // week: WeeklyReview が消費する getStatsPageData + getTimePL のみ
+      await Promise.all([
         helpers.entries.getStatsPageData.prefetch({
           startDate: dateRange.startDate,
           endDate: dateRange.endDate,
           prevStart: prevDateRange.startDate,
           prevEnd: prevDateRange.endDate,
           year: baseDate.getFullYear(),
-          monthlyMonths: computeMonthCount(granularity) ?? 12,
+          monthlyMonths: computeMonthCount(granularity),
         }),
-        helpers.entries.getStreak.prefetch(),
-        helpers.entries.getDailyHours.prefetch({ year: baseDate.getFullYear() }),
-      ];
-      if (granularity === 'week') {
-        prefetches.push(
-          helpers.entries.getTimePL.prefetch({
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate,
-            prevStart: prevDateRange.startDate,
-            prevEnd: prevDateRange.endDate,
-          }),
-        );
-      }
-      await Promise.all(prefetches);
+        helpers.entries.getTimePL.prefetch({
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate,
+          prevStart: prevDateRange.startDate,
+          prevEnd: prevDateRange.endDate,
+        }),
+      ]);
     }
   } catch {
     // 認証エラー等はスキップ（クライアント側でリトライ）

@@ -42,7 +42,7 @@ export function useReviewPageData() {
       prevStart: prevDateRange.startDate,
       prevEnd: prevDateRange.endDate,
       year: currentDate.getFullYear(),
-      monthlyMonths: computeMonthCount(granularity) ?? 12,
+      monthlyMonths: computeMonthCount(granularity),
     }),
     [dateRange, prevDateRange, currentDate, granularity],
   );

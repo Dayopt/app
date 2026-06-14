@@ -20,8 +20,6 @@ import { useReviewDateDisplayProps } from './layout/useReviewDateDisplayProps';
 const TODAY_LABEL_KEYS: Record<ReviewGranularity, string> = {
   day: 'common.time.today',
   week: 'common.time.thisWeek',
-  month: 'common.time.thisMonth',
-  year: 'calendar.stats.thisYear',
 };
 
 interface ReviewLayoutProps {

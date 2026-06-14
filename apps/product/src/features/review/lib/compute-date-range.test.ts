@@ -66,39 +66,6 @@ describe('computeStatsDateRange', () => {
       expect(end.getUTCHours()).toBe(23);
     });
   });
-
-  describe('granularity = "month"', () => {
-    it('UTC: 月の1日〜末日の範囲を返す', () => {
-      const result = computeStatsDateRange(new Date(), 'month', 'UTC');
-      const start = new Date(result.startDate);
-      const end = new Date(result.endDate);
-
-      expect(start.getUTCDate()).toBe(1);
-      expect(start.getUTCMonth()).toBe(2); // March
-      expect(start.getUTCHours()).toBe(0);
-
-      expect(end.getUTCDate()).toBe(31); // March has 31 days
-      expect(end.getUTCMonth()).toBe(2);
-      expect(end.getUTCHours()).toBe(23);
-    });
-  });
-
-  describe('granularity = "year"', () => {
-    it('UTC: 1月1日〜12月31日の範囲を返す', () => {
-      const result = computeStatsDateRange(new Date(), 'year', 'UTC');
-
-      expect(result.startDate).toBe('2026-01-01T00:00:00.000Z');
-      expect(result.endDate).toBe('2026-12-31T23:59:59.999Z');
-    });
-
-    it('Asia/Tokyo (UTC+9): JSTの年始・年末をUTCに変換して返す', () => {
-      const result = computeStatsDateRange(new Date(), 'year', 'Asia/Tokyo');
-      // JST 2026-01-01 00:00 = UTC 2025-12-31T15:00:00Z
-      expect(result.startDate).toBe('2025-12-31T15:00:00.000Z');
-      // JST 2026-12-31 23:59:59.999 = UTC 2026-12-31T14:59:59.999Z
-      expect(result.endDate).toBe('2026-12-31T14:59:59.999Z');
-    });
-  });
 });
 
 describe('computePreviousDateRange', () => {
@@ -126,13 +93,5 @@ describe('computeMonthCount', () => {
 
   it('weekは3を返す', () => {
     expect(computeMonthCount('week')).toBe(3);
-  });
-
-  it('monthは12を返す', () => {
-    expect(computeMonthCount('month')).toBe(12);
-  });
-
-  it('yearはundefinedを返す', () => {
-    expect(computeMonthCount('year')).toBeUndefined();
   });
 });

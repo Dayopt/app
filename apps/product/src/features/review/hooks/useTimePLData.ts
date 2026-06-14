@@ -120,19 +120,11 @@ export function useTimePLData() {
 
 // ── Internal ──
 
-function formatPeriodLabel(
-  date: Date,
-  granularity: 'day' | 'week' | 'month' | 'year',
-  timezone: string,
-): string {
+function formatPeriodLabel(date: Date, granularity: 'day' | 'week', timezone: string): string {
   switch (granularity) {
     case 'day':
       return formatInTimeZone(date, timezone, 'M/d（E）');
     case 'week':
       return formatInTimeZone(date, timezone, 'M/d') + '〜';
-    case 'month':
-      return formatInTimeZone(date, timezone, 'yyyy年M月');
-    case 'year':
-      return formatInTimeZone(date, timezone, 'yyyy年');
   }
 }

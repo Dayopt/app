@@ -23,7 +23,7 @@ interface EstimationRow {
 /**
  * EstimationAccuracyList — タグ別の見積もり精度リスト
  *
- * どのタグの見積もりがずれやすいかをタグ単位で示す月次ビューのセクション。
+ * どのタグの見積もりがずれやすいかをタグ単位で示す週次ビューのセクション。
  * 平均予定時間 → 平均実績時間 と、ずれ（±分）を 1 行で表示する。
  */
 export function EstimationAccuracyList({

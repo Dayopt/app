@@ -35,16 +35,5 @@ export function useReviewDateDisplayProps(
         showWeekNumber,
         weekStartsOn,
       };
-    case 'month':
-      return {
-        date: currentDate,
-        weekStartsOn,
-      };
-    case 'year':
-      return {
-        date: currentDate,
-        formatPattern: tCommon('dates.formats.yearOnly'),
-        weekStartsOn,
-      };
   }
 }

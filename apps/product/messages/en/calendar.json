@@ -265,17 +265,9 @@
         "unplannedTime": "Unplanned time",
         "unplannedCountValue": "{count} unplanned records"
       },
-      "monthly": {
-        "dailyTitle": "Daily record",
-        "dailyDesc": "The month's rhythm day by day",
-        "estimationTitle": "Estimation accuracy by tag",
-        "estimationDesc": "Which tags tend to drift from estimates"
-      },
-      "yearly": {
-        "heatmapTitle": "Year in records",
-        "heatmapDesc": "A bird's-eye view of the year in record density",
-        "monthlyTitle": "Monthly record",
-        "monthlyDesc": "Recorded hours by month"
+      "estimation": {
+        "title": "Estimation accuracy by tag",
+        "desc": "Which tags tend to drift from estimates"
       },
       "rhythm": {
         "dayOfWeek": "By day of week",
@@ -295,7 +287,6 @@
       "nextAction": {
         "planNextWeek": "Plan next week",
         "planTomorrow": "Plan tomorrow",
-        "planNextMonth": "Plan next month",
         "recordDay": "Record your first block"
       },
       "review": {
@@ -308,10 +299,7 @@
       },
       "periodDay": "Day",
       "periodWeek": "Week",
-      "periodMonth": "Month",
-      "periodYear": "Year",
       "periodAll": "All",
-      "thisYear": "This year",
       "metrics": {
         "totalTime": "Total Time",
         "totalTimeDesc": "Total tracked time",

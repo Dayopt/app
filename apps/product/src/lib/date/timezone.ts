@@ -14,7 +14,7 @@
  * ```
  */
 
-import { startOfWeek as dfStartOfWeek, endOfMonth, format, startOfMonth } from 'date-fns';
+import { startOfWeek as dfStartOfWeek, format } from 'date-fns';
 import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 
 // ========================================
@@ -208,34 +208,6 @@ export function tzWeekEnd(date: Date, timezone: string, weekStartsOn: 0 | 1 | 6 
   const weekEndDate = new Date(weekStart);
   weekEndDate.setDate(weekEndDate.getDate() + 6);
   const dateStr = format(weekEndDate, 'yyyy-MM-dd');
-  return fromZonedTime(new Date(`${dateStr}T23:59:59.999`), timezone).toISOString();
-}
-
-/**
- * ユーザーTZの月初0:00をUTC ISOで返す
- *
- * @param date - 基準日
- * @param timezone - ユーザーのタイムゾーン
- * @returns UTC ISO 8601文字列
- */
-export function tzMonthStart(date: Date, timezone: string): string {
-  const zonedDate = toZonedTime(date, timezone);
-  const monthStart = startOfMonth(zonedDate);
-  const dateStr = format(monthStart, 'yyyy-MM-dd');
-  return fromZonedTime(new Date(`${dateStr}T00:00:00`), timezone).toISOString();
-}
-
-/**
- * ユーザーTZの月末23:59:59.999をUTC ISOで返す
- *
- * @param date - 基準日
- * @param timezone - ユーザーのタイムゾーン
- * @returns UTC ISO 8601文字列
- */
-export function tzMonthEnd(date: Date, timezone: string): string {
-  const zonedDate = toZonedTime(date, timezone);
-  const monthEndDate = endOfMonth(zonedDate);
-  const dateStr = format(monthEndDate, 'yyyy-MM-dd');
   return fromZonedTime(new Date(`${dateStr}T23:59:59.999`), timezone).toISOString();
 }
 

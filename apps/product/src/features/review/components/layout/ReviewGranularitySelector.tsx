@@ -34,8 +34,6 @@ interface ReviewGranularitySelectorProps {
 const GRANULARITY_OPTIONS: { value: ReviewGranularity; labelKey: string }[] = [
   { value: 'day', labelKey: 'periodDay' },
   { value: 'week', labelKey: 'periodWeek' },
-  { value: 'month', labelKey: 'periodMonth' },
-  { value: 'year', labelKey: 'periodYear' },
 ];
 
 /**

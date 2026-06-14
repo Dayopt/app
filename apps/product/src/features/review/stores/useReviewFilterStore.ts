@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 
-import { addDays, addMonths, addWeeks } from '@/lib/date/core';
+import { addDays, addWeeks } from '@/lib/date/core';
 
 /** Stats の表示粒度 */
-export type ReviewGranularity = 'day' | 'week' | 'month' | 'year';
+export type ReviewGranularity = 'day' | 'week';
 
 interface ReviewFilterState {
   /** 表示粒度 */
@@ -32,13 +32,6 @@ function navigateDate(
       return addDays(currentDate, delta);
     case 'week':
       return addWeeks(currentDate, delta);
-    case 'month':
-      return addMonths(currentDate, delta);
-    case 'year': {
-      const result = new Date(currentDate);
-      result.setFullYear(result.getFullYear() + delta);
-      return result;
-    }
   }
 }
 
