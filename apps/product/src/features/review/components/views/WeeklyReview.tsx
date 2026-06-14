@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, CalendarClock, CalendarDays, Clock3, Gauge, Trophy } from 'lucide-react';
+import { BarChart3, CalendarClock, CalendarDays, Clock3, Gauge, Ruler, Trophy } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { format } from 'date-fns';
@@ -26,6 +26,7 @@ import { useTimePLData } from '../../hooks/useTimePLData';
 import { getMetricTrend } from '../../lib/metrics';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
 import type { ReviewViewProps } from '../../types/review.types';
+import { EstimationAccuracyList } from '../review/EstimationAccuracyList';
 import { DowRhythmChart, HourlyRhythmChart } from '../review/RhythmCharts';
 import { TagBalancePanel, type TagBalanceRow } from '../review/TagBalancePanel';
 import { InsightSlot } from '../shared/InsightSlot';
@@ -297,6 +298,17 @@ export function WeeklyReview({ className }: ReviewViewProps) {
               />
             </OverviewPanel>
           </section>
+
+          <OverviewPanel
+            title={t('estimation.title')}
+            description={t('estimation.desc')}
+            icon={<Ruler className="size-4" />}
+          >
+            <EstimationAccuracyList
+              rows={pageData?.estimationAccuracy}
+              isLoading={isPending && !isStatsError}
+            />
+          </OverviewPanel>
 
           <NextActionLink href={nextWeekHref} label={t('nextAction.planNextWeek')} />
         </div>

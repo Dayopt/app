@@ -13,7 +13,7 @@ import { HydrationBoundary } from '@/lib/trpc/server';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_GRANULARITIES = new Set(['day', 'week', 'month', 'year']);
+const VALID_GRANULARITIES = new Set(['day', 'week']);
 const DATE_PARAM_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** ?d= 省略時の「今日」をユーザー TZ で決める（サーバー TZ 基準だと日付がずれる） */

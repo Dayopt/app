@@ -1,41 +1,7 @@
-import { formatInTimeZone } from 'date-fns-tz';
-
-import { addDays, addMonths, addWeeks } from '@/lib/date/core';
-import {
-  tzDayEnd,
-  tzDayStart,
-  tzMonthEnd,
-  tzMonthStart,
-  tzWeekEnd,
-  tzWeekStart,
-} from '@/lib/date/timezone';
+import { addDays, addWeeks } from '@/lib/date/core';
+import { tzDayEnd, tzDayStart, tzWeekEnd, tzWeekStart } from '@/lib/date/timezone';
 
 import type { ReviewGranularity } from '../stores/useReviewFilterStore';
-
-// ============================================================
-// Internal helpers
-// ============================================================
-
-/**
- * 指定タイムゾーンで date が属する年を返す
- */
-function getYearInTimezone(date: Date, timezone: string): number {
-  return parseInt(formatInTimeZone(date, timezone, 'yyyy'), 10);
-}
-
-/**
- * 年の開始（1/1 00:00:00）をUTC ISOで返す
- */
-function tzYearStart(year: number, timezone: string): string {
-  return tzDayStart(new Date(`${year}-01-01T12:00:00Z`), timezone);
-}
-
-/**
- * 年の終了（12/31 23:59:59.999）をUTC ISOで返す
- */
-function tzYearEnd(year: number, timezone: string): string {
-  return tzDayEnd(new Date(`${year}-12-31T12:00:00Z`), timezone);
-}
 
 // ============================================================
 // Public API
@@ -72,26 +38,13 @@ export function computeStatsDateRange(
         endDate: tzWeekEnd(currentDate, timezone, weekStartsOn),
       };
     }
-    case 'month': {
-      return {
-        startDate: tzMonthStart(currentDate, timezone),
-        endDate: tzMonthEnd(currentDate, timezone),
-      };
-    }
-    case 'year': {
-      const year = getYearInTimezone(currentDate, timezone);
-      return {
-        startDate: tzYearStart(year, timezone),
-        endDate: tzYearEnd(year, timezone),
-      };
-    }
   }
 }
 
 /**
  * 現在の日付範囲から前期間の日付範囲を算出
  *
- * day → 前日、week → 前週、month → 前月、year → 前年
+ * day → 前日、week → 前週
  *
  * weekStartsOn はユーザーの週開始曜日設定（0=日, 1=月, 6=土）。
  * 省略時はデフォルト 1（月曜始まり）。
@@ -120,35 +73,17 @@ export function computePreviousDateRange(
         endDate: tzWeekEnd(prev, timezone, weekStartsOn),
       };
     }
-    case 'month': {
-      const prev = addMonths(currentDate, -1);
-      return {
-        startDate: tzMonthStart(prev, timezone),
-        endDate: tzMonthEnd(prev, timezone),
-      };
-    }
-    case 'year': {
-      const year = getYearInTimezone(currentDate, timezone) - 1;
-      return {
-        startDate: tzYearStart(year, timezone),
-        endDate: tzYearEnd(year, timezone),
-      };
-    }
   }
 }
 
 /**
  * 粒度から MonthlyTrend の月数を算出
  */
-export function computeMonthCount(granularity: ReviewGranularity): number | undefined {
+export function computeMonthCount(granularity: ReviewGranularity): number {
   switch (granularity) {
     case 'day':
       return 1;
     case 'week':
       return 3;
-    case 'month':
-      return 12;
-    case 'year':
-      return undefined;
   }
 }

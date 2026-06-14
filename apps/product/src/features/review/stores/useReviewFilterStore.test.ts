@@ -28,14 +28,10 @@ describe('useReviewFilterStore', () => {
       expect(useReviewFilterStore.getState().granularity).toBe('day');
     });
 
-    it('monthに切り替えできる', () => {
-      useReviewFilterStore.getState().setGranularity('month');
-      expect(useReviewFilterStore.getState().granularity).toBe('month');
-    });
-
-    it('yearに切り替えできる', () => {
-      useReviewFilterStore.getState().setGranularity('year');
-      expect(useReviewFilterStore.getState().granularity).toBe('year');
+    it('weekに切り替えできる', () => {
+      useReviewFilterStore.getState().setGranularity('day');
+      useReviewFilterStore.getState().setGranularity('week');
+      expect(useReviewFilterStore.getState().granularity).toBe('week');
     });
   });
 
@@ -58,18 +54,6 @@ describe('useReviewFilterStore', () => {
       expect(useReviewFilterStore.getState().currentDate.getDate()).toBe(17);
     });
 
-    it('month粒度で次の月に移動', () => {
-      useReviewFilterStore.getState().setGranularity('month');
-      useReviewFilterStore.getState().navigate('next');
-      expect(useReviewFilterStore.getState().currentDate.getMonth()).toBe(3); // April
-    });
-
-    it('year粒度で次の年に移動', () => {
-      useReviewFilterStore.getState().setGranularity('year');
-      useReviewFilterStore.getState().navigate('next');
-      expect(useReviewFilterStore.getState().currentDate.getFullYear()).toBe(2027);
-    });
-
     it('todayで今日に戻る', () => {
       useReviewFilterStore.getState().setGranularity('week');
       useReviewFilterStore.getState().navigate('next');
@@ -83,9 +67,9 @@ describe('useReviewFilterStore', () => {
 
   describe('状態の独立性', () => {
     it('navigateがgranularityに影響しない', () => {
-      useReviewFilterStore.getState().setGranularity('month');
+      useReviewFilterStore.getState().setGranularity('day');
       useReviewFilterStore.getState().navigate('next');
-      expect(useReviewFilterStore.getState().granularity).toBe('month');
+      expect(useReviewFilterStore.getState().granularity).toBe('day');
     });
   });
 });
