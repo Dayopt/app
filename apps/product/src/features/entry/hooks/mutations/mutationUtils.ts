@@ -53,6 +53,9 @@ export function createListQueryPredicate(entityName: 'entries') {
   };
 }
 
+/** entries.list query keys shared by all entry mutation hooks. */
+export const isEntriesListQuery = createListQueryPredicate('entries');
+
 /**
  * エンティティキャッシュ無効化オプション
  */

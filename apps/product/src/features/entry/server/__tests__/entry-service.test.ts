@@ -20,6 +20,33 @@ function createService(mockSupabase = createMockSupabase()) {
 
 const USER_ID = 'test-user-id';
 
+describe('EntryService.bulkDelete', () => {
+  it('userIdとentry idsをRPCへ渡し削除件数を返す', async () => {
+    const { service, mockSupabase } = createService();
+    mockSupabase.rpc.mockResolvedValue({ data: 2, error: null });
+
+    await expect(
+      service.bulkDelete({ userId: USER_ID, entryIds: ['entry-1', 'entry-2'] }),
+    ).resolves.toBe(2);
+    expect(mockSupabase.rpc).toHaveBeenCalledWith('bulk_soft_delete_entries', {
+      p_entry_ids: ['entry-1', 'entry-2'],
+      p_user_id: USER_ID,
+    });
+  });
+
+  it('RPCエラーをDELETE_FAILEDへ変換する', async () => {
+    const { service, mockSupabase } = createService();
+    mockSupabase.rpc.mockResolvedValue({ data: null, error: { message: 'rpc failed' } });
+
+    await expect(
+      service.bulkDelete({ userId: USER_ID, entryIds: ['entry-1'] }),
+    ).rejects.toMatchObject({
+      code: 'DELETE_FAILED',
+      message: 'エントリーの一括削除に失敗した',
+    });
+  });
+});
+
 // ============================================================================
 // create
 // ============================================================================

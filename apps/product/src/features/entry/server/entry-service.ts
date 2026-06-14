@@ -481,6 +481,20 @@ export class EntryService {
     return { success: true };
   }
 
+  /** 複数エントリを一括でソフト削除する。 */
+  async bulkDelete(options: { userId: string; entryIds: string[] }): Promise<number> {
+    const { data, error } = await this.supabase.rpc('bulk_soft_delete_entries', {
+      p_entry_ids: options.entryIds,
+      p_user_id: options.userId,
+    });
+
+    if (error) {
+      throw new EntryServiceError('DELETE_FAILED', 'エントリーの一括削除に失敗した');
+    }
+
+    return data ?? 0;
+  }
+
   /**
    * ソフト削除されたエントリを復元（Undo用）
    *
