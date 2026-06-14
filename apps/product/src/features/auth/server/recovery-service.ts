@@ -8,7 +8,7 @@ import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
 import type { Database } from '@dayopt/database';
 
-export class RecoveryServiceError extends ServiceError {
+class RecoveryServiceError extends ServiceError {
   constructor(
     code: 'RECOVERY_EXHAUSTED' | 'RECOVERY_INVALID' | 'RECOVERY_FAILED',
     message: string,
