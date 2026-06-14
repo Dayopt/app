@@ -18,11 +18,9 @@ import 'server-only';
  * - TanStack Queryのクライアントキャッシュ（5分）で対応
  */
 
-import { ServiceError } from '@/lib/trpc/errors';
 import type { Database, Insert, Row, Update } from '@dayopt/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { formatRpcErrorDetail } from '../domain/tag-merge';
-import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
 import { extractTagSuffixes, partitionByExistingName } from '../domain/tag-ungroup';
 import type { Tag, TagDeleteStrategy, TagTreeNode } from '../types';
 
@@ -86,56 +84,25 @@ interface MergeTagsResult {
   targetTag: Tag;
 }
 
-/** タグ並び替え更新 */
-interface ReorderTagUpdate {
-  id: string;
-  parent_id: string | null;
-  sort_order: number;
-}
+import { TagQueryService } from './tag-query-service';
+import { TagReorderService, type ReorderTagUpdate } from './tag-reorder-service';
+import { TagServiceError } from './tag-service-error';
+import { TagStatisticsService, type TagStatsRow } from './tag-statistics-service';
 
-/**
- * Tag Service エラー
- */
-export class TagServiceError extends ServiceError {
-  constructor(
-    code:
-      | 'FETCH_FAILED'
-      | 'CREATE_FAILED'
-      | 'UPDATE_FAILED'
-      | 'DELETE_FAILED'
-      | 'NOT_FOUND'
-      | 'DUPLICATE_NAME'
-      | 'INVALID_INPUT'
-      | 'MERGE_FAILED'
-      | 'SAME_TAG_MERGE'
-      | 'TARGET_NOT_FOUND'
-      | 'UNGROUP_CONFLICTS'
-      | 'GROUP_NAME_CONFLICT',
-    message: string,
-  ) {
-    super(code, message);
-    this.name = 'TagServiceError';
-  }
-}
+export { TagServiceError } from './tag-service-error';
 
 /**
  * Tag Service
  */
 export class TagService {
-  constructor(private readonly supabase: SupabaseClient<Database>) {}
+  private readonly queryService: TagQueryService;
+  private readonly reorderService: TagReorderService;
+  private readonly statisticsService: TagStatisticsService;
 
-  private async listRows(userId: string): Promise<DbTagRow[]> {
-    const { data, error } = await this.supabase
-      .from('tags')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true);
-
-    if (error) {
-      throw new TagServiceError('FETCH_FAILED', `Failed to fetch tags: ${error.message}`);
-    }
-
-    return data;
+  constructor(private readonly supabase: SupabaseClient<Database>) {
+    this.queryService = new TagQueryService(supabase);
+    this.reorderService = new TagReorderService(supabase);
+    this.statisticsService = new TagStatisticsService(supabase);
   }
 
   private async getNextSortOrder(userId: string, parentId: string | null): Promise<number> {
@@ -204,8 +171,7 @@ export class TagService {
   }
 
   async listHierarchy(options: { userId: string }): Promise<TagTreeNode[]> {
-    const rows = await this.listRows(options.userId);
-    return buildTagTree(rows.map(transformDbTag));
+    return this.queryService.listHierarchy(options.userId);
   }
 
   /**
@@ -220,29 +186,7 @@ export class TagService {
    * @returns タグ配列
    */
   async list(options: ListTagsOptions): Promise<Tag[]> {
-    const { userId, sortField, sortOrder } = options;
-
-    if (sortField === undefined || sortField === 'sort_order') {
-      const hierarchy = await this.listHierarchy({ userId });
-      return flattenTagTree(hierarchy);
-    }
-
-    const { data, error } = await this.supabase
-      .from('tags')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order(sortField, {
-        ascending: (sortOrder ?? 'asc') === 'asc',
-        nullsFirst: false,
-      })
-      .order('name', { ascending: true });
-
-    if (error) {
-      throw new TagServiceError('FETCH_FAILED', `Failed to fetch tags: ${error.message}`);
-    }
-
-    return data.map(transformDbTag);
+    return this.queryService.list(options);
   }
 
   /**
@@ -256,21 +200,7 @@ export class TagService {
     tagId: string;
     includeInactive?: boolean;
   }): Promise<Tag> {
-    const { userId, tagId, includeInactive = false } = options;
-
-    const query = this.supabase.from('tags').select('*').eq('id', tagId).eq('user_id', userId);
-
-    if (!includeInactive) {
-      query.eq('is_active', true);
-    }
-
-    const { data, error } = await query.single();
-
-    if (error || !data) {
-      throw new TagServiceError('NOT_FOUND', `Tag not found: ${tagId}`);
-    }
-
-    return transformDbTag(data);
+    return this.queryService.getById(options);
   }
 
   /**
@@ -880,58 +810,7 @@ export class TagService {
     userId: string;
     updates: ReorderTagUpdate[];
   }): Promise<{ count: number }> {
-    const { userId, updates } = options;
-
-    if (updates.length === 0) {
-      return { count: 0 };
-    }
-
-    // 所有権チェック: 更新対象のタグがすべてユーザーのものか確認
-    const tagIds = updates.map((u) => u.id);
-    const { data: existingTags, error: fetchError } = await this.supabase
-      .from('tags')
-      .select('id,parent_id')
-      .eq('user_id', userId)
-      .in('id', tagIds);
-
-    if (fetchError) {
-      throw new TagServiceError('FETCH_FAILED', `Failed to verify tags: ${fetchError.message}`);
-    }
-
-    const existingIds = new Set(existingTags?.map((t) => t.id) || []);
-    const invalidIds = tagIds.filter((id) => !existingIds.has(id));
-    if (invalidIds.length > 0) {
-      throw new TagServiceError('NOT_FOUND', `Tags not found: ${invalidIds.join(', ')}`);
-    }
-
-    const currentById = new Map(existingTags?.map((tag) => [tag.id, tag.parent_id ?? null]) ?? []);
-    for (const update of updates) {
-      if (update.parent_id === update.id) {
-        throw new TagServiceError('INVALID_INPUT', 'A tag cannot be its own parent');
-      }
-      if (update.parent_id && currentById.get(update.parent_id) !== null) {
-        throw new TagServiceError(
-          'INVALID_INPUT',
-          'Maximum nesting depth is 1 level. Parent tag cannot be a child of another tag.',
-        );
-      }
-    }
-
-    const { data: updatedCount, error: rpcError } = await this.supabase.rpc(
-      'batch_reorder_tags_hierarchy',
-      {
-        p_user_id: userId,
-        p_tag_ids: updates.map((u) => u.id),
-        p_parent_ids: updates.map((u) => u.parent_id) as never,
-        p_sort_orders: updates.map((u) => u.sort_order),
-      },
-    );
-
-    if (rpcError) {
-      throw new TagServiceError('UPDATE_FAILED', `Failed to reorder tags: ${rpcError.message}`);
-    }
-
-    return { count: typeof updatedCount === 'number' ? updatedCount : updates.length };
+    return this.reorderService.reorder(options);
   }
 
   /**
@@ -943,68 +822,8 @@ export class TagService {
    * @returns タグ統計の配列
    */
   async getStats(options: { userId: string }): Promise<TagStatsRow[]> {
-    const { userId } = options;
-
-    // タグ基本情報を取得
-    const { data: tags, error: tagsError } = await this.supabase
-      .from('tags')
-      .select('id, name, color, icon')
-      .eq('user_id', userId)
-      .eq('is_active', true);
-
-    if (tagsError) {
-      throw new TagServiceError('FETCH_FAILED', `Failed to fetch tags: ${tagsError.message}`);
-    }
-
-    if (!tags || tags.length === 0) {
-      return [];
-    }
-
-    // DB側集計関数で plan_count, record_count, last_used を一括取得
-    const { data: statsRows, error: statsError } = await this.supabase.rpc('get_tag_stats', {
-      p_user_id: userId,
-    });
-
-    if (statsError) {
-      throw new TagServiceError('FETCH_FAILED', `Failed to fetch tag stats: ${statsError.message}`);
-    }
-
-    // RPC結果をMapに変換
-    const statsMap = new Map<string, { entry_count: number; last_used: string | null }>();
-    for (const row of statsRows ?? []) {
-      statsMap.set(row.tag_id, {
-        entry_count: row.entry_count,
-        last_used: row.last_used,
-      });
-    }
-
-    const statsData: TagStatsRow[] = tags.map((tag) => {
-      const stats = statsMap.get(tag.id);
-      const entryCount = stats?.entry_count ?? 0;
-      return {
-        id: tag.id,
-        name: tag.name,
-        color: tag.color,
-        icon: tag.icon,
-        entry_count: entryCount,
-        last_used_at: stats?.last_used ?? null,
-      };
-    });
-
-    statsData.sort((a, b) => b.entry_count - a.entry_count);
-
-    return statsData;
+    return this.statisticsService.getStats(options.userId);
   }
-}
-
-/** タグ統計の型 */
-interface TagStatsRow {
-  id: string;
-  name: string;
-  color: string | null;
-  icon: string | null;
-  entry_count: number;
-  last_used_at: string | null;
 }
 
 /**

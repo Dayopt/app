@@ -1,0 +1,82 @@
+import 'server-only';
+
+import type { Database, Row } from '@dayopt/database';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
+import type { Tag, TagTreeNode } from '../types';
+import { TagServiceError } from './tag-service-error';
+
+type DbTagRow = Row<'tags'>;
+
+function transformDbTag(dbTag: DbTagRow): Tag {
+  return {
+    id: dbTag.id,
+    name: dbTag.name,
+    user_id: dbTag.user_id,
+    color: dbTag.color,
+    icon: dbTag.icon,
+    is_active: dbTag.is_active,
+    parent_id: dbTag.parent_id ?? null,
+    sort_order: dbTag.sort_order,
+    created_at: dbTag.created_at,
+    updated_at: dbTag.updated_at,
+  };
+}
+
+export class TagQueryService {
+  constructor(private readonly supabase: SupabaseClient<Database>) {}
+
+  async listHierarchy(userId: string): Promise<TagTreeNode[]> {
+    const { data, error } = await this.supabase
+      .from('tags')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+    if (error) {
+      throw new TagServiceError('FETCH_FAILED', `Failed to fetch tags: ${error.message}`);
+    }
+    return buildTagTree(data.map(transformDbTag));
+  }
+
+  async list(options: {
+    userId: string;
+    sortField?: 'name' | 'created_at' | 'updated_at' | 'tag_number' | 'sort_order' | undefined;
+    sortOrder?: 'asc' | 'desc' | undefined;
+  }): Promise<Tag[]> {
+    if (options.sortField === undefined || options.sortField === 'sort_order') {
+      return flattenTagTree(await this.listHierarchy(options.userId));
+    }
+    const { data, error } = await this.supabase
+      .from('tags')
+      .select('*')
+      .eq('user_id', options.userId)
+      .eq('is_active', true)
+      .order(options.sortField, {
+        ascending: (options.sortOrder ?? 'asc') === 'asc',
+        nullsFirst: false,
+      })
+      .order('name', { ascending: true });
+    if (error) {
+      throw new TagServiceError('FETCH_FAILED', `Failed to fetch tags: ${error.message}`);
+    }
+    return data.map(transformDbTag);
+  }
+
+  async getById(options: {
+    userId: string;
+    tagId: string;
+    includeInactive?: boolean;
+  }): Promise<Tag> {
+    const query = this.supabase
+      .from('tags')
+      .select('*')
+      .eq('id', options.tagId)
+      .eq('user_id', options.userId);
+    if (!options.includeInactive) query.eq('is_active', true);
+    const { data, error } = await query.single();
+    if (error || !data) {
+      throw new TagServiceError('NOT_FOUND', `Tag not found: ${options.tagId}`);
+    }
+    return transformDbTag(data);
+  }
+}
