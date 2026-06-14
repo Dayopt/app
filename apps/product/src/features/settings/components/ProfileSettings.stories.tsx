@@ -2,7 +2,6 @@
  * ProfileSettings Stories
  *
  * useAuthStore のモックでプロフィール設定パネルを再現する。
- * ChronotypeSettings は tRPC を使うため、モックプロバイダーも用意する。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';

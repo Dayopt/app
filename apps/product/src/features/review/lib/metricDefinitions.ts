@@ -9,7 +9,7 @@
  *   calendar.stats.metrics.{metricId}Desc
  */
 
-import { ArrowLeftRight, Clock, Flame, Gauge, Ratio, Target, Timer } from 'lucide-react';
+import { ArrowLeftRight, Clock, Flame, Ratio, Target, Timer } from 'lucide-react';
 
 import type { MetricDefinition, MetricId } from '../types/metrics.types';
 
@@ -43,13 +43,6 @@ export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
     thresholds: { good: 10, warning: 30 },
     icon: Timer,
   },
-  deepUtilization: {
-    id: 'deepUtilization',
-    format: 'percentage',
-    trendPositive: 'up',
-    thresholds: { good: 0.6, warning: 0.3 },
-    icon: Gauge,
-  },
   contextSwitches: {
     id: 'contextSwitches',
     format: 'count',
@@ -70,7 +63,6 @@ export const METRIC_ORDER: MetricId[] = [
   'entryRate',
   'streak',
   'estimationAccuracy',
-  'deepUtilization',
   'contextSwitches',
   'blankRate',
 ];

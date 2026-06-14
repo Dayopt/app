@@ -6,57 +6,11 @@
  */
 
 import type {
-  DeepUtilizationData,
-  EnergyMapRow,
   MetricDefinition,
   MetricFormat,
   MetricTrend,
   MetricValueParts,
 } from '../types/metrics.types';
-
-// =============================================================================
-// Deep Utilization（ピーク活用率）
-// =============================================================================
-
-/**
- * エネルギーマップデータとchronotypeピークゾーンからピーク活用率を計算
- *
- * ピーク活用率 = ピーク時間帯の実作業時間 / ピーク時間帯の利用可能時間
- */
-export function calculateDeepUtilization(
-  energyMap: EnergyMapRow[],
-  deepZones: ReadonlyArray<{ startHour: number; endHour: number }>,
-  daysInRange: number,
-): DeepUtilizationData {
-  if (deepZones.length === 0 || daysInRange <= 0) {
-    return { deepMinutes: 0, totalDeepAvailable: 0, deepUtilization: 0 };
-  }
-
-  // ピーク時間帯に含まれるhourのセットを作成
-  const deepHours = new Set<number>();
-  for (const zone of deepZones) {
-    for (let h = zone.startHour; h <= zone.endHour; h++) {
-      deepHours.add(h);
-    }
-  }
-
-  // ピーク時間帯のエネルギーマップデータを集計
-  let deepMinutes = 0;
-  for (const row of energyMap) {
-    if (deepHours.has(row.hour)) {
-      deepMinutes += row.totalMinutes;
-    }
-  }
-
-  // ピーク時間帯の利用可能時間 = ピーク時間数 × 60分 × 日数
-  const totalDeepAvailable = deepHours.size * 60 * daysInRange;
-
-  return {
-    deepMinutes,
-    totalDeepAvailable,
-    deepUtilization: totalDeepAvailable === 0 ? 0 : deepMinutes / totalDeepAvailable,
-  };
-}
 
 // =============================================================================
 // Metric Formatting

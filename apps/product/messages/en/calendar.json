@@ -306,8 +306,6 @@
         "streakDesc": "Current streak",
         "estimationAccuracy": "Estimation Accuracy",
         "estimationAccuracyDesc": "Avg deviation from planned time",
-        "deepUtilization": "Deep Utilization",
-        "deepUtilizationDesc": "Activity during deep hours",
         "contextSwitches": "Context Switches",
         "contextSwitchesDesc": "Tag changes per day",
         "blankRate": "Free Time",
@@ -325,7 +323,6 @@
       "insights": {
         "entryRateLow": "Most activities in this period were unplanned",
         "entryRateLowDetail": "Try planning tomorrow's schedule the night before",
-        "deepUtilizationLow": "Deep hours were mostly unused",
         "contextSwitchesHigh": "Many context switches in this period",
         "contextSwitchesHighDetail": "Try batching similar tasks together",
         "blankRateHigh": "This period had a lot of free time",
@@ -356,10 +353,6 @@
         "memo": "Memo",
         "untitled": "Untitled"
       }
-    },
-    "nowBadge": {
-      "inDeep": "In deep",
-      "inEase": "In ease"
     },
     "mobile": {
       "touchHint": {

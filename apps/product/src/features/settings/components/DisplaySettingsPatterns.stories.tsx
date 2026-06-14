@@ -42,7 +42,6 @@ function DisplaySettingsDemo() {
   const [showWeekends, setShowWeekends] = useState(true);
   const [showWeekNumbers, setShowWeekNumbers] = useState(false);
   const [density, setDensity] = useState('default');
-  const [showChronotypeOnTimeline, setShowChronotypeOnTimeline] = useState(false);
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -181,20 +180,6 @@ function DisplaySettingsDemo() {
               <SelectItem value="spacious">ゆったり</SelectItem>
             </SelectContent>
           </Select>
-        </LabeledRow>
-      </SectionCard>
-
-      {/* Section 4: クロノタイプ（条件付き表示） */}
-      <SectionCard title="クロノタイプ">
-        <LabeledRow
-          label="タイムラインに表示"
-          description="カレンダーの背景に生産性ゾーンを表示します"
-        >
-          <Switch
-            checked={showChronotypeOnTimeline}
-            onCheckedChange={setShowChronotypeOnTimeline}
-            aria-label="Show chronotype on timeline"
-          />
         </LabeledRow>
       </SectionCard>
     </div>

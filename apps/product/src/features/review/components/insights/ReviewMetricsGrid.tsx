@@ -8,8 +8,6 @@ import { MetricCard } from '../metrics/MetricCard';
 
 interface ReviewMetricsGridProps {
   pageData: StatsPageData | undefined;
-  dateRange: { startDate: string; endDate: string };
-  prevDateRange: { startDate: string; endDate: string };
 }
 
 /**
@@ -17,9 +15,9 @@ interface ReviewMetricsGridProps {
  *
  * 統合データ `StatsPageData` を受け取り、メトリクスカードを描画。
  */
-export function ReviewMetricsGrid({ pageData, dateRange, prevDateRange }: ReviewMetricsGridProps) {
+export function ReviewMetricsGrid({ pageData }: ReviewMetricsGridProps) {
   const t = useTranslations('calendar.stats.metrics');
-  const { cards, isLoading } = useReviewMetrics(t, pageData, dateRange, prevDateRange);
+  const { cards, isLoading } = useReviewMetrics(t, pageData);
 
   if (cards.length === 0) return null;
 

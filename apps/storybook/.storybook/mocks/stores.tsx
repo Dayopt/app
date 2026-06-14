@@ -23,7 +23,6 @@ import { useAuthStore } from '@/features/auth';
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 import { useCalendarNavigationStore } from '@/features/calendar/stores/useCalendarNavigationStore';
 import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
-import { useChronotypeSettingsStore } from '@/features/chronotype';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
@@ -42,9 +41,6 @@ const STORE_REGISTRY: Record<string, StoreApi<Record<string, unknown>>> = {
     Record<string, unknown>
   >,
   useCalendarSettingsStore: useCalendarSettingsStore as unknown as StoreApi<
-    Record<string, unknown>
-  >,
-  useChronotypeSettingsStore: useChronotypeSettingsStore as unknown as StoreApi<
     Record<string, unknown>
   >,
   useUserPreferenceStore: useUserPreferenceStore as unknown as StoreApi<Record<string, unknown>>,

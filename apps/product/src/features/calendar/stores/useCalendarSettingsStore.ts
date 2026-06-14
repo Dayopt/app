@@ -37,8 +37,7 @@ const defaultSettings: CalendarSettings = {
  * 永続 cache から hydrate される流れでほぼ即時に正しい値になる。
  *
  * app-wide な user preference (timezone / weekStartsOn 等) は `useUserPreferenceStore`
- * に分離されている。chronotype 設定は `useChronotypeSettingsStore`
- * (`@/features/chronotype`) に分離されている。
+ * に分離されている。
  */
 export const useCalendarSettingsStore = create<CalendarSettingsStore>()(
   devtools(

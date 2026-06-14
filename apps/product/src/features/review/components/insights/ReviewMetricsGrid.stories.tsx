@@ -59,16 +59,6 @@ const MOCK_PAGE_DATA: StatsPageData = {
   monthlyTrend: [],
 };
 
-const DATE_RANGE = {
-  startDate: '2026-03-24T15:00:00.000Z',
-  endDate: '2026-03-31T14:59:59.999Z',
-};
-
-const PREV_DATE_RANGE = {
-  startDate: '2026-03-17T15:00:00.000Z',
-  endDate: '2026-03-24T14:59:59.999Z',
-};
-
 // =============================================================================
 // Meta
 // =============================================================================
@@ -91,8 +81,6 @@ type Story = StoryObj<typeof meta>;
 export const WithData: Story = {
   args: {
     pageData: MOCK_PAGE_DATA,
-    dateRange: DATE_RANGE,
-    prevDateRange: PREV_DATE_RANGE,
   },
 };
 
@@ -100,7 +88,5 @@ export const WithData: Story = {
 export const Loading: Story = {
   args: {
     pageData: undefined,
-    dateRange: DATE_RANGE,
-    prevDateRange: PREV_DATE_RANGE,
   },
 };

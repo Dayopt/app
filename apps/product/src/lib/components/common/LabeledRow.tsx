@@ -33,8 +33,7 @@ interface LabeledRowProps {
  * - variant="action" で destructive カラー
  * - control variant の子要素に aria-labelledby を自動注入（a11y）
  *
- * 現在は主に Settings / Chronotype の設定系UIで使用。
- * DAG上 settings (Cross-cutting) と chronotype (Layer 0) の共通依存先として common/ に配置。
+ * 現在は主に Settings の設定系UIで使用。
  */
 export function LabeledRow({
   label,

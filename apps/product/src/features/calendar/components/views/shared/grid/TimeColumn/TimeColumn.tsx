@@ -7,7 +7,6 @@
 
 import { memo, useMemo } from 'react';
 
-import { getActiveZoneLevel } from '@/features/chronotype';
 import { cn } from '@/lib/utils';
 
 import { TIME_COLUMN_WIDTH } from '../../constants/grid.constants';
@@ -32,7 +31,6 @@ export const TimeColumn = memo<TimeColumnProps>(function TimeColumn({
   hourHeight = 72,
   format = '24h',
   className = '',
-  zones,
 }) {
   // グリッド高さ
   const gridHeight = (endHour - startHour) * hourHeight;
@@ -45,15 +43,7 @@ export const TimeColumn = memo<TimeColumnProps>(function TimeColumn({
       // 0時と折りたたみ時の最初の時間はラベルを表示しない
       const showLabel = hour !== 0 && !(hour === startHour && startHour > 0);
 
-      // Chronotype ゾーン判定
-      const zone = zones ? getActiveZoneLevel(zones, hour) : null;
-
-      const textClass =
-        zone === 'deep'
-          ? 'text-chronotype-deep'
-          : zone === 'ease'
-            ? 'text-chronotype-ease'
-            : 'text-muted-foreground';
+      const textClass = 'text-muted-foreground';
 
       rows.push(
         <div
@@ -70,7 +60,7 @@ export const TimeColumn = memo<TimeColumnProps>(function TimeColumn({
     }
 
     return rows;
-  }, [startHour, endHour, hourHeight, format, zones]);
+  }, [startHour, endHour, hourHeight, format]);
 
   return (
     <div

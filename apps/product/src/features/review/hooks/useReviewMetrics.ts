@@ -6,37 +6,17 @@ import { api } from '@/lib/trpc';
 
 import { METRIC_DEFINITIONS, METRIC_ORDER } from '../lib/metricDefinitions';
 import {
-  calculateDeepUtilization,
   computeAvgDeviation,
   formatMetricValueParts,
   getMetricProgress,
   getMetricTrend,
   getThresholdStatus,
 } from '../lib/metrics';
-import type {
-  EnergyMapRow,
-  MetricData,
-  MetricId,
-  MetricTrend,
-  StatsPageData,
-} from '../types/metrics.types';
+import type { MetricData, MetricId, MetricTrend, StatsPageData } from '../types/metrics.types';
 
 // =============================================================================
 // Helpers
 // =============================================================================
-
-function computeDeepFromEnergyMap(
-  data: EnergyMapRow[] | undefined,
-  startDate: string,
-  endDate: string,
-) {
-  if (!data || !startDate || !endDate) return null;
-  const defaultDeepZones = [{ startHour: 9, endHour: 14 }];
-  const s = new Date(startDate);
-  const e = new Date(endDate);
-  const daysInRange = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)));
-  return calculateDeepUtilization(data, defaultDeepZones, daysInRange);
-}
 
 function computeTrend(
   current: number | null | undefined,
@@ -83,27 +63,10 @@ interface UseStatsMetricsResult {
 export function useReviewMetrics(
   t: (key: string) => string,
   pageData: StatsPageData | undefined,
-  dateRange: { startDate: string; endDate: string },
-  prevDateRange: { startDate: string; endDate: string },
 ): UseStatsMetricsResult {
   const streakQuery = api.entries.getStreak.useQuery();
 
   const isLoading = !pageData;
-
-  // ピーク活用率
-  const deepUtilization = useMemo(
-    () => computeDeepFromEnergyMap(pageData?.energyMap, dateRange.startDate, dateRange.endDate),
-    [pageData?.energyMap, dateRange.startDate, dateRange.endDate],
-  );
-  const prevDeepUtilization = useMemo(
-    () =>
-      computeDeepFromEnergyMap(
-        pageData?.prevEnergyMap,
-        prevDateRange.startDate,
-        prevDateRange.endDate,
-      ),
-    [pageData?.prevEnergyMap, prevDateRange.startDate, prevDateRange.endDate],
-  );
 
   // 見積もり精度
   const avgDeviation = useMemo(
@@ -151,18 +114,6 @@ export function useReviewMetrics(
       };
     }
 
-    if (deepUtilization) {
-      map.deepUtilization = {
-        id: 'deepUtilization',
-        value: deepUtilization.deepUtilization,
-        trend: computeTrend(
-          deepUtilization.deepUtilization,
-          prevDeepUtilization?.deepUtilization,
-          'up',
-        ),
-      };
-    }
-
     map.contextSwitches = {
       id: 'contextSwitches',
       value: pageData.contextSwitches.avgPerDay,
@@ -176,14 +127,7 @@ export function useReviewMetrics(
     };
 
     return map;
-  }, [
-    pageData,
-    avgDeviation,
-    prevAvgDeviation,
-    deepUtilization,
-    prevDeepUtilization,
-    streakQuery.data,
-  ]);
+  }, [pageData, avgDeviation, prevAvgDeviation, streakQuery.data]);
 
   // アクティブなメトリクスのみカード化
   const cards = useMemo((): ReviewMetricCard[] => {
