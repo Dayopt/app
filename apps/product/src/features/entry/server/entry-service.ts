@@ -6,11 +6,13 @@ import 'server-only';
  * entries テーブルのビジネスロジック
  */
 
-import { logger } from '@/lib/logger';
-import { ServiceError } from '@/lib/trpc/errors';
 import type { TablesInsert, TablesUpdate } from '@dayopt/database';
 import { determineEntryOrigin } from '../domain';
 import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-normalization';
+
+import { EntryLifecycleService } from './entry-lifecycle-service';
+import { EntryOverlapService, type EntryOverlapOptions } from './entry-overlap-service';
+import { EntryServiceError } from './entry-service-error';
 
 import type {
   ConvertPlannedToUnplannedOptions,
@@ -37,7 +39,13 @@ type NormalizedEntryInput = TablesInsert<'entries'>;
  * エントリサービスクラス
  */
 export class EntryService {
-  constructor(private readonly supabase: ServiceSupabaseClient) {}
+  private readonly overlapService: EntryOverlapService;
+  private readonly lifecycleService: EntryLifecycleService;
+
+  constructor(private readonly supabase: ServiceSupabaseClient) {
+    this.overlapService = new EntryOverlapService(supabase);
+    this.lifecycleService = new EntryLifecycleService(supabase);
+  }
 
   /**
    * エントリ一覧を取得
@@ -151,36 +159,8 @@ export class EntryService {
   /**
    * planned range の時間重複をチェック
    */
-  async checkPlannedTimeOverlap(options: {
-    userId: string;
-    startTime: string;
-    endTime: string;
-    excludeEntryId?: string;
-  }): Promise<string[]> {
-    const { userId, startTime, endTime, excludeEntryId } = options;
-
-    let query = this.supabase
-      .from('entries')
-      .select('id')
-      .eq('user_id', userId)
-      .is('deleted_at', null)
-      .not('start_time', 'is', null)
-      .not('end_time', 'is', null)
-      .lt('start_time', endTime)
-      .gt('end_time', startTime);
-
-    if (excludeEntryId) {
-      query = query.neq('id', excludeEntryId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      logger.error('Planned time overlap check failed:', error);
-      return [];
-    }
-
-    return data?.map((row) => row.id) ?? [];
+  async checkPlannedTimeOverlap(options: EntryOverlapOptions): Promise<string[]> {
+    return this.overlapService.checkPlanned(options);
   }
 
   /**
@@ -190,41 +170,8 @@ export class EntryService {
    * 実績レイヤーを占有する。DB の EXCLUDE 制約は actual NULL の行を見ないため、
    * 自動記録との二重計上はこのチェックが唯一の防衛線になる。
    */
-  async checkActualTimeOverlap(options: {
-    userId: string;
-    startTime: string;
-    endTime: string;
-    excludeEntryId?: string;
-  }): Promise<string[]> {
-    const { userId, startTime, endTime, excludeEntryId } = options;
-    const nowIso = new Date().toISOString();
-
-    let query = this.supabase
-      .from('entries')
-      .select('id')
-      .eq('user_id', userId)
-      .is('deleted_at', null)
-      .or(
-        [
-          // ユーザーが確定した実績
-          `and(actual_start_time.lt.${endTime},actual_end_time.gt.${startTime})`,
-          // 自動記録（過去の planned、actual 未編集・未スキップ）
-          `and(origin.eq.planned,skipped_at.is.null,actual_start_time.is.null,start_time.lt.${endTime},end_time.gt.${startTime},end_time.lte.${nowIso})`,
-        ].join(','),
-      );
-
-    if (excludeEntryId) {
-      query = query.neq('id', excludeEntryId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      logger.error('Actual time overlap check failed:', error);
-      return [];
-    }
-
-    return data?.map((row) => row.id) ?? [];
+  async checkActualTimeOverlap(options: EntryOverlapOptions): Promise<string[]> {
+    return this.overlapService.checkActual(options);
   }
 
   /**
@@ -467,32 +414,12 @@ export class EntryService {
    * 適用されるため、直接 UPDATE では RLS 違反になる。
    */
   async delete(options: DeleteEntryOptions): Promise<{ success: boolean }> {
-    const { userId, entryId } = options;
-
-    const { error } = await this.supabase.rpc('soft_delete_entry', {
-      p_entry_id: entryId,
-      p_user_id: userId,
-    });
-
-    if (error) {
-      throw new EntryServiceError('DELETE_FAILED', `Failed to delete entry: ${error.message}`);
-    }
-
-    return { success: true };
+    return this.lifecycleService.delete(options);
   }
 
   /** 複数エントリを一括でソフト削除する。 */
   async bulkDelete(options: { userId: string; entryIds: string[] }): Promise<number> {
-    const { data, error } = await this.supabase.rpc('bulk_soft_delete_entries', {
-      p_entry_ids: options.entryIds,
-      p_user_id: options.userId,
-    });
-
-    if (error) {
-      throw new EntryServiceError('DELETE_FAILED', 'エントリーの一括削除に失敗した');
-    }
-
-    return data ?? 0;
+    return this.lifecycleService.bulkDelete(options);
   }
 
   /**
@@ -501,18 +428,7 @@ export class EntryService {
    * SECURITY DEFINER の RPC 関数でRLSをバイパス。
    */
   async restore(options: DeleteEntryOptions): Promise<{ success: boolean }> {
-    const { userId, entryId } = options;
-
-    const { error } = await this.supabase.rpc('restore_entry', {
-      p_entry_id: entryId,
-      p_user_id: userId,
-    });
-
-    if (error) {
-      throw new EntryServiceError('RESTORE_FAILED', `Failed to restore entry: ${error.message}`);
-    }
-
-    return { success: true };
+    return this.lifecycleService.restore(options);
   }
 
   /**
@@ -842,15 +758,7 @@ export class EntryService {
   }
 }
 
-/**
- * エントリサービスエラー
- */
-export class EntryServiceError extends ServiceError {
-  constructor(code: string, message: string) {
-    super(code, message);
-    this.name = 'EntryServiceError';
-  }
-}
+export { EntryServiceError } from './entry-service-error';
 
 /**
  * サービスインスタンスを作成
