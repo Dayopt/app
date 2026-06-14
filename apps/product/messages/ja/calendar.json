@@ -279,10 +279,7 @@
       },
       "daily": {
         "timelineDesc": "予定と現実のずれを並べて見る",
-        "openCalendar": "カレンダーで開く",
-        "scoreFulfillment": "充実度を記録",
-        "unconfirmedTitle": "確認待ちの予定",
-        "unconfirmedDesc": "計画どおりだったか、タップで記録しましょう"
+        "openCalendar": "カレンダーで開く"
       },
       "nextAction": {
         "planNextWeek": "来週の計画を立てる",
@@ -303,8 +300,6 @@
       "metrics": {
         "totalTime": "合計時間",
         "totalTimeDesc": "記録された合計時間",
-        "avgFulfillment": "充実度平均",
-        "avgFulfillmentDesc": "充実度スコアの平均",
         "entryRate": "計画率",
         "entryRateDesc": "計画済みエントリの割合",
         "streak": "ストリーク",
@@ -342,10 +337,6 @@
         "lowDataNote": "この期間は記録が少ないため、傾向は参考値です",
         "estimationBiasOver": "このタグは平均 +{bias} 分超過する傾向があります",
         "estimationBiasUnder": "このタグは平均 {bias} 分早く終わる傾向があります",
-        "hourlyFulfillmentHigh": "この時間帯の充実度は平均より高い傾向があります",
-        "hourlyFulfillmentLow": "この時間帯の充実度は平均より低い傾向があります",
-        "tagFulfillmentHigh": "このタグの平均充実度は {score} — 全体より高めです",
-        "tagFulfillmentLow": "このタグの平均充実度は {score} — 全体より低めです",
         "deepHour": "ピーク時間帯です — 集中作業に向いています"
       },
       "tagDetail": {

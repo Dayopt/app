@@ -4,8 +4,8 @@
  * 各 unpacker は `unknown` を受け取り、その KPI の sub-shape を `?.` + `?? default`
  * で安全に unpack する。以下 2 種類の呼び出し元から共通利用される:
  *
- * 1. 個別 KPI procedure: `get_cumulative_time` / `get_avg_fulfillment` /
- *    `get_plan_rate` / `get_context_switches` / `get_blank_rate` の各 RPC が
+ * 1. 個別 KPI procedure: `get_cumulative_time` / `get_plan_rate` /
+ *    `get_context_switches` / `get_blank_rate` の各 RPC が
  *    返す flat な inner shape をそのまま unpack
  * 2. `transformStatsOverviewResponse`: `get_stats_kpi_summary` RPC が返す
  *    nested wrapper から `wrapper?.<kpi>` を取り出して同じ unpacker に渡す
@@ -17,12 +17,6 @@
 /** `unpackCumulativeTime` の入力 inner shape */
 export interface CumulativeTimeRpcInner {
   totalMinutes: number;
-}
-
-/** `unpackAvgFulfillment` の入力 inner shape */
-export interface AvgFulfillmentRpcInner {
-  avgFulfillment: number | null;
-  entryCount: number;
 }
 
 /** `unpackEntryRate` の入力 inner shape (RPC は `planRate` field を含む) */
@@ -50,21 +44,6 @@ export interface BlankRateRpcInner {
 export function unpackCumulativeTime(data: unknown): { totalMinutes: number } {
   const result = data as Partial<CumulativeTimeRpcInner> | null | undefined;
   return { totalMinutes: result?.totalMinutes ?? 0 };
-}
-
-/**
- * 平均充実度 KPI を default 埋めして unpack。
- * `avgFulfillment` は RPC の `null` を `undefined` に変換する（既存契約）。
- */
-export function unpackAvgFulfillment(data: unknown): {
-  avgFulfillment: number | undefined;
-  entryCount: number;
-} {
-  const result = data as Partial<AvgFulfillmentRpcInner> | null | undefined;
-  return {
-    avgFulfillment: result?.avgFulfillment ?? undefined,
-    entryCount: result?.entryCount ?? 0,
-  };
 }
 
 /**

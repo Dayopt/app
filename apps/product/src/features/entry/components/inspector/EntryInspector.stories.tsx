@@ -7,14 +7,12 @@ import { expect, within } from 'storybook/test';
 
 import type { ReactNode } from 'react';
 
-import type { FulfillmentScore } from '../../types/entry';
-
 // Story 内のみ: Composition Layer 連携プレビュー用
 import { EntryMicroInsight } from '@/features/review';
 
 import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
 import { Spinner } from '@/lib/components/ui/spinner';
-import { DateRow, FulfillmentRow, NoteSection, TimeDiffBlock, TimeRow } from './fields';
+import { DateRow, NoteSection, TimeDiffBlock, TimeRow } from './fields';
 import { InspectorFrame, MockTagRow } from './story-helpers';
 
 /**
@@ -47,7 +45,6 @@ interface InspectorContentProps {
   initialActualStart?: string | null;
   initialActualEnd?: string | null;
   initialNote?: string;
-  initialFulfillment?: FulfillmentScore | null;
   microInsight?: ReactNode;
   /** 予定外エントリ */
   isUnplanned?: boolean;
@@ -61,7 +58,6 @@ function InspectorContent({
   initialActualStart = '10:00',
   initialActualEnd = '11:30',
   initialNote = '',
-  initialFulfillment = null,
   microInsight,
   isUnplanned = false,
 }: InspectorContentProps) {
@@ -71,7 +67,6 @@ function InspectorContent({
   const [actualStart, setActualStart] = useState<string | null>(initialActualStart);
   const [actualEnd, setActualEnd] = useState<string | null>(initialActualEnd);
   const [note, setNote] = useState(initialNote);
-  const [fulfillment, setFulfillment] = useState<FulfillmentScore | null>(initialFulfillment);
   const t = useTranslations();
 
   const effectiveActualStart = actualStart ?? plannedStart;
@@ -128,18 +123,6 @@ function InspectorContent({
             isUnplanned={isUnplanned}
           />
 
-          {/* Fulfillment */}
-          <FulfillmentRow
-            label={t('entry.inspector.time.fulfillment')}
-            score={fulfillment}
-            onScoreChange={setFulfillment}
-            scoreLabels={{
-              low: t('entry.inspector.time.fulfillmentLow'),
-              medium: t('entry.inspector.time.fulfillmentMedium'),
-              high: t('entry.inspector.time.fulfillmentHigh'),
-            }}
-          />
-
           {/* Note */}
           <NoteSection
             label={t('entry.inspector.note.label')}
@@ -169,7 +152,6 @@ export const Default: Story = {
         initialPlannedEnd="11:00"
         initialActualStart="10:00"
         initialActualEnd="11:00"
-        initialFulfillment={3}
       />
     </InspectorFrame>
   ),
@@ -191,7 +173,6 @@ export const Overtime: Story = {
         initialActualStart="10:15"
         initialActualEnd="12:00"
         initialNote="30分延長した"
-        initialFulfillment={2}
       />
     </InspectorFrame>
   ),
@@ -212,7 +193,6 @@ export const Underrun: Story = {
         initialPlannedEnd="16:00"
         initialActualStart="14:00"
         initialActualEnd="15:30"
-        initialFulfillment={1}
       />
     </InspectorFrame>
   ),
@@ -260,31 +240,6 @@ export const WithMicroInsightEstimation: Story = {
               type: 'estimation_bias',
               messageKey: 'estimationBiasOver',
               messageParams: { bias: 25 },
-            }}
-          />
-        }
-      />
-    </InspectorFrame>
-  ),
-};
-
-/** MicroInsight 付き — 時間帯の充実度 */
-export const WithMicroInsightFulfillment: Story = {
-  render: () => (
-    <InspectorFrame>
-      <InspectorContent
-        tagName="Deep Work"
-        tagColor="blue"
-        initialPlannedStart="10:00"
-        initialPlannedEnd="12:00"
-        initialActualStart="10:00"
-        initialActualEnd="12:15"
-        initialFulfillment={3}
-        microInsight={
-          <EntryMicroInsight
-            insight={{
-              type: 'hourly_fulfillment',
-              messageKey: 'hourlyFulfillmentHigh',
             }}
           />
         }
@@ -389,7 +344,6 @@ export const AllPatterns: Story = {
               initialPlannedEnd="11:00"
               initialActualStart="10:00"
               initialActualEnd="11:00"
-              initialFulfillment={3}
             />
           </InspectorFrame>
         </div>
@@ -403,7 +357,6 @@ export const AllPatterns: Story = {
               initialPlannedEnd="11:30"
               initialActualStart="10:15"
               initialActualEnd="12:00"
-              initialFulfillment={2}
             />
           </InspectorFrame>
         </div>
@@ -417,7 +370,6 @@ export const AllPatterns: Story = {
               initialPlannedEnd="16:00"
               initialActualStart="14:00"
               initialActualEnd="15:30"
-              initialFulfillment={1}
             />
           </InspectorFrame>
         </div>

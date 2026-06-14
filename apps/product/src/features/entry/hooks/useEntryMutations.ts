@@ -138,7 +138,7 @@ export function useEntryMutations(options?: {
         actual_start_time: origin === 'unplanned' ? selectedStart : null,
         actual_end_time: origin === 'unplanned' ? selectedEnd : null,
         duration_minutes: null,
-        fulfillment_score: input.fulfillment_score ?? null,
+        fulfillment_score: null,
         deleted_at: null,
         skipped_at: null,
         user_id: '',
@@ -292,8 +292,6 @@ export function useEntryMutations(options?: {
       if (data.actual_end_time !== undefined) updateData.actual_end_time = data.actual_end_time;
       if (data.title !== undefined) updateData.title = data.title;
       if (data.description !== undefined) updateData.description = data.description;
-      if (data.fulfillment_score !== undefined)
-        updateData.fulfillment_score = data.fulfillment_score;
       if (data.origin !== undefined) updateData.origin = data.origin;
 
       // 4. TanStack Queryキャッシュを楽観的に更新
@@ -869,9 +867,6 @@ export function useEntryMutations(options?: {
               actual_start_time: data.actual_start_time,
             }),
             ...(data.actual_end_time !== undefined && { actual_end_time: data.actual_end_time }),
-            ...(data.fulfillment_score !== undefined && {
-              fulfillment_score: data.fulfillment_score,
-            }),
             updated_at: new Date().toISOString(),
           } as typeof entry;
         });

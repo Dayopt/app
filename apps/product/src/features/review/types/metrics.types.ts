@@ -11,7 +11,6 @@
 /** 全メトリクスのID */
 export type MetricId =
   | 'totalTime'
-  | 'avgFulfillment'
   | 'entryRate'
   | 'streak'
   | 'estimationAccuracy'
@@ -73,7 +72,6 @@ export interface DeepUtilizationData {
 export interface EnergyMapRow {
   hour: number;
   dow: number;
-  avgFulfillment: number | null;
   totalMinutes: number;
   entryCount: number;
 }
@@ -86,7 +84,6 @@ export interface EnergyMapRow {
 export interface StatsPageData {
   overview: {
     totalMinutes: number;
-    avgFulfillment: number | null;
     entryCount: number;
     totalEntries: number;
     plannedEntries: number;
@@ -94,7 +91,6 @@ export interface StatsPageData {
   };
   prevOverview: {
     totalMinutes: number;
-    avgFulfillment: number | null;
     entryCount: number;
     totalEntries: number;
     plannedEntries: number;

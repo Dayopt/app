@@ -279,10 +279,7 @@
       },
       "daily": {
         "timelineDesc": "See where the day diverged from the plan",
-        "openCalendar": "Open in calendar",
-        "scoreFulfillment": "Score fulfillment",
-        "unconfirmedTitle": "Awaiting confirmation",
-        "unconfirmedDesc": "Were these as planned? Tap to score"
+        "openCalendar": "Open in calendar"
       },
       "nextAction": {
         "planNextWeek": "Plan next week",
@@ -303,8 +300,6 @@
       "metrics": {
         "totalTime": "Total Time",
         "totalTimeDesc": "Total tracked time",
-        "avgFulfillment": "Avg Fulfillment",
-        "avgFulfillmentDesc": "Average fulfillment score",
         "entryRate": "Entry Rate",
         "entryRateDesc": "Ratio of planned entries",
         "streak": "Streak",
@@ -342,10 +337,6 @@
         "lowDataNote": "Records are sparse in this period, so trends are indicative only",
         "estimationBiasOver": "This tag tends to run +{bias} min over estimate",
         "estimationBiasUnder": "This tag tends to finish {bias} min early",
-        "hourlyFulfillmentHigh": "Fulfillment tends to be above average at this hour",
-        "hourlyFulfillmentLow": "Fulfillment tends to be below average at this hour",
-        "tagFulfillmentHigh": "This tag's avg fulfillment is {score} — above overall average",
-        "tagFulfillmentLow": "This tag's avg fulfillment is {score} — below overall average",
         "deepHour": "This is a deep hour — great for focused work"
       },
       "tagDetail": {

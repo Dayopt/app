@@ -129,14 +129,6 @@ export function useReviewMetrics(
       trend: computeTrend(cur.totalMinutes, prev.totalMinutes, 'up'),
     };
 
-    if (cur.avgFulfillment != null) {
-      map.avgFulfillment = {
-        id: 'avgFulfillment',
-        value: cur.avgFulfillment,
-        trend: computeTrend(cur.avgFulfillment, prev.avgFulfillment, 'up'),
-      };
-    }
-
     map.entryRate = {
       id: 'entryRate',
       value: cur.planRate,

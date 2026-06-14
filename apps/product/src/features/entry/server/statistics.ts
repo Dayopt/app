@@ -28,7 +28,6 @@ import {
 
 import { transformEnergyMapResponse } from './statistics-energy-map-transform';
 import {
-  unpackAvgFulfillment,
   unpackBlankRate,
   unpackContextSwitches,
   unpackCumulativeTime,
@@ -506,39 +505,6 @@ export const entriesStatisticsRouter = createTRPCRouter({
       }
     }),
 
-  /** 平均充実度 */
-  getAvgFulfillment: proProcedure
-    .meta({ description: '平均充実度取得（1-5スケール）' })
-    .input(dateRangeInput)
-    .query(async ({ ctx, input }) => {
-      try {
-        const { supabase, userId } = ctx;
-
-        const { data, error } = await traceDbQuery('stats.get_avg_fulfillment', async () =>
-          supabase.rpc(
-            'get_avg_fulfillment',
-            stripUndefined({
-              p_user_id: userId,
-              p_start_date: input.startDate,
-              p_end_date: input.endDate,
-            }),
-          ),
-        );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch average fulfillment: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        return unpackAvgFulfillment(data);
-      } catch (error) {
-        handleStatsError('getAvgFulfillment', error);
-      }
-    }),
-
   // ---------------------------------------------------------------------------
   // Streak
   // ---------------------------------------------------------------------------
@@ -740,7 +706,6 @@ export const entriesStatisticsRouter = createTRPCRouter({
 interface StatsPageData {
   overview: {
     totalMinutes: number;
-    avgFulfillment: number | null;
     entryCount: number;
     totalEntries: number;
     plannedEntries: number;
@@ -748,7 +713,6 @@ interface StatsPageData {
   };
   prevOverview: {
     totalMinutes: number;
-    avgFulfillment: number | null;
     entryCount: number;
     totalEntries: number;
     plannedEntries: number;
@@ -780,7 +744,6 @@ interface StatsPageData {
   energyMap: Array<{
     hour: number;
     dow: number;
-    avgFulfillment: number | null;
     totalMinutes: number;
     entryCount: number;
   }>;
@@ -805,7 +768,6 @@ interface StatsPageData {
   prevEnergyMap: Array<{
     hour: number;
     dow: number;
-    avgFulfillment: number | null;
     totalMinutes: number;
     entryCount: number;
   }>;

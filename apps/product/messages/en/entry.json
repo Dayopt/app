@@ -103,13 +103,6 @@
         "noPlanned": "Lived, not planned",
         "duration": "Duration",
         "diff": "Diff",
-        "fulfillment": "Fulfillment",
-        "fulfillmentLow": "Fulfillment: Low",
-        "fulfillmentMedium": "Fulfillment: Medium",
-        "fulfillmentHigh": "Fulfillment: High",
-        "fulfillmentTooltipLow": "Not great",
-        "fulfillmentTooltipMedium": "Okay",
-        "fulfillmentTooltipHigh": "Fulfilling",
         "timeProgress": "Time progress"
       },
       "markUnplanned": "Mark as unplanned",
@@ -138,9 +131,6 @@
         "unlinkEntry": "Unlink from entry",
         "searchEntries": "Search entries...",
         "noEntries": "No entries found",
-        "fulfillmentTooltip": "Fulfillment: {score}/5 (long press to reset)",
-        "fulfillmentTap": "Fulfillment (tap to add)",
-        "fulfillmentLabel": "Fulfillment: {score}/5",
         "addNew": "Add new entry"
       }
     },

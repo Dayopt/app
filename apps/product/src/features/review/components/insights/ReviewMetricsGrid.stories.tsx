@@ -10,7 +10,6 @@ import { ReviewMetricsGrid } from './ReviewMetricsGrid';
 const MOCK_PAGE_DATA: StatsPageData = {
   overview: {
     totalMinutes: 2295,
-    avgFulfillment: 3.2,
     entryCount: 45,
     totalEntries: 52,
     plannedEntries: 38,
@@ -18,7 +17,6 @@ const MOCK_PAGE_DATA: StatsPageData = {
   },
   prevOverview: {
     totalMinutes: 1980,
-    avgFulfillment: 2.9,
     entryCount: 40,
     totalEntries: 48,
     plannedEntries: 32,
@@ -30,9 +28,9 @@ const MOCK_PAGE_DATA: StatsPageData = {
   hourly: [],
   dow: [],
   energyMap: [
-    { hour: 9, dow: 1, avgFulfillment: 3.5, totalMinutes: 120, entryCount: 5 },
-    { hour: 10, dow: 1, avgFulfillment: 3.0, totalMinutes: 90, entryCount: 4 },
-    { hour: 14, dow: 3, avgFulfillment: 2.8, totalMinutes: 60, entryCount: 3 },
+    { hour: 9, dow: 1, totalMinutes: 120, entryCount: 5 },
+    { hour: 10, dow: 1, totalMinutes: 90, entryCount: 4 },
+    { hour: 14, dow: 3, totalMinutes: 60, entryCount: 3 },
   ],
   estimationAccuracy: [
     {

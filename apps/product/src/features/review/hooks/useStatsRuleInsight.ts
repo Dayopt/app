@@ -38,17 +38,11 @@ export function useStatsRuleInsight(pageData: StatsPageData | undefined): StatsR
       contextSwitches: pageData.contextSwitches.avgPerDay,
       blankRate: pageData.blankRate.blankRate,
     };
-    if (pageData.overview.avgFulfillment != null) {
-      current.avgFulfillment = pageData.overview.avgFulfillment;
-    }
 
     const previous: MetricValues = {
       totalTime: pageData.prevOverview.totalMinutes,
       entryRate: pageData.prevOverview.planRate,
     };
-    if (pageData.prevOverview.avgFulfillment != null) {
-      previous.avgFulfillment = pageData.prevOverview.avgFulfillment;
-    }
 
     return { insight: evaluateRuleInsights(current, previous)[0] ?? null, isLowData: false };
   }, [pageData]);

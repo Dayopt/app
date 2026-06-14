@@ -18,9 +18,7 @@ import {
 
 describe('calculateDeepUtilization', () => {
   it('returns zero when no deep zones are defined', () => {
-    const energyMap: EnergyMapRow[] = [
-      { hour: 9, dow: 1, avgFulfillment: 2.5, totalMinutes: 60, entryCount: 2 },
-    ];
+    const energyMap: EnergyMapRow[] = [{ hour: 9, dow: 1, totalMinutes: 60, entryCount: 2 }];
 
     const result = calculateDeepUtilization(energyMap, [], 7);
     expect(result).toEqual({ deepMinutes: 0, totalDeepAvailable: 0, deepUtilization: 0 });
@@ -33,9 +31,9 @@ describe('calculateDeepUtilization', () => {
 
   it('calculates deep utilization correctly', () => {
     const energyMap: EnergyMapRow[] = [
-      { hour: 9, dow: 1, avgFulfillment: 3, totalMinutes: 45, entryCount: 1 },
-      { hour: 10, dow: 1, avgFulfillment: 2, totalMinutes: 30, entryCount: 1 },
-      { hour: 14, dow: 1, avgFulfillment: 1, totalMinutes: 60, entryCount: 1 }, // non-deep
+      { hour: 9, dow: 1, totalMinutes: 45, entryCount: 1 },
+      { hour: 10, dow: 1, totalMinutes: 30, entryCount: 1 },
+      { hour: 14, dow: 1, totalMinutes: 60, entryCount: 1 }, // non-deep
     ];
 
     // Deep: 9:00-11:00 inclusive (3 hours: 9, 10, 11)
@@ -48,8 +46,8 @@ describe('calculateDeepUtilization', () => {
 
   it('handles multiple deep zones', () => {
     const energyMap: EnergyMapRow[] = [
-      { hour: 9, dow: 1, avgFulfillment: 3, totalMinutes: 60, entryCount: 1 },
-      { hour: 15, dow: 1, avgFulfillment: 2, totalMinutes: 30, entryCount: 1 },
+      { hour: 9, dow: 1, totalMinutes: 60, entryCount: 1 },
+      { hour: 15, dow: 1, totalMinutes: 30, entryCount: 1 },
     ];
 
     const deepZones = [
@@ -65,9 +63,9 @@ describe('calculateDeepUtilization', () => {
 
   it('ignores non-deep hours in energy map', () => {
     const energyMap: EnergyMapRow[] = [
-      { hour: 8, dow: 1, avgFulfillment: 2, totalMinutes: 60, entryCount: 1 },
-      { hour: 9, dow: 1, avgFulfillment: 3, totalMinutes: 45, entryCount: 1 },
-      { hour: 13, dow: 1, avgFulfillment: 1, totalMinutes: 30, entryCount: 1 }, // outside deep
+      { hour: 8, dow: 1, totalMinutes: 60, entryCount: 1 },
+      { hour: 9, dow: 1, totalMinutes: 45, entryCount: 1 },
+      { hour: 13, dow: 1, totalMinutes: 30, entryCount: 1 }, // outside deep
     ];
 
     // Deep: 9-12 inclusive (hours 9, 10, 11, 12)

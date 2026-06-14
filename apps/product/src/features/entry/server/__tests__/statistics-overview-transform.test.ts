@@ -10,7 +10,6 @@ function makeFullResult(
 ): StatsKpiSummaryRpcResult {
   return {
     cumulativeTime: { totalMinutes: 600 },
-    avgFulfillment: { avgFulfillment: 0.85, entryCount: 20 },
     planRate: { totalEntries: 30, plannedEntries: 25, planRate: 0.83 },
     contextSwitches: { totalSwitches: 12, avgPerDay: 1.5 },
     blankRate: {
@@ -27,7 +26,6 @@ describe('transformStatsOverviewResponse', () => {
   it('null 入力 → 全 field が default', () => {
     expect(transformStatsOverviewResponse(null)).toEqual({
       cumulativeTime: { totalMinutes: 0 },
-      avgFulfillment: { avgFulfillment: undefined, entryCount: 0 },
       entryRate: { totalEntries: 0, plannedEntries: 0, entryRate: 0 },
       contextSwitches: { totalSwitches: 0, avgPerDay: 0 },
       blankRate: {
@@ -42,7 +40,6 @@ describe('transformStatsOverviewResponse', () => {
   it('undefined 入力 → 全 field が default', () => {
     const result = transformStatsOverviewResponse(undefined);
     expect(result.cumulativeTime.totalMinutes).toBe(0);
-    expect(result.avgFulfillment.avgFulfillment).toBeUndefined();
     expect(result.entryRate.totalEntries).toBe(0);
   });
 
@@ -50,7 +47,6 @@ describe('transformStatsOverviewResponse', () => {
     const result = transformStatsOverviewResponse(makeFullResult());
     expect(result).toEqual({
       cumulativeTime: { totalMinutes: 600 },
-      avgFulfillment: { avgFulfillment: 0.85, entryCount: 20 },
       entryRate: { totalEntries: 30, plannedEntries: 25, entryRate: 0.83 },
       contextSwitches: { totalSwitches: 12, avgPerDay: 1.5 },
       blankRate: {
@@ -68,21 +64,12 @@ describe('transformStatsOverviewResponse', () => {
     expect('entryRate' in result).toBe(true);
   });
 
-  it('avgFulfillment.avgFulfillment が null → undefined に変換', () => {
-    const result = transformStatsOverviewResponse({
-      avgFulfillment: { avgFulfillment: null, entryCount: 5 },
-    });
-    expect(result.avgFulfillment.avgFulfillment).toBeUndefined();
-    expect(result.avgFulfillment.entryCount).toBe(5);
-  });
-
   it('部分的 response: cumulativeTime のみ missing → そこだけ 0、他は値保持', () => {
     const partial = makeFullResult();
     // @ts-expect-error: 部分的に削除した状態を模倣
     delete partial.cumulativeTime;
     const result = transformStatsOverviewResponse(partial);
     expect(result.cumulativeTime.totalMinutes).toBe(0);
-    expect(result.avgFulfillment.entryCount).toBe(20);
     expect(result.entryRate.totalEntries).toBe(30);
   });
 
@@ -97,8 +84,6 @@ describe('transformStatsOverviewResponse', () => {
   it('全 nested が undefined → 全 field default', () => {
     const result = transformStatsOverviewResponse({});
     expect(result.cumulativeTime.totalMinutes).toBe(0);
-    expect(result.avgFulfillment.avgFulfillment).toBeUndefined();
-    expect(result.avgFulfillment.entryCount).toBe(0);
     expect(result.entryRate.totalEntries).toBe(0);
     expect(result.contextSwitches.totalSwitches).toBe(0);
     expect(result.blankRate.blankRate).toBe(0);

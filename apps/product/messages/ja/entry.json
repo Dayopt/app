@@ -103,13 +103,6 @@
         "noPlanned": "計画せず過ごした",
         "duration": "期間",
         "diff": "差分",
-        "fulfillment": "充実度",
-        "fulfillmentLow": "充実度: 低",
-        "fulfillmentMedium": "充実度: 中",
-        "fulfillmentHigh": "充実度: 高",
-        "fulfillmentTooltipLow": "いまいち",
-        "fulfillmentTooltipMedium": "ふつう",
-        "fulfillmentTooltipHigh": "充実した",
         "timeProgress": "時間達成率"
       },
       "markUnplanned": "予定外にする",
@@ -138,9 +131,6 @@
         "unlinkEntry": "エントリー紐付けを解除",
         "searchEntries": "エントリーを検索...",
         "noEntries": "まだエントリーがありません",
-        "fulfillmentTooltip": "充実度: {score}/5（長押しでリセット）",
-        "fulfillmentTap": "充実度（タップで加算）",
-        "fulfillmentLabel": "充実度: {score}/5",
         "addNew": "エントリーを追加"
       }
     },

@@ -30,11 +30,11 @@ const MOCK_INSIGHTS: RuleInsight[] = [
     messageKey: 'deepUtilizationLow',
   },
   {
-    metricId: 'avgFulfillment',
+    metricId: 'totalTime',
     type: 'trend',
     severity: 'info',
     messageKey: 'trendBetter',
-    messageParams: { label: 'Avg Fulfillment', pct: 25 },
+    messageParams: { label: 'Total Time', pct: 25 },
   },
 ];
 

@@ -1,13 +1,13 @@
 // Entry型定義（Canonical source）
 // plans + records を統合した entries テーブルに対応
 
-import type { EntryOrigin, EntryState, FulfillmentScore } from '@dayopt/domain';
+import type { EntryOrigin, EntryState } from '@dayopt/domain';
 
 /**
  * Entry の共通 domain type は @dayopt/domain を source of truth にする。
  * この feature API は既存 import を壊さないための re-export。
  */
-export type { EntryOrigin, EntryState, FulfillmentScore };
+export type { EntryOrigin, EntryState };
 
 /**
  * エントリ基本型（entries テーブルに対応）
@@ -29,7 +29,8 @@ interface Entry {
   actual_start_time: string | null;
   actual_end_time: string | null;
   duration_minutes: number | null;
-  fulfillment_score: FulfillmentScore | null;
+  /** @deprecated 充実度軸は廃止（#1324）。DB カラム drop までの暫定フィールド。読み書きしない */
+  fulfillment_score: number | null;
   /** 計画したがやらなかった（自動記録モデル）。非 null = 実績集計から除外 */
   skipped_at: string | null;
   created_at: string | null;

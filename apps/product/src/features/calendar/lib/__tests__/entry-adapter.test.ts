@@ -298,12 +298,11 @@ describe('entryToCalendarEvent', () => {
     });
   });
 
-  it('tagId / fulfillmentScore / actualStart/EndDate を伝播する', () => {
+  it('tagId / actualStart/EndDate を伝播する', () => {
     const event = entryToCalendarEvent(
       makeEntry({
         id: 'e1',
         tagId: 'tag-123',
-        fulfillment_score: 3,
         actual_start_time: '2026-04-27T01:10:00.000Z',
         actual_end_time: '2026-04-27T02:00:00.000Z',
       }),
@@ -311,7 +310,6 @@ describe('entryToCalendarEvent', () => {
     );
 
     expect(event!.tagId).toBe('tag-123');
-    expect(event!.fulfillmentScore).toBe(3);
     expect(event!.actualStartDate?.toISOString()).toBe('2026-04-27T01:10:00.000Z');
     expect(event!.actualEndDate?.toISOString()).toBe('2026-04-27T02:00:00.000Z');
   });

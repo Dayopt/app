@@ -9,7 +9,7 @@
  *   calendar.stats.metrics.{metricId}Desc
  */
 
-import { ArrowLeftRight, Clock, Flame, Gauge, Ratio, Star, Target, Timer } from 'lucide-react';
+import { ArrowLeftRight, Clock, Flame, Gauge, Ratio, Target, Timer } from 'lucide-react';
 
 import type { MetricDefinition, MetricId } from '../types/metrics.types';
 
@@ -21,12 +21,6 @@ export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
     trendPositive: 'up',
     icon: Clock,
     variant: 'hero',
-  },
-  avgFulfillment: {
-    id: 'avgFulfillment',
-    format: 'score',
-    trendPositive: 'up',
-    icon: Star,
   },
   entryRate: {
     id: 'entryRate',
@@ -73,7 +67,6 @@ export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
 /** メトリクスの表示順序（Row1: 基本指標, Row2: 分析指標） */
 export const METRIC_ORDER: MetricId[] = [
   'totalTime',
-  'avgFulfillment',
   'entryRate',
   'streak',
   'estimationAccuracy',

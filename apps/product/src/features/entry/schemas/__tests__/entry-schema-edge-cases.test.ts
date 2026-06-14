@@ -145,28 +145,6 @@ describe('createEntrySchema — timeOrderRefine バリデーション', () => {
       expect(result.success).toBe(true);
     });
   });
-
-  describe('fulfillment_score のバリデーション', () => {
-    it('1, 2, 3 はすべて valid', () => {
-      expect(createEntrySchema.safeParse(validEntry({ fulfillment_score: 1 })).success).toBe(true);
-      expect(createEntrySchema.safeParse(validEntry({ fulfillment_score: 2 })).success).toBe(true);
-      expect(createEntrySchema.safeParse(validEntry({ fulfillment_score: 3 })).success).toBe(true);
-    });
-
-    it('0 は invalid（min(1)）', () => {
-      expect(createEntrySchema.safeParse(validEntry({ fulfillment_score: 0 })).success).toBe(false);
-    });
-
-    it('4 は invalid（max(3)）', () => {
-      expect(createEntrySchema.safeParse(validEntry({ fulfillment_score: 4 })).success).toBe(false);
-    });
-
-    it('null は valid（nullable）', () => {
-      expect(createEntrySchema.safeParse(validEntry({ fulfillment_score: null })).success).toBe(
-        true,
-      );
-    });
-  });
 });
 
 describe('updateEntrySchema — partial フィールドの振る舞い', () => {
