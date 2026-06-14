@@ -2385,11 +2385,6 @@
               { "type": "number", "enum": [30] }
             ]
           },
-          "chronotypeType": {
-            "type": "string",
-            "enum": ["lion", "bear", "wolf", "dolphin"],
-            "nullable": true
-          },
           "defaultView": { "type": "string", "enum": ["day", "3day", "5day", "week"] },
           "hourHeightDensity": { "type": "string", "enum": ["compact", "default", "spacious"] },
           "theme": { "type": "string", "enum": ["light", "dark", "system"] },

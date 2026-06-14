@@ -15,8 +15,7 @@ interface SectionCardProps {
  * 設定セクションコンポーネント
  *
  * セクション間はborder-bセパレータで区切るフラットスタイル。
- * 現在は主に Settings / Chronotype の設定系UIで使用。
- * DAG上 settings (Cross-cutting) と chronotype (Layer 0) の共通依存先として common/ に配置。
+ * 現在は主に Settings の設定系UIで使用。
  */
 export function SectionCard({ title, children, className, actions }: SectionCardProps) {
   return (

@@ -15,10 +15,7 @@
  * } satisfies Meta;
  */
 
-import { generateChronotypeGradient, getChronotypeProfile } from '@/features/chronotype';
 import { createMockTag } from '@/lib/test/factories';
-
-const BEAR_ZONES = getChronotypeProfile('bear').productivityZones;
 
 // ─────────────────────────────────────────────────────────
 // Tags
@@ -56,11 +53,6 @@ export const PRESET_USER_SETTINGS = {
     defaultView: 'week',
     hourHeightDensity: 'default',
     planRecordMode: 'both',
-    chronotype: {
-      type: 'bear' as const,
-      gradientLight: generateChronotypeGradient(BEAR_ZONES, 'light'),
-      gradientDark: generateChronotypeGradient(BEAR_ZONES, 'dark'),
-    },
   },
 } as const;
 

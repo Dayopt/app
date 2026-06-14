@@ -258,107 +258,6 @@
       "densityDefault": "Default",
       "densitySpacious": "Spacious"
     },
-    "chronotype": {
-      "title": "Your rhythm",
-      "description": "Highlight your best focus and rest windows on the calendar",
-      "settingsSaved": "Chronotype settings saved",
-      "notSelected": "Not selected",
-      "details": "Type Details",
-      "timeline": "24-Hour Timeline",
-      "deepTime": "Deep time",
-      "easeTime": "Ease time",
-      "deepTimeHint": "Best for Deep Work",
-      "easeTimeHint": "Light tasks & rest",
-      "subtitle": "Show focus zones on calendar",
-      "quizAction": "Take the quiz",
-      "shortDesc": {
-        "lion": "Morning focus",
-        "bear": "Late-morning deep",
-        "wolf": "Evening energy",
-        "dolphin": "Late-morning stability"
-      },
-      "typeName": {
-        "lion": "Lion",
-        "bear": "Bear",
-        "wolf": "Wolf",
-        "dolphin": "Dolphin"
-      },
-      "learnMore": "Learn more about chronotypes",
-      "levels": {
-        "warmup": "Warm-up",
-        "deep": "Deep",
-        "ease": "Ease",
-        "recovery": "Recovery",
-        "winddown": "Wind-down"
-      },
-      "quiz": {
-        "title": "Chronotype Quiz",
-        "progress": "{current}/{total}",
-        "back": "Back",
-        "next": "Next",
-        "cancel": "Cancel",
-        "showResult": "See result",
-        "resultTitle": "You are a {type}",
-        "resultDescription": "Your strongest focus window is {deepTime}. We'll show it on your calendar.",
-        "confirm": "Save",
-        "questions": {
-          "wakeTime": {
-            "title": "Without an alarm, what time do you naturally wake up?",
-            "options": {
-              "early": "5–6 AM",
-              "moderate": "7–8 AM",
-              "late": "9 AM or later",
-              "irregular": "It varies day to day"
-            }
-          },
-          "morningEnergy": {
-            "title": "How is your energy level in the morning?",
-            "options": {
-              "veryHigh": "Full of energy from the start",
-              "gradual": "Gradually picks up",
-              "low": "Low in the morning",
-              "anxious": "Restless and uneasy"
-            }
-          },
-          "deepFocus": {
-            "title": "When do you focus best?",
-            "options": {
-              "earlyMorning": "Early morning (6–9 AM)",
-              "lateMorning": "Late morning (9 AM–12 PM)",
-              "afternoon": "Afternoon (1–5 PM)",
-              "evening": "Evening or night (after 5 PM)"
-            }
-          },
-          "afternoonEase": {
-            "title": "How does the afternoon slump affect you?",
-            "options": {
-              "earlyEase": "Strong drowsiness right after lunch",
-              "normalEase": "Slightly sleepy around 2–3 PM",
-              "noEase": "No drowsiness in the afternoon",
-              "unpredictable": "Sleepiness hits at unpredictable times"
-            }
-          },
-          "bedTime": {
-            "title": "What is your ideal bedtime?",
-            "options": {
-              "early": "9–10 PM",
-              "normal": "Around 11 PM",
-              "late": "After midnight",
-              "inconsistent": "No consistent bedtime"
-            }
-          },
-          "sleepQuality": {
-            "title": "How is your sleep quality?",
-            "options": {
-              "deepSleep": "Deep sleep, wake up refreshed",
-              "normalSleep": "Sleep normally",
-              "nightOwl": "Feel better staying up late",
-              "lightSleep": "Light sleeper, wake up easily"
-            }
-          }
-        }
-      }
-    },
     "sleepSchedule": {
       "title": "Sleep Schedule",
       "enabled": "Show sleep hours",
@@ -410,13 +309,13 @@
         "calendar": "Calendar",
         "calendarDesc": "Default view, snap interval, and display settings",
         "personalization": "Personalization",
-        "personalizationDesc": "Profile and chronotype",
+        "personalizationDesc": "Profile",
         "dataControls": "Data Controls",
         "dataControlsDesc": "Export, import, and backup settings",
         "integrations": "Integrations",
         "integrationsDesc": "AI providers and external service connections",
         "profile": "Profile",
-        "profileDesc": "Name, email, and chronotype",
+        "profileDesc": "Name and email",
         "display": "Display",
         "displayDesc": "Theme, language, timezone, and calendar defaults",
         "data": "Data",

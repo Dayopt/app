@@ -306,8 +306,6 @@
         "streakDesc": "現在の連続記録日数",
         "estimationAccuracy": "見積もり精度",
         "estimationAccuracyDesc": "予定時間との平均差",
-        "deepUtilization": "ピーク活用率",
-        "deepUtilizationDesc": "ピーク時間帯の活動率",
         "contextSwitches": "コンテキストスイッチ",
         "contextSwitchesDesc": "1日あたりのタグ切替回数",
         "blankRate": "自由時間率",
@@ -325,7 +323,6 @@
       "insights": {
         "entryRateLow": "この期間の活動の大半は計画外でした",
         "entryRateLowDetail": "翌日の計画を前夜に立てると効果的です",
-        "deepUtilizationLow": "ピーク時間帯がほとんど使われていません",
         "contextSwitchesHigh": "タスク切替が多い期間でした",
         "contextSwitchesHighDetail": "類似タスクをまとめてバッチ処理すると効率的です",
         "blankRateHigh": "空白時間が多めの期間でした",
@@ -356,10 +353,6 @@
         "memo": "メモ",
         "untitled": "無題"
       }
-    },
-    "nowBadge": {
-      "inDeep": "In deep",
-      "inEase": "In ease"
     },
     "mobile": {
       "touchHint": {

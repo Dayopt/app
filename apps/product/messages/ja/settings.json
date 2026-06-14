@@ -258,107 +258,6 @@
       "densityDefault": "デフォルト",
       "densitySpacious": "ゆったり"
     },
-    "chronotype": {
-      "title": "あなたのリズム",
-      "description": "集中しやすい時間帯と休憩の目安をカレンダーに表示",
-      "settingsSaved": "クロノタイプ設定を保存しました",
-      "notSelected": "未選択",
-      "details": "タイプの詳細",
-      "timeline": "24時間タイムライン",
-      "deepTime": "ピーク時間",
-      "easeTime": "ディップ時間",
-      "deepTimeHint": "Deep Workに最適",
-      "easeTimeHint": "軽い作業・休憩向き",
-      "subtitle": "集中しやすい時間帯をカレンダーに表示",
-      "quizAction": "クイズで診断",
-      "shortDesc": {
-        "lion": "早朝から集中できる",
-        "bear": "午前から午後前半がピーク",
-        "wolf": "午後から夜に集中力が上がる",
-        "dolphin": "午前過ぎに安定しやすい"
-      },
-      "typeName": {
-        "lion": "ライオン",
-        "bear": "ベア",
-        "wolf": "ウルフ",
-        "dolphin": "ドルフィン"
-      },
-      "learnMore": "クロノタイプについて詳しく知る",
-      "levels": {
-        "warmup": "ウォームアップ",
-        "deep": "ピーク",
-        "ease": "ディップ",
-        "recovery": "リカバリー",
-        "winddown": "ウインドダウン"
-      },
-      "quiz": {
-        "title": "クロノタイプ診断",
-        "progress": "{current}/{total}",
-        "back": "戻る",
-        "next": "次へ",
-        "cancel": "キャンセル",
-        "showResult": "結果を見る",
-        "resultTitle": "あなたは{type}タイプ",
-        "resultDescription": "集中しやすいピーク時間は{deepTime}です。カレンダーに表示します",
-        "confirm": "保存する",
-        "questions": {
-          "wakeTime": {
-            "title": "目覚ましなしで自然に起きると、何時頃に目が覚めますか？",
-            "options": {
-              "early": "5〜6時台",
-              "moderate": "7〜8時台",
-              "late": "9時以降",
-              "irregular": "日によってバラバラ"
-            }
-          },
-          "morningEnergy": {
-            "title": "午前中のエネルギーレベルはどうですか？",
-            "options": {
-              "veryHigh": "朝からエネルギー全開",
-              "gradual": "徐々に調子が上がる",
-              "low": "午前中は低調",
-              "anxious": "不安定で落ち着かない"
-            }
-          },
-          "deepFocus": {
-            "title": "最も集中できるのはいつですか？",
-            "options": {
-              "earlyMorning": "早朝（6〜9時）",
-              "lateMorning": "午前中（9〜12時）",
-              "afternoon": "午後（13〜17時）",
-              "evening": "夕方〜夜（17時以降）"
-            }
-          },
-          "afternoonEase": {
-            "title": "午後の眠気はどうですか？",
-            "options": {
-              "earlyEase": "昼過ぎに強い眠気が来る",
-              "normalEase": "14〜15時頃に少し眠くなる",
-              "noEase": "午後は眠くならない",
-              "unpredictable": "予測できないタイミングで眠くなる"
-            }
-          },
-          "bedTime": {
-            "title": "理想的な就寝時間はいつですか？",
-            "options": {
-              "early": "21〜22時",
-              "normal": "23時頃",
-              "late": "0時以降",
-              "inconsistent": "決まっていない"
-            }
-          },
-          "sleepQuality": {
-            "title": "睡眠の質はどうですか？",
-            "options": {
-              "deepSleep": "深く眠れる、朝スッキリ",
-              "normalSleep": "普通に眠れる",
-              "nightOwl": "夜更かしすると調子が良い",
-              "lightSleep": "眠りが浅く、途中で起きやすい"
-            }
-          }
-        }
-      }
-    },
     "sleepSchedule": {
       "title": "睡眠スケジュール",
       "enabled": "睡眠時間帯を表示",
@@ -410,13 +309,13 @@
         "calendar": "カレンダー",
         "calendarDesc": "デフォルトビュー、スナップ間隔、表示設定",
         "personalization": "パーソナライズ",
-        "personalizationDesc": "プロフィールとクロノタイプ",
+        "personalizationDesc": "プロフィール",
         "dataControls": "データ管理",
         "dataControlsDesc": "エクスポート、インポート、バックアップ設定",
         "integrations": "連携",
         "integrationsDesc": "AIプロバイダーと外部サービス連携",
         "profile": "プロフィール",
-        "profileDesc": "名前、メール、クロノタイプ",
+        "profileDesc": "名前、メール",
         "display": "表示",
         "displayDesc": "テーマ、言語、タイムゾーン、カレンダー設定",
         "data": "データ",

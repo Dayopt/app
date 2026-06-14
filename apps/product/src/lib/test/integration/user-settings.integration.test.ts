@@ -203,17 +203,6 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
       expect(settings?.snapInterval).toBe(15);
     });
 
-    it('should update chronotype settings', async () => {
-      const caller = createTestCaller(userSettingsRouter, ctx);
-
-      await caller.update({
-        chronotypeType: 'lion',
-      });
-
-      const settings = await caller.get();
-      expect(settings?.chronotype?.type).toBe('lion');
-    });
-
     it('should update theme settings', async () => {
       const caller = createTestCaller(userSettingsRouter, ctx);
 

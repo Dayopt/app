@@ -67,12 +67,9 @@ vi.mock('@/features/calendar/stores/userSettings', () => ({
   dispatchUserSettings: (settings: unknown) => mockDispatchUserSettings(settings),
 }));
 
-// merge 元の 3 store は固定値を返す（返り値 shape の検証用）
+// merge 元の 2 store は固定値を返す（返り値 shape の検証用）
 vi.mock('@/features/calendar/stores/useCalendarSettingsStore', () => ({
   useCalendarSettingsStore: () => ({ timezone: 'Asia/Tokyo', weekStartsOn: 1 }),
-}));
-vi.mock('@/features/chronotype', () => ({
-  useChronotypeSettingsStore: () => ({ chronotype: null }),
 }));
 vi.mock('@/lib/stores/useUserPreferenceStore', () => ({
   useUserPreferenceStore: () => ({ dateFormat: 'yyyy/MM/dd' }),
@@ -87,7 +84,6 @@ const DB_SETTINGS = {
   showWeekNumbers: false,
   defaultDuration: 30,
   snapInterval: 15,
-  chronotype: null,
   defaultView: 'week',
   hourHeightDensity: 'comfortable',
 };
@@ -110,13 +106,12 @@ describe('useUserSettings（返り値の契約）', () => {
     expect(typeof result.current.saveSettings).toBe('function');
   });
 
-  it('3 store を merge した settings を返す', () => {
+  it('2 store を merge した settings を返す', () => {
     mockQuery = { data: DB_SETTINGS, isPending: false, fetchStatus: 'idle', error: null };
     const { result } = renderHook(() => useUserSettings());
     expect(result.current.settings).toMatchObject({
       timezone: 'Asia/Tokyo',
       weekStartsOn: 1,
-      chronotype: null,
       dateFormat: 'yyyy/MM/dd',
     });
   });

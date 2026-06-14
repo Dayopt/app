@@ -6,7 +6,6 @@ import { Camera } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
-import { ChronotypeSettingsPanel as ChronotypeSettings } from '@/features/chronotype';
 import { LabeledRow } from '@/lib/components/common/LabeledRow';
 import { SectionCard } from '@/lib/components/common/SectionCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
@@ -18,7 +17,7 @@ import { DisplayNameDialog } from './display-name-dialog';
 /**
  * プロフィール設定コンポーネント
  *
- * アバター、表示名、クロノタイプ
+ * アバター、表示名
  */
 export function ProfileSettings() {
   const t = useTranslations();
@@ -59,9 +58,6 @@ export function ProfileSettings() {
           <span className="text-muted-foreground">{displayName}</span>
         </LabeledRow>
       </SectionCard>
-
-      {/* クロノタイプ */}
-      <ChronotypeSettings />
 
       {/* Dialogs */}
       <AvatarChangeDialog open={showAvatarDialog} onOpenChange={setShowAvatarDialog} />

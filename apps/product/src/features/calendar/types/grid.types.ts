@@ -5,8 +5,6 @@ export interface TimeColumnProps {
   hourHeight?: number | undefined;
   format?: '12h' | '24h' | undefined; // 時刻表示形式
   className?: string | undefined;
-  /** Chronotype ゾーン（deep/ease ラベル装飾用） */
-  zones?: import('@/features/chronotype').ProductivityZone[] | undefined;
 }
 
 /** 現在時刻線コンポーネントのプロパティ */

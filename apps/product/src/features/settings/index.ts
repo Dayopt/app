@@ -9,7 +9,7 @@
  * - ESLint feature DAG から除外されている（`apps/product/eslint.config.mjs` 参照）
  * - 他 feature の store を deep import するのは composition の責務として許容される例外運用
  *   （優先順: `@/lib/stores/*` > feature barrel > deep import）
- * - 自身の domain は持たない（business rule は calendar / chronotype / billing 等が持つ）
+ * - 自身の domain は持たない（business rule は calendar / billing 等が持つ）
  * - `userSettingsRouter` / `billingRouter` は settings UI からの書き込み入口として
  *   server を同居（billing は launch 後に独立 feature 化を検討）
  *

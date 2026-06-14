@@ -14,7 +14,6 @@ import { api } from '@/lib/trpc';
 import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import { dispatchUserSettings } from '@/features/calendar/stores/userSettings';
-import { useChronotypeSettingsStore } from '@/features/chronotype';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
 /**
@@ -84,11 +83,6 @@ export function useUserSettings() {
         showWeekNumbers: dbSettings.showWeekNumbers,
         defaultDuration: dbSettings.defaultDuration,
         snapInterval: dbSettings.snapInterval,
-        chronotype: dbSettings.chronotype ? { type: dbSettings.chronotype.type } : null,
-        chronotypeGradient: {
-          light: dbSettings.chronotype?.gradientLight ?? null,
-          dark: dbSettings.chronotype?.gradientDark ?? null,
-        },
         ...(dbSettings.defaultView && { defaultView: dbSettings.defaultView }),
         ...(dbSettings.hourHeightDensity && { hourHeightDensity: dbSettings.hourHeightDensity }),
       });
@@ -117,9 +111,6 @@ export function useUserSettings() {
       if (settings.defaultDuration !== undefined)
         dbInput.defaultDuration = settings.defaultDuration;
       if (settings.snapInterval !== undefined) dbInput.snapInterval = settings.snapInterval;
-      if (settings.chronotype !== undefined) {
-        dbInput.chronotypeType = settings.chronotype?.type ?? null;
-      }
       if (settings.defaultView !== undefined) dbInput.defaultView = settings.defaultView;
       if (settings.hourHeightDensity !== undefined)
         dbInput.hourHeightDensity = settings.hourHeightDensity;
@@ -130,13 +121,12 @@ export function useUserSettings() {
     [updateMutation],
   );
 
-  // UI表示用に3ストアを merge した shape を返す（既存 consumer との互換性維持）
+  // UI表示用に2ストアを merge した shape を返す（既存 consumer との互換性維持）
   const preferences = useUserPreferenceStore();
   const calendarSettings = useCalendarSettingsStore();
-  const chronotypeSettings = useChronotypeSettingsStore();
   const settings = useMemo<UserSettings>(
-    () => ({ ...preferences, ...calendarSettings, ...chronotypeSettings }),
-    [preferences, calendarSettings, chronotypeSettings],
+    () => ({ ...preferences, ...calendarSettings }),
+    [preferences, calendarSettings],
   );
 
   return {

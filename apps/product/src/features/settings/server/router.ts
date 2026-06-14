@@ -6,12 +6,6 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import type { ChronotypeType } from '@/features/chronotype';
-import {
-  chronotypeTypeSchema,
-  generateChronotypeGradient,
-  getChronotypeProfile,
-} from '@/features/chronotype';
 import { logger } from '@/lib/logger';
 import { invalidateUserTimezoneCache } from '@/lib/server/user-timezone-cache';
 import { handleServiceError } from '@/lib/trpc/errors';
@@ -35,9 +29,6 @@ const userSettingsSchema = z.object({
   // タスク設定
   defaultDuration: z.number().min(5).max(480).optional(),
   snapInterval: z.union([z.literal(5), z.literal(10), z.literal(15), z.literal(30)]).optional(),
-
-  // クロノタイプ設定（null で無効化）
-  chronotypeType: chronotypeTypeSchema.nullable().optional(),
 
   // デフォルトビュー・密度（Settings = デフォルト、Header = セッション）
   defaultView: z.enum(['day', '3day', '5day', 'week']).optional(),
@@ -98,17 +89,6 @@ export const userSettingsRouter = createTRPCRouter({
           showWeekNumbers: data.show_week_numbers,
           defaultDuration: data.default_duration,
           snapInterval: data.snap_interval as 5 | 10 | 15 | 30,
-          chronotype: (() => {
-            const cs = data.chronotype_settings as { type: string } | null;
-            if (!cs) return null;
-            const type = cs.type as ChronotypeType;
-            const zones = getChronotypeProfile(type).productivityZones;
-            return {
-              type,
-              gradientLight: generateChronotypeGradient(zones, 'light'),
-              gradientDark: generateChronotypeGradient(zones, 'dark'),
-            };
-          })(),
           defaultView: data.default_view as 'day' | '3day' | '5day' | 'week' | undefined,
           hourHeightDensity: data.hour_height_density as
             | 'compact'
@@ -166,12 +146,6 @@ export const userSettingsRouter = createTRPCRouter({
         if (input.defaultDuration !== undefined)
           updateData.default_duration = input.defaultDuration;
         if (input.snapInterval !== undefined) updateData.snap_interval = input.snapInterval;
-        if (input.chronotypeType !== undefined) {
-          updateData.chronotype_settings = input.chronotypeType
-            ? { type: input.chronotypeType }
-            : null;
-        }
-
         if (input.defaultView !== undefined) updateData.default_view = input.defaultView;
         if (input.hourHeightDensity !== undefined)
           updateData.hour_height_density = input.hourHeightDensity;

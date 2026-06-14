@@ -11,15 +11,13 @@
 
 import React, { useCallback } from 'react';
 
-import { useChronotypeGradient, useChronotypeZones } from '@/features/chronotype';
 import { cn } from '@/lib/utils';
 
 import { formatTimeString } from '@/lib/date';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
-import { TIME_COLUMN_WIDTH, Z_INDEX } from '../constants/grid.constants';
+import { TIME_COLUMN_WIDTH } from '../constants/grid.constants';
 import { CurrentTimeLine } from '../grid/CurrentTimeLine';
-import { NowBadge } from '../grid/CurrentTimeLine/NowBadge';
 import { TimeColumn } from '../grid/TimeColumn/TimeColumn';
 import { useCurrentTimeLine } from '../hooks/useCurrentTimeLine';
 import { useHourHeightSync, useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
@@ -121,7 +119,7 @@ export const ScrollableCalendarLayout = ({
   const HOUR_HEIGHT = useResponsiveHourHeight();
 
   // グリッドレイアウト計算（フック利用）
-  const { gridHeight, todayColumnPosition, hasToday } = useSleepHoursLayout({
+  const { gridHeight, hasToday } = useSleepHoursLayout({
     hourHeight: HOUR_HEIGHT,
     displayDates,
   });
@@ -142,12 +140,6 @@ export const ScrollableCalendarLayout = ({
     hourHeight: HOUR_HEIGHT,
     showCurrentTime,
   });
-
-  // Chronotype gradient（ゾーン外は transparent で bg-background を透過）
-  const gradientCss = useChronotypeGradient();
-
-  // Chronotype ゾーン配列（TimeColumn ラベル装飾用）
-  const chronotypeZones = useChronotypeZones();
 
   // 現在時刻のフォーマット（設定に応じて 24h/12h）
   const timeFormat = useUserPreferenceStore((s) => s.timeFormat);
@@ -212,7 +204,6 @@ export const ScrollableCalendarLayout = ({
                 hourHeight={HOUR_HEIGHT}
                 format="24h"
                 className="h-full"
-                zones={chronotypeZones}
               />
               {/* 現在時刻ラベル（Apple Calendar風） */}
               {shouldShowCurrentTimeLine && hasToday && (
@@ -233,15 +224,6 @@ export const ScrollableCalendarLayout = ({
 
         {/* グリッドコンテンツエリア */}
         <div className="relative flex flex-1 flex-col">
-          {/* Chronotype gradient 背景（ゾーン外は transparent） */}
-          {gradientCss && (
-            <div
-              className="pointer-events-none absolute inset-0 z-0"
-              style={{ backgroundImage: gradientCss }}
-              aria-hidden="true"
-            />
-          )}
-
           {/* メインコンテンツ（flex で横並びを維持） */}
           <div className="relative flex h-full" role={enableKeyboardNavigation ? 'row' : undefined}>
             {children}
@@ -262,30 +244,14 @@ export const ScrollableCalendarLayout = ({
             </div>
           )}
 
-          {/* 現在時刻線 + Now Badge */}
+          {/* 現在時刻線 */}
           {shouldShowCurrentTimeLine && displayDates && displayDates.length > 0 ? (
-            <>
-              <CurrentTimeLine
-                hourHeight={HOUR_HEIGHT}
-                displayDates={displayDates}
-                viewMode={viewMode}
-                showDot={viewMode !== 'day'}
-              />
-              {/* Now Badge（deep/ease ゾーン内のみ、今日の列に配置） */}
-              {hasToday && todayColumnPosition && (
-                <div
-                  className="pointer-events-none absolute"
-                  style={{
-                    top: `${currentTimePosition}px`,
-                    left: todayColumnPosition.left,
-                    width: todayColumnPosition.width,
-                    zIndex: Z_INDEX.CURRENT_TIME,
-                  }}
-                >
-                  <NowBadge currentHour={currentTime.getHours() + currentTime.getMinutes() / 60} />
-                </div>
-              )}
-            </>
+            <CurrentTimeLine
+              hourHeight={HOUR_HEIGHT}
+              displayDates={displayDates}
+              viewMode={viewMode}
+              showDot={viewMode !== 'day'}
+            />
           ) : null}
         </div>
       </div>
