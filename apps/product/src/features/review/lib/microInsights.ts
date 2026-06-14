@@ -5,12 +5,8 @@
  * 動的な評価関数は現状未使用のため定義していない。
  */
 
-/** マイクロインサイトの種別（見積もり精度 / 時間帯充実度 / タグ充実度 / ピーク時間帯） */
-export type MicroInsightType =
-  | 'estimation_bias'
-  | 'hourly_fulfillment'
-  | 'tag_fulfillment'
-  | 'deep_hour';
+/** マイクロインサイトの種別（見積もり精度 / ピーク時間帯） */
+export type MicroInsightType = 'estimation_bias' | 'deep_hour';
 
 /** Inspector に表示する1行インサイト */
 export interface MicroInsight {

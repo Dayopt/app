@@ -53,7 +53,6 @@ const CSV_COLUMNS = [
   'actual_start_time',
   'actual_end_time',
   'duration_minutes',
-  'fulfillment_score',
   'created_at',
 ] as const;
 

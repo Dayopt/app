@@ -152,7 +152,6 @@ function evaluateThresholdRules(
 /** トレンド判定対象のメトリクスと、悪化方向 */
 const TREND_METRICS: Array<{ id: MetricId; worseDirection: 'down' | 'up' }> = [
   { id: 'totalTime', worseDirection: 'down' },
-  { id: 'avgFulfillment', worseDirection: 'down' },
   { id: 'entryRate', worseDirection: 'down' },
   { id: 'deepUtilization', worseDirection: 'down' },
   { id: 'estimationAccuracy', worseDirection: 'up' },
@@ -162,7 +161,6 @@ const TREND_METRICS: Array<{ id: MetricId; worseDirection: 'down' | 'up' }> = [
 
 const METRIC_LABELS: Record<MetricId, string> = {
   totalTime: 'Total Time',
-  avgFulfillment: 'Avg Fulfillment',
   entryRate: 'Entry Rate',
   streak: 'Streak',
   estimationAccuracy: 'Estimation Accuracy',

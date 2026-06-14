@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarClock, Clock3, Gauge, ListChecks, Smile, Zap } from 'lucide-react';
+import { CalendarClock, Clock3, Gauge, Zap } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { format } from 'date-fns';
@@ -9,8 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
-import type { FulfillmentScore } from '@/features/entry';
-import { useEntries, useEntryMutations } from '@/features/entry';
+import { useEntries } from '@/features/entry';
 import { resolveTagColor, useTagsMap } from '@/features/tags';
 import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
@@ -19,13 +18,12 @@ import { addDays } from '@/lib/date/core';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { cn } from '@/lib/utils';
 
-import { computeDailySummary, isUnconfirmedPlanned } from '../../domain/dailySummary';
+import { computeDailySummary } from '../../domain/dailySummary';
 import { computePreviousDateRange, computeStatsDateRange } from '../../lib/compute-date-range';
 import { getMetricTrend } from '../../lib/metrics';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
 import type { ReviewViewProps } from '../../types/review.types';
 import { DayTimelineComparison, type TimelineBlock } from '../day/DayTimelineComparison';
-import { UnconfirmedPlanList, type UnconfirmedPlanRow } from '../day/UnconfirmedPlanList';
 import { InsightSlot } from '../shared/InsightSlot';
 import { NextActionLink } from '../shared/NextActionLink';
 import { OverviewPanel } from '../shared/OverviewPanel';
@@ -78,7 +76,6 @@ export function DailyReview({ className }: ReviewViewProps) {
   });
 
   const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data]);
-  const { updateEntry } = useEntryMutations();
   const summary = useMemo(() => computeDailySummary(entries), [entries]);
   const prevSummary = useMemo(
     () => computeDailySummary(prevEntriesQuery.data ?? []),
@@ -93,10 +90,6 @@ export function DailyReview({ className }: ReviewViewProps) {
   const accuracyTrend =
     summary.plannedMinutes > 0 && prevSummary.plannedMinutes > 0
       ? getMetricTrend(summary.planAccuracy, prevSummary.planAccuracy, 'up')
-      : null;
-  const fulfillmentTrend =
-    summary.avgFulfillment != null && prevSummary.avgFulfillment != null
-      ? getMetricTrend(summary.avgFulfillment, prevSummary.avgFulfillment, 'up')
       : null;
 
   // ── 研究者の所見（見積もりずれが閾値超 + サンプル数が十分な日だけ）──
@@ -120,7 +113,6 @@ export function DailyReview({ className }: ReviewViewProps) {
     const build = (
       getStart: (e: (typeof entries)[number]) => string | null,
       getEnd: (e: (typeof entries)[number]) => string | null,
-      withScore: boolean,
     ): TimelineBlock[] =>
       entries
         .filter((e) => getStart(e) && getEnd(e))
@@ -130,9 +122,6 @@ export function DailyReview({ className }: ReviewViewProps) {
           startMin: clampMin(getStart(e)!),
           endMin: clampMin(getEnd(e)!),
           color: resolveTagColor(e.tagId ? tagsMap.get(e.tagId)?.color : null),
-          ...(withScore
-            ? { fulfillmentScore: (e.fulfillment_score ?? null) as FulfillmentScore | null }
-            : {}),
         }))
         .filter((b) => b.endMin > b.startMin);
 
@@ -140,38 +129,13 @@ export function DailyReview({ className }: ReviewViewProps) {
       planned: build(
         (e) => e.start_time,
         (e) => e.end_time,
-        false,
       ),
       actual: build(
         (e) => e.actual_start_time,
         (e) => e.actual_end_time,
-        true,
       ),
     };
   }, [entries, dayStartMs, tagsMap]);
-
-  // 実績ブロックのその場採点（楽観的更新は useEntryMutations が担う）
-  const handleScoreChange = (entryId: string, score: FulfillmentScore | null) => {
-    updateEntry.mutate({ id: entryId, data: { fulfillment_score: score } });
-  };
-
-  // ── 確認待ちの予定（採点 = 確認で 1 件ずつ消える Daily Close の儀式）──
-  const unconfirmedRows = useMemo<UnconfirmedPlanRow[]>(() => {
-    const now = new Date();
-    const formatIso = (iso: string) => formatInTimeZone(new Date(iso), timezone, 'H:mm');
-    return entries
-      .filter((e) => isUnconfirmedPlanned(e, now))
-      .map((e) => {
-        const tag = e.tagId ? tagsMap.get(e.tagId) : undefined;
-        return {
-          id: e.id,
-          title: e.title,
-          timeLabel: `${formatIso(e.start_time!)}–${formatIso(e.end_time!)}`,
-          color: resolveTagColor(tag?.color),
-          icon: tag?.icon ?? null,
-        };
-      });
-  }, [entries, tagsMap, timezone]);
 
   const formatTime = useMemo(
     () => (minutesFromDayStart: number) =>
@@ -228,7 +192,7 @@ export function DailyReview({ className }: ReviewViewProps) {
         <div className="flex flex-col gap-4 p-4">
           {insightText && <InsightSlot text={insightText} />}
 
-          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid gap-3 sm:grid-cols-3">
             <SummaryCard
               icon={Clock3}
               label={t('overview.trackedTime')}
@@ -246,17 +210,6 @@ export function DailyReview({ className }: ReviewViewProps) {
               }
               description={t('overview.planAccuracyDesc')}
               trend={accuracyTrend}
-            />
-            <SummaryCard
-              icon={Smile}
-              label={t('metrics.avgFulfillment')}
-              value={
-                summary.avgFulfillment != null
-                  ? summary.avgFulfillment.toFixed(1)
-                  : t('metrics.noData')
-              }
-              description={t('metrics.avgFulfillmentDesc')}
-              trend={fulfillmentTrend}
             />
             <SummaryCard
               icon={Zap}
@@ -283,19 +236,8 @@ export function DailyReview({ className }: ReviewViewProps) {
               planned={toBlocks.planned}
               actual={toBlocks.actual}
               formatTime={formatTime}
-              onScoreChange={handleScoreChange}
             />
           </OverviewPanel>
-
-          {unconfirmedRows.length > 0 && (
-            <OverviewPanel
-              title={t('daily.unconfirmedTitle')}
-              description={t('daily.unconfirmedDesc')}
-              icon={<ListChecks className="size-4" />}
-            >
-              <UnconfirmedPlanList rows={unconfirmedRows} onScore={handleScoreChange} />
-            </OverviewPanel>
-          )}
 
           <NextActionLink href={tomorrowHref} label={t('nextAction.planTomorrow')} />
         </div>

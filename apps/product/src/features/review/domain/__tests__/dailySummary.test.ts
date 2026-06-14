@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeDailySummary, isUnconfirmedPlanned, type DailySummaryEntry } from '../dailySummary';
+import { computeDailySummary, type DailySummaryEntry } from '../dailySummary';
 
 function entry(overrides: Partial<DailySummaryEntry>): DailySummaryEntry {
   return {
@@ -9,7 +9,6 @@ function entry(overrides: Partial<DailySummaryEntry>): DailySummaryEntry {
     end_time: null,
     actual_start_time: null,
     actual_end_time: null,
-    fulfillment_score: null,
     ...overrides,
   };
 }
@@ -21,7 +20,6 @@ describe('computeDailySummary', () => {
       plannedMinutes: 0,
       actualMinutes: 0,
       planAccuracy: 1,
-      avgFulfillment: null,
       estimationBiasMinutes: null,
       estimationSampleCount: 0,
       unplannedMinutes: 0,
@@ -94,15 +92,6 @@ describe('computeDailySummary', () => {
     expect(result.estimationSampleCount).toBe(2);
   });
 
-  it('充実度はスコア付きエントリだけで平均する', () => {
-    const result = computeDailySummary([
-      entry({ fulfillment_score: 3 }),
-      entry({ fulfillment_score: 2 }),
-      entry({ fulfillment_score: null }),
-    ]);
-    expect(result.avgFulfillment).toBeCloseTo(2.5);
-  });
-
   it('開始 >= 終了の不正な時間は無視する', () => {
     const result = computeDailySummary([
       entry({
@@ -136,49 +125,5 @@ describe('computeDailySummary', () => {
     ]);
     expect(result.unplannedMinutes).toBe(90);
     expect(result.unplannedCount).toBe(2);
-  });
-});
-
-describe('isUnconfirmedPlanned', () => {
-  const NOW = new Date('2026-06-10T20:00:00Z');
-
-  const unconfirmed = entry({
-    start_time: '2026-06-10T09:00:00Z',
-    end_time: '2026-06-10T10:00:00Z',
-    actual_start_time: '2026-06-10T09:00:00Z',
-    actual_end_time: '2026-06-10T10:00:00Z',
-  });
-
-  it('actual が plan と完全一致・未採点・終了済みなら未確認', () => {
-    expect(isUnconfirmedPlanned(unconfirmed, NOW)).toBe(true);
-  });
-
-  it('採点済みは確認済み扱い', () => {
-    expect(isUnconfirmedPlanned({ ...unconfirmed, fulfillment_score: 3 }, NOW)).toBe(false);
-  });
-
-  it('実績が編集されていれば確認済み扱い', () => {
-    expect(
-      isUnconfirmedPlanned({ ...unconfirmed, actual_end_time: '2026-06-10T10:15:00Z' }, NOW),
-    ).toBe(false);
-  });
-
-  it('まだ終わっていない予定は対象外', () => {
-    expect(
-      isUnconfirmedPlanned(
-        {
-          ...unconfirmed,
-          start_time: '2026-06-10T21:00:00Z',
-          end_time: '2026-06-10T22:00:00Z',
-          actual_start_time: '2026-06-10T21:00:00Z',
-          actual_end_time: '2026-06-10T22:00:00Z',
-        },
-        NOW,
-      ),
-    ).toBe(false);
-  });
-
-  it('unplanned は対象外', () => {
-    expect(isUnconfirmedPlanned({ ...unconfirmed, origin: 'unplanned' }, NOW)).toBe(false);
   });
 });

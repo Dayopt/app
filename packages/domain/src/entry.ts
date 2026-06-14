@@ -6,8 +6,6 @@ export type EntryOrigin = (typeof entryOrigins)[number];
 
 export type EntryState = 'upcoming' | 'active' | 'past';
 
-export type FulfillmentScore = 1 | 2 | 3;
-
 export type EntryTimeRangeKind = 'planned' | 'actual';
 
 export type EntryTimeRanges = Readonly<{

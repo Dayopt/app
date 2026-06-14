@@ -5,7 +5,7 @@
  *
  * 全 Inspector フィールドの保存を一元管理:
  * - save(): 500ms debounce（テキスト・時間フィールド）
- * - saveImmediate(): 即時（fulfillment, reminder）
+ * - saveImmediate(): 即時（reminder 等の選択式 UI）
  * - saveTag(): 即時（別 API）
  * - flush(): 強制送信（unmount / entry 切替時）
  * - prepareForStructuralMutation(): 変換前に stale な pending 保存を止める
@@ -115,7 +115,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   );
 
   /**
-   * 即時保存（fulfillment, reminder 等の選択式 UI 用）
+   * 即時保存（reminder 等の選択式 UI 用）
    */
   const saveImmediate = useCallback(
     (fields: SaveFields) => {
@@ -193,7 +193,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
    * planned/unplanned 変換など、entry の構造を変える操作の直前に呼ぶ。
    *
    * pending 中の構造フィールド（start_time / end_time / actual_*）は変換後の shape に
-   * 適合しないため破棄。title / description / note / tag_id / fulfillment_score などの
+   * 適合しないため破棄。title / description / note / tag_id などの
    * 非構造フィールドは debounce 窓内のユーザー入力を失わせないよう先に flush する。
    * すでに送信中の保存は完了を待ち、変換と順序を揃える。
    *
@@ -238,7 +238,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     }
 
     // pre-flush が成功した後でだけ suppress を立てる。
-    // 変換中に走り出す in-flight な debounce 保存（fulfillment 等）の CONFLICT toast を抑制する。
+    // 変換中に走り出す in-flight な debounce 保存（note 等）の CONFLICT toast を抑制する。
     if (suppressResetTimerRef.current) {
       clearTimeout(suppressResetTimerRef.current);
       suppressResetTimerRef.current = null;

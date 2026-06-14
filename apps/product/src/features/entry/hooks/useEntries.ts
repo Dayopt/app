@@ -6,7 +6,7 @@ import type { EntryFilter } from '../schemas/entry';
  * エントリ一覧取得フック（plans + records 統合）
  *
  * @description tRPC Query を使用してエントリ一覧を取得
- * @param filters - フィルター条件（origin, search, tagId, startDate, endDate, fulfillmentScore, sortBy, sortOrder, limit, offset）
+ * @param filters - フィルター条件（origin, search, tagId, startDate, endDate, sortBy, sortOrder, limit, offset）
  * @param options - React Query オプション
  *
  * @remarks

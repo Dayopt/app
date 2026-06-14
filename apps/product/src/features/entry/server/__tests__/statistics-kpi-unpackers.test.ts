@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  unpackAvgFulfillment,
   unpackBlankRate,
   unpackContextSwitches,
   unpackCumulativeTime,
@@ -23,36 +22,6 @@ describe('unpackCumulativeTime', () => {
 
   it('実値 0 → default と区別される (そのまま 0)', () => {
     expect(unpackCumulativeTime({ totalMinutes: 0 })).toEqual({ totalMinutes: 0 });
-  });
-});
-
-describe('unpackAvgFulfillment', () => {
-  it('null → 全 default (avgFulfillment: undefined, entryCount: 0)', () => {
-    expect(unpackAvgFulfillment(null)).toEqual({
-      avgFulfillment: undefined,
-      entryCount: 0,
-    });
-  });
-
-  it('avgFulfillment が null → undefined に変換', () => {
-    expect(unpackAvgFulfillment({ avgFulfillment: null, entryCount: 5 })).toEqual({
-      avgFulfillment: undefined,
-      entryCount: 5,
-    });
-  });
-
-  it('値あり → そのまま受け渡し', () => {
-    expect(unpackAvgFulfillment({ avgFulfillment: 0.85, entryCount: 20 })).toEqual({
-      avgFulfillment: 0.85,
-      entryCount: 20,
-    });
-  });
-
-  it('部分: entryCount のみ → avgFulfillment は undefined', () => {
-    expect(unpackAvgFulfillment({ entryCount: 5 })).toEqual({
-      avgFulfillment: undefined,
-      entryCount: 5,
-    });
   });
 });
 

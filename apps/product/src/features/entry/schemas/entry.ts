@@ -5,9 +5,6 @@ import { z } from 'zod';
 /** エントリ発生源スキーマ */
 const entryOriginSchema = z.enum(['planned', 'unplanned']);
 
-/** 充実度スコアスキーマ（3段階: 1=微妙, 2=普通, 3=良い） */
-const fulfillmentScoreSchema = z.number().int().min(1).max(3);
-
 // 時間順序の検証（end >= start）
 const timeOrderRefine = <T extends Record<string, unknown>>(data: T, ctx: z.RefinementCtx) => {
   const d = data as {
@@ -45,7 +42,6 @@ const baseEntrySchema = z.object({
   end_time: z.string().datetime({ offset: true }).nullable().optional(),
   actual_start_time: z.string().datetime({ offset: true }).nullable().optional(),
   actual_end_time: z.string().datetime({ offset: true }).nullable().optional(),
-  fulfillment_score: fulfillmentScoreSchema.nullable().optional(),
 });
 
 /** エントリ作成スキーマ */
@@ -72,9 +68,6 @@ export const entryFilterSchema = z.object({
   // 日付範囲フィルタ（start_time基準）
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
-  // 充実度フィルタ
-  fulfillmentScoreMin: z.number().int().min(1).max(3).optional(),
-  fulfillmentScoreMax: z.number().int().min(1).max(3).optional(),
   // ソート
   sortBy: z.enum(['created_at', 'updated_at', 'title', 'start_time']).optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),

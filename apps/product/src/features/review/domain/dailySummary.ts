@@ -12,7 +12,6 @@ export interface DailySummaryEntry {
   end_time: string | null;
   actual_start_time: string | null;
   actual_end_time: string | null;
-  fulfillment_score: number | null;
 }
 
 interface DailySummary {
@@ -22,8 +21,6 @@ interface DailySummary {
   actualMinutes: number;
   /** 計画達成率 0-1（deriveAccuracy と同じ式: 1 - |予定 - 実績| / 予定）。予定ゼロかつ実績ゼロは 1 */
   planAccuracy: number;
-  /** 平均充実度。スコア付きエントリが無ければ null */
-  avgFulfillment: number | null;
   /** 平均見積もりずれ（実績 − 予定、分）。両方持つエントリが無ければ null */
   estimationBiasMinutes: number | null;
   /** 見積もりずれの母数（予定と実績の両方を持つエントリ数）。所見の信頼性ガードに使う */
@@ -47,8 +44,6 @@ export function computeDailySummary(entries: DailySummaryEntry[]): DailySummary 
   let actualMinutes = 0;
   let biasTotal = 0;
   let biasCount = 0;
-  let fulfillmentTotal = 0;
-  let fulfillmentCount = 0;
   let unplannedMinutes = 0;
   let unplannedCount = 0;
 
@@ -61,10 +56,6 @@ export function computeDailySummary(entries: DailySummaryEntry[]): DailySummary 
     if (planned != null && actual != null) {
       biasTotal += actual - planned;
       biasCount += 1;
-    }
-    if (entry.fulfillment_score != null) {
-      fulfillmentTotal += entry.fulfillment_score;
-      fulfillmentCount += 1;
     }
     if (entry.origin === 'unplanned' && actual != null) {
       unplannedMinutes += actual;
@@ -83,32 +74,9 @@ export function computeDailySummary(entries: DailySummaryEntry[]): DailySummary 
     plannedMinutes: Math.round(plannedMinutes),
     actualMinutes: Math.round(actualMinutes),
     planAccuracy,
-    avgFulfillment: fulfillmentCount > 0 ? fulfillmentTotal / fulfillmentCount : null,
     estimationBiasMinutes: biasCount > 0 ? biasTotal / biasCount : null,
     estimationSampleCount: biasCount,
     unplannedMinutes: Math.round(unplannedMinutes),
     unplannedCount,
   };
-}
-
-/**
- * ユーザー未確認の planned エントリかどうか。
- *
- * 現行モデルでは entry 作成時に actual が plan からコピーされるため、
- * 「actual が plan と完全一致 かつ 未採点 かつ 終了済み」を
- * 「計画どおりだったかユーザーがまだ確認していない」とみなす。
- * 採点・実績編集のどちらかが行われた時点で確認済みになる。
- *
- * 自動記録モデル（skipped_at + effective actual）のマージ後は、
- * この関数の中身を isAutoRecorded(entry) && !isSkipped(entry) && 未採点 に
- * 差し替える（呼び出し側は不変）。
- */
-export function isUnconfirmedPlanned(entry: DailySummaryEntry, now: Date = new Date()): boolean {
-  if (entry.origin !== 'planned') return false;
-  if (entry.fulfillment_score != null) return false;
-  if (!entry.start_time || !entry.end_time) return false;
-  if (entry.start_time !== entry.actual_start_time || entry.end_time !== entry.actual_end_time) {
-    return false;
-  }
-  return new Date(entry.end_time).getTime() <= now.getTime();
 }

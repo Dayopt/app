@@ -9,9 +9,7 @@ import { EntryMicroInsight } from './EntryMicroInsight';
  * watching AI 哲学: 言うべきことがあるときだけ、控えめに表示。
  *
  * - 優先度1: 見積もり超過バイアス（行動可能性最高）
- * - 優先度2: 時間帯の充実度偏差
- * - 優先度3: タグの充実度偏差
- * - 優先度4: ピーク時間帯通知
+ * - 優先度2: ピーク時間帯通知
  */
 const meta = {
   title: 'Features/Stats/Shared/EntryMicroInsight',
@@ -62,38 +60,7 @@ export const EstimationBiasUnder: Story = {
   },
 };
 
-/** 時間帯の充実度が高い（優先度2） */
-export const HourlyFulfillmentHigh: Story = {
-  args: {
-    insight: {
-      type: 'hourly_fulfillment',
-      messageKey: 'hourlyFulfillmentHigh',
-    },
-  },
-};
-
-/** 時間帯の充実度が低い */
-export const HourlyFulfillmentLow: Story = {
-  args: {
-    insight: {
-      type: 'hourly_fulfillment',
-      messageKey: 'hourlyFulfillmentLow',
-    },
-  },
-};
-
-/** タグの充実度偏差（優先度3） */
-export const TagFulfillment: Story = {
-  args: {
-    insight: {
-      type: 'tag_fulfillment',
-      messageKey: 'tagFulfillmentHigh',
-      messageParams: { score: '4.2' },
-    },
-  },
-};
-
-/** ピーク時間帯（優先度4） */
+/** ピーク時間帯（優先度2） */
 export const DeepHour: Story = {
   args: {
     insight: {
@@ -155,71 +122,6 @@ export const AllPatterns: Story = {
                 type: 'estimation_bias',
                 messageKey: 'estimationBiasUnder',
                 messageParams: { bias: 15 },
-              }}
-            />
-          </div>
-          <div className="bg-muted mt-4 rounded-2xl p-4">
-            <span className="text-muted-foreground text-xs">10:00 - 12:00</span>
-          </div>
-        </div>
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-4 text-xs">
-          HourlyFulfillmentHigh（時間帯充実度・高）
-        </p>
-        <div className="bg-card max-w-sm rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <span className="bg-primary size-3.5 rounded-full" />
-            <span className="text-foreground text-sm">朝のコーディング</span>
-          </div>
-          <div className="mt-2">
-            <EntryMicroInsight
-              insight={{
-                type: 'hourly_fulfillment',
-                messageKey: 'hourlyFulfillmentHigh',
-              }}
-            />
-          </div>
-          <div className="bg-muted mt-4 rounded-2xl p-4">
-            <span className="text-muted-foreground text-xs">10:00 - 12:00</span>
-          </div>
-        </div>
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-4 text-xs">
-          HourlyFulfillmentLow（時間帯充実度・低）
-        </p>
-        <div className="bg-card max-w-sm rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <span className="bg-primary size-3.5 rounded-full" />
-            <span className="text-foreground text-sm">朝のコーディング</span>
-          </div>
-          <div className="mt-2">
-            <EntryMicroInsight
-              insight={{
-                type: 'hourly_fulfillment',
-                messageKey: 'hourlyFulfillmentLow',
-              }}
-            />
-          </div>
-          <div className="bg-muted mt-4 rounded-2xl p-4">
-            <span className="text-muted-foreground text-xs">10:00 - 12:00</span>
-          </div>
-        </div>
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-4 text-xs">TagFulfillment（タグ充実度偏差）</p>
-        <div className="bg-card max-w-sm rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <span className="bg-primary size-3.5 rounded-full" />
-            <span className="text-foreground text-sm">朝のコーディング</span>
-          </div>
-          <div className="mt-2">
-            <EntryMicroInsight
-              insight={{
-                type: 'tag_fulfillment',
-                messageKey: 'tagFulfillmentHigh',
-                messageParams: { score: '4.2' },
               }}
             />
           </div>

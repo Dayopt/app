@@ -17,17 +17,8 @@ import { getTagColorClasses, resolveTagColor, useCreateTag, useTagsMap } from '@
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
 import { getEntryMenuItems } from '../../lib/entry-menu-items';
 import { getEntryState } from '../../lib/entry-status';
-import type { FulfillmentScore } from '../../types/entry';
 
-import {
-  DateRow,
-  FulfillmentRow,
-  NoteSection,
-  TagRow,
-  TimeConflictAlert,
-  TimeDiffBlock,
-  TimeRow,
-} from './fields';
+import { DateRow, NoteSection, TagRow, TimeConflictAlert, TimeDiffBlock, TimeRow } from './fields';
 import { useEntryForm } from './hooks/useEntryForm';
 
 interface EntryInspectorFormProps {
@@ -57,7 +48,6 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
   const { timeConflictError } = state;
   const {
     handleDelete,
-    updateEntry,
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,
     skipEntry,
@@ -96,7 +86,6 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
   // --- 派生値 ---
 
   // 充実度（TanStack Query の楽観的更新で即座に反映）
-  const fulfillmentScore: FulfillmentScore | null = entry?.fulfillment_score ?? null;
   const isUnplanned = entry?.origin === 'unplanned';
   const isPlanned = entry?.origin === 'planned';
 
@@ -170,14 +159,6 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
         finishStructuralMutation();
       });
   }, [entryId, isSkipped, prepareForStructuralMutation, finishStructuralMutation, unskipEntry]);
-
-  const handleFulfillmentChange = useCallback(
-    (score: FulfillmentScore | null) => {
-      if (!entryId) return;
-      updateEntry.mutate({ id: entryId, data: { fulfillment_score: score } });
-    },
-    [entryId, updateEntry],
-  );
 
   // 予定行の自動調整
   const {
@@ -304,23 +285,6 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
             actualEnd={actualEndTime}
             tagColor={selectedTag?.color}
             isUnplanned={isUnplanned}
-          />
-
-          {/* 充実度 */}
-          <FulfillmentRow
-            label={t('entry.inspector.time.fulfillment')}
-            score={fulfillmentScore ?? null}
-            onScoreChange={handleFulfillmentChange}
-            scoreLabels={{
-              low: t('entry.inspector.time.fulfillmentLow'),
-              medium: t('entry.inspector.time.fulfillmentMedium'),
-              high: t('entry.inspector.time.fulfillmentHigh'),
-            }}
-            tooltipLabels={{
-              low: t('entry.inspector.time.fulfillmentTooltipLow'),
-              medium: t('entry.inspector.time.fulfillmentTooltipMedium'),
-              high: t('entry.inspector.time.fulfillmentTooltipHigh'),
-            }}
           />
 
           {/* メモ */}

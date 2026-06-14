@@ -244,34 +244,6 @@ describe('EntryService.update', () => {
     }
   });
 
-  it('fulfillment_score が正常に設定される', async () => {
-    const existing = createMockEntry({
-      id: 'entry-1',
-      fulfillment_score: null,
-    });
-    const updated = {
-      ...existing,
-      fulfillment_score: 2,
-    };
-
-    const { service, mockSupabase } = createService();
-
-    let callCount = 0;
-    mockSupabase.from.mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) return createChainableMock(existing);
-      return createChainableMock(updated);
-    });
-
-    const result = await service.update({
-      userId: USER_ID,
-      entryId: 'entry-1',
-      input: { fulfillment_score: 2 },
-    });
-
-    expect(result.fulfillment_score).toBe(2);
-  });
-
   it('future planned更新でactualが明示されていればサーバー側で上書きしない', async () => {
     const existing = createMockEntry({
       id: 'entry-1',

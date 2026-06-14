@@ -50,8 +50,6 @@ export class EntryService {
       search,
       startDate,
       endDate,
-      fulfillmentScoreMin,
-      fulfillmentScoreMax,
       sortBy = 'created_at',
       sortOrder = 'desc',
       limit,
@@ -105,14 +103,6 @@ export class EntryService {
       query = query.or(`start_time.gte.${startDate},actual_start_time.gte.${startDate}`);
     } else if (endDate) {
       query = query.or(`start_time.lte.${endDate},actual_start_time.lte.${endDate}`);
-    }
-
-    // 充実度フィルタ
-    if (fulfillmentScoreMin) {
-      query = query.gte('fulfillment_score', fulfillmentScoreMin);
-    }
-    if (fulfillmentScoreMax) {
-      query = query.lte('fulfillment_score', fulfillmentScoreMax);
     }
 
     // ソート
@@ -618,7 +608,6 @@ export class EntryService {
       title: input.title,
       description: input.description ?? null,
       origin,
-      fulfillment_score: input.fulfillment_score ?? null,
       actual_start_time: origin === 'unplanned' ? selectedRange.start : null,
       actual_end_time: origin === 'unplanned' ? selectedRange.end : null,
       start_time: origin === 'planned' ? selectedRange.start : null,

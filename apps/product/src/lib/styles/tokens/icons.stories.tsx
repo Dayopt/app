@@ -464,7 +464,6 @@ const VALUES_CATEGORY: IconEntry[] = [
 
 const METRIC_SET: IconEntry[] = [
   { icon: Clock, name: 'Clock', usage: 'totalTime' },
-  { icon: Star, name: 'Star', usage: 'avgFulfillment' },
   { icon: Target, name: 'Target', usage: 'entryRate' },
   { icon: Flame, name: 'Flame', usage: 'streak' },
   { icon: Timer, name: 'Timer', usage: 'estimationAccuracy' },

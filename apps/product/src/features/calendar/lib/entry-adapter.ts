@@ -88,7 +88,6 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
     isMultiDay,
     origin: entry.origin,
     entryState,
-    fulfillmentScore: entry.fulfillment_score,
     actualStartDate,
     actualEndDate,
     plannedStartDate,
