@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
  * Review 粒度別ビュー スモーク
  *
  * review-granularity-redesign の regression guard:
- * /review?g={day|week|month|year} の deep link で各粒度の composition が
+ * /review?g={day|week} の deep link で各粒度の composition が
  * 描画されること（= URL からの粒度復元が機能していること）を検証する。
  *
  * 各粒度に固有のセクション見出しが出れば、デフォルト（週）ではなく
@@ -33,8 +33,6 @@ async function login(page: import('@playwright/test').Page) {
 const GRANULARITY_MARKERS: Record<string, RegExp> = {
   day: /予定と実績|Planned vs actual|まっさらな1日です|A fresh day/,
   week: /曜日別の記録|By day of week|新しい1週間が始まりました|No review data yet/,
-  month: /日別の記録|Daily record|新しい1週間が始まりました|No review data yet/,
-  year: /1年の記録マップ|Year in records|新しい1週間が始まりました|No review data yet/,
 };
 
 test.describe('Smoke: Review 粒度別ビュー', () => {
