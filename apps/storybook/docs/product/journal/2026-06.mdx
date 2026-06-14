@@ -6,6 +6,36 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-06-14
+
+### 3 機能を一気に削除した core-slim の集中日
+
+4 コミット、137 ファイル変更（約 6000 行削除 / 約 160 行追加）。review・entry・chronotype の 3 領域にまたがる大規模削除。年次・月次 Review ビューの除去、充実度（fulfillment）軸のコード側全削除、chronotype / Deep Zone の完全削除を同日に実施した。
+
+#### やったこと
+
+- **年次・月次 Review ビュー削除（1 commit）**: `MonthlyReview.tsx`（211 行）と `YearlyReview.tsx`（179 行）を削除。`ReviewGranularity` を `'day' | 'week'` に縮約。孤児化した `useTagBalanceRows` / `tzMonthStart` / `tzMonthEnd` も除去。`EstimationAccuracyList`（タグ別見積精度）は週次 Review に移設して存続させる
+- **充実度（fulfillment）軸のコード削除（1 PR、2 commits）**: `FulfillmentRow`、`FulfillmentScoreButtons`、`UnconfirmedPlanList` を削除。`getAvgFulfillment` procedure と `unpackAvgFulfillment` を削除。entry schema / StatsPageData / EnergyMapRow / metrics 定義から `fulfillment_score` / `avgFulfillment` を除去。DB カラムは残し、TS 側が読まない状態にする暫定形態
+- **chronotype / Deep Zone の完全削除（1 commit）**: `features/chronotype` 全体（quiz / settings / gradient / zones / store / tests）を削除。calendar 統合（背景グラデーション / NowBadge / TimeColumn の zone 装飾）を除去。`useCalendarSettingsStore` の dispatcher を UserPreference + CalendarSettings の 2 ストア構成に縮約。review の `deepUtilization` メトリクスも削除
+
+#### なぜ今日この作業をしたか
+
+3 つの削除はすべて [core-slim] というイニシアティブのもとで進んでいる。Dayopt の差別化はタイムボクシング × 時間記録 × タスク × カレンダーの一体化にある。それに対して年次・月次 Review は「眺めて終わる」ダッシュボードになっており、振り返りから次の行動への橋渡しという Review の本義からずれていた。充実度スコアは「ゼロ入力哲学」と衝突する第二の意思決定を確認フローに強いるもので、自然な記録リズムを妨げていた。chronotype は事前の自己申告（「私は朝型です」）というウェルネスアプリ的なベクトルで、オンボーディングを重くする要素でもあった。
+
+3 つに共通するのは「ユーザーが Dayopt に期待していない複雑さ」を積み上げていたという点。今日のまとめ削除はその借金を返済する作業で、コードベースの重力を下げることでこれからの機能追加を軽くするための下地になる。
+
+DB カラムの drop は「コード削除 → deploy → drop migration」という決まった順序で進める。TS 側が参照しない状態のカラムが本番 DB に残ることは正常な中間状態として扱い、次の migration PR で後片付けをする。
+
+#### Claudeの所感
+
+**削除は機能追加と同等の価値を持つ**: 今日の 3 削除は合計で約 6000 行を除去した。行数で見ると新機能の実装よりはるかに大きい変更だが、ユーザーが目にする画面は「ない」のではなく「軽い」に変わる。機能の過剰蓄積はフレームワークの理解コストを上げ、バグの潜伏場所を増やし、型の依存チェーンを複雑にする。削除に踏み切るタイミングは「使われていない」ではなく「存在がコアの哲学と矛盾している」というより強い判断基準で決まった。
+
+**「コード側削除 → deploy → DB drop」の順序規律**: fulfillment と chronotype のどちらも、DB カラムを一度に drop せずにコード側だけを先に消す 2 段階方式を採った。これは「TS が読まないカラムが DB に残る」という一時的な矛盾状態を許容することで、ロールバックリスクを最小化するトレードオフ。本番にデプロイしてから DB を変更すれば、万一のロールバック時に旧コードが旧カラムを参照できる安全マージンが確保できる。
+
+**「実績から観測する」アーキテクチャへの転換**: chronotype 削除のコミットメッセージは「集中時間帯は宣言ではなく実績データから事後的に観測されるべき」と明記している。これは単なる機能削除ではなく、時間インテリジェンスの設計哲学の明確化でもある。将来「実績ベースの集中時間帯」を作る場合は git 履歴から gradient 描画基盤を復元できるよう意識的に残している。削除しながらも将来の可能性を閉じない設計判断は、Dayopt の段階的な成長路線と整合している。
+
+---
+
 ## 2026-06-11
 
 ### Review の日付バグを根絶し、Daily Close を「確認して締める」体験へ
