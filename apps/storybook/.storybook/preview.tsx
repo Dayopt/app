@@ -45,7 +45,6 @@ const preview: Preview = {
         order: [
           'Welcome',
           'Architecture',
-          'Strategy',
           'Components',
           'Features',
           'Design',

@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
   // TypeScript推奨ルール
   ...nextTs,
 
+  // 未使用の eslint-disable ディレクティブを error 扱いにする（再発防止）
+  // 対象ルールが発火しなくなった disable は CI で fail させ、stale な disable の蓄積を防ぐ
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: 'error',
+    },
+  },
+
   // Ignore patterns
   globalIgnores([
     '.next/**',

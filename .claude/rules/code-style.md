@@ -63,3 +63,18 @@ Server Component をデフォルト。useState / useEffect / イベントハン�
 2. 既存の依存で代替できないか？
 3. GitHub Stars >= 1000、最終コミット6ヶ月以内か？
 4. 1つの機能のためだけに大きなライブラリを追加しない
+
+## eslint-disable の運用
+
+disable は「ルールが誤検知している／意図的に逸脱する」場合の最終手段。まずコード側で解消できないか検討する。やむを得ず disable する場合は次を守る:
+
+1. **必ず inline で `-- 理由` を書く**。前行コメントではなく disable ディレクティブと同じ行に書く（grep で「理由なし disable」を検出できる状態を保つ）。
+
+   ```ts
+   // ✅ react-hooks/exhaustive-deps -- 初回マウント時のみ URL から復元する意図的な mount-only effect
+   // ❌ 理由なし、または前行コメントに分離
+   ```
+
+2. **`eslint-disable`（ファイル全体）より `eslint-disable-next-line`（1 行）を優先**。影響範囲を最小化する。
+3. **未使用 disable は CI で fail する**。`reportUnusedDisableDirectives: 'error'`（`apps/product` / `apps/web` の `eslint.config.mjs`）により、対象ルールが発火しなくなった disable は自動検出される。リファクタで不要になった disable は放置せず削除する。
+4. 新しいルールを `off` にして黙らせるより、`warn` + 段階的解消を検討する（例: `@typescript-eslint/no-unused-vars` は TS 本体 + Prettier が未使用 import を消すため低優先で `off`）。

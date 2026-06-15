@@ -28,7 +28,7 @@ export default async function LocaleLayout({
 
   // Client Component が使わない重いネームスペースを除外（legal: ~96KB）
   // legal/ossCredits は Server Component で getTranslations() 経由で直接取得する
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- rest destructuring で除外する legal/ossCredits は意図的に未使用
   const { legal, ossCredits, ...clientMessages } = messages as Record<string, unknown>;
 
   return <NextIntlClientProvider messages={clientMessages}>{children}</NextIntlClientProvider>;

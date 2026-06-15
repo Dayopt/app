@@ -14,7 +14,7 @@ import type { McpRequestContext } from '../_server';
  *
  * Phase 1 の唯一の tool。read-only。`createMcpTrpcCaller` 経由で `entries.list`
  * tRPC procedure を呼び、`proProcedure` の Pro gate と `protectedProcedure` の
- * userId 注入を再利用する (apps/storybook/docs/product/projects/mcp-server/overview.mdx Decision 9)。
+ * userId 注入を再利用する (docs/projects/mcp-server/overview.md Decision 9)。
  */
 
 const inputSchema = {

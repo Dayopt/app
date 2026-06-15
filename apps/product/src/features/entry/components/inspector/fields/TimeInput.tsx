@@ -60,7 +60,7 @@ function timeToMinutes(time: string): number {
  *   矢印キー: dropdown が開いている時のみ list 内 highlight 移動（closed 時は何もしない）
  * - **Mobile**: タップで Drawer + 時計盤ピッカー（1 分粒度、drag で連続調整可）
  *
- * @see apps/storybook/docs/product/projects/timeline-precision-redesign/overview.mdx
+ * @see docs/projects/timeline-precision-redesign/overview.md
  */
 export function TimeInput({
   value,
