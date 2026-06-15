@@ -28,7 +28,7 @@ interface Entry {
   end_time: string | null;
   actual_start_time: string | null;
   actual_end_time: string | null;
-  duration_minutes: number | null;
+  planned_duration_minutes: number | null;
   /** @deprecated 充実度軸は廃止（#1324）。DB カラム drop までの暫定フィールド。読み書きしない */
   fulfillment_score: number | null;
   /** 計画したがやらなかった（自動記録モデル）。非 null = 実績集計から除外 */

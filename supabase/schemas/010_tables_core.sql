@@ -46,7 +46,7 @@ CREATE TABLE public.entries (
   end_time TIMESTAMPTZ,           -- カレンダー上の終了時刻
   actual_start_time TIMESTAMPTZ,  -- 実績開始時刻
   actual_end_time TIMESTAMPTZ,    -- 実績終了時刻
-  duration_minutes INTEGER GENERATED ALWAYS AS (
+  planned_duration_minutes INTEGER GENERATED ALWAYS AS (
     CASE
       WHEN start_time IS NOT NULL AND end_time IS NOT NULL
       THEN EXTRACT(EPOCH FROM (end_time - start_time))::INTEGER / 60

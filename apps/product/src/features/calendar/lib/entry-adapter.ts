@@ -13,7 +13,7 @@ import type { CalendarEvent } from '../types/calendar.types';
 /**
  * Date の秒・ミリ秒を 0 にする（分単位以下の精度を切り捨て）
  *
- * TZ 変換や DB から読み出した秒以下のずれが、duration_minutes 計算 /
+ * TZ 変換や DB から読み出した秒以下のずれが、所要時間（分）計算 /
  * tzIsSameDay 判定にノイズを混ぜないようにする。
  *
  * 旧 `snapMinutes` は 15 分単位スナップも兼ねていたが、これは UI policy を
@@ -68,8 +68,9 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
   // ユーザーTZで同日かどうかを判定（ブラウザローカルTZ依存を排除）
   const isMultiDay = !tzIsSameDay(startDate, endDate, timezone);
 
-  const duration =
-    entry.duration_minutes ?? Math.round((endDate.getTime() - startDate.getTime()) / 60000);
+  // 表示位置（planned/unplanned で選んだ start/end）から算出する。DB の
+  // planned_duration_minutes は plan range のみの値なので表示長には使わない。
+  const duration = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
 
   return {
     id: entry.id,

@@ -378,14 +378,14 @@ describe('EntryService.convertPlannedToUnplanned', () => {
       end_time: '2026-03-17T10:00:00Z',
       actual_start_time: '2026-03-17T09:15:00Z',
       actual_end_time: '2026-03-17T09:45:00Z',
-      duration_minutes: 60,
+      planned_duration_minutes: 60,
     });
     const updated = {
       ...existing,
       origin: 'unplanned' as const,
       start_time: null,
       end_time: null,
-      duration_minutes: null,
+      planned_duration_minutes: null,
     };
 
     const { service, mockSupabase } = createService();
@@ -447,14 +447,14 @@ describe('EntryService.convertPlannedToUnplanned', () => {
       end_time: '2030-03-17T10:00:00Z',
       actual_start_time: '2026-03-17T09:00:00Z',
       actual_end_time: '2026-03-17T10:00:00Z',
-      duration_minutes: 60,
+      planned_duration_minutes: 60,
     });
     const updated = {
       ...existing,
       origin: 'unplanned' as const,
       start_time: null,
       end_time: null,
-      duration_minutes: null,
+      planned_duration_minutes: null,
     };
 
     const { service, mockSupabase } = createService();
@@ -513,7 +513,7 @@ describe('EntryService.convertUnplannedToPlanned', () => {
       end_time: null,
       actual_start_time: '2026-03-17T09:15:00Z',
       actual_end_time: '2026-03-17T09:45:00Z',
-      duration_minutes: null,
+      planned_duration_minutes: null,
     });
     const updated = {
       ...existing,

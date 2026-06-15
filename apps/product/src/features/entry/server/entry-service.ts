@@ -317,7 +317,7 @@ export class EntryService {
       origin: 'unplanned',
       start_time: null,
       end_time: null,
-      duration_minutes: null,
+      planned_duration_minutes: null,
       actual_start_time: actualStart,
       actual_end_time: actualEnd,
       skipped_at: null,

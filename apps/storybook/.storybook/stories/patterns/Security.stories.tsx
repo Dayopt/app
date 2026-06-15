@@ -283,7 +283,7 @@ export const Overview: Story = {
                       z.number().int().min(0).max(N)
                     </code>
                   </td>
-                  <td className="py-2">fulfillment_score (1-3), duration_minutes</td>
+                  <td className="py-2">fulfillment_score (1-3), planned_duration_minutes</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2 font-medium">列挙</td>

@@ -90,7 +90,7 @@ export function useCreateEntryMutation(
         // 自動記録モデル: actual はユーザー編集時のみ。planned は NULL で作成される
         actual_start_time: origin === 'unplanned' ? selectedStart : null,
         actual_end_time: origin === 'unplanned' ? selectedEnd : null,
-        duration_minutes: null,
+        planned_duration_minutes: null,
         fulfillment_score: null,
         deleted_at: null,
         skipped_at: null,

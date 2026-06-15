@@ -26,7 +26,7 @@ export function useEntryConversionMutations(context: EntryMutationContext) {
           origin?: string | null;
           start_time?: string | null;
           end_time?: string | null;
-          duration_minutes?: number | null;
+          planned_duration_minutes?: number | null;
         },
       >(
         entry: T,
@@ -35,7 +35,7 @@ export function useEntryConversionMutations(context: EntryMutationContext) {
         origin: 'unplanned',
         start_time: null,
         end_time: null,
-        duration_minutes: null,
+        planned_duration_minutes: null,
       });
 
       queryClient.setQueriesData<EntryListData>({ predicate: isEntriesListQuery }, (oldData) => {
