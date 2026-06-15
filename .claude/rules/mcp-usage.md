@@ -4,21 +4,20 @@ Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下�
 
 接続済みサーバーは `.mcp.json` を参照（eagle / supabase-local / storybook / supabase / context7 / sentry / playwright / github / vercel）。有効化は各自の `.claude/settings.local.json`（gitignore 対象＝ローカル専用）の `enabledMcpjsonServers` で対象を列挙して行う。
 
-認証方式はサーバーごとに 3 通り（#1142 → 2026-06-16 整理）:
+認証方式はサーバーごとに 2 通り（#1142 → 2026-06-16 整理）:
 
-1. **OAuth 承認方式**（`/mcp` で承認、トークン管理不要）: `sentry` / `github` / `vercel`。`sentry` は `https://mcp.sentry.dev/mcp` を直叩きする hosted MCP。
-2. **`.mcp.json` 内 `op run` 自己解決方式**: `supabase`(cloud)。MCP プロセスの起動コマンド自体を `op run -- npx ...` でラップし、spawn 時に 1Password が `op://` 参照を解決する。**Claude 本体の起動経路に依存しない**（desktop アプリ起動でも動く）。
-3. **env 注入方式（`op run` ラッパー起動）**: `github` の PAT のみ。Claude を `~/.zshrc` のラッパー関数経由で起動し、`~/.config/claude/op-env.mcp`（op:// 参照のみ、repo の `.op-env.mcp.example` がテンプレ）から `GITHUB_MCP_PAT` を子プロセスに注入する。GitHub は OAuth(DCR) 非対応のため http header 注入が必要で、この経路だけ残る。
+1. **OAuth 承認方式**（`/mcp` で承認、トークン管理不要）: `sentry` / `vercel`。`sentry` は `https://mcp.sentry.dev/mcp` を直叩きする hosted MCP。
+2. **`.mcp.json` 内 `op run` 自己解決方式**: `supabase`(cloud) / `github`。MCP プロセスの起動コマンド自体を `op run -- <bin>` でラップし、spawn 時に 1Password が `op://` 参照を解決する。**Claude 本体の起動経路に依存しない**（desktop アプリ起動でも動く）。token 系 MCP はこの方式を標準とする。
 
-**トークンを平文でハードコードしない**。GitHub MCP を使わないなら zsh ラッパー起動は不要で全 MCP が動く。
+**トークンを平文でハードコードしない**。env 注入を要する MCP はもう無いため、**Claude 起動に zsh の `op run` ラッパーは不要**（過去の `.op-env.mcp` / wrapper 方式は廃止）。前提は `op` CLI + 1Password desktop 統合が使えること。
 
 ## 運用方針
 
 - **常時使う**: `context7` / `sentry` / `github` / `vercel`
 - **オンデマンドで使う**: `eagle` / `supabase-local` / `storybook` / `supabase`(cloud)
 - `context7` はバージョン依存の判断では原則使う。Next.js 15 / React 19 / tRPC / Supabase client / TanStack Query / Zustand などは記憶だけで判断しない。
-- `sentry` / `github` / `vercel` は OAuth 方式。初回や期限切れ時に `/mcp` で承認する。token 管理は不要。
-- `supabase`(cloud) は `.mcp.json` の起動コマンドが `op run` で `op://` を自己解決する。zsh ラッパー起動に依存しない。token は repo に置かない。
+- `sentry` / `vercel` は OAuth 方式。初回や期限切れ時に `/mcp` で承認する。token 管理は不要。
+- `supabase`(cloud) / `github` は `.mcp.json` の起動コマンドが `op run` で `op://` を自己解決する。zsh ラッパー起動に依存しない。token は repo に置かない。
 - `supabase`(cloud) は production project（read-only 既定）を参照する。schema/RLS の確認用。書き込みを伴う migration は `supabase-local` → PR Preview → production の既存フロー（`supabase` skill）で行う。
 - `supabase-local` は migration / RLS / schema 確認時だけ Docker Desktop と `supabase start` を起動する。通常のレビュー・実装ではローカル DB が落ちていても異常扱いしない。
 - `eagle` はローカル Eagle app が起動している時だけ使う。Eagle app が落ちている場合は MCP 接続失敗を異常扱いしない。
@@ -121,7 +120,9 @@ Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下�
   - リリースノート作成時にマージ済み PR 一覧を構造化データで取得する
   - 複数 PR や issue の横断集計を行う時
 - **Before use**:
-  - 初回は OAuth 承認（`/mcp` で承認フロー）が必要。token は repo に置かない
+  - **stdio + op run 自己解決方式**（2026-06-16 移行）。`.mcp.json` の `github` は `op run -- github-mcp-server stdio` を起動し、spawn 時に `op://Dayopt-Shared/github-mcp-pat/credential`（PAT）を `GITHUB_PERSONAL_ACCESS_TOKEN` に解決する。zsh ラッパー起動に依存しない。
+  - 前提: 公式バイナリ `github-mcp-server`（`brew install github-mcp-server`）+ `op` CLI + 1Password desktop 統合。`claude mcp get github` が `✔ Connected` なら利用可。
+  - GitHub の remote MCP (`api.githubcopilot.com`) は OAuth(DCR) 非対応のため OAuth 方式は使えない（#1142 で確認、2026-06 時点でも未対応）。ローカル stdio 版 + op run がトークン管理を repo に漏らさない最善手。
 - **境界ケース**: 単純な単一取得（`gh pr view N`）は `gh` CLI で十分。構造化抽出や横断集計が必要なときに MCP を使う。
 
 ## 共通原則
