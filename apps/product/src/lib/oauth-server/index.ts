@@ -2,7 +2,7 @@
  * OAuth 2.1 Authorization Server barrel.
  * /authorize, /token endpoints, PKCE (S256), opaque token issue/verify, static client allowlist.
  *
- * See apps/storybook/docs/product/projects/mcp-server/overview.mdx (Decision 1, 9).
+ * See docs/projects/mcp-server/overview.md (Decision 1, 9).
  */
 
 export { validateAuthorizeInput, type AuthorizeValidationError } from './authorize-validation';

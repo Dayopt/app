@@ -33,7 +33,7 @@ Dayopt の作業を進める際の規約。作業規模に応じて進め方を�
 
 ### 大規模
 
-- Project 全体設計書を必ず作成（`apps/storybook/docs/product/projects/{project-name}/overview.md`）
+- Project 全体設計書を必ず作成（`docs/projects/{project-name}/overview.md`）
 - 複雑な Step は Step 詳細設計書（`step-X-detail.md`）
 - 各 Step で事前調査プロンプト必須
 - 相談事項は Option α/β/γ 形式で提示
@@ -90,22 +90,24 @@ Dayopt の作業を進める際の規約。作業規模に応じて進め方を�
 
 ## 設計書の保存場所
 
+散文の設計書は repo 直下 `docs/projects/` に置く（Storybook には載せない。ビルド不要で GitHub 上でそのまま読める。`<Meta>` ラッパー不要の素の Markdown）。
+
 ### 進行中
 
 ```
-apps/storybook/docs/product/projects/{project-name}/
+docs/projects/{project-name}/
 ├── overview.md        — Project 全体設計書
 └── step-X-detail.md   — Step 詳細設計書（必要なら）
 ```
 
-または簡略形式として `apps/storybook/docs/product/projects/{project-name}-detail.md` 1 ファイル。
+または簡略形式として `docs/projects/{project-name}-detail.md` 1 ファイル。
 
 ### 完了後
 
-Project 完了時に `apps/storybook/docs/product/projects/` へ移動:
+Project 完了時も同じ `docs/projects/{project-name}/` に置いたまま `summary.md` を追加:
 
 ```
-apps/storybook/docs/product/projects/{project-name}/
+docs/projects/{project-name}/
 ├── overview.md
 ├── step-X-detail.md
 └── summary.md         — 完了時に追加（達成した成果）
@@ -119,7 +121,7 @@ apps/storybook/docs/product/projects/{project-name}/
 
 ### src/ にはコロケーションしない
 
-設計書は Project 単位（複数ファイル横断）の情報なので、src/ の個別コードにコロケーションしない。src/ はコード専用、設計書は `apps/storybook/docs/product/projects/` に集約する。
+設計書は Project 単位（複数ファイル横断）の情報なので、src/ の個別コードにコロケーションしない。src/ はコード専用、設計書は `docs/projects/` に集約する。
 
 ただし feature 単位の長期設計（ARCHITECTURE.md 相当）は feature 内コロケーションの選択肢あり。これは Project 設計書とは別物。
 
@@ -172,4 +174,4 @@ UI 変更を含む作業では、Storybook 起動して視覚確認を Tomoya �
 
 - フォローアップ作業群（typo 修正、namespace 追加、etc.）
 
-詳細は `apps/storybook/docs/product/projects/` 配下の各 project ディレクトリを参照。
+詳細は `docs/projects/` 配下の各 project ディレクトリを参照。
