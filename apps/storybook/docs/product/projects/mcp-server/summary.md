@@ -43,7 +43,7 @@ Phase 1 の実機完了基準と Phase 1.5 以降は、現在の repository だ�
 - `verifyAccessToken` と OAuth mode の `proProcedure` を覆う専用 unit test が現存しない
 - Settings は接続済み client 一覧 / revoke UI ではなく、`apiKey: null` の vestige を残す
 - `mcp.revokeToken`、`entries.daily_summary`、DCR `/oauth/register` は未実装
-- `/oauth/authorize` / MCP endpoint の専用 rate limit は現行コードで確認できない
+- `/oauth/authorize` / `/oauth/token` / MCP endpoint の専用 rate limit は現行コードで確認できない
 - `oauth_audit_log` table はあるが、MCP tool call からの audit insert は確認できない
 - atomic `issue_oauth_token_pair` RPC は migration にある一方、`code-exchange.ts` は未置換 TODO を残す
 - production rewrite 問題により、overview の versionless public URL ではなく実体 API path を advertise する follow-up が入っている
