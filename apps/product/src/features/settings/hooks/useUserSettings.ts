@@ -3,21 +3,19 @@
  * TanStack Queryを使用してSupabaseと同期
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useCalendarSettings } from '@/features/calendar/hooks/useCalendarSettings';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
-import { dispatchUserSettings } from '@/features/calendar/stores/userSettings';
 import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 
 /**
  * ユーザー設定をDBと同期するhook
- * - 初回ロード時: DBから設定を取得してStoreに反映
- * - 設定変更時: DBに保存（debounce済み）
+ * user_settings query cacheを参照し、設定変更をoptimistic mutationで保存する。
  */
 export function useUserSettings() {
   // DBから設定を取得
@@ -37,33 +35,10 @@ export function useUserSettings() {
   const isPaused = fetchStatus === 'paused';
 
   const updateMutation = useUpdateUserSettings();
-  const [calendarHydrated, setCalendarHydrated] = useState(false);
-
-  useEffect(() => {
-    if (isPending) return;
-    if (dbSettings) {
-      dispatchUserSettings({
-        showWeekends: dbSettings.showWeekends,
-        ...(dbSettings.defaultView && { defaultView: dbSettings.defaultView }),
-        ...(dbSettings.hourHeightDensity && { hourHeightDensity: dbSettings.hourHeightDensity }),
-      });
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- query解決後のCalendar UI state hydration
-    setCalendarHydrated(true);
-  }, [dbSettings, isPending]);
 
   // 設定をDBに保存する関数
   const saveSettings = useCallback(
     (settings: Partial<UserSettings>) => {
-      // Calendar UI stateはstore、server stateはmutationのquery cacheへ即時反映する。
-      if (
-        settings.showWeekends !== undefined ||
-        settings.defaultView !== undefined ||
-        settings.hourHeightDensity !== undefined
-      ) {
-        dispatchUserSettings(settings);
-      }
-
       // DBに保存用のマッピング
       const dbInput: Record<string, unknown> = {};
 
@@ -87,7 +62,7 @@ export function useUserSettings() {
   );
 
   const preferences = useUserPreferences();
-  const calendarSettings = useCalendarSettingsStore();
+  const calendarSettings = useCalendarSettings();
   const settings = useMemo<UserSettings>(
     () => ({ ...preferences, ...calendarSettings }),
     [preferences, calendarSettings],
@@ -98,7 +73,7 @@ export function useUserSettings() {
     saveSettings,
     isPending,
     isPaused,
-    hydrated: calendarHydrated && error == null,
+    hydrated: !isPending && error == null && dbSettings !== undefined,
     isSaving: updateMutation.isPending,
     error,
   };

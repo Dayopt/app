@@ -5,9 +5,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useCalendarSettings } from '@/features/calendar/hooks/useCalendarSettings';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
-import { dispatchUserSettings } from '@/features/calendar/stores/userSettings';
 import { buttonVariants } from '@/lib/components/ui/button';
 import {
   DropdownMenu,
@@ -20,6 +19,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/lib/components/ui/dropdown-menu';
+import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@/lib/utils';
@@ -67,16 +67,24 @@ export function ViewSwitcher({
   className,
 }: ViewSwitcherProps) {
   const t = useTranslations();
-  const showWeekends = useCalendarSettingsStore((s) => s.showWeekends);
+  const showWeekends = useCalendarSettings((s) => s.showWeekends);
   const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
-  const hourHeightDensity = useCalendarSettingsStore((s) => s.hourHeightDensity);
+  const hourHeightDensity = useCalendarSettings((s) => s.hourHeightDensity);
+  const updateSettings = useUpdateUserSettings();
 
   const persistSettings = useCallback(
-    (settings: Partial<UserSettings>) => {
-      dispatchUserSettings(settings);
-      onSettingsChange?.(settings);
+    (
+      settings: Partial<
+        Pick<UserSettings, 'showWeekends' | 'showWeekNumbers' | 'hourHeightDensity'>
+      >,
+    ) => {
+      if (onSettingsChange) {
+        onSettingsChange(settings);
+      } else {
+        updateSettings.mutate(settings);
+      }
     },
-    [onSettingsChange],
+    [onSettingsChange, updateSettings],
   );
 
   const currentLabel = isMultiDayView(currentView)

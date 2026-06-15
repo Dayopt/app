@@ -106,7 +106,7 @@ const { isOpen, toggle } = useSidebarStore();
 ```typescript
 import { persist } from 'zustand/middleware';
 
-export const useCalendarSettingsStore = create<CalendarSettingsState>()(
+export const useLocalUiSettingsStore = create<LocalUiSettingsState>()(
   persist(
     (set) => ({
       hourHeight: 72,
@@ -142,13 +142,12 @@ const CalendarNavigationContext = createContext<CalendarNavigationContextValue |
 
 ### Zustand
 
-| ストア                     | 説明           | 理由                           |
-| -------------------------- | -------------- | ------------------------------ |
-| `useAuthStore`             | 認証状態       | 頻繁な更新、アプリ全体で使用   |
-| `useSidebarStore`          | サイドバー開閉 | 多数のコンポーネントから参照   |
-| `useCalendarSettingsStore` | カレンダー設定 | 永続化が必要                   |
-| `useEventStore`            | イベント管理   | 複雑な状態、デバッグツール必要 |
-| `useTaskStore`             | タスク管理     | 複雑な状態、デバッグツール必要 |
+| ストア            | 説明           | 理由                           |
+| ----------------- | -------------- | ------------------------------ |
+| `useAuthStore`    | 認証状態       | 頻繁な更新、アプリ全体で使用   |
+| `useSidebarStore` | サイドバー開閉 | 多数のコンポーネントから参照   |
+| `useEventStore`   | イベント管理   | 複雑な状態、デバッグツール必要 |
+| `useTaskStore`    | タスク管理     | 複雑な状態、デバッグツール必要 |
 
 ### Context API（正当な理由あり）
 

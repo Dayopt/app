@@ -40,12 +40,12 @@ export {
 } from './hooks/navigation/CalendarNavigationContext';
 
 // =============================================================================
-// Stores（app/ composition 層からの barrel import 用）
+// State / settings（app composition 層からのbarrel import用）
 // =============================================================================
 // Note: useInlineCreateStore / useCalendarFilterStore は barrel 公開せず deep import で参照する。
 // useUserPreferences は app-wide なserver stateのため @/lib/hooks/ 配下に置く。
+export { useCalendarSettings } from './hooks/useCalendarSettings';
 export { useCalendarNavigationStore } from './stores/useCalendarNavigationStore';
-export { useCalendarSettingsStore } from './stores/useCalendarSettingsStore';
 export type { UserSettings } from './stores/userSettings';
 // =============================================================================
 // Hooks

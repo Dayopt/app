@@ -34,7 +34,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 | 環境                    | ソース                                        | フォールバック                                     |
 | ----------------------- | --------------------------------------------- | -------------------------------------------------- |
-| **クライアント**        | `useCalendarSettingsStore((s) => s.timezone)` | `Intl.DateTimeFormat().resolvedOptions().timeZone` |
+| **クライアント**        | `useUserPreferences((s) => s.timezone)`       | `Intl.DateTimeFormat().resolvedOptions().timeZone` |
 | **サーバー (tRPC)**     | `user_settings.timezone` (DB)                 | `'UTC'`                                            |
 | **サーバー (SSR)**      | Cookie `user-tz` → `x-user-timezone` ヘッダー | `'UTC'`                                            |
 | **DB関数 (PostgreSQL)** | `get_user_timezone(p_user_id)`                | `'UTC'`                                            |
@@ -42,8 +42,8 @@ import { Meta } from '@storybook/addon-docs/blocks';
 ### クライアントでの取得パターン
 
 ```tsx
-// ✅ 正しい: Zustandストアから取得
-const timezone = useCalendarSettingsStore((s) => s.timezone);
+// ✅ 正しい: userSettings query cacheから取得
+const timezone = useUserPreferences((s) => s.timezone);
 
 // ✅ 正しい: ブラウザ検出（TZ未設定時のフォールバックのみ）
 import { getBrowserTimezone } from '@/lib/date/timezone';
@@ -265,7 +265,7 @@ Layer 2 (`@/lib/date/timezone.ts`) を唯一の変更点として維持。
 | ---------------------------------------------------- | ------------------------------------------------- |
 | `src/lib/date/timezone.ts`                           | Layer 2: 全TZユーティリティ（唯一のTZライブラリ） |
 | `src/lib/date/core.ts`                               | TZ非依存の日付計算（加算・比較等）                |
-| `src/stores/useCalendarSettingsStore.ts`             | Layer 1: クライアントTZ保持                       |
+| `src/lib/hooks/useUserPreferences.ts`                | Layer 1: クライアントTZ参照                       |
 | `src/middleware.ts`                                  | SSR: Cookie → ヘッダー転写                        |
 | `supabase/migrations/20260326000000_*.sql`           | DB: TZ対応統計関数                                |
 | `src/lib/date/__tests__/timezone-edge-cases.test.ts` | DST・半時間オフセット等のエッジケーステスト       |

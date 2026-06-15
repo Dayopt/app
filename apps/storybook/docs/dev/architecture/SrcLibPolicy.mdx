@@ -18,14 +18,14 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 置いてよいもの
 
-| カテゴリ                          | 例                                                                                     |
-| --------------------------------- | -------------------------------------------------------------------------------------- |
-| **feature 非依存の pure utility** | `logger` / `safe-redirect` / `date-utils` / `breakpoints` / `cn`                       |
-| **infrastructure adapter**        | `supabase/` / `trpc/` / `sentry/` / `rate-limit/` / `i18n/` / `stripe/`                |
-| **cross-cutting UI state**        | `lib/stores/useShellStore` / `useCalendarSettingsStore` / `useCalendarNavigationStore` |
-| **shared UI primitive**           | `lib/components/ui/`（shadcn-style primitive）                                         |
-| **横断的な型**                    | `lib/types/settings.ts`（複数 feature 参照、明確な残存理由あり）                       |
-| **shell-level orchestration**     | `lib/auth/domain/`（middleware / tRPC / proxy で共有される access policy）             |
+| カテゴリ                          | 例                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------- |
+| **feature 非依存の pure utility** | `logger` / `safe-redirect` / `date-utils` / `breakpoints` / `cn`           |
+| **infrastructure adapter**        | `supabase/` / `trpc/` / `sentry/` / `rate-limit/` / `i18n/` / `stripe/`    |
+| **cross-cutting UI state**        | `lib/stores/useShellStore` / `useCalendarNavigationStore`                  |
+| **shared UI primitive**           | `lib/components/ui/`（shadcn-style primitive）                             |
+| **横断的な型**                    | `lib/types/settings.ts`（複数 feature 参照、明確な残存理由あり）           |
+| **shell-level orchestration**     | `lib/auth/domain/`（middleware / tRPC / proxy で共有される access policy） |
 
 ---
 

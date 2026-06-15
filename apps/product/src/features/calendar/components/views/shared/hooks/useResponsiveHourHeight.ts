@@ -10,7 +10,7 @@
 
 import { useEffect } from 'react';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useCalendarSettings } from '@/features/calendar/hooks/useCalendarSettings';
 import { BREAKPOINT_VALUES } from '@/lib/breakpoints';
 import { create } from 'zustand';
 
@@ -47,7 +47,7 @@ export function useResponsiveHourHeight(): number {
  * 密度設定の変更にも対応。
  */
 export function useHourHeightSync(): void {
-  const density = useCalendarSettingsStore((s) => s.hourHeightDensity);
+  const density = useCalendarSettings((s) => s.hourHeightDensity);
   const config = HOUR_HEIGHT_DENSITIES[density];
   const setHourHeight = useHourHeightStore((s) => s.setHourHeight);
 
