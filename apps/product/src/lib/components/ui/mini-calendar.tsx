@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/lib/components/ui/select';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@/lib/utils';
 
 interface MiniCalendarProps {
@@ -99,8 +99,8 @@ export const MiniCalendar = memo<MiniCalendarProps>(
   }) => {
     const tCommon = useTranslations('common');
     const tActions = useTranslations('calendar.actions');
-    const weekStartsOn = useUserPreferenceStore((state) => state.weekStartsOn);
-    const showWeekNumbers = useUserPreferenceStore((state) => state.showWeekNumbers);
+    const weekStartsOn = useUserPreferences((state) => state.weekStartsOn);
+    const showWeekNumbers = useUserPreferences((state) => state.showWeekNumbers);
     const isMounted = useHasMounted();
     const [open, setOpen] = useState(false);
     const [viewMonth, setViewMonth] = useState(() => month ?? selectedDate ?? new Date());

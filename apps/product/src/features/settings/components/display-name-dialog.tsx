@@ -19,6 +19,7 @@ import { Label } from '@/lib/components/ui/label';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/lib/toast';
+import { api } from '@/lib/trpc';
 
 interface DisplayNameDialogProps {
   open: boolean;
@@ -34,6 +35,7 @@ export function DisplayNameDialog({ open, onOpenChange, currentName }: DisplayNa
   const user = useAuthStore((state) => state.user);
   const userId = user?.id;
   const supabase = createClient();
+  const updateProfile = api.userSettings.updateProfile.useMutation();
 
   const [displayName, setDisplayName] = useState(currentName);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,17 +48,7 @@ export function DisplayNameDialog({ open, onOpenChange, currentName }: DisplayNa
 
       setIsLoading(true);
       try {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            full_name: displayName.trim(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId);
-
-        if (profileError) {
-          throw new Error(profileError.message);
-        }
+        await updateProfile.mutateAsync({ fullName: displayName.trim() });
 
         const { error: authError } = await supabase.auth.updateUser({
           data: { full_name: displayName.trim() },
@@ -75,7 +67,7 @@ export function DisplayNameDialog({ open, onOpenChange, currentName }: DisplayNa
         setIsLoading(false);
       }
     },
-    [displayName, userId, supabase, t, onOpenChange],
+    [displayName, userId, updateProfile, supabase, t, onOpenChange],
   );
 
   const handleOpenChange = useCallback(

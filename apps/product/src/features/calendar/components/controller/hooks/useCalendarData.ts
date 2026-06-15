@@ -8,7 +8,7 @@ import { fromZonedTime } from 'date-fns-tz';
 import type { EntryWithTags } from '@/features/entry';
 import { useEntries } from '@/features/entry';
 import { useTags } from '@/features/tags';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
 import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';
 
@@ -80,8 +80,8 @@ export function useCalendarData({
   currentDate,
 }: UseCalendarDataOptions): UseCalendarDataResult {
   // 週の開始日設定とタイムゾーンを取得
-  const weekStartsOn = useUserPreferenceStore((state) => state.weekStartsOn);
-  const timezone = useUserPreferenceStore((state) => state.timezone);
+  const weekStartsOn = useUserPreferences((state) => state.weekStartsOn);
+  const timezone = useUserPreferences((state) => state.timezone);
 
   // ビューに応じた期間計算（週の開始日設定を反映）
   const viewDateRange = useMemo(() => {

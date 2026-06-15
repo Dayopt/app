@@ -20,8 +20,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/lib/components/ui/dropdown-menu';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { cn } from '@/lib/utils';
 import type { ShortcutDef } from '../../../hooks/keyboard/shortcut-registry';
 import { registerShortcuts } from '../../../hooks/keyboard/shortcut-registry';
@@ -68,7 +68,7 @@ export function ViewSwitcher({
 }: ViewSwitcherProps) {
   const t = useTranslations();
   const showWeekends = useCalendarSettingsStore((s) => s.showWeekends);
-  const showWeekNumbers = useUserPreferenceStore((s) => s.showWeekNumbers);
+  const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
   const hourHeightDensity = useCalendarSettingsStore((s) => s.hourHeightDensity);
 
   const persistSettings = useCallback(

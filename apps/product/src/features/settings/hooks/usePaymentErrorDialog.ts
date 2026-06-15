@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 import { api } from '@/lib/trpc';
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
@@ -37,8 +38,7 @@ export function usePaymentErrorDialog(): UsePaymentErrorDialogResult {
     retry: false,
   });
   const settingsQuery = api.userSettings.get.useQuery();
-  const updateSettings = api.userSettings.update.useMutation();
-  const utils = api.useUtils();
+  const updateSettings = useUpdateUserSettings();
 
   // データ取得完了後に表示判定（effect 内なので Date.now() が使える）
   // past_due から active 等へ遷移した場合は dialog を閉じ、stale な表示を残さない
@@ -58,15 +58,8 @@ export function usePaymentErrorDialog(): UsePaymentErrorDialogResult {
 
   const close = useCallback(() => {
     setOpen(false);
-    updateSettings.mutate(
-      { paymentErrorDialogLastShownAt: new Date().toISOString() },
-      {
-        onSuccess: () => {
-          utils.userSettings.get.invalidate();
-        },
-      },
-    );
-  }, [updateSettings, utils]);
+    updateSettings.mutate({ paymentErrorDialogLastShownAt: new Date().toISOString() });
+  }, [updateSettings]);
 
   return { open, close };
 }

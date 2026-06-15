@@ -11,7 +11,7 @@ import { resolveTagColor } from '@/features/tags';
 import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
 import { addWeeks } from '@/lib/date/core';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
@@ -50,7 +50,7 @@ export function WeeklyReview({ className }: ReviewViewProps) {
   const locale = useLocale();
   const router = useRouter();
   const currentDate = useReviewFilterStore((s) => s.currentDate);
-  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
+  const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
 
   const {
     data: pageData,

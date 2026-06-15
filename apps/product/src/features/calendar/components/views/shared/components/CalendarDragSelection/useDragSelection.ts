@@ -14,7 +14,7 @@ import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { formatTimeString } from '@/lib/date';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { toast } from '@/lib/toast';
 
 import {
@@ -183,7 +183,7 @@ export function useDragSelection({
   plans = [],
   hourHeight = HOUR_HEIGHT,
 }: UseDragSelectionOptions): UseDragSelectionReturn {
-  const defaultDuration = useUserPreferenceStore((state) => state.defaultDuration);
+  const defaultDuration = useUserPreferences((state) => state.defaultDuration);
   const { tap } = useHapticFeedback();
   const t = useTranslations('entry');
 

@@ -7,8 +7,8 @@ import { useCallback } from 'react';
 
 import { format } from 'date-fns';
 
-import type { DateFormatType } from '@/lib/stores/useUserPreferenceStore';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import type { DateFormatType } from '@/lib/hooks/useUserPreferences';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 interface UseDateFormatReturn {
   dateFormat: DateFormatType;
@@ -26,9 +26,9 @@ interface UseDateFormatReturn {
  * ユーザー設定に基づいて日付をフォーマットするフック
  */
 export function useDateFormat(): UseDateFormatReturn {
-  const dateFormat = useUserPreferenceStore((s) => s.dateFormat);
-  const timeFormat = useUserPreferenceStore((s) => s.timeFormat);
-  const timezone = useUserPreferenceStore((s) => s.timezone);
+  const dateFormat = useUserPreferences((s) => s.dateFormat);
+  const timeFormat = useUserPreferences((s) => s.timeFormat);
+  const timezone = useUserPreferences((s) => s.timezone);
 
   const formatDate = useCallback(
     (date: Date): string => {

@@ -8,7 +8,7 @@
 
 import { useMemo } from 'react';
 
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cacheStrategies } from '@/lib/tanstack-query/cache-config';
 import { api } from '@/lib/trpc';
 
@@ -20,8 +20,8 @@ const TAG_DASHBOARD_ENTRY_LIMIT = 50;
 export function useTagDashboardData(tagId: string) {
   const granularity = useReviewFilterStore((s) => s.granularity);
   const currentDate = useReviewFilterStore((s) => s.currentDate);
-  const timezone = useUserPreferenceStore((s) => s.timezone);
-  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
+  const timezone = useUserPreferences((s) => s.timezone);
+  const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
 
   const dateRange = useMemo(
     () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),

@@ -41,6 +41,15 @@ const userSettingsSchema = z.object({
   preferredLocale: z.enum(['en', 'ja']).optional(),
 });
 
+const profileUpdateSchema = z
+  .object({
+    fullName: z.string().trim().min(1).max(100).optional(),
+    avatarUrl: z.string().url().max(2048).nullable().optional(),
+  })
+  .refine((input) => input.fullName !== undefined || input.avatarUrl !== undefined, {
+    message: 'At least one profile field is required',
+  });
+
 /** ユーザー設定のtRPCルーター（取得・更新・iCalトークン管理） */
 export const userSettingsRouter = createTRPCRouter({
   /**
@@ -83,6 +92,17 @@ export const userSettingsRouter = createTRPCRouter({
         }
 
         return await createSettingsService(ctx.supabase).update(userId, input);
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
+  updateProfile: protectedProcedure
+    .meta({ description: 'プロフィール表示情報更新' })
+    .input(profileUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await createSettingsService(ctx.supabase).updateProfile(ctx.userId, input);
       } catch (error) {
         return handleServiceError(error);
       }

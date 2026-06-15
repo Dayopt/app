@@ -36,7 +36,7 @@ const defaultSettings: CalendarSettings = {
  * に独自コピーを保持しない。cold load 時は defaultSettings → TanStack Query の
  * 永続 cache から hydrate される流れでほぼ即時に正しい値になる。
  *
- * app-wide な user preference (timezone / weekStartsOn 等) は `useUserPreferenceStore`
+ * app-wide な user preference (timezone / weekStartsOn 等) は `useUserPreferences`
  * に分離されている。
  */
 export const useCalendarSettingsStore = create<CalendarSettingsStore>()(

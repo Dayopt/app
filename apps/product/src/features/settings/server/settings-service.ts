@@ -25,6 +25,11 @@ interface UserSettingsUpdateInput {
   preferredLocale?: 'en' | 'ja' | undefined;
 }
 
+interface ProfileUpdateInput {
+  fullName?: string | undefined;
+  avatarUrl?: string | null | undefined;
+}
+
 export class SettingsService {
   constructor(private readonly supabase: SupabaseClient<Database>) {}
 
@@ -116,6 +121,22 @@ export class SettingsService {
     }
 
     return { success: true, settings: data };
+  }
+
+  async updateProfile(userId: string, input: ProfileUpdateInput) {
+    const updateData: Database['public']['Tables']['profiles']['Update'] = {
+      updated_at: new Date().toISOString(),
+    };
+    if (input.fullName !== undefined) updateData.full_name = input.fullName;
+    if (input.avatarUrl !== undefined) updateData.avatar_url = input.avatarUrl;
+
+    const { error } = await this.supabase.from('profiles').update(updateData).eq('id', userId);
+    if (error) {
+      logger.error('Profile update error', { error });
+      throw new SettingsServiceError('UPDATE_FAILED', error.message);
+    }
+
+    return { success: true };
   }
 
   async getICalToken(userId: string) {

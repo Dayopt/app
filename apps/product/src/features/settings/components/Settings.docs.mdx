@@ -62,14 +62,18 @@ LabeledRow                      フォーム行コンポーネント
 | `isOpen`           | モーダル開閉   |
 | `selectedCategory` | 選択中カテゴリ |
 
-### useCalendarSettingsStore（persist）
+### userSettings query cache
 
-| State                   | 説明             |
-| ----------------------- | ---------------- |
-| timezone                | タイムゾーン     |
-| timeFormat / dateFormat | 時間・日付形式   |
-| weekStartDay            | 週開始日         |
-| sleepSchedule           | 睡眠スケジュール |
+| State                   | 説明                       |
+| ----------------------- | -------------------------- |
+| timezone                | タイムゾーン               |
+| timeFormat / dateFormat | 時間・日付形式             |
+| weekStartsOn            | 週開始日                   |
+| showWeekNumbers         | 週番号表示                 |
+| defaultDuration         | 新規エントリの既定時間     |
+| snapInterval            | ドラッグ操作のスナップ間隔 |
+
+参照は `@/lib/hooks/useUserPreferences`、更新は `@/lib/hooks/useUpdateUserSettings` を使用する。
 
 ---
 

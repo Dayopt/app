@@ -9,7 +9,7 @@ import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
 import { entryTintColor } from '@/features/entry';
 import { getTagColorClasses, TagIcon } from '@/features/tags';
 import { formatTimeString } from '@/lib/date';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import { cn } from '@/lib/utils';
 
@@ -47,7 +47,7 @@ interface DraftEntryBlockProps {
  */
 export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
   const t = useTranslations();
-  const timeFormat = useUserPreferenceStore((s) => s.timeFormat);
+  const timeFormat = useUserPreferences((s) => s.timeFormat);
   const updateTimes = useTagDraftStore((s) => s.updateTimes);
   const queryClient = useQueryClient();
 

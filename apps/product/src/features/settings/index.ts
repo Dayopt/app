@@ -7,8 +7,7 @@
  * ## このfeatureは通常featureではなく cross-cutting composition
  *
  * - ESLint feature DAG から除外されている（`apps/product/eslint.config.mjs` 参照）
- * - 他 feature の store を deep import するのは composition の責務として許容される例外運用
- *   （優先順: `@/lib/stores/*` > feature barrel > deep import）
+ * - 他 feature のUI storeをdeep importするのはcompositionの責務として許容される例外運用
  * - 自身の domain は持たない（business rule は calendar / billing 等が持つ）
  * - `userSettingsRouter` / `billingRouter` は settings UI からの書き込み入口として
  *   server を同居（billing は launch 後に独立 feature 化を検討）
@@ -43,8 +42,6 @@ export { TrialEndedDialog } from './components/TrialEndedDialog';
 // =============================================================================
 // Utils
 // =============================================================================
-// Note: getCurrentTimezone / setUserTimezone は削除済み。
-// タイムゾーンの取得は Zustand ストア (useCalendarSettingsStore) を使用すること。
-// ブラウザTZの検出には getBrowserTimezone from '@/lib/date' を使用。
+// タイムゾーン等のserver stateはuseUserPreferences経由でquery cacheから取得する。
 
 // ここにないものはfeature内部専用

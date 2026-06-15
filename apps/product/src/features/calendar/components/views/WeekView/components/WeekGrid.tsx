@@ -5,7 +5,7 @@ import React from 'react';
 import { getWeek } from 'date-fns';
 
 import { isTodayInTimezone } from '@/lib/date/timezone';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@/lib/utils';
 
 import {
@@ -45,8 +45,8 @@ export const WeekGrid = ({
   onTimeRangeSelect,
   className,
 }: WeekGridProps) => {
-  const timezone = useUserPreferenceStore((s) => s.timezone);
-  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
+  const timezone = useUserPreferences((s) => s.timezone);
+  const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
 
   // レスポンシブな時間高さ
   const hourHeight = useResponsiveHourHeight();

@@ -174,6 +174,38 @@ describe('SettingsService', () => {
     });
   });
 
+  describe('updateProfile', () => {
+    it('認証済みuser idだけを対象にプロフィールを更新する', async () => {
+      const query = createChainableMock(null);
+      const { service } = createService([query]);
+
+      await expect(
+        service.updateProfile(USER_ID, {
+          fullName: 'Dayopt User',
+          avatarUrl: 'https://example.com/avatar.png',
+        }),
+      ).resolves.toEqual({ success: true });
+
+      expect(query.update).toHaveBeenCalledWith({
+        full_name: 'Dayopt User',
+        avatar_url: 'https://example.com/avatar.png',
+        updated_at: expect.any(String),
+      });
+      expect(query.eq).toHaveBeenCalledWith('id', USER_ID);
+    });
+
+    it('プロフィール更新エラーはUPDATE_FAILEDを投げる', async () => {
+      const query = createChainableMock(null, { message: 'Profile failed', code: 'PGRST000' });
+      const { service } = createService([query]);
+
+      await expect(service.updateProfile(USER_ID, { avatarUrl: null })).rejects.toMatchObject({
+        name: 'SettingsServiceError',
+        code: 'UPDATE_FAILED',
+        message: 'Profile failed',
+      });
+    });
+  });
+
   describe('iCal token', () => {
     it('保存済みtokenを返す', async () => {
       const query = createChainableMock({ ...settingsRow, ical_feed_token: 'token-1' });

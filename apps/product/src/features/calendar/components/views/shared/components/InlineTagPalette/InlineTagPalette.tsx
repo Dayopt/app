@@ -28,9 +28,9 @@ import {
 } from '@/features/tags';
 import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { logger } from '@/lib/logger';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import { cn } from '@/lib/utils';
 
@@ -66,7 +66,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const pendingSelection = useInlineCreateStore.use.pendingSelection();
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
   const updateSelectionTimes = useInlineCreateStore.use.updateSelectionTimes();
-  const timezone = useUserPreferenceStore((s) => s.timezone);
+  const timezone = useUserPreferences((s) => s.timezone);
   const locale = useLocale();
   const t = useTranslations('tags');
   const tCalendar = useTranslations('calendar');
@@ -265,7 +265,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     return () => clearPendingSelection();
   }, [waitingForModal, clearPendingSelection]);
 
-  const timeFormat = useUserPreferenceStore((s) => s.timeFormat);
+  const timeFormat = useUserPreferences((s) => s.timeFormat);
   const [nowForPastCheck, setNowForPastCheck] = useState<number | null>(null);
 
   useEffect(() => {

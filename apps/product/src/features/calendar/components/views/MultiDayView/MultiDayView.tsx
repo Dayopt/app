@@ -5,7 +5,7 @@ import React, { useMemo } from 'react';
 import { format, getWeek } from 'date-fns';
 
 import { isTodayInTimezone } from '@/lib/date/timezone';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@/lib/utils';
 
 import { CalendarViewAnimation } from '../../animations/ViewTransition';
@@ -45,8 +45,8 @@ export function MultiDayView({
   onNavigateNext: _onNavigateNext,
   onNavigateToday: _onNavigateToday,
 }: MultiDayViewProps) {
-  const timezone = useUserPreferenceStore((s) => s.timezone);
-  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
+  const timezone = useUserPreferences((s) => s.timezone);
+  const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
   const HOUR_HEIGHT = useResponsiveHourHeight();
 
   const displayCenterDate = useMemo(() => {

@@ -18,6 +18,7 @@ import {
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { deleteAvatar, uploadAvatar } from '@/lib/supabase/storage';
+import { api } from '@/lib/trpc';
 
 interface AvatarChangeDialogProps {
   open: boolean;
@@ -32,6 +33,7 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
   const user = useAuthStore((state) => state.user);
   const userId = user?.id;
   const supabase = createClient();
+  const updateProfile = api.userSettings.updateProfile.useMutation();
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     user?.user_metadata?.avatar_url || null,
@@ -47,14 +49,7 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
         const publicUrl = await uploadAvatar(file, userId);
         setAvatarUrl(publicUrl);
 
-        // Update profile
-        await supabase
-          .from('profiles')
-          .update({
-            avatar_url: publicUrl,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId);
+        await updateProfile.mutateAsync({ avatarUrl: publicUrl });
 
         await supabase.auth.updateUser({
           data: { avatar_url: publicUrl },
@@ -66,7 +61,7 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
         setIsUploading(false);
       }
     },
-    [userId, supabase],
+    [userId, updateProfile, supabase],
   );
 
   const handleRemove = useCallback(async () => {
@@ -77,14 +72,7 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
       await deleteAvatar(userId);
       setAvatarUrl(null);
 
-      // Update profile
-      await supabase
-        .from('profiles')
-        .update({
-          avatar_url: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId);
+      await updateProfile.mutateAsync({ avatarUrl: null });
 
       await supabase.auth.updateUser({
         data: { avatar_url: null },
@@ -95,7 +83,7 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
     } finally {
       setIsUploading(false);
     }
-  }, [userId, supabase]);
+  }, [userId, updateProfile, supabase]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);

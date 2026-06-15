@@ -24,7 +24,6 @@ import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFi
 import { useCalendarNavigationStore } from '@/features/calendar/stores/useCalendarNavigationStore';
 import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
 // ─────────────────────────────────────────────────────────
 // Registry
@@ -43,7 +42,6 @@ const STORE_REGISTRY: Record<string, StoreApi<Record<string, unknown>>> = {
   useCalendarSettingsStore: useCalendarSettingsStore as unknown as StoreApi<
     Record<string, unknown>
   >,
-  useUserPreferenceStore: useUserPreferenceStore as unknown as StoreApi<Record<string, unknown>>,
   useShellStore: useShellStore as unknown as StoreApi<Record<string, unknown>>,
 };
 

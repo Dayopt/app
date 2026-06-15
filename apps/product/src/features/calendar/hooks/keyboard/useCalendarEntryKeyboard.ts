@@ -4,8 +4,8 @@ import { useEffect, useRef } from 'react';
 
 import { useEntryInspectorStore, useEntryMutations } from '@/features/entry';
 import { localTimeToUTCISO } from '@/lib/date/timezone';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { logger } from '@/lib/logger';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';
@@ -58,7 +58,7 @@ export function useCalendarEventKeyboard({
   const { isOpen, entryId, openInspector, closeInspector } = useEntryInspectorStore();
   const { createEntry } = useEntryMutations();
   // ユーザーの設定タイムゾーン（ペースト時のUTC変換に使用）
-  const timezone = useUserPreferenceStore((s: { timezone: string }) => s.timezone);
+  const timezone = useUserPreferences((s: { timezone: string }) => s.timezone);
 
   // コールバックの最新値を参照
   const onDeleteEntryRef = useRef(onDeleteEntry);

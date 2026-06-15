@@ -15,7 +15,7 @@ import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import { addDays } from '@/lib/date/core';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@/lib/utils';
 
 import { computeDailySummary } from '../../domain/dailySummary';
@@ -49,8 +49,8 @@ export function DailyReview({ className }: ReviewViewProps) {
   const locale = useLocale();
   const router = useRouter();
   const currentDate = useReviewFilterStore((s) => s.currentDate);
-  const timezone = useUserPreferenceStore((s) => s.timezone);
-  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
+  const timezone = useUserPreferences((s) => s.timezone);
+  const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
   const { tagsMap } = useTagsMap();
 
   const dateRange = useMemo(

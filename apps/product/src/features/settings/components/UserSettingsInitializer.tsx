@@ -13,11 +13,11 @@ interface UserSettingsInitializerProps {
 /**
  * UserSettings 初期化 + hydration gate コンポーネント
  *
- * Providers ツリーの最上位で一度だけ `useUserSettings` を呼び、DB から取得した
- * ユーザー設定を `useCalendarSettingsStore` に sync する。
+ * Providers ツリーの最上位で一度だけ `useUserSettings` を呼び、query cacheの確定と
+ * Calendar UI stateの初期化が終わるまでchildrenをgateする。
  *
  * なぜ gate が必要か:
- * ・useCalendarSettingsStore は persist を持たず、server が単一の source of truth
+ * ・server stateはTanStack Query、Calendar UI stateは移行中のZustandが保持する
  * ・timezone / weekStartsOn 等は entry 作成等の timezone-dependent mutation で
  *   読まれる。defaults (browser timezone) のまま mutation が動くと UTC 変換が
  *   ズレ、誤ったタイムスタンプで server に書き込まれる data integrity 問題になる

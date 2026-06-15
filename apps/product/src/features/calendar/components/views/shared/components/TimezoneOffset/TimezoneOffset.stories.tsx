@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { PRESET_USER_SETTINGS } from '@dayopt/storybook/mocks/presets';
+import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 
 import { TimezoneOffset } from './TimezoneOffset';
 
@@ -18,48 +19,32 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const withTimezone = (timezone: string) => ({
+  'userSettings.get': { ...PRESET_USER_SETTINGS.default, timezone },
+});
+
 // ─────────────────────────────────────────────────────────
 // Stories
 // ─────────────────────────────────────────────────────────
 
 /** デフォルト表示（Asia/Tokyo = UTC+9）。 */
 export const Default: Story = {
-  decorators: [
-    (Story) => {
-      useUserPreferenceStore.setState({ timezone: 'Asia/Tokyo' });
-      return <Story />;
-    },
-  ],
+  parameters: { trpcMocks: withTimezone('Asia/Tokyo') },
 };
 
 /** UTC+0（ロンドン）。 */
 export const UTC: Story = {
-  decorators: [
-    (Story) => {
-      useUserPreferenceStore.setState({ timezone: 'Europe/London' });
-      return <Story />;
-    },
-  ],
+  parameters: { trpcMocks: withTimezone('Europe/London') },
 };
 
 /** UTC-5（ニューヨーク）。 */
 export const NewYork: Story = {
-  decorators: [
-    (Story) => {
-      useUserPreferenceStore.setState({ timezone: 'America/New_York' });
-      return <Story />;
-    },
-  ],
+  parameters: { trpcMocks: withTimezone('America/New_York') },
 };
 
 /** UTC-8（ロサンゼルス）。 */
 export const LosAngeles: Story = {
-  decorators: [
-    (Story) => {
-      useUserPreferenceStore.setState({ timezone: 'America/Los_Angeles' });
-      return <Story />;
-    },
-  ],
+  parameters: { trpcMocks: withTimezone('America/Los_Angeles') },
 };
 
 /** カスタムクラス付き。 */
@@ -67,12 +52,7 @@ export const WithClassName: Story = {
   args: {
     className: 'text-foreground',
   },
-  decorators: [
-    (Story) => {
-      useUserPreferenceStore.setState({ timezone: 'Asia/Tokyo' });
-      return <Story />;
-    },
-  ],
+  parameters: { trpcMocks: withTimezone('Asia/Tokyo') },
 };
 
 /** 全パターン一覧（各タイムゾーン）。 */
@@ -88,15 +68,14 @@ export const AllPatterns: Story = {
 
     return (
       <div className="flex flex-col gap-4">
-        {timezones.map(({ label, tz }) => {
-          useUserPreferenceStore.setState({ timezone: tz });
-          return (
-            <div key={tz} className="flex items-center gap-4">
+        {timezones.map(({ label, tz }) => (
+          <StoryTRPCProvider key={tz} mocks={withTimezone(tz)}>
+            <div className="flex items-center gap-4">
               <span className="text-muted-foreground w-52 text-xs">{label}</span>
               <TimezoneOffset />
             </div>
-          );
-        })}
+          </StoryTRPCProvider>
+        ))}
       </div>
     );
   },
