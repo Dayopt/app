@@ -177,7 +177,7 @@
     "eslint-plugin-storybook": "^10.4.2",
     "eslint-plugin-tailwindcss": "^4.0.0-beta.0",
     "glob": "^13.0.6",
-    "happy-dom": "^20.10.2",
+    "happy-dom": "^20.10.3",
     "husky": "^9.1.7",
     "knip": "^5.88.1",
     "license-checker": "^25.0.1",
