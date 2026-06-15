@@ -6,11 +6,7 @@ import { useUserSettings } from './useUserSettings';
 /**
  * I-03 characterization test（consumer hook の公開挙動）
  *
- * 目的: Phase 4（server-state store の TanStack Query 移行）の前に、
- * `useUserSettings` の返り値とCalendar UI stateのhydration境界を固定する。
- *
- * store 実装（Zustand）は移行で置き換わるため、store の内部状態ではなく
- * server stateはquery cacheを直接参照するためstoreへの複製はしない。
+ * query stateと公開APIの契約を固定する。
  */
 
 // query 返り値をテストごとに差し替える
@@ -30,7 +26,6 @@ let mockQuery: QueryResult = {
 const mockInvalidate = vi.fn();
 const mockEntriesInvalidate = vi.fn();
 const mockMutate = vi.fn();
-const mockDispatchUserSettings = vi.fn();
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
@@ -61,13 +56,9 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
-vi.mock('@/features/calendar/stores/userSettings', () => ({
-  dispatchUserSettings: (settings: unknown) => mockDispatchUserSettings(settings),
-}));
-
-// Calendar UI storeとquery-backed preferencesは固定値を返す
-vi.mock('@/features/calendar/stores/useCalendarSettingsStore', () => ({
-  useCalendarSettingsStore: () => ({
+// query-backedな2つのsettings hookは固定値を返す
+vi.mock('@/features/calendar/hooks/useCalendarSettings', () => ({
+  useCalendarSettings: () => ({
     defaultView: 'week',
     showWeekends: true,
     hourHeightDensity: 'default',
@@ -166,41 +157,6 @@ describe('useUserSettings（query state → flag の写像）', () => {
   });
 });
 
-describe('useUserSettings（Calendar UI state hydration）', () => {
-  beforeEach(() => {
-    mockQuery = { data: undefined, isPending: true, fetchStatus: 'fetching', error: null };
-    vi.clearAllMocks();
-  });
-
-  it('isPending 中はCalendar UI stateへapplyしない', () => {
-    mockQuery = { data: undefined, isPending: true, fetchStatus: 'fetching', error: null };
-    renderHook(() => useUserSettings());
-    expect(mockDispatchUserSettings).not.toHaveBeenCalled();
-  });
-
-  it('data解決後はCalendar専用設定だけをstoreへapplyする', () => {
-    mockQuery = { data: DB_SETTINGS, isPending: false, fetchStatus: 'idle', error: null };
-    renderHook(() => useUserSettings());
-    expect(mockDispatchUserSettings).toHaveBeenCalledTimes(1);
-    expect(mockDispatchUserSettings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        showWeekends: true,
-        defaultView: 'week',
-        hourHeightDensity: 'comfortable',
-      }),
-    );
-    expect(mockDispatchUserSettings).not.toHaveBeenCalledWith(
-      expect.objectContaining({ timezone: expect.anything() }),
-    );
-  });
-
-  it('data=null（新規ユーザー）では apply せず defaults を維持する', () => {
-    mockQuery = { data: null, isPending: false, fetchStatus: 'idle', error: null };
-    renderHook(() => useUserSettings());
-    expect(mockDispatchUserSettings).not.toHaveBeenCalled();
-  });
-});
-
 describe('useUserSettings（saveSettings の楽観的更新契約）', () => {
   beforeEach(() => {
     mockQuery = { data: DB_SETTINGS, isPending: false, fetchStatus: 'idle', error: null };
@@ -209,28 +165,22 @@ describe('useUserSettings（saveSettings の楽観的更新契約）', () => {
 
   it('server settingはquery mutationだけを実行する', () => {
     const { result } = renderHook(() => useUserSettings());
-    // 初回 apply 分の dispatch をクリアしてから saveSettings を検証
-    mockDispatchUserSettings.mockClear();
 
     result.current.saveSettings({ timezone: 'Europe/London' });
 
-    expect(mockDispatchUserSettings).not.toHaveBeenCalled();
     expect(mockMutate).toHaveBeenCalledWith({ timezone: 'Europe/London' });
   });
 
-  it('Calendar UI settingはstoreにも即時dispatchする', () => {
+  it('Calendar settingも同じquery mutationを実行する', () => {
     const { result } = renderHook(() => useUserSettings());
-    mockDispatchUserSettings.mockClear();
 
     result.current.saveSettings({ showWeekends: false });
 
-    expect(mockDispatchUserSettings).toHaveBeenCalledWith({ showWeekends: false });
     expect(mockMutate).toHaveBeenCalledWith({ showWeekends: false });
   });
 
   it('変更フィールドが無い場合は mutate しない', () => {
     const { result } = renderHook(() => useUserSettings());
-    mockDispatchUserSettings.mockClear();
 
     result.current.saveSettings({});
 

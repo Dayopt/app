@@ -2,7 +2,7 @@
  * カレンダーグリッドの密度設定
  *
  * 元々 features/calendar/components/views/shared/constants/grid.constants.ts に定義されていたが、
- * useCalendarSettingsStore が features を跨いで使用するため、共有レイヤーに移動。
+ * useCalendarSettings が features を跨いで使用するため、共有レイヤーに移動。
  *
  * Note: グリッドレイアウトの詳細定数（HOUR_HEIGHT, MIN_EVENT_HEIGHT 等）は
  * カレンダー機能内部にそのまま残る。ここではストアが型として必要な最小限のみ定義。

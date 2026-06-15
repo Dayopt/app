@@ -3,8 +3,9 @@ import { useCallback, useEffect, useRef } from 'react';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useCalendarSettings } from '@/features/calendar/hooks/useCalendarSettings';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
+import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 import type { ShortcutDef } from './shortcut-registry';
 import { registerShortcut } from './shortcut-registry';
 
@@ -14,16 +15,19 @@ import { registerShortcut } from './shortcut-registry';
 export function useWeekendToggleShortcut(
   onSettingsChange?: ((settings: Partial<UserSettings>) => void) | undefined,
 ) {
-  const showWeekends = useCalendarSettingsStore((s) => s.showWeekends);
-  const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
+  const showWeekends = useCalendarSettings((s) => s.showWeekends);
+  const updateSettings = useUpdateUserSettings();
   const t = useTranslations('calendar.toast');
 
   const persistSettings = useCallback(
-    (settings: Partial<UserSettings>) => {
-      updateSettings(settings);
-      onSettingsChange?.(settings);
+    (settings: Pick<UserSettings, 'showWeekends'>) => {
+      if (onSettingsChange) {
+        onSettingsChange(settings);
+      } else {
+        updateSettings.mutate(settings);
+      }
     },
-    [updateSettings, onSettingsChange],
+    [onSettingsChange, updateSettings],
   );
 
   // Ref for latest values in shortcut handler

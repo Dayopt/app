@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 import { logger } from '@/lib/logger';
 
 import { useWeekendNavigation } from '../../../hooks/navigation/useWeekendNavigation';
@@ -27,7 +27,7 @@ export function useCalendarNavigationHandlers({
   navigateToDate,
   changeView,
 }: UseCalendarNavigationHandlersOptions) {
-  const updateSettings = useCalendarSettingsStore((state) => state.updateSettings);
+  const updateSettings = useUpdateUserSettings();
 
   // 週末スキップナビゲーション（フック化）
   const { handleTodayWithWeekendSkip, handleWeekendSkipNavigation, adjustWeekendDate } =
@@ -95,7 +95,7 @@ export function useCalendarNavigationHandlers({
 
   // キーボードショートカット用
   const handleToggleWeekends = useCallback(() => {
-    updateSettings({ showWeekends: !showWeekends });
+    updateSettings.mutate({ showWeekends: !showWeekends });
   }, [updateSettings, showWeekends]);
 
   // 日付選択ハンドラー（週末調整フック使用）

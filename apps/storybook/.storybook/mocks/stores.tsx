@@ -22,7 +22,6 @@ import type { StoreApi } from 'zustand';
 import { useAuthStore } from '@/features/auth';
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 import { useCalendarNavigationStore } from '@/features/calendar/stores/useCalendarNavigationStore';
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 // ─────────────────────────────────────────────────────────
@@ -37,9 +36,6 @@ const STORE_REGISTRY: Record<string, StoreApi<Record<string, unknown>>> = {
   useAuthStore: useAuthStore as unknown as StoreApi<Record<string, unknown>>,
   useCalendarFilterStore: useCalendarFilterStore as unknown as StoreApi<Record<string, unknown>>,
   useCalendarNavigationStore: useCalendarNavigationStore as unknown as StoreApi<
-    Record<string, unknown>
-  >,
-  useCalendarSettingsStore: useCalendarSettingsStore as unknown as StoreApi<
     Record<string, unknown>
   >,
   useShellStore: useShellStore as unknown as StoreApi<Record<string, unknown>>,

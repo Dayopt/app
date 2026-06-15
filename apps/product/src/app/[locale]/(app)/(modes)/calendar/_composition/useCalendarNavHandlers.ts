@@ -12,7 +12,7 @@ import { useCallback, useMemo } from 'react';
 import type { CalendarViewType, UserSettings } from '@/features/calendar';
 import {
   useCalendarNavigationHandlers,
-  useCalendarSettingsStore,
+  useCalendarSettings,
   useWeekendToggleShortcut,
 } from '@/features/calendar';
 import { useUserSettings } from '@/features/settings';
@@ -52,7 +52,7 @@ export function useCalendarNavHandlers({
   navigateToDate,
   changeView,
 }: CalendarNavHandlersInput): CalendarNavHandlersResult {
-  const showWeekends = useCalendarSettingsStore((s) => s.showWeekends);
+  const showWeekends = useCalendarSettings((s) => s.showWeekends);
   const { saveSettings } = useUserSettings();
 
   const {
