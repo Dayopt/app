@@ -155,4 +155,81 @@ describe('createGitHubIssue', () => {
       'GitHub API configuration is missing',
     );
   });
+
+  it('GitHub API向けの必須headerとlabelsを送る', async () => {
+    const createGitHubIssue = await importService();
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ html_url: 'https://github.com/issues/3', number: 3 }),
+    });
+
+    await createGitHubIssue(defaultParams);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.github.com/repos/test-owner/test-repo/issues',
+      expect.objectContaining({
+        headers: {
+          Authorization: 'token ghp_test_token',
+          'Content-Type': 'application/json',
+          Accept: 'application/vnd.github.v3+json',
+        },
+        body: expect.any(String),
+      }),
+    );
+    const request = mockFetch.mock.calls[0]![1] as RequestInit;
+    expect(JSON.parse(request.body as string)).toMatchObject({
+      labels: ['contact', 'app', 'bug'],
+    });
+  });
+
+  it('複数行とUnicodeを含むmessageをそのまま保持する', async () => {
+    const createGitHubIssue = await importService();
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ html_url: 'https://github.com/issues/4', number: 4 }),
+    });
+    const message = '一行目\n\nSecond line: <script>alert(1)</script>';
+
+    await createGitHubIssue({
+      ...defaultParams,
+      input: { ...defaultParams.input, message },
+    });
+
+    const request = mockFetch.mock.calls[0]![1] as RequestInit;
+    const body = JSON.parse(request.body as string) as { body: string };
+    expect(body.body).toContain(message);
+  });
+
+  it('GITHUB_TOKENだけ未設定でもAPIを呼ばない', async () => {
+    const createGitHubIssue = await importService({
+      GITHUB_TOKEN: '',
+      GITHUB_CONTACT_REPO: 'test-owner/test-repo',
+    });
+
+    await expect(createGitHubIssue(defaultParams)).rejects.toMatchObject({
+      code: 'GITHUB_API_FAILED',
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('GITHUB_CONTACT_REPOだけ未設定でもAPIを呼ばない', async () => {
+    const createGitHubIssue = await importService({
+      GITHUB_TOKEN: 'ghp_test_token',
+      GITHUB_CONTACT_REPO: '',
+    });
+
+    await expect(createGitHubIssue(defaultParams)).rejects.toMatchObject({
+      code: 'GITHUB_API_FAILED',
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('network errorを呼び出し元へ伝播する', async () => {
+    const createGitHubIssue = await importService();
+    const networkError = new TypeError('fetch failed');
+    mockFetch.mockRejectedValueOnce(networkError);
+
+    await expect(createGitHubIssue(defaultParams)).rejects.toBe(networkError);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
 });
