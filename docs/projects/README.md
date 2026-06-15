@@ -21,6 +21,7 @@ Project 単位の完了記録アーカイブ。詳細な工程は各 project の
 | `cleanup-2026-04-26`          | 2026-04-26 | cleanup plan          | [overview](./cleanup-2026-04-26/overview.md)                       |
 | `mcp-server`                  | 2026-04-30 | design                | [overview](./mcp-server/overview.md)                               |
 | `timeline-precision-redesign` | 2026-04-28 | design                | [overview](./timeline-precision-redesign/overview.md)              |
+| `codebase-refactoring`        | 2026-06-15 | 24 issue / Phase 0-7  | [summary](./codebase-refactoring/summary.md)                       |
 
 ## 命名規則
 

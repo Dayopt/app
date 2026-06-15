@@ -167,9 +167,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
-          {/* onSubmit は event handler として submit 時にのみ turnstileRef.current を読む。
-              react-hooks/refs が handleSubmit(onSubmit) の closure 解析で誤検知するため disable */}
-          {/* eslint-disable-next-line react-hooks/refs */}
+          {/* eslint-disable-next-line react-hooks/refs -- onSubmit は submit 時のみ turnstileRef.current を読む event handler。handleSubmit(onSubmit) の closure 解析による誤検知を抑制 */}
           <form className="p-6 md:p-8" onSubmit={handleSubmit(onSubmit)}>
             <FieldGroup>
               <div className="flex flex-col items-center text-center">

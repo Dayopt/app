@@ -45,7 +45,7 @@ export function useInspectorURLSync() {
         isUpdatingFromURLRef.current = false;
       }, 0);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 初回マウント時のみ URL から復元する意図的な mount-only effect
   }, []);
 
   // インスペクタ状態変更時: URLを更新

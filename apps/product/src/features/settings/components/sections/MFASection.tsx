@@ -161,7 +161,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
                 </p>
                 {/* QRコードは白背景必須（読み取り精度のため） */}
                 <div className="flex justify-center rounded-2xl bg-white p-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {/* eslint-disable-next-line @next/next/no-img-element -- qrCode は動的生成の data URL。next/image の最適化対象外で利点がなく img で十分 */}
                   <img src={qrCode} alt="QR Code" className="h-48 w-48" />
                 </div>
                 <p className="text-muted-foreground mt-2 text-xs">

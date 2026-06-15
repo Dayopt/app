@@ -7,6 +7,12 @@ export default [
   {
     ignores: ['node_modules/', '.next/', 'out/', 'public/', '**/*.d.ts'],
   },
+  // 未使用の eslint-disable ディレクティブを error 扱いにする（再発防止）
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: 'error',
+    },
+  },
   {
     files: ['**/*.{ts,tsx,js,jsx}'],
     plugins: {
