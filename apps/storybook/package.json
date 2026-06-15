@@ -30,7 +30,7 @@
     "@storybook/addon-mcp": "^0.6.0",
     "@storybook/addon-vitest": "^10.4.4",
     "@storybook/nextjs-vite": "^10.4.4",
-    "@tailwindcss/vite": "^4.3.0",
+    "@tailwindcss/vite": "^4.3.1",
     "@vueless/storybook-dark-mode": "^10.0.8",
     "eslint-plugin-storybook": "^10.4.4",
     "mermaid": "^11.15.0",
