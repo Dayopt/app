@@ -8,7 +8,10 @@ on:
       - 'apps/product/src/features/*/services/**'
       - 'apps/product/src/platform/supabase/**'
       - 'supabase/migrations/**'
-      - 'apps/product/src/test/integration/**'
+      - 'apps/product/src/lib/test/integration/**'
+      - 'apps/product/vitest.config.integration.ts'
+      - 'scripts/generate-rls-snapshot.ts'
+      - 'apps/storybook/docs/dev/db/rls-snapshot.md'
   push:
     branches: [main]
     paths:
@@ -16,7 +19,10 @@ on:
       - 'apps/product/src/features/*/services/**'
       - 'apps/product/src/platform/supabase/**'
       - 'supabase/migrations/**'
-      - 'apps/product/src/test/integration/**'
+      - 'apps/product/src/lib/test/integration/**'
+      - 'apps/product/vitest.config.integration.ts'
+      - 'scripts/generate-rls-snapshot.ts'
+      - 'apps/storybook/docs/dev/db/rls-snapshot.md'
 
 env:
   NODE_VERSION: '22'
