@@ -4,8 +4,6 @@
 
 import { useMemo } from 'react';
 
-import { isSameDay } from 'date-fns';
-
 import { getDateKey } from '@/lib/date';
 import type { CalendarEvent } from '../../../../types/base.types';
 import { isValidEvent } from '../utils/dateHelpers';
@@ -16,6 +14,7 @@ interface UseEntriesByDateOptions {
   dates: Date[];
   entries: CalendarEvent[];
   sortType?: 'standard' | 'agenda';
+  timezone?: string;
 }
 
 /** useEntriesByDate フックの戻り値 */
@@ -39,13 +38,14 @@ export function useEntriesByDate({
   dates,
   entries = [],
   sortType = 'standard',
+  timezone,
 }: UseEntriesByDateOptions): UseEntriesByDateReturn {
   const entriesByDate = useMemo(() => {
     const grouped: Record<string, CalendarEvent[]> = {};
 
     // Step 1: 各日付のキーを初期化
     dates.forEach((date) => {
-      const dateKey = getDateKey(date);
+      const dateKey = getDateKey(date, timezone);
       grouped[dateKey] = [];
     });
 
@@ -74,10 +74,12 @@ export function useEntriesByDate({
         const entryEnd = entry.endDate instanceof Date ? entry.endDate : new Date(entry.endDate);
 
         if (!isNaN(entryEnd.getTime())) {
+          const startKey = getDateKey(entryStart, timezone);
+          const endKey = getDateKey(entryEnd, timezone);
           // 期間内の日付のみ処理
           dates.forEach((date) => {
-            if (date >= entryStart && date <= entryEnd) {
-              const dateKey = getDateKey(date);
+            const dateKey = getDateKey(date, timezone);
+            if (dateKey >= startKey && dateKey <= endKey) {
               if (grouped[dateKey]) {
                 grouped[dateKey].push(entry);
               }
@@ -88,9 +90,10 @@ export function useEntriesByDate({
       }
 
       // 単日エントリの場合
+      const entryDateKey = getDateKey(entryStart, timezone);
       dates.forEach((date) => {
-        if (isSameDay(entryStart, date)) {
-          const dateKey = getDateKey(date);
+        const dateKey = getDateKey(date, timezone);
+        if (entryDateKey === dateKey) {
           if (grouped[dateKey]) {
             grouped[dateKey].push(entry);
           }
@@ -103,7 +106,7 @@ export function useEntriesByDate({
       sortType === 'agenda' ? sortAgendaEventsByDateKeys(grouped) : sortEventsByDateKeys(grouped);
 
     return sortedResult;
-  }, [dates, entries, sortType]);
+  }, [dates, entries, sortType, timezone]);
 
   // 統計情報も提供
   const totalEntries = useMemo(() => {

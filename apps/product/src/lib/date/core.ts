@@ -14,6 +14,8 @@
  * ```
  */
 
+import { formatInTimeZone } from 'date-fns-tz';
+
 import { MS_PER_DAY } from './constants';
 
 // ========================================
@@ -276,9 +278,17 @@ export function getMonthDates(date: Date): Date[] {
 
 /**
  * 日付キー生成（YYYY-MM-DD形式）
- * キャッシュキーやMapのキーとして使用
+ * キャッシュキーやMapのキーとして使用。
+ *
+ * timezone を渡した場合はユーザーTZでの日付をキーにする。
+ * カレンダーの日次バケットは DB/RPC のユーザーTZ境界を正とし、
+ * クライアント側でブラウザローカルTZに依存して再解釈しない。
  */
-export function getDateKey(date: Date): string {
+export function getDateKey(date: Date, timezone?: string): string {
+  if (timezone) {
+    return formatInTimeZone(date, timezone, 'yyyy-MM-dd');
+  }
+
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');

@@ -45,6 +45,7 @@
     "../../supabase/functions/**",
     "src/lib/test/integration/**",
     "src/lib/test/storybook-setup*.ts",
+    "vitest.config*.ts",
     "../../scripts/**"
   ]
 }

@@ -532,6 +532,13 @@ describe('Date Core Utilities', () => {
 
         expect(getDateKey(date)).toBe('2024-01-05');
       });
+
+      it('should generate date key in explicit timezone', () => {
+        const date = new Date('2026-03-29T15:30:00.000Z');
+
+        expect(getDateKey(date, 'Asia/Tokyo')).toBe('2026-03-30');
+        expect(getDateKey(date, 'America/New_York')).toBe('2026-03-29');
+      });
     });
 
     describe('getMonthKey', () => {

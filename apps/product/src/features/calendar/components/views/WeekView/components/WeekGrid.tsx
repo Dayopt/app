@@ -126,7 +126,7 @@ export const WeekGrid = ({
       >
         {/* 7日分のグリッド */}
         {weekDates.map((date, dayIndex) => {
-          const dateKey = getDateKey(date);
+          const dateKey = getDateKey(date, timezone);
           // TZ変換済みのentriesByDateを使用（eventsByDateはTZ未対応）
           const dayEvents = tzEntriesByDate[dateKey] || [];
 

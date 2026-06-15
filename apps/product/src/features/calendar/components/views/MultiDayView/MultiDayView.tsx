@@ -58,6 +58,7 @@ export function MultiDayView({
   const { displayDates } = useMultiDayView({
     centerDate: displayCenterDate,
     dayCount,
+    timezone,
     events: entries,
     showWeekends,
   });

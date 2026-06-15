@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 
-import { isSameDay, isValid } from 'date-fns';
+import { isValid } from 'date-fns';
 
+import { getDateKey } from '@/lib/date';
 import { layoutEntryToVerticalPosition } from '../../../../lib/grid';
-import { applyTimezoneToDisplayDates } from '../../../../lib/plan-data-adapter';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
 import { HOUR_HEIGHT } from '../constants/grid.constants';
@@ -49,27 +49,26 @@ export function useViewEntries({
   hourHeight = HOUR_HEIGHT,
   timezone,
 }: UseViewEntriesOptions): UseViewEntriesReturn {
-  // TZ変換を適用（Planのみ、Recordは変換しない）
-  const tzEntries = useMemo(
-    () => entries.map((p) => applyTimezoneToDisplayDates(p, timezone)),
-    [entries, timezone],
-  );
-
-  // 指定日のエントリのみフィルター（displayStartDateで判定）
+  // 指定日のエントリのみフィルター（raw startDate + ユーザーTZの日付キーで判定）
   const dayEntries = useMemo(() => {
-    if (!tzEntries || !Array.isArray(tzEntries)) {
+    if (!entries || !Array.isArray(entries)) {
       return [];
     }
-    const result = tzEntries.filter((entry) => {
-      if (!entry.displayStartDate || !isValid(new Date(entry.displayStartDate))) {
+    const dateKey = getDateKey(date, timezone);
+    const result = entries.filter((entry) => {
+      if (
+        !entry.startDate ||
+        !entry.displayStartDate ||
+        !isValid(new Date(entry.displayStartDate))
+      ) {
         return false;
       }
 
-      return isSameDay(entry.displayStartDate, date);
+      return getDateKey(entry.startDate, timezone) === dateKey;
     });
 
     return result;
-  }, [date, tzEntries]);
+  }, [date, entries, timezone]);
 
   // CalendarEventをuseEntryLayoutCalculatorで期待される形式に変換
   // displayStartDate/displayEndDateを使用してTZ対応の位置計算を実現

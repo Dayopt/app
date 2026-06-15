@@ -8,6 +8,7 @@ import { fromZonedTime } from 'date-fns-tz';
 import type { EntryWithTags } from '@/features/entry';
 import { useEntries } from '@/features/entry';
 import { useTags } from '@/features/tags';
+import { getDateKey } from '@/lib/date';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
 import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';
@@ -15,6 +16,7 @@ import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 
 import { calculateViewDateRange } from '../../../domain/view-range';
+import { applyTimezoneToDisplayDates } from '../../../lib/plan-data-adapter';
 
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../../../types/calendar.types';
 import { getMultiDayCount, isMultiDayView } from '../../../types/calendar.types';
@@ -214,7 +216,9 @@ export function useCalendarData({
         tagId: e.tagId ?? null,
       })) as EntryWithTags[];
       const expandedEvents = expandEntriesToCalendarEvents(normalized, timezone);
-      calendarPlans.push(...expandedEvents);
+      calendarPlans.push(
+        ...expandedEvents.map((event) => applyTimezoneToDisplayDates(event, timezone)),
+      );
     }
 
     return calendarPlans;
@@ -226,37 +230,22 @@ export function useCalendarData({
       return [];
     }
 
-    // 表示範囲内のイベントのみをフィルタリング
-    const startDateOnly = new Date(
-      viewDateRange.start.getFullYear(),
-      viewDateRange.start.getMonth(),
-      viewDateRange.start.getDate(),
-    );
-    const endDateOnly = new Date(
-      viewDateRange.end.getFullYear(),
-      viewDateRange.end.getMonth(),
-      viewDateRange.end.getDate(),
-    );
+    // 表示範囲内のイベントのみをフィルタリング。
+    // 日次バケットはユーザーTZの yyyy-MM-dd を正とし、ブラウザTZでは再計算しない。
+    const startDateKey = getDateKey(viewDateRange.start, timezone);
+    const endDateKey = getDateKey(viewDateRange.end, timezone);
 
     const filtered = allCalendarEvents.filter((event) => {
       if (!event.startDate || !event.endDate) {
         return false;
       }
-      const eventStartDateOnly = new Date(
-        event.startDate.getFullYear(),
-        event.startDate.getMonth(),
-        event.startDate.getDate(),
-      );
-      const eventEndDateOnly = new Date(
-        event.endDate.getFullYear(),
-        event.endDate.getMonth(),
-        event.endDate.getDate(),
-      );
+      const eventStartDateKey = getDateKey(event.startDate, timezone);
+      const eventEndDateKey = getDateKey(event.endDate, timezone);
 
       return (
-        (eventStartDateOnly >= startDateOnly && eventStartDateOnly <= endDateOnly) ||
-        (eventEndDateOnly >= startDateOnly && eventEndDateOnly <= endDateOnly) ||
-        (eventStartDateOnly <= startDateOnly && eventEndDateOnly >= endDateOnly)
+        (eventStartDateKey >= startDateKey && eventStartDateKey <= endDateKey) ||
+        (eventEndDateKey >= startDateKey && eventEndDateKey <= endDateKey) ||
+        (eventStartDateKey <= startDateKey && eventEndDateKey >= endDateKey)
       );
     });
 
@@ -267,7 +256,7 @@ export function useCalendarData({
 
     return visibilityFiltered;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleTagIds はリアクティブ依存（関数参照は安定のため直接依存不可）
-  }, [viewDateRange, allCalendarEvents, isEntryVisible, visibleTagIds]);
+  }, [viewDateRange, allCalendarEvents, timezone, isEntryVisible, visibleTagIds]);
 
   return {
     viewDateRange,
