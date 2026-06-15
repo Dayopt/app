@@ -110,7 +110,7 @@ export const entriesStatisticsSummaryRouter = createTRPCRouter({
 
   /** Time P/L 用のタグ別予実データ + 日次ポイント */
   getTimePL: protectedProcedure
-    .meta({ description: 'Time P/L データ取得（タグ別予実 + 日次累積）' })
+    .meta({ description: 'Time P/L データ取得（タグ別予実）' })
     .input(
       z.object({
         startDate: z.string().datetime({ offset: true }),

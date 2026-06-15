@@ -919,35 +919,6 @@
         "x-auth-level": "pro"
       }
     },
-    "/entries.getEntryRate": {
-      "get": {
-        "operationId": "entries.getEntryRate",
-        "tags": ["entries"],
-        "summary": "エントリ率KPI（計画エントリ / 全エントリ）",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getEntryRate_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
     "/entries.getEstimationAccuracy": {
       "get": {
         "operationId": "entries.getEstimationAccuracy",
@@ -977,64 +948,6 @@
         "x-auth-level": "pro"
       }
     },
-    "/entries.getEnergyMap": {
-      "get": {
-        "operationId": "entries.getEnergyMap",
-        "tags": ["entries"],
-        "summary": "エネルギーマップ（時間帯×曜日の活動分布）",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getEnergyMap_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getContextSwitches": {
-      "get": {
-        "operationId": "entries.getContextSwitches",
-        "tags": ["entries"],
-        "summary": "コンテキストスイッチ回数（タグ変化頻度）",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getContextSwitches_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
     "/entries.getBlankRate": {
       "get": {
         "operationId": "entries.getBlankRate",
@@ -1050,64 +963,6 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/entries_getBlankRate_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getCumulativeTime": {
-      "get": {
-        "operationId": "entries.getCumulativeTime",
-        "tags": ["entries"],
-        "summary": "合計記録時間取得（分単位）",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getCumulativeTime_input" }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Success（SuperJSON形式）" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "description": "Too Many Requests（100 req/min）" }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "pro"
-      }
-    },
-    "/entries.getAvgFulfillment": {
-      "get": {
-        "operationId": "entries.getAvgFulfillment",
-        "tags": ["entries"],
-        "summary": "平均充実度取得（1-5スケール）",
-        "security": [{ "sessionCookie": [] }, { "oauthBearer": [] }],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/entries_getAvgFulfillment_input" }
               }
             }
           }
@@ -2080,31 +1935,7 @@
           }
         ]
       },
-      "entries_getEntryRate_input": {
-        "type": "object",
-        "properties": {
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "additionalProperties": false
-      },
       "entries_getEstimationAccuracy_input": {
-        "type": "object",
-        "properties": {
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "additionalProperties": false
-      },
-      "entries_getEnergyMap_input": {
-        "type": "object",
-        "properties": {
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "additionalProperties": false
-      },
-      "entries_getContextSwitches_input": {
         "type": "object",
         "properties": {
           "startDate": { "type": "string", "format": "date-time" },
@@ -2119,22 +1950,6 @@
           "endDate": { "type": "string", "format": "date-time" },
           "wakeHour": { "type": "number", "minimum": 0, "maximum": 23, "default": 7 },
           "sleepHour": { "type": "number", "minimum": 0, "maximum": 23, "default": 23 }
-        },
-        "additionalProperties": false
-      },
-      "entries_getCumulativeTime_input": {
-        "type": "object",
-        "properties": {
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
-        },
-        "additionalProperties": false
-      },
-      "entries_getAvgFulfillment_input": {
-        "type": "object",
-        "properties": {
-          "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" }
         },
         "additionalProperties": false
       },

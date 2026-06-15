@@ -3,17 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   MOCK_DAY_EXCELLENT,
   MOCK_MINIMAL,
-  MOCK_MONTH_POOR,
   MOCK_WEEK_GOOD,
   MOCK_WITH_UNPLANNED,
 } from '../../../components/time-pl/data/timePL.mocks';
 import {
   deriveAccuracy,
-  deriveBalanceSheet,
   deriveBarComparison,
-  deriveBreakEven,
   deriveStatement,
-  deriveWaterfall,
   getAccuracyStatus,
 } from '../derivers';
 
@@ -102,23 +98,6 @@ describe('deriveStatement', () => {
   });
 });
 
-describe('deriveWaterfall', () => {
-  it('starts with budget total and ends with actual total', () => {
-    const steps = deriveWaterfall(MOCK_WEEK_GOOD);
-    expect(steps[0]!.type).toBe('total');
-    expect(steps[0]!.label).toBe('予算');
-    expect(steps[steps.length - 1]!.type).toBe('total');
-    expect(steps[steps.length - 1]!.label).toBe('実績');
-  });
-
-  it('running total at end equals actual total', () => {
-    const steps = deriveWaterfall(MOCK_WEEK_GOOD);
-    const lastStep = steps[steps.length - 1]!;
-    const actualTotal = MOCK_WEEK_GOOD.tags.reduce((s, t) => s + t.actualMinutes, 0);
-    expect(lastStep.value).toBe(actualTotal);
-  });
-});
-
 describe('deriveBarComparison', () => {
   it('includes all tags with non-zero time', () => {
     const rows = deriveBarComparison(MOCK_WEEK_GOOD);
@@ -134,64 +113,5 @@ describe('deriveBarComparison', () => {
       const currMax = Math.max(rows[i]!.budgetMinutes, rows[i]!.actualMinutes);
       expect(currMax).toBeLessThanOrEqual(prevMax);
     }
-  });
-});
-
-describe('deriveBreakEven', () => {
-  it('returns null when no dailyPoints', () => {
-    const result = deriveBreakEven(MOCK_MONTH_POOR);
-    expect(result).toBeNull();
-  });
-
-  it('calculates cumulative totals', () => {
-    const result = deriveBreakEven(MOCK_WEEK_GOOD)!;
-    expect(result.points.length).toBe(MOCK_WEEK_GOOD.dailyPoints!.length);
-    const lastPoint = result.points[result.points.length - 1]!;
-    const expectedBudget = MOCK_WEEK_GOOD.dailyPoints!.reduce((s, p) => s + p.budgetMinutes, 0);
-    expect(lastPoint.cumulativeBudget).toBe(expectedBudget);
-  });
-
-  it('detects crossover point', () => {
-    const result = deriveBreakEven(MOCK_WEEK_GOOD)!;
-    if (result.breakEvenIndex !== null) {
-      expect(result.breakEvenIndex).toBeGreaterThan(0);
-      expect(result.breakEvenIndex).toBeLessThan(result.points.length);
-    }
-  });
-});
-
-describe('deriveBalanceSheet', () => {
-  it('left and right totals equal availableMinutes', () => {
-    const result = deriveBalanceSheet(MOCK_WEEK_GOOD);
-    expect(result.assets.totalMinutes).toBe(MOCK_WEEK_GOOD.availableMinutes);
-    expect(result.liabilitiesAndEquity.totalMinutes).toBe(MOCK_WEEK_GOOD.availableMinutes);
-  });
-
-  it('sections sum to total', () => {
-    const result = deriveBalanceSheet(MOCK_WEEK_GOOD);
-    const assetSectionSum = result.assets.sections.reduce((s, sec) => s + sec.totalMinutes, 0);
-    expect(assetSectionSum).toBe(result.assets.totalMinutes);
-
-    const liabSectionSum = result.liabilitiesAndEquity.sections.reduce(
-      (s, sec) => s + sec.totalMinutes,
-      0,
-    );
-    expect(liabSectionSum).toBe(result.liabilitiesAndEquity.totalMinutes);
-  });
-
-  it('blank time = available - actual', () => {
-    const result = deriveBalanceSheet(MOCK_WEEK_GOOD);
-    const actualTotal = MOCK_WEEK_GOOD.tags.reduce((s, t) => s + t.actualMinutes, 0);
-    const blankSection = result.assets.sections.find((s) => s.label === '空白時間');
-    expect(blankSection!.totalMinutes).toBe(MOCK_WEEK_GOOD.availableMinutes - actualTotal);
-  });
-
-  it('free time = available - budget', () => {
-    const result = deriveBalanceSheet(MOCK_WEEK_GOOD);
-    const budgetTotal = MOCK_WEEK_GOOD.tags.reduce((s, t) => s + t.budgetMinutes, 0);
-    const freeSection = result.liabilitiesAndEquity.sections.find(
-      (s) => s.label === '自由時間（資本）',
-    );
-    expect(freeSection!.totalMinutes).toBe(MOCK_WEEK_GOOD.availableMinutes - budgetTotal);
   });
 });

@@ -10,15 +10,12 @@ import { computeVariance } from '../variance';
 
 import type {
   AccuracyStatus,
-  BalanceSheetData,
   BarComparisonRow,
-  BreakEvenCurve,
   StatementViewData,
   TimePLAccuracy,
   TimePLInput,
   TimePLRow,
   TimePLVarianceRow,
-  WaterfallStep,
 } from './types';
 
 /** 精度率 → ステータス */
@@ -114,46 +111,6 @@ export function deriveStatement(input: TimePLInput): StatementViewData {
   };
 }
 
-/** Waterfall ステップを導出 */
-export function deriveWaterfall(input: TimePLInput): WaterfallStep[] {
-  const statement = deriveStatement(input);
-  const steps: WaterfallStep[] = [];
-
-  // Budget (start)
-  steps.push({
-    label: '予算',
-    value: statement.budgetTotal,
-    type: 'total',
-    runningTotal: statement.budgetTotal,
-    prevRunningTotal: 0,
-  });
-
-  // 差異ステップ
-  let running = statement.budgetTotal;
-  for (const row of statement.varianceRows) {
-    const prev = running;
-    running -= row.varianceMinutes;
-    steps.push({
-      label: row.tagName,
-      value: -row.varianceMinutes,
-      type: row.varianceMinutes > 0 ? 'decrease' : row.varianceMinutes < 0 ? 'increase' : 'neutral',
-      runningTotal: running,
-      prevRunningTotal: prev,
-    });
-  }
-
-  // Actual (end)
-  steps.push({
-    label: '実績',
-    value: statement.actualTotal,
-    type: 'total',
-    runningTotal: statement.actualTotal,
-    prevRunningTotal: 0,
-  });
-
-  return steps;
-}
-
 /** BarComparison 行を導出 */
 export function deriveBarComparison(input: TimePLInput): BarComparisonRow[] {
   return input.tags
@@ -179,64 +136,4 @@ export function deriveBarComparison(input: TimePLInput): BarComparisonRow[] {
       (a, b) =>
         Math.max(b.budgetMinutes, b.actualMinutes) - Math.max(a.budgetMinutes, a.actualMinutes),
     );
-}
-
-/** BreakEven カーブを導出 */
-export function deriveBreakEven(input: TimePLInput): BreakEvenCurve | null {
-  if (!input.dailyPoints || input.dailyPoints.length === 0) return null;
-
-  let cumBudget = 0;
-  let cumActual = 0;
-  const points = input.dailyPoints.map((dp) => {
-    cumBudget += dp.budgetMinutes;
-    cumActual += dp.actualMinutes;
-    return { label: dp.label, cumulativeBudget: cumBudget, cumulativeActual: cumActual };
-  });
-
-  // 最初の交差点
-  let breakEvenIndex: number | null = null;
-  for (let i = 1; i < points.length; i++) {
-    const prevDiff = points[i - 1]!.cumulativeBudget - points[i - 1]!.cumulativeActual;
-    const currDiff = points[i]!.cumulativeBudget - points[i]!.cumulativeActual;
-    if (prevDiff * currDiff < 0) {
-      breakEvenIndex = i;
-      break;
-    }
-  }
-
-  return {
-    points,
-    breakEvenIndex,
-    budgetTotal: cumBudget,
-    actualTotal: cumActual,
-  };
-}
-
-/** BalanceSheet データを導出 */
-export function deriveBalanceSheet(input: TimePLInput): BalanceSheetData {
-  const actual = toRows(input.tags, (t) => t.actualMinutes);
-  const budget = toRows(input.tags, (t) => t.budgetMinutes);
-
-  const blankMinutes = input.availableMinutes - actual.total;
-  const freeMinutes = input.availableMinutes - budget.total;
-
-  return {
-    availableMinutes: input.availableMinutes,
-    assets: {
-      label: '資産（実績）',
-      totalMinutes: input.availableMinutes,
-      sections: [
-        { label: '記録済み時間', rows: actual.rows, totalMinutes: actual.total },
-        { label: '空白時間', rows: [], totalMinutes: Math.max(blankMinutes, 0) },
-      ],
-    },
-    liabilitiesAndEquity: {
-      label: '負債＋資本（計画）',
-      totalMinutes: input.availableMinutes,
-      sections: [
-        { label: '予定時間（負債）', rows: budget.rows, totalMinutes: budget.total },
-        { label: '自由時間（資本）', rows: [], totalMinutes: Math.max(freeMinutes, 0) },
-      ],
-    },
-  };
 }
