@@ -1,10 +1,7 @@
 import { useMemo } from 'react';
 
-import { isSameDay } from 'date-fns';
-
 import { layoutEntryToVerticalPosition } from '../../../../lib/grid';
 import { calculateEntryLayouts, type EntryLayout } from '../../../../lib/layout';
-import { applyTimezoneToDisplayDates } from '../../../../lib/plan-data-adapter';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
 import type {
@@ -30,42 +27,37 @@ export function useWeekEntries({
   hourHeight = HOUR_HEIGHT,
   timezone,
 }: UseWeekEntriesOptions): UseWeekEntriesReturn {
-  // TZ変換を適用
-  const tzEntries = useMemo(
-    () => entries.map((p) => applyTimezoneToDisplayDates(p, timezone)),
-    [entries, timezone],
-  );
-
-  // エントリを日付ごとにグループ化（displayStartDateで判定）
+  // エントリを日付ごとにグループ化（raw startDate + ユーザーTZの日付キーで判定）
   const entriesByDate = useMemo(() => {
     const grouped: Record<string, CalendarEvent[]> = {};
 
     // 各日付のキーを初期化
     weekDates.forEach((date) => {
-      const dateKey = getDateKey(date);
+      const dateKey = getDateKey(date, timezone);
       if (!(dateKey in grouped)) {
         grouped[dateKey] = [];
       }
     });
 
     // エントリを適切な日付に配置
-    tzEntries.forEach((entry) => {
+    entries.forEach((entry) => {
       if (!isValidEvent(entry)) return;
 
+      if (!entry.startDate) return;
       if (!entry.displayStartDate) return;
 
       const entryStart =
-        entry.displayStartDate instanceof Date
-          ? entry.displayStartDate
-          : new Date(entry.displayStartDate);
+        entry.startDate instanceof Date ? entry.startDate : new Date(entry.startDate);
 
       // 無効な日付は除外
       if (isNaN(entryStart.getTime())) return;
 
+      const entryDateKey = getDateKey(entryStart, timezone);
+
       // 週の範囲内の日付を確認
       weekDates.forEach((date) => {
-        if (isSameDay(entryStart, date)) {
-          const dateKey = getDateKey(date);
+        const dateKey = getDateKey(date, timezone);
+        if (entryDateKey === dateKey) {
           if (Object.prototype.hasOwnProperty.call(grouped, dateKey) && grouped[dateKey]) {
             grouped[dateKey].push(entry);
           }
@@ -75,7 +67,7 @@ export function useWeekEntries({
 
     // 各日のエントリを時刻順にソート
     return sortEventsByDateKeys(grouped);
-  }, [weekDates, tzEntries]);
+  }, [weekDates, entries, timezone]);
 
   // エントリの位置情報を計算（共有layoutエンジン使用）
   const entryPositions = useMemo(() => {
@@ -84,7 +76,7 @@ export function useWeekEntries({
     const dayColumnWidth = weekDates.length > 0 ? 100 / weekDates.length : 100;
 
     weekDates.forEach((date, dayIndex) => {
-      const dateKey = getDateKey(date);
+      const dateKey = getDateKey(date, timezone);
       const dayEntries =
         (Object.prototype.hasOwnProperty.call(entriesByDate, dateKey)
           ? entriesByDate[dateKey]
@@ -131,7 +123,7 @@ export function useWeekEntries({
     });
 
     return positions;
-  }, [weekDates, entriesByDate, hourHeight]);
+  }, [weekDates, entriesByDate, hourHeight, timezone]);
 
   // 最大同時エントリ数を計算（layoutエンジンの結果から導出）
   const maxConcurrentEntries = useMemo(() => {

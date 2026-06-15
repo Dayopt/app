@@ -45,6 +45,7 @@ export const WeekView = ({
   onTimeRangeSelect,
 }: WeekViewProps) => {
   const weekStartsOnSetting = useUserPreferences((s) => s.weekStartsOn);
+  const timezone = useUserPreferences((s) => s.timezone);
   // 設定ストアの値を優先、プロップでオーバーライド可能
   const weekStartsOn = weekStartsOnProp ?? weekStartsOnSetting;
 
@@ -52,6 +53,7 @@ export const WeekView = ({
   const { weekDates, eventsByDate, todayIndex } = useWeekView({
     startDate: dateRange.start,
     events: entries,
+    timezone,
     weekStartsOn,
   });
 

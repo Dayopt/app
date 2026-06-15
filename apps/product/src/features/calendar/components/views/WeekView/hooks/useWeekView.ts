@@ -15,6 +15,7 @@ import { useCurrentPeriod, useDateUtilities, useEntriesByDate } from '../../shar
 export function useWeekView({
   startDate,
   events = [],
+  timezone,
   weekStartsOn = 1, // 0: 日曜始まり, 1: 月曜始まり
 }: UseWeekViewOptions): UseWeekViewReturn {
   // Phase 3統合フック: 週の7日間の日付生成
@@ -36,6 +37,7 @@ export function useWeekView({
     dates: weekDates,
     entries: events,
     sortType: 'standard',
+    timezone,
   });
 
   // スクロール処理はScrollableCalendarLayoutに委譲

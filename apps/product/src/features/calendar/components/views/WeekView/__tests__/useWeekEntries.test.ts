@@ -67,6 +67,28 @@ describe('useWeekEntries', () => {
     expect(wedPos?.dayIndex).toBe(2);
   });
 
+  it('ユーザーTZの日付キーで週ビューに配置する', () => {
+    const tokyoMidnightEntry = createMockEntry({
+      id: 'tokyo-midnight',
+      startDate: new Date('2026-03-29T15:30:00.000Z'),
+      endDate: new Date('2026-03-29T16:30:00.000Z'),
+      displayStartDate: new Date('2026-03-30T00:30:00'),
+      displayEndDate: new Date('2026-03-30T01:30:00'),
+    });
+
+    const { result } = renderHook(() =>
+      useWeekEntries({
+        weekDates,
+        events: [tokyoMidnightEntry],
+        timezone: 'Asia/Tokyo',
+      }),
+    );
+
+    const position = result.current.entryPositions.find((p) => p.plan.id === 'tokyo-midnight');
+    expect(position?.dayIndex).toBe(0);
+    expect(result.current.entriesByDate['2026-03-30']).toHaveLength(1);
+  });
+
   it('週の範囲外のエントリは除外される', () => {
     const outsideEntry = createMockEntry({
       id: 'outside',

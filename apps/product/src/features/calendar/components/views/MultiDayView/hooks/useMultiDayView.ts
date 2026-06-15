@@ -7,6 +7,7 @@ import { useCurrentPeriod, useDateUtilities, useEntriesByDate } from '../../shar
 interface UseMultiDayViewOptions {
   centerDate: Date;
   dayCount: number;
+  timezone: string;
   events?: CalendarEvent[];
   showWeekends?: boolean;
 }
@@ -31,6 +32,7 @@ interface UseMultiDayViewReturn {
 export function useMultiDayView({
   centerDate,
   dayCount,
+  timezone,
   events = [],
   showWeekends = true,
 }: UseMultiDayViewOptions): UseMultiDayViewReturn {
@@ -52,6 +54,7 @@ export function useMultiDayView({
     dates: displayDates,
     entries: events,
     sortType: 'standard',
+    timezone,
   });
 
   // スクロール処理はScrollableCalendarLayoutに委譲

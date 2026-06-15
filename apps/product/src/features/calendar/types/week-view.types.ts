@@ -38,6 +38,7 @@ export interface WeekGridProps {
 export interface UseWeekViewOptions {
   startDate: Date;
   events: CalendarEvent[];
+  timezone: string;
   weekStartsOn?: 0 | 1 | 6;
   onEventUpdate?: (
     entryIdOrEntry: string | CalendarEvent,
