@@ -1,13 +1,13 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// ユーザー嗜好ストアをモック
+// query-backedなユーザー嗜好hookをモック
 let mockDateFormat = 'yyyy-MM-dd';
 let mockTimeFormat: '12h' | '24h' = '24h';
 let mockTimezone = 'Asia/Tokyo';
 
-vi.mock('@/lib/stores/useUserPreferenceStore', () => ({
-  useUserPreferenceStore: (selector?: (s: Record<string, unknown>) => unknown) => {
+vi.mock('@/lib/hooks/useUserPreferences', () => ({
+  useUserPreferences: (selector?: (s: Record<string, unknown>) => unknown) => {
     const state = {
       dateFormat: mockDateFormat,
       timeFormat: mockTimeFormat,

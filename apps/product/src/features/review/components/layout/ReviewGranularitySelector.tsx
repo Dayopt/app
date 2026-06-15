@@ -17,12 +17,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/lib/components/ui/dropdown-menu';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
-import { toast } from '@/lib/toast';
-import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
+import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 import type { ReviewGranularity } from '../../stores/useReviewFilterStore';
 
 interface ReviewGranularitySelectorProps {
@@ -47,28 +46,8 @@ export function ReviewGranularitySelector({
   className,
 }: ReviewGranularitySelectorProps) {
   const t = useTranslations();
-  const showWeekNumbers = useUserPreferenceStore((s) => s.showWeekNumbers);
-  const updatePreferences = useUserPreferenceStore((s) => s.updatePreferences);
-  const utils = api.useUtils();
-
-  const updateMutation = api.userSettings.update.useMutation({
-    onMutate: (settings) => {
-      const previousShowWeekNumbers = useUserPreferenceStore.getState().showWeekNumbers;
-      if (typeof settings.showWeekNumbers === 'boolean') {
-        updatePreferences({ showWeekNumbers: settings.showWeekNumbers });
-      }
-      return { previousShowWeekNumbers };
-    },
-    onSuccess: () => {
-      utils.userSettings.get.invalidate();
-    },
-    onError: (_error, _settings, context) => {
-      if (context) {
-        updatePreferences({ showWeekNumbers: context.previousShowWeekNumbers });
-      }
-      toast.error(t('settings.common.saveFailed'));
-    },
-  });
+  const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
+  const updateMutation = useUpdateUserSettings();
 
   const currentLabel = t(
     `calendar.stats.${GRANULARITY_OPTIONS.find((opt) => opt.value === granularity)?.labelKey ?? 'periodWeek'}`,

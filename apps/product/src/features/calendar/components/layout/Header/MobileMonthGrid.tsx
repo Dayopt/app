@@ -17,7 +17,7 @@ import { memo, useCallback, useMemo } from 'react';
 
 import { isTodayInTimezone, tzIsSameDay } from '@/lib/date/timezone';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@/lib/utils';
 
 import { useSwipeGesture } from '../../../hooks/useSwipeGesture';
@@ -45,8 +45,8 @@ interface MobileMonthGridProps {
 export const MobileMonthGrid = memo<MobileMonthGridProps>(
   ({ viewMonth, selectedDate, onViewMonthChange, onDateSelect, className }) => {
     const tCommon = useTranslations('common');
-    const weekStartsOn = useUserPreferenceStore((state) => state.weekStartsOn);
-    const showWeekNumbers = useUserPreferenceStore((state) => state.showWeekNumbers);
+    const weekStartsOn = useUserPreferences((state) => state.weekStartsOn);
+    const showWeekNumbers = useUserPreferences((state) => state.showWeekNumbers);
     const isMounted = useHasMounted();
 
     const weekdaysRaw = tCommon.raw('dates.weekdaysNarrow') as string[];
@@ -82,7 +82,7 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
 
     const { handlers, ref } = useSwipeGesture(handleSwipeLeft, handleSwipeRight);
 
-    const timezone = useUserPreferenceStore((state) => state.timezone);
+    const timezone = useUserPreferences((state) => state.timezone);
 
     // 日付の状態を判定（ユーザー TZ ベース）
     const getDayState = useCallback(

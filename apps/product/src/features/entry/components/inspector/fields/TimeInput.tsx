@@ -15,7 +15,7 @@ import { Drawer, DrawerContent } from '@/lib/components/ui/drawer';
 import { Popover, PopoverAnchor, PopoverContent } from '@/lib/components/ui/popover';
 import { formatHHmm, formatTimeString, parseTimeString } from '@/lib/date';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { computeDuration, formatDurationDisplay } from '@/lib/time-utils';
 import { cn } from '@/lib/utils';
 
@@ -71,7 +71,7 @@ export function TimeInput({
   testId,
 }: TimeInputProps) {
   const isMobile = useIsMobile();
-  const timeFormat = useUserPreferenceStore((s) => s.timeFormat);
+  const timeFormat = useUserPreferences((s) => s.timeFormat);
   const [draft, setDraft] = useState(value);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);

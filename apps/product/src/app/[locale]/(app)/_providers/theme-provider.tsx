@@ -3,6 +3,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 import { CACHE_5_MINUTES } from '@/lib/date';
+import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 import { api } from '@/lib/trpc';
 
 type Theme = 'light' | 'dark' | 'system';
@@ -59,8 +60,6 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
 
-  const utils = api.useUtils();
-
   // DBから設定を取得
   const { data: dbSettings, isPending } = api.userSettings.get.useQuery(undefined, {
     staleTime: CACHE_5_MINUTES,
@@ -71,11 +70,7 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   });
 
   // DB更新用mutation
-  const updateMutation = api.userSettings.update.useMutation({
-    onSuccess: () => {
-      utils.userSettings.get.invalidate();
-    },
-  });
+  const updateMutation = useUpdateUserSettings();
 
   // DBから取得した設定を反映
   useEffect(() => {
@@ -90,15 +85,24 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   // テーマ設定（DB保存 + ローカル状態更新）
   const setTheme = useCallback(
     (newTheme: Theme) => {
+      const previousTheme = theme;
       setThemeState(newTheme);
       // localStorageにも保存（フォールバック用）
       if (typeof window !== 'undefined') {
         localStorage.setItem('theme', newTheme);
       }
       // DBに保存（認証済みの場合）
-      updateMutation.mutate({ theme: newTheme });
+      updateMutation.mutate(
+        { theme: newTheme },
+        {
+          onError: () => {
+            setThemeState(previousTheme);
+            localStorage.setItem('theme', previousTheme);
+          },
+        },
+      );
     },
-    [updateMutation],
+    [theme, updateMutation],
   );
 
   // Handle theme changes

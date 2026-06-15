@@ -14,7 +14,7 @@ import React, { useCallback } from 'react';
 import { cn } from '@/lib/utils';
 
 import { formatTimeString } from '@/lib/date';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { TIME_COLUMN_WIDTH } from '../constants/grid.constants';
 import { CurrentTimeLine } from '../grid/CurrentTimeLine';
@@ -64,7 +64,7 @@ export const CalendarDateHeader = ({
   weekNumber,
   className,
 }: CalendarDateHeaderProps) => {
-  const showWeekNumbers = useUserPreferenceStore((s) => s.showWeekNumbers);
+  const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
 
   // 設定がオンで週番号が渡されている場合のみ表示
   const shouldShowWeekNumber = showWeekNumbers && weekNumber != null;
@@ -142,7 +142,7 @@ export const ScrollableCalendarLayout = ({
   });
 
   // 現在時刻のフォーマット（設定に応じて 24h/12h）
-  const timeFormat = useUserPreferenceStore((s) => s.timeFormat);
+  const timeFormat = useUserPreferences((s) => s.timeFormat);
   const formattedCurrentTime = formatTimeString(
     currentTime.getHours(),
     currentTime.getMinutes(),

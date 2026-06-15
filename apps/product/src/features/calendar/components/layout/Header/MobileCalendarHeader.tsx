@@ -9,7 +9,7 @@ import { memo, useCallback, useState } from 'react';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { Button } from '@/lib/components/ui/button';
 import { isTodayInTimezone } from '@/lib/date/timezone';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@/lib/utils';
 
 import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
@@ -63,9 +63,9 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     }
 
     // ヘッダー: 月部分・日番号・接尾辞を分離して今日バッジ + 週数を1行に統合
-    const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
-    const showWeekNumbers = useUserPreferenceStore((s) => s.showWeekNumbers);
-    const timezone = useUserPreferenceStore((s) => s.timezone);
+    const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
+    const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
+    const timezone = useUserPreferences((s) => s.timezone);
     const monthPart = format(currentDate, locale === 'ja' ? 'M月' : 'MMM ', {
       locale: dateFnsLocale,
     });

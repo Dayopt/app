@@ -1,14 +1,14 @@
 import { useTranslations } from 'next-intl';
 
 import type { DateRangeDisplayProps } from '@/lib/components/common/DateRangeDisplay';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import type { ReviewGranularity } from '../../stores/useReviewFilterStore';
 
 /**
  * Review の granularity を共通 DateRangeDisplay の props に変換するフック
  *
- * 週番号表示は useUserPreferenceStore.showWeekNumbers を参照し、
+ * 週番号表示は useUserPreferences.showWeekNumbers を参照し、
  * Calendar と Review で表示条件を共有する。
  */
 export function useReviewDateDisplayProps(
@@ -16,8 +16,8 @@ export function useReviewDateDisplayProps(
   granularity: ReviewGranularity,
 ): DateRangeDisplayProps {
   const tCommon = useTranslations('common');
-  const showWeekNumbers = useUserPreferenceStore((s) => s.showWeekNumbers);
-  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
+  const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
+  const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
 
   const showWeekNumber = showWeekNumbers && (granularity === 'day' || granularity === 'week');
 

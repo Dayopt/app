@@ -7,12 +7,10 @@ import { useUserSettings } from './useUserSettings';
  * I-03 characterization test（consumer hook の公開挙動）
  *
  * 目的: Phase 4（server-state store の TanStack Query 移行）の前に、
- * `useUserSettings` の「返り値の契約」と「hydration 前に timezone 依存の
- * apply（dispatchUserSettings）を発火しない」data integrity 境界を固定する。
+ * `useUserSettings` の返り値とCalendar UI stateのhydration境界を固定する。
  *
  * store 実装（Zustand）は移行で置き換わるため、store の内部状態ではなく
- * (1) 返り値の shape (2) query state → hydrated/isPaused/error の写像
- * (3) apply effect の発火条件、という移行後も維持されるべき契約を検証する。
+ * server stateはquery cacheを直接参照するためstoreへの複製はしない。
  */
 
 // query 返り値をテストごとに差し替える
@@ -67,12 +65,24 @@ vi.mock('@/features/calendar/stores/userSettings', () => ({
   dispatchUserSettings: (settings: unknown) => mockDispatchUserSettings(settings),
 }));
 
-// merge 元の 2 store は固定値を返す（返り値 shape の検証用）
+// Calendar UI storeとquery-backed preferencesは固定値を返す
 vi.mock('@/features/calendar/stores/useCalendarSettingsStore', () => ({
-  useCalendarSettingsStore: () => ({ timezone: 'Asia/Tokyo', weekStartsOn: 1 }),
+  useCalendarSettingsStore: () => ({
+    defaultView: 'week',
+    showWeekends: true,
+    hourHeightDensity: 'default',
+  }),
 }));
-vi.mock('@/lib/stores/useUserPreferenceStore', () => ({
-  useUserPreferenceStore: () => ({ dateFormat: 'yyyy/MM/dd' }),
+vi.mock('@/lib/hooks/useUserPreferences', () => ({
+  useUserPreferences: () => ({
+    timezone: 'Asia/Tokyo',
+    timeFormat: '24h',
+    dateFormat: 'yyyy/MM/dd',
+    weekStartsOn: 1,
+    showWeekNumbers: false,
+    defaultDuration: 60,
+    snapInterval: 15,
+  }),
 }));
 
 const DB_SETTINGS = {
@@ -106,7 +116,7 @@ describe('useUserSettings（返り値の契約）', () => {
     expect(typeof result.current.saveSettings).toBe('function');
   });
 
-  it('2 store を merge した settings を返す', () => {
+  it('query preferencesとCalendar UI stateをmergeしたsettingsを返す', () => {
     mockQuery = { data: DB_SETTINGS, isPending: false, fetchStatus: 'idle', error: null };
     const { result } = renderHook(() => useUserSettings());
     expect(result.current.settings).toMatchObject({
@@ -156,24 +166,31 @@ describe('useUserSettings（query state → flag の写像）', () => {
   });
 });
 
-describe('useUserSettings（data integrity: apply 発火条件）', () => {
+describe('useUserSettings（Calendar UI state hydration）', () => {
   beforeEach(() => {
     mockQuery = { data: undefined, isPending: true, fetchStatus: 'fetching', error: null };
     vi.clearAllMocks();
   });
 
-  it('isPending 中は dispatchUserSettings（timezone 依存 apply）を発火しない', () => {
+  it('isPending 中はCalendar UI stateへapplyしない', () => {
     mockQuery = { data: undefined, isPending: true, fetchStatus: 'fetching', error: null };
     renderHook(() => useUserSettings());
     expect(mockDispatchUserSettings).not.toHaveBeenCalled();
   });
 
-  it('data 解決後は dbSettings を timezone 込みで store へ apply する', () => {
+  it('data解決後はCalendar専用設定だけをstoreへapplyする', () => {
     mockQuery = { data: DB_SETTINGS, isPending: false, fetchStatus: 'idle', error: null };
     renderHook(() => useUserSettings());
     expect(mockDispatchUserSettings).toHaveBeenCalledTimes(1);
     expect(mockDispatchUserSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ timezone: 'America/New_York', weekStartsOn: 0 }),
+      expect.objectContaining({
+        showWeekends: true,
+        defaultView: 'week',
+        hourHeightDensity: 'comfortable',
+      }),
+    );
+    expect(mockDispatchUserSettings).not.toHaveBeenCalledWith(
+      expect.objectContaining({ timezone: expect.anything() }),
     );
   });
 
@@ -190,15 +207,25 @@ describe('useUserSettings（saveSettings の楽観的更新契約）', () => {
     vi.clearAllMocks();
   });
 
-  it('saveSettings は store を即時 dispatch し DB mutation を mutate する', () => {
+  it('server settingはquery mutationだけを実行する', () => {
     const { result } = renderHook(() => useUserSettings());
     // 初回 apply 分の dispatch をクリアしてから saveSettings を検証
     mockDispatchUserSettings.mockClear();
 
     result.current.saveSettings({ timezone: 'Europe/London' });
 
-    expect(mockDispatchUserSettings).toHaveBeenCalledWith({ timezone: 'Europe/London' });
+    expect(mockDispatchUserSettings).not.toHaveBeenCalled();
     expect(mockMutate).toHaveBeenCalledWith({ timezone: 'Europe/London' });
+  });
+
+  it('Calendar UI settingはstoreにも即時dispatchする', () => {
+    const { result } = renderHook(() => useUserSettings());
+    mockDispatchUserSettings.mockClear();
+
+    result.current.saveSettings({ showWeekends: false });
+
+    expect(mockDispatchUserSettings).toHaveBeenCalledWith({ showWeekends: false });
+    expect(mockMutate).toHaveBeenCalledWith({ showWeekends: false });
   });
 
   it('変更フィールドが無い場合は mutate しない', () => {

@@ -1,28 +1,15 @@
 /**
- * UserSettings — `UserPreference` + `CalendarSettings` を統合した型と dispatcher
+ * UserSettings — query-backed `UserPreference` + Calendar UI state の統合型
  *
- * 2 ストアに跨る設定変更（例: `useUserSettings.saveSettings({ timezone, defaultView })`）
- * を扱うためのユーティリティ。callsite はこの型 / dispatch を経由することで、
- * 各 store の責務境界を保ったまま 1 度の呼び出しで複数 store の state を更新できる。
+ * server stateはTanStack Queryが保持し、このdispatcherは移行中のCalendar UI stateだけを更新する。
  */
 
-import type { UserPreference } from '@/lib/stores/useUserPreferenceStore';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import type { UserPreference } from '@/lib/hooks/useUserPreferences';
 import type { CalendarSettings } from './useCalendarSettingsStore';
 import { useCalendarSettingsStore } from './useCalendarSettingsStore';
 
-/** 2 ストアを統合した設定オブジェクトの型 */
+/** server settingsとCalendar UI settingsを統合した設定オブジェクトの型 */
 export type UserSettings = UserPreference & CalendarSettings;
-
-const USER_PREFERENCE_KEYS = [
-  'timezone',
-  'timeFormat',
-  'dateFormat',
-  'weekStartsOn',
-  'showWeekNumbers',
-  'defaultDuration',
-  'snapInterval',
-] as const satisfies ReadonlyArray<keyof UserPreference>;
 
 const CALENDAR_SETTINGS_KEYS = [
   'defaultView',
@@ -30,39 +17,22 @@ const CALENDAR_SETTINGS_KEYS = [
   'hourHeightDensity',
 ] as const satisfies ReadonlyArray<keyof CalendarSettings>;
 
-/** 統合 partial を 2 ストアに振り分ける純粋ユーティリティ（テスト/外部用途向け） */
-function splitUserSettings(partial: Partial<UserSettings>): {
-  preference: Partial<UserPreference>;
-  calendar: Partial<CalendarSettings>;
-} {
-  const preference: Partial<UserPreference> = {};
+function pickCalendarSettings(partial: Partial<UserSettings>): Partial<CalendarSettings> {
   const calendar: Partial<CalendarSettings> = {};
-
-  for (const key of USER_PREFERENCE_KEYS) {
-    if (key in partial) {
-      (preference as Record<string, unknown>)[key] = partial[key];
-    }
-  }
   for (const key of CALENDAR_SETTINGS_KEYS) {
     if (key in partial) {
       (calendar as Record<string, unknown>)[key] = partial[key];
     }
   }
 
-  return { preference, calendar };
+  return calendar;
 }
 
 /**
- * 統合 partial を 2 ストアに dispatch する。
- *
- * UserPreference / CalendarSettings のどちらに属するかで振り分ける。
+ * Calendar UI stateだけを即時反映する。server stateはmutationのquery cache更新が担当する。
  */
 export function dispatchUserSettings(partial: Partial<UserSettings>): void {
-  const { preference, calendar } = splitUserSettings(partial);
-
-  if (Object.keys(preference).length > 0) {
-    useUserPreferenceStore.getState().updatePreferences(preference);
-  }
+  const calendar = pickCalendarSettings(partial);
   if (Object.keys(calendar).length > 0) {
     useCalendarSettingsStore.getState().updateSettings(calendar);
   }

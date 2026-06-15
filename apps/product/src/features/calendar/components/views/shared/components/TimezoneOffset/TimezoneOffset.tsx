@@ -3,9 +3,9 @@
 import { useTranslations } from 'next-intl';
 
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/lib/components/ui/select';
-import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
+import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { getTimeZones } from '@/lib/timezone-utils';
-import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
 /** TimezoneOffset コンポーネントのプロパティ */
@@ -16,15 +16,8 @@ interface TimezoneOffsetProps {
 /** タイムゾーンを選択するドロップダウンコンポーネント（UTC オフセット表示） */
 export function TimezoneOffset({ className }: TimezoneOffsetProps) {
   const tActions = useTranslations('calendar.actions');
-  const timezone = useUserPreferenceStore((s) => s.timezone);
-  const updatePreferences = useUserPreferenceStore((s) => s.updatePreferences);
-  const utils = api.useUtils();
-  const updateMutation = api.userSettings.update.useMutation({
-    onSuccess: () => {
-      void utils.userSettings.get.invalidate();
-      void utils.entries.invalidate();
-    },
-  });
+  const timezone = useUserPreferences((s) => s.timezone);
+  const updateMutation = useUpdateUserSettings();
 
   const getUTCOffset = (tz: string): string => {
     try {
@@ -58,7 +51,6 @@ export function TimezoneOffset({ className }: TimezoneOffsetProps) {
   };
 
   const handleTimezoneChange = (value: string) => {
-    updatePreferences({ timezone: value });
     updateMutation.mutate({ timezone: value });
   };
 

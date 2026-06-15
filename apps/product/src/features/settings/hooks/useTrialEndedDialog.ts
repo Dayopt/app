@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
+import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 import { api } from '@/lib/trpc';
 
 interface UseTrialEndedDialogResult {
@@ -26,22 +27,14 @@ export function useTrialEndedDialog(): UseTrialEndedDialogResult {
     retry: false,
   });
   const settingsQuery = api.userSettings.get.useQuery();
-  const updateSettings = api.userSettings.update.useMutation();
-  const utils = api.useUtils();
+  const updateSettings = useUpdateUserSettings();
 
   const [locallyDismissed, setLocallyDismissed] = useState(false);
 
   const close = useCallback(() => {
     setLocallyDismissed(true);
-    updateSettings.mutate(
-      { dismissedTrialEndedDialog: true },
-      {
-        onSuccess: () => {
-          utils.userSettings.get.invalidate();
-        },
-      },
-    );
-  }, [updateSettings, utils]);
+    updateSettings.mutate({ dismissedTrialEndedDialog: true });
+  }, [updateSettings]);
 
   const open = useMemo(() => {
     if (locallyDismissed) return false;

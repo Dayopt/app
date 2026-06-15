@@ -1,5 +1,10 @@
 import { renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@/lib/hooks/useUserPreferences', () => ({
+  useUserPreferences: (selector: (settings: { timezone: string }) => unknown) =>
+    selector({ timezone: 'Asia/Tokyo' }),
+}));
 
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { useDayView } from '../hooks/useDayView';
