@@ -62,7 +62,7 @@ export function addMinutesToTime(
  * relative offset snap で「originalPosition.top をそのまま時刻に戻す」
  * 用途。ここで snap してしまうと 10:07 のような非グリッド時刻を保持できない。
  *
- * @see apps/storybook/docs/product/projects/timeline-precision-redesign/overview.mdx § 4 A-2
+ * @see docs/projects/timeline-precision-redesign/overview.md § 4 A-2
  */
 export function pixelsToTimeUnsnapped(
   yPx: number,
@@ -85,7 +85,7 @@ export function pixelsToTimeUnsnapped(
  * source of truth として保ち、移動量 (deltaY) だけを snap interval で量子化する。
  * これにより 10:07 entry を 30 分動かすと 10:37 になる（10:00 / 10:15 に潰れない）。
  *
- * @see apps/storybook/docs/product/projects/timeline-precision-redesign/overview.mdx § 4 A-2 / D-7
+ * @see docs/projects/timeline-precision-redesign/overview.md § 4 A-2 / D-7
  */
 export function snapDeltaToGrid(
   deltaPx: number,
