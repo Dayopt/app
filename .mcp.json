@@ -19,24 +19,24 @@
       "env": {}
     },
     "sentry": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@sentry/mcp-server@latest"],
-      "env": {
-        "SENTRY_ACCESS_TOKEN": "${SENTRY_ACCESS_TOKEN}"
-      }
+      "type": "http",
+      "url": "https://mcp.sentry.dev/mcp"
     },
     "supabase": {
       "type": "stdio",
-      "command": "npx",
+      "command": "op",
       "args": [
+        "run",
+        "--no-masking",
+        "--",
+        "npx",
         "-y",
         "@supabase/mcp-server-supabase@latest",
         "--read-only",
         "--project-ref=yvglwblxrnrenfifsnje"
       ],
       "env": {
-        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+        "SUPABASE_ACCESS_TOKEN": "op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN"
       }
     },
     "playwright": {

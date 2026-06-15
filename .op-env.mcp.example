@@ -1,18 +1,22 @@
 # Claude Code の MCP 用トークン注入テンプレート（#1142 / mcp-integration-setup）
 #
-# これは「Claude 起動時に MCP サーバーへトークンを渡す」ための op:// 参照ファイル。
+# これは「Claude 起動時に env 注入が必要な MCP サーバーへトークンを渡す」ための op:// 参照ファイル。
 # 値は書かない（op run が 1Password から解決する）。dev 用の .op-env.local とは別物。
 #
-# セットアップ:
+# 現在 env 注入が必要なのは GitHub のみ（下記）。Sentry / Supabase はこのファイルに依存しない:
+#   - Sentry  : OAuth 承認方式（/mcp で承認）。トークン不要。.mcp.json は https://mcp.sentry.dev/mcp を直叩き。
+#   - Supabase: .mcp.json の起動コマンド自体を `op run` でラップし、MCP プロセス spawn 時に
+#               op:// を自己解決する（Claude 本体の起動経路に依存しない）。
+#   - Vercel  : OAuth 承認方式（/mcp で承認）。トークン不要。
+#
+# セットアップ（GitHub PAT 注入が必要な場合のみ）:
 #   1. このファイルを ~/.config/claude/op-env.mcp にコピー
 #   2. ~/.zshrc に op run ラッパーを追加（mcp-usage.md 参照）:
 #        claude() { op run --env-file="$HOME/.config/claude/op-env.mcp" -- command claude "$@"; }
-#   3. zsh から `claude` を起動 → MCP にトークンが注入される
+#   3. zsh から `claude` を起動 → GitHub MCP のヘッダーに PAT が注入される
 #
-# Vercel の MCP は OAuth 承認方式（/mcp で承認）のためトークン不要。ここには書かない。
 # GitHub は OAuth(dynamic client registration)非対応のため、PAT を Authorization ヘッダーで渡す
 # （.mcp.json の github.headers）。1Password に github-mcp-pat（credential フィールド）を作成して参照する。
+# GitHub MCP を使わないなら、このファイルと zsh ラッパーは無くても全 MCP が動く。
 
-SENTRY_ACCESS_TOKEN=op://Dayopt-Shared/sentry/SENTRY_AUTH_TOKEN
-SUPABASE_ACCESS_TOKEN=op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN
 GITHUB_MCP_PAT=op://Dayopt-Shared/github-mcp-pat/credential
