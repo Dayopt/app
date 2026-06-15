@@ -32,11 +32,6 @@ interface TimePLRpcResponse {
     actualMinutes: number;
     isPlanned: boolean;
   }>;
-  dailyPoints: Array<{
-    label: string;
-    budgetMinutes: number;
-    actualMinutes: number;
-  }>;
   availableMinutes: number;
 }
 
@@ -94,7 +89,6 @@ export function useTimePLData() {
         actualMinutes: t.actualMinutes,
         isPlanned: t.isPlanned,
       })),
-      dailyPoints: data.dailyPoints.length > 0 ? data.dailyPoints : undefined,
       prevTags:
         data.prevTags.length > 0
           ? data.prevTags.map((t) => ({

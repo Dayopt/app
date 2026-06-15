@@ -1,7 +1,7 @@
 /**
  * Time P/L — 正規化された入力型
  *
- * 全ビュー（Statement, Waterfall, BarComparison, Stacked, BreakEven, BalanceSheet）が
+ * 予実比較（BarComparison）と精度・損益計算（deriveStatement / deriveAccuracy）が
  * この1つの入力型から導出される。ビュー固有の計算値はここに持たず、derivers で算出する。
  */
 
@@ -12,15 +12,6 @@ export type TimePLGranularity = 'day' | 'week' | 'month' | 'year';
 
 /** 予算精度のステータス（±0が理想） */
 export type AccuracyStatus = 'excellent' | 'good' | 'fair' | 'poor';
-
-/** ビューの種類 */
-export type TimePLViewType =
-  | 'statement'
-  | 'waterfall'
-  | 'barComparison'
-  | 'stacked'
-  | 'breakEven'
-  | 'balanceSheet';
 
 /** タグ別の予実データ（正規化された入力） */
 export interface TimePLTagEntry {
@@ -36,13 +27,6 @@ export interface TimePLTagEntry {
   isPlanned: boolean;
 }
 
-/** BreakEven用の日次データポイント */
-export interface TimePLDailyPoint {
-  label: string;
-  budgetMinutes: number;
-  actualMinutes: number;
-}
-
 /** 全ビュー共通の入力型 */
 export interface TimePLInput {
   period: {
@@ -55,8 +39,6 @@ export interface TimePLInput {
   availableMinutes: number;
   /** タグ別の予実データ */
   tags: TimePLTagEntry[];
-  /** BreakEven用の日次累積データ */
-  dailyPoints?: TimePLDailyPoint[] | undefined;
   /** 前期間のタグ別データ（トレンド比較用） */
   prevTags?: TimePLTagEntry[] | undefined;
 }
@@ -101,15 +83,6 @@ export interface StatementViewData {
   netVarianceMinutes: number;
 }
 
-/** Waterfall のステップ */
-export interface WaterfallStep {
-  label: string;
-  value: number;
-  type: 'total' | 'increase' | 'decrease' | 'neutral';
-  runningTotal: number;
-  prevRunningTotal: number;
-}
-
 /** BarComparison の行 */
 export interface BarComparisonRow {
   tagId: string;
@@ -120,34 +93,4 @@ export interface BarComparisonRow {
   actualMinutes: number;
   varianceMinutes: number;
   variancePercent: number | null;
-}
-
-/** BreakEven のカーブデータ */
-export interface BreakEvenCurve {
-  points: Array<{
-    label: string;
-    cumulativeBudget: number;
-    cumulativeActual: number;
-  }>;
-  breakEvenIndex: number | null;
-  budgetTotal: number;
-  actualTotal: number;
-}
-
-/** BalanceSheet の片側 */
-export interface BalanceSheetSide {
-  label: string;
-  sections: Array<{
-    label: string;
-    rows: TimePLRow[];
-    totalMinutes: number;
-  }>;
-  totalMinutes: number;
-}
-
-/** BalanceSheet の両側 */
-export interface BalanceSheetData {
-  availableMinutes: number;
-  assets: BalanceSheetSide;
-  liabilitiesAndEquity: BalanceSheetSide;
 }

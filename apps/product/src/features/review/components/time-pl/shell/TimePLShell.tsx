@@ -18,8 +18,6 @@ interface TimePLShellProps {
   subtitle?: string | undefined;
   /** 精度バッジ（null で非表示） */
   accuracy?: TimePLAccuracy | null | undefined;
-  /** 右上のカスタムスロット（精度バッジの代わり） */
-  trailing?: React.ReactNode | undefined;
   isLoading?: boolean | undefined;
   isEmpty?: boolean | undefined;
   children: React.ReactNode;
@@ -42,7 +40,6 @@ export function TimePLShell({
   title,
   subtitle,
   accuracy,
-  trailing,
   isLoading,
   isEmpty,
   children,
@@ -83,7 +80,7 @@ export function TimePLShell({
           <h3 className="text-foreground text-sm font-medium">{title}</h3>
           {subtitle && <p className="text-muted-foreground text-xs">{subtitle}</p>}
         </div>
-        {trailing ?? badge}
+        {badge}
       </CardHeader>
       <CardContent className="px-4 pt-4 pb-4">{children}</CardContent>
     </Card>

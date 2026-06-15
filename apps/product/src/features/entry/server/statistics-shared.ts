@@ -155,10 +155,5 @@ export interface TimePLResponse {
     actualMinutes: number;
     isPlanned: boolean;
   }>;
-  dailyPoints: Array<{
-    label: string;
-    budgetMinutes: number;
-    actualMinutes: number;
-  }>;
   availableMinutes: number;
 }
