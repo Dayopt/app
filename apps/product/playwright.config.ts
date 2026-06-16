@@ -78,11 +78,16 @@ export default defineConfig({
     },
   ],
 
-  // 開発サーバーの起動設定
+  // サーバー起動設定
+  // CI: 本番ビルドを起動する。next dev はルートを初回アクセス時に遅延コンパイルするため、
+  //     2 vCPU ランナーで冷間コンパイルが actionTimeout(10s) を超えて flaky になる。
+  //     事前ビルド済みを叩くことで初回 timeout を構造的に排除する。
+  // ローカル: 速い反復のため dev サーバーを維持。
   webServer: {
-    command: 'pnpm dev:raw',
+    command: process.env.CI ? 'pnpm build && pnpm start' : 'pnpm dev:raw',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    // CI は build(~90s)+start を吸収するため延長。
+    timeout: (process.env.CI ? 240 : 120) * 1000,
   },
 });
