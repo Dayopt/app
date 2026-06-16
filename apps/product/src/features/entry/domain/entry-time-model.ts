@@ -7,7 +7,6 @@ export type EntryLike = {
   end_time?: string | null;
   actual_start_time?: string | null;
   actual_end_time?: string | null;
-  duration_minutes?: number | null;
   skipped_at?: string | null;
 };
 
@@ -36,14 +35,13 @@ export function getActualRange(entry: EntryLike): TimeRange | null {
 
 /**
  * planned 所要時間（分）。
- * duration_minutes が保存済みなら優先、なければ planned range の差分から算出する。
+ * planned range（start_time/end_time）の差分から算出する。DB の
+ * planned_duration_minutes 列は同じ range の GENERATED 値なので参照不要。
  */
 export function getPlannedMinutes(entry: EntryLike): number | null {
   const range = getPlannedRange(entry);
   if (!range) return null;
-  return (
-    entry.duration_minutes ?? Math.round((range.end.getTime() - range.start.getTime()) / 60000)
-  );
+  return Math.round((range.end.getTime() - range.start.getTime()) / 60000);
 }
 
 /** 計画したがやらなかった planned エントリかどうか。 */

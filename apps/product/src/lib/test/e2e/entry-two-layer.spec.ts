@@ -257,7 +257,7 @@ describeWithEnv('Entry two-layer planned/unplanned flow', () => {
       end_time: isoAt(dateParam, '11:00'),
       actual_start_time: isoAt(dateParam, '10:00'),
       actual_end_time: isoAt(dateParam, '11:00'),
-      duration_minutes: 60,
+      planned_duration_minutes: 60,
     });
 
     await selectEntry(page, dateParam);
@@ -302,7 +302,7 @@ describeWithEnv('Entry two-layer planned/unplanned flow', () => {
       end_time: isoAt(dateParam, '11:00'),
       actual_start_time: isoAt(dateParam, '10:00'),
       actual_end_time: isoAt(dateParam, '11:00'),
-      duration_minutes: 60,
+      planned_duration_minutes: 60,
     });
 
     await selectEntry(page, dateParam);
@@ -370,7 +370,7 @@ describeWithEnv('Entry two-layer planned/unplanned flow', () => {
       end_time: null,
       actual_start_time: isoAt(dateParam, originalStart),
       actual_end_time: isoAt(dateParam, originalEnd),
-      duration_minutes: 0,
+      planned_duration_minutes: 0,
     });
 
     await openDay(page, dateParam);

@@ -16,7 +16,7 @@ function makeEntry(overrides: Partial<EntryWithTags> & { id: string }): EntryWit
     end_time: '2026-04-27T02:00:00.000Z', // JST 11:00
     actual_start_time: null,
     actual_end_time: null,
-    duration_minutes: null,
+    planned_duration_minutes: null,
     fulfillment_score: null,
     skipped_at: null,
     created_at: '2026-04-26T00:00:00.000Z',
@@ -165,7 +165,6 @@ describe('entryToCalendarEvent', () => {
         // 01:00:30 → 02:00:30 は秒切り捨てで 01:00 → 02:00、duration = 60 分
         start_time: '2026-04-27T01:00:30.000Z',
         end_time: '2026-04-27T02:00:30.000Z',
-        duration_minutes: null,
       }),
       TZ,
     );
@@ -173,27 +172,12 @@ describe('entryToCalendarEvent', () => {
     expect(event!.duration).toBe(60);
   });
 
-  it('duration_minutes が指定されていればそれを優先する', () => {
-    const event = entryToCalendarEvent(
-      makeEntry({
-        id: 'e1',
-        start_time: '2026-04-27T01:00:00.000Z',
-        end_time: '2026-04-27T02:00:00.000Z',
-        duration_minutes: 90,
-      }),
-      TZ,
-    );
-
-    expect(event!.duration).toBe(90);
-  });
-
-  it('duration_minutes が無ければ start/end 差分から算出する', () => {
+  it('duration は表示位置の start/end 差分から算出する', () => {
     const event = entryToCalendarEvent(
       makeEntry({
         id: 'e1',
         start_time: '2026-04-27T01:00:00.000Z',
         end_time: '2026-04-27T02:30:00.000Z',
-        duration_minutes: null,
       }),
       TZ,
     );

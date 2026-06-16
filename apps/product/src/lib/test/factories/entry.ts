@@ -17,7 +17,7 @@ export function createMockEntry(overrides: Partial<EntryRow> = {}): EntryRow {
     end_time: '2026-03-17T10:00:00.000Z',
     actual_start_time: '2026-03-17T09:00:00.000Z',
     actual_end_time: '2026-03-17T10:00:00.000Z',
-    duration_minutes: null,
+    planned_duration_minutes: null,
     fulfillment_score: null,
     deleted_at: null,
     skipped_at: null,

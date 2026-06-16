@@ -62,7 +62,7 @@ interface EntryRowLike {
   end_time: string | null;
   actual_start_time: string | null;
   actual_end_time: string | null;
-  duration_minutes: number | null;
+  planned_duration_minutes: number | null;
   tag_id: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -134,7 +134,7 @@ function normalizeEntry(e: EntryRowLike): NormalizedEntry {
     endTime: e.end_time,
     actualStartTime: e.actual_start_time,
     actualEndTime: e.actual_end_time,
-    durationMinutes: e.duration_minutes,
+    durationMinutes: e.planned_duration_minutes,
     tagId: e.tag_id,
     createdAt: e.created_at,
     updatedAt: e.updated_at,

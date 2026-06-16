@@ -112,20 +112,10 @@ describe('getActualRange', () => {
 });
 
 describe('getPlannedMinutes', () => {
-  it('duration_minutes が保存済みなら優先して返す', () => {
-    const entry = {
-      start_time: '2026-03-12T09:00:00Z',
-      end_time: '2026-03-12T10:00:00Z',
-      duration_minutes: 45, // range は 60 分だが保存値を優先
-    };
-    expect(getPlannedMinutes(entry)).toBe(45);
-  });
-
-  it('duration_minutes が null なら range から算出', () => {
+  it('planned range の差分から算出する', () => {
     const entry = {
       start_time: '2026-03-12T09:00:00Z',
       end_time: '2026-03-12T10:30:00Z',
-      duration_minutes: null,
     };
     expect(getPlannedMinutes(entry)).toBe(90);
   });
@@ -144,15 +134,6 @@ describe('getActualMinutes', () => {
     expect(getActualMinutes(entry)).toBe(75);
   });
 
-  it('duration_minutes は無視して actual range を使う', () => {
-    const entry = {
-      actual_start_time: '2026-03-12T09:00:00Z',
-      actual_end_time: '2026-03-12T10:00:00Z',
-      duration_minutes: 999,
-    };
-    expect(getActualMinutes(entry)).toBe(60);
-  });
-
   it('actual range がなければ null', () => {
     expect(getActualMinutes({})).toBeNull();
   });
@@ -165,7 +146,6 @@ describe('getDiffMinutes', () => {
       end_time: '2026-03-12T10:00:00Z',
       actual_start_time: '2026-03-12T09:00:00Z',
       actual_end_time: '2026-03-12T10:30:00Z',
-      duration_minutes: null,
     };
     expect(getDiffMinutes(entry)).toBe(30);
   });
@@ -176,7 +156,6 @@ describe('getDiffMinutes', () => {
       end_time: '2026-03-12T10:00:00Z',
       actual_start_time: '2026-03-12T09:00:00Z',
       actual_end_time: '2026-03-12T09:45:00Z',
-      duration_minutes: null,
     };
     expect(getDiffMinutes(entry)).toBe(-15);
   });
@@ -205,7 +184,6 @@ describe('hasPlannedActualDiff', () => {
       end_time: '2026-03-12T10:00:00Z',
       actual_start_time: '2026-03-12T09:00:00Z',
       actual_end_time: '2026-03-12T10:30:00Z',
-      duration_minutes: null,
     };
     expect(hasPlannedActualDiff(entry)).toBe(true);
   });
@@ -216,7 +194,6 @@ describe('hasPlannedActualDiff', () => {
       end_time: '2026-03-12T10:00:00Z',
       actual_start_time: '2026-03-12T09:00:00Z',
       actual_end_time: '2026-03-12T10:00:00Z',
-      duration_minutes: null,
     };
     expect(hasPlannedActualDiff(entry)).toBe(false);
   });
