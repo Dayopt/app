@@ -1,0 +1,79 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Architecture/ADR/008 Time Overlap Prohibition" />
+
+# ADR-008: 時間重なりの全面禁止（EXCLUDE 制約）
+
+> accepted（2026-05-13）
+
+---
+
+## コンテキスト
+
+`entries` は計画レイヤー（`start_time`〜`end_time`）と実績レイヤー（`actual_start_time`〜`actual_end_time`）の二層を持つ。Dayopt の「実際に何が起きたか」を一意なタイムラインとして記録するには、ある瞬間に対応するブロックは高々 1 つでなければならない。
+
+この不変条件をアプリケーション層のチェックだけに委ねると、並行書き込み（楽観的更新のリトライ、複数デバイスからの同時編集）でレースが生じ、重なりデータが混入しうる。「同じ時間に複数のことはできない」というタイムボクシング思想を、レース下でも崩れない形で保証する手段が必要だった。
+
+---
+
+## 決定
+
+同一ユーザー内の時間重なりを `EXCLUDE USING gist` 制約で **DB レベルで全面禁止**する。計画レイヤーと実績レイヤーをそれぞれ独立に制約する。
+
+- `entries_no_planned_time_overlap` — planned range の重なりを禁止
+- `entries_no_actual_time_overlap` — actual range の重なりを禁止
+
+両制約とも `deleted_at IS NULL` かつ両端が NOT NULL の行のみを対象とし、range は半開区間 `[)` で扱う（隣接の終端・始端一致は重なりとみなさない）。
+
+実装: `supabase/migrations/20260513000000_entry_two_layer_time_ranges.sql`（L92-110）
+
+---
+
+## 詳細
+
+### 並行活動を記録できないことは意図した世界観
+
+「会議をしながら移動する」のような並行活動は Dayopt では**記録できない**。Toggl は重なりを許すが Dayopt は許さない。これは機能不足ではなく、「1 つの時間に 1 つの活動を選び取る（選択型ログ）」というプロダクト決定の帰結である。
+
+### 緩和は実質不可逆な一方通行
+
+この制約は**緩める方向に実質不可逆**である。一度でも重なりを許すデータが入ると、後から制約を再強化しようとしても既存データが制約を満たさず `ADD CONSTRAINT` が失敗する。再強化には「どの重なりを残しどれを消すか」というデータ修復判断が必要になり、ユーザーの記録を機械的に削除することになる。
+
+導入 migration 自体がこの非対称性を体現している。制約を貼る前に既存の重なりデータをペアで検出し、新しい側を soft delete している（同 migration L40-72）。一度重なりを許した状態から制約世界へ移行するには、必ずこのデータ犠牲が伴う。
+
+### 自動記録（actual NULL）との防衛線の分担
+
+actual range が未確定（NULL）の自動記録エントリは、actual レイヤーの EXCLUDE 制約の対象外になる（制約が両端 NOT NULL を要求するため）。そのため自動記録同士の二重計上を防ぐ防衛線は DB 制約ではなく**サービス層** `EntryService.ensureNoOverlaps`（`apps/product/src/features/entry/server/entry-service.ts` L687-747）の effective actual チェックにある。詳細は ADR-009 を参照。
+
+---
+
+## 結果
+
+### メリット
+
+- 並行書き込みでも不変条件が壊れない（レース耐性）
+- タイムボクシング思想がスキーマに明文化される
+- サービス層のチェック漏れがあっても DB が最終防衛線になる
+
+### トレードオフ
+
+- 外部カレンダー同期（Google Calendar 等）の重なりだらけの外部イベントは、そのまま import すると制約違反で弾かれる。外部同期を設計する際は必ずこの制約と正面衝突する
+- 同時刻に複数活動を持つユースケースは構造的に表現できない
+- 緩和の不可逆性（再強化時のデータ犠牲）
+
+### 再訪条件
+
+- 外部カレンダー同期で重なりを含むイベントの取り込みが必要になったとき
+- 並行活動の記録を明確なプロダクト要求として受け入れる方針転換があったとき
+
+緩和を選ぶ場合は不可逆性を念頭に置き、移行に伴うデータ犠牲（どの重なりを消すか）を含めて設計すること。
+
+---
+
+## 関連
+
+- ADR-001 — 統合ブロックモデル（本 ADR が制約する entries モデルの前提）
+- ADR-005 — 時間不変原則（過去ブロックの編集制約）
+- ADR-009 — 自動記録モデル（actual NULL の防衛線分担）
+- `supabase/migrations/20260513000000_entry_two_layer_time_ranges.sql` — 制約導入
+- `apps/product/src/features/entry/server/entry-service.ts` — `ensureNoOverlaps`

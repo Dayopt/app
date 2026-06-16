@@ -19,6 +19,9 @@ Dayoptプロジェクトの主要な設計判断を文書化した記録。
 | ADR-005 | 時間不変原則                                 | 2026-03-10 | accepted   |
 | ADR-006 | CI品質ゲート段階的導入ロードマップ           | 2026-03-19 | proposed   |
 | ADR-007 | CLAUDE.md コーディング規範のポジティブ例示化 | 2026-04-17 | accepted   |
+| ADR-008 | 時間重なりの全面禁止（EXCLUDE 制約）         | 2026-05-13 | accepted   |
+| ADR-009 | 自動記録モデル（過ぎた予定を実績とみなす）   | 2026-06-10 | accepted   |
+| ADR-010 | entries の論理削除（soft delete）            | 2026-03-18 | accepted   |
 
 ---
 
@@ -26,7 +29,15 @@ Dayoptプロジェクトの主要な設計判断を文書化した記録。
 
 ```
 ADR-001（データモデル）
-  └── ADR-005（時間制約はentriesモデルが前提）
+  ├── ADR-005（時間制約はentriesモデルが前提）
+  ├── ADR-009（自動記録モデルはentriesにactual二層とunplannedを追加）
+  └── ADR-010（論理削除はentriesのdeleted_atを前提）
+
+ADR-009（自動記録モデル）
+  └── ADR-008（重なり禁止。自動記録のactual NULLはサービス層で防衛）
+
+ADR-008（時間重なり禁止）
+  └── ADR-010（EXCLUDE制約はdeleted_at IS NULLを前提）
 
 ADR-002（Feature境界）
   ├── ADR-003（MCPはfeature境界を前提に外部ツール層を構成）
