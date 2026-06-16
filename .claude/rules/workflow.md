@@ -157,6 +157,23 @@ UI 変更を含む作業では、Storybook 起動して視覚確認を Tomoya �
 - 既存 stories の regression なし
 - 新規 stories の描画確認
 
+## マージ方式
+
+策定日: 2026-06-17
+
+PR は **merge commit** でマージする。GitHub リポジトリ設定で squash / rebase merge を禁止済み（`mergeCommitAllowed: true` のみ）。
+
+### なぜ merge commit か
+
+- ブランチの分岐・合流を main の DAG に記録し、`git log --graph` や tig / lazygit で開発の経緯を可視化できるようにするため
+- squash は「PR の全コミットを 1 個に潰して親 1 つで main に載せる」ため分岐情報が一切残らず、履歴が一直線になる。後からどのブランチがいつ合流したかを復元できない
+
+### 運用上の含意
+
+- merge commit では**ブランチ上の各コミットがそのまま main に残る**。WIP / typo コミットを main に持ち込まないよう、1 コミット単位で意味の通る粒度・Conventional Commits 形式を守る
+- revert は対象を見極める。マージコミット自体を戻す場合は `git revert -m 1 <merge-sha>`、個別コミットを戻す場合は通常の `git revert <sha>`
+- マージ済みブランチは GitHub が自動削除（`deleteBranchOnMerge: true`）。ローカルでは `git branch -d` がマージを検出して安全に削除できる（squash 時代の `-D` 強制は不要になる）
+
 ## 実例の参照先
 
 各規模の実例:
