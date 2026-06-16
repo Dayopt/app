@@ -142,16 +142,6 @@ git add path/to/file2
 
 commit 前に必ず `git diff --cached` で index 内容を確認する。Edit ツールで変更した内容が working tree のみに反映されて index に入っていないケースを防ぐ（Step C-1 事故の教訓）。
 
-### PR merge policy
-
-PR を merge する時は、原則として merge commit を残す:
-
-```bash
-gh pr merge <PR番号> --merge --delete-branch
-```
-
-理由: `git log --graph` で branch の分岐と合流が見える履歴を維持するため。`--squash` はユーザーが明示した時、または release 手順など既存プロセスが明示している時だけ使う。
-
 ### typecheck / lint / build
 
 中規模以上の作業では以下を必ず pass:
@@ -178,6 +168,14 @@ PR は **merge commit** でマージする。GitHub リポジトリ設定で squ
 
 - ブランチの分岐・合流を main の DAG に記録し、`git log --graph` や tig / lazygit で開発の経緯を可視化できるようにするため
 - squash は「PR の全コミットを 1 個に潰して親 1 つで main に載せる」ため分岐情報が一切残らず、履歴が一直線になる。後からどのブランチがいつ合流したかを復元できない
+
+### マージ手順
+
+```bash
+gh pr merge <PR番号> --merge --delete-branch
+```
+
+`--squash` / `--rebase` は使わない（GitHub 設定でも禁止済み）。例外的に `--squash` を使うのはユーザーが明示した時、または release 手順など既存プロセスが明示している時だけ。
 
 ### 運用上の含意
 
