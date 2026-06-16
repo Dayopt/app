@@ -8,6 +8,10 @@
 -- Migration:
 --   20260501000000_oauth_tokens_from_api_keys.sql  (rename + extend)
 --   20260501000100_oauth_authorization_codes.sql   (PKCE code 中間 state)
+--   20260514000918_mcp_phase_1_5.sql               (audit log + token issue RPC)
+--   20260604230607_harden_function_execute_privileges.sql
+--
+-- 最終同期日: 2026-06-17
 -- ============================================================
 
 -- ────────────────────────────────────────────────────────────
@@ -40,7 +44,7 @@ CREATE TABLE public.oauth_tokens (
 -- oauth_authorization_codes: PKCE code grant の中間 state
 --
 -- /oauth/authorize で発行 → /oauth/token で消費。TTL 60 秒、single use。
--- service-role 経由でのみ insert / select / update。
+-- service_role 経由でのみ insert / select / update。browser client は RLS で拒否。
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE public.oauth_authorization_codes (
   code_hash             TEXT        PRIMARY KEY,
@@ -54,3 +58,21 @@ CREATE TABLE public.oauth_authorization_codes (
   consumed_at           TIMESTAMPTZ,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ────────────────────────────────────────────────────────────
+-- oauth_audit_log: MCP tool call audit
+--
+-- user は自分の audit log の SELECT のみ可能。
+-- INSERT は service_role 経由（tool call 記録）で行う。
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE public.oauth_audit_log (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  token_id   UUID        REFERENCES public.oauth_tokens(id) ON DELETE SET NULL,
+  client_id  TEXT        NOT NULL,
+  tool_name  TEXT        NOT NULL,
+  called_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_oauth_audit_log_user_called
+  ON public.oauth_audit_log(user_id, called_at DESC);
