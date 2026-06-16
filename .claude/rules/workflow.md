@@ -142,12 +142,23 @@ git add path/to/file2
 
 commit 前に必ず `git diff --cached` で index 内容を確認する。Edit ツールで変更した内容が working tree のみに反映されて index に入っていないケースを防ぐ（Step C-1 事故の教訓）。
 
+### PR merge policy
+
+PR を merge する時は、原則として merge commit を残す:
+
+```bash
+gh pr merge <PR番号> --merge --delete-branch
+```
+
+理由: `git log --graph` で branch の分岐と合流が見える履歴を維持するため。`--squash` はユーザーが明示した時、または release 手順など既存プロセスが明示している時だけ使う。
+
 ### typecheck / lint / build
 
 中規模以上の作業では以下を必ず pass:
 
 - `pnpm typecheck`
-- `pnpm lint`（lint:boundaries 含む）
+- `pnpm lint`
+- `pnpm lint:boundaries`
 - `pnpm build`（routing / layout 変更時）
 
 ### Storybook 視覚確認
