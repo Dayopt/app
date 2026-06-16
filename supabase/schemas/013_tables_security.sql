@@ -1,6 +1,11 @@
 -- ============================================================
 -- セキュリティ関連テーブル（読み物用 — CLIでは使用しない）
 -- ============================================================
+-- 最終同期日: 2026-06-17
+-- 同期対象 migration:
+--   - 20260317022728_fix_security_definer_idor.sql
+--   - 20260414150000_drop_login_attempts_and_auth_audit_logs.sql
+--
 
 -- login_attempts: 削除済み（20260414150000_drop_login_attempts_and_auth_audit_logs.sql）
 -- auth_audit_logs: 削除済み（同上）

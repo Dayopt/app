@@ -1,14 +1,15 @@
 -- ============================================================
 -- pg_cron ジョブ一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
--- ローカル: baseline.sql で自動登録
--- 本番/staging: Supabase Dashboard > Database > pg_cron で手動設定
+-- 最終同期日: 2026-06-17
+-- 同期対象 migration:
+--   - 20260414100000_drop_entry_activities.sql
+--   - 20260414150000_drop_login_attempts_and_auth_audit_logs.sql
+--   - 20260421130516_drop_notifications_table.sql
+--   - 20260425000000_unschedule_removed_edge_function_cron_jobs.sql
+--
+-- baseline.sql 由来の cleanup 系ジョブは、対象テーブル/関数の削除に合わせて unschedule 済み。
+-- Edge Function の定期実行も現状なし。
 -- ============================================================
 
--- 全ジョブは UTC 03:00-03:30 帯に集中（深夜のオフピーク時間）
-
--- | ジョブ名                    | スケジュール    | 対象関数                         | 保持期間  |
--- |-----------------------------|-----------------|----------------------------------|-----------|
--- | cleanup-plan-activities     | 30 3 * * * (毎日 03:30) | cleanup_old_plan_activities()   | 365日     |
-
--- Edge Function の定期実行は現状なし
+-- 現行 active pg_cron job: なし
