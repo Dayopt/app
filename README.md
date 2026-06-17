@@ -9,7 +9,7 @@ Dayopt monorepo。現在のプロダクト本体は `apps/product`、Storybook �
 pnpm install
 
 # 環境変数の設定（実値は置かず、.op-env.local の op:// 参照を使う）
-# 詳細: apps/storybook/docs/operations/secrets.mdx
+# 詳細: docs/operations/secrets.md
 
 # 開発サーバー起動（.op-env.local の op:// 参照を 1Password から注入）
 pnpm dev

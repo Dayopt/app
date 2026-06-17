@@ -23,7 +23,7 @@ if [[ ! -f "$OP_ENV_PATH" ]]; then
   cp .op-env.local.example .op-env.local
 
 .op-env.local には実値ではなく op://... 参照だけを書きます。
-詳細: apps/storybook/docs/operations/secrets.mdx
+詳細: docs/operations/secrets.md
 EOF
   exit 1
 fi
