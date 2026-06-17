@@ -55,46 +55,15 @@ X.Y.Z
 
 ## バージョンアップ手順
 
-### 1. バージョンアップコマンド
+version bump は **リリース対象の feature ブランチ上で行い、Release PR に含める**（main へ直接コミットしない）。
 
 ```bash
-# PATCH (0.0.1 → 0.0.2)
-npm version patch -m "chore: bump version to %s"
-
-# MINOR (0.0.1 → 0.1.0)
-npm version minor -m "feat: bump version to %s"
-
-# MAJOR (0.0.1 → 1.0.0)
-npm version major -m "feat!: bump version to %s"
+# package.json のみ更新（タグは打たない）。VERSION は上記ルールで決定
+npm version ${VERSION} --no-git-tag-version
+git commit -am "chore(release): v${VERSION} へ version bump"
 ```
 
-### 2. リリースノート作成
-
-```bash
-# docs/releases/vX.Y.Z.md を作成
-cp docs/releases/template.md docs/releases/vX.Y.Z.md
-# 内容を編集
-```
-
-### 3. コミット & プッシュ
-
-```bash
-# npm version コマンドが自動でコミット＆タグを作成
-git push origin dev
-git push origin vX.Y.Z
-```
-
-### 4. GitHub Release 作成
-
-```bash
-# GitHub CLI を使用
-gh release create vX.Y.Z \
-  --title "Release vX.Y.Z" \
-  --notes-file .github/RELEASE_TEMPLATE.md
-
-# または GitHub UI から手動作成
-# https://github.com/t3-nico/dayopt/releases/new
-```
+タグ作成・push・GitHub Release（タグ push で自動作成）を含む完全な手順は [process](./process.md) を正本とする。本ドキュメントはバージョン番号の決定ルールに専念する。
 
 ## リリースフロー
 
@@ -103,19 +72,15 @@ gh release create vX.Y.Z \
 ```
 1. 機能開発 (feature/xxx ブランチ)
    ↓
-2. dev ブランチにマージ
+2. feature ブランチで version bump → main へ Release PR
    ↓
-3. テスト・品質チェック
+3. CI・品質チェック (Quality Gate)
    ↓
-4. バージョンアップ
+4. PR マージ (merge commit / ブランチ削除) → Vercel 自動デプロイ
    ↓
-5. リリースノート更新
+5. main でタグ作成 & push
    ↓
-6. タグ作成 & プッシュ
-   ↓
-7. GitHub Release 作成
-   ↓
-8. 自動デプロイ (Vercel)
+6. GitHub Release 自動作成 → 詳細ノート反映
 ```
 
 ### プレリリース

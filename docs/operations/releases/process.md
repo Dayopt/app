@@ -116,16 +116,35 @@ npm run license:check
 
 ## リリース手順
 
-### Phase 0: Pull Request作成（dev → main）
+### Phase 0: Release PR作成（feature ブランチ → main）
 
-#### 0.1 最新のコードを取得
+> Dayopt に常設の `dev` ブランチは無い。リリースは番号付きの feature ブランチ（例: 直近 v0.30.0 は [#1370](https://github.com/Dayopt/dayopt/pull/1370)）を main へ PR する形で行う。version bump はこの Release PR に含める。
+
+#### 0.1 リリースブランチの準備
 
 ```bash
-git checkout dev
-git pull origin dev
+# リリース対象の feature ブランチに切り替え（version bump を載せるブランチ）
+git checkout <release-branch>
+git pull origin <release-branch>
+
+# main に追従（コンフリクトを避ける）
+git fetch origin
+git rebase origin/main   # または git merge origin/main
 ```
 
-#### 0.2 ブランチの状態確認
+#### 0.2 version bump を PR に含める
+
+```bash
+VERSION="0.X.0"
+
+# package.json のみ更新（タグはこの時点では打たない）
+npm version ${VERSION} --no-git-tag-version
+git commit -am "chore(release): v${VERSION} へ version bump"
+```
+
+タグ打ち前に main の `package.json` が正しい状態になるよう、version bump は必ずこの Release PR に含める（リリース後の後片付けがゼロになる）。
+
+#### 0.3 ブランチの状態確認
 
 ```bash
 # 未コミットの変更がないこと
@@ -134,17 +153,17 @@ git status
 # 最新のコミット確認
 git log -5 --oneline
 
-# devとmainの差分確認
-git log main..dev --oneline
+# main との差分確認
+git log main..HEAD --oneline
 ```
 
-#### 0.3 Pull Request作成
+#### 0.4 Pull Request作成
 
 ```bash
-# GitHub CLI でPR作成
+# GitHub CLI でPR作成（--head は現在のリリースブランチ）
 gh pr create \
   --base main \
-  --head dev \
+  --head "$(git branch --show-current)" \
   --title "Release v${VERSION}" \
   --body "$(cat <<'EOF'
 ## 📦 Release v${VERSION}
@@ -168,10 +187,10 @@ EOF
 )"
 
 # または GitHub UI から手動作成
-# https://github.com/t3-nico/dayopt/compare/main...dev
+# https://github.com/Dayopt/dayopt/compare/main...<release-branch>
 ```
 
-#### 0.4 CI/CD パイプライン確認
+#### 0.5 CI/CD パイプライン確認
 
 **自動実行されるチェック（`.github/workflows/ci.yml`）**:
 
@@ -205,7 +224,7 @@ gh run view --log
 gh pr view
 ```
 
-#### 0.5 レビュー & マージ
+#### 0.6 レビュー & マージ
 
 **マージ条件**:
 
@@ -232,11 +251,11 @@ gh pr diff -- package.json
 gh pr diff -- .github/workflows/
 gh pr diff -- src/middleware.ts
 
-# 5. 確認完了後にマージ（Squash & Merge推奨）
-gh pr merge --squash --delete-branch=false
+# 5. 確認完了後にマージ（Merge commit）
+gh pr merge --merge --delete-branch
 
-# または GitHub UI から手動マージ（推奨）
-# https://github.com/t3-nico/dayopt/pulls
+# または GitHub UI から手動マージ
+# https://github.com/Dayopt/dayopt/pulls
 ```
 
 **確認すべき項目**:
@@ -247,9 +266,11 @@ gh pr merge --squash --delete-branch=false
 - [ ] ドキュメントの更新が適切か
 - [ ] コミットメッセージが適切か
 
-⚠️ **重要**: `dev`ブランチは削除しないこと（`--delete-branch=false`）
+> **マージ方式**: リポジトリ設定で squash / rebase は無効化され **merge commit に統一**されている（`mergeCommitAllowed: true`, `squashMergeAllowed: false`）。`--graph` で分岐・合流が追える履歴を残すため。
+>
+> **ブランチ削除**: feature ブランチは merge 後に削除する（`deleteBranchOnMerge: true`）。`--delete-branch` を付ける。
 
-### Phase 1: バージョンタグ作成
+### Phase 1: main の取り込み確認
 
 #### 1.1 mainブランチに切り替え
 
@@ -258,15 +279,17 @@ git checkout main
 git pull origin main
 ```
 
-#### 1.2 ブランチの状態確認
+#### 1.2 状態確認
 
 ```bash
-# PRマージが反映されていることを確認
+# Release PR のマージが反映されていることを確認
 git log -5 --oneline
 
-# devとmainが同期していることを確認
-git log main..dev --oneline  # 何も表示されないはず
+# package.json のバージョンが更新済みであることを確認
+node -p "require('./package.json').version"  # → ${VERSION} になっているはず
 ```
+
+> main マージ時点で Vercel が本番へ自動デプロイする（タグはデプロイトリガーではなくバージョン記録用）。
 
 ### Phase 2: リリースノート作成
 
@@ -281,7 +304,7 @@ git tag --sort=-creatordate | head -5
 
 # 前回リリース以降のPR一覧を取得
 gh pr list --state merged --base main --limit 100 --json number,title,mergedAt \
-  | jq -r '.[] | select(.mergedAt > "YYYY-MM-DDT00:00:00Z") | "- [#\(.number)](https://github.com/t3-nico/dayopt/pull/\(.number)) - \(.title)"'
+  | jq -r '.[] | select(.mergedAt > "YYYY-MM-DDT00:00:00Z") | "- [#\(.number)](https://github.com/Dayopt/dayopt/pull/\(.number)) - \(.title)"'
 ```
 
 #### 2.2 リリースノートファイル作成
@@ -318,72 +341,39 @@ vim docs/releases/RELEASE_NOTES_v${VERSION}.md
 - [ ] カテゴリ別に整理されている
 - [ ] Full Changelogリンクが正しい
 
-### Phase 3: バージョンアップ
+### Phase 3: タグ作成
 
-#### 3.1 バージョンの決定
+version bump は Phase 0 の Release PR で済んでいる（`package.json` は更新済み）。ここでは main 上でタグを打つだけ。`npm version` は使わない（main への直接コミットを避けるため）。
+
+> セムバーの目安（VERSION は Phase 0.2 で決定済み）: PATCH=バグ修正 / MINOR=新機能 / MAJOR=破壊的変更。
+
+#### 3.1 タグ作成
 
 ```bash
-# 現在のバージョン確認
-npm version
-
-# バージョンアップのタイプを選択
-# PATCH: 0.0.1 → 0.0.2 (バグ修正)
-# MINOR: 0.0.1 → 0.1.0 (新機能)
-# MAJOR: 0.0.1 → 1.0.0 (破壊的変更)
+# main 上で version 記録用タグを打つ
+git tag v${VERSION}
 ```
 
-#### 3.2 バージョンアップ実行
+#### 3.2 タグ内容の確認
 
 ```bash
-# PATCH
-npm version patch -m "chore: bump version to %s"
+# タグが指すコミットを確認（version bump コミットであること）
+git show v${VERSION} --stat | head -20
 
-# MINOR
-npm version minor -m "feat: bump version to %s"
-
-# MAJOR
-npm version major -m "feat!: bump version to %s"
-```
-
-**このコマンドが実行すること:**
-
-1. package.json の version を更新
-2. Git commit を作成
-3. Git tag を作成
-
-#### 3.3 変更内容の確認
-
-```bash
-# 最新のコミットを確認
-git log -1
-
-# タグを確認
+# タグ一覧
 git tag --list | tail -5
-
-# 変更されたファイルを確認
-git show HEAD
 ```
 
-### Phase 4: プッシュ
+### Phase 4: タグのプッシュ
 
-#### 4.1 コミット & タグをプッシュ
+#### 4.1 タグをプッシュ
 
 ```bash
-# コミットをプッシュ（mainブランチから）
-git push origin main
-
-# タグをプッシュ
+# main は Release PR のマージ時点で push 済み。ここではタグだけを push する
 git push origin v${VERSION}
 ```
 
-#### 4.1.1 devブランチへの同期
-
-```bash
-# mainの変更をdevに反映（Fast-forward）
-git checkout dev
-git merge main --ff-only
-git push origin dev
-```
+タグ push により GitHub Actions（`.github/workflows/create-release.yml`）が **GitHub Release を自動作成**する（auto-generated notes 付き）。本番デプロイは main マージ時点で Vercel が既に実行済み。
 
 #### 4.2 プッシュ確認
 
@@ -395,32 +385,23 @@ git ls-remote --tags origin
 gh repo view --web
 ```
 
-### Phase 5: GitHub Release作成
+### Phase 5: GitHub Release のノート反映
 
-#### 5.1 GitHub Releaseテンプレート準備
+Release 自体は Phase 4 のタグ push で **自動作成済み**（auto-generated notes）。ここでは Phase 2 で用意した詳細ノートに差し替える。
+
+#### 5.1 詳細ノートを反映
 
 ```bash
-# テンプレートファイルを編集
-cp .github/RELEASE_TEMPLATE.md /tmp/release-v${VERSION}.md
-vim /tmp/release-v${VERSION}.md
+# Phase 2 で作成した詳細リリースノートを一時ファイルに用意し、上書き反映
+# 構造は ./template.md を参照
+gh release edit v${VERSION} \
+  --notes-file /tmp/release-notes-v${VERSION}.md
 ```
 
-#### 5.2 GitHub Release作成
+#### 5.2 Release確認
 
 ```bash
-# GitHub CLI で作成（リリースノートは docs/releases/ に配置）
-gh release create v${VERSION} \
-  --title "Release v${VERSION}" \
-  --notes-file docs/releases/RELEASE_NOTES_v${VERSION}.md
-
-# または GitHub UI から作成
-# https://github.com/t3-nico/dayopt/releases/new
-```
-
-#### 5.3 Release確認
-
-```bash
-# 作成されたReleaseを確認
+# 反映されたReleaseを確認
 gh release view v${VERSION} --web
 ```
 
@@ -430,7 +411,7 @@ gh release view v${VERSION} --web
 
 ```bash
 # Vercelのデプロイ状況を確認
-# https://vercel.com/t3-nico/dayopt
+# https://vercel.com/Dayopt/dayopt
 
 # デプロイログを確認
 npm run deploy:stats
@@ -460,7 +441,7 @@ npm run deploy:health
 
 ```bash
 # GitHub UI でマイルストーンをクローズ
-# https://github.com/t3-nico/dayopt/milestones
+# https://github.com/Dayopt/dayopt/milestones
 ```
 
 ### 2. 関連Issueの更新
@@ -468,7 +449,7 @@ npm run deploy:health
 ```bash
 # リリースされたことをIssueにコメント
 gh issue comment <issue_number> \
-  --body "Released in v${VERSION}: https://github.com/t3-nico/dayopt/releases/tag/v${VERSION}"
+  --body "Released in v${VERSION}: https://github.com/Dayopt/dayopt/releases/tag/v${VERSION}"
 ```
 
 ### 3. ドキュメントの更新
@@ -508,7 +489,7 @@ npm run analytics:stats
 npm run deploy:rollback
 
 # または Vercel UI から前のデプロイをPromote
-# https://vercel.com/t3-nico/dayopt/deployments
+# https://vercel.com/Dayopt/dayopt/deployments
 ```
 
 #### 3. GitHub Releaseの対応
@@ -526,18 +507,14 @@ gh issue create \
 #### 4. 修正版のリリース
 
 ```bash
-# 問題を修正
-# ...
+# 問題を修正用の feature ブランチで対応し、version bump を含めて main へ PR
+# （通常のリリースフローと同じ: Phase 0 → 4）
+#   npm version patch --no-git-tag-version → commit → PR → merge（merge commit, ブランチ削除）
 
-# パッチバージョンをリリース
-npm version patch -m "fix: critical issue in v${VERSION}"
-git push origin dev
+# main 取り込み後、main 上でタグを打って push（Release は自動作成される）
+git checkout main && git pull origin main
+git tag v${VERSION_PATCH}
 git push origin v${VERSION_PATCH}
-
-# 新しいReleaseを作成
-gh release create v${VERSION_PATCH} \
-  --title "Hotfix v${VERSION_PATCH}" \
-  --notes "Fixes critical issue in v${VERSION}"
 ```
 
 ## トラブルシューティング
@@ -560,9 +537,9 @@ npm version patch --force
 # タグの確認
 git tag -l
 
-# タグを削除して再作成
+# タグを削除して再作成（version bump は Release PR 済みなので git tag のみ）
 git tag -d v${VERSION}
-npm version patch -m "chore: bump version to %s"
+git tag v${VERSION}
 git push origin v${VERSION}
 ```
 
@@ -576,14 +553,14 @@ gh auth status
 gh auth login
 
 # 手動で作成
-# https://github.com/t3-nico/dayopt/releases/new
+# https://github.com/Dayopt/dayopt/releases/new
 ```
 
 ### Q: デプロイが失敗する
 
 ```bash
 # Vercelのログを確認
-# https://vercel.com/t3-nico/dayopt/deployments
+# https://vercel.com/Dayopt/dayopt/deployments
 
 # ローカルでビルド確認
 npm run build
@@ -599,16 +576,17 @@ npm run vercel:check
 ```markdown
 ## リリース v${VERSION} チェックシート
 
-### リリース前（devブランチ）
+### リリース前（リリースブランチ）
 
 - [ ] npm run lint - 成功
 - [ ] npm run typecheck - 成功
 - [ ] npm run test:run - 成功
 - [ ] npm run build - 成功
+- [ ] version bump を Release PR に含めた（npm version --no-git-tag-version）
 - [ ] リリースノート作成済み
 - [ ] マイルストーンの全Issue/PRクローズ済み
 
-### Phase 0: PR作成 & マージ（dev → main）
+### Phase 0: Release PR作成 & マージ（feature ブランチ → main）
 
 - [ ] PRテンプレート記入完了
 - [ ] CI/CD Quality Gate 通過
@@ -621,16 +599,14 @@ npm run vercel:check
   - [ ] heavy-checks ✅
   - [ ] docs-consistency ✅
 - [ ] コードレビュー承認済み
-- [ ] PRマージ完了（Squash & Merge）
+- [ ] PRマージ完了（Merge commit / feature ブランチ削除）
 
-### Phase 1-4: バージョンタグ作成 & プッシュ（mainブランチ）
+### Phase 1-4: タグ作成 & プッシュ（mainブランチ）
 
 - [ ] mainブランチに切り替え
-- [ ] PRマージ内容を確認
-- [ ] バージョンアップ実行（npm version）
-- [ ] Git push完了（main）
-- [ ] Tag push完了
-- [ ] devブランチへ同期完了
+- [ ] PRマージ内容・package.json バージョンを確認
+- [ ] タグ作成（git tag v${VERSION}）
+- [ ] Tag push完了（Release は自動作成）
 
 ### Phase 5-6: GitHub Release & デプロイ
 
@@ -656,33 +632,32 @@ npm run vercel:check
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 0: Pull Request（dev → main）                         │
+│ Phase 0: Release PR（feature ブランチ → main）              │
 ├─────────────────────────────────────────────────────────────┤
-│ 1. dev ブランチで開発完了                                    │
-│ 2. PR作成（dev → main）                                      │
+│ 1. feature ブランチで version bump（--no-git-tag-version）  │
+│ 2. PR作成（feature → main）                                  │
 │ 3. CI/CD自動実行（lint, typecheck, test, build...）         │
 │ 4. Quality Gate 通過                                         │
 │ 5. コードレビュー & 承認                                      │
-│ 6. PRマージ（Squash & Merge）                                │
+│ 6. PRマージ（Merge commit + feature ブランチ削除）          │
+│    → main マージで Vercel 本番デプロイが自動実行            │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 1-4: バージョンタグ作成（main）                        │
+│ Phase 1-4: タグ作成（main）                                  │
 ├─────────────────────────────────────────────────────────────┤
-│ 1. main ブランチに切り替え                                   │
-│ 2. npm version [patch|minor|major]                           │
-│ 3. git push origin main                                      │
-│ 4. git push origin v0.X.X                                    │
-│ 5. dev ブランチに同期（git merge main --ff-only）            │
+│ 1. main ブランチに切り替え（version bump 反映済み）         │
+│ 2. git tag v0.X.X                                            │
+│ 3. git push origin v0.X.X                                    │
+│    → create-release.yml が GitHub Release を自動作成        │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 5-6: GitHub Release & デプロイ                         │
+│ Phase 5-6: Release ノート反映 & 確認                         │
 ├─────────────────────────────────────────────────────────────┤
-│ 1. GitHub Release作成（gh release create）                   │
-│ 2. Vercel自動デプロイ（main → Production）                   │
-│ 3. 本番環境動作確認                                          │
-│ 4. Sentryモニタリング                                        │
+│ 1. gh release edit で詳細ノートを反映                        │
+│ 2. 本番環境動作確認（デプロイは Phase 0 で実行済み）        │
+│ 3. Sentryモニタリング                                        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
