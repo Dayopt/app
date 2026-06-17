@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Operations/Security/Monitoring" />
-
 # 🛡️ セキュリティ監視・レポート
 
 OWASP準拠のセキュリティ監視とレポート生成システム
@@ -287,8 +283,8 @@ LIMIT 20;
 
 ## 📚 関連ドキュメント
 
-- [Error Handling](../../src/lib/errors/secure-error-handler.ts)
-- [Rate Limiting](../../src/lib/rate-limit/upstash.ts)
+- [Error Handling](../../../apps/product/src/lib/errors/secure-error-handler.ts)
+- [Rate Limiting](../../../apps/product/src/lib/rate-limit/upstash.ts)
 - [Issue #487](https://github.com/t3-nico/dayopt/issues/487)
 
 ---

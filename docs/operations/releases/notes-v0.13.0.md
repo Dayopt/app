@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Operations/Releases/Notes v0.13.0" />
-
 # Release v0.13.0
 
 **リリース日**: 2026-01-23

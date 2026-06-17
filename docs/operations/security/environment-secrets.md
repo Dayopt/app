@@ -1,10 +1,6 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Operations/Security/Environment Secrets" />
-
 # Environment Secrets
 
-Dayopt の Secrets 運用の正本は [Operations / Secrets](../secrets.mdx)。
+Dayopt の Secrets 運用の正本は [Operations / Secrets](../secrets.md)。
 このページでは GitHub / Vercel / Supabase 側に置かれる replica の役割だけを整理する。
 
 ## 基本方針

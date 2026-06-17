@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Operations/Releases/Checklist" />
-
 # リリースチェックリスト
 
 このチェックリストは、**リリース作業時に必ず確認すべき項目**をまとめたものです。
@@ -239,9 +235,9 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 🔗 関連ドキュメント
 
-- [process](./process.mdx) - 詳細なリリースプロセス
-- [versioning](./versioning.mdx) - バージョニングルール
-- [template](./template.mdx) - リリースノート構造テンプレート（参照用）
+- [process](./process.md) - 詳細なリリースプロセス
+- [versioning](./versioning.md) - バージョニングルール
+- [template](./template.md) - リリースノート構造テンプレート（参照用）
 
 ---
 

@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Operations/Releases/Versioning" />
-
 # バージョニング管理ガイド
 
 ## 📋 目次

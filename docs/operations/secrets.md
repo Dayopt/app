@@ -1,7 +1,5 @@
 import { Meta } from '@storybook/blocks';
 
-<Meta title="Operations/Secrets Management" />
-
 # Secrets Management
 
 このページを Dayopt の Secrets 運用の正本とする。1Password が長寿命 secret の master で、ローカルファイル・Vercel Env・GitHub Secrets・Supabase Dashboard secrets は replica として扱う。
@@ -211,6 +209,6 @@ reCAPTCHA 関連 env は旧方式。新規設定・docs・example には追加�
 ## 関連
 
 - `.op-env.local.example` — local injection 参照例
-- `apps/storybook/docs/dev/architecture/BotProtection.mdx` — Turnstile 実装
-- `apps/storybook/docs/dev/architecture/Environments.mdx` — Supabase / deployment 環境構成
-- `apps/storybook/docs/operations/security/github-actions.mdx` — GitHub Actions secrets
+- `docs/architecture/bot-protection.md` — Turnstile 実装
+- `docs/architecture/environments.md` — Supabase / deployment 環境構成
+- `docs/operations/security/github-actions.md` — GitHub Actions secrets

@@ -1,14 +1,10 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Operations/Releases/Process" />
-
 # リリースプロセス
 
 Dayoptの正式なリリース作業手順を定義します。
 
 ## ⚠️ 必ず最初に確認
 
-**🎯 実際にリリース作業を行う際は、[checklist](./checklist.mdx) を開いて、上から順番に全ての項目をチェックしてください。**
+**🎯 実際にリリース作業を行う際は、[checklist](./checklist.md) を開いて、上から順番に全ての項目をチェックしてください。**
 
 このドキュメント（RELEASE_PROCESS.md）は詳細な説明と背景情報を提供します。
 実作業では RELEASE_CHECKLIST.md を使用してください。
@@ -694,8 +690,8 @@ npm run vercel:check
 
 ### プロジェクト内
 
-- [versioning](./versioning.mdx) - バージョニングルール
-- [.github/workflows/ci.yml](../../.github/workflows/ci.yml) - CI/CD設定
+- [versioning](./versioning.md) - バージョニングルール
+- [.github/workflows/ci.yml](../../../.github/workflows/ci.yml) - CI/CD設定
 
 ### 公式ドキュメント
 

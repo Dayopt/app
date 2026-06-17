@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Operations/Releases/Template" />
-
 # Release vX.Y.Z
 
 **リリース日**: YYYY-MM-DD
