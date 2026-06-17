@@ -175,7 +175,7 @@ PR は **merge commit** でマージする。GitHub リポジトリ設定で squ
 gh pr merge <PR番号> --merge --delete-branch
 ```
 
-`--squash` / `--rebase` は使わない（GitHub 設定でも禁止済み）。例外的に `--squash` を使うのはユーザーが明示した時、または release 手順など既存プロセスが明示している時だけ。
+`--squash` / `--rebase` は使わない。GitHub 設定でハード無効化済みで、`--admin` でも merge method 制限は迂回できない。**release 手順も merge commit に統一**（[releases/process.mdx](../../apps/storybook/docs/operations/releases/process.mdx)）。squash が必要になる稀なケースでは repo 設定の変更が前提になる。
 
 ### 運用上の含意
 
