@@ -1,0 +1,78 @@
+# ADR-001: 統合ブロックモデル
+
+> accepted（2026-03-05・遡及記録）
+
+---
+
+## コンテキスト
+
+Dayoptでは当初、計画（plans）と記録（records）を別テーブルで管理していた。この分離は以下の問題を生んでいた：
+
+- 計画と記録の紐付け・同期ロジックが複雑化（計画を実行したら対応するrecordを作成、未実行なら orphan plan が残る等）
+- `status` カラム（`pending`, `completed`, `skipped` 等）による主観的な状態管理がUIとロジックの両方を複雑にしていた
+- 2テーブル間のJOINがクエリパフォーマンスとRLS設計を困難にしていた
+
+タイムボクシングアプリとして、「時間ブロック」という統一概念で扱う方が自然であり、GoogleカレンダーやTogglのようなシンプルな体験に近づけたかった。
+
+---
+
+## 決定
+
+`plans` テーブルと `records` テーブルを単一の `entries` テーブルに統合する。エントリの種別は `origin` フィールド（`planned`）で識別し、`status` カラムは廃止して時間位置から状態を自動導出する。
+
+---
+
+## 詳細
+
+### スキーマ統合
+
+マイグレーション `20260301000000_unify_plans_records_to_entries.sql` で2テーブルのデータを `entries` に移行。
+
+### 状態の自動導出
+
+「Time waits for no one」原則に基づき、エントリの状態はDBカラムではなく時間位置から算出する：
+
+```typescript
+// src/features/entry/lib/entry-status.ts
+function getEntryState(entry: EntryLike, now?: Date): EntryState {
+  // start_time > now → 'upcoming'
+  // start_time <= now < end_time → 'active'
+  // end_time <= now → 'past'
+}
+```
+
+`EntryState` 型は `'upcoming' | 'active' | 'past'` の3値。
+
+### 型構造
+
+- `src/features/entry/types/entry.ts` — Entry型定義（canonical source）
+- `src/types/entry.ts` — 共有層向けの基本型（`EntryOrigin`, `EntryState`, `FulfillmentScore`）
+
+共有層（stores, types）はfeatures層をimportできないため、基本型のみ `src/types/` に配置する設計。
+
+---
+
+## 結果
+
+### メリット
+
+- データモデルがシンプルになり、CRUD操作が1テーブルで完結
+- 主観的なstatusの手動管理が不要になり、時間が経過すれば自動的に状態が変わる
+- RLSポリシーが1テーブル分で済み、セキュリティ設計が簡潔に
+- UIコンポーネントが統一的にエントリを扱えるようになった
+
+### トレードオフ
+
+- `origin` が現在 `'planned'` のみで、将来 `'unplanned'`（飛び込みタスク）を追加する場合はマイグレーションが必要
+- 既存の plans/records 参照を一括で entries に書き換える必要があった
+- 充実度スコア（`FulfillmentScore`）は過去ブロックのみに意味があるが、スキーマ上はnullableカラムとして全エントリに存在する
+
+---
+
+## 関連
+
+- `src/features/entry/types/entry.ts` — Entry型定義
+- `src/features/entry/lib/entry-status.ts` — `getEntryState()`, `isEntryPast()`
+- `src/types/entry.ts` — 共有層向け基本型
+- `supabase/migrations/_archive/20260301000000_unify_plans_records_to_entries.sql` — 統合マイグレーション
+- ADR-005 — 時間不変原則（本ADRのデータモデルを前提とする）

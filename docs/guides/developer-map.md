@@ -1,0 +1,190 @@
+# Developer Map
+
+「何をしたいとき、どこを見るか」の逆引きガイド。AI（Claude Code）がファイル検索する前の参照ポイントとしても機能する。
+
+---
+
+## ディレクトリマップ
+
+```
+apps/product/src/
+├── app/[locale]/              # Next.js App Router（ページ = Composition Layer）
+│   ├── (app)/                 # 認証済みユーザー向けレイアウト
+│   │   ├── calendar/          # カレンダーページ（day/week/nday）
+│   │   ├── stats/             # 統計ページ（insights/progress/tags）
+│   │   ├── settings/          # 設定ページ
+│   │   └── notifications/     # 通知ページ
+│   └── (marketing)/           # 未認証ユーザー向け（LP、ログイン）
+│
+├── features/                  # Feature モジュール（DAG階層）
+│   ├── tags/                  # Layer 0: タグ管理
+│   ├── chronotype/            # Layer 0: クロノタイプ
+│   ├── entry/                 # Layer 1: エントリ（時間ブロック）
+│   ├── calendar/              # Layer 2: カレンダー表示
+│   ├── stats/                 # Layer 2: 統計・分析
+│   ├── history/               # Layer 2: 最近のブロック
+│   ├── palette/               # Layer 2: クイック挿入
+│   ├── auth/                  # Cross-cutting: 認証
+│   ├── settings/              # Cross-cutting: ユーザー設定
+│   ├── notifications/         # Cross-cutting: 通知
+│   ├── onboarding/            # Independent: 初回案内
+│   ├── tour/                  # Independent: 機能紹介
+│   ├── contact/               # Independent: フィードバック
+│   └── ai/                    # Independent: AI機能
+│
+├── components/
+│   ├── ui/                    # shadcn/ui ベースの Primitive コンポーネント
+│   └── common/                # アプリ共通の複合コンポーネント
+│
+├── shell/components/          # アプリシェル（Header, Sidebar, BottomTab）
+│
+├── platform/                  # インフラ層（フレームワーク依存）
+│   ├── trpc/                  # tRPC クライアント設定
+│   ├── auth/                  # Supabase Auth ヘルパー
+│   ├── supabase/              # Supabase クライアント
+│   ├── i18n/                  # next-intl 設定
+│   ├── stripe/                # Stripe 決済
+│   ├── sentry/                # エラー監視
+│   ├── analytics/             # イベント追跡
+│   ├── cache/                 # TanStack Query キャッシュ設定
+│   └── security/              # CSP, CSRF
+│
+├── stores/                    # グローバル Zustand ストア
+├── hooks/                     # 共有カスタムフック
+├── types/                     # 共有型定義
+├── lib/                       # ユーティリティ（日付、セキュリティ、PWA等）
+├── lib/styles/tokens/         # product 固有 / legacy token layer
+│
+├── stories/
+│   ├── patterns/              # 実装パターン Story
+│   └── docs/                  # ドキュメント MDX
+│
+└── emails/                    # メールテンプレート
+
+packages/
+├── design/                    # design token source of truth
+├── ui/                        # domain logic を持たない React UI
+├── config/                    # URL / domain / contact / public constants
+├── domain/                    # DB に依存しない Dayopt domain model
+├── database/                  # Supabase generated types / converters
+├── billing/                   # plans / subscription / entitlement
+└── utils/                     # generic pure utilities
+```
+
+---
+
+## Monorepo packages
+
+責務境界の詳細は [Packages Overview](../architecture/packages-overview.md) を参照。
+
+現在は `packages/design` が token の source of truth で、Storybook の `Design/*` で最小 token を確認できる。`packages/config` は product/web が共有する URL / domain / contact / brand constants の置き場にする。
+
+## Root commands
+
+root の `dev`, `build`, `start` は既存互換のため product app の alias として残す。monorepo の対象を明示したいときは下の command を使う。
+
+| やりたいこと                 | コマンド                  |
+| ---------------------------- | ------------------------- |
+| product を起動               | `pnpm dev:product`        |
+| product を build             | `pnpm build:product`      |
+| web を build                 | `pnpm build:web`          |
+| Storybook を build           | `pnpm build-storybook`    |
+| shared packages を build     | `pnpm build:packages`     |
+| shared packages を型チェック | `pnpm typecheck:packages` |
+| workspace smoke check        | `pnpm check:workspace`    |
+
+## 目的別ガイド
+
+### UI を変更したい
+
+| やりたいこと             | 探す場所                  | 例                                    |
+| ------------------------ | ------------------------- | ------------------------------------- |
+| ボタン・入力欄を変更     | `src/components/ui/`      | `button.tsx`, `input.tsx`             |
+| 共通UIを変更             | `src/components/common/`  | `EmptyState.tsx`, `DateNavigator.tsx` |
+| ヘッダー・サイドバー変更 | `src/shell/components/`   | `AppHeader.tsx`, `sidebar/`           |
+| デザイントークン変更     | `packages/design/src/`    | `colors.ts`, `theme.css`              |
+| アイコン確認             | `Foundations/Icons` Story | lucide-react 一覧                     |
+
+### Feature を変更したい
+
+| やりたいこと             | 探す場所                          | 補足                         |
+| ------------------------ | --------------------------------- | ---------------------------- |
+| Feature のコンポーネント | `src/features/{name}/components/` | —                            |
+| Feature のAPI（tRPC）    | `src/features/{name}/server/`     | `router.ts` + `*-service.ts` |
+| Feature のフック         | `src/features/{name}/hooks/`      | barrel export のみ外部使用可 |
+| Feature のストア         | `src/features/{name}/stores/`     | —                            |
+| Feature の型             | `src/features/{name}/types/`      | —                            |
+| Feature の公開API確認    | `src/features/{name}/index.ts`    | これ以外は import 禁止       |
+
+### API を変更したい
+
+| やりたいこと         | 探す場所                                            | 補足                                     |
+| -------------------- | --------------------------------------------------- | ---------------------------------------- |
+| tRPC ルーター追加    | `src/features/{name}/server/router.ts`              | 3層パターン: Router → Service → Supabase |
+| サービスロジック     | `src/features/{name}/server/{name}-service.ts`      | ビジネスロジックはここ                   |
+| Supabase 型確認      | `packages/database/src/generated/database.types.ts` | `npm run types:generate` で再生成        |
+| マイグレーション作成 | `supabase/migrations/`                              | `npm run migration:create`               |
+| RLS ポリシー確認     | `supabase/migrations/`                              | `_rls` suffix のマイグレーション         |
+
+### 国際化（i18n）
+
+| やりたいこと   | 探す場所                                        |
+| -------------- | ----------------------------------------------- |
+| 翻訳キー追加   | `messages/ja/*.json` + `messages/en/*.json`     |
+| i18n 設定      | `src/platform/i18n/`                            |
+| フック使用     | `useTranslations('namespace')` from `next-intl` |
+| 整合性チェック | `npm run lint:i18n`                             |
+
+### テスト
+
+| やりたいこと             | コマンド                                |
+| ------------------------ | --------------------------------------- |
+| ユニットテスト実行       | `npm run test:run`                      |
+| テスト（ウォッチモード） | `npm run test`                          |
+| 統合テスト               | `npm run test:integration`              |
+| E2E スモーク             | `npm run test:e2e:smoke`                |
+| Storybook play関数テスト | `npm run storybook` → `test-runner`     |
+| テストファイル配置       | テスト対象ファイルの隣に `*.test.ts(x)` |
+
+### 品質チェック
+
+| やりたいこと         | コマンド                   |
+| -------------------- | -------------------------- |
+| 型チェック           | `npm run typecheck`        |
+| Lint                 | `npm run lint`             |
+| Feature 境界チェック | `npm run lint:boundaries`  |
+| デザイントークン検証 | `npm run lint:tokens`      |
+| 未使用コード検出     | `npm run quality:deadcode` |
+
+---
+
+## Feature 内のファイル構成
+
+```
+src/features/{name}/
+├── index.ts                   # Barrel export（公開API）
+├── components/                # UI コンポーネント
+│   ├── {Component}.tsx
+│   ├── {Component}.stories.tsx
+│   ├── {Component}.docs.mdx   # (optional)
+│   └── story-helpers.tsx       # (optional) Story用モック
+├── hooks/                     # カスタムフック
+├── server/                    # tRPC ルーター + サービス
+│   ├── router.ts
+│   ├── {name}-service.ts
+│   └── __tests__/
+├── stores/                    # Zustand ストア (optional)
+├── types/                     # 型定義
+└── lib/                       # ユーティリティ (optional)
+```
+
+---
+
+## 関連ドキュメント
+
+| ドキュメント                                                          | 内容           |
+| --------------------------------------------------------------------- | -------------- |
+| [Product Overview](../../apps/storybook/docs/dev/ProductOverview.mdx) | Dayoptの全体像 |
+| [Data Flow](../architecture/data-flow.md)                             | データの流れ   |
+| [Commands](commands.md)                                               | 全コマンド一覧 |
+| [Common Pitfalls](common-pitfalls.md)                                 | よくある間違い |
