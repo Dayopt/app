@@ -1,5 +1,3 @@
-import { Mermaid } from '../../../.storybook/decorators/Mermaid';
-
 # データフロー
 
 Dayoptにおけるデータの流れ。ユーザー操作からDBまでの全レイヤーを図解する。
@@ -8,7 +6,8 @@ Dayoptにおけるデータの流れ。ユーザー操作からDBまでの全レ
 
 ## 全体像
 
-<Mermaid chart={`graph TD
+```mermaid
+graph TD
 User["👤 ユーザー操作"]
 
     subgraph Client["🖥️ クライアント"]
@@ -41,12 +40,12 @@ User["👤 ユーザー操作"]
     SVC --> SB
     SB --> PG
     TQ -.->|"refetchOnWindowFocus"| RC
-
-`} />
+```
 
 ## 認証フロー
 
-<Mermaid chart={`graph LR
+```mermaid
+graph LR
 subgraph AuthModes["認証モード（自動判定）"]
 S["Session<br/>(Cookie)"]
 O["OAuth 2.1<br/>(Bearer Token)"]
@@ -63,13 +62,12 @@ end
     SR --> CTX
     CTX -->|"userId 抽出"| RL
     RL --> Router["tRPC Router"]
-
-`} />
+```
 
 ## Provider 階層
 
-<Mermaid
-chart={`graph TD
+```mermaid
+graph TD
     P["Providers (root)"]
     P --> QC["QueryClientProvider"]
     P --> TC["api.Provider (tRPC)"]
@@ -77,12 +75,12 @@ chart={`graph TD
     P --> TP["ThemeProvider"]
     P --> SW["ServiceWorkerProvider (lazy)"]
     P --> GT["GlobalTagMergeModal (lazy)"]
-`}
-/>
+```
 
 ## キャッシュ戦略
 
-<Mermaid chart={`graph LR
+```mermaid
+graph LR
 subgraph Cache["TanStack Query キャッシュ"]
 E["entries / calendars<br/>stale: 5min, gc: 10min"]
 T["tags<br/>stale: 5min, gc: 10min"]
@@ -92,12 +90,12 @@ end
 
     WF["refetchOnWindowFocus"] -.->|"stale時 再取得"| E
     WF -.->|"stale時 再取得"| T
-
-`} />
+```
 
 ## Feature 間の依存（Composition Layer）
 
-<Mermaid chart={`graph TD
+```mermaid
+graph TD
 subgraph Features
 CAL["calendar"]
 ENT["entry"]
@@ -133,8 +131,7 @@ end
     SHELL --> ENT
     SHELL --> TAG
     SHELL --> SEARCH
-
-`} />
+```
 
 ---
 
