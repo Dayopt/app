@@ -29,5 +29,5 @@ Codex が Dayopt repo で branch / commit / PR / merge を扱う時の薄い ove
 
 - ユーザーが単に「マージして」と言った場合は `gh pr merge --merge --delete-branch` を使う
 - 理由: main の履歴に branch の分岐と合流を残すため
-- `--squash` はユーザーが明示した時、または release 運用など既存手順が明示している時だけ使う
+- `--squash` / `--rebase` は GitHub 設定でハード無効化済み（`--admin` でも迂回不可）。release 運用も merge commit に統一されている。squash が必要な稀なケースは repo 設定変更が前提
 - merge 前に PR が mergeable で、required checks が成功していることを確認する

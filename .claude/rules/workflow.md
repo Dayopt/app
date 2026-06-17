@@ -142,16 +142,6 @@ git add path/to/file2
 
 commit 前に必ず `git diff --cached` で index 内容を確認する。Edit ツールで変更した内容が working tree のみに反映されて index に入っていないケースを防ぐ（Step C-1 事故の教訓）。
 
-### PR merge policy
-
-PR を merge する時は、原則として merge commit を残す:
-
-```bash
-gh pr merge <PR番号> --merge --delete-branch
-```
-
-理由: `git log --graph` で branch の分岐と合流が見える履歴を維持するため。`--squash` はユーザーが明示した時、または release 手順など既存プロセスが明示している時だけ使う。
-
 ### typecheck / lint / build
 
 中規模以上の作業では以下を必ず pass:
@@ -167,6 +157,31 @@ UI 変更を含む作業では、Storybook 起動して視覚確認を Tomoya �
 
 - 既存 stories の regression なし
 - 新規 stories の描画確認
+
+## マージ方式
+
+策定日: 2026-06-17
+
+PR は **merge commit** でマージする。GitHub リポジトリ設定で squash / rebase merge を禁止済み（`mergeCommitAllowed: true` のみ）。
+
+### なぜ merge commit か
+
+- ブランチの分岐・合流を main の DAG に記録し、`git log --graph` や tig / lazygit で開発の経緯を可視化できるようにするため
+- squash は「PR の全コミットを 1 個に潰して親 1 つで main に載せる」ため分岐情報が一切残らず、履歴が一直線になる。後からどのブランチがいつ合流したかを復元できない
+
+### マージ手順
+
+```bash
+gh pr merge <PR番号> --merge --delete-branch
+```
+
+`--squash` / `--rebase` は使わない。GitHub 設定でハード無効化済みで、`--admin` でも merge method 制限は迂回できない。**release 手順も merge commit に統一**（[releases/process.mdx](../../apps/storybook/docs/operations/releases/process.mdx)）。squash が必要になる稀なケースでは repo 設定の変更が前提になる。
+
+### 運用上の含意
+
+- merge commit では**ブランチ上の各コミットがそのまま main に残る**。WIP / typo コミットを main に持ち込まないよう、1 コミット単位で意味の通る粒度・Conventional Commits 形式を守る
+- revert は対象を見極める。マージコミット自体を戻す場合は `git revert -m 1 <merge-sha>`、個別コミットを戻す場合は通常の `git revert <sha>`
+- マージ済みブランチは GitHub が自動削除（`deleteBranchOnMerge: true`）。ローカルでは `git branch -d` がマージを検出して安全に削除できる（squash 時代の `-D` 強制は不要になる）
 
 ## 実例の参照先
 

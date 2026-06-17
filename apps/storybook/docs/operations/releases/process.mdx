@@ -236,8 +236,8 @@ gh pr diff -- package.json
 gh pr diff -- .github/workflows/
 gh pr diff -- src/middleware.ts
 
-# 5. 確認完了後にマージ（Squash & Merge推奨）
-gh pr merge --squash --delete-branch=false
+# 5. 確認完了後にマージ（merge commit のみ。squash/rebase は repo 設定で無効）
+gh pr merge --merge --delete-branch=false
 
 # または GitHub UI から手動マージ（推奨）
 # https://github.com/t3-nico/dayopt/pulls
@@ -625,7 +625,7 @@ npm run vercel:check
   - [ ] heavy-checks ✅
   - [ ] docs-consistency ✅
 - [ ] コードレビュー承認済み
-- [ ] PRマージ完了（Squash & Merge）
+- [ ] PRマージ完了（Merge commit）
 
 ### Phase 1-4: バージョンタグ作成 & プッシュ（mainブランチ）
 
@@ -667,7 +667,7 @@ npm run vercel:check
 │ 3. CI/CD自動実行（lint, typecheck, test, build...）         │
 │ 4. Quality Gate 通過                                         │
 │ 5. コードレビュー & 承認                                      │
-│ 6. PRマージ（Squash & Merge）                                │
+│ 6. PRマージ（Merge commit）                                  │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐

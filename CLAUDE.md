@@ -84,6 +84,12 @@ pnpm quality:deadcode # 未使用コード検出（knip）
 | `test`     | テストの追加・修正             |
 | `perf`     | パフォーマンス改善             |
 
+### マージ方式
+
+- **PR は merge commit でマージする**（squash / rebase は GitHub 設定で禁止済み）。理由＝ブランチの分岐を main の DAG に残し、開発の経緯を追えるようにするため
+- merge commit では**ブランチ上の各コミットがそのまま main に載る**。よって 1 コミット単位で Conventional Commits 形式を守る（PR タイトルだけ整える squash 前提の運用ではない）
+- マージ済みブランチは GitHub 側で自動削除される（`deleteBranchOnMerge`）。ローカルは `git branch -d` でマージ検出削除できる
+
 ## ルール体系
 
 詳細ルールは `.claude/rules/` に分離。CLAUDE.md は概要のみ記載。
