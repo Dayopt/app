@@ -108,7 +108,7 @@ export async function SecurityContent() {
               <ExternalLink className="size-4" />
               <strong>{t('security.vulnerability.contacts.github')}</strong>:{' '}
               <a
-                href="https://github.com/t3-nico/dayopt-app/security/advisories/new"
+                href="https://github.com/Dayopt/dayopt/security/advisories/new"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
@@ -239,7 +239,7 @@ export async function SecurityContent() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <Link
-            href="https://github.com/t3-nico/dayopt-app/blob/main/docs/legal/SECURITY.md"
+            href="https://github.com/Dayopt/dayopt/blob/main/docs/legal/SECURITY.md"
             target="_blank"
             rel="noopener noreferrer"
             className="border-border hover:border-primary block rounded-2xl border p-4 transition-colors"
@@ -251,7 +251,7 @@ export async function SecurityContent() {
           </Link>
 
           <Link
-            href="https://github.com/t3-nico/dayopt-app/blob/main/docs/legal/VULNERABILITY_DISCLOSURE.md"
+            href="https://github.com/Dayopt/dayopt/blob/main/docs/legal/VULNERABILITY_DISCLOSURE.md"
             target="_blank"
             rel="noopener noreferrer"
             className="border-border hover:border-primary block rounded-2xl border p-4 transition-colors"
@@ -265,7 +265,7 @@ export async function SecurityContent() {
           </Link>
 
           <Link
-            href="https://github.com/t3-nico/dayopt-app/blob/main/docs/legal/INCIDENT_RESPONSE.md"
+            href="https://github.com/Dayopt/dayopt/blob/main/docs/legal/INCIDENT_RESPONSE.md"
             target="_blank"
             rel="noopener noreferrer"
             className="border-border hover:border-primary block rounded-2xl border p-4 transition-colors"
