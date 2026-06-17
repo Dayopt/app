@@ -15,7 +15,7 @@ import { captureBusinessEvent } from '@/lib/sentry';
 import { getUserTimezone } from '@/lib/server/user-timezone-cache';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
-import type { TablesUpdate } from '@dayopt/database';
+import { toEntryUpdatePayload } from '../lib/entry-normalization';
 import {
   bulkDeleteEntrySchema,
   bulkUpdateEntrySchema,
@@ -26,8 +26,6 @@ import {
   updateEntrySchema,
 } from '../schemas/entry';
 import { createEntryService } from './service-index';
-
-import { removeUndefinedFields } from '../lib/entry-normalization';
 
 // =============================================================================
 // ユーザータイムゾーン取得 / レート制限の実装は lib に分離済み（P0-4 / P2-3）
@@ -267,7 +265,8 @@ export const entriesCoreRouter = createTRPCRouter({
     .input(bulkUpdateEntrySchema)
     .mutation(async ({ ctx, input }) => {
       const { supabase, userId } = ctx;
-      const updateData = removeUndefinedFields(input.data) as TablesUpdate<'entries'>;
+      // normalizeUpdateInput と同様、DB に無い列が Zod 側に紛れると型エラーになる。
+      const updateData = toEntryUpdatePayload(input.data);
 
       const { data, error } = await supabase
         .from('entries')

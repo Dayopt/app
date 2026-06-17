@@ -8,7 +8,11 @@ import 'server-only';
 
 import type { TablesInsert, TablesUpdate } from '@dayopt/database';
 import { determineEntryOrigin } from '../domain';
-import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-normalization';
+import {
+  normalizeDateTimeConsistency,
+  removeUndefinedFields,
+  toEntryUpdatePayload,
+} from '../lib/entry-normalization';
 
 import { EntryLifecycleService } from './entry-lifecycle-service';
 import { EntryOverlapService, type EntryOverlapOptions } from './entry-overlap-service';
@@ -257,7 +261,8 @@ export class EntryService {
       await this.ensureNoOverlaps(userId, finalEntry, entryId);
     }
 
-    const updateData = removeUndefinedFields(normalizedInput) as TablesUpdate<'entries'>;
+    // normalizeUpdateInput が既に TablesUpdate<'entries'> 型で返すため as キャスト不要。
+    const updateData = removeUndefinedFields(normalizedInput);
 
     const { data, error } = await this.supabase
       .from('entries')
@@ -548,11 +553,14 @@ export class EntryService {
     return normalized;
   }
 
+  // 戻り値を entries の Update 型に固定し、Zod 更新スキーマと DB 列の乖離（DB に無い列の
+  // 紛れ込み・列名 rename）を typecheck で検出する。Record<string, unknown> に緩めると
+  // 下流の as キャストと相まって乖離が runtime まで素通りするため戻さない（issue #1288 項目2）。
   private normalizeUpdateInput(
     input: UpdateEntryOptions['input'],
     existingData: EntryRow,
     timezone?: string,
-  ): Record<string, unknown> {
+  ): Partial<TablesUpdate<'entries'>> {
     if (input.origin !== undefined && input.origin !== existingData.origin) {
       throw new EntryServiceError(
         'INVALID_ENTRY_SHAPE',
@@ -579,7 +587,7 @@ export class EntryService {
       );
       // 自動記録モデル: 未来 planned の時間変更は plan range のみ。
       // actual へのコピーはしない（actual NULL = 未編集を維持する）。
-      return removeUndefinedFields({
+      return toEntryUpdatePayload({
         ...baseInput,
         start_time: plannedRange.start,
         end_time: plannedRange.end,
@@ -596,7 +604,7 @@ export class EntryService {
       );
     }
 
-    return removeUndefinedFields(baseInput);
+    return toEntryUpdatePayload(baseInput);
   }
 
   private resolveCreateRange(input: CreateEntryOptions['input'], timezone?: string): EntryRange {
