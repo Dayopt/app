@@ -27,7 +27,6 @@
       "command": "op",
       "args": [
         "run",
-        "--no-masking",
         "--",
         "npx",
         "-y",
@@ -48,7 +47,7 @@
     "github": {
       "type": "stdio",
       "command": "op",
-      "args": ["run", "--no-masking", "--", "github-mcp-server", "stdio"],
+      "args": ["run", "--", "github-mcp-server", "stdio"],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "op://Dayopt-Shared/github-mcp-pat/credential"
       }

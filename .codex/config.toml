@@ -19,6 +19,31 @@ env_vars = ["SENTRY_ACCESS_TOKEN"]
 [mcp_servers.supabase-local]
 url = "http://127.0.0.1:54321/mcp"
 
+[mcp_servers.github]
+command = "op"
+args = [
+    "run",
+    "--",
+    "github-mcp-server",
+    "stdio",
+]
+
+[mcp_servers.github.env]
+GITHUB_PERSONAL_ACCESS_TOKEN = "op://Dayopt-Shared/github-mcp-pat/credential"
+
+[mcp_servers.playwright]
+command = "npx"
+args = [
+    "-y",
+    "@playwright/mcp@latest",
+]
+
+[mcp_servers.storybook]
+url = "http://localhost:6006/mcp"
+
+[mcp_servers.vercel]
+url = "https://mcp.vercel.com"
+
 [shell_environment_policy]
 inherit = "core"
 

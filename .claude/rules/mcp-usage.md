@@ -9,7 +9,7 @@ Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下�
 1. **OAuth 承認方式**（`/mcp` で承認、トークン管理不要）: `sentry` / `vercel`。`sentry` は `https://mcp.sentry.dev/mcp` を直叩きする hosted MCP。
 2. **`.mcp.json` 内 `op run` 自己解決方式**: `supabase`(cloud) / `github`。MCP プロセスの起動コマンド自体を `op run -- <bin>` でラップし、spawn 時に 1Password が `op://` 参照を解決する。**Claude 本体の起動経路に依存しない**（desktop アプリ起動でも動く）。token 系 MCP はこの方式を標準とする。
 
-**トークンを平文でハードコードしない**。env 注入を要する MCP はもう無いため、**Claude 起動に zsh の `op run` ラッパーは不要**（過去の `.op-env.mcp` / wrapper 方式は廃止）。前提は `op` CLI + 1Password desktop 統合が使えること。
+**トークンを平文でハードコードしない**。env 注入を要する MCP はもう無いため、**Claude 起動に zsh の `op run` ラッパーは不要**（過去の `.op-env.mcp` / wrapper 方式は廃止）。前提は `op` CLI + 1Password desktop 統合が使えること。`op run` は stdout / stderr の secret masking が既定で有効なので、MCP server へ env token を渡す用途では `--no-masking` を付けない。
 
 ## 運用方針
 
