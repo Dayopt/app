@@ -42,7 +42,7 @@ jobs:
         run: pnpm exec prettier --check "apps/product/src/**/*.{ts,tsx,js,jsx,json,md}"
 
       - name: Workspace Prettier
-        run: pnpm exec prettier --check "package.json" "packages/*/package.json" "apps/*/package.json" "apps/storybook/docs/**/*.mdx"
+        run: pnpm exec prettier --check "package.json" "packages/*/package.json" "apps/*/package.json" "apps/storybook/docs/**/*.mdx" "docs/**/*.md"
 
       - name: License check
         run: pnpm license:check

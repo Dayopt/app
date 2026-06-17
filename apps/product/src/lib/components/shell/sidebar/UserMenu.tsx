@@ -142,7 +142,7 @@ export function UserMenu({
             <DropdownMenuSubContent className="border-input">
               <DropdownMenuItem asChild>
                 <Link
-                  href="https://github.com/t3-nico/dayopt/releases"
+                  href="https://github.com/Dayopt/dayopt/releases"
                   target="_blank"
                   rel="noopener noreferrer"
                 >

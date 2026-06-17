@@ -169,7 +169,7 @@ export default async function OSSCreditsPage({ params }: PageProps) {
             {t('ossCredits.footer.thirdPartyNotices')}
           </Link>
           <Link
-            href="https://github.com/t3-nico/dayopt-app"
+            href="https://github.com/Dayopt/dayopt"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline"

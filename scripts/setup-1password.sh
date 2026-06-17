@@ -10,7 +10,7 @@
 #   - `op account list` でサインイン済み
 #   - 初回専用。vault / item が既に存在すると重複作成される
 #
-# 詳細: apps/storybook/docs/operations/secrets.mdx
+# 詳細: docs/operations/secrets.md
 
 set -euo pipefail
 

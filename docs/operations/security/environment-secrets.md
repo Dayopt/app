@@ -1,0 +1,54 @@
+# Environment Secrets
+
+Dayopt の Secrets 運用の正本は [Operations / Secrets](../secrets.md)。
+このページでは GitHub / Vercel / Supabase 側に置かれる replica の役割だけを整理する。
+
+## 基本方針
+
+- 1Password は production / shared / optional staging の長寿命 secrets の master
+- Vercel Env、GitHub Secrets、Supabase Dashboard secrets は replica
+- PR Preview 用 Supabase credentials は Supabase / Vercel integration が作る ephemeral replica
+- PR Preview credentials は 1Password に保存しない
+- 値の確認は存在確認だけにし、terminal / docs / issue / chat に出さない
+
+## GitHub
+
+GitHub Actions は lint / typecheck / test / build などの検証を担当する。
+Supabase migration の production 適用は GitHub Actions ではなく Supabase GitHub integration が担当する。
+
+GitHub branch protection では、通常の CI check に加えて Supabase integration の Preview Branch check を required にする。
+
+| Secret                  | 用途                               | 方針                             |
+| ----------------------- | ---------------------------------- | -------------------------------- |
+| `CODECOV_TOKEN`         | coverage upload                    | CI 用 replica                    |
+| `LHCI_GITHUB_APP_TOKEN` | Lighthouse CI                      | CI 用 replica                    |
+| `SENTRY_AUTH_TOKEN`     | release / sourcemap 操作が必要な時 | 1Password から同期               |
+| `SUPABASE_ACCESS_TOKEN` | emergency / manual operation       | 通常 migration flow では使わない |
+
+## Vercel
+
+| Environment | Supabase credentials                                        |
+| ----------- | ----------------------------------------------------------- |
+| Production  | `Dayopt-Production/supabase` から手動同期した replica       |
+| Preview     | Supabase Vercel integration が PR branch credentials を注入 |
+| Development | 通常は使わない。local は `.op-env.local` + `op run`         |
+
+Preview scope に production Supabase credentials を手動設定しない。
+既に入っている場合は削除するか、Preview から外して Supabase integration 管理に寄せる。
+
+## Supabase
+
+Supabase Dashboard secrets は Supabase 側で必要な長寿命 replica として扱う。
+Auth Bot Protection、Auth hooks、Edge Functions、Vault secrets は 1Password master から手動同期する。
+
+PR Preview Branch credentials は短命で、Supabase Branching / Vercel integration が扱う。
+手動で 1Password や GitHub Secrets に保存しない。
+
+## Emergency Only
+
+手動 `supabase db push` や linked DB reset は通常導線ではない。
+Supabase integration 障害などで緊急対応が必要な時だけ、理由と対象環境を作業ログに残して実行する。
+
+```bash
+pnpm db:reset-linked:unsafe
+```

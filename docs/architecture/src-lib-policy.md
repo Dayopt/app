@@ -1,0 +1,121 @@
+# `src/lib` Policy
+
+`apps/product/src/lib/` の役割と「何を置き / 何を置かないか」のルール。
+
+---
+
+## 結論
+
+- `src/lib` は **feature 横断の再利用コードと shell-level state** のみ
+- `src/lib → features/*` の import は **禁止**（一方向ルール）
+- `src/lib` は便利箱ではない。feature 非依存の基盤として扱う
+
+---
+
+## 置いてよいもの
+
+| カテゴリ                          | 例                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------- |
+| **feature 非依存の pure utility** | `logger` / `safe-redirect` / `date-utils` / `breakpoints` / `cn`           |
+| **infrastructure adapter**        | `supabase/` / `trpc/` / `sentry/` / `rate-limit/` / `i18n/` / `stripe/`    |
+| **cross-cutting UI state**        | `lib/stores/useShellStore` / `useCalendarNavigationStore`                  |
+| **shared UI primitive**           | `lib/components/ui/`（shadcn-style primitive）                             |
+| **横断的な型**                    | `lib/types/settings.ts`（複数 feature 参照、明確な残存理由あり）           |
+| **shell-level orchestration**     | `lib/auth/domain/`（middleware / tRPC / proxy で共有される access policy） |
+
+---
+
+## 置かないもの
+
+| カテゴリ                       | 正しい配置先                            |
+| ------------------------------ | --------------------------------------- |
+| feature 固有の logic / 型      | `features/{name}/`                      |
+| feature 固有の component       | `features/{name}/components/`           |
+| 自動生成 artifact の re-export | DB 型は `@dayopt/database` から直接引く |
+
+---
+
+## 一方向ルール（ESLint `error` で強制）
+
+```
+src/lib/*  ✕→  @/features/*
+features/*  ✓→  src/lib/*
+```
+
+`src/lib` から `@/features/*` を import するのは **禁止**。逆依存が発生するため。
+
+例外（ESLint で許可されているもの）:
+
+- `src/lib/trpc/root.ts` — Server Composition Layer（router aggregator）
+- `src/lib/hooks/useTheme.ts` — `app/_providers/theme-provider` からの re-export
+- `src/lib/components/dnd/**` — DnD (stories only)
+- `src/lib/**/*.stories.*` — Storybook files
+- `src/lib/test/**` — Integration / E2E tests
+
+---
+
+## 例外運用の実例
+
+### `lib/types/settings.ts`
+
+`SettingsCategory` 型が以下の **3 箇所** から参照される:
+
+- `lib/stores/useShellStore.ts` — SheetType union の一部
+- `lib/components/shell/sidebar/UserMenu.tsx` — 引数型
+- `features/settings/types/index.ts` — settings 自身が re-export
+
+なぜ `lib/` に残すか:
+
+- `useShellStore` / `UserMenu` は **lib 層**（feature 非依存の shell UI）
+- ここから `features/settings` を import すると lib → features の逆依存になる
+- **本体は lib に置き、settings は re-export で扱う** ことで逆依存を回避
+
+これは settings 固有のテクニックではなく、**lib 層と feature 層が同じ型を共有する場合の参照パターン**として残す。
+
+### `lib/auth/domain/`
+
+`lib/auth/domain/` には access policy / identity / permissions / roles が置かれる。
+
+- これは **`features/auth/domain` ではなく、アプリ全体の認証・認可 policy domain**
+- 利用者:
+  - `middleware (proxy.ts)` — リクエストごとの access check
+  - `tRPC procedures.ts` — endpoint ごとの access check
+  - 各 endpoint
+- `features/auth/domain/index.ts` は `lib/auth/domain` を re-export（feature 側からも同じ API で見える）
+
+`features/auth` と `lib/auth/domain` は責務が異なる:
+
+| 場所                  | 責務                                                                 | 利用者                       |
+| --------------------- | -------------------------------------------------------------------- | ---------------------------- |
+| `features/auth`       | ログイン UI / Auth store / 認証体験                                  | UI ページ・コンポーネント    |
+| `src/lib/auth/domain` | アプリ全体の認証・認可 policy（access-policy / permissions / roles） | middleware / tRPC / endpoint |
+
+「auth feature の domain」ではなく「**アプリ全体で共有される access policy**」として lib に置くことで、proxy と tRPC が同じ policy を参照できる。
+
+---
+
+## Composition Feature
+
+通常 feature とは別カテゴリの **composition feature** が 2 つある:
+
+### `features/settings`
+
+- ESLint feature DAG から **除外**
+- 他 feature の store / barrel を組み合わせて「設定」UI を合成
+- 自身の domain は持たない
+- deep import 優先順: **`@/lib/stores/*` > feature barrel > deep import**
+- 詳細: `features/settings/index.ts` 冒頭コメント / `.claude/rules/feature-boundaries.md`
+
+### `features/auth`（部分的）
+
+- UI 部分は `features/auth`
+- policy 部分は `src/lib/auth/domain`（上述）
+- 2 つの責務を意図的に分離している
+
+---
+
+## 参考
+
+- `Code Organization`（このディレクトリ内）
+- `Domain vs Server`（このディレクトリ内）
+- `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）
