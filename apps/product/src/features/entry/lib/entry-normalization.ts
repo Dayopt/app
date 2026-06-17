@@ -3,6 +3,7 @@
  * Helper functions for router operations
  */
 
+import type { TablesUpdate } from '@dayopt/database';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 import { tzIsSameDay } from '@/lib/date/timezone';
@@ -10,15 +11,37 @@ import { logger } from '@/lib/logger';
 
 /**
  * Remove undefined fields from an object (for exactOptionalPropertyTypes)
+ *
+ * 戻り値の型からも undefined を除外する（Exclude）。実体が undefined を落とすので、
+ * 結果を DB の Insert/Update 型へ as キャストなしで渡せる（issue #1288 項目2）。
  */
-export function removeUndefinedFields<T extends Record<string, unknown>>(obj: T): Partial<T> {
-  const result: Partial<T> = {};
+export function removeUndefinedFields<T extends Record<string, unknown>>(
+  obj: T,
+): { [K in keyof T]?: Exclude<T[K], undefined> } {
+  const result: Record<string, unknown> = {};
   for (const key in obj) {
     if (obj[key] !== undefined) {
       result[key] = obj[key];
     }
   }
-  return result;
+  return result as { [K in keyof T]?: Exclude<T[K], undefined> };
+}
+
+/**
+ * Zod 更新入力を entries の Update ペイロードへ変換する。
+ *
+ * - undefined を除去する（exactOptionalPropertyTypes 対応）
+ * - DB に存在しない列が Zod 側に紛れ込むと、`Record<Exclude<…>, never>` 制約で
+ *   呼び出し側がコンパイルエラーになる（列の追加漏れ・rename を検出）
+ * - 共有列の型乖離は戻り値の代入（Partial<TablesUpdate<'entries'>>）で検出する
+ *
+ * 従来は `removeUndefinedFields(input) as TablesUpdate<'entries'>` と as キャストで
+ * Zod↔DB の乖離を握り潰していた。本関数で typecheck の防壁に変える（issue #1288 項目2）。
+ */
+export function toEntryUpdatePayload<T extends Record<string, unknown>>(
+  input: T & Record<Exclude<keyof T, keyof TablesUpdate<'entries'>>, never>,
+): Partial<TablesUpdate<'entries'>> {
+  return removeUndefinedFields(input);
 }
 
 /**
