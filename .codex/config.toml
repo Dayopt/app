@@ -23,7 +23,6 @@ url = "http://127.0.0.1:54321/mcp"
 command = "op"
 args = [
     "run",
-    "--no-masking",
     "--",
     "github-mcp-server",
     "stdio",
@@ -41,22 +40,6 @@ args = [
 
 [mcp_servers.storybook]
 url = "http://localhost:6006/mcp"
-
-[mcp_servers.supabase]
-command = "op"
-args = [
-    "run",
-    "--no-masking",
-    "--",
-    "npx",
-    "-y",
-    "@supabase/mcp-server-supabase@latest",
-    "--read-only",
-    "--project-ref=yvglwblxrnrenfifsnje",
-]
-
-[mcp_servers.supabase.env]
-SUPABASE_ACCESS_TOKEN = "op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN"
 
 [mcp_servers.vercel]
 url = "https://mcp.vercel.com"

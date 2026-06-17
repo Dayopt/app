@@ -12,6 +12,7 @@ Dayopt の詳細ルールは `.claude/rules/` を canonical source とする。`
 ## Files
 
 - `git-workflow.md` — Codex での branch / commit / PR / merge 運用
+- `mcp.md` — Codex 固有の MCP 起動範囲と 1Password masking 運用
 
 ## Canonical References
 
