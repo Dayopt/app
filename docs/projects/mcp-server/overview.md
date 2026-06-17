@@ -1,8 +1,8 @@
 # MCP Server 設計（Phase 分割）
 
 策定日: 2026-04-30
-最終更新: 2026-04-30（v3: Phase 1 を solo dogfood に圧縮、Phase 1.5 / 2 / 3 に細分）
-ステータス: 設計中（Phase 1 着手前）
+最終更新: 2026-06-18（v4: Phase 1 実装後の現状同期、write tool の扱いを再定義）
+ステータス: Phase 1 実装済み。Phase 1.5 以降は current code / current MCP client 要件を再確認してから再開
 オーナー: Tomoya
 
 ## Revision Log
@@ -13,10 +13,13 @@
   - Phase 1 から削除: `entries.daily_summary` / 接続済み client 一覧 UI / `mcp.revokeToken` mutation / `customer.subscription.updated` webhook / `/oauth/authorize` と `/api/mcp` の rate limit / ja consent UI / Free user 403 verification → 全部 Phase 1.5
   - Phase 1 で残す: subdomain + rewrite / schema migration / OAuth flow / versionless URL / scope 3 宣言（実装 1）/ `entries.list` / opaque token verify / `proProcedure` の OAuth-DB lookup 強制 / `.well-known/*` / `McpApiSection` の URL 文字列修正
   - Decision 1 補強: 暴露窓は **5 分**（access_token TTL）。`proProcedure` 毎リクエスト DB lookup で webhook 不要
+- **v4 (2026-06-18)**: Phase 1 実装済みの `summary.md` と状態を同期。核の再定義を受け、write 系 tool を「永続 Non-Goal」から「現時点では未着手の deferred north star」へ変更。
 
 ## Context
 
-Dayopt は Pro 課金ユーザー向けに **read-only Remote MCP server** を提供する。Pro user が `https://mcp.dayopt.app/mcp` を Claude.ai / ChatGPT / Cursor の Custom Connector に貼る → OAuth flow → 各 AI から Dayopt の entries / tags / stats を read できる、という体験を狙う。**ユーザーがコピペするのは URL であって API key ではない**（OAuth 設計のため）。
+Dayopt は Pro 課金ユーザー向けに Remote MCP server を提供する。Phase 1 の current implementation は **read-only** で、Pro user が `https://mcp.dayopt.app/mcp` を Claude.ai / ChatGPT / Cursor の Custom Connector に貼る → OAuth flow → 各 AI から Dayopt の entries を read できる、という体験を狙う。**ユーザーがコピペするのは URL であって API key ではない**（OAuth 設計のため）。
+
+2026-06 の core-polish で Dayopt の核は「計画が、訂正されない限りそのまま記録になる時間台帳」と定義された。これにより、エージェントが観測した実績を `actual` として書き戻す L3 write は、Phase 1 の scope 外ではあるが、永続的な禁止ではなく「入力コストを消す北極星」として再評価対象に戻す。
 
 `feedd7641 chore(ai): サービス内 AI 機能を撤去し MCP の受け皿のみ残す`（2026-04-29）でサービス内 LLM 統合は撤去され、**MCP の受け皿のみ温存** された状態。受け皿は 4 レイヤに散在:
 
@@ -36,13 +39,32 @@ Pro 課金ユーザーが Dayopt 設定画面で MCP Server URL をコピー →
 
 **Tomoya 自身**が Claude.ai connectors から OAuth 同意して `entries.list` を呼べるところまで。1 client / 1 tool / 1 user。
 
-### Non-Goal（永続的に scope 外）
+### Current Non-Goal
 
-- **write 系 tool**: read-only に絞る（書き戻し経路を持たないこと自体が contract）
+- **write 系 tool の即時実装**: Phase 1 / 1.5 では read-only を維持する。write は security / 信頼度モデル / 訂正 UX を再設計してから判断する
 - **Free 公開**: Pro 限定機能
 - **subscription / push / webhook 経由の通知**: stateful 機能は scope 外
 - **B2B 用途**（API key 大量発行、tenant 管理）: B2C なので考慮しない
 - **API key コピペ UX**: OAuth flow 一本に絞る（Claude.ai / ChatGPT / Cursor は全 OAuth 前提）
+
+### Deferred North Star
+
+L3 write tool は、核に最も近い MCP の最終形として再評価する。エージェントがセッション終了時に観測した実績を `actual` として書き戻せれば、ユーザーは「違ったところだけ直す」モデルをさらに低コストで運用できる。
+
+MCP server の正解の姿は、次の 3 層で扱う。
+
+| Layer           | 内容                                                                                                     | 現状                     | 判断                                                        |
+| --------------- | -------------------------------------------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------- |
+| L1 read         | エージェントが台帳を読んで時間について推論する。`entries.list` が中心                                    | Phase 1 実装済み         | 継続。E2E 証拠と auth test を復元する                       |
+| L2 read 充実    | `tags.list` / `tags.stats` / `stats.weekly_summary` / `entries.daily_summary` を追加し、tool 名を freeze | Phase 1.5 / 2 の再開待ち | Pro ローンチ前に current client 要件を再調査してから進める  |
+| L3 write 北極星 | エージェントが観測した実績を `actual` として書き戻す                                                     | 旧 doc では永続 Non-Goal | deferred north star。今は実装せず、条件が揃ったら再決定する |
+
+ただし、write を開く前に次を独立に設計する。
+
+- **再開条件**: solo dogfood で read の価値が立証され、Pro user の受け入れ準備が進み、確認済み率（#1333）の信頼度モデルが固まっていること
+- **信頼度モデル**: 人間確認 / エージェント書き込み / 未確認をどう区別し、週次 KPI の確認済み率とどう整合させるか
+- **security**: `write:entries` の同意粒度、過去のみ / 特定タグのみ等の制約、誤書き込みの取り消し方
+- **訂正 UX**: エージェント書き込み後も、人間がいつでも上書きできる台帳として扱えること
 
 ---
 
@@ -58,7 +80,7 @@ Pro 課金ユーザーが Dayopt 設定画面で MCP Server URL をコピー →
 - **refresh_token**: opaque random 256-bit、prefix `dop_rt_`、TTL **30 日**、rotation あり（refresh ごとに新 token 発行 + 旧 token revoke）
 - **storage**: `oauth_tokens` テーブルに `token_hash`（SHA-256）で格納。生 token は DB に置かない
 - **verify**: 毎リクエスト DB lookup（`token_hash` → `revoked_at IS NULL AND expires_at > now()` → `user_id` 取得）
-- **subscription_status 評価**: OAuth 経路では JWT claim を**信じない**。`proProcedure` が `authMode === 'oauth'` の時は **必ず DB lookup**（[`procedures.ts:357-393`](../../../src/lib/trpc/procedures.ts) の修正必要）
+- **subscription_status 評価**: OAuth 経路では JWT claim を**信じない**。`proProcedure` が `authMode === 'oauth'` の時は **必ず DB lookup**（Phase 1 で実装済み。専用 unit test は `summary.md` の残課題）
 
 ### 暴露窓 = 最長 5 分
 
@@ -227,6 +249,7 @@ Phase 1 では即時 revocation の自動化（webhook）はしないが、緊�
 | `entries.daily_summary(date)`    | [`features/entry/server/statistics.ts:173`](../../../src/features/entry/server/statistics.ts) `getDailyHours`                                     | 1.5   |
 | `tags.list()`                    | [`features/tags/server/router.ts:33`](../../../src/features/tags/server/router.ts) `list` / `:63` `listHierarchy`                                 | 2     |
 | `tags.stats(date_range, tag_id)` | [`features/entry/server/tag-statistics.ts`](../../../src/features/entry/server/tag-statistics.ts)                                                 | 2     |
+| `stats.weekly_summary(range)`    | 週次 Review の核指標（Time P/L、見積バイアス、確認済み率、スキップ、空白）を MCP 向けに正規化                                                     | 2     |
 | `entries.search(query, filter?)` | （未実装）                                                                                                                                        | 2     |
 
 ### Phase 1 採用: `entries.list(filter)` のみ
@@ -237,7 +260,7 @@ Phase 1 では即時 revocation の自動化（webhook）はしないが、緊�
 
 ### tool 命名は experimental
 
-Phase 1 の tool 名 `entries.list` は **freeze しない**（Reversibility `[hours]`）。Phase 2 で他 client（ChatGPT / Cursor）の usage を見て命名規則と signature を確定する。
+Phase 1 の tool 名 `entries.list` は **freeze しない**（Reversibility `[hours]`）。Phase 2 で他 client（ChatGPT / Cursor）の usage と core-polish 後の Review 構成を見て、命名規則と signature を確定する。
 
 ### tool response normalize
 
@@ -267,7 +290,7 @@ Phase 1 から resource 単位の最小粒度で **3 つ宣言**:
 
 - `read:entries` — `entries.list` / `entries.daily_summary`（Phase 1.5）
 - `read:tags` — `tags.list` / `tags.stats`（Phase 2）
-- `read:stats` — global stats / weekly summary（Phase 2）
+- `read:stats` — weekly summary / tag-level review facts（Phase 2）
 
 **Phase 1 では `read:entries` のみ実装** されるが、3 つを最初から `scopes_supported` に列挙。consent 画面は client が要求した scope のみ表示。
 
@@ -378,7 +401,7 @@ scope は `oauth_tokens.scopes text[]` に格納。MCP runtime は tool dispatch
 - `/oauth/register` に Turnstile + rate limit 適用
 - ChatGPT MCP / Cursor で接続検証
 - tool 名 freeze（3 client の usage を見て signature 確定、Reversibility `[irreversible]` に格上げ）
-- tool 拡充: `tags.list` / `tags.stats` / `entries.search`
+- tool 拡充: `tags.list` / `tags.stats` / `stats.weekly_summary` / `entries.search`
 - per-day quota（abuse 対策）
 
 ### Phase 3 — 公開 + ナレッジ化
@@ -420,7 +443,7 @@ scope は `oauth_tokens.scopes text[]` に格納。MCP runtime は tool dispatch
 ### Auth 層
 
 - [`src/lib/trpc/procedures.ts:87-219`](../../../src/lib/trpc/procedures.ts) `createTRPCContext` — OAuth 経路では Bearer token を **MCP 専用の `verifyOpaqueToken`（新設）** に通す
-- [`src/lib/trpc/procedures.ts:357-393`](../../../src/lib/trpc/procedures.ts) `proProcedure` — **修正必要**: `authMode === 'oauth'` のとき JWT claim を信じず DB lookup を必ず行う
+- [`src/lib/trpc/procedures.ts:357-393`](../../../src/lib/trpc/procedures.ts) `proProcedure` — Phase 1 で実装済み。`authMode === 'oauth'` のとき JWT claim を信じず DB lookup を必ず行う
 - [`src/lib/supabase/oauth.ts:76`](../../../src/lib/supabase/oauth.ts) `extractBearerToken` のみ流用。`verifyOAuthToken` は OAuth flow の `/oauth/authorize` で **user 認証にのみ** 使う
 
 ### Tool source
@@ -445,7 +468,7 @@ MCP tool は tRPC service 層を**直接呼ばない**。`proProcedure` 経由�
 
 ---
 
-## What I'm Not Doing（Phase 1 で明示的に却下）
+## What Phase 1 Does Not Include
 
 - **DCR (RFC 7591) 実装** → Phase 2
 - **`oauth_clients` table 新設** → Phase 2
@@ -459,7 +482,7 @@ MCP tool は tRPC service 層を**直接呼ばない**。`proProcedure` 経由�
 - **tool 名 freeze** → Phase 2（Phase 1 は experimental）
 - **LP / blog 訴求** → Phase 3
 - **ADR 化 / docs 公開** → Phase 3
-- **write 系 tool**: 永続的に却下
+- **write 系 tool**: Phase 1 / 1.5 では実装しない。永続却下ではなく、信頼度モデルと security 設計が固まった後の deferred north star として再評価する
 - **API key コピペ UX**: 永続的に却下（OAuth 一本）
 - **subagent / skill 新設**: 既存の `supabase` / `trpc-router-creating` / `security` で十分
 - **「ついでに ai router 残骸クリーンアップ」**: 別 plan
@@ -568,9 +591,8 @@ Phase 1 完了基準から外したもの（Phase 1.5 の verification に移譲
 
 ## Next Step
 
-1. v3 doc を Tomoya 確認 → Decision 1-9 を locked-down
-2. Phase 1 Step 0（feature 配置）から実装着手
-3. Phase 1 完了 → Tomoya 自身で dogfood して 1-2 週間運用
-4. 問題なければ Phase 1.5 着手（最初の有料 Pro user 受け入れ）
-5. Phase 1.5 完了で実質 launch ready
-6. Phase 2 / 3 は launch 後の usage を見て優先順位決定
+1. Phase 1 の E2E 証拠と auth unit test を復元する
+2. Phase 1.5 の旧 checklist を current MCP SDK / OAuth metadata / connector 要件で再調査する
+3. connected client 一覧、user revoke UI、audit log、rate limit、subscription revoke を独立 issue に分ける
+4. Phase 2 の tool 拡充は core-polish 後の週次 Review 構成と利用実績を見て決める
+5. L3 write は信頼度モデル / security / 訂正 UX の ADR を起こしてから実装判断する

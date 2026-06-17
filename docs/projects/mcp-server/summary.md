@@ -6,11 +6,13 @@
 
 状態: **Phase 1 実装済み、Phase 1.5 以降は部分実装で保留**
 
-> **overview**: [overview.mdx](./overview.mdx)。overview の Phase 分割を基準に、現在の repository で確認できる実装だけを到達済みと判定した。
+> **overview**: [overview.md](./overview.md)。overview の Phase 分割を基準に、現在の repository で確認できる実装だけを到達済みと判定した。
 
 ## Project ゴール
 
 Pro user が `mcp.dayopt.app` を Custom Connector に登録し、Dayopt が発行する OAuth 2.1 token で read-only MCP tool を利用できるようにする。Phase 1 は Tomoya の solo dogfood、Phase 1.5 は最初の有料 user 受け入れ、Phase 2 は DCR と複数 client 対応、Phase 3 は公開 docs を対象とした。
+
+2026-06-18 時点では read-only を現行 contract として維持する。ただし write 系 tool は「永続 Non-Goal」ではなく、エージェントが観測した実績を `actual` として書き戻す deferred north star として再評価対象に戻した。実装判断は信頼度モデル / security / 訂正 UX の設計後に行う。
 
 ## 主要コミット
 
