@@ -2,7 +2,7 @@
 
 OWASP準拠のセキュリティ監視とレポート生成システム
 
-**関連Issue**: [#487 - OWASP準拠のセキュリティ強化](https://github.com/t3-nico/dayopt/issues/487)
+**関連Issue**: [#487 - OWASP準拠のセキュリティ強化](https://github.com/Dayopt/dayopt/issues/487)
 
 ---
 
@@ -285,7 +285,7 @@ LIMIT 20;
 
 - [Error Handling](../../../apps/product/src/lib/errors/secure-error-handler.ts)
 - [Rate Limiting](../../../apps/product/src/lib/rate-limit/upstash.ts)
-- [Issue #487](https://github.com/t3-nico/dayopt/issues/487)
+- [Issue #487](https://github.com/Dayopt/dayopt/issues/487)
 
 ---
 

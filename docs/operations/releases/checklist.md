@@ -130,7 +130,7 @@
 
   # 前回リリース以降のPR一覧を取得
   gh pr list --state merged --base main --limit 100 --json number,title,mergedAt \
-    | jq -r '.[] | select(.mergedAt > "YYYY-MM-DDT00:00:00Z") | "- [#\(.number)](https://github.com/t3-nico/dayopt/pull/\(.number)) - \(.title)"'
+    | jq -r '.[] | select(.mergedAt > "YYYY-MM-DDT00:00:00Z") | "- [#\(.number)](https://github.com/Dayopt/dayopt/pull/\(.number)) - \(.title)"'
   ```
 
 ### 2.2 詳細なリリースノートを作成
@@ -141,7 +141,7 @@
   - [ ] カテゴリ別に整理されている（Added, Changed, Fixed, Performance, Breaking Changes）
   - [ ] **Full Changelogリンクが含まれている**
     ```markdown
-    **Full Changelog**: https://github.com/t3-nico/dayopt/compare/v{前バージョン}...v{今回バージョン}
+    **Full Changelog**: https://github.com/Dayopt/dayopt/compare/v{前バージョン}...v{今回バージョン}
     ```
   - [ ] 破壊的変更・データモデル変更を明記
   - [ ] 削除されたコンポーネント/機能をリスト
@@ -195,7 +195,7 @@
 - [ ] **関連Issueにコメント**
   ```bash
   gh issue comment {issue番号} \
-    --body "Released in v${VERSION}: https://github.com/t3-nico/dayopt/releases/tag/v${VERSION}"
+    --body "Released in v${VERSION}: https://github.com/Dayopt/dayopt/releases/tag/v${VERSION}"
   ```
 
 ---
@@ -248,7 +248,7 @@
 **リリース実施者**: @{username}
 **リリース日時**: YYYY-MM-DD HH:MM
 **バージョン**: v{VERSION}
-**リリースURL**: https://github.com/t3-nico/dayopt/releases/tag/v{VERSION}
+**リリースURL**: https://github.com/Dayopt/dayopt/releases/tag/v{VERSION}
 
 ---
 

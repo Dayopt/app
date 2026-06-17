@@ -27,7 +27,7 @@ docs/releases/
 
 ## 📋 最新リリース
 
-最新のリリース情報は [GitHub Releases](https://github.com/t3-nico/dayopt/releases) で確認できます。
+最新のリリース情報は [GitHub Releases](https://github.com/Dayopt/dayopt/releases) で確認できます。
 
 リリースノート本体は、プロジェクトルートの `RELEASE_NOTES_v*.md` ファイルに記載されています。
 
@@ -57,7 +57,7 @@ docs/releases/
 
 - [Semantic Versioning](https://semver.org/)
 - [Keep a Changelog](https://keepachangelog.com/)
-- [GitHub Releases](https://github.com/t3-nico/dayopt/releases)
+- [GitHub Releases](https://github.com/Dayopt/dayopt/releases)
 
 ## 📝 バージョニングルール
 
