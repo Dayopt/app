@@ -134,7 +134,7 @@ content/
    cp ../../.op-env.local.example ../../.op-env.local
    ```
 
-   実値は `.env.local` に置かず、1Password の `op://` 参照を使ってください。正本は `apps/storybook/docs/operations/secrets.mdx` です。
+   実値は `.env.local` に置かず、1Password の `op://` 参照を使ってください。正本は `docs/operations/secrets.md` です。
 
 4. **開発サーバーを起動**
 

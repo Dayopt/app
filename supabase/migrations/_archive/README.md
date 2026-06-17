@@ -18,5 +18,5 @@
 - 新規環境は `supabase db reset` が baseline からスキーマを構築する。既存環境は
   `supabase migration repair --status applied` で baseline 適用済みとしてマーク済み。
 - 現在有効な RLS / テーブル構成を把握したい時は、全 migration を読まず
-  [`apps/storybook/docs/dev/db/rls-snapshot.md`](../../../apps/storybook/docs/dev/db/rls-snapshot.md)
+  [`docs/architecture/db/rls-snapshot.md`](../../../docs/architecture/db/rls-snapshot.md)
   （自動生成 snapshot）を参照する。

@@ -1,6 +1,6 @@
 # 環境変数セットアップガイド
 
-Dayopt Web の環境変数は 1Password を master として管理する。Secrets 運用の正本は `apps/storybook/docs/operations/secrets.mdx`。
+Dayopt Web の環境変数は 1Password を master として管理する。Secrets 運用の正本は `docs/operations/secrets.md`。
 
 ---
 
@@ -99,6 +99,6 @@ GitHub Actions Secrets と Supabase Dashboard secrets も同じく replica と�
 
 ## 関連ファイル
 
-- `apps/storybook/docs/operations/secrets.mdx` - Secrets 運用の正本
+- `docs/operations/secrets.md` - Secrets 運用の正本
 - `.op-env.local.example` - local injection 参照例
 - `apps/web/src/platform/config/env.ts` - 環境変数の型定義とバリデーション

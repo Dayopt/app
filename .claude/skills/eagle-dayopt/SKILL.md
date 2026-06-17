@@ -185,4 +185,4 @@ Archive/
 ## 設計書
 
 詳細は Storybook ドキュメントを参照:
-`apps/storybook/docs/dev/guides/EagleAssetManagement.mdx`
+`docs/guides/eagle-asset-management.md`
