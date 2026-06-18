@@ -38,6 +38,12 @@ interface EntryMenuItemsArgs {
    * 未来の予定はまだ記録が存在し得ないため「予定外にする」を表示しない。
    */
   isUpcoming?: boolean | undefined;
+  /**
+   * 過去（past: end_time <= now）の予定か。
+   * skip はサーバーが過去の planned のみ許可する（active/未来は SKIP_IN_FUTURE 拒否）ため、
+   * past の時だけ skip を出して「失敗するメニュー」を見せない。
+   */
+  isPast?: boolean | undefined;
   /** スキップ済み（skipped_at あり）か。skip / unskip の表示切替に使う */
   isSkipped?: boolean | undefined;
   onViewStats?: (() => void) | undefined;
@@ -52,6 +58,7 @@ export function getEntryMenuItems({
   origin,
   tagId,
   isUpcoming = false,
+  isPast = false,
   isSkipped = false,
   onViewStats,
   onMarkUnplanned,
@@ -91,8 +98,8 @@ export function getEntryMenuItems({
           onSelect: onRestorePlanned,
         }
       : null,
-    // 過去の planned のみスキップ可能（未来の予定は削除で対応する）
-    onSkip && isPlanned && !isUpcoming && !isSkipped
+    // 過去の planned のみスキップ可能（active/未来はサーバーが拒否するため出さない）
+    onSkip && isPlanned && isPast && !isSkipped
       ? {
           key: 'skip',
           labelKey: 'entry.inspector.skip',
