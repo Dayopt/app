@@ -256,6 +256,24 @@ export class EntryService {
 
     this.validateEntryShape(finalEntry);
 
+    // 自動記録モデル: まだ始まっていない予定は実績を持てない（記録の手間ゼロ＝
+    // effective actual は plan range で代替する前提）。Inspector の記録行ロックに対する
+    // サーバー側の二重防御。入力で actual を明示セットした時だけ弾き、既存 actual を持つ
+    // 未来予定の無関係な編集（予定移動など）はブロックしない。
+    const isSettingActual =
+      normalizedInput.actual_start_time != null || normalizedInput.actual_end_time != null;
+    if (
+      isSettingActual &&
+      finalEntry.origin === 'planned' &&
+      finalEntry.start_time != null &&
+      new Date(finalEntry.start_time).getTime() > Date.now()
+    ) {
+      throw new EntryServiceError(
+        'RECORD_IN_FUTURE',
+        'Future planned entries cannot have a recorded actual time.',
+      );
+    }
+
     // 重複チェック
     if (preventOverlappingEntries) {
       await this.ensureNoOverlaps(userId, finalEntry, entryId);
