@@ -10,14 +10,19 @@
  * cross-feature依存の橋渡しはこのファイルが担当する。
  */
 
-import { PanelLeft } from 'lucide-react';
+import { ChartNoAxesColumnIncreasing, PanelLeft } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useCallback, useState } from 'react';
 
 import {
+  CalendarAnalyticsPanel,
   CalendarCompareToggle,
   CalendarController,
   useCalendarNavigation,
 } from '@/features/calendar';
 import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
+import { Button } from '@/lib/components/ui/button';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { useCalendarComposition } from './useCalendarComposition';
 
@@ -30,9 +35,12 @@ interface CalendarViewClientProps {
 }
 
 export function CalendarViewClient({ translations }: CalendarViewClientProps) {
+  const t = useTranslations();
   const calendarNavigation = useCalendarNavigation();
   const sidebar = useShellStore.use.sidebar();
   const toggleSidebar = useShellStore.use.toggleSidebar();
+  const [analyticsPanelOpen, setAnalyticsPanelOpen] = useState(false);
+  const [analyticsTagId, setAnalyticsTagId] = useState<string | null>(null);
 
   // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
   // calendarNavigation は常に利用可能。
@@ -73,21 +81,70 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
       <PanelLeft className="size-4" />
     </button>
   ) : null;
+  const handleAnalyticsPanelToggle = useCallback(() => {
+    setAnalyticsPanelOpen((open) => {
+      const nextOpen = !open;
+      if (nextOpen) {
+        setDayCompareEnabled(false);
+      }
+      return nextOpen;
+    });
+  }, [setDayCompareEnabled]);
+  const handleCompareToggle = useCallback(
+    (checked: boolean) => {
+      setAnalyticsPanelOpen(false);
+      setDayCompareEnabled(checked);
+    },
+    [setDayCompareEnabled],
+  );
+  const analyticsToggle = (
+    <HoverTooltip content={t('calendar.analysis.tooltip')} side="bottom">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        icon
+        className={
+          analyticsPanelOpen
+            ? 'bg-state-selected text-foreground hover:bg-state-selected'
+            : 'text-muted-foreground hover:text-foreground'
+        }
+        aria-label={t('calendar.analysis.ariaLabel')}
+        aria-pressed={analyticsPanelOpen}
+        onClick={handleAnalyticsPanelToggle}
+      >
+        <ChartNoAxesColumnIncreasing className="size-4" />
+      </Button>
+    </HoverTooltip>
+  );
   const compareToggle =
     viewType === 'day' ? (
       <>
         <CalendarCompareToggle
           checked={dayCompareEnabled}
-          onCheckedChange={setDayCompareEnabled}
+          onCheckedChange={handleCompareToggle}
           className="-mr-2 hidden md:flex"
         />
         <CalendarCompareToggle
           checked={dayCompareEnabled}
-          onCheckedChange={setDayCompareEnabled}
+          onCheckedChange={handleCompareToggle}
           className="-mr-2 md:hidden"
         />
       </>
     ) : null;
+  const headerActions = (
+    <>
+      {analyticsToggle}
+      {compareToggle}
+    </>
+  );
+  const analyticsPanel = (
+    <CalendarAnalyticsPanel
+      selectedTagId={analyticsTagId}
+      onSelectedTagIdChange={setAnalyticsTagId}
+      onClose={() => setAnalyticsPanelOpen(false)}
+    />
+  );
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -140,8 +197,12 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onDateSelect={composition.onDateSelect}
           onPrefetch={composition.prefetchDirection}
           leftSlot={sidebarToggle}
-          rightSlot={compareToggle}
+          rightSlot={headerActions}
           onCompareRailOpenChange={setDayCompareEnabled}
+          analyticsRail={analyticsPanel}
+          mobileAnalyticsRail={analyticsPanel}
+          analyticsRailOpen={analyticsPanelOpen}
+          onAnalyticsRailOpenChange={setAnalyticsPanelOpen}
         />
       </FeatureErrorBoundary>
     </div>

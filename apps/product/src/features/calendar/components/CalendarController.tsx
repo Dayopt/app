@@ -9,6 +9,7 @@
  * @see _composition/useCalendarComposition.ts
  */
 
+import { useTranslations } from 'next-intl';
 import { useCallback, useMemo } from 'react';
 
 import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsContext';
@@ -99,6 +100,10 @@ interface CalendarControllerProps {
   leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
   onCompareRailOpenChange?: ((open: boolean) => void) | undefined;
+  analyticsRail?: React.ReactNode | undefined;
+  mobileAnalyticsRail?: React.ReactNode | undefined;
+  analyticsRailOpen?: boolean | undefined;
+  onAnalyticsRailOpenChange?: ((open: boolean) => void) | undefined;
 }
 
 // =============================================================================
@@ -135,7 +140,13 @@ export function CalendarController({
   leftSlot,
   rightSlot,
   onCompareRailOpenChange,
+  analyticsRail,
+  mobileAnalyticsRail,
+  analyticsRailOpen = false,
+  onAnalyticsRailOpenChange,
 }: CalendarControllerProps) {
+  const t = useTranslations();
+
   // =========================================================================
   // Calendar-internal hooks
   // =========================================================================
@@ -238,6 +249,30 @@ export function CalendarController({
         onClose={onCompareRailOpenChange ? handleCloseCompareRail : undefined}
       />
     ) : null;
+  const compareRailOpen = viewType === 'day' && showActualDiff;
+  const analyticsRailActive = Boolean(analyticsRailOpen && analyticsRail);
+  const activeRail = analyticsRailActive ? analyticsRail : compareRail;
+  const activeMobileRail = analyticsRailActive
+    ? (mobileAnalyticsRail ?? analyticsRail)
+    : compareRail;
+  const activeRailOpen = analyticsRailActive || compareRailOpen;
+  const activeRailTitle = analyticsRailActive
+    ? t('calendar.analysis.panel.title')
+    : t('calendar.compare.rail.title');
+  const activeRailDescription = analyticsRailActive
+    ? t('calendar.analysis.panel.description')
+    : t('calendar.compare.rail.description');
+  const handleSideRailOpenChange = useCallback(
+    (open: boolean) => {
+      if (analyticsRailActive) {
+        onAnalyticsRailOpenChange?.(open);
+        return;
+      }
+
+      onCompareRailOpenChange?.(open);
+    },
+    [analyticsRailActive, onAnalyticsRailOpenChange, onCompareRailOpenChange],
+  );
 
   // =========================================================================
   // Render
@@ -259,10 +294,13 @@ export function CalendarController({
         onSettingsChange={onSettingsChange}
         leftSlot={leftSlot}
         rightSlot={rightSlot}
-        compareRail={compareRail}
-        mobileCompareRail={compareRail}
-        compareRailOpen={viewType === 'day' && showActualDiff}
-        onCompareRailOpenChange={onCompareRailOpenChange}
+        sideRail={activeRail}
+        mobileSideRail={activeMobileRail}
+        sideRailOpen={activeRailOpen}
+        onSideRailOpenChange={handleSideRailOpenChange}
+        sideRailTitle={activeRailTitle}
+        sideRailDescription={activeRailDescription}
+        sideRailResizeLabel={t('calendar.panel.resizeLabel')}
       >
         <CalendarViewRenderer viewType={viewType} commonProps={commonProps} />
       </CalendarLayout>

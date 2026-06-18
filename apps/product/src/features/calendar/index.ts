@@ -13,6 +13,7 @@ export { CalendarController } from './components/CalendarController';
 // =============================================================================
 // Layout Components
 // =============================================================================
+export { CalendarAnalyticsPanel } from './components/analytics/CalendarAnalyticsPanel';
 export { CalendarCompareToggle } from './components/layout/Header/CalendarCompareToggle';
 export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
 

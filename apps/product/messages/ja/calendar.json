@@ -7,13 +7,25 @@
       "description": "タイムボクシングでスケジュールを計画。日・週・月単位で予定を確認・管理。"
     },
     "title": "カレンダー",
+    "panel": {
+      "resizeLabel": "右パネルの幅を変更"
+    },
+    "analysis": {
+      "tooltip": "分析を表示",
+      "ariaLabel": "分析パネルを切り替え",
+      "panel": {
+        "title": "分析",
+        "description": "期間とタグの分析。",
+        "scopeLabel": "分析対象",
+        "all": "全体"
+      }
+    },
     "compare": {
       "tooltip": "予定と実績を比較",
       "ariaLabel": "予定と実績の比較表示を切り替え",
       "rail": {
         "title": "今日の差分",
         "description": "その日の予定から変わった点。",
-        "resizeLabel": "今日の差分パネルの幅を変更",
         "emptyTitle": "差分なし",
         "emptyDescription": "予定どおりの1日です。",
         "summary": {

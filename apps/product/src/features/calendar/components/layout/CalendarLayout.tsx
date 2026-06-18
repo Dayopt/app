@@ -28,10 +28,10 @@ import { DateRangeDisplay } from './Header/DateRangeDisplay';
 import { MobileCalendarHeader } from './Header/MobileCalendarHeader';
 import { ViewSwitcher } from './Header/ViewSwitcher';
 
-const COMPARE_RAIL_DEFAULT_WIDTH = 256;
-const COMPARE_RAIL_MIN_WIDTH = 256;
-const COMPARE_RAIL_MAX_WIDTH = 560;
-const COMPARE_RAIL_RESIZE_STEP = 32;
+const SIDE_RAIL_DEFAULT_WIDTH = 256;
+const SIDE_RAIL_MIN_WIDTH = 256;
+const SIDE_RAIL_MAX_WIDTH = 560;
+const SIDE_RAIL_RESIZE_STEP = 32;
 
 /** CalendarLayout コンポーネントのプロパティ */
 interface CalendarLayoutProps {
@@ -66,11 +66,14 @@ interface CalendarLayoutProps {
   leftSlot?: React.ReactNode | undefined;
   rightSlot?: React.ReactNode | undefined;
 
-  // Compare rail
-  compareRail?: React.ReactNode | undefined;
-  mobileCompareRail?: React.ReactNode | undefined;
-  compareRailOpen?: boolean | undefined;
-  onCompareRailOpenChange?: ((open: boolean) => void) | undefined;
+  // Side rail
+  sideRail?: React.ReactNode | undefined;
+  mobileSideRail?: React.ReactNode | undefined;
+  sideRailOpen?: boolean | undefined;
+  onSideRailOpenChange?: ((open: boolean) => void) | undefined;
+  sideRailTitle?: string | undefined;
+  sideRailDescription?: string | undefined;
+  sideRailResizeLabel?: string | undefined;
 }
 
 /**
@@ -103,19 +106,21 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     leftSlot,
     rightSlot,
 
-    // Compare rail
-    compareRail,
-    mobileCompareRail,
-    compareRailOpen = false,
-    onCompareRailOpenChange,
+    // Side rail
+    sideRail,
+    mobileSideRail,
+    sideRailOpen = false,
+    onSideRailOpenChange,
+    sideRailTitle,
+    sideRailDescription,
+    sideRailResizeLabel,
   }) => {
     const t = useTranslations('calendar');
-    const tAll = useTranslations();
     const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
     const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
     const banner = useInlineBanner();
     const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
-    const [compareRailWidth, setCompareRailWidth] = useState(COMPARE_RAIL_DEFAULT_WIDTH);
+    const [sideRailWidth, setSideRailWidth] = useState(SIDE_RAIL_DEFAULT_WIDTH);
 
     // ナビゲーション方向 + キーの追跡（スライドアニメーション用）
     const [slide, setSlide] = useState<{ key: number; direction: 'prev' | 'next' | null }>({
@@ -152,22 +157,25 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         : slide.direction === 'prev'
           ? 'calendar-slide-prev'
           : '';
-    const desktopCompareRailOpen = Boolean(compareRail && !isMobile);
-    const contentStyle = desktopCompareRailOpen
-      ? ({ marginRight: compareRailWidth } satisfies React.CSSProperties)
+    const desktopSideRailOpen = Boolean(sideRail && !isMobile);
+    const contentStyle = desktopSideRailOpen
+      ? ({ marginRight: sideRailWidth } satisfies React.CSSProperties)
       : undefined;
-    const compareRailStyle = {
-      width: compareRailWidth,
+    const sideRailStyle = {
+      width: sideRailWidth,
     } satisfies React.CSSProperties;
+    const resolvedSideRailTitle = sideRailTitle ?? t('title');
+    const resolvedSideRailDescription = sideRailDescription ?? t('meta.description');
+    const resolvedSideRailResizeLabel = sideRailResizeLabel ?? t('panel.resizeLabel');
 
-    const handleCompareRailResizeStart = useCallback(
+    const handleSideRailResizeStart = useCallback(
       (event: React.PointerEvent<HTMLDivElement>) => {
         if (event.button !== 0) return;
 
         event.preventDefault();
 
         const startX = event.clientX;
-        const startWidth = compareRailWidth;
+        const startWidth = sideRailWidth;
         const previousCursor = document.body.style.cursor;
         const previousUserSelect = document.body.style.userSelect;
 
@@ -175,7 +183,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         document.body.style.userSelect = 'none';
 
         const handlePointerMove = (moveEvent: PointerEvent) => {
-          setCompareRailWidth(clampCompareRailWidth(startWidth - (moveEvent.clientX - startX)));
+          setSideRailWidth(clampSideRailWidth(startWidth - (moveEvent.clientX - startX)));
         };
         const handlePointerUp = () => {
           document.body.style.cursor = previousCursor;
@@ -187,32 +195,32 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp, { once: true });
       },
-      [compareRailWidth],
+      [sideRailWidth],
     );
 
-    const handleCompareRailResizeKeyDown = useCallback(
+    const handleSideRailResizeKeyDown = useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'ArrowLeft') {
           event.preventDefault();
-          setCompareRailWidth((width) => clampCompareRailWidth(width + COMPARE_RAIL_RESIZE_STEP));
+          setSideRailWidth((width) => clampSideRailWidth(width + SIDE_RAIL_RESIZE_STEP));
           return;
         }
 
         if (event.key === 'ArrowRight') {
           event.preventDefault();
-          setCompareRailWidth((width) => clampCompareRailWidth(width - COMPARE_RAIL_RESIZE_STEP));
+          setSideRailWidth((width) => clampSideRailWidth(width - SIDE_RAIL_RESIZE_STEP));
           return;
         }
 
         if (event.key === 'Home') {
           event.preventDefault();
-          setCompareRailWidth(COMPARE_RAIL_MIN_WIDTH);
+          setSideRailWidth(SIDE_RAIL_MIN_WIDTH);
           return;
         }
 
         if (event.key === 'End') {
           event.preventDefault();
-          setCompareRailWidth(COMPARE_RAIL_MAX_WIDTH);
+          setSideRailWidth(SIDE_RAIL_MAX_WIDTH);
         }
       },
       [],
@@ -277,40 +285,40 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           </div>
         </div>
 
-        {compareRail ? (
+        {sideRail ? (
           <aside
             className="border-border-subtle bg-background absolute top-0 right-0 bottom-0 hidden shrink-0 border-l md:flex"
-            style={compareRailStyle}
+            style={sideRailStyle}
           >
-            {compareRail}
+            {sideRail}
             <div
               role="separator"
-              aria-label={tAll('calendar.compare.rail.resizeLabel')}
+              aria-label={resolvedSideRailResizeLabel}
               aria-orientation="vertical"
-              aria-valuemin={COMPARE_RAIL_MIN_WIDTH}
-              aria-valuemax={COMPARE_RAIL_MAX_WIDTH}
-              aria-valuenow={compareRailWidth}
+              aria-valuemin={SIDE_RAIL_MIN_WIDTH}
+              aria-valuemax={SIDE_RAIL_MAX_WIDTH}
+              aria-valuenow={sideRailWidth}
               tabIndex={0}
               className="hover:bg-state-hover focus-visible:outline-ring absolute inset-y-0 left-0 w-2 -translate-x-1 cursor-col-resize transition-colors duration-150 focus-visible:outline-2"
-              onPointerDown={handleCompareRailResizeStart}
-              onKeyDown={handleCompareRailResizeKeyDown}
+              onPointerDown={handleSideRailResizeStart}
+              onKeyDown={handleSideRailResizeKeyDown}
             />
           </aside>
         ) : null}
 
-        {isMobile && mobileCompareRail ? (
+        {isMobile && mobileSideRail ? (
           <Drawer
-            open={compareRailOpen}
+            open={sideRailOpen}
             modal={false}
             handleOnly
-            {...(onCompareRailOpenChange ? { onOpenChange: onCompareRailOpenChange } : {})}
+            {...(onSideRailOpenChange ? { onOpenChange: onSideRailOpenChange } : {})}
           >
             <DrawerContent className="h-3/4">
               <DrawerHeader className="sr-only">
-                <DrawerTitle>{tAll('calendar.compare.rail.title')}</DrawerTitle>
-                <DrawerDescription>{tAll('calendar.compare.rail.description')}</DrawerDescription>
+                <DrawerTitle>{resolvedSideRailTitle}</DrawerTitle>
+                <DrawerDescription>{resolvedSideRailDescription}</DrawerDescription>
               </DrawerHeader>
-              <div className="min-h-0 flex-1 overflow-hidden">{mobileCompareRail}</div>
+              <div className="min-h-0 flex-1 overflow-hidden">{mobileSideRail}</div>
             </DrawerContent>
           </Drawer>
         ) : null}
@@ -321,6 +329,6 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
 
 CalendarLayout.displayName = 'CalendarLayout';
 
-function clampCompareRailWidth(width: number): number {
-  return Math.min(COMPARE_RAIL_MAX_WIDTH, Math.max(COMPARE_RAIL_MIN_WIDTH, width));
+function clampSideRailWidth(width: number): number {
+  return Math.min(SIDE_RAIL_MAX_WIDTH, Math.max(SIDE_RAIL_MIN_WIDTH, width));
 }
