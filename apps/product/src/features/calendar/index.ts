@@ -71,13 +71,6 @@ export { calculateViewDateRange } from './domain/view-range';
 // Lib / Utils
 // =============================================================================
 export { formatCalendarDateParam, parseCalendarDateParam } from './lib/date-param';
-export { computeCalendarDayDiffs } from './lib/day-diff';
-export type {
-  CalendarDayDiffItem,
-  CalendarDayDiffKind,
-  CalendarDayDiffResult,
-  CalendarDayDiffSummary,
-} from './lib/day-diff';
 export { isCalendarViewPath } from './lib/route-utils';
 
 // ここにないものはfeature内部専用
