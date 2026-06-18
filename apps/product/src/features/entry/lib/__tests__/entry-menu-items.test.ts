@@ -54,4 +54,40 @@ describe('getEntryMenuItems', () => {
       );
     });
   });
+
+  describe('skip / unskip', () => {
+    const skipArgs = { ...baseArgs, onSkip: noop, onUnskip: noop };
+
+    it('過去の planned かつ未スキップなら skip を出す', () => {
+      expect(
+        keys({ ...skipArgs, origin: 'planned', isUpcoming: false, isSkipped: false }),
+      ).toContain('skip');
+    });
+
+    it('未来(upcoming)の planned には skip を出さない', () => {
+      expect(keys({ ...skipArgs, origin: 'planned', isUpcoming: true })).not.toContain('skip');
+    });
+
+    it('unplanned には skip を出さない', () => {
+      expect(keys({ ...skipArgs, origin: 'unplanned', isUpcoming: false })).not.toContain('skip');
+    });
+
+    it('スキップ済みなら skip を隠して unskip を出す', () => {
+      const result = keys({ ...skipArgs, origin: 'planned', isUpcoming: false, isSkipped: true });
+      expect(result).not.toContain('skip');
+      expect(result).toContain('unskip');
+    });
+
+    it('未スキップでは unskip を出さない', () => {
+      expect(
+        keys({ ...skipArgs, origin: 'planned', isUpcoming: false, isSkipped: false }),
+      ).not.toContain('unskip');
+    });
+
+    it('ハンドラ未指定なら skip / unskip を出さない', () => {
+      const result = keys({ ...baseArgs, origin: 'planned', isUpcoming: false, isSkipped: true });
+      expect(result).not.toContain('skip');
+      expect(result).not.toContain('unskip');
+    });
+  });
 });
