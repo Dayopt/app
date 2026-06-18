@@ -105,7 +105,7 @@ describe('computeCalendarDayDiffs', () => {
     });
   });
 
-  it('実績なしで終了した planned entry は missed として集計する', () => {
+  it('実績未編集の planned entry は予定どおりとして差分に出さない', () => {
     const result = computeCalendarDayDiffs(
       [
         entry({
@@ -116,8 +116,14 @@ describe('computeCalendarDayDiffs', () => {
       now,
     );
 
-    expect(result.items).toMatchObject([{ kind: 'missed' }]);
-    expect(result.entryIds.has('entry-1')).toBe(true);
+    expect(result.items).toHaveLength(0);
+    expect(result.entryIds.has('entry-1')).toBe(false);
+    expect(result.summary).toMatchObject({
+      plannedMinutes: 60,
+      actualMinutes: 60,
+      missedMinutes: 0,
+      diffMinutes: 0,
+    });
   });
 
   it('開始がずれた planned entry は shifted にする', () => {

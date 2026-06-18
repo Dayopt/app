@@ -74,9 +74,10 @@ function actualRange(entry: CalendarEvent): { start: Date | null; end: Date | nu
     };
   }
 
+  const planned = plannedRange(entry);
   return {
-    start: entry.actualStartDate ?? null,
-    end: entry.actualEndDate ?? null,
+    start: entry.actualStartDate && entry.actualEndDate ? entry.actualStartDate : planned.start,
+    end: entry.actualStartDate && entry.actualEndDate ? entry.actualEndDate : planned.end,
   };
 }
 
@@ -111,7 +112,7 @@ function makeItem(
 
 export function computeCalendarDayDiffs(
   entries: readonly CalendarEvent[],
-  now: Date = new Date(),
+  _now: Date = new Date(),
 ): CalendarDayDiffResult {
   if (entries.length === 0) return EMPTY_RESULT;
 
@@ -143,9 +144,8 @@ export function computeCalendarDayDiffs(
       continue;
     }
 
-    const ended = planned.end != null && planned.end.getTime() <= now.getTime();
     const hasActual = actual.start != null && actual.end != null && actualDuration > 0;
-    const missed = entry.isSkipped === true || (!hasActual && ended);
+    const missed = entry.isSkipped === true;
 
     if (missed) {
       missedMinutes += plannedDuration;
