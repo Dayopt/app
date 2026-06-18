@@ -42,6 +42,11 @@ interface UseDragSelectionOptions {
   onDoubleClick?: ((selection: DateTimeSelection) => void) | undefined;
   plans?: CalendarEvent[] | undefined;
   hourHeight?: number | undefined;
+  /**
+   * 重複ドロップ時の解決 hook。range（ms epoch）と「衝突がなければ実行する作成処理」を受け取り、
+   * handled なら true を返す。true の時は通常の重複エラー表示を抑止する（「スキップして記録」等）。
+   */
+  onOverlapDrop?: ((startMs: number, endMs: number, onProceed: () => void) => boolean) | undefined;
 }
 
 interface UseDragSelectionReturn {
@@ -182,6 +187,7 @@ export function useDragSelection({
   onDoubleClick: onDoubleClickProp,
   plans = [],
   hourHeight = HOUR_HEIGHT,
+  onOverlapDrop,
 }: UseDragSelectionOptions): UseDragSelectionReturn {
   const defaultDuration = useUserPreferences((state) => state.defaultDuration);
   const { tap } = useHapticFeedback();
@@ -205,6 +211,7 @@ export function useDragSelection({
     tap,
     plans,
     t,
+    onOverlapDrop,
   });
   // eslint-disable-next-line react-hooks/refs -- ref mirrors: レンダー中に同期し、イベントハンドラーでのみ読み取る
   propsRef.current = {
@@ -217,6 +224,7 @@ export function useDragSelection({
     tap,
     plans,
     t,
+    onOverlapDrop,
   };
 
   const pixelsToTime = useCallback((y: number) => pixelsToTimeRaw(y, hourHeight), [hourHeight]);
@@ -248,7 +256,10 @@ export function useDragSelection({
         const endTime = new Date(date);
         endTime.setHours(selection.endHour, selection.endMinute, 0, 0);
         if (checkClientSideOverlap(plans, '', startTime, endTime)) {
-          toast.error(t('errors.timeOverlap'));
+          const handled =
+            onOverlapDrop?.(startTime.getTime(), endTime.getTime(), () => handler(selection)) ??
+            false;
+          if (!handled) toast.error(t('errors.timeOverlap'));
         } else {
           handler(selection);
         }
@@ -256,7 +267,17 @@ export function useDragSelection({
       e.preventDefault();
       e.stopPropagation();
     },
-    [pixelsToTime, disabled, onDoubleClickProp, onTimeRangeSelect, date, defaultDuration, plans, t],
+    [
+      pixelsToTime,
+      disabled,
+      onDoubleClickProp,
+      onTimeRangeSelect,
+      date,
+      defaultDuration,
+      plans,
+      t,
+      onOverlapDrop,
+    ],
   );
 
   const handleMouseDown = useCallback(
@@ -365,7 +386,15 @@ export function useDragSelection({
       }
       if (mode.type === 'mouse-selecting' && mode.hasDragged) {
         if (mode.isOverlapping) {
-          toast.error(p.t('errors.timeOverlap'));
+          const startTime = new Date(p.date);
+          startTime.setHours(mode.selection.startHour, mode.selection.startMinute, 0, 0);
+          const endTime = new Date(p.date);
+          endTime.setHours(mode.selection.endHour, mode.selection.endMinute, 0, 0);
+          const handled =
+            p.onOverlapDrop?.(startTime.getTime(), endTime.getTime(), () =>
+              p.onTimeRangeSelect?.({ date: p.date, ...mode.selection }),
+            ) ?? false;
+          if (!handled) toast.error(p.t('errors.timeOverlap'));
         } else if (p.onTimeRangeSelect) {
           p.onTimeRangeSelect({ date: p.date, ...mode.selection });
         }
@@ -462,7 +491,15 @@ export function useDragSelection({
       const sel = mode.selection;
       if (mode.hasDragged) {
         if (mode.isOverlapping) {
-          toast.error(p.t('errors.timeOverlap'));
+          const startTime = new Date(p.date);
+          startTime.setHours(sel.startHour, sel.startMinute, 0, 0);
+          const endTime = new Date(p.date);
+          endTime.setHours(sel.endHour, sel.endMinute, 0, 0);
+          const handled =
+            p.onOverlapDrop?.(startTime.getTime(), endTime.getTime(), () =>
+              p.onTimeRangeSelect?.({ date: p.date, ...sel }),
+            ) ?? false;
+          if (!handled) toast.error(p.t('errors.timeOverlap'));
         } else if (p.onTimeRangeSelect) {
           p.onTimeRangeSelect({ date: p.date, ...sel });
         }
@@ -477,19 +514,22 @@ export function useDragSelection({
         const endTime = new Date(p.date);
         endTime.setHours(Math.floor(endTotal / 60), endTotal % 60, 0, 0);
 
+        const instant = createInstantSelection(
+          { hour: sel.startHour, minute: sel.startMinute },
+          p.date,
+          p.defaultDuration,
+        );
+
         if (checkClientSideOverlap(p.plans, '', startTime, endTime)) {
-          toast.error(p.t('errors.timeOverlap'));
+          const handled =
+            p.onOverlapDrop?.(startTime.getTime(), endTime.getTime(), () => handler(instant)) ??
+            false;
+          if (!handled) toast.error(p.t('errors.timeOverlap'));
           dispatch({ type: 'CANCEL' });
           return;
         }
 
-        handler(
-          createInstantSelection(
-            { hour: sel.startHour, minute: sel.startMinute },
-            p.date,
-            p.defaultDuration,
-          ),
-        );
+        handler(instant);
       }
       dispatch({ type: 'TOUCH_END' });
     };

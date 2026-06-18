@@ -14,7 +14,7 @@ export type { EntryWithTags } from './types/entry';
 // =============================================================================
 // Hooks
 // =============================================================================
-export { useEntries, useEntryMutations } from './hooks';
+export { useEntries, useEntryMutations, useFindSkippableAutoRecords } from './hooks';
 
 // =============================================================================
 // Stores
