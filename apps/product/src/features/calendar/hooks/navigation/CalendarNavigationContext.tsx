@@ -67,7 +67,7 @@ function resolveCalendarProps(pathname: string) {
 interface CalendarNavigationContextValue {
   currentDate: Date;
   viewType: CalendarViewType;
-  /** day view で予定と実績の差分レイヤーを表示する */
+  /** day view で予定と実績の Diff Rail を表示する */
   dayCompareEnabled: boolean;
   /** ナビゲーション中（日付変更・ビュー切替）のトランジション状態 */
   isPending: boolean;

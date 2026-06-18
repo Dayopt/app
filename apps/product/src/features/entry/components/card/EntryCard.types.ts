@@ -58,8 +58,10 @@ export interface EntryCardProps {
   previewTime?: ({ start: Date; end: Date } | null) | undefined;
   /** グリッドの1時間あたりの高さ（px）。予定vs記録の差分オーバーレイ計算に使用 */
   hourHeight?: number | undefined;
-  /** 予定と実績の差分レイヤーを表示する */
+  /** 予定と実績の差分レイヤーを表示する（multi-column drag 用） */
   showActualDiff?: boolean | undefined;
+  /** day compare Rail に出ている entry の marker を表示する */
+  showDayDiffMarker?: boolean | undefined;
   /** 予定レイヤーとして扱う高さ。actual 側の高さと分ける場合に使用 */
   plannedHeight?: number | undefined;
   /** 外部（WeekContent等）がwrapper側でoverlay位置調整済みの場合true。EntryCard内でのtopShift/heightDelta適用をスキップする */

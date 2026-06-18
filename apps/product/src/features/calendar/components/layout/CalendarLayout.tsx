@@ -3,6 +3,15 @@
 import { useTranslations } from 'next-intl';
 import { memo, useCallback, useState } from 'react';
 
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/lib/components/ui/drawer';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
@@ -51,6 +60,12 @@ interface CalendarLayoutProps {
   // Header slots
   leftSlot?: React.ReactNode | undefined;
   rightSlot?: React.ReactNode | undefined;
+
+  // Compare rail
+  compareRail?: React.ReactNode | undefined;
+  mobileCompareRail?: React.ReactNode | undefined;
+  compareRailOpen?: boolean | undefined;
+  onCompareRailOpenChange?: ((open: boolean) => void) | undefined;
 }
 
 /**
@@ -82,11 +97,19 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     // Header slots
     leftSlot,
     rightSlot,
+
+    // Compare rail
+    compareRail,
+    mobileCompareRail,
+    compareRailOpen = false,
+    onCompareRailOpenChange,
   }) => {
     const t = useTranslations('calendar');
+    const tAll = useTranslations();
     const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
     const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
     const banner = useInlineBanner();
+    const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
     // ナビゲーション方向 + キーの追跡（スライドアニメーション用）
     const [slide, setSlide] = useState<{ key: number; direction: 'prev' | 'next' | null }>({
@@ -174,10 +197,32 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           onTouchMove={handlers.onTouchMove}
           onTouchEnd={handlers.onTouchEnd}
         >
-          <div key={slide.key} className={cn('flex min-h-0 flex-1 flex-col', slideClass)}>
-            {children}
+          <div key={slide.key} className={cn('flex min-h-0 flex-1 flex-row', slideClass)}>
+            <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+            {compareRail ? (
+              <aside className="border-border-subtle hidden w-80 shrink-0 border-l md:flex">
+                {compareRail}
+              </aside>
+            ) : null}
           </div>
         </div>
+
+        {isMobile && mobileCompareRail ? (
+          <Drawer
+            open={compareRailOpen}
+            modal={false}
+            handleOnly
+            {...(onCompareRailOpenChange ? { onOpenChange: onCompareRailOpenChange } : {})}
+          >
+            <DrawerContent className="h-3/4">
+              <DrawerHeader className="sr-only">
+                <DrawerTitle>{tAll('calendar.compare.rail.title')}</DrawerTitle>
+                <DrawerDescription>{tAll('calendar.compare.rail.description')}</DrawerDescription>
+              </DrawerHeader>
+              <div className="min-h-0 flex-1 overflow-hidden">{mobileCompareRail}</div>
+            </DrawerContent>
+          </Drawer>
+        ) : null}
       </div>
     );
   },

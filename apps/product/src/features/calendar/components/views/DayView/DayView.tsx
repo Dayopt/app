@@ -23,6 +23,7 @@ export const DayView = ({
   currentDate,
   showWeekends: _showWeekends = true,
   showActualDiff = false,
+  dayDiffEntryIds,
   className,
   disabledEntryId,
   onEntryClick,
@@ -127,6 +128,7 @@ export const DayView = ({
             onTimeRangeSelect={onTimeRangeSelect}
             disabledEntryId={disabledEntryId}
             showActualDiff={showActualDiff}
+            dayDiffEntryIds={dayDiffEntryIds}
             className="absolute inset-y-0 right-0 left-0"
           />
         </ScrollableCalendarLayout>

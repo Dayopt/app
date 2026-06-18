@@ -9,7 +9,30 @@
     "title": "Calendar",
     "compare": {
       "tooltip": "Compare planned and actual time",
-      "ariaLabel": "Toggle planned and actual comparison"
+      "ariaLabel": "Toggle planned and actual comparison",
+      "rail": {
+        "title": "Day diff",
+        "description": "Changes from the day's plan.",
+        "emptyTitle": "No changes",
+        "emptyDescription": "The day matches the plan.",
+        "summary": {
+          "planned": "Planned",
+          "actual": "Actual",
+          "diff": "Diff",
+          "unplanned": "Unplanned",
+          "missed": "Missed"
+        },
+        "kind": {
+          "unplanned": "Added",
+          "missed": "Missed",
+          "shifted": "Moved",
+          "resized": "Resized"
+        },
+        "badge": {
+          "late": "{duration} late",
+          "early": "{duration} early"
+        }
+      }
     },
     "views": {
       "day": "Day",

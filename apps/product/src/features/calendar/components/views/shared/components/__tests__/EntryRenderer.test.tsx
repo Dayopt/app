@@ -110,19 +110,24 @@ function renderEntryRendererWith({
   entries,
   onGapClick,
   showActualDiff = true,
+  showDayDiffMarker = false,
+  enableCrossDayDrag = false,
 }: {
   entry: CalendarEvent;
   entries: CalendarEvent[];
   onGapClick?: (startMinutes: number, endMinutes: number) => void;
   showActualDiff?: boolean;
+  showDayDiffMarker?: boolean;
+  enableCrossDayDrag?: boolean;
 }) {
   return render(
     <EntryRenderer
       entry={entry}
       style={{ top: '100px', height: '60px' }}
       hourHeight={60}
-      enableCrossDayDrag={false}
+      enableCrossDayDrag={enableCrossDayDrag}
       showActualDiff={showActualDiff}
+      showDayDiffMarker={showDayDiffMarker}
       dayIndex={0}
       isDragging={false}
       isResizing={false}
@@ -176,7 +181,7 @@ describe('EntryRenderer', () => {
         entry={overtimeEntry}
         style={{ top: '100px', height: '70px' }}
         hourHeight={60}
-        enableCrossDayDrag={false}
+        enableCrossDayDrag={true}
         showActualDiff={true}
         dayIndex={0}
         isDragging={false}
@@ -237,7 +242,7 @@ describe('EntryRenderer', () => {
     expect(container.querySelector('[data-entry-actual-layer]')).toBeNull();
   });
 
-  it('day の比較表示では planned entry の actual 差分を表示する', () => {
+  it('day の比較表示では planned entry の actual 差分は Rail marker だけ表示する', () => {
     const diffEntry: CalendarEvent = {
       ...baseEntry,
       startDate: new Date(2026, 0, 15, 10, 0),
@@ -252,14 +257,12 @@ describe('EntryRenderer', () => {
       entry: diffEntry,
       entries: [diffEntry],
       showActualDiff: true,
+      showDayDiffMarker: true,
     });
 
-    expect(container.querySelector('[data-entry-gap="top"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-entry-actual-layer]')).toBeInTheDocument();
-    expect(container.querySelector<HTMLElement>('[data-entry-content-layer]')).toHaveStyle({
-      top: '30px',
-      height: '30px',
-    });
+    expect(container.querySelector('[data-entry-gap="top"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-entry-actual-layer]')).toBeNull();
+    expect(container.querySelector('[data-entry-day-diff-marker]')).toBeInTheDocument();
   });
 
   it('day の通常表示でも unplanned entry は実績ブロックとして表示する', () => {
@@ -313,6 +316,7 @@ describe('EntryRenderer', () => {
       entry: plannedEntry,
       entries: [plannedEntry, gapRecord],
       onGapClick,
+      enableCrossDayDrag: true,
     });
 
     const topGap = container.querySelector<HTMLElement>('[data-entry-gap="top"]');

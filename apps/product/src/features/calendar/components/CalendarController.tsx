@@ -15,12 +15,14 @@ import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsCo
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
+import { computeCalendarDayDiffs } from '../lib/day-diff';
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
 
 import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
 
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
+import { CalendarDayDiffRail } from './day-diff/CalendarDayDiffRail';
 import { CalendarLayout } from './layout/CalendarLayout';
 import { EventContextMenu, MobileTouchHint } from './views/shared/components';
 
@@ -96,6 +98,7 @@ interface CalendarControllerProps {
   className?: string;
   leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
+  onCompareRailOpenChange?: ((open: boolean) => void) | undefined;
 }
 
 // =============================================================================
@@ -131,6 +134,7 @@ export function CalendarController({
   className,
   leftSlot,
   rightSlot,
+  onCompareRailOpenChange,
 }: CalendarControllerProps) {
   // =========================================================================
   // Calendar-internal hooks
@@ -142,6 +146,14 @@ export function CalendarController({
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
+  const dayDiff = useMemo(
+    () =>
+      viewType === 'day' && showActualDiff
+        ? computeCalendarDayDiffs(filteredEntries)
+        : computeCalendarDayDiffs([]),
+    [filteredEntries, showActualDiff, viewType],
+  );
+  const dayDiffEntryIds = dayDiff.entryIds;
 
   // キーボードショートカット（ビューナビゲーション用）
   useCalendarKeyboard({
@@ -181,6 +193,7 @@ export function CalendarController({
       currentDate,
       showWeekends,
       showActualDiff,
+      dayDiffEntryIds,
       disabledEntryId,
       onEntryClick,
       onEntryContextMenu: handleEventContextMenu,
@@ -199,6 +212,7 @@ export function CalendarController({
       currentDate,
       showWeekends,
       showActualDiff,
+      dayDiffEntryIds,
       disabledEntryId,
       onEntryClick,
       handleEventContextMenu,
@@ -211,6 +225,11 @@ export function CalendarController({
       onNavigateToday,
     ],
   );
+
+  const compareRail =
+    viewType === 'day' && showActualDiff ? (
+      <CalendarDayDiffRail diff={dayDiff} entries={filteredEntries} onEntryClick={onEntryClick} />
+    ) : null;
 
   // =========================================================================
   // Render
@@ -232,6 +251,10 @@ export function CalendarController({
         onSettingsChange={onSettingsChange}
         leftSlot={leftSlot}
         rightSlot={rightSlot}
+        compareRail={compareRail}
+        mobileCompareRail={compareRail}
+        compareRailOpen={viewType === 'day' && showActualDiff}
+        onCompareRailOpenChange={onCompareRailOpenChange}
       >
         <CalendarViewRenderer viewType={viewType} commonProps={commonProps} />
       </CalendarLayout>

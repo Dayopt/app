@@ -9,7 +9,30 @@
     "title": "カレンダー",
     "compare": {
       "tooltip": "予定と実績を比較",
-      "ariaLabel": "予定と実績の比較表示を切り替え"
+      "ariaLabel": "予定と実績の比較表示を切り替え",
+      "rail": {
+        "title": "今日の差分",
+        "description": "その日の予定から変わった点。",
+        "emptyTitle": "差分なし",
+        "emptyDescription": "予定どおりの1日です。",
+        "summary": {
+          "planned": "予定",
+          "actual": "実績",
+          "diff": "差分",
+          "unplanned": "予定外",
+          "missed": "未実施"
+        },
+        "kind": {
+          "unplanned": "追加",
+          "missed": "未実施",
+          "shifted": "移動",
+          "resized": "長さ変更"
+        },
+        "badge": {
+          "late": "{duration}遅れ",
+          "early": "{duration}前倒し"
+        }
+      }
     },
     "views": {
       "day": "日",

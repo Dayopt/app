@@ -141,6 +141,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onPrefetch={composition.prefetchDirection}
           leftSlot={sidebarToggle}
           rightSlot={compareToggle}
+          onCompareRailOpenChange={setDayCompareEnabled}
         />
       </FeatureErrorBoundary>
     </div>

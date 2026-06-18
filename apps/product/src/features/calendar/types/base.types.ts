@@ -37,8 +37,10 @@ export interface GridViewProps extends BaseViewProps {
 
   // Display options
   showWeekends?: boolean | undefined;
-  /** 予定と実績の差分レイヤーを表示する */
+  /** day compare の差分 Rail を表示する */
   showActualDiff?: boolean | undefined;
+  /** day compare Rail に出ている entry の ID 一覧 */
+  dayDiffEntryIds?: ReadonlySet<string> | undefined;
 
   /** DnDを無効化するエントリID（Inspector表示中のエントリなど） */
   disabledEntryId?: string | null | undefined;

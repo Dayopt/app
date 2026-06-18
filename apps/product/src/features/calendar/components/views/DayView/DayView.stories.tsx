@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
+import { computeCalendarDayDiffs } from '../../../lib/day-diff';
 import type { CalendarEvent, ViewDateRange } from '../../../types/calendar.types';
 
 import { DayView } from './DayView';
@@ -278,6 +279,11 @@ const presetSampleEntries: CalendarEvent[] = [
   }),
 ];
 
+const presetDiffEntryIds = computeCalendarDayDiffs(
+  presetSampleEntries,
+  makeDate(today, 23, 0),
+).entryIds;
+
 /** プリセットサンプルデイ — オンボーディング後の初回表示イメージ */
 export const PresetSampleDay: Story = {
   render: () => (
@@ -292,7 +298,7 @@ export const PresetSampleDay: Story = {
   ),
 };
 
-/** 比較表示 — 予定と実績の差分レイヤーを表示 */
+/** 比較表示 — Diff Rail の対象 marker を表示 */
 export const CompareMode: Story = {
   render: () => (
     <div className="h-[700px]">
@@ -301,6 +307,7 @@ export const CompareMode: Story = {
         entries={presetSampleEntries}
         currentDate={today}
         showActualDiff
+        dayDiffEntryIds={presetDiffEntryIds}
         {...defaultHandlers}
       />
     </div>
@@ -331,6 +338,7 @@ export const AllPatterns: Story = {
           entries={presetSampleEntries}
           currentDate={today}
           showActualDiff
+          dayDiffEntryIds={presetDiffEntryIds}
           {...defaultHandlers}
         />
       </div>

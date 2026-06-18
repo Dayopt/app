@@ -10,7 +10,7 @@
 
 import React, { memo, startTransition, useCallback, useEffect, useMemo } from 'react';
 
-import { Plus } from 'lucide-react';
+import { GitCompareArrows, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses } from '@/features/tags';
@@ -70,6 +70,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   previewTime = null,
   hourHeight: hourHeightProp,
   showActualDiff = true,
+  showDayDiffMarker = false,
   plannedHeight: plannedHeightProp,
   overlayPositionApplied = false,
   onGapClick,
@@ -729,6 +730,16 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             previewTime={previewTime}
           />
         </div>
+      )}
+
+      {showDayDiffMarker && (
+        <span
+          data-entry-day-diff-marker
+          className="bg-background text-muted-foreground border-border-subtle pointer-events-none absolute top-1 right-1 flex size-5 items-center justify-center rounded-full border shadow-sm"
+          aria-hidden="true"
+        >
+          <GitCompareArrows className="size-3.5" />
+        </span>
       )}
 
       {/* 下端リサイズハンドル（Draft は非表示）

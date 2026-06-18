@@ -30,6 +30,7 @@ interface EntryRendererProps {
   hourHeight: number;
   enableCrossDayDrag: boolean;
   showActualDiff?: boolean | undefined;
+  showDayDiffMarker?: boolean | undefined;
   dayIndex: number;
   isDragging: boolean;
   isResizing: boolean;
@@ -111,7 +112,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   style,
   hourHeight,
   enableCrossDayDrag,
-  showActualDiff = false,
+  showDayDiffMarker = false,
   dayIndex,
   isDragging,
   isResizing,
@@ -152,8 +153,9 @@ export const EntryRenderer = React.memo(function EntryRenderer({
     ? { ...style, opacity: 0.65 }
     : getAdjustedStyle(style, entry.id, interactionState);
 
-  // 予定 vs 記録の差分オーバーレイ（multi-column または明示的な比較モード）
-  const shouldRenderActualDiff = enableCrossDayDrag || showActualDiff;
+  // 予定 vs 記録の差分オーバーレイは multi-column drag 用に限定する。
+  // day compare は Diff Rail を主役にし、カード上は marker のみ表示する。
+  const shouldRenderActualDiff = enableCrossDayDrag;
   let finalStyle: React.CSSProperties = adjustedStyle;
   let finalHeight: number;
   const previewPlannedHeight =
@@ -278,6 +280,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           isGapAvailable={isGapAvailable}
           gapCreationCutoffMs={gapCreationCutoffMs}
           showActualDiff={shouldRenderActualDiff}
+          showDayDiffMarker={showDayDiffMarker}
           {...(shouldRenderActualDiff ? { overlayPositionApplied: true } : {})}
           className={cn(
             'h-full w-full',

@@ -51,6 +51,14 @@ describe('EntryCard', () => {
       expect(eventBlock).toHaveAttribute('aria-label', 'entry: テストイベント');
       expect(eventBlock).toHaveAttribute('tabIndex', '0');
     });
+
+    it('day compare marker を表示できる', () => {
+      const { container } = render(
+        <EntryCard entry={mockEvent} position={mockPosition} showDayDiffMarker />,
+      );
+
+      expect(container.querySelector('[data-entry-day-diff-marker]')).toBeInTheDocument();
+    });
   });
 
   describe('planned / actual レイヤー表示', () => {
