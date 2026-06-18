@@ -1,10 +1,11 @@
 'use client';
 
-import { ArrowDown, ArrowUp, Circle, GitCompareArrows, Minus, Plus } from 'lucide-react';
+import { ArrowDown, ArrowUp, Circle, GitCompareArrows, Minus, Plus, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { useTagsMap } from '@/features/tags';
+import { Button } from '@/lib/components/ui/button';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +20,7 @@ interface CalendarDayDiffRailProps {
   diff: CalendarDayDiffResult;
   entries: readonly CalendarEvent[];
   onEntryClick: (entry: CalendarEvent) => void;
+  onClose?: (() => void) | undefined;
   className?: string | undefined;
 }
 
@@ -33,6 +35,7 @@ export function CalendarDayDiffRail({
   diff,
   entries,
   onEntryClick,
+  onClose,
   className,
 }: CalendarDayDiffRailProps) {
   const t = useTranslations();
@@ -53,15 +56,35 @@ export function CalendarDayDiffRail({
 
   return (
     <section
-      className={cn('bg-background flex min-h-0 flex-col', className)}
+      className={cn('bg-background flex min-h-0 w-full flex-col', className)}
       aria-label={t('calendar.compare.rail.title')}
     >
-      <header className="border-border-subtle shrink-0 border-b p-4">
-        <div className="flex items-center gap-2">
-          <GitCompareArrows className="text-muted-foreground size-4" aria-hidden="true" />
-          <h2 className="text-sm font-medium">{t('calendar.compare.rail.title')}</h2>
+      <header className="border-border-subtle shrink-0 border-b">
+        <div className="flex h-12 items-center gap-2 px-4">
+          <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
+            {t('calendar.compare.rail.title')}
+          </h2>
+          {onClose ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              icon
+              className="text-muted-foreground hover:text-foreground -mr-2"
+              onClick={onClose}
+              aria-label={t('actions.close')}
+            >
+              <X className="size-4" aria-hidden="true" />
+            </Button>
+          ) : null}
         </div>
-        <dl className="mt-4 grid grid-cols-2 gap-2">
+        <dl className="bg-container mx-4 mt-2 mb-4 flex flex-col gap-4 rounded-lg p-4">
+          <SummaryMetric
+            label={t('calendar.compare.rail.summary.diff')}
+            value={formatSignedDuration(t, diff.summary.diffMinutes)}
+            valueClassName={diff.summary.diffMinutes >= 0 ? 'text-success' : 'text-destructive'}
+            emphasis
+          />
           <SummaryMetric
             label={t('calendar.compare.rail.summary.planned')}
             value={formatDuration(t, diff.summary.plannedMinutes)}
@@ -69,11 +92,6 @@ export function CalendarDayDiffRail({
           <SummaryMetric
             label={t('calendar.compare.rail.summary.actual')}
             value={formatDuration(t, diff.summary.actualMinutes)}
-          />
-          <SummaryMetric
-            label={t('calendar.compare.rail.summary.diff')}
-            value={formatSignedDuration(t, diff.summary.diffMinutes)}
-            valueClassName={diff.summary.diffMinutes >= 0 ? 'text-success' : 'text-destructive'}
           />
           <SummaryMetric
             label={t('calendar.compare.rail.summary.unplanned')}
@@ -149,15 +167,23 @@ function SummaryMetric({
   label,
   value,
   valueClassName,
+  emphasis = false,
 }: {
   label: string;
   value: string;
   valueClassName?: string | undefined;
+  emphasis?: boolean | undefined;
 }) {
   return (
-    <div className="bg-container rounded-lg p-2">
+    <div>
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className={cn('mt-1 font-mono text-sm font-medium tabular-nums', valueClassName)}>
+      <dd
+        className={cn(
+          'mt-1 font-mono font-medium tabular-nums',
+          emphasis ? 'text-lg' : 'text-sm',
+          valueClassName,
+        )}
+      >
         {value}
       </dd>
     </div>

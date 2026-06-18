@@ -28,6 +28,11 @@ import { DateRangeDisplay } from './Header/DateRangeDisplay';
 import { MobileCalendarHeader } from './Header/MobileCalendarHeader';
 import { ViewSwitcher } from './Header/ViewSwitcher';
 
+const COMPARE_RAIL_DEFAULT_WIDTH = 256;
+const COMPARE_RAIL_MIN_WIDTH = 256;
+const COMPARE_RAIL_MAX_WIDTH = 560;
+const COMPARE_RAIL_RESIZE_STEP = 32;
+
 /** CalendarLayout コンポーネントのプロパティ */
 interface CalendarLayoutProps {
   children: React.ReactNode;
@@ -110,6 +115,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
     const banner = useInlineBanner();
     const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+    const [compareRailWidth, setCompareRailWidth] = useState(COMPARE_RAIL_DEFAULT_WIDTH);
 
     // ナビゲーション方向 + キーの追跡（スライドアニメーション用）
     const [slide, setSlide] = useState<{ key: number; direction: 'prev' | 'next' | null }>({
@@ -146,66 +152,151 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         : slide.direction === 'prev'
           ? 'calendar-slide-prev'
           : '';
+    const desktopCompareRailOpen = Boolean(compareRail && !isMobile);
+    const contentStyle = desktopCompareRailOpen
+      ? ({ marginRight: compareRailWidth } satisfies React.CSSProperties)
+      : undefined;
+    const compareRailStyle = {
+      width: compareRailWidth,
+    } satisfies React.CSSProperties;
+
+    const handleCompareRailResizeStart = useCallback(
+      (event: React.PointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return;
+
+        event.preventDefault();
+
+        const startX = event.clientX;
+        const startWidth = compareRailWidth;
+        const previousCursor = document.body.style.cursor;
+        const previousUserSelect = document.body.style.userSelect;
+
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        const handlePointerMove = (moveEvent: PointerEvent) => {
+          setCompareRailWidth(clampCompareRailWidth(startWidth - (moveEvent.clientX - startX)));
+        };
+        const handlePointerUp = () => {
+          document.body.style.cursor = previousCursor;
+          document.body.style.userSelect = previousUserSelect;
+          window.removeEventListener('pointermove', handlePointerMove);
+          window.removeEventListener('pointerup', handlePointerUp);
+        };
+
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp, { once: true });
+      },
+      [compareRailWidth],
+    );
+
+    const handleCompareRailResizeKeyDown = useCallback(
+      (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          setCompareRailWidth((width) => clampCompareRailWidth(width + COMPARE_RAIL_RESIZE_STEP));
+          return;
+        }
+
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          setCompareRailWidth((width) => clampCompareRailWidth(width - COMPARE_RAIL_RESIZE_STEP));
+          return;
+        }
+
+        if (event.key === 'Home') {
+          event.preventDefault();
+          setCompareRailWidth(COMPARE_RAIL_MIN_WIDTH);
+          return;
+        }
+
+        if (event.key === 'End') {
+          event.preventDefault();
+          setCompareRailWidth(COMPARE_RAIL_MAX_WIDTH);
+        }
+      },
+      [],
+    );
 
     return (
-      <div className={cn('calendar-layout flex h-full flex-col', className)}>
-        {/* スクリーンリーダー用のページタイトル */}
-        <h1 className="sr-only">{t('title')}</h1>
+      <div
+        className={cn('calendar-layout relative flex h-full flex-col overflow-hidden', className)}
+      >
+        <div className="flex min-h-0 flex-1 flex-col" style={contentStyle}>
+          {/* スクリーンリーダー用のページタイトル */}
+          <h1 className="sr-only">{t('title')}</h1>
 
-        {/* モバイル: インライン展開ミニカレンダー */}
-        <MobileCalendarHeader
-          currentDate={currentDate}
-          onNavigate={handleNavigate}
-          onPrefetch={onPrefetch}
-          onDateSelect={onDateSelect}
-          displayRange={displayRange}
-          rightSlot={rightSlot}
-        />
+          {/* モバイル: インライン展開ミニカレンダー */}
+          <MobileCalendarHeader
+            currentDate={currentDate}
+            onNavigate={handleNavigate}
+            onPrefetch={onPrefetch}
+            onDateSelect={onDateSelect}
+            displayRange={displayRange}
+            rightSlot={rightSlot}
+          />
 
-        {/* デスクトップ: 現行AppHeader（変更なし） */}
-        <div className="hidden md:block">
-          <AppHeader leftSlot={leftSlot} rightSlot={rightSlot}>
-            <div className="flex items-center gap-2">
-              <DateRangeDisplay
-                date={currentDate}
-                viewType={viewType}
-                showWeekNumber={showWeekNumbers}
-                weekStartsOn={weekStartsOn}
-                clickable={false}
-                displayRange={displayRange}
-              />
-              <DateNavigator onNavigate={handleNavigate} onPrefetch={onPrefetch} arrowSize="md" />
-              <ViewSwitcher
-                className="ml-2"
-                currentView={viewType}
-                onChange={(view) => onViewChange(view as CalendarViewType)}
-                onSettingsChange={onSettingsChange}
-              />
+          {/* デスクトップ: 現行AppHeader（変更なし） */}
+          <div className="hidden md:block">
+            <AppHeader leftSlot={leftSlot} rightSlot={rightSlot}>
+              <div className="flex items-center gap-2">
+                <DateRangeDisplay
+                  date={currentDate}
+                  viewType={viewType}
+                  showWeekNumber={showWeekNumbers}
+                  weekStartsOn={weekStartsOn}
+                  clickable={false}
+                  displayRange={displayRange}
+                />
+                <DateNavigator onNavigate={handleNavigate} onPrefetch={onPrefetch} arrowSize="md" />
+                <ViewSwitcher
+                  className="ml-2"
+                  currentView={viewType}
+                  onChange={(view) => onViewChange(view as CalendarViewType)}
+                  onSettingsChange={onSettingsChange}
+                />
+              </div>
+            </AppHeader>
+          </div>
+
+          {/* インラインバナー（同期エラー/オフライン/更新通知） */}
+          <InlineBanner {...banner} />
+
+          {/* カレンダーコンテンツ（スワイプ対応） */}
+          <div
+            ref={ref as React.RefObject<HTMLDivElement>}
+            data-calendar-main
+            className="flex min-h-0 flex-1 flex-col"
+            onTouchStart={handlers.onTouchStart}
+            onTouchMove={handlers.onTouchMove}
+            onTouchEnd={handlers.onTouchEnd}
+          >
+            <div key={slide.key} className={cn('flex min-h-0 flex-1 flex-row', slideClass)}>
+              <div className="flex min-w-0 flex-1 flex-col">{children}</div>
             </div>
-          </AppHeader>
-        </div>
-
-        {/* インラインバナー（同期エラー/オフライン/更新通知） */}
-        <InlineBanner {...banner} />
-
-        {/* カレンダーコンテンツ（スワイプ対応） */}
-        <div
-          ref={ref as React.RefObject<HTMLDivElement>}
-          data-calendar-main
-          className="flex min-h-0 flex-1 flex-col"
-          onTouchStart={handlers.onTouchStart}
-          onTouchMove={handlers.onTouchMove}
-          onTouchEnd={handlers.onTouchEnd}
-        >
-          <div key={slide.key} className={cn('flex min-h-0 flex-1 flex-row', slideClass)}>
-            <div className="flex min-w-0 flex-1 flex-col">{children}</div>
-            {compareRail ? (
-              <aside className="border-border-subtle hidden w-80 shrink-0 border-l md:flex">
-                {compareRail}
-              </aside>
-            ) : null}
           </div>
         </div>
+
+        {compareRail ? (
+          <aside
+            className="border-border-subtle bg-background absolute top-0 right-0 bottom-0 hidden shrink-0 border-l md:flex"
+            style={compareRailStyle}
+          >
+            {compareRail}
+            <div
+              role="separator"
+              aria-label={tAll('calendar.compare.rail.resizeLabel')}
+              aria-orientation="vertical"
+              aria-valuemin={COMPARE_RAIL_MIN_WIDTH}
+              aria-valuemax={COMPARE_RAIL_MAX_WIDTH}
+              aria-valuenow={compareRailWidth}
+              tabIndex={0}
+              className="hover:bg-state-hover focus-visible:outline-ring absolute inset-y-0 left-0 w-2 -translate-x-1 cursor-col-resize transition-colors duration-150 focus-visible:outline-2"
+              onPointerDown={handleCompareRailResizeStart}
+              onKeyDown={handleCompareRailResizeKeyDown}
+            />
+          </aside>
+        ) : null}
 
         {isMobile && mobileCompareRail ? (
           <Drawer
@@ -229,3 +320,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
 );
 
 CalendarLayout.displayName = 'CalendarLayout';
+
+function clampCompareRailWidth(width: number): number {
+  return Math.min(COMPARE_RAIL_MAX_WIDTH, Math.max(COMPARE_RAIL_MIN_WIDTH, width));
+}

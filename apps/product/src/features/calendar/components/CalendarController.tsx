@@ -9,7 +9,7 @@
  * @see _composition/useCalendarComposition.ts
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
@@ -154,6 +154,9 @@ export function CalendarController({
     [filteredEntries, showActualDiff, viewType],
   );
   const dayDiffEntryIds = dayDiff.entryIds;
+  const handleCloseCompareRail = useCallback(() => {
+    onCompareRailOpenChange?.(false);
+  }, [onCompareRailOpenChange]);
 
   // キーボードショートカット（ビューナビゲーション用）
   useCalendarKeyboard({
@@ -228,7 +231,12 @@ export function CalendarController({
 
   const compareRail =
     viewType === 'day' && showActualDiff ? (
-      <CalendarDayDiffRail diff={dayDiff} entries={filteredEntries} onEntryClick={onEntryClick} />
+      <CalendarDayDiffRail
+        diff={dayDiff}
+        entries={filteredEntries}
+        onEntryClick={onEntryClick}
+        onClose={onCompareRailOpenChange ? handleCloseCompareRail : undefined}
+      />
     ) : null;
 
   // =========================================================================

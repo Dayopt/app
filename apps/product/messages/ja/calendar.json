@@ -13,6 +13,7 @@
       "rail": {
         "title": "今日の差分",
         "description": "その日の予定から変わった点。",
+        "resizeLabel": "今日の差分パネルの幅を変更",
         "emptyTitle": "差分なし",
         "emptyDescription": "予定どおりの1日です。",
         "summary": {

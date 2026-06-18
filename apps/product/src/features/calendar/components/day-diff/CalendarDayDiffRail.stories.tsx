@@ -130,7 +130,8 @@ export const Default: Story = {
     diff: computeCalendarDayDiffs(diffEntries, now),
     entries: diffEntries,
     onEntryClick: fn(),
-    className: 'h-96 w-80 border border-border-subtle',
+    onClose: fn(),
+    className: 'border-border-subtle h-96 w-64 border',
   },
 };
 
@@ -140,7 +141,8 @@ export const Empty: Story = {
     diff: computeCalendarDayDiffs(noDiffEntries, now),
     entries: noDiffEntries,
     onEntryClick: fn(),
-    className: 'h-96 w-80 border border-border-subtle',
+    onClose: fn(),
+    className: 'border-border-subtle h-96 w-64 border',
   },
 };
 
@@ -157,13 +159,14 @@ export const AllPatterns: Story = {
         diff={computeCalendarDayDiffs(diffEntries, now)}
         entries={diffEntries}
         onEntryClick={fn()}
-        className="border-border-subtle h-96 w-80 border"
+        onClose={fn()}
+        className="border-border-subtle h-96 w-64 border"
       />
       <CalendarDayDiffRail
         diff={computeCalendarDayDiffs(noDiffEntries, now)}
         entries={noDiffEntries}
         onEntryClick={fn()}
-        className="border-border-subtle h-96 w-80 border"
+        className="border-border-subtle h-96 w-64 border"
       />
     </div>
   ),

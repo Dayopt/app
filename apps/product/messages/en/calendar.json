@@ -13,6 +13,7 @@
       "rail": {
         "title": "Day diff",
         "description": "Changes from the day's plan.",
+        "resizeLabel": "Resize day diff panel",
         "emptyTitle": "No changes",
         "emptyDescription": "The day matches the plan.",
         "summary": {

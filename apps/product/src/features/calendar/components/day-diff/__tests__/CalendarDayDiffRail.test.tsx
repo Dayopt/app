@@ -114,4 +114,23 @@ describe('CalendarDayDiffRail', () => {
 
     expect(onEntryClick).toHaveBeenCalledWith(entries[0]);
   });
+
+  it('close button click で onClose を呼ぶ', async () => {
+    const user = userEvent.setup();
+    const entries = [entry()];
+    const onClose = vi.fn();
+
+    render(
+      <CalendarDayDiffRail
+        diff={computeCalendarDayDiffs(entries, now)}
+        entries={entries}
+        onEntryClick={vi.fn()}
+        onClose={onClose}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'actions.close' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
