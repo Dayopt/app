@@ -23,31 +23,13 @@ describe('useReviewFilterStore', () => {
   });
 
   describe('setGranularity', () => {
-    it('dayに切り替えできる', () => {
-      useReviewFilterStore.getState().setGranularity('day');
-      expect(useReviewFilterStore.getState().granularity).toBe('day');
-    });
-
-    it('weekに切り替えできる', () => {
-      useReviewFilterStore.getState().setGranularity('day');
+    it('weekを保持する', () => {
       useReviewFilterStore.getState().setGranularity('week');
       expect(useReviewFilterStore.getState().granularity).toBe('week');
     });
   });
 
   describe('navigate', () => {
-    it('day粒度で次の日に移動', () => {
-      useReviewFilterStore.getState().setGranularity('day');
-      useReviewFilterStore.getState().navigate('next');
-      expect(useReviewFilterStore.getState().currentDate.getDate()).toBe(11);
-    });
-
-    it('day粒度で前の日に移動', () => {
-      useReviewFilterStore.getState().setGranularity('day');
-      useReviewFilterStore.getState().navigate('prev');
-      expect(useReviewFilterStore.getState().currentDate.getDate()).toBe(9);
-    });
-
     it('week粒度で次の週に移動', () => {
       useReviewFilterStore.getState().setGranularity('week');
       useReviewFilterStore.getState().navigate('next');
@@ -67,9 +49,8 @@ describe('useReviewFilterStore', () => {
 
   describe('状態の独立性', () => {
     it('navigateがgranularityに影響しない', () => {
-      useReviewFilterStore.getState().setGranularity('day');
       useReviewFilterStore.getState().navigate('next');
-      expect(useReviewFilterStore.getState().granularity).toBe('day');
+      expect(useReviewFilterStore.getState().granularity).toBe('week');
     });
   });
 });

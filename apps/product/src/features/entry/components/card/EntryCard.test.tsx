@@ -115,7 +115,7 @@ describe('EntryCard', () => {
       expect(plannedLayer).toHaveClass('rounded-r-lg');
       expect(plannedLayer).toHaveStyle({ top: '0px', left: '-1px', height: '60px' });
       expect(actualLayer).toHaveStyle({ top: '15px', height: '45px' });
-      expect(contentLayer).toHaveStyle({ top: '0px', height: '60px' });
+      expect(contentLayer).toHaveStyle({ top: '15px', height: '45px' });
       expect(container.querySelector('[data-entry-actual-accent]')).toBeInTheDocument();
     });
 
@@ -355,7 +355,7 @@ describe('EntryCard', () => {
       expect(root).toHaveStyle({ top: '100px', height: '120px' });
       expect(plannedLayer).toHaveStyle({ top: '0px', left: '-1px', height: '120px' });
       expect(actualLayer).toHaveStyle({ top: '30px', height: '60px' });
-      expect(contentLayer).toHaveStyle({ top: '0px', height: '120px' });
+      expect(contentLayer).toHaveStyle({ top: '30px', height: '60px' });
     });
 
     it('actual が planned を超過した場合は従来の破線オーバーレイを維持する', () => {

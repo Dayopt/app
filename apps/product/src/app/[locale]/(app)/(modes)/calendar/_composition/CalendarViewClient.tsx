@@ -12,7 +12,11 @@
 
 import { PanelLeft } from 'lucide-react';
 
-import { CalendarController, useCalendarNavigation } from '@/features/calendar';
+import {
+  CalendarCompareToggle,
+  CalendarController,
+  useCalendarNavigation,
+} from '@/features/calendar';
 import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { useCalendarComposition } from './useCalendarComposition';
@@ -39,8 +43,15 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
     );
   }
 
-  const { viewType, currentDate, navigateRelative, changeView, navigateToDate } =
-    calendarNavigation;
+  const {
+    viewType,
+    currentDate,
+    dayCompareEnabled,
+    setDayCompareEnabled,
+    navigateRelative,
+    changeView,
+    navigateToDate,
+  } = calendarNavigation;
 
   // Composition: 全cross-featureデータとコールバックを集約
   const composition = useCalendarComposition({
@@ -62,6 +73,21 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
       <PanelLeft className="size-4" />
     </button>
   ) : null;
+  const compareToggle =
+    viewType === 'day' ? (
+      <>
+        <CalendarCompareToggle
+          checked={dayCompareEnabled}
+          onCheckedChange={setDayCompareEnabled}
+          className="-mr-2 hidden md:flex"
+        />
+        <CalendarCompareToggle
+          checked={dayCompareEnabled}
+          onCheckedChange={setDayCompareEnabled}
+          className="-mr-2 md:hidden"
+        />
+      </>
+    ) : null;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -94,6 +120,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           filteredEntries={composition.filteredEvents}
           allEntries={composition.allCalendarEvents}
           showWeekends={composition.showWeekends}
+          showActualDiff={viewType === 'day' && dayCompareEnabled}
           disabledEntryId={composition.disabledEntryId}
           onEntryClick={composition.onEntryClick}
           onTimeRangeSelect={composition.onTimeRangeSelect}
@@ -113,6 +140,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onDateSelect={composition.onDateSelect}
           onPrefetch={composition.prefetchDirection}
           leftSlot={sidebarToggle}
+          rightSlot={compareToggle}
         />
       </FeatureErrorBoundary>
     </div>

@@ -7,6 +7,10 @@
       "description": "Plan your schedule with time boxing. View and manage your plans by day, week, or month."
     },
     "title": "Calendar",
+    "compare": {
+      "tooltip": "Compare planned and actual time",
+      "ariaLabel": "Toggle planned and actual comparison"
+    },
     "views": {
       "day": "Day",
       "splitDay": "Split Day",

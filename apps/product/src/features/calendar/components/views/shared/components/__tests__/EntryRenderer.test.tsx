@@ -109,10 +109,12 @@ function renderEntryRendererWith({
   entry,
   entries,
   onGapClick,
+  showActualDiff = true,
 }: {
   entry: CalendarEvent;
   entries: CalendarEvent[];
   onGapClick?: (startMinutes: number, endMinutes: number) => void;
+  showActualDiff?: boolean;
 }) {
   return render(
     <EntryRenderer
@@ -120,6 +122,7 @@ function renderEntryRendererWith({
       style={{ top: '100px', height: '60px' }}
       hourHeight={60}
       enableCrossDayDrag={false}
+      showActualDiff={showActualDiff}
       dayIndex={0}
       isDragging={false}
       isResizing={false}
@@ -174,6 +177,7 @@ describe('EntryRenderer', () => {
         style={{ top: '100px', height: '70px' }}
         hourHeight={60}
         enableCrossDayDrag={false}
+        showActualDiff={true}
         dayIndex={0}
         isDragging={false}
         isResizing={true}
@@ -210,6 +214,75 @@ describe('EntryRenderer', () => {
       height: '60px',
     });
     expect(container.querySelector('[data-entry-actual-layer]')).toBeNull();
+  });
+
+  it('day の通常表示では planned entry の actual 差分を隠す', () => {
+    const diffEntry: CalendarEvent = {
+      ...baseEntry,
+      startDate: new Date(2026, 0, 15, 10, 0),
+      endDate: new Date(2026, 0, 15, 11, 0),
+      actualStartDate: new Date(2026, 0, 15, 10, 30),
+      actualEndDate: new Date(2026, 0, 15, 11, 0),
+      displayStartDate: new Date(2026, 0, 15, 10, 0),
+      displayEndDate: new Date(2026, 0, 15, 11, 0),
+    };
+
+    const { container } = renderEntryRendererWith({
+      entry: diffEntry,
+      entries: [diffEntry],
+      showActualDiff: false,
+    });
+
+    expect(container.querySelector('[data-entry-gap="top"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-entry-actual-layer]')).toBeNull();
+  });
+
+  it('day の比較表示では planned entry の actual 差分を表示する', () => {
+    const diffEntry: CalendarEvent = {
+      ...baseEntry,
+      startDate: new Date(2026, 0, 15, 10, 0),
+      endDate: new Date(2026, 0, 15, 11, 0),
+      actualStartDate: new Date(2026, 0, 15, 10, 30),
+      actualEndDate: new Date(2026, 0, 15, 11, 0),
+      displayStartDate: new Date(2026, 0, 15, 10, 0),
+      displayEndDate: new Date(2026, 0, 15, 11, 0),
+    };
+
+    const { container } = renderEntryRendererWith({
+      entry: diffEntry,
+      entries: [diffEntry],
+      showActualDiff: true,
+    });
+
+    expect(container.querySelector('[data-entry-gap="top"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-entry-actual-layer]')).toBeInTheDocument();
+    expect(container.querySelector<HTMLElement>('[data-entry-content-layer]')).toHaveStyle({
+      top: '30px',
+      height: '30px',
+    });
+  });
+
+  it('day の通常表示でも unplanned entry は実績ブロックとして表示する', () => {
+    const unplannedEntry: CalendarEvent = {
+      ...baseEntry,
+      origin: 'unplanned',
+      startDate: new Date(2026, 0, 15, 13, 0),
+      endDate: new Date(2026, 0, 15, 13, 30),
+      actualStartDate: new Date(2026, 0, 15, 13, 0),
+      actualEndDate: new Date(2026, 0, 15, 13, 30),
+      displayStartDate: new Date(2026, 0, 15, 13, 0),
+      displayEndDate: new Date(2026, 0, 15, 13, 30),
+      duration: 30,
+    };
+
+    const { container } = renderEntryRendererWith({
+      entry: unplannedEntry,
+      entries: [unplannedEntry],
+      showActualDiff: false,
+    });
+
+    expect(container.querySelector('[data-entry-planned-layer]')).toBeNull();
+    expect(container.querySelector('[data-entry-actual-layer]')).toBeInTheDocument();
   });
 
   it('planned の前半 gap が既存の予定外記録で埋まっている場合は作成導線を隠す', () => {

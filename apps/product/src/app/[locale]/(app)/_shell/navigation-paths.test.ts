@@ -41,6 +41,26 @@ describe('navigation-paths', () => {
     ).toBe('/en/calendar/day?date=2026-03-25');
   });
 
+  it('adds compare only for day calendar paths', () => {
+    expect(
+      buildCalendarPath({
+        locale: 'ja',
+        viewType: 'day',
+        currentDate: new Date(2026, 2, 25),
+        compare: true,
+      }),
+    ).toBe('/ja/calendar/day?date=2026-03-25&compare=1');
+
+    expect(
+      buildCalendarPath({
+        locale: 'ja',
+        viewType: 'week',
+        currentDate: new Date(2026, 2, 25),
+        compare: true,
+      }),
+    ).toBe('/ja/calendar/week?date=2026-03-25');
+  });
+
   it('builds a localized review path', () => {
     expect(buildReviewPath('ja')).toBe('/ja/review');
     expect(buildReviewPath('en', { granularity: 'week' })).toBe('/en/review?g=week');

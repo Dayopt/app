@@ -37,6 +37,8 @@ export interface GridViewProps extends BaseViewProps {
 
   // Display options
   showWeekends?: boolean | undefined;
+  /** 予定と実績の差分レイヤーを表示する */
+  showActualDiff?: boolean | undefined;
 
   /** DnDを無効化するエントリID（Inspector表示中のエントリなど） */
   disabledEntryId?: string | null | undefined;

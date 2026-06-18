@@ -29,6 +29,7 @@ interface EntryRendererProps {
   style: React.CSSProperties;
   hourHeight: number;
   enableCrossDayDrag: boolean;
+  showActualDiff?: boolean | undefined;
   dayIndex: number;
   isDragging: boolean;
   isResizing: boolean;
@@ -110,6 +111,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   style,
   hourHeight,
   enableCrossDayDrag,
+  showActualDiff = false,
   dayIndex,
   isDragging,
   isResizing,
@@ -150,7 +152,8 @@ export const EntryRenderer = React.memo(function EntryRenderer({
     ? { ...style, opacity: 0.65 }
     : getAdjustedStyle(style, entry.id, interactionState);
 
-  // 予定 vs 記録の差分オーバーレイ（multi-column ビューのみ）
+  // 予定 vs 記録の差分オーバーレイ（multi-column または明示的な比較モード）
+  const shouldRenderActualDiff = enableCrossDayDrag || showActualDiff;
   let finalStyle: React.CSSProperties = adjustedStyle;
   let finalHeight: number;
   const previewPlannedHeight =
@@ -171,7 +174,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
     [entries, entry.id],
   );
 
-  if (enableCrossDayDrag) {
+  if (shouldRenderActualDiff) {
     const overlay = computeActualTimeDiffOverlay(renderedEntry, hourHeight);
     const overlayAdjustedStyle = {
       ...adjustedStyle,
@@ -274,7 +277,8 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           onGapClick={onGapClick}
           isGapAvailable={isGapAvailable}
           gapCreationCutoffMs={gapCreationCutoffMs}
-          {...(enableCrossDayDrag ? { overlayPositionApplied: true } : {})}
+          showActualDiff={shouldRenderActualDiff}
+          {...(shouldRenderActualDiff ? { overlayPositionApplied: true } : {})}
           className={cn(
             'h-full w-full',
             entryDragging ? 'cursor-grabbing' : 'cursor-grab',

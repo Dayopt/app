@@ -292,6 +292,21 @@ export const PresetSampleDay: Story = {
   ),
 };
 
+/** 比較表示 — 予定と実績の差分レイヤーを表示 */
+export const CompareMode: Story = {
+  render: () => (
+    <div className="h-[700px]">
+      <DayView
+        dateRange={todayRange}
+        entries={presetSampleEntries}
+        currentDate={today}
+        showActualDiff
+        {...defaultHandlers}
+      />
+    </div>
+  ),
+};
+
 /** 全パターン一覧 */
 export const AllPatterns: Story = {
   render: () => (
@@ -308,6 +323,16 @@ export const AllPatterns: Story = {
 
       <div className="h-[500px] w-full">
         <DayView dateRange={todayRange} entries={[]} currentDate={today} {...defaultHandlers} />
+      </div>
+
+      <div className="h-[500px] w-full">
+        <DayView
+          dateRange={todayRange}
+          entries={presetSampleEntries}
+          currentDate={today}
+          showActualDiff
+          {...defaultHandlers}
+        />
       </div>
     </div>
   ),

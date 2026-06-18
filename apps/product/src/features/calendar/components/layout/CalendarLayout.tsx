@@ -136,6 +136,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           onPrefetch={onPrefetch}
           onDateSelect={onDateSelect}
           displayRange={displayRange}
+          rightSlot={rightSlot}
         />
 
         {/* デスクトップ: 現行AppHeader（変更なし） */}

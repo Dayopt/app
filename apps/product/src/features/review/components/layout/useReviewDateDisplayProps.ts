@@ -1,5 +1,3 @@
-import { useTranslations } from 'next-intl';
-
 import type { DateRangeDisplayProps } from '@/lib/components/common/DateRangeDisplay';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
@@ -13,27 +11,14 @@ import type { ReviewGranularity } from '../../stores/useReviewFilterStore';
  */
 export function useReviewDateDisplayProps(
   currentDate: Date,
-  granularity: ReviewGranularity,
+  _granularity: ReviewGranularity,
 ): DateRangeDisplayProps {
-  const tCommon = useTranslations('common');
   const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
   const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
 
-  const showWeekNumber = showWeekNumbers && (granularity === 'day' || granularity === 'week');
-
-  switch (granularity) {
-    case 'day':
-      return {
-        date: currentDate,
-        formatPattern: tCommon('dates.formats.monthDayYear'),
-        showWeekNumber,
-        weekStartsOn,
-      };
-    case 'week':
-      return {
-        date: currentDate,
-        showWeekNumber,
-        weekStartsOn,
-      };
-  }
+  return {
+    date: currentDate,
+    showWeekNumber: showWeekNumbers,
+    weekStartsOn,
+  };
 }

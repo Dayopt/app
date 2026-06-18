@@ -45,6 +45,7 @@ interface CalendarControllerProps {
 
   // --- Settings ---
   showWeekends: boolean;
+  showActualDiff?: boolean;
 
   // --- Entry state ---
   disabledEntryId: string | null;
@@ -108,6 +109,7 @@ export function CalendarController({
   filteredEntries,
   allEntries,
   showWeekends,
+  showActualDiff = false,
   disabledEntryId,
   onEntryClick,
   onTimeRangeSelect,
@@ -178,6 +180,7 @@ export function CalendarController({
       allEntries,
       currentDate,
       showWeekends,
+      showActualDiff,
       disabledEntryId,
       onEntryClick,
       onEntryContextMenu: handleEventContextMenu,
@@ -195,6 +198,7 @@ export function CalendarController({
       allEntries,
       currentDate,
       showWeekends,
+      showActualDiff,
       disabledEntryId,
       onEntryClick,
       handleEventContextMenu,

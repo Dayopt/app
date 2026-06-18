@@ -69,6 +69,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   style = {},
   previewTime = null,
   hourHeight: hourHeightProp,
+  showActualDiff = true,
   plannedHeight: plannedHeightProp,
   overlayPositionApplied = false,
   onGapClick,
@@ -105,7 +106,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   // upcoming でも実際に差分がある場合は、記録レイヤーと予定外部分を維持する。
   const renderAsPlanOnly =
     entry.origin === 'planned' &&
-    ((entry.actualStartDate == null && entry.actualEndDate == null) || upcomingActualMatchesPlan);
+    (!showActualDiff ||
+      (entry.actualStartDate == null && entry.actualEndDate == null) ||
+      upcomingActualMatchesPlan);
   const contentEntry = renderAsPlanOnly
     ? { ...entry, actualStartDate: null, actualEndDate: null }
     : entry;
@@ -210,12 +213,14 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     visualHeight - actualLayerTop - actualLayerBottomGap,
     minHeight,
   );
-  const contentLayerTop = isUnplanned ? actualLayerTop : plannedLayerTop;
-  const contentLayerHeight = isUnplanned ? actualLayerHeight : plannedHeight;
+  const contentLayerTop =
+    isUnplanned || (!renderAsPlanOnly && showActualDiff) ? actualLayerTop : plannedLayerTop;
+  const contentLayerHeight =
+    isUnplanned || (!renderAsPlanOnly && showActualDiff) ? actualLayerHeight : plannedHeight;
   const alignPlannedLayerToGrid = entry.origin === 'planned' && !renderAsPlanOnly;
   // planned bg は「context」として後ろに引かせ、actual body が「main」として前に出る intensity 階層
-  const plannedBackgroundColor = `color-mix(in oklch, ${accentColor} 8%, var(--background))`;
-  const actualBackgroundColor = `color-mix(in oklch, ${accentColor} 18%, var(--background))`;
+  const plannedBackgroundColor = `color-mix(in oklch, ${accentColor} ${showActualDiff ? 10 : 8}%, var(--background))`;
+  const actualBackgroundColor = `color-mix(in oklch, ${accentColor} ${showActualDiff ? 26 : 18}%, var(--background))`;
 
   // 動的スタイルを計算（overlay.topShift/heightDelta でカード位置を調整）
   const dynamicStyle: React.CSSProperties = useMemo(
@@ -488,7 +493,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             height: `${plannedHeight}px`,
             // upcoming は記録(actual)と地の色を揃える（差は左アクセントの有無だけにする）。
             backgroundColor:
-              renderAsPlanOnly && !isSkippedEntry ? actualBackgroundColor : plannedBackgroundColor,
+              renderAsPlanOnly && !isSkippedEntry && !showActualDiff
+                ? actualBackgroundColor
+                : plannedBackgroundColor,
           }}
         />
       )}

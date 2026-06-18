@@ -2,18 +2,22 @@ import { formatInTimeZone } from 'date-fns-tz';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
 import type { ReviewGranularity } from '@/features/review';
-import { prefetchTagDetailData, TagDetailPage } from '@/features/review';
+import {
+  buildWeeklyTagDetailPath,
+  parseReviewGranularityParam,
+  prefetchTagDetailData,
+  TagDetailPage,
+} from '@/features/review';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import type { Locale } from '@/lib/i18n/routing';
 import { HydrationBoundary } from '@/lib/trpc/server';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_GRANULARITIES = new Set(['day', 'week']);
 const DATE_PARAM_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** ?d= 省略時の「今日」をユーザー TZ で決める（サーバー TZ 基準だと日付がずれる） */
@@ -57,19 +61,22 @@ const TagDetailRoute = async ({
   params,
   searchParams,
 }: {
-  params: Promise<{ tagId: string }>;
+  params: Promise<{ locale?: Locale; tagId: string }>;
   searchParams: Promise<{ g?: string; d?: string }>;
 }) => {
-  const { tagId } = await params;
+  const { locale = 'ja', tagId } = await params;
   const { g, d } = await searchParams;
 
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tagId)) {
     notFound();
   }
 
-  const granularity: ReviewGranularity =
-    g && VALID_GRANULARITIES.has(g) ? (g as ReviewGranularity) : 'week';
   const dateStr = d && DATE_PARAM_PATTERN.test(d) ? d : await defaultDateStr();
+  if (g === 'day') {
+    redirect(buildWeeklyTagDetailPath(locale, tagId, dateStr));
+  }
+
+  const granularity: ReviewGranularity = parseReviewGranularityParam(g) ?? 'week';
 
   return (
     <Suspense fallback={<Skeleton className="h-full w-full" />}>

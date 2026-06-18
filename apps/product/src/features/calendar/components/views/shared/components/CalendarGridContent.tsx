@@ -139,6 +139,8 @@ interface CalendarGridContentProps {
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   /** DnDを無効化するエントリID */
   disabledEntryId?: string | null | undefined;
+  /** 予定と実績の差分レイヤーを表示する */
+  showActualDiff?: boolean | undefined;
   className?: string | undefined;
 }
 
@@ -160,6 +162,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   onEventUpdate,
   onTimeRangeSelect,
   disabledEntryId,
+  showActualDiff = false,
   className,
 }: CalendarGridContentProps) {
   const [gapCreationCutoffMs] = useState(() => Date.now());
@@ -240,11 +243,12 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
           position={{ top: 0, left: 0, width: 100, height: ghostHeight }}
           plannedHeight={ghostHeight}
           hourHeight={HOUR_HEIGHT}
+          showActualDiff={showActualDiff}
           style={{ position: 'relative' }}
         />
       );
     },
-    [entries, entryStyles, getTagById, isMobile, HOUR_HEIGHT],
+    [entries, entryStyles, getTagById, isMobile, HOUR_HEIGHT, showActualDiff],
   );
 
   // 時間グリッド
@@ -296,6 +300,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
               style={style}
               hourHeight={HOUR_HEIGHT}
               enableCrossDayDrag={enableCrossDayDrag}
+              showActualDiff={showActualDiff}
               dayIndex={dayIndex}
               isDragging={isDragging}
               isResizing={isResizing}

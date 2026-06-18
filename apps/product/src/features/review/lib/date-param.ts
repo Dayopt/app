@@ -26,7 +26,7 @@ export function buildReviewTagPath(
   locale: string,
   tagId: string,
   date: Date,
-  granularity: string,
+  granularity: ReviewGranularity,
 ): string {
   const params = new URLSearchParams({
     g: granularity,
@@ -36,7 +36,11 @@ export function buildReviewTagPath(
 }
 
 /** Review メインページへのパスを粒度・日付付きで組み立てる */
-export function buildReviewMainPath(locale: string, date: Date, granularity: string): string {
+export function buildReviewMainPath(
+  locale: string,
+  date: Date,
+  granularity: ReviewGranularity,
+): string {
   const params = new URLSearchParams({
     g: granularity,
     d: formatReviewDateParam(date),

@@ -4,7 +4,7 @@ import { format, getWeek, isSameMonth } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useState, type ReactNode } from 'react';
 
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { Button } from '@/lib/components/ui/button';
@@ -24,6 +24,7 @@ interface MobileCalendarHeaderProps {
   onPrefetch?: ((direction: NavigationDirection) => void) | undefined;
   onDateSelect?: ((date: Date) => void) | undefined;
   displayRange?: { start: Date; end: Date } | undefined;
+  rightSlot?: ReactNode | undefined;
   className?: string | undefined;
   defaultExpanded?: boolean | undefined;
 }
@@ -42,6 +43,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     onPrefetch,
     onDateSelect,
     displayRange,
+    rightSlot,
     className,
     defaultExpanded,
   }) => {
@@ -106,23 +108,26 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
       <div className={cn('bg-background sticky top-0 z-20 md:hidden', className)}>
         <AppHeader
           rightSlot={
-            <Button
-              variant="ghost"
-              icon
-              size="sm"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={handleTodayClick}
-              onMouseEnter={() => onPrefetch?.('today')}
-              onTouchStart={() => onPrefetch?.('today')}
-              aria-label={t('actions.goToToday')}
-            >
-              <div className="relative flex size-5 flex-col">
-                <div className="h-1 w-full border-b-2 border-current" />
-                <div className="flex flex-1 items-center justify-center">
-                  <span className="text-xs leading-none font-medium">{new Date().getDate()}</span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                icon
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={handleTodayClick}
+                onMouseEnter={() => onPrefetch?.('today')}
+                onTouchStart={() => onPrefetch?.('today')}
+                aria-label={t('actions.goToToday')}
+              >
+                <div className="relative flex size-5 flex-col">
+                  <div className="h-1 w-full border-b-2 border-current" />
+                  <div className="flex flex-1 items-center justify-center">
+                    <span className="text-xs leading-none font-medium">{new Date().getDate()}</span>
+                  </div>
                 </div>
-              </div>
-            </Button>
+              </Button>
+              {rightSlot}
+            </div>
           }
         >
           <button
