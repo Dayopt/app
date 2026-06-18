@@ -18,6 +18,11 @@ interface PendingSelection {
   endHour: number;
   endMinute: number;
   creationSource?: 'planned-gap' | undefined;
+  /**
+   * 「スキップして記録」で作成する場合、この記録を作る前にスキップする自動記録の id。
+   * 作成が実際に確定する時にだけスキップする（パレットを閉じてキャンセルした時は何も変えない）。
+   */
+  skipEntryIds?: string[] | undefined;
 }
 
 interface InlineCreateState {

@@ -74,7 +74,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const { tap, impact } = useHapticFeedback();
 
   const queryClient = useQueryClient();
-  const { createEntry } = useEntryMutations();
+  const { createEntry, skipEntry } = useEntryMutations();
   const createTagMutation = useCreateTag({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
   const [hoveredTag, setHoveredTag] = useState<HoveredTagInfo | null>(null);
@@ -92,7 +92,16 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     (tagId: string, tagName: string) => {
       if (!pendingSelection || isCreating) return;
 
-      const { date: selDate, startHour, startMinute, endHour, endMinute } = pendingSelection;
+      const {
+        date: selDate,
+        startHour,
+        startMinute,
+        endHour,
+        endMinute,
+        skipEntryIds,
+      } = pendingSelection;
+      // 「スキップして記録」経由: これからスキップする自動記録は衝突候補から除外する。
+      const skipSet = new Set(skipEntryIds ?? []);
 
       // ローカル時刻 → UTC変換
       const localStart = new Date(
@@ -137,6 +146,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         for (const e of data) {
           if (seen.has(e.id)) continue;
           seen.add(e.id);
+          if (skipSet.has(e.id)) continue;
           events.push({
             id: e.id,
             plannedStart: e.start_time,
@@ -169,24 +179,45 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       // ハイライトを即座に消す（pendingSelectionの値は既にローカル変数に展開済み）
       clearPendingSelection();
 
-      createEntry.mutate(
-        {
-          title: tagName,
-          start_time: utcStart.toISOString(),
-          end_time: utcEnd.toISOString(),
-          tagId,
-        },
-        {
-          onSuccess: () => setIsCreating(false),
-          onError: () => setIsCreating(false),
-        },
-      );
+      const runCreate = () =>
+        createEntry.mutate(
+          {
+            title: tagName,
+            start_time: utcStart.toISOString(),
+            end_time: utcEnd.toISOString(),
+            tagId,
+          },
+          {
+            onSuccess: () => setIsCreating(false),
+            onError: () => setIsCreating(false),
+          },
+        );
+
+      // 「スキップして記録」: 記録の作成が確定するこの時点でだけ自動記録をスキップする。
+      // ここまで来ていない（パレットを閉じた）場合は何もスキップしない。skip が失敗したら
+      // slot が空かないため作成しない。
+      if (skipSet.size > 0) {
+        void (async () => {
+          try {
+            for (const id of skipSet) {
+              await skipEntry.mutateAsync({ id });
+            }
+            runCreate();
+          } catch {
+            // skipEntry.onError が toast 済み。記録は作成しない
+            setIsCreating(false);
+          }
+        })();
+      } else {
+        runCreate();
+      }
     },
     [
       pendingSelection,
       isCreating,
       timezone,
       createEntry,
+      skipEntry,
       clearPendingSelection,
       queryClient,
       tEntry,
