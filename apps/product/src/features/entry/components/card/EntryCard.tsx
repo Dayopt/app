@@ -654,7 +654,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             data-entry-actual-accent
             className={cn(
               'relative shrink-0',
-              isSkippedEntry ? 'opacity-30' : isActiveEntry ? 'opacity-100' : 'opacity-70',
+              isActiveEntry ? 'opacity-100' : 'opacity-70',
               isActiveEntry && 'entry-live-accent',
               colorClasses ? colorClasses.dot : 'bg-entry-default',
             )}
