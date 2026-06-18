@@ -103,6 +103,8 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onViewStats={composition.onViewStats}
           onMarkUnplanned={composition.onMarkUnplanned}
           onRestorePlanned={composition.onRestorePlanned}
+          onSkip={composition.onSkip}
+          onUnskip={composition.onUnskip}
           onNavigate={composition.onNavigate}
           onViewChange={composition.onViewChange}
           onNavigatePrev={composition.onNavigatePrev}

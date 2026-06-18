@@ -51,6 +51,8 @@ interface CalendarCrudHandlersResult {
   onViewStats: (entry: CalendarEvent) => void;
   onMarkUnplanned: (entry: CalendarEvent) => void;
   onRestorePlanned: (entry: CalendarEvent) => void;
+  onSkip: (entry: CalendarEvent) => void;
+  onUnskip: (entry: CalendarEvent) => void;
 }
 
 // =============================================================================
@@ -81,6 +83,8 @@ export function useCalendarCrudHandlers({
     handleViewStats,
     handleMarkUnplanned,
     handleRestorePlanned,
+    handleSkip,
+    handleUnskip,
   } = useEntryContextActions();
 
   // =========================================================================
@@ -158,6 +162,8 @@ export function useCalendarCrudHandlers({
       onViewStats: handleViewStats,
       onMarkUnplanned: handleMarkUnplanned,
       onRestorePlanned: handleRestorePlanned,
+      onSkip: handleSkip,
+      onUnskip: handleUnskip,
     }),
     [
       disabledEntryId,
@@ -169,6 +175,8 @@ export function useCalendarCrudHandlers({
       handleViewStats,
       handleMarkUnplanned,
       handleRestorePlanned,
+      handleSkip,
+      handleUnskip,
     ],
   );
 }

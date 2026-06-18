@@ -16,6 +16,8 @@ interface EntryContextMenuProps {
   onViewStats?: ((entry: CalendarEvent) => void) | undefined;
   onMarkUnplanned?: ((entry: CalendarEvent) => void) | undefined;
   onRestorePlanned?: ((entry: CalendarEvent) => void) | undefined;
+  onSkip?: ((entry: CalendarEvent) => void) | undefined;
+  onUnskip?: ((entry: CalendarEvent) => void) | undefined;
 }
 
 /** エントリの右クリックコンテキストメニューコンポーネント */
@@ -27,6 +29,8 @@ export const EventContextMenu = ({
   onViewStats,
   onMarkUnplanned,
   onRestorePlanned,
+  onSkip,
+  onUnskip,
 }: EntryContextMenuProps) => {
   const t = useTranslations();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -118,9 +122,12 @@ export const EventContextMenu = ({
     origin: entry.origin,
     tagId: entry.tagId,
     isUpcoming,
+    isSkipped: entry.isSkipped,
     onViewStats: onViewStats ? () => onViewStats(entry) : undefined,
-    onMarkUnplanned: onMarkUnplanned ? () => onMarkUnplanned(entry) : undefined,
+    onMarkUnplanned: onMarkUnplanned && !entry.isSkipped ? () => onMarkUnplanned(entry) : undefined,
     onRestorePlanned: onRestorePlanned ? () => onRestorePlanned(entry) : undefined,
+    onSkip: onSkip ? () => onSkip(entry) : undefined,
+    onUnskip: onUnskip ? () => onUnskip(entry) : undefined,
     onDelete: onDelete ? () => onDelete(entry) : undefined,
   });
 

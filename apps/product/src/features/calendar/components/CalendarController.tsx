@@ -75,6 +75,8 @@ interface CalendarControllerProps {
   onViewStats: (entry: CalendarEvent) => void;
   onMarkUnplanned: (entry: CalendarEvent) => void;
   onRestorePlanned: (entry: CalendarEvent) => void;
+  onSkip: (entry: CalendarEvent) => void;
+  onUnskip: (entry: CalendarEvent) => void;
 
   // --- Navigation handlers ---
   onNavigate: (direction: 'prev' | 'next' | 'today') => void;
@@ -117,6 +119,8 @@ export function CalendarController({
   onViewStats,
   onMarkUnplanned,
   onRestorePlanned,
+  onSkip,
+  onUnskip,
   onNavigate,
   onViewChange,
   onNavigatePrev,
@@ -241,6 +245,8 @@ export function CalendarController({
           onViewStats={onViewStats}
           onMarkUnplanned={onMarkUnplanned}
           onRestorePlanned={onRestorePlanned}
+          onSkip={onSkip}
+          onUnskip={onUnskip}
         />
       ) : null}
 
