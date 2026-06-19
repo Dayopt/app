@@ -17,7 +17,7 @@ import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
-import { entryTintColor, useEntryMutations } from '@/features/entry';
+import { entryTintColor, useEntryMutations, useFindSkippableAutoRecords } from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
 import {
   getTagColorClasses,
@@ -75,6 +75,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
   const queryClient = useQueryClient();
   const { createEntry, skipEntry } = useEntryMutations();
+  const findSkippable = useFindSkippableAutoRecords();
   const createTagMutation = useCreateTag({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
   const [hoveredTag, setHoveredTag] = useState<HoveredTagInfo | null>(null);
@@ -100,8 +101,6 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         endMinute,
         skipEntryIds,
       } = pendingSelection;
-      // 「スキップして記録」経由: これからスキップする自動記録は衝突候補から除外する。
-      const skipSet = new Set(skipEntryIds ?? []);
 
       // ローカル時刻 → UTC変換
       const localStart = new Date(
@@ -121,6 +120,19 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
       const utcStart = convertFromTimezone(localStart, timezone);
       const utcEnd = convertFromTimezone(localEnd, timezone);
+
+      // 「スキップして記録」経由: パレットで選択を動かせるため、ドロップ時の id をそのまま使わず
+      // 最終 range で再計算する。元の対象のうち、最終 range が今も完全に覆う自動記録だけを
+      // skip 対象にする（選択を auto-record から外したら無関係な記録を skip しない）。
+      const attachedSkipIds = new Set(skipEntryIds ?? []);
+      const skipSet =
+        attachedSkipIds.size > 0
+          ? new Set(
+              findSkippable(utcStart.getTime(), utcEnd.getTime()).filter((id) =>
+                attachedSkipIds.has(id),
+              ),
+            )
+          : new Set<string>();
 
       // 事前 overlap 判定（TagSelector を開いている間の resize / 他クライアント更新による race を回避）
       const cachedLists = queryClient.getQueriesData<
@@ -218,6 +230,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       timezone,
       createEntry,
       skipEntry,
+      findSkippable,
       clearPendingSelection,
       queryClient,
       tEntry,
