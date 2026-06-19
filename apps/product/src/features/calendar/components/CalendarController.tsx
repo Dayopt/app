@@ -12,6 +12,8 @@
 import { useTranslations } from 'next-intl';
 import { useCallback, useMemo } from 'react';
 
+import { addDays, startOfDay } from '@/lib/date';
+
 import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
@@ -161,12 +163,16 @@ export function CalendarController({
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
+  const dayDiffBounds = useMemo(() => {
+    const dayStart = startOfDay(currentDate);
+    return { dayStart, dayEnd: addDays(dayStart, 1) };
+  }, [currentDate]);
   const dayDiff = useMemo(
     () =>
       viewType === 'day' && showActualDiff
-        ? computeCalendarDayDiffs(filteredEntries)
+        ? computeCalendarDayDiffs(filteredEntries, dayDiffBounds)
         : computeCalendarDayDiffs([]),
-    [filteredEntries, showActualDiff, viewType],
+    [dayDiffBounds, filteredEntries, showActualDiff, viewType],
   );
   const dayDiffEntryIds = dayDiff.entryIds;
   const handleCloseCompareRail = useCallback(() => {

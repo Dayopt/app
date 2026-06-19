@@ -35,6 +35,11 @@ export interface CalendarDayDiffResult {
   entryIds: ReadonlySet<string>;
 }
 
+export interface CalendarDayDiffOptions {
+  dayStart?: Date | null;
+  dayEnd?: Date | null;
+}
+
 const EMPTY_RESULT: CalendarDayDiffResult = {
   summary: {
     plannedMinutes: 0,
@@ -76,9 +81,32 @@ function actualRange(entry: CalendarEvent): { start: Date | null; end: Date | nu
 
   const planned = plannedRange(entry);
   return {
-    start: entry.actualStartDate && entry.actualEndDate ? entry.actualStartDate : planned.start,
-    end: entry.actualStartDate && entry.actualEndDate ? entry.actualEndDate : planned.end,
+    start: entry.actualStartDate ?? planned.start,
+    end: entry.actualEndDate ?? planned.end,
   };
+}
+
+function resolveOptions(input: CalendarDayDiffOptions | Date): CalendarDayDiffOptions {
+  if (input instanceof Date) return {};
+  return input;
+}
+
+function clipRange(
+  range: { start: Date | null; end: Date | null },
+  bounds: CalendarDayDiffOptions,
+): { start: Date | null; end: Date | null } {
+  if (!range.start || !range.end) return range;
+
+  const dayStart = bounds.dayStart ?? null;
+  const dayEnd = bounds.dayEnd ?? null;
+  const clippedStart = dayStart && range.start < dayStart ? dayStart : range.start;
+  const clippedEnd = dayEnd && range.end > dayEnd ? dayEnd : range.end;
+
+  if (clippedEnd <= clippedStart) {
+    return { start: null, end: null };
+  }
+
+  return { start: clippedStart, end: clippedEnd };
 }
 
 function makeItem(
@@ -112,10 +140,11 @@ function makeItem(
 
 export function computeCalendarDayDiffs(
   entries: readonly CalendarEvent[],
-  _now: Date = new Date(),
+  options: CalendarDayDiffOptions | Date = {},
 ): CalendarDayDiffResult {
   if (entries.length === 0) return EMPTY_RESULT;
 
+  const bounds = resolveOptions(options);
   const items: CalendarDayDiffItem[] = [];
   let plannedMinutes = 0;
   let actualMinutes = 0;
@@ -125,8 +154,8 @@ export function computeCalendarDayDiffs(
   for (const entry of entries) {
     if (entry.isDraft) continue;
 
-    const planned = plannedRange(entry);
-    const actual = actualRange(entry);
+    const planned = clipRange(plannedRange(entry), bounds);
+    const actual = clipRange(actualRange(entry), bounds);
     const plannedDuration = diffMinutes(planned.start, planned.end);
     const actualDuration = diffMinutes(actual.start, actual.end);
     const countedActualDuration = entry.isSkipped === true ? 0 : actualDuration;

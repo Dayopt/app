@@ -174,6 +174,11 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
       if (isMobileRef.current && initialView !== 'day') return;
       setViewType(initialView);
       setDayCompareEnabledState(readCalendarCompareParam(initialView));
+    } else if (isCalendarPage) {
+      const nextCompareEnabled = readCalendarCompareParam(initialView);
+      if (dayCompareEnabledRef.current !== nextCompareEnabled) {
+        setDayCompareEnabledState(nextCompareEnabled);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialView変更時のみ同期
   }, [isCalendarPage, initialView]);

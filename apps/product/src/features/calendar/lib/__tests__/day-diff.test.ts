@@ -140,6 +140,38 @@ describe('computeCalendarDayDiffs', () => {
     expect(result.items).toMatchObject([{ kind: 'shifted', startDiffMinutes: 20, diffMinutes: 0 }]);
   });
 
+  it('actual start だけ編集された planned entry も shifted にする', () => {
+    const result = computeCalendarDayDiffs(
+      [
+        entry({
+          actualStartDate: new Date('2026-06-18T09:20:00.000Z'),
+          actualEndDate: null,
+        }),
+      ],
+      now,
+    );
+
+    expect(result.items).toMatchObject([
+      { kind: 'shifted', startDiffMinutes: 20, endDiffMinutes: 0, diffMinutes: -20 },
+    ]);
+  });
+
+  it('actual end だけ編集された planned entry も resized にする', () => {
+    const result = computeCalendarDayDiffs(
+      [
+        entry({
+          actualStartDate: null,
+          actualEndDate: new Date('2026-06-18T10:30:00.000Z'),
+        }),
+      ],
+      now,
+    );
+
+    expect(result.items).toMatchObject([
+      { kind: 'resized', startDiffMinutes: 0, endDiffMinutes: 30, diffMinutes: 30 },
+    ]);
+  });
+
   it('開始は同じで duration だけ変わった planned entry は resized にする', () => {
     const result = computeCalendarDayDiffs(
       [
@@ -151,5 +183,33 @@ describe('computeCalendarDayDiffs', () => {
     );
 
     expect(result.items).toMatchObject([{ kind: 'resized', diffMinutes: 30 }]);
+  });
+
+  it('日跨ぎ entry の集計は表示日の範囲に clipping する', () => {
+    const result = computeCalendarDayDiffs(
+      [
+        entry({
+          startDate: new Date('2026-06-18T23:00:00.000Z'),
+          endDate: new Date('2026-06-19T01:00:00.000Z'),
+          plannedStartDate: new Date('2026-06-18T23:00:00.000Z'),
+          plannedEndDate: new Date('2026-06-19T01:00:00.000Z'),
+          actualStartDate: new Date('2026-06-18T23:00:00.000Z'),
+          actualEndDate: new Date('2026-06-19T01:00:00.000Z'),
+          displayStartDate: new Date('2026-06-18T23:00:00.000Z'),
+          displayEndDate: new Date('2026-06-19T00:00:00.000Z'),
+        }),
+      ],
+      {
+        dayStart: new Date('2026-06-18T00:00:00.000Z'),
+        dayEnd: new Date('2026-06-19T00:00:00.000Z'),
+      },
+    );
+
+    expect(result.items).toHaveLength(0);
+    expect(result.summary).toMatchObject({
+      plannedMinutes: 60,
+      actualMinutes: 60,
+      diffMinutes: 0,
+    });
   });
 });

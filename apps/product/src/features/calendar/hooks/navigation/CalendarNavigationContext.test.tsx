@@ -107,6 +107,38 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('compare')).toHaveTextContent('on');
   });
 
+  it('syncs compare mode when returning to an already-active day view URL', () => {
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25');
+    mockPathname = '/ja/calendar/day';
+
+    const { rerender } = render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
+    expect(screen.getByTestId('compare')).toHaveTextContent('off');
+
+    mockPathname = '/ja/review';
+    rerender(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25&compare=1');
+    mockPathname = '/ja/calendar/day';
+    rerender(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
+    expect(screen.getByTestId('compare')).toHaveTextContent('on');
+  });
+
   it('writes compare=1 when day compare is enabled', () => {
     window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25');
     mockPathname = '/ja/calendar/day';
