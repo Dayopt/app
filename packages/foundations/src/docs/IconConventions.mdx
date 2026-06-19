@@ -8,7 +8,7 @@ Dayopt のアイコン運用ルール。lucide-react を単一セットとして
 
 > このドキュメントは「どのアイコンをいつ使うか」の意味論ルール。サイズ / 色 / spacing の token ルールは `.claude/rules/design-system.md` を参照。視覚参照は `Foundations / Icons / ByConvention` Story を併用。
 >
-> 本ファイルが唯一の source of truth。編集は `src/lib/styles/tokens/IconConventions.mdx` のみ。
+> 本ファイルが唯一の source of truth。編集は `packages/foundations/src/docs/IconConventions.mdx` のみ。
 
 ---
 
@@ -166,7 +166,7 @@ app コード（`src/app/` / `src/features/` 配下）では suffix なし（`Ch
 
 - [ ] lucide-react に存在するか（別セットに手を出さない）
 - [ ] 既に同概念で使われているアイコンがないか `grep -r "from 'lucide-react'" src` で確認
-- [ ] 意味論ルールのどこに属するか判断し、新概念ならこのドキュメント（`src/lib/styles/tokens/IconConventions.mdx`）に追記
+- [ ] 意味論ルールのどこに属するか判断し、新概念ならこのドキュメント（`packages/foundations/src/docs/IconConventions.mdx`）に追記
 - [ ] Storybook の `Foundations / Icons / ByConvention` Story に追加
 - [ ] `.claude/rules/design-system.md` の Icon Size 規約に準拠するサイズで使っているか
 

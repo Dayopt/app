@@ -94,18 +94,18 @@ pnpm quality:deadcode # 未使用コード検出（knip）
 
 詳細ルールは `.claude/rules/` に分離。CLAUDE.md は概要のみ記載。
 
-| ファイル                  | 内容                                                                                                                                                                                                                 |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ai-behavior.md`          | 拡張思考レベル、モデル選択、曖昧指示への対応                                                                                                                                                                         |
-| `architecture.md`         | tRPC 3層パターン、状態管理、環境構成                                                                                                                                                                                 |
-| `code-style.md`           | 型安全、セキュリティ、依存関係追加基準                                                                                                                                                                               |
-| `design-system.md`        | セマンティックトークン、elevation、spacing（アイコン運用は [`apps/product/src/lib/styles/tokens/IconConventions.mdx`](apps/product/src/lib/styles/tokens/IconConventions.mdx) / Storybook `Foundations/Icons/Docs`） |
-| `feature-boundaries.md`   | DAGレイヤーモデル、Composition Layer                                                                                                                                                                                 |
-| `quality.md`              | テスト優先度、A11y、パフォーマンス基準                                                                                                                                                                               |
-| `temporal-constraints.md` | 過去ブロックの編集制約                                                                                                                                                                                               |
-| `mcp-usage.md`            | MCP サーバーの呼び出し基準（Sentry/Supabase/Context7/Eagle 他）                                                                                                                                                      |
-| `skill-design.md`         | Skill 設計原則、類型、境界設計、記述書式                                                                                                                                                                             |
-| `plan-format.md`          | 実装 plan の必須セクション（Goal / Minimum Viable / Reversibility / Reuse / Not Doing）                                                                                                                              |
+| ファイル                  | 内容                                                                                                                                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ai-behavior.md`          | 拡張思考レベル、モデル選択、曖昧指示への対応                                                                                                                                                               |
+| `architecture.md`         | tRPC 3層パターン、状態管理、環境構成                                                                                                                                                                       |
+| `code-style.md`           | 型安全、セキュリティ、依存関係追加基準                                                                                                                                                                     |
+| `design-system.md`        | セマンティックトークン、elevation、spacing（アイコン運用は [`packages/foundations/src/docs/IconConventions.mdx`](packages/foundations/src/docs/IconConventions.mdx) / Storybook `Foundations/Icons/Docs`） |
+| `feature-boundaries.md`   | DAGレイヤーモデル、Composition Layer                                                                                                                                                                       |
+| `quality.md`              | テスト優先度、A11y、パフォーマンス基準                                                                                                                                                                     |
+| `temporal-constraints.md` | 過去ブロックの編集制約                                                                                                                                                                                     |
+| `mcp-usage.md`            | MCP サーバーの呼び出し基準（Sentry/Supabase/Context7/Eagle 他）                                                                                                                                            |
+| `skill-design.md`         | Skill 設計原則、類型、境界設計、記述書式                                                                                                                                                                   |
+| `plan-format.md`          | 実装 plan の必須セクション（Goal / Minimum Viable / Reversibility / Reuse / Not Doing）                                                                                                                    |
 
 ## スキル
 
