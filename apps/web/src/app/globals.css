@@ -3,7 +3,7 @@
 @import 'highlight.js/styles/github.css';
 
 /* Design Tokens */
-@import '@dayopt/design/theme.css';
+@import '@dayopt/foundations/theme.css';
 @import '../styles/tokens/primitives.css';
 @import '../styles/tokens/colors.css';
 @import '../styles/tokens/elevation.css';

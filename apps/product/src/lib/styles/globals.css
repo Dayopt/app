@@ -10,7 +10,7 @@
 /* ============================================
  * Design Tokens
  * ============================================ */
-@import '@dayopt/design/theme.css';
+@import '@dayopt/foundations/theme.css';
 @import './tokens/primitives.css';
 @import './tokens/colors.css';
 @import './tokens/spacing.css';

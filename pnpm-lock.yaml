@@ -190,12 +190,12 @@ importers:
       '@dayopt/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@dayopt/design':
-        specifier: workspace:*
-        version: link:../../packages/design
       '@dayopt/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@dayopt/foundations':
+        specifier: workspace:*
+        version: link:../../packages/foundations
       '@dayopt/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -542,9 +542,9 @@ importers:
 
   apps/storybook:
     dependencies:
-      '@dayopt/design':
+      '@dayopt/foundations':
         specifier: workspace:*
-        version: link:../../packages/design
+        version: link:../../packages/foundations
       '@dayopt/product':
         specifier: workspace:*
         version: link:../product
@@ -630,9 +630,9 @@ importers:
       '@dayopt/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@dayopt/design':
+      '@dayopt/foundations':
         specifier: workspace:*
-        version: link:../../packages/design
+        version: link:../../packages/foundations
       '@dayopt/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -866,13 +866,13 @@ importers:
 
   packages/database: {}
 
-  packages/design:
+  packages/domain: {}
+
+  packages/foundations:
     devDependencies:
       typescript:
         specifier: ^5
         version: 5.9.3
-
-  packages/domain: {}
 
   packages/types:
     devDependencies:

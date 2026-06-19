@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@dayopt/design": "workspace:*",
+    "@dayopt/foundations": "workspace:*",
     "@dayopt/product": "workspace:*",
     "@dayopt/ui": "workspace:*",
     "@tanstack/react-query": "^5.101.0",
