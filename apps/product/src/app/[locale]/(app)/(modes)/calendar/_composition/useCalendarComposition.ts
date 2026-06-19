@@ -70,6 +70,8 @@ interface CalendarCompositionResult {
   onViewStats: ReturnType<typeof useCalendarCrudHandlers>['onViewStats'];
   onMarkUnplanned: ReturnType<typeof useCalendarCrudHandlers>['onMarkUnplanned'];
   onRestorePlanned: ReturnType<typeof useCalendarCrudHandlers>['onRestorePlanned'];
+  onSkip: ReturnType<typeof useCalendarCrudHandlers>['onSkip'];
+  onUnskip: ReturnType<typeof useCalendarCrudHandlers>['onUnskip'];
 
   // === Navigation handlers ===
   onNavigate: ReturnType<typeof useCalendarNavHandlers>['onNavigate'];

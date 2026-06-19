@@ -220,8 +220,12 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     isUnplanned || (!renderAsPlanOnly && showActualDiff) ? actualLayerHeight : plannedHeight;
   const alignPlannedLayerToGrid = entry.origin === 'planned' && !renderAsPlanOnly;
   // planned bg は「context」として後ろに引かせ、actual body が「main」として前に出る intensity 階層
-  const plannedBackgroundColor = `color-mix(in oklch, ${accentColor} ${showActualDiff ? 10 : 8}%, var(--background))`;
-  const actualBackgroundColor = `color-mix(in oklch, ${accentColor} ${showActualDiff ? 26 : 18}%, var(--background))`;
+  const plannedBackgroundColor = `color-mix(in oklch, ${accentColor} 8%, var(--background))`;
+  const actualBackgroundColor = `color-mix(in oklch, ${accentColor} 18%, var(--background))`;
+  // skip（計画したがやらなかった）: 消さずに残し、タグ色の斜線ハッチングで「未実行の計画」を示す。
+  // 視認性は通常の予定と同等に保ち（fade させない）、ハッチングだけが状態を伝える。
+  const skippedBackgroundColor = `color-mix(in oklch, ${accentColor} 14%, var(--background))`;
+  const skippedHatchImage = `repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in oklch, ${accentColor} 38%, transparent) 5px 7px)`;
 
   // 動的スタイルを計算（overlay.topShift/heightDelta でカード位置を調整）
   const dynamicStyle: React.CSSProperties = useMemo(
@@ -432,8 +436,6 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     isDragging && 'opacity-30',
     // past entry の subtle fade（draft / dragging には適用しない）
     !isDraft && !isDragging && isPast && 'opacity-90',
-    // skipped entry: 計画したがやらなかった。muted で「実行されなかった計画」を伝える
-    !isDraft && !isDragging && isSkippedEntry && 'opacity-60',
     isDraft ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-pointer',
     className,
   );
@@ -492,11 +494,14 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             top: `${plannedLayerTop}px`,
             left: alignPlannedLayerToGrid ? '-1px' : '0px',
             height: `${plannedHeight}px`,
-            // upcoming は記録(actual)と地の色を揃える（差は左アクセントの有無だけにする）。
-            backgroundColor:
-              renderAsPlanOnly && !isSkippedEntry && !showActualDiff
+            // skip は専用 tint + 斜線ハッチング。それ以外の upcoming は記録(actual)と地の色を
+            // 揃える（差は左アクセントの有無だけにする）。
+            backgroundColor: isSkippedEntry
+              ? skippedBackgroundColor
+              : renderAsPlanOnly
                 ? actualBackgroundColor
                 : plannedBackgroundColor,
+            ...(isSkippedEntry ? { backgroundImage: skippedHatchImage } : {}),
           }}
         />
       )}
@@ -655,7 +660,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             data-entry-actual-accent
             className={cn(
               'relative shrink-0',
-              isSkippedEntry ? 'opacity-30' : isActiveEntry ? 'opacity-100' : 'opacity-70',
+              isActiveEntry ? 'opacity-100' : 'opacity-70',
               isActiveEntry && 'entry-live-accent',
               colorClasses ? colorClasses.dot : 'bg-entry-default',
             )}
@@ -710,7 +715,6 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               : isMobile
                 ? 'flex items-start gap-1 px-2 pt-2 text-sm'
                 : 'p-2 text-sm',
-            isSkippedEntry && 'text-muted-foreground line-through',
           )}
           style={{
             top: `${contentLayerTop}px`,

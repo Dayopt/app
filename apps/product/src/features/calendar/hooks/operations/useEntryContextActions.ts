@@ -12,7 +12,13 @@ import type { CalendarEvent } from '../../types/calendar.types';
 export function useEntryContextActions() {
   const router = useRouter();
   const locale = useLocale();
-  const { deleteEntry, convertPlannedToUnplanned, convertUnplannedToPlanned } = useEntryMutations();
+  const {
+    deleteEntry,
+    convertPlannedToUnplanned,
+    convertUnplannedToPlanned,
+    skipEntry,
+    unskipEntry,
+  } = useEntryMutations();
 
   const handleDeleteEntry = useCallback(
     (entry: CalendarEvent) => {
@@ -43,10 +49,26 @@ export function useEntryContextActions() {
     [convertUnplannedToPlanned],
   );
 
+  const handleSkip = useCallback(
+    (entry: CalendarEvent) => {
+      skipEntry.mutate({ id: entry.id });
+    },
+    [skipEntry],
+  );
+
+  const handleUnskip = useCallback(
+    (entry: CalendarEvent) => {
+      unskipEntry.mutate({ id: entry.id });
+    },
+    [unskipEntry],
+  );
+
   return {
     handleDeleteEntry,
     handleViewStats,
     handleMarkUnplanned,
     handleRestorePlanned,
+    handleSkip,
+    handleUnskip,
   };
 }

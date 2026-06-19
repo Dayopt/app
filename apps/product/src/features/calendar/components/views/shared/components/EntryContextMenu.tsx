@@ -16,6 +16,8 @@ interface EntryContextMenuProps {
   onViewStats?: ((entry: CalendarEvent) => void) | undefined;
   onMarkUnplanned?: ((entry: CalendarEvent) => void) | undefined;
   onRestorePlanned?: ((entry: CalendarEvent) => void) | undefined;
+  onSkip?: ((entry: CalendarEvent) => void) | undefined;
+  onUnskip?: ((entry: CalendarEvent) => void) | undefined;
 }
 
 /** エントリの右クリックコンテキストメニューコンポーネント */
@@ -27,6 +29,8 @@ export const EventContextMenu = ({
   onViewStats,
   onMarkUnplanned,
   onRestorePlanned,
+  onSkip,
+  onUnskip,
 }: EntryContextMenuProps) => {
   const t = useTranslations();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -109,18 +113,26 @@ export const EventContextMenu = ({
 
   // 未来の予定は記録が存在し得ないため「予定外にする」を出さない。
   // planned の予定開始が現在より後（または時刻未設定）なら upcoming 扱い。
+  // skip は過去（end <= now）のみ可能なので isPast も別に判定する。
   const plannedStartMs = (entry.plannedStartDate ?? entry.startDate)?.getTime();
+  const plannedEndMs = (entry.plannedEndDate ?? entry.endDate)?.getTime();
   // eslint-disable-next-line react-hooks/purity -- transient context menu, 右クリック時点の now で十分
-  const isUpcoming = plannedStartMs === undefined || plannedStartMs > Date.now();
+  const now = Date.now();
+  const isUpcoming = plannedStartMs === undefined || plannedStartMs > now;
+  const isPast = plannedEndMs !== undefined && plannedEndMs <= now;
 
   // 共通の menu items 定義から取得（Inspector の TagRow と同じ source）
   const menuItems = getEntryMenuItems({
     origin: entry.origin,
     tagId: entry.tagId,
     isUpcoming,
+    isPast,
+    isSkipped: entry.isSkipped,
     onViewStats: onViewStats ? () => onViewStats(entry) : undefined,
-    onMarkUnplanned: onMarkUnplanned ? () => onMarkUnplanned(entry) : undefined,
+    onMarkUnplanned: onMarkUnplanned && !entry.isSkipped ? () => onMarkUnplanned(entry) : undefined,
     onRestorePlanned: onRestorePlanned ? () => onRestorePlanned(entry) : undefined,
+    onSkip: onSkip ? () => onSkip(entry) : undefined,
+    onUnskip: onUnskip ? () => onUnskip(entry) : undefined,
     onDelete: onDelete ? () => onDelete(entry) : undefined,
   });
 

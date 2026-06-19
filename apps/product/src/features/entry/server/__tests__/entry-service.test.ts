@@ -271,21 +271,19 @@ describe('EntryService.update', () => {
     }
   });
 
-  it('future planned更新でactualが明示されていればサーバー側で上書きしない', async () => {
+  it('past planned更新でactualが明示されていればサーバー側で上書きしない', async () => {
     const existing = createMockEntry({
       id: 'entry-1',
       origin: 'planned',
-      start_time: '2030-03-17T09:00:00Z',
-      end_time: '2030-03-17T10:00:00Z',
-      actual_start_time: '2030-03-17T09:00:00Z',
-      actual_end_time: '2030-03-17T10:00:00Z',
+      start_time: '2026-03-17T09:00:00Z',
+      end_time: '2026-03-17T10:00:00Z',
+      actual_start_time: null,
+      actual_end_time: null,
     });
     const updated = {
       ...existing,
-      start_time: '2030-03-17T11:00:00Z',
-      end_time: '2030-03-17T12:00:00Z',
-      actual_start_time: '2030-03-17T09:15:00Z',
-      actual_end_time: '2030-03-17T09:45:00Z',
+      actual_start_time: '2026-03-17T09:15:00Z',
+      actual_end_time: '2026-03-17T09:45:00Z',
     };
 
     const { service, mockSupabase } = createService();
@@ -302,22 +300,44 @@ describe('EntryService.update', () => {
       userId: USER_ID,
       entryId: 'entry-1',
       input: {
-        start_time: '2030-03-17T11:00:00Z',
-        end_time: '2030-03-17T12:00:00Z',
-        actual_start_time: '2030-03-17T09:15:00Z',
-        actual_end_time: '2030-03-17T09:45:00Z',
+        actual_start_time: '2026-03-17T09:15:00Z',
+        actual_end_time: '2026-03-17T09:45:00Z',
       },
       timezone: 'UTC',
     });
 
     expect(updateMock.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        start_time: '2030-03-17T11:00:00Z',
-        end_time: '2030-03-17T12:00:00Z',
-        actual_start_time: '2030-03-17T09:15:00Z',
-        actual_end_time: '2030-03-17T09:45:00Z',
+        actual_start_time: '2026-03-17T09:15:00Z',
+        actual_end_time: '2026-03-17T09:45:00Z',
       }),
     );
+  });
+
+  it('未来の予定にactualを明示するとRECORD_IN_FUTUREで拒否する（自動記録モデル）', async () => {
+    const existing = createMockEntry({
+      id: 'entry-1',
+      origin: 'planned',
+      start_time: '2030-03-17T09:00:00Z',
+      end_time: '2030-03-17T10:00:00Z',
+      actual_start_time: null,
+      actual_end_time: null,
+    });
+
+    const { service, mockSupabase } = createService();
+    mockSupabase.from.mockImplementation(() => createChainableMock(existing));
+
+    await expect(
+      service.update({
+        userId: USER_ID,
+        entryId: 'entry-1',
+        input: {
+          actual_start_time: '2030-03-17T09:15:00Z',
+          actual_end_time: '2030-03-17T09:45:00Z',
+        },
+        timezone: 'UTC',
+      }),
+    ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
   });
 
   it('future planned更新はplanned rangeのみ更新し、actualへコピーしない（自動記録モデル）', async () => {

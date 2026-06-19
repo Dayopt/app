@@ -17,7 +17,7 @@ import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
-import { entryTintColor, useEntryMutations } from '@/features/entry';
+import { entryTintColor, useEntryMutations, useFindSkippableAutoRecords } from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
 import {
   getTagColorClasses,
@@ -74,7 +74,8 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const { tap, impact } = useHapticFeedback();
 
   const queryClient = useQueryClient();
-  const { createEntry } = useEntryMutations();
+  const { createEntry, skipEntry } = useEntryMutations();
+  const findSkippable = useFindSkippableAutoRecords();
   const createTagMutation = useCreateTag({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
   const [hoveredTag, setHoveredTag] = useState<HoveredTagInfo | null>(null);
@@ -92,7 +93,14 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     (tagId: string, tagName: string) => {
       if (!pendingSelection || isCreating) return;
 
-      const { date: selDate, startHour, startMinute, endHour, endMinute } = pendingSelection;
+      const {
+        date: selDate,
+        startHour,
+        startMinute,
+        endHour,
+        endMinute,
+        skipEntryIds,
+      } = pendingSelection;
 
       // ローカル時刻 → UTC変換
       const localStart = new Date(
@@ -112,6 +120,19 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
       const utcStart = convertFromTimezone(localStart, timezone);
       const utcEnd = convertFromTimezone(localEnd, timezone);
+
+      // 「スキップして記録」経由: パレットで選択を動かせるため、ドロップ時の id をそのまま使わず
+      // 最終 range で再計算する。元の対象のうち、最終 range が今も完全に覆う自動記録だけを
+      // skip 対象にする（選択を auto-record から外したら無関係な記録を skip しない）。
+      const attachedSkipIds = new Set(skipEntryIds ?? []);
+      const skipSet =
+        attachedSkipIds.size > 0
+          ? new Set(
+              findSkippable(utcStart.getTime(), utcEnd.getTime()).filter((id) =>
+                attachedSkipIds.has(id),
+              ),
+            )
+          : new Set<string>();
 
       // 事前 overlap 判定（TagSelector を開いている間の resize / 他クライアント更新による race を回避）
       const cachedLists = queryClient.getQueriesData<
@@ -137,6 +158,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         for (const e of data) {
           if (seen.has(e.id)) continue;
           seen.add(e.id);
+          if (skipSet.has(e.id)) continue;
           events.push({
             id: e.id,
             plannedStart: e.start_time,
@@ -169,24 +191,46 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       // ハイライトを即座に消す（pendingSelectionの値は既にローカル変数に展開済み）
       clearPendingSelection();
 
-      createEntry.mutate(
-        {
-          title: tagName,
-          start_time: utcStart.toISOString(),
-          end_time: utcEnd.toISOString(),
-          tagId,
-        },
-        {
-          onSuccess: () => setIsCreating(false),
-          onError: () => setIsCreating(false),
-        },
-      );
+      const runCreate = () =>
+        createEntry.mutate(
+          {
+            title: tagName,
+            start_time: utcStart.toISOString(),
+            end_time: utcEnd.toISOString(),
+            tagId,
+          },
+          {
+            onSuccess: () => setIsCreating(false),
+            onError: () => setIsCreating(false),
+          },
+        );
+
+      // 「スキップして記録」: 記録の作成が確定するこの時点でだけ自動記録をスキップする。
+      // ここまで来ていない（パレットを閉じた）場合は何もスキップしない。skip が失敗したら
+      // slot が空かないため作成しない。
+      if (skipSet.size > 0) {
+        void (async () => {
+          try {
+            for (const id of skipSet) {
+              await skipEntry.mutateAsync({ id });
+            }
+            runCreate();
+          } catch {
+            // skipEntry.onError が toast 済み。記録は作成しない
+            setIsCreating(false);
+          }
+        })();
+      } else {
+        runCreate();
+      }
     },
     [
       pendingSelection,
       isCreating,
       timezone,
       createEntry,
+      skipEntry,
+      findSkippable,
       clearPendingSelection,
       queryClient,
       tEntry,
