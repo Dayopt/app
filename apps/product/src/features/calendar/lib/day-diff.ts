@@ -127,6 +127,21 @@ function clipRange(
   return { start: clippedStart, end: clippedEnd };
 }
 
+export function filterCalendarDayDiffEntries(
+  entries: readonly CalendarEvent[],
+  bounds: CalendarDayDiffOptions,
+  isEntryVisible: (tagId: string | null) => boolean,
+): CalendarEvent[] {
+  return entries.filter((entry) => {
+    if (!isEntryVisible(entry.tagId ?? null)) return false;
+
+    const planned = clipRange(plannedRange(entry), bounds);
+    const actual = clipRange(actualRange(entry), bounds);
+
+    return diffMinutes(planned.start, planned.end) > 0 || diffMinutes(actual.start, actual.end) > 0;
+  });
+}
+
 function makeItem(
   entry: CalendarEvent,
   kind: CalendarDayDiffKind,
@@ -177,6 +192,7 @@ export function computeCalendarDayDiffs(
     const plannedDuration = diffMinutes(planned.start, planned.end);
     const actualDuration = diffMinutes(actual.start, actual.end);
     const countedActualDuration = entry.isSkipped === true ? 0 : actualDuration;
+    const hasActualEdit = entry.actualStartDate != null || entry.actualEndDate != null;
 
     if (entry.origin !== 'unplanned') {
       plannedMinutes += plannedDuration;
@@ -200,7 +216,12 @@ export function computeCalendarDayDiffs(
       continue;
     }
 
-    if (!hasActual) continue;
+    if (!hasActual) {
+      if (plannedDuration > 0 && hasActualEdit) {
+        items.push(makeItem(entry, 'shifted', planned, { start: null, end: null }));
+      }
+      continue;
+    }
 
     const startDiffMinutes = minutesBetween(planned.start, actual.start);
     const endDiffMinutes = minutesBetween(planned.end, actual.end);

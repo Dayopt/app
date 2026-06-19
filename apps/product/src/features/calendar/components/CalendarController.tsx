@@ -18,7 +18,12 @@ import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsCo
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
-import { computeCalendarDayDiffs, resolveCalendarDayDiffBounds } from '../lib/day-diff';
+import {
+  computeCalendarDayDiffs,
+  filterCalendarDayDiffEntries,
+  resolveCalendarDayDiffBounds,
+} from '../lib/day-diff';
+import { useCalendarFilterStore } from '../stores/useCalendarFilterStore';
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
 
 import { CalendarViewRenderer } from './controller/components';
@@ -160,6 +165,8 @@ export function CalendarController({
   // ショートカットレジストリのグローバルリスナー（1箇所のみ呼び出し）
   useShortcutRegistry();
   const timezone = useUserPreferences((preferences) => preferences.timezone);
+  const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
+  const visibleTagIds = useCalendarFilterStore((state) => state.visibleTagIds);
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
@@ -168,12 +175,18 @@ export function CalendarController({
     () => resolveCalendarDayDiffBounds(currentDate, timezone),
     [currentDate, timezone],
   );
+  const dayDiffEntries = useMemo(() => {
+    void visibleTagIds;
+    return viewType === 'day' && showActualDiff
+      ? filterCalendarDayDiffEntries(allEntries, dayDiffBounds, isEntryVisible)
+      : [];
+  }, [allEntries, dayDiffBounds, isEntryVisible, showActualDiff, viewType, visibleTagIds]);
   const dayDiff = useMemo(
     () =>
       viewType === 'day' && showActualDiff
-        ? computeCalendarDayDiffs(filteredEntries, dayDiffBounds)
+        ? computeCalendarDayDiffs(dayDiffEntries, dayDiffBounds)
         : computeCalendarDayDiffs([]),
-    [dayDiffBounds, filteredEntries, showActualDiff, viewType],
+    [dayDiffBounds, dayDiffEntries, showActualDiff, viewType],
   );
   const dayDiffEntryIds = dayDiff.entryIds;
   const handleCloseCompareRail = useCallback(() => {
@@ -255,7 +268,7 @@ export function CalendarController({
     viewType === 'day' && showActualDiff ? (
       <CalendarDayDiffRail
         diff={dayDiff}
-        entries={filteredEntries}
+        entries={dayDiffEntries}
         onEntryClick={onEntryClick}
         onClose={onCompareRailOpenChange ? handleCloseCompareRail : undefined}
       />

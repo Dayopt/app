@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import type { CalendarEvent } from '../../types/calendar.types';
-import { computeCalendarDayDiffs, resolveCalendarDayDiffBounds } from '../day-diff';
+import {
+  computeCalendarDayDiffs,
+  filterCalendarDayDiffEntries,
+  resolveCalendarDayDiffBounds,
+} from '../day-diff';
 
 const now = new Date('2026-06-18T23:00:00.000Z');
 
@@ -218,5 +222,65 @@ describe('computeCalendarDayDiffs', () => {
 
     expect(bounds.dayStart.toISOString()).toBe('2026-06-17T15:00:00.000Z');
     expect(bounds.dayEnd.toISOString()).toBe('2026-06-18T15:00:00.000Z');
+  });
+
+  it('planned が別日でも actual が表示日に交差する entry を diff source に含める', () => {
+    const bounds = {
+      dayStart: new Date('2026-06-18T00:00:00.000Z'),
+      dayEnd: new Date('2026-06-19T00:00:00.000Z'),
+    };
+    const entries = [
+      entry({
+        startDate: new Date('2026-06-17T10:00:00.000Z'),
+        endDate: new Date('2026-06-17T11:00:00.000Z'),
+        plannedStartDate: new Date('2026-06-17T10:00:00.000Z'),
+        plannedEndDate: new Date('2026-06-17T11:00:00.000Z'),
+        actualStartDate: new Date('2026-06-18T09:00:00.000Z'),
+        actualEndDate: new Date('2026-06-18T10:00:00.000Z'),
+      }),
+    ];
+
+    const source = filterCalendarDayDiffEntries(entries, bounds, () => true);
+    const result = computeCalendarDayDiffs(source, bounds);
+
+    expect(source).toHaveLength(1);
+    expect(result.summary).toMatchObject({ plannedMinutes: 0, actualMinutes: 60, diffMinutes: 60 });
+    expect(result.items).toMatchObject([{ entryId: 'entry-1', actualMinutes: 60 }]);
+  });
+
+  it('diff source は tag filter を適用する', () => {
+    const source = filterCalendarDayDiffEntries(
+      [entry()],
+      {
+        dayStart: new Date('2026-06-18T00:00:00.000Z'),
+        dayEnd: new Date('2026-06-19T00:00:00.000Z'),
+      },
+      (tagId) => tagId !== 'tag-1',
+    );
+
+    expect(source).toHaveLength(0);
+  });
+
+  it('actual が表示日から出た planned entry も item に残す', () => {
+    const result = computeCalendarDayDiffs(
+      [
+        entry({
+          actualStartDate: new Date('2026-06-19T09:00:00.000Z'),
+          actualEndDate: new Date('2026-06-19T10:00:00.000Z'),
+        }),
+      ],
+      {
+        dayStart: new Date('2026-06-18T00:00:00.000Z'),
+        dayEnd: new Date('2026-06-19T00:00:00.000Z'),
+      },
+    );
+
+    expect(result.summary).toMatchObject({
+      plannedMinutes: 60,
+      actualMinutes: 0,
+      diffMinutes: -60,
+    });
+    expect(result.items).toMatchObject([{ kind: 'shifted', entryId: 'entry-1', diffMinutes: -60 }]);
+    expect(result.entryIds.has('entry-1')).toBe(true);
   });
 });
