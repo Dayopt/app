@@ -12,13 +12,13 @@
 import { useTranslations } from 'next-intl';
 import { useCallback, useMemo } from 'react';
 
-import { addDays, startOfDay } from '@/lib/date';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
-import { computeCalendarDayDiffs } from '../lib/day-diff';
+import { computeCalendarDayDiffs, resolveCalendarDayDiffBounds } from '../lib/day-diff';
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
 
 import { CalendarViewRenderer } from './controller/components';
@@ -159,14 +159,15 @@ export function CalendarController({
 
   // ショートカットレジストリのグローバルリスナー（1箇所のみ呼び出し）
   useShortcutRegistry();
+  const timezone = useUserPreferences((preferences) => preferences.timezone);
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
-  const dayDiffBounds = useMemo(() => {
-    const dayStart = startOfDay(currentDate);
-    return { dayStart, dayEnd: addDays(dayStart, 1) };
-  }, [currentDate]);
+  const dayDiffBounds = useMemo(
+    () => resolveCalendarDayDiffBounds(currentDate, timezone),
+    [currentDate, timezone],
+  );
   const dayDiff = useMemo(
     () =>
       viewType === 'day' && showActualDiff
