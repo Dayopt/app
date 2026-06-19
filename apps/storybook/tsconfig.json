@@ -11,7 +11,6 @@
     "noEmit": true,
     "paths": {
       "@/*": ["../product/src/*"],
-      "@dayopt/foundations": ["../../packages/foundations/src/index.ts"],
       "@dayopt/foundations/*": ["../../packages/foundations/src/*"],
       "@dayopt/ui": ["../../packages/ui/src/index.ts"],
       "@dayopt/ui/*": ["../../packages/ui/src/*"],

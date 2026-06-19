@@ -57,12 +57,18 @@ Dayopt 全体で使う design tokens を `packages/foundations` に集約し、p
 ```
 packages/foundations/
   src/
-    tokens/            # 無prefix CSS（union: primitives/colors/radius/spacing/states/z-index/elevation）
+    tokens/            # トークンごとに co-locate: colors.css + Colors.stories.tsx + Colors.mdx ...
+                       #   無prefix CSS（union: primitives/colors/radius/spacing/states/z-index/elevation）
+                       #   ＋ Foundations/* の story(PascalCase) と mdx
+    tokens.css         # アグリゲータ（tokens/*.css → @theme を順に @import する単一 import 口）
     tailwind-theme.css # @theme inline（product superset を正）
     theme.css          # 旧 --dayopt-* を温存（@dayopt/ui 用、本 project では削除しない）
-    index.ts           # （死蔵 JS。整理対象だが本 project では保留可）
-  package.json         # name: @dayopt/foundations, exports: ./tokens/*, ./tailwind-theme.css, ./theme.css
+  package.json         # exports: ./tokens.css, ./theme.css（CSS のみ。死蔵 JS トークンは削除済み）
 ```
+
+> 補足（後続フォローアップで実施済み）: 死蔵かつ legacy 体系を記述していた JS トークン
+> （`colors.ts`/`index.ts` 等）は削除し、Foundations の story/mdx も `tokens/` に co-locate
+> （`states.stories.tsx` のみ product の Button/Input 依存のため product 残留）。
 
 apps の globals.css は local `tokens/*` と `tailwind-theme.css` を foundations 参照に置換し、`theme.css` import は維持。
 
