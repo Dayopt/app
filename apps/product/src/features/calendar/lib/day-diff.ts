@@ -35,7 +35,7 @@ export interface CalendarDayDiffResult {
   entryIds: ReadonlySet<string>;
 }
 
-export interface CalendarDayDiffOptions {
+interface CalendarDayDiffOptions {
   dayStart?: Date | null;
   dayEnd?: Date | null;
 }
