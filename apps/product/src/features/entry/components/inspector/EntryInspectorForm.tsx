@@ -198,10 +198,16 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
 
   if (!entry) return null;
 
+  // 自動記録モデル: 未来の予定はまだ起きていないため実績(actual)を持てない。
+  // 記録行の編集をロックし、effective actual = NULL の不変条件を UI でも守る。
+  const entryState = getEntryState(entry);
+  const isUpcoming = entryState === 'upcoming';
+
   const menuItems = getEntryMenuItems({
     origin: entry.origin,
     tagId: selectedTagId,
-    isUpcoming: getEntryState(entry) === 'upcoming',
+    isUpcoming,
+    isPast: entryState === 'past',
     isSkipped,
     onViewStats: onViewStats && selectedTagId ? handleViewStats : undefined,
     onMarkUnplanned: isPlanned && !isSkipped ? handleMarkUnplanned : undefined,
@@ -273,7 +279,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
             onEndChange={(time) => {
               handleActualEndChange(time);
             }}
-            disabled={isSkipped}
+            disabled={isSkipped || isUpcoming}
             testId="entry-inspector-actual-time"
           />
 

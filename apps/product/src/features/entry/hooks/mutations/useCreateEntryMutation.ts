@@ -1,8 +1,9 @@
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
-import { determineEntryOrigin, getEffectiveActualRange, isAutoRecorded } from '../../domain';
+import { determineEntryOrigin } from '../../domain';
 import { clearNew, markNew } from '../../lib/new-entry-tracker';
+import { useFindSkippableAutoRecords } from '../useFindSkippableAutoRecords';
 import { createTempId, isEntriesListQuery } from './mutationUtils';
 import type { EntryMutationContext } from './useEntryMutationContext';
 import type { useEntrySkipMutations } from './useEntrySkipMutations';
@@ -16,15 +17,11 @@ export function useCreateEntryMutation(
 ) {
   const { t, queryClient, utils, openInspector } = context;
   const { suppressCreateToast, skipEntry } = options;
-  /**
-   * 予定外記録の作成が TIME_OVERLAP で拒否された時、衝突相手が「自動記録
-   * （過去の planned・actual 未編集・未スキップ）だけ」で、かつ新記録が
-   * その plan range を完全に覆う場合に、スキップで解決できる entry ID を返す。
-   *
-   * 部分重複や確定済み実績との衝突が混ざる場合は空配列（実績トリムは
-   * インスペクターで行う）。
-   */
-  const findSkippableAutoRecords = (input: {
+
+  // 予定外記録の作成が TIME_OVERLAP で拒否された時、衝突相手が自動記録だけなら
+  // スキップで一手解決できる entry ID を返す（カレンダーのドラッグ作成と共用）。
+  const findSkippable = useFindSkippableAutoRecords();
+  const findSkippableForInput = (input: {
     start_time?: string | null | undefined;
     end_time?: string | null | undefined;
     actual_start_time?: string | null | undefined;
@@ -33,35 +30,9 @@ export function useCreateEntryMutation(
     const startIso = input.actual_start_time ?? input.start_time;
     const endIso = input.actual_end_time ?? input.end_time;
     if (!startIso || !endIso) return [];
-    // スキップで空くのは実績レイヤーのみ。planned 同士の衝突は解決できない
-    if (determineEntryOrigin(endIso) !== 'unplanned') return [];
-
-    const start = new Date(startIso).getTime();
-    const end = new Date(endIso).getTime();
-
-    type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
-    const lists = queryClient.getQueriesData<EntryListData>({ predicate: isEntriesListQuery });
-    const byId = new Map<string, EntryListData[number]>();
-    for (const [, data] of lists) {
-      for (const entry of data ?? []) byId.set(entry.id, entry);
-    }
-
-    const skippable: string[] = [];
-    for (const entry of byId.values()) {
-      const range = getEffectiveActualRange(entry);
-      if (!range) continue;
-      const s = range.start.getTime();
-      const e = range.end.getTime();
-      if (!(s < end && e > start)) continue;
-      if (isAutoRecorded(entry) && s >= start && e <= end) {
-        skippable.push(entry.id);
-      } else {
-        // 確定済み実績 or 部分重複の自動記録が混ざる → ワンタップでは解決しない
-        return [];
-      }
-    }
-    return skippable;
+    return findSkippable(new Date(startIso).getTime(), new Date(endIso).getTime());
   };
+
   // 作成（楽観的更新付き）
   const createEntry = api.entries.create.useMutation({
     onMutate: async (input) => {
@@ -180,7 +151,7 @@ export function useCreateEntryMutation(
         error.message.includes('TIME_OVERLAP')
       ) {
         // 衝突相手が自動記録だけなら「スキップして記録」のワンタップ解決を出す
-        const skippableIds = findSkippableAutoRecords(input);
+        const skippableIds = findSkippableForInput(input);
         if (skippableIds.length > 0) {
           toast.error(t('entry.errors.timeOverlapAutoRecord'), {
             action: {

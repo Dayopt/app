@@ -17,6 +17,8 @@ export interface DateTimeSelection extends TimeRange {
   date: Date;
   /** 選択の発生元。planned gap 由来の作成だけ preview を記録レーンに寄せる。 */
   creationSource?: 'planned-gap' | undefined;
+  /** 「スキップして記録」経由の場合、作成確定時にスキップする自動記録の id。 */
+  skipEntryIds?: string[] | undefined;
 }
 
 /** CalendarDragSelection コンポーネントのプロパティ */
