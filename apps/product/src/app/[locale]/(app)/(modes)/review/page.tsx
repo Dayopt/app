@@ -1,9 +1,17 @@
+import { formatInTimeZone } from 'date-fns-tz';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
 import type { ReviewGranularity } from '@/features/review';
-import { prefetchReviewData, ReviewView } from '@/features/review';
+import {
+  buildDailyReviewRedirectPath,
+  parseReviewGranularityParam,
+  prefetchReviewData,
+  ReviewView,
+} from '@/features/review';
 import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import type { Locale } from '@/lib/i18n/routing';
@@ -11,8 +19,13 @@ import { HydrationBoundary } from '@/lib/trpc/server';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_GRANULARITIES = new Set(['day', 'week']);
 const DATE_PARAM_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+async function defaultDateStr(): Promise<string> {
+  const headersList = await headers();
+  const timezone = headersList.get('x-user-timezone') ?? 'UTC';
+  return formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
+}
 
 export async function generateMetadata({
   params,
@@ -55,14 +68,22 @@ async function ReviewContent({
 }
 
 const ReviewPage = async ({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale?: Locale }>;
   searchParams: Promise<{ g?: string; d?: string }>;
 }) => {
+  const { locale = 'ja' } = await params;
   const { g, d } = await searchParams;
-
-  const granularity = g && VALID_GRANULARITIES.has(g) ? (g as ReviewGranularity) : undefined;
   const dateStr = d && DATE_PARAM_PATTERN.test(d) ? d : undefined;
+
+  if (g === 'day') {
+    const targetDateStr = dateStr ?? (await defaultDateStr());
+    redirect(buildDailyReviewRedirectPath(locale, targetDateStr));
+  }
+
+  const granularity = parseReviewGranularityParam(g);
 
   return (
     <Suspense fallback={<ReviewSkeleton />}>

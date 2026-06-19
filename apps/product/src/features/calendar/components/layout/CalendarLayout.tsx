@@ -3,6 +3,15 @@
 import { useTranslations } from 'next-intl';
 import { memo, useCallback, useState } from 'react';
 
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/lib/components/ui/drawer';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
@@ -18,6 +27,11 @@ import type { CalendarViewType } from '../../types/calendar.types';
 import { DateRangeDisplay } from './Header/DateRangeDisplay';
 import { MobileCalendarHeader } from './Header/MobileCalendarHeader';
 import { ViewSwitcher } from './Header/ViewSwitcher';
+
+const SIDE_RAIL_DEFAULT_WIDTH = 256;
+const SIDE_RAIL_MIN_WIDTH = 256;
+const SIDE_RAIL_MAX_WIDTH = 560;
+const SIDE_RAIL_RESIZE_STEP = 32;
 
 /** CalendarLayout コンポーネントのプロパティ */
 interface CalendarLayoutProps {
@@ -51,6 +65,15 @@ interface CalendarLayoutProps {
   // Header slots
   leftSlot?: React.ReactNode | undefined;
   rightSlot?: React.ReactNode | undefined;
+
+  // Side rail
+  sideRail?: React.ReactNode | undefined;
+  mobileSideRail?: React.ReactNode | undefined;
+  sideRailOpen?: boolean | undefined;
+  onSideRailOpenChange?: ((open: boolean) => void) | undefined;
+  sideRailTitle?: string | undefined;
+  sideRailDescription?: string | undefined;
+  sideRailResizeLabel?: string | undefined;
 }
 
 /**
@@ -82,11 +105,22 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     // Header slots
     leftSlot,
     rightSlot,
+
+    // Side rail
+    sideRail,
+    mobileSideRail,
+    sideRailOpen = false,
+    onSideRailOpenChange,
+    sideRailTitle,
+    sideRailDescription,
+    sideRailResizeLabel,
   }) => {
     const t = useTranslations('calendar');
     const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
     const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
     const banner = useInlineBanner();
+    const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+    const [sideRailWidth, setSideRailWidth] = useState(SIDE_RAIL_DEFAULT_WIDTH);
 
     // ナビゲーション方向 + キーの追跡（スライドアニメーション用）
     const [slide, setSlide] = useState<{ key: number; direction: 'prev' | 'next' | null }>({
@@ -123,63 +157,178 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         : slide.direction === 'prev'
           ? 'calendar-slide-prev'
           : '';
+    const desktopSideRailOpen = Boolean(sideRail && !isMobile);
+    const contentStyle = desktopSideRailOpen
+      ? ({ marginRight: sideRailWidth } satisfies React.CSSProperties)
+      : undefined;
+    const sideRailStyle = {
+      width: sideRailWidth,
+    } satisfies React.CSSProperties;
+    const resolvedSideRailTitle = sideRailTitle ?? t('title');
+    const resolvedSideRailDescription = sideRailDescription ?? t('meta.description');
+    const resolvedSideRailResizeLabel = sideRailResizeLabel ?? t('panel.resizeLabel');
+
+    const handleSideRailResizeStart = useCallback(
+      (event: React.PointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return;
+
+        event.preventDefault();
+
+        const startX = event.clientX;
+        const startWidth = sideRailWidth;
+        const previousCursor = document.body.style.cursor;
+        const previousUserSelect = document.body.style.userSelect;
+
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        const handlePointerMove = (moveEvent: PointerEvent) => {
+          setSideRailWidth(clampSideRailWidth(startWidth - (moveEvent.clientX - startX)));
+        };
+        const handlePointerUp = () => {
+          document.body.style.cursor = previousCursor;
+          document.body.style.userSelect = previousUserSelect;
+          window.removeEventListener('pointermove', handlePointerMove);
+          window.removeEventListener('pointerup', handlePointerUp);
+        };
+
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp, { once: true });
+      },
+      [sideRailWidth],
+    );
+
+    const handleSideRailResizeKeyDown = useCallback(
+      (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          setSideRailWidth((width) => clampSideRailWidth(width + SIDE_RAIL_RESIZE_STEP));
+          return;
+        }
+
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          setSideRailWidth((width) => clampSideRailWidth(width - SIDE_RAIL_RESIZE_STEP));
+          return;
+        }
+
+        if (event.key === 'Home') {
+          event.preventDefault();
+          setSideRailWidth(SIDE_RAIL_MIN_WIDTH);
+          return;
+        }
+
+        if (event.key === 'End') {
+          event.preventDefault();
+          setSideRailWidth(SIDE_RAIL_MAX_WIDTH);
+        }
+      },
+      [],
+    );
 
     return (
-      <div className={cn('calendar-layout flex h-full flex-col', className)}>
-        {/* スクリーンリーダー用のページタイトル */}
-        <h1 className="sr-only">{t('title')}</h1>
+      <div
+        className={cn('calendar-layout relative flex h-full flex-col overflow-hidden', className)}
+      >
+        <div className="flex min-h-0 flex-1 flex-col" style={contentStyle}>
+          {/* スクリーンリーダー用のページタイトル */}
+          <h1 className="sr-only">{t('title')}</h1>
 
-        {/* モバイル: インライン展開ミニカレンダー */}
-        <MobileCalendarHeader
-          currentDate={currentDate}
-          onNavigate={handleNavigate}
-          onPrefetch={onPrefetch}
-          onDateSelect={onDateSelect}
-          displayRange={displayRange}
-        />
+          {/* モバイル: インライン展開ミニカレンダー */}
+          <MobileCalendarHeader
+            currentDate={currentDate}
+            onNavigate={handleNavigate}
+            onPrefetch={onPrefetch}
+            onDateSelect={onDateSelect}
+            displayRange={displayRange}
+            rightSlot={rightSlot}
+          />
 
-        {/* デスクトップ: 現行AppHeader（変更なし） */}
-        <div className="hidden md:block">
-          <AppHeader leftSlot={leftSlot} rightSlot={rightSlot}>
-            <div className="flex items-center gap-2">
-              <DateRangeDisplay
-                date={currentDate}
-                viewType={viewType}
-                showWeekNumber={showWeekNumbers}
-                weekStartsOn={weekStartsOn}
-                clickable={false}
-                displayRange={displayRange}
-              />
-              <DateNavigator onNavigate={handleNavigate} onPrefetch={onPrefetch} arrowSize="md" />
-              <ViewSwitcher
-                className="ml-2"
-                currentView={viewType}
-                onChange={(view) => onViewChange(view as CalendarViewType)}
-                onSettingsChange={onSettingsChange}
-              />
+          {/* デスクトップ: 現行AppHeader（変更なし） */}
+          <div className="hidden md:block">
+            <AppHeader leftSlot={leftSlot} rightSlot={rightSlot}>
+              <div className="flex items-center gap-2">
+                <DateRangeDisplay
+                  date={currentDate}
+                  viewType={viewType}
+                  showWeekNumber={showWeekNumbers}
+                  weekStartsOn={weekStartsOn}
+                  clickable={false}
+                  displayRange={displayRange}
+                />
+                <DateNavigator onNavigate={handleNavigate} onPrefetch={onPrefetch} arrowSize="md" />
+                <ViewSwitcher
+                  className="ml-2"
+                  currentView={viewType}
+                  onChange={(view) => onViewChange(view as CalendarViewType)}
+                  onSettingsChange={onSettingsChange}
+                />
+              </div>
+            </AppHeader>
+          </div>
+
+          {/* インラインバナー（同期エラー/オフライン/更新通知） */}
+          <InlineBanner {...banner} />
+
+          {/* カレンダーコンテンツ（スワイプ対応） */}
+          <div
+            ref={ref as React.RefObject<HTMLDivElement>}
+            data-calendar-main
+            className="flex min-h-0 flex-1 flex-col"
+            onTouchStart={handlers.onTouchStart}
+            onTouchMove={handlers.onTouchMove}
+            onTouchEnd={handlers.onTouchEnd}
+          >
+            <div key={slide.key} className={cn('flex min-h-0 flex-1 flex-row', slideClass)}>
+              <div className="flex min-w-0 flex-1 flex-col">{children}</div>
             </div>
-          </AppHeader>
-        </div>
-
-        {/* インラインバナー（同期エラー/オフライン/更新通知） */}
-        <InlineBanner {...banner} />
-
-        {/* カレンダーコンテンツ（スワイプ対応） */}
-        <div
-          ref={ref as React.RefObject<HTMLDivElement>}
-          data-calendar-main
-          className="flex min-h-0 flex-1 flex-col"
-          onTouchStart={handlers.onTouchStart}
-          onTouchMove={handlers.onTouchMove}
-          onTouchEnd={handlers.onTouchEnd}
-        >
-          <div key={slide.key} className={cn('flex min-h-0 flex-1 flex-col', slideClass)}>
-            {children}
           </div>
         </div>
+
+        {sideRail ? (
+          <aside
+            className="border-border-subtle bg-background absolute top-0 right-0 bottom-0 hidden shrink-0 border-l md:flex"
+            style={sideRailStyle}
+          >
+            {sideRail}
+            <div
+              role="separator"
+              aria-label={resolvedSideRailResizeLabel}
+              aria-orientation="vertical"
+              aria-valuemin={SIDE_RAIL_MIN_WIDTH}
+              aria-valuemax={SIDE_RAIL_MAX_WIDTH}
+              aria-valuenow={sideRailWidth}
+              tabIndex={0}
+              className="hover:bg-state-hover focus-visible:outline-ring absolute inset-y-0 left-0 w-2 -translate-x-1 cursor-col-resize transition-colors duration-150 focus-visible:outline-2"
+              onPointerDown={handleSideRailResizeStart}
+              onKeyDown={handleSideRailResizeKeyDown}
+            />
+          </aside>
+        ) : null}
+
+        {isMobile && mobileSideRail ? (
+          <Drawer
+            open={sideRailOpen}
+            modal={false}
+            handleOnly
+            {...(onSideRailOpenChange ? { onOpenChange: onSideRailOpenChange } : {})}
+          >
+            <DrawerContent className="h-3/4">
+              <DrawerHeader className="sr-only">
+                <DrawerTitle>{resolvedSideRailTitle}</DrawerTitle>
+                <DrawerDescription>{resolvedSideRailDescription}</DrawerDescription>
+              </DrawerHeader>
+              <div className="min-h-0 flex-1 overflow-hidden">{mobileSideRail}</div>
+            </DrawerContent>
+          </Drawer>
+        ) : null}
       </div>
     );
   },
 );
 
 CalendarLayout.displayName = 'CalendarLayout';
+
+function clampSideRailWidth(width: number): number {
+  return Math.min(SIDE_RAIL_MAX_WIDTH, Math.max(SIDE_RAIL_MIN_WIDTH, width));
+}

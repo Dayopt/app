@@ -156,30 +156,6 @@ export function parseISOToUserTimezone(isoString: string, timezone: string): Dat
 // ========================================
 
 /**
- * ユーザーTZの0:00をUTC ISOで返す
- *
- * @param date - 基準日（任意TZ）
- * @param timezone - ユーザーのタイムゾーン
- * @returns UTC ISO 8601文字列
- */
-export function tzDayStart(date: Date, timezone: string): string {
-  const localDateStr = formatInTimeZone(date, timezone, 'yyyy-MM-dd');
-  return fromZonedTime(new Date(`${localDateStr}T00:00:00`), timezone).toISOString();
-}
-
-/**
- * ユーザーTZの23:59:59.999をUTC ISOで返す
- *
- * @param date - 基準日（任意TZ）
- * @param timezone - ユーザーのタイムゾーン
- * @returns UTC ISO 8601文字列
- */
-export function tzDayEnd(date: Date, timezone: string): string {
-  const localDateStr = formatInTimeZone(date, timezone, 'yyyy-MM-dd');
-  return fromZonedTime(new Date(`${localDateStr}T23:59:59.999`), timezone).toISOString();
-}
-
-/**
  * ユーザーTZの週初日0:00をUTC ISOで返す
  *
  * @param date - 基準日

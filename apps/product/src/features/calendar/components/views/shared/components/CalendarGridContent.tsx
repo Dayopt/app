@@ -139,6 +139,10 @@ interface CalendarGridContentProps {
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   /** DnDを無効化するエントリID */
   disabledEntryId?: string | null | undefined;
+  /** day compare の差分 marker を表示する */
+  showActualDiff?: boolean | undefined;
+  /** day compare Rail に出ている entry の ID 一覧 */
+  dayDiffEntryIds?: ReadonlySet<string> | undefined;
   className?: string | undefined;
 }
 
@@ -160,6 +164,8 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   onEventUpdate,
   onTimeRangeSelect,
   disabledEntryId,
+  showActualDiff = false,
+  dayDiffEntryIds,
   className,
 }: CalendarGridContentProps) {
   const [gapCreationCutoffMs] = useState(() => Date.now());
@@ -240,11 +246,13 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
           position={{ top: 0, left: 0, width: 100, height: ghostHeight }}
           plannedHeight={ghostHeight}
           hourHeight={HOUR_HEIGHT}
+          showActualDiff={enableCrossDayDrag}
+          showDayDiffMarker={dayDiffEntryIds?.has(entry.id) ?? false}
           style={{ position: 'relative' }}
         />
       );
     },
-    [entries, entryStyles, getTagById, isMobile, HOUR_HEIGHT],
+    [entries, entryStyles, getTagById, isMobile, HOUR_HEIGHT, enableCrossDayDrag, dayDiffEntryIds],
   );
 
   // 時間グリッド
@@ -296,6 +304,8 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
               style={style}
               hourHeight={HOUR_HEIGHT}
               enableCrossDayDrag={enableCrossDayDrag}
+              showActualDiff={showActualDiff}
+              showDayDiffMarker={dayDiffEntryIds?.has(entry.id) ?? false}
               dayIndex={dayIndex}
               isDragging={isDragging}
               isResizing={isResizing}

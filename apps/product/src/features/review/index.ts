@@ -28,5 +28,10 @@ export { TagDetailPage } from './components/tag-detail/TagDetailPage';
 // 各ファイルに import 'server-only' ガード済み。
 export { prefetchReviewData } from './lib/prefetch';
 export { prefetchTagDetailData } from './lib/prefetchTagDetail';
+export {
+  buildDailyReviewRedirectPath,
+  buildWeeklyTagDetailPath,
+  parseReviewGranularityParam,
+} from './lib/route-normalization';
 
 // ここにないものはfeature内部専用

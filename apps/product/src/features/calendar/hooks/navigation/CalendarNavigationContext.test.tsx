@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
 }));
 
-vi.mock('@/hooks/useMediaQuery', () => ({
+vi.mock('@/lib/hooks/useMediaQuery', () => ({
   useMediaQuery: () => mockUseMediaQuery(),
 }));
 
@@ -25,11 +25,21 @@ function TestConsumer() {
     <div>
       <span data-testid="date">{navigation.currentDate.toISOString().slice(0, 10)}</span>
       <span data-testid="view">{navigation.viewType}</span>
+      <span data-testid="compare">{navigation.dayCompareEnabled ? 'on' : 'off'}</span>
       <button
         type="button"
         onClick={() => navigation.navigateToDate(new Date('2026-03-29T12:00:00.000Z'))}
       >
         move
+      </button>
+      <button type="button" onClick={() => navigation.navigateToDate(new Date('2026-03-30'), true)}>
+        move-url
+      </button>
+      <button type="button" onClick={() => navigation.setDayCompareEnabled(true)}>
+        compare-on
+      </button>
+      <button type="button" onClick={() => navigation.changeView('week')}>
+        week
       </button>
     </div>
   );
@@ -82,6 +92,101 @@ describe('CalendarNavigationProvider', () => {
     );
 
     expect(screen.getByTestId('view')).toHaveTextContent('week');
+  });
+
+  it('resolves compare mode from day URL searchParams', () => {
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25&compare=1');
+    mockPathname = '/ja/calendar/day';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('compare')).toHaveTextContent('on');
+  });
+
+  it('syncs compare mode when returning to an already-active day view URL', () => {
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25');
+    mockPathname = '/ja/calendar/day';
+
+    const { rerender } = render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
+    expect(screen.getByTestId('compare')).toHaveTextContent('off');
+
+    mockPathname = '/ja/review';
+    rerender(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25&compare=1');
+    mockPathname = '/ja/calendar/day';
+    rerender(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
+    expect(screen.getByTestId('compare')).toHaveTextContent('on');
+  });
+
+  it('writes compare=1 when day compare is enabled', () => {
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25');
+    mockPathname = '/ja/calendar/day';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'compare-on' }));
+    expect(screen.getByTestId('compare')).toHaveTextContent('on');
+    expect(window.location.pathname + window.location.search).toBe(
+      '/ja/calendar/day?date=2026-03-25&compare=1',
+    );
+  });
+
+  it('preserves compare mode when date navigation updates the URL', () => {
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25&compare=1');
+    mockPathname = '/ja/calendar/day';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'move-url' }));
+    expect(window.location.pathname + window.location.search).toBe(
+      '/ja/calendar/day?date=2026-03-30&compare=1',
+    );
+  });
+
+  it('clears compare mode when changing to a non-day view', () => {
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25&compare=1');
+    mockPathname = '/ja/calendar/day';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'week' }));
+    expect(screen.getByTestId('compare')).toHaveTextContent('off');
+    expect(window.location.pathname + window.location.search).toBe(
+      '/ja/calendar/week?date=2026-03-25',
+    );
   });
 
   it('preserves calendar state when the current route is not a calendar page', () => {

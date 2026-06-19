@@ -22,7 +22,6 @@ interface PrefetchReviewOptions {
  * Review ページ用 prefetch
  *
  * URL の粒度・日付（?g=&d=）に合わせてクライアントと同じクエリキーで事前取得する:
- * - day: entries.list（当日 + 前日。日次ビューは Free データのみで構成）
  * - week: getStatsPageData + getTimePL
  */
 export async function prefetchReviewData(options: PrefetchReviewOptions = {}) {
@@ -36,41 +35,22 @@ export async function prefetchReviewData(options: PrefetchReviewOptions = {}) {
   const prevDateRange = computePreviousDateRange(baseDate, granularity, serverTimezone);
 
   try {
-    if (granularity === 'day') {
-      // DailyReview（useEntries）と同じ入力でキャッシュキーを一致させる
-      await Promise.all([
-        helpers.entries.list.prefetch({
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate,
-          sortBy: 'start_time',
-          sortOrder: 'asc',
-          limit: 100,
-        }),
-        helpers.entries.list.prefetch({
-          startDate: prevDateRange.startDate,
-          endDate: prevDateRange.endDate,
-          limit: 100,
-        }),
-      ]);
-    } else {
-      // week: WeeklyReview が消費する getStatsPageData + getTimePL のみ
-      await Promise.all([
-        helpers.entries.getStatsPageData.prefetch({
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate,
-          prevStart: prevDateRange.startDate,
-          prevEnd: prevDateRange.endDate,
-          year: baseDate.getFullYear(),
-          monthlyMonths: computeMonthCount(granularity),
-        }),
-        helpers.entries.getTimePL.prefetch({
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate,
-          prevStart: prevDateRange.startDate,
-          prevEnd: prevDateRange.endDate,
-        }),
-      ]);
-    }
+    await Promise.all([
+      helpers.entries.getStatsPageData.prefetch({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        prevStart: prevDateRange.startDate,
+        prevEnd: prevDateRange.endDate,
+        year: baseDate.getFullYear(),
+        monthlyMonths: computeMonthCount(granularity),
+      }),
+      helpers.entries.getTimePL.prefetch({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        prevStart: prevDateRange.startDate,
+        prevEnd: prevDateRange.endDate,
+      }),
+    ]);
   } catch {
     // 認証エラー等はスキップ（クライアント側でリトライ）
   }

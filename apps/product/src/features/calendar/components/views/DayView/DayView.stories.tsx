@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
+import { computeCalendarDayDiffs } from '../../../lib/day-diff';
 import type { CalendarEvent, ViewDateRange } from '../../../types/calendar.types';
 
 import { DayView } from './DayView';
@@ -278,6 +279,11 @@ const presetSampleEntries: CalendarEvent[] = [
   }),
 ];
 
+const presetDiffEntryIds = computeCalendarDayDiffs(
+  presetSampleEntries,
+  makeDate(today, 23, 0),
+).entryIds;
+
 /** プリセットサンプルデイ — オンボーディング後の初回表示イメージ */
 export const PresetSampleDay: Story = {
   render: () => (
@@ -286,6 +292,22 @@ export const PresetSampleDay: Story = {
         dateRange={todayRange}
         entries={presetSampleEntries}
         currentDate={today}
+        {...defaultHandlers}
+      />
+    </div>
+  ),
+};
+
+/** 比較表示 — Diff Rail の対象 marker を表示 */
+export const CompareMode: Story = {
+  render: () => (
+    <div className="h-[700px]">
+      <DayView
+        dateRange={todayRange}
+        entries={presetSampleEntries}
+        currentDate={today}
+        showActualDiff
+        dayDiffEntryIds={presetDiffEntryIds}
         {...defaultHandlers}
       />
     </div>
@@ -308,6 +330,17 @@ export const AllPatterns: Story = {
 
       <div className="h-[500px] w-full">
         <DayView dateRange={todayRange} entries={[]} currentDate={today} {...defaultHandlers} />
+      </div>
+
+      <div className="h-[500px] w-full">
+        <DayView
+          dateRange={todayRange}
+          entries={presetSampleEntries}
+          currentDate={today}
+          showActualDiff
+          dayDiffEntryIds={presetDiffEntryIds}
+          {...defaultHandlers}
+        />
       </div>
     </div>
   ),

@@ -33,6 +33,11 @@ function isValidViewType(view: string): view is CalendarViewType {
   return false;
 }
 
+function readCalendarCompareParam(viewType: CalendarViewType): boolean {
+  if (typeof window === 'undefined' || viewType !== 'day') return false;
+  return new URLSearchParams(window.location.search).get('compare') === '1';
+}
+
 /** pathname と URL searchParams からカレンダーページ判定と初期値を計算 */
 function resolveCalendarProps(pathname: string) {
   const pathWithoutLocale = pathname.replace(/^\/(ja|en)/, '');
@@ -54,18 +59,22 @@ function resolveCalendarProps(pathname: string) {
   const dateParam =
     typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('date') : null;
   const initialDate = parseCalendarDateParam(dateParam) ?? new Date();
+  const initialCompare = readCalendarCompareParam(view);
 
-  return { isCalendarPage: true as const, initialDate, initialView: view };
+  return { isCalendarPage: true as const, initialDate, initialView: view, initialCompare };
 }
 
 interface CalendarNavigationContextValue {
   currentDate: Date;
   viewType: CalendarViewType;
+  /** day view で予定と実績の Diff Rail を表示する */
+  dayCompareEnabled: boolean;
   /** ナビゲーション中（日付変更・ビュー切替）のトランジション状態 */
   isPending: boolean;
   navigateToDate: (date: Date, updateUrl?: boolean) => void;
   changeView: (view: CalendarViewType) => void;
   navigateRelative: (direction: 'prev' | 'next' | 'today') => void;
+  setDayCompareEnabled: (enabled: boolean) => void;
 }
 
 const CalendarNavigationContext = createContext<CalendarNavigationContextValue | null>(null);
@@ -81,13 +90,14 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
   const pathname = usePathname() ?? '/';
 
   // pathname + window.location.search からカレンダーページ判定と初期値を計算
-  const { isCalendarPage, initialDate, initialView } = useMemo(
+  const { isCalendarPage, initialDate, initialView, initialCompare } = useMemo(
     () => resolveCalendarProps(pathname),
     [pathname],
   );
 
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [viewType, setViewType] = useState<CalendarViewType>(initialView);
+  const [dayCompareEnabled, setDayCompareEnabledState] = useState(initialCompare ?? false);
 
   // モバイル判定（day view固定に使用）
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
@@ -100,6 +110,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
   // useRefで最新値を保持し、コールバックの依存配列を安定化
   const currentDateRef = useRef(currentDate);
   const viewTypeRef = useRef(viewType);
+  const dayCompareEnabledRef = useRef(dayCompareEnabled);
   const initialDateRef = useRef(initialDate);
 
   // 現在のlocaleを取得（例: /ja/day -> ja）
@@ -110,12 +121,38 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
   React.useEffect(() => {
     currentDateRef.current = currentDate;
     viewTypeRef.current = viewType;
+    dayCompareEnabledRef.current = dayCompareEnabled;
     localeRef.current = locale;
     isMobileRef.current = isMobile;
     // Palette等がカレンダー表示日/ビュータイプを参照するためグローバルに同期
     useCalendarNavigationStore.getState()._syncViewedDate(currentDate);
     useCalendarNavigationStore.getState()._syncViewType(viewType);
-  }, [currentDate, viewType, locale, isMobile]);
+  }, [currentDate, viewType, dayCompareEnabled, locale, isMobile]);
+
+  const writeCalendarUrl = useCallback(
+    (
+      view: CalendarViewType,
+      date: Date,
+      compareEnabled: boolean,
+      historyMode: 'push' | 'replace',
+    ) => {
+      const params = new URLSearchParams(window.location.search);
+      params.set('date', formatCalendarDateParam(date));
+      if (view === 'day' && compareEnabled) {
+        params.set('compare', '1');
+      } else {
+        params.delete('compare');
+      }
+
+      const newUrl = `/${localeRef.current}/calendar/${view}?${params.toString()}`;
+      if (historyMode === 'push') {
+        window.history.pushState(null, '', newUrl);
+      } else {
+        window.history.replaceState(null, '', newUrl);
+      }
+    },
+    [],
+  );
 
   // モバイルでday以外のビューが設定された場合、強制的にdayに切替
   // （URL直アクセスやブラウザ戻る/進むでweek URLに遷移した場合のガード）
@@ -125,16 +162,9 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
         setViewType('day');
       });
       // URLもday viewに更新
-      const dateString = formatCalendarDateParam(currentDateRef.current);
-      const params = new URLSearchParams(window.location.search);
-      params.set('date', dateString);
-      window.history.replaceState(
-        null,
-        '',
-        `/${localeRef.current}/calendar/day?${params.toString()}`,
-      );
+      writeCalendarUrl('day', currentDateRef.current, dayCompareEnabledRef.current, 'replace');
     }
-  }, [isCalendarPage, isMobile, viewType]);
+  }, [isCalendarPage, isMobile, viewType, writeCalendarUrl]);
 
   // URL由来の initialView が変更されたら viewType を同期
   // （ブラウザ戻る/進む、直接URL入力時）
@@ -143,6 +173,12 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     if (isCalendarPage && initialView !== viewType) {
       if (isMobileRef.current && initialView !== 'day') return;
       setViewType(initialView);
+      setDayCompareEnabledState(readCalendarCompareParam(initialView));
+    } else if (isCalendarPage) {
+      const nextCompareEnabled = readCalendarCompareParam(initialView);
+      if (dayCompareEnabledRef.current !== nextCompareEnabled) {
+        setDayCompareEnabledState(nextCompareEnabled);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialView変更時のみ同期
   }, [isCalendarPage, initialView]);
@@ -164,41 +200,47 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     }
   }, [isCalendarPage, initialDate, startTransition]);
 
-  const navigateToDate = useCallback((date: Date, updateUrl = false) => {
-    startTransition(() => {
-      setCurrentDate(date);
-    });
+  const navigateToDate = useCallback(
+    (date: Date, updateUrl = false) => {
+      startTransition(() => {
+        setCurrentDate(date);
+      });
 
-    if (updateUrl) {
-      const dateString = formatCalendarDateParam(date);
-      // 既存のquery paramを保持しつつdateのみ更新
-      const params = new URLSearchParams(window.location.search);
-      params.set('date', dateString);
-      const newUrl = `/${localeRef.current}/calendar/${viewTypeRef.current}?${params.toString()}`;
-      // 日付変更は履歴に追加しない（replaceState）
-      window.history.replaceState(null, '', newUrl);
-    }
-  }, []);
+      if (updateUrl) {
+        // 日付変更は履歴に追加しない（replaceState）
+        writeCalendarUrl(viewTypeRef.current, date, dayCompareEnabledRef.current, 'replace');
+      }
+    },
+    [writeCalendarUrl],
+  );
 
-  const changeView = useCallback((view: CalendarViewType) => {
-    // モバイルではday viewのみ許可
-    if (isMobileRef.current && view !== 'day') return;
+  const changeView = useCallback(
+    (view: CalendarViewType) => {
+      // モバイルではday viewのみ許可
+      if (isMobileRef.current && view !== 'day') return;
+      const nextCompareEnabled = view === 'day' ? dayCompareEnabledRef.current : false;
 
-    startTransition(() => {
-      setViewType(view);
-    });
-    const dateString = formatCalendarDateParam(currentDateRef.current);
-    // 既存のquery paramを保持しつつdateのみ更新
-    const params = new URLSearchParams(window.location.search);
-    params.set('date', dateString);
-    // pushState: 即座にURL更新、サーバーナビゲーションなし
-    // Next.js App Router は pushState と統合済み（usePathname等が同期する）
-    window.history.pushState(
-      null,
-      '',
-      `/${localeRef.current}/calendar/${view}?${params.toString()}`,
-    );
-  }, []);
+      startTransition(() => {
+        setViewType(view);
+        setDayCompareEnabledState(nextCompareEnabled);
+      });
+      // pushState: 即座にURL更新、サーバーナビゲーションなし
+      // Next.js App Router は pushState と統合済み（usePathname等が同期する）
+      writeCalendarUrl(view, currentDateRef.current, nextCompareEnabled, 'push');
+    },
+    [writeCalendarUrl],
+  );
+
+  const setDayCompareEnabled = useCallback(
+    (enabled: boolean) => {
+      const nextEnabled = viewTypeRef.current === 'day' ? enabled : false;
+      startTransition(() => {
+        setDayCompareEnabledState(nextEnabled);
+      });
+      writeCalendarUrl(viewTypeRef.current, currentDateRef.current, nextEnabled, 'replace');
+    },
+    [writeCalendarUrl],
+  );
 
   const navigateRelative = useCallback(
     (direction: 'prev' | 'next' | 'today') => {
@@ -237,12 +279,23 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     () => ({
       currentDate,
       viewType,
+      dayCompareEnabled,
       isPending,
       navigateToDate,
       changeView,
       navigateRelative,
+      setDayCompareEnabled,
     }),
-    [currentDate, viewType, isPending, navigateToDate, changeView, navigateRelative],
+    [
+      currentDate,
+      viewType,
+      dayCompareEnabled,
+      isPending,
+      navigateToDate,
+      changeView,
+      navigateRelative,
+      setDayCompareEnabled,
+    ],
   );
 
   return (
