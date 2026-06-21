@@ -7,6 +7,46 @@
       "description": "Plan your schedule with time boxing. View and manage your plans by day, week, or month."
     },
     "title": "Calendar",
+    "panel": {
+      "resizeLabel": "Resize right panel"
+    },
+    "analysis": {
+      "tooltip": "Show analytics",
+      "ariaLabel": "Toggle analytics panel",
+      "panel": {
+        "title": "Analytics",
+        "description": "Analysis by period and tag.",
+        "scopeLabel": "Analysis scope",
+        "all": "All"
+      }
+    },
+    "compare": {
+      "tooltip": "Compare planned and actual time",
+      "ariaLabel": "Toggle planned and actual comparison",
+      "rail": {
+        "title": "Day diff",
+        "description": "Changes from the day's plan.",
+        "emptyTitle": "No changes",
+        "emptyDescription": "The day matches the plan.",
+        "summary": {
+          "planned": "Planned",
+          "actual": "Actual",
+          "diff": "Diff",
+          "unplanned": "Unplanned",
+          "missed": "Missed"
+        },
+        "kind": {
+          "unplanned": "Added",
+          "missed": "Missed",
+          "shifted": "Moved",
+          "resized": "Resized"
+        },
+        "badge": {
+          "late": "{duration} late",
+          "early": "{duration} early"
+        }
+      }
+    },
     "views": {
       "day": "Day",
       "splitDay": "Split Day",

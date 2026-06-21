@@ -29,6 +29,8 @@ interface EntryRendererProps {
   style: React.CSSProperties;
   hourHeight: number;
   enableCrossDayDrag: boolean;
+  showActualDiff?: boolean | undefined;
+  showDayDiffMarker?: boolean | undefined;
   dayIndex: number;
   isDragging: boolean;
   isResizing: boolean;
@@ -110,6 +112,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   style,
   hourHeight,
   enableCrossDayDrag,
+  showDayDiffMarker = false,
   dayIndex,
   isDragging,
   isResizing,
@@ -150,7 +153,9 @@ export const EntryRenderer = React.memo(function EntryRenderer({
     ? { ...style, opacity: 0.65 }
     : getAdjustedStyle(style, entry.id, interactionState);
 
-  // 予定 vs 記録の差分オーバーレイ（multi-column ビューのみ）
+  // 予定 vs 記録の差分オーバーレイは multi-column drag 用に限定する。
+  // day compare は Diff Rail を主役にし、カード上は marker のみ表示する。
+  const shouldRenderActualDiff = enableCrossDayDrag;
   let finalStyle: React.CSSProperties = adjustedStyle;
   let finalHeight: number;
   const previewPlannedHeight =
@@ -171,7 +176,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
     [entries, entry.id],
   );
 
-  if (enableCrossDayDrag) {
+  if (shouldRenderActualDiff) {
     const overlay = computeActualTimeDiffOverlay(renderedEntry, hourHeight);
     const overlayAdjustedStyle = {
       ...adjustedStyle,
@@ -274,7 +279,9 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           onGapClick={onGapClick}
           isGapAvailable={isGapAvailable}
           gapCreationCutoffMs={gapCreationCutoffMs}
-          {...(enableCrossDayDrag ? { overlayPositionApplied: true } : {})}
+          showActualDiff={shouldRenderActualDiff}
+          showDayDiffMarker={showDayDiffMarker}
+          {...(shouldRenderActualDiff ? { overlayPositionApplied: true } : {})}
           className={cn(
             'h-full w-full',
             entryDragging ? 'cursor-grabbing' : 'cursor-grab',

@@ -28,11 +28,15 @@ export function buildCalendarPath(params: {
   locale: string;
   viewType: CalendarViewType;
   currentDate?: Date | null | undefined;
+  compare?: boolean | undefined;
 }): string {
   const searchParams = new URLSearchParams();
 
   if (params.currentDate) {
     searchParams.set('date', formatCalendarDateParam(params.currentDate));
+  }
+  if (params.viewType === 'day' && params.compare) {
+    searchParams.set('compare', '1');
   }
 
   const query = searchParams.size > 0 ? `?${searchParams.toString()}` : '';

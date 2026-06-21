@@ -9,18 +9,28 @@
  * @see _composition/useCalendarComposition.ts
  */
 
-import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { useCallback, useMemo } from 'react';
+
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
+import {
+  computeCalendarDayDiffs,
+  filterCalendarDayDiffEntries,
+  resolveCalendarDayDiffBounds,
+} from '../lib/day-diff';
+import { useCalendarFilterStore } from '../stores/useCalendarFilterStore';
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
 
 import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
 
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
+import { CalendarDayDiffRail } from './day-diff/CalendarDayDiffRail';
 import { CalendarLayout } from './layout/CalendarLayout';
 import { EventContextMenu, MobileTouchHint } from './views/shared/components';
 
@@ -45,6 +55,7 @@ interface CalendarControllerProps {
 
   // --- Settings ---
   showWeekends: boolean;
+  showActualDiff?: boolean;
 
   // --- Entry state ---
   disabledEntryId: string | null;
@@ -97,6 +108,11 @@ interface CalendarControllerProps {
   className?: string;
   leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
+  onCompareRailOpenChange?: ((open: boolean) => void) | undefined;
+  analyticsRail?: React.ReactNode | undefined;
+  mobileAnalyticsRail?: React.ReactNode | undefined;
+  analyticsRailOpen?: boolean | undefined;
+  onAnalyticsRailOpenChange?: ((open: boolean) => void) | undefined;
 }
 
 // =============================================================================
@@ -110,6 +126,7 @@ export function CalendarController({
   filteredEntries,
   allEntries,
   showWeekends,
+  showActualDiff = false,
   disabledEntryId,
   onEntryClick,
   onTimeRangeSelect,
@@ -133,17 +150,48 @@ export function CalendarController({
   className,
   leftSlot,
   rightSlot,
+  onCompareRailOpenChange,
+  analyticsRail,
+  mobileAnalyticsRail,
+  analyticsRailOpen = false,
+  onAnalyticsRailOpenChange,
 }: CalendarControllerProps) {
+  const t = useTranslations();
+
   // =========================================================================
   // Calendar-internal hooks
   // =========================================================================
 
   // ショートカットレジストリのグローバルリスナー（1箇所のみ呼び出し）
   useShortcutRegistry();
+  const timezone = useUserPreferences((preferences) => preferences.timezone);
+  const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
+  const visibleTagIds = useCalendarFilterStore((state) => state.visibleTagIds);
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
+  const dayDiffBounds = useMemo(
+    () => resolveCalendarDayDiffBounds(currentDate, timezone),
+    [currentDate, timezone],
+  );
+  const dayDiffEntries = useMemo(() => {
+    void visibleTagIds;
+    return viewType === 'day' && showActualDiff
+      ? filterCalendarDayDiffEntries(allEntries, dayDiffBounds, isEntryVisible)
+      : [];
+  }, [allEntries, dayDiffBounds, isEntryVisible, showActualDiff, viewType, visibleTagIds]);
+  const dayDiff = useMemo(
+    () =>
+      viewType === 'day' && showActualDiff
+        ? computeCalendarDayDiffs(dayDiffEntries, dayDiffBounds)
+        : computeCalendarDayDiffs([]),
+    [dayDiffBounds, dayDiffEntries, showActualDiff, viewType],
+  );
+  const dayDiffEntryIds = dayDiff.entryIds;
+  const handleCloseCompareRail = useCallback(() => {
+    onCompareRailOpenChange?.(false);
+  }, [onCompareRailOpenChange]);
 
   // キーボードショートカット（ビューナビゲーション用）
   useCalendarKeyboard({
@@ -182,6 +230,8 @@ export function CalendarController({
       allEntries,
       currentDate,
       showWeekends,
+      showActualDiff,
+      dayDiffEntryIds,
       disabledEntryId,
       onEntryClick,
       onEntryContextMenu: handleEventContextMenu,
@@ -199,6 +249,8 @@ export function CalendarController({
       allEntries,
       currentDate,
       showWeekends,
+      showActualDiff,
+      dayDiffEntryIds,
       disabledEntryId,
       onEntryClick,
       handleEventContextMenu,
@@ -210,6 +262,40 @@ export function CalendarController({
       onNavigateNext,
       onNavigateToday,
     ],
+  );
+
+  const compareRail =
+    viewType === 'day' && showActualDiff ? (
+      <CalendarDayDiffRail
+        diff={dayDiff}
+        entries={dayDiffEntries}
+        onEntryClick={onEntryClick}
+        onClose={onCompareRailOpenChange ? handleCloseCompareRail : undefined}
+      />
+    ) : null;
+  const compareRailOpen = viewType === 'day' && showActualDiff;
+  const analyticsRailActive = Boolean(analyticsRailOpen && analyticsRail);
+  const activeRail = analyticsRailActive ? analyticsRail : compareRail;
+  const activeMobileRail = analyticsRailActive
+    ? (mobileAnalyticsRail ?? analyticsRail)
+    : compareRail;
+  const activeRailOpen = analyticsRailActive || compareRailOpen;
+  const activeRailTitle = analyticsRailActive
+    ? t('calendar.analysis.panel.title')
+    : t('calendar.compare.rail.title');
+  const activeRailDescription = analyticsRailActive
+    ? t('calendar.analysis.panel.description')
+    : t('calendar.compare.rail.description');
+  const handleSideRailOpenChange = useCallback(
+    (open: boolean) => {
+      if (analyticsRailActive) {
+        onAnalyticsRailOpenChange?.(open);
+        return;
+      }
+
+      onCompareRailOpenChange?.(open);
+    },
+    [analyticsRailActive, onAnalyticsRailOpenChange, onCompareRailOpenChange],
   );
 
   // =========================================================================
@@ -232,6 +318,13 @@ export function CalendarController({
         onSettingsChange={onSettingsChange}
         leftSlot={leftSlot}
         rightSlot={rightSlot}
+        sideRail={activeRail}
+        mobileSideRail={activeMobileRail}
+        sideRailOpen={activeRailOpen}
+        onSideRailOpenChange={handleSideRailOpenChange}
+        sideRailTitle={activeRailTitle}
+        sideRailDescription={activeRailDescription}
+        sideRailResizeLabel={t('calendar.panel.resizeLabel')}
       >
         <CalendarViewRenderer viewType={viewType} commonProps={commonProps} />
       </CalendarLayout>

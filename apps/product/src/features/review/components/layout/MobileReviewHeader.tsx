@@ -16,16 +16,10 @@ import { cn } from '@/lib/utils';
 
 import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
 
-import type { ReviewGranularity } from '../../stores/useReviewFilterStore';
-import { ReviewGranularitySelector } from './ReviewGranularitySelector';
-
 interface MobileReviewHeaderProps {
   dateDisplayProps: DateRangeDisplayProps;
-  granularity: ReviewGranularity;
-  showGranularity: boolean;
   onNavigate: (direction: NavigationDirection) => void;
   onDateSelect: (date: Date) => void;
-  onGranularityChange: (granularity: ReviewGranularity) => void;
 }
 
 /**
@@ -36,11 +30,8 @@ interface MobileReviewHeaderProps {
  */
 export function MobileReviewHeader({
   dateDisplayProps,
-  granularity,
-  showGranularity,
   onNavigate,
   onDateSelect,
-  onGranularityChange,
 }: MobileReviewHeaderProps) {
   const t = useTranslations('calendar.actions');
   const locale = useLocale();
@@ -61,16 +52,7 @@ export function MobileReviewHeader({
 
   return (
     <div className="bg-background sticky top-0 z-20 md:hidden">
-      <AppHeader
-        rightSlot={
-          showGranularity ? (
-            <ReviewGranularitySelector
-              granularity={granularity}
-              onGranularityChange={onGranularityChange}
-            />
-          ) : undefined
-        }
-      >
+      <AppHeader>
         <div className="flex items-center gap-2">
           <button
             type="button"

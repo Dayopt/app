@@ -10,7 +10,7 @@
 
 import React, { memo, startTransition, useCallback, useEffect, useMemo } from 'react';
 
-import { Plus } from 'lucide-react';
+import { GitCompareArrows, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses } from '@/features/tags';
@@ -69,6 +69,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   style = {},
   previewTime = null,
   hourHeight: hourHeightProp,
+  showActualDiff = true,
+  showDayDiffMarker = false,
   plannedHeight: plannedHeightProp,
   overlayPositionApplied = false,
   onGapClick,
@@ -105,7 +107,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   // upcoming でも実際に差分がある場合は、記録レイヤーと予定外部分を維持する。
   const renderAsPlanOnly =
     entry.origin === 'planned' &&
-    ((entry.actualStartDate == null && entry.actualEndDate == null) || upcomingActualMatchesPlan);
+    (!showActualDiff ||
+      (entry.actualStartDate == null && entry.actualEndDate == null) ||
+      upcomingActualMatchesPlan);
   const contentEntry = renderAsPlanOnly
     ? { ...entry, actualStartDate: null, actualEndDate: null }
     : entry;
@@ -210,8 +214,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     visualHeight - actualLayerTop - actualLayerBottomGap,
     minHeight,
   );
-  const contentLayerTop = isUnplanned ? actualLayerTop : plannedLayerTop;
-  const contentLayerHeight = isUnplanned ? actualLayerHeight : plannedHeight;
+  const contentLayerTop =
+    isUnplanned || (!renderAsPlanOnly && showActualDiff) ? actualLayerTop : plannedLayerTop;
+  const contentLayerHeight =
+    isUnplanned || (!renderAsPlanOnly && showActualDiff) ? actualLayerHeight : plannedHeight;
   const alignPlannedLayerToGrid = entry.origin === 'planned' && !renderAsPlanOnly;
   // planned bg は「context」として後ろに引かせ、actual body が「main」として前に出る intensity 階層
   const plannedBackgroundColor = `color-mix(in oklch, ${accentColor} 8%, var(--background))`;
@@ -728,6 +734,16 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             previewTime={previewTime}
           />
         </div>
+      )}
+
+      {showDayDiffMarker && (
+        <span
+          data-entry-day-diff-marker
+          className="bg-background text-muted-foreground border-border-subtle pointer-events-none absolute top-1 right-1 flex size-5 items-center justify-center rounded-full border shadow-sm"
+          aria-hidden="true"
+        >
+          <GitCompareArrows className="size-3.5" />
+        </span>
       )}
 
       {/* 下端リサイズハンドル（Draft は非表示）

@@ -75,7 +75,7 @@ export function useTimePLData() {
     return {
       period: {
         granularity,
-        label: formatPeriodLabel(currentDate, granularity, timezone),
+        label: formatPeriodLabel(currentDate, timezone),
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       },
@@ -114,11 +114,6 @@ export function useTimePLData() {
 
 // ── Internal ──
 
-function formatPeriodLabel(date: Date, granularity: 'day' | 'week', timezone: string): string {
-  switch (granularity) {
-    case 'day':
-      return formatInTimeZone(date, timezone, 'M/d（E）');
-    case 'week':
-      return formatInTimeZone(date, timezone, 'M/d') + '〜';
-  }
+function formatPeriodLabel(date: Date, timezone: string): string {
+  return formatInTimeZone(date, timezone, 'M/d') + '〜';
 }
