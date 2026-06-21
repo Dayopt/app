@@ -7,9 +7,9 @@ import { cn } from './cn';
 
 export const buttonVariants = cva(
   [
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--dayopt-radius-md)] font-normal',
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-normal',
     'transition-colors outline-none',
-    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--dayopt-color-ring)]',
+    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
     'disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50',
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   ].join(' '),
@@ -17,12 +17,11 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          'bg-[var(--dayopt-color-primary)] text-[var(--dayopt-color-primary-foreground)] hover:bg-[color-mix(in_oklch,var(--dayopt-color-primary)_90%,black)]',
-        outline:
-          'border border-[var(--dayopt-color-border)] bg-[var(--dayopt-color-container)] text-[var(--dayopt-color-foreground)] hover:bg-[var(--dayopt-color-muted)]',
-        ghost: 'text-[var(--dayopt-color-foreground)] hover:bg-[var(--dayopt-color-muted)]',
+          'bg-primary text-primary-foreground hover:bg-[color-mix(in_oklch,var(--primary)_90%,black)]',
+        outline: 'border border-border bg-container text-foreground hover:bg-muted',
+        ghost: 'text-foreground hover:bg-muted',
         destructive:
-          'bg-[var(--dayopt-color-destructive)] text-[var(--dayopt-color-primary-foreground)] hover:bg-[color-mix(in_oklch,var(--dayopt-color-destructive)_90%,black)] focus-visible:outline-[var(--dayopt-color-destructive)]',
+          'bg-destructive text-primary-foreground hover:bg-[color-mix(in_oklch,var(--destructive)_90%,black)] focus-visible:outline-destructive',
       },
       size: {
         sm: 'h-8 px-3 text-sm',

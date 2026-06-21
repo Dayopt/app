@@ -6,26 +6,20 @@ import { cn } from './cn';
 
 export const badgeVariants = cva(
   [
-    'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[var(--dayopt-radius-md)] border px-2 py-1 text-xs font-normal',
-    'transition-[color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dayopt-color-ring)]',
+    'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-lg border px-2 py-1 text-xs font-normal',
+    'transition-[color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
     '[&>svg]:pointer-events-none [&>svg]:size-3.5',
   ].join(' '),
   {
     variants: {
       variant: {
-        primary:
-          'border-transparent bg-[var(--dayopt-color-primary)] text-[var(--dayopt-color-primary-foreground)]',
-        secondary:
-          'border-transparent bg-[var(--dayopt-color-container)] text-[var(--dayopt-color-foreground)]',
-        outline:
-          'border-[var(--dayopt-color-border)] bg-[var(--dayopt-color-background)] text-[var(--dayopt-color-foreground)]',
-        success:
-          'border-[var(--dayopt-color-success)] bg-[var(--dayopt-color-success-tint)] text-[var(--dayopt-color-success)]',
-        warning:
-          'border-[var(--dayopt-color-warning)] bg-[var(--dayopt-color-warning-tint)] text-[var(--dayopt-color-warning)]',
-        info: 'border-[var(--dayopt-color-info)] bg-[var(--dayopt-color-info-tint)] text-[var(--dayopt-color-info)]',
-        destructive:
-          'border-transparent bg-[var(--dayopt-color-destructive)] text-[var(--dayopt-color-primary-foreground)]',
+        primary: 'border-transparent bg-primary text-primary-foreground',
+        secondary: 'border-transparent bg-container text-foreground',
+        outline: 'border-border bg-background text-foreground',
+        success: 'border-success bg-success-tint text-success',
+        warning: 'border-warning bg-warning-tint text-warning',
+        info: 'border-info bg-info-tint text-info',
+        destructive: 'border-transparent bg-destructive text-primary-foreground',
       },
     },
     defaultVariants: {

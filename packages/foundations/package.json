@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./tokens.css": "./src/tokens.css",
-    "./theme.css": "./src/theme.css"
+    "./tokens.css": "./src/tokens.css"
   },
   "scripts": {
     "build": "tsc --noEmit",

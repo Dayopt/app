@@ -3,7 +3,6 @@
 @import 'highlight.js/styles/github.css';
 
 /* Design Tokens（@dayopt/foundations が単一ソース） */
-@import '@dayopt/foundations/theme.css';
 @import '@dayopt/foundations/tokens.css';
 
 /* Utilities */

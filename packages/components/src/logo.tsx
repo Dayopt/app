@@ -10,9 +10,9 @@ export interface LogoProps extends React.ComponentProps<'div'> {
 }
 
 const markSize = {
-  sm: 'size-5 rounded-[var(--dayopt-radius-sm)]',
-  md: 'size-7 rounded-[var(--dayopt-radius-md)]',
-  lg: 'size-9 rounded-[var(--dayopt-radius-lg)]',
+  sm: 'size-5 rounded-[0.25rem]',
+  md: 'size-7 rounded-lg',
+  lg: 'size-9 rounded-2xl',
 } as const;
 
 const textSize = {
@@ -35,17 +35,14 @@ export function Logo({
     <div
       data-slot="logo"
       aria-label={label}
-      className={cn(
-        'inline-flex items-center gap-2 text-[var(--dayopt-color-foreground)]',
-        className,
-      )}
+      className={cn('text-foreground inline-flex items-center gap-2', className)}
       {...props}
     >
       {showMark ? (
         <span
           aria-hidden="true"
           className={cn(
-            'grid place-items-center bg-[var(--dayopt-color-primary)] text-[var(--dayopt-color-primary-foreground)] shadow-[var(--dayopt-shadow-xs)]',
+            'bg-primary text-primary-foreground grid place-items-center shadow-xs',
             markSize[size],
           )}
         >
