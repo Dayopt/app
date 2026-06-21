@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-@source '../../../../packages/ui/src';
+@source '../../../../packages/components/src';
 @import 'highlight.js/styles/github.css';
 
 /* Design Tokens（@dayopt/foundations が単一ソース） */

@@ -8,8 +8,8 @@ import {
   entitlementKeys,
   getPlanIdForSubscriptionStatus,
 } from '@dayopt/billing';
+import { Button as SharedButton } from '@dayopt/components';
 import { dayoptUrls } from '@dayopt/config';
-import { Button as SharedButton } from '@dayopt/ui';
 import {
   AlertTriangle,
   Check,

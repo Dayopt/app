@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 
 import { toast } from '@/lib/toast';
-import { Badge, Button as SharedButton } from '@dayopt/ui';
+import { Badge, Button as SharedButton } from '@dayopt/components';
 import { LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 

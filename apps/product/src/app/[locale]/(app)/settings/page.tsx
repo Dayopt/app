@@ -8,8 +8,8 @@ import {
   entitlementKeys,
   getPlanIdForSubscriptionStatus,
 } from '@dayopt/billing';
+import { Badge, Card } from '@dayopt/components';
 import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
-import { Badge, Card } from '@dayopt/ui';
 import {
   Book,
   ChevronDown,

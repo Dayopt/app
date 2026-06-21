@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button, Card } from '@dayopt/ui';
+import { Button, Card } from '@dayopt/components';
 
 import { InstallBanner } from '@/lib/components/shell/InstallBanner';
 import { IOSInstallGuide } from '@/lib/components/shell/IOSInstallGuide';

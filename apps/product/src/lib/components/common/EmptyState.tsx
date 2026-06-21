@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 
-import { Button } from '@dayopt/ui';
+import { Button } from '@dayopt/components';
 
 import { cn } from '@/lib/utils';
 

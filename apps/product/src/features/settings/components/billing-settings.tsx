@@ -12,7 +12,7 @@ import {
   getPlanIdForSubscriptionStatus,
   type DayoptPlanId,
 } from '@dayopt/billing';
-import { Badge } from '@dayopt/ui';
+import { Badge } from '@dayopt/components';
 import { AlertTriangle, Check, CreditCard, Crown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';

@@ -3,7 +3,7 @@
 import { AlertCircle, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@dayopt/ui';
+import { Button } from '@dayopt/components';
 
 import { cn } from '@/lib/utils';
 

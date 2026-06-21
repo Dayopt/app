@@ -184,6 +184,9 @@ importers:
       '@dayopt/billing':
         specifier: workspace:*
         version: link:../../packages/billing
+      '@dayopt/components':
+        specifier: workspace:*
+        version: link:../../packages/components
       '@dayopt/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -196,9 +199,6 @@ importers:
       '@dayopt/foundations':
         specifier: workspace:*
         version: link:../../packages/foundations
-      '@dayopt/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -542,15 +542,15 @@ importers:
 
   apps/storybook:
     dependencies:
+      '@dayopt/components':
+        specifier: workspace:*
+        version: link:../../packages/components
       '@dayopt/foundations':
         specifier: workspace:*
         version: link:../../packages/foundations
       '@dayopt/product':
         specifier: workspace:*
         version: link:../product
-      '@dayopt/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
       '@tanstack/react-query':
         specifier: ^5.101.0
         version: 5.101.0(react@19.2.7)
@@ -627,15 +627,15 @@ importers:
       '@dayopt/billing':
         specifier: workspace:*
         version: link:../../packages/billing
+      '@dayopt/components':
+        specifier: workspace:*
+        version: link:../../packages/components
       '@dayopt/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@dayopt/foundations':
         specifier: workspace:*
         version: link:../../packages/foundations
-      '@dayopt/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
       '@hookform/resolvers':
         specifier: ^5.1.1
         version: 5.2.2(react-hook-form@7.79.0(react@19.2.7))
@@ -858,6 +858,34 @@ importers:
 
   packages/billing: {}
 
+  packages/components:
+    dependencies:
+      '@dayopt/assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@radix-ui/react-slot':
+        specifier: ^1.2.5
+        version: 1.2.5(@types/react@19.2.17)(react@19.2.7)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      react:
+        specifier: ^19
+        version: 19.2.7
+      tailwind-merge:
+        specifier: ^3.6.0
+        version: 3.6.0
+    devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.2.17
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   packages/config:
     devDependencies:
       typescript:
@@ -891,34 +919,6 @@ importers:
 
   packages/types:
     devDependencies:
-      typescript:
-        specifier: ^5
-        version: 5.9.3
-
-  packages/ui:
-    dependencies:
-      '@dayopt/assets':
-        specifier: workspace:*
-        version: link:../assets
-      '@radix-ui/react-slot':
-        specifier: ^1.2.5
-        version: 1.2.5(@types/react@19.2.17)(react@19.2.7)
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      react:
-        specifier: ^19
-        version: 19.2.7
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-    devDependencies:
-      '@types/react':
-        specifier: ^19
-        version: 19.2.17
       typescript:
         specifier: ^5
         version: 5.9.3

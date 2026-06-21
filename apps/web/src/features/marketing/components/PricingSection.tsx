@@ -10,7 +10,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@dayopt/ui';
+} from '@dayopt/components';
 import { Check } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 

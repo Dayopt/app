@@ -1,5 +1,5 @@
 import { Container } from '@/components/ui/container';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@dayopt/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@dayopt/components';
 import { Brain, Flame, Target } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 

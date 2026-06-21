@@ -2,7 +2,7 @@
 
 import { ErrorLayout } from '@/components/errors/ErrorLayout';
 import { isDevelopment } from '@/platform/config/env';
-import { Button } from '@dayopt/ui';
+import { Button } from '@dayopt/components';
 import Link from 'next/link';
 import { useEffect } from 'react';
 

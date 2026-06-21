@@ -9,7 +9,7 @@
 
 import { useEffect } from 'react';
 
-import { Button, Card } from '@dayopt/ui';
+import { Button, Card } from '@dayopt/components';
 import * as Sentry from '@sentry/nextjs';
 
 interface ErrorProps {

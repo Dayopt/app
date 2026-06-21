@@ -1,5 +1,5 @@
 import { Heading, Text } from '@/components/ui/typography';
-import { Button } from '@dayopt/ui';
+import { Button } from '@dayopt/components';
 import { getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
 import Link from 'next/link';
