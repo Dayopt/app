@@ -1,4 +1,3 @@
-import { Container } from '@/components/ui/container';
 import { Link } from '@/platform/i18n/navigation';
 import { dayoptPlans, dayoptPricing } from '@dayopt/billing';
 import {
@@ -10,6 +9,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  Container,
 } from '@dayopt/components';
 import { Check } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';

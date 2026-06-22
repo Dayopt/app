@@ -1,4 +1,4 @@
-import { Container } from '@/components/ui/container';
+import { Container } from '@dayopt/components';
 import { getTranslations } from 'next-intl/server';
 
 interface SolutionSectionProps {

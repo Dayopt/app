@@ -1,9 +1,7 @@
 'use client';
 
-import { Container } from '@/components/ui/container';
-import { Heading, Text } from '@/components/ui/typography';
 import { isDevelopment } from '@/platform/config/env';
-import { Button } from '@dayopt/components';
+import { Button, Container, Heading, Text } from '@dayopt/components';
 import { useEffect } from 'react';
 
 interface GlobalErrorProps {

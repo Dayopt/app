@@ -1,7 +1,7 @@
 import { generateEnhancedMetadata, StructuredData } from '@/components/seo/EnhancedSEO';
-import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
+import { Toaster } from '@dayopt/components';
 import { dayoptBrand, dayoptContact } from '@dayopt/config';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';

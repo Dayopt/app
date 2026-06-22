@@ -1,7 +1,7 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import { TagPill } from '@/components/ui/tag-pill';
+import { Button } from '@dayopt/components';
 import { X } from 'lucide-react';
 import { useState } from 'react';
 

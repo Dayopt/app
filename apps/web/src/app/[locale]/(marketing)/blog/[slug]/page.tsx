@@ -1,5 +1,4 @@
 import { createMDXComponents } from '@/components/content/ContentMDXComponents';
-import { Container } from '@/components/ui/container';
 import { TagPill } from '@/components/ui/tag-pill';
 import {
   RelatedPosts,
@@ -12,6 +11,7 @@ import { ClientTableOfContents } from '@/features/docs';
 import { Link } from '@/platform/i18n/navigation';
 import { routing } from '@/platform/i18n/routing';
 import { generateSEOMetadata } from '@/platform/seo/metadata';
+import { Container } from '@dayopt/components';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { MDXRemote } from 'next-mdx-remote/rsc';

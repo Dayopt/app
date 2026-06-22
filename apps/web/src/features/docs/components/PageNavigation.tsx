@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
 import { ContentData } from '@/types/content';
+import { Button } from '@dayopt/components';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
