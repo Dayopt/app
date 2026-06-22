@@ -2,8 +2,8 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { HoverTooltip } from '@dayopt/components';
 import { useTranslations } from 'next-intl';
 
 export type NavigationDirection = 'prev' | 'next' | 'today';

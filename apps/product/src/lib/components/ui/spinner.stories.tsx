@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 
-import { Button } from './button';
-import { Spinner } from './spinner';
+import { Button, Spinner } from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Spinner',

@@ -3,8 +3,8 @@ import { addDays } from 'date-fns';
 import { CalendarDays } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button } from '@/lib/components/ui/button';
 import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
+import { Button } from '@dayopt/components';
 import { withWrapper } from '@dayopt/storybook/decorators';
 
 const meta = {

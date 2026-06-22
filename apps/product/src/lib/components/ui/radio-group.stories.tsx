@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 
-import { Label } from './label';
-import { RadioGroup, RadioGroupItem } from './radio-group';
+import { Label, RadioGroup, RadioGroupItem } from '@dayopt/components';
 
 /** RadioGroup - ラジオボタングループ（単一選択）。2-4個の選択肢に適切、5個以上はSelectを使用。 */
 const meta = {

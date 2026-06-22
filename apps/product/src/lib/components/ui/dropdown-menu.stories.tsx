@@ -12,8 +12,8 @@ import {
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Button } from './button';
 import {
+  Button,
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -27,8 +27,8 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from './dropdown-menu';
-import { Input } from './input';
+  Input,
+} from '@dayopt/components';
 
 /** DropdownMenu - ドロップダウンメニュー。ラベル使用ルールはGAFA準拠（Material Design 3, Apple HIG）。 */
 const meta = {

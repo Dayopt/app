@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { WifiOff } from 'lucide-react';
 
 import { ErrorState } from '@/lib/components/common/ErrorState';
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 /**
  * インラインエラー状態のパターンカタログ

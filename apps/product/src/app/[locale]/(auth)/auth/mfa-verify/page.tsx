@@ -12,9 +12,9 @@ import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
 import { MFAVerifyForm } from '@/features/auth';
-import { Button } from '@/lib/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { vanillaTrpc } from '@/lib/trpc/client';
+import { Button } from '@dayopt/components';
 
 type VerifyMode = 'totp' | 'recovery';
 

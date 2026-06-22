@@ -13,9 +13,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from './alert-dialog';
-import { Button } from './button';
-import { Input } from './input';
+  Button,
+  Input,
+} from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Overlays/AlertDialog',

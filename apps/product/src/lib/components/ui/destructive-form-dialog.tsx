@@ -4,6 +4,8 @@ import { type ReactNode, useCallback, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -11,17 +13,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/lib/components/ui/alert-dialog';
-import { Button } from '@/lib/components/ui/button';
-import {
+  Button,
   Drawer,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from '@/lib/components/ui/drawer';
-import { useIsMobile } from '@/lib/hooks/useIsMobile';
-import { cn } from '@/lib/utils';
+} from '@dayopt/components';
 
 interface DestructiveFormDialogProps {
   /** ダイアログが開いているかどうか */

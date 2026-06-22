@@ -2,9 +2,8 @@ import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { Button } from './button';
+import { Button, RadioGroup, RadioGroupItem } from '@dayopt/components';
 import { DestructiveFormDialog } from './destructive-form-dialog';
-import { RadioGroup, RadioGroupItem } from './radio-group';
 
 const meta = {
   title: 'Components/UI/Overlays/DestructiveFormDialog',

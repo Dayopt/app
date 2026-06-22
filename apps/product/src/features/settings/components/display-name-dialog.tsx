@@ -5,21 +5,21 @@ import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
-import { Button } from '@/lib/components/ui/button';
+import { logger } from '@/lib/logger';
+import { createClient } from '@/lib/supabase/client';
+import { toast } from '@/lib/toast';
+import { api } from '@/lib/trpc';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/lib/components/ui/dialog';
-import { Input } from '@/lib/components/ui/input';
-import { Label } from '@/lib/components/ui/label';
-import { logger } from '@/lib/logger';
-import { createClient } from '@/lib/supabase/client';
-import { toast } from '@/lib/toast';
-import { api } from '@/lib/trpc';
+  Input,
+  Label,
+} from '@dayopt/components';
 
 interface DisplayNameDialogProps {
   open: boolean;

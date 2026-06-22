@@ -1,7 +1,7 @@
 import { toast } from '@/lib/toast';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { Button } from './button';
+import { Button } from '@dayopt/components';
 import { Toaster } from './toast';
 
 const meta = {

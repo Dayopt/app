@@ -17,8 +17,8 @@ import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Input } from '@/lib/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Input } from '@dayopt/components';
 import { getTagColorClasses } from '../lib/tag-colors';
 
 import { buildTagTree } from '../domain/tag-tree';

@@ -23,17 +23,19 @@ import {
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/lib/components/ui/popover';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
+import { cn } from '@/lib/utils';
 import {
+  Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/lib/components/ui/select';
-import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { cn } from '@/lib/utils';
+} from '@dayopt/components';
 
 interface MiniCalendarProps {
   selectedDate?: Date | undefined;

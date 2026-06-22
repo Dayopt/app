@@ -4,8 +4,7 @@ import { expect, userEvent, within } from 'storybook/test';
 
 import { getTagColorClasses } from '@/features/tags';
 
-import { Checkbox } from './checkbox';
-import { Label } from './label';
+import { Checkbox, Label } from '@dayopt/components';
 
 const greenColor = getTagColorClasses('green');
 

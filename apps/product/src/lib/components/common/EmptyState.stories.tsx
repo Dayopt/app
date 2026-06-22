@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { CalendarDays, Inbox } from 'lucide-react';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 import { withWrapper } from '@dayopt/storybook/decorators';
 import { EmptyState } from './EmptyState';

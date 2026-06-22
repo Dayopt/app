@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Flame, MoreHorizontal, Trophy } from 'lucide-react';
 
-import { Button } from './button';
 import {
+  Button,
   Card,
   CardAction,
   CardContent,
@@ -10,10 +10,10 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from './card';
-import { Input } from './input';
-import { Label } from './label';
-import { Skeleton } from './skeleton';
+  Input,
+  Label,
+  Skeleton,
+} from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Card',

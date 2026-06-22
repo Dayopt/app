@@ -16,9 +16,8 @@ import { Suspense, useCallback } from 'react';
 
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { ErrorState } from '@/lib/components/common/ErrorState';
-import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
-import { Spinner } from '@/lib/components/ui/spinner';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { Drawer, DrawerContent, DrawerTitle, Spinner } from '@dayopt/components';
 import { useEntry } from '../../hooks/useEntry';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
 import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';

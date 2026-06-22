@@ -7,6 +7,9 @@ import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { LabeledRow } from '@/lib/components/common/LabeledRow';
+import { logger } from '@/lib/logger';
+import { createClient } from '@/lib/supabase/client';
+import { api } from '@/lib/trpc';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,12 +19,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/lib/components/ui/alert-dialog';
-import { Button } from '@/lib/components/ui/button';
-import { Input } from '@/lib/components/ui/input';
-import { logger } from '@/lib/logger';
-import { createClient } from '@/lib/supabase/client';
-import { api } from '@/lib/trpc';
+  Button,
+  Input,
+} from '@dayopt/components';
 
 /**
  * 🗑️ Account Deletion Dialog Component

@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { Button } from '@/lib/components/ui/button';
-import { Input } from '@/lib/components/ui/input';
+import { Button, Input } from '@dayopt/components';
 
 const meta = {
   title: 'Foundations/States',

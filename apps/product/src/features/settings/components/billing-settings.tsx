@@ -20,6 +20,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ErrorState } from '@/lib/components/common/ErrorState';
 import { LabeledRow } from '@/lib/components/common/LabeledRow';
 import { SectionCard } from '@/lib/components/common/SectionCard';
+import { api } from '@/lib/trpc';
+import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,11 +32,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/lib/components/ui/alert-dialog';
-import { Button } from '@/lib/components/ui/button';
-import { Skeleton } from '@/lib/components/ui/skeleton';
-import { api } from '@/lib/trpc';
-import { cn } from '@/lib/utils';
+  Button,
+  Skeleton,
+} from '@dayopt/components';
 
 interface Plan {
   id: DayoptPlanId;

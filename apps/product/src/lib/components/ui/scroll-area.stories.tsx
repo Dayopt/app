@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { ScrollArea, ScrollBar } from './scroll-area';
-import { Separator } from './separator';
+import { ScrollArea, ScrollBar, Separator } from '@dayopt/components';
 
 /** ScrollArea - カスタムスクロールエリア */
 const meta = {

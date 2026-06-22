@@ -2,13 +2,13 @@ import type { Metadata } from 'next';
 
 import { getTranslations } from 'next-intl/server';
 
-import { Button } from '@/lib/components/ui/button';
 import {
   validateAuthorizeInput,
   type AuthorizeValidationError,
   type SupportedScope,
 } from '@/lib/oauth-server';
 import { createClient } from '@/lib/supabase/server';
+import { Button } from '@dayopt/components';
 
 import { OAuthErrorPanel } from '../_components/OAuthErrorPanel';
 import { processConsent } from './actions';

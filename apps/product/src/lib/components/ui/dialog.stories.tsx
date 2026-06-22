@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Button } from './button';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -10,9 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from './dialog';
-import { Input } from './input';
-import { Label } from './label';
+  Input,
+  Label,
+} from '@dayopt/components';
 
 /**
  * Dialog - モーダルダイアログ。

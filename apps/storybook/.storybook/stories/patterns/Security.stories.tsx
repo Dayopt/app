@@ -16,8 +16,8 @@ import {
 import { useState } from 'react';
 
 import { MFAVerifyForm, SessionTimeoutDialog } from '@/features/auth';
-import { Button } from '@/lib/components/ui/button';
 import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
+import { Button } from '@dayopt/components';
 
 /**
  * セキュリティパターンカタログ

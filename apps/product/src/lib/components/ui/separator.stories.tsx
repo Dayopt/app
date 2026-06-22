@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
+import { Separator } from '@dayopt/components';
 import { withWrapper } from '@dayopt/storybook/decorators';
-import { Separator } from './separator';
 
 const meta = {
   title: 'Components/UI/Separator',

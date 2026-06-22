@@ -22,6 +22,8 @@ import {
   TagIcon,
   useUpdateTag,
 } from '@/features/tags';
+import { useShellStore } from '@/lib/stores/useShellStore';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,9 +33,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@/lib/components/ui/dropdown-menu';
-import { useShellStore } from '@/lib/stores/useShellStore';
-import { cn } from '@/lib/utils';
+} from '@dayopt/components';
 
 interface GroupOption {
   id: string;

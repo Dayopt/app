@@ -3,7 +3,7 @@
 import { Download, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 interface InstallBannerProps {
   onInstall: () => void;

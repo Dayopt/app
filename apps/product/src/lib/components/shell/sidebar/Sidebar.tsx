@@ -5,9 +5,8 @@ import Image from 'next/image';
 import type { ReactNode } from 'react';
 
 import { APP_NAME } from '@/lib/app-info';
-import { Button } from '@/lib/components/ui/button';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { Button, HoverTooltip } from '@dayopt/components';
 import { useTranslations } from 'next-intl';
 
 import { UserMenu } from './UserMenu';

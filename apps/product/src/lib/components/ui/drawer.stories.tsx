@@ -3,8 +3,8 @@ import { Calendar, CheckSquare, FileText, History } from 'lucide-react';
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Button } from './button';
 import {
+  Button,
   Drawer,
   DrawerClose,
   DrawerContent,
@@ -13,7 +13,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from './drawer';
+} from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Drawer',

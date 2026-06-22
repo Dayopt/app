@@ -8,8 +8,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/lib/components/ui/select';
-import { Switch } from '@/lib/components/ui/switch';
+  Switch,
+} from '@dayopt/components';
 
 import { getTimeZones } from '@/lib/timezone-utils';
 

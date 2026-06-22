@@ -3,11 +3,19 @@
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 
-import { Button } from '@/lib/components/ui/button';
-import { Card, CardContent } from '@/lib/components/ui/card';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/lib/components/ui/field';
-import { Input } from '@/lib/components/ui/input';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/lib/components/ui/input-otp';
+import {
+  Button,
+  Card,
+  CardContent,
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  Input,
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@dayopt/components';
 
 type VerifyMode = 'totp' | 'recovery';
 

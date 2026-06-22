@@ -10,14 +10,14 @@ import {
   Trash2,
 } from 'lucide-react';
 
-import { Button } from '@/lib/components/ui/button';
 import {
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/lib/components/ui/dropdown-menu';
+} from '@dayopt/components';
 
 const meta = {
   title: 'Patterns/Actions',

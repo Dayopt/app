@@ -2,8 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Filter, Info, Search, Settings, SortAsc } from 'lucide-react';
 import { expect, within } from 'storybook/test';
 
-import { Button } from './button';
-import { HoverTooltip } from './tooltip';
+import { Button, HoverTooltip } from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Tooltip',

@@ -9,8 +9,8 @@ import * as React from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { type FileRejection, useDropzone } from 'react-dropzone';
 
-import { Button } from '@/lib/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Button } from '@dayopt/components';
 
 /**
  * アバターサイズ定義

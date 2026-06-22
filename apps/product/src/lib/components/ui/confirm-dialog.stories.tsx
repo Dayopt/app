@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Button } from './button';
+import { Button } from '@dayopt/components';
 import { ConfirmDialog } from './confirm-dialog';
 
 const meta = {

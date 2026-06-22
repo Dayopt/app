@@ -11,8 +11,8 @@ import { fn } from 'storybook/test';
 import { ChevronRight, Moon, PanelLeft, Plus, Search } from 'lucide-react';
 
 import { getTagColorClasses } from '@/features/tags';
-import { Checkbox } from '@/lib/components/ui/checkbox';
 import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
+import { Checkbox } from '@dayopt/components';
 
 import { TagIcon } from '@/features/tags';
 

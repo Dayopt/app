@@ -2,10 +2,15 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Button } from './button';
-import { Input } from './input';
-import { Label } from './label';
-import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './popover';
+import {
+  Button,
+  Input,
+  Label,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
+} from '@dayopt/components';
 
 /** Popover - ポップオーバー。PopoverTrigger（ボタン開閉）とPopoverAnchor（Input開閉）の2パターンを提供。 */
 const meta = {

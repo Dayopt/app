@@ -7,7 +7,7 @@ import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 /**
  * Cookie同意バナー

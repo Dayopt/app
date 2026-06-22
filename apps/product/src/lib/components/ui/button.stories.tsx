@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { ChevronLeft, ChevronRight, Plus, Settings, Trash2, X } from 'lucide-react';
 
-import { Button } from './button';
+import { Button } from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Button',

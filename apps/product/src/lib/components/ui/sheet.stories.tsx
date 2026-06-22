@@ -3,8 +3,7 @@ import { Calendar, CheckSquare, Menu, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Button } from './button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from './sheet';
+import { Button, Sheet, SheetContent, SheetHeader, SheetTitle } from '@dayopt/components';
 
 /**
  * Sheet - スライドインパネル。

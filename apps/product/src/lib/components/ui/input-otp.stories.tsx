@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 
-import { InputOTP, InputOTPGroup, InputOTPSlot } from './input-otp';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/InputOTP',

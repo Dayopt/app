@@ -3,8 +3,7 @@ import { Search, Tag } from 'lucide-react';
 
 import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
-import { Button } from '@/lib/components/ui/button';
-import { Input } from '@/lib/components/ui/input';
+import { Button, Input } from '@dayopt/components';
 
 import type { AuditEntry } from './_data/copywriting-audit';
 import {

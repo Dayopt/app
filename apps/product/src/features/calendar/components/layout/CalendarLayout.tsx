@@ -4,23 +4,23 @@ import { useTranslations } from 'next-intl';
 import { memo, useCallback, useState } from 'react';
 
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { cn } from '@/lib/utils';
 import {
   Drawer,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from '@/lib/components/ui/drawer';
-import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
-import { cn } from '@/lib/utils';
+} from '@dayopt/components';
 
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
 import { DateNavigator } from '@/lib/components/common/DateNavigator';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
-import { InlineBanner } from '@/lib/components/ui/inline-banner';
 import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
+import { InlineBanner } from '@dayopt/components';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type { CalendarViewType } from '../../types/calendar.types';
 

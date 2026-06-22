@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Trash2 } from 'lucide-react';
 
-import { Button } from './button';
+import { Button } from '@dayopt/components';
 
-import { ActionFooter } from './action-footer';
+import { ActionFooter } from '@dayopt/components';
 
 /**
  * ActionFooter - ダイアログ・モーダル・パネルのアクションボタン群レイアウト。

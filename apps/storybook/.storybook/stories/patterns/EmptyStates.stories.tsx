@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Calendar, FolderOpen, Inbox, Search, Tag } from 'lucide-react';
 
 import { EmptyState } from '@/lib/components/common/EmptyState';
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 const meta = {
   title: 'Patterns/EmptyStates',

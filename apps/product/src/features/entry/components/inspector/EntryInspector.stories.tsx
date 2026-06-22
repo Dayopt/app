@@ -10,8 +10,7 @@ import type { ReactNode } from 'react';
 // Story 内のみ: Composition Layer 連携プレビュー用
 import { EntryMicroInsight } from '@/features/review';
 
-import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
-import { Spinner } from '@/lib/components/ui/spinner';
+import { Drawer, DrawerContent, DrawerTitle, Spinner } from '@dayopt/components';
 import { DateRow, NoteSection, TimeDiffBlock, TimeRow } from './fields';
 import { InspectorFrame, MockTagRow } from './story-helpers';
 

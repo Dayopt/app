@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { ChevronDown, ChevronRight, Clock } from 'lucide-react';
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Collapsible',

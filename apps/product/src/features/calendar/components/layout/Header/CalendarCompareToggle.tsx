@@ -3,9 +3,8 @@
 import { GitCompareArrows } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { Button, HoverTooltip } from '@dayopt/components';
 
 interface CalendarCompareToggleProps {
   checked: boolean;

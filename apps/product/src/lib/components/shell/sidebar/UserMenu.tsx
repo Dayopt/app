@@ -22,6 +22,11 @@ import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
 
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
+import { useLogout } from '@/lib/hooks/useLogout';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useRouter } from '@/lib/i18n/navigation';
+import { useShellStore } from '@/lib/stores/useShellStore';
+import { getInitials } from '@/lib/user';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,12 +38,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@/lib/components/ui/dropdown-menu';
-import { useLogout } from '@/lib/hooks/useLogout';
-import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
-import { useRouter } from '@/lib/i18n/navigation';
-import { useShellStore } from '@/lib/stores/useShellStore';
-import { getInitials } from '@/lib/user';
+} from '@dayopt/components';
 import { useLocale, useTranslations } from 'next-intl';
 
 import type { SettingsCategory } from '@/lib/types/settings';

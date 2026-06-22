@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 
-import { Button } from './button';
-import { InlineBanner } from './inline-banner';
+import { Button, InlineBanner } from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Notifications/InlineBanner',

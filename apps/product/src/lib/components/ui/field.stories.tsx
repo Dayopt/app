@@ -8,8 +8,8 @@ import {
   FieldLabel,
   FieldSeparator,
   FieldSupportText,
-} from './field';
-import { Input } from './input';
+  Input,
+} from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Field',

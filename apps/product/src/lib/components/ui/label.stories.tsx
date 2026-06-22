@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { Checkbox } from './checkbox';
-import { Input } from './input';
-import { Label } from './label';
+import { Checkbox, Input, Label } from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Label',

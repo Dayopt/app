@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, fn, within } from 'storybook/test';
 
-import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger } from '@dayopt/components';
 
 import { FilterItemMenu, UntaggedItemMenu } from './FilterItemMenu';
 

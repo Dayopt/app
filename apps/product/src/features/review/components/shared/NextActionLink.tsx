@@ -4,7 +4,7 @@ import { ArrowRight } from 'lucide-react';
 
 import Link from 'next/link';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 /**
  * NextActionLink — Review から次の計画（Calendar）への還流導線

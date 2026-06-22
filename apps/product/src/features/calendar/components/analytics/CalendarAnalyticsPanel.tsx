@@ -4,15 +4,15 @@ import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { TagIcon, useTags } from '@/features/tags';
-import { Button } from '@/lib/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
+  Button,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/lib/components/ui/select';
-import { cn } from '@/lib/utils';
+} from '@dayopt/components';
 
 const ALL_SCOPE_VALUE = '__all__';
 

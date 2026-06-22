@@ -31,9 +31,8 @@ import {
   useUpdateTag,
 } from '@/features/tags';
 import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
-import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/components';
 
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 

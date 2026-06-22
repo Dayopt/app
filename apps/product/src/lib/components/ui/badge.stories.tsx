@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { Badge } from './badge';
+import { Badge } from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Badge',

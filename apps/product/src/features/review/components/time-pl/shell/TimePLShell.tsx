@@ -3,9 +3,8 @@
 import { FileSpreadsheet } from 'lucide-react';
 
 import { EmptyState } from '@/lib/components/common/EmptyState';
-import { Card, CardContent, CardHeader } from '@/lib/components/ui/card';
-import { Skeleton } from '@/lib/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, Skeleton } from '@dayopt/components';
 
 import { getAccuracyColors } from '../data/timePL.presentation';
 

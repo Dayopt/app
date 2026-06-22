@@ -32,10 +32,9 @@ import {
   useTagsHierarchy,
 } from '@/features/tags';
 import { SidebarSection } from '@/lib/components/shell/sidebar';
-import { Skeleton } from '@/lib/components/ui/skeleton';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
+import { HoverTooltip, Skeleton } from '@dayopt/components';
 
 import { buildReviewMainPath, buildReviewTagPath } from '../../lib/date-param';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';

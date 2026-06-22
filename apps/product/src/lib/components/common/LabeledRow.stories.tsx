@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { Switch } from '@/lib/components/ui/switch';
+import { Switch } from '@dayopt/components';
 import { withWrapper } from '@dayopt/storybook/decorators';
 
 import { LabeledRow } from './LabeledRow';

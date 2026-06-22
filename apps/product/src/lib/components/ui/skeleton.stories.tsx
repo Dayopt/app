@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { Card, CardContent, CardHeader } from './card';
-import { Skeleton } from './skeleton';
+import { Card, CardContent, CardHeader, Skeleton } from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Skeleton',

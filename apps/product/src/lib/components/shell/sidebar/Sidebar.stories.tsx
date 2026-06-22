@@ -2,9 +2,8 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { PanelLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/lib/components/ui/button';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { Button, HoverTooltip } from '@dayopt/components';
 
 import { withWrapper } from '@dayopt/storybook/decorators';
 

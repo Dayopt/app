@@ -2,8 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 
-import { Field, FieldError, FieldLabel } from './field';
-import { Input } from './input';
+import { Field, FieldError, FieldLabel, Input } from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Input',

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@dayopt/components';
 
 const meta = {
   title: 'Components/UI/Tabs',

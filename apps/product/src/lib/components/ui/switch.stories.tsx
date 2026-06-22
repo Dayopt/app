@@ -2,8 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Label } from './label';
-import { Switch } from './switch';
+import { Label, Switch } from '@dayopt/components';
 
 /** Switch - トグルスイッチ（ON/OFF切替）。即座に反映される設定に使用、フォーム送信後に反映する場合はCheckboxを使用。 */
 const meta = {

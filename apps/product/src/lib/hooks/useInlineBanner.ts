@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 
 import { useServiceWorker } from '@/lib/hooks/useServiceWorker';
 
-import type { InlineBannerAction } from '@/lib/components/ui/inline-banner';
+import type { InlineBannerAction } from '@dayopt/components';
 
 interface InlineBannerState {
   visible: boolean;
