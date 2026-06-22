@@ -24,6 +24,7 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "lint:i18n": "tsx ../../scripts/check-i18n-integrity.ts",
+    "copy:check": "tsx ../../scripts/i18n/check-glossary.ts",
     "i18n:add-locale": "tsx ../../scripts/add-locale.ts",
     "docs:check": "tsx ../../scripts/validate-doc-references.ts",
     "api:spec": "NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy SUPABASE_SERVICE_ROLE_KEY=dummy tsx ../../scripts/generate-api-spec.ts",
