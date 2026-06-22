@@ -1,7 +1,7 @@
 import { Symbol, Wordmark } from '@dayopt/assets';
 import * as React from 'react';
 
-import { cn } from './cn';
+import { cn } from '../cn';
 
 export interface LogoProps extends React.ComponentProps<'div'> {
   label?: string;
