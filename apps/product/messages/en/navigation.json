@@ -24,11 +24,6 @@
         "search": "Search"
       }
     },
-    "bottomTab": {
-      "calendar": "Calendar",
-      "stats": "Review",
-      "account": "Account"
-    },
     "navUser": {
       "myAccount": "My Account",
       "account": "Account",

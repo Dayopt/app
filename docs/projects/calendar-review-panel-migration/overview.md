@@ -43,10 +43,12 @@ Calendar の search params を正規状態とする。panel は単一 slot で�
 
 ### Mobile
 
-- BottomTabBar は Calendar / Account の 2 タブにする。
-- Review タブは削除する。
+- BottomTabBar は削除する。
+- Sidebar toggle は mobile に出さない。
+- Account は右上の account icon から `/settings` へ遷移する。
+- Review タブは作らない。
 - `ReviewTagChipRow` は削除する。
-- Calendar の `TagChipRow` は entry create 用に一本化する。
+- Calendar の `TagChipRow` は entry create 用の mobile footer に一本化する。
 - Review は Calendar header の panel action から開く。
 
 ## 4. Review Panel

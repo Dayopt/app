@@ -24,7 +24,7 @@ function sortActiveTags(tags: Tag[] | undefined): Tag[] {
 /**
  * モバイル専用タグチップ行。
  *
- * - タイムライン下部・タブバー上に横一列で並ぶ（親タグ・葉タグ混在）
+ * - タイムライン下部の固定フッターに横一列で並ぶ（親タグ・葉タグ混在）
  * - タップで bottom sheet `TagEntryCreatePopover` を開き、時刻指定してエントリ作成
  * - 行末に「+」ボタンを置き `useShellStore.openTagCreateModal()` で新規タグ作成
  * - データソース: `useTags()`（sidebar と同じ cache を参照、追加 fetch ゼロ）
@@ -55,14 +55,11 @@ export function TagChipRow({ className }: TagChipRowProps) {
   return (
     <div
       className={cn(
-        'bg-surface-container border-border-subtle z-bottom-tab fixed inset-x-0 flex h-14 items-center gap-1 overflow-x-auto border-t px-2',
+        'bg-surface-container border-border-subtle z-bottom-tab pb-safe fixed inset-x-0 bottom-0 flex min-h-14 items-center gap-1 overflow-x-auto border-t px-2 pt-1',
         // タップ領域を広く保ちつつ、横スクロール時のバウンスを抑える + スクロールバー非表示
         'scrollbar-hide overscroll-x-contain',
         className,
       )}
-      style={{
-        bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))',
-      }}
       role="list"
       aria-label={t('calendar.filter.quickCreate')}
     >

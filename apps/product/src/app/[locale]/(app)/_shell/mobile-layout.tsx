@@ -10,7 +10,7 @@ import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
-import { BottomTabBar } from './BottomTabBar';
+import { ConnectedMobileAccountButton } from './MobileAccountButton';
 import { useAppInlineBanner } from './useAppInlineBanner';
 
 import { MainContentWrapper } from './main-content-wrapper';
@@ -25,8 +25,8 @@ interface MobileLayoutProps {
  *
  * **構成**:
  * - AppHeader（ナビゲーション）
- * - MainContent（pb-16でBottomTabBar分の余白確保）
- * - BottomTabBar（固定ボトムタブ、常時表示）
+ * - MainContent
+ * - TagChipRow（Calendar のみ、固定フッター）
  */
 export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
   const t = useTranslations('common.inlineBanner');
@@ -65,7 +65,7 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
       <div className="flex h-full flex-1 flex-col">
         {/* AppHeader（Calendar は独自ヘッダーを持つため非表示） */}
         {!hasOwnHeader && (
-          <AppHeader>
+          <AppHeader rightSlot={<ConnectedMobileAccountButton />}>
             {title && <h1 className="truncate text-lg leading-8 font-medium">{title}</h1>}
           </AppHeader>
         )}
@@ -76,17 +76,16 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
         {/* モバイル閲覧専用の告知（calendar） */}
         {isDesktopOnlyEditPage && <InlineBanner visible message={t('mobileReadOnly')} />}
 
-        {/* Main Content（calendar view ではタグ行 + BottomTabBar 分の余白を確保） */}
-        <MainContentWrapper className={isCalendarView ? 'pb-32' : 'pb-16'}>
-          {children}
-        </MainContentWrapper>
+        {/* Main Content（calendar view ではタグフッター分の余白を確保） */}
+        {isCalendarView ? (
+          <MainContentWrapper className="pb-16">{children}</MainContentWrapper>
+        ) : (
+          <MainContentWrapper>{children}</MainContentWrapper>
+        )}
       </div>
 
       {/* calendar: タグタップで予定作成 popover */}
       {isCalendarView && <TagChipRow />}
-
-      {/* ボトムタブナビゲーション */}
-      <BottomTabBar />
     </>
   );
 }

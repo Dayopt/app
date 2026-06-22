@@ -25,6 +25,7 @@ import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
 import { Button } from '@/lib/components/ui/button';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { ConnectedMobileAccountButton } from '../../../_shell/MobileAccountButton';
 import { useCalendarComposition } from './useCalendarComposition';
 
 interface CalendarViewClientProps {
@@ -72,12 +73,12 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
     changeView,
   });
 
-  // サイドバーが閉じているときに表示するトグルボタン
+  // Sidebar は desktop 専用。mobile は header action と tag footer だけにする。
   const sidebarToggle = !sidebar.open ? (
     <button
       type="button"
       onClick={toggleSidebar}
-      className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg transition-colors"
+      className="hover:bg-state-hover hidden size-8 items-center justify-center rounded-lg transition-colors md:flex"
       aria-label="Open sidebar"
     >
       <PanelLeft className="size-4" />
@@ -156,6 +157,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
       {reviewToggle}
       {analyticsToggle}
       {compareToggle}
+      <ConnectedMobileAccountButton className="md:hidden" />
     </>
   );
   const analyticsPanel = (
