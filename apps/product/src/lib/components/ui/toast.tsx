@@ -63,7 +63,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
       visibleToasts={1}
       duration={3000}
       containerAriaLabel={t('toastContainer')}
-      // eslint-disable-next-line tailwindcss/no-arbitrary-value -- CSS custom property override for Sonner --width
       className={isMobile ? '' : '[--width:360px]'}
       offset={isMobile ? { top: 16 } : { top: 16, right: 16 }}
       mobileOffset={{ top: 16, left: 16, right: 16 }}
