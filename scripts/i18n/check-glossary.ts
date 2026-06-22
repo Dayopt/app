@@ -54,6 +54,8 @@ const MIGRATION_TARGETS: ForbiddenTerm[] = [
   { term: 'タスク', preferred: 'エントリ', migration: true },
   { term: 'ログイン', preferred: 'サインイン', migration: true },
   { term: 'ログアウト', preferred: 'サインアウト', migration: true },
+  // タグの代替として使うカテゴリは禁止。ただし法的文書・問い合わせフォーム等の文脈は許容で既存違反も多いため移行対象
+  { term: 'カテゴリ', preferred: 'タグ', migration: true },
 ];
 
 // ─── JSON 走査ユーティリティ ───
@@ -63,7 +65,11 @@ function getAllStringValues(obj: unknown, prefix = ''): Array<{ keyPath: string;
 
   if (typeof obj === 'string') {
     results.push({ keyPath: prefix, value: obj });
-  } else if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+  } else if (Array.isArray(obj)) {
+    obj.forEach((item, i) => {
+      results.push(...getAllStringValues(item, prefix ? `${prefix}[${i}]` : `[${i}]`));
+    });
+  } else if (obj && typeof obj === 'object') {
     for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
       const path = prefix ? `${prefix}.${key}` : key;
       results.push(...getAllStringValues(val, path));
