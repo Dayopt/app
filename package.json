@@ -71,6 +71,7 @@
     "test:e2e:headed": "pnpm --filter @dayopt/product test:e2e:headed",
     "i18n:check": "pnpm --filter @dayopt/product i18n:check",
     "i18n:unused": "pnpm --filter @dayopt/product i18n:unused",
+    "copy:check": "tsx scripts/i18n/check-glossary.ts",
     "vercel:env": "vercel env ls",
     "vercel:env:pull:unsafe": "vercel env pull apps/product/.env.local --environment preview",
     "deps:check": "pnpm --filter @dayopt/product deps:check",
