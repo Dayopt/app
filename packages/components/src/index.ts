@@ -20,6 +20,7 @@ export { Logo, type LogoProps } from './primitives/logo';
 export { Separator } from './primitives/separator';
 export { Skeleton } from './primitives/skeleton';
 export { Spinner } from './primitives/spinner';
+export { HoverTooltip } from './primitives/tooltip';
 export { Heading, Text, type HeadingProps, type TextProps } from './primitives/typography';
 export { VisuallyHidden, type VisuallyHiddenProps } from './primitives/visually-hidden';
 
@@ -47,6 +48,7 @@ export {
 export { Input } from './forms/input';
 export { InputOTP, InputOTPGroup, InputOTPSlot } from './forms/input-otp';
 export { RadioGroup, RadioGroupItem } from './forms/radio-group';
+export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './forms/select';
 export { Switch } from './forms/switch';
 export { Textarea } from './forms/textarea';
 
@@ -137,6 +139,16 @@ export {
 } from './layout/pagination';
 export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './layout/popover';
 export { ScrollArea, ScrollBar } from './layout/scroll-area';
+export {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from './layout/sheet';
 export {
   Tabs,
   TabsContent,
