@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test';
  * ClientPageRouter 撤去後、基本ルートへの deep link が SSR で正常描画され
  * Sidebar が初回レンダリングから表示されることを検証。
  *
- * /review/tags/[tagId] の tagId 動的取得は tag feature E2E で対応。
+ * Review は独立ページではなく Calendar panel として deep link する。
  */
 
 const SKIP_AUTH_TESTS = !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD;
@@ -24,29 +24,29 @@ async function loginAndNavigate(page: import('@playwright/test').Page) {
   await passwordInput.fill(process.env.TEST_USER_PASSWORD!);
   await submitButton.click();
 
-  await page.waitForURL(/\/(calendar|review)/i, { timeout: 15000 });
+  await page.waitForURL(/\/calendar/i, { timeout: 15000 });
 }
 
 test.describe('Deep Link: SSR rendering of app routes', () => {
   test.skip(SKIP_AUTH_TESTS, 'TEST_USER_EMAIL / TEST_USER_PASSWORD が未設定');
 
-  test('review renders with sidebar on direct access', async ({ page }, testInfo) => {
+  test('calendar review panel renders with sidebar on direct access', async ({
+    page,
+  }, testInfo) => {
     test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only');
 
     await loginAndNavigate(page);
 
-    // 直接 /review に遷移
-    await page.goto('/ja/review');
+    // 直接 Calendar review panel に遷移
+    await page.goto('/ja/calendar/week?date=2026-04-20&panel=review');
     await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/\/ja\/review/);
+    await expect(page).toHaveURL(/\/ja\/calendar\/week\?date=2026-04-20&panel=review/);
 
     // Sidebar が SSR から表示されている
     const sidebar = page.locator('[role="navigation"]').first();
     await expect(sidebar).toBeVisible();
 
-    // Review link が aria-current="page"
-    const reviewLink = page.getByRole('link', { name: /振り返り|Review/i }).first();
-    await expect(reviewLink).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { name: /振り返り|Review/i }).first()).toBeVisible();
   });
 
   test('calendar week renders with sidebar on direct access', async ({ page }, testInfo) => {
