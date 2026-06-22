@@ -1,6 +1,6 @@
 ---
 name: i18n
-description: UI テキストを含む component の新規実装・編集時、ハードコードされた日本語/英語の文字列リテラルを検出した時、`apps/product/messages/en/*.json` / `apps/product/messages/ja/*.json` 翻訳ファイルを編集する時、新規 locale namespace を `apps/product/src/lib/i18n/request.ts` に追加する時に発動。next-intl v4 の `useTranslations` / `getTranslations` パターンを適用する。内部ログやエラーコードなど非 UI 文字列には発動しない。
+description: UI テキストを含む component の新規実装・編集時、ハードコードされた日本語/英語の文字列リテラルを検出した時、`apps/product/messages/en/*.json` / `apps/product/messages/ja/*.json` 翻訳ファイルを編集する時、`docs/glossary/terms.md` の用語確認や `docs/glossary/forbidden-terms.md` の禁止語チェックが必要な時に発動。next-intl v4 の `useTranslations` / `getTranslations` パターンを適用し、Copy System のルール（用語集・禁止表記）に従う。内部ログやエラーコードなど非 UI 文字列には発動しない。
 effort: low
 maxTurns: 10
 ---
@@ -15,9 +15,9 @@ Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 
 - 新規 component で UI テキスト（ボタン文言、ラベル、placeholder、aria-label）を書く時
 - `apps/product/messages/en/*.json` / `apps/product/messages/ja/*.json` に新規キーを追加する時
-- 新規 namespace を `apps/product/src/lib/i18n/request.ts` の `NAMESPACES` 配列に登録する時
 - 既存 component で日本語/英語のハードコード文字列リテラル（`"記録"` / `"Save"` など）を検出した時
 - en / ja のキー不整合（片方にしか存在しないキー、`lint:i18n` で検出される類）が発生した時
+- `docs/glossary/terms.md` を参照して用語の正しい表記を確認する時
 
 ## When NOT to Use
 
@@ -34,46 +34,53 @@ Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 | デフォルト | English                                |
 | URL方式    | as-needed（/ja/\* のみプレフィックス） |
 
+## Copy System — 用語集と禁止表記
+
+**最初に確認する**:
+
+1. [`docs/glossary/terms.md`](../../../docs/glossary/terms.md) — UI で使う言葉の正解（エントリ / 予定 / 記録 / タグ等）
+2. [`docs/glossary/forbidden-terms.md`](../../../docs/glossary/forbidden-terms.md) — 使ってはいけない表現の一覧
+
+新規テキスト追加後に `pnpm copy:check` で禁止表記が含まれていないか確認する。
+
 ## アーキテクチャ（重要）
 
-### 全ネームスペースのマージ
+### namespace 自動検出（apps/product）
 
-`apps/product/src/lib/i18n/request.ts` が全ネームスペースを一括ロードし、`Object.assign` でルートレベルにマージする。
+`apps/product/src/lib/i18n/request.ts` が `messages/{locale}/` ディレクトリを**自動スキャン**してすべての `.json` を読み込む。**手動の NAMESPACES 配列への登録は不要**。
 
 ```
-apps/product/messages/en/common.json  → { common: {...}, actions: {...}, confirm: {...}, ... }
-apps/product/messages/en/plan.json    → { plan: {...} }
-apps/product/messages/en/calendar.json → { calendar: {...} }
-...
-↓ Object.assign で全てマージ
-{ common: {...}, actions: {...}, confirm: {...}, plan: {...}, calendar: {...}, ... }
+apps/product/messages/en/calendar.json → 自動で calendar namespace を検出
 ```
 
-**結果**: `useTranslations()` を引数なしで呼ぶと、全ファイルの全キーにフルパスでアクセス可能。
+新規 namespace 追加は JSON ファイルを作るだけで有効になる。
 
-### ロードされるネームスペース
+### apps/web は固定配列方式
 
-`apps/product/src/lib/i18n/request.ts` の `NAMESPACES` 配列に登録されたファイルのみロードされる:
+`apps/web/src/platform/i18n/request.ts` に `NAMESPACES = ['common', 'legal', 'marketing', 'search']` がハードコードされている。web 側に namespace を追加する場合はこの配列にも追加が必要。
 
-```typescript
-const NAMESPACES = [
-  'app',
-  'auth',
-  'calendar',
-  'common',
-  'error',
-  'plan',
-  'legal',
-  'navigation',
-  'notification',
-  'onboarding',
-  'settings',
-  'stats',
-  'tag',
-] as const;
-```
+### ロードされる全 namespace（apps/product）
 
-**注意**: `messages/` に JSON を置いただけではロードされない。`NAMESPACES` への登録が必要。
+| ネームスペース | 用途                                      |
+| -------------- | ----------------------------------------- |
+| `auth`         | 認証フロー全体                            |
+| `calendar`     | カレンダー機能                            |
+| `common`       | 共通 UI（複数トップレベルキーを持つ例外） |
+| `contact`      | お問い合わせ                              |
+| `email`        | メールテンプレート                        |
+| `entry`        | エントリ機能                              |
+| `error`        | グローバルエラー                          |
+| `legal`        | 法的文書                                  |
+| `navigation`   | ナビゲーション                            |
+| `oauth`        | OAuth 認証                                |
+| `record`       | レコード                                  |
+| `settings`     | 設定画面                                  |
+| `sidebar`      | サイドバー                                |
+| `tags`         | タグ機能                                  |
+
+### packages/ui は next-intl 非依存
+
+`packages/ui` から `next-intl` を import しない。翻訳は apps 側の責務。テキストは props/children で受け取る。
 
 ## 使用パターン
 
@@ -84,14 +91,12 @@ const NAMESPACES = [
 import { useTranslations } from 'next-intl';
 
 export function MyComponent() {
-  // ✅ 引数なし — 全キーにフルパスでアクセス（最も一般的）
+  // 複数 namespace を参照する場合 — 引数なしでフルパスアクセス
   const t = useTranslations();
-
   return (
     <div>
-      <button>{t('actions.save')}</button>
-      <p>{t('common.loading')}</p>
-      <span>{t('plan.toast.created')}</span>
+      <button>{t('common.actions.save')}</button>
+      <span>{t('calendar.toolbar.today')}</span>
     </div>
   );
 }
@@ -100,15 +105,15 @@ export function MyComponent() {
 ### スコープ付き（特定機能に閉じたコンポーネント向け）
 
 ```typescript
-// ✅ スコープ指定 — キーが短くなる
+// 1 namespace のみ使う場合 — キーが短くなる
 const t = useTranslations('settings');
-t('account.displayName'); // = t('settings.account.displayName')
+t('account.displayName'); // = settings.account.displayName
 
 // ⚠️ スコープ外のキーにはアクセスできない
-// t('actions.save'); // ← settings.actions.save を探すので動かない
+// t('common.actions.save'); // ← settings.common.actions.save を探すので動かない
 ```
 
-**判断基準**: 1つのネームスペースのキーしか使わないなら、スコープ付きでもOK。複数ネームスペースを跨ぐなら引数なし。
+**判断基準**: 1つのネームスペースのキーしか使わないなら、スコープ付きでもOK。複数なら引数なし。
 
 ### Server Component
 
@@ -117,7 +122,7 @@ import { getTranslations } from 'next-intl/server';
 
 export async function MyPage() {
   const t = await getTranslations();
-  return <h1>{t('common.loading')}</h1>;
+  return <h1>{t('calendar.pageTitle')}</h1>;
 }
 ```
 
@@ -137,39 +142,38 @@ t('items', { count: 5 }); // → "5 items"
 
 ## ファイル構造とキー配置ルール
 
-### 翻訳ファイル一覧
+### 翻訳ファイル一覧（apps/product）
 
-| ファイル            | キー数 | 用途                                        |
-| ------------------- | ------ | ------------------------------------------- |
-| `common.json`       | 290+   | 共通キー（複数トップレベルキーを含む）      |
-| `calendar.json`     | 300+   | カレンダー機能                              |
-| `tag.json`          | 300+   | タグ管理                                    |
-| `settings.json`     | 364    | 設定画面                                    |
-| `legal.json`        | 370    | 法的文書                                    |
-| `auth.json`         | 172    | 認証フロー                                  |
-| `plan.json`         | 100+   | プラン機能（toast、削除確認、ステータス等） |
-| `stats.json`        | 80     | 統計機能                                    |
-| `navigation.json`   | 63     | ナビゲーション                              |
-| `notification.json` | 61     | 通知                                        |
-| `error.json`        | 58     | エラーページUI                              |
-| `onboarding.json`   | 6      | オンボーディング                            |
-| `app.json`          | 4      | アプリメタデータ専用                        |
+| ファイル          | 用途                                                                 |
+| ----------------- | -------------------------------------------------------------------- |
+| `common.json`     | 共通キー（actions, aria, form, validation, errors, status, time 等） |
+| `calendar.json`   | カレンダー機能                                                       |
+| `tags.json`       | タグ管理                                                             |
+| `settings.json`   | 設定画面                                                             |
+| `auth.json`       | 認証フロー                                                           |
+| `entry.json`      | エントリ機能                                                         |
+| `navigation.json` | ナビゲーション                                                       |
+| `error.json`      | エラーページ UI                                                      |
+| `legal.json`      | 法的文書                                                             |
+| `record.json`     | レコード                                                             |
+| `sidebar.json`    | サイドバー                                                           |
+| `contact.json`    | お問い合わせ                                                         |
+| `oauth.json`      | OAuth 認証                                                           |
+| `email.json`      | メールテンプレート（複数トップレベルキーの例外）                     |
 
 ### common.json の内部構造（最重要）
 
 `common.json` は複数のトップレベルキーを持つ特殊なファイル:
 
-| トップレベルキー | 用途                                                                  | 例                                             |
-| ---------------- | --------------------------------------------------------------------- | ---------------------------------------------- |
-| `common`         | ナビゲーション・状態・ユーティリティ                                  | `common.loading`, `common.back`, `common.undo` |
-| `actions`        | **汎用アクション動詞** + ローディング状態                             | `actions.save`, `actions.deleting`             |
-| `confirm`        | 確認ダイアログテンプレート                                            | `confirm.delete.title`                         |
-| `aria`           | アクセシビリティラベル                                                | `aria.closeModal`                              |
-| `status`         | ステータス表示                                                        | `status.loading`, `status.error`               |
-| `time`           | 相対時間表現                                                          | `time.daysAgo`, `time.justNow`                 |
-| `validation`     | バリデーションメッセージ                                              | `validation.required`                          |
-| `errors`         | サービスエラー                                                        | `errors.generic`                               |
-| その他           | `reminder`, `language`, `theme`, `createNew`, `createSheet`, `search` |
+| トップレベルキー | 用途                                          |
+| ---------------- | --------------------------------------------- |
+| `common`         | ナビゲーション・状態・ユーティリティ          |
+| `actions`        | 汎用アクション動詞（save, cancel, delete 等） |
+| `aria`           | アクセシビリティラベル                        |
+| `status`         | ステータス表示                                |
+| `time`           | 相対時間表現                                  |
+| `validation`     | バリデーションメッセージ                      |
+| `errors`         | サービスエラー                                |
 
 ### キー配置の判断フロー
 
@@ -177,76 +181,45 @@ t('items', { count: 5 }); // → "5 items"
 新しい翻訳キーを追加
 │
 ├─ 汎用アクション動詞？（保存、削除、キャンセル等）
-│  └─ YES → actions.*          例: actions.save, actions.cancel
-│
-├─ ローディング状態？（○○中...）
-│  └─ YES → actions.*          例: actions.saving, actions.deleting
-│
-├─ ナビゲーション・UI状態？（戻る、次へ、読み込み中）
-│  └─ YES → common.*           例: common.back, common.loading
+│  └─ YES → actions.*
 │
 ├─ a11y ラベル？
-│  └─ YES → aria.*             例: aria.closeModal
+│  └─ YES → aria.*
 │
 ├─ 確認ダイアログのテンプレート？
-│  └─ YES → confirm.*          例: confirm.delete.title
+│  └─ YES → confirm.*
 │
 ├─ バリデーション？
-│  └─ YES → validation.*       例: validation.required
+│  └─ YES → validation.*
 │
 ├─ 特定機能でしか使わない？
-│  └─ YES → feature ファイル   例: plan.toast.created, calendar.toast.deleted
+│  └─ YES → feature ファイル（例: calendar.toast.deleted）
 │
-└─ 上記のどれにも当てはまらない
-   └─ common.* に追加
+└─ ナビゲーション・UI状態
+   └─ common.*
 ```
-
-### 具体例: どこに置くか
-
-| テキスト               | 正しい配置                    | 理由               |
-| ---------------------- | ----------------------------- | ------------------ |
-| "保存"                 | `actions.save`                | 汎用アクション動詞 |
-| "削除中..."            | `actions.deleting`            | ローディング状態   |
-| "閉じる"               | `actions.close`               | 汎用アクション動詞 |
-| "戻る"                 | `common.back`                 | ナビゲーション     |
-| "読み込み中..."        | `common.loading`              | UI状態             |
-| "プランを作成しました" | `plan.toast.created`          | plan 固有の toast  |
-| "タグ名は必須です"     | `validation.tag.nameRequired` | バリデーション     |
-| "メニューを開く"       | `aria.openMenu`               | a11y ラベル        |
 
 ## 新規翻訳キー追加手順
 
-### 1. 配置先を決める（上記フロー参照）
-
-### 2. 両言語に追加
-
-**必ず en と ja の両方に追加する。キー構造は完全一致させる。**
+1. **用語を確認**: `docs/glossary/terms.md` で正しい表記を確認
+2. **配置先を決める**: 上記フロー参照
+3. **両言語に追加**: en と ja のキー構造を完全一致させる
+4. **検証**: `pnpm i18n:check && pnpm copy:check`
 
 ```json
-// apps/product/messages/en/plan.json — 追加
+// apps/product/messages/en/entry.json — 追加
 {
-  "plan": {
-    "toast": {
-      "newKey": "English text"
-    }
+  "entry": {
+    "toast": { "created": "Entry created" }
   }
 }
 
-// apps/product/messages/ja/plan.json — 追加
+// apps/product/messages/ja/entry.json — 追加
 {
-  "plan": {
-    "toast": {
-      "newKey": "日本語テキスト"
-    }
+  "entry": {
+    "toast": { "created": "エントリを作成しました" }
   }
 }
-```
-
-### 3. 検証
-
-```bash
-pnpm i18n:check    # en/ja のキー差分チェック
-pnpm i18n:unused   # 未使用キーの検出
 ```
 
 ## 禁止事項
@@ -256,70 +229,63 @@ pnpm i18n:unused   # 未使用キーの検出
 ```typescript
 // ❌ 禁止
 <button>保存</button>
-<p>エラーが発生しました</p>
 
 // ✅ 正しい
-<button>{t('actions.save')}</button>
-<p>{t('errors.generic')}</p>
+<button>{t('common.actions.save')}</button>
 ```
 
 ### ❌ 機能固有キーを common.json に置く
 
 ```json
-// ❌ 禁止 — plan でしか使わないキーを common に置く
-// common.json
-{ "common": { "plan": { "created": "プランを作成しました" } } }
+// ❌ 禁止 — calendar でしか使わないキーを common に置く
+{ "common": { "calendar": { "toolbar": { "today": "今日" } } } }
 
-// ✅ 正しい — plan.json に置く
-// plan.json
-{ "plan": { "toast": { "created": "プランを作成しました" } } }
+// ✅ 正しい — calendar.json に置く
+{ "calendar": { "toolbar": { "today": "今日" } } }
 ```
 
 ### ❌ 汎用単語を feature ファイルに重複定義
 
 ```typescript
-// ❌ 禁止 — "保存" を tag.json に定義して使う
-t('tag.group.save');
+// ❌ 禁止 — "保存" を tags.json に定義して使う
+t('tags.group.save');
 
 // ✅ 正しい — actions.save を再利用
 t('actions.save');
 ```
 
-### ❌ 片方の言語のみ追加
-
-```
-// ❌ en のみ追加、ja を忘れる
-// → pnpm i18n:check でエラーになる
-```
-
-### ❌ NAMESPACES 未登録のファイルを使用
-
-```
-// ❌ apps/product/messages/en/myFeature.json を作成したが NAMESPACES に追加していない
-// → apps/product/src/lib/i18n/request.ts の NAMESPACES 配列に追加が必要
-```
-
-### ❌ 直接インポート
+### ❌ 禁止語を使う
 
 ```typescript
-// ❌ 禁止（個別ファイルインポート）
-import messages from '@/messages/en/common.json';
+// ❌ 禁止 — 禁止語「タスク」を使う
+{ "entry": { "createTask": "タスクを作成" } }
 
-// ✅ 正しい（next-intl経由）
-const t = useTranslations();
+// ✅ 正しい — glossary に従う
+{ "entry": { "create": "エントリを作成" } }
 ```
+
+## AI/Agent ルール
+
+1. 直接日本語・英語文字列をコードに書かない
+2. `messages/{locale}/{namespace}.json` に追加する
+3. namespace は画面/機能単位にする
+4. `common` に入れるのは共通操作語だけ（domain 固有キーは feature ファイルへ）
+5. 新しい用語は `docs/glossary/terms.md` を確認する
+6. 迷ったら既存キーをまず検索する（重複定義を防ぐ）
+7. 最後に `pnpm i18n:check` と `pnpm copy:check` を実行する
 
 ## チェックリスト
 
 新しいUIテキスト追加時：
 
+- [ ] `docs/glossary/terms.md` で用語を確認したか
 - [ ] 配置先を判断フローで決定したか
 - [ ] en/ja 両方に追加したか（キー構造が完全一致）
 - [ ] 汎用単語は `actions.*` / `common.*` を再利用しているか（重複定義していない）
 - [ ] 機能固有キーは feature ファイルに置いたか（common.json に混ぜていない）
-- [ ] キー名は意味のあるドット記法か（例: `plan.toast.created`）
-- [ ] 変数がある場合は `{variable}` 形式か
+- [ ] キー名は意味のあるドット記法か（例: `calendar.toast.deleted`）
 - [ ] `pnpm i18n:check` が通るか
+- [ ] `pnpm copy:check` で禁止表記が出ていないか
 
 ## 言語検出の仕組み
 
@@ -329,9 +295,12 @@ const t = useTranslations();
 
 ## 関連ファイル
 
+- `docs/glossary/terms.md` - UI 用語の source of truth
+- `docs/glossary/forbidden-terms.md` - 禁止表記一覧
+- `docs/guides/i18n.md` - 実装ガイド（詳細版）
 - `apps/product/src/lib/i18n/routing.ts` - ルーティング設定
-- `apps/product/src/lib/i18n/request.ts` - メッセージローダー（NAMESPACES 定義）
+- `apps/product/src/lib/i18n/request.ts` - メッセージローダー（自動検出）
 - `apps/product/src/lib/i18n/navigation.ts` - ナビゲーションユーティリティ
-- `apps/product/src/lib/supabase/middleware.ts` - 言語検出 + Auth ミドルウェア
 - `apps/product/src/lib/i18n/scripts/check-keys.ts` - キー差分チェック（`pnpm i18n:check`）
 - `apps/product/src/lib/i18n/scripts/find-unused.ts` - 未使用キー検出（`pnpm i18n:unused`）
+- `scripts/i18n/check-glossary.ts` - 禁止表記スキャン（`pnpm copy:check`）
