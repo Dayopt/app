@@ -69,6 +69,17 @@ export { Toaster } from './feedback/sonner';
 // actions
 export { ActionFooter } from './actions/action-footer';
 export {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut,
+} from './actions/command';
+export {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -95,6 +106,16 @@ export {
   BreadcrumbSeparator,
 } from './layout/breadcrumb';
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './layout/collapsible';
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from './layout/dialog';
 export {
   Drawer,
   DrawerClose,
