@@ -236,8 +236,7 @@
       "conflict": "他で変更がありました",
       "reload": "再読み込み",
       "updateAvailable": "新しいバージョンがあります",
-      "update": "更新",
-      "mobileReadOnly": "編集機能は PC 版でお使いいただけます"
+      "update": "更新"
     },
     "pwa": {
       "installTitle": "Dayoptをインストール",

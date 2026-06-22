@@ -3,8 +3,6 @@
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
-import { useTranslations } from 'next-intl';
-
 import { isCalendarViewPath, TagChipRow } from '@/features/calendar';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
@@ -29,7 +27,6 @@ interface MobileLayoutProps {
  * - TagChipRow（Calendar のみ、固定フッター）
  */
 export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
-  const t = useTranslations('common.inlineBanner');
   const title = useShellStore.use.pageTitle();
   const banner = useAppInlineBanner();
 
@@ -54,11 +51,6 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
 
   const isCalendarView = useMemo(() => isCalendarViewPath(pathWithoutLocale), [pathWithoutLocale]);
 
-  // calendar はモバイルでは編集機能が制限される (P0-6 Option B)
-  // tap=Inspector / longpress=ドラッグ は calendar で機能するが、タグ並び替え等の
-  // 詳細操作は PC 限定のため、情報として明示する
-  const isDesktopOnlyEditPage = isCalendarView;
-
   return (
     <>
       {/* AppHeader + Main Content */}
@@ -72,9 +64,6 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
 
         {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
         {!hasOwnHeader && <InlineBanner {...banner} />}
-
-        {/* モバイル閲覧専用の告知（calendar） */}
-        {isDesktopOnlyEditPage && <InlineBanner visible message={t('mobileReadOnly')} />}
 
         {/* Main Content（calendar view ではタグフッター分の余白を確保） */}
         {isCalendarView ? (
