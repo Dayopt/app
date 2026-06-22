@@ -14,10 +14,12 @@ export {
   CardHeader,
   CardTitle,
 } from './primitives/card';
+export { Container, type ContainerProps } from './primitives/container';
 export { Label } from './primitives/label';
 export { Logo, type LogoProps } from './primitives/logo';
 export { Separator } from './primitives/separator';
 export { Spinner } from './primitives/spinner';
+export { Heading, Text, type HeadingProps, type TextProps } from './primitives/typography';
 export { VisuallyHidden, type VisuallyHiddenProps } from './primitives/visually-hidden';
 
 // forms
@@ -31,11 +33,22 @@ export {
   FieldSeparator,
   FieldSupportText,
 } from './forms/field';
+export {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  useFormField,
+} from './forms/form';
 export { InputOTP, InputOTPGroup, InputOTPSlot } from './forms/input-otp';
 export { RadioGroup, RadioGroupItem } from './forms/radio-group';
 export { Switch } from './forms/switch';
 
 // feedback
+export { Alert, AlertDescription, AlertTitle } from './feedback/alert';
 export {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +61,7 @@ export {
   AlertDialogTrigger,
 } from './feedback/alert-dialog';
 export { InlineBanner, type InlineBannerAction } from './feedback/inline-banner';
+export { Toaster } from './feedback/sonner';
 
 // actions
 export { ActionFooter } from './actions/action-footer';
@@ -68,6 +82,15 @@ export {
 } from './actions/dropdown-menu';
 
 // layout
+export {
+  Breadcrumb,
+  BreadcrumbEllipsis,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from './layout/breadcrumb';
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './layout/collapsible';
 export {
   Drawer,
@@ -79,5 +102,14 @@ export {
   DrawerTitle,
   DrawerTrigger,
 } from './layout/drawer';
+export {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from './layout/pagination';
 export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './layout/popover';
 export { ScrollArea, ScrollBar } from './layout/scroll-area';
