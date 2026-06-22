@@ -72,13 +72,13 @@ vi.mock('@/lib/hooks/useLogout', () => ({
   useLogout: () => ({ logout: mockLogout, isLoggingOut: false }),
 }));
 
-vi.mock('@/lib/components/ui/avatar', () => ({
+vi.mock('@/components/ui/avatar', () => ({
   Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AvatarImage: () => null,
   AvatarFallback: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@/lib/components/ui/button', () => ({
+vi.mock('@/components/ui/button', () => ({
   Button: ({
     children,
     asChild,
@@ -90,7 +90,7 @@ vi.mock('@/lib/components/ui/button', () => ({
   }) => (asChild ? children : <button {...props}>{children}</button>),
 }));
 
-vi.mock('@/lib/components/ui/scroll-area', () => ({
+vi.mock('@/components/ui/scroll-area', () => ({
   ScrollArea: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
@@ -104,7 +104,7 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
-vi.mock('@/lib/components/shell/AppHeader', () => ({
+vi.mock('@/components/shell/AppHeader', () => ({
   AppHeader: ({
     children,
     leftSlot,

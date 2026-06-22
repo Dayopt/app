@@ -13,8 +13,8 @@ import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@dayopt/components';
 
-import { LabeledRow } from '@/lib/components/common/LabeledRow';
-import { SectionCard } from '@/lib/components/common/SectionCard';
+import { LabeledRow } from '@/components/common/LabeledRow';
+import { SectionCard } from '@/components/common/SectionCard';
 import { AccountDeletionDialog } from './account-deletion-dialog';
 import { EmailChangeDialog } from './email-change-dialog';
 import { PasswordChangeDialog } from './password-change-dialog';

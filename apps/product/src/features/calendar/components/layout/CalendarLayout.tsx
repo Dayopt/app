@@ -14,10 +14,10 @@ import {
   DrawerTitle,
 } from '@dayopt/components';
 
+import type { NavigationDirection } from '@/components/common/DateNavigator';
+import { DateNavigator } from '@/components/common/DateNavigator';
+import { AppHeader } from '@/components/shell/AppHeader';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
-import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
-import { DateNavigator } from '@/lib/components/common/DateNavigator';
-import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { InlineBanner } from '@dayopt/components';

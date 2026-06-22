@@ -20,8 +20,8 @@ import Link from 'next/link';
 
 import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
 import { useLogout } from '@/lib/hooks/useLogout';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useRouter } from '@/lib/i18n/navigation';

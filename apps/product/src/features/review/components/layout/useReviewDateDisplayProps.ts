@@ -1,4 +1,4 @@
-import type { DateRangeDisplayProps } from '@/lib/components/common/DateRangeDisplay';
+import type { DateRangeDisplayProps } from '@/components/common/DateRangeDisplay';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import type { ReviewGranularity } from '../../stores/useReviewFilterStore';

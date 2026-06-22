@@ -14,8 +14,8 @@
 import { useTranslations } from 'next-intl';
 import { Suspense, useCallback } from 'react';
 
+import { ErrorState } from '@/components/common/ErrorState';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { ErrorState } from '@/lib/components/common/ErrorState';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { Drawer, DrawerContent, DrawerTitle, Spinner } from '@dayopt/components';
 import { useEntry } from '../../hooks/useEntry';

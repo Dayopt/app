@@ -19,7 +19,7 @@ import {
   InputOTPSlot,
 } from '@dayopt/components';
 
-import { SectionCard } from '@/lib/components/common/SectionCard';
+import { SectionCard } from '@/components/common/SectionCard';
 import { type UseMFAReturn, useMFA } from '../../hooks/useMFA';
 import { InfoBox } from '../InfoBox';
 

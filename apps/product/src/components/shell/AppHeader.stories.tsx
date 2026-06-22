@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { BarChart3, CalendarDays } from 'lucide-react';
 
-import { AppHeader } from '@/lib/components/shell/AppHeader';
+import { AppHeader } from '@/components/shell/AppHeader';
 import { cn } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────

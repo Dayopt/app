@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Archive, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@dayopt/components';
 
 const meta = {

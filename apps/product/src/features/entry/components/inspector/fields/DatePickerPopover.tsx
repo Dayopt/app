@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
+import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { useDateFormat } from '@/lib/hooks/useDateFormat';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { Drawer, DrawerContent, DrawerTitle } from '@dayopt/components';

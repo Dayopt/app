@@ -1,7 +1,7 @@
 'use client';
 
+import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { ReviewTagList, useReviewFilterStore } from '@/features/review';
-import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
 
 /**
  * Review モード Sidebar 中身

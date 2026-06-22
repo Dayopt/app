@@ -13,8 +13,8 @@ import {
 
 import { getTimeZones } from '@/lib/timezone-utils';
 
-import { LabeledRow } from '@/lib/components/common/LabeledRow';
-import { SectionCard } from '@/lib/components/common/SectionCard';
+import { LabeledRow } from '@/components/common/LabeledRow';
+import { SectionCard } from '@/components/common/SectionCard';
 
 // ─────────────────────────────────────────────────────────
 // Demo Components

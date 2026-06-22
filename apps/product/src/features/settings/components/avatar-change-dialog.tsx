@@ -4,8 +4,8 @@ import { useCallback, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { AvatarUpload } from '@/components/ui/avatar';
 import { useAuthStore } from '@/features/auth';
-import { AvatarUpload } from '@/lib/components/ui/avatar';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { deleteAvatar, uploadAvatar } from '@/lib/supabase/storage';

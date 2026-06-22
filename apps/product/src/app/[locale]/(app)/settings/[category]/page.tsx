@@ -6,9 +6,9 @@ import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { AppHeader } from '@/components/shell/AppHeader';
 import { isValidCategory, SETTINGS_CATEGORIES, SettingsContent } from '@/features/settings';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { Link, useRouter } from '@/lib/i18n/navigation';

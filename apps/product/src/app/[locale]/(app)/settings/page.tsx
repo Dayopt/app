@@ -24,11 +24,11 @@ import {
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/features/auth';
 import { SETTINGS_CATEGORIES } from '@/features/settings';
 import { APP_NAME, APP_RELEASES_URL, APP_VERSION } from '@/lib/app-info';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useLogout } from '@/lib/hooks/useLogout';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';

@@ -6,7 +6,7 @@ import { toast } from '@/lib/toast';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { LabeledRow } from '@/lib/components/common/LabeledRow';
+import { LabeledRow } from '@/components/common/LabeledRow';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { api } from '@/lib/trpc';

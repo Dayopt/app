@@ -5,6 +5,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
+import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import type { ReviewGranularity } from '@/features/review';
 import {
   buildDailyReviewRedirectPath,
@@ -12,7 +13,6 @@ import {
   prefetchReviewData,
   ReviewView,
 } from '@/features/review';
-import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
 import type { Locale } from '@/lib/i18n/routing';
 import { HydrationBoundary } from '@/lib/trpc/server';
 import { Skeleton } from '@dayopt/components';
