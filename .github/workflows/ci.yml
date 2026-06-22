@@ -232,7 +232,7 @@ jobs:
   e2e:
     name: "\U0001F3AD E2E Tests"
     runs-on: ubuntu-latest
-    needs: [test, build, bundle-size]
+    needs: [build]
     environment: development
     timeout-minutes: 15
     steps:
