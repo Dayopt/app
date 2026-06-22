@@ -2,20 +2,9 @@
   "name": "@dayopt/assets",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
   "exports": {
-    ".": "./src/index.ts"
-  },
-  "types": "./src/index.ts",
-  "scripts": {
-    "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit"
-  },
-  "peerDependencies": {
-    "react": "^19"
-  },
-  "devDependencies": {
-    "@types/react": "^19",
-    "typescript": "^5"
+    "./brand/*": "./brand/*",
+    "./app-icons/*": "./app-icons/*",
+    "./social/*": "./social/*"
   }
 }

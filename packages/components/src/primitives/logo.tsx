@@ -1,4 +1,3 @@
-import { Symbol, Wordmark } from '@dayopt/assets';
 import * as React from 'react';
 
 import { cn } from '../cn';
@@ -20,6 +19,10 @@ const textSize = {
   md: 'text-lg',
   lg: 'text-2xl',
 } as const;
+
+// Dayopt symbol mark（配信用原本 SVG は packages/assets/brand/logo-mark.svg）
+const SYMBOL_PATH_D =
+  'M12 3.5c4.69 0 8.5 3.81 8.5 8.5s-3.81 8.5-8.5 8.5S3.5 16.69 3.5 12 7.31 3.5 12 3.5Zm0 3.2A5.31 5.31 0 0 0 6.7 12c0 2.92 2.38 5.3 5.3 5.3s5.3-2.38 5.3-5.3h-3.1a2.2 2.2 0 1 1-2.2-2.2V6.7Z';
 
 export function Logo({
   className,
@@ -46,10 +49,14 @@ export function Logo({
             markSize[size],
           )}
         >
-          <Symbol className="size-2/3" />
+          <svg viewBox="0 0 24 24" focusable={false} aria-hidden="true" className="size-2/3">
+            <path fill="currentColor" d={SYMBOL_PATH_D} />
+          </svg>
         </span>
       ) : null}
-      {showWordmark ? <Wordmark className={textSize[size]}>{label}</Wordmark> : null}
+      {showWordmark ? (
+        <span className={cn('font-medium tracking-tight', textSize[size])}>{label}</span>
+      ) : null}
     </div>
   );
 }
