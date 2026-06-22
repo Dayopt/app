@@ -63,7 +63,7 @@ export function CalendarReviewPanel({
 
   return (
     <section
-      className={cn('bg-background flex min-h-0 w-full flex-col', className)}
+      className={cn('flex min-h-0 w-full flex-col', className)}
       aria-label={tAll('calendar.views.stats')}
     >
       <header className="border-border-subtle shrink-0 border-b">

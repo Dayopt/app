@@ -21,6 +21,7 @@ interface CalendarDayDiffRailProps {
   entries: readonly CalendarEvent[];
   onEntryClick: (entry: CalendarEvent) => void;
   onClose?: (() => void) | undefined;
+  variant?: 'rail' | 'sheet' | undefined;
   className?: string | undefined;
 }
 
@@ -36,6 +37,7 @@ export function CalendarDayDiffRail({
   entries,
   onEntryClick,
   onClose,
+  variant = 'rail',
   className,
 }: CalendarDayDiffRailProps) {
   const t = useTranslations();
@@ -43,6 +45,7 @@ export function CalendarDayDiffRail({
   const timezone = useUserPreferences((s) => s.timezone);
   const { getTagById } = useTagsMap();
   const entryById = useMemo(() => new Map(entries.map((entry) => [entry.id, entry])), [entries]);
+  const isSheet = variant === 'sheet';
   const timeFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
@@ -56,10 +59,10 @@ export function CalendarDayDiffRail({
 
   return (
     <section
-      className={cn('bg-background flex min-h-0 w-full flex-col', className)}
+      className={cn('flex min-h-0 w-full flex-col', className)}
       aria-label={t('calendar.compare.rail.title')}
     >
-      <header className="border-border-subtle shrink-0 border-b">
+      <header className={cn('shrink-0', !isSheet && 'border-border-subtle border-b')}>
         <div className="flex h-12 items-center gap-2 px-4">
           <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
             {t('calendar.compare.rail.title')}
@@ -105,7 +108,12 @@ export function CalendarDayDiffRail({
       </header>
 
       {diff.items.length === 0 ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 py-8 text-center">
+        <div
+          className={cn(
+            'flex flex-col items-center px-6 py-8 text-center',
+            isSheet ? 'shrink-0' : 'min-h-0 flex-1 justify-center',
+          )}
+        >
           <Circle className="text-muted-foreground size-8" aria-hidden="true" />
           <p className="mt-4 text-sm font-medium">{t('calendar.compare.rail.emptyTitle')}</p>
           <p className="text-muted-foreground mt-1 text-sm">
@@ -113,7 +121,7 @@ export function CalendarDayDiffRail({
           </p>
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <div className={cn('min-h-0 overflow-y-auto p-2', isSheet ? 'max-h-96' : 'flex-1')}>
           <ol className="flex flex-col gap-1">
             {diff.items.map((item) => {
               const entry = entryById.get(item.entryId);

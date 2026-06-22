@@ -277,10 +277,20 @@ export function CalendarController({
         onClose={onCompareRailOpenChange ? handleCloseCompareRail : undefined}
       />
     ) : null;
+  const mobileCompareRail =
+    viewType === 'day' && showActualDiff ? (
+      <CalendarDayDiffRail
+        diff={dayDiff}
+        entries={dayDiffEntries}
+        onEntryClick={onEntryClick}
+        onClose={onCompareRailOpenChange ? handleCloseCompareRail : undefined}
+        variant="sheet"
+      />
+    ) : null;
   const compareRailOpen = viewType === 'day' && showActualDiff;
   const panelRailActive = Boolean(panelRailOpen && panelRail);
   const activeRail = panelRailActive ? panelRail : compareRail;
-  const activeMobileRail = panelRailActive ? (mobilePanelRail ?? panelRail) : compareRail;
+  const activeMobileRail = panelRailActive ? (mobilePanelRail ?? panelRail) : mobileCompareRail;
   const activeRailOpen = panelRailActive || compareRailOpen;
   const activeRailTitle = panelRailActive
     ? (panelRailTitle ?? t('calendar.analysis.panel.title'))
@@ -322,6 +332,7 @@ export function CalendarController({
         rightSlot={rightSlot}
         sideRail={activeRail}
         mobileSideRail={activeMobileRail}
+        mobileSideRailPresentation={panelRailActive ? 'rail' : 'sheet'}
         sideRailOpen={activeRailOpen}
         onSideRailOpenChange={handleSideRailOpenChange}
         sideRailTitle={activeRailTitle}

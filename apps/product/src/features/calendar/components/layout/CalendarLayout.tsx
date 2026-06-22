@@ -69,6 +69,7 @@ interface CalendarLayoutProps {
   // Side rail
   sideRail?: React.ReactNode | undefined;
   mobileSideRail?: React.ReactNode | undefined;
+  mobileSideRailPresentation?: 'rail' | 'sheet' | undefined;
   sideRailOpen?: boolean | undefined;
   onSideRailOpenChange?: ((open: boolean) => void) | undefined;
   sideRailTitle?: string | undefined;
@@ -109,6 +110,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     // Side rail
     sideRail,
     mobileSideRail,
+    mobileSideRailPresentation = 'rail',
     sideRailOpen = false,
     onSideRailOpenChange,
     sideRailTitle,
@@ -167,6 +169,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     const resolvedSideRailTitle = sideRailTitle ?? t('title');
     const resolvedSideRailDescription = sideRailDescription ?? t('meta.description');
     const resolvedSideRailResizeLabel = sideRailResizeLabel ?? t('panel.resizeLabel');
+    const mobileSideRailIsSheet = mobileSideRailPresentation === 'sheet';
 
     const handleSideRailResizeStart = useCallback(
       (event: React.PointerEvent<HTMLDivElement>) => {
@@ -312,12 +315,16 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
             handleOnly
             {...(onSideRailOpenChange ? { onOpenChange: onSideRailOpenChange } : {})}
           >
-            <DrawerContent className="h-3/4">
+            <DrawerContent
+              className={cn('gap-0 overflow-hidden p-0', !mobileSideRailIsSheet && 'h-3/4')}
+            >
               <DrawerHeader className="sr-only">
                 <DrawerTitle>{resolvedSideRailTitle}</DrawerTitle>
                 <DrawerDescription>{resolvedSideRailDescription}</DrawerDescription>
               </DrawerHeader>
-              <div className="min-h-0 flex-1 overflow-hidden">{mobileSideRail}</div>
+              <div className={cn('min-h-0 overflow-hidden', !mobileSideRailIsSheet && 'flex-1')}>
+                {mobileSideRail}
+              </div>
             </DrawerContent>
           </Drawer>
         ) : null}
