@@ -6,19 +6,19 @@ Dayoptプロジェクトの主要な設計判断を文書化した記録。
 
 ## 一覧
 
-| ID                                                        | タイトル                                                           | 日付       | ステータス |
-| --------------------------------------------------------- | ------------------------------------------------------------------ | ---------- | ---------- |
-| [ADR-001](001-unified-block-model.md)                     | 統合ブロックモデル                                                 | 2026-03-05 | accepted   |
-| [ADR-002](002-feature-sliced-architecture.md)             | Feature-Slicedアーキテクチャ                                       | 2026-02-26 | accepted   |
-| [ADR-003](003-mcp-integration.md)                         | MCP統合                                                            | 2026-02-26 | accepted   |
-| [ADR-004](004-ai-architecture-layers.md)                  | 3層AIアーキテクチャ                                                | 2026-03-02 | accepted   |
-| [ADR-005](005-time-immutability-principle.md)             | 時間不変原則                                                       | 2026-03-10 | accepted   |
-| [ADR-006](006-ci-quality-gates-roadmap.md)                | CI品質ゲート段階的導入ロードマップ                                 | 2026-03-19 | proposed   |
-| [ADR-007](007-positive-framing-coding-norms.md)           | CLAUDE.md コーディング規範のポジティブ例示化                       | 2026-04-17 | accepted   |
-| [ADR-008](008-time-overlap-prohibition.md)                | 時間重なりの全面禁止（EXCLUDE 制約）                               | 2026-05-13 | accepted   |
-| [ADR-009](009-auto-record-model.md)                       | 自動記録モデル（過ぎた予定を実績とみなす）                         | 2026-06-10 | accepted   |
-| [ADR-010](010-soft-delete-model.md)                       | entries の論理削除（soft delete）                                  | 2026-03-18 | accepted   |
-| [ADR-011](011-shared-packages-canonical-and-app-shims.md) | デザインシステム共有レイヤー（packages を canonical、app は shim） | 2026-06-22 | accepted   |
+| ID                                                        | タイトル                                                                 | 日付       | ステータス |
+| --------------------------------------------------------- | ------------------------------------------------------------------------ | ---------- | ---------- |
+| [ADR-001](001-unified-block-model.md)                     | 統合ブロックモデル                                                       | 2026-03-05 | accepted   |
+| [ADR-002](002-feature-sliced-architecture.md)             | Feature-Slicedアーキテクチャ                                             | 2026-02-26 | accepted   |
+| [ADR-003](003-mcp-integration.md)                         | MCP統合                                                                  | 2026-02-26 | accepted   |
+| [ADR-004](004-ai-architecture-layers.md)                  | 3層AIアーキテクチャ                                                      | 2026-03-02 | accepted   |
+| [ADR-005](005-time-immutability-principle.md)             | 時間不変原則                                                             | 2026-03-10 | accepted   |
+| [ADR-006](006-ci-quality-gates-roadmap.md)                | CI品質ゲート段階的導入ロードマップ                                       | 2026-03-19 | proposed   |
+| [ADR-007](007-positive-framing-coding-norms.md)           | CLAUDE.md コーディング規範のポジティブ例示化                             | 2026-04-17 | accepted   |
+| [ADR-008](008-time-overlap-prohibition.md)                | 時間重なりの全面禁止（EXCLUDE 制約）                                     | 2026-05-13 | accepted   |
+| [ADR-009](009-auto-record-model.md)                       | 自動記録モデル（過ぎた予定を実績とみなす）                               | 2026-06-10 | accepted   |
+| [ADR-010](010-soft-delete-model.md)                       | entries の論理削除（soft delete）                                        | 2026-03-18 | accepted   |
+| [ADR-011](011-shared-packages-canonical-and-app-shims.md) | デザインシステム共有レイヤー（packages を canonical、app は直接 import） | 2026-06-22 | accepted   |
 
 ---
 
