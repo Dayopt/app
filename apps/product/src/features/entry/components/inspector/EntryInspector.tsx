@@ -34,7 +34,7 @@ function InspectorURLSyncHandler() {
 }
 
 interface EntryInspectorProps {
-  /** 統計を見るコールバック（Composition Layer から注入） */
+  /** 振り返り panel を開くコールバック（Composition Layer から注入） */
   onViewStats?: ((tagId: string) => void) | undefined;
 }
 

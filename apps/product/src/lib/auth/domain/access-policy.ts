@@ -4,7 +4,6 @@ const protectedProductPaths = [
   '/tasks',
   '/settings',
   '/calendar',
-  '/review',
   '/box',
   '/table',
   '/board',

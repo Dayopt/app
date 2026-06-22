@@ -9,12 +9,7 @@ vi.mock('@/features/calendar', () => ({
   },
 }));
 
-import {
-  buildCalendarPath,
-  buildReviewPath,
-  getLocaleFromPathname,
-  getModeFromPath,
-} from './navigation-paths';
+import { buildCalendarPath, getLocaleFromPathname } from './navigation-paths';
 
 describe('navigation-paths', () => {
   it('builds a calendar path with date query', () => {
@@ -41,82 +36,62 @@ describe('navigation-paths', () => {
     ).toBe('/en/calendar/day?date=2026-03-25');
   });
 
-  it('adds compare only for day calendar paths', () => {
+  it('adds diff panel only for day calendar paths', () => {
     expect(
       buildCalendarPath({
         locale: 'ja',
         viewType: 'day',
         currentDate: new Date(2026, 2, 25),
-        compare: true,
+        panelKind: 'diff',
       }),
-    ).toBe('/ja/calendar/day?date=2026-03-25&compare=1');
+    ).toBe('/ja/calendar/day?date=2026-03-25&panel=diff');
 
     expect(
       buildCalendarPath({
         locale: 'ja',
         viewType: 'week',
         currentDate: new Date(2026, 2, 25),
-        compare: true,
+        panelKind: 'diff',
       }),
     ).toBe('/ja/calendar/week?date=2026-03-25');
   });
 
-  it('builds a localized review path', () => {
-    expect(buildReviewPath('ja')).toBe('/ja/review');
-    expect(buildReviewPath('en', { granularity: 'week' })).toBe('/en/review?g=week');
+  it('builds review panel paths with optional tag selection', () => {
+    expect(
+      buildCalendarPath({
+        locale: 'ja',
+        viewType: 'week',
+        currentDate: new Date(2026, 2, 25),
+        panelKind: 'review',
+      }),
+    ).toBe('/ja/calendar/week?date=2026-03-25&panel=review');
+
+    expect(
+      buildCalendarPath({
+        locale: 'ja',
+        viewType: 'week',
+        currentDate: new Date(2026, 2, 25),
+        panelKind: 'review',
+        reviewTagId: 'tag-1',
+      }),
+    ).toBe('/ja/calendar/week?date=2026-03-25&panel=review&reviewTagId=tag-1');
+  });
+
+  it('drops review tag id outside the review panel', () => {
+    expect(
+      buildCalendarPath({
+        locale: 'ja',
+        viewType: 'day',
+        currentDate: new Date(2026, 2, 25),
+        panelKind: 'analytics',
+        reviewTagId: 'tag-1',
+      }),
+    ).toBe('/ja/calendar/day?date=2026-03-25&panel=analytics');
   });
 
   it('extracts locale from pathname with fallback', () => {
     expect(getLocaleFromPathname('/en/settings')).toBe('en');
     expect(getLocaleFromPathname('/unknown')).toBe('ja');
     expect(getLocaleFromPathname(null)).toBe('ja');
-  });
-});
-
-describe('getModeFromPath', () => {
-  it('returns calendar for /ja/calendar/day', () => {
-    expect(getModeFromPath('/ja/calendar/day')).toBe('calendar');
-  });
-
-  it('returns calendar for /en/calendar/week (locale prefix 非依存)', () => {
-    expect(getModeFromPath('/en/calendar/week')).toBe('calendar');
-  });
-
-  it('returns review for /ja/review', () => {
-    expect(getModeFromPath('/ja/review')).toBe('review');
-  });
-
-  it('returns review for /ja/review/tags/abc123 (深い pathname)', () => {
-    expect(getModeFromPath('/ja/review/tags/abc123')).toBe('review');
-  });
-
-  it('returns other for /ja/settings (fallback)', () => {
-    expect(getModeFromPath('/ja/settings')).toBe('other');
-  });
-
-  it('returns other for /ja/settings/account', () => {
-    expect(getModeFromPath('/ja/settings/account')).toBe('other');
-  });
-
-  it('returns other for /ja (root)', () => {
-    expect(getModeFromPath('/ja')).toBe('other');
-  });
-
-  it('returns other for empty string (defensive)', () => {
-    expect(getModeFromPath('')).toBe('other');
-  });
-
-  it('returns other for null / undefined (defensive)', () => {
-    expect(getModeFromPath(null)).toBe('other');
-    expect(getModeFromPath(undefined)).toBe('other');
-  });
-
-  it('treats trailing slash equivalently', () => {
-    expect(getModeFromPath('/ja/calendar/')).toBe('calendar');
-    expect(getModeFromPath('/ja/review/')).toBe('review');
-  });
-
-  it('handles exact-match route endings', () => {
-    expect(getModeFromPath('/ja/review')).toBe('review');
   });
 });

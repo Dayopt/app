@@ -40,6 +40,7 @@ export {
   CalendarNavigationProvider,
   useCalendarNavigation,
 } from './hooks/navigation/CalendarNavigationContext';
+export type { CalendarPanelKind } from './hooks/navigation/CalendarNavigationContext';
 
 // =============================================================================
 // State / settings（app composition 層からのbarrel import用）
@@ -71,6 +72,7 @@ export { calculateViewDateRange } from './domain/view-range';
 // Lib / Utils
 // =============================================================================
 export { formatCalendarDateParam, parseCalendarDateParam } from './lib/date-param';
+export { buildCalendarReviewPanelPath } from './lib/panel-url';
 export { isCalendarViewPath } from './lib/route-utils';
 
 // ここにないものはfeature内部専用

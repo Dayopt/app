@@ -6,6 +6,7 @@ import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 
 import { useEntryMutations } from '@/features/entry';
+import { buildCalendarReviewPanelPath } from '../../lib/panel-url';
 import type { CalendarEvent } from '../../types/calendar.types';
 
 /** コンテキストメニューで使用するエントリー操作アクションを提供するフック */
@@ -30,7 +31,13 @@ export function useEntryContextActions() {
   const handleViewStats = useCallback(
     (entry: CalendarEvent) => {
       if (!entry.tagId) return;
-      router.push(`/${locale}/review/tags/${entry.tagId}`);
+      router.push(
+        buildCalendarReviewPanelPath(
+          locale,
+          entry.startDate ?? entry.actualStartDate ?? new Date(),
+          entry.tagId,
+        ),
+      );
     },
     [router, locale],
   );

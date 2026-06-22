@@ -109,10 +109,12 @@ interface CalendarControllerProps {
   leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
   onCompareRailOpenChange?: ((open: boolean) => void) | undefined;
-  analyticsRail?: React.ReactNode | undefined;
-  mobileAnalyticsRail?: React.ReactNode | undefined;
-  analyticsRailOpen?: boolean | undefined;
-  onAnalyticsRailOpenChange?: ((open: boolean) => void) | undefined;
+  panelRail?: React.ReactNode | undefined;
+  mobilePanelRail?: React.ReactNode | undefined;
+  panelRailOpen?: boolean | undefined;
+  onPanelRailOpenChange?: ((open: boolean) => void) | undefined;
+  panelRailTitle?: string | undefined;
+  panelRailDescription?: string | undefined;
 }
 
 // =============================================================================
@@ -151,10 +153,12 @@ export function CalendarController({
   leftSlot,
   rightSlot,
   onCompareRailOpenChange,
-  analyticsRail,
-  mobileAnalyticsRail,
-  analyticsRailOpen = false,
-  onAnalyticsRailOpenChange,
+  panelRail,
+  mobilePanelRail,
+  panelRailOpen = false,
+  onPanelRailOpenChange,
+  panelRailTitle,
+  panelRailDescription,
 }: CalendarControllerProps) {
   const t = useTranslations();
 
@@ -274,28 +278,26 @@ export function CalendarController({
       />
     ) : null;
   const compareRailOpen = viewType === 'day' && showActualDiff;
-  const analyticsRailActive = Boolean(analyticsRailOpen && analyticsRail);
-  const activeRail = analyticsRailActive ? analyticsRail : compareRail;
-  const activeMobileRail = analyticsRailActive
-    ? (mobileAnalyticsRail ?? analyticsRail)
-    : compareRail;
-  const activeRailOpen = analyticsRailActive || compareRailOpen;
-  const activeRailTitle = analyticsRailActive
-    ? t('calendar.analysis.panel.title')
+  const panelRailActive = Boolean(panelRailOpen && panelRail);
+  const activeRail = panelRailActive ? panelRail : compareRail;
+  const activeMobileRail = panelRailActive ? (mobilePanelRail ?? panelRail) : compareRail;
+  const activeRailOpen = panelRailActive || compareRailOpen;
+  const activeRailTitle = panelRailActive
+    ? (panelRailTitle ?? t('calendar.analysis.panel.title'))
     : t('calendar.compare.rail.title');
-  const activeRailDescription = analyticsRailActive
-    ? t('calendar.analysis.panel.description')
+  const activeRailDescription = panelRailActive
+    ? (panelRailDescription ?? t('calendar.analysis.panel.description'))
     : t('calendar.compare.rail.description');
   const handleSideRailOpenChange = useCallback(
     (open: boolean) => {
-      if (analyticsRailActive) {
-        onAnalyticsRailOpenChange?.(open);
+      if (panelRailActive) {
+        onPanelRailOpenChange?.(open);
         return;
       }
 
       onCompareRailOpenChange?.(open);
     },
-    [analyticsRailActive, onAnalyticsRailOpenChange, onCompareRailOpenChange],
+    [panelRailActive, onPanelRailOpenChange, onCompareRailOpenChange],
   );
 
   // =========================================================================

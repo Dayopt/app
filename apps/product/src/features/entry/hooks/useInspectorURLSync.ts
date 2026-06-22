@@ -63,23 +63,28 @@ export function useInspectorURLSync() {
     prevIsOpenRef.current = isOpen;
     prevEntryIdRef.current = entryId;
 
-    const currentEntryParam = searchParams.get(ENTRY_PARAM);
+    const currentUrl = typeof window !== 'undefined' ? new URL(window.location.href) : null;
+    const currentPathname = currentUrl?.pathname ?? pathname;
+    const currentParams = currentUrl
+      ? new URLSearchParams(currentUrl.search)
+      : new URLSearchParams(searchParams.toString());
+    const currentEntryParam = currentParams.get(ENTRY_PARAM);
 
     if (isOpen && entryId) {
       // 既存エントリでインスペクタが開いている場合
       // push で履歴エントリを追加 → 戻る/進むで復元可能にする
       if (currentEntryParam !== entryId) {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set(ENTRY_PARAM, entryId);
-        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+        currentParams.set(ENTRY_PARAM, entryId);
+        router.push(`${currentPathname}?${currentParams.toString()}`, { scroll: false });
       }
     } else {
       // インスペクタが閉じている、またはドラフトモード
       // replace で履歴を汚さない（閉じるたびに履歴が増えるのを防止）
       if (currentEntryParam !== null) {
-        const params = new URLSearchParams(searchParams.toString());
-        params.delete(ENTRY_PARAM);
-        const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+        currentParams.delete(ENTRY_PARAM);
+        const newUrl = currentParams.toString()
+          ? `${currentPathname}?${currentParams.toString()}`
+          : currentPathname;
         router.replace(newUrl, { scroll: false });
       }
     }

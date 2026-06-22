@@ -10,7 +10,7 @@
  * cross-feature依存の橋渡しはこのファイルが担当する。
  */
 
-import { ChartNoAxesColumnIncreasing, PanelLeft } from 'lucide-react';
+import { BarChart3, ChartNoAxesColumnIncreasing, PanelLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useState } from 'react';
 
@@ -20,6 +20,7 @@ import {
   CalendarController,
   useCalendarNavigation,
 } from '@/features/calendar';
+import { CalendarReviewPanel } from '@/features/review';
 import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
 import { Button } from '@/lib/components/ui/button';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
@@ -39,7 +40,6 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const calendarNavigation = useCalendarNavigation();
   const sidebar = useShellStore.use.sidebar();
   const toggleSidebar = useShellStore.use.toggleSidebar();
-  const [analyticsPanelOpen, setAnalyticsPanelOpen] = useState(false);
   const [analyticsTagId, setAnalyticsTagId] = useState<string | null>(null);
 
   // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
@@ -54,8 +54,10 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const {
     viewType,
     currentDate,
-    dayCompareEnabled,
-    setDayCompareEnabled,
+    panelKind,
+    reviewTagId,
+    setPanelKind,
+    setReviewTagId,
     navigateRelative,
     changeView,
     navigateToDate,
@@ -82,21 +84,19 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
     </button>
   ) : null;
   const handleAnalyticsPanelToggle = useCallback(() => {
-    setAnalyticsPanelOpen((open) => {
-      const nextOpen = !open;
-      if (nextOpen) {
-        setDayCompareEnabled(false);
-      }
-      return nextOpen;
-    });
-  }, [setDayCompareEnabled]);
+    setPanelKind(panelKind === 'analytics' ? null : 'analytics');
+  }, [panelKind, setPanelKind]);
+  const handleReviewPanelToggle = useCallback(() => {
+    setPanelKind(panelKind === 'review' ? null : 'review');
+  }, [panelKind, setPanelKind]);
   const handleCompareToggle = useCallback(
     (checked: boolean) => {
-      setAnalyticsPanelOpen(false);
-      setDayCompareEnabled(checked);
+      setPanelKind(checked ? 'diff' : null);
     },
-    [setDayCompareEnabled],
+    [setPanelKind],
   );
+  const isAnalyticsPanelActive = panelKind === 'analytics';
+  const isDiffPanelActive = panelKind === 'diff';
   const analyticsToggle = (
     <HoverTooltip content={t('calendar.analysis.tooltip')} side="bottom">
       <Button
@@ -105,35 +105,55 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
         size="sm"
         icon
         className={
-          analyticsPanelOpen
+          isAnalyticsPanelActive
             ? 'bg-state-selected text-foreground hover:bg-state-selected'
             : 'text-muted-foreground hover:text-foreground'
         }
         aria-label={t('calendar.analysis.ariaLabel')}
-        aria-pressed={analyticsPanelOpen}
+        aria-pressed={isAnalyticsPanelActive}
         onClick={handleAnalyticsPanelToggle}
       >
         <ChartNoAxesColumnIncreasing className="size-4" />
       </Button>
     </HoverTooltip>
   );
-  const compareToggle =
-    viewType === 'day' ? (
-      <>
-        <CalendarCompareToggle
-          checked={dayCompareEnabled}
-          onCheckedChange={handleCompareToggle}
-          className="-mr-2 hidden md:flex"
-        />
-        <CalendarCompareToggle
-          checked={dayCompareEnabled}
-          onCheckedChange={handleCompareToggle}
-          className="-mr-2 md:hidden"
-        />
-      </>
-    ) : null;
+  const reviewToggle = (
+    <HoverTooltip content={t('calendar.views.stats')} side="bottom">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        icon
+        className={
+          panelKind === 'review'
+            ? 'bg-state-selected text-foreground hover:bg-state-selected'
+            : 'text-muted-foreground hover:text-foreground'
+        }
+        aria-label={t('calendar.views.stats')}
+        aria-pressed={panelKind === 'review'}
+        onClick={handleReviewPanelToggle}
+      >
+        <BarChart3 className="size-4" />
+      </Button>
+    </HoverTooltip>
+  );
+  const compareToggle = (
+    <>
+      <CalendarCompareToggle
+        checked={isDiffPanelActive}
+        onCheckedChange={handleCompareToggle}
+        className="-mr-2 hidden md:flex"
+      />
+      <CalendarCompareToggle
+        checked={isDiffPanelActive}
+        onCheckedChange={handleCompareToggle}
+        className="-mr-2 md:hidden"
+      />
+    </>
+  );
   const headerActions = (
     <>
+      {reviewToggle}
       {analyticsToggle}
       {compareToggle}
     </>
@@ -142,9 +162,25 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
     <CalendarAnalyticsPanel
       selectedTagId={analyticsTagId}
       onSelectedTagIdChange={setAnalyticsTagId}
-      onClose={() => setAnalyticsPanelOpen(false)}
+      onClose={() => setPanelKind(null)}
     />
   );
+  const reviewPanel = (
+    <CalendarReviewPanel
+      currentDate={currentDate}
+      selectedTagId={reviewTagId}
+      onSelectedTagIdChange={setReviewTagId}
+      onClose={() => setPanelKind(null)}
+    />
+  );
+  const panelRail = panelKind === 'review' ? reviewPanel : analyticsPanel;
+  const panelRailOpen = panelKind === 'review' || panelKind === 'analytics';
+  const panelRailTitle =
+    panelKind === 'review' ? t('calendar.views.stats') : t('calendar.analysis.panel.title');
+  const panelRailDescription =
+    panelKind === 'review'
+      ? t('calendar.stats.review.emptyDescription')
+      : t('calendar.analysis.panel.description');
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -177,7 +213,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           filteredEntries={composition.filteredEvents}
           allEntries={composition.allCalendarEvents}
           showWeekends={composition.showWeekends}
-          showActualDiff={viewType === 'day' && dayCompareEnabled}
+          showActualDiff={viewType === 'day' && isDiffPanelActive}
           disabledEntryId={composition.disabledEntryId}
           onEntryClick={composition.onEntryClick}
           onTimeRangeSelect={composition.onTimeRangeSelect}
@@ -200,11 +236,16 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onPrefetch={composition.prefetchDirection}
           leftSlot={sidebarToggle}
           rightSlot={headerActions}
-          onCompareRailOpenChange={setDayCompareEnabled}
-          analyticsRail={analyticsPanel}
-          mobileAnalyticsRail={analyticsPanel}
-          analyticsRailOpen={analyticsPanelOpen}
-          onAnalyticsRailOpenChange={setAnalyticsPanelOpen}
+          onCompareRailOpenChange={(open) => setPanelKind(open ? 'diff' : null)}
+          panelRail={panelRail}
+          mobilePanelRail={panelRail}
+          panelRailOpen={panelRailOpen}
+          onPanelRailOpenChange={(open) => {
+            if (open) return;
+            setPanelKind(null);
+          }}
+          panelRailTitle={panelRailTitle}
+          panelRailDescription={panelRailDescription}
         />
       </FeatureErrorBoundary>
     </div>

@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
 
+import { buildCalendarReviewPanelPath, useCalendarNavigation } from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
 import { Toaster } from '@/lib/components/ui/toast';
 import { useShellStore } from '@/lib/stores/useShellStore';
@@ -43,6 +44,7 @@ export function GlobalOverlays() {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const calendarNavigation = useCalendarNavigation();
 
   const activeSheet = useShellStore.use.activeSheet();
   const closeSheet = useShellStore.use.closeSheet();
@@ -69,12 +71,15 @@ export function GlobalOverlays() {
     }
   }, [pathname, isInspectorOpen, closeInspector]);
 
-  // Inspector → タグ詳細ページナビゲーション
+  // Inspector → Calendar review panel
   const handleViewStats = useCallback(
     (tagId: string) => {
-      router.push(`/${locale}/review/tags/${tagId}`);
+      router.push(
+        buildCalendarReviewPanelPath(locale, calendarNavigation?.currentDate ?? new Date(), tagId),
+      );
+      closeInspector();
     },
-    [router, locale],
+    [calendarNavigation?.currentDate, closeInspector, router, locale],
   );
 
   return (
