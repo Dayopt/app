@@ -11,11 +11,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
 
 import { getAppUrl } from '@/lib/app-url';
+import type { Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { requireStripe } from '@/lib/stripe/client';
 import { ServiceError } from '@/lib/trpc/errors';
 import type { SubscriptionStatus } from '@dayopt/billing';
-import type { Database } from '@dayopt/database';
 
 // ===== Types =====
 

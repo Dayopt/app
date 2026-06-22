@@ -6,7 +6,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database, Row } from '@dayopt/database';
+import type { Database, Row } from '@/lib/database';
 import type { CreateEntryInput, EntryFilter, UpdateEntryInput } from '../schemas/entry';
 
 /**

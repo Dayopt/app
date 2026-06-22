@@ -1,4 +1,4 @@
-import type { Row } from '@dayopt/database';
+import type { Row } from '@/lib/database';
 
 type EntryRow = Row<'entries'>;
 

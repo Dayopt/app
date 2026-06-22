@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { databaseTables } from '@dayopt/database';
+import { databaseTables } from '@/lib/database';
 import type { OAuthClientId } from './clients';
 import { createOAuthDbClient } from './db';
 import { OAuthServerError } from './errors';

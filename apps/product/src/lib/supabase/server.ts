@@ -59,7 +59,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 import { env } from '@/env';
-import type { Database } from '@dayopt/database';
+import type { Database } from '@/lib/database';
 
 /**
  * Server用Supabaseクライアント作成

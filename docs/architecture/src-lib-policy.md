@@ -14,24 +14,24 @@
 
 ## 置いてよいもの
 
-| カテゴリ                          | 例                                                                         |
-| --------------------------------- | -------------------------------------------------------------------------- |
-| **feature 非依存の pure utility** | `logger` / `safe-redirect` / `date-utils` / `breakpoints` / `cn`           |
-| **infrastructure adapter**        | `supabase/` / `trpc/` / `sentry/` / `rate-limit/` / `i18n/` / `stripe/`    |
-| **cross-cutting UI state**        | `lib/stores/useShellStore` / `useCalendarNavigationStore`                  |
-| **shared UI primitive**           | `lib/components/ui/`（shadcn-style primitive）                             |
-| **横断的な型**                    | `lib/types/settings.ts`（複数 feature 参照、明確な残存理由あり）           |
-| **shell-level orchestration**     | `lib/auth/domain/`（middleware / tRPC / proxy で共有される access policy） |
+| カテゴリ                          | 例                                                                                       |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| **feature 非依存の pure utility** | `logger` / `safe-redirect` / `date-utils` / `breakpoints` / `cn`                         |
+| **infrastructure adapter**        | `supabase/` / `trpc/` / `sentry/` / `rate-limit/` / `i18n/` / `stripe/`                  |
+| **cross-cutting UI state**        | `lib/stores/useShellStore` / `useCalendarNavigationStore`                                |
+| **shared UI primitive**           | `lib/components/ui/`（shadcn-style primitive）                                           |
+| **横断的な型**                    | `lib/types/settings.ts`（複数 feature 参照、明確な残存理由あり）                         |
+| **shell-level orchestration**     | `lib/auth/domain/`（middleware / tRPC / proxy で共有される access policy）               |
+| **Supabase/DB 境界**              | `lib/database/`（generated types / `databaseTables` / Row helper。product 専用 DB 境界） |
 
 ---
 
 ## 置かないもの
 
-| カテゴリ                       | 正しい配置先                            |
-| ------------------------------ | --------------------------------------- |
-| feature 固有の logic / 型      | `features/{name}/`                      |
-| feature 固有の component       | `features/{name}/components/`           |
-| 自動生成 artifact の re-export | DB 型は `@dayopt/database` から直接引く |
+| カテゴリ                  | 正しい配置先                  |
+| ------------------------- | ----------------------------- |
+| feature 固有の logic / 型 | `features/{name}/`            |
+| feature 固有の component  | `features/{name}/components/` |
 
 ---
 

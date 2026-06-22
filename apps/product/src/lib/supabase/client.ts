@@ -36,7 +36,7 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 
-import type { Database } from '@dayopt/database';
+import type { Database } from '@/lib/database';
 
 /**
  * Browser用Supabaseクライアント作成

@@ -77,7 +77,6 @@
   "dependencies": {
     "@dayopt/billing": "workspace:*",
     "@dayopt/config": "workspace:*",
-    "@dayopt/database": "workspace:*",
     "@dayopt/foundations": "workspace:*",
     "@dayopt/domain": "workspace:*",
     "@dayopt/components": "workspace:*",

@@ -3,7 +3,7 @@
  * Helper functions for router operations
  */
 
-import type { TablesUpdate } from '@dayopt/database';
+import type { TablesUpdate } from '@/lib/database';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 import { tzIsSameDay } from '@/lib/date/timezone';

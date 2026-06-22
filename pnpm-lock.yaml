@@ -190,9 +190,6 @@ importers:
       '@dayopt/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@dayopt/database':
-        specifier: workspace:*
-        version: link:../../packages/database
       '@dayopt/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -940,8 +937,6 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
-
-  packages/database: {}
 
   packages/domain: {}
 

@@ -54,7 +54,7 @@ apps/product ─┐
 apps/web ─────┴──> @dayopt/config
 ```
 
-NG: `@dayopt/config` → `apps/*` / `@dayopt/foundations` / `@dayopt/components` / `@dayopt/database` / `next/*` / `react`
+NG: `@dayopt/config` → `apps/*` / `@dayopt/foundations` / `@dayopt/components` / `next/*` / `react`
 
 > Future: eslint（`no-restricted-imports`）での逆依存禁止の強制は、packages 間 boundary を
 > ルール化するタイミングでまとめて導入を判断する。
