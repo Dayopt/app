@@ -5,7 +5,6 @@
  *
  * タグ選択用フローティングパネル。
  * ラジオボタン型の単一選択 + 新規作成（グローバル TagCreateModal 経由）。
- * overlayなし — 背景コンテンツが見える状態を維持。
  * モバイル: Vaul Drawer（スワイプで閉じる）、PC: アンカー横フローティング。
  *
  * 「+」押下時は自身を一旦閉じてからグローバル TagCreateModal を開く（vaul nested
@@ -286,12 +285,11 @@ export function TagQuickSelector({
   if (!mounted) return null;
 
   // モバイル: Vaul Drawer（スワイプで閉じる）
-  // modal=false で背後の calendar grid（InlineTagPalette のハイライト block）を
-  // タッチ可能にし、resize / long-press 移動をサポートする。
+  // 背後の calendar grid は操作させず、sheet 内の選択に集中させる。
   // handleOnly でタグリスト内のスクロール・タップが drawer dismiss を誘発しない。
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange} modal={false} handleOnly>
+      <Drawer open={open} onOpenChange={onOpenChange} handleOnly>
         {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit */}
         <DrawerContent className="max-h-[80vh]">
           <DrawerHeader>

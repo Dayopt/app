@@ -309,7 +309,6 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         {isMobile && mobileSideRail ? (
           <Drawer
             open={sideRailOpen}
-            modal={false}
             handleOnly
             {...(onSideRailOpenChange ? { onOpenChange: onSideRailOpenChange } : {})}
           >

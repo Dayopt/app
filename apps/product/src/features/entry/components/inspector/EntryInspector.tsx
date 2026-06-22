@@ -122,9 +122,8 @@ export function EntryInspector({ onViewStats }: EntryInspectorProps) {
           onOpenChange={(open) => !open && handleClose()}
           handleOnly
           repositionInputs={false}
-          modal={false}
         >
-          <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0">
+          <DrawerContent className="flex flex-col gap-0 overflow-hidden p-0">
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="mx-auto w-full max-w-lg">{content}</div>

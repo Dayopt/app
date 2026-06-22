@@ -25,6 +25,7 @@ export interface TagEntryCreateFormProps {
   onCancel: () => void;
   isSubmitting?: boolean;
   hasError?: boolean;
+  surface?: 'card' | 'sheet';
   className?: string;
 }
 
@@ -33,13 +34,10 @@ export interface TagEntryCreateFormProps {
  *
  * レイアウト:
  * 1. タグアイコン + 名前ヘッダー
- * 2. **Inspector と同じ "スケジュールカード"** (`bg-muted rounded-2xl`) 内に
- *    - 日付行 (`DateRow`)
- *    - 予定行 (`TimeRow` = 開始 → 終了)
+ * 2. 日付行 (`DateRow`) と予定行 (`TimeRow` = 開始 → 終了)
  * 3. キャンセル / 作成 ボタン
  *
- * Inspector (EntryInspectorForm) のスケジュールカードと同じ container 構造・
- * 色味・間隔を使うことで、視覚的一貫性を確保する。
+ * PC popover では Inspector と同じカード面、mobile sheet では sheet の地色を使う。
  */
 export function TagEntryCreateForm({
   tag,
@@ -53,9 +51,13 @@ export function TagEntryCreateForm({
   onCancel,
   isSubmitting = false,
   hasError = false,
+  surface = 'card',
   className,
 }: TagEntryCreateFormProps) {
   const t = useTranslations();
+  const scheduleClassName = surface === 'sheet' ? 'mt-2' : 'bg-muted mt-2 rounded-2xl';
+  const scheduleBodyClassName =
+    surface === 'sheet' ? 'flex flex-col gap-2' : 'flex flex-col gap-2 px-4 pt-2 pb-4';
 
   return (
     // 親 row の onClick (onOpenPopover) が portal から bubble してきた click で再発火し
@@ -80,9 +82,9 @@ export function TagEntryCreateForm({
         </button>
       </div>
 
-      {/* スケジュールカード (Inspector と同じ bg-muted rounded-2xl) */}
-      <div className="bg-muted mt-2 rounded-2xl">
-        <div className="flex flex-col gap-2 px-4 pt-2 pb-4">
+      {/* スケジュール */}
+      <div className={scheduleClassName}>
+        <div className={scheduleBodyClassName}>
           <DateRow
             label={t('entry.inspector.time.date')}
             icon={Calendar}
