@@ -18,6 +18,7 @@ export { Container, type ContainerProps } from './primitives/container';
 export { Label } from './primitives/label';
 export { Logo, type LogoProps } from './primitives/logo';
 export { Separator } from './primitives/separator';
+export { Skeleton } from './primitives/skeleton';
 export { Spinner } from './primitives/spinner';
 export { Heading, Text, type HeadingProps, type TextProps } from './primitives/typography';
 export { VisuallyHidden, type VisuallyHiddenProps } from './primitives/visually-hidden';
@@ -43,9 +44,11 @@ export {
   FormMessage,
   useFormField,
 } from './forms/form';
+export { Input } from './forms/input';
 export { InputOTP, InputOTPGroup, InputOTPSlot } from './forms/input-otp';
 export { RadioGroup, RadioGroupItem } from './forms/radio-group';
 export { Switch } from './forms/switch';
+export { Textarea } from './forms/textarea';
 
 // feedback
 export { Alert, AlertDescription, AlertTitle } from './feedback/alert';
@@ -113,3 +116,10 @@ export {
 } from './layout/pagination';
 export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './layout/popover';
 export { ScrollArea, ScrollBar } from './layout/scroll-area';
+export {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  TabsTrigger as UnderlineTabsTrigger,
+} from './layout/tabs';
