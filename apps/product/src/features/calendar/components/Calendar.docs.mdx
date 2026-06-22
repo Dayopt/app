@@ -12,14 +12,14 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## ビュー一覧
 
-| ビュー        | 説明                   | コンポーネント                      |
-| ------------- | ---------------------- | ----------------------------------- |
-| **Day**       | 1日のタイムグリッド    | `DayView`                           |
-| **Week**      | 7日間のタイムグリッド  | `WeekView`                          |
-| **Multi-Day** | 2〜9日間のカスタム表示 | `MultiDayView`                      |
-| **Review**    | 振り返り               | `ReviewView`（`@/features/review`） |
+| ビュー        | 説明                   | コンポーネント |
+| ------------- | ---------------------- | -------------- |
+| **Day**       | 1日のタイムグリッド    | `DayView`      |
+| **Week**      | 7日間のタイムグリッド  | `WeekView`     |
+| **Multi-Day** | 2〜9日間のカスタム表示 | `MultiDayView` |
 
 ビュー切替は `ViewSwitcherList` コンポーネントで行い、`CalendarNavigationContext` で状態管理。
+Review / Day diff / Analytics は view ではなく Calendar の単一 panel slot に表示する。
 
 ---
 
@@ -43,6 +43,8 @@ CalendarController              メインエントリポイント
 │       ├── CalendarDragSelection/  ドラッグ選択レイヤー
 │       └── EventContextMenu    右クリックメニュー
 ├── tag-filter/                 タグフィルターUI（インライン rename 対応）
+├── analytics/                  分析パネル
+├── day-diff/                   日次差分パネル
 ├── animations/                 ビュー遷移アニメーション
 └── controller/                 ビュー描画ディスパッチ
 ```
@@ -61,10 +63,10 @@ CalendarController              メインエントリポイント
 
 ### Context
 
-| Context                     | 用途                             |
-| --------------------------- | -------------------------------- |
-| `CalendarNavigationContext` | 日付・ビュー・ナビゲーション操作 |
-| `CalendarGridProvider`      | グリッド計算の共有               |
+| Context                     | 用途                                    |
+| --------------------------- | --------------------------------------- |
+| `CalendarNavigationContext` | 日付・ビュー・panel・ナビゲーション操作 |
+| `CalendarGridProvider`      | グリッド計算の共有                      |
 
 ---
 
