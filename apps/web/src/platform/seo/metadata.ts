@@ -1,5 +1,5 @@
 import { env, getSiteUrl } from '@/platform/config/env';
-import { createDayoptUrl, dayoptBrand, dayoptContact } from '@dayopt/config';
+import { createDayoptUrl, dayoptBrand, dayoptContact, SUPPORTED_LOCALES } from '@dayopt/config';
 import type { Metadata } from 'next';
 
 export interface SEOData {
@@ -55,7 +55,7 @@ export const siteConfig: SiteConfig = {
     'Modern Development',
   ],
   locale: 'ja',
-  alternateLocales: ['en', 'ja'],
+  alternateLocales: [...SUPPORTED_LOCALES],
 };
 
 /**
