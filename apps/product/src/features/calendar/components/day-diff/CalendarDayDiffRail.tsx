@@ -78,7 +78,7 @@ export function CalendarDayDiffRail({
             </Button>
           ) : null}
         </div>
-        <dl className="bg-container mx-4 mt-2 mb-4 flex flex-col gap-4 rounded-lg p-4">
+        <dl className="mx-4 mt-2 mb-4 flex flex-col gap-2">
           <SummaryMetric
             label={t('calendar.compare.rail.summary.diff')}
             value={formatSignedDuration(t, diff.summary.diffMinutes)}
@@ -175,12 +175,12 @@ function SummaryMetric({
   emphasis?: boolean | undefined;
 }) {
   return (
-    <div>
-      <dt className="text-muted-foreground text-xs">{label}</dt>
+    <div className="flex min-h-11 items-center justify-between gap-4">
+      <dt className="text-muted-foreground text-sm">{label}</dt>
       <dd
         className={cn(
-          'mt-1 font-mono font-medium tabular-nums',
-          emphasis ? 'text-lg' : 'text-sm',
+          'text-right font-mono text-sm font-medium tabular-nums',
+          emphasis && 'text-base',
           valueClassName,
         )}
       >
