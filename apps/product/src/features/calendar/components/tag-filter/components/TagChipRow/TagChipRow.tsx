@@ -3,8 +3,7 @@
 import { useMemo, useState } from 'react';
 
 import { Plus } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { TagIcon, useTags, type Tag } from '@/features/tags';
 import { useShellStore } from '@/lib/stores/useShellStore';
@@ -13,12 +12,6 @@ import { cn } from '@/lib/utils';
 import { TagEntryCreatePopover } from '../TagEntryCreatePopover';
 
 interface TagChipRowProps {
-  /**
-   * タップ動作:
-   * - `'create'`（default）: タップで `TagEntryCreatePopover` を開く（calendar context）
-   * - `'stats-link'`: タップで `/stats/tags/[tagId]` に遷移（stats context）
-   */
-  mode?: 'create' | 'stats-link';
   className?: string;
 }
 
@@ -32,20 +25,16 @@ function sortActiveTags(tags: Tag[] | undefined): Tag[] {
  * モバイル専用タグチップ行。
  *
  * - タイムライン下部・タブバー上に横一列で並ぶ（親タグ・葉タグ混在）
- * - タップ動作は mode で切替可能:
- *   - `'create'` (default): bottom sheet `TagEntryCreatePopover` で時刻指定してエントリ作成
- *   - `'stats-link'`: 該当タグの統計詳細ページへ遷移
- * - 行末に「+」ボタンを置き `useShellStore.openTagCreateModal()` で新規タグ作成（mode 共通）
+ * - タップで bottom sheet `TagEntryCreatePopover` を開き、時刻指定してエントリ作成
+ * - 行末に「+」ボタンを置き `useShellStore.openTagCreateModal()` で新規タグ作成
  * - データソース: `useTags()`（sidebar と同じ cache を参照、追加 fetch ゼロ）
  * - 並び順: `sort_order` 昇順（PC sidebar と完全一致）
  * - 葉タグは suffix のみ表示（icon + color で親を識別）
  * - `is_active === false` のタグは除外
  * - タグゼロなら null を返す（行ごと非表示。初回タグ作成は別導線）
  */
-export function TagChipRow({ mode = 'create', className }: TagChipRowProps) {
+export function TagChipRow({ className }: TagChipRowProps) {
   const t = useTranslations();
-  const locale = useLocale();
-  const router = useRouter();
   const { data: tags } = useTags();
   const [openTagId, setOpenTagId] = useState<string | null>(null);
 
@@ -60,10 +49,6 @@ export function TagChipRow({ mode = 'create', className }: TagChipRowProps) {
   if (sortedTags.length === 0) return null;
 
   const handleTagTap = (tagId: string) => {
-    if (mode === 'stats-link') {
-      router.push(`/${locale}/stats/tags/${tagId}`);
-      return;
-    }
     setOpenTagId(tagId);
   };
 
@@ -79,7 +64,7 @@ export function TagChipRow({ mode = 'create', className }: TagChipRowProps) {
         bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))',
       }}
       role="list"
-      aria-label="タグクイック作成"
+      aria-label={t('calendar.filter.quickCreate')}
     >
       {sortedTags.map((tag) => {
         const label = tag.name;
@@ -108,7 +93,7 @@ export function TagChipRow({ mode = 'create', className }: TagChipRowProps) {
         <span className="max-w-16 truncate text-xs">{t('common.actions.add')}</span>
       </button>
 
-      {mode === 'create' && openTag && (
+      {openTag && (
         <TagEntryCreatePopover
           open={true}
           onOpenChange={(o) => {

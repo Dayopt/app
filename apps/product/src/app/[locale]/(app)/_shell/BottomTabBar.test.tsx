@@ -42,12 +42,6 @@ vi.mock('@/features/auth', () => ({
     }),
 }));
 
-vi.mock('@/features/review', () => ({
-  useReviewFilterStore: (
-    selector: (state: { granularity: string; currentDate: Date }) => unknown,
-  ) => selector({ granularity: 'week', currentDate: new Date(2026, 2, 25) }),
-}));
-
 import { BottomTabBar } from './BottomTabBar';
 
 describe('BottomTabBar', () => {
@@ -69,12 +63,12 @@ describe('BottomTabBar', () => {
     expect(calendarLink).not.toHaveAttribute('role', 'tab');
   });
 
-  it('marks the route derived from pathname as current', () => {
-    mockPathname = '/ja/review';
+  it('marks account as current on settings routes', () => {
+    mockPathname = '/ja/settings';
 
     render(<BottomTabBar />);
 
-    expect(screen.getByRole('link', { name: /navigation\.bottomTab\.stats/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /navigation\.bottomTab\.account/ })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -83,13 +77,19 @@ describe('BottomTabBar', () => {
     ).not.toHaveAttribute('aria-current');
   });
 
-  it('keeps the local calendar day when generating the return URL', () => {
-    mockPathname = '/ja/review';
-
+  it('keeps the local calendar day when generating the calendar URL', () => {
     render(<BottomTabBar />);
 
     const calendarLink = screen.getByRole('link', { name: /navigation\.bottomTab\.calendar/ });
 
     expect(calendarLink).toHaveAttribute('href', '/ja/calendar/week?date=2026-03-25');
+  });
+
+  it('does not render a review tab', () => {
+    render(<BottomTabBar />);
+
+    expect(
+      screen.queryByRole('link', { name: /navigation\.bottomTab\.stats/ }),
+    ).not.toBeInTheDocument();
   });
 });

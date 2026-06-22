@@ -17,22 +17,14 @@ interface SidebarProps {
   children: ReactNode;
   /** UserMenu に表示するユーザー情報（composition layerから注入） */
   user: { name: string; email: string; avatar: string | null };
-  /** Sidebar ヘッダー（ロゴ行）直下に配置する PageNav スロット */
-  pageNav?: ReactNode;
   /** フッターに配置するアクション（通知アイコン等） */
   footerActions?: ReactNode;
   /** ランドマークのアクセシブルネーム */
   'aria-label'?: string;
 }
 
-/** サイドバーコンテナ（ヘッダー + PageNav + スクロール領域 + フッター） */
-export function Sidebar({
-  children,
-  user,
-  pageNav,
-  footerActions,
-  'aria-label': ariaLabel,
-}: SidebarProps) {
+/** サイドバーコンテナ（ヘッダー + スクロール領域 + フッター） */
+export function Sidebar({ children, user, footerActions, 'aria-label': ariaLabel }: SidebarProps) {
   const closeSidebar = useShellStore.use.closeSidebar();
   const t = useTranslations();
 
@@ -68,9 +60,6 @@ export function Sidebar({
           </HoverTooltip>
         </div>
       </div>
-
-      {/* PageNav（Header ロゴ直下、Content スクロール領域の外で静止） */}
-      {pageNav && <div className="shrink-0 px-2 pb-2">{pageNav}</div>}
 
       {/* Content */}
       {/* scrollbar-stable: drag 中に collapsed groups の children container が

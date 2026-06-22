@@ -17,7 +17,6 @@ import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { MainContentWrapper } from './main-content-wrapper';
 import { SidebarContent } from './SidebarContent';
-import { SidebarPageNav } from './SidebarPageNav';
 import { useAppInlineBanner } from './useAppInlineBanner';
 
 interface DesktopLayoutProps {
@@ -49,7 +48,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
   const hasOwnHeader = useMemo(() => {
     const pathWithoutLocale = pathname?.replace(new RegExp(`^/${locale}`), '') ?? '';
-    return isCalendarViewPath(pathWithoutLocale) || pathWithoutLocale.startsWith('/review');
+    return isCalendarViewPath(pathWithoutLocale);
   }, [pathname, locale]);
 
   // サイドバーが閉じているときに表示するトグルボタン
@@ -75,7 +74,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
           )}
         >
           <div className="h-full w-64">
-            <Sidebar pageNav={<SidebarPageNav />} user={sidebarUser}>
+            <Sidebar user={sidebarUser}>
               <SidebarContent />
             </Sidebar>
           </div>
@@ -83,7 +82,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
 
         {/* PageHeader + Main Content + Inspector */}
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {/* AppHeader（Calendar/Statsは独自ヘッダーを持つため非表示） */}
+          {/* AppHeader（Calendar は独自ヘッダーを持つため非表示） */}
           {!hasOwnHeader && (
             <AppHeader leftSlot={sidebarToggle}>
               {title && <h1 className="truncate text-lg leading-8 font-medium">{title}</h1>}

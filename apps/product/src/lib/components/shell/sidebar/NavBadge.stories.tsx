@@ -2,7 +2,7 @@
  * NavBadge Stories
  *
  * Nav アイコン右上に表示する "NEW" / "β" バッジ。Phase 2-D Step D-5 で新規追加。
- * AI タブに β バッジを付与するため PageNav / BottomTabBar と統合される。
+ * Nav icon と組み合わせて使う小さな状態バッジ。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';

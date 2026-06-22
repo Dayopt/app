@@ -2,7 +2,7 @@
  * 認証必須ページ用レイアウト
  *
  * @description
- * 認証が必要なページ（/calendar, /review, /settings等）で使用。
+ * 認証が必要なページ（/calendar, /settings等）で使用。
  * IntlProvider でアプリ用namespace のみクライアントに配信。
  *
  * 責務分離:

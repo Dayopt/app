@@ -174,6 +174,7 @@
       "noTags": "タグで時間に名前をつけると、パターンが見えてきます。最初のタグを作りましょう",
       "comingSoon": "近日公開予定",
       "createTag": "タグを作成",
+      "quickCreate": "タグクイック作成",
       "addTagToGroup": "タグを追加",
       "rename": "名前を変更",
       "changeColor": "カラーを変更",

@@ -6,7 +6,6 @@ import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { isCalendarViewPath, TagChipRow } from '@/features/calendar';
-import { ReviewTagChipRow } from '@/features/review';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
 import { useShellStore } from '@/lib/stores/useShellStore';
@@ -48,28 +47,23 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
   const hasOwnHeader = useMemo(
     () =>
       isCalendarViewPath(pathWithoutLocale) ||
-      pathWithoutLocale.startsWith('/review') ||
       pathWithoutLocale === '/settings' ||
       pathWithoutLocale.startsWith('/settings/'),
     [pathWithoutLocale],
   );
 
   const isCalendarView = useMemo(() => isCalendarViewPath(pathWithoutLocale), [pathWithoutLocale]);
-  const isReviewView = useMemo(() => pathWithoutLocale.startsWith('/review'), [pathWithoutLocale]);
 
-  // calendar / review 系はモバイルでは編集機能が制限される (P0-6 Option B)
+  // calendar はモバイルでは編集機能が制限される (P0-6 Option B)
   // tap=Inspector / longpress=ドラッグ は calendar で機能するが、タグ並び替え等の
   // 詳細操作は PC 限定のため、情報として明示する
-  const isDesktopOnlyEditPage = useMemo(
-    () => isCalendarView || pathWithoutLocale.startsWith('/review'),
-    [isCalendarView, pathWithoutLocale],
-  );
+  const isDesktopOnlyEditPage = isCalendarView;
 
   return (
     <>
       {/* AppHeader + Main Content */}
       <div className="flex h-full flex-1 flex-col">
-        {/* AppHeader（Calendar/Reviewは独自ヘッダーを持つため非表示） */}
+        {/* AppHeader（Calendar は独自ヘッダーを持つため非表示） */}
         {!hasOwnHeader && (
           <AppHeader>
             {title && <h1 className="truncate text-lg leading-8 font-medium">{title}</h1>}
@@ -79,20 +73,17 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
         {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
         {!hasOwnHeader && <InlineBanner {...banner} />}
 
-        {/* モバイル閲覧専用の告知（calendar / review） */}
+        {/* モバイル閲覧専用の告知（calendar） */}
         {isDesktopOnlyEditPage && <InlineBanner visible message={t('mobileReadOnly')} />}
 
-        {/* Main Content（calendar / review view ではタグ行 + BottomTabBar 分の余白を確保） */}
-        <MainContentWrapper className={isCalendarView || isReviewView ? 'pb-32' : 'pb-16'}>
+        {/* Main Content（calendar view ではタグ行 + BottomTabBar 分の余白を確保） */}
+        <MainContentWrapper className={isCalendarView ? 'pb-32' : 'pb-16'}>
           {children}
         </MainContentWrapper>
       </div>
 
       {/* calendar: タグタップで予定作成 popover */}
       {isCalendarView && <TagChipRow />}
-
-      {/* review: タグタップでタグ別 Review へ遷移 */}
-      {isReviewView && <ReviewTagChipRow />}
 
       {/* ボトムタブナビゲーション */}
       <BottomTabBar />
