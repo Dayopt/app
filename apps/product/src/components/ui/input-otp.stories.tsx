@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/UI/InputOTP',
+  title: 'Components/UI/Inputs/InputOTP',
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',

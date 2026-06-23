@@ -41,7 +41,30 @@ const preview: Preview = {
     options: {
       storySort: {
         method: 'alphabetical',
-        order: ['Welcome', 'Components', 'Features', 'Design', 'UI', 'Foundations', 'Patterns'],
+        order: [
+          'Welcome',
+          'Components',
+          // Components/UI 配下は責務ベース taxonomy（ADR-012）の流れで並べる
+          [
+            'UI',
+            [
+              'Identity',
+              'Actions',
+              'Inputs',
+              'Navigation',
+              'Feedback',
+              'Overlays',
+              'Display',
+              'Layout',
+              'Utilities',
+            ],
+          ],
+          'Features',
+          'Design',
+          'UI',
+          'Foundations',
+          'Patterns',
+        ],
       },
     },
     darkMode: {

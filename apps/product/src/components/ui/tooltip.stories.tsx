@@ -5,7 +5,7 @@ import { expect, within } from 'storybook/test';
 import { Button, HoverTooltip } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/UI/Tooltip',
+  title: 'Components/UI/Overlays/Tooltip',
   component: HoverTooltip,
   tags: ['autodocs'],
   parameters: {

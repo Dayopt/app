@@ -20,7 +20,7 @@ import { ActionFooter } from '@dayopt/components';
  * | Sheet / Drawer | `ActionFooter`（このコンポーネント） |
  */
 const meta = {
-  title: 'Components/UI/ActionFooter',
+  title: 'Components/UI/Actions/ActionFooter',
   component: ActionFooter,
   tags: ['autodocs'],
   parameters: {

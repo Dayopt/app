@@ -9,7 +9,7 @@ import { Checkbox, Label } from '@dayopt/components';
 const greenColor = getTagColorClasses('green');
 
 const meta = {
-  title: 'Components/UI/Checkbox',
+  title: 'Components/UI/Inputs/Checkbox',
   component: Checkbox,
   tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },

@@ -5,7 +5,7 @@ import { Textarea } from '@dayopt/components';
 
 /** Textarea - 複数行テキスト入力。改行や長文が必要な場面で使用、単一行はInputを使用。 */
 const meta = {
-  title: 'Components/UI/Textarea',
+  title: 'Components/UI/Inputs/Textarea',
   component: Textarea,
   tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },

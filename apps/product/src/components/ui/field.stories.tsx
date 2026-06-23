@@ -12,7 +12,7 @@ import {
 } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/UI/Field',
+  title: 'Components/UI/Inputs/Field',
   component: FieldLabel,
   tags: ['autodocs'],
   parameters: {

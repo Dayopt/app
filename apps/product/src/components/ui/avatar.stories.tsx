@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@dayopt/components';
 import { AvatarUpload } from './avatar-upload';
 
 const meta = {
-  title: 'Components/UI/Avatar',
+  title: 'Components/UI/Display/Avatar',
   component: Avatar,
   tags: ['autodocs'],
   parameters: { layout: 'centered' },

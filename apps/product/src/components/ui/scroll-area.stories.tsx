@@ -4,7 +4,7 @@ import { ScrollArea, ScrollBar, Separator } from '@dayopt/components';
 
 /** ScrollArea - カスタムスクロールエリア */
 const meta = {
-  title: 'Components/UI/ScrollArea',
+  title: 'Components/UI/Layout/ScrollArea',
   component: ScrollArea,
   tags: ['autodocs'],
   parameters: {

@@ -4,7 +4,7 @@ import { Separator } from '@dayopt/components';
 import { withWrapper } from '@dayopt/storybook/decorators';
 
 const meta = {
-  title: 'Components/UI/Separator',
+  title: 'Components/UI/Layout/Separator',
   component: Separator,
   tags: ['autodocs'],
   parameters: {
