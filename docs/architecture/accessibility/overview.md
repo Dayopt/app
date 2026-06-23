@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Architecture/Accessibility/Overview" />
-
 # アクセシビリティガイド
 
 Dayoptのアクセシビリティ対応に関する基準と実装パターン

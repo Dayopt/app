@@ -2,7 +2,7 @@
 
 Dayopt固有のドメイン概念とコードベースで使用される用語の定義。
 
-> Storybook用語（CSF, Meta, Story 等）は [Storybook 公式用語集](../../apps/storybook/docs/dev/OfficialGlossary.mdx) を参照。
+> Storybook用語（CSF, Meta, Story 等）は [Storybook 公式用語集](./storybook-glossary.md) を参照。
 
 ---
 

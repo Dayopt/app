@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Architecture/Accessibility/Component Guide" />
-
 # shadcn/ui コンポーネント別ガイド
 
 shadcn/ui（Radix UI）コンポーネントのa11y対応状況

@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Architecture/Accessibility/Focus & Keyboard" />
-
 # フォーカスとキーボード
 
 キーボード操作時のフォーカス状態を明確に表示し、キーボードのみで全機能が使えるようにする

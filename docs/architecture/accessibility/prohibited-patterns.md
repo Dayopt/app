@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Architecture/Accessibility/Prohibited Patterns" />
-
 # 禁止事項
 
 アクセシビリティを損なう実装パターン
