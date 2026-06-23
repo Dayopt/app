@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Calendar, Clock, MoreHorizontal, Tag } from 'lucide-react';
 
-import { Badge } from '@/lib/components/ui/badge';
-import { Button } from '@/lib/components/ui/button';
 import {
+  Badge,
+  Button,
   Card,
   CardAction,
   CardContent,
@@ -11,13 +11,11 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/lib/components/ui/card';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/lib/components/ui/dropdown-menu';
+} from '@dayopt/components';
 
 const meta = {
   title: 'Patterns/Cards',

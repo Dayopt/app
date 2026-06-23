@@ -1,7 +1,5 @@
-import { Container } from '@/components/ui/container';
-import { Heading, Text } from '@/components/ui/typography';
 import { generateSEOMetadata } from '@/platform/seo/metadata';
-import { Button } from '@dayopt/ui';
+import { Button, Container, Heading, Text } from '@dayopt/components';
 import Link from 'next/link';
 
 export const metadata = generateSEOMetadata({

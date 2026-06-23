@@ -13,7 +13,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { databaseTables, type Database } from '@dayopt/database';
+import { databaseTables, type Database } from '@/lib/database';
 
 interface TzCacheEntry {
   timezone: string;

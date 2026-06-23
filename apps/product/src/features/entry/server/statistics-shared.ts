@@ -4,8 +4,8 @@ import { TRPCError } from '@trpc/server';
 import { formatInTimeZone } from 'date-fns-tz';
 import { z } from 'zod';
 
+import type { Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
-import type { Database } from '@dayopt/database';
 
 export function getTodayInTimezone(timezone: string): string {
   return formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');

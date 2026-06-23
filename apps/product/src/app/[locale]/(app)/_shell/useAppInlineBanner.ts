@@ -8,7 +8,7 @@ import { api } from '@/lib/trpc';
 
 import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 
-import type { InlineBannerAction } from '@/lib/components/ui/inline-banner';
+import type { InlineBannerAction } from '@dayopt/components';
 
 interface InlineBannerState {
   visible: boolean;

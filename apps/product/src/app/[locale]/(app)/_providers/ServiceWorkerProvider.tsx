@@ -5,10 +5,10 @@ import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button, Card } from '@dayopt/ui';
+import { Button, Card } from '@dayopt/components';
 
-import { InstallBanner } from '@/lib/components/shell/InstallBanner';
-import { IOSInstallGuide } from '@/lib/components/shell/IOSInstallGuide';
+import { InstallBanner } from '@/components/shell/InstallBanner';
+import { IOSInstallGuide } from '@/components/shell/IOSInstallGuide';
 import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
 import { usePWAInit } from '@/lib/hooks/usePWA';
 import { useServiceWorker } from '@/lib/hooks/useServiceWorker';

@@ -7,21 +7,21 @@ import { useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
 import { checkPasswordPwned } from '@/lib/auth/pwned-password';
-import { Button } from '@/lib/components/ui/button';
+import { logger } from '@/lib/logger';
+import { createClient } from '@/lib/supabase/client';
+import { api } from '@/lib/trpc';
+import { getDisplayName } from '@/lib/user';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/lib/components/ui/dialog';
-import { Input } from '@/lib/components/ui/input';
-import { Label } from '@/lib/components/ui/label';
-import { logger } from '@/lib/logger';
-import { createClient } from '@/lib/supabase/client';
-import { api } from '@/lib/trpc';
-import { getDisplayName } from '@/lib/user';
+  Input,
+  Label,
+} from '@dayopt/components';
 
 interface PasswordChangeDialogProps {
   open: boolean;

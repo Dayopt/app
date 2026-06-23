@@ -7,8 +7,12 @@ import { useTranslations } from 'next-intl';
 
 import { useCalendarSettings } from '@/features/calendar/hooks/useCalendarSettings';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
-import { buttonVariants } from '@/lib/components/ui/button';
+import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
+import { useShellStore } from '@/lib/stores/useShellStore';
+import { cn } from '@/lib/utils';
 import {
+  buttonVariants,
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -18,11 +22,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@/lib/components/ui/dropdown-menu';
-import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
-import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { useShellStore } from '@/lib/stores/useShellStore';
-import { cn } from '@/lib/utils';
+} from '@dayopt/components';
 import type { ShortcutDef } from '../../../hooks/keyboard/shortcut-registry';
 import { registerShortcuts } from '../../../hooks/keyboard/shortcut-registry';
 import type { CalendarViewType } from '../../../types/calendar.types';

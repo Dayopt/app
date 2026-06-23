@@ -1,6 +1,6 @@
 'use client';
 
-import { Skeleton } from '@/lib/components/ui/skeleton';
+import { Skeleton } from '@dayopt/components';
 
 /**
  * カレンダービュー用スケルトンローダー

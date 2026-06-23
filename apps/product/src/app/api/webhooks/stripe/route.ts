@@ -33,7 +33,7 @@ import { logger } from '@/lib/logger';
 import { captureBusinessEvent } from '@/lib/sentry';
 import { requireStripe } from '@/lib/stripe/client';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
-import type { SubscriptionStatus } from '@dayopt/billing';
+import { mapStripeSubscriptionStatus } from '@dayopt/billing';
 
 // ─── Slack 通知 ──────────────────────────────────────
 
@@ -151,28 +151,6 @@ async function sendTransactionalEmail(
   }
 }
 
-/**
- * Stripe subscription status → Dayopt subscription status のマッピング
- */
-function mapStripeStatus(stripeStatus: Stripe.Subscription.Status): SubscriptionStatus {
-  switch (stripeStatus) {
-    case 'active':
-      return 'active';
-    case 'trialing':
-      return 'trialing';
-    case 'past_due':
-      return 'past_due';
-    case 'canceled':
-    case 'unpaid':
-    case 'incomplete_expired':
-      return 'canceled';
-    case 'incomplete':
-    case 'paused':
-    default:
-      return 'free';
-  }
-}
-
 export async function POST(request: NextRequest) {
   const webhookSecret = env.STRIPE_WEBHOOK_SECRET;
 
@@ -244,7 +222,7 @@ export async function POST(request: NextRequest) {
 
           // 実際の subscription ステータスを取得（trialing vs active）
           const sub = await stripe.subscriptions.retrieve(subscriptionId);
-          const status = mapStripeStatus(sub.status);
+          const status = mapStripeSubscriptionStatus(sub.status);
 
           await syncSubscriptionStatus(supabase, customerId, subscriptionId, status);
           captureBusinessEvent('billing.checkout_completed', { customerId, status });
@@ -295,9 +273,9 @@ export async function POST(request: NextRequest) {
             ? subscription.customer
             : subscription.customer.id;
 
-        const status = mapStripeStatus(subscription.status);
+        const status = mapStripeSubscriptionStatus(subscription.status);
         const previousStatus = event.data.previous_attributes
-          ? mapStripeStatus(
+          ? mapStripeSubscriptionStatus(
               (event.data.previous_attributes as { status?: Stripe.Subscription.Status }).status ??
                 subscription.status,
             )

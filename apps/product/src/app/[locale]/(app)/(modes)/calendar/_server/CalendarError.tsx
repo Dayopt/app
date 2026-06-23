@@ -5,8 +5,8 @@ import { useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
 import { logger } from '@/lib/logger';
+import { Button } from '@dayopt/components';
 
 interface ErrorProps {
   error: Error & { digest?: string };

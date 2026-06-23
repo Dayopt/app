@@ -18,7 +18,7 @@ import 'server-only';
  * - TanStack Queryのクライアントキャッシュ（5分）で対応
  */
 
-import type { Database, Insert, Row, Update } from '@dayopt/database';
+import type { Database, Insert, Row, Update } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { formatRpcErrorDetail } from '../domain/tag-merge';
 import { extractTagSuffixes, partitionByExistingName } from '../domain/tag-ungroup';

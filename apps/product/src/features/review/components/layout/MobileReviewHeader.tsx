@@ -6,15 +6,15 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 
-import { CompactDateNavigator } from '@/lib/components/common/DateNavigator';
-import type { DateRangeDisplayProps } from '@/lib/components/common/DateRangeDisplay';
-import { AppHeader } from '@/lib/components/shell/AppHeader';
-import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
+import { CompactDateNavigator } from '@/components/common/DateNavigator';
+import type { DateRangeDisplayProps } from '@/components/common/DateRangeDisplay';
+import { AppHeader } from '@/components/shell/AppHeader';
+import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@/lib/utils';
 
-import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
+import type { NavigationDirection } from '@/components/common/DateNavigator';
 
 interface MobileReviewHeaderProps {
   dateDisplayProps: DateRangeDisplayProps;

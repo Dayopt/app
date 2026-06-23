@@ -51,8 +51,8 @@
   "dependencies": {
     "@dayopt/billing": "workspace:*",
     "@dayopt/config": "workspace:*",
-    "@dayopt/design": "workspace:*",
-    "@dayopt/ui": "workspace:*",
+    "@dayopt/foundations": "workspace:*",
+    "@dayopt/components": "workspace:*",
     "@hookform/resolvers": "^5.1.1",
     "@marsidev/react-turnstile": "^1.5.3",
     "@radix-ui/react-dialog": "^1.1.17",

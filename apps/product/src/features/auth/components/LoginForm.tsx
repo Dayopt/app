@@ -11,9 +11,15 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Link } from '@/lib/i18n/navigation';
 import { useForm } from 'react-hook-form';
 
-import { Button } from '@/lib/components/ui/button';
-import { Card, CardContent } from '@/lib/components/ui/card';
+import { logger } from '@/lib/logger';
+import { getSafeRedirectPath } from '@/lib/safe-redirect';
+import { createClient } from '@/lib/supabase/client';
+import { Turnstile, isTurnstileEnabled, type TurnstileInstance } from '@/lib/turnstile';
+import { cn } from '@/lib/utils';
 import {
+  Button,
+  Card,
+  CardContent,
   Field,
   FieldDescription,
   FieldError,
@@ -21,14 +27,9 @@ import {
   FieldLabel,
   FieldSeparator,
   FieldSupportText,
-} from '@/lib/components/ui/field';
-import { Input } from '@/lib/components/ui/input';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
-import { logger } from '@/lib/logger';
-import { getSafeRedirectPath } from '@/lib/safe-redirect';
-import { createClient } from '@/lib/supabase/client';
-import { Turnstile, isTurnstileEnabled, type TurnstileInstance } from '@/lib/turnstile';
-import { cn } from '@/lib/utils';
+  HoverTooltip,
+  Input,
+} from '@dayopt/components';
 import { useAuthStore } from '../stores/useAuthStore';
 
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';

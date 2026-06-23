@@ -1,5 +1,4 @@
-import { Container } from '@/components/ui/container';
-import { Button } from '@dayopt/ui';
+import { Button, Container } from '@dayopt/components';
 import { getTranslations } from 'next-intl/server';
 
 import { HeroProductMocks } from './HeroProductMocks';

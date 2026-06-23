@@ -81,9 +81,9 @@ npm run db:fresh            # リセット + シード
 npm run migration:create    # マイグレーション作成
 npm run migration:list      # マイグレーション一覧
 npm run migration:status    # DB差分確認
-npm run types:generate          # Supabase production main から packages/database に型生成
-npm run types:generate:production # production main から packages/database に型生成
-npm run types:generate:local    # ローカルから packages/database に型生成
+npm run types:generate          # Supabase production main から apps/product/src/lib/database に型生成
+npm run types:generate:production # production main から apps/product/src/lib/database に型生成
+npm run types:generate:local    # ローカルから apps/product/src/lib/database に型生成
 ```
 
 ### 環境変数

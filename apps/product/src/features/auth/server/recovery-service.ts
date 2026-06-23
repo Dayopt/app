@@ -3,10 +3,10 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { verifyRecoveryCode } from '@/lib/auth/recovery-codes';
+import type { Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
-import type { Database } from '@dayopt/database';
 
 class RecoveryServiceError extends ServiceError {
   constructor(

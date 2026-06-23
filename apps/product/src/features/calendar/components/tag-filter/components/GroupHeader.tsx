@@ -19,6 +19,7 @@ import { useTranslations } from 'next-intl';
 
 import type { TagColorName } from '@/features/tags';
 import { ColorPaletteMenuItems, IconPickerDropdownItems, TagIcon } from '@/features/tags';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,8 +29,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@/lib/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
+} from '@dayopt/components';
 
 interface GroupHeaderProps {
   label: string;

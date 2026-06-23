@@ -12,8 +12,8 @@ import { useCallback } from 'react';
 
 import { icons } from 'lucide-react';
 
-import { DropdownMenuItem } from '@/lib/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { DropdownMenuItem } from '@dayopt/components';
 
 import { CURATED_ICONS, kebabToPascal } from '../lib/curated-icons';
 

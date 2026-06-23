@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, fn, userEvent, within } from 'storybook/test';
 
-import { CompactDateNavigator, DateNavigator } from '@/lib/components/common/DateNavigator';
+import { CompactDateNavigator, DateNavigator } from '@/components/common/DateNavigator';
 import { ViewSwitcher } from './ViewSwitcher';
 
 /** カレンダーヘッダーのサブコンポーネント（ViewSwitcher, DateNavigator）。 */

@@ -5,11 +5,11 @@ import { useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { AppHeader } from '@/components/shell/AppHeader';
 import { isCalendarViewPath, TagChipRow } from '@/features/calendar';
 import { ReviewTagChipRow } from '@/features/review';
-import { AppHeader } from '@/lib/components/shell/AppHeader';
-import { InlineBanner } from '@/lib/components/ui/inline-banner';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { InlineBanner } from '@dayopt/components';
 
 import { BottomTabBar } from './BottomTabBar';
 import { useAppInlineBanner } from './useAppInlineBanner';

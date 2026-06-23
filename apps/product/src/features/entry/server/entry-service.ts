@@ -6,7 +6,7 @@ import 'server-only';
  * entries テーブルのビジネスロジック
  */
 
-import type { TablesInsert, TablesUpdate } from '@dayopt/database';
+import type { TablesInsert, TablesUpdate } from '@/lib/database';
 import { determineEntryOrigin } from '../domain';
 import {
   normalizeDateTimeConsistency,

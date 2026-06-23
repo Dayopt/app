@@ -1,8 +1,6 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Badge, Button, Sheet, SheetContent, SheetHeader, SheetTitle } from '@dayopt/components';
 import { Filter } from 'lucide-react';
 
 interface MobileFilterSheetProps {

@@ -1,3 +1,4 @@
+import { generateBreadcrumbs } from '@/lib/mdx';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -5,8 +6,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { generateBreadcrumbs } from '@/lib/mdx';
+} from '@dayopt/components';
 import Link from 'next/link';
 import { Fragment } from 'react';
 

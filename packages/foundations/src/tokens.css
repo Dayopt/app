@@ -1,0 +1,16 @@
+/* ============================================
+ * @dayopt/foundations — canonical design tokens
+ * product / web 共通の単一ソース。各アプリの globals.css から
+ *   @import '@dayopt/foundations/tokens.css';
+ * で取り込む。無 prefix（--background 等）が唯一の canonical 体系。
+ * 順序: primitives → semantic → @theme マッピング
+ * ============================================ */
+
+@import './tokens/primitives.css';
+@import './tokens/colors.css';
+@import './tokens/spacing.css';
+@import './tokens/radius.css';
+@import './tokens/z-index.css';
+@import './tokens/states.css';
+@import './tokens/elevation.css';
+@import './tailwind-theme.css';

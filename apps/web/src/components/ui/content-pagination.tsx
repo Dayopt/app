@@ -8,7 +8,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '@/components/ui/pagination';
+} from '@dayopt/components';
 
 interface ContentPaginationProps {
   currentPage: number;

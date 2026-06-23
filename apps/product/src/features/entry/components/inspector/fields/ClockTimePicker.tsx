@@ -17,9 +17,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Clock, Keyboard } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
 import { formatHHmm, parseTimeString } from '@/lib/date';
 import { cn } from '@/lib/utils';
+import { Button } from '@dayopt/components';
 
 // ─── 定数 ────────────────────────────────────────────
 

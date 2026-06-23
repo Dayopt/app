@@ -11,7 +11,8 @@
     "src/**/*.spec.{ts,tsx}",
     ".storybook/stories/**",
     "src/test/**",
-    "src/emails/**"
+    "src/emails/**",
+    "src/lib/database/**"
   ],
   "ignoreDependencies": [
     "@axe-core/react",

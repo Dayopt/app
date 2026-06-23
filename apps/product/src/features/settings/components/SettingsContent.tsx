@@ -2,9 +2,9 @@
 
 import { Suspense, lazy, useEffect } from 'react';
 
-import { Skeleton } from '@/lib/components/ui/skeleton';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
+import { Skeleton } from '@dayopt/components';
 
 import type { SettingsCategory } from '../types';
 

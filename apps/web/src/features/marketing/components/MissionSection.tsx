@@ -1,4 +1,4 @@
-import { Container } from '@/components/ui/container';
+import { Container } from '@dayopt/components';
 import { dayoptBrand } from '@dayopt/config';
 import { getTranslations } from 'next-intl/server';
 
