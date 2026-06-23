@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { Separator } from '@dayopt/components';
-import { withWrapper } from '@dayopt/storybook/decorators';
 
 const meta = {
   title: 'Components/UI/Layout/Separator',
@@ -25,7 +24,13 @@ export const Vertical: Story = {
   args: {
     orientation: 'vertical',
   },
-  decorators: [withWrapper('flex h-8 items-center')],
+  decorators: [
+    (Story) => (
+      <div className="flex h-8 items-center">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 /** 全パターン一覧。 */

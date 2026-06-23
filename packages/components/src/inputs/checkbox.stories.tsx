@@ -2,11 +2,10 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { getTagColorClasses } from '@/features/tags';
-
 import { Checkbox, Label } from '@dayopt/components';
 
-const greenColor = getTagColorClasses('green');
+// カスタムカラー demo 用のタグトークン（foundations の --tag-* を直接参照）
+const greenCssVar = 'var(--tag-green)';
 
 const meta = {
   title: 'Components/UI/Inputs/Checkbox',
@@ -94,8 +93,8 @@ export const WithCustomColor: Story = {
           checked={checked}
           onCheckedChange={(c) => setChecked(c === true)}
           style={{
-            borderColor: greenColor.cssVar,
-            backgroundColor: checked ? greenColor.cssVar : 'transparent',
+            borderColor: greenCssVar,
+            backgroundColor: checked ? greenCssVar : 'transparent',
           }}
         />
         <Label htmlFor="tag-filter">タグフィルター（カスタムカラー）</Label>
@@ -146,8 +145,8 @@ export const AllPatterns: Story = {
             checked={checked2}
             onCheckedChange={(c) => setChecked2(c === true)}
             style={{
-              borderColor: greenColor.cssVar,
-              backgroundColor: checked2 ? greenColor.cssVar : 'transparent',
+              borderColor: greenCssVar,
+              backgroundColor: checked2 ? greenCssVar : 'transparent',
             }}
           />
           <Label htmlFor="tag">仕事</Label>
