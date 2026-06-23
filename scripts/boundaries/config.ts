@@ -175,14 +175,10 @@ export const DEPRECATED_PREFIXES = [
   '@dayopt/ui', // 非 canonical な package 名（canonical = @dayopt/components）
 ];
 
-/** app alias（@/）→ 各 app の src 実 path。`@/components/ui/x` の実ファイル存在判定に使う。 */
-export function aliasBaseForApp(appRoot: string): string {
-  return `${appRoot}/src`;
-}
-
 /** `@/components/ui/<name>` が app-local 実ファイルを持つか（.tsx / index.tsx / .ts）。 */
 export function appLocalComponentExists(appRoot: string, subPath: string): boolean {
-  const base = resolve(ROOT, aliasBaseForApp(appRoot), subPath);
+  // app alias（@/）→ <appRoot>/src。`@/components/ui/x` の実ファイル存在判定に使う。
+  const base = resolve(ROOT, `${appRoot}/src`, subPath);
   return (
     existsSync(`${base}.tsx`) ||
     existsSync(`${base}.ts`) ||
