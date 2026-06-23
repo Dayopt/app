@@ -1,8 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-import { Mermaid } from '../../.storybook/decorators/Mermaid';
-
-<Meta title="Architecture/Product Overview" />
-
 # Dayopt — Product Overview
 
 タイムボクシング × 時間記録 × タスク × カレンダーを一体化した、個人向け生産性アプリ。
@@ -56,7 +51,8 @@ Dayoptの中心概念。「時間ブロック」として、計画と記録を�
 
 ## ユーザージャーニー
 
-<Mermaid chart={`graph LR
+```mermaid
+graph LR
     A["🎯 Onboarding<br/>クロノタイプ診断"]
     B["📅 Calendar<br/>時間ブロックを配置"]
     C["⏱️ Track<br/>実績を記録"]
@@ -68,8 +64,7 @@ Dayoptの中心概念。「時間ブロック」として、計画と記録を�
     C --> D
     D --> E
     E --> B
-
-`} />
+```
 
 1. **Onboarding** — クロノタイプ診断でエネルギーパターンを把握
 2. **Calendar** — Day/Week/MultiDay ビューで時間ブロックを視覚的に配置
@@ -83,11 +78,12 @@ Dayoptの中心概念。「時間ブロック」として、計画と記録を�
 
 15の機能モジュールがDAG（有向非巡回グラフ）で依存関係を構成：
 
-<Mermaid chart={`graph TD
+```mermaid
+graph TD
     subgraph "Layer 0 — Foundation"
-        tags["🏷️ Tags<br/>活動分類"]
-        chronotype["🧬 Chronotype<br/>生産性パターン"]
-    end
+tags["🏷️ Tags<br/>活動分類"]
+chronotype["🧬 Chronotype<br/>生産性パターン"]
+end
 
     subgraph "Layer 1 — Core Domain"
         entry["📦 Entry<br/>時間ブロック"]
@@ -116,8 +112,7 @@ Dayoptの中心概念。「時間ブロック」として、計画と記録を�
     entry --> stats
     entry --> history
     entry --> palette
-
-`} />
+```
 
 **Layer 0** はどの機能にも依存しない基盤。**Layer 1** は Layer 0 のみに依存。**Layer 2** は Layer 0/1 に依存。この階層は ESLint で強制される。
 
@@ -153,10 +148,10 @@ Dayoptの中心概念。「時間ブロック」として、計画と記録を�
 
 ## 次に読むべきドキュメント
 
-| ドキュメント                                                                                           | 内容                          |
-| ------------------------------------------------------------------------------------------------------ | ----------------------------- |
-| [Domain Glossary](https://github.com/Dayopt/dayopt/blob/main/docs/architecture/domain-glossary.md)     | ドメイン用語の定義            |
-| [Data Flow](https://github.com/Dayopt/dayopt/blob/main/docs/architecture/data-flow.md)                 | データの流れ（UI → API → DB） |
-| [ADR-001](https://github.com/Dayopt/dayopt/blob/main/docs/architecture/adr/001-unified-block-model.md) | Entry統合モデルの設計判断     |
-| [State Management](https://github.com/Dayopt/dayopt/blob/main/docs/architecture/state-management.md)   | 状態管理の使い分け            |
-| [Colors](?path=/story/foundations-colors--all-colors)                                                  | デザイントークン              |
+| ドキュメント                                | 内容                          |
+| ------------------------------------------- | ----------------------------- |
+| [Domain Glossary](./domain-glossary.md)     | ドメイン用語の定義            |
+| [Data Flow](./data-flow.md)                 | データの流れ（UI → API → DB） |
+| [ADR-001](./adr/001-unified-block-model.md) | Entry統合モデルの設計判断     |
+| [State Management](./state-management.md)   | 状態管理の使い分け            |
+| Colors（Storybook: Foundations/Colors）     | デザイントークン              |

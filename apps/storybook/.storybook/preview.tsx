@@ -41,16 +41,7 @@ const preview: Preview = {
     options: {
       storySort: {
         method: 'alphabetical',
-        order: [
-          'Welcome',
-          'Architecture',
-          'Components',
-          'Features',
-          'Design',
-          'UI',
-          'Foundations',
-          'Patterns',
-        ],
+        order: ['Welcome', 'Components', 'Features', 'Design', 'UI', 'Foundations', 'Patterns'],
       },
     },
     darkMode: {

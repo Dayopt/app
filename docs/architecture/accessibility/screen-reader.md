@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Architecture/Accessibility/Screen Reader" />
-
 # スクリーンリーダー対応
 
 視覚的には見えないが、スクリーンリーダーには読み上げられるテキストの実装パターン

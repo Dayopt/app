@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Architecture/Introduction" />
-
 # Dayopt Storybook
 
 DayoptのUIコンポーネントとデザイントークンのカタログです。
@@ -147,14 +143,14 @@ Story作成時に確認：
 
 初めてDayoptのコードベースに触れる場合、以下の順に読むとスムーズです：
 
-| 順番 | ドキュメント                                                                                           | 内容                                           |
-| ---- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| 1    | [Product Overview](?path=/docs/docs-product-overview--docs)                                            | Dayoptとは何か、コアコンセプト、Feature Map    |
-| 2    | [Domain Glossary](https://github.com/Dayopt/dayopt/blob/main/docs/architecture/domain-glossary.md)     | Entry, EntryState, Chronotype 等のドメイン用語 |
-| 3    | [Developer Map](https://github.com/Dayopt/dayopt/blob/main/docs/guides/developer-map.md)               | ディレクトリ構成と「どこに何があるか」         |
-| 4    | [Packages Overview](https://github.com/Dayopt/dayopt/blob/main/docs/architecture/packages-overview.md) | monorepo packages の責務境界と token 移行方針  |
-| 5    | [Data Flow](https://github.com/Dayopt/dayopt/blob/main/docs/architecture/data-flow.md)                 | UI → tRPC → Supabase のデータの流れ            |
-| 6    | [Common Pitfalls](https://github.com/Dayopt/dayopt/blob/main/docs/guides/common-pitfalls.md)           | よくある間違いと正しいパターン                 |
-| 7    | [Colors](?path=/story/foundations-colors--all-colors)                                                  | カラートークン、Surface体系                    |
-| 8    | [Typography](?path=/docs/foundations-typography--docs)                                                 | フォントサイズ、行間、ウェイト                 |
-| 9    | [Accessibility](?path=/docs/docs-accessibility-overview--docs)                                         | a11yチェックリスト、WCAG準拠                   |
+| 順番 | ドキュメント                                    | 内容                                           |
+| ---- | ----------------------------------------------- | ---------------------------------------------- |
+| 1    | [Product Overview](./product-overview.md)       | Dayoptとは何か、コアコンセプト、Feature Map    |
+| 2    | [Domain Glossary](./domain-glossary.md)         | Entry, EntryState, Chronotype 等のドメイン用語 |
+| 3    | [Developer Map](../guides/developer-map.md)     | ディレクトリ構成と「どこに何があるか」         |
+| 4    | [Packages Overview](./packages-overview.md)     | monorepo packages の責務境界と token 移行方針  |
+| 5    | [Data Flow](./data-flow.md)                     | UI → tRPC → Supabase のデータの流れ            |
+| 6    | [Common Pitfalls](../guides/common-pitfalls.md) | よくある間違いと正しいパターン                 |
+| 7    | Colors（Storybook: Foundations/Colors）         | カラートークン、Surface体系                    |
+| 8    | Typography（Storybook: Foundations/Typography） | フォントサイズ、行間、ウェイト                 |
+| 9    | [Accessibility](./accessibility/overview.md)    | a11yチェックリスト、WCAG準拠                   |

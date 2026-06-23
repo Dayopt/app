@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Architecture/Storybook Glossary" />
-
 # Storybook 公式用語集
 
 Storybook 8 の構成要素を公式用語に基づいて整理したリファレンス。

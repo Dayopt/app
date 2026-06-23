@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta = {
-  title: 'Architecture/Props Inventory',
+  title: 'Components/UI/Props Inventory',
   parameters: {
     layout: 'fullscreen',
   },
@@ -286,7 +286,7 @@ export const Overview: Story = {
                 {components.map((c) => (
                   <tr
                     key={c.name}
-                    className={`border-border border-b last:border-b-0 ${c.note ? 'bg-warning/5' : ''}`}
+                    className={`border-border border-b last:border-b-0 ${c.note ? 'bg-warning-tint' : ''}`}
                   >
                     <td className="px-4 py-2 font-mono text-xs font-medium">{c.name}</td>
                     <td className="text-muted-foreground px-4 py-2 font-mono text-xs">
@@ -300,7 +300,7 @@ export const Overview: Story = {
                     <td className="px-4 py-2 text-center">{c.className ? <Check /> : <Dash />}</td>
                     <td className="px-4 py-2 text-xs">
                       {c.note && (
-                        <span className="bg-warning/10 text-warning rounded-lg px-2 py-0.5 font-mono">
+                        <span className="bg-warning-tint text-warning rounded-lg px-2 py-1 font-mono">
                           {c.note}
                         </span>
                       )}
@@ -313,7 +313,7 @@ export const Overview: Story = {
         </section>
 
         {/* ステータス */}
-        <section className="bg-primary/5 border-primary/20 rounded-lg border p-4">
+        <section className="bg-primary-state-selected border-primary rounded-lg border p-4">
           <p className="text-primary text-sm font-medium">
             &#10003; すべてのpropsが統一ルールに準拠しています
           </p>

@@ -1,7 +1,3 @@
-import { Meta } from '@storybook/addon-docs/blocks';
-
-<Meta title="Architecture/Accessibility/Forms & Dialog" />
-
 # フォームとDialog
 
 フォーム要素のラベル紐付け、エラー状態、Dialog の必須ルール
