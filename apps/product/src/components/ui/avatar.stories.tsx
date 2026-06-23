@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 
-import { Avatar, AvatarFallback, AvatarImage, AvatarUpload } from './avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@dayopt/components';
+
+import { AvatarUpload } from './avatar-upload';
 
 const meta = {
   title: 'Components/UI/Avatar',

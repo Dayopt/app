@@ -7,12 +7,12 @@ import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
 import { NavBadge, type NavBadgeVariant } from '@/components/shell/sidebar/NavBadge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/features/auth';
 import { useCalendarNavigation } from '@/features/calendar';
 import { useReviewFilterStore } from '@/features/review';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@dayopt/components';
 
 import { buildCalendarPath, buildReviewPath, getLocaleFromPathname } from './navigation-paths';
 

@@ -144,6 +144,13 @@ export {
 export { HoverTooltip } from './overlays/tooltip';
 
 // display
+export {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  avatarVariants,
+  type AvatarProps,
+} from './display/avatar';
 export { Badge, badgeVariants, type BadgeProps } from './display/badge';
 export {
   Card,

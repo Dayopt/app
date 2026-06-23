@@ -7,9 +7,9 @@ import { useTranslations } from 'next-intl';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/features/auth';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
+import { Avatar, AvatarFallback, AvatarImage } from '@dayopt/components';
 
 import { AvatarChangeDialog } from './avatar-change-dialog';
 import { DisplayNameDialog } from './display-name-dialog';
