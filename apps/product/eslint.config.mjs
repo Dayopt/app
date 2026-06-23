@@ -83,13 +83,13 @@ const eslintConfig = defineConfig([
   // =========================================================================
   // Feature Boundary: DAG（有向非循環グラフ）モデル
   //
-  // Layer 0 (Domain/基盤): tags, chronotype       — 他featureに依存しない
-  // Layer 1 (Domain/中核): entry                  — L0 barrel のみ
-  // Layer 2 (Feature/体験): calendar, stats — L0+L1 barrel のみ
-  // Independent:      auth, contact, notifications — 他featureに依存しない
+  // Layer 0 (基盤):   tags             — 他featureに依存しない
+  // Layer 1 (中核):   entry            — L0 barrel のみ
+  // Layer 2 (体験):   calendar, review — L0+L1 barrel のみ
+  // Independent:      auth, contact    — 他featureに依存しない
   //
-  // settings: featureから除外（app層compositionに移動済み）
-  // palette:  featureから除外（廃止済み）
+  // settings:      feature から除外（app 層 composition に移動済み）
+  // *.stories.tsx: DAG 除外（composition プレビュー層として cross-feature import を許容）
   //
   // ルール: 上位→下位の barrel import のみ許可。同層・下位→上位は禁止。
   // deep import（@/features/X/components/*）は常に禁止。
@@ -127,9 +127,10 @@ const eslintConfig = defineConfig([
 
   // ── 2. Feature DAG ──
 
-  // Layer 0 (tags, chronotype): 他featureへの依存ゼロ
+  // Layer 0 (tags): 他featureへの依存ゼロ
   {
-    files: ['src/features/tags/**/*.{ts,tsx}', 'src/features/chronotype/**/*.{ts,tsx}'],
+    files: ['src/features/tags/**/*.{ts,tsx}'],
+    ignores: ['**/*.stories.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -148,6 +149,7 @@ const eslintConfig = defineConfig([
   // Layer 1 (entry): L0 barrel のみ許可
   {
     files: ['src/features/entry/**/*.{ts,tsx}'],
+    ignores: ['**/*.stories.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -159,7 +161,7 @@ const eslintConfig = defineConfig([
               message: '上位層featureのimport禁止。',
             },
             {
-              group: ['@/features/stats', '@/features/stats/**'],
+              group: ['@/features/review', '@/features/review/**'],
               message: '上位層featureのimport禁止。',
             },
             // Independent 禁止
@@ -176,10 +178,6 @@ const eslintConfig = defineConfig([
               group: ['@/features/tags/**'],
               message: 'barrel import（@/features/tags）のみ使用。',
             },
-            {
-              group: ['@/features/chronotype/**'],
-              message: 'barrel import（@/features/chronotype）のみ使用。',
-            },
           ],
         },
       ],
@@ -189,6 +187,7 @@ const eslintConfig = defineConfig([
   // Layer 2 (calendar): L0+L1 barrel のみ許可
   {
     files: ['src/features/calendar/**/*.{ts,tsx}'],
+    ignores: ['**/*.stories.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -196,7 +195,7 @@ const eslintConfig = defineConfig([
           patterns: [
             // 同層間禁止（自分自身は含めない）
             {
-              group: ['@/features/stats', '@/features/stats/**'],
+              group: ['@/features/review', '@/features/review/**'],
               message: '同層featureのimport禁止。',
             },
             // Independent 禁止
@@ -214,10 +213,6 @@ const eslintConfig = defineConfig([
               message: 'barrel import（@/features/tags）のみ使用。',
             },
             {
-              group: ['@/features/chronotype/**'],
-              message: 'barrel import（@/features/chronotype）のみ使用。',
-            },
-            {
               group: ['@/features/entry/**'],
               message: 'barrel import（@/features/entry）のみ使用。',
             },
@@ -227,18 +222,21 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // Layer 2 (stats): L0+L1 barrel のみ許可
+  // Layer 2 (review): L0+L1 barrel のみ許可
   {
-    files: ['src/features/stats/**/*.{ts,tsx}'],
+    files: ['src/features/review/**/*.{ts,tsx}'],
+    ignores: ['**/*.stories.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
           patterns: [
+            // 同層間禁止（自分自身は含めない）
             {
               group: ['@/features/calendar', '@/features/calendar/**'],
               message: '同層featureのimport禁止。',
             },
+            // Independent 禁止
             {
               group: ['@/features/auth', '@/features/auth/**'],
               message: '独立featureのimport禁止。',
@@ -247,13 +245,10 @@ const eslintConfig = defineConfig([
               group: ['@/features/contact', '@/features/contact/**'],
               message: '独立featureのimport禁止。',
             },
+            // L0+L1 deep import禁止（barrel のみ許可）
             {
               group: ['@/features/tags/**'],
               message: 'barrel import（@/features/tags）のみ使用。',
-            },
-            {
-              group: ['@/features/chronotype/**'],
-              message: 'barrel import（@/features/chronotype）のみ使用。',
             },
             {
               group: ['@/features/entry/**'],
@@ -268,6 +263,7 @@ const eslintConfig = defineConfig([
   // Independent (auth, contact): 他featureへの依存ゼロ
   {
     files: ['src/features/auth/**/*.{ts,tsx}', 'src/features/contact/**/*.{ts,tsx}'],
+    ignores: ['**/*.stories.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
