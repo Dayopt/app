@@ -4,8 +4,8 @@ import { BarChart3, CalendarClock, Clock, Diff, ListChecks } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useMemo } from 'react';
 
-import { EmptyState } from '@/components/common/EmptyState';
-import { ErrorState } from '@/components/common/ErrorState';
+import { EmptyState } from '@/components/ui/feedback/EmptyState';
+import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { TagIcon } from '@/features/tags';
 import { formatDateShort, formatDurationMinutes, formatTimeRange } from '@/lib/date';
 import { cn } from '@/lib/utils';

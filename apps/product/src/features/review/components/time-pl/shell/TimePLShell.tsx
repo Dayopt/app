@@ -2,7 +2,7 @@
 
 import { FileSpreadsheet } from 'lucide-react';
 
-import { EmptyState } from '@/components/common/EmptyState';
+import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, Skeleton } from '@dayopt/components';
 

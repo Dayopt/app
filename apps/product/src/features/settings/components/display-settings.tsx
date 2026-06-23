@@ -20,8 +20,8 @@ import {
 import { getTimeZones } from '@/lib/timezone-utils';
 import { useUserSettings } from '../hooks/useUserSettings';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
+import { LabeledRow } from '@/components/ui/display/LabeledRow';
+import { SectionCard } from '@/components/ui/display/SectionCard';
 
 /**
  * 表示設定コンポーネント

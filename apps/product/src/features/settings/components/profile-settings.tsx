@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { Camera } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
+import { LabeledRow } from '@/components/ui/display/LabeledRow';
+import { SectionCard } from '@/components/ui/display/SectionCard';
 import { useAuthStore } from '@/features/auth';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { Avatar, AvatarFallback, AvatarImage } from '@dayopt/components';

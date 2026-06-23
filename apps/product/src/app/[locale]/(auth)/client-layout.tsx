@@ -8,7 +8,7 @@
  */
 'use client';
 
-import { Toaster } from '@/components/ui/toast';
+import { Toaster } from '@/components/ui/feedback/toast';
 import { AuthLayout } from '@/features/auth';
 import { PublicProviders } from './_providers/PublicProviders';
 

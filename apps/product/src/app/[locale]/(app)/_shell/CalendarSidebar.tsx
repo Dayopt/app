@@ -1,6 +1,6 @@
 'use client';
 
-import { MiniCalendar } from '@/components/ui/mini-calendar';
+import { MiniCalendar } from '@/components/ui/inputs/mini-calendar';
 import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/features/calendar';
 
 /**

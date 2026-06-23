@@ -3,7 +3,7 @@ import { addDays } from 'date-fns';
 import { CalendarDays } from 'lucide-react';
 import { useState } from 'react';
 
-import { MiniCalendar } from '@/components/ui/mini-calendar';
+import { MiniCalendar } from '@/components/ui/inputs/mini-calendar';
 import { Button } from '@dayopt/components';
 import { withWrapper } from '@dayopt/storybook/decorators';
 

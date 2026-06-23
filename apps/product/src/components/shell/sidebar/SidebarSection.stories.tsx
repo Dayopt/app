@@ -10,7 +10,7 @@ import { fn } from 'storybook/test';
 
 import { ChevronRight, Moon, PanelLeft, Plus, Search } from 'lucide-react';
 
-import { MiniCalendar } from '@/components/ui/mini-calendar';
+import { MiniCalendar } from '@/components/ui/inputs/mini-calendar';
 import { getTagColorClasses } from '@/features/tags';
 import { Checkbox } from '@dayopt/components';
 

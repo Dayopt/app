@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
 import { MFAVerifyForm, SessionTimeoutDialog } from '@/features/auth';
 import { Button } from '@dayopt/components';
 

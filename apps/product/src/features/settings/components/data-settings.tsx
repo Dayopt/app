@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
 import { api } from '@/lib/trpc';
 import {
   Button,
@@ -36,8 +36,8 @@ import {
   SelectValue,
 } from '@dayopt/components';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
+import { LabeledRow } from '@/components/ui/display/LabeledRow';
+import { SectionCard } from '@/components/ui/display/SectionCard';
 import { InfoBox } from './InfoBox';
 
 type ExportFormat = 'json' | 'csv';

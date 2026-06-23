@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@dayopt/components';
 
-import { AvatarUpload } from './avatar-upload';
+import { AvatarUpload } from '../inputs/avatar-upload';
 
 const meta = {
   title: 'Components/UI/Display/Avatar',

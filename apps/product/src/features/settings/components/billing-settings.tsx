@@ -17,9 +17,9 @@ import { AlertTriangle, Check, CreditCard, Crown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { ErrorState } from '@/components/common/ErrorState';
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
+import { LabeledRow } from '@/components/ui/display/LabeledRow';
+import { SectionCard } from '@/components/ui/display/SectionCard';
+import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
