@@ -27,7 +27,7 @@ product / web がデザイントークンと汎用 UI を**各自で重複保有
 ```
 packages/foundations  = トークン（無 prefix CSS + @theme + Foundations docs）の canonical・export 入口
 packages/components   = 汎用 UI の canonical 実装・正規 export 入口（単一 barrel）
-  src/{primitives,forms,feedback,actions,layout}/  = category 別整理（export は index.ts 単一 barrel）
+  src/{category}/  = category 別整理（export は index.ts 単一 barrel。第二階層 category は ADR-012 で責務ベースに精緻化）
   src/hooks/                                        = component が必要とする hook（useIsMobile 等）を自己完結化
 
 apps/product/src/components/  = product 全体固有（旧 lib/components。common/shell/残置 ui）
