@@ -1,5 +1,5 @@
 import { FAQStructuredData } from '@/components/seo/EnhancedSEO';
-import { TagPill } from '@/components/ui/tag-pill';
+import { TagPill } from '@/components/ui/display/tag-pill';
 import { Breadcrumbs, ClientTableOfContents, mdxComponents, PageNavigation } from '@/features/docs';
 import { faqMdxComponents } from '@/features/docs/components/MDXComponents';
 import { getAllContent, getMDXContentForRSC, getRelatedContent } from '@/lib/mdx';

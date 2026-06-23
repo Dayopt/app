@@ -1,5 +1,5 @@
 import { createMDXComponents } from '@/components/content/ContentMDXComponents';
-import { TagPill } from '@/components/ui/tag-pill';
+import { TagPill } from '@/components/ui/display/tag-pill';
 import {
   RelatedPosts,
   ShareButton,

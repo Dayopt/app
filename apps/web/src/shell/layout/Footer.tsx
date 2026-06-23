@@ -1,7 +1,7 @@
 'use client';
 
-import { LanguageSwitcher } from '@/components/ui/language-switcher';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LanguageSwitcher } from '@/components/ui/actions/language-switcher';
+import { ThemeToggle } from '@/components/ui/actions/theme-toggle';
 import { Link } from '@/platform/i18n/navigation';
 import { Logo } from '@dayopt/components';
 import { dayoptBrand } from '@dayopt/config';

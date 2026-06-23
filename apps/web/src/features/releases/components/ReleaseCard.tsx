@@ -1,6 +1,6 @@
 'use client';
 
-import { TagPill } from '@/components/ui/tag-pill';
+import { TagPill } from '@/components/ui/display/tag-pill';
 import { Link } from '@/platform/i18n/navigation';
 import { Heading } from '@dayopt/components';
 import { useTranslations } from 'next-intl';
