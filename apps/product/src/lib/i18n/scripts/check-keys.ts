@@ -10,6 +10,7 @@
  *   npm run i18n:check
  */
 
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '@dayopt/config';
 import { readdir, readFile } from 'fs/promises';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -18,8 +19,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const MESSAGES_DIR = join(__dirname, '..', '..', '..', '..', 'messages');
-const LOCALES = ['en', 'ja'];
-const BASE_LOCALE = 'en';
+const LOCALES = SUPPORTED_LOCALES;
+const BASE_LOCALE = DEFAULT_LOCALE;
 
 /**
  * JSONオブジェクトからすべてのキーパスを抽出

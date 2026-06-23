@@ -4,21 +4,21 @@ import { useCallback, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { AvatarUpload } from '@/components/ui/avatar';
 import { useAuthStore } from '@/features/auth';
-import { AvatarUpload } from '@/lib/components/ui/avatar';
-import { Button } from '@/lib/components/ui/button';
+import { logger } from '@/lib/logger';
+import { createClient } from '@/lib/supabase/client';
+import { deleteAvatar, uploadAvatar } from '@/lib/supabase/storage';
+import { api } from '@/lib/trpc';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/lib/components/ui/dialog';
-import { logger } from '@/lib/logger';
-import { createClient } from '@/lib/supabase/client';
-import { deleteAvatar, uploadAvatar } from '@/lib/supabase/storage';
-import { api } from '@/lib/trpc';
+} from '@dayopt/components';
 
 interface AvatarChangeDialogProps {
   open: boolean;

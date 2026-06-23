@@ -10,6 +10,7 @@ import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { useIsFetching } from '@tanstack/react-query';
 
+import { SidebarSection } from '@/components/shell/sidebar';
 import {
   flattenTagTree,
   TagDeleteStrategyDialog,
@@ -17,12 +18,9 @@ import {
   useDeleteTag,
   useTagsHierarchy,
 } from '@/features/tags';
-import { SidebarSection } from '@/lib/components/shell/sidebar';
-import { Button } from '@/lib/components/ui/button';
-import { Skeleton } from '@/lib/components/ui/skeleton';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { api } from '@/lib/trpc';
+import { Button, HoverTooltip, Skeleton } from '@dayopt/components';
 
 import { TagFlatList } from './components/TagFlatList';
 

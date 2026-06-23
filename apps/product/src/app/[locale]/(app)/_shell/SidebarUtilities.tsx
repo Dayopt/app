@@ -5,9 +5,8 @@ import { useCallback } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useTheme } from '@/lib/hooks/useTheme';
+import { Button, HoverTooltip } from '@dayopt/components';
 
 /** テーマ切替ユーティリティ (全モード共通で Sidebar 下部に表示) */
 export function SidebarUtilities() {

@@ -5,8 +5,8 @@ import { useTranslations } from 'next-intl';
 
 import { DateRow, TimeConflictAlert, TimeRow } from '@/features/entry';
 import { TagIcon } from '@/features/tags';
-import { Button } from '@/lib/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Button } from '@dayopt/components';
 
 export interface TagEntryCreateFormProps {
   tag: {

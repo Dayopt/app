@@ -1,16 +1,9 @@
 @import 'tailwindcss';
-@source '../../../../packages/ui/src';
+@source '../../../../packages/components/src';
 @import 'highlight.js/styles/github.css';
 
-/* Design Tokens */
-@import '@dayopt/design/theme.css';
-@import '../styles/tokens/primitives.css';
-@import '../styles/tokens/colors.css';
-@import '../styles/tokens/elevation.css';
-@import '../styles/tokens/states.css';
-
-/* Tailwind Theme Mapping */
-@import '../styles/tailwind-theme.css';
+/* Design Tokens（@dayopt/foundations が単一ソース） */
+@import '@dayopt/foundations/tokens.css';
 
 /* Utilities */
 @import '../styles/utilities.css';

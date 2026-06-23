@@ -3,8 +3,8 @@
 import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { DropdownMenuItem } from '@/lib/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { DropdownMenuItem } from '@dayopt/components';
 import { TAG_COLOR_MAP, TAG_COLOR_NAMES, resolveTagColor } from '../lib/tag-colors';
 
 import type { TagColorName } from '../lib/tag-colors';

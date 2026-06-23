@@ -1,5 +1,4 @@
-import { Button } from '@/components/ui/button';
-import { Heading, Text } from '@/components/ui/typography';
+import { Button, Heading, Text } from '@dayopt/components';
 import type { LucideIcon } from 'lucide-react';
 
 interface EmptyStateProps {

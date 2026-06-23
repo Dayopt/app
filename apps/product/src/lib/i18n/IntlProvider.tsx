@@ -7,7 +7,7 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 
-import { CookieConsentBanner } from '@/lib/components/shell/CookieConsentBanner';
+import { CookieConsentBanner } from '@/components/shell/CookieConsentBanner';
 
 import { pickMessages } from './index';
 

@@ -7,19 +7,20 @@ import { useTranslations } from 'next-intl';
 import NextImage from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
-import { Button } from '@/lib/components/ui/button';
-import { Card, CardContent } from '@/lib/components/ui/card';
+import { Link } from '@/lib/i18n/navigation';
+import { cn } from '@/lib/utils';
 import {
+  Button,
+  Card,
+  CardContent,
   Field,
   FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
-} from '@/lib/components/ui/field';
-import { Input } from '@/lib/components/ui/input';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
-import { Link } from '@/lib/i18n/navigation';
-import { cn } from '@/lib/utils';
+  HoverTooltip,
+  Input,
+} from '@dayopt/components';
 
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 import { useAuthStore } from '../stores/useAuthStore';

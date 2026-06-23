@@ -2,11 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Check, X } from 'lucide-react';
 import { useState } from 'react';
 
-import { Badge } from '@/lib/components/ui/badge';
-import { Button } from '@/lib/components/ui/button';
-import { Checkbox } from '@/lib/components/ui/checkbox';
-import { Label } from '@/lib/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
+import { Badge, Button, Checkbox, Label, RadioGroup, RadioGroupItem } from '@dayopt/components';
 
 const meta = {
   title: 'Patterns/Selection',

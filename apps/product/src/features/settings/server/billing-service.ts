@@ -11,11 +11,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
 
 import { getAppUrl } from '@/lib/app-url';
+import type { Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { requireStripe } from '@/lib/stripe/client';
 import { ServiceError } from '@/lib/trpc/errors';
-import type { SubscriptionStatus } from '@dayopt/billing';
-import type { Database } from '@dayopt/database';
+import { dayoptProTrialDays, type SubscriptionStatus } from '@dayopt/billing';
 
 // ===== Types =====
 
@@ -148,7 +148,7 @@ export async function createCheckoutSession(
     customer: customerId,
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
-    subscription_data: hasTrialHistory ? {} : { trial_period_days: 7 },
+    subscription_data: hasTrialHistory ? {} : { trial_period_days: dayoptProTrialDays },
     success_url: `${appUrl}/settings/subscription?success=true`,
     cancel_url: `${appUrl}/settings/subscription?canceled=true`,
     metadata: {

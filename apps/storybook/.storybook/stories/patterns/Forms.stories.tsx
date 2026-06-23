@@ -1,9 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
-import { Button } from '@/lib/components/ui/button';
-import { Field, FieldError, FieldLabel, FieldSupportText } from '@/lib/components/ui/field';
-import { Input } from '@/lib/components/ui/input';
+import { Button, Field, FieldError, FieldLabel, FieldSupportText, Input } from '@dayopt/components';
 
 const meta = {
   title: 'Patterns/Forms',

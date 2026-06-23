@@ -6,18 +6,19 @@ import NextImage from 'next/image';
 
 import { Link } from '@/lib/i18n/navigation';
 
-import { Button } from '@/lib/components/ui/button';
-import { Card, CardContent } from '@/lib/components/ui/card';
+import { cn } from '@/lib/utils';
 import {
+  Button,
+  Card,
+  CardContent,
   Field,
   FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
   FieldSupportText,
-} from '@/lib/components/ui/field';
-import { Input } from '@/lib/components/ui/input';
-import { cn } from '@/lib/utils';
+  Input,
+} from '@dayopt/components';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '../stores/useAuthStore';
 

@@ -11,13 +11,12 @@ import {
 
 import { CheckIcon } from 'lucide-react';
 
-import { Drawer, DrawerContent } from '@/lib/components/ui/drawer';
-import { Popover, PopoverAnchor, PopoverContent } from '@/lib/components/ui/popover';
 import { formatHHmm, formatTimeString, parseTimeString } from '@/lib/date';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { computeDuration, formatDurationDisplay } from '@/lib/time-utils';
 import { cn } from '@/lib/utils';
+import { Drawer, DrawerContent, Popover, PopoverAnchor, PopoverContent } from '@dayopt/components';
 
 import { ClockTimePicker } from './ClockTimePicker';
 

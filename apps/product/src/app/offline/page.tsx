@@ -2,7 +2,7 @@
 
 import { WifiOff } from 'lucide-react';
 
-import { Button, Card } from '@dayopt/ui';
+import { Button, Card } from '@dayopt/components';
 
 const messages = {
   en: {

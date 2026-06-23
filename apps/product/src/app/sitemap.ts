@@ -1,9 +1,10 @@
+import { SUPPORTED_LOCALES } from '@dayopt/config';
 import type { MetadataRoute } from 'next';
 
 import { getAppUrl } from '@/lib/app-url';
 
-// サポートする言語
-const locales = ['ja', 'en'] as const;
+// サポートする言語（@dayopt/config が source of truth）
+const locales = SUPPORTED_LOCALES;
 
 /**
  * 動的Sitemap生成（多言語対応）

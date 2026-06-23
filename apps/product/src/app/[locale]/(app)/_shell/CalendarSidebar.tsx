@@ -1,7 +1,7 @@
 'use client';
 
+import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/features/calendar';
-import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
 
 /**
  * Calendar モード Sidebar 中身

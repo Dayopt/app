@@ -24,7 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/lib/components/ui/dropdown-menu';
+} from '@dayopt/components';
 
 interface TagRowProps {
   tagId: string | null;

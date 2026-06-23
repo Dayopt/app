@@ -14,7 +14,7 @@ Supabase CLIを使用して、データベーススキーマからTypeScript型�
 
 PR Preview Branch の schema は Supabase integration check で検証する。型生成は production main か local のどちらかを明示して行う。
 
-全コマンドとも `packages/database/src/generated/database.types.ts` に出力。
+全コマンドとも `apps/product/src/lib/database/generated/database.types.ts` に出力。
 
 ---
 
@@ -50,7 +50,7 @@ npm run types:generate:local
 npm run typecheck
 
 # 5. コミット
-git add packages/database/src/generated/database.types.ts
+git add apps/product/src/lib/database/generated/database.types.ts
 git commit -m "chore(types): supabase型定義を更新"
 ```
 
@@ -58,12 +58,12 @@ git commit -m "chore(types): supabase型定義を更新"
 
 ## カスタム型
 
-`packages/database/src/generated/database.types.ts` は自動生成ファイル。**直接編集禁止**。
+`apps/product/src/lib/database/generated/database.types.ts` は自動生成ファイル。**直接編集禁止**。
 
 カスタム型が必要な場合は別ファイルに定義:
 
 ```typescript
-// packages/database/src/types.ts
+// apps/product/src/lib/database/types.ts
 import type { Database } from './generated/database.types';
 
 export type PlanRow = Database['public']['Tables']['plans']['Row'];

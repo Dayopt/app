@@ -12,9 +12,7 @@ import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFi
 import { useTags } from '@/features/tags';
 import { useTagModalNavigation } from '../../../../hooks/useTagModalNavigation';
 
-import { Checkbox } from '@/lib/components/ui/checkbox';
-import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
+import { Checkbox, DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/components';
 
 import { FilterItemMenu, UntaggedItemMenu } from './FilterItemMenu';
 import { useFilterItemEdit } from './useFilterItemEdit';

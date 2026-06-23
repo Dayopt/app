@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 
 import { Bar, BarChart, XAxis, YAxis } from 'recharts';
 
-import { Skeleton } from '@/lib/components/ui/skeleton';
+import { Skeleton } from '@dayopt/components';
 
 import { formatHours } from '../../lib/format-hours';
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';

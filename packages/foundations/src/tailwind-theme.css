@@ -1,0 +1,154 @@
+/* ============================================
+ * Tailwindへのマッピング（@theme inline）
+ * :root / .dark の CSS変数を Tailwind ユーティリティクラスに接続
+ * ============================================ */
+@theme inline {
+  /* ============================================
+   * Surface トークン（3段階 + muted）
+   * container:   サイドバー、セクション（沈む）
+   * background:  ページ背景（基準）
+   * card:        カード、ダイアログ、ポップオーバー（浮く）
+   * muted:       入力欄、well
+   * overlay:     モーダル背景（半透明）
+   * ============================================ */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-container: var(--container);
+  --color-surface-container: var(--container); /* 後方互換: bg-surface-container */
+  --color-overlay: var(--overlay);
+  --color-entry-default: var(--entry-default);
+
+  /* Popover / Tooltip */
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-tooltip: var(--tooltip);
+  --color-tooltip-foreground: var(--tooltip-foreground);
+
+  /* Elevation（物理照明シャドウ） */
+  --shadow-elevation-sunken: var(--elevation-sunken);
+  --shadow-elevation-surface: var(--elevation-surface);
+  --shadow-elevation-raised: var(--elevation-raised);
+  --shadow-elevation-raised-heavy: var(--elevation-raised-heavy);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  /* Semantic — accent + tint + foreground */
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-tint: var(--destructive-tint);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
+  --color-success-foreground: var(--success-foreground);
+  --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Charts - Comparison（比較用） */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Charts - Semantic（意味ベース、既存セマンティックカラー参照） */
+  --color-chart-primary: var(--primary);
+  --color-chart-success: var(--success);
+  --color-chart-warning: var(--warning);
+  --color-chart-destructive: var(--destructive);
+  --color-chart-info: var(--info);
+  --color-chart-muted: var(--muted-foreground);
+
+  /* Heatmap Scale（primary α段階 — SVG/セル背景用） */
+  --color-heatmap-scale-1: var(--heatmap-scale-1);
+  --color-heatmap-scale-2: var(--heatmap-scale-2);
+  --color-heatmap-scale-3: var(--heatmap-scale-3);
+  --color-heatmap-scale-4: var(--heatmap-scale-4);
+  --color-fulfillment-high: var(--fulfillment-high);
+  --color-fulfillment-mid: var(--fulfillment-mid);
+  --color-fulfillment-low: var(--fulfillment-low);
+
+  /* ============================================
+   * Shadow トークン
+   * sm: 軽いエレベーション（ボタン、入力欄）
+   * card: カード・ポップオーバー用
+   * ダークモードは colors.css の CSS変数で切替
+   * ============================================ */
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-card: var(--shadow-card);
+
+  /* ============================================
+   * Tag Colors — Base（borders / dots / accents）
+   * 使用例: bg-tag-blue, border-tag-red
+   * ============================================ */
+  --color-tag-red: var(--tag-red);
+  --color-tag-orange: var(--tag-orange);
+  --color-tag-amber: var(--tag-amber);
+  --color-tag-green: var(--tag-green);
+  --color-tag-teal: var(--tag-teal);
+  --color-tag-blue: var(--tag-blue);
+  --color-tag-indigo: var(--tag-indigo);
+  --color-tag-violet: var(--tag-violet);
+  --color-tag-pink: var(--tag-pink);
+  --color-tag-gray: var(--tag-gray);
+
+  /* Tag Colors — Tint（card背景用、WCAG AA準拠）
+   * 使用例: bg-tag-blue-tint */
+  --color-tag-red-tint: var(--tag-red-tint);
+  --color-tag-orange-tint: var(--tag-orange-tint);
+  --color-tag-amber-tint: var(--tag-amber-tint);
+  --color-tag-green-tint: var(--tag-green-tint);
+  --color-tag-teal-tint: var(--tag-teal-tint);
+  --color-tag-blue-tint: var(--tag-blue-tint);
+  --color-tag-indigo-tint: var(--tag-indigo-tint);
+  --color-tag-violet-tint: var(--tag-violet-tint);
+  --color-tag-pink-tint: var(--tag-pink-tint);
+  --color-tag-gray-tint: var(--tag-gray-tint);
+
+  /* Chronotype — テキスト + 背景 tint */
+  --color-chronotype-deep: var(--chronotype-deep);
+  --color-chronotype-ease: var(--chronotype-ease);
+  --color-chronotype-deep-tint: var(--chronotype-deep-tint);
+  --color-chronotype-ease-tint: var(--chronotype-ease-tint);
+
+  /* Now Indicator */
+  --color-now-indicator: var(--now-indicator);
+  --color-now-indicator-foreground: var(--now-indicator-foreground);
+  --color-now-indicator-muted: var(--now-indicator-muted);
+
+  /* Badge — Rank */
+  --color-badge-bronze: var(--badge-bronze);
+  --color-badge-silver: var(--badge-silver);
+  --color-badge-gold: var(--badge-gold);
+
+  /* Badge — Category */
+  --color-badge-growth: var(--badge-growth);
+  --color-badge-exploration: var(--badge-exploration);
+  --color-badge-pattern: var(--badge-pattern);
+  --color-badge-loyalty: var(--badge-loyalty);
+}
+
+/* ============================================
+ * タイポグラフィ
+ * ============================================
+ * Tailwindデフォルトを使用（CSS変数不要）
+ * - フォントサイズ: text-xs, text-sm, text-base, text-lg, text-xl, text-2xl...
+ * - フォントウェイト: font-normal (400), font-medium (500)
+ * - 行間: leading-tight, leading-normal, leading-relaxed
+ * ダークモードで切り替える必要がないため、トークン化しない
+ */

@@ -1,8 +1,8 @@
 'use client';
 
 import { TagPill } from '@/components/ui/tag-pill';
-import { Heading } from '@/components/ui/typography';
 import { Link } from '@/platform/i18n/navigation';
+import { Heading } from '@dayopt/components';
 import { useTranslations } from 'next-intl';
 import type { ReleasePostMetaClient } from '../lib/releases';
 

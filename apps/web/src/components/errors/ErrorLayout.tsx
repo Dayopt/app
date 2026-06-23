@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Logo } from '@dayopt/ui';
+import { Button, Logo } from '@dayopt/components';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 

@@ -4,13 +4,12 @@ import { BarChart3, CalendarClock, Clock, Diff, ListChecks } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useMemo } from 'react';
 
+import { EmptyState } from '@/components/common/EmptyState';
+import { ErrorState } from '@/components/common/ErrorState';
 import { TagIcon } from '@/features/tags';
-import { EmptyState } from '@/lib/components/common/EmptyState';
-import { ErrorState } from '@/lib/components/common/ErrorState';
-import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/card';
-import { Skeleton } from '@/lib/components/ui/skeleton';
 import { formatDateShort, formatDurationMinutes, formatTimeRange } from '@/lib/date';
 import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle, Skeleton } from '@dayopt/components';
 
 import { useTagDashboardData } from '../../hooks/useTagDetailData';
 import { parseReviewDateParam } from '../../lib/date-param';

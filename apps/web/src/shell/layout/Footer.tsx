@@ -3,8 +3,8 @@
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Link } from '@/platform/i18n/navigation';
+import { Logo } from '@dayopt/components';
 import { dayoptBrand } from '@dayopt/config';
-import { Logo } from '@dayopt/ui';
 import { useTranslations } from 'next-intl';
 
 // SNS Icons

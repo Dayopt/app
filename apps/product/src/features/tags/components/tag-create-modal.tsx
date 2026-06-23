@@ -17,18 +17,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Folder, icons as lucideIcons } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/lib/components/ui/dialog';
-import { FieldError } from '@/lib/components/ui/field';
-import { Input } from '@/lib/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/lib/components/ui/popover';
-import { cn } from '@/lib/utils';
+  FieldError,
+  Input,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@dayopt/components';
 import {
   DEFAULT_TAG_COLOR,
   TAG_COLOR_MAP,

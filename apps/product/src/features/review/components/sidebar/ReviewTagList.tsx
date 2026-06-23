@@ -21,6 +21,7 @@ import type { SortingStrategy } from '@dnd-kit/sortable';
 import { SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS, getEventCoordinates } from '@dnd-kit/utilities';
 
+import { SidebarSection } from '@/components/shell/sidebar';
 import type { Tag, TagTreeNode } from '@/features/tags';
 import {
   buildTagHierarchyUpdates,
@@ -31,11 +32,9 @@ import {
   useReorderTags,
   useTagsHierarchy,
 } from '@/features/tags';
-import { SidebarSection } from '@/lib/components/shell/sidebar';
-import { Skeleton } from '@/lib/components/ui/skeleton';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
+import { HoverTooltip, Skeleton } from '@dayopt/components';
 
 import { buildReviewMainPath, buildReviewTagPath } from '../../lib/date-param';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';

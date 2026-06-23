@@ -14,15 +14,14 @@ import { useCallback, useState } from 'react';
 
 import { dayoptContact } from '@dayopt/config';
 
-import { Button } from '@/lib/components/ui/button';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/lib/components/ui/dialog';
-import {
   Drawer,
   DrawerClose,
   DrawerContent,
@@ -30,11 +29,11 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-} from '@/lib/components/ui/drawer';
-import { Label } from '@/lib/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
-import { Textarea } from '@/lib/components/ui/textarea';
-import { useIsMobile } from '@/lib/hooks/useIsMobile';
+  Label,
+  RadioGroup,
+  RadioGroupItem,
+  Textarea,
+} from '@dayopt/components';
 
 import type { ContactCategory } from '../types';
 

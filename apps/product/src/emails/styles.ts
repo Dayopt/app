@@ -3,7 +3,7 @@
  * 全メールテンプレートで使用する共通スタイル定義
  *
  * メールクライアントは CSS変数(var(--xxx)) や OKLCH をサポートしないため、
- * src/lib/styles/tokens/colors.css のセマンティックトークンを hex に変換して定義。
+ * @dayopt/foundations/src/tokens/colors.css のセマンティックトークンを hex に変換して定義。
  *
  * トークンマッピング (tokens/colors.css :root → hex):
  *   --background    oklch(0.99 0 0)             → #fafafa

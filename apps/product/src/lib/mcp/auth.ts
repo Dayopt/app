@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import {
   OAuthServerError,
@@ -8,7 +9,6 @@ import {
   type OAuthClientId,
   type SupportedScope,
 } from '@/lib/oauth-server';
-import { databaseTables } from '@dayopt/database';
 
 interface VerifiedAccessToken {
   /** oauth_tokens.id (chain 追跡用)。 */

@@ -3,6 +3,7 @@
  * ユーザー設定管理API（カレンダー設定等）
  */
 
+import { SUPPORTED_LOCALES } from '@dayopt/config';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -38,7 +39,7 @@ const userSettingsSchema = z.object({
   paymentErrorDialogLastShownAt: z.string().datetime().optional(),
 
   // メール送信言語
-  preferredLocale: z.enum(['en', 'ja']).optional(),
+  preferredLocale: z.enum(SUPPORTED_LOCALES).optional(),
 });
 
 const profileUpdateSchema = z

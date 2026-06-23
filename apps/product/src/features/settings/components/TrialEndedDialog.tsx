@@ -13,8 +13,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/lib/components/ui/alert-dialog';
-import { Button } from '@/lib/components/ui/button';
+  Button,
+} from '@dayopt/components';
 
 interface TrialEndedDialogProps {
   open: boolean;

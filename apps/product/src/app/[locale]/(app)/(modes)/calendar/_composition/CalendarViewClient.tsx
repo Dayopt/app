@@ -14,16 +14,15 @@ import { ChartNoAxesColumnIncreasing, PanelLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useState } from 'react';
 
+import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import {
   CalendarAnalyticsPanel,
   CalendarCompareToggle,
   CalendarController,
   useCalendarNavigation,
 } from '@/features/calendar';
-import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
-import { Button } from '@/lib/components/ui/button';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { Button, HoverTooltip } from '@dayopt/components';
 import { useCalendarComposition } from './useCalendarComposition';
 
 interface CalendarViewClientProps {

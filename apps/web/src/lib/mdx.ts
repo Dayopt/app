@@ -5,6 +5,7 @@ import type {
   FrontMatter,
   SerializedContent,
 } from '@/types/content';
+import { SUPPORTED_LOCALES } from '@dayopt/config';
 import fs from 'fs';
 import matter from 'gray-matter';
 import { serialize } from 'next-mdx-remote/serialize';
@@ -16,8 +17,8 @@ import { docFrontMatterSchema, parseFrontMatter } from './content-schemas';
 
 const CONTENT_PATH = path.join(process.cwd(), 'content/docs');
 
-/** ロケールディレクトリ名（スキャン時に除外用） */
-const LOCALE_DIRS = ['en', 'ja'];
+/** ロケールディレクトリ名（スキャン時に除外用。@dayopt/config が source of truth） */
+const LOCALE_DIRS: readonly string[] = SUPPORTED_LOCALES;
 
 /**
  * ロケールを考慮したコンテンツベースパスを取得

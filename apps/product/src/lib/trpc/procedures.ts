@@ -25,7 +25,7 @@ import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
 import { AuthMode, createServiceRoleClient, detectAuthMode } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
 
-import { databaseTables, type Database } from '@dayopt/database';
+import { databaseTables, type Database } from '@/lib/database';
 
 /**
  * プロシージャメタデータ（API仕様書自動生成用）

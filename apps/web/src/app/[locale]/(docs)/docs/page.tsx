@@ -1,8 +1,8 @@
-import { Heading, Text } from '@/components/ui/typography';
 import { Link } from '@/platform/i18n/navigation';
 import { routing } from '@/platform/i18n/routing';
 import { generateSEOMetadata } from '@/platform/seo/metadata';
 import { generateDocsNavigation } from '@/shell/navigation';
+import { Heading, Text } from '@dayopt/components';
 import { FileText } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';

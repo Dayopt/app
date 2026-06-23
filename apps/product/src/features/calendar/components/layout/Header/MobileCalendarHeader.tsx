@@ -6,13 +6,13 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { memo, useCallback, useState, type ReactNode } from 'react';
 
-import { AppHeader } from '@/lib/components/shell/AppHeader';
-import { Button } from '@/lib/components/ui/button';
+import { AppHeader } from '@/components/shell/AppHeader';
 import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@/lib/utils';
+import { Button } from '@dayopt/components';
 
-import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
+import type { NavigationDirection } from '@/components/common/DateNavigator';
 
 import { MobileMonthGrid } from './MobileMonthGrid';
 import { MobileYearStrip } from './MobileYearStrip';

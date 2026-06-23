@@ -36,7 +36,7 @@ Dayoptでの Supabase 運用パターンを支援するスキル。
 
 - アプリケーション層のみの変更(tRPC router 内部ロジック、`trpc-router-creating` skill の領域、DB 未変更)
 - 認証フローのみの変更で DB schema が変わらない時(`security` skill の領域)
-- 型生成結果(`packages/database/src/generated/database.types.ts`)のみの更新(`types:generate` 後の自動反映)
+- 型生成結果(`apps/product/src/lib/database/generated/database.types.ts`)のみの更新(`types:generate` 後の自動反映)
 
 ## 環境構成
 

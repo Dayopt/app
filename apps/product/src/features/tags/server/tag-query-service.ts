@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { Database, Row } from '@dayopt/database';
+import type { Database, Row } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
 import type { Tag, TagTreeNode } from '../types';
