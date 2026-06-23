@@ -78,22 +78,6 @@ vi.mock('@/components/ui/avatar', () => ({
   AvatarFallback: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@/components/ui/button', () => ({
-  Button: ({
-    children,
-    asChild,
-    ...props
-  }: {
-    children: React.ReactNode;
-    asChild?: boolean;
-    [key: string]: unknown;
-  }) => (asChild ? children : <button {...props}>{children}</button>),
-}));
-
-vi.mock('@/components/ui/scroll-area', () => ({
-  ScrollArea: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
 vi.mock('@/lib/trpc', () => ({
   api: {
     billing: {
