@@ -13,7 +13,7 @@ import {
 } from 'react-hook-form';
 
 import { cn } from '../cn';
-import { Label } from '../primitives/label';
+import { Label } from './label';
 
 const Form = FormProvider;
 

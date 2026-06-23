@@ -1,8 +1,8 @@
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 import * as React from 'react';
 
+import { buttonVariants } from '../actions/button';
 import { cn } from '../cn';
-import { buttonVariants } from '../primitives/button';
 
 interface PaginationProps extends React.ComponentProps<'nav'> {
   /** aria-label for the navigation element */

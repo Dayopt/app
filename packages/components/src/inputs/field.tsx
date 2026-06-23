@@ -4,8 +4,8 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { useMemo } from 'react';
 
 import { cn } from '../cn';
-import { Label } from '../primitives/label';
-import { Separator } from '../primitives/separator';
+import { Separator } from '../layout/separator';
+import { Label } from './label';
 
 function FieldGroup({ className, ...props }: React.ComponentProps<'div'>) {
   return (
