@@ -54,8 +54,8 @@ feature間の協調が必要な場合はComposition Layerで統合する：
 ### 自動検証
 
 - `eslint.config.mjs` の `no-restricted-imports` ルールでビルド時に違反を検出
-- `scripts/check-feature-boundaries.ts` がratchetパターンで違反数の増加をブロック
-- `.feature-boundary-budget.json` で現在の違反数を管理（現在ゼロ）
+- `scripts/boundaries/`（feature-dag / package-layers / public-api-barrels / import-paths）がratchetパターンで違反数の増加をブロック（monorepo 全体の import 境界に拡張）
+- root `.boundary-budget.json` で現在の違反数を管理（現在ゼロ）
 
 ---
 
@@ -80,7 +80,7 @@ feature間の協調が必要な場合はComposition Layerで統合する：
 
 - `.claude/rules/feature-boundaries.md` — DAG定義・依存ルール
 - `eslint.config.mjs` — `no-restricted-imports` ルール
-- `scripts/check-feature-boundaries.ts` — ratchetパターン
-- `.feature-boundary-budget.json` — 違反数バジェット（現在ゼロ）
+- `scripts/boundaries/` — monorepo 全体の import 境界 checker（ratchetパターン）
+- `.boundary-budget.json` — 違反数バジェット（現在ゼロ）
 - ADR-003 — MCP統合（feature境界を前提とした外部ツール層）
 - ADR-004 — 3層AIアーキテクチャ（feature境界に沿ったrules/skills定義）

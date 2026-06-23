@@ -18,8 +18,6 @@
     "start": "next start",
     "check": "pnpm typecheck && pnpm lint && pnpm test:run",
     "lint": "eslint . --max-warnings 0",
-    "lint:boundaries": "tsx ../../scripts/check-feature-boundaries.ts",
-    "lint:boundaries:update": "tsx ../../scripts/check-feature-boundaries.ts --update",
     "lint:tokens": "tsx src/lib/styles/scripts/check-tokens.ts",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
