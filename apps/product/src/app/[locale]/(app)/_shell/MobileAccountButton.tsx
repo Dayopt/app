@@ -6,9 +6,9 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
-import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@dayopt/components';
 
 import { getLocaleFromPathname } from './navigation-paths';
 

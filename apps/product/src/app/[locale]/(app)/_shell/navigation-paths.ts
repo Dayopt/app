@@ -32,6 +32,16 @@ export function buildCalendarPath(params: {
   return `/${params.locale}/calendar/${params.viewType}${query}`;
 }
 
+export function buildReviewPath(locale: string, options?: { granularity?: string; date?: Date }) {
+  const basePath = `/${locale}/review`;
+  if (!options?.granularity && !options?.date) return basePath;
+
+  const params = new URLSearchParams();
+  if (options.granularity) params.set('g', options.granularity);
+  if (options.date) params.set('d', formatCalendarDateParam(options.date));
+  return `${basePath}?${params.toString()}`;
+}
+
 function normalizeCalendarPanel(
   viewType: CalendarViewType,
   panelKind: CalendarPanelKind | null,

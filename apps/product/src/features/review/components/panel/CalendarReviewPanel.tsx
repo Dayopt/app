@@ -4,12 +4,11 @@ import { BarChart3, CalendarClock, Clock3, Gauge, X, type LucideIcon } from 'luc
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo } from 'react';
 
+import { EmptyState } from '@/components/ui/feedback/EmptyState';
+import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { TagIcon } from '@/features/tags';
-import { EmptyState } from '@/lib/components/common/EmptyState';
-import { ErrorState } from '@/lib/components/common/ErrorState';
-import { Button } from '@/lib/components/ui/button';
-import { Skeleton } from '@/lib/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Button, Skeleton } from '@dayopt/components';
 
 import { deriveAccuracy, deriveBarComparison, deriveStatement } from '../../domain/timePL/derivers';
 import { useReviewPageData } from '../../hooks/useReviewPageData';

@@ -7,8 +7,8 @@
  * Sidebar の標準内容として描画する。
  */
 
+import { MiniCalendar } from '@/components/ui/inputs/mini-calendar';
 import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/features/calendar';
-import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
 
 import { SidebarUtilities } from './SidebarUtilities';
 
