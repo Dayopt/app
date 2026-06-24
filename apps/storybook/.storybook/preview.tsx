@@ -65,7 +65,7 @@ const preview: Preview = {
           ],
           // Product = apps/product
           'Product',
-          ['Components', 'Features', 'Emails'],
+          ['Components', 'Features', 'Patterns', 'Emails'],
           // Web = apps/web（現状は構造のみ予約）
           'Web',
           ['Components', 'Sections', 'Pages'],

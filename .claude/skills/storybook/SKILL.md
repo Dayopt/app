@@ -230,7 +230,9 @@ export const Surfaces: Story = {
 ### Pattern
 
 **パス**: `apps/storybook/.storybook/stories/patterns/`
-**title**: `Shared/Patterns/`
+**title**: 依存ベースで分ける（ADR-013）。`@dayopt/components` だけで再現できる pattern は
+`Shared/Patterns/`、`@/`（product 内部: `@/components` / `@/lib` / `@/features`）に依存する
+pattern は `Product/Patterns/`
 **layout**: `fullscreen`
 **モック**: 不要
 **テキスト見出し**: 許可（パターンドキュメントのため）
@@ -238,10 +240,11 @@ export const Surfaces: Story = {
 ```tsx
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@dayopt/components';
 
 const meta = {
-  title: 'Shared/Patterns/Feedback',
+  // shared 例。product 結合（@/ 依存）なら 'Product/Patterns/Feedback'
+  title: 'Shared/Patterns/Actions',
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

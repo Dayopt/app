@@ -43,14 +43,14 @@ Storybook の **top-level を所有境界（package / app）**で分ける。第
 
 ### 物理位置と title の対応（移行ルール）
 
-| 物理位置                                     | 旧 title prefix             | 新 title prefix                             |
-| -------------------------------------------- | --------------------------- | ------------------------------------------- |
-| `packages/components/src/**`                 | `Components/`               | `Shared/Components/`                        |
-| `packages/foundations/src/**`                | `Foundations`               | `Shared/Foundations`                        |
-| `apps/storybook/.storybook/stories/patterns` | `Patterns/`                 | `Shared/Patterns/`                          |
-| `apps/product/src/components/**`             | `Components/`               | `Product/Components/`                       |
-| `apps/product/src/features/**`               | `Features/` / `Components/` | `Product/Features/` / `Product/Components/` |
-| `apps/product/src/emails`                    | `Patterns/Email`            | `Product/Emails`                            |
+| 物理位置                                     | 旧 title prefix             | 新 title prefix                                                   |
+| -------------------------------------------- | --------------------------- | ----------------------------------------------------------------- |
+| `packages/components/src/**`                 | `Components/`               | `Shared/Components/`                                              |
+| `packages/foundations/src/**`                | `Foundations`               | `Shared/Foundations`                                              |
+| `apps/storybook/.storybook/stories/patterns` | `Patterns/`                 | `Shared/Patterns/` または `Product/Patterns/`（依存ベース、下記） |
+| `apps/product/src/components/**`             | `Components/`               | `Product/Components/`                                             |
+| `apps/product/src/features/**`               | `Features/` / `Components/` | `Product/Features/` / `Product/Components/`                       |
+| `apps/product/src/emails`                    | `Patterns/Email`            | `Product/Emails`                                                  |
 
 ### 例外
 
@@ -59,6 +59,21 @@ Storybook の **top-level を所有境界（package / app）**で分ける。第
   不一致を許容。将来 `packages/foundations` へ移設する余地あり）。
 - `apps/product` 内で `Components/` を名乗っていた straggler（`ColorPaletteMenuItems` /
   `Props Inventory` / app-shell の `BottomTabBar`）は `Product/Components/` に寄せた。
+
+### Patterns は依存ベースで Shared / Product に分割
+
+`patterns/` 配下は物理的に 1 ディレクトリに同居するため、物理位置では分けられない。代わりに
+**story の import 依存**で判定する。「shared pattern は `@dayopt/components` だけで再現できるもの」
+という所有境界の原則に従い、`@/`（product 内部: `@/components` / `@/lib` / `@/features`）に
+依存する pattern は `Product/Patterns/` に置く。
+
+| 分類                | pattern                                                                 |
+| ------------------- | ----------------------------------------------------------------------- |
+| `Shared/Patterns/`  | Actions, Cards, ErrorPages, Forms, Loading, Selection                   |
+| `Product/Patterns/` | Confirmation, Copywriting, EmptyStates, ErrorStates, Feedback, Security |
+
+ファイルは `apps/storybook/.storybook/stories/patterns/` に据え置き、title だけ付け替える
+（`Foundations/States` と同じ title↔位置 decouple）。
 
 ## 結果
 
