@@ -328,6 +328,11 @@
         "recordDay": "Record your first block"
       },
       "review": {
+        "tooltip": "Show review",
+        "ariaLabel": "Toggle review panel",
+        "scopeLabel": "Review tag",
+        "allLabel": "Review",
+        "description": "Planned vs actual time for the week containing the visible calendar date.",
         "emptyTitle": "No review data yet",
         "emptyDescription": "Record entries to review your week",
         "dayEmptyTitle": "A fresh day",

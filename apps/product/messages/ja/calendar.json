@@ -328,6 +328,11 @@
         "recordDay": "最初のブロックを記録する"
       },
       "review": {
+        "tooltip": "振り返りを表示",
+        "ariaLabel": "振り返りパネルを切り替え",
+        "scopeLabel": "振り返るタグ",
+        "allLabel": "振り返り",
+        "description": "表示中のカレンダー日付を含む週の予定と実績。",
         "emptyTitle": "新しい1週間が始まりました",
         "emptyDescription": "エントリーを記録すると、ここに振り返りが表示されます",
         "dayEmptyTitle": "まっさらな1日です",

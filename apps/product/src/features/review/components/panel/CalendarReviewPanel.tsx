@@ -6,9 +6,17 @@ import { useEffect, useMemo } from 'react';
 
 import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
-import { TagIcon } from '@/features/tags';
+import { TagIcon, useTags } from '@/features/tags';
 import { cn } from '@/lib/utils';
-import { Button, Skeleton } from '@dayopt/components';
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Skeleton,
+} from '@dayopt/components';
 
 import { deriveAccuracy, deriveBarComparison, deriveStatement } from '../../domain/timePL/derivers';
 import { useReviewPageData } from '../../hooks/useReviewPageData';
@@ -19,6 +27,8 @@ import {
   formatVariance,
   getVarianceColor,
 } from '../time-pl/data/timePL.presentation';
+
+const ALL_SCOPE_VALUE = '__all__';
 
 interface CalendarReviewPanelProps {
   currentDate: Date;
@@ -39,6 +49,7 @@ export function CalendarReviewPanel({
   const tAll = useTranslations();
   const setGranularity = useReviewFilterStore((s) => s.setGranularity);
   const setCurrentDate = useReviewFilterStore((s) => s.setCurrentDate);
+  const { data: tags } = useTags();
 
   useEffect(() => {
     setGranularity('week');
@@ -59,17 +70,45 @@ export function CalendarReviewPanel({
   const isLoading = isPending || isTimePLPending;
   const hasError = isError || isTimePLError;
   const trackedMinutes = pageData?.overview.totalMinutes ?? statement?.actualTotal ?? 0;
+  const activeTags = tags?.filter((tag) => tag.is_active !== false) ?? [];
+  const selectedTag = selectedTagId
+    ? (activeTags.find((tag) => tag.id === selectedTagId) ?? null)
+    : null;
+  const selectedTagName = selectedRow?.tagName ?? selectedTag?.name ?? t('tag');
+  const selectedTagIcon = selectedRow?.tagIcon ?? selectedTag?.icon ?? null;
+  const selectedTagColor = selectedRow?.tagColor ?? selectedTag?.color ?? null;
 
   return (
     <section
       className={cn('flex min-h-0 w-full flex-col', className)}
       aria-label={tAll('calendar.views.stats')}
     >
-      <header className="border-border-subtle shrink-0 border-b">
+      <header className="shrink-0">
         <div className="flex h-12 items-center gap-2 px-4">
-          <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
-            {tAll('calendar.views.stats')}
-          </h2>
+          <Select
+            value={selectedTagId ?? ALL_SCOPE_VALUE}
+            onValueChange={(value) => {
+              onSelectedTagIdChange(value === ALL_SCOPE_VALUE ? null : value);
+            }}
+          >
+            <SelectTrigger
+              variant="ghost"
+              size="sm"
+              className="-ml-2 max-w-full min-w-0 flex-1 justify-start px-2 text-sm font-medium"
+              aria-label={t('review.scopeLabel')}
+            >
+              <SelectValue placeholder={t('review.allLabel')} />
+            </SelectTrigger>
+            <SelectContent align="start" className="w-64">
+              <SelectItem value={ALL_SCOPE_VALUE}>{t('review.allLabel')}</SelectItem>
+              {activeTags.map((tag) => (
+                <SelectItem key={tag.id} value={tag.id}>
+                  <TagIcon icon={tag.icon} color={tag.color} size="sm" />
+                  <span className="truncate">{tag.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             type="button"
             variant="ghost"
@@ -98,6 +137,32 @@ export function CalendarReviewPanel({
               size="sm"
               centered
             />
+          ) : selectedTagId ? (
+            <div className="border-border-subtle rounded-lg border p-4">
+              <div className="flex items-center gap-2">
+                <TagIcon icon={selectedTagIcon} color={selectedTagColor} size="sm" />
+                <h3 className="min-w-0 flex-1 truncate text-sm font-medium">{selectedTagName}</h3>
+              </div>
+              {selectedRow ? (
+                <dl className="mt-4 grid grid-cols-3 gap-3">
+                  <MiniStat
+                    label={t('overview.planned')}
+                    value={formatMinutesDuration(selectedRow.budgetMinutes)}
+                  />
+                  <MiniStat
+                    label={t('overview.actual')}
+                    value={formatMinutesDuration(selectedRow.actualMinutes)}
+                  />
+                  <MiniStat
+                    label={t('overview.diff')}
+                    value={formatVariance(selectedRow.varianceMinutes)}
+                    valueClassName={getVarianceColor(selectedRow.variancePercent)}
+                  />
+                </dl>
+              ) : (
+                <p className="text-muted-foreground mt-4 text-sm">{t('metrics.noData')}</p>
+              )}
+            </div>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-2">
@@ -131,16 +196,6 @@ export function CalendarReviewPanel({
               <div className="border-border-subtle rounded-lg border">
                 <div className="border-border-subtle flex items-center justify-between border-b px-3 py-2">
                   <h3 className="text-sm font-medium">{t('overview.planActual')}</h3>
-                  {selectedTagId ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onSelectedTagIdChange(null)}
-                    >
-                      {tAll('actions.clear')}
-                    </Button>
-                  ) : null}
                 </div>
                 <div className="flex flex-col gap-1 p-2">
                   {barRows.length === 0 ? (
@@ -179,36 +234,6 @@ export function CalendarReviewPanel({
                   )}
                 </div>
               </div>
-
-              {selectedRow ? (
-                <div className="border-border-subtle rounded-lg border p-4">
-                  <div className="flex items-center gap-2">
-                    <TagIcon
-                      icon={selectedRow.tagIcon ?? null}
-                      color={selectedRow.tagColor}
-                      size="sm"
-                    />
-                    <h3 className="min-w-0 flex-1 truncate text-sm font-medium">
-                      {selectedRow.tagName}
-                    </h3>
-                  </div>
-                  <dl className="mt-4 grid grid-cols-3 gap-3">
-                    <MiniStat
-                      label={t('overview.planned')}
-                      value={formatMinutesDuration(selectedRow.budgetMinutes)}
-                    />
-                    <MiniStat
-                      label={t('overview.actual')}
-                      value={formatMinutesDuration(selectedRow.actualMinutes)}
-                    />
-                    <MiniStat
-                      label={t('overview.diff')}
-                      value={formatVariance(selectedRow.varianceMinutes)}
-                      valueClassName={getVarianceColor(selectedRow.variancePercent)}
-                    />
-                  </dl>
-                </div>
-              ) : null}
             </>
           )}
         </div>
