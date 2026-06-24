@@ -10,14 +10,14 @@ paths:
 ## 階層モデル（DAG）
 
 ```
-Layer 0 (基盤):    tags, chronotype             ← 他featureに依存しない
-Layer 1 (中核):    entry                        ← Layer 0 の barrel を使える
-Layer 2 (体験):    calendar, review, ai,        ← Layer 0+1 を使える
-                   palette
-Independent:       auth, notifications,         ← 他featureに依存しない
-                   contact, onboarding, tour
-Composition:       settings                     ← DAG 除外。通常feature扱いしない
+Layer 0 (基盤):    tags                ← 他featureに依存しない
+Layer 1 (中核):    entry               ← Layer 0 の barrel を使える
+Layer 2 (体験):    calendar, review    ← Layer 0+1 を使える
+Independent:       auth, contact       ← 他featureに依存しない
+Composition:       settings            ← DAG 除外。通常feature扱いしない
 ```
+
+source of truth は [`apps/product/eslint.config.mjs`](../../apps/product/eslint.config.mjs) の Feature Boundary ブロック。feature の追加・削除・層変更時は eslint.config.mjs を先に直し、本 doc を追従させる。
 
 ## 依存ルール（ESLint `error` で強制）
 
@@ -25,15 +25,15 @@ Composition:       settings                     ← DAG 除外。通常feature�
 - deep import は常に禁止（`@/features/entry/hooks/*` ❌）
 - 同層間・下位→上位の参照は禁止
 - 共有層から `@/features/*` をimportすると **error**
-- `ai/server` はサーバー合成層として例外
 - **settings は DAG から除外** — 後述 [Composition Feature: settings](#composition-feature-settings) を参照
+- **`*.stories.tsx` は DAG 除外** — composition プレビュー層として cross-feature import を許容（各 feature の boundary rule で `ignores: ['**/*.stories.{ts,tsx}']`）
 
 ## domain は全 feature に作らない
 
 `features/{name}/domain/` は **pure logic（DB / React / Zustand / TZ 非依存）が複数箇所で参照される or 単体テストで凍結すべき挙動を持つ場合のみ** 作る。
 
 - 例: `features/entry/domain/`、`features/tags/domain/`、`features/review/domain/`
-- domain を作らない feature: `chronotype`（pure logic が薄い）、`settings`（composition なので rule は外部）
+- domain を作らない feature: `contact`（pure logic が薄い）、`settings`（composition なので rule は外部）
 
 「全 feature に domain を作る」は **方針ではない**。pure rule が無い feature には domain は無いのが正しい状態。
 
@@ -60,9 +60,9 @@ RPC row の snake_case shape に密結合した変換（snake → camel rename /
 
 settings → 他 feature の deep import は composition の責務上必要なので許容するが、優先順を守る:
 
-1. **`apps/product/src/lib/stores/*` から取得できる場合は lib 経由を優先**（例: `useUserPreferenceStore`）
-2. **feature の barrel に export されている場合は barrel 経由を優先**（例: `@/features/chronotype` 経由の `useChronotypeSettingsStore`）
-3. **本当に deep import が必要なケースに限定**（例: barrel に出ていない `useCalendarSettingsStore`）
+1. **`apps/product/src/lib/stores/*` から取得できる場合は lib 経由を優先**（例: `@/lib/stores/useShellStore`）
+2. **feature の barrel に export されている場合は barrel 経由を優先**（例: `@/features/auth` の barrel）
+3. **本当に deep import が必要なケースに限定**（例: barrel に出ていない `@/features/calendar/stores/userSettings`）
 
 ### Layer 1 → Layer 2 は不可（adapter は source 側に置く）
 
