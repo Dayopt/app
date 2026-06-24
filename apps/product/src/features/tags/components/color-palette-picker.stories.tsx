@@ -11,7 +11,7 @@ import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '
 import { ColorPaletteMenuItems, getColorDisplayName } from './color-palette-picker';
 
 const meta = {
-  title: 'Components/UI/ColorPaletteMenuItems',
+  title: 'Components/ColorPaletteMenuItems',
   component: ColorPaletteMenuItems,
   tags: ['autodocs'],
   parameters: {

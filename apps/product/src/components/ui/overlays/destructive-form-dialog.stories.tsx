@@ -6,7 +6,7 @@ import { Button, RadioGroup, RadioGroupItem } from '@dayopt/components';
 import { DestructiveFormDialog } from './destructive-form-dialog';
 
 const meta = {
-  title: 'Components/UI/Overlays/DestructiveFormDialog',
+  title: 'Components/Overlays/DestructiveFormDialog',
   component: DestructiveFormDialog,
   tags: ['autodocs'],
   parameters: {

@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 /** Select - ドロップダウン選択。5個以上の選択肢に適切、2-4個はRadioGroupを使用。 */
 const meta = {
-  title: 'Components/UI/Inputs/Select',
+  title: 'Components/Inputs/Select',
   component: Select,
   tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },

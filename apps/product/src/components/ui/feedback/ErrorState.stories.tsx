@@ -6,7 +6,7 @@ import { Button } from '@dayopt/components';
 import { ErrorState } from './ErrorState';
 
 const meta = {
-  title: 'Components/UI/Feedback/ErrorState',
+  title: 'Components/Feedback/ErrorState',
   component: ErrorState,
   tags: ['autodocs'],
   parameters: {

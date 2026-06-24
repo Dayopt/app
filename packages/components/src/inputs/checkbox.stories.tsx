@@ -8,7 +8,7 @@ import { Checkbox, Label } from '@dayopt/components';
 const greenCssVar = 'var(--tag-green)';
 
 const meta = {
-  title: 'Components/UI/Inputs/Checkbox',
+  title: 'Components/Inputs/Checkbox',
   component: Checkbox,
   tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },

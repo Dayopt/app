@@ -16,7 +16,7 @@ import {
 } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/UI/Overlays/Drawer',
+  title: 'Components/Overlays/Drawer',
   component: Drawer,
   tags: ['autodocs'],
   parameters: {

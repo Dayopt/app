@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button, Spinner } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/UI/Feedback/Spinner',
+  title: 'Components/Feedback/Spinner',
   component: Spinner,
   tags: ['autodocs'],
   parameters: {

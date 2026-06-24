@@ -18,7 +18,7 @@ import {
 } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/UI/Overlays/AlertDialog',
+  title: 'Components/Overlays/AlertDialog',
   component: AlertDialog,
   tags: [],
   parameters: {

@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, Settings, Trash2, X } from 'lucide-rea
 import { Button } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/UI/Actions/Button',
+  title: 'Components/Actions/Button',
   component: Button,
   parameters: { layout: 'fullscreen' },
   tags: ['autodocs'],

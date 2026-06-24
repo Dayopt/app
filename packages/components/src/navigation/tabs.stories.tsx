@@ -4,7 +4,7 @@ import { expect, userEvent, within } from 'storybook/test';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/UI/Navigation/Tabs',
+  title: 'Components/Navigation/Tabs',
   component: Tabs,
   tags: ['autodocs'],
   parameters: {

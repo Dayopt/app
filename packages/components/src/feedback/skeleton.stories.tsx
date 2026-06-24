@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Card, CardContent, CardHeader, Skeleton } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/UI/Feedback/Skeleton',
+  title: 'Components/Feedback/Skeleton',
   component: Skeleton,
   tags: ['autodocs'],
   parameters: {

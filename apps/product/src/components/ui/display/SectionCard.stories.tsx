@@ -7,7 +7,7 @@ import { LabeledRow } from './LabeledRow';
 import { SectionCard } from './SectionCard';
 
 const meta = {
-  title: 'Components/UI/Display/SectionCard',
+  title: 'Components/Display/SectionCard',
   component: SectionCard,
   tags: ['autodocs'],
   decorators: [withWrapper('w-[500px]')],

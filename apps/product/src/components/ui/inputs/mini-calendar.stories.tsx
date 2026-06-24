@@ -8,7 +8,7 @@ import { Button } from '@dayopt/components';
 import { withWrapper } from '@dayopt/storybook/decorators';
 
 const meta = {
-  title: 'Components/UI/Inputs/MiniCalendar',
+  title: 'Components/Inputs/MiniCalendar',
   component: MiniCalendar,
   tags: ['autodocs'],
   parameters: {

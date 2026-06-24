@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { PaymentErrorDialog } from './PaymentErrorDialog';
 
 const meta = {
-  title: 'Components/UI/Overlays/PaymentErrorDialog',
+  title: 'Components/Overlays/PaymentErrorDialog',
   component: PaymentErrorDialog,
   tags: ['autodocs'],
   parameters: {

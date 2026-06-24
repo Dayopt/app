@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Field, FieldError, FieldLabel, Input } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/UI/Inputs/Input',
+  title: 'Components/Inputs/Input',
   component: Input,
   tags: ['autodocs'],
   parameters: {

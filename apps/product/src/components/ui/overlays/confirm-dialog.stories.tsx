@@ -6,7 +6,7 @@ import { Button } from '@dayopt/components';
 import { ConfirmDialog } from './confirm-dialog';
 
 const meta = {
-  title: 'Components/UI/Overlays/ConfirmDialog',
+  title: 'Components/Overlays/ConfirmDialog',
   component: ConfirmDialog,
   tags: ['autodocs'],
   parameters: {
