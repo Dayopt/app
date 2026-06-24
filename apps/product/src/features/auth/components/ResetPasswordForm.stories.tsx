@@ -8,7 +8,7 @@ import { ResetPasswordForm } from './ResetPasswordForm';
 
 /** ResetPasswordForm - パスワードリセットフォーム（メールリンク経由） */
 const meta = {
-  title: 'Features/Auth/ResetPasswordForm',
+  title: 'Product/Features/Auth/ResetPasswordForm',
   component: ResetPasswordForm,
   parameters: {
     layout: 'padded',

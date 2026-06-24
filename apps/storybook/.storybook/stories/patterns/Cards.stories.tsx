@@ -18,7 +18,7 @@ import {
 } from '@dayopt/components';
 
 const meta = {
-  title: 'Patterns/Cards',
+  title: 'Shared/Patterns/Cards',
   parameters: {
     layout: 'fullscreen',
   },

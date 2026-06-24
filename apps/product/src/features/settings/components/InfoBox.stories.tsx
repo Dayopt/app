@@ -7,7 +7,7 @@ import { Button } from '@dayopt/components';
 import { InfoBox } from './InfoBox';
 
 const meta = {
-  title: 'Features/Settings/InfoBox',
+  title: 'Product/Features/Settings/InfoBox',
   component: InfoBox,
   tags: ['autodocs'],
   decorators: [

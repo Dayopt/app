@@ -13,7 +13,7 @@ import { DateRow } from './DateRow';
  * 予定・記録インスペクター両方で使用される。
  */
 const meta = {
-  title: 'Features/Entry/Inspector/DateRow',
+  title: 'Product/Features/Entry/Inspector/DateRow',
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { TrialEndedDialog } from './TrialEndedDialog';
 
 const meta = {
-  title: 'Components/Overlays/TrialEndedDialog',
+  title: 'Product/Components/Overlays/TrialEndedDialog',
   component: TrialEndedDialog,
   tags: ['autodocs'],
   parameters: {

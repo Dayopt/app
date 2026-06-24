@@ -11,7 +11,7 @@ import { FilterItem } from './FilterItem';
  * チェック/未チェック・各カラーバリアント・無効状態に対応。
  */
 const meta = {
-  title: 'Features/Calendar/Sidebar/TagFilter/FilterItem',
+  title: 'Product/Features/Calendar/Sidebar/TagFilter/FilterItem',
   component: FilterItem,
   tags: ['autodocs'],
   parameters: {

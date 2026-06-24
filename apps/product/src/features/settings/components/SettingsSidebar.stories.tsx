@@ -27,7 +27,7 @@ import { SettingsSidebar } from './SettingsSidebar';
  * 5カテゴリ（プロフィール・表示・データ・課金・アカウント）を表示。
  */
 const meta = {
-  title: 'Features/Settings/SettingsSidebar',
+  title: 'Product/Features/Settings/SettingsSidebar',
   component: SettingsSidebar,
   parameters: {
     layout: 'padded',

@@ -12,7 +12,7 @@ import { EntryMicroInsight } from './EntryMicroInsight';
  * - 優先度2: ピーク時間帯通知
  */
 const meta = {
-  title: 'Features/Stats/Shared/EntryMicroInsight',
+  title: 'Product/Features/Stats/Shared/EntryMicroInsight',
   component: EntryMicroInsight,
   parameters: { layout: 'padded' },
   tags: ['autodocs'],

@@ -5,7 +5,7 @@ import { Label, RadioGroup, RadioGroupItem } from '@dayopt/components';
 
 /** RadioGroup - ラジオボタングループ（単一選択）。2-4個の選択肢に適切、5個以上はSelectを使用。 */
 const meta = {
-  title: 'Components/Inputs/RadioGroup',
+  title: 'Shared/Components/Inputs/RadioGroup',
   component: RadioGroup,
   tags: ['autodocs'],
   parameters: {

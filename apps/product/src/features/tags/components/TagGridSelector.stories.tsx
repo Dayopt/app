@@ -456,7 +456,7 @@ function SelectorFrame({
  * 子タグはドリルダウンで2画面目に遷移。
  */
 const meta = {
-  title: 'Features/Tags/GridSelector',
+  title: 'Product/Features/Tags/GridSelector',
   parameters: {
     layout: 'centered',
   },

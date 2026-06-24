@@ -34,7 +34,7 @@ import { Button } from '@dayopt/components';
  * | UI | エラーサニタイズ + 確認ダイアログ | OWASP準拠メッセージ + 破壊操作ガード |
  */
 const meta = {
-  title: 'Patterns/Security',
+  title: 'Shared/Patterns/Security',
   parameters: {
     layout: 'fullscreen',
   },

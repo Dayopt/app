@@ -56,7 +56,7 @@ function createMockMFA(overrides: Partial<UseMFAReturn> = {}): UseMFAReturn {
  * render 関数内で直接 prop を渡す。
  */
 const meta = {
-  title: 'Features/Settings/MFASection',
+  title: 'Product/Features/Settings/MFASection',
   component: MFASection,
   parameters: { layout: 'padded' },
   tags: ['autodocs'],

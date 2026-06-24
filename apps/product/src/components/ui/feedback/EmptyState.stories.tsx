@@ -7,7 +7,7 @@ import { withWrapper } from '@dayopt/storybook/decorators';
 import { EmptyState } from './EmptyState';
 
 const meta = {
-  title: 'Components/Feedback/EmptyState',
+  title: 'Product/Components/Feedback/EmptyState',
   component: EmptyState,
   tags: ['autodocs'],
   parameters: {

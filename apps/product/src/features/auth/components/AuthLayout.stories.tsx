@@ -13,7 +13,7 @@ import { AuthLayout } from './AuthLayout';
  * メール確認完了・リンク期限切れ等のシンプルなページ向け。
  */
 const meta = {
-  title: 'Features/Auth/AuthLayout',
+  title: 'Product/Features/Auth/AuthLayout',
   parameters: {
     layout: 'fullscreen',
     nextjs: {

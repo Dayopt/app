@@ -42,7 +42,7 @@ const PAST_DAY = new Date('2020-01-01T00:00:00.000Z');
  * fullscreen レイアウトで相対コンテナ内に配置して確認する。
  */
 const meta = {
-  title: 'Features/Calendar/InlineTagPalette',
+  title: 'Product/Features/Calendar/InlineTagPalette',
   component: InlineTagPalette,
   parameters: {
     layout: 'fullscreen',

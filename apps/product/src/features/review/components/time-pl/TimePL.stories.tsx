@@ -10,7 +10,7 @@ import {
 
 /** Time P/L — 予実比較ビューを1つの入力データから描画 */
 const meta = {
-  title: 'Features/Stats/TimePL',
+  title: 'Product/Features/Stats/TimePL',
   component: TimePLContainer,
   parameters: { layout: 'padded' },
   tags: ['autodocs'],

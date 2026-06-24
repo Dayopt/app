@@ -32,7 +32,7 @@ import {
 
 /** DropdownMenu - ドロップダウンメニュー。ラベル使用ルールはGAFA準拠（Material Design 3, Apple HIG）。 */
 const meta = {
-  title: 'Components/Actions/DropdownMenu',
+  title: 'Shared/Components/Actions/DropdownMenu',
   component: DropdownMenu,
   tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },

@@ -6,7 +6,7 @@ import { withWrapper } from '@dayopt/storybook/decorators';
 import { LabeledRow } from './LabeledRow';
 
 const meta = {
-  title: 'Components/Display/LabeledRow',
+  title: 'Product/Components/Display/LabeledRow',
   component: LabeledRow,
   tags: ['autodocs'],
   decorators: [withWrapper('w-[500px]')],

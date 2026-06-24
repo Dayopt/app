@@ -19,7 +19,7 @@ import { DisplaySettings } from './display-settings';
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Settings/DisplaySettings',
+  title: 'Product/Features/Settings/DisplaySettings',
   component: DisplaySettings,
   parameters: {
     layout: 'padded',

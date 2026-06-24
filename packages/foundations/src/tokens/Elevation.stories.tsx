@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta = {
-  title: 'Foundations/Elevation',
+  title: 'Shared/Foundations/Elevation',
   parameters: {
     layout: 'fullscreen',
   },

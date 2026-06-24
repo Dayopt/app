@@ -4,7 +4,7 @@ import { UserMenu } from './UserMenu';
 
 /** UserMenu - サイドバーフッターのユーザーメニュー */
 const meta = {
-  title: 'Components/Shell/Sidebar/UserMenu',
+  title: 'Product/Components/Shell/Sidebar/UserMenu',
   parameters: {
     layout: 'fullscreen',
   },

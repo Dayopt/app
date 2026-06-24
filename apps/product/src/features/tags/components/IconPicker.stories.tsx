@@ -14,7 +14,7 @@ import { TagIcon } from './TagIcon';
  * 「アイコンなし」を選択すると従来の色ドットにフォールバック。
  */
 const meta = {
-  title: 'Features/Tags/IconPicker',
+  title: 'Product/Features/Tags/IconPicker',
   parameters: {
     layout: 'padded',
   },

@@ -14,7 +14,7 @@ import {
 
 /** Popover - ポップオーバー。PopoverTrigger（ボタン開閉）とPopoverAnchor（Input開閉）の2パターンを提供。 */
 const meta = {
-  title: 'Components/Overlays/Popover',
+  title: 'Shared/Components/Overlays/Popover',
   component: Popover,
   tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },

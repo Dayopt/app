@@ -4,7 +4,7 @@ import { TagBreakdownBar } from './TagBreakdownBar';
 
 /** TagBreakdownBar — タグ別時間配分の積み上げバー + 凡例 */
 const meta = {
-  title: 'Features/Stats/Review/TagBreakdownBar',
+  title: 'Product/Features/Stats/Review/TagBreakdownBar',
   component: TagBreakdownBar,
   parameters: { layout: 'padded' },
   tags: ['autodocs'],

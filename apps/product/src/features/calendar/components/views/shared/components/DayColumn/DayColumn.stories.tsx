@@ -11,7 +11,7 @@ import { DayColumn } from './DayColumn';
  * useEntryInspectorStore / useTagsMap はグローバルプロバイダーで解決済み。
  */
 const meta = {
-  title: 'Features/Calendar/Views/DayColumn',
+  title: 'Product/Features/Calendar/Views/DayColumn',
   component: DayColumn,
   tags: ['autodocs'],
   parameters: {

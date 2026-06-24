@@ -210,7 +210,7 @@ function TimezoneListReference() {
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Settings/DisplaySettingsPatterns',
+  title: 'Product/Features/Settings/DisplaySettingsPatterns',
   parameters: {
     layout: 'padded',
     // button-name: SelectTrigger inside LabeledRow without explicit aria-label

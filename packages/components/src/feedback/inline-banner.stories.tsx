@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button, InlineBanner } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/Feedback/InlineBanner',
+  title: 'Shared/Components/Feedback/InlineBanner',
   component: InlineBanner,
   tags: ['autodocs'],
   parameters: {

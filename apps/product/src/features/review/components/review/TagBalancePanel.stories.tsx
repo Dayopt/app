@@ -40,7 +40,7 @@ const ROWS: TagBalanceRow[] = [
 
 /** TagBalancePanel — タグ別時間配分（週次 / 月次 / 年次ビューで共用） */
 const meta = {
-  title: 'Features/Stats/Review/TagBalancePanel',
+  title: 'Product/Features/Stats/Review/TagBalancePanel',
   component: TagBalancePanel,
   parameters: {
     layout: 'padded',

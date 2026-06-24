@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Button, Input } from '@dayopt/components';
 
 const meta = {
-  title: 'Foundations/States',
+  title: 'Shared/Foundations/States',
   parameters: {
     layout: 'fullscreen',
   },

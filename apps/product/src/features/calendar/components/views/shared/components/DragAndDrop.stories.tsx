@@ -19,7 +19,7 @@ import { DragSelectionPreview } from './CalendarDragSelection/DragSelectionPrevi
  * パレット→カレンダーはクリックで現在時刻に配置（DnD不使用）。
  */
 const meta = {
-  title: 'Features/Calendar/DragAndDrop',
+  title: 'Product/Features/Calendar/DragAndDrop',
   parameters: {
     layout: 'padded',
   },

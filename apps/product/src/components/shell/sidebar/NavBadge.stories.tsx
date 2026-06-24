@@ -36,7 +36,7 @@ function MockNavBadge({
 
 /** NavBadge — icon 右上に配置する "NEW" / "β" バッジ。AI タブの stub 状態を暗示する用途。 */
 const meta = {
-  title: 'Components/Shell/Sidebar/NavBadge',
+  title: 'Product/Components/Shell/Sidebar/NavBadge',
   component: MockNavBadge,
   parameters: { layout: 'centered' },
   tags: ['autodocs'],

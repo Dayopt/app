@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { DefaultErrorFallback, DevErrorFallback, FeatureErrorFallback } from './error-boundary';
 
 const meta = {
-  title: 'Components/Feedback/ErrorBoundary',
+  title: 'Product/Components/Feedback/ErrorBoundary',
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',

@@ -19,7 +19,7 @@ import {
 } from './_data/copywriting-audit';
 
 const meta = {
-  title: 'Patterns/Copywriting',
+  title: 'Shared/Patterns/Copywriting',
   parameters: {
     layout: 'fullscreen',
   },

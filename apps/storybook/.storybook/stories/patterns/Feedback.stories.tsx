@@ -6,7 +6,7 @@ import { toast } from '@/lib/toast';
 import { Button } from '@dayopt/components';
 
 const meta = {
-  title: 'Patterns/Feedback',
+  title: 'Shared/Patterns/Feedback',
   parameters: {
     layout: 'fullscreen',
   },

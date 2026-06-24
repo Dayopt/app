@@ -25,7 +25,7 @@ const HOURLY_DATA = [
 
 /** RhythmCharts — 期間全体の曜日別・時間帯別バー（週次ビューの「週のリズム」） */
 const meta = {
-  title: 'Features/Stats/Review/RhythmCharts',
+  title: 'Product/Features/Stats/Review/RhythmCharts',
   component: DowRhythmChart,
   parameters: {
     layout: 'padded',

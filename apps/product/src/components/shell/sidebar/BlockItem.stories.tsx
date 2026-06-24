@@ -14,7 +14,7 @@ import { withWrapper } from '@dayopt/storybook/decorators';
 import { BlockItem } from './BlockItem';
 
 const meta = {
-  title: 'Components/Shell/Sidebar/BlockItem',
+  title: 'Product/Components/Shell/Sidebar/BlockItem',
   component: BlockItem,
   parameters: { layout: 'padded' },
   args: {

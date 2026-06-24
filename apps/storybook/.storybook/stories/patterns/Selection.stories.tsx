@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Badge, Button, Checkbox, Label, RadioGroup, RadioGroupItem } from '@dayopt/components';
 
 const meta = {
-  title: 'Patterns/Selection',
+  title: 'Shared/Patterns/Selection',
   parameters: {
     layout: 'fullscreen',
   },

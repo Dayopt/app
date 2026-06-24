@@ -18,7 +18,7 @@ import { PRESET_AUTH } from '@dayopt/storybook/mocks/presets';
 import { PasswordChangeDialog } from './password-change-dialog';
 
 const meta = {
-  title: 'Features/Settings/PasswordChangeDialog',
+  title: 'Product/Features/Settings/PasswordChangeDialog',
   component: PasswordChangeDialog,
   parameters: {
     layout: 'centered',

@@ -7,7 +7,7 @@ import { WeekView } from './WeekView';
 
 /** WeekView - 週表示ビュー */
 const meta = {
-  title: 'Features/Calendar/Views/WeekView',
+  title: 'Product/Features/Calendar/Views/WeekView',
   parameters: {
     layout: 'fullscreen',
   },

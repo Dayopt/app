@@ -21,7 +21,7 @@ import { InspectorFrame, MockTagRow } from './story-helpers';
  * TimeDiffBlock の差分バーは記録入力時のみ表示。
  */
 const meta = {
-  title: 'Features/Entry/Inspector/EntryInspector',
+  title: 'Product/Features/Entry/Inspector/EntryInspector',
   parameters: {
     layout: 'centered',
     a11y: { test: 'todo' },

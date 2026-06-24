@@ -79,7 +79,7 @@ function InteractiveSettingsDialog({
  * URL は変更せず、モーダル内でサイドバーのカテゴリ切替のみ行う。
  */
 const meta = {
-  title: 'Features/Settings/SettingsDialog',
+  title: 'Product/Features/Settings/SettingsDialog',
   component: SettingsDialog,
   parameters: {
     layout: 'fullscreen',

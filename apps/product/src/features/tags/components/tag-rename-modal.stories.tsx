@@ -67,7 +67,7 @@ const TARGET = { id: 'tag-1', name: '仕事', parent_id: null };
  * @see GlobalTagRenameModal — useShellStore に接続するラッパー
  */
 const meta = {
-  title: 'Features/Tags/RenameModal',
+  title: 'Product/Features/Tags/RenameModal',
   parameters: {
     layout: 'fullscreen',
     trpcMocks: { 'tags.list': { data: MOCK_TAGS } },
