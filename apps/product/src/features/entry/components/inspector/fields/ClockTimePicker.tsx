@@ -18,8 +18,7 @@ import { Clock, Keyboard } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { formatHHmm, parseTimeString } from '@/lib/date';
-import { cn } from '@/lib/utils';
-import { Button } from '@dayopt/components';
+import { Button, cn } from '@dayopt/components';
 
 // ─── 定数 ────────────────────────────────────────────
 

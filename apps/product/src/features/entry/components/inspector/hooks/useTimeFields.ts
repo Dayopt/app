@@ -13,9 +13,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date-utils';
+import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
+import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 import type { EntryWithTags } from '../../../types/entry';
 
 /** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */

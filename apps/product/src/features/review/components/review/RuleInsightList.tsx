@@ -3,7 +3,7 @@
 import { AlertTriangle, Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import type { RuleInsight, RuleInsightSeverity } from '../../lib/ruleInsights';
 

@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import type { MicroInsight } from '../../lib/microInsights';
 

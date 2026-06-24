@@ -24,9 +24,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { cn } from '@/lib/utils';
 import {
   Button,
+  cn,
   Popover,
   PopoverContent,
   PopoverTrigger,

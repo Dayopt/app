@@ -15,8 +15,14 @@ import { formatHHmm, formatTimeString, parseTimeString } from '@/lib/date';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { computeDuration, formatDurationDisplay } from '@/lib/time-utils';
-import { cn } from '@/lib/utils';
-import { Drawer, DrawerContent, Popover, PopoverAnchor, PopoverContent } from '@dayopt/components';
+import {
+  cn,
+  Drawer,
+  DrawerContent,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from '@dayopt/components';
 
 import { ClockTimePicker } from './ClockTimePicker';
 

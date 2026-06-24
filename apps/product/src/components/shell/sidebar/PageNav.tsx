@@ -6,8 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 
-import { cn } from '@/lib/utils';
-import { HoverTooltip } from '@dayopt/components';
+import { cn, HoverTooltip } from '@dayopt/components';
 
 import { NavBadge, type NavBadgeVariant } from './NavBadge';
 

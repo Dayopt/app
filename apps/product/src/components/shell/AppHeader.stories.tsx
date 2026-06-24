@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { BarChart3, CalendarDays } from 'lucide-react';
 
 import { AppHeader } from '@/components/shell/AppHeader';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 // ─────────────────────────────────────────────────────────
 // Stub UI Helpers

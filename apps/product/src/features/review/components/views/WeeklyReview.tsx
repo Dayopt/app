@@ -13,7 +13,7 @@ import { resolveTagColor } from '@/features/tags';
 import { addWeeks } from '@/lib/date/core';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import {
   deriveAccuracy,

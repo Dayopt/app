@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import type { DateRangeDisplayProps as BaseDateRangeDisplayProps } from '@/components/ui/display/DateRangeDisplay';
 import { DateRangeDisplay as DateRangeDisplayBase } from '@/components/ui/display/DateRangeDisplay';
 import { MiniCalendar } from '@/components/ui/inputs/mini-calendar';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 /** Calendar用 DateRangeDisplay のプロパティ */
 interface CalendarDateRangeDisplayProps extends BaseDateRangeDisplayProps {

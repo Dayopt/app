@@ -12,7 +12,7 @@
   },
   "aliases": {
     "components": "@/lib/components",
-    "utils": "@/lib/utils",
+    "utils": "@dayopt/components",
     "ui": "@/lib/components/ui",
     "lib": "@/lib",
     "hooks": "@/lib/hooks"

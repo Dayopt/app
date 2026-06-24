@@ -9,8 +9,7 @@ import { useTranslations } from 'next-intl';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { cn } from '@/lib/utils';
-import { ScrollArea } from '@dayopt/components';
+import { cn, ScrollArea } from '@dayopt/components';
 
 import { SETTINGS_CATEGORIES } from '../constants';
 

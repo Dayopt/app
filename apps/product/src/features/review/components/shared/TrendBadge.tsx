@@ -2,7 +2,7 @@
 
 import { TrendingDown, TrendingUp } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import type { MetricTrend } from '../../types/metrics.types';
 

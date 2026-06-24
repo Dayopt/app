@@ -23,8 +23,8 @@ import {
   useUpdateTag,
 } from '@/features/tags';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { cn } from '@/lib/utils';
 import {
+  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,

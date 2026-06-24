@@ -12,7 +12,7 @@ import { memo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { entryTintColor } from '@/features/entry';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 import { ConflictOverlay } from '../ConflictOverlay';

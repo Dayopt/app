@@ -31,8 +31,7 @@ import {
   useReorderTags,
   useUpdateTag,
 } from '@/features/tags';
-import { cn } from '@/lib/utils';
-import { DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/components';
+import { DropdownMenu, DropdownMenuTrigger, HoverTooltip, cn } from '@dayopt/components';
 
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 

@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 
 import { TagIcon, useTags, type Tag } from '@/features/tags';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import { TagEntryCreatePopover } from '../TagEntryCreatePopover';
 

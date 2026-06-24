@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 
 import { TagIcon } from '@/features/tags';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import {
   formatMinutesDuration,

@@ -7,7 +7,7 @@
 
 import { memo, useMemo } from 'react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import { TIME_COLUMN_WIDTH } from '../../constants/grid.constants';
 

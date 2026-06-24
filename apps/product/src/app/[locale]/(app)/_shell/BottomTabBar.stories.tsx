@@ -9,7 +9,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { BarChart3, CalendarDays, UserCircle } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 type TabId = 'calendar' | 'review' | 'account';
 

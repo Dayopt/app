@@ -8,11 +8,11 @@ import NextImage from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 import { Link } from '@/lib/i18n/navigation';
-import { cn } from '@/lib/utils';
 import {
   Button,
   Card,
   CardContent,
+  cn,
   Field,
   FieldDescription,
   FieldError,

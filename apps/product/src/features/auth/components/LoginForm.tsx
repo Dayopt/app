@@ -14,12 +14,12 @@ import { useForm } from 'react-hook-form';
 import { logger } from '@/lib/logger';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { createClient } from '@/lib/supabase/client';
-import { Turnstile, isTurnstileEnabled, type TurnstileInstance } from '@/lib/turnstile';
-import { cn } from '@/lib/utils';
+import { isTurnstileEnabled, Turnstile, type TurnstileInstance } from '@/lib/turnstile';
 import {
   Button,
   Card,
   CardContent,
+  cn,
   Field,
   FieldDescription,
   FieldError,

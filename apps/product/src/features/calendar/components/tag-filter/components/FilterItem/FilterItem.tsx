@@ -6,13 +6,12 @@ import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses } from '@/features/tags';
-import { cn } from '@/lib/utils';
 
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 import { useTags } from '@/features/tags';
 import { useTagModalNavigation } from '../../../../hooks/useTagModalNavigation';
 
-import { Checkbox, DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/components';
+import { Checkbox, cn, DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/components';
 
 import { FilterItemMenu, UntaggedItemMenu } from './FilterItemMenu';
 import { useFilterItemEdit } from './useFilterItemEdit';

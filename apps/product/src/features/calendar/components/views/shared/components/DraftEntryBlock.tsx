@@ -10,8 +10,8 @@ import { entryTintColor } from '@/features/entry';
 import { getTagColorClasses, TagIcon } from '@/features/tags';
 import { formatTimeString } from '@/lib/date';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
+import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 
 import { useTagDraftStore, type TagDraft } from '../../../../stores/useTagDraftStore';
 import { Z_INDEX } from '../constants/grid.constants';
