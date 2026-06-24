@@ -1,0 +1,27 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Web/Overview" />
+
+# Web
+
+`apps/web`（マーケティングサイト・docs・blog・releases）の Storybook レイヤー。
+
+現状このレイヤーには個別 story がまだ無く、**構造（命名規約）だけを予約**している。
+`apps/web` の component に story を追加する際は、以下の第二階層に沿って `title` を付ける。
+
+| 第二階層         | 置き場                                | 用途                                                        |
+| ---------------- | ------------------------------------- | ----------------------------------------------------------- |
+| `Web/Components` | `apps/web/src/components/**`          | 単体 UI（ボタン、カード等の web 固有 primitive / 表示部品） |
+| `Web/Sections`   | `apps/web/src/features/**` の section | ページを構成するまとまった区画（Hero、料金表、FAQ 等）      |
+| `Web/Pages`      | ページ全体の組み上げ                  | 1 ルート分の合成（LP、docs ページ等）                       |
+
+## taxonomy 上の位置づけ
+
+Storybook の top-level は**所有境界（package / app）**で分ける（ADR-012 の続き、cosmetic 再整列）。
+
+- `Shared/*` — `packages/*`（foundations / components / patterns）。再利用資産
+- `Product/*` — `apps/product`（components / features / emails）
+- `Web/*` — `apps/web`（components / sections / pages）← 本レイヤー
+
+共有 UI は `@dayopt/components`（`Shared/Components`）から取得する。web 固有のものだけを
+`Web/Components` に置く。
