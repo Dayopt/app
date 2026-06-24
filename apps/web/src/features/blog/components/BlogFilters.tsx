@@ -1,7 +1,7 @@
 'use client';
 
-import { InlineTagFilter } from '@/components/ui/inline-tag-filter';
-import { MobileFilterSheet } from '@/components/ui/mobile-filter-sheet';
+import { InlineTagFilter } from '@/components/ui/inputs/inline-tag-filter';
+import { MobileFilterSheet } from '@/components/ui/overlays/mobile-filter-sheet';
 import { cn } from '@/lib/utils';
 import { Button } from '@dayopt/components';
 import { Calendar, Filter } from 'lucide-react';

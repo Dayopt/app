@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Search, Tag } from 'lucide-react';
 
-import { EmptyState } from '@/components/common/EmptyState';
-import { ErrorState } from '@/components/common/ErrorState';
+import { EmptyState } from '@/components/ui/feedback/EmptyState';
+import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { Button, Input } from '@dayopt/components';
 
 import type { AuditEntry } from './_data/copywriting-audit';

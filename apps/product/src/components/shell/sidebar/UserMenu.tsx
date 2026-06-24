@@ -20,7 +20,6 @@ import Link from 'next/link';
 
 import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useLogout } from '@/lib/hooks/useLogout';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
@@ -28,6 +27,9 @@ import { useRouter } from '@/lib/i18n/navigation';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { getInitials } from '@/lib/user';
 import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,

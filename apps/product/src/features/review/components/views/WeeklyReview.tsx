@@ -7,8 +7,8 @@ import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 
-import { EmptyState } from '@/components/common/EmptyState';
-import { ErrorState } from '@/components/common/ErrorState';
+import { EmptyState } from '@/components/ui/feedback/EmptyState';
+import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { resolveTagColor } from '@/features/tags';
 import { addWeeks } from '@/lib/date/core';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';

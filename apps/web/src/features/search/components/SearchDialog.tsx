@@ -1,6 +1,6 @@
 'use client';
 
-import { TagPill } from '@/components/ui/tag-pill';
+import { TagPill } from '@/components/ui/display/tag-pill';
 import { Highlight } from '@/lib/highlight';
 import type { PopularTag, SearchResponse, TagResponse } from '@/types/api';
 import { Badge, Button, Dialog, DialogContent, Input } from '@dayopt/components';

@@ -1,9 +1,9 @@
 'use client';
 
 import { ContentHeader } from '@/components/content/ContentHeader';
-import { EmptyState } from '@/components/ui/empty-state';
-import { SearchInput } from '@/components/ui/search-input';
-import { TagPill } from '@/components/ui/tag-pill';
+import { TagPill } from '@/components/ui/display/tag-pill';
+import { EmptyState } from '@/components/ui/feedback/empty-state';
+import { SearchInput } from '@/components/ui/inputs/search-input';
 import { Link } from '@/platform/i18n/navigation';
 import { Heading } from '@dayopt/components';
 import { BookOpen, FileText, Filter, Megaphone, TrendingUp } from 'lucide-react';

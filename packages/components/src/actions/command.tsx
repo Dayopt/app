@@ -11,7 +11,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '../layout/dialog';
+} from '../overlays/dialog';
 
 const Command = ({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) => {
   return (

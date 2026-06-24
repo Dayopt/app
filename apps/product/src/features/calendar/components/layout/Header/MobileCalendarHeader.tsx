@@ -12,7 +12,7 @@ import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@/lib/utils';
 import { Button } from '@dayopt/components';
 
-import type { NavigationDirection } from '@/components/common/DateNavigator';
+import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
 
 import { MobileMonthGrid } from './MobileMonthGrid';
 import { MobileYearStrip } from './MobileYearStrip';

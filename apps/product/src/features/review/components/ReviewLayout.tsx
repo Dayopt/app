@@ -5,9 +5,9 @@ import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import { useCallback, type ReactNode } from 'react';
 
-import { DateNavigator } from '@/components/common/DateNavigator';
-import { DateRangeDisplay } from '@/components/common/DateRangeDisplay';
 import { AppHeader } from '@/components/shell/AppHeader';
+import { DateRangeDisplay } from '@/components/ui/display/DateRangeDisplay';
+import { DateNavigator } from '@/components/ui/navigation/DateNavigator';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { writeReviewSearchParams } from '../lib/date-param';

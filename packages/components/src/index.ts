@@ -1,75 +1,13 @@
-// @dayopt/components — 共有 UI の単一 export 入口（内部は category 別に整理）
+// @dayopt/components — 共有 UI の単一 export 入口（内部は責務ベースの category 別に整理）
 
 export { cn } from './cn';
 
-// primitives
-export { Badge, badgeVariants, type BadgeProps } from './primitives/badge';
-export { Button, buttonVariants, type ButtonProps } from './primitives/button';
-export {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from './primitives/card';
-export { Container, type ContainerProps } from './primitives/container';
-export { Label } from './primitives/label';
-export { Logo, type LogoProps } from './primitives/logo';
-export { Separator } from './primitives/separator';
-export { Skeleton } from './primitives/skeleton';
-export { Spinner } from './primitives/spinner';
-export { HoverTooltip } from './primitives/tooltip';
-export { Heading, Text, type HeadingProps, type TextProps } from './primitives/typography';
-export { VisuallyHidden, type VisuallyHiddenProps } from './primitives/visually-hidden';
-
-// forms
-export { Checkbox } from './forms/checkbox';
-export {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-  FieldSupportText,
-} from './forms/field';
-export {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  useFormField,
-} from './forms/form';
-export { Input } from './forms/input';
-export { InputOTP, InputOTPGroup, InputOTPSlot } from './forms/input-otp';
-export { RadioGroup, RadioGroupItem } from './forms/radio-group';
-export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './forms/select';
-export { Switch } from './forms/switch';
-export { Textarea } from './forms/textarea';
-
-// feedback
-export { Alert, AlertDescription, AlertTitle } from './feedback/alert';
-export {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from './feedback/alert-dialog';
-export { InlineBanner, type InlineBannerAction } from './feedback/inline-banner';
-export { Toaster } from './feedback/sonner';
+// identity
+export { Logo, type LogoProps } from './identity/logo';
 
 // actions
 export { ActionFooter } from './actions/action-footer';
+export { Button, buttonVariants, type ButtonProps } from './actions/button';
 export {
   Command,
   CommandDialog,
@@ -97,7 +35,36 @@ export {
   DropdownMenuTrigger,
 } from './actions/dropdown-menu';
 
-// layout
+// inputs
+export { Checkbox } from './inputs/checkbox';
+export {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSeparator,
+  FieldSupportText,
+} from './inputs/field';
+export {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  useFormField,
+} from './inputs/form';
+export { Input } from './inputs/input';
+export { InputOTP, InputOTPGroup, InputOTPSlot } from './inputs/input-otp';
+export { Label } from './inputs/label';
+export { RadioGroup, RadioGroupItem } from './inputs/radio-group';
+export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './inputs/select';
+export { Switch } from './inputs/switch';
+export { Textarea } from './inputs/textarea';
+
+// navigation
 export {
   Breadcrumb,
   BreadcrumbEllipsis,
@@ -106,8 +73,43 @@ export {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from './layout/breadcrumb';
-export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './layout/collapsible';
+} from './navigation/breadcrumb';
+export {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from './navigation/pagination';
+export {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  TabsTrigger as UnderlineTabsTrigger,
+} from './navigation/tabs';
+
+// feedback
+export { Alert, AlertDescription, AlertTitle } from './feedback/alert';
+export { InlineBanner, type InlineBannerAction } from './feedback/inline-banner';
+export { Skeleton } from './feedback/skeleton';
+export { Toaster } from './feedback/sonner';
+export { Spinner } from './feedback/spinner';
+
+// overlays
+export {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from './overlays/alert-dialog';
 export {
   Dialog,
   DialogClose,
@@ -117,7 +119,7 @@ export {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from './layout/dialog';
+} from './overlays/dialog';
 export {
   Drawer,
   DrawerClose,
@@ -127,18 +129,8 @@ export {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from './layout/drawer';
-export {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from './layout/pagination';
-export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './layout/popover';
-export { ScrollArea, ScrollBar } from './layout/scroll-area';
+} from './overlays/drawer';
+export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './overlays/popover';
 export {
   Sheet,
   SheetClose,
@@ -148,11 +140,34 @@ export {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from './layout/sheet';
+} from './overlays/sheet';
+export { HoverTooltip } from './overlays/tooltip';
+
+// display
 export {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  TabsTrigger as UnderlineTabsTrigger,
-} from './layout/tabs';
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  avatarVariants,
+  type AvatarProps,
+} from './display/avatar';
+export { Badge, badgeVariants, type BadgeProps } from './display/badge';
+export {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from './display/card';
+export { Heading, Text, type HeadingProps, type TextProps } from './display/typography';
+
+// layout
+export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './layout/collapsible';
+export { Container, type ContainerProps } from './layout/container';
+export { ScrollArea, ScrollBar } from './layout/scroll-area';
+export { Separator } from './layout/separator';
+
+// utilities
+export { VisuallyHidden, type VisuallyHiddenProps } from './utilities/visually-hidden';

@@ -24,7 +24,6 @@ import {
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/features/auth';
 import { SETTINGS_CATEGORIES } from '@/features/settings';
 import { APP_NAME, APP_RELEASES_URL, APP_VERSION } from '@/lib/app-info';
@@ -35,7 +34,7 @@ import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { api } from '@/lib/trpc';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
-import { ScrollArea, Skeleton } from '@dayopt/components';
+import { Avatar, AvatarFallback, AvatarImage, ScrollArea, Skeleton } from '@dayopt/components';
 
 /**
  * 設定ページのルート

@@ -143,7 +143,7 @@ paths:
 
 ### Empty State
 
-- コンポーネント: `EmptyState` (`@/components/common/EmptyState`)
+- コンポーネント: `EmptyState` (`@/components/ui/feedback/EmptyState`)
 - アイコン: `size-10` (40px), `text-muted-foreground`
 - ARIA: `role="status"`
 - 用途: データが存在しない場合の表示
@@ -151,7 +151,7 @@ paths:
 
 ### Error State
 
-- コンポーネント: `ErrorState` (`@/components/common/ErrorState`)
+- コンポーネント: `ErrorState` (`@/components/ui/feedback/ErrorState`)
 - アイコン: `AlertCircle`, `size-8` (32px), `text-destructive`
 - ARIA: `role="alert"`
 - リトライ: `Button variant="outline"`
@@ -161,7 +161,7 @@ paths:
 ### Loading State
 
 - Skeleton (`animate-shimmer`): コンテンツ形状のローディング、300ms〜3s
-- Spinner (`@/components/ui/spinner`): 短いインラインローディング、〜2s
+- Spinner (`@dayopt/components`): 短いインラインローディング、〜2s
 - `loading.tsx` (Next.js): ページレベルの Skeleton
 - **ルール**: コンテンツ領域は Skeleton 優先。生 `Loader2` 禁止、必ず Spinner コンポーネントを使用
 
@@ -191,7 +191,7 @@ paths:
 | 通常の確認                       | `default`     | アーカイブ、エクスポート   |
 | 取り消し可能な操作（保存・作成） | 確認不要      | —                          |
 
-- コンポーネント: `ConfirmDialog` (`@/components/ui/confirm-dialog`)
+- コンポーネント: `ConfirmDialog` (`@/components/ui/overlays/confirm-dialog`)
 - Props: `title`, `description`, `variant`, `icon?` (LucideIcon), `confirmLabel?`, `confirmDisabled?`
 - `onConfirm` は async 可。Loading 中は両ボタン自動 disable、ESC・backdrop click ブロック
 - 入力を伴う確認（パスワード確認等）は `AlertDialog` (`@radix-ui/react-alert-dialog`) を直接使用

@@ -14,7 +14,7 @@ import { ChartNoAxesColumnIncreasing, PanelLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useState } from 'react';
 
-import { FeatureErrorBoundary } from '@/components/common/error-boundary';
+import { FeatureErrorBoundary } from '@/components/ui/feedback/error-boundary';
 import {
   CalendarAnalyticsPanel,
   CalendarCompareToggle,

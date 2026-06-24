@@ -3,9 +3,9 @@
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import type { DateRangeDisplayProps as BaseDateRangeDisplayProps } from '@/components/common/DateRangeDisplay';
-import { DateRangeDisplay as DateRangeDisplayBase } from '@/components/common/DateRangeDisplay';
-import { MiniCalendar } from '@/components/ui/mini-calendar';
+import type { DateRangeDisplayProps as BaseDateRangeDisplayProps } from '@/components/ui/display/DateRangeDisplay';
+import { DateRangeDisplay as DateRangeDisplayBase } from '@/components/ui/display/DateRangeDisplay';
+import { MiniCalendar } from '@/components/ui/inputs/mini-calendar';
 import { cn } from '@/lib/utils';
 
 /** Calendar用 DateRangeDisplay のプロパティ */
@@ -105,4 +105,4 @@ export function DateRangeDisplay({
   );
 }
 
-export { CompactDateDisplay } from '@/components/common/DateRangeDisplay';
+export { CompactDateDisplay } from '@/components/ui/display/DateRangeDisplay';

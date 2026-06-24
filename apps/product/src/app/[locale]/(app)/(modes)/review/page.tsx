@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
-import { FeatureErrorBoundary } from '@/components/common/error-boundary';
+import { FeatureErrorBoundary } from '@/components/ui/feedback/error-boundary';
 import type { ReviewGranularity } from '@/features/review';
 import {
   buildDailyReviewRedirectPath,

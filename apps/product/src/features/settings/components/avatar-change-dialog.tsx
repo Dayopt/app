@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { AvatarUpload } from '@/components/ui/avatar';
+import { AvatarUpload } from '@/components/ui/inputs/avatar-upload';
 import { useAuthStore } from '@/features/auth';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';

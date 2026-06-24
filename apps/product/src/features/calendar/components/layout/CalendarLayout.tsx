@@ -14,9 +14,9 @@ import {
   DrawerTitle,
 } from '@dayopt/components';
 
-import type { NavigationDirection } from '@/components/common/DateNavigator';
-import { DateNavigator } from '@/components/common/DateNavigator';
 import { AppHeader } from '@/components/shell/AppHeader';
+import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
+import { DateNavigator } from '@/components/ui/navigation/DateNavigator';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';

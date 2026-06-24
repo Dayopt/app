@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta = {
-  title: 'Components/UI/Props Inventory',
+  title: 'Components/Props Inventory',
   parameters: {
     layout: 'fullscreen',
   },
