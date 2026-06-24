@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasTwoLayerTimeConflict, rangesOverlap } from '../two-layer-overlap';
+import { hasTwoLayerTimeConflict, rangesOverlap } from '@dayopt/domain';
 
 describe('rangesOverlap', () => {
   it('半開区間として、終端と始端の接触は重複しない', () => {

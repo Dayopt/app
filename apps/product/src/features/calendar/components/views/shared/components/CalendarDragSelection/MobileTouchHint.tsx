@@ -14,7 +14,7 @@ import { useTranslations } from 'next-intl';
 
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 const STORAGE_KEY = 'calendar-mobile-hint-dismissed';
 const AUTO_DISMISS_MS = 15_000;

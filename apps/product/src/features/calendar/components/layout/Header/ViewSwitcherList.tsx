@@ -13,7 +13,7 @@ import {
 import { useTranslations } from 'next-intl';
 
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 import { useCalendarNavigation } from '../../../hooks/navigation/CalendarNavigationContext';
 import type { CalendarViewType } from '../../../types/calendar.types';
 import { isMultiDayView } from '../../../types/calendar.types';

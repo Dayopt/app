@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 
 import { TagDeleteStrategyDialog, TagIcon, useDeleteTag, useTags, type Tag } from '@/features/tags';
 import { api } from '@/lib/trpc';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import { buildReviewMainPath, buildReviewTagPath } from '../../lib/date-param';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';

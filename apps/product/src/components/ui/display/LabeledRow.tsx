@@ -11,7 +11,7 @@ import {
 
 import { ChevronRight } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 type LabeledRowVariant = 'control' | 'navigate' | 'action' | 'display';
 

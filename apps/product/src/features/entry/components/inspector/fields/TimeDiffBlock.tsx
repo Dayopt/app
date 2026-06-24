@@ -17,7 +17,7 @@ import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses } from '@/features/tags';
 import { formatDurationDisplay } from '@/lib/time-utils';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 import { computeTimeDiff } from '../../../lib/time-diff';
 
 /** 差分（分）を "+30m" / "±0m" / "-15m" 形式にフォーマット */

@@ -12,7 +12,7 @@ import {
   getPlanIdForSubscriptionStatus,
   type DayoptPlanId,
 } from '@dayopt/billing';
-import { Badge } from '@dayopt/components';
+import { Badge, cn } from '@dayopt/components';
 import { AlertTriangle, Check, CreditCard, Crown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -21,7 +21,6 @@ import { LabeledRow } from '@/components/ui/display/LabeledRow';
 import { SectionCard } from '@/components/ui/display/SectionCard';
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { api } from '@/lib/trpc';
-import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,

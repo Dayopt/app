@@ -4,7 +4,7 @@ import { getMonth, getYear } from 'date-fns';
 import { useTranslations } from 'next-intl';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 const START_YEAR = 2020;
 const END_YEAR = 2050;

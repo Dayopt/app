@@ -8,8 +8,7 @@ import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { TagIcon } from '@/features/tags';
 import { formatDateShort, formatDurationMinutes, formatTimeRange } from '@/lib/date';
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle, Skeleton } from '@dayopt/components';
+import { Card, CardContent, CardHeader, CardTitle, cn, Skeleton } from '@dayopt/components';
 
 import { useTagDashboardData } from '../../hooks/useTagDetailData';
 import { parseReviewDateParam } from '../../lib/date-param';

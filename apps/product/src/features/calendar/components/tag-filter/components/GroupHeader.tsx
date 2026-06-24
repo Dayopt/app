@@ -19,8 +19,8 @@ import { useTranslations } from 'next-intl';
 
 import type { TagColorName } from '@/features/tags';
 import { ColorPaletteMenuItems, IconPickerDropdownItems, TagIcon } from '@/features/tags';
-import { cn } from '@/lib/utils';
 import {
+  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,

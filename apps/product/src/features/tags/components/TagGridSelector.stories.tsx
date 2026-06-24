@@ -4,9 +4,8 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { fn } from 'storybook/test';
 
-import { cn } from '@/lib/utils';
-import { Button, Drawer, DrawerContent, DrawerTitle, Input } from '@dayopt/components';
-import { TAG_COLOR_NAMES, getTagColorClasses } from '../lib/tag-colors';
+import { Button, cn, Drawer, DrawerContent, DrawerTitle, Input } from '@dayopt/components';
+import { getTagColorClasses, TAG_COLOR_NAMES } from '../lib/tag-colors';
 
 import type { TagColorName } from '../lib/tag-colors';
 

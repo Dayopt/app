@@ -6,7 +6,7 @@ import { format, getWeek } from 'date-fns';
 
 import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import { CalendarViewAnimation } from '../../animations/ViewTransition';
 import {

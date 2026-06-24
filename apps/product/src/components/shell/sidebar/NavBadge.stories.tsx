@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { Sparkles } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 // NavBadge は useTranslations 依存のため、stories では同形状の静的 mock を使う。
 function MockNavBadge({

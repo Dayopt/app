@@ -17,9 +17,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Folder, icons as lucideIcons } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { cn } from '@/lib/utils';
 import {
   Button,
+  cn,
   Dialog,
   DialogContent,
   DialogFooter,
@@ -33,10 +33,10 @@ import {
 } from '@dayopt/components';
 import {
   DEFAULT_TAG_COLOR,
+  resolveTagColor,
   TAG_COLOR_MAP,
   TAG_COLOR_NAMES,
   TAG_NAME_MAX_LENGTH,
-  resolveTagColor,
 } from '../lib/tag-colors';
 
 import { useCreateTag } from '../hooks/useTagCrudMutations';

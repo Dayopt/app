@@ -5,8 +5,8 @@ import { memo, useCallback, useState } from 'react';
 
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
-import { cn } from '@/lib/utils';
 import {
+  cn,
   Drawer,
   DrawerContent,
   DrawerDescription,

@@ -18,7 +18,7 @@ import { memo, useCallback, useMemo } from 'react';
 import { isTodayInTimezone, tzIsSameDay } from '@/lib/date/timezone';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import { useSwipeGesture } from '../../../hooks/useSwipeGesture';
 

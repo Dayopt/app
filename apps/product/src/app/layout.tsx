@@ -23,7 +23,7 @@ import { Suspense } from 'react';
 
 import { DeferredAnalytics } from '@/lib/analytics/DeferredAnalytics';
 import { WebVitalsReporter } from '@/lib/sentry/WebVitalsReporter';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 // next/font による最適化されたフォント読み込み（Variable Font: optical size軸有効）
 // preload: true でLCP改善（デフォルトでtrueだが明示的に指定）

@@ -4,9 +4,9 @@ import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { TagIcon, useTags } from '@/features/tags';
-import { cn } from '@/lib/utils';
 import {
   Button,
+  cn,
   Select,
   SelectContent,
   SelectItem,

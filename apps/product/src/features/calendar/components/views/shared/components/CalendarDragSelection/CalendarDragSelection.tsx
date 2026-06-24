@@ -8,7 +8,7 @@
  * - ドロップゾーンは CalendarDropZone に委譲
  */
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 import { useDragOverlapResolver } from '../../../../../hooks/operations/useDragOverlapResolver';
 import { useEntryClipboardStore } from '../../../../../stores/useEntryClipboardStore';
 

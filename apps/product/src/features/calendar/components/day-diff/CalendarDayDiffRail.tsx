@@ -6,8 +6,7 @@ import { useMemo } from 'react';
 
 import { useTagsMap } from '@/features/tags';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { cn } from '@/lib/utils';
-import { Button } from '@dayopt/components';
+import { Button, cn } from '@dayopt/components';
 
 import type {
   CalendarDayDiffItem,

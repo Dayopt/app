@@ -2,7 +2,7 @@
 
 import type { TagColorName } from '@/features/tags';
 import { TagIcon } from '@/features/tags';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 interface TagSegment {
   tagId: string;

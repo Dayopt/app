@@ -7,7 +7,7 @@
  * クリックで現在時刻にエントリを配置。
  */
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 interface BlockItemProps {
   tagName: string;

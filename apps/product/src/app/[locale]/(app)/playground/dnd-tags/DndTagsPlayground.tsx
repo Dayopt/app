@@ -24,7 +24,7 @@ import {
   useReorderTags,
   useTagsHierarchy,
 } from '@/features/tags';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 const ROOT = '__root__';
 

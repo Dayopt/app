@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { BarChart3, CalendarDays } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 // PageNav は usePathname / useCalendarNavigation 等に依存するため、
 // ストーリーでは同じ見た目の静的モックを使用する。
