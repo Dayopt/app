@@ -20,7 +20,7 @@ import { Button } from '@dayopt/components';
  * | Mutation 失敗 | Toast (sonner) | `onError` callback |
  */
 const meta = {
-  title: 'Patterns/ErrorStates',
+  title: 'Product/Patterns/ErrorStates',
   parameters: {
     layout: 'fullscreen',
   },

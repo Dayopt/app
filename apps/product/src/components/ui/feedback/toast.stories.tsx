@@ -5,7 +5,7 @@ import { Button } from '@dayopt/components';
 import { Toaster } from './toast';
 
 const meta = {
-  title: 'Components/Feedback/Toast',
+  title: 'Product/Components/Feedback/Toast',
   component: Toaster,
   tags: ['autodocs'],
   parameters: {

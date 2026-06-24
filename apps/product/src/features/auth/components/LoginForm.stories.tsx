@@ -7,7 +7,7 @@ import { LoginForm } from './LoginForm';
 
 /** LoginForm - ログインフォーム */
 const meta = {
-  title: 'Features/Auth/LoginForm',
+  title: 'Product/Features/Auth/LoginForm',
   component: LoginForm,
   parameters: {
     layout: 'padded',

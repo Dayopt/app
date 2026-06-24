@@ -6,7 +6,7 @@ import { RuleInsightList } from './RuleInsightList';
 
 /** RuleInsightList — 閾値ベースの気づきリスト（Review タブ KPI グリッド下） */
 const meta = {
-  title: 'Features/Stats/Review/RuleInsightList',
+  title: 'Product/Features/Stats/Review/RuleInsightList',
   component: RuleInsightList,
   parameters: { layout: 'padded' },
   tags: ['autodocs'],

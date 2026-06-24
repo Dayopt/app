@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Badge } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/Display/Badge',
+  title: 'Shared/Components/Display/Badge',
   component: Badge,
   parameters: { layout: 'fullscreen' },
   tags: ['autodocs'],

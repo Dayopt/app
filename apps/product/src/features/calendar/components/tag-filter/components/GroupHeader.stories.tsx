@@ -24,7 +24,7 @@ import { GroupHeader } from './GroupHeader';
  * 子タグ（グループ内タグ）のメニューは `FilterItemMenu` 参照。
  */
 const meta = {
-  title: 'Features/Tags/GroupHeader',
+  title: 'Product/Features/Tags/GroupHeader',
   component: GroupHeader,
   tags: ['autodocs'],
   parameters: {

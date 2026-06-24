@@ -19,7 +19,7 @@ import { Button, Sheet, SheetContent, SheetHeader, SheetTitle } from '@dayopt/co
  * フルスクリーン Sheet は `showCloseButton={false}` にして、ヘッダー内にカスタム閉じるボタンを配置する。
  */
 const meta = {
-  title: 'Components/Overlays/Sheet',
+  title: 'Shared/Components/Overlays/Sheet',
   component: Sheet,
   tags: ['autodocs'],
   parameters: {

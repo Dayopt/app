@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Spinner } from '@dayopt/components';
 
 const meta = {
-  title: 'Patterns/Loading',
+  title: 'Shared/Patterns/Loading',
   parameters: {
     layout: 'fullscreen',
   },

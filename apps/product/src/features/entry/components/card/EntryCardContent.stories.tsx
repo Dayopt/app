@@ -11,7 +11,7 @@ import { EntryCardContent } from './EntryCardContent';
  * EntryCard の内側で使われるが、独立してテスト可能な純粋コンポーネント。
  */
 const meta = {
-  title: 'Features/Entry/CardContent',
+  title: 'Product/Features/Entry/CardContent',
   parameters: {
     layout: 'padded',
   },

@@ -73,7 +73,7 @@ function MockBottomTabBar({
 }
 
 const meta = {
-  title: 'Components/Shell/BottomTabBar',
+  title: 'Product/Components/Shell/BottomTabBar',
   component: MockBottomTabBar,
   parameters: {
     layout: 'fullscreen',

@@ -37,7 +37,7 @@ const AUTH_WITH_AVATAR = {
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Settings/AvatarChangeDialog',
+  title: 'Product/Features/Settings/AvatarChangeDialog',
   component: AvatarChangeDialog,
   parameters: {
     layout: 'centered',

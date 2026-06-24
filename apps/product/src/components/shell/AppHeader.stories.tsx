@@ -77,7 +77,7 @@ function StubPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 's
 
 /** AppHeader - アプリ共通ヘッダーシェル */
 const meta = {
-  title: 'Components/Shell/AppHeader',
+  title: 'Product/Components/Shell/AppHeader',
   parameters: {
     layout: 'padded',
   },

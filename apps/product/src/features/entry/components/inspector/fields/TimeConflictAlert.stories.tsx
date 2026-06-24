@@ -10,7 +10,7 @@ import { TimeConflictAlert } from './TimeConflictAlert';
  * `aria-live="assertive"` によりスクリーンリーダーに即時通知される。
  */
 const meta = {
-  title: 'Features/Entry/Inspector/TimeConflictAlert',
+  title: 'Product/Features/Entry/Inspector/TimeConflictAlert',
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Avatar, AvatarFallback, AvatarImage } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/Display/Avatar',
+  title: 'Shared/Components/Display/Avatar',
   component: Avatar,
   tags: ['autodocs'],
   parameters: { layout: 'centered' },

@@ -16,7 +16,7 @@ import {
 } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/Display/Card',
+  title: 'Shared/Components/Display/Card',
   component: Card,
   tags: ['autodocs'],
   parameters: {

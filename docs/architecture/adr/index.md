@@ -20,6 +20,7 @@ Dayoptプロジェクトの主要な設計判断を文書化した記録。
 | [ADR-010](010-soft-delete-model.md)                       | entries の論理削除（soft delete）                                        | 2026-03-18 | accepted   |
 | [ADR-011](011-shared-packages-canonical-and-app-shims.md) | デザインシステム共有レイヤー（packages を canonical、app は直接 import） | 2026-06-22 | accepted   |
 | [ADR-012](012-component-taxonomy.md)                      | 共有 component の責務ベース taxonomy（第二階層）                         | 2026-06-23 | accepted   |
+| [ADR-013](013-storybook-ownership-taxonomy.md)            | Storybook story-title の所有境界 top-level（Shared / Product / Web）     | 2026-06-24 | accepted   |
 
 ---
 

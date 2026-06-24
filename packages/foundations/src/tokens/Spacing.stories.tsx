@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta = {
-  title: 'Foundations/Spacing',
+  title: 'Shared/Foundations/Spacing',
   parameters: {
     layout: 'fullscreen',
   },

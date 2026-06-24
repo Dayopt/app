@@ -6,7 +6,7 @@ import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
 import { Button } from '@dayopt/components';
 
 const meta = {
-  title: 'Patterns/Confirmation',
+  title: 'Product/Patterns/Confirmation',
   parameters: {
     layout: 'fullscreen',
   },

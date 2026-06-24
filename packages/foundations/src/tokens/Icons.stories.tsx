@@ -71,7 +71,7 @@ import {
 } from 'lucide-react';
 
 const meta = {
-  title: 'Foundations/Icons',
+  title: 'Shared/Foundations/Icons',
   parameters: {
     layout: 'fullscreen',
   },

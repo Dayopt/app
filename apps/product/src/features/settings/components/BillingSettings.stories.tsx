@@ -115,7 +115,7 @@ function makeBillingMocks(
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Settings/BillingSettings',
+  title: 'Product/Features/Settings/BillingSettings',
   component: BillingSettings,
   parameters: {
     layout: 'padded',

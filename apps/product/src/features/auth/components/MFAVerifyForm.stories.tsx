@@ -7,7 +7,7 @@ import { MFAVerifyForm } from './MFAVerifyForm';
 
 /** MFAVerifyForm - 2段階認証フォーム（TOTP / リカバリーコード） */
 const meta = {
-  title: 'Features/Auth/MFAVerifyForm',
+  title: 'Product/Features/Auth/MFAVerifyForm',
   component: MFAVerifyForm,
   parameters: {
     layout: 'padded',

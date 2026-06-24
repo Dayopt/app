@@ -9,7 +9,7 @@ import { SessionTimeoutDialog } from './SessionTimeoutDialog';
 
 /** SessionTimeoutDialog - セッションタイムアウト警告 */
 const meta = {
-  title: 'Features/Auth/SessionTimeoutDialog',
+  title: 'Product/Features/Auth/SessionTimeoutDialog',
   component: SessionTimeoutDialog,
   parameters: {
     layout: 'centered',

@@ -29,7 +29,7 @@ const defaultLabels = {
 
 /** ContactDialogContent - お問い合わせフォームUI */
 const meta = {
-  title: 'Features/Contact/ContactDialogContent',
+  title: 'Product/Features/Contact/ContactDialogContent',
   component: ContactDialogContent,
   parameters: { layout: 'centered' },
   tags: ['autodocs'],

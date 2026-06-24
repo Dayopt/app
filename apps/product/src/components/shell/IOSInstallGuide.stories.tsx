@@ -11,7 +11,7 @@ import { fn } from 'storybook/test';
 import { IOSInstallGuide } from './IOSInstallGuide';
 
 const meta = {
-  title: 'Components/Shell/IOSInstallGuide',
+  title: 'Product/Components/Shell/IOSInstallGuide',
   component: IOSInstallGuide,
   parameters: { layout: 'fullscreen' },
   args: {

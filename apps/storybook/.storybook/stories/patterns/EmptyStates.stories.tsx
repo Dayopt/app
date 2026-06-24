@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { Button } from '@dayopt/components';
 
 const meta = {
-  title: 'Patterns/EmptyStates',
+  title: 'Product/Patterns/EmptyStates',
   parameters: {
     layout: 'fullscreen',
   },

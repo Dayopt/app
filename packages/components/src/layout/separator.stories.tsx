@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Separator } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/Layout/Separator',
+  title: 'Shared/Components/Layout/Separator',
   component: Separator,
   tags: ['autodocs'],
   parameters: {

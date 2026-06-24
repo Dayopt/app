@@ -19,7 +19,7 @@ import { FilterItemMenu, UntaggedItemMenu } from './FilterItemMenu';
  * 色変更はグループ単位で統一するため、グループ内タグでは非表示。
  */
 const meta = {
-  title: 'Features/Tags/FilterItemMenu',
+  title: 'Product/Features/Tags/FilterItemMenu',
   component: FilterItemMenu,
   tags: ['autodocs'],
   parameters: {

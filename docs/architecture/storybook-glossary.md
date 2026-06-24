@@ -23,7 +23,7 @@ Storybook 8 の構成要素を公式用語に基づいて整理したリファ�
 
 ```tsx
 const meta = {
-  title: 'Components/UI/Button', // Sidebar上のパス
+  title: 'Shared/Components/Actions/Button', // Sidebar上のパス
   component: Button, // 対象コンポーネント
   tags: ['autodocs'], // 自動ドキュメント生成
   argTypes: {
@@ -90,15 +90,15 @@ export const Destructive: Story = {
 └──────────┴──────────────────────────────────────┘
 ```
 
-| パーツ             | 説明                                                                                                                                                                               |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Sidebar**        | 左側の Story ツリー。Meta の `title` 階層（例: `Components/UI/Button`）で構成される。Dayopt では `storySort` で `Docs > Foundations > UI > Features > Patterns` の順に並べている。 |
-| **Canvas**         | Story を描画するメインエリア。1 つの Story を単独で表示する。                                                                                                                      |
-| **Docs page**      | `tags: ['autodocs']` で自動生成されるドキュメントページ。コンポーネントの全 Story と props テーブルを一覧表示する。Dayopt では `DocsTemplate` でページレイアウトをカスタム。       |
-| **Controls panel** | ArgTypes に基づくインタラクティブな props 操作パネル。Story の Args をリアルタイムに変更できる。                                                                                   |
-| **Actions panel**  | イベントハンドラ（`onClick`, `onChange` 等）の呼び出しログを表示するパネル。                                                                                                       |
-| **Toolbar**        | 上部バー。GlobalTypes で定義したツールを配置する。Dayopt ではテーマ切替（Light / Dark）を設定。                                                                                    |
-| **Addons panel**   | 下部のタブ切替パネル。Controls, Actions, A11y などの addon が表示される。                                                                                                          |
+| パーツ             | 説明                                                                                                                                                                                                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sidebar**        | 左側の Story ツリー。Meta の `title` 階層（例: `Shared/Components/Actions/Button`）で構成される。Dayopt では top-level を所有境界で分け（ADR-013）、`Welcome > Shared(Foundations/Components/Patterns) > Product(Components/Features/Emails) > Web` の順に並べている。 |
+| **Canvas**         | Story を描画するメインエリア。1 つの Story を単独で表示する。                                                                                                                                                                                                          |
+| **Docs page**      | `tags: ['autodocs']` で自動生成されるドキュメントページ。コンポーネントの全 Story と props テーブルを一覧表示する。Dayopt では `DocsTemplate` でページレイアウトをカスタム。                                                                                           |
+| **Controls panel** | ArgTypes に基づくインタラクティブな props 操作パネル。Story の Args をリアルタイムに変更できる。                                                                                                                                                                       |
+| **Actions panel**  | イベントハンドラ（`onClick`, `onChange` 等）の呼び出しログを表示するパネル。                                                                                                                                                                                           |
+| **Toolbar**        | 上部バー。GlobalTypes で定義したツールを配置する。Dayopt ではテーマ切替（Light / Dark）を設定。                                                                                                                                                                        |
+| **Addons panel**   | 下部のタブ切替パネル。Controls, Actions, A11y などの addon が表示される。                                                                                                                                                                                              |
 
 ---
 

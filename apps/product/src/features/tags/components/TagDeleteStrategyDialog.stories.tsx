@@ -95,7 +95,7 @@ const mockTags: Tag[] = [
 ];
 
 const meta = {
-  title: 'Features/Tags/DeleteStrategyDialog',
+  title: 'Product/Features/Tags/DeleteStrategyDialog',
   parameters: {
     layout: 'centered',
   },

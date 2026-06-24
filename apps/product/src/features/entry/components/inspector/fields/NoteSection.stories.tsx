@@ -14,7 +14,7 @@ import { NoteSection } from './NoteSection';
  * HTML文字列が入力された場合は自動的にタグを除去してプレーンテキスト表示する。
  */
 const meta = {
-  title: 'Features/Entry/Inspector/NoteSection',
+  title: 'Product/Features/Entry/Inspector/NoteSection',
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',

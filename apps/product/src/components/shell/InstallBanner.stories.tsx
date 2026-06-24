@@ -11,7 +11,7 @@ import { fn } from 'storybook/test';
 import { InstallBanner } from './InstallBanner';
 
 const meta = {
-  title: 'Components/Shell/InstallBanner',
+  title: 'Product/Components/Shell/InstallBanner',
   component: InstallBanner,
   parameters: { layout: 'fullscreen' },
   args: {

@@ -1,0 +1,117 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Web/Overview" />
+
+# Web
+
+`apps/web`（マーケティングサイト・docs・blog・releases）の Storybook レイヤー。
+
+現状このレイヤーには個別 story がまだ無く、**構造（命名規約）だけを予約**している。
+`apps/web` の component に story を追加する際は、以下の第二階層に沿って `title` を付ける。
+
+| 第二階層         | 意図                                        |
+| ---------------- | ------------------------------------------- |
+| `Web/Components` | web 全体で使うが product とは共有しない部品 |
+| `Web/Sections`   | ページを構成する意味のある区画              |
+| `Web/Pages`      | ページ全体の構成確認                        |
+
+## taxonomy 上の位置づけ
+
+Storybook の top-level は**所有境界（package / app）**で分ける（ADR-013）。
+
+- `Shared/*` — `packages/*`（foundations / components / patterns）。再利用資産
+- `Product/*` — `apps/product`（components / features / patterns / emails）
+- `Web/*` — `apps/web`（components / sections / pages）← 本レイヤー
+
+共有 UI は `@dayopt/components`（`Shared/Components`）から取得する。web 固有のものだけを `Web/*` に置く。
+
+---
+
+## Web/Components
+
+web 全体で使うが、**product とは共有しない** component。`Shared/Components`（product と共有）でも
+`Web/Sections`（ページの区画）でもない、web サイト共通の部品。
+
+```
+Web/Components
+  Shell
+    Header
+    Footer
+    PublicLayout
+
+  Navigation
+    HeaderNav
+    FooterNav
+    MobileMenu
+
+  Content
+    MarkdownContent
+    Prose
+    LinkCard
+
+  SEO
+    SeoMeta
+    OgPreview
+```
+
+ここに入るのは「LP だけ」のものではなく、**web サイト全体で使う**もの。たとえば `Header` /
+`Footer` / `SeoMeta` / `Prose` など。
+
+## Web/Sections
+
+ページを構成する**意味のある区画**。Web の UI は Product のような「機能単位」よりも、
+**セクション単位**で見る方が自然。
+
+```
+Web/Sections
+  Landing
+    Hero
+    Problem
+    HowItWorks
+    Features
+    CTA
+
+  Pricing
+    PricingHero
+    PricingTable
+    PlanComparison
+    FAQ
+
+  Help
+    HelpHero
+    HelpCategoryList
+    HelpArticleList
+
+  Legal
+    LegalLayout
+    LegalSection
+```
+
+たとえば `Hero` は feature ではない。でも LP の伝達構造としては重要。なので
+`Web/Sections/Landing/Hero` が自然な置き場になる。
+
+## Web/Pages
+
+**ページ全体の構成確認**。page story を持つ意味は、個別 section ではなく、
+**ページとして並べたときにどう見えるか**を確認するため。
+
+```
+Web/Pages
+  Home
+  Pricing
+  Help
+  Legal
+```
+
+### Section 単体 vs Page 全体
+
+```
+Web/Sections/Landing/Hero
+  = Hero 単体
+
+Web/Pages/Home
+  = Hero + Problem + Features + CTA を並べたページ全体
+```
+
+LP は section 単体よりも、**順番・流れ・情報設計**が大事。section の並びとページとしての見え方を
+確認するために Page story を持つ。

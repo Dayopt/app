@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Checkbox, Input, Label } from '@dayopt/components';
 
 const meta = {
-  title: 'Components/Inputs/Label',
+  title: 'Shared/Components/Inputs/Label',
   component: Label,
   tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },

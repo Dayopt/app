@@ -147,7 +147,7 @@ function SidebarShell({ children }: { children: React.ReactNode }) {
 
 /** SidebarSection — サイドバー共通のセクション。title + 右端 action + 常時表示 children。 */
 const meta = {
-  title: 'Components/Shell/Sidebar/Section',
+  title: 'Product/Components/Shell/Sidebar/Section',
   component: SidebarSection,
   parameters: {
     layout: 'fullscreen',

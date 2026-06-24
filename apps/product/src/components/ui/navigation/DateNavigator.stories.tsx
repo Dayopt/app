@@ -4,7 +4,7 @@ import { expect, fn, userEvent, within } from 'storybook/test';
 import { CompactDateNavigator, DateNavigator } from './DateNavigator';
 
 const meta = {
-  title: 'Components/Navigation/DateNavigator',
+  title: 'Product/Components/Navigation/DateNavigator',
   component: DateNavigator,
   tags: ['autodocs'],
 } satisfies Meta<typeof DateNavigator>;

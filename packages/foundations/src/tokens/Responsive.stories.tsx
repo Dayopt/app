@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { CheckCircle, XCircle } from 'lucide-react';
 
 const meta = {
-  title: 'Foundations/Responsive',
+  title: 'Shared/Foundations/Responsive',
   parameters: {
     layout: 'fullscreen',
   },

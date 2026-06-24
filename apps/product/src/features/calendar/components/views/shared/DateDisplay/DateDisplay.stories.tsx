@@ -5,7 +5,7 @@ import { DateDisplay } from './DateDisplay';
 
 /** カレンダーの日付表示コンポーネント（DateDisplay）。 */
 const meta = {
-  title: 'Features/Calendar/DateDisplay',
+  title: 'Product/Features/Calendar/DateDisplay',
   parameters: {
     layout: 'padded',
   },

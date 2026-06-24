@@ -4,7 +4,7 @@ import { InsightSlot } from './InsightSlot';
 
 /** InsightSlot — 研究者の所見スロット（各粒度ビューの冒頭に 1-2 文だけ表示） */
 const meta = {
-  title: 'Features/Stats/Shared/InsightSlot',
+  title: 'Product/Features/Stats/Shared/InsightSlot',
   component: InsightSlot,
   parameters: {
     layout: 'padded',

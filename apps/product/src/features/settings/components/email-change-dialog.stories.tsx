@@ -15,7 +15,7 @@ import { Button } from '@dayopt/components';
 import { EmailChangeDialog } from './email-change-dialog';
 
 const meta = {
-  title: 'Features/Settings/EmailChangeDialog',
+  title: 'Product/Features/Settings/EmailChangeDialog',
   component: EmailChangeDialog,
   parameters: {
     layout: 'centered',

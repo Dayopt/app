@@ -7,7 +7,7 @@ import { TimeColumn } from './TimeColumn';
  * 24時間/12時間表示切替、時間範囲指定、密度調整に対応。
  */
 const meta = {
-  title: 'Features/Calendar/Views/Grid/TimeColumn',
+  title: 'Product/Features/Calendar/Views/Grid/TimeColumn',
   component: TimeColumn,
   tags: ['autodocs'],
   parameters: {

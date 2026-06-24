@@ -16,7 +16,7 @@ import { DataSettings } from './data-settings';
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Settings/DataSettings',
+  title: 'Product/Features/Settings/DataSettings',
   component: DataSettings,
   parameters: {
     layout: 'padded',

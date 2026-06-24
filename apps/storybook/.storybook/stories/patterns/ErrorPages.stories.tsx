@@ -17,7 +17,7 @@ import type { ReactNode } from 'react';
  * - maintenance/route.ts: メンテナンス（静的 HTML）
  */
 const meta = {
-  title: 'Patterns/ErrorPages',
+  title: 'Shared/Patterns/ErrorPages',
   parameters: {
     layout: 'fullscreen',
   },

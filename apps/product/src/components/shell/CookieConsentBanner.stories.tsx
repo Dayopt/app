@@ -6,7 +6,7 @@ import { CookieConsentBanner } from './CookieConsentBanner';
 const STORAGE_KEY = 'dayopt_cookie_consent';
 
 const meta = {
-  title: 'Components/Shell/CookieConsentBanner',
+  title: 'Product/Components/Shell/CookieConsentBanner',
   component: CookieConsentBanner,
   tags: ['autodocs'],
   parameters: {

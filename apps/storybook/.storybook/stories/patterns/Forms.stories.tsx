@@ -4,7 +4,7 @@ import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button, Field, FieldError, FieldLabel, FieldSupportText, Input } from '@dayopt/components';
 
 const meta = {
-  title: 'Patterns/Forms',
+  title: 'Shared/Patterns/Forms',
   parameters: {
     layout: 'fullscreen',
   },

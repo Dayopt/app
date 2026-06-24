@@ -20,7 +20,7 @@ import {
 } from '@dayopt/components';
 
 const meta = {
-  title: 'Patterns/Actions',
+  title: 'Shared/Patterns/Actions',
   parameters: {
     layout: 'fullscreen',
   },

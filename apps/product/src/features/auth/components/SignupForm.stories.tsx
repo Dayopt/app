@@ -7,7 +7,7 @@ import { SignupForm } from './SignupForm';
 
 /** SignupForm - サインアップフォーム */
 const meta = {
-  title: 'Features/Auth/SignupForm',
+  title: 'Product/Features/Auth/SignupForm',
   component: SignupForm,
   parameters: {
     layout: 'padded',

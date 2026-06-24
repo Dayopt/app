@@ -65,7 +65,7 @@ const MOCK_PAGE_DATA: StatsPageData = {
 
 /** ReviewMetricsGrid — KPIメトリクスをグリッド表示 */
 const meta = {
-  title: 'Features/Stats/Review/MetricsGrid',
+  title: 'Product/Features/Stats/Review/MetricsGrid',
   component: ReviewMetricsGrid,
   parameters: {
     layout: 'padded',

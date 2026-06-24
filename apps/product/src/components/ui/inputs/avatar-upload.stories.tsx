@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { AvatarUpload } from './avatar-upload';
 
 const meta = {
-  title: 'Components/Inputs/AvatarUpload',
+  title: 'Product/Components/Inputs/AvatarUpload',
   component: AvatarUpload,
   tags: ['autodocs'],
   parameters: { layout: 'centered' },

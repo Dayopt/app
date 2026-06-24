@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useCallback, useState } from 'react';
 
 const meta = {
-  title: 'Foundations/Motion',
+  title: 'Shared/Foundations/Motion',
   parameters: {
     layout: 'fullscreen',
   },

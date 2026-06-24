@@ -8,7 +8,7 @@ import { ViewSwitcher } from './ViewSwitcher';
 
 /** カレンダーヘッダーのサブコンポーネント（ViewSwitcher, DateNavigator）。 */
 const meta = {
-  title: 'Features/Calendar/Header',
+  title: 'Product/Features/Calendar/Header',
   parameters: {
     layout: 'padded',
   },

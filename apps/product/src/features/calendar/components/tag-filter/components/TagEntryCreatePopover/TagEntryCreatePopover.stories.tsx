@@ -35,7 +35,7 @@ function mockTrpc(entries: unknown[] = []) {
  * - 実機 / dev での dogfooding を前提に、Storybook variants は配置確認用の最小セット
  */
 const meta = {
-  title: 'Features/Calendar/Sidebar/TagFilter/TagEntryCreatePopover',
+  title: 'Product/Features/Calendar/Sidebar/TagFilter/TagEntryCreatePopover',
   component: TagEntryCreatePopover,
   parameters: {
     layout: 'centered',
