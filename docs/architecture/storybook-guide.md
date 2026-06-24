@@ -101,13 +101,35 @@ src/components/ui/my-component.stories.tsx     # Story（Canvas）
 src/components/ui/my-component.docs.mdx        # Docs（テーブルが必要な場合のみ）
 ```
 
-### 命名規則
+### 命名規則（所有境界 taxonomy）
+
+story の `title:` の **top-level は所有境界（どの package / app の資産か）** で分ける。第二階層以下は責務ベース。決定の経緯は [ADR-013](./adr/013-storybook-ownership-taxonomy.md)。
 
 - `Shared/Foundations/Colors` → デザイントークン
-- `Shared/Components/Actions/Button` → 単体UIコンポーネント
-- `Features/Navigation/AppHeader` → ナビゲーションコンポーネント
-- `Features/Entry/Inspector/EntryInspector` → Featureコンポーネント
-- `Docs/はじめに` → ドキュメント
+- `Shared/Components/Actions/Button` → 共有 UI コンポーネント（`packages/components`）
+- `Product/Features/Navigation/AppHeader` → product のナビゲーションコンポーネント
+- `Product/Features/Entry/Inspector/EntryInspector` → product の Feature コンポーネント
+- `Web/Sections/Pricing` → web LP のセクション（現状は構造予約のみ）
+- `Docs/はじめに` → ドキュメント（top-level doc は所有境界の外）
+
+#### title prefix は物理位置で決まる
+
+新規 story の prefix は「ファイルがどこに在るか」で機械的に決まる。下表に従う。
+
+| 物理位置                                     | title prefix                                                |
+| -------------------------------------------- | ----------------------------------------------------------- |
+| `packages/components/src/**`                 | `Shared/Components/`                                        |
+| `packages/foundations/src/**`                | `Shared/Foundations/`                                       |
+| `apps/storybook/.storybook/stories/patterns` | `Shared/Patterns/` または `Product/Patterns/`（依存ベース） |
+| `apps/product/src/components/**`             | `Product/Components/`                                       |
+| `apps/product/src/features/**`               | `Product/Features/`（一部 `Product/Components/`）           |
+| `apps/product/src/emails/**`                 | `Product/Emails`                                            |
+| `apps/web/src/**`                            | `Web/`                                                      |
+
+- **Patterns の依存ベース分離**: import が `@/`（product 内部）に依存 → `Product/Patterns/`。`@dayopt/components` だけに依存 → `Shared/Patterns/`。
+- **例外**: `apps/product/src/lib/styles/tokens/**` の token doc はサイドバー一貫性を優先し `Shared/Foundations/States` に揃える（title と物理位置の軽微な不一致を許容）。
+
+このルールは `scripts/check-story-taxonomy.ts` が CI（`pnpm storybook:taxonomy`）で機械検証する。逸脱した title は lint job で hard-fail する。
 
 ### 同期ルール
 

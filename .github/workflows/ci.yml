@@ -50,6 +50,9 @@ jobs:
       - name: i18n integrity
         run: pnpm lint:i18n
 
+      - name: Story taxonomy
+        run: pnpm storybook:taxonomy
+
       - name: Dead code check
         run: |
           set +e

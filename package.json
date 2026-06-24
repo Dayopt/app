@@ -84,6 +84,7 @@
     "security:check": "pnpm --filter @dayopt/product security:check",
     "security:check:production": "pnpm --filter @dayopt/product security:check:production",
     "storybook:coverage": "pnpm --filter @dayopt/product storybook:coverage",
+    "storybook:taxonomy": "tsx scripts/check-story-taxonomy.ts",
     "storybook": "pnpm --filter @dayopt/storybook storybook",
     "build-storybook": "pnpm --filter @dayopt/storybook build",
     "dev:web": "pnpm --filter @dayopt/web dev",
