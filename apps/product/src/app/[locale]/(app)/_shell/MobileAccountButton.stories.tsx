@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { MobileAccountButton } from './MobileAccountButton';
 
 const meta = {
-  title: 'Components/Shell/MobileAccountButton',
+  title: 'Product/Components/Shell/MobileAccountButton',
   component: MobileAccountButton,
   parameters: {
     layout: 'centered',
