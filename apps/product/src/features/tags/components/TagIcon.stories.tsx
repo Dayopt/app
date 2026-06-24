@@ -11,7 +11,7 @@ import { TagIcon } from './TagIcon';
  * 未設定（null）なら従来の色ドットにフォールバック。
  */
 const meta = {
-  title: 'Features/Tags/TagIcon',
+  title: 'Product/Features/Tags/TagIcon',
   parameters: {
     layout: 'padded',
   },

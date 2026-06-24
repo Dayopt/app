@@ -8,7 +8,7 @@ import { DayView } from './DayView';
 
 /** DayView - 日表示ビュー */
 const meta = {
-  title: 'Features/Calendar/Views/DayView',
+  title: 'Product/Features/Calendar/Views/DayView',
   parameters: {
     layout: 'fullscreen',
   },

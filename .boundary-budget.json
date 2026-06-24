@@ -1,0 +1,11 @@
+{
+  "_comment": "Import boundary violation budget (ratchet). Do not increase these numbers. Run `pnpm lint:boundaries:update` to lock in improvements.",
+  "_updated": "2026-06-23",
+  "featureDag": {
+    "crossImports": {},
+    "selfImports": {}
+  },
+  "importPaths": {
+    "deprecated": 0
+  }
+}

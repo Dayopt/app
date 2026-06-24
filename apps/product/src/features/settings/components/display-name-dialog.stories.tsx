@@ -14,7 +14,7 @@ import { PRESET_AUTH } from '@dayopt/storybook/mocks/presets';
 import { DisplayNameDialog } from './display-name-dialog';
 
 const meta = {
-  title: 'Features/Settings/DisplayNameDialog',
+  title: 'Product/Features/Settings/DisplayNameDialog',
   component: DisplayNameDialog,
   parameters: {
     layout: 'centered',

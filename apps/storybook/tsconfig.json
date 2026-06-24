@@ -11,10 +11,9 @@
     "noEmit": true,
     "paths": {
       "@/*": ["../product/src/*"],
-      "@dayopt/design": ["../../packages/design/src/index.ts"],
-      "@dayopt/design/*": ["../../packages/design/src/*"],
-      "@dayopt/ui": ["../../packages/ui/src/index.ts"],
-      "@dayopt/ui/*": ["../../packages/ui/src/*"],
+      "@dayopt/foundations/*": ["../../packages/foundations/src/*"],
+      "@dayopt/components": ["../../packages/components/src/index.ts"],
+      "@dayopt/components/*": ["../../packages/components/src/*"],
       "@dayopt/storybook/*": [".storybook/*"]
     },
     "resolveJsonModule": true,
@@ -28,9 +27,9 @@
     ".storybook/**/*.tsx",
     "../product/src/**/*.stories.tsx",
     "../product/src/**/*.mdx",
-    "../../packages/design/src/**/*.ts",
-    "../../packages/design/src/**/*.tsx",
-    "../../packages/ui/src/**/*.ts",
-    "../../packages/ui/src/**/*.tsx"
+    "../../packages/foundations/src/**/*.ts",
+    "../../packages/foundations/src/**/*.tsx",
+    "../../packages/components/src/**/*.ts",
+    "../../packages/components/src/**/*.tsx"
   ]
 }

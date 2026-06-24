@@ -1,12 +1,8 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Container } from '@/components/ui/container';
-import { Input } from '@/components/ui/input';
-import { Heading, Text } from '@/components/ui/typography';
 import { Highlight } from '@/lib/highlight';
 import type { SearchResultItem } from '@/types/api';
+import { Badge, Button, Container, Heading, Input, Text } from '@dayopt/components';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';

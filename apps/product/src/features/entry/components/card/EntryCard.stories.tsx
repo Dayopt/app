@@ -6,7 +6,7 @@ import { EntryCard } from './EntryCard';
 
 /** エントリーカード。カレンダーグリッド上の表示ブロック。タグカラー・レイアウト・インタラクション状態によるバリエーション。 */
 const meta = {
-  title: 'Features/Entry/Card',
+  title: 'Product/Features/Entry/Card',
   parameters: {
     layout: 'padded',
   },

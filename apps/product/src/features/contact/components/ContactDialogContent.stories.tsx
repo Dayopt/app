@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, fn, screen, userEvent, within } from 'storybook/test';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 import type { ContactCategory } from '../types';
 import { ContactDialogContent } from './ContactDialogContent';
@@ -29,7 +29,7 @@ const defaultLabels = {
 
 /** ContactDialogContent - お問い合わせフォームUI */
 const meta = {
-  title: 'Features/Contact/ContactDialogContent',
+  title: 'Product/Features/Contact/ContactDialogContent',
   component: ContactDialogContent,
   parameters: { layout: 'centered' },
   tags: ['autodocs'],

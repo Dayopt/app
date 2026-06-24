@@ -1,12 +1,11 @@
 import { FAQStructuredData } from '@/components/seo/EnhancedSEO';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { TagPill } from '@/components/ui/tag-pill';
-import { Heading, Text } from '@/components/ui/typography';
+import { TagPill } from '@/components/ui/display/tag-pill';
 import { Breadcrumbs, ClientTableOfContents, mdxComponents, PageNavigation } from '@/features/docs';
 import { faqMdxComponents } from '@/features/docs/components/MDXComponents';
 import { getAllContent, getMDXContentForRSC, getRelatedContent } from '@/lib/mdx';
 import { Link } from '@/platform/i18n/navigation';
 import { ContentData } from '@/types/content';
+import { Card, CardHeader, CardTitle, Heading, Text } from '@dayopt/components';
 import { Tag } from 'lucide-react';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';

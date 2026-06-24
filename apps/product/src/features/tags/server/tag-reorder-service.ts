@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { Database } from '@dayopt/database';
+import type { Database } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { TagServiceError } from './tag-service-error';
 

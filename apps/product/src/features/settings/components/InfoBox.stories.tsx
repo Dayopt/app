@@ -2,12 +2,12 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { AlertTriangle, Crown } from 'lucide-react';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 import { InfoBox } from './InfoBox';
 
 const meta = {
-  title: 'Features/Settings/InfoBox',
+  title: 'Product/Features/Settings/InfoBox',
   component: InfoBox,
   tags: ['autodocs'],
   decorators: [

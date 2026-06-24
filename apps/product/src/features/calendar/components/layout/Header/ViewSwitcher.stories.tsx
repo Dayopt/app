@@ -11,7 +11,7 @@ import { ViewSwitcher } from './ViewSwitcher';
  * キーボードショートカット対応（D, W, 1-9, 0）。
  */
 const meta = {
-  title: 'Features/Calendar/Header/ViewSwitcher',
+  title: 'Product/Features/Calendar/Header/ViewSwitcher',
   component: ViewSwitcher,
   tags: ['autodocs'],
   parameters: {

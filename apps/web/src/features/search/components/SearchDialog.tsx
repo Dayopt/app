@@ -1,12 +1,9 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { TagPill } from '@/components/ui/tag-pill';
+import { TagPill } from '@/components/ui/display/tag-pill';
 import { Highlight } from '@/lib/highlight';
 import type { PopularTag, SearchResponse, TagResponse } from '@/types/api';
+import { Badge, Button, Dialog, DialogContent, Input } from '@dayopt/components';
 import { Clock, Edit, FileText, Package, Search, Tag, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';

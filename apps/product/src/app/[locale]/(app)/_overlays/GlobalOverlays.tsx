@@ -5,9 +5,8 @@ import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
 
-import { buildCalendarReviewPanelPath, useCalendarNavigation } from '@/features/calendar';
+import { Toaster } from '@/components/ui/feedback/toast';
 import { useEntryInspectorStore } from '@/features/entry';
-import { Toaster } from '@/lib/components/ui/toast';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 const ContactDialog = dynamic(

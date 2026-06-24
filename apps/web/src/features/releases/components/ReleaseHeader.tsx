@@ -1,4 +1,4 @@
-import { TagPill } from '@/components/ui/tag-pill';
+import { TagPill } from '@/components/ui/display/tag-pill';
 import { Link } from '@/platform/i18n/navigation';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';

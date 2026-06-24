@@ -1,0 +1,90 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Shared/Foundations/Radius" />
+
+# Border Radius（角丸）
+
+4段階のみ。「modal/dialog だけ 16px、それ以外は 8px」が基本ルール。
+
+---
+
+## 基本トークン
+
+| クラス         | サイズ | 用途                                       |
+| -------------- | ------ | ------------------------------------------ |
+| `rounded-none` | 0px    | タブのアクティブ状態、隣接要素の結合部分   |
+| `rounded-lg`   | 8px    | **標準**: ボタン、入力、メニュー、カード   |
+| `rounded-2xl`  | 16px   | モーダル、ダイアログ                       |
+| `rounded-full` | 9999px | アバター、ピル型ボタン、トグル、丸アイコン |
+
+---
+
+## 使用例
+
+| コンポーネント                 | クラス         |
+| ------------------------------ | -------------- |
+| ボタン（標準）                 | `rounded-lg`   |
+| ボタン（ピル型）               | `rounded-full` |
+| カード                         | `rounded-lg`   |
+| モーダル・ダイアログ           | `rounded-2xl`  |
+| アバター                       | `rounded-full` |
+| 入力フィールド                 | `rounded-lg`   |
+| ドロップダウン・ポップオーバー | `rounded-lg`   |
+
+---
+
+## Elevation との対応
+
+| Elevation    | 例                | Radius               |
+| ------------ | ----------------- | -------------------- |
+| Sunken       | sidebar, input    | `rounded-lg` (8px)   |
+| Raised       | card, セクション  | `rounded-lg` (8px)   |
+| Overlay (小) | dropdown, popover | `rounded-lg` (8px)   |
+| Overlay (大) | modal, dialog     | `rounded-2xl` (16px) |
+
+> **原則**: Overlay の中でも画面中央に出る大きな面だけ `rounded-2xl`。それ以外は `rounded-lg` で統一。
+
+---
+
+## 部分的な Radius
+
+隣接要素の結合など、特定のコーナーのみ角丸にする場合。基本トークンと同じサイズ（8px, 16px）のみ許可。
+
+### Input Group
+
+```tsx
+<input className="rounded-l-lg border border-r-0 ..." />
+<button className="rounded-r-lg ...">検索</button>
+```
+
+### カレンダーの範囲選択
+
+```tsx
+// 範囲の開始
+<div className="rounded-l-lg ...">1</div>
+// 中間
+<div>2</div>
+// 範囲の終了
+<div className="rounded-r-lg ...">3</div>
+```
+
+### 許可されている部分 Radius
+
+| クラス                            | サイズ |
+| --------------------------------- | ------ |
+| `rounded-l-lg` / `rounded-r-lg`   | 8px    |
+| `rounded-t-lg` / `rounded-b-lg`   | 8px    |
+| `rounded-t-2xl` / `rounded-b-2xl` | 16px   |
+
+---
+
+## 廃止クラス
+
+以下のクラスは使用禁止。`lint:tokens` で検出される。
+
+| 廃止クラス       | 移行先        |
+| ---------------- | ------------- |
+| `rounded` (bare) | `rounded-lg`  |
+| `rounded-sm`     | `rounded-lg`  |
+| `rounded-md`     | `rounded-lg`  |
+| `rounded-xl`     | `rounded-2xl` |

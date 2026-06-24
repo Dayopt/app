@@ -31,7 +31,7 @@ const tags = [
 ];
 
 const meta = {
-  title: 'Features/Calendar/Analytics/CalendarAnalyticsPanel',
+  title: 'Product/Features/Calendar/Analytics/CalendarAnalyticsPanel',
   component: CalendarAnalyticsPanel,
   tags: ['autodocs'],
   parameters: {

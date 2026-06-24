@@ -24,8 +24,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AnyRouter } from '@trpc/server';
 import { vi } from 'vitest';
 
+import type { Database } from '@/lib/database';
 import { createCallerFactory, type Context } from '@/lib/trpc/procedures';
-import type { Database } from '@dayopt/database';
 
 // Re-export factories for backward compatibility
 /**

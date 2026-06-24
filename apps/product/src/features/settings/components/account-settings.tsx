@@ -3,18 +3,18 @@
 import { useCallback, useState } from 'react';
 
 import { toast } from '@/lib/toast';
-import { Badge, Button as SharedButton } from '@dayopt/ui';
+import { Badge, Button as SharedButton } from '@dayopt/components';
 import { LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
-import { Button } from '@/lib/components/ui/button';
 import { useRouter } from '@/lib/i18n/navigation';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
+import { Button } from '@dayopt/components';
 
-import { LabeledRow } from '@/lib/components/common/LabeledRow';
-import { SectionCard } from '@/lib/components/common/SectionCard';
+import { LabeledRow } from '@/components/ui/display/LabeledRow';
+import { SectionCard } from '@/components/ui/display/SectionCard';
 import { AccountDeletionDialog } from './account-deletion-dialog';
 import { EmailChangeDialog } from './email-change-dialog';
 import { PasswordChangeDialog } from './password-change-dialog';

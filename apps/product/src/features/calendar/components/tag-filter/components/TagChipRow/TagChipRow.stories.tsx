@@ -116,7 +116,7 @@ const MANY_TAGS: Tag[] = Array.from({ length: 30 }, (_, i) => ({
  * - タップで bottom sheet popover（既存 TagEntryCreatePopover を isMobile=true で再利用）
  */
 const meta = {
-  title: 'Features/Calendar/Sidebar/TagFilter/TagChipRow',
+  title: 'Product/Features/Calendar/Sidebar/TagFilter/TagChipRow',
   component: TagChipRow,
   parameters: {
     layout: 'fullscreen',

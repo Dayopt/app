@@ -1,6 +1,6 @@
-import { TagPill } from '@/components/ui/tag-pill';
-import { Heading } from '@/components/ui/typography';
+import { TagPill } from '@/components/ui/display/tag-pill';
 import { Link } from '@/platform/i18n/navigation';
+import { Heading } from '@dayopt/components';
 import { BlogPostMeta } from '../lib/blog';
 import { BlogImage } from './BlogImage';
 

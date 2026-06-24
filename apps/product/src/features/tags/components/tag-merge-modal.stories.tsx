@@ -15,7 +15,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 import { TagMergeModal } from './tag-merge-modal';
@@ -126,7 +126,7 @@ function InteractiveTagMerge({ tags = MOCK_TAGS }: { tags?: typeof MOCK_TAGS }) 
  * @see GlobalTagMergeModal — useModalStore と接続するラッパー
  */
 const meta = {
-  title: 'Features/Tags/MergeModal',
+  title: 'Product/Features/Tags/MergeModal',
   parameters: {
     layout: 'fullscreen',
     trpcMocks: { 'tags.list': { data: MOCK_TAGS } },

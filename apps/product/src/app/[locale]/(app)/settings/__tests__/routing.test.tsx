@@ -72,26 +72,13 @@ vi.mock('@/lib/hooks/useLogout', () => ({
   useLogout: () => ({ logout: mockLogout, isLoggingOut: false }),
 }));
 
-vi.mock('@/lib/components/ui/avatar', () => ({
+// 基底 Avatar は @dayopt/components に昇格済み。表示系のみ stub し、その他の
+// 共有 component（Card / Badge / ScrollArea / Skeleton 等）は実体を使う。
+vi.mock('@dayopt/components', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@dayopt/components')>()),
   Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AvatarImage: () => null,
   AvatarFallback: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock('@/lib/components/ui/button', () => ({
-  Button: ({
-    children,
-    asChild,
-    ...props
-  }: {
-    children: React.ReactNode;
-    asChild?: boolean;
-    [key: string]: unknown;
-  }) => (asChild ? children : <button {...props}>{children}</button>),
-}));
-
-vi.mock('@/lib/components/ui/scroll-area', () => ({
-  ScrollArea: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@/lib/trpc', () => ({
@@ -104,7 +91,7 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
-vi.mock('@/lib/components/shell/AppHeader', () => ({
+vi.mock('@/components/shell/AppHeader', () => ({
   AppHeader: ({
     children,
     leftSlot,

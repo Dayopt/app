@@ -1,7 +1,6 @@
 import type { Preview } from '@storybook/nextjs-vite';
 import { MINIMAL_VIEWPORTS } from 'storybook/viewport';
 
-import '@dayopt/design/theme.css';
 import '../../product/src/lib/styles/globals.css';
 import { providerDecorator, storeMockDecorator } from './decorators';
 import { dayoptDarkTheme, dayoptLightTheme } from './theme/dayopt';
@@ -42,15 +41,34 @@ const preview: Preview = {
     options: {
       storySort: {
         method: 'alphabetical',
+        // top-level は所有境界（package / app）で分ける
         order: [
           'Welcome',
-          'Architecture',
-          'Components',
-          'Features',
-          'Design',
-          'UI',
-          'Foundations',
-          'Patterns',
+          // Shared = packages（再利用資産）
+          'Shared',
+          [
+            'Foundations',
+            'Components',
+            // Shared/Components 直下は責務ベース taxonomy（ADR-012）の流れで並べる
+            [
+              'Identity',
+              'Actions',
+              'Inputs',
+              'Navigation',
+              'Feedback',
+              'Overlays',
+              'Display',
+              'Layout',
+              'Utilities',
+            ],
+            'Patterns',
+          ],
+          // Product = apps/product
+          'Product',
+          ['Components', 'Features', 'Patterns', 'Emails'],
+          // Web = apps/web（現状は構造のみ予約）
+          'Web',
+          ['Components', 'Sections', 'Pages'],
         ],
       },
     },

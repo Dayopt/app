@@ -8,7 +8,7 @@ import { EventContextMenu } from './EntryContextMenu';
 
 /** エントリコンテキストメニュー。右クリックメニューとして使用する。 */
 const meta = {
-  title: 'Features/Calendar/EntryContextMenu',
+  title: 'Product/Features/Calendar/EntryContextMenu',
   parameters: {
     layout: 'padded',
   },

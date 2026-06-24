@@ -118,13 +118,13 @@ root の `dev`, `build`, `start` は既存互換のため product app の alias 
 
 ### API を変更したい
 
-| やりたいこと         | 探す場所                                            | 補足                                     |
-| -------------------- | --------------------------------------------------- | ---------------------------------------- |
-| tRPC ルーター追加    | `src/features/{name}/server/router.ts`              | 3層パターン: Router → Service → Supabase |
-| サービスロジック     | `src/features/{name}/server/{name}-service.ts`      | ビジネスロジックはここ                   |
-| Supabase 型確認      | `packages/database/src/generated/database.types.ts` | `npm run types:generate` で再生成        |
-| マイグレーション作成 | `supabase/migrations/`                              | `npm run migration:create`               |
-| RLS ポリシー確認     | `supabase/migrations/`                              | `_rls` suffix のマイグレーション         |
+| やりたいこと         | 探す場所                                                    | 補足                                     |
+| -------------------- | ----------------------------------------------------------- | ---------------------------------------- |
+| tRPC ルーター追加    | `src/features/{name}/server/router.ts`                      | 3層パターン: Router → Service → Supabase |
+| サービスロジック     | `src/features/{name}/server/{name}-service.ts`              | ビジネスロジックはここ                   |
+| Supabase 型確認      | `apps/product/src/lib/database/generated/database.types.ts` | `npm run types:generate` で再生成        |
+| マイグレーション作成 | `supabase/migrations/`                                      | `npm run migration:create`               |
+| RLS ポリシー確認     | `supabase/migrations/`                                      | `_rls` suffix のマイグレーション         |
 
 ### 国際化（i18n）
 
@@ -182,9 +182,9 @@ src/features/{name}/
 
 ## 関連ドキュメント
 
-| ドキュメント                                                          | 内容           |
-| --------------------------------------------------------------------- | -------------- |
-| [Product Overview](../../apps/storybook/docs/dev/ProductOverview.mdx) | Dayoptの全体像 |
-| [Data Flow](../architecture/data-flow.md)                             | データの流れ   |
-| [Commands](commands.md)                                               | 全コマンド一覧 |
-| [Common Pitfalls](common-pitfalls.md)                                 | よくある間違い |
+| ドキュメント                                            | 内容           |
+| ------------------------------------------------------- | -------------- |
+| [Product Overview](../architecture/product-overview.md) | Dayoptの全体像 |
+| [Data Flow](../architecture/data-flow.md)               | データの流れ   |
+| [Commands](commands.md)                                 | 全コマンド一覧 |
+| [Common Pitfalls](common-pitfalls.md)                   | よくある間違い |

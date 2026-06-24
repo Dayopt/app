@@ -10,7 +10,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 import { PRESET_AUTH } from '@dayopt/storybook/mocks/presets';
 
@@ -37,7 +37,7 @@ const AUTH_WITH_AVATAR = {
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Settings/AvatarChangeDialog',
+  title: 'Product/Features/Settings/AvatarChangeDialog',
   component: AvatarChangeDialog,
   parameters: {
     layout: 'centered',

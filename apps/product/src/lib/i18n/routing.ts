@@ -1,16 +1,17 @@
+import { DEFAULT_LOCALE, LOCALE_PREFIX, SUPPORTED_LOCALES } from '@dayopt/config';
 import { defineRouting } from 'next-intl/routing';
 
-/** next-intlのルーティング設定（サポート言語・デフォルト言語・URLプレフィックス戦略） */
+/** next-intlのルーティング設定（locale 定義は @dayopt/config が source of truth） */
 export const routing = defineRouting({
   // サポートする言語一覧
-  locales: ['en', 'ja'],
+  locales: SUPPORTED_LOCALES,
 
   // デフォルト言語
-  defaultLocale: 'en',
+  defaultLocale: DEFAULT_LOCALE,
 
   // URLパス戦略: デフォルト言語(en)はプレフィックスなし
   // 例: / → 英語, /ja → 日本語
-  localePrefix: 'as-needed',
+  localePrefix: LOCALE_PREFIX,
 });
 
 /** サポートされているロケールの型（'en' | 'ja'） */

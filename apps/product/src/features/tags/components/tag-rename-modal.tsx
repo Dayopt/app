@@ -12,16 +12,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/lib/components/ui/dialog';
-import { FieldError } from '@/lib/components/ui/field';
-import { Input } from '@/lib/components/ui/input';
+  FieldError,
+  Input,
+} from '@dayopt/components';
 import { TAG_NAME_MAX_LENGTH } from '../lib/tag-colors';
 
 import { useUpdateTag } from '../hooks/useTagCrudMutations';

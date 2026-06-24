@@ -1,5 +1,5 @@
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@dayopt/components';
 
 interface BlogSkeletonProps {
   className?: string;

@@ -3,10 +3,10 @@
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
+import { AppHeader } from '@/components/shell/AppHeader';
 import { isCalendarViewPath, TagChipRow } from '@/features/calendar';
-import { AppHeader } from '@/lib/components/shell/AppHeader';
-import { InlineBanner } from '@/lib/components/ui/inline-banner';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { InlineBanner } from '@dayopt/components';
 
 import { ConnectedMobileAccountButton } from './MobileAccountButton';
 import { useAppInlineBanner } from './useAppInlineBanner';

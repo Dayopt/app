@@ -16,6 +16,7 @@ import { useTranslations } from 'next-intl';
 
 import type { TagColorName } from '@/features/tags';
 import { ColorPaletteMenuItems, IconPickerDropdownItems, TagIcon } from '@/features/tags';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenuContent,
   DropdownMenuItem,
@@ -23,8 +24,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-} from '@/lib/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
+} from '@dayopt/components';
 
 /** タグのグループ情報 */
 export interface GroupOption {

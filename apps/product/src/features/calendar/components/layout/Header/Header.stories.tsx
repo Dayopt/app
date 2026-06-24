@@ -3,12 +3,12 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, fn, userEvent, within } from 'storybook/test';
 
-import { CompactDateNavigator, DateNavigator } from '@/lib/components/common/DateNavigator';
+import { CompactDateNavigator, DateNavigator } from '@/components/ui/navigation/DateNavigator';
 import { ViewSwitcher } from './ViewSwitcher';
 
 /** カレンダーヘッダーのサブコンポーネント（ViewSwitcher, DateNavigator）。 */
 const meta = {
-  title: 'Features/Calendar/Header',
+  title: 'Product/Features/Calendar/Header',
   parameters: {
     layout: 'padded',
   },

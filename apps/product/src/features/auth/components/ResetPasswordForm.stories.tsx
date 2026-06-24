@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { FieldError } from '@/lib/components/ui/field';
 import { cn } from '@/lib/utils';
+import { FieldError } from '@dayopt/components';
 
 import { ResetPasswordForm } from './ResetPasswordForm';
 
 /** ResetPasswordForm - パスワードリセットフォーム（メールリンク経由） */
 const meta = {
-  title: 'Features/Auth/ResetPasswordForm',
+  title: 'Product/Features/Auth/ResetPasswordForm',
   component: ResetPasswordForm,
   parameters: {
     layout: 'padded',

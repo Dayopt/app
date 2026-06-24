@@ -1,4 +1,4 @@
-import { Heading } from '@/components/ui/typography';
+import { Heading } from '@dayopt/components';
 
 interface ContentHeaderProps {
   title: string;

@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { WifiOff } from 'lucide-react';
 
-import { ErrorState } from '@/lib/components/common/ErrorState';
-import { Button } from '@/lib/components/ui/button';
+import { ErrorState } from '@/components/ui/feedback/ErrorState';
+import { Button } from '@dayopt/components';
 
 /**
  * インラインエラー状態のパターンカタログ
@@ -20,7 +20,7 @@ import { Button } from '@/lib/components/ui/button';
  * | Mutation 失敗 | Toast (sonner) | `onError` callback |
  */
 const meta = {
-  title: 'Patterns/ErrorStates',
+  title: 'Product/Patterns/ErrorStates',
   parameters: {
     layout: 'fullscreen',
   },
@@ -228,7 +228,7 @@ export const Overview: Story = {
         <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-medium">実装例</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-xs">
-            {`import { ErrorState } from '@/lib/components/common/ErrorState';
+            {`import { ErrorState } from '@/components/ui/feedback/ErrorState';
 
 // tRPC クエリのエラーハンドリング
 const { data, isPending, isError, refetch } = api.stats.get.useQuery();

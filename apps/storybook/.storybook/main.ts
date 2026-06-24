@@ -13,10 +13,13 @@ const config: StorybookConfig = {
   stories: [
     '../../product/src/**/*.mdx',
     '../../product/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
-    '../../../packages/design/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
-    '../../../packages/ui/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
-    '../docs/**/*.mdx',
-    '../docs/**/*.stories.@(js|jsx|mjs|ts|tsx)',
+    // Web layer（apps/web）— 現状は Web/Overview のみ。今後 component/section/page story を追加する受け皿
+    '../../web/src/**/*.mdx',
+    '../../web/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
+    '../../../packages/foundations/src/**/*.mdx',
+    '../../../packages/foundations/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
+    '../../../packages/components/src/**/*.mdx',
+    '../../../packages/components/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
     './stories/**/*.stories.@(js|jsx|mjs|ts|tsx)',
   ],
   addons: [

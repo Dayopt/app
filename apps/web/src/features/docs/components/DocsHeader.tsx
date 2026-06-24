@@ -1,10 +1,9 @@
 'use client';
 
-import { Input } from '@/components/ui/input';
-import { LanguageSwitcher } from '@/components/ui/language-switcher';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LanguageSwitcher } from '@/components/ui/actions/language-switcher';
+import { ThemeToggle } from '@/components/ui/actions/theme-toggle';
 import { Link } from '@/platform/i18n/navigation';
-import { Button, Logo } from '@dayopt/ui';
+import { Button, Input, Logo } from '@dayopt/components';
 import { Menu, Search, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 

@@ -2,10 +2,10 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import type { Database, Insert } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { invalidateUserTimezoneCache } from '@/lib/server/user-timezone-cache';
 import { ServiceError } from '@/lib/trpc/errors';
-import type { Database, Insert } from '@dayopt/database';
 
 type UserSettingsInsert = Insert<'user_settings'>;
 

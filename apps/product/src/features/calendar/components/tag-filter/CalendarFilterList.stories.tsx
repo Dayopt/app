@@ -99,7 +99,7 @@ const MOCK_TRPC = {
 
 /** CalendarFilterList — カレンダーフィルターサイドバー（タグ表示切替） */
 const meta = {
-  title: 'Features/Calendar/FilterList',
+  title: 'Product/Features/Calendar/FilterList',
   component: CalendarFilterList,
   parameters: {
     layout: 'padded',

@@ -10,12 +10,12 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 import { EmailChangeDialog } from './email-change-dialog';
 
 const meta = {
-  title: 'Features/Settings/EmailChangeDialog',
+  title: 'Product/Features/Settings/EmailChangeDialog',
   component: EmailChangeDialog,
   parameters: {
     layout: 'centered',

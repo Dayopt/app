@@ -21,6 +21,7 @@ import { SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS, getEventCoordinates } from '@dnd-kit/utilities';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
 import type { Tag, TagTreeNode } from '@/features/tags';
 import {
   TagIcon,
@@ -30,10 +31,8 @@ import {
   useReorderTags,
   useUpdateTag,
 } from '@/features/tags';
-import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
-import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/components';
 
 import { useCalendarNavigation } from '../../../hooks/navigation/CalendarNavigationContext';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';

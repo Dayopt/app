@@ -13,11 +13,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/lib/components/ui/alert-dialog';
-import { Button } from '@/lib/components/ui/button';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/lib/components/ui/input-otp';
+  Button,
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@dayopt/components';
 
-import { SectionCard } from '@/lib/components/common/SectionCard';
+import { SectionCard } from '@/components/ui/display/SectionCard';
 import { type UseMFAReturn, useMFA } from '../../hooks/useMFA';
 import { InfoBox } from '../InfoBox';
 

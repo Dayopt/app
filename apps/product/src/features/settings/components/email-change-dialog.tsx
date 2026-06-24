@@ -4,18 +4,18 @@ import { useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
+import { createClient } from '@/lib/supabase/client';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/lib/components/ui/dialog';
-import { Input } from '@/lib/components/ui/input';
-import { Label } from '@/lib/components/ui/label';
-import { createClient } from '@/lib/supabase/client';
+  Input,
+  Label,
+} from '@dayopt/components';
 import { InfoBox } from './InfoBox';
 
 interface EmailChangeDialogProps {

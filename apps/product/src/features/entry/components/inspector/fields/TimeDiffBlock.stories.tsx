@@ -12,7 +12,7 @@ import { TimeDiffBlock } from './TimeDiffBlock';
  * - タグ色塗り = 計画と実績が重なる実行区間
  */
 const meta = {
-  title: 'Features/Entry/Inspector/TimeDiffBlock',
+  title: 'Product/Features/Entry/Inspector/TimeDiffBlock',
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',

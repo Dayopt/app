@@ -1,3 +1,5 @@
+import { SUPPORTED_LOCALES } from '@dayopt/config';
+
 import { getAllBlogPostMetas } from '@/features/blog';
 import { getAllReleaseMetas } from '@/features/releases';
 import { getAllTags } from '@/features/tags';
@@ -7,7 +9,8 @@ import { MetadataRoute } from 'next';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url;
-  const locales = ['en', 'ja'];
+  // サポートする言語（@dayopt/config が source of truth）
+  const locales = SUPPORTED_LOCALES;
 
   // Helper function to create pages for both locales
   const createLocalizedPages = (

@@ -2,11 +2,11 @@
 
 import { useTranslations } from 'next-intl';
 
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/lib/components/ui/select';
 import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { getTimeZones } from '@/lib/timezone-utils';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@dayopt/components';
 
 /** TimezoneOffset コンポーネントのプロパティ */
 interface TimezoneOffsetProps {

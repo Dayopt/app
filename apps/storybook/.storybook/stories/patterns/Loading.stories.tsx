@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { Spinner } from '@/lib/components/ui/spinner';
+import { Spinner } from '@dayopt/components';
 
 const meta = {
-  title: 'Patterns/Loading',
+  title: 'Shared/Patterns/Loading',
   parameters: {
     layout: 'fullscreen',
   },
@@ -178,7 +178,7 @@ export const Overview: Story = {
           </div>
 
           <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
-            {`import { Spinner } from '@/lib/components/ui/spinner';
+            {`import { Spinner } from '@dayopt/components';
 
 // ボタン内
 <Button disabled>

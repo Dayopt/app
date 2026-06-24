@@ -36,8 +36,13 @@ maxTurns: 15
 
 ### UI Component
 
-**パス**: `apps/product/src/lib/components/ui/`, `apps/product/src/lib/components/common/`, `apps/product/src/lib/components/shell/`
-**title**: `Components/UI/` or `Components/Common/` or `Components/Shell/`
+top-level は所有境界で決める（ADR-013）。共有 UI は `packages/components`、product 固有は `apps/product`。
+
+| 物理位置                              | title prefix                                              |
+| ------------------------------------- | --------------------------------------------------------- |
+| `packages/components/src/<category>/` | `Shared/Components/<Category>/`（責務9category, ADR-012） |
+| `apps/product/src/components/**`      | `Product/Components/`（Shell / Display / Feedback 等）    |
+
 **layout**: `centered`
 **モック**: 不要（props only）
 
@@ -47,7 +52,8 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { MyComponent } from './my-component';
 
 const meta = {
-  title: 'Components/UI/MyComponent',
+  // 共有 UI なら 'Shared/Components/Actions/MyComponent'
+  title: 'Product/Components/MyComponent',
   component: MyComponent,
   tags: ['autodocs'],
   parameters: { layout: 'centered' },
@@ -96,7 +102,7 @@ export const Default: Story = {
 ### Feature Component
 
 **パス**: `apps/product/src/features/*/components/`
-**title**: `Features/{feature名}/`
+**title**: `Product/Features/{feature名}/`
 **layout**: `padded`
 **モック**: `parameters.trpcMocks` + `parameters.storeMocks` で宣言
 
@@ -109,7 +115,7 @@ import { StoryTRPCProvider } from '../../../.storybook/mocks/trpc';
 import { MyFeatureComponent } from './my-feature-component';
 
 const meta = {
-  title: 'Features/Settings/MyFeatureComponent',
+  title: 'Product/Features/Settings/MyFeatureComponent',
   component: MyFeatureComponent,
   tags: ['autodocs'],
   parameters: {
@@ -169,7 +175,7 @@ export const AllPatterns: Story = {
 ### Foundation
 
 **パス**: `apps/product/src/lib/styles/tokens/`
-**title**: `Foundations/`
+**title**: `Shared/Foundations/`
 **layout**: `fullscreen`
 **モック**: 不要
 **テキスト見出し**: 許可（トークン可視化のため）
@@ -178,7 +184,7 @@ export const AllPatterns: Story = {
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta = {
-  title: 'Foundations/Colors',
+  title: 'Shared/Foundations/Colors',
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 
@@ -224,7 +230,9 @@ export const Surfaces: Story = {
 ### Pattern
 
 **パス**: `apps/storybook/.storybook/stories/patterns/`
-**title**: `Patterns/`
+**title**: 依存ベースで分ける（ADR-013）。`@dayopt/components` だけで再現できる pattern は
+`Shared/Patterns/`、`@/`（product 内部: `@/components` / `@/lib` / `@/features`）に依存する
+pattern は `Product/Patterns/`
 **layout**: `fullscreen`
 **モック**: 不要
 **テキスト見出し**: 許可（パターンドキュメントのため）
@@ -232,10 +240,11 @@ export const Surfaces: Story = {
 ```tsx
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@dayopt/components';
 
 const meta = {
-  title: 'Patterns/Feedback',
+  // shared 例。product 結合（@/ 依存）なら 'Product/Patterns/Feedback'
+  title: 'Shared/Patterns/Actions',
   parameters: { layout: 'fullscreen' },
 } satisfies Meta;
 

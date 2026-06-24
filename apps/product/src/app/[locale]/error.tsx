@@ -14,7 +14,7 @@ import { AlertCircle } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { logger } from '@/lib/logger';
-import { Button, Card } from '@dayopt/ui';
+import { Button, Card } from '@dayopt/components';
 
 interface ErrorProps {
   error: Error & { digest?: string };

@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 
-import { FieldError } from '@/lib/components/ui/field';
+import { FieldError } from '@dayopt/components';
 
 import { SignupForm } from './SignupForm';
 
 /** SignupForm - サインアップフォーム */
 const meta = {
-  title: 'Features/Auth/SignupForm',
+  title: 'Product/Features/Auth/SignupForm',
   component: SignupForm,
   parameters: {
     layout: 'padded',

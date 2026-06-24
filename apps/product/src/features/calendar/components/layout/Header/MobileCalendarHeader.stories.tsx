@@ -8,7 +8,7 @@ import { MobileCalendarHeader } from './MobileCalendarHeader';
 
 /** モバイル専用カレンダーヘッダー。日付タップでインライン展開月グリッドを表示し、タイムラインを押し下げる。 */
 const meta = {
-  title: 'Features/Calendar/Header/MobileCalendarHeader',
+  title: 'Product/Features/Calendar/Header/MobileCalendarHeader',
   component: MobileCalendarHeader,
   parameters: {
     layout: 'fullscreen',

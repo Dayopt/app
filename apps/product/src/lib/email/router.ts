@@ -26,12 +26,12 @@ import { TrialStartEmail } from '@/emails/TrialStartEmail';
 import { WelcomeEmail } from '@/emails/WelcomeEmail';
 import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
+import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { handleServiceError } from '@/lib/trpc/errors';
 import type { Context } from '@/lib/trpc/procedures';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
-import { databaseTables } from '@dayopt/database';
 
 function getResend() {
   return new Resend(env.RESEND_API_KEY);

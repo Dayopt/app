@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import type { Tag } from '../types';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 import { TagDeleteStrategyDialog } from './TagDeleteStrategyDialog';
 
 const mockTags: Tag[] = [
@@ -95,7 +95,7 @@ const mockTags: Tag[] = [
 ];
 
 const meta = {
-  title: 'Features/Tags/DeleteStrategyDialog',
+  title: 'Product/Features/Tags/DeleteStrategyDialog',
   parameters: {
     layout: 'centered',
   },

@@ -66,7 +66,7 @@ function createMockMFA(overrides: Partial<UseMFAReturn> = {}): UseMFAReturn {
  * `satisfies Meta`（型引数なし）を使い、render 関数内で直接 prop を渡す。
  */
 const meta = {
-  title: 'Features/Settings/AccountSettings',
+  title: 'Product/Features/Settings/AccountSettings',
   component: AccountSettings,
   parameters: {
     layout: 'padded',

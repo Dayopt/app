@@ -12,7 +12,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 import { TagRenameModal } from './tag-rename-modal';
@@ -67,7 +67,7 @@ const TARGET = { id: 'tag-1', name: '仕事', parent_id: null };
  * @see GlobalTagRenameModal — useShellStore に接続するラッパー
  */
 const meta = {
-  title: 'Features/Tags/RenameModal',
+  title: 'Product/Features/Tags/RenameModal',
   parameters: {
     layout: 'fullscreen',
     trpcMocks: { 'tags.list': { data: MOCK_TAGS } },

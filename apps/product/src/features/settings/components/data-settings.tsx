@@ -8,8 +8,8 @@ import {
   entitlementKeys,
   getPlanIdForSubscriptionStatus,
 } from '@dayopt/billing';
+import { Button as SharedButton } from '@dayopt/components';
 import { dayoptUrls } from '@dayopt/config';
-import { Button as SharedButton } from '@dayopt/ui';
 import {
   AlertTriangle,
   Check,
@@ -24,20 +24,20 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
-import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
-import { Input } from '@/lib/components/ui/input';
+import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
+import { api } from '@/lib/trpc';
 import {
+  Button,
+  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/lib/components/ui/select';
-import { api } from '@/lib/trpc';
+} from '@dayopt/components';
 
-import { LabeledRow } from '@/lib/components/common/LabeledRow';
-import { SectionCard } from '@/lib/components/common/SectionCard';
+import { LabeledRow } from '@/components/ui/display/LabeledRow';
+import { SectionCard } from '@/components/ui/display/SectionCard';
 import { InfoBox } from './InfoBox';
 
 type ExportFormat = 'json' | 'csv';

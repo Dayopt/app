@@ -3,13 +3,13 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, fn, userEvent, within } from 'storybook/test';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/components';
 
 import { SessionTimeoutDialog } from './SessionTimeoutDialog';
 
 /** SessionTimeoutDialog - セッションタイムアウト警告 */
 const meta = {
-  title: 'Features/Auth/SessionTimeoutDialog',
+  title: 'Product/Features/Auth/SessionTimeoutDialog',
   component: SessionTimeoutDialog,
   parameters: {
     layout: 'centered',

@@ -7,16 +7,11 @@ import { TAG_COLOR_MAP, TAG_COLOR_NAMES } from '../lib/tag-colors';
 
 import type { TagColorName } from '../lib/tag-colors';
 
-import { Button } from '@/lib/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/lib/components/ui/dropdown-menu';
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@dayopt/components';
 import { ColorPaletteMenuItems, getColorDisplayName } from './color-palette-picker';
 
 const meta = {
-  title: 'Components/UI/ColorPaletteMenuItems',
+  title: 'Product/Components/ColorPaletteMenuItems',
   component: ColorPaletteMenuItems,
   tags: ['autodocs'],
   parameters: {

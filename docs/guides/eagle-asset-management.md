@@ -96,7 +96,7 @@ Dayopt Design/
 #### パスセグメント（自動付与）
 
 Storybook タイトルの階層がそのままタグになる。
-例: `Components/UI/Button` → `components`, `ui`, `button`
+例: `Shared/Components/Actions/Button` → `components`, `ui`, `button`
 
 #### デザイン要素（任意・手動）
 
@@ -121,7 +121,7 @@ Storybook タイトルの階層がそのままタグになる。
 Storybook タイトル階層とバリアント名からタグを自動生成する。
 
 ```
-Storybook title: Components/UI/Button
+Storybook title: Shared/Components/Actions/Button
 Story name: AllPatterns
 ファイル名: Components_UI_Button--AllPatterns_dark_mobile.png
 
@@ -257,19 +257,19 @@ Eagle MCP → `get_item_info` → メモからパスを抽出して応答でき�
 
 ### 5.2 ルール（Storybook カテゴリ準拠）
 
-| カテゴリ                        | mobile | desktop | 理由                             |
-| ------------------------------- | ------ | ------- | -------------------------------- |
-| Features/Calendar/Views/        | ✓      | ✓       | Day/Week/Grid のページレイアウト |
-| Features/Settings/              | ✓      | ✓       | 設定画面各種                     |
-| Features/Stats/                 | ✓      | ✓       | 統計タブ各種                     |
-| Features/Auth/                  | ✓      | ✓       | 認証画面                         |
-| Features/Onboarding/            | ✓      | ✓       | オンボーディング                 |
-| Components/Shell/Sidebar/       | ✓      | ✓       | デスクトップでレイアウト変化     |
-| Components/UI/                  | ✓      | -       | プリミティブ（差分小）           |
-| Components/Common/              | ✓      | -       | ユーティリティ                   |
-| Components/Shell/ (Sidebar以外) | ✓      | -       | BottomTabBar, AppHeader          |
-| Foundations/                    | ✓      | -       | デザイントークン                 |
-| その他 Feature コンポーネント   | ✓      | -       | 個別UIパーツ                     |
+| カテゴリ                                | mobile | desktop | 理由                             |
+| --------------------------------------- | ------ | ------- | -------------------------------- |
+| Features/Calendar/Views/                | ✓      | ✓       | Day/Week/Grid のページレイアウト |
+| Features/Settings/                      | ✓      | ✓       | 設定画面各種                     |
+| Features/Stats/                         | ✓      | ✓       | 統計タブ各種                     |
+| Features/Auth/                          | ✓      | ✓       | 認証画面                         |
+| Features/Onboarding/                    | ✓      | ✓       | オンボーディング                 |
+| Product/Components/Shell/Sidebar/       | ✓      | ✓       | デスクトップでレイアウト変化     |
+| Shared/Components/                      | ✓      | -       | プリミティブ（差分小）           |
+| Product/Components/                     | ✓      | -       | ユーティリティ                   |
+| Product/Components/Shell/ (Sidebar以外) | ✓      | -       | BottomTabBar, AppHeader          |
+| Foundations/                            | ✓      | -       | デザイントークン                 |
+| その他 Feature コンポーネント           | ✓      | -       | 個別UIパーツ                     |
 
 フォルダは分けず、タグ（`mobile` / `desktop`）で管理。
 

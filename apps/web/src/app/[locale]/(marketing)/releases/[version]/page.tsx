@@ -1,5 +1,4 @@
 import { createMDXComponents } from '@/components/content/ContentMDXComponents';
-import { Container } from '@/components/ui/container';
 import {
   ReleaseCard,
   ReleaseHeader,
@@ -9,6 +8,7 @@ import {
   getRelease,
 } from '@/features/releases';
 import { Link } from '@/platform/i18n/navigation';
+import { Container } from '@dayopt/components';
 import { ArrowLeft, ArrowLeftRight, Info, TriangleAlert } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';

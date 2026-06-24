@@ -33,9 +33,9 @@ import { createServerSideHelpers } from '@trpc/react-query/server';
 import superjson from 'superjson';
 
 import { env } from '@/env';
+import type { Database } from '@/lib/database';
 import type { Context } from '@/lib/trpc/procedures';
 import { appRouter } from '@/lib/trpc/root';
-import type { Database } from '@dayopt/database';
 
 // Re-export for convenience
 export { dehydrate, HydrationBoundary };

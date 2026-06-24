@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, fn, within } from 'storybook/test';
 
-import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger } from '@dayopt/components';
 
 import { FilterItemMenu, UntaggedItemMenu } from './FilterItemMenu';
 
@@ -19,7 +19,7 @@ import { FilterItemMenu, UntaggedItemMenu } from './FilterItemMenu';
  * 色変更はグループ単位で統一するため、グループ内タグでは非表示。
  */
 const meta = {
-  title: 'Features/Tags/FilterItemMenu',
+  title: 'Product/Features/Tags/FilterItemMenu',
   component: FilterItemMenu,
   tags: ['autodocs'],
   parameters: {

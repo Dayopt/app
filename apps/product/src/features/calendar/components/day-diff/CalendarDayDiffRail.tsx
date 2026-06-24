@@ -5,9 +5,9 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { useTagsMap } from '@/features/tags';
-import { Button } from '@/lib/components/ui/button';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@/lib/utils';
+import { Button } from '@dayopt/components';
 
 import type {
   CalendarDayDiffItem,

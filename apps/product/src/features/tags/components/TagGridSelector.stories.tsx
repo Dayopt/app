@@ -4,10 +4,8 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { fn } from 'storybook/test';
 
-import { Button } from '@/lib/components/ui/button';
-import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
-import { Input } from '@/lib/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Button, Drawer, DrawerContent, DrawerTitle, Input } from '@dayopt/components';
 import { TAG_COLOR_NAMES, getTagColorClasses } from '../lib/tag-colors';
 
 import type { TagColorName } from '../lib/tag-colors';
@@ -458,7 +456,7 @@ function SelectorFrame({
  * 子タグはドリルダウンで2画面目に遷移。
  */
 const meta = {
-  title: 'Features/Tags/GridSelector',
+  title: 'Product/Features/Tags/GridSelector',
   parameters: {
     layout: 'centered',
   },

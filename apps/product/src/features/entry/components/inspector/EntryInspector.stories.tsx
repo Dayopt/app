@@ -10,8 +10,7 @@ import type { ReactNode } from 'react';
 // Story 内のみ: Composition Layer 連携プレビュー用
 import { EntryMicroInsight } from '@/features/review';
 
-import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
-import { Spinner } from '@/lib/components/ui/spinner';
+import { Drawer, DrawerContent, DrawerTitle, Spinner } from '@dayopt/components';
 import { DateRow, NoteSection, TimeDiffBlock, TimeRow } from './fields';
 import { InspectorFrame, MockTagRow } from './story-helpers';
 
@@ -22,7 +21,7 @@ import { InspectorFrame, MockTagRow } from './story-helpers';
  * TimeDiffBlock の差分バーは記録入力時のみ表示。
  */
 const meta = {
-  title: 'Features/Entry/Inspector/EntryInspector',
+  title: 'Product/Features/Entry/Inspector/EntryInspector',
   parameters: {
     layout: 'centered',
     a11y: { test: 'todo' },

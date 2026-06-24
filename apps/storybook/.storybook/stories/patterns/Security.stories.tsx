@@ -15,9 +15,9 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
+import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
 import { MFAVerifyForm, SessionTimeoutDialog } from '@/features/auth';
-import { Button } from '@/lib/components/ui/button';
-import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
+import { Button } from '@dayopt/components';
 
 /**
  * セキュリティパターンカタログ
@@ -34,7 +34,7 @@ import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
  * | UI | エラーサニタイズ + 確認ダイアログ | OWASP準拠メッセージ + 破壊操作ガード |
  */
 const meta = {
-  title: 'Patterns/Security',
+  title: 'Product/Patterns/Security',
   parameters: {
     layout: 'fullscreen',
   },

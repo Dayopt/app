@@ -3,13 +3,17 @@
 Dayopt の monorepo は、アプリを増やすためだけではなく、責務を小さく保つために `packages/*` を使う。
 このページは「どのコードをどの package に出すか」を決めるための境界メモであり、大規模な移動計画ではない。
 
+> ⚠️ **このページは陳腐化している**（database 部分のみ追従更新済み、全面更新は別タスク）。現状との差分:
+> `packages/design`→`packages/foundations`、`packages/ui`→`packages/components`、`packages/types` は削除済み、
+> `apps/admin` は存在しない、`packages/database` は product 専用のため `apps/product/src/lib/database` へ移設済み。
+
 ## Package Map
 
 - `packages/design`: design tokens / theme css / CSS variables。React components, domain logic, DB 型は入れない。
 - `packages/ui`: React UI primitives / reusable components。Supabase, Stripe, feature-specific business rules は入れない。
 - `packages/config`: public constants / metadata / URL definitions。secrets, request-scoped values, server-only clients は入れない。
 - `packages/domain`: Dayopt domain model / pure types / helpers。DB row shape, React, Next, Supabase, Zustand は入れない。
-- `packages/database`: Supabase/Postgres boundary。generated types / table names / row helper types / converters を扱い、UI components, DB access clients, service role secrets は入れない。
+- `apps/product/src/lib/database`（旧 `packages/database`）: Supabase/Postgres boundary。generated types / table names / row helper types を扱う。product 専用のため package ではなく product-local。
 - `packages/billing`: Free / Pro plans, subscription status, entitlement, public-safe pricing constants。Stripe secret key, SDK, webhook handlers, checkout / portal 実装は入れない。
 
 ## Dependency Direction
@@ -21,15 +25,14 @@ apps/product, apps/web, apps/admin, apps/storybook
   -> packages/ui
   -> packages/design
 
-apps/product, apps/web, apps/admin
+apps/product, apps/web
   -> packages/config
   -> packages/domain
-  -> packages/database
   -> packages/billing
 ```
 
 `packages/ui` は `packages/design` の token / CSS variables を使えるが、`packages/design` は `packages/ui` を知らない。
-`packages/domain` は `packages/database` を知らない。DB の都合を domain model に漏らす場合は `packages/database` 側の converter で吸収する。
+`packages/domain` は DB row shape を知らない。DB の都合を domain model に漏らす場合は product 側（`apps/product/src/lib/database`）で吸収する。
 
 ## Current Phase
 
@@ -139,17 +142,17 @@ Dayopt の「意味」を pure TypeScript の型・定数・helper にする。D
 - Next.js route / server-only helper
 - CSS / UI token
 
-### `packages/database`
+### `apps/product/src/lib/database`（旧 `packages/database`）
 
-Supabase/Postgres 上の形を扱う境界。generated types, table names, row helper types を公開し、domain model との pure converter もここで扱う。
+Supabase/Postgres 上の形を扱う境界。generated types, table names, row helper types を公開する。
+product 専用（web・他 package から参照なし）のため package ではなく product-local（`@/lib/database`）に置く。
+`types:generate` の出力先も `apps/product/src/lib/database/generated/database.types.ts`。
 
 例:
 
 - `Database`
-- `EntryRow`
-- `TagRow`
-- `entryRowToDomainEntry`
-- `domainEntryToInsert`
+- `Row<'entries'>` / `Insert<'tags'>`
+- `databaseTables`
 
 入れないもの:
 

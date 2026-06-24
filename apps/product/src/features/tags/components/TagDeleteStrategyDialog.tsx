@@ -4,8 +4,8 @@ import { useCallback, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { DestructiveFormDialog } from '@/lib/components/ui/destructive-form-dialog';
-import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
+import { DestructiveFormDialog } from '@/components/ui/overlays/destructive-form-dialog';
+import { RadioGroup, RadioGroupItem } from '@dayopt/components';
 
 import type { Tag, TagDeleteStrategy } from '../types';
 import { TagBadgeList } from './TagBadgeList';

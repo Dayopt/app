@@ -1,7 +1,7 @@
-import { Container } from '@/components/ui/container';
 import { ReleasesClient, getAllReleaseMetas, getAllReleaseTags } from '@/features/releases';
 import { routing } from '@/platform/i18n/routing';
 import { generateSEOMetadata } from '@/platform/seo/metadata';
+import { Container } from '@dayopt/components';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 

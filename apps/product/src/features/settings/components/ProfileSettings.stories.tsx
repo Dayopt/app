@@ -15,7 +15,7 @@ import { ProfileSettings } from './profile-settings';
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Settings/ProfileSettings',
+  title: 'Product/Features/Settings/ProfileSettings',
   component: ProfileSettings,
   parameters: {
     layout: 'padded',

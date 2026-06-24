@@ -14,6 +14,7 @@ import { BarChart3, ChartNoAxesColumnIncreasing, PanelLeft } from 'lucide-react'
 import { useTranslations } from 'next-intl';
 import { useCallback, useState } from 'react';
 
+import { FeatureErrorBoundary } from '@/components/ui/feedback/error-boundary';
 import {
   CalendarAnalyticsPanel,
   CalendarCompareToggle,
@@ -21,10 +22,8 @@ import {
   useCalendarNavigation,
 } from '@/features/calendar';
 import { CalendarReviewPanel } from '@/features/review';
-import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
-import { Button } from '@/lib/components/ui/button';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { Button, HoverTooltip } from '@dayopt/components';
 import { ConnectedMobileAccountButton } from '../../../_shell/MobileAccountButton';
 import { useCalendarComposition } from './useCalendarComposition';
 

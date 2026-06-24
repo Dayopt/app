@@ -9,11 +9,11 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import type { Database, Row } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { getStripe } from '@/lib/stripe/client';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
-import type { Database, Row } from '@dayopt/database';
 
 /**
  * User Service エラー

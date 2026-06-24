@@ -8,13 +8,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/lib/components/ui/select';
-import { Switch } from '@/lib/components/ui/switch';
+  Switch,
+} from '@dayopt/components';
 
 import { getTimeZones } from '@/lib/timezone-utils';
 
-import { LabeledRow } from '@/lib/components/common/LabeledRow';
-import { SectionCard } from '@/lib/components/common/SectionCard';
+import { LabeledRow } from '@/components/ui/display/LabeledRow';
+import { SectionCard } from '@/components/ui/display/SectionCard';
 
 // ─────────────────────────────────────────────────────────
 // Demo Components
@@ -210,7 +210,7 @@ function TimezoneListReference() {
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Settings/DisplaySettingsPatterns',
+  title: 'Product/Features/Settings/DisplaySettingsPatterns',
   parameters: {
     layout: 'padded',
     // button-name: SelectTrigger inside LabeledRow without explicit aria-label

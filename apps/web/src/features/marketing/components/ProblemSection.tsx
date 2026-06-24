@@ -1,4 +1,4 @@
-import { Container } from '@/components/ui/container';
+import { Container } from '@dayopt/components';
 import { CalendarX, Clock, Shuffle } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 

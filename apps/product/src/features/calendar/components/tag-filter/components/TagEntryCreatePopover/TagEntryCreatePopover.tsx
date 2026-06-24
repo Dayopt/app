@@ -8,10 +8,16 @@ import { useTranslations } from 'next-intl';
 
 import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
 import { useEntryMutations } from '@/features/entry';
-import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
-import { Popover, PopoverAnchor, PopoverContent } from '@/lib/components/ui/popover';
 import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import { toast } from '@/lib/toast';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerTitle,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from '@dayopt/components';
 
 import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import { TagEntryCreateForm, type TagEntryCreateFormProps } from './TagEntryCreateForm';

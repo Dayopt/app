@@ -29,7 +29,7 @@ import { TrialStartEmail } from './TrialStartEmail';
 import { WelcomeEmail } from './WelcomeEmail';
 
 const meta = {
-  title: 'Architecture/Email',
+  title: 'Product/Emails',
   parameters: {
     layout: 'fullscreen',
   },

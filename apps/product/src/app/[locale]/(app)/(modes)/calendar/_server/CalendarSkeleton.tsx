@@ -1,4 +1,4 @@
-import { Skeleton } from '@/lib/components/ui/skeleton';
+import { Skeleton } from '@dayopt/components';
 
 /**
  * カレンダービューのスケルトンUI

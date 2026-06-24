@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@dayopt/components';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { DestructiveFormDialog } from '@/lib/components/ui/destructive-form-dialog';
+import { DestructiveFormDialog } from '@/components/ui/overlays/destructive-form-dialog';
 import { logger } from '@/lib/logger';
 import { trpc } from '@/lib/trpc/client';
 

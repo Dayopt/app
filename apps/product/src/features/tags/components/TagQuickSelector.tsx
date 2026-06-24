@@ -17,11 +17,11 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/lib/components/ui/drawer';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@/lib/utils';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@dayopt/components';
 import { useTags } from '../hooks/useTagsQuery';
 import { TagBadgeList } from './TagBadgeList';
 import { TagIcon } from './TagIcon';

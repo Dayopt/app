@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Calendar, FolderOpen, Inbox, Search, Tag } from 'lucide-react';
 
-import { EmptyState } from '@/lib/components/common/EmptyState';
-import { Button } from '@/lib/components/ui/button';
+import { EmptyState } from '@/components/ui/feedback/EmptyState';
+import { Button } from '@dayopt/components';
 
 const meta = {
-  title: 'Patterns/EmptyStates',
+  title: 'Product/Patterns/EmptyStates',
   parameters: {
     layout: 'fullscreen',
   },
@@ -223,7 +223,7 @@ export const Overview: Story = {
         <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-medium">実装例</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-xs">
-            {`import { EmptyState } from '@/lib/components/common/EmptyState';
+            {`import { EmptyState } from '@/components/ui/feedback/EmptyState';
 
 // 標準（size="md"）
 <EmptyState
