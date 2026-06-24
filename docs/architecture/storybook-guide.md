@@ -84,7 +84,7 @@ AllPatterns も同様に、コンポーネントを `flex-col gap-6` で並べ�
 
 **Docs** — テーブルが必要なら MDX（`.docs.mdx`）で作成。不要なら `tags: ['autodocs']` + JSDoc で十分。
 
-公式テンプレート: `Components/UI/AlertDialog`
+公式テンプレート: `Shared/Components/Overlays/AlertDialog`
 
 ## 🛠️ 開発者向け
 
@@ -103,8 +103,8 @@ src/components/ui/my-component.docs.mdx        # Docs（テーブルが必要な
 
 ### 命名規則
 
-- `Foundations/Colors` → デザイントークン
-- `Components/UI/Button` → 単体UIコンポーネント
+- `Shared/Foundations/Colors` → デザイントークン
+- `Shared/Components/Actions/Button` → 単体UIコンポーネント
 - `Features/Navigation/AppHeader` → ナビゲーションコンポーネント
 - `Features/Entry/Inspector/EntryInspector` → Featureコンポーネント
 - `Docs/はじめに` → ドキュメント
@@ -151,6 +151,6 @@ Story作成時に確認：
 | 4    | [Packages Overview](./packages-overview.md)     | monorepo packages の責務境界と token 移行方針  |
 | 5    | [Data Flow](./data-flow.md)                     | UI → tRPC → Supabase のデータの流れ            |
 | 6    | [Common Pitfalls](../guides/common-pitfalls.md) | よくある間違いと正しいパターン                 |
-| 7    | Colors（Storybook: Foundations/Colors）         | カラートークン、Surface体系                    |
+| 7    | Colors（Storybook: Shared/Foundations/Colors）  | カラートークン、Surface体系                    |
 | 8    | Typography（Storybook: Foundations/Typography） | フォントサイズ、行間、ウェイト                 |
 | 9    | [Accessibility](./accessibility/overview.md)    | a11yチェックリスト、WCAG準拠                   |
