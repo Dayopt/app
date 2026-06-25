@@ -14,9 +14,9 @@ Composition Layer パターンで各 feature を組み立てる。
 ```
 Sidebar (Container)
 ├── Header           Dayoptロゴ + 検索 + 閉じるボタン
-├── PageNav          [📅 カレンダー │ 📊 統計] セグメントコントロール
 ├── ScrollArea       gap-4 (16px) で各セクションを配置
 │   ├── MiniCalendar     月カレンダー（PCのみ、見出しなし）
+│   ├── ViewSwitcherList
 │   ├── CalendarFilterList
 │   │   └── SidebarSection "タグ"
 │   │       └── TagRow × N    チェックボックス + タグ名
@@ -31,14 +31,13 @@ Sidebar (Container)
 
 ## ファイル構成
 
-| ファイル             | 役割                                                                 |
-| -------------------- | -------------------------------------------------------------------- |
-| `Sidebar.tsx`        | コンテナ: `<aside>` + ヘッダー + PageNav + スクロール領域 + フッター |
-| `PageNav.tsx`        | Calendar / Stats セグメントコントロール（pushState + Zustand）       |
-| `SidebarSection.tsx` | セクション（title + action スロット）                                |
-| `BlockItem.tsx`      | パレットのブロックアイテム（アイコン + タグ名 + duration）           |
-| `UserMenu.tsx`       | フッターのユーザーアバター/名前                                      |
-| `SidebarContent.tsx` | Composition Layer: feature コンポーネントの組み立て                  |
+| ファイル             | 役割                                                       |
+| -------------------- | ---------------------------------------------------------- |
+| `Sidebar.tsx`        | コンテナ: `<aside>` + ヘッダー + スクロール領域 + フッター |
+| `SidebarSection.tsx` | セクション（title + action スロット）                      |
+| `BlockItem.tsx`      | パレットのブロックアイテム（アイコン + タグ名 + duration） |
+| `UserMenu.tsx`       | フッターのユーザーアバター/名前                            |
+| `SidebarContent.tsx` | Composition Layer: feature コンポーネントの組み立て        |
 
 ---
 
@@ -66,7 +65,7 @@ Sidebar (Container)
 
 ## Composition Layer
 
-`SidebarContent.tsx` が各 feature コンポーネントを組み立てる。
+`SidebarContent.tsx` が Calendar 作業面に必要な feature コンポーネントを組み立てる。
 feature 間の直接 import は禁止（`@/features/X` を他 feature から import しない）。
 
 ```tsx

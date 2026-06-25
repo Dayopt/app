@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
@@ -32,6 +32,7 @@ const SIDE_RAIL_DEFAULT_WIDTH = 256;
 const SIDE_RAIL_MIN_WIDTH = 256;
 const SIDE_RAIL_MAX_WIDTH = 560;
 const SIDE_RAIL_RESIZE_STEP = 32;
+const SIDE_RAIL_SHEET_MAX_PAGE_WIDTH = 1024;
 
 /** CalendarLayout コンポーネントのプロパティ */
 interface CalendarLayoutProps {
@@ -69,11 +70,14 @@ interface CalendarLayoutProps {
   // Side rail
   sideRail?: React.ReactNode | undefined;
   mobileSideRail?: React.ReactNode | undefined;
+  mobileSideRailPresentation?: 'rail' | 'sheet' | undefined;
   sideRailOpen?: boolean | undefined;
   onSideRailOpenChange?: ((open: boolean) => void) | undefined;
   sideRailTitle?: string | undefined;
   sideRailDescription?: string | undefined;
   sideRailResizeLabel?: string | undefined;
+  sideRailRecoverableWidth?: number | undefined;
+  onSideRailRecoverableWidthRequest?: (() => void) | undefined;
 }
 
 /**
@@ -109,11 +113,14 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     // Side rail
     sideRail,
     mobileSideRail,
+    mobileSideRailPresentation = 'rail',
     sideRailOpen = false,
     onSideRailOpenChange,
     sideRailTitle,
     sideRailDescription,
     sideRailResizeLabel,
+    sideRailRecoverableWidth = 0,
+    onSideRailRecoverableWidthRequest,
   }) => {
     const t = useTranslations('calendar');
     const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
@@ -121,6 +128,9 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     const banner = useInlineBanner();
     const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
     const [sideRailWidth, setSideRailWidth] = useState(SIDE_RAIL_DEFAULT_WIDTH);
+    const [layoutWidth, setLayoutWidth] = useState<number | null>(null);
+    const [recoveringSideRailSpace, setRecoveringSideRailSpace] = useState(false);
+    const layoutRef = useRef<HTMLDivElement | null>(null);
 
     // ナビゲーション方向 + キーの追跡（スライドアニメーション用）
     const [slide, setSlide] = useState<{ key: number; direction: 'prev' | 'next' | null }>({
@@ -151,13 +161,46 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     // タッチイベントのみで動作（タッチイベントが発生 = タッチデバイス）
     const { handlers, ref } = useSwipeGesture(handleSwipeLeft, handleSwipeRight);
 
+    useEffect(() => {
+      const element = layoutRef.current;
+      if (!element) return;
+
+      const updateLayoutWidth = () => {
+        setLayoutWidth(element.getBoundingClientRect().width);
+      };
+      updateLayoutWidth();
+
+      const resizeObserver = new ResizeObserver((entries) => {
+        const [entry] = entries;
+        setLayoutWidth(entry?.contentRect.width ?? element.getBoundingClientRect().width);
+      });
+      resizeObserver.observe(element);
+
+      return () => resizeObserver.disconnect();
+    }, []);
+
     const slideClass =
       slide.direction === 'next'
         ? 'calendar-slide-next'
         : slide.direction === 'prev'
           ? 'calendar-slide-prev'
           : '';
-    const desktopSideRailOpen = Boolean(sideRail && !isMobile);
+    const desktopSideRailRequested = Boolean(sideRail && !isMobile);
+    const desktopSideRailNeedsSpace =
+      desktopSideRailRequested &&
+      shouldUseSideRailSheet({
+        layoutWidth,
+        maxPageWidth: SIDE_RAIL_SHEET_MAX_PAGE_WIDTH,
+      });
+    const desktopSideRailSheet =
+      desktopSideRailNeedsSpace &&
+      !recoveringSideRailSpace &&
+      !canRecoverSideRailSpace({
+        layoutWidth,
+        recoverableWidth: sideRailRecoverableWidth,
+        maxPageWidth: SIDE_RAIL_SHEET_MAX_PAGE_WIDTH,
+      });
+    const desktopSideRailOpen = desktopSideRailRequested && !desktopSideRailSheet;
     const contentStyle = desktopSideRailOpen
       ? ({ marginRight: sideRailWidth } satisfies React.CSSProperties)
       : undefined;
@@ -167,6 +210,46 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     const resolvedSideRailTitle = sideRailTitle ?? t('title');
     const resolvedSideRailDescription = sideRailDescription ?? t('meta.description');
     const resolvedSideRailResizeLabel = sideRailResizeLabel ?? t('panel.resizeLabel');
+    const sheetSideRail = isMobile
+      ? mobileSideRail
+      : desktopSideRailSheet
+        ? (mobileSideRail ?? sideRail)
+        : null;
+    const sheetSideRailOpen = Boolean(sheetSideRail && sideRailOpen);
+    const sheetSideRailIsSheet = desktopSideRailSheet || mobileSideRailPresentation === 'sheet';
+
+    useEffect(() => {
+      if (!recoveringSideRailSpace) return;
+      if (layoutWidth !== null && layoutWidth >= SIDE_RAIL_SHEET_MAX_PAGE_WIDTH) {
+        setRecoveringSideRailSpace(false);
+      }
+    }, [layoutWidth, recoveringSideRailSpace]);
+
+    useEffect(() => {
+      if (!desktopSideRailNeedsSpace) return;
+      if (!onSideRailRecoverableWidthRequest) return;
+      if (
+        !canRecoverSideRailSpace({
+          layoutWidth,
+          recoverableWidth: sideRailRecoverableWidth,
+          maxPageWidth: SIDE_RAIL_SHEET_MAX_PAGE_WIDTH,
+        })
+      ) {
+        return;
+      }
+
+      setRecoveringSideRailSpace(true);
+      onSideRailRecoverableWidthRequest();
+      const timeout = window.setTimeout(() => {
+        setRecoveringSideRailSpace(false);
+      }, 240);
+      return () => window.clearTimeout(timeout);
+    }, [
+      desktopSideRailNeedsSpace,
+      layoutWidth,
+      onSideRailRecoverableWidthRequest,
+      sideRailRecoverableWidth,
+    ]);
 
     const handleSideRailResizeStart = useCallback(
       (event: React.PointerEvent<HTMLDivElement>) => {
@@ -228,6 +311,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
 
     return (
       <div
+        ref={layoutRef}
         className={cn('calendar-layout relative flex h-full flex-col overflow-hidden', className)}
       >
         <div className="flex min-h-0 flex-1 flex-col" style={contentStyle}>
@@ -285,7 +369,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           </div>
         </div>
 
-        {sideRail ? (
+        {desktopSideRailOpen ? (
           <aside
             className="border-border-subtle bg-background absolute top-0 right-0 bottom-0 hidden shrink-0 border-l md:flex"
             style={sideRailStyle}
@@ -306,19 +390,22 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           </aside>
         ) : null}
 
-        {isMobile && mobileSideRail ? (
+        {sheetSideRail ? (
           <Drawer
-            open={sideRailOpen}
-            modal={false}
+            open={sheetSideRailOpen}
             handleOnly
             {...(onSideRailOpenChange ? { onOpenChange: onSideRailOpenChange } : {})}
           >
-            <DrawerContent className="h-3/4">
+            <DrawerContent
+              className={cn('gap-0 overflow-hidden p-0', !sheetSideRailIsSheet && 'h-3/4')}
+            >
               <DrawerHeader className="sr-only">
                 <DrawerTitle>{resolvedSideRailTitle}</DrawerTitle>
                 <DrawerDescription>{resolvedSideRailDescription}</DrawerDescription>
               </DrawerHeader>
-              <div className="min-h-0 flex-1 overflow-hidden">{mobileSideRail}</div>
+              <div className={cn('min-h-0 overflow-hidden', !sheetSideRailIsSheet && 'flex-1')}>
+                {sheetSideRail}
+              </div>
             </DrawerContent>
           </Drawer>
         ) : null}
@@ -331,4 +418,29 @@ CalendarLayout.displayName = 'CalendarLayout';
 
 function clampSideRailWidth(width: number): number {
   return Math.min(SIDE_RAIL_MAX_WIDTH, Math.max(SIDE_RAIL_MIN_WIDTH, width));
+}
+
+export function shouldUseSideRailSheet({
+  layoutWidth,
+  maxPageWidth,
+}: {
+  layoutWidth: number | null;
+  maxPageWidth: number;
+}): boolean {
+  if (layoutWidth === null) return false;
+  return layoutWidth < maxPageWidth;
+}
+
+export function canRecoverSideRailSpace({
+  layoutWidth,
+  recoverableWidth,
+  maxPageWidth,
+}: {
+  layoutWidth: number | null;
+  recoverableWidth: number;
+  maxPageWidth: number;
+}): boolean {
+  if (layoutWidth === null) return false;
+  if (recoverableWidth <= 0) return false;
+  return layoutWidth + recoverableWidth >= maxPageWidth;
 }

@@ -23,14 +23,12 @@ function mockTrpc(entries: unknown[] = []) {
  *
  * 構成:
  *   [icon] タグ名
- *   ┌─ bg-muted rounded-2xl ─┐
  *   │ 📅 日付   04/22/2026   │
  *   │ 🕐 予定   07:15 → 08:45 │
- *   └────────────────────────┘
  *              [キャンセル] [作成]
  *
  * - 日付 / 時刻入力は Inspector の DateRow / TimeRow を流用
- * - container (`bg-muted rounded-2xl`) も Inspector と同じ
+ * - mobile sheet は Drawer の地色を使い、背景 calendar は操作させない
  * - 作成成功で popover close + 5s undo トースト。失敗時は popover 維持で再試行可能
  * - 実機 / dev での dogfooding を前提に、Storybook variants は配置確認用の最小セット
  */
@@ -100,4 +98,16 @@ export const Mobile: Story = {
     trpcMocks: mockTrpc(),
   },
   render: () => renderPopover({ isMobile: true }),
+};
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  parameters: {
+    viewport: { defaultViewport: 'mobile1' },
+    layout: 'fullscreen',
+    trpcMocks: mockTrpc(),
+  },
+  render: () => (
+    <div className="bg-background min-h-[560px] p-4">{renderPopover({ isMobile: true })}</div>
+  ),
 };

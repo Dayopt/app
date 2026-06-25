@@ -31,7 +31,7 @@ export {
 // ========================================
 // Format - フォーマット
 // ========================================
-export { formatDateShort, formatDurationMinutes, formatTime, formatTimeRange } from './format';
+export { formatTime, formatTimeRange } from './format';
 
 // ========================================
 // Timezone - タイムゾーン（実利用 API のみ）

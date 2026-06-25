@@ -236,8 +236,7 @@
       "conflict": "Changes were made elsewhere",
       "reload": "Reload",
       "updateAvailable": "A new version is available",
-      "update": "Update",
-      "mobileReadOnly": "Editing is available on desktop"
+      "update": "Update"
     },
     "pwa": {
       "installTitle": "Install Dayopt",

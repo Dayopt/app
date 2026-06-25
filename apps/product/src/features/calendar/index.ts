@@ -13,7 +13,6 @@ export { CalendarController } from './components/CalendarController';
 // =============================================================================
 // Layout Components
 // =============================================================================
-export { CalendarAnalyticsPanel } from './components/analytics/CalendarAnalyticsPanel';
 export { CalendarCompareToggle } from './components/layout/Header/CalendarCompareToggle';
 export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
 
@@ -70,7 +69,8 @@ export { calculateViewDateRange } from './domain/view-range';
 // =============================================================================
 // Lib / Utils
 // =============================================================================
-export { formatCalendarDateParam, parseCalendarDateParam } from './lib/date-param';
+export { parseCalendarDateParam } from './lib/date-param';
+export { buildCalendarReviewPanelPath } from './lib/panel-url';
 export { isCalendarViewPath } from './lib/route-utils';
 
 // ここにないものはfeature内部専用

@@ -157,12 +157,12 @@ export const entriesStatisticsSummaryRouter = createTRPCRouter({
     }),
 
   // ---------------------------------------------------------------------------
-  // Unified Stats Page Data (12 RPCs → 1 round-trip)
+  // Unified Review Panel Data (12 RPCs → 1 round-trip)
   // ---------------------------------------------------------------------------
 
-  /** Stats ページ全データを 1 RPC で取得 */
+  /** Review panel 用データを 1 RPC で取得 */
   getStatsPageData: proProcedure
-    .meta({ description: 'Stats全データ一括取得（12クエリ統合）' })
+    .meta({ description: 'Review panel データ一括取得（12クエリ統合）' })
     .input(
       z.object({
         startDate: z.string().datetime({ offset: true }),
@@ -196,7 +196,7 @@ export const entriesStatisticsSummaryRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch stats page data: ${error.message}`,
+            message: `Failed to fetch review panel data: ${error.message}`,
             cause: error,
           });
         }

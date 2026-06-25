@@ -33,7 +33,9 @@ import {
 } from '@/features/tags';
 import { DropdownMenu, DropdownMenuTrigger, HoverTooltip, cn } from '@dayopt/components';
 
+import { useCalendarNavigation } from '../../../hooks/navigation/CalendarNavigationContext';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
+import { buildCalendarReviewPanelPath } from '../../../lib/panel-url';
 
 import { FilterItemMenu, type GroupOption } from './FilterItem/FilterItemMenu';
 import { useFilterItemEdit } from './FilterItem/useFilterItemEdit';
@@ -390,6 +392,8 @@ function SortableParentBlock({
 }: SortableParentBlockProps) {
   const locale = useLocale();
   const router = useRouter();
+  const navigation = useCalendarNavigation();
+  const reviewDate = navigation?.currentDate ?? new Date();
   const updateTagMutation = useUpdateTag();
   const { openTagRenameModal, openTagCreateModal } = useTagModalNavigation();
   const {
@@ -475,7 +479,9 @@ function SortableParentBlock({
                 parent_id: node.tag.parent_id ?? null,
               })
             }
-            onViewStats={() => router.push(`/${locale}/review/tags/${node.tag.id}`)}
+            onViewStats={() =>
+              router.push(buildCalendarReviewPanelPath(locale, reviewDate, node.tag.id))
+            }
             onDeleteGroup={() => onDeleteTag(node.tag.id, node.tag.name)}
             onRowClick={() => onOpenPopover(node.tag.id)}
             highlighted={isPopoverOpen}
@@ -573,6 +579,8 @@ function SortableTagItem({
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
+  const navigation = useCalendarNavigation();
+  const reviewDate = navigation?.currentDate ?? new Date();
   const {
     attributes,
     listeners,
@@ -742,7 +750,9 @@ function SortableTagItem({
                   openTagMergeModal({ id: tag.id, name: tag.name, color: tag.color ?? null })
                 }
                 onShowOnlyTag={onShowOnlyTag}
-                onViewStats={() => router.push(`/${locale}/stats/tags/${tag.id}`)}
+                onViewStats={() =>
+                  router.push(buildCalendarReviewPanelPath(locale, reviewDate, tag.id))
+                }
                 onDeleteTag={onDeleteTag}
               />
             </DropdownMenu>

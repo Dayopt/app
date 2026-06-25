@@ -30,7 +30,7 @@ interface BaseLayoutContentProps {
  * - カレンダープロバイダーのラップ
  *
  * ⚠ useSearchParams() は使用しない。
- *   Stats ページでの URL 変更（replaceState）が Suspense 境界を発火し、
+ *   Calendar panel での URL 変更（replaceState）が Suspense 境界を発火し、
  *   子ツリー全体がアンマウントされるバグを防止するため。
  *   カレンダーの searchParams 読み取りは CalendarNavigationProvider 内部で行う。
  */

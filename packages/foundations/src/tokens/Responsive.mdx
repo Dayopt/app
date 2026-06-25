@@ -51,10 +51,10 @@ Material Design 3 Window Size Classes に基づくレスポンシブデザイン
 
 `MEDIA_QUERIES.mobile`（max-width: 767px）で MobileLayout / DesktopLayout を二分岐する。
 
-| 画面幅  | レイアウト    | ナビゲーション       | サイドバー                    |
-| ------- | ------------- | -------------------- | ----------------------------- |
-| < 768px | MobileLayout  | BottomTabBar（固定） | なし                          |
-| ≥ 768px | DesktopLayout | Sidebar              | w-64（256px）、折りたたみ w-0 |
+| 画面幅  | レイアウト    | ナビゲーション                            | サイドバー                    |
+| ------- | ------------- | ----------------------------------------- | ----------------------------- |
+| < 768px | MobileLayout  | Header account icon / Calendar tag footer | なし                          |
+| ≥ 768px | DesktopLayout | Sidebar                                   | w-64（256px）、折りたたみ w-0 |
 
 ### 判定フック
 
@@ -72,18 +72,18 @@ const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 }
 ```
 
-### BottomTabBar
+### Mobile Footer
 
-モバイルレイアウトでのみ表示。固定ボトムナビゲーション。
+モバイルの固定フッターは Calendar のタグクイック作成だけに使う。ページナビゲーションは持たず、アカウント導線は右上の account icon に置く。
 
-| プロパティ   | 値                                              |
-| ------------ | ----------------------------------------------- |
-| 高さ         | h-14（56px）                                    |
-| z-index      | z-bottom-tab（40）                              |
-| セーフエリア | pb-safe（iOS ホームインジケーター）             |
-| タブ数       | 4（Calendar / Stats / Notifications / Account） |
+| プロパティ   | 値                                  |
+| ------------ | ----------------------------------- |
+| 高さ         | h-14（56px）                        |
+| z-index      | z-bottom-tab（40）                  |
+| セーフエリア | pb-safe（iOS ホームインジケーター） |
+| 内容         | TagChipRow（Calendar のみ）         |
 
-メインコンテンツには `pb-16`（64px）で BottomTabBar 分の余白を確保。
+Calendar のメインコンテンツには `pb-16`（64px）でタグフッター分の余白を確保。Calendar 以外の mobile page は固定フッターを持たない。
 
 ### デスクトップサイドバー
 

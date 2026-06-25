@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import type { Tag } from '@/features/tags';
+import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 
 import { TagChipRow } from './TagChipRow';
 
@@ -107,7 +108,7 @@ const MANY_TAGS: Tag[] = Array.from({ length: 30 }, (_, i) => ({
 }));
 
 /**
- * モバイル専用タグチップ行。タイムライン下部・タブバー上に配置される想定。
+ * モバイル専用タグチップ行。タイムライン下部の固定フッターに配置される想定。
  *
  * - sort_order 昇順で並ぶ（PC sidebar と完全一致）
  * - is_active === false のタグは除外
@@ -153,4 +154,25 @@ export const Empty: Story = {
   parameters: {
     trpcMocks: { 'tags.list': { data: [] }, 'entries.list': [] },
   },
+};
+
+function FooterPreview({ tags }: { tags: Tag[] }) {
+  return (
+    <StoryTRPCProvider mocks={{ 'tags.list': { data: tags }, 'entries.list': [] }}>
+      <div className="border-border-subtle bg-background relative h-20 overflow-hidden rounded-lg border">
+        <TagChipRow className="absolute" />
+      </div>
+    </StoryTRPCProvider>
+  );
+}
+
+/** AllPatterns: fixed footer 化した mobile tag row の主要状態を一覧表示 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="bg-background space-y-4 p-4">
+      <FooterPreview tags={MOCK_TAGS} />
+      <FooterPreview tags={MANY_TAGS} />
+      <FooterPreview tags={[]} />
+    </div>
+  ),
 };

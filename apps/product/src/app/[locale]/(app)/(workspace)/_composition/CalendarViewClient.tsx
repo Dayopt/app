@@ -12,17 +12,18 @@
 
 import { ChartNoAxesColumnIncreasing, PanelLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
 import { FeatureErrorBoundary } from '@/components/ui/feedback/error-boundary';
 import {
-  CalendarAnalyticsPanel,
   CalendarCompareToggle,
   CalendarController,
   useCalendarNavigation,
 } from '@/features/calendar';
+import { CalendarReviewPanel } from '@/features/review';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button, HoverTooltip } from '@dayopt/components';
+import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
 import { useCalendarComposition } from './useCalendarComposition';
 
 interface CalendarViewClientProps {
@@ -37,9 +38,8 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const t = useTranslations();
   const calendarNavigation = useCalendarNavigation();
   const sidebar = useShellStore.use.sidebar();
+  const closeSidebar = useShellStore.use.closeSidebar();
   const toggleSidebar = useShellStore.use.toggleSidebar();
-  const [analyticsPanelOpen, setAnalyticsPanelOpen] = useState(false);
-  const [analyticsTagId, setAnalyticsTagId] = useState<string | null>(null);
 
   // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
   // calendarNavigation は常に利用可能。
@@ -53,8 +53,10 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const {
     viewType,
     currentDate,
-    dayCompareEnabled,
-    setDayCompareEnabled,
+    panelKind,
+    reviewTagId,
+    setPanelKind,
+    setReviewTagId,
     navigateRelative,
     changeView,
     navigateToDate,
@@ -69,81 +71,91 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
     changeView,
   });
 
-  // サイドバーが閉じているときに表示するトグルボタン
+  // Sidebar は desktop 専用。mobile は header action と tag footer だけにする。
   const sidebarToggle = !sidebar.open ? (
     <button
       type="button"
       onClick={toggleSidebar}
-      className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg transition-colors"
+      className="hover:bg-state-hover hidden size-8 items-center justify-center rounded-lg transition-colors md:flex"
       aria-label="Open sidebar"
     >
       <PanelLeft className="size-4" />
     </button>
   ) : null;
-  const handleAnalyticsPanelToggle = useCallback(() => {
-    setAnalyticsPanelOpen((open) => {
-      const nextOpen = !open;
-      if (nextOpen) {
-        setDayCompareEnabled(false);
-      }
-      return nextOpen;
-    });
-  }, [setDayCompareEnabled]);
+  const handleReviewPanelToggle = useCallback(() => {
+    setPanelKind(panelKind === 'review' || panelKind === 'analytics' ? null : 'review');
+  }, [panelKind, setPanelKind]);
   const handleCompareToggle = useCallback(
     (checked: boolean) => {
-      setAnalyticsPanelOpen(false);
-      setDayCompareEnabled(checked);
+      setPanelKind(checked ? 'diff' : null);
     },
-    [setDayCompareEnabled],
+    [setPanelKind],
   );
-  const analyticsToggle = (
-    <HoverTooltip content={t('calendar.analysis.tooltip')} side="bottom">
+  const isReviewPanelActive = panelKind === 'review' || panelKind === 'analytics';
+  const isDiffPanelActive = panelKind === 'diff';
+  const reviewToggle = (
+    <HoverTooltip content={t('calendar.stats.review.tooltip')} side="bottom">
       <Button
         type="button"
         variant="ghost"
         size="sm"
         icon
         className={
-          analyticsPanelOpen
+          isReviewPanelActive
             ? 'bg-state-selected text-foreground hover:bg-state-selected'
             : 'text-muted-foreground hover:text-foreground'
         }
-        aria-label={t('calendar.analysis.ariaLabel')}
-        aria-pressed={analyticsPanelOpen}
-        onClick={handleAnalyticsPanelToggle}
+        aria-label={t('calendar.stats.review.ariaLabel')}
+        aria-pressed={isReviewPanelActive}
+        onClick={handleReviewPanelToggle}
       >
         <ChartNoAxesColumnIncreasing className="size-4" />
       </Button>
     </HoverTooltip>
   );
-  const compareToggle =
-    viewType === 'day' ? (
-      <>
-        <CalendarCompareToggle
-          checked={dayCompareEnabled}
-          onCheckedChange={handleCompareToggle}
-          className="-mr-2 hidden md:flex"
-        />
-        <CalendarCompareToggle
-          checked={dayCompareEnabled}
-          onCheckedChange={handleCompareToggle}
-          className="-mr-2 md:hidden"
-        />
-      </>
-    ) : null;
-  const headerActions = (
+  const compareToggle = (
     <>
-      {analyticsToggle}
-      {compareToggle}
+      <CalendarCompareToggle
+        checked={isDiffPanelActive}
+        onCheckedChange={handleCompareToggle}
+        className="-mr-2 hidden md:flex"
+      />
+      <CalendarCompareToggle
+        checked={isDiffPanelActive}
+        onCheckedChange={handleCompareToggle}
+        className="md:hidden"
+      />
     </>
   );
-  const analyticsPanel = (
-    <CalendarAnalyticsPanel
-      selectedTagId={analyticsTagId}
-      onSelectedTagIdChange={setAnalyticsTagId}
-      onClose={() => setAnalyticsPanelOpen(false)}
+  const headerActions = (
+    <>
+      {reviewToggle}
+      {compareToggle}
+      <ConnectedMobileAccountButton className="md:hidden" />
+    </>
+  );
+  const reviewPanel = (
+    <CalendarReviewPanel
+      currentDate={currentDate}
+      selectedTagId={reviewTagId}
+      onSelectedTagIdChange={setReviewTagId}
+      onClose={() => setPanelKind(null)}
     />
   );
+  const mobileReviewPanel = (
+    <CalendarReviewPanel
+      currentDate={currentDate}
+      selectedTagId={reviewTagId}
+      onSelectedTagIdChange={setReviewTagId}
+      onClose={() => setPanelKind(null)}
+      variant="sheet"
+    />
+  );
+  const panelRail = isReviewPanelActive ? reviewPanel : null;
+  const mobilePanelRail = isReviewPanelActive ? mobileReviewPanel : null;
+  const panelRailOpen = isReviewPanelActive;
+  const panelRailTitle = t('calendar.views.stats');
+  const panelRailDescription = t('calendar.stats.review.description');
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -176,7 +188,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           filteredEntries={composition.filteredEvents}
           allEntries={composition.allCalendarEvents}
           showWeekends={composition.showWeekends}
-          showActualDiff={viewType === 'day' && dayCompareEnabled}
+          showActualDiff={viewType === 'day' && isDiffPanelActive}
           disabledEntryId={composition.disabledEntryId}
           onEntryClick={composition.onEntryClick}
           onTimeRangeSelect={composition.onTimeRangeSelect}
@@ -199,11 +211,18 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onPrefetch={composition.prefetchDirection}
           leftSlot={sidebarToggle}
           rightSlot={headerActions}
-          onCompareRailOpenChange={setDayCompareEnabled}
-          analyticsRail={analyticsPanel}
-          mobileAnalyticsRail={analyticsPanel}
-          analyticsRailOpen={analyticsPanelOpen}
-          onAnalyticsRailOpenChange={setAnalyticsPanelOpen}
+          onCompareRailOpenChange={(open) => setPanelKind(open ? 'diff' : null)}
+          panelRail={panelRail}
+          mobilePanelRail={mobilePanelRail}
+          panelRailOpen={panelRailOpen}
+          onPanelRailOpenChange={(open) => {
+            if (open) return;
+            setPanelKind(null);
+          }}
+          panelRailTitle={panelRailTitle}
+          panelRailDescription={panelRailDescription}
+          sideRailRecoverableWidth={sidebar.open ? sidebar.width : 0}
+          onSideRailRecoverableWidthRequest={closeSidebar}
         />
       </FeatureErrorBoundary>
     </div>

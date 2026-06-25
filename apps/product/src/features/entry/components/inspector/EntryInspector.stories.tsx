@@ -304,7 +304,7 @@ export const MobileDrawer: Story = {
         setActiveSnapPoint={setSnap}
         fadeFromIndex={1}
       >
-        <DrawerContent className="bg-card z-modal flex flex-col gap-0 overflow-hidden rounded-t-none p-0">
+        <DrawerContent className="flex flex-col gap-0 overflow-hidden p-0">
           <DrawerTitle className="sr-only">エントリ詳細</DrawerTitle>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <InspectorContent

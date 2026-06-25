@@ -14,7 +14,7 @@ import { useReviewFilterStore } from '../stores/useReviewFilterStore';
 import type { StatsPageData } from '../types/metrics.types';
 
 /**
- * useReviewPageData — Stats ページ全データを 1 RPC で取得
+ * useReviewPageData — Review panel 用データを 1 RPC で取得
  *
  * 従来 12 個の useQuery を 1 つに統合。
  * TanStack Query キャッシュキーが prefetch と一致するため、

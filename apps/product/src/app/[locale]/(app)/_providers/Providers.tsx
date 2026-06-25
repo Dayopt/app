@@ -2,7 +2,7 @@
  * 認証必須ページ用フルProviders
  *
  * @description
- * 認証が必要なページ（/calendar, /tags, /review等）で使用。
+ * 認証が必要なページ（/calendar, /tags, /settings等）で使用。
  * tRPC、GlobalSearch等の全機能を提供する。
  *
  * プロバイダー階層（CLAUDE.md準拠）:

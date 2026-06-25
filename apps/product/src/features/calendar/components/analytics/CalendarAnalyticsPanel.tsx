@@ -35,7 +35,7 @@ export function CalendarAnalyticsPanel({
 
   return (
     <section
-      className={cn('bg-background flex min-h-0 w-full flex-col', className)}
+      className={cn('flex min-h-0 w-full flex-col', className)}
       aria-label={t('calendar.analysis.panel.title')}
     >
       <header className="shrink-0">

@@ -107,7 +107,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
       <div className={cn('bg-background sticky top-0 z-20 md:hidden', className)}>
         <AppHeader
           rightSlot={
-            <div className="flex items-center gap-1">
+            <div className="flex h-8 items-center gap-1">
               <Button
                 variant="ghost"
                 icon

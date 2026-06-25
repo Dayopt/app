@@ -21,6 +21,8 @@ import { isCalendarViewPath } from '../../lib/route-utils';
 import type { CalendarViewType } from '../../types/calendar.types';
 import { getMultiDayCount, isMultiDayView } from '../../types/calendar.types';
 
+type CalendarPanelKind = 'review' | 'diff' | 'analytics' | null;
+
 // ── カレンダーページ判定・初期値計算（旧 useCalendarProviderProps） ──
 
 function isValidViewType(view: string): view is CalendarViewType {
@@ -33,9 +35,30 @@ function isValidViewType(view: string): view is CalendarViewType {
   return false;
 }
 
-function readCalendarCompareParam(viewType: CalendarViewType): boolean {
-  if (typeof window === 'undefined' || viewType !== 'day') return false;
-  return new URLSearchParams(window.location.search).get('compare') === '1';
+function normalizePanelForView(
+  viewType: CalendarViewType,
+  panelKind: CalendarPanelKind | null,
+): CalendarPanelKind | null {
+  if (panelKind === 'diff') return viewType === 'day' ? 'diff' : null;
+  return panelKind;
+}
+
+function readCalendarPanelState(viewType: CalendarViewType): {
+  panelKind: CalendarPanelKind | null;
+  reviewTagId: string | null;
+} {
+  if (typeof window === 'undefined') return { panelKind: null, reviewTagId: null };
+
+  const params = new URLSearchParams(window.location.search);
+  const rawPanel = params.get('panel');
+  const requestedPanel: CalendarPanelKind | null =
+    rawPanel === 'review' || rawPanel === 'diff' || rawPanel === 'analytics' ? rawPanel : null;
+  const panelKind = normalizePanelForView(viewType, requestedPanel);
+
+  return {
+    panelKind,
+    reviewTagId: panelKind === 'review' ? params.get('reviewTagId') : null,
+  };
 }
 
 /** pathname と URL searchParams からカレンダーページ判定と初期値を計算 */
@@ -59,22 +82,23 @@ function resolveCalendarProps(pathname: string) {
   const dateParam =
     typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('date') : null;
   const initialDate = parseCalendarDateParam(dateParam) ?? new Date();
-  const initialCompare = readCalendarCompareParam(view);
+  const initialPanel = readCalendarPanelState(view);
 
-  return { isCalendarPage: true as const, initialDate, initialView: view, initialCompare };
+  return { isCalendarPage: true as const, initialDate, initialView: view, initialPanel };
 }
 
 interface CalendarNavigationContextValue {
   currentDate: Date;
   viewType: CalendarViewType;
-  /** day view で予定と実績の Diff Rail を表示する */
-  dayCompareEnabled: boolean;
+  panelKind: CalendarPanelKind | null;
+  reviewTagId: string | null;
   /** ナビゲーション中（日付変更・ビュー切替）のトランジション状態 */
   isPending: boolean;
   navigateToDate: (date: Date, updateUrl?: boolean) => void;
   changeView: (view: CalendarViewType) => void;
   navigateRelative: (direction: 'prev' | 'next' | 'today') => void;
-  setDayCompareEnabled: (enabled: boolean) => void;
+  setPanelKind: (panelKind: CalendarPanelKind | null, options?: { reviewTagId?: string }) => void;
+  setReviewTagId: (reviewTagId: string | null) => void;
 }
 
 const CalendarNavigationContext = createContext<CalendarNavigationContextValue | null>(null);
@@ -90,14 +114,19 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
   const pathname = usePathname() ?? '/';
 
   // pathname + window.location.search からカレンダーページ判定と初期値を計算
-  const { isCalendarPage, initialDate, initialView, initialCompare } = useMemo(
+  const { isCalendarPage, initialDate, initialView, initialPanel } = useMemo(
     () => resolveCalendarProps(pathname),
     [pathname],
   );
 
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [viewType, setViewType] = useState<CalendarViewType>(initialView);
-  const [dayCompareEnabled, setDayCompareEnabledState] = useState(initialCompare ?? false);
+  const [panelKind, setPanelKindState] = useState<CalendarPanelKind | null>(
+    initialPanel?.panelKind ?? null,
+  );
+  const [reviewTagId, setReviewTagIdState] = useState<string | null>(
+    initialPanel?.reviewTagId ?? null,
+  );
 
   // モバイル判定（day view固定に使用）
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
@@ -110,7 +139,8 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
   // useRefで最新値を保持し、コールバックの依存配列を安定化
   const currentDateRef = useRef(currentDate);
   const viewTypeRef = useRef(viewType);
-  const dayCompareEnabledRef = useRef(dayCompareEnabled);
+  const panelKindRef = useRef(panelKind);
+  const reviewTagIdRef = useRef(reviewTagId);
   const initialDateRef = useRef(initialDate);
 
   // 現在のlocaleを取得（例: /ja/day -> ja）
@@ -121,27 +151,37 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
   React.useEffect(() => {
     currentDateRef.current = currentDate;
     viewTypeRef.current = viewType;
-    dayCompareEnabledRef.current = dayCompareEnabled;
+    panelKindRef.current = panelKind;
+    reviewTagIdRef.current = reviewTagId;
     localeRef.current = locale;
     isMobileRef.current = isMobile;
     // Palette等がカレンダー表示日/ビュータイプを参照するためグローバルに同期
     useCalendarNavigationStore.getState()._syncViewedDate(currentDate);
     useCalendarNavigationStore.getState()._syncViewType(viewType);
-  }, [currentDate, viewType, dayCompareEnabled, locale, isMobile]);
+  }, [currentDate, viewType, panelKind, reviewTagId, locale, isMobile]);
 
   const writeCalendarUrl = useCallback(
     (
       view: CalendarViewType,
       date: Date,
-      compareEnabled: boolean,
+      nextPanelKind: CalendarPanelKind | null,
+      nextReviewTagId: string | null,
       historyMode: 'push' | 'replace',
     ) => {
       const params = new URLSearchParams(window.location.search);
       params.set('date', formatCalendarDateParam(date));
-      if (view === 'day' && compareEnabled) {
-        params.set('compare', '1');
+      params.delete('compare');
+      params.delete('panel');
+      params.delete('reviewTagId');
+
+      const normalizedPanel = normalizePanelForView(view, nextPanelKind);
+      if (normalizedPanel) {
+        params.set('panel', normalizedPanel);
+      }
+      if (normalizedPanel === 'review' && nextReviewTagId) {
+        params.set('reviewTagId', nextReviewTagId);
       } else {
-        params.delete('compare');
+        params.delete('reviewTagId');
       }
 
       const newUrl = `/${localeRef.current}/${view}?${params.toString()}`;
@@ -160,9 +200,19 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     if (isCalendarPage && isMobile && viewType !== 'day') {
       startTransition(() => {
         setViewType('day');
+        const nextPanelKind = normalizePanelForView('day', panelKindRef.current);
+        const nextReviewTagId = nextPanelKind === 'review' ? reviewTagIdRef.current : null;
+        setPanelKindState(nextPanelKind);
+        setReviewTagIdState(nextReviewTagId);
       });
       // URLもday viewに更新
-      writeCalendarUrl('day', currentDateRef.current, dayCompareEnabledRef.current, 'replace');
+      writeCalendarUrl(
+        'day',
+        currentDateRef.current,
+        panelKindRef.current,
+        reviewTagIdRef.current,
+        'replace',
+      );
     }
   }, [isCalendarPage, isMobile, viewType, writeCalendarUrl]);
 
@@ -173,11 +223,17 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     if (isCalendarPage && initialView !== viewType) {
       if (isMobileRef.current && initialView !== 'day') return;
       setViewType(initialView);
-      setDayCompareEnabledState(readCalendarCompareParam(initialView));
+      const nextPanel = readCalendarPanelState(initialView);
+      setPanelKindState(nextPanel.panelKind);
+      setReviewTagIdState(nextPanel.reviewTagId);
     } else if (isCalendarPage) {
-      const nextCompareEnabled = readCalendarCompareParam(initialView);
-      if (dayCompareEnabledRef.current !== nextCompareEnabled) {
-        setDayCompareEnabledState(nextCompareEnabled);
+      const nextPanel = readCalendarPanelState(initialView);
+      if (
+        panelKindRef.current !== nextPanel.panelKind ||
+        reviewTagIdRef.current !== nextPanel.reviewTagId
+      ) {
+        setPanelKindState(nextPanel.panelKind);
+        setReviewTagIdState(nextPanel.reviewTagId);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialView変更時のみ同期
@@ -200,6 +256,27 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     }
   }, [isCalendarPage, initialDate, startTransition]);
 
+  React.useEffect(() => {
+    const handlePopState = () => {
+      const resolved = resolveCalendarProps(window.location.pathname);
+      if (!resolved.isCalendarPage) return;
+
+      const nextView =
+        isMobileRef.current && resolved.initialView !== 'day' ? 'day' : resolved.initialView;
+      const nextPanel = readCalendarPanelState(nextView);
+
+      startTransition(() => {
+        setCurrentDate(resolved.initialDate);
+        setViewType(nextView);
+        setPanelKindState(nextPanel.panelKind);
+        setReviewTagIdState(nextPanel.reviewTagId);
+      });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [startTransition]);
+
   const navigateToDate = useCallback(
     (date: Date, updateUrl = false) => {
       startTransition(() => {
@@ -208,7 +285,13 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
 
       if (updateUrl) {
         // 日付変更は履歴に追加しない（replaceState）
-        writeCalendarUrl(viewTypeRef.current, date, dayCompareEnabledRef.current, 'replace');
+        writeCalendarUrl(
+          viewTypeRef.current,
+          date,
+          panelKindRef.current,
+          reviewTagIdRef.current,
+          'replace',
+        );
       }
     },
     [writeCalendarUrl],
@@ -218,26 +301,59 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     (view: CalendarViewType) => {
       // モバイルではday viewのみ許可
       if (isMobileRef.current && view !== 'day') return;
-      const nextCompareEnabled = view === 'day' ? dayCompareEnabledRef.current : false;
+      const nextPanelKind = normalizePanelForView(view, panelKindRef.current);
+      const nextReviewTagId = nextPanelKind === 'review' ? reviewTagIdRef.current : null;
 
       startTransition(() => {
         setViewType(view);
-        setDayCompareEnabledState(nextCompareEnabled);
+        setPanelKindState(nextPanelKind);
+        setReviewTagIdState(nextReviewTagId);
       });
       // pushState: 即座にURL更新、サーバーナビゲーションなし
       // Next.js App Router は pushState と統合済み（usePathname等が同期する）
-      writeCalendarUrl(view, currentDateRef.current, nextCompareEnabled, 'push');
+      writeCalendarUrl(view, currentDateRef.current, nextPanelKind, nextReviewTagId, 'push');
     },
     [writeCalendarUrl],
   );
 
-  const setDayCompareEnabled = useCallback(
-    (enabled: boolean) => {
-      const nextEnabled = viewTypeRef.current === 'day' ? enabled : false;
+  const setPanelKind = useCallback(
+    (nextPanelKind: CalendarPanelKind | null, options?: { reviewTagId?: string }) => {
+      const nextView =
+        nextPanelKind === 'diff'
+          ? 'day'
+          : nextPanelKind === 'review'
+            ? isMobileRef.current
+              ? 'day'
+              : 'week'
+            : viewTypeRef.current;
+      const normalizedPanel = normalizePanelForView(nextView, nextPanelKind);
+      const nextReviewTagId =
+        normalizedPanel === 'review' ? (options?.reviewTagId ?? reviewTagIdRef.current) : null;
+
       startTransition(() => {
-        setDayCompareEnabledState(nextEnabled);
+        setViewType(nextView);
+        setPanelKindState(normalizedPanel);
+        setReviewTagIdState(nextReviewTagId);
       });
-      writeCalendarUrl(viewTypeRef.current, currentDateRef.current, nextEnabled, 'replace');
+      writeCalendarUrl(
+        nextView,
+        currentDateRef.current,
+        normalizedPanel,
+        nextReviewTagId,
+        'replace',
+      );
+    },
+    [writeCalendarUrl],
+  );
+
+  const setReviewTagId = useCallback(
+    (nextReviewTagId: string | null) => {
+      startTransition(() => {
+        setViewType('week');
+        setPanelKindState('review');
+        setReviewTagIdState(nextReviewTagId);
+      });
+      writeCalendarUrl('week', currentDateRef.current, 'review', nextReviewTagId, 'replace');
     },
     [writeCalendarUrl],
   );
@@ -279,22 +395,26 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     () => ({
       currentDate,
       viewType,
-      dayCompareEnabled,
+      panelKind,
+      reviewTagId,
       isPending,
       navigateToDate,
       changeView,
       navigateRelative,
-      setDayCompareEnabled,
+      setPanelKind,
+      setReviewTagId,
     }),
     [
       currentDate,
       viewType,
-      dayCompareEnabled,
+      panelKind,
+      reviewTagId,
       isPending,
       navigateToDate,
       changeView,
       navigateRelative,
-      setDayCompareEnabled,
+      setPanelKind,
+      setReviewTagId,
     ],
   );
 

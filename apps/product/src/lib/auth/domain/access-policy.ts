@@ -3,7 +3,6 @@ import { isProSubscriptionStatus } from '@dayopt/billing';
 const protectedProductPaths = [
   '/tasks',
   '/settings',
-  '/review',
   '/box',
   '/table',
   '/board',

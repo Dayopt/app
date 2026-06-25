@@ -62,7 +62,7 @@ grep -n "icon:.*IconName\|icon: 'IconName'" src/features/review/
 
 | アイコン    | 用途                                                                                                       |
 | ----------- | ---------------------------------------------------------------------------------------------------------- |
-| `Sparkles`  | AI 機能全般 + Watching AI のモードアイコン（BottomTab / PageNav / AI モードメインの empty state）          |
+| `Sparkles`  | AI 機能全般 + Watching AI のモードアイコン（AI モードメインの empty state）                                |
 | `Lightbulb` | ヒント / tips（AI 由来でない一般的な示唆。UI ツアー、空状態のヒント等。AI Insight 系のアイコンとしても可） |
 
 **判断基準**: AI が生成したもの + Watching AI モード全般 = `Sparkles`、ユーザーや静的ロジックが出すヒント = `Lightbulb`。
@@ -90,10 +90,10 @@ grep -n "icon:.*IconName\|icon: 'IconName'" src/features/review/
 
 ### カレンダー / 日付
 
-| アイコン       | 用途                                                                       |
-| -------------- | -------------------------------------------------------------------------- |
-| `Calendar`     | 日付入力フィールド / 単日参照（DatePicker, DateRow）                       |
-| `CalendarDays` | ナビゲーション / 機能名 / 複数日の集計（BottomTabBar, PageNav, AppHeader） |
+| アイコン       | 用途                                                         |
+| -------------- | ------------------------------------------------------------ |
+| `Calendar`     | 日付入力フィールド / 単日参照（DatePicker, DateRow）         |
+| `CalendarDays` | ナビゲーション / 機能名 / 複数日の集計（AppHeader, Sidebar） |
 
 **判断基準**: 「1 つの日」を指す = Calendar、「カレンダー機能そのもの / 複数日」= CalendarDays。
 

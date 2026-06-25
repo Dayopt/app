@@ -136,9 +136,9 @@ export const LayoutArchitecture: Story = {
             <div>
               <h3 className="text-muted-foreground mb-2 text-sm">MobileLayout（&lt; 768px）</h3>
               <div className="border-border overflow-hidden rounded-lg border">
-                <LayoutSection label="AppHeader" bg="bg-container" height="h-8" />
-                <LayoutSection label="MainContent (pb-16)" bg="bg-background" height="h-24" />
-                <LayoutSection label="BottomTabBar h-14" bg="bg-container" height="h-8" />
+                <LayoutSection label="AppHeader + account" bg="bg-container" height="h-8" />
+                <LayoutSection label="MainContent" bg="bg-background" height="h-24" />
+                <LayoutSection label="Tag footer h-14" bg="bg-container" height="h-8" />
               </div>
             </div>
             {/* DesktopLayout */}
@@ -189,11 +189,11 @@ export const LayoutArchitecture: Story = {
           </div>
         </section>
 
-        {/* BottomTabBar スペック */}
+        {/* Mobile footer スペック */}
         <section>
-          <h2 className="mb-4 text-lg font-medium">BottomTabBar</h2>
+          <h2 className="mb-4 text-lg font-medium">Mobile Footer</h2>
           <p className="text-muted-foreground mb-4 text-sm">
-            モバイルレイアウトでのみ表示。固定ボトムナビゲーション。
+            Calendar のタグクイック作成だけに使う固定フッター。ページナビゲーションは持たない。
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -224,15 +224,16 @@ export const LayoutArchitecture: Story = {
                   </td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-2">タブ数</td>
-                  <td className="px-4 py-2">4（Calendar / Stats / Notifications / Account）</td>
+                  <td className="px-4 py-2">内容</td>
+                  <td className="px-4 py-2">TagChipRow（Calendar のみ）</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p className="text-muted-foreground mt-4 text-sm">
-            メインコンテンツには <code className="bg-container rounded-lg px-2">pb-16</code>
-            （64px）で BottomTabBar 分の余白を確保。
+            Calendar のメインコンテンツには{' '}
+            <code className="bg-container rounded-lg px-2">pb-16</code>
+            （64px）でタグフッター分の余白を確保。
           </p>
         </section>
 

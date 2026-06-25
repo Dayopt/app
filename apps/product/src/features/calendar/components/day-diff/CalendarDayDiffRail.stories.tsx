@@ -146,6 +146,22 @@ export const Empty: Story = {
   },
 };
 
+/** モバイルボトムシート。 */
+export const MobileSheet: Story = {
+  args: {
+    diff: computeCalendarDayDiffs(noDiffEntries, now),
+    entries: noDiffEntries,
+    onEntryClick: fn(),
+    onClose: fn(),
+    variant: 'sheet',
+  },
+  render: (args) => (
+    <div className="bg-card border-border-subtle shadow-card w-80 rounded-2xl border">
+      <CalendarDayDiffRail {...args} />
+    </div>
+  ),
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   args: {
@@ -168,6 +184,15 @@ export const AllPatterns: Story = {
         onEntryClick={fn()}
         className="border-border-subtle h-96 w-64 border"
       />
+      <div className="bg-card border-border-subtle shadow-card w-80 rounded-2xl border">
+        <CalendarDayDiffRail
+          diff={computeCalendarDayDiffs(noDiffEntries, now)}
+          entries={noDiffEntries}
+          onEntryClick={fn()}
+          onClose={fn()}
+          variant="sheet"
+        />
+      </div>
     </div>
   ),
 };

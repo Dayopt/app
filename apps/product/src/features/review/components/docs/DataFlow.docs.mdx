@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Data Flow
 
-Stats feature のデータ取得・変換・表示のパイプライン。
+Calendar Review panel のデータ取得・変換・表示のパイプライン。
 
 ---
 
@@ -14,16 +14,16 @@ Stats feature のデータ取得・変換・表示のパイプライン。
 PostgreSQL RPC 関数
   → tRPC ルーター (entry/stats feature)
     → TanStack Query (並列取得・自動キャッシュ)
-      → 純粋計算関数 / Recharts
-        → UI コンポーネント
+      → 純粋計算関数
+        → Calendar panel UI
 ```
 
-Insights タブはルールベースで client-side 評価:
+Review の補助 insight はルールベースで client-side 評価:
 
 ```
 TanStack Query (Layer 1/2 と同じ pageData)
   → useDiscoveries (純粋関数で発見リストを評価)
-    → DiscoveryList (UI コンポーネント)
+    → compact panel UI
 ```
 
 ---
@@ -55,7 +55,7 @@ TanStack Query (Layer 1/2 と同じ pageData)
 | `getDayOfWeekDistribution` | dateRange?    | 曜日別分布             |
 | `getHourlyDistribution`    | dateRange?    | 時間帯分布             |
 
-### Insights タブ（ルールベース）
+### 補助 insight（ルールベース）
 
 サーバー endpoint なし。Layer 1/2 と同じ `getStatsPageData` の結果を `useDiscoveries` で評価する。
 
@@ -65,20 +65,20 @@ TanStack Query (Layer 1/2 と同じ pageData)
 
 ### useReviewFilterStore (Zustand)
 
-| State         | 型                                     | 説明                 |
-| ------------- | -------------------------------------- | -------------------- |
-| `granularity` | `'day' \| 'week' \| 'month' \| 'year'` | 表示粒度             |
-| `currentDate` | `Date`                                 | ナビゲーション基準日 |
+| State         | 型       | 説明                 |
+| ------------- | -------- | -------------------- |
+| `granularity` | `'week'` | 表示粒度             |
+| `currentDate` | `Date`   | ナビゲーション基準日 |
 
 ### URL 状態
 
-`/review` 単一ページ。期間 / 粒度は `?g=`, `?d=` の searchParams で表現し、`pushState` で更新する。
+Calendar URL の `panel=review` と `reviewTagId` で表現する。期間は Calendar の `date` search param を使う。
 
 ---
 
 ## キャッシュ戦略
 
-- Layer 1/2: TanStack Query の staleTime でキャッシュ。粒度・日付の組み合わせがキャッシュキー
+- Layer 1/2: TanStack Query の staleTime でキャッシュ。週・日付の組み合わせがキャッシュキー
 - Insights タブ: 同じ pageData を共有し、`useDiscoveries` で再計算（メモ化）
 
 ---
