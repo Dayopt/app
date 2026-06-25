@@ -6,7 +6,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
 
 import { Toaster } from '@/components/ui/feedback/toast';
-import { buildCalendarReviewPanelPath, useCalendarNavigation } from '@/features/calendar';
+import {
+  buildCalendarReviewPanelPath,
+  isCalendarViewPath,
+  useCalendarNavigation,
+} from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
@@ -60,26 +64,31 @@ export function GlobalOverlays() {
     }
   }, [settingsOpen, contactOpen, closeInspector]);
 
-  // Inspector は Calendar 配下専用 — /calendar/ 外への遷移で自動 close
-  // handleViewStats から close を呼ぶと useInspectorURLSync の URL 同期が
-  // router.push を打ち消すため、pathname 変化を契機に close する。
+  // Inspector は Calendar ビュー専用 — workspace ビュー外への遷移で自動 close。
+  // URL は平坦化済み（/day, /week, /Nday）のため isCalendarViewPath で判定する。
   useEffect(() => {
     if (!isInspectorOpen) return;
-    const onCalendarPage = pathname?.includes('/calendar/') ?? false;
-    if (!onCalendarPage) {
+    const pathWithoutLocale = pathname?.replace(/^\/(ja|en)/, '') ?? '';
+    if (!isCalendarViewPath(pathWithoutLocale)) {
       closeInspector();
     }
   }, [pathname, isInspectorOpen, closeInspector]);
 
   // Inspector → Calendar review panel
+  // setPanelKind は writeCalendarUrl(window.history.replaceState) で URL を
+  // 同期更新するため、続く closeInspector の URL 同期（entry 削除）が
+  // review panel を打ち消さない。router.push の非同期遷移と closeInspector が
+  // 競合し「inspector だけ閉じて panel に到達しない」問題を解消する。
   const handleViewStats = useCallback(
     (tagId: string) => {
-      router.push(
-        buildCalendarReviewPanelPath(locale, calendarNavigation?.currentDate ?? new Date(), tagId),
-      );
+      if (calendarNavigation) {
+        calendarNavigation.setPanelKind('review', { reviewTagId: tagId });
+      } else {
+        router.push(buildCalendarReviewPanelPath(locale, new Date(), tagId));
+      }
       closeInspector();
     },
-    [calendarNavigation?.currentDate, closeInspector, router, locale],
+    [calendarNavigation, closeInspector, router, locale],
   );
 
   return (
