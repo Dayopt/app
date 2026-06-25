@@ -59,7 +59,7 @@ export function TrialStartEmail({
               </Text>
             </Section>
             <Text style={styles.paragraph}>{t('trialStart.noActionNote')}</Text>
-            <Button style={styles.button} href={`${appUrl}/calendar`}>
+            <Button style={styles.button} href={`${appUrl}/week`}>
               {t('trialStart.ctaButton')}
             </Button>
             <Text style={styles.footer}>{t('emailCommon.teamSignature')}</Text>

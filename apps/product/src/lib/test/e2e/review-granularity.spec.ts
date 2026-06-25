@@ -26,7 +26,7 @@ async function login(page: import('@playwright/test').Page) {
   await passwordInput.fill(process.env.TEST_USER_PASSWORD!);
   await submitButton.click();
 
-  await page.waitForURL(/\/(calendar|review)/i, { timeout: 15000 });
+  await page.waitForURL(/\/(day|week|review)/i, { timeout: 15000 });
 }
 
 /** 粒度ごとの「そのビューが描画された証拠」となるテキスト（データなしは空状態文言を許容） */

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-let mockPathname = '/ja/calendar/day';
+let mockPathname = '/ja/day';
 
 const mockPush = vi.fn();
 
@@ -53,7 +53,7 @@ import { BottomTabBar } from './BottomTabBar';
 describe('BottomTabBar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPathname = '/ja/calendar/day';
+    mockPathname = '/ja/day';
   });
 
   it('uses page navigation semantics instead of tab semantics', () => {
@@ -90,6 +90,6 @@ describe('BottomTabBar', () => {
 
     const calendarLink = screen.getByRole('link', { name: /navigation\.bottomTab\.calendar/ });
 
-    expect(calendarLink).toHaveAttribute('href', '/ja/calendar/week?date=2026-03-25');
+    expect(calendarLink).toHaveAttribute('href', '/ja/week?date=2026-03-25');
   });
 });

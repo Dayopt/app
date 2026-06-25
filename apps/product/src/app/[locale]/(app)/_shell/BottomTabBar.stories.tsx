@@ -26,7 +26,7 @@ function MockBottomTabBar({
     icon: typeof CalendarDays;
     href: string;
   }> = [
-    { id: 'calendar', label: 'カレンダー', icon: CalendarDays, href: '/ja/calendar/day' },
+    { id: 'calendar', label: 'カレンダー', icon: CalendarDays, href: '/ja/day' },
     { id: 'review', label: '振り返り', icon: BarChart3, href: '/ja/review' },
     { id: 'account', label: 'アカウント', icon: UserCircle, href: '/ja/settings' },
   ];

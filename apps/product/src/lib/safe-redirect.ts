@@ -15,7 +15,7 @@
  * - プロトコル相対URL (`//evil.com`)
  * - エンコードされたバイパス (`%2F%2Fevil.com`)
  */
-export function getSafeRedirectPath(next: string | null, fallback = '/calendar/day'): string {
+export function getSafeRedirectPath(next: string | null, fallback = '/week'): string {
   if (!next) return fallback;
 
   // 相対パスでない、またはプロトコル相対URL

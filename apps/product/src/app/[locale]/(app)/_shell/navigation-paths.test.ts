@@ -7,6 +7,14 @@ vi.mock('@/features/calendar', () => ({
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   },
+  isCalendarViewPath: (pathWithoutLocale: string) => {
+    const segment = pathWithoutLocale.split('/')[1];
+    if (!segment) return false;
+    const clean = segment.split('?')[0];
+    if (!clean) return false;
+    if (['day', 'week'].includes(clean)) return true;
+    return /^\d+day$/.test(clean);
+  },
 }));
 
 import {
@@ -24,11 +32,11 @@ describe('navigation-paths', () => {
         viewType: 'week',
         currentDate: new Date(2026, 2, 25, 23, 45, 0, 0),
       }),
-    ).toBe('/ja/calendar/week?date=2026-03-25');
+    ).toBe('/ja/week?date=2026-03-25');
   });
 
   it('builds a calendar path without query when date is absent', () => {
-    expect(buildCalendarPath({ locale: 'en', viewType: 'day' })).toBe('/en/calendar/day');
+    expect(buildCalendarPath({ locale: 'en', viewType: 'day' })).toBe('/en/day');
   });
 
   it('keeps the local day for late-night dates', () => {
@@ -38,7 +46,7 @@ describe('navigation-paths', () => {
         viewType: 'day',
         currentDate: new Date(2026, 2, 25, 23, 59, 0, 0),
       }),
-    ).toBe('/en/calendar/day?date=2026-03-25');
+    ).toBe('/en/day?date=2026-03-25');
   });
 
   it('adds compare only for day calendar paths', () => {
@@ -49,7 +57,7 @@ describe('navigation-paths', () => {
         currentDate: new Date(2026, 2, 25),
         compare: true,
       }),
-    ).toBe('/ja/calendar/day?date=2026-03-25&compare=1');
+    ).toBe('/ja/day?date=2026-03-25&compare=1');
 
     expect(
       buildCalendarPath({
@@ -58,7 +66,7 @@ describe('navigation-paths', () => {
         currentDate: new Date(2026, 2, 25),
         compare: true,
       }),
-    ).toBe('/ja/calendar/week?date=2026-03-25');
+    ).toBe('/ja/week?date=2026-03-25');
   });
 
   it('builds a localized review path', () => {
@@ -74,12 +82,16 @@ describe('navigation-paths', () => {
 });
 
 describe('getModeFromPath', () => {
-  it('returns calendar for /ja/calendar/day', () => {
-    expect(getModeFromPath('/ja/calendar/day')).toBe('calendar');
+  it('returns calendar for /ja/day', () => {
+    expect(getModeFromPath('/ja/day')).toBe('calendar');
   });
 
-  it('returns calendar for /en/calendar/week (locale prefix 非依存)', () => {
-    expect(getModeFromPath('/en/calendar/week')).toBe('calendar');
+  it('returns calendar for /en/week (locale prefix 非依存)', () => {
+    expect(getModeFromPath('/en/week')).toBe('calendar');
+  });
+
+  it('returns calendar for multi-day view /ja/3day', () => {
+    expect(getModeFromPath('/ja/3day')).toBe('calendar');
   });
 
   it('returns review for /ja/review', () => {
@@ -112,7 +124,7 @@ describe('getModeFromPath', () => {
   });
 
   it('treats trailing slash equivalently', () => {
-    expect(getModeFromPath('/ja/calendar/')).toBe('calendar');
+    expect(getModeFromPath('/ja/week/')).toBe('calendar');
     expect(getModeFromPath('/ja/review/')).toBe('review');
   });
 

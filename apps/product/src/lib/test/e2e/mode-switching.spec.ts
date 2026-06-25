@@ -23,7 +23,7 @@ async function loginAndNavigate(page: import('@playwright/test').Page) {
   await passwordInput.fill(process.env.TEST_USER_PASSWORD!);
   await submitButton.click();
 
-  await page.waitForURL(/\/(calendar|stats)/i, { timeout: 15000 });
+  await page.waitForURL(/\/(day|week|stats)/i, { timeout: 15000 });
 }
 
 test.describe('Mode Switching: Calendar ↔ Stats ↔ AI', () => {
@@ -33,9 +33,9 @@ test.describe('Mode Switching: Calendar ↔ Stats ↔ AI', () => {
     await loginAndNavigate(page);
 
     // 起点: Calendar day view
-    await page.goto('/ja/calendar/day?date=2026-04-20');
+    await page.goto('/ja/day?date=2026-04-20');
     await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/\/ja\/calendar\/day/);
+    await expect(page).toHaveURL(/\/ja\/day/);
 
     // Stats へ遷移 (Sidebar / BottomTabBar どちらの "統計" リンクでも最初の 1 つをクリック)
     const statsLink = page.getByRole('link', { name: /統計|Stats/i }).first();
@@ -45,7 +45,7 @@ test.describe('Mode Switching: Calendar ↔ Stats ↔ AI', () => {
     // Calendar に戻る
     const calendarLink = page.getByRole('link', { name: /カレンダー|Calendar/i }).first();
     await calendarLink.click();
-    await expect(page).toHaveURL(/\/ja\/calendar\/day/);
+    await expect(page).toHaveURL(/\/ja\/day/);
 
     // ブラウザバックで Stats に戻る
     await page.goBack();
@@ -53,7 +53,7 @@ test.describe('Mode Switching: Calendar ↔ Stats ↔ AI', () => {
 
     // ブラウザバックで Calendar に戻る
     await page.goBack();
-    await expect(page).toHaveURL(/\/ja\/calendar\/day/);
+    await expect(page).toHaveURL(/\/ja\/day/);
   });
 
   test('navigates through 3 modes (calendar → stats → ai → calendar) with browser back', async ({
@@ -62,9 +62,9 @@ test.describe('Mode Switching: Calendar ↔ Stats ↔ AI', () => {
     await loginAndNavigate(page);
 
     // 起点: Calendar day view
-    await page.goto('/ja/calendar/day?date=2026-04-20');
+    await page.goto('/ja/day?date=2026-04-20');
     await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/\/ja\/calendar\/day/);
+    await expect(page).toHaveURL(/\/ja\/day/);
 
     // Stats へ
     await page
@@ -82,7 +82,7 @@ test.describe('Mode Switching: Calendar ↔ Stats ↔ AI', () => {
       .getByRole('link', { name: /カレンダー|Calendar/i })
       .first()
       .click();
-    await expect(page).toHaveURL(/\/ja\/calendar\/day/);
+    await expect(page).toHaveURL(/\/ja\/day/);
 
     // ブラウザバックで AI → Stats → Calendar
     await page.goBack();
@@ -92,6 +92,6 @@ test.describe('Mode Switching: Calendar ↔ Stats ↔ AI', () => {
     await expect(page).toHaveURL(/\/ja\/stats\/review/);
 
     await page.goBack();
-    await expect(page).toHaveURL(/\/ja\/calendar\/day/);
+    await expect(page).toHaveURL(/\/ja\/day/);
   });
 });

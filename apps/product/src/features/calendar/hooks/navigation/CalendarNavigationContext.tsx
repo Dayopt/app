@@ -144,7 +144,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
         params.delete('compare');
       }
 
-      const newUrl = `/${localeRef.current}/calendar/${view}?${params.toString()}`;
+      const newUrl = `/${localeRef.current}/${view}?${params.toString()}`;
       if (historyMode === 'push') {
         window.history.pushState(null, '', newUrl);
       } else {

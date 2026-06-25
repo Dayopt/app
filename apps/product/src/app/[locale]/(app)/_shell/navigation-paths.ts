@@ -1,5 +1,5 @@
 import type { CalendarViewType } from '@/features/calendar';
-import { formatCalendarDateParam } from '@/features/calendar';
+import { formatCalendarDateParam, isCalendarViewPath } from '@/features/calendar';
 
 type AppMode = 'calendar' | 'review' | 'other';
 
@@ -7,13 +7,15 @@ type AppMode = 'calendar' | 'review' | 'other';
  * pathname から現在の app モードを判定する。
  *
  * Sidebar の中身を pathname dispatch で切替えるための central point。
- * route group (modes) は URL に現れないため、判定は prefix ベースで問題ない。
+ * route group (workspace) は URL に現れないため、判定はパス形状ベースで問題ない。
+ * calendar ビューは workspace 直下に平坦化されている（/day, /week, /Nday）。
  * locale prefix / trailing slash / query string に非依存。
  */
 export function getModeFromPath(pathname: string | null | undefined): AppMode {
   if (!pathname) return 'other';
-  if (pathname.includes('/calendar/') || pathname.endsWith('/calendar')) return 'calendar';
-  if (pathname.includes('/review/') || pathname.endsWith('/review')) return 'review';
+  const pathWithoutLocale = pathname.replace(/^\/(ja|en)/, '');
+  if (isCalendarViewPath(pathWithoutLocale)) return 'calendar';
+  if (pathWithoutLocale === '/review' || pathWithoutLocale.startsWith('/review/')) return 'review';
   return 'other';
 }
 
@@ -40,7 +42,7 @@ export function buildCalendarPath(params: {
   }
 
   const query = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
-  return `/${params.locale}/calendar/${params.viewType}${query}`;
+  return `/${params.locale}/${params.viewType}${query}`;
 }
 
 export function buildReviewPath(locale: string, options?: { granularity?: string; date?: Date }) {
