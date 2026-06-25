@@ -21,7 +21,7 @@ import { isCalendarViewPath } from '../../lib/route-utils';
 import type { CalendarViewType } from '../../types/calendar.types';
 import { getMultiDayCount, isMultiDayView } from '../../types/calendar.types';
 
-export type CalendarPanelKind = 'review' | 'diff' | 'analytics' | null;
+type CalendarPanelKind = 'review' | 'diff' | 'analytics' | null;
 
 // ── カレンダーページ判定・初期値計算（旧 useCalendarProviderProps） ──
 
