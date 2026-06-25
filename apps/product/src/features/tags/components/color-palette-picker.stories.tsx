@@ -1,13 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 
-import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { TAG_COLOR_MAP, TAG_COLOR_NAMES } from '../lib/tag-colors';
 
 import type { TagColorName } from '../lib/tag-colors';
 
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@dayopt/components';
+import {
+  Button,
+  cn,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@dayopt/components';
 import { ColorPaletteMenuItems, getColorDisplayName } from './color-palette-picker';
 
 const meta = {

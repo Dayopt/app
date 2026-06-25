@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { BarChart3, CalendarDays } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 // PageNav は usePathname / useCalendarNavigation 等に依存するため、
 // ストーリーでは同じ見た目の静的モックを使用する。
@@ -24,7 +24,7 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: ActivePage }) {
     icon: typeof CalendarDays;
     href: string;
   }> = [
-    { id: 'calendar', label: 'カレンダー', icon: CalendarDays, href: '/ja/calendar/day' },
+    { id: 'calendar', label: 'カレンダー', icon: CalendarDays, href: '/ja/day' },
     { id: 'review', label: '振り返り', icon: BarChart3, href: '/ja/review' },
   ];
 

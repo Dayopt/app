@@ -8,7 +8,6 @@ import { useTranslations } from 'next-intl';
 
 import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
 import { useEntryMutations } from '@/features/entry';
-import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import { toast } from '@/lib/toast';
 import {
   Drawer,
@@ -18,6 +17,7 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@dayopt/components';
+import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 
 import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import { TagEntryCreateForm, type TagEntryCreateFormProps } from './TagEntryCreateForm';

@@ -9,8 +9,7 @@ import { memo, useCallback, useState, type ReactNode } from 'react';
 import { AppHeader } from '@/components/shell/AppHeader';
 import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { cn } from '@/lib/utils';
-import { Button } from '@dayopt/components';
+import { Button, cn } from '@dayopt/components';
 
 import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
 

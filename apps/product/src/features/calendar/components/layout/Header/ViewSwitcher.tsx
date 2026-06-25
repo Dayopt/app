@@ -10,9 +10,9 @@ import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { cn } from '@/lib/utils';
 import {
   buttonVariants,
+  cn,
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,

@@ -7,7 +7,7 @@
  * dnd-kit の useDroppable は廃止し、カスタム interaction machine に統一。
  */
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 /** CalendarDropZone コンポーネントのプロパティ */
 interface CalendarDropZoneProps {

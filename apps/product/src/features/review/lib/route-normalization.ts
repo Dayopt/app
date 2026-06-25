@@ -7,7 +7,7 @@ export function parseReviewGranularityParam(
 }
 
 export function buildDailyReviewRedirectPath(locale: string, dateStr: string): string {
-  return `/${locale}/calendar/day?date=${dateStr}&compare=1`;
+  return `/${locale}/day?date=${dateStr}&compare=1`;
 }
 
 export function buildWeeklyTagDetailPath(locale: string, tagId: string, dateStr: string): string {

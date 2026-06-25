@@ -5,7 +5,7 @@
  * 全エントリ間で重複を禁止する。
  */
 
-import { hasTwoLayerTimeConflict, type TwoLayerOverlapTarget } from '@/lib/time/two-layer-overlap';
+import { hasTwoLayerTimeConflict, type TwoLayerOverlapTarget } from '@dayopt/domain';
 import type { CalendarEvent } from '../types/calendar.types';
 
 export function buildNewEntryOverlapTarget(

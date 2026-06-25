@@ -11,7 +11,7 @@ import {
 import { useTagsMap } from '@/features/tags';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 import { useTranslations } from 'next-intl';
 
 import type { InteractionState } from '../../../../domain/interaction/types';

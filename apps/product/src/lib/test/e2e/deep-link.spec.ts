@@ -24,7 +24,7 @@ async function loginAndNavigate(page: import('@playwright/test').Page) {
   await passwordInput.fill(process.env.TEST_USER_PASSWORD!);
   await submitButton.click();
 
-  await page.waitForURL(/\/calendar/i, { timeout: 15000 });
+  await page.waitForURL(/\/(day|week|review)/i, { timeout: 15000 });
 }
 
 test.describe('Deep Link: SSR rendering of app routes', () => {
@@ -54,10 +54,10 @@ test.describe('Deep Link: SSR rendering of app routes', () => {
 
     await loginAndNavigate(page);
 
-    // 直接 /calendar/week に遷移
-    await page.goto('/ja/calendar/week?date=2026-04-20');
+    // 直接 /week に遷移
+    await page.goto('/ja/week?date=2026-04-20');
     await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/\/ja\/calendar\/week/);
+    await expect(page).toHaveURL(/\/ja\/week/);
 
     // Sidebar が SSR から表示
     const sidebar = page.locator('[role="navigation"]').first();

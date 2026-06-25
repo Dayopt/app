@@ -13,12 +13,12 @@ import { Link } from '@/lib/i18n/navigation';
 import { useForm } from 'react-hook-form';
 
 import { logger } from '@/lib/logger';
-import { Turnstile, isTurnstileEnabled, type TurnstileInstance } from '@/lib/turnstile';
-import { cn } from '@/lib/utils';
+import { isTurnstileEnabled, Turnstile, type TurnstileInstance } from '@/lib/turnstile';
 import {
   Button,
   Card,
   CardContent,
+  cn,
   Field,
   FieldDescription,
   FieldError,
@@ -127,7 +127,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
         turnstileRef.current?.reset();
       } else if (result.data.session) {
         // メール確認不要 — そのままアプリへ
-        router.push(`/${locale}/calendar/day`);
+        router.push(`/${locale}/week`);
       } else {
         // メール確認が必要 — 確認待ちUIを表示
         setPendingEmail(data.email);

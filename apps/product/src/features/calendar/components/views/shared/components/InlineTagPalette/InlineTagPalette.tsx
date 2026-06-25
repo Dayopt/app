@@ -31,8 +31,8 @@ import { convertFromTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { logger } from '@/lib/logger';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
+import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';

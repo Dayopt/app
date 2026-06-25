@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 
 import { TagIcon, useTags, type Tag } from '@/features/tags';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import { TagEntryCreatePopover } from '../TagEntryCreatePopover';
 

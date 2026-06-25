@@ -1,23 +1,21 @@
 /**
- * カレンダービューのルーティングユーティリティ
+ * ワークスペースビューのルーティングユーティリティ
  *
- * URLパスからカレンダービューページかどうかを判定する。
- * /calendar/day, /calendar/week 等のネスト構造に対応。
+ * URLパスが workspace の時間軸ビュー（day / week / Nday）かどうかを判定する。
+ * URL は calendar namespace を持たず workspace 直下に平坦化されている。
+ * 例: /day, /week, /3day（旧 /calendar/day, /calendar/week, /calendar/3day）
  */
 
 const CALENDAR_VIEWS = ['day', 'week'];
 
 /**
- * ロケールを除いたパスがカレンダービューかどうかを判定
+ * ロケールを除いたパスが workspace の時間軸ビューかどうかを判定
  *
- * @param pathWithoutLocale - ロケールプレフィックスを除いたパス（例: "/calendar/day", "/calendar/week?date=2026-01-01", "/calendar/3day"）
+ * @param pathWithoutLocale - ロケールプレフィックスを除いたパス（例: "/day", "/week?date=2026-01-01", "/3day"）
  */
 export function isCalendarViewPath(pathWithoutLocale: string): boolean {
-  // /calendar/ プレフィックスをチェック
-  if (!pathWithoutLocale.startsWith('/calendar')) return false;
-
-  // /calendar の後のセグメントを取得
-  const segment = pathWithoutLocale.split('/')[2];
+  // 先頭セグメントを取得（"/day" -> "day", "/week?date=..." -> "week?date=..."）
+  const segment = pathWithoutLocale.split('/')[1];
   if (!segment) return false;
 
   // query string を除去
@@ -25,6 +23,6 @@ export function isCalendarViewPath(pathWithoutLocale: string): boolean {
   if (!clean) return false;
 
   if (CALENDAR_VIEWS.includes(clean)) return true;
-  // multi-day view: 2day〜9day
+  // multi-day view: 2day〜9day（厳密に「数字+day」のみ）
   return /^\d+day$/.test(clean);
 }

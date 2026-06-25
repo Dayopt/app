@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 /**
  * OverviewPanel — 粒度ビュー共通のセクションパネル

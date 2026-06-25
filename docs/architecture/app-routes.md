@@ -19,12 +19,12 @@ src/app/
 ├── api/                        ← REST / Webhook（api-overview.md 参照）
 └── [locale]/
     ├── layout.tsx              ← locale-scoped HTML lang / dir / metadata
-    ├── page.tsx                ← / → /{locale}/calendar/day へ redirect
+    ├── page.tsx                ← / → /{locale}/week へ redirect
     ├── error.tsx               ← locale-scoped error boundary
     ├── (app)/                  ← 認証必須グループ
     │   ├── layout.tsx          ← IntlProvider + Providers + BaseLayout
     │   ├── error.tsx, not-found.tsx
-    │   ├── (modes)/            ← calendar / stats / ai
+    │   ├── (workspace)/        ← day / week / [nday] / review（URL 上は calendar namespace なし）
     │   ├── settings/
     │   ├── playground/
     │   ├── _providers/         ← Providers ツリー
@@ -50,19 +50,23 @@ src/app/
 | [`(app)/error.tsx`](<../src/app/[locale]/(app)/error.tsx>)         | error boundary | (app) Group 内のページエラーを BaseLayout 内側で表示。i18n 対応、Sentry にも記録                                               |
 | [`(app)/not-found.tsx`](<../src/app/[locale]/(app)/not-found.tsx>) | not-found      | (app) Group 内の 404。BaseLayout 内側で表示し、ナビ崩れを防ぐ                                                                  |
 
-### (modes) — メインモード
+### (workspace) — メインモード
 
-| Path                                                                                                           | Type           | 責務 / 主な合成元                                                                                                    |
-| -------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [`(modes)/calendar/day/page.tsx`](<../src/app/[locale]/(app)/(modes)/calendar/day/page.tsx>)                   | page (server)  | `prefetchCalendarData` → `HydrationBoundary` → `CalendarViewClient`（day view）。`generateMetadata` で i18n タイトル |
-| [`(modes)/calendar/week/page.tsx`](<../src/app/[locale]/(app)/(modes)/calendar/week/page.tsx>)                 | page (server)  | week view。同上の prefetch + Suspense streaming                                                                      |
-| [`(modes)/calendar/[nday]/page.tsx`](<../src/app/[locale]/(app)/(modes)/calendar/[nday]/page.tsx>)             | page (server)  | 多日数 view（2day〜9day）。`[nday]` で動的セグメント                                                                 |
-| `(modes)/calendar/{day,week,[nday]}/loading.tsx`                                                               | loading        | 共通 `CalendarSkeleton` を表示                                                                                       |
-| `(modes)/calendar/{day,week,[nday]}/error.tsx`                                                                 | error boundary | calendar segment 専用エラー                                                                                          |
-| [`(modes)/calendar/_composition/`](<../src/app/[locale]/(app)/(modes)/calendar/_composition/>)                 | —              | `CalendarViewClient` ほか、各 view / panel の合成 layer                                                              |
-| [`(modes)/calendar/_server/`](<../src/app/[locale]/(app)/(modes)/calendar/_server/>)                           | —              | `prefetchCalendarData` / `parseDateParam` / `CalendarSkeleton` 等の server-only ヘルパ                               |
-| [`(modes)/ai/page.tsx`](<../src/app/[locale]/(app)/(modes)/ai/page.tsx>)                                       | page (server)  | AI モード ルート（`AiMainContent` を render）                                                                        |
-| [`(modes)/ai/threads/[threadId]/page.tsx`](<../src/app/[locale]/(app)/(modes)/ai/threads/[threadId]/page.tsx>) | page (server)  | AI スレッド詳細                                                                                                      |
+| Path                                                                                                                   | Type           | 責務 / 主な合成元                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [`(workspace)/day/page.tsx`](<../src/app/[locale]/(app)/(workspace)/day/page.tsx>)                                     | page (server)  | `prefetchCalendarData` → `HydrationBoundary` → `CalendarViewClient`（day view）。`generateMetadata` で i18n タイトル |
+| [`(workspace)/week/page.tsx`](<../src/app/[locale]/(app)/(workspace)/week/page.tsx>)                                   | page (server)  | week view。同上の prefetch + Suspense streaming                                                                      |
+| [`(workspace)/[nday]/page.tsx`](<../src/app/[locale]/(app)/(workspace)/[nday]/page.tsx>)                               | page (server)  | 多日数 view（2day〜9day）。`[nday]` で動的セグメント                                                                 |
+| `(workspace)/{day,week,[nday]}/loading.tsx`                                                                            | loading        | 共通 `CalendarSkeleton` を表示                                                                                       |
+| `(workspace)/{day,week,[nday]}/error.tsx`                                                                              | error boundary | calendar segment 専用エラー                                                                                          |
+| [`(workspace)/_composition/`](<../src/app/[locale]/(app)/(workspace)/_composition/>)                                   | —              | `CalendarViewClient` ほか、各 view の合成 layer                                                                      |
+| [`(workspace)/_server/`](<../src/app/[locale]/(app)/(workspace)/_server/>)                                             | —              | `prefetchCalendarData` / `parseDateParam` / `CalendarSkeleton` 等の server-only ヘルパ                               |
+| [`(workspace)/review/page.tsx`](<../src/app/[locale]/(app)/(workspace)/review/page.tsx>)                               | page (server)  | 振り返り単一ページ（`ReviewView` を render）                                                                         |
+| [`(workspace)/review/layout.tsx`](<../src/app/[locale]/(app)/(workspace)/review/layout.tsx>)                           | layout         | `ReviewLayout`（日付ナビ + 粒度セレクタヘッダー）                                                                    |
+| [`(workspace)/review/tags/[tagId]/page.tsx`](<../src/app/[locale]/(app)/(workspace)/review/tags/[tagId]/page.tsx>)     | page (server)  | タグ詳細（特定 tag のサマリ）                                                                                        |
+| [`(workspace)/review/error.tsx`](<../src/app/[locale]/(app)/(workspace)/review/error.tsx>)                             | error boundary | review segment 専用エラー                                                                                            |
+| [`(workspace)/ai/page.tsx`](<../src/app/[locale]/(app)/(workspace)/ai/page.tsx>)                                       | page (server)  | AI モード ルート（`AiMainContent` を render）                                                                        |
+| [`(workspace)/ai/threads/[threadId]/page.tsx`](<../src/app/[locale]/(app)/(workspace)/ai/threads/[threadId]/page.tsx>) | page (server)  | AI スレッド詳細                                                                                                      |
 
 ### settings
 
@@ -132,7 +136,7 @@ locale ルーティングの境界。HTML lang / dir、metadata、redirect を�
 | Path                                                                                                              | Type            | 責務                                                                                          |
 | ----------------------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------- |
 | [`[locale]/layout.tsx`](../../apps/product/src/app/[locale]/layout.tsx)                                           | layout (server) | `<html lang dir>` の確定、`generateMetadata` で多言語 OG / canonical、未対応 locale を 404 に |
-| [`[locale]/page.tsx`](../../apps/product/src/app/[locale]/page.tsx)                                               | page (server)   | `/{locale}` → `/{locale}/calendar/day` redirect。`force-dynamic`                              |
+| [`[locale]/page.tsx`](../../apps/product/src/app/[locale]/page.tsx)                                               | page (server)   | `/{locale}` → `/{locale}/week` redirect。`force-dynamic`                                      |
 | [`[locale]/error.tsx`](../../apps/product/src/app/[locale]/error.tsx)                                             | error boundary  | locale 全体のエラー（IntlProvider 未マウントケース含む）                                      |
 | [`[locale]/playground/dnd-multi-container/`](../../apps/product/src/app/[locale]/playground/dnd-multi-container/) | dev             | dnd-kit Multiple Containers の検証用                                                          |
 | [`[locale]/test-email/`](../../apps/product/src/app/[locale]/test-email/)                                         | dev             | email template の preview ページ                                                              |

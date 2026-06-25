@@ -13,7 +13,7 @@ import { resolveTagColor } from '@/features/tags';
 import { addWeeks } from '@/lib/date/core';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import {
   deriveAccuracy,
@@ -126,7 +126,7 @@ export function WeeklyReview({ className }: ReviewViewProps) {
   const { insight, isLowData } = useStatsRuleInsight(pageData);
 
   // ── 還流導線（来週の計画へ）──
-  const nextWeekHref = `/${locale}/calendar/week?date=${format(addWeeks(currentDate, 1), 'yyyy-MM-dd')}`;
+  const nextWeekHref = `/${locale}/week?date=${format(addWeeks(currentDate, 1), 'yyyy-MM-dd')}`;
 
   // ── 週のリズム ──
   const weekdayLabels = tCommon.raw('dates.weekdaysNarrow') as string[];

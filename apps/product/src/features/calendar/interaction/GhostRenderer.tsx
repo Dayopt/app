@@ -18,7 +18,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import { ConflictOverlay } from '../components/views/shared/components/ConflictOverlay';
 import type { InteractionState, TimeRange } from '../domain/interaction/types';

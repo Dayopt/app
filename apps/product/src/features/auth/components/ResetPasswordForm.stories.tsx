@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { cn } from '@/lib/utils';
-import { FieldError } from '@dayopt/components';
+import { cn, FieldError } from '@dayopt/components';
 
 import { ResetPasswordForm } from './ResetPasswordForm';
 

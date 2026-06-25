@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 
 import { getWeek } from 'date-fns';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 

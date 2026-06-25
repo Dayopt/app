@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
+import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 
 import type { CalendarEvent } from '../../types/calendar.types';
 

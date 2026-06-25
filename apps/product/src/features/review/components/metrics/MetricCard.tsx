@@ -1,7 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@dayopt/components';
+import { Card, CardContent, cn } from '@dayopt/components';
 
 import type { MetricTrend, MetricValueParts } from '../../types/metrics.types';
 import { TrendBadge } from '../shared/TrendBadge';

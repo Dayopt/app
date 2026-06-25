@@ -15,7 +15,7 @@ describe('review route normalization', () => {
 
   it('builds the calendar compare redirect path for daily review links', () => {
     expect(buildDailyReviewRedirectPath('ja', '2026-06-18')).toBe(
-      '/ja/calendar/day?date=2026-06-18&compare=1',
+      '/ja/day?date=2026-06-18&compare=1',
     );
   });
 

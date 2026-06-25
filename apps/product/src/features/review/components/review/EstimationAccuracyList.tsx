@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 
 import { resolveTagColor, TagIcon } from '@/features/tags';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import { formatMinutesDuration } from '../time-pl/data/timePL.presentation';
 

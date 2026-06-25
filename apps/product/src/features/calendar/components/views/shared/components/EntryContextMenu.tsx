@@ -5,7 +5,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { getEntryMenuItems } from '@/features/entry';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
 interface EntryContextMenuProps {

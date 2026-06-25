@@ -5,7 +5,6 @@ import { type ReactNode, useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
-import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -14,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Button,
+  cn,
   Drawer,
   DrawerContent,
   DrawerDescription,

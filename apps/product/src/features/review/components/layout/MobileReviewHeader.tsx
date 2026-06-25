@@ -12,7 +12,7 @@ import { MiniCalendar } from '@/components/ui/inputs/mini-calendar';
 import { CompactDateNavigator } from '@/components/ui/navigation/DateNavigator';
 import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { cn } from '@/lib/utils';
+import { cn } from '@dayopt/components';
 
 import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
 

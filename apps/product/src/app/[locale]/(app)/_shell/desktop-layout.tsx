@@ -10,8 +10,7 @@ import { Sidebar } from '@/components/shell/sidebar';
 import { useAuthStore } from '@/features/auth';
 import { isCalendarViewPath } from '@/features/calendar';
 import { getAvatarUrl, getDisplayName } from '@/lib/user';
-import { cn } from '@/lib/utils';
-import { InlineBanner } from '@dayopt/components';
+import { cn, InlineBanner } from '@dayopt/components';
 
 import { useShellStore } from '@/lib/stores/useShellStore';
 
