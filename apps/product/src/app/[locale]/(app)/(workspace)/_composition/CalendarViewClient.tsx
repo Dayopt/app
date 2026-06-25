@@ -38,6 +38,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const t = useTranslations();
   const calendarNavigation = useCalendarNavigation();
   const sidebar = useShellStore.use.sidebar();
+  const closeSidebar = useShellStore.use.closeSidebar();
   const toggleSidebar = useShellStore.use.toggleSidebar();
 
   // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
@@ -220,6 +221,8 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           }}
           panelRailTitle={panelRailTitle}
           panelRailDescription={panelRailDescription}
+          sideRailRecoverableWidth={sidebar.open ? sidebar.width : 0}
+          onSideRailRecoverableWidthRequest={closeSidebar}
         />
       </FeatureErrorBoundary>
     </div>
