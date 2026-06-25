@@ -9,9 +9,14 @@ import { useAuthStore } from '@/features/auth';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { Avatar, AvatarFallback, AvatarImage, cn } from '@dayopt/components';
 
-import { getLocaleFromPathname } from './navigation-paths';
-
 const LOCALE_PREFIX_PATTERN = /^\/(en|ja)(?=\/|$)/;
+
+function getLocaleFromPathname(pathname: string | null | undefined): 'ja' | 'en' {
+  const segments = pathname?.split('/') ?? [];
+  return segments.length >= 2 && (segments[1] === 'ja' || segments[1] === 'en')
+    ? segments[1]
+    : 'ja';
+}
 
 function buildSettingsReturnPath(
   pathname: string | null,
