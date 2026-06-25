@@ -37,7 +37,7 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
   const pathname = usePathname();
 
   // localePrefix: 'as-needed' により default locale の URL は prefix なし
-  // (例: /calendar/day) の場合もあるため、prop の locale ではなく実際の
+  // (例: /day) の場合もあるため、prop の locale ではなく実際の
   // URL セグメントから /en/ /ja/ のみを剥がす。未知の先頭セグメントは維持する。
   const pathWithoutLocale = useMemo(
     () => (pathname ?? '').replace(/^\/(en|ja)(?=\/|$)/, ''),

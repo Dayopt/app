@@ -199,7 +199,7 @@ test.describe('Auth: パスワードリセット', () => {
 
 test.describe('Auth: リダイレクト', () => {
   test('未認証ユーザーは保護されたページからリダイレクトされる', async ({ page }) => {
-    await page.goto('/calendar/day');
+    await page.goto('/day');
     await page.waitForLoadState('networkidle');
 
     // auth系のページにリダイレクト

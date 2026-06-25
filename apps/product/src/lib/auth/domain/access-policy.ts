@@ -3,7 +3,6 @@ import { isProSubscriptionStatus } from '@dayopt/billing';
 const protectedProductPaths = [
   '/tasks',
   '/settings',
-  '/calendar',
   '/review',
   '/box',
   '/table',
@@ -13,6 +12,10 @@ const protectedProductPaths = [
   '/oauth/authorize',
   '/oauth/consent',
 ] as const;
+
+// workspace の時間軸ビュー（/day, /week, /2day〜/9day）。calendar namespace 廃止後も認証必須。
+// prefix では /2day が /day に当たらないため、パス形状を正規表現で判定する。
+const workspaceViewPathPattern = /^\/(day|week|\d+day)(\/|$)/;
 
 const authProductPaths = ['/login', '/signup', '/auth'] as const;
 
@@ -25,7 +28,9 @@ export function canAccessProFeatures(status: string | null | undefined): boolean
 }
 
 export function isProtectedProductPath(pathname: string): boolean {
-  return matchesPathPrefix(pathname, protectedProductPaths);
+  return (
+    matchesPathPrefix(pathname, protectedProductPaths) || workspaceViewPathPattern.test(pathname)
+  );
 }
 
 export function isAuthProductPath(pathname: string): boolean {

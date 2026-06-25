@@ -155,9 +155,7 @@ export async function proxy(request: NextRequest) {
     const isMFAVerifyPath = pathWithoutLocale === '/auth/mfa-verify';
 
     if (user && isAuthPath && !isMFAVerifyPath) {
-      return NextResponse.redirect(
-        new URL(getLocalizedPath('/calendar/day', currentLocale), request.url),
-      );
+      return NextResponse.redirect(new URL(getLocalizedPath('/week', currentLocale), request.url));
     }
 
     // MFA AAL強制（認証済みユーザーのみ）

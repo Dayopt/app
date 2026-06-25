@@ -22,7 +22,7 @@ async function loginAndNavigate(page: import('@playwright/test').Page) {
   await passwordInput.fill(process.env.TEST_USER_PASSWORD!);
   await submitButton.click();
 
-  await page.waitForURL(/\/(calendar|stats)/i, { timeout: 15000 });
+  await page.waitForURL(/\/(day|week|stats)/i, { timeout: 15000 });
 }
 
 test.describe('Sidebar Persistence: Dynamic href preserves viewType', () => {
@@ -34,9 +34,9 @@ test.describe('Sidebar Persistence: Dynamic href preserves viewType', () => {
     await loginAndNavigate(page);
 
     // week view で Calendar 起動
-    await page.goto('/ja/calendar/week?date=2026-04-20');
+    await page.goto('/ja/week?date=2026-04-20');
     await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/\/ja\/calendar\/week/);
+    await expect(page).toHaveURL(/\/ja\/week/);
 
     // Stats へ遷移 (SidebarPageNav)
     const statsLink = page.getByRole('link', { name: /統計|Stats/i }).first();
@@ -48,7 +48,7 @@ test.describe('Sidebar Persistence: Dynamic href preserves viewType', () => {
     await calendarLink.click();
 
     // week viewType が保持 (day にリセットされない)
-    await expect(page).toHaveURL(/\/ja\/calendar\/week/);
+    await expect(page).toHaveURL(/\/ja\/week/);
   });
 
   test('calendar week view survives round trip via ai', async ({ page }, testInfo) => {
@@ -59,9 +59,9 @@ test.describe('Sidebar Persistence: Dynamic href preserves viewType', () => {
     // 保持され、動的 href (buildCalendarPath) が week を維持する。
     await loginAndNavigate(page);
 
-    await page.goto('/ja/calendar/week?date=2026-04-20');
+    await page.goto('/ja/week?date=2026-04-20');
     await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/\/ja\/calendar\/week/);
+    await expect(page).toHaveURL(/\/ja\/week/);
 
     // AI へ遷移 (Phase 2-C Step C-5 で PageNav に AI タブ追加)
     const aiLink = page.getByRole('link', { name: /^AI$/i }).first();
@@ -73,6 +73,6 @@ test.describe('Sidebar Persistence: Dynamic href preserves viewType', () => {
     await calendarLink.click();
 
     // week viewType が保持 (Sidebar dispatch の副作用で state がリセットされていない)
-    await expect(page).toHaveURL(/\/ja\/calendar\/week/);
+    await expect(page).toHaveURL(/\/ja\/week/);
   });
 });

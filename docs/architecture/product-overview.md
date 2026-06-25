@@ -122,8 +122,8 @@ end
 
 | 画面               | ルート                 | 主な機能                                             |
 | ------------------ | ---------------------- | ---------------------------------------------------- |
-| Calendar (Day)     | `/calendar`            | 1日の時間ブロック配置、ドラッグ&ドロップ             |
-| Calendar (Week)    | `/calendar/week`       | 週間俯瞰、複数日比較                                 |
+| Calendar (Day)     | `/day`                 | 1日の時間ブロック配置、ドラッグ&ドロップ             |
+| Calendar (Week)    | `/week`                | 週間俯瞰、複数日比較                                 |
 | Stats - Insights   | `/stats/insights`      | エネルギーマップ、見積精度、コンテキストスイッチ分析 |
 | Stats - Progress   | `/stats/progress`      | 目標達成率、タグ別時間推移                           |
 | Stats - Tag Detail | `/stats/tags/[tagId]`  | 特定タグの詳細分析                                   |
