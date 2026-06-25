@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 
 import { ArrowLeft } from 'lucide-react';
@@ -15,6 +15,8 @@ import { Link, useRouter } from '@/lib/i18n/navigation';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button } from '@dayopt/components';
 
+import { buildSettingsReturnQuery, normalizeSettingsReturnPath } from '../_utils/settings-return';
+
 /**
  * 設定カテゴリページ
  *
@@ -27,10 +29,15 @@ export default function SettingsCategoryPage() {
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const openSettings = useShellStore((s) => s.openSettings);
 
   const category = params?.category ?? 'general';
   const isValid = isValidCategory(category);
+  const rawReturnTo = searchParams.get('returnTo');
+  const settingsIndexHref = rawReturnTo
+    ? `/settings${buildSettingsReturnQuery(normalizeSettingsReturnPath(rawReturnTo))}`
+    : '/settings';
 
   // PC: ホームにリダイレクトし、設定モーダルを開く
   useEffect(() => {
@@ -57,7 +64,7 @@ export default function SettingsCategoryPage() {
       <AppHeader
         leftSlot={
           <Button variant="ghost" size="sm" icon asChild className="-ml-2">
-            <Link href="/settings" aria-label={t('common.back')}>
+            <Link href={settingsIndexHref} aria-label={t('common.back')}>
               <ArrowLeft className="size-5" />
             </Link>
           </Button>

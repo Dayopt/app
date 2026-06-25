@@ -122,7 +122,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
       <CalendarCompareToggle
         checked={isDiffPanelActive}
         onCheckedChange={handleCompareToggle}
-        className="-mr-2 md:hidden"
+        className="md:hidden"
       />
     </>
   );
@@ -141,7 +141,17 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
       onClose={() => setPanelKind(null)}
     />
   );
+  const mobileReviewPanel = (
+    <CalendarReviewPanel
+      currentDate={currentDate}
+      selectedTagId={reviewTagId}
+      onSelectedTagIdChange={setReviewTagId}
+      onClose={() => setPanelKind(null)}
+      variant="sheet"
+    />
+  );
   const panelRail = isReviewPanelActive ? reviewPanel : null;
+  const mobilePanelRail = isReviewPanelActive ? mobileReviewPanel : null;
   const panelRailOpen = isReviewPanelActive;
   const panelRailTitle = t('calendar.views.stats');
   const panelRailDescription = t('calendar.stats.review.description');
@@ -202,7 +212,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           rightSlot={headerActions}
           onCompareRailOpenChange={(open) => setPanelKind(open ? 'diff' : null)}
           panelRail={panelRail}
-          mobilePanelRail={panelRail}
+          mobilePanelRail={mobilePanelRail}
           panelRailOpen={panelRailOpen}
           onPanelRailOpenChange={(open) => {
             if (open) return;

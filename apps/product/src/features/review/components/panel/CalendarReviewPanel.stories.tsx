@@ -78,6 +78,21 @@ export const TagSelected: Story = {
   },
 };
 
+/** モバイル bottom sheet 内で表示される状態。 */
+export const MobileSheet: Story = {
+  parameters: {
+    viewport: { defaultViewport: 'mobile1' },
+  },
+  args: {
+    currentDate: new Date(2026, 3, 1),
+    selectedTagId: null,
+    onSelectedTagIdChange: noop,
+    onClose: noop,
+    variant: 'sheet',
+    className: 'w-full',
+  },
+};
+
 /** データ取得中。 */
 export const Loading: Story = {
   args: {
@@ -127,6 +142,14 @@ export const AllPatterns: Story = {
         onSelectedTagIdChange={noop}
         onClose={noop}
         className="border-border-subtle h-[560px] w-80 border"
+      />
+      <CalendarReviewPanel
+        currentDate={new Date(2026, 3, 1)}
+        selectedTagId={null}
+        onSelectedTagIdChange={noop}
+        onClose={noop}
+        variant="sheet"
+        className="w-80"
       />
     </div>
   ),

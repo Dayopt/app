@@ -40,7 +40,6 @@ function normalizePanelForView(
   panelKind: CalendarPanelKind | null,
 ): CalendarPanelKind | null {
   if (panelKind === 'diff') return viewType === 'day' ? 'diff' : null;
-  if (panelKind === 'review') return viewType === 'week' ? 'review' : null;
   return panelKind;
 }
 
@@ -202,11 +201,18 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
       startTransition(() => {
         setViewType('day');
         const nextPanelKind = normalizePanelForView('day', panelKindRef.current);
+        const nextReviewTagId = nextPanelKind === 'review' ? reviewTagIdRef.current : null;
         setPanelKindState(nextPanelKind);
-        setReviewTagIdState(null);
+        setReviewTagIdState(nextReviewTagId);
       });
       // URLもday viewに更新
-      writeCalendarUrl('day', currentDateRef.current, panelKindRef.current, null, 'replace');
+      writeCalendarUrl(
+        'day',
+        currentDateRef.current,
+        panelKindRef.current,
+        reviewTagIdRef.current,
+        'replace',
+      );
     }
   }, [isCalendarPage, isMobile, viewType, writeCalendarUrl]);
 
@@ -316,7 +322,9 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
         nextPanelKind === 'diff'
           ? 'day'
           : nextPanelKind === 'review'
-            ? 'week'
+            ? isMobileRef.current
+              ? 'day'
+              : 'week'
             : viewTypeRef.current;
       const normalizedPanel = normalizePanelForView(nextView, nextPanelKind);
       const nextReviewTagId =

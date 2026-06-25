@@ -47,6 +47,5 @@ function normalizeCalendarPanel(
   panelKind: CalendarPanelKind | null,
 ): CalendarPanelKind | null {
   if (panelKind === 'diff') return viewType === 'day' ? 'diff' : null;
-  if (panelKind === 'review') return viewType === 'week' ? 'review' : null;
   return panelKind;
 }

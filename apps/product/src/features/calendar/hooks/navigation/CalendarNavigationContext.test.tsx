@@ -114,7 +114,7 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('panel')).toHaveTextContent('diff');
   });
 
-  it('drops review panel params when the URL is not a week view', () => {
+  it('restores review panel params on day view URLs', () => {
     window.history.replaceState(
       null,
       '',
@@ -128,8 +128,8 @@ describe('CalendarNavigationProvider', () => {
       </CalendarNavigationProvider>,
     );
 
-    expect(screen.getByTestId('panel')).toHaveTextContent('none');
-    expect(screen.getByTestId('review-tag')).toHaveTextContent('none');
+    expect(screen.getByTestId('panel')).toHaveTextContent('review');
+    expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
   });
 
   it('syncs panel state when returning to an already-active day view URL', () => {
@@ -230,6 +230,26 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
     expect(window.location.pathname + window.location.search).toBe(
       '/ja/calendar/week?date=2026-03-25&panel=review&reviewTagId=tag-1',
+    );
+  });
+
+  it('opens review panel as a day view bottom sheet on mobile', () => {
+    mockUseMediaQuery.mockReturnValue(true);
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25');
+    mockPathname = '/ja/calendar/day';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'review-on' }));
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
+    expect(screen.getByTestId('panel')).toHaveTextContent('review');
+    expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
+    expect(window.location.pathname + window.location.search).toBe(
+      '/ja/calendar/day?date=2026-03-25&panel=review&reviewTagId=tag-1',
     );
   });
 

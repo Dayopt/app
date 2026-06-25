@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import { useTranslations } from 'next-intl';
 
@@ -11,6 +11,18 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@dayopt/components';
 
 import { getLocaleFromPathname } from './navigation-paths';
+
+const LOCALE_PREFIX_PATTERN = /^\/(en|ja)(?=\/|$)/;
+
+function buildSettingsReturnPath(
+  pathname: string | null,
+  searchParams: { toString: () => string },
+): string {
+  const pathWithoutLocale = (pathname ?? '').replace(LOCALE_PREFIX_PATTERN, '') || '/calendar/day';
+  const query = searchParams.toString();
+
+  return query ? `${pathWithoutLocale}?${query}` : pathWithoutLocale;
+}
 
 interface MobileAccountButtonProps {
   href: string;
@@ -50,13 +62,15 @@ export function MobileAccountButton({
 export function ConnectedMobileAccountButton({ className }: { className?: string | undefined }) {
   const t = useTranslations();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const locale = getLocaleFromPathname(pathname);
   const displayName = getDisplayName(user, 'User');
+  const returnPath = buildSettingsReturnPath(pathname, searchParams);
 
   return (
     <MobileAccountButton
-      href={`/${locale}/settings`}
+      href={`/${locale}/settings?returnTo=${encodeURIComponent(returnPath)}`}
       displayName={displayName}
       avatarUrl={getAvatarUrl(user)}
       ariaLabel={t('navigation.navUser.account')}

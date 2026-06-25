@@ -35,6 +35,7 @@ interface CalendarReviewPanelProps {
   selectedTagId: string | null;
   onSelectedTagIdChange: (tagId: string | null) => void;
   onClose: () => void;
+  variant?: 'rail' | 'sheet' | undefined;
   className?: string | undefined;
 }
 
@@ -43,6 +44,7 @@ export function CalendarReviewPanel({
   selectedTagId,
   onSelectedTagIdChange,
   onClose,
+  variant = 'rail',
   className,
 }: CalendarReviewPanelProps) {
   const t = useTranslations('calendar.stats');
@@ -77,10 +79,11 @@ export function CalendarReviewPanel({
   const selectedTagName = selectedRow?.tagName ?? selectedTag?.name ?? t('tag');
   const selectedTagIcon = selectedRow?.tagIcon ?? selectedTag?.icon ?? null;
   const selectedTagColor = selectedRow?.tagColor ?? selectedTag?.color ?? null;
+  const isSheet = variant === 'sheet';
 
   return (
     <section
-      className={cn('flex min-h-0 w-full flex-col', className)}
+      className={cn('flex w-full flex-col', !isSheet && 'min-h-0', className)}
       aria-label={tAll('calendar.views.stats')}
     >
       <header className="shrink-0">
@@ -123,8 +126,13 @@ export function CalendarReviewPanel({
         </div>
       </header>
 
-      <div className="scrollbar-stable min-h-0 flex-1 overflow-y-auto">
-        <div className="flex flex-col gap-4 p-4">
+      <div
+        className={cn(
+          'scrollbar-stable overflow-y-auto',
+          isSheet ? 'max-h-[min(72dvh,560px)]' : 'min-h-0 flex-1',
+        )}
+      >
+        <div className={cn('flex flex-col gap-4 p-4', isSheet && 'pt-2')}>
           {hasError ? (
             <ErrorState title={t('review.errorTitle')} description={t('review.errorDescription')} />
           ) : isLoading ? (

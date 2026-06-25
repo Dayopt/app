@@ -60,6 +60,16 @@ describe('navigation-paths', () => {
     expect(
       buildCalendarPath({
         locale: 'ja',
+        viewType: 'day',
+        currentDate: new Date(2026, 2, 25),
+        panelKind: 'review',
+        reviewTagId: 'tag-1',
+      }),
+    ).toBe('/ja/calendar/day?date=2026-03-25&panel=review&reviewTagId=tag-1');
+
+    expect(
+      buildCalendarPath({
+        locale: 'ja',
         viewType: 'week',
         currentDate: new Date(2026, 2, 25),
         panelKind: 'review',

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 let mockHasMounted = false;
 let mockIsMobile = false;
 let mockCategory = 'profile';
+let mockSearchParams = new URLSearchParams();
 
 const mockReplace = vi.fn();
 const mockPush = vi.fn();
@@ -12,6 +13,7 @@ const mockLogout = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ category: mockCategory }),
+  useSearchParams: () => mockSearchParams,
 }));
 
 vi.mock('next-intl', () => ({
@@ -118,6 +120,7 @@ describe('settings route hydration guards', () => {
     mockHasMounted = false;
     mockIsMobile = false;
     mockCategory = 'profile';
+    mockSearchParams = new URLSearchParams();
   });
 
   it('does not redirect desktop settings before mount state is ready', () => {
@@ -139,11 +142,22 @@ describe('settings route hydration guards', () => {
   it('renders mobile settings content without redirect', () => {
     mockHasMounted = true;
     mockIsMobile = true;
+    mockSearchParams = new URLSearchParams(
+      'returnTo=%2Fcalendar%2Fweek%3Fdate%3D2026-06-22%26panel%3Dreview',
+    );
 
     render(<SettingsPage />);
 
     expect(mockOpenSettings).not.toHaveBeenCalled();
     expect(screen.getByText('Tester')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'common.back' })).toHaveAttribute(
+      'href',
+      '/calendar/week?date=2026-06-22&panel=review',
+    );
+    expect(screen.getByRole('link', { name: /settings\.category\.profile/ })).toHaveAttribute(
+      'href',
+      '/settings/profile?returnTo=%2Fcalendar%2Fweek%3Fdate%3D2026-06-22%26panel%3Dreview',
+    );
   });
 
   it('does not redirect desktop category page before mount state is ready', () => {
@@ -161,5 +175,19 @@ describe('settings route hydration guards', () => {
 
     expect(mockOpenSettings).toHaveBeenCalledWith('billing');
     expect(mockReplace).toHaveBeenCalledWith('/');
+  });
+
+  it('preserves the mobile settings return path from category pages', () => {
+    mockHasMounted = true;
+    mockIsMobile = true;
+    mockCategory = 'billing';
+    mockSearchParams = new URLSearchParams('returnTo=%2Fja%2Fcalendar%2Fday%3Fdate%3D2026-06-22');
+
+    render(<SettingsCategoryPage />);
+
+    expect(screen.getByRole('link', { name: 'common.back' })).toHaveAttribute(
+      'href',
+      '/settings?returnTo=%2Fcalendar%2Fday%3Fdate%3D2026-06-22',
+    );
   });
 });

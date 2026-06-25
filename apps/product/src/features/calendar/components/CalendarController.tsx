@@ -332,7 +332,7 @@ export function CalendarController({
         rightSlot={rightSlot}
         sideRail={activeRail}
         mobileSideRail={activeMobileRail}
-        mobileSideRailPresentation={panelRailActive ? 'rail' : 'sheet'}
+        mobileSideRailPresentation="sheet"
         sideRailOpen={activeRailOpen}
         onSideRailOpenChange={handleSideRailOpenChange}
         sideRailTitle={activeRailTitle}
