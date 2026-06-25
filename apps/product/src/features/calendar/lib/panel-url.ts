@@ -9,5 +9,5 @@ export function buildCalendarReviewPanelPath(
   params.set('date', formatCalendarDateParam(date));
   params.set('panel', 'review');
   if (reviewTagId) params.set('reviewTagId', reviewTagId);
-  return `/${locale}/calendar/week?${params.toString()}`;
+  return `/${locale}/week?${params.toString()}`;
 }
