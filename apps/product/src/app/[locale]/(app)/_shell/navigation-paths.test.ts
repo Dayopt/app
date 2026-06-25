@@ -17,7 +17,7 @@ vi.mock('@/features/calendar', () => ({
   },
 }));
 
-import { buildCalendarPath, getLocaleFromPathname } from './navigation-paths';
+import { buildCalendarPath, getLocaleFromPathname, getModeFromPath } from './navigation-paths';
 
 describe('navigation-paths', () => {
   it('builds a calendar path with date query', () => {
@@ -52,7 +52,7 @@ describe('navigation-paths', () => {
         currentDate: new Date(2026, 2, 25),
         panelKind: 'diff',
       }),
-    ).toBe('/ja/day?date=2026-03-25&compare=1');
+    ).toBe('/ja/day?date=2026-03-25&panel=diff');
 
     expect(
       buildCalendarPath({
@@ -73,7 +73,7 @@ describe('navigation-paths', () => {
         panelKind: 'review',
         reviewTagId: 'tag-1',
       }),
-    ).toBe('/ja/calendar/day?date=2026-03-25&panel=review&reviewTagId=tag-1');
+    ).toBe('/ja/day?date=2026-03-25&panel=review&reviewTagId=tag-1');
 
     expect(
       buildCalendarPath({
@@ -82,7 +82,7 @@ describe('navigation-paths', () => {
         currentDate: new Date(2026, 2, 25),
         panelKind: 'review',
       }),
-    ).toBe('/ja/calendar/week?date=2026-03-25&panel=review');
+    ).toBe('/ja/week?date=2026-03-25&panel=review');
 
     expect(
       buildCalendarPath({
@@ -92,7 +92,7 @@ describe('navigation-paths', () => {
         panelKind: 'review',
         reviewTagId: 'tag-1',
       }),
-    ).toBe('/ja/calendar/week?date=2026-03-25&panel=review&reviewTagId=tag-1');
+    ).toBe('/ja/week?date=2026-03-25&panel=review&reviewTagId=tag-1');
   });
 
   it('drops review tag id outside the review panel', () => {
@@ -104,7 +104,7 @@ describe('navigation-paths', () => {
         panelKind: 'analytics',
         reviewTagId: 'tag-1',
       }),
-    ).toBe('/ja/calendar/day?date=2026-03-25&panel=analytics');
+    ).toBe('/ja/day?date=2026-03-25&panel=analytics');
   });
 
   it('extracts locale from pathname with fallback', () => {

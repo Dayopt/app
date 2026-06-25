@@ -7,8 +7,7 @@ import { useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
-import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@dayopt/components';
+import { Avatar, AvatarFallback, AvatarImage, cn } from '@dayopt/components';
 
 import { getLocaleFromPathname } from './navigation-paths';
 
@@ -18,7 +17,7 @@ function buildSettingsReturnPath(
   pathname: string | null,
   searchParams: { toString: () => string },
 ): string {
-  const pathWithoutLocale = (pathname ?? '').replace(LOCALE_PREFIX_PATTERN, '') || '/calendar/day';
+  const pathWithoutLocale = (pathname ?? '').replace(LOCALE_PREFIX_PATTERN, '') || '/day';
   const query = searchParams.toString();
 
   return query ? `${pathWithoutLocale}?${query}` : pathWithoutLocale;

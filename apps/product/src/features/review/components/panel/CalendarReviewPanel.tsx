@@ -7,9 +7,9 @@ import { useEffect, useMemo } from 'react';
 import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { TagIcon, useTags } from '@/features/tags';
-import { cn } from '@/lib/utils';
 import {
   Button,
+  cn,
   Select,
   SelectContent,
   SelectItem,

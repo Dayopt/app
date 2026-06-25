@@ -1,4 +1,4 @@
-import type { CalendarViewType } from '@/features/calendar';
+import type { CalendarPanelKind, CalendarViewType } from '@/features/calendar';
 import { formatCalendarDateParam, isCalendarViewPath } from '@/features/calendar';
 
 type AppMode = 'calendar' | 'review' | 'other';

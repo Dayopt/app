@@ -142,9 +142,7 @@ describe('settings route hydration guards', () => {
   it('renders mobile settings content without redirect', () => {
     mockHasMounted = true;
     mockIsMobile = true;
-    mockSearchParams = new URLSearchParams(
-      'returnTo=%2Fcalendar%2Fweek%3Fdate%3D2026-06-22%26panel%3Dreview',
-    );
+    mockSearchParams = new URLSearchParams('returnTo=%2Fweek%3Fdate%3D2026-06-22%26panel%3Dreview');
 
     render(<SettingsPage />);
 
@@ -152,11 +150,11 @@ describe('settings route hydration guards', () => {
     expect(screen.getByText('Tester')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'common.back' })).toHaveAttribute(
       'href',
-      '/calendar/week?date=2026-06-22&panel=review',
+      '/week?date=2026-06-22&panel=review',
     );
     expect(screen.getByRole('link', { name: /settings\.category\.profile/ })).toHaveAttribute(
       'href',
-      '/settings/profile?returnTo=%2Fcalendar%2Fweek%3Fdate%3D2026-06-22%26panel%3Dreview',
+      '/settings/profile?returnTo=%2Fweek%3Fdate%3D2026-06-22%26panel%3Dreview',
     );
   });
 
@@ -181,13 +179,13 @@ describe('settings route hydration guards', () => {
     mockHasMounted = true;
     mockIsMobile = true;
     mockCategory = 'billing';
-    mockSearchParams = new URLSearchParams('returnTo=%2Fja%2Fcalendar%2Fday%3Fdate%3D2026-06-22');
+    mockSearchParams = new URLSearchParams('returnTo=%2Fja%2Fday%3Fdate%3D2026-06-22');
 
     render(<SettingsCategoryPage />);
 
     expect(screen.getByRole('link', { name: 'common.back' })).toHaveAttribute(
       'href',
-      '/settings?returnTo=%2Fcalendar%2Fday%3Fdate%3D2026-06-22',
+      '/settings?returnTo=%2Fday%3Fdate%3D2026-06-22',
     );
   });
 });

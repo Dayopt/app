@@ -23,7 +23,7 @@ import {
 import { CalendarReviewPanel } from '@/features/review';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button, HoverTooltip } from '@dayopt/components';
-import { ConnectedMobileAccountButton } from '../../../_shell/MobileAccountButton';
+import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
 import { useCalendarComposition } from './useCalendarComposition';
 
 interface CalendarViewClientProps {
