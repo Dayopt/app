@@ -8,12 +8,10 @@
 // =============================================================================
 // Components
 // =============================================================================
-export { ReviewTagChipRow } from './components/mobile/ReviewTagChipRow';
 export { CalendarReviewPanel } from './components/panel/CalendarReviewPanel';
 export { ReviewLayout } from './components/ReviewLayout';
 export { ReviewView } from './components/ReviewView';
 export { EntryMicroInsight } from './components/shared/EntryMicroInsight';
-export { ReviewTagList } from './components/sidebar/ReviewTagList';
 
 // =============================================================================
 // Stores

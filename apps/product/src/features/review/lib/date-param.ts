@@ -21,33 +21,6 @@ export function parseReviewDateParam(value: string | null | undefined): Date {
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
-/** タグ詳細ページへのパスを現在の粒度・日付付きで組み立てる */
-export function buildReviewTagPath(
-  locale: string,
-  tagId: string,
-  date: Date,
-  granularity: ReviewGranularity,
-): string {
-  const params = new URLSearchParams({
-    g: granularity,
-    d: formatReviewDateParam(date),
-  });
-  return `/${locale}/review/tags/${tagId}?${params.toString()}`;
-}
-
-/** Review メインページへのパスを粒度・日付付きで組み立てる */
-export function buildReviewMainPath(
-  locale: string,
-  date: Date,
-  granularity: ReviewGranularity,
-): string {
-  const params = new URLSearchParams({
-    g: granularity,
-    d: formatReviewDateParam(date),
-  });
-  return `/${locale}/review?${params.toString()}`;
-}
-
 /**
  * 現在の粒度・日付を ?g=&d= として URL に書き込む（client 専用）
  *

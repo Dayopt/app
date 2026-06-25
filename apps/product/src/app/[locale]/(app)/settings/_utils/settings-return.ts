@@ -1,6 +1,5 @@
 const LOCALE_PREFIX_PATTERN = /^\/(en|ja)(?=\/|$)/;
-
-export const SETTINGS_RETURN_FALLBACK_PATH = '/day';
+const SETTINGS_RETURN_FALLBACK_PATH = '/day';
 
 export function normalizeSettingsReturnPath(returnTo: string | null | undefined): string {
   if (!returnTo || !returnTo.startsWith('/') || returnTo.startsWith('//')) {
