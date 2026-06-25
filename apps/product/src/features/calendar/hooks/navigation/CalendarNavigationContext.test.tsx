@@ -101,8 +101,8 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('view')).toHaveTextContent('week');
   });
 
-  it('resolves compare mode from day URL searchParams', () => {
-    window.history.replaceState(null, '', '/ja/day?date=2026-03-25&compare=1');
+  it('resolves diff panel from day URL searchParams', () => {
+    window.history.replaceState(null, '', '/ja/day?date=2026-03-25&panel=diff');
     mockPathname = '/ja/day';
 
     render(
@@ -114,7 +114,7 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('panel')).toHaveTextContent('diff');
   });
 
-  it('syncs compare mode when returning to an already-active day view URL', () => {
+  it('syncs diff panel when returning to an already-active day view URL', () => {
     window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
     mockPathname = '/ja/day';
 
@@ -134,7 +134,7 @@ describe('CalendarNavigationProvider', () => {
       </CalendarNavigationProvider>,
     );
 
-    window.history.replaceState(null, '', '/ja/day?date=2026-03-25&compare=1');
+    window.history.replaceState(null, '', '/ja/day?date=2026-03-25&panel=diff');
     mockPathname = '/ja/day';
     rerender(
       <CalendarNavigationProvider>
@@ -146,7 +146,7 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('panel')).toHaveTextContent('diff');
   });
 
-  it('writes compare=1 when day compare is enabled', () => {
+  it('writes panel=diff when day diff is enabled', () => {
     window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
     mockPathname = '/ja/day';
 
@@ -159,12 +159,12 @@ describe('CalendarNavigationProvider', () => {
     fireEvent.click(screen.getByRole('button', { name: 'diff-on' }));
     expect(screen.getByTestId('panel')).toHaveTextContent('diff');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/day?date=2026-03-25&compare=1',
+      '/ja/day?date=2026-03-25&panel=diff',
     );
   });
 
-  it('preserves compare mode when date navigation updates the URL', () => {
-    window.history.replaceState(null, '', '/ja/day?date=2026-03-25&compare=1');
+  it('preserves diff panel when date navigation updates the URL', () => {
+    window.history.replaceState(null, '', '/ja/day?date=2026-03-25&panel=diff');
     mockPathname = '/ja/day';
 
     render(
@@ -175,12 +175,12 @@ describe('CalendarNavigationProvider', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'move-url' }));
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/day?date=2026-03-30&compare=1',
+      '/ja/day?date=2026-03-30&panel=diff',
     );
   });
 
-  it('clears compare mode when changing to a non-day view', () => {
-    window.history.replaceState(null, '', '/ja/day?date=2026-03-25&compare=1');
+  it('clears diff panel when changing to a non-day view', () => {
+    window.history.replaceState(null, '', '/ja/day?date=2026-03-25&panel=diff');
     mockPathname = '/ja/day';
 
     render(
@@ -190,13 +190,13 @@ describe('CalendarNavigationProvider', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'week' }));
-    expect(screen.getByTestId('compare')).toHaveTextContent('off');
+    expect(screen.getByTestId('panel')).toHaveTextContent('none');
     expect(window.location.pathname + window.location.search).toBe('/ja/week?date=2026-03-25');
   });
 
   it('opens review panel on week view with reviewTagId', () => {
-    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25');
-    mockPathname = '/ja/calendar/day';
+    window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
+    mockPathname = '/ja/day';
 
     render(
       <CalendarNavigationProvider>
@@ -209,14 +209,14 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('panel')).toHaveTextContent('review');
     expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/calendar/week?date=2026-03-25&panel=review&reviewTagId=tag-1',
+      '/ja/week?date=2026-03-25&panel=review&reviewTagId=tag-1',
     );
   });
 
   it('opens review panel as a day view bottom sheet on mobile', () => {
     mockUseMediaQuery.mockReturnValue(true);
-    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25');
-    mockPathname = '/ja/calendar/day';
+    window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
+    mockPathname = '/ja/day';
 
     render(
       <CalendarNavigationProvider>
@@ -229,7 +229,7 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('panel')).toHaveTextContent('review');
     expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/calendar/day?date=2026-03-25&panel=review&reviewTagId=tag-1',
+      '/ja/day?date=2026-03-25&panel=review&reviewTagId=tag-1',
     );
   });
 
