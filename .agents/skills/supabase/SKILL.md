@@ -145,6 +145,12 @@ CREATE TABLE IF NOT EXISTS public.new_table (
 -- RLSを有効化
 ALTER TABLE public.new_table ENABLE ROW LEVEL SECURITY;
 
+-- Data API への明示 GRANT（RLS とセットで必須）
+-- Supabase は新規 public テーブルを Data API に自動公開しなくなる方向のため、
+-- authenticated role での PostgREST アクセス権を明示的に付与する。
+-- anon は原則付与しない（公開読み取りが必要なテーブルのみ SELECT を個別付与）。
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.new_table TO authenticated;
+
 -- RLSポリシー
 CREATE POLICY "Users can view own data"
   ON public.new_table FOR SELECT
@@ -176,6 +182,8 @@ CREATE INDEX idx_new_table_user_id ON public.new_table(user_id);
 
 - [ ] RLS を有効化したか
 - [ ] 適切な RLS ポリシーを設定したか
+- [ ] `authenticated` への `GRANT` を明示したか（RLS + policy + GRANT をセットで。Data API 自動公開に依存しない）
+- [ ] `anon` に過剰な権限を付与していないか（公開読み取りが必要なテーブルのみ `SELECT` を個別付与）
 - [ ] `user_id` カラムがあるか(ユーザーデータの場合)
 - [ ] `ON DELETE CASCADE` を設定したか
 - [ ] インデックスを追加したか
@@ -209,6 +217,8 @@ INSERT INTO public.tags (id, name, color, user_id) VALUES
 1. 全テーブルで RLS を有効化
 2. auth.uid() = user_id でフィルタ
 3. tRPC側でも ctx.userId でフィルタ(二重チェック)
+4. authenticated への GRANT を明示（RLS は GRANT 済みテーブルへのアクセスを絞るもの。
+   GRANT が無いと RLS 以前に permission denied になる）
 ```
 
 ### パターン別ポリシー
