@@ -50,6 +50,10 @@ const config: StorybookConfig = {
     name: '@storybook/nextjs-vite',
     options: {},
   },
+  // async Server Component（apps/web の marketing セクション等）を Suspense でラップして描画
+  features: {
+    experimentalRSC: true,
+  },
   staticDirs: ['../../product/public'],
   typescript: {
     reactDocgen: 'react-docgen-typescript',
@@ -92,11 +96,19 @@ const config: StorybookConfig = {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...config.resolve.alias,
+      // web の Link re-export（PricingSection が使用）。product を指す '@' より先に置いて優先させる
+      '@/platform/i18n/navigation': path.resolve(
+        __dirname,
+        '../../web/src/platform/i18n/navigation',
+      ),
       '@': path.resolve(__dirname, '../../product/src'),
       '@dayopt/storybook': path.resolve(__dirname),
       // next-intl（React未定義エラー回避）— next/image, next/link, next/navigation は @storybook/nextjs-vite が自動解決
       'next-intl/navigation': path.resolve(__dirname, './mocks/next-intl-navigation.tsx'),
       'next-intl/routing': path.resolve(__dirname, './mocks/next-intl-routing.ts'),
+      // next-intl/server（getTranslations / setRequestLocale）— apps/web の async Server Component セクションを
+      // Storybook で描画するため。request scope を持たない Storybook では web messages から同期解決する
+      'next-intl/server': path.resolve(__dirname, './mocks/next-intl-server.tsx'),
       // Sentry（@sentry/nextjs が Next.js 内部の process 依存のため Storybook ではモック化）
       '@sentry/nextjs': path.resolve(__dirname, './mocks/sentry-nextjs.ts'),
       // Storybook 10: @storybook/blocks は @storybook/addon-docs/blocks に統合
