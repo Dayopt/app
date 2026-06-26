@@ -6,7 +6,7 @@ import { CurrentTimeLine, CurrentTimeLineForColumn } from './CurrentTimeLine';
  * 現在時刻インジケーター線。dot(6px) + bar(2px) 構造、bg-now-indicator 色。日ビュー用（全幅）とカラム用（列内）の2バリアント。startHour/endHour で範囲外非表示。
  */
 const meta = {
-  title: 'Product/Features/Calendar/Views/Grid/CurrentTimeLine',
+  title: 'Product/Features/Calendar/Grid/CurrentTimeLine',
   component: CurrentTimeLine,
   tags: ['autodocs'],
   parameters: {

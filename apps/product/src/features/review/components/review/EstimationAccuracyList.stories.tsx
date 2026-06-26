@@ -34,7 +34,7 @@ const ESTIMATION_ROWS = [
 
 /** EstimationAccuracyList — タグ別の見積もり精度リスト（週次ビューのセクション） */
 const meta = {
-  title: 'Product/Features/Stats/Review/EstimationAccuracyList',
+  title: 'Product/Features/Review/Reflection/EstimationAccuracyList',
   component: EstimationAccuracyList,
   parameters: {
     layout: 'padded',

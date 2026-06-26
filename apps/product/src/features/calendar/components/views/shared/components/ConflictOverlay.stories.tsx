@@ -7,7 +7,7 @@ import { ConflictOverlay } from './ConflictOverlay';
  * タグ下書きの 5 面で共有する「この時間帯には既に予定があります」表示。
  */
 const meta = {
-  title: 'Product/Features/Calendar/ConflictOverlay',
+  title: 'Product/Features/Calendar/Interaction/ConflictOverlay',
   // color-contrast: text-destructive on bg-destructive-tint（設計上可読）
   parameters: { layout: 'padded', a11y: { test: 'todo' } },
   tags: ['autodocs'],

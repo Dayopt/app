@@ -4,7 +4,7 @@ import { DragSelectionPreview } from './CalendarDragSelection/DragSelectionPrevi
 
 /** ドラッグ選択プレビュー。グリッド上の時間範囲選択UI。 */
 const meta = {
-  title: 'Product/Features/Calendar/DragSelectionPreview',
+  title: 'Product/Features/Calendar/Interaction/DragSelectionPreview',
   parameters: {
     layout: 'padded',
   },

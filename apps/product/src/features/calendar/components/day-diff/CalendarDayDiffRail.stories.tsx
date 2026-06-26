@@ -109,7 +109,7 @@ const tags = [
 ];
 
 const meta = {
-  title: 'Product/Features/Calendar/DayDiff/CalendarDayDiffRail',
+  title: 'Product/Features/Review/Diff/CalendarDayDiffRail',
   component: CalendarDayDiffRail,
   tags: ['autodocs'],
   parameters: {

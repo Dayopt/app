@@ -4,7 +4,7 @@ import { NextActionLink } from './NextActionLink';
 
 /** NextActionLink — Review から次の計画（Calendar）への還流導線（Tier 2 CTA） */
 const meta = {
-  title: 'Product/Features/Stats/Shared/NextActionLink',
+  title: 'Product/Features/Review/Shared/NextActionLink',
   component: NextActionLink,
   parameters: {
     layout: 'padded',

@@ -41,7 +41,7 @@ const MOCK_TIME_PL_RESPONSE = {
 };
 
 const meta = {
-  title: 'Product/Features/Review/CalendarReviewPanel',
+  title: 'Product/Features/Review/Reflection/CalendarReviewPanel',
   component: CalendarReviewPanel,
   parameters: {
     layout: 'padded',
