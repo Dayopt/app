@@ -86,11 +86,11 @@ CI（`.github/workflows/ci.yml`）は既に job レベルで並列化済み。
 | steps 並列化（新 `parallel`） | install 1 回を共有し、その後のチェックのみ並列。step 単位で log group / 失敗箇所が残る | GA 直後（2026-06-25）で hosted runner 実績が浅い。4-core runner で同時実行数を増やすと CPU/mem 競合 | 高（install 共有 + 独立並列） |
 | 1 step 内 shell `&` / `wait`  | 新機能不要・確実                                                                       | log が interleave し失敗箇所の特定が劣化（issue が懸念する点）                                      | 中                            |
 
-`lint` job は「1 install を共有した後の独立チェック群」であり、steps 並列化が最も適合する。
+`lint` job は「1 install を共有した後の独立チェック群」であり、install を共有したまま checks のみ並列化する方式（native steps 並列化 / shell `&`）が最も適合する。
 
-### 判断: 採用（lint job を `parallel` で並列化）
+### 判断: 採用（lint job を shell lane で並列化）
 
-本ブランチで `lint` job の 8 チェックを `parallel` 化（install は 1 回のまま）。issue の「小さく 1 workflow で試す」に沿い lint 1 job で検証する。同時実行の CPU/mem 競合が見えたら 2-3 バケットに束ねて調整する。実測は本 PR の Actions run を参照。cross-ref: [ADR-006 CI品質ゲート段階的導入ロードマップ](../../architecture/adr/006-ci-quality-gates-roadmap.md)（proposed）。
+当初 native `parallel`（2026-06-25 GA）を試したが、hosted runner が未対応で workflow parse error（job が 1 つも起動せず 0s で fail）となった。そこで確実に動く **1 step 内の shell `&` / `wait` 方式**へ切替え、`lint` job の 8 チェックを 3 lane に並列化（install は 1 回のまま、重い ESLint / knip を個別 lane に分離）。lane ごとに log を退避し `::group::` で表示して失敗箇所を明確にする（interleave 懸念への対処）。issue の「小さく 1 workflow で試す」に沿い lint 1 job で検証する。実測は本 PR の Actions run を参照。cross-ref: [ADR-006 CI品質ゲート段階的導入ロードマップ](../../architecture/adr/006-ci-quality-gates-roadmap.md)（proposed）。
 
 不採用とした隣接策（follow-up 候補）。
 
@@ -99,5 +99,5 @@ CI（`.github/workflows/ci.yml`）は既に job レベルで並列化済み。
 
 ### 再評価トリガ
 
-- `parallel` が hosted runner で不安定 / 未対応なら、job 分割フォールバックへ切替（本 PR の Actions 結果で判断）。
-- lint 短縮効果が小さければ、install キャッシュ導入を別 issue 化。
+- native `parallel` 構文が hosted runner で利用可能になったら shell lane から移行する（step 単位の log group が標準で得られ、interleave 対処が不要になる）。
+- lint 短縮効果が小さければ、install キャッシュ導入を別 issue 化する。
