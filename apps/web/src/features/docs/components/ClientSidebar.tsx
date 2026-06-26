@@ -1,6 +1,7 @@
 'use client';
 
 import { type NavigationItem, type NavigationSection } from '@/shell/navigation';
+import { Input } from '@dayopt/components';
 import {
   BarChart3,
   Bell,
@@ -21,6 +22,7 @@ import {
   Shield,
   User,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -166,9 +168,16 @@ interface ClientSidebarProps {
 
 export function ClientSidebar({ navigation }: ClientSidebarProps) {
   const pathname = usePathname();
+  const t = useTranslations('common');
 
   return (
     <div className="flex h-full flex-col">
+      {/* Search（旧 docs ヘッダーから移設） */}
+      <div className="relative mb-6">
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+        <Input type="search" placeholder={t('actions.search')} size="sm" className="pl-8" />
+      </div>
+
       {/* Navigation */}
       <nav className="flex-1 space-y-6">
         {navigation.map((section) => (

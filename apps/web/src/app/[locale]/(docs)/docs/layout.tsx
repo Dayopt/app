@@ -1,5 +1,6 @@
-import { ClientSidebar, DocsHeader } from '@/features/docs';
+import { ClientSidebar } from '@/features/docs';
 import { Footer } from '@/shell/layout/Footer';
+import { Header } from '@/shell/layout/Header';
 import { generateDocsNavigation } from '@/shell/navigation';
 
 export default async function DocsLayout({
@@ -14,8 +15,10 @@ export default async function DocsLayout({
 
   return (
     <div className="bg-background fixed inset-0 flex flex-col overflow-hidden">
-      {/* Docs専用ヘッダー（固定） */}
-      <DocsHeader />
+      {/* 共通ヘッダー（marketing と統一） */}
+      <div className="flex-shrink-0">
+        <Header />
+      </div>
 
       {/* 3カラムレイアウト: Sidebar(240px) | Main(flex-1) | TOC(240px, xl以上) */}
       <div className="max-w-8xl mx-auto flex min-h-0 w-full flex-1 overflow-hidden">
