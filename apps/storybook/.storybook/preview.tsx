@@ -67,9 +67,24 @@ const preview: Preview = {
           // Product = apps/product
           'Product',
           ['Components', 'Features', 'Patterns', 'Emails'],
-          // Web = apps/web（現状は構造のみ予約）
+          // Web = apps/web
           'Web',
-          ['Components', 'Sections', 'Pages'],
+          [
+            'Components',
+            // Shell（chrome）→ 以降は責務ベース（Shared/Components ADR-012 と揃える）
+            [
+              'Shell',
+              'Actions',
+              'Inputs',
+              'Navigation',
+              'Feedback',
+              'Overlays',
+              'Display',
+              'Layout',
+            ],
+            'Sections',
+            'Pages',
+          ],
         ],
       },
     },
