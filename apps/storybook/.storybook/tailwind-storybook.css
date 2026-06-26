@@ -1,0 +1,12 @@
+/**
+ * Storybook 用 Tailwind エントリ。
+ *
+ * product の globals.css（@import 'tailwindcss' + token / @source 群）を取り込みつつ、
+ * apps/web の source も走査対象に加える。これが無いと、web のみが使う responsive utility
+ * （md:/lg:/xl: の flex・grid・hidden 等で product に未使用のもの）が Storybook で生成されず、
+ * Footer / Header のレイアウトが mobile 崩れする。
+ */
+@import '../../product/src/lib/styles/globals.css';
+
+/* apps/web の component が使う utility class を生成対象に含める */
+@source '../../web/src';

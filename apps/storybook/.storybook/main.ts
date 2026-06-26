@@ -96,10 +96,19 @@ const config: StorybookConfig = {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...config.resolve.alias,
-      // web の Link re-export（PricingSection が使用）。product を指す '@' より先に置いて優先させる
-      '@/platform/i18n/navigation': path.resolve(
+      // '@' は product/src 固定だが、apps/web の component も '@/' を使う。product と衝突しない
+      // web 固有パス（product に同一ファイルが無いもの）だけを web/src へ向ける。'@'(product) より
+      // 先に並べて優先させる（Vite alias は配列順で最初の一致を採用）。
+      // ※ importer 起点の汎用 resolver plugin は Storybook の Vite 環境で resolveId が効かず断念。
+      '@/platform': path.resolve(__dirname, '../../web/src/platform'),
+      '@/lib/utils': path.resolve(__dirname, '../../web/src/lib/utils'),
+      '@/components/ui/actions/theme-toggle': path.resolve(
         __dirname,
-        '../../web/src/platform/i18n/navigation',
+        '../../web/src/components/ui/actions/theme-toggle',
+      ),
+      '@/components/ui/actions/language-switcher': path.resolve(
+        __dirname,
+        '../../web/src/components/ui/actions/language-switcher',
       ),
       '@': path.resolve(__dirname, '../../product/src'),
       '@dayopt/storybook': path.resolve(__dirname),

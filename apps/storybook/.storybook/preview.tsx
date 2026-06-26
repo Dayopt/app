@@ -1,8 +1,9 @@
 import type { Preview } from '@storybook/nextjs-vite';
 import { MINIMAL_VIEWPORTS } from 'storybook/viewport';
 
-import '../../product/src/lib/styles/globals.css';
+// product globals + apps/web の @source を含む Storybook 用 Tailwind エントリ
 import { providerDecorator, storeMockDecorator } from './decorators';
+import './tailwind-storybook.css';
 import { dayoptDarkTheme, dayoptLightTheme } from './theme/dayopt';
 import { DocsTemplate, ThemedDocsContainer } from './theme/docs';
 import './theme/overrides.css';
