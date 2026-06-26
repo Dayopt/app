@@ -5,12 +5,13 @@ import { useMemo } from 'react';
 
 import { PanelLeft } from 'lucide-react';
 
+import { AnimatedWidthPanel } from '@/components/shell/AnimatedWidthPanel';
 import { AppHeader } from '@/components/shell/AppHeader';
 import { Sidebar } from '@/components/shell/sidebar';
 import { useAuthStore } from '@/features/auth';
 import { isCalendarViewPath } from '@/features/calendar';
 import { getAvatarUrl, getDisplayName } from '@/lib/user';
-import { cn, InlineBanner } from '@dayopt/components';
+import { InlineBanner } from '@dayopt/components';
 
 import { useShellStore } from '@/lib/stores/useShellStore';
 
@@ -66,18 +67,16 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1">
         {/* Sidebar（固定幅256px、開閉可能） */}
-        <div
-          className={cn(
-            'h-full shrink-0 overflow-hidden transition-all duration-200',
-            sidebar.open ? 'w-64' : 'w-0',
-          )}
+        <AnimatedWidthPanel
+          open={sidebar.open}
+          width={sidebar.width}
+          className="h-full"
+          innerClassName="h-full"
         >
-          <div className="h-full w-64">
-            <Sidebar user={sidebarUser}>
-              <SidebarContent />
-            </Sidebar>
-          </div>
-        </div>
+          <Sidebar user={sidebarUser}>
+            <SidebarContent />
+          </Sidebar>
+        </AnimatedWidthPanel>
 
         {/* PageHeader + Main Content + Inspector */}
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
