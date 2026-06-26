@@ -1,7 +1,7 @@
 /**
- * Stats Feature - Public API
+ * Review Feature - Public API
  *
- * 統計・分析機能のエントリポイント。
+ * 振り返り機能のエントリポイント。
  * 内部モジュールへの直接参照（deep import）は避け、ここからのみ import すること。
  */
 

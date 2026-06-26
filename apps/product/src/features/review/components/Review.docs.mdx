@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Product/Features/Stats/Guide/Overview" />
+<Meta title="Product/Features/Review/Guide/Overview" />
 
 # Review
 
@@ -10,29 +10,36 @@ Calendar の contextual panel として表示する振り返り UI。週次サ�
 
 ## 概要
 
-`@/features/review` は集計 domain / hooks / panel UI を持つ。表示先は Calendar shell の panel slot で、正規 URL は `/calendar/week?date=YYYY-MM-DD&panel=review`。
+`@/features/review` は集計 domain / hooks / panel UI を持つ。表示先は Calendar shell の panel slot で、現行 URL は `/week?date=YYYY-MM-DD&panel=review`。
 
 Review tag detail は `reviewTagId` search param で表し、Calendar の tag filter state とは分ける。
 
 ---
 
+## Storybook 構成
+
+- **Reflection** — 週次 Review。`CalendarReviewPanel`、Time P/L、タグ別差分、選択タグ詳細を含む
+- **Diff** — 日次差分。予定外、未実施、移動、長さ変更を右パネルで扱う
+- **Shared** — Review 内で使う補助 UI
+
 ## 表示要素
 
-上から順に:
+Reflection は上から順に:
 
 - **CalendarReviewPanel** — Calendar panel slot 用の compact Review
 - **Time P/L summary** — 予定 / 実績 / 差分 / 精度の要約
 - **Tag variance list** — タグ別の予実差分
 - **Selected tag detail** — `reviewTagId` で選択されたタグの compact detail
 
+Diff は日次の予定と実績の差分を表示する。runtime ではまだ `CalendarDayDiffRail` が Calendar 内部型に依存しているため、物理移動は後続の adapter 抽出で扱う。
+
 ---
 
 ## URL 状態
 
-- Review: `/calendar/week?date=YYYY-MM-DD&panel=review`
-- Review tag detail: `/calendar/week?date=YYYY-MM-DD&panel=review&reviewTagId=...`
-- Day diff: `/calendar/day?date=YYYY-MM-DD&panel=diff`
-- Analytics: `/calendar/{view}?date=YYYY-MM-DD&panel=analytics`
+- Review: `/week?date=YYYY-MM-DD&panel=review`
+- Review tag detail: `/week?date=YYYY-MM-DD&panel=review&reviewTagId=...`
+- Day diff: `/day?date=YYYY-MM-DD&panel=diff`
 
 ---
 
@@ -46,11 +53,17 @@ CalendarViewClient
             ├── weekly metrics
             ├── tag variance rows
             └── selected tag detail
+
+CalendarController
+└── sideRail
+    └── CalendarDayDiffRail
+        ├── daily diff summary
+        └── diff rows
 ```
 
 ---
 
 ## 技術詳細
 
-- [Layer Architecture](?path=/docs/features-stats-docs-layer-architecture--docs) — 技術設計
-- [Data Flow](?path=/docs/features-stats-docs-data-flow--docs) — データ取得パイプライン
+- [Layer Architecture](?path=/docs/product-features-review-guide-layer-architecture--docs) — 技術設計
+- [Data Flow](?path=/docs/product-features-review-guide-data-flow--docs) — データ取得パイプライン
