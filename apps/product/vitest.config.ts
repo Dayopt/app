@@ -86,7 +86,7 @@ export default defineConfig({
               },
             ],
           },
-          setupFiles: ['./src/lib/test/storybook-setup.ts'],
+          setupFiles: [path.join(dirname, 'src/lib/test/storybook-setup.ts')],
         },
       },
       // Storybook Dark mode テスト（beforeEach で .dark クラスを強制適用）
@@ -113,7 +113,7 @@ export default defineConfig({
               },
             ],
           },
-          setupFiles: ['./src/lib/test/storybook-setup-dark.ts'],
+          setupFiles: [path.join(dirname, 'src/lib/test/storybook-setup-dark.ts')],
         },
       },
     ],
