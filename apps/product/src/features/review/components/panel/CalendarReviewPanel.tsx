@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, CalendarClock, Clock3, Gauge, X, type LucideIcon } from 'lucide-react';
+import { BarChart3, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo } from 'react';
 
@@ -22,6 +22,7 @@ import { deriveAccuracy, deriveBarComparison, deriveStatement } from '../../doma
 import { useReviewPageData } from '../../hooks/useReviewPageData';
 import { useTimePLData } from '../../hooks/useTimePLData';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
+import { WeeklyReflectionPanel } from '../reflection/WeeklyReflectionPanel';
 import {
   formatMinutesDuration,
   formatVariance,
@@ -172,77 +173,16 @@ export function CalendarReviewPanel({
               )}
             </div>
           ) : (
-            <>
-              <div className="grid grid-cols-2 gap-2">
-                <PanelMetric
-                  icon={Clock3}
-                  label={t('overview.trackedTime')}
-                  value={formatMinutesDuration(trackedMinutes)}
-                />
-                <PanelMetric
-                  icon={Gauge}
-                  label={t('overview.planAccuracy')}
-                  value={accuracy ? `${Math.round(accuracy.rate * 100)}%` : t('metrics.noData')}
-                />
-                <PanelMetric
-                  icon={CalendarClock}
-                  label={t('overview.planned')}
-                  value={formatMinutesDuration(statement?.budgetTotal ?? 0)}
-                />
-                <PanelMetric
-                  icon={BarChart3}
-                  label={t('overview.diff')}
-                  value={formatVariance(statement?.netVarianceMinutes ?? 0)}
-                  valueClassName={getVarianceColor(
-                    statement && statement.budgetTotal > 0
-                      ? (statement.netVarianceMinutes / statement.budgetTotal) * 100
-                      : 0,
-                  )}
-                />
-              </div>
-
-              <div className="border-border-subtle rounded-lg border">
-                <div className="border-border-subtle flex items-center justify-between border-b px-3 py-2">
-                  <h3 className="text-sm font-medium">{t('overview.planActual')}</h3>
-                </div>
-                <div className="flex flex-col gap-1 p-2">
-                  {barRows.length === 0 ? (
-                    <p className="text-muted-foreground px-2 py-6 text-center text-sm">
-                      {t('metrics.noData')}
-                    </p>
-                  ) : (
-                    barRows.slice(0, 8).map((row) => (
-                      <button
-                        key={row.tagId}
-                        type="button"
-                        className={cn(
-                          'hover:bg-state-hover flex min-h-11 items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors duration-150',
-                          selectedTagId === row.tagId && 'bg-state-selected',
-                        )}
-                        onClick={() => onSelectedTagIdChange(row.tagId)}
-                      >
-                        <TagIcon icon={row.tagIcon ?? null} color={row.tagColor} size="sm" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">{row.tagName}</span>
-                          <span className="text-muted-foreground mt-1 block font-mono text-xs tabular-nums">
-                            {formatMinutesDuration(row.budgetMinutes)} /{' '}
-                            {formatMinutesDuration(row.actualMinutes)}
-                          </span>
-                        </span>
-                        <span
-                          className={cn(
-                            'shrink-0 font-mono text-xs font-medium tabular-nums',
-                            getVarianceColor(row.variancePercent),
-                          )}
-                        >
-                          {formatVariance(row.varianceMinutes)}
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            </>
+            <WeeklyReflectionPanel
+              trackedMinutes={trackedMinutes}
+              planAccuracyRate={accuracy?.rate ?? null}
+              plannedMinutes={statement?.budgetTotal ?? 0}
+              diffMinutes={statement?.netVarianceMinutes ?? 0}
+              timePLRows={barRows}
+              estimationRows={pageData?.estimationAccuracy}
+              blankSummary={pageData?.blankRate ?? null}
+              onTagClick={onSelectedTagIdChange}
+            />
           )}
         </div>
       </div>
@@ -260,30 +200,6 @@ function ReviewPanelSkeleton() {
       </div>
       <Skeleton className="h-72 rounded-lg" />
       <Skeleton className="h-32 rounded-lg" />
-    </div>
-  );
-}
-
-function PanelMetric({
-  icon: Icon,
-  label,
-  value,
-  valueClassName,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  valueClassName?: string | undefined;
-}) {
-  return (
-    <div className="border-border-subtle rounded-lg border p-3">
-      <div className="text-muted-foreground flex items-center gap-1 text-xs">
-        <Icon className="size-3.5" aria-hidden="true" />
-        <span className="truncate">{label}</span>
-      </div>
-      <div className={cn('mt-2 font-mono text-lg font-medium tabular-nums', valueClassName)}>
-        {value}
-      </div>
     </div>
   );
 }

@@ -62,10 +62,18 @@ Panel v1 の構成:
 
 ### Reflection
 
+週次 Review は #1376 の「所見 + 見積バイアス + スキップ + 空白 = 1画面」を受け皿にする。
+
 1. Review header: 週次対象期間、close action、必要なら tag selector
-2. Overall summary: 記録時間、計画達成率、トップタグ
-3. Time P/L compact: planned / actual / diff とタグ別差分
-4. Tag detail compact: `reviewTagId` がある場合に選択タグの要約を表示
+2. 所見: 週内で最も訂正に効く signal を 1-2 文で表示
+3. KPI row: 記録時間、計画達成率、確認済み率（#1333 未接続の間は現行 diff KPI）
+4. Time P/L compact: planned / actual / diff とタグ別差分
+5. 見積バイアス: タグ別の平均 planned / actual / deviation
+6. スキップ: #1289 の `skipped_at` を週次集約して表示（後続接続）
+7. 空白: `getBlankRate` を「計画が壊れた場所」として表示
+8. Tag detail compact: `reviewTagId` がある場合に選択タグの要約を表示
+
+曜日リズム / 時間帯リズムは週次 Review の主役から外す。必要になった場合は analytics ではなく別の pattern surface として再検討する。
 
 ### Diff
 

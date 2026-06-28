@@ -23,7 +23,7 @@ Review の補助 insight はルールベースで client-side 評価:
 ```
 TanStack Query (getStatsPageData / getTimePL)
   → review domain / presentation derivers
-    → compact panel UI
+    → WeeklyReflectionPanel
 ```
 
 ---
@@ -36,6 +36,8 @@ TanStack Query (getStatsPageData / getTimePL)
 | ------------------ | ------------------- | ------------------------------------------ |
 | `getStatsPageData` | `useReviewPageData` | 週次 Review panel の overview / trend data |
 | `getTimePL`        | `useTimePLData`     | Time P/L 用の planned / actual / diff data |
+
+Reflection は `getStatsPageData.estimationAccuracy` と `getStatsPageData.blankRate` を直接使う。確認済み率（#1333）と skip 週次集約（#1289 `skipped_at`）は次の data 接続で `WeeklyReflectionPanel` の props へ入れる。
 
 日次差分は Calendar の表示中 entries から `computeCalendarDayDiffs` で導出する。Calendar は `entryId` action に戻す adapter を持ち、表示は Review / Diff の `ReviewDiffPanel` が所有する。
 
@@ -63,4 +65,4 @@ Calendar URL の `panel=review` と `reviewTagId` で表現する。期間は Ca
 
 ---
 
-**最終更新**: 2026-03-16
+**最終更新**: 2026-06-29

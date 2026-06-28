@@ -11,7 +11,7 @@ Review panel の技術的な分層設計。Reflection と Diff を同じ Review 
 ## 2 segment model
 
 ```
-Reflection  週次 Review。getStatsPageData / getTimePL から予実とタグ差分を表示
+Reflection  週次 Review。所見、KPI、Time P/L、見積バイアス、スキップ、空白を1画面で表示
 Diff        日次差分。Calendar entries から予定外・未実施・移動・長さ変更を表示
 ```
 
@@ -19,11 +19,11 @@ Diff        日次差分。Calendar entries から予定外・未実施・移動
 
 data source と panel segment は**直交する**概念。
 
-|                       | Reflection                       | Diff                      |
-| --------------------- | -------------------------------- | ------------------------- |
-| **RPC**               | `getStatsPageData` / `getTimePL` | なし                      |
-| **Client derivation** | Time P/L derivers                | `computeCalendarDayDiffs` |
-| **UI**                | `CalendarReviewPanel`            | `ReviewDiffPanel`         |
+|                       | Reflection                                      | Diff                      |
+| --------------------- | ----------------------------------------------- | ------------------------- |
+| **RPC**               | `getStatsPageData` / `getTimePL`                | なし                      |
+| **Client derivation** | Time P/L derivers                               | `computeCalendarDayDiffs` |
+| **UI**                | `CalendarReviewPanel` / `WeeklyReflectionPanel` | `ReviewDiffPanel`         |
 
 runtime では Reflection と Diff がまだ別 `panel` state だが、表示 component は Review が両 segment を所有する。
 
@@ -33,8 +33,12 @@ runtime では Reflection と Diff がまだ別 `panel` state だが、表示 co
 
 週次 Review の compact panel。LLM は使わず、既存 RPC と純粋 deriver で表示する。
 
-- **KPI**: 記録時間、計画達成率、予定、差分
+- **所見**: 見積バイアス、スキップ、空白から最上位 signal を 1-2 文で出す
+- **KPI**: 記録時間、計画達成率、確認済み率（#1333 接続前は差分 KPI）
 - **Time P/L**: `deriveStatement` / `deriveAccuracy` / `deriveBarComparison`
+- **見積バイアス**: `getStatsPageData.estimationAccuracy`
+- **スキップ**: #1289 の `skipped_at` を週次集約して後続接続
+- **空白**: `getStatsPageData.blankRate`
 - **計算場所**: `features/entry` の summary RPC + `features/review/domain`
 - **AI 依存**: なし
 - **対象**: 全ユーザー（Free 含む）
@@ -78,4 +82,4 @@ Feature 間の直接 import は公開 API 経由に限定する。Diff 表示は
 
 ---
 
-**最終更新**: 2026-03-16
+**最終更新**: 2026-06-29

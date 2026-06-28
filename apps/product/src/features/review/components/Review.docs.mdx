@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Review
 
-Calendar の contextual panel として表示する振り返り UI。週次サマリー、Time P/L、タグ別差分、選択タグ詳細で「実際に何が起きたか」を提示する。
+Calendar の contextual panel として表示する振り返り UI。週次 Reflection と日次 Diff を同じ Review 所有の panel segment として扱う。
 
 ---
 
@@ -18,7 +18,7 @@ Review tag detail は `reviewTagId` search param で表し、Calendar の tag fi
 
 ## Storybook 構成
 
-- **Reflection** — 週次 Review。`CalendarReviewPanel`、Time P/L、タグ別差分、選択タグ詳細を含む
+- **Reflection** — 週次 Review。`WeeklyReflectionPanel` を中心に、所見、KPI、Time P/L、見積バイアス、スキップ、空白、選択タグ詳細を含む
 - **Diff** — 日次差分。予定外、未実施、移動、長さ変更を右パネルで扱う
 - **Shared** — Review 内で使う補助 UI
 
@@ -26,9 +26,9 @@ Review tag detail は `reviewTagId` search param で表し、Calendar の tag fi
 
 Reflection は上から順に:
 
-- **CalendarReviewPanel** — Calendar panel slot 用の compact Review
+- **CalendarReviewPanel** — Calendar panel slot 用の data shell
+- **WeeklyReflectionPanel** — 所見、KPI、Time P/L、見積バイアス、スキップ、空白の 1 画面 Reflection
 - **Time P/L summary** — 予定 / 実績 / 差分 / 精度の要約
-- **Tag variance list** — タグ別の予実差分
 - **Selected tag detail** — `reviewTagId` で選択されたタグの compact detail
 
 Diff は日次の予定と実績の差分を表示する。`ReviewDiffPanel` は Calendar 内部型を受け取らず、Calendar 側で導出した diff payload と `entryId` action だけを受ける。
@@ -50,8 +50,9 @@ CalendarViewClient
 └── CalendarController
     └── panelRail
         └── CalendarReviewPanel
+            ├── WeeklyReflectionPanel
             ├── weekly metrics
-            ├── tag variance rows
+            ├── estimation bias rows
             └── selected tag detail
 
 CalendarController
