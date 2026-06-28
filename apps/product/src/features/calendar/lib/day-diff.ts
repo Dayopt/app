@@ -109,6 +109,17 @@ export function resolveCalendarDayDiffBounds(date: Date, timezone: string): Cale
   };
 }
 
+export function resolveCalendarRangeDiffBounds(
+  startDate: Date,
+  endDate: Date,
+  timezone: string,
+): CalendarDayDiffBounds {
+  return {
+    dayStart: resolveCalendarDayDiffBounds(startDate, timezone).dayStart,
+    dayEnd: resolveCalendarDayDiffBounds(endDate, timezone).dayEnd,
+  };
+}
+
 function clipRange(
   range: { start: Date | null; end: Date | null },
   bounds: CalendarDayDiffOptions,

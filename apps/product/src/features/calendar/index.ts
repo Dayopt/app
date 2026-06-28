@@ -65,6 +65,7 @@ export { useEntryOperations } from './hooks/operations/useEntryOperations';
 // Domain（Calendar 固有の仕様ルール）
 // =============================================================================
 export { calculateViewDateRange } from './domain/view-range';
+export { isCalendarDiffView } from './types/calendar.types';
 
 // =============================================================================
 // Lib / Utils

@@ -22,9 +22,15 @@ import {
   computeCalendarDayDiffs,
   filterCalendarDayDiffEntries,
   resolveCalendarDayDiffBounds,
+  resolveCalendarRangeDiffBounds,
 } from '../lib/day-diff';
 import { useCalendarFilterStore } from '../stores/useCalendarFilterStore';
-import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
+import {
+  isCalendarDiffView,
+  type CalendarEvent,
+  type CalendarViewType,
+  type ViewDateRange,
+} from '../types/calendar.types';
 
 import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
@@ -187,34 +193,42 @@ export function CalendarController({
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
-  const dayDiffBounds = useMemo(
-    () => resolveCalendarDayDiffBounds(currentDate, timezone),
-    [currentDate, timezone],
-  );
-  const dayDiffEntries = useMemo(() => {
-    void visibleTagIds;
-    return viewType === 'day' && showActualDiff
-      ? filterCalendarDayDiffEntries(allEntries, dayDiffBounds, isEntryVisible)
-      : [];
-  }, [allEntries, dayDiffBounds, isEntryVisible, showActualDiff, viewType, visibleTagIds]);
-  const dayDiff = useMemo(
+  const calendarDiffEnabled = showActualDiff && isCalendarDiffView(viewType);
+  const calendarDiffBounds = useMemo(
     () =>
-      viewType === 'day' && showActualDiff
-        ? computeCalendarDayDiffs(dayDiffEntries, dayDiffBounds)
+      viewType === 'day' || viewDateRange.days.length === 0
+        ? resolveCalendarDayDiffBounds(currentDate, timezone)
+        : resolveCalendarRangeDiffBounds(
+            viewDateRange.days[0] ?? viewDateRange.start,
+            viewDateRange.days[viewDateRange.days.length - 1] ?? viewDateRange.end,
+            timezone,
+          ),
+    [currentDate, timezone, viewDateRange.days, viewDateRange.end, viewDateRange.start, viewType],
+  );
+  const calendarDiffEntries = useMemo(() => {
+    void visibleTagIds;
+    return calendarDiffEnabled
+      ? filterCalendarDayDiffEntries(allEntries, calendarDiffBounds, isEntryVisible)
+      : [];
+  }, [allEntries, calendarDiffBounds, calendarDiffEnabled, isEntryVisible, visibleTagIds]);
+  const calendarDiff = useMemo(
+    () =>
+      calendarDiffEnabled
+        ? computeCalendarDayDiffs(calendarDiffEntries, calendarDiffBounds)
         : computeCalendarDayDiffs([]),
-    [dayDiffBounds, dayDiffEntries, showActualDiff, viewType],
+    [calendarDiffBounds, calendarDiffEnabled, calendarDiffEntries],
   );
-  const dayDiffEntryIds = dayDiff.entryIds;
-  const dayDiffEntryById = useMemo(
-    () => new Map(dayDiffEntries.map((entry) => [entry.id, entry])),
-    [dayDiffEntries],
+  const dayDiffEntryIds = calendarDiff.entryIds;
+  const calendarDiffEntryById = useMemo(
+    () => new Map(calendarDiffEntries.map((entry) => [entry.id, entry])),
+    [calendarDiffEntries],
   );
-  const handleDayDiffItemClick = useCallback(
+  const handleCalendarDiffItemClick = useCallback(
     (entryId: string) => {
-      const entry = dayDiffEntryById.get(entryId);
+      const entry = calendarDiffEntryById.get(entryId);
       if (entry) onEntryClick(entry);
     },
-    [dayDiffEntryById, onEntryClick],
+    [calendarDiffEntryById, onEntryClick],
   );
   const handleCloseCompareRail = useCallback(() => {
     onCompareRailOpenChange?.(false);
@@ -292,20 +306,20 @@ export function CalendarController({
   );
 
   const compareRail =
-    viewType === 'day' && showActualDiff && renderCompareRail
+    calendarDiffEnabled && renderCompareRail
       ? renderCompareRail({
-          diff: dayDiff,
+          diff: calendarDiff,
           variant: 'rail',
-          onItemClick: handleDayDiffItemClick,
+          onItemClick: handleCalendarDiffItemClick,
           onClose: onCompareRailOpenChange ? handleCloseCompareRail : undefined,
         })
       : null;
   const mobileCompareRail =
-    viewType === 'day' && showActualDiff && renderCompareRail
+    calendarDiffEnabled && renderCompareRail
       ? renderCompareRail({
-          diff: dayDiff,
+          diff: calendarDiff,
           variant: 'sheet',
-          onItemClick: handleDayDiffItemClick,
+          onItemClick: handleCalendarDiffItemClick,
           onClose: onCompareRailOpenChange ? handleCloseCompareRail : undefined,
         })
       : null;

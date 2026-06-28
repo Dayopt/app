@@ -18,6 +18,7 @@ import { FeatureErrorBoundary } from '@/components/ui/feedback/error-boundary';
 import {
   CalendarCompareToggle,
   CalendarController,
+  isCalendarDiffView,
   useCalendarNavigation,
 } from '@/features/calendar';
 import { CalendarReviewPanel, ReviewDiffPanel } from '@/features/review';
@@ -188,7 +189,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           filteredEntries={composition.filteredEvents}
           allEntries={composition.allCalendarEvents}
           showWeekends={composition.showWeekends}
-          showActualDiff={viewType === 'day' && isDiffPanelActive}
+          showActualDiff={isDiffPanelActive && isCalendarDiffView(viewType)}
           disabledEntryId={composition.disabledEntryId}
           onEntryClick={composition.onEntryClick}
           onTimeRangeSelect={composition.onTimeRangeSelect}

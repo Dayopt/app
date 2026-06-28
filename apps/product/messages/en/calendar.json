@@ -24,10 +24,10 @@
       "tooltip": "Compare planned and actual time",
       "ariaLabel": "Toggle planned and actual comparison",
       "rail": {
-        "title": "Day diff",
-        "description": "Changes from the day's plan.",
+        "title": "Plan diff",
+        "description": "Changes from the visible plan.",
         "emptyTitle": "No changes",
-        "emptyDescription": "The day matches the plan.",
+        "emptyDescription": "The visible range matches the plan.",
         "summary": {
           "planned": "Planned",
           "actual": "Actual",

@@ -24,10 +24,10 @@
       "tooltip": "予定と実績を比較",
       "ariaLabel": "予定と実績の比較表示を切り替え",
       "rail": {
-        "title": "今日の差分",
-        "description": "その日の予定から変わった点。",
+        "title": "予定との差分",
+        "description": "表示範囲の予定から変わった点。",
         "emptyTitle": "差分なし",
-        "emptyDescription": "予定どおりの1日です。",
+        "emptyDescription": "表示範囲は予定どおりです。",
         "summary": {
           "planned": "予定",
           "actual": "実績",

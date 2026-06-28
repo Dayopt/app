@@ -12,7 +12,7 @@ Review panel の技術的な分層設計。Reflection と Diff を同じ Review 
 
 ```
 Reflection  週次 Review。所見、KPI、Time P/L、見積バイアス、スキップ、空白を1画面で表示
-Diff        日次差分。Calendar entries から予定外・未実施・移動・長さ変更を表示
+Diff        表示範囲差分。Calendar entries から予定外・未実施・移動・長さ変更を表示
 ```
 
 ### Data vs Panel Segment
@@ -49,13 +49,13 @@ runtime では Reflection と Diff がまだ別 `panel` state だが、表示 co
 
 ## Diff
 
-日次の予定と実績の差分を Calendar entries から導出する。
+day / multi-day の表示範囲における予定と実績の差分を Calendar entries から導出する。
 
 - **Summary**: planned / actual / diff / unplanned / missed
 - **List**: unplanned / missed / shifted / resized
 - **計算場所**: `features/calendar/lib/day-diff.ts`
 - **AI 依存**: なし
-- **対象**: day view
+- **対象**: day view / 2〜9day multi-day view
 
 詳細な catalog は現行 Storybook taxonomy では個別 story に集約する。
 
