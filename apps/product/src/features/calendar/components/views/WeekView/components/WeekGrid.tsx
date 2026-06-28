@@ -44,6 +44,8 @@ export const WeekGrid = ({
   onEventUpdate,
   onTimeRangeSelect,
   className,
+  showActualDiff = false,
+  dayDiffEntryIds,
 }: WeekGridProps) => {
   const timezone = useUserPreferences((s) => s.timezone);
   const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
@@ -152,6 +154,8 @@ export const WeekGrid = ({
                 onEventUpdate={handleEventUpdate}
                 onTimeRangeSelect={onTimeRangeSelect}
                 disabledEntryId={disabledEntryId}
+                showActualDiff={showActualDiff}
+                dayDiffEntryIds={dayDiffEntryIds}
                 className="h-full"
               />
             </div>

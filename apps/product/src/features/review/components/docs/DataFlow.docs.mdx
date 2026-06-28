@@ -39,7 +39,7 @@ TanStack Query (getStatsPageData / getTimePL)
 
 Reflection は `getStatsPageData.estimationAccuracy` と `getStatsPageData.blankRate` を直接使う。確認済み率（#1333）と skip 週次集約（#1289 `skipped_at`）は次の data 接続で `WeeklyReflectionPanel` の props へ入れる。
 
-Diff は Calendar の表示中 entries から `computeCalendarDayDiffs` で導出する。day view では 1 日、multi-day view では表示範囲全体を bounds にする。Calendar は `entryId` action に戻す adapter を持ち、表示は Review / Diff の `ReviewDiffPanel` が所有する。
+Diff は Calendar の表示中 entries から `computeCalendarDayDiffs` で導出する。day view では 1 日、week / multi-day view では表示範囲全体を bounds にする。Calendar は `entryId` action に戻す adapter を持ち、表示は Review / Diff の `ReviewDiffPanel` が所有する。
 
 ---
 

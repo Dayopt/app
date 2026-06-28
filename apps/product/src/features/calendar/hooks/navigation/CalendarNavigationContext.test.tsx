@@ -131,6 +131,20 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('panel')).toHaveTextContent('diff');
   });
 
+  it('resolves diff panel from week URL searchParams', () => {
+    window.history.replaceState(null, '', '/ja/week?date=2026-03-25&panel=diff');
+    mockPathname = '/ja/week';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('view')).toHaveTextContent('week');
+    expect(screen.getByTestId('panel')).toHaveTextContent('diff');
+  });
+
   it('syncs diff panel when returning to an already-active day view URL', () => {
     window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
     mockPathname = '/ja/day';
@@ -198,7 +212,7 @@ describe('CalendarNavigationProvider', () => {
     );
   });
 
-  it('falls back to day when diff is enabled from week view', () => {
+  it('keeps week view when diff is enabled there', () => {
     window.history.replaceState(null, '', '/ja/week?date=2026-03-25');
     mockPathname = '/ja/week';
 
@@ -209,10 +223,10 @@ describe('CalendarNavigationProvider', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'diff-on' }));
-    expect(screen.getByTestId('view')).toHaveTextContent('day');
+    expect(screen.getByTestId('view')).toHaveTextContent('week');
     expect(screen.getByTestId('panel')).toHaveTextContent('diff');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/day?date=2026-03-25&panel=diff',
+      '/ja/week?date=2026-03-25&panel=diff',
     );
   });
 
@@ -232,7 +246,7 @@ describe('CalendarNavigationProvider', () => {
     );
   });
 
-  it('clears diff panel when changing to a non-day view', () => {
+  it('preserves diff panel when changing to week view', () => {
     window.history.replaceState(null, '', '/ja/day?date=2026-03-25&panel=diff');
     mockPathname = '/ja/day';
 
@@ -243,8 +257,10 @@ describe('CalendarNavigationProvider', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'week' }));
-    expect(screen.getByTestId('panel')).toHaveTextContent('none');
-    expect(window.location.pathname + window.location.search).toBe('/ja/week?date=2026-03-25');
+    expect(screen.getByTestId('panel')).toHaveTextContent('diff');
+    expect(window.location.pathname + window.location.search).toBe(
+      '/ja/week?date=2026-03-25&panel=diff',
+    );
   });
 
   it('opens review panel on week view with reviewTagId', () => {

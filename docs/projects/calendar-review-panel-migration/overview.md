@@ -15,21 +15,21 @@ Dayopt の主体験は Calendar 上で予定を置き、記録し、予定と実
 
 Calendar の search params を正規状態とする。panel は単一 slot で、同時に開けるのは 1 種類だけ。
 
-| 用途         | 現行 URL                                                                     |
-| ------------ | ---------------------------------------------------------------------------- |
-| 週次 Review  | `/ja/week?date=YYYY-MM-DD&panel=review`                                      |
-| タグ Review  | `/ja/week?date=YYYY-MM-DD&panel=review&reviewTagId=TAG_ID`                   |
-| 表示範囲差分 | `/ja/day?date=YYYY-MM-DD&panel=diff` / `/ja/3day?date=YYYY-MM-DD&panel=diff` |
+| 用途         | 現行 URL                                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| 週次 Review  | `/ja/week?date=YYYY-MM-DD&panel=review`                                                                              |
+| タグ Review  | `/ja/week?date=YYYY-MM-DD&panel=review&reviewTagId=TAG_ID`                                                           |
+| 表示範囲差分 | `/ja/day?date=YYYY-MM-DD&panel=diff` / `/ja/week?date=YYYY-MM-DD&panel=diff` / `/ja/3day?date=YYYY-MM-DD&panel=diff` |
 
 実装ルール:
 
 - 現行 runtime には `CalendarPanelKind = 'review' | 'diff' | 'analytics' | null` があるが、v1 の主要導線は `review` / `diff` に限定する。
 - 既存の `compare=1` は廃止する。
 - `reviewTagId` は Calendar tag filter と混ぜない。Review panel 内の選択状態として扱う。
-- `panel=diff` は day view と 2〜9day multi-day view で有効。week では panel を閉じる。
+- `panel=diff` は day view / week view / 2〜9day multi-day view で有効。Calendar の表示範囲に合わせて差分を出す。
 - URL と state を同期し、戻る/進む/リロードで復元する。
 
-Storybook 上の所有境界は `Product/Features/Review` に寄せる。`Reflection` は週次 Review、`Diff` は day / multi-day の表示範囲差分を扱う。Calendar 側の Storybook は `Product/Features/Calendar/{Views,Grid,Header,Filter,Interaction,Feedback}` 配下へ責務ごとに分け、時間軸表示に必要な部品だけを持つ。
+Storybook 上の所有境界は `Product/Features/Review` に寄せる。`Reflection` は週次 Review、`Diff` は Calendar の表示範囲差分を扱う。Calendar 側の Storybook は `Product/Features/Calendar/{Views,Grid,Header,Filter,Interaction,Feedback}` 配下へ責務ごとに分け、時間軸表示に必要な部品だけを持つ。
 
 後続の本番統合では `panel=review&reviewMode=summary|diff` を候補にする。現行の `panel=diff` は runtime 互換のためこの step では維持する。
 

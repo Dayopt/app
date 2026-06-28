@@ -19,7 +19,7 @@ Review tag detail は `reviewTagId` search param で表し、Calendar の tag fi
 ## Storybook 構成
 
 - **Reflection** — 週次 Review。`WeeklyReflectionPanel` を中心に、所見、KPI、Time P/L、見積バイアス、スキップ、空白、選択タグ詳細を含む
-- **Diff** — day / multi-day の表示範囲差分。予定外、未実施、移動、長さ変更を右パネルで扱う
+- **Diff** — Calendar の表示範囲差分。予定外、未実施、移動、長さ変更を右パネルで扱う
 - **Shared** — Review 内で使う補助 UI
 
 ## 表示要素
@@ -39,7 +39,7 @@ Diff は表示範囲内の予定と実績の差分を表示する。`ReviewDiffP
 
 - Review: `/week?date=YYYY-MM-DD&panel=review`
 - Review tag detail: `/week?date=YYYY-MM-DD&panel=review&reviewTagId=...`
-- Diff: `/day?date=YYYY-MM-DD&panel=diff` / `/3day?date=YYYY-MM-DD&panel=diff`
+- Diff: `/day?date=YYYY-MM-DD&panel=diff` / `/week?date=YYYY-MM-DD&panel=diff` / `/3day?date=YYYY-MM-DD&panel=diff`
 
 ---
 

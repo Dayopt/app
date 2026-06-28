@@ -32,7 +32,7 @@ export function isMultiDayView(view: CalendarViewType): view is MultiDayViewType
 
 /** 予定/実績差分 panel を表示できるビューかどうかを判定 */
 export function isCalendarDiffView(view: CalendarViewType): boolean {
-  return view === 'day' || isMultiDayView(view);
+  return view === 'day' || view === 'week' || isMultiDayView(view);
 }
 
 /** MultiDayViewType から日数を取得 */
