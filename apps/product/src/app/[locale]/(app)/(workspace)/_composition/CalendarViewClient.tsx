@@ -20,7 +20,7 @@ import {
   CalendarController,
   useCalendarNavigation,
 } from '@/features/calendar';
-import { CalendarReviewPanel } from '@/features/review';
+import { CalendarReviewPanel, ReviewDiffPanel } from '@/features/review';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button, HoverTooltip } from '@dayopt/components';
 import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
@@ -212,6 +212,14 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           leftSlot={sidebarToggle}
           rightSlot={headerActions}
           onCompareRailOpenChange={(open) => setPanelKind(open ? 'diff' : null)}
+          renderCompareRail={({ diff, variant, onItemClick, onClose }) => (
+            <ReviewDiffPanel
+              diff={diff}
+              variant={variant}
+              onItemClick={onItemClick}
+              onClose={onClose}
+            />
+          )}
           panelRail={panelRail}
           mobilePanelRail={mobilePanelRail}
           panelRailOpen={panelRailOpen}

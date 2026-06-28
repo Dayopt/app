@@ -30,7 +30,6 @@ import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
 
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
-import { CalendarDayDiffRail } from './day-diff/CalendarDayDiffRail';
 import { CalendarLayout } from './layout/CalendarLayout';
 import { EventContextMenu, MobileTouchHint } from './views/shared/components';
 
@@ -109,6 +108,7 @@ interface CalendarControllerProps {
   leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
   onCompareRailOpenChange?: ((open: boolean) => void) | undefined;
+  renderCompareRail?: ((props: CalendarCompareRailRenderProps) => React.ReactNode) | undefined;
   panelRail?: React.ReactNode | undefined;
   mobilePanelRail?: React.ReactNode | undefined;
   panelRailOpen?: boolean | undefined;
@@ -117,6 +117,13 @@ interface CalendarControllerProps {
   panelRailDescription?: string | undefined;
   sideRailRecoverableWidth?: number | undefined;
   onSideRailRecoverableWidthRequest?: (() => void) | undefined;
+}
+
+interface CalendarCompareRailRenderProps {
+  diff: ReturnType<typeof computeCalendarDayDiffs>;
+  variant: 'rail' | 'sheet';
+  onItemClick: (entryId: string) => void;
+  onClose?: (() => void) | undefined;
 }
 
 // =============================================================================
@@ -155,6 +162,7 @@ export function CalendarController({
   leftSlot,
   rightSlot,
   onCompareRailOpenChange,
+  renderCompareRail,
   panelRail,
   mobilePanelRail,
   panelRailOpen = false,
@@ -197,6 +205,17 @@ export function CalendarController({
     [dayDiffBounds, dayDiffEntries, showActualDiff, viewType],
   );
   const dayDiffEntryIds = dayDiff.entryIds;
+  const dayDiffEntryById = useMemo(
+    () => new Map(dayDiffEntries.map((entry) => [entry.id, entry])),
+    [dayDiffEntries],
+  );
+  const handleDayDiffItemClick = useCallback(
+    (entryId: string) => {
+      const entry = dayDiffEntryById.get(entryId);
+      if (entry) onEntryClick(entry);
+    },
+    [dayDiffEntryById, onEntryClick],
+  );
   const handleCloseCompareRail = useCallback(() => {
     onCompareRailOpenChange?.(false);
   }, [onCompareRailOpenChange]);
@@ -273,25 +292,24 @@ export function CalendarController({
   );
 
   const compareRail =
-    viewType === 'day' && showActualDiff ? (
-      <CalendarDayDiffRail
-        diff={dayDiff}
-        entries={dayDiffEntries}
-        onEntryClick={onEntryClick}
-        onClose={onCompareRailOpenChange ? handleCloseCompareRail : undefined}
-      />
-    ) : null;
+    viewType === 'day' && showActualDiff && renderCompareRail
+      ? renderCompareRail({
+          diff: dayDiff,
+          variant: 'rail',
+          onItemClick: handleDayDiffItemClick,
+          onClose: onCompareRailOpenChange ? handleCloseCompareRail : undefined,
+        })
+      : null;
   const mobileCompareRail =
-    viewType === 'day' && showActualDiff ? (
-      <CalendarDayDiffRail
-        diff={dayDiff}
-        entries={dayDiffEntries}
-        onEntryClick={onEntryClick}
-        onClose={onCompareRailOpenChange ? handleCloseCompareRail : undefined}
-        variant="sheet"
-      />
-    ) : null;
-  const compareRailOpen = viewType === 'day' && showActualDiff;
+    viewType === 'day' && showActualDiff && renderCompareRail
+      ? renderCompareRail({
+          diff: dayDiff,
+          variant: 'sheet',
+          onItemClick: handleDayDiffItemClick,
+          onClose: onCompareRailOpenChange ? handleCloseCompareRail : undefined,
+        })
+      : null;
+  const compareRailOpen = Boolean(compareRail);
   const panelRailActive = Boolean(panelRailOpen && panelRail);
   const activeRail = panelRailActive ? panelRail : compareRail;
   const activeMobileRail = panelRailActive ? (mobilePanelRail ?? panelRail) : mobileCompareRail;

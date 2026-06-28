@@ -23,9 +23,9 @@ data source と panel segment は**直交する**概念。
 | --------------------- | -------------------------------- | ------------------------- |
 | **RPC**               | `getStatsPageData` / `getTimePL` | なし                      |
 | **Client derivation** | Time P/L derivers                | `computeCalendarDayDiffs` |
-| **UI**                | `CalendarReviewPanel`            | `CalendarDayDiffRail`     |
+| **UI**                | `CalendarReviewPanel`            | `ReviewDiffPanel`         |
 
-runtime では Reflection と Diff がまだ別 `panel` state だが、Storybook 上は Review が両 segment を所有する。
+runtime では Reflection と Diff がまだ別 `panel` state だが、表示 component は Review が両 segment を所有する。
 
 ---
 
@@ -61,7 +61,7 @@ runtime では Reflection と Diff がまだ別 `panel` state だが、Storybook
 
 - Analytics panel は v1 の主要構成に含めない。
 - LLM insight は扱わない。
-- `CalendarDayDiffRail` の物理移動は、Calendar 内部型への依存を外す adapter 抽出後に扱う。
+- Diff の diff 導出と Calendar entry action adapter は Calendar 側に残す。
 
 ---
 
@@ -74,7 +74,7 @@ settings feature  → AI 設定（communication style, values）を所有
 supabase/functions/ → Edge Function（プラットフォーム基盤）
 ```
 
-Feature 間の直接 import は公開 API 経由に限定する。`CalendarDayDiffRail` は現時点では Calendar 内部に残し、Storybook title だけ Review / Diff として扱う。
+Feature 間の直接 import は公開 API 経由に限定する。Diff 表示は `ReviewDiffPanel` が所有し、Calendar は render slot に diff payload と `entryId` action を渡す。
 
 ---
 

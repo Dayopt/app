@@ -8,6 +8,12 @@
 // =============================================================================
 // Components
 // =============================================================================
+export { ReviewDiffPanel } from './components/diff/ReviewDiffPanel';
+export type {
+  ReviewDiffItem,
+  ReviewDiffKind,
+  ReviewDiffResult,
+} from './components/diff/ReviewDiffPanel';
 export { CalendarReviewPanel } from './components/panel/CalendarReviewPanel';
 export { EntryMicroInsight } from './components/shared/EntryMicroInsight';
 

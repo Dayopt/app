@@ -31,7 +31,7 @@ Reflection は上から順に:
 - **Tag variance list** — タグ別の予実差分
 - **Selected tag detail** — `reviewTagId` で選択されたタグの compact detail
 
-Diff は日次の予定と実績の差分を表示する。runtime ではまだ `CalendarDayDiffRail` が Calendar 内部型に依存しているため、物理移動は後続の adapter 抽出で扱う。
+Diff は日次の予定と実績の差分を表示する。`ReviewDiffPanel` は Calendar 内部型を受け取らず、Calendar 側で導出した diff payload と `entryId` action だけを受ける。
 
 ---
 
@@ -56,7 +56,7 @@ CalendarViewClient
 
 CalendarController
 └── sideRail
-    └── CalendarDayDiffRail
+    └── ReviewDiffPanel
         ├── daily diff summary
         └── diff rows
 ```

@@ -37,7 +37,7 @@ TanStack Query (getStatsPageData / getTimePL)
 | `getStatsPageData` | `useReviewPageData` | 週次 Review panel の overview / trend data |
 | `getTimePL`        | `useTimePLData`     | Time P/L 用の planned / actual / diff data |
 
-日次差分は Calendar の表示中 entries から `computeCalendarDayDiffs` で導出する。runtime ではまだ Calendar 側の rail component だが、Storybook 上は Review / Diff segment が所有する。
+日次差分は Calendar の表示中 entries から `computeCalendarDayDiffs` で導出する。Calendar は `entryId` action に戻す adapter を持ち、表示は Review / Diff の `ReviewDiffPanel` が所有する。
 
 ---
 
