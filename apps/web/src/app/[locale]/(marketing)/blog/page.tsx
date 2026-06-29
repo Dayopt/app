@@ -1,4 +1,4 @@
-import { FilteredBlogClient, getAllBlogPostMetas, getAllTagNames } from '@/features/blog';
+import { FilteredBlogClient, getAllBlogPostMetas } from '@/features/blog';
 import { routing } from '@/platform/i18n/routing';
 import { generateSEOMetadata } from '@/platform/seo/metadata';
 import { Container } from '@dayopt/components';
@@ -37,17 +37,14 @@ export default async function BlogPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [allPosts, allTags] = await Promise.all([
-    getAllBlogPostMetas(locale),
-    getAllTagNames(locale),
-  ]);
+  const allPosts = await getAllBlogPostMetas(locale);
 
   return (
     <div className="bg-background min-h-screen">
       <section className="py-16">
         <Container>
           <div className="mx-auto max-w-6xl">
-            <FilteredBlogClient initialPosts={allPosts} tags={allTags} locale={locale} />
+            <FilteredBlogClient initialPosts={allPosts} locale={locale} />
           </div>
         </Container>
       </section>
