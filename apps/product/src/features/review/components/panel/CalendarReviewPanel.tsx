@@ -129,6 +129,7 @@ export function CalendarReviewPanel({
       <div
         className={cn(
           'scrollbar-stable overflow-y-auto',
+          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- sheet 高は viewport 連動の min()/dvh が必要でトークン化不可
           isSheet ? 'max-h-[min(72dvh,560px)]' : 'min-h-0 flex-1',
         )}
       >

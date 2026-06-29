@@ -10,12 +10,7 @@
 
 /** 全メトリクスのID */
 export type MetricId =
-  | 'totalTime'
-  | 'entryRate'
-  | 'streak'
-  | 'estimationAccuracy'
-  | 'contextSwitches'
-  | 'blankRate';
+  'totalTime' | 'entryRate' | 'streak' | 'estimationAccuracy' | 'contextSwitches' | 'blankRate';
 
 /** メトリクスの表示形式 */
 export type MetricFormat = 'duration' | 'percentage' | 'minutes' | 'count' | 'score' | 'days';

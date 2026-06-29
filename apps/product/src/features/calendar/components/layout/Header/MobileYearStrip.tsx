@@ -10,8 +10,7 @@ const START_YEAR = 2020;
 const END_YEAR = 2050;
 
 type StripItem =
-  | { type: 'year'; year: number }
-  | { type: 'month'; year: number; month: number; label: string };
+  { type: 'year'; year: number } | { type: 'month'; year: number; month: number; label: string };
 
 interface MobileYearStripProps {
   viewMonth: Date;

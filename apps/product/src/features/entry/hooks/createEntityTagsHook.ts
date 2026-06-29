@@ -73,9 +73,7 @@ export function useEntityTagsHook(
     (entityId: string): string | null => {
       // まず getById から取得を試みる
       const entityData = utils[entityName].getById.getData({ id: entityId }) as
-        | { tagId?: string | null }
-        | null
-        | undefined;
+        { tagId?: string | null } | null | undefined;
       if (entityData?.tagId !== undefined) {
         return entityData.tagId;
       }

@@ -55,16 +55,16 @@ Auth=unauthenticated のとき Entry/Plan は無関係 → 実効 **~330通り**
 
 **関連ファイル**: `src/features/entry/components/inspector/EntryInspector.tsx`
 
-| Auth          | Query状態             | Device  | 対応                             |
+| Auth | Query状態 | Device | 対応 |
 | ------------- | --------------------- | ------- | -------------------------------- | --------------------------------- |
-| authenticated | `isLoading`           | both    | EXPLICIT — Spinner               |
-| authenticated | success (entry found) | mobile  | EXPLICIT — Drawer + snap points  |
-| authenticated | success (entry found) | desktop | EXPLICIT — FloatingPopover       |
-| authenticated | success (null)        | both    | EXPLICIT — `notFound` メッセージ |
-| authenticated | **error**             | both    | ~~GAP~~ → **FIXED** (H4)         |
-| session失効中 | any                   | both    | ~~GAP~~ → **FIXED** (C2)         |
-| authenticated | any                   | both    | Inspector + RecurringEditDialog  | EXPLICIT — `handleClose` でガード |
-| authenticated | any                   | both    | 削除 → soft-delete + undo toast  | EXPLICIT — 確認モーダル廃止済み   |
+| authenticated | `isLoading` | both | EXPLICIT — Spinner |
+| authenticated | success (entry found) | mobile | EXPLICIT — Drawer + snap points |
+| authenticated | success (entry found) | desktop | EXPLICIT — FloatingPopover |
+| authenticated | success (null) | both | EXPLICIT — `notFound` メッセージ |
+| authenticated | **error** | both | ~~GAP~~ → **FIXED** (H4) |
+| session失効中 | any | both | ~~GAP~~ → **FIXED** (C2) |
+| authenticated | any | both | Inspector + RecurringEditDialog | EXPLICIT — `handleClose` でガード |
+| authenticated | any | both | 削除 → soft-delete + undo toast | EXPLICIT — 確認モーダル廃止済み |
 
 ---
 

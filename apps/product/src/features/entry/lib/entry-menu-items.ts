@@ -14,12 +14,7 @@ import { BarChart3, CalendarOff, CircleSlash, RotateCcw, Trash2 } from 'lucide-r
 import type { EntryOrigin } from '../types/entry';
 
 export type EntryMenuItemKey =
-  | 'viewStats'
-  | 'markUnplanned'
-  | 'restorePlanned'
-  | 'skip'
-  | 'unskip'
-  | 'delete';
+  'viewStats' | 'markUnplanned' | 'restorePlanned' | 'skip' | 'unskip' | 'delete';
 
 export interface EntryMenuItem {
   key: EntryMenuItemKey;

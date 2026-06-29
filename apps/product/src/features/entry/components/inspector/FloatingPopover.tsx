@@ -138,6 +138,7 @@ export function FloatingPopover({ children, onClose, title, anchorRect }: Floati
         className={cn(
           'bg-card text-card-foreground z-inspector',
           'border-border-subtle shadow-card rounded-2xl border',
+          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- popover サイズは viewport 連動の min()/dvh/vw が必要でトークン化不可
           'fixed flex max-h-[min(40rem,calc(100dvh-2rem))] w-[95vw] max-w-[30rem] flex-col gap-0 overflow-hidden p-0',
           'animate-in slide-in-from-bottom-2 duration-150 motion-reduce:animate-none',
         )}

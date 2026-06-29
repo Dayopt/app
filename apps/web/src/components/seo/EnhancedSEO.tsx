@@ -147,12 +147,7 @@ export function generateEnhancedMetadata({
 
 // JSON-LD 構造化データのコンポーネント
 type SchemaValue =
-  | string
-  | number
-  | boolean
-  | null
-  | SchemaValue[]
-  | { [key: string]: SchemaValue };
+  string | number | boolean | null | SchemaValue[] | { [key: string]: SchemaValue };
 
 interface StructuredDataProps {
   type: 'Organization' | 'WebSite' | 'Article' | 'Product' | 'SoftwareApplication';
