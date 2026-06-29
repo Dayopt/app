@@ -1,152 +1,33 @@
 [
   {
-    "name": "@ai-sdk/anthropic",
-    "version": "3.0.67",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/vercel/ai"
+    "name": "@dayopt/billing",
+    "version": "0.0.0",
+    "license": "UNLICENSED"
   },
   {
-    "name": "@ai-sdk/gateway",
-    "version": "3.0.91",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/vercel/ai"
+    "name": "@dayopt/components",
+    "version": "0.0.0",
+    "license": "UNLICENSED"
   },
   {
-    "name": "@ai-sdk/openai",
-    "version": "3.0.51",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/vercel/ai"
+    "name": "@dayopt/config",
+    "version": "0.0.0",
+    "license": "UNLICENSED"
   },
   {
-    "name": "@ai-sdk/provider",
-    "version": "3.0.8",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/vercel/ai"
+    "name": "@dayopt/domain",
+    "version": "0.0.0",
+    "license": "UNLICENSED"
   },
   {
-    "name": "@ai-sdk/provider-utils",
-    "version": "4.0.23",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/vercel/ai"
+    "name": "@dayopt/foundations",
+    "version": "0.0.0",
+    "license": "UNLICENSED"
   },
   {
-    "name": "@babel/code-frame",
-    "version": "7.29.0",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/compat-data",
-    "version": "7.29.0",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/core",
-    "version": "7.28.4",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/generator",
-    "version": "7.29.0",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/helper-compilation-targets",
-    "version": "7.28.6",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/helper-globals",
-    "version": "7.28.0",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/helper-module-imports",
-    "version": "7.28.6",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/helper-module-transforms",
-    "version": "7.28.6",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/helper-string-parser",
-    "version": "7.27.1",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/helper-validator-identifier",
-    "version": "7.28.5",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/helper-validator-option",
-    "version": "7.27.1",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/helpers",
-    "version": "7.28.4",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/parser",
-    "version": "7.29.0",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/template",
-    "version": "7.28.6",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/traverse",
-    "version": "7.29.0",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@babel/types",
-    "version": "7.29.0",
-    "license": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team"
-  },
-  {
-    "name": "@dnd-kit/accessibility",
-    "version": "3.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/clauderic/dnd-kit",
-    "publisher": "Claudéric Demers"
+    "name": "@dayopt/product",
+    "version": "0.27.0",
+    "license": "UNLICENSED"
   },
   {
     "name": "@dnd-kit/core",
@@ -170,81 +51,6 @@
     "publisher": "Claudéric Demers"
   },
   {
-    "name": "@fastify/otel",
-    "version": "0.18.0",
-    "license": "MIT",
-    "repository": "https://github.com/fastify/otel",
-    "publisher": "Carlos Fuentes - @metcoder95"
-  },
-  {
-    "name": "@floating-ui/core",
-    "version": "1.7.3",
-    "license": "MIT",
-    "repository": "https://github.com/floating-ui/floating-ui",
-    "publisher": "atomiks"
-  },
-  {
-    "name": "@floating-ui/dom",
-    "version": "1.7.4",
-    "license": "MIT",
-    "repository": "https://github.com/floating-ui/floating-ui",
-    "publisher": "atomiks"
-  },
-  {
-    "name": "@floating-ui/react-dom",
-    "version": "2.1.6",
-    "license": "MIT",
-    "repository": "https://github.com/floating-ui/floating-ui",
-    "publisher": "atomiks"
-  },
-  {
-    "name": "@floating-ui/utils",
-    "version": "0.2.10",
-    "license": "MIT",
-    "repository": "https://github.com/floating-ui/floating-ui",
-    "publisher": "atomiks"
-  },
-  {
-    "name": "@formatjs/bigdecimal",
-    "version": "0.2.0",
-    "license": "MIT",
-    "repository": "https://github.com/formatjs/formatjs",
-    "publisher": "Long Ho"
-  },
-  {
-    "name": "@formatjs/ecma402-abstract",
-    "version": "3.2.0",
-    "license": "MIT",
-    "repository": "https://github.com/formatjs/formatjs",
-    "publisher": "Long Ho"
-  },
-  {
-    "name": "@formatjs/fast-memoize",
-    "version": "3.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/formatjs/formatjs",
-    "publisher": "Long Ho"
-  },
-  {
-    "name": "@formatjs/icu-messageformat-parser",
-    "version": "3.5.3",
-    "license": "MIT",
-    "repository": "https://github.com/formatjs/formatjs"
-  },
-  {
-    "name": "@formatjs/icu-skeleton-parser",
-    "version": "2.1.3",
-    "license": "MIT",
-    "repository": "https://github.com/formatjs/formatjs"
-  },
-  {
-    "name": "@formatjs/intl-localematcher",
-    "version": "0.8.2",
-    "license": "MIT",
-    "repository": "https://github.com/formatjs/formatjs",
-    "publisher": "Long Ho"
-  },
-  {
     "name": "@hookform/resolvers",
     "version": "3.10.0",
     "license": "MIT",
@@ -252,1223 +58,202 @@
     "publisher": "bluebill1049"
   },
   {
-    "name": "@img/colour",
-    "version": "1.0.0",
+    "name": "@marsidev/react-turnstile",
+    "version": "1.5.3",
     "license": "MIT",
-    "repository": "https://github.com/lovell/colour"
+    "repository": "https://github.com/marsidev/react-turnstile",
+    "publisher": "Luis Marsiglia"
   },
   {
-    "name": "@img/sharp-darwin-arm64",
-    "version": "0.34.5",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/lovell/sharp",
-    "publisher": "Lovell Fuller"
-  },
-  {
-    "name": "@img/sharp-libvips-darwin-arm64",
-    "version": "1.2.4",
-    "license": "LGPL-3.0-or-later",
-    "repository": "https://github.com/lovell/sharp-libvips",
-    "publisher": "Lovell Fuller"
-  },
-  {
-    "name": "@jridgewell/gen-mapping",
-    "version": "0.3.13",
+    "name": "@modelcontextprotocol/sdk",
+    "version": "1.29.0",
     "license": "MIT",
-    "repository": "https://github.com/jridgewell/sourcemaps",
-    "publisher": "Justin Ridgewell"
-  },
-  {
-    "name": "@jridgewell/remapping",
-    "version": "2.3.5",
-    "license": "MIT",
-    "repository": "https://github.com/jridgewell/sourcemaps",
-    "publisher": "Justin Ridgewell"
-  },
-  {
-    "name": "@jridgewell/resolve-uri",
-    "version": "3.1.2",
-    "license": "MIT",
-    "repository": "https://github.com/jridgewell/resolve-uri",
-    "publisher": "Justin Ridgewell"
-  },
-  {
-    "name": "@jridgewell/sourcemap-codec",
-    "version": "1.5.5",
-    "license": "MIT",
-    "repository": "https://github.com/jridgewell/sourcemaps",
-    "publisher": "Justin Ridgewell"
-  },
-  {
-    "name": "@jridgewell/trace-mapping",
-    "version": "0.3.31",
-    "license": "MIT",
-    "repository": "https://github.com/jridgewell/sourcemaps",
-    "publisher": "Justin Ridgewell"
-  },
-  {
-    "name": "@next/env",
-    "version": "16.2.2",
-    "license": "MIT",
-    "repository": "https://github.com/vercel/next.js",
-    "publisher": "Next.js Team"
-  },
-  {
-    "name": "@next/swc-darwin-arm64",
-    "version": "16.2.2",
-    "license": "MIT",
-    "repository": "https://github.com/vercel/next.js"
-  },
-  {
-    "name": "@opentelemetry/api",
-    "version": "1.9.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/api",
-    "version": "1.9.1",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/api-logs",
-    "version": "0.207.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/api-logs",
-    "version": "0.212.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/api-logs",
-    "version": "0.214.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/context-async-hooks",
-    "version": "2.6.1",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/core",
-    "version": "2.6.1",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation",
-    "version": "0.207.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation",
-    "version": "0.212.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation",
-    "version": "0.214.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-amqplib",
-    "version": "0.61.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-connect",
-    "version": "0.57.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-dataloader",
-    "version": "0.31.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-express",
-    "version": "0.62.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-fs",
-    "version": "0.33.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-generic-pool",
-    "version": "0.57.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-graphql",
-    "version": "0.62.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-hapi",
-    "version": "0.60.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-http",
-    "version": "0.214.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-ioredis",
-    "version": "0.62.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-kafkajs",
-    "version": "0.23.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-knex",
-    "version": "0.58.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-koa",
-    "version": "0.62.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-lru-memoizer",
-    "version": "0.58.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-mongodb",
-    "version": "0.67.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-mongoose",
-    "version": "0.60.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-mysql",
-    "version": "0.60.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-mysql2",
-    "version": "0.60.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-pg",
-    "version": "0.66.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-redis",
-    "version": "0.62.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-tedious",
-    "version": "0.33.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/instrumentation-undici",
-    "version": "0.24.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/redis-common",
-    "version": "0.38.2",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/resources",
-    "version": "2.6.1",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/sdk-trace-base",
-    "version": "2.6.1",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/semantic-conventions",
-    "version": "1.40.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@opentelemetry/sql-common",
-    "version": "0.41.2",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/open-telemetry/opentelemetry-js-contrib",
-    "publisher": "OpenTelemetry Authors"
-  },
-  {
-    "name": "@parcel/watcher",
-    "version": "2.5.6",
-    "license": "MIT",
-    "repository": "https://github.com/parcel-bundler/watcher"
-  },
-  {
-    "name": "@parcel/watcher-darwin-arm64",
-    "version": "2.5.6",
-    "license": "MIT",
-    "repository": "https://github.com/parcel-bundler/watcher"
-  },
-  {
-    "name": "@playwright/test",
-    "version": "1.56.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/microsoft/playwright",
-    "publisher": "Microsoft Corporation"
-  },
-  {
-    "name": "@prisma/instrumentation",
-    "version": "7.6.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/prisma/prisma"
-  },
-  {
-    "name": "@radix-ui/number",
-    "version": "1.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/primitive",
-    "version": "1.1.3",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
+    "repository": "https://github.com/modelcontextprotocol/typescript-sdk",
+    "publisher": "Anthropic, PBC"
   },
   {
     "name": "@radix-ui/react-alert-dialog",
-    "version": "1.1.15",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-arrow",
-    "version": "1.1.7",
+    "version": "1.1.17",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-avatar",
-    "version": "1.1.11",
+    "version": "1.2.0",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-checkbox",
-    "version": "1.3.3",
+    "version": "1.3.5",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-collapsible",
-    "version": "1.1.12",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-collection",
-    "version": "1.1.7",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-compose-refs",
-    "version": "1.1.2",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-context",
-    "version": "1.1.2",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-context",
-    "version": "1.1.3",
+    "version": "1.1.14",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-dialog",
-    "version": "1.1.15",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-direction",
-    "version": "1.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-dismissable-layer",
-    "version": "1.1.11",
+    "version": "1.1.17",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-dropdown-menu",
-    "version": "2.1.16",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-focus-guards",
-    "version": "1.1.3",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-focus-scope",
-    "version": "1.1.7",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-id",
-    "version": "1.1.1",
+    "version": "2.1.18",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-label",
-    "version": "2.1.8",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-menu",
-    "version": "2.1.16",
+    "version": "2.1.10",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-popover",
-    "version": "1.1.15",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-popper",
-    "version": "1.2.8",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-portal",
-    "version": "1.1.9",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-presence",
-    "version": "1.1.5",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-primitive",
-    "version": "2.1.3",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-primitive",
-    "version": "2.1.4",
+    "version": "1.1.17",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-radio-group",
-    "version": "1.3.8",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-roving-focus",
-    "version": "1.1.11",
+    "version": "1.4.1",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-scroll-area",
-    "version": "1.2.10",
+    "version": "1.2.12",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-select",
-    "version": "2.2.6",
+    "version": "2.3.1",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-separator",
-    "version": "1.1.8",
+    "version": "1.1.10",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-slot",
-    "version": "1.2.3",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-slot",
-    "version": "1.2.4",
+    "version": "1.3.0",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-switch",
-    "version": "1.2.6",
+    "version": "1.3.1",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-tabs",
-    "version": "1.1.13",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-use-callback-ref",
-    "version": "1.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-use-controllable-state",
-    "version": "1.2.2",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-use-effect-event",
-    "version": "0.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-use-escape-keydown",
-    "version": "1.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-use-is-hydrated",
-    "version": "0.1.0",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-use-layout-effect",
-    "version": "1.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-use-previous",
-    "version": "1.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-use-rect",
-    "version": "1.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/react-use-size",
-    "version": "1.1.1",
+    "version": "1.1.15",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
   },
   {
     "name": "@radix-ui/react-visually-hidden",
-    "version": "1.2.3",
+    "version": "1.2.6",
     "license": "MIT",
     "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@radix-ui/rect",
-    "version": "1.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/radix-ui/primitives"
-  },
-  {
-    "name": "@react-email/body",
-    "version": "0.3.0",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/button",
-    "version": "0.2.1",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/code-block",
-    "version": "0.2.1",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/code-inline",
-    "version": "0.0.6",
-    "license": "MIT"
-  },
-  {
-    "name": "@react-email/column",
-    "version": "0.0.14",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
   },
   {
     "name": "@react-email/components",
-    "version": "1.0.11",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/container",
-    "version": "0.0.16",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/font",
-    "version": "0.0.10",
-    "license": "MIT"
-  },
-  {
-    "name": "@react-email/head",
-    "version": "0.0.13",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/heading",
-    "version": "0.0.16",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/hr",
-    "version": "0.0.12",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/html",
-    "version": "0.0.12",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/img",
-    "version": "0.0.12",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/link",
-    "version": "0.0.13",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/markdown",
-    "version": "0.0.18",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/preview",
-    "version": "0.0.14",
+    "version": "1.0.12",
     "license": "MIT",
     "repository": "https://github.com/resend/react-email"
   },
   {
     "name": "@react-email/render",
-    "version": "2.0.5",
+    "version": "2.0.9",
     "license": "MIT",
     "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/row",
-    "version": "0.0.13",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/section",
-    "version": "0.0.17",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/tailwind",
-    "version": "2.0.7",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@react-email/text",
-    "version": "0.1.6",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email"
-  },
-  {
-    "name": "@reduxjs/toolkit",
-    "version": "2.11.0",
-    "license": "MIT",
-    "repository": "https://github.com/reduxjs/redux-toolkit",
-    "publisher": "Mark Erikson"
-  },
-  {
-    "name": "@rollup/plugin-commonjs",
-    "version": "28.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/rollup/plugins",
-    "publisher": "Rich Harris"
-  },
-  {
-    "name": "@rollup/pluginutils",
-    "version": "5.3.0",
-    "license": "MIT",
-    "repository": "https://github.com/rollup/plugins",
-    "publisher": "Rich Harris"
-  },
-  {
-    "name": "@rollup/rollup-darwin-arm64",
-    "version": "4.59.0",
-    "license": "MIT",
-    "repository": "https://github.com/rollup/rollup",
-    "publisher": "Lukas Taegert-Atkinson"
-  },
-  {
-    "name": "@schummar/icu-type-parser",
-    "version": "1.21.5",
-    "license": "MIT",
-    "repository": "https://github.com/schummar/schummar-translate",
-    "publisher": "Marco Schumacher"
-  },
-  {
-    "name": "@selderee/plugin-htmlparser2",
-    "version": "0.11.0",
-    "license": "MIT",
-    "repository": "https://github.com/mxxii/selderee",
-    "publisher": "KillyMXI"
-  },
-  {
-    "name": "@sentry-internal/browser-utils",
-    "version": "10.47.0",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry-internal/feedback",
-    "version": "10.47.0",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry-internal/replay",
-    "version": "10.47.0",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry-internal/replay-canvas",
-    "version": "10.47.0",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/babel-plugin-component-annotate",
-    "version": "5.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript-bundler-plugins",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/browser",
-    "version": "10.47.0",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/bundler-plugin-core",
-    "version": "5.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript-bundler-plugins",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/cli",
-    "version": "2.58.5",
-    "license": "FSL-1.1-MIT",
-    "repository": "https://github.com/getsentry/sentry-cli",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/cli-darwin",
-    "version": "2.58.5",
-    "license": "FSL-1.1-MIT",
-    "repository": "https://github.com/getsentry/sentry-cli"
-  },
-  {
-    "name": "@sentry/core",
-    "version": "10.47.0",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript",
-    "publisher": "Sentry"
   },
   {
     "name": "@sentry/nextjs",
-    "version": "10.47.0",
+    "version": "10.62.0",
     "license": "MIT",
     "repository": "https://github.com/getsentry/sentry-javascript",
     "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/node",
-    "version": "10.47.0",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/node-core",
-    "version": "10.47.0",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/opentelemetry",
-    "version": "10.47.0",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/react",
-    "version": "10.47.0",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/vercel-edge",
-    "version": "10.47.0",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/webpack-plugin",
-    "version": "5.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/getsentry/sentry-javascript-bundler-plugins",
-    "publisher": "Sentry"
-  },
-  {
-    "name": "@stablelib/base64",
-    "version": "1.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/StableLib/stablelib",
-    "publisher": "Dmitry Chestnykh"
-  },
-  {
-    "name": "@standard-schema/spec",
-    "version": "1.1.0",
-    "license": "MIT",
-    "repository": "https://github.com/standard-schema/standard-schema",
-    "publisher": "Colin McDonnell"
-  },
-  {
-    "name": "@standard-schema/utils",
-    "version": "0.3.0",
-    "license": "MIT",
-    "repository": "https://github.com/standard-schema/standard-schema",
-    "publisher": "Fabian Hiller"
   },
   {
     "name": "@supabase/auth-js",
-    "version": "2.102.0",
-    "license": "MIT",
-    "repository": "https://github.com/supabase/supabase-js",
-    "publisher": "Supabase"
-  },
-  {
-    "name": "@supabase/functions-js",
-    "version": "2.102.0",
-    "license": "MIT",
-    "repository": "https://github.com/supabase/supabase-js",
-    "publisher": "Supabase"
-  },
-  {
-    "name": "@supabase/phoenix",
-    "version": "0.4.0",
-    "license": "MIT",
-    "repository": "https://github.com/supabase/phoenix",
-    "publisher": "Chris McCord"
-  },
-  {
-    "name": "@supabase/postgrest-js",
-    "version": "2.102.0",
-    "license": "MIT",
-    "repository": "https://github.com/supabase/supabase-js",
-    "publisher": "Supabase"
-  },
-  {
-    "name": "@supabase/realtime-js",
-    "version": "2.102.0",
+    "version": "2.108.2",
     "license": "MIT",
     "repository": "https://github.com/supabase/supabase-js",
     "publisher": "Supabase"
   },
   {
     "name": "@supabase/ssr",
-    "version": "0.10.0",
+    "version": "0.12.0",
     "license": "MIT",
     "repository": "https://github.com/supabase/ssr",
     "publisher": "Supabase, Inc."
   },
   {
-    "name": "@supabase/storage-js",
-    "version": "2.102.0",
-    "license": "MIT",
-    "repository": "https://github.com/supabase/supabase-js",
-    "publisher": "Supabase"
-  },
-  {
     "name": "@supabase/supabase-js",
-    "version": "2.102.0",
+    "version": "2.108.2",
     "license": "MIT",
     "repository": "https://github.com/supabase/supabase-js",
     "publisher": "Supabase"
-  },
-  {
-    "name": "@swc/core",
-    "version": "1.15.3",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/swc-project/swc",
-    "publisher": "강동윤"
-  },
-  {
-    "name": "@swc/core-darwin-arm64",
-    "version": "1.15.3",
-    "license": "Apache-2.0 AND MIT",
-    "repository": "https://github.com/swc-project/swc",
-    "publisher": "강동윤"
-  },
-  {
-    "name": "@swc/counter",
-    "version": "0.1.3",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/swc-project/pkgs",
-    "publisher": "강동윤"
-  },
-  {
-    "name": "@swc/helpers",
-    "version": "0.5.15",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/swc-project/swc",
-    "publisher": "강동윤"
-  },
-  {
-    "name": "@swc/types",
-    "version": "0.1.25",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/swc-project/swc",
-    "publisher": "강동윤"
   },
   {
     "name": "@tailwindcss/typography",
-    "version": "0.5.19",
+    "version": "0.5.20",
     "license": "MIT",
     "repository": "https://github.com/tailwindlabs/tailwindcss-typography"
   },
   {
-    "name": "@tanstack/query-core",
-    "version": "5.96.2",
-    "license": "MIT",
-    "repository": "https://github.com/TanStack/query",
-    "publisher": "tannerlinsley"
-  },
-  {
     "name": "@tanstack/query-persist-client-core",
-    "version": "5.96.2",
+    "version": "5.101.2",
     "license": "MIT",
     "repository": "https://github.com/TanStack/query",
     "publisher": "tannerlinsley"
   },
   {
     "name": "@tanstack/react-query",
-    "version": "5.96.2",
+    "version": "5.101.2",
     "license": "MIT",
     "repository": "https://github.com/TanStack/query",
     "publisher": "tannerlinsley"
   },
   {
     "name": "@tanstack/react-query-persist-client",
-    "version": "5.96.2",
+    "version": "5.101.2",
     "license": "MIT",
     "repository": "https://github.com/TanStack/query",
     "publisher": "tannerlinsley"
   },
   {
-    "name": "@tanstack/react-virtual",
-    "version": "3.13.23",
-    "license": "MIT",
-    "repository": "https://github.com/TanStack/virtual",
-    "publisher": "Tanner Linsley"
-  },
-  {
-    "name": "@tanstack/virtual-core",
-    "version": "3.13.23",
-    "license": "MIT",
-    "repository": "https://github.com/TanStack/virtual",
-    "publisher": "Tanner Linsley"
-  },
-  {
     "name": "@trpc/client",
-    "version": "11.16.0",
+    "version": "11.18.0",
     "license": "MIT",
     "repository": "https://github.com/trpc/trpc",
     "publisher": "KATT"
   },
   {
     "name": "@trpc/react-query",
-    "version": "11.16.0",
+    "version": "11.18.0",
     "license": "MIT",
     "repository": "https://github.com/trpc/trpc",
     "publisher": "KATT"
   },
   {
     "name": "@trpc/server",
-    "version": "11.16.0",
+    "version": "11.18.0",
     "license": "MIT",
     "repository": "https://github.com/trpc/trpc",
     "publisher": "KATT"
-  },
-  {
-    "name": "@types/connect",
-    "version": "3.4.38",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/d3-array",
-    "version": "3.2.2",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/d3-color",
-    "version": "3.1.3",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/d3-ease",
-    "version": "3.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/d3-interpolate",
-    "version": "3.0.4",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/d3-path",
-    "version": "3.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/d3-scale",
-    "version": "4.0.9",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/d3-shape",
-    "version": "3.1.7",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/d3-time",
-    "version": "3.0.4",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/d3-timer",
-    "version": "3.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/estree",
-    "version": "1.0.8",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/mysql",
-    "version": "2.15.27",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/node",
-    "version": "25.3.3",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/pg",
-    "version": "8.15.6",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/pg-pool",
-    "version": "2.0.7",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/react",
-    "version": "19.2.14",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/react-dom",
-    "version": "19.2.3",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/tedious",
-    "version": "4.0.14",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/use-sync-external-store",
-    "version": "0.0.6",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@types/ws",
-    "version": "8.18.1",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
-  },
-  {
-    "name": "@upstash/core-analytics",
-    "version": "0.0.10",
-    "license": "MIT",
-    "publisher": "Andreas Thomas"
   },
   {
     "name": "@upstash/ratelimit",
@@ -1477,7 +262,7 @@
   },
   {
     "name": "@upstash/redis",
-    "version": "1.37.0",
+    "version": "1.38.0",
     "license": "MIT",
     "repository": "https://github.com/upstash/redis-js",
     "publisher": "Andreas Thomas"
@@ -1489,101 +274,10 @@
     "repository": "https://github.com/vercel/analytics"
   },
   {
-    "name": "@vercel/oidc",
-    "version": "3.1.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/vercel/vercel"
-  },
-  {
     "name": "@vercel/speed-insights",
     "version": "1.3.1",
     "license": "Apache-2.0",
     "repository": "https://github.com/vercel/speed-insights"
-  },
-  {
-    "name": "acorn",
-    "version": "8.16.0",
-    "license": "MIT",
-    "repository": "https://github.com/acornjs/acorn"
-  },
-  {
-    "name": "acorn-import-attributes",
-    "version": "1.9.5",
-    "license": "MIT",
-    "repository": "https://github.com/xtuc/acorn-import-attributes",
-    "publisher": "Sven Sauleau"
-  },
-  {
-    "name": "agent-base",
-    "version": "6.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/TooTallNate/node-agent-base",
-    "publisher": "Nathan Rajlich"
-  },
-  {
-    "name": "ai",
-    "version": "6.0.149",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/vercel/ai"
-  },
-  {
-    "name": "aria-hidden",
-    "version": "1.2.6",
-    "license": "MIT",
-    "repository": "https://github.com/theKashey/aria-hidden",
-    "publisher": "Anton Korzunov"
-  },
-  {
-    "name": "attr-accept",
-    "version": "2.2.5",
-    "license": "MIT",
-    "repository": "https://github.com/react-dropzone/attr-accept",
-    "publisher": "Andrey Okonetchnikov @okonetchnikov"
-  },
-  {
-    "name": "babel-plugin-react-compiler",
-    "version": "1.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/facebook/react"
-  },
-  {
-    "name": "balanced-match",
-    "version": "4.0.4",
-    "license": "MIT",
-    "repository": "https://github.com/juliangruber/balanced-match"
-  },
-  {
-    "name": "baseline-browser-mapping",
-    "version": "2.9.19",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/web-platform-dx/baseline-browser-mapping"
-  },
-  {
-    "name": "brace-expansion",
-    "version": "5.0.5",
-    "license": "MIT",
-    "repository": "https://github.com/juliangruber/brace-expansion"
-  },
-  {
-    "name": "browserslist",
-    "version": "4.28.1",
-    "license": "MIT",
-    "repository": "https://github.com/browserslist/browserslist",
-    "publisher": "Andrey Sitnik"
-  },
-  {
-    "name": "caniuse-lite",
-    "version": "1.0.30001767",
-    "license": "CC-BY-4.0",
-    "repository": "https://github.com/browserslist/caniuse-lite",
-    "publisher": "Ben Briggs"
-  },
-  {
-    "name": "cjs-module-lexer",
-    "version": "2.2.0",
-    "license": "MIT",
-    "repository": "https://github.com/nodejs/cjs-module-lexer",
-    "publisher": "Guy Bedford"
   },
   {
     "name": "class-variance-authority",
@@ -1591,11 +285,6 @@
     "license": "Apache-2.0",
     "repository": "https://github.com/joe-bell/cva",
     "publisher": "Joe Bell"
-  },
-  {
-    "name": "client-only",
-    "version": "0.0.1",
-    "license": "MIT"
   },
   {
     "name": "clsx",
@@ -1612,127 +301,8 @@
     "publisher": "Paco"
   },
   {
-    "name": "commondir",
-    "version": "1.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/substack/node-commondir",
-    "publisher": "James Halliday"
-  },
-  {
-    "name": "convert-source-map",
-    "version": "2.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/thlorenz/convert-source-map",
-    "publisher": "Thorsten Lorenz"
-  },
-  {
-    "name": "cookie",
-    "version": "1.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/jshttp/cookie",
-    "publisher": "Roman Shtylman"
-  },
-  {
-    "name": "copy-anything",
-    "version": "4.0.5",
-    "license": "MIT",
-    "repository": "https://github.com/mesqueeb/copy-anything",
-    "publisher": "Luca Ban - Mesqueeb"
-  },
-  {
-    "name": "cssesc",
-    "version": "3.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/mathiasbynens/cssesc",
-    "publisher": "Mathias Bynens"
-  },
-  {
-    "name": "csstype",
-    "version": "3.2.3",
-    "license": "MIT",
-    "repository": "https://github.com/frenic/csstype",
-    "publisher": "Fredrik Nicol"
-  },
-  {
-    "name": "d3-array",
-    "version": "3.2.4",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-array",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-color",
-    "version": "3.1.0",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-color",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-ease",
-    "version": "3.0.1",
-    "license": "BSD-3-Clause",
-    "repository": "https://github.com/d3/d3-ease",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-format",
-    "version": "3.1.0",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-format",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-interpolate",
-    "version": "3.0.1",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-interpolate",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-path",
-    "version": "3.1.0",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-path",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-scale",
-    "version": "4.0.2",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-scale",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-shape",
-    "version": "3.2.0",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-shape",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-time",
-    "version": "3.1.0",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-time",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-time-format",
-    "version": "4.1.0",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-time-format",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-timer",
-    "version": "3.0.1",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-timer",
-    "publisher": "Mike Bostock"
-  },
-  {
     "name": "date-fns",
-    "version": "4.1.0",
+    "version": "4.4.0",
     "license": "MIT",
     "repository": "https://github.com/date-fns/date-fns"
   },
@@ -1744,369 +314,11 @@
     "publisher": "Marnus Weststrate"
   },
   {
-    "name": "dayopt-app",
-    "version": "0.25.0",
-    "license": "UNLICENSED"
-  },
-  {
-    "name": "debug",
-    "version": "4.4.3",
-    "license": "MIT",
-    "repository": "https://github.com/debug-js/debug",
-    "publisher": "Josh Junon"
-  },
-  {
-    "name": "decimal.js-light",
-    "version": "2.5.1",
-    "license": "MIT",
-    "repository": "https://github.com/MikeMcl/decimal.js-light",
-    "publisher": "Michael Mclaughlin"
-  },
-  {
-    "name": "deepmerge",
-    "version": "4.3.1",
-    "license": "MIT",
-    "repository": "https://github.com/TehShrike/deepmerge"
-  },
-  {
-    "name": "detect-libc",
-    "version": "2.1.2",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/lovell/detect-libc",
-    "publisher": "Lovell Fuller"
-  },
-  {
-    "name": "detect-node-es",
-    "version": "1.1.0",
-    "license": "MIT",
-    "repository": "https://github.com/thekashey/detect-node",
-    "publisher": "Ilya Kantor"
-  },
-  {
-    "name": "dom-serializer",
-    "version": "2.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/cheeriojs/dom-serializer",
-    "publisher": "Felix Boehm"
-  },
-  {
-    "name": "domelementtype",
-    "version": "2.3.0",
-    "license": "BSD-2-Clause",
-    "repository": "https://github.com/fb55/domelementtype",
-    "publisher": "Felix Boehm"
-  },
-  {
-    "name": "domhandler",
-    "version": "5.0.3",
-    "license": "BSD-2-Clause",
-    "repository": "https://github.com/fb55/domhandler",
-    "publisher": "Felix Boehm"
-  },
-  {
-    "name": "domutils",
-    "version": "3.2.2",
-    "license": "BSD-2-Clause",
-    "repository": "https://github.com/fb55/domutils",
-    "publisher": "Felix Boehm"
-  },
-  {
-    "name": "dotenv",
-    "version": "16.6.1",
-    "license": "BSD-2-Clause",
-    "repository": "https://github.com/motdotla/dotenv"
-  },
-  {
-    "name": "electron-to-chromium",
-    "version": "1.5.283",
-    "license": "ISC",
-    "repository": "https://github.com/kilian/electron-to-chromium",
-    "publisher": "Kilian Valkhof"
-  },
-  {
-    "name": "entities",
-    "version": "4.5.0",
-    "license": "BSD-2-Clause",
-    "repository": "https://github.com/fb55/entities",
-    "publisher": "Felix Boehm"
-  },
-  {
-    "name": "es-toolkit",
-    "version": "1.42.0",
-    "license": "MIT",
-    "repository": "https://github.com/toss/es-toolkit"
-  },
-  {
-    "name": "escalade",
-    "version": "3.2.0",
-    "license": "MIT",
-    "repository": "https://github.com/lukeed/escalade",
-    "publisher": "Luke Edwards"
-  },
-  {
-    "name": "estree-walker",
-    "version": "2.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/Rich-Harris/estree-walker",
-    "publisher": "Rich Harris"
-  },
-  {
-    "name": "eventemitter3",
-    "version": "5.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/primus/eventemitter3",
-    "publisher": "Arnout Kazemier"
-  },
-  {
-    "name": "eventsource-parser",
-    "version": "3.0.6",
-    "license": "MIT",
-    "repository": "https://github.com/rexxars/eventsource-parser",
-    "publisher": "Espen Hovlandsdal"
-  },
-  {
-    "name": "fast-sha256",
-    "version": "1.3.0",
-    "license": "Unlicense",
-    "repository": "https://github.com/dchest/fast-sha256-js",
-    "publisher": "Dmitry Chestnykh"
-  },
-  {
-    "name": "fdir",
-    "version": "6.5.0",
-    "license": "MIT",
-    "repository": "https://github.com/thecodrr/fdir",
-    "publisher": "thecodrr"
-  },
-  {
-    "name": "file-selector",
-    "version": "2.1.2",
-    "license": "MIT",
-    "repository": "https://github.com/react-dropzone/file-selector",
-    "publisher": "Roland Groza"
-  },
-  {
-    "name": "find-up",
-    "version": "5.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/sindresorhus/find-up",
-    "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "forwarded-parse",
-    "version": "2.1.2",
-    "license": "MIT",
-    "repository": "https://github.com/lpinca/forwarded-parse",
-    "publisher": "Luigi Pinca"
-  },
-  {
-    "name": "fsevents",
-    "version": "2.3.2",
-    "license": "MIT",
-    "repository": "https://github.com/fsevents/fsevents"
-  },
-  {
-    "name": "gensync",
-    "version": "1.0.0-beta.2",
-    "license": "MIT",
-    "repository": "https://github.com/loganfsmyth/gensync",
-    "publisher": "Logan Smyth"
-  },
-  {
-    "name": "get-nonce",
-    "version": "1.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/theKashey/get-nonce",
-    "publisher": "Anton Korzunov"
-  },
-  {
-    "name": "glob",
-    "version": "13.0.6",
-    "license": "BlueOak-1.0.0",
-    "repository": "https://github.com/isaacs/node-glob",
-    "publisher": "Isaac Z. Schlueter"
-  },
-  {
-    "name": "html-to-text",
-    "version": "9.0.5",
-    "license": "MIT",
-    "repository": "https://github.com/html-to-text/node-html-to-text",
-    "publisher": "Malte Legenhausen"
-  },
-  {
-    "name": "htmlparser2",
-    "version": "8.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/fb55/htmlparser2",
-    "publisher": "Felix Boehm"
-  },
-  {
-    "name": "https-proxy-agent",
-    "version": "5.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/TooTallNate/node-https-proxy-agent",
-    "publisher": "Nathan Rajlich"
-  },
-  {
-    "name": "iceberg-js",
-    "version": "0.8.1",
-    "license": "MIT",
-    "repository": "https://github.com/supabase/iceberg-js",
-    "publisher": "mandarini"
-  },
-  {
-    "name": "icu-minify",
-    "version": "4.9.0",
-    "license": "MIT",
-    "repository": "https://github.com/amannn/next-intl",
-    "publisher": "Jan Amann"
-  },
-  {
-    "name": "immer",
-    "version": "10.1.3",
-    "license": "MIT",
-    "repository": "https://github.com/immerjs/immer",
-    "publisher": "Michel Weststrate"
-  },
-  {
-    "name": "immer",
-    "version": "11.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/immerjs/immer",
-    "publisher": "Michel Weststrate"
-  },
-  {
-    "name": "import-in-the-middle",
-    "version": "2.0.6",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/nodejs/import-in-the-middle",
-    "publisher": "Bryan English"
-  },
-  {
-    "name": "import-in-the-middle",
-    "version": "3.0.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/nodejs/import-in-the-middle",
-    "publisher": "Bryan English"
-  },
-  {
     "name": "input-otp",
     "version": "1.4.2",
     "license": "MIT",
     "repository": "https://github.com/guilhermerodz/input-otp",
     "publisher": "Guilherme Rodz"
-  },
-  {
-    "name": "internmap",
-    "version": "1.0.1",
-    "license": "ISC",
-    "repository": "https://github.com/mbostock/internmap",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "intl-messageformat",
-    "version": "11.2.0",
-    "license": "BSD-3-Clause",
-    "repository": "https://github.com/formatjs/formatjs",
-    "publisher": "Eric Ferraiuolo"
-  },
-  {
-    "name": "is-extglob",
-    "version": "2.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/jonschlinkert/is-extglob",
-    "publisher": "Jon Schlinkert"
-  },
-  {
-    "name": "is-glob",
-    "version": "4.0.3",
-    "license": "MIT",
-    "repository": "https://github.com/micromatch/is-glob",
-    "publisher": "Jon Schlinkert"
-  },
-  {
-    "name": "is-reference",
-    "version": "1.2.1",
-    "license": "MIT",
-    "repository": "https://github.com/Rich-Harris/is-reference",
-    "publisher": "Rich Harris"
-  },
-  {
-    "name": "is-what",
-    "version": "5.5.0",
-    "license": "MIT",
-    "repository": "https://github.com/mesqueeb/is-what",
-    "publisher": "Luca Ban - Mesqueeb"
-  },
-  {
-    "name": "isexe",
-    "version": "2.0.0",
-    "license": "ISC",
-    "repository": "https://github.com/isaacs/isexe",
-    "publisher": "Isaac Z. Schlueter"
-  },
-  {
-    "name": "js-tokens",
-    "version": "4.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/lydell/js-tokens",
-    "publisher": "Simon Lydell"
-  },
-  {
-    "name": "jsesc",
-    "version": "3.1.0",
-    "license": "MIT",
-    "repository": "https://github.com/mathiasbynens/jsesc",
-    "publisher": "Mathias Bynens"
-  },
-  {
-    "name": "json-schema",
-    "version": "0.4.0",
-    "license": "(AFL-2.1 OR BSD-3-Clause)",
-    "repository": "https://github.com/kriszyp/json-schema",
-    "publisher": "Kris Zyp"
-  },
-  {
-    "name": "json5",
-    "version": "2.2.3",
-    "license": "MIT",
-    "repository": "https://github.com/json5/json5",
-    "publisher": "Aseem Kishore"
-  },
-  {
-    "name": "leac",
-    "version": "0.6.0",
-    "license": "MIT",
-    "repository": "https://github.com/mxxii/leac",
-    "publisher": "KillyMXI"
-  },
-  {
-    "name": "locate-path",
-    "version": "6.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/sindresorhus/locate-path",
-    "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "loose-envify",
-    "version": "1.4.0",
-    "license": "MIT",
-    "repository": "https://github.com/zertosh/loose-envify",
-    "publisher": "Andres Suarez"
-  },
-  {
-    "name": "lru-cache",
-    "version": "11.2.7",
-    "license": "BlueOak-1.0.0",
-    "repository": "https://github.com/isaacs/node-lru-cache",
-    "publisher": "Isaac Z. Schlueter"
-  },
-  {
-    "name": "lru-cache",
-    "version": "5.1.1",
-    "license": "ISC",
-    "repository": "https://github.com/isaacs/node-lru-cache",
-    "publisher": "Isaac Z. Schlueter"
   },
   {
     "name": "lucide-react",
@@ -2116,293 +328,40 @@
     "publisher": "Eric Fennis"
   },
   {
-    "name": "magic-string",
-    "version": "0.30.21",
-    "license": "MIT",
-    "repository": "https://github.com/Rich-Harris/magic-string",
-    "publisher": "Rich Harris"
-  },
-  {
-    "name": "marked",
-    "version": "15.0.12",
-    "license": "MIT",
-    "repository": "https://github.com/markedjs/marked",
-    "publisher": "Christopher Jeffrey"
-  },
-  {
-    "name": "minimatch",
-    "version": "10.2.5",
-    "license": "BlueOak-1.0.0",
-    "repository": "https://github.com/isaacs/minimatch",
-    "publisher": "Isaac Z. Schlueter"
-  },
-  {
-    "name": "minipass",
-    "version": "7.1.3",
-    "license": "BlueOak-1.0.0",
-    "repository": "https://github.com/isaacs/minipass",
-    "publisher": "Isaac Z. Schlueter"
-  },
-  {
-    "name": "module-details-from-path",
-    "version": "1.0.4",
-    "license": "MIT",
-    "repository": "https://github.com/watson/module-details-from-path",
-    "publisher": "Thomas Watson"
-  },
-  {
-    "name": "ms",
-    "version": "2.1.3",
-    "license": "MIT",
-    "repository": "https://github.com/vercel/ms"
-  },
-  {
-    "name": "nanoid",
-    "version": "3.3.11",
-    "license": "MIT",
-    "repository": "https://github.com/ai/nanoid",
-    "publisher": "Andrey Sitnik"
-  },
-  {
-    "name": "negotiator",
-    "version": "1.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/jshttp/negotiator"
-  },
-  {
     "name": "next",
-    "version": "16.2.2",
+    "version": "16.2.9",
     "license": "MIT",
     "repository": "https://github.com/vercel/next.js"
   },
   {
     "name": "next-intl",
-    "version": "4.9.0",
+    "version": "4.13.0",
     "license": "MIT",
     "repository": "https://github.com/amannn/next-intl",
     "publisher": "Jan Amann"
   },
   {
-    "name": "next-intl-swc-plugin-extractor",
-    "version": "4.9.0",
+    "name": "next-themes",
+    "version": "0.4.6",
     "license": "MIT",
-    "repository": "https://github.com/amannn/next-intl",
-    "publisher": "강동윤"
+    "repository": "https://github.com/pacocoursey/next-themes"
   },
   {
-    "name": "node-addon-api",
-    "version": "7.1.1",
+    "name": "qrcode",
+    "version": "1.5.4",
     "license": "MIT",
-    "repository": "https://github.com/nodejs/node-addon-api"
-  },
-  {
-    "name": "node-fetch",
-    "version": "2.7.0",
-    "license": "MIT",
-    "repository": "https://github.com/bitinn/node-fetch",
-    "publisher": "David Frank"
-  },
-  {
-    "name": "node-releases",
-    "version": "2.0.27",
-    "license": "MIT",
-    "repository": "https://github.com/chicoxyzzy/node-releases",
-    "publisher": "Sergey Rubanov"
-  },
-  {
-    "name": "object-assign",
-    "version": "4.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/sindresorhus/object-assign",
-    "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "p-limit",
-    "version": "3.1.0",
-    "license": "MIT",
-    "repository": "https://github.com/sindresorhus/p-limit",
-    "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "p-locate",
-    "version": "5.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/sindresorhus/p-locate",
-    "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "parseley",
-    "version": "0.12.1",
-    "license": "MIT",
-    "repository": "https://github.com/mxxii/parseley",
-    "publisher": "KillyMXI"
-  },
-  {
-    "name": "path-exists",
-    "version": "4.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/sindresorhus/path-exists",
-    "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "path-scurry",
-    "version": "2.0.2",
-    "license": "BlueOak-1.0.0",
-    "repository": "https://github.com/isaacs/path-scurry",
-    "publisher": "Isaac Z. Schlueter"
-  },
-  {
-    "name": "peberminta",
-    "version": "0.9.0",
-    "license": "MIT",
-    "repository": "https://github.com/mxxii/peberminta",
-    "publisher": "KillyMXI"
-  },
-  {
-    "name": "pg-int8",
-    "version": "1.0.1",
-    "license": "ISC",
-    "repository": "https://github.com/charmander/pg-int8"
-  },
-  {
-    "name": "pg-protocol",
-    "version": "1.13.0",
-    "license": "MIT",
-    "repository": "https://github.com/brianc/node-postgres"
-  },
-  {
-    "name": "pg-types",
-    "version": "2.2.0",
-    "license": "MIT",
-    "repository": "https://github.com/brianc/node-pg-types",
-    "publisher": "Brian M. Carlson"
-  },
-  {
-    "name": "picocolors",
-    "version": "1.1.1",
-    "license": "ISC",
-    "repository": "https://github.com/alexeyraspopov/picocolors",
-    "publisher": "Alexey Raspopov"
-  },
-  {
-    "name": "picomatch",
-    "version": "4.0.3",
-    "license": "MIT",
-    "repository": "https://github.com/micromatch/picomatch",
-    "publisher": "Jon Schlinkert"
-  },
-  {
-    "name": "playwright",
-    "version": "1.56.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/microsoft/playwright",
-    "publisher": "Microsoft Corporation"
-  },
-  {
-    "name": "playwright-core",
-    "version": "1.56.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/microsoft/playwright",
-    "publisher": "Microsoft Corporation"
-  },
-  {
-    "name": "po-parser",
-    "version": "2.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/amannn/po-parser",
-    "publisher": "Jan Amann"
-  },
-  {
-    "name": "postal-mime",
-    "version": "2.7.4",
-    "license": "MIT-0",
-    "repository": "https://github.com/postalsys/postal-mime",
-    "publisher": "Andris Reinman"
-  },
-  {
-    "name": "postcss",
-    "version": "8.4.31",
-    "license": "MIT",
-    "repository": "https://github.com/postcss/postcss",
-    "publisher": "Andrey Sitnik"
-  },
-  {
-    "name": "postcss-selector-parser",
-    "version": "6.0.10",
-    "license": "MIT",
-    "repository": "https://github.com/postcss/postcss-selector-parser"
-  },
-  {
-    "name": "postgres-array",
-    "version": "2.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/bendrucker/postgres-array",
-    "publisher": "Ben Drucker"
-  },
-  {
-    "name": "postgres-bytea",
-    "version": "1.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/bendrucker/postgres-bytea",
-    "publisher": "Ben Drucker"
-  },
-  {
-    "name": "postgres-date",
-    "version": "1.0.7",
-    "license": "MIT",
-    "repository": "https://github.com/bendrucker/postgres-date",
-    "publisher": "Ben Drucker"
-  },
-  {
-    "name": "postgres-interval",
-    "version": "1.2.0",
-    "license": "MIT",
-    "repository": "https://github.com/bendrucker/postgres-interval",
-    "publisher": "Ben Drucker"
-  },
-  {
-    "name": "prettier",
-    "version": "3.6.2",
-    "license": "MIT",
-    "repository": "https://github.com/prettier/prettier",
-    "publisher": "James Long"
-  },
-  {
-    "name": "prismjs",
-    "version": "1.30.0",
-    "license": "MIT",
-    "repository": "https://github.com/PrismJS/prism",
-    "publisher": "Lea Verou"
-  },
-  {
-    "name": "progress",
-    "version": "2.0.3",
-    "license": "MIT",
-    "repository": "https://github.com/visionmedia/node-progress",
-    "publisher": "TJ Holowaychuk"
-  },
-  {
-    "name": "prop-types",
-    "version": "15.8.1",
-    "license": "MIT",
-    "repository": "https://github.com/facebook/prop-types"
-  },
-  {
-    "name": "proxy-from-env",
-    "version": "1.1.0",
-    "license": "MIT",
-    "repository": "https://github.com/Rob--W/proxy-from-env",
-    "publisher": "Rob Wu"
+    "repository": "https://github.com/soldair/node-qrcode",
+    "publisher": "Ryan Day"
   },
   {
     "name": "react",
-    "version": "19.2.4",
+    "version": "19.2.7",
     "license": "MIT",
     "repository": "https://github.com/facebook/react"
   },
   {
     "name": "react-dom",
-    "version": "19.2.4",
+    "version": "19.2.7",
     "license": "MIT",
     "repository": "https://github.com/facebook/react"
   },
@@ -2415,129 +374,28 @@
   },
   {
     "name": "react-hook-form",
-    "version": "7.72.1",
+    "version": "7.80.0",
     "license": "MIT",
     "repository": "https://github.com/react-hook-form/react-hook-form",
     "publisher": "Beier"
   },
   {
-    "name": "react-is",
-    "version": "16.13.1",
-    "license": "MIT",
-    "repository": "https://github.com/facebook/react"
-  },
-  {
-    "name": "react-redux",
-    "version": "9.2.0",
-    "license": "MIT",
-    "repository": "https://github.com/reduxjs/react-redux",
-    "publisher": "Dan Abramov"
-  },
-  {
-    "name": "react-remove-scroll",
-    "version": "2.7.1",
-    "license": "MIT",
-    "repository": "https://github.com/theKashey/react-remove-scroll",
-    "publisher": "Anton Korzunov"
-  },
-  {
-    "name": "react-remove-scroll-bar",
-    "version": "2.3.8",
-    "license": "MIT",
-    "repository": "https://github.com/theKashey/react-remove-scroll-bar",
-    "publisher": "Anton Korzunov"
-  },
-  {
-    "name": "react-style-singleton",
-    "version": "2.2.3",
-    "license": "MIT",
-    "repository": "https://github.com/theKashey/react-style-singleton",
-    "publisher": "Anton Korzunov"
-  },
-  {
     "name": "recharts",
-    "version": "3.8.1",
+    "version": "3.9.0",
     "license": "MIT",
     "repository": "https://github.com/recharts/recharts",
     "publisher": "recharts group"
   },
   {
-    "name": "redux",
-    "version": "5.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/reduxjs/redux"
-  },
-  {
-    "name": "redux-thunk",
-    "version": "3.1.0",
-    "license": "MIT",
-    "repository": "https://github.com/reduxjs/redux-thunk",
-    "publisher": "Dan Abramov"
-  },
-  {
-    "name": "require-in-the-middle",
-    "version": "8.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/nodejs/require-in-the-middle",
-    "publisher": "Thomas Watson Steen"
-  },
-  {
-    "name": "reselect",
-    "version": "5.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/reduxjs/reselect"
-  },
-  {
     "name": "resend",
-    "version": "6.10.0",
+    "version": "6.16.0",
     "license": "MIT",
     "repository": "https://github.com/resend/resend-node"
-  },
-  {
-    "name": "rollup",
-    "version": "4.59.0",
-    "license": "MIT",
-    "repository": "https://github.com/rollup/rollup",
-    "publisher": "Rich Harris"
-  },
-  {
-    "name": "scheduler",
-    "version": "0.27.0",
-    "license": "MIT",
-    "repository": "https://github.com/facebook/react"
-  },
-  {
-    "name": "selderee",
-    "version": "0.11.0",
-    "license": "MIT",
-    "repository": "https://github.com/mxxii/selderee",
-    "publisher": "KillyMXI"
-  },
-  {
-    "name": "semver",
-    "version": "6.3.1",
-    "license": "ISC",
-    "repository": "https://github.com/npm/node-semver",
-    "publisher": "GitHub Inc."
-  },
-  {
-    "name": "semver",
-    "version": "7.7.3",
-    "license": "ISC",
-    "repository": "https://github.com/npm/node-semver",
-    "publisher": "GitHub Inc."
   },
   {
     "name": "server-only",
     "version": "0.0.1",
     "license": "MIT"
-  },
-  {
-    "name": "sharp",
-    "version": "0.34.5",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/lovell/sharp",
-    "publisher": "Lovell Fuller"
   },
   {
     "name": "sonner",
@@ -2547,38 +405,11 @@
     "publisher": "Emil Kowalski"
   },
   {
-    "name": "source-map-js",
-    "version": "1.2.1",
-    "license": "BSD-3-Clause",
-    "repository": "https://github.com/7rulnik/source-map-js",
-    "publisher": "Valentin 7rulnik Semirulnik"
-  },
-  {
-    "name": "stacktrace-parser",
-    "version": "0.1.11",
-    "license": "MIT",
-    "repository": "https://github.com/errwischt/stacktrace-parser",
-    "publisher": "Georg Tavonius"
-  },
-  {
-    "name": "standardwebhooks",
-    "version": "1.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/standard-webhooks/standard-webhooks",
-    "publisher": "Standard Webhooks"
-  },
-  {
     "name": "stripe",
     "version": "20.4.1",
     "license": "MIT",
     "repository": "https://github.com/stripe/stripe-node",
     "publisher": "Stripe"
-  },
-  {
-    "name": "styled-jsx",
-    "version": "5.1.6",
-    "license": "MIT",
-    "repository": "https://github.com/vercel/styled-jsx"
   },
   {
     "name": "superjson",
@@ -2588,130 +419,11 @@
     "publisher": "Simon Knott"
   },
   {
-    "name": "svix",
-    "version": "1.88.0",
-    "license": "MIT",
-    "repository": "https://github.com/svix/svix-webhooks",
-    "publisher": "svix"
-  },
-  {
     "name": "tailwind-merge",
-    "version": "3.5.0",
+    "version": "3.6.0",
     "license": "MIT",
     "repository": "https://github.com/dcastil/tailwind-merge",
     "publisher": "Dany Castillo"
-  },
-  {
-    "name": "tailwindcss",
-    "version": "4.1.14",
-    "license": "MIT",
-    "repository": "https://github.com/tailwindlabs/tailwindcss"
-  },
-  {
-    "name": "tailwindcss",
-    "version": "4.2.2",
-    "license": "MIT",
-    "repository": "https://github.com/tailwindlabs/tailwindcss"
-  },
-  {
-    "name": "tiny-invariant",
-    "version": "1.3.3",
-    "license": "MIT",
-    "repository": "https://github.com/alexreardon/tiny-invariant",
-    "publisher": "Alex Reardon"
-  },
-  {
-    "name": "tr46",
-    "version": "0.0.3",
-    "license": "MIT",
-    "repository": "https://github.com/Sebmaster/tr46.js",
-    "publisher": "Sebastian Mayr"
-  },
-  {
-    "name": "tslib",
-    "version": "2.8.1",
-    "license": "0BSD",
-    "repository": "https://github.com/Microsoft/tslib",
-    "publisher": "Microsoft Corp."
-  },
-  {
-    "name": "type-fest",
-    "version": "0.7.1",
-    "license": "(MIT OR CC0-1.0)",
-    "repository": "https://github.com/sindresorhus/type-fest",
-    "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "typescript",
-    "version": "5.9.3",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/microsoft/TypeScript",
-    "publisher": "Microsoft Corp."
-  },
-  {
-    "name": "uncrypto",
-    "version": "0.1.3",
-    "license": "MIT",
-    "repository": "https://github.com/unjs/uncrypto"
-  },
-  {
-    "name": "undici-types",
-    "version": "7.18.2",
-    "license": "MIT",
-    "repository": "https://github.com/nodejs/undici"
-  },
-  {
-    "name": "update-browserslist-db",
-    "version": "1.2.3",
-    "license": "MIT",
-    "repository": "https://github.com/browserslist/update-db",
-    "publisher": "Andrey Sitnik"
-  },
-  {
-    "name": "use-callback-ref",
-    "version": "1.3.3",
-    "license": "MIT",
-    "repository": "https://github.com/theKashey/use-callback-ref",
-    "publisher": "theKashey"
-  },
-  {
-    "name": "use-intl",
-    "version": "4.9.0",
-    "license": "MIT",
-    "repository": "https://github.com/amannn/next-intl",
-    "publisher": "Jan Amann"
-  },
-  {
-    "name": "use-sidecar",
-    "version": "1.1.3",
-    "license": "MIT",
-    "repository": "https://github.com/theKashey/use-sidecar",
-    "publisher": "theKashey"
-  },
-  {
-    "name": "use-sync-external-store",
-    "version": "1.6.0",
-    "license": "MIT",
-    "repository": "https://github.com/facebook/react"
-  },
-  {
-    "name": "util-deprecate",
-    "version": "1.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/TooTallNate/util-deprecate",
-    "publisher": "Nathan Rajlich"
-  },
-  {
-    "name": "uuid",
-    "version": "10.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/uuidjs/uuid"
-  },
-  {
-    "name": "uuid",
-    "version": "9.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/uuidjs/uuid"
   },
   {
     "name": "vaul",
@@ -2719,69 +431,6 @@
     "license": "MIT",
     "repository": "https://github.com/emilkowalski/vaul",
     "publisher": "Emil Kowalski"
-  },
-  {
-    "name": "victory-vendor",
-    "version": "37.3.6",
-    "license": "MIT AND ISC",
-    "repository": "https://github.com/FormidableLabs/victory",
-    "publisher": "Formidable"
-  },
-  {
-    "name": "web-vitals",
-    "version": "5.2.0",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/GoogleChrome/web-vitals",
-    "publisher": "Philip Walton"
-  },
-  {
-    "name": "webidl-conversions",
-    "version": "3.0.1",
-    "license": "BSD-2-Clause",
-    "repository": "https://github.com/jsdom/webidl-conversions",
-    "publisher": "Domenic Denicola"
-  },
-  {
-    "name": "whatwg-url",
-    "version": "5.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/jsdom/whatwg-url",
-    "publisher": "Sebastian Mayr"
-  },
-  {
-    "name": "which",
-    "version": "2.0.2",
-    "license": "ISC",
-    "repository": "https://github.com/isaacs/node-which",
-    "publisher": "Isaac Z. Schlueter"
-  },
-  {
-    "name": "ws",
-    "version": "8.18.3",
-    "license": "MIT",
-    "repository": "https://github.com/websockets/ws",
-    "publisher": "Einar Otto Stangvik"
-  },
-  {
-    "name": "xtend",
-    "version": "4.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/Raynos/xtend",
-    "publisher": "Raynos"
-  },
-  {
-    "name": "yallist",
-    "version": "3.1.1",
-    "license": "ISC",
-    "repository": "https://github.com/isaacs/yallist",
-    "publisher": "Isaac Z. Schlueter"
-  },
-  {
-    "name": "yocto-queue",
-    "version": "0.1.0",
-    "license": "MIT",
-    "repository": "https://github.com/sindresorhus/yocto-queue",
-    "publisher": "Sindre Sorhus"
   },
   {
     "name": "zod",
@@ -2792,7 +441,7 @@
   },
   {
     "name": "zustand",
-    "version": "5.0.12",
+    "version": "5.0.14",
     "license": "MIT",
     "repository": "https://github.com/pmndrs/zustand",
     "publisher": "Paul Henschel"
