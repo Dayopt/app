@@ -9,7 +9,7 @@ import {
 import { ClientTableOfContents } from '@/features/docs';
 import { Link } from '@/platform/i18n/navigation';
 import { routing } from '@/platform/i18n/routing';
-import { generateSEOMetadata } from '@/platform/seo/metadata';
+import { generateSEOMetadata, siteConfig } from '@/platform/seo/metadata';
 import { Container } from '@dayopt/components';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
@@ -238,7 +238,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 <div className="mt-6 space-y-6">
                   <div>
                     <h3 className="text-foreground mb-4 text-lg font-medium">{t('share.title')}</h3>
-                    <ShareButton title={post.frontMatter.title} slug={slug} />
+                    <ShareButton
+                      title={post.frontMatter.title}
+                      url={`${siteConfig.url}/${locale}/blog/${slug}`}
+                    />
                   </div>
                 </div>
               </div>
