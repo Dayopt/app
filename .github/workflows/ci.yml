@@ -139,7 +139,7 @@ jobs:
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
 
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: apps/product/.next/cache
           key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/product/src/**/*.{ts,tsx}') }}
@@ -192,7 +192,7 @@ jobs:
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
 
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: apps/web/.next/cache
           key: nextjs-web-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**/*.{ts,tsx}', 'apps/web/content/**/*.{md,mdx,json}') }}
