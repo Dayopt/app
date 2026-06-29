@@ -26,15 +26,9 @@ const meta = {
   title: 'Shared/Components/Actions/Button', // Sidebar上のパス
   component: Button, // 対象コンポーネント
   tags: ['autodocs'], // 自動ドキュメント生成
-  argTypes: {
-    /* ... */
-  }, // Controls設定
-  decorators: [
-    /* ... */
-  ], // ラッパー
-  parameters: {
-    /* ... */
-  }, // 静的メタデータ
+  argTypes: {/* ... */}, // Controls設定
+  decorators: [/* ... */], // ラッパー
+  parameters: {/* ... */}, // 静的メタデータ
 } satisfies Meta<typeof Button>;
 
 export default meta;
