@@ -30,6 +30,7 @@
     "license:check": "license-checker --production --excludePrivatePackages --onlyAllow \"$(cat .licensrc.json | jq -r .onlyAllow)\"",
     "license:check-risks": "tsx ../../scripts/check-license-risks.ts",
     "license:audit": "license-checker --production --summary",
+    "license:credits:check": "tsx ../../scripts/generate-licenses.ts --check",
     "generate-licenses": "tsx ../../scripts/generate-licenses.ts",
     "perf:lighthouse": "lhci autorun",
     "quality:full": "pnpm lint && pnpm license:check && pnpm perf:lighthouse && pnpm typecheck",

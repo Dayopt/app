@@ -45,6 +45,7 @@
     "license:check": "pnpm --filter @dayopt/product license:check",
     "license:check-risks": "pnpm --filter @dayopt/product license:check-risks",
     "license:audit": "pnpm --filter @dayopt/product license:audit",
+    "license:credits:check": "pnpm --filter @dayopt/product license:credits:check",
     "generate-licenses": "pnpm --filter @dayopt/product generate-licenses",
     "perf:lighthouse": "pnpm --filter @dayopt/product perf:lighthouse",
     "quality:full": "pnpm --filter @dayopt/product quality:full",
