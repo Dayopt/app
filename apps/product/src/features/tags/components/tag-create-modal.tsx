@@ -314,6 +314,7 @@ export function TagCreateModal({ open, onClose, initialParentId, onCreated }: Ta
                     type="button"
                     aria-label={t('selectGroup')}
                     className={cn(
+                      // eslint-disable-next-line tailwindcss/no-arbitrary-value -- グループ名ボタンの最大幅 10rem はトークンに対応する spacing が無い
                       'flex h-8 max-w-[10rem] items-center gap-1 rounded-full border px-2 transition-colors',
                       'hover:bg-state-hover active:bg-state-hover',
                       'focus-visible:outline-ring outline-none focus-visible:outline-2 focus-visible:outline-offset-2',

@@ -164,6 +164,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
         {/* インライン展開パネル — grid-rows アニメーション */}
         <div
           className={cn(
+            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- grid-template-rows の transition はトークンで表現不可
             'grid transition-[grid-template-rows] duration-200 ease-in-out',
             isExpanded ? 'grid-rows-expanded' : 'grid-rows-collapsed',
           )}

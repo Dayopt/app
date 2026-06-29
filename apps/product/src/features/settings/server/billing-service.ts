@@ -93,8 +93,7 @@ async function getOrCreateCustomer(
   const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
 
   const existingCustomerId = (data as Record<string, unknown> | null)?.stripe_customer_id as
-    | string
-    | null;
+    string | null;
 
   if (existingCustomerId) {
     return existingCustomerId;

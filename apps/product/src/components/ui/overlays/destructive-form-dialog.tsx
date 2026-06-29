@@ -129,6 +129,7 @@ export function DestructiveFormDialog({
   if (responsive && isMobile) {
     return (
       <Drawer open={open} onOpenChange={handleOpenChange}>
+        {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- ドロワー高は viewport 単位 80vh が必要でトークン化不可 */}
         <DrawerContent className={cn('max-h-[80vh]', contentClassName)}>
           <DrawerHeader>
             <DrawerTitle>{title}</DrawerTitle>

@@ -321,6 +321,7 @@ export function TagQuickSelector({
         aria-modal="false"
         aria-label={t('tagSelector.title')}
         className={cn(
+          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- セレクタ高は viewport 単位 70vh が必要でトークン化不可
           'bg-card border-border-subtle shadow-card absolute flex max-h-[70vh] w-full max-w-sm flex-col rounded-2xl border',
           'animate-in fade-in duration-150',
         )}
