@@ -113,8 +113,4 @@ export interface CategoryInfo {
 }
 
 export type ContentCategory =
-  | 'getting-started'
-  | 'api-reference'
-  | 'guides'
-  | 'examples'
-  | 'resources';
+  'getting-started' | 'api-reference' | 'guides' | 'examples' | 'resources';

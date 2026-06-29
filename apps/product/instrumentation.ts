@@ -9,12 +9,12 @@
 export async function register() {
   // Node.jsランタイム（サーバーサイド）
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await import('./sentry.server.config')
+    await import('./sentry.server.config');
   }
 
   // Edgeランタイム（Middleware、Edge API Routes）
   if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('./sentry.edge.config')
+    await import('./sentry.edge.config');
   }
 }
 
@@ -24,19 +24,23 @@ export async function register() {
 export const onRequestError = async (
   err: Error,
   request: {
-    path: string
-    method: string
-    headers: Record<string, string>
+    path: string;
+    method: string;
+    headers: Record<string, string>;
   },
   context: {
-    routerKind: 'Pages Router' | 'App Router'
-    routeType: 'render' | 'route' | 'action' | 'middleware'
-    routePath: string
-    revalidateReason: 'on-demand' | 'stale' | undefined
-    renderSource: 'react-server-components' | 'react-server-components-payload' | 'server-rendering' | undefined
-  }
+    routerKind: 'Pages Router' | 'App Router';
+    routeType: 'render' | 'route' | 'action' | 'middleware';
+    routePath: string;
+    revalidateReason: 'on-demand' | 'stale' | undefined;
+    renderSource:
+      | 'react-server-components'
+      | 'react-server-components-payload'
+      | 'server-rendering'
+      | undefined;
+  },
 ) => {
-  const { captureRequestError } = await import('@sentry/nextjs')
+  const { captureRequestError } = await import('@sentry/nextjs');
 
-  captureRequestError(err, request, context)
-}
+  captureRequestError(err, request, context);
+};
