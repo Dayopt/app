@@ -3,34 +3,37 @@
 import { EmptyState } from '@/components/ui/feedback/empty-state';
 import { SearchInput } from '@/components/ui/inputs/search-input';
 import { ContentPagination } from '@/components/ui/navigation/content-pagination';
-import { Tabs, TabsList, TabsTrigger } from '@dayopt/components';
+import { cn } from '@/lib/utils';
+import { Link } from '@/platform/i18n/navigation';
 import { Rss, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import type { BlogPostMeta } from '../lib/blog';
+import { BLOG_CATEGORIES, type BlogCategory, blogCategoryHref } from '../lib/categories';
 import { PostCard } from './PostCard';
 
 const POSTS_PER_PAGE = 12;
 
-// タブ = blog の category。'all' は全件表示の特別値。
-const BLOG_CATEGORIES = ['all', 'guide', 'philosophy', 'release', 'devlog'] as const;
-type BlogCategory = (typeof BLOG_CATEGORIES)[number];
-
 interface FilteredBlogClientProps {
   initialPosts: BlogPostMeta[];
   locale: string;
+  /** 現在のタブ（URL 由来）。/blog は 'all'、/blog/{category} はその category。 */
+  activeCategory?: BlogCategory;
 }
 
-export function FilteredBlogClient({ initialPosts, locale }: FilteredBlogClientProps) {
+export function FilteredBlogClient({
+  initialPosts,
+  locale,
+  activeCategory = 'all',
+}: FilteredBlogClientProps) {
   const t = useTranslations('blog');
   const searchParams = useSearchParams();
-  const [activeCategory, setActiveCategory] = useState<BlogCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const currentPage = Number(searchParams?.get('page')) || 1;
 
-  // カテゴリ（タブ）+ 検索で絞り込み、日付降順
+  // カテゴリ（タブ＝URL）+ 検索で絞り込み、日付降順
   const filteredPosts = useMemo(() => {
     let filtered = [...initialPosts];
 
@@ -66,30 +69,33 @@ export function FilteredBlogClient({ initialPosts, locale }: FilteredBlogClientP
   const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
   const currentPosts = filteredPosts.slice(startIndex, startIndex + POSTS_PER_PAGE);
 
-  const resetFilters = () => {
-    setActiveCategory('all');
-    setSearchQuery('');
-  };
-
   return (
     <div>
       {/* タイトルは header ナビの「ブログ」ハイライトで示すため非表示（a11y/SEO 用に sr-only で残す） */}
       <h1 className="sr-only">{t('header.title')}</h1>
 
-      {/* タブ（カテゴリ）+ RSS + 検索 */}
+      {/* タブ（カテゴリ＝URL）+ RSS + 検索 */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Tabs
-          value={activeCategory}
-          onValueChange={(value) => setActiveCategory(value as BlogCategory)}
-        >
-          <TabsList className="flex-wrap">
-            {BLOG_CATEGORIES.map((category) => (
-              <TabsTrigger key={category} value={category}>
+        <nav className="flex flex-wrap items-center gap-0" aria-label={t('header.title')}>
+          {BLOG_CATEGORIES.map((category) => {
+            const isActive = category === activeCategory;
+            return (
+              <Link
+                key={category}
+                href={blogCategoryHref(category)}
+                aria-current={isActive ? 'page' : undefined}
+                className={cn(
+                  'relative inline-flex items-center justify-center rounded-lg px-2 py-1 text-sm whitespace-nowrap transition-colors after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-transparent after:transition-colors',
+                  isActive
+                    ? 'text-foreground after:bg-foreground font-medium'
+                    : 'text-muted-foreground hover:bg-state-hover hover:text-foreground',
+                )}
+              >
                 {t(`tabs.${category}`)}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+              </Link>
+            );
+          })}
+        </nav>
 
         <div className="flex items-center gap-2">
           {/* RSS は検索の左に配置（位置は要検討の暫定） */}
@@ -134,7 +140,13 @@ export function FilteredBlogClient({ initialPosts, locale }: FilteredBlogClientP
                 <ContentPagination
                   currentPage={currentPage}
                   totalPages={totalPages}
-                  basePath={locale === 'ja' ? '/ja/blog' : '/blog'}
+                  basePath={
+                    activeCategory === 'all'
+                      ? locale === 'ja'
+                        ? '/ja/blog'
+                        : '/blog'
+                      : `${locale === 'ja' ? '/ja' : ''}${blogCategoryHref(activeCategory)}`
+                  }
                 />
               </div>
             )}
@@ -144,10 +156,6 @@ export function FilteredBlogClient({ initialPosts, locale }: FilteredBlogClientP
             icon={Search}
             title={t('list.noArticles')}
             description={t('list.noArticlesHint')}
-            action={{
-              label: t('list.clearAllFilters'),
-              onClick: resetFilters,
-            }}
           />
         )}
       </div>

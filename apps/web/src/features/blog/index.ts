@@ -16,3 +16,10 @@ export {
   searchBlogPosts,
 } from './lib/blog';
 export type { BlogPost, BlogPostFrontMatter, BlogPostMeta } from './lib/blog';
+export {
+  BLOG_CATEGORIES,
+  BLOG_CATEGORY_KEYS,
+  blogCategoryHref,
+  isBlogCategoryKey,
+  type BlogCategory,
+} from './lib/categories';
