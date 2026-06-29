@@ -8,6 +8,43 @@ import { TocItem, generateTableOfContents, truncateHeading } from '../lib/toc';
 interface AutoTableOfContentsProps {
   content: string;
   className?: string;
+  /** 下部の Links（Issue 報告 / ソース）を内包表示するか。別 card に分けたい場合は false。 */
+  showLinks?: boolean;
+}
+
+/** TOC 下部の外部リンク（Issue 報告 / ソース）。単体でも別 card として使える。 */
+export function TocLinks() {
+  const t = useTranslations('docs.toc');
+
+  return (
+    <div>
+      <div className="text-muted-foreground mb-4 text-xs font-medium tracking-wider uppercase">
+        {t('links')}
+      </div>
+      <ul className="space-y-2">
+        <li>
+          <a
+            href={dayoptBrand.githubIssuesNewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+          >
+            {t('reportIssue')}
+          </a>
+        </li>
+        <li>
+          <a
+            href={dayoptBrand.githubRepositoryUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+          >
+            {t('viewSource')}
+          </a>
+        </li>
+      </ul>
+    </div>
+  );
 }
 
 interface TocListProps {
@@ -49,7 +86,11 @@ function TocList({ items, level = 0, activeId, onItemClick }: TocListProps) {
   );
 }
 
-export function AutoTableOfContents({ content, className = '' }: AutoTableOfContentsProps) {
+export function AutoTableOfContents({
+  content,
+  className = '',
+  showLinks = true,
+}: AutoTableOfContentsProps) {
   const t = useTranslations('docs.toc');
   const [toc, setToc] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string>('');
@@ -175,34 +216,12 @@ export function AutoTableOfContents({ content, className = '' }: AutoTableOfCont
         <TocList items={toc} activeId={activeId} onItemClick={handleItemClick} />
       </nav>
 
-      {/* Links */}
-      <div className="border-border border-t pt-4">
-        <div className="text-muted-foreground mb-4 text-xs font-medium tracking-wider uppercase">
-          {t('links')}
+      {/* Links（showLinks=false の場合は呼び出し側で別 card として TocLinks を描画する） */}
+      {showLinks && (
+        <div className="border-border border-t pt-4">
+          <TocLinks />
         </div>
-        <ul className="space-y-2">
-          <li>
-            <a
-              href={dayoptBrand.githubIssuesNewUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-            >
-              {t('reportIssue')}
-            </a>
-          </li>
-          <li>
-            <a
-              href={dayoptBrand.githubRepositoryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-            >
-              {t('viewSource')}
-            </a>
-          </li>
-        </ul>
-      </div>
+      )}
     </div>
   );
 }
