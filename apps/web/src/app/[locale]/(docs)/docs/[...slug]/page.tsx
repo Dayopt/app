@@ -1,12 +1,10 @@
 import { FAQStructuredData } from '@/components/seo/EnhancedSEO';
-import { TagPill } from '@/components/ui/display/tag-pill';
 import { Breadcrumbs, ClientTableOfContents, mdxComponents, PageNavigation } from '@/features/docs';
 import { faqMdxComponents } from '@/features/docs/components/MDXComponents';
 import { getAllContent, getMDXContentForRSC, getRelatedContent } from '@/lib/mdx';
 import { Link } from '@/platform/i18n/navigation';
 import { ContentData } from '@/types/content';
 import { Card, CardHeader, CardTitle, Heading, Text } from '@dayopt/components';
-import { Tag } from 'lucide-react';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { MDXRemote } from 'next-mdx-remote/rsc';
@@ -95,7 +93,6 @@ export async function generateMetadata({ params }: DocPageProps): Promise<Metada
     return {
       title: `${frontMatter.title} - Dayopt Documentation`,
       description: frontMatter.description,
-      keywords: frontMatter.tags?.join(', '),
       authors: frontMatter.author ? [{ name: frontMatter.author }] : undefined,
       openGraph: {
         title: frontMatter.title,
@@ -103,7 +100,6 @@ export async function generateMetadata({ params }: DocPageProps): Promise<Metada
         type: 'article',
         publishedTime: frontMatter.publishedAt,
         modifiedTime: frontMatter.updatedAt,
-        tags: frontMatter.tags,
         authors: frontMatter.author ? [frontMatter.author] : undefined,
       },
       twitter: {
@@ -215,22 +211,6 @@ export default async function DocPage({ params }: DocPageProps) {
             </article>
 
             {/* Tags section */}
-            {frontMatter.tags && frontMatter.tags.length > 0 && (
-              <aside className="border-border mt-12 border-t pt-8">
-                <div className="mb-4 flex items-center gap-2">
-                  <Tag className="text-muted-foreground size-4" />
-                  <span className="text-muted-foreground text-sm font-medium">{tDocs('tags')}</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {frontMatter.tags.map((tag) => (
-                    <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`}>
-                      <TagPill tag={tag} />
-                    </Link>
-                  ))}
-                </div>
-              </aside>
-            )}
-
             {/* Related content */}
             {relatedContent.length > 0 && (
               <aside className="border-border mt-12 border-t pt-8">
@@ -250,13 +230,6 @@ export default async function DocPage({ params }: DocPageProps) {
                               <time className="text-muted-foreground text-xs">
                                 {new Date(related.frontMatter.updatedAt).toLocaleDateString(locale)}
                               </time>
-                            )}
-                            {related.frontMatter.tags && related.frontMatter.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {related.frontMatter.tags.slice(0, 2).map((tag) => (
-                                  <TagPill key={tag} tag={tag} />
-                                ))}
-                              </div>
                             )}
                           </div>
                         </CardHeader>

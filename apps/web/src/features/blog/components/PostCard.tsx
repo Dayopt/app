@@ -1,4 +1,3 @@
-import { TagPill } from '@/components/ui/display/tag-pill';
 import { Link } from '@/platform/i18n/navigation';
 import { Heading } from '@dayopt/components';
 import { BlogPostMeta } from '../lib/blog';
@@ -28,7 +27,7 @@ export function PostCard({
 
   const formattedDate = formatDate(post.frontMatter.publishedAt);
 
-  // List layout: cover image + title → tags (#付き) → date
+  // List layout: cover image + title → date
   if (layout === 'list') {
     return (
       <article className="relative py-6 first:pt-0">
@@ -43,7 +42,7 @@ export function PostCard({
             />
           </div>
 
-          {/* コンテンツ: タイトル → タグ → 日付 */}
+          {/* コンテンツ: タイトル → 日付 */}
           <div className="min-w-0 flex-1">
             {/* タイトル（stretched link でカード全体をクリック可能に） */}
             <Link href={`/blog/${post.slug}`} className="after:absolute after:inset-0">
@@ -51,15 +50,6 @@ export function PostCard({
                 {post.frontMatter.title}
               </Heading>
             </Link>
-
-            {/* タグ（#付き・全表示・個別クリック可能） */}
-            <div className="relative z-10 mt-3 flex flex-wrap items-center gap-1">
-              {post.frontMatter.tags.map((tag) => (
-                <Link key={tag} href={`/tags/${tag}`}>
-                  <TagPill tag={tag} />
-                </Link>
-              ))}
-            </div>
 
             {/* 日付 */}
             <div className="text-muted-foreground mt-3 text-sm">
@@ -72,7 +62,7 @@ export function PostCard({
   }
 
   if (layout === 'vertical') {
-    // Vertical layout (for featured articles): image on top, content below
+    // Vertical layout: image on top, content below
     return (
       <article className="group bg-card overflow-hidden rounded-2xl">
         {/* Cover image */}
@@ -91,19 +81,12 @@ export function PostCard({
           <Link href={`/blog/${post.slug}`}>
             <Heading
               as="h2"
-              size="xl"
-              className="mb-4 line-clamp-2 cursor-pointer transition-colors hover:underline"
+              size="lg"
+              className="mb-3 line-clamp-2 cursor-pointer transition-colors hover:underline"
             >
               {post.frontMatter.title}
             </Heading>
           </Link>
-
-          {/* Tags */}
-          <div className="mb-4 flex flex-wrap gap-1">
-            {post.frontMatter.tags.map((tag) => (
-              <TagPill key={tag} tag={tag} />
-            ))}
-          </div>
 
           {/* Meta information */}
           <div className="text-muted-foreground text-sm">
@@ -114,7 +97,7 @@ export function PostCard({
     );
   }
 
-  // Horizontal layout (for regular articles): image on left, content on right
+  // Horizontal layout: image on left, content on right
   return (
     <article className="group bg-card overflow-hidden rounded-2xl">
       <div className="flex gap-6">
@@ -141,13 +124,6 @@ export function PostCard({
                 {post.frontMatter.title}
               </Heading>
             </Link>
-
-            {/* Tags */}
-            <div className="mb-4 flex flex-wrap gap-1">
-              {post.frontMatter.tags.map((tag) => (
-                <TagPill key={tag} tag={tag} />
-              ))}
-            </div>
 
             {/* Meta information */}
             <div className="text-muted-foreground text-sm">

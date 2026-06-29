@@ -45,7 +45,6 @@ export async function generateMetadata({ params }: ReleasePageProps): Promise<Me
   return {
     title: `${frontMatter.title} - v${frontMatter.version}`,
     description: frontMatter.description,
-    keywords: frontMatter.tags.join(', '),
     authors: frontMatter.author ? [{ name: frontMatter.author }] : undefined,
     openGraph: {
       title: `${frontMatter.title} - v${frontMatter.version}`,
@@ -53,7 +52,6 @@ export async function generateMetadata({ params }: ReleasePageProps): Promise<Me
       type: 'article',
       publishedTime: releaseDate,
       authors: frontMatter.author ? [frontMatter.author] : undefined,
-      tags: frontMatter.tags,
       images: frontMatter.coverImage
         ? [
             {
@@ -184,7 +182,6 @@ export default async function ReleaseDetailPage({ params }: ReleasePageProps) {
         name: release.frontMatter.author || 'Dayopt Team',
       },
       datePublished: release.frontMatter.date,
-      keywords: release.frontMatter.tags.join(', '),
       about: {
         '@type': 'SoftwareApplication',
         name: 'Dayopt',

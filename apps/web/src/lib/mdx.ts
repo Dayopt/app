@@ -307,18 +307,11 @@ export async function getContentBySlug(
 
 /**
  * 関連性スコアを計算
- * - 共通タグ: 各タグにつき +2点
  * - 同じカテゴリ: +1点
  * - relatedDocsで指定されている: +5点
  */
 function calculateRelevanceScore(current: ContentData, candidate: ContentData): number {
   let score = 0;
-  const currentTags = current.frontMatter.tags || [];
-  const candidateTags = candidate.frontMatter.tags || [];
-
-  // 共通タグのスコア
-  const commonTags = currentTags.filter((tag) => candidateTags.includes(tag));
-  score += commonTags.length * 2;
 
   // 同じカテゴリのスコア
   if (current.frontMatter.category === candidate.frontMatter.category) {
@@ -366,19 +359,18 @@ export async function getRelatedContent(
 }
 
 /**
- * 検索機能（タイトル、説明、タグで検索）
+ * 検索機能（タイトル、説明、本文で検索）
  */
 export async function searchContent(query: string, locale?: string): Promise<ContentData[]> {
   const allContent = await getAllContent(locale);
   const lowercaseQuery = query.toLowerCase();
 
   return allContent.filter((content) => {
-    const { title, description, tags } = content.frontMatter;
+    const { title, description } = content.frontMatter;
 
     return (
       title.toLowerCase().includes(lowercaseQuery) ||
       description.toLowerCase().includes(lowercaseQuery) ||
-      tags?.some((tag) => tag.toLowerCase().includes(lowercaseQuery)) ||
       content.content.toLowerCase().includes(lowercaseQuery)
     );
   });

@@ -1,5 +1,4 @@
 import { createMDXComponents } from '@/components/content/ContentMDXComponents';
-import { TagPill } from '@/components/ui/display/tag-pill';
 import {
   RelatedPosts,
   ShareButton,
@@ -86,8 +85,6 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
     publishedTime: frontMatter.publishedAt,
     modifiedTime: frontMatter.updatedAt || frontMatter.publishedAt,
     authors: [frontMatter.author],
-    tags: frontMatter.tags,
-    keywords: frontMatter.tags,
     image: frontMatter.coverImage,
     section: frontMatter.category,
   });
@@ -147,7 +144,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     },
     datePublished: post.frontMatter.publishedAt,
     dateModified: post.frontMatter.updatedAt || post.frontMatter.publishedAt,
-    keywords: post.frontMatter.tags.join(', '),
     articleSection: post.frontMatter.category,
     wordCount: post.readingTime * 200,
     timeRequired: `PT${post.readingTime}M`,
@@ -239,19 +235,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 <div className="border-border mt-8 border-t pt-6"></div>
 
                 <div className="mt-6 space-y-6">
-                  <div>
-                    <h3 className="text-foreground mb-4 text-lg font-medium">
-                      {t('post.tagsUsed')}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {post.frontMatter.tags.map((tag) => (
-                        <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`}>
-                          <TagPill tag={tag} />
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-
                   <div>
                     <h3 className="text-foreground mb-4 text-lg font-medium">{t('share.title')}</h3>
                     <ShareButton title={post.frontMatter.title} slug={slug} />

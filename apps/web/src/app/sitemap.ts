@@ -2,7 +2,6 @@ import { SUPPORTED_LOCALES } from '@dayopt/config';
 
 import { getAllBlogPostMetas } from '@/features/blog';
 import { getAllReleaseMetas } from '@/features/releases';
-import { getAllTags } from '@/features/tags';
 import { getAllContent } from '@/lib/mdx';
 import { siteConfig } from '@/platform/seo/metadata';
 import { MetadataRoute } from 'next';
@@ -80,13 +79,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     blog: false,
     releases: false,
     docs: false,
-    tags: false,
   };
 
   let blogPages: MetadataRoute.Sitemap = [];
   let releasePages: MetadataRoute.Sitemap = [];
   let docPages: MetadataRoute.Sitemap = [];
-  let tagPages: MetadataRoute.Sitemap = [];
 
   // Blog posts for both locales
   try {
@@ -152,22 +149,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('[Sitemap] Failed to load docs:', error instanceof Error ? error.message : error);
   }
 
-  // Tag pages for both locales
-  try {
-    const tags = await getAllTags();
-    tagPages = tags.slice(0, 50).flatMap((tag) =>
-      locales.map((locale) => ({
-        url: `${baseUrl}/${locale}/tags/${encodeURIComponent(tag.tag.toLowerCase())}`,
-        lastModified: new Date(),
-        changeFrequency: 'weekly' as const,
-        priority: 0.5,
-      })),
-    );
-    contentStatus.tags = true;
-  } catch (error) {
-    console.error('[Sitemap] Failed to load tags:', error instanceof Error ? error.message : error);
-  }
-
   // Log overall status
   const failedSources = Object.entries(contentStatus)
     .filter(([, success]) => !success)
@@ -177,5 +158,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.warn(`[Sitemap] Some content sources failed: ${failedSources.join(', ')}`);
   }
 
-  return [...staticPages, ...blogPages, ...releasePages, ...docPages, ...tagPages];
+  return [...staticPages, ...blogPages, ...releasePages, ...docPages];
 }
