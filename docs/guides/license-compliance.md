@@ -1,6 +1,9 @@
 # License Compliance Guide - 開発者向け
 
-Dayopt OSS License Compliance System の使い方ガイド
+Dayopt OSS License Compliance System の使い方ガイド。
+
+このリポジトリは pnpm workspace 形式の monorepo。公開用クレジットは `@dayopt/product` の
+production dependency tree を対象に生成する。
 
 ## 📋 目次
 
@@ -18,13 +21,13 @@ Dayopt OSS License Compliance System の使い方ガイド
 
 ```bash
 # 1. 新しいパッケージをインストール
-npm install <package-name>
+pnpm --filter @dayopt/product add <package-name>
 
 # 2. ライセンス情報を生成
-npm run generate-licenses
+pnpm generate-licenses
 
 # 3. コンプライアンスチェック
-npm run license:check
+pnpm license:check
 
 # ✅ 合格なら完了
 # ❌ 違反があればパッケージを削除して代替を探す
@@ -79,27 +82,38 @@ A: 使用禁止です。法的リスクがあるため、必ず代替パッケ�
 ### ライセンス情報生成
 
 ```bash
-npm run generate-licenses
+pnpm generate-licenses
 ```
 
 **出力**:
 
-- `public/legal/oss-credits.json` (153KB) - Web表示用データ
-- `public/legal/THIRD_PARTY_NOTICES.txt` (3.9KB) - Apache-2.0 NOTICE集約
+- `apps/product/public/legal/oss-credits.json` - Web表示用データ
+- `apps/product/public/legal/THIRD_PARTY_NOTICES.txt` - Apache-2.0 NOTICE集約
 
 **実行タイミング**:
 
-- package.json/package-lock.json変更時
+- `apps/product/package.json` / `pnpm-lock.yaml` 変更時
 - 手動でライセンス情報を更新したい時
+
+**生成対象**:
+
+- `pnpm --filter @dayopt/product licenses list --prod --json --long` の結果
+- production dependencies とその transitive dependencies
+- private workspace package 自体は除外され、外部 package の license だけを列挙
+
+### 生成物の鮮度チェック
+
+```bash
+pnpm license:credits:check
+```
+
+`pnpm generate-licenses` の結果と committed file が一致するかを検証する。CI では drift 検出として実行する。
 
 ### コンプライアンスチェック
 
 ```bash
 # 通常チェック（.licensrc.json のルールを適用）
-npm run license:check
-
-# 厳格モード（failOn オプション適用）
-npm run license:check:force
+pnpm license:check
 ```
 
 **チェック項目**:
@@ -111,13 +125,10 @@ npm run license:check:force
 
 ```bash
 # 統計サマリー
-npm run license:audit
+pnpm license:audit
 
 # 全パッケージ詳細（JSON形式）
-npm run license:info
-
-# CSVレポート生成
-npm run license:report
+pnpm --filter @dayopt/product licenses list --prod --json --long
 ```
 
 **例: 統計サマリー出力**:
@@ -138,16 +149,17 @@ npm run license:report
 
 ```bash
 # Step 1: インストール
-npm install lodash
+pnpm --filter @dayopt/product add lodash
 
 # Step 2: ライセンス情報更新
-npm run generate-licenses
+pnpm generate-licenses
 
 # Step 3: コンプライアンスチェック
-npm run license:check
+pnpm license:check
 
 # Step 4: ライセンス詳細確認（必要に応じて）
-npm run license:info | jq '.[] | select(.name | contains("lodash"))'
+pnpm --filter @dayopt/product licenses list --prod --json --long \
+  | jq '.[] | .[] | select(.name | contains("lodash"))'
 ```
 
 **チェック結果**:
@@ -159,16 +171,19 @@ npm run license:info | jq '.[] | select(.name | contains("lodash"))'
 
 ```bash
 # Step 1: 依存関係更新
-npm update
+pnpm --filter @dayopt/product update
 
 # Step 2: ライセンス情報更新
-npm run generate-licenses
+pnpm generate-licenses
 
 # Step 3: 差分確認
-git diff public/legal/oss-credits.json
+git diff apps/product/public/legal/oss-credits.json
 
 # Step 4: コンプライアンスチェック
-npm run license:check
+pnpm license:check
+
+# Step 5: 生成物の鮮度チェック
+pnpm license:credits:check
 ```
 
 ### 3. CI/CDパイプライン
@@ -177,17 +192,14 @@ GitHub Actionsが自動実行:
 
 **トリガー**:
 
-- `package.json` / `package-lock.json` 変更時
-- 週次自動実行（毎週月曜日 0:00 UTC）
-- 手動実行（workflow_dispatch）
+- `package.json` / `pnpm-lock.yaml` 変更時
+- PR / main push の CI
 
 **処理内容**:
 
-1. ライセンス情報生成
-2. コンプライアンスチェック
-3. 違反があればビルド失敗
-4. PRにコメント投稿（統計情報付き）
-5. devブランチに自動コミット
+1. コンプライアンスチェック
+2. `oss-credits.json` / `THIRD_PARTY_NOTICES.txt` の drift 検出
+3. 違反または drift があれば CI 失敗
 
 ---
 
@@ -239,7 +251,7 @@ GitHub Actionsが自動実行:
 **解決方法**:
 
 ```bash
-npm run generate-licenses
+pnpm generate-licenses
 ```
 
 ### エラー: "ライセンス違反が検出されました"
@@ -250,22 +262,23 @@ npm run generate-licenses
 
 ```bash
 # 1. 違反パッケージを特定
-npm run license:check
+pnpm license:check
 
 # 2. パッケージの詳細確認（違反ライセンスを持つパッケージを探す）
-npm run license:info | jq '.[] | select(.licenses != "MIT" and .licenses != "Apache-2.0" and .licenses != "ISC")'
+pnpm --filter @dayopt/product licenses list --prod --json --long \
+  | jq '.[] | .[] | select(.license != "MIT" and .license != "Apache-2.0" and .license != "ISC")'
 
 # 3. パッケージを削除
-npm uninstall <package-name>
+pnpm --filter @dayopt/product remove <package-name>
 
 # 4. 代替パッケージを検索
-npm search <similar-package-name>
+pnpm search <similar-package-name>
 
 # 5. 代替パッケージをインストール
-npm install <alternative-package>
+pnpm --filter @dayopt/product add <alternative-package>
 
 # 6. 再チェック
-npm run generate-licenses && npm run license:check
+pnpm generate-licenses && pnpm license:check && pnpm license:credits:check
 ```
 
 ### 警告: "検証済みファクターなし"（MFA関連）
@@ -280,7 +293,7 @@ npm run generate-licenses && npm run license:check
 
 **解決方法**:
 
-1. ローカルで `npm run license:check` 実行
+1. ローカルで `pnpm license:check` 実行
 2. 違反パッケージを削除
 3. 代替パッケージをインストール
 4. 再度プッシュ
@@ -335,10 +348,11 @@ BSD-2-Clause: 12 packages (1.3%)
 
 ## 📝 変更履歴
 
-| 日付       | バージョン | 変更内容                  |
-| ---------- | ---------- | ------------------------- |
-| 2025-10-15 | 1.0.0      | 初版作成（Phase 5完了時） |
+| 日付       | バージョン | 変更内容                                              |
+| ---------- | ---------- | ----------------------------------------------------- |
+| 2026-06-29 | 1.1.0      | monorepo / pnpm 前提に更新。生成物 drift check を追加 |
+| 2025-10-15 | 1.0.0      | 初版作成（Phase 5完了時）                             |
 
 ---
 
-**📖 最終更新**: 2025-10-15 | **担当**: Dayopt Development Team
+**📖 最終更新**: 2026-06-29 | **担当**: Dayopt Development Team
