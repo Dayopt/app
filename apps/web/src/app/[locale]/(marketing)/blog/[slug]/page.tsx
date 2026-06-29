@@ -133,6 +133,15 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   const relatedPosts = await getRelatedPosts(slug, 3, locale);
 
+  // cover 画像が無ければ生成 OGP 画像を hero として表示する
+  const heroImage =
+    post.frontMatter.coverImage ||
+    `/api/og?${new URLSearchParams({
+      title: post.frontMatter.title,
+      type: 'blog',
+      date: post.frontMatter.publishedAt,
+    }).toString()}`;
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
@@ -166,33 +175,42 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           <Container>
             <div className="mx-auto flex max-w-4xl gap-8">
               <div className="min-w-0 flex-1 pt-16">
-                <div className="mb-8">
-                  <nav
-                    aria-label="breadcrumb"
-                    className="flex min-w-0 items-center space-x-2 text-sm"
+                {/* パンくず（HOME は出さず ブログ / タイトル） */}
+                <nav
+                  aria-label="breadcrumb"
+                  className="mb-8 flex min-w-0 items-center space-x-2 text-sm"
+                >
+                  <Link
+                    href="/blog"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <Link
-                      href="/"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {tCommon('navigation.home')}
-                    </Link>
-                    <span className="text-border">/</span>
-                    <Link
-                      href="/blog"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {tCommon('navigation.blog')}
-                    </Link>
-                    <span className="text-border">/</span>
-                    <span className="text-foreground truncate font-medium">
-                      {post.frontMatter.title}
-                    </span>
-                  </nav>
+                    {tCommon('navigation.blog')}
+                  </Link>
+                  <span className="text-border">/</span>
+                  <span className="text-foreground truncate font-medium">
+                    {post.frontMatter.title}
+                  </span>
+                </nav>
+
+                {/* 写真 → タイトル → メタ情報 の順 */}
+                <div className="border-border relative mb-6 aspect-[16/9] overflow-hidden rounded-2xl border">
+                  <Image
+                    src={heroImage}
+                    alt={post.frontMatter.title}
+                    fill
+                    className="object-cover"
+                    priority
+                    unoptimized={!post.frontMatter.coverImage}
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                  />
                 </div>
 
+                <h1 className="text-foreground mb-3 text-4xl font-medium break-words">
+                  {post.frontMatter.title}
+                </h1>
+
                 <time
-                  className="text-muted-foreground mb-2 block text-sm"
+                  className="text-muted-foreground mb-8 block text-sm"
                   dateTime={post.frontMatter.publishedAt}
                 >
                   {new Date(post.frontMatter.publishedAt).toLocaleDateString(locale, {
@@ -201,23 +219,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                     day: 'numeric',
                   })}
                 </time>
-
-                <h1 className="text-foreground mb-8 text-4xl font-medium break-words">
-                  {post.frontMatter.title}
-                </h1>
-
-                {post.frontMatter.coverImage && (
-                  <div className="relative mb-8 aspect-[16/9] overflow-hidden rounded-2xl shadow-lg">
-                    <Image
-                      src={post.frontMatter.coverImage}
-                      alt={post.frontMatter.title}
-                      fill
-                      className="rounded-2xl object-cover"
-                      priority
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-                    />
-                  </div>
-                )}
 
                 <div>
                   <MDXRemote
@@ -242,9 +243,11 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 </div>
               </div>
 
-              <aside className="hidden w-60 flex-shrink-0 xl:block">
-                <div className="sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto pt-16 pl-6">
-                  <ClientTableOfContents content={post.content} />
+              <aside className="hidden w-72 flex-shrink-0 xl:block">
+                <div className="sticky top-24 pt-16">
+                  <div className="bg-card text-card-foreground border-border max-h-[calc(100vh-8rem)] overflow-y-auto rounded-xl border p-5">
+                    <ClientTableOfContents content={post.content} />
+                  </div>
                 </div>
               </aside>
             </div>
