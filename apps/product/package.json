@@ -167,7 +167,7 @@
     "sharp": "^0.35.2",
     "size-limit": "^11.2.0",
     "storybook": "^10.4.6",
-    "supabase": "^2.107.0",
+    "supabase": "^2.108.0",
     "tailwindcss": "^4.3.1",
     "tsx": "^4.22.4",
     "tw-animate-css": "^1.3.6",
