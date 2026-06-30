@@ -424,8 +424,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
     // Draft: state-selected オーバーレイ
     isDraft &&
+      // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の rounded-[inherit] は親カードの角丸継承が必須
       'before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:transition-colors hover:before:bg-state-hover',
     isDraft &&
+      // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の rounded-[inherit] は親カードの角丸継承が必須
       'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-state-selected',
     // 選択/アクティブ状態（ホバーが継続しているような見た目）
     !isDraft && (isSelected || isActive) && 'after:!bg-state-hover',

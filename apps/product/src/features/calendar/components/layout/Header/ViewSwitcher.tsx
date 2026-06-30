@@ -154,16 +154,14 @@ export function ViewSwitcher({
         },
       },
       // 2-9 → N-day View
-      ...([2, 3, 4, 5, 6, 7, 8, 9] as const).map(
-        (n): ShortcutDef => ({
-          key: String(n),
-          description: `${n}-Day View に切り替え`,
-          handler: (e) => {
-            e.preventDefault();
-            onChangeRef.current(`${n}day` as CalendarViewType);
-          },
-        }),
-      ),
+      ...([2, 3, 4, 5, 6, 7, 8, 9] as const).map((n): ShortcutDef => ({
+        key: String(n),
+        description: `${n}-Day View に切り替え`,
+        handler: (e) => {
+          e.preventDefault();
+          onChangeRef.current(`${n}day` as CalendarViewType);
+        },
+      })),
     ];
 
     return registerShortcuts(shortcuts);

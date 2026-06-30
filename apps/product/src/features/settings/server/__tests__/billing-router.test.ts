@@ -189,10 +189,12 @@ describe('billing-router', () => {
 
     it('Stripe顧客なしでサービスエラー', async () => {
       vi.mocked(billingServiceMock.createPortalSession).mockRejectedValue(
-        new (billingServiceMock.BillingServiceError as unknown as new (
-          code: string,
-          message: string,
-        ) => Error)('NOT_FOUND', 'No Stripe customer found'),
+        new (
+          billingServiceMock.BillingServiceError as unknown as new (
+            code: string,
+            message: string,
+          ) => Error
+        )('NOT_FOUND', 'No Stripe customer found'),
       );
 
       const ctx = createMockContext({ userId: 'user-1' });

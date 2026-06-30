@@ -57,8 +57,7 @@ export const providerDecorator: Decorator = (Story, context) => {
   const trpcMocks = context.parameters.trpcMocks as MockResponseMap | undefined;
   const trpcPending = context.parameters.trpcPending as boolean | undefined;
   const trpcError = context.parameters.trpcError as
-    | { path: string; code: string; message?: string }
-    | undefined;
+    { path: string; code: string; message?: string } | undefined;
 
   return (
     <StorybookThemeProvider>

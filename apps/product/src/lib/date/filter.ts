@@ -8,12 +8,7 @@ import { formatInTimeZone } from 'date-fns-tz';
 
 /** 日付範囲フィルターの選択肢（'all'〜'this_month'） */
 export type DateRangeFilter =
-  | 'all'
-  | 'today'
-  | 'yesterday'
-  | 'this_week'
-  | 'last_week'
-  | 'this_month';
+  'all' | 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month';
 
 /**
  * 日付文字列が指定された日付範囲フィルターに一致するか判定
