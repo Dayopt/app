@@ -7,7 +7,6 @@ import { getTranslations } from 'next-intl/server';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
-import { Breadcrumbs } from './Breadcrumbs';
 import { faqMdxComponents, mdxComponents } from './MDXComponents';
 import { PageNavigation } from './PageNavigation';
 import { TableOfContentsCards } from './TableOfContentsCards';
@@ -72,9 +71,6 @@ export async function DocArticle({
       {/* Main Content */}
       <div className="min-w-0 flex-1 px-6 py-8 lg:px-8">
         <div className="mx-auto max-w-3xl">
-          {/* Breadcrumb navigation */}
-          <Breadcrumbs slug={slug} title={frontMatter.title} />
-
           {/* FAQ構造化データ（FAQサブページのみ） */}
           {category === 'faq' &&
             contentSlug &&

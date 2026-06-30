@@ -1,5 +1,4 @@
 export { AutoTableOfContents, TocLinks } from './components/AutoTableOfContents';
-export { Breadcrumbs } from './components/Breadcrumbs';
 export { ClientSidebar } from './components/ClientSidebar';
 export { ClientTableOfContents } from './components/ClientTableOfContents';
 export { CopyCodeButton } from './components/CopyCodeButton';
