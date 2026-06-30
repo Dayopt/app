@@ -61,7 +61,7 @@ function TocList({ items, level = 0, activeId, onItemClick }: TocListProps) {
         <li key={item.id}>
           <button
             onClick={() => onItemClick(item.id)}
-            className={`-ml-2 block w-full rounded-lg px-2 py-2 text-left text-sm transition-colors ${
+            className={`-ml-2 block w-full rounded-lg px-2 py-1 text-left text-sm transition-colors ${
               activeId === item.id
                 ? 'text-foreground bg-state-selected font-medium'
                 : 'text-muted-foreground hover:text-foreground hover:bg-state-hover'
