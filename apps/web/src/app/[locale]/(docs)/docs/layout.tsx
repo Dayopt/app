@@ -21,7 +21,7 @@ export default async function DocsLayout({
       {/* 3カラムレイアウト: Sidebar(240px) | Main(flex-1)。Footer はこの外側で画面全幅にする */}
       <div className="max-w-8xl mx-auto flex w-full flex-1 items-start">
         {/* Left Sidebar - Navigation (lg以上で表示、sticky で独立スクロール) */}
-        <aside className="bg-container sticky top-14 hidden h-[calc(100vh-3.5rem)] w-60 flex-shrink-0 overflow-y-auto lg:block">
+        <aside className="bg-background sticky top-14 hidden h-[calc(100vh-3.5rem)] w-60 flex-shrink-0 overflow-y-auto lg:block">
           <div className="px-4 py-8">
             <ClientSidebar navigation={navigation} />
           </div>
