@@ -16,8 +16,7 @@ export function Header() {
   const pathname = usePathname();
 
   const navigation = [
-    { name: t('navigation.features'), href: '/#features' },
-    { name: t('navigation.pricing'), href: '/#pricing' },
+    { name: t('navigation.home'), href: '/' },
     { name: t('navigation.blog'), href: '/blog' },
     { name: t('navigation.docs'), href: '/docs' },
   ];
