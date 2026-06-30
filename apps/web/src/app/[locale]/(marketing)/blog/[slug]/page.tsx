@@ -216,7 +216,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         <article className="py-8">
           {/* Header と同じ左右の余白に揃える（max-w-7xl px-6 lg:px-8） */}
           <div className="mx-auto flex max-w-7xl gap-8 px-6 lg:px-8">
-            <div className="min-w-0 flex-1 pt-16">
+            <div className="min-w-0 flex-1">
               {/* パンくず（HOME は出さず ブログ / カテゴリ） */}
               <nav
                 aria-label="breadcrumb"
@@ -299,7 +299,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </div>
 
             <aside className="hidden w-72 flex-shrink-0 xl:block">
-              <div className="sticky top-24 pt-16">
+              <div className="sticky top-14">
                 <TableOfContentsCards content={post.content} />
               </div>
             </aside>
