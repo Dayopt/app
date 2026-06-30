@@ -267,7 +267,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                     day: 'numeric',
                   })}
                 </time>
-                <span className="bg-muted text-muted-foreground inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium">
+                <span className="bg-muted text-muted-foreground inline-flex items-center rounded-lg px-2 py-1 text-xs font-medium">
                   {categoryLabel}
                 </span>
               </div>

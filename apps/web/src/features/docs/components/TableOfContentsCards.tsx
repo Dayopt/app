@@ -19,11 +19,11 @@ export function TableOfContentsCards({ content }: TableOfContentsCardsProps) {
   return (
     <div className="flex flex-col gap-4">
       {/* card 1: 目次 */}
-      <div className="bg-card text-card-foreground border-border max-h-[60vh] overflow-y-auto rounded-xl border p-5">
+      <div className="bg-card text-card-foreground border-border max-h-[60vh] overflow-y-auto rounded-lg border p-4">
         <ClientTableOfContents content={content} showLinks={false} />
       </div>
       {/* card 2: リンク（Issue 報告 / ソース） */}
-      <div className="bg-card text-card-foreground border-border rounded-xl border p-5">
+      <div className="bg-card text-card-foreground border-border rounded-lg border p-4">
         <TocLinks />
       </div>
     </div>
