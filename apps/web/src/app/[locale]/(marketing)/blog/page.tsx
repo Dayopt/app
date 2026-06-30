@@ -1,7 +1,6 @@
 import { FilteredBlogClient, getAllBlogPostMetas } from '@/features/blog';
 import { routing } from '@/platform/i18n/routing';
 import { generateSEOMetadata } from '@/platform/seo/metadata';
-import { Container } from '@dayopt/components';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
@@ -41,12 +40,11 @@ export default async function BlogPage({ params }: PageProps) {
 
   return (
     <div className="bg-background min-h-screen">
-      <section className="py-16">
-        <Container>
-          <div className="mx-auto max-w-6xl">
-            <FilteredBlogClient initialPosts={allPosts} locale={locale} />
-          </div>
-        </Container>
+      {/* Header と同じ横幅・左右余白に揃える（max-w-7xl px-6 lg:px-8）。上下の余白は docs と同じ py-8 */}
+      <section className="py-8">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <FilteredBlogClient initialPosts={allPosts} locale={locale} />
+        </div>
       </section>
     </div>
   );
