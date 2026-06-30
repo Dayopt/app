@@ -1,3 +1,5 @@
+import { DocArticle } from '@/features/docs';
+import { getMDXContentForRSC } from '@/lib/mdx';
 import { Link } from '@/platform/i18n/navigation';
 import { routing } from '@/platform/i18n/routing';
 import { generateSEOMetadata } from '@/platform/seo/metadata';
@@ -20,8 +22,20 @@ export const revalidate = 86400;
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'common' });
 
+  // はじめに（getting-started）の Overview が無いロケールはフォールバック表示と同じメタデータにする
+  const overview = await getMDXContentForRSC('getting-started', locale);
+  if (overview) {
+    return generateSEOMetadata({
+      title: overview.frontMatter.title,
+      description: overview.frontMatter.description,
+      url: `/${locale}/docs`,
+      locale: locale,
+      type: 'article',
+    });
+  }
+
+  const t = await getTranslations({ locale, namespace: 'common' });
   return generateSEOMetadata({
     title: t('navigation.docs'),
     description: t('navigation.docsDescription'),
@@ -38,6 +52,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function DocsPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
+
+  // /docs はデフォルトで「はじめに」の Overview（getting-started/index.mdx）を表示する。
+  // ロケールにコンテンツが無い場合（未翻訳など）は従来のセクション一覧にフォールバックする。
+  const overview = await getMDXContentForRSC('getting-started', locale);
+
+  if (overview) {
+    return (
+      <DocArticle
+        slug="getting-started"
+        category="getting-started"
+        contentSlug=""
+        mdxContent={overview.content}
+        frontMatter={overview.frontMatter}
+        locale={locale}
+      />
+    );
+  }
 
   const tCommon = await getTranslations({ locale, namespace: 'common' });
   const tDocs = await getTranslations({ locale, namespace: 'docs' });

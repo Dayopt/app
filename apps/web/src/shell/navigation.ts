@@ -84,9 +84,16 @@ export async function generateDocsNavigation(locale: string): Promise<Navigation
     const indexContent = contents.find((c) => c.slug === `${category}/index`);
     const rest = contents.filter((c) => c.slug !== `${category}/index`);
 
+    // getting-started の Overview だけは /docs（ドキュメントのトップ）自体に解決する。
+    // /docs はデフォルトでこの Overview を表示するため、URL を二重化させずここに統一する。
+    const isGettingStarted = category === 'getting-started';
+
     const items: NavigationItem[] = [];
     if (indexContent) {
-      items.push({ title: indexContent.frontMatter.title, href: `/docs/${category}` });
+      items.push({
+        title: isGettingStarted ? t('overview') : indexContent.frontMatter.title,
+        href: isGettingStarted ? '/docs' : `/docs/${category}`,
+      });
     }
     for (const content of rest) {
       items.push({ title: content.frontMatter.title, href: `/docs/${content.slug}` });
