@@ -1,6 +1,10 @@
+'use client';
+
 import { Link } from '@/platform/i18n/navigation';
 import { Heading } from '@dayopt/components';
+import { useTranslations } from 'next-intl';
 import { BlogPostMeta } from '../lib/blog';
+import { isBlogCategoryKey } from '../lib/categories';
 import { BlogImage } from './BlogImage';
 
 interface PostCardProps {
@@ -16,6 +20,8 @@ export function PostCard({
   layout = 'horizontal',
   locale = 'en',
 }: PostCardProps) {
+  const t = useTranslations('blog');
+
   const formatDate = (dateString: string) => {
     const localeCode = locale === 'ja' ? 'ja-JP' : 'en-US';
     return new Date(dateString).toLocaleDateString(localeCode, {
@@ -27,7 +33,21 @@ export function PostCard({
 
   const formattedDate = formatDate(post.frontMatter.publishedAt);
 
-  // List layout: cover image + title → date
+  // 既知カテゴリは i18n ラベル、未知（再分類前の古い値など）は raw 値を表示
+  const categoryKey = post.frontMatter.category.toLowerCase();
+  const categoryLabel = isBlogCategoryKey(categoryKey)
+    ? t(`tabs.${categoryKey}`)
+    : post.frontMatter.category;
+
+  const CategoryLabel = ({ className = '' }: { className?: string }) => (
+    <span
+      className={`text-muted-foreground text-xs font-medium tracking-wide uppercase ${className}`}
+    >
+      {categoryLabel}
+    </span>
+  );
+
+  // List layout: cover image + category → title → date
   if (layout === 'list') {
     return (
       <article className="relative py-6 first:pt-0">
@@ -42,8 +62,10 @@ export function PostCard({
             />
           </div>
 
-          {/* コンテンツ: タイトル → 日付 */}
+          {/* コンテンツ: カテゴリ → タイトル → 日付 */}
           <div className="min-w-0 flex-1">
+            <CategoryLabel className="mb-1 block" />
+
             {/* タイトル（stretched link でカード全体をクリック可能に） */}
             <Link href={`/blog/${post.slug}`} className="after:absolute after:inset-0">
               <Heading as="h2" size="md" className="text-foreground font-medium">
@@ -77,6 +99,8 @@ export function PostCard({
 
         {/* Content */}
         <div className="p-6">
+          <CategoryLabel className="mb-2 block" />
+
           {/* Title */}
           <Link href={`/blog/${post.slug}`}>
             <Heading
@@ -114,6 +138,8 @@ export function PostCard({
         {/* Right side: Content */}
         <div className="flex-1">
           <div className="my-1">
+            <CategoryLabel className="mb-2 block" />
+
             {/* Title */}
             <Link href={`/blog/${post.slug}`}>
               <Heading
