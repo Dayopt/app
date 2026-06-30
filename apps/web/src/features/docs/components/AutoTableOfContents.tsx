@@ -115,7 +115,7 @@ export function AutoTableOfContents({
     const headingIds = flatTocItems.map((item) => item.id).filter(Boolean);
 
     const updateActiveHeading = () => {
-      const mainElement = document.getElementById('main-content');
+      const mainElement = getScrollableMain();
       const scrollTop = mainElement?.scrollTop ?? window.scrollY;
       const offset = 100; // ヘッダー高さを考慮
 
@@ -143,8 +143,8 @@ export function AutoTableOfContents({
     // 初期設定
     setTimeout(updateActiveHeading, 100);
 
-    // main要素のスクロールを監視
-    const mainElement = document.getElementById('main-content');
+    // スクロールコンテナ（docs は main、marketing は window）を監視
+    const mainElement = getScrollableMain();
     if (mainElement) {
       mainElement.addEventListener('scroll', updateActiveHeading, { passive: true });
     }
@@ -162,8 +162,9 @@ export function AutoTableOfContents({
   const handleItemClick = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      const mainElement = document.getElementById('main-content');
-      const headerOffset = 32; // py-8のパディング分
+      const mainElement = getScrollableMain();
+      // main がスクロールする docs は 32、sticky header の marketing は header 分(約80)を確保
+      const headerOffset = mainElement ? 32 : 80;
 
       if (mainElement) {
         // main要素内でスクロール
@@ -173,9 +174,9 @@ export function AutoTableOfContents({
           behavior: 'smooth',
         });
       } else {
-        // フォールバック: window スクロール
+        // window スクロール（sticky header を考慮）
         const elementPosition = element.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        const offsetPosition = elementPosition + window.scrollY - headerOffset;
 
         window.scrollTo({
           top: offsetPosition,
@@ -224,6 +225,20 @@ export function AutoTableOfContents({
       )}
     </div>
   );
+}
+
+/**
+ * 実際にスクロールするコンテナを返す。
+ * docs レイアウトは `#main-content` 自体がスクロールするが、marketing（blog）レイアウトでは
+ * `#main-content` は存在しても window がスクロールする。スクロール可能でなければ null を返し、
+ * 呼び出し側は window スクロールにフォールバックする。
+ */
+function getScrollableMain(): HTMLElement | null {
+  const main = document.getElementById('main-content');
+  if (main && main.scrollHeight > main.clientHeight + 1) {
+    return main;
+  }
+  return null;
 }
 
 // 階層化された目次をフラットなリストに変換
