@@ -5,6 +5,7 @@ export { ClientTableOfContents } from './components/ClientTableOfContents';
 export { CopyCodeButton } from './components/CopyCodeButton';
 export { faqMdxComponents, mdxComponents } from './components/MDXComponents';
 export { PageNavigation } from './components/PageNavigation';
+export { TableOfContentsCards } from './components/TableOfContentsCards';
 export {
   buildTocTree,
   extractHeadings,

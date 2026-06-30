@@ -1,5 +1,5 @@
 import { FAQStructuredData } from '@/components/seo/EnhancedSEO';
-import { Breadcrumbs, ClientTableOfContents, mdxComponents, PageNavigation } from '@/features/docs';
+import { Breadcrumbs, mdxComponents, PageNavigation, TableOfContentsCards } from '@/features/docs';
 import { faqMdxComponents } from '@/features/docs/components/MDXComponents';
 import { getAllContent, getMDXContentForRSC, getRelatedContent } from '@/lib/mdx';
 import { Link } from '@/platform/i18n/navigation';
@@ -245,10 +245,10 @@ export default async function DocPage({ params }: DocPageProps) {
           </div>
         </div>
 
-        {/* Right Sidebar - Table of Contents (xl以上で表示、固定位置) */}
-        <aside className="hidden w-60 flex-shrink-0 xl:block">
-          <div className="sticky top-0 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-4 py-8">
-            <ClientTableOfContents content={mdxContent} />
+        {/* Right Sidebar - Table of Contents（xl以上で表示。blog と共通の2card レイアウト） */}
+        <aside className="hidden w-72 flex-shrink-0 xl:block">
+          <div className="sticky top-14 py-8 pr-6 lg:pr-8">
+            <TableOfContentsCards content={mdxContent} />
           </div>
         </aside>
       </div>

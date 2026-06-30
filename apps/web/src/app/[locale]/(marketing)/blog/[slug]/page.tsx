@@ -9,7 +9,7 @@ import {
   RelatedPosts,
   ShareButton,
 } from '@/features/blog';
-import { ClientTableOfContents, TocLinks } from '@/features/docs';
+import { TableOfContentsCards } from '@/features/docs';
 import { Link } from '@/platform/i18n/navigation';
 import { routing } from '@/platform/i18n/routing';
 import { generateSEOMetadata, siteConfig } from '@/platform/seo/metadata';
@@ -299,15 +299,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </div>
 
             <aside className="hidden w-72 flex-shrink-0 xl:block">
-              <div className="sticky top-24 flex flex-col gap-4 pt-16">
-                {/* card 1: 目次 */}
-                <div className="bg-card text-card-foreground border-border max-h-[60vh] overflow-y-auto rounded-xl border p-5">
-                  <ClientTableOfContents content={post.content} showLinks={false} />
-                </div>
-                {/* card 2: リンク（Issue 報告 / ソース） */}
-                <div className="bg-card text-card-foreground border-border rounded-xl border p-5">
-                  <TocLinks />
-                </div>
+              <div className="sticky top-24 pt-16">
+                <TableOfContentsCards content={post.content} />
               </div>
             </aside>
           </div>
