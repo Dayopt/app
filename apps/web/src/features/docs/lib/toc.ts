@@ -102,14 +102,3 @@ export function generateTableOfContents(content: string): TocItem[] {
   const headings = extractHeadings(content);
   return buildTocTree(headings);
 }
-
-/**
- * 見出しタイトルを適切な長さに省略
- */
-export function truncateHeading(title: string, maxLength: number = 50): string {
-  if (title.length <= maxLength) {
-    return title;
-  }
-
-  return title.substring(0, maxLength - 3) + '...';
-}

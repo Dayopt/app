@@ -11,6 +11,5 @@ export {
   extractHeadings,
   generateAnchorId,
   generateTableOfContents,
-  truncateHeading,
 } from './lib/toc';
 export type { TocItem } from './lib/toc';

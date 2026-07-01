@@ -3,7 +3,7 @@
 import { dayoptBrand } from '@dayopt/config';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
-import { TocItem, generateTableOfContents, truncateHeading } from '../lib/toc';
+import { TocItem, generateTableOfContents } from '../lib/toc';
 
 interface AutoTableOfContentsProps {
   content: string;
@@ -56,7 +56,7 @@ interface TocListProps {
 
 function TocList({ items, level = 0, activeId, onItemClick }: TocListProps) {
   return (
-    <ul className={`space-y-1 ${level > 0 ? 'ml-4' : ''}`}>
+    <ul className="space-y-1">
       {items.map((item) => (
         <li key={item.id}>
           <button
@@ -68,9 +68,7 @@ function TocList({ items, level = 0, activeId, onItemClick }: TocListProps) {
             }`}
             title={item.title}
           >
-            <span className="line-clamp-2">
-              {truncateHeading(item.title, level === 0 ? 40 : 35)}
-            </span>
+            <span className="line-clamp-2">{item.title}</span>
           </button>
           {item.children && item.children.length > 0 && (
             <TocList
