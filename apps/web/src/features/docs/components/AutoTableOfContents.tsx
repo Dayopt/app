@@ -141,6 +141,17 @@ export function AutoTableOfContents({
         }
       }
 
+      // 最後の見出し直後のコンテンツが短いと、しきい値に届かず最後まで
+      // スクロールしても currentActiveId が更新されないため、最下部到達時は
+      // 最後の見出しを強制的にアクティブにする
+      const maxScrollTop = mainElement
+        ? mainElement.scrollHeight - mainElement.clientHeight
+        : document.documentElement.scrollHeight - window.innerHeight;
+      const lastHeadingId = headingIds[headingIds.length - 1];
+      if (lastHeadingId && scrollTop >= maxScrollTop - 2) {
+        currentActiveId = lastHeadingId;
+      }
+
       setActiveId(currentActiveId);
     };
 
@@ -166,6 +177,9 @@ export function AutoTableOfContents({
   const handleItemClick = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
+      // スクロール検出を待たず、クリックした項目を即座にハイライトする
+      setActiveId(id);
+
       const mainElement = getScrollableMain();
       // main がスクロールする docs は 32、sticky header の marketing は header 分(約80)を確保
       const headerOffset = mainElement ? 32 : 80;
