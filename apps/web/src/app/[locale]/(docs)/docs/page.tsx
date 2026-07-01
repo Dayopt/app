@@ -58,16 +58,7 @@ export default async function DocsPage({ params }: PageProps) {
   const overview = await getMDXContentForRSC('getting-started', locale);
 
   if (overview) {
-    return (
-      <DocArticle
-        slug="getting-started"
-        category="getting-started"
-        contentSlug=""
-        mdxContent={overview.content}
-        frontMatter={overview.frontMatter}
-        locale={locale}
-      />
-    );
+    return <DocArticle category="getting-started" mdxContent={overview.content} />;
   }
 
   const tCommon = await getTranslations({ locale, namespace: 'common' });

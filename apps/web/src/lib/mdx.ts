@@ -90,12 +90,13 @@ export async function getMDXContent(
 
     const { data, content } = parsedMatter;
 
-    // スラッグを生成（ファイルパスから、ロケールプレフィックスは含まない）
-    const slug = filePath.replace(/\.mdx$/, '').replace(/\\/g, '/');
-
-    // カテゴリーをパスから抽出
-    const pathParts = filePath.split('/');
+    // カテゴリーをパスから抽出（ディレクトリ構造は維持するが、URLはフラットな1階層にする）
+    const pathParts = filePath.replace(/\\/g, '/').split('/');
     const category = pathParts[0] || 'general';
+
+    // 公開URLのスラッグはファイル名のみ（index.mdx はカテゴリー名そのものになる）
+    const fileName = (pathParts[pathParts.length - 1] || '').replace(/\.mdx$/, '');
+    const slug = fileName === 'index' ? category : fileName;
 
     const parsed = parseFrontMatter(docFrontMatterSchema, { ...data, slug, category }, filePath);
     const frontMatter: FrontMatter = parsed;
@@ -306,56 +307,14 @@ export async function getContentBySlug(
 }
 
 /**
- * 関連性スコアを計算
- * - 同じカテゴリ: +1点
- * - relatedDocsで指定されている: +5点
+ * コンテンツの公開URLを返す。getting-started の overview (index.mdx) は
+ * `/docs` はデフォルトでこの記事を表示するため、URL を二重化させず /docs 自体に統一する。
  */
-function calculateRelevanceScore(current: ContentData, candidate: ContentData): number {
-  let score = 0;
-
-  // 同じカテゴリのスコア
-  if (current.frontMatter.category === candidate.frontMatter.category) {
-    score += 1;
+export function getDocHref(content: Pick<ContentData, 'slug' | 'frontMatter'>): string {
+  if (content.frontMatter.category === 'getting-started' && content.slug === 'getting-started') {
+    return '/docs';
   }
-
-  // relatedDocsで明示的に指定されている場合
-  const relatedDocs = current.frontMatter.ai?.relatedDocs || [];
-  if (relatedDocs.some((doc) => doc.includes(candidate.slug))) {
-    score += 5;
-  }
-
-  return score;
-}
-
-/**
- * 関連コンテンツを取得（スコアリングで関連性の高い順に取得）
- */
-export async function getRelatedContent(
-  _category: string, // 後方互換性のため引数は残す
-  currentSlug: string,
-  limit: number = 3,
-  locale?: string,
-): Promise<ContentData[]> {
-  const allContent = await getAllContent(locale);
-
-  // 現在の記事を取得
-  const currentContent = allContent.find((content) => content.slug === currentSlug);
-  if (!currentContent) {
-    return [];
-  }
-
-  // 自分自身を除外してスコアリング
-  const scoredContent = allContent
-    .filter((content) => content.slug !== currentSlug)
-    .map((content) => ({
-      content,
-      score: calculateRelevanceScore(currentContent, content),
-    }))
-    .filter(({ score }) => score > 0) // スコア0は除外
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
-
-  return scoredContent.map(({ content }) => content);
+  return `/docs/${content.slug}`;
 }
 
 /**
