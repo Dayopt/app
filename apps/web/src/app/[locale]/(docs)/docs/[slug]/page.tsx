@@ -1,15 +1,15 @@
 import { DocArticle } from '@/features/docs';
-import { getAllContent, getMDXContentForRSC } from '@/lib/mdx';
+import { getAllContent } from '@/lib/mdx';
 import { Link } from '@/platform/i18n/navigation';
 import { ContentData } from '@/types/content';
 import { Heading, Text } from '@dayopt/components';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 interface PageParams {
   locale: string;
-  slug: string[];
+  slug: string;
 }
 
 interface DocPageProps {
@@ -28,10 +28,14 @@ export async function generateStaticParams(): Promise<PageParams[]> {
     for (const locale of locales) {
       const allContent = await getAllContent(locale);
       for (const content of allContent) {
-        params.push({
-          locale,
-          slug: content.slug.split('/'),
-        });
+        // getting-started の overview は /docs 自体に統一するため静的生成しない
+        if (
+          content.frontMatter.category === 'getting-started' &&
+          content.slug === 'getting-started'
+        ) {
+          continue;
+        }
+        params.push({ locale, slug: content.slug });
       }
     }
 
@@ -45,19 +49,17 @@ export async function generateStaticParams(): Promise<PageParams[]> {
 export async function generateMetadata({ params }: DocPageProps): Promise<Metadata> {
   try {
     const { locale, slug } = await params;
-    const category = slug[0];
-    const contentSlug = slug.slice(1).join('/');
+    const allContent = await getAllContent(locale);
+    const matched = allContent.find((content) => content.slug === slug);
 
-    const content = await getMDXContentForRSC(`${category}/${contentSlug}`, locale);
-
-    if (!content) {
+    if (!matched) {
       return {
         title: 'Page Not Found - Dayopt Documentation',
         description: 'The requested documentation page could not be found.',
       };
     }
 
-    const { frontMatter } = content;
+    const { frontMatter } = matched;
 
     return {
       title: `${frontMatter.title} - Dayopt Documentation`,
@@ -86,76 +88,33 @@ export async function generateMetadata({ params }: DocPageProps): Promise<Metada
 }
 
 // Get adjacent pages
-async function getAdjacentPages(
+function getAdjacentPages(
+  allContent: ContentData[],
   slug: string,
-  locale?: string,
-): Promise<{
+): {
   previousPage?: ContentData;
   nextPage?: ContentData;
-}> {
-  try {
-    const allContent = await getAllContent(locale);
-    const currentIndex = allContent.findIndex((content) => content.slug === slug);
+} {
+  const currentIndex = allContent.findIndex((content) => content.slug === slug);
 
-    if (currentIndex === -1) {
-      return {};
-    }
-
-    return {
-      previousPage: currentIndex > 0 ? allContent[currentIndex - 1] : undefined,
-      nextPage: currentIndex < allContent.length - 1 ? allContent[currentIndex + 1] : undefined,
-    };
-  } catch {
+  if (currentIndex === -1) {
     return {};
   }
+
+  return {
+    previousPage: currentIndex > 0 ? allContent[currentIndex - 1] : undefined,
+    nextPage: currentIndex < allContent.length - 1 ? allContent[currentIndex + 1] : undefined,
+  };
 }
 
 // Main page component
 export default async function DocPage({ params }: DocPageProps) {
-  const { locale, slug: slugArray } = await params;
+  const { locale, slug } = await params;
   const tDocs = await getTranslations('docs');
 
+  let allContent: ContentData[];
   try {
-    const slug = slugArray.join('/');
-    const category = slugArray[0] ?? '';
-    const contentSlug = slugArray.slice(1).join('/');
-
-    // Get MDX content
-    let content;
-
-    // First try with complete slug
-    content = await getMDXContentForRSC(slug, locale);
-
-    // If not found, try other patterns
-    if (!content && contentSlug) {
-      // Category/file format
-      content = await getMDXContentForRSC(`${category}/${contentSlug}`, locale);
-    }
-
-    if (!content && !contentSlug && category) {
-      // Single file format
-      content = await getMDXContentForRSC(category, locale);
-    }
-
-    if (!content) {
-      notFound();
-    }
-
-    const { content: mdxContent, frontMatter } = content;
-    const { previousPage, nextPage } = await getAdjacentPages(slug, locale);
-
-    return (
-      <DocArticle
-        slug={slug}
-        category={category}
-        contentSlug={contentSlug}
-        mdxContent={mdxContent}
-        frontMatter={frontMatter}
-        locale={locale}
-        previousPage={previousPage}
-        nextPage={nextPage}
-      />
-    );
+    allContent = await getAllContent(locale);
   } catch {
     // Error page
     return (
@@ -177,4 +136,27 @@ export default async function DocPage({ params }: DocPageProps) {
       </div>
     );
   }
+
+  const matched = allContent.find((content) => content.slug === slug);
+
+  if (!matched) {
+    notFound();
+  }
+
+  // getting-started の overview (index.mdx) は /docs 自体に統一する。
+  // /docs/getting-started として直接アクセスされた場合は重複コンテンツを避けるため寄せる。
+  if (matched.frontMatter.category === 'getting-started' && matched.slug === 'getting-started') {
+    redirect('/docs');
+  }
+
+  const { previousPage, nextPage } = getAdjacentPages(allContent, slug);
+
+  return (
+    <DocArticle
+      category={matched.frontMatter.category}
+      mdxContent={matched.content}
+      previousPage={previousPage}
+      nextPage={nextPage}
+    />
+  );
 }
