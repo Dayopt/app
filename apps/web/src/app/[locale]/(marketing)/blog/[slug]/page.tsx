@@ -13,7 +13,6 @@ import { TableOfContentsCards } from '@/features/docs';
 import { Link } from '@/platform/i18n/navigation';
 import { routing } from '@/platform/i18n/routing';
 import { generateSEOMetadata, siteConfig } from '@/platform/seo/metadata';
-import { Container } from '@dayopt/components';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { MDXRemote } from 'next-mdx-remote/rsc';
@@ -132,16 +131,15 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   setRequestLocale(locale);
 
   // カテゴリ一覧ページ（/blog/{category}）— 一覧をそのカテゴリで表示
+  // /blog（すべて）と同じ横幅・左右余白・上下余白に揃える（max-w-7xl px-6 lg:px-8 / py-8）
   if (isBlogCategoryKey(slug)) {
     const allPosts = await getAllBlogPostMetas(locale);
     return (
       <div className="bg-background min-h-screen">
-        <section className="py-16">
-          <Container>
-            <div className="mx-auto max-w-6xl">
-              <FilteredBlogClient initialPosts={allPosts} locale={locale} activeCategory={slug} />
-            </div>
-          </Container>
+        <section className="py-8">
+          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+            <FilteredBlogClient initialPosts={allPosts} locale={locale} activeCategory={slug} />
+          </div>
         </section>
       </div>
     );
