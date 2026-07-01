@@ -17,7 +17,6 @@ export interface SearchResult {
   type: 'blog' | 'release' | 'docs';
   breadcrumbs: string[];
   lastModified: string;
-  tags: string[];
 }
 
 export function useSearch() {

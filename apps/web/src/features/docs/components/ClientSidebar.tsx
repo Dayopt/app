@@ -1,77 +1,11 @@
 'use client';
 
 import { type NavigationItem, type NavigationSection } from '@/shell/navigation';
-import {
-  BarChart3,
-  Bell,
-  Book,
-  BookOpen,
-  Building,
-  Code,
-  CreditCard,
-  ExternalLink,
-  FileText,
-  Home,
-  Key,
-  Puzzle,
-  Radio,
-  Rocket,
-  Search,
-  Settings,
-  Shield,
-  User,
-} from 'lucide-react';
+import { Input } from '@dayopt/components';
+import { ExternalLink, Search } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-function getPageIcon(href: string, _title: string) {
-  // ホームページ
-  if (href === '/docs' || href === '/docs/') return Home;
-
-  // Getting Started
-  if (href.includes('/getting-started')) return Rocket;
-
-  // Account
-  if (href.includes('/account/profile')) return User;
-  if (href.includes('/account/billing')) return CreditCard;
-  if (href.includes('/account/api-keys')) return Key;
-  if (href.includes('/account/security')) return Shield;
-  if (href.includes('/account/notifications')) return Bell;
-  if (href.includes('/account')) return Settings;
-
-  // Workspace
-  if (href.includes('/workspace')) return Building;
-
-  // Dashboard
-  if (href.includes('/dashboard')) return BarChart3;
-
-  // Logs
-  if (href.includes('/logs')) return FileText;
-
-  // Search
-  if (href.includes('/search')) return Search;
-
-  // Alerts
-  if (href.includes('/alerts')) return Bell;
-
-  // Integrations
-  if (href.includes('/integrations')) return Puzzle;
-
-  // SDKs
-  if (href.includes('/sdks')) return Code;
-
-  // API
-  if (href.includes('/api')) return Radio;
-
-  // Guides
-  if (href.includes('/guides')) return BookOpen;
-
-  // Reference
-  if (href.includes('/reference')) return Book;
-
-  // Default
-  return FileText;
-}
 
 interface NavigationItemProps {
   item: NavigationItem;
@@ -105,15 +39,7 @@ function NavigationItemComponent({ item, level, currentPath }: NavigationItemPro
               paddingBottom: '6px',
             }}
           >
-            {(() => {
-              const IconComponent = getPageIcon(item.href!, item.title);
-              return (
-                <>
-                  <IconComponent className="mr-2 size-4 flex-shrink-0" />
-                  <span className="flex-1">{item.title}</span>
-                </>
-              );
-            })()}
+            <span className="flex-1">{item.title}</span>
             {item.badge && (
               <span className="bg-muted text-primary border-primary ml-2 rounded border px-2 py-1 text-xs font-medium">
                 {item.badge}
@@ -131,15 +57,7 @@ function NavigationItemComponent({ item, level, currentPath }: NavigationItemPro
               paddingBottom: '6px',
             }}
           >
-            {(() => {
-              const IconComponent = getPageIcon('', item.title);
-              return (
-                <>
-                  <IconComponent className="mr-2 size-4 flex-shrink-0" />
-                  <span className="flex-1">{item.title}</span>
-                </>
-              );
-            })()}
+            <span className="flex-1">{item.title}</span>
           </span>
         )}
       </div>
@@ -166,14 +84,21 @@ interface ClientSidebarProps {
 
 export function ClientSidebar({ navigation }: ClientSidebarProps) {
   const pathname = usePathname();
+  const t = useTranslations('common');
 
   return (
     <div className="flex h-full flex-col">
+      {/* Search（旧 docs ヘッダーから移設） */}
+      <div className="relative mb-6">
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+        <Input type="search" placeholder={t('actions.search')} size="sm" className="pl-8" />
+      </div>
+
       {/* Navigation */}
       <nav className="flex-1 space-y-6">
         {navigation.map((section) => (
           <div key={section.title}>
-            <div className="text-muted-foreground cursor-default py-2 pr-4 pl-2 text-xs font-medium tracking-wider uppercase">
+            <div className="text-foreground cursor-default py-2 pr-4 pl-2 text-xs font-medium tracking-wider uppercase">
               {section.title}
             </div>
 

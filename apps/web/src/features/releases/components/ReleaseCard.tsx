@@ -1,6 +1,5 @@
 'use client';
 
-import { TagPill } from '@/components/ui/display/tag-pill';
 import { Link } from '@/platform/i18n/navigation';
 import { Heading } from '@dayopt/components';
 import { useTranslations } from 'next-intl';
@@ -45,15 +44,6 @@ export function ReleaseCard({ release, layout = 'vertical', locale }: ReleaseCar
               </Heading>
             </Link>
 
-            {/* タグ */}
-            <div className="relative z-10 mt-3 flex flex-wrap items-center gap-1">
-              {frontMatter.tags.map((tag) => (
-                <Link key={tag} href={`/tags/${tag}`}>
-                  <TagPill tag={tag} />
-                </Link>
-              ))}
-            </div>
-
             {/* 日付 + バージョン */}
             <div className="text-muted-foreground mt-3 flex items-center gap-2 text-sm">
               <time dateTime={frontMatter.date}>{formattedDate}</time>
@@ -92,19 +82,10 @@ export function ReleaseCard({ release, layout = 'vertical', locale }: ReleaseCar
           <Heading
             as="h2"
             size="xl"
-            className="mb-4 line-clamp-2 cursor-pointer transition-colors hover:underline"
+            className="line-clamp-2 cursor-pointer transition-colors hover:underline"
           >
             {frontMatter.title}
           </Heading>
-
-          {/* Tags */}
-          {frontMatter.tags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1">
-              {frontMatter.tags.map((tag) => (
-                <TagPill key={tag} tag={tag} />
-              ))}
-            </div>
-          )}
         </div>
       </Link>
     </article>

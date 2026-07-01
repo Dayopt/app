@@ -5,6 +5,9 @@
 /* Design Tokens（@dayopt/foundations が単一ソース） */
 @import '@dayopt/foundations/tokens.css';
 
+/* product / web 共通スクロールバー（product を正解として一本化） */
+@import '@dayopt/foundations/scrollbar.css';
+
 /* Utilities */
 @import '../styles/utilities.css';
 

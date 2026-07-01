@@ -1,4 +1,3 @@
-export { BlogFilters, type BlogFilterState } from './components/BlogFilters';
 export { BlogImage } from './components/BlogImage';
 export { BlogCardSkeleton, BlogSkeleton } from './components/BlogSkeleton';
 export { FilteredBlogClient } from './components/FilteredBlogClient';
@@ -9,14 +8,18 @@ export {
   generateExcerpt,
   getAllBlogPostMetas,
   getAllCategories,
-  getAllTagNames,
-  getAllTags,
   getBlogPost,
   getBlogPostsByCategory,
-  getBlogPostsByTag,
   getFeaturedPosts,
   getRecentPosts,
   getRelatedPosts,
   searchBlogPosts,
 } from './lib/blog';
 export type { BlogPost, BlogPostFrontMatter, BlogPostMeta } from './lib/blog';
+export {
+  BLOG_CATEGORIES,
+  BLOG_CATEGORY_KEYS,
+  blogCategoryHref,
+  isBlogCategoryKey,
+  type BlogCategory,
+} from './lib/categories';

@@ -3,18 +3,14 @@
     "navigation": {
       "home": "ホーム",
       "about": "概要",
-      "features": "機能",
-      "pricing": "料金",
       "blog": "ブログ",
       "docs": "ドキュメント",
       "contact": "お問い合わせ",
       "releases": "リリース",
-      "tags": "タグ",
       "resources": "リソース",
       "blogDescription": "最新の記事とチュートリアル",
       "docsDescription": "ドキュメントとガイド",
-      "releasesDescription": "最新のアップデートと変更履歴",
-      "tagsDescription": "トピックでコンテンツを探す"
+      "releasesDescription": "最新のアップデートと変更履歴"
     },
     "actions": {
       "search": "検索",
@@ -123,6 +119,13 @@
     "header": {
       "title": "ブログ"
     },
+    "tabs": {
+      "all": "すべて",
+      "guide": "使い方",
+      "philosophy": "設計思想",
+      "release": "リリースノート",
+      "devlog": "開発ログ"
+    },
     "filters": {
       "title": "フィルター",
       "clearAll": "すべてクリア",
@@ -167,39 +170,6 @@
     "view": {
       "list": "リスト",
       "grid": "グリッド"
-    }
-  },
-  "tags": {
-    "title": "タグ",
-    "description": "タグでコンテンツを探す。ブログ記事、リリース、ドキュメントをトピック別に閲覧できます。",
-    "searchPlaceholder": "タグを検索...",
-    "clearSearch": "検索をクリア",
-    "category": "カテゴリ",
-    "all": "すべて",
-    "blog": "ブログ",
-    "releases": "リリース",
-    "docs": "ドキュメント",
-    "popularTags": "人気のタグ",
-    "noTagsFound": "タグが見つかりません",
-    "noTagsHint": "検索条件を変更してみてください",
-    "clearFilters": "フィルターをクリア",
-    "tagsCount": "{count}件のタグ",
-    "tagsCountSingular": "{count}件のタグ",
-    "filters": "フィルター",
-    "filtersClearAll": "すべてクリア",
-    "filtersApply": "フィルターを適用",
-    "view": {
-      "grid": "グリッド",
-      "list": "リスト"
-    },
-    "detail": {
-      "items": "{count}件",
-      "itemsSingular": "{count}件",
-      "allTags": "すべてのタグ",
-      "searchContent": "コンテンツを検索...",
-      "noContentFound": "コンテンツが見つかりません",
-      "noContentHint": "検索条件を変更してみてください",
-      "clearSearch": "検索をクリア"
     }
   },
   "releases": {
@@ -266,7 +236,6 @@
     }
   },
   "docs": {
-    "relatedArticles": "関連記事",
     "tags": "タグ",
     "pageNavigation": {
       "previous": "前へ",
@@ -280,6 +249,7 @@
     "landing": {
       "subtitle": "ドキュメントとガイドでDayoptを始めましょう"
     },
+    "overview": "概要",
     "categories": {
       "getting-started": "はじめに",
       "features": "機能",
@@ -289,7 +259,7 @@
       "faq": "よくある質問"
     },
     "toc": {
-      "onThisPage": "このページの内容",
+      "onThisPage": "目次",
       "loading": "読み込み中...",
       "noHeadings": "見出しが見つかりません",
       "links": "リンク",

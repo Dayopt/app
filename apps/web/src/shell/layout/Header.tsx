@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Link } from '@/platform/i18n/navigation';
+import { Link, usePathname } from '@/platform/i18n/navigation';
 import { Button, Logo } from '@dayopt/components';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Menu, X } from 'lucide-react';
@@ -13,12 +13,17 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const t = useTranslations('common');
 
+  const pathname = usePathname();
+
   const navigation = [
-    { name: t('navigation.features'), href: '/#features' },
-    { name: t('navigation.pricing'), href: '/#pricing' },
+    { name: t('navigation.home'), href: '/' },
     { name: t('navigation.blog'), href: '/blog' },
     { name: t('navigation.docs'), href: '/docs' },
   ];
+
+  // ハッシュリンク（/#features 等）は対象外。/blog・/docs などの実ページのみハイライト
+  const isActive = (href: string) =>
+    !href.includes('#') && (pathname === href || pathname.startsWith(`${href}/`));
 
   useEffect(() => {
     let ticking = false;
@@ -39,7 +44,7 @@ export function Header() {
   return (
     <header
       className={cn(
-        'bg-background/95 supports-[backdrop-filter]:bg-background/60 z-dropdown sticky top-0 w-full backdrop-blur transition-shadow',
+        'bg-background/95 supports-[backdrop-filter]:bg-background/60 border-border z-dropdown sticky top-0 w-full border-b backdrop-blur transition-shadow',
         isScrolled && 'shadow-elevation-raised',
       )}
     >
@@ -60,7 +65,13 @@ export function Header() {
             <Link
               key={item.name}
               href={item.href}
-              className="text-muted-foreground hover:bg-state-hover hover:text-foreground rounded-lg px-4 py-2 text-base font-medium transition-colors"
+              aria-current={isActive(item.href) ? 'page' : undefined}
+              className={cn(
+                'rounded-lg px-2 py-1 text-base font-medium transition-colors',
+                isActive(item.href)
+                  ? 'bg-state-selected text-foreground'
+                  : 'text-muted-foreground hover:bg-state-hover hover:text-foreground',
+              )}
             >
               {item.name}
             </Link>
@@ -130,7 +141,13 @@ export function Header() {
                       key={item.name}
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="text-foreground hover:bg-state-hover block rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                      aria-current={isActive(item.href) ? 'page' : undefined}
+                      className={cn(
+                        'block rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                        isActive(item.href)
+                          ? 'bg-state-selected text-foreground'
+                          : 'text-foreground hover:bg-state-hover',
+                      )}
                     >
                       {item.name}
                     </Link>

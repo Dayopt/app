@@ -1,4 +1,3 @@
-import { TagPill } from '@/components/ui/display/tag-pill';
 import { Link } from '@/platform/i18n/navigation';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
@@ -10,7 +9,6 @@ interface ReleaseFrontMatter {
   date: string;
   title: string;
   description: string;
-  tags: string[];
   breaking: boolean;
   featured: boolean;
   prerelease?: boolean;
@@ -95,17 +93,6 @@ export async function ReleaseHeader({ frontMatter, locale }: ReleaseHeaderProps)
           </>
         )}
       </div>
-
-      {/* Tags */}
-      {frontMatter.tags.length > 0 && (
-        <div className="mb-8 flex flex-wrap gap-2">
-          {frontMatter.tags.map((tag) => (
-            <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`}>
-              <TagPill tag={tag} />
-            </Link>
-          ))}
-        </div>
-      )}
 
       {/* Actions */}
       <div className="flex items-center gap-4">

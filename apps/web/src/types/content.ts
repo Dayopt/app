@@ -60,7 +60,6 @@ export interface AIMetadata {
 export interface FrontMatter {
   title: string;
   description: string;
-  tags?: string[];
   author?: string;
   publishedAt?: string;
   updatedAt?: string;

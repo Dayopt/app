@@ -32,30 +32,32 @@ Storybook の top-level は**所有境界（package / app）**で分ける（ADR
 web 全体で使うが、**product とは共有しない** component。`Shared/Components`（product と共有）でも
 `Web/Sections`（ページの区画）でもない、web サイト共通の部品。
 
+二段目は **`Shell`（area-bound な chrome）+ 責務ベース categories** で分ける。責務 categories は
+物理構造 `components/ui/<category>/` と `Shared/Components`（ADR-012）の taxonomy に揃える。
+
 ```
 Web/Components
-  Shell
+  Shell                  — ページ骨格（area-bound chrome）
     Header
     Footer
-    PublicLayout
+
+  Actions                — 以下は責務ベース（ui/<category>/ と一致）
+    ThemeToggle
+    LanguageSwitcher
+
+  Inputs
+    SearchInput
+
+  Feedback
+    EmptyState
 
   Navigation
-    HeaderNav
-    FooterNav
-    MobileMenu
-
-  Content
-    MarkdownContent
-    Prose
-    LinkCard
-
-  SEO
-    SeoMeta
-    OgPreview
+    ContentPagination
 ```
 
-ここに入るのは「LP だけ」のものではなく、**web サイト全体で使う**もの。たとえば `Header` /
-`Footer` / `SeoMeta` / `Prose` など。
+`Shell` は Header / Footer のようにページ骨格を構成する chrome。それ以外の単体 UI は
+責務（Actions / Inputs / Display / …）で分類する。SEO 系（`EnhancedSEO` / `StructuredData`）は
+`<head>` / JSON-LD を出すだけで**視覚出力が無い**ため story 化対象外（taxonomy にも載せない）。
 
 ## Web/Sections
 

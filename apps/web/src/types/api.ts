@@ -6,35 +6,13 @@
  */
 
 // ============================================================================
-// タグ API
-// ============================================================================
-
-/**
- * タグ API のレスポンス型
- *
- * @endpoint GET /api/tags
- */
-export interface TagResponse {
-  tag: string;
-  count: number;
-}
-
-/**
- * 人気タグ（UI 用）
- */
-export interface PopularTag {
-  name: string;
-  count: number;
-}
-
-// ============================================================================
 // 検索 API
 // ============================================================================
 
 /**
  * 検索結果のタイプ
  */
-export type SearchResultType = 'blog' | 'docs' | 'release' | 'tags';
+export type SearchResultType = 'blog' | 'docs' | 'release';
 
 /**
  * 検索結果の単一アイテム
@@ -47,7 +25,6 @@ export interface SearchResultItem {
   type: SearchResultType;
   breadcrumbs?: string[];
   lastModified: string;
-  tags: string[];
   category?: string;
 }
 
