@@ -61,10 +61,10 @@ function TocList({ items, level = 0, activeId, onItemClick }: TocListProps) {
         <li key={item.id}>
           <button
             onClick={() => onItemClick(item.id)}
-            className={`block w-full rounded-lg py-1 text-left text-sm transition-colors ${
+            className={`block w-full border-l-[3px] py-1 pl-3 text-left text-sm transition-colors ${
               activeId === item.id
-                ? 'text-foreground bg-state-selected font-medium'
-                : 'text-muted-foreground hover:text-foreground hover:bg-state-hover'
+                ? 'border-foreground text-foreground font-medium'
+                : 'text-muted-foreground hover:text-foreground border-transparent'
             }`}
             title={item.title}
           >
@@ -193,7 +193,7 @@ export function AutoTableOfContents({
   if (!isLoaded || toc.length === 0) {
     return (
       <div className={`space-y-4 ${className}`}>
-        <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+        <div className="text-muted-foreground border-l-[3px] border-transparent pl-3 text-xs font-medium tracking-wider uppercase">
           {t('onThisPage')}
         </div>
         {!isLoaded ? (
@@ -207,7 +207,7 @@ export function AutoTableOfContents({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+      <div className="text-muted-foreground border-l-[3px] border-transparent pl-3 text-xs font-medium tracking-wider uppercase">
         {t('onThisPage')}
       </div>
 
