@@ -61,13 +61,19 @@ function TocList({ items, level = 0, activeId, onItemClick }: TocListProps) {
         <li key={item.id}>
           <button
             onClick={() => onItemClick(item.id)}
-            className={`block w-full border-l-[3px] py-1 pl-3 text-left text-sm transition-colors ${
+            className={`relative block w-full py-1 pl-4 text-left text-sm transition-colors ${
               activeId === item.id
-                ? 'border-foreground text-foreground font-medium'
-                : 'text-muted-foreground hover:text-foreground border-transparent'
+                ? 'text-foreground font-medium'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
             title={item.title}
           >
+            {activeId === item.id && (
+              <span
+                className="bg-foreground absolute inset-y-0 left-0 w-[2px] rounded-full"
+                aria-hidden="true"
+              />
+            )}
             <span className="line-clamp-2">{item.title}</span>
           </button>
           {item.children && item.children.length > 0 && (
@@ -193,7 +199,7 @@ export function AutoTableOfContents({
   if (!isLoaded || toc.length === 0) {
     return (
       <div className={`space-y-4 ${className}`}>
-        <div className="text-muted-foreground border-l-[3px] border-transparent pl-3 text-xs font-medium tracking-wider uppercase">
+        <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
           {t('onThisPage')}
         </div>
         {!isLoaded ? (
@@ -207,11 +213,15 @@ export function AutoTableOfContents({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      <div className="text-muted-foreground border-l-[3px] border-transparent pl-3 text-xs font-medium tracking-wider uppercase">
+      <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
         {t('onThisPage')}
       </div>
 
-      <nav className="space-y-1">
+      <nav className="relative">
+        <span
+          className="bg-border absolute inset-y-0 left-0 w-[2px] rounded-full"
+          aria-hidden="true"
+        />
         <TocList items={toc} activeId={activeId} onItemClick={handleItemClick} />
       </nav>
 
