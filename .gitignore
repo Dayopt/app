@@ -166,6 +166,7 @@ temp/
 /test-results/
 /playwright-report/
 /playwright/.auth/
+/.playwright-mcp/
 # Lighthouse CI
 .lighthouseci/
 .env*.local
