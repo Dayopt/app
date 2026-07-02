@@ -59,15 +59,26 @@ jobs:
           DOCS_GUARD_BASE_REF: origin/${{ github.event.pull_request.base.ref || 'main' }}
 
   # secret scan はリポジトリ全体・全 push/PR が対象（docs 以外の変更でも走る）
+  # org の Actions 許可リストが actions/* github/* zaproxy/* codecov/* softprops/* supabase/*
+  # oven-sh/* に限定されており gitleaks/gitleaks-action は使えないため、バイナリを直接取得して実行する。
   gitleaks:
     name: "\U0001F512 gitleaks"
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      GITLEAKS_VERSION: '8.9.0'
+      GITLEAKS_SHA256: '188d84394cfbb287e5acf789f313fca55a385ba738cb014e7a9bef6e6b0f4d69'
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
-      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: gitleaks インストール
+        run: |
+          curl -sSLO "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | sha256sum -c -
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+
+      - name: gitleaks detect
+        run: gitleaks detect --source . --redact --exit-code 1
