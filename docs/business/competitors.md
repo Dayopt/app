@@ -7,7 +7,7 @@ last_verified: 2026-07-02
 
 Dayopt vs 主要競合7社の構造化比較。機能・価格・ターゲット・哲学の4軸で整理し、Blue Ocean Strategyに基づく勝ち負けを明確化する。
 
-> 調査時点: 2026年3月。プロダクトの最上位コンセプトは [`docs/strategy/concept.md`](../strategy/concept.md) を参照（2026-07-02 策定、in-app AI は作らない方針。本ドキュメントの AI 関連記述は MCP/API 経由の外部 AI 連携を指す）
+> 調査時点: 2026年3月。プロダクトの最上位コンセプトは [`docs/product/concept.md`](../product/concept.md) を参照（2026-07-02 策定、in-app AI は作らない方針。本ドキュメントの AI 関連記述は MCP/API 経由の外部 AI 連携を指す）
 
 ---
 
@@ -224,16 +224,16 @@ Strategy Canvasの4アクションを競合との対比で整理。
 
 Dayoptが**意図的にゼロにした**もの。これにより競合とvalue curveが交差しない。
 
-| 排除した機能                             | 競合での位置づけ                  | 排除の理由                                                                                                                                             |
-| ---------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Task management（完了/優先度/期限）      | Akiflow・Motion・Structuredの中核 | Dayoptは「いつ・どれだけ」のレイヤー。「何を」は別ツールの領域                                                                                         |
-| Calendar attributes（参加者/場所/招待）  | Reclaim・Morgen・Amieの中核       | 外部コミットメントの管理はカレンダーの仕事                                                                                                             |
-| AI auto-scheduling                       | Motion・Reclaimの差別化軸         | 自ら配分を決める行為がタイムボクシングの本質                                                                                                           |
-| Recurrence rules（全自動生成・自動確定） | 全競合が提供                      | 提案型ルーティン（ゴースト+ワンタップ確定）で入力効率と選択型ログの主体性を両立。全自動確定は非採用のまま（[concept.md §4-3](../strategy/concept.md)） |
-| Productivity score / streaks             | Motion（部分的）                  | スコアは判定を生む。Dayoptは判定しない                                                                                                                 |
-| Team collaboration                       | Motion・Reclaim・Amie             | 個人の鏡。他者に見せないからこそ本音の配分ができる                                                                                                     |
-| Meeting intelligence（録音/要約）        | Akiflow・Amie                     | 会議管理ではなく、会議に「配分した時間のパターン」を見る                                                                                               |
-| Granular notifications（5/15/30分前）    | 全競合が提供                      | カレンダーパラダイム。ブロック境界の遷移シグナルのみ                                                                                                   |
+| 排除した機能                             | 競合での位置づけ                  | 排除の理由                                                                                                                                            |
+| ---------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Task management（完了/優先度/期限）      | Akiflow・Motion・Structuredの中核 | Dayoptは「いつ・どれだけ」のレイヤー。「何を」は別ツールの領域                                                                                        |
+| Calendar attributes（参加者/場所/招待）  | Reclaim・Morgen・Amieの中核       | 外部コミットメントの管理はカレンダーの仕事                                                                                                            |
+| AI auto-scheduling                       | Motion・Reclaimの差別化軸         | 自ら配分を決める行為がタイムボクシングの本質                                                                                                          |
+| Recurrence rules（全自動生成・自動確定） | 全競合が提供                      | 提案型ルーティン（ゴースト+ワンタップ確定）で入力効率と選択型ログの主体性を両立。全自動確定は非採用のまま（[concept.md §4-3](../product/concept.md)） |
+| Productivity score / streaks             | Motion（部分的）                  | スコアは判定を生む。Dayoptは判定しない                                                                                                                |
+| Team collaboration                       | Motion・Reclaim・Amie             | 個人の鏡。他者に見せないからこそ本音の配分ができる                                                                                                    |
+| Meeting intelligence（録音/要約）        | Akiflow・Amie                     | 会議管理ではなく、会議に「配分した時間のパターン」を見る                                                                                              |
+| Granular notifications（5/15/30分前）    | 全競合が提供                      | カレンダーパラダイム。ブロック境界の遷移シグナルのみ                                                                                                  |
 
 ### Reduce（削減）
 

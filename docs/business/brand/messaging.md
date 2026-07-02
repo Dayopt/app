@@ -7,7 +7,7 @@ last_verified: 2026-07-02
 
 Dayoptのマーケティングメッセージの核。「何を」「なぜ」伝えるかを定義する。
 
-> プロダクトの最上位コンセプトは [`docs/strategy/concept.md`](./concept.md) を参照（2026-07-02 策定、本ドキュメントと矛盾する場合は concept.md を優先）。
+> プロダクトの最上位コンセプトは [`docs/product/concept.md`](../../product/concept.md) を参照（2026-07-02 策定、本ドキュメントと矛盾する場合は concept.md を優先）。
 
 ---
 

@@ -7,7 +7,7 @@ last_verified: 2026-07-02
 
 Dayoptの最初の顧客像。「誰に」を具体化する。
 
-> ターゲットの要約は [`docs/strategy/concept.md`](./concept.md) §3「AI を使いこなす知的労働者」を参照。本ドキュメントはその詳細な行動パターン・原体験を補足する。
+> ターゲットの要約は [`docs/product/concept.md`](../../product/concept.md) §3「AI を使いこなす知的労働者」を参照。本ドキュメントはその詳細な行動パターン・原体験を補足する。
 
 ---
 
