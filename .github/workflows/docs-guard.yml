@@ -81,4 +81,13 @@ jobs:
           sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
 
       - name: gitleaks detect
-        run: gitleaks detect --source . --redact --exit-code 1
+        # 過去の commit 履歴には（すでに削除済みのファイルを含む）古いプレースホルダー値由来の
+        # 誤検知が積もっている。全履歴を毎回スキャンすると同じ既知ノイズを永久に re-flag し続け
+        # gate として機能しなくなるため、このPR/pushで新規に入ったcommitの範囲だけをスキャンする。
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            BASE="HEAD~1"
+            git cat-file -e "$BASE" 2>/dev/null || BASE="HEAD"
+          fi
+          gitleaks detect --source . --redact --log-opts="${BASE}..HEAD" --exit-code 1
