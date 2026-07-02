@@ -117,7 +117,7 @@ EXISTS (SELECT 1 FROM entries WHERE entries.id = entry_tags.entry_id
         AND entries.user_id = (select auth.uid()))
 ```
 
-### Entries の統合設計（ADR-001）
+### Entries の統合設計（ADR-011）
 
 `plans` テーブルと `records` テーブルを単一の `entries` テーブルに統合。`status` カラムは廃止し、エントリの状態は時間位置から自動導出する：
 
@@ -125,7 +125,7 @@ EXISTS (SELECT 1 FROM entries WHERE entries.id = entry_tags.entry_id
 - `start_time <= now < end_time` → `active`
 - `end_time <= now` → `past`
 
-`actual_start_time` / `actual_end_time` は過去ブロックの実績記録に使用。`fulfillment_score`（1-5）はnullableカラムとして全エントリに存在するが、過去ブロックのみに意味を持つ。詳細は ADR-001 参照。
+`actual_start_time` / `actual_end_time` は過去ブロックの実績記録に使用。`fulfillment_score`（1-5）はnullableカラムとして全エントリに存在するが、過去ブロックのみに意味を持つ。詳細は ADR-011 参照。
 
 ### Tags の階層制限
 

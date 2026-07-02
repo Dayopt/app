@@ -1,4 +1,4 @@
-# ADR-003: MCP統合
+# ADR-013: MCP統合
 
 > accepted（2026-02-26・遡及記録）
 
@@ -40,7 +40,7 @@ MCPを外部ツール統合レイヤーとして採用し、3サーバー構成�
 
 ### Feature境界との関係
 
-MCPはADR-002で定義したfeature境界の「外側」に位置する。MCPサーバーはfeatureの内部構造を知らず、公開APIやDBスキーマを通じてのみアクセスする。これにより、feature境界の原則を壊さずに外部ツール統合を実現している。
+MCPはADR-012で定義したfeature境界の「外側」に位置する。MCPサーバーはfeatureの内部構造を知らず、公開APIやDBスキーマを通じてのみアクセスする。これにより、feature境界の原則を壊さずに外部ツール統合を実現している。
 
 ---
 
@@ -64,5 +64,5 @@ MCPはADR-002で定義したfeature境界の「外側」に位置する。MCPサ
 
 - `.mcp.json` — 3サーバー設定
 - `.claude/settings.json` — MCP権限管理
-- ADR-002 — Feature-Slicedアーキテクチャ（MCPが前提とする境界設計）
-- ADR-004 — 3層AIアーキテクチャ（MCPはLayer 3として位置づけ）
+- ADR-012 — Feature-Slicedアーキテクチャ（MCPが前提とする境界設計）
+- ADR-014 — 3層AIアーキテクチャ（MCPはLayer 3として位置づけ）

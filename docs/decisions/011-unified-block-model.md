@@ -1,4 +1,4 @@
-# ADR-001: 統合ブロックモデル
+# ADR-011: 統合ブロックモデル
 
 > accepted（2026-03-05・遡及記録）
 
@@ -75,4 +75,4 @@ function getEntryState(entry: EntryLike, now?: Date): EntryState {
 - `src/features/entry/lib/entry-status.ts` — `getEntryState()`, `isEntryPast()`
 - `src/types/entry.ts` — 共有層向け基本型
 - `supabase/migrations/_archive/20260301000000_unify_plans_records_to_entries.sql` — 統合マイグレーション
-- ADR-005 — 時間不変原則（本ADRのデータモデルを前提とする）
+- ADR-015 — 時間不変原則（本ADRのデータモデルを前提とする）

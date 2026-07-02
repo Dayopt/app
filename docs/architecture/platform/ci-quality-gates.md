@@ -1,4 +1,4 @@
-# ADR-006: CI品質ゲート段階的導入ロードマップ
+# ADR-016: CI品質ゲート段階的導入ロードマップ
 
 > proposed（2026-03-19）
 
@@ -114,7 +114,7 @@
 
 ## 関連
 
-- `docs/architecture/adr/006-ci-quality-gates-roadmap.md` — ADR本体
+- `docs/decisions/016-ci-quality-gates-roadmap.md` — ADR本体
 - `.github/workflows/ci.yml` — 段階的に変更する中心ファイル
 - `scripts/diff-coverage.ts` — Phase 1 でCI連携
 - `lighthouserc.cjs` — Phase 2 でCI連携

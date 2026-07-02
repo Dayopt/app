@@ -2,7 +2,7 @@
 
 Dayopt の feature / lib / shell の責務と、それぞれに「何を置き / 何を置かないか」のルール。
 
-`ADR-002 Feature-Sliced Architecture` と `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）の運用面を補完するドキュメント。
+`ADR-012 Feature-Sliced Architecture` と `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）の運用面を補完するドキュメント。
 
 ---
 
@@ -105,4 +105,4 @@ Composition:          settings  (= 通常 feature DAG には乗せない)
 - `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）
 - `Domain vs Server`（このディレクトリ内）
 - `src/lib Policy`（このディレクトリ内）
-- `ADR-002 Feature-Sliced Architecture`
+- `ADR-012 Feature-Sliced Architecture`

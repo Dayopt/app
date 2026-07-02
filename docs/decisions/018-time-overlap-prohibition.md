@@ -1,4 +1,4 @@
-# ADR-008: 時間重なりの全面禁止（EXCLUDE 制約）
+# ADR-018: 時間重なりの全面禁止（EXCLUDE 制約）
 
 > accepted（2026-05-13）
 
@@ -39,7 +39,7 @@
 
 ### 自動記録（actual NULL）との防衛線の分担
 
-actual range が未確定（NULL）の自動記録エントリは、actual レイヤーの EXCLUDE 制約の対象外になる（制約が両端 NOT NULL を要求するため）。そのため自動記録同士の二重計上を防ぐ防衛線は DB 制約ではなく**サービス層** `EntryService.ensureNoOverlaps`（`apps/product/src/features/entry/server/entry-service.ts` L687-747）の effective actual チェックにある。詳細は ADR-009 を参照。
+actual range が未確定（NULL）の自動記録エントリは、actual レイヤーの EXCLUDE 制約の対象外になる（制約が両端 NOT NULL を要求するため）。そのため自動記録同士の二重計上を防ぐ防衛線は DB 制約ではなく**サービス層** `EntryService.ensureNoOverlaps`（`apps/product/src/features/entry/server/entry-service.ts` L687-747）の effective actual チェックにある。詳細は ADR-019 を参照。
 
 ---
 
@@ -68,8 +68,8 @@ actual range が未確定（NULL）の自動記録エントリは、actual レ�
 
 ## 関連
 
-- ADR-001 — 統合ブロックモデル（本 ADR が制約する entries モデルの前提）
-- ADR-005 — 時間不変原則（過去ブロックの編集制約）
-- ADR-009 — 自動記録モデル（actual NULL の防衛線分担）
+- ADR-011 — 統合ブロックモデル（本 ADR が制約する entries モデルの前提）
+- ADR-015 — 時間不変原則（過去ブロックの編集制約）
+- ADR-019 — 自動記録モデル（actual NULL の防衛線分担）
 - `supabase/migrations/20260513000000_entry_two_layer_time_ranges.sql` — 制約導入
 - `apps/product/src/features/entry/server/entry-service.ts` — `ensureNoOverlaps`

@@ -1,17 +1,17 @@
-# ADR-013: Storybook story-title の所有境界 top-level（Shared / Product / Web）
+# ADR-023: Storybook story-title の所有境界 top-level（Shared / Product / Web）
 
 > accepted（2026-06-24）
 
-> ADR-012 が「別途の cosmetic 作業」として残した Storybook story `title:` の再整列を確定する。
+> ADR-022 が「別途の cosmetic 作業」として残した Storybook story `title:` の再整列を確定する。
 > 物理配置・barrel・公開 API は不変。サイドバーの **top-level 階層のみ**を変える。
 
 ---
 
 ## コンテキスト
 
-ADR-011 / ADR-012 で共有 UI を `packages/components` に canonical 集約し、第二階層を
+ADR-021 / ADR-022 で共有 UI を `packages/components` に canonical 集約し、第二階層を
 責務ベース 9 category に切り直した。その際 story の `title:` は物理 path と decouple している
-ため再整列は保留された（ADR-012「結果／トレードオフ」）。
+ため再整列は保留された（ADR-022「結果／トレードオフ」）。
 
 保留の結果、サイドバー top-level は `Components / Features / Foundations / Patterns` のままで、
 **所有境界が読めない**状態になっていた。とくに第二階層 category の精緻化により、共有資産と
@@ -35,7 +35,7 @@ Storybook の **top-level を所有境界（package / app）**で分ける。第
 - `title:` の再整列は **物理ディレクトリ基準**で機械適用する（shared と product が同じ
   `Components/` prefix を共有するため、prefix 一致では分離できない）。
 - `apps/storybook/.storybook/preview.tsx` の `storySort.order` を新 top-level に更新。
-  `Shared/Components` 直下は ADR-012 の責務 9 category 順を維持する。
+  `Shared/Components` 直下は ADR-022 の責務 9 category 順を維持する。
 - `apps/web` は story 未作成のため、`main.ts` の glob 追加 + `Web/Overview`（`apps/web/src/Web.docs.mdx`）
   placeholder + storySort 枠で**構造だけ予約**する。
 
@@ -85,14 +85,14 @@ Storybook の **top-level を所有境界（package / app）**で分ける。第
 
 ### トレードオフ
 
-- title は依然 ADR-012 同様に物理 path と decouple（位置を動かさず top-level だけ付け替える方式）。
+- title は依然 ADR-022 同様に物理 path と decouple（位置を動かさず top-level だけ付け替える方式）。
   `Foundations/States` のような軽微な title↔位置の不一致が残る
 - `Web/*` は当面 `Web/Overview` 1 枚のみ（個別 story は今後追加）
 
 ## 関連
 
-- ADR-011 — 共有レイヤー（packages canonical / app 直接 import）
-- ADR-012 — 共有 component の責務ベース 9 category（第二階層）。本 ADR はその保留事項
+- ADR-021 — 共有レイヤー（packages canonical / app 直接 import）
+- ADR-022 — 共有 component の責務ベース 9 category（第二階層）。本 ADR はその保留事項
   （story title 再整列）を top-level の所有境界軸で確定する
 - `apps/storybook/.storybook/preview.tsx` — `storySort.order`
 - `apps/web/src/Web.docs.mdx` — Web レイヤーの予約と命名規約

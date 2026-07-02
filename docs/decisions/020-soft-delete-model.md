@@ -1,4 +1,4 @@
-# ADR-010: entries の論理削除（soft delete）
+# ADR-020: entries の論理削除（soft delete）
 
 > accepted（2026-03-18）
 
@@ -9,7 +9,7 @@
 `entries` の削除を物理 DELETE で行うと、以下が成立しなくなる:
 
 - **取り消し（undo）**: 「削除しました。元に戻す」という可逆操作を提供できない（物理削除後は復元元が無い）
-- **時間重なり制約との両立**: ADR-008 の EXCLUDE 制約は「削除された行を重なり判定から除外する」必要がある。物理削除なら除外は自明だが、削除を取り消せる設計と両立しない
+- **時間重なり制約との両立**: ADR-018 の EXCLUDE 制約は「削除された行を重なり判定から除外する」必要がある。物理削除なら除外は自明だが、削除を取り消せる設計と両立しない
 
 時間記録としての信頼性（誤削除からの復帰）と、可逆操作の UX を同時に満たす削除モデルが必要だった。
 
@@ -20,7 +20,7 @@
 `entries` に `deleted_at TIMESTAMPTZ` を持たせ、削除は**論理削除（soft delete）**で行う。
 
 - SELECT RLS ポリシーが `deleted_at IS NULL` で削除済み行を自動フィルタする
-- すべての制約・集計・effective actual（ADR-009）・EXCLUDE 制約（ADR-008）は `deleted_at IS NULL` を前提に書く
+- すべての制約・集計・effective actual（ADR-019）・EXCLUDE 制約（ADR-018）は `deleted_at IS NULL` を前提に書く
 - 部分インデックス `idx_entries_deleted_at WHERE deleted_at IS NOT NULL` でクリーンアップを高速化
 
 実装: `supabase/migrations/20260318150000_add_entries_soft_delete.sql`
@@ -61,7 +61,7 @@ PostgreSQL は UPDATE 時に新しい行が SELECT ポリシーも満たすこ�
 
 ## 関連
 
-- ADR-008 — 時間重なり全面禁止（EXCLUDE 制約が `deleted_at IS NULL` を前提）
-- ADR-009 — 自動記録モデル（`entries_effective` view が `deleted_at IS NULL` を前提）
+- ADR-018 — 時間重なり全面禁止（EXCLUDE 制約が `deleted_at IS NULL` を前提）
+- ADR-019 — 自動記録モデル（`entries_effective` view が `deleted_at IS NULL` を前提）
 - `supabase/migrations/20260318150000_add_entries_soft_delete.sql` — deleted_at 導入
 - `supabase/migrations/20260323000001_add_soft_delete_rpc.sql` — soft_delete / restore RPC

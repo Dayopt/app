@@ -1,15 +1,15 @@
-# ADR-012: 共有 component の責務ベース taxonomy（第二階層）
+# ADR-022: 共有 component の責務ベース taxonomy（第二階層）
 
 > accepted（2026-06-23）
 
-> ADR-011 を前提に、`packages/components/src/` の第二階層 category を精緻化する。ADR-011
+> ADR-021 を前提に、`packages/components/src/` の第二階層 category を精緻化する。ADR-021
 > の「category 別整理 + 単一 barrel」方針は不変。本 ADR は category の**切り方**だけを更新する。
 
 ---
 
 ## コンテキスト
 
-ADR-011 で `packages/components` を canonical 実装＋単一 barrel に集約した際、第二階層は
+ADR-021 で `packages/components` を canonical 実装＋単一 barrel に集約した際、第二階層は
 移行元の都合で `primitives / forms / feedback / actions / layout` の 5 category だった。
 集約後にこの 5 分割を運用すると、責務の混在が顕在化した：
 
@@ -64,7 +64,7 @@ barrel が単一 export 入口（`@dayopt/components`）であるため、第二
 app 層（`apps/product/src/components/ui/`）に埋もれていた表示用 Avatar の基底
 （`Avatar`/`AvatarImage`/`AvatarFallback` + `avatarVariants`）を `display/` に昇格した。
 app 固有の `AvatarUpload`（Supabase Storage アップロード前提・i18n 結合）は app に残し、
-基底のみ `@dayopt/components` から取得する。ADR-011 の「i18n 結合の強い component は
+基底のみ `@dayopt/components` から取得する。ADR-021 の「i18n 結合の強い component は
 app 残置、将来 props 注入で共有化」の方針に沿う切り分け。
 
 ### app 層へは taxonomy をミラーしない
@@ -94,7 +94,7 @@ web の marketing/docs 系）は少数かつ app 固有で、9 category を機�
 
 ## 関連
 
-- ADR-011 — デザインシステム共有レイヤー（packages canonical / app 直接 import）。本 ADR は
+- ADR-021 — デザインシステム共有レイヤー（packages canonical / app 直接 import）。本 ADR は
   その第二階層 category を精緻化する
 - `packages/components/src/index.ts` — 単一 barrel（category 別に整理）
-- `.claude/rules/feature-boundaries.md` — app 内 feature 境界（packages ↔ app 境界は ADR-011）
+- `.claude/rules/feature-boundaries.md` — app 内 feature 境界（packages ↔ app 境界は ADR-021）

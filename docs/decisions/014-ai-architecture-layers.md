@@ -1,4 +1,4 @@
-# ADR-004: 3層AIアーキテクチャ
+# ADR-014: 3層AIアーキテクチャ
 
 > accepted（2026-03-02・遡及記録）
 
@@ -44,7 +44,7 @@ AI向けの知識を3層構造で階層化する。Layer 1（rules）は常時�
 
 ### Layer 3: MCP（外部ツール）
 
-`.mcp.json` で定義。ADR-003参照。
+`.mcp.json` で定義。ADR-013参照。
 
 ### 拡張思考バジェット
 
@@ -88,5 +88,5 @@ AI向けの知識を3層構造で階層化する。Layer 1（rules）は常時�
 - `.claude/skills/` — Layer 2: タスク特化知識
 - `.mcp.json` — Layer 3: 外部ツール
 - `.claude/rules/ai-behavior.md` — 拡張思考バジェット定義
-- ADR-002 — Feature-Slicedアーキテクチャ（rules/skillsがfeature境界に沿う）
-- ADR-003 — MCP統合（Layer 3の実装）
+- ADR-012 — Feature-Slicedアーキテクチャ（rules/skillsがfeature境界に沿う）
+- ADR-013 — MCP統合（Layer 3の実装）

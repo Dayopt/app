@@ -4,7 +4,7 @@
  * Check: Public API / Barrel（app-local barrel の禁止）
  *
  * 意図的な public API barrel（packages の src 配下 index.ts、各 feature の index.ts）は許可し、
- * 広域な app-local barrel（components/index.ts 等）を禁止する。ADR-011 の「app barrel 不使用」
+ * 広域な app-local barrel（components/index.ts 等）を禁止する。ADR-021 の「app barrel 不使用」
  * を固定する architectural invariant。budget を持たず hard-fail。
  *
  * 判定: FORBIDDEN_BARRELS の各 path が「存在しない」または「export を持たない」なら OK。

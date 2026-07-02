@@ -1,4 +1,4 @@
-# ADR-011: デザインシステム共有レイヤー（packages を canonical、app は直接 import）
+# ADR-021: デザインシステム共有レイヤー（packages を canonical、app は直接 import）
 
 > accepted（2026-06-22）
 
@@ -27,7 +27,7 @@ product / web がデザイントークンと汎用 UI を**各自で重複保有
 ```
 packages/foundations  = トークン（無 prefix CSS + @theme + Foundations docs）の canonical・export 入口
 packages/components   = 汎用 UI の canonical 実装・正規 export 入口（単一 barrel）
-  src/{category}/  = category 別整理（export は index.ts 単一 barrel。第二階層 category は ADR-012 で責務ベースに精緻化）
+  src/{category}/  = category 別整理（export は index.ts 単一 barrel。第二階層 category は ADR-022 で責務ベースに精緻化）
   src/hooks/                                        = component が必要とする hook（useIsMobile 等）を自己完結化
 
 apps/product/src/components/  = product 全体固有（旧 lib/components。common/shell/残置 ui）
@@ -95,4 +95,4 @@ near-identical な component は視覚変化なし。product と乖離する com
 - `docs/projects/foundations-sharing/overview.md` — foundations 集約（完了分の詳細）
 - `~/.claude/plans/crispy-snuggling-pebble.md` — components 共通モジュール化の実行 plan
 - `.claude/rules/feature-boundaries.md` — app 内 feature 境界（本 ADR は packages ↔ app 境界を扱う）
-- ADR-002 — Feature-Sliced アーキテクチャ（app 内の層構造）
+- ADR-012 — Feature-Sliced アーキテクチャ（app 内の層構造）

@@ -148,10 +148,10 @@ end
 
 ## 次に読むべきドキュメント
 
-| ドキュメント                                   | 内容                          |
-| ---------------------------------------------- | ----------------------------- |
-| [Domain Glossary](./domain-glossary.md)        | ドメイン用語の定義            |
-| [Data Flow](./data-flow.md)                    | データの流れ（UI → API → DB） |
-| [ADR-001](./adr/001-unified-block-model.md)    | Entry統合モデルの設計判断     |
-| [State Management](./state-management.md)      | 状態管理の使い分け            |
-| Colors（Storybook: Shared/Foundations/Colors） | デザイントークン              |
+| ドキュメント                                       | 内容                          |
+| -------------------------------------------------- | ----------------------------- |
+| [Domain Glossary](./domain-glossary.md)            | ドメイン用語の定義            |
+| [Data Flow](./data-flow.md)                        | データの流れ（UI → API → DB） |
+| [ADR-011](../decisions/011-unified-block-model.md) | Entry統合モデルの設計判断     |
+| [State Management](./state-management.md)          | 状態管理の使い分け            |
+| Colors（Storybook: Shared/Foundations/Colors）     | デザイントークン              |

@@ -6,7 +6,7 @@
 
 ## 1. 旧用語の使用
 
-ADR-001 で `plans` + `records` テーブルは `entries` に統合済み。
+ADR-011 で `plans` + `records` テーブルは `entries` に統合済み。
 
 ```tsx
 // ❌ 旧用語
@@ -38,7 +38,7 @@ updateEntry({ id, actual_start, actual_end, fulfillment_score, note });
 
 **二重防御**: UI（disabled 表示）+ ロジックガード（`assertEntryEditable()`）の両方で制御。
 
-詳細: [ADR-005 時間不変原則](../architecture/adr/005-time-immutability-principle.md)
+詳細: [ADR-015 時間不変原則](../decisions/015-time-immutability-principle.md)
 
 ---
 

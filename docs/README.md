@@ -13,8 +13,7 @@ docs/
 │   ├── frontend/              # ルーティング、状態管理、hooks、a11y、PWA
 │   ├── data/                  # DB スキーマ
 │   ├── platform/              # 環境構成、bot 対策、開発ツール
-│   ├── conventions/           # コード規約、設計パターン、タイムゾーン
-│   └── adr/                   # Architecture Decision Records
+│   └── conventions/           # コード規約、設計パターン、タイムゾーン
 ├── operations/                # 運用（監視、リリース、セキュリティ）
 │   ├── monitoring/            # Sentry、bundle、performance 監視
 │   ├── releases/              # リリース手順
@@ -24,7 +23,7 @@ docs/
 │   ├── marketing/
 │   └── sns/
 ├── guides/                    # 手順書、ハマりどころ、チェックリスト
-├── decisions/                 # プロダクト判断の ADR（001〜）
+├── decisions/                 # プロダクト判断・技術ADRの意思決定記録（001〜、index.md が索引）
 ├── glossary/                  # 用語集、禁止語
 ├── notes/                     # 時点ものの調査・監査ログ（日付プレフィックス）
 ├── journal/                   # 開発ジャーナル（月次）
@@ -209,7 +208,7 @@ src/features/{name}/
 | [Tech Stack](architecture/tech-stack.md)          | 技術スタック                             |
 | [Commands](guides/commands.md)                    | 全コマンド一覧                           |
 | [Common Pitfalls](guides/common-pitfalls.md)      | よくある間違い                           |
-| [ADR Index](architecture/adr/index.md)            | 技術判断の Architecture Decision Records |
+| [ADR Index](decisions/index.md)                   | 技術判断の Architecture Decision Records |
 | [Decisions](decisions/)                           | プロダクト判断の意思決定記録             |
 | [Glossary](glossary/terms.md)                     | 用語集・禁止語                           |
 | [Projects](projects/README.md)                    | 進行中プロジェクトの索引                 |

@@ -1,4 +1,4 @@
-# ADR-002: Feature-Slicedアーキテクチャ
+# ADR-012: Feature-Slicedアーキテクチャ
 
 > accepted（2026-02-26・遡及記録）
 
@@ -82,5 +82,5 @@ feature間の協調が必要な場合はComposition Layerで統合する：
 - `eslint.config.mjs` — `no-restricted-imports` ルール
 - `scripts/boundaries/` — monorepo 全体の import 境界 checker（ratchetパターン）
 - `.boundary-budget.json` — 違反数バジェット（現在ゼロ）
-- ADR-003 — MCP統合（feature境界を前提とした外部ツール層）
-- ADR-004 — 3層AIアーキテクチャ（feature境界に沿ったrules/skills定義）
+- ADR-013 — MCP統合（feature境界を前提とした外部ツール層）
+- ADR-014 — 3層AIアーキテクチャ（feature境界に沿ったrules/skills定義）
