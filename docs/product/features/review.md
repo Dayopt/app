@@ -16,7 +16,7 @@ code: apps/product/src/features/review
 
 ## 進行中の変更
 
-[calendar-review-panel-migration](../../projects/calendar-review-panel-migration/overview.md)（active）で `/review` 独立ページを廃止し、Calendar 内の contextual panel（Desktop: 右panel、Mobile: bottom sheet）へ統合中。本ファイルは移行完了後に更新する。
+`/review` 独立ページを廃止し、Calendar 内の contextual panel（Desktop: 右panel、Mobile: bottom sheet）へ統合中。本ファイルは移行完了後に更新する。
 
 ## 関連する意思決定
 
