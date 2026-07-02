@@ -133,5 +133,4 @@ Dayoptの機能は企業会計と同じ構造を持つ。
 
 📖 **本能マッピング**: [instinct-mapping.md](?path=/docs/strategy-brand-instinct-mapping--docs) — 8つの本能と訴求設計
 📖 **ターゲット**: [persona.md](?path=/docs/strategy-brand-persona--docs) — ターゲットペルソナの具体像
-🔗 **LP仕様**: [../lp-spec.md](?path=/docs/strategy-lp-spec--docs) — 本設計のLP実装への翻訳
 🔗 **ブランドキャラクター**: [brand-character.md](?path=/docs/strategy-brand-character--docs) — トーン・パーソナリティ

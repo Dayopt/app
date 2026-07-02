@@ -84,4 +84,3 @@ LPでは「道具の断片化」（下位ジョブ）ではなく、**「サイ�
 
 📖 **本能マッピング**: [instinct-mapping.md](?path=/docs/strategy-brand-instinct-mapping--docs) — 「向く人/向かない人」の理論的根拠
 📖 **メッセージング**: [messaging.md](?path=/docs/strategy-brand-messaging--docs) — ペルソナに何を伝えるか
-🔗 **LP仕様**: [../lp-spec.md](?path=/docs/strategy-lp-spec--docs) — ペルソナの旅をLPに翻訳

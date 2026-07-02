@@ -18,7 +18,7 @@ Dayopt が追う指標の定義。同じ名前の指標が文書によって違�
 ## 意図的に追わないもの
 
 - **共有・口コミ数** — 計測困難なため意図的に追わない（自然に任せる）。[Growth Cycle](marketing/growth-cycle.md) 参照
-- **他社との比較指標**（業界平均等） — Dayoptは非交差のvalue curveを取る戦略のため、競合とのKPI比較は意味を持たない。[Competitors](competitors.md) 参照
+- **他社との比較指標**（業界平均等） — Dayoptは非交差のvalue curveを取る戦略のため、競合とのKPI比較は意味を持たない
 
 ## チャーン率（2026-07-03 定義確定）
 

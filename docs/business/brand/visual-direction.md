@@ -104,5 +104,3 @@ LPのProofセクションでは実際のプロダクト画面を使用する。�
 📖 **ブランドキャラクター**: [brand-character.md](?path=/docs/strategy-brand-character--docs) — 見た目（§4）の基盤
 📖 **メッセージング**: [messaging.md](?path=/docs/strategy-brand-messaging--docs) — パーソナリティの定義元
 📖 **ロゴリファレンス**: logo-references.md — ロゴデザインの方向性
-🔗 **LP仕様**: [../lp-spec.md](?path=/docs/strategy-lp-spec--docs) — セクション別のビジュアル指示
-🔗 **LP戦略**: [../lp.md](?path=/docs/strategy-lp-design--docs) — UI画像使用のベストプラクティス
