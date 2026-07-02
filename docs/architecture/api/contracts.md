@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Service 層 Contracts（skin-agnostic target shape）
 
 作成: 2026-05-12 | 前段: [Audit](service-audit.md)

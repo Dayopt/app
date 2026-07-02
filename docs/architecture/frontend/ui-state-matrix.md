@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # UIステート・マトリクス — 全組み合わせ棚卸し & ギャップ分析
 
 > **目的**: EntryState × Auth × Plan × Device × Error の5軸を網羅し、未定義の組み合わせを可視化する

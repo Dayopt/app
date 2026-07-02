@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # ADR-016: CI品質ゲート段階的導入ロードマップ
 
 > proposed（2026-03-19）

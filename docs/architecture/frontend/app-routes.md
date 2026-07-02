@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # App Routes Overview
 
 `src/app/[locale]/**` 配下の Next.js App Router routing を総覧。Route Group / Composition Layer / 認証境界の関係を一望できるようまとめる。`/api/**` は別途 [api-overview](./api-overview.md) を参照。

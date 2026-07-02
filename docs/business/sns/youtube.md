@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # YouTube
 
 動画コンテンツ用（将来検討）。

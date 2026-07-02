@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Bot 対策（Cloudflare Turnstile）
 
 Dayopt は bot 対策として **Cloudflare Turnstile** を使う。reCAPTCHA v3 + v2 fallback から 2026-04 に乗り換え、マーケティングサイトとアプリの両方で同じ仕組みに統一した。

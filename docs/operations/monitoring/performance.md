@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Performance Monitoring 運用
 
 性能予算・SLO・設計方針は [Performance Budget](../../architecture/frontend/performance.md) を参照。このファイルは監視・計測の運用のみを扱う。

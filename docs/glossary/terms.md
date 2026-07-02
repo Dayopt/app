@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Dayopt Glossary — UI 用語集
 
 Dayopt の UI で使う言葉の正解一覧。翻訳ファイル（messages）を編集する際は必ずここを確認する。

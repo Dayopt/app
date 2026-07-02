@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Dayopt — Product Overview
 
 タイムボクシング × 時間記録 × タスク × カレンダーを一体化した、個人向け生産性アプリ。

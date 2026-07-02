@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # ランディングページ戦略
 
 DayoptのLP設計方針。GAFA-First原則に基づき、実績のあるベストプラクティスを採用。

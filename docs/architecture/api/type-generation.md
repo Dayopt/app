@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Supabase 型自動生成
 
 Supabase CLIを使用して、データベーススキーマからTypeScript型定義を自動生成する。

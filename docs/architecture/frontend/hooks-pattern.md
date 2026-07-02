@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Hooks Pattern
 
 tRPC カスタムフックの統一実装パターン。全 Feature 共通で適用する。

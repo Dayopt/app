@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # API Endpoints Overview
 
 `src/app/api/**` 配下の REST/Webhook endpoint 総覧。tRPC procedure は `/api/trpc/[procedure-path]` に集約され、procedure 単位の仕様は各 feature の `server/router.ts` を参照すること。

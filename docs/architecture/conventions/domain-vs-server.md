@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Domain vs Server
 
 `features/{name}/domain/` と `features/{name}/server/` の境界。

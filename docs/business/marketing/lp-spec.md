@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # LP実装仕様書 (v2)
 
 marketing repo → web repo へのハンドオフ文書。

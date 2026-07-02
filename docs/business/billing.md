@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Stripe 課金統合
 
 Dayoptの Stripe サブスクリプション課金システムの技術ドキュメント。

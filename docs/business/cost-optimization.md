@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # コスト最適化分析
 
 ユーザー数 100 / 500 / 1,000 / 5,000 人時点での Vercel・Supabase・Anthropic API の月額コスト試算。

@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # 競合機能マトリクス
 
 Dayopt vs 主要競合7社の構造化比較。機能・価格・ターゲット・哲学の4軸で整理し、Blue Ocean Strategyに基づく勝ち負けを明確化する。

@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Storybook 公式用語集
 
 Storybook 8 の構成要素を公式用語に基づいて整理したリファレンス。

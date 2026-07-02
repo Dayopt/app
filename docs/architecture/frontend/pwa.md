@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # PWA Architecture
 
 Dayopt の PWA は、ホーム画面へのインストール、静的キャッシュ、オフライン時の読み取り

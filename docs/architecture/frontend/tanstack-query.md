@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # TanStack Query 使用ガイド
 
 DayoptにおけるTanStack Query（React Query）の標準的な使用方法とベストプラクティス。

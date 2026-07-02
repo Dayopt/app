@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Common Pitfalls
 
 開発時によくある間違いと、正しいパターンの一覧。AI（Claude Code）が同じミスを繰り返さないための参照ドキュメント。

@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-22
+---
+
 # Dayopt 禁止表記一覧
 
 `pnpm copy:check` がスキャンする禁止語の定義ファイル。

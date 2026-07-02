@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # 設計パターン
 
 Dayoptで採用している設計パターンの解説。

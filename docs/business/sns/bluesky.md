@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Bluesky
 
 開発者層へのリーチ用（検討中）。

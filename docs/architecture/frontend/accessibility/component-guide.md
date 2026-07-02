@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # shadcn/ui コンポーネント別ガイド
 
 shadcn/ui（Radix UI）コンポーネントのa11y対応状況

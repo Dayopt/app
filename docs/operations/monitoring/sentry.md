@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Sentry 統合ガイド
 
 DayoptアプリケーションにおけるSentryの統合・設定・運用の完全ガイド。

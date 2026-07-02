@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # DB Migration Rollback 手順書
 
 本番デプロイ事故時の逆マイグレーションSQL集。Supabaseはネイティブのrollback機構を持たないため、**逆SQLを新しいマイグレーションとして適用する**方式で対応する。

@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # Release vX.Y.Z
 
 **リリース日**: YYYY-MM-DD

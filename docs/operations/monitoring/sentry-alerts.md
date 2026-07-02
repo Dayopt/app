@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Sentryアラート設定ガイド
 
 Sentryダッシュボードでアラート・通知を設定する手順書。

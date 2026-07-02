@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # API バリデーション
 
 DayoptにおけるZod + tRPCによる型安全なAPIバリデーションシステムの解説。

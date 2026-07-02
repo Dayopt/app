@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # ツール連携
 
 Dayoptで使用しているツールの役割と、どう連携しているかの解説。

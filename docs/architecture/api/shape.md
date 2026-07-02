@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # API Shape — Service 層の skin-agnostic contract
 
 作成日: 2026-05-12

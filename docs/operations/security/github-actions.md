@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # GitHub Actions セキュリティ設定ガイド
 
 **参考**: [GitHub Actions Security Hardening](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)

@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-24
+---
+
 # Dayopt Eagle デザインアセット管理設計書
 
 > このドキュメントはDayoptのデザインアセットをEagle + MCP + Claude Codeで一元管理するための設計仕様。

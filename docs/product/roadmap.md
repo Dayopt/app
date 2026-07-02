@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Roadmap - リリースまでの道のり
 
 プロダクトリリースに向けて必要なことを逆算で整理。

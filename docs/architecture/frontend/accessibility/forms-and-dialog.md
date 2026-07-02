@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # フォームとDialog
 
 フォーム要素のラベル紐付け、エラー状態、Dialog の必須ルール

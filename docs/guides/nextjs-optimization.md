@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # Next.js パフォーマンス最適化
 
 Dayoptで実装済みのNext.js 15 App Router向けパフォーマンス最適化の技術リファレンス。

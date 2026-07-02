@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Dayopt 価値提案 (Value Proposition)
 
 ## 概要

@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # 状態管理ガイド: Zustand vs Context API
 
 Dayoptにおける状態管理の判断基準。**原則: 新規はZustandを優先する。**

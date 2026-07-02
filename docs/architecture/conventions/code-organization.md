@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # Code Organization
 
 Dayopt の feature / lib / shell の責務と、それぞれに「何を置き / 何を置かないか」のルール。

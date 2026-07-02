@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # 🧭 Dayopt Brand Character 設計
 
 ## 1. 名前（仮）

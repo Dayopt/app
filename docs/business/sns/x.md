@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # X (Twitter)
 
 メインの発信プラットフォーム。

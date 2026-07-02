@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # 価格戦略
 
 Dayoptの Free/Pro 境界線と価格設定に関する分析ドキュメント。

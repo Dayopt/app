@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
 # ターゲットペルソナ
 
 Dayoptの最初の顧客像。「誰に」を具体化する。
