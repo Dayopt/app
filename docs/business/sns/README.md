@@ -21,7 +21,7 @@ last_verified: 2026-07-03
 
 ## SNS でやらないこと
 
-[concept.md](../../product/concept.md) の原則を発信にも適用する:
+[concept.md](../concept.md) の原則を発信にも適用する:
 
 - **煽らない**。「時間を無駄にしていませんか?」型の欠乏訴求・恐怖訴求は使わない(トーンは [copywriting ルール](../../../.claude/rules/copywriting.md)と [content-guidelines.md](../marketing/content-guidelines.md) に従う)
 - **gamification を訴求しない**。ストリーク・バッジ・ランキングはプロダクトに存在しない(concept.md §4-6)ため、発信でも扱わない

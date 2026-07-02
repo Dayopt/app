@@ -7,13 +7,13 @@ last_verified: 2026-07-02
 
 Dayoptの最初の顧客像。「誰に」を具体化する。
 
-> ターゲットの要約は [`docs/product/concept.md`](../../product/concept.md) §3「AI を使いこなす知的労働者」を参照。本ドキュメントはその詳細な行動パターン・原体験を補足する。
+> ターゲットの要約は [`docs/business/concept.md`](../concept.md) §3「AI を使いこなす知的労働者」を参照。本ドキュメントはその詳細な行動パターン・原体験を補足する。
 
 ---
 
 ## 1. ペルソナの核心
 
-**「正しいやり方は分かってるのに、道具がない」人。** 中でも AI を使いこなす知的労働者（[concept.md §3](../../product/concept.md)）を最初の楔とする。
+**「正しいやり方は分かってるのに、道具がない」人。** 中でも AI を使いこなす知的労働者（[concept.md §3](../concept.md)）を最初の楔とする。
 
 - 時間管理に困ってる初心者ではない
 - すでにいろいろ試して、自分なりの方法論を持ってる
@@ -84,5 +84,4 @@ LPでは「道具の断片化」（下位ジョブ）ではなく、**「サイ�
 
 📖 **本能マッピング**: [instinct-mapping.md](?path=/docs/strategy-brand-instinct-mapping--docs) — 「向く人/向かない人」の理論的根拠
 📖 **メッセージング**: [messaging.md](?path=/docs/strategy-brand-messaging--docs) — ペルソナに何を伝えるか
-📖 **創業者エピソード**: [founder-story.md](?path=/docs/strategy-brand-founder-story--docs) — Problem素材の源泉
 🔗 **LP仕様**: [../lp-spec.md](?path=/docs/strategy-lp-spec--docs) — ペルソナの旅をLPに翻訳

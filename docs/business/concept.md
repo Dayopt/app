@@ -16,8 +16,8 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 
 この文書には**変わらないもの（コンセプトと原則）だけ**を置く。更新され続けるものは分冊する:
 
-- **画面・操作への翻訳**: [`experience-design.md`](./experience-design.md) — 体験設計。設計が進むたび更新される
-- **v1 のスコープ**: [`v1-definition.md`](./v1-definition.md) — 完成の定義と未決事項。v1 が終わるまで更新される
+- **画面・操作への翻訳**: [`experience-design.md`](../product/experience-design.md) — 体験設計。設計が進むたび更新される
+- **v1 のスコープ**: [`v1-definition.md`](../product/v1-definition.md) — 完成の定義と未決事項。v1 が終わるまで更新される
 
 この文書は「僕（創業者）と AI がこのプロダクトで作りたいものを同じ解像度で理解する」ために書かれている。実装判断で迷ったら §4 の原則に戻ること。
 
@@ -65,7 +65,7 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 7. **通知はユーザーの計画に仕える。アプリの都合で鳴らさない。** ブロック開始・終了の合図（opt-in）は「自分が頼んだ合図」であり OK。streak 煽り・離脱メール・re-engagement push は永久に禁止
 8. **AI は外にいる。** in-app の AI 機能は作らない（少なくとも初期は）。MCP / API であらゆるデータを読み書きできるようにし、ユーザーが自分の AI（Claude / ChatGPT）を接続する。統計的なフィードバック（見積もり実績の提示、週次の補正提案）はルールベースの計算で十分成立し、AI を必要としない
 9. **軽い・早い・少ない。** 速度・起動の速さ・操作数・画面の少なさは機能要件。Sunsama を重さで、Motion を「勝手に動かされる不信」で相対化するための武器
-10. **ズレは部屋ではなく、瞬間に置く。** レビュー専用ページ・独立した分析画面を作らない。ズレは体験の中の瞬間（カレンダーの上、脇のパネル、次のブロックを置く瞬間）に分散して現れる。分析を「行き先」にすると分析が目的化し、Toggl/RescueTime のレポート領土に入る。具体的な分散先の設計は [`experience-design.md`](./experience-design.md)
+10. **ズレは部屋ではなく、瞬間に置く。** レビュー専用ページ・独立した分析画面を作らない。ズレは体験の中の瞬間（カレンダーの上、脇のパネル、次のブロックを置く瞬間）に分散して現れる。分析を「行き先」にすると分析が目的化し、Toggl/RescueTime のレポート領土に入る。具体的な分散先の設計は [`experience-design.md`](../product/experience-design.md)
 
 ## 5. 変えないもの
 
@@ -77,10 +77,10 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 
 ## 関連文書
 
-- [`experience-design.md`](./experience-design.md) — 本コンセプトの画面・操作への翻訳（体験設計）
-- [`v1-definition.md`](./v1-definition.md) — v1 完成の定義・未決事項・ドクトリン改定の反映状況
+- [`experience-design.md`](../product/experience-design.md) — 本コンセプトの画面・操作への翻訳（体験設計）
+- [`v1-definition.md`](../product/v1-definition.md) — v1 完成の定義・未決事項・ドクトリン改定の反映状況
 - [`decisions/010-feature-non-adoption.md`](../decisions/010-feature-non-adoption.md) — 非採用機能と条件付き採用（提案型ルーティン・通知）の経緯
 - [decisions/011 統合ブロックモデル](../decisions/011-unified-block-model.md) / [decisions/015 時間不変原則](../decisions/015-time-immutability-principle.md)
 - [`notes/2026-06-15-competitor-research/`](../notes/2026-06-15-competitor-research/README.md) — 競合深掘り（勝ち筋 = より短い儀式・より軽い入力・直接差分）
-- [`business/pricing.md`](../business/pricing.md) — 価格戦略
+- [`pricing.md`](./pricing.md) — 価格戦略
 - [`.claude/rules/copywriting.md`](../../.claude/rules/copywriting.md) / [`glossary/`](../glossary/terms.md) — トーン・用語

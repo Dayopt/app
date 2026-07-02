@@ -8,7 +8,7 @@ last_verified: 2026-07-02
 marketing repo → web repo へのハンドオフ文書。
 LPの各セクションについて、メッセージの方向性・コピー候補・翻訳キー・実装指示を定義する。
 
-> プロダクトの最上位コンセプトは [`docs/product/concept.md`](../../product/concept.md) を参照（2026-07-02 策定）。本仕様書は未実装のドラフトであり、次回 LP 作業（`apps/web/messages/*.json` 等の実装）で concept.md の決定を反映して確定させる。
+> プロダクトの最上位コンセプトは [`docs/business/concept.md`](../concept.md) を参照（2026-07-02 策定）。本仕様書は未実装のドラフトであり、次回 LP 作業（`apps/web/messages/*.json` 等の実装）で concept.md の決定を反映して確定させる。
 
 ---
 
@@ -63,7 +63,7 @@ LPの各セクションについて、メッセージの方向性・コピー候
 
 **JTBD**: 上位（計画を守れるようにしたい）
 
-**ヘッドライン** [DECIDED: 2026-07-02]（[concept.md](../../product/concept.md) 準拠）:
+**ヘッドライン** [DECIDED: 2026-07-02]（[concept.md](../concept.md) 準拠）:
 
 - 英語: **"Plan days you can actually keep."**
 - 日本語: 「守れる計画」を軸に据える。直訳ではなく同じJTBDに刺さる自然な日本語を次回 LP 作業で確定する

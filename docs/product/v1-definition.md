@@ -5,9 +5,9 @@ last_verified: 2026-07-03
 
 # Dayopt v1 定義（完成の定義と未決事項）
 
-[`concept.md`](./concept.md) から分冊した v1 のスコープ文書。**v1 が完成するまで更新され続ける**。
+[`concept.md`](../business/concept.md) から分冊した v1 のスコープ文書。**v1 が完成するまで更新され続ける**。
 
-- コンセプト・原則そのものは [`concept.md`](./concept.md)（不変）
+- コンセプト・原則そのものは [`concept.md`](../business/concept.md)（不変）
 - 画面・操作の設計は [`experience-design.md`](./experience-design.md)
 
 策定日: 2026-07-02（concept.md からの分冊）

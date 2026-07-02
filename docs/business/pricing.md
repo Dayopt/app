@@ -8,7 +8,7 @@ last_verified: 2026-07-02
 Dayoptの Free/Pro 境界線と価格設定に関する分析ドキュメント。
 3つのAIエージェント（Strategist / Devil's Advocate / Customer）による多角的分析に基づく。
 
-> プロダクトの最上位コンセプトは [`docs/product/concept.md`](../product/concept.md) を参照（2026-07-02 策定）。**in-app AI 機能（AI振り返り）は作らない方針**のため、以下の表・分析から AI 振り返り関連の記述を除去済み。AI 価値は MCP/API 経由の外部 AI 連携として提供する。Free/Pro の詳細な線引きは [`v1-definition.md`](../product/v1-definition.md) の未決事項であり、本ドキュメントは今後見直す。
+> プロダクトの最上位コンセプトは [`docs/business/concept.md`](./concept.md) を参照（2026-07-02 策定）。**in-app AI 機能（AI振り返り）は作らない方針**のため、以下の表・分析から AI 振り返り関連の記述を除去済み。AI 価値は MCP/API 経由の外部 AI 連携として提供する。Free/Pro の詳細な線引きは [`v1-definition.md`](../product/v1-definition.md) の未決事項であり、本ドキュメントは今後見直す。
 
 ---
 
@@ -82,7 +82,7 @@ Dayoptの Free/Pro 境界線と価格設定に関する分析ドキュメント�
 
 ### LTV最大化戦略
 
-- **習慣定着**: 「見積もり精度が4週間前より上がっている」等、過去の自分との事実比較で進捗感を作る（ストリーク・バッジ等の gamification は [concept.md §4-6](../product/concept.md) で永久禁止）
+- **習慣定着**: 「見積もり精度が4週間前より上がっている」等、過去の自分との事実比較で進捗感を作る（ストリーク・バッジ等の gamification は [concept.md §4-6](./concept.md) で永久禁止）
 - **週次サマリーメール**: stats featureの8指標を活用
 - **アップセル**: 分析画面でPro限定指標を「ブラー表示」
 
