@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # マイグレーション & リリース チェックリスト
 
 ## 運用モデル
@@ -111,5 +116,5 @@ supabase db push
 ## 関連
 
 - skill: `.agents/skills/supabase/SKILL.md`
-- architecture: `docs/architecture/environments.md`
+- architecture: `docs/architecture/platform/environments.md`
 - secrets: `docs/operations/secrets.md`

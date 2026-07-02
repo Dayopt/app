@@ -3,7 +3,7 @@
 /**
  * Check: Package Layers（packages ↔ apps の依存方向）
  *
- * ADR-011 の依存方向を固定する architectural invariant。budget を持たず hard-fail。
+ * ADR-021 の依存方向を固定する architectural invariant。budget を持たず hard-fail。
  *
  * 許可:  apps/* -> packages/*、packages/components -> packages/foundations|assets
  * 禁止:  packages/* -> apps/*（逆依存）、packages/* の @/ alias 使用、

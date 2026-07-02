@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # データフロー
 
 Dayoptにおけるデータの流れ。ユーザー操作からDBまでの全レイヤーを図解する。
@@ -219,7 +224,7 @@ USING (auth.uid() = user_id);
 | **UI状態（ローカル）**   | useState       | フォームの入力値、モーダルの開閉 |
 | **URL状態**              | Next.js Router | 現在のページ、クエリパラメータ   |
 
-詳細は [状態管理](state-management.md) を参照。
+詳細は [状態管理](frontend/state-management.md) を参照。
 
 ---
 

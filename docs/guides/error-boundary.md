@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # ErrorBoundary 自動復旧システム
 
 4段階の復旧戦略（自動→手動→リロード→ホーム）を持つエラーハンドリングシステム。
@@ -211,8 +216,8 @@ const userActionRetry = useUserActionRetry(userAction, {
 
 ## 関連ページ
 
-- [エラーパターン](../architecture/error-patterns.md) — エラーコード体系・Sentry連携
-- [Patterns/ErrorPages](../architecture/error-pages.md) — エラーページのUIパターン
+- [エラーパターン](../architecture/conventions/error-patterns.md) — エラーコード体系・Sentry連携
+- [Patterns/ErrorPages](../architecture/frontend/error-pages.md) — エラーページのUIパターン
 
 ---
 

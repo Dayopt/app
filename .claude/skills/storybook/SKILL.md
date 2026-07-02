@@ -36,11 +36,11 @@ maxTurns: 15
 
 ### UI Component
 
-top-level は所有境界で決める（ADR-013）。共有 UI は `packages/components`、product 固有は `apps/product`。
+top-level は所有境界で決める（ADR-023）。共有 UI は `packages/components`、product 固有は `apps/product`。
 
 | 物理位置                              | title prefix                                              |
 | ------------------------------------- | --------------------------------------------------------- |
-| `packages/components/src/<category>/` | `Shared/Components/<Category>/`（責務9category, ADR-012） |
+| `packages/components/src/<category>/` | `Shared/Components/<Category>/`（責務9category, ADR-022） |
 | `apps/product/src/components/**`      | `Product/Components/`（Shell / Display / Feedback 等）    |
 
 **layout**: `centered`
@@ -64,9 +64,7 @@ type Story = StoryObj<typeof meta>;
 
 /** 基本的な使用例。 */
 export const Default: Story = {
-  args: {
-    /* props */
-  },
+  args: {/* props */},
 };
 
 /** 無効状態。 */
@@ -230,7 +228,7 @@ export const Surfaces: Story = {
 ### Pattern
 
 **パス**: `apps/storybook/.storybook/stories/patterns/`
-**title**: 依存ベースで分ける（ADR-013）。`@dayopt/components` だけで再現できる pattern は
+**title**: 依存ベースで分ける（ADR-023）。`@dayopt/components` だけで再現できる pattern は
 `Shared/Patterns/`、`@/`（product 内部: `@/components` / `@/lib` / `@/features`）に依存する
 pattern は `Product/Patterns/`
 **layout**: `fullscreen`

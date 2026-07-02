@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # リリースプロセス
 
 Dayoptの正式なリリース作業手順を定義します。

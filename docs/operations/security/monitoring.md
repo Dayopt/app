@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # 🛡️ セキュリティ監視・レポート
 
 OWASP準拠のセキュリティ監視とレポート生成システム
@@ -283,7 +288,7 @@ LIMIT 20;
 
 ## 📚 関連ドキュメント
 
-- [Error Handling](../../../apps/product/src/lib/errors/secure-error-handler.ts)
+- [Error Handling](../../../apps/product/src/lib/errors/index.ts)
 - [Rate Limiting](../../../apps/product/src/lib/rate-limit/upstash.ts)
 - [Issue #487](https://github.com/Dayopt/dayopt/issues/487)
 

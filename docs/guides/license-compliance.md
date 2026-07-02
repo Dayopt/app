@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-29
+---
+
 # License Compliance Guide - 開発者向け
 
 Dayopt OSS License Compliance System の使い方ガイド。

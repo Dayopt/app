@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # Next.js パフォーマンス最適化
 
 Dayoptで実装済みのNext.js 15 App Router向けパフォーマンス最適化の技術リファレンス。
@@ -192,8 +197,8 @@ npx lighthouse http://localhost:3000 --view
 
 ## 関連ページ
 
-- [パフォーマンス](../quality/performance.md)
-- [バンドル監視](../quality/bundle-monitoring.md)
+- [パフォーマンス](../architecture/frontend/performance.md)
+- [バンドル監視](../operations/monitoring/bundle-monitoring.md)
 
 ---
 

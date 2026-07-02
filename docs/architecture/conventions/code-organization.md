@@ -1,0 +1,114 @@
+---
+status: current
+last_verified: 2026-07-02
+code: apps/product/src
+---
+
+# Code Organization
+
+Dayopt の feature / lib / shell の責務と、それぞれに「何を置き / 何を置かないか」のルール。
+
+`ADR-012 Feature-Sliced Architecture` と `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）の運用面を補完するドキュメント。
+
+---
+
+## 3 つの結論（前提）
+
+この docs は cross-layer types owner cleanup シリーズ（#1222〜#1232）で確定した 3 原則を前提に書かれている。
+
+1. **domain は全 feature 必須ではない** — pure logic が無い feature には domain は無いのが正しい状態
+2. **RPC / DB response transformer は domain ではなく server** — shape 密結合の adapter は server サブレイヤーに置く
+3. **`src/lib` は便利箱ではなく feature 非依存の基盤** — feature を import しない一方向ルールを死守
+
+---
+
+## Feature 標準ディレクトリ構造
+
+```
+features/{name}/
+  index.ts          # barrel（公開 API、明示的 named export のみ）
+  components/       # React component（feature 固有 UI）
+  hooks/            # React hook（feature 固有）
+  stores/           # Zustand store（feature 内 client-side state）
+  domain/           # pure logic（DB / React / store / TZ 非依存）
+  lib/              # feature 固有の helper（色 const / utility）
+  server/           # tRPC router / service / adapter（DB access あり）
+  schemas/          # Zod schema（必要時のみ）
+  types/            # 型定義（DB row / domain type の re-export 含む）
+```
+
+**全部存在する必要はない。必要なサブディレクトリだけ作る** のが原則。
+
+### 各サブディレクトリの責務
+
+| サブディレクトリ | 置くもの                                                | 置かないもの                                                |
+| ---------------- | ------------------------------------------------------- | ----------------------------------------------------------- |
+| `components/`    | feature 固有の React component                          | shadcn 系の primitive（→ `lib/components/ui/`）             |
+| `hooks/`         | feature 固有の React hook                               | 他 feature でも使う汎用 hook（→ `lib/hooks/`）              |
+| `stores/`        | feature 内で完結する client state                       | 複数 feature が参照する UI state（→ `lib/stores/`）         |
+| `domain/`        | pure logic（業務 rule、計算、validation）               | DB / RPC / React に依存するもの、shape 密結合の transformer |
+| `lib/`           | feature 固有の helper（色 const、enum mapping、helper） | pure business rule（→ `domain/`）                           |
+| `server/`        | tRPC router、service、RPC↔tRPC adapter                  | UI / hook / store                                           |
+| `schemas/`       | Zod schema                                              | TypeScript 型のみ（→ `types/`）                             |
+| `types/`         | DB row / domain type の re-export                       | 実装を伴う logic                                            |
+
+---
+
+## なぜ全 feature に domain を作らないか
+
+> domain を作ること自体が目的ではない。「テストしたい挙動 / 共有したいルール」がそこにあるかで判断する。
+
+### domain を作る基準
+
+- pure aggregation / pure transformation / pure validation が **複数箇所で参照される** または **単体テストで凍結すべき挙動を持つ**
+- feature の business rule（merge 制約、streak 計算、planned vs actual 判定）が pure logic として表現できる
+
+### domain を作らない判断（実例）
+
+| Feature      | 理由                                                                              |
+| ------------ | --------------------------------------------------------------------------------- |
+| `chronotype` | UI と store だけで完結。pure logic がほぼ存在しない                               |
+| `settings`   | composition なので business rule は外部 feature が持つ。settings 自体は rule なし |
+
+「pure logic が無い feature には domain が無い」のが正しい状態。無理に domain を切ると逆に追跡コストが増える。
+
+### domain を作った判断（実例）
+
+| Feature  | domain の中身                                                                                               |
+| -------- | ----------------------------------------------------------------------------------------------------------- |
+| `entry`  | `entry-time-model` / `monthly-trend` / `streak-calculator` / `estimation-accuracy` / `tag-stats` ほか 10 件 |
+| `tags`   | `tag-colon` / `tag-tree` / `tag-merge` / `tag-ungroup`                                                      |
+| `review` | `variance` / `timePL/`（薄い構成）                                                                          |
+
+---
+
+## DAG Layer
+
+```
+Layer 0 (基盤):       tags, chronotype
+Layer 1 (中核):       entry
+Layer 2 (体験):       calendar, review, ai, palette
+Independent:          auth, notifications, contact, onboarding, tour
+Composition:          settings  (= 通常 feature DAG には乗せない)
+```
+
+詳細は `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）を参照。
+
+---
+
+## Calendar Hub（暫定運用）
+
+`features/calendar` は views / tag-filter / navigation / interaction を内部に同居させた hub feature。launch 前の解体リスクを避けるため、blast radius を hub 内部に閉じる運用。
+
+- barrel は「ページから見た public API」のみを export
+- 子 feature 化（`calendar-view` / `calendar-filter` / `calendar-interaction`）は launch 後に検討
+- decomposition plan: `~/.claude/plans/p1-5-calendar-decomposition.md`
+
+---
+
+## 参考
+
+- `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）
+- `Domain vs Server`（このディレクトリ内）
+- `src/lib Policy`（このディレクトリ内）
+- `ADR-012 Feature-Sliced Architecture`

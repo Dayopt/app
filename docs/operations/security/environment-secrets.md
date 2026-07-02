@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # Environment Secrets
 
 Dayopt の Secrets 運用の正本は [Operations / Secrets](../secrets.md)。

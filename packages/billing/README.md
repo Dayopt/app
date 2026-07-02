@@ -1,5 +1,7 @@
 # @dayopt/billing
 
+> 責務境界の全体像: [docs/architecture/overview.md](../../docs/architecture/overview.md)。課金フロー自体は [docs/business/billing.md](../../docs/business/billing.md)
+
 アプリ横断で使う **public-safe な billing model の source of truth**。
 Free / Pro の意味、subscription status、entitlement、価格表示用定数を一元化する。
 client import できる pure model だけを持ち、Stripe SDK / secret / runtime は **持たない**。
