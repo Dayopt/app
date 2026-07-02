@@ -4,6 +4,7 @@ DayoptのLP設計方針。GAFA-First原則に基づき、実績のあるベス�
 
 > **このドキュメントの位置づけ**: 汎用的なLP設計原則・ベストプラクティスを記載。
 > Dayopt固有のメッセージング・セクション別仕様は **[LP Spec](?path=/docs/strategy-lp-spec--docs)** を参照。
+> プロダクトの最上位コンセプトは [`docs/strategy/concept.md`](./concept.md) を参照（2026-07-02 策定）。以下のヘッドライン案は策定前の汎用例であり、実際の LP コピーは concept.md の「守れる計画」訴求に従う。
 
 ---
 
