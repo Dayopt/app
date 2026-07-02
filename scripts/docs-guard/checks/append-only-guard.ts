@@ -18,6 +18,8 @@ export interface AppendOnlyViolation {
 }
 
 const SUPERSEDE_LINE_RE = /^\+(superseded_by:\s*\S+|status:\s*superseded)\s*$/;
+// 追加された空行（frontmatter/本文の区切り整形）は supersede 追記に伴う自然な差分として許容
+const BLANK_ADDITION_RE = /^\+\s*$/;
 
 function isSupersedeOnlyDiff(diff: string): boolean {
   const lines = diff.split('\n');
@@ -32,6 +34,7 @@ function isSupersedeOnlyDiff(diff: string): boolean {
     }
 
     if (line.startsWith('+')) {
+      if (BLANK_ADDITION_RE.test(line)) continue;
       if (!SUPERSEDE_LINE_RE.test(line)) return false;
       hasAddition = true;
     }
