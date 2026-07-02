@@ -1,5 +1,6 @@
 ---
 status: active
+last_verified: 2026-07-02
 ---
 
 # calendar-review-panel-migration: Calendar 内 Review Panel 移行設計

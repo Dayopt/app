@@ -1,0 +1,73 @@
+name: Docs Guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '22'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # docs/ に変更があるときだけ実際のチェックを走らせる。トリガー自体は絞らず、
+  # gitleaks ジョブ（リポジトリ全体対象）と同じワークフローに同居させるため job 側で判定する。
+  docs-checks:
+    name: "\U0001F4DA docs-guard"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # append-only guard が base ref との差分を見るため full history が必要
+          fetch-depth: 0
+
+      - name: docs/ 変更の有無を確認
+        id: docs-changed
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BASE"...HEAD -- docs/ | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        if: steps.docs-changed.outputs.changed == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - run: corepack enable
+        if: steps.docs-changed.outputs.changed == 'true'
+
+      - run: pnpm install --frozen-lockfile
+        if: steps.docs-changed.outputs.changed == 'true'
+
+      - name: pnpm docs:check
+        if: steps.docs-changed.outputs.changed == 'true'
+        run: pnpm docs:check
+        env:
+          DOCS_GUARD_BASE_REF: origin/${{ github.event.pull_request.base.ref || 'main' }}
+
+  # secret scan はリポジトリ全体・全 push/PR が対象（docs 以外の変更でも走る）
+  gitleaks:
+    name: "\U0001F512 gitleaks"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

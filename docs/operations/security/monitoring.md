@@ -288,7 +288,7 @@ LIMIT 20;
 
 ## 📚 関連ドキュメント
 
-- [Error Handling](../../../apps/product/src/lib/errors/secure-error-handler.ts)
+- [Error Handling](../../../apps/product/src/lib/errors/index.ts)
 - [Rate Limiting](../../../apps/product/src/lib/rate-limit/upstash.ts)
 - [Issue #487](https://github.com/Dayopt/dayopt/issues/487)
 

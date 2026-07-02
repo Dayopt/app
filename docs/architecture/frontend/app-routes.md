@@ -49,43 +49,38 @@ src/app/
 
 ### Layout 系
 
-| Path                                                               | Type           | 責務                                                                                                                           |
-| ------------------------------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| [`(app)/layout.tsx`](<../src/app/[locale]/(app)/layout.tsx>)       | layout         | IntlProvider（app namespace のみ）+ Providers + BaseLayout + GlobalOverlays。`metadata.robots: noindex` で認証ページを検索除外 |
-| [`(app)/error.tsx`](<../src/app/[locale]/(app)/error.tsx>)         | error boundary | (app) Group 内のページエラーを BaseLayout 内側で表示。i18n 対応、Sentry にも記録                                               |
-| [`(app)/not-found.tsx`](<../src/app/[locale]/(app)/not-found.tsx>) | not-found      | (app) Group 内の 404。BaseLayout 内側で表示し、ナビ崩れを防ぐ                                                                  |
+| Path                                                                                  | Type           | 責務                                                                                                                           |
+| ------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| [`(app)/layout.tsx`](<../../../apps/product/src/app/[locale]/(app)/layout.tsx>)       | layout         | IntlProvider（app namespace のみ）+ Providers + BaseLayout + GlobalOverlays。`metadata.robots: noindex` で認証ページを検索除外 |
+| [`(app)/error.tsx`](<../../../apps/product/src/app/[locale]/(app)/error.tsx>)         | error boundary | (app) Group 内のページエラーを BaseLayout 内側で表示。i18n 対応、Sentry にも記録                                               |
+| [`(app)/not-found.tsx`](<../../../apps/product/src/app/[locale]/(app)/not-found.tsx>) | not-found      | (app) Group 内の 404。BaseLayout 内側で表示し、ナビ崩れを防ぐ                                                                  |
 
 ### (workspace) — メインモード
 
-| Path                                                                                                                   | Type           | 責務 / 主な合成元                                                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [`(workspace)/day/page.tsx`](<../src/app/[locale]/(app)/(workspace)/day/page.tsx>)                                     | page (server)  | `prefetchCalendarData` → `HydrationBoundary` → `CalendarViewClient`（day view）。`generateMetadata` で i18n タイトル |
-| [`(workspace)/week/page.tsx`](<../src/app/[locale]/(app)/(workspace)/week/page.tsx>)                                   | page (server)  | week view。同上の prefetch + Suspense streaming                                                                      |
-| [`(workspace)/[nday]/page.tsx`](<../src/app/[locale]/(app)/(workspace)/[nday]/page.tsx>)                               | page (server)  | 多日数 view（2day〜9day）。`[nday]` で動的セグメント                                                                 |
-| `(workspace)/{day,week,[nday]}/loading.tsx`                                                                            | loading        | 共通 `CalendarSkeleton` を表示                                                                                       |
-| `(workspace)/{day,week,[nday]}/error.tsx`                                                                              | error boundary | calendar segment 専用エラー                                                                                          |
-| [`(workspace)/_composition/`](<../src/app/[locale]/(app)/(workspace)/_composition/>)                                   | —              | `CalendarViewClient` ほか、各 view の合成 layer                                                                      |
-| [`(workspace)/_server/`](<../src/app/[locale]/(app)/(workspace)/_server/>)                                             | —              | `prefetchCalendarData` / `parseDateParam` / `CalendarSkeleton` 等の server-only ヘルパ                               |
-| [`(workspace)/review/page.tsx`](<../src/app/[locale]/(app)/(workspace)/review/page.tsx>)                               | page (server)  | 振り返り単一ページ（`ReviewView` を render）                                                                         |
-| [`(workspace)/review/layout.tsx`](<../src/app/[locale]/(app)/(workspace)/review/layout.tsx>)                           | layout         | `ReviewLayout`（日付ナビ + 粒度セレクタヘッダー）                                                                    |
-| [`(workspace)/review/tags/[tagId]/page.tsx`](<../src/app/[locale]/(app)/(workspace)/review/tags/[tagId]/page.tsx>)     | page (server)  | タグ詳細（特定 tag のサマリ）                                                                                        |
-| [`(workspace)/review/error.tsx`](<../src/app/[locale]/(app)/(workspace)/review/error.tsx>)                             | error boundary | review segment 専用エラー                                                                                            |
-| [`(workspace)/ai/page.tsx`](<../src/app/[locale]/(app)/(workspace)/ai/page.tsx>)                                       | page (server)  | AI モード ルート（`AiMainContent` を render）                                                                        |
-| [`(workspace)/ai/threads/[threadId]/page.tsx`](<../src/app/[locale]/(app)/(workspace)/ai/threads/[threadId]/page.tsx>) | page (server)  | AI スレッド詳細                                                                                                      |
+| Path                                                                                                        | Type           | 責務 / 主な合成元                                                                                                                                                                                   |
+| ----------------------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`(workspace)/day/page.tsx`](<../../../apps/product/src/app/[locale]/(app)/(workspace)/day/page.tsx>)       | page (server)  | `prefetchCalendarData` → `HydrationBoundary` → `CalendarViewClient`（day view）。`generateMetadata` で i18n タイトル                                                                                |
+| [`(workspace)/week/page.tsx`](<../../../apps/product/src/app/[locale]/(app)/(workspace)/week/page.tsx>)     | page (server)  | week view。同上の prefetch + Suspense streaming                                                                                                                                                     |
+| [`(workspace)/[nday]/page.tsx`](<../../../apps/product/src/app/[locale]/(app)/(workspace)/[nday]/page.tsx>) | page (server)  | 多日数 view（2day〜9day）。`[nday]` で動的セグメント                                                                                                                                                |
+| `(workspace)/{day,week,[nday]}/loading.tsx`                                                                 | loading        | 共通 `CalendarSkeleton` を表示                                                                                                                                                                      |
+| `(workspace)/{day,week,[nday]}/error.tsx`                                                                   | error boundary | calendar segment 専用エラー                                                                                                                                                                         |
+| [`(workspace)/_composition/`](<../../../apps/product/src/app/[locale]/(app)/(workspace)/_composition/>)     | —              | `CalendarViewClient` ほか、各 view の合成 layer                                                                                                                                                     |
+| [`(workspace)/_server/`](<../../../apps/product/src/app/[locale]/(app)/(workspace)/_server/>)               | —              | `prefetchCalendarData` / `parseDateParam` / `CalendarSkeleton` 等の server-only ヘルパ                                                                                                              |
+| `(workspace)/review/*`, `(workspace)/ai/*`（旧構成）                                                        | —              | 独立ルートとしては現存しない。[`calendar-review-panel-migration`](../../projects/calendar-review-panel-migration/overview.md)（active）で Calendar panel へ統合中。本表の記述は移行完了後に更新する |
 
 ### settings
 
-| Path                                                                                       | Type            | 責務                                                                                |
-| ------------------------------------------------------------------------------------------ | --------------- | ----------------------------------------------------------------------------------- |
-| [`settings/page.tsx`](<../src/app/[locale]/(app)/settings/page.tsx>)                       | page (client)   | settings 一覧。client component、`useAuthStore` + `SETTINGS_CATEGORIES` で nav 表示 |
-| [`settings/layout.tsx`](<../src/app/[locale]/(app)/settings/layout.tsx>)                   | layout (client) | settings 用の slot 構造                                                             |
-| [`settings/[category]/page.tsx`](<../src/app/[locale]/(app)/settings/[category]/page.tsx>) | page (client)   | カテゴリ別 settings（`SettingsContent` を render）                                  |
+| Path                                                                                                          | Type            | 責務                                                                                |
+| ------------------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------------------------------------------- |
+| [`settings/page.tsx`](<../../../apps/product/src/app/[locale]/(app)/settings/page.tsx>)                       | page (client)   | settings 一覧。client component、`useAuthStore` + `SETTINGS_CATEGORIES` で nav 表示 |
+| [`settings/layout.tsx`](<../../../apps/product/src/app/[locale]/(app)/settings/layout.tsx>)                   | layout (client) | settings 用の slot 構造                                                             |
+| [`settings/[category]/page.tsx`](<../../../apps/product/src/app/[locale]/(app)/settings/[category]/page.tsx>) | page (client)   | カテゴリ別 settings（`SettingsContent` を render）                                  |
 
 ### playground
 
-| Path                                                                                       | Type | 責務                                                                      |
-| ------------------------------------------------------------------------------------------ | ---- | ------------------------------------------------------------------------- |
-| [`playground/dnd-tags/page.tsx`](<../src/app/[locale]/(app)/playground/dnd-tags/page.tsx>) | page | dnd-kit 検証用の dev playground（production では `noindex` 継承で隠れる） |
+| Path                                                                                                          | Type | 責務                                                                      |
+| ------------------------------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------- |
+| [`playground/dnd-tags/page.tsx`](<../../../apps/product/src/app/[locale]/(app)/playground/dnd-tags/page.tsx>) | page | dnd-kit 検証用の dev playground（production では `noindex` 継承で隠れる） |
 
 ## composition layer の使い方
 
@@ -99,11 +94,11 @@ src/app/
 
 ## providers / shell / overlays
 
-| Path                                                                                             | 責務                                                                          |
-| ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| [`(app)/_providers/Providers.tsx`](<../src/app/[locale]/(app)/_providers/Providers.tsx>)         | tRPC / TanStack Query / Auth Store / Calendar Settings / Theme などのデータ層 |
-| [`(app)/_shell/base-layout.tsx`](<../src/app/[locale]/(app)/_shell/base-layout.tsx>)             | sidebar + header + main の UI shell                                           |
-| [`(app)/_overlays/GlobalOverlays.tsx`](<../src/app/[locale]/(app)/_overlays/GlobalOverlays.tsx>) | ContactDialog / TourOrchestrator など global dialog 群を集約マウント          |
+| Path                                                                                                                | 責務                                                                          |
+| ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [`(app)/_providers/Providers.tsx`](<../../../apps/product/src/app/[locale]/(app)/_providers/Providers.tsx>)         | tRPC / TanStack Query / Auth Store / Calendar Settings / Theme などのデータ層 |
+| [`(app)/_shell/base-layout.tsx`](<../../../apps/product/src/app/[locale]/(app)/_shell/base-layout.tsx>)             | sidebar + header + main の UI shell                                           |
+| [`(app)/_overlays/GlobalOverlays.tsx`](<../../../apps/product/src/app/[locale]/(app)/_overlays/GlobalOverlays.tsx>) | ContactDialog / TourOrchestrator など global dialog 群を集約マウント          |
 
 ## Auth 境界の確認
 
@@ -117,22 +112,22 @@ src/app/
 
 ### Layout 系
 
-| Path                                                             | Type            | 責務                                                                                                       |
-| ---------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
-| [`(auth)/layout.tsx`](<../src/app/[locale]/(auth)/layout.tsx>)   | layout (server) | IntlProvider（`common` / `auth` / `error` namespace のみ）+ `AuthClientLayout`。`metadata.robots: noindex` |
-| [`(auth)/loading.tsx`](<../src/app/[locale]/(auth)/loading.tsx>) | loading         | 認証フロー共通のローディング表示                                                                           |
+| Path                                                                                | Type            | 責務                                                                                                       |
+| ----------------------------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
+| [`(auth)/layout.tsx`](<../../../apps/product/src/app/[locale]/(auth)/layout.tsx>)   | layout (server) | IntlProvider（`common` / `auth` / `error` namespace のみ）+ `AuthClientLayout`。`metadata.robots: noindex` |
+| [`(auth)/loading.tsx`](<../../../apps/product/src/app/[locale]/(auth)/loading.tsx>) | loading         | 認証フロー共通のローディング表示                                                                           |
 
 ### Pages
 
-| Path                                                                                               | Type          | 責務                                                           |
-| -------------------------------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
-| [`(auth)/auth/page.tsx`](<../src/app/[locale]/(auth)/auth/page.tsx>)                               | page (server) | `/auth` ルートへの直接アクセス時の入口（リダイレクト or 案内） |
-| [`(auth)/auth/login/page.tsx`](<../src/app/[locale]/(auth)/auth/login/page.tsx>)                   | page (server) | `LoginForm` を中央配置で render                                |
-| [`(auth)/auth/signup/page.tsx`](<../src/app/[locale]/(auth)/auth/signup/page.tsx>)                 | page (server) | `SignupForm`                                                   |
-| [`(auth)/auth/password/page.tsx`](<../src/app/[locale]/(auth)/auth/password/page.tsx>)             | page (server) | `PasswordResetForm`（リセットメール送信）                      |
-| [`(auth)/auth/reset-password/page.tsx`](<../src/app/[locale]/(auth)/auth/reset-password/page.tsx>) | page (server) | `ResetPasswordForm`（リセットリンク経由の新パスワード設定）    |
-| [`(auth)/auth/mfa-verify/page.tsx`](<../src/app/[locale]/(auth)/auth/mfa-verify/page.tsx>)         | page (server) | MFA TOTP コード検証                                            |
-| [`(auth)/auth/mfa-verify/layout.tsx`](<../src/app/[locale]/(auth)/auth/mfa-verify/layout.tsx>)     | layout        | MFA 専用 wrapper                                               |
+| Path                                                                                                                  | Type          | 責務                                                           |
+| --------------------------------------------------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
+| [`(auth)/auth/page.tsx`](<../../../apps/product/src/app/[locale]/(auth)/auth/page.tsx>)                               | page (server) | `/auth` ルートへの直接アクセス時の入口（リダイレクト or 案内） |
+| [`(auth)/auth/login/page.tsx`](<../../../apps/product/src/app/[locale]/(auth)/auth/login/page.tsx>)                   | page (server) | `LoginForm` を中央配置で render                                |
+| [`(auth)/auth/signup/page.tsx`](<../../../apps/product/src/app/[locale]/(auth)/auth/signup/page.tsx>)                 | page (server) | `SignupForm`                                                   |
+| [`(auth)/auth/password/page.tsx`](<../../../apps/product/src/app/[locale]/(auth)/auth/password/page.tsx>)             | page (server) | `PasswordResetForm`（リセットメール送信）                      |
+| [`(auth)/auth/reset-password/page.tsx`](<../../../apps/product/src/app/[locale]/(auth)/auth/reset-password/page.tsx>) | page (server) | `ResetPasswordForm`（リセットリンク経由の新パスワード設定）    |
+| [`(auth)/auth/mfa-verify/page.tsx`](<../../../apps/product/src/app/[locale]/(auth)/auth/mfa-verify/page.tsx>)         | page (server) | MFA TOTP コード検証                                            |
+| [`(auth)/auth/mfa-verify/layout.tsx`](<../../../apps/product/src/app/[locale]/(auth)/auth/mfa-verify/layout.tsx>)     | layout        | MFA 専用 wrapper                                               |
 
 ## [locale] 直下
 
