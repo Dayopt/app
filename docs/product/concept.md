@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-03
+---
+
 # Dayopt コンセプト
 
 策定日: 2026-07-02

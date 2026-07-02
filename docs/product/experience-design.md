@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-03
+---
+
 # Dayopt 体験設計
 
 [`concept.md`](./concept.md) の原則を画面と操作に翻訳する設計文書。

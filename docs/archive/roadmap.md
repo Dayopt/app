@@ -1,7 +1,9 @@
 ---
-status: current
+status: deprecated
 last_verified: 2026-07-02
 ---
+
+> **Archive (2026-07-03)**: 汎用ローンチチェックリスト方式は廃止。v1 の完成定義と残作業の考え方は [`docs/product/v1-definition.md`](../product/v1-definition.md)（「残作業はループの欠けと摩擦だけで構成する」）に置き換えた。
 
 # Roadmap - リリースまでの道のり
 

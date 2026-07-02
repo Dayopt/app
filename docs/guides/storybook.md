@@ -172,7 +172,7 @@ Story作成時に確認：
 
 | 順番 | ドキュメント                                                        | 内容                                           |
 | ---- | ------------------------------------------------------------------- | ---------------------------------------------- |
-| 1    | [Product Overview](../product/overview.md)                          | Dayoptとは何か、コアコンセプト、Feature Map    |
+| 1    | [Dayopt コンセプト](../product/concept.md)                          | Dayoptとは何か、ジョブ、プロダクト原則         |
 | 2    | [Domain Glossary](../glossary/terms.md)                             | Entry, EntryState, Chronotype 等のドメイン用語 |
 | 3    | [Developer Map](../archive/developer-map.md)                        | ディレクトリ構成と「どこに何があるか」         |
 | 4    | [Packages Overview](../architecture/overview.md)                    | monorepo packages の責務境界と token 移行方針  |

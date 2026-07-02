@@ -12,15 +12,15 @@ AI(Claude Code / Codex)も人間も、情報を探すときはまずこのファ
 
 ### ストック
 
-| 場所            | 中身                                                                                                                                                    |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `product/`      | プロダクトの仕様・要件・ロードマップ。「何を作っているか」。`features/` 配下に機能ごとの「今日どう振る舞うか」仕様（1機能1ファイル）                    |
-| `architecture/` | 技術の現在の姿。「どう作られているか」。直下は横断もの(overview / tech-stack / data-flow)、配下に `api/` `frontend/` `data/` `platform/` `conventions/` |
-| `guides/`       | 開発のHow-to。コマンド、ハマりどころ、各種手順                                                                                                          |
-| `operations/`   | 運用。障害対応、シークレット管理方針、依存サービス台帳(`external-services.md`)、`security/` `releases/` `monitoring/`(Sentry・バンドル監視等)           |
-| `business/`     | 事業の現在の方針。価格・課金・競合・コスト・指標定義(`metrics.md`)が直下、配下に `brand/` `marketing/` `sns/` `legal/`(該当時。本文はアプリ側が正本)    |
-| `glossary/`     | 用語定義(`terms.md`)と禁止用語(`forbidden-terms.md`)                                                                                                    |
-| `projects/`     | 進行中の取り組み。1件1ディレクトリ、frontmatterの `status` 必須。完了したら `archive/projects/` へ                                                      |
+| 場所            | 中身                                                                                                                                                                                                                               |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `product/`      | プロダクトのコンセプトと仕様。「なぜ・何を作っているか」。最上位は `concept.md`(不変)、体験設計は `experience-design.md`、v1 スコープは `v1-definition.md`。`features/` 配下に機能ごとの「今日どう振る舞うか」仕様(1機能1ファイル) |
+| `architecture/` | 技術の現在の姿。「どう作られているか」。直下は横断もの(overview / tech-stack / data-flow)、配下に `api/` `frontend/` `data/` `platform/` `conventions/`                                                                            |
+| `guides/`       | 開発のHow-to。コマンド、ハマりどころ、各種手順                                                                                                                                                                                     |
+| `operations/`   | 運用。障害対応、シークレット管理方針、依存サービス台帳(`external-services.md`)、`security/` `releases/` `monitoring/`(Sentry・バンドル監視等)                                                                                      |
+| `business/`     | 事業の現在の方針。価格・課金・競合・コスト・指標定義(`metrics.md`)が直下、配下に `brand/` `marketing/` `sns/` `legal/`(該当時。本文はアプリ側が正本)                                                                               |
+| `glossary/`     | 用語定義(`terms.md`)と禁止用語(`forbidden-terms.md`)                                                                                                                                                                               |
+| `projects/`     | 進行中の取り組み。1件1ディレクトリ、frontmatterの `status` 必須。完了したら `archive/projects/` へ                                                                                                                                 |
 
 ### ログ(追記専用)
 

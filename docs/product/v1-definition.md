@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-03
+---
+
 # Dayopt v1 定義（完成の定義と未決事項）
 
 [`concept.md`](./concept.md) から分冊した v1 のスコープ文書。**v1 が完成するまで更新され続ける**。
@@ -36,7 +41,7 @@ concept.md 策定（2026-07-02）に伴う既存資産の改定状況。
 | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------- |
 | [`decisions/010`](../decisions/010-feature-non-adoption.md)                                    | 繰り返し予定 → 提案型ルーティン、通知 → 計画に仕える opt-in に改定                    | ✅ 反映済み                   |
 | [decisions/015](../decisions/015-time-immutability-principle.md)                               | 「予定は凍結、記録は訂正可」の二層化                                                  | ✅ 反映済み（猶予幅は未決）   |
-| `CLAUDE.md` / [product/overview.md](./overview.md)                                             | ターゲットの楔・タイトル欄廃止・AI/通知の注釈                                         | ✅ 反映済み                   |
+| `CLAUDE.md` / [product/features/](./features/entry.md)                                         | ターゲットの楔・タイトル欄廃止・AI/通知の注釈                                         | ✅ 反映済み                   |
 | [`business/pricing.md`](../business/pricing.md) / [competitors.md](../business/competitors.md) | in-app AI 振り返りの記述を削除、MCP/API 連携に統一                                    | ✅ 反映済み                   |
 | strategy 文書（brand-\*, lp-\*）                                                               | JTBD「計画を守れるようにする」への統一、ヘッドライン確定                              | ✅ 反映済み                   |
 | LP 実装（`apps/web/messages/*.json`、`content/docs/**/*.mdx`、marketing コンポーネント）       | 「守れる計画」訴求への書き換え、AI Reflection 訴求の削除                              | ⬜ 未実施（次回 LP 作業）     |
