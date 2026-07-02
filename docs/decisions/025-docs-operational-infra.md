@@ -30,5 +30,6 @@ status: accepted
 ## 影響・やること
 
 - `pnpm docs:check` がローカル/CIの両方でdocsガードを実行する
-- `docs/operations/secrets.md` の実秘密値監査はサンドボックス権限の制約で未完了（フォローアップ課題として残置）
-- `docs-restructure` ブランチ自体（ADR-024の作業）は append-only ガード導入前の変更を含むため、`docs/decisions` `docs/notes` 等への一部修正が本ブランチのマージ後に初めて guard の保護対象になる（この PR 自体は grandfathered）
+- `docs/operations/secrets.md` の実秘密値監査はサンドボックス権限の制約で未完了。フォローアップ課題として [issue #1450](https://github.com/Dayopt/dayopt/issues/1450) に切り出した
+- CI導入時、`docs-restructure` ブランチ自体（ADR-024の作業）が append-only ガード導入前に `docs/decisions/010-feature-non-adoption.md` を修正していたことが CI で検出された。ガードを回避せず、当該修正を revert して origin/main の内容に戻した（該当リンクは移動先が変わって古くなるが、append-only領域のリンク切れは docs-guard の link-check で warning 扱いのため実害はない）
+- gitleaks は導入初回に git 全履歴スキャンで21件のヒットを検出したが、全て (a) 既に削除済みの古いファイルに含まれていたプレースホルダー値、または (b) Supabase local dev の公開用 `sb_publishable_...` キー（設計上 public な値）であり、実際の漏洩ではなかった。ただし全履歴スキャンは同じ既知ノイズを毎回re-flagしCI gateとして機能しなくなるため、スキャン範囲をそのpush/PRで新規に入ったcommit範囲に限定する設計に修正した
