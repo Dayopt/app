@@ -48,7 +48,7 @@ Dayoptの中心モデル。計画（旧 Plan）と記録（旧 Record）を統�
 ルーティン（提案型ルーティン）、外部 AI（MCP/API 経由）の書き込み、外部カレンダー同期の予定 — 出所を問わず、自動生成されたエントリは確定（`confirmed`）するまで未確定のゴーストとして現れる。ユーザーがワンタップで確定すると実データになり、無視すれば消える。
 
 - 自動生成はゴーストまで、確定は常に人間（[concept.md §4-3](../strategy/concept.md)）
-- 詳細な実装仕様（`confirmed` フラグの形式、ゴースト有効期限）は未確定。[concept.md §9](../strategy/concept.md) の未決事項を参照
+- 詳細な実装仕様（`confirmed` フラグの形式、ゴースト有効期限）は未確定。[v1-definition.md](../strategy/v1-definition.md) の未決事項を参照
 
 ### FulfillmentScore（達成度スコア）
 
