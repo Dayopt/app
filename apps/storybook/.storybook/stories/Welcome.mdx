@@ -9,12 +9,12 @@ import { Meta } from '@storybook/addon-docs/blocks';
 デザイン原則・UX方針・アーキテクチャ判断・プロダクト仕様など、**コンポーネントを跨ぐ話**やコード以外のすべては [`docs/README.md`](https://github.com/Dayopt/dayopt/blob/main/docs/README.md) にある。
 
 - 迷ったら `docs/README.md` の「どこに置くか（決定木）」から辿る
-- 「なぜこの設計にしたか」は `docs/decisions/`
+- 「なぜこの設計にしたか」は `docs/log/decisions/`
 - 「今この機能はどう振る舞うか」は `docs/product/features/`
 
 ## この Storybook の構成
 
-top-level は所有境界（package / app）で分ける（[ADR-023](https://github.com/Dayopt/dayopt/blob/main/docs/decisions/023-storybook-ownership-taxonomy.md)）。
+top-level は所有境界（package / app）で分ける（[ADR-023](https://github.com/Dayopt/dayopt/blob/main/docs/log/decisions/023-storybook-ownership-taxonomy.md)）。
 
 - `Shared/*` — `packages/*`（foundations / components / patterns）
 - `Product/*` — `apps/product`

@@ -21,12 +21,17 @@ export const FRONTMATTER_REQUIRED_DIRS = [
 ];
 
 // 書き換え禁止（append-only）対象ディレクトリ。sessions/latest.md のみ例外で上書き可。
-export const APPEND_ONLY_DIRS = ['docs/decisions', 'docs/notes', 'docs/journal', 'docs/sessions'];
-export const APPEND_ONLY_EXCLUDE = ['docs/sessions/latest.md'];
+export const APPEND_ONLY_DIRS = [
+  'docs/log/decisions',
+  'docs/log/notes',
+  'docs/log/journal',
+  'docs/log/sessions',
+];
+export const APPEND_ONLY_EXCLUDE = ['docs/log/sessions/latest.md'];
 
 // リンク切れチェックで「凍結された過去の記録」として warning 扱いにするディレクトリ。
 // APPEND_ONLY_DIRS に加え、archive/ も完了・停止した project の経緯記録であり書き換えない前提。
-export const LINK_CHECK_SOFT_DIRS = [...APPEND_ONLY_DIRS, 'docs/archive'];
+export const LINK_CHECK_SOFT_DIRS = [...APPEND_ONLY_DIRS, 'docs/log/archive'];
 
 // frontmatter 必須チェックから除外するファイル（グロブではなく完全一致 or 前方一致）。
 // secrets.md: サンドボックス権限で編集不可（フォローアップ課題）。

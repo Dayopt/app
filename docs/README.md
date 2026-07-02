@@ -20,26 +20,28 @@ AI(Claude Code / Codex)も人間も、情報を探すときはまずこのファ
 | `operations/`   | 運用。障害対応、シークレット管理方針、依存サービス台帳(`external-services.md`)、`security/` `releases/` `monitoring/`(Sentry・バンドル監視等)                                                       |
 | `business/`     | 事業の現在の方針。最上位は `concept.md`(なぜ作るか・原則。不変)。価格・課金・競合・コスト・指標定義(`metrics.md`)が直下、配下に `brand/` `marketing/` `sns/` `legal/`(該当時。本文はアプリ側が正本) |
 | `glossary/`     | 用語定義(`terms.md`)と禁止用語(`forbidden-terms.md`)                                                                                                                                                |
-| `projects/`     | 進行中の取り組み。1件1ディレクトリ、frontmatterの `status` 必須。完了したら `archive/projects/` へ                                                                                                  |
+| `projects/`     | 進行中の取り組み。1件1ディレクトリ、frontmatterの `status` 必須。完了したら `log/archive/projects/` へ                                                                                              |
 
 ### ログ(追記専用)
 
-| 場所         | 中身                                                                   | 命名                                                                                                       |
-| ------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `decisions/` | 意思決定の記録。技術もビジネスも同じ形式。「なぜ・何を捨てたか」が本体 | `NNN-slug.md`(3桁連番)                                                                                     |
-| `notes/`     | 調査・実験・監査・障害からの学び。トピック単位の時点記録               | `YYYY-MM-DD-slug.md`（ユーザーの声は `YYYY-MM-DD-feedback-slug.md`、障害は `YYYY-MM-DD-incident-slug.md`） |
-| `sessions/`  | 日次の作業ログ                                                         | `YYYY-MM-DD.md`(`latest.md` のみ上書き可)                                                                  |
-| `journal/`   | 月次のまとめ・ふりかえり                                               | `YYYY-MM.md`                                                                                               |
-| `archive/`   | 役目を終えたストックと完了プロジェクト。削除せずここへ移す             | 元の名前を維持                                                                                             |
+ストックと線引きしづらいため全て `log/` 配下にまとめる。
+
+| 場所             | 中身                                                                   | 命名                                                                                                       |
+| ---------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `log/decisions/` | 意思決定の記録。技術もビジネスも同じ形式。「なぜ・何を捨てたか」が本体 | `NNN-slug.md`(3桁連番)                                                                                     |
+| `log/notes/`     | 調査・実験・監査・障害からの学び。トピック単位の時点記録               | `YYYY-MM-DD-slug.md`（ユーザーの声は `YYYY-MM-DD-feedback-slug.md`、障害は `YYYY-MM-DD-incident-slug.md`） |
+| `log/sessions/`  | 日次の作業ログ                                                         | `YYYY-MM-DD.md`(`latest.md` のみ上書き可)                                                                  |
+| `log/journal/`   | 月次のまとめ・ふりかえり                                               | `YYYY-MM.md`                                                                                               |
+| `log/archive/`   | 役目を終えたストックと完了プロジェクト。削除せずここへ移す             | 元の名前を維持                                                                                             |
 
 ## どこに置くか(決定木)
 
 迷ったら上から順に判定する。
 
 1. **過去のある時点の記録か?**
-   - 何かを決めた → `decisions/`
-   - 調べた・試した・監査した・障害から学んだ → `notes/`
-   - 今日の作業そのもの → `sessions/`(月次の総括は `journal/`)
+   - 何かを決めた → `log/decisions/`
+   - 調べた・試した・監査した・障害から学んだ → `log/notes/`
+   - 今日の作業そのもの → `log/sessions/`(月次の総括は `log/journal/`)
 2. **単一のUIコンポーネントに閉じる話か?** → Storybook。docsには書かない
 3. **現在の真実か?**
    - 開発の手順 → `guides/`
@@ -49,7 +51,7 @@ AI(Claude Code / Codex)も人間も、情報を探すときはまずこのファ
    - 事業・ブランド・マーケ・SNSの方針 → `business/`
    - 言葉の定義 → `glossary/`
 4. **進行中の取り組みの計画・作業メモか?** → `projects/`
-5. **それでも迷ったら** → `notes/YYYY-MM-DD-slug.md` に置く。書かないのが最悪。あとで昇格・整理すればいい
+5. **それでも迷ったら** → `log/notes/YYYY-MM-DD-slug.md` に置く。書かないのが最悪。あとで昇格・整理すればいい
 
 ## Storybookとの分界
 

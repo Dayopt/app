@@ -5,7 +5,7 @@ last_verified: 2026-07-02
 
 # 依存サービス台帳
 
-Dayopt が依存する外部サービスの一覧。新しいサービスを追加したら行を1つ足す。解約・移行したら行を消さず「解約済み」の note を残すか `docs/notes/YYYY-MM-DD-slug.md` に経緯を書いて `superseded_by` で辿れるようにする。
+Dayopt が依存する外部サービスの一覧。新しいサービスを追加したら行を1つ足す。解約・移行したら行を消さず「解約済み」の note を残すか `docs/log/notes/YYYY-MM-DD-slug.md` に経緯を書いて `superseded_by` で辿れるようにする。
 
 料金の詳細な試算は [Cost Optimization](../business/cost-optimization.md) を参照。このファイルは「何を・なぜ使っているか」の索引であり、金額の正本ではない。
 

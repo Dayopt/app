@@ -107,7 +107,7 @@ Dayoptの中心モデル。計画（旧 Plan）と記録（旧 Record）を統�
 | `past`     | `end_time <= now`              | 読み取り専用（実績記録のみ可） |
 
 - 算出関数: `getEntryState()` — `src/features/entry/lib/entry-status.ts`
-- ADR: [ADR-015 時間不変原則](../decisions/015-time-immutability-principle.md)
+- ADR: [ADR-015 時間不変原則](../log/decisions/015-time-immutability-principle.md)
 
 #### EntryOrigin（エントリ起源）
 
@@ -144,7 +144,7 @@ Dayoptの中心モデル。計画（旧 Plan）と記録（旧 Record）を統�
 - 過去のエントリの `start_time` / `end_time` は変更不可
 - 実績（`actual_start` / `actual_end` / `fulfillment_score`）は記録可能
 - UI: 過去ブロックは disabled 表示 + ロジックガードの二重防御
-- ADR: [ADR-011](../decisions/011-unified-block-model.md), [ADR-015](../decisions/015-time-immutability-principle.md)
+- ADR: [ADR-011](../log/decisions/011-unified-block-model.md), [ADR-015](../log/decisions/015-time-immutability-principle.md)
 
 ### ユーザー属性
 
@@ -204,7 +204,7 @@ DAG構造の依存関係を持つ機能分類:
 | Layer 2       | Layer 0, 1     | Calendar, Stats, Search, History, Palette |
 | Cross-cutting | 制約なし       | Settings, Auth, Notifications             |
 
-- ADR: [ADR-012](../decisions/012-feature-sliced-architecture.md)
+- ADR: [ADR-012](../log/decisions/012-feature-sliced-architecture.md)
 - ESLint: `lint:boundaries` で強制
 
 #### Composition Layer

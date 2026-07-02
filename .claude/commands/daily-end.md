@@ -6,11 +6,11 @@
 
 - `git log --oneline --since="00:00" --all` で今日のコミットを取得（monorepo 全体。apps/product / apps/web / apps/storybook / packages を含む）
 - `git diff --stat $(git log --since="00:00" --format=%H | tail -1)^..HEAD` で変更規模を把握
-- 既存のセッションログがあれば `docs/sessions/` を確認
+- 既存のセッションログがあれば `docs/log/sessions/` を確認
 
 ## 2. セッションログ（Claude Code向け）
 
-出力先: `docs/sessions/YYYY-MM-DD.md`
+出力先: `docs/log/sessions/YYYY-MM-DD.md`
 
 以下の構造で、事実と規約だけを簡潔に書く。散文・感想・論評は一切不要。
 
@@ -55,7 +55,7 @@ CLAUDE.mdからのポインタが常に最新セッションを指すために�
 
 ## 3. 日記エントリ（開発者向け）
 
-出力先: `docs/journal/YYYY-MM.md`
+出力先: `docs/log/journal/YYYY-MM.md`
 （該当月ファイルの先頭エントリの直前に追記）
 
 該当月ファイルが存在しない場合は新規作成する。テンプレート（Storybook には載せない素の Markdown）:

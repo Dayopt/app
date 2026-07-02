@@ -1,10 +1,10 @@
 ---
-description: docs/notes/ に時点ものの調査・監査・実験ログを新規作成する
+description: docs/log/notes/ に時点ものの調査・監査・実験ログを新規作成する
 ---
 
 # /note
 
-時点ものの記録を `docs/notes/YYYY-MM-DD-slug.md` として作成する。調査・実験・監査・障害からの学びなど、書いた時点でしか意味を持たない内容を置く場所。
+時点ものの記録を `docs/log/notes/YYYY-MM-DD-slug.md` として作成する。調査・実験・監査・障害からの学びなど、書いた時点でしか意味を持たない内容を置く場所。
 
 引数: `$ARGUMENTS`（slug。例: `/note bundle-size-audit` → `2026-07-02-bundle-size-audit.md`）
 
@@ -21,7 +21,7 @@ description: docs/notes/ に時点ものの調査・監査・実験ログを新�
 
 1. 今日の日付（`YYYY-MM-DD`）を確認する
 2. slug が指定されていなければ、何についてのメモかを問い返す
-3. `docs/notes/YYYY-MM-DD-slug.md` を以下の骨格で作成する:
+3. `docs/log/notes/YYYY-MM-DD-slug.md` を以下の骨格で作成する:
 
    ```markdown
    # <タイトル>

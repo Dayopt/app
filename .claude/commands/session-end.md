@@ -1,22 +1,22 @@
 ---
-description: 当日の作業要点を docs/sessions/ に記録し latest.md を更新する
+description: 当日の作業要点を docs/log/sessions/ に記録し latest.md を更新する
 ---
 
 # /session-end
 
-今日の作業を振り返り、`docs/sessions/YYYY-MM-DD.md` にセッションログを書き、`docs/sessions/latest.md` を更新する。
+今日の作業を振り返り、`docs/log/sessions/YYYY-MM-DD.md` にセッションログを書き、`docs/log/sessions/latest.md` を更新する。
 
-> 日記（`docs/journal/YYYY-MM.md`）への蒸留はここでは行わない。月次で `/gardening` がまとめて行う（sessions/ を月末に読み返して journal/ へ蒸留する設計。日次で journal に書くと粒度が細かすぎ、月次で読み返す時に重複整理が必要になるため）。
+> 日記（`docs/log/journal/YYYY-MM.md`）への蒸留はここでは行わない。月次で `/gardening` がまとめて行う（sessions/ を月末に読み返して journal/ へ蒸留する設計。日次で journal に書くと粒度が細かすぎ、月次で読み返す時に重複整理が必要になるため）。
 
 ## 1. 情報収集
 
 - `git log --oneline --since="00:00" --all` で今日のコミットを取得（monorepo 全体。apps/product / apps/web / apps/storybook / packages を含む）
 - `git diff --stat $(git log --since="00:00" --format=%H | tail -1)^..HEAD` で変更規模を把握
-- 既存のセッションログがあれば `docs/sessions/` を確認し、書式を踏襲する
+- 既存のセッションログがあれば `docs/log/sessions/` を確認し、書式を踏襲する
 
 ## 2. セッションログ
 
-出力先: `docs/sessions/YYYY-MM-DD.md`
+出力先: `docs/log/sessions/YYYY-MM-DD.md`
 
 以下の構造で、事実と規約だけを簡潔に書く。散文・感想・論評は一切不要（それは journal/ の役割）。
 

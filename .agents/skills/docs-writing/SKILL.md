@@ -165,7 +165,7 @@ app側の技術ドキュメント・ADR・APIドキュメントもこのスキ�
 ```
 何を記録したいか？
 ├─ 機能の仕組み → 技術ドキュメント（docs/features/ or docs/architecture/）
-├─ なぜこの方法を選んだか → ADR（docs/decisions/）
+├─ なぜこの方法を選んだか → ADR（docs/log/decisions/）
 └─ APIの使い方 → APIドキュメント（docs/api/）
 ```
 

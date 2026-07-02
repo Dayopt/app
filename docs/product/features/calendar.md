@@ -18,5 +18,5 @@ code: apps/product/src/features/calendar
 
 ## 関連する意思決定
 
-- [ADR-011 統合ブロックモデル](../../decisions/011-unified-block-model.md)
-- [Timeline Precision Redesign](../../archive/projects/timeline-precision-redesign/overview.md)（paused。精度非対称化の検討は Project A/B/C に分割済み、未実装）
+- [ADR-011 統合ブロックモデル](../../log/decisions/011-unified-block-model.md)
+- [Timeline Precision Redesign](../../log/archive/projects/timeline-precision-redesign/overview.md)（paused。精度非対称化の検討は Project A/B/C に分割済み、未実装）

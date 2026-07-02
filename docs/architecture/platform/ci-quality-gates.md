@@ -119,7 +119,7 @@ last_verified: 2026-07-02
 
 ## 関連
 
-- `docs/decisions/016-ci-quality-gates-roadmap.md` — ADR本体
+- `docs/log/decisions/016-ci-quality-gates-roadmap.md` — ADR本体
 - `.github/workflows/ci.yml` — 段階的に変更する中心ファイル
 - `scripts/diff-coverage.ts` — Phase 1 でCI連携
 - `lighthouserc.cjs` — Phase 2 でCI連携

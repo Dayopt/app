@@ -20,9 +20,9 @@ Dayoptの中心概念。「時間ブロック」として、計画（予定）�
 
 ## 関連する意思決定
 
-- [ADR-011 統合ブロックモデル](../../decisions/011-unified-block-model.md)
-- [ADR-015 時間不変原則](../../decisions/015-time-immutability-principle.md)
-- [ADR-018 時間重なりの全面禁止](../../decisions/018-time-overlap-prohibition.md)
-- [ADR-019 自動記録モデル](../../decisions/019-auto-record-model.md)
-- [ADR-020 entries の論理削除](../../decisions/020-soft-delete-model.md)
-- [機能スコープ: やらないことを決める](../../decisions/010-feature-non-adoption.md)（繰り返し予定を採用しない理由）
+- [ADR-011 統合ブロックモデル](../../log/decisions/011-unified-block-model.md)
+- [ADR-015 時間不変原則](../../log/decisions/015-time-immutability-principle.md)
+- [ADR-018 時間重なりの全面禁止](../../log/decisions/018-time-overlap-prohibition.md)
+- [ADR-019 自動記録モデル](../../log/decisions/019-auto-record-model.md)
+- [ADR-020 entries の論理削除](../../log/decisions/020-soft-delete-model.md)
+- [機能スコープ: やらないことを決める](../../log/decisions/010-feature-non-adoption.md)（繰り返し予定を採用しない理由）

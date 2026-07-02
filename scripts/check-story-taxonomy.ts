@@ -10,7 +10,7 @@
  *   prop / fixture の `title:`（例: defaultLabels.title, CalendarEvent.title）を
  *   誤検知しないよう、meta 宣言をアンカーにして直後の最初の title を取る。
  *
- * 参照: docs/decisions/023-storybook-ownership-taxonomy.md
+ * 参照: docs/log/decisions/023-storybook-ownership-taxonomy.md
  *
  * Usage:
  *   npx tsx scripts/check-story-taxonomy.ts

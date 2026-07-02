@@ -108,7 +108,7 @@ src/components/ui/my-component.docs.mdx        # Docs（テーブルが必要な
 
 ### 命名規則（所有境界 taxonomy）
 
-story の `title:` の **top-level は所有境界（どの package / app の資産か）** で分ける。第二階層以下は責務ベース。決定の経緯は [ADR-023](../decisions/023-storybook-ownership-taxonomy.md)。
+story の `title:` の **top-level は所有境界（どの package / app の資産か）** で分ける。第二階層以下は責務ベース。決定の経緯は [ADR-023](../log/decisions/023-storybook-ownership-taxonomy.md)。
 
 - `Shared/Foundations/Colors` → デザイントークン
 - `Shared/Components/Actions/Button` → 共有 UI コンポーネント（`packages/components`）
@@ -174,7 +174,7 @@ Story作成時に確認：
 | ---- | ------------------------------------------------------------------- | ---------------------------------------------- |
 | 1    | [Dayopt コンセプト](../business/concept.md)                         | Dayoptとは何か、ジョブ、プロダクト原則         |
 | 2    | [Domain Glossary](../glossary/terms.md)                             | Entry, EntryState, Chronotype 等のドメイン用語 |
-| 3    | [Developer Map](../archive/developer-map.md)                        | ディレクトリ構成と「どこに何があるか」         |
+| 3    | [Developer Map](../log/archive/developer-map.md)                    | ディレクトリ構成と「どこに何があるか」         |
 | 4    | [Packages Overview](../architecture/overview.md)                    | monorepo packages の責務境界と token 移行方針  |
 | 5    | [Data Flow](../architecture/data-flow.md)                           | UI → tRPC → Supabase のデータの流れ            |
 | 6    | [Common Pitfalls](../guides/common-pitfalls.md)                     | よくある間違いと正しいパターン                 |
