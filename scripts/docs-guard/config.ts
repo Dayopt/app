@@ -31,7 +31,12 @@ export const LINK_CHECK_SOFT_DIRS = [...APPEND_ONLY_DIRS, 'docs/archive'];
 // frontmatter 必須チェックから除外するファイル（グロブではなく完全一致 or 前方一致）。
 // secrets.md: サンドボックス権限で編集不可（フォローアップ課題）。
 // releases/notes-v*.md: 発行時点で凍結される release note スナップショット（journal 相当）。
-export const FRONTMATTER_EXCLUDE = ['docs/operations/secrets.md'];
+// data/db/rls-snapshot.md: scripts/generate-rls-snapshot.ts の自動生成物。手で編集しない前提で
+// frontmatterを持たせると `pnpm rls:snapshot:check`（Integration Tests）がdriftとして検知する。
+export const FRONTMATTER_EXCLUDE = [
+  'docs/operations/secrets.md',
+  'docs/architecture/data/db/rls-snapshot.md',
+];
 export const FRONTMATTER_EXCLUDE_PATTERNS = [/^docs\/operations\/releases\/notes-v[\d.]+\.md$/];
 
 // 命名規約チェックの追加許容パターン（kebab-case の対象外だが正当なもの）。
