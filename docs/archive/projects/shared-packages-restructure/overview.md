@@ -134,4 +134,4 @@ packages/
 
 - 前段の Storybook 重複 story 削除: commit `f585b91b`（`packages/{ui,design}` の story 10本削除）
 - 分離先 project: `build-config-sharing`（eslint/tsconfig base 共有。別途設計）
-- workflow: [.claude/rules/workflow.md](../../../.claude/rules/workflow.md) / plan format: [.claude/rules/plan-format.md](../../../.claude/rules/plan-format.md)
+- workflow: [.claude/rules/workflow.md](../../../../.claude/rules/workflow.md) / plan format: [.claude/rules/plan-format.md](../../../../.claude/rules/plan-format.md)
