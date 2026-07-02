@@ -3,6 +3,7 @@
 Dayopt固有のドメイン概念とコードベースで使用される用語の定義。
 
 > Storybook用語（CSF, Meta, Story 等）は [Storybook 公式用語集](./storybook-glossary.md) を参照。
+> プロダクトの最上位コンセプトは [`docs/strategy/concept.md`](../strategy/concept.md) を参照。
 
 ---
 
@@ -38,6 +39,17 @@ Dayoptの中心モデル。計画（旧 Plan）と記録（旧 Record）を統�
 | `planned`   | 事前に計画として作成された             |
 | `unplanned` | アドホックに作成された（予定外の作業） |
 
+### Memo（一言メモ）
+
+エントリの自由入力欄。リンク貼付可。**タイトル欄は存在しない** — 入力の最小単位はタグであり、詳細（仕様書・成果物・タスクの中身）は GitHub Issues / Notion 等の他ツールが持つ（[concept.md §4-1/§4-2](../strategy/concept.md)）。
+
+### Ghost（ゴースト・未確定エントリ）
+
+ルーティン（提案型ルーティン）、外部 AI（MCP/API 経由）の書き込み、外部カレンダー同期の予定 — 出所を問わず、自動生成されたエントリは確定（`confirmed`）するまで未確定のゴーストとして現れる。ユーザーがワンタップで確定すると実データになり、無視すれば消える。
+
+- 自動生成はゴーストまで、確定は常に人間（[concept.md §4-3](../strategy/concept.md)）
+- 詳細な実装仕様（`confirmed` フラグの形式、ゴースト有効期限）は未確定。[concept.md §9](../strategy/concept.md) の未決事項を参照
+
 ### FulfillmentScore（達成度スコア）
 
 エントリ完了後にユーザーが付ける1-5の主観的達成度。Stats機能で集計される。
@@ -61,11 +73,11 @@ Dayoptの中心モデル。計画（旧 Plan）と記録（旧 Record）を統�
 
 ### Time Immutability（時間不変原則）
 
-「Time waits for no one」 — 過去は変更できないという原則。
+「Time waits for no one」 — **予定は凍結、記録は訂正可**という原則（二層構造）。
 
-- 過去のエントリの `start_time` / `end_time` は変更不可
-- 実績（`actual_start` / `actual_end` / `fulfillment_score`）は記録可能
-- UI: 過去ブロックは disabled 表示 + ロジックガードの二重防御
+- 過去のエントリの `start_time` / `end_time`（予定）は変更不可
+- 実績（`actual_start` / `actual_end` / `fulfillment_score`）はいつでも自由に記録・訂正可能
+- UI: 予定時間の編集は disabled 表示 + ロジックガードの二重防御
 - ADR: [ADR-001](adr/001-unified-block-model.md), [ADR-005](adr/005-time-immutability-principle.md)
 
 ---
