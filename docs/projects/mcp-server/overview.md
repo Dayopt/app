@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 # MCP Server 設計（Phase 分割）
 
 策定日: 2026-04-30

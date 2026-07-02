@@ -1,3 +1,7 @@
+---
+status: paused
+---
+
 # Timeline Precision Redesign — Design Document
 
 `apps/storybook/docs/product/projects/timeline-precision-redesign/overview.mdx` への保存を想定。元提案「精度の非対称設計 + Elastic Timeline」を critical review (`/plan-review` 2 agent 並列) に通し、3 つの独立 project に分割した修正版。

@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 # review-granularity-redesign: 粒度適応型 Review 全体設計
 
 > **策定日**: 2026-06-10

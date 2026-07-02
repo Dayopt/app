@@ -1,3 +1,7 @@
+---
+status: paused
+---
+
 # shared-packages-restructure — Project 全体設計書
 
 策定日: 2026-06-19（plan-review 反映改訂: 2026-06-19）

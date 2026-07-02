@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 # Phase 2-B Step 4 詳細設計 — ClientPageRouter 撤去
 
 > **策定日**: 2026-04-22

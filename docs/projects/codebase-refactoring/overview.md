@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 # codebase-refactoring: 段階的完全リファクタリング全体設計
 
 > **策定日**: 2026-06-12

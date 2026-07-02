@@ -25,7 +25,7 @@ Vercel AI SDK 7 が公開。Node 22+ 必須、ESM-only（CommonJS export 撤廃�
 
 ### 判断: 後で採用（defer）
 
-LLM 機能（agent / streaming 等）を Dayopt に実装する意思決定が出た時点で採用評価する。それまでは前提整合（Node 22）のみ済ませ、SDK 自体は入れない。cross-ref: [ADR-003 MCP統合](../../architecture/adr/003-mcp-integration.md) / [ADR-004 3層AIアーキテクチャ](../../architecture/adr/004-ai-architecture-layers.md)。
+LLM 機能（agent / streaming 等）を Dayopt に実装する意思決定が出た時点で採用評価する。それまでは前提整合（Node 22）のみ済ませ、SDK 自体は入れない。cross-ref: [ADR-013 MCP統合](../decisions/013-mcp-integration.md) / [ADR-014 3層AIアーキテクチャ](../decisions/014-ai-architecture-layers.md)。
 
 ### 再評価トリガ
 
@@ -90,7 +90,7 @@ CI（`.github/workflows/ci.yml`）は既に job レベルで並列化済み。
 
 ### 判断: 採用（lint job を shell lane で並列化）
 
-当初 native `parallel`（2026-06-25 GA）を試したが、hosted runner が未対応で workflow parse error（job が 1 つも起動せず 0s で fail）となった。そこで確実に動く **1 step 内の shell `&` / `wait` 方式**へ切替え、`lint` job の 8 チェックを 3 lane に並列化（install は 1 回のまま、重い ESLint / knip を個別 lane に分離）。lane ごとに log を退避し `::group::` で表示して失敗箇所を明確にする（interleave 懸念への対処）。issue の「小さく 1 workflow で試す」に沿い lint 1 job で検証する。実測は本 PR の Actions run を参照。cross-ref: [ADR-006 CI品質ゲート段階的導入ロードマップ](../../architecture/adr/006-ci-quality-gates-roadmap.md)（proposed）。
+当初 native `parallel`（2026-06-25 GA）を試したが、hosted runner が未対応で workflow parse error（job が 1 つも起動せず 0s で fail）となった。そこで確実に動く **1 step 内の shell `&` / `wait` 方式**へ切替え、`lint` job の 8 チェックを 3 lane に並列化（install は 1 回のまま、重い ESLint / knip を個別 lane に分離）。lane ごとに log を退避し `::group::` で表示して失敗箇所を明確にする（interleave 懸念への対処）。issue の「小さく 1 workflow で試す」に沿い lint 1 job で検証する。実測は本 PR の Actions run を参照。cross-ref: [ADR-016 CI品質ゲート段階的導入ロードマップ](../decisions/016-ci-quality-gates-roadmap.md)（proposed）。
 
 不採用とした隣接策（follow-up 候補）。
 

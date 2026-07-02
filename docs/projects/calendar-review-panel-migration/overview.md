@@ -1,3 +1,7 @@
+---
+status: active
+---
+
 # calendar-review-panel-migration: Calendar 内 Review Panel 移行設計
 
 > **策定日**: 2026-06-22

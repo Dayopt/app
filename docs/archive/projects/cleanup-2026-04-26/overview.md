@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 # Cleanup Plan 2026-04-26
 
 監査範囲: `src/` 配下

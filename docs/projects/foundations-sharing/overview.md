@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 # foundations-sharing — Project 設計書
 
 策定日: 2026-06-19
