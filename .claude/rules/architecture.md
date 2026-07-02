@@ -87,7 +87,7 @@ migration churn（pre_drop/post_drop の踊り）の温床にもなる。その�
 - DB 関数を drop する時は、コード側（呼び出し元）削除を先に production へ deploy → 静穏確認 →
   drop migration の順を守る（呼び出し中の関数を消すと 500 になる）。
 - 「現在有効な RLS / テーブル」は全 migration を読まず
-  [`docs/architecture/db/rls-snapshot.md`](../../docs/architecture/db/rls-snapshot.md)
+  [`docs/architecture/data/db/rls-snapshot.md`](../../docs/architecture/data/db/rls-snapshot.md)
   （`pnpm rls:snapshot` で再生成、CI で drift 検出）を参照する。
 
 ## 楽観的更新

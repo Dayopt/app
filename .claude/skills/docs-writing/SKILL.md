@@ -167,7 +167,7 @@ app側の技術ドキュメント・ADR・APIドキュメントもこのスキ�
 ├─ 機能の仕組み → 技術ドキュメント（docs/architecture/, docs/guides/）
 ├─ なぜこの方法を選んだか（技術判断） → 技術 ADR（docs/decisions/NNN-*.md、正本。docs/decisions/index.md も更新）
 ├─ なぜこの方法を選んだか（プロダクト判断） → プロダクト判断ログ（docs/decisions/NNN-*.md）
-└─ APIの使い方 → APIドキュメント（docs/architecture/api-*.md）
+└─ APIの使い方 → APIドキュメント（docs/architecture/api/*.md）
 ```
 
 ### 内部ドキュメントのルール

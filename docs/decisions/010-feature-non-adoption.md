@@ -33,7 +33,7 @@ Dayopt は「機能数」で競合（TickTick 等の all-in-one タスク管理�
 
 ### なぜ「やらないこと」を決めるのか
 
-競合分析（[`docs/strategy/research/competitors/`](../strategy/research/competitors/)）の結論は明快だった。TickTick は機能量・価格・対応プラットフォームで非常に強く、**Dayopt は機能数では勝てない**。勝ち筋は all-in-one を目指さず、時間の使い方を整える 1 点に絞ることにある。
+競合分析（`docs/notes/2026-06-15-competitor-research/`（旧 `docs/strategy/research/competitors/`））の結論は明快だった。TickTick は機能量・価格・対応プラットフォームで非常に強く、**Dayopt は機能数では勝てない**。勝ち筋は all-in-one を目指さず、時間の使い方を整える 1 点に絞ることにある。
 
 ```
 TickTick = ToDo / カレンダー / ポモドーロ / 習慣 / 統計をまとめる all-in-one app

@@ -116,5 +116,5 @@ supabase db push
 ## 関連
 
 - skill: `.agents/skills/supabase/SKILL.md`
-- architecture: `docs/architecture/environments.md`
+- architecture: `docs/architecture/platform/environments.md`
 - secrets: `docs/operations/secrets.md`

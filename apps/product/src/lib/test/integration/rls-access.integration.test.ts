@@ -339,7 +339,7 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
 
   it('I-16 snapshotがsuiteの全対象テーブルを含む', () => {
     const snapshot = readFileSync(
-      resolve(process.cwd(), '../../docs/architecture/db/rls-snapshot.md'),
+      resolve(process.cwd(), '../../docs/architecture/data/db/rls-snapshot.md'),
       'utf8',
     );
 
