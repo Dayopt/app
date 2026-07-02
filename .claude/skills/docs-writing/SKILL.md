@@ -1,6 +1,6 @@
 ---
 name: docs-writing
-description: 新機能実装完了後のユーザー向けドキュメント（`apps/web/content/docs/**/*.mdx`）執筆時、リリース完了後のリリースノート（`apps/web/content/releases/{en,ja}/*.mdx`）作成時、アーキテクチャ意思決定確定後の ADR（技術判断は `docs/architecture/adr/NNN-*.md`、プロダクト判断は `docs/decisions/NNN-*.md`）作成時、Breaking change を含む変更の merge 前の技術ドキュメント更新時、`docs-audit` skill からの docs gap フィードバック受領時に発動。AI 生成時は `draft: true` 初期値を適用する。コード内コメントや一時メモでは発動しない。
+description: 新機能実装完了後のユーザー向けドキュメント（`apps/web/content/docs/**/*.mdx`）執筆時、リリース完了後のリリースノート（`apps/web/content/releases/{en,ja}/*.mdx`）作成時、アーキテクチャ意思決定確定後の ADR（技術判断・プロダクト判断ともに `docs/decisions/NNN-*.md`、索引は `docs/decisions/index.md`）作成時、Breaking change を含む変更の merge 前の技術ドキュメント更新時、`docs-audit` skill からの docs gap フィードバック受領時に発動。AI 生成時は `draft: true` 初期値を適用する。コード内コメントや一時メモでは発動しない。
 effort: high
 maxTurns: 25
 ---
@@ -18,7 +18,7 @@ app側の技術ドキュメント（`docs/`）とは別物。
 
 - 新機能の public API 仕様が確定し、ユーザー向け使い方ドキュメントが必要になった時
 - リリース作業完了後、`apps/web/content/releases/{en,ja}/*.mdx` にリリースノートを書く時
-- アーキテクチャ意思決定が確定し、ADR を書く時（技術判断は正本の `docs/architecture/adr/NNN-*.md` ＋ `docs/architecture/adr/index.md` 更新、プロダクト判断は `docs/decisions/NNN-*.md`。技術 ADR は Storybook MDX から docs/ へ抽出済み）
+- アーキテクチャ意思決定が確定し、ADR を書く時（技術判断・プロダクト判断ともに `docs/decisions/NNN-*.md`（正本）＋ `docs/decisions/index.md` 更新。技術 ADR は Storybook MDX から docs/ へ抽出済み、2026-07-02 に docs/decisions/ へ合流）
 - Breaking change を含む変更を merge する前、影響を受ける技術ドキュメントの更新が必要な時
 
 **診断起点（何に気付いたか）:**
@@ -165,9 +165,9 @@ app側の技術ドキュメント・ADR・APIドキュメントもこのスキ�
 ```
 何を記録したいか？
 ├─ 機能の仕組み → 技術ドキュメント（docs/architecture/, docs/guides/）
-├─ なぜこの方法を選んだか（技術判断） → 技術 ADR（docs/architecture/adr/NNN-*.md、正本。docs/architecture/adr/index.md も更新）
+├─ なぜこの方法を選んだか（技術判断） → 技術 ADR（docs/decisions/NNN-*.md、正本。docs/decisions/index.md も更新）
 ├─ なぜこの方法を選んだか（プロダクト判断） → プロダクト判断ログ（docs/decisions/NNN-*.md）
-└─ APIの使い方 → APIドキュメント（docs/architecture/api-*.md）
+└─ APIの使い方 → APIドキュメント（docs/architecture/api/*.md）
 ```
 
 ### 内部ドキュメントのルール

@@ -1,0 +1,65 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
+# アクセシビリティガイド
+
+Dayoptのアクセシビリティ対応に関する基準と実装パターン
+
+---
+
+## 基準スコア
+
+| ツール                 | 基準      | タイミング             |
+| ---------------------- | --------- | ---------------------- |
+| Lighthouse CI          | 95点以上  | mainマージ時にチェック |
+| eslint-plugin-jsx-a11y | エラー0件 | コミット時にチェック   |
+| axe-core               | 警告確認  | 開発時にコンソール表示 |
+
+---
+
+## WCAG AA コントラスト基準
+
+| テキストサイズ           | 最小コントラスト比 |
+| ------------------------ | ------------------ |
+| 通常テキスト（&lt;18pt） | 4.5:1              |
+| 大きなテキスト（≥18pt）  | 3:1                |
+
+セマンティックトークン（`text-foreground`, `text-muted-foreground`）を使用すれば自動的に基準を満たします。
+
+---
+
+## チェックリスト
+
+### 新規コンポーネント作成時
+
+- [ ] インタラクティブ要素に aria-label または可視ラベルがある
+- [ ] フォーカス状態が視覚的に明確
+- [ ] キーボードで操作可能（Tab, Enter, Space, Escape）
+- [ ] カラーコントラストがWCAG AA準拠（4.5:1以上）
+- [ ] `npm run a11y:check` がパス
+
+### PR作成前
+
+- [ ] `npm run lint` がパス
+- [ ] 開発サーバーでaxe-coreの警告を確認
+- [ ] Tabキーで全要素にアクセス可能
+- [ ] スクリーンリーダーでテスト（VoiceOver / NVDA）
+
+---
+
+## コマンド
+
+| コマンド             | 説明                            |
+| -------------------- | ------------------------------- |
+| `npm run a11y:check` | ESLint jsx-a11yルールでチェック |
+| `npm run a11y:full`  | 自動修正付きチェック            |
+
+---
+
+## 参考リンク
+
+- [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+- [Radix UI Accessibility](https://www.radix-ui.com/docs/primitives/overview/accessibility)
+- [axe-core Rules](https://dequeuniversity.com/rules/axe/)

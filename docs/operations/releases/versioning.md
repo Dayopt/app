@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # バージョニング管理ガイド
 
 ## 📋 目次

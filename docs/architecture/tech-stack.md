@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 import { Meta } from '@storybook/blocks';
 
 # 技術スタック決定事項

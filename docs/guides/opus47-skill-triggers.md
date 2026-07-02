@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-17
+---
+
 # Opus 4.7 Skill Triggers Migration
 
 **Date**: 2026-04-17

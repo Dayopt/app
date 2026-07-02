@@ -3,7 +3,7 @@
 /**
  * Check: Import Paths（migration 後に旧 import path が戻らないことを検知）
  *
- * ADR-011 の components migration 後、canonical import = @dayopt/components に統一する。
+ * ADR-021 の components migration 後、canonical import = @dayopt/components に統一する。
  * deprecated 判定:
  *  1. `@/lib/components/**`（旧配置・dir 消滅済み）/ `@dayopt/ui`（非 canonical 名）
  *  2. `@/components/ui/<name>` で app-local 実ファイル（<name>.tsx / <name>/index.tsx）が無いもの

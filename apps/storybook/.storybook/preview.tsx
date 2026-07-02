@@ -50,7 +50,7 @@ const preview: Preview = {
           [
             'Foundations',
             'Components',
-            // Shared/Components 直下は責務ベース taxonomy（ADR-012）の流れで並べる
+            // Shared/Components 直下は責務ベース taxonomy（ADR-022）の流れで並べる
             [
               'Identity',
               'Actions',
@@ -71,7 +71,7 @@ const preview: Preview = {
           'Web',
           [
             'Components',
-            // Shell（chrome）→ 以降は責務ベース（Shared/Components ADR-012 と揃える）
+            // Shell（chrome）→ 以降は責務ベース（Shared/Components ADR-022 と揃える）
             [
               'Shell',
               'Actions',

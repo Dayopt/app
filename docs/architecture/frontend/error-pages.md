@@ -1,0 +1,73 @@
+---
+status: current
+last_verified: 2026-07-02
+---
+
+# エラーページシステム
+
+B2C個人向けアプリに必要なエラーハンドリングだけに整理した6コンポーネント構成。
+
+---
+
+## アーキテクチャ
+
+```
+エラー発生
+│
+├─ Root Layout 破壊 ──→ global-error.tsx
+├─ ルートエラー ──→ error.tsx
+├─ 404 ──→ not-found.tsx
+├─ カレンダー SSR エラー ──→ calendar/error.tsx
+├─ React レンダリングエラー ──→ error-boundary.tsx
+└─ メンテナンス ──→ maintenance/route.ts
+```
+
+## 主要コンポーネント
+
+| コンポーネント | 責務                                     | ファイル                                    |
+| -------------- | ---------------------------------------- | ------------------------------------------- |
+| GlobalError    | Root Layout破壊時。Sentry連携            | `src/app/global-error.tsx`                  |
+| RootError      | Provider外のランタイムエラー。Sentry連携 | `src/app/error.tsx`                         |
+| RootNotFound   | 404表示。ホームへの導線のみ              | `src/app/not-found.tsx`                     |
+| CalendarError  | カレンダーSSR/ランタイムエラー。i18n対応 | `src/app/[locale]/(app)/calendar/error.tsx` |
+| ErrorBoundary  | Reactレンダリングエラー。Sentry連携      | `src/components/error-boundary.tsx`         |
+| maintenance    | メンテナンスモード。静的HTML             | `src/app/maintenance/route.ts`              |
+
+## 言語の挙動
+
+ページによって表示言語が異なる。技術的制約に基づく意図的な設計。
+
+| コンポーネント         | 表示言語                | 理由                                              |
+| ---------------------- | ----------------------- | ------------------------------------------------- |
+| `global-error.tsx`     | 英語固定                | Provider外（i18n使用不可）                        |
+| `error.tsx`            | 英語固定                | Provider外（i18n使用不可）                        |
+| `not-found.tsx`        | 英語固定                | Provider外（i18n使用不可）                        |
+| `calendar/error.tsx`   | ユーザーのlocale        | `[locale]`配下で`useTranslations()`使用可能       |
+| `error-boundary.tsx`   | ユーザーのlocale        | アプリ内レンダリングで`useTranslations()`使用可能 |
+| `maintenance/route.ts` | 英語メイン + 日本語併記 | 静的HTML（i18n使用不可）                          |
+
+Root系3ページが英語固定な理由: これらが表示される = `NextIntlClientProvider`自体がマウントできなかった状況。i18nに依存するとProvider破壊時にエラーページすら表示できなくなる。
+
+### i18nキーの場所
+
+| ページ               | キー                                                   |
+| -------------------- | ------------------------------------------------------ |
+| `calendar/error.tsx` | `messages/{locale}/calendar.json` → `calendar.error.*` |
+| `error-boundary.tsx` | `messages/{locale}/error.json` → `error.boundary.*`    |
+
+## 注意点
+
+- フルページエラー（global-error, error, not-found）はカード型デザイン（`max-w-md`, `rounded-2xl`）で統一
+- HTTPステータスコード（404, 500等）は見出しに使わない。ユーザーに意味がないため
+- CTAは最小限にする。404に「お問い合わせ」は不要（サポート案件ではない）
+- `global-error.tsx`は`<html>``<body>`タグを含む（Root Layoutが壊れているため）
+
+## 削除したページ（2026-02-10）
+
+| ページ                                | 理由                                                             |
+| ------------------------------------- | ---------------------------------------------------------------- |
+| `[locale]/error/page.tsx`             | デッドコード。どこからもリダイレクトされない                     |
+| `[locale]/error/401/page.tsx`         | デッドコード。Middlewareが`/auth/login`へ直接リダイレクト        |
+| `[locale]/error/403/page.tsx`         | デッドコード + B2Cアプリにロールベース権限なし                   |
+| `[locale]/error/500/page.tsx`         | デッドコード。Next.jsが`error.tsx`を自動表示                     |
+| `[locale]/error/maintenance/page.tsx` | デッドコード。Middlewareは`/maintenance`(route.ts)へリダイレクト |

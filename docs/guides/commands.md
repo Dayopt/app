@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-06-23
+---
+
 # 開発コマンド一覧
 
 Dayoptプロジェクトで使用可能な全npmコマンドのリファレンス。
