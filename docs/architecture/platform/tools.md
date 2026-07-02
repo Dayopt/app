@@ -152,9 +152,9 @@ const count = useStore((state) => state.count);
 
 ## 関連ページ
 
-- [データフロー](data-flow.md)
-- [設計パターン](design-patterns.md)
-- [状態管理](state-management.md)
+- [データフロー](../data-flow.md)
+- [設計パターン](../conventions/design-patterns.md)
+- [状態管理](../frontend/state-management.md)
 
 ---
 

@@ -1,7 +1,7 @@
 # Service 層 Audit（現状の歪み地図）
 
 調査日: 2026-05-01（main: `52ef53d77` 時点で verify 済み）
-target shape: [Service Contracts](service-contracts.md)
+target shape: [Service Contracts](../architecture/api/contracts.md)
 
 ---
 
@@ -149,7 +149,7 @@ skin 間で import スタイルが不一致（factory vs class new）— Delta 7
 4. **`syncSubscriptionStatus` の RLS bypass が暗黙**（原則 4 半違反）→ Delta 4
 5. **副作用の JSDoc 不徹底**（原則 4 違反）→ Delta 6
 
-detail は [Service Contracts](service-contracts.md) の Delta section を参照。
+detail は [Service Contracts](../architecture/api/contracts.md) の Delta section を参照。
 
 ---
 

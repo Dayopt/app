@@ -216,7 +216,7 @@ const { data, isLoading } = useQuery({
 
 ## 関連ページ
 
-- [データフロー](data-flow.md)
+- [データフロー](../data-flow.md)
 - [状態管理](state-management.md)
 
 ---

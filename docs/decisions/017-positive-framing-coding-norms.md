@@ -65,5 +65,5 @@ CLAUDE.md の `## 絶対禁止` セクションを `## コーディング規範�
 
 ## 参考
 
-- [CLAUDE.md](../../../CLAUDE.md)
+- [CLAUDE.md](../../CLAUDE.md)
 - 変更時ブランチ: `feat/tag-detail-entries-pagination`

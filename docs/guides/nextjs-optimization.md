@@ -197,8 +197,8 @@ npx lighthouse http://localhost:3000 --view
 
 ## 関連ページ
 
-- [パフォーマンス](../quality/performance.md)
-- [バンドル監視](../quality/bundle-monitoring.md)
+- [パフォーマンス](../architecture/frontend/performance.md)
+- [バンドル監視](../operations/monitoring/bundle-monitoring.md)
 
 ---
 

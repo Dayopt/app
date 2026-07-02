@@ -225,4 +225,4 @@ skin agnostic 化の観点で実際に剥がす価値がある箇所:
 
 ## 後続
 
-target shape の decide は [api-shape.md](api-shape.md) に分離。current vs target の delta もそこに集約。
+target shape の decide は [api-shape.md](../architecture/api/shape.md) に分離。current vs target の delta もそこに集約。

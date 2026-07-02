@@ -8,9 +8,9 @@ last_verified: 2026-07-02
 > **パニックしない。チェックリストに従う。**
 > 一人で全部やる必要はない。まず影響を止めて、それから原因を探す。
 
-**Sentryアラート設定**: [Docs/Guides/SentryAlerts](../quality/sentry-alerts.md) |
-**Sentry統合ガイド**: [Docs/Guides/Sentry](../quality/sentry.md) |
-**パフォーマンス監視**: [Docs/Guides/Performance](../quality/performance.md)
+**Sentryアラート設定**: [Docs/Guides/SentryAlerts](./monitoring/sentry-alerts.md) |
+**Sentry統合ガイド**: [Docs/Guides/Sentry](./monitoring/sentry.md) |
+**パフォーマンス監視**: [Docs/Guides/Performance](./monitoring/performance.md)
 
 ---
 
@@ -390,9 +390,9 @@ ORDER BY created_at DESC;
 
 ## 関連ドキュメント
 
-- **Sentry統合ガイド**: [Docs/Guides/Sentry](../quality/sentry.md)
-- **Sentryアラート設定**: [Docs/Guides/SentryAlerts](../quality/sentry-alerts.md)
-- **パフォーマンス監視**: [Docs/Guides/Performance](../quality/performance.md)
+- **Sentry統合ガイド**: [Docs/Guides/Sentry](./monitoring/sentry.md)
+- **Sentryアラート設定**: [Docs/Guides/SentryAlerts](./monitoring/sentry-alerts.md)
+- **パフォーマンス監視**: [Docs/Guides/Performance](./monitoring/performance.md)
 - **マイグレーションロールバック**: `docs/guides/migration-rollback.md`
 - **ヘルスチェック実装**: `src/app/api/health/route.ts`
 - **Stripe Webhook実装**: `src/app/api/webhooks/stripe/route.ts`

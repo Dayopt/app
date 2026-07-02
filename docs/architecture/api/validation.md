@@ -262,8 +262,8 @@ describe('tRPC API統合テスト', () => {
 
 ## 関連ページ
 
-- [エラーパターン](error-patterns.md)
-- [設計パターン](design-patterns.md)
+- [エラーパターン](../conventions/error-patterns.md)
+- [設計パターン](../conventions/design-patterns.md)
 
 ---
 

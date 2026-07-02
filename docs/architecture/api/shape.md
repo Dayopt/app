@@ -6,7 +6,7 @@ last_verified: 2026-07-02
 # API Shape — Service 層の skin-agnostic contract
 
 作成日: 2026-05-12
-前段: [api-first-audit.md](api-first-audit.md)（current の歪み地図）
+前段: [api-first-audit.md](../../notes/2026-05-01-api-first-audit.md)（current の歪み地図）
 本文書: target shape を decide し、current → target の delta を列挙する。
 
 ---

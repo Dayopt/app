@@ -75,7 +75,7 @@ packages/
 
 ## Monorepo packages
 
-責務境界の詳細は [Packages Overview](../architecture/packages-overview.md) を参照。
+責務境界の詳細は [Packages Overview](../architecture/overview.md) を参照。
 
 現在は `packages/design` が token の source of truth で、Storybook の `Design/*` で最小 token を確認できる。`packages/config` は product/web が共有する URL / domain / contact / brand constants の置き場にする。
 
@@ -182,9 +182,9 @@ src/features/{name}/
 
 ## 関連ドキュメント
 
-| ドキュメント                                            | 内容           |
-| ------------------------------------------------------- | -------------- |
-| [Product Overview](../architecture/product-overview.md) | Dayoptの全体像 |
-| [Data Flow](../architecture/data-flow.md)               | データの流れ   |
-| [Commands](commands.md)                                 | 全コマンド一覧 |
-| [Common Pitfalls](common-pitfalls.md)                   | よくある間違い |
+| ドキュメント                                    | 内容           |
+| ----------------------------------------------- | -------------- |
+| [Product Overview](../product/overview.md)      | Dayoptの全体像 |
+| [Data Flow](../architecture/data-flow.md)       | データの流れ   |
+| [Commands](../guides/commands.md)               | 全コマンド一覧 |
+| [Common Pitfalls](../guides/common-pitfalls.md) | よくある間違い |

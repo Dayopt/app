@@ -171,8 +171,8 @@ const mutation = api.entries.update.useMutation({
 
 ## 関連ページ
 
-- [データフロー](data-flow.md)
-- [ツール連携](tools.md)
+- [データフロー](../data-flow.md)
+- [ツール連携](../platform/tools.md)
 - [エラーパターン](error-patterns.md)
 
 ---

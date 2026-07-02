@@ -170,14 +170,14 @@ Story作成時に確認：
 
 初めてDayoptのコードベースに触れる場合、以下の順に読むとスムーズです：
 
-| 順番 | ドキュメント                                    | 内容                                           |
-| ---- | ----------------------------------------------- | ---------------------------------------------- |
-| 1    | [Product Overview](./product-overview.md)       | Dayoptとは何か、コアコンセプト、Feature Map    |
-| 2    | [Domain Glossary](./domain-glossary.md)         | Entry, EntryState, Chronotype 等のドメイン用語 |
-| 3    | [Developer Map](../guides/developer-map.md)     | ディレクトリ構成と「どこに何があるか」         |
-| 4    | [Packages Overview](./packages-overview.md)     | monorepo packages の責務境界と token 移行方針  |
-| 5    | [Data Flow](./data-flow.md)                     | UI → tRPC → Supabase のデータの流れ            |
-| 6    | [Common Pitfalls](../guides/common-pitfalls.md) | よくある間違いと正しいパターン                 |
-| 7    | Colors（Storybook: Shared/Foundations/Colors）  | カラートークン、Surface体系                    |
-| 8    | Typography（Storybook: Foundations/Typography） | フォントサイズ、行間、ウェイト                 |
-| 9    | [Accessibility](./accessibility/overview.md)    | a11yチェックリスト、WCAG準拠                   |
+| 順番 | ドキュメント                                                        | 内容                                           |
+| ---- | ------------------------------------------------------------------- | ---------------------------------------------- |
+| 1    | [Product Overview](../product/overview.md)                          | Dayoptとは何か、コアコンセプト、Feature Map    |
+| 2    | [Domain Glossary](../glossary/terms.md)                             | Entry, EntryState, Chronotype 等のドメイン用語 |
+| 3    | [Developer Map](../archive/developer-map.md)                        | ディレクトリ構成と「どこに何があるか」         |
+| 4    | [Packages Overview](../architecture/overview.md)                    | monorepo packages の責務境界と token 移行方針  |
+| 5    | [Data Flow](../architecture/data-flow.md)                           | UI → tRPC → Supabase のデータの流れ            |
+| 6    | [Common Pitfalls](../guides/common-pitfalls.md)                     | よくある間違いと正しいパターン                 |
+| 7    | Colors（Storybook: Shared/Foundations/Colors）                      | カラートークン、Surface体系                    |
+| 8    | Typography（Storybook: Foundations/Typography）                     | フォントサイズ、行間、ウェイト                 |
+| 9    | [Accessibility](../architecture/frontend/accessibility/overview.md) | a11yチェックリスト、WCAG準拠                   |

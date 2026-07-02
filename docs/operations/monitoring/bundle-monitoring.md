@@ -169,7 +169,7 @@ npm install
 
 ## 関連ページ
 
-- [Next.js最適化](../guides/nextjs-optimization.md)
+- [Next.js最適化](../../guides/nextjs-optimization.md)
 - [パフォーマンス](performance.md)
 
 ---

@@ -323,8 +323,8 @@ export const ERROR_PATTERNS: Record<number, ErrorPattern> = {
 
 ## 関連ページ
 
-- [ErrorBoundary](../guides/error-boundary.md) — 4段階自動復旧システム
-- [Patterns/ErrorPages](error-pages.md) — エラーページのUIパターン
+- [ErrorBoundary](../../guides/error-boundary.md) — 4段階自動復旧システム
+- [Patterns/ErrorPages](../frontend/error-pages.md) — エラーページのUIパターン
 - Patterns/Feedback（Storybook） — toast通知パターン
 
 ---

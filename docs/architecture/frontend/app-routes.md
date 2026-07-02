@@ -5,10 +5,10 @@ last_verified: 2026-07-02
 
 # App Routes Overview
 
-`src/app/[locale]/**` 配下の Next.js App Router routing を総覧。Route Group / Composition Layer / 認証境界の関係を一望できるようまとめる。`/api/**` は別途 [api-overview](./api-overview.md) を参照。
+`src/app/[locale]/**` 配下の Next.js App Router routing を総覧。Route Group / Composition Layer / 認証境界の関係を一望できるようまとめる。`/api/**` は別途 [api-overview](../api/overview.md) を参照。
 
 策定日: 2026-04-26（最終更新: 2026-05-12 に onboarding route group 削除を反映）
-スコープ: `src/app/**` 配下の Next.js App Router 全 route。`/api/**` は除外（[api-overview](./api-overview.md) 参照）。`(public)` Route Group は現時点で存在しない。
+スコープ: `src/app/**` 配下の Next.js App Router 全 route。`/api/**` は除外（[api-overview](../api/overview.md) 参照）。`(public)` Route Group は現時点で存在しない。
 
 ## Route Group 構造
 
@@ -95,7 +95,7 @@ src/app/
 - 合成対象: feature barrel (`@/features/calendar`, `@/features/review`, `@/features/entry` 等)
 - 出力: 1 つの client component ツリー
 
-`page.tsx` 自体は薄く保つ（prefetch + Suspense + 合成 component の呼出）。view の差し替えやデータ取得方式の変更は composition layer 内で完結させる。詳細は [.claude/rules/feature-boundaries.md](../../.claude/rules/feature-boundaries.md) の Composition Layer / Composition Hub を参照。
+`page.tsx` 自体は薄く保つ（prefetch + Suspense + 合成 component の呼出）。view の差し替えやデータ取得方式の変更は composition layer 内で完結させる。詳細は [.claude/rules/feature-boundaries.md](../../../.claude/rules/feature-boundaries.md) の Composition Layer / Composition Hub を参照。
 
 ## providers / shell / overlays
 
@@ -138,28 +138,28 @@ src/app/
 
 locale ルーティングの境界。HTML lang / dir、metadata、redirect を担う。
 
-| Path                                                                                                              | Type            | 責務                                                                                          |
-| ----------------------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------- |
-| [`[locale]/layout.tsx`](../../apps/product/src/app/[locale]/layout.tsx)                                           | layout (server) | `<html lang dir>` の確定、`generateMetadata` で多言語 OG / canonical、未対応 locale を 404 に |
-| [`[locale]/page.tsx`](../../apps/product/src/app/[locale]/page.tsx)                                               | page (server)   | `/{locale}` → `/{locale}/week` redirect。`force-dynamic`                                      |
-| [`[locale]/error.tsx`](../../apps/product/src/app/[locale]/error.tsx)                                             | error boundary  | locale 全体のエラー（IntlProvider 未マウントケース含む）                                      |
-| [`[locale]/playground/dnd-multi-container/`](../../apps/product/src/app/[locale]/playground/dnd-multi-container/) | dev             | dnd-kit Multiple Containers の検証用                                                          |
-| [`[locale]/test-email/`](../../apps/product/src/app/[locale]/test-email/)                                         | dev             | email template の preview ページ                                                              |
+| Path                                                                                                                 | Type            | 責務                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------- |
+| [`[locale]/layout.tsx`](../../../apps/product/src/app/[locale]/layout.tsx)                                           | layout (server) | `<html lang dir>` の確定、`generateMetadata` で多言語 OG / canonical、未対応 locale を 404 に |
+| [`[locale]/page.tsx`](../../../apps/product/src/app/[locale]/page.tsx)                                               | page (server)   | `/{locale}` → `/{locale}/week` redirect。`force-dynamic`                                      |
+| [`[locale]/error.tsx`](../../../apps/product/src/app/[locale]/error.tsx)                                             | error boundary  | locale 全体のエラー（IntlProvider 未マウントケース含む）                                      |
+| [`[locale]/playground/dnd-multi-container/`](../../../apps/product/src/app/[locale]/playground/dnd-multi-container/) | dev             | dnd-kit Multiple Containers の検証用                                                          |
+| [`[locale]/test-email/`](../../../apps/product/src/app/[locale]/test-email/)                                         | dev             | email template の preview ページ                                                              |
 
 ## ルート直下（src/app/）
 
 locale プレフィックスを持たない routing と Next.js metadata route 群。
 
-| Path                                                                      | Type                | 責務                                                                                                                 |
-| ------------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [`layout.tsx`](../../apps/product/src/app/layout.tsx)                     | root layout         | HTML 骨格 / theme provider / font / `globals.css` の読み込み。**この layout は触らない** が原則（影響範囲が全 page） |
-| [`error.tsx`](../../apps/product/src/app/error.tsx)                       | root error boundary | App router の最上位エラー                                                                                            |
-| [`global-error.tsx`](../../apps/product/src/app/global-error.tsx)         | global error        | layout も含めた致命エラー時の最終手段（`<html>` から自前で組む）                                                     |
-| [`not-found.tsx`](../../apps/product/src/app/not-found.tsx)               | root 404            | 全 path 共通の 404                                                                                                   |
-| [`sitemap.ts`](../../apps/product/src/app/sitemap.ts)                     | metadata route      | 多言語 sitemap。app 側は SaaS のため公開 URL 最小（マーケは web/ 側）                                                |
-| [`opengraph-image.tsx`](../../apps/product/src/app/opengraph-image.tsx)   | metadata route      | edge runtime で動的 OG 画像生成。`@/lib/og-colors` で色固定                                                          |
-| [`maintenance/route.ts`](../../apps/product/src/app/maintenance/route.ts) | route handler       | `/maintenance`。Route Handler で raw HTML を返し、Provider ツリーをバイパスして CSP を回避                           |
-| [`offline/page.tsx`](../../apps/product/src/app/offline/page.tsx)         | page (client)       | PWA オフラインフォールバック。`navigator.language` で ja/en を切替                                                   |
+| Path                                                                         | Type                | 責務                                                                                                                 |
+| ---------------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [`layout.tsx`](../../../apps/product/src/app/layout.tsx)                     | root layout         | HTML 骨格 / theme provider / font / `globals.css` の読み込み。**この layout は触らない** が原則（影響範囲が全 page） |
+| [`error.tsx`](../../../apps/product/src/app/error.tsx)                       | root error boundary | App router の最上位エラー                                                                                            |
+| [`global-error.tsx`](../../../apps/product/src/app/global-error.tsx)         | global error        | layout も含めた致命エラー時の最終手段（`<html>` から自前で組む）                                                     |
+| [`not-found.tsx`](../../../apps/product/src/app/not-found.tsx)               | root 404            | 全 path 共通の 404                                                                                                   |
+| [`sitemap.ts`](../../../apps/product/src/app/sitemap.ts)                     | metadata route      | 多言語 sitemap。app 側は SaaS のため公開 URL 最小（マーケは web/ 側）                                                |
+| [`opengraph-image.tsx`](../../../apps/product/src/app/opengraph-image.tsx)   | metadata route      | edge runtime で動的 OG 画像生成。`@/lib/og-colors` で色固定                                                          |
+| [`maintenance/route.ts`](../../../apps/product/src/app/maintenance/route.ts) | route handler       | `/maintenance`。Route Handler で raw HTML を返し、Provider ツリーをバイパスして CSP を回避                           |
+| [`offline/page.tsx`](../../../apps/product/src/app/offline/page.tsx)         | page (client)       | PWA オフラインフォールバック。`navigator.language` で ja/en を切替                                                   |
 
 ## 認証境界の全体像
 
@@ -174,6 +174,6 @@ locale 不正 / path 不在    → [locale]/error.tsx, not-found.tsx, root not-f
 
 ## 関連ドキュメント
 
-- API endpoints: [api-overview](./api-overview.md)
-- Feature 境界: [.claude/rules/feature-boundaries.md](../../.claude/rules/feature-boundaries.md)
-- アーキテクチャ全体: [.claude/rules/architecture.md](../../.claude/rules/architecture.md)
+- API endpoints: [api-overview](../api/overview.md)
+- Feature 境界: [.claude/rules/feature-boundaries.md](../../../.claude/rules/feature-boundaries.md)
+- アーキテクチャ全体: [.claude/rules/architecture.md](../../../.claude/rules/architecture.md)

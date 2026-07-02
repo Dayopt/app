@@ -216,8 +216,8 @@ const userActionRetry = useUserActionRetry(userAction, {
 
 ## 関連ページ
 
-- [エラーパターン](../architecture/error-patterns.md) — エラーコード体系・Sentry連携
-- [Patterns/ErrorPages](../architecture/error-pages.md) — エラーページのUIパターン
+- [エラーパターン](../architecture/conventions/error-patterns.md) — エラーコード体系・Sentry連携
+- [Patterns/ErrorPages](../architecture/frontend/error-pages.md) — エラーページのUIパターン
 
 ---
 

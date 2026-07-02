@@ -175,8 +175,8 @@ git commit -m "fix(ui): ボタンのカラーをセマンティックトーク�
 
 ## 関連ドキュメント
 
-| ドキュメント                                          | 内容                   |
-| ----------------------------------------------------- | ---------------------- |
-| [Developer Map](developer-map.md)                     | ディレクトリ構成ガイド |
-| [Domain Glossary](../architecture/domain-glossary.md) | ドメイン用語定義       |
-| [Error Patterns](../architecture/error-patterns.md)   | エラーコード体系       |
+| ドキュメント                                                    | 内容                   |
+| --------------------------------------------------------------- | ---------------------- |
+| [Developer Map](../archive/developer-map.md)                    | ディレクトリ構成ガイド |
+| [Domain Glossary](../glossary/terms.md)                         | ドメイン用語定義       |
+| [Error Patterns](../architecture/conventions/error-patterns.md) | エラーコード体系       |
