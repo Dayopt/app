@@ -1,6 +1,7 @@
 ---
 status: current
 last_verified: 2026-07-02
+code: apps/product/src
 ---
 
 # Code Organization
