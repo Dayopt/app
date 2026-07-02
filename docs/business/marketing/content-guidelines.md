@@ -141,6 +141,6 @@ Dayoptは「内向きの充実」を求める人のためのツール（参照: 
 ## 🔗 関連ドキュメント
 
 📖 **前提知識**: [brand/brand-character.md](?path=/docs/strategy-brand-character--docs) - コンテンツのトーン・キャラクター
-🔗 **価値提案**: [brand/value-proposition.md](?path=/docs/strategy-brand-value-proposition--docs) - コンテンツで伝える価値
+🔗 **価値提案(RTB)**: [brand/messaging.md §8](../brand/messaging.md) - コンテンツで伝える価値
 🔗 **本能マッピング**: [本能マッピング](?path=/docs/strategy-brand-instinct-mapping--docs) - ターゲット層の理解
 🔗 **SNS戦略**: SNS戦略ドキュメント - SNS投稿の具体的な運用方針

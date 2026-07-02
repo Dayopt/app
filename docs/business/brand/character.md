@@ -121,8 +121,7 @@ Dayoptは、ユーザーの行動に対して必ず「こだま」が返る体�
 
 📖 **前提知識**: README.md - ブランド戦略の全体像
 🔗 **メッセージング設計**: [messaging.md](?path=/docs/strategy-brand-messaging--docs) - ブランドパーソナリティの詳細定義
-🔗 **価値提案**: [value-proposition.md](?path=/docs/strategy-brand-value-proposition--docs) - キャラクターが体現する価値
-🔗 **マーケティング手法論**: [marketing-methodology.md](?path=/docs/strategy-brand-methodology--docs) - キャラクターの行動原則
+🔗 **価値提案(RTB)**: [messaging.md §8](./messaging.md) - キャラクターが体現する価値
 🔗 **ビジュアルディレクション**: [visual-direction.md](?path=/docs/strategy-brand-visual-direction--docs) - ビジュアルへの翻訳
 🔗 **SNS運用**: ../sns/README.md - キャラクターの発信方法
 

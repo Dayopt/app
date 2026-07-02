@@ -578,7 +578,7 @@ Dayoptは「内向きの充実」を求める人のためのツール。
 ## 🔗 関連ドキュメント
 
 📖 **前提知識**: README.md - ブランド戦略の全体像
-🔗 **価値提案**: [value-proposition.md](?path=/docs/strategy-brand-value-proposition--docs) - 本能マッピングに基づく価値設計
+🔗 **価値提案(RTB)**: [messaging.md §8](./messaging.md) - 本能マッピングに基づく価値設計
 🔗 **ブランドキャラクター**: [brand-character.md](?path=/docs/strategy-brand-character--docs) - ターゲットに響くキャラクター設定
 🔗 **顧客の声**: ../../customers/README.md - 実際のターゲット層のフィードバック
 

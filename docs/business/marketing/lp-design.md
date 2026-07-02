@@ -171,6 +171,6 @@ _リリース初期は省略可_
 📖 **メッセージング設計**: [brand/messaging.md](?path=/docs/strategy-brand-messaging--docs) - JTBD・コアメッセージ
 📖 **ターゲットペルソナ**: [brand/persona.md](?path=/docs/strategy-brand-persona--docs) - LPが語りかける相手
 📖 **ビジュアルディレクション**: [brand/visual-direction.md](?path=/docs/strategy-brand-visual-direction--docs) - デザイン方向性
-📖 **前提知識**: [brand/value-proposition.md](?path=/docs/strategy-brand-value-proposition--docs) - LPで伝える価値提案
+📖 **前提知識**: [brand/messaging.md](../brand/messaging.md) - LPで伝える価値提案(JTBD・RTB)
 🔗 **ブランドキャラクター**: [brand/brand-character.md](?path=/docs/strategy-brand-character--docs) - LPのトーン設定
 🔗 **コンテンツガイドライン**: [content-guidelines.md](?path=/docs/strategy-content-guidelines--docs) - LP文章の書き方

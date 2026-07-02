@@ -1,11 +1,13 @@
 ---
-status: current
+status: deprecated
 last_verified: 2026-07-02
 ---
 
+> **Archive (2026-07-03)**: concept.md 策定前(〜2026-06)の価値提案分析。生きている結論は吸収済み — ジョブ定義は [concept.md §2](../product/concept.md)、RTB は [brand/messaging.md](../business/brand/messaging.md) §8。STC の喪失感・痛みフレームは concept のトーン(煽らない)と不整合のため採用しない。
+
 # Dayopt 価値提案 (Value Proposition)
 
-> プロダクトの最上位コンセプトは [`docs/product/concept.md`](../../product/concept.md) を参照（2026-07-02 策定）。concept.md §2 の結論: **「ズレを見せる」は手段であって売り物ではない。売り物は「守れる計画」**。以下の STC/RTB は策定当時（〜2026-06）の分析であり、「見える化」を価値の中心に置く記述は concept.md の決定に合わせて読み替えること。
+> プロダクトの最上位コンセプトは [`docs/product/concept.md`](../product/concept.md) を参照（2026-07-02 策定）。concept.md §2 の結論: **「ズレを見せる」は手段であって売り物ではない。売り物は「守れる計画」**。以下の STC/RTB は策定当時（〜2026-06）の分析であり、「見える化」を価値の中心に置く記述は concept.md の決定に合わせて読み替えること。
 
 ## 概要
 

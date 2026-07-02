@@ -137,6 +137,14 @@ Dayoptの機能は企業会計と同じ構造を持つ。
 
 旧・4候補（Own your time. / Make every hour intentional. / See where your time actually goes. / Your time. By design.）は、いずれも「ズレの可視化」または汎用的な主体性を主訴求にしており、concept.md の決定と整合しないため不採用。
 
+### RTB（信じられる理由）
+
+「守れる計画」という約束を信じてもらう3つの根拠（旧 value-proposition.md から吸収）:
+
+1. **主体的タイムブロック** — 自分で時間を握るから集中できる
+2. **ワンタップ完了 + タグ** — 行動が「見える証拠」になり進捗を確かめられる
+3. **ルールベース統計による次週の補正提案** — 記録が次の計画を後押しする（in-app AI ではない。深掘りは MCP/API 経由で自分の AI に接続。[concept.md §4-8](../../product/concept.md)）
+
 ### 次のアクション
 
 - 日本語ヘッドラインの確定、LP 実装（`apps/web/messages/*.json`）への反映は次回 LP 作業で行う
@@ -145,7 +153,6 @@ Dayoptの機能は企業会計と同じ構造を持つ。
 
 ## 🔗 関連ドキュメント
 
-📖 **STC/RTB**: [value-proposition.md](?path=/docs/strategy-brand-value-proposition--docs) — 価値提案フレームワーク
 📖 **本能マッピング**: [instinct-mapping.md](?path=/docs/strategy-brand-instinct-mapping--docs) — 8つの本能と訴求設計
 📖 **ターゲット**: [persona.md](?path=/docs/strategy-brand-persona--docs) — ターゲットペルソナの具体像
 🔗 **LP仕様**: [../lp-spec.md](?path=/docs/strategy-lp-spec--docs) — 本設計のLP実装への翻訳

@@ -278,5 +278,5 @@ lp-spec.md のセクション → `messages/{en,ja}/marketing.json` のキー対
 📖 **ターゲットペルソナ**: [brand/persona.md](?path=/docs/strategy-brand-persona--docs) — 顧客像と行動パターン
 📖 **ビジュアルディレクション**: [brand/visual-direction.md](?path=/docs/strategy-brand-visual-direction--docs) — タイポグラフィ・カラー・イメージ
 📖 **LP戦略（汎用）**: [lp.md](?path=/docs/strategy-lp-design--docs) — ベストプラクティス・技術要件
-📖 **価値提案**: [brand/value-proposition.md](?path=/docs/strategy-brand-value-proposition--docs) — STC/RTB
+📖 **価値提案(RTB)**: [brand/messaging.md §8](../brand/messaging.md) — コアメッセージと信じられる理由
 📖 **ブランドキャラクター**: [brand/brand-character.md](?path=/docs/strategy-brand-character--docs) — トーン・パーソナリティ
