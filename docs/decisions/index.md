@@ -21,6 +21,7 @@ Dayoptプロジェクトの主要な設計判断を文書化した記録。
 | [ADR-021](021-shared-packages-canonical-and-app-shims.md) | デザインシステム共有レイヤー（packages を canonical、app は直接 import） | 2026-06-22 | accepted   |
 | [ADR-022](022-component-taxonomy.md)                      | 共有 component の責務ベース taxonomy（第二階層）                         | 2026-06-23 | accepted   |
 | [ADR-023](023-storybook-ownership-taxonomy.md)            | Storybook story-title の所有境界 top-level（Shared / Product / Web）     | 2026-06-24 | accepted   |
+| [ADR-024](024-docs-restructure.md)                        | docs/ 構造の再編                                                         | 2026-07-02 | accepted   |
 
 ---
 
