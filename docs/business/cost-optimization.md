@@ -9,6 +9,8 @@ last_verified: 2026-07-02
 損益分岐点と最適化レバーを特定する。
 
 > 最終更新: 2026-03-19
+>
+> **注（2026-07-03）**: 本試算は in-app AI 機能があった時点の前提（AI 原価・トライアル AI 利用量）を含む。concept.md で in-app AI 廃止が確定したため、AI 原価抜きの再計算が必要。再計算は Free/Pro 線引きの決定（[v1-definition.md](../product/v1-definition.md) の未決事項）とセットで実施する。
 
 ---
 
