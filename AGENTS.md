@@ -55,6 +55,16 @@ pnpm quality:deadcode
 - コミット前に `git diff --cached` を確認する
 - コード変更後は `pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries` を通す
 - コミットメッセージは日本語 Conventional Commits 形式にする
+
+  | prefix     | 用途                           |
+  | ---------- | ------------------------------ |
+  | `feat`     | 新機能追加                     |
+  | `fix`      | バグ修正                       |
+  | `refactor` | 機能変更なしのコード改善       |
+  | `chore`    | ビルド、CI、依存関係、設定変更 |
+  | `docs`     | ドキュメントのみの変更         |
+  | `test`     | テストの追加・修正             |
+  | `perf`     | パフォーマンス改善             |
 - PR を merge する時は、枝分かれを履歴に残すため `gh pr merge --merge` を標準にする
 
 ## Coding Rules
