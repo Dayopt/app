@@ -3,7 +3,7 @@
 /**
  * copy:check — Copy System 禁止表記スキャナー
  *
- * docs/glossary/forbidden-terms.md で定義された禁止語が messages に含まれていないかスキャンする。
+ * docs/product/glossary.md（禁止表記一覧）で定義された禁止語が messages に含まれていないかスキャンする。
  *
  * 動作モード:
  *   - デフォルト: 警告のみ (exit 0)。既存の違反が多いため、現在はリファクタリング移行中。
@@ -28,7 +28,7 @@ const MESSAGES_DIRS = [
 
 const STRICT_MODE = process.argv.includes('--strict');
 
-// ─── 禁止語定義 (docs/glossary/forbidden-terms.md と同期) ───
+// ─── 禁止語定義 (docs/product/glossary.md#禁止表記一覧 と同期) ───
 
 interface ForbiddenTerm {
   term: string;

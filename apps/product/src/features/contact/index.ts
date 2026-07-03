@@ -1,7 +1,7 @@
 /**
  * Contact Feature - Public API
  *
- * docs: docs/product/features/contact.md
+ * docs: docs/product/specs/contact.md
  *
  * この barrel export は外部から参照される公開インターフェースを定義する。
  * 内部モジュールへの直接参照（deep import）は避け、ここからのみ import すること。

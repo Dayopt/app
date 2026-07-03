@@ -36,10 +36,14 @@
     "**/.next": true,
     "**/dist": true
   },
+  "workbench.editorAssociations": {
+    "*.md": "vscode.markdown.preview.editor"
+  },
   "files.watcherExclude": {
     "**/node_modules/**": true,
     "**/.git/**": true,
     "**/dist/**": true,
     "**/.next/**": true
-  }
+  },
+  "cSpell.words": ["Dayopt"]
 }

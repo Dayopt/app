@@ -185,4 +185,4 @@ Archive/
 ## 設計書
 
 詳細は Storybook ドキュメントを参照:
-`docs/guides/eagle-asset-management.md`
+`docs/operations/tooling.md`

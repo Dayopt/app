@@ -6,7 +6,7 @@
  *  - link-check          : 相対リンク切れ
  *  - frontmatter-check   : ストック対象への status / last_verified 必須
  *  - naming-check        : kebab-case 命名規約
- *  - append-only-guard   : decisions/notes/journal/sessions の書き換え禁止
+ *  - append-only-guard   : log/decisions/notes/journal/sessions の書き換え禁止
  *
  * Usage:
  *   tsx scripts/docs-guard/index.ts

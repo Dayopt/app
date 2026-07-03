@@ -1,0 +1,1489 @@
+---
+status: current
+last_verified: 2026-07-03
+---
+
+# Runbook（障害対応・リリース手順）
+
+インシデント対応プレイブックとリリース作業手順（チェックリスト・詳細プロセス・バージョニング・リリースノートテンプレート）を集約する。障害対応は「パニックしない、チェックリストに従う」、リリースは「上から順に確認する」運用を前提にする。
+
+---
+
+# 第1部: インシデント対応プレイブック
+
+> **パニックしない。チェックリストに従う。**
+> 一人で全部やる必要はない。まず影響を止めて、それから原因を探す。
+
+**Sentryアラート設定 / Sentry統合ガイド / パフォーマンス監視**: [monitoring.md](./monitoring.md)
+
+## インシデントレベル定義
+
+| レベル | 定義                              | 対応目標  | 例                        |
+| ------ | --------------------------------- | --------- | ------------------------- |
+| **P0** | サービス全停止 / セキュリティ侵害 | 即時対応  | DB障害、不正アクセス      |
+| **P1** | 主要機能が使えない                | 1時間以内 | デプロイ失敗、Webhook停止 |
+| **P2** | 一部機能に影響                    | 4時間以内 | Sentryエラー急増          |
+| **P3** | 軽微な不具合                      | 翌営業日  | UIの表示崩れ              |
+
+## 共通初動チェックリスト
+
+すべてのインシデントで最初にやること:
+
+- [ ] `/api/health` のレスポンス確認（200 / 503 / タイムアウト）
+- [ ] Sentry Issues を開き、直近のエラー急増を確認
+- [ ] 直近のデプロイ有無を確認（Vercel Dashboard / `git log --oneline -5`）
+- [ ] 影響範囲を判断 → P0/P1なら次の「メンテナンスモード判断」へ
+
+### メンテナンスモード有効化
+
+P0またはP1で復旧に時間がかかる場合:
+
+```bash
+# Vercel環境変数を設定（即時反映）
+# Vercel Dashboard → Settings → Environment Variables
+NEXT_PUBLIC_MAINTENANCE_MODE=true
+```
+
+- `src/proxy.ts` がフラグを検知し、全リクエストを `/maintenance` にリダイレクト
+- `/maintenance` は静的HTML（503 + Retry-After: 3600）を返す
+- 復旧後は `NEXT_PUBLIC_MAINTENANCE_MODE=false` に戻す（または削除）
+
+### 重要ダッシュボードURL
+
+| ダッシュボード  | URL                                       |
+| --------------- | ----------------------------------------- |
+| Vercel          | https://vercel.com/dashboard              |
+| Sentry          | https://sentry.io（プロジェクト: dayopt） |
+| Supabase        | https://supabase.com/dashboard            |
+| Stripe          | https://dashboard.stripe.com              |
+| Supabase Status | https://status.supabase.com               |
+
+## Playbook 1: Supabase障害（P0）
+
+### 検知
+
+- [ ] Sentry: `tags.errorCategory:DB` のエラー急増
+- [ ] `/api/health` → 503（`checks.database: "error"`）
+- [ ] https://status.supabase.com に障害報告あり
+
+### 初動
+
+- [ ] Status Page確認 → Supabase側障害なら **ケースA** へ
+- [ ] Status Page正常 → 環境変数チェック → **ケースB** or **ケースC** へ
+- [ ] P0判断 → メンテナンスモード有効化を検討
+
+### 復旧
+
+#### ケースA: Supabase外部障害
+
+- [ ] https://status.supabase.com を継続監視
+- [ ] メンテナンスモード有効化
+- [ ] Status Pageの復旧通知を待つ
+- [ ] 復旧後: `/api/health` で `checks.database: "ok"` を確認
+- [ ] メンテナンスモード解除
+
+#### ケースB: 環境変数ミス
+
+- [ ] Vercel Dashboard → Settings → Environment Variables を確認
+- [ ] `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` が設定済みか
+- [ ] サーバー側: `SUPABASE_SERVICE_ROLE_KEY` が設定済みか
+- [ ] 修正後: 再デプロイ（Vercel Dashboard → Deployments → Redeploy）
+
+#### ケースC: Edge Functions障害
+
+- [ ] Supabase Dashboard → Edge Functions → ログ確認
+- [ ] 再デプロイ:
+
+```bash
+# IMPORTANT: --use-api 必須（この環境にDockerがない）
+supabase functions deploy --use-api
+```
+
+- [ ] デプロイ後: Edge Functionsのログで正常動作を確認
+
+### 振り返り
+
+- [ ] 根本原因を記録
+- [ ] 影響時間（検知〜復旧）を記録
+- [ ] 再発防止策を検討（アラート閾値調整等）
+
+## Playbook 2: Vercelデプロイ失敗（P1）
+
+### 検知
+
+- [ ] GitHub Actions / Vercel Dashboardでデプロイ失敗通知
+- [ ] 本番サイトが古いバージョンのまま（新機能が反映されない）
+
+### 初動
+
+- [ ] Vercel Dashboard → Deployments → 失敗デプロイのログを開く
+- [ ] 失敗フェーズを特定: lint / typecheck / build のどれか
+
+### 復旧
+
+#### ケースA: CI失敗（lint / typecheck）
+
+- [ ] エラーメッセージを確認
+- [ ] ローカルで再現:
+
+```bash
+npm run typecheck    # 型エラー
+npm run lint         # lintエラー
+npm run lint:boundaries  # feature境界違反
+```
+
+- [ ] 修正 → push → 自動デプロイ
+
+#### ケースB: ビルドエラー
+
+- [ ] Vercelビルドログでエラー箇所を特定
+- [ ] よくある原因:
+  - 環境変数の追加忘れ（`src/env.ts` の Zod バリデーション失敗）
+  - 依存パッケージのバージョン不整合
+  - Next.js App Router の規約違反
+- [ ] `.env.example` と Vercel環境変数を照合
+- [ ] 修正 → push → 自動デプロイ
+
+#### ケースC: 緊急ロールバック（本番が壊れている場合）
+
+- [ ] Vercel Dashboard → Deployments
+- [ ] 正常に動作していた直前のデプロイを見つける
+- [ ] **"..." → "Promote to Production"** で2クリックロールバック
+- [ ] ロールバック後: 本番サイトで動作確認
+- [ ] 落ち着いて原因調査 → 修正 → 再デプロイ
+
+### 振り返り
+
+- [ ] pre-commitフック（typecheck/lint）がスキップされていなかったか
+- [ ] `.env.example` に新しい環境変数が追加されているか
+- [ ] ビルドエラーの場合: ローカルで `npm run build` を実行してから push するフローに
+
+## Playbook 3: Stripe Webhook停止（P1）
+
+### 検知
+
+- [ ] Stripe Dashboard → Webhooks → エンドポイントに失敗マーク
+- [ ] Sentry: `tags.source:stripe_webhook` のエラー
+- [ ] Slack課金通知チャンネルに通知が来なくなった
+
+### 初動
+
+- [ ] Stripe Dashboard → Webhooks → エンドポイント詳細を開く
+- [ ] 失敗イベントのHTTPステータスコードを確認:
+  - **401** → 署名検証失敗 → **ケースA**
+  - **500** → 処理エラー → **ケースB**
+  - **Timeout** → `maxDuration=30` 超過 → **ケースB**
+
+### 復旧
+
+#### ケースA: STRIPE_WEBHOOK_SECRET 不一致
+
+- [ ] Stripe Dashboard → Webhooks → エンドポイント → Signing secret をコピー
+- [ ] Vercel Dashboard → Environment Variables → `STRIPE_WEBHOOK_SECRET` を更新
+- [ ] 再デプロイ（Vercel Dashboard → Deployments → Redeploy）
+- [ ] Stripe Dashboard → 失敗イベントの「Resend」で確認
+
+#### ケースB: 処理エラー（500 / Timeout）
+
+- [ ] Sentry → Issues → `tags.source:stripe_webhook` でフィルタ
+- [ ] エラー詳細とスタックトレースを確認
+- [ ] `src/app/api/webhooks/stripe/route.ts` のイベントハンドラを確認
+- [ ] 処理対象イベント: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+- [ ] 修正 → push → 自動デプロイ
+- [ ] Stripe Dashboard → 失敗イベントの「Resend」
+
+### 失敗イベントの再送
+
+冪等性ガード実装済み（`stripe_webhook_events` テーブル、23505 unique_violation で重複スキップ）のため、安全に再送可能:
+
+- [ ] Stripe Dashboard → Webhooks → 失敗イベント一覧
+- [ ] 各イベントの「Resend」ボタンで再送
+- [ ] 正常処理されたことをログで確認
+
+### 振り返り
+
+- [ ] 未処理のまま放置されたユーザーがいないか確認（Supabase → `subscriptions` テーブル）
+- [ ] 全失敗イベントの再送が完了したか確認
+- [ ] Webhook Secret のローテーション手順を確認
+
+## Playbook 4: Sentryエラー急増（P2）
+
+### 検知
+
+- [ ] Sentryアラート: 1時間に50件超のエラー
+- [ ] Sentry Dashboard → Issues → 直近1時間でソート
+
+### トリアージ
+
+エラーカテゴリで優先度を判断（`src/platform/sentry/integration.ts` のカテゴリ定義）:
+
+| カテゴリ       | Sentryタグ                 | 優先度          | アクション             |
+| -------------- | -------------------------- | --------------- | ---------------------- |
+| **DB**         | `errorCategory:DB`         | P0 → Playbook 1 | 即時対応               |
+| **AUTH**       | `errorCategory:AUTH`       | P1              | 認証系を確認           |
+| **SYSTEM**     | `errorCategory:SYSTEM`     | P1              | インフラ確認           |
+| **EXTERNAL**   | `errorCategory:EXTERNAL`   | P2              | 外部サービス障害を待機 |
+| **BIZ**        | `errorCategory:BIZ`        | P3              | 通常バグ修正           |
+| **VALIDATION** | `errorCategory:VALIDATION` | P3              | 入力バリデーション改善 |
+| **RATE**       | `errorCategory:RATE`       | P3              | レート制限調整         |
+
+### 復旧
+
+#### ケースA: リグレッション（直近デプロイが原因）
+
+- [ ] `git log --oneline -10` で直近の変更を確認
+- [ ] エラー発生時刻とデプロイ時刻が一致するか
+- [ ] 一致 → Vercel Dashboard でロールバック（Playbook 2 ケースC参照）
+- [ ] ロールバック後: Sentryでエラーが止まったか確認
+
+#### ケースB: 外部サービス障害
+
+- [ ] エラーの `errorCategory` が `EXTERNAL` か確認
+- [ ] 該当サービスのStatus Pageを確認
+- [ ] 復旧を待機（メンテナンスモードは不要な場合が多い）
+- [ ] 復旧後: Sentryでエラーが止まったか確認
+
+#### ケースC: 未知のエラー
+
+- [ ] Sentryでエラー詳細・スタックトレースを確認
+- [ ] 影響ユーザー数を確認（Sentry → Issue → Users Affected）
+- [ ] 影響が大きい場合: メンテナンスモード検討
+- [ ] 原因調査 → 修正 → デプロイ
+
+### Sentryクォータ保護
+
+大量エラー時にクォータを消費しすぎないよう:
+
+- [ ] Sentry Dashboard → Settings → Rate Limits が設定されているか確認
+- [ ] 必要に応じて一時的にRate Limitを引き下げる
+
+### 振り返り
+
+- [ ] エラーをResolve済みにする
+- [ ] アラート閾値の調整が必要か検討
+- [ ] リグレッションの場合: typecheck/lintで検知できなかった理由を調査
+
+## Playbook 5: 不正アクセス検知（P0）
+
+### 検知
+
+- [ ] Sentry: `type:csp-violation` の急増
+- [ ] Sentry: `errorCategory:AUTH` の急増（認証失敗の連続）
+- [ ] Supabase Dashboard → Authentication → Logs に不審なアクティビティ
+
+### 初動: まず止める
+
+- [ ] **即時**: メンテナンスモード有効化（`NEXT_PUBLIC_MAINTENANCE_MODE=true`）
+- [ ] 影響範囲を把握:
+  - [ ] Sentry → 影響ユーザーID一覧
+  - [ ] Supabase → Auth Logs → 不審なIPアドレス / ユーザー
+- [ ] 不審アカウントの無効化: Supabase Dashboard → Authentication → Users → Ban User
+
+### 復旧
+
+#### ケースA: CSP違反 / XSS疑い
+
+- [ ] Sentry → CSP違反レポートの `blocked-uri` を確認
+- [ ] 自サイトのスクリプトか、外部注入か判別
+- [ ] 外部注入の場合:
+  - [ ] `next.config.ts` のCSPヘッダーを確認・強化
+  - [ ] 注入経路を特定（ユーザー入力のサニタイズ漏れ等）
+  - [ ] 修正 → デプロイ
+- [ ] ブラウザ拡張由来の誤検知の場合: アラート閾値調整のみ
+
+#### ケースB: 認証バイパス
+
+- [ ] Supabase Dashboard → Authentication → Logs
+- [ ] 不正なセッション / トークンの有無を確認
+- [ ] Supabase → SQL Editor:
+
+```sql
+-- 不審なセッションを確認
+SELECT * FROM auth.sessions
+WHERE created_at > NOW() - INTERVAL '24 hours'
+ORDER BY created_at DESC;
+```
+
+- [ ] 不審なセッションを無効化
+- [ ] RLSポリシーの確認（意図しないデータアクセスがないか）
+- [ ] 修正 → デプロイ
+
+#### ケースC: ブルートフォース
+
+- [ ] Supabase Auth Logs → 同一IP / メールアドレスからの大量失敗
+- [ ] Supabase Dashboard → Authentication → Rate Limits の確認
+- [ ] 必要に応じてレート制限を強化
+- [ ] メンテナンスモード解除
+
+### 事後対応
+
+- [ ] 影響ユーザーへの通知（該当する場合）
+- [ ] 関連ログを保存（Sentry / Supabase / Vercel）
+- [ ] セキュリティパッチの適用
+- [ ] パスワードリセットの強制（認証侵害の場合）
+
+## 事後レビュー
+
+### ポストモーテムテンプレート
+
+すべてのP0/P1インシデント後に記録する:
+
+```markdown
+## ポストモーテム: [インシデント名]
+
+**日時**: YYYY-MM-DD HH:MM〜HH:MM（JST）
+**レベル**: P0 / P1
+**影響**: [影響ユーザー数 / 影響機能]
+
+### タイムライン
+
+| 時刻  | イベント                                 |
+| ----- | ---------------------------------------- |
+| HH:MM | 検知（Sentryアラート / 手動発見）        |
+| HH:MM | 初動開始                                 |
+| HH:MM | メンテナンスモード有効化（該当する場合） |
+| HH:MM | 原因特定                                 |
+| HH:MM | 修正デプロイ / ロールバック              |
+| HH:MM | 復旧確認                                 |
+| HH:MM | メンテナンスモード解除                   |
+
+### 根本原因
+
+[根本原因の説明]
+
+### 再発防止策
+
+- [ ] [アクション1]
+- [ ] [アクション2]
+
+### 学び
+
+[このインシデントから得られた教訓]
+```
+
+### 月次メンテナンスチェックリスト
+
+毎月1回、以下を確認:
+
+- [ ] Sentry: 未解決Issueの棚卸し（Resolve / Ignore の判断）
+- [ ] Sentry: アラート閾値の妥当性確認（誤検知が多すぎないか）
+- [ ] Sentry: Rate Limits設定の確認
+- [ ] Stripe: Webhookエンドポイントの成功率確認
+- [ ] Supabase: Edge Functionsのエラーログ確認
+- [ ] Vercel: ビルド時間のトレンド確認（異常な増加がないか）
+- [ ] 環境変数: `.env.example` と本番/ステージングの差分確認
+- [ ] 依存パッケージ: `npm audit` でセキュリティ脆弱性チェック
+
+## インシデント対応 関連ドキュメント
+
+- **監視・アラート**: [monitoring.md](./monitoring.md)
+- **マイグレーションロールバック**: `docs/engineering/infra.md`
+- **ヘルスチェック実装**: `src/app/api/health/route.ts`
+- **Stripe Webhook実装**: `src/app/api/webhooks/stripe/route.ts`
+- **エラーカテゴリ定義**: `src/platform/sentry/integration.ts`
+- **メンテナンスページ**: `src/app/maintenance/route.ts`
+
+---
+
+# 第2部: リリースチェックリスト
+
+このチェックリストは、**リリース作業時に必ず確認すべき項目**をまとめたものです。
+リリースの度に、このセクションを開いて、上から順に確認してください。
+
+## このドキュメントの使い方
+
+1. **リリース作業開始前に、このセクションを必ず開く**
+2. **上から順番に、各項目を確認する**
+3. **全ての項目が✅になったら、次のステップに進む**
+4. **問題があれば、必ず修正してからリリースする**
+
+## Phase 0: リリース準備（featureブランチで実施）
+
+### 0.1 バージョン番号の確認
+
+- [ ] **リリースするバージョン番号を決定**
+  - PATCH: バグ修正のみ（例: 0.16.0 → 0.16.1）
+  - MINOR: 新機能追加（例: 0.16.0 → 0.17.0）
+  - MAJOR: 破壊的変更（例: 0.16.0 → 1.0.0）
+
+  ```bash
+  # 今回のリリースバージョン（例）
+  VERSION="0.17.0"
+  ```
+
+- [ ] **既存のリリースタグと重複していないことを確認**
+
+  ```bash
+  # 既存のリリースを確認
+  gh release list
+
+  # 確認: v${VERSION} が既に存在しないこと
+  gh release view v${VERSION} 2>/dev/null && echo "❌ Already exists!" || echo "✅ OK"
+  ```
+
+### 0.2 package.json バージョン更新
+
+- [ ] **リリース前の最後のPRにversion bumpを含める**
+
+  ```bash
+  npm version ${VERSION} --no-git-tag-version
+  # → コミットに含める
+  ```
+
+  **ポイント**: タグ打ち前にmainのpackage.jsonが正しい状態になるため、リリース後の後片付けが不要。
+
+### 0.3 コード品質の確認
+
+- [ ] **Lintチェック**
+
+  ```bash
+  npm run lint
+  ```
+
+- [ ] **型チェック**
+
+  ```bash
+  npm run typecheck
+  ```
+
+- [ ] **テスト**
+
+  ```bash
+  npm run test:run
+  ```
+
+- [ ] **ビルド**
+  ```bash
+  npm run build
+  ```
+
+→ **PRをマージしてからPhase 1へ**
+
+## Phase 1: タグ作成・リリース
+
+### 1.1 mainブランチの最新を取得
+
+- [ ] **mainブランチに切り替えて最新を取得**
+
+  ```bash
+  git checkout main
+  git pull origin main
+  ```
+
+### 1.2 Gitタグの作成とプッシュ
+
+- [ ] **Gitタグを作成してプッシュ**
+
+  ```bash
+  # タグを作成
+  git tag v${VERSION}
+
+  # タグをプッシュ
+  git push origin v${VERSION}
+  ```
+
+### 1.3 GitHub Actions の自動実行を確認
+
+タグpushにより以下が自動実行される：
+
+- [ ] **本番デプロイ（Vercel）が成功**
+
+  ```bash
+  gh run list --workflow=create-release.yml --limit 1
+  gh run watch
+  ```
+
+- [ ] **GitHub Releaseが自動作成された**
+
+  ```bash
+  gh release view v${VERSION}
+  ```
+
+## Phase 2: リリースノート反映
+
+### 2.1 前回リリース以降の全PRを取得
+
+- [ ] **全PRを取得**
+
+  ```bash
+  # 前回リリースのタグを確認
+  git tag --sort=-creatordate | head -5
+
+  # 前回リリース以降のPR一覧を取得
+  gh pr list --state merged --base main --limit 100 --json number,title,mergedAt \
+    | jq -r '.[] | select(.mergedAt > "YYYY-MM-DDT00:00:00Z") | "- [#\(.number)](https://github.com/Dayopt/dayopt/pull/\(.number)) - \(.title)"'
+  ```
+
+### 2.2 詳細なリリースノートを作成
+
+- [ ] **このファイルの「第4部: リリースノートテンプレート」の構造を参考にリリースノートを作成**
+  - [ ] 前回リリース以降の**全てのPR**が含まれている
+  - [ ] 各PRにリンクが付いている
+  - [ ] カテゴリ別に整理されている（Added, Changed, Fixed, Performance, Breaking Changes）
+  - [ ] **Full Changelogリンクが含まれている**
+    ```markdown
+    **Full Changelog**: https://github.com/Dayopt/dayopt/compare/v{前バージョン}...v{今回バージョン}
+    ```
+  - [ ] 破壊的変更・データモデル変更を明記
+  - [ ] 削除されたコンポーネント/機能をリスト
+
+### 2.3 GitHub Release に反映
+
+- [ ] **リリースノートを GitHub Release に直接反映**
+
+  ```bash
+  # 一時ファイルにリリースノートを書き出してから反映
+  gh release edit v${VERSION} --notes-file /tmp/release-notes-v${VERSION}.md
+  ```
+
+- [ ] **リリースページで確認**
+
+  ```bash
+  gh release view v${VERSION} --web
+  ```
+
+  - [ ] バージョン番号が正しい
+  - [ ] リリースノートが正しく表示されている
+  - [ ] Full Changelogリンクが機能している
+
+## Phase 3: リリース後作業
+
+### 3.1 デプロイ確認
+
+- [ ] **本番環境で動作確認**
+  - [ ] サイトが正常に表示される
+  - [ ] 新機能が動作する
+  - [ ] 既存機能が正常に動作する
+
+### 3.2 監視・モニタリング
+
+- [ ] **Sentryでエラー監視**
+  - エラーが急増していないことを確認
+
+### 3.3 OSSライセンス情報の更新
+
+- [ ] **ライセンス情報を再生成**
+  ```bash
+  npm run generate-licenses
+  ```
+- [ ] **生成物をマーケティングサイト（web）に反映**
+  - `public/legal/oss-credits.json` を web リポジトリへコピー
+
+### 3.4 通知・関連Issue
+
+- [ ] **関連Issueにコメント**
+  ```bash
+  gh issue comment {issue番号} \
+    --body "Released in v${VERSION}: https://github.com/Dayopt/dayopt/releases/tag/v${VERSION}"
+  ```
+
+## よくある失敗と対策
+
+### 失敗例1: 既存のリリースと重複するバージョンを作成
+
+**対策**:
+
+- ✅ Phase 0.1で既存リリースを確認
+- ✅ `gh release view v${VERSION}` でチェック
+- ✅ 既存バージョンが見つかった場合、必ず「v0.X.0じゃないですか？」と確認
+
+### 失敗例2: リリースノートに一部のPRしか含まれていない
+
+**対策**:
+
+- ✅ 前回リリース以降の**全てのPR**を取得してから記載
+- ✅ `gh pr list --state merged` コマンドで漏れなく取得
+
+### 失敗例3: リリースノートが抽象的
+
+**対策**:
+
+- ✅ 各PRのコミットを取得して具体的な変更内容を記載
+- ✅ 「第4部: リリースノートテンプレート」の構造を参考にする
+
+### 失敗例4: version bump忘れ
+
+**対策**:
+
+- ✅ Phase 0.2でリリース前の最後のPRにversion bumpを含める
+- ✅ タグ打ち前にmainのpackage.jsonが正しい状態になっていることを確認
+
+---
+
+# 第3部: リリースプロセス詳細
+
+このパートは詳細な説明と背景情報を提供する。実作業では第2部のチェックリストを使用すること。
+
+## 前提条件
+
+### 必要なツール
+
+```bash
+# Node.js & npm
+node --version  # v20以上
+npm --version
+
+# GitHub CLI
+gh --version
+
+op --version
+
+# Git
+git --version
+```
+
+### 権限
+
+- リポジトリへのWrite権限
+- GitHub Releaseの作成権限
+- Vercelプロジェクトへのアクセス権
+
+### ブランチ保護設定（推奨）
+
+**GitHub公式推奨**: `main`ブランチへの直接プッシュを禁止し、必ずPRを経由する
+
+```bash
+# GitHub Settings → Branches → Branch protection rules
+# または GitHub CLI で設定
+gh api repos/:owner/:repo/branches/main/protection \
+  --method PUT \
+  --field required_status_checks[strict]=true \
+  --field required_status_checks[contexts][]=lint \
+  --field required_status_checks[contexts][]=typecheck \
+  --field required_status_checks[contexts][]=unit-tests \
+  --field required_status_checks[contexts][]=build \
+  --field required_pull_request_reviews[required_approving_review_count]=1 \
+  --field enforce_admins=false \
+  --field restrictions=null
+```
+
+**推奨設定**:
+
+- ✅ Require a pull request before merging
+  - Require approvals: 1
+- ✅ Require status checks to pass before merging
+  - Require branches to be up to date before merging
+  - Status checks: `lint`, `typecheck`, `unit-tests`, `build`
+- ✅ Do not allow bypassing the above settings
+- ❌ Allow force pushes (本番ブランチでは禁止)
+- ❌ Allow deletions
+
+## リリース前チェックリスト
+
+### 1. コードの品質確認
+
+```bash
+# Lint チェック
+npm run lint
+
+# 型チェック
+npm run typecheck
+
+# テスト実行
+npm run test:run
+
+# ビルド確認
+npm run build
+```
+
+### 2. ドキュメント確認
+
+- [ ] 新機能のドキュメントが更新されている
+- [ ] 破壊的変更がある場合、マイグレーションガイドが用意されている
+- [ ] README.md が最新の状態である
+
+### 3. Issue/PR確認
+
+- [ ] マイルストーンに紐づく全てのIssueがクローズされている
+- [ ] マイルストーンに紐づく全てのPRがマージされている
+- [ ] 未解決の重大なバグがない
+
+### 4. セキュリティ確認
+
+```bash
+# 依存関係の脆弱性チェック
+npm audit
+
+# ライセンスチェック
+npm run license:check
+```
+
+## リリース手順
+
+### Phase 0: Release PR作成（feature ブランチ → main）
+
+> Dayopt に常設の `dev` ブランチは無い。リリースは番号付きの feature ブランチ（例: 直近 v0.30.0 は [#1370](https://github.com/Dayopt/dayopt/pull/1370)）を main へ PR する形で行う。version bump はこの Release PR に含める。
+
+#### 0.1 リリースブランチの準備
+
+```bash
+# リリース対象の feature ブランチに切り替え（version bump を載せるブランチ）
+git checkout <release-branch>
+git pull origin <release-branch>
+
+# main に追従（コンフリクトを避ける）
+git fetch origin
+git rebase origin/main   # または git merge origin/main
+```
+
+#### 0.2 version bump を PR に含める
+
+```bash
+VERSION="0.X.0"
+
+# package.json のみ更新（タグはこの時点では打たない）
+npm version ${VERSION} --no-git-tag-version
+git commit -am "chore(release): v${VERSION} へ version bump"
+```
+
+タグ打ち前に main の `package.json` が正しい状態になるよう、version bump は必ずこの Release PR に含める（リリース後の後片付けがゼロになる）。
+
+#### 0.3 ブランチの状態確認
+
+```bash
+# 未コミットの変更がないこと
+git status
+
+# 最新のコミット確認
+git log -5 --oneline
+
+# main との差分確認
+git log main..HEAD --oneline
+```
+
+#### 0.4 Pull Request作成
+
+```bash
+# GitHub CLI でPR作成（--head は現在のリリースブランチ）
+gh pr create \
+  --base main \
+  --head "$(git branch --show-current)" \
+  --title "Release v${VERSION}" \
+  --body "$(cat <<'EOF'
+## 📦 Release v${VERSION}
+
+### リリース内容
+- 今回リリースの主な変更点
+
+### リリース前チェックリスト
+- [ ] npm run lint - 成功
+- [ ] npm run typecheck - 成功
+- [ ] npm run test:run - 成功
+- [ ] npm run build - 成功
+- [ ] リリースノート作成済み
+
+### CI/CD
+- GitHub Actions が自動実行されます
+- Quality Gate 通過後にマージ可能になります
+
+/cc @reviewer
+EOF
+)"
+
+# または GitHub UI から手動作成
+# https://github.com/Dayopt/dayopt/compare/main...<release-branch>
+```
+
+#### 0.5 CI/CD パイプライン確認
+
+**自動実行されるチェック（`.github/workflows/ci.yml`）**:
+
+**Phase 1: Quick Checks（並列実行 / 3分以内）**
+
+- 🔍 ESLint & Prettier
+- 🔤 TypeScript型チェック
+- 🧪 Unit Tests（カバレッジ付き）
+- 🌍 i18n Translation Check
+
+**Phase 2: Quality Checks（並列実行 / 5分以内）**
+
+- 🏗️ Build（Next.js本番ビルド）
+- ♿ Accessibility（a11yチェック）
+- 🔍 Heavy Analysis（License, API, Performance）
+- 📚 Docs Consistency
+
+**Phase 3: Quality Gate**
+
+- 🚪 全チェック結果の集約
+- 💬 PRへのサマリーコメント自動投稿
+
+```bash
+# CI/CD実行状況を確認
+gh pr checks
+
+# 詳細ログを確認
+gh run view --log
+
+# PRのステータスを確認
+gh pr view
+```
+
+#### 0.6 レビュー & マージ
+
+**マージ条件**:
+
+- [ ] Quality Gate（全必須チェック）が通過
+- [ ] **PR内容の目視確認完了**（承認者不在でも実施必須）
+- [ ] コンフリクトなし
+
+**⚠️ 重要: 一人開発での確認プロセス**
+
+承認者がいない場合でも、以下の手順で**必ずPR内容を確認**してからマージすること：
+
+```bash
+# 1. CI/CD完了を確認
+gh pr checks
+
+# 2. PRの変更内容を確認（Web UIで詳細レビュー）
+gh pr view --web
+
+# 3. 変更ファイル一覧を確認
+gh pr diff --name-only
+
+# 4. 重要な変更を個別確認（例: 設定ファイル、セキュリティ関連）
+gh pr diff -- package.json
+gh pr diff -- .github/workflows/
+gh pr diff -- src/middleware.ts
+
+# 5. 確認完了後にマージ（Merge commit）
+gh pr merge --merge --delete-branch
+
+# または GitHub UI から手動マージ
+# https://github.com/Dayopt/dayopt/pulls
+```
+
+**確認すべき項目**:
+
+- [ ] 意図しない変更が含まれていないか
+- [ ] セキュリティ上問題のある変更がないか
+- [ ] 設定ファイルの変更が正しいか
+- [ ] ドキュメントの更新が適切か
+- [ ] コミットメッセージが適切か
+
+> **マージ方式**: リポジトリ設定で squash / rebase は無効化され **merge commit に統一**されている（`mergeCommitAllowed: true`, `squashMergeAllowed: false`）。`--graph` で分岐・合流が追える履歴を残すため。
+>
+> **ブランチ削除**: feature ブランチは merge 後に削除する（`deleteBranchOnMerge: true`）。`--delete-branch` を付ける。
+
+### Phase 1: main の取り込み確認
+
+#### 1.1 mainブランチに切り替え
+
+```bash
+git checkout main
+git pull origin main
+```
+
+#### 1.2 状態確認
+
+```bash
+# Release PR のマージが反映されていることを確認
+git log -5 --oneline
+
+# package.json のバージョンが更新済みであることを確認
+node -p "require('./package.json').version"  # → ${VERSION} になっているはず
+```
+
+> main マージ時点で Vercel が本番へ自動デプロイする（タグはデプロイトリガーではなくバージョン記録用）。
+
+### Phase 2: リリースノート作成
+
+#### 2.1 前回リリース以降の全PRを取得
+
+```bash
+# バージョン番号を決定（例: v0.6.0）
+VERSION="0.6.0"
+
+# 前回リリースのタグを確認
+git tag --sort=-creatordate | head -5
+
+# 前回リリース以降のPR一覧を取得
+gh pr list --state merged --base main --limit 100 --json number,title,mergedAt \
+  | jq -r '.[] | select(.mergedAt > "YYYY-MM-DDT00:00:00Z") | "- [#\(.number)](https://github.com/Dayopt/dayopt/pull/\(.number)) - \(.title)"'
+```
+
+#### 2.2 リリースノートファイル作成
+
+リリースノート本体はリポジトリにコミットせず、GitHub Release に直接反映する（第4部のテンプレートを参照）。
+
+#### 2.3 リリースノート編集
+
+一時ファイルに第4部の構造で編集し、`gh release edit` で反映する。
+
+**⚠️ 重要: 記載内容**
+
+前回リリース以降の**全てのPR**を以下のカテゴリに分類して記載：
+
+- 新機能 (Added) - 各項目にPRリンクを付ける
+- 変更 (Changed) - 各項目にPRリンクを付ける
+- バグ修正 (Fixed) - 各項目にPRリンクを付ける
+- 破壊的変更 (Breaking Changes)
+- 削除 (Removed) - 各項目にPRリンクを付ける
+- パフォーマンス (Performance) - 各項目にPRリンクを付ける
+- セキュリティ (Security) - 各項目にPRリンクを付ける
+- Pull Requests一覧 - 全PRをリストアップ
+
+**品質基準:**
+
+- [ ] 前回リリース以降の全てのPRが含まれている
+- [ ] 各PRにリンクが付いている
+- [ ] カテゴリ別に整理されている
+- [ ] Full Changelogリンクが正しい
+
+### Phase 3: タグ作成
+
+version bump は Phase 0 の Release PR で済んでいる（`package.json` は更新済み）。ここでは main 上でタグを打つだけ。`npm version` は使わない（main への直接コミットを避けるため）。
+
+> セムバーの目安（VERSION は Phase 0.2 で決定済み）: PATCH=バグ修正 / MINOR=新機能 / MAJOR=破壊的変更。
+
+#### 3.1 タグ作成
+
+```bash
+# main 上で version 記録用タグを打つ
+git tag v${VERSION}
+```
+
+#### 3.2 タグ内容の確認
+
+```bash
+# タグが指すコミットを確認（version bump コミットであること）
+git show v${VERSION} --stat | head -20
+
+# タグ一覧
+git tag --list | tail -5
+```
+
+### Phase 4: タグのプッシュ
+
+#### 4.1 タグをプッシュ
+
+```bash
+# main は Release PR のマージ時点で push 済み。ここではタグだけを push する
+git push origin v${VERSION}
+```
+
+タグ push により GitHub Actions（`.github/workflows/create-release.yml`）が **GitHub Release を自動作成**する（auto-generated notes 付き）。本番デプロイは main マージ時点で Vercel が既に実行済み。
+
+#### 4.2 プッシュ確認
+
+```bash
+# リモートのタグを確認
+git ls-remote --tags origin
+
+# GitHub上で確認
+gh repo view --web
+```
+
+### Phase 5: GitHub Release のノート反映
+
+Release 自体は Phase 4 のタグ push で **自動作成済み**（auto-generated notes）。ここでは Phase 2 で用意した詳細ノートに差し替える。
+
+#### 5.1 詳細ノートを反映
+
+```bash
+# Phase 2 で作成した詳細リリースノートを一時ファイルに用意し、上書き反映
+# 構造は第4部を参照
+gh release edit v${VERSION} \
+  --notes-file /tmp/release-notes-v${VERSION}.md
+```
+
+#### 5.2 Release確認
+
+```bash
+# 反映されたReleaseを確認
+gh release view v${VERSION} --web
+```
+
+### Phase 6: デプロイ確認
+
+#### 6.1 自動デプロイの監視
+
+```bash
+# Vercelのデプロイ状況を確認
+# https://vercel.com/Dayopt/dayopt
+
+# デプロイログを確認
+npm run deploy:stats
+```
+
+#### 6.2 本番環境の動作確認
+
+```bash
+# ヘルスチェック
+npm run deploy:health
+
+# 本番環境にアクセスして動作確認
+# https://dayopt.vercel.app
+```
+
+**確認項目:**
+
+- [ ] サイトが正常に表示される
+- [ ] 新機能が動作する
+- [ ] 既存機能が正常に動作する
+- [ ] エラーが発生していない
+- [ ] パフォーマンスに問題がない
+
+## リリース後の作業
+
+### 1. マイルストーンのクローズ
+
+```bash
+# GitHub UI でマイルストーンをクローズ
+# https://github.com/Dayopt/dayopt/milestones
+```
+
+### 2. 関連Issueの更新
+
+```bash
+# リリースされたことをIssueにコメント
+gh issue comment <issue_number> \
+  --body "Released in v${VERSION}: https://github.com/Dayopt/dayopt/releases/tag/v${VERSION}"
+```
+
+### 3. ドキュメントの更新
+
+- [ ] README.md のバージョン番号更新（必要に応じて）
+
+### 4. 通知
+
+- [ ] チームへのリリース通知
+- [ ] ユーザーへのアナウンス（必要に応じて）
+
+### 5. モニタリング
+
+```bash
+# Sentryでエラー監視
+# https://sentry.io/organizations/dayopt/issues/
+
+# アナリティクス確認
+npm run analytics:stats
+```
+
+## ロールバック手順
+
+### 緊急時のロールバック
+
+#### 1. 重大な問題の確認
+
+- クリティカルなバグ
+- セキュリティ上の問題
+- データ損失の可能性
+
+#### 2. ロールバック実行
+
+```bash
+# Vercelで前のデプロイに戻す
+npm run deploy:rollback
+
+# または Vercel UI から前のデプロイをPromote
+# https://vercel.com/Dayopt/dayopt/deployments
+```
+
+#### 3. GitHub Releaseの対応
+
+```bash
+# Releaseをドラフトに変更（削除はしない）
+gh release edit v${VERSION} --draft
+
+# 問題を説明するIssueを作成
+gh issue create \
+  --title "Rollback: v${VERSION} - Critical Issue" \
+  --body "Description of the issue..."
+```
+
+#### 4. 修正版のリリース
+
+```bash
+# 問題を修正用の feature ブランチで対応し、version bump を含めて main へ PR
+# （通常のリリースフローと同じ: Phase 0 → 4）
+#   npm version patch --no-git-tag-version → commit → PR → merge（merge commit, ブランチ削除）
+
+# main 取り込み後、main 上でタグを打って push（Release は自動作成される）
+git checkout main && git pull origin main
+git tag v${VERSION_PATCH}
+git push origin v${VERSION_PATCH}
+```
+
+## トラブルシューティング
+
+### Q: npm version でエラーが出る
+
+```bash
+# 未コミットの変更がある場合
+git status
+git add .
+git commit -m "chore: prepare for release"
+
+# または強制実行（非推奨）
+npm version patch --force
+```
+
+### Q: タグのプッシュに失敗する
+
+```bash
+# タグの確認
+git tag -l
+
+# タグを削除して再作成（version bump は Release PR 済みなので git tag のみ）
+git tag -d v${VERSION}
+git tag v${VERSION}
+git push origin v${VERSION}
+```
+
+### Q: GitHub Releaseの作成に失敗する
+
+```bash
+# GitHub CLI の認証確認
+gh auth status
+
+# 再ログイン
+gh auth login
+
+# 手動で作成
+# https://github.com/Dayopt/dayopt/releases/new
+```
+
+### Q: デプロイが失敗する
+
+```bash
+# Vercelのログを確認
+# https://vercel.com/Dayopt/dayopt/deployments
+
+# ローカルでビルド確認
+npm run build
+
+# 環境変数の確認
+npm run vercel:check
+```
+
+## チェックシート
+
+### リリース実施チェックシート
+
+```markdown
+## リリース v${VERSION} チェックシート
+
+### リリース前（リリースブランチ）
+
+- [ ] npm run lint - 成功
+- [ ] npm run typecheck - 成功
+- [ ] npm run test:run - 成功
+- [ ] npm run build - 成功
+- [ ] version bump を Release PR に含めた（npm version --no-git-tag-version）
+- [ ] リリースノート作成済み
+- [ ] マイルストーンの全Issue/PRクローズ済み
+
+### Phase 0: Release PR作成 & マージ（feature ブランチ → main）
+
+- [ ] PRテンプレート記入完了
+- [ ] CI/CD Quality Gate 通過
+  - [ ] lint ✅
+  - [ ] typecheck ✅
+  - [ ] unit-tests ✅
+  - [ ] build ✅
+  - [ ] i18n-check ✅
+  - [ ] accessibility ✅
+  - [ ] heavy-checks ✅
+  - [ ] docs-consistency ✅
+- [ ] コードレビュー承認済み
+- [ ] PRマージ完了（Merge commit / feature ブランチ削除）
+
+### Phase 1-4: タグ作成 & プッシュ（mainブランチ）
+
+- [ ] mainブランチに切り替え
+- [ ] PRマージ内容・package.json バージョンを確認
+- [ ] タグ作成（git tag v${VERSION}）
+- [ ] Tag push完了（Release は自動作成）
+
+### Phase 5-6: GitHub Release & デプロイ
+
+- [ ] GitHub Release作成完了
+- [ ] Vercelデプロイ成功
+- [ ] 本番環境動作確認OK
+- [ ] Sentryエラー監視OK
+
+### リリース後
+
+- [ ] マイルストーンクローズ
+- [ ] 関連Issueへコメント
+- [ ] チームへ通知完了
+
+### 日時
+
+- 開始: YYYY-MM-DD HH:MM
+- 完了: YYYY-MM-DD HH:MM
+- 実施者: @username
+```
+
+## リリースフロー概要図
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 0: Release PR（feature ブランチ → main）              │
+├─────────────────────────────────────────────────────────────┤
+│ 1. feature ブランチで version bump（--no-git-tag-version）  │
+│ 2. PR作成（feature → main）                                  │
+│ 3. CI/CD自動実行（lint, typecheck, test, build...）         │
+│ 4. Quality Gate 通過                                         │
+│ 5. コードレビュー & 承認                                      │
+│ 6. PRマージ（Merge commit + feature ブランチ削除）          │
+│    → main マージで Vercel 本番デプロイが自動実行            │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 1-4: タグ作成（main）                                  │
+├─────────────────────────────────────────────────────────────┤
+│ 1. main ブランチに切り替え（version bump 反映済み）         │
+│ 2. git tag v0.X.X                                            │
+│ 3. git push origin v0.X.X                                    │
+│    → create-release.yml が GitHub Release を自動作成        │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Phase 5-6: Release ノート反映 & 確認                         │
+├─────────────────────────────────────────────────────────────┤
+│ 1. gh release edit で詳細ノートを反映                        │
+│ 2. 本番環境動作確認（デプロイは Phase 0 で実行済み）        │
+│ 3. Sentryモニタリング                                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 参考リンク
+
+### 公式ドキュメント
+
+- [Semantic Versioning](https://semver.org/)
+- [GitHub Releases](https://docs.github.com/ja/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
+- [GitHub Branch Protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+- [Gitflow Workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow)
+- [Vercel Deployments](https://vercel.com/docs/deployments/overview)
+
+---
+
+# 第3.5部: バージョニング管理ガイド
+
+Dayoptは [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html) に準拠したバージョン管理を行う。
+
+## バージョン形式
+
+```
+X.Y.Z
+```
+
+- **X (MAJOR)**: 破壊的変更を含む場合にインクリメント
+- **Y (MINOR)**: 後方互換性のある新機能追加時にインクリメント
+- **Z (PATCH)**: 後方互換性のあるバグ修正時にインクリメント
+
+## バージョンアップの判断基準
+
+### MAJOR (X) - 破壊的変更
+
+- API の破壊的変更
+- データベーススキーマの非互換変更
+- 設定ファイル形式の変更
+- 依存関係の大幅な変更
+
+**例**: `1.0.0` → `2.0.0`
+
+### MINOR (Y) - 新機能
+
+- 新しい機能の追加
+- 既存機能の拡張
+- パフォーマンス改善
+- 非推奨機能の追加（削除は次のMAJOR）
+
+**例**: `1.0.0` → `1.1.0`
+
+### PATCH (Z) - バグ修正
+
+- バグ修正
+- セキュリティパッチ
+- ドキュメント修正
+- リファクタリング
+
+**例**: `1.0.0` → `1.0.1`
+
+## バージョンアップ手順
+
+version bump は **リリース対象の feature ブランチ上で行い、Release PR に含める**（main へ直接コミットしない）。
+
+```bash
+# package.json のみ更新（タグは打たない）。VERSION は上記ルールで決定
+npm version ${VERSION} --no-git-tag-version
+git commit -am "chore(release): v${VERSION} へ version bump"
+```
+
+タグ作成・push・GitHub Release（タグ push で自動作成）を含む完全な手順は第3部を正本とする。本セクションはバージョン番号の決定ルールに専念する。
+
+## リリースフロー（開発フロー）
+
+```
+1. 機能開発 (feature/xxx ブランチ)
+   ↓
+2. feature ブランチで version bump → main へ Release PR
+   ↓
+3. CI・品質チェック (Quality Gate)
+   ↓
+4. PR マージ (merge commit / ブランチ削除) → Vercel 自動デプロイ
+   ↓
+5. main でタグ作成 & push
+   ↓
+6. GitHub Release 自動作成 → 詳細ノート反映
+```
+
+### プレリリース
+
+開発版やベータ版をリリースする場合:
+
+```bash
+# アルファ版
+npm version prerelease --preid=alpha
+# 例: 0.1.0-alpha.0
+
+# ベータ版
+npm version prerelease --preid=beta
+# 例: 0.1.0-beta.0
+
+# リリース候補
+npm version prerelease --preid=rc
+# 例: 0.1.0-rc.0
+```
+
+## バージョニング計画
+
+### ロードマップ
+
+| バージョン | 目標             | 主な内容          |
+| ---------- | ---------------- | ----------------- |
+| **v0.0.1** | 初回リリース     | 基本機能実装      |
+| **v0.0.x** | バグ修正         | 初期不具合対応    |
+| **v0.1.0** | TypeScript厳格化 | strict mode完了   |
+| **v0.2.0** | テスト強化       | カバレッジ60%達成 |
+| **v0.3.0** | E2Eテスト        | Playwright導入    |
+| **v1.0.0** | 正式リリース     | 本番運用開始      |
+
+### v1.0.0 までの条件
+
+- [ ] TypeScript strict mode完全対応
+- [ ] テストカバレッジ80%以上
+- [ ] E2Eテスト導入
+- [ ] パフォーマンス最適化
+- [ ] セキュリティ監査完了
+- [ ] ドキュメント整備完了
+- [ ] 本番環境での安定稼働確認
+
+## ベストプラクティス
+
+### ✅ 推奨
+
+- リリース前に必ず `npm run lint` と `npm run typecheck` を実行
+- 破壊的変更は BREAKING CHANGE として明記
+- バージョンタグは必ず `v` プレフィックスを付ける（例: `v0.0.1`）
+
+### ❌ 非推奨
+
+- リリース後のバージョン番号の変更
+- タグの削除・付け替え
+
+## 参考リンク
+
+- [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
+- [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
+- [npm version](https://docs.npmjs.com/cli/v8/commands/npm-version)
+
+---
+
+# 第4部: リリースノートテンプレート
+
+AIがリリースノートを記載する際の構造テンプレート。リポジトリにリリースノートファイルをコミットする必要はなく、`gh release edit` で GitHub Release ページに直接反映する。
+
+```markdown
+# Release vX.Y.Z
+
+**リリース日**: YYYY-MM-DD
+**バージョン**: X.Y.Z
+
+## 🎯 概要
+
+このリリースの主な変更点を簡潔に記載（前回リリースからの全変更を網羅）
+
+---
+
+## 📋 変更内容
+
+**⚠️ 重要**: 前回リリース（v{前バージョン}）から今回リリース（v{今回バージョン}）までの**全てのPR**を網羅して記載すること。リリースPR単体の変更だけでなく、期間中にマージされた全PRの内容を反映する。
+
+### ✨ 新機能 (Added)
+
+- **機能名** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
+  - 詳細説明
+
+### 🔄 変更 (Changed)
+
+- **変更内容** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
+  - 詳細説明
+
+### 🐛 バグ修正 (Fixed)
+
+- **修正内容** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
+  - 詳細説明
+
+### ⚠️ 破壊的変更 (Breaking Changes)
+
+- 破壊的変更がある場合、詳細に記載
+- マイグレーション手順も記載
+
+### 🗑️ 削除 (Removed)
+
+- **削除内容** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
+  - 削除された機能や非推奨になった機能
+
+### ⚡ パフォーマンス (Performance)
+
+- **改善内容** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
+  - 詳細説明
+
+### 🔒 セキュリティ (Security)
+
+- **対応内容** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
+  - セキュリティ関連の修正
+
+---
+
+## 🔗 関連リンク
+
+### Pull Requests
+
+**⚠️ 重要**: 前回リリースから今回リリースまでの**全てのPR**をリストアップすること。
+
+\`\`\`bash
+
+# 前回リリース以降のPR一覧を取得
+
+gh pr list --state merged --base main --search "merged:>=YYYY-MM-DD" --json number,title --jq '.[] | "- [#\(.number)](<https://github.com/Dayopt/dayopt/pull/(.number)>) - \(.title)"'
+\`\`\`
+
+- [#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}) - {PR説明}
+- [#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}) - {PR説明}
+- ...（前回リリース以降の全PRを記載）
+
+---
+
+**Full Changelog**: https://github.com/Dayopt/dayopt/compare/v{前バージョン}...v{今回バージョン}
+
+**🤖 Generated with [Claude Code](https://claude.com/claude-code)**
+
+**Co-Authored-By: Claude `<noreply@anthropic.com>`**
+```
+
+### リリースノートの品質基準
+
+- [ ] 前回リリース以降の**全てのPR**が含まれている
+- [ ] 各PRにリンクが付いている
+- [ ] カテゴリ別に整理されている（Added, Changed, Fixed, etc.）
+- [ ] Full Changelogリンクが正しい
+- [ ] バージョン番号が正しい
+
+## 過去のリリースノートスナップショット
+
+バージョン別の実際のリリースノートは `docs/operations/log/` に日付プレフィックス付きで保存する（例: [2026-01-23-release-v0.13.0.md](./log/2026-01-23-release-v0.13.0.md)、[2026-03-27-release-v0.23.0.md](./log/2026-03-27-release-v0.23.0.md)）。最新のリリース情報は [GitHub Releases](https://github.com/Dayopt/dayopt/releases) で確認できる。

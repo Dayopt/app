@@ -1,6 +1,6 @@
 ---
 name: i18n
-description: UI テキストを含む component の新規実装・編集時、ハードコードされた日本語/英語の文字列リテラルを検出した時、`apps/product/messages/en/*.json` / `apps/product/messages/ja/*.json` 翻訳ファイルを編集する時、`docs/glossary/terms.md` の用語確認や `docs/glossary/forbidden-terms.md` の禁止語チェックが必要な時に発動。next-intl v4 の `useTranslations` / `getTranslations` パターンを適用し、Copy System のルール（用語集・禁止表記）に従う。内部ログやエラーコードなど非 UI 文字列には発動しない。
+description: UI テキストを含む component の新規実装・編集時、ハードコードされた日本語/英語の文字列リテラルを検出した時、`apps/product/messages/en/*.json` / `apps/product/messages/ja/*.json` 翻訳ファイルを編集する時、`docs/product/glossary.md` の用語確認や `docs/product/glossary.md#禁止表記一覧` の禁止語チェックが必要な時に発動。next-intl v4 の `useTranslations` / `getTranslations` パターンを適用し、Copy System のルール（用語集・禁止表記）に従う。内部ログやエラーコードなど非 UI 文字列には発動しない。
 effort: low
 maxTurns: 10
 ---
@@ -17,7 +17,7 @@ Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 - `apps/product/messages/en/*.json` / `apps/product/messages/ja/*.json` に新規キーを追加する時
 - 既存 component で日本語/英語のハードコード文字列リテラル（`"記録"` / `"Save"` など）を検出した時
 - en / ja のキー不整合（片方にしか存在しないキー、`lint:i18n` で検出される類）が発生した時
-- `docs/glossary/terms.md` を参照して用語の正しい表記を確認する時
+- `docs/product/glossary.md` を参照して用語の正しい表記を確認する時
 
 ## When NOT to Use
 
@@ -38,8 +38,8 @@ Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 
 **最初に確認する**:
 
-1. [`docs/glossary/terms.md`](../../../docs/glossary/terms.md) — UI で使う言葉の正解（エントリ / 予定 / 記録 / タグ等）
-2. [`docs/glossary/forbidden-terms.md`](../../../docs/glossary/forbidden-terms.md) — 使ってはいけない表現の一覧
+1. [`docs/product/glossary.md`](../../../docs/product/glossary.md) — UI で使う言葉の正解（エントリ / 予定 / 記録 / タグ等）
+2. [`docs/product/glossary.md`](../../../docs/product/glossary.md#禁止表記一覧) — 使ってはいけない表現の一覧
 
 新規テキスト追加後に `pnpm copy:check` で禁止表記が含まれていないか確認する。
 
@@ -201,7 +201,7 @@ t('items', { count: 5 }); // → "5 items"
 
 ## 新規翻訳キー追加手順
 
-1. **用語を確認**: `docs/glossary/terms.md` で正しい表記を確認
+1. **用語を確認**: `docs/product/glossary.md` で正しい表記を確認
 2. **配置先を決める**: 上記フロー参照
 3. **両言語に追加**: en と ja のキー構造を完全一致させる
 4. **検証**: `pnpm i18n:check && pnpm copy:check`
@@ -270,7 +270,7 @@ t('actions.save');
 2. `messages/{locale}/{namespace}.json` に追加する
 3. namespace は画面/機能単位にする
 4. `common` に入れるのは共通操作語だけ（domain 固有キーは feature ファイルへ）
-5. 新しい用語は `docs/glossary/terms.md` を確認する
+5. 新しい用語は `docs/product/glossary.md` を確認する
 6. 迷ったら既存キーをまず検索する（重複定義を防ぐ）
 7. 最後に `pnpm i18n:check` と `pnpm copy:check` を実行する
 
@@ -278,7 +278,7 @@ t('actions.save');
 
 新しいUIテキスト追加時：
 
-- [ ] `docs/glossary/terms.md` で用語を確認したか
+- [ ] `docs/product/glossary.md` で用語を確認したか
 - [ ] 配置先を判断フローで決定したか
 - [ ] en/ja 両方に追加したか（キー構造が完全一致）
 - [ ] 汎用単語は `actions.*` / `common.*` を再利用しているか（重複定義していない）
@@ -295,9 +295,9 @@ t('actions.save');
 
 ## 関連ファイル
 
-- `docs/glossary/terms.md` - UI 用語の source of truth
-- `docs/glossary/forbidden-terms.md` - 禁止表記一覧
-- `docs/guides/i18n.md` - 実装ガイド（詳細版）
+- `docs/product/glossary.md` - UI 用語の source of truth
+- `docs/product/glossary.md#禁止表記一覧` - 禁止表記一覧
+- `docs/engineering/i18n.md` - 実装ガイド（詳細版）
 - `apps/product/src/lib/i18n/routing.ts` - ルーティング設定
 - `apps/product/src/lib/i18n/request.ts` - メッセージローダー（自動検出）
 - `apps/product/src/lib/i18n/navigation.ts` - ナビゲーションユーティリティ

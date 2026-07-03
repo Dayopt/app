@@ -1,7 +1,7 @@
 /**
  * Check: 追記専用ガード（最重要）
  *
- * docs/decisions, docs/notes, docs/journal, docs/sessions（sessions/latest.md を除く）は
+ * docs/log/decisions, docs/log/notes, docs/log/journal, docs/log/sessions（sessions/latest.md を除く）は
  * 「ログは書き換えない、訂正は supersede」の規約を持つ append-only 領域。
  * base ref との差分で "M"（modified）扱いのファイルがあれば原則 fail する。
  *

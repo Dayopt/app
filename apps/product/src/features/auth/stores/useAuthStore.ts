@@ -2,7 +2,7 @@
  * Zustand認証ストア
  * Context APIから移行してパフォーマンスを最適化
  *
- * @see docs/architecture/AUTH_STORE.md
+ * @see docs/product/specs/auth.md
  */
 import * as Sentry from '@sentry/nextjs';
 
