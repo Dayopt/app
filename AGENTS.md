@@ -91,7 +91,7 @@ pnpm docs:check               # リンク切れ/frontmatter/命名/append-only �
 
 - **フィードバックの記録** — ユーザーの声（感想・要望・不具合報告）が届いたら、その日のうちに `docs/log/notes/YYYY-MM-DD-feedback-<slug>.md` に原文のまま記録する（`/note` コマンド参照）
 - **障害の記録** — 障害・トラブルが起きたら `docs/log/notes/YYYY-MM-DD-incident-<slug>.md` に記録する。対応手順そのものの更新は `docs/operations/` 側に別途反映する
-- **機能仕様の反映** — プロダクトの振る舞いを変えたら `docs/product/features/` の該当ファイルを更新する
+- **機能仕様の反映** — プロダクトの振る舞いを変えたら `docs/product/specs/` の該当ファイルを更新する
 - **月次ガーデニング** — `docs/log/journal/` に当月のファイルが存在しない状態でセッションが始まったら、`/gardening` の実施をユーザーに提案する
 
 ## コマンド一覧（.claude/commands/）
