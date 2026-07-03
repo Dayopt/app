@@ -40,13 +40,17 @@ export const LINK_CHECK_SOFT_DIRS = [...APPEND_ONLY_DIRS];
 // frontmatterを持たせると `pnpm rls:snapshot:check`（Integration Tests）がdriftとして検知する。
 export const FRONTMATTER_EXCLUDE = [
   'docs/operations/secrets.md',
-  'docs/architecture/data/db/rls-snapshot.md',
+  'docs/engineering/data/db/rls-snapshot.md',
 ];
 export const FRONTMATTER_EXCLUDE_PATTERNS = [/^docs\/operations\/releases\/notes-v[\d.]+\.md$/];
 
 // 命名規約チェックの追加許容パターン（kebab-case の対象外だが正当なもの）。
 // リリースノートの semver ファイル名（notes-v0.13.0.md 等）。
-export const NAMING_ALLOW_PATTERNS = [/^notes-v\d+\.\d+\.\d+\.md$/];
+// docs/operations/log/YYYY-MM-DD-release-vX.Y.Z.md: リリースノートスナップショット（semver のドットを含む）。
+export const NAMING_ALLOW_PATTERNS = [
+  /^notes-v\d+\.\d+\.\d+\.md$/,
+  /^\d{4}-\d{2}-\d{2}-release-v\d+\.\d+\.\d+\.md$/,
+];
 
 export const colors = {
   reset: '\x1b[0m',

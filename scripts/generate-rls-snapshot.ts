@@ -25,7 +25,7 @@ import { format as formatWithPrettier } from 'prettier';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const OUTPUT_PATH = resolve(ROOT, 'docs/architecture/data/db/rls-snapshot.md');
+const OUTPUT_PATH = resolve(ROOT, 'docs/engineering/data/db/rls-snapshot.md');
 const CHECK_MODE = process.argv.includes('--check');
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';

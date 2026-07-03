@@ -1,6 +1,6 @@
 ---
 name: docs-writing
-description: 新機能実装完了後のユーザー向けドキュメント（`content/docs/**/*.mdx`）執筆時、リリース完了後のリリースノート（`content/releases/{en,ja}/*.mdx`）作成時、アーキテクチャ意思決定確定後の ADR（`docs/adr/ADR-*.md`）作成時、Breaking change を含む変更の merge 前の技術ドキュメント更新時、`docs-audit` skill からの docs gap フィードバック受領時に発動。AI 生成時は `draft: true` 初期値を適用する。コード内コメントや一時メモでは発動しない。
+description: 新機能実装完了後のユーザー向けドキュメント（`content/docs/**/*.mdx`）執筆時、リリース完了後のリリースノート（`content/releases/{en,ja}/*.mdx`）作成時、アーキテクチャ意思決定確定後の decision ログ（各ドメインの `docs/{domain}/log/YYYY-MM-DD-slug.md`）作成時、Breaking change を含む変更の merge 前の技術ドキュメント更新時、`docs-audit` skill からの docs gap フィードバック受領時に発動。AI 生成時は `draft: true` 初期値を適用する。コード内コメントや一時メモでは発動しない。
 effort: high
 maxTurns: 25
 ---
@@ -18,7 +18,7 @@ app側の技術ドキュメント（`docs/`）とは別物。
 
 - 新機能の public API 仕様が確定し、ユーザー向け使い方ドキュメントが必要になった時
 - リリース作業完了後、`content/releases/{en,ja}/*.mdx` にリリースノートを書く時
-- アーキテクチャ意思決定が確定し、`docs/adr/ADR-{n}-{title}.md` に ADR を書く時
+- アーキテクチャ意思決定が確定し、該当ドメインの `docs/{domain}/log/YYYY-MM-DD-slug.md` に decision ログを書く時
 - Breaking change を含む変更を merge する前、影響を受ける技術ドキュメントの更新が必要な時
 
 **診断起点（何に気付いたか）:**
@@ -164,8 +164,8 @@ app側の技術ドキュメント・ADR・APIドキュメントもこのスキ�
 
 ```
 何を記録したいか？
-├─ 機能の仕組み → 技術ドキュメント（docs/features/ or docs/architecture/）
-├─ なぜこの方法を選んだか → ADR（docs/log/decisions/）
+├─ 機能の仕組み → 技術ドキュメント（docs/product/specs/ or docs/engineering/）
+├─ なぜこの方法を選んだか → decision ログ（各ドメインの log/）
 └─ APIの使い方 → APIドキュメント（docs/api/）
 ```
 

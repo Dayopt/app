@@ -1,26 +1,27 @@
 ---
-description: docs/log/decisions/ に意思決定ログを新規作成する
+description: 各ドメインの log/ に意思決定ログを新規作成する
 ---
 
 # /decision
 
-意思決定ログを `docs/log/decisions/NNN-slug.md` として作成する。
+意思決定ログを `docs/{domain}/log/YYYY-MM-DD-slug.md` として作成する。
 
-引数: `$ARGUMENTS`（slug。例: `/decision skip-recurring-events` → `skip-recurring-events`）
+引数: `$ARGUMENTS`（domain と slug。例: `/decision engineering skip-recurring-events` → `docs/engineering/log/2026-07-03-skip-recurring-events.md`）
 
 ## 手順
 
-1. `ls docs/log/decisions/ | grep -E '^[0-9]+' | sort -n | tail -1` で最大連番を確認し、+1 した3桁ゼロ埋め番号を `NNN` とする（`decisions/index.md` は連番外の `index.md` なので対象外）
+1. domain が指定されていなければ、対話の文脈からどのドメイン(`business` / `product` / `marketing` / `engineering` / `operations` / `company`)の判断かを判定する。迷ったら問い返す
 2. slug が指定されていなければ、何を決めたかを 1 フレーズで問い返す
-3. `docs/log/decisions/NNN-slug.md` を以下のテンプレート（`docs/README.md` §decisions のテンプレ、と同一）で作成する:
+3. 今日の日付(`YYYY-MM-DD`)を確認する
+4. `docs/{domain}/log/YYYY-MM-DD-slug.md` を [`docs/_templates/decision.md`](../../docs/_templates/decision.md) のテンプレートで作成する:
 
    ```markdown
    ---
-   date: YYYY-MM-DD
-   status: accepted # accepted | superseded
+   status: current
+   updated: YYYY-MM-DD
    ---
 
-   # 決めたこと（1行）
+   # 決めたこと(1行)
 
    ## 背景・当時の前提
 
@@ -31,12 +32,11 @@ description: docs/log/decisions/ に意思決定ログを新規作成する
    ## 影響・やること
    ```
 
-4. 各セクションを対話の文脈から埋める。埋められない箇所はユーザーに問い返す（5分で書ける軽さを保つ。長い散文にしない）
-5. ファイル作成後、`docs/log/decisions/index.md` の一覧表に行を追加する（該当する技術ADRの場合のみ。プロダクト判断のみの場合は index.md への追加は不要）
+5. 各セクションを対話の文脈から埋める。埋められない箇所はユーザーに問い返す(5分で書ける軽さを保つ。長い散文にしない)
 6. 確認不要。ファイル作成まで一気に実行する
 
 ## 守ること
 
-- **番号は必ず最大値+1**。歯抜け・重複を作らない
-- 一度作成した decision ファイルは書き換えない。訂正が必要になったら新しい `/decision` を実行し、古い方に `superseded_by: NNN-new-slug.md` を追記する（本文は書き換えない）
-- 技術判断・プロダクト判断を区別せず同じ連番シリーズ・同じテンプレートを使う
+- 一度作成した decision ファイルは書き換えない。訂正が必要になったら新しい `/decision` を実行し、古い方の frontmatter に `status: superseded` を追記する(本文は書き換えない)
+- 技術判断・プロダクト判断・事業判断を区別せず同じテンプレートを使う。置き場所(ドメイン)だけで分類する
+- 連番管理は不要(日付が一意性を担保する)。同日に複数決定があれば slug で区別する

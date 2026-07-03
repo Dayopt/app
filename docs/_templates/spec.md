@@ -25,5 +25,5 @@ code: apps/product/src/features/<feature> # 対応する実装コードのパス
 
 ## 関連する意思決定
 
-- [YYYY-MM-DD-slug](../../<domain>/log/YYYY-MM-DD-slug.md) — なぜこの仕様になったか
+- 該当ドメインの log/YYYY-MM-DD-slug.md へのリンク — なぜこの仕様になったか
 ```

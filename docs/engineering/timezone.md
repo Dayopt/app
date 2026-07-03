@@ -1,11 +1,12 @@
 ---
 status: current
-last_verified: 2026-07-02
+last_verified: 2026-07-03
+code: apps/product/src/lib/date
 ---
 
 # タイムゾーン設計ガイド
 
-どの国のユーザーでも同じ体験を保証するための3層アーキテクチャ。
+どの国のユーザーでも同じ体験を保証するための3層アーキテクチャ（TZ Source of Truth / Boundary Functions / Application Code）。禁止パターン、DB層のTZ処理、SSR Cookie方式をまとめる。
 
 ---
 

@@ -297,7 +297,7 @@ t('actions.save');
 
 - `docs/product/glossary.md` - UI 用語の source of truth
 - `docs/product/glossary.md#禁止表記一覧` - 禁止表記一覧
-- `docs/guides/i18n.md` - 実装ガイド（詳細版）
+- `docs/engineering/i18n.md` - 実装ガイド（詳細版）
 - `apps/product/src/lib/i18n/routing.ts` - ルーティング設定
 - `apps/product/src/lib/i18n/request.ts` - メッセージローダー（自動検出）
 - `apps/product/src/lib/i18n/navigation.ts` - ナビゲーションユーティリティ

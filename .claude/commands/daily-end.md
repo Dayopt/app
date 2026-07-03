@@ -1,20 +1,25 @@
 # 日次振り返り
 
-今日の作業を振り返って、セッションログと日記の2つを生成する。
+今日の作業を振り返って、セッションログと月次ロールアップの2つを生成する。
 
 ## 1. 情報収集
 
-- `git log --oneline --since="00:00" --all` で今日のコミットを取得（monorepo 全体。apps/product / apps/web / apps/storybook / packages を含む）
+- `git log --oneline --since="00:00" --all` で今日のコミットを取得(monorepo 全体。apps/product / apps/web / apps/storybook / packages を含む)
 - `git diff --stat $(git log --since="00:00" --format=%H | tail -1)^..HEAD` で変更規模を把握
-- 既存のセッションログがあれば `docs/log/sessions/` を確認
+- 既存のセッションログがあれば `docs/engineering/log/*-session.md` を確認
 
-## 2. セッションログ（Claude Code向け）
+## 2. セッションログ(Claude Code向け)
 
-出力先: `docs/log/sessions/YYYY-MM-DD.md`
+出力先: `docs/engineering/log/YYYY-MM-DD-session.md`
 
 以下の構造で、事実と規約だけを簡潔に書く。散文・感想・論評は一切不要。
 
 ```yaml
+---
+status: frozen
+updated: YYYY-MM-DD
+---
+
 date: YYYY-MM-DD
 commits: N
 areas: [触った機能領域]
@@ -50,17 +55,22 @@ next:
 
 ### latest.md へのコピー
 
-セッションログを `YYYY-MM-DD.md` に書いた後、同じ内容を `sessions/latest.md` にコピーする。
+セッションログを `YYYY-MM-DD-session.md` に書いた後、同じ内容を `docs/engineering/log/latest.md` にコピーする。
 CLAUDE.mdからのポインタが常に最新セッションを指すために必要。
 
-## 3. 日記エントリ（開発者向け）
+## 3. 月次ロールアップ(開発者向け)
 
-出力先: `docs/log/journal/YYYY-MM.md`
-（該当月ファイルの先頭エントリの直前に追記）
+出力先: `docs/engineering/log/YYYY-MM-01-journal.md`
+(該当月ファイルの先頭エントリの直前に追記)
 
-該当月ファイルが存在しない場合は新規作成する。テンプレート（Storybook には載せない素の Markdown）:
+該当月ファイルが存在しない場合は新規作成する。テンプレート:
 
 ```markdown
+---
+status: frozen
+updated: YYYY-MM-DD
+---
+
 # YYYY年N月 Diary
 
 ---
@@ -98,7 +108,7 @@ CLAUDE.mdからのポインタが常に最新セッションを指すために�
 
 ## ルール
 
-- セッションログには主観を入れない。日記には入れていい
+- セッションログには主観を入れない。月次ロールアップには入れていい
 - セッションログの conventions と learned は特に丁寧に。月末のCLAUDE.md蒸留で最も参照される
-- 日記の「やったこと」はコミット全件列挙ではなく、意味のある単位にグルーピングする
+- 月次ロールアップの「やったこと」はコミット全件列挙ではなく、意味のある単位にグルーピングする
 - 確認不要。ファイル作成 → latest.md コピー → コミットまで一気に実行する

@@ -169,7 +169,7 @@ done
 
 **粒度の基準**: 第三者が見ても「何が変わったか」がわかるレベル
 
-**構造テンプレート**: `docs/operations/releases/template.md` を参照
+**構造テンプレート**: `docs/operations/runbook.md` を参照
 
 **❌ 悪い例（抽象的）**:
 
@@ -259,4 +259,4 @@ gh release edit v${VERSION} --notes-file /tmp/release-notes-v${VERSION}.md
 
 ## 詳細ドキュメント
 
-完全なチェックリスト: `docs/operations/releases/checklist.md`
+完全なチェックリスト: `docs/operations/runbook.md`

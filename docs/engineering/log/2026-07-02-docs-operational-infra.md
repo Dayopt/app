@@ -15,7 +15,7 @@ status: accepted
 
 1. **docs CI（`scripts/docs-guard/` + `.github/workflows/docs-guard.yml`）** — リンク切れ・frontmatter必須・命名規約・append-onlyガードを機械的に検証する。gitleaksによるsecret scanをリポジトリ全体に追加
 2. **儀式のコマンド化（`.claude/commands/`）** — `/decision` `/note` `/session-end` `/gardening` の4コマンドで、散文のルールを読み飛ばさず実行させる
-3. **新しい器**（`operations/external-services.md`、`product/features/`、`business/metrics.md`、`business/legal/`）— 受け皿がなく書く場所に迷っていたコンテンツの置き場を新設
+3. **新しい器**（`operations/external-services.md`、`product/features/`、`business/kpi.md`、`business/legal/`）— 受け皿がなく書く場所に迷っていたコンテンツの置き場を新設
 4. **双方向アンカー** — docs↔コードを `code:` frontmatter・doc pointer コメント・Storybook Welcome ページで相互参照可能にする
 
 理由: ルールを増やすことではなく、①機械に守らせる ②鮮度と昇格のループを回す ③受け皿を作る、の3つを目的とする。

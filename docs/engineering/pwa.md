@@ -1,6 +1,7 @@
 ---
 status: current
-last_verified: 2026-07-02
+last_verified: 2026-07-03
+code: apps/product/src/lib/pwa
 ---
 
 # PWA Architecture

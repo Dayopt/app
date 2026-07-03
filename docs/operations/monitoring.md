@@ -996,13 +996,13 @@ npm install
 
 ## 関連ページ（バンドル）
 
-- [Next.js最適化](../guides/nextjs-optimization.md)
+- [Next.js最適化](../engineering/conventions-frontend.md)
 
 ---
 
 # 第4部: Performance Monitoring 運用
 
-性能予算・SLO・設計方針は [Performance Budget](../architecture/frontend/performance.md) を参照。本セクションは監視・計測の運用のみを扱う。
+性能予算・SLO・設計方針は [Performance Budget](../engineering/infra.md#パフォーマンス監視の原則) を参照。本セクションは監視・計測の運用のみを扱う。
 
 ## 監視ツールの使い分け
 

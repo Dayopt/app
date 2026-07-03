@@ -377,7 +377,7 @@ ORDER BY created_at DESC;
 ## インシデント対応 関連ドキュメント
 
 - **監視・アラート**: [monitoring.md](./monitoring.md)
-- **マイグレーションロールバック**: `docs/guides/migration-rollback.md`
+- **マイグレーションロールバック**: `docs/engineering/infra.md`
 - **ヘルスチェック実装**: `src/app/api/health/route.ts`
 - **Stripe Webhook実装**: `src/app/api/webhooks/stripe/route.ts`
 - **エラーカテゴリ定義**: `src/platform/sentry/integration.ts`
