@@ -9,29 +9,29 @@ export const ROOT = resolve(__dirname, '../..');
 export const DOCS_DIR = resolve(ROOT, 'docs');
 
 // frontmatter (status / last_verified) が必須のストック対象ディレクトリ。
-// notes/ journal/ sessions/ decisions/ archive/ はログ・時点もの・append-only系のため対象外。
+// 各ドメイン直下の log/ はログ・時点もの・append-only系のため対象外。
 export const FRONTMATTER_REQUIRED_DIRS = [
-  'product',
-  'architecture',
-  'guides',
-  'operations',
   'business',
-  'glossary',
-  'projects',
+  'product',
+  'marketing',
+  'engineering',
+  'operations',
+  'company',
 ];
 
-// 書き換え禁止（append-only）対象ディレクトリ。sessions/latest.md のみ例外で上書き可。
+// 書き換え禁止（append-only）対象ディレクトリ。各ドメインの log/latest.md のみ例外で上書き可。
 export const APPEND_ONLY_DIRS = [
-  'docs/log/decisions',
-  'docs/log/notes',
-  'docs/log/journal',
-  'docs/log/sessions',
+  'docs/business/log',
+  'docs/product/log',
+  'docs/marketing/log',
+  'docs/engineering/log',
+  'docs/operations/log',
+  'docs/company/log',
 ];
-export const APPEND_ONLY_EXCLUDE = ['docs/log/sessions/latest.md'];
+export const APPEND_ONLY_EXCLUDE = ['docs/engineering/log/latest.md'];
 
 // リンク切れチェックで「凍結された過去の記録」として warning 扱いにするディレクトリ。
-// APPEND_ONLY_DIRS に加え、archive/ も完了・停止した project の経緯記録であり書き換えない前提。
-export const LINK_CHECK_SOFT_DIRS = [...APPEND_ONLY_DIRS, 'docs/log/archive'];
+export const LINK_CHECK_SOFT_DIRS = [...APPEND_ONLY_DIRS];
 
 // frontmatter 必須チェックから除外するファイル（グロブではなく完全一致 or 前方一致）。
 // secrets.md: サンドボックス権限で編集不可（フォローアップ課題）。

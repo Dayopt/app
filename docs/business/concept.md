@@ -69,7 +69,7 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 
 ## 5. 変えないもの
 
-1. **1 Entry モデル**（[decisions/011](../log/decisions/011-unified-block-model.md)） — 計画と実績を同じ物体に重ねる設計は本物の差別化
+1. **1 Entry モデル**（[decisions/011](../engineering/log/2026-03-05-unified-block-model.md)） — 計画と実績を同じ物体に重ねる設計は本物の差別化
 2. **Todo エンジンを作らない** — サブタスク・優先度・期限・ボード・テーブルは作らない（一度作って捨てた）
 3. **他人と比較しない・gamification をしない**
 4. **$5 価格帯** — 「AI と連携できて、全体感が見えて、カレンダーと紐づく」なら $5 は払う。$10-20 だと微妙。この感覚を維持する
@@ -79,8 +79,8 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 
 - [`experience-design.md`](../product/experience-design.md) — 本コンセプトの画面・操作への翻訳（体験設計）
 - [`v1-definition.md`](../product/v1-definition.md) — v1 完成の定義・未決事項・ドクトリン改定の反映状況
-- [`decisions/010-feature-non-adoption.md`](../log/decisions/010-feature-non-adoption.md) — 非採用機能と条件付き採用（提案型ルーティン・通知）の経緯
-- [decisions/011 統合ブロックモデル](../log/decisions/011-unified-block-model.md) / [decisions/015 時間不変原則](../log/decisions/015-time-immutability-principle.md)
-- [`notes/2026-06-15-competitor-research/`](../log/notes/2026-06-15-competitor-research/README.md) — 競合深掘り（勝ち筋 = より短い儀式・より軽い入力・直接差分）
+- [`decisions/010-feature-non-adoption.md`](../product/log/2026-06-16-feature-non-adoption.md) — 非採用機能と条件付き採用（提案型ルーティン・通知）の経緯
+- [decisions/011 統合ブロックモデル](../engineering/log/2026-03-05-unified-block-model.md) / [decisions/015 時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
+- [競合調査(2026-06-15)](./log/2026-06-15-competitor-research-overview.md) — 競合深掘り（勝ち筋 = より短い儀式・より軽い入力・直接差分）
 - [`pricing.md`](./pricing.md) — 価格戦略
 - [`.claude/rules/copywriting.md`](../../.claude/rules/copywriting.md) / [`glossary/`](../glossary/terms.md) — トーン・用語

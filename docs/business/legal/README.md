@@ -18,7 +18,7 @@
 
 利用規約・プライバシーポリシー等を改定したら、**なぜ改定したか**を `/decision` で記録する（本文の diff は git history が正本、decision には理由だけ書く）。
 
-例: [ADR-008 cookie consent banner](../../log/decisions/007-cookie-consent-banner.md)、[ADR-009 cookie consent required](../../log/decisions/008-cookie-consent-required.md) は過去の cookie 同意まわりの意思決定記録（このディレクトリ新設以前のもの）。
+例: [ADR-008 cookie consent banner](../../operations/log/2026-02-16-cookie-consent-banner.md)、[ADR-009 cookie consent required](../../operations/log/2026-02-18-cookie-consent-required.md) は過去の cookie 同意まわりの意思決定記録（このディレクトリ新設以前のもの）。
 
 ## このディレクトリに書かないこと
 

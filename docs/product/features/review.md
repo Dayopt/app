@@ -20,5 +20,4 @@ code: apps/product/src/features/review
 
 ## 関連する意思決定
 
-- [review-granularity-redesign 完了サマリー](../../log/archive/projects/review-granularity-redesign/summary.md)（done。核となる設計判断の記録）
-- [機能スコープ: やらないことを決める](../../log/decisions/010-feature-non-adoption.md)（Productivity score / streaks を採用しない理由）
+- [機能スコープ: やらないことを決める](../log/2026-06-16-feature-non-adoption.md)（Productivity score / streaks を採用しない理由）

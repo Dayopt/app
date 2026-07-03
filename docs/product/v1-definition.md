@@ -30,7 +30,7 @@ last_verified: 2026-07-03
 
 - **Free / Pro の線引き** — どこまで Free でどこから Pro か（例: API アクセスは Pro）を改めて設計する。[`business/pricing.md`](../business/pricing.md) の全面見直しとセット
 - **ゴースト経由 API 書き込みの詳細** — 直接確定を許す `confirmed` フラグの是非、ゴーストの有効期限、外部カレンダー同期の繰り返しイベントの扱い
-- **予定凍結の「開始直後の猶予」** — 猶予を設けるか、設けるなら時間幅（[decisions/015](../log/decisions/015-time-immutability-principle.md) に反映する）
+- **予定凍結の「開始直後の猶予」** — 猶予を設けるか、設けるなら時間幅（[decisions/015](./log/2026-03-10-time-immutability-principle.md) に反映する）
 - **エネルギーマッピング（クロノタイプ）の扱い** — 今回のコンセプト再設計では対象外として保留中。v1 スコープに含めるかを別途判断する
 
 ## ドクトリン改定の反映状況
@@ -39,8 +39,8 @@ concept.md 策定（2026-07-02）に伴う既存資産の改定状況。
 
 | 対象                                                                                     | 内容                                                                                  | 状態                          |
 | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------- |
-| [`decisions/010`](../log/decisions/010-feature-non-adoption.md)                          | 繰り返し予定 → 提案型ルーティン、通知 → 計画に仕える opt-in に改定                    | ✅ 反映済み                   |
-| [decisions/015](../log/decisions/015-time-immutability-principle.md)                     | 「予定は凍結、記録は訂正可」の二層化                                                  | ✅ 反映済み（猶予幅は未決）   |
+| [`decisions/010`](./log/2026-06-16-feature-non-adoption.md)                              | 繰り返し予定 → 提案型ルーティン、通知 → 計画に仕える opt-in に改定                    | ✅ 反映済み                   |
+| [decisions/015](./log/2026-03-10-time-immutability-principle.md)                         | 「予定は凍結、記録は訂正可」の二層化                                                  | ✅ 反映済み（猶予幅は未決）   |
 | `CLAUDE.md` / [product/features/](./features/entry.md)                                   | ターゲットの楔・タイトル欄廃止・AI/通知の注釈                                         | ✅ 反映済み                   |
 | [`business/pricing.md`](../business/pricing.md)                                          | in-app AI 振り返りの記述を削除、MCP/API 連携に統一                                    | ✅ 反映済み                   |
 | strategy 文書（brand-\*, lp-\*）                                                         | JTBD「計画を守れるようにする」への統一、ヘッドライン確定                              | ✅ 反映済み                   |

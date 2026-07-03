@@ -17,4 +17,4 @@ code: apps/product/src/features/tags
 
 ## 関連する意思決定
 
-- [機能スコープ: やらないことを決める](../../log/decisions/010-feature-non-adoption.md)（ToDo管理・Kanban等を採用しない理由）
+- [機能スコープ: やらないことを決める](../log/2026-06-16-feature-non-adoption.md)（ToDo管理・Kanban等を採用しない理由）

@@ -43,7 +43,7 @@ updateEntry({ id, actual_start, actual_end, fulfillment_score, note });
 
 **二重防御**: UI（disabled 表示）+ ロジックガード（`assertEntryEditable()`）の両方で制御。
 
-詳細: [ADR-015 時間不変原則](../log/decisions/015-time-immutability-principle.md)
+詳細: [ADR-015 時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
 
 ---
 
