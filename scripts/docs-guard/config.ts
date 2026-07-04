@@ -9,24 +9,29 @@ export const ROOT = resolve(__dirname, '../..');
 export const DOCS_DIR = resolve(ROOT, 'docs');
 
 // frontmatter (status / last_verified) が必須のストック対象ディレクトリ。
-// notes/ journal/ sessions/ decisions/ archive/ はログ・時点もの・append-only系のため対象外。
+// 各ドメイン直下の log/ はログ・時点もの・append-only系のため対象外。
 export const FRONTMATTER_REQUIRED_DIRS = [
-  'product',
-  'architecture',
-  'guides',
-  'operations',
   'business',
-  'glossary',
-  'projects',
+  'product',
+  'marketing',
+  'engineering',
+  'operations',
+  'company',
 ];
 
-// 書き換え禁止（append-only）対象ディレクトリ。sessions/latest.md のみ例外で上書き可。
-export const APPEND_ONLY_DIRS = ['docs/decisions', 'docs/notes', 'docs/journal', 'docs/sessions'];
-export const APPEND_ONLY_EXCLUDE = ['docs/sessions/latest.md'];
+// 書き換え禁止（append-only）対象ディレクトリ。各ドメインの log/latest.md のみ例外で上書き可。
+export const APPEND_ONLY_DIRS = [
+  'docs/business/log',
+  'docs/product/log',
+  'docs/marketing/log',
+  'docs/engineering/log',
+  'docs/operations/log',
+  'docs/company/log',
+];
+export const APPEND_ONLY_EXCLUDE = ['docs/engineering/log/latest.md'];
 
 // リンク切れチェックで「凍結された過去の記録」として warning 扱いにするディレクトリ。
-// APPEND_ONLY_DIRS に加え、archive/ も完了・停止した project の経緯記録であり書き換えない前提。
-export const LINK_CHECK_SOFT_DIRS = [...APPEND_ONLY_DIRS, 'docs/archive'];
+export const LINK_CHECK_SOFT_DIRS = [...APPEND_ONLY_DIRS];
 
 // frontmatter 必須チェックから除外するファイル（グロブではなく完全一致 or 前方一致）。
 // secrets.md: サンドボックス権限で編集不可（フォローアップ課題）。
@@ -35,13 +40,17 @@ export const LINK_CHECK_SOFT_DIRS = [...APPEND_ONLY_DIRS, 'docs/archive'];
 // frontmatterを持たせると `pnpm rls:snapshot:check`（Integration Tests）がdriftとして検知する。
 export const FRONTMATTER_EXCLUDE = [
   'docs/operations/secrets.md',
-  'docs/architecture/data/db/rls-snapshot.md',
+  'docs/engineering/data/db/rls-snapshot.md',
 ];
 export const FRONTMATTER_EXCLUDE_PATTERNS = [/^docs\/operations\/releases\/notes-v[\d.]+\.md$/];
 
 // 命名規約チェックの追加許容パターン（kebab-case の対象外だが正当なもの）。
 // リリースノートの semver ファイル名（notes-v0.13.0.md 等）。
-export const NAMING_ALLOW_PATTERNS = [/^notes-v\d+\.\d+\.\d+\.md$/];
+// docs/operations/log/YYYY-MM-DD-release-vX.Y.Z.md: リリースノートスナップショット（semver のドットを含む）。
+export const NAMING_ALLOW_PATTERNS = [
+  /^notes-v\d+\.\d+\.\d+\.md$/,
+  /^\d{4}-\d{2}-\d{2}-release-v\d+\.\d+\.\d+\.md$/,
+];
 
 export const colors = {
   reset: '\x1b[0m',

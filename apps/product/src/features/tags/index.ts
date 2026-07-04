@@ -1,7 +1,7 @@
 /**
  * Tags Feature - Public API
  *
- * docs: docs/product/features/tags.md
+ * docs: docs/product/specs/tags.md
  *
  * タグ機能の統一的なエントリーポイント。
  * 外部からのインポートはこのファイル経由で行う。

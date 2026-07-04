@@ -1,8 +1,8 @@
 /**
  * Check: 追記専用ガード（最重要）
  *
- * docs/decisions, docs/notes, docs/journal, docs/sessions（sessions/latest.md を除く）は
- * 「ログは書き換えない、訂正は supersede」の規約を持つ append-only 領域。
+ * 各ドメイン直下の log/ は「ログは書き換えない、訂正は supersede」の規約を持つ
+ * append-only 領域。
  * base ref との差分で "M"（modified）扱いのファイルがあれば原則 fail する。
  *
  * 例外: 変更内容が frontmatter への `superseded_by:` 行追加、または

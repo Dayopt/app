@@ -1,0 +1,67 @@
+# ADR-020: entries の論理削除（soft delete）
+
+> accepted（2026-03-18）
+
+---
+
+## コンテキスト
+
+`entries` の削除を物理 DELETE で行うと、以下が成立しなくなる:
+
+- **取り消し（undo）**: 「削除しました。元に戻す」という可逆操作を提供できない（物理削除後は復元元が無い）
+- **時間重なり制約との両立**: [ADR-018](../../product/log/2026-05-13-time-overlap-prohibition.md) の EXCLUDE 制約は「削除された行を重なり判定から除外する」必要がある。物理削除なら除外は自明だが、削除を取り消せる設計と両立しない
+
+時間記録としての信頼性（誤削除からの復帰）と、可逆操作の UX を同時に満たす削除モデルが必要だった。
+
+---
+
+## 決定
+
+`entries` に `deleted_at TIMESTAMPTZ` を持たせ、削除は**論理削除（soft delete）**で行う。
+
+- SELECT RLS ポリシーが `deleted_at IS NULL` で削除済み行を自動フィルタする
+- すべての制約・集計・effective actual（[ADR-019](../../product/log/2026-06-10-auto-record-model.md)）・EXCLUDE 制約（[ADR-018](../../product/log/2026-05-13-time-overlap-prohibition.md)）は `deleted_at IS NULL` を前提に書く
+- 部分インデックス `idx_entries_deleted_at WHERE deleted_at IS NOT NULL` でクリーンアップを高速化
+
+実装: `supabase/migrations/20260318150000_add_entries_soft_delete.sql`
+
+---
+
+## 詳細
+
+### SECURITY DEFINER RPC が必須な理由
+
+PostgreSQL は UPDATE 時に新しい行が SELECT ポリシーも満たすことを要求する。SELECT ポリシーの `deleted_at IS NULL` が soft-delete 後の行を不可視にするため、直接 UPDATE すると `new row violates row-level security policy` で失敗する。
+
+そのため削除・復元は `SECURITY DEFINER` の RPC（`soft_delete_entry` / `restore_entry`）で RLS をバイパスし、関数内で `user_id` チェックを実施して安全性を担保する。
+
+実装: `supabase/migrations/20260323000001_add_soft_delete_rpc.sql`
+
+### 不変条件の前提化
+
+`deleted_at IS NULL` は entries に関わる全レイヤーの暗黙の前提になっている。EXCLUDE 制約の WHERE 句、`entries_effective` view、統計 RPC のフィルタはすべてこの条件を含む。**entries を読み書きする新規コードは `deleted_at IS NULL` フィルタを忘れてはならない**（RLS が SELECT を守るが、SECURITY DEFINER RPC 内では自前で付ける必要がある）。
+
+---
+
+## 結果
+
+### メリット
+
+- 「削除→元に戻す」の可逆操作を提供できる
+- 誤削除からの復帰が可能で、時間記録の信頼性が上がる
+- 削除済み行を残しつつ EXCLUDE 制約・集計から除外できる
+
+### トレードオフ
+
+- 全クエリ・制約・RPC が `deleted_at IS NULL` を前提にする必要があり、付け忘れると削除済み行が漏れる
+- 直接 UPDATE が RLS で弾かれるため、削除・復元に SECURITY DEFINER RPC を経由する迂回が必要
+- 物理削除しない分、行が蓄積する（部分インデックス + 将来のクリーンアップ前提で許容）
+
+---
+
+## 関連
+
+- [ADR-018](../../product/log/2026-05-13-time-overlap-prohibition.md) — 時間重なり全面禁止（EXCLUDE 制約が `deleted_at IS NULL` を前提）
+- [ADR-019](../../product/log/2026-06-10-auto-record-model.md) — 自動記録モデル（`entries_effective` view が `deleted_at IS NULL` を前提）
+- `supabase/migrations/20260318150000_add_entries_soft_delete.sql` — deleted_at 導入
+- `supabase/migrations/20260323000001_add_soft_delete_rpc.sql` — soft_delete / restore RPC

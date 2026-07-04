@@ -11,7 +11,7 @@
  * - useCalendarCrudHandlers: Entry CRUD・キーボードショートカット
  * - useCalendarNavHandlers: ナビゲーション・設定永続化
  *
- * @see /docs/architecture/grand-design.md
+ * @see docs/product/specs/calendar.md
  */
 
 import React, { useCallback, useEffect, useMemo } from 'react';

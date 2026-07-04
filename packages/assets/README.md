@@ -1,6 +1,6 @@
 # @dayopt/assets
 
-> 責務境界の全体像: [docs/architecture/overview.md](../../docs/architecture/overview.md)
+> 責務境界の全体像: [docs/engineering/architecture.md](../../docs/engineering/architecture.md)
 
 複数 app で共有する**静的素材の原本（source of truth）**を置く package。
 ブランド・配信素材（logo / app icon / favicon / PWA icon / OG・social image）と、

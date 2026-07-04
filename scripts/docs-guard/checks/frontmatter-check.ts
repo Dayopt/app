@@ -1,9 +1,9 @@
 /**
  * Check: frontmatter必須
  *
- * ストック対象ディレクトリ（product/ architecture/ guides/ operations/ business/
- * glossary/ projects/）配下の .md に status / last_verified frontmatter があること。
- * README系ファイルは除外する。
+ * ストック対象ディレクトリ（business/ product/ marketing/ engineering/ operations/
+ * company/）配下の .md に status / last_verified frontmatter があること。
+ * 各ドメイン直下の log/（append-only）と README系ファイルは除外する。
  */
 
 import { glob } from 'glob';
@@ -27,6 +27,11 @@ function isReadme(file: string): boolean {
   return /^readme\.md$/i.test(basename(file)) || /^index\.md$/i.test(basename(file));
 }
 
+function isLog(file: string): boolean {
+  const rel = relative(ROOT, file).split('/');
+  return rel.includes('log');
+}
+
 function isExcluded(file: string): boolean {
   const rel = relative(ROOT, file);
   if (FRONTMATTER_EXCLUDE.includes(rel)) return true;
@@ -40,7 +45,7 @@ export async function runFrontmatterCheck(): Promise<FrontmatterViolation[]> {
     const files = await glob('**/*.md', { cwd: `${DOCS_DIR}/${dir}`, absolute: true });
 
     for (const file of files) {
-      if (isReadme(file) || isExcluded(file)) continue;
+      if (isReadme(file) || isLog(file) || isExcluded(file)) continue;
 
       const content = readFileSync(file, 'utf-8');
       if (!content.startsWith('---\n')) {

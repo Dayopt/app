@@ -25,6 +25,7 @@ pnpm 1password:check         # 1Password schema 確認（値は表示しない�
 pnpm storybook               # Storybook
 
 # 検証（コード変更後は必須）
+pnpm check                  # CI Stage 1 + unit test 相当のローカル一括チェック（build/e2e は含めない）
 pnpm typecheck
 pnpm lint
 pnpm lint:boundaries
@@ -89,10 +90,10 @@ pnpm docs:check               # リンク切れ/frontmatter/命名/append-only �
 
 `docs/README.md` の地図・決定木・書き方の約束に従う。とくに以下は都度・自発的に実施する:
 
-- **フィードバックの記録** — ユーザーの声（感想・要望・不具合報告）が届いたら、その日のうちに `docs/notes/YYYY-MM-DD-feedback-<slug>.md` に原文のまま記録する（`/note` コマンド参照）
-- **障害の記録** — 障害・トラブルが起きたら `docs/notes/YYYY-MM-DD-incident-<slug>.md` に記録する。対応手順そのものの更新は `docs/operations/` 側に別途反映する
-- **機能仕様の反映** — プロダクトの振る舞いを変えたら `docs/product/features/` の該当ファイルを更新する
-- **月次ガーデニング** — `docs/journal/` に当月のファイルが存在しない状態でセッションが始まったら、`/gardening` の実施をユーザーに提案する
+- **フィードバックの記録** — ユーザーの声（感想・要望・不具合報告）が届いたら、その日のうちに `docs/product/log/YYYY-MM-DD-feedback-<slug>.md` に原文のまま記録する（`/note` コマンド参照）
+- **障害の記録** — 障害・トラブルが起きたら `docs/operations/log/YYYY-MM-DD-incident-<slug>.md` に記録する。対応手順そのものの更新は `docs/operations/` 側に別途反映する
+- **機能仕様の反映** — プロダクトの振る舞いを変えたら `docs/product/specs/` の該当ファイルを更新する
+- **月次ガーデニング** — `docs/engineering/log/` に当月のロールアップファイル（`YYYY-MM-01-journal.md`）が存在しない状態でセッションが始まったら、`/gardening` の実施をユーザーに提案する
 
 ## コマンド一覧（.claude/commands/）
 
@@ -100,10 +101,10 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 
 | コマンド        | 内容                                                                     |
 | --------------- | ---------------------------------------------------------------------- |
-| `/decision`     | `docs/decisions/` に最大連番+1で意思決定ログを新規作成                  |
-| `/note`         | `docs/notes/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応） |
-| `/session-end`  | 当日の作業を `docs/sessions/YYYY-MM-DD.md` に記録し `latest.md` を更新   |
-| `/gardening`    | 月次: sessions→journal蒸留、ストック鮮度triage、notes昇格、projects archive回収、スモークテスト |
+| `/decision`     | 各ドメインの `log/` に `YYYY-MM-DD-slug.md` で意思決定ログを新規作成         |
+| `/note`         | 各ドメインの `log/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応） |
+| `/session-end`  | 当日の作業を `docs/engineering/log/YYYY-MM-DD-session.md` に記録し `latest.md` を更新 |
+| `/gardening`    | 月次: セッションログ→月次ロールアップ蒸留、ストック鮮度triage、notes昇格、スモークテスト |
 
 ## Rule Map
 
@@ -127,7 +128,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 
 Project skills は `.agents/skills/` を参照する。該当する作業では `SKILL.md` を先に読む。
 
-error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / source-command-plan-review
+error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / source-command-plan-review / audit-ai-config
 
 ## Workflow
 
