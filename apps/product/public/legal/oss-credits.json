@@ -2041,6 +2041,13 @@
     "publisher": "Guy Bedford"
   },
   {
+    "name": "es-module-lexer",
+    "version": "2.3.0",
+    "license": "MIT",
+    "repository": "https://github.com/guybedford/es-module-lexer.git",
+    "publisher": "Guy Bedford"
+  },
+  {
     "name": "es-object-atoms",
     "version": "1.1.1",
     "license": "MIT",
@@ -2684,7 +2691,7 @@
   },
   {
     "name": "nanoid",
-    "version": "3.3.12",
+    "version": "3.3.15",
     "license": "MIT",
     "repository": "ai/nanoid",
     "publisher": "Andrey Sitnik <andrey@sitnik.ru>"
@@ -2920,7 +2927,7 @@
   },
   {
     "name": "postcss",
-    "version": "8.5.15",
+    "version": "8.5.16",
     "license": "MIT",
     "repository": "postcss/postcss",
     "publisher": "Andrey Sitnik <andrey@sitnik.es>"
