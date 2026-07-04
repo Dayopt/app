@@ -325,7 +325,13 @@ function checkGeneratedFiles(artifacts: LicenseArtifacts): void {
       return true;
     }
 
-    return readFileSync(filePath, 'utf-8') !== artifacts.files[fileName];
+    const currentContent = normalizeGeneratedFileForCheck(
+      fileName,
+      readFileSync(filePath, 'utf-8'),
+    );
+    const expectedContent = normalizeGeneratedFileForCheck(fileName, artifacts.files[fileName]);
+
+    return currentContent !== expectedContent;
   });
 
   if (staleFiles.length === 0) {
@@ -338,6 +344,55 @@ function checkGeneratedFiles(artifacts: LicenseArtifacts): void {
   });
   console.error('\nRun `pnpm generate-licenses` and commit the updated files.');
   process.exit(1);
+}
+
+export function normalizeGeneratedFileForCheck(
+  fileName: GeneratedFileName,
+  content: string,
+): string {
+  if (fileName !== 'oss-credits.json') {
+    return content;
+  }
+
+  const parsed: unknown = JSON.parse(content);
+  if (!Array.isArray(parsed)) {
+    return content;
+  }
+
+  const credits = parsed.filter((item) => {
+    if (!isCreditInfo(item)) {
+      return true;
+    }
+
+    return !isPlatformSpecificCredit(item);
+  });
+
+  return `${JSON.stringify(credits, null, 2)}\n`;
+}
+
+function isCreditInfo(value: unknown): value is CreditInfo {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.name === 'string' &&
+    typeof value.version === 'string' &&
+    typeof value.license === 'string'
+  );
+}
+
+function isPlatformSpecificCredit(credit: Pick<CreditInfo, 'name'>): boolean {
+  return (
+    credit.name.startsWith('@esbuild/') ||
+    credit.name.startsWith('@img/sharp-') ||
+    credit.name.startsWith('@next/swc-') ||
+    credit.name.startsWith('@parcel/watcher-') ||
+    credit.name.startsWith('@rollup/rollup-') ||
+    credit.name.startsWith('@sentry/cli-') ||
+    credit.name.startsWith('@swc/core-') ||
+    credit.name === 'fsevents'
+  );
 }
 
 function ensureOutputDir(outputDir: string): void {
