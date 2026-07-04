@@ -401,6 +401,70 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       expect(error).toBeNull();
       expect(data?.deleted_at).toBeNull();
     });
+
+    it('service_role は検証済みサーバー経路として soft-delete / restore RPC を実行できる', async () => {
+      const { error: deleteError } = await adminSupabase.rpc('soft_delete_entry', {
+        p_entry_id: TEST_USER_B_ENTRY_ID,
+        p_user_id: TEST_USER_B_ID,
+      });
+      expect(deleteError).toBeNull();
+
+      const { data: deletedEntry, error: deletedReadError } = await adminSupabase
+        .from('entries')
+        .select('deleted_at')
+        .eq('id', TEST_USER_B_ENTRY_ID)
+        .single();
+      expect(deletedReadError).toBeNull();
+      expect(deletedEntry?.deleted_at).not.toBeNull();
+
+      const { error: restoreError } = await adminSupabase.rpc('restore_entry', {
+        p_entry_id: TEST_USER_B_ENTRY_ID,
+        p_user_id: TEST_USER_B_ID,
+      });
+      expect(restoreError).toBeNull();
+
+      const { data: restoredEntry, error: restoredReadError } = await adminSupabase
+        .from('entries')
+        .select('deleted_at')
+        .eq('id', TEST_USER_B_ENTRY_ID)
+        .single();
+      expect(restoredReadError).toBeNull();
+      expect(restoredEntry?.deleted_at).toBeNull();
+    });
+
+    it('service_role は検証済みサーバー経路として bulk delete / personalization RPC を実行できる', async () => {
+      const { data: affected, error: bulkDeleteError } = await adminSupabase.rpc(
+        'bulk_soft_delete_entries',
+        {
+          p_entry_ids: [TEST_USER_B_ENTRY_ID],
+          p_user_id: TEST_USER_B_ID,
+        },
+      );
+      expect(bulkDeleteError).toBeNull();
+      expect(affected).toBe(1);
+
+      const { error: restoreError } = await adminSupabase.rpc('restore_entry', {
+        p_entry_id: TEST_USER_B_ENTRY_ID,
+        p_user_id: TEST_USER_B_ID,
+      });
+      expect(restoreError).toBeNull();
+
+      const { error: personalizationError } = await adminSupabase.rpc('update_personalization', {
+        p_path: 'rlsServiceRole',
+        p_user_id: TEST_USER_B_ID,
+        p_value: { allowed: true },
+      });
+      expect(personalizationError).toBeNull();
+
+      const { data: settings, error: settingsError } = await adminSupabase
+        .from('user_settings')
+        .select('personalization')
+        .eq('user_id', TEST_USER_B_ID)
+        .single();
+
+      expect(settingsError).toBeNull();
+      expect(JSON.stringify(settings?.personalization ?? {})).toContain('rlsServiceRole');
+    });
   });
 
   it('I-16 snapshotがsuiteの全対象テーブルを含む', () => {
