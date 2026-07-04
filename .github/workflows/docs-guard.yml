@@ -58,6 +58,34 @@ jobs:
         env:
           DOCS_GUARD_BASE_REF: origin/${{ github.event.pull_request.base.ref || 'main' }}
 
+  docs-reminder:
+    name: "\U0001F4DD docs reminder"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: src 変更に対応する docs 更新の有無を確認
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            BASE="HEAD~1"
+            git cat-file -e "$BASE" 2>/dev/null || BASE="HEAD"
+          fi
+
+          changed_files="$(git diff --name-only "$BASE"...HEAD)"
+          echo "$changed_files"
+
+          src_changed="$(printf '%s\n' "$changed_files" | grep -E '^apps/product/src/' || true)"
+          docs_changed="$(printf '%s\n' "$changed_files" | grep -E '^docs/' || true)"
+
+          if [ -n "$src_changed" ] && [ -z "$docs_changed" ]; then
+            echo "::warning::apps/product/src/ に変更がありますが docs/ の更新がありません。仕様・運用・アーキテクチャへの影響がないか確認してください。"
+          fi
+
   # secret scan はリポジトリ全体・全 push/PR が対象（docs 以外の変更でも走る）
   # org の Actions 許可リストが actions/* github/* zaproxy/* codecov/* softprops/* supabase/*
   # oven-sh/* に限定されており gitleaks/gitleaks-action は使えないため、バイナリを直接取得して実行する。

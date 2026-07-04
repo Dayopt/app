@@ -54,13 +54,7 @@ jobs:
 
           (
             set -e
-            pnpm lint:boundaries
-            pnpm exec prettier --check "apps/product/src/**/*.{ts,tsx,js,jsx,json,md}"
-            pnpm exec prettier --check "package.json" "packages/*/package.json" "apps/*/package.json" "docs/**/*.md"
-            pnpm license:check
-            pnpm license:credits:check
-            pnpm lint:i18n
-            pnpm storybook:taxonomy
+            pnpm check:static
           ) >/tmp/lane-rest.log 2>&1 &
           pid_rest=$!
 

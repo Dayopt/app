@@ -58,9 +58,8 @@ function isSoft(file: string): boolean {
 }
 
 /**
- * append-only ディレクトリ（log/decisions/notes/journal/sessions）と log/archive/ 内のリンク切れは
- * 「凍結された過去の記録」であり、後から書き換えて直すことができない（Phase 5-4 の
- * append-only guard と矛盾する、あるいは archive/ の経緯記録としての性質と矛盾する）。
+ * append-only ディレクトリ（各ドメインの log/）内のリンク切れは「凍結された過去の記録」であり、
+ * 後から書き換えて直すことができない（append-only guard と矛盾する）。
  * そのため warning としてのみ報告し、CI の exit code には影響させない。
  */
 export function reportLinkCheck(violations: LinkViolation[]): boolean {

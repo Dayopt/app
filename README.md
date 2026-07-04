@@ -1,5 +1,9 @@
 # Dayopt
 
+[![CI](https://github.com/Dayopt/dayopt/actions/workflows/ci.yml/badge.svg)](https://github.com/Dayopt/dayopt/actions/workflows/ci.yml)
+[![Docs Guard](https://github.com/Dayopt/dayopt/actions/workflows/docs-guard.yml/badge.svg)](https://github.com/Dayopt/dayopt/actions/workflows/docs-guard.yml)
+[![Integration Tests](https://github.com/Dayopt/dayopt/actions/workflows/integration.yml/badge.svg)](https://github.com/Dayopt/dayopt/actions/workflows/integration.yml)
+
 Dayopt monorepo。現在のプロダクト本体は `apps/product`、Storybook は `apps/storybook` にあります。
 
 ## 🚀 クイックスタート

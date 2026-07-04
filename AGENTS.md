@@ -25,6 +25,7 @@ pnpm 1password:check         # 1Password schema 確認（値は表示しない�
 pnpm storybook               # Storybook
 
 # 検証（コード変更後は必須）
+pnpm check                  # CI Stage 1 + unit test 相当のローカル一括チェック（build/e2e は含めない）
 pnpm typecheck
 pnpm lint
 pnpm lint:boundaries
@@ -127,7 +128,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 
 Project skills は `.agents/skills/` を参照する。該当する作業では `SKILL.md` を先に読む。
 
-error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / source-command-plan-review
+error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / source-command-plan-review / audit-ai-config
 
 ## Workflow
 
