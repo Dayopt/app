@@ -10,6 +10,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
 
+import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import type { Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
@@ -52,6 +53,19 @@ export class BillingServiceError extends ServiceError {
     super(code, message);
     this.name = 'BillingServiceError';
   }
+}
+
+function getConfiguredProPriceId(): string {
+  const priceId = env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID?.trim();
+
+  if (!priceId?.startsWith('price_')) {
+    throw new BillingServiceError(
+      'STRIPE_PRICE_NOT_CONFIGURED',
+      'Stripe Pro price is not configured',
+    );
+  }
+
+  return priceId;
 }
 
 // ===== Service =====
@@ -128,9 +142,9 @@ export async function createCheckoutSession(
   supabase: SupabaseClient<Database>,
   userId: string,
   email: string,
-  priceId: string,
 ): Promise<string> {
   const stripe = requireStripe();
+  const priceId = getConfiguredProPriceId();
   const customerId = await getOrCreateCustomer(stripe, supabase, userId, email);
 
   // 過去にサブスクリプション履歴がある場合はトライアルを付与しない

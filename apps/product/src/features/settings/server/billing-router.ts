@@ -5,7 +5,6 @@
 
 import * as Sentry from '@sentry/nextjs';
 import { TRPCError } from '@trpc/server';
-import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
 import { captureBusinessEvent } from '@/lib/sentry';
@@ -55,12 +54,7 @@ export const billingRouter = createTRPCRouter({
    */
   createCheckoutSession: protectedProcedure
     .meta({ description: 'Stripe Checkoutセッション作成' })
-    .input(
-      z.object({
-        priceId: z.string().startsWith('price_'),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx }) => {
       try {
         // ユーザーのメールを取得
         const {
@@ -90,14 +84,9 @@ export const billingRouter = createTRPCRouter({
           });
         }
 
-        const url = await createCheckoutSession(
-          ctx.supabase,
-          ctx.userId,
-          user.email,
-          input.priceId,
-        );
+        const url = await createCheckoutSession(ctx.supabase, ctx.userId, user.email);
 
-        captureBusinessEvent('billing.checkout_started', { priceId: input.priceId });
+        captureBusinessEvent('billing.checkout_started', { plan: 'pro' });
         return { url };
       } catch (error) {
         handleServiceError(error);
