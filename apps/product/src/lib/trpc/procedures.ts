@@ -20,7 +20,7 @@ import { logger } from '@/lib/logger';
 // 循環依存防止: barrel `@/lib/mcp` は trpc-bridge を再 export し、それが appRouter →
 // feature router → procedures.ts と辿るため、ここでは auth.ts を直 import する。
 import { extractBearerToken, verifyAccessToken } from '@/lib/mcp/auth';
-import { OAuthServerError } from '@/lib/oauth-server';
+import { OAuthServerError, type OAuthClientId, type SupportedScope } from '@/lib/oauth-server';
 import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
 import { AuthMode, createServiceRoleClient, detectAuthMode } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
@@ -59,6 +59,8 @@ export interface TrpcResponseLike {
   end?: (...args: unknown[]) => void;
 }
 
+type MfaAssuranceLevel = 'aal1' | 'aal2';
+
 /** tRPCプロシージャのコンテキスト型 */
 export interface Context {
   req: TrpcRequestLike;
@@ -70,6 +72,17 @@ export interface Context {
   authMode: AuthMode;
   /** OAuth 2.1トークン（oauth modeの場合のみ） */
   accessToken?: string | undefined;
+  /** OAuth 2.1 client_id（oauth modeの場合のみ） */
+  oauthClientId?: OAuthClientId | undefined;
+  /** 検証済み OAuth scopes（oauth modeの場合のみ） */
+  oauthScopes?: SupportedScope[] | undefined;
+  /** Supabase Auth MFA assurance level（session modeの場合のみ） */
+  mfaAssurance?:
+    | {
+        currentLevel: MfaAssuranceLevel | null;
+        nextLevel: MfaAssuranceLevel | null;
+      }
+    | undefined;
   /** JWTカスタムクレームから取得したサブスクリプション状態（custom_access_token hook） */
   subscriptionStatus?: string | undefined;
 }
@@ -95,6 +108,9 @@ async function createTRPCContext(opts: {
   let userId: string | undefined;
   let sessionId: string | undefined;
   let accessToken: string | undefined;
+  let oauthClientId: OAuthClientId | undefined;
+  let oauthScopes: SupportedScope[] | undefined;
+  let mfaAssurance: Context['mfaAssurance'];
   let supabase: SupabaseClient<Database>;
 
   // 1. OAuth 2.1トークン認証（MCP用） — Dayopt 発行の opaque token を oauth_tokens 検証
@@ -107,6 +123,8 @@ async function createTRPCContext(opts: {
 
       userId = verified.userId;
       accessToken = token;
+      oauthClientId = verified.clientId;
+      oauthScopes = verified.scopes;
       // Opaque token は JWT ではないため subscription_status は proProcedure 側で
       // 必ず DB lookup する (Decision 1)。supabase は service-role client。
       supabase = createServiceRoleClient();
@@ -177,6 +195,11 @@ async function createTRPCContext(opts: {
           data: { session },
         } = await supabase.auth.getSession();
         sessionId = session?.access_token;
+        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        mfaAssurance = {
+          currentLevel: normalizeMfaAssuranceLevel(aalData?.currentLevel),
+          nextLevel: normalizeMfaAssuranceLevel(aalData?.nextLevel),
+        };
       }
     } catch {
       // 認証エラーは無視（ゲストユーザーとして扱う）
@@ -210,6 +233,9 @@ async function createTRPCContext(opts: {
     userId,
     sessionId,
     accessToken,
+    oauthClientId,
+    oauthScopes,
+    mfaAssurance,
     supabase,
     authMode,
     subscriptionStatus,
@@ -273,6 +299,10 @@ const USER_RATE_LIMIT = 100;
 const USER_RATE_WINDOW_MS = 60 * 1000;
 const userRequestLog = new Map<string, number[]>();
 
+const OAUTH_TRPC_SCOPE_REQUIREMENTS: Partial<Record<string, SupportedScope>> = {
+  'entries.list': 'read:entries',
+};
+
 function isUserRateLimitedInMemory(userId: string): boolean {
   const now = Date.now();
   const timestamps = userRequestLog.get(userId) ?? [];
@@ -312,12 +342,35 @@ async function isUserRateLimited(userId: string): Promise<boolean> {
  */
 export const protectedProcedure = t.procedure
   .meta({ auth: 'protected' })
-  .use(async ({ ctx, next }) => {
+  .use(async ({ ctx, next, path }) => {
     if (!ctx.userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'Authentication required',
         cause: new ServiceError('INVALID_TOKEN', 'Authentication required'),
+      });
+    }
+
+    if (ctx.authMode === 'oauth') {
+      const requiredScope = OAUTH_TRPC_SCOPE_REQUIREMENTS[path];
+      if (!requiredScope || !ctx.oauthScopes?.includes(requiredScope)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'OAuth token scope does not allow this procedure',
+          cause: new ServiceError('FORBIDDEN', 'OAuth scope denied'),
+        });
+      }
+    }
+
+    if (
+      ctx.authMode === 'session' &&
+      ctx.mfaAssurance?.currentLevel === 'aal1' &&
+      ctx.mfaAssurance.nextLevel === 'aal2'
+    ) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'MFA verification required',
+        cause: new ServiceError('FORBIDDEN', 'MFA AAL2 required'),
       });
     }
 
@@ -448,4 +501,8 @@ function parseCookieHeader(cookieHeader: string | null): Record<string, string> 
   }
 
   return cookies;
+}
+
+function normalizeMfaAssuranceLevel(level: unknown): MfaAssuranceLevel | null {
+  return level === 'aal1' || level === 'aal2' ? level : null;
 }

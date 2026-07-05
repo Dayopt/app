@@ -15,6 +15,12 @@ import { createCallerFactory, createTRPCRouter, protectedProcedure } from '../..
 // protectedProcedure の認証ガードテスト用ルーター
 const authTestRouter = createTRPCRouter({
   whoami: protectedProcedure.query(({ ctx }) => ({ userId: ctx.userId })),
+  entries: createTRPCRouter({
+    list: protectedProcedure.query(() => 'entries'),
+  }),
+  userSettings: createTRPCRouter({
+    update: protectedProcedure.mutation(() => 'updated'),
+  }),
 });
 
 const createCaller = createCallerFactory(authTestRouter);
@@ -49,6 +55,56 @@ describe('トークン期限切れ・セッション検証', () => {
 
       const result = await caller.whoami();
       expect(result.userId).toBe('user-1');
+    });
+
+    it('MFA登録済みAAL1セッションはFORBIDDEN', async () => {
+      const ctx = createMockContext({
+        userId: 'user-1',
+        mfaAssurance: { currentLevel: 'aal1', nextLevel: 'aal2' },
+      });
+      const caller = createCaller(ctx as never);
+
+      await expect(caller.whoami()).rejects.toThrow(expect.objectContaining({ code: 'FORBIDDEN' }));
+    });
+
+    it('AAL2セッションは通過する', async () => {
+      const ctx = createMockContext({
+        userId: 'user-1',
+        mfaAssurance: { currentLevel: 'aal2', nextLevel: 'aal2' },
+      });
+      const caller = createCaller(ctx as never);
+
+      const result = await caller.whoami();
+      expect(result.userId).toBe('user-1');
+    });
+
+    it('OAuth read:entries token は明示許可された entries.list だけ通過する', async () => {
+      const ctx = createMockContext({
+        userId: 'user-1',
+        authMode: 'oauth',
+        oauthClientId: 'claude-ai',
+        oauthScopes: ['read:entries'],
+      });
+      const caller = createCaller(ctx as never);
+
+      await expect(caller.entries.list()).resolves.toBe('entries');
+      await expect(caller.userSettings.update()).rejects.toThrow(
+        expect.objectContaining({ code: 'FORBIDDEN' }),
+      );
+    });
+
+    it('OAuth token はscopeなしでentries.listを通過できない', async () => {
+      const ctx = createMockContext({
+        userId: 'user-1',
+        authMode: 'oauth',
+        oauthClientId: 'claude-ai',
+        oauthScopes: ['read:tags'],
+      });
+      const caller = createCaller(ctx as never);
+
+      await expect(caller.entries.list()).rejects.toThrow(
+        expect.objectContaining({ code: 'FORBIDDEN' }),
+      );
     });
   });
 

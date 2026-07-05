@@ -12,7 +12,17 @@ Supabase Auth ベースの認証機能。
 
 - Supabase Auth によるセッション管理（メール/パスワード、MFA検証フローを含む）
 - `protectedProcedure` で保護された tRPC procedure が `ctx.userId` でデータアクセスを制限する
+- MFA登録済みで session assurance level が `aal1` のブラウザセッションは、画面遷移だけでなく tRPC API 側でも protected procedure を拒否する
 - RLS（Row Level Security）によるDBレベルでの認可を併用する
+
+## tRPC API auth policy
+
+`/api/trpc` は middleware/proxy を通らないため、API gate 自体で認証状態を再評価する。
+
+- Session cookie mode: Supabase Auth の `getUser()` でユーザーを検証し、MFA登録済み `aal1 -> aal2` の状態なら `FORBIDDEN` を返す
+- OAuth bearer mode: token を `oauth_tokens` で検証し、`client_id` と `scopes` を tRPC context に保持する
+- OAuth bearer mode の汎用 tRPC 呼び出しは、procedure path ごとの allowlist と scope が一致した場合だけ許可する
+- Phase 1 で OAuth bearer mode から許可する tRPC procedure は `entries.list` + `read:entries` のみ
 
 ## OAuth / MCP redirect URI policy
 

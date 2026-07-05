@@ -31,6 +31,8 @@ export function createMcpTrpcCaller(input: McpTrpcContextInput) {
     req: { headers: {}, cookies: {} },
     res: {},
     userId: input.userId,
+    oauthClientId: input.clientId,
+    oauthScopes: input.scopes,
     supabase,
     authMode: 'oauth',
   });
