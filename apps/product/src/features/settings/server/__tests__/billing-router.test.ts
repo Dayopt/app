@@ -6,6 +6,12 @@ import { createCallerFactory } from '@/lib/trpc/procedures';
 
 import { billingRouter } from '../billing-router';
 
+const serviceRoleSupabaseMock = vi.hoisted(() => ({ from: vi.fn() }));
+
+vi.mock('@/lib/supabase/oauth', () => ({
+  createServiceRoleClient: vi.fn(() => serviceRoleSupabaseMock),
+}));
+
 // billing-service モック
 vi.mock('../billing-service', () => ({
   getBillingInfo: vi.fn(),
@@ -146,7 +152,7 @@ describe('billing-router', () => {
       );
     });
 
-    it('caller supplied priceId を service に渡さない', async () => {
+    it('caller supplied priceId を service に渡さずservice role経路でcheckoutを作成する', async () => {
       vi.mocked(billingServiceMock.createCheckoutSession).mockResolvedValue(
         'https://checkout.stripe.com/test',
       );
@@ -163,7 +169,7 @@ describe('billing-router', () => {
 
       expect(result?.url).toBe('https://checkout.stripe.com/test');
       expect(billingServiceMock.createCheckoutSession).toHaveBeenCalledWith(
-        ctx.supabase,
+        serviceRoleSupabaseMock,
         'user-1',
         'test@example.com',
       );
