@@ -1,21 +1,29 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
-import { BillingServiceError, getBillingInfo, syncSubscriptionStatus } from '../billing-service';
+import {
+  BillingServiceError,
+  createCheckoutSession,
+  getBillingInfo,
+  syncSubscriptionStatus,
+} from '../billing-service';
+
+const stripeMock = vi.hoisted(() => ({
+  customers: {
+    create: vi.fn(),
+    retrieve: vi.fn(),
+  },
+  checkout: { sessions: { create: vi.fn() } },
+  subscriptions: { list: vi.fn() },
+  billingPortal: { sessions: { create: vi.fn() } },
+  paymentMethods: { retrieve: vi.fn() },
+  invoices: { list: vi.fn() },
+}));
 
 // Stripe SDK モック
 vi.mock('@/lib/stripe/client', () => ({
-  requireStripe: vi.fn(() => ({
-    customers: {
-      create: vi.fn(),
-      retrieve: vi.fn(),
-    },
-    checkout: { sessions: { create: vi.fn() } },
-    billingPortal: { sessions: { create: vi.fn() } },
-    paymentMethods: { retrieve: vi.fn() },
-    invoices: { list: vi.fn() },
-  })),
+  requireStripe: vi.fn(() => stripeMock),
   getStripe: vi.fn(),
 }));
 
@@ -37,6 +45,11 @@ function createProfileSupabase(
 }
 
 describe('billing-service', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.clearAllMocks();
+  });
+
   describe('getBillingInfo', () => {
     it('正常系: active ユーザーの課金情報を返す', async () => {
       const supabase = createProfileSupabase({
@@ -91,6 +104,43 @@ describe('billing-service', () => {
       await expect(getBillingInfo(supabase, 'user-1')).rejects.toThrow(
         'Failed to fetch billing info',
       );
+    });
+  });
+
+  describe('createCheckoutSession', () => {
+    it('サーバー設定の Pro price だけを Stripe Checkout に渡す', async () => {
+      vi.stubEnv('NEXT_PUBLIC_STRIPE_PRO_PRICE_ID', 'price_server_pro');
+      stripeMock.subscriptions.list.mockResolvedValue({ data: [] });
+      stripeMock.checkout.sessions.create.mockResolvedValue({
+        url: 'https://checkout.stripe.com/test',
+      });
+
+      const supabase = createProfileSupabase({
+        id: 'user-1',
+        stripe_customer_id: 'cus_existing',
+      });
+
+      const url = await createCheckoutSession(supabase, 'user-1', 'test@example.com');
+
+      expect(url).toBe('https://checkout.stripe.com/test');
+      expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          line_items: [{ price: 'price_server_pro', quantity: 1 }],
+        }),
+      );
+    });
+
+    it('Pro price 未設定では Stripe Checkout を作成しない', async () => {
+      vi.stubEnv('NEXT_PUBLIC_STRIPE_PRO_PRICE_ID', '');
+      const supabase = createProfileSupabase({
+        id: 'user-1',
+        stripe_customer_id: 'cus_existing',
+      });
+
+      await expect(createCheckoutSession(supabase, 'user-1', 'test@example.com')).rejects.toThrow(
+        BillingServiceError,
+      );
+      expect(stripeMock.checkout.sessions.create).not.toHaveBeenCalled();
     });
   });
 

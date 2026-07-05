@@ -117,7 +117,7 @@ Webhook で受け取る Stripe の `Subscription.Status` を Dayopt のステー
 ```
 ユーザー "Pro にアップグレード" クリック
   → BillingSettings.handleUpgrade()
-  → api.billing.createCheckoutSession.mutate({ priceId })
+  → api.billing.createCheckoutSession.mutate()
   → billing-service.createCheckoutSession()
     → getOrCreateCustomer(): Stripe Customer 取得/作成 → profiles に保存
     → stripe.checkout.sessions.create({
@@ -211,11 +211,11 @@ publicProcedure          ← 認証不要
 
 ## 環境変数
 
-| 変数名                            | 用途                         | 設定場所                          |
-| --------------------------------- | ---------------------------- | --------------------------------- |
-| `STRIPE_SECRET_KEY`               | Stripe API シークレットキー  | サーバーサイドのみ (`src/env.ts`) |
-| `STRIPE_WEBHOOK_SECRET`           | Webhook 署名検証シークレット | サーバーサイドのみ                |
-| `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID` | Pro プランの Price ID        | クライアント公開                  |
+| 変数名                            | 用途                         | 設定場所                                        |
+| --------------------------------- | ---------------------------- | ----------------------------------------------- |
+| `STRIPE_SECRET_KEY`               | Stripe API シークレットキー  | サーバーサイドのみ (`src/env.ts`)               |
+| `STRIPE_WEBHOOK_SECRET`           | Webhook 署名検証シークレット | サーバーサイドのみ                              |
+| `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID` | Pro プランの Price ID        | サーバー側 Checkout 設定値。UI 表示制御にも使用 |
 
 **注意**: `STRIPE_SECRET_KEY` が未設定の場合、`getStripe()` は `null` を返す（graceful degradation）。課金が必須の処理では `requireStripe()` を使用し、未設定時にエラーをスローする。
 

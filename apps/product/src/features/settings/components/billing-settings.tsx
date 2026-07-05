@@ -130,7 +130,7 @@ export function BillingSettings() {
       toast.error(t('settings.subscription.stripeNotConfigured'));
       return;
     }
-    createCheckout.mutate({ priceId: STRIPE_PRICE_ID });
+    createCheckout.mutate();
   }, [createCheckout, t]);
 
   const handleManageSubscription = useCallback(() => {
