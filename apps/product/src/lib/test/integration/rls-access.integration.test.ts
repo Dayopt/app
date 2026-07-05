@@ -305,6 +305,81 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
     );
   });
 
+  describe('profiles billing column grants', () => {
+    it('ownerでもbilling entitlement columnsを直接更新できない', async () => {
+      const { error } = await supabaseB
+        .from('profiles')
+        .update({
+          stripe_customer_id: `cus_forbidden_${crypto.randomUUID()}`,
+          subscription_id: `sub_forbidden_${crypto.randomUUID()}`,
+          subscription_status: 'active',
+        })
+        .eq('id', TEST_USER_B_ID);
+
+      expect(error?.code).toBe('42501');
+
+      const { data, error: readError } = await adminSupabase
+        .from('profiles')
+        .select('stripe_customer_id, subscription_id, subscription_status')
+        .eq('id', TEST_USER_B_ID)
+        .single();
+
+      expect(readError).toBeNull();
+      expect(data?.stripe_customer_id).toBeNull();
+      expect(data?.subscription_id).toBeNull();
+      expect(data?.subscription_status).toBe('free');
+    });
+
+    it('ownerはprofile presentation columnsを更新できる', async () => {
+      const { error } = await supabaseB
+        .from('profiles')
+        .update({ full_name: 'RLS profile owner update', avatar_url: null })
+        .eq('id', TEST_USER_B_ID);
+
+      expect(error).toBeNull();
+    });
+
+    it('service_roleはStripe webhook経路としてbilling entitlement columnsを更新できる', async () => {
+      const stripeCustomerId = `cus_allowed_${crypto.randomUUID()}`;
+      const subscriptionId = `sub_allowed_${crypto.randomUUID()}`;
+
+      const { error } = await adminSupabase
+        .from('profiles')
+        .update({
+          stripe_customer_id: stripeCustomerId,
+          subscription_id: subscriptionId,
+          subscription_status: 'active',
+        })
+        .eq('id', TEST_USER_B_ID);
+
+      expect(error).toBeNull();
+
+      const { data, error: readError } = await adminSupabase
+        .from('profiles')
+        .select('stripe_customer_id, subscription_id, subscription_status')
+        .eq('id', TEST_USER_B_ID)
+        .single();
+
+      expect(readError).toBeNull();
+      expect(data).toMatchObject({
+        stripe_customer_id: stripeCustomerId,
+        subscription_id: subscriptionId,
+        subscription_status: 'active',
+      });
+
+      const { error: resetError } = await adminSupabase
+        .from('profiles')
+        .update({
+          stripe_customer_id: null,
+          subscription_id: null,
+          subscription_status: 'free',
+        })
+        .eq('id', TEST_USER_B_ID);
+
+      expect(resetError).toBeNull();
+    });
+  });
+
   describe.each(serviceRoleCases)('$table', (testCase) => {
     it.each(['select', 'insert', 'update', 'delete'] as const)(
       'authenticated clientの%sを拒否する',

@@ -8,6 +8,7 @@ import { TRPCError } from '@trpc/server';
 
 import { logger } from '@/lib/logger';
 import { captureBusinessEvent } from '@/lib/sentry';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
@@ -84,7 +85,8 @@ export const billingRouter = createTRPCRouter({
           });
         }
 
-        const url = await createCheckoutSession(ctx.supabase, ctx.userId, user.email);
+        const serviceRoleSupabase = createServiceRoleClient();
+        const url = await createCheckoutSession(serviceRoleSupabase, ctx.userId, user.email);
 
         captureBusinessEvent('billing.checkout_started', { plan: 'pro' });
         return { url };
