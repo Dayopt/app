@@ -81,6 +81,7 @@ export interface Context {
     | {
         currentLevel: MfaAssuranceLevel | null;
         nextLevel: MfaAssuranceLevel | null;
+        lookupFailed?: boolean | undefined;
       }
     | undefined;
   /** JWTカスタムクレームから取得したサブスクリプション状態（custom_access_token hook） */
@@ -195,11 +196,16 @@ async function createTRPCContext(opts: {
           data: { session },
         } = await supabase.auth.getSession();
         sessionId = session?.access_token;
-        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        const { data: aalData, error: aalError } =
+          await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
         mfaAssurance = {
           currentLevel: normalizeMfaAssuranceLevel(aalData?.currentLevel),
           nextLevel: normalizeMfaAssuranceLevel(aalData?.nextLevel),
+          lookupFailed: Boolean(aalError),
         };
+        if (aalError) {
+          logger.warn('MFA assurance lookup failed', { message: aalError.message });
+        }
       }
     } catch {
       // 認証エラーは無視（ゲストユーザーとして扱う）
@@ -303,6 +309,8 @@ const OAUTH_TRPC_SCOPE_REQUIREMENTS: Partial<Record<string, SupportedScope>> = {
   'entries.list': 'read:entries',
 };
 
+const MFA_CHALLENGE_TRPC_PATHS = new Set(['user.verifyRecoveryCode']);
+
 function isUserRateLimitedInMemory(userId: string): boolean {
   const now = Date.now();
   const timestamps = userRequestLog.get(userId) ?? [];
@@ -362,16 +370,26 @@ export const protectedProcedure = t.procedure
       }
     }
 
-    if (
-      ctx.authMode === 'session' &&
-      ctx.mfaAssurance?.currentLevel === 'aal1' &&
-      ctx.mfaAssurance.nextLevel === 'aal2'
-    ) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'MFA verification required',
-        cause: new ServiceError('FORBIDDEN', 'MFA AAL2 required'),
-      });
+    if (ctx.authMode === 'session') {
+      if (ctx.mfaAssurance?.lookupFailed) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'MFA verification required',
+          cause: new ServiceError('FORBIDDEN', 'MFA AAL lookup failed'),
+        });
+      }
+
+      if (
+        !MFA_CHALLENGE_TRPC_PATHS.has(path) &&
+        ctx.mfaAssurance?.currentLevel === 'aal1' &&
+        ctx.mfaAssurance.nextLevel === 'aal2'
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'MFA verification required',
+          cause: new ServiceError('FORBIDDEN', 'MFA AAL2 required'),
+        });
+      }
     }
 
     // per-userId レート制限

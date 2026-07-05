@@ -21,6 +21,9 @@ const authTestRouter = createTRPCRouter({
   userSettings: createTRPCRouter({
     update: protectedProcedure.mutation(() => 'updated'),
   }),
+  user: createTRPCRouter({
+    verifyRecoveryCode: protectedProcedure.mutation(() => 'recovered'),
+  }),
 });
 
 const createCaller = createCallerFactory(authTestRouter);
@@ -65,6 +68,29 @@ describe('トークン期限切れ・セッション検証', () => {
       const caller = createCaller(ctx as never);
 
       await expect(caller.whoami()).rejects.toThrow(expect.objectContaining({ code: 'FORBIDDEN' }));
+    });
+
+    it('MFA登録済みAAL1セッションでもリカバリーコード検証は通過する', async () => {
+      const ctx = createMockContext({
+        userId: 'user-1',
+        mfaAssurance: { currentLevel: 'aal1', nextLevel: 'aal2' },
+      });
+      const caller = createCaller(ctx as never);
+
+      await expect(caller.user.verifyRecoveryCode()).resolves.toBe('recovered');
+    });
+
+    it('AAL取得失敗時はfail closedでFORBIDDEN', async () => {
+      const ctx = createMockContext({
+        userId: 'user-1',
+        mfaAssurance: { currentLevel: null, nextLevel: null, lookupFailed: true },
+      });
+      const caller = createCaller(ctx as never);
+
+      await expect(caller.whoami()).rejects.toThrow(expect.objectContaining({ code: 'FORBIDDEN' }));
+      await expect(caller.user.verifyRecoveryCode()).rejects.toThrow(
+        expect.objectContaining({ code: 'FORBIDDEN' }),
+      );
     });
 
     it('AAL2セッションは通過する', async () => {

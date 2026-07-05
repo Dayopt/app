@@ -20,6 +20,8 @@ Supabase Auth ベースの認証機能。
 `/api/trpc` は middleware/proxy を通らないため、API gate 自体で認証状態を再評価する。
 
 - Session cookie mode: Supabase Auth の `getUser()` でユーザーを検証し、MFA登録済み `aal1 -> aal2` の状態なら `FORBIDDEN` を返す
+- MFA AAL 取得に失敗した session cookie mode は fail closed として `FORBIDDEN` を返す
+- `user.verifyRecoveryCode` は recovery-code 検証により MFA factor を解除するため、既知の `aal1 -> aal2` 状態でも通過を許可する
 - OAuth bearer mode: token を `oauth_tokens` で検証し、`client_id` と `scopes` を tRPC context に保持する
 - OAuth bearer mode の汎用 tRPC 呼び出しは、procedure path ごとの allowlist と scope が一致した場合だけ許可する
 - Phase 1 で OAuth bearer mode から許可する tRPC procedure は `entries.list` + `read:entries` のみ
