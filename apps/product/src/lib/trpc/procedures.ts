@@ -192,19 +192,37 @@ async function createTRPCContext(opts: {
       if (user) {
         userId = user.id;
         // セッションからアクセストークンを取得（ログ・追跡用）
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        sessionId = session?.access_token;
-        const { data: aalData, error: aalError } =
-          await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-        mfaAssurance = {
-          currentLevel: normalizeMfaAssuranceLevel(aalData?.currentLevel),
-          nextLevel: normalizeMfaAssuranceLevel(aalData?.nextLevel),
-          lookupFailed: Boolean(aalError),
-        };
-        if (aalError) {
-          logger.warn('MFA assurance lookup failed', { message: aalError.message });
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          sessionId = session?.access_token;
+        } catch (error) {
+          logger.warn('Session token lookup failed', {
+            message: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
+
+        try {
+          const { data: aalData, error: aalError } =
+            await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          mfaAssurance = {
+            currentLevel: normalizeMfaAssuranceLevel(aalData?.currentLevel),
+            nextLevel: normalizeMfaAssuranceLevel(aalData?.nextLevel),
+            lookupFailed: Boolean(aalError),
+          };
+          if (aalError) {
+            logger.warn('MFA assurance lookup failed', { message: aalError.message });
+          }
+        } catch (error) {
+          mfaAssurance = {
+            currentLevel: null,
+            nextLevel: null,
+            lookupFailed: true,
+          };
+          logger.warn('MFA assurance lookup threw', {
+            message: error instanceof Error ? error.message : 'Unknown error',
+          });
         }
       }
     } catch {
