@@ -28,7 +28,9 @@ import {
 } from '../lib/day-diff';
 import { useCalendarFilterStore } from '../stores/useCalendarFilterStore';
 import {
+  getMultiDayCount,
   isCalendarDiffView,
+  isMultiDayView,
   type CalendarEvent,
   type CalendarViewType,
   type ViewDateRange,
@@ -40,6 +42,7 @@ import { initializePreload } from './controller/utils';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import { CalendarLayout } from './layout/CalendarLayout';
 import { EventContextMenu, MobileTouchHint } from './views/shared/components';
+import { generateMultiDayDates } from './views/shared/hooks/useDateUtilities';
 
 // 初回ロード時にビューをプリロード
 initializePreload();
@@ -196,13 +199,20 @@ export function CalendarController({
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
   const calendarDiffDays = useMemo(() => {
+    if (isMultiDayView(viewType)) {
+      return generateMultiDayDates(currentDate, getMultiDayCount(viewType), showWeekends);
+    }
     if (viewType === 'day' || showWeekends) return viewDateRange.days;
     return viewDateRange.days.filter((day) => !isWeekend(day));
-  }, [showWeekends, viewDateRange.days, viewType]);
+  }, [currentDate, showWeekends, viewDateRange.days, viewType]);
   const calendarDiffEnabled =
     showActualDiff &&
     isCalendarDiffView(viewType) &&
     (viewType === 'day' || calendarDiffDays.length > 0);
+  const calendarDiffDayBounds = useMemo(
+    () => calendarDiffDays.map((day) => resolveCalendarDayDiffBounds(day, timezone)),
+    [calendarDiffDays, timezone],
+  );
   const calendarDiffBounds = useMemo(
     () =>
       viewType === 'day' || calendarDiffDays.length === 0
@@ -216,10 +226,32 @@ export function CalendarController({
   );
   const calendarDiffEntries = useMemo(() => {
     void visibleTagIds;
-    return calendarDiffEnabled
-      ? filterCalendarDayDiffEntries(allEntries, calendarDiffBounds, isEntryVisible)
-      : [];
-  }, [allEntries, calendarDiffBounds, calendarDiffEnabled, isEntryVisible, visibleTagIds]);
+    if (!calendarDiffEnabled) return [];
+
+    const boundedEntries = filterCalendarDayDiffEntries(
+      allEntries,
+      calendarDiffBounds,
+      isEntryVisible,
+    );
+    if (viewType === 'day' || showWeekends) return boundedEntries;
+
+    const visibleEntryIds = new Set<string>();
+    for (const bounds of calendarDiffDayBounds) {
+      for (const entry of filterCalendarDayDiffEntries(boundedEntries, bounds, isEntryVisible)) {
+        visibleEntryIds.add(entry.id);
+      }
+    }
+    return boundedEntries.filter((entry) => visibleEntryIds.has(entry.id));
+  }, [
+    allEntries,
+    calendarDiffBounds,
+    calendarDiffDayBounds,
+    calendarDiffEnabled,
+    isEntryVisible,
+    showWeekends,
+    viewType,
+    visibleTagIds,
+  ]);
   const calendarDiff = useMemo(
     () =>
       calendarDiffEnabled
