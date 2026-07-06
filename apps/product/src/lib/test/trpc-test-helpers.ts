@@ -25,6 +25,7 @@ import type { AnyRouter } from '@trpc/server';
 import { vi } from 'vitest';
 
 import type { Database } from '@/lib/database';
+import type { OAuthClientId, SupportedScope } from '@/lib/oauth-server';
 import { createCallerFactory, type Context } from '@/lib/trpc/procedures';
 
 // Re-export factories for backward compatibility
@@ -34,6 +35,10 @@ import { createCallerFactory, type Context } from '@/lib/trpc/procedures';
 interface MockContextOptions {
   userId?: string | undefined;
   sessionId?: string | undefined;
+  authMode?: Context['authMode'];
+  oauthClientId?: OAuthClientId | undefined;
+  oauthScopes?: SupportedScope[] | undefined;
+  mfaAssurance?: Context['mfaAssurance'];
   supabaseOverrides?: Partial<MockSupabaseClient>;
 }
 
@@ -86,7 +91,15 @@ export function createMockSupabase(overrides?: Partial<MockSupabaseClient>): Moc
  * モックコンテキストを作成
  */
 export function createMockContext(options: MockContextOptions = {}): Context {
-  const { userId, sessionId, supabaseOverrides } = options;
+  const {
+    userId,
+    sessionId,
+    authMode = 'session',
+    oauthClientId,
+    oauthScopes,
+    mfaAssurance,
+    supabaseOverrides,
+  } = options;
 
   const mockSupabase = createMockSupabase(supabaseOverrides);
 
@@ -102,8 +115,11 @@ export function createMockContext(options: MockContextOptions = {}): Context {
     } as unknown as Context['res'],
     userId,
     sessionId,
+    oauthClientId,
+    oauthScopes,
+    mfaAssurance,
     supabase: mockSupabase as unknown as SupabaseClient<Database>,
-    authMode: 'session' as const,
+    authMode,
   };
 }
 
