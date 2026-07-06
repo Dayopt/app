@@ -87,16 +87,6 @@ export const searchRateLimit = createRateLimiter(
 );
 
 /**
- * タグAPI用レート制限
- *
- * - 同一IPから1分間に60回まで
- */
-export const tagsRateLimit = createRateLimiter(
-  Ratelimit.slidingWindow(60, '1 m'),
-  'ratelimit:tags',
-);
-
-/**
  * IP アドレスの取得
  *
  * Vercel の x-forwarded-for ヘッダーまたは x-real-ip から IP を取得

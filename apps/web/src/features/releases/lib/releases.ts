@@ -27,11 +27,6 @@ export interface ReleasePost {
   readingTime: number;
 }
 
-export interface TagCount {
-  tag: string;
-  count: number;
-}
-
 export interface ChangeType {
   id: string;
   label: string;
@@ -223,28 +218,6 @@ export async function getRelease(version: string, locale?: string): Promise<Rele
   }
 }
 
-// タグ別リリースノート取得
-export async function getReleasesByTag(tag: string, locale?: string): Promise<ReleasePostMeta[]> {
-  const allReleases = await getAllReleaseMetas(locale);
-  return allReleases.filter((release) => release.frontMatter.tags.includes(tag));
-}
-
-// 全タグとその数を取得
-export async function getAllReleaseTags(locale?: string): Promise<TagCount[]> {
-  const allReleases = await getAllReleaseMetas(locale);
-  const tagCounts = new Map<string, number>();
-
-  allReleases.forEach((release) => {
-    release.frontMatter.tags.forEach((tag) => {
-      tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-    });
-  });
-
-  return Array.from(tagCounts.entries())
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
 // 注目リリース取得
 export async function getFeaturedReleases(locale?: string): Promise<ReleasePostMeta[]> {
   const allReleases = await getAllReleaseMetas(locale);
@@ -264,24 +237,11 @@ export async function getRelatedReleases(
     return [];
   }
 
-  // タグベースでの関連性スコア計算
-  const relatedReleases = allReleases
+  // 現在のリリース以外を日付降順で返す
+  return allReleases
     .filter((release) => release.frontMatter.version !== currentVersion)
-    .map((release) => {
-      const commonTags = release.frontMatter.tags.filter((tag) =>
-        currentRelease.frontMatter.tags.includes(tag),
-      );
-
-      return {
-        ...release,
-        score: commonTags.length,
-      };
-    })
-    .filter((release) => release.score > 0)
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => new Date(b.frontMatter.date).getTime() - new Date(a.frontMatter.date).getTime())
     .slice(0, limit);
-
-  return relatedReleases.map(({ score: _score, ...release }) => release);
 }
 
 // リリースノート検索
@@ -294,7 +254,6 @@ export async function searchReleases(query: string, locale?: string): Promise<Re
       release.frontMatter.title,
       release.frontMatter.description,
       release.frontMatter.version,
-      ...release.frontMatter.tags,
       release.content,
     ]
       .join(' ')

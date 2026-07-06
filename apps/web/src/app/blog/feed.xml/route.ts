@@ -29,13 +29,7 @@ export async function GET() {
       <guid isPermaLink="true">${baseUrl}/blog/${post.slug}</guid>
       <description>${escapeXml(post.excerpt)}</description>
       <pubDate>${new Date(post.frontMatter.publishedAt).toUTCString()}</pubDate>
-      <author>${escapeXml(post.frontMatter.author)}</author>${
-        post.frontMatter.tags.length > 0
-          ? post.frontMatter.tags
-              .map((tag) => `\n      <category>${escapeXml(tag)}</category>`)
-              .join('')
-          : ''
-      }
+      <author>${escapeXml(post.frontMatter.author)}</author>
     </item>`,
     )
     .join('\n');

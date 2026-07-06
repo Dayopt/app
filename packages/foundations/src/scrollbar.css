@@ -1,0 +1,25 @@
+/* ============================================
+ * スクロールバーのスタイリング
+ * product / web 共通（product を正解として一本化）
+ * ============================================ */
+
+/* Webkit系ブラウザ（Chrome, Safari, Edge） */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--color-muted-foreground) 30%, transparent);
+  border-radius: 8px;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--color-muted-foreground) 30%, transparent) transparent;
+}

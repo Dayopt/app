@@ -10,7 +10,6 @@ interface SearchIndexEntry {
   description: string;
   url: string;
   type: 'blog' | 'docs' | 'release';
-  tags: string[];
   category: string;
   date: string;
 }
@@ -87,9 +86,8 @@ export async function GET(request: NextRequest) {
     for (const entry of entries) {
       const titleMatch = entry.title.toLowerCase().includes(searchTerm);
       const descriptionMatch = entry.description.toLowerCase().includes(searchTerm);
-      const tagMatch = entry.tags.some((tag) => tag.toLowerCase().includes(searchTerm));
 
-      if (titleMatch || descriptionMatch || tagMatch) {
+      if (titleMatch || descriptionMatch) {
         results.push({
           id: entry.id,
           title: entry.title,
@@ -98,7 +96,6 @@ export async function GET(request: NextRequest) {
           type: entry.type,
           breadcrumbs: getBreadcrumbs(entry),
           lastModified: entry.date,
-          tags: entry.tags,
         });
       }
     }

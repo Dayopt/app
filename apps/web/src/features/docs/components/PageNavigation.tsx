@@ -1,3 +1,4 @@
+import { getDocHref } from '@/lib/mdx';
 import { ContentData } from '@/types/content';
 import { Button } from '@dayopt/components';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -28,7 +29,7 @@ export async function PageNavigation({ previousPage, nextPage }: PageNavigationP
               asChild
               className="h-auto w-full justify-start px-4 py-4"
             >
-              <Link href={`/docs/${previousPage.slug}`}>
+              <Link href={getDocHref(previousPage)}>
                 <ChevronLeft className="mr-2 size-4 shrink-0" />
                 <div className="text-left">
                   <div className="text-muted-foreground text-xs">{t('previous')}</div>
@@ -50,7 +51,7 @@ export async function PageNavigation({ previousPage, nextPage }: PageNavigationP
               asChild
               className="h-auto w-full justify-end px-4 py-4"
             >
-              <Link href={`/docs/${nextPage.slug}`}>
+              <Link href={getDocHref(nextPage)}>
                 <div className="text-right">
                   <div className="text-muted-foreground text-xs">{t('next')}</div>
                   <div className="text-foreground text-sm font-medium">

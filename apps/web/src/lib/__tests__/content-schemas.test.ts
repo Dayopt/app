@@ -12,14 +12,12 @@ describe('blogFrontMatterSchema', () => {
       title: 'Test Post',
       description: 'A test post',
       publishedAt: '2026-01-01',
-      tags: ['test'],
       category: 'engineering',
       author: 'Test Author',
     };
 
     const result = blogFrontMatterSchema.parse(data);
     expect(result.title).toBe('Test Post');
-    expect(result.tags).toEqual(['test']);
     expect(result.draft).toBe(false);
     expect(result.featured).toBe(false);
   });
@@ -32,7 +30,6 @@ describe('blogFrontMatterSchema', () => {
 
     const result = blogFrontMatterSchema.parse(data);
     expect(result.description).toBe('');
-    expect(result.tags).toEqual([]);
     expect(result.category).toBe('general');
     expect(result.author).toBe('Dayopt Team');
     expect(result.draft).toBe(false);
@@ -94,7 +91,6 @@ describe('releaseFrontMatterSchema', () => {
   it('デフォルト値を補完', () => {
     const data = { version: 'v0.1.0', date: '2026-01-01' };
     const result = releaseFrontMatterSchema.parse(data);
-    expect(result.tags).toEqual([]);
     expect(result.breaking).toBe(false);
     expect(result.featured).toBe(false);
   });

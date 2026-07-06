@@ -25,6 +25,7 @@ pnpm 1password:check         # 1Password schema 確認（値は表示しない�
 pnpm storybook               # Storybook
 
 # 検証（コード変更後は必須）
+pnpm check                  # CI Stage 1 + unit test 相当のローカル一括チェック（build/e2e は含めない）
 pnpm typecheck
 pnpm lint
 pnpm lint:boundaries
@@ -45,6 +46,9 @@ pnpm db:fresh
 
 # 品質
 pnpm quality:deadcode
+
+# docs
+pnpm docs:check               # リンク切れ/frontmatter/命名/append-only を検証（CI と同一）
 ```
 
 ## Non-Negotiables
@@ -55,6 +59,16 @@ pnpm quality:deadcode
 - コミット前に `git diff --cached` を確認する
 - コード変更後は `pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries` を通す
 - コミットメッセージは日本語 Conventional Commits 形式にする
+
+  | prefix     | 用途                           |
+  | ---------- | ------------------------------ |
+  | `feat`     | 新機能追加                     |
+  | `fix`      | バグ修正                       |
+  | `refactor` | 機能変更なしのコード改善       |
+  | `chore`    | ビルド、CI、依存関係、設定変更 |
+  | `docs`     | ドキュメントのみの変更         |
+  | `test`     | テストの追加・修正             |
+  | `perf`     | パフォーマンス改善             |
 - PR を merge する時は、枝分かれを履歴に残すため `gh pr merge --merge` を標準にする
 
 ## Coding Rules
@@ -71,6 +85,26 @@ pnpm quality:deadcode
 - **依存方向**: `features/ -> lib/` の一方向。`lib/` は feature 非依存の再利用コードだけ
 - **命名**: `utils.ts` / `helpers.ts` を避け、責務を表す具体名にする
 - **新規 top-level feature**: `features/` 直下に新 feature を作る前に相談する
+
+## Docs 運用責務
+
+`docs/README.md` の地図・決定木・書き方の約束に従う。とくに以下は都度・自発的に実施する:
+
+- **フィードバックの記録** — ユーザーの声（感想・要望・不具合報告）が届いたら、その日のうちに `docs/product/log/YYYY-MM-DD-feedback-<slug>.md` に原文のまま記録する（`/note` コマンド参照）
+- **障害の記録** — 障害・トラブルが起きたら `docs/operations/log/YYYY-MM-DD-incident-<slug>.md` に記録する。対応手順そのものの更新は `docs/operations/` 側に別途反映する
+- **機能仕様の反映** — プロダクトの振る舞いを変えたら `docs/product/specs/` の該当ファイルを更新する
+- **月次ガーデニング** — `docs/engineering/log/` に当月のロールアップファイル（`YYYY-MM-01-journal.md`）が存在しない状態でセッションが始まったら、`/gardening` の実施をユーザーに提案する
+
+## コマンド一覧（.claude/commands/）
+
+Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手動実行する。
+
+| コマンド        | 内容                                                                     |
+| --------------- | ---------------------------------------------------------------------- |
+| `/decision`     | 各ドメインの `log/` に `YYYY-MM-DD-slug.md` で意思決定ログを新規作成         |
+| `/note`         | 各ドメインの `log/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応） |
+| `/session-end`  | 当日の作業を `docs/engineering/log/YYYY-MM-DD-session.md` に記録し `latest.md` を更新 |
+| `/gardening`    | 月次: セッションログ→月次ロールアップ蒸留、ストック鮮度triage、notes昇格、スモークテスト |
 
 ## Rule Map
 
@@ -94,7 +128,7 @@ pnpm quality:deadcode
 
 Project skills は `.agents/skills/` を参照する。該当する作業では `SKILL.md` を先に読む。
 
-error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / source-command-plan-review
+error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / source-command-plan-review / audit-ai-config
 
 ## Workflow
 

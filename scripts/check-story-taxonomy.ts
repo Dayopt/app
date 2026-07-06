@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Storybook Story Taxonomy チェッカー（ADR-013）
+ * Storybook Story Taxonomy チェッカー（ADR-023）
  *
  * story の meta title prefix が物理位置（所有境界 Shared / Product / Web）と
  * 一致するかを検証する。一致しない story が 1 件でもあれば exit 1（hard-fail）。
@@ -10,7 +10,7 @@
  *   prop / fixture の `title:`（例: defaultLabels.title, CalendarEvent.title）を
  *   誤検知しないよう、meta 宣言をアンカーにして直後の最初の title を取る。
  *
- * 参照: docs/architecture/adr/013-storybook-ownership-taxonomy.md
+ * 参照: docs/log/decisions/023-storybook-ownership-taxonomy.md
  *
  * Usage:
  *   npx tsx scripts/check-story-taxonomy.ts
@@ -38,7 +38,7 @@ const SCAN_DIRS = [
 ];
 
 /**
- * 物理位置 → 許容 title prefix（ADR-013 の移行ルール表に準拠）。
+ * 物理位置 → 許容 title prefix（ADR-023 の移行ルール表に準拠）。
  *
  * 評価は配列の上から順。最初にマッチした rule を採用するため、
  * より具体的な path（tokens / emails）を product/src より前に置く。
@@ -156,7 +156,7 @@ function main(): void {
     }
   }
 
-  console.log('\n━━━ Story Taxonomy (ADR-013) ━━━\n');
+  console.log('\n━━━ Story Taxonomy (ADR-023) ━━━\n');
   console.log(`Checked: ${checked} stories across ${SCAN_DIRS.length} roots\n`);
 
   if (noTitle.length > 0) {
@@ -178,7 +178,7 @@ function main(): void {
   }
   console.log('');
   console.error(
-    `ERROR: ${violations.length} story title(s) violate the ownership taxonomy (ADR-013).`,
+    `ERROR: ${violations.length} story title(s) violate the ownership taxonomy (ADR-023).`,
   );
   process.exit(1);
 }

@@ -160,6 +160,7 @@ export function GroupHeader({
         }}
         onPointerDown={(e) => e.stopPropagation()}
         className={cn(
+          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素のヒットエリア拡張に before:content-[''] の空文字指定が必須
           "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-['']",
           checked || indeterminate ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
           isMobile && 'opacity-100',

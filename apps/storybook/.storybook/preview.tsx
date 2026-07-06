@@ -1,8 +1,9 @@
 import type { Preview } from '@storybook/nextjs-vite';
 import { MINIMAL_VIEWPORTS } from 'storybook/viewport';
 
-import '../../product/src/lib/styles/globals.css';
+// product globals + apps/web の @source を含む Storybook 用 Tailwind エントリ
 import { providerDecorator, storeMockDecorator } from './decorators';
+import './tailwind-storybook.css';
 import { dayoptDarkTheme, dayoptLightTheme } from './theme/dayopt';
 import { DocsTemplate, ThemedDocsContainer } from './theme/docs';
 import './theme/overrides.css';
@@ -49,7 +50,7 @@ const preview: Preview = {
           [
             'Foundations',
             'Components',
-            // Shared/Components 直下は責務ベース taxonomy（ADR-012）の流れで並べる
+            // Shared/Components 直下は責務ベース taxonomy（ADR-022）の流れで並べる
             [
               'Identity',
               'Actions',
@@ -66,9 +67,24 @@ const preview: Preview = {
           // Product = apps/product
           'Product',
           ['Components', 'Features', 'Patterns', 'Emails'],
-          // Web = apps/web（現状は構造のみ予約）
+          // Web = apps/web
           'Web',
-          ['Components', 'Sections', 'Pages'],
+          [
+            'Components',
+            // Shell（chrome）→ 以降は責務ベース（Shared/Components ADR-022 と揃える）
+            [
+              'Shell',
+              'Actions',
+              'Inputs',
+              'Navigation',
+              'Feedback',
+              'Overlays',
+              'Display',
+              'Layout',
+            ],
+            'Sections',
+            'Pages',
+          ],
         ],
       },
     },

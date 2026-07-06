@@ -29,7 +29,6 @@ export const blogFrontMatterSchema = z.object({
   description: z.string().default(''),
   publishedAt: z.string().min(1, 'publishedAt は必須です'),
   updatedAt: z.string().optional(),
-  tags: z.array(z.string()).default([]),
   category: z.string().default('general'),
   author: z.string().default('Dayopt Team'),
   authorAvatar: z.string().optional(),
@@ -49,7 +48,6 @@ export const releaseFrontMatterSchema = z.object({
   date: z.string().min(1, 'date は必須です'),
   title: z.string().default(''),
   description: z.string().default(''),
-  tags: z.array(z.string()).default([]),
   breaking: z.boolean().default(false),
   featured: z.boolean().default(false),
   prerelease: z.boolean().optional(),
@@ -66,7 +64,6 @@ export type ReleaseFrontMatter = z.infer<typeof releaseFrontMatterSchema>;
 export const docFrontMatterSchema = z.object({
   title: z.string().default('Untitled'),
   description: z.string().default(''),
-  tags: z.array(z.string()).default([]),
   author: z.string().optional(),
   publishedAt: z.string().optional(),
   updatedAt: z.string().optional(),

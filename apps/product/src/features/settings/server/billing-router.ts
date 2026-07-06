@@ -5,10 +5,10 @@
 
 import * as Sentry from '@sentry/nextjs';
 import { TRPCError } from '@trpc/server';
-import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
 import { captureBusinessEvent } from '@/lib/sentry';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
@@ -55,12 +55,7 @@ export const billingRouter = createTRPCRouter({
    */
   createCheckoutSession: protectedProcedure
     .meta({ description: 'Stripe Checkoutセッション作成' })
-    .input(
-      z.object({
-        priceId: z.string().startsWith('price_'),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx }) => {
       try {
         // ユーザーのメールを取得
         const {
@@ -90,14 +85,10 @@ export const billingRouter = createTRPCRouter({
           });
         }
 
-        const url = await createCheckoutSession(
-          ctx.supabase,
-          ctx.userId,
-          user.email,
-          input.priceId,
-        );
+        const serviceRoleSupabase = createServiceRoleClient();
+        const url = await createCheckoutSession(serviceRoleSupabase, ctx.userId, user.email);
 
-        captureBusinessEvent('billing.checkout_started', { priceId: input.priceId });
+        captureBusinessEvent('billing.checkout_started', { plan: 'pro' });
         return { url };
       } catch (error) {
         handleServiceError(error);

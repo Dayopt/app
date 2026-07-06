@@ -6,6 +6,12 @@ import { createCallerFactory } from '@/lib/trpc/procedures';
 
 import { billingRouter } from '../billing-router';
 
+const serviceRoleSupabaseMock = vi.hoisted(() => ({ from: vi.fn() }));
+
+vi.mock('@/lib/supabase/oauth', () => ({
+  createServiceRoleClient: vi.fn(() => serviceRoleSupabaseMock),
+}));
+
 // billing-service モック
 vi.mock('../billing-service', () => ({
   getBillingInfo: vi.fn(),
@@ -64,7 +70,7 @@ describe('billing-router', () => {
       const ctx = createMockContext({ userId: undefined });
       const caller = createCaller(ctx);
 
-      await expect(caller.createCheckoutSession({ priceId: 'price_test' })).rejects.toThrow(
+      await expect(caller.createCheckoutSession()).rejects.toThrow(
         expect.objectContaining({ code: 'UNAUTHORIZED' }),
       );
     });
@@ -113,14 +119,6 @@ describe('billing-router', () => {
   });
 
   describe('createCheckoutSession', () => {
-    it('無効な priceId は Zod バリデーションエラー', async () => {
-      const ctx = createMockContext({ userId: 'user-1' });
-      const caller = createCaller(ctx);
-
-      // "price_" で始まらない priceId
-      await expect(caller.createCheckoutSession({ priceId: 'invalid_id' })).rejects.toThrow();
-    });
-
     it('メールなしで BAD_REQUEST', async () => {
       const ctx = createMockContext({ userId: 'user-1' });
 
@@ -133,7 +131,7 @@ describe('billing-router', () => {
 
       const caller = createCaller(ctx);
 
-      await expect(caller.createCheckoutSession({ priceId: 'price_test123' })).rejects.toThrow(
+      await expect(caller.createCheckoutSession()).rejects.toThrow(
         expect.objectContaining({ code: 'BAD_REQUEST' }),
       );
     });
@@ -149,8 +147,31 @@ describe('billing-router', () => {
 
       const caller = createCaller(ctx);
 
-      await expect(caller.createCheckoutSession({ priceId: 'price_test123' })).rejects.toThrow(
+      await expect(caller.createCheckoutSession()).rejects.toThrow(
         expect.objectContaining({ code: 'INTERNAL_SERVER_ERROR' }),
+      );
+    });
+
+    it('caller supplied priceId を service に渡さずservice role経路でcheckoutを作成する', async () => {
+      vi.mocked(billingServiceMock.createCheckoutSession).mockResolvedValue(
+        'https://checkout.stripe.com/test',
+      );
+
+      const ctx = createMockContext({ userId: 'user-1' });
+      const mockSupabase = ctx.supabase as unknown as Record<string, unknown>;
+      (mockSupabase.auth as Record<string, unknown>).getUser = vi.fn().mockResolvedValue({
+        data: { user: { id: 'user-1', email: 'test@example.com' } },
+        error: null,
+      });
+
+      const caller = createCaller(ctx);
+      const result = await caller.createCheckoutSession({ priceId: 'price_attacker' } as never);
+
+      expect(result?.url).toBe('https://checkout.stripe.com/test');
+      expect(billingServiceMock.createCheckoutSession).toHaveBeenCalledWith(
+        serviceRoleSupabaseMock,
+        'user-1',
+        'test@example.com',
       );
     });
 
@@ -168,7 +189,7 @@ describe('billing-router', () => {
       });
 
       const caller = createCaller(ctx);
-      const result = await caller.createCheckoutSession({ priceId: 'price_test123' });
+      const result = await caller.createCheckoutSession();
 
       expect(result?.url).toBe('https://checkout.stripe.com/test');
     });
@@ -189,10 +210,12 @@ describe('billing-router', () => {
 
     it('Stripe顧客なしでサービスエラー', async () => {
       vi.mocked(billingServiceMock.createPortalSession).mockRejectedValue(
-        new (billingServiceMock.BillingServiceError as unknown as new (
-          code: string,
-          message: string,
-        ) => Error)('NOT_FOUND', 'No Stripe customer found'),
+        new (
+          billingServiceMock.BillingServiceError as unknown as new (
+            code: string,
+            message: string,
+          ) => Error
+        )('NOT_FOUND', 'No Stripe customer found'),
       );
 
       const ctx = createMockContext({ userId: 'user-1' });

@@ -16,18 +16,14 @@
     "navigation": {
       "home": "Home",
       "about": "About",
-      "features": "Features",
-      "pricing": "Pricing",
       "blog": "Blog",
       "docs": "Documentation",
       "contact": "Contact",
       "releases": "Releases",
-      "tags": "Tags",
       "resources": "Resources",
       "blogDescription": "Read our latest articles and tutorials",
       "docsDescription": "Documentation and guides",
-      "releasesDescription": "Latest updates and changelog",
-      "tagsDescription": "Browse content by topic"
+      "releasesDescription": "Latest updates and changelog"
     },
     "states": {
       "loading": "Loading...",
@@ -154,6 +150,13 @@
     "header": {
       "title": "Blog"
     },
+    "tabs": {
+      "all": "All",
+      "guide": "Guides",
+      "philosophy": "Philosophy",
+      "release": "Release Notes",
+      "devlog": "Devlog"
+    },
     "filters": {
       "title": "Filters",
       "clearAll": "Clear all",
@@ -198,39 +201,6 @@
     "view": {
       "list": "List",
       "grid": "Grid"
-    }
-  },
-  "tags": {
-    "title": "Tags",
-    "description": "Explore content by tags. Find blog posts, releases, and documentation organized by topics.",
-    "searchPlaceholder": "Search tags...",
-    "clearSearch": "Clear search",
-    "category": "Category",
-    "all": "All",
-    "blog": "Blog",
-    "releases": "Releases",
-    "docs": "Docs",
-    "popularTags": "Popular Tags",
-    "noTagsFound": "No tags found",
-    "noTagsHint": "Try adjusting your search or filters",
-    "clearFilters": "Clear filters",
-    "tagsCount": "{count} tags",
-    "tagsCountSingular": "{count} tag",
-    "filters": "Filters",
-    "filtersClearAll": "Clear all",
-    "filtersApply": "Apply Filters",
-    "view": {
-      "grid": "Grid",
-      "list": "List"
-    },
-    "detail": {
-      "items": "{count} items",
-      "itemsSingular": "{count} item",
-      "allTags": "All Tags",
-      "searchContent": "Search content...",
-      "noContentFound": "No content found",
-      "noContentHint": "Try adjusting your search",
-      "clearSearch": "Clear search"
     }
   },
   "releases": {
@@ -297,7 +267,6 @@
     }
   },
   "docs": {
-    "relatedArticles": "Related Articles",
     "tags": "Tags",
     "pageNavigation": {
       "previous": "Previous",
@@ -311,6 +280,7 @@
     "landing": {
       "subtitle": "Get started with Dayopt using our documentation and guides"
     },
+    "overview": "Overview",
     "categories": {
       "getting-started": "Getting Started",
       "features": "Features",
@@ -320,7 +290,7 @@
       "faq": "FAQ"
     },
     "toc": {
-      "onThisPage": "On This Page",
+      "onThisPage": "Table of Contents",
       "loading": "Loading...",
       "noHeadings": "No headings found",
       "links": "Links",

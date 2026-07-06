@@ -1,4 +1,4 @@
-import { ReleasesClient, getAllReleaseMetas, getAllReleaseTags } from '@/features/releases';
+import { ReleasesClient, getAllReleaseMetas } from '@/features/releases';
 import { routing } from '@/platform/i18n/routing';
 import { generateSEOMetadata } from '@/platform/seo/metadata';
 import { Container } from '@dayopt/components';
@@ -39,10 +39,7 @@ export default async function ReleasesPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   // Fetch data server-side
-  const [allReleases, allTags] = await Promise.all([
-    getAllReleaseMetas(locale),
-    getAllReleaseTags(locale),
-  ]);
+  const allReleases = await getAllReleaseMetas(locale);
 
   // クライアントに不要なMDXコンテンツを転送しない
   const clientReleases = allReleases.map(({ content: _, ...rest }) => rest);
@@ -52,11 +49,7 @@ export default async function ReleasesPage({ params }: PageProps) {
       <section className="py-16">
         <Container>
           <div className="mx-auto max-w-6xl">
-            <ReleasesClient
-              initialReleases={clientReleases}
-              initialTags={allTags}
-              locale={locale}
-            />
+            <ReleasesClient initialReleases={clientReleases} locale={locale} />
           </div>
         </Container>
       </section>

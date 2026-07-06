@@ -305,7 +305,7 @@ Dayopt全体で「地図」のメタファーを一貫して使う。地図は�
 
 事実ベース。過剰な歓迎はしない。「前回の記録」を見せることで一貫性が働く。
 
-離脱メールやプッシュ通知での追い立ては行わない（[`docs/decisions/010-feature-non-adoption.md`](../../docs/decisions/010-feature-non-adoption.md)）。復帰はユーザーが自発的に戻った時のこのバナーのみで迎える。
+離脱メールやプッシュ通知での追い立ては行わない（[`docs/product/log/2026-06-16-feature-non-adoption.md`](../../docs/product/log/2026-06-16-feature-non-adoption.md)）。復帰はユーザーが自発的に戻った時のこのバナーのみで迎える。
 
 ---
 
@@ -411,8 +411,8 @@ Undo:      「{操作}しました。元に戻す」
 - 日常のトーストに感嘆符を使う（研究者は普段叫ばない）
 - 「アップグレードしませんか？」（得るものフレーミング）
 - 他人との比較を出す（絶対に使わない）
-- gamification（バッジ、ストリーク危機の煽り）で達成を演出する（製品から削除済み。docs/decisions/010）
-- 離脱メール・プッシュ通知で記録を追い立てる（非採用方針。docs/decisions/010）
+- gamification（バッジ、ストリーク危機の煽り）で達成を演出する（製品から削除済み。docs/product/log/2026-06-16-feature-non-adoption.md）
+- 離脱メール・プッシュ通知で記録を追い立てる（非採用方針。docs/product/log/2026-06-16-feature-non-adoption.md）
 - コスト・制限・欠如から文を始める（Pre-suasion違反）
 - ニュートラルな質問でフィードバックを求める（Pre-suasion違反）
 - 「管理」「日記」「鏡」のメタファーを使う（Pre-suasion違反）

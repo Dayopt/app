@@ -70,11 +70,12 @@ npm run test:a11y
 `src/scripts/performance-audit.js` でCore Web Vitalsを測定します。
 
 **目標値**:
-| 指標 | 目標値 |
-|------|--------|
+
+| 指標                           | 目標値  |
+| ------------------------------ | ------- |
 | LCP (Largest Contentful Paint) | < 2.5秒 |
-| FID (First Input Delay) | < 100ms |
-| CLS (Cumulative Layout Shift) | < 0.1 |
+| FID (First Input Delay)        | < 100ms |
+| CLS (Cumulative Layout Shift)  | < 0.1   |
 
 ```bash
 # パフォーマンス監査のみ

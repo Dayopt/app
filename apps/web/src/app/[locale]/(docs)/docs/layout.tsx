@@ -1,5 +1,6 @@
-import { ClientSidebar, DocsHeader } from '@/features/docs';
+import { ClientSidebar } from '@/features/docs';
 import { Footer } from '@/shell/layout/Footer';
+import { Header } from '@/shell/layout/Header';
 import { generateDocsNavigation } from '@/shell/navigation';
 
 export default async function DocsLayout({
@@ -13,29 +14,27 @@ export default async function DocsLayout({
   const navigation = await generateDocsNavigation(locale);
 
   return (
-    <div className="bg-background fixed inset-0 flex flex-col overflow-hidden">
-      {/* Docs専用ヘッダー（固定） */}
-      <DocsHeader />
+    <div className="bg-background flex min-h-screen flex-col">
+      {/* 共通ヘッダー（marketing と統一、sticky） */}
+      <Header />
 
-      {/* 3カラムレイアウト: Sidebar(240px) | Main(flex-1) | TOC(240px, xl以上) */}
-      <div className="max-w-8xl mx-auto flex min-h-0 w-full flex-1 overflow-hidden">
-        {/* Left Sidebar - Navigation (lg以上で表示) */}
-        <aside className="bg-container hidden w-60 flex-shrink-0 overflow-y-auto lg:block">
+      {/* 3カラムレイアウト: Sidebar(240px) | Main(flex-1)。Footer はこの外側で画面全幅にする */}
+      <div className="max-w-8xl mx-auto flex w-full flex-1 items-start">
+        {/* Left Sidebar - Navigation (lg以上で表示、sticky で独立スクロール) */}
+        <aside className="bg-background sticky top-14 hidden h-[calc(100vh-3.5rem)] w-60 flex-shrink-0 overflow-y-auto lg:block">
           <div className="px-4 py-8">
             <ClientSidebar navigation={navigation} />
           </div>
         </aside>
 
-        {/* Main Content + Footer */}
-        <main
-          id="main-content"
-          role="main"
-          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto"
-        >
-          <div className="flex-1">{children}</div>
-          <Footer />
+        {/* Main Content */}
+        <main id="main-content" role="main" className="min-w-0 flex-1">
+          {children}
         </main>
       </div>
+
+      {/* Footer: Sidebar 部分も含めて画面全幅 */}
+      <Footer />
     </div>
   );
 }

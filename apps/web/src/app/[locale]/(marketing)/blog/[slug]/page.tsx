@@ -1,17 +1,18 @@
 import { createMDXComponents } from '@/components/content/ContentMDXComponents';
-import { TagPill } from '@/components/ui/display/tag-pill';
 import {
-  RelatedPosts,
-  ShareButton,
+  BLOG_CATEGORY_KEYS,
+  FilteredBlogClient,
   getAllBlogPostMetas,
   getBlogPost,
   getRelatedPosts,
+  isBlogCategoryKey,
+  RelatedPosts,
+  ShareButton,
 } from '@/features/blog';
-import { ClientTableOfContents } from '@/features/docs';
+import { TableOfContentsCards } from '@/features/docs';
 import { Link } from '@/platform/i18n/navigation';
 import { routing } from '@/platform/i18n/routing';
-import { generateSEOMetadata } from '@/platform/seo/metadata';
-import { Container } from '@dayopt/components';
+import { generateSEOMetadata, siteConfig } from '@/platform/seo/metadata';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { MDXRemote } from 'next-mdx-remote/rsc';
@@ -61,6 +62,19 @@ const mdxComponents = createMDXComponents({ Callout });
 // Generate metadata
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
   const { locale, slug } = await params;
+
+  // カテゴリ一覧ページ（/blog/{category}）のメタデータ
+  if (isBlogCategoryKey(slug)) {
+    const tBlog = await getTranslations({ locale, namespace: 'blog' });
+    const tCommon = await getTranslations({ locale, namespace: 'common' });
+    return generateSEOMetadata({
+      title: `${tBlog(`tabs.${slug}`)} | ${tCommon('navigation.blog')}`,
+      url: `/${locale}/blog/${slug}`,
+      locale,
+      type: 'website',
+    });
+  }
+
   const post = await getBlogPost(slug, locale);
 
   if (!post) {
@@ -86,8 +100,6 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
     publishedTime: frontMatter.publishedAt,
     modifiedTime: frontMatter.updatedAt || frontMatter.publishedAt,
     authors: [frontMatter.author],
-    tags: frontMatter.tags,
-    keywords: frontMatter.tags,
     image: frontMatter.coverImage,
     section: frontMatter.category,
   });
@@ -101,6 +113,10 @@ export async function generateStaticParams() {
   const params = [];
 
   for (const locale of routing.locales) {
+    // カテゴリ一覧ページ（/blog/{category}）
+    for (const category of BLOG_CATEGORY_KEYS) {
+      params.push({ locale, slug: category });
+    }
     const posts = await getAllBlogPostMetas(locale);
     for (const post of posts) {
       params.push({ locale, slug: post.slug });
@@ -113,6 +129,22 @@ export async function generateStaticParams() {
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
+
+  // カテゴリ一覧ページ（/blog/{category}）— 一覧をそのカテゴリで表示
+  // /blog（すべて）と同じ横幅・左右余白・上下余白に揃える（max-w-7xl px-6 lg:px-8 / py-8）
+  if (isBlogCategoryKey(slug)) {
+    const allPosts = await getAllBlogPostMetas(locale);
+    return (
+      <div className="bg-background min-h-screen">
+        <section className="py-8">
+          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+            <FilteredBlogClient initialPosts={allPosts} locale={locale} activeCategory={slug} />
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   const t = await getTranslations('blog');
   const tCommon = await getTranslations('common');
 
@@ -121,6 +153,11 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   if (!post) {
     notFound();
   }
+
+  // カテゴリのラベル（既知の taxonomy なら i18n ラベル、それ以外は素の値）+ リンク先
+  const categoryKey = post.frontMatter.category.toLowerCase();
+  const categoryIsKnown = isBlogCategoryKey(categoryKey);
+  const categoryLabel = categoryIsKnown ? t(`tabs.${categoryKey}`) : post.frontMatter.category;
 
   // Remove duplicate h1 title from MDX content (already shown in page header)
   let processedContent = post.content;
@@ -136,6 +173,15 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   const relatedPosts = await getRelatedPosts(slug, 3, locale);
 
+  // cover 画像が無ければ生成 OGP 画像を hero として表示する
+  const heroImage =
+    post.frontMatter.coverImage ||
+    `/api/og?${new URLSearchParams({
+      title: post.frontMatter.title,
+      type: 'blog',
+      date: post.frontMatter.publishedAt,
+    }).toString()}`;
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
@@ -147,7 +193,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     },
     datePublished: post.frontMatter.publishedAt,
     dateModified: post.frontMatter.updatedAt || post.frontMatter.publishedAt,
-    keywords: post.frontMatter.tags.join(', '),
     articleSection: post.frontMatter.category,
     wordCount: post.readingTime * 200,
     timeRequired: `PT${post.readingTime}M`,
@@ -167,105 +212,96 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
       <div className="bg-background min-h-screen">
         <article className="py-8">
-          <Container>
-            <div className="mx-auto flex max-w-4xl gap-8">
-              <div className="min-w-0 flex-1 pt-16">
-                <div className="mb-8">
-                  <nav
-                    aria-label="breadcrumb"
-                    className="flex min-w-0 items-center space-x-2 text-sm"
-                  >
-                    <Link
-                      href="/"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {tCommon('navigation.home')}
-                    </Link>
-                    <span className="text-border">/</span>
-                    <Link
-                      href="/blog"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {tCommon('navigation.blog')}
-                    </Link>
-                    <span className="text-border">/</span>
-                    <span className="text-foreground truncate font-medium">
-                      {post.frontMatter.title}
-                    </span>
-                  </nav>
-                </div>
-
-                <time
-                  className="text-muted-foreground mb-2 block text-sm"
-                  dateTime={post.frontMatter.publishedAt}
+          {/* Header と同じ左右の余白に揃える（max-w-7xl px-6 lg:px-8） */}
+          <div className="mx-auto flex max-w-7xl gap-8 px-6 lg:px-8">
+            <div className="min-w-0 flex-1">
+              {/* パンくず（HOME は出さず ブログ / カテゴリ） */}
+              <nav
+                aria-label="breadcrumb"
+                className="mb-8 flex min-w-0 items-center space-x-2 text-sm"
+              >
+                <Link
+                  href="/blog"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
                 >
+                  {tCommon('navigation.blog')}
+                </Link>
+                <span className="text-border">/</span>
+                {categoryIsKnown ? (
+                  <Link
+                    href={`/blog/${categoryKey}`}
+                    className="text-foreground font-medium transition-colors hover:underline"
+                  >
+                    {categoryLabel}
+                  </Link>
+                ) : (
+                  <span className="text-foreground font-medium">{categoryLabel}</span>
+                )}
+              </nav>
+
+              {/* 写真 → タイトル → メタ情報 の順 */}
+              <div className="border-border relative mb-6 aspect-[16/9] overflow-hidden rounded-2xl border">
+                <Image
+                  src={heroImage}
+                  alt={post.frontMatter.title}
+                  fill
+                  className="object-cover"
+                  priority
+                  unoptimized={!post.frontMatter.coverImage}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                />
+              </div>
+
+              <h1 className="text-foreground mb-3 text-4xl font-medium break-words">
+                {post.frontMatter.title}
+              </h1>
+
+              {/* メタ情報: 日付 + カテゴリラベル */}
+              <div className="mb-8 flex flex-wrap items-center gap-3 text-sm">
+                <time className="text-muted-foreground" dateTime={post.frontMatter.publishedAt}>
                   {new Date(post.frontMatter.publishedAt).toLocaleDateString(locale, {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
                   })}
                 </time>
-
-                <h1 className="text-foreground mb-8 text-4xl font-medium break-words">
-                  {post.frontMatter.title}
-                </h1>
-
-                {post.frontMatter.coverImage && (
-                  <div className="relative mb-8 aspect-[16/9] overflow-hidden rounded-2xl shadow-lg">
-                    <Image
-                      src={post.frontMatter.coverImage}
-                      alt={post.frontMatter.title}
-                      fill
-                      className="rounded-2xl object-cover"
-                      priority
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <MDXRemote
-                    source={processedContent}
-                    components={mdxComponents}
-                    options={{
-                      mdxOptions: {
-                        remarkPlugins: [remarkGfm],
-                        rehypePlugins: [rehypeHighlight],
-                      },
-                    }}
-                  />
-                </div>
-
-                <div className="border-border mt-8 border-t pt-6"></div>
-
-                <div className="mt-6 space-y-6">
-                  <div>
-                    <h3 className="text-foreground mb-4 text-lg font-medium">
-                      {t('post.tagsUsed')}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {post.frontMatter.tags.map((tag) => (
-                        <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`}>
-                          <TagPill tag={tag} />
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-foreground mb-4 text-lg font-medium">{t('share.title')}</h3>
-                    <ShareButton title={post.frontMatter.title} slug={slug} />
-                  </div>
-                </div>
+                <span className="bg-muted text-muted-foreground inline-flex items-center rounded-lg px-2 py-1 text-xs font-medium">
+                  {categoryLabel}
+                </span>
               </div>
 
-              <aside className="hidden w-60 flex-shrink-0 xl:block">
-                <div className="sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto pt-16 pl-6">
-                  <ClientTableOfContents content={post.content} />
+              <div>
+                <MDXRemote
+                  source={processedContent}
+                  components={mdxComponents}
+                  options={{
+                    mdxOptions: {
+                      remarkPlugins: [remarkGfm],
+                      rehypePlugins: [rehypeHighlight],
+                    },
+                  }}
+                />
+              </div>
+
+              <div className="border-border mt-8 border-t pt-6"></div>
+
+              <div className="mt-6 space-y-6">
+                <div>
+                  <h3 className="text-foreground mb-4 text-lg font-medium">{t('share.title')}</h3>
+                  <ShareButton
+                    title={post.frontMatter.title}
+                    url={`${siteConfig.url}/${locale}/blog/${slug}`}
+                  />
                 </div>
-              </aside>
+              </div>
             </div>
-          </Container>
+
+            <aside className="hidden w-72 flex-shrink-0 xl:block">
+              <div className="sticky top-14">
+                <TableOfContentsCards content={post.content} />
+              </div>
+            </aside>
+          </div>
         </article>
 
         <RelatedPosts posts={relatedPosts} currentSlug={slug} locale={locale} />

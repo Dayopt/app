@@ -222,14 +222,6 @@ export async function getBlogPost(slug: string, locale?: string): Promise<BlogPo
   }
 }
 
-// Get articles by tag
-export async function getBlogPostsByTag(tag: string, locale?: string): Promise<BlogPostMeta[]> {
-  const allPosts = await getAllBlogPostMetas(locale);
-  return allPosts.filter((post) =>
-    post.frontMatter.tags.some((postTag) => postTag.toLowerCase() === tag.toLowerCase()),
-  );
-}
-
 // Get articles by category
 export async function getBlogPostsByCategory(
   category: string,
@@ -254,53 +246,17 @@ export async function getRelatedPosts(
     return [];
   }
 
-  const currentTags = currentPost.frontMatter.tags;
   const currentCategory = currentPost.frontMatter.category;
 
-  // Sort other articles by relevance
-  const relatedPosts = allPosts
-    .filter((post) => post.slug !== currentSlug)
-    .map((post) => {
-      let score = 0;
-
-      // Higher score for same category
-      if (post.frontMatter.category === currentCategory) {
-        score += 10;
-      }
-
-      // Add score based on common tags
-      const commonTags = post.frontMatter.tags.filter((tag) => currentTags.includes(tag)).length;
-      score += commonTags * 5;
-
-      return { ...post, score };
-    })
-    .filter((post) => post.score > 0)
-    .sort((a, b) => b.score - a.score)
+  // 同一カテゴリの記事を新しい順に
+  return allPosts
+    .filter((post) => post.slug !== currentSlug && post.frontMatter.category === currentCategory)
+    .sort(
+      (a, b) =>
+        new Date(b.frontMatter.publishedAt).getTime() -
+        new Date(a.frontMatter.publishedAt).getTime(),
+    )
     .slice(0, maxPosts);
-
-  return relatedPosts.map(({ score: _score, ...post }) => post);
-}
-
-// Get all tags
-export async function getAllTags(locale?: string): Promise<{ tag: string; count: number }[]> {
-  const allPosts = await getAllBlogPostMetas(locale);
-  const tagCounts: Record<string, number> = {};
-
-  allPosts.forEach((post) => {
-    post.frontMatter.tags.forEach((tag) => {
-      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-    });
-  });
-
-  return Object.entries(tagCounts)
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
-// Get all tags as simple string array
-export async function getAllTagNames(locale?: string): Promise<string[]> {
-  const tagsWithCounts = await getAllTags(locale);
-  return tagsWithCounts.map(({ tag }) => tag);
 }
 
 // Get all categories
@@ -348,11 +304,10 @@ export async function searchBlogPosts(
   return allPosts.filter((post) => {
     const titleMatch = post.frontMatter.title.toLowerCase().includes(searchTerm);
     const descriptionMatch = post.frontMatter.description?.toLowerCase().includes(searchTerm);
-    const tagMatch = post.frontMatter.tags.some((tag) => tag.toLowerCase().includes(searchTerm));
     const categoryMatch = post.frontMatter.category.toLowerCase().includes(searchTerm);
     const excerptMatch = post.excerpt.toLowerCase().includes(searchTerm);
 
-    return titleMatch || descriptionMatch || tagMatch || categoryMatch || excerptMatch;
+    return titleMatch || descriptionMatch || categoryMatch || excerptMatch;
   });
 }
 

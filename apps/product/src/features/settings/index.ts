@@ -1,6 +1,8 @@
 /**
  * Settings Feature - Public API
  *
+ * docs: docs/product/specs/settings.md
+ *
  * ユーザー設定（カレンダー設定、タイムゾーン、日付フォーマットなど）の管理。
  * 内部モジュールへの直接参照（deep import）は避け、ここからのみ import すること。
  *

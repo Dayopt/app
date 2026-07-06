@@ -60,8 +60,6 @@ export async function generateDocsNavigation(locale: string): Promise<Navigation
   // カテゴリー（トップレベルのディレクトリ）ごとにグループ化
   const byCategory = new Map<string, ContentData[]>();
   for (const content of allContent) {
-    // トップレベル index.mdx は /docs ランディング自身なので nav から除外
-    if (content.slug === 'index') continue;
     const items = byCategory.get(content.frontMatter.category) ?? [];
     items.push(content);
     byCategory.set(content.frontMatter.category, items);
@@ -80,13 +78,20 @@ export async function generateDocsNavigation(locale: string): Promise<Navigation
   return orderedCategories.map((category) => {
     // getAllContent は category → order でソート済みなので push 順がそのまま order 昇順になる
     const contents = byCategory.get(category) ?? [];
-    // カテゴリーの index.mdx は overview として先頭に固定（href は /docs/{category} に解決される）
-    const indexContent = contents.find((c) => c.slug === `${category}/index`);
-    const rest = contents.filter((c) => c.slug !== `${category}/index`);
+    // カテゴリー名と同じスラッグの記事（index.mdx 由来）は overview として先頭に固定
+    const indexContent = contents.find((c) => c.slug === category);
+    const rest = contents.filter((c) => c.slug !== category);
+
+    // getting-started の Overview だけは /docs（ドキュメントのトップ）自体に解決する。
+    // /docs はデフォルトでこの Overview を表示するため、URL を二重化させずここに統一する。
+    const isGettingStarted = category === 'getting-started';
 
     const items: NavigationItem[] = [];
     if (indexContent) {
-      items.push({ title: indexContent.frontMatter.title, href: `/docs/${category}` });
+      items.push({
+        title: isGettingStarted ? t('overview') : indexContent.frontMatter.title,
+        href: isGettingStarted ? '/docs' : `/docs/${indexContent.slug}`,
+      });
     }
     for (const content of rest) {
       items.push({ title: content.frontMatter.title, href: `/docs/${content.slug}` });

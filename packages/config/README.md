@@ -1,5 +1,7 @@
 # @dayopt/config
 
+> 責務境界の全体像: [docs/engineering/architecture.md](../../docs/engineering/architecture.md)
+
 アプリ横断で使う**public-safe な定数の source of truth**を置く package。
 クライアントに露出しても安全な、全環境で同一の静的な公開値だけを持つ。
 

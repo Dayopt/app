@@ -18,10 +18,12 @@ const SUPABASE_ANON_KEY =
 
 const TEST_USER_A_ID = crypto.randomUUID();
 const TEST_USER_B_ID = crypto.randomUUID();
+const TEST_USER_B_ENTRY_ID = crypto.randomUUID();
 const TEST_EMAIL_A = `test-rls-a-${TEST_USER_A_ID}@example.com`;
 const TEST_EMAIL_B = `test-rls-b-${TEST_USER_B_ID}@example.com`;
 const TEST_PASSWORD = 'test-password-123';
 const SKIP_INTEGRATION = process.env.SKIP_INTEGRATION_TESTS === 'true';
+const ACCESS_DENIED_MESSAGE = 'Access denied: user_id mismatch';
 
 const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -52,7 +54,7 @@ const userOwnedCases: UserOwnedRlsCase[] = [
   {
     table: 'entries',
     idColumn: 'id',
-    rowId: crypto.randomUUID(),
+    rowId: TEST_USER_B_ENTRY_ID,
     seed: async function () {
       const { error } = await adminSupabase.from('entries').insert({
         id: this.rowId,
@@ -303,6 +305,81 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
     );
   });
 
+  describe('profiles billing column grants', () => {
+    it('ownerでもbilling entitlement columnsを直接更新できない', async () => {
+      const { error } = await supabaseB
+        .from('profiles')
+        .update({
+          stripe_customer_id: `cus_forbidden_${crypto.randomUUID()}`,
+          subscription_id: `sub_forbidden_${crypto.randomUUID()}`,
+          subscription_status: 'active',
+        })
+        .eq('id', TEST_USER_B_ID);
+
+      expect(error?.code).toBe('42501');
+
+      const { data, error: readError } = await adminSupabase
+        .from('profiles')
+        .select('stripe_customer_id, subscription_id, subscription_status')
+        .eq('id', TEST_USER_B_ID)
+        .single();
+
+      expect(readError).toBeNull();
+      expect(data?.stripe_customer_id).toBeNull();
+      expect(data?.subscription_id).toBeNull();
+      expect(data?.subscription_status).toBe('free');
+    });
+
+    it('ownerはprofile presentation columnsを更新できる', async () => {
+      const { error } = await supabaseB
+        .from('profiles')
+        .update({ full_name: 'RLS profile owner update', avatar_url: null })
+        .eq('id', TEST_USER_B_ID);
+
+      expect(error).toBeNull();
+    });
+
+    it('service_roleはStripe webhook経路としてbilling entitlement columnsを更新できる', async () => {
+      const stripeCustomerId = `cus_allowed_${crypto.randomUUID()}`;
+      const subscriptionId = `sub_allowed_${crypto.randomUUID()}`;
+
+      const { error } = await adminSupabase
+        .from('profiles')
+        .update({
+          stripe_customer_id: stripeCustomerId,
+          subscription_id: subscriptionId,
+          subscription_status: 'active',
+        })
+        .eq('id', TEST_USER_B_ID);
+
+      expect(error).toBeNull();
+
+      const { data, error: readError } = await adminSupabase
+        .from('profiles')
+        .select('stripe_customer_id, subscription_id, subscription_status')
+        .eq('id', TEST_USER_B_ID)
+        .single();
+
+      expect(readError).toBeNull();
+      expect(data).toMatchObject({
+        stripe_customer_id: stripeCustomerId,
+        subscription_id: subscriptionId,
+        subscription_status: 'active',
+      });
+
+      const { error: resetError } = await adminSupabase
+        .from('profiles')
+        .update({
+          stripe_customer_id: null,
+          subscription_id: null,
+          subscription_status: 'free',
+        })
+        .eq('id', TEST_USER_B_ID);
+
+      expect(resetError).toBeNull();
+    });
+  });
+
   describe.each(serviceRoleCases)('$table', (testCase) => {
     it.each(['select', 'insert', 'update', 'delete'] as const)(
       'authenticated clientの%sを拒否する',
@@ -337,9 +414,137 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
     );
   });
 
+  describe('SECURITY DEFINER RPC user_id guard', () => {
+    it.each([
+      {
+        name: 'soft_delete_entry',
+        call: () =>
+          supabaseA.rpc('soft_delete_entry', {
+            p_entry_id: TEST_USER_B_ENTRY_ID,
+            p_user_id: TEST_USER_B_ID,
+          }),
+      },
+      {
+        name: 'restore_entry',
+        call: () =>
+          supabaseA.rpc('restore_entry', {
+            p_entry_id: TEST_USER_B_ENTRY_ID,
+            p_user_id: TEST_USER_B_ID,
+          }),
+      },
+      {
+        name: 'bulk_soft_delete_entries',
+        call: () =>
+          supabaseA.rpc('bulk_soft_delete_entries', {
+            p_entry_ids: [TEST_USER_B_ENTRY_ID],
+            p_user_id: TEST_USER_B_ID,
+          }),
+      },
+      {
+        name: 'update_personalization',
+        call: () =>
+          supabaseA.rpc('update_personalization', {
+            p_path: 'rlsGuard',
+            p_user_id: TEST_USER_B_ID,
+            p_value: { blocked: true },
+          }),
+      },
+    ])('$name は他ユーザーの p_user_id を拒否する', async ({ call }) => {
+      const { error } = await call();
+
+      expect(error?.message).toContain(ACCESS_DENIED_MESSAGE);
+    });
+
+    it('拒否された update_personalization は他ユーザー設定を変更しない', async () => {
+      const { data, error } = await adminSupabase
+        .from('user_settings')
+        .select('personalization')
+        .eq('user_id', TEST_USER_B_ID)
+        .single();
+
+      expect(error).toBeNull();
+      expect(JSON.stringify(data?.personalization ?? {})).not.toContain('rlsGuard');
+    });
+
+    it('拒否された soft-delete RPC は他ユーザー entry を変更しない', async () => {
+      const { data, error } = await adminSupabase
+        .from('entries')
+        .select('deleted_at')
+        .eq('id', TEST_USER_B_ENTRY_ID)
+        .single();
+
+      expect(error).toBeNull();
+      expect(data?.deleted_at).toBeNull();
+    });
+
+    it('service_role は検証済みサーバー経路として soft-delete / restore RPC を実行できる', async () => {
+      const { error: deleteError } = await adminSupabase.rpc('soft_delete_entry', {
+        p_entry_id: TEST_USER_B_ENTRY_ID,
+        p_user_id: TEST_USER_B_ID,
+      });
+      expect(deleteError).toBeNull();
+
+      const { data: deletedEntry, error: deletedReadError } = await adminSupabase
+        .from('entries')
+        .select('deleted_at')
+        .eq('id', TEST_USER_B_ENTRY_ID)
+        .single();
+      expect(deletedReadError).toBeNull();
+      expect(deletedEntry?.deleted_at).not.toBeNull();
+
+      const { error: restoreError } = await adminSupabase.rpc('restore_entry', {
+        p_entry_id: TEST_USER_B_ENTRY_ID,
+        p_user_id: TEST_USER_B_ID,
+      });
+      expect(restoreError).toBeNull();
+
+      const { data: restoredEntry, error: restoredReadError } = await adminSupabase
+        .from('entries')
+        .select('deleted_at')
+        .eq('id', TEST_USER_B_ENTRY_ID)
+        .single();
+      expect(restoredReadError).toBeNull();
+      expect(restoredEntry?.deleted_at).toBeNull();
+    });
+
+    it('service_role は検証済みサーバー経路として bulk delete / personalization RPC を実行できる', async () => {
+      const { data: affected, error: bulkDeleteError } = await adminSupabase.rpc(
+        'bulk_soft_delete_entries',
+        {
+          p_entry_ids: [TEST_USER_B_ENTRY_ID],
+          p_user_id: TEST_USER_B_ID,
+        },
+      );
+      expect(bulkDeleteError).toBeNull();
+      expect(affected).toBe(1);
+
+      const { error: restoreError } = await adminSupabase.rpc('restore_entry', {
+        p_entry_id: TEST_USER_B_ENTRY_ID,
+        p_user_id: TEST_USER_B_ID,
+      });
+      expect(restoreError).toBeNull();
+
+      const { error: personalizationError } = await adminSupabase.rpc('update_personalization', {
+        p_path: 'rlsServiceRole',
+        p_user_id: TEST_USER_B_ID,
+        p_value: { allowed: true },
+      });
+      expect(personalizationError).toBeNull();
+
+      const { data: settings, error: settingsError } = await adminSupabase
+        .from('user_settings')
+        .select('personalization')
+        .eq('user_id', TEST_USER_B_ID)
+        .single();
+
+      expect(settingsError).toBeNull();
+      expect(JSON.stringify(settings?.personalization ?? {})).toContain('rlsServiceRole');
+    });
+  });
+
   it('I-16 snapshotがsuiteの全対象テーブルを含む', () => {
     const snapshot = readFileSync(
-      resolve(process.cwd(), '../../docs/architecture/db/rls-snapshot.md'),
+      resolve(process.cwd(), '../../docs/engineering/data/db/rls-snapshot.md'),
       'utf8',
     );
 

@@ -1,13 +1,12 @@
 'use client';
 
-import { TagPill } from '@/components/ui/display/tag-pill';
 import { Highlight } from '@/lib/highlight';
-import type { PopularTag, SearchResponse, TagResponse } from '@/types/api';
+import type { SearchResponse } from '@/types/api';
 import { Badge, Button, Dialog, DialogContent, Input } from '@dayopt/components';
-import { Clock, Edit, FileText, Package, Search, Tag, X } from 'lucide-react';
+import { Clock, Edit, FileText, Package, Search, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface SearchDialogProps {
   open: boolean;
@@ -18,18 +17,10 @@ interface SearchDialogProps {
 export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) {
   const t = useTranslations('search');
   const [query, setQuery] = useState('');
-  const [popularTags, setPopularTags] = useState<PopularTag[]>([]);
   const [previewResults, setPreviewResults] = useState<SearchResponse['results']>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // タグフィルタリング（メモ化）
-  const matchedTags = useMemo(() => {
-    if (!query) return [];
-    const normalizedQuery = query.toLowerCase();
-    return popularTags.filter((tag) => tag.name.toLowerCase().includes(normalizedQuery));
-  }, [popularTags, query]);
 
   // localStorage から最近の検索を読み込む
   useEffect(() => {
@@ -58,45 +49,6 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
       console.error('[SearchDialog] Failed to save recent search:', error);
     }
   };
-
-  // 人気タグを取得
-  useEffect(() => {
-    let isMounted = true;
-    const abortController = new AbortController();
-
-    const fetchPopularTags = async () => {
-      try {
-        const response = await fetch('/api/tags', {
-          signal: abortController.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch tags');
-        }
-
-        const allTags: TagResponse[] = await response.json();
-
-        if (isMounted) {
-          const topTags: PopularTag[] = allTags.slice(0, 8).map((tag) => ({
-            name: tag.tag,
-            count: tag.count,
-          }));
-          setPopularTags(topTags);
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name !== 'AbortError') {
-          console.error('[SearchDialog] Failed to fetch popular tags:', error);
-        }
-      }
-    };
-
-    fetchPopularTags();
-
-    return () => {
-      isMounted = false;
-      abortController.abort();
-    };
-  }, []);
 
   // 検索プレビューを取得
   useEffect(() => {
@@ -147,11 +99,6 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
     router.push(`/${locale}/search?q=${encodeURIComponent(searchQuery)}`);
   };
 
-  const handleTagClick = (tagName: string) => {
-    onOpenChange(false);
-    router.push(`/${locale}/tags/${encodeURIComponent(tagName.toLowerCase())}`);
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       onOpenChange(false);
@@ -175,6 +122,9 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
         return <FileText className="text-muted-foreground size-4" />;
     }
   };
+
+  const typeLabel = (type: string) =>
+    type === 'docs' ? t('docs') : type === 'blog' ? t('blog') : t('release');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -226,23 +176,6 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
                   </div>
                 </div>
               )}
-
-              {/* 人気タグ */}
-              <div>
-                <h3 className="text-muted-foreground mb-4 text-xs font-medium tracking-wide uppercase">
-                  {t('popularTags')}
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {popularTags.map((tag, index) => (
-                    <TagPill
-                      key={index}
-                      tag={tag.name}
-                      count={tag.count}
-                      onClick={() => handleTagClick(tag.name)}
-                    />
-                  ))}
-                </div>
-              </div>
             </div>
           ) : (
             <div className="space-y-4 p-4">
@@ -292,14 +225,7 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
                         <div className="min-w-0 flex-1">
                           <div className="mb-1 flex items-center gap-2">
                             <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                              {result.breadcrumbs?.[0] ||
-                                (result.type === 'docs'
-                                  ? t('docs')
-                                  : result.type === 'blog'
-                                    ? t('blog')
-                                    : result.type === 'tags'
-                                      ? t('tags')
-                                      : t('release'))}
+                              {result.breadcrumbs?.[0] || typeLabel(result.type)}
                             </span>
                             <span className="text-muted-foreground/50 text-xs">•</span>
                             <span className="text-muted-foreground text-xs">
@@ -314,51 +240,7 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
                           </div>
                         </div>
                         <Badge variant="outline" className="self-start px-2 py-1 text-xs">
-                          {result.type === 'docs'
-                            ? t('docs')
-                            : result.type === 'blog'
-                              ? t('blog')
-                              : result.type === 'tags'
-                                ? t('tags')
-                                : t('release')}
-                        </Badge>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* タグ検索候補 */}
-              {matchedTags.length > 0 && (
-                <div>
-                  <p className="text-muted-foreground mb-2 text-xs">{t('relatedTags')}</p>
-                  <div className="space-y-1">
-                    {matchedTags.map((tag, index) => (
-                      <Button
-                        key={index}
-                        onClick={() => handleTagClick(tag.name)}
-                        variant="ghost"
-                        className="flex h-auto w-full items-center justify-start gap-4 p-2"
-                      >
-                        <div className="mt-1">
-                          <Tag className="text-muted-foreground size-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-1 flex items-center gap-2">
-                            <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                              {t('tags')}
-                            </span>
-                            <span className="text-muted-foreground/50 text-xs">•</span>
-                            <span className="text-muted-foreground text-xs">
-                              {tag.count} {t('articles')}
-                            </span>
-                          </div>
-                          <div className="text-foreground truncate text-sm font-medium">
-                            <Highlight text={tag.name} query={query} />
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="self-start px-2 py-1 text-xs">
-                          {t('tags')}
+                          {typeLabel(result.type)}
                         </Badge>
                       </Button>
                     ))}

@@ -2,18 +2,25 @@
 
 import { Button } from '@dayopt/components';
 import { Copy, Facebook, Link2, Linkedin, Twitter } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface ShareButtonProps {
   title: string;
-  slug: string;
+  /** 共有対象の絶対 URL。SSR と CSR で一致させるためサーバから渡す（window.location は使わない） */
+  url: string;
 }
 
-export function ShareButton({ title, slug }: ShareButtonProps) {
+export function ShareButton({ title, url }: ShareButtonProps) {
   const t = useTranslations('common.actions');
-  const locale = useLocale();
-  const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/blog/${slug}`;
+  // native share はクライアントでしか使えないため、mount 後のみ表示して hydration mismatch を防ぐ
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const encodedTitle = encodeURIComponent(title);
   const encodedUrl = encodeURIComponent(url);
 
@@ -45,7 +52,7 @@ export function ShareButton({ title, slug }: ShareButtonProps) {
   };
 
   const handleNativeShare = () => {
-    if (typeof window !== 'undefined' && 'share' in navigator) {
+    if ('share' in navigator) {
       navigator.share({ title, url });
     } else {
       handleCopyLink();
@@ -77,7 +84,7 @@ export function ShareButton({ title, slug }: ShareButtonProps) {
       >
         <Copy className="size-4" />
       </Button>
-      {typeof window !== 'undefined' && 'share' in navigator && (
+      {mounted && 'share' in navigator && (
         <Button
           variant="ghost"
           icon

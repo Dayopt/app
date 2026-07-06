@@ -9,6 +9,23 @@ import 'server-only';
 
 import { z } from 'zod';
 
+function isRedirectUriList(value: string | undefined): boolean {
+  if (!value) return true;
+  return value
+    .split(',')
+    .map((uri) => uri.trim())
+    .filter(Boolean)
+    .every((uri) => {
+      if (uri.includes('*')) return false;
+      try {
+        new URL(uri);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+}
+
 const serverSchema = z
   .object({
     // Supabase
@@ -34,6 +51,15 @@ const serverSchema = z
 
     // Auth
     RECOVERY_CODE_PEPPER: z.string().optional(),
+    OAUTH_CLAUDE_REDIRECT_URIS: z.string().optional().refine(isRedirectUriList, {
+      message: 'OAUTH_CLAUDE_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
+    }),
+    OAUTH_CHATGPT_REDIRECT_URIS: z.string().optional().refine(isRedirectUriList, {
+      message: 'OAUTH_CHATGPT_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
+    }),
+    OAUTH_CURSOR_REDIRECT_URIS: z.string().optional().refine(isRedirectUriList, {
+      message: 'OAUTH_CURSOR_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
+    }),
 
     // Google
     GOOGLE_SITE_VERIFICATION: z.string().optional(),
@@ -41,6 +67,7 @@ const serverSchema = z
     // Stripe
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    NEXT_PUBLIC_STRIPE_PRO_PRICE_ID: z.string().optional(),
 
     // Slack
     SLACK_BILLING_WEBHOOK_URL: z.string().url().optional(),

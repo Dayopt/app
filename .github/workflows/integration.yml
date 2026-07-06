@@ -11,7 +11,7 @@ on:
       - 'apps/product/src/lib/test/integration/**'
       - 'apps/product/vitest.config.integration.ts'
       - 'scripts/generate-rls-snapshot.ts'
-      - 'docs/architecture/db/rls-snapshot.md'
+      - 'docs/engineering/data/db/rls-snapshot.md'
   push:
     branches: [main]
     paths:
@@ -22,7 +22,7 @@ on:
       - 'apps/product/src/lib/test/integration/**'
       - 'apps/product/vitest.config.integration.ts'
       - 'scripts/generate-rls-snapshot.ts'
-      - 'docs/architecture/db/rls-snapshot.md'
+      - 'docs/engineering/data/db/rls-snapshot.md'
 
 env:
   NODE_VERSION: '22'

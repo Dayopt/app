@@ -3,11 +3,48 @@
 import { dayoptBrand } from '@dayopt/config';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
-import { TocItem, generateTableOfContents, truncateHeading } from '../lib/toc';
+import { TocItem, generateTableOfContents } from '../lib/toc';
 
 interface AutoTableOfContentsProps {
   content: string;
   className?: string;
+  /** 下部の Links（Issue 報告 / ソース）を内包表示するか。別 card に分けたい場合は false。 */
+  showLinks?: boolean;
+}
+
+/** TOC 下部の外部リンク（Issue 報告 / ソース）。単体でも別 card として使える。 */
+export function TocLinks() {
+  const t = useTranslations('docs.toc');
+
+  return (
+    <div>
+      <div className="text-muted-foreground mb-4 text-xs font-medium tracking-wider uppercase">
+        {t('links')}
+      </div>
+      <ul className="space-y-2">
+        <li>
+          <a
+            href={dayoptBrand.githubIssuesNewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+          >
+            {t('reportIssue')}
+          </a>
+        </li>
+        <li>
+          <a
+            href={dayoptBrand.githubRepositoryUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+          >
+            {t('viewSource')}
+          </a>
+        </li>
+      </ul>
+    </div>
+  );
 }
 
 interface TocListProps {
@@ -19,21 +56,25 @@ interface TocListProps {
 
 function TocList({ items, level = 0, activeId, onItemClick }: TocListProps) {
   return (
-    <ul className={`space-y-1 ${level > 0 ? 'ml-4' : ''}`}>
+    <ul className="space-y-1">
       {items.map((item) => (
         <li key={item.id}>
           <button
             onClick={() => onItemClick(item.id)}
-            className={`-ml-2 block w-full rounded-lg px-2 py-2 text-left text-sm transition-colors ${
+            className={`relative block w-full py-1 pl-4 text-left text-sm transition-colors ${
               activeId === item.id
-                ? 'text-foreground bg-state-selected font-medium'
-                : 'text-muted-foreground hover:text-foreground hover:bg-state-hover'
+                ? 'text-foreground font-medium'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
             title={item.title}
           >
-            <span className="line-clamp-2">
-              {truncateHeading(item.title, level === 0 ? 40 : 35)}
-            </span>
+            {activeId === item.id && (
+              <span
+                className="bg-foreground absolute inset-y-0 left-0 w-[2px] rounded-full"
+                aria-hidden="true"
+              />
+            )}
+            <span className="line-clamp-2">{item.title}</span>
           </button>
           {item.children && item.children.length > 0 && (
             <TocList
@@ -49,7 +90,11 @@ function TocList({ items, level = 0, activeId, onItemClick }: TocListProps) {
   );
 }
 
-export function AutoTableOfContents({ content, className = '' }: AutoTableOfContentsProps) {
+export function AutoTableOfContents({
+  content,
+  className = '',
+  showLinks = true,
+}: AutoTableOfContentsProps) {
   const t = useTranslations('docs.toc');
   const [toc, setToc] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string>('');
@@ -74,7 +119,7 @@ export function AutoTableOfContents({ content, className = '' }: AutoTableOfCont
     const headingIds = flatTocItems.map((item) => item.id).filter(Boolean);
 
     const updateActiveHeading = () => {
-      const mainElement = document.getElementById('main-content');
+      const mainElement = getScrollableMain();
       const scrollTop = mainElement?.scrollTop ?? window.scrollY;
       const offset = 100; // ヘッダー高さを考慮
 
@@ -96,14 +141,25 @@ export function AutoTableOfContents({ content, className = '' }: AutoTableOfCont
         }
       }
 
+      // 最後の見出し直後のコンテンツが短いと、しきい値に届かず最後まで
+      // スクロールしても currentActiveId が更新されないため、最下部到達時は
+      // 最後の見出しを強制的にアクティブにする
+      const maxScrollTop = mainElement
+        ? mainElement.scrollHeight - mainElement.clientHeight
+        : document.documentElement.scrollHeight - window.innerHeight;
+      const lastHeadingId = headingIds[headingIds.length - 1];
+      if (lastHeadingId && scrollTop >= maxScrollTop - 2) {
+        currentActiveId = lastHeadingId;
+      }
+
       setActiveId(currentActiveId);
     };
 
     // 初期設定
     setTimeout(updateActiveHeading, 100);
 
-    // main要素のスクロールを監視
-    const mainElement = document.getElementById('main-content');
+    // スクロールコンテナ（docs は main、marketing は window）を監視
+    const mainElement = getScrollableMain();
     if (mainElement) {
       mainElement.addEventListener('scroll', updateActiveHeading, { passive: true });
     }
@@ -121,8 +177,12 @@ export function AutoTableOfContents({ content, className = '' }: AutoTableOfCont
   const handleItemClick = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      const mainElement = document.getElementById('main-content');
-      const headerOffset = 32; // py-8のパディング分
+      // スクロール検出を待たず、クリックした項目を即座にハイライトする
+      setActiveId(id);
+
+      const mainElement = getScrollableMain();
+      // main がスクロールする docs は 32、sticky header の marketing は header 分(約80)を確保
+      const headerOffset = mainElement ? 32 : 80;
 
       if (mainElement) {
         // main要素内でスクロール
@@ -132,9 +192,9 @@ export function AutoTableOfContents({ content, className = '' }: AutoTableOfCont
           behavior: 'smooth',
         });
       } else {
-        // フォールバック: window スクロール
+        // window スクロール（sticky header を考慮）
         const elementPosition = element.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        const offsetPosition = elementPosition + window.scrollY - headerOffset;
 
         window.scrollTo({
           top: offsetPosition,
@@ -171,40 +231,36 @@ export function AutoTableOfContents({ content, className = '' }: AutoTableOfCont
         {t('onThisPage')}
       </div>
 
-      <nav className="space-y-1">
+      <nav className="relative">
+        <span
+          className="bg-border absolute inset-y-0 left-0 w-[2px] rounded-full"
+          aria-hidden="true"
+        />
         <TocList items={toc} activeId={activeId} onItemClick={handleItemClick} />
       </nav>
 
-      {/* Links */}
-      <div className="border-border border-t pt-4">
-        <div className="text-muted-foreground mb-4 text-xs font-medium tracking-wider uppercase">
-          {t('links')}
+      {/* Links（showLinks=false の場合は呼び出し側で別 card として TocLinks を描画する） */}
+      {showLinks && (
+        <div className="border-border border-t pt-4">
+          <TocLinks />
         </div>
-        <ul className="space-y-2">
-          <li>
-            <a
-              href={dayoptBrand.githubIssuesNewUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-            >
-              {t('reportIssue')}
-            </a>
-          </li>
-          <li>
-            <a
-              href={dayoptBrand.githubRepositoryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-            >
-              {t('viewSource')}
-            </a>
-          </li>
-        </ul>
-      </div>
+      )}
     </div>
   );
+}
+
+/**
+ * 実際にスクロールするコンテナを返す。
+ * docs レイアウトは `#main-content` 自体がスクロールするが、marketing（blog）レイアウトでは
+ * `#main-content` は存在しても window がスクロールする。スクロール可能でなければ null を返し、
+ * 呼び出し側は window スクロールにフォールバックする。
+ */
+function getScrollableMain(): HTMLElement | null {
+  const main = document.getElementById('main-content');
+  if (main && main.scrollHeight > main.clientHeight + 1) {
+    return main;
+  }
+  return null;
 }
 
 // 階層化された目次をフラットなリストに変換

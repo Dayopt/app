@@ -26,6 +26,7 @@ import {
   updateEntrySchema,
 } from '../schemas/entry';
 import { createEntryService } from './service-index';
+import type { ServiceSupabaseClient } from './types';
 
 // =============================================================================
 // ユーザータイムゾーン取得 / レート制限の実装は lib に分離済み（P0-4 / P2-3）
@@ -57,6 +58,23 @@ const setTagInputSchema = z.object({
   entryId: z.string().uuid(),
   tagId: z.string().uuid().nullable(),
 });
+
+async function assertTagOwnedByUser(
+  supabase: ServiceSupabaseClient,
+  userId: string,
+  tagId: string,
+): Promise<void> {
+  const { data: tag, error } = await supabase
+    .from('tags')
+    .select('id')
+    .eq('id', tagId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error || !tag) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid tag ID' });
+  }
+}
 
 // =============================================================================
 // Router
@@ -118,6 +136,10 @@ export const entriesCoreRouter = createTRPCRouter({
       const service = createEntryService(ctx.supabase);
       try {
         const { tagId, ...entryInput } = input;
+        if (tagId) {
+          await assertTagOwnedByUser(ctx.supabase, ctx.userId, tagId);
+        }
+
         const timezone = await getUserTimezone(ctx.supabase, ctx.userId);
         const result = await service.create({
           userId: ctx.userId,
@@ -308,6 +330,8 @@ export const entriesCoreRouter = createTRPCRouter({
       const { supabase, userId } = ctx;
       const { entryIds, tagId } = input;
 
+      await assertTagOwnedByUser(supabase, userId, tagId);
+
       const { error, count } = await supabase
         .from('entries')
         .update({ tag_id: tagId })
@@ -347,16 +371,7 @@ export const entriesCoreRouter = createTRPCRouter({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found' });
       }
 
-      const { data: tag, error: tagError } = await supabase
-        .from('tags')
-        .select('id')
-        .eq('id', tagId)
-        .eq('user_id', userId)
-        .single();
-
-      if (tagError || !tag) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Tag not found' });
-      }
+      await assertTagOwnedByUser(supabase, userId, tagId);
 
       const { error } = await supabase
         .from('entries')
@@ -433,16 +448,7 @@ export const entriesCoreRouter = createTRPCRouter({
 
       // タグの所有権チェック
       if (tagId) {
-        const { data: validTag, error: tagError } = await supabase
-          .from('tags')
-          .select('id')
-          .eq('id', tagId)
-          .eq('user_id', userId)
-          .single();
-
-        if (tagError || !validTag) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid tag ID' });
-        }
+        await assertTagOwnedByUser(supabase, userId, tagId);
       }
 
       const { error } = await supabase

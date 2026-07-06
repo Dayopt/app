@@ -109,6 +109,7 @@ performance-*.log
 # Auto-generated code
 /src/types/generated/
 /src/**/generated/
+/.generated/
 
 # Test files (moved to .eslint/tests/)
 test-*
@@ -166,6 +167,7 @@ temp/
 /test-results/
 /playwright-report/
 /playwright/.auth/
+/.playwright-mcp/
 # Lighthouse CI
 .lighthouseci/
 .env*.local

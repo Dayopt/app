@@ -230,6 +230,7 @@ function ChartTooltipContent({
   return (
     <div
       className={cn(
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- tooltip の最小幅 8rem はトークンに対応する spacing が無い
         'border-border-subtle bg-card shadow-card grid min-w-[8rem] items-start gap-2 rounded-2xl border px-2 py-2 text-xs',
         className,
       )}

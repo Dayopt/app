@@ -36,12 +36,7 @@ function hasErrorCode(error: unknown): error is Error & { code: string } {
 
 /** tRPCエラーコードの型定義 */
 type TRPCErrorCode =
-  | 'INTERNAL_SERVER_ERROR'
-  | 'NOT_FOUND'
-  | 'BAD_REQUEST'
-  | 'FORBIDDEN'
-  | 'UNAUTHORIZED'
-  | 'CONFLICT';
+  'INTERNAL_SERVER_ERROR' | 'NOT_FOUND' | 'BAD_REQUEST' | 'FORBIDDEN' | 'UNAUTHORIZED' | 'CONFLICT';
 
 /**
  * エラーコードとTRPCエラーコードのマッピング

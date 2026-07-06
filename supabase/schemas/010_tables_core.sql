@@ -67,6 +67,9 @@ CREATE TABLE public.entries (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- entries.tag_id は nullable FK に加えて、trigger で tags.user_id = entries.user_id を強制する。
+--   enforce_entry_tag_owner -> enforce_entry_tag_owner()
+
 -- tags: タグ（root -> child の最大2階層）
 -- 20260424000000 でコロン記法 "dev:api" から parent_id 階層へ移行済み
 -- parent_id IS NULL が root、parent_id NOT NULL が child

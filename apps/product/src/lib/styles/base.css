@@ -1,6 +1,7 @@
 /* ============================================
  * ベーススタイル
- * フォント、カラースキーム、スクロールバー
+ * フォント、カラースキーム
+ * （スクロールバーは @dayopt/foundations/scrollbar.css に共通化）
  * ============================================ */
 
 /* next/font 最適化フォント適用（GAFA方針準拠フォールバックスタック） */
@@ -40,28 +41,4 @@ html.dark {
    disabled は Tailwind の disabled:cursor-not-allowed / pointer-events-none で個別対応。 */
 button:not(:disabled) {
   cursor: pointer;
-}
-
-/* ============================================
- * スクロールバーのスタイリング
- * ============================================ */
-/* Webkit系ブラウザ（Chrome, Safari, Edge） */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: color-mix(in oklch, var(--color-muted-foreground) 30%, transparent);
-  border-radius: 8px;
-}
-
-/* Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklch, var(--color-muted-foreground) 30%, transparent) transparent;
 }

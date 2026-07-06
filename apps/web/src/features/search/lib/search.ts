@@ -7,7 +7,6 @@ export interface SearchIndexItem {
   content: string;
   slug: string;
   category: string;
-  tags: string[];
   href: string;
 }
 
@@ -50,7 +49,6 @@ export async function generateSearchIndex(locale?: string): Promise<SearchIndexI
           content: stripMarkdown(content.content || ''),
           slug: content.slug,
           category: content.frontMatter?.category || 'general',
-          tags: content.frontMatter?.tags || [],
           href: `/docs/${content.slug}`,
         });
       } catch (itemError) {
@@ -147,10 +145,6 @@ function calculateScore(item: SearchIndexItem, query: string): number {
     score += 50;
   }
 
-  // タグマッチ
-  const matchingTags = item.tags.filter((tag) => tag.toLowerCase().includes(queryLower));
-  score += matchingTags.length * 30;
-
   // コンテンツマッチ（低スコア）
   const contentMatches = (
     item.content.toLowerCase().match(new RegExp(escapeRegExp(queryLower), 'g')) || []
@@ -239,13 +233,6 @@ export function getSearchSuggestions(query: string, maxSuggestions: number = 5):
   for (const item of searchIndex) {
     if (item.title.toLowerCase().includes(queryLower)) {
       suggestions.add(item.title);
-    }
-
-    // タグから候補を抽出
-    for (const tag of item.tags) {
-      if (tag.toLowerCase().includes(queryLower)) {
-        suggestions.add(tag);
-      }
     }
   }
 

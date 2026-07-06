@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./tokens.css": "./src/tokens.css"
+    "./tokens.css": "./src/tokens.css",
+    "./scrollbar.css": "./src/scrollbar.css"
   },
   "scripts": {
     "build": "tsc --noEmit",
