@@ -1,6 +1,6 @@
 # MCP サーバー利用ガイドライン
 
-Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下の場面では積極的に MCP を呼ぶこと。推測より確認を優先する。
+モデルによってはツール呼び出しが控えめになる傾向がある。モデルによらず、以下の場面では積極的に MCP を呼ぶこと。推測より確認を優先する。
 
 接続済みサーバーは `.mcp.json` を参照（eagle / supabase-local / storybook / supabase / context7 / sentry / playwright / github / vercel）。有効化は各自の `.claude/settings.local.json`（gitignore 対象＝ローカル専用）の `enabledMcpjsonServers` で対象を列挙して行う。
 
