@@ -12,6 +12,8 @@
 import { useTranslations } from 'next-intl';
 import { useCallback, useMemo } from 'react';
 
+import { isWeekend } from 'date-fns';
+
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsContext';
@@ -193,17 +195,24 @@ export function CalendarController({
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
-  const calendarDiffEnabled = showActualDiff && isCalendarDiffView(viewType);
+  const calendarDiffDays = useMemo(() => {
+    if (viewType === 'day' || showWeekends) return viewDateRange.days;
+    return viewDateRange.days.filter((day) => !isWeekend(day));
+  }, [showWeekends, viewDateRange.days, viewType]);
+  const calendarDiffEnabled =
+    showActualDiff &&
+    isCalendarDiffView(viewType) &&
+    (viewType === 'day' || calendarDiffDays.length > 0);
   const calendarDiffBounds = useMemo(
     () =>
-      viewType === 'day' || viewDateRange.days.length === 0
+      viewType === 'day' || calendarDiffDays.length === 0
         ? resolveCalendarDayDiffBounds(currentDate, timezone)
         : resolveCalendarRangeDiffBounds(
-            viewDateRange.days[0] ?? viewDateRange.start,
-            viewDateRange.days[viewDateRange.days.length - 1] ?? viewDateRange.end,
+            calendarDiffDays[0] ?? viewDateRange.start,
+            calendarDiffDays[calendarDiffDays.length - 1] ?? viewDateRange.end,
             timezone,
           ),
-    [currentDate, timezone, viewDateRange.days, viewDateRange.end, viewDateRange.start, viewType],
+    [calendarDiffDays, currentDate, timezone, viewDateRange.end, viewDateRange.start, viewType],
   );
   const calendarDiffEntries = useMemo(() => {
     void visibleTagIds;
