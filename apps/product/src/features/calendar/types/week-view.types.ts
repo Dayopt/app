@@ -31,6 +31,10 @@ export interface WeekGridProps {
       ) => void | Promise<void> | Promise<{ skipToast: true } | void>)
     | undefined;
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
+  /** compare の差分 marker を表示する */
+  showActualDiff?: boolean | undefined;
+  /** compare Rail に出ている entry の ID 一覧 */
+  dayDiffEntryIds?: ReadonlySet<string> | undefined;
   className?: string | undefined;
 }
 

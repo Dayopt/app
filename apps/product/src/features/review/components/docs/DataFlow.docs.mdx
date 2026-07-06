@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Product/Features/Stats/Guide/Data Flow" />
+<Meta title="Product/Features/Review/Guide/Data Flow" />
 
 # Data Flow
 
@@ -12,7 +12,7 @@ Calendar Review panel のデータ取得・変換・表示のパイプライン�
 
 ```
 PostgreSQL RPC 関数
-  → tRPC ルーター (entry/stats feature)
+  → tRPC ルーター (entry feature)
     → TanStack Query (並列取得・自動キャッシュ)
       → 純粋計算関数
         → Calendar panel UI
@@ -21,43 +21,25 @@ PostgreSQL RPC 関数
 Review の補助 insight はルールベースで client-side 評価:
 
 ```
-TanStack Query (Layer 1/2 と同じ pageData)
-  → useDiscoveries (純粋関数で発見リストを評価)
-    → compact panel UI
+TanStack Query (getStatsPageData / getTimePL)
+  → review domain / presentation derivers
+    → WeeklyReflectionPanel
 ```
 
 ---
 
 ## tRPC エンドポイント
 
-### Layer 1: KPI メトリクス
+**ルーター**: `apps/product/src/features/entry/server/statistics-summary-router.ts`
 
-**ルーター**: `src/features/entry/server/statistics.ts`
+| エンドポイント     | Consumer            | 説明                                       |
+| ------------------ | ------------------- | ------------------------------------------ |
+| `getStatsPageData` | `useReviewPageData` | 週次 Review panel の overview / trend data |
+| `getTimePL`        | `useTimePLData`     | Time P/L 用の planned / actual / diff data |
 
-| エンドポイント          | Input                  | 説明                      |
-| ----------------------- | ---------------------- | ------------------------- |
-| `getCumulativeTime`     | dateRange              | 期間内の記録時間合計      |
-| `getStreak`             | —                      | 連続アクティビティ日数    |
-| `getPlanRate`           | dateRange              | 計画率                    |
-| `getEstimationAccuracy` | dateRange              | タグ別見積もり精度        |
-| `getEnergyMap`          | dateRange              | 時間帯×曜日エネルギー分布 |
-| `getContextSwitches`    | dateRange              | タスク切替回数            |
-| `getBlankRate`          | dateRange + wake/sleep | 空白時間率                |
+Reflection は `getStatsPageData.estimationAccuracy` と `getStatsPageData.blankRate` を直接使う。確認済み率（#1333）と skip 週次集約（#1289 `skipped_at`）は次の data 接続で `WeeklyReflectionPanel` の props へ入れる。
 
-### Layer 2: チャート
-
-**ルーター**: `src/features/entry/server/statistics.ts`
-
-| エンドポイント             | Input         | 説明                   |
-| -------------------------- | ------------- | ---------------------- |
-| `getDailyHours`            | `{ year }`    | ヒートマップ用日次集計 |
-| `getMonthlyTrend`          | `{ months? }` | 月次推移               |
-| `getDayOfWeekDistribution` | dateRange?    | 曜日別分布             |
-| `getHourlyDistribution`    | dateRange?    | 時間帯分布             |
-
-### 補助 insight（ルールベース）
-
-サーバー endpoint なし。Layer 1/2 と同じ `getStatsPageData` の結果を `useDiscoveries` で評価する。
+Diff は Calendar の表示中 entries から `computeCalendarDayDiffs` で導出する。day view では 1 日、week / multi-day view では表示範囲全体を bounds にする。Calendar は `entryId` action に戻す adapter を持ち、表示は Review / Diff の `ReviewDiffPanel` が所有する。
 
 ---
 
@@ -78,9 +60,9 @@ Calendar URL の `panel=review` と `reviewTagId` で表現する。期間は Ca
 
 ## キャッシュ戦略
 
-- Layer 1/2: TanStack Query の staleTime でキャッシュ。週・日付の組み合わせがキャッシュキー
-- Insights タブ: 同じ pageData を共有し、`useDiscoveries` で再計算（メモ化）
+- Reflection: TanStack Query の staleTime でキャッシュ。週・日付の組み合わせがキャッシュキー
+- Diff: Calendar view data から同期的に導出し、追加 RPC は呼ばない
 
 ---
 
-**最終更新**: 2026-03-16
+**最終更新**: 2026-06-29

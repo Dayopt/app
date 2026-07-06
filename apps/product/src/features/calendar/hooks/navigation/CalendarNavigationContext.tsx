@@ -19,7 +19,7 @@ import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { formatCalendarDateParam, parseCalendarDateParam } from '../../lib/date-param';
 import { isCalendarViewPath } from '../../lib/route-utils';
 import type { CalendarViewType } from '../../types/calendar.types';
-import { getMultiDayCount, isMultiDayView } from '../../types/calendar.types';
+import { getMultiDayCount, isCalendarDiffView, isMultiDayView } from '../../types/calendar.types';
 
 type CalendarPanelKind = 'review' | 'diff' | 'analytics' | null;
 
@@ -39,7 +39,7 @@ function normalizePanelForView(
   viewType: CalendarViewType,
   panelKind: CalendarPanelKind | null,
 ): CalendarPanelKind | null {
-  if (panelKind === 'diff') return viewType === 'day' ? 'diff' : null;
+  if (panelKind === 'diff') return isCalendarDiffView(viewType) ? 'diff' : null;
   return panelKind;
 }
 
@@ -320,7 +320,9 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     (nextPanelKind: CalendarPanelKind | null, options?: { reviewTagId?: string }) => {
       const nextView =
         nextPanelKind === 'diff'
-          ? 'day'
+          ? isCalendarDiffView(viewTypeRef.current)
+            ? viewTypeRef.current
+            : 'day'
           : nextPanelKind === 'review'
             ? isMobileRef.current
               ? 'day'

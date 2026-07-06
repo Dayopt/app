@@ -154,7 +154,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
     : getAdjustedStyle(style, entry.id, interactionState);
 
   // 予定 vs 記録の差分オーバーレイは multi-column drag 用に限定する。
-  // day compare は Diff Rail を主役にし、カード上は marker のみ表示する。
+  // compare は Diff Rail を主役にし、カード上は marker のみ表示する。
   const shouldRenderActualDiff = enableCrossDayDrag;
   let finalStyle: React.CSSProperties = adjustedStyle;
   let finalHeight: number;

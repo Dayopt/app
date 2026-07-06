@@ -37,6 +37,8 @@ export const WeekView = ({
   allEntries,
   showWeekends = true,
   weekStartsOn: weekStartsOnProp,
+  showActualDiff = false,
+  dayDiffEntryIds,
   className,
   disabledEntryId,
   onEntryClick,
@@ -76,6 +78,8 @@ export const WeekView = ({
         onEventUpdate={onUpdateEntry}
         onTimeRangeSelect={onTimeRangeSelect}
         className={className}
+        showActualDiff={showActualDiff}
+        dayDiffEntryIds={dayDiffEntryIds}
       />
     </CalendarViewAnimation>
   );

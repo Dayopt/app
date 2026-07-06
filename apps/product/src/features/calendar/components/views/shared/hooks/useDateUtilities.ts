@@ -38,7 +38,11 @@ interface UseDateUtilitiesReturn {
 /**
  * N日間の日付配列を生成（中央日基準、週末非表示対応）
  */
-function generateMultiDayDates(referenceDate: Date, count: number, showWeekends: boolean): Date[] {
+export function generateMultiDayDates(
+  referenceDate: Date,
+  count: number,
+  showWeekends: boolean,
+): Date[] {
   const offset = Math.floor(count / 2);
 
   if (!showWeekends) {

@@ -5,7 +5,7 @@ import { SummaryCard } from './SummaryCard';
 
 /** SummaryCard — 粒度ビュー共通の KPI カード（前期間比トレンド付き） */
 const meta = {
-  title: 'Product/Features/Stats/Shared/SummaryCard',
+  title: 'Product/Features/Review/Shared/SummaryCard',
   component: SummaryCard,
   parameters: {
     layout: 'padded',

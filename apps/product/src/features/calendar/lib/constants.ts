@@ -30,6 +30,11 @@ export function isMultiDayView(view: CalendarViewType): view is MultiDayViewType
   return /^\d+day$/.test(view) && view !== 'day';
 }
 
+/** 予定/実績差分 panel を表示できるビューかどうかを判定 */
+export function isCalendarDiffView(view: CalendarViewType): boolean {
+  return view === 'day' || view === 'week' || isMultiDayView(view);
+}
+
 /** MultiDayViewType から日数を取得 */
 export function getMultiDayCount(view: MultiDayViewType): MultiDayCount {
   return parseInt(view) as MultiDayCount;

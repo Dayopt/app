@@ -1,85 +1,71 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Product/Features/Stats/Guide/Layer Architecture" />
+<Meta title="Product/Features/Review/Guide/Layer Architecture" />
 
 # Layer Architecture
 
-Review panel の技術的な分層設計。計算の複雑度に応じて 3 層に分離し、段階的に実装する。
+Review panel の技術的な分層設計。Reflection と Diff を同じ Review 所有の panel segment として扱う。
 
 ---
 
-## 3 層モデル
+## 2 segment model
 
 ```
-Layer 1 (自動計算)      純粋な集計ロジック。SQL + クライアント計算
-  ↓ 数値データを提供
-Layer 2 (パターン検出)   集計結果をチャートで可視化。Recharts
-  ↓ 構造化データを提供
-Layer 3 (LLM インサイト)  L1 + L2 データから自然言語の気づきを生成
+Reflection  週次 Review。所見、KPI、Time P/L、見積バイアス、スキップ、空白を1画面で表示
+Diff        表示範囲差分。Calendar entries から予定外・未実施・移動・長さ変更を表示
 ```
 
-### Layer vs Tab
+### Data vs Panel Segment
 
-Layer（計算の複雑度）と Tab（UIの分類）は**直交する**概念。
+data source と panel segment は**直交する**概念。
 
-|             | Review タブ | Progress タブ | Insights タブ  |
-| ----------- | ----------- | ------------- | -------------- |
-| **Layer 1** | KPI 8カード | —             | —              |
-| **Layer 2** | —           | チャート 4つ  | —              |
-| **Layer 3** | —           | —             | LLM インサイト |
+|                       | Reflection                                      | Diff                      |
+| --------------------- | ----------------------------------------------- | ------------------------- |
+| **RPC**               | `getStatsPageData` / `getTimePL`                | なし                      |
+| **Client derivation** | Time P/L derivers                               | `computeCalendarDayDiffs` |
+| **UI**                | `CalendarReviewPanel` / `WeeklyReflectionPanel` | `ReviewDiffPanel`         |
 
-現在は 1:1 だが、将来コンポーネントがタブ間を移動する可能性がある。例: Rule Insights（L1）が Review タブに配置される予定。
+runtime では Reflection と Diff がまだ別 `panel` state だが、表示 component は Review が両 segment を所有する。
 
 ---
 
-## Layer 1: Auto-Computed Metrics
+## Reflection
 
-LLM を使わない純粋な集計ロジック。
+週次 Review の compact panel。LLM は使わず、既存 RPC と純粋 deriver で表示する。
 
-- **8 KPI カード**: Total Time, Avg Fulfillment, Plan Rate, Streak, Estimation Accuracy, Deep Utilization, Context Switches, Blank Rate
-- **計算場所**: PostgreSQL RPC 関数 + クライアント側純粋関数
+- **所見**: 見積バイアス、スキップ、空白から最上位 signal を 1-2 文で出す
+- **KPI**: 記録時間、計画達成率、確認済み率（#1333 接続前は差分 KPI）
+- **Time P/L**: `deriveStatement` / `deriveAccuracy` / `deriveBarComparison`
+- **見積バイアス**: `getStatsPageData.estimationAccuracy`
+- **スキップ**: #1289 の `skipped_at` を週次集約して後続接続
+- **空白**: `getStatsPageData.blankRate`
+- **計算場所**: `features/entry` の summary RPC + `features/review/domain`
 - **AI 依存**: なし
 - **対象**: 全ユーザー（Free 含む）
 
-詳細: [L1 Metrics](?path=/docs/features-stats-layers-l1-metrics--docs) | [Metrics Catalog](?path=/docs/features-stats-layers-l1-metrics-catalog--docs)
+詳細な catalog は現行 Storybook taxonomy では個別 story に集約する。
 
 ---
 
-## Layer 2: Pattern Detection
+## Diff
 
-集計結果を可視化するチャート群。
+Calendar の表示範囲における予定と実績の差分を Calendar entries から導出する。
 
-- **4 チャート**: YearlyHeatmap, MonthlyTrend, DayOfWeekChart, HourlyDistribution
-- **ライブラリ**: Recharts
+- **Summary**: planned / actual / diff / unplanned / missed
+- **List**: unplanned / missed / shifted / resized
+- **計算場所**: `features/calendar/lib/day-diff.ts`
 - **AI 依存**: なし
-- **対象**: 全ユーザー（Free 含む）
+- **対象**: day view / week view / 2〜9day multi-day view
 
-詳細: [L2 Patterns](?path=/docs/features-stats-layers-l2-patterns--docs) | [Charts Catalog](?path=/docs/features-stats-layers-l2-charts-catalog--docs)
-
----
-
-## Layer 3: LLM Insights
-
-L1 + L2 の構造化データを LLM に渡し、自然言語のインサイトを生成。
-
-- **生成**: Edge Function `generate-reflections` が pg_cron で定期実行
-- **モデル**: Anthropic Haiku 4.5
-- **AI 依存**: あり
-- **対象**: 全ユーザー（Free 含む — システム側の自動実行なのでクォータ不要）
-
-詳細: [L3 LLM Insights](?path=/docs/features-stats-layers-l3-llm-insights--docs) | [L3 Schedule](?path=/docs/features-stats-layers-l3-schedule--docs)
+詳細な catalog は現行 Storybook taxonomy では個別 story に集約する。
 
 ---
 
-## Rule Insights（Layer 1 の一部）
+## Not In V1
 
-閾値ベースの自動気づき生成。LLM 不要。メトリクス数値の「解釈」をルールで自動化する。
-
-- **実装**: 純粋関数 `(currentMetrics, previousMetrics, thresholds) => RuleInsight[]`
-- **配置予定**: Review タブ
-- **AI 依存**: なし
-
-詳細: [L1 Rule Insights](?path=/docs/features-stats-layers-l1-rule-insights--docs)
+- Analytics panel は v1 の主要構成に含めない。
+- LLM insight は扱わない。
+- Diff の diff 導出と Calendar entry action adapter は Calendar 側に残す。
 
 ---
 
@@ -87,13 +73,13 @@ L1 + L2 の構造化データを LLM に渡し、自然言語のインサイト�
 
 ```
 entry feature     → DB 集約（RPC 呼び出し）を所有
-stats feature     → 表示ロジック・UI・tRPC ルーターを所有
+review feature    → 表示ロジック・UIを所有
 settings feature  → AI 設定（communication style, values）を所有
 supabase/functions/ → Edge Function（プラットフォーム基盤）
 ```
 
-Layer 間のデータ共有は DB 関数 `get_insights_data()` で一括取得。Feature 間の直接 import は禁止。
+Feature 間の直接 import は公開 API 経由に限定する。Diff 表示は `ReviewDiffPanel` が所有し、Calendar は render slot に diff payload と `entryId` action を渡す。
 
 ---
 
-**最終更新**: 2026-03-16
+**最終更新**: 2026-06-29

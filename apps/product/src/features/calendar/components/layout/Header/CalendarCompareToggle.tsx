@@ -11,7 +11,7 @@ interface CalendarCompareToggleProps {
   className?: string | undefined;
 }
 
-/** Day view の予定と実績の比較表示を切り替える。 */
+/** 対応ビューの予定と実績の比較表示を切り替える。 */
 export function CalendarCompareToggle({
   checked,
   onCheckedChange,

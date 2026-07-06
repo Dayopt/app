@@ -139,9 +139,9 @@ interface CalendarGridContentProps {
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   /** DnDを無効化するエントリID */
   disabledEntryId?: string | null | undefined;
-  /** day compare の差分 marker を表示する */
+  /** compare の差分 marker を表示する */
   showActualDiff?: boolean | undefined;
-  /** day compare Rail に出ている entry の ID 一覧 */
+  /** compare Rail に出ている entry の ID 一覧 */
   dayDiffEntryIds?: ReadonlySet<string> | undefined;
   className?: string | undefined;
 }
