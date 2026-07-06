@@ -21,6 +21,7 @@ maxTurns: 15
 
 - 既存 Story の文言・コメント・説明テキストのみを修正する時（regression リスクなし）
 - Component の internal logic のみ変更し、表示 props / variant / state が変わらない時（Story 再生成不要）
+- Story 作成後の snapshot 撮影・Eagle への同期・Archive 整理（eagle-dayopt skill の領域。この skill は Story 作成規約まで）
 
 ## 絶対ルール
 

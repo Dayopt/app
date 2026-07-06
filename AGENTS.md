@@ -102,6 +102,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 | コマンド        | 内容                                                                     |
 | --------------- | ---------------------------------------------------------------------- |
 | `/decision`     | 各ドメインの `log/` に `YYYY-MM-DD-slug.md` で意思決定ログを新規作成         |
+| `/plan-review`  | 直前の実装 plan を plan-fact-checker / plan-critic の 2 agent で並列レビュー |
 | `/note`         | 各ドメインの `log/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応） |
 | `/session-end`  | 当日の作業を `docs/engineering/log/YYYY-MM-DD-session.md` に記録し `latest.md` を更新 |
 | `/gardening`    | 月次: セッションログ→月次ロールアップ蒸留、ストック鮮度triage、notes昇格、スモークテスト |
@@ -126,9 +127,9 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 
 ## Skills
 
-Project skills は `.agents/skills/` を参照する。該当する作業では `SKILL.md` を先に読む。
+Project skills は `.agents/skills/` を参照する。該当する作業では `SKILL.md` を先に読む。実体は `.claude/skills/` が正本で、`.agents/skills/` は各 skill への symlink（二重管理しない）。
 
-error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / source-command-plan-review / audit-ai-config
+error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / audit-ai-config
 
 ## Workflow
 
