@@ -17,8 +17,6 @@ import {
   Crown,
   Download,
   ExternalLink,
-  Key,
-  RefreshCw,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -256,22 +254,18 @@ function RestoreSection() {
 
 function McpApiSection() {
   const t = useTranslations('settings.dataControls.mcp');
-  const [copied, setCopied] = useState<'url' | 'key' | null>(null);
+  const [copied, setCopied] = useState<'url' | null>(null);
 
   // Pro判定: billing overview の subscription status から判定
   const billingOverview = api.billing.getOverview.useQuery(undefined, { retry: false });
   const subStatus = billingOverview.data?.billingInfo.subscriptionStatus;
   const currentPlan = getPlanIdForSubscriptionStatus(subStatus);
   const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
-  // TODO: Replace with actual API key from backend
-  const apiKey: string | null = null;
-
   // OAuth 接続のため client (Claude.ai etc.) に渡すのはこの URL のみ。
-  // API key 入力欄は Phase 1.5 で「接続済み client 一覧」に置換する vestige。
   const mcpServerUrl = dayoptUrls.mcp;
 
   const handleCopy = useCallback(
-    (text: string, type: 'url' | 'key') => {
+    (text: string, type: 'url') => {
       navigator.clipboard.writeText(text);
       setCopied(type);
       toast.success(t('copied'));
@@ -311,33 +305,6 @@ function McpApiSection() {
           />
         </div>
       </LabeledRow>
-      {/* API Key */}
-      <LabeledRow label={t('apiKey')}>
-        {apiKey ? (
-          <div className="flex items-center gap-2">
-            <code className="text-muted-foreground font-mono text-sm">{apiKey}</code>
-            <CopyButton
-              copied={copied === 'key'}
-              onClick={() => handleCopy(apiKey, 'key')}
-              label="Copy API key"
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              aria-label={t('regenerateKey')}
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
-          <Button variant="outline" size="sm">
-            <Key className="mr-2 h-4 w-4" />
-            {t('generateKey')}
-          </Button>
-        )}
-      </LabeledRow>
-
       {/* Connection guide */}
       <InfoBox className="mt-4 p-4">
         <p className="text-muted-foreground text-base md:text-sm">
