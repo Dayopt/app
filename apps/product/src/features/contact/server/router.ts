@@ -12,7 +12,7 @@ import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { contactFormSchema } from '../schemas';
-import { createGitHubIssue } from './contact-service';
+import { deliverContactFeedback } from './contact-service';
 
 /** お問い合わせフォームのtRPCルーター */
 export const contactRouter = createTRPCRouter({
@@ -45,28 +45,22 @@ export const contactRouter = createTRPCRouter({
       const userEmail = user?.email ?? 'unknown';
       const userName = user?.user_metadata?.full_name ?? 'Unknown';
 
-      try {
-        const result = await createGitHubIssue({
-          userId: ctx.userId,
-          userEmail,
-          userName,
-          input,
-        });
+      // 起票失敗時も deliverContactFeedback 内で内容がログ/Sentryに退避されるため、
+      // ユーザーへは常に成功を返す（フィードバックを失わせない）
+      const result = await deliverContactFeedback({
+        userId: ctx.userId,
+        userEmail,
+        userName,
+        input,
+      });
 
-        logger.info('Contact form submitted', {
-          userId: ctx.userId,
-          category: input.category,
-          issueNumber: result.issueNumber,
-        });
+      logger.info('Contact form submitted', {
+        userId: ctx.userId,
+        category: input.category,
+        delivered: result.delivered,
+        issueNumber: result.delivered ? result.issueNumber : undefined,
+      });
 
-        return { success: true as const };
-      } catch (error) {
-        logger.error('Contact form submission failed', {
-          userId: ctx.userId,
-          category: input.category,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        return handleServiceError(error);
-      }
+      return { success: true as const };
     }),
 });
