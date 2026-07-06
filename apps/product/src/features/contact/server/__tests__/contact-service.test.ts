@@ -8,40 +8,56 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
+const mockLoggerError = vi.fn();
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    log: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+const mockCaptureException = vi.fn();
+vi.mock('@sentry/nextjs', () => ({
+  captureException: (...args: unknown[]) => mockCaptureException(...args),
+  addBreadcrumb: vi.fn(),
+}));
+
 async function importService(envOverrides?: Record<string, string>) {
   vi.resetModules();
 
   vi.stubEnv('GITHUB_TOKEN', envOverrides?.GITHUB_TOKEN ?? 'ghp_test_token');
   vi.stubEnv('GITHUB_CONTACT_REPO', envOverrides?.GITHUB_CONTACT_REPO ?? 'test-owner/test-repo');
 
-  const mod = await import('../contact-service');
-  return mod.createGitHubIssue;
+  return import('../contact-service');
 }
 
-describe('createGitHubIssue', () => {
-  const defaultParams = {
-    userId: 'user-123',
-    userEmail: 'test@example.com',
-    userName: 'Test User',
-    input: {
-      category: 'bug' as const,
-      message: 'Something is broken',
-      environment: {
-        appVersion: '0.19.0',
-        os: 'macOS 15.0',
-        browser: 'Chrome 120.0',
-        timezone: 'Asia/Tokyo',
-        language: 'ja',
-      },
+const defaultParams = {
+  userId: 'user-123',
+  userEmail: 'test@example.com',
+  userName: 'Test User',
+  input: {
+    category: 'bug' as const,
+    message: 'Something is broken',
+    environment: {
+      appVersion: '0.19.0',
+      os: 'macOS 15.0',
+      browser: 'Chrome 120.0',
+      timezone: 'Asia/Tokyo',
+      language: 'ja',
     },
-  };
+  },
+};
 
+describe('createGitHubIssue', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('正常系: GitHub Issue を作成する', async () => {
-    const createGitHubIssue = await importService();
+    const { createGitHubIssue } = await importService();
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -67,7 +83,7 @@ describe('createGitHubIssue', () => {
   });
 
   it('正常系: Issue 本文にユーザー情報とメッセージが含まれる', async () => {
-    const createGitHubIssue = await importService();
+    const { createGitHubIssue } = await importService();
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -94,11 +110,11 @@ describe('createGitHubIssue', () => {
     expect(body.body).toContain('Browser: Chrome 120.0');
     expect(body.body).toContain('Timezone: Asia/Tokyo');
     expect(body.body).toContain('Language: ja');
-    expect(body.labels).toEqual(['contact', 'app', 'bug']);
+    expect(body.labels).toEqual(['contact', 'feedback', 'app', 'bug']);
   });
 
   it('正常系: カテゴリごとのラベルが正しい', async () => {
-    const createGitHubIssue = await importService();
+    const { createGitHubIssue } = await importService();
 
     const categories = [
       { input: 'bug' as const, label: 'Bug' },
@@ -135,7 +151,7 @@ describe('createGitHubIssue', () => {
   });
 
   it('エラー系: GitHub API がエラーを返す', async () => {
-    const createGitHubIssue = await importService();
+    const { createGitHubIssue } = await importService();
 
     mockFetch.mockResolvedValueOnce({
       ok: false,
@@ -149,15 +165,18 @@ describe('createGitHubIssue', () => {
   });
 
   it('エラー系: 環境変数が未設定', async () => {
-    const createGitHubIssue = await importService({ GITHUB_TOKEN: '', GITHUB_CONTACT_REPO: '' });
+    const { createGitHubIssue } = await importService({
+      GITHUB_TOKEN: '',
+      GITHUB_CONTACT_REPO: '',
+    });
 
     await expect(createGitHubIssue(defaultParams)).rejects.toThrow(
       'GitHub API configuration is missing',
     );
   });
 
-  it('GitHub API向けの必須headerとlabelsを送る', async () => {
-    const createGitHubIssue = await importService();
+  it('GitHub API向けの必須headerとlabelsとtimeout signalを送る', async () => {
+    const { createGitHubIssue } = await importService();
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ html_url: 'https://github.com/issues/3', number: 3 }),
@@ -178,12 +197,13 @@ describe('createGitHubIssue', () => {
     );
     const request = mockFetch.mock.calls[0]![1] as RequestInit;
     expect(JSON.parse(request.body as string)).toMatchObject({
-      labels: ['contact', 'app', 'bug'],
+      labels: ['contact', 'feedback', 'app', 'bug'],
     });
+    expect(request.signal).toBeInstanceOf(AbortSignal);
   });
 
   it('複数行とUnicodeを含むmessageをそのまま保持する', async () => {
-    const createGitHubIssue = await importService();
+    const { createGitHubIssue } = await importService();
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ html_url: 'https://github.com/issues/4', number: 4 }),
@@ -201,7 +221,7 @@ describe('createGitHubIssue', () => {
   });
 
   it('GITHUB_TOKENだけ未設定でもAPIを呼ばない', async () => {
-    const createGitHubIssue = await importService({
+    const { createGitHubIssue } = await importService({
       GITHUB_TOKEN: '',
       GITHUB_CONTACT_REPO: 'test-owner/test-repo',
     });
@@ -213,7 +233,7 @@ describe('createGitHubIssue', () => {
   });
 
   it('GITHUB_CONTACT_REPOだけ未設定でもAPIを呼ばない', async () => {
-    const createGitHubIssue = await importService({
+    const { createGitHubIssue } = await importService({
       GITHUB_TOKEN: 'ghp_test_token',
       GITHUB_CONTACT_REPO: '',
     });
@@ -225,11 +245,109 @@ describe('createGitHubIssue', () => {
   });
 
   it('network errorを呼び出し元へ伝播する', async () => {
-    const createGitHubIssue = await importService();
+    const { createGitHubIssue } = await importService();
     const networkError = new TypeError('fetch failed');
     mockFetch.mockRejectedValueOnce(networkError);
 
     await expect(createGitHubIssue(defaultParams)).rejects.toBe(networkError);
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('deliverContactFeedback', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('正常系: 起票成功時は delivered: true と issue 情報を返す', async () => {
+    const { deliverContactFeedback } = await importService();
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ html_url: 'https://github.com/issues/5', number: 5 }),
+    });
+
+    const result = await deliverContactFeedback(defaultParams);
+
+    expect(result).toEqual({
+      delivered: true,
+      issueUrl: 'https://github.com/issues/5',
+      issueNumber: 5,
+    });
+    expect(mockLoggerError).not.toHaveBeenCalled();
+    expect(mockCaptureException).not.toHaveBeenCalled();
+  });
+
+  it('best-effort: GitHub API 失敗時も throw せず delivered: false を返す', async () => {
+    const { deliverContactFeedback } = await importService();
+
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      text: () => Promise.resolve('Internal Server Error'),
+    });
+
+    const result = await deliverContactFeedback(defaultParams);
+
+    expect(result).toEqual({ delivered: false });
+  });
+
+  it('best-effort: 失敗時にフィードバック内容を構造化ログへ退避する', async () => {
+    const { deliverContactFeedback } = await importService();
+
+    const networkError = new TypeError('fetch failed');
+    mockFetch.mockRejectedValueOnce(networkError);
+
+    await deliverContactFeedback(defaultParams);
+
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      'Contact feedback delivery to GitHub failed',
+      expect.objectContaining({
+        userId: 'user-123',
+        userEmail: 'test@example.com',
+        category: 'bug',
+        message: 'Something is broken',
+        environment: defaultParams.input.environment,
+        error: 'fetch failed',
+      }),
+    );
+  });
+
+  it('best-effort: 失敗時に Sentry へ内容つきで capture する', async () => {
+    const { deliverContactFeedback } = await importService();
+
+    const networkError = new TypeError('fetch failed');
+    mockFetch.mockRejectedValueOnce(networkError);
+
+    await deliverContactFeedback(defaultParams);
+
+    expect(mockCaptureException).toHaveBeenCalledWith(
+      networkError,
+      expect.objectContaining({
+        tags: { source: 'contact', operation: 'github_issue_create' },
+        user: { id: 'user-123' },
+        extra: expect.objectContaining({
+          category: 'bug',
+          message: 'Something is broken',
+        }),
+      }),
+    );
+  });
+
+  it('best-effort: 環境変数未設定でも throw せず内容を退避する', async () => {
+    const { deliverContactFeedback } = await importService({
+      GITHUB_TOKEN: '',
+      GITHUB_CONTACT_REPO: '',
+    });
+
+    const result = await deliverContactFeedback(defaultParams);
+
+    expect(result).toEqual({ delivered: false });
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      'Contact feedback delivery to GitHub failed',
+      expect.objectContaining({ message: 'Something is broken' }),
+    );
+    expect(mockCaptureException).toHaveBeenCalled();
   });
 });
