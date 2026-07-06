@@ -5,7 +5,7 @@ import { CompactDateDisplay, DateRangeDisplay } from './DateRangeDisplay';
 
 /** 日付範囲表示。単一日付または期間をヘッダーに表示するコンポーネント。 */
 const meta = {
-  title: 'Product/Features/Calendar/DateRangeDisplay',
+  title: 'Product/Features/Calendar/Header/DateRangeDisplay',
   component: DateRangeDisplay,
   parameters: {
     layout: 'padded',

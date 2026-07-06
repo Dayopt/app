@@ -33,6 +33,8 @@ export function MultiDayView({
   currentDate,
   centerDate: _centerDate,
   showWeekends = true,
+  showActualDiff = false,
+  dayDiffEntryIds,
   className,
   disabledEntryId,
   onEntryClick,
@@ -149,6 +151,8 @@ export function MultiDayView({
                   onEventUpdate={handleEventUpdate}
                   onTimeRangeSelect={onTimeRangeSelect}
                   disabledEntryId={disabledEntryId}
+                  showActualDiff={showActualDiff}
+                  dayDiffEntryIds={dayDiffEntryIds}
                   className="h-full"
                 />
               </div>

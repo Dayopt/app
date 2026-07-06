@@ -5,6 +5,7 @@ import {
   computeCalendarDayDiffs,
   filterCalendarDayDiffEntries,
   resolveCalendarDayDiffBounds,
+  resolveCalendarRangeDiffBounds,
 } from '../day-diff';
 
 const now = new Date('2026-06-18T23:00:00.000Z');
@@ -222,6 +223,17 @@ describe('computeCalendarDayDiffs', () => {
 
     expect(bounds.dayStart.toISOString()).toBe('2026-06-17T15:00:00.000Z');
     expect(bounds.dayEnd.toISOString()).toBe('2026-06-18T15:00:00.000Z');
+  });
+
+  it('複数日 clipping 境界は表示範囲の先頭日から末尾日までで作る', () => {
+    const bounds = resolveCalendarRangeDiffBounds(
+      new Date('2026-06-18T12:00:00.000Z'),
+      new Date('2026-06-20T12:00:00.000Z'),
+      'Asia/Tokyo',
+    );
+
+    expect(bounds.dayStart.toISOString()).toBe('2026-06-17T15:00:00.000Z');
+    expect(bounds.dayEnd.toISOString()).toBe('2026-06-20T15:00:00.000Z');
   });
 
   it('planned が別日でも actual が表示日に交差する entry を diff source に含める', () => {

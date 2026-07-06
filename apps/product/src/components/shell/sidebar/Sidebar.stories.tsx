@@ -7,6 +7,7 @@ import { Button, HoverTooltip } from '@dayopt/components';
 
 import { withWrapper } from '@dayopt/storybook/decorators';
 
+import { AnimatedWidthPanel } from '../AnimatedWidthPanel';
 import { Sidebar } from './Sidebar';
 
 const MOCK_USER = { name: 'Demo User', email: 'demo@example.com', avatar: null };
@@ -73,16 +74,11 @@ function InteractiveDemo({ sidebarLabel }: { sidebarLabel?: string }) {
   return (
     <div className="border-border flex h-[500px] w-[800px] overflow-hidden rounded-2xl border">
       {/* サイドバー（実コンポーネント） */}
-      <div
-        className="shrink-0 overflow-hidden transition-all duration-200"
-        style={{ width: isOpen ? 256 : 0 }}
-      >
-        <div className="h-full w-64">
-          <Sidebar user={MOCK_USER} {...(sidebarLabel ? { 'aria-label': sidebarLabel } : {})}>
-            <MockSidebarContent />
-          </Sidebar>
-        </div>
-      </div>
+      <AnimatedWidthPanel open={isOpen} width={256} className="h-full" innerClassName="h-full">
+        <Sidebar user={MOCK_USER} {...(sidebarLabel ? { 'aria-label': sidebarLabel } : {})}>
+          <MockSidebarContent />
+        </Sidebar>
+      </AnimatedWidthPanel>
 
       {/* メインコンテンツ */}
       <div className="bg-background flex flex-1 flex-col">

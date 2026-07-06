@@ -4,9 +4,9 @@ import { addDays } from '@/lib/date';
 
 import type { CalendarEvent } from '../types/calendar.types';
 
-export type CalendarDayDiffKind = 'unplanned' | 'missed' | 'shifted' | 'resized';
+type CalendarDayDiffKind = 'unplanned' | 'missed' | 'shifted' | 'resized';
 
-export interface CalendarDayDiffItem {
+interface CalendarDayDiffItem {
   id: string;
   entryId: string;
   kind: CalendarDayDiffKind;
@@ -25,7 +25,7 @@ export interface CalendarDayDiffItem {
   sortTime: number;
 }
 
-export interface CalendarDayDiffSummary {
+interface CalendarDayDiffSummary {
   plannedMinutes: number;
   actualMinutes: number;
   diffMinutes: number;
@@ -33,7 +33,7 @@ export interface CalendarDayDiffSummary {
   missedMinutes: number;
 }
 
-export interface CalendarDayDiffResult {
+interface CalendarDayDiffResult {
   summary: CalendarDayDiffSummary;
   items: CalendarDayDiffItem[];
   entryIds: ReadonlySet<string>;
@@ -106,6 +106,17 @@ export function resolveCalendarDayDiffBounds(date: Date, timezone: string): Cale
   return {
     dayStart: fromZonedTime(zonedDayStart, timezone),
     dayEnd: fromZonedTime(addDays(zonedDayStart, 1), timezone),
+  };
+}
+
+export function resolveCalendarRangeDiffBounds(
+  startDate: Date,
+  endDate: Date,
+  timezone: string,
+): CalendarDayDiffBounds {
+  return {
+    dayStart: resolveCalendarDayDiffBounds(startDate, timezone).dayStart,
+    dayEnd: resolveCalendarDayDiffBounds(endDate, timezone).dayEnd,
   };
 }
 

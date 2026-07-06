@@ -5,7 +5,7 @@ import { MetricCard } from './MetricCard';
 
 /** MetricCard — KPI数値を表示するカード（weather.com風の数値/単位分離デザイン） */
 const meta = {
-  title: 'Product/Features/Stats/Review/MetricCard',
+  title: 'Product/Features/Review/Reflection/MetricCard',
   component: MetricCard,
   parameters: {
     layout: 'padded',

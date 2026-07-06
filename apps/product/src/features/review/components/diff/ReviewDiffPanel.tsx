@@ -8,17 +8,43 @@ import { useTagsMap } from '@/features/tags';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { Button, cn } from '@dayopt/components';
 
-import type {
-  CalendarDayDiffItem,
-  CalendarDayDiffKind,
-  CalendarDayDiffResult,
-} from '../../lib/day-diff';
-import type { CalendarEvent } from '../../types/calendar.types';
+export type ReviewDiffKind = 'unplanned' | 'missed' | 'shifted' | 'resized';
 
-interface CalendarDayDiffRailProps {
-  diff: CalendarDayDiffResult;
-  entries: readonly CalendarEvent[];
-  onEntryClick: (entry: CalendarEvent) => void;
+export interface ReviewDiffItem {
+  id: string;
+  entryId: string;
+  kind: ReviewDiffKind;
+  title: string;
+  tagId: string | null;
+  color: string;
+  plannedStart: Date | null;
+  plannedEnd: Date | null;
+  actualStart: Date | null;
+  actualEnd: Date | null;
+  plannedMinutes: number;
+  actualMinutes: number;
+  diffMinutes: number;
+  startDiffMinutes: number;
+  endDiffMinutes: number;
+  sortTime: number;
+}
+
+export interface ReviewDiffSummary {
+  plannedMinutes: number;
+  actualMinutes: number;
+  diffMinutes: number;
+  unplannedMinutes: number;
+  missedMinutes: number;
+}
+
+export interface ReviewDiffResult {
+  summary: ReviewDiffSummary;
+  items: readonly ReviewDiffItem[];
+}
+
+interface ReviewDiffPanelProps {
+  diff: ReviewDiffResult;
+  onItemClick?: ((entryId: string) => void) | undefined;
   onClose?: (() => void) | undefined;
   variant?: 'rail' | 'sheet' | undefined;
   className?: string | undefined;
@@ -29,21 +55,19 @@ const KIND_ICON = {
   missed: Minus,
   shifted: GitCompareArrows,
   resized: GitCompareArrows,
-} satisfies Record<CalendarDayDiffKind, typeof Plus>;
+} satisfies Record<ReviewDiffKind, typeof Plus>;
 
-export function CalendarDayDiffRail({
+export function ReviewDiffPanel({
   diff,
-  entries,
-  onEntryClick,
+  onItemClick,
   onClose,
   variant = 'rail',
   className,
-}: CalendarDayDiffRailProps) {
+}: ReviewDiffPanelProps) {
   const t = useTranslations();
   const locale = useLocale();
   const timezone = useUserPreferences((s) => s.timezone);
   const { getTagById } = useTagsMap();
-  const entryById = useMemo(() => new Map(entries.map((entry) => [entry.id, entry])), [entries]);
   const isSheet = variant === 'sheet';
   const timeFormatter = useMemo(
     () =>
@@ -123,7 +147,6 @@ export function CalendarDayDiffRail({
         <div className={cn('min-h-0 overflow-y-auto p-2', isSheet ? 'max-h-96' : 'flex-1')}>
           <ol className="flex flex-col gap-1">
             {diff.items.map((item) => {
-              const entry = entryById.get(item.entryId);
               const tag = item.tagId ? getTagById(item.tagId) : null;
               const Icon = KIND_ICON[item.kind];
               const rangeStart = item.actualStart ?? item.plannedStart;
@@ -133,9 +156,7 @@ export function CalendarDayDiffRail({
                   <button
                     type="button"
                     className="hover:bg-state-hover focus-visible:ring-ring flex min-h-11 w-full min-w-0 items-start gap-2 rounded-lg px-2 py-2 text-left transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
-                    onClick={() => {
-                      if (entry) onEntryClick(entry);
-                    }}
+                    onClick={() => onItemClick?.(item.entryId)}
                   >
                     <span
                       className="mt-1 h-8 w-1 shrink-0 rounded-full"
@@ -197,7 +218,7 @@ function SummaryMetric({
   );
 }
 
-function DiffBadge({ item }: { item: CalendarDayDiffItem }) {
+function DiffBadge({ item }: { item: ReviewDiffItem }) {
   const t = useTranslations();
 
   const content = diffBadgeLabel(t, item);
@@ -217,7 +238,7 @@ function DiffBadge({ item }: { item: CalendarDayDiffItem }) {
   );
 }
 
-function diffBadgeLabel(t: ReturnType<typeof useTranslations>, item: CalendarDayDiffItem): string {
+function diffBadgeLabel(t: ReturnType<typeof useTranslations>, item: ReviewDiffItem): string {
   if (item.kind === 'unplanned') return formatSignedDuration(t, item.actualMinutes);
   if (item.kind === 'missed') return formatSignedDuration(t, -item.plannedMinutes);
 
@@ -231,7 +252,7 @@ function diffBadgeLabel(t: ReturnType<typeof useTranslations>, item: CalendarDay
   return formatSignedDuration(t, item.diffMinutes);
 }
 
-function kindLabel(t: ReturnType<typeof useTranslations>, kind: CalendarDayDiffKind): string {
+function kindLabel(t: ReturnType<typeof useTranslations>, kind: ReviewDiffKind): string {
   switch (kind) {
     case 'unplanned':
       return t('calendar.compare.rail.kind.unplanned');

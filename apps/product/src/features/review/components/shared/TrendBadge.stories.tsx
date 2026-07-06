@@ -4,7 +4,7 @@ import { TrendBadge } from './TrendBadge';
 
 /** TrendBadge — 前期間比のトレンド方向と変化率を表示するバッジ */
 const meta = {
-  title: 'Product/Features/Stats/Shared/TrendBadge',
+  title: 'Product/Features/Review/Shared/TrendBadge',
   component: TrendBadge,
   parameters: { layout: 'padded' },
   tags: ['autodocs'],

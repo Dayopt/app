@@ -14,6 +14,10 @@ import {
   DrawerTitle,
 } from '@dayopt/components';
 
+import {
+  ANIMATED_WIDTH_PANEL_TRANSITION_CLASS,
+  AnimatedWidthPanel,
+} from '@/components/shell/AnimatedWidthPanel';
 import { AppHeader } from '@/components/shell/AppHeader';
 import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
 import { DateNavigator } from '@/components/ui/navigation/DateNavigator';
@@ -130,6 +134,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     const [sideRailWidth, setSideRailWidth] = useState(SIDE_RAIL_DEFAULT_WIDTH);
     const [layoutWidth, setLayoutWidth] = useState<number | null>(null);
     const [recoveringSideRailSpace, setRecoveringSideRailSpace] = useState(false);
+    const [sideRailResizing, setSideRailResizing] = useState(false);
     const layoutRef = useRef<HTMLDivElement | null>(null);
 
     // ナビゲーション方向 + キーの追跡（スライドアニメーション用）
@@ -185,7 +190,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         : slide.direction === 'prev'
           ? 'calendar-slide-prev'
           : '';
-    const desktopSideRailRequested = Boolean(sideRail && !isMobile);
+    const desktopSideRailRequested = Boolean(sideRail && sideRailOpen && !isMobile);
     const desktopSideRailNeedsSpace =
       desktopSideRailRequested &&
       shouldUseSideRailSheet({
@@ -201,11 +206,8 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         maxPageWidth: SIDE_RAIL_SHEET_MAX_PAGE_WIDTH,
       });
     const desktopSideRailOpen = desktopSideRailRequested && !desktopSideRailSheet;
-    const contentStyle = desktopSideRailOpen
-      ? ({ marginRight: sideRailWidth } satisfies React.CSSProperties)
-      : undefined;
-    const sideRailStyle = {
-      width: sideRailWidth,
+    const contentStyle = {
+      marginRight: desktopSideRailOpen ? sideRailWidth : 0,
     } satisfies React.CSSProperties;
     const resolvedSideRailTitle = sideRailTitle ?? t('title');
     const resolvedSideRailDescription = sideRailDescription ?? t('meta.description');
@@ -262,6 +264,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         const previousCursor = document.body.style.cursor;
         const previousUserSelect = document.body.style.userSelect;
 
+        setSideRailResizing(true);
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
 
@@ -269,6 +272,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           setSideRailWidth(clampSideRailWidth(startWidth - (moveEvent.clientX - startX)));
         };
         const handlePointerUp = () => {
+          setSideRailResizing(false);
           document.body.style.cursor = previousCursor;
           document.body.style.userSelect = previousUserSelect;
           window.removeEventListener('pointermove', handlePointerMove);
@@ -314,7 +318,13 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         ref={layoutRef}
         className={cn('calendar-layout relative flex h-full flex-col overflow-hidden', className)}
       >
-        <div className="flex min-h-0 flex-1 flex-col" style={contentStyle}>
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col',
+            !sideRailResizing && ANIMATED_WIDTH_PANEL_TRANSITION_CLASS,
+          )}
+          style={contentStyle}
+        >
           {/* スクリーンリーダー用のページタイトル */}
           <h1 className="sr-only">{t('title')}</h1>
 
@@ -369,26 +379,28 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           </div>
         </div>
 
-        {desktopSideRailOpen ? (
-          <aside
-            className="border-border-subtle bg-background absolute top-0 right-0 bottom-0 hidden shrink-0 border-l md:flex"
-            style={sideRailStyle}
-          >
-            {sideRail}
-            <div
-              role="separator"
-              aria-label={resolvedSideRailResizeLabel}
-              aria-orientation="vertical"
-              aria-valuemin={SIDE_RAIL_MIN_WIDTH}
-              aria-valuemax={SIDE_RAIL_MAX_WIDTH}
-              aria-valuenow={sideRailWidth}
-              tabIndex={0}
-              className="hover:bg-state-hover focus-visible:outline-ring absolute inset-y-0 left-0 w-2 -translate-x-1 cursor-col-resize transition-colors duration-150 focus-visible:outline-2"
-              onPointerDown={handleSideRailResizeStart}
-              onKeyDown={handleSideRailResizeKeyDown}
-            />
-          </aside>
-        ) : null}
+        <AnimatedWidthPanel
+          open={desktopSideRailOpen}
+          width={sideRailWidth}
+          side="right"
+          disableTransition={sideRailResizing}
+          className="absolute top-0 right-0 bottom-0 hidden md:flex"
+          innerClassName="border-border-subtle bg-background flex h-full border-l"
+        >
+          {sideRail}
+          <div
+            role="separator"
+            aria-label={resolvedSideRailResizeLabel}
+            aria-orientation="vertical"
+            aria-valuemin={SIDE_RAIL_MIN_WIDTH}
+            aria-valuemax={SIDE_RAIL_MAX_WIDTH}
+            aria-valuenow={sideRailWidth}
+            tabIndex={0}
+            className="hover:bg-state-hover focus-visible:outline-ring absolute inset-y-0 left-0 w-2 -translate-x-1 cursor-col-resize transition-colors duration-150 focus-visible:outline-2"
+            onPointerDown={handleSideRailResizeStart}
+            onKeyDown={handleSideRailResizeKeyDown}
+          />
+        </AnimatedWidthPanel>
 
         {sheetSideRail ? (
           <Drawer

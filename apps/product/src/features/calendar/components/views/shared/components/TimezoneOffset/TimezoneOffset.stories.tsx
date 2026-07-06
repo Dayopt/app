@@ -7,7 +7,7 @@ import { TimezoneOffset } from './TimezoneOffset';
 
 /** タイムゾーン選択セレクト。カレンダーグリッドの時刻列に表示するUTCオフセット表示。 */
 const meta = {
-  title: 'Product/Features/Calendar/TimezoneOffset',
+  title: 'Product/Features/Calendar/Grid/TimezoneOffset',
   component: TimezoneOffset,
   parameters: {
     layout: 'padded',

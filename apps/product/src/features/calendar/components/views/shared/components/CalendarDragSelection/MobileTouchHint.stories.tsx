@@ -20,7 +20,7 @@ import { MobileTouchHint } from './MobileTouchHint';
  * 各ストーリーのデコレーターで `window.matchMedia` をモックし、モバイル判定を強制する。
  */
 const meta = {
-  title: 'Product/Features/Calendar/MobileTouchHint',
+  title: 'Product/Features/Calendar/Interaction/MobileTouchHint',
   component: MobileTouchHint,
   parameters: {
     layout: 'fullscreen',
