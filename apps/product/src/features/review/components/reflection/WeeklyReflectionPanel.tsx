@@ -34,13 +34,13 @@ export interface WeeklyReflectionEstimationRow {
   entryCount: number;
 }
 
-export interface WeeklyReflectionSkipSummary {
+interface WeeklyReflectionSkipSummary {
   skippedCount: number;
   skippedMinutes: number;
   topTagName?: string | null | undefined;
 }
 
-export interface WeeklyReflectionBlankSummary {
+interface WeeklyReflectionBlankSummary {
   availableMinutes: number;
   scheduledMinutes: number;
   blankRate: number;
