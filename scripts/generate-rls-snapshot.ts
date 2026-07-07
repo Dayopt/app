@@ -82,32 +82,67 @@ function fetchRlsTables(): RlsRow[] {
 function fetchGrants(): GrantRow[] {
   return (
     queryJson<GrantRow[] | null>(
-      `WITH table_grants AS (
+      `WITH relation_grants AS (
          SELECT
-           'table' AS object_type,
-           table_schema || '.' || table_name AS object_name,
-           grantee,
-           string_agg(privilege_type, ', ' ORDER BY privilege_type) AS privileges
-         FROM information_schema.table_privileges
-         WHERE table_schema = 'public'
-           AND grantee IN ('anon', 'authenticated', 'service_role')
-           AND privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
-         GROUP BY table_schema, table_name, grantee
+           CASE c.relkind
+             WHEN 'r' THEN 'table'
+             WHEN 'p' THEN 'table'
+             WHEN 'v' THEN 'view'
+             WHEN 'm' THEN 'materialized view'
+             ELSE c.relkind::text
+           END AS object_type,
+           n.nspname || '.' || c.relname AS object_name,
+           CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
+           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+         FROM pg_class c
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         CROSS JOIN LATERAL aclexplode(c.relacl) acl
+         WHERE n.nspname = 'public'
+           AND c.relkind IN ('r', 'p', 'v', 'm')
+           AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
+             IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
+           AND acl.privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
+         GROUP BY object_type, object_name, grantee
+       ),
+       column_grants AS (
+         SELECT
+           'column' AS object_type,
+           n.nspname || '.' || c.relname || '.' || a.attname AS object_name,
+           CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
+           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+         FROM pg_attribute a
+         JOIN pg_class c ON c.oid = a.attrelid
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         CROSS JOIN LATERAL aclexplode(a.attacl) acl
+         WHERE n.nspname = 'public'
+           AND c.relkind IN ('r', 'p', 'v', 'm')
+           AND a.attnum > 0
+           AND NOT a.attisdropped
+           AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
+             IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
+           AND acl.privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
+         GROUP BY object_type, object_name, grantee
        ),
        routine_grants AS (
          SELECT
            'routine' AS object_type,
-           routine_schema || '.' || routine_name AS object_name,
-           grantee,
-           string_agg(privilege_type, ', ' ORDER BY privilege_type) AS privileges
-         FROM information_schema.routine_privileges
-         WHERE routine_schema = 'public'
-           AND grantee IN ('anon', 'authenticated', 'service_role', 'supabase_auth_admin')
-         GROUP BY routine_schema, routine_name, grantee
+           n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
+           CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
+           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+         FROM pg_proc p
+         JOIN pg_namespace n ON n.oid = p.pronamespace
+         CROSS JOIN LATERAL aclexplode(p.proacl) acl
+         WHERE n.nspname = 'public'
+           AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
+             IN ('PUBLIC', 'anon', 'authenticated', 'service_role', 'supabase_auth_admin')
+           AND acl.privilege_type = 'EXECUTE'
+         GROUP BY object_type, object_name, grantee
        )
        SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.object_type, t.object_name, t.grantee), '[]'::json)
        FROM (
-         SELECT * FROM table_grants
+         SELECT * FROM column_grants
+         UNION ALL
+         SELECT * FROM relation_grants
          UNION ALL
          SELECT * FROM routine_grants
        ) t;`,
