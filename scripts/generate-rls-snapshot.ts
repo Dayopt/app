@@ -3,9 +3,10 @@
 /**
  * RLS / schema snapshot 生成スクリプト（I-16）
  *
- * 「現在有効な RLS ポリシー」を migration を全部読まずに把握できるよう、
- * DB の pg_policies / RLS 有効状態を 1 コマンドで deterministic な markdown に
- * 書き出す。`api:spec` と同型で、--check で CI ドリフト検出を行う。
+ * 「現在有効な RLS ポリシー / GRANT / Realtime publication」を migration を全部読まずに
+ * 把握できるよう、DB の pg_policies / RLS 有効状態 / 権限 / publication を
+ * 1 コマンドで deterministic な markdown に書き出す。
+ * `api:spec` と同型で、--check で CI ドリフト検出を行う。
  *
  * 入力 DB:
  *   DATABASE_URL（無ければ local supabase の既定 postgresql://postgres:postgres@127.0.0.1:54322/postgres）
@@ -41,6 +42,8 @@ type PolicyRow = {
 };
 
 type RlsRow = { table: string; rls: boolean; forced: boolean };
+type GrantRow = { object_type: string; object_name: string; grantee: string; privileges: string };
+type RealtimePublicationRow = { schemaname: string; tablename: string };
 
 /** psql で 1 行 JSON を取り出す（複数行・特殊文字に強い） */
 function queryJson<T>(sql: string): T {
@@ -76,12 +79,66 @@ function fetchRlsTables(): RlsRow[] {
   );
 }
 
+function fetchGrants(): GrantRow[] {
+  return (
+    queryJson<GrantRow[] | null>(
+      `WITH table_grants AS (
+         SELECT
+           'table' AS object_type,
+           table_schema || '.' || table_name AS object_name,
+           grantee,
+           string_agg(privilege_type, ', ' ORDER BY privilege_type) AS privileges
+         FROM information_schema.table_privileges
+         WHERE table_schema = 'public'
+           AND grantee IN ('anon', 'authenticated', 'service_role')
+           AND privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
+         GROUP BY table_schema, table_name, grantee
+       ),
+       routine_grants AS (
+         SELECT
+           'routine' AS object_type,
+           routine_schema || '.' || routine_name AS object_name,
+           grantee,
+           string_agg(privilege_type, ', ' ORDER BY privilege_type) AS privileges
+         FROM information_schema.routine_privileges
+         WHERE routine_schema = 'public'
+           AND grantee IN ('anon', 'authenticated', 'service_role', 'supabase_auth_admin')
+         GROUP BY routine_schema, routine_name, grantee
+       )
+       SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.object_type, t.object_name, t.grantee), '[]'::json)
+       FROM (
+         SELECT * FROM table_grants
+         UNION ALL
+         SELECT * FROM routine_grants
+       ) t;`,
+    ) ?? []
+  );
+}
+
+function fetchRealtimePublication(): RealtimePublicationRow[] {
+  return (
+    queryJson<RealtimePublicationRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.schemaname, t.tablename), '[]'::json)
+       FROM (
+         SELECT schemaname, tablename
+         FROM pg_publication_tables
+         WHERE pubname = 'supabase_realtime'
+       ) t;`,
+    ) ?? []
+  );
+}
+
 /** markdown 1 セル用に改行・パイプを無害化 */
 function cell(value: string): string {
   return value.replace(/\s+/g, ' ').replace(/\|/g, '\\|').trim() || '—';
 }
 
-function render(policies: PolicyRow[], rlsTables: RlsRow[]): string {
+function render(
+  policies: PolicyRow[],
+  rlsTables: RlsRow[],
+  grants: GrantRow[],
+  realtimePublication: RealtimePublicationRow[],
+): string {
   const policyByTable = new Map<string, PolicyRow[]>();
   for (const p of policies) {
     const list = policyByTable.get(p.tablename) ?? [];
@@ -96,12 +153,15 @@ function render(policies: PolicyRow[], rlsTables: RlsRow[]): string {
     '> **生成元**: `scripts/generate-rls-snapshot.ts`（`pnpm rls:snapshot`）。DB の `pg_policies` /',
   );
   lines.push(
-    '> RLS 有効状態を deterministic に書き出した snapshot。**手で編集しない**。migration 変更時は',
+    '> RLS 有効状態 / GRANT / Realtime publication を deterministic に書き出した snapshot。',
   );
-  lines.push('> CI（`pnpm rls:snapshot:check`）が drift を検出する。再生成で更新すること。');
+  lines.push(
+    '> **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。',
+  );
+  lines.push('> 再生成で更新すること。');
   lines.push('>');
   lines.push(
-    `> 集計: public スキーマの policy ${policies.length} 件 / RLS 対象テーブル ${rlsTables.length} 件。`,
+    `> 集計: public スキーマの policy ${policies.length} 件 / RLS 対象テーブル ${rlsTables.length} 件 / GRANT ${grants.length} 件 / Realtime publication ${realtimePublication.length} 件。`,
   );
   lines.push('');
 
@@ -129,13 +189,43 @@ function render(policies: PolicyRow[], rlsTables: RlsRow[]): string {
     lines.push('');
   }
 
+  lines.push('## GRANT 一覧（public schema）');
+  lines.push('');
+  lines.push('| object type | object | grantee | privileges |');
+  lines.push('| --- | --- | --- | --- |');
+  for (const grant of grants) {
+    lines.push(
+      `| ${grant.object_type} | ${cell(grant.object_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
+    );
+  }
+  lines.push('');
+
+  lines.push('## Realtime publication');
+  lines.push('');
+  lines.push('`supabase_realtime` に含まれる public table。空なら Realtime 公開なし。');
+  lines.push('');
+  if (realtimePublication.length === 0) {
+    lines.push('- なし');
+  } else {
+    lines.push('| schema | table |');
+    lines.push('| --- | --- |');
+    for (const row of realtimePublication) {
+      lines.push(`| ${cell(row.schemaname)} | ${cell(row.tablename)} |`);
+    }
+  }
+
   return lines.join('\n');
 }
 
 async function main(): Promise<void> {
   let content: string;
   try {
-    const raw = render(fetchPolicies(), fetchRlsTables());
+    const raw = render(
+      fetchPolicies(),
+      fetchRlsTables(),
+      fetchGrants(),
+      fetchRealtimePublication(),
+    );
     // commit 時の lint-staged prettier と同一整形を施し、--check の drift を防ぐ
     // （raw のままだと prettier がテーブルを整列して常に差分になる）
     content = await formatWithPrettier(raw, { parser: 'markdown', printWidth: 100 });

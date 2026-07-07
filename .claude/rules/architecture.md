@@ -86,7 +86,12 @@ migration churn（pre_drop/post_drop の踊り）の温床にもなる。その�
 - **既存の PL/pgSQL 関数は凍結資産**: 修正は bug fix のみ。機能追加は TS 側に寄せ、DB 関数を肥大化させない。
 - DB 関数を drop する時は、コード側（呼び出し元）削除を先に production へ deploy → 静穏確認 →
   drop migration の順を守る（呼び出し中の関数を消すと 500 になる）。
-- 「現在有効な RLS / テーブル」は全 migration を読まず
+- 新規 table / view / RPC の migration は `RLS + policy + GRANT` を 1 セットでレビューする。
+  `authenticated` / `anon` / `service_role` のどれに何を公開するかを migration 内に明示し、
+  Data API 自動公開や既存 function privilege の保持に依存しない。
+- Realtime (`supabase_realtime` publication / `postgres_changes`) を追加する時は、購読対象 table と
+  RLS policy の意図を同じ PR に残す。現状は publication 空を期待値とする。
+- 「現在有効な RLS / GRANT / Realtime publication」は全 migration を読まず
   [`docs/engineering/data/db/rls-snapshot.md`](../../docs/engineering/data/db/rls-snapshot.md)
   （`pnpm rls:snapshot` で再生成、CI で drift 検出）を参照する。
 
