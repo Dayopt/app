@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-07
 code: apps/product/src
 ---
 
@@ -521,10 +521,11 @@ Dayopt の monorepo は、アプリを増やすためだけではなく、責務
 
 ### Package Map
 
-- `packages/design`: design tokens / theme css / CSS variables。React components, domain logic, DB 型は入れない。
-- `packages/ui`: React UI primitives / reusable components。Supabase, Stripe, feature-specific business rules は入れない。
+- `packages/foundations`（旧 `packages/design`）: design tokens / theme css / CSS variables。React components, domain logic, DB 型は入れない。
+- `packages/components`（旧 `packages/ui`）: React UI primitives / reusable components。Supabase, Stripe, feature-specific business rules は入れない。
 - `packages/config`: public constants / metadata / URL definitions。secrets, request-scoped values, server-only clients は入れない。
-- `packages/domain`: Dayopt domain model / pure types / helpers。DB row shape, React, Next, Supabase, Zustand は入れない。
+- `packages/domain`: Dayopt domain model / pure types / helpers。DB row shape, React, Next, Supabase, Zustand は入れない。消費者は現状 product のみだが、純粋ロジックの隔離層として package を維持する。
+- `packages/assets`: 複数 app で共有する静的素材の原本（logo / app icon / OGP image）。React component は入れない。
 - `apps/product/src/lib/database`（旧 `packages/database`）: Supabase/Postgres boundary。generated types / table names / row helper types を扱う。product 専用のため package ではなく product-local。
 - `packages/billing`: Free / Pro plans, subscription status, entitlement, public-safe pricing constants。Stripe secret key, SDK, webhook handlers, checkout / portal 実装は入れない。
 
@@ -533,37 +534,39 @@ Dayopt の monorepo は、アプリを増やすためだけではなく、責務
 `packages/*` は app / feature へ戻る import を作らない。共有 package 同士も、下位の意味を上位に漏らさない。
 
 ```txt
-apps/product, apps/web, apps/admin, apps/storybook
-  -> packages/ui
-  -> packages/design
+apps/product, apps/web, apps/storybook
+  -> packages/components
+  -> packages/foundations
 
 apps/product, apps/web
   -> packages/config
-  -> packages/domain
   -> packages/billing
+
+apps/product
+  -> packages/domain
 ```
 
-`packages/ui` は `packages/design` の token / CSS variables を使えるが、`packages/design` は `packages/ui` を知らない。
+`packages/components` は `packages/foundations` の token / CSS variables を使えるが、`packages/foundations` は `packages/components` を知らない。
 `packages/domain` は DB row shape を知らない。DB の都合を domain model に漏らす場合は product 側（`apps/product/src/lib/database`）で吸収する。
 
 ### Current Phase
 
-`packages/design`, `packages/ui`, `packages/config`, `packages/domain` は最小の公開面を持つ package として動き始めている。
+`packages/foundations`, `packages/components`, `packages/config`, `packages/domain` は最小の公開面を持つ package として運用中。
 `packages/domain` は Dayopt の意味を表す pure TypeScript package で、現時点では `TimeRange`, `EntryOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`, `Chronotype` などの軽い型・定数・helper だけを持つ。
 
-`packages/database` は Supabase generated types と DB row helper の境界として動き始めている。converter は受け皿だけを先に作り、DB access を含む service は product 側に残す。
-`packages/billing` は Free / Pro の公開 plan model, subscription status, `pro_access` entitlement, pricing 表示用定数の境界として動き始めている。Stripe SDK / secret / webhook / checkout / portal は product 側の server-only 境界に残す。
-`packages/types` はまだ第一段階の placeholder に近い。
+DB boundary は `apps/product/src/lib/database`（旧 `packages/database`、product-local 化済み）が Supabase generated types と DB row helper を担う。DB access を含む service は product 側に残す。
+`packages/billing` は Free / Pro の公開 plan model, subscription status, `pro_access` entitlement, pricing 表示用定数の境界として運用中。Stripe SDK / secret / webhook / checkout / portal は product 側の server-only 境界に残す。
+`packages/types`, `packages/server`, `packages/utils` は未使用のまま責務が立たなかったため削除済み。
 
 ### Integration Audit
 
-現時点の shared package 統合では、`packages/*` から `apps/*` / product feature / app alias へ戻る依存は作らない。`packages/ui` の React / Radix 依存は UI primitive の責務として許容し、`packages/database` の Stripe 文字列は generated DB type と table name 由来の DB boundary として扱う。
+現時点の shared package 統合では、`packages/*` から `apps/*` / product feature / app alias へ戻る依存は作らない。`packages/components` の React / Radix 依存は UI primitive の責務として許容し、`apps/product/src/lib/database` の Stripe 文字列は generated DB type と table name 由来の DB boundary として扱う。
 
 Source of truth:
 
 - URL / domain / contact / public brand constants: `packages/config`
-- Entry origin / fulfillment score / date-time preference / pure Dayopt concept: `packages/domain`
-- Supabase generated type / table name / row helper type: `packages/database`
+- Entry origin / time range・time conflict / date-time preference / pure Dayopt concept: `packages/domain`
+- Supabase generated type / table name / row helper type: `apps/product/src/lib/database`
 - Free / Pro plan / subscription status / `pro_access` entitlement / public pricing: `packages/billing`
 
 Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文字列は、ユーザー向け文言・履歴・例示が混ざるため機械的には置換しない。DB access の `.from('entries')` / `.from('tags')` / `.from('user_settings')` も Supabase 型推論と呼び出し箇所が多いため、`databaseTables` 適用は段階的な follow-up にする。
@@ -572,37 +575,27 @@ Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文�
 
 Package foundation は第一段階として運用可能な状態にある。root scripts の `build:packages`, `typecheck:packages`, `check:workspace`, `lint:boundaries`, `build`, `build:web`, `build-storybook` は現在の package 構成を検証対象に含め、CI も `packages-build` job で `pnpm build:packages` を実行する。
 
-ここからは新しい package を増やすより、既存 apps が shared package を低リスクに使う段階へ進む。優先順は `packages/ui` の product / web 実利用、`packages/config` の残り hardcode 置換、`packages/database.databaseTables` の段階適用、`packages/billing` の pricing / plan 表示整理とする。
-`apps/web` でも design theme / UI primitives / config social links / billing pricing の採用を始めている。broader UI migration と design token consolidation は段階的な follow-up として扱う。
-
-product 側の product-first adoption は一段落した。config / billing / database / domain / assets / ui の 6 package は逆依存なく product surfaces で利用され、shell のブランド名ラベルも product-local の `APP_NAME`（= `dayoptBrand.name`）経由に揃えた。残るのは `apps/web` への adoption（config → assets → ui → billing の順）と、`.from('table')` の大規模 service sweep など follow-up であり、これらは別 PR で段階的に進める。
+apps への adoption は完了している。[ADR-021](./log/2026-06-22-shared-packages-canonical-and-app-shims.md)（2026-06-22）で packages を canonical とし、product / web は shim を介さず直接 import する形に統一した。UI・トークンの app 側重複は解消済みで、app 側 `components/` に残るのは app 固有（i18n 結合が強いもの）のみ。残る follow-up は `.from('table')` への `databaseTables` 段階適用など小粒のものに限られる。
 
 ### Package Boundaries
 
-#### `packages/design`
+#### `packages/foundations`
 
-Dayopt の見た目の source of truth。React component は持たず、tokens と theme だけを扱う。
-CSS variables は `--dayopt-*` prefix で公開し、既存 app の `--background`, `--primary`, `--radius-*` などは上書きしない。
+Dayopt の見た目の source of truth。React component は持たず、tokens と theme（+ token showcase の Story）だけを扱う。
+CSS variables は無 prefix（`--background`, `--primary`, `--radius-*` など）が唯一の canonical 体系。旧 `--dayopt-*` prefix は ADR-021 で廃止した。
 
-Storybook 表示:
+Storybook 表示: `Shared/Foundations/*`（Colors / Typography / Spacing / Radius / Elevation / Z-Index / Motion / Icons / Overview）
 
-- `Design/Colors`
-- `Design/Typography`
-- `Design/Spacing`
-- `Design/Radius`
-- `Design/Shadows`
+#### `packages/components`
 
-#### `packages/ui`
-
-Domain logic を持たない React UI primitive の置き場。Button, Badge, Card, Logo のように複数 app で使える部品だけを入れる。
-`apps/product` では settings / account / fallback surfaces で Button, Badge, Card の runtime 利用を段階的に広げている。Interactive core surfaces は app-local のままにし、submit / mutation / billing flow は避けながら進める。
-`apps/web` では marketing / shell / docs header / fallback surfaces から採用し、form / search / content interaction は web-local のままにする。
+Domain logic を持たない React UI primitive / 汎用複合 component の置き場。Button, Badge, Card, Logo のように複数 app で使える部品だけを入れる。
+ADR-021 以降、product / web の canonical UI として直接 import で全面採用済み。app 固有（i18n 結合が強い confirm dialog 等）だけを app-local（`apps/*/src/components/`）に残す。
 
 知ってよいもの:
 
 - React
 - accessibility primitives
-- `packages/design`
+- `packages/foundations`
 - generic utility
 
 知ってはいけないもの:
@@ -697,33 +690,41 @@ product 専用（web・他 package から参照なし）のため package では
 
 抽出は「共通化したいから」ではなく、責務境界が明確になった時だけ行う。
 
-- UI だけで成立し、domain を知らない: `packages/ui`
-- 見た目の token / CSS variable / theme: `packages/design`
+- UI だけで成立し、domain を知らない: `packages/components`
+- 見た目の token / CSS variable / theme: `packages/foundations`
 - URL / metadata / public constants: `packages/config`
 - DB なしで説明できる Dayopt の business definition: `packages/domain`
-- Supabase row / generated type / domain converter: `packages/database`
+- 複数 app で共有する静的素材の原本: `packages/assets`
+- Supabase row / generated type / domain converter: `apps/product/src/lib/database`（product-local）
 - plan / subscription / entitlement の公開定義: `packages/billing`
 - Dayopt に依存しない pure helper: 再利用先が明確になるまでは利用する app 内に置く
 - secret, admin, webhook, service-role を使う共通処理: product の server-only 境界に置く
 
 ### Storybook Policy
 
-Storybook は `packages/design` と `packages/ui` の公開面を確認する場所にする。
+Storybook は `packages/foundations` と `packages/components` の公開面を確認する場所にする。
 
-- `packages/design`: token の一覧、意味、使用禁止例を `Design/*` で可視化する。
-- `packages/ui`: props と状態を `UI/*` で可視化する。
-- `packages/domain`, `packages/database`, `packages/billing`: UI カタログではなく docs と decision table で境界を説明する。
-- `apps/product` 固有の feature component は `Features/*` に残し、汎用化できたものだけ `packages/ui` に移す。
+- `packages/foundations`: token の一覧、意味、使用禁止例を `Shared/Foundations/*` で可視化する。
+- `packages/components`: props と状態を `Shared/Components/*` で可視化する。
+- `packages/domain`, `packages/billing`, `apps/product/src/lib/database`: UI カタログではなく docs と decision table で境界を説明する。
+- `apps/product` 固有の feature component は `Product/*` に残し、汎用化できたものだけ `packages/components` に移す。
 
 ### Ownership And Operations
 
-- `Design/*`: design tokens。Source of truth は `packages/design`。
-- `UI/*`: reusable UI primitives。Source of truth は `packages/ui`。
-- `Foundations/*`: legacy / product-facing foundations。Source of truth は `apps/product` 由来の既存 Storybook 表示。
-- `Primitives/*`: legacy reusable UI primitives。Source of truth は `apps/product/src/lib/components/ui/`。
-- `Features/*`: product feature UI。Source of truth は `apps/product/src/features/*`。
-- `Operations/*`: deployment / release ops。Source of truth は `docs/operations/`。
-- `Architecture/*`: engineering decisions。Source of truth は `docs/engineering/`。
+Storybook の story title top-level は所有境界（package / app）で分ける（[ADR-023](./log/2026-06-24-storybook-ownership-taxonomy.md)）。第二階層以下は責務ベース（[ADR-022](./log/2026-06-23-component-taxonomy.md)）。`scripts/check-story-taxonomy.ts` が物理位置と title prefix の一致を CI で強制する。
+
+| title prefix           | Source of truth                                                                                                |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `Shared/Foundations/*` | `packages/foundations`。例外: `apps/product/src/lib/styles/tokens`（token doc、物理位置は product 側）も許容   |
+| `Shared/Components/*`  | `packages/components`                                                                                          |
+| `Shared/Patterns/*`    | `apps/storybook/.storybook/stories/patterns`（`@dayopt/components` のみに依存する pattern）                    |
+| `Product/Components/*` | `apps/product/src/components/**`（app 固有 component。`apps/product/src/features/**` の straggler も一部含む） |
+| `Product/Features/*`   | `apps/product/src/features/**`                                                                                 |
+| `Product/Patterns/*`   | `apps/storybook/.storybook/stories/patterns`（`@/`＝product 内部に依存する pattern）                           |
+| `Product/Emails/*`     | `apps/product/src/emails`                                                                                      |
+| `Web/*`                | `apps/web/src/*`                                                                                               |
+
+operations / engineering の散文 docs は Storybook ではなく repo 直下 `docs/` が正（`docs/operations/`, `docs/engineering/`）。
 
 ### Before Auth Package
 
@@ -736,7 +737,7 @@ Current placement:
 
 Future extraction:
 
-- `packages/database.databaseTables` を DB access call site に少しずつ適用できるか確認する。
+- `databaseTables`（`apps/product/src/lib/database`）を DB access call site に少しずつ適用できるか確認する。
 - billing / legal / pricing 文言は i18n の表示責務と `packages/billing` の public constants の境界を分けて扱う。
 - admin app または別 runtime が同じ permission model を必要とした時点で、product auth domain を `packages/auth` の pure model として昇格する。
 - 昇格後も Supabase client, cookie, middleware, session refresh, route handler は product 側に残す。
