@@ -48,6 +48,11 @@ export function UserSettingsInitializer({ children }: UserSettingsInitializerPro
         className="bg-background text-foreground flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center"
       >
         <p className="text-sm">{t('errors.loadFailedDescription')}</p>
+        {process.env.NODE_ENV === 'development' && (
+          <p className="text-muted-foreground max-w-lg text-xs whitespace-pre-wrap">
+            {error.message}
+          </p>
+        )}
         <button
           type="button"
           onClick={() => window.location.reload()}

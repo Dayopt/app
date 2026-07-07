@@ -77,8 +77,17 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
           </Suspense>
         );
       case 'week':
-        // モバイル/タブレットでは7列が狭すぎるためMultiDayViewにフォールバック
-        if (isMobile || isTablet) {
+        // モバイルは CalendarNavigationContext が viewType を 'day' に強制するため、
+        // 収束先と同じ DayView を直接返す（MultiDayView を経由すると2段階で切り替わりちらつく）
+        if (isMobile) {
+          return (
+            <Suspense fallback={<CalendarViewSkeleton />}>
+              <DayView {...commonProps} />
+            </Suspense>
+          );
+        }
+        // タブレットでは7列が狭すぎるためMultiDayViewにフォールバック
+        if (isTablet) {
           return (
             <Suspense fallback={<CalendarViewSkeleton />}>
               <MultiDayView dayCount={maxDays} {...commonProps} />

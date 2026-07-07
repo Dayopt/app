@@ -44,8 +44,15 @@ import type { Database } from '@/lib/database';
  * @returns Supabase Browser Client
  */
 export function createClient() {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    throw new Error(
+      '❌ NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY が未設定です:\n\n' +
+        '.op-env.local を作成し、op run 経由で起動してください。詳細は docs/operations/secrets.md を参照してください。',
+    );
+  }
+
+  return createBrowserClient<Database>(url, anonKey);
 }
