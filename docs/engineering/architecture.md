@@ -711,10 +711,18 @@ Storybook は `packages/foundations` と `packages/components` の公開面を�
 
 ### Ownership And Operations
 
-- `Shared/Foundations/*`: design tokens。Source of truth は `packages/foundations`。
-- `Shared/Components/*`: reusable UI components。Source of truth は `packages/components`。
-- `Product/*`: product feature UI。Source of truth は `apps/product/src/features/*`。
-- `Web/*`: marketing site UI。Source of truth は `apps/web/src/*`。
+Storybook の story title top-level は所有境界（package / app）で分ける（[ADR-023](./log/2026-06-24-storybook-ownership-taxonomy.md)）。第二階層以下は責務ベース（[ADR-022](./log/2026-06-23-component-taxonomy.md)）。`scripts/check-story-taxonomy.ts` が物理位置と title prefix の一致を CI で強制する。
+
+| title prefix           | Source of truth                                                                                                |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `Shared/Foundations/*` | `packages/foundations`。例外: `apps/product/src/lib/styles/tokens`（token doc、物理位置は product 側）も許容   |
+| `Shared/Components/*`  | `packages/components`                                                                                          |
+| `Shared/Patterns/*`    | `apps/storybook/.storybook/stories/patterns`（`@dayopt/components` のみに依存する pattern）                    |
+| `Product/Components/*` | `apps/product/src/components/**`（app 固有 component。`apps/product/src/features/**` の straggler も一部含む） |
+| `Product/Features/*`   | `apps/product/src/features/**`                                                                                 |
+| `Product/Patterns/*`   | `apps/storybook/.storybook/stories/patterns`（`@/`＝product 内部に依存する pattern）                           |
+| `Product/Emails/*`     | `apps/product/src/emails`                                                                                      |
+| `Web/*`                | `apps/web/src/*`                                                                                               |
 
 operations / engineering の散文 docs は Storybook ではなく repo 直下 `docs/` が正（`docs/operations/`, `docs/engineering/`）。
 
