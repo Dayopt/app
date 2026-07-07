@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-08
 ---
 
 # インフラ・環境・API/Routing 総覧
@@ -1005,10 +1005,47 @@ supabase db push
 ### マイグレーション統合時の注意
 
 - [ ] RLS が有効で、`auth.uid() = user_id` の境界が維持されている
+- [ ] 新規 table / view / RPC は `GRANT` を明示し、`RLS + policy + GRANT` を 1 セットでレビューしている
+- [ ] `authenticated` への Data API 権限は必要最小限にしている
+- [ ] `anon` への権限付与は公開読み取りなど明示理由がある場合だけに限定している
+- [ ] service-role 専用 table / RPC は browser client から使えないことを RLS / GRANT の両方で確認している
+- [ ] Realtime が必要な table だけ `supabase_realtime` publication に入っている
 - [ ] `IF NOT EXISTS` / `IF EXISTS` で冪等化している
 - [ ] ローカルで `db:reset` が通る
+- [ ] `pnpm rls:snapshot` を再生成し、RLS / GRANT / Realtime publication の差分を確認している
 - [ ] Supabase Preview Branch check が green
 - [ ] Production 適用前に Vercel Preview で主要導線を確認した
+
+### GRANT / Realtime 監査
+
+Supabase Data API / GraphQL API から新規 `public` object を使う時は、RLS だけでなく
+`GRANT` が必要になる。migration review では以下を確認する。
+
+- table: user data は `authenticated` に必要な `SELECT` / `INSERT` / `UPDATE` / `DELETE` だけを付与する
+- view: `security_invoker = true` を使い、必要な role に `SELECT` を明示する
+- RPC: app-facing 関数は `authenticated`、service-role 専用関数は `service_role` / platform role に限定する
+- public read が必要な object 以外は `anon` に付与しない
+- `CREATE OR REPLACE FUNCTION` は既存権限を保持しうるため、意図する `GRANT` / `REVOKE` を migration 内に明示する
+
+権限と Realtime publication は snapshot に含める。migration 変更後は local DB に適用してから再生成する。
+
+```bash
+pnpm rls:snapshot
+pnpm rls:snapshot:check
+```
+
+Realtime publication の手動確認 SQL:
+
+```sql
+SELECT schemaname, tablename
+FROM pg_publication_tables
+WHERE pubname = 'supabase_realtime'
+ORDER BY schemaname, tablename;
+```
+
+2026-07-08 時点の期待値は production / local ともに空。アプリコード側にも `postgres_changes`
+購読はない。Realtime を再導入する時は、購読する table、必要な RLS policy、publication 追加理由を
+同じ PR に残す。
 
 ### スキーマ変更を含むリリースの順序
 

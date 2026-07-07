@@ -194,9 +194,11 @@ CREATE INDEX idx_new_table_user_id ON public.new_table(user_id);
 - [ ] 適切な RLS ポリシーを設定したか
 - [ ] `authenticated` への `GRANT` を明示したか（RLS + policy + GRANT をセットで。Data API 自動公開に依存しない）
 - [ ] `anon` に過剰な権限を付与していないか（公開読み取りが必要なテーブルのみ `SELECT` を個別付与）
+- [ ] Realtime が必要な場合だけ `supabase_realtime` publication に追加したか
 - [ ] `user_id` カラムがあるか(ユーザーデータの場合)
 - [ ] `ON DELETE CASCADE` を設定したか
 - [ ] インデックスを追加したか
+- [ ] `pnpm rls:snapshot` で RLS / GRANT / Realtime publication の差分を確認したか
 - [ ] preview branch で適用確認したか
 
 ## Seed 戦略
@@ -267,6 +269,16 @@ SELECT * FROM pg_policies WHERE tablename = 'your_table';
 ```
 
 ## Realtime 購読
+
+Dayopt は現状 Realtime を使わない。`supabase_realtime` publication は空が期待値。再導入する時は
+購読対象 table を最小化し、RLS policy と `postgres_changes` filter を同じ PR でレビューする。
+
+```sql
+SELECT schemaname, tablename
+FROM pg_publication_tables
+WHERE pubname = 'supabase_realtime'
+ORDER BY schemaname, tablename;
+```
 
 ### 基本パターン
 
