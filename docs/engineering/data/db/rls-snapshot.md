@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 29 件 / RLS 対象テーブル 11 件 / GRANT 75 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 29 件 / RLS 対象テーブル 11 件 / GRANT 109 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -111,83 +111,117 @@
 
 ## GRANT 一覧（public schema）
 
-| object type | object                                 | grantee             | privileges     |
-| ----------- | -------------------------------------- | ------------------- | -------------- |
-| routine     | public.auto_shrink_neighbors           | service_role        | EXECUTE        |
-| routine     | public.batch_rename_tags               | authenticated       | EXECUTE        |
-| routine     | public.batch_rename_tags               | service_role        | EXECUTE        |
-| routine     | public.batch_reorder_tags              | service_role        | EXECUTE        |
-| routine     | public.batch_reorder_tags_hierarchy    | authenticated       | EXECUTE        |
-| routine     | public.batch_reorder_tags_hierarchy    | service_role        | EXECUTE        |
-| routine     | public.bulk_soft_delete_entries        | authenticated       | EXECUTE        |
-| routine     | public.bulk_soft_delete_entries        | service_role        | EXECUTE        |
-| routine     | public.check_tag_has_children          | service_role        | EXECUTE        |
-| routine     | public.check_tag_hierarchy             | service_role        | EXECUTE        |
-| routine     | public.count_unused_recovery_codes     | authenticated       | EXECUTE        |
-| routine     | public.count_unused_recovery_codes     | service_role        | EXECUTE        |
-| routine     | public.custom_access_token_hook        | service_role        | EXECUTE        |
-| routine     | public.custom_access_token_hook        | supabase_auth_admin | EXECUTE        |
-| routine     | public.get_active_dates                | authenticated       | EXECUTE        |
-| routine     | public.get_active_dates                | service_role        | EXECUTE        |
-| routine     | public.get_active_users_for_reflection | service_role        | EXECUTE        |
-| routine     | public.get_blank_rate                  | authenticated       | EXECUTE        |
-| routine     | public.get_blank_rate                  | service_role        | EXECUTE        |
-| routine     | public.get_daily_hours                 | authenticated       | EXECUTE        |
-| routine     | public.get_daily_hours                 | service_role        | EXECUTE        |
-| routine     | public.get_dow_distribution            | authenticated       | EXECUTE        |
-| routine     | public.get_dow_distribution            | service_role        | EXECUTE        |
-| routine     | public.get_estimation_accuracy         | authenticated       | EXECUTE        |
-| routine     | public.get_estimation_accuracy         | service_role        | EXECUTE        |
-| routine     | public.get_fulfillment_trend           | service_role        | EXECUTE        |
-| routine     | public.get_hourly_distribution         | authenticated       | EXECUTE        |
-| routine     | public.get_hourly_distribution         | service_role        | EXECUTE        |
-| routine     | public.get_monthly_hours               | authenticated       | EXECUTE        |
-| routine     | public.get_monthly_hours               | service_role        | EXECUTE        |
-| routine     | public.get_plan_summary                | service_role        | EXECUTE        |
-| routine     | public.get_stats_kpi_summary           | authenticated       | EXECUTE        |
-| routine     | public.get_stats_kpi_summary           | service_role        | EXECUTE        |
-| routine     | public.get_stats_page_data             | authenticated       | EXECUTE        |
-| routine     | public.get_stats_page_data             | service_role        | EXECUTE        |
-| routine     | public.get_tag_stats                   | authenticated       | EXECUTE        |
-| routine     | public.get_tag_stats                   | service_role        | EXECUTE        |
-| routine     | public.get_time_by_tag                 | authenticated       | EXECUTE        |
-| routine     | public.get_time_by_tag                 | service_role        | EXECUTE        |
-| routine     | public.get_time_pl_data                | authenticated       | EXECUTE        |
-| routine     | public.get_time_pl_data                | service_role        | EXECUTE        |
-| routine     | public.get_timeboxing_adherence        | authenticated       | EXECUTE        |
-| routine     | public.get_timeboxing_adherence        | service_role        | EXECUTE        |
-| routine     | public.get_total_time                  | authenticated       | EXECUTE        |
-| routine     | public.get_total_time                  | service_role        | EXECUTE        |
-| routine     | public.get_user_timezone               | authenticated       | EXECUTE        |
-| routine     | public.get_user_timezone               | service_role        | EXECUTE        |
-| routine     | public.get_vault_secret                | service_role        | EXECUTE        |
-| routine     | public.get_weekly_focus_score          | authenticated       | EXECUTE        |
-| routine     | public.get_weekly_focus_score          | service_role        | EXECUTE        |
-| routine     | public.handle_new_user                 | service_role        | EXECUTE        |
-| routine     | public.increment_tag_sort_orders       | service_role        | EXECUTE        |
-| routine     | public.invoke_edge_function            | service_role        | EXECUTE        |
-| routine     | public.issue_oauth_token_pair          | service_role        | EXECUTE        |
-| routine     | public.merge_tags                      | authenticated       | EXECUTE        |
-| routine     | public.merge_tags                      | service_role        | EXECUTE        |
-| routine     | public.merge_tags_with_hierarchy       | authenticated       | EXECUTE        |
-| routine     | public.merge_tags_with_hierarchy       | service_role        | EXECUTE        |
-| routine     | public.rename_tag_group                | authenticated       | EXECUTE        |
-| routine     | public.rename_tag_group                | service_role        | EXECUTE        |
-| routine     | public.restore_entry                   | authenticated       | EXECUTE        |
-| routine     | public.restore_entry                   | service_role        | EXECUTE        |
-| routine     | public.soft_delete_entry               | authenticated       | EXECUTE        |
-| routine     | public.soft_delete_entry               | service_role        | EXECUTE        |
-| routine     | public.trunc_week_tz                   | authenticated       | EXECUTE        |
-| routine     | public.trunc_week_tz                   | service_role        | EXECUTE        |
-| routine     | public.update_personalization          | authenticated       | EXECUTE        |
-| routine     | public.update_personalization          | service_role        | EXECUTE        |
-| routine     | public.update_updated_at               | service_role        | EXECUTE        |
-| routine     | public.use_recovery_code               | authenticated       | EXECUTE        |
-| routine     | public.use_recovery_code               | service_role        | EXECUTE        |
-| routine     | public.vault_secret_exists             | service_role        | EXECUTE        |
-| table       | public.entries_effective               | authenticated       | SELECT         |
-| table       | public.entries_effective               | service_role        | SELECT         |
-| table       | public.profiles                        | service_role        | INSERT, UPDATE |
+| object type | object                                 | grantee             | privileges                     |
+| ----------- | -------------------------------------- | ------------------- | ------------------------------ |
+| routine     | public.auto_shrink_neighbors           | service_role        | EXECUTE                        |
+| routine     | public.batch_rename_tags               | authenticated       | EXECUTE                        |
+| routine     | public.batch_rename_tags               | service_role        | EXECUTE                        |
+| routine     | public.batch_reorder_tags              | service_role        | EXECUTE                        |
+| routine     | public.batch_reorder_tags_hierarchy    | authenticated       | EXECUTE                        |
+| routine     | public.batch_reorder_tags_hierarchy    | service_role        | EXECUTE                        |
+| routine     | public.bulk_soft_delete_entries        | authenticated       | EXECUTE                        |
+| routine     | public.bulk_soft_delete_entries        | service_role        | EXECUTE                        |
+| routine     | public.check_tag_has_children          | service_role        | EXECUTE                        |
+| routine     | public.check_tag_hierarchy             | service_role        | EXECUTE                        |
+| routine     | public.count_unused_recovery_codes     | authenticated       | EXECUTE                        |
+| routine     | public.count_unused_recovery_codes     | service_role        | EXECUTE                        |
+| routine     | public.custom_access_token_hook        | service_role        | EXECUTE                        |
+| routine     | public.custom_access_token_hook        | supabase_auth_admin | EXECUTE                        |
+| routine     | public.enforce_entry_tag_owner         | authenticated       | EXECUTE                        |
+| routine     | public.enforce_entry_tag_owner         | service_role        | EXECUTE                        |
+| routine     | public.get_active_dates                | authenticated       | EXECUTE                        |
+| routine     | public.get_active_dates                | service_role        | EXECUTE                        |
+| routine     | public.get_active_users_for_reflection | service_role        | EXECUTE                        |
+| routine     | public.get_blank_rate                  | authenticated       | EXECUTE                        |
+| routine     | public.get_blank_rate                  | service_role        | EXECUTE                        |
+| routine     | public.get_daily_hours                 | authenticated       | EXECUTE                        |
+| routine     | public.get_daily_hours                 | service_role        | EXECUTE                        |
+| routine     | public.get_dow_distribution            | authenticated       | EXECUTE                        |
+| routine     | public.get_dow_distribution            | service_role        | EXECUTE                        |
+| routine     | public.get_estimation_accuracy         | authenticated       | EXECUTE                        |
+| routine     | public.get_estimation_accuracy         | service_role        | EXECUTE                        |
+| routine     | public.get_fulfillment_trend           | service_role        | EXECUTE                        |
+| routine     | public.get_hourly_distribution         | authenticated       | EXECUTE                        |
+| routine     | public.get_hourly_distribution         | service_role        | EXECUTE                        |
+| routine     | public.get_monthly_hours               | authenticated       | EXECUTE                        |
+| routine     | public.get_monthly_hours               | service_role        | EXECUTE                        |
+| routine     | public.get_plan_summary                | service_role        | EXECUTE                        |
+| routine     | public.get_stats_kpi_summary           | authenticated       | EXECUTE                        |
+| routine     | public.get_stats_kpi_summary           | service_role        | EXECUTE                        |
+| routine     | public.get_stats_page_data             | authenticated       | EXECUTE                        |
+| routine     | public.get_stats_page_data             | service_role        | EXECUTE                        |
+| routine     | public.get_tag_stats                   | authenticated       | EXECUTE                        |
+| routine     | public.get_tag_stats                   | service_role        | EXECUTE                        |
+| routine     | public.get_time_by_tag                 | authenticated       | EXECUTE                        |
+| routine     | public.get_time_by_tag                 | service_role        | EXECUTE                        |
+| routine     | public.get_time_pl_data                | authenticated       | EXECUTE                        |
+| routine     | public.get_time_pl_data                | service_role        | EXECUTE                        |
+| routine     | public.get_timeboxing_adherence        | authenticated       | EXECUTE                        |
+| routine     | public.get_timeboxing_adherence        | service_role        | EXECUTE                        |
+| routine     | public.get_total_time                  | authenticated       | EXECUTE                        |
+| routine     | public.get_total_time                  | service_role        | EXECUTE                        |
+| routine     | public.get_user_timezone               | authenticated       | EXECUTE                        |
+| routine     | public.get_user_timezone               | service_role        | EXECUTE                        |
+| routine     | public.get_vault_secret                | service_role        | EXECUTE                        |
+| routine     | public.get_weekly_focus_score          | authenticated       | EXECUTE                        |
+| routine     | public.get_weekly_focus_score          | service_role        | EXECUTE                        |
+| routine     | public.handle_new_user                 | service_role        | EXECUTE                        |
+| routine     | public.increment_tag_sort_orders       | service_role        | EXECUTE                        |
+| routine     | public.invoke_edge_function            | service_role        | EXECUTE                        |
+| routine     | public.issue_oauth_token_pair          | service_role        | EXECUTE                        |
+| routine     | public.merge_tags                      | authenticated       | EXECUTE                        |
+| routine     | public.merge_tags                      | service_role        | EXECUTE                        |
+| routine     | public.merge_tags_with_hierarchy       | authenticated       | EXECUTE                        |
+| routine     | public.merge_tags_with_hierarchy       | service_role        | EXECUTE                        |
+| routine     | public.rename_tag_group                | authenticated       | EXECUTE                        |
+| routine     | public.rename_tag_group                | service_role        | EXECUTE                        |
+| routine     | public.restore_entry                   | authenticated       | EXECUTE                        |
+| routine     | public.restore_entry                   | service_role        | EXECUTE                        |
+| routine     | public.soft_delete_entry               | authenticated       | EXECUTE                        |
+| routine     | public.soft_delete_entry               | service_role        | EXECUTE                        |
+| routine     | public.trunc_week_tz                   | authenticated       | EXECUTE                        |
+| routine     | public.trunc_week_tz                   | service_role        | EXECUTE                        |
+| routine     | public.update_personalization          | authenticated       | EXECUTE                        |
+| routine     | public.update_personalization          | service_role        | EXECUTE                        |
+| routine     | public.update_updated_at               | service_role        | EXECUTE                        |
+| routine     | public.use_recovery_code               | authenticated       | EXECUTE                        |
+| routine     | public.use_recovery_code               | service_role        | EXECUTE                        |
+| routine     | public.vault_secret_exists             | service_role        | EXECUTE                        |
+| table       | public.email_suppressions              | anon                | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.email_suppressions              | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.email_suppressions              | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.entries                         | anon                | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.entries                         | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.entries                         | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.entries_effective               | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.entries_effective               | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.mfa_recovery_codes              | anon                | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.mfa_recovery_codes              | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.mfa_recovery_codes              | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.oauth_audit_log                 | anon                | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.oauth_audit_log                 | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.oauth_audit_log                 | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.oauth_authorization_codes       | anon                | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.oauth_authorization_codes       | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.oauth_authorization_codes       | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.oauth_tokens                    | anon                | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.oauth_tokens                    | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.oauth_tokens                    | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.profiles                        | anon                | DELETE, SELECT                 |
+| table       | public.profiles                        | authenticated       | DELETE, SELECT                 |
+| table       | public.profiles                        | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.reports                         | anon                | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.reports                         | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.reports                         | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.stripe_webhook_events           | anon                | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.stripe_webhook_events           | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.stripe_webhook_events           | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.tags                            | anon                | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.tags                            | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.tags                            | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.user_settings                   | anon                | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.user_settings                   | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.user_settings                   | service_role        | DELETE, INSERT, SELECT, UPDATE |
 
 ## Realtime publication
 
