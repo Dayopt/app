@@ -12,6 +12,8 @@
  * @see https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
  */
 
+import { SupabaseConfigError } from '@/lib/supabase/client';
+
 type AuthContext = 'login' | 'signup' | 'resetPassword' | 'updatePassword' | 'oauth';
 
 /**
@@ -70,4 +72,19 @@ export function getAuthErrorKey(errorMessage: string, context: AuthContext): str
 
   // OAuth, resetPassword, その他
   return 'auth.errors.unexpectedError';
+}
+
+/**
+ * catch(err) で受けた例外を安全な i18n キーに変換する。
+ *
+ * SupabaseConfigError（env未設定/placeholderのまま起動）はユーザーの入力とは無関係な
+ * システム設定の問題であり、getAuthErrorKey の OWASP サニタイズ（例: login context を
+ * 全て「invalidCredentials」に丸める）を通すと「メールアドレスまたはパスワードが正しく
+ * ありません」に化けて原因が分からなくなる。dev環境限定で実メッセージをそのまま返す。
+ */
+export function resolveAuthErrorKey(err: unknown, context: AuthContext): string {
+  if (err instanceof SupabaseConfigError && process.env.NODE_ENV === 'development') {
+    return err.message;
+  }
+  return getAuthErrorKey(err instanceof Error ? err.message : '', context);
 }

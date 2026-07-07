@@ -44,6 +44,18 @@ const PLACEHOLDER_SUPABASE_URL = 'https://placeholder.supabase.co';
 const PLACEHOLDER_SUPABASE_ANON_KEY = 'placeholder';
 
 /**
+ * env var 未設定 / placeholder 値のまま起動された場合の設定エラー。
+ * 呼び出し側（useAuthStore 等）が Supabase の認証エラーと区別して扱えるよう
+ * 専用クラスにしている（instanceof で判定）。
+ */
+export class SupabaseConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SupabaseConfigError';
+  }
+}
+
+/**
  * Browser用Supabaseクライアント作成
  *
  * @returns Supabase Browser Client
@@ -58,7 +70,7 @@ export function createClient() {
     url === PLACEHOLDER_SUPABASE_URL ||
     anonKey === PLACEHOLDER_SUPABASE_ANON_KEY
   ) {
-    throw new Error(
+    throw new SupabaseConfigError(
       '❌ NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY が未設定です:\n\n' +
         '.op-env.local を作成し、op run 経由で起動してください。詳細は docs/operations/secrets.md を参照してください。',
     );

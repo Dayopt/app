@@ -20,7 +20,7 @@ import type {
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-import { getAuthErrorKey } from '@/lib/auth-error';
+import { getAuthErrorKey, resolveAuthErrorKey } from '@/lib/auth-error';
 
 interface UserMetadata {
   [key: string]: string | number | boolean | null;
@@ -188,7 +188,7 @@ export const useAuthStore = create<AuthState>()(
 
           return result;
         } catch (err) {
-          const safeError = getAuthErrorKey(err instanceof Error ? err.message : '', 'signup');
+          const safeError = resolveAuthErrorKey(err, 'signup');
           set({ error: safeError, loading: false });
           return {
             data: { user: null, session: null },
@@ -227,7 +227,7 @@ export const useAuthStore = create<AuthState>()(
 
           return result;
         } catch (err) {
-          const safeError = getAuthErrorKey(err instanceof Error ? err.message : '', 'login');
+          const safeError = resolveAuthErrorKey(err, 'login');
           set({ error: safeError, loading: false });
           return {
             data: { user: null, session: null },
@@ -258,7 +258,7 @@ export const useAuthStore = create<AuthState>()(
 
           return result;
         } catch (err) {
-          const safeError = getAuthErrorKey(err instanceof Error ? err.message : '', 'oauth');
+          const safeError = resolveAuthErrorKey(err, 'oauth');
           set({ error: safeError, loading: false });
           return {
             data: { provider, url: null },
