@@ -131,7 +131,7 @@ function fetchGrants(): GrantRow[] {
            string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
          FROM pg_proc p
          JOIN pg_namespace n ON n.oid = p.pronamespace
-         CROSS JOIN LATERAL aclexplode(p.proacl) acl
+         CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
          WHERE n.nspname = 'public'
            AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
              IN ('PUBLIC', 'anon', 'authenticated', 'service_role', 'supabase_auth_admin')
