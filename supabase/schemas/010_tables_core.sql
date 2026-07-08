@@ -3,13 +3,14 @@
 -- ============================================================
 -- Dayopt のドメインモデルの中核テーブル
 -- 実際のマイグレーションは migrations/ を参照
--- 最終同期日: 2026-06-17
+-- 最終同期日: 2026-07-09
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
 --   - 20260425110000_fix_tag_children_trigger_active_only.sql
 --   - 20260610000000_entry_auto_record_model.sql
 --   - 20260616000000_rename_duration_to_planned_duration.sql
+--   - 20260708232500_add_time_model_tables.sql
 --
 -- カラム順序の規則:
 --   1. id (PK)
@@ -69,6 +70,74 @@ CREATE TABLE public.entries (
 
 -- entries.tag_id は nullable FK に加えて、trigger で tags.user_id = entries.user_id を強制する。
 --   enforce_entry_tag_owner -> enforce_entry_tag_owner()
+
+-- external_calendar_events: 外部カレンダー同期ミラー
+-- Phase 1 では FK の受け皿だけを追加し、OAuth / sync / ghost UI は Phase 2 で実装する
+CREATE TABLE public.external_calendar_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,
+  provider_calendar_id TEXT NOT NULL,
+  provider_event_id TEXT NOT NULL,
+  title TEXT,
+  description TEXT,
+  calendar_name TEXT,
+  start_at TIMESTAMPTZ,
+  end_at TIMESTAMPTZ,
+  status TEXT NOT NULL,
+  dismissed_at TIMESTAMPTZ,
+  last_synced_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- plans: Dayopt 内の予定
+CREATE TABLE public.plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  tag_id UUID REFERENCES public.tags(id) ON DELETE SET NULL,
+  external_calendar_event_id UUID REFERENCES public.external_calendar_events(id),
+  title TEXT NOT NULL,
+  note TEXT,
+  start_at TIMESTAMPTZ NOT NULL,
+  end_at TIMESTAMPTZ NOT NULL,
+  skipped_at TIMESTAMPTZ,
+  source TEXT NOT NULL DEFAULT 'manual', -- manual / external_calendar / api
+  deleted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- plans 関連 constraint / trigger:
+--   plans_no_overlap                    -> user_id + tstzrange(start_at, end_at, '[)') EXCLUDE
+--   prevent_plans_source_change         -> prevent_time_model_source_change()
+--   enforce_plan_tag_owner              -> enforce_plan_tag_owner()
+--   enforce_plan_external_event_owner   -> enforce_plan_external_event_owner()
+
+-- logs: Dayopt 内の記録
+CREATE TABLE public.logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  tag_id UUID REFERENCES public.tags(id) ON DELETE SET NULL,
+  plan_id UUID REFERENCES public.plans(id),
+  external_calendar_event_id UUID REFERENCES public.external_calendar_events(id),
+  title TEXT NOT NULL,
+  note TEXT,
+  start_at TIMESTAMPTZ NOT NULL,
+  end_at TIMESTAMPTZ NOT NULL,
+  source TEXT NOT NULL DEFAULT 'manual', -- manual / from_plan / external_calendar / api
+  fulfillment_score INTEGER,
+  deleted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- logs 関連 constraint / trigger:
+--   logs_no_overlap                    -> user_id + tstzrange(start_at, end_at, '[)') EXCLUDE
+--   prevent_logs_source_change         -> prevent_time_model_source_change()
+--   enforce_log_tag_owner              -> enforce_log_tag_owner()
+--   enforce_log_plan_owner             -> enforce_log_plan_owner()
+--   enforce_log_external_event_owner   -> enforce_log_external_event_owner()
 
 -- tags: タグ（root -> child の最大2階層）
 -- 20260424000000 でコロン記法 "dev:api" から parent_id 階層へ移行済み

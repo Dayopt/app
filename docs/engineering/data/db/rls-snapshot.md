@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 29 件 / RLS 対象テーブル 11 件 / GRANT 115 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 42 件 / RLS 対象テーブル 14 件 / GRANT 128 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -13,10 +13,13 @@
 | ------------------------- | ----------- | ------ |
 | email_suppressions        | ✅          | —      |
 | entries                   | ✅          | —      |
+| external_calendar_events  | ✅          | —      |
+| logs                      | ✅          | —      |
 | mfa_recovery_codes        | ✅          | —      |
 | oauth_audit_log           | ✅          | —      |
 | oauth_authorization_codes | ✅          | —      |
 | oauth_tokens              | ✅          | —      |
+| plans                     | ✅          | —      |
 | profiles                  | ✅          | —      |
 | reports                   | ✅          | —      |
 | stripe_webhook_events     | ✅          | —      |
@@ -39,6 +42,24 @@
 | Users can insert own plans | INSERT | PERMISSIVE | {public} | —                                                                  | (( SELECT auth.uid() AS uid) = user_id) |
 | Users can view own plans   | SELECT | PERMISSIVE | {public} | ((( SELECT auth.uid() AS uid) = user_id) AND (deleted_at IS NULL)) | —                                       |
 | Users can update own plans | UPDATE | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id)                            | (( SELECT auth.uid() AS uid) = user_id) |
+
+### external_calendar_events
+
+| policy                                                   | cmd    | permissive | roles           | USING                                   | WITH CHECK                              |
+| -------------------------------------------------------- | ------ | ---------- | --------------- | --------------------------------------- | --------------------------------------- |
+| Service role has full access to external calendar events | ALL    | PERMISSIVE | {service_role}  | true                                    | true                                    |
+| Users can view own external calendar events              | SELECT | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
+| Users can dismiss own external calendar events           | UPDATE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id) |
+
+### logs
+
+| policy                               | cmd    | permissive | roles           | USING                                                              | WITH CHECK                              |
+| ------------------------------------ | ------ | ---------- | --------------- | ------------------------------------------------------------------ | --------------------------------------- |
+| Service role has full access to logs | ALL    | PERMISSIVE | {service_role}  | true                                                               | true                                    |
+| Users can delete own logs            | DELETE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id)                            | —                                       |
+| Users can insert own logs            | INSERT | PERMISSIVE | {authenticated} | —                                                                  | (( SELECT auth.uid() AS uid) = user_id) |
+| Users can view own logs              | SELECT | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (deleted_at IS NULL)) | —                                       |
+| Users can update own logs            | UPDATE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id)                            | (( SELECT auth.uid() AS uid) = user_id) |
 
 ### mfa_recovery_codes
 
@@ -65,6 +86,16 @@
 | policy                          | cmd    | permissive | roles    | USING                                   | WITH CHECK |
 | ------------------------------- | ------ | ---------- | -------- | --------------------------------------- | ---------- |
 | Users can view own oauth_tokens | SELECT | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —          |
+
+### plans
+
+| policy                                | cmd    | permissive | roles           | USING                                                              | WITH CHECK                              |
+| ------------------------------------- | ------ | ---------- | --------------- | ------------------------------------------------------------------ | --------------------------------------- |
+| Service role has full access to plans | ALL    | PERMISSIVE | {service_role}  | true                                                               | true                                    |
+| Users can delete own plans            | DELETE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id)                            | —                                       |
+| Users can insert own plans            | INSERT | PERMISSIVE | {authenticated} | —                                                                  | (( SELECT auth.uid() AS uid) = user_id) |
+| Users can view own plans              | SELECT | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (deleted_at IS NULL)) | —                                       |
+| Users can update own plans            | UPDATE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id)                            | (( SELECT auth.uid() AS uid) = user_id) |
 
 ### profiles
 
@@ -113,6 +144,7 @@
 
 | object type | object                                                                                                                                                                                                                                                                                  | grantee             | privileges                     |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------ |
+| column      | public.external_calendar_events.dismissed_at                                                                                                                                                                                                                                            | authenticated       | UPDATE                         |
 | column      | public.profiles.avatar_url                                                                                                                                                                                                                                                              | authenticated       | INSERT, UPDATE                 |
 | column      | public.profiles.email                                                                                                                                                                                                                                                                   | authenticated       | INSERT                         |
 | column      | public.profiles.full_name                                                                                                                                                                                                                                                               | authenticated       | INSERT, UPDATE                 |
@@ -135,6 +167,11 @@
 | routine     | public.enforce_entry_tag_owner()                                                                                                                                                                                                                                                        | PUBLIC              | EXECUTE                        |
 | routine     | public.enforce_entry_tag_owner()                                                                                                                                                                                                                                                        | authenticated       | EXECUTE                        |
 | routine     | public.enforce_entry_tag_owner()                                                                                                                                                                                                                                                        | service_role        | EXECUTE                        |
+| routine     | public.enforce_log_external_event_owner()                                                                                                                                                                                                                                               | service_role        | EXECUTE                        |
+| routine     | public.enforce_log_plan_owner()                                                                                                                                                                                                                                                         | service_role        | EXECUTE                        |
+| routine     | public.enforce_log_tag_owner()                                                                                                                                                                                                                                                          | service_role        | EXECUTE                        |
+| routine     | public.enforce_plan_external_event_owner()                                                                                                                                                                                                                                              | service_role        | EXECUTE                        |
+| routine     | public.enforce_plan_tag_owner()                                                                                                                                                                                                                                                         | service_role        | EXECUTE                        |
 | routine     | public.get_active_dates(p_user_id uuid, p_start_date date, p_end_date date)                                                                                                                                                                                                             | authenticated       | EXECUTE                        |
 | routine     | public.get_active_dates(p_user_id uuid, p_start_date date, p_end_date date)                                                                                                                                                                                                             | service_role        | EXECUTE                        |
 | routine     | public.get_active_users_for_reflection(p_week_start date, p_threshold_days integer, p_limit integer)                                                                                                                                                                                    | service_role        | EXECUTE                        |
@@ -179,6 +216,7 @@
 | routine     | public.merge_tags(p_user_id uuid, p_source_tag_id uuid, p_target_tag_id uuid)                                                                                                                                                                                                           | service_role        | EXECUTE                        |
 | routine     | public.merge_tags_with_hierarchy(p_user_id uuid, p_source_tag_id uuid, p_target_tag_id uuid)                                                                                                                                                                                            | authenticated       | EXECUTE                        |
 | routine     | public.merge_tags_with_hierarchy(p_user_id uuid, p_source_tag_id uuid, p_target_tag_id uuid)                                                                                                                                                                                            | service_role        | EXECUTE                        |
+| routine     | public.prevent_time_model_source_change()                                                                                                                                                                                                                                               | service_role        | EXECUTE                        |
 | routine     | public.rename_tag_group(p_user_id uuid, p_old_prefix text, p_new_prefix text)                                                                                                                                                                                                           | authenticated       | EXECUTE                        |
 | routine     | public.rename_tag_group(p_user_id uuid, p_old_prefix text, p_new_prefix text)                                                                                                                                                                                                           | service_role        | EXECUTE                        |
 | routine     | public.restore_entry(p_entry_id uuid, p_user_id uuid)                                                                                                                                                                                                                                   | authenticated       | EXECUTE                        |
@@ -199,6 +237,10 @@
 | table       | public.entries                                                                                                                                                                                                                                                                          | anon                | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.entries                                                                                                                                                                                                                                                                          | authenticated       | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.entries                                                                                                                                                                                                                                                                          | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.external_calendar_events                                                                                                                                                                                                                                                         | authenticated       | SELECT                         |
+| table       | public.external_calendar_events                                                                                                                                                                                                                                                         | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.logs                                                                                                                                                                                                                                                                             | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.logs                                                                                                                                                                                                                                                                             | service_role        | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.mfa_recovery_codes                                                                                                                                                                                                                                                               | anon                | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.mfa_recovery_codes                                                                                                                                                                                                                                                               | authenticated       | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.mfa_recovery_codes                                                                                                                                                                                                                                                               | service_role        | DELETE, INSERT, SELECT, UPDATE |
@@ -211,6 +253,8 @@
 | table       | public.oauth_tokens                                                                                                                                                                                                                                                                     | anon                | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.oauth_tokens                                                                                                                                                                                                                                                                     | authenticated       | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.oauth_tokens                                                                                                                                                                                                                                                                     | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.plans                                                                                                                                                                                                                                                                            | authenticated       | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.plans                                                                                                                                                                                                                                                                            | service_role        | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.profiles                                                                                                                                                                                                                                                                         | anon                | DELETE, SELECT                 |
 | table       | public.profiles                                                                                                                                                                                                                                                                         | authenticated       | DELETE, SELECT                 |
 | table       | public.profiles                                                                                                                                                                                                                                                                         | service_role        | DELETE, INSERT, SELECT, UPDATE |
