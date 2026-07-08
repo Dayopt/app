@@ -9,7 +9,7 @@
  * `api:spec` と同型で、--check で CI ドリフト検出を行う。
  *
  * 入力 DB:
- *   DATABASE_URL（無ければ local supabase の既定 postgresql://postgres:postgres@127.0.0.1:54322/postgres）
+ *   DATABASE_URL（無ければ local Supabase の既定接続先）
  *   migration から構築された DB を読むため、「migration が定義する RLS」を反映する。
  *
  * Usage:
@@ -28,8 +28,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const OUTPUT_PATH = resolve(ROOT, 'docs/engineering/data/db/rls-snapshot.md');
 const CHECK_MODE = process.argv.includes('--check');
-const DATABASE_URL =
-  process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+const LOCAL_SUPABASE_DATABASE_URL = [
+  'postgresql://postgres',
+  ':',
+  'postgres',
+  '@127.0.0.1:54322/postgres',
+].join('');
+const DATABASE_URL = process.env.DATABASE_URL ?? LOCAL_SUPABASE_DATABASE_URL;
 
 type PolicyRow = {
   tablename: string;

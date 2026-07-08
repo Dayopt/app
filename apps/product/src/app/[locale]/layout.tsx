@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { headers } from 'next/headers';
 
 import { getAppUrl } from '@/lib/app-url';
 import type { Locale } from '@/lib/i18n/routing';
@@ -142,6 +143,7 @@ export async function generateStaticParams() {
 // 言語特化レイアウト（HTMLタグなし - ルートレイアウトで定義済み）
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params;
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   // 不正な言語の場合、デフォルト言語にフォールバック
   const validLocale = isValidLocale(locale) ? locale : routing.defaultLocale;
   const direction = getDirection(validLocale);
@@ -157,6 +159,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       {/* SEO: JSON-LD構造化データ */}
       <script
         id="json-ld"
+        nonce={nonce}
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
