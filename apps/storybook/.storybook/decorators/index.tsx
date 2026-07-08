@@ -33,9 +33,12 @@ export const withWrapper = (className: string): Decorator => {
 };
 
 // メッセージファイルを自動収集（namespace追加時に変更不要）
-const messageModules = import.meta.glob<Record<string, string>>('../../messages/ja/*.json', {
-  eager: true,
-});
+const messageModules = import.meta.glob<Record<string, string>>(
+  '../../../product/messages/ja/*.json',
+  {
+    eager: true,
+  },
+);
 const messages = Object.entries(messageModules).reduce<Record<string, unknown>>(
   (acc, [, mod]) => ({ ...acc, ...(mod as Record<string, unknown>) }),
   {},
