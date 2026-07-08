@@ -56,23 +56,6 @@ const nextConfig = {
 
   // セキュリティヘッダー設定
   async headers() {
-    // 開発環境ではローカルSupabaseへの接続を許可
-    const isDevelopment = process.env.NODE_ENV === 'development'
-    const connectSrc = [
-      "'self'",
-      'https://*.supabase.co',
-      'https://vercel.live',
-      'wss://*.supabase.co',
-      'https://vitals.vercel-insights.com',
-      'https://api.pwnedpasswords.com', // Have I Been Pwned API
-      // Cloudflare Turnstile (captcha) - widget の siteverify / telemetry
-      'https://challenges.cloudflare.com',
-      // Sentry エラー監視・パフォーマンス監視
-      'https://*.sentry.io',
-      'https://*.ingest.sentry.io',
-      ...(isDevelopment ? ['http://127.0.0.1:54321', 'http://localhost:54321'] : []),
-    ].join(' ')
-
     return [
       {
         source: '/(.*)',
@@ -81,33 +64,6 @@ const nextConfig = {
           {
             key: 'Strict-Transport-Security',
             value: 'max-age=63072000; includeSubDomains; preload',
-          },
-          // CSP（Content Security Policy）- 強化モード（2025-10-20より有効化）
-          // NOTE: 'unsafe-eval' / 'unsafe-inline' が必要な理由:
-          // - 'unsafe-eval': Next.js開発モードのHMR、一部ライブラリの動的コード評価
-          // - 'unsafe-inline': shadcn/ui, Radix UI, Tailwind CSSのインラインスタイル
-          // TODO: 将来的にnonce-based CSPへの移行を検討（Next.js 15.xでのサポート改善後）
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              // 開発環境では'unsafe-eval'が必要、本番では可能な限り制限
-              isDevelopment
-                ? "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com https://www.google.com https://www.gstatic.com https://challenges.cloudflare.com"
-                : "script-src 'self' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com https://www.google.com https://www.gstatic.com https://challenges.cloudflare.com",
-              // NOTE: 'unsafe-inline'はshadcn/ui, Radix UIで必要
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https: blob:",
-              "font-src 'self' data:",
-              `connect-src ${connectSrc}`,
-              "frame-src 'self' https://vercel.live https://www.google.com https://recaptcha.google.com https://challenges.cloudflare.com",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'none'",
-              'upgrade-insecure-requests',
-              'report-uri /api/csp-report',
-            ].join('; '),
           },
           // Clickjacking対策
           {

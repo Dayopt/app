@@ -17,6 +17,79 @@ import { updateSession } from '@/lib/supabase/middleware';
 const intlMiddleware = createMiddleware(routing);
 
 const MCP_HOST = dayoptDomains.mcp;
+const CSP_HEADER = 'Content-Security-Policy';
+const CSP_REPORT_URI = '/api/csp-report';
+
+function createCspNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function buildContentSecurityPolicy(nonce: string): string {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const connectSrc = [
+    "'self'",
+    'https://*.supabase.co',
+    'https://vercel.live',
+    'wss://*.supabase.co',
+    'https://vitals.vercel-insights.com',
+    'https://api.pwnedpasswords.com',
+    'https://challenges.cloudflare.com',
+    'https://*.sentry.io',
+    'https://*.ingest.sentry.io',
+    ...(isDevelopment ? ['http://127.0.0.1:54321', 'http://localhost:54321'] : []),
+  ].join(' ');
+
+  const scriptSrc = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    "'strict-dynamic'",
+    ...(isDevelopment ? ["'unsafe-eval'"] : []),
+    'https://vercel.live',
+    'https://va.vercel-scripts.com',
+    'https://www.google.com',
+    'https://www.gstatic.com',
+    'https://challenges.cloudflare.com',
+  ].join(' ');
+
+  return [
+    "default-src 'self'",
+    `script-src ${scriptSrc}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https: blob:",
+    "font-src 'self' data:",
+    `connect-src ${connectSrc}`,
+    "frame-src 'self' https://vercel.live https://www.google.com https://recaptcha.google.com https://challenges.cloudflare.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    'upgrade-insecure-requests',
+    `report-uri ${CSP_REPORT_URI}`,
+  ].join('; ');
+}
+
+function prepareCspRequest(request: NextRequest): string {
+  const nonce = createCspNonce();
+  const contentSecurityPolicy = buildContentSecurityPolicy(nonce);
+  request.headers.set('x-nonce', nonce);
+  request.headers.set(CSP_HEADER, contentSecurityPolicy);
+  return contentSecurityPolicy;
+}
+
+function applyCsp(response: NextResponse, contentSecurityPolicy: string): NextResponse {
+  response.headers.set(CSP_HEADER, contentSecurityPolicy);
+  return response;
+}
+
+function nextWithCsp(request: NextRequest, contentSecurityPolicy: string): NextResponse {
+  return applyCsp(NextResponse.next({ request }), contentSecurityPolicy);
+}
+
+function redirectWithCsp(url: URL, contentSecurityPolicy: string): NextResponse {
+  return applyCsp(NextResponse.redirect(url), contentSecurityPolicy);
+}
 
 // 言語プレフィックスを除いたパスを取得
 // as-needed設定: デフォルト言語(en)はプレフィックスなし
@@ -61,6 +134,7 @@ function getLocalizedPath(path: string, locale: string): string {
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname;
+  const contentSecurityPolicy = prepareCspRequest(request);
 
   // 静的ファイル、API、_nextファイルはスキップ
   // API routes は middleware 認証をスキップ — 各ルートが自前で認証:
@@ -76,18 +150,18 @@ export async function proxy(request: NextRequest) {
     (hostname === MCP_HOST && pathname === '/') ||
     isPublicRewritePath(pathname)
   ) {
-    return NextResponse.next();
+    return nextWithCsp(request, contentSecurityPolicy);
   }
 
   // メンテナンス / オフラインページは言語処理をスキップ
   if (pathname === '/maintenance' || pathname === '/offline') {
-    return NextResponse.next();
+    return nextWithCsp(request, contentSecurityPolicy);
   }
 
   // 言語プレフィックス付きメンテナンスページへのアクセスをリダイレクト
   for (const locale of routing.locales) {
     if (pathname === `/${locale}/maintenance`) {
-      return NextResponse.redirect(new URL('/maintenance', request.url));
+      return redirectWithCsp(new URL('/maintenance', request.url), contentSecurityPolicy);
     }
   }
 
@@ -101,7 +175,7 @@ export async function proxy(request: NextRequest) {
   // メンテナンスモードチェック
   const isMaintenanceMode = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true';
   if (isMaintenanceMode) {
-    return NextResponse.redirect(new URL('/maintenance', request.url));
+    return redirectWithCsp(new URL('/maintenance', request.url), contentSecurityPolicy);
   }
 
   // next-intlのミドルウェアを実行（言語検出とリダイレクト）
@@ -109,7 +183,7 @@ export async function proxy(request: NextRequest) {
 
   // リダイレクトレスポンスの場合はそのまま返す
   if (intlResponse.status !== 200) {
-    return intlResponse;
+    return applyCsp(intlResponse, contentSecurityPolicy);
   }
 
   const currentLocale = getCurrentLocale(pathname);
@@ -122,7 +196,7 @@ export async function proxy(request: NextRequest) {
   // パフォーマンス最適化: 公開ページでは getUser() をスキップ
   // getUser() は Supabase API への往復が発生するため、認証が必要なパスのみ実行
   if (isPublicPath && !isProtectedPath && !isAuthPath) {
-    return intlResponse;
+    return applyCsp(intlResponse, contentSecurityPolicy);
   }
 
   // Supabaseセッションを更新（ユーザー情報も同時取得 - 重複呼び出し防止で高速化）
@@ -138,7 +212,7 @@ export async function proxy(request: NextRequest) {
       intlResponse.headers.forEach((value, key) => {
         response.headers.set(key, value);
       });
-      return response;
+      return applyCsp(response, contentSecurityPolicy);
     }
 
     // 未認証でprotectedPathにアクセスした場合
@@ -147,7 +221,7 @@ export async function proxy(request: NextRequest) {
       // OAuth flow 等で query string が必要なため search も含めて redirect 先に保持する
       const search = request.nextUrl.search;
       loginUrl.searchParams.set('redirect', pathWithoutLocale + search);
-      return NextResponse.redirect(loginUrl);
+      return redirectWithCsp(loginUrl, contentSecurityPolicy);
     }
 
     // 認証済みでauth系のパスにアクセスした場合
@@ -155,7 +229,10 @@ export async function proxy(request: NextRequest) {
     const isMFAVerifyPath = pathWithoutLocale === '/auth/mfa-verify';
 
     if (user && isAuthPath && !isMFAVerifyPath) {
-      return NextResponse.redirect(new URL(getLocalizedPath('/week', currentLocale), request.url));
+      return redirectWithCsp(
+        new URL(getLocalizedPath('/week', currentLocale), request.url),
+        contentSecurityPolicy,
+      );
     }
 
     // MFA AAL強制（認証済みユーザーのみ）
@@ -163,8 +240,9 @@ export async function proxy(request: NextRequest) {
       const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
         // MFA有効だがまだ検証していない → mfa-verifyへ強制リダイレクト
-        return NextResponse.redirect(
+        return redirectWithCsp(
           new URL(getLocalizedPath('/auth/mfa-verify', currentLocale), request.url),
+          contentSecurityPolicy,
         );
       }
     }
@@ -174,11 +252,12 @@ export async function proxy(request: NextRequest) {
       response.headers.set(key, value);
     });
 
-    return response;
+    return applyCsp(response, contentSecurityPolicy);
   } catch (error) {
     logger.error('Proxy error:', error);
-    return NextResponse.redirect(
+    return redirectWithCsp(
       new URL(getLocalizedPath('/auth/login', currentLocale), request.url),
+      contentSecurityPolicy,
     );
   }
 }
