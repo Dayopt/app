@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-06-17
+last_verified: 2026-07-08
 ---
 
 # Environment Secrets
@@ -40,6 +40,60 @@ GitHub branch protection では、通常の CI check に加えて Supabase integ
 
 Preview scope に production Supabase credentials を手動設定しない。
 既に入っている場合は削除するか、Preview から外して Supabase integration 管理に寄せる。
+
+### Vercel readiness audit (2026-07-08)
+
+対象 project は Vercel team `Dayopt` の `product` と `web`。
+確認は secret 値ではなく metadata と未認証レスポンスだけを見る。
+
+#### Preview protection
+
+| URL                                | 期待                                               | 2026-07-08 確認結果                   |
+| ---------------------------------- | -------------------------------------------------- | ------------------------------------- |
+| `*.vercel.app` preview (`product`) | 未認証は Vercel SSO / Deployment Protection に送る | `302` to `https://vercel.com/sso-api` |
+| `*.vercel.app` preview (`web`)     | 未認証は Vercel SSO / Deployment Protection に送る | `302` to `https://vercel.com/sso-api` |
+| `app.dayopt.app`                   | production app として通常到達できる                | `200`                                 |
+| `dayopt.app`                       | production marketing site として通常到達できる     | `200`                                 |
+| `mcp.dayopt.app`                   | OAuth / token validation で保護される              | `401`                                 |
+
+`product` には Automation Bypass が存在し、Vercel env var として管理されている。
+値は docs / issue / PR / terminal に出さない。漏えいが疑われる場合は Vercel Dashboard で rotate し、
+新しい値は 1Password か Vercel-managed secret storage だけに置く。
+
+#### Env scope / Sensitive flag
+
+`product` Preview に production Supabase credentials は見えない。
+Supabase integration 由来の production DB / key も `production` target のみ。
+
+次の server-only secret は Vercel CLI API で `sensitive` に更新済み。
+値は読まず、`vercel api` で env type だけを変更した。
+
+| Project   | Env                         | Production / Preview | Development |
+| --------- | --------------------------- | -------------------- | ----------- |
+| `product` | `SUPABASE_SERVICE_ROLE_KEY` | `sensitive`          | n/a         |
+| `product` | `RECOVERY_CODE_PEPPER`      | `sensitive`          | `encrypted` |
+| `product` | `RESEND_API_KEY`            | `sensitive`          | `encrypted` |
+| `product` | `RESEND_WEBHOOK_SECRET`     | `sensitive`          | n/a         |
+| `product` | `SENTRY_AUTH_TOKEN`         | `sensitive`          | `encrypted` |
+| `product` | `GITHUB_TOKEN`              | `sensitive`          | `encrypted` |
+| `web`     | `GITHUB_TOKEN`              | `sensitive`          | `encrypted` |
+
+Development scope の secret は Vercel Sensitive Env の対象外として `encrypted` のまま残す。
+今後の棚卸しでは、development / preview に long-lived secret が必要かを用途ごとに確認する。
+
+`NEXT_PUBLIC_*` と repository 名などの公開 metadata は secret 扱いにしない。
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY` は public key なので、`sensitive` のままでも事故ではないが必須ではない。
+
+#### Pre-deploy dry run
+
+2026-07-08 時点の local Vercel CLI は `50.32.5`。
+`vercel deploy --help` に `--dry` は出ていないため、`vercel deploy --dry` を pre-deploy check / CI に入れない。
+CLI と公式 docs の両方で dry run が確認できた時点で、次の順で再評価する。
+
+1. `vercel deploy --help` で `--dry` が表示されることを確認する
+2. `product` と `web` で deploy されないことを確認する
+3. 出力が secret 値を含まないことを確認する
+4. 有用なら `pnpm` script か CI の warning-only step に入れる
 
 ## Supabase
 
