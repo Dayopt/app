@@ -40,7 +40,7 @@ GitHub integration が production migration の通常経路である前提は維
 - Supabase dashboard の production deployment / branch log で失敗箇所を特定する。
 - production DB の backup / PITR 状態を確認する。
 - `supabase db push --dry-run` で未適用 migration と SQL plan を確認する。
-- 手動 `supabase db push` が必要な場合は、作業理由と dry-run 結果をこの log または後続 log に残してから実行する。
+- 手動 `supabase db push` が必要な場合は、作業理由と dry-run 結果を後続 log に残してから実行する。
 - 適用後に `supabase_migrations.schema_migrations` の最新 version と branch status を再確認する。
 
 ## 検証
