@@ -1003,7 +1003,7 @@ PR を作成すると Supabase GitHub integration が Preview Branch を作成�
 - Supabase dashboard の production deployment / branch log に失敗した migration 名と SQL error が残っている
 - production DB の `supabase_migrations.schema_migrations` 最新 version が repo の `supabase/migrations/` と一致している
 - 不一致がある場合、未適用 migration を列挙して作業ログに残している
-- 手動適用が必要な場合、`--dry-run` 結果と backup / PITR の状態を確認している
+- 手動適用が必要な場合、`--dry-run` で適用対象 migration を確認し、対象 SQL の destructive change / backfill / lock risk と backup / PITR の状態を確認している
 
 ```bash
 supabase link --project-ref yvglwblxrnrenfifsnje
