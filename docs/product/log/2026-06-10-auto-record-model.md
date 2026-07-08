@@ -1,3 +1,6 @@
+status: superseded
+superseded_by: ./2026-07-09-time-model-split.md
+
 # ADR-019: 自動記録モデル（過ぎた予定を実績とみなす）
 
 > accepted（2026-06-10）

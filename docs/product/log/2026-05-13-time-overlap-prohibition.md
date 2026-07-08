@@ -1,3 +1,6 @@
+status: superseded
+superseded_by: ./2026-07-09-time-model-split.md
+
 # ADR-018: 時間重なりの全面禁止（EXCLUDE 制約）
 
 > accepted（2026-05-13）
