@@ -996,11 +996,22 @@ PR を作成すると Supabase GitHub integration が Preview Branch を作成�
 
 通常運用では手動 `supabase db push` を使わない。Supabase integration 障害などで緊急対応が必要な場合だけ、Production の 1Password secret を使い、作業ログに理由を残して実行する。
 
+`main` branch が `MIGRATIONS_FAILED` を示している場合は、先に失敗状態が production migration path の実体か、Preview Branch 側の古い状態かを確認する。production schema に未適用 migration があるまま launch-blocker の security migration を merge すると、Git 上では修正済みでも本番 DB へ反映されない。
+
+確認すること:
+
+- Supabase dashboard の production deployment / branch log に失敗した migration 名と SQL error が残っている
+- production DB の `supabase_migrations.schema_migrations` 最新 version が repo の `supabase/migrations/` と一致している
+- 不一致がある場合、未適用 migration を列挙して作業ログに残している
+- 手動適用が必要な場合、`--dry-run` で適用対象 migration を確認し、対象 SQL の destructive change / backfill / lock risk と backup / PITR の状態を確認している
+
 ```bash
 supabase link --project-ref yvglwblxrnrenfifsnje
 supabase db push --dry-run
 supabase db push
 ```
+
+手動適用後は migration history を再確認し、Supabase branch status が解消されたか、または production path に影響しない非 authoritative な preview 状態だったことを作業ログに残す。
 
 ### マイグレーション統合時の注意
 
