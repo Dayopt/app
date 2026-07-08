@@ -1,3 +1,6 @@
+status: superseded
+superseded_by: ../../product/log/2026-07-09-time-model-split.md
+
 # ADR-011: 統合ブロックモデル
 
 > accepted（2026-03-05・遡及記録）
