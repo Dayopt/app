@@ -12,7 +12,19 @@
  * @see https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
  */
 
+import { logger } from '@/lib/logger';
+import { SupabaseConfigError } from '@/lib/supabase/client';
+
 type AuthContext = 'login' | 'signup' | 'resetPassword' | 'updatePassword' | 'oauth';
+
+/**
+ * 既に解決済みの i18n キー（resolveAuthErrorKey の戻り値）。
+ * LoginForm 等の呼び出し元コンポーネントが `signInError.message` を再度
+ * getAuthErrorKey に通すため（e.g. LoginForm.tsx:117）、ここに含まれるキーは
+ * context に関わらずそのまま返す（login context の「非rate-limitは全て
+ * invalidCredentialsに丸める」ルールに巻き込まれて意味が変わるのを防ぐ）。
+ */
+const RESOLVED_KEYS = new Set(['auth.errors.unexpectedError']);
 
 /**
  * Supabase の AuthError メッセージを安全な i18n キーに変換
@@ -23,6 +35,10 @@ type AuthContext = 'login' | 'signup' | 'resetPassword' | 'updatePassword' | 'oa
  * - resetPassword: 常に成功メッセージ（Supabase 側で処理済み）
  */
 export function getAuthErrorKey(errorMessage: string, context: AuthContext): string {
+  if (RESOLVED_KEYS.has(errorMessage)) {
+    return errorMessage;
+  }
+
   const normalizedMessage = errorMessage.toLowerCase();
 
   // ログイン: 具体的な理由を開示しない（OWASP準拠）
@@ -70,4 +86,22 @@ export function getAuthErrorKey(errorMessage: string, context: AuthContext): str
 
   // OAuth, resetPassword, その他
   return 'auth.errors.unexpectedError';
+}
+
+/**
+ * catch(err) で受けた例外を安全な i18n キーに変換する。
+ *
+ * SupabaseConfigError（env未設定/placeholderのまま起動）はユーザーの入力とは無関係な
+ * システム設定の問題であり、getAuthErrorKey の OWASP サニタイズ（例: login context を
+ * 全て「invalidCredentials」に丸める）を通すと「メールアドレスまたはパスワードが正しく
+ * ありません」に化けて原因が分からなくなる。RESOLVED_KEYS の一つを返すことで、呼び出し元
+ * コンポーネントが再度 getAuthErrorKey に通しても意味が変わらないようにする。
+ * 実メッセージ（env未設定の詳細）は logger.error で常に出力する。
+ */
+export function resolveAuthErrorKey(err: unknown, context: AuthContext): string {
+  if (err instanceof SupabaseConfigError) {
+    logger.error('[Auth] Supabase設定エラー:', err.message);
+    return 'auth.errors.unexpectedError';
+  }
+  return getAuthErrorKey(err instanceof Error ? err.message : '', context);
 }
