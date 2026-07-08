@@ -19,6 +19,7 @@ import '@/lib/styles/globals.css';
 
 import type { Metadata, Viewport } from 'next';
 import { Inter, Noto_Sans_JP } from 'next/font/google';
+import { headers } from 'next/headers';
 import { Suspense } from 'react';
 
 import { DeferredAnalytics } from '@/lib/analytics/DeferredAnalytics';
@@ -108,6 +109,8 @@ interface RootLayoutProps {
 const RootLayout = async ({ children, params }: RootLayoutProps) => {
   const resolvedParams = await params;
   const locale = resolvedParams?.locale || 'en';
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
   return (
     <html
       lang={locale}
@@ -186,6 +189,7 @@ const RootLayout = async ({ children, params }: RootLayoutProps) => {
       <body className={cn('bg-background')} suppressHydrationWarning>
         {/* SSR timezone detection: 2回目以降のSSRで正しいタイムゾーンを使用 */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `if(!document.cookie.includes('user-tz='))document.cookie='user-tz='+Intl.DateTimeFormat().resolvedOptions().timeZone+';path=/;max-age=31536000;SameSite=Lax';`,
           }}
