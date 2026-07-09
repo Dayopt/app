@@ -395,7 +395,7 @@ module.exports = {
 ├── scripts/
 │   ├── eagle-sync.sh         ← Storycap実行 + Eagle取込
 │   ├── eagle-cleanup.sh      ← Archive整理
-│   └── parse-filename.sh     ← ファイル名→タグ変換ユーティリティ
+│   └── parse-filename.ts     ← ファイル名→タグ変換ユーティリティ
 ├── references/
 │   └── tag-taxonomy.md       ← タグ体系リファレンス（§2を抽出）
 └── assets/
@@ -933,3 +933,12 @@ op run --env-file=.op-env.local -- \
 | `admin-show-user.sh`          | email から `auth.users` の状態を dump（read-only）        | `USER_EMAIL`                     |
 
 `PASSWORD_ITEM_ID` は password を保存した 1Password item の ID。
+
+## 関連スクリプト
+
+| スクリプト            | 用途                                                                                       | 必須 env                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `enable-auth-hook.sh` | Production project の `custom_access_token` hook を有効化する                              | `SUPABASE_ACCESS_TOKEN`                                                                       |
+| `verify-login.sh`     | email + password の組合せで直接 `/auth/v1/token` を叩き、login 可否を確認する（read-only） | `USER_EMAIL`, `PASSWORD_ITEM_ID`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+
+`verify-login.sh` が成功すれば password 自体は正しい（UI / CSP / form 側の問題）。失敗すれば `admin-set-user-password.sh` で password を再設定する。

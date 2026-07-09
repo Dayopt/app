@@ -14,6 +14,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { generateSplashScreens } from './lib/pwa-splash';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const ICONS_DIR = path.join(ROOT, 'public', 'icons');
@@ -24,18 +26,6 @@ const PRIMARY = { r: 32, g: 81, b: 161 };
 
 // bg-background light: oklch(0.98 0 0) → #f8f8f8
 const BG_COLOR = { r: 248, g: 248, b: 248 };
-
-// Splash screen sizes (layout.tsx の apple-touch-startup-image で参照)
-const SPLASH_SIZES = [
-  { width: 1290, height: 2796, label: 'iPhone 16 Pro Max / 15 Pro Max' },
-  { width: 1179, height: 2556, label: 'iPhone 16 Pro / 15 Pro / 14 Pro' },
-  { width: 1170, height: 2532, label: 'iPhone 14 / 13 / 12' },
-  { width: 750, height: 1334, label: 'iPhone SE / 8' },
-  { width: 2048, height: 2732, label: 'iPad Pro 12.9"' },
-  { width: 1668, height: 2388, label: 'iPad Pro 11"' },
-  { width: 1640, height: 2360, label: 'iPad Air / mini 6th+' },
-  { width: 1536, height: 2048, label: 'iPad 9th gen' },
-];
 
 /**
  * 画像の暗い部分を primary blue に差し替え、白い部分は維持
@@ -186,31 +176,15 @@ async function main() {
 
   const iconBuffer = await fs.readFile(path.join(ICONS_DIR, 'icon-512.png'));
 
-  for (const splash of SPLASH_SIZES) {
-    const outputPath = path.join(SPLASH_DIR, `splash-${splash.width}x${splash.height}.png`);
-
-    const logoSize = Math.round(Math.min(splash.width, splash.height) * 0.25);
-    const resizedIcon = await sharp(iconBuffer)
-      .resize(logoSize, logoSize, { fit: 'contain', background: { ...BG_COLOR, alpha: 0 } })
-      .toBuffer();
-
-    await sharp({
-      create: {
-        width: splash.width,
-        height: splash.height,
-        channels: 3,
-        background: BG_COLOR,
-      },
-    })
-      .composite([{ input: resizedIcon, gravity: 'centre' }])
-      .png()
-      .toFile(outputPath);
-
+  await generateSplashScreens({
+    sharp,
+    iconBuffer,
+    bgColor: BG_COLOR,
+    outputDir: SPLASH_DIR,
+    root: ROOT,
     // eslint-disable-next-line no-console -- スクリプト用
-    console.log(
-      `✓ ${splash.width}x${splash.height} → ${path.relative(ROOT, outputPath)} (${splash.label})`,
-    );
-  }
+    log: (message) => console.log(message),
+  });
 
   // eslint-disable-next-line no-console -- スクリプト用
   console.log('\n✅ All PWA assets updated successfully.');
