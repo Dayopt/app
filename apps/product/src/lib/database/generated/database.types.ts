@@ -97,6 +97,133 @@ export type Database = {
           },
         ];
       };
+      external_calendar_events: {
+        Row: {
+          calendar_name: string | null;
+          created_at: string;
+          description: string | null;
+          dismissed_at: string | null;
+          end_at: string | null;
+          id: string;
+          last_synced_at: string;
+          provider: string;
+          provider_calendar_id: string;
+          provider_event_id: string;
+          start_at: string | null;
+          status: string;
+          title: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          calendar_name?: string | null;
+          created_at?: string;
+          description?: string | null;
+          dismissed_at?: string | null;
+          end_at?: string | null;
+          id?: string;
+          last_synced_at: string;
+          provider: string;
+          provider_calendar_id: string;
+          provider_event_id: string;
+          start_at?: string | null;
+          status: string;
+          title?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          calendar_name?: string | null;
+          created_at?: string;
+          description?: string | null;
+          dismissed_at?: string | null;
+          end_at?: string | null;
+          id?: string;
+          last_synced_at?: string;
+          provider?: string;
+          provider_calendar_id?: string;
+          provider_event_id?: string;
+          start_at?: string | null;
+          status?: string;
+          title?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      logs: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          fulfillment_score: number | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          end_at: string;
+          external_calendar_event_id?: string | null;
+          fulfillment_score?: number | null;
+          id?: string;
+          note?: string | null;
+          plan_id?: string | null;
+          source?: string;
+          start_at: string;
+          tag_id?: string | null;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          end_at?: string;
+          external_calendar_event_id?: string | null;
+          fulfillment_score?: number | null;
+          id?: string;
+          note?: string | null;
+          plan_id?: string | null;
+          source?: string;
+          start_at?: string;
+          tag_id?: string | null;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'logs_external_calendar_event_id_fkey';
+            columns: ['external_calendar_event_id'];
+            isOneToOne: false;
+            referencedRelation: 'external_calendar_events';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'logs_plan_id_fkey';
+            columns: ['plan_id'];
+            isOneToOne: false;
+            referencedRelation: 'plans';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'logs_tag_id_fkey';
+            columns: ['tag_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       mfa_recovery_codes: {
         Row: {
           code_hash: string;
@@ -206,6 +333,69 @@ export type Database = {
             columns: ['parent_token_id'];
             isOneToOne: false;
             referencedRelation: 'oauth_tokens';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      plans: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          end_at: string;
+          external_calendar_event_id?: string | null;
+          id?: string;
+          note?: string | null;
+          skipped_at?: string | null;
+          source?: string;
+          start_at: string;
+          tag_id?: string | null;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          end_at?: string;
+          external_calendar_event_id?: string | null;
+          id?: string;
+          note?: string | null;
+          skipped_at?: string | null;
+          source?: string;
+          start_at?: string;
+          tag_id?: string | null;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'plans_external_calendar_event_id_fkey';
+            columns: ['external_calendar_event_id'];
+            isOneToOne: false;
+            referencedRelation: 'external_calendar_events';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'plans_tag_id_fkey';
+            columns: ['tag_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
             referencedColumns: ['id'];
           },
         ];
@@ -468,6 +658,36 @@ export type Database = {
         Args: { p_entry_ids: string[]; p_user_id: string };
         Returns: number;
       };
+      confirm_day_plans_to_logs: {
+        Args: {
+          p_confirmed_at?: string;
+          p_end_at: string;
+          p_start_at: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          fulfillment_score: number | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'logs';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       count_unused_recovery_codes: {
         Args: { p_user_id: string };
         Returns: number;
@@ -697,8 +917,24 @@ export type Database = {
         Args: { p_entry_id: string; p_user_id: string };
         Returns: undefined;
       };
+      restore_log: {
+        Args: { p_log_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      restore_plan: {
+        Args: { p_plan_id: string; p_user_id: string };
+        Returns: undefined;
+      };
       soft_delete_entry: {
         Args: { p_entry_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      soft_delete_log: {
+        Args: { p_log_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      soft_delete_plan: {
+        Args: { p_plan_id: string; p_user_id: string };
         Returns: undefined;
       };
       update_personalization: {

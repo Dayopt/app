@@ -7,3 +7,5 @@
  */
 
 export { createEntryService } from './entry-service';
+export { createLogService } from './log-service';
+export { createPlanService } from './plan-service';
