@@ -12,9 +12,6 @@
     "lint": {
       "outputs": []
     },
-    "lint:boundaries": {
-      "outputs": []
-    },
     "test:run": {
       "outputs": ["coverage/**"]
     },
