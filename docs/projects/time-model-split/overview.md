@@ -130,14 +130,22 @@ code: apps/product/src/features/entry
 
 ## 5. Phase 構成
 
-**Phase 1 — plans / logs 分割 + 明示記録化**（external なしで完結する）
+**Phase 1 — plans / logs 分割 + 明示記録化**（external なしで完結する）。1 Step = 1 PR。Step 2-7 は既存 runtime に接続しない dormant 実装として積み、Step 8 で一括切り替える。
 
-1. Step 0: 統計 RPC 書き換え方針を決定済み — [step-0-statistics-rpc-policy.md](./step-0-statistics-rpc-policy.md)。結論: Plan / Log 分割後の統計ロジックは TS service 層へ移し、PL/pgSQL 統計 RPC と `entries_effective` は呼び出し元を消してから drop する
-2. schema: plans / logs 作成、EXCLUDE・CHECK・trigger・RLS・index — [step-1-schema-detail.md](./step-1-schema-detail.md)
-3. migration: entries → plans / logs のデータ移行（下記 §7）
-4. server: entry-service / router の分割（plans CRUD / logs CRUD / ワンタップ記録 / 一括確定）
-5. domain / UI: CalendarEvent 射影、Plan layer + Log layer の描画、Inspector、Review 差分の再定義
-6. 後始末: `entries_effective` view・entries テーブルの廃止、iCal export の対象決定（§8 未決 5）
+| Step | 内容                                                                              | 設計書                                      | 状態 |
+| ---- | --------------------------------------------------------------------------------- | ------------------------------------------- | ---- |
+| 0    | 統計 RPC 書き換え方針（TS service 化を決定）                                      | [step-0](./step-0-statistics-rpc-policy.md) | 完了 |
+| 1    | plans / logs / external の schema 追加                                            | [step-1](./step-1-schema-detail.md)         | 完了 |
+| 2    | entries → plans / logs の冪等 backfill migration（未決 4 をここで決定）           | [step-2](./step-2-backfill-migration.md)    |      |
+| 3    | plans / logs server 層（CRUD・ワンタップ記録・一括確定。未決 8 をここで決定）     | [step-3](./step-3-server-layer.md)          |      |
+| 4    | 統計 TS service（Step 0 方針の実装、未接続）                                      | [step-4](./step-4-statistics-service.md)    |      |
+| 5    | Calendar 2レーン表示（read 側、未接続）                                           | [step-5](./step-5-calendar-two-lane.md)     |      |
+| 6    | 作成・編集フロー（保存先ルール・記録導線、未接続）                                | [step-6](./step-6-create-edit-flows.md)     |      |
+| 7    | Review 差分の 1:N 再定義（未決 1・2・3 をここで決定）                             | [step-7](./step-7-review-diff.md)           |      |
+| 8    | カットオーバー（backfill 再実行 + 配線切替 + iCal / MCP。未決 5・7 をここで決定） | [step-8](./step-8-cutover.md)               |      |
+| 9    | 後始末（entries / RPC / 旧コード drop、specs・glossary 更新、summary.md）         | [step-9](./step-9-cleanup.md)               |      |
+
+依存関係: 2 → 3 → 4 は直列。5・6・7 は 3 以降なら並行可（6 は 5 の後推奨）。8 は 2-7 全完了が前提。9 は 8 の安定確認（1 週間目安）後。
 
 **Phase 2 — 外部カレンダー取り込み**（Phase 1 リリース後に着手）
 
@@ -166,16 +174,16 @@ code: apps/product/src/features/entry
 4. **auto-record の凍結**: actual NULL・過去・未 skip の planned entries は、移行時点の effective actual（= plan range）を一度だけ実体化して logs 化する。やらないと過去の Review が遡って「未記録」に変わる。`getEffectiveActualRange()` / `entries_effective` はこの backfill を最後の用途として廃止
 5. soft delete 済み entries も対応テーブルへ `deleted_at` ごと移行（復元可能性を維持）
 
-## 8. 未決事項（実装 Step 着手前に決める）
+## 8. 未決事項（担当 Step の着手時に決める。各 step 設計書に Option + 推奨を記載済み）
 
-1. 別日実行の diff 帰属 — 火曜の予定を水曜にやって紐づけた時、log は log の日に計上・plan は自分の日に未達、が有力
-2. plan と log の tag / title 乖離時、Review はどちらで束ねるか — log 側優先が有力
-3. plan soft delete 時の紐づき logs の見せ方（「予定に対する記録」のままか「予定外」に落とすか）
-4. 移行時に実体化した logs を明示記録と区別するか — ADR-019 は自動記録を見積もり精度の分母から除外していた。区別を落とすと精度指標が汚れる
-5. iCal export（`/api/v1/calendar/[token]`）に plans / logs のどちらを出すか（両方なら 2 フィード）
-6. ghost の有効期限・視覚表現（principles.md でも未確定）
-7. MCP / API が公開している entries 形の契約をどう version するか
-8. feature / ディレクトリ命名 — `features/log` は `@/lib/logger`（アプリログ）と紛らわしい。`features/logs` 等、衝突しない名前にする
+1. 別日実行の diff 帰属 — log は log の日に計上・plan は自分の日に未達、が有力 → **Step 7**
+2. plan と log の tag / title 乖離時、Review はどちらで束ねるか — log 側優先が有力 → **Step 7**
+3. plan soft delete 時の紐づき logs の見せ方（「予定に対する記録」のままか「予定外」に落とすか） → **Step 7**
+4. 移行時に実体化した logs を明示記録と区別するか — ADR-019 は自動記録を見積もり精度の分母から除外していた。区別を落とすと精度指標が汚れる → **Step 2**
+5. iCal export（`/api/v1/calendar/[token]`）に plans / logs のどちらを出すか（両方なら 2 フィード） → **Step 8**
+6. ghost の有効期限・視覚表現（principles.md でも未確定） → **Phase 2**
+7. MCP / API が公開している entries 形の契約をどう version するか → **Step 8**
+8. feature / ディレクトリ命名 — `features/log` は `@/lib/logger`（アプリログ）と紛らわしい。衝突しない配置にする → **Step 3**
 
 ## 9. Existing Code to Reuse
 
