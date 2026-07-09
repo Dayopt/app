@@ -125,7 +125,7 @@ CREATE TABLE public.logs (
   note TEXT,
   start_at TIMESTAMPTZ NOT NULL,
   end_at TIMESTAMPTZ NOT NULL,
-  source TEXT NOT NULL DEFAULT 'manual', -- manual / from_plan / external_calendar / api
+  source TEXT NOT NULL DEFAULT 'manual', -- manual / from_plan / auto_migrated / external_calendar / api
   fulfillment_score INTEGER,
   deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

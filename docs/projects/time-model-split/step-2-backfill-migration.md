@@ -14,24 +14,24 @@ code:
 
 entries の全データを plans / logs として実体化し、いつでも再実行して最新化できる backfill を作る。
 
-## 決めること（overview §8 未決 4）
+## 決定（overview §8 未決 4）
 
 auto-record 実体化 log を明示記録と区別するか。
 
-- **Option α（推奨）**: `logs.source` に `auto_migrated` を追加（Step 1 の source CHECK を拡張）。provenance は source の責務そのものであり、ADR-019 の「自動記録は見積もり精度の分母に入れない」意味論を Step 4 で継承できる
+- **採用: Option α**: `logs.source` に `auto_migrated` を追加（Step 1 の source CHECK を拡張）。provenance は source の責務そのものであり、ADR-019 の「自動記録は見積もり精度の分母に入れない」意味論を Step 4 で継承できる
 - Option β: `logs.auto_recorded boolean` 列を追加。source の意味を汚さないが、列が1つ増える
 - Option γ: 区別しない。最小だが精度指標が恒久的に汚れ、後から復元不能（[irreversible]）
 
 ## Minimum Viable Approach
 
-1. **id を決定的にマッピングする**: planned entry → `plans.id = entries.id`、unplanned entry → `logs.id = entries.id`、planned entry の実績 log → `uuid_generate_v5(entry.id 名前空間, 'log')` 等の決定的導出。再実行時の upsert と FK 安定性の両方が成立する
+1. **id を決定的にマッピングする**: planned entry → `plans.id = entries.id`、unplanned entry → `logs.id = entries.id`、planned entry の実績 log → `uuid_generate_v5(entry.id 名前空間, 'log')` 等の決定的導出。再実行前に各 entry から導出され得る全 deterministic id を管理対象として削除し、`logs -> plans` の順で掃除してから `plans -> logs` の順で再挿入する。これにより immediate EXCLUDE 制約の row-by-row update 衝突と `updated_at` trigger の上書きを避ける
 2. 変換規則（overview §7 準拠）:
    - `origin = 'planned'` → plans（`start_time`/`end_time` → `start_at`/`end_at`、`skipped_at`・`deleted_at` 移設、`source = 'manual'`）
-   - 明示 actual（両端 NOT NULL）→ logs（`plan_id` = 対応 plan、`source = 'from_plan'`、`fulfillment_score` 移設）
+   - 明示 actual（両端 NOT NULL）→ logs（`plan_id` = 対応 plan、`source = 'from_plan'`、`fulfillment_score` 移設）。soft-deleted historical row など plan range が欠ける planned entry は plan FK を作れないため log 化しない
    - `origin = 'unplanned'` → logs（`plan_id` NULL、`source = 'manual'`）
    - auto-record（planned・actual NULL・未 skip・`end_time <= now()`）→ logs（plan range を実体化、source = 未決 4 の決定値）。effective actual の判定式は `entries_effective` と同一ロジックを backfill SQL 内に一度だけ書く
-3. `INSERT ... ON CONFLICT (id) DO UPDATE` で冪等化。soft delete 行も `deleted_at` ごと移行（Step 1 の CHECK は deleted 行の歴史的 shape を許容済み）
-4. **EXCLUDE 整合の事前検証**: 明示 actual 同士は現行 DB 制約で重なりゼロが保証済み。auto-record 実体化同士・auto-record × 明示 actual はサービス層防衛だった領域なので、backfill 前に重なり検出クエリを流して 0 件を確認する（ヒットしたら ADR-018 の前例に従い新しい側を soft delete）
+3. 管理対象行を delete/reinsert して冪等化。soft delete 行も `deleted_at` ごと移行（Step 1 の CHECK は deleted 行の歴史的 shape を許容済み）。`created_at` / `updated_at` は entries の値を明示挿入し、更新 trigger による replay 時の時刻変化を避ける
+4. **EXCLUDE 整合の修復と事前検証**: 明示 actual 同士は現行 DB 制約で重なりゼロが保証済み。auto-record 実体化同士・auto-record × 明示 actual はサービス層防衛だった領域なので、期待 log 集合を作る前に重なり検出クエリを流し、ヒットしたら ADR-018 の前例に従い新しい側を soft delete する。修復後の期待 log 集合にも重なりが残る場合は migration を止める
 5. 検証クエリを migration とペアで残す: 件数突合（planned 数 = plans 数、actual/unplanned/auto 数 = logs 数）、時間合計突合、`plan_id` 参照整合
 
 ## Scope
@@ -43,7 +43,7 @@ auto-record 実体化 log を明示記録と区別するか。
 
 | Step                               | Tag            | 備考                                                                        |
 | ---------------------------------- | -------------- | --------------------------------------------------------------------------- |
-| backfill upsert                    | [hours]        | 新テーブルはまだ未参照。TRUNCATE + 再実行で何度でもやり直せる。entries 無傷 |
+| backfill delete/reinsert           | [hours]        | 新テーブルはまだ未参照。TRUNCATE + 再実行で何度でもやり直せる。entries 無傷 |
 | source CHECK 拡張（未決 4 = α 時） | [hours]        | 値の追加のみ。既存行に影響なし                                              |
 | auto-record の区別を落とす（γ 時） | [irreversible] | 実体化後に「自動だったか」を復元できない。α / β なら回避                    |
 

@@ -35,6 +35,7 @@
 --   restore_entry(entry_id, user_id)          — entries.deleted_at を解除
 --   bulk_soft_delete_entries(entry_ids, user_id) — entries の一括 soft delete
 --   issue_oauth_token_pair(...)               — refresh/access token pair を service-role 経由で発行
+--   backfill_entries_to_plans_logs(now)       — entries を plans / logs へ冪等 backfill
 
 -- ■ app-facing 統計関数（authenticated に明示 GRANT）
 --   get_time_pl_data(...)                     — Time PL の集計データ
