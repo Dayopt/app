@@ -252,6 +252,7 @@ export class PlanService {
       throw new TimeModelServiceError('INVALID_INPUT', 'Skipped plans cannot be recorded.');
     }
 
+    await this.ensurePlanNotRecorded(userId, planId);
     await this.ensureNoLogOverlap(userId, plan.start_at, plan.end_at);
 
     const { data, error } = await this.supabase
@@ -369,6 +370,27 @@ export class PlanService {
     }
   }
 
+  private async ensurePlanNotRecorded(userId: string, planId: string): Promise<void> {
+    const { data, error } = await this.supabase
+      .from('logs')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('plan_id', planId)
+      .is('deleted_at', null)
+      .limit(1);
+
+    if (error) {
+      throw new TimeModelServiceError(
+        'FETCH_FAILED',
+        `Failed to check recorded plan: ${error.message}`,
+      );
+    }
+
+    if ((data ?? []).length > 0) {
+      throw new TimeModelServiceError('ALREADY_RECORDED', 'Plan already has an active log.');
+    }
+  }
+
   private handleMutationError(
     error: { code?: string; message: string },
     code: string,
@@ -379,6 +401,9 @@ export class PlanService {
         'TIME_OVERLAP',
         'This time range overlaps with an existing item.',
       );
+    }
+    if (error.code === '23505') {
+      throw new TimeModelServiceError('ALREADY_RECORDED', 'Plan already has an active log.');
     }
     throw new TimeModelServiceError(code, `${prefix}: ${error.message}`);
   }

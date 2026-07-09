@@ -256,6 +256,9 @@ export class LogService {
         'This time range overlaps with an existing item.',
       );
     }
+    if (error.code === '23505') {
+      throw new TimeModelServiceError('ALREADY_RECORDED', 'Plan already has an active log.');
+    }
     throw new TimeModelServiceError(code, `${prefix}: ${error.message}`);
   }
 

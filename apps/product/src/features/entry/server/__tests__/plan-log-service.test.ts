@@ -171,12 +171,56 @@ describe('PlanService.record', () => {
     mockSupabase.from.mockImplementation((table: string) => {
       if (table === 'plans') return createChainableMock(plan);
       logsCallCount++;
-      return createChainableMock(logsCallCount === 1 ? [] : log);
+      return createChainableMock(logsCallCount <= 2 ? [] : log);
     });
 
     await expect(service.record({ userId: USER_ID, planId: plan.id })).resolves.toMatchObject({
       plan_id: plan.id,
       source: 'from_plan',
+    });
+  });
+
+  it('active log が紐づく plan の再記録を拒否する', async () => {
+    const plan = createPlan({
+      end_at: '2026-03-17T11:00:00.000Z',
+      start_at: '2026-03-17T10:00:00.000Z',
+    });
+    const existingLog = createLog({
+      end_at: '2026-03-17T13:00:00.000Z',
+      plan_id: plan.id,
+      start_at: '2026-03-17T12:00:00.000Z',
+    });
+    const { service, mockSupabase } = createPlanService();
+    mockSupabase.from.mockImplementation((table: string) =>
+      createChainableMock(table === 'plans' ? plan : [existingLog]),
+    );
+
+    await expect(service.record({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
+      code: 'ALREADY_RECORDED',
+    });
+
+    expect(mockSupabase.from).toHaveBeenCalledTimes(2);
+  });
+
+  it('DB unique violation を ALREADY_RECORDED に変換する', async () => {
+    const plan = createPlan({
+      end_at: '2026-03-17T11:00:00.000Z',
+      start_at: '2026-03-17T10:00:00.000Z',
+    });
+    const { service, mockSupabase } = createPlanService();
+    let logsCallCount = 0;
+    mockSupabase.from.mockImplementation((table: string) => {
+      if (table === 'plans') return createChainableMock(plan);
+      logsCallCount++;
+      if (logsCallCount <= 2) return createChainableMock([]);
+      return createChainableMock(null, {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint',
+      });
+    });
+
+    await expect(service.record({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
+      code: 'ALREADY_RECORDED',
     });
   });
 });
@@ -224,5 +268,30 @@ describe('LogService.create', () => {
     ).rejects.toBeInstanceOf(TimeModelServiceError);
 
     expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
+  it('plan の active log unique violation を ALREADY_RECORDED に変換する', async () => {
+    const { service, mockSupabase } = createLogService();
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return createChainableMock([]);
+      return createChainableMock(null, {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint',
+      });
+    });
+
+    await expect(
+      service.create({
+        userId: USER_ID,
+        input: {
+          title: 'Duplicate plan log',
+          planId: 'plan-1',
+          start_at: '2026-03-17T10:00:00.000Z',
+          end_at: '2026-03-17T11:00:00.000Z',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'ALREADY_RECORDED' });
   });
 });
