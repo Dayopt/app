@@ -12,7 +12,7 @@ code: apps/product/src/features/entry
 
 ## 1. Goal
 
-予定（Plan）と記録（Log）を独立エンティティに分離し、「予定を立てる → 記録する → 差分を見る → 次を改善する」のループを、1予定:N記録・予定外記録・外部カレンダー取り込みまで含めて破綻なく表現できるデータモデルにする。
+予定（Plan）と記録（Log）を独立エンティティに分離し、「予定を立てる → 記録する → 差分を見る → 次を改善する」のループを、1予定:N記録・予定外記録・外部カレンダー取り込みまで含めて破綻なく表現できるデータモデルにする。Phase 1（Step 9）完了時点の具体的な状態は §11 に定義する。
 
 ## 2. 決定済みモデル
 
@@ -202,3 +202,30 @@ code: apps/product/src/features/entry
 - 繰り返し予定の独自展開 — provider が展開した instance をそのまま保存する
 - Phase 1 / Phase 2 の同時リリース — 1 リリースに詰めない
 - 「ついで」の統計リファクタ — RPC の書き換えは分割に必要な範囲に限定（方針は Phase 1 Step 0 で確定）
+
+## 11. Phase 1 完了時の状態（Step 9 完了 = この project のゴール）
+
+Step 0-9 がすべて完了した時点で、以下がすべて真になっている。これが本 project の Definition of Done。
+
+### ユーザーから見える状態
+
+- Calendar は **Plan レーン（アウトライン・淡色）+ Log レーン（塗り・主役）の 2 レーン**。Day は 2 レーン横並び、Week「予定+記録」は Plan が細レーン、モバイル Week は表示切替
+- ブロック作成時に保存先を選ぶ UI は存在しない。**end が未来なら予定、end が今以前なら記録**として保存され、チップの表示が編集中に自動で切り替わる
+- 過去の予定は記録するまで「未記録」。**ワンタップ「そのまま記録」/ Log レーンへのドラッグ / 一括「この日を確定」**の 3 導線で記録する。自動で実績になるものは何もない
+- 表示される実績はすべてユーザーが明示した記録。1 つの予定に複数の記録を紐づけられ、差分は数字で表示（±0 は非表示）、予定外の記録は静かなマーカーのみ。判定ラベル・赤マークは無い
+- 過去の予定は時間凍結・内容（title / tag / note）訂正可。過去日付への予定追加は不可。skip で「やらなかった」と「未記録」が区別される
+- Review は **未記録 / やらなかった / 予定に対する記録 / 予定外** の 4 分類 + 差分で成立している
+
+### データ・コードの状態
+
+- 時間データは `plans` / `logs` のみが正。**`entries` / `entries_effective` / PL/pgSQL 統計 RPC は drop 済み**で、アプリからの参照ゼロ
+- 統計はすべて TS service（実績 = logs、予定 = plans、予実比較 = join）。migration で実体化した auto-record 由来の log は provenance で区別され、見積もり精度の分母に入らない
+- 重なり制約は二層 EXCLUDE で継続（plans 同士 / logs 同士は禁止、plan × log は許可、半開区間 `[)`）
+- iCal export は plans を配信（URL 不変）。MCP は `plans-list` / `logs-list` を公開し、`entries-list` は合成互換として残存
+- `external_calendar_events` はテーブルだけ存在し（Step 1 で作成済み）、中身は空。同期・ghost 表示はまだ無い
+- docs が現実と一致: `specs/entry.md` は Plan / Log 仕様に改稿済み、glossary に新用語、rls-snapshot 再生成済み、本ディレクトリに `summary.md` が追加され project は完了状態
+
+### まだ無いもの（= Phase 2 の出発点）
+
+- Google Calendar の取り込み・ghost 表示・`calendar_connections`（OAuth / カレンダー選択 / sync cursor）
+- 自動記録モデルは存在しない。将来必要になったら `logs.source` の拡張と Review の解釈追加で再導入できる（ADR-025 は扉を閉じていない）
