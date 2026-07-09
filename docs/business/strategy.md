@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-10
 ---
 
 # Dayopt コンセプト
@@ -16,8 +16,7 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 
 この文書には**変わらないもの（コンセプトと原則）だけ**を置く。更新され続けるものは分冊する:
 
-- **画面・操作への翻訳**: [`principles.md`](../product/principles.md) — 体験設計。設計が進むたび更新される
-- **v1 のスコープ**: [`roadmap.md`](../product/roadmap.md) — 未決事項。v1 が終わるまで更新される
+- **画面・操作への翻訳と v1 の未決事項**: [`principles.md`](../product/principles.md) — 体験設計。設計が進むたび更新される。未決事項は末尾の「設計上の未決リスト」で扱う
 
 この文書は「僕（創業者）と AI がこのプロダクトで作りたいものを同じ解像度で理解する」ために書かれている。実装判断で迷ったら §4 の原則に戻ること。
 
@@ -69,7 +68,7 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 
 ## 5. 変えないもの
 
-1. **1 Entry モデル**（[decisions/011](../engineering/log/2026-03-05-unified-block-model.md)） — 計画と実績を同じ物体に重ねる設計は本物の差別化
+1. **予定と実績が同じタイムラインで対になる設計**（[ADR-011](../engineering/log/2026-03-05-unified-block-model.md) → [ADR-025](../product/log/2026-07-09-time-model-split.md)） — 計画と実績を1画面で突き合わせられることが本物の差別化。実装モデルは 1 Entry から Plan / Log 分割（1予定:N記録）へ発展したが、この本質は変わらない
 2. **Todo エンジンを作らない** — サブタスク・優先度・期限・ボード・テーブルは作らない（一度作って捨てた）
 3. **他人と比較しない・gamification をしない**
 4. **$5 価格帯** — 「AI と連携できて、全体感が見えて、カレンダーと紐づく」なら $5 は払う。$10-20 だと微妙。この感覚を維持する
@@ -77,10 +76,9 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 
 ## 関連文書
 
-- [`principles.md`](../product/principles.md) — 本コンセプトの画面・操作への翻訳（体験設計）
-- [`roadmap.md`](../product/roadmap.md) — 未決事項・ドクトリン改定の反映状況
+- [`principles.md`](../product/principles.md) — 本コンセプトの画面・操作への翻訳（体験設計）と未決事項
 - [`decisions/010-feature-non-adoption.md`](../product/log/2026-06-16-feature-non-adoption.md) — 非採用機能と条件付き採用（提案型ルーティン・通知）の経緯
-- [decisions/011 統合ブロックモデル](../engineering/log/2026-03-05-unified-block-model.md) / [decisions/015 時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
+- [ADR-025 時間モデル分割](../product/log/2026-07-09-time-model-split.md) / [decisions/015 時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
 - [競合調査(2026-06-15)](./log/2026-06-15-competitor-research-overview.md) — 競合深掘り（勝ち筋 = より短い儀式・より軽い入力・直接差分）
 - [`pricing.md`](./pricing.md) — 価格戦略
 - [`.claude/rules/copywriting.md`](../../.claude/rules/copywriting.md) / [`glossary`](../product/glossary.md) — トーン・用語
