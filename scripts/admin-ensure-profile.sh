@@ -17,22 +17,14 @@
 
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/admin-common.sh"
+
 USER_EMAIL="${USER_EMAIL:-}"
 
-if [[ -z "$USER_EMAIL" ]]; then
-  echo "エラー: USER_EMAIL を指定してください" >&2
-  exit 1
-fi
+require_user_email
+require_supabase_env
 
-if [[ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" || -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
-  echo "エラー: NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が未設定です" >&2
-  exit 1
-fi
-
-AUTH_HEADERS=(
-  -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}"
-  -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"
-)
+auth_headers
 
 # ========================================
 # email から user ID を解決

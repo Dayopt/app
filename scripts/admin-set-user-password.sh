@@ -29,37 +29,18 @@
 
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/admin-common.sh"
+
 # ========================================
 # 入力チェック
 # ========================================
 USER_EMAIL="${USER_EMAIL:-}"
 PASSWORD_ITEM_ID="${PASSWORD_ITEM_ID:-}"
 
-if [[ -z "$USER_EMAIL" || -z "$PASSWORD_ITEM_ID" ]]; then
-  echo "エラー: USER_EMAIL と PASSWORD_ITEM_ID を環境変数で指定してください" >&2
-  echo "" >&2
-  echo "使い方:" >&2
-  echo "  op run --env-file=.op-env.local -- \\" >&2
-  echo "    env USER_EMAIL=foo@example.com PASSWORD_ITEM_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx \\" >&2
-  echo "    bash scripts/admin-set-user-password.sh" >&2
-  exit 1
-fi
+require_user_email_and_password_item "admin-set-user-password.sh"
+require_supabase_env_verbose
 
-if [[ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ]]; then
-  echo "エラー: NEXT_PUBLIC_SUPABASE_URL が未設定です (op run --env-file=.op-env.local 経由で実行してください)" >&2
-  exit 1
-fi
-
-if [[ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
-  echo "エラー: SUPABASE_SERVICE_ROLE_KEY が未設定です (op run --env-file=.op-env.local 経由で実行してください)" >&2
-  exit 1
-fi
-
-AUTH_HEADERS=(
-  -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}"
-  -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"
-  -H "Content-Type: application/json"
-)
+auth_headers_json
 
 # ========================================
 # 1Password から password を取得

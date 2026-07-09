@@ -17,25 +17,16 @@
 
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/admin-common.sh"
+
 USER_EMAIL="${USER_EMAIL:-}"
 APP_BASE_URL="${APP_BASE_URL:-https://app-dayopt.vercel.app}"
 NEXT_PATH="${NEXT_PATH:-/calendar/day}"
 
-if [[ -z "$USER_EMAIL" ]]; then
-  echo "エラー: USER_EMAIL を指定してください" >&2
-  exit 1
-fi
+require_user_email
+require_supabase_env
 
-if [[ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" || -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
-  echo "エラー: NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が未設定です" >&2
-  exit 1
-fi
-
-AUTH_HEADERS=(
-  -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}"
-  -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"
-  -H "Content-Type: application/json"
-)
+auth_headers_json
 
 echo "[Supabase] ${USER_EMAIL} の magic link を生成中..."
 

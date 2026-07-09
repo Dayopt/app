@@ -3,9 +3,9 @@ status: current
 last_verified: 2026-07-03
 ---
 
-# 運用ツール（Eagle / ライセンスコンプライアンス / Skill Triggers）
+# 運用ツール（Eagle / ライセンスコンプライアンス / Skill Triggers / 管理者スクリプト）
 
-Eagle デザインアセット管理設計、OSSライセンスコンプライアンスガイド、Opus 4.7 Skill Triggers migration の記録を集約する。
+Eagle デザインアセット管理設計、OSSライセンスコンプライアンスガイド、Opus 4.7 Skill Triggers migration、管理者向け運用スクリプトの記録を集約する。
 
 ---
 
@@ -902,3 +902,34 @@ description に「DB 変更系 / Realtime 系 / Edge Functions 系 / 3 環境運
 ### 7.2 adversarial review subagent 設計
 
 Designer / Critic / User の 3-agent design review を仮に実装する場合、skill ではなく subagent として `.claude/agents/` 配下に設計する。現状ディレクトリ自体存在せず、発生時に別ファイル / 別 note で扱う。命名空間は `subagent-*` とし、本節（`skill-triggers`）と分離する。
+
+---
+
+# 第4部: 管理者向け運用スクリプト（admin-\*.sh）
+
+`scripts/admin-*.sh` は Supabase Auth Admin API を直接叩き、dogfooding / 内部テスト用の account 操作を CLI から行うためのツール群。通常の signup / login flow を bypass したい時のみ使用する。
+
+共通の env チェック・auth header 生成は `scripts/admin-common.sh` に集約されており、各スクリプトはこれを `source` する。
+
+## 実行方法
+
+```bash
+op run --env-file=.op-env.local -- \
+  env USER_EMAIL=foo@example.com \
+  bash scripts/admin-show-user.sh
+```
+
+`.op-env.local` に `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を設定し、`op run --env-file=.op-env.local` 経由で実行する。Production project に対して実行する場合は手動作業ログを残す。
+
+## スクリプト一覧
+
+| スクリプト                    | 用途                                                      | 必須 env                         |
+| ----------------------------- | --------------------------------------------------------- | -------------------------------- |
+| `admin-create-user.sh`        | email + password で user を新規作成（即 login 可能）      | `USER_EMAIL`, `PASSWORD_ITEM_ID` |
+| `admin-delete-user.sh`        | user を hard delete（関連 row も CASCADE 削除）           | `USER_EMAIL`                     |
+| `admin-ensure-profile.sh`     | trigger 未発火時に `profiles` row を手動 upsert           | `USER_EMAIL`                     |
+| `admin-generate-magiclink.sh` | captcha / UI form の bug を bypass する magic link を発行 | `USER_EMAIL`                     |
+| `admin-set-user-password.sh`  | 既存 user の password を上書き + email 確認済みにする     | `USER_EMAIL`, `PASSWORD_ITEM_ID` |
+| `admin-show-user.sh`          | email から `auth.users` の状態を dump（read-only）        | `USER_EMAIL`                     |
+
+`PASSWORD_ITEM_ID` は password を保存した 1Password item の ID。
