@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 42 件 / RLS 対象テーブル 14 件 / GRANT 128 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 42 件 / RLS 対象テーブル 14 件 / GRANT 129 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -53,13 +53,13 @@
 
 ### logs
 
-| policy                               | cmd    | permissive | roles           | USING                                                              | WITH CHECK                              |
-| ------------------------------------ | ------ | ---------- | --------------- | ------------------------------------------------------------------ | --------------------------------------- |
-| Service role has full access to logs | ALL    | PERMISSIVE | {service_role}  | true                                                               | true                                    |
-| Users can delete own logs            | DELETE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id)                            | —                                       |
-| Users can insert own logs            | INSERT | PERMISSIVE | {authenticated} | —                                                                  | (( SELECT auth.uid() AS uid) = user_id) |
-| Users can view own logs              | SELECT | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (deleted_at IS NULL)) | —                                       |
-| Users can update own logs            | UPDATE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id)                            | (( SELECT auth.uid() AS uid) = user_id) |
+| policy                               | cmd    | permissive | roles           | USING                                                                           | WITH CHECK                                                                      |
+| ------------------------------------ | ------ | ---------- | --------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Service role has full access to logs | ALL    | PERMISSIVE | {service_role}  | true                                                                            | true                                                                            |
+| Users can delete own logs            | DELETE | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text)) | —                                                                               |
+| Users can insert own logs            | INSERT | PERMISSIVE | {authenticated} | —                                                                               | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text)) |
+| Users can view own logs              | SELECT | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (deleted_at IS NULL))              | —                                                                               |
+| Users can update own logs            | UPDATE | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text)) | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text)) |
 
 ### mfa_recovery_codes
 
@@ -151,6 +151,7 @@
 | column      | public.profiles.id                                                                                                                                                                                                                                                                      | authenticated       | INSERT                         |
 | column      | public.profiles.updated_at                                                                                                                                                                                                                                                              | authenticated       | UPDATE                         |
 | routine     | public.auto_shrink_neighbors(p_user_id uuid, p_entry_id uuid, p_actual_start timestamp with time zone, p_actual_end timestamp with time zone)                                                                                                                                           | service_role        | EXECUTE                        |
+| routine     | public.backfill_entries_to_plans_logs(p_backfill_now timestamp with time zone)                                                                                                                                                                                                          | service_role        | EXECUTE                        |
 | routine     | public.batch_rename_tags(p_user_id uuid, p_tag_ids uuid[], p_new_names text[])                                                                                                                                                                                                          | authenticated       | EXECUTE                        |
 | routine     | public.batch_rename_tags(p_user_id uuid, p_tag_ids uuid[], p_new_names text[])                                                                                                                                                                                                          | service_role        | EXECUTE                        |
 | routine     | public.batch_reorder_tags(p_user_id uuid, p_tag_ids uuid[], p_sort_orders integer[])                                                                                                                                                                                                    | service_role        | EXECUTE                        |

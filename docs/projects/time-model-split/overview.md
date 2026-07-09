@@ -36,14 +36,14 @@ code: apps/product/src/features/entry
 
 ### logs（Dayopt 内の記録）
 
-| カラム                                                                      | 型                   | 制約                                                                |
-| --------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------- |
-| id / user_id / tag_id / title / note / created_at / updated_at / deleted_at |                      | plans と同形                                                        |
-| plan_id                                                                     | uuid NULL            | FK → plans。あり = 予定に対する記録（**1:N**）、なし = 予定外の記録 |
-| start_at / end_at                                                           | timestamptz NOT NULL | CHECK `end_at > start_at`                                           |
-| source                                                                      | text NOT NULL        | `manual` / `from_plan` / `external_calendar` / `api`                |
-| external_calendar_event_id                                                  | uuid NULL            | FK → external_calendar_events                                       |
-| fulfillment_score                                                           | integer NULL         | entries から移設（記録側の属性）                                    |
+| カラム                                                                      | 型                   | 制約                                                                   |
+| --------------------------------------------------------------------------- | -------------------- | ---------------------------------------------------------------------- |
+| id / user_id / tag_id / title / note / created_at / updated_at / deleted_at |                      | plans と同形                                                           |
+| plan_id                                                                     | uuid NULL            | FK → plans。あり = 予定に対する記録（**1:N**）、なし = 予定外の記録    |
+| start_at / end_at                                                           | timestamptz NOT NULL | CHECK `end_at > start_at`                                              |
+| source                                                                      | text NOT NULL        | `manual` / `from_plan` / `auto_migrated` / `external_calendar` / `api` |
+| external_calendar_event_id                                                  | uuid NULL            | FK → external_calendar_events                                          |
+| fulfillment_score                                                           | integer NULL         | entries から移設（記録側の属性）                                       |
 
 - CHECK: `source = 'from_plan'` ⇒ `plan_id IS NOT NULL`、`source = 'external_calendar'` ⇒ `external_calendar_event_id IS NOT NULL`
 - EXCLUDE: `logs_no_overlap` — plans と同型
@@ -179,7 +179,7 @@ code: apps/product/src/features/entry
 1. 別日実行の diff 帰属 — log は log の日に計上・plan は自分の日に未達、が有力 → **Step 7**
 2. plan と log の tag / title 乖離時、Review はどちらで束ねるか — log 側優先が有力 → **Step 7**
 3. plan soft delete 時の紐づき logs の見せ方（「予定に対する記録」のままか「予定外」に落とすか） → **Step 7**
-4. 移行時に実体化した logs を明示記録と区別するか — ADR-019 は自動記録を見積もり精度の分母から除外していた。区別を落とすと精度指標が汚れる → **Step 2**
+4. 移行時に実体化した logs を明示記録と区別するか — **決定: `logs.source = 'auto_migrated'` で区別する（Step 2）**
 5. iCal export（`/api/v1/calendar/[token]`）に plans / logs のどちらを出すか（両方なら 2 フィード） → **Step 8**
 6. ghost の有効期限・視覚表現（principles.md でも未確定） → **Phase 2**
 7. MCP / API が公開している entries 形の契約をどう version するか → **Step 8**
