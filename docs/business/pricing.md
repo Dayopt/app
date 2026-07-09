@@ -8,7 +8,7 @@ last_verified: 2026-07-02
 Dayoptの Free/Pro 境界線と価格設定に関する分析ドキュメント。
 3つのAIエージェント（Strategist / Devil's Advocate / Customer）による多角的分析に基づく。
 
-> プロダクトの最上位コンセプトは [`docs/business/strategy.md`](./strategy.md) を参照（2026-07-02 策定）。**in-app AI 機能（AI振り返り）は作らない方針**のため、以下の表・分析から AI 振り返り関連の記述を除去済み。AI 価値は MCP/API 経由の外部 AI 連携として提供する。Free/Pro の詳細な線引きは [`roadmap.md`](../product/roadmap.md) の未決事項であり、本ドキュメントは今後見直す。
+> プロダクトの最上位コンセプトは [`docs/business/strategy.md`](./strategy.md) を参照（2026-07-02 策定）。**in-app AI 機能（AI振り返り）は作らない方針**のため、以下の表・分析から AI 振り返り関連の記述を除去済み。AI 価値は MCP/API 経由の外部 AI 連携として提供する。Free/Pro の詳細な線引きは未決であり、本ドキュメントの全面見直しとセットで扱う。
 
 ---
 

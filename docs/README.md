@@ -53,7 +53,6 @@ code: apps/product/src/features/entry # (任意) 対応するコードのパス
 | 事業指標の定義は?               | `business/kpi.md`             |
 | 訴求・コピーの方針は?           | `business/messaging.md`       |
 | プロダクト原則・やらないことは? | `product/principles.md`       |
-| 今やってる/次やる/やらないは?   | `product/roadmap.md`          |
 | この機能の仕様は?               | `product/specs/*.md`          |
 | 用語の定義は?                   | `product/glossary.md`         |
 | SNSの投稿トーンは?              | `marketing/voice.md`          |
