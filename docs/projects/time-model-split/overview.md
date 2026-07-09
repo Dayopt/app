@@ -12,7 +12,7 @@ code: apps/product/src/features/entry
 
 ## 1. Goal
 
-予定（Plan）と記録（Log）を独立エンティティに分離し、「予定を立てる → 記録する → 差分を見る → 次を改善する」のループを、1予定:N記録・予定外記録・外部カレンダー取り込みまで含めて破綻なく表現できるデータモデルにする。
+予定（Plan）と記録（Log）を独立エンティティに分離し、「予定を立てる → 記録する → 差分を見る → 次を改善する」のループを、1予定:N記録・予定外記録・外部カレンダー取り込みまで含めて破綻なく表現できるデータモデルにする。Phase 1（Step 9）完了時点の具体的な状態は §11 に定義する。
 
 ## 2. 決定済みモデル
 
@@ -130,14 +130,22 @@ code: apps/product/src/features/entry
 
 ## 5. Phase 構成
 
-**Phase 1 — plans / logs 分割 + 明示記録化**（external なしで完結する）
+**Phase 1 — plans / logs 分割 + 明示記録化**（external なしで完結する）。1 Step = 1 PR。Step 2-7 は既存 runtime に接続しない dormant 実装として積み、Step 8 で一括切り替える。
 
-1. Step 0: 統計 RPC 書き換え方針を決定済み — [step-0-statistics-rpc-policy.md](./step-0-statistics-rpc-policy.md)。結論: Plan / Log 分割後の統計ロジックは TS service 層へ移し、PL/pgSQL 統計 RPC と `entries_effective` は呼び出し元を消してから drop する
-2. schema: plans / logs 作成、EXCLUDE・CHECK・trigger・RLS・index — [step-1-schema-detail.md](./step-1-schema-detail.md)
-3. migration: entries → plans / logs のデータ移行（下記 §7）
-4. server: entry-service / router の分割（plans CRUD / logs CRUD / ワンタップ記録 / 一括確定）
-5. domain / UI: CalendarEvent 射影、Plan layer + Log layer の描画、Inspector、Review 差分の再定義
-6. 後始末: `entries_effective` view・entries テーブルの廃止、iCal export の対象決定（§8 未決 5）
+| Step | 内容                                                                              | 設計書                                      | 状態 |
+| ---- | --------------------------------------------------------------------------------- | ------------------------------------------- | ---- |
+| 0    | 統計 RPC 書き換え方針（TS service 化を決定）                                      | [step-0](./step-0-statistics-rpc-policy.md) | 完了 |
+| 1    | plans / logs / external の schema 追加                                            | [step-1](./step-1-schema-detail.md)         | 完了 |
+| 2    | entries → plans / logs の冪等 backfill migration（未決 4 をここで決定）           | [step-2](./step-2-backfill-migration.md)    |      |
+| 3    | plans / logs server 層（CRUD・ワンタップ記録・一括確定。未決 8 をここで決定）     | [step-3](./step-3-server-layer.md)          |      |
+| 4    | 統計 TS service（Step 0 方針の実装、未接続）                                      | [step-4](./step-4-statistics-service.md)    |      |
+| 5    | Calendar 2レーン表示（read 側、未接続）                                           | [step-5](./step-5-calendar-two-lane.md)     |      |
+| 6    | 作成・編集フロー（保存先ルール・記録導線、未接続）                                | [step-6](./step-6-create-edit-flows.md)     |      |
+| 7    | Review 差分の 1:N 再定義（未決 1・2・3 をここで決定）                             | [step-7](./step-7-review-diff.md)           |      |
+| 8    | カットオーバー（backfill 再実行 + 配線切替 + iCal / MCP。未決 5・7 をここで決定） | [step-8](./step-8-cutover.md)               |      |
+| 9    | 後始末（entries / RPC / 旧コード drop、specs・glossary 更新、summary.md）         | [step-9](./step-9-cleanup.md)               |      |
+
+依存関係: 2 → 3 → 4 は直列。5・6・7 は 3 以降なら並行可（6 は 5 の後推奨）。8 は 2-7 全完了が前提。9 は 8 の安定確認（1 週間目安）後。
 
 **Phase 2 — 外部カレンダー取り込み**（Phase 1 リリース後に着手）
 
@@ -166,16 +174,16 @@ code: apps/product/src/features/entry
 4. **auto-record の凍結**: actual NULL・過去・未 skip の planned entries は、移行時点の effective actual（= plan range）を一度だけ実体化して logs 化する。やらないと過去の Review が遡って「未記録」に変わる。`getEffectiveActualRange()` / `entries_effective` はこの backfill を最後の用途として廃止
 5. soft delete 済み entries も対応テーブルへ `deleted_at` ごと移行（復元可能性を維持）
 
-## 8. 未決事項（実装 Step 着手前に決める）
+## 8. 未決事項（担当 Step の着手時に決める。各 step 設計書に Option + 推奨を記載済み）
 
-1. 別日実行の diff 帰属 — 火曜の予定を水曜にやって紐づけた時、log は log の日に計上・plan は自分の日に未達、が有力
-2. plan と log の tag / title 乖離時、Review はどちらで束ねるか — log 側優先が有力
-3. plan soft delete 時の紐づき logs の見せ方（「予定に対する記録」のままか「予定外」に落とすか）
-4. 移行時に実体化した logs を明示記録と区別するか — ADR-019 は自動記録を見積もり精度の分母から除外していた。区別を落とすと精度指標が汚れる
-5. iCal export（`/api/v1/calendar/[token]`）に plans / logs のどちらを出すか（両方なら 2 フィード）
-6. ghost の有効期限・視覚表現（principles.md でも未確定）
-7. MCP / API が公開している entries 形の契約をどう version するか
-8. feature / ディレクトリ命名 — `features/log` は `@/lib/logger`（アプリログ）と紛らわしい。`features/logs` 等、衝突しない名前にする
+1. 別日実行の diff 帰属 — log は log の日に計上・plan は自分の日に未達、が有力 → **Step 7**
+2. plan と log の tag / title 乖離時、Review はどちらで束ねるか — log 側優先が有力 → **Step 7**
+3. plan soft delete 時の紐づき logs の見せ方（「予定に対する記録」のままか「予定外」に落とすか） → **Step 7**
+4. 移行時に実体化した logs を明示記録と区別するか — ADR-019 は自動記録を見積もり精度の分母から除外していた。区別を落とすと精度指標が汚れる → **Step 2**
+5. iCal export（`/api/v1/calendar/[token]`）に plans / logs のどちらを出すか（両方なら 2 フィード） → **Step 8**
+6. ghost の有効期限・視覚表現（principles.md でも未確定） → **Phase 2**
+7. MCP / API が公開している entries 形の契約をどう version するか → **Step 8**
+8. feature / ディレクトリ命名 — `features/log` は `@/lib/logger`（アプリログ）と紛らわしい。衝突しない配置にする → **Step 3**
 
 ## 9. Existing Code to Reuse
 
@@ -194,3 +202,30 @@ code: apps/product/src/features/entry
 - 繰り返し予定の独自展開 — provider が展開した instance をそのまま保存する
 - Phase 1 / Phase 2 の同時リリース — 1 リリースに詰めない
 - 「ついで」の統計リファクタ — RPC の書き換えは分割に必要な範囲に限定（方針は Phase 1 Step 0 で確定）
+
+## 11. Phase 1 完了時の状態（Step 9 完了 = この project のゴール）
+
+Step 0-9 がすべて完了した時点で、以下がすべて真になっている。これが本 project の Definition of Done。
+
+### ユーザーから見える状態
+
+- Calendar は **Plan レーン（アウトライン・淡色）+ Log レーン（塗り・主役）の 2 レーン**。Day は 2 レーン横並び、Week「予定+記録」は Plan が細レーン、モバイル Week は表示切替
+- ブロック作成時に保存先を選ぶ UI は存在しない。**end が未来なら予定、end が今以前なら記録**として保存され、チップの表示が編集中に自動で切り替わる
+- 過去の予定は記録するまで「未記録」。**ワンタップ「そのまま記録」/ Log レーンへのドラッグ / 一括「この日を確定」**の 3 導線で記録する。自動で実績になるものは何もない
+- 表示される実績はすべてユーザーが明示した記録。1 つの予定に複数の記録を紐づけられ、差分は数字で表示（±0 は非表示）、予定外の記録は静かなマーカーのみ。判定ラベル・赤マークは無い
+- 過去の予定は時間凍結・内容（title / tag / note）訂正可。過去日付への予定追加は不可。skip で「やらなかった」と「未記録」が区別される
+- Review は **未記録 / やらなかった / 予定に対する記録 / 予定外** の 4 分類 + 差分で成立している
+
+### データ・コードの状態
+
+- 時間データは `plans` / `logs` のみが正。**`entries` / `entries_effective` / PL/pgSQL 統計 RPC は drop 済み**で、アプリからの参照ゼロ
+- 統計はすべて TS service（実績 = logs、予定 = plans、予実比較 = join）。migration で実体化した auto-record 由来の log は provenance で区別され、見積もり精度の分母に入らない
+- 重なり制約は二層 EXCLUDE で継続（plans 同士 / logs 同士は禁止、plan × log は許可、半開区間 `[)`）
+- iCal export は plans を配信（URL 不変）。MCP は `plans-list` / `logs-list` を公開し、`entries-list` は合成互換として残存
+- `external_calendar_events` はテーブルだけ存在し（Step 1 で作成済み）、中身は空。同期・ghost 表示はまだ無い
+- docs が現実と一致: `specs/entry.md` は Plan / Log 仕様に改稿済み、glossary に新用語、rls-snapshot 再生成済み、本ディレクトリに `summary.md` が追加され project は完了状態
+
+### まだ無いもの（= Phase 2 の出発点）
+
+- Google Calendar の取り込み・ghost 表示・`calendar_connections`（OAuth / カレンダー選択 / sync cursor）
+- 自動記録モデルは存在しない。将来必要になったら `logs.source` の拡張と Review の解釈追加で再導入できる（ADR-025 は扉を閉じていない）
