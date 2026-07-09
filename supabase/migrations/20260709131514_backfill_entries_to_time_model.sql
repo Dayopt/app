@@ -44,7 +44,9 @@ BEGIN
       e.user_id,
       e.actual_start_time AS start_at,
       e.actual_end_time AS end_at,
-      'manual'::TEXT AS source
+      'manual'::TEXT AS source,
+      e.created_at,
+      e.updated_at
     FROM public.entries e
     WHERE e.deleted_at IS NULL
       AND e.origin = 'unplanned'
@@ -58,7 +60,9 @@ BEGIN
       e.user_id,
       e.actual_start_time AS start_at,
       e.actual_end_time AS end_at,
-      'from_plan'::TEXT AS source
+      'from_plan'::TEXT AS source,
+      e.created_at,
+      e.updated_at
     FROM public.entries e
     WHERE e.deleted_at IS NULL
       AND e.origin = 'planned'
@@ -74,7 +78,9 @@ BEGIN
       e.user_id,
       e.start_time AS start_at,
       e.end_time AS end_at,
-      'auto_migrated'::TEXT AS source
+      'auto_migrated'::TEXT AS source,
+      e.created_at,
+      e.updated_at
     FROM public.entries e
     WHERE e.deleted_at IS NULL
       AND e.origin = 'planned'
@@ -85,7 +91,13 @@ BEGIN
       AND e.end_time IS NOT NULL
       AND e.end_time <= p_backfill_now
   ), effective_log_overlap_pairs AS (
-    SELECT l2.entry_id AS delete_id
+    SELECT
+      CASE
+        WHEN l1.source = 'auto_migrated' AND l2.source <> 'auto_migrated' THEN l1.entry_id
+        WHEN l2.source = 'auto_migrated' AND l1.source <> 'auto_migrated' THEN l2.entry_id
+        WHEN (l1.created_at, l1.updated_at, l1.entry_id) >= (l2.created_at, l2.updated_at, l2.entry_id) THEN l1.entry_id
+        ELSE l2.entry_id
+      END AS delete_id
     FROM projected_logs l1
     JOIN projected_logs l2
       ON l1.user_id = l2.user_id
