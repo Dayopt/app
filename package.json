@@ -55,7 +55,8 @@
     "quality:deadcode:ci": "pnpm --filter @dayopt/product quality:deadcode:ci",
     "test": "pnpm --filter @dayopt/product test",
     "test:product": "pnpm --filter @dayopt/product test",
-    "test:run": "pnpm --filter @dayopt/product test:run",
+    "test:run": "pnpm --filter @dayopt/product test:run && pnpm test:scripts",
+    "test:scripts": "vitest run --config vitest.scripts.config.ts",
     "test-storybook": "pnpm --filter @dayopt/storybook test-storybook",
     "test-storybook:dark": "pnpm --filter @dayopt/storybook test-storybook:dark",
     "test:ui": "pnpm --filter @dayopt/product test:ui",
@@ -134,7 +135,6 @@
     "@vitest/ui": "^4.1.9",
     "@vueless/storybook-dark-mode": "^10.0.8",
     "babel-plugin-react-compiler": "^1.0.0",
-    "culori": "^4.0.2",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.10",
     "eslint-plugin-storybook": "^10.4.6",
@@ -163,22 +163,5 @@
     "typescript": "^5",
     "vitest": "^4.1.9",
     "zod-to-json-schema": "^3.25.2"
-  },
-  "pnpm": {
-    "overrides": {
-      "tar": "^7.5.4",
-      "tmp": "^0.2.4",
-      "@types/react": "19.2.17",
-      "@types/react-dom": "19.2.3"
-    },
-    "onlyBuiltDependencies": [
-      "@parcel/watcher",
-      "@sentry/cli",
-      "@swc/core",
-      "esbuild",
-      "sharp",
-      "supabase",
-      "unrs-resolver"
-    ]
   }
 }
