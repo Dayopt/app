@@ -52,18 +52,20 @@ code: apps/product/src/features/entry
 
 ### external_calendar_events（同期ミラー）
 
-| カラム                                 | 型                   | 制約                                                      |
-| -------------------------------------- | -------------------- | --------------------------------------------------------- |
-| id / user_id / created_at / updated_at |                      |                                                           |
-| provider                               | text NOT NULL        | `google` 等                                               |
-| provider_event_id                      | text NOT NULL        | UNIQUE `(user_id, provider, provider_event_id)` で upsert |
-| title / description / calendar_name    |                      | provider 値のミラー                                       |
-| start_at / end_at                      | timestamptz NOT NULL |                                                           |
-| status                                 | text NOT NULL        | provider 側状態（`confirmed` / `cancelled`）              |
-| dismissed_at                           | timestamptz NULL     | ユーザーの「何もしない」。再同期で復活させない            |
-| last_synced_at                         | timestamptz NOT NULL |                                                           |
+| カラム                                 | 型                   | 制約                                                                            |
+| -------------------------------------- | -------------------- | ------------------------------------------------------------------------------- |
+| id / user_id / created_at / updated_at |                      |                                                                                 |
+| provider                               | text NOT NULL        | `google` 等                                                                     |
+| provider_calendar_id                   | text NOT NULL        | provider 側の stable calendar id                                                |
+| provider_event_id                      | text NOT NULL        | UNIQUE `(user_id, provider, provider_calendar_id, provider_event_id)` で upsert |
+| title / description / calendar_name    |                      | provider 値のミラー。`cancelled` tombstone では title 欠落を許可                |
+| start_at / end_at                      | timestamptz NULL     | `cancelled` tombstone 以外は NOT NULL 相当                                      |
+| status                                 | text NOT NULL        | provider 側状態（`confirmed` / `cancelled`）                                    |
+| dismissed_at                           | timestamptz NULL     | ユーザーの「何もしない」。再同期で復活させない                                  |
+| last_synced_at                         | timestamptz NOT NULL |                                                                                 |
 
 - **provider 状態の純粋なミラー**。ユーザー編集不可・EXCLUDE 対象外・Review 集計対象外
+- `status = 'cancelled'` は provider tombstone として sparse row を許可する。通常 row は `title` / `start_at` / `end_at` を CHECK で必須化する。
 - **ghost は導出概念**: ミラー − (plans/logs から参照済み) − (dismissed) − (cancelled)。Calendar にゴースト表示し、ワンタップで Plan / Log に変換
 - 変換後に provider 側でイベントが変わってもミラーだけ更新し、変換済み plan/log は触らない
 - 同期 window（目安 -90日/+90日、iCal export と同じ）で prune
@@ -131,7 +133,7 @@ code: apps/product/src/features/entry
 **Phase 1 — plans / logs 分割 + 明示記録化**（external なしで完結する）
 
 1. Step 0: 統計 RPC 書き換え方針を決定済み — [step-0-statistics-rpc-policy.md](./step-0-statistics-rpc-policy.md)。結論: Plan / Log 分割後の統計ロジックは TS service 層へ移し、PL/pgSQL 統計 RPC と `entries_effective` は呼び出し元を消してから drop する
-2. schema: plans / logs 作成、EXCLUDE・CHECK・trigger・RLS・index
+2. schema: plans / logs 作成、EXCLUDE・CHECK・trigger・RLS・index — [step-1-schema-detail.md](./step-1-schema-detail.md)
 3. migration: entries → plans / logs のデータ移行（下記 §7）
 4. server: entry-service / router の分割（plans CRUD / logs CRUD / ワンタップ記録 / 一括確定）
 5. domain / UI: CalendarEvent 射影、Plan layer + Log layer の描画、Inspector、Review 差分の再定義
