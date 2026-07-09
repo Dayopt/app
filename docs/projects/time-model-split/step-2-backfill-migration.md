@@ -31,7 +31,7 @@ auto-record 実体化 log を明示記録と区別するか。
    - `origin = 'unplanned'` → logs（`plan_id` NULL、`source = 'manual'`）
    - auto-record（planned・actual NULL・未 skip・`end_time <= now()`）→ logs（plan range を実体化、source = 未決 4 の決定値）。effective actual の判定式は `entries_effective` と同一ロジックを backfill SQL 内に一度だけ書く
 3. 管理対象行を delete/reinsert して冪等化。soft delete 行も `deleted_at` ごと移行（Step 1 の CHECK は deleted 行の歴史的 shape を許容済み）。`created_at` / `updated_at` は entries の値を明示挿入し、更新 trigger による replay 時の時刻変化を避ける
-4. **EXCLUDE 整合の修復と事前検証**: 明示 actual 同士は現行 DB 制約で重なりゼロが保証済み。auto-record 実体化同士・auto-record × 明示 actual はサービス層防衛だった領域なので、期待 log 集合を作る前に重なり検出クエリを流し、ヒットしたら ADR-018 の前例に従い新しい側を soft delete する。修復後の期待 log 集合にも重なりが残る場合は migration を止める
+4. **EXCLUDE 整合の修復と事前検証**: 明示 actual 同士は現行 DB 制約で重なりゼロが保証済み。auto-record 実体化同士・auto-record × 明示 actual はサービス層防衛だった領域なので、期待 log 集合を作る前に重なり検出クエリを流す。明示 actual / unplanned と auto-record が衝突した場合は明示記録を優先して auto-record 側を soft delete し、auto-record 同士は `created_at` / `updated_at` / `id` で新しい側を soft delete する。修復後の期待 log 集合にも重なりが残る場合は migration を止める
 5. 検証クエリを migration とペアで残す: 件数突合（planned 数 = plans 数、actual/unplanned/auto 数 = logs 数）、時間合計突合、`plan_id` 参照整合
 
 ## Scope
