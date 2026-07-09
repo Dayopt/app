@@ -1,7 +1,7 @@
 /**
  * iOS PWA スプラッシュスクリーン生成スクリプト
  *
- * public/icons/icon-512.png をベースに各デバイスサイズの
+ * apps/product/public/icons/icon-512.png をベースに各デバイスサイズの
  * スプラッシュスクリーン画像を生成する。
  *
  * 使用方法:
@@ -18,8 +18,9 @@ import { generateSplashScreens, SPLASH_SIZES } from './lib/pwa-splash';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const OUTPUT_DIR = path.join(ROOT, 'public', 'splash');
-const ICON_PATH = path.join(ROOT, 'public', 'icons', 'icon-512.png');
+const PRODUCT_PUBLIC_DIR = path.join(ROOT, 'apps', 'product', 'public');
+const OUTPUT_DIR = path.join(PRODUCT_PUBLIC_DIR, 'splash');
+const ICON_PATH = path.join(PRODUCT_PUBLIC_DIR, 'icons', 'icon-512.png');
 
 // テーマカラー（manifest.json の background_color と一致）
 const BG_COLOR = { r: 255, g: 255, b: 255 };
@@ -45,7 +46,7 @@ async function main() {
   });
 
   // eslint-disable-next-line no-console -- スクリプト用
-  console.log(`\n${SPLASH_SIZES.length} splash screens generated in public/splash/`);
+  console.log(`\n${SPLASH_SIZES.length} splash screens generated in apps/product/public/splash/`);
 }
 
 main().catch((err) => {

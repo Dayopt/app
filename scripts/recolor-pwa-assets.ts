@@ -18,8 +18,9 @@ import { generateSplashScreens } from './lib/pwa-splash';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const ICONS_DIR = path.join(ROOT, 'public', 'icons');
-const SPLASH_DIR = path.join(ROOT, 'public', 'splash');
+const PRODUCT_PUBLIC_DIR = path.join(ROOT, 'apps', 'product', 'public');
+const ICONS_DIR = path.join(PRODUCT_PUBLIC_DIR, 'icons');
+const SPLASH_DIR = path.join(PRODUCT_PUBLIC_DIR, 'splash');
 
 // Primary blue: oklch(0.45 0.14 259.8145) → #2051a1
 const PRIMARY = { r: 32, g: 81, b: 161 };
