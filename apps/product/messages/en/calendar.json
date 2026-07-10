@@ -33,13 +33,17 @@
           "actual": "Actual",
           "diff": "Diff",
           "unplanned": "Unplanned",
-          "missed": "Missed"
+          "missed": "Missed",
+          "unrecorded": "Unrecorded"
         },
         "kind": {
           "unplanned": "Added",
           "missed": "Missed",
           "shifted": "Moved",
-          "resized": "Resized"
+          "resized": "Resized",
+          "recorded": "Recorded",
+          "skipped": "Skipped",
+          "unrecorded": "Unrecorded"
         },
         "badge": {
           "late": "{duration} late",
