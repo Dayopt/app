@@ -183,6 +183,43 @@ gh pr merge <PR番号> --merge --delete-branch
 - revert は対象を見極める。マージコミット自体を戻す場合は `git revert -m 1 <merge-sha>`、個別コミットを戻す場合は通常の `git revert <sha>`
 - マージ済みブランチは GitHub が自動削除（`deleteBranchOnMerge: true`）。ローカルでは `git branch -d` がマージを検出して安全に削除できる（squash 時代の `-D` 強制は不要になる）
 
+## Worktree 運用
+
+策定日: 2026-07-10
+
+**原則: 1 worktree = 1 branch = 1 PR。役目（PR の merge / close）を終えた worktree はその場で削除する。** 放置すると worktree・ブランチ・孤児ディレクトリが積み上がり、どれが生きている作業か判別できなくなる。
+
+### 置き場と作成
+
+- Claude Code は `.claude/worktrees/<name>/` に自動作成する（gitignore 済み）。Codex は `~/.codex/worktrees/` を使う。**手動で `git worktree add` する場合も `.claude/worktrees/` 配下に置く**（repo 直下や無関係な場所に散らさない）
+- 他ツールの worktree（`~/.codex/` 配下）は各ツールの管理に任せ、手動で触らない
+
+### マージ後の掃除（AI の責務、merge と同一セッションで実施）
+
+```bash
+gh pr merge <N> --merge --delete-branch  # remote は deleteBranchOnMerge でも自動削除
+git worktree remove <worktree-path>      # branch が worktree に checkout されている場合は先に
+git branch -d <branch>                   # merge 済みなら -d が通る（-D は使わない）
+```
+
+順序に意味がある: **worktree に checkout されたブランチは削除できない**ため、`git worktree remove` が先。
+
+### 削除時の安全確認
+
+- 削除前に `git -C <worktree-path> status --porcelain` が空であることを確認する。未コミット差分が残る worktree はユーザー作業として扱い、勝手に消さない（確認を取る）
+- **`rm -rf` で worktree を直接消さない**。git の管理情報が残って孤児化する。必ず `git worktree remove` を使う
+- gitignore された生成物（`.next/` 等）だけが残って `remove` が拒否される場合は、tracked ファイルに差分がないことを確認した上で `git worktree remove --force`
+
+### 定期掃除（月次 sweep で実施）
+
+```bash
+git worktree list          # 全 worktree と branch の対応を俯瞰
+git worktree prune         # 手動削除などで孤児化した管理情報を掃除
+git branch --merged main   # merge 済みローカルブランチ → git branch -d で削除
+```
+
+`git worktree list` に出ないのに `.claude/worktrees/` 配下に残っているディレクトリは孤児（過去の削除で gitignore 生成物だけが残った残骸）。中身が生成物のみであることを確認して削除する。
+
 ## 実例の参照先
 
 各規模の実例:

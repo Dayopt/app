@@ -72,6 +72,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 - [ ] NOT_PLANNED で close された issue の中身が、実は未完了のまま受け皿を失っていないか
 - [ ] 生成系スクリプト（`api:spec` / `types:generate` / `rls:snapshot`）が現在も exit 0 で通るか
 - [ ] open PR で 2 週間以上動きがないものの扱い（rebase / close / 引き継ぎ）
+- [ ] worktree・ブランチの残骸: `git worktree list` / `git worktree prune` / `git branch --merged main`（手順は `.claude/rules/workflow.md` §Worktree 運用）
 
 ## 操作 D: unfreeze — 凍結解除の判定
 

@@ -70,7 +70,7 @@ pnpm docs:check               # リンク切れ/frontmatter/命名/append-only �
   | `docs`     | ドキュメントのみの変更         |
   | `test`     | テストの追加・修正             |
   | `perf`     | パフォーマンス改善             |
-- PR を merge する時は、枝分かれを履歴に残すため `gh pr merge --merge` を標準にする
+- PR を merge する時は、枝分かれを履歴に残すため `gh pr merge --merge --delete-branch` を標準にする。**マージ後は同一セッション内でローカルブランチと作業に使った worktree も削除する**（worktree remove → branch -d の順。`.claude/rules/workflow.md` §Worktree 運用）
 
 ## Coding Rules
 
