@@ -19,7 +19,10 @@ type Story = StoryObj<typeof meta>;
 
 function Frame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="border-border relative h-[500px] w-64 overflow-hidden rounded-lg border">
+    <div
+      className="border-border relative w-64 overflow-hidden rounded-lg border"
+      style={{ height: 500 }}
+    >
       {children}
     </div>
   );
