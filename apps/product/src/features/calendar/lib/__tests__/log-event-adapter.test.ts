@@ -13,6 +13,7 @@ function makeRow(overrides: Partial<LogEventSourceRow> = {}): LogEventSourceRow 
     note: null,
     tag_id: 'tag-1',
     plan_id: null,
+    source: 'manual',
     start_at: '2026-07-10T09:00:00Z',
     end_at: '2026-07-10T10:00:00Z',
     fulfillment_score: null,
@@ -57,11 +58,14 @@ describe('logRowToLogEvent', () => {
 });
 
 describe('expandLogRowsToLogEvents', () => {
-  it('plannedMinutesByPlanId から各 log の diffMinutes を解決する（1 plan に複数 log の 1:N も対応）', () => {
+  it('plannedMinutesByPlanId から各 log の diffMinutes を解決する（1 log : 1 plan）', () => {
     const rows = [
-      makeRow({ id: 'l1', plan_id: 'p1' }),
-      makeRow({ id: 'l2', plan_id: 'p1', end_at: '2026-07-10T09:20:00Z' }),
-      makeRow({ id: 'l3', plan_id: null }),
+      makeRow({ id: 'l1', plan_id: 'p1', source: 'from_plan' }),
+      makeRow({
+        id: 'l2',
+        plan_id: null,
+        end_at: '2026-07-10T09:20:00Z',
+      }),
     ];
     const events = expandLogRowsToLogEvents(rows, {
       timezone: 'UTC',
@@ -69,7 +73,89 @@ describe('expandLogRowsToLogEvents', () => {
     });
 
     expect(events.find((e) => e.id === 'l1')?.diffMinutes).toBe(0);
-    expect(events.find((e) => e.id === 'l2')?.diffMinutes).toBe(-40);
-    expect(events.find((e) => e.id === 'l3')?.diffMinutes).toBeUndefined();
+    expect(events.find((e) => e.id === 'l2')?.diffMinutes).toBeUndefined();
+  });
+
+  it('1 plan に複数 log（分割記録）は合計実績で 1 件にのみ差分を付与する（1:N、二重計上を避ける）', () => {
+    // 60分 plan を 30分 log 2件で記録 → 合計は予定どおり(diff=0)。
+    // 個別の log 時間(30分)だけで計算すると誤って -30min が 2 件出る不具合の回帰テスト。
+    const rows = [
+      makeRow({
+        id: 'l1',
+        plan_id: 'p1',
+        source: 'from_plan',
+        start_at: '2026-07-10T09:00:00Z',
+        end_at: '2026-07-10T09:30:00Z',
+      }),
+      makeRow({
+        id: 'l2',
+        plan_id: 'p1',
+        source: 'manual',
+        start_at: '2026-07-10T09:30:00Z',
+        end_at: '2026-07-10T10:00:00Z',
+      }),
+    ];
+    const events = expandLogRowsToLogEvents(rows, {
+      timezone: 'UTC',
+      plannedMinutesByPlanId: new Map([['p1', 60]]),
+    });
+
+    // from_plan の log が代表として合計実績(60分)ベースの差分を持つ
+    expect(events.find((e) => e.id === 'l1')?.diffMinutes).toBe(0);
+    // 他方の log は個別の差分を持たない（二重計上を避ける）
+    expect(events.find((e) => e.id === 'l2')?.diffMinutes).toBeUndefined();
+  });
+
+  it('1:N の分割記録が予定より多い/少ない場合、合計実績ベースの差分になる', () => {
+    // 60分 plan を 20分 + 20分 = 40分の実績で記録 → -20min
+    const rows = [
+      makeRow({
+        id: 'l1',
+        plan_id: 'p1',
+        source: 'from_plan',
+        start_at: '2026-07-10T09:00:00Z',
+        end_at: '2026-07-10T09:20:00Z',
+      }),
+      makeRow({
+        id: 'l2',
+        plan_id: 'p1',
+        source: 'manual',
+        start_at: '2026-07-10T09:20:00Z',
+        end_at: '2026-07-10T09:40:00Z',
+      }),
+    ];
+    const events = expandLogRowsToLogEvents(rows, {
+      timezone: 'UTC',
+      plannedMinutesByPlanId: new Map([['p1', 60]]),
+    });
+
+    expect(events.find((e) => e.id === 'l1')?.diffMinutes).toBe(-20);
+    expect(events.find((e) => e.id === 'l2')?.diffMinutes).toBeUndefined();
+  });
+
+  it('from_plan の log が無い場合は最初に現れた log を代表にする', () => {
+    const rows = [
+      makeRow({
+        id: 'l1',
+        plan_id: 'p1',
+        source: 'manual',
+        start_at: '2026-07-10T09:00:00Z',
+        end_at: '2026-07-10T09:30:00Z',
+      }),
+      makeRow({
+        id: 'l2',
+        plan_id: 'p1',
+        source: 'manual',
+        start_at: '2026-07-10T09:30:00Z',
+        end_at: '2026-07-10T10:00:00Z',
+      }),
+    ];
+    const events = expandLogRowsToLogEvents(rows, {
+      timezone: 'UTC',
+      plannedMinutesByPlanId: new Map([['p1', 60]]),
+    });
+
+    expect(events.find((e) => e.id === 'l1')?.diffMinutes).toBe(0);
+    expect(events.find((e) => e.id === 'l2')?.diffMinutes).toBeUndefined();
   });
 });
