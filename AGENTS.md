@@ -54,6 +54,7 @@ pnpm docs:check               # リンク切れ/frontmatter/命名/append-only �
 ## Non-Negotiables
 
 - 既存コードを検索してから変更する。`rg` / `rg --files` を優先する
+- issue の起票・worker への作業依頼・`status:blocked` issue への着手判断は `dispatch` skill（`.agents/skills/dispatch/SKILL.md`）の規約に従う。凍結 issue には着手しない
 - 既存の未コミット差分はユーザー作業として扱い、勝手に revert / stage しない
 - `git add .` は避ける。必ず path-limited add で scope を固定する
 - コミット前に `git diff --cached` を確認する
@@ -102,7 +103,6 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 | コマンド        | 内容                                                                     |
 | --------------- | ---------------------------------------------------------------------- |
 | `/decision`     | 各ドメインの `log/` に `YYYY-MM-DD-slug.md` で意思決定ログを新規作成         |
-| `/dispatch`     | 並行レーン orchestration の指揮者運用: issue を worker へ渡す / intake 起票 / sweep 棚卸し / 凍結解除。正は tracking issue（#1567） |
 | `/plan-review`  | 直前の実装 plan を plan-fact-checker / plan-critic の 2 agent で並列レビュー |
 | `/note`         | 各ドメインの `log/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応） |
 | `/session-end`  | 当日の作業を `docs/engineering/log/YYYY-MM-DD-session.md` に記録し `latest.md` を更新 |
@@ -130,7 +130,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 
 Project skills は `.agents/skills/` を参照する。該当する作業では `SKILL.md` を先に読む。実体は `.claude/skills/` が正本で、`.agents/skills/` は各 skill への symlink（二重管理しない）。
 
-error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / audit-ai-config
+error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / audit-ai-config / dispatch
 
 ## Workflow
 

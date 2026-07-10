@@ -1,14 +1,30 @@
 ---
-description: 並行レーン orchestration の指揮者運用 — tracking issue から worker へ issue を渡し、新規作業を issue 化し、定期棚卸しで gap を検出する
+name: dispatch
+description: GitHub issue を worker（Sonnet / Codex）へ渡す準備をする時、非 feature 作業の issue を新規起票する時、orchestration tracking issue を更新する時、`status:blocked` の凍結 issue への着手が話題になった時、並行作業の定期棚卸し（sweep）や凍結解除を行う時に発動。凍結・衝突チェック、handoff-quality 補強、既存ラベル体系を適用する。issue の中身の実装作業そのものや、docs ログ作成（/decision・/note の領域）では発動しない。
 ---
 
-# /dispatch
+# Dispatch Skill
 
-feature 開発と並行する非 feature 作業を issue ベースで回す指揮者（conductor）の定常運用。**どのモデルでも実行できる**ことを前提に、判断基準をすべて本ファイルに明文化する。個人メモリや特定モデルの記憶に依存しない。
+feature 開発と並行する非 feature 作業を issue ベースで回す指揮者（conductor）の定常運用。**どのモデル（Opus / Sonnet / Codex / それ以降）でも実行できる**ことを前提に、判断基準をすべて本ファイルに明文化する。個人メモリや特定モデルの記憶に依存しない。
 
 **正（source of truth）**: 現行の orchestration tracking issue（2026-07 時点は #1567）。レーン定義・凍結リスト・推奨着手順はそこを読む。本ファイルは「手順」、tracking issue は「状態」。
 
-引数で操作を指定する: `/dispatch`（渡す）/ `/dispatch intake <内容>`（起票）/ `/dispatch sweep`（棚卸し）/ `/dispatch unfreeze`（凍結解除判定）。引数なしは操作 A。
+## When to Use
+
+以下の状況で発動:
+
+- worker に渡す issue を選定・準備する時（→ 操作 A）
+- 非 feature 作業（refactor / security / ops / content）の issue を新規起票する時（→ 操作 B）
+- orchestration tracking issue のレーン・checklist を更新する時
+- 定期棚卸し（sweep）や凍結解除（unfreeze）を明示依頼された時（→ 操作 C / D）
+- 提案・plan の中に `status:blocked` 付き issue への着手が含まれているのを検出した時（凍結違反の防止）
+- issue 化されていない作業（監査ログの残タスク、alert、会話中の口頭依頼）がセッション内に現れた時
+
+## When NOT to Use
+
+- 各 issue の中身の実装作業そのもの（issue 本文の受け入れ条件と、該当する project skill に従う）
+- 意思決定ログ・調査ログの作成（/decision・/note コマンドの領域）
+- feature 実装 plan の策定（`.claude/rules/plan-format.md` に従う。dispatch は「誰に渡すか」だけを扱う）
 
 ## 操作 A: dispatch — issue を worker に渡す
 
@@ -16,7 +32,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 2. **衝突チェック**: 候補 issue が触るファイル・ディレクトリを、(a) 進行中 feature の設計書（例: `docs/projects/time-model-split/` の該当 Step）の対象、(b) 他の in-progress issue（`status:in-progress` ラベル）の対象、と突合する。重なれば渡さず次の候補へ
 3. **凍結チェック**: `status:blocked` が付いていないこと、tracking issue の凍結リストに載っていないことを確認
 4. issue 本文を **handoff-quality** に補強する（下記テンプレート）。worker が repo 探索なしで着手できる密度が基準
-5. `status:in-progress` ラベルを付け、tracking issue の checklist にコメントで dispatch 先（Sonnet / Codex / その他）を記録
+5. `status:in-progress` ラベルを付け、tracking issue にコメントで dispatch 先（Sonnet / Codex / その他）を記録
 6. worker への指示は issue URL + 「本文の受け入れ条件と検証コマンドに従う」だけで済む状態にする
 
 ### handoff-quality テンプレート（issue 本文に含める 4 要素）
