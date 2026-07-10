@@ -12,6 +12,8 @@
 // =============================================================================
 export type { CalendarEvent } from './types/calendar-event';
 export type { EntryWithTags } from './types/entry';
+export type { LogEvent } from './types/log-event';
+export type { PlanEvent, PlanEventStatus } from './types/plan-event';
 
 // =============================================================================
 // Hooks
@@ -26,7 +28,7 @@ export { useEntryInspectorStore } from './stores/useEntryInspectorStore';
 // =============================================================================
 // Lib (actual-time overlay)
 // =============================================================================
-export { computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
+export { computeActualTimeDiffOverlay, formatDiffMinutes } from './lib/actual-time-overlay';
 export { entryTintColor } from './lib/entry-tint';
 
 // =============================================================================
