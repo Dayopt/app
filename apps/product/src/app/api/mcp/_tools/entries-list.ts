@@ -95,14 +95,62 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
           clientId: ctx.clientId,
           scopes: ctx.scopes,
         });
-        const entries = await trpc.entries.list({
+        const [plans, logs] = await Promise.all([
+          trpc.plans.list({
+            limit: limit ?? 50,
+            sortBy: 'start_at',
+            sortOrder: 'desc',
+            ...(startDate ? { startDate } : {}),
+            ...(endDate ? { endDate } : {}),
+            ...(tagId ? { tagId } : {}),
+          }),
+          trpc.logs.list({
+            limit: limit ?? 50,
+            sortBy: 'start_at',
+            sortOrder: 'desc',
+            ...(startDate ? { startDate } : {}),
+            ...(endDate ? { endDate } : {}),
+            ...(tagId ? { tagId } : {}),
+          }),
+        ]);
+        const entries = [
+          ...plans.map((plan) => ({
+            id: plan.id,
+            title: plan.title,
+            description: plan.note,
+            origin: 'planned',
+            start_time: plan.start_at,
+            end_time: plan.end_at,
+            actual_start_time: null,
+            actual_end_time: null,
+            planned_duration_minutes: null,
+            tag_id: plan.tag_id,
+            created_at: plan.created_at,
+            updated_at: plan.updated_at,
+          })),
+          ...logs.map((log) => ({
+            id: log.id,
+            title: log.title,
+            description: log.note,
+            origin: log.plan_id ? 'planned' : 'unplanned',
+            start_time: log.start_at,
+            end_time: log.end_at,
+            actual_start_time: log.start_at,
+            actual_end_time: log.end_at,
+            planned_duration_minutes: null,
+            tag_id: log.tag_id,
+            created_at: log.created_at,
+            updated_at: log.updated_at,
+          })),
+        ];
+        /* const entries = await trpc.entries.list({
           limit: limit ?? 50,
           sortBy: 'start_time',
           sortOrder: 'desc',
           ...(startDate ? { startDate } : {}),
           ...(endDate ? { endDate } : {}),
           ...(tagId ? { tagId } : {}),
-        });
+        }); */
 
         const normalized = (entries as EntryRowLike[]).map(normalizeEntry);
         return {
