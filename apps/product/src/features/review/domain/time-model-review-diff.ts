@@ -1,6 +1,6 @@
-export type TimeModelReviewDiffKind = 'recorded' | 'skipped' | 'unplanned' | 'unrecorded';
+type TimeModelReviewDiffKind = 'recorded' | 'skipped' | 'unplanned' | 'unrecorded';
 
-export interface TimeModelReviewDiffResult {
+interface TimeModelReviewDiffResult {
   summary: {
     plannedMinutes: number;
     actualMinutes: number;

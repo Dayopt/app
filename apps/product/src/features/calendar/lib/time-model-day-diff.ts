@@ -1,6 +1,6 @@
-export type TimeModelDayDiffKind = 'recorded' | 'skipped' | 'unplanned' | 'unrecorded';
+type TimeModelDayDiffKind = 'recorded' | 'skipped' | 'unplanned' | 'unrecorded';
 
-export interface TimeModelPlanDiffInput {
+interface TimeModelPlanDiffInput {
   id: string;
   title: string;
   tagId: string | null;
@@ -11,7 +11,7 @@ export interface TimeModelPlanDiffInput {
   deletedAt?: Date | null | undefined;
 }
 
-export interface TimeModelLogDiffInput {
+interface TimeModelLogDiffInput {
   id: string;
   planId: string | null;
   title: string;
@@ -21,7 +21,7 @@ export interface TimeModelLogDiffInput {
   endAt: Date;
 }
 
-export interface TimeModelDayDiffItem {
+interface TimeModelDayDiffItem {
   id: string;
   kind: TimeModelDayDiffKind;
   title: string;
@@ -34,7 +34,7 @@ export interface TimeModelDayDiffItem {
   sortTime: number;
 }
 
-export interface TimeModelDayDiffResult {
+interface TimeModelDayDiffResult {
   summary: {
     plannedMinutes: number;
     actualMinutes: number;
@@ -45,7 +45,7 @@ export interface TimeModelDayDiffResult {
   items: TimeModelDayDiffItem[];
 }
 
-export interface TimeModelDayDiffBounds {
+interface TimeModelDayDiffBounds {
   dayStart?: Date | null | undefined;
   dayEnd?: Date | null | undefined;
 }
