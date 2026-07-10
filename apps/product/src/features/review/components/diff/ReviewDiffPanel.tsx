@@ -8,7 +8,8 @@ import { useTagsMap } from '@/features/tags';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { Button, cn } from '@dayopt/components';
 
-export type ReviewDiffKind = 'unplanned' | 'missed' | 'shifted' | 'resized';
+export type ReviewDiffKind =
+  'unplanned' | 'missed' | 'recorded' | 'resized' | 'shifted' | 'skipped' | 'unrecorded';
 
 export interface ReviewDiffItem {
   id: string;
@@ -35,6 +36,7 @@ export interface ReviewDiffSummary {
   diffMinutes: number;
   unplannedMinutes: number;
   missedMinutes: number;
+  unrecordedMinutes?: number | undefined;
 }
 
 export interface ReviewDiffResult {
@@ -55,6 +57,9 @@ const KIND_ICON = {
   missed: Minus,
   shifted: GitCompareArrows,
   resized: GitCompareArrows,
+  recorded: GitCompareArrows,
+  skipped: Minus,
+  unrecorded: Minus,
 } satisfies Record<ReviewDiffKind, typeof Plus>;
 
 export function ReviewDiffPanel({
@@ -127,6 +132,12 @@ export function ReviewDiffPanel({
             label={t('calendar.compare.rail.summary.missed')}
             value={formatDuration(t, diff.summary.missedMinutes)}
           />
+          {diff.summary.unrecordedMinutes != null ? (
+            <SummaryMetric
+              label={t('calendar.compare.rail.summary.unrecorded')}
+              value={formatDuration(t, diff.summary.unrecordedMinutes)}
+            />
+          ) : null}
         </dl>
       </header>
 
@@ -240,7 +251,9 @@ function DiffBadge({ item }: { item: ReviewDiffItem }) {
 
 function diffBadgeLabel(t: ReturnType<typeof useTranslations>, item: ReviewDiffItem): string {
   if (item.kind === 'unplanned') return formatSignedDuration(t, item.actualMinutes);
-  if (item.kind === 'missed') return formatSignedDuration(t, -item.plannedMinutes);
+  if (item.kind === 'missed' || item.kind === 'skipped' || item.kind === 'unrecorded') {
+    return formatSignedDuration(t, -item.plannedMinutes);
+  }
 
   if (item.kind === 'shifted' && item.startDiffMinutes !== 0) {
     const duration = formatDuration(t, Math.abs(item.startDiffMinutes));
@@ -262,6 +275,12 @@ function kindLabel(t: ReturnType<typeof useTranslations>, kind: ReviewDiffKind):
       return t('calendar.compare.rail.kind.shifted');
     case 'resized':
       return t('calendar.compare.rail.kind.resized');
+    case 'recorded':
+      return t('calendar.compare.rail.kind.recorded');
+    case 'skipped':
+      return t('calendar.compare.rail.kind.skipped');
+    case 'unrecorded':
+      return t('calendar.compare.rail.kind.unrecorded');
   }
 }
 

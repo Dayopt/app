@@ -33,13 +33,17 @@
           "actual": "実績",
           "diff": "差分",
           "unplanned": "予定外",
-          "missed": "未実施"
+          "missed": "未実施",
+          "unrecorded": "未記録"
         },
         "kind": {
           "unplanned": "追加",
           "missed": "未実施",
           "shifted": "移動",
-          "resized": "長さ変更"
+          "resized": "長さ変更",
+          "recorded": "記録",
+          "skipped": "やらなかった",
+          "unrecorded": "未記録"
         },
         "badge": {
           "late": "{duration}遅れ",
