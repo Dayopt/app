@@ -158,4 +158,26 @@ describe('expandLogRowsToLogEvents', () => {
     expect(events.find((e) => e.id === 'l1')?.diffMinutes).toBe(0);
     expect(events.find((e) => e.id === 'l2')?.diffMinutes).toBeUndefined();
   });
+
+  it('秒以下の端数は truncateToMinute 後の duration で集計する（生の timestamp 差分を使わない）', () => {
+    // 09:00:31 - 10:00:00 は truncateToMinute で 09:00:00 - 10:00:00 = 60分。
+    // 生の timestamp 差分（59分29秒）を丸めると 59分になり、60分 plan に対して
+    // 誤って -1min の差分が出てしまう回帰テスト。
+    const rows = [
+      makeRow({
+        id: 'l1',
+        plan_id: 'p1',
+        source: 'from_plan',
+        start_at: '2026-07-10T09:00:31Z',
+        end_at: '2026-07-10T10:00:00Z',
+      }),
+    ];
+    const events = expandLogRowsToLogEvents(rows, {
+      timezone: 'UTC',
+      plannedMinutesByPlanId: new Map([['p1', 60]]),
+    });
+
+    expect(events[0]?.duration).toBe(60);
+    expect(events[0]?.diffMinutes).toBe(0);
+  });
 });

@@ -83,28 +83,31 @@ export function expandLogRowsToLogEvents(
   rows: ReadonlyArray<LogEventSourceRow>,
   options: ExpandLogRowsOptions,
 ): LogEvent[] {
+  // `logRowToLogEvent` が truncateToMinute 済みの `duration` を単一の情報源として使う
+  // （ここで生の start_at/end_at から再計算すると truncate 前の秒数が混ざる）。
+  const events = rows.map((row) =>
+    logRowToLogEvent(row, { timezone: options.timezone, plannedMinutes: null }),
+  );
+
   const totalActualMinutesByPlanId = new Map<string, number>();
   const primaryLogIdByPlanId = new Map<string, string>();
 
-  for (const row of rows) {
-    if (row.plan_id == null) continue;
+  rows.forEach((row, i) => {
+    if (row.plan_id == null) return;
 
-    const duration = Math.round(
-      (new Date(row.end_at).getTime() - new Date(row.start_at).getTime()) / 60000,
-    );
     totalActualMinutesByPlanId.set(
       row.plan_id,
-      (totalActualMinutesByPlanId.get(row.plan_id) ?? 0) + duration,
+      (totalActualMinutesByPlanId.get(row.plan_id) ?? 0) + events[i]!.duration,
     );
 
     const currentPrimaryId = primaryLogIdByPlanId.get(row.plan_id);
     if (!currentPrimaryId || row.source === 'from_plan') {
       primaryLogIdByPlanId.set(row.plan_id, row.id);
     }
-  }
+  });
 
-  return rows.map((row) => {
-    const event = logRowToLogEvent(row, { timezone: options.timezone, plannedMinutes: null });
+  return rows.map((row, i) => {
+    const event = events[i]!;
 
     const isPrimary = row.plan_id != null && primaryLogIdByPlanId.get(row.plan_id) === row.id;
     if (!isPrimary || row.plan_id == null) return event;
