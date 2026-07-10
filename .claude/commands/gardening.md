@@ -39,6 +39,10 @@ feedback / incident の note は、対応がまだ `operations/` 側の手順に
 
 `docs/engineering/log/` に `*-ai-config-audit.md` が直近 3 ヶ月存在しなければ、`audit-ai-config` skill による AI 設定棚卸しの実施をユーザーに提案する（このステップで実施はしない。提案のみ）。
 
+### 5.5. 並行レーン sweep（月次）
+
+`dispatch` skill（`.agents/skills/dispatch/SKILL.md`）の操作 C（sweep）を実施する。issue の外に溜まった作業（advisors / Dependabot alerts / 監査ログ残タスク / 生成スクリプトの故障 / 放置 PR）を検出し、見つけたら同 skill の intake で起票する。結果はステップ 6 のロールアップに件数を記録する。
+
 ### 6. 月次ロールアップへの記録
 
 このガーデニング実施の内容(蒸留したセッション件数、triageした上位10件の対応、昇格したnote、スモークテストの結果)を当月 `docs/engineering/log/YYYY-MM-01-journal.md` に追記して終了する。
