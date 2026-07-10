@@ -201,25 +201,20 @@ describe('PlanService.record', () => {
 
     expect(mockSupabase.from).toHaveBeenCalledTimes(2);
   });
+});
 
-  it('DB unique violation を ALREADY_RECORDED に変換する', async () => {
+describe('PlanService.skip', () => {
+  it('active log が紐づく plan の skip を拒否する', async () => {
     const plan = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
     const { service, mockSupabase } = createPlanService();
-    let logsCallCount = 0;
-    mockSupabase.from.mockImplementation((table: string) => {
-      if (table === 'plans') return createChainableMock(plan);
-      logsCallCount++;
-      if (logsCallCount <= 2) return createChainableMock([]);
-      return createChainableMock(null, {
-        code: '23505',
-        message: 'duplicate key value violates unique constraint',
-      });
-    });
+    mockSupabase.from.mockImplementation((table: string) =>
+      createChainableMock(table === 'plans' ? plan : [createLog({ plan_id: plan.id })]),
+    );
 
-    await expect(service.record({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
+    await expect(service.skip({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
       code: 'ALREADY_RECORDED',
     });
   });
@@ -270,28 +265,65 @@ describe('LogService.create', () => {
     expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
-  it('plan の active log unique violation を ALREADY_RECORDED に変換する', async () => {
+  it('past plan には複数の manual log を紐づけられる', async () => {
+    const plan = createPlan({
+      end_at: '2026-03-17T11:00:00.000Z',
+      start_at: '2026-03-17T10:00:00.000Z',
+    });
+    const log = createLog({ plan_id: plan.id });
     const { service, mockSupabase } = createLogService();
-    let callCount = 0;
-    mockSupabase.from.mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) return createChainableMock([]);
-      return createChainableMock(null, {
-        code: '23505',
-        message: 'duplicate key value violates unique constraint',
-      });
+    let logsCallCount = 0;
+    mockSupabase.from.mockImplementation((table: string) => {
+      if (table === 'plans') return createChainableMock(plan);
+      logsCallCount++;
+      return createChainableMock(logsCallCount === 1 ? [] : log);
     });
 
     await expect(
       service.create({
         userId: USER_ID,
         input: {
-          title: 'Duplicate plan log',
+          title: 'Second segment',
+          planId: plan.id,
+          start_at: '2026-03-17T12:00:00.000Z',
+          end_at: '2026-03-17T13:00:00.000Z',
+        },
+      }),
+    ).resolves.toMatchObject({ plan_id: plan.id });
+  });
+
+  it('future plan への紐づけを拒否する', async () => {
+    const { service, mockSupabase } = createLogService();
+    mockSupabase.from.mockReturnValue(createChainableMock(createPlan()));
+
+    await expect(
+      service.create({
+        userId: USER_ID,
+        input: {
+          title: 'Linked log',
           planId: 'plan-1',
           start_at: '2026-03-17T10:00:00.000Z',
           end_at: '2026-03-17T11:00:00.000Z',
         },
       }),
-    ).rejects.toMatchObject({ code: 'ALREADY_RECORDED' });
+    ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
+
+    expect(mockSupabase.from).toHaveBeenCalledWith('plans');
+  });
+
+  it('plan 紐づけの update でも future plan を拒否する', async () => {
+    const existing = createLog();
+    const { service, mockSupabase } = createLogService();
+    mockSupabase.from.mockImplementation((table: string) =>
+      createChainableMock(table === 'logs' ? existing : createPlan()),
+    );
+
+    await expect(
+      service.update({
+        userId: USER_ID,
+        logId: existing.id,
+        input: { planId: 'plan-1' },
+      }),
+    ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
   });
 });

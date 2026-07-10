@@ -92,6 +92,10 @@ export class LogService {
     this.validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
     this.ensureLogCanBeCreated(input.end_at);
 
+    if (input.planId) {
+      await this.ensureRecordablePlan(userId, input.planId);
+    }
+
     if (preventOverlappingLogs) {
       await this.ensureNoLogOverlap(userId, input.start_at, input.end_at);
     }
@@ -130,6 +134,10 @@ export class LogService {
 
     this.validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
     if (updatesTime) this.ensureLogCanBeCreated(nextEndAt);
+
+    if (input.planId) {
+      await this.ensureRecordablePlan(userId, input.planId);
+    }
 
     if (preventOverlappingLogs && updatesTime) {
       await this.ensureNoLogOverlap(userId, nextStartAt, nextEndAt, logId);
@@ -245,6 +253,28 @@ export class LogService {
     }
   }
 
+  private async ensureRecordablePlan(userId: string, planId: string): Promise<void> {
+    const { data, error } = await this.supabase
+      .from('plans')
+      .select('id, end_at, skipped_at')
+      .eq('id', planId)
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .single();
+
+    if (error || !data) {
+      throw new TimeModelServiceError('NOT_FOUND', 'Plan not found');
+    }
+
+    if (new Date(data.end_at).getTime() > Date.now()) {
+      throw new TimeModelServiceError('RECORD_IN_FUTURE', 'Future plans cannot have linked logs.');
+    }
+
+    if (data.skipped_at) {
+      throw new TimeModelServiceError('INVALID_INPUT', 'Skipped plans cannot have linked logs.');
+    }
+  }
+
   private handleMutationError(
     error: { code?: string; message: string },
     code: string,
@@ -255,9 +285,6 @@ export class LogService {
         'TIME_OVERLAP',
         'This time range overlaps with an existing item.',
       );
-    }
-    if (error.code === '23505') {
-      throw new TimeModelServiceError('ALREADY_RECORDED', 'Plan already has an active log.');
     }
     throw new TimeModelServiceError(code, `${prefix}: ${error.message}`);
   }

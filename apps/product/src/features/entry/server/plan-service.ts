@@ -204,6 +204,8 @@ export class PlanService {
       );
     }
 
+    await this.ensurePlanNotRecorded(userId, planId);
+
     const { data, error } = await this.supabase
       .from('plans')
       .update({ skipped_at: new Date().toISOString() })
@@ -401,9 +403,6 @@ export class PlanService {
         'TIME_OVERLAP',
         'This time range overlaps with an existing item.',
       );
-    }
-    if (error.code === '23505') {
-      throw new TimeModelServiceError('ALREADY_RECORDED', 'Plan already has an active log.');
     }
     throw new TimeModelServiceError(code, `${prefix}: ${error.message}`);
   }
