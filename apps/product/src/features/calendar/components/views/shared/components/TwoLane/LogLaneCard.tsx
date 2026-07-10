@@ -17,7 +17,7 @@ import { cn } from '@dayopt/components';
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 import { DiffBadge } from './DiffBadge';
 
-export interface LogLaneCardProps {
+interface LogLaneCardProps {
   event: LogEvent;
   position: TwoLanePosition;
   tagColor?: string | null | undefined;

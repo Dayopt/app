@@ -16,7 +16,7 @@ import type { LogEvent, PlanEvent } from '@/features/entry';
 import { LogLaneCard } from './LogLaneCard';
 import { PlanLaneCard } from './PlanLaneCard';
 
-export interface TwoLaneDayColumnProps {
+interface TwoLaneDayColumnProps {
   plans: ReadonlyArray<PlanEvent>;
   logs: ReadonlyArray<LogEvent>;
   /** 1 時間あたりの px */

@@ -13,7 +13,7 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { formatDiffMinutes } from '@/features/entry';
 import { cn } from '@dayopt/components';
 
-export interface DiffBadgeProps {
+interface DiffBadgeProps {
   /** 実績 - 予定（分）。0 の場合は何も描画しない。 */
   diffMinutes: number;
   className?: string | undefined;

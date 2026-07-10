@@ -24,17 +24,17 @@ export interface TwoLanePosition {
   width: number;
 }
 
-export interface TwoLaneLayoutItem<T> {
+interface TwoLaneLayoutItem<T> {
   entry: T;
   position: TwoLanePosition;
 }
 
-export interface TwoLaneLayoutResult {
+interface TwoLaneLayoutResult {
   planLayouts: TwoLaneLayoutItem<PlanEvent>[];
   logLayouts: TwoLaneLayoutItem<LogEvent>[];
 }
 
-export interface CalculateTwoLaneLayoutOptions {
+interface CalculateTwoLaneLayoutOptions {
   plans: ReadonlyArray<PlanEvent>;
   logs: ReadonlyArray<LogEvent>;
   /** 1 時間あたりの px */

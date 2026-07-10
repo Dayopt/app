@@ -15,7 +15,7 @@ import { cn } from '@dayopt/components';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 
-export interface PlanLaneCardProps {
+interface PlanLaneCardProps {
   event: PlanEvent;
   position: TwoLanePosition;
   tagColor?: string | null | undefined;

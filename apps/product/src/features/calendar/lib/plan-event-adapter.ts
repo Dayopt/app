@@ -51,7 +51,7 @@ function resolvePlanEventStatus({
   return 'upcoming';
 }
 
-export interface PlanRowToPlanEventOptions {
+interface PlanRowToPlanEventOptions {
   timezone: string;
   /** この plan を参照する log（`source <> 'auto_migrated'` を問わず）が 1 件以上あるか */
   isRecorded: boolean;
@@ -88,7 +88,7 @@ export function planRowToPlanEvent(
   };
 }
 
-export interface ExpandPlanRowsOptions {
+interface ExpandPlanRowsOptions {
   timezone: string;
   /** log から紐づけられている plan id の集合（1 件以上参照されていれば記録済み扱い） */
   recordedPlanIds: ReadonlySet<string>;

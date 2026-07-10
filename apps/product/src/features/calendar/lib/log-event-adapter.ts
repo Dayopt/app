@@ -27,7 +27,7 @@ function truncateToMinute(date: Date): Date {
   return d;
 }
 
-export interface LogRowToLogEventOptions {
+interface LogRowToLogEventOptions {
   timezone: string;
   /** 紐づく plan の所要時間（分）。`plan_id` が無い、または呼び出し側で未解決なら null/undefined */
   plannedMinutes?: number | null | undefined;
@@ -62,7 +62,7 @@ export function logRowToLogEvent(
   };
 }
 
-export interface ExpandLogRowsOptions {
+interface ExpandLogRowsOptions {
   timezone: string;
   /** plan id -> 所要時間（分）。1 plan に複数 log が紐づく場合も同じ plan 時間を毎回参照する */
   plannedMinutesByPlanId: ReadonlyMap<string, number>;
