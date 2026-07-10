@@ -18,6 +18,8 @@ interface PendingSelection {
   endHour: number;
   endMinute: number;
   creationSource?: 'planned-gap' | undefined;
+  /** Step 5 のレーン起点。保存先は最終的に end_at のルールが優先する。 */
+  lane?: 'plan' | 'log' | undefined;
   /**
    * 「スキップして記録」で作成する場合、この記録を作る前にスキップする自動記録の id。
    * 作成が実際に確定する時にだけスキップする（パレットを閉じてキャンセルした時は何も変えない）。

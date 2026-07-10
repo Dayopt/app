@@ -36,6 +36,12 @@ describe('useInlineCreateStore', () => {
       expect(useInlineCreateStore.getState().pendingSelection?.creationSource).toBe('planned-gap');
     });
 
+    it('レーン起点を保持できる', () => {
+      useInlineCreateStore.getState().setPendingSelection({ ...mockSelection, lane: 'log' });
+
+      expect(useInlineCreateStore.getState().pendingSelection?.lane).toBe('log');
+    });
+
     it('既存の選択を上書きできる', () => {
       useInlineCreateStore.getState().setPendingSelection(mockSelection);
       const newSelection = { ...mockSelection, startHour: 14, endHour: 15 };
