@@ -274,7 +274,7 @@ export class PlanService {
       .single();
 
     if (error) {
-      this.handleMutationError(error, 'CREATE_FAILED', 'Failed to record plan');
+      this.handleRecordMutationError(error, 'Failed to record plan');
     }
 
     return data;
@@ -292,7 +292,7 @@ export class PlanService {
     });
 
     if (error) {
-      this.handleMutationError(error, 'CREATE_FAILED', 'Failed to confirm day plans');
+      this.handleRecordMutationError(error, 'Failed to confirm day plans');
     }
 
     return data ?? [];
@@ -405,6 +405,19 @@ export class PlanService {
       );
     }
     throw new TimeModelServiceError(code, `${prefix}: ${error.message}`);
+  }
+
+  private handleRecordMutationError(
+    error: { code?: string; message: string },
+    prefix: string,
+  ): never {
+    if (error.code === '23505') {
+      throw new TimeModelServiceError(
+        'ALREADY_RECORDED',
+        'Plan already has an active recorded log.',
+      );
+    }
+    this.handleMutationError(error, 'CREATE_FAILED', prefix);
   }
 
   private sanitizeSearch(search: string): string {

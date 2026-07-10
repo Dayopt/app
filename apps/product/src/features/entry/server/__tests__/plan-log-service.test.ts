@@ -201,6 +201,28 @@ describe('PlanService.record', () => {
 
     expect(mockSupabase.from).toHaveBeenCalledTimes(2);
   });
+
+  it('同時記録による from_plan 一意制約違反を再記録エラーに変換する', async () => {
+    const plan = createPlan({
+      end_at: '2026-03-17T11:00:00.000Z',
+      start_at: '2026-03-17T10:00:00.000Z',
+    });
+    const { service, mockSupabase } = createPlanService();
+    let logsCallCount = 0;
+    mockSupabase.from.mockImplementation((table: string) => {
+      if (table === 'plans') return createChainableMock(plan);
+      logsCallCount++;
+      if (logsCallCount <= 2) return createChainableMock([]);
+      return createChainableMock(null, {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint',
+      });
+    });
+
+    await expect(service.record({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
+      code: 'ALREADY_RECORDED',
+    });
+  });
 });
 
 describe('PlanService.skip', () => {
@@ -244,6 +266,24 @@ describe('PlanService.confirmDay', () => {
         p_user_id: USER_ID,
       }),
     );
+  });
+
+  it('同時確定による from_plan 一意制約違反を再記録エラーに変換する', async () => {
+    const { service, mockSupabase } = createPlanService();
+    mockSupabase.rpc.mockResolvedValue({
+      data: null,
+      error: { code: '23505', message: 'duplicate key value violates unique constraint' },
+    });
+
+    await expect(
+      service.confirmDay({
+        userId: USER_ID,
+        input: {
+          start_at: '2026-03-17T00:00:00.000Z',
+          end_at: '2026-03-18T00:00:00.000Z',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'ALREADY_RECORDED' });
   });
 });
 
