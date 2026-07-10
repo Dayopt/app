@@ -1,9 +1,12 @@
 export const databaseTables = {
   emailSuppressions: 'email_suppressions',
   entries: 'entries',
+  externalCalendarEvents: 'external_calendar_events',
+  logs: 'logs',
   mfaRecoveryCodes: 'mfa_recovery_codes',
   oauthAuthorizationCodes: 'oauth_authorization_codes',
   oauthTokens: 'oauth_tokens',
+  plans: 'plans',
   profiles: 'profiles',
   reports: 'reports',
   stripeWebhookEvents: 'stripe_webhook_events',
