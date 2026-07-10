@@ -12,9 +12,8 @@ import type { McpRequestContext } from '../_server';
 /**
  * `entries.list` tool — Dayopt entries (timeboxes / records) を取得する。
  *
- * Phase 1 の唯一の tool。read-only。`createMcpTrpcCaller` 経由で `entries.list`
- * tRPC procedure を呼び、`proProcedure` の Pro gate と `protectedProcedure` の
- * userId 注入を再利用する (docs/projects/mcp-server/overview.md Decision 9)。
+ * Step 8 以降の互換 tool。`createMcpTrpcCaller` 経由で plans / logs の read procedure
+ * を呼び、従来の entry 形式へ合成して返す。
  */
 
 const inputSchema = {
@@ -68,6 +67,10 @@ interface EntryRowLike {
   updated_at: string | null;
 }
 
+function durationMinutes(startTime: string, endTime: string): number {
+  return Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60_000);
+}
+
 export function registerEntriesListTool(server: McpServer, ctx: McpRequestContext) {
   server.registerTool(
     'entries.list',
@@ -113,7 +116,7 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
             ...(tagId ? { tagId } : {}),
           }),
         ]);
-        const entries = [
+        const entries: EntryRowLike[] = [
           ...plans.map((plan) => ({
             id: plan.id,
             title: plan.title,
@@ -123,7 +126,7 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
             end_time: plan.end_at,
             actual_start_time: null,
             actual_end_time: null,
-            planned_duration_minutes: null,
+            planned_duration_minutes: durationMinutes(plan.start_at, plan.end_at),
             tag_id: plan.tag_id,
             created_at: plan.created_at,
             updated_at: plan.updated_at,
@@ -137,22 +140,18 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
             end_time: log.end_at,
             actual_start_time: log.start_at,
             actual_end_time: log.end_at,
-            planned_duration_minutes: null,
+            planned_duration_minutes: log.plan_id
+              ? durationMinutes(log.start_at, log.end_at)
+              : null,
             tag_id: log.tag_id,
             created_at: log.created_at,
             updated_at: log.updated_at,
           })),
-        ];
-        /* const entries = await trpc.entries.list({
-          limit: limit ?? 50,
-          sortBy: 'start_time',
-          sortOrder: 'desc',
-          ...(startDate ? { startDate } : {}),
-          ...(endDate ? { endDate } : {}),
-          ...(tagId ? { tagId } : {}),
-        }); */
+        ]
+          .sort((a, b) => (b.start_time ?? '').localeCompare(a.start_time ?? ''))
+          .slice(0, limit ?? 50);
 
-        const normalized = (entries as EntryRowLike[]).map(normalizeEntry);
+        const normalized = entries.map(normalizeEntry);
         return {
           content: [
             {

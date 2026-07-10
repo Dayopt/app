@@ -2,6 +2,7 @@ import 'server-only';
 
 import { z } from 'zod';
 
+import { logger } from '@/lib/logger';
 import { createMcpTrpcCaller } from '@/lib/mcp/trpc-bridge';
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -29,29 +30,39 @@ export function registerTimeModelListTools(server: McpServer, ctx: McpRequestCon
         if (!ctx.scopes.includes('read:entries')) {
           return { content: [{ type: 'text' as const, text: 'Access denied.' }], isError: true };
         }
-        const trpc = createMcpTrpcCaller({
-          userId: ctx.userId,
-          clientId: ctx.clientId,
-          scopes: ctx.scopes,
-        });
-        const input = {
-          limit: limit ?? 50,
-          ...(startDate ? { startDate } : {}),
-          ...(endDate ? { endDate } : {}),
-          ...(tagId ? { tagId } : {}),
-        };
-        const rows =
-          model === 'plans'
-            ? await trpc.plans.list({ ...input, sortBy: 'start_at', sortOrder: 'desc' })
-            : await trpc.logs.list({ ...input, sortBy: 'start_at', sortOrder: 'desc' });
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({ count: rows.length, [model]: rows }, null, 2),
-            },
-          ],
-        };
+        try {
+          const trpc = createMcpTrpcCaller({
+            userId: ctx.userId,
+            clientId: ctx.clientId,
+            scopes: ctx.scopes,
+          });
+          const input = {
+            limit: limit ?? 50,
+            ...(startDate ? { startDate } : {}),
+            ...(endDate ? { endDate } : {}),
+            ...(tagId ? { tagId } : {}),
+          };
+          const rows =
+            model === 'plans'
+              ? await trpc.plans.list({ ...input, sortBy: 'start_at', sortOrder: 'desc' })
+              : await trpc.logs.list({ ...input, sortBy: 'start_at', sortOrder: 'desc' });
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: JSON.stringify({ count: rows.length, [model]: rows }, null, 2),
+              },
+            ],
+          };
+        } catch (error) {
+          logger.error({ error, model, userId: ctx.userId }, `[mcp] ${model}.list failed`);
+          return {
+            content: [
+              { type: 'text' as const, text: `Failed to list ${model}. Please try again.` },
+            ],
+            isError: true,
+          };
+        }
       },
     );
   }
