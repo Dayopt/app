@@ -54,6 +54,7 @@ pnpm docs:check               # リンク切れ/frontmatter/命名/append-only �
 ## Non-Negotiables
 
 - 既存コードを検索してから変更する。`rg` / `rg --files` を優先する
+- issue の起票・worker への作業依頼・`status:blocked` issue への着手判断は `dispatch` skill（`.agents/skills/dispatch/SKILL.md`）の規約に従う。凍結 issue には着手しない
 - 既存の未コミット差分はユーザー作業として扱い、勝手に revert / stage しない
 - `git add .` は避ける。必ず path-limited add で scope を固定する
 - コミット前に `git diff --cached` を確認する
@@ -69,7 +70,7 @@ pnpm docs:check               # リンク切れ/frontmatter/命名/append-only �
   | `docs`     | ドキュメントのみの変更         |
   | `test`     | テストの追加・修正             |
   | `perf`     | パフォーマンス改善             |
-- PR を merge する時は、枝分かれを履歴に残すため `gh pr merge --merge` を標準にする
+- PR を merge する時は、枝分かれを履歴に残すため `gh pr merge --merge --delete-branch` を標準にする。**マージ後は同一セッション内でローカルブランチと作業に使った worktree も削除する**（worktree remove → branch -d の順。`.claude/rules/workflow.md` §Worktree 運用）
 
 ## Coding Rules
 
@@ -129,7 +130,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 
 Project skills は `.agents/skills/` を参照する。該当する作業では `SKILL.md` を先に読む。実体は `.claude/skills/` が正本で、`.agents/skills/` は各 skill への symlink（二重管理しない）。
 
-error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / audit-ai-config
+error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / audit-ai-config / dispatch
 
 ## Workflow
 
