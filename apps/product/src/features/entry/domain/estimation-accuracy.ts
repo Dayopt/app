@@ -49,3 +49,95 @@ export function transformEstimationAccuracy(
     entryCount: row.entry_count,
   }));
 }
+
+/**
+ * Step 4: `plans` LEFT JOIN `logs` (`plan_id` 経由) の 1:N 見積もり精度集計。
+ *
+ * 1 plan に複数 log が紐づく場合（分割記録）は log 時間を合算して 1 件の
+ * 「実績」として扱う。`source = 'auto_migrated'` の log はユーザーが確定した記録
+ * ではないため合算から除外する（overview.md §8 未決 4、Step 2 決定）。
+ * 除外した結果、紐づく実績が 1 件も無い plan は estimation accuracy の分母から外れる
+ * （旧 RPC の `actual_start_time/end_time IS NOT NULL` 条件と同じ効果）。
+ *
+ * 出力は `transformEstimationAccuracy` にそのまま渡せる DB-row 互換 shape。
+ */
+
+export interface EstimationAccuracyPlanRow {
+  id: string;
+  tag_id: string | null;
+  planned_minutes: number;
+}
+
+export interface EstimationAccuracyLogRow {
+  plan_id: string | null;
+  source: string;
+  minutes: number;
+}
+
+export interface EstimationAccuracyTagLookup {
+  name: string;
+  color: string | null;
+}
+
+const AUTO_MIGRATED_SOURCE = 'auto_migrated';
+/** 旧 `get_estimation_accuracy` RPC の `HAVING COUNT(*) >= 2` を踏襲。 */
+const MIN_ENTRY_COUNT = 2;
+
+export function aggregatePlanLogEstimationAccuracy(
+  plans: ReadonlyArray<EstimationAccuracyPlanRow>,
+  logs: ReadonlyArray<EstimationAccuracyLogRow>,
+  tagsById: ReadonlyMap<string, EstimationAccuracyTagLookup>,
+): EstimationAccuracyDbRow[] {
+  const actualMinutesByPlanId = new Map<string, number>();
+  for (const log of logs) {
+    if (log.plan_id == null || log.source === AUTO_MIGRATED_SOURCE) continue;
+    actualMinutesByPlanId.set(
+      log.plan_id,
+      (actualMinutesByPlanId.get(log.plan_id) ?? 0) + log.minutes,
+    );
+  }
+
+  interface TagAccumulator {
+    tagId: string;
+    plannedSum: number;
+    actualSum: number;
+    deviationSum: number;
+    count: number;
+  }
+  const byTag = new Map<string, TagAccumulator>();
+
+  for (const plan of plans) {
+    if (plan.tag_id == null || plan.planned_minutes <= 0) continue;
+    const actualMinutes = actualMinutesByPlanId.get(plan.id);
+    if (actualMinutes == null) continue;
+
+    const acc = byTag.get(plan.tag_id) ?? {
+      tagId: plan.tag_id,
+      plannedSum: 0,
+      actualSum: 0,
+      deviationSum: 0,
+      count: 0,
+    };
+    acc.plannedSum += plan.planned_minutes;
+    acc.actualSum += actualMinutes;
+    acc.deviationSum += Math.abs(actualMinutes - plan.planned_minutes);
+    acc.count += 1;
+    byTag.set(plan.tag_id, acc);
+  }
+
+  return Array.from(byTag.values())
+    .filter((acc) => acc.count >= MIN_ENTRY_COUNT)
+    .sort((a, b) => b.count - a.count)
+    .map((acc) => {
+      const tag = tagsById.get(acc.tagId);
+      return {
+        tag_id: acc.tagId,
+        tag_name: tag?.name ?? '',
+        tag_color: tag?.color ?? '',
+        avg_planned_minutes: acc.plannedSum / acc.count,
+        avg_actual_minutes: acc.actualSum / acc.count,
+        avg_deviation_minutes: acc.deviationSum / acc.count,
+        entry_count: acc.count,
+      };
+    });
+}

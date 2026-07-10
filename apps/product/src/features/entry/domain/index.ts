@@ -4,8 +4,16 @@ export { findSkippableAutoRecords } from './skippable-auto-records';
 
 export { aggregateDayOfWeekDistribution } from './day-of-week-distribution';
 export { buildTimeUpdateData, buildUndoTimeUpdateData } from './entry-time-update';
-export { transformEstimationAccuracy } from './estimation-accuracy';
-export type { EstimationAccuracyDbRow } from './estimation-accuracy';
+export {
+  aggregatePlanLogEstimationAccuracy,
+  transformEstimationAccuracy,
+} from './estimation-accuracy';
+export type {
+  EstimationAccuracyDbRow,
+  EstimationAccuracyLogRow,
+  EstimationAccuracyPlanRow,
+  EstimationAccuracyTagLookup,
+} from './estimation-accuracy';
 export { aggregateHourlyDistribution } from './hourly-distribution';
 export { aggregateMonthlyTrend, getMonthlyStartDate } from './monthly-trend';
 export { calculateStreak } from './streak-calculator';
