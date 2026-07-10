@@ -72,17 +72,17 @@ interface TagLookupRow {
   icon: string | null;
 }
 
-export interface DateRangeInput {
+interface DateRangeInput {
   startDate?: string | undefined;
   endDate?: string | undefined;
 }
 
-export interface BlankRateInput extends DateRangeInput {
+interface BlankRateInput extends DateRangeInput {
   wakeHour: number;
   sleepHour: number;
 }
 
-export interface TimePLInput {
+interface TimePLInput {
   startDate: string;
   endDate: string;
   prevStart?: string | undefined;
@@ -91,7 +91,7 @@ export interface TimePLInput {
   sleepHour: number;
 }
 
-export interface StatsPageDataInput {
+interface StatsPageDataInput {
   startDate: string;
   endDate: string;
   prevStart: string;
@@ -102,7 +102,7 @@ export interface StatsPageDataInput {
   sleepHour: number;
 }
 
-export interface TagDashboardInput {
+interface TagDashboardInput {
   tagId: string;
   startDate: string;
   endDate: string;
@@ -698,8 +698,4 @@ export class StatisticsService {
     if (error) throw new Error(`Failed to fetch plans for tag dashboard: ${error.message}`);
     return data ?? [];
   }
-}
-
-export function createStatisticsService(supabase: ServiceSupabaseClient): StatisticsService {
-  return new StatisticsService(supabase);
 }

@@ -18,16 +18,16 @@
 
 import { formatInTimeZone } from 'date-fns-tz';
 
-export interface TimeRangeRow {
+interface TimeRangeRow {
   start_at: string;
   end_at: string;
 }
 
-export interface TagTimeRangeRow extends TimeRangeRow {
+interface TagTimeRangeRow extends TimeRangeRow {
   tag_id: string | null;
 }
 
-export interface FulfillmentTimeRangeRow extends TimeRangeRow {
+interface FulfillmentTimeRangeRow extends TimeRangeRow {
   fulfillment_score: number | null;
 }
 
