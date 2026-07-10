@@ -12,6 +12,8 @@
 // =============================================================================
 export type { CalendarEvent } from './types/calendar-event';
 export type { EntryWithTags } from './types/entry';
+export type { LogEvent } from './types/log-event';
+export type { PlanEvent, PlanEventStatus } from './types/plan-event';
 
 // =============================================================================
 // Hooks
