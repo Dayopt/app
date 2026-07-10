@@ -23,14 +23,15 @@ repo-refactor 棚卸し（#1536）のうち R-09（#1524）/ R-12（#1527）/ R-
 
 ## 決定 2: issue 化されていなかった残骸の補充
 
-検証の上 3 件を起票し、1 件を既存 issue に統合した:
+検証の上 4 件を起票し、1 件を既存 issue に統合した:
 
 - #1564 — Supabase security advisors **WARN 24 件**の棚卸し（全件 `SECURITY DEFINER` × `p_user_id` パターン。一部は 2026-07-04 の migration でガード済みだが体系的な検証がない）。I-16（#1312）close 時の持ち越し分
 - #1565 — `api:spec` ジェネレータ故障の修復（2026-06-15 から `buildErrorResponses` で TypeError、2026-07-10 再現確認。openapi.json が手作業編集運用になっている）
 - #1566 — Sentry 運用整備（alert / Vercel integration 責務 / quota・inbound filter・dashboard。#1006 が NOT_PLANNED close で受け皿がなかった）
+- #1569 — Dependabot security alerts 16 件（high 1 / moderate 13 / low 2）の解消。high は `@modelcontextprotocol/sdk` の transitive 依存 `hono` の CORS 脆弱性（MCP サーバー面）
 - #1558 に pre-deploy 監査ログ（2026-07-08）の残タスク 2 件（Preview long-lived secrets / Development encrypted secrets の見直し）を統合
 
-dependabot 放置 PR（#1033/#1034/#1035）は gap 候補だったが merged 済みと確認し、対象外とした。
+dependabot の version-bump PR（#1033/#1034/#1035）は gap 候補だったが merged 済みと確認し、対象外とした（security alerts は別枠で残っていたため #1569 に切り出し）。
 
 ## 決定 3: 運用ルール（トークン効率）
 
