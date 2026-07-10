@@ -102,6 +102,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 | コマンド        | 内容                                                                     |
 | --------------- | ---------------------------------------------------------------------- |
 | `/decision`     | 各ドメインの `log/` に `YYYY-MM-DD-slug.md` で意思決定ログを新規作成         |
+| `/dispatch`     | 並行レーン orchestration の指揮者運用: issue を worker へ渡す / intake 起票 / sweep 棚卸し / 凍結解除。正は tracking issue（#1567） |
 | `/plan-review`  | 直前の実装 plan を plan-fact-checker / plan-critic の 2 agent で並列レビュー |
 | `/note`         | 各ドメインの `log/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応） |
 | `/session-end`  | 当日の作業を `docs/engineering/log/YYYY-MM-DD-session.md` に記録し `latest.md` を更新 |
