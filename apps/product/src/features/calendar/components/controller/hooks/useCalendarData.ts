@@ -5,13 +5,11 @@ import { useCallback, useDeferredValue, useEffect, useMemo } from 'react';
 import { addDays, subDays } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 
-import type { EntryWithTags } from '@/features/entry';
-import { useEntries } from '@/features/entry';
 import { useTags } from '@/features/tags';
 import { getDateKey } from '@/lib/date';
+import { tzIsSameDay } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
-import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';
 
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 
@@ -57,15 +55,14 @@ interface UseCalendarDataResult {
   viewDateRange: ViewDateRange;
   filteredEvents: CalendarEvent[];
   allCalendarEvents: CalendarEvent[];
-  entriesData: ReturnType<typeof useEntries>['data'];
-  /** エントリ取得エラー */
-  entriesError: ReturnType<typeof useEntries>['error'];
-  /** エントリ取得中かどうか（初回のみ true） */
+  /** time model 取得エラー */
+  entriesError: unknown | null;
+  /** time model 取得中かどうか（初回のみ true） */
   isEntriesLoading: boolean;
   /** バックグラウンド再取得中も含めて取得中かどうか */
   isEntriesFetching: boolean;
   /** エントリ取得を手動で再試行する */
-  refetchEntries: ReturnType<typeof useEntries>['refetch'];
+  refetchEntries: () => Promise<unknown>;
   /** ナビゲーション方向に対応する日付範囲を事前取得する */
   prefetchDirection: (direction: 'prev' | 'next' | 'today') => void;
   /** ビュー切り替え先の日付範囲を即座に事前取得する */
@@ -75,7 +72,7 @@ interface UseCalendarDataResult {
 /**
  * カレンダーデータ取得・変換フック
  *
- * ビュータイプと日付からエントリを取得し、CalendarEvent型に変換・フィルタリングして返す
+ * ビュータイプと日付から plan / log を取得し、既存カレンダー表示型に射影して返す
  */
 export function useCalendarData({
   viewType,
@@ -100,14 +97,26 @@ export function useCalendarData({
     [viewDateRange, timezone],
   );
 
-  // entries を取得（単一クエリ）
-  const {
-    data: entriesData,
-    error: entriesError,
-    isLoading: isEntriesLoading,
-    isFetching: isEntriesFetching,
-    refetch: refetchEntries,
-  } = useEntries(dateFilter);
+  // Step 8: entries を読まず、plans / logs をそれぞれ取得する。
+  const plansQuery = api.plans.list.useQuery({
+    ...dateFilter,
+    sortBy: 'start_at',
+    sortOrder: 'asc',
+    limit: 100,
+  });
+  const logsQuery = api.logs.list.useQuery({
+    ...dateFilter,
+    sortBy: 'start_at',
+    sortOrder: 'asc',
+    limit: 100,
+  });
+  const entriesError = plansQuery.error ?? logsQuery.error;
+  const isEntriesLoading = plansQuery.isLoading || logsQuery.isLoading;
+  const isEntriesFetching = plansQuery.isFetching || logsQuery.isFetching;
+  const refetchEntries = useCallback(
+    () => Promise.all([plansQuery.refetch(), logsQuery.refetch()]),
+    [logsQuery, plansQuery],
+  );
 
   // タグマスタ取得（EntryCard等で使用するためキャッシュをwarm up + フィルタ同期）
   const { data: tagsData } = useTags();
@@ -128,10 +137,14 @@ export function useCalendarData({
   useEffect(() => {
     const prefetchRange = (date: Date, view: CalendarViewType = viewType) => {
       const range = calculateViewDateRange(view, date, weekStartsOn);
-      void utils.entries.list.prefetch({
+      const input = {
         startDate: toTZStartISO(range.start, timezone),
         endDate: toTZEndISO(range.end, timezone),
-      });
+        sortBy: 'start_at' as const,
+        sortOrder: 'asc' as const,
+        limit: 100,
+      };
+      void Promise.all([utils.plans.list.prefetch(input), utils.logs.list.prefetch(input)]);
     };
 
     if (viewType === 'day') {
@@ -150,7 +163,7 @@ export function useCalendarData({
       prefetchRange(subDays(currentDate, 7));
       prefetchRange(addDays(currentDate, 7));
     }
-  }, [currentDate, viewType, weekStartsOn, timezone, utils.entries.list]);
+  }, [currentDate, viewType, weekStartsOn, timezone, utils.logs.list, utils.plans.list]);
 
   // 指定方向のナビゲーション先を事前取得（ホバー/タッチ時に呼ばれる）
   const prefetchDirection = useCallback(
@@ -178,24 +191,32 @@ export function useCalendarData({
       }
 
       const range = calculateViewDateRange(viewType, targetDate, weekStartsOn);
-      void utils.entries.list.prefetch({
+      const input = {
         startDate: toTZStartISO(range.start, timezone),
         endDate: toTZEndISO(range.end, timezone),
-      });
+        sortBy: 'start_at' as const,
+        sortOrder: 'asc' as const,
+        limit: 100,
+      };
+      void Promise.all([utils.plans.list.prefetch(input), utils.logs.list.prefetch(input)]);
     },
-    [currentDate, viewType, weekStartsOn, timezone, utils.entries.list],
+    [currentDate, viewType, weekStartsOn, timezone, utils.logs.list, utils.plans.list],
   );
 
   // ビュー切り替え先の日付範囲を即座にprefetch（useEffect経由の1レンダー遅延を回避）
   const prefetchForView = useCallback(
     (newViewType: CalendarViewType) => {
       const range = calculateViewDateRange(newViewType, currentDate, weekStartsOn);
-      void utils.entries.list.prefetch({
+      const input = {
         startDate: toTZStartISO(range.start, timezone),
         endDate: toTZEndISO(range.end, timezone),
-      });
+        sortBy: 'start_at' as const,
+        sortOrder: 'asc' as const,
+        limit: 100,
+      };
+      void Promise.all([utils.plans.list.prefetch(input), utils.logs.list.prefetch(input)]);
     },
-    [currentDate, weekStartsOn, timezone, utils.entries.list],
+    [currentDate, weekStartsOn, timezone, utils.logs.list, utils.plans.list],
   );
 
   // フィルター関数と状態を取得（ストアに統一）
@@ -205,24 +226,74 @@ export function useCalendarData({
   // チェックボックスUIの即時応答を維持する
   const visibleTagIds = useDeferredValue(useCalendarFilterStore((state) => state.visibleTagIds));
 
-  // 全エントリをCalendarEvent型に変換
+  // Step 8 の表示互換射影。既存のカードと DnD の段階的置換が完了するまで
+  // CalendarEvent は view model としてだけ維持し、データ取得は time model に固定する。
   const allCalendarEvents = useMemo(() => {
-    const calendarPlans: CalendarEvent[] = [];
-
-    if (entriesData) {
-      // サーバー型 → コア型に正規化（tagId を保証）
-      const normalized: EntryWithTags[] = entriesData.map((e) => ({
-        ...e,
-        tagId: e.tagId ?? null,
-      })) as EntryWithTags[];
-      const expandedEvents = expandEntriesToCalendarEvents(normalized, timezone);
-      calendarPlans.push(
-        ...expandedEvents.map((event) => applyTimezoneToDisplayDates(event, timezone)),
+    const plans = plansQuery.data ?? [];
+    const logs = logsQuery.data ?? [];
+    const now = new Date();
+    const planEvents = plans.map((plan) => {
+      const startDate = new Date(plan.start_at);
+      const endDate = new Date(plan.end_at);
+      const entryState = endDate <= now ? 'past' : startDate <= now ? 'active' : 'upcoming';
+      return applyTimezoneToDisplayDates(
+        {
+          id: plan.id,
+          title: plan.title,
+          description: plan.note ?? undefined,
+          startDate,
+          endDate,
+          status: entryState === 'past' ? 'closed' : 'open',
+          color: '',
+          tagId: plan.tag_id,
+          createdAt: new Date(plan.created_at),
+          updatedAt: new Date(plan.updated_at),
+          displayStartDate: startDate,
+          displayEndDate: endDate,
+          duration: Math.round((endDate.getTime() - startDate.getTime()) / 60_000),
+          isMultiDay: !tzIsSameDay(startDate, endDate, timezone),
+          origin: 'planned',
+          entryState,
+          plannedStartDate: startDate,
+          plannedEndDate: endDate,
+          actualStartDate: null,
+          actualEndDate: null,
+          isSkipped: plan.skipped_at != null,
+        },
+        timezone,
       );
-    }
-
-    return calendarPlans;
-  }, [entriesData, timezone]);
+    });
+    const logEvents = logs.map((log) => {
+      const startDate = new Date(log.start_at);
+      const endDate = new Date(log.end_at);
+      return applyTimezoneToDisplayDates(
+        {
+          id: log.id,
+          title: log.title,
+          description: log.note ?? undefined,
+          startDate,
+          endDate,
+          status: 'closed' as const,
+          color: '',
+          tagId: log.tag_id,
+          createdAt: new Date(log.created_at),
+          updatedAt: new Date(log.updated_at),
+          displayStartDate: startDate,
+          displayEndDate: endDate,
+          duration: Math.round((endDate.getTime() - startDate.getTime()) / 60_000),
+          isMultiDay: !tzIsSameDay(startDate, endDate, timezone),
+          origin: log.plan_id ? 'planned' : 'unplanned',
+          entryState: 'past' as const,
+          actualStartDate: startDate,
+          actualEndDate: endDate,
+          plannedStartDate: null,
+          plannedEndDate: null,
+        },
+        timezone,
+      );
+    });
+    return [...planEvents, ...logEvents];
+  }, [logsQuery.data, plansQuery.data, timezone]);
 
   // 表示範囲のイベントをフィルタリング
   const filteredEvents = useMemo(() => {
@@ -262,7 +333,6 @@ export function useCalendarData({
     viewDateRange,
     filteredEvents,
     allCalendarEvents,
-    entriesData,
     entriesError,
     isEntriesLoading,
     isEntriesFetching,

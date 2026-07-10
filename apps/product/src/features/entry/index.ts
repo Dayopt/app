@@ -18,7 +18,7 @@ export type { PlanEvent, PlanEventStatus } from './types/plan-event';
 // =============================================================================
 // Hooks
 // =============================================================================
-export { useEntries, useEntryMutations, useFindSkippableAutoRecords } from './hooks';
+export { useEntryMutations, useFindSkippableAutoRecords } from './hooks';
 
 // =============================================================================
 // Stores

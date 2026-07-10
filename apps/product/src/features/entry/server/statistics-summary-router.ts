@@ -8,14 +8,13 @@ import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/p
 import { calculateStreak } from '../domain';
 
 import { transformStatsOverviewResponse } from './statistics-overview-transform';
+import { StatisticsService } from './statistics-service';
 import {
   dateRangeInput,
   getTodayInTimezone,
   getUserTimezone,
   handleStatsError,
   stripUndefined,
-  type StatsPageData,
-  type TimePLResponse,
 } from './statistics-shared';
 
 export const entriesStatisticsSummaryRouter = createTRPCRouter({
@@ -123,34 +122,7 @@ export const entriesStatisticsSummaryRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       try {
-        const { supabase, userId } = ctx;
-
-        // NOTE: get_time_pl_data は新規追加のため database.types.ts にまだ含まれない。
-        // 型生成後にこの as never キャストを除去する。
-        const { data, error } = await traceDbQuery('stats.get_time_pl_data', async () =>
-          supabase.rpc(
-            'get_time_pl_data' as never,
-            stripUndefined({
-              p_user_id: userId,
-              p_start_date: input.startDate,
-              p_end_date: input.endDate,
-              p_prev_start: input.prevStart,
-              p_prev_end: input.prevEnd,
-              p_wake_hour: input.wakeHour,
-              p_sleep_hour: input.sleepHour,
-            }) as never,
-          ),
-        );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch time PL data: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        return data as unknown as TimePLResponse;
+        return await new StatisticsService(ctx.supabase).getTimePLData(ctx.userId, input);
       } catch (error) {
         handleStatsError('getTimePL', error);
       }
@@ -177,32 +149,7 @@ export const entriesStatisticsSummaryRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       try {
-        const { supabase, userId } = ctx;
-
-        const { data, error } = await traceDbQuery('stats.get_stats_page_data', async () =>
-          supabase.rpc('get_stats_page_data', {
-            p_user_id: userId,
-            p_start_date: input.startDate,
-            p_end_date: input.endDate,
-            p_prev_start: input.prevStart,
-            p_prev_end: input.prevEnd,
-            p_year: input.year,
-            p_monthly_months: input.monthlyMonths,
-            p_wake_hour: input.wakeHour,
-            p_sleep_hour: input.sleepHour,
-          }),
-        );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch review panel data: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        // DB関数が返すJSONをそのまま返す（型はクライアント側で定義）
-        return data as unknown as StatsPageData;
+        return await new StatisticsService(ctx.supabase).getStatsPageData(ctx.userId, input);
       } catch (error) {
         handleStatsError('getStatsPageData', error);
       }

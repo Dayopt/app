@@ -36,7 +36,7 @@ async function getUserIdByToken(token: string): Promise<string | null> {
 /**
  * ユーザーのエントリを取得（タグ名含む）
  */
-async function getEntriesForFeed(userId: string) {
+async function getPlansForFeed(userId: string) {
   const supabase = createServiceRoleClient();
 
   // 過去90日〜未来90日のエントリを取得
@@ -44,47 +44,45 @@ async function getEntriesForFeed(userId: string) {
   const past = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const future = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data: entries, error } = await supabase
-    .from('entries')
+  const { data: plans, error } = await supabase
+    .from('plans')
     .select(
       `
       id,
       title,
-      description,
-      start_time,
-      end_time,
+      note,
+      start_at,
+      end_at,
       created_at,
       updated_at,
       tag_id,
-      tags!entries_tag_id_fkey(name)
+      tags(name)
     `,
     )
     .eq('user_id', userId)
     .is('deleted_at', null)
-    .not('start_time', 'is', null)
-    .not('end_time', 'is', null)
-    .gte('start_time', past)
-    .lte('start_time', future)
-    .order('start_time', { ascending: true })
+    .gte('start_at', past)
+    .lte('start_at', future)
+    .order('start_at', { ascending: true })
     .limit(1000);
 
   if (error) {
-    logger.error('[iCal Feed] entries fetch error', error);
+    logger.error('[iCal Feed] plans fetch error', error);
     return [];
   }
 
   // tags リレーションからタグ名を抽出
-  return (entries ?? []).map((entry) => {
-    const tags = entry.tags as unknown as { name: string } | null;
+  return (plans ?? []).map((plan) => {
+    const tags = plan.tags as unknown as { name: string } | null;
     const tagName = tags?.name ?? null;
     return {
-      id: entry.id,
-      title: entry.title,
-      description: entry.description,
-      start_time: entry.start_time,
-      end_time: entry.end_time,
-      created_at: entry.created_at,
-      updated_at: entry.updated_at,
+      id: plan.id,
+      title: plan.title,
+      description: plan.note,
+      start_time: plan.start_at,
+      end_time: plan.end_at,
+      created_at: plan.created_at,
+      updated_at: plan.updated_at,
       tag_name: tagName,
     };
   });
@@ -199,8 +197,8 @@ export async function GET(
   }
 
   // エントリ取得 → iCal変換
-  const entries = await getEntriesForFeed(userId);
-  const ical = entriesToICal(entries);
+  const plans = await getPlansForFeed(userId);
+  const ical = entriesToICal(plans);
 
   return new NextResponse(ical, {
     status: 200,
