@@ -34,6 +34,30 @@
       "placed": "Added {name} at {time}",
       "overlapError": "{time} overlaps with an existing block"
     },
+    "timeModel": {
+      "destination": {
+        "plan": "Save as plan",
+        "log": "Save as record"
+      },
+      "title": "Title",
+      "titlePlaceholder": "What did you do?",
+      "date": "Date",
+      "time": "Time",
+      "note": "Note",
+      "notePlaceholder": "Add a note...",
+      "save": "Save",
+      "timeLocked": "Time is fixed for past plans",
+      "recordAsIs": "Record as planned",
+      "confirmDay": "Confirm day",
+      "toast": {
+        "recorded": "Recorded ✓",
+        "dayConfirmed": "Day recorded ✓",
+        "overlap": "This time slot is already taken",
+        "saveFailed": "Could not save. Please try again",
+        "recordFailed": "Could not record. Please try again",
+        "confirmFailed": "Could not confirm the day. Please try again"
+      }
+    },
     "sidebar": {
       "tabs": {
         "calendar": "Calendar",

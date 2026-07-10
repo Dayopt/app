@@ -24,11 +24,19 @@ interface CalendarDragState {
   previewTime: { start: Date; end: Date } | null;
   /** スナップされた位置（top, height） */
   snappedPosition: { top: number; height?: number } | null;
+  /** Step 5 の 2 レーン接続用。Plan → Log は record mutation に委譲する。 */
+  sourceLane: 'plan' | 'log' | null;
+  targetLane: 'plan' | 'log' | null;
 }
 
 interface CalendarDragActions {
   /** カレンダー内ドラッグ開始 */
-  startDrag: (entryId: string, entry: CalendarEvent, dateIndex: number) => void;
+  startDrag: (
+    entryId: string,
+    entry: CalendarEvent,
+    dateIndex: number,
+    lane?: 'plan' | 'log',
+  ) => void;
   /** ドラッグ中の状態更新 */
   updateDrag: (
     updates: Partial<Omit<CalendarDragState, 'draggedEntryId' | 'draggedEntry'>>,
@@ -45,13 +53,15 @@ const initialState: CalendarDragState = {
   isDragging: false,
   previewTime: null,
   snappedPosition: null,
+  sourceLane: null,
+  targetLane: null,
 };
 
 /** カレンダーのドラッグ状態を管理するZustandストア */
 export const useCalendarDragStore = create<CalendarDragState & CalendarDragActions>((set) => ({
   ...initialState,
 
-  startDrag: (entryId, entry, dateIndex) =>
+  startDrag: (entryId, entry, dateIndex, lane = 'plan') =>
     set({
       draggedEntryId: entryId,
       draggedEntry: entry,
@@ -60,6 +70,8 @@ export const useCalendarDragStore = create<CalendarDragState & CalendarDragActio
       isDragging: true,
       previewTime: null,
       snappedPosition: null,
+      sourceLane: lane,
+      targetLane: lane,
     }),
 
   updateDrag: (updates) =>
