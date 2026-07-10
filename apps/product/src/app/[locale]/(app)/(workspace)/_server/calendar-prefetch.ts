@@ -82,7 +82,18 @@ export async function prefetchCalendarData(view: CalendarViewType, targetDate: D
 
   try {
     await Promise.all([
-      helpers.entries.list.prefetch(dateFilter),
+      helpers.plans.list.prefetch({
+        ...dateFilter,
+        sortBy: 'start_at',
+        sortOrder: 'asc',
+        limit: 100,
+      }),
+      helpers.logs.list.prefetch({
+        ...dateFilter,
+        sortBy: 'start_at',
+        sortOrder: 'asc',
+        limit: 100,
+      }),
       helpers.entries.getTagStats.prefetch(),
       helpers.tags.list.prefetch(),
     ]);
