@@ -28,7 +28,7 @@ export { useEntryInspectorStore } from './stores/useEntryInspectorStore';
 // =============================================================================
 // Lib (actual-time overlay)
 // =============================================================================
-export { computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
+export { computeActualTimeDiffOverlay, formatDiffMinutes } from './lib/actual-time-overlay';
 export { entryTintColor } from './lib/entry-tint';
 
 // =============================================================================
