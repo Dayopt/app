@@ -24,7 +24,8 @@ import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
 import type { EntryWithTags } from '../../types/entry';
 import { EntryInspectorForm } from './EntryInspectorForm';
 import { FloatingPopover } from './FloatingPopover';
-import { useInspectorKeyboard, useInspectorNavigation } from './hooks';
+import { useInspectorKeyboard } from './hooks';
+import { useInspectorNavigation } from './hooks/useInspectorNavigation';
 
 /** URL同期（useSearchParams は Suspense が必要なため分離） */
 function InspectorURLSyncHandler() {

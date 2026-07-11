@@ -34,11 +34,6 @@ export {
 export { formatTime, formatTimeRange } from './format';
 
 // ========================================
-// Timezone - タイムゾーン（実利用 API のみ）
-// ========================================
-export { localTimeToUTCISO, parseISOToUserTimezone } from './timezone';
-
-// ========================================
 // TimeString - "HH:mm" パース / フォーマット
 // ========================================
 export { formatHHmm, formatTimeString, parseTimeString } from './timeString';

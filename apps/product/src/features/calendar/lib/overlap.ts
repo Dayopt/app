@@ -14,7 +14,7 @@ import type { CalendarEvent } from '../types/calendar.types';
 // =============================================================================
 
 /** plans.list / logs.list キャッシュ行のうち重複判定に必要な部分 */
-export interface TimeModelLaneItem {
+interface TimeModelLaneItem {
   id: string;
   start_at: string;
   end_at: string;
