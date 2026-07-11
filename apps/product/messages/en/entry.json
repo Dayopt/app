@@ -63,7 +63,8 @@
         "restoreFailed": "Could not restore. Please try again",
         "skipped": "Skipped",
         "skipFailed": "Could not skip. Please try again",
-        "unskipped": "Skip removed"
+        "unskipped": "Skip removed",
+        "planCreated": "Plan added ✓"
       },
       "migratedLocked": "Migrated past records cannot be edited"
     },

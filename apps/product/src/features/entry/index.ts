@@ -18,7 +18,12 @@ export type { PlanEvent, PlanEventStatus } from './types/plan-event';
 // =============================================================================
 // Hooks
 // =============================================================================
-export { useEntryMutations, useFindSkippableAutoRecords } from './hooks';
+export {
+  useEntryMutations,
+  useFindSkippableAutoRecords,
+  useTimeModelRecordMutations,
+  useTimeModelWriteMutations,
+} from './hooks';
 
 // =============================================================================
 // Stores
@@ -41,6 +46,8 @@ export {
   isUnplannedEntry,
 } from './domain';
 export type { EntryLike } from './domain';
+export { isPlanTimeEditable, resolveTimeModelDestination } from './domain/time-model-destination';
+export type { TimeModelDestination } from './domain/time-model-destination';
 
 // =============================================================================
 // Lib (entry-status utilities)

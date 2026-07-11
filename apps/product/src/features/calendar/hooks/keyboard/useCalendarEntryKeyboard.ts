@@ -2,7 +2,11 @@
 
 import { useEffect, useRef } from 'react';
 
-import { useEntryInspectorStore, useEntryMutations } from '@/features/entry';
+import {
+  resolveTimeModelDestination,
+  useEntryInspectorStore,
+  useTimeModelWriteMutations,
+} from '@/features/entry';
 import { localTimeToUTCISO } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { logger } from '@/lib/logger';
@@ -56,7 +60,7 @@ export function useCalendarEventKeyboard({
 }: UseCalendarEventKeyboardOptions) {
   const t = useTranslations();
   const { isOpen, entryId, openInspector, closeInspector } = useEntryInspectorStore();
-  const { createEntry } = useEntryMutations();
+  const { createLog, createPlan } = useTimeModelWriteMutations();
   // ユーザーの設定タイムゾーン（ペースト時のUTC変換に使用）
   const timezone = useUserPreferences((s: { timezone: string }) => s.timezone);
 
@@ -66,7 +70,8 @@ export function useCalendarEventKeyboard({
   const getInitialEntryDataRef = useRef(getInitialEntryData);
   const getSelectedEntryForCopyRef = useRef(getSelectedEntryForCopy);
   const getPasteDateForKeyboardRef = useRef(getPasteDateForKeyboard);
-  const createEntryRef = useRef(createEntry);
+  const createPlanRef = useRef(createPlan);
+  const createLogRef = useRef(createLog);
   const isOpenRef = useRef(isOpen);
   const entryIdRef = useRef(entryId);
   const closeInspectorRef = useRef(closeInspector);
@@ -80,7 +85,8 @@ export function useCalendarEventKeyboard({
     getInitialEntryDataRef.current = getInitialEntryData;
     getSelectedEntryForCopyRef.current = getSelectedEntryForCopy;
     getPasteDateForKeyboardRef.current = getPasteDateForKeyboard;
-    createEntryRef.current = createEntry;
+    createPlanRef.current = createPlan;
+    createLogRef.current = createLog;
     isOpenRef.current = isOpen;
     entryIdRef.current = entryId;
     closeInspectorRef.current = closeInspector;
@@ -93,7 +99,8 @@ export function useCalendarEventKeyboard({
     getInitialEntryData,
     getSelectedEntryForCopy,
     getPasteDateForKeyboard,
-    createEntry,
+    createPlan,
+    createLog,
     isOpen,
     entryId,
     closeInspector,
@@ -200,21 +207,26 @@ export function useCalendarEventKeyboard({
             const endMs = new Date(startTimeISO).getTime() + copiedEntry.duration * 60 * 1000;
             const endTimeISO = new Date(endMs).toISOString();
 
-            createEntryRef.current
-              .mutateAsync({
-                title: copiedEntry.title,
-                description: copiedEntry.description ?? undefined,
-                start_time: startTimeISO,
-                end_time: endTimeISO,
-              })
-              .then((result) => {
-                if (result?.id) {
-                  openInspectorRef.current(result.id);
-                }
-              })
-              .catch(() => {
-                logger.error('Failed to paste entry');
-              });
+            // 保存先は end ルールで一意に決める（コピー元の予定/記録の別を引き継がない）
+            const destination = resolveTimeModelDestination(endTimeISO);
+            const pasteInput = {
+              title: copiedEntry.title,
+              note: copiedEntry.description ?? undefined,
+              tagId: copiedEntry.tagId ?? undefined,
+              start_at: startTimeISO,
+              end_at: endTimeISO,
+            };
+            const onPasted = (result: { id: string } | undefined) => {
+              if (result?.id) {
+                openInspectorRef.current(result.id, destination);
+              }
+            };
+            const onPasteFailed = () => logger.error('Failed to paste entry');
+            if (destination === 'plan') {
+              createPlanRef.current.mutateAsync(pasteInput).then(onPasted).catch(onPasteFailed);
+            } else {
+              createLogRef.current.mutateAsync(pasteInput).then(onPasted).catch(onPasteFailed);
+            }
           }
         },
       },
@@ -226,43 +238,65 @@ export function useCalendarEventKeyboard({
           if (isInDialogOrInspector()) return;
           e.preventDefault();
 
+          // 未来15分の枠を既定にする（quick create は必ず時間範囲を持つ time model の制約に合わせる）
+          const now = new Date();
+          const roundedStart = new Date(
+            Math.ceil(now.getTime() / (15 * 60 * 1000)) * 15 * 60 * 1000,
+          );
+          const defaultEnd = new Date(roundedStart.getTime() + 15 * 60 * 1000);
+
           const initialData = e.shiftKey ? undefined : getInitialEntryDataRef.current?.();
-          createEntryRef.current
-            .mutateAsync({
-              title: '',
-              start_time: initialData?.start_time,
-              end_time: initialData?.end_time,
-            })
-            .then((result) => {
-              if (result?.id) {
-                openInspectorRef.current(result.id);
-              }
-            })
-            .catch(() => {
-              logger.error('Failed to create entry');
-            });
+          const startAt = initialData?.start_time ?? roundedStart.toISOString();
+          const endAt = initialData?.end_time ?? defaultEnd.toISOString();
+          const destination = resolveTimeModelDestination(endAt);
+          const createInput = {
+            title: tRef.current('entry.untitled'),
+            start_at: startAt,
+            end_at: endAt,
+          };
+          const onCreated = (result: { id: string } | undefined) => {
+            if (result?.id) {
+              openInspectorRef.current(result.id, destination);
+            }
+          };
+          const onCreateFailed = () => logger.error('Failed to create entry');
+          if (destination === 'plan') {
+            createPlanRef.current.mutateAsync(createInput).then(onCreated).catch(onCreateFailed);
+          } else {
+            createLogRef.current.mutateAsync(createInput).then(onCreated).catch(onCreateFailed);
+          }
         },
       },
       {
         key: 'Shift+C',
-        description: '新規エントリー作成（時刻指定なし）',
+        description: '新規エントリー作成（現在時刻から15分）',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           e.preventDefault();
 
-          createEntryRef.current
-            .mutateAsync({
-              title: '',
-            })
-            .then((result) => {
-              if (result?.id) {
-                openInspectorRef.current(result.id);
-              }
-            })
-            .catch(() => {
-              logger.error('Failed to create entry');
-            });
+          const now = new Date();
+          const roundedStart = new Date(
+            Math.ceil(now.getTime() / (15 * 60 * 1000)) * 15 * 60 * 1000,
+          );
+          const endAt = new Date(roundedStart.getTime() + 15 * 60 * 1000).toISOString();
+          const destination = resolveTimeModelDestination(endAt);
+          const createInput = {
+            title: tRef.current('entry.untitled'),
+            start_at: roundedStart.toISOString(),
+            end_at: endAt,
+          };
+          const onCreated = (result: { id: string } | undefined) => {
+            if (result?.id) {
+              openInspectorRef.current(result.id, destination);
+            }
+          };
+          const onCreateFailed = () => logger.error('Failed to create entry');
+          if (destination === 'plan') {
+            createPlanRef.current.mutateAsync(createInput).then(onCreated).catch(onCreateFailed);
+          } else {
+            createLogRef.current.mutateAsync(createInput).then(onCreated).catch(onCreateFailed);
+          }
         },
       },
     ];

@@ -16,8 +16,15 @@ import { format, isSameDay } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
-import { entryTintColor, useEntryMutations, useFindSkippableAutoRecords } from '@/features/entry';
+import {
+  collectTimeModelLaneItems,
+  hasTimeModelLaneConflict,
+} from '@/features/calendar/lib/overlap';
+import {
+  entryTintColor,
+  resolveTimeModelDestination,
+  useTimeModelWriteMutations,
+} from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
 import {
   getTagColorClasses,
@@ -32,7 +39,6 @@ import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { logger } from '@/lib/logger';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@dayopt/components';
-import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
@@ -40,18 +46,6 @@ import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore
 import { Z_INDEX } from '../../constants/grid.constants';
 import { DRAG_CONSTANTS } from '../CalendarDragSelection/types';
 import { ConflictOverlay } from '../ConflictOverlay';
-
-/** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */
-function isEntriesListQuery(query: { queryKey: unknown }): boolean {
-  const key = query.queryKey;
-  return (
-    Array.isArray(key) &&
-    key.length >= 1 &&
-    Array.isArray(key[0]) &&
-    key[0][0] === 'entries' &&
-    key[0][1] === 'list'
-  );
-}
 
 /** InlineTagPalette コンポーネントのプロパティ */
 interface InlineTagPaletteProps {
@@ -74,8 +68,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const { tap, impact } = useHapticFeedback();
 
   const queryClient = useQueryClient();
-  const { createEntry, skipEntry } = useEntryMutations();
-  const findSkippable = useFindSkippableAutoRecords();
+  const { createLog, createPlan } = useTimeModelWriteMutations();
   const createTagMutation = useCreateTag({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
   const [hoveredTag, setHoveredTag] = useState<HoveredTagInfo | null>(null);
@@ -88,19 +81,12 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     setHoveredTag(tag);
   }, []);
 
-  // エントリ作成ハンドラー（タグ必須、タグ名をタイトルに設定）
+  // plan / log 作成ハンドラー（タグ必須、タグ名をタイトルに設定）
   const handleCreate = useCallback(
     (tagId: string, tagName: string) => {
       if (!pendingSelection || isCreating) return;
 
-      const {
-        date: selDate,
-        startHour,
-        startMinute,
-        endHour,
-        endMinute,
-        skipEntryIds,
-      } = pendingSelection;
+      const { date: selDate, startHour, startMinute, endHour, endMinute } = pendingSelection;
 
       // ローカル時刻 → UTC変換
       const localStart = new Date(
@@ -121,58 +107,16 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       const utcStart = convertFromTimezone(localStart, timezone);
       const utcEnd = convertFromTimezone(localEnd, timezone);
 
-      // 「スキップして記録」経由: パレットで選択を動かせるため、ドロップ時の id をそのまま使わず
-      // 最終 range で再計算する。元の対象のうち、最終 range が今も完全に覆う自動記録だけを
-      // skip 対象にする（選択を auto-record から外したら無関係な記録を skip しない）。
-      const attachedSkipIds = new Set(skipEntryIds ?? []);
-      const skipSet =
-        attachedSkipIds.size > 0
-          ? new Set(
-              findSkippable(utcStart.getTime(), utcEnd.getTime()).filter((id) =>
-                attachedSkipIds.has(id),
-              ),
-            )
-          : new Set<string>();
+      // 保存先は end ルールで一意に決める（lane はドラッグ起点の表示ヒントに留める）
+      const destination = resolveTimeModelDestination(utcEnd);
 
       // 事前 overlap 判定（TagSelector を開いている間の resize / 他クライアント更新による race を回避）
-      const cachedLists = queryClient.getQueriesData<
-        Array<{
-          id: string;
-          origin: string | null;
-          start_time: string | null;
-          end_time: string | null;
-          actual_start_time: string | null;
-          actual_end_time: string | null;
-        }>
-      >({ predicate: isEntriesListQuery });
-      const seen = new Set<string>();
-      const events: Array<{
-        id: string;
-        plannedStart: string | null;
-        plannedEnd: string | null;
-        actualStart: string | null;
-        actualEnd: string | null;
-      }> = [];
-      for (const [, data] of cachedLists) {
-        if (!data) continue;
-        for (const e of data) {
-          if (seen.has(e.id)) continue;
-          seen.add(e.id);
-          if (skipSet.has(e.id)) continue;
-          events.push({
-            id: e.id,
-            plannedStart: e.start_time,
-            plannedEnd: e.end_time,
-            actualStart: e.actual_start_time,
-            actualEnd: e.actual_end_time,
-          });
-        }
-      }
-      const hasOverlap = hasTwoLayerTimeConflict(
-        events,
-        buildNewEntryOverlapTarget(utcStart, utcEnd),
+      // 同一レーンのみ禁止（plan×plan / log×log）。plan×log は許可。
+      const laneItems = collectTimeModelLaneItems(
+        queryClient,
+        destination === 'plan' ? 'plans' : 'logs',
       );
-      if (hasOverlap) {
+      if (hasTimeModelLaneConflict(laneItems, utcStart, utcEnd)) {
         toast.error(tEntry('errors.timeOverlap'));
         clearPendingSelection();
         return;
@@ -181,7 +125,8 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       lockedRef.current = true;
       setIsCreating(true);
 
-      logger.log('🏷️ InlineTagPalette: Creating entry', {
+      logger.log('🏷️ InlineTagPalette: Creating', {
+        destination,
         start: utcStart.toISOString(),
         end: utcEnd.toISOString(),
         tagId,
@@ -191,46 +136,33 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       // ハイライトを即座に消す（pendingSelectionの値は既にローカル変数に展開済み）
       clearPendingSelection();
 
-      const runCreate = () =>
-        createEntry.mutate(
-          {
-            title: tagName,
-            start_time: utcStart.toISOString(),
-            end_time: utcEnd.toISOString(),
-            tagId,
-          },
-          {
-            onSuccess: () => setIsCreating(false),
-            onError: () => setIsCreating(false),
-          },
-        );
-
-      // 「スキップして記録」: 記録の作成が確定するこの時点でだけ自動記録をスキップする。
-      // ここまで来ていない（パレットを閉じた）場合は何もスキップしない。skip が失敗したら
-      // slot が空かないため作成しない。
-      if (skipSet.size > 0) {
-        void (async () => {
-          try {
-            for (const id of skipSet) {
-              await skipEntry.mutateAsync({ id });
-            }
-            runCreate();
-          } catch {
-            // skipEntry.onError が toast 済み。記録は作成しない
+      const mutation = destination === 'plan' ? createPlan : createLog;
+      mutation.mutate(
+        {
+          title: tagName,
+          start_at: utcStart.toISOString(),
+          end_at: utcEnd.toISOString(),
+          tagId,
+        },
+        {
+          onSuccess: () => {
             setIsCreating(false);
-          }
-        })();
-      } else {
-        runCreate();
-      }
+            toast.success(
+              destination === 'plan'
+                ? tEntry('timeModel.toast.planCreated')
+                : tEntry('timeModel.toast.recorded'),
+            );
+          },
+          onError: () => setIsCreating(false),
+        },
+      );
     },
     [
       pendingSelection,
       isCreating,
       timezone,
-      createEntry,
-      skipEntry,
-      findSkippable,
+      createPlan,
+      createLog,
       clearPendingSelection,
       queryClient,
       tEntry,
@@ -358,39 +290,13 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     const utcStart = convertFromTimezone(localStart, timezone);
     const utcEnd = convertFromTimezone(localEnd, timezone);
 
-    const cachedLists = queryClient.getQueriesData<
-      Array<{
-        id: string;
-        start_time: string | null;
-        end_time: string | null;
-        actual_start_time: string | null;
-        actual_end_time: string | null;
-      }>
-    >({ predicate: isEntriesListQuery });
-    const seen = new Set<string>();
-    const events: Array<{
-      id: string;
-      plannedStart: string | null;
-      plannedEnd: string | null;
-      actualStart: string | null;
-      actualEnd: string | null;
-    }> = [];
-    for (const [, data] of cachedLists) {
-      if (!data) continue;
-      for (const e of data) {
-        if (seen.has(e.id)) continue;
-        seen.add(e.id);
-        events.push({
-          id: e.id,
-          plannedStart: e.start_time,
-          plannedEnd: e.end_time,
-          actualStart: e.actual_start_time,
-          actualEnd: e.actual_end_time,
-        });
-      }
-    }
-
-    return hasTwoLayerTimeConflict(events, buildNewEntryOverlapTarget(utcStart, utcEnd));
+    // 保存先レーンと同じレーンのみ判定（plan×log は共存可）
+    const destination = resolveTimeModelDestination(utcEnd);
+    const laneItems = collectTimeModelLaneItems(
+      queryClient,
+      destination === 'plan' ? 'plans' : 'logs',
+    );
+    return hasTimeModelLaneConflict(laneItems, utcStart, utcEnd);
   }, [queryClient, pendingSelection, timezone]);
 
   // 日付が指定されている場合、対象日と一致するカラムのみ表示

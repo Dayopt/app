@@ -63,7 +63,8 @@
         "restoreFailed": "復元できませんでした。もう一度お試しください",
         "skipped": "スキップしました",
         "skipFailed": "スキップできませんでした。もう一度お試しください",
-        "unskipped": "スキップを解除しました"
+        "unskipped": "スキップを解除しました",
+        "planCreated": "予定を追加しました ✓"
       },
       "migratedLocked": "移行された過去の記録は編集できません"
     },
