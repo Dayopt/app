@@ -259,6 +259,8 @@ export function useCalendarData({
           actualStartDate: null,
           actualEndDate: null,
           isSkipped: plan.skipped_at != null,
+          kind: 'plan' as const,
+          planId: null,
         },
         timezone,
       );
@@ -288,6 +290,9 @@ export function useCalendarData({
           actualEndDate: endDate,
           plannedStartDate: null,
           plannedEndDate: null,
+          kind: 'log' as const,
+          planId: log.plan_id,
+          logSource: log.source,
         },
         timezone,
       );

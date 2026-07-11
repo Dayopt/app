@@ -1,7 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EntryRect } from '../../domain/interaction/types';
+import { useCalendarDragStore } from '../../stores/useCalendarDragStore';
 import type { CalendarEvent } from '../../types/calendar.types';
 import { useInteraction, type UseInteractionProps } from '../useInteraction';
 
@@ -14,6 +15,7 @@ const baseEvent: CalendarEvent = {
   origin: 'manual',
   actualStartDate: null,
   actualEndDate: null,
+  kind: 'plan',
 } as unknown as CalendarEvent;
 
 const rect: EntryRect = { top: 540, left: 0, width: 200, height: 60 };
@@ -36,6 +38,60 @@ function makeProps(overrides: Partial<UseInteractionProps> = {}): UseInteraction
     ...overrides,
   };
 }
+
+beforeEach(() => {
+  useCalendarDragStore.getState().endDrag();
+});
+
+function completeDrag(hook: { result: { current: ReturnType<typeof useInteraction> } }) {
+  act(() => {
+    hook.result.current.dispatch({
+      type: 'POINTER_DOWN',
+      entryId: 'entry-1',
+      point: { clientX: 20, clientY: 540 },
+      originalPosition: rect,
+      dateIndex: 0,
+    });
+    hook.result.current.dispatch({
+      type: 'POINTER_MOVE',
+      point: { clientX: 80, clientY: 570 },
+    });
+  });
+}
+
+describe('useInteraction Plan → Log drop', () => {
+  it('Logレーンへのdropはplan更新ではなく記録mutationへ委譲する', () => {
+    const onEventUpdate = vi.fn();
+    const onPlanRecord = vi.fn();
+    const hook = renderHook(() => useInteraction(makeProps({ onEventUpdate, onPlanRecord })));
+
+    completeDrag(hook);
+    act(() => {
+      useCalendarDragStore.getState().updateDrag({ targetLane: 'log' });
+      hook.result.current.dispatch({ type: 'POINTER_UP' });
+    });
+
+    expect(onPlanRecord).toHaveBeenCalledWith('entry-1');
+    expect(onEventUpdate).not.toHaveBeenCalled();
+  });
+
+  it('過去Planの同一レーンdropは時間更新しない', () => {
+    const onEventUpdate = vi.fn();
+    const pastPlan = {
+      ...baseEvent,
+      startDate: new Date('2020-01-15T09:00:00'),
+      endDate: new Date('2020-01-15T10:00:00'),
+    };
+    const hook = renderHook(() => useInteraction(makeProps({ events: [pastPlan], onEventUpdate })));
+
+    completeDrag(hook);
+    act(() => {
+      hook.result.current.dispatch({ type: 'POINTER_UP' });
+    });
+
+    expect(onEventUpdate).not.toHaveBeenCalled();
+  });
+});
 
 describe('useInteraction handleResizeStart guard', () => {
   it('PC + Inspector open: disabledPlanId と resizeDisabledPlanId が同じ ID のとき RESIZE_START を block', () => {

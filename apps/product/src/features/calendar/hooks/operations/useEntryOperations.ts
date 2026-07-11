@@ -1,117 +1,107 @@
 import { useCallback } from 'react';
 
-import {
-  buildTimeUpdateData,
-  buildUndoTimeUpdateData,
-  useEntryMutations,
-  type EntryLike,
-} from '@/features/entry';
-import { logger } from '@/lib/logger';
-import { toast } from '@/lib/toast';
-import { api } from '@/lib/trpc';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
+import { resolveTimeModelDestination, useTimeModelWriteMutations } from '@/features/entry';
+import { logger } from '@/lib/logger';
+import { toast } from '@/lib/toast';
+
+import type { TimeModelDestination } from '@/features/entry';
 import type { CalendarEvent } from '../../types/calendar.types';
 
-function isEntriesListQuery(query: { queryKey: unknown }): boolean {
-  const key = query.queryKey;
-  return (
-    Array.isArray(key) &&
-    key.length >= 1 &&
-    Array.isArray(key[0]) &&
-    key[0][0] === 'entries' &&
-    key[0][1] === 'list'
-  );
+interface TimeModelCacheRow {
+  id: string;
+  start_at: string;
+  end_at: string;
+  updated_at: string;
 }
 
-function entryFromCalendarEvent(event: CalendarEvent): EntryLike {
-  const plannedStartDate =
-    event.plannedStartDate ?? (event.origin === 'planned' ? event.startDate : null);
-  const plannedEndDate =
-    event.plannedEndDate ?? (event.origin === 'planned' ? event.endDate : null);
-
-  return {
-    origin: event.origin ?? null,
-    start_time: plannedStartDate?.toISOString() ?? null,
-    end_time: plannedEndDate?.toISOString() ?? null,
-    // 自動記録モデル: actual はユーザー確定値のみ（NULL = 未編集）。
-    // unplanned だけは表示位置 = actual なので startDate を fallback に使う
-    actual_start_time:
-      (
-        event.actualStartDate ?? (event.origin === 'unplanned' ? event.startDate : null)
-      )?.toISOString() ?? null,
-    actual_end_time:
-      (
-        event.actualEndDate ?? (event.origin === 'unplanned' ? event.endDate : null)
-      )?.toISOString() ?? null,
+function isLaneListQuery(lane: 'plans' | 'logs') {
+  return (query: { queryKey: unknown }): boolean => {
+    const key = query.queryKey;
+    return (
+      Array.isArray(key) && Array.isArray(key[0]) && key[0][0] === lane && key[0][1] === 'list'
+    );
   };
 }
 
-function findEntryInListCaches(
+function findRowInLane(
   queryClient: ReturnType<typeof useQueryClient>,
-  entryId: string,
-): EntryLike | null {
-  const cachedLists = queryClient.getQueriesData<Array<{ id: string } & EntryLike>>({
-    predicate: isEntriesListQuery,
+  lane: 'plans' | 'logs',
+  id: string,
+): TimeModelCacheRow | null {
+  const lists = queryClient.getQueriesData<TimeModelCacheRow[]>({
+    predicate: isLaneListQuery(lane),
   });
-
-  for (const [, entries] of cachedLists) {
-    const entry = entries?.find((candidate) => candidate.id === entryId);
-    if (entry) return entry;
+  for (const [, data] of lists) {
+    const row = data?.find((candidate) => candidate.id === id);
+    if (row) return row;
   }
+  return null;
+}
 
+/** plans.list / logs.list キャッシュから id で 1 行探す。見つかった方が kind を決める。 */
+function findTimeModelRowById(
+  queryClient: ReturnType<typeof useQueryClient>,
+  id: string,
+): { kind: TimeModelDestination; row: TimeModelCacheRow } | null {
+  const planRow = findRowInLane(queryClient, 'plans', id);
+  if (planRow) return { kind: 'plan', row: planRow };
+  const logRow = findRowInLane(queryClient, 'logs', id);
+  if (logRow) return { kind: 'log', row: logRow };
   return null;
 }
 
 /**
- * エントリー操作（CRUD）を提供するフック
- * エントリーの削除、復元、更新を管理
+ * plan / log の CRUD（削除・時間更新）を提供するフック。
+ *
+ * カレンダーの DnD / リサイズ / キーボード削除は id だけを渡してくる（kind を持たない）ため、
+ * plans.list / logs.list キャッシュから id を逆引きして kind を判定する。
  */
 export const useEntryOperations = () => {
-  const { updateEntry, deleteEntry } = useEntryMutations();
-  const utils = api.useUtils();
+  const { deleteLog, deletePlan, updateLog, updatePlan } = useTimeModelWriteMutations();
   const queryClient = useQueryClient();
   const t = useTranslations();
 
-  /**
-   * 時間変更のUndo toastを表示
-   * ドラッグ/リサイズで時間が変わった場合にのみ呼び出す
-   */
   const showTimeChangeUndoToast = useCallback(
-    (entryId: string, previousEntry: EntryLike | null | undefined, resetActualTime = false) => {
-      const undoData = buildUndoTimeUpdateData(previousEntry, resetActualTime);
-      if (!undoData) return;
-
+    (id: string, kind: TimeModelDestination, previous: { start_at: string; end_at: string }) => {
       toast.success(t('entry.toast.updated'), {
         duration: 6000,
         action: {
           label: t('common.undo'),
           onClick: () => {
-            updateEntry.mutate({
-              id: entryId,
-              data: undoData,
-            });
+            const data = { start_at: previous.start_at, end_at: previous.end_at };
+            if (kind === 'plan') {
+              updatePlan.mutate({ id, data });
+            } else {
+              updateLog.mutate({ id, data });
+            }
           },
         },
       });
     },
-    [updateEntry, t],
+    [updatePlan, updateLog, t],
   );
 
-  // エントリー削除ハンドラー
+  // エントリー削除ハンドラー（id のみ。kind はキャッシュから逆引きする）
   const handleEntryDelete = useCallback(
     async (entryId: string) => {
-      try {
-        deleteEntry.mutate({ id: entryId });
-      } catch (error) {
-        logger.error('エントリー削除に失敗:', error);
+      const found = findTimeModelRowById(queryClient, entryId);
+      if (!found) {
+        logger.error('エントリー削除に失敗: id がキャッシュに見つかりません', { entryId });
+        return;
+      }
+      if (found.kind === 'plan') {
+        deletePlan.mutate({ id: entryId });
+      } else {
+        deleteLog.mutate({ id: entryId });
       }
     },
-    [deleteEntry],
+    [queryClient, deletePlan, deleteLog],
   );
 
-  // エントリー更新ハンドラー（ドラッグ&ドロップ用）
+  // エントリー更新ハンドラー（ドラッグ&ドロップ / リサイズ用）
   const handleUpdateEntry = useCallback(
     async (
       entryIdOrEntry: string | CalendarEvent,
@@ -121,62 +111,66 @@ export const useEntryOperations = () => {
         resetActualTime?: boolean;
       },
     ) => {
-      try {
-        if (typeof entryIdOrEntry === 'string' && updates) {
-          const entryId = entryIdOrEntry;
+      const entryId = typeof entryIdOrEntry === 'string' ? entryIdOrEntry : entryIdOrEntry.id;
+      const nextRange =
+        typeof entryIdOrEntry === 'string'
+          ? updates
+            ? { start: updates.startTime, end: updates.endTime }
+            : null
+          : entryIdOrEntry.startDate && entryIdOrEntry.endDate
+            ? { start: entryIdOrEntry.startDate, end: entryIdOrEntry.endDate }
+            : null;
 
-          // Undo用に現在の時間をキャッシュから取得
-          const cachedEntry =
-            utils.entries.getById.getData({ id: entryId }) ??
-            findEntryInListCaches(queryClient, entryId);
+      if (!nextRange) {
+        logger.error('startTime/endTimeが無いため更新できません:', entryId);
+        return;
+      }
 
-          updateEntry.mutate(
-            {
-              id: entryId,
-              data: buildTimeUpdateData(
-                cachedEntry,
-                updates.startTime,
-                updates.endTime,
-                updates.resetActualTime,
-              ),
-            },
-            {
-              onSuccess: () => {
-                showTimeChangeUndoToast(entryId, cachedEntry, updates.resetActualTime);
-              },
-            },
-          );
-        } else if (typeof entryIdOrEntry === 'object') {
-          const updatedEntry = entryIdOrEntry;
-
-          if (!updatedEntry.startDate || !updatedEntry.endDate) {
-            logger.error('startDate/endDateがnullのため更新できません:', updatedEntry.id);
-            return;
+      // kind が既知（CalendarEvent object 経由）ならそのレーンだけ、未知なら両レーンを探す。
+      // previous 値は常にキャッシュ由来（渡された event 自身は更新後プレビューの可能性があるため）。
+      const knownKind = typeof entryIdOrEntry !== 'string' ? entryIdOrEntry.kind : undefined;
+      const found = knownKind
+        ? {
+            kind: knownKind,
+            row: findRowInLane(queryClient, knownKind === 'plan' ? 'plans' : 'logs', entryId),
           }
+        : findTimeModelRowById(queryClient, entryId);
 
-          // Undo用に現在の時間をキャッシュから取得
-          const cachedEntry =
-            utils.entries.getById.getData({ id: updatedEntry.id }) ??
-            findEntryInListCaches(queryClient, updatedEntry.id);
-          const currentEntry = cachedEntry ?? entryFromCalendarEvent(updatedEntry);
+      if (!found) {
+        logger.error('エントリー更新に失敗: id がキャッシュに見つかりません', { entryId });
+        return;
+      }
 
-          updateEntry.mutate(
-            {
-              id: updatedEntry.id,
-              data: buildTimeUpdateData(currentEntry, updatedEntry.startDate, updatedEntry.endDate),
-            },
-            {
-              onSuccess: () => {
-                showTimeChangeUndoToast(updatedEntry.id, currentEntry);
-              },
-            },
-          );
-        }
-      } catch (error) {
-        logger.error('エントリー更新に失敗:', error);
+      // 過去 plan は時間変更不可（server も PLAN_TIME_LOCKED で拒否するが、無駄な往復を避ける）
+      if (
+        found.kind === 'plan' &&
+        found.row &&
+        resolveTimeModelDestination(found.row.end_at) === 'log'
+      ) {
+        toast.error(t('entry.timeModel.timeLocked'));
+        return;
+      }
+      // log は未来へ移動できない（記録は過去のみ）
+      if (found.kind === 'log' && resolveTimeModelDestination(nextRange.end) === 'plan') {
+        toast.error(t('entry.timeModel.timeLocked'));
+        return;
+      }
+
+      const previous = found.row
+        ? { start_at: found.row.start_at, end_at: found.row.end_at }
+        : null;
+      const data = { start_at: nextRange.start.toISOString(), end_at: nextRange.end.toISOString() };
+      const onSuccess = () => {
+        if (previous) showTimeChangeUndoToast(entryId, found.kind, previous);
+      };
+
+      if (found.kind === 'plan') {
+        updatePlan.mutate({ id: entryId, data }, { onSuccess });
+      } else {
+        updateLog.mutate({ id: entryId, data }, { onSuccess });
       }
     },
-    [updateEntry, utils, queryClient, showTimeChangeUndoToast],
+    [queryClient, updatePlan, updateLog, showTimeChangeUndoToast, t],
   );
 
   return {

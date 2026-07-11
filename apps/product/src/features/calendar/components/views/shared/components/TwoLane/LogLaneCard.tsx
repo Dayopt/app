@@ -8,6 +8,8 @@
  */
 'use client';
 
+import type React from 'react';
+
 import { useTranslations } from 'next-intl';
 
 import type { LogEvent } from '@/features/entry';
@@ -22,31 +24,63 @@ interface LogLaneCardProps {
   position: TwoLanePosition;
   tagColor?: string | null | undefined;
   className?: string | undefined;
+  /** Inspector で選択中か（強調表示） */
+  isActive?: boolean | undefined;
+  /** auto_migrated など RLS で不変な log。ドラッグ・リサイズを禁止する */
+  disableDrag?: boolean | undefined;
+  onClick?: ((event: LogEvent, e: React.MouseEvent) => void) | undefined;
+  onContextMenu?: ((event: LogEvent, e: React.MouseEvent) => void) | undefined;
+  onPointerDown?: ((event: LogEvent, e: React.MouseEvent) => void) | undefined;
+  onTouchStart?: ((event: LogEvent, e: React.TouchEvent) => void) | undefined;
+  onResizeStart?: ((event: LogEvent, e: React.MouseEvent | React.TouchEvent) => void) | undefined;
+  /** ドラッグ中の opacity / リサイズ中の zIndex など、呼び出し側から上書きしたい style */
+  styleOverride?: React.CSSProperties | undefined;
 }
 
 const MIN_HEIGHT = 20;
 const DETAIL_HEIGHT_THRESHOLD = 40;
+const RESIZE_HANDLE_HEIGHT = 20;
 
 function formatTimeRange(start: Date, end: Date): string {
   const pad = (n: number) => n.toString().padStart(2, '0');
   return `${pad(start.getHours())}:${pad(start.getMinutes())}–${pad(end.getHours())}:${pad(end.getMinutes())}`;
 }
 
-export function LogLaneCard({ event, position, tagColor = null, className }: LogLaneCardProps) {
+export function LogLaneCard({
+  event,
+  position,
+  tagColor = null,
+  className,
+  isActive = false,
+  disableDrag = false,
+  onClick,
+  onContextMenu,
+  onPointerDown,
+  onTouchStart,
+  onResizeStart,
+  styleOverride,
+}: LogLaneCardProps) {
   const t = useTranslations();
   const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
   const isUnplanned = event.planId == null;
   const hasDiff = event.diffMinutes != null && event.diffMinutes !== 0;
   const showDetails = position.height >= DETAIL_HEIGHT_THRESHOLD;
+  const canDrag = !disableDrag && Boolean(onPointerDown);
 
   return (
     <div
       data-log-lane-card
       data-log-planned={!isUnplanned}
+      data-entry-block="true"
+      tabIndex={0}
+      role="button"
+      aria-label={event.title || t('entry.untitled')}
       className={cn(
         'absolute flex flex-col gap-1 overflow-hidden rounded-lg px-2 py-1 text-xs',
         colorClasses?.tint ?? 'bg-card',
         'text-foreground',
+        isActive && 'ring-ring ring-2',
+        canDrag ? 'cursor-grab' : 'cursor-pointer',
         className,
       )}
       style={{
@@ -54,6 +88,21 @@ export function LogLaneCard({ event, position, tagColor = null, className }: Log
         left: `${position.left}%`,
         width: `calc(${position.width}% - 4px)`,
         height: `${Math.max(position.height, MIN_HEIGHT)}px`,
+        ...styleOverride,
+      }}
+      onClick={(e) => onClick?.(event, e)}
+      onContextMenu={(e) => onContextMenu?.(event, e)}
+      onMouseDown={(e) => {
+        if (e.button === 0 && canDrag) onPointerDown?.(event, e);
+      }}
+      onTouchStart={(e) => {
+        if (canDrag) onTouchStart?.(event, e);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.(event, e as unknown as React.MouseEvent);
+        }
       }}
     >
       <div className="flex items-start justify-between gap-1">
@@ -69,6 +118,28 @@ export function LogLaneCard({ event, position, tagColor = null, className }: Log
         <span data-log-unplanned-marker className="text-muted-foreground truncate">
           {t('entry.inspector.unplanned')}
         </span>
+      )}
+      {canDrag && onResizeStart && (
+        <div
+          role="slider"
+          tabIndex={-1}
+          aria-label={t('calendar.event.adjustEndTime')}
+          aria-orientation="vertical"
+          aria-valuenow={position.height}
+          aria-valuemin={MIN_HEIGHT}
+          aria-valuemax={1440}
+          className="absolute right-0 bottom-0 left-0 cursor-ns-resize"
+          style={{ height: RESIZE_HANDLE_HEIGHT }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onResizeStart(event, e);
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            onResizeStart(event, e);
+          }}
+        />
       )}
     </div>
   );

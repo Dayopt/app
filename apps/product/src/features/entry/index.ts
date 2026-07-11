@@ -18,7 +18,11 @@ export type { PlanEvent, PlanEventStatus } from './types/plan-event';
 // =============================================================================
 // Hooks
 // =============================================================================
-export { useEntryMutations, useFindSkippableAutoRecords } from './hooks';
+export {
+  useFindSkippableAutoRecords,
+  useTimeModelRecordMutations,
+  useTimeModelWriteMutations,
+} from './hooks';
 
 // =============================================================================
 // Stores
@@ -34,13 +38,9 @@ export { entryTintColor } from './lib/entry-tint';
 // =============================================================================
 // Domain (Entry 時間モデル — 純粋関数、DB/tRPC/React 非依存)
 // =============================================================================
-export {
-  buildTimeUpdateData,
-  buildUndoTimeUpdateData,
-  isPlannedEntry,
-  isUnplannedEntry,
-} from './domain';
-export type { EntryLike } from './domain';
+export { isPlannedEntry, isUnplannedEntry } from './domain';
+export { isPlanRecordDrop, resolveTimeModelDestination } from './domain/time-model-destination';
+export type { TimeModelDestination } from './domain/time-model-destination';
 
 // =============================================================================
 // Lib (entry-status utilities)
@@ -66,6 +66,11 @@ export { getEntryMenuItems } from './lib/entry-menu-items';
 // =============================================================================
 export { EntryCard } from './components/card';
 export type { EntryCardPosition } from './components/card';
+
+// =============================================================================
+// Components (time model 記録導線)
+// =============================================================================
+export { ConfirmDayButton } from './components/time-model/TimeModelRecordActions';
 
 // =============================================================================
 // Components (Inspector fields — 他 feature から再利用可能な入力 row)

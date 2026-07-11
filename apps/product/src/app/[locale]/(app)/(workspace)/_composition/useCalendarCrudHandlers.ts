@@ -49,8 +49,6 @@ interface CalendarCrudHandlersResult {
   onDeleteEntry: (entryId: string) => void;
   onDeleteEntryConfirm: (entry: CalendarEvent) => void;
   onViewStats: (entry: CalendarEvent) => void;
-  onMarkUnplanned: (entry: CalendarEvent) => void;
-  onRestorePlanned: (entry: CalendarEvent) => void;
   onSkip: (entry: CalendarEvent) => void;
   onUnskip: (entry: CalendarEvent) => void;
 }
@@ -81,8 +79,6 @@ export function useCalendarCrudHandlers({
   const {
     handleDeleteEntry: handleDeleteEntryConfirm,
     handleViewStats,
-    handleMarkUnplanned,
-    handleRestorePlanned,
     handleSkip,
     handleUnskip,
   } = useEntryContextActions();
@@ -160,8 +156,6 @@ export function useCalendarCrudHandlers({
       onDeleteEntry: deleteEntry,
       onDeleteEntryConfirm: handleDeleteEntryConfirm,
       onViewStats: handleViewStats,
-      onMarkUnplanned: handleMarkUnplanned,
-      onRestorePlanned: handleRestorePlanned,
       onSkip: handleSkip,
       onUnskip: handleUnskip,
     }),
@@ -173,8 +167,6 @@ export function useCalendarCrudHandlers({
       deleteEntry,
       handleDeleteEntryConfirm,
       handleViewStats,
-      handleMarkUnplanned,
-      handleRestorePlanned,
       handleSkip,
       handleUnskip,
     ],

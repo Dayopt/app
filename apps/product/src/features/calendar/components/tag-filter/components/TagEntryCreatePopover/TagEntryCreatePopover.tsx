@@ -6,8 +6,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { isSameDay, startOfDay } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
-import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
-import { useEntryMutations } from '@/features/entry';
+import {
+  collectTimeModelLaneItems,
+  hasTimeModelLaneConflict,
+} from '@/features/calendar/lib/overlap';
+import { resolveTimeModelDestination, useTimeModelWriteMutations } from '@/features/entry';
 import { toast } from '@/lib/toast';
 import {
   Drawer,
@@ -17,22 +20,9 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@dayopt/components';
-import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 
 import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import { TagEntryCreateForm, type TagEntryCreateFormProps } from './TagEntryCreateForm';
-
-/** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */
-function isEntriesListQuery(query: { queryKey: unknown }): boolean {
-  const key = query.queryKey;
-  return (
-    Array.isArray(key) &&
-    key.length >= 1 &&
-    Array.isArray(key[0]) &&
-    key[0][0] === 'entries' &&
-    key[0][1] === 'list'
-  );
-}
 
 /** 開始時刻の default: today なら現在時刻を次の 15 分境界に ceil、それ以外は 09:00 */
 function defaultStartHHMM(forDate: Date): string {
@@ -92,7 +82,7 @@ export function TagEntryCreatePopover({
   isMobile,
 }: TagEntryCreatePopoverProps) {
   const t = useTranslations();
-  const { createEntry, deleteEntry } = useEntryMutations({ suppressCreateToast: true });
+  const { createLog, createPlan, deleteLog, deletePlan } = useTimeModelWriteMutations();
   const queryClient = useQueryClient();
 
   const draft = useTagDraftStore((s) => s.draft);
@@ -161,46 +151,19 @@ export function TagEntryCreatePopover({
 
   // クライアント側で時間重複を判定（drag / Inspector と同じ規範）。
   // 重複時は inline alert + submit disabled で hard-block し、mutation を発火させない。
+  // 同一レーンのみ判定（plan×plan / log×log）。plan×log は許可。
   const hasConflict = useMemo(() => {
     if (!startTime || !endTime) return false;
     const startDate = combineDateAndHHMM(selectedDate, startTime);
     const endDate = combineDateAndHHMM(selectedDate, endTime);
     if (endDate.getTime() <= startDate.getTime()) return false;
 
-    const cachedLists = queryClient.getQueriesData<
-      Array<{
-        id: string;
-        start_time: string | null;
-        end_time: string | null;
-        actual_start_time: string | null;
-        actual_end_time: string | null;
-      }>
-    >({ predicate: isEntriesListQuery });
-
-    const seen = new Set<string>();
-    const events: Array<{
-      id: string;
-      plannedStart: string | null;
-      plannedEnd: string | null;
-      actualStart: string | null;
-      actualEnd: string | null;
-    }> = [];
-    for (const [, data] of cachedLists) {
-      if (!data) continue;
-      for (const e of data) {
-        if (seen.has(e.id)) continue;
-        seen.add(e.id);
-        events.push({
-          id: e.id,
-          plannedStart: e.start_time,
-          plannedEnd: e.end_time,
-          actualStart: e.actual_start_time,
-          actualEnd: e.actual_end_time,
-        });
-      }
-    }
-
-    return hasTwoLayerTimeConflict(events, buildNewEntryOverlapTarget(startDate, endDate));
+    const destination = resolveTimeModelDestination(endDate);
+    const laneItems = collectTimeModelLaneItems(
+      queryClient,
+      destination === 'plan' ? 'plans' : 'logs',
+    );
+    return hasTimeModelLaneConflict(laneItems, startDate, endDate);
   }, [queryClient, selectedDate, startTime, endTime]);
 
   const handleSubmit = useCallback(() => {
@@ -208,37 +171,45 @@ export function TagEntryCreatePopover({
 
     const startDate = combineDateAndHHMM(selectedDate, startTime);
     const endDate = combineDateAndHHMM(selectedDate, endTime);
+    const destination = resolveTimeModelDestination(endDate);
+    const displayTitle = tag.name;
+    const input = {
+      title: tag.name,
+      tagId: tag.id,
+      start_at: startDate.toISOString(),
+      end_at: endDate.toISOString(),
+    };
+    const onSuccess = (created: { id: string } | undefined) => {
+      if (created?.id) {
+        const deletePayload = { id: created.id };
+        toast.success(t('entry.toast.created', { title: displayTitle }), {
+          duration: 5000,
+          action: {
+            label: t('common.undo'),
+            onClick: () =>
+              destination === 'plan'
+                ? deletePlan.mutate(deletePayload)
+                : deleteLog.mutate(deletePayload),
+          },
+        });
+      } else {
+        toast.success(t('entry.toast.created', { title: displayTitle }));
+      }
+      handleClose();
+    };
 
-    createEntry.mutate(
-      {
-        title: tag.name,
-        tagId: tag.id,
-        start_time: startDate.toISOString(),
-        end_time: endDate.toISOString(),
-      },
-      {
-        onSuccess: (newEntry) => {
-          const displayTitle = tag.name;
-          if (newEntry?.id) {
-            toast.success(t('entry.toast.created', { title: displayTitle }), {
-              duration: 5000,
-              action: {
-                label: t('common.undo'),
-                onClick: () => deleteEntry.mutate({ id: newEntry.id }),
-              },
-            });
-          } else {
-            toast.success(t('entry.toast.created', { title: displayTitle }));
-          }
-          handleClose();
-        },
-        // onError: useEntryMutations 側でエラートースト + 楽観的更新ロールバック。
-        // popover は閉じない（意図的）。time overlap 時はユーザーが時刻を調整して再試行できる。
-      },
-    );
+    // onError: useTimeModelWriteMutations 側でエラートースト + 楽観的更新ロールバック。
+    // popover は閉じない（意図的）。time overlap 時はユーザーが時刻を調整して再試行できる。
+    if (destination === 'plan') {
+      createPlan.mutate(input, { onSuccess });
+    } else {
+      createLog.mutate(input, { onSuccess });
+    }
   }, [
-    createEntry,
-    deleteEntry,
+    createLog,
+    createPlan,
+    deleteLog,
+    deletePlan,
     endTime,
     handleClose,
     hasConflict,
@@ -260,7 +231,7 @@ export function TagEntryCreatePopover({
       onEndTimeChange={handleEndChange}
       onSubmit={handleSubmit}
       onCancel={handleClose}
-      isSubmitting={createEntry.isPending}
+      isSubmitting={createPlan.isPending || createLog.isPending}
       hasError={hasConflict}
       surface={isMobile ? 'sheet' : 'card'}
     />

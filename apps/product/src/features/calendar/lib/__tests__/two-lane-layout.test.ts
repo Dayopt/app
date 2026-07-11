@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { LogEvent, PlanEvent } from '@/features/entry';
-import { calculateTwoLaneLayout } from '../two-lane-layout';
+import { calculateTwoLaneLayout, resolveTwoLaneFromPointer } from '../two-lane-layout';
 
 const HOUR_HEIGHT = 60;
 
@@ -119,5 +119,17 @@ describe('calculateTwoLaneLayout', () => {
     });
     expect(result.planLayouts).toHaveLength(2);
     expect(result.planLayouts[1]?.position).toMatchObject({ top: 660, height: 30 });
+  });
+});
+
+describe('resolveTwoLaneFromPointer', () => {
+  it('既定38%の境界より左をPlan、右をLogにする', () => {
+    expect(resolveTwoLaneFromPointer(137, 100, 100)).toBe('plan');
+    expect(resolveTwoLaneFromPointer(138, 100, 100)).toBe('log');
+  });
+
+  it('Week用20%幅を反映する', () => {
+    expect(resolveTwoLaneFromPointer(119, 100, 100, 20)).toBe('plan');
+    expect(resolveTwoLaneFromPointer(120, 100, 100, 20)).toBe('log');
   });
 });

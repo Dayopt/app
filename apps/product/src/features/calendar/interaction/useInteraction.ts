@@ -14,8 +14,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 import type { CalendarEvent } from '../types/calendar.types';
 
+import { isPlanRecordDrop } from '@/features/entry';
 import { hasCalendarActualRangeDiff } from '../lib/entry-time';
-import { checkClientSideOverlap } from '../lib/overlap';
+import { checkClientSideOverlapByKind } from '../lib/overlap';
+import { resolveTwoLaneFromPointer } from '../lib/two-lane-layout';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
 import { IDLE, interactionReducer } from '../domain/interaction/machine';
@@ -54,6 +56,8 @@ export interface UseInteractionProps {
   resizeDisabledPlanId?: string | null;
   /** Pixels per hour */
   hourHeight: number;
+  /** 2レーン表示のPlan幅（%） */
+  planLaneWidthPercent?: number | undefined;
   /** Callback when an event is moved or resized */
   onEventUpdate?: (
     eventId: string,
@@ -63,6 +67,8 @@ export interface UseInteractionProps {
       resetActualTime?: boolean;
     },
   ) => Promise<void | { skipToast: true }> | void;
+  /** Plan を Log レーンへdropした時の記録化 */
+  onPlanRecord?: ((planId: string) => void) | undefined;
   /** Callback when an event is clicked (not dragged) */
   onEventClick?: (event: CalendarEvent) => void;
   /** Callback when a time range is selected on the grid */
@@ -139,6 +145,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
     events: props.events,
     allEvents: props.allEventsForOverlapCheck ?? props.events,
     hourHeight: props.hourHeight,
+    planLaneWidthPercent: props.planLaneWidthPercent ?? 38,
     date: props.date,
     displayDates: props.displayDates,
     viewMode: props.viewMode ?? 'day',
@@ -146,6 +153,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
     resizeDisabledPlanId: props.resizeDisabledPlanId,
     onEventClick: props.onEventClick,
     onEventUpdate: props.onEventUpdate,
+    onPlanRecord: props.onPlanRecord,
     onTimeRangeSelect: props.onTimeRangeSelect,
     haptic,
     startDragStore,
@@ -156,6 +164,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
     events: props.events,
     allEvents: props.allEventsForOverlapCheck ?? props.events,
     hourHeight: props.hourHeight,
+    planLaneWidthPercent: props.planLaneWidthPercent ?? 38,
     date: props.date,
     displayDates: props.displayDates,
     viewMode: props.viewMode ?? 'day',
@@ -163,6 +172,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
     resizeDisabledPlanId: props.resizeDisabledPlanId,
     onEventClick: props.onEventClick,
     onEventUpdate: props.onEventUpdate,
+    onPlanRecord: props.onPlanRecord,
     onTimeRangeSelect: props.onTimeRangeSelect,
     haptic,
     startDragStore,
@@ -175,6 +185,8 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
 
   // Cached day-column NodeList — populated at drag-start, cleared on drag-end
   const dayColumnsRef = useRef<NodeListOf<HTMLElement> | null>(null);
+  // machine は DRAG_STORE_END → DROP の順でeffectを出すため、drop判定用laneを別refに保持する。
+  const dragLaneRef = useRef<{ source: 'plan' | 'log'; target: 'plan' | 'log' } | null>(null);
 
   // ---- Build context for the reducer ----
   function buildContext(r: typeof latestRef.current): InteractionContext {
@@ -198,7 +210,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
       // 自動記録モデルでは drag / resize とも「planned のみ移動・確定済み actual は固定」で
       // 重複判定が同一なため operation は使わない（machine の API 形状だけ維持する）
       checkOverlap: (entryId: string, start: Date, end: Date, _operation: 'drag' | 'resize') => {
-        return checkClientSideOverlap(r.allEvents, entryId, start, end);
+        return checkClientSideOverlapByKind(r.allEvents, entryId, start, end);
       },
     };
   }
@@ -241,12 +253,26 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           break;
         }
 
-        case 'DROP':
+        case 'DROP': {
+          const event = r.events.find((candidate) => candidate.id === effect.entryId);
+          if (
+            event?.kind === 'plan' &&
+            dragLaneRef.current &&
+            isPlanRecordDrop(dragLaneRef.current.source, dragLaneRef.current.target)
+          ) {
+            r.onPlanRecord?.(effect.entryId);
+            break;
+          }
+          // 過去PlanはLogレーンへの記録dropだけ許可し、同一レーンの時間移動は無視する。
+          if (event?.kind === 'plan' && event.endDate && event.endDate.getTime() <= Date.now()) {
+            break;
+          }
           r.onEventUpdate?.(effect.entryId, {
             startTime: effect.time.start,
             endTime: effect.time.end,
           });
           break;
+        }
 
         case 'DROP_REJECTED':
           // Snap-back animation handled by GhostRenderer
@@ -282,7 +308,11 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
 
         case 'DRAG_STORE_START': {
           const plan = r.events.find((e) => e.id === effect.entryId);
-          if (plan) r.startDragStore(effect.entryId, plan, effect.dateIndex);
+          if (plan) {
+            const lane = plan.kind ?? 'plan';
+            dragLaneRef.current = { source: lane, target: lane };
+            r.startDragStore(effect.entryId, plan, effect.dateIndex, lane);
+          }
           // Cache day-column elements once at drag-start
           dayColumnsRef.current = document.querySelectorAll<HTMLElement>(
             '[data-calendar-day-index]',
@@ -297,11 +327,19 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           });
           break;
 
-        case 'DRAG_STORE_END':
+        case 'DRAG_STORE_END': {
+          const currentDrag = useCalendarDragStore.getState();
+          if (currentDrag.sourceLane && currentDrag.targetLane) {
+            dragLaneRef.current = {
+              source: currentDrag.sourceLane,
+              target: currentDrag.targetLane,
+            };
+          }
           r.endDragStore();
           // Clear cached day-column elements
           dayColumnsRef.current = null;
           break;
+        }
       }
     }
   }
@@ -349,14 +387,16 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
       // Calculate target date index for multi-column views
       let targetDateIndex: number | undefined;
       const r = latestRef.current;
+      let targetColumn: HTMLElement | undefined;
+      const columns =
+        dayColumnsRef.current ??
+        document.querySelectorAll<HTMLElement>('[data-calendar-day-index]');
       if (r.viewMode !== 'day' && r.displayDates && r.displayDates.length > 1) {
         // Use cached NodeList during drag to avoid querySelectorAll on every pointermove
-        const columns =
-          dayColumnsRef.current ??
-          document.querySelectorAll<HTMLElement>('[data-calendar-day-index]');
         for (const col of columns) {
           const rect = col.getBoundingClientRect();
           if (point.clientX >= rect.left && point.clientX < rect.right) {
+            targetColumn = col;
             targetDateIndex = parseInt(col.dataset.calendarDayIndex ?? '0', 10);
             break;
           }
@@ -366,8 +406,27 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           const first = columns[0]!;
           const last = columns[columns.length - 1]!;
           const edge = point.clientX < first.getBoundingClientRect().left ? first : last;
+          targetColumn = edge;
           targetDateIndex = parseInt(edge.dataset.calendarDayIndex ?? '0', 10);
         }
+      }
+
+      if (!targetColumn) {
+        targetColumn = Array.from(columns).find((column) => {
+          const rect = column.getBoundingClientRect();
+          return point.clientX >= rect.left && point.clientX < rect.right;
+        });
+      }
+      if (stateRef.current.mode === 'dragging' && targetColumn) {
+        const rect = targetColumn.getBoundingClientRect();
+        const targetLane = resolveTwoLaneFromPointer(
+          point.clientX,
+          rect.left,
+          rect.width,
+          r.planLaneWidthPercent,
+        );
+        if (dragLaneRef.current) dragLaneRef.current.target = targetLane;
+        r.updateDragStore({ targetLane });
       }
 
       // Prevent scroll during active drag/resize/select

@@ -3,14 +3,26 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
+import type { TimeModelDestination } from '../domain/time-model-destination';
 import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
 
 const ENTRY_PARAM = 'entry';
 
+/** `plan:{uuid}` / `log:{uuid}` を分解する。prefix なしは plan として扱う（旧 URL 互換） */
+function parseEntryParam(param: string): { entryId: string; kind: TimeModelDestination } {
+  if (param.startsWith('plan:')) return { entryId: param.slice(5), kind: 'plan' };
+  if (param.startsWith('log:')) return { entryId: param.slice(4), kind: 'log' };
+  return { entryId: param, kind: 'plan' };
+}
+
+function serializeEntryParam(entryId: string, kind: TimeModelDestination): string {
+  return `${kind}:${entryId}`;
+}
+
 /**
  * インスペクタとURLクエリパラメータを同期するフック
  *
- * - `?entry=<uuid>` → 該当エントリでインスペクタオープン
+ * - `?entry=plan:<uuid>` / `?entry=log:<uuid>` → 該当 plan / log でインスペクタオープン
  * - インスペクタ閉じる → パラメータ削除
  * - ブラウザの戻る/進むボタンでも動作
  * - ドラフトモード（entryId === null）はURL同期しない
@@ -24,12 +36,14 @@ export function useInspectorURLSync() {
 
   const isOpen = useEntryInspectorStore((state) => state.isOpen);
   const entryId = useEntryInspectorStore((state) => state.entryId);
+  const entryKind = useEntryInspectorStore((state) => state.entryKind);
   const openInspector = useEntryInspectorStore((state) => state.openInspector);
   const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
 
   // 前回の状態を追跡（無限ループ防止）
   const prevIsOpenRef = useRef(isOpen);
   const prevEntryIdRef = useRef(entryId);
+  const prevEntryKindRef = useRef(entryKind);
   const isUpdatingFromURLRef = useRef(false);
 
   // 初回マウント時のみ: URLパラメータからインスペクタを開く
@@ -40,7 +54,8 @@ export function useInspectorURLSync() {
 
     if (entryParam) {
       isUpdatingFromURLRef.current = true;
-      openInspector(entryParam);
+      const parsed = parseEntryParam(entryParam);
+      openInspector(parsed.entryId, parsed.kind);
       setTimeout(() => {
         isUpdatingFromURLRef.current = false;
       }, 0);
@@ -56,12 +71,16 @@ export function useInspectorURLSync() {
     if (isUpdatingFromURLRef.current) return;
 
     // 状態が実際に変更されたかチェック
-    const stateChanged = prevIsOpenRef.current !== isOpen || prevEntryIdRef.current !== entryId;
+    const stateChanged =
+      prevIsOpenRef.current !== isOpen ||
+      prevEntryIdRef.current !== entryId ||
+      prevEntryKindRef.current !== entryKind;
     if (!stateChanged) return;
 
     // 状態を更新
     prevIsOpenRef.current = isOpen;
     prevEntryIdRef.current = entryId;
+    prevEntryKindRef.current = entryKind;
 
     const currentUrl = typeof window !== 'undefined' ? new URL(window.location.href) : null;
     const currentPathname = currentUrl?.pathname ?? pathname;
@@ -73,8 +92,9 @@ export function useInspectorURLSync() {
     if (isOpen && entryId) {
       // 既存エントリでインスペクタが開いている場合
       // push で履歴エントリを追加 → 戻る/進むで復元可能にする
-      if (currentEntryParam !== entryId) {
-        currentParams.set(ENTRY_PARAM, entryId);
+      const serialized = serializeEntryParam(entryId, entryKind);
+      if (currentEntryParam !== serialized) {
+        currentParams.set(ENTRY_PARAM, serialized);
         router.push(`${currentPathname}?${currentParams.toString()}`, { scroll: false });
       }
     } else {
@@ -88,7 +108,7 @@ export function useInspectorURLSync() {
         router.replace(newUrl, { scroll: false });
       }
     }
-  }, [isOpen, entryId, pathname, searchParams, router]);
+  }, [isOpen, entryId, entryKind, pathname, searchParams, router]);
 
   // popstate対応: ブラウザの戻る/進むでURLが変わった時
   useEffect(() => {
@@ -98,9 +118,12 @@ export function useInspectorURLSync() {
 
       isUpdatingFromURLRef.current = true;
 
-      if (entryParam && entryParam !== entryId) {
-        openInspector(entryParam);
-      } else if (!entryParam && isOpen && entryId) {
+      if (entryParam) {
+        const parsed = parseEntryParam(entryParam);
+        if (parsed.entryId !== entryId || parsed.kind !== entryKind) {
+          openInspector(parsed.entryId, parsed.kind);
+        }
+      } else if (isOpen && entryId) {
         closeInspector();
       }
 
@@ -111,5 +134,5 @@ export function useInspectorURLSync() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [entryId, isOpen, openInspector, closeInspector]);
+  }, [entryId, entryKind, isOpen, openInspector, closeInspector]);
 }

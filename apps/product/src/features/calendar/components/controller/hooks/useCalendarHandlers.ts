@@ -23,12 +23,12 @@ export function useCalendarHandlers() {
   // エントリクリックハンドラー
   const handleEntryClick = useCallback(
     (entry: CalendarEvent) => {
-      openEntryInspector(entry.id);
+      openEntryInspector(entry.id, entry.kind ?? 'plan');
 
       logger.log('Opening Entry Inspector:', {
         entryId: entry.id,
         title: entry.title,
-        origin: entry.origin,
+        kind: entry.kind,
       });
     },
     [openEntryInspector],

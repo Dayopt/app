@@ -115,6 +115,21 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       actual_start_time: '2026-01-01T09:00:00Z',
       actual_end_time: '2026-01-01T10:00:00Z',
     });
+
+    // time model（plans/logs）は entries とは独立したテーブルなので個別に作成する
+    await adminSupabase.from('plans').insert({
+      user_id: TEST_USER_ID,
+      title: 'GDPR Test Plan',
+      start_at: '2026-01-02T09:00:00Z',
+      end_at: '2026-01-02T10:00:00Z',
+    });
+
+    await adminSupabase.from('logs').insert({
+      user_id: TEST_USER_ID,
+      title: 'GDPR Test Log',
+      start_at: '2026-01-03T09:00:00Z',
+      end_at: '2026-01-03T10:00:00Z',
+    });
   });
 
   afterAll(async () => {
@@ -122,6 +137,8 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     await supabase.auth.signOut();
 
     // テストデータをクリーンアップ
+    await adminSupabase.from('logs').delete().eq('user_id', TEST_USER_ID);
+    await adminSupabase.from('plans').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('entries').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('tags').delete().eq('user_id', TEST_USER_ID);
 
@@ -163,6 +180,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       expect(result.data).toHaveProperty('profile');
       expect(result.data).toHaveProperty('entries');
       expect(result.data).toHaveProperty('plans');
+      expect(result.data).toHaveProperty('logs');
       expect(result.data).toHaveProperty('tags');
       expect(result.data).toHaveProperty('records');
       expect(result.data).toHaveProperty('planTags');
@@ -170,22 +188,34 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       expect(result.data).toHaveProperty('userSettings');
     });
 
-    it('should include user entries and legacy plans alias in export', async () => {
+    it('should include user entries in export', async () => {
       const caller = createTestCaller(userRouter, ctx);
 
       const result = await caller.exportData();
 
       expect(Array.isArray(result.data.entries)).toBe(true);
-      expect(Array.isArray(result.data.plans)).toBe(true);
       // テストで作成したエントリが含まれている
       const testEntry = result.data.entries.find(
         (e: { title?: string }) => e.title === 'GDPR Test Entry',
       );
       expect(testEntry).toBeDefined();
-      const testPlanAlias = result.data.plans.find(
-        (e: { title?: string }) => e.title === 'GDPR Test Entry',
+    });
+
+    it('should include user plans and logs (time model) in export', async () => {
+      const caller = createTestCaller(userRouter, ctx);
+
+      const result = await caller.exportData();
+
+      // Step 8 cutover: plans/logs は entries とは独立した実データとしてエクスポートされる
+      // （旧 `plans: entries` エイリアスは廃止）
+      expect(Array.isArray(result.data.plans)).toBe(true);
+      expect(Array.isArray(result.data.logs)).toBe(true);
+      const testPlan = result.data.plans.find(
+        (p: { title?: string }) => p.title === 'GDPR Test Plan',
       );
-      expect(testPlanAlias).toBeDefined();
+      expect(testPlan).toBeDefined();
+      const testLog = result.data.logs.find((l: { title?: string }) => l.title === 'GDPR Test Log');
+      expect(testLog).toBeDefined();
     });
 
     it('should include user tags in export', async () => {

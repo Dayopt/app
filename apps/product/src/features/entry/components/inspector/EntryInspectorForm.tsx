@@ -18,7 +18,8 @@ import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
 import { getEntryMenuItems } from '../../lib/entry-menu-items';
 import { getEntryState } from '../../lib/entry-status';
 
-import { DateRow, NoteSection, TagRow, TimeConflictAlert, TimeDiffBlock, TimeRow } from './fields';
+import { DateRow, NoteSection, TagRow, TimeDiffBlock, TimeRow } from './fields';
+import { TimeConflictAlert } from './fields/TimeConflictAlert';
 import { useEntryForm } from './hooks/useEntryForm';
 
 interface EntryInspectorFormProps {

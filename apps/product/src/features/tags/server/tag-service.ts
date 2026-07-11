@@ -19,6 +19,7 @@ import 'server-only';
  */
 
 import type { Database, Insert, Row, Update } from '@/lib/database';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { formatRpcErrorDetail } from '../domain/tag-merge';
 import { extractTagSuffixes, partitionByExistingName } from '../domain/tag-ungroup';
@@ -103,6 +104,107 @@ export class TagService {
     this.queryService = new TagQueryService(supabase);
     this.reorderService = new TagReorderService(supabase);
     this.statisticsService = new TagStatisticsService(supabase);
+  }
+
+  private async countTagAssociations(userId: string, tagIds: string[]): Promise<number> {
+    const results = await Promise.all(
+      (['plans', 'logs', 'entries'] as const).map((table) =>
+        this.supabase
+          .from(table)
+          .select('id', { count: 'exact', head: true })
+          .in('tag_id', tagIds)
+          .eq('user_id', userId),
+      ),
+    );
+
+    const failed = results.find((result) => result.error);
+    if (failed?.error) {
+      throw new TagServiceError(
+        'FETCH_FAILED',
+        `Failed to inspect tag associations: ${failed.error.message}`,
+      );
+    }
+    return results.reduce((total, result) => total + (result.count ?? 0), 0);
+  }
+
+  private async applyTagStrategy(options: {
+    userId: string;
+    tagIds: string[];
+    strategy: TagDeleteStrategy;
+    targetTagId?: string | undefined;
+  }): Promise<void> {
+    const { userId, tagIds, strategy, targetTagId } = options;
+    const adminClient = createServiceRoleClient();
+
+    if (strategy === 'reassign') {
+      if (!targetTagId) {
+        throw new TagServiceError('INVALID_INPUT', 'targetTagId is required for reassign strategy');
+      }
+      for (const table of ['plans', 'logs', 'entries'] as const) {
+        const { error } = await adminClient
+          .from(table)
+          .update({ tag_id: targetTagId })
+          .in('tag_id', tagIds)
+          .eq('user_id', userId);
+        if (error) {
+          throw new TagServiceError(
+            'UPDATE_FAILED',
+            `Failed to reassign ${table}: ${error.message}`,
+          );
+        }
+      }
+      return;
+    }
+
+    const { data: plans, error: planLookupError } = await adminClient
+      .from('plans')
+      .select('id')
+      .in('tag_id', tagIds)
+      .eq('user_id', userId);
+    if (planLookupError) {
+      throw new TagServiceError(
+        'FETCH_FAILED',
+        `Failed to inspect plans for tag deletion: ${planLookupError.message}`,
+      );
+    }
+
+    const { error: logDeleteError } = await adminClient
+      .from('logs')
+      .delete()
+      .in('tag_id', tagIds)
+      .eq('user_id', userId);
+    if (logDeleteError) {
+      throw new TagServiceError(
+        'DELETE_FAILED',
+        `Failed to delete logs: ${logDeleteError.message}`,
+      );
+    }
+
+    const planIds = (plans ?? []).map((plan) => plan.id);
+    if (planIds.length > 0) {
+      const { error: detachError } = await adminClient
+        .from('logs')
+        .update({ plan_id: null })
+        .in('plan_id', planIds)
+        .eq('user_id', userId);
+      if (detachError) {
+        throw new TagServiceError(
+          'UPDATE_FAILED',
+          `Failed to detach logs from deleted plans: ${detachError.message}`,
+        );
+      }
+    }
+
+    for (const table of ['plans', 'entries'] as const) {
+      const { error } = await adminClient
+        .from(table)
+        .delete()
+        .in('tag_id', tagIds)
+        .eq('user_id', userId);
+      if (error) {
+        throw new TagServiceError('DELETE_FAILED', `Failed to delete ${table}: ${error.message}`);
+      }
+    }
   }
 
   private async getNextSortOrder(userId: string, parentId: string | null): Promise<number> {
@@ -556,15 +658,10 @@ export class TagService {
 
     const tagIds = matchingTags.map((t) => t.id);
 
-    // 関連エントリがある場合は strategy 必須（参照ありのタグは暗黙削除させない）
+    // 関連Plan / Log / Entryがある場合は strategy 必須（暗黙削除させない）
     if (!strategy) {
-      const { count } = await this.supabase
-        .from('entries')
-        .select('*', { count: 'exact', head: true })
-        .in('tag_id', tagIds)
-        .eq('user_id', userId);
-
-      if (count && count > 0) {
+      const associationCount = await this.countTagAssociations(userId, tagIds);
+      if (associationCount > 0) {
         throw new TagServiceError(
           'INVALID_INPUT',
           'Tags in this group have associated entries. Specify a strategy: "delete_entries" or "reassign"',
@@ -577,35 +674,13 @@ export class TagService {
         throw new TagServiceError('INVALID_INPUT', 'targetTagId is required for reassign strategy');
       }
       await this.getById({ userId, tagId: targetTagId });
-
-      // entries.tag_id を targetTagId に付け替え
-      const { error: reassignError } = await this.supabase
-        .from('entries')
-        .update({ tag_id: targetTagId })
-        .in('tag_id', tagIds)
-        .eq('user_id', userId);
-
-      if (reassignError) {
-        throw new TagServiceError(
-          'UPDATE_FAILED',
-          `Failed to reassign entries: ${reassignError.message}`,
-        );
-      }
-    } else {
-      // delete_entries または strategy なし — 関連エントリを直接削除
-      const { error: entriesError } = await this.supabase
-        .from('entries')
-        .delete()
-        .in('tag_id', tagIds)
-        .eq('user_id', userId);
-
-      if (entriesError) {
-        throw new TagServiceError(
-          'DELETE_FAILED',
-          `Failed to delete entries: ${entriesError.message}`,
-        );
-      }
     }
+    await this.applyTagStrategy({
+      userId,
+      tagIds,
+      strategy: strategy ?? 'delete_entries',
+      ...(targetTagId ? { targetTagId } : {}),
+    });
 
     // タグを一括削除
     const { error: deleteError } = await this.supabase
@@ -624,7 +699,7 @@ export class TagService {
   /**
    * タグマージ（atomic）
    *
-   * `merge_tags_with_hierarchy` RPC で entries 移動 + children 再 parent +
+   * `merge_tags_with_hierarchy` RPC で plans / logs / entries 移動 + children 再 parent +
    * source 非アクティブ化を 1 transaction にまとめて実行する。途中失敗時は全体
    * rollback されるため partial state は発生しない。
    *
@@ -720,15 +795,10 @@ export class TagService {
       );
     }
 
-    // 関連エントリがある場合は strategy 必須（参照ありのタグは暗黙削除させない）
+    // 関連Plan / Log / Entryがある場合は strategy 必須（暗黙削除させない）
     if (!strategy) {
-      const { count } = await this.supabase
-        .from('entries')
-        .select('*', { count: 'exact', head: true })
-        .eq('tag_id', tagId)
-        .eq('user_id', userId);
-
-      if (count && count > 0) {
+      const associationCount = await this.countTagAssociations(userId, [tagId]);
+      if (associationCount > 0) {
         throw new TagServiceError(
           'INVALID_INPUT',
           'Tag has associated entries. Specify a strategy: "delete_entries" or "reassign"',
@@ -742,25 +812,13 @@ export class TagService {
       }
       // 付け替え先の所有権チェック
       await this.getById({ userId, tagId: targetTagId });
-
-      // entries.tag_id を targetTagId に付け替え
-      const { error: reassignError } = await this.supabase
-        .from('entries')
-        .update({ tag_id: targetTagId })
-        .eq('tag_id', tagId)
-        .eq('user_id', userId);
-
-      if (reassignError) {
-        throw new TagServiceError(
-          'UPDATE_FAILED',
-          `Failed to reassign entries: ${reassignError.message}`,
-        );
-      }
-    } else {
-      // delete_entries または strategy なし（0件タグ）
-      // 関連エントリを直接削除
-      await this.supabase.from('entries').delete().eq('tag_id', tagId).eq('user_id', userId);
     }
+    await this.applyTagStrategy({
+      userId,
+      tagIds: [tagId],
+      strategy: strategy ?? 'delete_entries',
+      ...(targetTagId ? { targetTagId } : {}),
+    });
 
     if ((childTags?.length ?? 0) > 0) {
       const nextRootSortOrder = await this.getNextSortOrder(userId, null);
@@ -816,13 +874,13 @@ export class TagService {
   /**
    * タグ使用統計取得
    *
-   * DB側集計関数 get_tag_stats を使用（5クエリ → 1 RPC に最適化）
+   * logs を正としてタグ使用数・最終利用日時を集計する
    *
    * @param options - userId
    * @returns タグ統計の配列
    */
   async getStats(options: { userId: string }): Promise<TagStatsRow[]> {
-    return this.statisticsService.getStats(options.userId);
+    return this.statisticsService.getStatsFromLogs(options.userId);
   }
 }
 

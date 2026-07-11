@@ -23,13 +23,6 @@ export async function getUserTimezone(
   return (data?.timezone as string | null | undefined) ?? 'UTC';
 }
 
-type StripUndefinedValues<T> = { [K in keyof T]: Exclude<T[K], undefined> };
-export function stripUndefined<T extends Record<string, unknown>>(obj: T): StripUndefinedValues<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, value]) => value !== undefined),
-  ) as never;
-}
-
 export function handleStatsError(operation: string, error: unknown): never {
   if (error instanceof TRPCError) {
     Sentry.captureException(error.cause ?? error, {

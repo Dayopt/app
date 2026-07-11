@@ -8,6 +8,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock, createMockSupabase } from '@/lib/test/trpc-test-helpers';
 
+const adminFrom = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/supabase/oauth', () => ({
+  createServiceRoleClient: () => ({ from: adminFrom }),
+}));
+
 import { createTagService, TagService, TagServiceError } from '../tag-service';
 
 describe('TagService', () => {
@@ -18,6 +24,7 @@ describe('TagService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSupabase = createMockSupabase();
+    adminFrom.mockImplementation(() => createChainableMock([], null));
     service = createTagService(mockSupabase as unknown as Parameters<typeof createTagService>[0]);
   });
 
@@ -578,22 +585,20 @@ describe('TagService', () => {
       ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     });
 
-    it('reassign strategy: should update entries.tag_id to targetTagId', async () => {
+    it('reassign strategy: should update plans / logs / entries tag_id', async () => {
       const targetTag = { id: 'tag-2', name: 'Target', user_id: userId, parent_id: null };
 
       // 1: getById(tagId)
       // 2: select children
       // 3: getById(targetTagId)
-      // 4: update entries (set tag_id=targetTagId)
-      // 5: delete tags
       const updateMock = createChainableMock(null);
       const deleteMock = createChainableMock(null);
+      adminFrom.mockReturnValue(updateMock);
 
       mockSupabase.from
         .mockReturnValueOnce(mockSingleResponse(existingTag))
         .mockReturnValueOnce(mockArrayResponse([]))
         .mockReturnValueOnce(mockSingleResponse(targetTag))
-        .mockReturnValueOnce(updateMock)
         .mockReturnValueOnce(deleteMock);
 
       const result = await service.delete({
@@ -604,22 +609,24 @@ describe('TagService', () => {
       });
 
       expect(updateMock.update).toHaveBeenCalledWith({ tag_id: 'tag-2' });
+      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['plans', 'logs', 'entries']);
       expect(deleteMock.delete).toHaveBeenCalled();
       expect(result).toMatchObject(existingTag);
     });
 
-    it('delete_entries strategy: should delete entries before deleting the tag', async () => {
-      // 1: getById(tagId)
-      // 2: select children
-      // 3: delete entries
-      // 4: delete tag
-      const entriesDeleteMock = createChainableMock(null);
+    it('delete_entries strategy: should delete logs / plans / entries before deleting the tag', async () => {
+      const planLookupMock = createChainableMock([]);
+      const dataDeleteMock = createChainableMock(null);
       const tagDeleteMock = createChainableMock(null);
+      adminFrom
+        .mockReturnValueOnce(planLookupMock)
+        .mockReturnValueOnce(dataDeleteMock)
+        .mockReturnValueOnce(dataDeleteMock)
+        .mockReturnValueOnce(dataDeleteMock);
 
       mockSupabase.from
         .mockReturnValueOnce(mockSingleResponse(existingTag))
         .mockReturnValueOnce(mockArrayResponse([]))
-        .mockReturnValueOnce(entriesDeleteMock)
         .mockReturnValueOnce(tagDeleteMock);
 
       await service.delete({
@@ -628,7 +635,13 @@ describe('TagService', () => {
         strategy: 'delete_entries',
       });
 
-      expect(entriesDeleteMock.delete).toHaveBeenCalled();
+      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual([
+        'plans',
+        'logs',
+        'plans',
+        'entries',
+      ]);
+      expect(dataDeleteMock.delete).toHaveBeenCalled();
       expect(tagDeleteMock.delete).toHaveBeenCalled();
     });
   });

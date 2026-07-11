@@ -197,8 +197,6 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onDeleteEntry={composition.onDeleteEntry}
           onDeleteEntryConfirm={composition.onDeleteEntryConfirm}
           onViewStats={composition.onViewStats}
-          onMarkUnplanned={composition.onMarkUnplanned}
-          onRestorePlanned={composition.onRestorePlanned}
           onSkip={composition.onSkip}
           onUnskip={composition.onUnskip}
           onNavigate={composition.onNavigate}

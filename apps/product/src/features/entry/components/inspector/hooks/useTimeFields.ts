@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date';
+import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 import type { EntryWithTags } from '../../../types/entry';

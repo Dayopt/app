@@ -1,25 +1,9 @@
-import { TRPCError } from '@trpc/server';
-import { formatInTimeZone } from 'date-fns-tz';
 import { z } from 'zod';
 
-import { traceDbQuery } from '@/lib/sentry/trace';
 import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
 
-import {
-  aggregateDayOfWeekDistribution,
-  aggregateHourlyDistribution,
-  aggregateMonthlyTrend,
-  aggregateTagStats,
-  getMonthlyStartDate,
-} from '../domain';
-
-import {
-  dateRangeInput,
-  getUserTimezone,
-  handleStatsError,
-  stripUndefined,
-} from './statistics-shared';
-import { transformTimeByTagResponse } from './statistics-time-by-tag-transform';
+import { StatisticsService } from './statistics-service';
+import { dateRangeInput, handleStatsError } from './statistics-shared';
 
 export const entriesStatisticsGeneralRouter = createTRPCRouter({
   /** Get tag statistics (entry count and last used date) */
@@ -27,21 +11,7 @@ export const entriesStatisticsGeneralRouter = createTRPCRouter({
     .meta({ description: 'タグ別統計取得（エントリ数・最終使用日）' })
     .query(async ({ ctx }) => {
       try {
-        const { supabase, userId } = ctx;
-
-        const { data, error } = await traceDbQuery('stats.get_tag_stats', async () =>
-          supabase.rpc('get_tag_stats', { p_user_id: userId }),
-        );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch tag statistics: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        return aggregateTagStats(data);
+        return await new StatisticsService(ctx.supabase).getTagStats(ctx.userId);
       } catch (error) {
         handleStatsError('getTagStats', error);
       }
@@ -53,28 +23,7 @@ export const entriesStatisticsGeneralRouter = createTRPCRouter({
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
       try {
-        const { supabase, userId } = ctx;
-
-        const { data, error } = await traceDbQuery('stats.get_time_by_tag', async () =>
-          supabase.rpc(
-            'get_time_by_tag',
-            stripUndefined({
-              p_user_id: userId,
-              p_start_date: input?.startDate,
-              p_end_date: input?.endDate,
-            }),
-          ),
-        );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch time by tag: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        return transformTimeByTagResponse(data);
+        return await new StatisticsService(ctx.supabase).getTimeByTag(ctx.userId, input);
       } catch (error) {
         handleStatsError('getTimeByTag', error);
       }
@@ -86,25 +35,7 @@ export const entriesStatisticsGeneralRouter = createTRPCRouter({
     .input(z.object({ year: z.number().int().min(2000).max(2100) }))
     .query(async ({ ctx, input }) => {
       try {
-        const { supabase, userId } = ctx;
-        const { year } = input;
-
-        const { data, error } = await traceDbQuery('stats.get_daily_hours', async () =>
-          supabase.rpc('get_daily_hours', {
-            p_user_id: userId,
-            p_year: year,
-          }),
-        );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch daily hours: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        return data ?? [];
+        return await new StatisticsService(ctx.supabase).getDailyHours(ctx.userId, input.year);
       } catch (error) {
         handleStatsError('getDailyHours', error);
       }
@@ -116,28 +47,7 @@ export const entriesStatisticsGeneralRouter = createTRPCRouter({
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
       try {
-        const { supabase, userId } = ctx;
-
-        const { data, error } = await traceDbQuery('stats.get_hourly_distribution', async () =>
-          supabase.rpc(
-            'get_hourly_distribution',
-            stripUndefined({
-              p_user_id: userId,
-              p_start_date: input?.startDate,
-              p_end_date: input?.endDate,
-            }),
-          ),
-        );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch hourly distribution: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        return aggregateHourlyDistribution(data ?? []);
+        return await new StatisticsService(ctx.supabase).getHourlyDistribution(ctx.userId, input);
       } catch (error) {
         handleStatsError('getHourlyDistribution', error);
       }
@@ -149,28 +59,10 @@ export const entriesStatisticsGeneralRouter = createTRPCRouter({
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
       try {
-        const { supabase, userId } = ctx;
-
-        const { data, error } = await traceDbQuery('stats.get_dow_distribution', async () =>
-          supabase.rpc(
-            'get_dow_distribution',
-            stripUndefined({
-              p_user_id: userId,
-              p_start_date: input?.startDate,
-              p_end_date: input?.endDate,
-            }),
-          ),
+        return await new StatisticsService(ctx.supabase).getDayOfWeekDistribution(
+          ctx.userId,
+          input,
         );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch day-of-week distribution: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        return aggregateDayOfWeekDistribution(data ?? []);
       } catch (error) {
         handleStatsError('getDayOfWeekDistribution', error);
       }
@@ -182,32 +74,7 @@ export const entriesStatisticsGeneralRouter = createTRPCRouter({
     .input(z.object({ months: z.number().min(1).max(120).optional() }).optional())
     .query(async ({ ctx, input }) => {
       try {
-        const { supabase, userId } = ctx;
-        const monthCount = input?.months ?? 12;
-
-        // ユーザーのタイムゾーンで「現在の年月」を決定する
-        const timezone = await getUserTimezone(supabase, userId);
-        const nowStr = formatInTimeZone(new Date(), timezone, 'yyyy-MM');
-        const [nowYear, nowMonth] = nowStr.split('-').map(Number) as [number, number];
-
-        const startDate = getMonthlyStartDate(nowYear, nowMonth, monthCount);
-
-        const { data, error } = await traceDbQuery('stats.get_monthly_hours', async () =>
-          supabase.rpc('get_monthly_hours', {
-            p_user_id: userId,
-            p_start_date: startDate.toISOString(),
-          }),
-        );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch monthly trend: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        return aggregateMonthlyTrend(data ?? [], nowYear, nowMonth, monthCount);
+        return await new StatisticsService(ctx.supabase).getMonthlyTrend(ctx.userId, input?.months);
       } catch (error) {
         handleStatsError('getMonthlyTrend', error);
       }
