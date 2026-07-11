@@ -1,13 +1,9 @@
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import { traceDbQuery } from '@/lib/sentry/trace';
 import { createTRPCRouter, proProcedure } from '@/lib/trpc/procedures';
 
-import { type EstimationAccuracyDbRow, transformEstimationAccuracy } from '../domain';
-
-import { unpackBlankRate } from './statistics-kpi-unpackers';
-import { dateRangeInput, handleStatsError, stripUndefined } from './statistics-shared';
+import { StatisticsService } from './statistics-service';
+import { dateRangeInput, handleStatsError } from './statistics-shared';
 
 export const entriesStatisticsKpiRouter = createTRPCRouter({
   /** 見積もり精度: タグ別の予定時間 vs 実績時間 */
@@ -16,28 +12,7 @@ export const entriesStatisticsKpiRouter = createTRPCRouter({
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
       try {
-        const { supabase, userId } = ctx;
-
-        const { data, error } = await traceDbQuery('stats.get_estimation_accuracy', async () =>
-          supabase.rpc(
-            'get_estimation_accuracy',
-            stripUndefined({
-              p_user_id: userId,
-              p_start_date: input.startDate,
-              p_end_date: input.endDate,
-            }),
-          ),
-        );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch estimation accuracy: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        return transformEstimationAccuracy((data ?? []) as ReadonlyArray<EstimationAccuracyDbRow>);
+        return await new StatisticsService(ctx.supabase).getEstimationAccuracy(ctx.userId, input);
       } catch (error) {
         handleStatsError('getEstimationAccuracy', error);
       }
@@ -54,30 +29,7 @@ export const entriesStatisticsKpiRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       try {
-        const { supabase, userId } = ctx;
-
-        const { data, error } = await traceDbQuery('stats.get_blank_rate', async () =>
-          supabase.rpc(
-            'get_blank_rate',
-            stripUndefined({
-              p_user_id: userId,
-              p_start_date: input.startDate,
-              p_end_date: input.endDate,
-              p_wake_hour: input.wakeHour,
-              p_sleep_hour: input.sleepHour,
-            }),
-          ),
-        );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch idle rate: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        return unpackBlankRate(data);
+        return await new StatisticsService(ctx.supabase).getBlankRate(ctx.userId, input);
       } catch (error) {
         handleStatsError('getBlankRate', error);
       }

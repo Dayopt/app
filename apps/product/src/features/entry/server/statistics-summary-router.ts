@@ -1,20 +1,15 @@
-import { TRPCError } from '@trpc/server';
-import { formatInTimeZone } from 'date-fns-tz';
 import { z } from 'zod';
 
-import { traceDbQuery } from '@/lib/sentry/trace';
 import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { calculateStreak } from '../domain';
 
-import { transformStatsOverviewResponse } from './statistics-overview-transform';
 import { StatisticsService } from './statistics-service';
 import {
   dateRangeInput,
   getTodayInTimezone,
   getUserTimezone,
   handleStatsError,
-  stripUndefined,
 } from './statistics-shared';
 
 export const entriesStatisticsSummaryRouter = createTRPCRouter({
@@ -32,23 +27,13 @@ export const entriesStatisticsSummaryRouter = createTRPCRouter({
         // 過去365日分のアクティブ日を取得
         const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
-        const { data, error } = await traceDbQuery('stats.get_active_dates', async () =>
-          supabase.rpc('get_active_dates', {
-            p_user_id: userId,
-            p_start_date: formatInTimeZone(since, timezone, 'yyyy-MM-dd'),
-          }),
+        const activeDates = await new StatisticsService(supabase).getActiveDates(
+          userId,
+          since.toISOString(),
         );
 
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch active days: ${error.message}`,
-            cause: error,
-          });
-        }
-
         const streak = calculateStreak({
-          activeDates: data ?? [],
+          activeDates,
           todayStr,
           timezone,
         });
@@ -74,30 +59,7 @@ export const entriesStatisticsSummaryRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       try {
-        const { supabase, userId } = ctx;
-
-        const { data, error } = await traceDbQuery('stats.get_kpi_summary', async () =>
-          supabase.rpc(
-            'get_stats_kpi_summary',
-            stripUndefined({
-              p_user_id: userId,
-              p_start_date: input.startDate,
-              p_end_date: input.endDate,
-              p_wake_hour: input.wakeHour,
-              p_sleep_hour: input.sleepHour,
-            }),
-          ),
-        );
-
-        if (error) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch KPI summary: ${error.message}`,
-            cause: error,
-          });
-        }
-
-        return transformStatsOverviewResponse(data);
+        return await new StatisticsService(ctx.supabase).getStatsOverview(ctx.userId, input);
       } catch (error) {
         handleStatsError('getStatsOverview', error);
       }
