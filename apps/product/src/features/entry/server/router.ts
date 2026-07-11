@@ -1,7 +1,7 @@
 /**
  * Entries Core Router
  *
- * CRUD, bulk operations, tags
+ * read（list / getById）のみ提供する。write は Step 8 でクローズ済み。
  *
  * 統計系は statistics.ts に分離。
  */
@@ -9,13 +9,8 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import { logger } from '@/lib/logger';
-import { isEntryCreateLimited } from '@/lib/rate-limit/entry-create-limit';
-import { captureBusinessEvent } from '@/lib/sentry';
-import { getUserTimezone } from '@/lib/server/user-timezone-cache';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
-import { toEntryUpdatePayload } from '../lib/entry-normalization';
 import {
   bulkDeleteEntrySchema,
   bulkUpdateEntrySchema,
@@ -26,64 +21,54 @@ import {
   updateEntrySchema,
 } from '../schemas/entry';
 import { createEntryService } from './service-index';
-import type { ServiceSupabaseClient } from './types';
+import type { EntryRow, UpdateEntryResult } from './types';
 
 // =============================================================================
-// ユーザータイムゾーン取得 / レート制限の実装は lib に分離済み（P0-4 / P2-3）
+// Step 8 cutover: entries への書き込みをクローズする
+// =============================================================================
+//
+// runtime の正は plans / logs（time model）に切り替え済み。entries mutation を
+// 呼ぶ UI 経路はゼロ（休眠中の EntryInspector 系フックのみが参照するが未マウント）。
+// read（list / getById）と統計は Step 9 で entries 削除するまで残す。
+// Zod input はクライアント型の破壊的変更を避けるため維持し、実行時に
+// PRECONDITION_FAILED を投げる（古いタブ / キャッシュされたクライアントへの
+// 明示エラー。無言のデータ消失にしない）。
+
+/** entries への書き込みが closed であることを示す共通エラー */
+function throwEntriesWriteClosed(): never {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: 'ENTRIES_WRITE_CLOSED',
+  });
+}
+
+// =============================================================================
+// Inline Schemas（closed mutation の入力型維持用）
 // =============================================================================
 
-// - getUserTimezone は `@/lib/server/user-timezone-cache`（settings 更新時に
-//   同 module の invalidateUserTimezoneCache が呼ばれて即時無効化）
-// - isEntryCreateLimited は `@/lib/rate-limit/entry-create-limit`（Upstash
-//   優先、未設定時は in-memory fallback）
-
-// =============================================================================
-// Inline Schemas
-// =============================================================================
-
-/** 一括タグ設定のスキーマ（1エントリ1タグ制約） */
 const bulkSetTagSchema = z.object({
   entryIds: z.array(z.string().uuid()).min(1).max(100),
   tagId: z.string().uuid(),
 });
 
-/** エントリ・タグ操作の入力スキーマ */
 const entryTagInputSchema = z.object({
   entryId: z.string().uuid(),
   tagId: z.string().uuid(),
 });
 
-/** タグ設定の入力スキーマ（1エントリ1タグ制約） */
 const setTagInputSchema = z.object({
   entryId: z.string().uuid(),
   tagId: z.string().uuid().nullable(),
 });
 
-async function assertTagOwnedByUser(
-  supabase: ServiceSupabaseClient,
-  userId: string,
-  tagId: string,
-): Promise<void> {
-  const { data: tag, error } = await supabase
-    .from('tags')
-    .select('id')
-    .eq('id', tagId)
-    .eq('user_id', userId)
-    .single();
-
-  if (error || !tag) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid tag ID' });
-  }
-}
-
 // =============================================================================
 // Router
 // =============================================================================
 
-/** エントリCRUD・一括操作・タグ操作を担うコアtRPCルーター */
+/** エントリ read（list/getById）+ closed write を担うコアtRPCルーター */
 export const entriesCoreRouter = createTRPCRouter({
   // ---------------------------------------------------------------------------
-  // CRUD
+  // CRUD（read のみ有効）
   // ---------------------------------------------------------------------------
 
   /** エントリ一覧取得 */
@@ -117,58 +102,15 @@ export const entriesCoreRouter = createTRPCRouter({
       }
     }),
 
-  /** エントリ作成 */
+  /** [closed] エントリ作成 — plans.create / logs.create を使う */
   create: protectedProcedure
-    .meta({
-      description: 'エントリ作成（日次500件上限）',
-      rateLimit: { requests: 500, window: '24h' },
-    })
+    .meta({ description: '[closed] entries への書き込みは終了。plans.create / logs.create を使う' })
     .input(createEntrySchema)
-    .mutation(async ({ ctx, input }) => {
-      // 日次作成上限チェック（500/day）
-      if (await isEntryCreateLimited(ctx.userId)) {
-        throw new TRPCError({
-          code: 'TOO_MANY_REQUESTS',
-          message: 'Daily entry creation limit reached. Please try again later.',
-        });
-      }
+    .mutation((): Promise<EntryRow> => throwEntriesWriteClosed()),
 
-      const service = createEntryService(ctx.supabase);
-      try {
-        const { tagId, ...entryInput } = input;
-        if (tagId) {
-          await assertTagOwnedByUser(ctx.supabase, ctx.userId, tagId);
-        }
-
-        const timezone = await getUserTimezone(ctx.supabase, ctx.userId);
-        const result = await service.create({
-          userId: ctx.userId,
-          input: entryInput,
-          preventOverlappingEntries: true,
-          timezone,
-        });
-
-        // タグ指定時: entries.tag_id を直接設定
-        if (tagId && result.id) {
-          await ctx.supabase
-            .from('entries')
-            .update({ tag_id: tagId })
-            .eq('id', result.id)
-            .eq('user_id', ctx.userId);
-        }
-
-        captureBusinessEvent('entry.created', {
-          entryType: input.origin ?? 'planned',
-        });
-        return result;
-      } catch (error) {
-        handleServiceError(error);
-      }
-    }),
-
-  /** エントリ更新 */
+  /** [closed] エントリ更新 — plans.update / logs.update を使う */
   update: protectedProcedure
-    .meta({ description: 'エントリ更新（楽観的ロック対応）' })
+    .meta({ description: '[closed] entries への書き込みは終了。plans.update / logs.update を使う' })
     .input(
       z.object({
         id: z.string().uuid(),
@@ -176,295 +118,81 @@ export const entriesCoreRouter = createTRPCRouter({
         expectedUpdatedAt: z.string().datetime({ offset: true }).optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const service = createEntryService(ctx.supabase);
-      try {
-        const timezone = await getUserTimezone(ctx.supabase, ctx.userId);
-        return await service.update({
-          userId: ctx.userId,
-          entryId: input.id,
-          input: input.data,
-          preventOverlappingEntries: true,
-          expectedUpdatedAt: input.expectedUpdatedAt,
-          timezone,
-        });
-      } catch (error) {
-        handleServiceError(error);
-      }
-    }),
+    .mutation((): Promise<UpdateEntryResult> => throwEntriesWriteClosed()),
 
-  /** planned エントリを予定外記録へ明示変換 */
+  /** [closed] planned エントリを予定外記録へ変換 — time model に変換 procedure は無い */
   convertPlannedToUnplanned: protectedProcedure
-    .meta({ description: 'planned エントリを予定外記録へ変換' })
+    .meta({ description: '[closed] entries への書き込みは終了' })
     .input(entryIdSchema)
-    .mutation(async ({ ctx, input }) => {
-      const service = createEntryService(ctx.supabase);
-      try {
-        return await service.convertPlannedToUnplanned({
-          userId: ctx.userId,
-          entryId: input.id,
-        });
-      } catch (error) {
-        handleServiceError(error);
-      }
-    }),
+    .mutation((): Promise<EntryRow> => throwEntriesWriteClosed()),
 
-  /** unplanned エントリを予定へ明示変換 */
+  /** [closed] unplanned エントリを予定へ変換 — time model に変換 procedure は無い */
   convertUnplannedToPlanned: protectedProcedure
-    .meta({ description: 'unplanned エントリを予定へ変換' })
+    .meta({ description: '[closed] entries への書き込みは終了' })
     .input(entryIdSchema)
-    .mutation(async ({ ctx, input }) => {
-      const service = createEntryService(ctx.supabase);
-      try {
-        return await service.convertUnplannedToPlanned({
-          userId: ctx.userId,
-          entryId: input.id,
-        });
-      } catch (error) {
-        handleServiceError(error);
-      }
-    }),
+    .mutation((): Promise<EntryRow> => throwEntriesWriteClosed()),
 
-  /** エントリ削除（soft-delete） */
+  /** [closed] エントリ削除 — plans.delete / logs.delete を使う */
   delete: protectedProcedure
-    .meta({ description: 'エントリ削除（ソフトデリート、復元可能）' })
+    .meta({ description: '[closed] entries への書き込みは終了。plans.delete / logs.delete を使う' })
     .input(entryIdSchema)
-    .mutation(async ({ ctx, input }) => {
-      const service = createEntryService(ctx.supabase);
-      try {
-        return await service.delete({ userId: ctx.userId, entryId: input.id });
-      } catch (error) {
-        handleServiceError(error);
-      }
-    }),
+    .mutation((): Promise<{ success: boolean }> => throwEntriesWriteClosed()),
 
-  /** ソフト削除されたエントリを復元（Undo用） */
+  /** [closed] ソフト削除されたエントリを復元 — plans.restore / logs.restore を使う */
   restore: protectedProcedure
-    .meta({ description: 'ソフト削除されたエントリを復元' })
+    .meta({
+      description: '[closed] entries への書き込みは終了。plans.restore / logs.restore を使う',
+    })
     .input(entryIdSchema)
-    .mutation(async ({ ctx, input }) => {
-      const service = createEntryService(ctx.supabase);
-      try {
-        return await service.restore({ userId: ctx.userId, entryId: input.id });
-      } catch (error) {
-        handleServiceError(error);
-      }
-    }),
+    .mutation((): Promise<{ success: boolean }> => throwEntriesWriteClosed()),
 
-  /** planned エントリをスキップ（計画したがやらなかった。実績集計から除外） */
+  /** [closed] planned エントリをスキップ — plans.skip を使う */
   skip: protectedProcedure
-    .meta({ description: 'planned エントリをスキップ（実績集計から除外、計画履歴は残る）' })
+    .meta({ description: '[closed] entries への書き込みは終了。plans.skip を使う' })
     .input(entryIdSchema)
-    .mutation(async ({ ctx, input }) => {
-      const service = createEntryService(ctx.supabase);
-      try {
-        return await service.skip({ userId: ctx.userId, entryId: input.id });
-      } catch (error) {
-        handleServiceError(error);
-      }
-    }),
+    .mutation((): Promise<EntryRow> => throwEntriesWriteClosed()),
 
-  /** スキップを解除（自動記録が復活。Undo用） */
+  /** [closed] スキップ解除 — plans.unskip を使う */
   unskip: protectedProcedure
-    .meta({ description: 'エントリのスキップ解除（自動記録が復活）' })
+    .meta({ description: '[closed] entries への書き込みは終了。plans.unskip を使う' })
     .input(entryIdSchema)
-    .mutation(async ({ ctx, input }) => {
-      const service = createEntryService(ctx.supabase);
-      try {
-        return await service.unskip({ userId: ctx.userId, entryId: input.id });
-      } catch (error) {
-        handleServiceError(error);
-      }
-    }),
+    .mutation((): Promise<EntryRow> => throwEntriesWriteClosed()),
 
   // ---------------------------------------------------------------------------
-  // Bulk Operations
+  // Bulk Operations（[closed]）
   // ---------------------------------------------------------------------------
 
-  /** 一括更新 */
   bulkUpdate: protectedProcedure
-    .meta({ description: '複数エントリの一括更新' })
+    .meta({ description: '[closed] entries への書き込みは終了' })
     .input(bulkUpdateEntrySchema)
-    .mutation(async ({ ctx, input }) => {
-      const { supabase, userId } = ctx;
-      // normalizeUpdateInput と同様、DB に無い列が Zod 側に紛れると型エラーになる。
-      const updateData = toEntryUpdatePayload(input.data);
+    .mutation((): Promise<{ count: number; entries: EntryRow[] }> => throwEntriesWriteClosed()),
 
-      const { data, error } = await supabase
-        .from('entries')
-        .update(updateData)
-        .in('id', input.ids)
-        .eq('user_id', userId)
-        .select();
-
-      if (error) {
-        logger.error('Failed to bulk update entries', { error });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'エントリーの一括更新に失敗した',
-        });
-      }
-      return { count: data.length, entries: data };
-    }),
-
-  /** 一括削除（soft-delete） */
   bulkDelete: protectedProcedure
-    .meta({ description: '複数エントリの一括削除（ソフトデリート）' })
+    .meta({ description: '[closed] entries への書き込みは終了' })
     .input(bulkDeleteEntrySchema)
-    .mutation(async ({ ctx, input }) => {
-      const service = createEntryService(ctx.supabase);
-      try {
-        const count = await service.bulkDelete({ userId: ctx.userId, entryIds: input.ids });
-        captureBusinessEvent('entry.bulk_deleted', { count });
-        return { success: true, count };
-      } catch (error) {
-        handleServiceError(error);
-      }
-    }),
+    .mutation((): Promise<{ success: boolean; count: number }> => throwEntriesWriteClosed()),
 
-  /** 複数エントリにタグを一括設定（1エントリ1タグ、delete+insert） */
   bulkAddTags: protectedProcedure
-    .meta({ description: '複数エントリにタグを一括設定' })
+    .meta({ description: '[closed] entries への書き込みは終了' })
     .input(bulkSetTagSchema)
-    .mutation(async ({ ctx, input }) => {
-      const { supabase, userId } = ctx;
-      const { entryIds, tagId } = input;
-
-      await assertTagOwnedByUser(supabase, userId, tagId);
-
-      const { error, count } = await supabase
-        .from('entries')
-        .update({ tag_id: tagId })
-        .in('id', entryIds)
-        .eq('user_id', userId);
-
-      if (error) {
-        logger.error('Failed to bulk set tag', { error });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'タグの一括設定に失敗した',
-        });
-      }
-      return { success: true, count: count ?? entryIds.length };
-    }),
+    .mutation((): Promise<{ success: boolean; count: number }> => throwEntriesWriteClosed()),
 
   // ---------------------------------------------------------------------------
-  // Tags (single entry operations)
+  // Tags（single entry operations、[closed]）
   // ---------------------------------------------------------------------------
 
-  /** エントリにタグを追加（upsert 動作） */
   addTag: protectedProcedure
-    .meta({ description: 'エントリにタグ追加（upsert）' })
+    .meta({ description: '[closed] entries への書き込みは終了' })
     .input(entryTagInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      const { supabase, userId } = ctx;
-      const { entryId, tagId } = input;
+    .mutation((): Promise<{ success: boolean }> => throwEntriesWriteClosed()),
 
-      const { data: entry, error: entryError } = await supabase
-        .from('entries')
-        .select('id')
-        .eq('id', entryId)
-        .eq('user_id', userId)
-        .single();
-
-      if (entryError || !entry) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found' });
-      }
-
-      await assertTagOwnedByUser(supabase, userId, tagId);
-
-      const { error } = await supabase
-        .from('entries')
-        .update({ tag_id: tagId })
-        .eq('id', entryId)
-        .eq('user_id', userId);
-
-      if (error) {
-        logger.error('Failed to add tag to entry', { error });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'タグの追加に失敗した',
-        });
-      }
-
-      return { success: true };
-    }),
-
-  /** エントリからタグを削除 */
   removeTag: protectedProcedure
-    .meta({ description: 'エントリからタグ削除' })
+    .meta({ description: '[closed] entries への書き込みは終了' })
     .input(entryTagInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      const { supabase, userId } = ctx;
-      const { entryId, tagId } = input;
+    .mutation((): Promise<{ success: boolean; removed: boolean }> => throwEntriesWriteClosed()),
 
-      const { data: entry, error: entryError } = await supabase
-        .from('entries')
-        .select('id')
-        .eq('id', entryId)
-        .eq('user_id', userId)
-        .single();
-
-      if (entryError || !entry) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found' });
-      }
-
-      const { error } = await supabase
-        .from('entries')
-        .update({ tag_id: null })
-        .eq('id', entryId)
-        .eq('user_id', userId)
-        .eq('tag_id', tagId);
-
-      if (error) {
-        logger.error('Failed to remove tag from entry', { error });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'タグの削除に失敗した',
-        });
-      }
-
-      return { success: true, removed: true };
-    }),
-
-  /** エントリのタグを設定（1エントリ1タグ、null で解除） */
   setTags: protectedProcedure
-    .meta({ description: 'エントリのタグ設定（1タグ制約、nullで解除）' })
+    .meta({ description: '[closed] entries への書き込みは終了' })
     .input(setTagInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      const { supabase, userId } = ctx;
-      const { entryId, tagId } = input;
-
-      const { data: entry, error: entryError } = await supabase
-        .from('entries')
-        .select('id')
-        .eq('id', entryId)
-        .eq('user_id', userId)
-        .single();
-
-      if (entryError || !entry) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found' });
-      }
-
-      // タグの所有権チェック
-      if (tagId) {
-        await assertTagOwnedByUser(supabase, userId, tagId);
-      }
-
-      const { error } = await supabase
-        .from('entries')
-        .update({ tag_id: tagId })
-        .eq('id', entryId)
-        .eq('user_id', userId);
-
-      if (error) {
-        logger.error('Failed to set tag', { error });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'タグの設定に失敗した',
-        });
-      }
-
-      return { success: true, tagId };
-    }),
+    .mutation((): Promise<{ success: boolean; tagId: string | null }> => throwEntriesWriteClosed()),
 });
