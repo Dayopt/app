@@ -18,7 +18,8 @@ const SUPABASE_ANON_KEY =
 
 const TEST_USER_A_ID = crypto.randomUUID();
 const TEST_USER_B_ID = crypto.randomUUID();
-const TEST_USER_B_ENTRY_ID = crypto.randomUUID();
+const TEST_USER_B_PLAN_ID = crypto.randomUUID();
+const TEST_USER_B_LOG_ID = crypto.randomUUID();
 const TEST_EMAIL_A = `test-rls-a-${TEST_USER_A_ID}@example.com`;
 const TEST_EMAIL_B = `test-rls-b-${TEST_USER_B_ID}@example.com`;
 const TEST_PASSWORD = 'test-password-123';
@@ -52,17 +53,34 @@ const userOwnedCases: UserOwnedRlsCase[] = [
     update: { full_name: 'foreign update' },
   },
   {
-    table: 'entries',
+    table: 'plans',
     idColumn: 'id',
-    rowId: TEST_USER_B_ENTRY_ID,
+    rowId: TEST_USER_B_PLAN_ID,
     seed: async function () {
-      const { error } = await adminSupabase.from('entries').insert({
+      const { error } = await adminSupabase.from('plans').insert({
         id: this.rowId,
         user_id: TEST_USER_B_ID,
-        title: 'RLS entry',
-        origin: 'planned',
-        start_time: '2026-06-15T09:00:00.000Z',
-        end_time: '2026-06-15T10:00:00.000Z',
+        title: 'RLS plan',
+        source: 'manual',
+        start_at: '2026-06-15T09:00:00.000Z',
+        end_at: '2026-06-15T10:00:00.000Z',
+      });
+      if (error) throw error;
+    },
+    update: { title: 'foreign update' },
+  },
+  {
+    table: 'logs',
+    idColumn: 'id',
+    rowId: TEST_USER_B_LOG_ID,
+    seed: async function () {
+      const { error } = await adminSupabase.from('logs').insert({
+        id: this.rowId,
+        user_id: TEST_USER_B_ID,
+        title: 'RLS log',
+        source: 'manual',
+        start_at: '2026-06-15T11:00:00.000Z',
+        end_at: '2026-06-15T12:00:00.000Z',
       });
       if (error) throw error;
     },
@@ -417,30 +435,6 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
   describe('SECURITY DEFINER RPC user_id guard', () => {
     it.each([
       {
-        name: 'soft_delete_entry',
-        call: () =>
-          supabaseA.rpc('soft_delete_entry', {
-            p_entry_id: TEST_USER_B_ENTRY_ID,
-            p_user_id: TEST_USER_B_ID,
-          }),
-      },
-      {
-        name: 'restore_entry',
-        call: () =>
-          supabaseA.rpc('restore_entry', {
-            p_entry_id: TEST_USER_B_ENTRY_ID,
-            p_user_id: TEST_USER_B_ID,
-          }),
-      },
-      {
-        name: 'bulk_soft_delete_entries',
-        call: () =>
-          supabaseA.rpc('bulk_soft_delete_entries', {
-            p_entry_ids: [TEST_USER_B_ENTRY_ID],
-            p_user_id: TEST_USER_B_ID,
-          }),
-      },
-      {
         name: 'update_personalization',
         call: () =>
           supabaseA.rpc('update_personalization', {
@@ -466,64 +460,7 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       expect(JSON.stringify(data?.personalization ?? {})).not.toContain('rlsGuard');
     });
 
-    it('拒否された soft-delete RPC は他ユーザー entry を変更しない', async () => {
-      const { data, error } = await adminSupabase
-        .from('entries')
-        .select('deleted_at')
-        .eq('id', TEST_USER_B_ENTRY_ID)
-        .single();
-
-      expect(error).toBeNull();
-      expect(data?.deleted_at).toBeNull();
-    });
-
-    it('service_role は検証済みサーバー経路として soft-delete / restore RPC を実行できる', async () => {
-      const { error: deleteError } = await adminSupabase.rpc('soft_delete_entry', {
-        p_entry_id: TEST_USER_B_ENTRY_ID,
-        p_user_id: TEST_USER_B_ID,
-      });
-      expect(deleteError).toBeNull();
-
-      const { data: deletedEntry, error: deletedReadError } = await adminSupabase
-        .from('entries')
-        .select('deleted_at')
-        .eq('id', TEST_USER_B_ENTRY_ID)
-        .single();
-      expect(deletedReadError).toBeNull();
-      expect(deletedEntry?.deleted_at).not.toBeNull();
-
-      const { error: restoreError } = await adminSupabase.rpc('restore_entry', {
-        p_entry_id: TEST_USER_B_ENTRY_ID,
-        p_user_id: TEST_USER_B_ID,
-      });
-      expect(restoreError).toBeNull();
-
-      const { data: restoredEntry, error: restoredReadError } = await adminSupabase
-        .from('entries')
-        .select('deleted_at')
-        .eq('id', TEST_USER_B_ENTRY_ID)
-        .single();
-      expect(restoredReadError).toBeNull();
-      expect(restoredEntry?.deleted_at).toBeNull();
-    });
-
-    it('service_role は検証済みサーバー経路として bulk delete / personalization RPC を実行できる', async () => {
-      const { data: affected, error: bulkDeleteError } = await adminSupabase.rpc(
-        'bulk_soft_delete_entries',
-        {
-          p_entry_ids: [TEST_USER_B_ENTRY_ID],
-          p_user_id: TEST_USER_B_ID,
-        },
-      );
-      expect(bulkDeleteError).toBeNull();
-      expect(affected).toBe(1);
-
-      const { error: restoreError } = await adminSupabase.rpc('restore_entry', {
-        p_entry_id: TEST_USER_B_ENTRY_ID,
-        p_user_id: TEST_USER_B_ID,
-      });
-      expect(restoreError).toBeNull();
-
+    it('service_role は検証済みサーバー経路として personalization RPC を実行できる', async () => {
       const { error: personalizationError } = await adminSupabase.rpc('update_personalization', {
         p_path: 'rlsServiceRole',
         p_user_id: TEST_USER_B_ID,

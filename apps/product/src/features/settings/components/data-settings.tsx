@@ -119,10 +119,6 @@ function ExportSection() {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
-        exportData.data.entries = exportData.data.entries.filter((entry) => {
-          const entryDate = new Date(entry.start_time ?? entry.created_at ?? '');
-          return entryDate >= start && entryDate <= end;
-        });
         exportData.data.plans = exportData.data.plans.filter((plan) => {
           const planDate = new Date(plan.start_at);
           return planDate >= start && planDate <= end;

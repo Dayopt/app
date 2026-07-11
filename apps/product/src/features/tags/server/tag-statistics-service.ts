@@ -16,52 +16,11 @@ export interface TagStatsRow {
 export class TagStatisticsService {
   constructor(private readonly supabase: SupabaseClient<Database>) {}
 
-  async getStats(userId: string): Promise<TagStatsRow[]> {
-    const { data: tags, error: tagsError } = await this.supabase
-      .from('tags')
-      .select('id, name, color, icon')
-      .eq('user_id', userId)
-      .eq('is_active', true);
-    if (tagsError) {
-      throw new TagServiceError('FETCH_FAILED', `Failed to fetch tags: ${tagsError.message}`);
-    }
-    if (!tags || tags.length === 0) return [];
-
-    const { data: statsRows, error: statsError } = await this.supabase.rpc('get_tag_stats', {
-      p_user_id: userId,
-    });
-    if (statsError) {
-      throw new TagServiceError('FETCH_FAILED', `Failed to fetch tag stats: ${statsError.message}`);
-    }
-
-    const statsMap = new Map(
-      (statsRows ?? []).map((row) => [
-        row.tag_id,
-        { entry_count: row.entry_count, last_used: row.last_used },
-      ]),
-    );
-    return tags
-      .map((tag) => {
-        const stats = statsMap.get(tag.id);
-        return {
-          id: tag.id,
-          name: tag.name,
-          color: tag.color,
-          icon: tag.icon,
-          entry_count: stats?.entry_count ?? 0,
-          last_used_at: stats?.last_used ?? null,
-        };
-      })
-      .sort((a, b) => b.entry_count - a.entry_count);
-  }
-
   /**
-   * Step 4: `get_tag_stats` RPC の代わりに `logs`（実績）を直接集計するタグ統計。
+   * `logs`（実績）を直接集計するタグ統計。
    *
-   * `tags` は Layer 0 のため `features/entry/domain` を import できない（feature DAG）。
-   * `entries.getTagStats` procedure と同じ意味論（実績ベースの件数・最終使用日）を
-   * ここで独立に計算する。**dormant**: router から未接続。Step 8 で `getStats` の
-   * 呼び出し元を切り替える前提。
+   * `tags` は Layer 0 のため上位 feature の domain を import できない（feature DAG）。
+   * 実績ベースの件数・最終使用日をここで独立に計算する。
    */
   async getStatsFromLogs(userId: string): Promise<TagStatsRow[]> {
     const { data: tags, error: tagsError } = await this.supabase

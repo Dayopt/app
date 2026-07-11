@@ -108,7 +108,7 @@ export class TagService {
 
   private async countTagAssociations(userId: string, tagIds: string[]): Promise<number> {
     const results = await Promise.all(
-      (['plans', 'logs', 'entries'] as const).map((table) =>
+      (['plans', 'logs'] as const).map((table) =>
         this.supabase
           .from(table)
           .select('id', { count: 'exact', head: true })
@@ -140,7 +140,7 @@ export class TagService {
       if (!targetTagId) {
         throw new TagServiceError('INVALID_INPUT', 'targetTagId is required for reassign strategy');
       }
-      for (const table of ['plans', 'logs', 'entries'] as const) {
+      for (const table of ['plans', 'logs'] as const) {
         const { error } = await adminClient
           .from(table)
           .update({ tag_id: targetTagId })
@@ -195,15 +195,16 @@ export class TagService {
       }
     }
 
-    for (const table of ['plans', 'entries'] as const) {
-      const { error } = await adminClient
-        .from(table)
-        .delete()
-        .in('tag_id', tagIds)
-        .eq('user_id', userId);
-      if (error) {
-        throw new TagServiceError('DELETE_FAILED', `Failed to delete ${table}: ${error.message}`);
-      }
+    const { error: planDeleteError } = await adminClient
+      .from('plans')
+      .delete()
+      .in('tag_id', tagIds)
+      .eq('user_id', userId);
+    if (planDeleteError) {
+      throw new TagServiceError(
+        'DELETE_FAILED',
+        `Failed to delete plans: ${planDeleteError.message}`,
+      );
     }
   }
 

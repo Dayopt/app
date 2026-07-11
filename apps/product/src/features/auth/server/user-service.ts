@@ -58,8 +58,6 @@ interface DeleteAccountResult {
   success: true;
 }
 
-type LegacyEmptyRows = Array<Record<string, never>>;
-
 /**
  * データエクスポートレスポンス
  */
@@ -68,13 +66,9 @@ interface ExportDataResult {
   userId: string;
   data: {
     profile: Row<'profiles'> | null;
-    entries: Row<'entries'>[];
     plans: Row<'plans'>[];
     logs: Row<'logs'>[];
     tags: Row<'tags'>[];
-    records: LegacyEmptyRows;
-    planTags: LegacyEmptyRows;
-    recordTags: LegacyEmptyRows;
     userSettings: Row<'user_settings'> | null;
   };
 }
@@ -177,15 +171,15 @@ export function createUserService(supabase: SupabaseClient<Database>) {
     },
 
     /**
-     * 全ブロック（plans / logs。互換用 entries も含む）を削除
+     * 全ブロック（plans / logs）を削除
      * タグ・設定・プロフィールは保持
      */
     async deleteBlocks(userId: string): Promise<{ deletedCount: number }> {
       const adminClient = createServiceRoleClient();
       let deletedCount = 0;
 
-      // logs.plan_id は plans を参照するため、logs → plans → entries の順で削除する。
-      for (const table of ['logs', 'plans', 'entries'] as const) {
+      // logs.plan_id は plans を参照するため、logs → plans の順で削除する。
+      for (const table of ['logs', 'plans'] as const) {
         const { data: deleted, error } = await adminClient
           .from(table)
           .delete()
@@ -206,12 +200,12 @@ export function createUserService(supabase: SupabaseClient<Database>) {
 
     /**
      * 全データを削除（アカウントは保持）
-     * plans, logs, entries, tags, 設定, 通知設定を全削除
+     * plans, logs, tags, 設定を全削除
      */
     async deleteAllData(userId: string): Promise<{ success: true }> {
       const adminClient = createServiceRoleClient();
       // FK 依存順。service-role を使うが、全操作を認証済み userId で明示的に制限する。
-      for (const table of ['logs', 'plans', 'entries', 'tags', 'user_settings'] as const) {
+      for (const table of ['logs', 'plans', 'tags', 'user_settings'] as const) {
         const { error } = await adminClient.from(table).delete().eq('user_id', userId);
         if (error) {
           throw new UserServiceError(
@@ -233,32 +227,19 @@ export function createUserService(supabase: SupabaseClient<Database>) {
       const { userId } = options;
 
       const adminClient = createServiceRoleClient();
-      const [
-        profileResult,
-        entriesResult,
-        plansResult,
-        logsResult,
-        tagsResult,
-        userSettingsResult,
-      ] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', userId).single(),
-        adminClient.from('entries').select('*').eq('user_id', userId),
-        adminClient.from('plans').select('*').eq('user_id', userId),
-        adminClient.from('logs').select('*').eq('user_id', userId),
-        supabase.from('tags').select('*').eq('user_id', userId),
-        supabase.from('user_settings').select('*').eq('user_id', userId).single(),
-      ]);
+      const [profileResult, plansResult, logsResult, tagsResult, userSettingsResult] =
+        await Promise.all([
+          supabase.from('profiles').select('*').eq('id', userId).single(),
+          adminClient.from('plans').select('*').eq('user_id', userId),
+          adminClient.from('logs').select('*').eq('user_id', userId),
+          supabase.from('tags').select('*').eq('user_id', userId),
+          supabase.from('user_settings').select('*').eq('user_id', userId).single(),
+        ]);
 
       if (profileResult.error && profileResult.error.code !== 'PGRST116') {
         throw new UserServiceError(
           'EXPORT_FAILED',
           `Profile fetch error: ${profileResult.error.message}`,
-        );
-      }
-      if (entriesResult.error) {
-        throw new UserServiceError(
-          'EXPORT_FAILED',
-          `Entries fetch error: ${entriesResult.error.message}`,
         );
       }
       if (plansResult.error) {
@@ -279,20 +260,14 @@ export function createUserService(supabase: SupabaseClient<Database>) {
           `Tags fetch error: ${tagsResult.error.message}`,
         );
       }
-      const entries = entriesResult.data || [];
-
       return {
         exportedAt: new Date().toISOString(),
         userId,
         data: {
           profile: profileResult.data || null,
-          entries,
           plans: plansResult.data || [],
           logs: logsResult.data || [],
           tags: tagsResult.data || [],
-          records: [],
-          planTags: [],
-          recordTags: [],
           userSettings: userSettingsResult.data || null,
         },
       };
