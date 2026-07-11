@@ -43,6 +43,7 @@ export function useInspectorURLSync() {
   // 前回の状態を追跡（無限ループ防止）
   const prevIsOpenRef = useRef(isOpen);
   const prevEntryIdRef = useRef(entryId);
+  const prevEntryKindRef = useRef(entryKind);
   const isUpdatingFromURLRef = useRef(false);
 
   // 初回マウント時のみ: URLパラメータからインスペクタを開く
@@ -70,12 +71,16 @@ export function useInspectorURLSync() {
     if (isUpdatingFromURLRef.current) return;
 
     // 状態が実際に変更されたかチェック
-    const stateChanged = prevIsOpenRef.current !== isOpen || prevEntryIdRef.current !== entryId;
+    const stateChanged =
+      prevIsOpenRef.current !== isOpen ||
+      prevEntryIdRef.current !== entryId ||
+      prevEntryKindRef.current !== entryKind;
     if (!stateChanged) return;
 
     // 状態を更新
     prevIsOpenRef.current = isOpen;
     prevEntryIdRef.current = entryId;
+    prevEntryKindRef.current = entryKind;
 
     const currentUrl = typeof window !== 'undefined' ? new URL(window.location.href) : null;
     const currentPathname = currentUrl?.pathname ?? pathname;
@@ -115,7 +120,7 @@ export function useInspectorURLSync() {
 
       if (entryParam) {
         const parsed = parseEntryParam(entryParam);
-        if (parsed.entryId !== entryId) {
+        if (parsed.entryId !== entryId || parsed.kind !== entryKind) {
           openInspector(parsed.entryId, parsed.kind);
         }
       } else if (isOpen && entryId) {
@@ -129,5 +134,5 @@ export function useInspectorURLSync() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [entryId, isOpen, openInspector, closeInspector]);
+  }, [entryId, entryKind, isOpen, openInspector, closeInspector]);
 }
