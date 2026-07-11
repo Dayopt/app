@@ -26,6 +26,8 @@ interface PlanLaneCardProps {
   isActive?: boolean | undefined;
   /** 過去 plan などドラッグ・リサイズを禁止する場合 true */
   disableDrag?: boolean | undefined;
+  /** 過去 plan などリサイズだけを禁止する場合 true */
+  disableResize?: boolean | undefined;
   onClick?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
@@ -56,6 +58,7 @@ export function PlanLaneCard({
   className,
   isActive = false,
   disableDrag = false,
+  disableResize = false,
   onClick,
   onContextMenu,
   onPointerDown,
@@ -124,7 +127,7 @@ export function PlanLaneCard({
           {formatTimeRange(event.displayStartDate, event.displayEndDate)}
         </p>
       )}
-      {canDrag && onResizeStart && (
+      {canDrag && !disableResize && onResizeStart && (
         <div
           role="slider"
           tabIndex={-1}

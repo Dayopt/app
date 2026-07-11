@@ -57,14 +57,19 @@ interface TwoLaneEntryRendererProps {
   ) => void;
 }
 
-/** 過去 plan・auto_migrated log はドラッグ/リサイズを禁止する（temporal-constraints の UI 側防御）。 */
-function isDragDisabled(entry: CalendarEvent, now: number): boolean {
+/** auto_migrated log はドラッグ/リサイズを禁止する。 */
+function isDragDisabled(entry: CalendarEvent): boolean {
+  if (entry.logSource === 'auto_migrated') return true;
+  return false;
+}
+
+/** 過去Planは時間変更を禁止するが、Logレーンへの記録dropは許可する。 */
+function isResizeDisabled(entry: CalendarEvent, now: number): boolean {
   if (entry.kind === 'plan') {
     const end = entry.endDate?.getTime();
     return end != null && end <= now;
   }
-  if (entry.logSource === 'auto_migrated') return true;
-  return false;
+  return entry.logSource === 'auto_migrated';
 }
 
 /** entry.id を絶対座標 rect として渡すためのヘルパー（useInteraction の EntryRect 契約） */
@@ -112,7 +117,9 @@ export function TwoLaneEntryRenderer({
   const tagColor = entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null;
   const isActive = isInspectorOpen && inspectorEntryId === entry.id;
   // eslint-disable-next-line react-hooks/purity -- 過去 plan / auto_migrated ロック判定。再レンダーごとの now で十分（EntryContextMenu と同じ運用）
-  const disableDrag = isDragDisabled(entry, Date.now());
+  const now = Date.now();
+  const disableDrag = isDragDisabled(entry);
+  const disableResize = isResizeDisabled(entry, now);
   const rect = toRect(position);
 
   const handleClick = (_target: unknown, e: React.MouseEvent) => {
@@ -155,6 +162,7 @@ export function TwoLaneEntryRenderer({
         tagColor={tagColor}
         isActive={isActive}
         disableDrag={disableDrag}
+        disableResize={disableResize}
         styleOverride={styleOverride}
         onClick={handleClick}
         onContextMenu={handleContextMenu}

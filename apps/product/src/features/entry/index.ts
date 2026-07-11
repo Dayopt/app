@@ -46,7 +46,11 @@ export {
   isUnplannedEntry,
 } from './domain';
 export type { EntryLike } from './domain';
-export { isPlanTimeEditable, resolveTimeModelDestination } from './domain/time-model-destination';
+export {
+  isPlanRecordDrop,
+  isPlanTimeEditable,
+  resolveTimeModelDestination,
+} from './domain/time-model-destination';
 export type { TimeModelDestination } from './domain/time-model-destination';
 
 // =============================================================================

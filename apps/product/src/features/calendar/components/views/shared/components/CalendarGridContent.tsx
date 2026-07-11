@@ -4,7 +4,7 @@ import React, { useCallback, useState } from 'react';
 
 import { isSameDay } from 'date-fns';
 
-import { EntryCard } from '@/features/entry';
+import { EntryCard, useTimeModelRecordMutations } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
@@ -180,12 +180,15 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
+  const { recordPlan } = useTimeModelRecordMutations();
 
   // Tag タップで開いている draft entry（同日のときだけ block を描画）
   const tagDraft = useTagDraftStore((s) => s.draft);
 
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
+  // Week/複数日ビューはカラム幅が狭いため Plan レーンを細くする（Day は既定 38%）。
+  const planLaneWidthPercent = viewMode === 'day' ? 38 : 20;
 
   const wrappedOnEventUpdate = useCallback(
     (
@@ -219,6 +222,8 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     ...(displayDates ? { displayDates } : {}),
     viewMode,
     hourHeight: HOUR_HEIGHT,
+    planLaneWidthPercent,
+    onPlanRecord: (planId) => recordPlan.mutate({ id: planId }),
     ...(onEventUpdate ? { onEventUpdate: wrappedOnEventUpdate } : {}),
     ...(onEntryClick ? { onEventClick: onEntryClick } : {}),
     ...(disabledEntryId != null
@@ -235,8 +240,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   const isResizing = state.mode === 'resizing';
 
   // Step 8: 2レーン座標（plan=左/log=右）。entries は既に kind 付き CalendarEvent。
-  // Week/複数日ビューはカラム幅が狭いため Plan レーンを細くする（Day は既定 38%）。
-  const planLaneWidthPercent = viewMode === 'day' ? undefined : 20;
   const twoLaneStyles = React.useMemo(
     () => calculateTwoLaneStylesForCalendarEvents(entries, HOUR_HEIGHT, planLaneWidthPercent),
     [entries, HOUR_HEIGHT, planLaneWidthPercent],
