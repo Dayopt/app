@@ -94,8 +94,9 @@ interface CalendarControllerProps {
   // --- Context menu actions ---
   onDeleteEntryConfirm: (entry: CalendarEvent) => void;
   onViewStats: (entry: CalendarEvent) => void;
-  onMarkUnplanned: (entry: CalendarEvent) => void;
-  onRestorePlanned: (entry: CalendarEvent) => void;
+  // plan ⇄ log 変換は time model に procedure が存在しないため optional（渡さなければメニュー非表示）
+  onMarkUnplanned?: ((entry: CalendarEvent) => void) | undefined;
+  onRestorePlanned?: ((entry: CalendarEvent) => void) | undefined;
   onSkip: (entry: CalendarEvent) => void;
   onUnskip: (entry: CalendarEvent) => void;
 

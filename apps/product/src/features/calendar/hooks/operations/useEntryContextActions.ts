@@ -2,30 +2,36 @@
 
 import { useCallback } from 'react';
 
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 
-import { useEntryMutations } from '@/features/entry';
+import { useTimeModelWriteMutations } from '@/features/entry';
+import { toast } from '@/lib/toast';
+
 import { buildCalendarReviewPanelPath } from '../../lib/panel-url';
 import type { CalendarEvent } from '../../types/calendar.types';
 
-/** コンテキストメニューで使用するエントリー操作アクションを提供するフック */
+/**
+ * コンテキストメニューで使用する plan / log 操作アクションを提供するフック
+ *
+ * plan ⇄ log 変換（markUnplanned / restorePlanned）は time model に procedure が
+ * 存在しないため提供しない（entry-menu-items 側で該当 handler が undefined なら表示されない）。
+ */
 export function useEntryContextActions() {
   const router = useRouter();
   const locale = useLocale();
-  const {
-    deleteEntry,
-    convertPlannedToUnplanned,
-    convertUnplannedToPlanned,
-    skipEntry,
-    unskipEntry,
-  } = useEntryMutations();
+  const t = useTranslations();
+  const { deleteLog, deletePlan, skipPlan, unskipPlan } = useTimeModelWriteMutations();
 
   const handleDeleteEntry = useCallback(
     (entry: CalendarEvent) => {
-      deleteEntry.mutate({ id: entry.id });
+      if ((entry.kind ?? 'plan') === 'plan') {
+        deletePlan.mutate({ id: entry.id });
+      } else {
+        deleteLog.mutate({ id: entry.id });
+      }
     },
-    [deleteEntry],
+    [deletePlan, deleteLog],
   );
 
   const handleViewStats = useCallback(
@@ -42,39 +48,31 @@ export function useEntryContextActions() {
     [router, locale],
   );
 
-  const handleMarkUnplanned = useCallback(
-    (entry: CalendarEvent) => {
-      convertPlannedToUnplanned.mutate({ id: entry.id });
-    },
-    [convertPlannedToUnplanned],
-  );
-
-  const handleRestorePlanned = useCallback(
-    (entry: CalendarEvent) => {
-      convertUnplannedToPlanned.mutate({ id: entry.id });
-    },
-    [convertUnplannedToPlanned],
-  );
-
   const handleSkip = useCallback(
     (entry: CalendarEvent) => {
-      skipEntry.mutate({ id: entry.id });
+      if (entry.kind !== 'plan') return;
+      skipPlan.mutate(
+        { id: entry.id },
+        { onSuccess: () => toast.success(t('entry.timeModel.toast.skipped')) },
+      );
     },
-    [skipEntry],
+    [skipPlan, t],
   );
 
   const handleUnskip = useCallback(
     (entry: CalendarEvent) => {
-      unskipEntry.mutate({ id: entry.id });
+      if (entry.kind !== 'plan') return;
+      unskipPlan.mutate(
+        { id: entry.id },
+        { onSuccess: () => toast.success(t('entry.timeModel.toast.unskipped')) },
+      );
     },
-    [unskipEntry],
+    [unskipPlan, t],
   );
 
   return {
     handleDeleteEntry,
     handleViewStats,
-    handleMarkUnplanned,
-    handleRestorePlanned,
     handleSkip,
     handleUnskip,
   };

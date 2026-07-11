@@ -68,8 +68,6 @@ interface CalendarCompositionResult {
   // === Context menu actions ===
   onDeleteEntryConfirm: ReturnType<typeof useCalendarCrudHandlers>['onDeleteEntryConfirm'];
   onViewStats: ReturnType<typeof useCalendarCrudHandlers>['onViewStats'];
-  onMarkUnplanned: ReturnType<typeof useCalendarCrudHandlers>['onMarkUnplanned'];
-  onRestorePlanned: ReturnType<typeof useCalendarCrudHandlers>['onRestorePlanned'];
   onSkip: ReturnType<typeof useCalendarCrudHandlers>['onSkip'];
   onUnskip: ReturnType<typeof useCalendarCrudHandlers>['onUnskip'];
 
