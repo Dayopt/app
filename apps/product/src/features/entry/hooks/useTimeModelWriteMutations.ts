@@ -20,8 +20,96 @@ function isLaneListQuery(lane: 'plans' | 'logs') {
 const isPlansListQuery = isLaneListQuery('plans');
 const isLogsListQuery = isLaneListQuery('logs');
 
-function isTimeModelListQuery(query: { queryKey: unknown }): boolean {
-  return isPlansListQuery(query) || isLogsListQuery(query);
+function isTimeModelQuery(query: { queryKey: unknown }): boolean {
+  const key = query.queryKey;
+  return (
+    Array.isArray(key) && Array.isArray(key[0]) && (key[0][0] === 'plans' || key[0][0] === 'logs')
+  );
+}
+
+interface TimeModelListFilter {
+  search?: string;
+  tagId?: string;
+  planId?: string;
+  startDate?: string;
+  endDate?: string;
+  includeSkipped?: boolean;
+  sortBy?: 'created_at' | 'updated_at' | 'title' | 'start_at';
+  sortOrder?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
+}
+
+interface TimeModelListRow {
+  id: string;
+  title: string;
+  note: string | null;
+  tag_id: string | null;
+  start_at: string;
+  end_at: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  skipped_at?: string | null;
+  plan_id?: string | null;
+}
+
+function getListFilter(queryKey: unknown): TimeModelListFilter {
+  if (!Array.isArray(queryKey)) return {};
+  const meta = queryKey[1];
+  if (!meta || typeof meta !== 'object') return {};
+  const input = (meta as { input?: unknown }).input;
+  return input && typeof input === 'object' ? (input as TimeModelListFilter) : {};
+}
+
+/** query input と行が一致するか。create の offset>0 cache は順位不明のため更新しない。 */
+export function doesTimeModelListQueryIncludeRow(
+  queryKey: unknown,
+  row: TimeModelListRow,
+  lane: 'plans' | 'logs',
+  operation: 'create' | 'update' = 'create',
+): boolean {
+  const filter = getListFilter(queryKey);
+  if (row.deleted_at != null) return false;
+  if (operation === 'create' && (filter.offset ?? 0) > 0) return false;
+  if (filter.tagId && row.tag_id !== filter.tagId) return false;
+  if (lane === 'logs' && filter.planId && row.plan_id !== filter.planId) return false;
+  if (lane === 'plans' && filter.includeSkipped === false && row.skipped_at != null) return false;
+
+  if (filter.search) {
+    const search = filter.search.toLocaleLowerCase();
+    const haystack = `${row.title}\n${row.note ?? ''}`.toLocaleLowerCase();
+    if (!haystack.includes(search)) return false;
+  }
+
+  if (filter.startDate && filter.endDate) {
+    if (!(
+      Date.parse(row.start_at) < Date.parse(filter.endDate) &&
+      Date.parse(row.end_at) > Date.parse(filter.startDate)
+    ))
+      return false;
+  } else if (filter.startDate && Date.parse(row.start_at) < Date.parse(filter.startDate)) {
+    return false;
+  } else if (filter.endDate && Date.parse(row.start_at) > Date.parse(filter.endDate)) {
+    return false;
+  }
+
+  return true;
+}
+
+function sortAndLimitRows<T extends TimeModelListRow>(
+  rows: T[],
+  queryKey: unknown,
+  lane: 'plans' | 'logs',
+): T[] {
+  const filter = getListFilter(queryKey);
+  const sortBy = filter.sortBy ?? 'start_at';
+  const sortOrder = filter.sortOrder ?? (lane === 'plans' ? 'asc' : 'desc');
+  const sorted = [...rows].sort((a, b) => {
+    const comparison = String(a[sortBy]).localeCompare(String(b[sortBy]));
+    return sortOrder === 'asc' ? comparison : -comparison;
+  });
+  return filter.limit ? sorted.slice(0, filter.limit) : sorted;
 }
 
 function isTimeOverlapError(error: { message: string }): boolean {
@@ -50,7 +138,7 @@ export function useTimeModelWriteMutations() {
   const snapshot = async (): Promise<MutationContext> => {
     await Promise.all([utils.plans.list.cancel(), utils.logs.list.cancel()]);
     return {
-      snapshots: queryClient.getQueriesData({ predicate: isTimeModelListQuery }) as Array<
+      snapshots: queryClient.getQueriesData({ predicate: isTimeModelQuery }) as Array<
         [QueryKey, unknown]
       >,
     };
@@ -64,6 +152,36 @@ export function useTimeModelWriteMutations() {
 
   const reportError = (error: { message: string }) => {
     toast.error(isTimeOverlapError(error) ? t('toast.overlap') : t('toast.saveFailed'));
+  };
+
+  const insertIntoMatchingLists = <T extends TimeModelListRow>(
+    lane: 'plans' | 'logs',
+    row: T,
+    replaceId?: string,
+  ) => {
+    const predicate = lane === 'plans' ? isPlansListQuery : isLogsListQuery;
+    for (const [queryKey, data] of queryClient.getQueriesData<T[]>({ predicate })) {
+      if (!doesTimeModelListQueryIncludeRow(queryKey, row, lane, 'create')) continue;
+      const old = data ?? [];
+      const next = old.filter((candidate) => candidate.id !== replaceId && candidate.id !== row.id);
+      queryClient.setQueryData(queryKey, sortAndLimitRows([...next, row], queryKey, lane));
+    }
+  };
+
+  const patchMatchingLists = <T extends TimeModelListRow>(
+    lane: 'plans' | 'logs',
+    id: string,
+    patch: (row: T) => T,
+  ) => {
+    const predicate = lane === 'plans' ? isPlansListQuery : isLogsListQuery;
+    for (const [queryKey, data] of queryClient.getQueriesData<T[]>({ predicate })) {
+      if (!data?.some((row) => row.id === id)) continue;
+      const patched = data.map((row) => (row.id === id ? patch(row) : row));
+      const filtered = patched.filter(
+        (row) => row.id !== id || doesTimeModelListQueryIncludeRow(queryKey, row, lane, 'update'),
+      );
+      queryClient.setQueryData(queryKey, sortAndLimitRows(filtered, queryKey, lane));
+    }
   };
 
   // getById も対象に含めて router 全体を再検証する（Inspector の updated_at 鮮度を保つ）
@@ -92,18 +210,12 @@ export function useTimeModelWriteMutations() {
         created_at: nowIso,
         updated_at: nowIso,
       };
-      queryClient.setQueriesData<PlanListItem[]>({ predicate: isPlansListQuery }, (old) =>
-        old ? [...old, tempPlan] : [tempPlan],
-      );
+      insertIntoMatchingLists('plans', tempPlan);
       return { ...context, tempId };
     },
     onSuccess: (created, _input, context) => {
       if (!created) return;
-      queryClient.setQueriesData<PlanListItem[]>({ predicate: isPlansListQuery }, (old) =>
-        old
-          ? old.filter((row) => row.id !== context?.tempId && row.id !== created.id).concat(created)
-          : [created],
-      );
+      insertIntoMatchingLists('plans', created, context?.tempId);
     },
     onError: (error, _input, context) => {
       restore(context);
@@ -133,18 +245,12 @@ export function useTimeModelWriteMutations() {
         created_at: nowIso,
         updated_at: nowIso,
       };
-      queryClient.setQueriesData<LogListItem[]>({ predicate: isLogsListQuery }, (old) =>
-        old ? [...old, tempLog] : [tempLog],
-      );
+      insertIntoMatchingLists('logs', tempLog);
       return { ...context, tempId };
     },
     onSuccess: (created, _input, context) => {
       if (!created) return;
-      queryClient.setQueriesData<LogListItem[]>({ predicate: isLogsListQuery }, (old) =>
-        old
-          ? old.filter((row) => row.id !== context?.tempId && row.id !== created.id).concat(created)
-          : [created],
-      );
+      insertIntoMatchingLists('logs', created, context?.tempId);
     },
     onError: (error, _input, context) => {
       restore(context);
@@ -156,20 +262,16 @@ export function useTimeModelWriteMutations() {
   const updatePlan = api.plans.update.useMutation({
     onMutate: async (input): Promise<MutationContext> => {
       const context = await snapshot();
-      queryClient.setQueriesData<PlanListItem[]>({ predicate: isPlansListQuery }, (old) =>
-        old?.map((row) =>
-          row.id === input.id
-            ? {
-                ...row,
-                ...(input.data.title !== undefined ? { title: input.data.title } : {}),
-                ...(input.data.note !== undefined ? { note: input.data.note ?? null } : {}),
-                ...(input.data.tagId !== undefined ? { tag_id: input.data.tagId ?? null } : {}),
-                ...(input.data.start_at !== undefined ? { start_at: input.data.start_at } : {}),
-                ...(input.data.end_at !== undefined ? { end_at: input.data.end_at } : {}),
-              }
-            : row,
-        ),
-      );
+      const patch = (row: PlanListItem): PlanListItem => ({
+        ...row,
+        ...(input.data.title !== undefined ? { title: input.data.title } : {}),
+        ...(input.data.note !== undefined ? { note: input.data.note ?? null } : {}),
+        ...(input.data.tagId !== undefined ? { tag_id: input.data.tagId ?? null } : {}),
+        ...(input.data.start_at !== undefined ? { start_at: input.data.start_at } : {}),
+        ...(input.data.end_at !== undefined ? { end_at: input.data.end_at } : {}),
+      });
+      patchMatchingLists('plans', input.id, patch);
+      utils.plans.getById.setData({ id: input.id }, (old) => (old ? patch(old) : old));
       return context;
     },
     onError: (error, _input, context) => {
@@ -182,20 +284,16 @@ export function useTimeModelWriteMutations() {
   const updateLog = api.logs.update.useMutation({
     onMutate: async (input): Promise<MutationContext> => {
       const context = await snapshot();
-      queryClient.setQueriesData<LogListItem[]>({ predicate: isLogsListQuery }, (old) =>
-        old?.map((row) =>
-          row.id === input.id
-            ? {
-                ...row,
-                ...(input.data.title !== undefined ? { title: input.data.title } : {}),
-                ...(input.data.note !== undefined ? { note: input.data.note ?? null } : {}),
-                ...(input.data.tagId !== undefined ? { tag_id: input.data.tagId ?? null } : {}),
-                ...(input.data.start_at !== undefined ? { start_at: input.data.start_at } : {}),
-                ...(input.data.end_at !== undefined ? { end_at: input.data.end_at } : {}),
-              }
-            : row,
-        ),
-      );
+      const patch = (row: LogListItem): LogListItem => ({
+        ...row,
+        ...(input.data.title !== undefined ? { title: input.data.title } : {}),
+        ...(input.data.note !== undefined ? { note: input.data.note ?? null } : {}),
+        ...(input.data.tagId !== undefined ? { tag_id: input.data.tagId ?? null } : {}),
+        ...(input.data.start_at !== undefined ? { start_at: input.data.start_at } : {}),
+        ...(input.data.end_at !== undefined ? { end_at: input.data.end_at } : {}),
+      });
+      patchMatchingLists('logs', input.id, patch);
+      utils.logs.getById.setData({ id: input.id }, (old) => (old ? patch(old) : old));
       return context;
     },
     onError: (error, _input, context) => {
