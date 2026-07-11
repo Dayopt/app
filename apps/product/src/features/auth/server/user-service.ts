@@ -69,7 +69,8 @@ interface ExportDataResult {
   data: {
     profile: Row<'profiles'> | null;
     entries: Row<'entries'>[];
-    plans: Row<'entries'>[];
+    plans: Row<'plans'>[];
+    logs: Row<'logs'>[];
     tags: Row<'tags'>[];
     records: LegacyEmptyRows;
     planTags: LegacyEmptyRows;
@@ -176,57 +177,48 @@ export function createUserService(supabase: SupabaseClient<Database>) {
     },
 
     /**
-     * 全ブロック（entries）を削除
+     * 全ブロック（plans / logs。互換用 entries も含む）を削除
      * タグ・設定・プロフィールは保持
      */
     async deleteBlocks(userId: string): Promise<{ deletedCount: number }> {
-      const { data: deleted, error: entryError } = await supabase
-        .from('entries')
-        .delete()
-        .eq('user_id', userId)
-        .select('id');
-      if (entryError) {
-        throw new UserServiceError(
-          'DELETE_DATA_FAILED',
-          `entries deletion failed: ${entryError.message}`,
-        );
+      const adminClient = createServiceRoleClient();
+      let deletedCount = 0;
+
+      // logs.plan_id は plans を参照するため、logs → plans → entries の順で削除する。
+      for (const table of ['logs', 'plans', 'entries'] as const) {
+        const { data: deleted, error } = await adminClient
+          .from(table)
+          .delete()
+          .eq('user_id', userId)
+          .select('id');
+        if (error) {
+          throw new UserServiceError(
+            'DELETE_DATA_FAILED',
+            `${table} deletion failed: ${error.message}`,
+          );
+        }
+        deletedCount += deleted?.length ?? 0;
       }
 
-      logger.info('Blocks deleted', { userId, count: deleted?.length ?? 0 });
-      return { deletedCount: deleted?.length ?? 0 };
+      logger.info('Blocks deleted', { userId, count: deletedCount });
+      return { deletedCount };
     },
 
     /**
      * 全データを削除（アカウントは保持）
-     * entries, tags, 設定, 通知設定を全削除
+     * plans, logs, entries, tags, 設定, 通知設定を全削除
      */
     async deleteAllData(userId: string): Promise<{ success: true }> {
-      // 依存関係順に削除: entries → tags → settings
-      const { error: entryError } = await supabase.from('entries').delete().eq('user_id', userId);
-      if (entryError) {
-        throw new UserServiceError(
-          'DELETE_DATA_FAILED',
-          `entries deletion failed: ${entryError.message}`,
-        );
-      }
-
-      const { error: tagError } = await supabase.from('tags').delete().eq('user_id', userId);
-      if (tagError) {
-        throw new UserServiceError(
-          'DELETE_DATA_FAILED',
-          `tags deletion failed: ${tagError.message}`,
-        );
-      }
-
-      const { error: settingsError } = await supabase
-        .from('user_settings')
-        .delete()
-        .eq('user_id', userId);
-      if (settingsError) {
-        throw new UserServiceError(
-          'DELETE_DATA_FAILED',
-          `user_settings deletion failed: ${settingsError.message}`,
-        );
+      const adminClient = createServiceRoleClient();
+      // FK 依存順。service-role を使うが、全操作を認証済み userId で明示的に制限する。
+      for (const table of ['logs', 'plans', 'entries', 'tags', 'user_settings'] as const) {
+        const { error } = await adminClient.from(table).delete().eq('user_id', userId);
+        if (error) {
+          throw new UserServiceError(
+            'DELETE_DATA_FAILED',
+            `${table} deletion failed: ${error.message}`,
+          );
+        }
       }
 
       logger.info('All user data deleted (account preserved)', { userId });
@@ -240,9 +232,19 @@ export function createUserService(supabase: SupabaseClient<Database>) {
     async exportData(options: ExportDataOptions): Promise<ExportDataResult> {
       const { userId } = options;
 
-      const [profileResult, entriesResult, tagsResult, userSettingsResult] = await Promise.all([
+      const adminClient = createServiceRoleClient();
+      const [
+        profileResult,
+        entriesResult,
+        plansResult,
+        logsResult,
+        tagsResult,
+        userSettingsResult,
+      ] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', userId).single(),
-        supabase.from('entries').select('*').eq('user_id', userId),
+        adminClient.from('entries').select('*').eq('user_id', userId),
+        adminClient.from('plans').select('*').eq('user_id', userId),
+        adminClient.from('logs').select('*').eq('user_id', userId),
         supabase.from('tags').select('*').eq('user_id', userId),
         supabase.from('user_settings').select('*').eq('user_id', userId).single(),
       ]);
@@ -259,6 +261,18 @@ export function createUserService(supabase: SupabaseClient<Database>) {
           `Entries fetch error: ${entriesResult.error.message}`,
         );
       }
+      if (plansResult.error) {
+        throw new UserServiceError(
+          'EXPORT_FAILED',
+          `Plans fetch error: ${plansResult.error.message}`,
+        );
+      }
+      if (logsResult.error) {
+        throw new UserServiceError(
+          'EXPORT_FAILED',
+          `Logs fetch error: ${logsResult.error.message}`,
+        );
+      }
       if (tagsResult.error) {
         throw new UserServiceError(
           'EXPORT_FAILED',
@@ -273,7 +287,8 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         data: {
           profile: profileResult.data || null,
           entries,
-          plans: entries,
+          plans: plansResult.data || [],
+          logs: logsResult.data || [],
           tags: tagsResult.data || [],
           records: [],
           planTags: [],

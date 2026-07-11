@@ -42,23 +42,27 @@ type ExportFormat = 'json' | 'csv';
 type ExportRange = 'all' | 'custom';
 
 const CSV_COLUMNS = [
+  'kind',
   'id',
   'title',
-  'description',
-  'origin',
-  'start_time',
-  'end_time',
-  'actual_start_time',
-  'actual_end_time',
-  'planned_duration_minutes',
+  'note',
+  'tag_id',
+  'plan_id',
+  'start_at',
+  'end_at',
+  'source',
+  'skipped_at',
+  'fulfillment_score',
   'created_at',
+  'updated_at',
+  'deleted_at',
 ] as const;
 
 /**
- * entriesをCSV文字列に変換
+ * plans / logsをCSV文字列に変換
  * RFC 4180準拠: ダブルクォートでフィールドをエスケープ
  */
-function entriesToCsv(entries: Record<string, unknown>[]): string {
+function timeModelRowsToCsv(rows: Record<string, unknown>[]): string {
   const escapeCsvField = (value: unknown): string => {
     if (value == null) return '';
     const str = String(value);
@@ -69,10 +73,8 @@ function entriesToCsv(entries: Record<string, unknown>[]): string {
   };
 
   const header = CSV_COLUMNS.join(',');
-  const rows = entries.map((entry) =>
-    CSV_COLUMNS.map((col) => escapeCsvField(entry[col])).join(','),
-  );
-  return [header, ...rows].join('\n');
+  const csvRows = rows.map((row) => CSV_COLUMNS.map((col) => escapeCsvField(row[col])).join(','));
+  return [header, ...csvRows].join('\n');
 }
 
 /**
@@ -121,13 +123,25 @@ function ExportSection() {
           const entryDate = new Date(entry.start_time ?? entry.created_at ?? '');
           return entryDate >= start && entryDate <= end;
         });
+        exportData.data.plans = exportData.data.plans.filter((plan) => {
+          const planDate = new Date(plan.start_at);
+          return planDate >= start && planDate <= end;
+        });
+        exportData.data.logs = exportData.data.logs.filter((log) => {
+          const logDate = new Date(log.start_at);
+          return logDate >= start && logDate <= end;
+        });
       }
 
       let blob: Blob;
       let mimeType: string;
 
       if (format === 'csv') {
-        const csvContent = entriesToCsv(exportData.data.entries);
+        const csvRows = [
+          ...exportData.data.plans.map((plan) => ({ ...plan, kind: 'plan' })),
+          ...exportData.data.logs.map((log) => ({ ...log, kind: 'log' })),
+        ];
+        const csvContent = timeModelRowsToCsv(csvRows);
         blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
         mimeType = 'csv';
       } else {

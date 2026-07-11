@@ -63,11 +63,11 @@ export const userRouter = createTRPCRouter({
     }),
 
   /**
-   * 全ブロック（エントリ）を削除
+   * 全ブロック（Plan / Log。互換用 Entry も含む）を削除
    * タグ・設定は保持
    */
   deleteBlocks: protectedProcedure
-    .meta({ description: '全エントリを削除（タグ・設定は保持）' })
+    .meta({ description: '全Plan / Logを削除（タグ・設定は保持）' })
     .input(z.object({ confirmText: z.literal('DELETE') }))
     .mutation(async ({ ctx }) => {
       try {
