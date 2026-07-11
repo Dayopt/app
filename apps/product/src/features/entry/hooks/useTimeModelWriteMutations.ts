@@ -88,5 +88,73 @@ export function useTimeModelWriteMutations() {
     onSettled: invalidate,
   });
 
-  return { createLog, createPlan, updateLog, updatePlan };
+  const reportDeleteError = () => toast.error(t('toast.deleteFailed'));
+  const reportRestoreError = () => toast.error(t('toast.restoreFailed'));
+
+  const deletePlan = api.plans.delete.useMutation({
+    onMutate: snapshot,
+    onError: (_error, _input, context) => {
+      restore(context);
+      reportDeleteError();
+    },
+    onSettled: invalidate,
+  });
+
+  const deleteLog = api.logs.delete.useMutation({
+    onMutate: snapshot,
+    onError: (_error, _input, context) => {
+      restore(context);
+      reportDeleteError();
+    },
+    onSettled: invalidate,
+  });
+
+  const restorePlan = api.plans.restore.useMutation({
+    onMutate: snapshot,
+    onError: (_error, _input, context) => {
+      restore(context);
+      reportRestoreError();
+    },
+    onSettled: invalidate,
+  });
+
+  const restoreLog = api.logs.restore.useMutation({
+    onMutate: snapshot,
+    onError: (_error, _input, context) => {
+      restore(context);
+      reportRestoreError();
+    },
+    onSettled: invalidate,
+  });
+
+  const skipPlan = api.plans.skip.useMutation({
+    onMutate: snapshot,
+    onError: (_error, _input, context) => {
+      restore(context);
+      toast.error(t('toast.skipFailed'));
+    },
+    onSettled: invalidate,
+  });
+
+  const unskipPlan = api.plans.unskip.useMutation({
+    onMutate: snapshot,
+    onError: (_error, _input, context) => {
+      restore(context);
+      toast.error(t('toast.skipFailed'));
+    },
+    onSettled: invalidate,
+  });
+
+  return {
+    createLog,
+    createPlan,
+    deleteLog,
+    deletePlan,
+    restoreLog,
+    restorePlan,
+    skipPlan,
+    unskipPlan,
+    updateLog,
+    updatePlan,
+  };
 }

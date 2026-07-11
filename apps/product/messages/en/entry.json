@@ -55,8 +55,17 @@
         "overlap": "This time slot is already taken",
         "saveFailed": "Could not save. Please try again",
         "recordFailed": "Could not record. Please try again",
-        "confirmFailed": "Could not confirm the day. Please try again"
-      }
+        "confirmFailed": "Could not confirm the day. Please try again",
+        "saved": "Saved ✓",
+        "deleted": "Deleted",
+        "deleteFailed": "Could not delete. Please try again",
+        "restored": "Restored",
+        "restoreFailed": "Could not restore. Please try again",
+        "skipped": "Skipped",
+        "skipFailed": "Could not skip. Please try again",
+        "unskipped": "Skip removed"
+      },
+      "migratedLocked": "Migrated past records cannot be edited"
     },
     "sidebar": {
       "tabs": {

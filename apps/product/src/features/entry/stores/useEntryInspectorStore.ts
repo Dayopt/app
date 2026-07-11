@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import type { TimeModelDestination } from '../domain/time-model-destination';
+
 /**
  * Entry Inspector 状態管理
  *
- * entries テーブルに対応。全フィールドはデバウンス即時保存。
+ * plans / logs（time model）に対応。entryKind で対象テーブルを判別する。
  */
 
 /** Inspector ポップオーバーのアンカー位置 */
@@ -23,8 +25,10 @@ export interface AnchorRect {
 interface EntryInspectorState {
   /** Inspector が開いているか */
   isOpen: boolean;
-  /** 対象エントリのID */
+  /** 対象エントリのID（plan または log の UUID） */
   entryId: string | null;
+  /** 対象が plan / log のどちらか */
+  entryKind: TimeModelDestination;
   /** Inspector のアンカー位置（クリックされたブロックの位置） */
   anchorRect: AnchorRect | null;
 }
@@ -34,7 +38,7 @@ interface EntryInspectorState {
  */
 interface EntryInspectorActions {
   /** Inspector を開く */
-  openInspector: (entryId: string) => void;
+  openInspector: (entryId: string, kind?: TimeModelDestination) => void;
   /** Inspector を閉じる */
   closeInspector: () => void;
   /** アンカー位置を設定 */
@@ -46,21 +50,23 @@ interface EntryInspectorActions {
  */
 type EntryInspectorStore = EntryInspectorState & EntryInspectorActions;
 
-/** Entry Inspector の開閉状態・対象エントリIDを管理するストア */
+/** Entry Inspector の開閉状態・対象エントリID・kind を管理するストア */
 export const useEntryInspectorStore = create<EntryInspectorStore>()(
   devtools(
     (set) => ({
       isOpen: false,
       entryId: null,
+      entryKind: 'plan',
       anchorRect: null,
 
       setAnchorRect: (rect) => set({ anchorRect: rect }, false, 'setAnchorRect'),
 
-      openInspector: (entryId) =>
+      openInspector: (entryId, kind = 'plan') =>
         set(
           {
             isOpen: true,
             entryId,
+            entryKind: kind,
           },
           false,
           'openInspector',
@@ -75,6 +81,7 @@ export const useEntryInspectorStore = create<EntryInspectorStore>()(
           {
             isOpen: false,
             entryId: null,
+            entryKind: 'plan',
             anchorRect: null,
           },
           false,

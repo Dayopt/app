@@ -1,3 +1,4 @@
+import type { TimeModelDestination } from '../domain/time-model-destination';
 import type { EntryOrigin, EntryState } from './entry';
 
 /** Entry の表示用射影型（カレンダー上でのレンダリングに使用） */
@@ -33,6 +34,13 @@ export interface CalendarEvent {
   plannedEndDate?: Date | null | undefined;
   /** 計画したがやらなかった（skipped_at あり）。実績集計から除外される */
   isSkipped?: boolean | undefined;
+  // === time model 射影フィールド（Step 8 cutover） ===
+  /** 射影元が plans / logs のどちらか。クリック・DnD・削除のルーティングに使う */
+  kind?: TimeModelDestination | undefined;
+  /** log が紐づく plan の id（plan 行・予定外 log では null） */
+  planId?: string | null | undefined;
+  /** log の作成元（manual / plan_record / auto_migrated / external_calendar）。auto_migrated は RLS で不変 */
+  logSource?: string | undefined;
   // Optional properties used in various contexts
   userId?: string | undefined; // 所有者ID
   location?: string | undefined; // 場所

@@ -30,10 +30,12 @@ const SettingsDialog = dynamic(
   { ssr: false },
 );
 
-const EntryInspector = dynamic(
+// Step 8 cutover: plans / logs 対応の TimeModelInspector をマウントする。
+// 旧 EntryInspector（entries 用）は Step 9 で削除するまで休眠のまま残す。
+const TimeModelInspector = dynamic(
   () =>
-    import('@/features/entry/components/inspector/EntryInspector').then((m) => ({
-      default: m.EntryInspector,
+    import('@/features/entry/components/time-model/TimeModelInspector').then((m) => ({
+      default: m.TimeModelInspector,
     })),
   { ssr: false },
 );
@@ -100,7 +102,7 @@ export function GlobalOverlays() {
         }}
       />
       <SettingsDialog />
-      <EntryInspector onViewStats={handleViewStats} />
+      <TimeModelInspector onViewStats={handleViewStats} />
       <Toaster />
     </>
   );
