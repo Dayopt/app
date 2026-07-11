@@ -75,6 +75,11 @@ export { EntryCard } from './components/card';
 export type { EntryCardPosition } from './components/card';
 
 // =============================================================================
+// Components (time model 記録導線)
+// =============================================================================
+export { ConfirmDayButton, RecordPlanButton } from './components/time-model/TimeModelRecordActions';
+
+// =============================================================================
 // Components (Inspector fields — 他 feature から再利用可能な入力 row)
 // =============================================================================
 export { DateRow } from './components/inspector/fields/DateRow';

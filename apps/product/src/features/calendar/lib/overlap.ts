@@ -152,6 +152,33 @@ export function checkClientSideOverlap(
 }
 
 /**
+ * ドラッグ/リサイズ中の kind-aware 重複判定（plan×plan / log×log のみ禁止、plan×log は許可）。
+ * time model 化された CalendarEvent（`kind` 付き）専用。checkClientSideOverlap の
+ * 旧二層判定（planned/actual layer）は log-with-plan を origin:'planned' として誤扱いするため、
+ * ドラッグ移動先が同一 kind の他イベントと重ならないかだけを見るこちらに置き換える。
+ */
+export function checkClientSideOverlapByKind(
+  events: CalendarEvent[],
+  draggedEventId: string,
+  previewStartTime: Date,
+  previewEndTime: Date,
+): boolean {
+  const draggedEvent = events.find((event) => event.id === draggedEventId);
+  const kind = draggedEvent?.kind ?? 'plan';
+  const start = previewStartTime.getTime();
+  const end = previewEndTime.getTime();
+
+  return events.some((event) => {
+    if (event.id === draggedEventId) return false;
+    if ((event.kind ?? 'plan') !== kind) return false;
+    const otherStart = (event.startDate ?? event.displayStartDate)?.getTime();
+    const otherEnd = (event.endDate ?? event.displayEndDate)?.getTime();
+    if (otherStart == null || otherEnd == null) return false;
+    return otherStart < end && otherEnd > start;
+  });
+}
+
+/**
  * CalendarEvent を重複判定用の2レイヤー表現に変換する。
  * actual レイヤーは effective actual（確定済み actual、なければ過去 planned の自動記録）。
  */

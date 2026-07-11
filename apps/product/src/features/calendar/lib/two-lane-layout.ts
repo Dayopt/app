@@ -13,6 +13,8 @@
 
 import type { LogEvent, PlanEvent } from '@/features/entry';
 
+import type { CalendarEvent } from '../types/calendar.types';
+
 export interface TwoLanePosition {
   /** px */
   top: number;
@@ -101,4 +103,35 @@ export function calculateTwoLaneLayout({
   });
 
   return { planLayouts, logLayouts };
+}
+
+/**
+ * `CalendarEvent[]`（Step 8 の time model 射影、`kind` 付き）から直接 2 レーン座標を計算する。
+ * `TwoLaneEntryRenderer` はインタラクション状態（drag/resize preview）を CalendarEvent 単位で
+ * 持つ既存 `useInteraction` をそのまま使うため、PlanEvent/LogEvent への変換を経由しない。
+ */
+export function calculateTwoLaneStylesForCalendarEvents(
+  events: ReadonlyArray<CalendarEvent>,
+  hourHeight: number,
+  planLaneWidthPercent: number = DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+): Record<string, TwoLanePosition> {
+  const logLaneWidthPercent = 100 - planLaneWidthPercent;
+  const styles: Record<string, TwoLanePosition> = {};
+
+  for (const event of events) {
+    const start = event.displayStartDate ?? event.startDate;
+    const end = event.displayEndDate ?? event.endDate;
+    if (!start || !end) continue;
+
+    const { top, height } = timeToPosition(start, end, hourHeight);
+    const isLog = event.kind === 'log';
+    styles[event.id] = {
+      top,
+      height,
+      left: isLog ? planLaneWidthPercent : 0,
+      width: isLog ? logLaneWidthPercent : planLaneWidthPercent,
+    };
+  }
+
+  return styles;
 }

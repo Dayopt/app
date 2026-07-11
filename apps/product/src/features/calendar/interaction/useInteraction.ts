@@ -15,7 +15,7 @@ import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 import type { CalendarEvent } from '../types/calendar.types';
 
 import { hasCalendarActualRangeDiff } from '../lib/entry-time';
-import { checkClientSideOverlap } from '../lib/overlap';
+import { checkClientSideOverlapByKind } from '../lib/overlap';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
 import { IDLE, interactionReducer } from '../domain/interaction/machine';
@@ -198,7 +198,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
       // 自動記録モデルでは drag / resize とも「planned のみ移動・確定済み actual は固定」で
       // 重複判定が同一なため operation は使わない（machine の API 形状だけ維持する）
       checkOverlap: (entryId: string, start: Date, end: Date, _operation: 'drag' | 'resize') => {
-        return checkClientSideOverlap(r.allEvents, entryId, start, end);
+        return checkClientSideOverlapByKind(r.allEvents, entryId, start, end);
       },
     };
   }

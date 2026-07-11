@@ -12,6 +12,7 @@ import { cn } from '@dayopt/components';
 
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
+import { calculateTwoLaneStylesForCalendarEvents } from '../../../../lib/two-lane-layout';
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
@@ -21,6 +22,11 @@ import { CalendarDragSelection } from './CalendarDragSelection';
 import { DraftEntryBlock } from './DraftEntryBlock';
 import { EntryRenderer } from './EntryRenderer';
 import { InlineTagPalette } from './InlineTagPalette';
+import { TwoLaneEntryRenderer } from './TwoLaneEntryRenderer';
+
+// Step 8 cutover: 2レーン描画へ切り替える。旧単一レーン（EntryRenderer）は
+// Step 9 の削除まで分岐の下に残す。
+const USE_TWO_LANE = true;
 
 // ========================================
 // Types
@@ -228,6 +234,14 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   const isDragging = state.mode === 'dragging';
   const isResizing = state.mode === 'resizing';
 
+  // Step 8: 2レーン座標（plan=左/log=右）。entries は既に kind 付き CalendarEvent。
+  // Week/複数日ビューはカラム幅が狭いため Plan レーンを細くする（Day は既定 38%）。
+  const planLaneWidthPercent = viewMode === 'day' ? undefined : 20;
+  const twoLaneStyles = React.useMemo(
+    () => calculateTwoLaneStylesForCalendarEvents(entries, HOUR_HEIGHT, planLaneWidthPercent),
+    [entries, HOUR_HEIGHT, planLaneWidthPercent],
+  );
+
   // ドラッグゴースト描画コールバック
   const renderGhost = useCallback(
     ({ entryId, previewTime }: { entryId: string; previewTime: { start: Date; end: Date } }) => {
@@ -235,7 +249,9 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       if (!entry) return null;
       const previewEntry = buildDragPreviewEntry(entry, previewTime);
       const tag = entry.tagId ? getTagById(entry.tagId) : null;
-      const ghostHeight = getGhostEntryHeight(entryStyles[entryId]);
+      const ghostHeight = USE_TWO_LANE
+        ? Math.max(twoLaneStyles[entryId]?.height ?? 20, 20)
+        : getGhostEntryHeight(entryStyles[entryId]);
       return (
         <EntryCard
           entry={previewEntry}
@@ -252,7 +268,16 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
         />
       );
     },
-    [entries, entryStyles, getTagById, isMobile, HOUR_HEIGHT, enableCrossDayDrag, dayDiffEntryIds],
+    [
+      entries,
+      entryStyles,
+      twoLaneStyles,
+      getTagById,
+      isMobile,
+      HOUR_HEIGHT,
+      enableCrossDayDrag,
+      dayDiffEntryIds,
+    ],
   );
 
   // 時間グリッド
@@ -290,52 +315,78 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
       {/* エントリ表示エリア */}
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
-        {entries.map((entry) => {
-          const style = entryStyles[entry.id];
-          if (!style) return null;
+        {USE_TWO_LANE
+          ? entries.map((entry) => {
+              const position = twoLaneStyles[entry.id];
+              if (!position) return null;
 
-          const entryDragging = isDragging && (state as { entryId: string }).entryId === entry.id;
-          const entryResizing = isResizing && (state as { entryId: string }).entryId === entry.id;
+              return (
+                <TwoLaneEntryRenderer
+                  key={entry.id}
+                  entry={entry}
+                  position={position}
+                  allEvents={allEventsForOverlapCheck ?? entries}
+                  isDragging={isDragging}
+                  isResizing={isResizing}
+                  interactionState={state}
+                  dayIndex={dayIndex}
+                  enableCrossDayDrag={enableCrossDayDrag}
+                  onEntryClick={onEntryClick}
+                  onEntryContextMenu={onEntryContextMenu}
+                  onPointerDown={handlers.handlePointerDown}
+                  onTouchStart={handlers.handleTouchStart}
+                  onResizeStart={handlers.handleResizeStart}
+                />
+              );
+            })
+          : entries.map((entry) => {
+              const style = entryStyles[entry.id];
+              if (!style) return null;
 
-          return (
-            <EntryRenderer
-              key={entry.id}
-              entry={entry}
-              style={style}
-              hourHeight={HOUR_HEIGHT}
-              enableCrossDayDrag={enableCrossDayDrag}
-              showActualDiff={showActualDiff}
-              showDayDiffMarker={dayDiffEntryIds?.has(entry.id) ?? false}
-              dayIndex={dayIndex}
-              isDragging={isDragging}
-              isResizing={isResizing}
-              entryDragging={entryDragging}
-              entryResizing={entryResizing}
-              interactionState={state}
-              globalDraggedEntryId={globalDraggedEntryId}
-              isSourceColumnMovingAway={isSourceColumnMovingAway}
-              onEntryClick={onEntryClick}
-              onEntryContextMenu={onEntryContextMenu}
-              onPointerDown={handlers.handlePointerDown}
-              onTouchStart={handlers.handleTouchStart}
-              onResizeStart={handlers.handleResizeStart}
-              entries={entries}
-              onGapClick={
-                onTimeRangeSelect
-                  ? (startMinutes, endMinutes) => {
-                      if (minutesToDate(date, endMinutes).getTime() > gapCreationCutoffMs) {
-                        return;
-                      }
-                      onTimeRangeSelect(
-                        minutesToSelection(date, startMinutes, endMinutes, 'planned-gap'),
-                      );
-                    }
-                  : undefined
-              }
-              gapCreationCutoffMs={gapCreationCutoffMs}
-            />
-          );
-        })}
+              const entryDragging =
+                isDragging && (state as { entryId: string }).entryId === entry.id;
+              const entryResizing =
+                isResizing && (state as { entryId: string }).entryId === entry.id;
+
+              return (
+                <EntryRenderer
+                  key={entry.id}
+                  entry={entry}
+                  style={style}
+                  hourHeight={HOUR_HEIGHT}
+                  enableCrossDayDrag={enableCrossDayDrag}
+                  showActualDiff={showActualDiff}
+                  showDayDiffMarker={dayDiffEntryIds?.has(entry.id) ?? false}
+                  dayIndex={dayIndex}
+                  isDragging={isDragging}
+                  isResizing={isResizing}
+                  entryDragging={entryDragging}
+                  entryResizing={entryResizing}
+                  interactionState={state}
+                  globalDraggedEntryId={globalDraggedEntryId}
+                  isSourceColumnMovingAway={isSourceColumnMovingAway}
+                  onEntryClick={onEntryClick}
+                  onEntryContextMenu={onEntryContextMenu}
+                  onPointerDown={handlers.handlePointerDown}
+                  onTouchStart={handlers.handleTouchStart}
+                  onResizeStart={handlers.handleResizeStart}
+                  entries={entries}
+                  onGapClick={
+                    onTimeRangeSelect
+                      ? (startMinutes, endMinutes) => {
+                          if (minutesToDate(date, endMinutes).getTime() > gapCreationCutoffMs) {
+                            return;
+                          }
+                          onTimeRangeSelect(
+                            minutesToSelection(date, startMinutes, endMinutes, 'planned-gap'),
+                          );
+                        }
+                      : undefined
+                  }
+                  gapCreationCutoffMs={gapCreationCutoffMs}
+                />
+              );
+            })}
 
         <InlineTagPalette hourHeight={HOUR_HEIGHT} {...(enableCrossDayDrag ? { date } : {})} />
 
