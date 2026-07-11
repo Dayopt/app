@@ -23,14 +23,23 @@ interface TimeModelLogDiffInput {
 
 interface TimeModelDayDiffItem {
   id: string;
+  /** クリック時に開く Inspector 対象の id（recorded/skipped/unrecorded は plan、unplanned は log） */
+  entryId: string;
   kind: TimeModelDayDiffKind;
   title: string;
   tagId: string | null;
   color: string;
   planId: string | null;
+  plannedStart: Date | null;
+  plannedEnd: Date | null;
+  actualStart: Date | null;
+  actualEnd: Date | null;
   plannedMinutes: number;
   actualMinutes: number;
   diffMinutes: number;
+  /** ReviewDiffPanel の 'shifted' kind 専用フィールド。time model では常に 0（'shifted' を出さない） */
+  startDiffMinutes: number;
+  endDiffMinutes: number;
   sortTime: number;
 }
 
@@ -40,6 +49,8 @@ interface TimeModelDayDiffResult {
     actualMinutes: number;
     diffMinutes: number;
     unplannedMinutes: number;
+    /** time model に「未達成」の概念は無いため常に 0（ReviewDiffSummary の必須フィールドを満たすため保持） */
+    missedMinutes: number;
     unrecordedMinutes: number;
   };
   items: TimeModelDayDiffItem[];
@@ -87,14 +98,21 @@ export function computeTimeModelDayDiffs(
     unplannedMinutes += duration;
     items.push({
       id: `unplanned:${log.id}`,
+      entryId: log.id,
       kind: 'unplanned',
       title: log.title,
       tagId: log.tagId,
       color: log.color,
       planId: null,
+      plannedStart: null,
+      plannedEnd: null,
+      actualStart: log.startAt,
+      actualEnd: log.endAt,
       plannedMinutes: 0,
       actualMinutes: duration,
       diffMinutes: duration,
+      startDiffMinutes: 0,
+      endDiffMinutes: 0,
       sortTime: log.startAt.getTime(),
     });
   }
@@ -106,14 +124,21 @@ export function computeTimeModelDayDiffs(
     if (plan.skippedAt) {
       items.push({
         id: `skipped:${plan.id}`,
+        entryId: plan.id,
         kind: 'skipped',
         title: plan.title,
         tagId: plan.tagId,
         color: plan.color,
         planId: plan.id,
+        plannedStart: plan.startAt,
+        plannedEnd: plan.endAt,
+        actualStart: null,
+        actualEnd: null,
         plannedMinutes: duration,
         actualMinutes: 0,
         diffMinutes: -duration,
+        startDiffMinutes: 0,
+        endDiffMinutes: 0,
         sortTime: plan.startAt.getTime(),
       });
       continue;
@@ -124,14 +149,21 @@ export function computeTimeModelDayDiffs(
       unrecordedMinutes += duration;
       items.push({
         id: `unrecorded:${plan.id}`,
+        entryId: plan.id,
         kind: 'unrecorded',
         title: plan.title,
         tagId: plan.tagId,
         color: plan.color,
         planId: plan.id,
+        plannedStart: plan.startAt,
+        plannedEnd: plan.endAt,
+        actualStart: null,
+        actualEnd: null,
         plannedMinutes: duration,
         actualMinutes: 0,
         diffMinutes: -duration,
+        startDiffMinutes: 0,
+        endDiffMinutes: 0,
         sortTime: plan.startAt.getTime(),
       });
       continue;
@@ -141,16 +173,26 @@ export function computeTimeModelDayDiffs(
       (total, log) => total + clippedMinutes(log.startAt, log.endAt, bounds),
       0,
     );
+    const sortedLinkedLogs = [...linkedLogs].sort(
+      (a, b) => a.startAt.getTime() - b.startAt.getTime(),
+    );
     items.push({
       id: `recorded:${plan.id}`,
+      entryId: plan.id,
       kind: 'recorded',
       title: plan.title,
       tagId: plan.tagId,
       color: plan.color,
       planId: plan.id,
+      plannedStart: plan.startAt,
+      plannedEnd: plan.endAt,
+      actualStart: sortedLinkedLogs[0]?.startAt ?? null,
+      actualEnd: sortedLinkedLogs[sortedLinkedLogs.length - 1]?.endAt ?? null,
       plannedMinutes: duration,
       actualMinutes: linkedMinutes,
       diffMinutes: linkedMinutes - duration,
+      startDiffMinutes: 0,
+      endDiffMinutes: 0,
       sortTime: plan.startAt.getTime(),
     });
   }
@@ -162,6 +204,7 @@ export function computeTimeModelDayDiffs(
       actualMinutes,
       diffMinutes: actualMinutes - plannedMinutes,
       unplannedMinutes,
+      missedMinutes: 0,
       unrecordedMinutes,
     },
     items,

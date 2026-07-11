@@ -20,12 +20,8 @@ import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsCo
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
-import {
-  computeCalendarDayDiffs,
-  filterCalendarDayDiffEntries,
-  resolveCalendarDayDiffBounds,
-  resolveCalendarRangeDiffBounds,
-} from '../lib/day-diff';
+import { resolveCalendarDayDiffBounds, resolveCalendarRangeDiffBounds } from '../lib/day-diff';
+import { computeTimeModelDayDiffs } from '../lib/time-model-day-diff';
 import { useCalendarFilterStore } from '../stores/useCalendarFilterStore';
 import {
   getMultiDayCount,
@@ -132,7 +128,7 @@ interface CalendarControllerProps {
 }
 
 interface CalendarCompareRailRenderProps {
-  diff: ReturnType<typeof computeCalendarDayDiffs>;
+  diff: ReturnType<typeof computeTimeModelDayDiffs>;
   variant: 'rail' | 'sheet';
   onItemClick: (entryId: string) => void;
   onClose?: (() => void) | undefined;
@@ -225,52 +221,61 @@ export function CalendarController({
           ),
     [calendarDiffDays, currentDate, timezone, viewDateRange.end, viewDateRange.start, viewType],
   );
-  const calendarDiffEntries = useMemo(() => {
+  // Step 8: compare rail は plans/logs（kind 付き CalendarEvent）から直接集計する。
+  // タグ可視性・週末除外は絞るが、範囲内の時間クリップは computeTimeModelDayDiffs 側の
+  // clippedMinutes に委ねる（0分は自動的に除外される）。
+  const isWithinVisibleDayBounds = useCallback(
+    (start: Date, end: Date) => {
+      if (viewType === 'day' || showWeekends) return true;
+      return calendarDiffDayBounds.some((bounds) => start < bounds.dayEnd && end > bounds.dayStart);
+    },
+    [calendarDiffDayBounds, showWeekends, viewType],
+  );
+  const calendarDiffPlans = useMemo(() => {
     void visibleTagIds;
     if (!calendarDiffEnabled) return [];
-
-    const boundedEntries = filterCalendarDayDiffEntries(
-      allEntries,
-      calendarDiffBounds,
-      isEntryVisible,
-    );
-    if (viewType === 'day' || showWeekends) return boundedEntries;
-
-    const visibleEntryIds = new Set<string>();
-    for (const bounds of calendarDiffDayBounds) {
-      for (const entry of filterCalendarDayDiffEntries(boundedEntries, bounds, isEntryVisible)) {
-        visibleEntryIds.add(entry.id);
-      }
-    }
-    return boundedEntries.filter((entry) => visibleEntryIds.has(entry.id));
-  }, [
-    allEntries,
-    calendarDiffBounds,
-    calendarDiffDayBounds,
-    calendarDiffEnabled,
-    isEntryVisible,
-    showWeekends,
-    viewType,
-    visibleTagIds,
-  ]);
+    return allEntries
+      .filter((entry) => entry.kind === 'plan' && isEntryVisible(entry.tagId ?? null))
+      .map((entry) => ({
+        id: entry.id,
+        title: entry.title,
+        tagId: entry.tagId ?? null,
+        color: entry.color,
+        startAt: entry.startDate ?? entry.displayStartDate,
+        endAt: entry.endDate ?? entry.displayEndDate,
+        skippedAt: entry.isSkipped ? (entry.startDate ?? entry.displayStartDate) : null,
+      }))
+      .filter((plan) => isWithinVisibleDayBounds(plan.startAt, plan.endAt));
+  }, [allEntries, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds, visibleTagIds]);
+  const calendarDiffLogs = useMemo(() => {
+    if (!calendarDiffEnabled) return [];
+    return allEntries
+      .filter((entry) => entry.kind === 'log' && isEntryVisible(entry.tagId ?? null))
+      .map((entry) => ({
+        id: entry.id,
+        planId: entry.planId ?? null,
+        title: entry.title,
+        tagId: entry.tagId ?? null,
+        color: entry.color,
+        startAt: entry.startDate ?? entry.displayStartDate,
+        endAt: entry.endDate ?? entry.displayEndDate,
+      }))
+      .filter((log) => isWithinVisibleDayBounds(log.startAt, log.endAt));
+  }, [allEntries, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds]);
   const calendarDiff = useMemo(
-    () =>
-      calendarDiffEnabled
-        ? computeCalendarDayDiffs(calendarDiffEntries, calendarDiffBounds)
-        : computeCalendarDayDiffs([]),
-    [calendarDiffBounds, calendarDiffEnabled, calendarDiffEntries],
+    () => computeTimeModelDayDiffs(calendarDiffPlans, calendarDiffLogs, calendarDiffBounds),
+    [calendarDiffBounds, calendarDiffLogs, calendarDiffPlans],
   );
-  const dayDiffEntryIds = calendarDiff.entryIds;
-  const calendarDiffEntryById = useMemo(
-    () => new Map(calendarDiffEntries.map((entry) => [entry.id, entry])),
-    [calendarDiffEntries],
+  const dayDiffEntryIds = useMemo(
+    () => new Set(calendarDiff.items.map((item) => item.entryId)),
+    [calendarDiff.items],
   );
   const handleCalendarDiffItemClick = useCallback(
     (entryId: string) => {
-      const entry = calendarDiffEntryById.get(entryId);
+      const entry = allEntries.find((candidate) => candidate.id === entryId);
       if (entry) onEntryClick(entry);
     },
-    [calendarDiffEntryById, onEntryClick],
+    [allEntries, onEntryClick],
   );
   const handleCloseCompareRail = useCallback(() => {
     onCompareRailOpenChange?.(false);
