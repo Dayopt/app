@@ -7,7 +7,7 @@
  * - past: 過去の記録
  */
 
-import type { EntryState } from '../types/entry';
+import type { EntryState } from '@dayopt/domain';
 
 type EntryLike = {
   origin?: string | null;

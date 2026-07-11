@@ -138,27 +138,27 @@ type Story = StoryObj<typeof meta>;
 /** Default: 7 タグ、ほぼ画面に収まる */
 export const Default: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: MOCK_TAGS }, 'entries.list': [] },
+    trpcMocks: { 'tags.list': { data: MOCK_TAGS }, 'plans.list': [], 'logs.list': [] },
   },
 };
 
 /** ManyTags: 30 タグ、横スクロールで全件アクセス可能 */
 export const ManyTags: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: MANY_TAGS }, 'entries.list': [] },
+    trpcMocks: { 'tags.list': { data: MANY_TAGS }, 'plans.list': [], 'logs.list': [] },
   },
 };
 
 /** Empty: タグゼロ → chip 行ごと非描画（null を返す） */
 export const Empty: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: [] }, 'entries.list': [] },
+    trpcMocks: { 'tags.list': { data: [] }, 'plans.list': [], 'logs.list': [] },
   },
 };
 
 function FooterPreview({ tags }: { tags: Tag[] }) {
   return (
-    <StoryTRPCProvider mocks={{ 'tags.list': { data: tags }, 'entries.list': [] }}>
+    <StoryTRPCProvider mocks={{ 'tags.list': { data: tags }, 'plans.list': [], 'logs.list': [] }}>
       <div className="border-border-subtle bg-background relative h-20 overflow-hidden rounded-lg border">
         <TagChipRow className="absolute" />
       </div>

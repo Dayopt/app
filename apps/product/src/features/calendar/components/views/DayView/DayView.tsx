@@ -23,7 +23,7 @@ export const DayView = ({
   allEntries: _allEntries,
   currentDate,
   showWeekends: _showWeekends = true,
-  showActualDiff = false,
+  showActualDiff: _showActualDiff = false,
   dayDiffEntryIds,
   className,
   disabledEntryId,
@@ -74,7 +74,7 @@ export const DayView = ({
   // DayView専用ロジック（CalendarControllerから渡されたエントリデータを使用）
   const {
     dayEntries: dayEvents,
-    entryStyles: eventStyles,
+    entryStyles: _eventStyles,
     isToday,
     timeSlots: _timeSlots,
   } = useDayView({
@@ -145,7 +145,6 @@ export const DayView = ({
           <CalendarGridContent
             date={date}
             entries={dayEvents}
-            entryStyles={eventStyles}
             viewMode="day"
             dayIndex={0}
             onEntryClick={onEntryClick}
@@ -153,7 +152,6 @@ export const DayView = ({
             onEventUpdate={handleEventTimeUpdate}
             onTimeRangeSelect={onTimeRangeSelect}
             disabledEntryId={disabledEntryId}
-            showActualDiff={showActualDiff}
             dayDiffEntryIds={dayDiffEntryIds}
             className="absolute inset-y-0 right-0 left-0"
           />

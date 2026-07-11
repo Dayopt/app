@@ -1,5 +1,5 @@
+import type { EntryOrigin, EntryState } from '@dayopt/domain';
 import type { TimeModelDestination } from '../domain/time-model-destination';
-import type { EntryOrigin, EntryState } from './entry';
 
 /** Entry の表示用射影型（カレンダー上でのレンダリングに使用） */
 export interface CalendarEvent {

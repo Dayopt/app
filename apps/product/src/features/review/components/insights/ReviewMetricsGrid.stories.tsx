@@ -69,7 +69,7 @@ const meta = {
   component: ReviewMetricsGrid,
   parameters: {
     layout: 'padded',
-    trpcMocks: { 'entries.getStreak': { streak: 14 } },
+    trpcMocks: { 'statistics.getStreak': { streak: 14 } },
   },
   tags: ['autodocs'],
 } satisfies Meta<typeof ReviewMetricsGrid>;

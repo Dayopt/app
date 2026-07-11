@@ -9,7 +9,6 @@
  */
 
 import { cn } from '@dayopt/components';
-import { useDragOverlapResolver } from '../../../../../hooks/operations/useDragOverlapResolver';
 import { useEntryClipboardStore } from '../../../../../stores/useEntryClipboardStore';
 
 import { useResponsiveHourHeight } from '../../hooks/useResponsiveHourHeight';
@@ -30,7 +29,6 @@ export const CalendarDragSelection = ({
   plans = [],
 }: CalendarDragSelectionProps) => {
   const hourHeight = useResponsiveHourHeight();
-  const resolveOverlapDrop = useDragOverlapResolver();
 
   const {
     selection,
@@ -49,7 +47,6 @@ export const CalendarDragSelection = ({
     onDoubleClick,
     plans,
     hourHeight,
-    onOverlapDrop: resolveOverlapDrop,
   });
 
   return (

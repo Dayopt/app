@@ -58,7 +58,6 @@ export function useCalendarHandlers() {
         endHour: Math.floor(endMinutes / 60),
         endMinute: endMinutes % 60,
         creationSource: selection.creationSource,
-        skipEntryIds: selection.skipEntryIds,
       });
     },
     [setPendingSelection],

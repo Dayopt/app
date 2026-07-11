@@ -11,7 +11,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { BarChart3, CalendarOff, CircleSlash, RotateCcw, Trash2 } from 'lucide-react';
 
-import type { EntryOrigin } from '../types/entry';
+import type { EntryOrigin } from '@dayopt/domain';
 
 export type EntryMenuItemKey =
   'viewStats' | 'markUnplanned' | 'restorePlanned' | 'skip' | 'unskip' | 'delete';

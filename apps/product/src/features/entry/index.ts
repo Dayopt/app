@@ -11,18 +11,13 @@
 // Types
 // =============================================================================
 export type { CalendarEvent } from './types/calendar-event';
-export type { EntryWithTags } from './types/entry';
 export type { LogEvent } from './types/log-event';
 export type { PlanEvent, PlanEventStatus } from './types/plan-event';
 
 // =============================================================================
 // Hooks
 // =============================================================================
-export {
-  useFindSkippableAutoRecords,
-  useTimeModelRecordMutations,
-  useTimeModelWriteMutations,
-} from './hooks';
+export { useTimeModelRecordMutations, useTimeModelWriteMutations } from './hooks';
 
 // =============================================================================
 // Stores
@@ -36,9 +31,8 @@ export { computeActualTimeDiffOverlay, formatDiffMinutes } from './lib/actual-ti
 export { entryTintColor } from './lib/entry-tint';
 
 // =============================================================================
-// Domain (Entry 時間モデル — 純粋関数、DB/tRPC/React 非依存)
+// Domain (時間モデル — 純粋関数、DB/tRPC/React 非依存)
 // =============================================================================
-export { isPlannedEntry, isUnplannedEntry } from './domain';
 export { isPlanRecordDrop, resolveTimeModelDestination } from './domain/time-model-destination';
 export type { TimeModelDestination } from './domain/time-model-destination';
 

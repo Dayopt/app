@@ -66,7 +66,7 @@ export function useTimePLData() {
     [dateRange, prevDateRange],
   );
 
-  const query = api.entries.getTimePL.useQuery(input);
+  const query = api.statistics.getTimePL.useQuery(input);
 
   const timePLInput: TimePLInput | null = useMemo(() => {
     const data = query.data as TimePLRpcResponse | undefined;

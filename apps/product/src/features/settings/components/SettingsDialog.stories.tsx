@@ -39,7 +39,7 @@ const DIALOG_MOCKS = {
   'userSettings.get': PRESET_USER_SETTINGS.default,
   'profile.get': MOCK_PROFILE,
   'tags.list': { data: [] },
-  'entries.getTagStats': { counts: {} },
+  'statistics.getTagStats': { counts: {} },
 };
 
 // ─────────────────────────────────────────────────────────

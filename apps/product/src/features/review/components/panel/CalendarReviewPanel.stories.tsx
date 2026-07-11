@@ -65,8 +65,8 @@ const meta = {
   parameters: {
     layout: 'padded',
     trpcMocks: {
-      'entries.getStatsPageData': MOCK_PAGE_DATA,
-      'entries.getTimePL': MOCK_TIME_PL_RESPONSE,
+      'statistics.getStatsPageData': MOCK_PAGE_DATA,
+      'statistics.getTimePL': MOCK_TIME_PL_RESPONSE,
     },
   },
   tags: ['autodocs'],
@@ -134,7 +134,7 @@ export const Error: Story = {
     className: 'border-border-subtle h-[560px] w-80 border',
   },
   parameters: {
-    trpcError: { path: 'entries.getStatsPageData', code: 'INTERNAL_SERVER_ERROR' },
+    trpcError: { path: 'statistics.getStatsPageData', code: 'INTERNAL_SERVER_ERROR' },
   },
 };
 

@@ -36,7 +36,7 @@ export function CalendarFilterList() {
   const t = useTranslations();
   const isMobile = useIsMobile();
   const { data: nodes, isLoading: tagsLoading } = useTagsHierarchy();
-  const { data: tagStats, isError: isTagStatsError } = api.entries.getTagStats.useQuery();
+  const { data: tagStats, isError: isTagStatsError } = api.statistics.getTagStats.useQuery();
   const tags = useMemo(() => flattenTagTree(nodes ?? []), [nodes]);
 
   // エラー時は null にすることで、削除確認ダイアログを常に表示（誤削除防止）

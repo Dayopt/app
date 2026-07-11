@@ -13,7 +13,6 @@ import {
   CalendarDateHeader,
   DateDisplay,
   ScrollableCalendarLayout,
-  useEntryStyles,
   useMultiDayEntryPositions,
 } from '../shared';
 import { useResponsiveHourHeight } from '../shared/hooks/useResponsiveHourHeight';
@@ -33,7 +32,7 @@ export function MultiDayView({
   currentDate,
   centerDate: _centerDate,
   showWeekends = true,
-  showActualDiff = false,
+  showActualDiff: _showActualDiff = false,
   dayDiffEntryIds,
   className,
   disabledEntryId,
@@ -65,14 +64,12 @@ export function MultiDayView({
     showWeekends,
   });
 
-  const { entryPositions, entriesByDate } = useMultiDayEntryPositions({
+  const { entriesByDate } = useMultiDayEntryPositions({
     displayDates,
     entries,
     hourHeight: HOUR_HEIGHT,
     timezone,
   });
-
-  const entryStyles = useEntryStyles(entryPositions);
 
   // onUpdateEntry を CalendarGridContent が期待する (eventId, { startTime, endTime }) 型に変換
   const handleEventUpdate = React.useCallback(
@@ -141,7 +138,6 @@ export function MultiDayView({
                 <CalendarGridContent
                   date={date}
                   entries={dayEntries}
-                  entryStyles={entryStyles}
                   viewMode={viewMode}
                   dayIndex={dayIndex}
                   allEventsForOverlapCheck={entries}
@@ -151,7 +147,6 @@ export function MultiDayView({
                   onEventUpdate={handleEventUpdate}
                   onTimeRangeSelect={onTimeRangeSelect}
                   disabledEntryId={disabledEntryId}
-                  showActualDiff={showActualDiff}
                   dayDiffEntryIds={dayDiffEntryIds}
                   className="h-full"
                 />

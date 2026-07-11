@@ -94,7 +94,7 @@ export async function prefetchCalendarData(view: CalendarViewType, targetDate: D
         sortOrder: 'asc',
         limit: 100,
       }),
-      helpers.entries.getTagStats.prefetch(),
+      helpers.statistics.getTagStats.prefetch(),
       helpers.tags.list.prefetch(),
     ]);
   } catch (error) {

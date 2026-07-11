@@ -47,7 +47,7 @@ export function useReviewPageData() {
     [dateRange, prevDateRange, currentDate, granularity],
   );
 
-  const query = api.entries.getStatsPageData.useQuery(input);
+  const query = api.statistics.getStatsPageData.useQuery(input);
 
   return {
     data: query.data as StatsPageData | undefined,

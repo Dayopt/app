@@ -6,7 +6,10 @@ import { useTranslations } from 'next-intl';
 import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
 
-import { createTempId } from './mutations/mutationUtils';
+/** 一時ID生成（楽観的作成用） */
+function createTempId(): string {
+  return `temp-${Date.now()}`;
+}
 
 function isLaneListQuery(lane: 'plans' | 'logs') {
   return (query: { queryKey: unknown }): boolean => {

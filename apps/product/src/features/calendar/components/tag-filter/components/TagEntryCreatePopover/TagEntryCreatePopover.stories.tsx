@@ -13,9 +13,9 @@ const MOCK_TAG = {
   icon: 'briefcase',
 };
 
-/** trpcMocks: 今日分 entries.list（既定は空配列） */
+/** trpcMocks: 今日分 plans.list / logs.list（既定は空配列） */
 function mockTrpc(entries: unknown[] = []) {
-  return { 'entries.list': entries };
+  return { 'plans.list': entries, 'logs.list': [] };
 }
 
 /**

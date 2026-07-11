@@ -64,7 +64,7 @@ export function useReviewMetrics(
   t: (key: string) => string,
   pageData: StatsPageData | undefined,
 ): UseStatsMetricsResult {
-  const streakQuery = api.entries.getStreak.useQuery();
+  const streakQuery = api.statistics.getStreak.useQuery();
 
   const isLoading = !pageData;
 
