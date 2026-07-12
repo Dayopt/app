@@ -63,63 +63,72 @@ fi
 echo "ユーザー作成成功: $USER_ID"
 
 # ========================================
-# 2. サンプルエントリの作成
+# 2. サンプルPlan / Recordの作成
 # ========================================
-echo "サンプルエントリを作成中..."
+echo "サンプルPlan / Recordを作成中..."
 
-cat > /tmp/seed_entries.sql <<EOF
--- サンプルエントリ1（予定）
-INSERT INTO public.entries (
-  user_id, title, description, origin,
-  start_time, end_time
+cat > /tmp/seed_timeblocks.sql <<EOF
+DO \$\$
+BEGIN
+-- サンプルPlan 1
+INSERT INTO public.plans (
+  user_id, title, note, start_at, end_at
 ) VALUES (
   '${USER_ID}',
   'Development task',
   'Feature implementation and code review',
-  'planned',
   NOW() + INTERVAL '1 hour',
   NOW() + INTERVAL '3 hours'
 );
 
--- サンプルエントリ2（予定）
-INSERT INTO public.entries (
-  user_id, title, origin,
-  start_time, end_time
+-- サンプルPlan 2
+INSERT INTO public.plans (
+  user_id, title, start_at, end_at
 ) VALUES (
   '${USER_ID}',
   'Auth system testing',
-  'planned',
   NOW() + INTERVAL '4 hours',
   NOW() + INTERVAL '5 hours'
 );
 
--- サンプルエントリ3（実績）
-INSERT INTO public.entries (
-  user_id, title, description, origin,
-  start_time, end_time,
-  actual_start_time, actual_end_time,
-  fulfillment_score
-) VALUES (
-  '${USER_ID}',
-  'Daily review',
-  'Daily task review and next day planning',
-  'planned',
-  NOW() - INTERVAL '2 hours',
-  NOW() - INTERVAL '1 hour',
-  NOW() - INTERVAL '2 hours',
+-- サンプルPlan 3と、それに紐づくRecord
+WITH inserted_plan AS (
+  INSERT INTO public.plans (
+    user_id, title, note, start_at, end_at
+  ) VALUES (
+    '${USER_ID}',
+    'Daily review',
+    'Daily task review and next day planning',
+    NOW() - INTERVAL '2 hours',
+    NOW() - INTERVAL '1 hour'
+  )
+  RETURNING id, user_id, title, note, start_at
+)
+INSERT INTO public.records (
+  user_id, plan_id, title, note, start_at, end_at, source, fulfillment_score
+)
+SELECT
+  user_id,
+  id,
+  title,
+  note,
+  start_at,
   NOW() - INTERVAL '50 minutes',
+  'from_plan',
   3
-);
+FROM inserted_plan;
 
 -- サンプルタグ
 INSERT INTO public.tags (user_id, name, color) VALUES
-  ('${USER_ID}', 'Frontend', '#3b82f6'),
-  ('${USER_ID}', 'Backend', '#10b981'),
-  ('${USER_ID}', 'Bug fix', '#ef4444'),
-  ('${USER_ID}', 'Documentation', '#8b5cf6');
+  ('${USER_ID}', 'Frontend', 'blue'),
+  ('${USER_ID}', 'Backend', 'green'),
+  ('${USER_ID}', 'Bug fix', 'red'),
+  ('${USER_ID}', 'Documentation', 'violet');
+END;
+\$\$;
 EOF
 
-supabase db execute --file /tmp/seed_entries.sql $DB_TARGET
+supabase db query --file /tmp/seed_timeblocks.sql $DB_TARGET
 
 echo "サンプルデータ投入完了"
 echo ""
@@ -128,7 +137,8 @@ echo "作成されたデータ"
 echo "===================="
 echo "ユーザー: dev@example.com"
 echo "パスワード: password123"
-echo "エントリ: 3件"
+echo "Plan: 3件"
+echo "Record: 1件"
 echo "タグ: 4件"
 echo ""
 echo "開発を開始できます！"

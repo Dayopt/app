@@ -1,6 +1,60 @@
 -- time-model-split Step 9b: logs -> records rename and entries removal.
 -- CASCADE is intentionally avoided so an unknown dependency stops the migration.
 
+-- Capture plans that crossed into the past after the one-time backfill.
+-- If the current app already created an explicit record for the plan, keep that
+-- record as the source of truth instead of synthesizing an auto-migrated row.
+INSERT INTO public.logs (
+  id,
+  user_id,
+  tag_id,
+  plan_id,
+  external_calendar_event_id,
+  title,
+  note,
+  start_at,
+  end_at,
+  source,
+  fulfillment_score,
+  deleted_at,
+  created_at,
+  updated_at
+)
+SELECT
+  extensions.uuid_generate_v5(
+    '8f48b7ce-9362-5a4d-bf4c-65fcd4fe93e9'::UUID,
+    e.id::TEXT || ':log'
+  ),
+  e.user_id,
+  e.tag_id,
+  e.id,
+  NULL,
+  e.title,
+  e.description,
+  e.start_time,
+  e.end_time,
+  'auto_migrated',
+  e.fulfillment_score,
+  e.deleted_at,
+  e.created_at,
+  e.updated_at
+FROM public.entries e
+WHERE e.origin = 'planned'
+  AND e.actual_start_time IS NULL
+  AND e.actual_end_time IS NULL
+  AND e.skipped_at IS NULL
+  AND e.start_time IS NOT NULL
+  AND e.end_time IS NOT NULL
+  AND e.end_time <= now()
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.logs existing
+    WHERE existing.plan_id = e.id
+      AND existing.deleted_at IS NULL
+      AND existing.source <> 'auto_migrated'
+  )
+ON CONFLICT (id) DO NOTHING;
+
 DO $$
 DECLARE
   v_missing_plans INTEGER;
@@ -72,6 +126,13 @@ BEGIN
         AND e.start_time IS NOT NULL
         AND e.end_time IS NOT NULL
         AND e.end_time <= now()
+        AND NOT EXISTS (
+          SELECT 1
+          FROM public.logs existing
+          WHERE existing.plan_id = e.id
+            AND existing.deleted_at IS NULL
+            AND existing.source <> 'auto_migrated'
+        )
       )
   )
   SELECT count(*)::INTEGER
@@ -185,6 +246,81 @@ ALTER TRIGGER trigger_update_logs_updated_at ON public.records
 ALTER FUNCTION public.enforce_log_tag_owner() RENAME TO enforce_record_tag_owner;
 ALTER FUNCTION public.enforce_log_plan_owner() RENAME TO enforce_record_plan_owner;
 ALTER FUNCTION public.enforce_log_external_event_owner() RENAME TO enforce_record_external_event_owner;
+
+CREATE OR REPLACE FUNCTION public.enforce_record_tag_owner()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.tag_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.tags
+    WHERE tags.id = NEW.tag_id
+      AND tags.user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'records.tag_id must reference a tag owned by the record user'
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enforce_record_plan_owner()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.plan_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.plans
+    WHERE plans.id = NEW.plan_id
+      AND plans.user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'records.plan_id must reference a plan owned by the record user'
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enforce_record_external_event_owner()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.external_calendar_event_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.external_calendar_events
+    WHERE external_calendar_events.id = NEW.external_calendar_event_id
+      AND external_calendar_events.user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'records.external_calendar_event_id must reference an event owned by the record user'
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
 
 ALTER POLICY "Users can view own logs" ON public.records RENAME TO "Users can view own records";
 ALTER POLICY "Users can insert own logs" ON public.records RENAME TO "Users can insert own records";
