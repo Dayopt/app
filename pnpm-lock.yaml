@@ -9,9 +9,9 @@ overrides:
   tmp: ^0.2.4
   '@types/react': 19.2.17
   '@types/react-dom': 19.2.3
-  hono: '>=4.12.25'
-  dompurify: '>=3.4.11'
-  esbuild: '>=0.28.1'
+  hono: ^4.12.25
+  dompurify: ^3.4.11
+  esbuild: ^0.28.1
   js-yaml@4.1.1: ^4.2.0
   postcss@8.4.31: ^8.5.16
   '@babel/core@7.29.0': ^7.29.7
@@ -1812,7 +1812,7 @@ packages:
       }
     engines: { node: '>=18.14.1' }
     peerDependencies:
-      hono: '>=4.12.25'
+      hono: ^4.12.25
 
   '@hookform/resolvers@3.10.0':
     resolution:
@@ -5111,7 +5111,7 @@ packages:
         integrity: sha512-NILLxDqpA/JR/AazGWpsz+4fadJwRU4uhHephGtYpVOWnQA/DkJfKT6zpcJVq8+QA8A2zKMLX3GVKsXIrxjuDA==,
       }
     peerDependencies:
-      esbuild: '>=0.28.1'
+      esbuild: ^0.28.1
       rollup: '*'
       storybook: ^10.4.6
       vite: '*'
@@ -15207,7 +15207,7 @@ packages:
     peerDependencies:
       '@types/node': ^20.19.0 || >=22.12.0
       '@vitejs/devtools': ^0.3.0
-      esbuild: '>=0.28.1'
+      esbuild: ^0.28.1
       jiti: '>=1.21.0'
       less: ^4.0.0
       sass: ^1.70.0
