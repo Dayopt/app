@@ -10,10 +10,7 @@ export { DateDisplay } from './DateDisplay';
 // ドラッグ選択レイヤー（DateTimeSelection 型のみ外部参照あり）
 export type { DateTimeSelection } from './components/CalendarDragSelection';
 
-// ===== カスタムフック =====
-export { useTimeblockStyles } from './hooks/useTimeblockStyles';
-
-// 統合カスタムフック
+// ===== 統合カスタムフック =====
 export { useCurrentPeriod } from './hooks/useCurrentPeriod';
 export { useDateUtilities } from './hooks/useDateUtilities';
 export { useMultiDayTimeblockPositions } from './hooks/useMultiDayTimeblockPositions';

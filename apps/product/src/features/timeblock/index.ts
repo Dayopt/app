@@ -37,11 +37,6 @@ export { isPlanRecordDrop, resolveTimeblockDestination } from './domain/timebloc
 export type { TimeblockDestination } from './domain/timeblock-destination';
 
 // =============================================================================
-// Lib (timeblock-status utilities)
-// =============================================================================
-export { getTimeblockState } from './lib/timeblock-status';
-
-// =============================================================================
 // Lib (iCal export)
 // =============================================================================
 export { plansToICal } from './lib/plan-to-ical';
