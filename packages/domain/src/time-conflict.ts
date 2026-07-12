@@ -1,6 +1,6 @@
 type RangeInput = Date | string | null | undefined;
 
-interface TwoLayerOverlapEntry {
+interface TwoLayerOverlapTimeblock {
   id: string;
   plannedStart?: RangeInput;
   plannedEnd?: RangeInput;
@@ -54,7 +54,7 @@ function hasInvalidTargetRange(start: RangeInput, end: RangeInput): boolean {
 }
 
 export function hasTwoLayerTimeConflict(
-  entries: TwoLayerOverlapEntry[],
+  timeblocks: TwoLayerOverlapTimeblock[],
   target: TwoLayerOverlapTarget,
 ): boolean {
   // 自動記録モデル: 未来の planned は actual レイヤーを占有しない（actual NULL = 未編集）。
@@ -78,15 +78,25 @@ export function hasTwoLayerTimeConflict(
     return true;
   }
 
-  return entries.some((entry) => {
-    if (target.id != null && entry.id === target.id) return false;
+  return timeblocks.some((timeblock) => {
+    if (target.id != null && timeblock.id === target.id) return false;
 
     if (
-      rangesOverlap(target.plannedStart, target.plannedEnd, entry.plannedStart, entry.plannedEnd)
+      rangesOverlap(
+        target.plannedStart,
+        target.plannedEnd,
+        timeblock.plannedStart,
+        timeblock.plannedEnd,
+      )
     ) {
       return true;
     }
 
-    return rangesOverlap(target.actualStart, target.actualEnd, entry.actualStart, entry.actualEnd);
+    return rangesOverlap(
+      target.actualStart,
+      target.actualEnd,
+      timeblock.actualStart,
+      timeblock.actualEnd,
+    );
   });
 }

@@ -12,7 +12,7 @@ import type { McpRequestContext } from '../_server';
 /**
  * `entries.list` tool — Dayopt entries (timeboxes / records) を取得する。
  *
- * Step 8 以降の互換 tool。`createMcpTrpcCaller` 経由で plans / logs の read procedure
+ * Step 8 以降の互換 tool。`createMcpTrpcCaller` 経由で plans / records の read procedure
  * を呼び、従来の entry 形式へ合成して返す。
  */
 
@@ -98,7 +98,7 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
           clientId: ctx.clientId,
           scopes: ctx.scopes,
         });
-        const [plans, logs] = await Promise.all([
+        const [plans, records] = await Promise.all([
           trpc.plans.list({
             limit: limit ?? 50,
             sortBy: 'start_at',
@@ -131,21 +131,21 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
             created_at: plan.created_at,
             updated_at: plan.updated_at,
           })),
-          ...logs.map((log) => ({
-            id: log.id,
-            title: log.title,
-            description: log.note,
-            origin: log.plan_id ? 'planned' : 'unplanned',
-            start_time: log.start_at,
-            end_time: log.end_at,
-            actual_start_time: log.start_at,
-            actual_end_time: log.end_at,
-            planned_duration_minutes: log.plan_id
-              ? durationMinutes(log.start_at, log.end_at)
+          ...records.map((record) => ({
+            id: record.id,
+            title: record.title,
+            description: record.note,
+            origin: record.plan_id ? 'planned' : 'unplanned',
+            start_time: record.start_at,
+            end_time: record.end_at,
+            actual_start_time: record.start_at,
+            actual_end_time: record.end_at,
+            planned_duration_minutes: record.plan_id
+              ? durationMinutes(record.start_at, record.end_at)
               : null,
-            tag_id: log.tag_id,
-            created_at: log.created_at,
-            updated_at: log.updated_at,
+            tag_id: record.tag_id,
+            created_at: record.created_at,
+            updated_at: record.updated_at,
           })),
         ]
           .sort((a, b) => (b.start_time ?? '').localeCompare(a.start_time ?? ''))

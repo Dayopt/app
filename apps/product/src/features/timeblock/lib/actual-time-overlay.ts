@@ -1,9 +1,9 @@
 /**
  * 予定 vs 記録 差分オーバーレイ計算
  *
- * Entry の actual_start/end と planned start/end の差分から
+ * Timeblock の actual_start/end と planned start/end の差分から
  * カレンダー表示用のオーバーレイ情報を計算する。
- * Entry ドメインのロジックのため features/timeblock に配置。
+ * Timeblock ドメインのロジックのため features/timeblock に配置。
  */
 
 import type { CalendarEvent } from '../types/calendar-event';
@@ -53,7 +53,7 @@ export function toMinutesOfDay(date: Date): number {
  * 予定時間と実績時間の差分からオーバーレイ情報を計算
  *
  * 対象: actualStartDate または actualEndDate が1つ以上入力されている場合
- * （entryState に依存しない — actual time が入力されていれば常に差分を表示）
+ * （timeblockState に依存しない — actual time が入力されていれば常に差分を表示）
  * 未設定の方は予定通り（差分なし）として扱う
  */
 export function computeActualTimeDiffOverlay(

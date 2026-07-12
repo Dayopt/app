@@ -217,7 +217,7 @@ export function generateTimeSlots(
 }
 
 // ========================================
-// Entry Style Computation
+// Timeblock Style Computation
 // ========================================
 
 /** エントリ位置情報 */

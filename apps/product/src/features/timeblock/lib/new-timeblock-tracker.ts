@@ -7,12 +7,12 @@
 
 const newIds = new Set<string>();
 
-/** エントリIDを「新規作成」としてマーク */
+/** Timeblock IDを「新規作成」としてマーク */
 export function markNew(id: string): void {
   newIds.add(id);
 }
 
-/** エントリIDが「新規作成」かどうか判定 */
+/** Timeblock IDが「新規作成」かどうか判定 */
 export function isNewTimeblock(id: string): boolean {
   return newIds.has(id);
 }

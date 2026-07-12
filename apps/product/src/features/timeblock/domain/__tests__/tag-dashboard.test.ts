@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { TagDashboardEntryRow, TagDashboardTagRow } from '../tag-dashboard';
+import type { TagDashboardTagRow, TagDashboardTimeblockRow } from '../tag-dashboard';
 import { buildTagDashboard } from '../tag-dashboard';
 
 const TAG: TagDashboardTagRow = {
@@ -10,7 +10,7 @@ const TAG: TagDashboardTagRow = {
   icon: 'briefcase',
 };
 
-function entry(overrides: Partial<TagDashboardEntryRow>): TagDashboardEntryRow {
+function entry(overrides: Partial<TagDashboardTimeblockRow>): TagDashboardTimeblockRow {
   return {
     id: 'entry-1',
     title: 'Entry',
@@ -38,7 +38,7 @@ describe('buildTagDashboard', () => {
       plannedMinutes: 60,
       actualMinutes: 60,
       diffMinutes: 0,
-      entryCount: 1,
+      recordCount: 1,
     });
     expect(result.dailyRows).toEqual([
       { date: '2026-05-01', plannedMinutes: 60, actualMinutes: 60, diffMinutes: 0 },
@@ -149,6 +149,6 @@ describe('buildTagDashboard', () => {
       timezone: 'UTC',
     });
 
-    expect(result.entries.map((row) => row.entryId)).toEqual(['new', 'mid']);
+    expect(result.records.map((row) => row.timeblockId)).toEqual(['new', 'mid']);
   });
 });

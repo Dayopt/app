@@ -123,9 +123,9 @@ function ExportSection() {
           const planDate = new Date(plan.start_at);
           return planDate >= start && planDate <= end;
         });
-        exportData.data.logs = exportData.data.logs.filter((log) => {
-          const logDate = new Date(log.start_at);
-          return logDate >= start && logDate <= end;
+        exportData.data.records = exportData.data.records.filter((record) => {
+          const recordDate = new Date(record.start_at);
+          return recordDate >= start && recordDate <= end;
         });
       }
 
@@ -135,7 +135,7 @@ function ExportSection() {
       if (format === 'csv') {
         const csvRows = [
           ...exportData.data.plans.map((plan) => ({ ...plan, kind: 'plan' })),
-          ...exportData.data.logs.map((log) => ({ ...log, kind: 'log' })),
+          ...exportData.data.records.map((record) => ({ ...record, kind: 'record' })),
         ];
         const csvContent = timeblockRowsToCsv(csvRows);
         blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });

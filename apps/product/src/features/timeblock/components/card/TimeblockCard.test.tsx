@@ -100,7 +100,7 @@ describe('TimeblockCard', () => {
           entry={{
             ...mockEvent,
             origin: 'planned',
-            entryState: 'upcoming',
+            timeblockState: 'upcoming',
             actualStartDate: new Date('2025-01-15T10:15:00'),
             actualEndDate: mockEvent.endDate,
           }}
@@ -133,7 +133,7 @@ describe('TimeblockCard', () => {
           entry={{
             ...mockEvent,
             origin: 'planned',
-            entryState: 'upcoming',
+            timeblockState: 'upcoming',
             plannedStartDate: mockEvent.startDate,
             plannedEndDate: mockEvent.endDate,
             actualStartDate: mockEvent.startDate,
@@ -156,7 +156,7 @@ describe('TimeblockCard', () => {
           entry={{
             ...mockEvent,
             origin: 'planned',
-            entryState: 'upcoming',
+            timeblockState: 'upcoming',
             actualStartDate: null,
             actualEndDate: null,
           }}
@@ -182,7 +182,7 @@ describe('TimeblockCard', () => {
           entry={{
             ...mockEvent,
             origin: 'planned',
-            entryState: 'upcoming',
+            timeblockState: 'upcoming',
             actualStartDate: mockEvent.startDate,
             actualEndDate: new Date('2025-01-15T11:30:00'),
           }}
@@ -208,7 +208,7 @@ describe('TimeblockCard', () => {
           entry={{
             ...mockEvent,
             origin: 'planned',
-            entryState: 'upcoming',
+            timeblockState: 'upcoming',
             actualStartDate: mockEvent.startDate,
             actualEndDate: new Date('2025-01-15T11:30:00'),
           }}
@@ -477,7 +477,7 @@ describe('TimeblockCard', () => {
           entry={{
             ...mockEvent,
             origin: 'planned',
-            entryState: 'active',
+            timeblockState: 'active',
             actualStartDate: mockEvent.startDate,
             actualEndDate: mockEvent.endDate,
           }}
@@ -496,7 +496,7 @@ describe('TimeblockCard', () => {
           entry={{
             ...mockEvent,
             origin: 'planned',
-            entryState: 'past',
+            timeblockState: 'past',
             actualStartDate: mockEvent.startDate,
             actualEndDate: mockEvent.endDate,
           }}
@@ -600,7 +600,7 @@ describe('TimeblockCard', () => {
     it('過去の planned でもリサイズハンドルが存在する', () => {
       render(
         <TimeblockCard
-          entry={{ ...mockEvent, origin: 'planned', entryState: 'past' }}
+          entry={{ ...mockEvent, origin: 'planned', timeblockState: 'past' }}
           position={mockPosition}
         />,
       );
@@ -611,7 +611,7 @@ describe('TimeblockCard', () => {
     it('過去の unplanned でもリサイズハンドルが存在する', () => {
       render(
         <TimeblockCard
-          entry={{ ...mockEvent, origin: 'unplanned', entryState: 'past' }}
+          entry={{ ...mockEvent, origin: 'unplanned', timeblockState: 'past' }}
           position={mockPosition}
         />,
       );

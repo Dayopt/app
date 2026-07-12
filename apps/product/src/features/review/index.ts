@@ -12,6 +12,5 @@
 // =============================================================================
 export { ReviewDiffPanel } from './components/diff/ReviewDiffPanel';
 export { CalendarReviewPanel } from './components/panel/CalendarReviewPanel';
-export { TimeblockMicroInsight } from './components/shared/TimeblockMicroInsight';
 
 // ここにないものはfeature内部専用

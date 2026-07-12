@@ -111,12 +111,12 @@ export const trpcUserRateLimit =
  * エントリ作成の日次上限
  * 500リクエスト / 24時間 per user
  */
-export const entryCreateRateLimit =
+export const timeblockCreateRateLimit =
   isUpstashEnabled && redis
     ? new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(500, '24 h'),
-        prefix: 'ratelimit:entry:create',
+        prefix: 'ratelimit:timeblock:create',
       })
     : null;
 

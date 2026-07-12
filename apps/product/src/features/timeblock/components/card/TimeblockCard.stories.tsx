@@ -6,7 +6,7 @@ import { TimeblockCard } from './TimeblockCard';
 
 /** エントリーカード。カレンダーグリッド上の表示ブロック。タグカラー・レイアウト・インタラクション状態によるバリエーション。 */
 const meta = {
-  title: 'Product/Features/Entry/Card',
+  title: 'Product/Features/Timeblock/Card',
   parameters: {
     layout: 'padded',
   },
@@ -183,7 +183,7 @@ export const UpcomingPlan: Story = {
       <TimeblockCard
         entry={{
           ...baseEntry,
-          entryState: 'upcoming',
+          timeblockState: 'upcoming',
           origin: 'planned',
           actualStartDate: null,
           actualEndDate: null,
@@ -204,7 +204,7 @@ export const ActivePlan: Story = {
       <TimeblockCard
         entry={{
           ...baseEntry,
-          entryState: 'active',
+          timeblockState: 'active',
           origin: 'planned',
           actualStartDate: new Date('2024-01-15T10:00:00'),
           actualEndDate: new Date('2024-01-15T11:00:00'),
@@ -228,7 +228,7 @@ export const PlanToRecordByTime: Story = {
           <TimeblockCard
             entry={{
               ...baseEntry,
-              entryState: 'upcoming',
+              timeblockState: 'upcoming',
               origin: 'planned',
               actualStartDate: null,
               actualEndDate: null,
@@ -246,7 +246,7 @@ export const PlanToRecordByTime: Story = {
           <TimeblockCard
             entry={{
               ...baseEntry,
-              entryState: 'active',
+              timeblockState: 'active',
               origin: 'planned',
               actualStartDate: new Date('2024-01-15T10:00:00'),
               actualEndDate: new Date('2024-01-15T11:00:00'),
@@ -264,7 +264,7 @@ export const PlanToRecordByTime: Story = {
           <TimeblockCard
             entry={{
               ...baseEntry,
-              entryState: 'past',
+              timeblockState: 'past',
               origin: 'planned',
               endDate: new Date('2024-01-15T12:00:00'),
               displayEndDate: new Date('2024-01-15T12:00:00'),
@@ -294,7 +294,7 @@ export const PlannedActualSame: Story = {
       <TimeblockCard
         entry={{
           ...baseEntry,
-          entryState: 'past',
+          timeblockState: 'past',
           origin: 'planned',
           actualStartDate: new Date('2024-01-15T10:00:00'),
           actualEndDate: new Date('2024-01-15T11:00:00'),
@@ -315,7 +315,7 @@ export const PlannedActualShorter: Story = {
       <TimeblockCard
         entry={{
           ...baseEntry,
-          entryState: 'past',
+          timeblockState: 'past',
           origin: 'planned',
           endDate: new Date('2024-01-15T12:00:00'),
           displayEndDate: new Date('2024-01-15T12:00:00'),
@@ -339,7 +339,7 @@ export const PlannedActualShifted: Story = {
       <TimeblockCard
         entry={{
           ...baseEntry,
-          entryState: 'past',
+          timeblockState: 'past',
           origin: 'planned',
           endDate: new Date('2024-01-15T12:00:00'),
           displayEndDate: new Date('2024-01-15T12:00:00'),
@@ -363,7 +363,7 @@ export const OverlayUnexecuted: Story = {
       <TimeblockCard
         entry={{
           ...baseEntry,
-          entryState: 'past',
+          timeblockState: 'past',
           origin: 'planned',
           endDate: new Date('2024-01-15T12:00:00'),
           displayEndDate: new Date('2024-01-15T12:00:00'),
@@ -385,7 +385,7 @@ export const OverlayOvertime: Story = {
       <TimeblockCard
         entry={{
           ...baseEntry,
-          entryState: 'past',
+          timeblockState: 'past',
           origin: 'planned',
           endDate: new Date('2024-01-15T11:00:00'),
           displayEndDate: new Date('2024-01-15T11:00:00'),
@@ -411,7 +411,7 @@ export const OverlayOvertimeOnGrid: Story = {
         <TimeblockCard
           entry={{
             ...baseEntry,
-            entryState: 'past',
+            timeblockState: 'past',
             origin: 'planned',
             startDate: new Date('2024-01-15T10:00:00'),
             endDate: new Date('2024-01-15T11:00:00'),
@@ -445,7 +445,7 @@ export const PlanOnlyOnGrid: Story = {
         <TimeblockCard
           entry={{
             ...baseEntry,
-            entryState: 'upcoming',
+            timeblockState: 'upcoming',
             origin: 'planned',
             startDate: new Date('2024-01-15T10:00:00'),
             endDate: new Date('2024-01-15T11:00:00'),
@@ -483,7 +483,7 @@ export const Skipped: Story = {
       <TimeblockCard
         entry={{
           ...baseEntry,
-          entryState: 'past',
+          timeblockState: 'past',
           origin: 'planned',
           isSkipped: true,
         }}
@@ -566,7 +566,7 @@ export const UnplannedInGap: Story = {
             displayStartDate: new Date('2024-01-15T10:00:00'),
             displayEndDate: new Date('2024-01-15T12:00:00'),
             duration: 120,
-            entryState: 'past',
+            timeblockState: 'past',
             actualStartDate: new Date('2024-01-15T10:00:00'),
             actualEndDate: new Date('2024-01-15T11:00:00'),
           }}
@@ -709,7 +709,7 @@ export const AllPatterns: Story = {
           <TimeblockCard
             entry={{
               ...baseEntry,
-              entryState: 'past',
+              timeblockState: 'past',
               origin: 'planned',
               actualStartDate: null,
               actualEndDate: null,
@@ -731,7 +731,7 @@ export const AllPatterns: Story = {
           <TimeblockCard
             entry={{
               ...baseEntry,
-              entryState: 'past',
+              timeblockState: 'past',
               origin: 'planned',
               isSkipped: true,
             }}
@@ -772,7 +772,7 @@ export const AllPatterns: Story = {
           <TimeblockCard
             entry={{
               ...baseEntry,
-              entryState: 'past',
+              timeblockState: 'past',
               origin: 'planned',
               endDate: new Date('2024-01-15T12:00:00'),
               displayEndDate: new Date('2024-01-15T12:00:00'),
@@ -794,7 +794,7 @@ export const AllPatterns: Story = {
           <TimeblockCard
             entry={{
               ...baseEntry,
-              entryState: 'past',
+              timeblockState: 'past',
               origin: 'planned',
               endDate: new Date('2024-01-15T11:00:00'),
               displayEndDate: new Date('2024-01-15T11:00:00'),

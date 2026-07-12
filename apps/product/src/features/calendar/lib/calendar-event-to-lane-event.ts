@@ -2,7 +2,7 @@
  * `CalendarEvent`（Step 8 の time model 射影）から TwoLane カード用の
  * `PlanEvent` / `RecordEvent` 表示型へ変換するアダプタ。
  *
- * `useCalendarData` は plans/logs から CalendarEvent を作る際に kind/planId/logSource を
+ * `useCalendarData` は Plan / Record から CalendarEvent を作る際に kind/planId/recordSource を
  * 既に埋めているため、ここでは同じ視野内の他イベント（`allEvents`）から
  * 記録済み判定・差分計算に必要な情報だけを逆引きする。
  */
@@ -31,7 +31,7 @@ export function calendarEventToPlanEvent(
   allEvents: ReadonlyArray<CalendarEvent>,
   now: Date = new Date(),
 ): PlanEvent {
-  const isRecorded = allEvents.some((e) => e.kind === 'log' && e.planId === event.id);
+  const isRecorded = allEvents.some((e) => e.kind === 'record' && e.planId === event.id);
   return {
     id: event.id,
     title: event.title,
@@ -46,7 +46,7 @@ export function calendarEventToPlanEvent(
   };
 }
 
-/** kind='log' の CalendarEvent を RecordLaneCard 用の RecordEvent へ変換する */
+/** kind='record' の CalendarEvent を RecordLaneCard 用の RecordEvent へ変換する */
 export function calendarEventToRecordEvent(
   event: CalendarEvent,
   allEvents: ReadonlyArray<CalendarEvent>,

@@ -21,27 +21,46 @@ describe('useInspectorURLSync', () => {
     useTimeblockInspectorStore.getState().closeInspector();
   });
 
-  it('同じUUIDでplanからlogへ切り替えた時もURLを更新する', () => {
+  it('同じUUIDでplanからrecordへ切り替えた時もURLを更新する', () => {
     renderHook(() => useInspectorURLSync());
 
     act(() => useTimeblockInspectorStore.getState().openInspector('same-id', 'plan'));
-    expect(push).toHaveBeenLastCalledWith('/ja/day?entry=plan%3Asame-id', { scroll: false });
+    expect(push).toHaveBeenLastCalledWith('/ja/day?timeblock=plan%3Asame-id', { scroll: false });
 
-    act(() => useTimeblockInspectorStore.getState().openInspector('same-id', 'log'));
-    expect(push).toHaveBeenLastCalledWith('/ja/day?entry=log%3Asame-id', { scroll: false });
+    act(() => useTimeblockInspectorStore.getState().openInspector('same-id', 'record'));
+    expect(push).toHaveBeenLastCalledWith('/ja/day?timeblock=record%3Asame-id', { scroll: false });
   });
 
   it('popstateで同じUUIDのkindだけが変わった場合もstoreを更新する', () => {
     useTimeblockInspectorStore.getState().openInspector('same-id', 'plan');
     renderHook(() => useInspectorURLSync());
 
-    window.history.replaceState({}, '', '/ja/day?entry=log%3Asame-id');
+    window.history.replaceState({}, '', '/ja/day?timeblock=record%3Asame-id');
     act(() => window.dispatchEvent(new PopStateEvent('popstate')));
 
     expect(useTimeblockInspectorStore.getState()).toMatchObject({
-      entryId: 'same-id',
-      entryKind: 'log',
+      timeblockId: 'same-id',
+      timeblockKind: 'record',
       isOpen: true,
+    });
+  });
+
+  it('初期URLのrecordを正しいUUIDで開く', () => {
+    window.history.replaceState({}, '', '/ja/day?timeblock=record%3Arecord-id');
+    renderHook(() => useInspectorURLSync());
+    expect(useTimeblockInspectorStore.getState()).toMatchObject({
+      timeblockId: 'record-id',
+      timeblockKind: 'record',
+      isOpen: true,
+    });
+  });
+
+  it('旧log URLは受理しない', () => {
+    window.history.replaceState({}, '', '/ja/day?timeblock=log%3Alegacy-id');
+    renderHook(() => useInspectorURLSync());
+    expect(useTimeblockInspectorStore.getState()).toMatchObject({
+      timeblockId: null,
+      isOpen: false,
     });
   });
 });

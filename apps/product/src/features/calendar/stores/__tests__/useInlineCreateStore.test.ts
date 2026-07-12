@@ -37,9 +37,9 @@ describe('useInlineCreateStore', () => {
     });
 
     it('レーン起点を保持できる', () => {
-      useInlineCreateStore.getState().setPendingSelection({ ...mockSelection, lane: 'log' });
+      useInlineCreateStore.getState().setPendingSelection({ ...mockSelection, lane: 'record' });
 
-      expect(useInlineCreateStore.getState().pendingSelection?.lane).toBe('log');
+      expect(useInlineCreateStore.getState().pendingSelection?.lane).toBe('record');
     });
 
     it('既存の選択を上書きできる', () => {

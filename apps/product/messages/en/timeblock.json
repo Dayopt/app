@@ -28,7 +28,7 @@
       "skipped": "Skipped",
       "skipFailed": "Failed to skip. Please try again",
       "unskipped": "Skip undone",
-      "conflict": "This entry was modified elsewhere. Reload to see the latest version.",
+      "conflict": "This timeblock was modified elsewhere. Reload to see the latest version.",
       "placed": "Added {name} at {time}",
       "overlapError": "{time} overlaps with an existing block"
     },
@@ -39,19 +39,19 @@
       },
       "list": {
         "nav": {
-          "plan": "Entry"
+          "plan": "Plan"
         }
       }
     },
     "open": "Open",
     "editDetails": "Edit details",
     "delete": {
-      "confirmTitle": "Delete this entry?",
+      "confirmTitle": "Delete this timeblock?",
       "confirmTitleWithName": "Delete {name}?",
-      "description": "This action cannot be undone. The entry will be permanently deleted and removed from calendar.",
+      "description": "This action cannot be undone. The timeblock will be permanently deleted and removed from calendar.",
       "warningIrreversible": "This action cannot be undone",
       "afterDeletion": "After deletion",
-      "willBeDeleted": "The entry will be permanently deleted",
+      "willBeDeleted": "The timeblock will be permanently deleted",
       "willBeRemovedFromCalendar": "It will be removed from calendar",
       "confirm": "Delete",
       "deleting": "Deleting..."
@@ -70,19 +70,19 @@
       "editDescription": "Edit description",
       "addDescription": "Add description",
       "addDescriptionPlaceholder": "Add description...",
-      "create": "Create Entry",
-      "createRecord": "Create Entry",
+      "create": "Create Timeblock",
+      "createRecord": "Create Record",
       "markComplete": "Mark complete",
       "markIncomplete": "Mark incomplete",
       "completeOptions": "Complete options",
-      "completeAndCreate": "Complete + Create Entry",
+      "completeAndCreate": "Complete + Create Timeblock",
       "toast": {
         "tagsSaveFailed": "Failed to save tags",
-        "createFailed": "Failed to create entry",
+        "createFailed": "Failed to create timeblock",
         "saveFailed": "Failed to save"
       },
       "noTitle": "(No title)",
-      "notFound": "Entry not found",
+      "notFound": "Timeblock not found",
       "noData": "No data found",
       "menu": {
         "duplicate": "Duplicate",
@@ -115,21 +115,21 @@
         "pastPlaceholder": "Quick note on what you did..."
       },
       "records": {
-        "link": "Link entry",
-        "unlink": "Unlink entry",
-        "search": "Search entries...",
-        "noMatch": "No matching entries",
-        "addNew": "Add work log"
+        "link": "Link Record",
+        "unlink": "Unlink Record",
+        "search": "Search Records...",
+        "noMatch": "No matching Records",
+        "addNew": "Add Record"
       },
       "recordCreate": {
         "titlePlaceholder": "What did you do?",
-        "titleLabel": "Entry title",
-        "failed": "Failed to create entry",
-        "linkEntry": "Link to entry",
-        "unlinkEntry": "Unlink from entry",
-        "searchEntries": "Search entries...",
-        "noEntries": "No entries found",
-        "addNew": "Add new entry"
+        "titleLabel": "Record title",
+        "failed": "Failed to create Record",
+        "linkEntry": "Link to Record",
+        "unlinkEntry": "Unlink from Record",
+        "searchEntries": "Search Records...",
+        "noEntries": "No Records found",
+        "addNew": "Add new Record"
       }
     },
     "view": {

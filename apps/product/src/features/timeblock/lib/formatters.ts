@@ -1,35 +1,35 @@
 import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE } from '@/lib/date';
 
 /**
- * エントリー番号のフォーマット
- * @example formatEntryNumber("TKT-20241030-001") => "#TKT-001"
+ * Timeblock番号のフォーマット
+ * @example formatTimeblockNumber("TKT-20241030-001") => "#TKT-001"
  */
-/** エントリー番号を短縮表示形式にフォーマット（例: "TKT-20241030-001" → "#TKT-001"）
- * @param entryNumber - エントリー番号文字列
- * @returns 短縮形式のエントリー番号
+/** Timeblock番号を短縮表示形式にフォーマット（例: "TKT-20241030-001" → "#TKT-001"）
+ * @param timeblockNumber - Timeblock番号文字列
+ * @returns 短縮形式のTimeblock番号
  */
-export function formatEntryNumber(entryNumber: string): string {
+export function formatTimeblockNumber(timeblockNumber: string): string {
   // TKT-20241030-001 → #TKT-001
-  const parts = entryNumber.split('-');
+  const parts = timeblockNumber.split('-');
   if (parts.length === 3) {
     return `#${parts[0]}-${parts[2]}`;
   }
-  return `#${entryNumber}`;
+  return `#${timeblockNumber}`;
 }
 
 /**
  * 日付のフォーマット
  * @param dateString - ISO 8601形式の日時文字列
  * @param locale - 'en' | 'ja' (デフォルト: 'en')
- * @example formatEntryDate("2025-01-15", "ja") => "2025年1月15日"
- * @example formatEntryDate("2025-01-15", "en") => "Jan 15, 2025"
+ * @example formatTimeblockDate("2025-01-15", "ja") => "2025年1月15日"
+ * @example formatTimeblockDate("2025-01-15", "en") => "Jan 15, 2025"
  */
 /** 日付文字列をロケール対応形式にフォーマット
  * @param dateString - ISO 8601形式の日時文字列
  * @param locale - ロケール（'en' | 'ja'、デフォルト: 'en'）
  * @returns フォーマット済み日付文字列
  */
-export function formatEntryDate(
+export function formatTimeblockDate(
   dateString: string | null | undefined,
   locale: string = 'en',
 ): string {
@@ -51,7 +51,7 @@ export function formatEntryDate(
  * 日時のフォーマット（ISO 8601 → YYYY/MM/DD HH:mm）
  */
 /** 日時文字列を "YYYY/MM/DD HH:mm" 形式にフォーマット */
-export function formatEntryDateTime(dateTimeString: string | null | undefined): string {
+export function formatTimeblockDateTime(dateTimeString: string | null | undefined): string {
   if (!dateTimeString) return '-';
 
   try {

@@ -4,7 +4,7 @@ import {
   unpackBlankRate,
   unpackContextSwitches,
   unpackCumulativeTime,
-  unpackEntryRate,
+  unpackPlanRate,
 } from '../statistics-kpi-unpackers';
 
 describe('unpackCumulativeTime', () => {
@@ -25,34 +25,34 @@ describe('unpackCumulativeTime', () => {
   });
 });
 
-describe('unpackEntryRate', () => {
+describe('unpackPlanRate', () => {
   it('null → 全 default (0)', () => {
-    expect(unpackEntryRate(null)).toEqual({
+    expect(unpackPlanRate(null)).toEqual({
       totalEntries: 0,
       plannedEntries: 0,
-      entryRate: 0,
+      planRate: 0,
     });
   });
 
-  it('planRate → entryRate に rename される', () => {
-    expect(unpackEntryRate({ totalEntries: 30, plannedEntries: 25, planRate: 0.83 })).toEqual({
+  it('planRate → planRate に rename される', () => {
+    expect(unpackPlanRate({ totalEntries: 30, plannedEntries: 25, planRate: 0.83 })).toEqual({
       totalEntries: 30,
       plannedEntries: 25,
-      entryRate: 0.83,
+      planRate: 0.83,
     });
   });
 
-  it('output に planRate field は含まれない', () => {
-    const result = unpackEntryRate({ totalEntries: 30, plannedEntries: 25, planRate: 0.83 });
-    expect('planRate' in result).toBe(false);
-    expect('entryRate' in result).toBe(true);
+  it('output は planRate field に統一する', () => {
+    const result = unpackPlanRate({ totalEntries: 30, plannedEntries: 25, planRate: 0.83 });
+    expect('planRate' in result).toBe(true);
+    expect('entryRate' in result).toBe(false);
   });
 
   it('実値 0 → default と区別される', () => {
-    expect(unpackEntryRate({ totalEntries: 0, plannedEntries: 0, planRate: 0 })).toEqual({
+    expect(unpackPlanRate({ totalEntries: 0, plannedEntries: 0, planRate: 0 })).toEqual({
       totalEntries: 0,
       plannedEntries: 0,
-      entryRate: 0,
+      planRate: 0,
     });
   });
 });

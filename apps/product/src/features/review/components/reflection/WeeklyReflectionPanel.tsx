@@ -31,7 +31,7 @@ export interface WeeklyReflectionEstimationRow {
   avgPlannedMinutes: number;
   avgActualMinutes: number;
   avgDeviationMinutes: number;
-  entryCount: number;
+  recordCount: number;
 }
 
 interface WeeklyReflectionSkipSummary {
@@ -75,7 +75,7 @@ export function WeeklyReflectionPanel({
   const sortedEstimationRows = useMemo(
     () =>
       [...(estimationRows ?? [])]
-        .filter((row) => row.entryCount > 0)
+        .filter((row) => row.recordCount > 0)
         .sort((a, b) => Math.abs(b.avgDeviationMinutes) - Math.abs(a.avgDeviationMinutes))
         .slice(0, MAX_ESTIMATION_ROWS),
     [estimationRows],

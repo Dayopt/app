@@ -103,8 +103,8 @@ interface CalendarGridContentProps {
     | undefined;
   /** 時間範囲選択 */
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
-  /** DnDを無効化するエントリID */
-  disabledEntryId?: string | null | undefined;
+  /** DnDを無効化するTimeblock ID */
+  disabledTimeblockId?: string | null | undefined;
   /** compare Rail に出ている entry の ID 一覧 */
   dayDiffEntryIds?: ReadonlySet<string> | undefined;
   className?: string | undefined;
@@ -126,7 +126,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   onEntryContextMenu,
   onEventUpdate,
   onTimeRangeSelect,
-  disabledEntryId,
+  disabledTimeblockId,
   dayDiffEntryIds,
   className,
 }: CalendarGridContentProps) {
@@ -171,11 +171,11 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     onPlanRecord: (planId) => recordPlan.mutate({ id: planId }),
     ...(onEventUpdate ? { onEventUpdate: wrappedOnEventUpdate } : {}),
     ...(onEntryClick ? { onEventClick: onEntryClick } : {}),
-    ...(disabledEntryId != null
+    ...(disabledTimeblockId != null
       ? {
-          disabledPlanId: disabledEntryId,
+          disabledPlanId: disabledTimeblockId,
           // Mobile では Inspector 開いている entry も resize 可（PC は Phase 1 と同じ block 維持）
-          resizeDisabledPlanId: isMobile ? null : disabledEntryId,
+          resizeDisabledPlanId: isMobile ? null : disabledTimeblockId,
         }
       : {}),
   });
@@ -192,12 +192,18 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   // ドラッグゴースト描画コールバック
   const renderGhost = useCallback(
-    ({ entryId, previewTime }: { entryId: string; previewTime: { start: Date; end: Date } }) => {
-      const entry = entries.find((e) => e.id === entryId);
+    ({
+      timeblockId,
+      previewTime,
+    }: {
+      timeblockId: string;
+      previewTime: { start: Date; end: Date };
+    }) => {
+      const entry = entries.find((e) => e.id === timeblockId);
       if (!entry) return null;
       const previewEntry = buildDragPreviewEntry(entry, previewTime);
       const tag = entry.tagId ? getTagById(entry.tagId) : null;
-      const ghostHeight = Math.max(twoLaneStyles[entryId]?.height ?? 20, 20);
+      const ghostHeight = Math.max(twoLaneStyles[timeblockId]?.height ?? 20, 20);
       return (
         <TimeblockCard
           entry={previewEntry}

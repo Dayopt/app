@@ -19,7 +19,7 @@ interface PendingSelection {
   endMinute: number;
   creationSource?: 'planned-gap' | undefined;
   /** Step 5 のレーン起点。保存先は最終的に end_at のルールが優先する。 */
-  lane?: 'plan' | 'log' | undefined;
+  lane?: 'plan' | 'record' | undefined;
 }
 
 interface InlineCreateState {

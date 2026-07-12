@@ -17,7 +17,7 @@ interface CalendarEntryActions {
   onEntryContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
   onUpdateEntry?:
     | ((
-        entryIdOrEntry: string | CalendarEvent,
+        timeblockIdOrTimeblock: string | CalendarEvent,
         updates?: {
           startTime: Date;
           endTime: Date;
@@ -25,7 +25,7 @@ interface CalendarEntryActions {
         },
       ) => void | Promise<void> | Promise<{ skipToast: true } | void>)
     | undefined;
-  onDeleteEntry?: ((entryId: string) => void) | undefined;
+  onDeleteTimeblock?: ((timeblockId: string) => void) | undefined;
   onTimeRangeSelect?:
     | ((selection: {
         date: Date;
@@ -35,7 +35,7 @@ interface CalendarEntryActions {
         endMinute: number;
       }) => void)
     | undefined;
-  disabledEntryId?: string | null | undefined;
+  disabledTimeblockId?: string | null | undefined;
 }
 
 const CalendarTimeblockActionsContext = createContext<CalendarEntryActions>({});

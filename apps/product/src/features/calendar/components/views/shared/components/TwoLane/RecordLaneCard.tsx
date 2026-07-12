@@ -1,5 +1,5 @@
 /**
- * Log レーン用カード（overview.md §4: 塗りカード、視覚的な主役）。
+ * Record レーン用カード（overview.md §4: 塗りカード、視覚的な主役）。
  *
  * `TimeblockCard.tsx` のトークン使用を踏襲するが、DnD・overlay 計算・gap クリック
  * 導線は Step 6 の対象のため持ち込まない（read 側専用の軽量プレゼンテーショナル
@@ -19,7 +19,7 @@ import { cn } from '@dayopt/components';
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 import { DiffBadge } from './DiffBadge';
 
-interface LogLaneCardProps {
+interface RecordLaneCardProps {
   event: RecordEvent;
   position: TwoLanePosition;
   tagColor?: string | null | undefined;
@@ -60,7 +60,7 @@ export function RecordLaneCard({
   onTouchStart,
   onResizeStart,
   styleOverride,
-}: LogLaneCardProps) {
+}: RecordLaneCardProps) {
   const t = useTranslations();
   const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
   const isUnplanned = event.planId == null;

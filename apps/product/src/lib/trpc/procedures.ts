@@ -324,7 +324,8 @@ const USER_RATE_WINDOW_MS = 60 * 1000;
 const userRequestLog = new Map<string, number[]>();
 
 const OAUTH_TRPC_SCOPE_REQUIREMENTS: Partial<Record<string, SupportedScope>> = {
-  'entries.list': 'read:entries',
+  'plans.list': 'read:entries',
+  'records.list': 'read:entries',
 };
 
 const MFA_CHALLENGE_TRPC_PATHS = new Set(['user.verifyRecoveryCode']);

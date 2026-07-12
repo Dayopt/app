@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { TimeblockEditor, type TimeModelEditorValue } from './TimeblockEditor';
 
 const meta = {
-  title: 'Product/Features/Entry/TimeblockEditor',
+  title: 'Product/Features/Timeblock/TimeblockEditor',
   component: TimeblockEditor,
   tags: ['autodocs'],
   parameters: { layout: 'padded' },

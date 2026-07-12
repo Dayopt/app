@@ -1,4 +1,5 @@
 import type { Insert, Row, Update } from '@/lib/database';
+import { databaseTables } from '@/lib/database';
 import type {
   ConfirmDayInput,
   CreatePlanInput,
@@ -13,9 +14,9 @@ export type PlanRow = Row<'plans'>;
 export type PlanInsert = Insert<'plans'>;
 export type PlanUpdate = Update<'plans'>;
 
-export type RecordRow = Row<'logs'>;
-export type RecordInsert = Insert<'logs'>;
-export type RecordUpdate = Update<'logs'>;
+export type RecordRow = Row<typeof databaseTables.records>;
+export type RecordInsert = Insert<typeof databaseTables.records>;
+export type RecordUpdate = Update<typeof databaseTables.records>;
 
 export interface ListPlansOptions extends PlanFilter {
   userId: string;
@@ -61,24 +62,24 @@ export interface ListRecordsOptions extends RecordFilter {
 
 export interface GetRecordByIdOptions {
   userId: string;
-  logId: string;
+  recordId: string;
 }
 
 export interface CreateRecordOptions {
   userId: string;
   input: CreateRecordInput;
-  preventOverlappingLogs?: boolean;
+  preventOverlappingRecords?: boolean;
 }
 
 export interface UpdateRecordOptions {
   userId: string;
-  logId: string;
+  recordId: string;
   input: UpdateRecordInput;
   expectedUpdatedAt?: string | undefined;
-  preventOverlappingLogs?: boolean;
+  preventOverlappingRecords?: boolean;
 }
 
 export interface DeleteRecordOptions {
   userId: string;
-  logId: string;
+  recordId: string;
 }

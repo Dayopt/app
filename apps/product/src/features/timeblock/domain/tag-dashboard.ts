@@ -5,7 +5,7 @@ export interface TagDashboardTagRow {
   icon: string | null;
 }
 
-export interface TagDashboardEntryRow {
+export interface TagDashboardTimeblockRow {
   id: string;
   title: string | null;
   description: string | null;
@@ -18,7 +18,7 @@ export interface TagDashboardEntryRow {
 
 interface TagDashboardInput {
   tag: TagDashboardTagRow;
-  rows: TagDashboardEntryRow[];
+  rows: TagDashboardTimeblockRow[];
   limit: number;
   timezone: string;
 }
@@ -89,7 +89,7 @@ export function buildTagDashboard({ tag, rows, limit, timezone }: TagDashboardIn
       plannedMinutes: totalPlannedMinutes,
       actualMinutes: totalActualMinutes,
       diffMinutes: totalActualMinutes - totalPlannedMinutes,
-      entryCount: rows.length,
+      recordCount: rows.length,
     },
     dailyRows: Array.from(dailyMap.values())
       .sort((a, b) => a.date.localeCompare(b.date))
@@ -97,25 +97,25 @@ export function buildTagDashboard({ tag, rows, limit, timezone }: TagDashboardIn
         ...row,
         diffMinutes: row.actualMinutes - row.plannedMinutes,
       })),
-    entries: computedRows
+    records: computedRows
       .sort((a, b) => {
         const aTime = new Date(a.row.actual_start_time ?? a.row.start_time ?? 0).getTime();
         const bTime = new Date(b.row.actual_start_time ?? b.row.start_time ?? 0).getTime();
         return bTime - aTime;
       })
       .slice(0, limit)
-      .map((entry) => ({
-        entryId: entry.row.id,
-        date: entry.date,
-        title: entry.row.title,
-        description: entry.row.description,
-        startTime: entry.row.start_time,
-        endTime: entry.row.end_time,
-        actualStartTime: entry.row.actual_start_time,
-        actualEndTime: entry.row.actual_end_time,
-        plannedMinutes: entry.plannedMinutes,
-        actualMinutes: entry.actualMinutes,
-        diffMinutes: entry.diffMinutes,
+      .map((record) => ({
+        timeblockId: record.row.id,
+        date: record.date,
+        title: record.row.title,
+        description: record.row.description,
+        startTime: record.row.start_time,
+        endTime: record.row.end_time,
+        actualStartTime: record.row.actual_start_time,
+        actualEndTime: record.row.actual_end_time,
+        plannedMinutes: record.plannedMinutes,
+        actualMinutes: record.actualMinutes,
+        diffMinutes: record.diffMinutes,
         tag: {
           id: tag.id,
           name: tag.name,

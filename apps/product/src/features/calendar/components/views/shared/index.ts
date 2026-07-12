@@ -28,7 +28,7 @@ export { getDateKey } from '@/lib/date';
 // dateHelpers（カレンダー固有、isValidEvent のみ）
 export { isValidEvent } from './utils/dateHelpers';
 
-// entrySorting
+// timeblockSorting
 export { sortEventsByDateKeys } from './utils/timeblockSorting';
 
 // ===== 型定義（centralized types/ から re-export） =====

@@ -17,7 +17,7 @@ interface EstimationRow {
   avgPlannedMinutes: number;
   avgActualMinutes: number;
   avgDeviationMinutes: number;
-  entryCount: number;
+  recordCount: number;
 }
 
 /**
@@ -44,8 +44,8 @@ export function EstimationAccuracyList({
   }
 
   const sorted = (rows ?? [])
-    .filter((row) => row.entryCount > 0)
-    .sort((a, b) => b.entryCount - a.entryCount)
+    .filter((row) => row.recordCount > 0)
+    .sort((a, b) => b.recordCount - a.recordCount)
     .slice(0, MAX_ROWS);
 
   if (sorted.length === 0) {

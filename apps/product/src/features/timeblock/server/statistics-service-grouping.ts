@@ -1,7 +1,7 @@
 /**
  * Step 4 統計 TS service (`statistics-service.ts`) が使う TZ-aware なグルーピング層。
  *
- * `plans` / `logs` の生行（snake_case, start_at/end_at）を、既存 domain 層の
+ * Plan / Record の生行（snake_case, start_at/end_at）を、既存 domain 層の
  * `aggregate*` 関数が受け取れる RPC 互換の bucket shape（`{hour, total_minutes}` 等）
  * に変換する。TZ 変換をここに閉じ込め、domain 層は TZ 非依存を維持する
  * （`monthly-trend.ts` の既存コメント方針を踏襲）。
@@ -111,14 +111,14 @@ export function groupEnergyMap(
   hour: number;
   dow: number;
   totalMinutes: number;
-  entryCount: number;
+  recordCount: number;
   avgFulfillment: number | null;
 }> {
   interface Bucket {
     hour: number;
     dow: number;
     totalMinutes: number;
-    entryCount: number;
+    recordCount: number;
     fulfillmentSum: number;
     fulfillmentCount: number;
   }
@@ -132,12 +132,12 @@ export function groupEnergyMap(
       hour,
       dow,
       totalMinutes: 0,
-      entryCount: 0,
+      recordCount: 0,
       fulfillmentSum: 0,
       fulfillmentCount: 0,
     };
     bucket.totalMinutes += minutesBetween(row.start_at, row.end_at);
-    bucket.entryCount += 1;
+    bucket.recordCount += 1;
     if (row.fulfillment_score != null) {
       bucket.fulfillmentSum += row.fulfillment_score;
       bucket.fulfillmentCount += 1;
@@ -148,7 +148,7 @@ export function groupEnergyMap(
     hour: bucket.hour,
     dow: bucket.dow,
     totalMinutes: bucket.totalMinutes,
-    entryCount: bucket.entryCount,
+    recordCount: bucket.recordCount,
     avgFulfillment:
       bucket.fulfillmentCount > 0 ? bucket.fulfillmentSum / bucket.fulfillmentCount : null,
   }));

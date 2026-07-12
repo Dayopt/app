@@ -33,7 +33,7 @@ export interface TimeblockPosition {
 
 interface UseViewEntriesReturn {
   dayEntries: CalendarEvent[];
-  entryPositions: TimeblockPosition[];
+  timeblockPositions: TimeblockPosition[];
   maxConcurrentEntries: number;
   skippedEntriesCount: number;
 }
@@ -81,11 +81,11 @@ export function useViewTimeblocks({
   }, [dayEntries]);
 
   // 新しいレイアウト計算システムを使用
-  const entryLayouts = useTimeblockLayoutCalculator(convertedEntries);
+  const timeblockLayouts = useTimeblockLayoutCalculator(convertedEntries);
 
   // レイアウト情報をTimeblockPositionに変換
-  const entryPositions = useMemo((): TimeblockPosition[] => {
-    return entryLayouts.map((layout: TimeblockLayout, index: number) => {
+  const timeblockPositions = useMemo((): TimeblockPosition[] => {
+    return timeblockLayouts.map((layout: TimeblockLayout, index: number) => {
       const { top, height } = layoutEntryToVerticalPosition(
         new Date(layout.entry.start),
         new Date(layout.entry.end),
@@ -104,15 +104,15 @@ export function useViewTimeblocks({
         opacity: layout.totalColumns > 1 ? 0.95 : 1.0,
       };
     });
-  }, [entryLayouts, hourHeight]);
+  }, [timeblockLayouts, hourHeight]);
 
   const maxConcurrentEntries = useMemo(() => {
-    return Math.max(1, ...entryLayouts.map((layout: TimeblockLayout) => layout.totalColumns));
-  }, [entryLayouts]);
+    return Math.max(1, ...timeblockLayouts.map((layout: TimeblockLayout) => layout.totalColumns));
+  }, [timeblockLayouts]);
 
   return {
     dayEntries,
-    entryPositions,
+    timeblockPositions,
     maxConcurrentEntries,
     skippedEntriesCount: 0, // 新しいシステムではスキップしない
   };

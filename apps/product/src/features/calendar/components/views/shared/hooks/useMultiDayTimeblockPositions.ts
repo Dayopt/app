@@ -22,7 +22,7 @@ interface UseMultiDayEntryPositionsOptions {
 
 /** useMultiDayTimeblockPositions フックの戻り値 */
 interface UseMultiDayEntryPositionsReturn {
-  entryPositions: TimeblockPosition[];
+  timeblockPositions: TimeblockPosition[];
   entriesByDate: Map<string, CalendarEvent[]>;
 }
 
@@ -88,7 +88,7 @@ export function useMultiDayTimeblockPositions({
   }, [entriesByDate]);
 
   // O(1)ルックアップ用Map（allConvertedEntries.find() の O(n*m) を回避）
-  const entryMap = useMemo(() => {
+  const timeblockMap = useMemo(() => {
     const map = new Map<string, CalendarEvent>();
     for (const item of allConvertedEntries) {
       map.set(item.id, item.entry);
@@ -99,7 +99,7 @@ export function useMultiDayTimeblockPositions({
   // 日付ごとにレイアウト計算
   // useTimeblockLayoutCalculatorはフックなので、日付ごとに呼べない
   // 代わりに全エントリを一度に渡し、後で日付ごとに分離
-  const entryLayouts = useTimeblockLayoutCalculator(
+  const timeblockLayouts = useTimeblockLayoutCalculator(
     allConvertedEntries.map((p) => ({
       ...p.entry,
       start: p.start,
@@ -109,9 +109,9 @@ export function useMultiDayTimeblockPositions({
   );
 
   // レイアウト情報をTimeblockPositionに変換
-  const entryPositions = useMemo((): TimeblockPosition[] => {
-    return entryLayouts.map((layout: TimeblockLayout, index: number) => {
-      const entry = entryMap.get(layout.entry.id) ?? (layout.entry as CalendarEvent);
+  const timeblockPositions = useMemo((): TimeblockPosition[] => {
+    return timeblockLayouts.map((layout: TimeblockLayout, index: number) => {
+      const entry = timeblockMap.get(layout.entry.id) ?? (layout.entry as CalendarEvent);
       const { top, height } = layoutEntryToVerticalPosition(
         new Date(layout.entry.start),
         new Date(layout.entry.end),
@@ -130,10 +130,10 @@ export function useMultiDayTimeblockPositions({
         opacity: layout.totalColumns > 1 ? 0.95 : 1.0,
       };
     });
-  }, [entryLayouts, entryMap, hourHeight]);
+  }, [timeblockLayouts, timeblockMap, hourHeight]);
 
   return {
-    entryPositions,
+    timeblockPositions,
     entriesByDate,
   };
 }

@@ -6,7 +6,7 @@
  * カラードット + タグ名を表示し、クリックで TagQuickSelector を開く。
  * 右側に「…」メニュー（getTimeblockMenuItems で生成された項目）を配置。
  *
- * タグデータの解決とタグ作成は上位（EntryInspectorForm）が担当。
+ * タグデータの解決とタグ作成は上位（TimeblockInspectorForm）が担当。
  * メニュー items は上位で `getTimeblockMenuItems` から生成して props 経由で受け取る。
  */
 

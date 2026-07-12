@@ -8,7 +8,7 @@ import { getTimeblockMenuItems } from '@/features/timeblock';
 import { cn } from '@dayopt/components';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
-interface EntryContextMenuProps {
+interface TimeblockContextMenuProps {
   entry: CalendarEvent;
   position: { x: number; y: number };
   onClose: () => void;
@@ -31,7 +31,7 @@ export const EventContextMenu = ({
   onRestorePlanned,
   onSkip,
   onUnskip,
-}: EntryContextMenuProps) => {
+}: TimeblockContextMenuProps) => {
   const t = useTranslations();
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState(position);

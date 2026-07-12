@@ -68,7 +68,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const { tap, impact } = useHapticFeedback();
 
   const queryClient = useQueryClient();
-  const { createLog, createPlan } = useTimeblockWriteMutations();
+  const { createRecord, createPlan } = useTimeblockWriteMutations();
   const createTagMutation = useCreateTag({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
   const [hoveredTag, setHoveredTag] = useState<HoveredTagInfo | null>(null);
@@ -114,7 +114,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       // 同一レーンのみ禁止（plan×plan / log×log）。plan×log は許可。
       const laneItems = collectTimeModelLaneItems(
         queryClient,
-        destination === 'plan' ? 'plans' : 'logs',
+        destination === 'plan' ? 'plans' : 'records',
       );
       if (hasTimeModelLaneConflict(laneItems, utcStart, utcEnd)) {
         toast.error(tEntry('errors.timeOverlap'));
@@ -136,7 +136,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       // ハイライトを即座に消す（pendingSelectionの値は既にローカル変数に展開済み）
       clearPendingSelection();
 
-      const mutation = destination === 'plan' ? createPlan : createLog;
+      const mutation = destination === 'plan' ? createPlan : createRecord;
       mutation.mutate(
         {
           title: tagName,
@@ -162,7 +162,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       isCreating,
       timezone,
       createPlan,
-      createLog,
+      createRecord,
       clearPendingSelection,
       queryClient,
       tEntry,
@@ -294,7 +294,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     const destination = resolveTimeblockDestination(utcEnd);
     const laneItems = collectTimeModelLaneItems(
       queryClient,
-      destination === 'plan' ? 'plans' : 'logs',
+      destination === 'plan' ? 'plans' : 'records',
     );
     return hasTimeModelLaneConflict(laneItems, utcStart, utcEnd);
   }, [queryClient, pendingSelection, timezone]);

@@ -10,9 +10,9 @@ import type { CalendarEvent } from '../types/calendar.types';
  */
 
 interface CalendarDragState {
-  /** ドラッグ中のエントリーID */
+  /** ドラッグ中のTimeblockID */
   draggedEntryId: string | null;
-  /** ドラッグ中のエントリーデータ */
+  /** ドラッグ中のTimeblockデータ */
   draggedEntry: CalendarEvent | null;
   /** 元の日付インデックス */
   originalDateIndex: number;
@@ -24,18 +24,18 @@ interface CalendarDragState {
   previewTime: { start: Date; end: Date } | null;
   /** スナップされた位置（top, height） */
   snappedPosition: { top: number; height?: number } | null;
-  /** Step 5 の 2 レーン接続用。Plan → Log は record mutation に委譲する。 */
-  sourceLane: 'plan' | 'log' | null;
-  targetLane: 'plan' | 'log' | null;
+  /** Step 5 の 2 レーン接続用。Plan → Record は record mutation に委譲する。 */
+  sourceLane: 'plan' | 'record' | null;
+  targetLane: 'plan' | 'record' | null;
 }
 
 interface CalendarDragActions {
   /** カレンダー内ドラッグ開始 */
   startDrag: (
-    entryId: string,
+    timeblockId: string,
     entry: CalendarEvent,
     dateIndex: number,
-    lane?: 'plan' | 'log',
+    lane?: 'plan' | 'record',
   ) => void;
   /** ドラッグ中の状態更新 */
   updateDrag: (
@@ -61,9 +61,9 @@ const initialState: CalendarDragState = {
 export const useCalendarDragStore = create<CalendarDragState & CalendarDragActions>((set) => ({
   ...initialState,
 
-  startDrag: (entryId, entry, dateIndex, lane = 'plan') =>
+  startDrag: (timeblockId, entry, dateIndex, lane = 'plan') =>
     set({
-      draggedEntryId: entryId,
+      draggedEntryId: timeblockId,
       draggedEntry: entry,
       originalDateIndex: dateIndex,
       targetDateIndex: dateIndex,

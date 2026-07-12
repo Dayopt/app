@@ -127,7 +127,7 @@ interface MutationContext {
 }
 
 /**
- * Plan / Log の書き込み mutation 群。
+ * Plan / Record の書き込み mutation 群。
  *
  * optimistic-update skill に従い、create は temp 行 insert、update は該当行 patch、
  * delete は行除去を onMutate で行い、onError で snapshot rollback、onSettled で再検証する。
@@ -229,7 +229,7 @@ export function useTimeblockWriteMutations() {
     onSettled: invalidate,
   });
 
-  const createLog = api.records.create.useMutation({
+  const createRecord = api.records.create.useMutation({
     onMutate: async (input): Promise<MutationContext> => {
       const context = await snapshot();
       const tempId = createTempId();
@@ -286,7 +286,7 @@ export function useTimeblockWriteMutations() {
     onSettled: invalidate,
   });
 
-  const updateLog = api.records.update.useMutation({
+  const updateRecord = api.records.update.useMutation({
     onMutate: async (input): Promise<MutationContext> => {
       const context = await snapshot();
       const patch = (row: RecordListItem): RecordListItem => ({
@@ -326,7 +326,7 @@ export function useTimeblockWriteMutations() {
     onSettled: invalidate,
   });
 
-  const deleteLog = api.records.delete.useMutation({
+  const deleteRecord = api.records.delete.useMutation({
     onMutate: async (input): Promise<MutationContext> => {
       const context = await snapshot();
       queryClient.setQueriesData<RecordListItem[]>({ predicate: isRecordsListQuery }, (old) =>
@@ -350,7 +350,7 @@ export function useTimeblockWriteMutations() {
     onSettled: invalidate,
   });
 
-  const restoreLog = api.records.restore.useMutation({
+  const restoreRecord = api.records.restore.useMutation({
     onMutate: snapshot,
     onError: (_error, _input, context) => {
       restore(context);
@@ -378,15 +378,15 @@ export function useTimeblockWriteMutations() {
   });
 
   return {
-    createLog,
+    createRecord,
     createPlan,
-    deleteLog,
+    deleteRecord,
     deletePlan,
-    restoreLog,
+    restoreRecord,
     restorePlan,
     skipPlan,
     unskipPlan,
-    updateLog,
+    updateRecord,
     updatePlan,
   };
 }

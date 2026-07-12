@@ -7,7 +7,7 @@ import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 import { RecordLaneCard } from './RecordLaneCard';
 
 /**
- * Log レーン用カード。塗り(主役)+差分バッジ(±0非表示)+予定外マーカーの全 variant。
+ * Record レーン用カード。塗り(主役)+差分バッジ(±0非表示)+予定外マーカーの全 variant。
  */
 const meta = {
   title: 'Product/Features/Calendar/TwoLane/RecordLaneCard',

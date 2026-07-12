@@ -14,6 +14,7 @@ import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses, resolveTagColor, useCreateTag, useTagsMap } from '@/features/tags';
 import type { Row } from '@/lib/database';
+import { databaseTables } from '@/lib/database';
 import { toast } from '@/lib/toast';
 
 import type { TimeblockDestination } from '../../domain/timeblock-destination';
@@ -25,7 +26,7 @@ import { TimeblockEditor, type TimeModelEditorValue } from './TimeblockEditor';
 import { RecordPlanButton } from './TimeblockRecordActions';
 
 type PlanRow = Row<'plans'>;
-type RecordRow = Row<'logs'>;
+type RecordRow = Row<typeof databaseTables.records>;
 
 interface TimeModelInspectorFormProps {
   kind: TimeblockDestination;
@@ -54,13 +55,13 @@ export function TimeblockInspectorForm({
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
   const {
-    deleteLog,
+    deleteRecord,
     deletePlan,
-    restoreLog,
+    restoreRecord,
     restorePlan,
     skipPlan,
     unskipPlan,
-    updateLog,
+    updateRecord,
     updatePlan,
   } = useTimeblockWriteMutations();
 
@@ -78,8 +79,8 @@ export function TimeblockInspectorForm({
   }));
 
   // auto_migrated log は RLS で update / delete とも拒否されるため UI 側も読み取り専用にする
-  const isMigrated = kind === 'log' && log?.source === 'auto_migrated';
-  const isPast = kind === 'log' || (target != null && new Date(target.end_at) <= new Date());
+  const isMigrated = kind === 'record' && log?.source === 'auto_migrated';
+  const isPast = kind === 'record' || (target != null && new Date(target.end_at) <= new Date());
   const isSkipped = kind === 'plan' && plan?.skipped_at != null;
   const timeLocked = kind === 'plan' && target != null && !isPlanTimeEditable(target.end_at);
 
@@ -94,10 +95,10 @@ export function TimeblockInspectorForm({
       if (kind === 'plan') {
         updatePlan.mutate({ id: targetId, data: { tagId } });
       } else {
-        updateLog.mutate({ id: targetId, data: { tagId } });
+        updateRecord.mutate({ id: targetId, data: { tagId } });
       }
     },
-    [kind, targetId, isMigrated, updatePlan, updateLog],
+    [kind, targetId, isMigrated, updatePlan, updateRecord],
   );
 
   const handleCreateAndSelectTag = useCallback(
@@ -140,9 +141,9 @@ export function TimeblockInspectorForm({
     if (kind === 'plan') {
       updatePlan.mutate({ id: targetId, data, expectedUpdatedAt: targetUpdatedAt }, options);
     } else {
-      updateLog.mutate({ id: targetId, data, expectedUpdatedAt: targetUpdatedAt }, options);
+      updateRecord.mutate({ id: targetId, data, expectedUpdatedAt: targetUpdatedAt }, options);
     }
-  }, [kind, targetId, targetUpdatedAt, isMigrated, timeLocked, value, updatePlan, updateLog, t]);
+  }, [kind, targetId, targetUpdatedAt, isMigrated, timeLocked, value, updatePlan, updateRecord, t]);
 
   // --- スキップ / 削除 ---
   const handleSkip = useCallback(() => {
@@ -163,8 +164,8 @@ export function TimeblockInspectorForm({
 
   const handleDelete = useCallback(() => {
     if (!targetId) return;
-    const deleteMutation = kind === 'plan' ? deletePlan : deleteLog;
-    const restoreMutation = kind === 'plan' ? restorePlan : restoreLog;
+    const deleteMutation = kind === 'plan' ? deletePlan : deleteRecord;
+    const restoreMutation = kind === 'plan' ? restorePlan : restoreRecord;
     deleteMutation.mutate(
       { id: targetId },
       {
@@ -183,7 +184,7 @@ export function TimeblockInspectorForm({
         },
       },
     );
-  }, [kind, targetId, deletePlan, deleteLog, restorePlan, restoreLog, onDeleted, t]);
+  }, [kind, targetId, deletePlan, deleteRecord, restorePlan, restoreRecord, onDeleted, t]);
 
   const menuItems = getTimeblockMenuItems({
     // time model では変換系（markUnplanned / restorePlanned）を出さないため
@@ -201,7 +202,10 @@ export function TimeblockInspectorForm({
   if (!target) return null;
 
   const isSubmitting =
-    updatePlan.isPending || updateLog.isPending || deletePlan.isPending || deleteLog.isPending;
+    updatePlan.isPending ||
+    updateRecord.isPending ||
+    deletePlan.isPending ||
+    deleteRecord.isPending;
 
   return (
     <div className="space-y-3 p-4">

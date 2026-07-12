@@ -4,9 +4,9 @@ import { devtools } from 'zustand/middleware';
 import type { TimeblockDestination } from '../domain/timeblock-destination';
 
 /**
- * Entry Inspector 状態管理
+ * Timeblock Inspector 状態管理
  *
- * plans / logs（time model）に対応。entryKind で対象テーブルを判別する。
+ * Plan / Record に対応。timeblockKind で対象を判別する。
  */
 
 /** Inspector ポップオーバーのアンカー位置 */
@@ -20,25 +20,25 @@ export interface AnchorRect {
 }
 
 /**
- * Entry Inspector Store の状態
+ * Timeblock Inspector Store の状態
  */
-interface EntryInspectorState {
+interface TimeblockInspectorState {
   /** Inspector が開いているか */
   isOpen: boolean;
   /** 対象エントリのID（plan または log の UUID） */
-  entryId: string | null;
+  timeblockId: string | null;
   /** 対象が plan / log のどちらか */
-  entryKind: TimeblockDestination;
+  timeblockKind: TimeblockDestination;
   /** Inspector のアンカー位置（クリックされたブロックの位置） */
   anchorRect: AnchorRect | null;
 }
 
 /**
- * Entry Inspector Store のアクション
+ * Timeblock Inspector Store のアクション
  */
-interface EntryInspectorActions {
+interface TimeblockInspectorActions {
   /** Inspector を開く */
-  openInspector: (entryId: string, kind?: TimeblockDestination) => void;
+  openInspector: (timeblockId: string, kind?: TimeblockDestination) => void;
   /** Inspector を閉じる */
   closeInspector: () => void;
   /** アンカー位置を設定 */
@@ -46,27 +46,27 @@ interface EntryInspectorActions {
 }
 
 /**
- * Entry Inspector Store 型
+ * Timeblock Inspector Store 型
  */
-type TimeblockInspectorStore = EntryInspectorState & EntryInspectorActions;
+type TimeblockInspectorStore = TimeblockInspectorState & TimeblockInspectorActions;
 
-/** Entry Inspector の開閉状態・対象エントリID・kind を管理するストア */
+/** Timeblock Inspector の開閉状態・対象Timeblock ID・kind を管理するストア */
 export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
   devtools(
     (set) => ({
       isOpen: false,
-      entryId: null,
-      entryKind: 'plan',
+      timeblockId: null,
+      timeblockKind: 'plan',
       anchorRect: null,
 
       setAnchorRect: (rect) => set({ anchorRect: rect }, false, 'setAnchorRect'),
 
-      openInspector: (entryId, kind = 'plan') =>
+      openInspector: (timeblockId, kind = 'plan') =>
         set(
           {
             isOpen: true,
-            entryId,
-            entryKind: kind,
+            timeblockId,
+            timeblockKind: kind,
           },
           false,
           'openInspector',
@@ -80,8 +80,8 @@ export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
         set(
           {
             isOpen: false,
-            entryId: null,
-            entryKind: 'plan',
+            timeblockId: null,
+            timeblockKind: 'plan',
             anchorRect: null,
           },
           false,
@@ -89,6 +89,6 @@ export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
         );
       },
     }),
-    { name: 'entry-inspector-store', enabled: process.env.NODE_ENV !== 'production' },
+    { name: 'timeblock-inspector-store', enabled: process.env.NODE_ENV !== 'production' },
   ),
 );

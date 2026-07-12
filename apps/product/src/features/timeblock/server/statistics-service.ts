@@ -2,13 +2,14 @@ import 'server-only';
 
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
+import { databaseTables } from '@/lib/database';
 import { getUserTimezone } from '@/lib/server/user-timezone-cache';
 
 import {
   aggregateDayOfWeekDistribution,
   aggregateHourlyDistribution,
   aggregateMonthlyTrend,
-  aggregatePlanLogEstimationAccuracy,
+  aggregatePlanRecordEstimationAccuracy,
   aggregateTagStats,
   type EstimationAccuracyDbRow,
   type EstimationAccuracyTagLookup,
@@ -17,8 +18,8 @@ import {
 } from '../domain';
 import {
   buildTagDashboard,
-  type TagDashboardEntryRow,
   type TagDashboardTagRow,
+  type TagDashboardTimeblockRow,
 } from '../domain/tag-dashboard';
 
 import { transformStatsOverviewResponse } from './statistics-overview-transform';
@@ -41,7 +42,7 @@ import type { ServiceSupabaseClient } from './types';
  * Step 4: 統計 TS service。
  *
  * Step 0 の Aggregation Source Contract（`docs/projects/time-model-split/step-0-statistics-rpc-policy.md`）
- * に従い、実績系は `logs`、予定系は `plans`、予実比較は `plans` LEFT JOIN `logs`（`plan_id` 経由）を読む。
+ * に従い、実績系は `records`、予定系は `plans`、予実比較は `plans` LEFT JOIN `records`（`plan_id` 経由）を読む。
  *
  * **dormant**: このクラスは router から未接続。既存 RPC ベースの router
  * (`statistics-general-router.ts` 等) は現状維持のまま、この service は Step 8 の
@@ -55,7 +56,7 @@ interface StatPlanRow {
   end_at: string;
 }
 
-interface StatLogRow {
+interface StatRecordRow {
   id: string;
   tag_id: string | null;
   plan_id: string | null;
@@ -120,42 +121,42 @@ export class StatisticsService {
   // General: タグ別統計・時間帯分布
   // ---------------------------------------------------------------------------
 
-  /** `get_tag_stats` 相当。実績（logs）ベースのタグ別件数・最終使用日。 */
+  /** `get_tag_stats` 相当。実績（records）ベースのタグ別件数・最終使用日。 */
   async getTagStats(userId: string): Promise<{
     counts: Record<string, number>;
     lastUsed: Record<string, string>;
   }> {
-    const logs = await this.fetchLogs(userId);
+    const records = await this.fetchRecords(userId);
     const byTag = new Map<string, { count: number; lastUsed: string | null }>();
-    for (const log of logs) {
-      if (log.tag_id == null) continue;
-      const acc = byTag.get(log.tag_id) ?? { count: 0, lastUsed: null };
+    for (const record of records) {
+      if (record.tag_id == null) continue;
+      const acc = byTag.get(record.tag_id) ?? { count: 0, lastUsed: null };
       acc.count += 1;
-      if (acc.lastUsed == null || log.start_at > acc.lastUsed) acc.lastUsed = log.start_at;
-      byTag.set(log.tag_id, acc);
+      if (acc.lastUsed == null || record.start_at > acc.lastUsed) acc.lastUsed = record.start_at;
+      byTag.set(record.tag_id, acc);
     }
 
     const rows = Array.from(byTag.entries()).map(([tag_id, v]) => ({
       tag_id,
-      entry_count: v.count,
+      record_count: v.count,
       last_used: v.lastUsed,
     }));
     return aggregateTagStats(rows);
   }
 
-  /** `get_time_by_tag` 相当。実績（logs）のタグ別合計時間。 */
+  /** `get_time_by_tag` 相当。実績（records）のタグ別合計時間。 */
   async getTimeByTag(userId: string, range: DateRangeInput = {}) {
-    const [logs, tagsById] = await Promise.all([
-      this.fetchLogs(userId, range),
+    const [records, tagsById] = await Promise.all([
+      this.fetchRecords(userId, range),
       this.fetchTagsById(userId),
     ]);
 
     const minutesByTag = new Map<string, number>();
-    for (const log of logs) {
-      if (log.tag_id == null) continue;
+    for (const record of records) {
+      if (record.tag_id == null) continue;
       minutesByTag.set(
-        log.tag_id,
-        (minutesByTag.get(log.tag_id) ?? 0) + minutesBetween(log.start_at, log.end_at),
+        record.tag_id,
+        (minutesByTag.get(record.tag_id) ?? 0) + minutesBetween(record.start_at, record.end_at),
       );
     }
 
@@ -180,22 +181,25 @@ export class StatisticsService {
     const timezone = await getUserTimezone(this.supabase, userId);
     const startOfYear = fromZonedTime(`${year}-01-01T00:00:00`, timezone).toISOString();
     const startOfNextYear = fromZonedTime(`${year + 1}-01-01T00:00:00`, timezone).toISOString();
-    const logs = await this.fetchLogs(userId, { startDate: startOfYear, endDate: startOfNextYear });
-    return groupHoursByDay(logs, timezone);
+    const records = await this.fetchRecords(userId, {
+      startDate: startOfYear,
+      endDate: startOfNextYear,
+    });
+    return groupHoursByDay(records, timezone);
   }
 
   /** `get_hourly_distribution` 相当。 */
   async getHourlyDistribution(userId: string, range: DateRangeInput = {}) {
     const timezone = await getUserTimezone(this.supabase, userId);
-    const logs = await this.fetchLogs(userId, range);
-    return aggregateHourlyDistribution(groupMinutesByHour(logs, timezone));
+    const records = await this.fetchRecords(userId, range);
+    return aggregateHourlyDistribution(groupMinutesByHour(records, timezone));
   }
 
   /** `get_dow_distribution` 相当。 */
   async getDayOfWeekDistribution(userId: string, range: DateRangeInput = {}) {
     const timezone = await getUserTimezone(this.supabase, userId);
-    const logs = await this.fetchLogs(userId, range);
-    return aggregateDayOfWeekDistribution(groupMinutesByDow(logs, timezone));
+    const records = await this.fetchRecords(userId, range);
+    return aggregateDayOfWeekDistribution(groupMinutesByDow(records, timezone));
   }
 
   /** `get_monthly_hours` 相当。 */
@@ -205,8 +209,8 @@ export class StatisticsService {
     const [nowYear, nowMonth] = nowStr.split('-').map(Number) as [number, number];
     const startDate = getMonthlyStartDate(nowYear, nowMonth, months);
 
-    const logs = await this.fetchLogs(userId, { startDate: startDate.toISOString() });
-    return aggregateMonthlyTrend(groupHoursByMonth(logs, timezone), nowYear, nowMonth, months);
+    const records = await this.fetchRecords(userId, { startDate: startDate.toISOString() });
+    return aggregateMonthlyTrend(groupHoursByMonth(records, timezone), nowYear, nowMonth, months);
   }
 
   // ---------------------------------------------------------------------------
@@ -214,8 +218,8 @@ export class StatisticsService {
   // ---------------------------------------------------------------------------
 
   /**
-   * `get_estimation_accuracy` 相当。`plans` LEFT JOIN `logs`（1:N、`auto_migrated` 除外）。
-   * 詳細は `domain/estimation-accuracy.ts` の `aggregatePlanLogEstimationAccuracy` を参照。
+   * `get_estimation_accuracy` 相当。`plans` LEFT JOIN `records`（1:N、`auto_migrated` 除外）。
+   * 詳細は `domain/estimation-accuracy.ts` の `aggregatePlanRecordEstimationAccuracy` を参照。
    */
   async getEstimationAccuracy(userId: string, range: DateRangeInput = {}) {
     const [plans, tagsById] = await Promise.all([
@@ -240,12 +244,12 @@ export class StatisticsService {
   // Summary: streak / KPI サマリー / Time P/L / Review panel 統合データ
   // ---------------------------------------------------------------------------
 
-  /** `get_active_dates` 相当。実績（logs）が存在する日付（tz basis）の一覧。 */
+  /** `get_active_dates` 相当。実績（records）が存在する日付（tz basis）の一覧。 */
   async getActiveDates(userId: string, startDate: string): Promise<string[]> {
     const timezone = await getUserTimezone(this.supabase, userId);
-    const logs = await this.fetchLogs(userId, { startDate });
+    const records = await this.fetchRecords(userId, { startDate });
     const days = new Set(
-      logs.map((log) => formatInTimeZone(new Date(log.start_at), timezone, 'yyyy-MM-dd')),
+      records.map((record) => formatInTimeZone(new Date(record.start_at), timezone, 'yyyy-MM-dd')),
     );
     return Array.from(days).sort();
   }
@@ -256,17 +260,17 @@ export class StatisticsService {
     { startDate, endDate, wakeHour, sleepHour }: BlankRateInput,
   ) {
     const timezone = await getUserTimezone(this.supabase, userId);
-    const [logs, plans] = await Promise.all([
-      this.fetchLogs(userId, { startDate, endDate }),
+    const [records, plans] = await Promise.all([
+      this.fetchRecords(userId, { startDate, endDate }),
       this.fetchPlans(userId, { startDate, endDate }),
     ]);
 
-    const cumulativeMinutes = logs.reduce(
-      (sum, log) => sum + minutesBetween(log.start_at, log.end_at),
+    const cumulativeMinutes = records.reduce(
+      (sum, record) => sum + minutesBetween(record.start_at, record.end_at),
       0,
     );
-    const plannedEntries = logs.filter((log) => log.plan_id != null).length;
-    const contextSwitches = computeContextSwitches(logs, timezone);
+    const plannedEntries = records.filter((record) => record.plan_id != null).length;
+    const contextSwitches = computeContextSwitches(records, timezone);
     const scheduledMinutes = plans.reduce(
       (sum, plan) => sum + minutesBetween(plan.start_at, plan.end_at),
       0,
@@ -281,9 +285,9 @@ export class StatisticsService {
     return transformStatsOverviewResponse({
       cumulativeTime: { totalMinutes: cumulativeMinutes },
       planRate: {
-        totalEntries: logs.length,
+        totalEntries: records.length,
         plannedEntries,
-        planRate: logs.length > 0 ? plannedEntries / logs.length : 0,
+        planRate: records.length > 0 ? plannedEntries / records.length : 0,
       },
       contextSwitches,
       blankRate,
@@ -295,18 +299,18 @@ export class StatisticsService {
     const { startDate, endDate, prevStart, prevEnd, wakeHour, sleepHour } = input;
     const timezone = await getUserTimezone(this.supabase, userId);
 
-    const [plans, logs, tagsById] = await Promise.all([
+    const [plans, records, tagsById] = await Promise.all([
       this.fetchPlans(userId, { startDate, endDate }),
-      this.fetchLogs(userId, { startDate, endDate }),
+      this.fetchRecords(userId, { startDate, endDate }),
       this.fetchTagsById(userId),
     ]);
-    const tags = this.buildTagPL(plans, logs, tagsById);
+    const tags = this.buildTagPL(plans, records, tagsById);
 
     let prevTags: TimePLResponse['prevTags'] = [];
     if (prevStart && prevEnd) {
       const [prevPlans, prevLogs] = await Promise.all([
         this.fetchPlans(userId, { startDate: prevStart, endDate: prevEnd }),
-        this.fetchLogs(userId, { startDate: prevStart, endDate: prevEnd }),
+        this.fetchRecords(userId, { startDate: prevStart, endDate: prevEnd }),
       ]);
       prevTags = this.buildTagPL(prevPlans, prevLogs, tagsById);
     }
@@ -334,19 +338,20 @@ export class StatisticsService {
     const [nowYear, nowMonth] = nowStr.split('-').map(Number) as [number, number];
     const monthlyStartDate = getMonthlyStartDate(nowYear, nowMonth, monthlyMonths);
 
-    const [logs, plans, prevLogs, prevPlans, yearLogs, monthlyLogs, tagsById] = await Promise.all([
-      this.fetchLogs(userId, { startDate, endDate }),
-      this.fetchPlans(userId, { startDate, endDate }),
-      this.fetchLogs(userId, { startDate: prevStart, endDate: prevEnd }),
-      this.fetchPlans(userId, { startDate: prevStart, endDate: prevEnd }),
-      this.fetchLogs(userId, { startDate: startOfYear, endDate: startOfNextYear }),
-      this.fetchLogs(userId, { startDate: monthlyStartDate.toISOString() }),
-      this.fetchTagsById(userId),
-    ]);
+    const [records, plans, prevLogs, prevPlans, yearLogs, monthlyLogs, tagsById] =
+      await Promise.all([
+        this.fetchRecords(userId, { startDate, endDate }),
+        this.fetchPlans(userId, { startDate, endDate }),
+        this.fetchRecords(userId, { startDate: prevStart, endDate: prevEnd }),
+        this.fetchPlans(userId, { startDate: prevStart, endDate: prevEnd }),
+        this.fetchRecords(userId, { startDate: startOfYear, endDate: startOfNextYear }),
+        this.fetchRecords(userId, { startDate: monthlyStartDate.toISOString() }),
+        this.fetchTagsById(userId),
+      ]);
 
-    const overview = this.buildOverviewSection(logs);
+    const overview = this.buildOverviewSection(records);
     const prevOverview = this.buildOverviewSection(prevLogs);
-    const contextSwitches = computeContextSwitches(logs, timezone);
+    const contextSwitches = computeContextSwitches(records, timezone);
     const scheduledMinutes = plans.reduce(
       (sum, plan) => sum + minutesBetween(plan.start_at, plan.end_at),
       0,
@@ -358,19 +363,19 @@ export class StatisticsService {
       sleepHour,
     });
 
-    const timeByTag = transformTimeByTagResponse(this.buildTimeByTagRows(logs, tagsById));
+    const timeByTag = transformTimeByTagResponse(this.buildTimeByTagRows(records, tagsById));
     // NOTE: get_stats_page_data の hourly/dow は 24h/7dow の raw bucket をそのまま返す
     // （getHourlyDistribution/getDayOfWeekDistribution procedure が行う 2h slot 集約や
     // 曜日ラベル変換は適用しない。RPC 契約どおり）。
-    const hourly = groupMinutesByHour(logs, timezone).map((row) => ({
+    const hourly = groupMinutesByHour(records, timezone).map((row) => ({
       hour: row.hour,
       totalMinutes: row.total_minutes,
     }));
-    const dow = groupMinutesByDow(logs, timezone).map((row) => ({
+    const dow = groupMinutesByDow(records, timezone).map((row) => ({
       dow: row.dow,
       totalMinutes: row.total_minutes,
     }));
-    const energyMap = groupEnergyMap(logs, timezone).map(
+    const energyMap = groupEnergyMap(records, timezone).map(
       ({ avgFulfillment: _avgFulfillment, ...rest }) => rest,
     );
     const prevEnergyMap = groupEnergyMap(prevLogs, timezone).map(
@@ -419,47 +424,48 @@ export class StatisticsService {
 
   async getTagDashboard(userId: string, { tagId, startDate, endDate, limit }: TagDashboardInput) {
     const timezone = await getUserTimezone(this.supabase, userId);
-    const [tag, logs, plans] = await Promise.all([
+    const [tag, records, plans] = await Promise.all([
       this.fetchTagById(userId, tagId),
-      this.fetchLogsOverlapping(userId, tagId, startDate, endDate),
+      this.fetchRecordsOverlapping(userId, tagId, startDate, endDate),
       this.fetchPlansOverlapping(userId, tagId, startDate, endDate),
     ]);
 
     const plansById = new Map(plans.map((plan) => [plan.id, plan]));
 
-    // 1 plan に複数 log（分割記録）が紐づく場合、予定時間の二重計上を避けるため
-    // 「代表 log」1 件だけに planned range を割り当てる。from_plan があればそれを優先する。
-    const primaryLogIdByPlanId = new Map<string, string>();
-    for (const log of logs) {
-      if (log.plan_id == null) continue;
-      const currentId = primaryLogIdByPlanId.get(log.plan_id);
+    // 1 plan に複数 record（分割記録）が紐づく場合、予定時間の二重計上を避けるため
+    // 「代表 record」1 件だけに planned range を割り当てる。from_plan があればそれを優先する。
+    const primaryRecordIdByPlanId = new Map<string, string>();
+    for (const record of records) {
+      if (record.plan_id == null) continue;
+      const currentId = primaryRecordIdByPlanId.get(record.plan_id);
       if (!currentId) {
-        primaryLogIdByPlanId.set(log.plan_id, log.id);
+        primaryRecordIdByPlanId.set(record.plan_id, record.id);
         continue;
       }
-      if (log.source === 'from_plan') {
-        primaryLogIdByPlanId.set(log.plan_id, log.id);
+      if (record.source === 'from_plan') {
+        primaryRecordIdByPlanId.set(record.plan_id, record.id);
       }
     }
 
-    const rows: TagDashboardEntryRow[] = logs.map((log) => {
-      const plan = log.plan_id ? plansById.get(log.plan_id) : undefined;
-      const isPrimary = log.plan_id != null && primaryLogIdByPlanId.get(log.plan_id) === log.id;
+    const rows: TagDashboardTimeblockRow[] = records.map((record) => {
+      const plan = record.plan_id ? plansById.get(record.plan_id) : undefined;
+      const isPrimary =
+        record.plan_id != null && primaryRecordIdByPlanId.get(record.plan_id) === record.id;
       return {
-        id: log.id,
-        title: log.title,
-        description: log.note,
+        id: record.id,
+        title: record.title,
+        description: record.note,
         start_time: isPrimary && plan ? plan.start_at : null,
         end_time: isPrimary && plan ? plan.end_at : null,
-        actual_start_time: log.start_at,
-        actual_end_time: log.end_at,
-        tag_id: log.tag_id,
+        actual_start_time: record.start_at,
+        actual_end_time: record.end_at,
+        tag_id: record.tag_id,
       };
     });
 
     // 未記録・未 skip の plan は「予定のみ」の行として残す（実績時間は 0）。
     const recordedPlanIds = new Set(
-      logs.map((log) => log.plan_id).filter((id): id is string => id != null),
+      records.map((record) => record.plan_id).filter((id): id is string => id != null),
     );
     for (const plan of plans) {
       if (recordedPlanIds.has(plan.id) || plan.skipped_at) continue;
@@ -488,7 +494,7 @@ export class StatisticsService {
     tagsById: ReadonlyMap<string, TagLookupRow>,
   ): Promise<EstimationAccuracyDbRow[]> {
     const planIds = plans.map((plan) => plan.id);
-    const logs = planIds.length > 0 ? await this.fetchLogsByPlanIds(userId, planIds) : [];
+    const records = planIds.length > 0 ? await this.fetchRecordsByPlanIds(userId, planIds) : [];
 
     const planRows = plans
       .filter((plan): plan is StatPlanRow & { tag_id: string } => plan.tag_id != null)
@@ -497,29 +503,29 @@ export class StatisticsService {
         tag_id: plan.tag_id,
         planned_minutes: minutesBetween(plan.start_at, plan.end_at),
       }));
-    const logRows = logs.map((log) => ({
-      plan_id: log.plan_id,
-      source: log.source,
-      minutes: minutesBetween(log.start_at, log.end_at),
+    const recordRows = records.map((record) => ({
+      plan_id: record.plan_id,
+      source: record.source,
+      minutes: minutesBetween(record.start_at, record.end_at),
     }));
     const tagLookup: Map<string, EstimationAccuracyTagLookup> = new Map(
       Array.from(tagsById.entries()).map(([id, tag]) => [id, { name: tag.name, color: tag.color }]),
     );
 
-    return aggregatePlanLogEstimationAccuracy(planRows, logRows, tagLookup);
+    return aggregatePlanRecordEstimationAccuracy(planRows, recordRows, tagLookup);
   }
 
-  private buildOverviewSection(logs: ReadonlyArray<StatLogRow>) {
-    const totalMinutes = logs.reduce(
-      (sum, log) => sum + minutesBetween(log.start_at, log.end_at),
+  private buildOverviewSection(records: ReadonlyArray<StatRecordRow>) {
+    const totalMinutes = records.reduce(
+      (sum, record) => sum + minutesBetween(record.start_at, record.end_at),
       0,
     );
-    const entryCount = logs.filter((log) => log.fulfillment_score != null).length;
-    const totalEntries = logs.length;
-    const plannedEntries = logs.filter((log) => log.plan_id != null).length;
+    const recordCount = records.filter((record) => record.fulfillment_score != null).length;
+    const totalEntries = records.length;
+    const plannedEntries = records.filter((record) => record.plan_id != null).length;
     return {
       totalMinutes,
-      entryCount,
+      recordCount,
       totalEntries,
       plannedEntries,
       planRate: totalEntries > 0 ? plannedEntries / totalEntries : 0,
@@ -527,15 +533,15 @@ export class StatisticsService {
   }
 
   private buildTimeByTagRows(
-    logs: ReadonlyArray<StatLogRow>,
+    records: ReadonlyArray<StatRecordRow>,
     tagsById: ReadonlyMap<string, TagLookupRow>,
   ) {
     const minutesByTag = new Map<string, number>();
-    for (const log of logs) {
-      if (log.tag_id == null) continue;
+    for (const record of records) {
+      if (record.tag_id == null) continue;
       minutesByTag.set(
-        log.tag_id,
-        (minutesByTag.get(log.tag_id) ?? 0) + minutesBetween(log.start_at, log.end_at),
+        record.tag_id,
+        (minutesByTag.get(record.tag_id) ?? 0) + minutesBetween(record.start_at, record.end_at),
       );
     }
     return Array.from(minutesByTag.entries())
@@ -554,7 +560,7 @@ export class StatisticsService {
 
   private buildTagPL(
     plans: ReadonlyArray<StatPlanRow>,
-    logs: ReadonlyArray<StatLogRow>,
+    records: ReadonlyArray<StatRecordRow>,
     tagsById: ReadonlyMap<string, TagLookupRow>,
   ): TimePLResponse['tags'] {
     interface Accumulator {
@@ -571,11 +577,11 @@ export class StatisticsService {
       acc.hasPlan = true;
       byTag.set(plan.tag_id, acc);
     }
-    for (const log of logs) {
-      if (log.tag_id == null) continue;
-      const acc = byTag.get(log.tag_id) ?? { budget: 0, actual: 0, hasPlan: false };
-      acc.actual += minutesBetween(log.start_at, log.end_at);
-      byTag.set(log.tag_id, acc);
+    for (const record of records) {
+      if (record.tag_id == null) continue;
+      const acc = byTag.get(record.tag_id) ?? { budget: 0, actual: 0, hasPlan: false };
+      acc.actual += minutesBetween(record.start_at, record.end_at);
+      byTag.set(record.tag_id, acc);
     }
 
     return Array.from(byTag.entries())
@@ -599,9 +605,9 @@ export class StatisticsService {
   // private: fetch
   // ---------------------------------------------------------------------------
 
-  private async fetchLogs(userId: string, range: DateRangeInput = {}): Promise<StatLogRow[]> {
+  private async fetchRecords(userId: string, range: DateRangeInput = {}): Promise<StatRecordRow[]> {
     let query = this.supabase
-      .from('logs')
+      .from(databaseTables.records)
       .select('id, tag_id, plan_id, source, start_at, end_at, fulfillment_score')
       .eq('user_id', userId)
       .is('deleted_at', null);
@@ -609,18 +615,18 @@ export class StatisticsService {
     if (range.endDate) query = query.lt('start_at', range.endDate);
 
     const { data, error } = await query;
-    if (error) throw new Error(`Failed to fetch logs: ${error.message}`);
+    if (error) throw new Error(`Failed to fetch records: ${error.message}`);
     return data ?? [];
   }
 
-  private async fetchLogsByPlanIds(userId: string, planIds: string[]): Promise<StatLogRow[]> {
+  private async fetchRecordsByPlanIds(userId: string, planIds: string[]): Promise<StatRecordRow[]> {
     const { data, error } = await this.supabase
-      .from('logs')
+      .from(databaseTables.records)
       .select('id, tag_id, plan_id, source, start_at, end_at, fulfillment_score')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .in('plan_id', planIds);
-    if (error) throw new Error(`Failed to fetch logs by plan ids: ${error.message}`);
+    if (error) throw new Error(`Failed to fetch records by plan ids: ${error.message}`);
     return data ?? [];
   }
 
@@ -659,14 +665,14 @@ export class StatisticsService {
     return data;
   }
 
-  private async fetchLogsOverlapping(
+  private async fetchRecordsOverlapping(
     userId: string,
     tagId: string,
     startDate: string,
     endDate: string,
-  ): Promise<Array<StatLogRow & { title: string; note: string | null }>> {
+  ): Promise<Array<StatRecordRow & { title: string; note: string | null }>> {
     const { data, error } = await this.supabase
-      .from('logs')
+      .from(databaseTables.records)
       .select('id, title, note, tag_id, plan_id, source, start_at, end_at, fulfillment_score')
       .eq('user_id', userId)
       .eq('tag_id', tagId)
@@ -674,7 +680,7 @@ export class StatisticsService {
       .lt('start_at', endDate)
       .gt('end_at', startDate)
       .order('start_at', { ascending: true });
-    if (error) throw new Error(`Failed to fetch logs for tag dashboard: ${error.message}`);
+    if (error) throw new Error(`Failed to fetch records for tag dashboard: ${error.message}`);
     return data ?? [];
   }
 

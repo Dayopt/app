@@ -11,7 +11,7 @@ interface TimeModelPlanDiffInput {
   deletedAt?: Date | null | undefined;
 }
 
-interface TimeModelLogDiffInput {
+interface TimeModelRecordDiffInput {
   id: string;
   planId: string | null;
   title: string;
@@ -23,8 +23,8 @@ interface TimeModelLogDiffInput {
 
 interface TimeModelDayDiffItem {
   id: string;
-  /** クリック時に開く Inspector 対象の id（recorded/skipped/unrecorded は plan、unplanned は log） */
-  entryId: string;
+  /** クリック時に開く Inspector 対象の id（recorded/skipped/unrecorded は plan、unplanned は record） */
+  timeblockId: string;
   kind: TimeModelDayDiffKind;
   title: string;
   tagId: string | null;
@@ -68,52 +68,52 @@ function clippedMinutes(start: Date, end: Date, bounds: TimeModelDayDiffBounds):
 }
 
 /**
- * Step 7 の Plan / Log 1:N 差分。既存 entries ベースの day-diff とは並存し、Step 8 で接続する。
- * Log は Log 自身の日に、Plan は Plan 自身の日に集計される。
+ * Step 7 の Plan / Record 1:N 差分。既存 entries ベースの day-diff とは並存し、Step 8 で接続する。
+ * Record は Record 自身の日に、Plan は Plan 自身の日に集計される。
  */
 export function computeTimeblockDayDiffs(
   plans: readonly TimeModelPlanDiffInput[],
-  logs: readonly TimeModelLogDiffInput[],
+  records: readonly TimeModelRecordDiffInput[],
   bounds: TimeModelDayDiffBounds = {},
 ): TimeModelDayDiffResult {
   const activePlans = plans.filter((plan) => plan.deletedAt == null);
   const plansById = new Map(activePlans.map((plan) => [plan.id, plan]));
-  const logsByPlanId = new Map<string, TimeModelLogDiffInput[]>();
+  const logsByPlanId = new Map<string, TimeModelRecordDiffInput[]>();
   const items: TimeModelDayDiffItem[] = [];
   let plannedMinutes = 0;
   let actualMinutes = 0;
   let unplannedMinutes = 0;
   let unrecordedMinutes = 0;
 
-  for (const log of logs) {
-    const duration = clippedMinutes(log.startAt, log.endAt, bounds);
+  for (const record of records) {
+    const duration = clippedMinutes(record.startAt, record.endAt, bounds);
     if (duration === 0) continue;
     actualMinutes += duration;
-    if (log.planId && plansById.has(log.planId)) {
-      const linked = logsByPlanId.get(log.planId) ?? [];
-      linked.push(log);
-      logsByPlanId.set(log.planId, linked);
+    if (record.planId && plansById.has(record.planId)) {
+      const linked = logsByPlanId.get(record.planId) ?? [];
+      linked.push(record);
+      logsByPlanId.set(record.planId, linked);
       continue;
     }
     unplannedMinutes += duration;
     items.push({
-      id: `unplanned:${log.id}`,
-      entryId: log.id,
+      id: `unplanned:${record.id}`,
+      timeblockId: record.id,
       kind: 'unplanned',
-      title: log.title,
-      tagId: log.tagId,
-      color: log.color,
+      title: record.title,
+      tagId: record.tagId,
+      color: record.color,
       planId: null,
       plannedStart: null,
       plannedEnd: null,
-      actualStart: log.startAt,
-      actualEnd: log.endAt,
+      actualStart: record.startAt,
+      actualEnd: record.endAt,
       plannedMinutes: 0,
       actualMinutes: duration,
       diffMinutes: duration,
       startDiffMinutes: 0,
       endDiffMinutes: 0,
-      sortTime: log.startAt.getTime(),
+      sortTime: record.startAt.getTime(),
     });
   }
 
@@ -124,7 +124,7 @@ export function computeTimeblockDayDiffs(
     if (plan.skippedAt) {
       items.push({
         id: `skipped:${plan.id}`,
-        entryId: plan.id,
+        timeblockId: plan.id,
         kind: 'skipped',
         title: plan.title,
         tagId: plan.tagId,
@@ -149,7 +149,7 @@ export function computeTimeblockDayDiffs(
       unrecordedMinutes += duration;
       items.push({
         id: `unrecorded:${plan.id}`,
-        entryId: plan.id,
+        timeblockId: plan.id,
         kind: 'unrecorded',
         title: plan.title,
         tagId: plan.tagId,
@@ -170,7 +170,7 @@ export function computeTimeblockDayDiffs(
     }
 
     const linkedMinutes = linkedLogs.reduce(
-      (total, log) => total + clippedMinutes(log.startAt, log.endAt, bounds),
+      (total, record) => total + clippedMinutes(record.startAt, record.endAt, bounds),
       0,
     );
     const sortedLinkedLogs = [...linkedLogs].sort(
@@ -178,7 +178,7 @@ export function computeTimeblockDayDiffs(
     );
     items.push({
       id: `recorded:${plan.id}`,
-      entryId: plan.id,
+      timeblockId: plan.id,
       kind: 'recorded',
       title: plan.title,
       tagId: plan.tagId,

@@ -444,7 +444,7 @@ export function useDragSelection({
       const p = propsRef.current;
       const handler = p.onDoubleClickProp || p.onTimeRangeSelect;
 
-      // touch-pending: シングルタップは無視（長押しのみでエントリー作成）
+      // touch-pending: シングルタップは無視（長押しのみでTimeblock作成）
       if (mode.type === 'touch-pending') {
         dispatch({ type: 'TOUCH_END' });
         return;

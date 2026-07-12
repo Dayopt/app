@@ -28,18 +28,18 @@ export function MultiDayView({
   dayCount,
   dateRange: _dateRange,
   entries,
-  allEntries: _allEntries,
+  allTimeblocks: _allTimeblocks,
   currentDate,
   centerDate: _centerDate,
   showWeekends = true,
   showActualDiff: _showActualDiff = false,
   dayDiffEntryIds,
   className,
-  disabledEntryId,
+  disabledTimeblockId,
   onEntryClick,
   onEntryContextMenu,
   onUpdateEntry,
-  onDeleteEntry: _onDeleteEntry,
+  onDeleteTimeblock: _onDeleteTimeblock,
   onTimeRangeSelect,
   onViewChange: _onViewChange,
   onNavigatePrev: _onNavigatePrev,
@@ -146,7 +146,7 @@ export function MultiDayView({
                   onEntryContextMenu={onEntryContextMenu}
                   onEventUpdate={handleEventUpdate}
                   onTimeRangeSelect={onTimeRangeSelect}
-                  disabledEntryId={disabledEntryId}
+                  disabledTimeblockId={disabledTimeblockId}
                   dayDiffEntryIds={dayDiffEntryIds}
                   className="h-full"
                 />

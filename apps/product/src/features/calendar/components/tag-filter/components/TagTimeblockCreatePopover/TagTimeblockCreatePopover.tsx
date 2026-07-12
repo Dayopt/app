@@ -82,7 +82,7 @@ export function TagTimeblockCreatePopover({
   isMobile,
 }: TagEntryCreatePopoverProps) {
   const t = useTranslations();
-  const { createLog, createPlan, deleteLog, deletePlan } = useTimeblockWriteMutations();
+  const { createRecord, createPlan, deleteRecord, deletePlan } = useTimeblockWriteMutations();
   const queryClient = useQueryClient();
 
   const draft = useTagDraftStore((s) => s.draft);
@@ -161,7 +161,7 @@ export function TagTimeblockCreatePopover({
     const destination = resolveTimeblockDestination(endDate);
     const laneItems = collectTimeModelLaneItems(
       queryClient,
-      destination === 'plan' ? 'plans' : 'logs',
+      destination === 'plan' ? 'plans' : 'records',
     );
     return hasTimeModelLaneConflict(laneItems, startDate, endDate);
   }, [queryClient, selectedDate, startTime, endTime]);
@@ -189,7 +189,7 @@ export function TagTimeblockCreatePopover({
             onClick: () =>
               destination === 'plan'
                 ? deletePlan.mutate(deletePayload)
-                : deleteLog.mutate(deletePayload),
+                : deleteRecord.mutate(deletePayload),
           },
         });
       } else {
@@ -203,12 +203,12 @@ export function TagTimeblockCreatePopover({
     if (destination === 'plan') {
       createPlan.mutate(input, { onSuccess });
     } else {
-      createLog.mutate(input, { onSuccess });
+      createRecord.mutate(input, { onSuccess });
     }
   }, [
-    createLog,
+    createRecord,
     createPlan,
-    deleteLog,
+    deleteRecord,
     deletePlan,
     endTime,
     handleClose,
@@ -231,7 +231,7 @@ export function TagTimeblockCreatePopover({
       onEndTimeChange={handleEndChange}
       onSubmit={handleSubmit}
       onCancel={handleClose}
-      isSubmitting={createPlan.isPending || createLog.isPending}
+      isSubmitting={createPlan.isPending || createRecord.isPending}
       hasError={hasConflict}
       surface={isMobile ? 'sheet' : 'card'}
     />

@@ -251,8 +251,8 @@ describe('getMetricTrend', () => {
 // =============================================================================
 
 describe('getThresholdStatus', () => {
-  const entryRateDef: MetricDefinition = {
-    id: 'entryRate',
+  const planRateDef: MetricDefinition = {
+    id: 'planRate',
     format: 'percentage',
     trendPositive: 'up',
     thresholds: { good: 0.7, warning: 0.4 },
@@ -276,19 +276,19 @@ describe('getThresholdStatus', () => {
 
   describe('trendPositive: up (higher is better)', () => {
     it('returns good when value >= good threshold', () => {
-      expect(getThresholdStatus(0.8, entryRateDef)).toBe('good');
+      expect(getThresholdStatus(0.8, planRateDef)).toBe('good');
     });
 
     it('returns good at exact good threshold', () => {
-      expect(getThresholdStatus(0.7, entryRateDef)).toBe('good');
+      expect(getThresholdStatus(0.7, planRateDef)).toBe('good');
     });
 
     it('returns warning when value >= warning but < good', () => {
-      expect(getThresholdStatus(0.5, entryRateDef)).toBe('warning');
+      expect(getThresholdStatus(0.5, planRateDef)).toBe('warning');
     });
 
     it('returns critical when value < warning', () => {
-      expect(getThresholdStatus(0.3, entryRateDef)).toBe('critical');
+      expect(getThresholdStatus(0.3, planRateDef)).toBe('critical');
     });
   });
 

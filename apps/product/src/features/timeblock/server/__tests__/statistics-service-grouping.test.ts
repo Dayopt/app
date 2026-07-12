@@ -86,7 +86,7 @@ describe('groupEnergyMap', () => {
     ];
     const result = groupEnergyMap(rows, TZ);
     expect(result).toEqual([
-      { hour: 9, dow: 3, totalMinutes: 60, entryCount: 2, avgFulfillment: 2.5 },
+      { hour: 9, dow: 3, totalMinutes: 60, recordCount: 2, avgFulfillment: 2.5 },
     ]);
   });
 

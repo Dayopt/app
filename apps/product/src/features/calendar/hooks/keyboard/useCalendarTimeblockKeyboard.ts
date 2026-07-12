@@ -17,16 +17,16 @@ import type { ShortcutDef } from './shortcut-registry';
 import { registerShortcuts } from './shortcut-registry';
 
 /** useCalendarEventKeyboard フックのオプション */
-interface UseCalendarEventKeyboardOptions {
+interface UseCalendarTimeblockKeyboardOptions {
   /** ショートカットを有効にするか */
   enabled?: boolean;
-  /** 現在選択中（Inspector表示中）のエントリーを削除する関数 */
-  onDeleteEntry?: (entryId: string) => Promise<void>;
-  /** 現在選択中のエントリーのタイトルを取得する関数 */
+  /** 現在選択中（Inspector表示中）のTimeblockを削除する関数 */
+  onDeleteTimeblock?: (timeblockId: string) => Promise<void>;
+  /** 現在選択中のTimeblockのタイトルを取得する関数 */
   getSelectedEntryTitle?: () => string | null;
-  /** 新規エントリー作成時の初期データ取得関数（現在の日時など） */
+  /** 新規Timeblock作成時の初期データ取得関数（現在の日時など） */
   getInitialEntryData?: () => { start_time?: string; end_time?: string } | undefined;
-  /** 現在選択中のエントリーのコピー情報を取得する関数 */
+  /** 現在選択中のTimeblockのコピー情報を取得する関数 */
   getSelectedEntryForCopy?: () => {
     title: string;
     description: string | null;
@@ -40,69 +40,69 @@ interface UseCalendarEventKeyboardOptions {
 }
 
 /**
- * カレンダー用エントリー操作キーボードショートカット
+ * カレンダー用Timeblock操作キーボードショートカット
  *
  * Google Calendar互換のショートカット：
- * - Delete / Backspace: 選択中エントリーを削除
- * - C: 新規エントリー作成（現在時刻）
- * - Shift + C: 新規エントリー作成（時刻指定なし）
- * - Cmd/Ctrl + C: 選択中のエントリーをコピー
- * - Cmd/Ctrl + V: コピーしたエントリーをペースト（ドラフトモード）
+ * - Delete / Backspace: 選択中Timeblockを削除
+ * - C: 新規Timeblock作成（現在時刻）
+ * - Shift + C: 新規Timeblock作成（時刻指定なし）
+ * - Cmd/Ctrl + C: 選択中のTimeblockをコピー
+ * - Cmd/Ctrl + V: コピーしたTimeblockをペースト（ドラフトモード）
  * - Escape: Inspectorを閉じる
  */
 export function useCalendarEventKeyboard({
   enabled = true,
-  onDeleteEntry,
+  onDeleteTimeblock,
   getSelectedEntryTitle,
   getInitialEntryData,
   getSelectedEntryForCopy,
   getPasteDateForKeyboard,
-}: UseCalendarEventKeyboardOptions) {
+}: UseCalendarTimeblockKeyboardOptions) {
   const t = useTranslations();
-  const { isOpen, entryId, openInspector, closeInspector } = useTimeblockInspectorStore();
-  const { createLog, createPlan } = useTimeblockWriteMutations();
+  const { isOpen, timeblockId, openInspector, closeInspector } = useTimeblockInspectorStore();
+  const { createRecord, createPlan } = useTimeblockWriteMutations();
   // ユーザーの設定タイムゾーン（ペースト時のUTC変換に使用）
   const timezone = useUserPreferences((s: { timezone: string }) => s.timezone);
 
   // コールバックの最新値を参照
-  const onDeleteEntryRef = useRef(onDeleteEntry);
+  const onDeleteTimeblockRef = useRef(onDeleteTimeblock);
   const getSelectedEntryTitleRef = useRef(getSelectedEntryTitle);
   const getInitialEntryDataRef = useRef(getInitialEntryData);
   const getSelectedEntryForCopyRef = useRef(getSelectedEntryForCopy);
   const getPasteDateForKeyboardRef = useRef(getPasteDateForKeyboard);
   const createPlanRef = useRef(createPlan);
-  const createLogRef = useRef(createLog);
+  const createRecordRef = useRef(createRecord);
   const isOpenRef = useRef(isOpen);
-  const entryIdRef = useRef(entryId);
+  const timeblockIdRef = useRef(timeblockId);
   const closeInspectorRef = useRef(closeInspector);
   const openInspectorRef = useRef(openInspector);
   const tRef = useRef(t);
   const timezoneRef = useRef(timezone);
 
   useEffect(() => {
-    onDeleteEntryRef.current = onDeleteEntry;
+    onDeleteTimeblockRef.current = onDeleteTimeblock;
     getSelectedEntryTitleRef.current = getSelectedEntryTitle;
     getInitialEntryDataRef.current = getInitialEntryData;
     getSelectedEntryForCopyRef.current = getSelectedEntryForCopy;
     getPasteDateForKeyboardRef.current = getPasteDateForKeyboard;
     createPlanRef.current = createPlan;
-    createLogRef.current = createLog;
+    createRecordRef.current = createRecord;
     isOpenRef.current = isOpen;
-    entryIdRef.current = entryId;
+    timeblockIdRef.current = timeblockId;
     closeInspectorRef.current = closeInspector;
     openInspectorRef.current = openInspector;
     tRef.current = t;
     timezoneRef.current = timezone;
   }, [
-    onDeleteEntry,
+    onDeleteTimeblock,
     getSelectedEntryTitle,
     getInitialEntryData,
     getSelectedEntryForCopy,
     getPasteDateForKeyboard,
     createPlan,
-    createLog,
+    createRecord,
     isOpen,
-    entryId,
+    timeblockId,
     closeInspector,
     openInspector,
     t,
@@ -135,15 +135,15 @@ export function useCalendarEventKeyboard({
       },
       {
         key: 'Delete',
-        description: '選択中エントリーを削除',
+        description: '選択中Timeblockを削除',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
-          if (isOpenRef.current && entryIdRef.current) {
+          if (isOpenRef.current && timeblockIdRef.current) {
             e.preventDefault();
-            const deleteCallback = onDeleteEntryRef.current;
+            const deleteCallback = onDeleteTimeblockRef.current;
             if (deleteCallback) {
-              void deleteCallback(entryIdRef.current);
+              void deleteCallback(timeblockIdRef.current);
               closeInspectorRef.current();
             }
           }
@@ -151,15 +151,15 @@ export function useCalendarEventKeyboard({
       },
       {
         key: 'Backspace',
-        description: '選択中エントリーを削除（Backspace）',
+        description: '選択中Timeblockを削除（Backspace）',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
-          if (isOpenRef.current && entryIdRef.current) {
+          if (isOpenRef.current && timeblockIdRef.current) {
             e.preventDefault();
-            const deleteCallback = onDeleteEntryRef.current;
+            const deleteCallback = onDeleteTimeblockRef.current;
             if (deleteCallback) {
-              void deleteCallback(entryIdRef.current);
+              void deleteCallback(timeblockIdRef.current);
               closeInspectorRef.current();
             }
           }
@@ -167,15 +167,15 @@ export function useCalendarEventKeyboard({
       },
       {
         key: 'Cmd+C',
-        description: '選択中エントリーをコピー',
+        description: '選択中Timeblockをコピー',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
-          if (isOpenRef.current && entryIdRef.current) {
-            const entryData = getSelectedEntryForCopyRef.current?.();
-            if (entryData) {
+          if (isOpenRef.current && timeblockIdRef.current) {
+            const timeblockData = getSelectedEntryForCopyRef.current?.();
+            if (timeblockData) {
               e.preventDefault();
-              useTimeblockClipboardStore.getState().copyEntry(entryData);
+              useTimeblockClipboardStore.getState().copyTimeblock(timeblockData);
               toast.success(tRef.current('common.toast.copied'));
             }
           }
@@ -183,13 +183,13 @@ export function useCalendarEventKeyboard({
       },
       {
         key: 'Cmd+V',
-        description: 'コピーしたエントリーをペースト',
+        description: 'コピーしたTimeblockをペースト',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           const clipboard = useTimeblockClipboardStore.getState();
-          const copiedEntry = clipboard.copiedEntry;
-          if (copiedEntry) {
+          const copiedTimeblock = clipboard.copiedTimeblock;
+          if (copiedTimeblock) {
             e.preventDefault();
 
             const lastClicked = clipboard.lastClickedPosition;
@@ -200,19 +200,19 @@ export function useCalendarEventKeyboard({
             const tz = timezoneRef.current;
             const startTimeISO = localTimeToUTCISO(
               targetDate,
-              copiedEntry.startHour,
-              copiedEntry.startMinute,
+              copiedTimeblock.startHour,
+              copiedTimeblock.startMinute,
               tz,
             );
-            const endMs = new Date(startTimeISO).getTime() + copiedEntry.duration * 60 * 1000;
+            const endMs = new Date(startTimeISO).getTime() + copiedTimeblock.duration * 60 * 1000;
             const endTimeISO = new Date(endMs).toISOString();
 
             // 保存先は end ルールで一意に決める（コピー元の予定/記録の別を引き継がない）
             const destination = resolveTimeblockDestination(endTimeISO);
             const pasteInput = {
-              title: copiedEntry.title,
-              note: copiedEntry.description ?? undefined,
-              tagId: copiedEntry.tagId ?? undefined,
+              title: copiedTimeblock.title,
+              note: copiedTimeblock.description ?? undefined,
+              tagId: copiedTimeblock.tagId ?? undefined,
               start_at: startTimeISO,
               end_at: endTimeISO,
             };
@@ -225,14 +225,14 @@ export function useCalendarEventKeyboard({
             if (destination === 'plan') {
               createPlanRef.current.mutateAsync(pasteInput).then(onPasted).catch(onPasteFailed);
             } else {
-              createLogRef.current.mutateAsync(pasteInput).then(onPasted).catch(onPasteFailed);
+              createRecordRef.current.mutateAsync(pasteInput).then(onPasted).catch(onPasteFailed);
             }
           }
         },
       },
       {
         key: 'C',
-        description: '新規エントリー作成',
+        description: '新規Timeblock作成',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
@@ -263,13 +263,13 @@ export function useCalendarEventKeyboard({
           if (destination === 'plan') {
             createPlanRef.current.mutateAsync(createInput).then(onCreated).catch(onCreateFailed);
           } else {
-            createLogRef.current.mutateAsync(createInput).then(onCreated).catch(onCreateFailed);
+            createRecordRef.current.mutateAsync(createInput).then(onCreated).catch(onCreateFailed);
           }
         },
       },
       {
         key: 'Shift+C',
-        description: '新規エントリー作成（現在時刻から15分）',
+        description: '新規Timeblock作成（現在時刻から15分）',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
@@ -295,7 +295,7 @@ export function useCalendarEventKeyboard({
           if (destination === 'plan') {
             createPlanRef.current.mutateAsync(createInput).then(onCreated).catch(onCreateFailed);
           } else {
-            createLogRef.current.mutateAsync(createInput).then(onCreated).catch(onCreateFailed);
+            createRecordRef.current.mutateAsync(createInput).then(onCreated).catch(onCreateFailed);
           }
         },
       },

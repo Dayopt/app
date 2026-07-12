@@ -23,7 +23,7 @@ export function TimeblockDestinationChip({ destination }: TimeModelDestinationCh
       )}
       aria-live="polite"
     >
-      {isPlan ? t('plan') : t('log')}
+      {isPlan ? t('plan') : t('record')}
     </span>
   );
 }

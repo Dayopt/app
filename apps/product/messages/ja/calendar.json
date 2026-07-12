@@ -120,8 +120,8 @@
       "allDay": "終日"
     },
     "contextMenu": {
-      "title": "エントリ操作",
-      "delete": "エントリーを削除"
+      "title": "タイムブロック操作",
+      "delete": "タイムブロックを削除"
     },
     "toast": {
       "created": "予定を作成しました",
@@ -223,7 +223,7 @@
       "deleteGroup": {
         "label": "グループを削除",
         "title": "「{name}」グループを削除",
-        "description": "{count}個のタグが削除されます。エントリー自体は削除されません。",
+        "description": "{count}個のタグが削除されます。タイムブロック自体は削除されません。",
         "success": "「{name}」グループを削除しました（{count}個のタグ）",
         "failed": "グループを削除できませんでした。もう一度お試しください"
       },
@@ -273,7 +273,7 @@
       "days": "日",
       "longestStreak": "最長: {days}日",
       "tag": "タグ",
-      "plan": "Entry",
+      "plan": "Plan",
       "done": "Done",
       "percent": "%",
       "total": "合計",
@@ -338,7 +338,7 @@
         "allLabel": "振り返り",
         "description": "表示中のカレンダー日付を含む週の予定と実績。",
         "emptyTitle": "新しい1週間が始まりました",
-        "emptyDescription": "エントリーを記録すると、ここに振り返りが表示されます",
+        "emptyDescription": "タイムブロックを記録すると、ここに振り返りが表示されます",
         "dayEmptyTitle": "まっさらな1日です",
         "dayEmptyDescription": "最初のブロックを記録しましょう",
         "errorTitle": "振り返りデータを読み込めませんでした",
@@ -366,8 +366,8 @@
       "metrics": {
         "totalTime": "合計時間",
         "totalTimeDesc": "記録された合計時間",
-        "entryRate": "計画率",
-        "entryRateDesc": "計画済みエントリの割合",
+        "planRate": "計画率",
+        "planRateDesc": "Plan に紐づく Record の割合",
         "streak": "ストリーク",
         "streakDesc": "現在の連続記録日数",
         "estimationAccuracy": "見積もり精度",
@@ -387,8 +387,8 @@
         "entries": "{count}件"
       },
       "insights": {
-        "entryRateLow": "この期間の活動の大半は計画外でした",
-        "entryRateLowDetail": "翌日の計画を前夜に立てると効果的です",
+        "planRateLow": "この期間の活動の大半は計画外でした",
+        "planRateLowDetail": "翌日の計画を前夜に立てると効果的です",
         "contextSwitchesHigh": "タスク切替が多い期間でした",
         "contextSwitchesHighDetail": "類似タスクをまとめてバッチ処理すると効率的です",
         "blankRateHigh": "空白時間が多めの期間でした",
@@ -411,7 +411,7 @@
         "kpiDiff": "差分",
         "dailyActual": "日別の時間",
         "planActual": "予定と実績",
-        "entryList": "期間内エントリ",
+        "entryList": "期間内タイムブロック",
         "date": "日付",
         "time": "時間",
         "tag": "タグ",
@@ -423,7 +423,7 @@
     "mobile": {
       "touchHint": {
         "title": "長押しで作成",
-        "description": "タイムライン上を長押しして新しいエントリーを作成"
+        "description": "タイムライン上を長押しして新しいタイムブロックを作成"
       }
     },
     "timeGrid": {
@@ -434,7 +434,7 @@
       "description": "ネットワーク接続を確認してもう一度お試しください",
       "retry": "再読み込み",
       "reload": "ページをリロード",
-      "entriesLoadFailed": "エントリーを読み込めませんでした。ページを更新してください"
+      "entriesLoadFailed": "タイムブロックを読み込めませんでした。ページを更新してください"
     }
   }
 }

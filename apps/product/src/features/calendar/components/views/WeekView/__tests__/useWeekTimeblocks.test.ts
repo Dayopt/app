@@ -33,7 +33,7 @@ describe('useWeekTimeblocks', () => {
       useWeekTimeblocks({ weekDates, events: [], timezone: 'UTC' }),
     );
 
-    expect(result.current.entryPositions).toEqual([]);
+    expect(result.current.timeblockPositions).toEqual([]);
     expect(result.current.maxConcurrentEntries).toBe(0);
   });
 
@@ -61,10 +61,10 @@ describe('useWeekTimeblocks', () => {
       }),
     );
 
-    expect(result.current.entryPositions).toHaveLength(2);
+    expect(result.current.timeblockPositions).toHaveLength(2);
     // 月曜 = dayIndex 0, 水曜 = dayIndex 2
-    const mondayPos = result.current.entryPositions.find((p) => p.plan.id === 'monday');
-    const wedPos = result.current.entryPositions.find((p) => p.plan.id === 'wednesday');
+    const mondayPos = result.current.timeblockPositions.find((p) => p.plan.id === 'monday');
+    const wedPos = result.current.timeblockPositions.find((p) => p.plan.id === 'wednesday');
     expect(mondayPos?.dayIndex).toBe(0);
     expect(wedPos?.dayIndex).toBe(2);
   });
@@ -86,7 +86,7 @@ describe('useWeekTimeblocks', () => {
       }),
     );
 
-    const position = result.current.entryPositions.find((p) => p.plan.id === 'tokyo-midnight');
+    const position = result.current.timeblockPositions.find((p) => p.plan.id === 'tokyo-midnight');
     expect(position?.dayIndex).toBe(0);
     expect(result.current.entriesByDate['2026-03-30']).toHaveLength(1);
   });
@@ -108,7 +108,7 @@ describe('useWeekTimeblocks', () => {
       }),
     );
 
-    expect(result.current.entryPositions).toHaveLength(0);
+    expect(result.current.timeblockPositions).toHaveLength(0);
   });
 
   it('同日の重複エントリで正しい位置が計算される', () => {
@@ -135,7 +135,7 @@ describe('useWeekTimeblocks', () => {
       }),
     );
 
-    expect(result.current.entryPositions).toHaveLength(2);
+    expect(result.current.timeblockPositions).toHaveLength(2);
     expect(result.current.maxConcurrentEntries).toBe(2);
   });
 
@@ -165,8 +165,10 @@ describe('useWeekTimeblocks', () => {
       }),
     );
 
-    const recordPosition = result.current.entryPositions.find((p) => p.plan.id === 'gap-record');
-    const plannedPosition = result.current.entryPositions.find((p) => p.plan.id === 'planned');
+    const recordPosition = result.current.timeblockPositions.find(
+      (p) => p.plan.id === 'gap-record',
+    );
+    const plannedPosition = result.current.timeblockPositions.find((p) => p.plan.id === 'planned');
 
     expect(recordPosition?.zIndex).toBeGreaterThan(plannedPosition?.zIndex ?? 0);
   });

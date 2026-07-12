@@ -41,7 +41,7 @@ function withTime(date: Date, value: string): Date {
   return next;
 }
 
-/** Plan / Log 共通エディタ。保存先は end_at から表示専用で導出する。 */
+/** Plan / Record 共通エディタ。保存先は end_at から表示専用で導出する。 */
 export function TimeblockEditor({ value, onChange, onSubmit, isSubmitting }: TimeModelEditorProps) {
   const t = useTranslations('timeblock.editor');
   const destination = resolveTimeblockDestination(value.endAt);
@@ -88,7 +88,7 @@ export function TimeblockEditor({ value, onChange, onSubmit, isSubmitting }: Tim
           onStartChange={(next) => onChange({ ...value, startAt: withTime(value.startAt, next) })}
           onEndChange={(next) => onChange({ ...value, endAt: withTime(value.endAt, next) })}
           disabled={timeLocked || isSubmitting === true}
-          isPrimary={destination === 'log'}
+          isPrimary={destination === 'record'}
         />
       </div>
       <div className="space-y-1">

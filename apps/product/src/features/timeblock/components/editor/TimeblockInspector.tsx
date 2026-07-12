@@ -3,12 +3,12 @@
 /**
  * Time Model Inspector（Level 1）
  *
- * plans / logs を対象にした Inspector シェル:
- * - store 読み取り（entryId + entryKind）、kind 別 getById、loading/empty 分岐
+ * plans / records を対象にした Inspector シェル:
+ * - store 読み取り（timeblockId + timeblockKind）、kind 別 getById、loading/empty 分岐
  * - レスポンシブ分岐（mobile=Drawer / PC=FloatingPopover）
  * - keyboard ショートカット、URL同期
  *
- * 旧 EntryInspector（entries 用）の置き換え。旧実装は Step 9 で削除する。
+ * 旧 TimeblockInspector（entries 用）の置き換え。旧実装は Step 9 で削除する。
  */
 
 import { Suspense, useCallback } from 'react';
@@ -38,34 +38,34 @@ interface TimeModelInspectorProps {
   onViewStats?: ((tagId: string) => void) | undefined;
 }
 
-/** plans / logs 対応 Inspector のトップレベル（モバイル=Drawer / PC=FloatingPopover） */
+/** plans / records 対応 Inspector のトップレベル（モバイル=Drawer / PC=FloatingPopover） */
 export function TimeblockInspector({ onViewStats }: TimeModelInspectorProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
   const isOpen = useTimeblockInspectorStore((state) => state.isOpen);
-  const entryId = useTimeblockInspectorStore((state) => state.entryId);
-  const entryKind = useTimeblockInspectorStore((state) => state.entryKind);
+  const timeblockId = useTimeblockInspectorStore((state) => state.timeblockId);
+  const timeblockKind = useTimeblockInspectorStore((state) => state.timeblockKind);
   const anchorRect = useTimeblockInspectorStore((state) => state.anchorRect);
   const closeInspector = useTimeblockInspectorStore((state) => state.closeInspector);
 
   const planQuery = api.plans.getById.useQuery(
-    { id: entryId ?? '' },
-    { enabled: isOpen && !!entryId && entryKind === 'plan' },
+    { id: timeblockId ?? '' },
+    { enabled: isOpen && !!timeblockId && timeblockKind === 'plan' },
   );
   const logQuery = api.records.getById.useQuery(
-    { id: entryId ?? '' },
-    { enabled: isOpen && !!entryId && entryKind === 'log' },
+    { id: timeblockId ?? '' },
+    { enabled: isOpen && !!timeblockId && timeblockKind === 'record' },
   );
   // 過去 plan の記録済み判定（RecordPlanButton / skip 表示の切替に使う）
   const recordedQuery = api.records.list.useQuery(
-    { planId: entryId ?? '', limit: 1 },
-    { enabled: isOpen && !!entryId && entryKind === 'plan' },
+    { planId: timeblockId ?? '', limit: 1 },
+    { enabled: isOpen && !!timeblockId && timeblockKind === 'plan' },
   );
 
-  const activeQuery = entryKind === 'plan' ? planQuery : logQuery;
-  const plan = entryKind === 'plan' ? planQuery.data : undefined;
-  const log = entryKind === 'log' ? logQuery.data : undefined;
+  const activeQuery = timeblockKind === 'plan' ? planQuery : logQuery;
+  const plan = timeblockKind === 'plan' ? planQuery.data : undefined;
+  const log = timeblockKind === 'record' ? logQuery.data : undefined;
   const target = plan ?? log;
 
   const handleClose = useCallback(() => {
@@ -105,8 +105,8 @@ export function TimeblockInspector({ onViewStats }: TimeModelInspectorProps) {
   } else {
     content = (
       <TimeblockInspectorForm
-        key={`${entryKind}:${target.id}:${target.updated_at}`}
-        kind={entryKind}
+        key={`${timeblockKind}:${target.id}:${target.updated_at}`}
+        kind={timeblockKind}
         plan={plan}
         log={log}
         isRecorded={(recordedQuery.data?.length ?? 0) > 0}

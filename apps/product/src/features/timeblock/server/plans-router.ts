@@ -132,7 +132,7 @@ export const plansRouter = createTRPCRouter({
     }),
 
   confirmDay: protectedProcedure
-    .meta({ description: 'Record unskipped past plans in a day range as logs' })
+    .meta({ description: 'Record unskipped past plans in a day range as records' })
     .input(confirmDaySchema)
     .mutation(async ({ ctx, input }) => {
       const service = createPlanService(ctx.supabase);

@@ -61,21 +61,22 @@ export function useTimeblocksByDate({
       }
 
       // より柔軟な日付正規化
-      const entryStart =
+      const timeblockStart =
         entry.startDate instanceof Date ? entry.startDate : new Date(entry.startDate);
 
       // 無効な日付は除外
-      if (isNaN(entryStart.getTime())) {
+      if (isNaN(timeblockStart.getTime())) {
         return;
       }
 
       // マルチデイエントリの場合は複数日にまたがって表示
       if (entry.isMultiDay && entry.endDate) {
-        const entryEnd = entry.endDate instanceof Date ? entry.endDate : new Date(entry.endDate);
+        const timeblockEnd =
+          entry.endDate instanceof Date ? entry.endDate : new Date(entry.endDate);
 
-        if (!isNaN(entryEnd.getTime())) {
-          const startKey = getDateKey(entryStart, timezone);
-          const endKey = getDateKey(entryEnd, timezone);
+        if (!isNaN(timeblockEnd.getTime())) {
+          const startKey = getDateKey(timeblockStart, timezone);
+          const endKey = getDateKey(timeblockEnd, timezone);
           // 期間内の日付のみ処理
           dates.forEach((date) => {
             const dateKey = getDateKey(date, timezone);
@@ -90,10 +91,10 @@ export function useTimeblocksByDate({
       }
 
       // 単日エントリの場合
-      const entryDateKey = getDateKey(entryStart, timezone);
+      const timeblockDateKey = getDateKey(timeblockStart, timezone);
       dates.forEach((date) => {
         const dateKey = getDateKey(date, timezone);
-        if (entryDateKey === dateKey) {
+        if (timeblockDateKey === dateKey) {
           if (grouped[dateKey]) {
             grouped[dateKey].push(entry);
           }

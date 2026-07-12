@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { TimeblockDestinationChip } from './TimeblockDestinationChip';
 
 const meta = {
-  title: 'Product/Features/Entry/TimeblockDestinationChip',
+  title: 'Product/Features/Timeblock/TimeblockDestinationChip',
   component: TimeblockDestinationChip,
   tags: ['autodocs'],
   parameters: { layout: 'padded' },
@@ -16,7 +16,7 @@ type Story = StoryObj<typeof meta>;
 export const Plan: Story = { args: { destination: 'plan' } };
 
 /** 過去の終了時刻から導出された記録の保存先。 */
-export const Log: Story = { args: { destination: 'log' } };
+export const Record: Story = { args: { destination: 'record' } };
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
@@ -24,7 +24,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex items-center gap-3">
       <TimeblockDestinationChip destination="plan" />
-      <TimeblockDestinationChip destination="log" />
+      <TimeblockDestinationChip destination="record" />
     </div>
   ),
 };

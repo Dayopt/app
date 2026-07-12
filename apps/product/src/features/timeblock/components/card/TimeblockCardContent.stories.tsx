@@ -11,7 +11,7 @@ import { TimeblockCardContent } from './TimeblockCardContent';
  * TimeblockCard の内側で使われるが、独立してテスト可能な純粋コンポーネント。
  */
 const meta = {
-  title: 'Product/Features/Entry/CardContent',
+  title: 'Product/Features/Timeblock/CardContent',
   parameters: {
     layout: 'padded',
   },

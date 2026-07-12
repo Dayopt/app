@@ -36,7 +36,7 @@ interface GhostRendererProps {
 
 /** GhostRendererのrenderGhostコールバックに渡されるパラメータ */
 interface GhostRenderParams {
-  entryId: string;
+  timeblockId: string;
   previewTime: TimeRange;
   isOverlapping: boolean;
   /** 'dragging' or 'resizing' */
@@ -197,7 +197,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
     />
   ) : (
     renderGhost?.({
-      entryId: state.entryId,
+      timeblockId: state.timeblockId,
       previewTime: state.previewTime,
       isOverlapping: false,
       mode: 'dragging',

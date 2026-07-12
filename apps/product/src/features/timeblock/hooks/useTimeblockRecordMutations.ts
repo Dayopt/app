@@ -20,7 +20,7 @@ function isTimeOverlapError(error: { message: string }): boolean {
   return error.message.includes('TIME_OVERLAP');
 }
 
-/** Plan → Log の記録導線に共通の rollback / 再検証を提供する。 */
+/** Plan → Record の記録導線に共通の rollback / 再検証を提供する。 */
 export function useTimeblockRecordMutations() {
   const utils = api.useUtils();
   const queryClient = useQueryClient();
@@ -31,8 +31,8 @@ export function useTimeblockRecordMutations() {
       await Promise.all([utils.plans.list.cancel(), utils.records.list.cancel()]);
       return { snapshots: queryClient.getQueriesData({ predicate: isTimeModelListQuery }) };
     },
-    onSuccess: (log) => {
-      utils.records.list.setData(undefined, (old) => (old ? [...old, log] : [log]));
+    onSuccess: (record) => {
+      utils.records.list.setData(undefined, (old) => (old ? [...old, record] : [record]));
       toast.success(t('toast.recorded'));
     },
     onError: (error, _input, context) => {
@@ -52,8 +52,8 @@ export function useTimeblockRecordMutations() {
       await Promise.all([utils.plans.list.cancel(), utils.records.list.cancel()]);
       return { snapshots: queryClient.getQueriesData({ predicate: isTimeModelListQuery }) };
     },
-    onSuccess: (logs) => {
-      utils.records.list.setData(undefined, (old) => (old ? [...old, ...logs] : logs));
+    onSuccess: (records) => {
+      utils.records.list.setData(undefined, (old) => (old ? [...old, ...records] : records));
       toast.success(t('toast.dayConfirmed'));
     },
     onError: (error, _input, context) => {

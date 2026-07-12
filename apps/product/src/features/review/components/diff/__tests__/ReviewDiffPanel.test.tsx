@@ -33,7 +33,7 @@ function diff(overrides: Partial<ReviewDiffResult> = {}): ReviewDiffResult {
     items: [
       {
         id: 'shifted:entry-1',
-        entryId: 'entry-1',
+        timeblockId: 'entry-1',
         kind: 'shifted',
         title: 'Focus',
         tagId: 'tag-1',
@@ -81,7 +81,7 @@ describe('ReviewDiffPanel', () => {
     expect(screen.getByText('Focus')).toBeInTheDocument();
   });
 
-  it('item click で entryId を渡す', async () => {
+  it('item click で timeblockId を渡す', async () => {
     const user = userEvent.setup();
     const onItemClick = vi.fn();
 

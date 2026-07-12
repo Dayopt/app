@@ -24,23 +24,23 @@ describe('computeTimeblockDayDiffs', () => {
     expect(result.items[0]?.kind).toBe('unrecorded');
   });
 
-  it('複数 Log を一つの Plan に合算する', () => {
+  it('複数 Record を一つの Plan に合算する', () => {
     const result = computeTimeblockDayDiffs(
       [plan],
       [
         {
-          id: 'log-1',
+          id: 'record-1',
           planId: 'plan-1',
-          title: 'Log',
+          title: 'Record',
           tagId: 'tag-1',
           color: 'blue',
           startAt: at(9),
           endAt: at(10),
         },
         {
-          id: 'log-2',
+          id: 'record-2',
           planId: 'plan-1',
-          title: 'Log',
+          title: 'Record',
           tagId: 'tag-1',
           color: 'blue',
           startAt: at(10),
@@ -55,17 +55,20 @@ describe('computeTimeblockDayDiffs', () => {
     });
   });
 
-  it('Plan のない、または削除済み Plan の Log を予定外として扱う', () => {
-    const log = {
-      id: 'log-1',
+  it('Plan のない、または削除済み Plan の Record を予定外として扱う', () => {
+    const record = {
+      id: 'record-1',
       planId: 'deleted',
-      title: 'Log',
+      title: 'Record',
       tagId: null,
       color: 'gray',
       startAt: at(9),
       endAt: at(10),
     };
-    const result = computeTimeblockDayDiffs([{ ...plan, id: 'deleted', deletedAt: at(11) }], [log]);
+    const result = computeTimeblockDayDiffs(
+      [{ ...plan, id: 'deleted', deletedAt: at(11) }],
+      [record],
+    );
     expect(result.summary.unplannedMinutes).toBe(60);
     expect(result.items[0]?.kind).toBe('unplanned');
   });

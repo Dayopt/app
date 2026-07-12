@@ -1,6 +1,6 @@
 export { aggregateDayOfWeekDistribution } from './day-of-week-distribution';
 export {
-  aggregatePlanLogEstimationAccuracy,
+  aggregatePlanRecordEstimationAccuracy,
   transformEstimationAccuracy,
 } from './estimation-accuracy';
 export type { EstimationAccuracyDbRow, EstimationAccuracyTagLookup } from './estimation-accuracy';

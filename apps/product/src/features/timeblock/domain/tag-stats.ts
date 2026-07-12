@@ -10,12 +10,12 @@
 
 interface TagStatsRow {
   tag_id: string;
-  entry_count: number;
+  record_count: number;
   last_used: string | null;
 }
 
 interface TagStatsResult {
-  /** tagId → entry_count の Record */
+  /** tagId → record_count の Record */
   counts: Record<string, number>;
   /** tagId → last_used 日付文字列。null だった row は含まない */
   lastUsed: Record<string, string>;
@@ -36,7 +36,7 @@ export function aggregateTagStats(
 
   if (rows) {
     for (const row of rows) {
-      counts[row.tag_id] = row.entry_count;
+      counts[row.tag_id] = row.record_count;
       if (row.last_used) {
         lastUsed[row.tag_id] = row.last_used;
       }

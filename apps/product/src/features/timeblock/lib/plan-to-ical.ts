@@ -1,5 +1,5 @@
 /**
- * Entry[] → iCalendar 文字列変換
+ * Timeblock[] → iCalendar 文字列変換
  *
  * RFC 5545 準拠の VCALENDAR を生成。
  * Google Calendar / Apple Calendar などで購読可能。
@@ -59,7 +59,7 @@ function foldLine(line: string): string {
 }
 
 /**
- * Entry配列からiCalendar文字列を生成
+ * Timeblock配列からiCalendar文字列を生成
  */
 export function plansToICal(entries: ICalEntry[]): string {
   const lines: string[] = [

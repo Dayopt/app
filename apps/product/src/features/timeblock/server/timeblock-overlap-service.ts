@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import type { ServiceSupabaseClient } from './types';
 
@@ -13,8 +14,8 @@ interface PlanOverlapOptions extends TimeModelOverlapOptions {
   excludePlanId?: string;
 }
 
-interface LogOverlapOptions extends TimeModelOverlapOptions {
-  excludeLogId?: string;
+interface RecordOverlapOptions extends TimeModelOverlapOptions {
+  excludeRecordId?: string;
 }
 
 export class TimeblockOverlapService {
@@ -41,21 +42,21 @@ export class TimeblockOverlapService {
     return data?.map((row) => row.id) ?? [];
   }
 
-  async checkLogs(options: LogOverlapOptions): Promise<string[]> {
-    const { userId, startAt, endAt, excludeLogId } = options;
+  async checkRecords(options: RecordOverlapOptions): Promise<string[]> {
+    const { userId, startAt, endAt, excludeRecordId } = options;
     let query = this.supabase
-      .from('logs')
+      .from(databaseTables.records)
       .select('id')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .lt('start_at', endAt)
       .gt('end_at', startAt);
 
-    if (excludeLogId) query = query.neq('id', excludeLogId);
+    if (excludeRecordId) query = query.neq('id', excludeRecordId);
 
     const { data, error } = await query;
     if (error) {
-      logger.error('Log overlap check failed', { error });
+      logger.error('Record overlap check failed', { error });
       return [];
     }
 

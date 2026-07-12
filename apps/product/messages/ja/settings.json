@@ -226,9 +226,9 @@
       "showWeekends": "週末を表示",
       "showWeekNumbers": "週番号を表示",
       "defaultTaskSettings": "作成時のデフォルト",
-      "defaultTaskSettingsDesc": "新しいエントリー作成時のデフォルト動作",
+      "defaultTaskSettingsDesc": "新しいタイムブロック作成時のデフォルト動作",
       "defaultDuration": "デフォルト時間",
-      "defaultDurationDesc": "新しいエントリー作成時のデフォルト時間",
+      "defaultDurationDesc": "新しいタイムブロック作成時のデフォルト時間",
       "selectDuration": "時間を選択",
       "duration15min": "15分",
       "duration30min": "30分",
@@ -289,7 +289,7 @@
       "startupScreenDesc": "アプリを開いたときに表示する画面を選択",
       "selectStartupScreen": "起動画面を選択",
       "startupLast": "前回の画面を表示",
-      "startupPlan": "エントリー",
+      "startupPlan": "Plan",
       "startupCalendar": "カレンダー"
     },
     "common": {
@@ -351,7 +351,7 @@
         "csvComingSoon": "近日公開",
         "includedDataTitle": "エクスポートに含まれるデータ",
         "profileInfo": "プロフィール情報",
-        "tasksEvents": "エントリー",
+        "tasksEvents": "タイムブロック",
         "tagSettings": "タグ設定",
         "calendarSettings": "カレンダー設定",
         "otherSettings": "その他の設定"
@@ -388,12 +388,12 @@
       "deletion": {
         "title": "データ削除",
         "deleteBlocks": "全ブロックを削除",
-        "deleteBlocksDesc": "すべてのエントリーを削除します。タグと設定は残ります。",
+        "deleteBlocksDesc": "すべてのタイムブロックを削除します。タグと設定は残ります。",
         "deleteAllData": "全データを削除",
         "deleteAllDataDesc": "タグや設定を含むすべてのデータを削除します。アカウントは残ります。",
         "confirmTitle": "本当に削除しますか？",
-        "confirmDeleteBlocks": "すべてのエントリーが完全に削除されます。タグと設定は保持されます。",
-        "confirmDeleteAll": "すべてのデータが完全に削除されます。アカウントは残りますが、エントリー、タグ、設定はすべて削除されます。",
+        "confirmDeleteBlocks": "すべてのタイムブロックが完全に削除されます。タグと設定は保持されます。",
+        "confirmDeleteAll": "すべてのデータが完全に削除されます。アカウントは残りますが、タイムブロック、タグ、設定はすべて削除されます。",
         "typeToConfirm": "確認のため「{keyword}」と入力してください",
         "confirmKeyword": "削除",
         "deleting": "削除中..."

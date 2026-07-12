@@ -16,7 +16,7 @@ const estimationRows = [
     avgPlannedMinutes: 120,
     avgActualMinutes: 148,
     avgDeviationMinutes: 28,
-    entryCount: 5,
+    recordCount: 5,
   },
   {
     tagId: '2',
@@ -25,7 +25,7 @@ const estimationRows = [
     avgPlannedMinutes: 60,
     avgActualMinutes: 48,
     avgDeviationMinutes: -12,
-    entryCount: 7,
+    recordCount: 7,
   },
   {
     tagId: '3',
@@ -34,7 +34,7 @@ const estimationRows = [
     avgPlannedMinutes: 80,
     avgActualMinutes: 65,
     avgDeviationMinutes: -15,
-    entryCount: 3,
+    recordCount: 3,
   },
 ];
 

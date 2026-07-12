@@ -19,7 +19,7 @@ export interface CumulativeTimeRpcInner {
   totalMinutes: number;
 }
 
-/** `unpackEntryRate` の入力 inner shape (RPC は `planRate` field を含む) */
+/** `unpackPlanRate` の入力 inner shape */
 export interface PlanRateRpcInner {
   totalEntries: number;
   plannedEntries: number;
@@ -47,19 +47,18 @@ export function unpackCumulativeTime(data: unknown): { totalMinutes: number } {
 }
 
 /**
- * エントリ率 KPI を default 埋めして unpack。
- * RPC の `planRate` field は `entryRate` field として出力する（既存契約の rename）。
+ * 計画率 KPI を default 埋めして unpack。
  */
-export function unpackEntryRate(data: unknown): {
+export function unpackPlanRate(data: unknown): {
   totalEntries: number;
   plannedEntries: number;
-  entryRate: number;
+  planRate: number;
 } {
   const result = data as Partial<PlanRateRpcInner> | null | undefined;
   return {
     totalEntries: result?.totalEntries ?? 0,
     plannedEntries: result?.plannedEntries ?? 0,
-    entryRate: result?.planRate ?? 0,
+    planRate: result?.planRate ?? 0,
   };
 }
 

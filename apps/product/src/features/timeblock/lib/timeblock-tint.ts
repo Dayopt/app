@@ -1,5 +1,5 @@
 /**
- * Entry カードの本体背景 tint を計算する純粋関数。
+ * Timeblock カードの本体背景 tint を計算する純粋関数。
  *
  * TimeblockCard の actual layer 背景（`color-mix(in oklch, accentColor 18%, var(--background))`）と
  * 同一の式を、ドラッグ／タグパレット／ドラフトのプレビュー側でも共有するための single source。

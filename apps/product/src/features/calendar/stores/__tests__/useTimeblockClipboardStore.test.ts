@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import type { ClipboardEntry } from '../useTimeblockClipboardStore';
+import type { ClipboardTimeblock } from '../useTimeblockClipboardStore';
 import { useTimeblockClipboardStore } from '../useTimeblockClipboardStore';
 
-const mockEntry: ClipboardEntry = {
+const mockEntry: ClipboardTimeblock = {
   title: 'テストエントリ',
   description: '説明文',
   duration: 60,
@@ -21,40 +21,40 @@ describe('useTimeblockClipboardStore', () => {
   describe('初期状態', () => {
     it('クリップボードが空', () => {
       const state = useTimeblockClipboardStore.getState();
-      expect(state.copiedEntry).toBeNull();
+      expect(state.copiedTimeblock).toBeNull();
       expect(state.lastClickedPosition).toBeNull();
     });
 
-    it('hasCopiedEntryがfalse', () => {
-      expect(useTimeblockClipboardStore.getState().hasCopiedEntry()).toBe(false);
+    it('hasCopiedTimeblockがfalse', () => {
+      expect(useTimeblockClipboardStore.getState().hasCopiedTimeblock()).toBe(false);
     });
   });
 
-  describe('copyEntry', () => {
+  describe('copyTimeblock', () => {
     it('エントリをコピーできる', () => {
-      useTimeblockClipboardStore.getState().copyEntry(mockEntry);
-      expect(useTimeblockClipboardStore.getState().copiedEntry).toEqual(mockEntry);
+      useTimeblockClipboardStore.getState().copyTimeblock(mockEntry);
+      expect(useTimeblockClipboardStore.getState().copiedTimeblock).toEqual(mockEntry);
     });
 
-    it('hasCopiedEntryがtrueになる', () => {
-      useTimeblockClipboardStore.getState().copyEntry(mockEntry);
-      expect(useTimeblockClipboardStore.getState().hasCopiedEntry()).toBe(true);
+    it('hasCopiedTimeblockがtrueになる', () => {
+      useTimeblockClipboardStore.getState().copyTimeblock(mockEntry);
+      expect(useTimeblockClipboardStore.getState().hasCopiedTimeblock()).toBe(true);
     });
 
     it('上書きコピーできる', () => {
-      useTimeblockClipboardStore.getState().copyEntry(mockEntry);
+      useTimeblockClipboardStore.getState().copyTimeblock(mockEntry);
       const newEntry = { ...mockEntry, title: '新しいエントリ' };
-      useTimeblockClipboardStore.getState().copyEntry(newEntry);
-      expect(useTimeblockClipboardStore.getState().copiedEntry?.title).toBe('新しいエントリ');
+      useTimeblockClipboardStore.getState().copyTimeblock(newEntry);
+      expect(useTimeblockClipboardStore.getState().copiedTimeblock?.title).toBe('新しいエントリ');
     });
   });
 
   describe('clearClipboard', () => {
     it('クリップボードをクリアできる', () => {
-      useTimeblockClipboardStore.getState().copyEntry(mockEntry);
+      useTimeblockClipboardStore.getState().copyTimeblock(mockEntry);
       useTimeblockClipboardStore.getState().clearClipboard();
-      expect(useTimeblockClipboardStore.getState().copiedEntry).toBeNull();
-      expect(useTimeblockClipboardStore.getState().hasCopiedEntry()).toBe(false);
+      expect(useTimeblockClipboardStore.getState().copiedTimeblock).toBeNull();
+      expect(useTimeblockClipboardStore.getState().hasCopiedTimeblock()).toBe(false);
     });
   });
 

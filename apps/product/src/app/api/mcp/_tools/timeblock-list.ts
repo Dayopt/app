@@ -16,7 +16,7 @@ const inputSchema = {
   limit: z.number().int().min(1).max(100).optional(),
 };
 
-/** Step 8: Plan / Log を個別に公開する。entries.list は互換のため残す。 */
+/** Step 8: Plan / Record を個別に公開する。entries.list は互換のため残す。 */
 export function registerTimeblockListTools(server: McpServer, ctx: McpRequestContext) {
   for (const model of ['plans', 'records'] as const) {
     server.registerTool(

@@ -25,7 +25,7 @@ export function useTimeblockPosition(
   // useTimeblockLayoutCalculator で列配置を計算
   const layouts = useTimeblockLayoutCalculator(entries);
 
-  const entryPositions = useMemo(() => {
+  const timeblockPositions = useMemo(() => {
     const positions = new Map<string, TimeblockCardPosition>();
 
     if (layouts.length === 0) return positions;
@@ -49,5 +49,5 @@ export function useTimeblockPosition(
     return positions;
   }, [layouts, hourHeight]);
 
-  return entryPositions;
+  return timeblockPositions;
 }

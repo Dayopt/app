@@ -12,7 +12,7 @@ import { createRecordService } from './service-index';
 
 export const recordsRouter = createTRPCRouter({
   list: protectedProcedure
-    .meta({ description: 'Log list for the split time model' })
+    .meta({ description: 'Record list for the split time model' })
     .input(recordFilterSchema.optional())
     .query(async ({ ctx, input }) => {
       const service = createRecordService(ctx.supabase);
@@ -24,12 +24,12 @@ export const recordsRouter = createTRPCRouter({
     }),
 
   getById: protectedProcedure
-    .meta({ description: 'Log detail for the split time model' })
+    .meta({ description: 'Record detail for the split time model' })
     .input(recordIdSchema)
     .query(async ({ ctx, input }) => {
       const service = createRecordService(ctx.supabase);
       try {
-        return await service.getById({ userId: ctx.userId, logId: input.id });
+        return await service.getById({ userId: ctx.userId, recordId: input.id });
       } catch (error) {
         handleServiceError(error);
       }
@@ -60,7 +60,7 @@ export const recordsRouter = createTRPCRouter({
       try {
         return await service.update({
           userId: ctx.userId,
-          logId: input.id,
+          recordId: input.id,
           input: input.data,
           expectedUpdatedAt: input.expectedUpdatedAt,
         });
@@ -75,7 +75,7 @@ export const recordsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const service = createRecordService(ctx.supabase);
       try {
-        return await service.delete({ userId: ctx.userId, logId: input.id });
+        return await service.delete({ userId: ctx.userId, recordId: input.id });
       } catch (error) {
         handleServiceError(error);
       }
@@ -87,7 +87,7 @@ export const recordsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const service = createRecordService(ctx.supabase);
       try {
-        return await service.restore({ userId: ctx.userId, logId: input.id });
+        return await service.restore({ userId: ctx.userId, recordId: input.id });
       } catch (error) {
         handleServiceError(error);
       }

@@ -1,14 +1,14 @@
 /**
- * `logs` テーブル行 -> `RecordEvent` 変換アダプター（Step 5、read 側専用）
+ * Record の物理テーブル `logs` の行 -> `RecordEvent` 変換アダプター（read 側専用）
  *
  * `entry-adapter.ts`（entries -> CalendarEvent）と同じ配置パターンで、
- * logs -> RecordEvent の射影を担う。書き込み・DnD 保存先判定は Step 6。
+ * 物理 `logs` -> RecordEvent の境界射影を担う。
  */
 
 import type { RecordEvent } from '@/features/timeblock';
 import { convertToTimezone } from '@/lib/date/timezone';
 
-/** `logs` テーブル行のうち RecordEvent 射影に必要な最小 shape */
+/** Record の物理テーブル `logs` のうち RecordEvent 射影に必要な最小 shape */
 export interface RecordEventSourceRow {
   id: string;
   title: string;
@@ -28,7 +28,7 @@ function truncateToMinute(date: Date): Date {
   return d;
 }
 
-interface LogRowToLogEventOptions {
+interface RecordRowToRecordEventOptions {
   timezone: string;
   /** 紐づく plan の所要時間（分）。`plan_id` が無い、または呼び出し側で未解決なら null/undefined */
   plannedMinutes?: number | null | undefined;
@@ -36,7 +36,7 @@ interface LogRowToLogEventOptions {
 
 export function recordRowToRecordEvent(
   row: RecordEventSourceRow,
-  options: LogRowToLogEventOptions,
+  options: RecordRowToRecordEventOptions,
 ): RecordEvent {
   const startDate = truncateToMinute(new Date(row.start_at));
   const endDate = truncateToMinute(new Date(row.end_at));
@@ -63,7 +63,7 @@ export function recordRowToRecordEvent(
   };
 }
 
-interface ExpandLogRowsOptions {
+interface ExpandRecordRowsOptions {
   timezone: string;
   /** plan id -> 所要時間（分）。1 plan に複数 log が紐づく場合も同じ plan 時間を参照する */
   plannedMinutesByPlanId: ReadonlyMap<string, number>;
@@ -81,7 +81,7 @@ interface ExpandLogRowsOptions {
  */
 export function expandRecordRowsToRecordEvents(
   rows: ReadonlyArray<RecordEventSourceRow>,
-  options: ExpandLogRowsOptions,
+  options: ExpandRecordRowsOptions,
 ): RecordEvent[] {
   // `recordRowToRecordEvent` が truncateToMinute 済みの `duration` を単一の情報源として使う
   // （ここで生の start_at/end_at から再計算すると truncate 前の秒数が混ざる）。
@@ -90,7 +90,7 @@ export function expandRecordRowsToRecordEvents(
   );
 
   const totalActualMinutesByPlanId = new Map<string, number>();
-  const primaryLogIdByPlanId = new Map<string, string>();
+  const primaryRecordIdByPlanId = new Map<string, string>();
 
   rows.forEach((row, i) => {
     if (row.plan_id == null) return;
@@ -100,16 +100,16 @@ export function expandRecordRowsToRecordEvents(
       (totalActualMinutesByPlanId.get(row.plan_id) ?? 0) + events[i]!.duration,
     );
 
-    const currentPrimaryId = primaryLogIdByPlanId.get(row.plan_id);
+    const currentPrimaryId = primaryRecordIdByPlanId.get(row.plan_id);
     if (!currentPrimaryId || row.source === 'from_plan') {
-      primaryLogIdByPlanId.set(row.plan_id, row.id);
+      primaryRecordIdByPlanId.set(row.plan_id, row.id);
     }
   });
 
   return rows.map((row, i) => {
     const event = events[i]!;
 
-    const isPrimary = row.plan_id != null && primaryLogIdByPlanId.get(row.plan_id) === row.id;
+    const isPrimary = row.plan_id != null && primaryRecordIdByPlanId.get(row.plan_id) === row.id;
     if (!isPrimary || row.plan_id == null) return event;
 
     const plannedMinutes = options.plannedMinutesByPlanId.get(row.plan_id);

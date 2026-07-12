@@ -153,7 +153,7 @@ describe('StatisticsService.getEstimationAccuracy', () => {
 
     const result = await service.getEstimationAccuracy(USER_ID);
 
-    // p2 の log は auto_migrated なので実績なし扱い → entry_count は p1 のみで 1 件 → HAVING で除外
+    // p2 の log は auto_migrated なので実績なし扱い → record_count は p1 のみで 1 件 → HAVING で除外
     expect(result).toEqual([]);
     expect(mockSupabase.from).toHaveBeenCalledWith('plans');
     expect(mockSupabase.from).toHaveBeenCalledWith('logs');
@@ -227,9 +227,9 @@ describe('StatisticsService.getTagDashboard', () => {
       limit: 50,
     });
 
-    expect(result.entries).toHaveLength(1);
-    expect(result.entries[0]).toMatchObject({
-      entryId: 'log-1',
+    expect(result.records).toHaveLength(1);
+    expect(result.records[0]).toMatchObject({
+      timeblockId: 'log-1',
       plannedMinutes: 45,
       actualMinutes: 60,
       diffMinutes: 15,
@@ -261,9 +261,9 @@ describe('StatisticsService.getTagDashboard', () => {
       limit: 50,
     });
 
-    expect(result.entries).toHaveLength(1);
-    expect(result.entries[0]).toMatchObject({
-      entryId: 'plan-1',
+    expect(result.records).toHaveLength(1);
+    expect(result.records[0]).toMatchObject({
+      timeblockId: 'plan-1',
       plannedMinutes: 60,
       actualMinutes: 0,
     });
@@ -294,6 +294,6 @@ describe('StatisticsService.getTagDashboard', () => {
       limit: 50,
     });
 
-    expect(result.entries).toHaveLength(0);
+    expect(result.records).toHaveLength(0);
   });
 });

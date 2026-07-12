@@ -26,7 +26,7 @@ describe('transformStatsOverviewResponse', () => {
   it('null 入力 → 全 field が default', () => {
     expect(transformStatsOverviewResponse(null)).toEqual({
       cumulativeTime: { totalMinutes: 0 },
-      entryRate: { totalEntries: 0, plannedEntries: 0, entryRate: 0 },
+      planRate: { totalEntries: 0, plannedEntries: 0, planRate: 0 },
       contextSwitches: { totalSwitches: 0, avgPerDay: 0 },
       blankRate: {
         availableMinutes: 0,
@@ -40,14 +40,14 @@ describe('transformStatsOverviewResponse', () => {
   it('undefined 入力 → 全 field が default', () => {
     const result = transformStatsOverviewResponse(undefined);
     expect(result.cumulativeTime.totalMinutes).toBe(0);
-    expect(result.entryRate.totalEntries).toBe(0);
+    expect(result.planRate.totalEntries).toBe(0);
   });
 
-  it('完全な response → そのまま受け渡し + planRate → entryRate rename', () => {
+  it('完全な response → そのまま受け渡し + planRate → planRate rename', () => {
     const result = transformStatsOverviewResponse(makeFullResult());
     expect(result).toEqual({
       cumulativeTime: { totalMinutes: 600 },
-      entryRate: { totalEntries: 30, plannedEntries: 25, entryRate: 0.83 },
+      planRate: { totalEntries: 30, plannedEntries: 25, planRate: 0.83 },
       contextSwitches: { totalSwitches: 12, avgPerDay: 1.5 },
       blankRate: {
         availableMinutes: 480,
@@ -58,10 +58,10 @@ describe('transformStatsOverviewResponse', () => {
     });
   });
 
-  it('outer key rename: response に entryRate は存在せず entryRate のみ持つ', () => {
+  it('overview の KPI key は planRate に統一する', () => {
     const result = transformStatsOverviewResponse(makeFullResult());
-    expect('planRate' in result).toBe(false);
-    expect('entryRate' in result).toBe(true);
+    expect('planRate' in result).toBe(true);
+    expect('entryRate' in result).toBe(false);
   });
 
   it('部分的 response: cumulativeTime のみ missing → そこだけ 0、他は値保持', () => {
@@ -70,21 +70,21 @@ describe('transformStatsOverviewResponse', () => {
     delete partial.cumulativeTime;
     const result = transformStatsOverviewResponse(partial);
     expect(result.cumulativeTime.totalMinutes).toBe(0);
-    expect(result.entryRate.totalEntries).toBe(30);
+    expect(result.planRate.totalEntries).toBe(30);
   });
 
   it('planRate.planRate が実値 0 → そのまま 0 (default と区別される)', () => {
     const result = transformStatsOverviewResponse({
       planRate: { totalEntries: 0, plannedEntries: 0, planRate: 0 },
     });
-    expect(result.entryRate.entryRate).toBe(0);
-    expect(result.entryRate.totalEntries).toBe(0);
+    expect(result.planRate.planRate).toBe(0);
+    expect(result.planRate.totalEntries).toBe(0);
   });
 
   it('全 nested が undefined → 全 field default', () => {
     const result = transformStatsOverviewResponse({});
     expect(result.cumulativeTime.totalMinutes).toBe(0);
-    expect(result.entryRate.totalEntries).toBe(0);
+    expect(result.planRate.totalEntries).toBe(0);
     expect(result.contextSwitches.totalSwitches).toBe(0);
     expect(result.blankRate.blankRate).toBe(0);
   });

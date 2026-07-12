@@ -23,7 +23,7 @@ describe('CalendarGridContent', () => {
       duration: 120,
       isMultiDay: false,
       origin: 'planned' as const,
-      entryState: 'upcoming' as const,
+      timeblockState: 'upcoming' as const,
     };
 
     const previewEntry = buildDragPreviewEntry(entry, {

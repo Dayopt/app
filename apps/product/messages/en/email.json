@@ -52,7 +52,7 @@
     "heading": "Account deleted",
     "body": "Your Dayopt account has been successfully deleted as of {deletionDate}.",
     "dataRemovedIntro": "The following data has been permanently removed:",
-    "dataPlans": "All entries and time records",
+    "dataPlans": "All timeblocks and time records",
     "dataTags": "Tags and categories",
     "dataProfile": "Profile information",
     "mistakeLine": "If you didn't request this deletion or believe this was a mistake, please contact us immediately at {supportEmail}.",
@@ -60,10 +60,10 @@
     "thankYou": "Thank you for using Dayopt."
   },
   "reminder": {
-    "subject": "Reminder: {entryTitle}",
-    "heading": "Entry Reminder",
-    "body": "Your entry is starting now:",
-    "labelPlan": "Entry",
+    "subject": "Reminder: {timeblockTitle}",
+    "heading": "Plan Reminder",
+    "body": "Your timeblock is starting now:",
+    "labelPlan": "Plan",
     "labelStartsAt": "Starts at",
     "ctaButton": "View Calendar"
   },

@@ -1,5 +1,5 @@
 /**
- * Entry に対する操作メニューの items 定義（単一情報源）
+ * Timeblock に対する操作メニューの items 定義（単一情報源）
  *
  * 右クリックメニュー（EventContextMenu）と Inspector の TagRow メニューが
  * 同じ項目セット・同じ表示条件を共有するための shared source。
@@ -25,7 +25,7 @@ export interface TimeblockMenuItem {
   onSelect: () => void;
 }
 
-interface EntryMenuItemsArgs {
+interface TimeblockMenuItemsArgs {
   origin: TimeblockOrigin | undefined;
   tagId: string | null | undefined;
   /**
@@ -61,7 +61,7 @@ export function getTimeblockMenuItems({
   onSkip,
   onUnskip,
   onDelete,
-}: EntryMenuItemsArgs): TimeblockMenuItem[] {
+}: TimeblockMenuItemsArgs): TimeblockMenuItem[] {
   const isUnplanned = origin === 'unplanned';
   const isPlanned = origin === 'planned';
 

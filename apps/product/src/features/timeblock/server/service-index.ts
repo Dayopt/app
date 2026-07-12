@@ -1,7 +1,7 @@
 /**
  * Service Module
  *
- * plans / logs 操作のサービス層エクスポート。
+ * plans / records 操作のサービス層エクスポート。
  * router で使う factory のみを公開する。
  */
 

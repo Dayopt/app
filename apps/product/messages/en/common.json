@@ -126,8 +126,8 @@
       "changeColor": "Change color",
       "unread": "Unread",
       "close": "Close",
-      "previousPlan": "Previous entry",
-      "nextPlan": "Next entry",
+      "previousPlan": "Previous timeblock",
+      "nextPlan": "Next timeblock",
       "options": "Options",
       "selectAll": "Select all",
       "tagColor": "Tag color",
@@ -144,7 +144,7 @@
       "endTime": "End time",
       "switchToKeyboardInput": "Switch to keyboard input",
       "switchToClockInput": "Switch to clock input",
-      "addPlan": "Tap to add entry",
+      "addPlan": "Tap to add timeblock",
       "navigationMenu": "Navigation menu",
       "pageNavigation": "Page navigation",
       "calendar": "Calendar",
@@ -259,10 +259,10 @@
       "pendingGenerationNoDate": "Scheduled for generation ✦"
     },
     "createNew": {
-      "plan": "Create Entry",
+      "plan": "Create Plan",
       "task": "Create Task",
       "tag": "Create Tag",
-      "defaultPlanTitle": "New Entry"
+      "defaultPlanTitle": "New Plan"
     },
     "comingSoon": "Coming Soon",
     "userProfile": {
@@ -285,7 +285,7 @@
       "dark": "Dark Mode"
     },
     "suggest": {
-      "recentHistory": "Last 30 entries",
+      "recentHistory": "Last 30 timeblocks",
       "loading": "Loading...",
       "loadError": "Failed to load",
       "noResults": "No results"

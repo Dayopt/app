@@ -22,8 +22,8 @@ export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
     icon: Clock,
     variant: 'hero',
   },
-  entryRate: {
-    id: 'entryRate',
+  planRate: {
+    id: 'planRate',
     format: 'percentage',
     trendPositive: 'up',
     thresholds: { good: 0.7, warning: 0.4 },
@@ -60,7 +60,7 @@ export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
 /** メトリクスの表示順序（Row1: 基本指標, Row2: 分析指標） */
 export const METRIC_ORDER: MetricId[] = [
   'totalTime',
-  'entryRate',
+  'planRate',
   'streak',
   'estimationAccuracy',
   'contextSwitches',

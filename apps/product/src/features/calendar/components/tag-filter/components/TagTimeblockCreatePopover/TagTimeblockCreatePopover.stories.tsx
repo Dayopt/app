@@ -13,7 +13,7 @@ const MOCK_TAG = {
   icon: 'briefcase',
 };
 
-/** trpcMocks: 今日分 plans.list / logs.list（既定は空配列） */
+/** trpcMocks: 今日分 plans.list / records.list（既定は空配列） */
 function mockTrpc(entries: unknown[] = []) {
   return { 'plans.list': entries, 'records.list': [] };
 }

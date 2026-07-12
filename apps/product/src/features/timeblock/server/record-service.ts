@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { databaseTables } from '@/lib/database';
+
 import { TimeblockOverlapService } from './timeblock-overlap-service';
 import { TimeblockServiceError } from './timeblock-service-error';
 import type {
@@ -35,7 +37,11 @@ export class RecordService {
       offset,
     } = options;
 
-    let query = this.supabase.from('logs').select('*').eq('user_id', userId).is('deleted_at', null);
+    let query = this.supabase
+      .from(databaseTables.records)
+      .select('*')
+      .eq('user_id', userId)
+      .is('deleted_at', null);
 
     if (tagId) query = query.eq('tag_id', tagId);
     if (planId) query = query.eq('plan_id', planId);
@@ -63,41 +69,41 @@ export class RecordService {
     const { data, error } = await query;
 
     if (error) {
-      throw new TimeblockServiceError('FETCH_FAILED', `Failed to fetch logs: ${error.message}`);
+      throw new TimeblockServiceError('FETCH_FAILED', `Failed to fetch records: ${error.message}`);
     }
 
     return data ?? [];
   }
 
   async getById(options: GetRecordByIdOptions): Promise<RecordRow> {
-    const { userId, logId } = options;
+    const { userId, recordId } = options;
     const { data, error } = await this.supabase
-      .from('logs')
+      .from(databaseTables.records)
       .select('*')
-      .eq('id', logId)
+      .eq('id', recordId)
       .eq('user_id', userId)
       .is('deleted_at', null)
       .single();
 
     if (error || !data) {
-      throw new TimeblockServiceError('NOT_FOUND', 'Log not found');
+      throw new TimeblockServiceError('NOT_FOUND', 'Record not found');
     }
 
     return data;
   }
 
   async create(options: CreateRecordOptions): Promise<RecordRow> {
-    const { userId, input, preventOverlappingLogs = true } = options;
+    const { userId, input, preventOverlappingRecords = true } = options;
 
     this.validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
-    this.ensureLogCanBeCreated(input.end_at);
+    this.ensureRecordCanBeCreated(input.end_at);
 
     if (input.planId) {
       await this.ensureRecordablePlan(userId, input.planId);
     }
 
-    if (preventOverlappingLogs) {
-      await this.ensureNoLogOverlap(userId, input.start_at, input.end_at);
+    if (preventOverlappingRecords) {
+      await this.ensureNoRecordOverlap(userId, input.start_at, input.end_at);
     }
 
     const insertData: RecordInsert = {
@@ -113,7 +119,11 @@ export class RecordService {
       fulfillment_score: input.fulfillmentScore ?? null,
     };
 
-    const { data, error } = await this.supabase.from('logs').insert(insertData).select().single();
+    const { data, error } = await this.supabase
+      .from(databaseTables.records)
+      .insert(insertData)
+      .select()
+      .single();
 
     if (error) {
       this.handleMutationError(error, 'CREATE_FAILED', 'Failed to create log');
@@ -123,8 +133,14 @@ export class RecordService {
   }
 
   async update(options: UpdateRecordOptions): Promise<RecordRow> {
-    const { userId, logId, input, expectedUpdatedAt, preventOverlappingLogs = true } = options;
-    const existing = await this.getById({ userId, logId });
+    const {
+      userId,
+      recordId,
+      input,
+      expectedUpdatedAt,
+      preventOverlappingRecords = true,
+    } = options;
+    const existing = await this.getById({ userId, recordId });
 
     this.assertOptimisticLock(expectedUpdatedAt, existing.updated_at);
 
@@ -133,23 +149,23 @@ export class RecordService {
     const updatesTime = input.start_at !== undefined || input.end_at !== undefined;
 
     this.validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
-    if (updatesTime) this.ensureLogCanBeCreated(nextEndAt);
+    if (updatesTime) this.ensureRecordCanBeCreated(nextEndAt);
 
     if (input.planId) {
       await this.ensureRecordablePlan(userId, input.planId);
     }
 
-    if (preventOverlappingLogs && updatesTime) {
-      await this.ensureNoLogOverlap(userId, nextStartAt, nextEndAt, logId);
+    if (preventOverlappingRecords && updatesTime) {
+      await this.ensureNoRecordOverlap(userId, nextStartAt, nextEndAt, recordId);
     }
 
-    const updateData = this.toLogUpdate(input);
+    const updateData = this.toRecordUpdate(input);
     if (Object.keys(updateData).length === 0) return existing;
 
     const { data, error } = await this.supabase
-      .from('logs')
+      .from(databaseTables.records)
       .update(updateData)
-      .eq('id', logId)
+      .eq('id', recordId)
       .eq('user_id', userId)
       .select()
       .single();
@@ -162,9 +178,9 @@ export class RecordService {
   }
 
   async delete(options: DeleteRecordOptions): Promise<{ success: boolean }> {
-    const { userId, logId } = options;
+    const { userId, recordId } = options;
     const { error } = await this.supabase.rpc('soft_delete_log', {
-      p_log_id: logId,
+      p_log_id: recordId,
       p_user_id: userId,
     });
 
@@ -176,9 +192,9 @@ export class RecordService {
   }
 
   async restore(options: DeleteRecordOptions): Promise<{ success: boolean }> {
-    const { userId, logId } = options;
+    const { userId, recordId } = options;
     const { error } = await this.supabase.rpc('restore_log', {
-      p_log_id: logId,
+      p_log_id: recordId,
       p_user_id: userId,
     });
 
@@ -189,7 +205,7 @@ export class RecordService {
     return { success: true };
   }
 
-  private toLogUpdate(input: UpdateRecordOptions['input']): RecordUpdate {
+  private toRecordUpdate(input: UpdateRecordOptions['input']): RecordUpdate {
     const updateData: RecordUpdate = {};
     if (input.title !== undefined) updateData.title = input.title;
     if (input.note !== undefined) updateData.note = input.note;
@@ -214,9 +230,9 @@ export class RecordService {
     }
   }
 
-  private ensureLogCanBeCreated(endAt: string): void {
+  private ensureRecordCanBeCreated(endAt: string): void {
     if (new Date(endAt).getTime() > Date.now()) {
-      throw new TimeblockServiceError('LOG_IN_FUTURE', 'Logs cannot end in the future.');
+      throw new TimeblockServiceError('RECORD_IN_FUTURE', 'Logs cannot end in the future.');
     }
   }
 
@@ -233,22 +249,22 @@ export class RecordService {
     }
   }
 
-  private async ensureNoLogOverlap(
+  private async ensureNoRecordOverlap(
     userId: string,
     startAt: string,
     endAt: string,
-    excludeLogId?: string,
+    excludeRecordId?: string,
   ): Promise<void> {
-    const overlappingIds = await this.overlapService.checkLogs({
+    const overlappingIds = await this.overlapService.checkRecords({
       userId,
       startAt,
       endAt,
-      ...(excludeLogId !== undefined && { excludeLogId }),
+      ...(excludeRecordId !== undefined && { excludeRecordId }),
     });
     if (overlappingIds.length > 0) {
       throw new TimeblockServiceError(
         'TIME_OVERLAP',
-        `Log time overlaps with existing logs (${overlappingIds.length})`,
+        `Record time overlaps with existing records (${overlappingIds.length})`,
       );
     }
   }
@@ -267,11 +283,14 @@ export class RecordService {
     }
 
     if (new Date(data.end_at).getTime() > Date.now()) {
-      throw new TimeblockServiceError('RECORD_IN_FUTURE', 'Future plans cannot have linked logs.');
+      throw new TimeblockServiceError(
+        'RECORD_IN_FUTURE',
+        'Future plans cannot have linked records.',
+      );
     }
 
     if (data.skipped_at) {
-      throw new TimeblockServiceError('INVALID_INPUT', 'Skipped plans cannot have linked logs.');
+      throw new TimeblockServiceError('INVALID_INPUT', 'Skipped plans cannot have linked records.');
     }
   }
 

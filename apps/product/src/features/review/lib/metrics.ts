@@ -143,7 +143,7 @@ export function getThresholdStatus(
   const { good, warning } = definition.thresholds;
 
   if (definition.trendPositive === 'up') {
-    // 高いほうが良い（entryRate, deepUtilization）
+    // 高いほうが良い（planRate, deepUtilization）
     if (value >= good) return 'good';
     if (value >= warning) return 'warning';
     return 'critical';
@@ -189,13 +189,13 @@ export function getMetricProgress(value: number, definition: MetricDefinition): 
  * データが無ければ null。
  */
 export function computeAvgDeviation(
-  data: { avgDeviationMinutes: number; entryCount: number }[] | undefined,
+  data: { avgDeviationMinutes: number; recordCount: number }[] | undefined,
 ): number | null {
   if (!data || data.length === 0) return null;
   const totalDeviation = data.reduce(
-    (sum, item) => sum + item.avgDeviationMinutes * item.entryCount,
+    (sum, item) => sum + item.avgDeviationMinutes * item.recordCount,
     0,
   );
-  const totalEntries = data.reduce((sum, item) => sum + item.entryCount, 0);
+  const totalEntries = data.reduce((sum, item) => sum + item.recordCount, 0);
   return totalEntries > 0 ? totalDeviation / totalEntries : 0;
 }

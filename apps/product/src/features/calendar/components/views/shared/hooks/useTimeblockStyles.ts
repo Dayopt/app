@@ -10,10 +10,10 @@ import type { TimeblockPosition } from './useViewTimeblocks';
  * engine/grid.ts の computeTimeblockStyles の React ラッパー
  */
 export function useTimeblockStyles(
-  entryPositions: TimeblockPosition[],
+  timeblockPositions: TimeblockPosition[],
 ): Record<string, CSSProperties> {
   return useMemo((): Record<string, CSSProperties> => {
-    const inputs = entryPositions
+    const inputs = timeblockPositions
       .filter((p) => p.plan?.id)
       .map(({ plan, top, height, left, width, zIndex, opacity }) => ({
         id: plan.id,
@@ -26,5 +26,5 @@ export function useTimeblockStyles(
       }));
 
     return computeTimeblockStyles(inputs);
-  }, [entryPositions]);
+  }, [timeblockPositions]);
 }

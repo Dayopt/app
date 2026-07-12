@@ -13,8 +13,8 @@ describe('resolveTimeblockDestination', () => {
     expect(resolveTimeblockDestination('2026-07-10T12:00:00.001Z', now)).toBe('plan');
   });
 
-  it('終了が現在以前なら Log を返す', () => {
-    expect(resolveTimeblockDestination('2026-07-10T12:00:00.000Z', now)).toBe('log');
+  it('終了が現在以前なら Record を返す', () => {
+    expect(resolveTimeblockDestination('2026-07-10T12:00:00.000Z', now)).toBe('record');
   });
 });
 
@@ -26,9 +26,9 @@ describe('isPlanTimeEditable', () => {
 });
 
 describe('isPlanRecordDrop', () => {
-  it('Plan から Log レーンへのドロップだけを記録化とみなす', () => {
-    expect(isPlanRecordDrop('plan', 'log')).toBe(true);
-    expect(isPlanRecordDrop('log', 'plan')).toBe(false);
+  it('Plan から Record レーンへのドロップだけを記録化とみなす', () => {
+    expect(isPlanRecordDrop('plan', 'record')).toBe(true);
+    expect(isPlanRecordDrop('record', 'plan')).toBe(false);
     expect(isPlanRecordDrop('plan', 'plan')).toBe(false);
   });
 });

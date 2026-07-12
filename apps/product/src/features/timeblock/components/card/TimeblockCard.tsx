@@ -1,5 +1,5 @@
 /**
- * エントリー表示カードコンポーネント
+ * Timeblock表示カードコンポーネント
  * タグカラーを反映した左ボーダーアクセント + 右角丸の統一デザイン
  *
  * Pure props コンポーネント: store / data-fetch hook なし。
@@ -86,9 +86,9 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
   // ドラフト（未保存プレビュー）かどうか判定
   const isDraft = entry.isDraft === true;
   // 進行中エントリかどうか（視覚区別に使用）
-  const isActiveEntry = entry.entryState === 'active';
+  const isActiveEntry = entry.timeblockState === 'active';
   // 過去エントリかどうか（subtle fade で「過ぎた」を視覚的に伝える。Apple Calendar 規範）
-  const isPast = entry.entryState === 'past';
+  const isPast = entry.timeblockState === 'past';
   // 予定外エントリかどうか（全体を破線枠で表示）
   const isUnplanned = entry.origin === 'unplanned';
   // スキップ済み（計画したがやらなかった）。計画レイヤーに muted で残し、実績の強調を消す
@@ -96,7 +96,7 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
   const plannedStart = entry.plannedStartDate ?? entry.startDate;
   const plannedEnd = entry.plannedEndDate ?? entry.endDate;
   const upcomingActualMatchesPlan =
-    entry.entryState === 'upcoming' &&
+    entry.timeblockState === 'upcoming' &&
     plannedStart != null &&
     plannedEnd != null &&
     entry.actualStartDate != null &&
@@ -417,9 +417,9 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isDragging, onDragEnd, entry]);
 
-  // CSSクラス（統一Entryデザイン: 左アクセント + 右角丸）
+  // CSSクラス（統一Timeblockデザイン: 左アクセント + 右角丸）
   // `group/entry` は子の resize handle icon が hover 時に visible になるための trigger
-  const entryCardClasses = cn(
+  const timeblockCardClasses = cn(
     'group/entry relative flex rounded-r-lg',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
     // Draft: state-selected オーバーレイ
@@ -451,7 +451,7 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
       data-entry-card
       data-entry-id={entry.id}
       data-entry-origin={entry.origin}
-      className={entryCardClasses}
+      className={timeblockCardClasses}
       style={dynamicStyle}
       onClick={handleClick}
       onContextMenu={handleContextMenu}

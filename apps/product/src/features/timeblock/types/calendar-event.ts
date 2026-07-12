@@ -1,7 +1,7 @@
 import type { TimeblockOrigin, TimeblockState } from '@dayopt/domain';
 import type { TimeblockDestination } from '../domain/timeblock-destination';
 
-/** Entry の表示用射影型（カレンダー上でのレンダリングに使用） */
+/** Timeblock の表示用射影型（カレンダー上でのレンダリングに使用） */
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -19,11 +19,11 @@ export interface CalendarEvent {
   displayEndDate: Date;
   duration: number; // minutes
   isMultiDay: boolean;
-  // === Entry 統合フィールド ===
+  // === Timeblock 統合フィールド ===
   /** エントリの起源 */
   origin?: TimeblockOrigin | undefined;
   /** 時間位置ベースの状態（upcoming/active/past） */
-  entryState?: TimeblockState | undefined;
+  timeblockState?: TimeblockState | undefined;
   /** 実記録の開始時刻（actual_start_time から変換） */
   actualStartDate?: Date | null | undefined;
   /** 実記録の終了時刻（actual_end_time から変換） */
@@ -35,12 +35,12 @@ export interface CalendarEvent {
   /** 計画したがやらなかった（skipped_at あり）。実績集計から除外される */
   isSkipped?: boolean | undefined;
   // === time model 射影フィールド（Step 8 cutover） ===
-  /** 射影元が plans / logs のどちらか。クリック・DnD・削除のルーティングに使う */
+  /** 射影元が plans / records のどちらか。クリック・DnD・削除のルーティングに使う */
   kind?: TimeblockDestination | undefined;
   /** log が紐づく plan の id（plan 行・予定外 log では null） */
   planId?: string | null | undefined;
   /** log の作成元（manual / plan_record / auto_migrated / external_calendar）。auto_migrated は RLS で不変 */
-  logSource?: string | undefined;
+  recordSource?: string | undefined;
   // Optional properties used in various contexts
   userId?: string | undefined; // 所有者ID
   location?: string | undefined; // 場所

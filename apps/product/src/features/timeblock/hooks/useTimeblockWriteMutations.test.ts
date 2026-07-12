@@ -23,11 +23,11 @@ function listKey(input: Record<string, unknown>) {
 }
 
 describe('useTimeblockWriteMutations', () => {
-  it('Plan と Log の作成・編集 mutation をまとめる hook を提供する', () => {
+  it('Plan と Record の作成・編集 mutation をまとめる hook を提供する', () => {
     expect(useTimeblockWriteMutations).toBeTypeOf('function');
   });
 
-  it('planIdが異なるlogs.listには作成行を入れない', () => {
+  it('planIdが異なるrecords.listには作成行を入れない', () => {
     expect(
       doesTimeModelListQueryIncludeRow(listKey({ planId: 'plan-2', limit: 1 }), row, 'records'),
     ).toBe(false);

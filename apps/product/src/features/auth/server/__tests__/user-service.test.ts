@@ -228,7 +228,7 @@ describe('createUserService', () => {
 
       await expect(service.deleteBlocks(USER_ID)).rejects.toMatchObject({
         code: 'DELETE_DATA_FAILED',
-        message: 'logs deletion failed: logs failed',
+        message: 'records deletion failed: logs failed',
       });
     });
   });
@@ -268,13 +268,13 @@ describe('createUserService', () => {
   });
 
   describe('exportData', () => {
-    it('plans / logs / tags / settings をexportする', async () => {
+    it('plans / records / tags / settings をexportする', async () => {
       const profile = { id: USER_ID, email: USER_EMAIL };
       const plans = [{ id: 'plan-1', user_id: USER_ID }];
-      const logs = [{ id: 'log-1', user_id: USER_ID }];
+      const records = [{ id: 'record-1', user_id: USER_ID }];
       const tags = [{ id: 'tag-1', user_id: USER_ID }];
       const settings = { id: 'settings-1', user_id: USER_ID };
-      mockAdminTables({ plans: { data: plans }, logs: { data: logs } });
+      mockAdminTables({ plans: { data: plans }, logs: { data: records } });
       const { service } = createSupabase({
         tables: {
           profiles: { data: profile },
@@ -290,7 +290,7 @@ describe('createUserService', () => {
       expect(result.data).toEqual({
         profile,
         plans,
-        logs,
+        records,
         tags,
         userSettings: settings,
       });

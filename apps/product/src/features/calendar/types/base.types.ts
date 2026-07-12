@@ -20,7 +20,7 @@ interface BaseViewProps {
   // Display options
   className?: string | undefined;
 
-  // Entry handlers（最小限）
+  // Timeblock handlers（最小限）
   onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
   onEntryContextMenu?: ((entry: CalendarEvent, mouseEvent: React.MouseEvent) => void) | undefined;
 }
@@ -33,7 +33,7 @@ export interface GridViewProps extends BaseViewProps {
   // Core data
   dateRange: ViewDateRange;
   /** 全エントリ（期限切れ未完了表示用、日付フィルタリング前） */
-  allEntries?: CalendarEvent[] | undefined;
+  allTimeblocks?: CalendarEvent[] | undefined;
 
   // Display options
   showWeekends?: boolean | undefined;
@@ -42,13 +42,13 @@ export interface GridViewProps extends BaseViewProps {
   /** compare Rail に出ている entry の ID 一覧 */
   dayDiffEntryIds?: ReadonlySet<string> | undefined;
 
-  /** DnDを無効化するエントリID（Inspector表示中のエントリなど） */
-  disabledEntryId?: string | null | undefined;
+  /** DnDを無効化するTimeblock ID（Inspector表示中のエントリなど） */
+  disabledTimeblockId?: string | null | undefined;
 
-  // Entry handlers（グリッド操作用）
+  // Timeblock handlers（グリッド操作用）
   onUpdateEntry?:
     | ((
-        entryIdOrEntry: string | CalendarEvent,
+        timeblockIdOrTimeblock: string | CalendarEvent,
         updates?: {
           startTime: Date;
           endTime: Date;
@@ -56,7 +56,7 @@ export interface GridViewProps extends BaseViewProps {
         },
       ) => void | Promise<void> | Promise<{ skipToast: true } | void>)
     | undefined;
-  onDeleteEntry?: ((entryId: string) => void) | undefined;
+  onDeleteTimeblock?: ((timeblockId: string) => void) | undefined;
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
 
   // Navigation handlers

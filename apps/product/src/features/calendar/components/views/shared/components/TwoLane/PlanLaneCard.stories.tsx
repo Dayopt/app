@@ -72,7 +72,7 @@ export const Unrecorded: Story = {
   ),
 };
 
-/** 記録済み（logs あり）。Log レーンが主役になるため控えめに沈める。 */
+/** 記録済み（records あり）。Record レーンが主役になるため控えめに沈める。 */
 export const Recorded: Story = {
   render: () => (
     <Slot>

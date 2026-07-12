@@ -1,6 +1,7 @@
 import 'server-only';
 
 import type { Database } from '@/lib/database';
+import { databaseTables } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { TagServiceError } from './tag-service-error';
 
@@ -9,7 +10,7 @@ export interface TagStatsRow {
   name: string;
   color: string | null;
   icon: string | null;
-  entry_count: number;
+  record_count: number;
   last_used_at: string | null;
 }
 
@@ -17,12 +18,12 @@ export class TagStatisticsService {
   constructor(private readonly supabase: SupabaseClient<Database>) {}
 
   /**
-   * `logs`（実績）を直接集計するタグ統計。
+   * `records`（実績）を直接集計するタグ統計。
    *
    * `tags` は Layer 0 のため上位 feature の domain を import できない（feature DAG）。
    * 実績ベースの件数・最終使用日をここで独立に計算する。
    */
-  async getStatsFromLogs(userId: string): Promise<TagStatsRow[]> {
+  async getStatsFromRecords(userId: string): Promise<TagStatsRow[]> {
     const { data: tags, error: tagsError } = await this.supabase
       .from('tags')
       .select('id, name, color, icon')
@@ -33,25 +34,25 @@ export class TagStatisticsService {
     }
     if (!tags || tags.length === 0) return [];
 
-    const { data: logs, error: logsError } = await this.supabase
-      .from('logs')
+    const { data: records, error: recordsError } = await this.supabase
+      .from(databaseTables.records)
       .select('tag_id, start_at')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .not('tag_id', 'is', null);
-    if (logsError) {
-      throw new TagServiceError('FETCH_FAILED', `Failed to fetch logs: ${logsError.message}`);
+    if (recordsError) {
+      throw new TagServiceError('FETCH_FAILED', `Failed to fetch records: ${recordsError.message}`);
     }
 
-    const statsMap = new Map<string, { entry_count: number; last_used: string }>();
-    for (const log of logs ?? []) {
-      if (!log.tag_id) continue;
-      const existing = statsMap.get(log.tag_id);
+    const statsMap = new Map<string, { record_count: number; last_used: string }>();
+    for (const record of records ?? []) {
+      if (!record.tag_id) continue;
+      const existing = statsMap.get(record.tag_id);
       if (existing) {
-        existing.entry_count += 1;
-        if (log.start_at > existing.last_used) existing.last_used = log.start_at;
+        existing.record_count += 1;
+        if (record.start_at > existing.last_used) existing.last_used = record.start_at;
       } else {
-        statsMap.set(log.tag_id, { entry_count: 1, last_used: log.start_at });
+        statsMap.set(record.tag_id, { record_count: 1, last_used: record.start_at });
       }
     }
 
@@ -63,10 +64,10 @@ export class TagStatisticsService {
           name: tag.name,
           color: tag.color,
           icon: tag.icon,
-          entry_count: stats?.entry_count ?? 0,
+          record_count: stats?.record_count ?? 0,
           last_used_at: stats?.last_used ?? null,
         };
       })
-      .sort((a, b) => b.entry_count - a.entry_count);
+      .sort((a, b) => b.record_count - a.record_count);
   }
 }

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeDailySummary, type DailySummaryEntry } from '../dailySummary';
+import { computeDailySummary, type DailySummaryTimeblock } from '../dailySummary';
 
-function entry(overrides: Partial<DailySummaryEntry>): DailySummaryEntry {
+function entry(overrides: Partial<DailySummaryTimeblock>): DailySummaryTimeblock {
   return {
     origin: 'planned',
     start_time: null,

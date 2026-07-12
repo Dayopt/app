@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { databaseTables } from '@/lib/database';
+
 import { TimeblockOverlapService } from './timeblock-overlap-service';
 import { TimeblockServiceError } from './timeblock-service-error';
 import type {
@@ -255,10 +257,10 @@ export class PlanService {
     }
 
     await this.ensurePlanNotRecorded(userId, planId);
-    await this.ensureNoLogOverlap(userId, plan.start_at, plan.end_at);
+    await this.ensureNoRecordOverlap(userId, plan.start_at, plan.end_at);
 
     const { data, error } = await this.supabase
-      .from('logs')
+      .from(databaseTables.records)
       .insert({
         user_id: userId,
         title: plan.title,
@@ -362,19 +364,23 @@ export class PlanService {
     }
   }
 
-  private async ensureNoLogOverlap(userId: string, startAt: string, endAt: string): Promise<void> {
-    const overlappingIds = await this.overlapService.checkLogs({ userId, startAt, endAt });
+  private async ensureNoRecordOverlap(
+    userId: string,
+    startAt: string,
+    endAt: string,
+  ): Promise<void> {
+    const overlappingIds = await this.overlapService.checkRecords({ userId, startAt, endAt });
     if (overlappingIds.length > 0) {
       throw new TimeblockServiceError(
         'TIME_OVERLAP',
-        `Log time overlaps with existing logs (${overlappingIds.length})`,
+        `Record time overlaps with existing records (${overlappingIds.length})`,
       );
     }
   }
 
   private async ensurePlanNotRecorded(userId: string, planId: string): Promise<void> {
     const { data, error } = await this.supabase
-      .from('logs')
+      .from(databaseTables.records)
       .select('id')
       .eq('user_id', userId)
       .eq('plan_id', planId)

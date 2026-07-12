@@ -33,10 +33,10 @@ import type { WeekGridProps } from '../../../../types/week-view.types';
 export const WeekGrid = ({
   weekDates,
   events,
-  allEntries: _allEntries,
+  allTimeblocks: _allTimeblocks,
   eventsByDate: _eventsByDate,
   todayIndex: _todayIndex,
-  disabledEntryId,
+  disabledTimeblockId,
   onEventClick,
   onEventContextMenu,
   onEventUpdate,
@@ -143,7 +143,7 @@ export const WeekGrid = ({
                 onEntryContextMenu={onEventContextMenu}
                 onEventUpdate={handleEventUpdate}
                 onTimeRangeSelect={onTimeRangeSelect}
-                disabledEntryId={disabledEntryId}
+                disabledTimeblockId={disabledTimeblockId}
                 dayDiffEntryIds={dayDiffEntryIds}
                 className="h-full"
               />

@@ -13,7 +13,7 @@ import { TimeRow, TimeRowPlaceholder } from './TimeRow';
  * `isPrimary` が true のときは記録行として視覚的に強調される。
  */
 const meta = {
-  title: 'Product/Features/Entry/Inspector/TimeRow',
+  title: 'Product/Features/Timeblock/Inspector/TimeRow',
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',

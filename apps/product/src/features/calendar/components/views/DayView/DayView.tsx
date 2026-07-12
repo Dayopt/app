@@ -20,17 +20,17 @@ import { useDayView } from './hooks/useDayView';
 export const DayView = ({
   dateRange: _dateRange,
   entries,
-  allEntries: _allEntries,
+  allTimeblocks: _allTimeblocks,
   currentDate,
   showWeekends: _showWeekends = true,
   showActualDiff: _showActualDiff = false,
   dayDiffEntryIds,
   className,
-  disabledEntryId,
+  disabledTimeblockId,
   onEntryClick,
   onEntryContextMenu,
   onUpdateEntry,
-  onDeleteEntry: _onDeleteEntry,
+  onDeleteTimeblock: _onDeleteTimeblock,
   onTimeRangeSelect,
   onViewChange: _onViewChange,
   onNavigatePrev: _onNavigatePrev,
@@ -74,7 +74,7 @@ export const DayView = ({
   // DayView専用ロジック（CalendarControllerから渡されたエントリデータを使用）
   const {
     dayEntries: dayEvents,
-    entryStyles: _eventStyles,
+    timeblockStyles: _eventStyles,
     isToday,
     timeSlots: _timeSlots,
   } = useDayView({
@@ -106,7 +106,7 @@ export const DayView = ({
         !e.isSkipped &&
         e.endDate != null &&
         e.endDate.getTime() <= now &&
-        !list.some((log) => log.kind === 'log' && log.planId === e.id),
+        !list.some((log) => log.kind === 'record' && log.planId === e.id),
     );
   }, [entries]);
 
@@ -151,7 +151,7 @@ export const DayView = ({
             onEntryContextMenu={onEntryContextMenu}
             onEventUpdate={handleEventTimeUpdate}
             onTimeRangeSelect={onTimeRangeSelect}
-            disabledEntryId={disabledEntryId}
+            disabledTimeblockId={disabledTimeblockId}
             dayDiffEntryIds={dayDiffEntryIds}
             className="absolute inset-y-0 right-0 left-0"
           />

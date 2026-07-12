@@ -47,7 +47,7 @@ function completeDrag(hook: { result: { current: ReturnType<typeof useInteractio
   act(() => {
     hook.result.current.dispatch({
       type: 'POINTER_DOWN',
-      entryId: 'entry-1',
+      timeblockId: 'entry-1',
       point: { clientX: 20, clientY: 540 },
       originalPosition: rect,
       dateIndex: 0,
@@ -59,15 +59,15 @@ function completeDrag(hook: { result: { current: ReturnType<typeof useInteractio
   });
 }
 
-describe('useInteraction Plan → Log drop', () => {
-  it('Logレーンへのdropはplan更新ではなく記録mutationへ委譲する', () => {
+describe('useInteraction Plan → Record drop', () => {
+  it('Recordレーンへのdropはplan更新ではなく記録mutationへ委譲する', () => {
     const onEventUpdate = vi.fn();
     const onPlanRecord = vi.fn();
     const hook = renderHook(() => useInteraction(makeProps({ onEventUpdate, onPlanRecord })));
 
     completeDrag(hook);
     act(() => {
-      useCalendarDragStore.getState().updateDrag({ targetLane: 'log' });
+      useCalendarDragStore.getState().updateDrag({ targetLane: 'record' });
       hook.result.current.dispatch({ type: 'POINTER_UP' });
     });
 
@@ -176,7 +176,7 @@ describe('useInteraction resize completion', () => {
     act(() => {
       result.current.dispatch({
         type: 'RESIZE_START',
-        entryId: 'entry-1',
+        timeblockId: 'entry-1',
         direction: 'bottom',
         point: { clientX: 100, clientY: 600 },
         originalPosition: rect,
@@ -215,7 +215,7 @@ describe('useInteraction resize completion', () => {
     act(() => {
       result.current.dispatch({
         type: 'RESIZE_START',
-        entryId: 'entry-1',
+        timeblockId: 'entry-1',
         direction: 'bottom',
         point: { clientX: 100, clientY: 600 },
         originalPosition: rect,

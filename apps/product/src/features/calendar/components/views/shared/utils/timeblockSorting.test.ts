@@ -9,7 +9,7 @@ import {
   sortEventsForAgenda,
 } from './timeblockSorting';
 
-function makeEntry(id: string, startDate: Date | null): CalendarEvent {
+function makeTimeblock(id: string, startDate: Date | null): CalendarEvent {
   return {
     id,
     title: `Entry ${id}`,
@@ -26,28 +26,31 @@ function makeEntry(id: string, startDate: Date | null): CalendarEvent {
   };
 }
 
-describe('entrySorting', () => {
+describe('timeblockSorting', () => {
   describe('sortEventsByTime', () => {
     it('時刻昇順でソートする', () => {
       const entries = [
-        makeEntry('c', new Date('2026-02-21T14:00:00')),
-        makeEntry('a', new Date('2026-02-21T09:00:00')),
-        makeEntry('b', new Date('2026-02-21T11:00:00')),
+        makeTimeblock('c', new Date('2026-02-21T14:00:00')),
+        makeTimeblock('a', new Date('2026-02-21T09:00:00')),
+        makeTimeblock('b', new Date('2026-02-21T11:00:00')),
       ];
       const sorted = sortEventsByTime(entries);
       expect(sorted.map((p) => p.id)).toEqual(['a', 'b', 'c']);
     });
 
     it('startDateがnullのイベントは先頭に来る', () => {
-      const entries = [makeEntry('b', new Date('2026-02-21T10:00:00')), makeEntry('a', null)];
+      const entries = [
+        makeTimeblock('b', new Date('2026-02-21T10:00:00')),
+        makeTimeblock('a', null),
+      ];
       const sorted = sortEventsByTime(entries);
       expect(sorted[0]!.id).toBe('a');
     });
 
     it('元の配列を変更しない', () => {
       const entries = [
-        makeEntry('b', new Date('2026-02-21T14:00:00')),
-        makeEntry('a', new Date('2026-02-21T09:00:00')),
+        makeTimeblock('b', new Date('2026-02-21T14:00:00')),
+        makeTimeblock('a', new Date('2026-02-21T09:00:00')),
       ];
       const original = [...entries];
       sortEventsByTime(entries);
@@ -63,12 +66,12 @@ describe('entrySorting', () => {
     it('各日付キーのイベントをソートする', () => {
       const eventsByDate: Record<string, CalendarEvent[]> = {
         '2026-02-21': [
-          makeEntry('b', new Date('2026-02-21T14:00:00')),
-          makeEntry('a', new Date('2026-02-21T09:00:00')),
+          makeTimeblock('b', new Date('2026-02-21T14:00:00')),
+          makeTimeblock('a', new Date('2026-02-21T09:00:00')),
         ],
         '2026-02-22': [
-          makeEntry('d', new Date('2026-02-22T16:00:00')),
-          makeEntry('c', new Date('2026-02-22T08:00:00')),
+          makeTimeblock('d', new Date('2026-02-22T16:00:00')),
+          makeTimeblock('c', new Date('2026-02-22T08:00:00')),
         ],
       };
 
@@ -81,8 +84,8 @@ describe('entrySorting', () => {
   describe('sortEventsForAgenda', () => {
     it('sortEventsByTimeと同じ結果を返す', () => {
       const entries = [
-        makeEntry('b', new Date('2026-02-21T14:00:00')),
-        makeEntry('a', new Date('2026-02-21T09:00:00')),
+        makeTimeblock('b', new Date('2026-02-21T14:00:00')),
+        makeTimeblock('a', new Date('2026-02-21T09:00:00')),
       ];
       const sorted = sortEventsForAgenda(entries);
       expect(sorted.map((p) => p.id)).toEqual(['a', 'b']);
@@ -93,8 +96,8 @@ describe('entrySorting', () => {
     it('各日付キーのイベントをAgenda用にソートする', () => {
       const eventsByDate: Record<string, CalendarEvent[]> = {
         '2026-02-21': [
-          makeEntry('b', new Date('2026-02-21T14:00:00')),
-          makeEntry('a', new Date('2026-02-21T09:00:00')),
+          makeTimeblock('b', new Date('2026-02-21T14:00:00')),
+          makeTimeblock('a', new Date('2026-02-21T09:00:00')),
         ],
       };
 

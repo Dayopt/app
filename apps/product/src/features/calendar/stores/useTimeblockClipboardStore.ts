@@ -5,7 +5,7 @@ import { create } from 'zustand';
 /**
  * クリップボードにコピーされたエントリの情報
  */
-export interface ClipboardEntry {
+export interface ClipboardTimeblock {
   /** タイトル */
   title: string;
   /** 説明 */
@@ -28,27 +28,27 @@ interface LastClickedPosition {
   date: Date;
 }
 
-interface EntryClipboardState {
+interface TimeblockClipboardState {
   /** コピーされたエントリ */
-  copiedEntry: ClipboardEntry | null;
+  copiedTimeblock: ClipboardTimeblock | null;
   /** 最後にクリックした位置（Cmd+Vでペーストする位置） */
   lastClickedPosition: LastClickedPosition | null;
 }
 
-interface EntryClipboardActions {
+interface TimeblockClipboardActions {
   /** エントリをクリップボードにコピー */
-  copyEntry: (entry: ClipboardEntry) => void;
+  copyTimeblock: (entry: ClipboardTimeblock) => void;
   /** クリップボードをクリア */
   clearClipboard: () => void;
   /** クリップボードにエントリがあるかチェック */
-  hasCopiedEntry: () => boolean;
+  hasCopiedTimeblock: () => boolean;
   /** 最後にクリックした位置を設定（Googleカレンダー互換のCmd+Vペースト用） */
   setLastClickedPosition: (position: LastClickedPosition) => void;
   /** 最後にクリックした位置をクリア */
   clearLastClickedPosition: () => void;
 }
 
-type TimeblockClipboardStore = EntryClipboardState & EntryClipboardActions;
+type TimeblockClipboardStore = TimeblockClipboardState & TimeblockClipboardActions;
 
 /**
  * エントリクリップボードStore
@@ -59,20 +59,20 @@ type TimeblockClipboardStore = EntryClipboardState & EntryClipboardActions;
  */
 export const useTimeblockClipboardStore = create<TimeblockClipboardStore>((set, get) => ({
   // State
-  copiedEntry: null,
+  copiedTimeblock: null,
   lastClickedPosition: null,
 
   // Actions
-  copyEntry: (entry) => {
-    set({ copiedEntry: entry });
+  copyTimeblock: (entry) => {
+    set({ copiedTimeblock: entry });
   },
 
   clearClipboard: () => {
-    set({ copiedEntry: null });
+    set({ copiedTimeblock: null });
   },
 
-  hasCopiedEntry: () => {
-    return get().copiedEntry !== null;
+  hasCopiedTimeblock: () => {
+    return get().copiedTimeblock !== null;
   },
 
   setLastClickedPosition: (position) => {

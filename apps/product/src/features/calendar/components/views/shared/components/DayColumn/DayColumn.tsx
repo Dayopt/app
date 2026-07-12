@@ -52,7 +52,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
   }, [events, date]);
 
   // エントリの位置を計算
-  const entryPositions = useTimeblockPosition(dayEntries, { hourHeight });
+  const timeblockPositions = useTimeblockPosition(dayEntries, { hourHeight });
 
   // グリッド高さ
   const columnHeight = 24 * hourHeight;
@@ -100,7 +100,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
 
         {/* エントリ */}
         {dayEntries.map((entry) => {
-          const position = entryPositions.get(entry.id);
+          const position = timeblockPositions.get(entry.id);
           // positionが見つからない場合は、デフォルト位置を使用してレンダリング
 
           return (

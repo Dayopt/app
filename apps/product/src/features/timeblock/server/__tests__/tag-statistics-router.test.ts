@@ -25,7 +25,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   getTagDashboard.mockResolvedValue({
     tag: { id: TAG_ID, name: 'Work' },
-    summary: { entryCount: 0 },
+    summary: { recordCount: 0 },
     dailyRows: [],
     entries: [],
   });
@@ -44,7 +44,7 @@ describe('tag-statistics router', () => {
 
     await expect(caller.getTagDashboard(INPUT)).resolves.toMatchObject({
       tag: { id: TAG_ID, name: 'Work' },
-      summary: { entryCount: 0 },
+      summary: { recordCount: 0 },
     });
     expect(getTagDashboard).toHaveBeenCalledWith('user-1', { ...INPUT, limit: 50 });
   });

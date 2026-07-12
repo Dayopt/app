@@ -34,13 +34,13 @@ import type { WeekViewProps } from '../../../types/week-view.types';
 export const WeekView = ({
   dateRange,
   entries,
-  allEntries,
+  allTimeblocks,
   showWeekends = true,
   weekStartsOn: weekStartsOnProp,
   showActualDiff = false,
   dayDiffEntryIds,
   className,
-  disabledEntryId,
+  disabledTimeblockId,
   onEntryClick,
   onEntryContextMenu,
   onUpdateEntry,
@@ -69,10 +69,10 @@ export const WeekView = ({
       <WeekGrid
         weekDates={displayDates}
         events={entries}
-        allEntries={allEntries}
+        allTimeblocks={allTimeblocks}
         eventsByDate={eventsByDate}
         todayIndex={todayIndex}
-        disabledEntryId={disabledEntryId}
+        disabledTimeblockId={disabledTimeblockId}
         onEventClick={onEntryClick}
         onEventContextMenu={onEntryContextMenu}
         onEventUpdate={onUpdateEntry}

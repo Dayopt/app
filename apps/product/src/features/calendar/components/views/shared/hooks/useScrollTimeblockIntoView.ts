@@ -32,7 +32,7 @@ export function useScrollTimeblockIntoView({
   hourHeight,
 }: UseScrollEntryIntoViewOptions) {
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
-  const inspectorEntryId = useTimeblockInspectorStore((s) => s.entryId);
+  const inspectorEntryId = useTimeblockInspectorStore((s) => s.timeblockId);
   const inspectorIsOpen = useTimeblockInspectorStore((s) => s.isOpen);
   const tagDraft = useTagDraftStore((s) => s.draft);
 
@@ -44,12 +44,14 @@ export function useScrollTimeblockIntoView({
     if (!container) return;
 
     const timer = setTimeout(() => {
-      const entryEl = container.querySelector<HTMLElement>(`[data-entry-id="${inspectorEntryId}"]`);
-      if (!entryEl) return;
+      const timeblockEl = container.querySelector<HTMLElement>(
+        `[data-entry-id="${inspectorEntryId}"]`,
+      );
+      if (!timeblockEl) return;
       const containerRect = container.getBoundingClientRect();
-      const entryRect = entryEl.getBoundingClientRect();
-      const entryTopInContainer = entryRect.top - containerRect.top + container.scrollTop;
-      scrollToTopPx(container, entryTopInContainer);
+      const timeblockRect = timeblockEl.getBoundingClientRect();
+      const timeblockTopInContainer = timeblockRect.top - containerRect.top + container.scrollTop;
+      scrollToTopPx(container, timeblockTopInContainer);
     }, 220);
 
     return () => clearTimeout(timer);

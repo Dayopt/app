@@ -10,7 +10,7 @@ interface RecordPlanButtonProps {
   disabled?: boolean | undefined;
 }
 
-/** 過去 Plan を同じ時間帯の Log として記録するワンタップ導線。 */
+/** 過去 Plan を同じ時間帯の Record として記録するワンタップ導線。 */
 export function RecordPlanButton({ planId, disabled = false }: RecordPlanButtonProps) {
   const t = useTranslations('timeblock.editor');
   const { recordPlan } = useTimeblockRecordMutations();

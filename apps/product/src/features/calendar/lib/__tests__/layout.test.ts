@@ -5,9 +5,9 @@ import type { CalendarEvent } from '../../types/calendar.types';
 import type { TimedTimeblock } from '../../types/timeblock.types';
 
 import {
-  calculateEntryPosition,
   calculateMaxConcurrent,
   calculateTimeblockLayouts,
+  calculateTimeblockPosition,
   computeActualTimeDiffOverlay,
   detectOverlapGroups,
   filterTimeblocksByDate,
@@ -398,17 +398,17 @@ describe('detectOverlapGroups', () => {
 });
 
 // ========================================
-// calculateEntryPosition
+// calculateTimeblockPosition
 // ========================================
 
-describe('calculateEntryPosition', () => {
+describe('calculateTimeblockPosition', () => {
   it('10:00-11:00のエントリを正しく配置（hourHeight=72）', () => {
     const entry = createTimedEntry({
       start: new Date('2026-01-15T10:00:00'),
       end: new Date('2026-01-15T11:00:00'),
     });
     const column = { entries: [], columnIndex: 0, totalColumns: 1 };
-    const pos = calculateEntryPosition(entry, column, 72);
+    const pos = calculateTimeblockPosition(entry, column, 72);
 
     expect(pos.top).toBe(720); // 10 * 72
     expect(pos.height).toBe(72); // 1時間 * 72
@@ -422,7 +422,7 @@ describe('calculateEntryPosition', () => {
       end: new Date('2026-01-15T10:05:00'), // 5分 = 6px
     });
     const column = { entries: [], columnIndex: 0, totalColumns: 1 };
-    const pos = calculateEntryPosition(entry, column, 72);
+    const pos = calculateTimeblockPosition(entry, column, 72);
 
     expect(pos.height).toBe(14);
   });
@@ -433,7 +433,7 @@ describe('calculateEntryPosition', () => {
       end: new Date('2026-01-15T11:00:00'),
     });
     const column = { entries: [], columnIndex: 1, totalColumns: 2 };
-    const pos = calculateEntryPosition(entry, column, 72);
+    const pos = calculateTimeblockPosition(entry, column, 72);
 
     expect(pos.left).toBe(50);
     expect(pos.width).toBe(50);
@@ -513,7 +513,7 @@ describe('computeActualTimeDiffOverlay', () => {
       endDate: new Date('2026-01-15T11:00:00'),
       actualStartDate: new Date('2026-01-15T10:15:00'), // 15分遅れ
       actualEndDate: new Date('2026-01-15T11:00:00'),
-      entryState: 'past',
+      timeblockState: 'past',
       origin: 'planned',
     });
     const overlay = computeActualTimeDiffOverlay(event, 72);
@@ -527,7 +527,7 @@ describe('computeActualTimeDiffOverlay', () => {
     const event = createCalendarEvent({
       startDate: new Date('2099-01-15T10:00:00'),
       endDate: new Date('2099-01-15T11:00:00'),
-      entryState: 'upcoming',
+      timeblockState: 'upcoming',
       origin: 'planned',
     });
     const overlay = computeActualTimeDiffOverlay(event, 72);
@@ -542,7 +542,7 @@ describe('computeActualTimeDiffOverlay', () => {
     const event = createCalendarEvent({
       startDate: new Date('2026-01-15T10:00:00'),
       endDate: new Date('2026-01-15T11:00:00'),
-      entryState: 'past',
+      timeblockState: 'past',
       origin: 'planned',
     });
     const overlay = computeActualTimeDiffOverlay(event, 72);
@@ -555,7 +555,7 @@ describe('computeActualTimeDiffOverlay', () => {
       endDate: new Date('2026-01-15T11:00:00'),
       actualStartDate: new Date('2026-01-15T09:45:00'), // 15分早い
       actualEndDate: new Date('2026-01-15T11:00:00'),
-      entryState: 'past',
+      timeblockState: 'past',
       origin: 'planned',
     });
     const overlay = computeActualTimeDiffOverlay(event, 72);

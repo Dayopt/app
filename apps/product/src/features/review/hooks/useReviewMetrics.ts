@@ -92,8 +92,8 @@ export function useReviewMetrics(
       trend: computeTrend(cur.totalMinutes, prev.totalMinutes, 'up'),
     };
 
-    map.entryRate = {
-      id: 'entryRate',
+    map.planRate = {
+      id: 'planRate',
       value: cur.planRate,
       trend: computeTrend(cur.planRate, prev.planRate, 'up'),
     };

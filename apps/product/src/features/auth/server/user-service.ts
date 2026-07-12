@@ -10,6 +10,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database, Row } from '@/lib/database';
+import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { getStripe } from '@/lib/stripe/client';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
@@ -67,7 +68,7 @@ interface ExportDataResult {
   data: {
     profile: Row<'profiles'> | null;
     plans: Row<'plans'>[];
-    logs: Row<'logs'>[];
+    records: Row<typeof databaseTables.records>[];
     tags: Row<'tags'>[];
     userSettings: Row<'user_settings'> | null;
   };
@@ -171,24 +172,25 @@ export function createUserService(supabase: SupabaseClient<Database>) {
     },
 
     /**
-     * 全ブロック（plans / logs）を削除
+     * 全ブロック（plans / records）を削除
      * タグ・設定・プロフィールは保持
      */
     async deleteBlocks(userId: string): Promise<{ deletedCount: number }> {
       const adminClient = createServiceRoleClient();
       let deletedCount = 0;
 
-      // logs.plan_id は plans を参照するため、logs → plans の順で削除する。
-      for (const table of ['logs', 'plans'] as const) {
+      // records.plan_id は plans を参照するため、records → plans の順で削除する。
+      for (const table of [databaseTables.records, databaseTables.plans] as const) {
         const { data: deleted, error } = await adminClient
           .from(table)
           .delete()
           .eq('user_id', userId)
           .select('id');
         if (error) {
+          const resource = table === databaseTables.records ? 'records' : table;
           throw new UserServiceError(
             'DELETE_DATA_FAILED',
-            `${table} deletion failed: ${error.message}`,
+            `${resource} deletion failed: ${error.message}`,
           );
         }
         deletedCount += deleted?.length ?? 0;
@@ -200,17 +202,23 @@ export function createUserService(supabase: SupabaseClient<Database>) {
 
     /**
      * 全データを削除（アカウントは保持）
-     * plans, logs, tags, 設定を全削除
+     * plans, records, tags, 設定を全削除
      */
     async deleteAllData(userId: string): Promise<{ success: true }> {
       const adminClient = createServiceRoleClient();
       // FK 依存順。service-role を使うが、全操作を認証済み userId で明示的に制限する。
-      for (const table of ['logs', 'plans', 'tags', 'user_settings'] as const) {
+      for (const table of [
+        databaseTables.records,
+        databaseTables.plans,
+        databaseTables.tags,
+        databaseTables.userSettings,
+      ] as const) {
         const { error } = await adminClient.from(table).delete().eq('user_id', userId);
         if (error) {
+          const resource = table === databaseTables.records ? 'records' : table;
           throw new UserServiceError(
             'DELETE_DATA_FAILED',
-            `${table} deletion failed: ${error.message}`,
+            `${resource} deletion failed: ${error.message}`,
           );
         }
       }
@@ -227,11 +235,11 @@ export function createUserService(supabase: SupabaseClient<Database>) {
       const { userId } = options;
 
       const adminClient = createServiceRoleClient();
-      const [profileResult, plansResult, logsResult, tagsResult, userSettingsResult] =
+      const [profileResult, plansResult, recordsResult, tagsResult, userSettingsResult] =
         await Promise.all([
           supabase.from('profiles').select('*').eq('id', userId).single(),
           adminClient.from('plans').select('*').eq('user_id', userId),
-          adminClient.from('logs').select('*').eq('user_id', userId),
+          adminClient.from(databaseTables.records).select('*').eq('user_id', userId),
           supabase.from('tags').select('*').eq('user_id', userId),
           supabase.from('user_settings').select('*').eq('user_id', userId).single(),
         ]);
@@ -248,10 +256,10 @@ export function createUserService(supabase: SupabaseClient<Database>) {
           `Plans fetch error: ${plansResult.error.message}`,
         );
       }
-      if (logsResult.error) {
+      if (recordsResult.error) {
         throw new UserServiceError(
           'EXPORT_FAILED',
-          `Logs fetch error: ${logsResult.error.message}`,
+          `Records fetch error: ${recordsResult.error.message}`,
         );
       }
       if (tagsResult.error) {
@@ -266,7 +274,7 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         data: {
           profile: profileResult.data || null,
           plans: plansResult.data || [],
-          logs: logsResult.data || [],
+          records: recordsResult.data || [],
           tags: tagsResult.data || [],
           userSettings: userSettingsResult.data || null,
         },

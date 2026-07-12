@@ -1,5 +1,5 @@
 /**
- * `logs` の表示用射影型（Calendar Log レーンでのレンダリングに使用、視覚的な主役）。
+ * Record の表示用射影型（Calendar の Record レーンでのレンダリングに使用）。
  *
  * `CalendarEvent`（entries 統合型）から独立した Step 5 の新規型。
  * `diffMinutes` は `planId` が紐づく log のみ算出される（実績 − 予定、分）。

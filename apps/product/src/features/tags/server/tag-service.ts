@@ -19,6 +19,7 @@ import 'server-only';
  */
 
 import type { Database, Insert, Row, Update } from '@/lib/database';
+import { databaseTables } from '@/lib/database';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { formatRpcErrorDetail } from '../domain/tag-merge';
@@ -108,7 +109,7 @@ export class TagService {
 
   private async countTagAssociations(userId: string, tagIds: string[]): Promise<number> {
     const results = await Promise.all(
-      (['plans', 'logs'] as const).map((table) =>
+      ([databaseTables.plans, databaseTables.records] as const).map((table) =>
         this.supabase
           .from(table)
           .select('id', { count: 'exact', head: true })
@@ -140,7 +141,7 @@ export class TagService {
       if (!targetTagId) {
         throw new TagServiceError('INVALID_INPUT', 'targetTagId is required for reassign strategy');
       }
-      for (const table of ['plans', 'logs'] as const) {
+      for (const table of [databaseTables.plans, databaseTables.records] as const) {
         const { error } = await adminClient
           .from(table)
           .update({ tag_id: targetTagId })
@@ -168,29 +169,29 @@ export class TagService {
       );
     }
 
-    const { error: logDeleteError } = await adminClient
-      .from('logs')
+    const { error: recordDeleteError } = await adminClient
+      .from(databaseTables.records)
       .delete()
       .in('tag_id', tagIds)
       .eq('user_id', userId);
-    if (logDeleteError) {
+    if (recordDeleteError) {
       throw new TagServiceError(
         'DELETE_FAILED',
-        `Failed to delete logs: ${logDeleteError.message}`,
+        `Failed to delete records: ${recordDeleteError.message}`,
       );
     }
 
     const planIds = (plans ?? []).map((plan) => plan.id);
     if (planIds.length > 0) {
       const { error: detachError } = await adminClient
-        .from('logs')
+        .from(databaseTables.records)
         .update({ plan_id: null })
         .in('plan_id', planIds)
         .eq('user_id', userId);
       if (detachError) {
         throw new TagServiceError(
           'UPDATE_FAILED',
-          `Failed to detach logs from deleted plans: ${detachError.message}`,
+          `Failed to detach records from deleted plans: ${detachError.message}`,
         );
       }
     }
@@ -659,7 +660,7 @@ export class TagService {
 
     const tagIds = matchingTags.map((t) => t.id);
 
-    // 関連Plan / Log / Entryがある場合は strategy 必須（暗黙削除させない）
+    // 関連 Plan / Record がある場合は strategy 必須（暗黙削除させない）
     if (!strategy) {
       const associationCount = await this.countTagAssociations(userId, tagIds);
       if (associationCount > 0) {
@@ -700,7 +701,7 @@ export class TagService {
   /**
    * タグマージ（atomic）
    *
-   * `merge_tags_with_hierarchy` RPC で plans / logs / entries 移動 + children 再 parent +
+   * `merge_tags_with_hierarchy` RPC で関連 Timeblock を移動し、children を再 parent する。
    * source 非アクティブ化を 1 transaction にまとめて実行する。途中失敗時は全体
    * rollback されるため partial state は発生しない。
    *
@@ -796,7 +797,7 @@ export class TagService {
       );
     }
 
-    // 関連Plan / Log / Entryがある場合は strategy 必須（暗黙削除させない）
+    // 関連 Plan / Record がある場合は strategy 必須（暗黙削除させない）
     if (!strategy) {
       const associationCount = await this.countTagAssociations(userId, [tagId]);
       if (associationCount > 0) {
@@ -875,13 +876,13 @@ export class TagService {
   /**
    * タグ使用統計取得
    *
-   * logs を正としてタグ使用数・最終利用日時を集計する
+   * Record を正としてタグ使用数・最終利用日時を集計する
    *
    * @param options - userId
    * @returns タグ統計の配列
    */
   async getStats(options: { userId: string }): Promise<TagStatsRow[]> {
-    return this.statisticsService.getStatsFromLogs(options.userId);
+    return this.statisticsService.getStatsFromRecords(options.userId);
   }
 }
 

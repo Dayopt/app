@@ -28,7 +28,7 @@
       "skipped": "スキップしました",
       "skipFailed": "スキップできませんでした。もう一度お試しください",
       "unskipped": "スキップを解除しました",
-      "conflict": "このエントリーは他の場所で変更されました。最新データを読み込んでください",
+      "conflict": "このタイムブロックは他の場所で変更されました。最新データを読み込んでください",
       "placed": "{name} を {time} に追加しました",
       "overlapError": "{time} は既存のブロックと重複しています"
     },
@@ -39,21 +39,21 @@
       },
       "list": {
         "nav": {
-          "plan": "エントリー"
+          "plan": "Plan"
         }
       }
     },
     "open": "開く",
     "editDetails": "詳細を編集",
     "delete": {
-      "confirmTitle": "エントリーを削除しますか？",
+      "confirmTitle": "タイムブロックを削除しますか？",
       "confirmTitleWithName": "{name}を削除しますか？",
-      "description": "このエントリーは完全に削除されます。取り消せません",
+      "description": "このタイムブロックは完全に削除されます。取り消せません",
       "warningIrreversible": "この操作は取り消せません",
       "afterDeletion": "削除すると",
-      "willBeDeleted": "エントリーが完全に削除されます",
+      "willBeDeleted": "タイムブロックが完全に削除されます",
       "willBeRemovedFromCalendar": "カレンダーから削除されます",
-      "confirm": "エントリーを削除",
+      "confirm": "タイムブロックを削除",
       "deleting": "削除中..."
     },
     "status": {
@@ -70,19 +70,19 @@
       "editDescription": "説明を編集",
       "addDescription": "説明を追加",
       "addDescriptionPlaceholder": "例: Slack整理 + メール返信",
-      "create": "エントリーを作成",
-      "createRecord": "エントリーを作成",
+      "create": "タイムブロックを作成",
+      "createRecord": "Record を作成",
       "markComplete": "完了にする",
       "markIncomplete": "未完了に戻す",
       "completeOptions": "完了オプション",
-      "completeAndCreate": "完了 + エントリー作成",
+      "completeAndCreate": "完了 + タイムブロック作成",
       "toast": {
         "tagsSaveFailed": "タグを保存できませんでした。入力内容は保持されています。もう一度お試しください",
-        "createFailed": "エントリーを作成できませんでした。もう一度お試しください",
+        "createFailed": "タイムブロックを作成できませんでした。もう一度お試しください",
         "saveFailed": "保存できませんでした。入力内容は保持されています。もう一度お試しください"
       },
       "noTitle": "（タイトルなし）",
-      "notFound": "エントリーが見つかりません",
+      "notFound": "タイムブロックが見つかりません",
       "noData": "データが見つかりません",
       "menu": {
         "duplicate": "複製",
@@ -115,26 +115,26 @@
         "pastPlaceholder": "やったことをひとこと..."
       },
       "records": {
-        "link": "エントリーを紐付け",
-        "unlink": "エントリー紐付けを解除",
-        "search": "エントリーを検索...",
-        "noMatch": "一致するエントリーがありません",
-        "addNew": "作業ログを追加"
+        "link": "Record を紐付け",
+        "unlink": "Record の紐付けを解除",
+        "search": "Record を検索...",
+        "noMatch": "一致する Record がありません",
+        "addNew": "Record を追加"
       },
       "recordCreate": {
         "titlePlaceholder": "何をした？",
-        "titleLabel": "エントリータイトル",
-        "failed": "エントリーを作成できませんでした。もう一度お試しください",
-        "linkEntry": "エントリーに紐付け",
-        "unlinkEntry": "エントリー紐付けを解除",
-        "searchEntries": "エントリーを検索...",
-        "noEntries": "まだエントリーがありません",
-        "addNew": "エントリーを追加"
+        "titleLabel": "Record のタイトル",
+        "failed": "Record を作成できませんでした。もう一度お試しください",
+        "linkEntry": "Record に紐付け",
+        "unlinkEntry": "Record の紐付けを解除",
+        "searchEntries": "Record を検索...",
+        "noEntries": "まだ Record がありません",
+        "addNew": "Record を追加"
       }
     },
     "view": {
       "edit": "編集",
-      "delete": "エントリーを削除",
+      "delete": "タイムブロックを削除",
       "deleteConfirmTitle": "「{name}」を削除しますか？",
       "deleteConfirmDescription": "この表示設定は完全に削除されます。取り消せません",
       "deleteConfirm": "削除"

@@ -42,7 +42,7 @@ function createPlan(overrides: Partial<PlanRow> = {}): PlanRow {
   };
 }
 
-function createLog(overrides: Partial<RecordRow> = {}): RecordRow {
+function createRecord(overrides: Partial<RecordRow> = {}): RecordRow {
   return {
     created_at: '2026-07-01T00:00:00.000Z',
     deleted_at: null,
@@ -157,7 +157,7 @@ describe('PlanService.record', () => {
       tag_id: 'tag-1',
       title: 'Recorded plan',
     });
-    const log = createLog({
+    const log = createRecord({
       end_at: plan.end_at,
       note: plan.note,
       plan_id: plan.id,
@@ -167,11 +167,11 @@ describe('PlanService.record', () => {
       title: plan.title,
     });
     const { service, mockSupabase } = createPlanService();
-    let logsCallCount = 0;
+    let recordsCallCount = 0;
     mockSupabase.from.mockImplementation((table: string) => {
       if (table === 'plans') return createChainableMock(plan);
-      logsCallCount++;
-      return createChainableMock(logsCallCount <= 2 ? [] : log);
+      recordsCallCount++;
+      return createChainableMock(recordsCallCount <= 2 ? [] : log);
     });
 
     await expect(service.record({ userId: USER_ID, planId: plan.id })).resolves.toMatchObject({
@@ -185,7 +185,7 @@ describe('PlanService.record', () => {
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
-    const existingLog = createLog({
+    const existingLog = createRecord({
       end_at: '2026-03-17T13:00:00.000Z',
       plan_id: plan.id,
       start_at: '2026-03-17T12:00:00.000Z',
@@ -208,11 +208,11 @@ describe('PlanService.record', () => {
       start_at: '2026-03-17T10:00:00.000Z',
     });
     const { service, mockSupabase } = createPlanService();
-    let logsCallCount = 0;
+    let recordsCallCount = 0;
     mockSupabase.from.mockImplementation((table: string) => {
       if (table === 'plans') return createChainableMock(plan);
-      logsCallCount++;
-      if (logsCallCount <= 2) return createChainableMock([]);
+      recordsCallCount++;
+      if (recordsCallCount <= 2) return createChainableMock([]);
       return createChainableMock(null, {
         code: '23505',
         message: 'duplicate key value violates unique constraint',
@@ -233,7 +233,7 @@ describe('PlanService.skip', () => {
     });
     const { service, mockSupabase } = createPlanService();
     mockSupabase.from.mockImplementation((table: string) =>
-      createChainableMock(table === 'plans' ? plan : [createLog({ plan_id: plan.id })]),
+      createChainableMock(table === 'plans' ? plan : [createRecord({ plan_id: plan.id })]),
     );
 
     await expect(service.skip({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
@@ -244,7 +244,7 @@ describe('PlanService.skip', () => {
 
 describe('PlanService.confirmDay', () => {
   it('confirm_day_plans_to_logs RPC へ user と day range を渡す', async () => {
-    const log = createLog({ source: 'from_plan' });
+    const log = createRecord({ source: 'from_plan' });
     const { service, mockSupabase } = createPlanService();
     mockSupabase.rpc.mockResolvedValue({ data: [log], error: null });
 
@@ -310,13 +310,13 @@ describe('RecordService.create', () => {
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
-    const log = createLog({ plan_id: plan.id });
+    const log = createRecord({ plan_id: plan.id });
     const { service, mockSupabase } = createRecordService();
-    let logsCallCount = 0;
+    let recordsCallCount = 0;
     mockSupabase.from.mockImplementation((table: string) => {
       if (table === 'plans') return createChainableMock(plan);
-      logsCallCount++;
-      return createChainableMock(logsCallCount === 1 ? [] : log);
+      recordsCallCount++;
+      return createChainableMock(recordsCallCount === 1 ? [] : log);
     });
 
     await expect(
@@ -352,7 +352,7 @@ describe('RecordService.create', () => {
   });
 
   it('plan 紐づけの update でも future plan を拒否する', async () => {
-    const existing = createLog();
+    const existing = createRecord();
     const { service, mockSupabase } = createRecordService();
     mockSupabase.from.mockImplementation((table: string) =>
       createChainableMock(table === 'logs' ? existing : createPlan()),
@@ -361,7 +361,7 @@ describe('RecordService.create', () => {
     await expect(
       service.update({
         userId: USER_ID,
-        logId: existing.id,
+        recordId: existing.id,
         input: { planId: 'plan-1' },
       }),
     ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });

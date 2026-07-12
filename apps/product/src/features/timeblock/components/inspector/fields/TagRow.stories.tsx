@@ -14,7 +14,7 @@ import { TagRow } from './TagRow';
  * 右側に「…」メニュー（getTimeblockMenuItems で生成された項目）を配置。
  */
 const meta = {
-  title: 'Product/Features/Entry/Inspector/TagRow',
+  title: 'Product/Features/Timeblock/Inspector/TagRow',
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',

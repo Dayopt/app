@@ -29,7 +29,7 @@ const estimationRows: WeeklyReflectionEstimationRow[] = [
     avgPlannedMinutes: 120,
     avgActualMinutes: 150,
     avgDeviationMinutes: 30,
-    entryCount: 3,
+    recordCount: 3,
   },
 ];
 

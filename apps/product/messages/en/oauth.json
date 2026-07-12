@@ -6,7 +6,7 @@
       "description": "{clientName} will be able to read your Dayopt records.",
       "scopesLabel": "Access scope",
       "scope": {
-        "read:entries": "Read entries",
+        "read:entries": "Read timeblocks",
         "read:tags": "Read tags",
         "read:stats": "Read stats"
       },

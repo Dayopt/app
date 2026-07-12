@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CalendarEvent } from '@/features/timeblock';
 
 const createPlanMutate = vi.fn();
-const createLogMutate = vi.fn();
+const createRecordMutate = vi.fn();
 const updatePlanMutate = vi.fn();
-const updateLogMutate = vi.fn();
+const updateRecordMutate = vi.fn();
 const deletePlanMutate = vi.fn();
-const deleteLogMutate = vi.fn();
+const deleteRecordMutate = vi.fn();
 const getQueriesData = vi.fn(
   (_opts: { predicate: (q: { queryKey: unknown }) => boolean }) => [] as Array<[unknown, unknown]>,
 );
@@ -23,11 +23,11 @@ vi.mock('@/features/timeblock', async () => {
     ...actual,
     useTimeblockWriteMutations: () => ({
       createPlan: { mutate: createPlanMutate },
-      createLog: { mutate: createLogMutate },
+      createRecord: { mutate: createRecordMutate },
       updatePlan: { mutate: updatePlanMutate },
-      updateLog: { mutate: updateLogMutate },
+      updateRecord: { mutate: updateRecordMutate },
       deletePlan: { mutate: deletePlanMutate },
-      deleteLog: { mutate: deleteLogMutate },
+      deleteRecord: { mutate: deleteRecordMutate },
     }),
   };
 });
@@ -71,7 +71,7 @@ function makeEvent(overrides: Partial<CalendarEvent> & { id: string }): Calendar
     duration: 60,
     isMultiDay: false,
     origin: 'planned',
-    entryState: 'upcoming',
+    timeblockState: 'upcoming',
     plannedStartDate: start,
     plannedEndDate: end,
     actualStartDate: null,
@@ -81,9 +81,9 @@ function makeEvent(overrides: Partial<CalendarEvent> & { id: string }): Calendar
   };
 }
 
-/** plans.list / logs.list キャッシュ query を模した getQueriesData の戻り値（tRPC v11 query key 形式） */
+/** plans.list / records.list キャッシュ query を模した getQueriesData の戻り値（tRPC v11 query key 形式） */
 function makeCache(
-  lane: 'plans' | 'logs',
+  lane: 'plans' | 'records',
   rows: Array<{ id: string; start_at: string; end_at: string }>,
 ): Array<[unknown, unknown]> {
   return [[[[lane, 'list'], {}], rows]];
@@ -99,11 +99,11 @@ function mockCaches(...caches: Array<[unknown, unknown]>[]) {
 describe('useTimeblockOperations', () => {
   beforeEach(() => {
     createPlanMutate.mockReset();
-    createLogMutate.mockReset();
+    createRecordMutate.mockReset();
     updatePlanMutate.mockReset();
-    updateLogMutate.mockReset();
+    updateRecordMutate.mockReset();
     deletePlanMutate.mockReset();
-    deleteLogMutate.mockReset();
+    deleteRecordMutate.mockReset();
     getQueriesData.mockReset();
     getQueriesData.mockReturnValue([]);
     toastSuccess.mockReset();
@@ -117,7 +117,7 @@ describe('useTimeblockOperations', () => {
     vi.useRealTimers();
   });
 
-  describe('handleEntryDelete', () => {
+  describe('handleTimeblockDelete', () => {
     it('plans.list キャッシュに id があれば deletePlan.mutate を呼ぶ', async () => {
       mockCaches(
         makeCache('plans', [
@@ -130,17 +130,17 @@ describe('useTimeblockOperations', () => {
       );
 
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleEntryDelete('plan-1');
+      await result.current.handleTimeblockDelete('plan-1');
 
       expect(deletePlanMutate).toHaveBeenCalledWith({ id: 'plan-1' });
-      expect(deleteLogMutate).not.toHaveBeenCalled();
+      expect(deleteRecordMutate).not.toHaveBeenCalled();
     });
 
-    it('logs.list キャッシュに id があれば deleteLog.mutate を呼ぶ', async () => {
+    it('records.list キャッシュに id があれば deleteRecord.mutate を呼ぶ', async () => {
       mockCaches(
-        makeCache('logs', [
+        makeCache('records', [
           {
-            id: 'log-1',
+            id: 'record-1',
             start_at: '2026-04-26T00:00:00.000Z',
             end_at: '2026-04-26T01:00:00.000Z',
           },
@@ -148,28 +148,28 @@ describe('useTimeblockOperations', () => {
       );
 
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleEntryDelete('log-1');
+      await result.current.handleTimeblockDelete('record-1');
 
-      expect(deleteLogMutate).toHaveBeenCalledWith({ id: 'log-1' });
+      expect(deleteRecordMutate).toHaveBeenCalledWith({ id: 'record-1' });
       expect(deletePlanMutate).not.toHaveBeenCalled();
     });
 
     it('キャッシュに id が見つからなければ何も mutate せず logger.error する', async () => {
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleEntryDelete('unknown-id');
+      await result.current.handleTimeblockDelete('unknown-id');
 
       expect(deletePlanMutate).not.toHaveBeenCalled();
-      expect(deleteLogMutate).not.toHaveBeenCalled();
+      expect(deleteRecordMutate).not.toHaveBeenCalled();
       expect(loggerError).toHaveBeenCalled();
     });
   });
 
-  describe('handleUpdateEntry: object overload (CalendarEvent)', () => {
+  describe('handleUpdateTimeblock: object overload (CalendarEvent)', () => {
     it('kind=plan の未来イベントは updatePlan.mutate を呼ぶ', async () => {
       const event = makeEvent({ id: 'plan-1', kind: 'plan' });
 
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleUpdateEntry(event);
+      await result.current.handleUpdateTimeblock(event);
 
       expect(updatePlanMutate).toHaveBeenCalledWith(
         {
@@ -181,18 +181,18 @@ describe('useTimeblockOperations', () => {
         },
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
-      expect(updateLogMutate).not.toHaveBeenCalled();
+      expect(updateRecordMutate).not.toHaveBeenCalled();
     });
 
-    it('kind=log の過去イベントは updateLog.mutate を呼ぶ', async () => {
+    it('kind=log の過去イベントは updateRecord.mutate を呼ぶ', async () => {
       const start = new Date('2026-04-25T01:00:00.000Z');
       const end = new Date('2026-04-25T02:00:00.000Z');
-      const event = makeEvent({ id: 'log-1', kind: 'log', startDate: start, endDate: end });
+      const event = makeEvent({ id: 'log-1', kind: 'record', startDate: start, endDate: end });
 
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleUpdateEntry(event);
+      await result.current.handleUpdateTimeblock(event);
 
-      expect(updateLogMutate).toHaveBeenCalledWith(
+      expect(updateRecordMutate).toHaveBeenCalledWith(
         {
           id: 'log-1',
           data: {
@@ -209,22 +209,22 @@ describe('useTimeblockOperations', () => {
       const event = makeEvent({ id: 'plan-1', startDate: null });
 
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleUpdateEntry(event);
+      await result.current.handleUpdateTimeblock(event);
 
       expect(loggerError).toHaveBeenCalled();
       expect(updatePlanMutate).not.toHaveBeenCalled();
-      expect(updateLogMutate).not.toHaveBeenCalled();
+      expect(updateRecordMutate).not.toHaveBeenCalled();
     });
 
     it('endDate が null なら logger.error を出して mutate を呼ばない', async () => {
       const event = makeEvent({ id: 'plan-1', endDate: null });
 
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleUpdateEntry(event);
+      await result.current.handleUpdateTimeblock(event);
 
       expect(loggerError).toHaveBeenCalled();
       expect(updatePlanMutate).not.toHaveBeenCalled();
-      expect(updateLogMutate).not.toHaveBeenCalled();
+      expect(updateRecordMutate).not.toHaveBeenCalled();
     });
 
     it('キャッシュ上の plan が既に過去（end_at <= now）なら timeLocked トーストを出し mutate を呼ばない', async () => {
@@ -240,7 +240,7 @@ describe('useTimeblockOperations', () => {
       const event = makeEvent({ id: 'plan-1', kind: 'plan' });
 
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleUpdateEntry(event);
+      await result.current.handleUpdateTimeblock(event);
 
       expect(updatePlanMutate).not.toHaveBeenCalled();
       expect(toastError).toHaveBeenCalledWith('timeblock.editor.timeLocked');
@@ -249,12 +249,12 @@ describe('useTimeblockOperations', () => {
     it('log を未来へ動かす更新は timeLocked トーストを出し mutate を呼ばない', async () => {
       const start = new Date('2026-04-27T01:00:00.000Z');
       const end = new Date('2026-04-27T02:00:00.000Z');
-      const event = makeEvent({ id: 'log-1', kind: 'log', startDate: start, endDate: end });
+      const event = makeEvent({ id: 'log-1', kind: 'record', startDate: start, endDate: end });
 
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleUpdateEntry(event);
+      await result.current.handleUpdateTimeblock(event);
 
-      expect(updateLogMutate).not.toHaveBeenCalled();
+      expect(updateRecordMutate).not.toHaveBeenCalled();
       expect(toastError).toHaveBeenCalledWith('timeblock.editor.timeLocked');
     });
 
@@ -271,7 +271,7 @@ describe('useTimeblockOperations', () => {
       const event = makeEvent({ id: 'plan-1', kind: 'plan' });
 
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleUpdateEntry(event);
+      await result.current.handleUpdateTimeblock(event);
 
       const onSuccess = updatePlanMutate.mock.calls[0]?.[1].onSuccess as () => void;
       onSuccess();
@@ -290,14 +290,14 @@ describe('useTimeblockOperations', () => {
     });
   });
 
-  describe('handleUpdateEntry: string overload', () => {
+  describe('handleUpdateTimeblock: string overload', () => {
     it('id だけの呼び出しで updates が無ければ何もしない', async () => {
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleUpdateEntry('plan-1');
+      await result.current.handleUpdateTimeblock('plan-1');
 
       expect(loggerError).toHaveBeenCalled();
       expect(updatePlanMutate).not.toHaveBeenCalled();
-      expect(updateLogMutate).not.toHaveBeenCalled();
+      expect(updateRecordMutate).not.toHaveBeenCalled();
     });
 
     it('id + updates + キャッシュ一致で kind を逆引きして updatePlan.mutate を呼ぶ', async () => {
@@ -312,7 +312,7 @@ describe('useTimeblockOperations', () => {
       );
 
       const { result } = renderHook(() => useTimeblockOperations());
-      await result.current.handleUpdateEntry('plan-1', {
+      await result.current.handleUpdateTimeblock('plan-1', {
         startTime: new Date('2026-04-27T01:00:00.000Z'),
         endTime: new Date('2026-04-27T02:00:00.000Z'),
       });

@@ -9,7 +9,7 @@ import type { TimeblockColumn, TimedTimeblock } from '../types/timeblock.types';
 
 import { MIN_EVENT_HEIGHT } from './grid';
 
-// 予定 vs 記録 差分オーバーレイは Entry ドメインのロジック
+// 予定 vs 記録 差分オーバーレイは Timeblock ドメインのロジック
 // canonical source: @/features/timeblock
 export { computeActualTimeDiffOverlay } from '@/features/timeblock';
 
@@ -81,10 +81,10 @@ export function findOverlapGroups(entries: TimedTimeblock[]): OverlapGroup[] {
   let groupEndTime: Date | null = null;
 
   entries.forEach((entry) => {
-    const entryStart = new Date(entry.start);
-    const entryEnd = new Date(entry.end);
+    const timeblockStart = new Date(entry.start);
+    const timeblockEnd = new Date(entry.end);
 
-    if (!groupEndTime || entryStart >= groupEndTime) {
+    if (!groupEndTime || timeblockStart >= groupEndTime) {
       if (currentGroup.length > 0) {
         groups.push({
           entries: currentGroup,
@@ -93,11 +93,11 @@ export function findOverlapGroups(entries: TimedTimeblock[]): OverlapGroup[] {
         });
       }
       currentGroup = [entry];
-      groupEndTime = entryEnd;
+      groupEndTime = timeblockEnd;
     } else {
       currentGroup.push(entry);
-      if (entryEnd > groupEndTime) {
-        groupEndTime = entryEnd;
+      if (timeblockEnd > groupEndTime) {
+        groupEndTime = timeblockEnd;
       }
     }
   });
@@ -195,13 +195,13 @@ export function isOverlapping(entry1: TimedTimeblock, entry2: TimedTimeblock): b
  * 最大同時重複数を計算（sweep-line）
  */
 export function calculateMaxConcurrent(entries: TimedTimeblock[]): number {
-  const timePoints: { time: Date; type: 'start' | 'end'; entryId: string }[] = [];
+  const timePoints: { time: Date; type: 'start' | 'end'; timeblockId: string }[] = [];
 
   entries.forEach((entry) => {
     const start = new Date(entry.start);
     const end = new Date(entry.end);
-    timePoints.push({ time: start, type: 'start', entryId: entry.id });
-    timePoints.push({ time: end, type: 'end', entryId: entry.id });
+    timePoints.push({ time: start, type: 'start', timeblockId: entry.id });
+    timePoints.push({ time: end, type: 'end', timeblockId: entry.id });
   });
 
   timePoints.sort((a, b) => {
@@ -258,7 +258,7 @@ export function detectOverlapGroups(entries: TimedTimeblock[]): TimedTimeblock[]
 /**
  * エントリの表示位置を計算
  */
-export function calculateEntryPosition(
+export function calculateTimeblockPosition(
   entry: TimedTimeblock,
   column: TimeblockColumn,
   hourHeight: number = 60,

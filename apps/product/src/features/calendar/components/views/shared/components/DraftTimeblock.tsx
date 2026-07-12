@@ -5,7 +5,7 @@ import { useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
+import { buildNewTimeblockOverlapTarget } from '@/features/calendar/lib/overlap';
 import { getTagColorClasses, TagIcon } from '@/features/tags';
 import { timeblockTintColor } from '@/features/timeblock';
 import { formatTimeString } from '@/lib/date';
@@ -17,35 +17,35 @@ import { useTagDraftStore, type TagDraft } from '../../../../stores/useTagDraftS
 import { Z_INDEX } from '../constants/grid.constants';
 import { ConflictOverlay } from './ConflictOverlay';
 
-/** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */
-function isEntriesListQuery(query: { queryKey: unknown }): boolean {
+/** plans.list / records.list の cached query を判定する predicate（tRPC v11 key 形式） */
+function isTimeblocksListQuery(query: { queryKey: unknown }): boolean {
   const key = query.queryKey;
   return (
     Array.isArray(key) &&
     key.length >= 1 &&
     Array.isArray(key[0]) &&
-    key[0][0] === 'entries' &&
+    (key[0][0] === 'plans' || key[0][0] === 'records') &&
     key[0][1] === 'list'
   );
 }
 
-interface DraftEntryBlockProps {
+interface DraftTimeblockProps {
   /** この列が表示する日付（draft.date と同日のときだけ render する想定） */
   draft: TagDraft;
   hourHeight: number;
 }
 
 /**
- * Tag タップで開く draft entry の calendar 上のプレビュー。
+ * Tag タップで開く draft Timeblock の Calendar 上のプレビュー。
  *
  * - InlineTagPalette と同じ視覚（左 accent strip + 右 tinted card）
  * - 下端に drawer pill 風の resize handle。drag で end time を更新
  * - drag 中は 15 分粒度に snap、24:00 を超えない・start より小さくならない
  * - クリックは popover 側の interaction を阻害しないよう pointer-events: none を基本にし、
  *   resize handle のみ pointer-events: auto
- * - 他 entry と時間が重なる時は赤リング（drag ghost と同じ規範）
+ * - 同一レーンの Timeblock と時間が重なる時は赤リング（drag ghost と同じ規範）
  */
-export function DraftTimeblock({ draft, hourHeight }: DraftEntryBlockProps) {
+export function DraftTimeblock({ draft, hourHeight }: DraftTimeblockProps) {
   const t = useTranslations();
   const timeFormat = useUserPreferences((s) => s.timeFormat);
   const updateTimes = useTagDraftStore((s) => s.updateTimes);
@@ -72,7 +72,7 @@ export function DraftTimeblock({ draft, hourHeight }: DraftEntryBlockProps) {
   isPastEndDate.setHours(endH, endM, 0, 0);
   const isPast = isPastEndDate.getTime() <= nowForPastCheck;
 
-  // 他 entry と時間が重なるか判定（drag ghost と同じく赤リングを描画する用）
+  // 同一レーンの Timeblock と時間が重なるか判定（drag ghost と同じく赤リングを描画する用）
   const hasConflict = useMemo(() => {
     if (endMinutes <= startMinutes) return false;
     const startDate = new Date(draft.date);
@@ -83,12 +83,10 @@ export function DraftTimeblock({ draft, hourHeight }: DraftEntryBlockProps) {
     const cachedLists = queryClient.getQueriesData<
       Array<{
         id: string;
-        start_time: string | null;
-        end_time: string | null;
-        actual_start_time: string | null;
-        actual_end_time: string | null;
+        start_at: string;
+        end_at: string;
       }>
-    >({ predicate: isEntriesListQuery });
+    >({ predicate: isTimeblocksListQuery });
 
     const seen = new Set<string>();
     const events: Array<{
@@ -98,24 +96,25 @@ export function DraftTimeblock({ draft, hourHeight }: DraftEntryBlockProps) {
       actualStart: string | null;
       actualEnd: string | null;
     }> = [];
-    for (const [, data] of cachedLists) {
+    for (const [queryKey, data] of cachedLists) {
       if (!data) continue;
-      for (const e of data) {
-        if (seen.has(e.id)) continue;
-        seen.add(e.id);
+      const lane = Array.isArray(queryKey) && Array.isArray(queryKey[0]) ? queryKey[0][0] : null;
+      for (const timeblock of data) {
+        if (seen.has(timeblock.id)) continue;
+        seen.add(timeblock.id);
         events.push({
-          id: e.id,
-          plannedStart: e.start_time,
-          plannedEnd: e.end_time,
-          actualStart: e.actual_start_time,
-          actualEnd: e.actual_end_time,
+          id: timeblock.id,
+          plannedStart: lane === 'plans' ? timeblock.start_at : null,
+          plannedEnd: lane === 'plans' ? timeblock.end_at : null,
+          actualStart: lane === 'records' ? timeblock.start_at : null,
+          actualEnd: lane === 'records' ? timeblock.end_at : null,
         });
       }
     }
 
     return hasTwoLayerTimeConflict(
       events,
-      buildNewEntryOverlapTarget(startDate, endDate, nowForPastCheck),
+      buildNewTimeblockOverlapTarget(startDate, endDate, nowForPastCheck),
     );
   }, [
     queryClient,

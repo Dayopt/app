@@ -4,8 +4,8 @@
  * `CalendarEvent`（entries 統合型）から独立した Step 5 の新規型。
  * `status` は「過去 Plan の見え方」（overview.md §4）を表現する:
  * - `upcoming` / `active`: 通常のアウトライン表示
- * - `unrecorded`: 過去・未 skip・logs なし（静かなプロンプト）
- * - `recorded`: 過去・logs あり（記録済み、控えめ表示）
+ * - `unrecorded`: 過去・未 skip・records なし（静かなプロンプト）
+ * - `recorded`: 過去・records あり（記録済み、控えめ表示）
  * - `skipped`: `skipped_at` あり（減衰表示）
  */
 export type PlanEventStatus = 'upcoming' | 'active' | 'unrecorded' | 'recorded' | 'skipped';

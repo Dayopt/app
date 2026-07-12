@@ -3,8 +3,8 @@
 /**
  * Calendar CRUD Handlers Hook
  *
- * Entry のクリック・作成・更新・削除・コンテキストメニュー操作を担当。
- * キーボードショートカット（Entry操作系）もここに集約。
+ * Timeblock のクリック・作成・更新・削除・コンテキストメニュー操作を担当。
+ * キーボードショートカット（Timeblock操作系）もここに集約。
  */
 
 import { useCallback, useMemo } from 'react';
@@ -24,8 +24,8 @@ import {
 // =============================================================================
 
 interface CalendarCrudHandlersInput {
-  /** Inspector で選択中の Entry ID */
-  selectedEntryId: string | null;
+  /** Inspector で選択中の Timeblock ID */
+  selectedTimeblockId: string | null;
   /** フィルタ済みイベント一覧（キーボード操作でタイトル取得に使用） */
   filteredEvents: CalendarEvent[];
   /** 現在の表示日付（キーボード操作で過去日判定に使用） */
@@ -33,7 +33,7 @@ interface CalendarCrudHandlersInput {
 }
 
 interface CalendarCrudHandlersResult {
-  disabledEntryId: string | null;
+  disabledTimeblockId: string | null;
   onEntryClick: (entry: CalendarEvent) => void;
   onTimeRangeSelect: (selection: {
     date: Date;
@@ -43,11 +43,11 @@ interface CalendarCrudHandlersResult {
     endMinute: number;
   }) => void;
   onUpdateEntry: (
-    entryIdOrEntry: string | CalendarEvent,
+    timeblockIdOrTimeblock: string | CalendarEvent,
     updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
-  onDeleteEntry: (entryId: string) => void;
-  onDeleteEntryConfirm: (entry: CalendarEvent) => void;
+  onDeleteTimeblock: (timeblockId: string) => void;
+  onDeleteTimeblockConfirm: (entry: CalendarEvent) => void;
   onViewStats: (entry: CalendarEvent) => void;
   onSkip: (entry: CalendarEvent) => void;
   onUnskip: (entry: CalendarEvent) => void;
@@ -58,33 +58,34 @@ interface CalendarCrudHandlersResult {
 // =============================================================================
 
 export function useCalendarCrudHandlers({
-  selectedEntryId,
+  selectedTimeblockId,
   filteredEvents,
   currentDate,
 }: CalendarCrudHandlersInput): CalendarCrudHandlersResult {
   // =========================================================================
   // Calendar Handlers（click, create, drag-select）
   // =========================================================================
-  const { handleEntryClick, handleDateTimeRangeSelect, disabledEntryId } = useCalendarHandlers();
+  const { handleTimeblockClick, handleDateTimeRangeSelect, disabledTimeblockId } =
+    useCalendarHandlers();
 
   // =========================================================================
-  // Entry Operations（CRUD）
+  // Timeblock Operations（CRUD）
   // =========================================================================
-  const { handleEntryDelete: deleteEntry, handleUpdateEntry: handleEntryUpdate } =
+  const { handleTimeblockDelete: deleteTimeblock, handleUpdateTimeblock: handleTimeblockUpdate } =
     useTimeblockOperations();
 
   // =========================================================================
   // Context Actions（右クリックメニュー）
   // =========================================================================
   const {
-    handleDeleteEntry: handleDeleteEntryConfirm,
+    handleDeleteTimeblock: handleDeleteTimeblockConfirm,
     handleViewStats,
     handleSkip,
     handleUnskip,
   } = useTimeblockContextActions();
 
   // =========================================================================
-  // Entry Keyboard Shortcuts
+  // Timeblock Keyboard Shortcuts
   // =========================================================================
   const getInitialEntryData = useCallback((): { start_time?: string; end_time?: string } => {
     const now = new Date();
@@ -97,14 +98,14 @@ export function useCalendarCrudHandlers({
   }, []);
 
   const getSelectedEntryTitle = useCallback(() => {
-    if (!selectedEntryId) return null;
-    const entry = filteredEvents.find((p) => p.id === selectedEntryId);
+    if (!selectedTimeblockId) return null;
+    const entry = filteredEvents.find((p) => p.id === selectedTimeblockId);
     return entry?.title ?? null;
-  }, [selectedEntryId, filteredEvents]);
+  }, [selectedTimeblockId, filteredEvents]);
 
   const getSelectedEntryForCopy = useCallback(() => {
-    if (!selectedEntryId) return null;
-    const entry = filteredEvents.find((p) => p.id === selectedEntryId);
+    if (!selectedTimeblockId) return null;
+    const entry = filteredEvents.find((p) => p.id === selectedTimeblockId);
     if (!entry) return null;
 
     const startHour = entry.startDate?.getHours() ?? 0;
@@ -122,22 +123,22 @@ export function useCalendarCrudHandlers({
       duration,
       tagId: entry.tagId,
     };
-  }, [selectedEntryId, filteredEvents]);
+  }, [selectedTimeblockId, filteredEvents]);
 
   const getPasteDateForKeyboard = useCallback(() => {
     return currentDate;
   }, [currentDate]);
 
-  const deleteEntryAsync = useCallback(
-    async (entryId: string) => {
-      deleteEntry(entryId);
+  const deleteTimeblockAsync = useCallback(
+    async (timeblockId: string) => {
+      deleteTimeblock(timeblockId);
     },
-    [deleteEntry],
+    [deleteTimeblock],
   );
 
   useCalendarEventKeyboard({
     enabled: true,
-    onDeleteEntry: deleteEntryAsync,
+    onDeleteTimeblock: deleteTimeblockAsync,
     getSelectedEntryTitle,
     getInitialEntryData,
     getSelectedEntryForCopy,
@@ -149,23 +150,23 @@ export function useCalendarCrudHandlers({
   // =========================================================================
   return useMemo(
     () => ({
-      disabledEntryId,
-      onEntryClick: handleEntryClick,
+      disabledTimeblockId,
+      onEntryClick: handleTimeblockClick,
       onTimeRangeSelect: handleDateTimeRangeSelect,
-      onUpdateEntry: handleEntryUpdate,
-      onDeleteEntry: deleteEntry,
-      onDeleteEntryConfirm: handleDeleteEntryConfirm,
+      onUpdateEntry: handleTimeblockUpdate,
+      onDeleteTimeblock: deleteTimeblock,
+      onDeleteTimeblockConfirm: handleDeleteTimeblockConfirm,
       onViewStats: handleViewStats,
       onSkip: handleSkip,
       onUnskip: handleUnskip,
     }),
     [
-      disabledEntryId,
-      handleEntryClick,
+      disabledTimeblockId,
+      handleTimeblockClick,
       handleDateTimeRangeSelect,
-      handleEntryUpdate,
-      deleteEntry,
-      handleDeleteEntryConfirm,
+      handleTimeblockUpdate,
+      deleteTimeblock,
+      handleDeleteTimeblockConfirm,
       handleViewStats,
       handleSkip,
       handleUnskip,

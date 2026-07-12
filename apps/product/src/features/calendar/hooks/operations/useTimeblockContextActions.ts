@@ -21,17 +21,17 @@ export function useTimeblockContextActions() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations();
-  const { deleteLog, deletePlan, skipPlan, unskipPlan } = useTimeblockWriteMutations();
+  const { deleteRecord, deletePlan, skipPlan, unskipPlan } = useTimeblockWriteMutations();
 
-  const handleDeleteEntry = useCallback(
+  const handleDeleteTimeblock = useCallback(
     (entry: CalendarEvent) => {
       if ((entry.kind ?? 'plan') === 'plan') {
         deletePlan.mutate({ id: entry.id });
       } else {
-        deleteLog.mutate({ id: entry.id });
+        deleteRecord.mutate({ id: entry.id });
       }
     },
-    [deletePlan, deleteLog],
+    [deletePlan, deleteRecord],
   );
 
   const handleViewStats = useCallback(
@@ -71,7 +71,7 @@ export function useTimeblockContextActions() {
   );
 
   return {
-    handleDeleteEntry,
+    handleDeleteTimeblock,
     handleViewStats,
     handleSkip,
     handleUnskip,

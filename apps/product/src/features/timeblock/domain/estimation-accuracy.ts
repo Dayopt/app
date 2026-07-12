@@ -16,7 +16,7 @@ export interface EstimationAccuracyDbRow {
   avg_planned_minutes: number;
   avg_actual_minutes: number;
   avg_deviation_minutes: number;
-  entry_count: number;
+  record_count: number;
 }
 
 interface EstimationAccuracyItem {
@@ -27,7 +27,7 @@ interface EstimationAccuracyItem {
   avgPlannedMinutes: number;
   avgActualMinutes: number;
   avgDeviationMinutes: number;
-  entryCount: number;
+  recordCount: number;
 }
 
 /**
@@ -46,15 +46,15 @@ export function transformEstimationAccuracy(
     avgPlannedMinutes: row.avg_planned_minutes,
     avgActualMinutes: row.avg_actual_minutes,
     avgDeviationMinutes: row.avg_deviation_minutes,
-    entryCount: row.entry_count,
+    recordCount: row.record_count,
   }));
 }
 
 /**
- * Step 4: `plans` LEFT JOIN `logs` (`plan_id` 経由) の 1:N 見積もり精度集計。
+ * Step 4: `plans` LEFT JOIN `records` (`plan_id` 経由) の 1:N 見積もり精度集計。
  *
- * 1 plan に複数 log が紐づく場合（分割記録）は log 時間を合算して 1 件の
- * 「実績」として扱う。`source = 'auto_migrated'` の log はユーザーが確定した記録
+ * 1 plan に複数 record が紐づく場合（分割記録）は record 時間を合算して 1 件の
+ * 「実績」として扱う。`source = 'auto_migrated'` の record はユーザーが確定した記録
  * ではないため合算から除外する（overview.md §8 未決 4、Step 2 決定）。
  * 除外した結果、紐づく実績が 1 件も無い plan は estimation accuracy の分母から外れる
  * （旧 RPC の `actual_start_time/end_time IS NOT NULL` 条件と同じ効果）。
@@ -68,7 +68,7 @@ export interface EstimationAccuracyPlanRow {
   planned_minutes: number;
 }
 
-export interface EstimationAccuracyLogRow {
+export interface EstimationAccuracyRecordRow {
   plan_id: string | null;
   source: string;
   minutes: number;
@@ -83,17 +83,17 @@ const AUTO_MIGRATED_SOURCE = 'auto_migrated';
 /** 旧 `get_estimation_accuracy` RPC の `HAVING COUNT(*) >= 2` を踏襲。 */
 const MIN_ENTRY_COUNT = 2;
 
-export function aggregatePlanLogEstimationAccuracy(
+export function aggregatePlanRecordEstimationAccuracy(
   plans: ReadonlyArray<EstimationAccuracyPlanRow>,
-  logs: ReadonlyArray<EstimationAccuracyLogRow>,
+  records: ReadonlyArray<EstimationAccuracyRecordRow>,
   tagsById: ReadonlyMap<string, EstimationAccuracyTagLookup>,
 ): EstimationAccuracyDbRow[] {
   const actualMinutesByPlanId = new Map<string, number>();
-  for (const log of logs) {
-    if (log.plan_id == null || log.source === AUTO_MIGRATED_SOURCE) continue;
+  for (const record of records) {
+    if (record.plan_id == null || record.source === AUTO_MIGRATED_SOURCE) continue;
     actualMinutesByPlanId.set(
-      log.plan_id,
-      (actualMinutesByPlanId.get(log.plan_id) ?? 0) + log.minutes,
+      record.plan_id,
+      (actualMinutesByPlanId.get(record.plan_id) ?? 0) + record.minutes,
     );
   }
 
@@ -137,7 +137,7 @@ export function aggregatePlanLogEstimationAccuracy(
         avg_planned_minutes: acc.plannedSum / acc.count,
         avg_actual_minutes: acc.actualSum / acc.count,
         avg_deviation_minutes: acc.deviationSum / acc.count,
-        entry_count: acc.count,
+        record_count: acc.count,
       };
     });
 }

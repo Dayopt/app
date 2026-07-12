@@ -53,14 +53,14 @@ export const dateRangeInput = z.object({
 export interface StatsPageData {
   overview: {
     totalMinutes: number;
-    entryCount: number;
+    recordCount: number;
     totalEntries: number;
     plannedEntries: number;
     planRate: number;
   };
   prevOverview: {
     totalMinutes: number;
-    entryCount: number;
+    recordCount: number;
     totalEntries: number;
     plannedEntries: number;
     planRate: number;
@@ -92,7 +92,7 @@ export interface StatsPageData {
     hour: number;
     dow: number;
     totalMinutes: number;
-    entryCount: number;
+    recordCount: number;
   }>;
   estimationAccuracy: Array<{
     tagId: string;
@@ -101,7 +101,7 @@ export interface StatsPageData {
     avgPlannedMinutes: number;
     avgActualMinutes: number;
     avgDeviationMinutes: number;
-    entryCount: number;
+    recordCount: number;
   }>;
   prevEstimationAccuracy: Array<{
     tagId: string;
@@ -110,13 +110,13 @@ export interface StatsPageData {
     avgPlannedMinutes: number;
     avgActualMinutes: number;
     avgDeviationMinutes: number;
-    entryCount: number;
+    recordCount: number;
   }>;
   prevEnergyMap: Array<{
     hour: number;
     dow: number;
     totalMinutes: number;
-    entryCount: number;
+    recordCount: number;
   }>;
   dailyHours: Array<{
     day: string;

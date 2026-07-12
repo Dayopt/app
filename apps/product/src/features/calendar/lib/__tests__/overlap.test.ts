@@ -4,7 +4,7 @@ import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 
 import type { CalendarEvent } from '../../types/calendar.types';
 
-import { buildNewEntryOverlapTarget, checkClientSideOverlap } from '../overlap';
+import { buildNewTimeblockOverlapTarget, checkClientSideOverlap } from '../overlap';
 
 function createEvent(
   overrides: Partial<CalendarEvent> & { id: string; startDate: Date; endDate: Date },
@@ -25,11 +25,15 @@ function createEvent(
   } as CalendarEvent;
 }
 
-describe('buildNewEntryOverlapTarget', () => {
+describe('buildNewTimeblockOverlapTarget', () => {
   it('未来の新規予定はplannedのみ占有する（actualは未編集 = null）', () => {
     const start = new Date('2030-01-15T10:00');
     const end = new Date('2030-01-15T11:00');
-    const target = buildNewEntryOverlapTarget(start, end, new Date('2026-01-15T09:00').getTime());
+    const target = buildNewTimeblockOverlapTarget(
+      start,
+      end,
+      new Date('2026-01-15T09:00').getTime(),
+    );
 
     expect(target).toMatchObject({
       id: '',
@@ -44,7 +48,11 @@ describe('buildNewEntryOverlapTarget', () => {
   it('過去の新規記録はplannedなし、actualありにする', () => {
     const start = new Date('2026-01-15T10:00');
     const end = new Date('2026-01-15T11:00');
-    const target = buildNewEntryOverlapTarget(start, end, new Date('2026-01-15T12:00').getTime());
+    const target = buildNewTimeblockOverlapTarget(
+      start,
+      end,
+      new Date('2026-01-15T12:00').getTime(),
+    );
 
     expect(target).toMatchObject({
       id: '',

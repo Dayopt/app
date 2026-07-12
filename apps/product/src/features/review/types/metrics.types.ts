@@ -10,7 +10,7 @@
 
 /** 全メトリクスのID */
 export type MetricId =
-  'totalTime' | 'entryRate' | 'streak' | 'estimationAccuracy' | 'contextSwitches' | 'blankRate';
+  'totalTime' | 'planRate' | 'streak' | 'estimationAccuracy' | 'contextSwitches' | 'blankRate';
 
 /** メトリクスの表示形式 */
 export type MetricFormat = 'duration' | 'percentage' | 'minutes' | 'count' | 'score' | 'days';
@@ -60,7 +60,7 @@ export interface EnergyMapRow {
   hour: number;
   dow: number;
   totalMinutes: number;
-  entryCount: number;
+  recordCount: number;
 }
 
 // =============================================================================
@@ -71,14 +71,14 @@ export interface EnergyMapRow {
 export interface StatsPageData {
   overview: {
     totalMinutes: number;
-    entryCount: number;
+    recordCount: number;
     totalEntries: number;
     plannedEntries: number;
     planRate: number;
   };
   prevOverview: {
     totalMinutes: number;
-    entryCount: number;
+    recordCount: number;
     totalEntries: number;
     plannedEntries: number;
     planRate: number;
@@ -114,7 +114,7 @@ export interface StatsPageData {
     avgPlannedMinutes: number;
     avgActualMinutes: number;
     avgDeviationMinutes: number;
-    entryCount: number;
+    recordCount: number;
   }>;
   prevEstimationAccuracy: Array<{
     tagId: string;
@@ -123,7 +123,7 @@ export interface StatsPageData {
     avgPlannedMinutes: number;
     avgActualMinutes: number;
     avgDeviationMinutes: number;
-    entryCount: number;
+    recordCount: number;
   }>;
   prevEnergyMap: EnergyMapRow[];
   dailyHours: Array<{

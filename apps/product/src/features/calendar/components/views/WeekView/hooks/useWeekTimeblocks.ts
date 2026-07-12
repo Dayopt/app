@@ -46,18 +46,18 @@ export function useWeekTimeblocks({
       if (!entry.startDate) return;
       if (!entry.displayStartDate) return;
 
-      const entryStart =
+      const timeblockStart =
         entry.startDate instanceof Date ? entry.startDate : new Date(entry.startDate);
 
       // 無効な日付は除外
-      if (isNaN(entryStart.getTime())) return;
+      if (isNaN(timeblockStart.getTime())) return;
 
-      const entryDateKey = getDateKey(entryStart, timezone);
+      const timeblockDateKey = getDateKey(timeblockStart, timezone);
 
       // 週の範囲内の日付を確認
       weekDates.forEach((date) => {
         const dateKey = getDateKey(date, timezone);
-        if (entryDateKey === dateKey) {
+        if (timeblockDateKey === dateKey) {
           if (Object.prototype.hasOwnProperty.call(grouped, dateKey) && grouped[dateKey]) {
             grouped[dateKey].push(entry);
           }
@@ -70,7 +70,7 @@ export function useWeekTimeblocks({
   }, [weekDates, entries, timezone]);
 
   // エントリの位置情報を計算（共有layoutエンジン使用）
-  const entryPositions = useMemo(() => {
+  const timeblockPositions = useMemo(() => {
     const positions: WeekEntryPosition[] = [];
 
     const dayColumnWidth = weekDates.length > 0 ? 100 / weekDates.length : 100;
@@ -127,13 +127,13 @@ export function useWeekTimeblocks({
 
   // 最大同時エントリ数を計算（layoutエンジンの結果から導出）
   const maxConcurrentEntries = useMemo(() => {
-    if (entryPositions.length === 0) return 0;
-    return Math.max(0, ...entryPositions.map((pos) => pos.totalColumns));
-  }, [entryPositions]);
+    if (timeblockPositions.length === 0) return 0;
+    return Math.max(0, ...timeblockPositions.map((pos) => pos.totalColumns));
+  }, [timeblockPositions]);
 
   return {
     entriesByDate,
-    entryPositions,
+    timeblockPositions,
     maxConcurrentEntries,
   };
 }
