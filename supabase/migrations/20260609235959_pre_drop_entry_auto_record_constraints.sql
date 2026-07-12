@@ -12,6 +12,9 @@ ALTER TABLE public.entries
   DROP CONSTRAINT IF EXISTS entries_actual_time_order;
 
 ALTER TABLE public.entries
+  DROP CONSTRAINT IF EXISTS entries_actual_time_order_check;
+
+ALTER TABLE public.entries
   DROP CONSTRAINT IF EXISTS entries_two_layer_shape;
 
 ALTER TABLE public.entries

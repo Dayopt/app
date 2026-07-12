@@ -1,6 +1,6 @@
 ---
 status: active
-superseded_by: 2026-07-12-incident-supabase-production-migration-stall.md
+superseded_by: ./2026-07-12-incident-supabase-production-migration-stall.md
 last_verified: 2026-07-08
 issue: 1462
 code: supabase/migrations
