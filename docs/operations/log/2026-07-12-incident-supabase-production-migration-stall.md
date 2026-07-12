@@ -1,6 +1,6 @@
 ---
 status: frozen
-updated: 2026-07-12
+last_verified: 2026-07-12
 issue: 1462
 ---
 
