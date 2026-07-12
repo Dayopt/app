@@ -163,7 +163,7 @@
     "madge": "^8.0.0",
     "npm-check-updates": "^19.6.6",
     "playwright": "^1.61.1",
-    "postcss": "^8",
+    "postcss": "^8.5.16",
     "prettier": "^3.9.4",
     "sharp": "^0.35.3",
     "size-limit": "^11.2.0",
