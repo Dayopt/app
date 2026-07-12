@@ -5,7 +5,7 @@
 
 import 'server-only';
 
-import { createHash, timingSafeEqual } from 'crypto';
+import { timingSafeEqual } from 'crypto';
 
 import * as Sentry from '@sentry/nextjs';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -503,9 +503,10 @@ export const createCallerFactory = t.createCallerFactory;
  * タイミング攻撃耐性のある文字列比較
  */
 function safeCompare(a: string, b: string): boolean {
-  const hashA = createHash('sha256').update(a).digest();
-  const hashB = createHash('sha256').update(b).digest();
-  return timingSafeEqual(hashA, hashB);
+  const bufferA = Buffer.from(a);
+  const bufferB = Buffer.from(b);
+  if (bufferA.length !== bufferB.length) return false;
+  return timingSafeEqual(bufferA, bufferB);
 }
 
 function createRequestLike(req: Request): TrpcRequestLike {

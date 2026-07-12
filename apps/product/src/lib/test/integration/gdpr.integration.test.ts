@@ -115,7 +115,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
 
     await adminSupabase.from('logs').insert({
       user_id: TEST_USER_ID,
-      title: 'GDPR Test Log',
+      title: 'GDPR Test Record',
       start_at: '2026-01-03T09:00:00Z',
       end_at: '2026-01-03T10:00:00Z',
     });
@@ -167,24 +167,26 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       // エクスポートデータの構造を確認
       expect(result.data).toHaveProperty('profile');
       expect(result.data).toHaveProperty('plans');
-      expect(result.data).toHaveProperty('logs');
+      expect(result.data).toHaveProperty('records');
       expect(result.data).toHaveProperty('tags');
       expect(result.data).toHaveProperty('userSettings');
     });
 
-    it('should include user plans and logs (time model) in export', async () => {
+    it('should include user plans and records in export', async () => {
       const caller = createTestCaller(userRouter, ctx);
 
       const result = await caller.exportData();
 
       expect(Array.isArray(result.data.plans)).toBe(true);
-      expect(Array.isArray(result.data.logs)).toBe(true);
+      expect(Array.isArray(result.data.records)).toBe(true);
       const testPlan = result.data.plans.find(
         (p: { title?: string }) => p.title === 'GDPR Test Plan',
       );
       expect(testPlan).toBeDefined();
-      const testLog = result.data.logs.find((l: { title?: string }) => l.title === 'GDPR Test Log');
-      expect(testLog).toBeDefined();
+      const testRecord = result.data.records.find(
+        (record: { title?: string }) => record.title === 'GDPR Test Record',
+      );
+      expect(testRecord).toBeDefined();
     });
 
     it('should include user tags in export', async () => {
