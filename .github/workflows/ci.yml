@@ -117,7 +117,11 @@ jobs:
 
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:coverage
+      - name: Product unit tests with coverage
+        run: pnpm test:coverage
+
+      - name: Web unit tests
+        run: pnpm test:web
 
   build:
     name: "\U0001F3D7\uFE0F Build"

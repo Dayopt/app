@@ -122,6 +122,8 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
   });
 
   afterAll(async () => {
+    if (!supabase || !adminSupabase) return;
+
     // サインアウト
     await supabase.auth.signOut();
 
@@ -218,6 +220,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     let deleteTestPassword: string;
     let deleteTestSupabase: ReturnType<typeof createClient<Database>>;
     let deleteTestCtx: Context;
+    let deleteTestUserDeleted = false;
 
     beforeAll(async () => {
       // 削除テスト用の別ユーザーを作成
@@ -258,9 +261,13 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     });
 
     afterAll(async () => {
+      if (!deleteTestSupabase || !deleteTestUserId) return;
+
       // 削除テスト用ユーザーのクリーンアップ
       await deleteTestSupabase.auth.signOut();
-      await adminSupabase.auth.admin.deleteUser(deleteTestUserId);
+      if (!deleteTestUserDeleted) {
+        await adminSupabase.auth.admin.deleteUser(deleteTestUserId);
+      }
     });
 
     beforeEach(() => {
@@ -319,10 +326,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       ).rejects.toThrow(TRPCError);
     });
 
-    // skip理由: アカウント削除は auth.users を CASCADE DELETE するためテストDBを破壊する
-    // CI専用テストランナーでの実行を検討中
-    // TODO(#999): CI専用環境でのみ実行する仕組みを導入
-    it.skip('should delete account immediately with correct credentials', async () => {
+    it('should delete account immediately with correct credentials', async () => {
       const caller = createTestCaller(userRouter, deleteTestCtx);
 
       const result = await caller.deleteAccount({
@@ -331,6 +335,11 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       });
 
       expect(result.success).toBe(true);
+
+      const { data, error } = await adminSupabase.auth.admin.getUserById(deleteTestUserId);
+      expect(data.user).toBeNull();
+      expect(error).toBeDefined();
+      deleteTestUserDeleted = true;
     });
   });
 

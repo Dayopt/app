@@ -27,7 +27,7 @@ persistent staging は常設しない。固定 URL が必要な Stripe / OAuth c
 
 | Suite                          | CI       | 現在の役割                                                               |
 | ------------------------------ | -------- | ------------------------------------------------------------------------ |
-| Vitest unit                    | required | ロジックとcomponentの回帰検知                                            |
+| Vitest unit（product / web）   | required | ロジックとcomponentの回帰検知                                            |
 | Playwright `chromium`          | required | `apps/product/src/lib/test/e2e` の全specを実行                           |
 | Playwright `Mobile Chrome`     | local    | `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` を持つ環境でmobile shellを確認  |
 | Storybook browser light / dark | local    | interaction / a11yの既知failureを #1499 / #1586 で解消後にCI昇格を再判断 |

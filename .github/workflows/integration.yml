@@ -4,22 +4,26 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'apps/product/src/server/**'
-      - 'apps/product/src/features/*/services/**'
-      - 'apps/product/src/platform/supabase/**'
+      - 'apps/product/src/features/*/server/**'
+      - 'apps/product/src/lib/database/**'
+      - 'apps/product/src/lib/trpc/**'
       - 'supabase/migrations/**'
       - 'apps/product/src/lib/test/integration/**'
+      - 'apps/product/src/lib/test/integration-setup.ts'
+      - 'apps/product/src/lib/test/trpc-test-helpers.ts'
       - 'apps/product/vitest.config.integration.ts'
       - 'scripts/generate-rls-snapshot.ts'
       - 'docs/engineering/data/db/rls-snapshot.md'
   push:
     branches: [main]
     paths:
-      - 'apps/product/src/server/**'
-      - 'apps/product/src/features/*/services/**'
-      - 'apps/product/src/platform/supabase/**'
+      - 'apps/product/src/features/*/server/**'
+      - 'apps/product/src/lib/database/**'
+      - 'apps/product/src/lib/trpc/**'
       - 'supabase/migrations/**'
       - 'apps/product/src/lib/test/integration/**'
+      - 'apps/product/src/lib/test/integration-setup.ts'
+      - 'apps/product/src/lib/test/trpc-test-helpers.ts'
       - 'apps/product/vitest.config.integration.ts'
       - 'scripts/generate-rls-snapshot.ts'
       - 'docs/engineering/data/db/rls-snapshot.md'
