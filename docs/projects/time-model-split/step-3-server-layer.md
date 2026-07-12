@@ -2,9 +2,9 @@
 status: current
 last_verified: 2026-07-09
 code:
-  - apps/product/src/features/entry/server
-  - apps/product/src/features/entry/schemas
-  - apps/product/src/features/entry/types
+  - apps/product/src/features/timeblock/server
+  - apps/product/src/features/timeblock/schemas
+  - apps/product/src/features/timeblock/types
 ---
 
 # Step 3: plans / logs server 層
@@ -19,7 +19,7 @@ Plan / Log の CRUD + ワンタップ記録 + 一括確定を、時間ガード�
 
 feature 配置。
 
-- **Option α（推奨）**: 既存 `features/entry/` をコンテナとして維持し、その中に `plan-service.ts` / `log-service.ts` / `plans-router.ts` / `logs-router.ts` を追加する。calendar（191ファイル）が entry barrel に依存しており、ディレクトリ改名は Phase 1 の blast radius を無意味に広げる。`features/log/` を作らないので `@/lib/logger` との衝突も発生しない
+- **Option α（推奨）**: 既存 `features/timeblock/` をコンテナとして維持し、その中に `plan-service.ts` / `record-service.ts` / `plans-router.ts` / `records-router.ts` を追加する。calendar（191ファイル）が entry barrel に依存しており、ディレクトリ改名は Phase 1 の blast radius を無意味に広げる。`features/log/` を作らないので `@/lib/logger` との衝突も発生しない
 - Option β: `features/plans/` / `features/logs/` を新設。概念的には綺麗だが、共有エディタ・共有 domain の置き場が第3の場所に必要になり、feature DAG の組み替えが Phase 1 に混入する
 
 ## Minimum Viable Approach
@@ -29,7 +29,7 @@ feature 配置。
    - **時間ルール**: create / update とも `end_at > now()` を強制（過去 Plan は作れない）。past plan（end ≤ now）は時間フィールド変更を拒否、title / tag / note は許可（ADR-015、overview §4 マトリクス）
    - skip / unskip（過去 plan のみ skip 可、現行 `SKIP_IN_FUTURE` と同じ向き）
    - 重なり: EXCLUDE 違反 `23P01` → `TIME_OVERLAP` へのマッピング（現行 entry-service と同じパターン）+ 事前チェック
-3. `log-service.ts`: CRUD + ガード
+3. `record-service.ts`: CRUD + ガード
    - **時間ルール**: `end_at <= now()` を強制（未来の記録は作れない。現行 `RECORD_IN_FUTURE` / `UNPLANNED_IN_FUTURE` の後継）
    - `plan_id` の付け替え（後から予定に紐づける）を許可。owner 整合は Step 1 の trigger が DB 側で防衛
 4. 複合 procedure:
@@ -52,9 +52,9 @@ feature 配置。
 
 ## Existing Code to Reuse
 
-- `apps/product/src/features/entry/server/entry-service.ts` — 時間ガード（`RECORD_IN_FUTURE` 等）・楽観ロック・`normalize*Input` のパターン
-- `apps/product/src/features/entry/server/entry-overlap-service.ts` — 半開区間の重なり判定と `23P01` マッピング
-- `apps/product/src/features/entry/server/entry-service-error.ts` — エラー正規化
+- `apps/product/src/features/timeblock/server/entry-service.ts` — 時間ガード（`RECORD_IN_FUTURE` 等）・楽観ロック・`normalize*Input` のパターン
+- `apps/product/src/features/timeblock/server/entry-overlap-service.ts` — 半開区間の重なり判定と `23P01` マッピング
+- `apps/product/src/features/timeblock/server/entry-service-error.ts` — エラー正規化
 - `supabase/migrations/20260323000001_add_soft_delete_rpc.sql` — soft delete / restore RPC の前例
 - project skills: `trpc-router-creating` / `error-handling` / `test`
 

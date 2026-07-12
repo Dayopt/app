@@ -2,11 +2,11 @@
 status: current
 last_verified: 2026-07-09
 code:
-  - apps/product/src/features/entry/server/statistics.ts
-  - apps/product/src/features/entry/server/statistics-general-router.ts
-  - apps/product/src/features/entry/server/statistics-kpi-router.ts
-  - apps/product/src/features/entry/server/statistics-summary-router.ts
-  - apps/product/src/features/entry/server/tag-statistics.ts
+  - apps/product/src/features/timeblock/server/statistics.ts
+  - apps/product/src/features/timeblock/server/statistics-general-router.ts
+  - apps/product/src/features/timeblock/server/statistics-kpi-router.ts
+  - apps/product/src/features/timeblock/server/statistics-summary-router.ts
+  - apps/product/src/features/timeblock/server/tag-statistics.ts
   - apps/product/src/features/tags/server/tag-statistics-service.ts
   - supabase/migrations/20260610000000_entry_auto_record_model.sql
 ---
@@ -42,7 +42,7 @@ Plan / Log 分割後の統計を `logs` / `plans` の明示モデルで表現し
 
 ## Minimum Viable Approach
 
-1. `apps/product/src/features/entry/server/statistics-service.ts` を追加し、現行 router の procedure 名は維持したまま内部実装を service 呼び出しへ差し替える。
+1. `apps/product/src/features/timeblock/server/statistics-service.ts` を追加し、現行 router の procedure 名は維持したまま内部実装を service 呼び出しへ差し替える。
 2. service は `plans` / `logs` / `tags` を必要な範囲で select し、既存 domain aggregator / response transformer を再利用する。まず生存 procedure の互換レスポンスを守る。
 3. `get_stats_page_data` / `get_stats_kpi_summary` / `get_time_pl_data` のような統合 RPC は、router の public contract を維持しつつ TS 側で同形 JSON を組み立てる。
 4. `TagStatisticsService` と `entriesTagStatisticsRouter` も `logs` / `plans` 読みに寄せる。Tags feature から `get_tag_stats` RPC への依存を残さない。
@@ -69,14 +69,14 @@ Plan / Log 分割後の統計を `logs` / `plans` の明示モデルで表現し
 
 ## Existing Code to Reuse
 
-- `apps/product/src/features/entry/server/statistics.ts` — router の public procedure 名を維持する集約点
-- `apps/product/src/features/entry/server/statistics-shared.ts` — input schema / error handling / response 型
-- `apps/product/src/features/entry/server/statistics-overview-transform.ts` — overview response unpacking の既存 contract
-- `apps/product/src/features/entry/server/statistics-time-by-tag-transform.ts` — time-by-tag response mapping
-- `apps/product/src/features/entry/server/statistics-kpi-unpackers.ts` — KPI response の null-safe unpacking
-- `apps/product/src/features/entry/domain/*distribution.ts` / `monthly-trend.ts` / `tag-stats.ts` / `estimation-accuracy.ts` — TS aggregation の既存部品
-- `apps/product/src/features/entry/server/tag-statistics.ts` — tag dashboard の direct select + domain build pattern
-- `apps/product/src/features/entry/domain/tag-dashboard.ts` — tag dashboard aggregation
+- `apps/product/src/features/timeblock/server/statistics.ts` — router の public procedure 名を維持する集約点
+- `apps/product/src/features/timeblock/server/statistics-shared.ts` — input schema / error handling / response 型
+- `apps/product/src/features/timeblock/server/statistics-overview-transform.ts` — overview response unpacking の既存 contract
+- `apps/product/src/features/timeblock/server/statistics-time-by-tag-transform.ts` — time-by-tag response mapping
+- `apps/product/src/features/timeblock/server/statistics-kpi-unpackers.ts` — KPI response の null-safe unpacking
+- `apps/product/src/features/timeblock/domain/*distribution.ts` / `monthly-trend.ts` / `tag-stats.ts` / `estimation-accuracy.ts` — TS aggregation の既存部品
+- `apps/product/src/features/timeblock/server/tag-statistics.ts` — tag dashboard の direct select + domain build pattern
+- `apps/product/src/features/timeblock/domain/tag-dashboard.ts` — tag dashboard aggregation
 
 ## What I'm Not Doing
 

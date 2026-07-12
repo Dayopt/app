@@ -1,10 +1,10 @@
 ---
 status: current
-last_verified: 2026-07-09
-code: apps/product/src/features/entry
+last_verified: 2026-07-12
+code: apps/product/src/features/timeblock
 ---
 
-# time-model-split — entries を Plan / Log / 外部カレンダーミラーに分割する
+# time-model-split — entries を Plan / Record / 外部カレンダーミラーに分割する
 
 [ADR-025](../../product/log/2026-07-09-time-model-split.md) で決定した時間管理モデル分割の全体設計書。決定の経緯・却下案は ADR-025 が正で、本書はそれをスキーマ・UI 方針・移行・影響範囲・Phase 構成に落とす。**大規模判定**（新テーブル・blast radius が entry/calendar/review/stats/API 横断）。
 
@@ -190,9 +190,9 @@ code: apps/product/src/features/entry
 - `supabase/migrations/20260706120000_enforce_entry_tag_owner.sql` — オーナー整合 constraint trigger のパターン（logs.plan_id にも適用）
 - `supabase/migrations/20260513000000_entry_two_layer_time_ranges.sql` L92-110 — EXCLUDE 制約の定義型（そのまま plans / logs に移植）
 - `soft_delete_entry` / `restore_entry` RPC — soft delete 運用パターン
-- `apps/product/src/features/entry/domain/entry-time-model.ts` `getEffectiveActualRange()` — migration backfill（§7-4）で最後に使用して廃止
+- `apps/product/src/features/timeblock/domain/entry-time-model.ts` `getEffectiveActualRange()` — migration backfill（§7-4）で最後に使用して廃止
 - `apps/product/src/features/calendar/lib/day-diff.ts` — 差分分類の再定義ベース
-- `apps/product/src/features/entry/lib/entry-to-ical.ts` — export 対象決定後に流用
+- `apps/product/src/features/timeblock/lib/plan-to-ical.ts` — export 対象決定後に流用
 - project skills: `trpc-router-creating` / `optimistic-update` / `supabase` / `test`
 
 ## 10. What I'm Not Doing
@@ -218,12 +218,12 @@ Step 0-9 がすべて完了した時点で、以下がすべて真になって�
 
 ### データ・コードの状態
 
-- 時間データは `plans` / `logs` のみが正。**`entries` / `entries_effective` / PL/pgSQL 統計 RPC は drop 済み**で、アプリからの参照ゼロ
-- 統計はすべて TS service（実績 = logs、予定 = plans、予実比較 = join）。migration で実体化した auto-record 由来の log は provenance で区別され、見積もり精度の分母に入らない
-- 重なり制約は二層 EXCLUDE で継続（plans 同士 / logs 同士は禁止、plan × log は許可、半開区間 `[)`）
-- iCal export は plans を配信（URL 不変）。MCP は `plans-list` / `logs-list` を公開し、`entries-list` は合成互換として残存
+- runtime の正は Plan / Record。Step 9a の物理保存先は `plans` / `logs` で、`entries` は drop 待ちだがアプリからの参照はない
+- 統計はすべて TS service（実績 = Record、予定 = Plan、予実比較 = join）。migration で実体化した auto-record 由来の Record は provenance で区別され、見積もり精度の分母に入らない
+- 重なり制約は二層 EXCLUDE で継続（Plan 同士 / Record 同士は禁止、Plan × Record は許可、半開区間 `[)`）
+- iCal export は plans を配信（URL 不変）。MCP は `plans.list` / `records.list` を公開し、`entries.list` は合成互換として残す
 - `external_calendar_events` はテーブルだけ存在し（Step 1 で作成済み）、中身は空。同期・ghost 表示はまだ無い
-- docs が現実と一致: `specs/entry.md` は Plan / Log 仕様に改稿済み、glossary に新用語、rls-snapshot 再生成済み、本ディレクトリに `summary.md` が追加され project は完了状態
+- docs は Step 9a の移行状態と一致する。RLS snapshot 再生成と `summary.md` 追加は #1579 / #1580 の完了条件
 
 ### まだ無いもの（= Phase 2 の出発点）
 

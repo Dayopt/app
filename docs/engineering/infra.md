@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-08
+last_verified: 2026-07-12
 ---
 
 # インフラ・環境・API/Routing 総覧
@@ -381,7 +381,7 @@ Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や
 | `/api/trpc/[trpc]`         | GET / POST | procedure 依存         | procedure 依存             | nodejs                   | tRPC procedure のルーティング本体。すべての procedure (`@/lib/trpc/root`) をここで受ける。cache: 認証済み `private, no-store` / 未認証 `no-cache`                                     |
 | `/api/beacon/entry-save`   | POST       | Supabase Auth (Cookie) | なし                       | nodejs                   | `navigator.sendBeacon()` 経由のエントリ緊急保存。ブラウザ閉じ時に tRPC mutation が使えないための fallback。`useDebouncedSave` から呼ばれる                                            |
 | `/api/auth`                | GET / POST | mixed                  | POST 10/分（login/reset）  | nodejs                   | Supabase 認証管理。POST: signin / signup / reset / verify。GET: session / user 取得                                                                                                   |
-| `/api/v1/calendar/[token]` | GET        | token (URL)            | あり (`icalFeedRateLimit`) | nodejs                   | iCal フィード配信。秘密 token で RLS バイパス、Service Role で対象ユーザーの entries を `entriesToICal` で iCalendar 形式に変換                                                       |
+| `/api/v1/calendar/[token]` | GET        | token (URL)            | あり (`icalFeedRateLimit`) | nodejs                   | iCal フィード配信。秘密 token で RLS バイパス、Service Role で対象ユーザーの plans を `plansToICal` で iCalendar 形式に変換                                                           |
 | `/api/webhooks/resend`     | POST       | Resend signature       | なし                       | nodejs (maxDuration 30s) | Resend からの bounce / complained / delivered を受け、bounce/complained は Supabase の suppression list に書込                                                                        |
 | `/api/webhooks/stripe`     | POST       | Stripe signature       | なし                       | nodejs (maxDuration 30s) | checkout.session.completed / customer.subscription.updated / customer.subscription.deleted を処理。subscription state の DB 反映、トランザクションメール送信、Sentry へのイベント記録 |
 
@@ -572,7 +572,7 @@ src/app/
 各 mode の `_composition/` には「ページから見た合成 hub」を集める:
 
 - 入力: `params` / `searchParams` / `prefetched data`
-- 合成対象: feature barrel (`@/features/calendar`, `@/features/review`, `@/features/entry` 等)
+- 合成対象: feature barrel (`@/features/calendar`, `@/features/review`, `@/features/timeblock` 等)
 - 出力: 1 つの client component ツリー
 
 `page.tsx` 自体は薄く保つ（prefetch + Suspense + 合成 component の呼出）。view の差し替えやデータ取得方式の変更は composition layer 内で完結させる。詳細は `.claude/rules/feature-boundaries.md` の Composition Layer / Composition Hub を参照。
@@ -1460,7 +1460,7 @@ DROP TABLE IF EXISTS public.stripe_webhook_events CASCADE;
 - [ ] `supabase_migrations.schema_migrations` から該当レコード削除
 - [ ] Staging環境で動作確認
 - [ ] メンテナンスモード解除
-- [ ] アプリの主要機能（ログイン、エントリ作成、カレンダー表示）の手動確認
+- [ ] アプリの主要機能（ログイン、予定/記録の作成、カレンダー表示）の手動確認
 
 #### マイグレーション履歴の更新
 

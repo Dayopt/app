@@ -3,8 +3,8 @@ status: current
 last_verified: 2026-07-09
 code:
   - apps/product/src/features/calendar/components/views
-  - apps/product/src/features/entry/types/calendar-event.ts
-  - apps/product/src/features/entry/components/card
+  - apps/product/src/features/timeblock/types/calendar-event.ts
+  - apps/product/src/features/timeblock/components/card
 ---
 
 # Step 5: Calendar 2レーン表示（read 側）
@@ -17,7 +17,7 @@ plans / logs を Plan レーン + Log レーンとして描画し、差分を数
 
 ## Minimum Viable Approach
 
-1. 射影型: 現行 `CalendarEvent`（`features/entry/types/calendar-event.ts`）を `PlanEvent` / `LogEvent` に分割する。plan 側は `skipped_at` / 記録済みか（logs の有無）、log 側は `plan_id` / 差分分を持つ
+1. 射影型: 現行 `CalendarEvent`（`features/timeblock/types/calendar-event.ts`）を `PlanEvent` / `RecordEvent` に分割する。plan 側は `skipped_at` / 記録済みか（logs の有無）、log 側は `plan_id` / 差分分を持つ
 2. レーン描画: 日カラムを Plan レーンと Log レーンに分割。**Log = 塗りカード（主役）、Plan = アウトライン・淡色**。現行 `EntryRenderer` の配置ロジック（時間 → 座標）は流用し、レーンごとの幅計算だけ追加する
 3. 差分の数字表示: `plan_id` ありの log に差分バッジ（±0 は非表示）。`plan_id` なしは「予定外」の静かなマーカーのみ。二値ラベルは使わない（copywriting「判定せず数字で示す」）
 4. 密度対応: Day = 2レーン、Week「予定+記録」= Plan を細レーン、モバイル Week = 表示切替（予定だけ / 記録だけ）。表示モードは `useCalendarSettingsStore` 系の既存 client state 置き場に追加する
@@ -39,8 +39,8 @@ plans / logs を Plan レーン + Log レーンとして描画し、差分を数
 ## Existing Code to Reuse
 
 - `apps/product/src/features/calendar/components/views/shared/components/EntryRenderer.tsx` — 時間 → 座標の配置ロジック
-- `apps/product/src/features/entry/components/card/EntryCard.tsx` / `EntryCardContent.tsx` — カードの構造・token 使用の踏襲元
-- `apps/product/src/features/entry/lib/actual-time-overlay.ts` — 旧・差分オーバーレイ（置き換え対象の仕様参照。数字バッジ移行で廃止予定）
+- `apps/product/src/features/timeblock/components/card/TimeblockCard.tsx` / `TimeblockCardContent.tsx` — カードの構造・token 使用の踏襲元
+- `apps/product/src/features/timeblock/lib/actual-time-overlay.ts` — 旧・差分オーバーレイ（置き換え対象の仕様参照。数字バッジ移行で廃止予定）
 - `apps/product/src/features/calendar/stores/useCalendarFilterStore.ts` — タグ表示切替（レーンとは直交に維持）
 - project skills: `storybook` / `i18n`
 

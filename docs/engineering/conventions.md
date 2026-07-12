@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-12
 code: apps/product/src
 ---
 
@@ -148,7 +148,7 @@ API 契約・エラーパターンの詳細は [`conventions-api.md`](./conventi
 #### Router（薄い層）
 
 ```typescript
-// src/features/entry/server/router.ts
+// src/features/timeblock/server/router.ts
 create: protectedProcedure
   .input(createEntrySchema) // Zodでバリデーション
   .mutation(({ ctx, input }) => {
@@ -162,12 +162,12 @@ create: protectedProcedure
 #### Service（ビジネスロジック）
 
 ```typescript
-// src/features/entry/server/entry-service.ts
+// src/features/timeblock/server/entry-service.ts
 class EntryService {
   async create(params: CreateEntryOptions) {
     this.validateEntry(params);
     const entryData = this.buildEntryData(params);
-    return this.supabase.from('entries').insert(entryData);
+    return this.supabase.from(databaseTables.records).insert(recordData);
   }
 }
 ```
@@ -197,7 +197,7 @@ export const useCalendarStore = create(
 #### サーバー状態（TanStack Query via tRPC）
 
 ```typescript
-const { data: entries, isLoading } = api.entries.list.useQuery({
+const { data: plans, isLoading } = api.plans.list.useQuery({
   startDate,
   endDate,
 });
@@ -226,8 +226,8 @@ function EntryCard({ entry, onEdit, onDelete }) {
 
 ```tsx
 function EntryCardContainer({ entryId }) {
-  const { data: entry } = api.entries.getById.useQuery({ id: entryId });
-  const deleteEntry = api.entries.delete.useMutation();
+  const { data: entry } = api.plans.getById.useQuery({ id: entryId });
+  const deleteEntry = api.plans.delete.useMutation();
 
   return <EntryCard entry={entry} onDelete={() => deleteEntry.mutate({ id: entryId })} />;
 }
@@ -247,7 +247,7 @@ if (!entry) {
 }
 
 // Client側でキャッチ
-const mutation = api.entries.update.useMutation({
+const mutation = api.plans.update.useMutation({
   onError: (error) => {
     if (error.data?.code === 'NOT_FOUND') {
       toast.error('エントリが見つかりません');
@@ -319,7 +319,7 @@ const mutation = api.entries.update.useMutation({
 server transformer は基本的に **1 procedure 1 file**。
 
 ```
-features/entry/server/
+features/timeblock/server/
   statistics-overview-transform.ts
   statistics-time-by-tag-transform.ts
   statistics-energy-map-transform.ts
@@ -376,7 +376,7 @@ entryRate: {
 #### domain の例: `aggregateMonthlyTrend`
 
 ```ts
-// features/entry/domain/monthly-trend.ts
+// features/timeblock/domain/monthly-trend.ts
 export function aggregateMonthlyTrend(
   rows: MonthlyTrendRow[],
   nowYear: number,
@@ -395,7 +395,7 @@ export function aggregateMonthlyTrend(
 #### server transformer の例: `transformStatsOverviewResponse`
 
 ```ts
-// features/entry/server/statistics-overview-transform.ts
+// features/timeblock/server/statistics-overview-transform.ts
 export function transformStatsOverviewResponse(data: unknown): StatsOverviewResult {
   const result = data as Partial<StatsKpiSummaryRpcResult> | null | undefined;
   return {
@@ -524,25 +524,25 @@ features/*  ✓→  src/lib/*
 
 ### 1. 旧用語の使用
 
-ADR-011 で `plans` + `records` テーブルは `entries` に統合済み。
+ADR-025 で `entries` 単一モデルは `plans`（予定）/ Record（記録）に分割済み。Step 9a では Record の物理保存先は `logs` で、`databaseTables.records` adapter が差を吸収する。
 
 ```tsx
 // ❌ 旧用語
-api.plans.create(...)
-from('plans')
-PlanService
-
-// ✅ 現在
 api.entry.create(...)
 from('entries')
 EntryService
+
+// ✅ 現在
+api.plans.create(...) / api.records.create(...)
+from('plans') / from(databaseTables.records)
+PlanService / RecordService
 ```
 
-コードベースやドキュメントで `plan` / `record` を見かけたら、`entry` / `entries` に読み替える。
+コードベースやドキュメントで `entry` / `entries` を見かけたら、文脈に応じて `plan` / `record` に読み替える。
 
-### 2. 過去エントリの編集（時間不変原則）
+### 2. 過去 Timeblock の編集（時間不変原則）
 
-`EntryState === 'past'` のエントリは読み取り専用。スケジュール変更は不可。
+`TimeblockState === 'past'` の Timeblock は読み取り専用。スケジュール変更は不可。
 
 ```tsx
 // ❌ 過去エントリの start_time を変更
@@ -575,19 +575,19 @@ Tailwind の直接カラークラスは禁止。セマンティックトーク�
 Feature 同士は直接 import できない。Composition Layer（`src/app/` のページ）で合成する。
 
 ```tsx
-// ❌ Calendar から Entry を直接 import
-import { EntryCard } from '@/features/entry/components/EntryCard';
+// ❌ Calendar から Timeblock を直接 import
+import { TimeblockCard } from '@/features/timeblock/components/card/TimeblockCard';
 
 // ❌ deep import
-import { useEntry } from '@/features/entry/hooks/useEntry';
+import { useTimeblockInspectorStore } from '@/features/timeblock/stores/useTimeblockInspectorStore';
 
 // ✅ barrel export 経由
-import { EntryCard } from '@/features/entry';
+import { TimeblockCard } from '@/features/timeblock';
 
 // ✅ ページ層（Composition Layer）で合成
 // src/app/[locale]/(app)/calendar/page.tsx
 import { CalendarController } from '@/features/calendar';
-import { EntryInspector } from '@/features/entry';
+import { TimeblockInspector } from '@/features/timeblock';
 ```
 
 **検出**: `npm run lint:boundaries` で違反を検出。

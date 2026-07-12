@@ -37,7 +37,7 @@
 ---
 status: current # current | superseded | frozen(ログ)
 last_verified: 2026-07-03
-code: apps/product/src/features/entry # (任意) 対応するコードのパス
+code: apps/product/src/features/timeblock # (任意) 対応するコードのパス
 ---
 ```
 

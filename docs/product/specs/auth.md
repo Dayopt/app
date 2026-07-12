@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-06
+last_verified: 2026-07-12
 code: apps/product/src/features/auth
 ---
 
@@ -24,7 +24,7 @@ Supabase Auth ベースの認証機能。
 - `user.verifyRecoveryCode` は recovery-code 検証により MFA factor を解除するため、既知の `aal1 -> aal2` 状態でも通過を許可する
 - OAuth bearer mode: token を `oauth_tokens` で検証し、`client_id` と `scopes` を tRPC context に保持する
 - OAuth bearer mode の汎用 tRPC 呼び出しは、procedure path ごとの allowlist と scope が一致した場合だけ許可する
-- Phase 1 で OAuth bearer mode から許可する tRPC procedure は `entries.list` + `read:entries` のみ
+- Phase 1 で OAuth bearer mode から許可する tRPC procedure は `plans.list` / `records.list` の read-only 2 本だけ。互換 MCP tool `entries.list` も同じ `read:entries` scope を使う
 
 ## OAuth / MCP redirect URI policy
 

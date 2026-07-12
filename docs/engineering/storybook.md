@@ -115,7 +115,7 @@ story の `title:` の **top-level は所有境界（どの package / app の資
 - `Shared/Foundations/Colors` → デザイントークン
 - `Shared/Components/Actions/Button` → 共有 UI コンポーネント（`packages/components`）
 - `Product/Features/Navigation/AppHeader` → product のナビゲーションコンポーネント
-- `Product/Features/Entry/Inspector/EntryInspector` → product の Feature コンポーネント
+- `Product/Features/Timeblock/Inspector/TimeblockInspector` → product の Feature コンポーネント
 - `Web/Sections/Pricing` → web LP のセクション（現状は構造予約のみ）
 - `Docs/はじめに` → ドキュメント（top-level doc は所有境界の外）
 

@@ -1,19 +1,19 @@
 ---
 status: current
-last_verified: 2026-07-02
+last_verified: 2026-07-12
 ---
 
 # 指標定義（SSOT）
 
 Dayopt が追う指標の定義。同じ名前の指標が文書によって違う定義で使われることを防ぐため、ここを正本とする。
 
-| 名前                         | 定義式                                                     | データソース                                                  | なぜこの定義か                                                                                               | 関連decision                                                                              |
-| ---------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| **指名検索数**               | Dayopt / dayopt を含む検索語のクエリ数（月次）             | Google Search Console                                         | 認知ステップの計測指標。有料広告を使わない前提で、口コミ・コンテンツ発信の効果を唯一測れる先行指標           | [marketing/strategy.md](../marketing/strategy.md)                                         |
-| **CVR（登録CVR）**           | LP訪問者数のうち登録完了に至った割合                       | Vercel Analytics + Supabase `profiles`                        | 登録ステップの計測指標。「試してみよう」への転換を見る                                                       | [marketing/strategy.md](../marketing/strategy.md)                                         |
-| **WAU**                      | 直近7日間に1件以上 entry を作成/編集したユニークユーザー数 | Supabase `entries` テーブル                                   | 定着ステップの計測指標。日次ではなく週次にするのは、時間管理アプリの利用が毎日ではなく数日おきになりうるため | [marketing/strategy.md](../marketing/strategy.md)                                         |
-| **課金率（Free→Pro転換率）** | 一定期間内にProへアップグレードしたFreeユーザーの割合      | Stripe + Supabase `profiles.subscription_status`              | 課金ステップの計測指標。損益分岐点の試算では 10% がキーKPI（5-10%のレンジで計算）                            | [Cost Optimization](business-model.md#損益分岐点)、[Billing](../product/specs/billing.md) |
-| **粗利率**                   | (売上 − インフラ・ツールコスト) / 売上                     | Stripe売上 + [accounts.md](../company/accounts.md) の月額合計 | 事業の持続可能性を見る指標。Free/Pro/AIコストの構造がスケールに応じて変わるため定期的に再計算する            | [Cost Optimization](business-model.md#粗利率の推移)                                       |
+| 名前                         | 定義式                                                                  | データソース                                                  | なぜこの定義か                                                                                               | 関連decision                                                                              |
+| ---------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| **指名検索数**               | Dayopt / dayopt を含む検索語のクエリ数（月次）                          | Google Search Console                                         | 認知ステップの計測指標。有料広告を使わない前提で、口コミ・コンテンツ発信の効果を唯一測れる先行指標           | [marketing/strategy.md](../marketing/strategy.md)                                         |
+| **CVR（登録CVR）**           | LP訪問者数のうち登録完了に至った割合                                    | Vercel Analytics + Supabase `profiles`                        | 登録ステップの計測指標。「試してみよう」への転換を見る                                                       | [marketing/strategy.md](../marketing/strategy.md)                                         |
+| **WAU**                      | 直近7日間に1件以上 Plan または Record を作成/編集したユニークユーザー数 | Supabase `plans` / `logs` テーブル（Record の物理保存先）     | 定着ステップの計測指標。日次ではなく週次にするのは、時間管理アプリの利用が毎日ではなく数日おきになりうるため | [marketing/strategy.md](../marketing/strategy.md)                                         |
+| **課金率（Free→Pro転換率）** | 一定期間内にProへアップグレードしたFreeユーザーの割合                   | Stripe + Supabase `profiles.subscription_status`              | 課金ステップの計測指標。損益分岐点の試算では 10% がキーKPI（5-10%のレンジで計算）                            | [Cost Optimization](business-model.md#損益分岐点)、[Billing](../product/specs/billing.md) |
+| **粗利率**                   | (売上 − インフラ・ツールコスト) / 売上                                  | Stripe売上 + [accounts.md](../company/accounts.md) の月額合計 | 事業の持続可能性を見る指標。Free/Pro/AIコストの構造がスケールに応じて変わるため定期的に再計算する            | [Cost Optimization](business-model.md#粗利率の推移)                                       |
 
 ## 意図的に追わないもの
 

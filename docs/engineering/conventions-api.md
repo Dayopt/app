@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-12
 code: apps/product/src/features
 ---
 
@@ -295,7 +295,7 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 
 #### EntryService
 
-- file: `src/features/entry/server/entry-service.ts`
+- file: `src/features/timeblock/server/entry-service.ts`
 - 構造: `class EntryService` + `createEntryService(supabase)` factory
 - error: `EntryServiceError extends ServiceError`
 - skins: tRPC (`createEntryService` 経由) + REST beacon (`new EntryService(supabase)` 直接)
@@ -461,14 +461,14 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 - input: `userId: string`
 - output: `Promise<{ success: true }>`
 - error: `UserServiceError(DELETE_DATA_FAILED)`
-- side effect: DB write（entries → tags → settings の cascade delete）
+- side effect: DB write（plans / `logs`〔Record の物理保存先〕→ tags → settings の cascade delete）
 
 ##### `exportData(options)` — L237
 
 - input: `ExportDataOptions { userId }`
-- output: `Promise<ExportDataResult { exportedAt, userId, data: { profile, entries, tags, userSettings } }>`
+- output: `Promise<ExportDataResult { exportedAt, userId, data: { profile, plans, records, tags, userSettings } }>`
 - error: `UserServiceError(EXPORT_FAILED)`
-- side effect: DB read（4 テーブル並列 fetch）
+- side effect: DB read（5 テーブル並列 fetch）
 
 #### ContactService
 
@@ -615,7 +615,7 @@ shape の話ではなく後続 plan で扱う:
 ### 参照する既存定義（再定義しない）
 
 - `src/lib/trpc/errors.ts:16-119` — `ServiceError` 階層と code enum
-- `src/features/entry/server/types.ts` — `ListEntriesOptions`, `CreateEntryOptions`, `UpdateEntryOptions`, `DeleteEntryOptions`, `GetEntryByIdOptions`, `EntryWithTags`, `EntryRow`, `UpdateEntryResult`
+- `src/features/timeblock/server/types.ts` — `ListEntriesOptions`, `CreateEntryOptions`, `UpdateEntryOptions`, `DeleteEntryOptions`, `GetEntryByIdOptions`, `EntryWithTags`, `EntryRow`, `UpdateEntryResult`
 - `src/features/tags/server/tag-service.ts:48-` — `CreateTagInput`, `UpdateTagInput`, `ListTagsOptions`, `MergeTagsOptions`, `MergeTagsResult`, `ReorderTagUpdate`, `TagStatsRow`
 - `src/features/auth/server/user-service.ts` — `DeleteAccountOptions`, `DeleteAccountResult`, `ExportDataOptions`, `ExportDataResult`
 - `src/features/settings/server/billing-service.ts:18-` — `BillingInfo`, `PaymentMethod`, `InvoiceItem`, `BillingOverview`, `SubscriptionStatus`

@@ -2,7 +2,7 @@
 status: current
 last_verified: 2026-07-09
 code:
-  - apps/product/src/features/entry/server/router-index.ts
+  - apps/product/src/features/timeblock/server/router-index.ts
   - apps/product/src/app/api/v1/calendar
   - apps/product/src/app/api/mcp/_tools/entries-list.ts
 ---
@@ -46,7 +46,7 @@ runtime の正を entries から plans / logs に切り替える。Step 2-7 の 
 
 ## Existing Code to Reuse
 
-- `apps/product/src/features/entry/lib/entry-to-ical.ts` — plans 読みへの改修ベース
+- `apps/product/src/features/timeblock/lib/plan-to-ical.ts` — plans 読みへの改修ベース
 - `apps/product/src/app/api/mcp/_tools/entries-list.ts` — tool 定義・auth の踏襲元
 - Step 2 の backfill migration（再実行）と検証クエリ
 
