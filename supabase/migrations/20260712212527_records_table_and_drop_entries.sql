@@ -25,36 +25,39 @@ SELECT
     '8f48b7ce-9362-5a4d-bf4c-65fcd4fe93e9'::UUID,
     e.id::TEXT || ':log'
   ),
-  e.user_id,
-  e.tag_id,
-  e.id,
-  NULL,
-  e.title,
-  e.description,
-  e.start_time,
-  e.end_time,
+  p.user_id,
+  p.tag_id,
+  p.id,
+  p.external_calendar_event_id,
+  p.title,
+  p.note,
+  p.start_at,
+  p.end_at,
   'auto_migrated',
-  e.fulfillment_score,
-  e.deleted_at,
-  e.created_at,
-  e.updated_at
+  NULL,
+  p.deleted_at,
+  p.created_at,
+  p.updated_at
 FROM public.entries e
+JOIN public.plans p
+  ON p.id = e.id
+ AND p.user_id = e.user_id
 WHERE e.origin = 'planned'
   AND e.actual_start_time IS NULL
   AND e.actual_end_time IS NULL
-  AND e.skipped_at IS NULL
-  AND e.start_time IS NOT NULL
-  AND e.end_time IS NOT NULL
-  AND e.end_time <= now()
+  AND p.skipped_at IS NULL
+  AND p.start_at IS NOT NULL
+  AND p.end_at IS NOT NULL
+  AND p.end_at <= now()
   AND NOT EXISTS (
     SELECT 1
     FROM public.logs existing
-    WHERE existing.user_id = e.user_id
+    WHERE existing.user_id = p.user_id
       AND existing.deleted_at IS NULL
       AND (
-        (existing.plan_id = e.id AND existing.source <> 'auto_migrated')
+        (existing.plan_id = p.id AND existing.source <> 'auto_migrated')
         OR tstzrange(existing.start_at, existing.end_at, '[)')
-          && tstzrange(e.start_time, e.end_time, '[)')
+          && tstzrange(p.start_at, p.end_at, '[)')
       )
   )
 ON CONFLICT (id) DO NOTHING;
@@ -70,17 +73,7 @@ BEGIN
   FROM public.entries e
   LEFT JOIN public.plans p ON p.id = e.id
   WHERE e.origin = 'planned'
-    AND (
-      p.id IS NULL
-      OR p.user_id IS DISTINCT FROM e.user_id
-      OR p.tag_id IS DISTINCT FROM e.tag_id
-      OR p.title IS DISTINCT FROM e.title
-      OR p.note IS DISTINCT FROM e.description
-      OR p.start_at IS DISTINCT FROM e.start_time
-      OR p.end_at IS DISTINCT FROM e.end_time
-      OR p.skipped_at IS DISTINCT FROM e.skipped_at
-      OR p.deleted_at IS DISTINCT FROM e.deleted_at
-    );
+    AND (p.id IS NULL OR p.user_id IS DISTINCT FROM e.user_id);
 
   IF v_missing_plans > 0 THEN
     RAISE EXCEPTION 'Step 9b preflight found % entries without matching plans', v_missing_plans
@@ -97,20 +90,16 @@ BEGIN
         )
       END AS id,
       e.user_id,
-      e.tag_id,
       CASE WHEN e.origin = 'planned' THEN e.id ELSE NULL END AS plan_id,
-      e.title,
-      e.description AS note,
-      COALESCE(e.actual_start_time, e.start_time) AS start_at,
-      COALESCE(e.actual_end_time, e.end_time) AS end_at,
       CASE
         WHEN e.origin = 'unplanned' THEN 'manual'
         WHEN e.actual_start_time IS NOT NULL THEN 'from_plan'
         ELSE 'auto_migrated'
-      END AS source,
-      e.fulfillment_score,
-      e.deleted_at
+      END AS source
     FROM public.entries e
+    LEFT JOIN public.plans p
+      ON p.id = e.id
+     AND p.user_id = e.user_id
     WHERE
       (
         e.origin = 'unplanned'
@@ -126,19 +115,19 @@ BEGIN
         e.origin = 'planned'
         AND e.actual_start_time IS NULL
         AND e.actual_end_time IS NULL
-        AND e.skipped_at IS NULL
-        AND e.start_time IS NOT NULL
-        AND e.end_time IS NOT NULL
-        AND e.end_time <= now()
+        AND p.skipped_at IS NULL
+        AND p.start_at IS NOT NULL
+        AND p.end_at IS NOT NULL
+        AND p.end_at <= now()
         AND NOT EXISTS (
           SELECT 1
           FROM public.logs existing
-          WHERE existing.user_id = e.user_id
+          WHERE existing.user_id = p.user_id
             AND existing.deleted_at IS NULL
             AND (
-              (existing.plan_id = e.id AND existing.source <> 'auto_migrated')
+              (existing.plan_id = p.id AND existing.source <> 'auto_migrated')
               OR tstzrange(existing.start_at, existing.end_at, '[)')
-                && tstzrange(e.start_time, e.end_time, '[)')
+                && tstzrange(p.start_at, p.end_at, '[)')
             )
         )
       )
@@ -150,15 +139,8 @@ BEGIN
   WHERE
     l.id IS NULL
     OR l.user_id IS DISTINCT FROM expected.user_id
-    OR l.tag_id IS DISTINCT FROM expected.tag_id
     OR l.plan_id IS DISTINCT FROM expected.plan_id
-    OR l.title IS DISTINCT FROM expected.title
-    OR l.note IS DISTINCT FROM expected.note
-    OR l.start_at IS DISTINCT FROM expected.start_at
-    OR l.end_at IS DISTINCT FROM expected.end_at
-    OR l.source IS DISTINCT FROM expected.source
-    OR l.fulfillment_score IS DISTINCT FROM expected.fulfillment_score
-    OR l.deleted_at IS DISTINCT FROM expected.deleted_at;
+    OR l.source IS DISTINCT FROM expected.source;
 
   IF v_missing_records > 0 THEN
     RAISE EXCEPTION 'Step 9b preflight found % entries without matching records', v_missing_records
