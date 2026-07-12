@@ -185,7 +185,7 @@ export class RecordService {
     });
 
     if (error) {
-      throw new TimeblockServiceError('DELETE_FAILED', `Failed to delete log: ${error.message}`);
+      throw new TimeblockServiceError('DELETE_FAILED', `Failed to delete record: ${error.message}`);
     }
 
     return { success: true };
@@ -199,7 +199,10 @@ export class RecordService {
     });
 
     if (error) {
-      throw new TimeblockServiceError('RESTORE_FAILED', `Failed to restore log: ${error.message}`);
+      throw new TimeblockServiceError(
+        'RESTORE_FAILED',
+        `Failed to restore record: ${error.message}`,
+      );
     }
 
     return { success: true };

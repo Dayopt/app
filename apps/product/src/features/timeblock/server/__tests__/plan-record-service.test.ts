@@ -389,4 +389,16 @@ describe('RecordService soft delete', () => {
       p_user_id: USER_ID,
     });
   });
+
+  it('delete / restore失敗時もRecord語彙でエラーを返す', async () => {
+    const { service, mockSupabase } = createRecordService();
+    mockSupabase.rpc.mockResolvedValue({ data: null, error: { message: 'denied' } });
+
+    await expect(service.delete({ userId: USER_ID, recordId: 'record-1' })).rejects.toThrow(
+      'Failed to delete record: denied',
+    );
+    await expect(service.restore({ userId: USER_ID, recordId: 'record-1' })).rejects.toThrow(
+      'Failed to restore record: denied',
+    );
+  });
 });
