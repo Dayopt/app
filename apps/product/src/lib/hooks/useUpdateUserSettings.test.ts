@@ -59,7 +59,7 @@ describe('useUpdateUserSettings', () => {
     expect(setData).toHaveBeenLastCalledWith(undefined, previous);
   });
 
-  it('onSettledでsettingsを再検証しtimezone変更時はplans/logs/statisticsも無効化する', () => {
+  it('onSettledでsettingsを再検証しtimezone変更時はplans/records/statisticsも無効化する', () => {
     renderHook(() => useUpdateUserSettings());
 
     mutationOptions.onSettled?.(

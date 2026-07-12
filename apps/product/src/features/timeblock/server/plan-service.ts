@@ -286,7 +286,7 @@ export class PlanService {
     const { userId, input } = options;
     this.validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
 
-    const { data, error } = await this.supabase.rpc('confirm_day_plans_to_logs', {
+    const { data, error } = await this.supabase.rpc('confirm_day_plans_to_records', {
       p_confirmed_at: new Date().toISOString(),
       p_end_at: input.end_at,
       p_start_at: input.start_at,

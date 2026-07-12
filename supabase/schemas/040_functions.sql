@@ -1,7 +1,7 @@
 -- ============================================================
 -- 関数一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
--- 最終同期日: 2026-06-17
+-- 最終同期日: 2026-07-13
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -12,6 +12,7 @@
 --   - 20260613000000_drop_orphan_tag_detail_rpcs.sql
 --   - 20260615000000_drop_unused_stats_rpcs.sql
 --   - 20260616000000_rename_duration_to_planned_duration.sql
+--   - 20260712212527_records_table_and_drop_entries.sql
 -- 全 app-facing 関数は authenticated に明示 GRANT。
 -- PUBLIC/anon への関数 EXECUTE は revoke 済み。
 -- ============================================================
@@ -23,36 +24,19 @@
 --   check_tag_has_children()                  — active child を持つ tag の child 化を禁止
 -- ■ RPC 関数
 --   update_personalization(user_id, key, value) — user_settings.personalization 更新
---   merge_tags(user_id, source, target)       — タグをマージ（entries.tag_id 移行 + ソース非アクティブ化）
---   merge_tags(user_id, sources, target)      — 複数タグを target へマージ
---   merge_tags_with_hierarchy(user_id, source, target) — parent_id 階層対応の atomic タグマージ
+--   merge_tags_with_hierarchy(user_id, source, target) — plans / records 対応の atomic タグマージ
 --   batch_reorder_tags_hierarchy(user_id, tag_ids, parent_ids, sort_orders) — 階層 + 並び順更新
 --   batch_rename_tags(user_id, tag_ids, names) — 複数タグ名を一括変更
 --   rename_tag_group(user_id, old_name, new_name) — root tag group の名称変更
 --   use_recovery_code(user_id, code_hash)     — MFAリカバリーコードを使用済みにマーク
 --   count_unused_recovery_codes(user_id)      — 未使用リカバリーコード数
---   soft_delete_entry(entry_id, user_id)      — entries.deleted_at を設定
---   restore_entry(entry_id, user_id)          — entries.deleted_at を解除
---   bulk_soft_delete_entries(entry_ids, user_id) — entries の一括 soft delete
+--   soft_delete_plan / restore_plan            — Plan の soft delete / restore
+--   soft_delete_record / restore_record        — Record の soft delete / restore
+--   confirm_day_plans_to_records(...)          — 完了 Plan を Record として一括確定
 --   issue_oauth_token_pair(...)               — refresh/access token pair を service-role 経由で発行
---   backfill_entries_to_plans_logs(now)       — entries を plans / logs へ冪等 backfill
-
--- ■ app-facing 統計関数（authenticated に明示 GRANT）
---   get_time_pl_data(...)                     — Time PL の集計データ
---   get_stats_page_data(...)                  — Stats page の集約データ
---   get_stats_kpi_summary(...)                — KPI summary
---   get_tag_stats(user_id)                    — タグ別使用統計
---   get_time_by_tag(user_id, start, end)      — タグ別時間
---   get_daily_hours(user_id, days)            — 日別記録時間
---   get_hourly_distribution(user_id, start, end) — 時間帯別分布
---   get_dow_distribution(user_id, start, end) — 曜日別分布
---   get_monthly_hours(user_id, months)        — 月別記録時間
---   get_active_dates(user_id, start, end)     — アクティブ日一覧
---   get_total_time(user_id)                   — 合計時間
---   get_estimation_accuracy(user_id, start, end)   — 見積もり精度
---   get_blank_rate(user_id, start, end, wake, sleep) — 空白率
---   get_timeboxing_adherence(user_id, start, end)  — タイムボクシング遵守率
---   get_weekly_focus_score(user_id, weeks)          — 週次フォーカススコア
+-- ■ 一時 compatibility RPC（Step 9c で削除）
+--   soft_delete_log / restore_log / confirm_day_plans_to_logs
+--     -> records 正本 RPC へ委譲する旧 deploy 用 alias
 
 -- ■ 削除済み RPC
 --   get_tag_cumulative_time / get_tag_avg_fulfillment / get_tag_plan_rate /
@@ -63,3 +47,5 @@
 --   get_energy_map / get_context_switches / get_cumulative_time /
 --   get_plan_rate / get_avg_fulfillment
 --     -> 20260615000000_drop_unused_stats_rpcs.sql
+--   entries 系 CRUD / stats / backfill RPC
+--     -> 20260712212527_records_table_and_drop_entries.sql

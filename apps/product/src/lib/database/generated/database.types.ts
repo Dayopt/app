@@ -1,10 +1,30 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: '14.1';
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
   public: {
     Tables: {
@@ -31,71 +51,6 @@ export type Database = {
           source_event_id?: string | null;
         };
         Relationships: [];
-      };
-      entries: {
-        Row: {
-          actual_end_time: string | null;
-          actual_start_time: string | null;
-          created_at: string | null;
-          deleted_at: string | null;
-          description: string | null;
-          end_time: string | null;
-          fulfillment_score: number | null;
-          id: string;
-          origin: string;
-          planned_duration_minutes: number | null;
-          skipped_at: string | null;
-          start_time: string | null;
-          tag_id: string | null;
-          title: string;
-          updated_at: string | null;
-          user_id: string;
-        };
-        Insert: {
-          actual_end_time?: string | null;
-          actual_start_time?: string | null;
-          created_at?: string | null;
-          deleted_at?: string | null;
-          description?: string | null;
-          end_time?: string | null;
-          fulfillment_score?: number | null;
-          id?: string;
-          origin?: string;
-          planned_duration_minutes?: number | null;
-          skipped_at?: string | null;
-          start_time?: string | null;
-          tag_id?: string | null;
-          title: string;
-          updated_at?: string | null;
-          user_id: string;
-        };
-        Update: {
-          actual_end_time?: string | null;
-          actual_start_time?: string | null;
-          created_at?: string | null;
-          deleted_at?: string | null;
-          description?: string | null;
-          end_time?: string | null;
-          fulfillment_score?: number | null;
-          id?: string;
-          origin?: string;
-          planned_duration_minutes?: number | null;
-          skipped_at?: string | null;
-          start_time?: string | null;
-          tag_id?: string | null;
-          title?: string;
-          updated_at?: string | null;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'entries_tag_id_fkey';
-            columns: ['tag_id'];
-            isOneToOne: false;
-            referencedRelation: 'tags';
-            referencedColumns: ['id'];
-          },
-        ];
       };
       external_calendar_events: {
         Row: {
@@ -151,79 +106,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      logs: {
-        Row: {
-          created_at: string;
-          deleted_at: string | null;
-          end_at: string;
-          external_calendar_event_id: string | null;
-          fulfillment_score: number | null;
-          id: string;
-          note: string | null;
-          plan_id: string | null;
-          source: string;
-          start_at: string;
-          tag_id: string | null;
-          title: string;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          deleted_at?: string | null;
-          end_at: string;
-          external_calendar_event_id?: string | null;
-          fulfillment_score?: number | null;
-          id?: string;
-          note?: string | null;
-          plan_id?: string | null;
-          source?: string;
-          start_at: string;
-          tag_id?: string | null;
-          title: string;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          deleted_at?: string | null;
-          end_at?: string;
-          external_calendar_event_id?: string | null;
-          fulfillment_score?: number | null;
-          id?: string;
-          note?: string | null;
-          plan_id?: string | null;
-          source?: string;
-          start_at?: string;
-          tag_id?: string | null;
-          title?: string;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'logs_external_calendar_event_id_fkey';
-            columns: ['external_calendar_event_id'];
-            isOneToOne: false;
-            referencedRelation: 'external_calendar_events';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'logs_plan_id_fkey';
-            columns: ['plan_id'];
-            isOneToOne: false;
-            referencedRelation: 'plans';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'logs_tag_id_fkey';
-            columns: ['tag_id'];
-            isOneToOne: false;
-            referencedRelation: 'tags';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
       mfa_recovery_codes: {
         Row: {
           code_hash: string;
@@ -247,6 +129,41 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [];
+      };
+      oauth_audit_log: {
+        Row: {
+          called_at: string;
+          client_id: string;
+          id: string;
+          token_id: string | null;
+          tool_name: string;
+          user_id: string;
+        };
+        Insert: {
+          called_at?: string;
+          client_id: string;
+          id?: string;
+          token_id?: string | null;
+          tool_name: string;
+          user_id: string;
+        };
+        Update: {
+          called_at?: string;
+          client_id?: string;
+          id?: string;
+          token_id?: string | null;
+          tool_name?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'oauth_audit_log_token_id_fkey';
+            columns: ['token_id'];
+            isOneToOne: false;
+            referencedRelation: 'oauth_tokens';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       oauth_authorization_codes: {
         Row: {
@@ -436,6 +353,79 @@ export type Database = {
         };
         Relationships: [];
       };
+      records: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          fulfillment_score: number | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          end_at: string;
+          external_calendar_event_id?: string | null;
+          fulfillment_score?: number | null;
+          id?: string;
+          note?: string | null;
+          plan_id?: string | null;
+          source?: string;
+          start_at: string;
+          tag_id?: string | null;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          end_at?: string;
+          external_calendar_event_id?: string | null;
+          fulfillment_score?: number | null;
+          id?: string;
+          note?: string | null;
+          plan_id?: string | null;
+          source?: string;
+          start_at?: string;
+          tag_id?: string | null;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'records_external_calendar_event_id_fkey';
+            columns: ['external_calendar_event_id'];
+            isOneToOne: false;
+            referencedRelation: 'external_calendar_events';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'records_plan_id_fkey';
+            columns: ['plan_id'];
+            isOneToOne: false;
+            referencedRelation: 'plans';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'records_tag_id_fkey';
+            columns: ['tag_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       reports: {
         Row: {
           content: Json;
@@ -544,6 +534,7 @@ export type Database = {
           default_duration: number;
           default_view: string;
           hour_height_density: string;
+          ical_feed_token: string | null;
           id: string;
           personalization: Json | null;
           preferred_locale: string;
@@ -563,6 +554,7 @@ export type Database = {
           default_duration?: number;
           default_view?: string;
           hour_height_density?: string;
+          ical_feed_token?: string | null;
           id?: string;
           personalization?: Json | null;
           preferred_locale?: string;
@@ -582,6 +574,7 @@ export type Database = {
           default_duration?: number;
           default_view?: string;
           hour_height_density?: string;
+          ical_feed_token?: string | null;
           id?: string;
           personalization?: Json | null;
           preferred_locale?: string;
@@ -599,40 +592,81 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      auto_shrink_neighbors: {
-        Args: {
-          p_actual_end: string;
-          p_actual_start: string;
-          p_entry_id: string;
-          p_user_id: string;
-        };
-        Returns: {
-          actual_end_time: string | null;
-          actual_start_time: string | null;
+      logs: {
+        Row: {
           created_at: string | null;
           deleted_at: string | null;
-          description: string | null;
-          end_time: string | null;
+          end_at: string | null;
+          external_calendar_event_id: string | null;
           fulfillment_score: number | null;
-          id: string;
-          origin: string;
-          planned_duration_minutes: number | null;
-          start_time: string | null;
+          id: string | null;
+          note: string | null;
+          plan_id: string | null;
+          source: string | null;
+          start_at: string | null;
           tag_id: string | null;
-          title: string;
+          title: string | null;
           updated_at: string | null;
-          user_id: string;
-        }[];
-        SetofOptions: {
-          from: '*';
-          to: 'entries';
-          isOneToOne: false;
-          isSetofReturn: true;
+          user_id: string | null;
         };
+        Insert: {
+          created_at?: string | null;
+          deleted_at?: string | null;
+          end_at?: string | null;
+          external_calendar_event_id?: string | null;
+          fulfillment_score?: number | null;
+          id?: string | null;
+          note?: string | null;
+          plan_id?: string | null;
+          source?: string | null;
+          start_at?: string | null;
+          tag_id?: string | null;
+          title?: string | null;
+          updated_at?: string | null;
+          user_id?: string | null;
+        };
+        Update: {
+          created_at?: string | null;
+          deleted_at?: string | null;
+          end_at?: string | null;
+          external_calendar_event_id?: string | null;
+          fulfillment_score?: number | null;
+          id?: string | null;
+          note?: string | null;
+          plan_id?: string | null;
+          source?: string | null;
+          start_at?: string | null;
+          tag_id?: string | null;
+          title?: string | null;
+          updated_at?: string | null;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'records_external_calendar_event_id_fkey';
+            columns: ['external_calendar_event_id'];
+            isOneToOne: false;
+            referencedRelation: 'external_calendar_events';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'records_plan_id_fkey';
+            columns: ['plan_id'];
+            isOneToOne: false;
+            referencedRelation: 'plans';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'records_tag_id_fkey';
+            columns: ['tag_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
+            referencedColumns: ['id'];
+          },
+        ];
       };
+    };
+    Functions: {
       batch_rename_tags: {
         Args: { p_new_names: string[]; p_tag_ids: string[]; p_user_id: string };
         Returns: number;
@@ -652,10 +686,6 @@ export type Database = {
           p_tag_ids: string[];
           p_user_id: string;
         };
-        Returns: number;
-      };
-      bulk_soft_delete_entries: {
-        Args: { p_entry_ids: string[]; p_user_id: string };
         Returns: number;
       };
       confirm_day_plans_to_logs: {
@@ -683,7 +713,37 @@ export type Database = {
         }[];
         SetofOptions: {
           from: '*';
-          to: 'logs';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      confirm_day_plans_to_records: {
+        Args: {
+          p_confirmed_at?: string;
+          p_end_at: string;
+          p_start_at: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          fulfillment_score: number | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
           isOneToOne: false;
           isSetofReturn: true;
         };
@@ -693,172 +753,8 @@ export type Database = {
         Returns: number;
       };
       custom_access_token_hook: { Args: { event: Json }; Returns: Json };
-      get_active_dates: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
-        Returns: string[];
-      };
-      get_active_users_for_reflection: {
-        Args: {
-          p_limit?: number;
-          p_threshold_days?: number;
-          p_week_start: string;
-        };
-        Returns: {
-          entry_count: number;
-          user_id: string;
-        }[];
-      };
-      get_avg_fulfillment: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
-        Returns: Json;
-      };
-      get_blank_rate: {
-        Args: {
-          p_end_date?: string;
-          p_sleep_hour?: number;
-          p_start_date?: string;
-          p_user_id: string;
-          p_wake_hour?: number;
-        };
-        Returns: Json;
-      };
-      get_context_switches: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
-        Returns: Json;
-      };
-      get_cumulative_time: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
-        Returns: Json;
-      };
-      get_daily_hours: {
-        Args: { p_user_id: string; p_year: number };
-        Returns: {
-          day: string;
-          hours: number;
-        }[];
-      };
-      get_dow_distribution: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
-        Returns: {
-          dow: number;
-          total_minutes: number;
-        }[];
-      };
-      get_energy_map: {
-        Args: { p_end: string; p_start: string; p_user_id: string };
-        Returns: {
-          dow: number;
-          hour: number;
-          total_minutes: number;
-        }[];
-      };
-      get_estimation_accuracy: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
-        Returns: {
-          avg_actual_minutes: number;
-          avg_deviation_minutes: number;
-          avg_planned_minutes: number;
-          entry_count: number;
-          tag_color: string;
-          tag_id: string;
-          tag_name: string;
-        }[];
-      };
-      get_fulfillment_trend: {
-        Args: { p_end: string; p_start: string; p_user_id: string };
-        Returns: {
-          avg_fulfillment: number;
-          day: string;
-        }[];
-      };
-      get_hourly_distribution: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
-        Returns: {
-          hour: number;
-          total_minutes: number;
-        }[];
-      };
-      get_monthly_hours: {
-        Args: { p_months?: number; p_user_id: string };
-        Returns: {
-          hours: number;
-          month: string;
-        }[];
-      };
-      get_plan_rate: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
-        Returns: Json;
-      };
-      get_plan_summary: { Args: { p_user_id: string }; Returns: Json };
-      get_stats_kpi_summary: {
-        Args: {
-          p_end_date?: string;
-          p_sleep_hour?: number;
-          p_start_date?: string;
-          p_user_id: string;
-          p_wake_hour?: number;
-        };
-        Returns: Json;
-      };
-      get_stats_page_data: {
-        Args: {
-          p_end_date: string;
-          p_monthly_months?: number;
-          p_prev_end: string;
-          p_prev_start: string;
-          p_sleep_hour?: number;
-          p_start_date: string;
-          p_user_id: string;
-          p_wake_hour?: number;
-          p_year: number;
-        };
-        Returns: Json;
-      };
-      get_tag_stats: {
-        Args: { p_user_id: string };
-        Returns: {
-          entry_count: number;
-          last_used: string;
-          tag_id: string;
-        }[];
-      };
-      get_time_by_tag: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
-        Returns: {
-          hours: number;
-          tag_color: string;
-          tag_id: string;
-          tag_name: string;
-        }[];
-      };
-      get_time_pl_data: {
-        Args: {
-          p_end_date: string;
-          p_prev_end?: string;
-          p_prev_start?: string;
-          p_sleep_hour?: number;
-          p_start_date: string;
-          p_user_id: string;
-          p_wake_hour?: number;
-        };
-        Returns: Json;
-      };
-      get_timeboxing_adherence: {
-        Args: { p_end: string; p_start: string; p_user_id: string };
-        Returns: Json;
-      };
-      get_total_time: { Args: { p_user_id: string }; Returns: Json };
       get_user_timezone: { Args: { p_user_id: string }; Returns: string };
       get_vault_secret: { Args: { p_name: string }; Returns: string };
-      get_weekly_focus_score: {
-        Args: { p_user_id: string; p_weeks?: number };
-        Returns: {
-          entry_count: number;
-          focus_score: number;
-          unique_tags: number;
-          week_start: string;
-        }[];
-      };
       increment_tag_sort_orders: {
         Args: { p_user_id: string };
         Returns: undefined;
@@ -867,23 +763,22 @@ export type Database = {
         Args: { p_body?: Json; p_function_name: string };
         Returns: number;
       };
-      merge_tags:
-        | {
-            Args: {
-              p_source_tag_id: string;
-              p_target_tag_id: string;
-              p_user_id: string;
-            };
-            Returns: Json;
-          }
-        | {
-            Args: {
-              p_source_tag_ids: string[];
-              p_target_tag_id: string;
-              p_user_id: string;
-            };
-            Returns: Json;
-          };
+      issue_oauth_token_pair: {
+        Args: {
+          p_access_expires_at: string;
+          p_access_hash: string;
+          p_client_id: string;
+          p_parent_refresh_id?: string;
+          p_refresh_expires_at: string;
+          p_refresh_hash: string;
+          p_scopes: string[];
+          p_user_id: string;
+        };
+        Returns: {
+          access_id: string;
+          refresh_id: string;
+        }[];
+      };
       merge_tags_with_hierarchy: {
         Args: {
           p_source_tag_id: string;
@@ -913,10 +808,6 @@ export type Database = {
           isSetofReturn: true;
         };
       };
-      restore_entry: {
-        Args: { p_entry_id: string; p_user_id: string };
-        Returns: undefined;
-      };
       restore_log: {
         Args: { p_log_id: string; p_user_id: string };
         Returns: undefined;
@@ -925,8 +816,8 @@ export type Database = {
         Args: { p_plan_id: string; p_user_id: string };
         Returns: undefined;
       };
-      soft_delete_entry: {
-        Args: { p_entry_id: string; p_user_id: string };
+      restore_record: {
+        Args: { p_record_id: string; p_user_id: string };
         Returns: undefined;
       };
       soft_delete_log: {
@@ -936,6 +827,14 @@ export type Database = {
       soft_delete_plan: {
         Args: { p_plan_id: string; p_user_id: string };
         Returns: undefined;
+      };
+      soft_delete_record: {
+        Args: { p_record_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      trunc_week_tz: {
+        Args: { ts: string; tz: string; week_start?: number };
+        Returns: string;
       };
       update_personalization: {
         Args: { p_path: string; p_user_id: string; p_value: Json };
@@ -1068,6 +967,9 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

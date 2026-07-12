@@ -243,7 +243,7 @@ describe('PlanService.skip', () => {
 });
 
 describe('PlanService.confirmDay', () => {
-  it('confirm_day_plans_to_logs RPC へ user と day range を渡す', async () => {
+  it('confirm_day_plans_to_records RPC へ user と day range を渡す', async () => {
     const log = createRecord({ source: 'from_plan' });
     const { service, mockSupabase } = createPlanService();
     mockSupabase.rpc.mockResolvedValue({ data: [log], error: null });
@@ -259,7 +259,7 @@ describe('PlanService.confirmDay', () => {
     ).resolves.toEqual([log]);
 
     expect(mockSupabase.rpc).toHaveBeenCalledWith(
-      'confirm_day_plans_to_logs',
+      'confirm_day_plans_to_records',
       expect.objectContaining({
         p_end_at: '2026-03-18T00:00:00.000Z',
         p_start_at: '2026-03-17T00:00:00.000Z',
@@ -355,7 +355,7 @@ describe('RecordService.create', () => {
     const existing = createRecord();
     const { service, mockSupabase } = createRecordService();
     mockSupabase.from.mockImplementation((table: string) =>
-      createChainableMock(table === 'logs' ? existing : createPlan()),
+      createChainableMock(table === 'records' ? existing : createPlan()),
     );
 
     await expect(
@@ -365,5 +365,28 @@ describe('RecordService.create', () => {
         input: { planId: 'plan-1' },
       }),
     ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
+  });
+});
+
+describe('RecordService soft delete', () => {
+  it('Record 正本 RPC で delete / restore する', async () => {
+    const { service, mockSupabase } = createRecordService();
+    mockSupabase.rpc.mockResolvedValue({ data: null, error: null });
+
+    await expect(service.delete({ userId: USER_ID, recordId: 'record-1' })).resolves.toEqual({
+      success: true,
+    });
+    await expect(service.restore({ userId: USER_ID, recordId: 'record-1' })).resolves.toEqual({
+      success: true,
+    });
+
+    expect(mockSupabase.rpc).toHaveBeenNthCalledWith(1, 'soft_delete_record', {
+      p_record_id: 'record-1',
+      p_user_id: USER_ID,
+    });
+    expect(mockSupabase.rpc).toHaveBeenNthCalledWith(2, 'restore_record', {
+      p_record_id: 'record-1',
+      p_user_id: USER_ID,
+    });
   });
 });

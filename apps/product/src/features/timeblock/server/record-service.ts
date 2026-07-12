@@ -179,8 +179,8 @@ export class RecordService {
 
   async delete(options: DeleteRecordOptions): Promise<{ success: boolean }> {
     const { userId, recordId } = options;
-    const { error } = await this.supabase.rpc('soft_delete_log', {
-      p_log_id: recordId,
+    const { error } = await this.supabase.rpc('soft_delete_record', {
+      p_record_id: recordId,
       p_user_id: userId,
     });
 
@@ -193,8 +193,8 @@ export class RecordService {
 
   async restore(options: DeleteRecordOptions): Promise<{ success: boolean }> {
     const { userId, recordId } = options;
-    const { error } = await this.supabase.rpc('restore_log', {
-      p_log_id: recordId,
+    const { error } = await this.supabase.rpc('restore_record', {
+      p_record_id: recordId,
       p_user_id: userId,
     });
 

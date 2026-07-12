@@ -1,7 +1,7 @@
 /**
  * Plan レーン + Record レーンの固定 2 レーン座標計算（Step 5、read 側専用）。
  *
- * `plans_no_overlap` / `logs_no_overlap`（DB EXCLUDE 制約、半開区間）により、
+ * `plans_no_overlap` / `records_no_overlap`（DB EXCLUDE 制約、半開区間）により、
  * 同一ユーザーの plans 同士・records 同士は決して時間的に重ならない。そのため
  * 既存 `layout.ts` の `calculateGroupLayout`（時間重複を動的に検出して
  * column を割り当てる sweep-line）は不要で、各レーン内は「その日の時刻から

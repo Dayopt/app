@@ -2,7 +2,7 @@
 -- RLS ポリシー一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
 -- 全ユーザーデータテーブルで RLS が有効
--- 最終同期日: 2026-06-17
+-- 最終同期日: 2026-07-13
 -- 同期対象 migration:
 --   - 20260318150000_add_entries_soft_delete.sql
 --   - 20260323000000_fix_entries_soft_delete_rls.sql
@@ -11,17 +11,19 @@
 --   - 20260501000100_oauth_authorization_codes.sql
 --   - 20260514000918_mcp_phase_1_5.sql
 --   - 20260604230607_harden_function_execute_privileges.sql
+--   - 20260708232500_add_time_model_tables.sql
+--   - 20260712212527_records_table_and_drop_entries.sql
 --
 -- パターン:
 --   (select auth.uid()) でキャッシュ → auth.uid() 直呼びより 94-99% 高速
 -- ============================================================
 
 -- ■ profiles: id = auth.uid()
--- ■ entries:
+-- ■ plans / records:
 --   SELECT: user_id = auth.uid() AND deleted_at IS NULL
---   INSERT: user_id = auth.uid()
---   UPDATE: USING user_id = auth.uid(), WITH CHECK user_id = auth.uid()
---   DELETE: user_id = auth.uid()
+--   INSERT/UPDATE/DELETE: user_id = auth.uid()
+--   records の auto_migrated 行は authenticated から変更不可
+-- ■ logs view: records RLS を使う旧 deploy 用 security_invoker view
 -- ■ tags:
 --   SELECT/INSERT/DELETE: user_id = auth.uid()
 --   UPDATE: USING user_id = auth.uid(), WITH CHECK user_id = auth.uid()
