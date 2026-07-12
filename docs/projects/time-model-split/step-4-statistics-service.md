@@ -2,8 +2,8 @@
 status: current
 last_verified: 2026-07-09
 code:
-  - apps/product/src/features/entry/server/statistics.ts
-  - apps/product/src/features/entry/server/tag-statistics.ts
+  - apps/product/src/features/timeblock/server/statistics.ts
+  - apps/product/src/features/timeblock/server/tag-statistics.ts
   - apps/product/src/features/tags/server/tag-statistics-service.ts
 ---
 
@@ -17,7 +17,7 @@ Step 0 の Aggregation Source Contract を実装する。`plans` / `logs` を読
 
 ## Minimum Viable Approach
 
-1. `apps/product/src/features/entry/server/statistics-service.ts` を追加。Step 0 の contract に従い、実績系は `logs`、予定系は `plans`、予実比較は `plans LEFT JOIN logs (plan_id)` を読む
+1. `apps/product/src/features/timeblock/server/statistics-service.ts` を追加。Step 0 の contract に従い、実績系は `logs`、予定系は `plans`、予実比較は `plans LEFT JOIN logs (plan_id)` を読む
 2. 対応する procedure 面（Step 0 Current Inventory の全行）:
    - general: tag stats / time-by-tag / daily hours / hourly / dow / monthly
    - kpi: estimation accuracy / blank rate
@@ -41,10 +41,10 @@ Step 0 の Aggregation Source Contract を実装する。`plans` / `logs` を読
 
 ## Existing Code to Reuse
 
-- `apps/product/src/features/entry/server/statistics-shared.ts` — input schema / error handling / response 型
-- `apps/product/src/features/entry/server/statistics-overview-transform.ts` / `statistics-time-by-tag-transform.ts` / `statistics-kpi-unpackers.ts` — 互換レスポンスの契約
-- `apps/product/src/features/entry/domain/` の distribution / monthly-trend / tag-stats / estimation-accuracy — TS aggregation 部品（1:N 対応の改修ベース）
-- `apps/product/src/features/entry/server/tag-statistics.ts` — direct select + domain build の既存パターン
+- `apps/product/src/features/timeblock/server/statistics-shared.ts` — input schema / error handling / response 型
+- `apps/product/src/features/timeblock/server/statistics-overview-transform.ts` / `statistics-time-by-tag-transform.ts` / `statistics-kpi-unpackers.ts` — 互換レスポンスの契約
+- `apps/product/src/features/timeblock/domain/` の distribution / monthly-trend / tag-stats / estimation-accuracy — TS aggregation 部品（1:N 対応の改修ベース）
+- `apps/product/src/features/timeblock/server/tag-statistics.ts` — direct select + domain build の既存パターン
 
 ## What I'm Not Doing
 

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
 import type { CalendarEvent } from '../../../../types/calendar.types';
-import { useCurrentPeriod, useDateUtilities, useEntriesByDate } from '../../shared';
+import { useCurrentPeriod, useDateUtilities, useTimeblocksByDate } from '../../shared';
 
 /** useMultiDayView フックのオプション */
 interface UseMultiDayViewOptions {
@@ -50,7 +50,7 @@ export function useMultiDayView({
 
   const centerIndex = Math.floor(dayCount / 2);
 
-  const { entriesByDate: eventsByDate } = useEntriesByDate({
+  const { entriesByDate: eventsByDate } = useTimeblocksByDate({
     dates: displayDates,
     entries: events,
     sortType: 'standard',

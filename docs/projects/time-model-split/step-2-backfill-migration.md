@@ -3,7 +3,7 @@ status: current
 last_verified: 2026-07-09
 code:
   - supabase/migrations/20260708232500_add_time_model_tables.sql
-  - apps/product/src/features/entry/domain/entry-time-model.ts
+  - apps/product/src/features/timeblock/domain/entry-time-model.ts
 ---
 
 # Step 2: entries → plans / logs backfill migration
@@ -49,7 +49,7 @@ auto-record 実体化 log を明示記録と区別するか。
 
 ## Existing Code to Reuse
 
-- `apps/product/src/features/entry/domain/entry-time-model.ts` `getEffectiveActualRange()` — effective actual 判定の正（SQL へ転写する際の仕様書として。この backfill が最後の用途）
+- `apps/product/src/features/timeblock/domain/entry-time-model.ts` `getEffectiveActualRange()` — effective actual 判定の正（SQL へ転写する際の仕様書として。この backfill が最後の用途）
 - `supabase/migrations/20260610000000_entry_auto_record_model.sql` — `entries_effective` の判定式（SQL 表現の参照元）
 - `supabase/migrations/20260513000000_entry_two_layer_time_ranges.sql` L40-72 — 重なり検出 + 新しい側を soft delete する前例
 

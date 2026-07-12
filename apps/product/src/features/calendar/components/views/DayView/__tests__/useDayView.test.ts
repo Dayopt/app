@@ -34,7 +34,7 @@ describe('useDayView', () => {
     );
 
     expect(result.current.dayEntries).toEqual([]);
-    expect(result.current.entryStyles).toEqual({});
+    expect(result.current.timeblockStyles).toEqual({});
   });
 
   it('指定日のエントリのみをフィルタする', () => {
@@ -71,7 +71,7 @@ describe('useDayView', () => {
       useDayView({ date: baseDate, entries: [entry], timezone: 'UTC' }),
     );
 
-    const styles = result.current.entryStyles;
+    const styles = result.current.timeblockStyles;
     expect(styles['styled']).toBeDefined();
     expect(styles['styled']?.position).toBe('absolute');
     expect(styles['styled']?.top).toBeDefined();
@@ -114,8 +114,8 @@ describe('useDayView', () => {
     );
 
     // 重複するので幅が50%ずつ
-    const style1 = result.current.entryStyles['overlap-1'];
-    const style2 = result.current.entryStyles['overlap-2'];
+    const style1 = result.current.timeblockStyles['overlap-1'];
+    const style2 = result.current.timeblockStyles['overlap-2'];
     expect(style1).toBeDefined();
     expect(style2).toBeDefined();
     expect(parseFloat(style1?.width?.toString() ?? '100')).toBe(50);
@@ -148,8 +148,8 @@ describe('useDayView', () => {
       }),
     );
 
-    const recordZIndex = Number(result.current.entryStyles['gap-record']?.zIndex);
-    const plannedZIndex = Number(result.current.entryStyles.planned?.zIndex);
+    const recordZIndex = Number(result.current.timeblockStyles['gap-record']?.zIndex);
+    const plannedZIndex = Number(result.current.timeblockStyles.planned?.zIndex);
 
     expect(recordZIndex).toBeGreaterThan(plannedZIndex);
   });

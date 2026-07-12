@@ -50,9 +50,9 @@ export function useCalendarDataLayer({
     viewDateRange,
     filteredEvents,
     allCalendarEvents,
-    entriesError,
-    isEntriesFetching,
-    refetchEntries,
+    timeblocksError,
+    isTimeblocksFetching,
+    refetchTimeblocks,
     prefetchDirection,
     prefetchForView,
   } = useCalendarData({
@@ -62,25 +62,25 @@ export function useCalendarDataLayer({
 
   // エントリ取得エラー時にtoast通知 + 再試行アクション
   useEffect(() => {
-    if (entriesError) {
-      logger.error('[useCalendarDataLayer] entries fetch error', entriesError);
+    if (timeblocksError) {
+      logger.error('[useCalendarDataLayer] entries fetch error', timeblocksError);
       toast.error(tError('entriesLoadFailed'), {
         action: {
           label: tError('retry'),
           onClick: () => {
-            void refetchEntries();
+            void refetchTimeblocks();
           },
         },
       });
     }
-  }, [entriesError, tError, refetchEntries]);
+  }, [timeblocksError, tError, refetchTimeblocks]);
 
   return useMemo(
     () => ({
       viewDateRange,
       filteredEvents,
       allCalendarEvents,
-      isFetching: isEntriesFetching,
+      isFetching: isTimeblocksFetching,
       prefetchDirection,
       prefetchForView,
     }),
@@ -88,7 +88,7 @@ export function useCalendarDataLayer({
       viewDateRange,
       filteredEvents,
       allCalendarEvents,
-      isEntriesFetching,
+      isTimeblocksFetching,
       prefetchDirection,
       prefetchForView,
     ],

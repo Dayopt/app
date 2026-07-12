@@ -151,7 +151,7 @@ export function getDurationInMinutes(start: Date, end: Date): number {
 // Layout → Position Conversion
 // ========================================
 
-/** EntryLayout から top/height を計算する共通関数 */
+/** TimeblockLayout から top/height を計算する共通関数 */
 const ENTRY_PADDING = 2;
 
 export function layoutEntryToVerticalPosition(
@@ -217,11 +217,11 @@ export function generateTimeSlots(
 }
 
 // ========================================
-// Entry Style Computation
+// Timeblock Style Computation
 // ========================================
 
 /** エントリ位置情報 */
-interface EntryPositionInput {
+interface TimeblockPositionInput {
   id: string;
   top: number;
   height: number;
@@ -232,7 +232,7 @@ interface EntryPositionInput {
 }
 
 /** エントリ位置情報からCSSスタイルマップを生成（純粋関数） */
-export function computeEntryStyles(positions: EntryPositionInput[]): Record<
+export function computeTimeblockStyles(positions: TimeblockPositionInput[]): Record<
   string,
   {
     position: 'absolute';

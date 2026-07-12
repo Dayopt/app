@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-07
+last_verified: 2026-07-12
 code: apps/product/src
 ---
 
@@ -136,7 +136,7 @@ graph TD
 ```mermaid
 graph LR
 subgraph Cache["TanStack Query キャッシュ"]
-E["entries / calendars<br/>stale: 5min, gc: 10min"]
+E["plans / records / calendars<br/>stale: 5min, gc: 10min"]
 T["tags<br/>stale: 5min, gc: 10min"]
 US["userSettings<br/>stale: 1h, gc: 2h"]
 TU["tagUsage<br/>stale: 1min, gc: 5min"]
@@ -194,8 +194,8 @@ end
 ユーザー操作を受け取り、tRPC mutation を呼び出す。
 
 ```typescript
-const handleCreateEntry = async (data) => {
-  await createEntry.mutateAsync(data);
+const handleCreatePlan = async (data) => {
+  await createPlan.mutateAsync(data);
 };
 ```
 
@@ -204,9 +204,9 @@ const handleCreateEntry = async (data) => {
 型安全な API 呼び出しとキャッシュ管理。
 
 ```typescript
-const createEntry = api.entries.create.useMutation({
+const createPlan = api.plans.create.useMutation({
   onSuccess: () => {
-    utils.entries.list.invalidate(); // キャッシュ無効化→再取得
+    utils.plans.list.invalidate(); // キャッシュ無効化→再取得
   },
 });
 ```
@@ -220,8 +220,8 @@ const createEntry = api.entries.create.useMutation({
 入力バリデーションと認証チェック。ルーターは薄く保つ。
 
 ```typescript
-create: protectedProcedure.input(createEntrySchema).mutation(async ({ ctx, input }) => {
-  const service = createEntryService(ctx.supabase);
+create: protectedProcedure.input(createPlanSchema).mutation(async ({ ctx, input }) => {
+  const service = createPlanService(ctx.supabase);
   return service.create({ userId: ctx.userId, ...input });
 });
 ```
@@ -231,7 +231,7 @@ create: protectedProcedure.input(createEntrySchema).mutation(async ({ ctx, input
 ビジネスロジックを集約。テストしやすく、再利用可能。
 
 ```typescript
-class EntryService {
+class PlanService {
   async create(params) {
     // バリデーション
     // ビジネスロジック
@@ -245,7 +245,7 @@ class EntryService {
 #### 5. Supabase Client
 
 ```typescript
-const { data, error } = await this.supabase.from('entries').insert(entryData).select().single();
+const { data, error } = await this.supabase.from('plans').insert(planData).select().single();
 ```
 
 #### 6. PostgreSQL + RLS
@@ -253,8 +253,8 @@ const { data, error } = await this.supabase.from('entries').insert(entryData).se
 データベースレベルでのセキュリティ。
 
 ```sql
-CREATE POLICY "Users can manage own entries"
-ON entries FOR ALL
+CREATE POLICY "Users can manage own plans"
+ON plans FOR ALL
 USING (auth.uid() = user_id);
 ```
 
@@ -264,7 +264,7 @@ USING (auth.uid() = user_id);
 
 | 状態の種類               | 管理方法       | 例                               |
 | ------------------------ | -------------- | -------------------------------- |
-| **サーバーデータ**       | TanStack Query | エントリ一覧、タグ               |
+| **サーバーデータ**       | TanStack Query | 予定・記録一覧、タグ             |
 | **UI状態（グローバル）** | Zustand        | サイドバー開閉、選択中のアイテム |
 | **UI状態（ローカル）**   | useState       | フォームの入力値、モーダルの開閉 |
 | **URL状態**              | Next.js Router | 現在のページ、クエリパラメータ   |
@@ -335,34 +335,28 @@ USING (auth.uid() = user_id);
 
 ## Database Architecture
 
-> **テーブル数**: 11 | **PostgreSQL**: v17
+> **テーブル数**: 12 | **PostgreSQL**: v17
 
 Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Production）で運用。
 全テーブルに Row Level Security (RLS) を適用し、マルチテナントのデータ分離を実現。
 
 ### テーブル一覧
 
-#### コアビジネス（3テーブル）
+#### コアビジネス（4テーブル）
 
-| テーブル       | 役割                                         | 主要カラム                                                                                                                              |
-| -------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **entries**    | 時間ブロック（計画・実績の統合エンティティ） | title, origin(planned), start*time, end_time, actual_start_time, actual_end_time, fulfillment_score(1-5), duration_minutes, reminder*\* |
-| **tags**       | 階層タグ（親子1階層）                        | name, color, parent_id, level, sort_order, is_active                                                                                    |
-| **entry_tags** | Entries↔Tags中間テーブル                     | entry_id, tag_id                                                                                                                        |
+| テーブル                     | 役割                                                             | 主要カラム                                                                                                |
+| ---------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **plans**                    | Plan（予定）。これからやる時間の宣言                             | title, tag_id, start_at, end_at, skipped_at, source, external_calendar_event_id                           |
+| **logs**                     | Record（記録）の物理保存先。`plan_id` で 1 Plan : N Record       | title, tag_id, plan_id, start_at, end_at, source, fulfillment_score(1-5), external_calendar_event_id      |
+| **external_calendar_events** | 外部カレンダー同期ミラー（テーブルのみ存在。同期実装は Phase 2） | provider, provider_calendar_id, provider_event_id, start_at, end_at, status, dismissed_at, last_synced_at |
+| **tags**                     | 階層タグ（親子1階層）                                            | name, color, parent_id, sort_order, is_active                                                             |
 
-#### ユーザー設定（3テーブル）
+#### ユーザー設定（2テーブル）
 
-| テーブル                     | 役割                                    | 主要カラム                                                                  |
-| ---------------------------- | --------------------------------------- | --------------------------------------------------------------------------- |
-| **profiles**                 | ユーザープロフィール（auth.usersと1:1） | email, username, full_name, avatar_url                                      |
-| **user_settings**            | 表示設定                                | timezone, theme, time*format, chronotype*_, snap*interval, business_hours*_ |
-| **notification_preferences** | 通知設定                                | enable_browser/email/push_notifications, default_reminder_enabled           |
-
-#### 通知（1テーブル）
-
-| テーブル          | 役割         | 主要カラム                                        |
-| ----------------- | ------------ | ------------------------------------------------- |
-| **notifications** | ユーザー通知 | type, priority, title, message, is_read, entry_id |
+| テーブル          | 役割                                    | 主要カラム                                                                  |
+| ----------------- | --------------------------------------- | --------------------------------------------------------------------------- |
+| **profiles**      | ユーザープロフィール（auth.usersと1:1） | email, username, full_name, avatar_url                                      |
+| **user_settings** | 表示設定                                | timezone, theme, time*format, chronotype*_, snap*interval, business_hours*_ |
 
 #### セキュリティ/監査（1テーブル）
 
@@ -385,37 +379,44 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
          │                         │                         │
          ▼                         ▼                         ▼
 ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│    profiles       │  │  user_settings    │  │  notification_   │
-│    (1:1)          │  │    (1:1)          │  │  preferences     │
-│──────────────────│  │──────────────────│  │    (1:1)          │
-│ id (PK=FK)        │  │ user_id (FK,UQ)   │  │──────────────────│
-│ email, username   │  │ timezone, theme   │  │ user_id (FK,UQ)  │
-└──────────────────┘  └──────────────────┘  └──────────────────┘
-
-
-         ┌─────────────────────────┼─────────────────────────┐
-         │                         │                         │
-         ▼                         ▼                         ▼
-┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│     entries       │  │       tags        │  │  notifications   │
-│──────────────────│  │──────────────────│  │──────────────────│
-│ id (PK)           │  │ id (PK)           │  │ id (PK)          │
-│ user_id (FK)      │  │ user_id (FK)      │  │ user_id (FK)     │
-│ title, origin     │  │ name, color       │  │ type, title      │
-│ start/end_time    │  │ parent_id (FK→    │  │ entry_id (FK)    │
-│ actual_start/     │  │   self, max 1階層) │  │ is_read          │
-│   end_time        │  └───────┬──────────┘  └──────────────────┘
-│ fulfillment_score │          │
-│ duration_minutes  │     ┌────┘
-│ reminder_*        │     │
-└───────┬──────────┘      ▼
-        │          ┌──────────────────┐
-        └──────────│   entry_tags     │
-                   │──────────────────│
-                   │ entry_id (FK)    │
-                   │ tag_id  (FK)     │
-                   │ UNIQUE(entry,tag) │
-                   └──────────────────┘
+│    profiles       │  │  user_settings    │  │       tags        │
+│    (1:1)          │  │    (1:1)          │  │──────────────────│
+│──────────────────│  │──────────────────│  │ id (PK)           │
+│ id (PK=FK)        │  │ user_id (FK,UQ)   │  │ user_id (FK)      │
+│ email, username   │  │ timezone, theme   │  │ name, color       │
+└──────────────────┘  └──────────────────┘  │ parent_id (FK→    │
+                                              │   self, max 1階層) │
+                                              └────────┬─────────┘
+                                                       │ tag_id (nullable, both)
+                              ┌─────────────────────────┤
+                              │                         │
+                              ▼                         ▼
+                    ┌──────────────────┐      ┌──────────────────┐
+                    │      plans        │      │ logs (Record store)│
+                    │──────────────────│      │──────────────────│
+                    │ id (PK)           │◄─────│ plan_id (FK, NULL) │
+                    │ user_id (FK)      │ 1:N  │ user_id (FK)       │
+                    │ title, note       │      │ title, note        │
+                    │ start_at/end_at   │      │ start_at/end_at    │
+                    │ skipped_at        │      │ fulfillment_score  │
+                    │ source            │      │ source             │
+                    │ external_calendar_│      │ external_calendar_ │
+                    │  event_id (FK)    │      │  event_id (FK)     │
+                    └────────┬─────────┘      └─────────┬──────────┘
+                             │                            │
+                             └─────────────┬──────────────┘
+                                           ▼
+                              ┌───────────────────────────┐
+                              │  external_calendar_events  │
+                              │  (同期ミラー)              │
+                              │───────────────────────────│
+                              │ id (PK)                    │
+                              │ user_id (FK)                │
+                              │ provider, provider_calendar_ │
+                              │  id, provider_event_id      │
+                              │ start_at/end_at, status     │
+                              │ dismissed_at, last_synced_at │
+                              └───────────────────────────┘
 
 === セキュリティ/監査 ===
 
@@ -440,21 +441,16 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
 ```sql
 -- 基本パターン: ユーザーは自分のデータのみアクセス可能
 (select auth.uid()) = user_id
-
--- 関連テーブル: 親テーブルの所有権で判定
-EXISTS (SELECT 1 FROM entries WHERE entries.id = entry_tags.entry_id
-        AND entries.user_id = (select auth.uid()))
 ```
 
-#### Entries の統合設計（ADR-011）
+#### Plan / Record 分離（ADR-025）
 
-`plans` テーブルと `records` テーブルを単一の `entries` テーブルに統合。`status` カラムは廃止し、エントリの状態は時間位置から自動導出する:
+単一 `entries` テーブル（ADR-011）に予定 range と実績 range を同居させ、実績を read 時に自動導出するモデルは、1予定に対する複数回の記録を表現できない・自動記録が見積もり精度などの KPI を歪める、という限界を抱えていた。ADR-025 でこれを Plan / Record の2独立エンティティへ分割し、記録を自動導出ではなく明示操作に反転した。Step 9a の物理テーブルは `plans` / `logs` で、#1579 で `logs` を `records` へ rename する。
 
-- `start_time > now` → `upcoming`
-- `start_time <= now < end_time` → `active`
-- `end_time <= now` → `past`
-
-`actual_start_time` / `actual_end_time` は過去ブロックの実績記録に使用。`fulfillment_score`（1-5）は nullable カラムとして全エントリに存在するが、過去ブロックのみに意味を持つ。詳細は ADR-011 参照。
+- 状態導出（`upcoming` / `active` / `past`）は Plan / Record それぞれの時間位置から行う
+- 保存先は選択 UI ではなく `end_at > now` か否かで一意に決まる（`end_at > now` → Plan、`end_at <= now` → Record）
+- `fulfillment_score`（1-5）は Record 側のみが持つ属性。Plan には存在しない
+- 詳細は [ADR-025](../product/log/2026-07-09-time-model-split.md) 参照
 
 #### Tags の階層制限
 
@@ -464,16 +460,10 @@ EXISTS (SELECT 1 FROM entries WHERE entries.id = entry_tags.entry_id
 
 複数テーブルを跨ぐ操作は DB 関数で原子性を保証:
 
-- `soft_delete_entry()` — エントリのソフトデリート（deleted_at セット）
-- `bulk_soft_delete_entries()` — 複数エントリの一括ソフトデリート
-- `restore_entry()` — ソフトデリートしたエントリの復元
-- `merge_tags()` — タグマージ + 子タグの昇格
-
-### 定期クリーンアップ（pg_cron）
-
-| ジョブ                  | スケジュール   | 保持期間         | 対象テーブル  |
-| ----------------------- | -------------- | ---------------- | ------------- |
-| `cleanup-notifications` | 毎日 03:20 UTC | 30日（既読のみ） | notifications |
+- `soft_delete_plan()` / `restore_plan()` — Plan のソフトデリート / 復元
+- `soft_delete_record()` / `restore_record()` — Record のソフトデリート / 復元
+- `confirm_day_plans_to_logs()` — 指定日の未記録 Plan を一括で Record 化（一括「この日を確定」。物理名は移行中）
+- `merge_tags_with_hierarchy()` — タグマージ + 子タグの昇格（plans / logs 両方の tag_id を追随して更新）
 
 ### インデックス監査ランブック
 
@@ -565,11 +555,11 @@ DB boundary は `apps/product/src/lib/database`（旧 `packages/database`、prod
 Source of truth:
 
 - URL / domain / contact / public brand constants: `packages/config`
-- Entry origin / time range・time conflict / date-time preference / pure Dayopt concept: `packages/domain`
+- Plan / Record source・time range・time conflict / date-time preference / pure Dayopt concept: `packages/domain`
 - Supabase generated type / table name / row helper type: `apps/product/src/lib/database`
 - Free / Pro plan / subscription status / `pro_access` entitlement / public pricing: `packages/billing`
 
-Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文字列は、ユーザー向け文言・履歴・例示が混ざるため機械的には置換しない。DB access の `.from('entries')` / `.from('tags')` / `.from('user_settings')` も Supabase 型推論と呼び出し箇所が多いため、`databaseTables` 適用は段階的な follow-up にする。
+Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文字列は、ユーザー向け文言・履歴・例示が混ざるため機械的には置換しない。DB access の `.from('plans')` / `.from('records')` / `.from('tags')` / `.from('user_settings')` も Supabase 型推論と呼び出し箇所が多いため、`databaseTables` 適用は段階的な follow-up にする。
 
 ### Foundation Readiness
 
@@ -604,7 +594,7 @@ ADR-021 以降、product / web の canonical UI として直接 import で全面
 - Supabase / database row
 - Stripe / billing secret
 - user session / auth policy
-- entry/tag/calendar 固有の business rule
+- timeblock/tag/calendar 固有の business rule
 
 #### `packages/config`
 
@@ -656,7 +646,7 @@ product 専用（web・他 package から参照なし）のため package では
 例:
 
 - `Database`
-- `Row<'entries'>` / `Insert<'tags'>`
+- `Row<typeof databaseTables.records>` / `Insert<'tags'>`
 - `databaseTables`
 
 入れないもの:

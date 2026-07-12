@@ -11,7 +11,7 @@ paths:
 
 ```
 Layer 0 (基盤):    tags                ← 他featureに依存しない
-Layer 1 (中核):    entry               ← Layer 0 の barrel を使える
+Layer 1 (中核):    timeblock           ← Layer 0 の barrel を使える
 Layer 2 (体験):    calendar, review    ← Layer 0+1 を使える
 Independent:       auth, contact       ← 他featureに依存しない
 Composition:       settings            ← DAG 除外。通常feature扱いしない
@@ -22,7 +22,7 @@ source of truth は [`apps/product/eslint.config.mjs`](../../apps/product/eslint
 ## 依存ルール（ESLint `error` で強制）
 
 - 上位→下位の barrel import のみ許可
-- deep import は常に禁止（`@/features/entry/hooks/*` ❌）
+- deep import は常に禁止（`@/features/timeblock/hooks/*` ❌）
 - 同層間・下位→上位の参照は禁止
 - 共有層から `@/features/*` をimportすると **error**
 - **settings は DAG から除外** — 後述 [Composition Feature: settings](#composition-feature-settings) を参照
@@ -32,7 +32,7 @@ source of truth は [`apps/product/eslint.config.mjs`](../../apps/product/eslint
 
 `features/{name}/domain/` は **pure logic（DB / React / Zustand / TZ 非依存）が複数箇所で参照される or 単体テストで凍結すべき挙動を持つ場合のみ** 作る。
 
-- 例: `features/entry/domain/`、`features/tags/domain/`、`features/review/domain/`
+- 例: `features/timeblock/domain/`、`features/tags/domain/`、`features/review/domain/`
 - domain を作らない feature: `contact`（pure logic が薄い）、`settings`（composition なので rule は外部）
 
 「全 feature に domain を作る」は **方針ではない**。pure rule が無い feature には domain は無いのが正しい状態。
@@ -66,9 +66,9 @@ settings → 他 feature の deep import は composition の責務上必要な�
 
 ### Layer 1 → Layer 2 は不可（adapter は source 側に置く）
 
-`features/entry`（Layer 1）から `features/review`（Layer 2）の import は DAG 違反のため不可。
+`features/timeblock`（Layer 1）から `features/review`（Layer 2）の import は DAG 違反のため不可。
 
-「review UI で消費される transformer だから review/domain に置きたい」と思っても、**adapter は source 側 (entry) に置く**のが正解。consumer 側 (review) は tRPC 経由で受ける。
+「review UI で消費される transformer だから review/domain に置きたい」と思っても、**adapter は source 側 (timeblock) に置く**のが正解。consumer 側 (review) は tRPC 経由で受ける。
 
 ## Barrel Export
 

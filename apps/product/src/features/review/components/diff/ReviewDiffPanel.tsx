@@ -13,7 +13,7 @@ export type ReviewDiffKind =
 
 export interface ReviewDiffItem {
   id: string;
-  entryId: string;
+  timeblockId: string;
   kind: ReviewDiffKind;
   title: string;
   tagId: string | null;
@@ -46,7 +46,7 @@ export interface ReviewDiffResult {
 
 interface ReviewDiffPanelProps {
   diff: ReviewDiffResult;
-  onItemClick?: ((entryId: string) => void) | undefined;
+  onItemClick?: ((timeblockId: string) => void) | undefined;
   onClose?: (() => void) | undefined;
   variant?: 'rail' | 'sheet' | undefined;
   className?: string | undefined;
@@ -167,7 +167,7 @@ export function ReviewDiffPanel({
                   <button
                     type="button"
                     className="hover:bg-state-hover focus-visible:ring-ring flex min-h-11 w-full min-w-0 items-start gap-2 rounded-lg px-2 py-2 text-left transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
-                    onClick={() => onItemClick?.(item.entryId)}
+                    onClick={() => onItemClick?.(item.timeblockId)}
                   >
                     <span
                       className="mt-1 h-8 w-1 shrink-0 rounded-full"

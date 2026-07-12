@@ -39,7 +39,7 @@ runtime では Reflection と Diff がまだ別 `panel` state だが、表示 co
 - **見積バイアス**: `getStatsPageData.estimationAccuracy`
 - **スキップ**: #1289 の `skipped_at` を週次集約して後続接続
 - **空白**: `getStatsPageData.blankRate`
-- **計算場所**: `features/entry` の summary RPC + `features/review/domain`
+- **計算場所**: `features/timeblock` の summary RPC + `features/review/domain`
 - **AI 依存**: なし
 - **対象**: 全ユーザー（Free 含む）
 
@@ -78,7 +78,7 @@ settings feature  → AI 設定（communication style, values）を所有
 supabase/functions/ → Edge Function（プラットフォーム基盤）
 ```
 
-Feature 間の直接 import は公開 API 経由に限定する。Diff 表示は `ReviewDiffPanel` が所有し、Calendar は render slot に diff payload と `entryId` action を渡す。
+Feature 間の直接 import は公開 API 経由に限定する。Diff 表示は `ReviewDiffPanel` が所有し、Calendar は render slot に diff payload と `timeblockId` action を渡す。
 
 ---
 

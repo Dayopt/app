@@ -20,11 +20,6 @@ import {
   collectTimeModelLaneItems,
   hasTimeModelLaneConflict,
 } from '@/features/calendar/lib/overlap';
-import {
-  entryTintColor,
-  resolveTimeModelDestination,
-  useTimeModelWriteMutations,
-} from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
 import {
   getTagColorClasses,
@@ -33,6 +28,11 @@ import {
   TagQuickSelector,
   useCreateTag,
 } from '@/features/tags';
+import {
+  resolveTimeblockDestination,
+  timeblockTintColor,
+  useTimeblockWriteMutations,
+} from '@/features/timeblock';
 import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
@@ -64,11 +64,11 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const locale = useLocale();
   const t = useTranslations('tags');
   const tCalendar = useTranslations('calendar');
-  const tEntry = useTranslations('entry');
+  const tEntry = useTranslations('timeblock');
   const { tap, impact } = useHapticFeedback();
 
   const queryClient = useQueryClient();
-  const { createLog, createPlan } = useTimeModelWriteMutations();
+  const { createRecord, createPlan } = useTimeblockWriteMutations();
   const createTagMutation = useCreateTag({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
   const [hoveredTag, setHoveredTag] = useState<HoveredTagInfo | null>(null);
@@ -108,13 +108,13 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       const utcEnd = convertFromTimezone(localEnd, timezone);
 
       // 保存先は end ルールで一意に決める（lane はドラッグ起点の表示ヒントに留める）
-      const destination = resolveTimeModelDestination(utcEnd);
+      const destination = resolveTimeblockDestination(utcEnd);
 
       // 事前 overlap 判定（TagSelector を開いている間の resize / 他クライアント更新による race を回避）
       // 同一レーンのみ禁止（plan×plan / log×log）。plan×log は許可。
       const laneItems = collectTimeModelLaneItems(
         queryClient,
-        destination === 'plan' ? 'plans' : 'logs',
+        destination === 'plan' ? 'plans' : 'records',
       );
       if (hasTimeModelLaneConflict(laneItems, utcStart, utcEnd)) {
         toast.error(tEntry('errors.timeOverlap'));
@@ -136,7 +136,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       // ハイライトを即座に消す（pendingSelectionの値は既にローカル変数に展開済み）
       clearPendingSelection();
 
-      const mutation = destination === 'plan' ? createPlan : createLog;
+      const mutation = destination === 'plan' ? createPlan : createRecord;
       mutation.mutate(
         {
           title: tagName,
@@ -149,8 +149,8 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
             setIsCreating(false);
             toast.success(
               destination === 'plan'
-                ? tEntry('timeModel.toast.planCreated')
-                : tEntry('timeModel.toast.recorded'),
+                ? tEntry('editor.toast.planCreated')
+                : tEntry('editor.toast.recorded'),
             );
           },
           onError: () => setIsCreating(false),
@@ -162,7 +162,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       isCreating,
       timezone,
       createPlan,
-      createLog,
+      createRecord,
       clearPendingSelection,
       queryClient,
       tEntry,
@@ -291,10 +291,10 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     const utcEnd = convertFromTimezone(localEnd, timezone);
 
     // 保存先レーンと同じレーンのみ判定（plan×log は共存可）
-    const destination = resolveTimeModelDestination(utcEnd);
+    const destination = resolveTimeblockDestination(utcEnd);
     const laneItems = collectTimeModelLaneItems(
       queryClient,
-      destination === 'plan' ? 'plans' : 'logs',
+      destination === 'plan' ? 'plans' : 'records',
     );
     return hasTimeModelLaneConflict(laneItems, utcStart, utcEnd);
   }, [queryClient, pendingSelection, timezone]);
@@ -324,8 +324,8 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const accentColor = hoveredTag
     ? getTagColorClasses(hoveredTag.color).cssVar
     : 'var(--entry-default)';
-  // EntryCard と同じ 18% color-mix tint を使い、確定後カードと背景色を揃える
-  const tintColor = entryTintColor(accentColor);
+  // TimeblockCard と同じ 18% color-mix tint を使い、確定後カードと背景色を揃える
+  const tintColor = timeblockTintColor(accentColor);
   const displayName = hoveredTag?.name ?? tCalendar('event.selectTag');
 
   // 下端 handle: end time だけを 15 分単位で更新

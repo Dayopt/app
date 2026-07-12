@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-12
 code: apps/product/src
 ---
 
@@ -16,7 +16,7 @@ code: apps/product/src
 | 軸                            | 値                                                          | TypeScript ソース                                                                      |
 | ----------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | **EntryState**                | `upcoming` / `active` / `past`                              | `src/types/entry.ts` — `EntryState`                                                    |
-| **EntryStatus** (派生)        | `open` / `closed` (past → closed, else → open)              | `src/features/entry/hooks/useEntryData.ts:126`                                         |
+| **EntryStatus** (派生)        | `open` / `closed` (past → closed, else → open)              | `src/features/timeblock/hooks/useEntryData.ts:126`                                     |
 | **Auth**                      | `loading` / `authenticated` / `unauthenticated` / `error`   | `src/stores/useAuthStore.ts`                                                           |
 | **Plan (SubscriptionStatus)** | `free` / `active` / `trialing` / `past_due` / `canceled`    | `src/features/settings/server/billing-service.ts`                                      |
 | **Device**                    | `mobile` (&lt; 768px + coarse pointer) / `desktop`          | `src/hooks/useIsMobile.ts`                                                             |
@@ -39,7 +39,7 @@ Auth=unauthenticated のとき Entry/Plan は無関係 → 実効 **~330通り**
 
 ### 2-A. EntryCard（カレンダーグリッド）
 
-**関連ファイル**: `src/features/entry/components/card/EntryCard.tsx`
+**関連ファイル**: `src/features/timeblock/components/card/EntryCard.tsx`
 
 | EntryState | actual_time | Device  | 状態                                  | 対応                                                |
 | ---------- | ----------- | ------- | ------------------------------------- | --------------------------------------------------- |
@@ -57,15 +57,15 @@ Auth=unauthenticated のとき Entry/Plan は無関係 → 実効 **~330通り**
 
 ---
 
-### 2-B. EntryInspector
+### 2-B. TimeblockInspector
 
-**関連ファイル**: `src/features/entry/components/inspector/EntryInspector.tsx`
+**関連ファイル**: `src/features/timeblock/components/editor/TimeblockInspector.tsx`
 
 | Auth | Query状態 | Device | 対応 |
 | ------------- | --------------------- | ------- | -------------------------------- | --------------------------------- |
 | authenticated | `isLoading` | both | EXPLICIT — Spinner |
-| authenticated | success (entry found) | mobile | EXPLICIT — Drawer + snap points |
-| authenticated | success (entry found) | desktop | EXPLICIT — FloatingPopover |
+| authenticated | success (Timeblock found) | mobile | EXPLICIT — Drawer + snap points |
+| authenticated | success (Timeblock found) | desktop | EXPLICIT — FloatingPopover |
 | authenticated | success (null) | both | EXPLICIT — `notFound` メッセージ |
 | authenticated | **error** | both | ~~GAP~~ → **FIXED** (H4) |
 | session失効中 | any | both | ~~GAP~~ → **FIXED** (C2) |
@@ -74,15 +74,15 @@ Auth=unauthenticated のとき Entry/Plan は無関係 → 実効 **~330通り**
 
 ---
 
-### 2-B'. EntryInspector フィールドレベル
+### 2-B'. TimeblockInspector フィールドレベル
 
-**関連ファイル**: EntryInspectorForm
+**関連ファイル**: `src/features/timeblock/components/editor/TimeblockInspectorForm.tsx`
 
-| EntryState | actual time fields | 対応                                |
-| ---------- | ------------------ | ----------------------------------- |
-| `past`     | 表示・編集可       | IMPLICIT — 意図的だが明示ガードなし |
-| `upcoming` | 表示・編集可       | ~~GAP~~ → **FIXED** (H5)            |
-| `active`   | 表示・編集可       | ~~GAP~~ → **FIXED** (H5)            |
+| TimeblockState | actual time fields | 対応                                |
+| -------------- | ------------------ | ----------------------------------- |
+| `past`         | 表示・編集可       | IMPLICIT — 意図的だが明示ガードなし |
+| `upcoming`     | 表示・編集可       | ~~GAP~~ → **FIXED** (H5)            |
+| `active`       | 表示・編集可       | ~~GAP~~ → **FIXED** (H5)            |
 
 ---
 

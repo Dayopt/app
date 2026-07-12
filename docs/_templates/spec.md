@@ -1,11 +1,11 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-12
 ---
 
 # spec テンプレ
 
-`product/specs/*.md` に機能単位で1ファイル。「現在の仕様の正」を書く。既存の `product/specs/entry.md` 等のパターンに準拠。
+`product/specs/*.md` に機能単位で1ファイル。「現在の仕様の正」を書く。既存の `product/specs/plan-record.md` 等のパターンに準拠。
 
 ```markdown
 ---

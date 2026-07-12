@@ -13,8 +13,7 @@ import {
   CalendarDateHeader,
   DateDisplay,
   ScrollableCalendarLayout,
-  useEntryStyles,
-  useMultiDayEntryPositions,
+  useMultiDayTimeblockPositions,
 } from '../shared';
 import { useResponsiveHourHeight } from '../shared/hooks/useResponsiveHourHeight';
 
@@ -29,18 +28,18 @@ export function MultiDayView({
   dayCount,
   dateRange: _dateRange,
   entries,
-  allEntries: _allEntries,
+  allTimeblocks: _allTimeblocks,
   currentDate,
   centerDate: _centerDate,
   showWeekends = true,
-  showActualDiff = false,
+  showActualDiff: _showActualDiff = false,
   dayDiffEntryIds,
   className,
-  disabledEntryId,
+  disabledTimeblockId,
   onEntryClick,
   onEntryContextMenu,
   onUpdateEntry,
-  onDeleteEntry: _onDeleteEntry,
+  onDeleteTimeblock: _onDeleteTimeblock,
   onTimeRangeSelect,
   onViewChange: _onViewChange,
   onNavigatePrev: _onNavigatePrev,
@@ -65,14 +64,12 @@ export function MultiDayView({
     showWeekends,
   });
 
-  const { entryPositions, entriesByDate } = useMultiDayEntryPositions({
+  const { entriesByDate } = useMultiDayTimeblockPositions({
     displayDates,
     entries,
     hourHeight: HOUR_HEIGHT,
     timezone,
   });
-
-  const entryStyles = useEntryStyles(entryPositions);
 
   // onUpdateEntry を CalendarGridContent が期待する (eventId, { startTime, endTime }) 型に変換
   const handleEventUpdate = React.useCallback(
@@ -141,7 +138,6 @@ export function MultiDayView({
                 <CalendarGridContent
                   date={date}
                   entries={dayEntries}
-                  entryStyles={entryStyles}
                   viewMode={viewMode}
                   dayIndex={dayIndex}
                   allEventsForOverlapCheck={entries}
@@ -150,8 +146,7 @@ export function MultiDayView({
                   onEntryContextMenu={onEntryContextMenu}
                   onEventUpdate={handleEventUpdate}
                   onTimeRangeSelect={onTimeRangeSelect}
-                  disabledEntryId={disabledEntryId}
-                  showActualDiff={showActualDiff}
+                  disabledTimeblockId={disabledTimeblockId}
                   dayDiffEntryIds={dayDiffEntryIds}
                   className="h-full"
                 />

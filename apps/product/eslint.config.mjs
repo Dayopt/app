@@ -84,7 +84,7 @@ const eslintConfig = defineConfig([
   // Feature Boundary: DAG（有向非循環グラフ）モデル
   //
   // Layer 0 (基盤):   tags             — 他featureに依存しない
-  // Layer 1 (中核):   entry            — L0 barrel のみ
+  // Layer 1 (中核):   timeblock            — L0 barrel のみ
   // Layer 2 (体験):   calendar, review — L0+L1 barrel のみ
   // Independent:      auth, contact    — 他featureに依存しない
   //
@@ -146,9 +146,9 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // Layer 1 (entry): L0 barrel のみ許可
+  // Layer 1 (timeblock): L0 barrel のみ許可
   {
-    files: ['src/features/entry/**/*.{ts,tsx}'],
+    files: ['src/features/timeblock/**/*.{ts,tsx}'],
     ignores: ['**/*.stories.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
@@ -213,8 +213,8 @@ const eslintConfig = defineConfig([
               message: 'barrel import（@/features/tags）のみ使用。',
             },
             {
-              group: ['@/features/entry/**'],
-              message: 'barrel import（@/features/entry）のみ使用。',
+              group: ['@/features/timeblock/**'],
+              message: 'barrel import（@/features/timeblock）のみ使用。',
             },
           ],
         },
@@ -251,8 +251,8 @@ const eslintConfig = defineConfig([
               message: 'barrel import（@/features/tags）のみ使用。',
             },
             {
-              group: ['@/features/entry/**'],
-              message: 'barrel import（@/features/entry）のみ使用。',
+              group: ['@/features/timeblock/**'],
+              message: 'barrel import（@/features/timeblock）のみ使用。',
             },
           ],
         },

@@ -7,7 +7,9 @@ const cancel = vi.fn();
 const getData = vi.fn();
 const setData = vi.fn();
 const invalidateSettings = vi.fn();
-const invalidateEntries = vi.fn();
+const invalidatePlans = vi.fn();
+const invalidateLogs = vi.fn();
+const invalidateStatistics = vi.fn();
 let mutationOptions: Record<string, (...args: never[]) => unknown>;
 
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
@@ -16,7 +18,9 @@ vi.mock('@/lib/trpc', () => ({
   api: {
     useUtils: () => ({
       userSettings: { get: { cancel, getData, setData, invalidate: invalidateSettings } },
-      entries: { invalidate: invalidateEntries },
+      plans: { invalidate: invalidatePlans },
+      records: { invalidate: invalidateLogs },
+      statistics: { invalidate: invalidateStatistics },
     }),
     userSettings: {
       update: {
@@ -55,7 +59,7 @@ describe('useUpdateUserSettings', () => {
     expect(setData).toHaveBeenLastCalledWith(undefined, previous);
   });
 
-  it('onSettledでsettingsを再検証しtimezone変更時はentriesも無効化する', () => {
+  it('onSettledでsettingsを再検証しtimezone変更時はplans/logs/statisticsも無効化する', () => {
     renderHook(() => useUpdateUserSettings());
 
     mutationOptions.onSettled?.(
@@ -67,6 +71,8 @@ describe('useUpdateUserSettings', () => {
     );
 
     expect(invalidateSettings).toHaveBeenCalledOnce();
-    expect(invalidateEntries).toHaveBeenCalledOnce();
+    expect(invalidatePlans).toHaveBeenCalledOnce();
+    expect(invalidateLogs).toHaveBeenCalledOnce();
+    expect(invalidateStatistics).toHaveBeenCalledOnce();
   });
 });

@@ -8,7 +8,7 @@ const idle: InteractionState = { mode: 'idle' };
 
 const dragging: InteractionState = {
   mode: 'dragging',
-  entryId: 'plan-1',
+  timeblockId: 'plan-1',
   startPoint: { clientX: 0, clientY: 0 },
   currentPoint: { clientX: 100, clientY: 200 },
   originalPosition: { top: 0, height: 60, left: 0, width: 100 },
@@ -28,7 +28,7 @@ const resizingPreviewTime = {
 };
 const resizing: Extract<InteractionState, { mode: 'resizing' }> = {
   mode: 'resizing',
-  entryId: 'plan-1',
+  timeblockId: 'plan-1',
   startPoint: { clientX: 0, clientY: 0 },
   currentPoint: { clientX: 0, clientY: 100 },
   originalPosition: { top: 0, height: 60, left: 0, width: 100 },

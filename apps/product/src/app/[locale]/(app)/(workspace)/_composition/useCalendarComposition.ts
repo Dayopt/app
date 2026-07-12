@@ -8,7 +8,7 @@
  *
  * Sub-hooks:
  * - useCalendarDataLayer: データ取得・フィルタリング
- * - useCalendarCrudHandlers: Entry CRUD・キーボードショートカット
+ * - useCalendarCrudHandlers: Timeblock CRUD・キーボードショートカット
  * - useCalendarNavHandlers: ナビゲーション・設定永続化
  *
  * @see docs/product/specs/calendar.md
@@ -19,7 +19,7 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 // Feature barrel imports（side-effect用）
 import type { CalendarViewType, UserSettings } from '@/features/calendar';
 import { useCalendarNavigationStore } from '@/features/calendar';
-import { useEntryInspectorStore } from '@/features/entry';
+import { useTimeblockInspectorStore } from '@/features/timeblock';
 import { logger } from '@/lib/logger';
 
 // Sub-hooks
@@ -54,19 +54,19 @@ interface CalendarCompositionResult {
   // === Settings ===
   showWeekends: boolean;
 
-  // === Entry state ===
-  disabledEntryId: string | null;
+  // === Timeblock state ===
+  disabledTimeblockId: string | null;
 
-  // === Entry click handlers ===
+  // === Timeblock click handlers ===
   onEntryClick: ReturnType<typeof useCalendarCrudHandlers>['onEntryClick'];
   onTimeRangeSelect: ReturnType<typeof useCalendarCrudHandlers>['onTimeRangeSelect'];
 
-  // === Entry CRUD ===
+  // === Timeblock CRUD ===
   onUpdateEntry: ReturnType<typeof useCalendarCrudHandlers>['onUpdateEntry'];
-  onDeleteEntry: ReturnType<typeof useCalendarCrudHandlers>['onDeleteEntry'];
+  onDeleteTimeblock: ReturnType<typeof useCalendarCrudHandlers>['onDeleteTimeblock'];
 
   // === Context menu actions ===
-  onDeleteEntryConfirm: ReturnType<typeof useCalendarCrudHandlers>['onDeleteEntryConfirm'];
+  onDeleteTimeblockConfirm: ReturnType<typeof useCalendarCrudHandlers>['onDeleteTimeblockConfirm'];
   onViewStats: ReturnType<typeof useCalendarCrudHandlers>['onViewStats'];
   onSkip: ReturnType<typeof useCalendarCrudHandlers>['onSkip'];
   onUnskip: ReturnType<typeof useCalendarCrudHandlers>['onUnskip'];
@@ -98,8 +98,8 @@ export function useCalendarComposition({
   // =========================================================================
   // Side Effects: Inspector cleanup on date navigation
   // =========================================================================
-  const selectedEntryId = useEntryInspectorStore((state) => state.entryId);
-  const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
+  const selectedTimeblockId = useTimeblockInspectorStore((state) => state.timeblockId);
+  const closeInspector = useTimeblockInspectorStore((state) => state.closeInspector);
 
   const prevDateRef = React.useRef(currentDate);
   useEffect(() => {
@@ -128,7 +128,7 @@ export function useCalendarComposition({
   const dataLayer = useCalendarDataLayer({ viewType, currentDate });
 
   const crudHandlers = useCalendarCrudHandlers({
-    selectedEntryId,
+    selectedTimeblockId,
     filteredEvents: dataLayer.filteredEvents,
     currentDate,
   });
@@ -172,7 +172,7 @@ export function useCalendarComposition({
       // Settings
       showWeekends: navHandlers.showWeekends,
 
-      // CRUD + Entry state
+      // CRUD + Timeblock state
       ...crudHandlers,
 
       // Navigation

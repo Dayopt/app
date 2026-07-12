@@ -122,7 +122,7 @@ describe('computeCalendarDayDiffs', () => {
     );
 
     expect(result.items).toHaveLength(0);
-    expect(result.entryIds.has('entry-1')).toBe(false);
+    expect(result.timeblockIds.has('entry-1')).toBe(false);
     expect(result.summary).toMatchObject({
       plannedMinutes: 60,
       actualMinutes: 60,
@@ -257,7 +257,7 @@ describe('computeCalendarDayDiffs', () => {
 
     expect(source).toHaveLength(1);
     expect(result.summary).toMatchObject({ plannedMinutes: 0, actualMinutes: 60, diffMinutes: 60 });
-    expect(result.items).toMatchObject([{ entryId: 'entry-1', actualMinutes: 60 }]);
+    expect(result.items).toMatchObject([{ timeblockId: 'entry-1', actualMinutes: 60 }]);
   });
 
   it('diff source は tag filter を適用する', () => {
@@ -292,7 +292,9 @@ describe('computeCalendarDayDiffs', () => {
       actualMinutes: 0,
       diffMinutes: -60,
     });
-    expect(result.items).toMatchObject([{ kind: 'shifted', entryId: 'entry-1', diffMinutes: -60 }]);
-    expect(result.entryIds.has('entry-1')).toBe(true);
+    expect(result.items).toMatchObject([
+      { kind: 'shifted', timeblockId: 'entry-1', diffMinutes: -60 },
+    ]);
+    expect(result.timeblockIds.has('entry-1')).toBe(true);
   });
 });

@@ -169,7 +169,7 @@ export function interactionReducer(
       return {
         state: {
           mode: 'pending',
-          entryId: action.entryId,
+          timeblockId: action.timeblockId,
           startPoint: action.point,
           originalPosition: action.originalPosition,
           dateIndex: action.dateIndex,
@@ -184,7 +184,7 @@ export function interactionReducer(
       return {
         state: {
           mode: 'longpress-pending',
-          entryId: action.entryId,
+          timeblockId: action.timeblockId,
           startPoint: action.point,
           originalPosition: action.originalPosition,
           dateIndex: action.dateIndex,
@@ -196,7 +196,7 @@ export function interactionReducer(
     case 'LONGPRESS_FIRED': {
       if (state.mode !== 'longpress-pending') return { state, effects };
 
-      const durationMs = ctx.getEntryDurationMs(state.entryId);
+      const durationMs = ctx.getTimeblockDurationMs(state.timeblockId);
       const durationPx = (durationMs / 60_000) * (ctx.hourHeight / 60);
       const startSnap = snapToGrid(state.originalPosition.top, ctx.hourHeight, interval);
       const endSnap = snapEndToGrid(
@@ -207,7 +207,7 @@ export function interactionReducer(
       const targetDate = resolveTargetDate(ctx, state.dateIndex);
       const previewTime = buildDragTimeRange(targetDate, startSnap, endSnap, interval);
       const isOverlapping = ctx.checkOverlap(
-        state.entryId,
+        state.timeblockId,
         previewTime.start,
         previewTime.end,
         'drag',
@@ -216,14 +216,14 @@ export function interactionReducer(
       effects.push({ type: 'HAPTIC', pattern: 'impact' });
       effects.push({
         type: 'DRAG_STORE_START',
-        entryId: state.entryId,
+        timeblockId: state.timeblockId,
         dateIndex: state.dateIndex,
       });
 
       return {
         state: {
           mode: 'dragging',
-          entryId: state.entryId,
+          timeblockId: state.timeblockId,
           startPoint: state.startPoint,
           currentPoint: state.startPoint,
           originalPosition: state.originalPosition,
@@ -259,12 +259,12 @@ export function interactionReducer(
         (ctx.hourHeight / 60) * interval,
         endSnap.snappedTop - startSnap.snappedTop,
       );
-      const isOverlapping = ctx.checkOverlap(action.entryId, start, end, 'resize');
+      const isOverlapping = ctx.checkOverlap(action.timeblockId, start, end, 'resize');
 
       return {
         state: {
           mode: 'resizing',
-          entryId: action.entryId,
+          timeblockId: action.timeblockId,
           startPoint: action.point,
           currentPoint: action.point,
           originalPosition: action.originalPosition,
@@ -395,7 +395,7 @@ function handlePointerMove(
       }
       // Threshold crossed → transition to dragging
       const deltaY = action.point.clientY - state.startPoint.clientY;
-      const durationMs = ctx.getEntryDurationMs(state.entryId);
+      const durationMs = ctx.getTimeblockDurationMs(state.timeblockId);
       const durationPx = (durationMs / 60_000) * (ctx.hourHeight / 60);
       const rawTop = clampSnappedTopToDay(
         state.originalPosition.top + deltaY,
@@ -408,7 +408,7 @@ function handlePointerMove(
       const targetDate = resolveTargetDate(ctx, targetDateIndex);
       const previewTime = buildDragTimeRange(targetDate, startSnap, endSnap, interval);
       const isOverlapping = ctx.checkOverlap(
-        state.entryId,
+        state.timeblockId,
         previewTime.start,
         previewTime.end,
         'drag',
@@ -416,14 +416,14 @@ function handlePointerMove(
 
       effects.push({
         type: 'DRAG_STORE_START',
-        entryId: state.entryId,
+        timeblockId: state.timeblockId,
         dateIndex: state.dateIndex,
       });
 
       return {
         state: {
           mode: 'dragging',
-          entryId: state.entryId,
+          timeblockId: state.timeblockId,
           startPoint: state.startPoint,
           currentPoint: action.point,
           originalPosition: state.originalPosition,
@@ -447,7 +447,7 @@ function handlePointerMove(
 
     case 'dragging': {
       const deltaY = action.point.clientY - state.startPoint.clientY;
-      const durationMs = ctx.getEntryDurationMs(state.entryId);
+      const durationMs = ctx.getTimeblockDurationMs(state.timeblockId);
       const durationPx = (durationMs / 60_000) * (ctx.hourHeight / 60);
       const rawTop = clampSnappedTopToDay(
         state.originalPosition.top + deltaY,
@@ -460,7 +460,7 @@ function handlePointerMove(
       const targetDate = resolveTargetDate(ctx, targetDateIndex);
       const previewTime = buildDragTimeRange(targetDate, startSnap, endSnap, interval);
       const isOverlapping = ctx.checkOverlap(
-        state.entryId,
+        state.timeblockId,
         previewTime.start,
         previewTime.end,
         'drag',
@@ -487,7 +487,7 @@ function handlePointerMove(
     case 'resizing': {
       const deltaY = action.point.clientY - state.startPoint.clientY;
       const minHeight = (ctx.hourHeight / 60) * interval;
-      const resizeMinEndMinutes = ctx.getResizeMinEndMinutes?.(state.entryId) ?? null;
+      const resizeMinEndMinutes = ctx.getResizeMinEndMinutes?.(state.timeblockId) ?? null;
       const resizeMinEndTop =
         resizeMinEndMinutes == null
           ? 0
@@ -519,7 +519,7 @@ function handlePointerMove(
       end.setHours(endSnap.hour, endSnap.minute, 0, 0);
 
       const previewTime: TimeRange = { start, end };
-      const isOverlapping = ctx.checkOverlap(state.entryId, start, end, 'resize');
+      const isOverlapping = ctx.checkOverlap(state.timeblockId, start, end, 'resize');
 
       return {
         state: {
@@ -575,13 +575,13 @@ function handlePointerMove(
 function handlePointerUp(state: InteractionState, effects: InteractionEffect[]): InteractionResult {
   switch (state.mode) {
     case 'pending': {
-      effects.push({ type: 'EVENT_CLICK', entryId: state.entryId });
+      effects.push({ type: 'EVENT_CLICK', timeblockId: state.timeblockId });
       return { state: IDLE, effects };
     }
 
     case 'longpress-pending': {
       effects.push({ type: 'CLEAR_LONGPRESS_TIMER' });
-      effects.push({ type: 'EVENT_CLICK', entryId: state.entryId });
+      effects.push({ type: 'EVENT_CLICK', timeblockId: state.timeblockId });
       return { state: IDLE, effects };
     }
 
@@ -589,12 +589,12 @@ function handlePointerUp(state: InteractionState, effects: InteractionEffect[]):
       effects.push({ type: 'DRAG_STORE_END' });
 
       if (state.isOverlapping) {
-        effects.push({ type: 'DROP_REJECTED', entryId: state.entryId, reason: 'overlap' });
+        effects.push({ type: 'DROP_REJECTED', timeblockId: state.timeblockId, reason: 'overlap' });
         effects.push({ type: 'HAPTIC', pattern: 'error' });
       } else {
         effects.push({
           type: 'DROP',
-          entryId: state.entryId,
+          timeblockId: state.timeblockId,
           time: state.previewTime,
           targetDateIndex: state.targetDateIndex,
         });
@@ -605,12 +605,16 @@ function handlePointerUp(state: InteractionState, effects: InteractionEffect[]):
 
     case 'resizing': {
       if (state.isOverlapping) {
-        effects.push({ type: 'RESIZE_REJECTED', entryId: state.entryId, reason: 'overlap' });
+        effects.push({
+          type: 'RESIZE_REJECTED',
+          timeblockId: state.timeblockId,
+          reason: 'overlap',
+        });
         effects.push({ type: 'HAPTIC', pattern: 'error' });
       } else {
         effects.push({
           type: 'RESIZE_COMPLETE',
-          entryId: state.entryId,
+          timeblockId: state.timeblockId,
           time: state.previewTime,
         });
       }

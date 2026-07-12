@@ -113,7 +113,7 @@ const MANY_TAGS: Tag[] = Array.from({ length: 30 }, (_, i) => ({
  * - sort_order 昇順で並ぶ（PC sidebar と完全一致）
  * - is_active === false のタグは除外
  * - 葉タグは suffix のみ表示（"仕事:会議" → "会議"）
- * - タップで bottom sheet popover（既存 TagEntryCreatePopover を isMobile=true で再利用）
+ * - タップで bottom sheet popover（既存 TagTimeblockCreatePopover を isMobile=true で再利用）
  */
 const meta = {
   title: 'Product/Features/Calendar/Filter/TagFilter/TagChipRow',
@@ -138,27 +138,29 @@ type Story = StoryObj<typeof meta>;
 /** Default: 7 タグ、ほぼ画面に収まる */
 export const Default: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: MOCK_TAGS }, 'entries.list': [] },
+    trpcMocks: { 'tags.list': { data: MOCK_TAGS }, 'plans.list': [], 'records.list': [] },
   },
 };
 
 /** ManyTags: 30 タグ、横スクロールで全件アクセス可能 */
 export const ManyTags: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: MANY_TAGS }, 'entries.list': [] },
+    trpcMocks: { 'tags.list': { data: MANY_TAGS }, 'plans.list': [], 'records.list': [] },
   },
 };
 
 /** Empty: タグゼロ → chip 行ごと非描画（null を返す） */
 export const Empty: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: [] }, 'entries.list': [] },
+    trpcMocks: { 'tags.list': { data: [] }, 'plans.list': [], 'records.list': [] },
   },
 };
 
 function FooterPreview({ tags }: { tags: Tag[] }) {
   return (
-    <StoryTRPCProvider mocks={{ 'tags.list': { data: tags }, 'entries.list': [] }}>
+    <StoryTRPCProvider
+      mocks={{ 'tags.list': { data: tags }, 'plans.list': [], 'records.list': [] }}
+    >
       <div className="border-border-subtle bg-background relative h-20 overflow-hidden rounded-lg border">
         <TagChipRow className="absolute" />
       </div>

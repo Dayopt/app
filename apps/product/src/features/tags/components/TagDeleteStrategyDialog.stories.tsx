@@ -127,7 +127,7 @@ export const FewEntries: Story = {
               setOpen(false);
             }}
             tagName="Work"
-            entryCount={3}
+            recordCount={3}
             availableTags={mockTags.filter((t) => t.id !== '1')}
           />
         </>
@@ -158,7 +158,7 @@ export const ManyTags: Story = {
               setOpen(false);
             }}
             tagName="Meeting"
-            entryCount={12}
+            recordCount={12}
             availableTags={mockTags.filter((t) => t.id !== '3')}
           />
         </>
@@ -189,7 +189,7 @@ export const SingleReassignTarget: Story = {
               setOpen(false);
             }}
             tagName="Personal"
-            entryCount={5}
+            recordCount={5}
             availableTags={[mockTags[0]!]}
           />
         </>
@@ -210,7 +210,7 @@ export const AllPatterns: Story = {
           onClose={() => {}}
           onConfirm={async () => {}}
           tagName="Work"
-          entryCount={3}
+          recordCount={3}
           availableTags={mockTags.filter((t) => t.id !== '1')}
         />
       </div>
@@ -221,7 +221,7 @@ export const AllPatterns: Story = {
           onClose={() => {}}
           onConfirm={async () => {}}
           tagName="Meeting"
-          entryCount={12}
+          recordCount={12}
           availableTags={mockTags.filter((t) => t.id !== '3')}
         />
       </div>
@@ -232,7 +232,7 @@ export const AllPatterns: Story = {
           onClose={() => {}}
           onConfirm={async () => {}}
           tagName="Personal"
-          entryCount={5}
+          recordCount={5}
           availableTags={[mockTags[0]!]}
         />
       </div>

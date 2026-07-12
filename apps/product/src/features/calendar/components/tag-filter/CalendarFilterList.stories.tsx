@@ -90,7 +90,7 @@ const MOCK_TAG_STATS_COUNTS = {
 
 const MOCK_TRPC = {
   'tags.list': { data: MOCK_TAGS },
-  'entries.getTagStats': { counts: MOCK_TAG_STATS_COUNTS },
+  'statistics.getTagStats': { counts: MOCK_TAG_STATS_COUNTS },
 };
 
 // ─────────────────────────────────────────────────────────
@@ -166,7 +166,7 @@ export const EmptyState: Story = {
   parameters: {
     trpcMocks: {
       'tags.list': { data: [] },
-      'entries.getTagStats': { counts: {} },
+      'statistics.getTagStats': { counts: {} },
     },
     storeMocks: {
       useCalendarFilterStore: {
@@ -201,7 +201,7 @@ export const AllPatterns: Story = {
       <div className="w-60">
         <p className="text-muted-foreground mb-2 text-xs">空状態</p>
         <StoryTRPCProvider
-          mocks={{ 'tags.list': { data: [] }, 'entries.getTagStats': { counts: {} } }}
+          mocks={{ 'tags.list': { data: [] }, 'statistics.getTagStats': { counts: {} } }}
         >
           <CalendarFilterList />
         </StoryTRPCProvider>

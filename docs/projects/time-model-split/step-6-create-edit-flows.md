@@ -4,7 +4,7 @@ last_verified: 2026-07-09
 code:
   - apps/product/src/features/calendar/stores/useInlineCreateStore.ts
   - apps/product/src/features/calendar/stores/useCalendarDragStore.ts
-  - apps/product/src/features/entry/components
+  - apps/product/src/features/timeblock/components
 ---
 
 # Step 6: 作成・編集フロー（保存先ルール・記録導線）
@@ -44,7 +44,7 @@ overview §4 の「保存先は end で一意に決まる」ルールと Plan �
 ## Existing Code to Reuse
 
 - `apps/product/src/features/calendar/stores/useInlineCreateStore.ts` / `useCalendarDragStore.ts` — インライン作成・ドラッグの既存 state（レーン概念の追加ベース）
-- `apps/product/src/features/entry/stores/`（Inspector store）— 開閉・対象参照のパターン
+- `apps/product/src/features/timeblock/stores/`（Inspector store）— 開閉・対象参照のパターン
 - `apps/product/src/features/calendar/stores/useEntryClipboardStore.ts` — コピー / ペースト（保存先ルールを適用して流用）
 - `.claude/rules/temporal-constraints.md` — 過去ブロック操作制約の UI + ロジック二重防御パターン
 - project skills: `optimistic-update` / `i18n` / `storybook` / `test`

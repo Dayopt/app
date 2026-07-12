@@ -585,7 +585,7 @@ describe('TagService', () => {
       ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     });
 
-    it('reassign strategy: should update plans / logs / entries tag_id', async () => {
+    it('reassign strategy: should update plans / logs tag_id', async () => {
       const targetTag = { id: 'tag-2', name: 'Target', user_id: userId, parent_id: null };
 
       // 1: getById(tagId)
@@ -609,12 +609,12 @@ describe('TagService', () => {
       });
 
       expect(updateMock.update).toHaveBeenCalledWith({ tag_id: 'tag-2' });
-      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['plans', 'logs', 'entries']);
+      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['plans', 'logs']);
       expect(deleteMock.delete).toHaveBeenCalled();
       expect(result).toMatchObject(existingTag);
     });
 
-    it('delete_entries strategy: should delete logs / plans / entries before deleting the tag', async () => {
+    it('delete_blocks strategy: should delete logs / plans before deleting the tag', async () => {
       const planLookupMock = createChainableMock([]);
       const dataDeleteMock = createChainableMock(null);
       const tagDeleteMock = createChainableMock(null);
@@ -632,15 +632,10 @@ describe('TagService', () => {
       await service.delete({
         userId,
         tagId: 'tag-1',
-        strategy: 'delete_entries',
+        strategy: 'delete_blocks',
       });
 
-      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual([
-        'plans',
-        'logs',
-        'plans',
-        'entries',
-      ]);
+      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['plans', 'logs', 'plans']);
       expect(dataDeleteMock.delete).toHaveBeenCalled();
       expect(tagDeleteMock.delete).toHaveBeenCalled();
     });

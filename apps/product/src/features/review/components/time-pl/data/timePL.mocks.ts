@@ -146,7 +146,7 @@ export const MOCK_DAY_EXCELLENT: TimePLInput = {
   ],
 };
 
-/** 計画外エントリー含む */
+/** 計画外Timeblock含む */
 export const MOCK_WITH_UNPLANNED: TimePLInput = {
   period: {
     granularity: 'week',

@@ -23,7 +23,7 @@ export interface TimeRange {
 }
 
 /** グリッド上のエントリ位置（px） */
-export interface EntryRect {
+export interface TimeblockRect {
   top: number;
   left: number;
   width: number;
@@ -52,28 +52,28 @@ export interface IdleState {
 /** Mouse down on event, waiting for 5px movement (→drag) or mouseup (→click) */
 export interface PendingState {
   mode: 'pending';
-  entryId: string;
+  timeblockId: string;
   startPoint: Point;
-  originalPosition: EntryRect;
+  originalPosition: TimeblockRect;
   dateIndex: number;
 }
 
 /** Touch on event, waiting for 500ms long-press or 10px movement (→scroll cancel) */
 export interface LongPressPendingState {
   mode: 'longpress-pending';
-  entryId: string;
+  timeblockId: string;
   startPoint: Point;
-  originalPosition: EntryRect;
+  originalPosition: TimeblockRect;
   dateIndex: number;
 }
 
 /** Actively dragging an event */
 export interface DraggingState {
   mode: 'dragging';
-  entryId: string;
+  timeblockId: string;
   startPoint: Point;
   currentPoint: Point;
-  originalPosition: EntryRect;
+  originalPosition: TimeblockRect;
   /** Column the drag originated from */
   dateIndex: number;
   /** Column the drag is currently over */
@@ -89,10 +89,10 @@ export interface DraggingState {
 /** Actively resizing an event (bottom edge) */
 export interface ResizingState {
   mode: 'resizing';
-  entryId: string;
+  timeblockId: string;
   startPoint: Point;
   currentPoint: Point;
-  originalPosition: EntryRect;
+  originalPosition: TimeblockRect;
   direction: 'top' | 'bottom';
   /** Snapped height (px) */
   snappedHeight: number;
@@ -131,16 +131,16 @@ export interface SelectionLongPressPendingState {
 export type InteractionAction =
   | {
       type: 'POINTER_DOWN';
-      entryId: string;
+      timeblockId: string;
       point: Point;
-      originalPosition: EntryRect;
+      originalPosition: TimeblockRect;
       dateIndex: number;
     }
   | {
       type: 'TOUCH_START';
-      entryId: string;
+      timeblockId: string;
       point: Point;
-      originalPosition: EntryRect;
+      originalPosition: TimeblockRect;
       dateIndex: number;
     }
   | { type: 'LONGPRESS_FIRED' }
@@ -148,10 +148,10 @@ export type InteractionAction =
   | { type: 'POINTER_UP' }
   | {
       type: 'RESIZE_START';
-      entryId: string;
+      timeblockId: string;
       direction: 'top' | 'bottom';
       point: Point;
-      originalPosition: EntryRect;
+      originalPosition: TimeblockRect;
     }
   | { type: 'GRID_POINTER_DOWN'; point: Point; dateIndex: number; gridY: number }
   | { type: 'GRID_TOUCH_START'; point: Point; dateIndex: number; gridY: number }
@@ -175,11 +175,16 @@ export interface InteractionContext {
   /** Snap interval in minutes (default: 15) */
   snapIntervalMinutes?: number;
   /** Get entry duration in milliseconds by ID */
-  getEntryDurationMs: (entryId: string) => number;
+  getTimeblockDurationMs: (timeblockId: string) => number;
   /** planned resize の終了時刻に必要な下限（分 of day）。未指定なら通常の最小durationのみ。 */
-  getResizeMinEndMinutes?: (entryId: string) => number | null;
+  getResizeMinEndMinutes?: (timeblockId: string) => number | null;
   /** Check if a time range overlaps with other same-origin entries */
-  checkOverlap: (entryId: string, start: Date, end: Date, operation: 'drag' | 'resize') => boolean;
+  checkOverlap: (
+    timeblockId: string,
+    start: Date,
+    end: Date,
+    operation: 'drag' | 'resize',
+  ) => boolean;
 }
 
 // ========================================
@@ -191,13 +196,13 @@ export type InteractionEffect =
   | { type: 'START_LONGPRESS_TIMER'; delayMs: number }
   | { type: 'CLEAR_LONGPRESS_TIMER' }
   | { type: 'HAPTIC'; pattern: 'tap' | 'impact' | 'error' }
-  | { type: 'EVENT_CLICK'; entryId: string }
-  | { type: 'DROP'; entryId: string; time: TimeRange; targetDateIndex: number }
-  | { type: 'DROP_REJECTED'; entryId: string; reason: 'overlap' }
-  | { type: 'RESIZE_COMPLETE'; entryId: string; time: TimeRange }
-  | { type: 'RESIZE_REJECTED'; entryId: string; reason: 'overlap' }
+  | { type: 'EVENT_CLICK'; timeblockId: string }
+  | { type: 'DROP'; timeblockId: string; time: TimeRange; targetDateIndex: number }
+  | { type: 'DROP_REJECTED'; timeblockId: string; reason: 'overlap' }
+  | { type: 'RESIZE_COMPLETE'; timeblockId: string; time: TimeRange }
+  | { type: 'RESIZE_REJECTED'; timeblockId: string; reason: 'overlap' }
   | { type: 'SELECT_COMPLETE'; dateIndex: number; range: TimeRange }
-  | { type: 'DRAG_STORE_START'; entryId: string; dateIndex: number }
+  | { type: 'DRAG_STORE_START'; timeblockId: string; dateIndex: number }
   | { type: 'DRAG_STORE_UPDATE'; targetDateIndex: number }
   | { type: 'DRAG_STORE_END' };
 

@@ -16,12 +16,12 @@ import { isWeekend } from 'date-fns';
 
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
-import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsContext';
+import { CalendarTimeblockActionsProvider } from '../contexts/CalendarTimeblockActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
 import { resolveCalendarDayDiffBounds, resolveCalendarRangeDiffBounds } from '../lib/day-diff';
-import { computeTimeModelDayDiffs } from '../lib/time-model-day-diff';
+import { computeTimeblockDayDiffs } from '../lib/timeblock-day-diff';
 import { useCalendarFilterStore } from '../stores/useCalendarFilterStore';
 import {
   getMultiDayCount,
@@ -56,17 +56,17 @@ interface CalendarControllerProps {
 
   // --- Data ---
   viewDateRange: ViewDateRange;
-  filteredEntries: CalendarEvent[];
-  allEntries: CalendarEvent[];
+  filteredTimeblocks: CalendarEvent[];
+  allTimeblocks: CalendarEvent[];
 
   // --- Settings ---
   showWeekends: boolean;
   showActualDiff?: boolean;
 
-  // --- Entry state ---
-  disabledEntryId: string | null;
+  // --- Timeblock state ---
+  disabledTimeblockId: string | null;
 
-  // --- Entry click handlers ---
+  // --- Timeblock click handlers ---
   onEntryClick: (entry: CalendarEvent) => void;
   onTimeRangeSelect: (selection: {
     date: Date;
@@ -76,19 +76,19 @@ interface CalendarControllerProps {
     endMinute: number;
   }) => void;
 
-  // --- Entry CRUD ---
+  // --- Timeblock CRUD ---
   onUpdateEntry: (
-    entryIdOrEntry: string | CalendarEvent,
+    timeblockIdOrTimeblock: string | CalendarEvent,
     updates?: {
       startTime: Date;
       endTime: Date;
       resetActualTime?: boolean;
     },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
-  onDeleteEntry: (entryId: string) => void;
+  onDeleteTimeblock: (timeblockId: string) => void;
 
   // --- Context menu actions ---
-  onDeleteEntryConfirm: (entry: CalendarEvent) => void;
+  onDeleteTimeblockConfirm: (entry: CalendarEvent) => void;
   onViewStats: (entry: CalendarEvent) => void;
   // plan ⇄ log 変換は time model に procedure が存在しないため optional（渡さなければメニュー非表示）
   onMarkUnplanned?: ((entry: CalendarEvent) => void) | undefined;
@@ -128,9 +128,9 @@ interface CalendarControllerProps {
 }
 
 interface CalendarCompareRailRenderProps {
-  diff: ReturnType<typeof computeTimeModelDayDiffs>;
+  diff: ReturnType<typeof computeTimeblockDayDiffs>;
   variant: 'rail' | 'sheet';
-  onItemClick: (entryId: string) => void;
+  onItemClick: (timeblockId: string) => void;
   onClose?: (() => void) | undefined;
 }
 
@@ -142,16 +142,16 @@ export function CalendarController({
   viewType,
   currentDate,
   viewDateRange,
-  filteredEntries,
-  allEntries,
+  filteredTimeblocks,
+  allTimeblocks,
   showWeekends,
   showActualDiff = false,
-  disabledEntryId,
+  disabledTimeblockId,
   onEntryClick,
   onTimeRangeSelect,
   onUpdateEntry,
-  onDeleteEntry,
-  onDeleteEntryConfirm,
+  onDeleteTimeblock,
+  onDeleteTimeblockConfirm,
   onViewStats,
   onMarkUnplanned,
   onRestorePlanned,
@@ -221,8 +221,8 @@ export function CalendarController({
           ),
     [calendarDiffDays, currentDate, timezone, viewDateRange.end, viewDateRange.start, viewType],
   );
-  // Step 8: compare rail は plans/logs（kind 付き CalendarEvent）から直接集計する。
-  // タグ可視性・週末除外は絞るが、範囲内の時間クリップは computeTimeModelDayDiffs 側の
+  // Step 8: compare rail は plans/records（kind 付き CalendarEvent）から直接集計する。
+  // タグ可視性・週末除外は絞るが、範囲内の時間クリップは computeTimeblockDayDiffs 側の
   // clippedMinutes に委ねる（0分は自動的に除外される）。
   const isWithinVisibleDayBounds = useCallback(
     (start: Date, end: Date) => {
@@ -234,7 +234,7 @@ export function CalendarController({
   const calendarDiffPlans = useMemo(() => {
     void visibleTagIds;
     if (!calendarDiffEnabled) return [];
-    return allEntries
+    return allTimeblocks
       .filter((entry) => entry.kind === 'plan' && isEntryVisible(entry.tagId ?? null))
       .map((entry) => ({
         id: entry.id,
@@ -246,11 +246,11 @@ export function CalendarController({
         skippedAt: entry.isSkipped ? (entry.startDate ?? entry.displayStartDate) : null,
       }))
       .filter((plan) => isWithinVisibleDayBounds(plan.startAt, plan.endAt));
-  }, [allEntries, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds, visibleTagIds]);
+  }, [allTimeblocks, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds, visibleTagIds]);
   const calendarDiffLogs = useMemo(() => {
     if (!calendarDiffEnabled) return [];
-    return allEntries
-      .filter((entry) => entry.kind === 'log' && isEntryVisible(entry.tagId ?? null))
+    return allTimeblocks
+      .filter((entry) => entry.kind === 'record' && isEntryVisible(entry.tagId ?? null))
       .map((entry) => ({
         id: entry.id,
         planId: entry.planId ?? null,
@@ -261,21 +261,21 @@ export function CalendarController({
         endAt: entry.endDate ?? entry.displayEndDate,
       }))
       .filter((log) => isWithinVisibleDayBounds(log.startAt, log.endAt));
-  }, [allEntries, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds]);
+  }, [allTimeblocks, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds]);
   const calendarDiff = useMemo(
-    () => computeTimeModelDayDiffs(calendarDiffPlans, calendarDiffLogs, calendarDiffBounds),
+    () => computeTimeblockDayDiffs(calendarDiffPlans, calendarDiffLogs, calendarDiffBounds),
     [calendarDiffBounds, calendarDiffLogs, calendarDiffPlans],
   );
   const dayDiffEntryIds = useMemo(
-    () => new Set(calendarDiff.items.map((item) => item.entryId)),
+    () => new Set(calendarDiff.items.map((item) => item.timeblockId)),
     [calendarDiff.items],
   );
   const handleCalendarDiffItemClick = useCallback(
-    (entryId: string) => {
-      const entry = allEntries.find((candidate) => candidate.id === entryId);
+    (timeblockId: string) => {
+      const entry = allTimeblocks.find((candidate) => candidate.id === timeblockId);
       if (entry) onEntryClick(entry);
     },
-    [allEntries, onEntryClick],
+    [allTimeblocks, onEntryClick],
   );
   const handleCloseCompareRail = useCallback(() => {
     onCompareRailOpenChange?.(false);
@@ -291,22 +291,22 @@ export function CalendarController({
 
   // =========================================================================
   // エントリ操作ハンドラ（Context経由で配信 — View以下でprops不要）
-  const entryActions = useMemo(
+  const timeblockActions = useMemo(
     () => ({
       onEntryClick,
       onEntryContextMenu: handleEventContextMenu,
       onUpdateEntry,
-      onDeleteEntry,
+      onDeleteTimeblock,
       onTimeRangeSelect,
-      disabledEntryId,
+      disabledTimeblockId,
     }),
     [
       onEntryClick,
       handleEventContextMenu,
       onUpdateEntry,
-      onDeleteEntry,
+      onDeleteTimeblock,
       onTimeRangeSelect,
-      disabledEntryId,
+      disabledTimeblockId,
     ],
   );
 
@@ -314,17 +314,17 @@ export function CalendarController({
   const commonProps = useMemo(
     () => ({
       dateRange: viewDateRange,
-      entries: filteredEntries,
-      allEntries,
+      entries: filteredTimeblocks,
+      allTimeblocks,
       currentDate,
       showWeekends,
       showActualDiff,
       dayDiffEntryIds,
-      disabledEntryId,
+      disabledTimeblockId,
       onEntryClick,
       onEntryContextMenu: handleEventContextMenu,
       onUpdateEntry,
-      onDeleteEntry,
+      onDeleteTimeblock,
       onTimeRangeSelect,
       onViewChange,
       onNavigatePrev,
@@ -333,17 +333,17 @@ export function CalendarController({
     }),
     [
       viewDateRange,
-      filteredEntries,
-      allEntries,
+      filteredTimeblocks,
+      allTimeblocks,
       currentDate,
       showWeekends,
       showActualDiff,
       dayDiffEntryIds,
-      disabledEntryId,
+      disabledTimeblockId,
       onEntryClick,
       handleEventContextMenu,
       onUpdateEntry,
-      onDeleteEntry,
+      onDeleteTimeblock,
       onTimeRangeSelect,
       onViewChange,
       onNavigatePrev,
@@ -397,7 +397,7 @@ export function CalendarController({
   // Render
   // =========================================================================
   return (
-    <CalendarEntryActionsProvider value={entryActions}>
+    <CalendarTimeblockActionsProvider value={timeblockActions}>
       <CalendarLayout
         className={className}
         viewType={viewType}
@@ -432,7 +432,7 @@ export function CalendarController({
           entry={contextMenuEvent}
           position={contextMenuPosition}
           onClose={handleCloseContextMenu}
-          onDelete={onDeleteEntryConfirm}
+          onDelete={onDeleteTimeblockConfirm}
           onViewStats={onViewStats}
           onMarkUnplanned={onMarkUnplanned}
           onRestorePlanned={onRestorePlanned}
@@ -443,6 +443,6 @@ export function CalendarController({
 
       {/* モバイル操作ヒント（初回のみ表示） */}
       <MobileTouchHint />
-    </CalendarEntryActionsProvider>
+    </CalendarTimeblockActionsProvider>
   );
 }

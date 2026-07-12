@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import type { LogEvent, PlanEvent } from '@/features/entry';
+import type { PlanEvent, RecordEvent } from '@/features/timeblock';
 
 import { TwoLaneDayColumn } from './TwoLaneDayColumn';
 
 /**
- * 1日分の Plan レーン + Log レーン合成。Log が主役(塗り)、Plan は控えめ(アウトライン)。
+ * 1日分の Plan レーン + Record レーン合成。Record が主役(塗り)、Plan は控えめ(アウトライン)。
  * useTagsMap はグローバルプロバイダーで解決済み。
  */
 const meta = {
@@ -48,9 +48,9 @@ function makePlan(overrides: Partial<PlanEvent> = {}): PlanEvent {
   };
 }
 
-function makeLog(overrides: Partial<LogEvent> = {}): LogEvent {
+function makeRecord(overrides: Partial<RecordEvent> = {}): RecordEvent {
   return {
-    id: 'log-1',
+    id: 'record-1',
     title: 'Deep Work',
     note: null,
     tagId: 'tag-1',
@@ -72,7 +72,7 @@ export const WithPlanAndLog: Story = {
       <TwoLaneDayColumn
         hourHeight={72}
         plans={[makePlan()]}
-        logs={[makeLog({ diffMinutes: -15 })]}
+        records={[makeRecord({ diffMinutes: -15 })]}
       />
     </Frame>
   ),
@@ -97,7 +97,9 @@ export const MixedDay: Story = {
             status: 'skipped',
           }),
         ]}
-        logs={[makeLog({ id: 'l1', planId: null, diffMinutes: undefined, title: 'メール返信' })]}
+        records={[
+          makeRecord({ id: 'l1', planId: null, diffMinutes: undefined, title: 'メール返信' }),
+        ]}
       />
     </Frame>
   ),
@@ -107,7 +109,7 @@ export const MixedDay: Story = {
 export const Empty: Story = {
   render: () => (
     <Frame>
-      <TwoLaneDayColumn hourHeight={72} plans={[]} logs={[]} />
+      <TwoLaneDayColumn hourHeight={72} plans={[]} records={[]} />
     </Frame>
   ),
 };
@@ -121,7 +123,7 @@ export const AllPatterns: Story = {
           <TwoLaneDayColumn
             hourHeight={72}
             plans={[makePlan()]}
-            logs={[makeLog({ diffMinutes: -15 })]}
+            records={[makeRecord({ diffMinutes: -15 })]}
           />
         </Frame>
       </div>
@@ -143,8 +145,8 @@ export const AllPatterns: Story = {
                 status: 'skipped',
               }),
             ]}
-            logs={[
-              makeLog({ id: 'l1', planId: null, diffMinutes: undefined, title: 'メール返信' }),
+            records={[
+              makeRecord({ id: 'l1', planId: null, diffMinutes: undefined, title: 'メール返信' }),
             ]}
           />
         </Frame>
@@ -152,7 +154,7 @@ export const AllPatterns: Story = {
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs">空</p>
         <Frame>
-          <TwoLaneDayColumn hourHeight={72} plans={[]} logs={[]} />
+          <TwoLaneDayColumn hourHeight={72} plans={[]} records={[]} />
         </Frame>
       </div>
     </div>

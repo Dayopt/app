@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-12
 code: apps/product/src
 ---
 
@@ -773,7 +773,8 @@ import { createServerHelpers } from '@/lib/trpc/server';
 export default async function CalendarPage() {
   const helpers = await createServerHelpers();
 
-  await helpers.entries.list.prefetch();
+  await helpers.plans.list.prefetch();
+  await helpers.records.list.prefetch();
   await helpers.tags.list.prefetch();
 
   return (

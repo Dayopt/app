@@ -1,17 +1,17 @@
 /**
- * Plan レーン + Log レーンの固定 2 レーン座標計算（Step 5、read 側専用）。
+ * Plan レーン + Record レーンの固定 2 レーン座標計算（Step 5、read 側専用）。
  *
  * `plans_no_overlap` / `logs_no_overlap`（DB EXCLUDE 制約、半開区間）により、
- * 同一ユーザーの plans 同士・logs 同士は決して時間的に重ならない。そのため
+ * 同一ユーザーの plans 同士・records 同士は決して時間的に重ならない。そのため
  * 既存 `layout.ts` の `calculateGroupLayout`（時間重複を動的に検出して
  * column を割り当てる sweep-line）は不要で、各レーン内は「その日の時刻から
- * 座標を出すだけ」で足りる。レーン自体は Plan=左・Log=右の固定幅分割。
+ * 座標を出すだけ」で足りる。レーン自体は Plan=左・Record=右の固定幅分割。
  *
- * 呼び出し側は対象日の plans/logs だけを渡す想定（日をまたぐ絞り込みは
+ * 呼び出し側は対象日の plans/records だけを渡す想定（日をまたぐ絞り込みは
  * 呼び出し側の責務、既存 DayColumn 系コンポーネントと同じ分担）。
  */
 
-import type { LogEvent, PlanEvent } from '@/features/entry';
+import type { PlanEvent, RecordEvent } from '@/features/timeblock';
 
 import type { CalendarEvent } from '../types/calendar.types';
 
@@ -33,30 +33,30 @@ interface TwoLaneLayoutItem<T> {
 
 interface TwoLaneLayoutResult {
   planLayouts: TwoLaneLayoutItem<PlanEvent>[];
-  logLayouts: TwoLaneLayoutItem<LogEvent>[];
+  recordLayouts: TwoLaneLayoutItem<RecordEvent>[];
 }
 
 interface CalculateTwoLaneLayoutOptions {
   plans: ReadonlyArray<PlanEvent>;
-  logs: ReadonlyArray<LogEvent>;
+  records: ReadonlyArray<RecordEvent>;
   /** 1 時間あたりの px */
   hourHeight: number;
-  /** Plan レーンの幅（%）。既定 38（Log レーンが主役で広め、overview.md §4） */
+  /** Plan レーンの幅（%）。既定 38（Record レーンが主役で広め、overview.md §4） */
   planLaneWidthPercent?: number;
 }
 
 const DAY_MINUTES = 24 * 60;
 const DEFAULT_PLAN_LANE_WIDTH_PERCENT = 38;
 
-/** カラム内の pointer X から Plan / Log の drop 先レーンを決める。 */
+/** カラム内の pointer X から Plan / Record の drop 先レーンを決める。 */
 export function resolveTwoLaneFromPointer(
   clientX: number,
   columnLeft: number,
   columnWidth: number,
   planLaneWidthPercent: number = DEFAULT_PLAN_LANE_WIDTH_PERCENT,
-): 'plan' | 'log' {
+): 'plan' | 'record' {
   const boundary = columnLeft + columnWidth * (planLaneWidthPercent / 100);
-  return clientX < boundary ? 'plan' : 'log';
+  return clientX < boundary ? 'plan' : 'record';
 }
 
 function minutesSinceMidnight(date: Date): number {
@@ -86,11 +86,11 @@ function timeToPosition(
 
 export function calculateTwoLaneLayout({
   plans,
-  logs,
+  records,
   hourHeight,
   planLaneWidthPercent = DEFAULT_PLAN_LANE_WIDTH_PERCENT,
 }: CalculateTwoLaneLayoutOptions): TwoLaneLayoutResult {
-  const logLaneWidthPercent = 100 - planLaneWidthPercent;
+  const recordLaneWidthPercent = 100 - planLaneWidthPercent;
 
   const planLayouts = plans.map((entry) => {
     const { top, height } = timeToPosition(
@@ -101,7 +101,7 @@ export function calculateTwoLaneLayout({
     return { entry, position: { top, height, left: 0, width: planLaneWidthPercent } };
   });
 
-  const logLayouts = logs.map((entry) => {
+  const recordLayouts = records.map((entry) => {
     const { top, height } = timeToPosition(
       entry.displayStartDate,
       entry.displayEndDate,
@@ -109,24 +109,24 @@ export function calculateTwoLaneLayout({
     );
     return {
       entry,
-      position: { top, height, left: planLaneWidthPercent, width: logLaneWidthPercent },
+      position: { top, height, left: planLaneWidthPercent, width: recordLaneWidthPercent },
     };
   });
 
-  return { planLayouts, logLayouts };
+  return { planLayouts, recordLayouts };
 }
 
 /**
  * `CalendarEvent[]`（Step 8 の time model 射影、`kind` 付き）から直接 2 レーン座標を計算する。
- * `TwoLaneEntryRenderer` はインタラクション状態（drag/resize preview）を CalendarEvent 単位で
- * 持つ既存 `useInteraction` をそのまま使うため、PlanEvent/LogEvent への変換を経由しない。
+ * `TwoLaneTimeblockRenderer` はインタラクション状態（drag/resize preview）を CalendarEvent 単位で
+ * 持つ既存 `useInteraction` をそのまま使うため、PlanEvent/RecordEvent への変換を経由しない。
  */
 export function calculateTwoLaneStylesForCalendarEvents(
   events: ReadonlyArray<CalendarEvent>,
   hourHeight: number,
   planLaneWidthPercent: number = DEFAULT_PLAN_LANE_WIDTH_PERCENT,
 ): Record<string, TwoLanePosition> {
-  const logLaneWidthPercent = 100 - planLaneWidthPercent;
+  const recordLaneWidthPercent = 100 - planLaneWidthPercent;
   const styles: Record<string, TwoLanePosition> = {};
 
   for (const event of events) {
@@ -135,12 +135,12 @@ export function calculateTwoLaneStylesForCalendarEvents(
     if (!start || !end) continue;
 
     const { top, height } = timeToPosition(start, end, hourHeight);
-    const isLog = event.kind === 'log';
+    const isLog = event.kind === 'record';
     styles[event.id] = {
       top,
       height,
       left: isLog ? planLaneWidthPercent : 0,
-      width: isLog ? logLaneWidthPercent : planLaneWidthPercent,
+      width: isLog ? recordLaneWidthPercent : planLaneWidthPercent,
     };
   }
 

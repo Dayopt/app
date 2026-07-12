@@ -13,12 +13,10 @@ import {
   DateDisplay,
   ScrollableCalendarLayout,
   getDateKey,
-  useEntryStyles,
 } from '../../shared';
 import { CalendarGridContent } from '../../shared/components/CalendarGridContent';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
-import { useWeekEntries } from '../hooks/useWeekEntries';
-import { toWeekDayEntryPosition } from '../utils/weekEntryPosition';
+import { useWeekTimeblocks } from '../hooks/useWeekTimeblocks';
 
 import type { WeekGridProps } from '../../../../types/week-view.types';
 
@@ -35,16 +33,16 @@ import type { WeekGridProps } from '../../../../types/week-view.types';
 export const WeekGrid = ({
   weekDates,
   events,
-  allEntries: _allEntries,
+  allTimeblocks: _allTimeblocks,
   eventsByDate: _eventsByDate,
   todayIndex: _todayIndex,
-  disabledEntryId,
+  disabledTimeblockId,
   onEventClick,
   onEventContextMenu,
   onEventUpdate,
   onTimeRangeSelect,
   className,
-  showActualDiff = false,
+  showActualDiff: _showActualDiff = false,
   dayDiffEntryIds,
 }: WeekGridProps) => {
   const timezone = useUserPreferences((s) => s.timezone);
@@ -70,19 +68,12 @@ export const WeekGrid = ({
   );
 
   // エントリ位置計算（TZ変換済みの日付グルーピングも取得）
-  const { entryPositions, entriesByDate: tzEntriesByDate } = useWeekEntries({
+  const { entriesByDate: tzEntriesByDate } = useWeekTimeblocks({
     weekDates,
     events,
     hourHeight,
     timezone,
   });
-
-  // entryPositions → entryStyles 変換（全日分をまとめて計算）
-  const normalizedPositions = React.useMemo(
-    () => entryPositions.map((pos) => toWeekDayEntryPosition(pos)),
-    [entryPositions],
-  );
-  const entryStyles = useEntryStyles(normalizedPositions);
 
   // 週番号を計算（週の最初の日から）
   const weekNumber = React.useMemo(() => {
@@ -144,7 +135,6 @@ export const WeekGrid = ({
               <CalendarGridContent
                 date={date}
                 entries={dayEvents}
-                entryStyles={entryStyles}
                 viewMode="week"
                 dayIndex={dayIndex}
                 allEventsForOverlapCheck={events}
@@ -153,8 +143,7 @@ export const WeekGrid = ({
                 onEntryContextMenu={onEventContextMenu}
                 onEventUpdate={handleEventUpdate}
                 onTimeRangeSelect={onTimeRangeSelect}
-                disabledEntryId={disabledEntryId}
-                showActualDiff={showActualDiff}
+                disabledTimeblockId={disabledTimeblockId}
                 dayDiffEntryIds={dayDiffEntryIds}
                 className="h-full"
               />

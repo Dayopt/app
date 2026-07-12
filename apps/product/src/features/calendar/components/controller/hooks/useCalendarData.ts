@@ -56,13 +56,13 @@ interface UseCalendarDataResult {
   filteredEvents: CalendarEvent[];
   allCalendarEvents: CalendarEvent[];
   /** time model 取得エラー */
-  entriesError: unknown | null;
+  timeblocksError: unknown | null;
   /** time model 取得中かどうか（初回のみ true） */
-  isEntriesLoading: boolean;
+  isTimeblocksLoading: boolean;
   /** バックグラウンド再取得中も含めて取得中かどうか */
-  isEntriesFetching: boolean;
+  isTimeblocksFetching: boolean;
   /** エントリ取得を手動で再試行する */
-  refetchEntries: () => Promise<unknown>;
+  refetchTimeblocks: () => Promise<unknown>;
   /** ナビゲーション方向に対応する日付範囲を事前取得する */
   prefetchDirection: (direction: 'prev' | 'next' | 'today') => void;
   /** ビュー切り替え先の日付範囲を即座に事前取得する */
@@ -72,7 +72,7 @@ interface UseCalendarDataResult {
 /**
  * カレンダーデータ取得・変換フック
  *
- * ビュータイプと日付から plan / log を取得し、既存カレンダー表示型に射影して返す
+ * ビュータイプと日付から plan / record を取得し、既存カレンダー表示型に射影して返す
  */
 export function useCalendarData({
   viewType,
@@ -97,28 +97,28 @@ export function useCalendarData({
     [viewDateRange, timezone],
   );
 
-  // Step 8: entries を読まず、plans / logs をそれぞれ取得する。
+  // Step 8: entries を読まず、plans / records をそれぞれ取得する。
   const plansQuery = api.plans.list.useQuery({
     ...dateFilter,
     sortBy: 'start_at',
     sortOrder: 'asc',
     limit: 100,
   });
-  const logsQuery = api.logs.list.useQuery({
+  const recordsQuery = api.records.list.useQuery({
     ...dateFilter,
     sortBy: 'start_at',
     sortOrder: 'asc',
     limit: 100,
   });
-  const entriesError = plansQuery.error ?? logsQuery.error;
-  const isEntriesLoading = plansQuery.isLoading || logsQuery.isLoading;
-  const isEntriesFetching = plansQuery.isFetching || logsQuery.isFetching;
-  const refetchEntries = useCallback(
-    () => Promise.all([plansQuery.refetch(), logsQuery.refetch()]),
-    [logsQuery, plansQuery],
+  const timeblocksError = plansQuery.error ?? recordsQuery.error;
+  const isTimeblocksLoading = plansQuery.isLoading || recordsQuery.isLoading;
+  const isTimeblocksFetching = plansQuery.isFetching || recordsQuery.isFetching;
+  const refetchTimeblocks = useCallback(
+    () => Promise.all([plansQuery.refetch(), recordsQuery.refetch()]),
+    [recordsQuery, plansQuery],
   );
 
-  // タグマスタ取得（EntryCard等で使用するためキャッシュをwarm up + フィルタ同期）
+  // タグマスタ取得（TimeblockCard等で使用するためキャッシュをwarm up + フィルタ同期）
   const { data: tagsData } = useTags();
   const syncWithTags = useCalendarFilterStore((state) => state.syncWithTags);
 
@@ -144,7 +144,7 @@ export function useCalendarData({
         sortOrder: 'asc' as const,
         limit: 100,
       };
-      void Promise.all([utils.plans.list.prefetch(input), utils.logs.list.prefetch(input)]);
+      void Promise.all([utils.plans.list.prefetch(input), utils.records.list.prefetch(input)]);
     };
 
     if (viewType === 'day') {
@@ -163,7 +163,7 @@ export function useCalendarData({
       prefetchRange(subDays(currentDate, 7));
       prefetchRange(addDays(currentDate, 7));
     }
-  }, [currentDate, viewType, weekStartsOn, timezone, utils.logs.list, utils.plans.list]);
+  }, [currentDate, viewType, weekStartsOn, timezone, utils.records.list, utils.plans.list]);
 
   // 指定方向のナビゲーション先を事前取得（ホバー/タッチ時に呼ばれる）
   const prefetchDirection = useCallback(
@@ -198,9 +198,9 @@ export function useCalendarData({
         sortOrder: 'asc' as const,
         limit: 100,
       };
-      void Promise.all([utils.plans.list.prefetch(input), utils.logs.list.prefetch(input)]);
+      void Promise.all([utils.plans.list.prefetch(input), utils.records.list.prefetch(input)]);
     },
-    [currentDate, viewType, weekStartsOn, timezone, utils.logs.list, utils.plans.list],
+    [currentDate, viewType, weekStartsOn, timezone, utils.records.list, utils.plans.list],
   );
 
   // ビュー切り替え先の日付範囲を即座にprefetch（useEffect経由の1レンダー遅延を回避）
@@ -214,9 +214,9 @@ export function useCalendarData({
         sortOrder: 'asc' as const,
         limit: 100,
       };
-      void Promise.all([utils.plans.list.prefetch(input), utils.logs.list.prefetch(input)]);
+      void Promise.all([utils.plans.list.prefetch(input), utils.records.list.prefetch(input)]);
     },
-    [currentDate, weekStartsOn, timezone, utils.logs.list, utils.plans.list],
+    [currentDate, weekStartsOn, timezone, utils.records.list, utils.plans.list],
   );
 
   // フィルター関数と状態を取得（ストアに統一）
@@ -230,12 +230,12 @@ export function useCalendarData({
   // CalendarEvent は view model としてだけ維持し、データ取得は time model に固定する。
   const allCalendarEvents = useMemo(() => {
     const plans = plansQuery.data ?? [];
-    const logs = logsQuery.data ?? [];
+    const records = recordsQuery.data ?? [];
     const now = new Date();
     const planEvents = plans.map((plan) => {
       const startDate = new Date(plan.start_at);
       const endDate = new Date(plan.end_at);
-      const entryState = endDate <= now ? 'past' : startDate <= now ? 'active' : 'upcoming';
+      const timeblockState = endDate <= now ? 'past' : startDate <= now ? 'active' : 'upcoming';
       return applyTimezoneToDisplayDates(
         {
           id: plan.id,
@@ -243,7 +243,7 @@ export function useCalendarData({
           description: plan.note ?? undefined,
           startDate,
           endDate,
-          status: entryState === 'past' ? 'closed' : 'open',
+          status: timeblockState === 'past' ? 'closed' : 'open',
           color: '',
           tagId: plan.tag_id,
           createdAt: new Date(plan.created_at),
@@ -253,7 +253,7 @@ export function useCalendarData({
           duration: Math.round((endDate.getTime() - startDate.getTime()) / 60_000),
           isMultiDay: !tzIsSameDay(startDate, endDate, timezone),
           origin: 'planned',
-          entryState,
+          timeblockState,
           plannedStartDate: startDate,
           plannedEndDate: endDate,
           actualStartDate: null,
@@ -265,40 +265,40 @@ export function useCalendarData({
         timezone,
       );
     });
-    const logEvents = logs.map((log) => {
-      const startDate = new Date(log.start_at);
-      const endDate = new Date(log.end_at);
+    const recordEvents = records.map((record) => {
+      const startDate = new Date(record.start_at);
+      const endDate = new Date(record.end_at);
       return applyTimezoneToDisplayDates(
         {
-          id: log.id,
-          title: log.title,
-          description: log.note ?? undefined,
+          id: record.id,
+          title: record.title,
+          description: record.note ?? undefined,
           startDate,
           endDate,
           status: 'closed' as const,
           color: '',
-          tagId: log.tag_id,
-          createdAt: new Date(log.created_at),
-          updatedAt: new Date(log.updated_at),
+          tagId: record.tag_id,
+          createdAt: new Date(record.created_at),
+          updatedAt: new Date(record.updated_at),
           displayStartDate: startDate,
           displayEndDate: endDate,
           duration: Math.round((endDate.getTime() - startDate.getTime()) / 60_000),
           isMultiDay: !tzIsSameDay(startDate, endDate, timezone),
-          origin: log.plan_id ? 'planned' : 'unplanned',
-          entryState: 'past' as const,
+          origin: record.plan_id ? 'planned' : 'unplanned',
+          timeblockState: 'past' as const,
           actualStartDate: startDate,
           actualEndDate: endDate,
           plannedStartDate: null,
           plannedEndDate: null,
-          kind: 'log' as const,
-          planId: log.plan_id,
-          logSource: log.source,
+          kind: 'record' as const,
+          planId: record.plan_id,
+          recordSource: record.source,
         },
         timezone,
       );
     });
-    return [...planEvents, ...logEvents];
-  }, [logsQuery.data, plansQuery.data, timezone]);
+    return [...planEvents, ...recordEvents];
+  }, [recordsQuery.data, plansQuery.data, timezone]);
 
   // 表示範囲のイベントをフィルタリング
   const filteredEvents = useMemo(() => {
@@ -338,10 +338,10 @@ export function useCalendarData({
     viewDateRange,
     filteredEvents,
     allCalendarEvents,
-    entriesError,
-    isEntriesLoading,
-    isEntriesFetching,
-    refetchEntries,
+    timeblocksError,
+    isTimeblocksLoading,
+    isTimeblocksFetching,
+    refetchTimeblocks,
     prefetchDirection,
     prefetchForView,
   };

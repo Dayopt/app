@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 
-import { useEntryInspectorStore } from '@/features/entry';
+import { useTimeblockInspectorStore } from '@/features/timeblock';
 import { logger } from '@/lib/logger';
 import { useInlineCreateStore } from '../../../stores/useInlineCreateStore';
 
@@ -11,27 +11,27 @@ import type { DateTimeSelection } from '../../views/shared';
 
 /** エントリクリック・時間範囲選択など、カレンダー共通のUIイベントハンドラーを提供するフック */
 export function useCalendarHandlers() {
-  const openEntryInspector = useEntryInspectorStore((state) => state.openInspector);
-  const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
-  const inspectorIsOpen = useEntryInspectorStore((state) => state.isOpen);
+  const openTimeblockInspector = useTimeblockInspectorStore((state) => state.openInspector);
+  const inspectorEntryId = useTimeblockInspectorStore((state) => state.timeblockId);
+  const inspectorIsOpen = useTimeblockInspectorStore((state) => state.isOpen);
 
   const setPendingSelection = useInlineCreateStore.use.setPendingSelection();
 
-  // Inspector で開いているエントリーIDをDnD無効化用に計算
-  const disabledEntryId = inspectorIsOpen ? inspectorEntryId : null;
+  // Inspector で開いているTimeblockIDをDnD無効化用に計算
+  const disabledTimeblockId = inspectorIsOpen ? inspectorEntryId : null;
 
   // エントリクリックハンドラー
-  const handleEntryClick = useCallback(
+  const handleTimeblockClick = useCallback(
     (entry: CalendarEvent) => {
-      openEntryInspector(entry.id, entry.kind ?? 'plan');
+      openTimeblockInspector(entry.id, entry.kind ?? 'plan');
 
-      logger.log('Opening Entry Inspector:', {
-        entryId: entry.id,
+      logger.log('Opening Timeblock Inspector:', {
+        timeblockId: entry.id,
         title: entry.title,
         kind: entry.kind,
       });
     },
-    [openEntryInspector],
+    [openTimeblockInspector],
   );
 
   // 統一された時間範囲選択ハンドラー（全ビュー共通）
@@ -58,16 +58,15 @@ export function useCalendarHandlers() {
         endHour: Math.floor(endMinutes / 60),
         endMinute: endMinutes % 60,
         creationSource: selection.creationSource,
-        skipEntryIds: selection.skipEntryIds,
       });
     },
     [setPendingSelection],
   );
 
   return {
-    handleEntryClick,
+    handleTimeblockClick,
     handleDateTimeRangeSelect,
-    /** DnDを無効化するエントリーID（Inspector表示中のエントリー） */
-    disabledEntryId,
+    /** DnDを無効化するTimeblockID（Inspector表示中のTimeblock） */
+    disabledTimeblockId,
   };
 }

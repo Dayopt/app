@@ -20,10 +20,10 @@ export function getAdjustedStyle(
   planId: string,
   state: InteractionState,
 ): React.CSSProperties {
-  if (state.mode === 'dragging' && state.entryId === planId) {
+  if (state.mode === 'dragging' && state.timeblockId === planId) {
     return { ...originalStyle, opacity: 0.3, zIndex: 1 };
   }
-  if (state.mode === 'resizing' && state.entryId === planId) {
+  if (state.mode === 'resizing' && state.timeblockId === planId) {
     return {
       ...originalStyle,
       height: `${state.snappedHeight}px`,
@@ -43,7 +43,7 @@ export function getPreviewTime(
   planId: string,
   state: InteractionState,
 ): { start: Date; end: Date } | null {
-  if (state.mode === 'resizing' && state.entryId === planId) {
+  if (state.mode === 'resizing' && state.timeblockId === planId) {
     return state.previewTime;
   }
   return null;

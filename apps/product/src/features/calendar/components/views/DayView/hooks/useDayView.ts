@@ -1,6 +1,6 @@
 import type { UseDayViewOptions, UseDayViewReturn } from '../../../../types/day-view.types';
-import { useEntryStyles } from '../../shared/hooks/useEntryStyles';
 import { useIsToday } from '../../shared/hooks/useIsToday';
+import { useTimeblockStyles } from '../../shared/hooks/useTimeblockStyles';
 import { useTimeSlots } from '../../shared/hooks/useTimeSlots';
 
 import { useDayEntries } from './useDayEntries';
@@ -13,7 +13,7 @@ export function useDayView({
   timezone,
 }: UseDayViewOptions): UseDayViewReturn {
   // エントリデータ処理
-  const { dayEntries, entryPositions } = useDayEntries({ date, entries, timezone });
+  const { dayEntries, timeblockPositions } = useDayEntries({ date, entries, timezone });
 
   // 今日かどうかの判定
   const isTodayFlag = useIsToday(date);
@@ -22,13 +22,13 @@ export function useDayView({
   const timeSlots = useTimeSlots();
 
   // エントリのCSSスタイルを計算
-  const entryStyles = useEntryStyles(entryPositions);
+  const timeblockStyles = useTimeblockStyles(timeblockPositions);
 
   // スクロール処理はScrollableCalendarLayoutに委譲
 
   return {
     dayEntries,
-    entryStyles,
+    timeblockStyles,
     isToday: isTodayFlag,
     timeSlots,
   };

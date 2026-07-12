@@ -82,7 +82,7 @@ DB にロジックが沈むと型安全・ユニットテスト・dead-code 検�
 migration churn（pre_drop/post_drop の踊り）の温床にもなる。そのため:
 
 - **新規の集計・ビジネスロジックは TS の service 層に書く**（`features/{feature}/server/{feature}-service.ts`）。
-  RPC を新設してよいのは「RLS で表現できない原子的バッチ操作」に限る（例: `bulk_soft_delete_entries`）。
+  RPC を新設してよいのは「RLS で表現できない原子的バッチ操作」に限る（例: `confirm_day_plans_to_records`）。
 - **既存の PL/pgSQL 関数は凍結資産**: 修正は bug fix のみ。機能追加は TS 側に寄せ、DB 関数を肥大化させない。
 - DB 関数を drop する時は、コード側（呼び出し元）削除を先に production へ deploy → 静穏確認 →
   drop migration の順を守る（呼び出し中の関数を消すと 500 になる）。

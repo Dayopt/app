@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { LogEvent, PlanEvent } from '@/features/entry';
+import type { PlanEvent, RecordEvent } from '@/features/timeblock';
 import { calculateTwoLaneLayout, resolveTwoLaneFromPointer } from '../two-lane-layout';
 
 const HOUR_HEIGHT = 60;
@@ -35,11 +35,11 @@ function makePlan(overrides: Partial<PlanEvent> = {}): PlanEvent {
   };
 }
 
-function makeLog(overrides: Partial<LogEvent> = {}): LogEvent {
+function makeRecord(overrides: Partial<RecordEvent> = {}): RecordEvent {
   const start = localDate(9, 0);
   const end = localDate(10, 0);
   return {
-    id: 'log-1',
+    id: 'record-1',
     title: 'Deep Work',
     note: null,
     tagId: 'tag-1',
@@ -55,35 +55,35 @@ function makeLog(overrides: Partial<LogEvent> = {}): LogEvent {
 }
 
 describe('calculateTwoLaneLayout', () => {
-  it('Plan は左レーン(left=0)、Log は右レーン(left=planLaneWidthPercent)に配置する', () => {
+  it('Plan は左レーン(left=0)、Record は右レーン(left=planLaneWidthPercent)に配置する', () => {
     const result = calculateTwoLaneLayout({
       plans: [makePlan()],
-      logs: [makeLog()],
+      records: [makeRecord()],
       hourHeight: HOUR_HEIGHT,
     });
 
     expect(result.planLayouts[0]?.position.left).toBe(0);
     expect(result.planLayouts[0]?.position.width).toBe(38);
-    expect(result.logLayouts[0]?.position.left).toBe(38);
-    expect(result.logLayouts[0]?.position.width).toBe(62);
+    expect(result.recordLayouts[0]?.position.left).toBe(38);
+    expect(result.recordLayouts[0]?.position.width).toBe(62);
   });
 
   it('planLaneWidthPercent を変更するとレーン幅も追従する', () => {
     const result = calculateTwoLaneLayout({
       plans: [makePlan()],
-      logs: [makeLog()],
+      records: [makeRecord()],
       hourHeight: HOUR_HEIGHT,
       planLaneWidthPercent: 50,
     });
     expect(result.planLayouts[0]?.position.width).toBe(50);
-    expect(result.logLayouts[0]?.position.left).toBe(50);
-    expect(result.logLayouts[0]?.position.width).toBe(50);
+    expect(result.recordLayouts[0]?.position.left).toBe(50);
+    expect(result.recordLayouts[0]?.position.width).toBe(50);
   });
 
   it('9:00-10:00 (hourHeight=60) は top=540px, height=60px', () => {
     const result = calculateTwoLaneLayout({
       plans: [makePlan()],
-      logs: [],
+      records: [],
       hourHeight: HOUR_HEIGHT,
     });
     expect(result.planLayouts[0]?.position).toMatchObject({ top: 540, height: 60 });
@@ -97,14 +97,14 @@ describe('calculateTwoLaneLayout', () => {
           displayEndDate: localDate(2, 0, 11),
         }),
       ],
-      logs: [],
+      records: [],
       hourHeight: HOUR_HEIGHT,
     });
     // 23:00 → top=1380px, 24:00までの1時間 → height=60px
     expect(result.planLayouts[0]?.position).toMatchObject({ top: 1380, height: 60 });
   });
 
-  it('plans/logs 複数件をそれぞれ独立に配置する（レーン内は重複しない前提）', () => {
+  it('plans/records 複数件をそれぞれ独立に配置する（レーン内は重複しない前提）', () => {
     const result = calculateTwoLaneLayout({
       plans: [
         makePlan({ id: 'p1' }),
@@ -114,7 +114,7 @@ describe('calculateTwoLaneLayout', () => {
           displayEndDate: localDate(11, 30),
         }),
       ],
-      logs: [],
+      records: [],
       hourHeight: HOUR_HEIGHT,
     });
     expect(result.planLayouts).toHaveLength(2);
@@ -123,13 +123,13 @@ describe('calculateTwoLaneLayout', () => {
 });
 
 describe('resolveTwoLaneFromPointer', () => {
-  it('既定38%の境界より左をPlan、右をLogにする', () => {
+  it('既定38%の境界より左をPlan、右をRecordにする', () => {
     expect(resolveTwoLaneFromPointer(137, 100, 100)).toBe('plan');
-    expect(resolveTwoLaneFromPointer(138, 100, 100)).toBe('log');
+    expect(resolveTwoLaneFromPointer(138, 100, 100)).toBe('record');
   });
 
   it('Week用20%幅を反映する', () => {
     expect(resolveTwoLaneFromPointer(119, 100, 100, 20)).toBe('plan');
-    expect(resolveTwoLaneFromPointer(120, 100, 100, 20)).toBe('log');
+    expect(resolveTwoLaneFromPointer(120, 100, 100, 20)).toBe('record');
   });
 });

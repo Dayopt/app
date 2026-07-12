@@ -15,8 +15,11 @@ import { createCallerFactory, createTRPCRouter, protectedProcedure } from '../..
 // protectedProcedure の認証ガードテスト用ルーター
 const authTestRouter = createTRPCRouter({
   whoami: protectedProcedure.query(({ ctx }) => ({ userId: ctx.userId })),
-  entries: createTRPCRouter({
-    list: protectedProcedure.query(() => 'entries'),
+  plans: createTRPCRouter({
+    list: protectedProcedure.query(() => 'plans'),
+  }),
+  records: createTRPCRouter({
+    list: protectedProcedure.query(() => 'records'),
   }),
   userSettings: createTRPCRouter({
     update: protectedProcedure.mutation(() => 'updated'),
@@ -104,7 +107,7 @@ describe('トークン期限切れ・セッション検証', () => {
       expect(result.userId).toBe('user-1');
     });
 
-    it('OAuth read:entries token は明示許可された entries.list だけ通過する', async () => {
+    it('OAuth read:entries token は read-only の plans.list / records.list だけ通過する', async () => {
       const ctx = createMockContext({
         userId: 'user-1',
         authMode: 'oauth',
@@ -113,13 +116,14 @@ describe('トークン期限切れ・セッション検証', () => {
       });
       const caller = createCaller(ctx as never);
 
-      await expect(caller.entries.list()).resolves.toBe('entries');
+      await expect(caller.plans.list()).resolves.toBe('plans');
+      await expect(caller.records.list()).resolves.toBe('records');
       await expect(caller.userSettings.update()).rejects.toThrow(
         expect.objectContaining({ code: 'FORBIDDEN' }),
       );
     });
 
-    it('OAuth token はscopeなしでentries.listを通過できない', async () => {
+    it('OAuth token は scope なしで plans.list / records.list を通過できない', async () => {
       const ctx = createMockContext({
         userId: 'user-1',
         authMode: 'oauth',
@@ -128,7 +132,10 @@ describe('トークン期限切れ・セッション検証', () => {
       });
       const caller = createCaller(ctx as never);
 
-      await expect(caller.entries.list()).rejects.toThrow(
+      await expect(caller.plans.list()).rejects.toThrow(
+        expect.objectContaining({ code: 'FORBIDDEN' }),
+      );
+      await expect(caller.records.list()).rejects.toThrow(
         expect.objectContaining({ code: 'FORBIDDEN' }),
       );
     });

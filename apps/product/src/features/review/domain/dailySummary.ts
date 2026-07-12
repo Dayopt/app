@@ -6,7 +6,7 @@
  */
 
 /** 計算に必要な最小のエントリ形 */
-export interface DailySummaryEntry {
+export interface DailySummaryTimeblock {
   origin: string | null;
   start_time: string | null;
   end_time: string | null;
@@ -39,7 +39,7 @@ function durationMinutes(start: string | null, end: string | null): number | nul
 }
 
 /** 1日分のエントリ群から日次サマリーを計算する */
-export function computeDailySummary(entries: DailySummaryEntry[]): DailySummary {
+export function computeDailySummary(entries: DailySummaryTimeblock[]): DailySummary {
   let plannedMinutes = 0;
   let actualMinutes = 0;
   let biasTotal = 0;

@@ -36,7 +36,7 @@ interface GhostRendererProps {
 
 /** GhostRendererのrenderGhostコールバックに渡されるパラメータ */
 interface GhostRenderParams {
-  entryId: string;
+  timeblockId: string;
   previewTime: TimeRange;
   isOverlapping: boolean;
   /** 'dragging' or 'resizing' */
@@ -68,7 +68,7 @@ const MIN_GHOST_HEIGHT_MOBILE = 40;
 
 /** ドラッグ中のゴースト要素をReact Portalで描画するコンポーネント */
 export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
-  const t = useTranslations('entry');
+  const t = useTranslations('timeblock');
   const isMobile = useIsMobile();
   const minGhostHeight = isMobile ? MIN_GHOST_HEIGHT_MOBILE : 0;
   const prevStateRef = useRef(state);
@@ -197,7 +197,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
     />
   ) : (
     renderGhost?.({
-      entryId: state.entryId,
+      timeblockId: state.timeblockId,
       previewTime: state.previewTime,
       isOverlapping: false,
       mode: 'dragging',

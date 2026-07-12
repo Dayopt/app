@@ -6,7 +6,7 @@ import { getWeek } from 'date-fns';
 
 import { cn } from '@dayopt/components';
 
-import { ConfirmDayButton } from '@/features/entry';
+import { ConfirmDayButton } from '@/features/timeblock';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarViewAnimation } from '../../animations/ViewTransition';
@@ -20,17 +20,17 @@ import { useDayView } from './hooks/useDayView';
 export const DayView = ({
   dateRange: _dateRange,
   entries,
-  allEntries: _allEntries,
+  allTimeblocks: _allTimeblocks,
   currentDate,
   showWeekends: _showWeekends = true,
-  showActualDiff = false,
+  showActualDiff: _showActualDiff = false,
   dayDiffEntryIds,
   className,
-  disabledEntryId,
+  disabledTimeblockId,
   onEntryClick,
   onEntryContextMenu,
   onUpdateEntry,
-  onDeleteEntry: _onDeleteEntry,
+  onDeleteTimeblock: _onDeleteTimeblock,
   onTimeRangeSelect,
   onViewChange: _onViewChange,
   onNavigatePrev: _onNavigatePrev,
@@ -74,7 +74,7 @@ export const DayView = ({
   // DayView専用ロジック（CalendarControllerから渡されたエントリデータを使用）
   const {
     dayEntries: dayEvents,
-    entryStyles: eventStyles,
+    timeblockStyles: _eventStyles,
     isToday,
     timeSlots: _timeSlots,
   } = useDayView({
@@ -97,7 +97,7 @@ export const DayView = ({
     return d;
   }, [date]);
   const hasUnrecordedPastPlans = useMemo(() => {
-    // eslint-disable-next-line react-hooks/purity -- confirmDay 導線の表示判定。entries 変更時の再評価で十分（EntryContextMenu と同じ運用）
+    // eslint-disable-next-line react-hooks/purity -- confirmDay 導線の表示判定。entries 変更時の再評価で十分（TimeblockContextMenu と同じ運用）
     const now = Date.now();
     const list = entries ?? [];
     return list.some(
@@ -106,7 +106,7 @@ export const DayView = ({
         !e.isSkipped &&
         e.endDate != null &&
         e.endDate.getTime() <= now &&
-        !list.some((log) => log.kind === 'log' && log.planId === e.id),
+        !list.some((log) => log.kind === 'record' && log.planId === e.id),
     );
   }, [entries]);
 
@@ -145,15 +145,13 @@ export const DayView = ({
           <CalendarGridContent
             date={date}
             entries={dayEvents}
-            entryStyles={eventStyles}
             viewMode="day"
             dayIndex={0}
             onEntryClick={onEntryClick}
             onEntryContextMenu={onEntryContextMenu}
             onEventUpdate={handleEventTimeUpdate}
             onTimeRangeSelect={onTimeRangeSelect}
-            disabledEntryId={disabledEntryId}
-            showActualDiff={showActualDiff}
+            disabledTimeblockId={disabledTimeblockId}
             dayDiffEntryIds={dayDiffEntryIds}
             className="absolute inset-y-0 right-0 left-0"
           />

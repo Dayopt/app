@@ -1,5 +1,5 @@
 /**
- * Log レーンの差分バッジ（実績 - 予定、分）。
+ * Record レーンの差分バッジ（実績 - 予定、分）。
  *
  * copywriting「判定せず数字で示す」に従い、±0 は非表示（何も描画しない）。
  * 視覚言語は `features/review/components/diff/ReviewDiffPanel.tsx` の
@@ -10,7 +10,7 @@
 
 import { ArrowDown, ArrowUp } from 'lucide-react';
 
-import { formatDiffMinutes } from '@/features/entry';
+import { formatDiffMinutes } from '@/features/timeblock';
 import { cn } from '@dayopt/components';
 
 interface DiffBadgeProps {

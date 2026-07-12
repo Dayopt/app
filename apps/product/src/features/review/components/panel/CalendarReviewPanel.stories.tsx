@@ -9,14 +9,14 @@ const noop = () => {};
 const MOCK_PAGE_DATA: StatsPageData = {
   overview: {
     totalMinutes: 2220,
-    entryCount: 38,
+    recordCount: 38,
     totalEntries: 44,
     plannedEntries: 35,
     planRate: 0.8,
   },
   prevOverview: {
     totalMinutes: 1980,
-    entryCount: 33,
+    recordCount: 33,
     totalEntries: 40,
     plannedEntries: 30,
     planRate: 0.75,
@@ -35,7 +35,7 @@ const MOCK_PAGE_DATA: StatsPageData = {
       avgPlannedMinutes: 120,
       avgActualMinutes: 148,
       avgDeviationMinutes: 28,
-      entryCount: 5,
+      recordCount: 5,
     },
     {
       tagId: '2',
@@ -44,7 +44,7 @@ const MOCK_PAGE_DATA: StatsPageData = {
       avgPlannedMinutes: 60,
       avgActualMinutes: 48,
       avgDeviationMinutes: -12,
-      entryCount: 7,
+      recordCount: 7,
     },
   ],
   prevEstimationAccuracy: [],
@@ -65,8 +65,8 @@ const meta = {
   parameters: {
     layout: 'padded',
     trpcMocks: {
-      'entries.getStatsPageData': MOCK_PAGE_DATA,
-      'entries.getTimePL': MOCK_TIME_PL_RESPONSE,
+      'statistics.getStatsPageData': MOCK_PAGE_DATA,
+      'statistics.getTimePL': MOCK_TIME_PL_RESPONSE,
     },
   },
   tags: ['autodocs'],
@@ -134,7 +134,7 @@ export const Error: Story = {
     className: 'border-border-subtle h-[560px] w-80 border',
   },
   parameters: {
-    trpcError: { path: 'entries.getStatsPageData', code: 'INTERNAL_SERVER_ERROR' },
+    trpcError: { path: 'statistics.getStatsPageData', code: 'INTERNAL_SERVER_ERROR' },
   },
 };
 

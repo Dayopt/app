@@ -86,7 +86,9 @@ export function useUpdateUserSettings() {
     onSettled: (_data, _error, input) => {
       void utils.userSettings.get.invalidate();
       if (typeof input.timezone === 'string') {
-        void utils.entries.invalidate();
+        void utils.plans.invalidate();
+        void utils.records.invalidate();
+        void utils.statistics.invalidate();
       }
     },
   });

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CalendarEvent } from '@/features/entry';
+import type { CalendarEvent } from '@/features/timeblock';
 
 vi.mock('@/lib/date/timezone', () => ({
   // テスト時はシステム TZ 依存を排除し、入力 Date に 1h 加算した別インスタンスを返す

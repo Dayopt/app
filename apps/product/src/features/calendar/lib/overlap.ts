@@ -2,7 +2,7 @@
  * 重複判定エンジン — React/DOM依存ゼロの純粋関数
  *
  * ドラッグ操作時のクライアント側重複チェックを提供。
- * 全エントリ間で重複を禁止する。
+ * 同一レーンの Timeblock 間で重複を禁止する。
  */
 
 import { hasTwoLayerTimeConflict, type TwoLayerOverlapTarget } from '@dayopt/domain';
@@ -10,10 +10,10 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { CalendarEvent } from '../types/calendar.types';
 
 // =============================================================================
-// time model（plans / logs）のレーン別重複判定
+// time model（plans / records）のレーン別重複判定
 // =============================================================================
 
-/** plans.list / logs.list キャッシュ行のうち重複判定に必要な部分 */
+/** plans.list / records.list キャッシュ行のうち重複判定に必要な部分 */
 interface TimeModelLaneItem {
   id: string;
   start_at: string;
@@ -21,7 +21,7 @@ interface TimeModelLaneItem {
 }
 
 /** 指定レーンの list キャッシュ query を判定する predicate（tRPC v11 key 形式） */
-function isLaneListQuery(lane: 'plans' | 'logs') {
+function isLaneListQuery(lane: 'plans' | 'records') {
   return (query: { queryKey: unknown }): boolean => {
     const key = query.queryKey;
     return (
@@ -30,10 +30,10 @@ function isLaneListQuery(lane: 'plans' | 'logs') {
   };
 }
 
-/** キャッシュ済みの plans.list / logs.list から重複判定用の行を id 重複なしで集める */
+/** キャッシュ済みの plans.list / records.list から重複判定用の行を id 重複なしで集める */
 export function collectTimeModelLaneItems(
   queryClient: QueryClient,
-  lane: 'plans' | 'logs',
+  lane: 'plans' | 'records',
 ): TimeModelLaneItem[] {
   const lists = queryClient.getQueriesData<TimeModelLaneItem[]>({
     predicate: isLaneListQuery(lane),
@@ -52,8 +52,8 @@ export function collectTimeModelLaneItems(
 }
 
 /**
- * 同一レーン内の時間重複を判定する（plan×plan / log×log のみ禁止、plan×log は許可）。
- * サーバーの TimeModelOverlapService と同じ半開区間判定（start < otherEnd && end > otherStart）。
+ * 同一レーン内の時間重複を判定する（Plan 同士 / Record 同士のみ禁止し、Plan と Record は許可）。
+ * サーバーの TimeblockOverlapService と同じ半開区間判定（start < otherEnd && end > otherStart）。
  * skip 済み plan も占有として扱う（EXCLUDE 制約と同一視野）。
  */
 export function hasTimeModelLaneConflict(
@@ -72,7 +72,7 @@ export function hasTimeModelLaneConflict(
   );
 }
 
-export function buildNewEntryOverlapTarget(
+export function buildNewTimeblockOverlapTarget(
   startTime: Date,
   endTime: Date,
   now: number = Date.now(),
@@ -134,7 +134,7 @@ export function checkClientSideOverlap(
 
   const target =
     draggedEventId === ''
-      ? buildNewEntryOverlapTarget(previewStartTime, previewEndTime, now)
+      ? buildNewTimeblockOverlapTarget(previewStartTime, previewEndTime, now)
       : {
           id: draggedEventId,
           plannedStart: shouldCheckPlanned ? previewStartTime : null,

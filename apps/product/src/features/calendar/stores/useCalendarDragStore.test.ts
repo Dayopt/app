@@ -62,8 +62,8 @@ describe('useCalendarDragStore', () => {
 
     it('ドロップ先レーンを更新できる', () => {
       useCalendarDragStore.getState().startDrag('plan-1', mockCalendarEvent, 0, 'plan');
-      useCalendarDragStore.getState().updateDrag({ targetLane: 'log' });
-      expect(useCalendarDragStore.getState().targetLane).toBe('log');
+      useCalendarDragStore.getState().updateDrag({ targetLane: 'record' });
+      expect(useCalendarDragStore.getState().targetLane).toBe('record');
     });
 
     it('プレビュー時間を設定できる', () => {

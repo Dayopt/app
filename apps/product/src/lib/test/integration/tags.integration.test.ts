@@ -326,23 +326,21 @@ describe.skipIf(SKIP_INTEGRATION)('Tags Router Integration', () => {
       });
       createdTagIds.push(targetTag.id);
 
-      // 2. エントリを作成してソースタグに紐付け（adminSupabaseでRLSバイパス）
-      const { data: entry } = await adminSupabase
-        .from('entries')
+      // 2. plan を作成してソースタグに紐付け（adminSupabaseでRLSバイパス）
+      const { data: plan } = await adminSupabase
+        .from('plans')
         .insert({
           user_id: TEST_USER_ID,
-          title: 'Test Entry for Merge',
-          origin: 'planned',
+          title: 'Test Plan for Merge',
+          source: 'manual',
           tag_id: sourceTag.id,
-          start_time: '2026-01-02T09:00:00Z',
-          end_time: '2026-01-02T10:00:00Z',
-          actual_start_time: '2026-01-02T09:00:00Z',
-          actual_end_time: '2026-01-02T10:00:00Z',
+          start_at: '2026-01-02T09:00:00Z',
+          end_at: '2026-01-02T10:00:00Z',
         })
         .select()
         .single();
 
-      if (!entry) throw new Error('Failed to create test entry');
+      if (!plan) throw new Error('Failed to create test plan');
 
       // 3. マージ実行
       const mergeResult = await caller.merge({
@@ -354,20 +352,20 @@ describe.skipIf(SKIP_INTEGRATION)('Tags Router Integration', () => {
 
       expect(mergeResult.success).toBe(true);
 
-      // 4. エントリがターゲットタグに紐付いていることを確認
-      const { data: updatedEntry } = await adminSupabase
-        .from('entries')
+      // 4. plan がターゲットタグに紐付いていることを確認
+      const { data: updatedPlan } = await adminSupabase
+        .from('plans')
         .select('tag_id')
-        .eq('id', entry.id)
+        .eq('id', plan.id)
         .single();
 
-      expect(updatedEntry?.tag_id).toBe(targetTag.id);
+      expect(updatedPlan?.tag_id).toBe(targetTag.id);
 
       // 5. ソースタグが削除されていることを確認
       await expect(caller.getById({ id: sourceTag.id })).rejects.toThrow();
 
       // クリーンアップ
-      await adminSupabase.from('entries').delete().eq('id', entry.id);
+      await adminSupabase.from('plans').delete().eq('id', plan.id);
 
       // createdTagIdsからソースタグを削除（既に削除済み）
       createdTagIds = createdTagIds.filter((id) => id !== sourceTag.id);
@@ -389,23 +387,21 @@ describe.skipIf(SKIP_INTEGRATION)('Tags Router Integration', () => {
       });
       createdTagIds.push(targetTag.id);
 
-      // 2. エントリをソースタグで作成
-      const { data: entry } = await adminSupabase
-        .from('entries')
+      // 2. plan をソースタグで作成
+      const { data: plan } = await adminSupabase
+        .from('plans')
         .insert({
           user_id: TEST_USER_ID,
-          title: 'Test Entry for Duplicate',
-          origin: 'planned',
+          title: 'Test Plan for Duplicate',
+          source: 'manual',
           tag_id: sourceTag.id,
-          start_time: '2026-01-03T09:00:00Z',
-          end_time: '2026-01-03T10:00:00Z',
-          actual_start_time: '2026-01-03T09:00:00Z',
-          actual_end_time: '2026-01-03T10:00:00Z',
+          start_at: '2026-01-03T09:00:00Z',
+          end_at: '2026-01-03T10:00:00Z',
         })
         .select()
         .single();
 
-      if (!entry) throw new Error('Failed to create test entry');
+      if (!plan) throw new Error('Failed to create test plan');
 
       // 3. マージ実行
       await caller.merge({
@@ -415,17 +411,17 @@ describe.skipIf(SKIP_INTEGRATION)('Tags Router Integration', () => {
         deleteSource: true,
       });
 
-      // 4. エントリがターゲットタグに紐付いていることを確認
-      const { data: updatedEntry } = await adminSupabase
-        .from('entries')
+      // 4. plan がターゲットタグに紐付いていることを確認
+      const { data: updatedPlan } = await adminSupabase
+        .from('plans')
         .select('tag_id')
-        .eq('id', entry.id)
+        .eq('id', plan.id)
         .single();
 
-      expect(updatedEntry?.tag_id).toBe(targetTag.id);
+      expect(updatedPlan?.tag_id).toBe(targetTag.id);
 
       // クリーンアップ
-      await adminSupabase.from('entries').delete().eq('id', entry.id);
+      await adminSupabase.from('plans').delete().eq('id', plan.id);
       createdTagIds = createdTagIds.filter((id) => id !== sourceTag.id);
     });
   });

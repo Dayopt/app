@@ -18,7 +18,7 @@ export interface UseDayViewOptions {
 /** useDayView フックの戻り値 */
 export interface UseDayViewReturn {
   dayEntries: CalendarEvent[];
-  entryStyles: Record<string, CSSProperties>;
+  timeblockStyles: Record<string, CSSProperties>;
   isToday: boolean;
   timeSlots: TimeSlot[];
 }
@@ -33,12 +33,12 @@ export interface UseDayEntriesOptions {
 /** useDayEntries フックの戻り値 */
 export interface UseDayEntriesReturn {
   dayEntries: CalendarEvent[];
-  entryPositions: EntryPosition[];
+  timeblockPositions: TimeblockPosition[];
   maxConcurrentEntries: number;
 }
 
 /** エントリの計算済み位置情報 */
-export interface EntryPosition {
+export interface TimeblockPosition {
   plan: CalendarEvent;
   top: number;
   height: number;

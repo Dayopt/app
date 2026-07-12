@@ -52,7 +52,7 @@
     "heading": "アカウントが削除されました",
     "body": "{deletionDate} をもって、Dayopt アカウントが正常に削除されました。",
     "dataRemovedIntro": "以下のデータが完全に削除されました：",
-    "dataPlans": "すべてのエントリーと時間記録",
+    "dataPlans": "すべてのタイムブロックと時間記録",
     "dataTags": "タグとカテゴリ",
     "dataProfile": "プロフィール情報",
     "mistakeLine": "この削除に覚えがない場合、または誤りであると思われる場合は、すぐに {supportEmail} までご連絡ください。",
@@ -60,10 +60,10 @@
     "thankYou": "Dayopt をご利用いただきありがとうございました。"
   },
   "reminder": {
-    "subject": "リマインダー：{entryTitle}",
-    "heading": "エントリーのリマインダー",
-    "body": "エントリーの開始時刻になりました：",
-    "labelPlan": "エントリー",
+    "subject": "リマインダー：{timeblockTitle}",
+    "heading": "Plan のリマインダー",
+    "body": "タイムブロックの開始時刻になりました：",
+    "labelPlan": "Plan",
     "labelStartsAt": "開始時刻",
     "ctaButton": "カレンダーを開く"
   },

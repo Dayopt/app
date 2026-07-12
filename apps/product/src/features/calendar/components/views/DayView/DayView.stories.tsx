@@ -116,7 +116,7 @@ const defaultHandlers = {
   onEntryClick: fn(),
   onEntryContextMenu: fn(),
   onUpdateEntry: fn(),
-  onDeleteEntry: fn(),
+  onDeleteTimeblock: fn(),
   onTimeRangeSelect: fn(),
   onViewChange: fn(),
   onNavigatePrev: fn(),
@@ -161,7 +161,7 @@ export const WithAllHandlers: Story = {
       <DayView
         dateRange={todayRange}
         entries={mockPlans}
-        allEntries={[...mockPlans, overdueEntry]}
+        allTimeblocks={[...mockPlans, overdueEntry]}
         currentDate={today}
         {...defaultHandlers}
       />
@@ -171,7 +171,7 @@ export const WithAllHandlers: Story = {
 
 /**
  * 期限切れエントリあり
- * allEntries に昨日の未完了タスクを含めることで期限切れ表示を確認できる
+ * allTimeblocks に昨日の未完了タスクを含めることで期限切れ表示を確認できる
  */
 export const WithOverdueEntry: Story = {
   render: () => (
@@ -179,7 +179,7 @@ export const WithOverdueEntry: Story = {
       <DayView
         dateRange={todayRange}
         entries={mockPlans}
-        allEntries={[...mockPlans, overdueEntry]}
+        allTimeblocks={[...mockPlans, overdueEntry]}
         currentDate={today}
         {...defaultHandlers}
       />
@@ -234,7 +234,7 @@ function preset(
 }
 
 /** 過去エントリ（記録済み）の共通props */
-const closed: Partial<CalendarEvent> = { status: 'closed', entryState: 'past' };
+const closed: Partial<CalendarEvent> = { status: 'closed', timeblockState: 'past' };
 
 const presetSampleEntries: CalendarEvent[] = [
   // 過去（記録済み）
@@ -282,7 +282,7 @@ const presetSampleEntries: CalendarEvent[] = [
 const presetDiffEntryIds = computeCalendarDayDiffs(
   presetSampleEntries,
   makeDate(today, 23, 0),
-).entryIds;
+).timeblockIds;
 
 /** プリセットサンプルデイ — オンボーディング後の初回表示イメージ */
 export const PresetSampleDay: Story = {
@@ -322,7 +322,7 @@ export const AllPatterns: Story = {
         <DayView
           dateRange={todayRange}
           entries={mockPlans}
-          allEntries={[...mockPlans, overdueEntry]}
+          allTimeblocks={[...mockPlans, overdueEntry]}
           currentDate={today}
           {...defaultHandlers}
         />

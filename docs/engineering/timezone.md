@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-12
 code: apps/product/src/lib/date
 ---
 
@@ -117,7 +117,7 @@ import { tzDayStart, tzDayEnd, tzIsSameDay } from '@/lib/date/timezone';
 // ✅ 「今日の全エントリ」を取得するクエリ境界
 const startDate = tzDayStart(new Date(), timezone); // "2026-03-25T15:00:00.000Z" (JST)
 const endDate = tzDayEnd(new Date(), timezone); // "2026-03-26T14:59:59.999Z" (JST)
-const entries = api.entries.list.useQuery({ startDate, endDate });
+const plans = api.plans.list.useQuery({ startDate, endDate });
 
 // ✅ マルチデイ判定
 const isMultiDay = !tzIsSameDay(entry.startDate, entry.endDate, timezone);
@@ -161,7 +161,7 @@ const dateRange = {
   startDate: tzWeekStart(currentDate, timezone),
   endDate: tzWeekEnd(currentDate, timezone),
 };
-const data = api.entries.getTimeByTag.useQuery(dateRange);
+const data = api.statistics.getTimeByTag.useQuery(dateRange);
 
 // ❌ 禁止: startOfWeek + toISOString
 const start = startOfWeek(currentDate);

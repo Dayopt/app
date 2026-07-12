@@ -5,7 +5,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { OAuthClientId, SupportedScope } from '@/lib/oauth-server';
 
 import { registerEntriesListTool } from './_tools/entries-list';
-import { registerTimeModelListTools } from './_tools/time-model-list';
+import { registerTimeblockListTools } from './_tools/timeblock-list';
 
 export interface McpRequestContext {
   userId: string;
@@ -32,7 +32,7 @@ export function createMcpServer(ctx: McpRequestContext): McpServer {
   });
 
   registerEntriesListTool(server, ctx);
-  registerTimeModelListTools(server, ctx);
+  registerTimeblockListTools(server, ctx);
 
   return server;
 }

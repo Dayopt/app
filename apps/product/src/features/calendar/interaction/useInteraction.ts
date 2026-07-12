@@ -14,9 +14,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 import type { CalendarEvent } from '../types/calendar.types';
 
-import { isPlanRecordDrop } from '@/features/entry';
-import { hasCalendarActualRangeDiff } from '../lib/entry-time';
+import { isPlanRecordDrop } from '@/features/timeblock';
 import { checkClientSideOverlapByKind } from '../lib/overlap';
+import { hasCalendarActualRangeDiff } from '../lib/timeblock-time';
 import { resolveTwoLaneFromPointer } from '../lib/two-lane-layout';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
@@ -27,11 +27,11 @@ import {
   isTouchEvent,
 } from '../domain/interaction/pointer-tracker';
 import type {
-  EntryRect,
   InteractionAction,
   InteractionContext,
   InteractionEffect,
   InteractionState,
+  TimeblockRect,
 } from '../domain/interaction/types';
 
 // ========================================
@@ -67,7 +67,7 @@ export interface UseInteractionProps {
       resetActualTime?: boolean;
     },
   ) => Promise<void | { skipToast: true }> | void;
-  /** Plan を Log レーンへdropした時の記録化 */
+  /** Plan を Record レーンへdropした時の記録化 */
   onPlanRecord?: ((planId: string) => void) | undefined;
   /** Callback when an event is clicked (not dragged) */
   onEventClick?: (event: CalendarEvent) => void;
@@ -94,22 +94,22 @@ interface UseInteractionReturn {
 /** DOM要素にアタッチするインタラクションハンドラー群 */
 interface InteractionHandlers {
   handlePointerDown: (
-    entryId: string,
+    timeblockId: string,
     e: React.MouseEvent,
-    position: EntryRect,
+    position: TimeblockRect,
     dateIndex?: number,
   ) => void;
   handleTouchStart: (
-    entryId: string,
+    timeblockId: string,
     e: React.TouchEvent,
-    position: EntryRect,
+    position: TimeblockRect,
     dateIndex?: number,
   ) => void;
   handleResizeStart: (
-    entryId: string,
+    timeblockId: string,
     direction: 'top' | 'bottom',
     e: React.MouseEvent | React.TouchEvent,
-    position: EntryRect,
+    position: TimeblockRect,
   ) => void;
 }
 
@@ -186,7 +186,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
   // Cached day-column NodeList — populated at drag-start, cleared on drag-end
   const dayColumnsRef = useRef<NodeListOf<HTMLElement> | null>(null);
   // machine は DRAG_STORE_END → DROP の順でeffectを出すため、drop判定用laneを別refに保持する。
-  const dragLaneRef = useRef<{ source: 'plan' | 'log'; target: 'plan' | 'log' } | null>(null);
+  const dragLaneRef = useRef<{ source: 'plan' | 'record'; target: 'plan' | 'record' } | null>(null);
 
   // ---- Build context for the reducer ----
   function buildContext(r: typeof latestRef.current): InteractionContext {
@@ -195,22 +195,27 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
       date: r.date,
       ...(r.displayDates ? { displayDates: r.displayDates } : {}),
       viewMode: r.viewMode,
-      getEntryDurationMs: (entryId: string) => {
-        const event = r.events.find((e) => e.id === entryId);
+      getTimeblockDurationMs: (timeblockId: string) => {
+        const event = r.events.find((e) => e.id === timeblockId);
         if (event?.startDate && event?.endDate) {
           return event.endDate.getTime() - event.startDate.getTime();
         }
         return 3600000; // default 1h
       },
-      getResizeMinEndMinutes: (entryId: string) => {
-        const event = r.events.find((candidate) => candidate.id === entryId);
+      getResizeMinEndMinutes: (timeblockId: string) => {
+        const event = r.events.find((candidate) => candidate.id === timeblockId);
         if (!hasCalendarActualRangeDiff(event) || !event?.actualStartDate) return null;
         return event.actualStartDate.getHours() * 60 + event.actualStartDate.getMinutes();
       },
       // 自動記録モデルでは drag / resize とも「planned のみ移動・確定済み actual は固定」で
       // 重複判定が同一なため operation は使わない（machine の API 形状だけ維持する）
-      checkOverlap: (entryId: string, start: Date, end: Date, _operation: 'drag' | 'resize') => {
-        return checkClientSideOverlapByKind(r.allEvents, entryId, start, end);
+      checkOverlap: (
+        timeblockId: string,
+        start: Date,
+        end: Date,
+        _operation: 'drag' | 'resize',
+      ) => {
+        return checkClientSideOverlapByKind(r.allEvents, timeblockId, start, end);
       },
     };
   }
@@ -248,26 +253,26 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           break;
 
         case 'EVENT_CLICK': {
-          const event = r.events.find((e) => e.id === effect.entryId);
+          const event = r.events.find((e) => e.id === effect.timeblockId);
           if (event) r.onEventClick?.(event);
           break;
         }
 
         case 'DROP': {
-          const event = r.events.find((candidate) => candidate.id === effect.entryId);
+          const event = r.events.find((candidate) => candidate.id === effect.timeblockId);
           if (
             event?.kind === 'plan' &&
             dragLaneRef.current &&
             isPlanRecordDrop(dragLaneRef.current.source, dragLaneRef.current.target)
           ) {
-            r.onPlanRecord?.(effect.entryId);
+            r.onPlanRecord?.(effect.timeblockId);
             break;
           }
-          // 過去PlanはLogレーンへの記録dropだけ許可し、同一レーンの時間移動は無視する。
+          // 過去PlanはRecordレーンへの記録dropだけ許可し、同一レーンの時間移動は無視する。
           if (event?.kind === 'plan' && event.endDate && event.endDate.getTime() <= Date.now()) {
             break;
           }
-          r.onEventUpdate?.(effect.entryId, {
+          r.onEventUpdate?.(effect.timeblockId, {
             startTime: effect.time.start,
             endTime: effect.time.end,
           });
@@ -282,7 +287,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           // 自動記録モデル: planned の resize は planned のみ更新（確定済み actual は固定、
           // 未編集 actual は NULL のまま）。buildTimeUpdateData が origin 別に処理するため
           // ここで actual の扱いを指定する必要はない。
-          r.onEventUpdate?.(effect.entryId, {
+          r.onEventUpdate?.(effect.timeblockId, {
             startTime: effect.time.start,
             endTime: effect.time.end,
           });
@@ -307,11 +312,11 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
         }
 
         case 'DRAG_STORE_START': {
-          const plan = r.events.find((e) => e.id === effect.entryId);
+          const plan = r.events.find((e) => e.id === effect.timeblockId);
           if (plan) {
             const lane = plan.kind ?? 'plan';
             dragLaneRef.current = { source: lane, target: lane };
-            r.startDragStore(effect.entryId, plan, effect.dateIndex, lane);
+            r.startDragStore(effect.timeblockId, plan, effect.dateIndex, lane);
           }
           // Cache day-column elements once at drag-start
           dayColumnsRef.current = document.querySelectorAll<HTMLElement>(
@@ -490,12 +495,12 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
   // ---- Convenience handlers ----
 
   const handlePointerDown = useCallback(
-    (entryId: string, e: React.MouseEvent, position: EntryRect, dateIndex: number = 0) => {
+    (timeblockId: string, e: React.MouseEvent, position: TimeblockRect, dateIndex: number = 0) => {
       if (e.button !== 0) return;
       const r = latestRef.current;
       // Disabled plan → direct click
-      if (r.disabledPlanId && entryId === r.disabledPlanId) {
-        const event = r.events.find((ev) => ev.id === entryId);
+      if (r.disabledPlanId && timeblockId === r.disabledPlanId) {
+        const event = r.events.find((ev) => ev.id === timeblockId);
         if (event) r.onEventClick?.(event);
         return;
       }
@@ -503,7 +508,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
       e.stopPropagation();
       dispatch({
         type: 'POINTER_DOWN',
-        entryId,
+        timeblockId,
         point: getPointerPoint(e.nativeEvent),
         originalPosition: position,
         dateIndex,
@@ -513,12 +518,12 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
   );
 
   const handleTouchStart = useCallback(
-    (entryId: string, e: React.TouchEvent, position: EntryRect, dateIndex: number = 0) => {
+    (timeblockId: string, e: React.TouchEvent, position: TimeblockRect, dateIndex: number = 0) => {
       const r = latestRef.current;
-      if (r.disabledPlanId && entryId === r.disabledPlanId) return;
+      if (r.disabledPlanId && timeblockId === r.disabledPlanId) return;
       dispatch({
         type: 'TOUCH_START',
-        entryId,
+        timeblockId,
         point: getPointerPoint(e.nativeEvent),
         originalPosition: position,
         dateIndex,
@@ -529,20 +534,20 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
 
   const handleResizeStart = useCallback(
     (
-      entryId: string,
+      timeblockId: string,
       direction: 'top' | 'bottom',
       e: React.MouseEvent | React.TouchEvent,
-      position: EntryRect,
+      position: TimeblockRect,
     ) => {
       // マウスイベントの場合は左クリックのみ許可
       if ('button' in e && e.button !== 0) return;
       const r = latestRef.current;
-      if (r.resizeDisabledPlanId && entryId === r.resizeDisabledPlanId) return;
+      if (r.resizeDisabledPlanId && timeblockId === r.resizeDisabledPlanId) return;
       e.preventDefault();
       e.stopPropagation();
       dispatch({
         type: 'RESIZE_START',
-        entryId,
+        timeblockId,
         direction,
         point: getPointerPoint(e.nativeEvent),
         originalPosition: position,

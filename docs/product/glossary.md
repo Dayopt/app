@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-12
 ---
 
 # Dayopt Glossary — 用語集
@@ -10,7 +10,7 @@ Dayopt の UI で使う言葉の正解一覧(コピー用語集)と、コード�
 - 実装ガイド → [`docs/engineering/i18n.md`](../engineering/i18n.md)
 - Storybook用語(CSF, Meta, Story等) → [`docs/engineering/storybook.md`](../engineering/storybook.md)
 
-UI文言を書く/翻訳する時は「UI 用語集」、コードの型やDBカラムを扱う時は「ドメイン・コード用語集」を参照する。両者で同じ概念(Entry, Tag, TimeBoxing等)を指す場合は UI 表記側を正とし、コード用語集側は実装詳細(DBカラム名・型・decision参照)のみを持つ。
+UI文言を書く/翻訳する時は「UI 用語集」、コードの型やDBカラムを扱う時は「ドメイン・コード用語集」を参照する。両者で同じ概念(Plan, Record, Tag, TimeBoxing等)を指す場合は UI 表記側を正とし、コード用語集側は実装詳細(DBカラム名・型・decision参照)のみを持つ。
 
 ---
 
@@ -29,36 +29,45 @@ UI文言を書く/翻訳する時は「UI 用語集」、コードの型やDBカ
 
 ### 主要用語
 
-| Concept            | ja             | en       | UIでの使い方                                         | 禁止表記               | 移行状況                                                  |
-| ------------------ | -------------- | -------- | ---------------------------------------------------- | ---------------------- | --------------------------------------------------------- |
-| entry              | エントリ       | Entry    | 計画・記録を持つ時間ブロック                         | タスク, ブロック(単独) | 一部 `タスク` 表記が残存(calendar.json, navigation.json)  |
-| plan (record side) | 予定           | Plan     | エントリの計画側の時間                               | 計画(名詞)             | —                                                         |
-| record             | 記録           | Record   | 実際に発生した時間(UI 表示)                          | —                      | —                                                         |
-| actual             | 実績           | Actual   | DB/API 寄りの技術用語。**UI では原則「記録」を使う** | —                      | calendar.json に混在(技術的文脈では許容)                  |
-| tag                | タグ           | Tag      | 1エントリ1タグで分類する属性                         | ラベル, カテゴリ       | contact.json に `カテゴリ` が残存                         |
-| review             | 振り返り       | Review   | ページ名・機能名                                     | レビュー               | —                                                         |
-| account            | アカウント     | Account  | 設定ページ名                                         | 設定(ページ名として)   | —                                                         |
-| sign in            | サインイン     | Sign in  | 認証アクション                                       | ログイン               | 移行中(auth.json, navigation.json が `ログイン` を使用)   |
-| sign out           | サインアウト   | Sign out | 認証解除アクション                                   | ログアウト             | 移行中(auth.json, navigation.json が `ログアウト` を使用) |
-| timebox            | タイムボックス | Timebox  | 時間を区切って作業する手法(説明文脈)                 | —                      | —                                                         |
+| Concept   | ja             | en       | UIでの使い方                                              | 禁止表記                          | 移行状況                                                  |
+| --------- | -------------- | -------- | --------------------------------------------------------- | --------------------------------- | --------------------------------------------------------- |
+| plan      | 予定           | Plan     | 独立エンティティとしての予定。まだやっていない時間        | 計画(名詞), エントリ              | —                                                         |
+| record    | 記録           | Record   | 実際に使った時間。1 Plan に複数紐づく。予定外の記録もある | 実績(UI では原則不使用), エントリ | —                                                         |
+| timeblock | ブロック       | Block    | Plan / Record の総称。カレンダー上の時間ブロック全般      | タスク, エントリ                  | 一部 `タスク` 表記が残存(calendar.json, navigation.json)  |
+| tag       | タグ           | Tag      | 1ブロック1タグで分類する属性                              | ラベル, カテゴリ                  | contact.json に `カテゴリ` が残存                         |
+| review    | 振り返り       | Review   | ページ名・機能名                                          | レビュー                          | —                                                         |
+| account   | アカウント     | Account  | 設定ページ名                                              | 設定(ページ名として)              | —                                                         |
+| sign in   | サインイン     | Sign in  | 認証アクション                                            | ログイン                          | 移行中(auth.json, navigation.json が `ログイン` を使用)   |
+| sign out  | サインアウト   | Sign out | 認証解除アクション                                        | ログアウト                        | 移行中(auth.json, navigation.json が `ログアウト` を使用) |
+| timebox   | タイムボックス | Timebox  | 時間を区切って作業する手法(説明文脈)                      | —                                 | —                                                         |
 
 ### 詳細ノート
 
-#### entry / エントリ
+#### plan / 予定
 
-DB の `entries` テーブルに対応する中心モデル。計画(予定)と記録の両側を持つ。
+DB の `plans` テーブルに対応する独立エンティティ。これからやる時間の宣言。
 
-- UI: 「エントリ」
-- 禁止: 「タスク」(GTD 文脈の作業リスト項目と混同する)、「イベント」(カレンダーの外部 event と混同する)
-- ただし **外部カレンダー連携の文脈**では「イベント」が正しい場合がある(Google Calendar の event = イベント)
+- UI: 「予定」
+- 禁止: 「計画」(名詞としては使わない。動詞「計画する」は文脈により可)、「エントリ」(旧モデルの呼称。ADR-025 で廃止)
+- 過去の Plan は時間凍結。title / tag / note のみ訂正可
 
-#### actual / 実績
+#### record / 記録
 
-DB の `actual_start` / `actual_end` カラム名、および計算値の技術用語。
+実際に使った時間を表す独立エンティティ。1 つの Plan に複数の Record が紐づけられる(1:N)。Step 9a では物理 `logs` テーブルを adapter 経由で読み、#1579 で `records` へ rename する。
 
-- UI 表示では原則「記録」に揃える
-- **「予定と実績の比較」のような UI 文言では「実績」は許容**(比較コンテキストで「記録」にすると「予定と記録」となり読みにくい)
-- コードコメント・変数名では `actual` / `実績` を使い続けてよい
+- UI: 「記録」
+- 禁止: 「実績」(UI では原則不使用。技術用語・比較文脈では許容)、「エントリ」(旧モデルの呼称)
+- `plan_id` があれば「予定に対する記録」、なければ「予定外の記録」
+
+#### 未記録 / やらなかった / 予定外
+
+Review で区別する3つの状態:
+
+- **未記録の予定** — 過去の Plan で Record がなく、`skipped_at` も未設定。「まだ記録していない」
+- **やらなかった予定** — Plan に `skipped_at` があるもの。実績集計からは除外するが計画履歴は残す
+- **予定外の記録** — Record に `plan_id` がないもの。予定していなかったが記録した時間
+
+いずれも判定ラベルではなく静かなマーカーで表示する(コピーライティング原則「判定せず数字で示す」)。
 
 #### sign in / サインイン(移行中)
 
@@ -79,16 +88,22 @@ pnpm copy:check
 
 `pnpm copy:check` がスキャンする禁止語の定義。追加した禁止語は `scripts/i18n/check-glossary.ts` がスキャンする。新規追加した messages キーにこれらの語が含まれている場合は**警告**(現在はリファクタリング移行中のため exit 0)。既存の違反は `pnpm copy:check` で確認し、Phase 2(messages 整理)で順次修正する。
 
-### タスク(UI でのエントリ呼称として)
+### タスク(UI でのブロック呼称として)
 
-**推奨**: エントリ
-**理由**: GTD のタスクリスト項目と混同する。Dayopt のエントリはタスクではなく時間ブロック。
+**推奨**: ブロック
+**理由**: GTD のタスクリスト項目と混同する。Dayopt のブロックはタスクではなく時間ブロック。
 **例外**: データエクスポート・法的文書での「タスクデータ」等の技術的文脈では許容
+
+### エントリ(旧モデルの呼称として)
+
+**推奨**: ブロック、または文脈に応じて予定 / 記録
+**理由**: ADR-025 で Entry 単一モデルは廃止され、Plan(予定)/ Record(記録)に分割された。「エントリ」は旧モデルの呼称であり、新規追加では使わない。
+**例外**: 過去の意思決定ログ(ADR-011 等)や migration コメント内での歴史的言及では許容
 
 ### ラベル(タグの代替として)
 
 **推奨**: タグ
-**理由**: Dayopt のタグは 1 エントリ 1 タグの分類単位。「ラベル」は複数付けられる印象を与える。
+**理由**: Dayopt のタグは 1 ブロック 1 タグの分類単位。「ラベル」は複数付けられる印象を与える。
 
 ### カテゴリ(タグの代替として)
 
@@ -127,41 +142,52 @@ pnpm copy:check
 
 Dayopt固有のドメイン概念とコードベースで使用される用語の定義。UI表記ではなく、DBカラム名・型・意思決定ログ参照などの実装詳細を扱う。
 
-### エントリ関連
+### Plan / Record 関連
 
-#### Entry(エントリ)
+#### Plan(予定)
 
-Dayoptの中心モデル。計画(旧 Plan)と記録(旧 Record)を統合した「時間ブロック」。UI表記は「エントリ」([UI用語集](#主要用語)参照)。
+これからやる時間の宣言。独立エンティティ。UI表記は「予定」([UI用語集](#主要用語)参照)。
 
-- DB: `entries` テーブル
-- 型: `src/features/entry/types/entry.ts`
-- 旧名称: `Plan`, `Record`(コードベースで見かけたら `Entry` に読み替える)
+- DB: `plans` テーブル
+- source: `manual` / `external_calendar` / `api`(作成時に確定する不変の provenance)
+- `skipped_at` があれば「やらなかった」予定
 
-#### EntryState(エントリ状態)
+#### Record(記録)
 
-エントリの時間位置から自動導出される3値。DBカラムではない。
+実際に使った時間。独立エンティティ。1 つの Plan に複数の Record が紐づく(1:N)。UI表記は「記録」([UI用語集](#主要用語)参照)。
 
-| 状態       | 条件                           | 編集可否                     |
-| ---------- | ------------------------------ | ---------------------------- |
-| `upcoming` | `start_time > now`             | 全フィールド編集可           |
-| `active`   | `start_time <= now < end_time` | 一部フィールド編集可         |
-| `past`     | `end_time <= now`              | 読み取り専用(実績記録のみ可) |
+- DB: `logs` テーブル（移行中。公開名は Record、#1579 で `records` へ rename）
+- `plan_id`(nullable): あり = 予定に対する記録、なし = 予定外の記録
+- source: `manual` / `from_plan` / `auto_migrated` / `external_calendar` / `api`
+- `fulfillment_score` は Record 側のみが持つ属性(Plan にはない)
 
-- 算出関数: `getEntryState()` — `src/features/entry/lib/entry-status.ts`
-- 意思決定ログ: [時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
+#### TimeblockState(ブロック状態)
 
-#### EntryOrigin(エントリ起源)
+Plan / Record の時間位置から自動導出される3値。DBカラムではない。
 
-エントリがどのように作られたかを示す分類。
+| 状態       | 条件                       | 備考                                          |
+| ---------- | -------------------------- | --------------------------------------------- |
+| `upcoming` | `start_at > now`           | Plan のみ取りうる(未来の Record は存在しない) |
+| `active`   | `start_at <= now < end_at` | 進行中                                        |
+| `past`     | `end_at <= now`            | Plan は時間凍結、Record は訂正可              |
 
-| 値          | 説明                                 |
-| ----------- | ------------------------------------ |
-| `planned`   | 事前に計画として作成された           |
-| `unplanned` | アドホックに作成された(予定外の作業) |
+- 算出関数: `getTimeblockState()` — `src/features/timeblock/lib/timeblock-status.ts`
+- 意思決定ログ: [時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)、[ADR-025](log/2026-07-09-time-model-split.md)
+
+#### 2レーン表示
+
+Calendar は Plan レーンと Record レーンを横並びで表示する。
+
+- **Plan レーン**: アウトライン・淡色(控えめ)
+- **Record レーン**: 塗り・主役(「Dayopt は実際に何が起きたかを見せる」を画面に反映)
+
+#### 保存先ルール
+
+ブロック作成・編集時に保存先を選ぶ UI は存在しない。`end_at > now` なら Plan、`end_at <= now` なら Record として一意に決まる。境界をまたぐ編集で表示チップが自動的に切り替わる。
 
 #### FulfillmentScore(達成度スコア)
 
-エントリ完了後にユーザーが付ける1-5の主観的達成度。Stats機能で集計される。
+Record に対してユーザーが付ける1-5の主観的達成度。Stats機能で集計される。Plan には存在しない(予定の時点では達成度を測れないため)。
 
 | スコア | 意味                   |
 | ------ | ---------------------- |
@@ -182,10 +208,10 @@ Dayoptの中心モデル。計画(旧 Plan)と記録(旧 Record)を統合した�
 
 「Time waits for no one」 — 過去は変更できないという原則。
 
-- 過去のエントリの `start_time` / `end_time` は変更不可
-- 実績(`actual_start` / `actual_end` / `fulfillment_score`)は記録可能
-- UI: 過去ブロックは disabled 表示 + ロジックガードの二重防御
-- 意思決定ログ: [統合ブロックモデル](../engineering/log/2026-03-05-unified-block-model.md)、[時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
+- 過去 Plan の `start_at` / `end_at` は変更不可(title / tag / note のみ訂正可)
+- Record は過去の記録そのものなので、時間・タグ・note・`fulfillment_score` を訂正可能
+- UI: 過去 Plan は disabled 表示 + ロジックガードの二重防御
+- 意思決定ログ: [ADR-025](log/2026-07-09-time-model-split.md)、[時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
 
 ### ユーザー属性
 
@@ -212,7 +238,7 @@ Dayoptの中心モデル。計画(旧 Plan)と記録(旧 Record)を統合した�
 
 #### Tag(タグ)
 
-エントリの活動分類。コロン(`:`)区切りで階層を表現(最大2階層)。UI表記は「タグ」([UI用語集](#主要用語)参照)。
+ブロックの活動分類。コロン(`:`)区切りで階層を表現(最大2階層)。UI表記は「タグ」([UI用語集](#主要用語)参照)。
 
 - 例: `仕事:開発`, `学習:英語`, `運動`
 - 各タグにカラーとアイコンを設定可能(10色パレット)
@@ -221,16 +247,16 @@ Dayoptの中心モデル。計画(旧 Plan)と記録(旧 Record)を統合した�
 #### Palette(パレット)
 
 サイドバーに表示される「よく使うブロック」のクイック挿入機能。
-頻度 × 最終使用日のスコアリングで自動ランク付け。1タップで現在時刻にエントリを作成。
+頻度 × 最終使用日のスコアリングで自動ランク付け。1タップで現在時刻にブロックを作成。
 
 - Feature: `src/features/palette/`
 
 #### Inspector(インスペクタ)
 
-カレンダー上のエントリをクリックした際に開く詳細パネル。
+カレンダー上のブロック(Plan / Record)をクリックした際に開く詳細パネル。
 時間変更、タグ付け、ノート、達成度記録などを行う。
 
-- Component: `src/features/entry/components/inspector/`
+- Component: `src/features/timeblock/components/editor/`
 
 ### アーキテクチャ用語
 
@@ -241,7 +267,7 @@ DAG構造の依存関係を持つ機能分類:
 | レイヤー      | 依存可能な対象 | 含まれる機能                              |
 | ------------- | -------------- | ----------------------------------------- |
 | Layer 0       | なし(基盤)     | Tags, Chronotype                          |
-| Layer 1       | Layer 0 のみ   | Entry                                     |
+| Layer 1       | Layer 0 のみ   | Timeblock                                 |
 | Layer 2       | Layer 0, 1     | Calendar, Stats, Search, History, Palette |
 | Cross-cutting | 制約なし       | Settings, Auth, Notifications             |
 
@@ -256,7 +282,7 @@ Feature同士は直接importできないため、ページ層で合成する。
 #### Barrel Export
 
 各Featureの `index.ts` で公開するAPIのみが外部からアクセス可能。
-deep import(`@/features/entry/hooks/useEntry`)は禁止。
+deep import(`@/features/timeblock/hooks/useTimeblock`)は禁止。
 
 ### ビジネス用語
 

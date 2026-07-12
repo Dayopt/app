@@ -46,7 +46,7 @@ overview §3 の 4 分類（未記録 / やらなかった / 予定に対する�
 - `apps/product/src/features/calendar/lib/day-diff.ts` — 分類・summary の再定義ベース
 - `apps/product/src/features/review/components/diff/ReviewDiffPanel.tsx` + stories — パネルの shape 契約
 - `apps/product/src/features/review/domain/`（timePL / variance）— 予実比較の既存 domain
-- `apps/product/src/features/entry/domain/estimation-accuracy.ts` — 1:N 化の改修ベース（Step 4 と共有）
+- `apps/product/src/features/timeblock/domain/estimation-accuracy.ts` — 1:N 化の改修ベース（Step 4 と共有）
 
 ## What I'm Not Doing
 

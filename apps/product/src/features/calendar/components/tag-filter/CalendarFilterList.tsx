@@ -36,7 +36,7 @@ export function CalendarFilterList() {
   const t = useTranslations();
   const isMobile = useIsMobile();
   const { data: nodes, isLoading: tagsLoading } = useTagsHierarchy();
-  const { data: tagStats, isError: isTagStatsError } = api.entries.getTagStats.useQuery();
+  const { data: tagStats, isError: isTagStatsError } = api.statistics.getTagStats.useQuery();
   const tags = useMemo(() => flattenTagTree(nodes ?? []), [nodes]);
 
   // エラー時は null にすることで、削除確認ダイアログを常に表示（誤削除防止）
@@ -77,17 +77,17 @@ export function CalendarFilterList() {
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     name: string;
-    entryCount: number;
+    recordCount: number;
   } | null>(null);
 
   // 削除ハンドラー: stats未取得/エラー時は安全側に倒して常に確認ダイアログを表示
   const handleDeleteTag = useCallback(
     (tagId: string, tagName: string) => {
-      const entryCount = tagPlanCounts === null ? 1 : (tagPlanCounts[tagId] ?? 0);
-      if (entryCount === 0) {
+      const recordCount = tagPlanCounts === null ? 1 : (tagPlanCounts[tagId] ?? 0);
+      if (recordCount === 0) {
         deleteTagMutation.mutate({ id: tagId });
       } else {
-        setDeleteTarget({ id: tagId, name: tagName, entryCount });
+        setDeleteTarget({ id: tagId, name: tagName, recordCount });
       }
     },
     [tagPlanCounts, deleteTagMutation],
@@ -95,7 +95,7 @@ export function CalendarFilterList() {
 
   // 削除確認後のハンドラー（ストラテジー付き）
   const handleConfirmDelete = async (
-    strategy: 'delete_entries' | 'reassign',
+    strategy: 'delete_blocks' | 'reassign',
     targetTagId?: string,
   ) => {
     if (!deleteTarget) return;
@@ -170,7 +170,7 @@ export function CalendarFilterList() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleConfirmDelete}
         tagName={deleteTarget?.name ?? ''}
-        entryCount={deleteTarget?.entryCount ?? 0}
+        recordCount={deleteTarget?.recordCount ?? 0}
         availableTags={availableTagsForReassign}
       />
     </>

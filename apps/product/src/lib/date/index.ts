@@ -3,7 +3,7 @@
  *
  * `@/lib/date` 経由で実際に参照されている API のみ re-export。
  * deep import (`@/lib/date/core`, `@/lib/date/format`, `@/lib/date/timezone`,
- * `@/lib/date/constants`, `@/lib/date/filter`) も並行して利用可能。
+ * `@/lib/date/constants`) も並行して利用可能。
  */
 
 // ========================================
@@ -37,11 +37,6 @@ export { formatTime, formatTimeRange } from './format';
 // TimeString - "HH:mm" パース / フォーマット
 // ========================================
 export { formatHHmm, formatTimeString, parseTimeString } from './timeString';
-
-// ========================================
-// Filter - 日付範囲フィルター（type のみ）
-// ========================================
-export type { DateRangeFilter } from './filter';
 
 // ========================================
 // 定数の再エクスポート

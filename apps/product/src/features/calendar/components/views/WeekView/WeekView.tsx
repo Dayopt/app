@@ -19,7 +19,7 @@ import type { WeekViewProps } from '../../../types/week-view.types';
  * 1. shared/DateDisplay で7日分の日付表示
  * 2. ScrollableCalendarLayout（時間軸 + グリッド + 現在時刻線）
  * 3. 7つの WeekContent を横並び
- * 4. EntryCard でエントリ表示
+ * 4. TimeblockCard でエントリ表示
  *
  * レイアウト:
  * ┌────┬────┬────┬────┬────┬────┬────┬────┐
@@ -34,13 +34,13 @@ import type { WeekViewProps } from '../../../types/week-view.types';
 export const WeekView = ({
   dateRange,
   entries,
-  allEntries,
+  allTimeblocks,
   showWeekends = true,
   weekStartsOn: weekStartsOnProp,
   showActualDiff = false,
   dayDiffEntryIds,
   className,
-  disabledEntryId,
+  disabledTimeblockId,
   onEntryClick,
   onEntryContextMenu,
   onUpdateEntry,
@@ -69,10 +69,10 @@ export const WeekView = ({
       <WeekGrid
         weekDates={displayDates}
         events={entries}
-        allEntries={allEntries}
+        allTimeblocks={allTimeblocks}
         eventsByDate={eventsByDate}
         todayIndex={todayIndex}
-        disabledEntryId={disabledEntryId}
+        disabledTimeblockId={disabledTimeblockId}
         onEventClick={onEntryClick}
         onEventContextMenu={onEntryContextMenu}
         onEventUpdate={onUpdateEntry}

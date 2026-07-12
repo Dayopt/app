@@ -1,0 +1,74 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Product/Features/Timeblock/Guide" />
+
+# Timeblock（Plan / Record）
+
+予定（Plan）と記録（Record）を独立エンティティとして扱う時間ブロック機能。
+カレンダー上の 2 レーン表示・作成/編集エディタ・統計サービスを提供する。
+
+---
+
+## 概要
+
+| 項目         | 値                                                                 |
+| ------------ | ------------------------------------------------------------------ |
+| エンティティ | `plans`（予定）/ `records`（記録）。1 Plan : N Record（`plan_id`） |
+| 保存先ルール | `end_at > now` → Plan、`end_at <= now` → Record（選択 UI なし）    |
+| 時間位置     | `upcoming` / `active` / `past`（`getTimeblockState()` で自動判定） |
+| タグ         | `tag_id` → `tags`（1 ブロック 1 タグ）                             |
+| skip         | Plan の「やらなかった」マーカー（`skipped_at`）。未記録とは別状態  |
+| 重なり制約   | Plan 同士 / Record 同士は EXCLUDE で禁止。Plan × Record は許可     |
+
+---
+
+## コンポーネント構成
+
+```
+TimeblockInspector                    Inspector シェル（PC: FloatingPopover / Mobile: Drawer）
+└── TimeblockInspectorForm            Plan / Record 共有の編集フォーム
+    ├── TimeblockDestinationChip      保存先の表示（end 位置で自動切替、セレクタではない）
+    ├── TagRow / DateRow / TimeRow    入力 row（inspector/fields、他 feature からも再利用）
+    └── TimeConflictAlert             重なり警告
+
+TimeblockEditor                       インライン作成エディタ（タグパレット等から）
+TimeblockRecordActions                記録導線（ワンタップ「そのまま記録」/ ConfirmDayButton）
+TimeblockCard                         カレンダー表示カード（ドラッグゴースト等）
+```
+
+カレンダー側の 2 レーン描画は `features/calendar` の `TwoLaneTimeblockRenderer` +
+`PlanLaneCard` / `RecordLaneCard` が担う（Plan レーン = アウトライン、Record レーン = 塗り）。
+
+---
+
+## サーバー層
+
+| モジュール                          | 責務                                                           |
+| ----------------------------------- | -------------------------------------------------------------- |
+| `plans-router` / `plan-service`     | Plan CRUD、skip / unskip、ワンタップ記録、一括「この日を確定」 |
+| `records-router` / `record-service` | Record CRUD（`plan_id` 紐づけ / 予定外）                       |
+| `router-index`（statistics）        | 統計 procedure（`api.statistics.*`）。実体は TS service        |
+| `statistics-service`                | 実績 = records、予定 = plans、予実比較 = join の集計           |
+| `timeblock-overlap-service`         | 同レーン重なりの事前チェック                                   |
+
+---
+
+## 状態管理・Hooks
+
+| 対象                                           | 用途                                               |
+| ---------------------------------------------- | -------------------------------------------------- |
+| `useTimeblockInspectorStore`                   | Inspector 開閉、対象 id / kind（plan / record）    |
+| `useTimeblockWriteMutations`                   | Plan / Record の作成・更新・削除（楽観的更新付き） |
+| `useTimeblockRecordMutations`                  | ワンタップ記録 / この日を確定                      |
+| `useInspectorURLSync` / `useInspectorKeyboard` | URL 同期・キーボード操作                           |
+
+---
+
+## 過去 Plan の扱い（時間だけ凍結）
+
+- 予定時間の変更（移動・リサイズ）: 不可（差分データの信頼性を守る）
+- タイトル・タグ・メモの訂正: 可
+- 過去日付への新規 Plan 追加: 不可（実際にやったことは予定外の Record へ）
+- ワンタップ記録 / skip / 削除: 可
+
+詳細仕様は `docs/product/specs/plan-record.md` を参照。

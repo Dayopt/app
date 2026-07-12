@@ -63,7 +63,7 @@ export const userRouter = createTRPCRouter({
     }),
 
   /**
-   * 全ブロック（Plan / Log。互換用 Entry も含む）を削除
+   * 全ブロック（Plan / Record）を削除
    * タグ・設定は保持
    */
   deleteBlocks: protectedProcedure

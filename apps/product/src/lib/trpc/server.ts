@@ -13,7 +13,7 @@ import 'server-only';
  *
  * export default async function Page() {
  *   const helpers = await createServerHelpers()
- *   await helpers.entries.list.prefetch()
+ *   await helpers.records.list.prefetch()
  *
  *   return (
  *     <HydrationBoundary state={dehydrate(helpers.queryClient)}>

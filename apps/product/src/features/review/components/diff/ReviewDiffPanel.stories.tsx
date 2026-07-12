@@ -22,7 +22,7 @@ function item(overrides: Partial<ReviewDiffItem> = {}): ReviewDiffItem {
 
   return {
     id: 'shifted:entry-1',
-    entryId: 'entry-1',
+    timeblockId: 'entry-1',
     kind: 'shifted',
     title: 'Deep work',
     tagId: 'tag-work',
@@ -53,7 +53,7 @@ const diff: ReviewDiffResult = {
     item(),
     item({
       id: 'resized:entry-2',
-      entryId: 'entry-2',
+      timeblockId: 'entry-2',
       kind: 'resized',
       title: 'Planning',
       tagId: 'tag-admin',
@@ -71,7 +71,7 @@ const diff: ReviewDiffResult = {
     }),
     item({
       id: 'unplanned:entry-3',
-      entryId: 'entry-3',
+      timeblockId: 'entry-3',
       kind: 'unplanned',
       title: 'Unexpected call',
       tagId: 'tag-admin',
@@ -89,7 +89,7 @@ const diff: ReviewDiffResult = {
     }),
     item({
       id: 'missed:entry-4',
-      entryId: 'entry-4',
+      timeblockId: 'entry-4',
       kind: 'missed',
       title: 'Email batch',
       tagId: 'tag-admin',

@@ -182,7 +182,7 @@ const defaultHandlers = {
   onEntryClick: fn(),
   onEntryContextMenu: fn(),
   onUpdateEntry: fn(),
-  onDeleteEntry: fn(),
+  onDeleteTimeblock: fn(),
   onTimeRangeSelect: fn(),
   onViewChange: fn(),
   onNavigatePrev: fn(),
@@ -242,7 +242,7 @@ export const WithAllHandlers: Story = {
       <WeekView
         dateRange={weekRange}
         entries={mockPlans}
-        allEntries={[...mockPlans, overdueEntry]}
+        allTimeblocks={[...mockPlans, overdueEntry]}
         currentDate={today}
         {...defaultHandlers}
       />
@@ -306,7 +306,7 @@ export const SundayStart: Story = {
 
 /**
  * 期限切れエントリあり
- * allEntries に先週の未完了タスクを含めることで期限切れ表示を確認できる
+ * allTimeblocks に先週の未完了タスクを含めることで期限切れ表示を確認できる
  */
 export const WithOverdueEntry: Story = {
   render: () => (
@@ -314,7 +314,7 @@ export const WithOverdueEntry: Story = {
       <WeekView
         dateRange={weekRange}
         entries={mockPlans}
-        allEntries={[...mockPlans, overdueEntry]}
+        allTimeblocks={[...mockPlans, overdueEntry]}
         currentDate={today}
         {...defaultHandlers}
       />
@@ -330,7 +330,7 @@ export const AllPatterns: Story = {
         <WeekView
           dateRange={weekRange}
           entries={mockPlans}
-          allEntries={[...mockPlans, overdueEntry]}
+          allTimeblocks={[...mockPlans, overdueEntry]}
           currentDate={today}
           {...defaultHandlers}
         />

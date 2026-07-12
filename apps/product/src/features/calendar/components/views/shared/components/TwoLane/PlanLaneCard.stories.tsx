@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import type { PlanEvent, PlanEventStatus } from '@/features/entry';
+import type { PlanEvent, PlanEventStatus } from '@/features/timeblock';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 
@@ -72,7 +72,7 @@ export const Unrecorded: Story = {
   ),
 };
 
-/** 記録済み（logs あり）。Log レーンが主役になるため控えめに沈める。 */
+/** 記録済み（records あり）。Record レーンが主役になるため控えめに沈める。 */
 export const Recorded: Story = {
   render: () => (
     <Slot>

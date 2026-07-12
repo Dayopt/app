@@ -126,8 +126,8 @@
       "changeColor": "カラーを変更",
       "unread": "未読",
       "close": "閉じる",
-      "previousPlan": "前のエントリー",
-      "nextPlan": "次のエントリー",
+      "previousPlan": "前のタイムブロック",
+      "nextPlan": "次のタイムブロック",
       "options": "オプション",
       "selectAll": "すべて選択",
       "tagColor": "タグカラー",
@@ -259,10 +259,10 @@
       "pendingGenerationNoDate": "生成予定 ✦"
     },
     "createNew": {
-      "plan": "エントリーを作成",
+      "plan": "Plan を作成",
       "task": "タスクを作成",
       "tag": "タグを作成",
-      "defaultPlanTitle": "新しいエントリー"
+      "defaultPlanTitle": "新しい Plan"
     },
     "comingSoon": "近日公開",
     "userProfile": {

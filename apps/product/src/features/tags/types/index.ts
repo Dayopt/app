@@ -22,4 +22,4 @@ export interface TagTreeNode {
 }
 
 // タグ削除戦略
-export type TagDeleteStrategy = 'delete_entries' | 'reassign';
+export type TagDeleteStrategy = 'delete_blocks' | 'reassign';

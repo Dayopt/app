@@ -62,7 +62,7 @@ const CSV_COLUMNS = [
  * plans / logsをCSV文字列に変換
  * RFC 4180準拠: ダブルクォートでフィールドをエスケープ
  */
-function timeModelRowsToCsv(rows: Record<string, unknown>[]): string {
+function timeblockRowsToCsv(rows: Record<string, unknown>[]): string {
   const escapeCsvField = (value: unknown): string => {
     if (value == null) return '';
     const str = String(value);
@@ -119,17 +119,13 @@ function ExportSection() {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
-        exportData.data.entries = exportData.data.entries.filter((entry) => {
-          const entryDate = new Date(entry.start_time ?? entry.created_at ?? '');
-          return entryDate >= start && entryDate <= end;
-        });
         exportData.data.plans = exportData.data.plans.filter((plan) => {
           const planDate = new Date(plan.start_at);
           return planDate >= start && planDate <= end;
         });
-        exportData.data.logs = exportData.data.logs.filter((log) => {
-          const logDate = new Date(log.start_at);
-          return logDate >= start && logDate <= end;
+        exportData.data.records = exportData.data.records.filter((record) => {
+          const recordDate = new Date(record.start_at);
+          return recordDate >= start && recordDate <= end;
         });
       }
 
@@ -139,9 +135,9 @@ function ExportSection() {
       if (format === 'csv') {
         const csvRows = [
           ...exportData.data.plans.map((plan) => ({ ...plan, kind: 'plan' })),
-          ...exportData.data.logs.map((log) => ({ ...log, kind: 'log' })),
+          ...exportData.data.records.map((record) => ({ ...record, kind: 'record' })),
         ];
-        const csvContent = timeModelRowsToCsv(csvRows);
+        const csvContent = timeblockRowsToCsv(csvRows);
         blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
         mimeType = 'csv';
       } else {

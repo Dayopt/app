@@ -14,7 +14,7 @@ export type TimePLGranularity = 'day' | 'week' | 'month' | 'year';
 export type AccuracyStatus = 'excellent' | 'good' | 'fair' | 'poor';
 
 /** タグ別の予実データ（正規化された入力） */
-export interface TimePLTagEntry {
+export interface TimePLTagTimeblock {
   tagId: string;
   tagName: string;
   tagColor: TagColorName;
@@ -38,9 +38,9 @@ export interface TimePLInput {
   /** 可処分時間（起床〜就寝 × 日数、分） */
   availableMinutes: number;
   /** タグ別の予実データ */
-  tags: TimePLTagEntry[];
+  tags: TimePLTagTimeblock[];
   /** 前期間のタグ別データ（トレンド比較用） */
-  prevTags?: TimePLTagEntry[] | undefined;
+  prevTags?: TimePLTagTimeblock[] | undefined;
 }
 
 // ── Derived types（derivers の出力型）──

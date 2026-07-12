@@ -11,7 +11,7 @@ import {
   isCalendarViewPath,
   useCalendarNavigation,
 } from '@/features/calendar';
-import { useEntryInspectorStore } from '@/features/entry';
+import { useTimeblockInspectorStore } from '@/features/timeblock';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 const ContactDialog = dynamic(
@@ -30,12 +30,10 @@ const SettingsDialog = dynamic(
   { ssr: false },
 );
 
-// Step 8 cutover: plans / logs 対応の TimeModelInspector をマウントする。
-// 旧 EntryInspector（entries 用）は Step 9 で削除するまで休眠のまま残す。
-const TimeModelInspector = dynamic(
+const TimeblockInspector = dynamic(
   () =>
-    import('@/features/entry/components/time-model/TimeModelInspector').then((m) => ({
-      default: m.TimeModelInspector,
+    import('@/features/timeblock/components/editor/TimeblockInspector').then((m) => ({
+      default: m.TimeblockInspector,
     })),
   { ssr: false },
 );
@@ -56,8 +54,8 @@ export function GlobalOverlays() {
   const closeSheet = useShellStore.use.closeSheet();
   const contactOpen = activeSheet?.type === 'contact';
   const settingsOpen = activeSheet?.type === 'settings';
-  const isInspectorOpen = useEntryInspectorStore((s) => s.isOpen);
-  const closeInspector = useEntryInspectorStore((s) => s.closeInspector);
+  const isInspectorOpen = useTimeblockInspectorStore((s) => s.isOpen);
+  const closeInspector = useTimeblockInspectorStore((s) => s.closeInspector);
 
   // C4: モーダル（Settings/Contact）が開いたら Inspector を閉じる（排他制御）
   useEffect(() => {
@@ -102,7 +100,7 @@ export function GlobalOverlays() {
         }}
       />
       <SettingsDialog />
-      <TimeModelInspector onViewStats={handleViewStats} />
+      <TimeblockInspector onViewStats={handleViewStats} />
       <Toaster />
     </>
   );

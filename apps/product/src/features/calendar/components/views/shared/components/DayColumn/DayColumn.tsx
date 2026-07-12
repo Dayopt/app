@@ -11,15 +11,15 @@ import React, { memo, useMemo } from 'react';
 
 import type { DayColumnProps } from '../../../../../types/view.types';
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
-import { useEntryPosition } from '../../hooks/useEntryPosition';
+import { useTimeblockPosition } from '../../hooks/useTimeblockPosition';
 
-import { EntryCard, isNewEntry, useEntryInspectorStore } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
+import { TimeblockCard, isNewTimeblock, useTimeblockInspectorStore } from '@/features/timeblock';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { filterEntriesByDate, sortTimedEntries } from '../../../../../lib/layout';
+import { filterTimeblocksByDate, sortTimedTimeblocks } from '../../../../../lib/layout';
 
 export const DayColumn = memo<DayColumnProps>(function DayColumn({
   date,
@@ -34,25 +34,25 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
 }) {
   const t = useTranslations('common.aria');
   const { getTagById } = useTagsMap();
-  const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
+  const setAnchorRect = useTimeblockInspectorStore((state) => state.setAnchorRect);
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const format = useFormatter();
   const timezone = useUserPreferences((state) => state.timezone);
 
   // この日のエントリをフィルタリング
   const dayEntries = useMemo(() => {
-    // CalendarEventをTimedEntryに変換
+    // CalendarEventをTimedTimeblockに変換
     const timedEntries = events.map((entry) => ({
       ...entry,
       start: entry.startDate || new Date(),
       end: entry.endDate || new Date(),
     }));
-    const filtered = filterEntriesByDate(timedEntries, date);
-    return sortTimedEntries(filtered);
+    const filtered = filterTimeblocksByDate(timedEntries, date);
+    return sortTimedTimeblocks(filtered);
   }, [events, date]);
 
   // エントリの位置を計算
-  const entryPositions = useEntryPosition(dayEntries, { hourHeight });
+  const timeblockPositions = useTimeblockPosition(dayEntries, { hourHeight });
 
   // グリッド高さ
   const columnHeight = 24 * hourHeight;
@@ -100,11 +100,11 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
 
         {/* エントリ */}
         {dayEntries.map((entry) => {
-          const position = entryPositions.get(entry.id);
+          const position = timeblockPositions.get(entry.id);
           // positionが見つからない場合は、デフォルト位置を使用してレンダリング
 
           return (
-            <EntryCard
+            <TimeblockCard
               key={entry.id}
               entry={entry}
               tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
@@ -112,11 +112,11 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
               tagIcon={entry.tagId ? (getTagById(entry.tagId)?.icon ?? null) : null}
               onAnchorRect={setAnchorRect}
               isMobile={isMobile}
-              position={position} // undefinedでも大丈夫（EntryCard側で対応済み）
+              position={position} // undefinedでも大丈夫（TimeblockCard側で対応済み）
               hourHeight={hourHeight}
               onClick={onEventClick}
               onContextMenu={onEventContextMenu}
-              className={isNewEntry(entry.id) ? 'animate-entry-pop' : undefined}
+              className={isNewTimeblock(entry.id) ? 'animate-entry-pop' : undefined}
             />
           );
         })}

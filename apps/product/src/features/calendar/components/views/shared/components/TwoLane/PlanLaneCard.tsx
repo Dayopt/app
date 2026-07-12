@@ -1,7 +1,7 @@
 /**
  * Plan レーン用カード（overview.md §4: アウトライン・淡色、控えめ）。
  *
- * `EntryCard.tsx` のトークン使用（タグカラー、色分けロジック）を踏襲するが、
+ * `TimeblockCard.tsx` のトークン使用（タグカラー、色分けロジック）を踏襲するが、
  * DnD・overlay 計算・gap クリック導線は Step 6 の対象のため持ち込まない
  * （read 側専用の軽量プレゼンテーショナルコンポーネント）。
  */
@@ -11,8 +11,8 @@ import type React from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import type { PlanEvent } from '@/features/entry';
 import { getTagColorClasses } from '@/features/tags';
+import type { PlanEvent } from '@/features/timeblock';
 import { cn } from '@dayopt/components';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
@@ -46,7 +46,7 @@ function formatTimeRange(start: Date, end: Date): string {
   return `${pad(start.getHours())}:${pad(start.getMinutes())}–${pad(end.getHours())}:${pad(end.getMinutes())}`;
 }
 
-/** skip 済み plan の斜線ハッチング背景。EntryCard の skip 表現を踏襲。 */
+/** skip 済み plan の斜線ハッチング背景。TimeblockCard の skip 表現を踏襲。 */
 function skippedHatchImage(accentColor: string): string {
   return `repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in oklch, ${accentColor} 38%, transparent) 5px 7px)`;
 }
@@ -83,7 +83,7 @@ export function PlanLaneCard({
       data-entry-block="true"
       tabIndex={0}
       role="button"
-      aria-label={event.title || t('entry.untitled')}
+      aria-label={event.title || t('timeblock.untitled')}
       className={cn(
         'absolute overflow-hidden rounded-lg border-2 px-2 py-1 text-xs',
         borderClass,
@@ -121,7 +121,7 @@ export function PlanLaneCard({
         }
       }}
     >
-      <p className="truncate font-medium">{event.title || t('entry.untitled')}</p>
+      <p className="truncate font-medium">{event.title || t('timeblock.untitled')}</p>
       {showDetails && (
         <p className="text-muted-foreground truncate">
           {formatTimeRange(event.displayStartDate, event.displayEndDate)}

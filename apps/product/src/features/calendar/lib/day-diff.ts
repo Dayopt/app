@@ -8,7 +8,7 @@ type CalendarDayDiffKind = 'unplanned' | 'missed' | 'shifted' | 'resized';
 
 interface CalendarDayDiffItem {
   id: string;
-  entryId: string;
+  timeblockId: string;
   kind: CalendarDayDiffKind;
   title: string;
   tagId: string | null;
@@ -36,7 +36,7 @@ interface CalendarDayDiffSummary {
 interface CalendarDayDiffResult {
   summary: CalendarDayDiffSummary;
   items: CalendarDayDiffItem[];
-  entryIds: ReadonlySet<string>;
+  timeblockIds: ReadonlySet<string>;
 }
 
 interface CalendarDayDiffOptions {
@@ -58,7 +58,7 @@ const EMPTY_RESULT: CalendarDayDiffResult = {
     missedMinutes: 0,
   },
   items: [],
-  entryIds: new Set<string>(),
+  timeblockIds: new Set<string>(),
 };
 
 function diffMinutes(start: Date | null | undefined, end: Date | null | undefined): number {
@@ -164,7 +164,7 @@ function makeItem(
 
   return {
     id: `${kind}:${entry.id}`,
-    entryId: entry.id,
+    timeblockId: entry.id,
     kind,
     title: entry.title,
     tagId: entry.tagId ?? null,
@@ -248,7 +248,7 @@ export function computeCalendarDayDiffs(
 
   items.sort((a, b) => a.sortTime - b.sortTime || a.title.localeCompare(b.title));
 
-  const entryIds = new Set(items.map((item) => item.entryId));
+  const timeblockIds = new Set(items.map((item) => item.timeblockId));
 
   return {
     summary: {
@@ -259,6 +259,6 @@ export function computeCalendarDayDiffs(
       missedMinutes,
     },
     items,
-    entryIds,
+    timeblockIds,
   };
 }

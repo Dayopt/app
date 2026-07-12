@@ -64,7 +64,7 @@ export function useReviewMetrics(
   t: (key: string) => string,
   pageData: StatsPageData | undefined,
 ): UseStatsMetricsResult {
-  const streakQuery = api.entries.getStreak.useQuery();
+  const streakQuery = api.statistics.getStreak.useQuery();
 
   const isLoading = !pageData;
 
@@ -92,8 +92,8 @@ export function useReviewMetrics(
       trend: computeTrend(cur.totalMinutes, prev.totalMinutes, 'up'),
     };
 
-    map.entryRate = {
-      id: 'entryRate',
+    map.planRate = {
+      id: 'planRate',
       value: cur.planRate,
       trend: computeTrend(cur.planRate, prev.planRate, 'up'),
     };

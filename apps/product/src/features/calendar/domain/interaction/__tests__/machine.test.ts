@@ -10,12 +10,12 @@ import {
   snapToGrid,
 } from '../machine';
 import type {
-  EntryRect,
   InteractionAction,
   InteractionContext,
   InteractionResult,
   InteractionState,
   Point,
+  TimeblockRect,
 } from '../types';
 
 // ========================================
@@ -27,7 +27,7 @@ function createCtx(overrides?: Partial<InteractionContext>): InteractionContext 
     hourHeight: 60,
     date: new Date('2026-01-15T00:00:00'),
     viewMode: 'day',
-    getEntryDurationMs: () => 60 * 60 * 1000, // 1 hour
+    getTimeblockDurationMs: () => 60 * 60 * 1000, // 1 hour
     checkOverlap: () => false,
     ...overrides,
   };
@@ -42,7 +42,7 @@ function dispatch(
 }
 
 const origin: Point = { clientX: 100, clientY: 200 };
-const rect: EntryRect = { top: 540, left: 0, width: 200, height: 60 }; // 9:00 at 60px/h
+const rect: TimeblockRect = { top: 540, left: 0, width: 200, height: 60 }; // 9:00 at 60px/h
 
 // ========================================
 // snapToGrid
@@ -96,7 +96,7 @@ describe('POINTER_DOWN', () => {
   it('idle → pending', () => {
     const { state, effects } = dispatch(IDLE, {
       type: 'POINTER_DOWN',
-      entryId: 'a',
+      timeblockId: 'a',
       point: origin,
       originalPosition: rect,
       dateIndex: 0,
@@ -104,7 +104,7 @@ describe('POINTER_DOWN', () => {
 
     expect(state.mode).toBe('pending');
     if (state.mode === 'pending') {
-      expect(state.entryId).toBe('a');
+      expect(state.timeblockId).toBe('a');
       expect(state.startPoint).toEqual(origin);
       expect(state.originalPosition).toEqual(rect);
       expect(state.dateIndex).toBe(0);
@@ -115,21 +115,21 @@ describe('POINTER_DOWN', () => {
   it('ignores POINTER_DOWN when not idle', () => {
     const pendingState: InteractionState = {
       mode: 'pending',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       originalPosition: rect,
       dateIndex: 0,
     };
     const { state } = dispatch(pendingState, {
       type: 'POINTER_DOWN',
-      entryId: 'b',
+      timeblockId: 'b',
       point: { clientX: 0, clientY: 0 },
       originalPosition: rect,
       dateIndex: 0,
     });
     expect(state.mode).toBe('pending');
     if (state.mode === 'pending') {
-      expect(state.entryId).toBe('a'); // unchanged
+      expect(state.timeblockId).toBe('a'); // unchanged
     }
   });
 });
@@ -142,7 +142,7 @@ describe('TOUCH_START', () => {
   it('idle → longpress-pending with timer effect', () => {
     const { state, effects } = dispatch(IDLE, {
       type: 'TOUCH_START',
-      entryId: 'a',
+      timeblockId: 'a',
       point: origin,
       originalPosition: rect,
       dateIndex: 0,
@@ -163,7 +163,7 @@ describe('TOUCH_START', () => {
 describe('LONGPRESS_FIRED', () => {
   const longpressState: InteractionState = {
     mode: 'longpress-pending',
-    entryId: 'a',
+    timeblockId: 'a',
     startPoint: origin,
     originalPosition: rect,
     dateIndex: 0,
@@ -174,7 +174,7 @@ describe('LONGPRESS_FIRED', () => {
 
     expect(state.mode).toBe('dragging');
     if (state.mode === 'dragging') {
-      expect(state.entryId).toBe('a');
+      expect(state.timeblockId).toBe('a');
       expect(state.targetDateIndex).toBe(0);
       expect(state.isOverlapping).toBe(false);
       // snappedTop should match original position (540 = 9:00)
@@ -185,7 +185,7 @@ describe('LONGPRESS_FIRED', () => {
     expect(effects).toContainEqual({ type: 'HAPTIC', pattern: 'impact' });
     expect(effects).toContainEqual({
       type: 'DRAG_STORE_START',
-      entryId: 'a',
+      timeblockId: 'a',
       dateIndex: 0,
     });
   });
@@ -194,14 +194,14 @@ describe('LONGPRESS_FIRED', () => {
     const { state } = dispatch(
       {
         mode: 'longpress-pending',
-        entryId: 'a',
+        timeblockId: 'a',
         startPoint: origin,
         originalPosition: { top: 607, left: 0, width: 200, height: 60 },
         dateIndex: 0,
       },
       { type: 'LONGPRESS_FIRED' },
       createCtx({
-        checkOverlap: (_entryId, start, end) =>
+        checkOverlap: (_timeblockId, start, end) =>
           start.getHours() === 10 && start.getMinutes() === 0 && end.getHours() === 11,
       }),
     );
@@ -225,7 +225,7 @@ describe('LONGPRESS_FIRED', () => {
 describe('POINTER_MOVE from pending', () => {
   const pendingState: InteractionState = {
     mode: 'pending',
-    entryId: 'a',
+    timeblockId: 'a',
     startPoint: origin,
     originalPosition: rect,
     dateIndex: 0,
@@ -251,7 +251,7 @@ describe('POINTER_MOVE from pending', () => {
 
     expect(state.mode).toBe('dragging');
     if (state.mode === 'dragging') {
-      expect(state.entryId).toBe('a');
+      expect(state.timeblockId).toBe('a');
       expect(state.currentPoint).toEqual(movedPoint);
       expect(state.previewTime.start).toBeInstanceOf(Date);
     }
@@ -281,7 +281,7 @@ describe('POINTER_UP from pending (click)', () => {
   it('returns to idle with EVENT_CLICK effect', () => {
     const pendingState: InteractionState = {
       mode: 'pending',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       originalPosition: rect,
       dateIndex: 0,
@@ -289,7 +289,7 @@ describe('POINTER_UP from pending (click)', () => {
     const { state, effects } = dispatch(pendingState, { type: 'POINTER_UP' });
 
     expect(state.mode).toBe('idle');
-    expect(effects).toContainEqual({ type: 'EVENT_CLICK', entryId: 'a' });
+    expect(effects).toContainEqual({ type: 'EVENT_CLICK', timeblockId: 'a' });
   });
 });
 
@@ -300,7 +300,7 @@ describe('POINTER_UP from pending (click)', () => {
 describe('POINTER_MOVE from longpress-pending', () => {
   const longpressState: InteractionState = {
     mode: 'longpress-pending',
-    entryId: 'a',
+    timeblockId: 'a',
     startPoint: origin,
     originalPosition: rect,
     dateIndex: 0,
@@ -341,7 +341,7 @@ describe('POINTER_UP from longpress-pending (quick tap → click)', () => {
   it('fires EVENT_CLICK and clears timer', () => {
     const longpressState: InteractionState = {
       mode: 'longpress-pending',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       originalPosition: rect,
       dateIndex: 0,
@@ -350,7 +350,7 @@ describe('POINTER_UP from longpress-pending (quick tap → click)', () => {
 
     expect(state.mode).toBe('idle');
     expect(effects).toContainEqual({ type: 'CLEAR_LONGPRESS_TIMER' });
-    expect(effects).toContainEqual({ type: 'EVENT_CLICK', entryId: 'a' });
+    expect(effects).toContainEqual({ type: 'EVENT_CLICK', timeblockId: 'a' });
   });
 });
 
@@ -361,7 +361,7 @@ describe('POINTER_UP from longpress-pending (quick tap → click)', () => {
 describe('POINTER_MOVE while dragging', () => {
   const draggingState: InteractionState = {
     mode: 'dragging',
-    entryId: 'a',
+    timeblockId: 'a',
     startPoint: origin,
     currentPoint: origin,
     originalPosition: rect, // top: 540 = 9:00
@@ -439,7 +439,7 @@ describe('POINTER_UP while dragging', () => {
   it('emits DROP effect when no overlap', () => {
     const draggingState: InteractionState = {
       mode: 'dragging',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       currentPoint: { clientX: origin.clientX, clientY: origin.clientY + 60 },
       originalPosition: rect,
@@ -460,7 +460,7 @@ describe('POINTER_UP while dragging', () => {
     expect(effects).toContainEqual(
       expect.objectContaining({
         type: 'DROP',
-        entryId: 'a',
+        timeblockId: 'a',
         targetDateIndex: 1,
       }),
     );
@@ -473,7 +473,7 @@ describe('POINTER_UP while dragging', () => {
   it('emits DROP_REJECTED and HAPTIC error when overlapping', () => {
     const draggingState: InteractionState = {
       mode: 'dragging',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       currentPoint: origin,
       originalPosition: rect,
@@ -506,7 +506,7 @@ describe('RESIZE_START', () => {
   it('idle → resizing with correct preview time', () => {
     const { state, effects } = dispatch(IDLE, {
       type: 'RESIZE_START',
-      entryId: 'a',
+      timeblockId: 'a',
       direction: 'bottom',
       point: origin,
       originalPosition: rect, // top: 540 (9:00), height: 60 (1h)
@@ -514,7 +514,7 @@ describe('RESIZE_START', () => {
 
     expect(state.mode).toBe('resizing');
     if (state.mode === 'resizing') {
-      expect(state.entryId).toBe('a');
+      expect(state.timeblockId).toBe('a');
       expect(state.direction).toBe('bottom');
       expect(state.snappedHeight).toBe(60);
       expect(state.previewTime.start.getHours()).toBe(9);
@@ -529,13 +529,13 @@ describe('RESIZE_START', () => {
       IDLE,
       {
         type: 'RESIZE_START',
-        entryId: 'a',
+        timeblockId: 'a',
         direction: 'bottom',
         point: origin,
         originalPosition: { top: 607, left: 0, width: 200, height: 60 },
       },
       createCtx({
-        checkOverlap: (_entryId, start, end) =>
+        checkOverlap: (_timeblockId, start, end) =>
           start.getHours() === 10 && start.getMinutes() === 0 && end.getHours() === 11,
       }),
     );
@@ -551,13 +551,13 @@ describe('RESIZE_START', () => {
       IDLE,
       {
         type: 'RESIZE_START',
-        entryId: 'a',
+        timeblockId: 'a',
         direction: 'bottom',
         point: origin,
         originalPosition: { top: 608, left: 0, width: 200, height: 8 },
       },
       createCtx({
-        checkOverlap: (_entryId, start, end) => end.getTime() <= start.getTime(),
+        checkOverlap: (_timeblockId, start, end) => end.getTime() <= start.getTime(),
       }),
     );
 
@@ -581,7 +581,7 @@ describe('RESIZE_START', () => {
 describe('POINTER_MOVE while resizing', () => {
   const resizingState: InteractionState = {
     mode: 'resizing',
-    entryId: 'a',
+    timeblockId: 'a',
     startPoint: origin,
     currentPoint: origin,
     originalPosition: rect, // top: 540, height: 60
@@ -640,7 +640,7 @@ describe('POINTER_UP while resizing', () => {
   it('emits RESIZE_COMPLETE when no overlap', () => {
     const resizingState: InteractionState = {
       mode: 'resizing',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       currentPoint: { clientX: origin.clientX, clientY: origin.clientY + 30 },
       originalPosition: rect,
@@ -657,14 +657,14 @@ describe('POINTER_UP while resizing', () => {
 
     expect(state.mode).toBe('idle');
     expect(effects).toContainEqual(
-      expect.objectContaining({ type: 'RESIZE_COMPLETE', entryId: 'a' }),
+      expect.objectContaining({ type: 'RESIZE_COMPLETE', timeblockId: 'a' }),
     );
   });
 
   it('emits RESIZE_REJECTED when overlapping', () => {
     const resizingState: InteractionState = {
       mode: 'resizing',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       currentPoint: origin,
       originalPosition: rect,
@@ -693,12 +693,12 @@ describe('POINTER_UP while resizing', () => {
 
 describe('precision regression: drag/resize snaps off-grid times to the absolute grid', () => {
   // 10:07 entry を表す originalPosition: top=607（hourHeight=60 で 10*60+7=607）
-  const off607: EntryRect = { top: 607, left: 0, width: 200, height: 60 };
+  const off607: TimeblockRect = { top: 607, left: 0, width: 200, height: 60 };
 
   it('LONGPRESS_FIRED on 10:07 entry → preview start snaps to 10:00', () => {
     const longpressState: InteractionState = {
       mode: 'longpress-pending',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       originalPosition: off607,
       dateIndex: 0,
@@ -716,7 +716,7 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
   it('drag 10:07 → +30px → 10:30', () => {
     const draggingState: InteractionState = {
       mode: 'dragging',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       currentPoint: origin,
       originalPosition: off607,
@@ -742,7 +742,7 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
   it('drag 10:07 → +7px → 10:15', () => {
     const draggingState: InteractionState = {
       mode: 'dragging',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       currentPoint: origin,
       originalPosition: off607,
@@ -765,10 +765,10 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
   });
 
   it('5分snap設定では15:13 entryをdragすると15:15へ揃える', () => {
-    const off913: EntryRect = { top: 913, left: 0, width: 200, height: 60 };
+    const off913: TimeblockRect = { top: 913, left: 0, width: 200, height: 60 };
     const draggingState: InteractionState = {
       mode: 'dragging',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       currentPoint: origin,
       originalPosition: off913,
@@ -797,10 +797,10 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
   });
 
   it('5分snap設定ではdrag時にoff-grid durationも丸めて終了時刻をグリッドへ揃える', () => {
-    const off913: EntryRect = { top: 913, left: 0, width: 200, height: 47 };
+    const off913: TimeblockRect = { top: 913, left: 0, width: 200, height: 47 };
     const draggingState: InteractionState = {
       mode: 'dragging',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       currentPoint: origin,
       originalPosition: off913,
@@ -818,7 +818,7 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
       { type: 'POINTER_MOVE', point: origin },
       createCtx({
         snapIntervalMinutes: 5,
-        getEntryDurationMs: () => 47 * 60 * 1000,
+        getTimeblockDurationMs: () => 47 * 60 * 1000,
       }),
     );
 
@@ -833,10 +833,10 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
   });
 
   it('drag時は終了境界もsnapし、48分entryを不要に50分へ伸ばさない', () => {
-    const off913: EntryRect = { top: 913, left: 0, width: 200, height: 48 };
+    const off913: TimeblockRect = { top: 913, left: 0, width: 200, height: 48 };
     const draggingState: InteractionState = {
       mode: 'dragging',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       currentPoint: origin,
       originalPosition: off913,
@@ -854,7 +854,7 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
       { type: 'POINTER_MOVE', point: origin },
       createCtx({
         snapIntervalMinutes: 5,
-        getEntryDurationMs: () => 48 * 60 * 1000,
+        getTimeblockDurationMs: () => 48 * 60 * 1000,
       }),
     );
 
@@ -871,7 +871,7 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
   it('RESIZE_START on 10:07 entry → preview range snaps to 10:00-11:00', () => {
     const { state } = dispatch(IDLE, {
       type: 'RESIZE_START',
-      entryId: 'a',
+      timeblockId: 'a',
       direction: 'bottom',
       point: origin,
       originalPosition: off607,
@@ -888,7 +888,7 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
   it('resize 10:07-11:07 entry を +15px → 10:00-11:15', () => {
     const resizingState: InteractionState = {
       mode: 'resizing',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       currentPoint: origin,
       originalPosition: off607,
@@ -921,7 +921,7 @@ describe('day-end boundary regression', () => {
   it('dragging a 1-hour entry to 23:00 keeps the end at next-day 00:00', () => {
     const draggingState: InteractionState = {
       mode: 'dragging',
-      entryId: 'a',
+      timeblockId: 'a',
       startPoint: origin,
       currentPoint: origin,
       originalPosition: { top: 1320, left: 0, width: 200, height: 60 },
@@ -953,7 +953,7 @@ describe('day-end boundary regression', () => {
   it('RESIZE_START supports a 23:00-24:00 range instead of collapsing to one interval', () => {
     const { state } = dispatch(IDLE, {
       type: 'RESIZE_START',
-      entryId: 'a',
+      timeblockId: 'a',
       direction: 'bottom',
       point: origin,
       originalPosition: { top: 1380, left: 0, width: 200, height: 60 },
@@ -1154,21 +1154,21 @@ describe('CANCEL', () => {
     const states: InteractionState[] = [
       {
         mode: 'pending',
-        entryId: 'a',
+        timeblockId: 'a',
         startPoint: origin,
         originalPosition: rect,
         dateIndex: 0,
       },
       {
         mode: 'longpress-pending',
-        entryId: 'a',
+        timeblockId: 'a',
         startPoint: origin,
         originalPosition: rect,
         dateIndex: 0,
       },
       {
         mode: 'dragging',
-        entryId: 'a',
+        timeblockId: 'a',
         startPoint: origin,
         currentPoint: origin,
         originalPosition: rect,
@@ -1193,7 +1193,7 @@ describe('CANCEL', () => {
     const { effects } = dispatch(
       {
         mode: 'longpress-pending',
-        entryId: 'a',
+        timeblockId: 'a',
         startPoint: origin,
         originalPosition: rect,
         dateIndex: 0,
@@ -1207,7 +1207,7 @@ describe('CANCEL', () => {
     const { effects } = dispatch(
       {
         mode: 'dragging',
-        entryId: 'a',
+        timeblockId: 'a',
         startPoint: origin,
         currentPoint: origin,
         originalPosition: rect,
@@ -1227,18 +1227,18 @@ describe('CANCEL', () => {
 });
 
 // ========================================
-// Context: getEntryDurationMs
+// Context: getTimeblockDurationMs
 // ========================================
 
 describe('Custom entry duration', () => {
-  it('uses getEntryDurationMs for 30-minute event', () => {
+  it('uses getTimeblockDurationMs for 30-minute event', () => {
     const ctx = createCtx({
-      getEntryDurationMs: () => 30 * 60 * 1000, // 30 min
+      getTimeblockDurationMs: () => 30 * 60 * 1000, // 30 min
     });
 
     const pendingState: InteractionState = {
       mode: 'pending',
-      entryId: 'short',
+      timeblockId: 'short',
       startPoint: origin,
       originalPosition: { ...rect, top: 540 }, // 9:00
       dateIndex: 0,

@@ -226,9 +226,9 @@
       "showWeekends": "Show weekends",
       "showWeekNumbers": "Show week numbers",
       "defaultTaskSettings": "Creation Defaults",
-      "defaultTaskSettingsDesc": "Default behavior when creating new entries",
+      "defaultTaskSettingsDesc": "Default behavior when creating new timeblocks",
       "defaultDuration": "Default duration",
-      "defaultDurationDesc": "Default duration when creating new entries",
+      "defaultDurationDesc": "Default duration when creating new timeblocks",
       "selectDuration": "Select duration",
       "duration15min": "15 minutes",
       "duration30min": "30 minutes",
@@ -289,7 +289,7 @@
       "startupScreenDesc": "Choose which screen to show when opening the app",
       "selectStartupScreen": "Select startup screen",
       "startupLast": "Continue where you left off",
-      "startupPlan": "Entry",
+      "startupPlan": "Plan",
       "startupCalendar": "Calendar"
     },
     "common": {
@@ -351,7 +351,7 @@
         "csvComingSoon": "Coming soon",
         "includedDataTitle": "Data included in export",
         "profileInfo": "Profile information",
-        "tasksEvents": "Entries",
+        "tasksEvents": "Timeblocks",
         "tagSettings": "Tag settings",
         "calendarSettings": "Calendar settings",
         "otherSettings": "Other settings"
@@ -388,12 +388,12 @@
       "deletion": {
         "title": "Data Deletion",
         "deleteBlocks": "Delete all blocks",
-        "deleteBlocksDesc": "Remove all entries. Tags and settings are kept.",
+        "deleteBlocksDesc": "Remove all timeblocks. Tags and settings are kept.",
         "deleteAllData": "Delete all data",
         "deleteAllDataDesc": "Remove all data including tags and settings. Your account remains active.",
         "confirmTitle": "Are you sure?",
-        "confirmDeleteBlocks": "This will permanently delete all your entries. Tags and settings will be preserved.",
-        "confirmDeleteAll": "This will permanently delete all your data. Your account will remain but all entries, tags, and settings will be removed.",
+        "confirmDeleteBlocks": "This will permanently delete all your timeblocks. Tags and settings will be preserved.",
+        "confirmDeleteAll": "This will permanently delete all your data. Your account will remain but all timeblocks, tags, and settings will be removed.",
         "typeToConfirm": "Type \"{keyword}\" to confirm",
         "confirmKeyword": "DELETE",
         "deleting": "Deleting..."

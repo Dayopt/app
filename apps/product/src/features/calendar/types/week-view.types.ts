@@ -13,16 +13,16 @@ export interface WeekGridProps {
   weekDates: Date[];
   events: CalendarEvent[];
   /** 全エントリ（期限切れ未完了表示用） */
-  allEntries?: CalendarEvent[] | undefined;
+  allTimeblocks?: CalendarEvent[] | undefined;
   eventsByDate: Record<string, CalendarEvent[]>;
   todayIndex: number;
-  /** DnDを無効化するエントリID（Inspector表示中のエントリなど） */
-  disabledEntryId?: string | null | undefined;
+  /** DnDを無効化するTimeblock ID（Inspector表示中のTimeblock など） */
+  disabledTimeblockId?: string | null | undefined;
   onEventClick?: ((entry: CalendarEvent) => void) | undefined;
   onEventContextMenu?: ((entry: CalendarEvent, mouseEvent: React.MouseEvent) => void) | undefined;
   onEventUpdate?:
     | ((
-        entryIdOrEntry: string | CalendarEvent,
+        timeblockIdOrTimeblock: string | CalendarEvent,
         updates?: {
           startTime: Date;
           endTime: Date;
@@ -45,7 +45,7 @@ export interface UseWeekViewOptions {
   timezone: string;
   weekStartsOn?: 0 | 1 | 6;
   onEventUpdate?: (
-    entryIdOrEntry: string | CalendarEvent,
+    timeblockIdOrTimeblock: string | CalendarEvent,
     updates?: {
       startTime: Date;
       endTime: Date;
@@ -63,7 +63,7 @@ export interface UseWeekViewReturn {
   isCurrentWeek: boolean;
 }
 
-/** useWeekEntries フックのオプション */
+/** useWeekTimeblocks フックのオプション */
 export interface UseWeekEntriesOptions {
   weekDates: Date[];
   events: CalendarEvent[];
@@ -71,10 +71,10 @@ export interface UseWeekEntriesOptions {
   timezone: string;
 }
 
-/** useWeekEntries フックの戻り値 */
+/** useWeekTimeblocks フックの戻り値 */
 export interface UseWeekEntriesReturn {
   entriesByDate: Record<string, CalendarEvent[]>;
-  entryPositions: WeekEntryPosition[];
+  timeblockPositions: WeekEntryPosition[];
   maxConcurrentEntries: number;
 }
 

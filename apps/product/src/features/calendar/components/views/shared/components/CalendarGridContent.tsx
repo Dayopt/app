@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 
 import { isSameDay } from 'date-fns';
 
-import { EntryCard, useTimeModelRecordMutations } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
+import { TimeblockCard, useTimeblockRecordMutations } from '@/features/timeblock';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@dayopt/components';
@@ -13,56 +13,18 @@ import { cn } from '@dayopt/components';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { calculateTwoLaneStylesForCalendarEvents } from '../../../../lib/two-lane-layout';
-import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import type { DateTimeSelection } from './CalendarDragSelection';
 import { CalendarDragSelection } from './CalendarDragSelection';
-import { DraftEntryBlock } from './DraftEntryBlock';
-import { EntryRenderer } from './EntryRenderer';
+import { DraftTimeblock } from './DraftTimeblock';
 import { InlineTagPalette } from './InlineTagPalette';
-import { TwoLaneEntryRenderer } from './TwoLaneEntryRenderer';
-
-// Step 8 cutover: 2レーン描画へ切り替える。旧単一レーン（EntryRenderer）は
-// Step 9 の削除まで分岐の下に残す。
-const USE_TWO_LANE = true;
+import { TwoLaneTimeblockRenderer } from './TwoLaneTimeblockRenderer';
 
 // ========================================
 // Types
 // ========================================
-
-export function minutesToSelection(
-  date: Date,
-  startMinutes: number,
-  endMinutes: number,
-  creationSource?: DateTimeSelection['creationSource'],
-): DateTimeSelection {
-  const normalizedStart = Math.max(0, Math.min(startMinutes, 24 * 60 - 1));
-  const normalizedEnd = Math.max(normalizedStart + 1, Math.min(endMinutes, 24 * 60 - 1));
-  return {
-    date,
-    startHour: Math.floor(normalizedStart / 60),
-    startMinute: normalizedStart % 60,
-    endHour: Math.floor(normalizedEnd / 60),
-    endMinute: normalizedEnd % 60,
-    ...(creationSource ? { creationSource } : {}),
-  };
-}
-
-function minutesToDate(date: Date, minutes: number): Date {
-  const normalizedMinutes = Math.max(0, Math.min(minutes, 24 * 60 - 1));
-  const result = new Date(date);
-  result.setHours(Math.floor(normalizedMinutes / 60), normalizedMinutes % 60, 0, 0);
-  return result;
-}
-
-export function getGhostEntryHeight(style: React.CSSProperties | undefined): number {
-  const rawHeight = style?.height;
-  const height =
-    typeof rawHeight === 'number' ? rawHeight : parseFloat(rawHeight?.toString() ?? '');
-  return Number.isFinite(height) && height > 0 ? height : 20;
-}
 
 function shiftOptionalDate(
   date: Date | null | undefined,
@@ -116,8 +78,6 @@ interface CalendarGridContentProps {
   date: Date;
   /** 表示するエントリ一覧 */
   entries: CalendarEvent[];
-  /** 計算済みのエントリスタイル（position/size） */
-  entryStyles: Record<string, React.CSSProperties>;
   /** ビューモード（useInteraction に渡す） */
   viewMode?: 'day' | '3day' | '5day' | 'week';
   /** この列の日付インデックス（DayView=0, Week/MultiDay=列番号） */
@@ -143,10 +103,8 @@ interface CalendarGridContentProps {
     | undefined;
   /** 時間範囲選択 */
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
-  /** DnDを無効化するエントリID */
-  disabledEntryId?: string | null | undefined;
-  /** compare の差分 marker を表示する */
-  showActualDiff?: boolean | undefined;
+  /** DnDを無効化するTimeblock ID */
+  disabledTimeblockId?: string | null | undefined;
   /** compare Rail に出ている entry の ID 一覧 */
   dayDiffEntryIds?: ReadonlySet<string> | undefined;
   className?: string | undefined;
@@ -160,7 +118,6 @@ interface CalendarGridContentProps {
 export const CalendarGridContent = React.memo(function CalendarGridContent({
   date,
   entries,
-  entryStyles,
   viewMode = 'day',
   dayIndex,
   allEventsForOverlapCheck,
@@ -169,18 +126,16 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   onEntryContextMenu,
   onEventUpdate,
   onTimeRangeSelect,
-  disabledEntryId,
-  showActualDiff = false,
+  disabledTimeblockId,
   dayDiffEntryIds,
   className,
 }: CalendarGridContentProps) {
-  const [gapCreationCutoffMs] = useState(() => Date.now());
   const { getTagById } = useTagsMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
-  const { recordPlan } = useTimeModelRecordMutations();
+  const { recordPlan } = useTimeblockRecordMutations();
 
   // Tag タップで開いている draft entry（同日のときだけ block を描画）
   const tagDraft = useTagDraftStore((s) => s.draft);
@@ -204,16 +159,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     [onEventUpdate],
   );
 
-  // 自カラムに関係するドラッグ状態のみ購読（プリミティブ値で参照安定性を確保）
-  const globalDraggedEntryId = useCalendarDragStore((s) =>
-    s.isDragging && (s.originalDateIndex === dayIndex || s.targetDateIndex === dayIndex)
-      ? s.draggedEntryId
-      : null,
-  );
-  const isSourceColumnMovingAway = useCalendarDragStore(
-    (s) => s.isDragging && s.originalDateIndex === dayIndex && s.targetDateIndex !== dayIndex,
-  );
-
   // 統合インタラクション（drag/resize/click）
   const { state, handlers } = useInteraction({
     date,
@@ -226,11 +171,11 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     onPlanRecord: (planId) => recordPlan.mutate({ id: planId }),
     ...(onEventUpdate ? { onEventUpdate: wrappedOnEventUpdate } : {}),
     ...(onEntryClick ? { onEventClick: onEntryClick } : {}),
-    ...(disabledEntryId != null
+    ...(disabledTimeblockId != null
       ? {
-          disabledPlanId: disabledEntryId,
+          disabledPlanId: disabledTimeblockId,
           // Mobile では Inspector 開いている entry も resize 可（PC は Phase 1 と同じ block 維持）
-          resizeDisabledPlanId: isMobile ? null : disabledEntryId,
+          resizeDisabledPlanId: isMobile ? null : disabledTimeblockId,
         }
       : {}),
   });
@@ -247,16 +192,20 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   // ドラッグゴースト描画コールバック
   const renderGhost = useCallback(
-    ({ entryId, previewTime }: { entryId: string; previewTime: { start: Date; end: Date } }) => {
-      const entry = entries.find((e) => e.id === entryId);
+    ({
+      timeblockId,
+      previewTime,
+    }: {
+      timeblockId: string;
+      previewTime: { start: Date; end: Date };
+    }) => {
+      const entry = entries.find((e) => e.id === timeblockId);
       if (!entry) return null;
       const previewEntry = buildDragPreviewEntry(entry, previewTime);
       const tag = entry.tagId ? getTagById(entry.tagId) : null;
-      const ghostHeight = USE_TWO_LANE
-        ? Math.max(twoLaneStyles[entryId]?.height ?? 20, 20)
-        : getGhostEntryHeight(entryStyles[entryId]);
+      const ghostHeight = Math.max(twoLaneStyles[timeblockId]?.height ?? 20, 20);
       return (
-        <EntryCard
+        <TimeblockCard
           entry={previewEntry}
           tagName={tag?.name ?? null}
           tagColor={tag?.color ?? null}
@@ -273,7 +222,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     },
     [
       entries,
-      entryStyles,
       twoLaneStyles,
       getTagById,
       isMobile,
@@ -318,84 +266,35 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
       {/* エントリ表示エリア */}
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
-        {USE_TWO_LANE
-          ? entries.map((entry) => {
-              const position = twoLaneStyles[entry.id];
-              if (!position) return null;
+        {entries.map((entry) => {
+          const position = twoLaneStyles[entry.id];
+          if (!position) return null;
 
-              return (
-                <TwoLaneEntryRenderer
-                  key={entry.id}
-                  entry={entry}
-                  position={position}
-                  allEvents={allEventsForOverlapCheck ?? entries}
-                  isDragging={isDragging}
-                  isResizing={isResizing}
-                  interactionState={state}
-                  dayIndex={dayIndex}
-                  enableCrossDayDrag={enableCrossDayDrag}
-                  onEntryClick={onEntryClick}
-                  onEntryContextMenu={onEntryContextMenu}
-                  onPointerDown={handlers.handlePointerDown}
-                  onTouchStart={handlers.handleTouchStart}
-                  onResizeStart={handlers.handleResizeStart}
-                />
-              );
-            })
-          : entries.map((entry) => {
-              const style = entryStyles[entry.id];
-              if (!style) return null;
-
-              const entryDragging =
-                isDragging && (state as { entryId: string }).entryId === entry.id;
-              const entryResizing =
-                isResizing && (state as { entryId: string }).entryId === entry.id;
-
-              return (
-                <EntryRenderer
-                  key={entry.id}
-                  entry={entry}
-                  style={style}
-                  hourHeight={HOUR_HEIGHT}
-                  enableCrossDayDrag={enableCrossDayDrag}
-                  showActualDiff={showActualDiff}
-                  showDayDiffMarker={dayDiffEntryIds?.has(entry.id) ?? false}
-                  dayIndex={dayIndex}
-                  isDragging={isDragging}
-                  isResizing={isResizing}
-                  entryDragging={entryDragging}
-                  entryResizing={entryResizing}
-                  interactionState={state}
-                  globalDraggedEntryId={globalDraggedEntryId}
-                  isSourceColumnMovingAway={isSourceColumnMovingAway}
-                  onEntryClick={onEntryClick}
-                  onEntryContextMenu={onEntryContextMenu}
-                  onPointerDown={handlers.handlePointerDown}
-                  onTouchStart={handlers.handleTouchStart}
-                  onResizeStart={handlers.handleResizeStart}
-                  entries={entries}
-                  onGapClick={
-                    onTimeRangeSelect
-                      ? (startMinutes, endMinutes) => {
-                          if (minutesToDate(date, endMinutes).getTime() > gapCreationCutoffMs) {
-                            return;
-                          }
-                          onTimeRangeSelect(
-                            minutesToSelection(date, startMinutes, endMinutes, 'planned-gap'),
-                          );
-                        }
-                      : undefined
-                  }
-                  gapCreationCutoffMs={gapCreationCutoffMs}
-                />
-              );
-            })}
+          return (
+            <TwoLaneTimeblockRenderer
+              key={entry.id}
+              entry={entry}
+              position={position}
+              allEvents={allEventsForOverlapCheck ?? entries}
+              isDragging={isDragging}
+              isResizing={isResizing}
+              interactionState={state}
+              dayIndex={dayIndex}
+              enableCrossDayDrag={enableCrossDayDrag}
+              onEntryClick={onEntryClick}
+              onEntryContextMenu={onEntryContextMenu}
+              onPointerDown={handlers.handlePointerDown}
+              onTouchStart={handlers.handleTouchStart}
+              onResizeStart={handlers.handleResizeStart}
+            />
+          );
+        })}
 
         <InlineTagPalette hourHeight={HOUR_HEIGHT} {...(enableCrossDayDrag ? { date } : {})} />
 
         {/* Tag タップで作成中の draft entry を該当日に描画 */}
         {tagDraft && isSameDay(tagDraft.date, date) && (
-          <DraftEntryBlock draft={tagDraft} hourHeight={HOUR_HEIGHT} />
+          <DraftTimeblock draft={tagDraft} hourHeight={HOUR_HEIGHT} />
         )}
       </div>
 

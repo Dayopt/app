@@ -15,33 +15,33 @@ interface TagDeleteStrategyDialogProps {
   onClose: () => void;
   onConfirm: (strategy: TagDeleteStrategy, targetTagId?: string) => Promise<void>;
   tagName: string;
-  entryCount: number;
+  recordCount: number;
   availableTags: Tag[];
 }
 
 /**
  * タグ削除戦略選択ダイアログ
  *
- * 関連エントリがあるタグを削除する際に、エントリごと削除するか別タグに再割当てするかを選ばせる。
+ * 関連 Timeblock があるタグを削除する際に、Timeblock ごと削除するか別タグへ再割当てするかを選ばせる。
  */
 export function TagDeleteStrategyDialog({
   open,
   onClose,
   onConfirm,
   tagName,
-  entryCount,
+  recordCount,
   availableTags,
 }: TagDeleteStrategyDialogProps) {
   const t = useTranslations('tags');
 
-  const [strategy, setStrategy] = useState<TagDeleteStrategy>('delete_entries');
+  const [strategy, setStrategy] = useState<TagDeleteStrategy>('delete_blocks');
   const [targetTagId, setTargetTagId] = useState<string | null>(null);
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
-      setStrategy('delete_entries');
+      setStrategy('delete_blocks');
       setTargetTagId(null);
     }
   }
@@ -58,7 +58,7 @@ export function TagDeleteStrategyDialog({
       onClose={onClose}
       onConfirm={handleConfirm}
       title={t('delete.confirmTitleWithName', { name: tagName })}
-      description={t('deleteStrategy.usedByEntries', { count: entryCount })}
+      description={t('deleteStrategy.usedByTimeblocks', { count: recordCount })}
       confirmDisabled={isConfirmDisabled}
     >
       <div className="space-y-4">
@@ -68,8 +68,8 @@ export function TagDeleteStrategyDialog({
           className="space-y-2"
         >
           <label htmlFor="strategy-delete" className="flex cursor-pointer items-center gap-4">
-            <RadioGroupItem value="delete_entries" id="strategy-delete" />
-            <span className="text-sm">{t('deleteStrategy.deleteEntries')}</span>
+            <RadioGroupItem value="delete_blocks" id="strategy-delete" />
+            <span className="text-sm">{t('deleteStrategy.deleteTimeblocks')}</span>
           </label>
           <label htmlFor="strategy-reassign" className="flex cursor-pointer items-center gap-4">
             <RadioGroupItem value="reassign" id="strategy-reassign" />

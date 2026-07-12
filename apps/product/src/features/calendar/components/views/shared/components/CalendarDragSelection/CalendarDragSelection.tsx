@@ -9,8 +9,7 @@
  */
 
 import { cn } from '@dayopt/components';
-import { useDragOverlapResolver } from '../../../../../hooks/operations/useDragOverlapResolver';
-import { useEntryClipboardStore } from '../../../../../stores/useEntryClipboardStore';
+import { useTimeblockClipboardStore } from '../../../../../stores/useTimeblockClipboardStore';
 
 import { useResponsiveHourHeight } from '../../hooks/useResponsiveHourHeight';
 import { CalendarDropZone } from '../CalendarDropZone';
@@ -30,7 +29,6 @@ export const CalendarDragSelection = ({
   plans = [],
 }: CalendarDragSelectionProps) => {
   const hourHeight = useResponsiveHourHeight();
-  const resolveOverlapDrop = useDragOverlapResolver();
 
   const {
     selection,
@@ -49,7 +47,6 @@ export const CalendarDragSelection = ({
     onDoubleClick,
     plans,
     hourHeight,
-    onOverlapDrop: resolveOverlapDrop,
   });
 
   return (
@@ -64,7 +61,7 @@ export const CalendarDragSelection = ({
         className="absolute inset-0"
         onMouseDown={(e) => {
           // Googleカレンダー互換: クリックした日付を記憶（Cmd+Vでペーストする日付として使用）
-          useEntryClipboardStore.getState().setLastClickedPosition({ date });
+          useTimeblockClipboardStore.getState().setLastClickedPosition({ date });
           handleMouseDown(e);
         }}
         onDoubleClick={handleDoubleClick}
