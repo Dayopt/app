@@ -26,7 +26,8 @@ Step 8 で runtime の正を Plan / Record に切り替えた後、旧コード�
 2. **稼働確認**
    - Step 9a merge 後の Sentry と Calendar / Review / GDPR / MCP 主要動線を確認する
    - #1462 を解決し、production migration history と repository の同期を確認する
-   - Step 8 から約 1 週間の安定、backup / PITR、Step 2 の件数・時間・`plan_id` 突合を確認する
+   - backup / PITR、Step 2 の件数・時間・`plan_id` 突合を確認する
+   - 約1週間の待機条件は 2026-07-12 の Tomoya 判断で解除済み。期間ではなく上記の実測ゲートで判断する
 3. **Step 9b destructive migration**（#1579）
    - `logs` table を `records` へ rename し、旧 deploy 用の一時 `logs` view / RPC alias を作る
    - catalog で完全 signature と依存を確認してから、entries 依存 RPC、`entries_effective`、`entries` を drop する
