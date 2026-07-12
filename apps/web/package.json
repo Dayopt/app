@@ -111,7 +111,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "license-checker": "^25.0.1",
-    "postcss": "^8.5.16",
+    "postcss": "^8.5.18",
     "prettier": "^3.9.4",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.0",
