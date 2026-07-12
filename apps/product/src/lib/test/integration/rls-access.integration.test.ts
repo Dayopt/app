@@ -343,6 +343,31 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         .eq('id', LEGACY_LOGS_VIEW_RECORD_ID);
       expect(selectError).toBeNull();
       expect(data).toEqual([{ id: LEGACY_LOGS_VIEW_RECORD_ID }]);
+
+      const { data: updated, error: updateError } = await supabaseB
+        .from('logs')
+        .update({ title: 'Updated through logs view' })
+        .eq('id', LEGACY_LOGS_VIEW_RECORD_ID)
+        .select('id, title');
+      expect(updateError).toBeNull();
+      expect(updated).toEqual([
+        { id: LEGACY_LOGS_VIEW_RECORD_ID, title: 'Updated through logs view' },
+      ]);
+
+      const { data: deleted, error: deleteError } = await supabaseB
+        .from('logs')
+        .delete()
+        .eq('id', LEGACY_LOGS_VIEW_RECORD_ID)
+        .select('id');
+      expect(deleteError).toBeNull();
+      expect(deleted).toEqual([{ id: LEGACY_LOGS_VIEW_RECORD_ID }]);
+
+      const { data: afterDelete, error: afterDeleteError } = await supabaseB
+        .from('logs')
+        .select('id')
+        .eq('id', LEGACY_LOGS_VIEW_RECORD_ID);
+      expect(afterDeleteError).toBeNull();
+      expect(afterDelete).toEqual([]);
     });
 
     it('他ユーザーのselect / update / deleteを拒否する', async () => {
