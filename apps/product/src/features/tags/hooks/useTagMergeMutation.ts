@@ -17,7 +17,7 @@ export function useMergeTag() {
       await utils.tags.getById.cancel({ id: targetTagId });
       await utils.statistics.getTagStats.cancel();
       await utils.plans.list.cancel();
-      await utils.logs.list.cancel();
+      await utils.records.list.cancel();
 
       const previousData = utils.tags.list.getData();
       const previousSourceDetail = utils.tags.getById.getData({ id: sourceTagId });
@@ -65,7 +65,7 @@ export function useMergeTag() {
       void utils.tags.getById.invalidate({ id: input.sourceTagId });
       void utils.tags.getById.invalidate({ id: input.targetTagId });
       void utils.plans.list.invalidate();
-      void utils.logs.list.invalidate();
+      void utils.records.list.invalidate();
       void utils.statistics.getTagStats.refetch();
     },
   });

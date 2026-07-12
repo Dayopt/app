@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 
-import { useEntryInspectorStore } from '@/features/entry';
+import { useTimeblockInspectorStore } from '@/features/timeblock';
 import { logger } from '@/lib/logger';
 import { useInlineCreateStore } from '../../../stores/useInlineCreateStore';
 
@@ -11,9 +11,9 @@ import type { DateTimeSelection } from '../../views/shared';
 
 /** エントリクリック・時間範囲選択など、カレンダー共通のUIイベントハンドラーを提供するフック */
 export function useCalendarHandlers() {
-  const openEntryInspector = useEntryInspectorStore((state) => state.openInspector);
-  const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
-  const inspectorIsOpen = useEntryInspectorStore((state) => state.isOpen);
+  const openEntryInspector = useTimeblockInspectorStore((state) => state.openInspector);
+  const inspectorEntryId = useTimeblockInspectorStore((state) => state.entryId);
+  const inspectorIsOpen = useTimeblockInspectorStore((state) => state.isOpen);
 
   const setPendingSelection = useInlineCreateStore.use.setPendingSelection();
 

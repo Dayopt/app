@@ -185,7 +185,7 @@ export function useDragSelection({
 }: UseDragSelectionOptions): UseDragSelectionReturn {
   const defaultDuration = useUserPreferences((state) => state.defaultDuration);
   const { tap } = useHapticFeedback();
-  const t = useTranslations('entry');
+  const t = useTranslations('timeblock');
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

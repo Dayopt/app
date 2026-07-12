@@ -11,7 +11,7 @@
  * 呼び出し側の責務、既存 DayColumn 系コンポーネントと同じ分担）。
  */
 
-import type { LogEvent, PlanEvent } from '@/features/entry';
+import type { PlanEvent, RecordEvent } from '@/features/timeblock';
 
 import type { CalendarEvent } from '../types/calendar.types';
 
@@ -33,12 +33,12 @@ interface TwoLaneLayoutItem<T> {
 
 interface TwoLaneLayoutResult {
   planLayouts: TwoLaneLayoutItem<PlanEvent>[];
-  logLayouts: TwoLaneLayoutItem<LogEvent>[];
+  logLayouts: TwoLaneLayoutItem<RecordEvent>[];
 }
 
 interface CalculateTwoLaneLayoutOptions {
   plans: ReadonlyArray<PlanEvent>;
-  logs: ReadonlyArray<LogEvent>;
+  logs: ReadonlyArray<RecordEvent>;
   /** 1 時間あたりの px */
   hourHeight: number;
   /** Plan レーンの幅（%）。既定 38（Log レーンが主役で広め、overview.md §4） */
@@ -118,8 +118,8 @@ export function calculateTwoLaneLayout({
 
 /**
  * `CalendarEvent[]`（Step 8 の time model 射影、`kind` 付き）から直接 2 レーン座標を計算する。
- * `TwoLaneEntryRenderer` はインタラクション状態（drag/resize preview）を CalendarEvent 単位で
- * 持つ既存 `useInteraction` をそのまま使うため、PlanEvent/LogEvent への変換を経由しない。
+ * `TwoLaneTimeblockRenderer` はインタラクション状態（drag/resize preview）を CalendarEvent 単位で
+ * 持つ既存 `useInteraction` をそのまま使うため、PlanEvent/RecordEvent への変換を経由しない。
  */
 export function calculateTwoLaneStylesForCalendarEvents(
   events: ReadonlyArray<CalendarEvent>,

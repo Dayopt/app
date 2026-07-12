@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import type { PlanEvent, PlanEventStatus } from '@/features/entry';
+import type { PlanEvent, PlanEventStatus } from '@/features/timeblock';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 

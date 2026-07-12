@@ -19,7 +19,7 @@ import type { WeekViewProps } from '../../../types/week-view.types';
  * 1. shared/DateDisplay で7日分の日付表示
  * 2. ScrollableCalendarLayout（時間軸 + グリッド + 現在時刻線）
  * 3. 7つの WeekContent を横並び
- * 4. EntryCard でエントリ表示
+ * 4. TimeblockCard でエントリ表示
  *
  * レイアウト:
  * ┌────┬────┬────┬────┬────┬────┬────┬────┐

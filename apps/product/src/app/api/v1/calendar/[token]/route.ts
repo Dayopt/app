@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { entriesToICal } from '@/features/entry';
+import { plansToICal } from '@/features/timeblock';
 import { logger } from '@/lib/logger';
 import { icalFeedRateLimit } from '@/lib/rate-limit/upstash';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
@@ -198,7 +198,7 @@ export async function GET(
 
   // エントリ取得 → iCal変換
   const plans = await getPlansForFeed(userId);
-  const ical = entriesToICal(plans);
+  const ical = plansToICal(plans);
 
   return new NextResponse(ical, {
     status: 200,

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
 import type { UseWeekViewOptions, UseWeekViewReturn } from '../../../../types/week-view.types';
-import { useCurrentPeriod, useDateUtilities, useEntriesByDate } from '../../shared';
+import { useCurrentPeriod, useDateUtilities, useTimeblocksByDate } from '../../shared';
 
 /**
  * WeekView専用のロジックを管理するフック
@@ -33,7 +33,7 @@ export function useWeekView({
   });
 
   // Phase 3統合フック: エントリ日付グループ化
-  const { entriesByDate: eventsByDate } = useEntriesByDate({
+  const { entriesByDate: eventsByDate } = useTimeblocksByDate({
     dates: weekDates,
     entries: events,
     sortType: 'standard',

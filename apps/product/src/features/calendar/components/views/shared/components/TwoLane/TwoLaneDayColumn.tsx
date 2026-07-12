@@ -1,7 +1,7 @@
 /**
  * 1 日分の Plan レーン + Log レーンを合成する read 側コンポーネント（Step 5）。
  *
- * `two-lane-layout.ts` で座標を計算し、`PlanLaneCard`/`LogLaneCard` を配置する。
+ * `two-lane-layout.ts` で座標を計算し、`PlanLaneCard`/`RecordLaneCard` を配置する。
  * 既存ビュー（DayView/WeekView）への接続は Step 8 のフリップで行うため、
  * このコンポーネント自体はどこからも呼ばれない dormant な状態で追加する。
  */
@@ -12,13 +12,13 @@ import { cn } from '@dayopt/components';
 
 import { calculateTwoLaneLayout } from '../../../../../lib/two-lane-layout';
 
-import type { LogEvent, PlanEvent } from '@/features/entry';
-import { LogLaneCard } from './LogLaneCard';
+import type { PlanEvent, RecordEvent } from '@/features/timeblock';
 import { PlanLaneCard } from './PlanLaneCard';
+import { RecordLaneCard } from './RecordLaneCard';
 
 interface TwoLaneDayColumnProps {
   plans: ReadonlyArray<PlanEvent>;
-  logs: ReadonlyArray<LogEvent>;
+  logs: ReadonlyArray<RecordEvent>;
   /** 1 時間あたりの px */
   hourHeight: number;
   /** Plan レーンの幅（%）。既定は `calculateTwoLaneLayout` のデフォルトに従う */
@@ -53,7 +53,7 @@ export function TwoLaneDayColumn({
         />
       ))}
       {logLayouts.map(({ entry, position }) => (
-        <LogLaneCard
+        <RecordLaneCard
           key={entry.id}
           event={entry}
           position={position}

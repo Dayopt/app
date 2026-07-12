@@ -63,7 +63,7 @@ export interface UseWeekViewReturn {
   isCurrentWeek: boolean;
 }
 
-/** useWeekEntries フックのオプション */
+/** useWeekTimeblocks フックのオプション */
 export interface UseWeekEntriesOptions {
   weekDates: Date[];
   events: CalendarEvent[];
@@ -71,7 +71,7 @@ export interface UseWeekEntriesOptions {
   timezone: string;
 }
 
-/** useWeekEntries フックの戻り値 */
+/** useWeekTimeblocks フックの戻り値 */
 export interface UseWeekEntriesReturn {
   entriesByDate: Record<string, CalendarEvent[]>;
   entryPositions: WeekEntryPosition[];

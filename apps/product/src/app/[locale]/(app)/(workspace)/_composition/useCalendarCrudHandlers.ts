@@ -15,8 +15,8 @@ import type { CalendarEvent } from '@/features/calendar';
 import {
   useCalendarEventKeyboard,
   useCalendarHandlers,
-  useEntryContextActions,
-  useEntryOperations,
+  useTimeblockContextActions,
+  useTimeblockOperations,
 } from '@/features/calendar';
 
 // =============================================================================
@@ -71,7 +71,7 @@ export function useCalendarCrudHandlers({
   // Entry Operations（CRUD）
   // =========================================================================
   const { handleEntryDelete: deleteEntry, handleUpdateEntry: handleEntryUpdate } =
-    useEntryOperations();
+    useTimeblockOperations();
 
   // =========================================================================
   // Context Actions（右クリックメニュー）
@@ -81,7 +81,7 @@ export function useCalendarCrudHandlers({
     handleViewStats,
     handleSkip,
     handleUnskip,
-  } = useEntryContextActions();
+  } = useTimeblockContextActions();
 
   // =========================================================================
   // Entry Keyboard Shortcuts

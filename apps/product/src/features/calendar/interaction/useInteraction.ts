@@ -14,9 +14,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 import type { CalendarEvent } from '../types/calendar.types';
 
-import { isPlanRecordDrop } from '@/features/entry';
-import { hasCalendarActualRangeDiff } from '../lib/entry-time';
+import { isPlanRecordDrop } from '@/features/timeblock';
 import { checkClientSideOverlapByKind } from '../lib/overlap';
+import { hasCalendarActualRangeDiff } from '../lib/timeblock-time';
 import { resolveTwoLaneFromPointer } from '../lib/two-lane-layout';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
@@ -27,11 +27,11 @@ import {
   isTouchEvent,
 } from '../domain/interaction/pointer-tracker';
 import type {
-  EntryRect,
   InteractionAction,
   InteractionContext,
   InteractionEffect,
   InteractionState,
+  TimeblockRect,
 } from '../domain/interaction/types';
 
 // ========================================
@@ -96,20 +96,20 @@ interface InteractionHandlers {
   handlePointerDown: (
     entryId: string,
     e: React.MouseEvent,
-    position: EntryRect,
+    position: TimeblockRect,
     dateIndex?: number,
   ) => void;
   handleTouchStart: (
     entryId: string,
     e: React.TouchEvent,
-    position: EntryRect,
+    position: TimeblockRect,
     dateIndex?: number,
   ) => void;
   handleResizeStart: (
     entryId: string,
     direction: 'top' | 'bottom',
     e: React.MouseEvent | React.TouchEvent,
-    position: EntryRect,
+    position: TimeblockRect,
   ) => void;
 }
 
@@ -490,7 +490,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
   // ---- Convenience handlers ----
 
   const handlePointerDown = useCallback(
-    (entryId: string, e: React.MouseEvent, position: EntryRect, dateIndex: number = 0) => {
+    (entryId: string, e: React.MouseEvent, position: TimeblockRect, dateIndex: number = 0) => {
       if (e.button !== 0) return;
       const r = latestRef.current;
       // Disabled plan → direct click
@@ -513,7 +513,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
   );
 
   const handleTouchStart = useCallback(
-    (entryId: string, e: React.TouchEvent, position: EntryRect, dateIndex: number = 0) => {
+    (entryId: string, e: React.TouchEvent, position: TimeblockRect, dateIndex: number = 0) => {
       const r = latestRef.current;
       if (r.disabledPlanId && entryId === r.disabledPlanId) return;
       dispatch({
@@ -532,7 +532,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
       entryId: string,
       direction: 'top' | 'bottom',
       e: React.MouseEvent | React.TouchEvent,
-      position: EntryRect,
+      position: TimeblockRect,
     ) => {
       // マウスイベントの場合は左クリックのみ許可
       if ('button' in e && e.button !== 0) return;

@@ -13,7 +13,7 @@ import {
   CalendarDateHeader,
   DateDisplay,
   ScrollableCalendarLayout,
-  useMultiDayEntryPositions,
+  useMultiDayTimeblockPositions,
 } from '../shared';
 import { useResponsiveHourHeight } from '../shared/hooks/useResponsiveHourHeight';
 
@@ -64,7 +64,7 @@ export function MultiDayView({
     showWeekends,
   });
 
-  const { entriesByDate } = useMultiDayEntryPositions({
+  const { entriesByDate } = useMultiDayTimeblockPositions({
     displayDates,
     entries,
     hourHeight: HOUR_HEIGHT,

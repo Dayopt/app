@@ -95,7 +95,7 @@ export function CalendarFilterList() {
 
   // 削除確認後のハンドラー（ストラテジー付き）
   const handleConfirmDelete = async (
-    strategy: 'delete_entries' | 'reassign',
+    strategy: 'delete_blocks' | 'reassign',
     targetTagId?: string,
   ) => {
     if (!deleteTarget) return;

@@ -19,7 +19,7 @@ vi.mock('@/lib/trpc', () => ({
     useUtils: () => ({
       userSettings: { get: { cancel, getData, setData, invalidate: invalidateSettings } },
       plans: { invalidate: invalidatePlans },
-      logs: { invalidate: invalidateLogs },
+      records: { invalidate: invalidateLogs },
       statistics: { invalidate: invalidateStatistics },
     }),
     userSettings: {

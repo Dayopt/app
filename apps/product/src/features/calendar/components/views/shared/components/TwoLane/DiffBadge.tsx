@@ -10,7 +10,7 @@
 
 import { ArrowDown, ArrowUp } from 'lucide-react';
 
-import { formatDiffMinutes } from '@/features/entry';
+import { formatDiffMinutes } from '@/features/timeblock';
 import { cn } from '@dayopt/components';
 
 interface DiffBadgeProps {

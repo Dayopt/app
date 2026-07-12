@@ -16,12 +16,12 @@ import { isWeekend } from 'date-fns';
 
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
-import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsContext';
+import { CalendarTimeblockActionsProvider } from '../contexts/CalendarTimeblockActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
 import { resolveCalendarDayDiffBounds, resolveCalendarRangeDiffBounds } from '../lib/day-diff';
-import { computeTimeModelDayDiffs } from '../lib/time-model-day-diff';
+import { computeTimeblockDayDiffs } from '../lib/timeblock-day-diff';
 import { useCalendarFilterStore } from '../stores/useCalendarFilterStore';
 import {
   getMultiDayCount,
@@ -128,7 +128,7 @@ interface CalendarControllerProps {
 }
 
 interface CalendarCompareRailRenderProps {
-  diff: ReturnType<typeof computeTimeModelDayDiffs>;
+  diff: ReturnType<typeof computeTimeblockDayDiffs>;
   variant: 'rail' | 'sheet';
   onItemClick: (entryId: string) => void;
   onClose?: (() => void) | undefined;
@@ -222,7 +222,7 @@ export function CalendarController({
     [calendarDiffDays, currentDate, timezone, viewDateRange.end, viewDateRange.start, viewType],
   );
   // Step 8: compare rail は plans/logs（kind 付き CalendarEvent）から直接集計する。
-  // タグ可視性・週末除外は絞るが、範囲内の時間クリップは computeTimeModelDayDiffs 側の
+  // タグ可視性・週末除外は絞るが、範囲内の時間クリップは computeTimeblockDayDiffs 側の
   // clippedMinutes に委ねる（0分は自動的に除外される）。
   const isWithinVisibleDayBounds = useCallback(
     (start: Date, end: Date) => {
@@ -263,7 +263,7 @@ export function CalendarController({
       .filter((log) => isWithinVisibleDayBounds(log.startAt, log.endAt));
   }, [allEntries, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds]);
   const calendarDiff = useMemo(
-    () => computeTimeModelDayDiffs(calendarDiffPlans, calendarDiffLogs, calendarDiffBounds),
+    () => computeTimeblockDayDiffs(calendarDiffPlans, calendarDiffLogs, calendarDiffBounds),
     [calendarDiffBounds, calendarDiffLogs, calendarDiffPlans],
   );
   const dayDiffEntryIds = useMemo(
@@ -397,7 +397,7 @@ export function CalendarController({
   // Render
   // =========================================================================
   return (
-    <CalendarEntryActionsProvider value={entryActions}>
+    <CalendarTimeblockActionsProvider value={entryActions}>
       <CalendarLayout
         className={className}
         viewType={viewType}
@@ -443,6 +443,6 @@ export function CalendarController({
 
       {/* モバイル操作ヒント（初回のみ表示） */}
       <MobileTouchHint />
-    </CalendarEntryActionsProvider>
+    </CalendarTimeblockActionsProvider>
   );
 }

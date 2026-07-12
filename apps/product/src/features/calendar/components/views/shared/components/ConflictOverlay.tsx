@@ -36,7 +36,7 @@ export function ConflictOverlay({
   /** 小さいブロック向け: メッセージ 1 行のみ縦中央表示 */
   compact?: boolean;
   className?: string;
-  /** リサイズ時に EntryCard より前面へ重ねるための z-index 等を渡す */
+  /** リサイズ時に TimeblockCard より前面へ重ねるための z-index 等を渡す */
   style?: React.CSSProperties;
 }) {
   const resolvedLabel =

@@ -614,7 +614,7 @@ describe('TagService', () => {
       expect(result).toMatchObject(existingTag);
     });
 
-    it('delete_entries strategy: should delete logs / plans before deleting the tag', async () => {
+    it('delete_blocks strategy: should delete logs / plans before deleting the tag', async () => {
       const planLookupMock = createChainableMock([]);
       const dataDeleteMock = createChainableMock(null);
       const tagDeleteMock = createChainableMock(null);
@@ -632,7 +632,7 @@ describe('TagService', () => {
       await service.delete({
         userId,
         tagId: 'tag-1',
-        strategy: 'delete_entries',
+        strategy: 'delete_blocks',
       });
 
       expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['plans', 'logs', 'plans']);

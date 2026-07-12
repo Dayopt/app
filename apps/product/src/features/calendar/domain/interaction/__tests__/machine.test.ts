@@ -10,12 +10,12 @@ import {
   snapToGrid,
 } from '../machine';
 import type {
-  EntryRect,
   InteractionAction,
   InteractionContext,
   InteractionResult,
   InteractionState,
   Point,
+  TimeblockRect,
 } from '../types';
 
 // ========================================
@@ -42,7 +42,7 @@ function dispatch(
 }
 
 const origin: Point = { clientX: 100, clientY: 200 };
-const rect: EntryRect = { top: 540, left: 0, width: 200, height: 60 }; // 9:00 at 60px/h
+const rect: TimeblockRect = { top: 540, left: 0, width: 200, height: 60 }; // 9:00 at 60px/h
 
 // ========================================
 // snapToGrid
@@ -693,7 +693,7 @@ describe('POINTER_UP while resizing', () => {
 
 describe('precision regression: drag/resize snaps off-grid times to the absolute grid', () => {
   // 10:07 entry を表す originalPosition: top=607（hourHeight=60 で 10*60+7=607）
-  const off607: EntryRect = { top: 607, left: 0, width: 200, height: 60 };
+  const off607: TimeblockRect = { top: 607, left: 0, width: 200, height: 60 };
 
   it('LONGPRESS_FIRED on 10:07 entry → preview start snaps to 10:00', () => {
     const longpressState: InteractionState = {
@@ -765,7 +765,7 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
   });
 
   it('5分snap設定では15:13 entryをdragすると15:15へ揃える', () => {
-    const off913: EntryRect = { top: 913, left: 0, width: 200, height: 60 };
+    const off913: TimeblockRect = { top: 913, left: 0, width: 200, height: 60 };
     const draggingState: InteractionState = {
       mode: 'dragging',
       entryId: 'a',
@@ -797,7 +797,7 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
   });
 
   it('5分snap設定ではdrag時にoff-grid durationも丸めて終了時刻をグリッドへ揃える', () => {
-    const off913: EntryRect = { top: 913, left: 0, width: 200, height: 47 };
+    const off913: TimeblockRect = { top: 913, left: 0, width: 200, height: 47 };
     const draggingState: InteractionState = {
       mode: 'dragging',
       entryId: 'a',
@@ -833,7 +833,7 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
   });
 
   it('drag時は終了境界もsnapし、48分entryを不要に50分へ伸ばさない', () => {
-    const off913: EntryRect = { top: 913, left: 0, width: 200, height: 48 };
+    const off913: TimeblockRect = { top: 913, left: 0, width: 200, height: 48 };
     const draggingState: InteractionState = {
       mode: 'dragging',
       entryId: 'a',

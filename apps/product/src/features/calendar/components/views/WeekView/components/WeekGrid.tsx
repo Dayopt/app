@@ -16,7 +16,7 @@ import {
 } from '../../shared';
 import { CalendarGridContent } from '../../shared/components/CalendarGridContent';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
-import { useWeekEntries } from '../hooks/useWeekEntries';
+import { useWeekTimeblocks } from '../hooks/useWeekTimeblocks';
 
 import type { WeekGridProps } from '../../../../types/week-view.types';
 
@@ -68,7 +68,7 @@ export const WeekGrid = ({
   );
 
   // エントリ位置計算（TZ変換済みの日付グルーピングも取得）
-  const { entriesByDate: tzEntriesByDate } = useWeekEntries({
+  const { entriesByDate: tzEntriesByDate } = useWeekTimeblocks({
     weekDates,
     events,
     hourHeight,

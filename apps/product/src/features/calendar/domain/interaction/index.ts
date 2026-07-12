@@ -15,7 +15,6 @@
 export { IDLE, interactionReducer, snapToGrid } from './machine';
 
 export type {
-  EntryRect,
   InteractionAction,
   InteractionContext,
   InteractionEffect,
@@ -23,6 +22,7 @@ export type {
   InteractionState,
   Point,
   TimeRange,
+  TimeblockRect,
 } from './types';
 
 // ──────────────────────────────────────────────

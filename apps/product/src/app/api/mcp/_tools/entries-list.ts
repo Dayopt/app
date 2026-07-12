@@ -107,7 +107,7 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
             ...(endDate ? { endDate } : {}),
             ...(tagId ? { tagId } : {}),
           }),
-          trpc.logs.list({
+          trpc.records.list({
             limit: limit ?? 50,
             sortBy: 'start_at',
             sortOrder: 'desc',

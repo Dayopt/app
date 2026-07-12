@@ -11,13 +11,13 @@ export { DateDisplay } from './DateDisplay';
 export type { DateTimeSelection } from './components/CalendarDragSelection';
 
 // ===== カスタムフック =====
-export { useEntryStyles } from './hooks/useEntryStyles';
+export { useTimeblockStyles } from './hooks/useTimeblockStyles';
 
 // 統合カスタムフック
 export { useCurrentPeriod } from './hooks/useCurrentPeriod';
 export { useDateUtilities } from './hooks/useDateUtilities';
-export { useEntriesByDate } from './hooks/useEntriesByDate';
-export { useMultiDayEntryPositions } from './hooks/useMultiDayEntryPositions';
+export { useMultiDayTimeblockPositions } from './hooks/useMultiDayTimeblockPositions';
+export { useTimeblocksByDate } from './hooks/useTimeblocksByDate';
 
 // ===== レイアウト =====
 export {
@@ -32,10 +32,10 @@ export { getDateKey } from '@/lib/date';
 export { isValidEvent } from './utils/dateHelpers';
 
 // entrySorting
-export { sortEventsByDateKeys } from './utils/entrySorting';
+export { sortEventsByDateKeys } from './utils/timeblockSorting';
 
 // ===== 型定義（centralized types/ から re-export） =====
 export type * from '../../../types/base.types';
-export type * from '../../../types/entry.types';
 export type * from '../../../types/grid.types';
+export type * from '../../../types/timeblock.types';
 export type * from '../../../types/view.types';

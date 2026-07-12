@@ -62,7 +62,7 @@ const CSV_COLUMNS = [
  * plans / logsをCSV文字列に変換
  * RFC 4180準拠: ダブルクォートでフィールドをエスケープ
  */
-function timeModelRowsToCsv(rows: Record<string, unknown>[]): string {
+function timeblockRowsToCsv(rows: Record<string, unknown>[]): string {
   const escapeCsvField = (value: unknown): string => {
     if (value == null) return '';
     const str = String(value);
@@ -137,7 +137,7 @@ function ExportSection() {
           ...exportData.data.plans.map((plan) => ({ ...plan, kind: 'plan' })),
           ...exportData.data.logs.map((log) => ({ ...log, kind: 'log' })),
         ];
-        const csvContent = timeModelRowsToCsv(csvRows);
+        const csvContent = timeblockRowsToCsv(csvRows);
         blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
         mimeType = 'csv';
       } else {

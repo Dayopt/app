@@ -53,7 +53,7 @@ export function collectTimeModelLaneItems(
 
 /**
  * 同一レーン内の時間重複を判定する（plan×plan / log×log のみ禁止、plan×log は許可）。
- * サーバーの TimeModelOverlapService と同じ半開区間判定（start < otherEnd && end > otherStart）。
+ * サーバーの TimeblockOverlapService と同じ半開区間判定（start < otherEnd && end > otherStart）。
  * skip 済み plan も占有として扱う（EXCLUDE 制約と同一視野）。
  */
 export function hasTimeModelLaneConflict(

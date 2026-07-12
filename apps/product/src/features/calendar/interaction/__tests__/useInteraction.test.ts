@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { EntryRect } from '../../domain/interaction/types';
+import type { TimeblockRect } from '../../domain/interaction/types';
 import { useCalendarDragStore } from '../../stores/useCalendarDragStore';
 import type { CalendarEvent } from '../../types/calendar.types';
 import { useInteraction, type UseInteractionProps } from '../useInteraction';
@@ -18,7 +18,7 @@ const baseEvent: CalendarEvent = {
   kind: 'plan',
 } as unknown as CalendarEvent;
 
-const rect: EntryRect = { top: 540, left: 0, width: 200, height: 60 };
+const rect: TimeblockRect = { top: 540, left: 0, width: 200, height: 60 };
 
 function createMouseEvent(): React.MouseEvent {
   return {

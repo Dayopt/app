@@ -33,12 +33,12 @@ export interface UseDayEntriesOptions {
 /** useDayEntries フックの戻り値 */
 export interface UseDayEntriesReturn {
   dayEntries: CalendarEvent[];
-  entryPositions: EntryPosition[];
+  entryPositions: TimeblockPosition[];
   maxConcurrentEntries: number;
 }
 
 /** エントリの計算済み位置情報 */
-export interface EntryPosition {
+export interface TimeblockPosition {
   plan: CalendarEvent;
   top: number;
   height: number;

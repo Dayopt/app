@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import type { LogEvent, PlanEvent } from '@/features/entry';
+import type { PlanEvent, RecordEvent } from '@/features/timeblock';
 
 import { TwoLaneDayColumn } from './TwoLaneDayColumn';
 
@@ -48,7 +48,7 @@ function makePlan(overrides: Partial<PlanEvent> = {}): PlanEvent {
   };
 }
 
-function makeLog(overrides: Partial<LogEvent> = {}): LogEvent {
+function makeLog(overrides: Partial<RecordEvent> = {}): RecordEvent {
   return {
     id: 'log-1',
     title: 'Deep Work',

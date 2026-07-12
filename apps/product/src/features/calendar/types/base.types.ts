@@ -68,7 +68,7 @@ export interface GridViewProps extends BaseViewProps {
 
 /**
  * エントリ位置情報の基本型
- * 4箇所で重複していた EntryPosition を統一
+ * 4箇所で重複していた TimeblockPosition を統一
  */
 export interface BaseEntryPosition {
   plan: CalendarEvent;

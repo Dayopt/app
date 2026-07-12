@@ -11,7 +11,7 @@ import { memo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { entryTintColor } from '@/features/entry';
+import { timeblockTintColor } from '@/features/timeblock';
 import { cn } from '@dayopt/components';
 
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
@@ -43,7 +43,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   hourHeight = HOUR_HEIGHT,
 }: DragSelectionPreviewProps) {
   const tCalendar = useTranslations('calendar');
-  const tEntry = useTranslations('entry');
+  const tEntry = useTranslations('timeblock');
 
   // 選択範囲のスタイルを計算
   const startMinutes = selection.startHour * 60 + selection.startMinute;
@@ -72,7 +72,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
     );
   }
 
-  // 通常時: EntryCardと同じデザイン（左アクセント + tint 塗り + 右角丸 + 時間）
+  // 通常時: TimeblockCardと同じデザイン（左アクセント + tint 塗り + 右角丸 + 時間）
   // 過去時間帯（unplanned 風）も確定後カードと同じ作り: アクセント + tint 塗り + 3 辺破線のみ差分
   const isCompact = height < 40;
 
@@ -91,12 +91,12 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
       {/* upcoming はアクセント無し。文言位置を合わせる 3px スペーサーのみ（本体と同色で不可視）。 */}
       <div
         className="shrink-0"
-        style={{ width: '3px', backgroundColor: entryTintColor('var(--entry-default)') }}
+        style={{ width: '3px', backgroundColor: timeblockTintColor('var(--entry-default)') }}
       />
-      {/* カード本体 — EntryCard と同じ 18% color-mix tint（neutral base） */}
+      {/* カード本体 — TimeblockCard と同じ 18% color-mix tint（neutral base） */}
       <div
         className="min-w-0 flex-1 overflow-hidden rounded-r-lg"
-        style={{ backgroundColor: entryTintColor('var(--entry-default)') }}
+        style={{ backgroundColor: timeblockTintColor('var(--entry-default)') }}
       >
         {isCompact ? (
           <div className="flex h-full items-center px-2">

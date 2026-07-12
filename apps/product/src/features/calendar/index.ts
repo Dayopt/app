@@ -58,10 +58,10 @@ export type { UserSettings } from './stores/userSettings';
 export { useCalendarData } from './components/controller/hooks/useCalendarData';
 export { useCalendarHandlers } from './components/controller/hooks/useCalendarHandlers';
 export { useCalendarNavigationHandlers } from './components/controller/hooks/useCalendarNavigationHandlers';
-export { useCalendarEventKeyboard } from './hooks/keyboard/useCalendarEntryKeyboard';
+export { useCalendarEventKeyboard } from './hooks/keyboard/useCalendarTimeblockKeyboard';
 export { useWeekendToggleShortcut } from './hooks/keyboard/useWeekendToggleShortcut';
-export { useEntryContextActions } from './hooks/operations/useEntryContextActions';
-export { useEntryOperations } from './hooks/operations/useEntryOperations';
+export { useTimeblockContextActions } from './hooks/operations/useTimeblockContextActions';
+export { useTimeblockOperations } from './hooks/operations/useTimeblockOperations';
 
 // =============================================================================
 // Domain（Calendar 固有の仕様ルール）

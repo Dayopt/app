@@ -68,7 +68,7 @@ const MIN_GHOST_HEIGHT_MOBILE = 40;
 
 /** ドラッグ中のゴースト要素をReact Portalで描画するコンポーネント */
 export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
-  const t = useTranslations('entry');
+  const t = useTranslations('timeblock');
   const isMobile = useIsMobile();
   const minGhostHeight = isMobile ? MIN_GHOST_HEIGHT_MOBILE : 0;
   const prevStateRef = useRef(state);

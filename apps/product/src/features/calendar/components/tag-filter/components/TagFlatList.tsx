@@ -40,7 +40,7 @@ import { buildCalendarReviewPanelPath } from '../../../lib/panel-url';
 import { FilterItemMenu, type GroupOption } from './FilterItem/FilterItemMenu';
 import { useFilterItemEdit } from './FilterItem/useFilterItemEdit';
 import { GroupHeader } from './GroupHeader';
-import { TagEntryCreatePopover } from './TagEntryCreatePopover';
+import { TagTimeblockCreatePopover } from './TagTimeblockCreatePopover';
 import {
   END_OF_ROOT,
   ROOT,
@@ -431,7 +431,7 @@ function SortableParentBlock({
   const showDropLine = !isMobile && overIndex === index && activeIndex !== overIndex;
 
   // ドラッグ中は transform を打ち消し、source を原位置に opacity-30 で残す
-  // （EntryCard と同じ「後ろに薄く残る」見え方）
+  // （TimeblockCard と同じ「後ろに薄く残る」見え方）
   const style = isMobile
     ? undefined
     : {
@@ -488,7 +488,7 @@ function SortableParentBlock({
           />
 
           {isPopoverOpen ? (
-            <TagEntryCreatePopover
+            <TagTimeblockCreatePopover
               open
               onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? node.tag.id : null)}
               tag={{
@@ -611,7 +611,7 @@ function SortableTagItem({
 
   const isPopoverOpen = openPopoverTagId === tag.id;
   // ドラッグ中は transform を打ち消し、source を原位置に opacity-30 で残す
-  // （EntryCard と同じ「後ろに薄く残る」見え方）
+  // （TimeblockCard と同じ「後ろに薄く残る」見え方）
   const style = isMobile
     ? undefined
     : {
@@ -759,7 +759,7 @@ function SortableTagItem({
             </DropdownMenu>
 
             {isPopoverOpen ? (
-              <TagEntryCreatePopover
+              <TagTimeblockCreatePopover
                 open
                 onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? tag.id : null)}
                 tag={{ id: tag.id, name: tag.name, color: displayColor, icon: tag.icon }}

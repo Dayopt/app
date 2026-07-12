@@ -220,7 +220,7 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
       // バージョンを上げるとlocalStorageがリセットされる
       // v2: visibleTagIds競合問題の修正に伴いリセット
       // v3: showUntagged削除、matchesTagFilter/isPlanVisible単一タグ対応
-      // v4: ItemType ('plan'|'record') → EntryOrigin ('planned'|'unplanned') に変更
+      // v4: ItemType ('plan'|'record') → TimeblockOrigin ('planned'|'unplanned') に変更
       version: 5,
       storage: createPlatformStorage<CalendarFilterState>({
         serialize: (state) => setSerializer.serialize(state),

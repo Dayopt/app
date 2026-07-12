@@ -33,7 +33,7 @@ const APP_NAMESPACES = [
   'auth',
   'common',
   'calendar',
-  'entry',
+  'timeblock',
   'plan',
   'record',
   'tags',

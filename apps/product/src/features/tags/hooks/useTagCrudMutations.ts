@@ -211,7 +211,7 @@ export function useUpdateTag() {
     },
     onSettled: (_data, _err, input) => {
       void utils.plans.list.invalidate();
-      void utils.logs.list.invalidate();
+      void utils.records.list.invalidate();
       void utils.tags.list.invalidate();
       void utils.tags.listHierarchy.invalidate();
       void utils.tags.getById.invalidate({ id: input.id });
@@ -270,7 +270,7 @@ export function useDeleteTag() {
       void utils.tags.listHierarchy.invalidate();
       void utils.tags.getById.invalidate({ id: input.id });
       void utils.plans.list.invalidate();
-      void utils.logs.list.invalidate();
+      void utils.records.list.invalidate();
       void utils.statistics.getTagStats.invalidate();
     },
   });

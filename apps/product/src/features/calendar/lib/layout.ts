@@ -5,21 +5,21 @@
  * エントリカードの位置計算、予定vs記録の差分オーバーレイ計算を提供。
  */
 
-import type { EntryColumn, TimedEntry } from '../types/entry.types';
+import type { TimeblockColumn, TimedTimeblock } from '../types/timeblock.types';
 
 import { MIN_EVENT_HEIGHT } from './grid';
 
 // 予定 vs 記録 差分オーバーレイは Entry ドメインのロジック
-// canonical source: @/features/entry
-export { computeActualTimeDiffOverlay } from '@/features/entry';
+// canonical source: @/features/timeblock
+export { computeActualTimeDiffOverlay } from '@/features/timeblock';
 
 // ========================================
 // 型定義
 // ========================================
 
 /** 重複レイアウト情報 */
-export interface EntryLayout {
-  entry: TimedEntry;
+export interface TimeblockLayout {
+  entry: TimedTimeblock;
   /** 左から何番目のカラム（0始まり） */
   column: number;
   /** その時間帯の総カラム数 */
@@ -32,7 +32,7 @@ export interface EntryLayout {
 
 /** 重複グループ */
 interface OverlapGroup {
-  entries: TimedEntry[];
+  entries: TimedTimeblock[];
   startTime: Date;
   endTime: Date;
 }
@@ -48,7 +48,7 @@ interface OverlapGroup {
  * 1. Planned を左側（column: 0）に配置
  * 2. Unplanned を右側に配置
  */
-export function calculateEntryLayouts(entries: TimedEntry[]): EntryLayout[] {
+export function calculateTimeblockLayouts(entries: TimedTimeblock[]): TimeblockLayout[] {
   if (entries.length === 0) return [];
 
   // Step 1: エントリを開始時間でソート
@@ -62,7 +62,7 @@ export function calculateEntryLayouts(entries: TimedEntry[]): EntryLayout[] {
   const overlapGroups = findOverlapGroups(sortedEntries);
 
   // Step 3: 各グループ内でレイアウトを計算
-  const layouts: EntryLayout[] = [];
+  const layouts: TimeblockLayout[] = [];
 
   overlapGroups.forEach((group) => {
     const groupLayouts = calculateGroupLayout(group.entries);
@@ -75,9 +75,9 @@ export function calculateEntryLayouts(entries: TimedEntry[]): EntryLayout[] {
 /**
  * 重複するエントリグループを検出（sweep-line）
  */
-export function findOverlapGroups(entries: TimedEntry[]): OverlapGroup[] {
+export function findOverlapGroups(entries: TimedTimeblock[]): OverlapGroup[] {
   const groups: OverlapGroup[] = [];
-  let currentGroup: TimedEntry[] = [];
+  let currentGroup: TimedTimeblock[] = [];
   let groupEndTime: Date | null = null;
 
   entries.forEach((entry) => {
@@ -120,8 +120,8 @@ export function findOverlapGroups(entries: TimedEntry[]): OverlapGroup[] {
  * 1. Plan（type !== 'record'）を左側（column: 0）に配置
  * 2. Record（type === 'record'）を右側に配置
  */
-function calculateGroupLayout(entries: TimedEntry[]): EntryLayout[] {
-  const layouts: EntryLayout[] = [];
+function calculateGroupLayout(entries: TimedTimeblock[]): TimeblockLayout[] {
+  const layouts: TimeblockLayout[] = [];
 
   // 各エントリの「競合リスト」を作成
   const conflicts = new Map<string, Set<string>>();
@@ -187,14 +187,14 @@ function calculateGroupLayout(entries: TimedEntry[]): EntryLayout[] {
  *
  * 接触のみ（一方の end === 他方の start）は重複としない
  */
-export function isOverlapping(entry1: TimedEntry, entry2: TimedEntry): boolean {
+export function isOverlapping(entry1: TimedTimeblock, entry2: TimedTimeblock): boolean {
   return entry1.start < entry2.end && entry2.start < entry1.end;
 }
 
 /**
  * 最大同時重複数を計算（sweep-line）
  */
-export function calculateMaxConcurrent(entries: TimedEntry[]): number {
+export function calculateMaxConcurrent(entries: TimedTimeblock[]): number {
   const timePoints: { time: Date; type: 'start' | 'end'; entryId: string }[] = [];
 
   entries.forEach((entry) => {
@@ -232,11 +232,11 @@ export function calculateMaxConcurrent(entries: TimedEntry[]): number {
 /**
  * エントリグループを検出（重複するエントリをグループ化）
  */
-export function detectOverlapGroups(entries: TimedEntry[]): TimedEntry[][] {
+export function detectOverlapGroups(entries: TimedTimeblock[]): TimedTimeblock[][] {
   if (entries.length === 0) return [];
 
   const sortedEntries = [...entries].sort((a, b) => a.start.getTime() - b.start.getTime());
-  const groups: TimedEntry[][] = [];
+  const groups: TimedTimeblock[][] = [];
 
   for (const entry of sortedEntries) {
     let added = false;
@@ -259,8 +259,8 @@ export function detectOverlapGroups(entries: TimedEntry[]): TimedEntry[][] {
  * エントリの表示位置を計算
  */
 export function calculateEntryPosition(
-  entry: TimedEntry,
-  column: EntryColumn,
+  entry: TimedTimeblock,
+  column: TimeblockColumn,
   hourHeight: number = 60,
 ): { top: number; height: number; left: number; width: number } {
   const startMinutes = entry.start.getHours() * 60 + entry.start.getMinutes();
@@ -278,7 +278,7 @@ export function calculateEntryPosition(
 /**
  * 時間指定エントリをソート（開始時刻順）
  */
-export function sortTimedEntries(entries: TimedEntry[]): TimedEntry[] {
+export function sortTimedTimeblocks(entries: TimedTimeblock[]): TimedTimeblock[] {
   return [...entries].sort((a, b) => {
     const timeDiff = a.start.getTime() - b.start.getTime();
     if (timeDiff !== 0) return timeDiff;
@@ -289,7 +289,7 @@ export function sortTimedEntries(entries: TimedEntry[]): TimedEntry[] {
 /**
  * 特定の日のエントリをフィルタリング
  */
-export function filterEntriesByDate(entries: TimedEntry[], date: Date): TimedEntry[] {
+export function filterTimeblocksByDate(entries: TimedTimeblock[], date: Date): TimedTimeblock[] {
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
 

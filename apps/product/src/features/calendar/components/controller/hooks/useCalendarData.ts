@@ -104,7 +104,7 @@ export function useCalendarData({
     sortOrder: 'asc',
     limit: 100,
   });
-  const logsQuery = api.logs.list.useQuery({
+  const logsQuery = api.records.list.useQuery({
     ...dateFilter,
     sortBy: 'start_at',
     sortOrder: 'asc',
@@ -118,7 +118,7 @@ export function useCalendarData({
     [logsQuery, plansQuery],
   );
 
-  // タグマスタ取得（EntryCard等で使用するためキャッシュをwarm up + フィルタ同期）
+  // タグマスタ取得（TimeblockCard等で使用するためキャッシュをwarm up + フィルタ同期）
   const { data: tagsData } = useTags();
   const syncWithTags = useCalendarFilterStore((state) => state.syncWithTags);
 
@@ -144,7 +144,7 @@ export function useCalendarData({
         sortOrder: 'asc' as const,
         limit: 100,
       };
-      void Promise.all([utils.plans.list.prefetch(input), utils.logs.list.prefetch(input)]);
+      void Promise.all([utils.plans.list.prefetch(input), utils.records.list.prefetch(input)]);
     };
 
     if (viewType === 'day') {
@@ -163,7 +163,7 @@ export function useCalendarData({
       prefetchRange(subDays(currentDate, 7));
       prefetchRange(addDays(currentDate, 7));
     }
-  }, [currentDate, viewType, weekStartsOn, timezone, utils.logs.list, utils.plans.list]);
+  }, [currentDate, viewType, weekStartsOn, timezone, utils.records.list, utils.plans.list]);
 
   // 指定方向のナビゲーション先を事前取得（ホバー/タッチ時に呼ばれる）
   const prefetchDirection = useCallback(
@@ -198,9 +198,9 @@ export function useCalendarData({
         sortOrder: 'asc' as const,
         limit: 100,
       };
-      void Promise.all([utils.plans.list.prefetch(input), utils.logs.list.prefetch(input)]);
+      void Promise.all([utils.plans.list.prefetch(input), utils.records.list.prefetch(input)]);
     },
-    [currentDate, viewType, weekStartsOn, timezone, utils.logs.list, utils.plans.list],
+    [currentDate, viewType, weekStartsOn, timezone, utils.records.list, utils.plans.list],
   );
 
   // ビュー切り替え先の日付範囲を即座にprefetch（useEffect経由の1レンダー遅延を回避）
@@ -214,9 +214,9 @@ export function useCalendarData({
         sortOrder: 'asc' as const,
         limit: 100,
       };
-      void Promise.all([utils.plans.list.prefetch(input), utils.logs.list.prefetch(input)]);
+      void Promise.all([utils.plans.list.prefetch(input), utils.records.list.prefetch(input)]);
     },
-    [currentDate, weekStartsOn, timezone, utils.logs.list, utils.plans.list],
+    [currentDate, weekStartsOn, timezone, utils.records.list, utils.plans.list],
   );
 
   // フィルター関数と状態を取得（ストアに統一）

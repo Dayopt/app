@@ -2,25 +2,27 @@ import { describe, expect, it } from 'vitest';
 
 import type { CalendarEvent } from '../../types/calendar.types';
 
-import type { TimedEntry } from '../../types/entry.types';
+import type { TimedTimeblock } from '../../types/timeblock.types';
 
 import {
-  calculateEntryLayouts,
   calculateEntryPosition,
   calculateMaxConcurrent,
+  calculateTimeblockLayouts,
   computeActualTimeDiffOverlay,
   detectOverlapGroups,
-  filterEntriesByDate,
+  filterTimeblocksByDate,
   findOverlapGroups,
   isOverlapping,
-  sortTimedEntries,
+  sortTimedTimeblocks,
 } from '../layout';
 
 // ========================================
 // テストヘルパー
 // ========================================
 
-function createTimedEntry(overrides: Partial<TimedEntry> & { start: Date; end: Date }): TimedEntry {
+function createTimedEntry(
+  overrides: Partial<TimedTimeblock> & { start: Date; end: Date },
+): TimedTimeblock {
   return {
     id: 'test-1',
     title: 'Test Entry',
@@ -37,7 +39,7 @@ function createTimedEntry(overrides: Partial<TimedEntry> & { start: Date; end: D
     updatedAt: new Date(),
     origin: 'planned',
     ...overrides,
-  } as TimedEntry;
+  } as TimedTimeblock;
 }
 
 function createCalendarEvent(
@@ -61,12 +63,12 @@ function createCalendarEvent(
 }
 
 // ========================================
-// calculateEntryLayouts
+// calculateTimeblockLayouts
 // ========================================
 
-describe('calculateEntryLayouts', () => {
+describe('calculateTimeblockLayouts', () => {
   it('空配列で空のレイアウトを返す', () => {
-    expect(calculateEntryLayouts([])).toEqual([]);
+    expect(calculateTimeblockLayouts([])).toEqual([]);
   });
 
   it('単一エントリはfull widthで配置', () => {
@@ -75,7 +77,7 @@ describe('calculateEntryLayouts', () => {
       start: new Date('2026-01-15T10:00:00'),
       end: new Date('2026-01-15T11:00:00'),
     });
-    const layouts = calculateEntryLayouts([entry]);
+    const layouts = calculateTimeblockLayouts([entry]);
 
     expect(layouts).toHaveLength(1);
     expect(layouts[0]!.column).toBe(0);
@@ -95,7 +97,7 @@ describe('calculateEntryLayouts', () => {
       start: new Date('2026-01-15T10:30:00'),
       end: new Date('2026-01-15T11:30:00'),
     });
-    const layouts = calculateEntryLayouts([entry1, entry2]);
+    const layouts = calculateTimeblockLayouts([entry1, entry2]);
 
     expect(layouts).toHaveLength(2);
     expect(layouts[0]!.totalColumns).toBe(2);
@@ -124,7 +126,7 @@ describe('calculateEntryLayouts', () => {
       origin: 'planned',
     });
 
-    const layouts = calculateEntryLayouts([unplannedGapRecord, planned]);
+    const layouts = calculateTimeblockLayouts([unplannedGapRecord, planned]);
     const plannedLayout = layouts.find((layout) => layout.entry.id === 'planned');
     const recordLayout = layouts.find((layout) => layout.entry.id === 'gap-record');
 
@@ -152,7 +154,7 @@ describe('calculateEntryLayouts', () => {
       origin: 'unplanned',
     });
 
-    const layouts = calculateEntryLayouts([planned, overlappingRecord]);
+    const layouts = calculateTimeblockLayouts([planned, overlappingRecord]);
 
     expect(layouts).toHaveLength(2);
     layouts.forEach((layout) => {
@@ -177,7 +179,7 @@ describe('calculateEntryLayouts', () => {
       origin: 'planned',
     });
 
-    const layouts = calculateEntryLayouts([unplanned, planned]);
+    const layouts = calculateTimeblockLayouts([unplanned, planned]);
     const plannedLayout = layouts.find((layout) => layout.entry.id === 'planned');
     const unplannedLayout = layouts.find((layout) => layout.entry.id === 'unplanned');
 
@@ -196,7 +198,7 @@ describe('calculateEntryLayouts', () => {
       start: new Date('2026-01-15T12:00:00'),
       end: new Date('2026-01-15T13:00:00'),
     });
-    const layouts = calculateEntryLayouts([entry1, entry2]);
+    const layouts = calculateTimeblockLayouts([entry1, entry2]);
 
     expect(layouts).toHaveLength(2);
     layouts.forEach((layout) => {
@@ -219,7 +221,7 @@ describe('calculateEntryLayouts', () => {
       origin: 'planned',
     });
     // 後発エントリを先に渡しても、早い方がcolumn 0になるべき
-    const layouts = calculateEntryLayouts([laterEntry, planned]);
+    const layouts = calculateTimeblockLayouts([laterEntry, planned]);
 
     const plannedLayout = layouts.find((l) => l.entry.id === 'planned');
     const laterLayout = layouts.find((l) => l.entry.id === 'later-entry');
@@ -439,10 +441,10 @@ describe('calculateEntryPosition', () => {
 });
 
 // ========================================
-// sortTimedEntries / filterEntriesByDate
+// sortTimedTimeblocks / filterTimeblocksByDate
 // ========================================
 
-describe('sortTimedEntries', () => {
+describe('sortTimedTimeblocks', () => {
   it('開始時刻順にソート', () => {
     const entries = [
       createTimedEntry({
@@ -456,7 +458,7 @@ describe('sortTimedEntries', () => {
         end: new Date('2026-01-15T11:00'),
       }),
     ];
-    const sorted = sortTimedEntries(entries);
+    const sorted = sortTimedTimeblocks(entries);
     expect(sorted[0]!.id).toBe('a');
     expect(sorted[1]!.id).toBe('b');
   });
@@ -474,12 +476,12 @@ describe('sortTimedEntries', () => {
         end: new Date('2026-01-15T11:00'),
       }),
     ];
-    sortTimedEntries(entries);
+    sortTimedTimeblocks(entries);
     expect(entries[0]!.id).toBe('b');
   });
 });
 
-describe('filterEntriesByDate', () => {
+describe('filterTimeblocksByDate', () => {
   it('指定日のエントリのみ返す', () => {
     const entries = [
       createTimedEntry({
@@ -493,7 +495,7 @@ describe('filterEntriesByDate', () => {
         end: new Date('2026-01-16T11:00'),
       }),
     ];
-    const filtered = filterEntriesByDate(entries, new Date('2026-01-15'));
+    const filtered = filterTimeblocksByDate(entries, new Date('2026-01-15'));
     expect(filtered).toHaveLength(1);
     expect(filtered[0]!.id).toBe('a');
   });

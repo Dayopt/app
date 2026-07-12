@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { LogEvent, PlanEvent } from '@/features/entry';
+import type { PlanEvent, RecordEvent } from '@/features/timeblock';
 import { calculateTwoLaneLayout, resolveTwoLaneFromPointer } from '../two-lane-layout';
 
 const HOUR_HEIGHT = 60;
@@ -35,7 +35,7 @@ function makePlan(overrides: Partial<PlanEvent> = {}): PlanEvent {
   };
 }
 
-function makeLog(overrides: Partial<LogEvent> = {}): LogEvent {
+function makeLog(overrides: Partial<RecordEvent> = {}): RecordEvent {
   const start = localDate(9, 0);
   const end = localDate(10, 0);
   return {

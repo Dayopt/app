@@ -34,14 +34,14 @@ export function TagDeleteStrategyDialog({
 }: TagDeleteStrategyDialogProps) {
   const t = useTranslations('tags');
 
-  const [strategy, setStrategy] = useState<TagDeleteStrategy>('delete_entries');
+  const [strategy, setStrategy] = useState<TagDeleteStrategy>('delete_blocks');
   const [targetTagId, setTargetTagId] = useState<string | null>(null);
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
-      setStrategy('delete_entries');
+      setStrategy('delete_blocks');
       setTargetTagId(null);
     }
   }
@@ -68,7 +68,7 @@ export function TagDeleteStrategyDialog({
           className="space-y-2"
         >
           <label htmlFor="strategy-delete" className="flex cursor-pointer items-center gap-4">
-            <RadioGroupItem value="delete_entries" id="strategy-delete" />
+            <RadioGroupItem value="delete_blocks" id="strategy-delete" />
             <span className="text-sm">{t('deleteStrategy.deleteEntries')}</span>
           </label>
           <label htmlFor="strategy-reassign" className="flex cursor-pointer items-center gap-4">

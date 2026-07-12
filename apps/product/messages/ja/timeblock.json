@@ -1,0 +1,177 @@
+{
+  "timeblock": {
+    "untitled": "無題",
+    "errors": {
+      "timeOverlap": "この時間帯には既に予定があります"
+    },
+    "toast": {
+      "created": "「{title}」を記録しました ✓",
+      "createFailed": "作成できませんでした: {error}",
+      "updated": "更新しました",
+      "updateFailed": "更新できませんでした。もう一度お試しください",
+      "deleted": "削除しました",
+      "deleteFailed": "削除できませんでした: {error}",
+      "bulkUpdated": "{count}件を更新しました",
+      "bulkUpdateFailed": "一括更新できませんでした: {error}",
+      "bulkDeleted": "{count}件を削除しました",
+      "bulkDeleteFailed": "一括削除できませんでした: {error}",
+      "tagsAdded": "タグを追加しました",
+      "tagsAddFailed": "タグを追加できませんでした: {error}",
+      "statusChanged": "ステータスを{status}に変更しました",
+      "statusChangedCount": "{count}件のステータスを変更しました",
+      "statusChangeFailed": "ステータスを変更できませんでした。もう一度お試しください",
+      "archivedCount": "{count}件をアーカイブしました",
+      "archiveFailed": "アーカイブできませんでした。もう一度お試しください",
+      "deletedCount": "{count}件を削除しました",
+      "restored": "復元しました",
+      "restoreFailed": "復元できませんでした。もう一度お試しください",
+      "skipped": "スキップしました",
+      "skipFailed": "スキップできませんでした。もう一度お試しください",
+      "unskipped": "スキップを解除しました",
+      "conflict": "このエントリーは他の場所で変更されました。最新データを読み込んでください",
+      "placed": "{name} を {time} に追加しました",
+      "overlapError": "{time} は既存のブロックと重複しています"
+    },
+    "sidebar": {
+      "tabs": {
+        "calendar": "カレンダー",
+        "list": "リスト"
+      },
+      "list": {
+        "nav": {
+          "plan": "エントリー"
+        }
+      }
+    },
+    "open": "開く",
+    "editDetails": "詳細を編集",
+    "delete": {
+      "confirmTitle": "エントリーを削除しますか？",
+      "confirmTitleWithName": "{name}を削除しますか？",
+      "description": "このエントリーは完全に削除されます。取り消せません",
+      "warningIrreversible": "この操作は取り消せません",
+      "afterDeletion": "削除すると",
+      "willBeDeleted": "エントリーが完全に削除されます",
+      "willBeRemovedFromCalendar": "カレンダーから削除されます",
+      "confirm": "エントリーを削除",
+      "deleting": "削除中..."
+    },
+    "status": {
+      "label": "ステータス",
+      "backlog": "準備中",
+      "ready": "配置済み",
+      "active": "作業中",
+      "wait": "待ち",
+      "closed": "完了",
+      "cancel": "中止"
+    },
+    "inspector": {
+      "addTitle": "タイトルを追加",
+      "editDescription": "説明を編集",
+      "addDescription": "説明を追加",
+      "addDescriptionPlaceholder": "例: Slack整理 + メール返信",
+      "create": "エントリーを作成",
+      "createRecord": "エントリーを作成",
+      "markComplete": "完了にする",
+      "markIncomplete": "未完了に戻す",
+      "completeOptions": "完了オプション",
+      "completeAndCreate": "完了 + エントリー作成",
+      "toast": {
+        "tagsSaveFailed": "タグを保存できませんでした。入力内容は保持されています。もう一度お試しください",
+        "createFailed": "エントリーを作成できませんでした。もう一度お試しください",
+        "saveFailed": "保存できませんでした。入力内容は保持されています。もう一度お試しください"
+      },
+      "noTitle": "（タイトルなし）",
+      "notFound": "エントリーが見つかりません",
+      "noData": "データが見つかりません",
+      "menu": {
+        "duplicate": "複製",
+        "copyId": "IDをコピー",
+        "copyLink": "リンクをコピー",
+        "openNewTab": "新しいタブで開く"
+      },
+      "tags": {
+        "add": "タグを追加"
+      },
+      "time": {
+        "date": "日付",
+        "planned": "予定",
+        "actual": "記録",
+        "sameAsPlanned": "まだこれから",
+        "noPlanned": "計画せず過ごした",
+        "duration": "期間",
+        "diff": "差分",
+        "timeProgress": "時間達成率"
+      },
+      "markUnplanned": "予定外にする",
+      "restorePlanned": "予定に戻す",
+      "skip": "スキップ",
+      "unskip": "スキップを解除",
+      "unplanned": "予定外",
+      "note": {
+        "label": "メモ",
+        "placeholder": "例: 集中できた",
+        "upcomingPlaceholder": "何をやる予定？",
+        "pastPlaceholder": "やったことをひとこと..."
+      },
+      "records": {
+        "link": "エントリーを紐付け",
+        "unlink": "エントリー紐付けを解除",
+        "search": "エントリーを検索...",
+        "noMatch": "一致するエントリーがありません",
+        "addNew": "作業ログを追加"
+      },
+      "recordCreate": {
+        "titlePlaceholder": "何をした？",
+        "titleLabel": "エントリータイトル",
+        "failed": "エントリーを作成できませんでした。もう一度お試しください",
+        "linkEntry": "エントリーに紐付け",
+        "unlinkEntry": "エントリー紐付けを解除",
+        "searchEntries": "エントリーを検索...",
+        "noEntries": "まだエントリーがありません",
+        "addNew": "エントリーを追加"
+      }
+    },
+    "view": {
+      "edit": "編集",
+      "delete": "エントリーを削除",
+      "deleteConfirmTitle": "「{name}」を削除しますか？",
+      "deleteConfirmDescription": "この表示設定は完全に削除されます。取り消せません",
+      "deleteConfirm": "削除"
+    },
+    "editor": {
+      "destination": {
+        "plan": "予定として保存",
+        "record": "記録として保存"
+      },
+      "title": "タイトル",
+      "titlePlaceholder": "何をしましたか？",
+      "date": "日付",
+      "time": "時間",
+      "note": "メモ",
+      "notePlaceholder": "例: 集中できた",
+      "save": "保存",
+      "timeLocked": "過去の予定の時間は変更できません",
+      "recordAsIs": "そのまま記録",
+      "confirmDay": "この日を確定",
+      "toast": {
+        "recorded": "記録しました ✓",
+        "dayConfirmed": "この日を記録しました ✓",
+        "overlap": "この時間帯には既に記録があります",
+        "saveFailed": "保存できませんでした。もう一度お試しください",
+        "recordFailed": "記録できませんでした。もう一度お試しください",
+        "confirmFailed": "この日を確定できませんでした。もう一度お試しください",
+        "saved": "保存しました ✓",
+        "deleted": "削除しました",
+        "deleteFailed": "削除できませんでした。もう一度お試しください",
+        "restored": "復元しました",
+        "restoreFailed": "復元できませんでした。もう一度お試しください",
+        "skipped": "スキップしました",
+        "skipFailed": "スキップできませんでした。もう一度お試しください",
+        "unskipped": "スキップを解除しました",
+        "planCreated": "予定を追加しました ✓"
+      },
+      "migratedLocked": "移行された過去の記録は編集できません"
+    }
+  }
+}

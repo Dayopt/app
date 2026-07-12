@@ -5,7 +5,7 @@
  * plans -> PlanEvent の射影を担う。書き込み・DnD 保存先判定は Step 6。
  */
 
-import type { PlanEvent, PlanEventStatus } from '@/features/entry';
+import type { PlanEvent, PlanEventStatus } from '@/features/timeblock';
 import { convertToTimezone } from '@/lib/date/timezone';
 
 /** `plans` テーブル行のうち PlanEvent 射影に必要な最小 shape */

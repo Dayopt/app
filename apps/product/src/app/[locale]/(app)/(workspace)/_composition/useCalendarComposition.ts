@@ -19,7 +19,7 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 // Feature barrel imports（side-effect用）
 import type { CalendarViewType, UserSettings } from '@/features/calendar';
 import { useCalendarNavigationStore } from '@/features/calendar';
-import { useEntryInspectorStore } from '@/features/entry';
+import { useTimeblockInspectorStore } from '@/features/timeblock';
 import { logger } from '@/lib/logger';
 
 // Sub-hooks
@@ -98,8 +98,8 @@ export function useCalendarComposition({
   // =========================================================================
   // Side Effects: Inspector cleanup on date navigation
   // =========================================================================
-  const selectedEntryId = useEntryInspectorStore((state) => state.entryId);
-  const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
+  const selectedEntryId = useTimeblockInspectorStore((state) => state.entryId);
+  const closeInspector = useTimeblockInspectorStore((state) => state.closeInspector);
 
   const prevDateRef = React.useRef(currentDate);
   useEffect(() => {

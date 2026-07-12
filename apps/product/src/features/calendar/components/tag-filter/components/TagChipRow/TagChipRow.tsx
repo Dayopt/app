@@ -9,7 +9,7 @@ import { TagIcon, useTags, type Tag } from '@/features/tags';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@dayopt/components';
 
-import { TagEntryCreatePopover } from '../TagEntryCreatePopover';
+import { TagTimeblockCreatePopover } from '../TagTimeblockCreatePopover';
 
 interface TagChipRowProps {
   className?: string;
@@ -25,7 +25,7 @@ function sortActiveTags(tags: Tag[] | undefined): Tag[] {
  * モバイル専用タグチップ行。
  *
  * - タイムライン下部の固定フッターに横一列で並ぶ（親タグ・葉タグ混在）
- * - タップで bottom sheet `TagEntryCreatePopover` を開き、時刻指定してエントリ作成
+ * - タップで bottom sheet `TagTimeblockCreatePopover` を開き、時刻指定してエントリ作成
  * - 行末に「+」ボタンを置き `useShellStore.openTagCreateModal()` で新規タグ作成
  * - データソース: `useTags()`（sidebar と同じ cache を参照、追加 fetch ゼロ）
  * - 並び順: `sort_order` 昇順（PC sidebar と完全一致）
@@ -91,7 +91,7 @@ export function TagChipRow({ className }: TagChipRowProps) {
       </button>
 
       {openTag && (
-        <TagEntryCreatePopover
+        <TagTimeblockCreatePopover
           open={true}
           onOpenChange={(o) => {
             if (!o) setOpenTagId(null);

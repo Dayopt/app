@@ -259,7 +259,7 @@ export const tagsRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string().uuid(),
-        strategy: z.enum(['delete_entries', 'reassign']).optional(),
+        strategy: z.enum(['delete_blocks', 'reassign']).optional(),
         targetTagId: z.string().uuid().optional(),
       }),
     )
@@ -363,7 +363,7 @@ export const tagsRouter = createTRPCRouter({
     .input(
       z.object({
         prefix: z.string().min(1).max(50),
-        strategy: z.enum(['delete_entries', 'reassign']).optional(),
+        strategy: z.enum(['delete_blocks', 'reassign']).optional(),
         targetTagId: z.string().uuid().optional(),
       }),
     )

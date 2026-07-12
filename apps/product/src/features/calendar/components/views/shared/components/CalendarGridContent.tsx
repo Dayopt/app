@@ -4,8 +4,8 @@ import React, { useCallback } from 'react';
 
 import { isSameDay } from 'date-fns';
 
-import { EntryCard, useTimeModelRecordMutations } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
+import { TimeblockCard, useTimeblockRecordMutations } from '@/features/timeblock';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@dayopt/components';
@@ -18,9 +18,9 @@ import type { CalendarEvent } from '../../../../types/calendar.types';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import type { DateTimeSelection } from './CalendarDragSelection';
 import { CalendarDragSelection } from './CalendarDragSelection';
-import { DraftEntryBlock } from './DraftEntryBlock';
+import { DraftTimeblock } from './DraftTimeblock';
 import { InlineTagPalette } from './InlineTagPalette';
-import { TwoLaneEntryRenderer } from './TwoLaneEntryRenderer';
+import { TwoLaneTimeblockRenderer } from './TwoLaneTimeblockRenderer';
 
 // ========================================
 // Types
@@ -135,7 +135,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
-  const { recordPlan } = useTimeModelRecordMutations();
+  const { recordPlan } = useTimeblockRecordMutations();
 
   // Tag タップで開いている draft entry（同日のときだけ block を描画）
   const tagDraft = useTagDraftStore((s) => s.draft);
@@ -199,7 +199,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       const tag = entry.tagId ? getTagById(entry.tagId) : null;
       const ghostHeight = Math.max(twoLaneStyles[entryId]?.height ?? 20, 20);
       return (
-        <EntryCard
+        <TimeblockCard
           entry={previewEntry}
           tagName={tag?.name ?? null}
           tagColor={tag?.color ?? null}
@@ -265,7 +265,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
           if (!position) return null;
 
           return (
-            <TwoLaneEntryRenderer
+            <TwoLaneTimeblockRenderer
               key={entry.id}
               entry={entry}
               position={position}
@@ -288,7 +288,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
         {/* Tag タップで作成中の draft entry を該当日に描画 */}
         {tagDraft && isSameDay(tagDraft.date, date) && (
-          <DraftEntryBlock draft={tagDraft} hourHeight={HOUR_HEIGHT} />
+          <DraftTimeblock draft={tagDraft} hourHeight={HOUR_HEIGHT} />
         )}
       </div>
 

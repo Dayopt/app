@@ -23,7 +23,7 @@ export interface TimeRange {
 }
 
 /** グリッド上のエントリ位置（px） */
-export interface EntryRect {
+export interface TimeblockRect {
   top: number;
   left: number;
   width: number;
@@ -54,7 +54,7 @@ export interface PendingState {
   mode: 'pending';
   entryId: string;
   startPoint: Point;
-  originalPosition: EntryRect;
+  originalPosition: TimeblockRect;
   dateIndex: number;
 }
 
@@ -63,7 +63,7 @@ export interface LongPressPendingState {
   mode: 'longpress-pending';
   entryId: string;
   startPoint: Point;
-  originalPosition: EntryRect;
+  originalPosition: TimeblockRect;
   dateIndex: number;
 }
 
@@ -73,7 +73,7 @@ export interface DraggingState {
   entryId: string;
   startPoint: Point;
   currentPoint: Point;
-  originalPosition: EntryRect;
+  originalPosition: TimeblockRect;
   /** Column the drag originated from */
   dateIndex: number;
   /** Column the drag is currently over */
@@ -92,7 +92,7 @@ export interface ResizingState {
   entryId: string;
   startPoint: Point;
   currentPoint: Point;
-  originalPosition: EntryRect;
+  originalPosition: TimeblockRect;
   direction: 'top' | 'bottom';
   /** Snapped height (px) */
   snappedHeight: number;
@@ -133,14 +133,14 @@ export type InteractionAction =
       type: 'POINTER_DOWN';
       entryId: string;
       point: Point;
-      originalPosition: EntryRect;
+      originalPosition: TimeblockRect;
       dateIndex: number;
     }
   | {
       type: 'TOUCH_START';
       entryId: string;
       point: Point;
-      originalPosition: EntryRect;
+      originalPosition: TimeblockRect;
       dateIndex: number;
     }
   | { type: 'LONGPRESS_FIRED' }
@@ -151,7 +151,7 @@ export type InteractionAction =
       entryId: string;
       direction: 'top' | 'bottom';
       point: Point;
-      originalPosition: EntryRect;
+      originalPosition: TimeblockRect;
     }
   | { type: 'GRID_POINTER_DOWN'; point: Point; dateIndex: number; gridY: number }
   | { type: 'GRID_TOUCH_START'; point: Point; dateIndex: number; gridY: number }

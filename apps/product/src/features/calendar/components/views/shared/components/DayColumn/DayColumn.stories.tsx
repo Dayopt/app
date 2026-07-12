@@ -8,7 +8,7 @@ import { DayColumn } from './DayColumn';
 /**
  * 1日分のグリッド列コンポーネント。
  * エントリ表示・空状態CTA・週末背景色に対応。
- * useEntryInspectorStore / useTagsMap はグローバルプロバイダーで解決済み。
+ * useTimeblockInspectorStore / useTagsMap はグローバルプロバイダーで解決済み。
  */
 const meta = {
   title: 'Product/Features/Calendar/Views/DayColumn',

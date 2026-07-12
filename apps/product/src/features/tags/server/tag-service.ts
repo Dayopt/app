@@ -665,7 +665,7 @@ export class TagService {
       if (associationCount > 0) {
         throw new TagServiceError(
           'INVALID_INPUT',
-          'Tags in this group have associated entries. Specify a strategy: "delete_entries" or "reassign"',
+          'Tags in this group have associated blocks. Specify a strategy: "delete_blocks" or "reassign"',
         );
       }
     }
@@ -679,7 +679,7 @@ export class TagService {
     await this.applyTagStrategy({
       userId,
       tagIds,
-      strategy: strategy ?? 'delete_entries',
+      strategy: strategy ?? 'delete_blocks',
       ...(targetTagId ? { targetTagId } : {}),
     });
 
@@ -802,7 +802,7 @@ export class TagService {
       if (associationCount > 0) {
         throw new TagServiceError(
           'INVALID_INPUT',
-          'Tag has associated entries. Specify a strategy: "delete_entries" or "reassign"',
+          'Tag has associated blocks. Specify a strategy: "delete_blocks" or "reassign"',
         );
       }
     }
@@ -817,7 +817,7 @@ export class TagService {
     await this.applyTagStrategy({
       userId,
       tagIds: [tagId],
-      strategy: strategy ?? 'delete_entries',
+      strategy: strategy ?? 'delete_blocks',
       ...(targetTagId ? { targetTagId } : {}),
     });
 

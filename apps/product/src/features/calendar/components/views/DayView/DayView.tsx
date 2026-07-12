@@ -6,7 +6,7 @@ import { getWeek } from 'date-fns';
 
 import { cn } from '@dayopt/components';
 
-import { ConfirmDayButton } from '@/features/entry';
+import { ConfirmDayButton } from '@/features/timeblock';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarViewAnimation } from '../../animations/ViewTransition';
@@ -97,7 +97,7 @@ export const DayView = ({
     return d;
   }, [date]);
   const hasUnrecordedPastPlans = useMemo(() => {
-    // eslint-disable-next-line react-hooks/purity -- confirmDay 導線の表示判定。entries 変更時の再評価で十分（EntryContextMenu と同じ運用）
+    // eslint-disable-next-line react-hooks/purity -- confirmDay 導線の表示判定。entries 変更時の再評価で十分（TimeblockContextMenu と同じ運用）
     const now = Date.now();
     const list = entries ?? [];
     return list.some(
