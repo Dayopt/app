@@ -49,9 +49,13 @@ WHERE e.origin = 'planned'
   AND NOT EXISTS (
     SELECT 1
     FROM public.logs existing
-    WHERE existing.plan_id = e.id
+    WHERE existing.user_id = e.user_id
       AND existing.deleted_at IS NULL
-      AND existing.source <> 'auto_migrated'
+      AND (
+        (existing.plan_id = e.id AND existing.source <> 'auto_migrated')
+        OR tstzrange(existing.start_at, existing.end_at, '[)')
+          && tstzrange(e.start_time, e.end_time, '[)')
+      )
   )
 ON CONFLICT (id) DO NOTHING;
 
@@ -129,9 +133,13 @@ BEGIN
         AND NOT EXISTS (
           SELECT 1
           FROM public.logs existing
-          WHERE existing.plan_id = e.id
+          WHERE existing.user_id = e.user_id
             AND existing.deleted_at IS NULL
-            AND existing.source <> 'auto_migrated'
+            AND (
+              (existing.plan_id = e.id AND existing.source <> 'auto_migrated')
+              OR tstzrange(existing.start_at, existing.end_at, '[)')
+                && tstzrange(e.start_time, e.end_time, '[)')
+            )
         )
       )
   )
