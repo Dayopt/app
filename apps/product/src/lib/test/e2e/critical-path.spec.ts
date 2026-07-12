@@ -31,7 +31,7 @@ async function loginAndNavigate(page: import('@playwright/test').Page) {
   await page.waitForURL(/\/(day|week|stats)/i, { timeout: 15000 });
 }
 
-test.describe('Critical Path: カレンダー & エントリ管理', () => {
+test.describe('Critical Path: Calendar & Timeblock', () => {
   test.skip(SKIP_AUTH_TESTS, 'TEST_USER_EMAIL / TEST_USER_PASSWORD が未設定');
 
   test.beforeEach(async ({ page }) => {
@@ -50,7 +50,7 @@ test.describe('Critical Path: カレンダー & エントリ管理', () => {
     await expect(calendarContent).toBeVisible({ timeout: 10000 });
   });
 
-  test('エントリ作成導線が存在する', async ({ page }) => {
+  test('Timeblock 作成導線が存在する', async ({ page }) => {
     // 作成ボタンまたはFABが存在する
     const createButton = page
       .locator(
@@ -61,10 +61,10 @@ test.describe('Critical Path: カレンダー & エントリ管理', () => {
     await expect(createButton).toBeVisible({ timeout: 10000 });
   });
 
-  test('カレンダービューにエントリ領域が表示される', async ({ page }) => {
+  test('Calendar に Timeblock 領域が表示される', async ({ page }) => {
     await page.waitForLoadState('networkidle');
 
-    // タイムスロットまたはエントリのコンテナが存在する
+    // タイムスロットまたは Timeblock のコンテナが存在する
     const timeSlots = page
       .locator('[data-testid="time-slots"], [data-testid="calendar"], [role="grid"], .time-column')
       .first();

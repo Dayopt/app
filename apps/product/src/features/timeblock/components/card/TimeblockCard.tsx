@@ -448,7 +448,7 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
 
   return (
     <div
-      data-entry-card
+      data-timeblock-card
       data-entry-id={entry.id}
       data-entry-origin={entry.origin}
       className={timeblockCardClasses}
