@@ -51,10 +51,10 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
 
-  // テスト対象プロジェクト（ブラウザ別）
-  // E2Eはスモーク＋クリティカルパスに縮小済み（2ファイル）
-  // クロスブラウザのUI差異はStorybook側でカバー
-  // @see Storybook → Docs/テスト戦略
+  // CI は chromium で全 spec を実行する。
+  // Mobile Chrome は認証情報を持つローカル検証用。CI では認証必須テストが skip され、
+  // 未認証ケースだけを二重実行するため対象外とする。
+  // @see docs/engineering/log/2026-07-13-test-automation-strategy.md
   projects: [
     // ==========================================
     // デスクトップ（Chromiumのみ）

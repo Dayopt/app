@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-13
 ---
 
 # セキュリティ方針
@@ -19,8 +19,8 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 .github/
   dependabot.yml              # 依存関係自動更新
   workflows/
-    ci.yml                    # lint + typecheck + test + storybook + build
-    e2e.yml                   # Playwright E2E テスト
+    ci.yml                    # lint + typecheck + unit + build + Playwright E2E
+    docs-guard.yml            # docs整合性チェック
     integration.yml           # Supabase 統合テスト（パスフィルター）
     create-release.yml        # GitHub Release 作成
 ```
@@ -34,7 +34,7 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 | ワークフロー         | permissions       | 理由                 |
 | -------------------- | ----------------- | -------------------- |
 | `ci.yml`             | `contents: read`  | コード読み取りのみ   |
-| `e2e.yml`            | `contents: read`  | コード読み取りのみ   |
+| `docs-guard.yml`     | `contents: read`  | docs読み取りのみ     |
 | `integration.yml`    | `contents: read`  | コード読み取りのみ   |
 | `create-release.yml` | `contents: write` | タグからリリース作成 |
 
@@ -79,7 +79,7 @@ Required checks:
   ✅ Supabase Preview Branch
 ```
 
-Storybook Tests は Playwright コンテナのスケジューリング不安定性のため required から除外。
+Storybook browser testはlight / darkとも既知failureがあるためrequiredから除外。#1499 / #1586 を解消し、両suiteが継続してgreenになってから昇格を再判断する。
 
 ### Fork Pull Request
 

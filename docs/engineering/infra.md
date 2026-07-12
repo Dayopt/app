@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-13
 ---
 
 # インフラ・環境・API/Routing 総覧
@@ -22,6 +22,18 @@ Dayopt の標準ルートは `local → PR Preview → production`。Vercel Prev
 | **Production** | `dayopt` main                     | main merge で Production deploy | `app.dayopt.app` |
 
 persistent staging は常設しない。固定 URL が必要な Stripe / OAuth callback / closed beta 検証が出た時だけ、Vercel staging と Supabase persistent branch を追加する。
+
+### テスト自動化の現在地
+
+| Suite                          | CI       | 現在の役割                                                               |
+| ------------------------------ | -------- | ------------------------------------------------------------------------ |
+| Vitest unit                    | required | ロジックとcomponentの回帰検知                                            |
+| Playwright `chromium`          | required | `apps/product/src/lib/test/e2e` の全specを実行                           |
+| Playwright `Mobile Chrome`     | local    | `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` を持つ環境でmobile shellを確認  |
+| Storybook browser light / dark | local    | interaction / a11yの既知failureを #1499 / #1586 で解消後にCI昇格を再判断 |
+| Playwright Test Agents         | opt-in   | planner / generatorだけを単一フローの計画・生成支援に使う                |
+
+Mobile ChromeをCIで実行すると、認証必須testは環境変数不足でskipされ、残る未認証testだけがchromiumと重複する。認証fixtureまたはCI専用test userを安全に用意するまではlocal専用とする。Test Agentsのhealerは、失敗を`test.fixme()`へ変えてgreenにできるため採用しない。判断の根拠は [2026-07-13-test-automation-strategy.md](./log/2026-07-13-test-automation-strategy.md) に記録する。
 
 ### Supabase Project
 
