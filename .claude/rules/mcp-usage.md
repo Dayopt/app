@@ -93,7 +93,7 @@
 
 - **Invoke when**:
   - UI 変更実装後、Stats ページ / Hero / block-visual 等のビジュアル結果をスクリーンショットで確認する
-  - E2E スモーク（`apps/product` / `apps/web` の `playwright.config.ts`）が失敗した際の再現状況を撮影する
+  - E2E スモーク（`apps/product/playwright.config.ts`）が失敗した際の再現状況を撮影する
   - Storybook の variant レンダリングを検証する
 - **Before use**:
   - 検証対象（`pnpm storybook` の localhost:6006、または `pnpm dev` の app）が起動していることを確認する

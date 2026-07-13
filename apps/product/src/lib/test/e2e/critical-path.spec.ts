@@ -4,10 +4,10 @@ import { expect, test } from '@playwright/test';
  * クリティカルパステスト
  *
  * ビジネスクリティカルなユーザーフローの疎通確認。
- * 各機能のUI操作詳細はStorybook play関数でカバー。
+ * 各機能のUI操作詳細はunit / integration / Storybookに分担する。
  * サーバーサイドのCRUDロジックはintegration testでカバー。
  *
- * @see Storybook → Docs/テスト戦略
+ * @see docs/engineering/log/2026-07-13-test-automation-strategy.md
  */
 
 // 認証が必要なテストはスキップ条件を設定

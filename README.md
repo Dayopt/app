@@ -113,7 +113,7 @@ pnpm lint:fix    # 自動修正可能な問題を修正
 pnpm typecheck   # TypeScript型チェック
 
 # テスト
-pnpm test:run           # ユニットテスト（happy-dom環境）
+pnpm test:run           # product / web / scripts のユニットテスト
 pnpm test:integration   # 統合テスト（要: supabase start）
 pnpm test:e2e:smoke     # E2E smoke（ルーティング・認証フロー）
 pnpm test:e2e:critical  # E2E critical-path（カレンダー・エントリ操作）

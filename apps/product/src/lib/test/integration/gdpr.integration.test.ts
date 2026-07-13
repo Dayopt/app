@@ -122,8 +122,12 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
   });
 
   afterAll(async () => {
-    // サインアウト
-    await supabase.auth.signOut();
+    if (supabase) {
+      // サインアウト
+      await supabase.auth.signOut();
+    }
+
+    if (!adminSupabase) return;
 
     // テストデータをクリーンアップ
     await adminSupabase.from('records').delete().eq('user_id', TEST_USER_ID);
@@ -218,6 +222,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     let deleteTestPassword: string;
     let deleteTestSupabase: ReturnType<typeof createClient<Database>>;
     let deleteTestCtx: Context;
+    let deleteTestUserDeleted = false;
 
     beforeAll(async () => {
       // 削除テスト用の別ユーザーを作成
@@ -258,8 +263,13 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     });
 
     afterAll(async () => {
+      if (deleteTestSupabase) {
+        await deleteTestSupabase.auth.signOut();
+      }
+
+      if (!adminSupabase || !deleteTestUserId || deleteTestUserDeleted) return;
+
       // 削除テスト用ユーザーのクリーンアップ
-      await deleteTestSupabase.auth.signOut();
       await adminSupabase.auth.admin.deleteUser(deleteTestUserId);
     });
 
@@ -319,10 +329,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       ).rejects.toThrow(TRPCError);
     });
 
-    // skip理由: アカウント削除は auth.users を CASCADE DELETE するためテストDBを破壊する
-    // CI専用テストランナーでの実行を検討中
-    // TODO(#999): CI専用環境でのみ実行する仕組みを導入
-    it.skip('should delete account immediately with correct credentials', async () => {
+    it('should delete account immediately with correct credentials', async () => {
       const caller = createTestCaller(userRouter, deleteTestCtx);
 
       const result = await caller.deleteAccount({
@@ -331,6 +338,10 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       });
 
       expect(result.success).toBe(true);
+
+      const { data } = await adminSupabase.auth.admin.getUserById(deleteTestUserId);
+      expect(data.user).toBeNull();
+      deleteTestUserDeleted = true;
     });
   });
 
