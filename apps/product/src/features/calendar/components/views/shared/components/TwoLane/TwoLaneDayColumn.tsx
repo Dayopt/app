@@ -53,6 +53,7 @@ export function TwoLaneDayColumn({
             position={position}
             tagName={tag?.name ?? null}
             tagColor={tag?.color ?? null}
+            tagIcon={tag?.icon ?? null}
           />
         );
       })}
@@ -65,6 +66,7 @@ export function TwoLaneDayColumn({
             position={position}
             tagName={tag?.name ?? null}
             tagColor={tag?.color ?? null}
+            tagIcon={tag?.icon ?? null}
           />
         );
       })}

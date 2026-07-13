@@ -47,11 +47,27 @@ describe('TwoLane cards', () => {
     expect(screen.queryByText('Legacy plan title')).not.toBeInTheDocument();
   });
 
+  it('PlanカードはtagIconを表示する', () => {
+    const { container } = render(
+      <PlanLaneCard event={plan} position={position} tagName="Deep Work" tagIcon="briefcase" />,
+    );
+
+    expect(container.querySelector('svg')).not.toBeNull();
+  });
+
   it('Recordカードはtitleではなくタグ名を表示する', () => {
     render(<RecordLaneCard event={record} position={position} tagName="Deep Work" />);
 
     expect(screen.getByRole('button', { name: 'Deep Work' })).toBeInTheDocument();
     expect(screen.queryByText('Legacy record title')).not.toBeInTheDocument();
+  });
+
+  it('RecordカードはtagIconを表示する', () => {
+    const { container } = render(
+      <RecordLaneCard event={record} position={position} tagName="Deep Work" tagIcon="briefcase" />,
+    );
+
+    expect(container.querySelector('svg')).not.toBeNull();
   });
 
   it('タグを解決できない場合もtitleへフォールバックしない', () => {
