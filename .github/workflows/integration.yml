@@ -57,10 +57,13 @@ jobs:
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
 
+      - id: supabase-version
+        run: echo "version=$(node -p \"require('./apps/product/package.json').devDependencies.supabase\")" >> "$GITHUB_OUTPUT"
+
       - uses: supabase/setup-cli@v3
         with:
           # package.json の Supabase CLI と同じバージョンを使い、ローカルと CI の挙動を揃える
-          version: 2.109.1
+          version: ${{ steps.supabase-version.outputs.version }}
 
       - name: Start Supabase
         run: supabase start

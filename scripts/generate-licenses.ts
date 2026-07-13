@@ -247,7 +247,6 @@ export function generateCredits(packages: Record<string, LicenseInfo>): CreditIn
         ...(info.copyright ? { copyright: info.copyright } : {}),
       };
     })
-    .filter((credit) => !isPlatformSpecificCredit(credit))
     .sort((a, b) => {
       const nameOrder = a.name.localeCompare(b.name);
       return nameOrder === 0 ? a.version.localeCompare(b.version) : nameOrder;
