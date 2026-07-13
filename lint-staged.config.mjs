@@ -2,12 +2,17 @@ import path from 'node:path';
 
 const quote = (value) => JSON.stringify(value);
 
-const relativeToRoot = (files) => files.map((file) => path.relative(process.cwd(), file));
+const toPosixPath = (value) => value.split(path.sep).join(path.posix.sep);
+
+const relativeToRoot = (files) =>
+  files.map((file) => toPosixPath(path.relative(process.cwd(), file)));
 
 const relativeToWorkspace = (files, workspace) =>
   files
-    .filter((file) => path.relative(process.cwd(), file).startsWith(`${workspace}/`))
-    .map((file) => path.relative(path.join(process.cwd(), workspace), file));
+    .filter((file) =>
+      toPosixPath(path.relative(process.cwd(), file)).startsWith(`${workspace}/`),
+    )
+    .map((file) => toPosixPath(path.relative(path.join(process.cwd(), workspace), file)));
 
 export default {
   '*.{ts,tsx,js,jsx}': (files) => {
