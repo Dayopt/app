@@ -22,6 +22,8 @@ import { DiffBadge } from './DiffBadge';
 interface RecordLaneCardProps {
   event: RecordEvent;
   position: TwoLanePosition;
+  /** Calendar カードの表示名。title ではなくタグを source of truth とする。 */
+  tagName: string | null;
   tagColor?: string | null | undefined;
   className?: string | undefined;
   /** Inspector で選択中か（強調表示） */
@@ -50,6 +52,7 @@ function formatTimeRange(start: Date, end: Date): string {
 export function RecordLaneCard({
   event,
   position,
+  tagName,
   tagColor = null,
   className,
   isActive = false,
@@ -63,6 +66,7 @@ export function RecordLaneCard({
 }: RecordLaneCardProps) {
   const t = useTranslations();
   const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
+  const displayName = tagName ?? t('common.tags.noTag');
   const isUnplanned = event.planId == null;
   const hasDiff = event.diffMinutes != null && event.diffMinutes !== 0;
   const showDetails = position.height >= DETAIL_HEIGHT_THRESHOLD;
@@ -75,7 +79,7 @@ export function RecordLaneCard({
       data-entry-block="true"
       tabIndex={0}
       role="button"
-      aria-label={event.title || t('timeblock.untitled')}
+      aria-label={displayName}
       className={cn(
         'pointer-events-auto absolute flex flex-col gap-1 overflow-hidden rounded-lg px-2 py-1 text-xs',
         colorClasses?.tint ?? 'bg-card',
@@ -107,7 +111,7 @@ export function RecordLaneCard({
       }}
     >
       <div className="flex items-start justify-between gap-1">
-        <p className="truncate font-medium">{event.title || t('timeblock.untitled')}</p>
+        <p className="truncate font-medium">{displayName}</p>
         {hasDiff && <DiffBadge diffMinutes={event.diffMinutes ?? 0} />}
       </div>
       {showDetails && (

@@ -114,7 +114,9 @@ export function TwoLaneTimeblockRenderer({
       ? { zIndex: 1000 }
       : {};
 
-  const tagColor = entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null;
+  const tag = entry.tagId ? getTagById(entry.tagId) : undefined;
+  const tagName = tag?.name ?? null;
+  const tagColor = tag?.color ?? null;
   const isActive = isInspectorOpen && inspectorEntryId === entry.id;
   // eslint-disable-next-line react-hooks/purity -- 過去 plan / auto_migrated ロック判定。再レンダーごとの now で十分（TimeblockContextMenu と同じ運用）
   const now = Date.now();
@@ -159,6 +161,7 @@ export function TwoLaneTimeblockRenderer({
       <PlanLaneCard
         event={calendarEventToPlanEvent(entry, allEvents)}
         position={previewPosition}
+        tagName={tagName}
         tagColor={tagColor}
         isActive={isActive}
         disableDrag={disableDrag}
@@ -177,6 +180,7 @@ export function TwoLaneTimeblockRenderer({
     <RecordLaneCard
       event={calendarEventToRecordEvent(entry, allEvents)}
       position={previewPosition}
+      tagName={tagName}
       tagColor={tagColor}
       isActive={isActive}
       disableDrag={disableDrag}

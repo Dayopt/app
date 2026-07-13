@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-07-14
 code: apps/product/src/features/timeblock
 ---
 
@@ -20,6 +20,12 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 - **`end_at > now` → Plan、`end_at <= now` → Record**。「未来の記録は作れない」「過去の予定は無意味」の帰結として、時間編集の結果だけで保存先が一意に決まる
 - フォームの「予定として保存 / 記録として保存」表示はセレクタではなく**状態表示**。時間編集で now をまたいだ瞬間に自動で切り替わる
 - エディタは Plan / Record で共有し、destination の表示だけが差し替わる
+
+## Calendar カードの表示名
+
+- Plan / Record カードの表示名はタグ名を source of truth とする
+- DB 互換の `title` はカード表示へフォールバックしない。タグがない、またはタグを解決できない場合は「タグなし」と表示する
+- タグ名とタグ色は同じタグマスタから解決し、タグ名の変更をカード表示へ反映する
 
 ## skip（やらなかった）と未記録の区別
 

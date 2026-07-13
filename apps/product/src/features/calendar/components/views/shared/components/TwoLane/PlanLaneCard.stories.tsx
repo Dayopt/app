@@ -50,7 +50,12 @@ function makeEvent(status: PlanEventStatus, overrides: Partial<PlanEvent> = {}):
 export const Upcoming: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard event={makeEvent('upcoming')} position={basePosition} tagColor="blue" />
+      <PlanLaneCard
+        event={makeEvent('upcoming')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="blue"
+      />
     </Slot>
   ),
 };
@@ -58,7 +63,12 @@ export const Upcoming: Story = {
 export const Active: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard event={makeEvent('active')} position={basePosition} tagColor="teal" />
+      <PlanLaneCard
+        event={makeEvent('active')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="teal"
+      />
     </Slot>
   ),
 };
@@ -67,7 +77,12 @@ export const Active: Story = {
 export const Unrecorded: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard event={makeEvent('unrecorded')} position={basePosition} tagColor="amber" />
+      <PlanLaneCard
+        event={makeEvent('unrecorded')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="amber"
+      />
     </Slot>
   ),
 };
@@ -76,7 +91,12 @@ export const Unrecorded: Story = {
 export const Recorded: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard event={makeEvent('recorded')} position={basePosition} tagColor="indigo" />
+      <PlanLaneCard
+        event={makeEvent('recorded')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="indigo"
+      />
     </Slot>
   ),
 };
@@ -85,18 +105,24 @@ export const Recorded: Story = {
 export const Skipped: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard event={makeEvent('skipped')} position={basePosition} tagColor="gray" />
+      <PlanLaneCard
+        event={makeEvent('skipped')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="gray"
+      />
     </Slot>
   ),
 };
 
-/** タイトル未設定。 */
-export const Untitled: Story = {
+/** タグ未設定。title は表示へフォールバックしない。 */
+export const NoTag: Story = {
   render: () => (
     <Slot>
       <PlanLaneCard
-        event={makeEvent('upcoming', { title: '' })}
+        event={makeEvent('upcoming')}
         position={basePosition}
+        tagName={null}
         tagColor="violet"
       />
     </Slot>
@@ -110,6 +136,7 @@ export const Compact: Story = {
       <PlanLaneCard
         event={makeEvent('upcoming')}
         position={{ ...basePosition, height: 24 }}
+        tagName="Deep Work"
         tagColor="red"
       />
     </Slot>
@@ -131,7 +158,12 @@ export const AllPatterns: Story = {
         <div key={status} className="space-y-2">
           <p className="text-muted-foreground text-xs">{status}</p>
           <Slot>
-            <PlanLaneCard event={makeEvent(status)} position={basePosition} tagColor={color} />
+            <PlanLaneCard
+              event={makeEvent(status)}
+              position={basePosition}
+              tagName="Deep Work"
+              tagColor={color}
+            />
           </Slot>
         </div>
       ))}

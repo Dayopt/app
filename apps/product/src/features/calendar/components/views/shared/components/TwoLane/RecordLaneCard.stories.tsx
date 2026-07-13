@@ -57,6 +57,7 @@ export const RecordedNoDiff: Story = {
       <RecordLaneCard
         event={makeEvent({ diffMinutes: 0 })}
         position={basePosition}
+        tagName="Deep Work"
         tagColor="blue"
       />
     </Slot>
@@ -70,6 +71,7 @@ export const Overtime: Story = {
       <RecordLaneCard
         event={makeEvent({ diffMinutes: 20 })}
         position={basePosition}
+        tagName="Deep Work"
         tagColor="teal"
       />
     </Slot>
@@ -83,6 +85,7 @@ export const Early: Story = {
       <RecordLaneCard
         event={makeEvent({ diffMinutes: -15 })}
         position={basePosition}
+        tagName="Deep Work"
         tagColor="amber"
       />
     </Slot>
@@ -96,19 +99,21 @@ export const Unplanned: Story = {
       <RecordLaneCard
         event={makeEvent({ planId: null, diffMinutes: undefined })}
         position={basePosition}
+        tagName="Deep Work"
         tagColor="violet"
       />
     </Slot>
   ),
 };
 
-/** タイトル未設定。 */
-export const Untitled: Story = {
+/** タグ未設定。title は表示へフォールバックしない。 */
+export const NoTag: Story = {
   render: () => (
     <Slot>
       <RecordLaneCard
-        event={makeEvent({ title: '', diffMinutes: 0 })}
+        event={makeEvent({ diffMinutes: 0 })}
         position={basePosition}
+        tagName={null}
         tagColor="gray"
       />
     </Slot>
@@ -122,6 +127,7 @@ export const Compact: Story = {
       <RecordLaneCard
         event={makeEvent({ diffMinutes: 10 })}
         position={{ ...basePosition, height: 24 }}
+        tagName="Deep Work"
         tagColor="red"
       />
     </Slot>
@@ -137,6 +143,7 @@ export const AllPatterns: Story = {
           <RecordLaneCard
             event={makeEvent({ diffMinutes: 0 })}
             position={basePosition}
+            tagName="Deep Work"
             tagColor="blue"
           />
         </Slot>
@@ -147,6 +154,7 @@ export const AllPatterns: Story = {
           <RecordLaneCard
             event={makeEvent({ diffMinutes: 20 })}
             position={basePosition}
+            tagName="Deep Work"
             tagColor="teal"
           />
         </Slot>
@@ -157,6 +165,7 @@ export const AllPatterns: Story = {
           <RecordLaneCard
             event={makeEvent({ diffMinutes: -15 })}
             position={basePosition}
+            tagName="Deep Work"
             tagColor="amber"
           />
         </Slot>
@@ -167,6 +176,7 @@ export const AllPatterns: Story = {
           <RecordLaneCard
             event={makeEvent({ planId: null, diffMinutes: undefined })}
             position={basePosition}
+            tagName="Deep Work"
             tagColor="violet"
           />
         </Slot>

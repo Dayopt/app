@@ -20,6 +20,8 @@ import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 interface PlanLaneCardProps {
   event: PlanEvent;
   position: TwoLanePosition;
+  /** Calendar カードの表示名。title ではなくタグを source of truth とする。 */
+  tagName: string | null;
   tagColor?: string | null | undefined;
   className?: string | undefined;
   /** Inspector で選択中か（強調表示） */
@@ -54,6 +56,7 @@ function skippedHatchImage(accentColor: string): string {
 export function PlanLaneCard({
   event,
   position,
+  tagName,
   tagColor = null,
   className,
   isActive = false,
@@ -69,6 +72,7 @@ export function PlanLaneCard({
   const t = useTranslations();
   const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
   const borderClass = colorClasses?.border ?? 'border-border';
+  const displayName = tagName ?? t('common.tags.noTag');
 
   const isSkipped = event.status === 'skipped';
   const isUnrecorded = event.status === 'unrecorded';
@@ -83,7 +87,7 @@ export function PlanLaneCard({
       data-entry-block="true"
       tabIndex={0}
       role="button"
-      aria-label={event.title || t('timeblock.untitled')}
+      aria-label={displayName}
       className={cn(
         'pointer-events-auto absolute overflow-hidden rounded-lg border-2 px-2 py-1 text-xs',
         borderClass,
@@ -121,7 +125,7 @@ export function PlanLaneCard({
         }
       }}
     >
-      <p className="truncate font-medium">{event.title || t('timeblock.untitled')}</p>
+      <p className="truncate font-medium">{displayName}</p>
       {showDetails && (
         <p className="text-muted-foreground truncate">
           {formatTimeRange(event.displayStartDate, event.displayEndDate)}
