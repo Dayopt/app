@@ -6,8 +6,8 @@
     "storybook": "storybook dev -p 6006",
     "build": "storybook build",
     "build-storybook": "storybook build",
-    "test-storybook": "pnpm --filter @dayopt/product exec vitest --config vitest.config.ts --project storybook run",
-    "test-storybook:dark": "pnpm --filter @dayopt/product exec vitest --config vitest.config.ts --project storybook-dark run",
+    "test-storybook": "pnpm --filter @dayopt/product exec vitest run --config vitest.config.ts --project storybook",
+    "test-storybook:dark": "pnpm --filter @dayopt/product exec vitest run --config vitest.config.ts --project storybook-dark",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
