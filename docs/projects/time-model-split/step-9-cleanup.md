@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-13
 code:
   - apps/product/src/features/timeblock
   - supabase/migrations

@@ -20,6 +20,7 @@ const TEST_USER_A_ID = crypto.randomUUID();
 const TEST_USER_B_ID = crypto.randomUUID();
 const TEST_USER_B_PLAN_ID = crypto.randomUUID();
 const TEST_USER_B_LOG_ID = crypto.randomUUID();
+const LEGACY_LOGS_VIEW_RECORD_ID = crypto.randomUUID();
 const TEST_EMAIL_A = `test-rls-a-${TEST_USER_A_ID}@example.com`;
 const TEST_EMAIL_B = `test-rls-b-${TEST_USER_B_ID}@example.com`;
 const TEST_PASSWORD = 'test-password-123';
@@ -70,11 +71,11 @@ const userOwnedCases: UserOwnedRlsCase[] = [
     update: { title: 'foreign update' },
   },
   {
-    table: 'logs',
+    table: 'records',
     idColumn: 'id',
     rowId: TEST_USER_B_LOG_ID,
     seed: async function () {
-      const { error } = await adminSupabase.from('logs').insert({
+      const { error } = await adminSupabase.from('records').insert({
         id: this.rowId,
         user_id: TEST_USER_B_ID,
         title: 'RLS log',
@@ -273,6 +274,7 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
   });
 
   afterAll(async () => {
+    await adminSupabase.from('records').delete().eq('id', LEGACY_LOGS_VIEW_RECORD_ID);
     for (const testCase of serviceRoleCases) {
       await adminSupabase.from(testCase.table).delete().eq(testCase.idColumn, testCase.rowId);
     }
@@ -321,6 +323,71 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         expect(data).toEqual([]);
       },
     );
+  });
+
+  describe('logs compatibility view', () => {
+    it('ownerのCRUDをrecords RLS経由で許可する', async () => {
+      const { error: insertError } = await supabaseB.from('logs').insert({
+        id: LEGACY_LOGS_VIEW_RECORD_ID,
+        user_id: TEST_USER_B_ID,
+        title: 'Legacy logs view record',
+        source: 'manual',
+        start_at: '2026-06-15T12:00:00.000Z',
+        end_at: '2026-06-15T13:00:00.000Z',
+      });
+      expect(insertError).toBeNull();
+
+      const { data, error: selectError } = await supabaseB
+        .from('logs')
+        .select('id')
+        .eq('id', LEGACY_LOGS_VIEW_RECORD_ID);
+      expect(selectError).toBeNull();
+      expect(data).toEqual([{ id: LEGACY_LOGS_VIEW_RECORD_ID }]);
+
+      const { data: updated, error: updateError } = await supabaseB
+        .from('logs')
+        .update({ title: 'Updated through logs view' })
+        .eq('id', LEGACY_LOGS_VIEW_RECORD_ID)
+        .select('id, title');
+      expect(updateError).toBeNull();
+      expect(updated).toEqual([
+        { id: LEGACY_LOGS_VIEW_RECORD_ID, title: 'Updated through logs view' },
+      ]);
+
+      const { data: deleted, error: deleteError } = await supabaseB
+        .from('logs')
+        .delete()
+        .eq('id', LEGACY_LOGS_VIEW_RECORD_ID)
+        .select('id');
+      expect(deleteError).toBeNull();
+      expect(deleted).toEqual([{ id: LEGACY_LOGS_VIEW_RECORD_ID }]);
+
+      const { data: afterDelete, error: afterDeleteError } = await supabaseB
+        .from('logs')
+        .select('id')
+        .eq('id', LEGACY_LOGS_VIEW_RECORD_ID);
+      expect(afterDeleteError).toBeNull();
+      expect(afterDelete).toEqual([]);
+    });
+
+    it('他ユーザーのselect / update / deleteを拒否する', async () => {
+      const selectResult = await supabaseA.from('logs').select().eq('id', TEST_USER_B_LOG_ID);
+      const updateResult = await supabaseA
+        .from('logs')
+        .update({ title: 'foreign update' })
+        .eq('id', TEST_USER_B_LOG_ID)
+        .select();
+      const deleteResult = await supabaseA
+        .from('logs')
+        .delete()
+        .eq('id', TEST_USER_B_LOG_ID)
+        .select();
+
+      for (const result of [selectResult, updateResult, deleteResult]) {
+        expect(result.error).toBeNull();
+        expect(result.data).toEqual([]);
+      }
+    });
   });
 
   describe('profiles billing column grants', () => {

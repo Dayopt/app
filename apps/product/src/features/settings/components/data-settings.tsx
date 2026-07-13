@@ -59,7 +59,7 @@ const CSV_COLUMNS = [
 ] as const;
 
 /**
- * plans / logsをCSV文字列に変換
+ * plans / recordsをCSV文字列に変換
  * RFC 4180準拠: ダブルクォートでフィールドをエスケープ
  */
 function timeblockRowsToCsv(rows: Record<string, unknown>[]): string {

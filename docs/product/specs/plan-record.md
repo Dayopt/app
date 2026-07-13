@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-13
 code: apps/product/src/features/timeblock
 ---
 
@@ -11,8 +11,8 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 ## 2エンティティ構成
 
 - **Plan（予定）**: これからやる時間の宣言。`plans` テーブル
-- **Record（記録）**: 実際に使った時間。Step 9a では物理 `logs` テーブルを `databaseTables.records` 経由で読む
-- **1 Plan : N Record**。物理 `logs.plan_id` があれば「予定に対する記録」、なければ「予定外の記録」
+- **Record（記録）**: 実際に使った時間。物理 `records` テーブル
+- **1 Plan : N Record**。`records.plan_id` があれば「予定に対する記録」、なければ「予定外の記録」
 - 1つの予定に複数回の記録を紐づけられる（例: 途中で中断して後で再開した場合など）
 
 ## 保存先ルール（選択 UI なし）
@@ -31,11 +31,11 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 
 - **ワンタップ「そのまま記録」** — Plan の時間帯をそのままコピーした Record を1タップで作成
 - **Record レーンへのドラッグ** — Plan カードを Record レーンへドラッグ（リサイズすればずれ込みで記録できる）
-- **一括「この日を確定」** — その日の未記録 Plan をまとめて Record 化（移行中の物理 RPC は `confirm_day_plans_to_logs`）
+- **一括「この日を確定」** — その日の未記録 Plan をまとめて `confirm_day_plans_to_records` で Record 化
 
 ## DB rename の移行状態
 
-UI / tRPC / export の語彙は Record に統一済み。物理 DB と RPC の rename は、非破壊 code deploy と本番稼働確認後に #1579 / #1580 で実施する。
+物理 DB と正本 RPC は Record に統一済み。旧 deploy のための `logs` security-invoker view と旧名 RPC alias は一時的に残し、安定確認後の #1580 で削除する。
 
 ## 過去 Plan の時間凍結
 
@@ -56,7 +56,7 @@ end が未来の Plan（進行中含む）は自由に編集できる。ただ�
 
 ## fulfillment_score
 
-達成度スコア（1-5）は Record 側の属性。Plan には存在しない（予定の時点では達成度を測れないため）。
+達成度スコア（1-3）は Record 側の属性。Plan には存在しない（予定の時点では達成度を測れないため）。
 
 ## 関連する意思決定
 

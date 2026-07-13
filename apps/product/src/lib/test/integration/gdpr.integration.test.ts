@@ -113,7 +113,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       end_at: '2026-01-02T10:00:00Z',
     });
 
-    await adminSupabase.from('logs').insert({
+    await adminSupabase.from('records').insert({
       user_id: TEST_USER_ID,
       title: 'GDPR Test Record',
       start_at: '2026-01-03T09:00:00Z',
@@ -126,7 +126,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     await supabase.auth.signOut();
 
     // テストデータをクリーンアップ
-    await adminSupabase.from('logs').delete().eq('user_id', TEST_USER_ID);
+    await adminSupabase.from('records').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('plans').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('tags').delete().eq('user_id', TEST_USER_ID);
 

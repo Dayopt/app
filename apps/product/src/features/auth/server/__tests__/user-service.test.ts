@@ -205,15 +205,15 @@ describe('createUserService', () => {
   });
 
   describe('deleteBlocks', () => {
-    it('logs、plansを依存順に削除して合計件数を返す', async () => {
+    it('records、plansを依存順に削除して合計件数を返す', async () => {
       const adminQueries = mockAdminTables({
-        logs: { data: [{ id: 'log-1' }] },
+        records: { data: [{ id: 'log-1' }] },
         plans: { data: [{ id: 'plan-1' }, { id: 'plan-2' }] },
       });
       const { service } = createSupabase();
 
       await expect(service.deleteBlocks(USER_ID)).resolves.toEqual({ deletedCount: 3 });
-      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['logs', 'plans']);
+      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['records', 'plans']);
       for (const query of adminQueries.values()) {
         expect(query.eq).toHaveBeenCalledWith('user_id', USER_ID);
         expect(query.select).toHaveBeenCalledWith('id');
@@ -222,21 +222,21 @@ describe('createUserService', () => {
 
     it('削除エラーをDELETE_DATA_FAILEDに変換する', async () => {
       mockAdminTables({
-        logs: { error: { message: 'logs failed' } },
+        records: { error: { message: 'records failed' } },
       });
       const { service } = createSupabase();
 
       await expect(service.deleteBlocks(USER_ID)).rejects.toMatchObject({
         code: 'DELETE_DATA_FAILED',
-        message: 'records deletion failed: logs failed',
+        message: 'records deletion failed: records failed',
       });
     });
   });
 
   describe('deleteAllData', () => {
-    it('logs、plans、tags、user_settingsの順に削除する', async () => {
+    it('records、plans、tags、user_settingsの順に削除する', async () => {
       mockAdminTables({
-        logs: { data: [] },
+        records: { data: [] },
         plans: { data: [] },
         tags: { data: [] },
         user_settings: { data: [] },
@@ -245,7 +245,7 @@ describe('createUserService', () => {
 
       await expect(service.deleteAllData(USER_ID)).resolves.toEqual({ success: true });
       expect(adminFrom.mock.calls.map(([table]) => table)).toEqual([
-        'logs',
+        'records',
         'plans',
         'tags',
         'user_settings',
@@ -254,7 +254,7 @@ describe('createUserService', () => {
 
     it('途中の削除失敗で後続tableを削除しない', async () => {
       mockAdminTables({
-        logs: { data: [] },
+        records: { data: [] },
         plans: { error: { message: 'plans failed' } },
       });
       const { service } = createSupabase();
@@ -274,7 +274,7 @@ describe('createUserService', () => {
       const records = [{ id: 'record-1', user_id: USER_ID }];
       const tags = [{ id: 'tag-1', user_id: USER_ID }];
       const settings = { id: 'settings-1', user_id: USER_ID };
-      mockAdminTables({ plans: { data: plans }, logs: { data: records } });
+      mockAdminTables({ plans: { data: plans }, records: { data: records } });
       const { service } = createSupabase({
         tables: {
           profiles: { data: profile },
@@ -297,7 +297,7 @@ describe('createUserService', () => {
     });
 
     it('profileが未作成ならnullとしてexportする', async () => {
-      mockAdminTables({ plans: { data: [] }, logs: { data: [] } });
+      mockAdminTables({ plans: { data: [] }, records: { data: [] } });
       const { service } = createSupabase({
         tables: {
           profiles: { error: { code: 'PGRST116', message: 'not found' } },
@@ -314,7 +314,7 @@ describe('createUserService', () => {
     it('plans取得失敗をEXPORT_FAILEDに変換する', async () => {
       mockAdminTables({
         plans: { error: { message: 'plans fetch failed' } },
-        logs: { data: [] },
+        records: { data: [] },
       });
       const { service } = createSupabase({
         tables: {
@@ -331,7 +331,7 @@ describe('createUserService', () => {
     });
 
     it('tags取得失敗をEXPORT_FAILEDに変換する', async () => {
-      mockAdminTables({ plans: { data: [] }, logs: { data: [] } });
+      mockAdminTables({ plans: { data: [] }, records: { data: [] } });
       const { service } = createSupabase({
         tables: {
           profiles: { data: null },

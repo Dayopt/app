@@ -73,7 +73,7 @@ describe('statistics router: 認証ガード', () => {
 });
 
 describe('statistics router: StatisticsService 委譲', () => {
-  it('general procedures を plans / logs service へ渡す', async () => {
+  it('general procedures を plans / records service へ渡す', async () => {
     const caller = authedCaller();
     const range = { startDate: START, endDate: END };
 
@@ -92,7 +92,7 @@ describe('statistics router: StatisticsService 委譲', () => {
     expect(serviceMethods.getMonthlyTrend).toHaveBeenCalledWith(USER_ID, 6);
   });
 
-  it('KPI procedures を plans / logs service へ渡す', async () => {
+  it('KPI procedures を plans / records service へ渡す', async () => {
     const caller = authedCaller();
     const range = { startDate: START, endDate: END };
     const blankInput = { ...range, wakeHour: 7, sleepHour: 23 };
@@ -129,7 +129,7 @@ describe('statistics router: StatisticsService 委譲', () => {
     expect(serviceMethods.getStatsPageData).toHaveBeenCalledWith(USER_ID, pageInput);
   });
 
-  it('tag dashboard を plans / logs service へ渡す', async () => {
+  it('tag dashboard を plans / records service へ渡す', async () => {
     const ctx = createMockContext({ userId: USER_ID });
     const input = { tagId: '00000000-0000-4000-8000-000000000001', startDate: START, endDate: END };
 
