@@ -128,8 +128,8 @@ describe('resolveTwoLaneFromPointer', () => {
     expect(resolveTwoLaneFromPointer(138, 100, 100)).toBe('record');
   });
 
-  it('Week用20%幅を反映する', () => {
-    expect(resolveTwoLaneFromPointer(119, 100, 100, 20)).toBe('plan');
-    expect(resolveTwoLaneFromPointer(120, 100, 100, 20)).toBe('record');
+  it('既定値に戻した38%幅を反映する', () => {
+    expect(resolveTwoLaneFromPointer(137, 100, 100, 38)).toBe('plan');
+    expect(resolveTwoLaneFromPointer(138, 100, 100, 38)).toBe('record');
   });
 });

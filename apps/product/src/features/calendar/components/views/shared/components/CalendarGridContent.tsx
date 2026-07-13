@@ -142,8 +142,8 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
-  // Week/複数日ビューはカラム幅が狭いため Plan レーンを細くする（Day は既定 38%）。
-  const planLaneWidthPercent = viewMode === 'day' ? 38 : 20;
+  // 予定/記録比率は 38:62 を維持（Day / Week / 3day / 5day 共通）。
+  const planLaneWidthPercent = 38;
 
   const wrappedOnEventUpdate = useCallback(
     (
