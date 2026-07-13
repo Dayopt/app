@@ -263,13 +263,14 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     });
 
     afterAll(async () => {
-      if (!deleteTestSupabase || !deleteTestUserId) return;
+      if (deleteTestSupabase) {
+        await deleteTestSupabase.auth.signOut();
+      }
+
+      if (!adminSupabase || !deleteTestUserId || deleteTestUserDeleted) return;
 
       // 削除テスト用ユーザーのクリーンアップ
-      await deleteTestSupabase.auth.signOut();
-      if (!deleteTestUserDeleted) {
-        await adminSupabase.auth.admin.deleteUser(deleteTestUserId);
-      }
+      await adminSupabase.auth.admin.deleteUser(deleteTestUserId);
     });
 
     beforeEach(() => {
