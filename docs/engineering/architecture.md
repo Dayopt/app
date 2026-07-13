@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-13
 code: apps/product/src
 ---
 
@@ -347,7 +347,7 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
 | テーブル                     | 役割                                                             | 主要カラム                                                                                                |
 | ---------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | **plans**                    | Plan（予定）。これからやる時間の宣言                             | title, tag_id, start_at, end_at, skipped_at, source, external_calendar_event_id                           |
-| **logs**                     | Record（記録）の物理保存先。`plan_id` で 1 Plan : N Record       | title, tag_id, plan_id, start_at, end_at, source, fulfillment_score(1-5), external_calendar_event_id      |
+| **records**                  | Record（記録）。`plan_id` で 1 Plan : N Record                   | title, tag_id, plan_id, start_at, end_at, source, fulfillment_score(1-5), external_calendar_event_id      |
 | **external_calendar_events** | 外部カレンダー同期ミラー（テーブルのみ存在。同期実装は Phase 2） | provider, provider_calendar_id, provider_event_id, start_at, end_at, status, dismissed_at, last_synced_at |
 | **tags**                     | 階層タグ（親子1階層）                                            | name, color, parent_id, sort_order, is_active                                                             |
 
@@ -392,7 +392,7 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
                               │                         │
                               ▼                         ▼
                     ┌──────────────────┐      ┌──────────────────┐
-                    │      plans        │      │ logs (Record store)│
+                    │      plans        │      │      records       │
                     │──────────────────│      │──────────────────│
                     │ id (PK)           │◄─────│ plan_id (FK, NULL) │
                     │ user_id (FK)      │ 1:N  │ user_id (FK)       │
@@ -445,7 +445,7 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
 
 #### Plan / Record 分離（ADR-025）
 
-単一 `entries` テーブル（ADR-011）に予定 range と実績 range を同居させ、実績を read 時に自動導出するモデルは、1予定に対する複数回の記録を表現できない・自動記録が見積もり精度などの KPI を歪める、という限界を抱えていた。ADR-025 でこれを Plan / Record の2独立エンティティへ分割し、記録を自動導出ではなく明示操作に反転した。Step 9a の物理テーブルは `plans` / `logs` で、#1579 で `logs` を `records` へ rename する。
+単一 `entries` テーブル（ADR-011）に予定 range と実績 range を同居させ、実績を read 時に自動導出するモデルは、1予定に対する複数回の記録を表現できない・自動記録が見積もり精度などの KPI を歪める、という限界を抱えていた。ADR-025 でこれを Plan / Record の2独立エンティティへ分割し、記録を自動導出ではなく明示操作に反転した。物理テーブルと公開契約は `plans` / `records` に統一している。
 
 - 状態導出（`upcoming` / `active` / `past`）は Plan / Record それぞれの時間位置から行う
 - 保存先は選択 UI ではなく `end_at > now` か否かで一意に決まる（`end_at > now` → Plan、`end_at <= now` → Record）
@@ -462,8 +462,8 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
 
 - `soft_delete_plan()` / `restore_plan()` — Plan のソフトデリート / 復元
 - `soft_delete_record()` / `restore_record()` — Record のソフトデリート / 復元
-- `confirm_day_plans_to_logs()` — 指定日の未記録 Plan を一括で Record 化（一括「この日を確定」。物理名は移行中）
-- `merge_tags_with_hierarchy()` — タグマージ + 子タグの昇格（plans / logs 両方の tag_id を追随して更新）
+- `confirm_day_plans_to_records()` — 指定日の未記録 Plan を一括で Record 化（一括「この日を確定」）
+- `merge_tags_with_hierarchy()` — タグマージ + 子タグの昇格（plans / records 両方の tag_id を追随して更新）
 
 ### インデックス監査ランブック
 

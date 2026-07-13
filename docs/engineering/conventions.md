@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-13
 code: apps/product/src
 ---
 
@@ -72,17 +72,17 @@ features/{name}/
 
 #### domain を作った判断（実例）
 
-| Feature  | domain の中身                                                                                               |
-| -------- | ----------------------------------------------------------------------------------------------------------- |
-| `entry`  | `entry-time-model` / `monthly-trend` / `streak-calculator` / `estimation-accuracy` / `tag-stats` ほか 10 件 |
-| `tags`   | `tag-colon` / `tag-tree` / `tag-merge` / `tag-ungroup`                                                      |
-| `review` | `variance` / `timePL/`（薄い構成）                                                                          |
+| Feature     | domain の中身                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------------- |
+| `timeblock` | `timeblock-destination` / `monthly-trend` / `streak-calculator` / `estimation-accuracy` / `tag-stats` |
+| `tags`      | `tag-colon` / `tag-tree` / `tag-merge` / `tag-ungroup`                                                |
+| `review`    | `variance` / `timePL/`（薄い構成）                                                                    |
 
 ### DAG Layer
 
 ```
 Layer 0 (基盤):       tags, chronotype
-Layer 1 (中核):       entry
+Layer 1 (中核):       timeblock
 Layer 2 (体験):       calendar, review, ai, palette
 Independent:          auth, notifications, contact, onboarding, tour
 Composition:          settings  (= 通常 feature DAG には乗せない)
@@ -124,7 +124,7 @@ features/
 │   ├── hooks/
 │   ├── stores/
 │   └── types/
-├── entry/         # エントリ管理（統合ブロックモデル）
+├── timeblock/     # Plan / Record の時間管理
 ├── tags/          # タグ管理
 └── ...
 ```
@@ -148,12 +148,12 @@ API 契約・エラーパターンの詳細は [`conventions-api.md`](./conventi
 #### Router（薄い層）
 
 ```typescript
-// src/features/timeblock/server/router.ts
+// src/features/timeblock/server/records-router.ts
 create: protectedProcedure
-  .input(createEntrySchema) // Zodでバリデーション
+  .input(createRecordSchema) // Zodでバリデーション
   .mutation(({ ctx, input }) => {
-    const service = createEntryService(ctx.supabase);
-    return service.create({ userId: ctx.userId, ...input });
+    const service = createRecordService(ctx.supabase);
+    return service.create({ userId: ctx.userId, input });
   });
 ```
 
@@ -162,12 +162,14 @@ create: protectedProcedure
 #### Service（ビジネスロジック）
 
 ```typescript
-// src/features/timeblock/server/entry-service.ts
-class EntryService {
-  async create(params: CreateEntryOptions) {
-    this.validateEntry(params);
-    const entryData = this.buildEntryData(params);
-    return this.supabase.from(databaseTables.records).insert(recordData);
+// src/features/timeblock/server/record-service.ts
+class RecordService {
+  async create(options: CreateRecordOptions) {
+    this.validateRange(options.input.start_at, options.input.end_at);
+    return this.supabase.from(databaseTables.records).insert({
+      user_id: options.userId,
+      ...options.input,
+    });
   }
 }
 ```
@@ -524,7 +526,7 @@ features/*  ✓→  src/lib/*
 
 ### 1. 旧用語の使用
 
-ADR-025 で `entries` 単一モデルは `plans`（予定）/ Record（記録）に分割済み。Step 9a では Record の物理保存先は `logs` で、`databaseTables.records` adapter が差を吸収する。
+ADR-025 で `entries` 単一モデルは `plans`（予定）/ `records`（記録）に分割済み。DB、tRPC、型、コード上のドメイン名は Plan / Record を正とする。
 
 ```tsx
 // ❌ 旧用語
@@ -534,7 +536,7 @@ EntryService
 
 // ✅ 現在
 api.plans.create(...) / api.records.create(...)
-from('plans') / from(databaseTables.records)
+from('plans') / from('records')
 PlanService / RecordService
 ```
 

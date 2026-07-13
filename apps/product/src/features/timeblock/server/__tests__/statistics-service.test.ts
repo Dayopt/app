@@ -67,7 +67,7 @@ describe('StatisticsService.getTagStats', () => {
     });
   });
 
-  it('log が無い場合は空の counts/lastUsed を返す', async () => {
+  it('record が無い場合は空の counts/lastUsed を返す', async () => {
     const { service } = createService({ records: createChainableMock([]) });
     expect(await service.getTagStats(USER_ID)).toEqual({ counts: {}, lastUsed: {} });
   });
@@ -112,7 +112,7 @@ describe('StatisticsService.getTimeByTag', () => {
 });
 
 describe('StatisticsService.getEstimationAccuracy', () => {
-  it('plan に紐づく非 auto_migrated log を実績として 1:N 集計する', async () => {
+  it('plan に紐づく非 auto_migrated record を実績として 1:N 集計する', async () => {
     const { service, mockSupabase } = createService({
       plans: createChainableMock([
         {
@@ -153,7 +153,7 @@ describe('StatisticsService.getEstimationAccuracy', () => {
 
     const result = await service.getEstimationAccuracy(USER_ID);
 
-    // p2 の log は auto_migrated なので実績なし扱い → record_count は p1 のみで 1 件 → HAVING で除外
+    // p2 の record は auto_migrated なので実績なし扱い → record_count は p1 のみで 1 件 → HAVING で除外
     expect(result).toEqual([]);
     expect(mockSupabase.from).toHaveBeenCalledWith('plans');
     expect(mockSupabase.from).toHaveBeenCalledWith('records');
@@ -190,13 +190,13 @@ describe('StatisticsService.getBlankRate', () => {
 });
 
 describe('StatisticsService.getTagDashboard', () => {
-  it('log を主とし、紐づく plan の予定時間を代表 log にのみ割り当てる', async () => {
+  it('record を主とし、紐づく plan の予定時間を代表 record にのみ割り当てる', async () => {
     const { service } = createService({
       user_settings: createChainableMock({ timezone: 'UTC' }),
       tags: createChainableMock({ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: 'brain' }),
       records: createChainableMock([
         {
-          id: 'log-1',
+          id: 'record-1',
           title: 'Focus session',
           note: null,
           tag_id: 'tag-1',
@@ -229,7 +229,7 @@ describe('StatisticsService.getTagDashboard', () => {
 
     expect(result.records).toHaveLength(1);
     expect(result.records[0]).toMatchObject({
-      timeblockId: 'log-1',
+      timeblockId: 'record-1',
       plannedMinutes: 45,
       actualMinutes: 60,
       diffMinutes: 15,

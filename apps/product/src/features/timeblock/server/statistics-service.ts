@@ -308,11 +308,11 @@ export class StatisticsService {
 
     let prevTags: TimePLResponse['prevTags'] = [];
     if (prevStart && prevEnd) {
-      const [prevPlans, prevLogs] = await Promise.all([
+      const [prevPlans, prevRecords] = await Promise.all([
         this.fetchPlans(userId, { startDate: prevStart, endDate: prevEnd }),
         this.fetchRecords(userId, { startDate: prevStart, endDate: prevEnd }),
       ]);
-      prevTags = this.buildTagPL(prevPlans, prevLogs, tagsById);
+      prevTags = this.buildTagPL(prevPlans, prevRecords, tagsById);
     }
 
     const availableMinutes = computeAvailableMinutesInclusive({
@@ -338,7 +338,7 @@ export class StatisticsService {
     const [nowYear, nowMonth] = nowStr.split('-').map(Number) as [number, number];
     const monthlyStartDate = getMonthlyStartDate(nowYear, nowMonth, monthlyMonths);
 
-    const [records, plans, prevLogs, prevPlans, yearLogs, monthlyLogs, tagsById] =
+    const [records, plans, prevRecords, prevPlans, yearRecords, monthlyRecords, tagsById] =
       await Promise.all([
         this.fetchRecords(userId, { startDate, endDate }),
         this.fetchPlans(userId, { startDate, endDate }),
@@ -350,7 +350,7 @@ export class StatisticsService {
       ]);
 
     const overview = this.buildOverviewSection(records);
-    const prevOverview = this.buildOverviewSection(prevLogs);
+    const prevOverview = this.buildOverviewSection(prevRecords);
     const contextSwitches = computeContextSwitches(records, timezone);
     const scheduledMinutes = plans.reduce(
       (sum, plan) => sum + minutesBetween(plan.start_at, plan.end_at),
@@ -378,7 +378,7 @@ export class StatisticsService {
     const energyMap = groupEnergyMap(records, timezone).map(
       ({ avgFulfillment: _avgFulfillment, ...rest }) => rest,
     );
-    const prevEnergyMap = groupEnergyMap(prevLogs, timezone).map(
+    const prevEnergyMap = groupEnergyMap(prevRecords, timezone).map(
       ({ avgFulfillment: _avgFulfillment, ...rest }) => rest,
     );
 
@@ -389,9 +389,9 @@ export class StatisticsService {
       await this.computeEstimationAccuracy(userId, prevPlans, tagsById),
     );
 
-    const dailyHours = groupHoursByDay(yearLogs, timezone);
+    const dailyHours = groupHoursByDay(yearRecords, timezone);
     const monthlyTrend = aggregateMonthlyTrend(
-      groupHoursByMonth(monthlyLogs, timezone),
+      groupHoursByMonth(monthlyRecords, timezone),
       nowYear,
       nowMonth,
       monthlyMonths,

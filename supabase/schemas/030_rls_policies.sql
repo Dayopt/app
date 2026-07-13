@@ -13,6 +13,8 @@
 --   - 20260604230607_harden_function_execute_privileges.sql
 --   - 20260708232500_add_time_model_tables.sql
 --   - 20260712212527_records_table_and_drop_entries.sql
+--   - 20260713120023_drop_time_model_compatibility_layer.sql
+--   - 20260713121911_restore_baseline_table_grants.sql
 --
 -- パターン:
 --   (select auth.uid()) でキャッシュ → auth.uid() 直呼びより 94-99% 高速
@@ -23,7 +25,6 @@
 --   SELECT: user_id = auth.uid() AND deleted_at IS NULL
 --   INSERT/UPDATE/DELETE: user_id = auth.uid()
 --   records の auto_migrated 行は authenticated から変更不可
--- ■ logs view: records RLS を使う旧 deploy 用 security_invoker view
 -- ■ tags:
 --   SELECT/INSERT/DELETE: user_id = auth.uid()
 --   UPDATE: USING user_id = auth.uid(), WITH CHECK user_id = auth.uid()

@@ -81,7 +81,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     setHoveredTag(tag);
   }, []);
 
-  // plan / log 作成ハンドラー（タグ必須、タグ名をタイトルに設定）
+  // plan / record 作成ハンドラー（タグ必須、タグ名をタイトルに設定）
   const handleCreate = useCallback(
     (tagId: string, tagName: string) => {
       if (!pendingSelection || isCreating) return;
@@ -111,7 +111,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       const destination = resolveTimeblockDestination(utcEnd);
 
       // 事前 overlap 判定（TagSelector を開いている間の resize / 他クライアント更新による race を回避）
-      // 同一レーンのみ禁止（plan×plan / log×log）。plan×log は許可。
+      // 同一レーンのみ禁止（plan×plan / record×record）。plan×record は許可。
       const laneItems = collectTimeModelLaneItems(
         queryClient,
         destination === 'plan' ? 'plans' : 'records',
@@ -290,7 +290,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     const utcStart = convertFromTimezone(localStart, timezone);
     const utcEnd = convertFromTimezone(localEnd, timezone);
 
-    // 保存先レーンと同じレーンのみ判定（plan×log は共存可）
+    // 保存先レーンと同じレーンのみ判定（plan×record は共存可）
     const destination = resolveTimeblockDestination(utcEnd);
     const laneItems = collectTimeModelLaneItems(
       queryClient,

@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-13
 ---
 
 # Dayopt Glossary — 用語集
@@ -53,7 +53,7 @@ DB の `plans` テーブルに対応する独立エンティティ。これか�
 
 #### record / 記録
 
-実際に使った時間を表す独立エンティティ。1 つの Plan に複数の Record が紐づけられる(1:N)。Step 9a では物理 `logs` テーブルを adapter 経由で読み、#1579 で `records` へ rename する。
+実際に使った時間を表す独立エンティティ。1 つの Plan に複数の Record が紐づけられる(1:N)。物理テーブル、RPC、生成型も `records` / Record に統一する。
 
 - UI: 「記録」
 - 禁止: 「実績」(UI では原則不使用。技術用語・比較文脈では許容)、「エントリ」(旧モデルの呼称)
@@ -156,7 +156,7 @@ Dayopt固有のドメイン概念とコードベースで使用される用語�
 
 実際に使った時間。独立エンティティ。1 つの Plan に複数の Record が紐づく(1:N)。UI表記は「記録」([UI用語集](#主要用語)参照)。
 
-- DB: `logs` テーブル（移行中。公開名は Record、#1579 で `records` へ rename）
+- DB: `records` テーブル
 - `plan_id`(nullable): あり = 予定に対する記録、なし = 予定外の記録
 - source: `manual` / `from_plan` / `auto_migrated` / `external_calendar` / `api`
 - `fulfillment_score` は Record 側のみが持つ属性(Plan にはない)

@@ -35,7 +35,7 @@ function makeEvent(overrides: Partial<RecordEvent> = {}): RecordEvent {
   const start = new Date(2026, 6, 15, 10, 0);
   const end = new Date(2026, 6, 15, 11, 0);
   return {
-    id: 'log-1',
+    id: 'record-1',
     title: 'Deep Work',
     note: null,
     tagId: 'tag-1',

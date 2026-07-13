@@ -160,7 +160,7 @@ export const useTimeblockOperations = () => {
         toast.error(t('timeblock.editor.timeLocked'));
         return;
       }
-      // log は未来へ移動できない（記録は過去のみ）
+      // record は未来へ移動できない（記録は過去のみ）
       if (found.kind === 'record' && resolveTimeblockDestination(nextRange.end) === 'plan') {
         toast.error(t('timeblock.editor.timeLocked'));
         return;

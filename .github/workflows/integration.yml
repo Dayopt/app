@@ -58,7 +58,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - id: supabase-version
-        run: echo "version=$(node -p \"require('./apps/product/package.json').devDependencies.supabase\")" >> "$GITHUB_OUTPUT"
+        run: |
+          version=$(node -p "require('./apps/product/package.json').devDependencies.supabase")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - uses: supabase/setup-cli@v3
         with:

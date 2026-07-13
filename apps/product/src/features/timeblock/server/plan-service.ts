@@ -395,7 +395,7 @@ export class PlanService {
     }
 
     if ((data ?? []).length > 0) {
-      throw new TimeblockServiceError('ALREADY_RECORDED', 'Plan already has an active log.');
+      throw new TimeblockServiceError('ALREADY_RECORDED', 'Plan already has an active record.');
     }
   }
 
@@ -418,10 +418,7 @@ export class PlanService {
     prefix: string,
   ): never {
     if (error.code === '23505') {
-      throw new TimeblockServiceError(
-        'ALREADY_RECORDED',
-        'Plan already has an active recorded log.',
-      );
+      throw new TimeblockServiceError('ALREADY_RECORDED', 'Plan already has an active record.');
     }
     this.handleMutationError(error, 'CREATE_FAILED', prefix);
   }

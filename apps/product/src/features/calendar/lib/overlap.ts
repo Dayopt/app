@@ -152,9 +152,9 @@ export function checkClientSideOverlap(
 }
 
 /**
- * ドラッグ/リサイズ中の kind-aware 重複判定（plan×plan / log×log のみ禁止、plan×log は許可）。
+ * ドラッグ/リサイズ中の kind-aware 重複判定（plan×plan / record×record のみ禁止、plan×record は許可）。
  * time model 化された CalendarEvent（`kind` 付き）専用。checkClientSideOverlap の
- * 旧二層判定（planned/actual layer）は log-with-plan を origin:'planned' として誤扱いするため、
+ * 旧二層判定（planned/actual layer）は record-with-plan を origin:'planned' として誤扱いするため、
  * ドラッグ移動先が同一 kind の他イベントと重ならないかだけを見るこちらに置き換える。
  */
 export function checkClientSideOverlapByKind(

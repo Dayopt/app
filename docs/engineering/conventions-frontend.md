@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-13
 code: apps/product/src
 ---
 
@@ -883,12 +883,11 @@ const NovelDescriptionEditor = dynamic(
 
 ### 意図的にスキップした最適化
 
-| 項目                 | 理由                                                |
-| -------------------- | --------------------------------------------------- |
-| Entry Suspense細分化 | EntryBoardView内部で既にisPending実装済み           |
-| Settings遅延ロード   | Next.jsがルート別に自動コード分割済み               |
-| React.memo追加       | 工数対効果が低い（既にuseMemo/useCallback実装済み） |
-| Edge Runtime         | 既存構成で十分、複雑性増加のリスク                  |
+| 項目               | 理由                                                |
+| ------------------ | --------------------------------------------------- |
+| Settings遅延ロード | Next.jsがルート別に自動コード分割済み               |
+| React.memo追加     | 工数対効果が低い（既にuseMemo/useCallback実装済み） |
+| Edge Runtime       | 既存構成で十分、複雑性増加のリスク                  |
 
 ### 計測方法
 

@@ -53,7 +53,7 @@ export function TimeblockInspector({ onViewStats }: TimeModelInspectorProps) {
     { id: timeblockId ?? '' },
     { enabled: isOpen && !!timeblockId && timeblockKind === 'plan' },
   );
-  const logQuery = api.records.getById.useQuery(
+  const recordQuery = api.records.getById.useQuery(
     { id: timeblockId ?? '' },
     { enabled: isOpen && !!timeblockId && timeblockKind === 'record' },
   );
@@ -63,10 +63,10 @@ export function TimeblockInspector({ onViewStats }: TimeModelInspectorProps) {
     { enabled: isOpen && !!timeblockId && timeblockKind === 'plan' },
   );
 
-  const activeQuery = timeblockKind === 'plan' ? planQuery : logQuery;
+  const activeQuery = timeblockKind === 'plan' ? planQuery : recordQuery;
   const plan = timeblockKind === 'plan' ? planQuery.data : undefined;
-  const log = timeblockKind === 'record' ? logQuery.data : undefined;
-  const target = plan ?? log;
+  const record = timeblockKind === 'record' ? recordQuery.data : undefined;
+  const target = plan ?? record;
 
   const handleClose = useCallback(() => {
     closeInspector();
@@ -108,7 +108,7 @@ export function TimeblockInspector({ onViewStats }: TimeModelInspectorProps) {
         key={`${timeblockKind}:${target.id}:${target.updated_at}`}
         kind={timeblockKind}
         plan={plan}
-        log={log}
+        record={record}
         isRecorded={(recordedQuery.data?.length ?? 0) > 0}
         onViewStats={onViewStats}
         onCloseInspector={isMobile ? handleClose : undefined}

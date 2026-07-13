@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-13
 ---
 
 # Dayopt Storybook
@@ -57,7 +57,7 @@ UI/UX で迷ったら文脈に合う Google 製品を開いて観察する（GAF
 | **Foundations** | デザイントークン・設計基盤                    | Colors, Typography, Spacing, Elevation           |
 | **Primitives**  | 単体UIコンポーネント                          | Button, Badge, Input, Dialog                     |
 | **Recipes**     | 2つ以上の Primitive を組み合わせた複合UI      | ActionFooter, Field, ConfirmDialog, Inspector/\* |
-| **Features**    | ドメインロジックを含む Feature コンポーネント | Entry/_, Calendar/_, Tags/\*                     |
+| **Features**    | ドメインロジックを含む Feature コンポーネント | Timeblock/_, Calendar/_, Tags/\*                 |
 | **Patterns**    | 実装パターンのカタログ                        | Forms, Feedback, Loading                         |
 
 ## 🎨 カラートークン
@@ -172,15 +172,15 @@ Story作成時に確認：
 
 初めてDayoptのコードベースに触れる場合、以下の順に読むとスムーズです：
 
-| 順番 | ドキュメント                                        | 内容                                           |
-| ---- | --------------------------------------------------- | ---------------------------------------------- |
-| 1    | [Dayopt コンセプト](../business/strategy.md)        | Dayoptとは何か、ジョブ、プロダクト原則         |
-| 2    | [Domain Glossary](../product/glossary.md)           | Entry, EntryState, Chronotype 等のドメイン用語 |
-| 3    | [Architecture](./architecture.md)                   | monorepo packages の責務境界とデータフロー     |
-| 4    | [Common Pitfalls](./conventions.md#common-pitfalls) | よくある間違いと正しいパターン                 |
-| 5    | Colors（Storybook: Shared/Foundations/Colors）      | カラートークン、Surface体系                    |
-| 6    | Typography（Storybook: Foundations/Typography）     | フォントサイズ、行間、ウェイト                 |
-| 7    | [Accessibility](./accessibility.md)                 | a11yチェックリスト、WCAG準拠                   |
+| 順番 | ドキュメント                                        | 内容                                       |
+| ---- | --------------------------------------------------- | ------------------------------------------ |
+| 1    | [Dayopt コンセプト](../business/strategy.md)        | Dayoptとは何か、ジョブ、プロダクト原則     |
+| 2    | [Domain Glossary](../product/glossary.md)           | Plan, Record, Chronotype 等のドメイン用語  |
+| 3    | [Architecture](./architecture.md)                   | monorepo packages の責務境界とデータフロー |
+| 4    | [Common Pitfalls](./conventions.md#common-pitfalls) | よくある間違いと正しいパターン             |
+| 5    | Colors（Storybook: Shared/Foundations/Colors）      | カラートークン、Surface体系                |
+| 6    | Typography（Storybook: Foundations/Typography）     | フォントサイズ、行間、ウェイト             |
+| 7    | [Accessibility](./accessibility.md)                 | a11yチェックリスト、WCAG準拠               |
 
 ---
 

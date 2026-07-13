@@ -184,7 +184,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   const isDragging = state.mode === 'dragging';
   const isResizing = state.mode === 'resizing';
 
-  // Step 8: 2レーン座標（plan=左/log=右）。entries は既に kind 付き CalendarEvent。
+  // Step 8: 2レーン座標（plan=左/record=右）。entries は既に kind 付き CalendarEvent。
   const twoLaneStyles = React.useMemo(
     () => calculateTwoLaneStylesForCalendarEvents(entries, HOUR_HEIGHT, planLaneWidthPercent),
     [entries, HOUR_HEIGHT, planLaneWidthPercent],

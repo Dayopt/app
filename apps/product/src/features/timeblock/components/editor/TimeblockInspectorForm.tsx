@@ -3,9 +3,9 @@
 /**
  * TimeblockInspector のフォーム（Level 2）
  *
- * plan / log の 1 行を受け取り、TagRow ヘッダー + TimeblockEditor を描画する。
+ * plan / record の 1 行を受け取り、TagRow ヘッダー + TimeblockEditor を描画する。
  * タグ変更は即時保存、title / note / 時間は保存ボタンで確定する。
- * auto_migrated の log は RLS で不変のため読み取り専用として扱う。
+ * auto_migrated の record は RLS で不変のため読み取り専用として扱う。
  */
 
 import { useCallback, useState } from 'react';
@@ -31,8 +31,8 @@ type RecordRow = Row<typeof databaseTables.records>;
 interface TimeModelInspectorFormProps {
   kind: TimeblockDestination;
   plan?: PlanRow | undefined;
-  log?: RecordRow | undefined;
-  /** plan に紐づく log が存在するか（記録済み判定。log では常に false） */
+  record?: RecordRow | undefined;
+  /** plan に紐づく record が存在するか（記録済み判定。record では常に false） */
   isRecorded: boolean;
   onViewStats?: ((tagId: string) => void) | undefined;
   /** Inspector を閉じるコールバック（Mobile Drawer のみ渡す） */
@@ -41,11 +41,11 @@ interface TimeModelInspectorFormProps {
   onDeleted: () => void;
 }
 
-/** plan / log 共通の Inspector フォーム。タグ即時保存 + エディタ submit 保存。 */
+/** plan / record 共通の Inspector フォーム。タグ即時保存 + エディタ submit 保存。 */
 export function TimeblockInspectorForm({
   kind,
   plan,
-  log,
+  record,
   isRecorded,
   onViewStats,
   onCloseInspector,
@@ -65,7 +65,7 @@ export function TimeblockInspectorForm({
     updatePlan,
   } = useTimeblockWriteMutations();
 
-  const target: PlanRow | RecordRow | undefined = kind === 'plan' ? plan : log;
+  const target: PlanRow | RecordRow | undefined = kind === 'plan' ? plan : record;
   const targetId = target?.id ?? null;
   const targetUpdatedAt = target?.updated_at ?? null;
 
@@ -78,8 +78,8 @@ export function TimeblockInspectorForm({
     source: kind,
   }));
 
-  // auto_migrated log は RLS で update / delete とも拒否されるため UI 側も読み取り専用にする
-  const isMigrated = kind === 'record' && log?.source === 'auto_migrated';
+  // auto_migrated record は RLS で update / delete とも拒否されるため UI 側も読み取り専用にする
+  const isMigrated = kind === 'record' && record?.source === 'auto_migrated';
   const isPast = kind === 'record' || (target != null && new Date(target.end_at) <= new Date());
   const isSkipped = kind === 'plan' && plan?.skipped_at != null;
   const timeLocked = kind === 'plan' && target != null && !isPlanTimeEditable(target.end_at);
@@ -188,7 +188,7 @@ export function TimeblockInspectorForm({
 
   const menuItems = getTimeblockMenuItems({
     // time model では変換系（markUnplanned / restorePlanned）を出さないため
-    // plan → planned / log → unplanned の対応で表示条件だけ流用する
+    // plan → planned / record → unplanned の対応で表示条件だけ流用する
     origin: kind === 'plan' ? 'planned' : 'unplanned',
     tagId: value.tagId,
     isPast,

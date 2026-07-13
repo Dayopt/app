@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-13
 code: apps/product/src/lib/date
 ---
 
@@ -211,16 +211,16 @@ SELECT public.get_user_timezone(p_user_id) INTO v_tz;
 
 ```sql
 -- ✅ ユーザーTZで日付抽出
-SELECT (e.start_time AT TIME ZONE v_tz)::DATE AS entry_date
-FROM entries e
-WHERE e.user_id = p_user_id;
+SELECT (r.start_at AT TIME ZONE v_tz)::DATE AS record_date
+FROM records r
+WHERE r.user_id = p_user_id;
 
 -- ✅ インデックス活用可能なフィルタリング
-WHERE e.start_time >= (p_start::timestamp AT TIME ZONE v_tz)
-  AND e.start_time <  ((p_end + 1)::timestamp AT TIME ZONE v_tz)
+WHERE r.start_at >= (p_start::timestamp AT TIME ZONE v_tz)
+  AND r.start_at <  ((p_end + 1)::timestamp AT TIME ZONE v_tz)
 
 -- ❌ 禁止: UTCハードコード
-WHERE (e.start_time AT TIME ZONE 'UTC')::DATE >= p_start
+WHERE (r.start_at AT TIME ZONE 'UTC')::DATE >= p_start
 ```
 
 ---

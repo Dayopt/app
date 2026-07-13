@@ -65,19 +65,19 @@ export function recordRowToRecordEvent(
 
 interface ExpandRecordRowsOptions {
   timezone: string;
-  /** plan id -> 所要時間（分）。1 plan に複数 log が紐づく場合も同じ plan 時間を参照する */
+  /** plan id -> 所要時間（分）。1 plan に複数 record が紐づく場合も同じ plan 時間を参照する */
   plannedMinutesByPlanId: ReadonlyMap<string, number>;
 }
 
 /**
- * 1 plan に複数 log（分割記録）が紐づく 1:N ケースでは、各 log 個別の所要時間ではなく
- * 「その plan に紐づく log 群の合計実績時間」を予定時間と比較しないと差分が誤って
- * 二重・N 重に表示される（例: 60 分 plan を 30 分 log 2 件で記録した場合、
- * 個々の log 単位で `duration - plannedMinutes` を計算すると両方に `-30min` の
+ * 1 plan に複数 record（分割記録）が紐づく 1:N ケースでは、各 record 個別の所要時間ではなく
+ * 「その plan に紐づく record 群の合計実績時間」を予定時間と比較しないと差分が誤って
+ * 二重・N 重に表示される（例: 60 分 plan を 30 分 record 2 件で記録した場合、
+ * 個々の record 単位で `duration - plannedMinutes` を計算すると両方に `-30min` の
  * バッジが付くが、実際は合計 60 分で予定どおり）。
  *
- * そのため差分は「代表 log」（`source='from_plan'` を優先、無ければ最初の log）
- * 1 件にのみ、合計実績時間ベースで付与し、他の log は `diffMinutes` を持たない。
+ * そのため差分は「代表 record」（`source='from_plan'` を優先、無ければ最初の record）
+ * 1 件にのみ、合計実績時間ベースで付与し、他の record は `diffMinutes` を持たない。
  */
 export function expandRecordRowsToRecordEvents(
   rows: ReadonlyArray<RecordEventSourceRow>,

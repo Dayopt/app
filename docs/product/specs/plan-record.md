@@ -33,9 +33,9 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 - **Record レーンへのドラッグ** — Plan カードを Record レーンへドラッグ（リサイズすればずれ込みで記録できる）
 - **一括「この日を確定」** — その日の未記録 Plan をまとめて `confirm_day_plans_to_records` で Record 化
 
-## DB rename の移行状態
+## DB 契約
 
-物理 DB と正本 RPC は Record に統一済み。旧 deploy のための `logs` security-invoker view と旧名 RPC alias は一時的に残し、安定確認後の #1580 で削除する。
+物理 DB、正本 RPC、生成型は Record に統一済み。テーブルは `records`、一括確定は `confirm_day_plans_to_records`、soft delete / restore は `soft_delete_record` / `restore_record` を使う。旧 `logs` view と Log 名 RPC alias は存在しない。
 
 ## 過去 Plan の時間凍結
 

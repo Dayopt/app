@@ -49,13 +49,13 @@ function createRecord(overrides: Partial<RecordRow> = {}): RecordRow {
     end_at: '2026-03-17T11:00:00.000Z',
     external_calendar_event_id: null,
     fulfillment_score: null,
-    id: 'log-1',
+    id: 'record-1',
     note: null,
     plan_id: null,
     source: 'manual',
     start_at: '2026-03-17T10:00:00.000Z',
     tag_id: null,
-    title: 'Log',
+    title: 'Record',
     updated_at: '2026-07-01T00:00:00.000Z',
     user_id: USER_ID,
     ...overrides,
@@ -148,7 +148,7 @@ describe('PlanService.update', () => {
 });
 
 describe('PlanService.record', () => {
-  it('past plan の range を from_plan log としてコピーする', async () => {
+  it('past plan の range を from_plan record としてコピーする', async () => {
     const plan = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       external_calendar_event_id: 'external-event-1',
@@ -157,7 +157,7 @@ describe('PlanService.record', () => {
       tag_id: 'tag-1',
       title: 'Recorded plan',
     });
-    const log = createRecord({
+    const record = createRecord({
       end_at: plan.end_at,
       note: plan.note,
       plan_id: plan.id,
@@ -171,7 +171,7 @@ describe('PlanService.record', () => {
     mockSupabase.from.mockImplementation((table: string) => {
       if (table === 'plans') return createChainableMock(plan);
       recordsCallCount++;
-      return createChainableMock(recordsCallCount <= 2 ? [] : log);
+      return createChainableMock(recordsCallCount <= 2 ? [] : record);
     });
 
     await expect(service.record({ userId: USER_ID, planId: plan.id })).resolves.toMatchObject({
@@ -180,19 +180,19 @@ describe('PlanService.record', () => {
     });
   });
 
-  it('active log が紐づく plan の再記録を拒否する', async () => {
+  it('active record が紐づく plan の再記録を拒否する', async () => {
     const plan = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
-    const existingLog = createRecord({
+    const existingRecord = createRecord({
       end_at: '2026-03-17T13:00:00.000Z',
       plan_id: plan.id,
       start_at: '2026-03-17T12:00:00.000Z',
     });
     const { service, mockSupabase } = createPlanService();
     mockSupabase.from.mockImplementation((table: string) =>
-      createChainableMock(table === 'plans' ? plan : [existingLog]),
+      createChainableMock(table === 'plans' ? plan : [existingRecord]),
     );
 
     await expect(service.record({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
@@ -226,7 +226,7 @@ describe('PlanService.record', () => {
 });
 
 describe('PlanService.skip', () => {
-  it('active log が紐づく plan の skip を拒否する', async () => {
+  it('active record が紐づく plan の skip を拒否する', async () => {
     const plan = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
@@ -244,9 +244,9 @@ describe('PlanService.skip', () => {
 
 describe('PlanService.confirmDay', () => {
   it('confirm_day_plans_to_records RPC へ user と day range を渡す', async () => {
-    const log = createRecord({ source: 'from_plan' });
+    const record = createRecord({ source: 'from_plan' });
     const { service, mockSupabase } = createPlanService();
-    mockSupabase.rpc.mockResolvedValue({ data: [log], error: null });
+    mockSupabase.rpc.mockResolvedValue({ data: [record], error: null });
 
     await expect(
       service.confirmDay({
@@ -256,7 +256,7 @@ describe('PlanService.confirmDay', () => {
           end_at: '2026-03-18T00:00:00.000Z',
         },
       }),
-    ).resolves.toEqual([log]);
+    ).resolves.toEqual([record]);
 
     expect(mockSupabase.rpc).toHaveBeenCalledWith(
       'confirm_day_plans_to_records',
@@ -288,14 +288,14 @@ describe('PlanService.confirmDay', () => {
 });
 
 describe('RecordService.create', () => {
-  it('未来に完了する log 作成を拒否する', async () => {
+  it('未来に完了する record 作成を拒否する', async () => {
     const { service, mockSupabase } = createRecordService();
 
     await expect(
       service.create({
         userId: USER_ID,
         input: {
-          title: 'Future log',
+          title: 'Future record',
           start_at: '2030-03-17T10:00:00.000Z',
           end_at: '2030-03-17T11:00:00.000Z',
         },
@@ -305,18 +305,18 @@ describe('RecordService.create', () => {
     expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
-  it('past plan には複数の manual log を紐づけられる', async () => {
+  it('past plan には複数の manual record を紐づけられる', async () => {
     const plan = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
-    const log = createRecord({ plan_id: plan.id });
+    const record = createRecord({ plan_id: plan.id });
     const { service, mockSupabase } = createRecordService();
     let recordsCallCount = 0;
     mockSupabase.from.mockImplementation((table: string) => {
       if (table === 'plans') return createChainableMock(plan);
       recordsCallCount++;
-      return createChainableMock(recordsCallCount === 1 ? [] : log);
+      return createChainableMock(recordsCallCount === 1 ? [] : record);
     });
 
     await expect(
@@ -340,7 +340,7 @@ describe('RecordService.create', () => {
       service.create({
         userId: USER_ID,
         input: {
-          title: 'Linked log',
+          title: 'Linked record',
           planId: 'plan-1',
           start_at: '2026-03-17T10:00:00.000Z',
           end_at: '2026-03-17T11:00:00.000Z',

@@ -90,7 +90,7 @@ export const DayView = ({
   }, [date, weekStartsOn]);
 
   // 過去日 + 未記録 plan あり = confirmDay 導線を出す。
-  // 記録済み判定は同日 entries 内の log.planId 参照で行う（他日への持ち越し記録は稀なため対象外）。
+  // 記録済み判定は同日 entries 内の record.planId 参照で行う（他日への持ち越し記録は稀なため対象外）。
   const dayEnd = useMemo(() => {
     const d = new Date(date);
     d.setHours(23, 59, 59, 999);
@@ -106,7 +106,7 @@ export const DayView = ({
         !e.isSkipped &&
         e.endDate != null &&
         e.endDate.getTime() <= now &&
-        !list.some((log) => log.kind === 'record' && log.planId === e.id),
+        !list.some((record) => record.kind === 'record' && record.planId === e.id),
     );
   }, [entries]);
 

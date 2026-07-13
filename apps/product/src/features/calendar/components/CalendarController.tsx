@@ -90,7 +90,7 @@ interface CalendarControllerProps {
   // --- Context menu actions ---
   onDeleteTimeblockConfirm: (entry: CalendarEvent) => void;
   onViewStats: (entry: CalendarEvent) => void;
-  // plan ⇄ log 変換は time model に procedure が存在しないため optional（渡さなければメニュー非表示）
+  // plan ⇄ record 変換は time model に procedure が存在しないため optional（渡さなければメニュー非表示）
   onMarkUnplanned?: ((entry: CalendarEvent) => void) | undefined;
   onRestorePlanned?: ((entry: CalendarEvent) => void) | undefined;
   onSkip: (entry: CalendarEvent) => void;
@@ -247,7 +247,7 @@ export function CalendarController({
       }))
       .filter((plan) => isWithinVisibleDayBounds(plan.startAt, plan.endAt));
   }, [allTimeblocks, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds, visibleTagIds]);
-  const calendarDiffLogs = useMemo(() => {
+  const calendarDiffRecords = useMemo(() => {
     if (!calendarDiffEnabled) return [];
     return allTimeblocks
       .filter((entry) => entry.kind === 'record' && isEntryVisible(entry.tagId ?? null))
@@ -260,11 +260,11 @@ export function CalendarController({
         startAt: entry.startDate ?? entry.displayStartDate,
         endAt: entry.endDate ?? entry.displayEndDate,
       }))
-      .filter((log) => isWithinVisibleDayBounds(log.startAt, log.endAt));
+      .filter((record) => isWithinVisibleDayBounds(record.startAt, record.endAt));
   }, [allTimeblocks, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds]);
   const calendarDiff = useMemo(
-    () => computeTimeblockDayDiffs(calendarDiffPlans, calendarDiffLogs, calendarDiffBounds),
-    [calendarDiffBounds, calendarDiffLogs, calendarDiffPlans],
+    () => computeTimeblockDayDiffs(calendarDiffPlans, calendarDiffRecords, calendarDiffBounds),
+    [calendarDiffBounds, calendarDiffPlans, calendarDiffRecords],
   );
   const dayDiffEntryIds = useMemo(
     () => new Set(calendarDiff.items.map((item) => item.timeblockId)),

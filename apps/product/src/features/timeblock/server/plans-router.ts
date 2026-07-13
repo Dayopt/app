@@ -120,7 +120,7 @@ export const plansRouter = createTRPCRouter({
     }),
 
   record: protectedProcedure
-    .meta({ description: 'Record past plan as log' })
+    .meta({ description: 'Create a record from a past plan' })
     .input(recordPlanSchema)
     .mutation(async ({ ctx, input }) => {
       const service = createPlanService(ctx.supabase);
