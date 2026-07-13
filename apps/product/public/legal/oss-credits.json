@@ -179,12 +179,6 @@
     "publisher": "Claudéric Demers"
   },
   {
-    "name": "@esbuild/darwin-arm64",
-    "version": "0.28.1",
-    "license": "MIT",
-    "repository": "https://github.com/evanw/esbuild.git"
-  },
-  {
     "name": "@floating-ui/core",
     "version": "1.7.5",
     "license": "MIT",
@@ -259,20 +253,6 @@
     "repository": "https://github.com/lovell/colour.git"
   },
   {
-    "name": "@img/sharp-darwin-arm64",
-    "version": "0.34.5",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/lovell/sharp.git",
-    "publisher": "Lovell Fuller <npm@lovell.info>"
-  },
-  {
-    "name": "@img/sharp-libvips-darwin-arm64",
-    "version": "1.2.4",
-    "license": "LGPL-3.0-or-later",
-    "repository": "https://github.com/lovell/sharp-libvips.git",
-    "publisher": "Lovell Fuller <npm@lovell.info>"
-  },
-  {
     "name": "@jridgewell/gen-mapping",
     "version": "0.3.13",
     "license": "MIT",
@@ -336,12 +316,6 @@
     "publisher": "Next.js Team <support@vercel.com>"
   },
   {
-    "name": "@next/swc-darwin-arm64",
-    "version": "16.2.10",
-    "license": "MIT",
-    "repository": "https://github.com/vercel/next.js"
-  },
-  {
     "name": "@opentelemetry/api",
     "version": "1.9.1",
     "license": "Apache-2.0",
@@ -399,12 +373,6 @@
   },
   {
     "name": "@parcel/watcher",
-    "version": "2.5.6",
-    "license": "MIT",
-    "repository": "https://github.com/parcel-bundler/watcher.git"
-  },
-  {
-    "name": "@parcel/watcher-darwin-arm64",
     "version": "2.5.6",
     "license": "MIT",
     "repository": "https://github.com/parcel-bundler/watcher.git"
@@ -886,13 +854,6 @@
     "publisher": "Rich Harris <richard.a.harris@gmail.com>"
   },
   {
-    "name": "@rollup/rollup-darwin-arm64",
-    "version": "4.62.2",
-    "license": "MIT",
-    "repository": "https://github.com/rollup/rollup.git",
-    "publisher": "Lukas Taegert-Atkinson"
-  },
-  {
     "name": "@schummar/icu-type-parser",
     "version": "1.21.5",
     "license": "MIT",
@@ -940,12 +901,6 @@
     "license": "FSL-1.1-MIT",
     "repository": "git://github.com/getsentry/sentry-cli.git",
     "publisher": "Sentry"
-  },
-  {
-    "name": "@sentry/cli-darwin",
-    "version": "2.58.6",
-    "license": "FSL-1.1-MIT",
-    "repository": "https://github.com/getsentry/sentry-cli"
   },
   {
     "name": "@sentry/conventions",
@@ -1118,13 +1073,6 @@
     "name": "@swc/core",
     "version": "1.15.43",
     "license": "Apache-2.0",
-    "repository": "https://github.com/swc-project/swc.git",
-    "publisher": "강동윤 <kdy1997.dev@gmail.com>"
-  },
-  {
-    "name": "@swc/core-darwin-arm64",
-    "version": "1.15.43",
-    "license": "Apache-2.0 AND MIT",
     "repository": "https://github.com/swc-project/swc.git",
     "publisher": "강동윤 <kdy1997.dev@gmail.com>"
   },
@@ -2234,18 +2182,6 @@
     "license": "MIT",
     "repository": "jshttp/fresh",
     "publisher": "TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com)"
-  },
-  {
-    "name": "fsevents",
-    "version": "2.3.2",
-    "license": "MIT",
-    "repository": "https://github.com/fsevents/fsevents.git"
-  },
-  {
-    "name": "fsevents",
-    "version": "2.3.3",
-    "license": "MIT",
-    "repository": "https://github.com/fsevents/fsevents.git"
   },
   {
     "name": "function-bind",
