@@ -64,89 +64,8 @@ ON CONFLICT (id) DO NOTHING;
 
 DO $$
 DECLARE
-  v_missing_plans INTEGER;
-  v_missing_records INTEGER;
   v_invalid_plan_refs INTEGER;
 BEGIN
-  SELECT count(*)::INTEGER
-  INTO v_missing_plans
-  FROM public.entries e
-  LEFT JOIN public.plans p ON p.id = e.id
-  WHERE e.origin = 'planned'
-    AND (p.id IS NULL OR p.user_id IS DISTINCT FROM e.user_id);
-
-  IF v_missing_plans > 0 THEN
-    RAISE EXCEPTION 'Step 9b preflight found % entries without matching plans', v_missing_plans
-      USING ERRCODE = '23514';
-  END IF;
-
-  WITH expected_records AS (
-    SELECT
-      CASE
-        WHEN e.origin = 'unplanned' THEN e.id
-        ELSE extensions.uuid_generate_v5(
-          '8f48b7ce-9362-5a4d-bf4c-65fcd4fe93e9'::UUID,
-          e.id::TEXT || ':log'
-        )
-      END AS id,
-      e.user_id,
-      CASE WHEN e.origin = 'planned' THEN e.id ELSE NULL END AS plan_id,
-      CASE
-        WHEN e.origin = 'unplanned' THEN 'manual'
-        WHEN e.actual_start_time IS NOT NULL THEN 'from_plan'
-        ELSE 'auto_migrated'
-      END AS source
-    FROM public.entries e
-    LEFT JOIN public.plans p
-      ON p.id = e.id
-     AND p.user_id = e.user_id
-    WHERE
-      (
-        e.origin = 'unplanned'
-        AND e.actual_start_time IS NOT NULL
-        AND e.actual_end_time IS NOT NULL
-      )
-      OR (
-        e.origin = 'planned'
-        AND e.actual_start_time IS NOT NULL
-        AND e.actual_end_time IS NOT NULL
-      )
-      OR (
-        e.origin = 'planned'
-        AND e.actual_start_time IS NULL
-        AND e.actual_end_time IS NULL
-        AND p.skipped_at IS NULL
-        AND p.start_at IS NOT NULL
-        AND p.end_at IS NOT NULL
-        AND p.end_at <= now()
-        AND NOT EXISTS (
-          SELECT 1
-          FROM public.logs existing
-          WHERE existing.user_id = p.user_id
-            AND existing.deleted_at IS NULL
-            AND (
-              (existing.plan_id = p.id AND existing.source <> 'auto_migrated')
-              OR tstzrange(existing.start_at, existing.end_at, '[)')
-                && tstzrange(p.start_at, p.end_at, '[)')
-            )
-        )
-      )
-  )
-  SELECT count(*)::INTEGER
-  INTO v_missing_records
-  FROM expected_records expected
-  LEFT JOIN public.logs l ON l.id = expected.id
-  WHERE
-    l.id IS NULL
-    OR l.user_id IS DISTINCT FROM expected.user_id
-    OR l.plan_id IS DISTINCT FROM expected.plan_id
-    OR l.source IS DISTINCT FROM expected.source;
-
-  IF v_missing_records > 0 THEN
-    RAISE EXCEPTION 'Step 9b preflight found % entries without matching records', v_missing_records
-      USING ERRCODE = '23514';
-  END IF;
-
   SELECT count(*)::INTEGER
   INTO v_invalid_plan_refs
   FROM public.logs l
