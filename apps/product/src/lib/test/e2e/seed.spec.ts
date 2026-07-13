@@ -12,6 +12,8 @@ test.describe('Playwright Test Agent seed', () => {
     await page.locator('button[type="submit"]').click();
 
     await page.waitForURL(/\/ja\/(day|week)/, { timeout: 15_000 });
-    await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-calendar-grid][data-calendar-day-index="0"]')).toBeVisible({
+      timeout: 10_000,
+    });
   });
 });
