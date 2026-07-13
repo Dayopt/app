@@ -4,7 +4,7 @@
  * TimeblockInspector のフォーム（Level 2）
  *
  * plan / record の 1 行を受け取り、TagRow ヘッダー + TimeblockEditor を描画する。
- * タグ変更は即時保存、title / note / 時間は保存ボタンで確定する。
+ * タグ変更は即時保存、note / 時間は保存ボタンで確定する。
  * auto_migrated の record は RLS で不変のため読み取り専用として扱う。
  */
 
@@ -70,7 +70,6 @@ export function TimeblockInspectorForm({
   const targetUpdatedAt = target?.updated_at ?? null;
 
   const [value, setValue] = useState<TimeModelEditorValue>(() => ({
-    title: target?.title ?? '',
     note: target?.note ?? '',
     tagId: target?.tag_id ?? null,
     startAt: target ? new Date(target.start_at) : new Date(),
@@ -123,11 +122,10 @@ export function TimeblockInspectorForm({
     [createTagMutation, handleTagChange, t],
   );
 
-  // --- 保存（title / note / 時間） ---
+  // --- 保存（note / 時間） ---
   const handleSubmit = useCallback(() => {
     if (!targetId || !targetUpdatedAt || isMigrated) return;
     const data = {
-      title: value.title.trim(),
       note: value.note.trim() === '' ? null : value.note,
       tagId: value.tagId,
       // 過去 plan の時間はサーバーが PLAN_TIME_LOCKED で拒否するため送らない

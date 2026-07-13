@@ -14,7 +14,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const futureValue: TimeModelEditorValue = {
-  title: 'Deep work',
   note: '',
   tagId: null,
   startAt: new Date('2026-07-11T09:00:00'),
@@ -22,7 +21,7 @@ const futureValue: TimeModelEditorValue = {
   source: 'plan',
 };
 
-/** 終了時刻が未来の Plan 編集。 */
+/** 未来の Plan の日時・メモ編集。 */
 export const Plan: Story = {
   args: { value: futureValue, onChange: () => undefined, onSubmit: () => undefined },
   render: function PlanStory() {

@@ -4,17 +4,16 @@ import { Calendar, Clock, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { DateRow, TimeRow } from '@/features/timeblock';
-import { Button, Input, Textarea } from '@dayopt/components';
+import { Button } from '@dayopt/components';
 
 import {
   isPlanTimeEditable,
   resolveTimeblockDestination,
   type TimeblockDestination,
 } from '../../domain/timeblock-destination';
-import { TimeblockDestinationChip } from './TimeblockDestinationChip';
+import { NoteSection } from '../inspector/fields';
 
 export interface TimeModelEditorValue {
-  title: string;
   note: string;
   tagId: string | null;
   startAt: Date;
@@ -41,7 +40,7 @@ function withTime(date: Date, value: string): Date {
   return next;
 }
 
-/** Plan / Record 共通エディタ。保存先は end_at から表示専用で導出する。 */
+/** Plan / Record 共通エディタ。詳細画面では日時とメモだけを編集する。 */
 export function TimeblockEditor({ value, onChange, onSubmit, isSubmitting }: TimeModelEditorProps) {
   const t = useTranslations('timeblock.editor');
   const destination = resolveTimeblockDestination(value.endAt);
@@ -55,17 +54,11 @@ export function TimeblockEditor({ value, onChange, onSubmit, isSubmitting }: Tim
         onSubmit(destination);
       }}
     >
-      <div className="flex items-center justify-between gap-3">
-        <TimeblockDestinationChip destination={destination} />
-        {timeLocked && <span className="text-muted-foreground text-xs">{t('timeLocked')}</span>}
-      </div>
-      <Input
-        value={value.title}
-        onChange={(event) => onChange({ ...value, title: event.target.value })}
-        placeholder={t('titlePlaceholder')}
-        aria-label={t('title')}
-        disabled={isSubmitting}
-      />
+      {timeLocked && (
+        <div className="flex justify-end">
+          <span className="text-muted-foreground text-xs">{t('timeLocked')}</span>
+        </div>
+      )}
       <div className="bg-muted rounded-2xl px-4 py-2">
         <DateRow
           label={t('date')}
@@ -91,24 +84,16 @@ export function TimeblockEditor({ value, onChange, onSubmit, isSubmitting }: Tim
           isPrimary={destination === 'record'}
         />
       </div>
-      <div className="space-y-1">
-        <label
-          className="text-muted-foreground flex items-center gap-2 text-sm"
-          htmlFor="time-model-note"
-        >
-          <StickyNote className="size-4" />
-          {t('note')}
-        </label>
-        <Textarea
-          id="time-model-note"
-          value={value.note}
-          onChange={(event) => onChange({ ...value, note: event.target.value })}
-          placeholder={t('notePlaceholder')}
-          disabled={isSubmitting}
-        />
-      </div>
+      <NoteSection
+        label={t('note')}
+        icon={StickyNote}
+        note={value.note}
+        onNoteChange={(note) => onChange({ ...value, note })}
+        placeholder={t('notePlaceholder')}
+        disabled={isSubmitting}
+      />
       <div className="flex justify-end">
-        <Button type="submit" size="sm" disabled={isSubmitting || value.title.trim().length === 0}>
+        <Button type="submit" size="sm" disabled={isSubmitting}>
           {t('save')}
         </Button>
       </div>

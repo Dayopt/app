@@ -144,8 +144,6 @@
         "plan": "予定として保存",
         "record": "記録として保存"
       },
-      "title": "タイトル",
-      "titlePlaceholder": "何をしましたか？",
       "date": "日付",
       "time": "時間",
       "note": "メモ",

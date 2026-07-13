@@ -144,8 +144,6 @@
         "plan": "Save as plan",
         "record": "Save as record"
       },
-      "title": "Title",
-      "titlePlaceholder": "What did you do?",
       "date": "Date",
       "time": "Time",
       "note": "Note",
