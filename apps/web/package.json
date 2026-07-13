@@ -118,7 +118,7 @@
     "tailwindcss": "^4.3.2",
     "tsx": "^4.23.0",
     "typescript": "^5",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   },
   "optionalDependencies": {
     "@tailwindcss/oxide-darwin-arm64": "^4.3.2",
