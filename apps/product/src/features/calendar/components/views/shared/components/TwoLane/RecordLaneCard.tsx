@@ -73,8 +73,6 @@ export function RecordLaneCard({
   const hasDiff = event.diffMinutes != null && event.diffMinutes !== 0;
   const showDetails = position.height >= DETAIL_HEIGHT_THRESHOLD;
   const canDrag = !disableDrag && Boolean(onPointerDown);
-  const showTagIcon = tagIcon !== null && tagIcon !== undefined;
-
   return (
     <div
       data-record-lane-card
@@ -115,9 +113,7 @@ export function RecordLaneCard({
     >
       <div className="flex items-start justify-between gap-1">
         <p className="flex min-h-0 items-start gap-1 truncate font-medium">
-          {showTagIcon && (
-            <TagIcon icon={tagIcon} color={tagColor ?? undefined} size="sm" className="shrink-0" />
-          )}
+          <TagIcon icon={tagIcon} color={tagColor ?? undefined} size="sm" className="shrink-0" />
           <span className="truncate">{displayName}</span>
         </p>
         {hasDiff && <DiffBadge diffMinutes={event.diffMinutes ?? 0} />}

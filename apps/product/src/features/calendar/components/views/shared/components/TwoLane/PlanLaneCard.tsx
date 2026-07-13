@@ -81,8 +81,6 @@ export function PlanLaneCard({
   const isRecorded = event.status === 'recorded';
   const showDetails = position.height >= DETAIL_HEIGHT_THRESHOLD;
   const canDrag = !disableDrag && Boolean(onPointerDown);
-  const showTagIcon = tagIcon !== null && tagIcon !== undefined;
-
   return (
     <div
       data-plan-lane-card
@@ -129,9 +127,7 @@ export function PlanLaneCard({
       }}
     >
       <p className="flex min-h-0 items-start gap-1 truncate font-medium">
-        {showTagIcon && (
-          <TagIcon icon={tagIcon} color={tagColor ?? undefined} size="sm" className="shrink-0" />
-        )}
+        <TagIcon icon={tagIcon} color={tagColor ?? undefined} size="sm" className="shrink-0" />
         <span className="truncate">{displayName}</span>
       </p>
       {showDetails && (
