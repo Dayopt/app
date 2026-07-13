@@ -12,7 +12,7 @@ import type React from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { getTagColorClasses } from '@/features/tags';
+import { getTagColorClasses, TagIcon } from '@/features/tags';
 import type { RecordEvent } from '@/features/timeblock';
 import { cn } from '@dayopt/components';
 
@@ -25,6 +25,7 @@ interface RecordLaneCardProps {
   /** Calendar カードの表示名。title ではなくタグを source of truth とする。 */
   tagName: string | null;
   tagColor?: string | null | undefined;
+  tagIcon?: string | null | undefined;
   className?: string | undefined;
   /** Inspector で選択中か（強調表示） */
   isActive?: boolean | undefined;
@@ -54,6 +55,7 @@ export function RecordLaneCard({
   position,
   tagName,
   tagColor = null,
+  tagIcon = null,
   className,
   isActive = false,
   disableDrag = false,
@@ -111,7 +113,12 @@ export function RecordLaneCard({
       }}
     >
       <div className="flex items-start justify-between gap-1">
-        <p className="truncate font-medium">{displayName}</p>
+        <p className="flex min-h-0 items-start gap-1 truncate font-medium">
+          {tagIcon && (
+            <TagIcon icon={tagIcon} color={tagColor ?? undefined} size="sm" className="shrink-0" />
+          )}
+          <span className="truncate">{displayName}</span>
+        </p>
         {hasDiff && <DiffBadge diffMinutes={event.diffMinutes ?? 0} />}
       </div>
       {showDetails && (
