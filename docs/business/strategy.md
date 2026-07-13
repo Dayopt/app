@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-13
 ---
 
 # Dayopt コンセプト
@@ -68,7 +68,7 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 
 ## 5. 変えないもの
 
-1. **予定と実績が同じタイムラインで対になる設計**（[ADR-011](../engineering/log/2026-03-05-unified-block-model.md) → [ADR-025](../product/log/2026-07-09-time-model-split.md)） — 計画と実績を1画面で突き合わせられることが本物の差別化。実装モデルは 1 Entry から Plan / Log 分割（1予定:N記録）へ発展したが、この本質は変わらない
+1. **予定と実績が同じタイムラインで対になる設計**（[ADR-011](../engineering/log/2026-03-05-unified-block-model.md) → [ADR-025](../product/log/2026-07-09-time-model-split.md)） — 計画と実績を1画面で突き合わせられることが本物の差別化。実装モデルは 1 Entry から Plan / Record 分割（1予定:N記録）へ発展したが、この本質は変わらない
 2. **Todo エンジンを作らない** — サブタスク・優先度・期限・ボード・テーブルは作らない（一度作って捨てた）
 3. **他人と比較しない・gamification をしない**
 4. **$5 価格帯** — 「AI と連携できて、全体感が見えて、カレンダーと紐づく」なら $5 は払う。$10-20 だと微妙。この感覚を維持する

@@ -1,6 +1,7 @@
 ---
-status: current
-last_verified: 2026-07-12
+status: superseded
+superseded_by: ../product/specs/plan-record.md
+last_verified: 2026-07-13
 code: apps/product/src
 ---
 

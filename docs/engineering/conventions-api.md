@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-13
 code: apps/product/src/features
 ---
 
@@ -274,15 +274,15 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 
 ### Skin-agnostic 7 原則
 
-| #   | 原則                                                                                                                                          | Why                                                                                                  | 現状                                                                                    |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| 1   | **viewer context は引数で渡す** — `userId` を string 引数で受け取る。framework ctx を service に渡さない                                      | skin が違っても viewer は同じ概念。framework ctx に依存すると skin 毎に shim が要る                  | 全 method 準拠 ✓                                                                        |
-| 2   | **framework object を import / touch しない** — `Request`, `NextRequest`, `NextResponse`, tRPC `Context` を service が知らない                | 上記の必然。一度でも触ると skin 切替時に依存が漏れる                                                 | 全 service 準拠 ✓                                                                       |
-| 3   | **error は domain typed (`ServiceError` 系列) で throw** — framework error (`TRPCError`, `NextResponse`) は router 層で wrap                  | skin が error の表現を decide する責務を持つ。service は「何が起きたか」だけを表現                   | 全 service 準拠 ✓                                                                       |
-| 4   | **side effect は signature と doc に明示** — DB read/write 以外の I/O（Stripe API, GitHub API 等）は JSDoc に列挙                             | 副作用が暗黙だと skin 設計（retry / idempotency / rate limit）が組めない                             | doc 化未徹底（実装は準拠）                                                              |
-| 5   | **時刻 / 地域依存は引数で受ける** — timezone は計算の入力として渡す。受けなければ service が DB から fetch                                    | skin が timezone を知っている場合（MCP の OAuth claim 等）渡したい。skin agnostic な fallback も維持 | write 系のみ部分準拠、read 系は service が DB fetch                                     |
-| 6   | **pagination は contract で表明** — 結果が "N 件以上ありうる" method は limit / cursor / offset を持つ。"全件取得" を仕様とする method は明記 | skin がメモリ / レスポンスサイズの制約を予測できる                                                   | 不揃い（後述 delta）                                                                    |
-| 7   | **legitimate absence と failure を区別** — 「データが無い」は null / 空配列で返してよい。「外部 API 失敗 / DB エラー」は throw する           | skin の error UI と "no data" UI を別の経路で扱える                                                  | BillingService が概ね準拠、明文化なし。`EntryService.checkTimeOverlap` は要修正（後述） |
+| #   | 原則                                                                                                                                          | Why                                                                                                  | 現状                                                         |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 1   | **viewer context は引数で渡す** — `userId` を string 引数で受け取る。framework ctx を service に渡さない                                      | skin が違っても viewer は同じ概念。framework ctx に依存すると skin 毎に shim が要る                  | 全 method 準拠 ✓                                             |
+| 2   | **framework object を import / touch しない** — `Request`, `NextRequest`, `NextResponse`, tRPC `Context` を service が知らない                | 上記の必然。一度でも触ると skin 切替時に依存が漏れる                                                 | 全 service 準拠 ✓                                            |
+| 3   | **error は domain typed (`ServiceError` 系列) で throw** — framework error (`TRPCError`, `NextResponse`) は router 層で wrap                  | skin が error の表現を decide する責務を持つ。service は「何が起きたか」だけを表現                   | 全 service 準拠 ✓                                            |
+| 4   | **side effect は signature と doc に明示** — DB read/write 以外の I/O（Stripe API, GitHub API 等）は JSDoc に列挙                             | 副作用が暗黙だと skin 設計（retry / idempotency / rate limit）が組めない                             | doc 化未徹底（実装は準拠）                                   |
+| 5   | **時刻 / 地域依存は引数で受ける** — timezone は計算の入力として渡す。受けなければ service が DB から fetch                                    | skin が timezone を知っている場合（MCP の OAuth claim 等）渡したい。skin agnostic な fallback も維持 | write 系のみ部分準拠、read 系は service が DB fetch          |
+| 6   | **pagination は contract で表明** — 結果が "N 件以上ありうる" method は limit / cursor / offset を持つ。"全件取得" を仕様とする method は明記 | skin がメモリ / レスポンスサイズの制約を予測できる                                                   | 不揃い（後述 delta）                                         |
+| 7   | **legitimate absence と failure を区別** — 「データが無い」は null / 空配列で返してよい。「外部 API 失敗 / DB エラー」は throw する           | skin の error UI と "no data" UI を別の経路で扱える                                                  | Timeblock service と BillingService は準拠。明文化を継続する |
 
 #### 取らないと decide したもの
 
@@ -293,67 +293,28 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 
 各 method の target shape を明記する。current が target と異なる箇所は **★** で印を付け、Delta セクションで対応 action を書く。
 
-#### EntryService
+#### PlanService / RecordService
 
-- file: `src/features/timeblock/server/entry-service.ts`
-- 構造: `class EntryService` + `createEntryService(supabase)` factory
-- error: `EntryServiceError extends ServiceError`
-- skins: tRPC (`createEntryService` 経由) + REST beacon (`new EntryService(supabase)` 直接)
+- files: `src/features/timeblock/server/plan-service.ts` / `record-service.ts`
+- 構造: `class PlanService` / `class RecordService` + 同名 factory
+- error: 共通の `TimeblockServiceError extends ServiceError`
+- skins: tRPC の `plans` / `records` router。公開契約も同じ namespace を正本にする
 
-##### `list(options)` — L35
+##### 共通 CRUD
 
-- input: `ListEntriesOptions { userId, tagId?, origin?, search?, startDate?, endDate?, fulfillmentScoreMin?, fulfillmentScoreMax?, sortBy, sortOrder, limit?, offset?, timezone? ★ }`
-- output: `Promise<EntryWithTags[]>`
-- error: `EntryServiceError(FETCH_FAILED)`
-- side effect: DB read
-- timezone: optional, なければ DB fetch ★
-- pagination: limit + offset ✓
+- `list(options)`: `userId` と任意の tag / search / overlap range / sort / limit / offset を受け、active row の配列を返す。DB failure は `FETCH_FAILED`、空配列は legitimate absence
+- `getById(options)`: `userId` + entity id で active row を取得し、無ければ `NOT_FOUND`
+- `create(options)`: `userId` + `input` + 同一レーン overlap guard を受ける。Plan は未来、Record は現在以前の end を要求する
+- `update(options)`: optimistic lock と同一レーン overlap guard を適用する。過去 Plan の時間 field は変更不可
+- `delete` / `restore`: Record 名・Plan 名の RPC を介した soft delete / restore
 
-##### `getById(options)` — L128
+##### Plan 固有操作
 
-- input: `GetEntryByIdOptions { userId, entryId }`
-- output: `Promise<EntryWithTags>`
-- error: `EntryServiceError(NOT_FOUND)`
-- side effect: DB read
-- pagination: N/A
+- `skip` / `unskip`: 過去 Plan の未実行状態を更新する。active Record がある Plan は skip しない
+- `record`: 過去 Plan から `source = 'from_plan'` の Record を1件作る
+- `confirmDay`: `confirm_day_plans_to_records` で指定 range の未記録 Plan を一括確定する
 
-##### `checkTimeOverlap(options)` — L148
-
-- input: `{ userId, startTime, endTime, excludeEntryId? }`
-- output: `Promise<string[]>`（重複する entry id 配列、空配列は "重複なし"）
-- error: `EntryServiceError(FETCH_FAILED)` ★（現状 error 時に空配列を返して log のみ、原則 7 違反）
-- side effect: DB read
-- pagination: N/A
-
-##### `create(options)` — L202
-
-- input: `CreateEntryOptions { userId, input, preventOverlappingEntries?, timezone? }`
-- output: `Promise<EntryRow>`
-- error: `EntryServiceError(CREATE_FAILED | TIME_OVERLAP)`
-- side effect: DB write + 重複 check
-- timezone: optional ✓
-
-##### `update(options)` — L252
-
-- input: `UpdateEntryOptions { userId, entryId, input, preventOverlappingEntries?, expectedUpdatedAt?, timezone? }`
-- output: `Promise<UpdateEntryResult>`
-- error: `EntryServiceError(UPDATE_FAILED | CONFLICT | TIME_OVERLAP)`
-- side effect: DB write + 重複 check + optimistic lock
-- timezone: optional ✓
-
-##### `delete(options)` — L323
-
-- input: `DeleteEntryOptions { userId, entryId }`
-- output: `Promise<{ success: boolean }>`
-- error: `EntryServiceError(DELETE_FAILED)`
-- side effect: DB write（RPC 経由の soft delete）
-
-##### `restore(options)` — L343
-
-- input: `DeleteEntryOptions { userId, entryId }`
-- output: `Promise<{ success: boolean }>`
-- error: `EntryServiceError(RESTORE_FAILED)`
-- side effect: DB write（RPC 経由 restore）
+全 method は `userId` を明示入力に持ち、service 内でも row filter / RPC parameter に渡す。Plan と Record の1:N、時間重複、future/past 境界は service と DB constraint の両方で守る。
 
 #### TagService
 
@@ -461,7 +422,7 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 - input: `userId: string`
 - output: `Promise<{ success: true }>`
 - error: `UserServiceError(DELETE_DATA_FAILED)`
-- side effect: DB write（plans / `logs`〔Record の物理保存先〕→ tags → settings の cascade delete）
+- side effect: DB write（plans / records → tags → settings の cascade delete）
 
 ##### `exportData(options)` — L237
 
@@ -544,39 +505,26 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 
 7 原則のうち current が満たしていない箇所。**file:line で裏取れる事実のみ列挙**。各 delta は後続の個別 plan で対応する。本セクションは scope を decide するだけ。
 
-#### Delta 1: `EntryService.list` に optional `timezone` を追加
-
-- 原則 5 違反: `entry-service.ts:35` の `ListEntriesOptions` に timezone がない。
-- Current の挙動: service が自前で `user_settings.timezone` を fetch（要 verify、本 audit 範囲外）
-- Target: `ListEntriesOptions.timezone?: string`。渡されたら使う、なければ DB fetch fallback。
-- 影響: tRPC / REST beacon の caller 側で渡す/渡さないを decide。breaking change なし。
-
-#### Delta 2: `EntryService.checkTimeOverlap` の error contract 修正
-
-- 原則 7 違反: `entry-service.ts:148` の現実装は **DB エラー時にも空配列を返して log のみ**（failure を absence と混同）。
-- Target: DB エラー時は `EntryServiceError(FETCH_FAILED)` を throw。空配列は "重複なし" の意味だけに限定。
-- 影響: caller が error を意識する必要が出る（router 側 catch 追加）。
-
-#### Delta 3: `BillingService.getInvoices` の pagination 表明
+#### Delta 1: `BillingService.getInvoices` の pagination 表明
 
 - 原則 6 違反: `billing-service.ts:239` で `limit=10` ハードコード（`billing-service.ts:252`）。
 - Target: `getInvoices(supabase, userId, limit?: number = 10)` に signature 変更。
 - 影響: 既存 caller は引数省略でそのまま動く。breaking change なし。
 
-#### Delta 4: `syncSubscriptionStatus` の RLS bypass 表明
+#### Delta 2: `syncSubscriptionStatus` の RLS bypass 表明
 
 - 原則 4 半違反: `billing-service.ts:375` の現 signature は `supabase: SupabaseClient<Database>`。コメント (`billing-service.ts:373`) で「createServiceRoleClient() 経由を使用すること（RLSバイパス）」と指示。
 - Target: 引数名を `serviceRoleSupabase: SupabaseClient<Database>` に rename + JSDoc で「**MUST be created via `createServiceRoleClient()` to bypass RLS**」と強調。
 - 影響: 引数名変更のみ、type は同じ。呼び出し側の named arg 使用箇所のみ修正（`src/app/api/webhooks/stripe/route.ts:249, 306, 361` を check）。
 
-#### Delta 5: `BillingService.getBillingOverview` 内の subscription_status read 重複
+#### Delta 3: `BillingService.getBillingOverview` 内の subscription_status read 重複
 
 - 原則違反ではない（構造課題）。`billing-service.ts:79, 81` と `:294, 296` で同パターンの subscription_status / subscription_id read が二重実装。
 - Target: 重複を internal helper に統合。
 - 影響: 純粋に internal refactor。skin agnostic とは独立だが記録として残す。
 - 注: 本 delta は **shape 違反ではなく内部実装の重複**。後続 plan で扱うかどうかは ROI で判断。
 
-#### Delta 6: 副作用の JSDoc 明示（全 service 横断）
+#### Delta 4: 副作用の JSDoc 明示（全 service 横断）
 
 - 原則 4 違反: side effect を持つ method（特に Stripe / GitHub API を呼ぶもの）の JSDoc に副作用列挙が不徹底。
 - 対象（"★" を付けていないが原則 4 該当）:
@@ -587,12 +535,11 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 - Target: 各 method の JSDoc 冒頭に `@sideEffect` 形式（or 自然文）で外部 I/O を列挙。
 - 影響: JSDoc 追加のみ、コード挙動変化なし。
 
-#### Delta 7: shape 違反ではない既知の構造課題（記録のみ）
+#### Delta 5: shape 違反ではない既知の構造課題（記録のみ）
 
 本 delta セクションの対象外。後続 plan で別途扱う:
 
-- `entry/server/statistics.ts` / `tag-statistics.ts` が router file 内にロジック直書き（service 層分離が未着手）
-- `EntryService` の skin 間 import スタイル不一致（tRPC は factory `createEntryService`、REST beacon は `new EntryService(supabase)` 直接呼び）
+- `tag-statistics.ts` など、router / service の責務分離が未完了な箇所は個別 issue で扱う
 
 ### 構造の不揃いについての判断
 

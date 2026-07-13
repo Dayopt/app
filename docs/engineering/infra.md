@@ -1139,6 +1139,8 @@ ORDER BY schemaname, tablename;
 
 ### 各マイグレーションの逆SQL
 
+> **注意（2026-07-13）**: 以下の `entries` を対象にした逆SQLは当時の履歴であり、Step 9b で `entries` を削除した現在の schema には直接適用しない。Step 9b より前へ戻す必要がある場合は、個別の逆SQLではなく backup / PITR と time-model migration の再適用で復旧する。
+
 #### 1. `20260317022728_fix_security_definer_idor.sql`
 
 | 項目       | 値                                                     |
