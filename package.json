@@ -148,7 +148,7 @@
     "next": "^16.2.10",
     "npm-check-updates": "^19.6.6",
     "playwright": "^1.61.1",
-    "postcss": "^8",
+    "postcss": "^8.5.16",
     "prettier": "^3.9.4",
     "prettier-plugin-organize-imports": "^4.0.0",
     "prettier-plugin-tailwindcss": "^0.8.0",

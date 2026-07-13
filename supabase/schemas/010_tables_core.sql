@@ -3,7 +3,7 @@
 -- ============================================================
 -- Dayopt のドメインモデルの中核テーブル
 -- 実際のマイグレーションは migrations/ を参照
--- 最終同期日: 2026-07-09
+-- 最終同期日: 2026-07-13
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -11,6 +11,8 @@
 --   - 20260610000000_entry_auto_record_model.sql
 --   - 20260616000000_rename_duration_to_planned_duration.sql
 --   - 20260708232500_add_time_model_tables.sql
+--   - 20260712212527_records_table_and_drop_entries.sql
+--   - 20260712213550_rename_record_constraint_triggers.sql
 --
 -- カラム順序の規則:
 --   1. id (PK)
@@ -35,41 +37,6 @@ CREATE TABLE public.profiles (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
--- entries: エントリ（プラン + 記録 統合テーブル）
--- origin='planned' → 事前に計画したタイムボックス
--- origin='unplanned' → 実行後に記録した時間
--- fulfillment_score IS NOT NULL → レビュー済み
--- 自動記録モデル（20260610000000）: actual_* は「ユーザーが編集・確定した実績」のみ
--- （NULL = 未編集）。過去になった planned は読み取り時に plan range を実績として扱う
--- （entries_effective view が唯一の定義）。skipped_at は「計画したがやらなかった」
-CREATE TABLE public.entries (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  tag_id UUID REFERENCES public.tags(id) ON DELETE SET NULL,
-  title TEXT NOT NULL,
-  description TEXT,
-  origin TEXT NOT NULL DEFAULT 'planned',
-  start_time TIMESTAMPTZ,         -- カレンダー上の開始時刻
-  end_time TIMESTAMPTZ,           -- カレンダー上の終了時刻
-  actual_start_time TIMESTAMPTZ,  -- 実績開始時刻
-  actual_end_time TIMESTAMPTZ,    -- 実績終了時刻
-  planned_duration_minutes INTEGER GENERATED ALWAYS AS (
-    CASE
-      WHEN start_time IS NOT NULL AND end_time IS NOT NULL
-      THEN EXTRACT(EPOCH FROM (end_time - start_time))::INTEGER / 60
-      ELSE NULL
-    END
-  ) STORED,
-  fulfillment_score INTEGER,      -- 充実度 1-3（低/中/高）
-  skipped_at TIMESTAMPTZ,         -- 計画したがやらなかった（自動記録・実績集計から除外）
-  deleted_at TIMESTAMPTZ,         -- ソフトデリート
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- entries.tag_id は nullable FK に加えて、trigger で tags.user_id = entries.user_id を強制する。
---   enforce_entry_tag_owner -> enforce_entry_tag_owner()
 
 -- external_calendar_events: 外部カレンダー同期ミラー
 -- Phase 1 では FK の受け皿だけを追加し、OAuth / sync / ghost UI は Phase 2 で実装する
@@ -114,8 +81,8 @@ CREATE TABLE public.plans (
 --   enforce_plan_tag_owner              -> enforce_plan_tag_owner()
 --   enforce_plan_external_event_owner   -> enforce_plan_external_event_owner()
 
--- logs: Dayopt 内の記録
-CREATE TABLE public.logs (
+-- records: Dayopt 内の記録
+CREATE TABLE public.records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   tag_id UUID REFERENCES public.tags(id) ON DELETE SET NULL,
@@ -132,12 +99,12 @@ CREATE TABLE public.logs (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- logs 関連 constraint / trigger:
---   logs_no_overlap                    -> user_id + tstzrange(start_at, end_at, '[)') EXCLUDE
---   prevent_logs_source_change         -> prevent_time_model_source_change()
---   enforce_log_tag_owner              -> enforce_log_tag_owner()
---   enforce_log_plan_owner             -> enforce_log_plan_owner()
---   enforce_log_external_event_owner   -> enforce_log_external_event_owner()
+-- records 関連 constraint / trigger:
+--   records_no_overlap                    -> user_id + tstzrange(start_at, end_at, '[)') EXCLUDE
+--   prevent_records_source_change         -> prevent_time_model_source_change()
+--   enforce_record_tag_owner              -> enforce_record_tag_owner()
+--   enforce_record_plan_owner             -> enforce_record_plan_owner()
+--   enforce_record_external_event_owner   -> enforce_record_external_event_owner()
 
 -- tags: タグ（root -> child の最大2階層）
 -- 20260424000000 でコロン記法 "dev:api" から parent_id 階層へ移行済み
@@ -178,8 +145,9 @@ CREATE UNIQUE INDEX tags_user_parent_name_unique
 --   enforce_tag_no_children_as_child  -> check_tag_has_children()
 --   trigger_update_tags_updated_at    -> update_updated_at()
 
--- entry_tags: 削除済み（20260415000000_inline_entry_tag_id.sql）
--- entries.tag_id に統合
+-- entries / entry_tags: 削除済み
+--   20260415000000_inline_entry_tag_id.sql
+--   20260712212527_records_table_and_drop_entries.sql
 
 -- entry_instances: 削除済み（20260319130003_cleanup_recurrence_remnants.sql）
 

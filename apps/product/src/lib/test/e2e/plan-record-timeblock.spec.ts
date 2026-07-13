@@ -115,7 +115,7 @@ describeWithEnv('Plan / Record Timeblock flow', () => {
     if (planError) throw new Error(planError.message);
 
     const { data: record, error: recordError } = await adminSupabase
-      .from('logs')
+      .from('records')
       .insert({
         user_id: TEST_USER_ID,
         tag_id: tag.id,
@@ -132,7 +132,7 @@ describeWithEnv('Plan / Record Timeblock flow', () => {
 
   test.afterAll(async () => {
     if (!adminSupabase) return;
-    await adminSupabase.from('logs').delete().eq('user_id', TEST_USER_ID);
+    await adminSupabase.from('records').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('plans').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('tags').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('user_settings').delete().eq('user_id', TEST_USER_ID);

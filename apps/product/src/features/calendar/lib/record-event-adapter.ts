@@ -1,14 +1,14 @@
 /**
- * Record の物理テーブル `logs` の行 -> `RecordEvent` 変換アダプター（read 側専用）
+ * Record の物理テーブル `records` の行 -> `RecordEvent` 変換アダプター（read 側専用）
  *
  * `entry-adapter.ts`（entries -> CalendarEvent）と同じ配置パターンで、
- * 物理 `logs` -> RecordEvent の境界射影を担う。
+ * 物理 `records` -> RecordEvent の境界射影を担う。
  */
 
 import type { RecordEvent } from '@/features/timeblock';
 import { convertToTimezone } from '@/lib/date/timezone';
 
-/** Record の物理テーブル `logs` のうち RecordEvent 射影に必要な最小 shape */
+/** Record の物理テーブル `records` のうち RecordEvent 射影に必要な最小 shape */
 export interface RecordEventSourceRow {
   id: string;
   title: string;

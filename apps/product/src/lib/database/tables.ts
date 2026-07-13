@@ -1,7 +1,7 @@
 export const databaseTables = {
   emailSuppressions: 'email_suppressions',
   externalCalendarEvents: 'external_calendar_events',
-  records: 'logs',
+  records: 'records',
   mfaRecoveryCodes: 'mfa_recovery_codes',
   oauthAuthorizationCodes: 'oauth_authorization_codes',
   oauthTokens: 'oauth_tokens',

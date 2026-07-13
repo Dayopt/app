@@ -25,9 +25,9 @@ beforeEach(() => {
 });
 
 describe('StatisticsService.getTagStats', () => {
-  it('logs をタグ別に集計し counts/lastUsed を返す（deleted は除外済み前提）', async () => {
+  it('records をタグ別に集計し counts/lastUsed を返す（deleted は除外済み前提）', async () => {
     const { service } = createService({
-      logs: createChainableMock([
+      records: createChainableMock([
         {
           id: 'l1',
           tag_id: 'tag-1',
@@ -68,15 +68,15 @@ describe('StatisticsService.getTagStats', () => {
   });
 
   it('log が無い場合は空の counts/lastUsed を返す', async () => {
-    const { service } = createService({ logs: createChainableMock([]) });
+    const { service } = createService({ records: createChainableMock([]) });
     expect(await service.getTagStats(USER_ID)).toEqual({ counts: {}, lastUsed: {} });
   });
 });
 
 describe('StatisticsService.getTimeByTag', () => {
-  it('logs をタグ別合計時間に変換し hours 降順で返す', async () => {
+  it('records をタグ別合計時間に変換し hours 降順で返す', async () => {
     const { service } = createService({
-      logs: createChainableMock([
+      records: createChainableMock([
         {
           id: 'l1',
           tag_id: 'tag-1',
@@ -129,7 +129,7 @@ describe('StatisticsService.getEstimationAccuracy', () => {
         },
       ]),
       tags: createChainableMock([{ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: null }]),
-      logs: createChainableMock([
+      records: createChainableMock([
         {
           id: 'l1',
           tag_id: 'tag-1',
@@ -156,7 +156,7 @@ describe('StatisticsService.getEstimationAccuracy', () => {
     // p2 の log は auto_migrated なので実績なし扱い → record_count は p1 のみで 1 件 → HAVING で除外
     expect(result).toEqual([]);
     expect(mockSupabase.from).toHaveBeenCalledWith('plans');
-    expect(mockSupabase.from).toHaveBeenCalledWith('logs');
+    expect(mockSupabase.from).toHaveBeenCalledWith('records');
   });
 });
 
@@ -194,7 +194,7 @@ describe('StatisticsService.getTagDashboard', () => {
     const { service } = createService({
       user_settings: createChainableMock({ timezone: 'UTC' }),
       tags: createChainableMock({ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: 'brain' }),
-      logs: createChainableMock([
+      records: createChainableMock([
         {
           id: 'log-1',
           title: 'Focus session',
@@ -240,7 +240,7 @@ describe('StatisticsService.getTagDashboard', () => {
     const { service } = createService({
       user_settings: createChainableMock({ timezone: 'UTC' }),
       tags: createChainableMock({ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: null }),
-      logs: createChainableMock([]),
+      records: createChainableMock([]),
       plans: createChainableMock([
         {
           id: 'plan-1',
@@ -273,7 +273,7 @@ describe('StatisticsService.getTagDashboard', () => {
     const { service } = createService({
       user_settings: createChainableMock({ timezone: 'UTC' }),
       tags: createChainableMock({ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: null }),
-      logs: createChainableMock([]),
+      records: createChainableMock([]),
       plans: createChainableMock([
         {
           id: 'plan-1',
