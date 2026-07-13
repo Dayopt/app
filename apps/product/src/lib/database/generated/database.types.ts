@@ -592,79 +592,7 @@ export type Database = {
       };
     };
     Views: {
-      logs: {
-        Row: {
-          created_at: string | null;
-          deleted_at: string | null;
-          end_at: string | null;
-          external_calendar_event_id: string | null;
-          fulfillment_score: number | null;
-          id: string | null;
-          note: string | null;
-          plan_id: string | null;
-          source: string | null;
-          start_at: string | null;
-          tag_id: string | null;
-          title: string | null;
-          updated_at: string | null;
-          user_id: string | null;
-        };
-        Insert: {
-          created_at?: string | null;
-          deleted_at?: string | null;
-          end_at?: string | null;
-          external_calendar_event_id?: string | null;
-          fulfillment_score?: number | null;
-          id?: string | null;
-          note?: string | null;
-          plan_id?: string | null;
-          source?: string | null;
-          start_at?: string | null;
-          tag_id?: string | null;
-          title?: string | null;
-          updated_at?: string | null;
-          user_id?: string | null;
-        };
-        Update: {
-          created_at?: string | null;
-          deleted_at?: string | null;
-          end_at?: string | null;
-          external_calendar_event_id?: string | null;
-          fulfillment_score?: number | null;
-          id?: string | null;
-          note?: string | null;
-          plan_id?: string | null;
-          source?: string | null;
-          start_at?: string | null;
-          tag_id?: string | null;
-          title?: string | null;
-          updated_at?: string | null;
-          user_id?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'records_external_calendar_event_id_fkey';
-            columns: ['external_calendar_event_id'];
-            isOneToOne: false;
-            referencedRelation: 'external_calendar_events';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'records_plan_id_fkey';
-            columns: ['plan_id'];
-            isOneToOne: false;
-            referencedRelation: 'plans';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'records_tag_id_fkey';
-            columns: ['tag_id'];
-            isOneToOne: false;
-            referencedRelation: 'tags';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
+      [_ in never]: never;
     };
     Functions: {
       batch_rename_tags: {
@@ -687,36 +615,6 @@ export type Database = {
           p_user_id: string;
         };
         Returns: number;
-      };
-      confirm_day_plans_to_logs: {
-        Args: {
-          p_confirmed_at?: string;
-          p_end_at: string;
-          p_start_at: string;
-          p_user_id: string;
-        };
-        Returns: {
-          created_at: string;
-          deleted_at: string | null;
-          end_at: string;
-          external_calendar_event_id: string | null;
-          fulfillment_score: number | null;
-          id: string;
-          note: string | null;
-          plan_id: string | null;
-          source: string;
-          start_at: string;
-          tag_id: string | null;
-          title: string;
-          updated_at: string;
-          user_id: string;
-        }[];
-        SetofOptions: {
-          from: '*';
-          to: 'records';
-          isOneToOne: false;
-          isSetofReturn: true;
-        };
       };
       confirm_day_plans_to_records: {
         Args: {
@@ -808,20 +706,12 @@ export type Database = {
           isSetofReturn: true;
         };
       };
-      restore_log: {
-        Args: { p_log_id: string; p_user_id: string };
-        Returns: undefined;
-      };
       restore_plan: {
         Args: { p_plan_id: string; p_user_id: string };
         Returns: undefined;
       };
       restore_record: {
         Args: { p_record_id: string; p_user_id: string };
-        Returns: undefined;
-      };
-      soft_delete_log: {
-        Args: { p_log_id: string; p_user_id: string };
         Returns: undefined;
       };
       soft_delete_plan: {

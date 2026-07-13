@@ -13,6 +13,7 @@
 --   - 20260615000000_drop_unused_stats_rpcs.sql
 --   - 20260616000000_rename_duration_to_planned_duration.sql
 --   - 20260712212527_records_table_and_drop_entries.sql
+--   - 20260713120023_drop_time_model_compatibility_layer.sql
 -- 全 app-facing 関数は authenticated に明示 GRANT。
 -- PUBLIC/anon への関数 EXECUTE は revoke 済み。
 -- ============================================================
@@ -34,9 +35,6 @@
 --   soft_delete_record / restore_record        — Record の soft delete / restore
 --   confirm_day_plans_to_records(...)          — 完了 Plan を Record として一括確定
 --   issue_oauth_token_pair(...)               — refresh/access token pair を service-role 経由で発行
--- ■ 一時 compatibility RPC（Step 9c で削除）
---   soft_delete_log / restore_log / confirm_day_plans_to_logs
---     -> records 正本 RPC へ委譲する旧 deploy 用 alias
 
 -- ■ 削除済み RPC
 --   get_tag_cumulative_time / get_tag_avg_fulfillment / get_tag_plan_rate /
@@ -49,3 +47,5 @@
 --     -> 20260615000000_drop_unused_stats_rpcs.sql
 --   entries 系 CRUD / stats / backfill RPC
 --     -> 20260712212527_records_table_and_drop_entries.sql
+--   soft_delete_log / restore_log / confirm_day_plans_to_logs
+--     -> 20260713120023_drop_time_model_compatibility_layer.sql
