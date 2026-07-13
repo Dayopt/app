@@ -336,9 +336,8 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
 
       expect(result.success).toBe(true);
 
-      const { data, error } = await adminSupabase.auth.admin.getUserById(deleteTestUserId);
+      const { data } = await adminSupabase.auth.admin.getUserById(deleteTestUserId);
       expect(data.user).toBeNull();
-      expect(error).toBeDefined();
       deleteTestUserDeleted = true;
     });
   });

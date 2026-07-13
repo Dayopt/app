@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/product/src/features/*/server/**'
       - 'apps/product/src/lib/database/**'
+      - 'apps/product/src/lib/supabase/**'
       - 'apps/product/src/lib/trpc/**'
       - 'supabase/migrations/**'
       - 'apps/product/src/lib/test/integration/**'
@@ -19,6 +20,7 @@ on:
     paths:
       - 'apps/product/src/features/*/server/**'
       - 'apps/product/src/lib/database/**'
+      - 'apps/product/src/lib/supabase/**'
       - 'apps/product/src/lib/trpc/**'
       - 'supabase/migrations/**'
       - 'apps/product/src/lib/test/integration/**'
