@@ -6,7 +6,7 @@ import {
 } from './useTimeblockWriteMutations';
 
 const row = {
-  id: 'log-1',
+  id: 'record-1',
   title: 'Deep Work',
   note: 'Focus',
   tag_id: 'tag-1',

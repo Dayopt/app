@@ -207,7 +207,7 @@ describe('createUserService', () => {
   describe('deleteBlocks', () => {
     it('records、plansを依存順に削除して合計件数を返す', async () => {
       const adminQueries = mockAdminTables({
-        records: { data: [{ id: 'log-1' }] },
+        records: { data: [{ id: 'record-1' }] },
         plans: { data: [{ id: 'plan-1' }, { id: 'plan-2' }] },
       });
       const { service } = createSupabase();

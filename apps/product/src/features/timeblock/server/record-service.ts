@@ -126,7 +126,7 @@ export class RecordService {
       .single();
 
     if (error) {
-      this.handleMutationError(error, 'CREATE_FAILED', 'Failed to create log');
+      this.handleMutationError(error, 'CREATE_FAILED', 'Failed to create record');
     }
 
     return data;
@@ -171,7 +171,7 @@ export class RecordService {
       .single();
 
     if (error) {
-      this.handleMutationError(error, 'UPDATE_FAILED', 'Failed to update log');
+      this.handleMutationError(error, 'UPDATE_FAILED', 'Failed to update record');
     }
 
     return data;
@@ -235,7 +235,7 @@ export class RecordService {
 
   private ensureRecordCanBeCreated(endAt: string): void {
     if (new Date(endAt).getTime() > Date.now()) {
-      throw new TimeblockServiceError('RECORD_IN_FUTURE', 'Logs cannot end in the future.');
+      throw new TimeblockServiceError('RECORD_IN_FUTURE', 'Records cannot end in the future.');
     }
   }
 
@@ -247,7 +247,7 @@ export class RecordService {
     if (new Date(expectedUpdatedAt).getTime() !== new Date(actualUpdatedAt).getTime()) {
       throw new TimeblockServiceError(
         'CONFLICT',
-        'This log was updated elsewhere. Reload the latest data.',
+        'This record was updated elsewhere. Reload the latest data.',
       );
     }
   }

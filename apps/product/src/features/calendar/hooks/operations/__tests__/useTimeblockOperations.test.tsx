@@ -184,17 +184,17 @@ describe('useTimeblockOperations', () => {
       expect(updateRecordMutate).not.toHaveBeenCalled();
     });
 
-    it('kind=log の過去イベントは updateRecord.mutate を呼ぶ', async () => {
+    it('kind=record の過去イベントは updateRecord.mutate を呼ぶ', async () => {
       const start = new Date('2026-04-25T01:00:00.000Z');
       const end = new Date('2026-04-25T02:00:00.000Z');
-      const event = makeEvent({ id: 'log-1', kind: 'record', startDate: start, endDate: end });
+      const event = makeEvent({ id: 'record-1', kind: 'record', startDate: start, endDate: end });
 
       const { result } = renderHook(() => useTimeblockOperations());
       await result.current.handleUpdateTimeblock(event);
 
       expect(updateRecordMutate).toHaveBeenCalledWith(
         {
-          id: 'log-1',
+          id: 'record-1',
           data: {
             start_at: '2026-04-25T01:00:00.000Z',
             end_at: '2026-04-25T02:00:00.000Z',
@@ -246,10 +246,10 @@ describe('useTimeblockOperations', () => {
       expect(toastError).toHaveBeenCalledWith('timeblock.editor.timeLocked');
     });
 
-    it('log を未来へ動かす更新は timeLocked トーストを出し mutate を呼ばない', async () => {
+    it('record を未来へ動かす更新は timeLocked トーストを出し mutate を呼ばない', async () => {
       const start = new Date('2026-04-27T01:00:00.000Z');
       const end = new Date('2026-04-27T02:00:00.000Z');
-      const event = makeEvent({ id: 'log-1', kind: 'record', startDate: start, endDate: end });
+      const event = makeEvent({ id: 'record-1', kind: 'record', startDate: start, endDate: end });
 
       const { result } = renderHook(() => useTimeblockOperations());
       await result.current.handleUpdateTimeblock(event);

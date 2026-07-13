@@ -78,7 +78,7 @@ export function computeTimeblockDayDiffs(
 ): TimeModelDayDiffResult {
   const activePlans = plans.filter((plan) => plan.deletedAt == null);
   const plansById = new Map(activePlans.map((plan) => [plan.id, plan]));
-  const logsByPlanId = new Map<string, TimeModelRecordDiffInput[]>();
+  const recordsByPlanId = new Map<string, TimeModelRecordDiffInput[]>();
   const items: TimeModelDayDiffItem[] = [];
   let plannedMinutes = 0;
   let actualMinutes = 0;
@@ -90,9 +90,9 @@ export function computeTimeblockDayDiffs(
     if (duration === 0) continue;
     actualMinutes += duration;
     if (record.planId && plansById.has(record.planId)) {
-      const linked = logsByPlanId.get(record.planId) ?? [];
+      const linked = recordsByPlanId.get(record.planId) ?? [];
       linked.push(record);
-      logsByPlanId.set(record.planId, linked);
+      recordsByPlanId.set(record.planId, linked);
       continue;
     }
     unplannedMinutes += duration;
@@ -144,8 +144,8 @@ export function computeTimeblockDayDiffs(
       continue;
     }
 
-    const linkedLogs = logsByPlanId.get(plan.id) ?? [];
-    if (linkedLogs.length === 0) {
+    const linkedRecords = recordsByPlanId.get(plan.id) ?? [];
+    if (linkedRecords.length === 0) {
       unrecordedMinutes += duration;
       items.push({
         id: `unrecorded:${plan.id}`,
@@ -169,11 +169,11 @@ export function computeTimeblockDayDiffs(
       continue;
     }
 
-    const linkedMinutes = linkedLogs.reduce(
+    const linkedMinutes = linkedRecords.reduce(
       (total, record) => total + clippedMinutes(record.startAt, record.endAt, bounds),
       0,
     );
-    const sortedLinkedLogs = [...linkedLogs].sort(
+    const sortedLinkedRecords = [...linkedRecords].sort(
       (a, b) => a.startAt.getTime() - b.startAt.getTime(),
     );
     items.push({
@@ -186,8 +186,8 @@ export function computeTimeblockDayDiffs(
       planId: plan.id,
       plannedStart: plan.startAt,
       plannedEnd: plan.endAt,
-      actualStart: sortedLinkedLogs[0]?.startAt ?? null,
-      actualEnd: sortedLinkedLogs[sortedLinkedLogs.length - 1]?.endAt ?? null,
+      actualStart: sortedLinkedRecords[0]?.startAt ?? null,
+      actualEnd: sortedLinkedRecords[sortedLinkedRecords.length - 1]?.endAt ?? null,
       plannedMinutes: duration,
       actualMinutes: linkedMinutes,
       diffMinutes: linkedMinutes - duration,

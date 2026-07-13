@@ -15,7 +15,7 @@ import { persist } from 'zustand/middleware';
 
 import { platformStorage } from '@/lib/zustand/storage';
 
-type MobileWeekDisplayMode = 'planned' | 'logged';
+type MobileWeekDisplayMode = 'planned' | 'recorded';
 
 interface CalendarDisplayModeState {
   /** モバイル Week 表示で「予定だけ」か「記録だけ」か */
@@ -28,17 +28,34 @@ interface CalendarDisplayModeActions {
 
 type CalendarDisplayModeStore = CalendarDisplayModeState & CalendarDisplayModeActions;
 
+export function migrateCalendarDisplayModeState(
+  persistedState: unknown,
+  version: number,
+): CalendarDisplayModeState {
+  const persisted = persistedState as { mobileWeekDisplayMode?: unknown };
+
+  if (version < 2 && persisted.mobileWeekDisplayMode === 'logged') {
+    return { mobileWeekDisplayMode: 'recorded' };
+  }
+
+  return {
+    mobileWeekDisplayMode: persisted.mobileWeekDisplayMode === 'planned' ? 'planned' : 'recorded',
+  };
+}
+
 /** Calendar 2レーン表示のモバイル Week 表示切替を管理する Zustand ストア（localStorage 永続化） */
 export const useCalendarDisplayModeStore = create<CalendarDisplayModeStore>()(
   persist(
     (set) => ({
-      mobileWeekDisplayMode: 'logged',
+      mobileWeekDisplayMode: 'recorded',
       setMobileWeekDisplayMode: (mode) => set({ mobileWeekDisplayMode: mode }),
     }),
     {
       name: 'calendar-display-mode-storage',
-      version: 1,
+      version: 2,
       storage: platformStorage<CalendarDisplayModeState>(),
+      migrate: (persistedState, version) =>
+        migrateCalendarDisplayModeState(persistedState, version) as CalendarDisplayModeStore,
     },
   ),
 );

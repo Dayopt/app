@@ -25,9 +25,9 @@ export interface AnchorRect {
 interface TimeblockInspectorState {
   /** Inspector が開いているか */
   isOpen: boolean;
-  /** 対象エントリのID（plan または log の UUID） */
+  /** 対象エントリのID（plan または record の UUID） */
   timeblockId: string | null;
-  /** 対象が plan / log のどちらか */
+  /** 対象が plan / record のどちらか */
   timeblockKind: TimeblockDestination;
   /** Inspector のアンカー位置（クリックされたブロックの位置） */
   anchorRect: AnchorRect | null;

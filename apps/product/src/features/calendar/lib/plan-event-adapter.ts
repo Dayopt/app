@@ -53,7 +53,7 @@ function resolvePlanEventStatus({
 
 interface PlanRowToPlanEventOptions {
   timezone: string;
-  /** この plan を参照する log（`source <> 'auto_migrated'` を問わず）が 1 件以上あるか */
+  /** この plan を参照する record（`source <> 'auto_migrated'` を問わず）が 1 件以上あるか */
   isRecorded: boolean;
   /** テスト用の時刻固定。省略時は `new Date()` */
   now?: Date;
@@ -90,7 +90,7 @@ export function planRowToPlanEvent(
 
 interface ExpandPlanRowsOptions {
   timezone: string;
-  /** log から紐づけられている plan id の集合（1 件以上参照されていれば記録済み扱い） */
+  /** record から紐づけられている plan id の集合（1 件以上参照されていれば記録済み扱い） */
   recordedPlanIds: ReadonlySet<string>;
   now?: Date;
 }

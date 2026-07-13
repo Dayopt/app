@@ -28,7 +28,7 @@ export function DiffBadge({ diffMinutes, className }: DiffBadgeProps) {
 
   return (
     <span
-      data-log-diff-badge
+      data-record-diff-badge
       className={cn(
         'bg-container border-border-subtle inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs tabular-nums',
         isOver ? 'text-success' : 'text-destructive',

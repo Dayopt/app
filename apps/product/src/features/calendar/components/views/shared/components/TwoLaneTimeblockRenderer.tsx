@@ -57,7 +57,7 @@ interface TwoLaneEntryRendererProps {
   ) => void;
 }
 
-/** auto_migrated log はドラッグ/リサイズを禁止する。 */
+/** auto_migrated record はドラッグ/リサイズを禁止する。 */
 function isDragDisabled(entry: CalendarEvent): boolean {
   if (entry.recordSource === 'auto_migrated') return true;
   return false;

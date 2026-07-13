@@ -37,9 +37,9 @@ export interface CalendarEvent {
   // === time model 射影フィールド（Step 8 cutover） ===
   /** 射影元が plans / records のどちらか。クリック・DnD・削除のルーティングに使う */
   kind?: TimeblockDestination | undefined;
-  /** log が紐づく plan の id（plan 行・予定外 log では null） */
+  /** record が紐づく plan の id（plan 行・予定外 record では null） */
   planId?: string | null | undefined;
-  /** log の作成元（manual / plan_record / auto_migrated / external_calendar）。auto_migrated は RLS で不変 */
+  /** record の作成元（manual / plan_record / auto_migrated / external_calendar）。auto_migrated は RLS で不変 */
   recordSource?: string | undefined;
   // Optional properties used in various contexts
   userId?: string | undefined; // 所有者ID

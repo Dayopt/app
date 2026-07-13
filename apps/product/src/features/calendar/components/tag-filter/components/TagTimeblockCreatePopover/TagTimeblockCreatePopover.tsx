@@ -151,7 +151,7 @@ export function TagTimeblockCreatePopover({
 
   // クライアント側で時間重複を判定（drag / Inspector と同じ規範）。
   // 重複時は inline alert + submit disabled で hard-block し、mutation を発火させない。
-  // 同一レーンのみ判定（plan×plan / log×log）。plan×log は許可。
+  // 同一レーンのみ判定（plan×plan / record×record）。plan×record は許可。
   const hasConflict = useMemo(() => {
     if (!startTime || !endTime) return false;
     const startDate = combineDateAndHHMM(selectedDate, startTime);

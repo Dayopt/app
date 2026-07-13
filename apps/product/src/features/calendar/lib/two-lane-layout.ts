@@ -135,12 +135,12 @@ export function calculateTwoLaneStylesForCalendarEvents(
     if (!start || !end) continue;
 
     const { top, height } = timeToPosition(start, end, hourHeight);
-    const isLog = event.kind === 'record';
+    const isRecord = event.kind === 'record';
     styles[event.id] = {
       top,
       height,
-      left: isLog ? planLaneWidthPercent : 0,
-      width: isLog ? recordLaneWidthPercent : planLaneWidthPercent,
+      left: isRecord ? planLaneWidthPercent : 0,
+      width: isRecord ? recordLaneWidthPercent : planLaneWidthPercent,
     };
   }
 

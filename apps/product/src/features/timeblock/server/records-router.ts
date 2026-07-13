@@ -36,7 +36,7 @@ export const recordsRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure
-    .meta({ description: 'Create past log' })
+    .meta({ description: 'Create past record' })
     .input(createRecordSchema)
     .mutation(async ({ ctx, input }) => {
       const service = createRecordService(ctx.supabase);
@@ -48,7 +48,7 @@ export const recordsRouter = createTRPCRouter({
     }),
 
   update: protectedProcedure
-    .meta({ description: 'Update log with optimistic lock support' })
+    .meta({ description: 'Update record with optimistic lock support' })
     .input(
       recordIdSchema.extend({
         data: updateRecordSchema,
@@ -70,7 +70,7 @@ export const recordsRouter = createTRPCRouter({
     }),
 
   delete: protectedProcedure
-    .meta({ description: 'Soft delete log' })
+    .meta({ description: 'Soft delete record' })
     .input(recordIdSchema)
     .mutation(async ({ ctx, input }) => {
       const service = createRecordService(ctx.supabase);
@@ -82,7 +82,7 @@ export const recordsRouter = createTRPCRouter({
     }),
 
   restore: protectedProcedure
-    .meta({ description: 'Restore soft-deleted log' })
+    .meta({ description: 'Restore soft-deleted record' })
     .input(recordIdSchema)
     .mutation(async ({ ctx, input }) => {
       const service = createRecordService(ctx.supabase);

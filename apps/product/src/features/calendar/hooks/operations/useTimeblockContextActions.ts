@@ -12,9 +12,9 @@ import { buildCalendarReviewPanelPath } from '../../lib/panel-url';
 import type { CalendarEvent } from '../../types/calendar.types';
 
 /**
- * コンテキストメニューで使用する plan / log 操作アクションを提供するフック
+ * コンテキストメニューで使用する plan / record 操作アクションを提供するフック
  *
- * plan ⇄ log 変換（markUnplanned / restorePlanned）は time model に procedure が
+ * plan ⇄ record 変換（markUnplanned / restorePlanned）は time model に procedure が
  * 存在しないため提供しない（entry-menu-items 側で該当 handler が undefined なら表示されない）。
  */
 export function useTimeblockContextActions() {

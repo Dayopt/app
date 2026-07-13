@@ -26,7 +26,7 @@ interface RecordLaneCardProps {
   className?: string | undefined;
   /** Inspector で選択中か（強調表示） */
   isActive?: boolean | undefined;
-  /** auto_migrated など RLS で不変な log。ドラッグ・リサイズを禁止する */
+  /** auto_migrated など RLS で不変な record。ドラッグ・リサイズを禁止する */
   disableDrag?: boolean | undefined;
   onClick?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
@@ -70,8 +70,8 @@ export function RecordLaneCard({
 
   return (
     <div
-      data-log-lane-card
-      data-log-planned={!isUnplanned}
+      data-record-lane-card
+      data-record-planned={!isUnplanned}
       data-entry-block="true"
       tabIndex={0}
       role="button"
@@ -116,7 +116,7 @@ export function RecordLaneCard({
         </p>
       )}
       {isUnplanned && (
-        <span data-log-unplanned-marker className="text-muted-foreground truncate">
+        <span data-record-unplanned-marker className="text-muted-foreground truncate">
           {t('timeblock.inspector.unplanned')}
         </span>
       )}

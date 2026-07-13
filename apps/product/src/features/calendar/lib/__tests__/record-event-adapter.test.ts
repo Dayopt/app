@@ -8,7 +8,7 @@ import {
 
 function makeRow(overrides: Partial<RecordEventSourceRow> = {}): RecordEventSourceRow {
   return {
-    id: 'log-1',
+    id: 'record-1',
     title: 'Deep Work',
     note: null,
     tag_id: 'tag-1',
@@ -24,7 +24,12 @@ function makeRow(overrides: Partial<RecordEventSourceRow> = {}): RecordEventSour
 describe('recordRowToRecordEvent', () => {
   it('基本フィールドを変換する', () => {
     const event = recordRowToRecordEvent(makeRow(), { timezone: 'UTC' });
-    expect(event).toMatchObject({ id: 'log-1', title: 'Deep Work', tagId: 'tag-1', duration: 60 });
+    expect(event).toMatchObject({
+      id: 'record-1',
+      title: 'Deep Work',
+      tagId: 'tag-1',
+      duration: 60,
+    });
   });
 
   it('planId が無ければ diffMinutes は undefined（予定外の記録）', () => {
@@ -58,7 +63,7 @@ describe('recordRowToRecordEvent', () => {
 });
 
 describe('expandRecordRowsToRecordEvents', () => {
-  it('plannedMinutesByPlanId から各 log の diffMinutes を解決する（1 log : 1 plan）', () => {
+  it('plannedMinutesByPlanId から各 record の diffMinutes を解決する（1 record : 1 plan）', () => {
     const rows = [
       makeRow({ id: 'l1', plan_id: 'p1', source: 'from_plan' }),
       makeRow({
@@ -76,9 +81,9 @@ describe('expandRecordRowsToRecordEvents', () => {
     expect(events.find((e) => e.id === 'l2')?.diffMinutes).toBeUndefined();
   });
 
-  it('1 plan に複数 log（分割記録）は合計実績で 1 件にのみ差分を付与する（1:N、二重計上を避ける）', () => {
-    // 60分 plan を 30分 log 2件で記録 → 合計は予定どおり(diff=0)。
-    // 個別の log 時間(30分)だけで計算すると誤って -30min が 2 件出る不具合の回帰テスト。
+  it('1 plan に複数 record（分割記録）は合計実績で 1 件にのみ差分を付与する（1:N、二重計上を避ける）', () => {
+    // 60分 plan を 30分 record 2件で記録 → 合計は予定どおり(diff=0)。
+    // 個別の record 時間(30分)だけで計算すると誤って -30min が 2 件出る不具合の回帰テスト。
     const rows = [
       makeRow({
         id: 'l1',
@@ -100,9 +105,9 @@ describe('expandRecordRowsToRecordEvents', () => {
       plannedMinutesByPlanId: new Map([['p1', 60]]),
     });
 
-    // from_plan の log が代表として合計実績(60分)ベースの差分を持つ
+    // from_plan の record が代表として合計実績(60分)ベースの差分を持つ
     expect(events.find((e) => e.id === 'l1')?.diffMinutes).toBe(0);
-    // 他方の log は個別の差分を持たない（二重計上を避ける）
+    // 他方の record は個別の差分を持たない（二重計上を避ける）
     expect(events.find((e) => e.id === 'l2')?.diffMinutes).toBeUndefined();
   });
 
@@ -133,7 +138,7 @@ describe('expandRecordRowsToRecordEvents', () => {
     expect(events.find((e) => e.id === 'l2')?.diffMinutes).toBeUndefined();
   });
 
-  it('from_plan の log が無い場合は最初に現れた log を代表にする', () => {
+  it('from_plan の record が無い場合は最初に現れた record を代表にする', () => {
     const rows = [
       makeRow({
         id: 'l1',

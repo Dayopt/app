@@ -93,14 +93,14 @@ const TAGS = new Map<string, EstimationAccuracyTagLookup>([
 ]);
 
 describe('aggregatePlanRecordEstimationAccuracy', () => {
-  it('plan と紐づく非 auto_migrated log を実績として集計する（record_count>=2 のタグのみ）', () => {
+  it('plan と紐づく非 auto_migrated record を実績として集計する（record_count>=2 のタグのみ）', () => {
     const plans = [makePlan({ id: 'p1' }), makePlan({ id: 'p2', planned_minutes: 30 })];
-    const logs = [
+    const records = [
       makeRecord({ plan_id: 'p1', minutes: 90 }),
       makeRecord({ plan_id: 'p2', minutes: 20 }),
     ];
 
-    const result = aggregatePlanRecordEstimationAccuracy(plans, logs, TAGS);
+    const result = aggregatePlanRecordEstimationAccuracy(plans, records, TAGS);
 
     expect(result).toEqual([
       {
@@ -117,49 +117,49 @@ describe('aggregatePlanRecordEstimationAccuracy', () => {
 
   it('record_count が 1 件のタグは分母から除外する（旧 RPC の HAVING COUNT(*)>=2 を踏襲）', () => {
     const plans = [makePlan({ id: 'p1' })];
-    const logs = [makeRecord({ plan_id: 'p1' })];
+    const records = [makeRecord({ plan_id: 'p1' })];
 
-    expect(aggregatePlanRecordEstimationAccuracy(plans, logs, TAGS)).toEqual([]);
+    expect(aggregatePlanRecordEstimationAccuracy(plans, records, TAGS)).toEqual([]);
   });
 
-  it('source=auto_migrated の log は分母から除外する（Step 2 決定 4）', () => {
+  it('source=auto_migrated の record は分母から除外する（Step 2 決定 4）', () => {
     const plans = [makePlan({ id: 'p1' }), makePlan({ id: 'p2' })];
-    const logs = [
+    const records = [
       makeRecord({ plan_id: 'p1', source: 'auto_migrated' }),
       makeRecord({ plan_id: 'p2', source: 'manual' }),
     ];
 
-    // p1 に紐づく非 auto_migrated log が無いので実績なし扱い → record_count は p2 のみで 1 件 → 除外
-    expect(aggregatePlanRecordEstimationAccuracy(plans, logs, TAGS)).toEqual([]);
+    // p1 に紐づく非 auto_migrated record が無いので実績なし扱い → record_count は p2 のみで 1 件 → 除外
+    expect(aggregatePlanRecordEstimationAccuracy(plans, records, TAGS)).toEqual([]);
   });
 
-  it('1 plan に複数 log（分割記録）は合算して 1 件の実績として扱う（1:N）', () => {
+  it('1 plan に複数 record（分割記録）は合算して 1 件の実績として扱う（1:N）', () => {
     const plans = [makePlan({ id: 'p1', planned_minutes: 60 }), makePlan({ id: 'p2' })];
-    const logs = [
+    const records = [
       makeRecord({ plan_id: 'p1', minutes: 20 }),
       makeRecord({ plan_id: 'p1', minutes: 25, source: 'manual' }),
       makeRecord({ plan_id: 'p2', minutes: 60 }),
     ];
 
-    const result = aggregatePlanRecordEstimationAccuracy(plans, logs, TAGS);
+    const result = aggregatePlanRecordEstimationAccuracy(plans, records, TAGS);
 
     expect(result[0]?.record_count).toBe(2);
     expect(result[0]?.avg_actual_minutes).toBe((45 + 60) / 2);
   });
 
-  it('紐づく log が無い plan は分母から除外する', () => {
+  it('紐づく record が無い plan は分母から除外する', () => {
     const plans = [makePlan({ id: 'p1' }), makePlan({ id: 'p2' })];
-    const logs = [makeRecord({ plan_id: 'p1' })];
+    const records = [makeRecord({ plan_id: 'p1' })];
 
-    expect(aggregatePlanRecordEstimationAccuracy(plans, logs, TAGS)).toEqual([]);
+    expect(aggregatePlanRecordEstimationAccuracy(plans, records, TAGS)).toEqual([]);
   });
 
   it('tag_id が null の plan は無視する', () => {
     const plans = [makePlan({ id: 'p1', tag_id: null }), makePlan({ id: 'p2' })];
-    const logs = [makeRecord({ plan_id: 'p1' }), makeRecord({ plan_id: 'p2' })];
+    const records = [makeRecord({ plan_id: 'p1' }), makeRecord({ plan_id: 'p2' })];
 
     // tag_id null の p1 を除くと tag-1 は 1 件のみ → HAVING で除外
-    expect(aggregatePlanRecordEstimationAccuracy(plans, logs, TAGS)).toEqual([]);
+    expect(aggregatePlanRecordEstimationAccuracy(plans, records, TAGS)).toEqual([]);
   });
 
   it('未知の tagId は空文字にフォールバックする', () => {
@@ -167,9 +167,9 @@ describe('aggregatePlanRecordEstimationAccuracy', () => {
       makePlan({ id: 'p1', tag_id: 'unknown' }),
       makePlan({ id: 'p2', tag_id: 'unknown' }),
     ];
-    const logs = [makeRecord({ plan_id: 'p1' }), makeRecord({ plan_id: 'p2' })];
+    const records = [makeRecord({ plan_id: 'p1' }), makeRecord({ plan_id: 'p2' })];
 
-    const result = aggregatePlanRecordEstimationAccuracy(plans, logs, TAGS);
+    const result = aggregatePlanRecordEstimationAccuracy(plans, records, TAGS);
     expect(result[0]).toMatchObject({ tag_id: 'unknown', tag_name: '', tag_color: '' });
   });
 });

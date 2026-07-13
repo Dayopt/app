@@ -66,7 +66,7 @@ function makeRecord(overrides: Partial<RecordEvent> = {}): RecordEvent {
 }
 
 /** 予定+記録が揃っている日（差分あり）。 */
-export const WithPlanAndLog: Story = {
+export const WithPlanAndRecord: Story = {
   render: () => (
     <Frame>
       <TwoLaneDayColumn
