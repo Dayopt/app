@@ -77,7 +77,7 @@ export function RecordLaneCard({
       role="button"
       aria-label={event.title || t('timeblock.untitled')}
       className={cn(
-        'absolute flex flex-col gap-1 overflow-hidden rounded-lg px-2 py-1 text-xs',
+        'pointer-events-auto absolute flex flex-col gap-1 overflow-hidden rounded-lg px-2 py-1 text-xs',
         colorClasses?.tint ?? 'bg-card',
         'text-foreground',
         isActive && 'ring-ring ring-2',

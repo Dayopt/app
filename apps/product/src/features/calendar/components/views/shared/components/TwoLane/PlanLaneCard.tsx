@@ -85,7 +85,7 @@ export function PlanLaneCard({
       role="button"
       aria-label={event.title || t('timeblock.untitled')}
       className={cn(
-        'absolute overflow-hidden rounded-lg border-2 px-2 py-1 text-xs',
+        'pointer-events-auto absolute overflow-hidden rounded-lg border-2 px-2 py-1 text-xs',
         borderClass,
         // skip / 記録済みは控えめに沈める。未記録の過去 plan は静かなプロンプトとして
         // 破線で「まだ何かが足りない」を示す。
