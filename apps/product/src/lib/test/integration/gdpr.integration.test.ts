@@ -122,10 +122,12 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
   });
 
   afterAll(async () => {
-    if (!supabase || !adminSupabase) return;
+    if (supabase) {
+      // サインアウト
+      await supabase.auth.signOut();
+    }
 
-    // サインアウト
-    await supabase.auth.signOut();
+    if (!adminSupabase) return;
 
     // テストデータをクリーンアップ
     await adminSupabase.from('records').delete().eq('user_id', TEST_USER_ID);

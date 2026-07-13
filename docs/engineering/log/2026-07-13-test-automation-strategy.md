@@ -7,9 +7,9 @@ updated: 2026-07-13
 
 ## 背景・当時の前提
 
-#1539の確認時点で、Playwrightは11 spec・41 testを持ち、CIは`chromium`だけで全件を実行していた。`Mobile Chrome`も同じ41 testを収集するが、CIには`TEST_USER_EMAIL` / `TEST_USER_PASSWORD`がなく、mobile専用2 testを含む認証必須testはskipされる。
+#1539の確認時点で、Playwrightは12 spec・42 testを持ち、CIは`chromium`だけで全件を実行していた。`Mobile Chrome`も同じ42 testを収集するが、CIには`TEST_USER_EMAIL` / `TEST_USER_PASSWORD`がなく、mobile専用2 testを含む認証必須testはskipされる。
 
-Storybook browser testはCIから呼ばれていなかった。2026-07-13の実測ではlightが13 failed files、darkが12 failed filesで、apps/webのalias解決失敗と既存interaction / a11y違反が含まれていた。
+Storybook browser testはCIから呼ばれていなかった。2026-07-13の実測ではlightが12 failed files、darkが13 failed filesで、apps/webのalias解決失敗と既存interaction / a11y違反が含まれていた。
 
 #1503の確認では、Playwright 1.61.1がCodex向けplanner / generator / healer定義を生成できた。一方、生成promptのagent名がhyphen、定義名がsnake_caseで一致せず、monorepo rootからproductのPlaywright configを選ぶ指定も生成されなかった。healerには失敗testを`test.fixme()`へ変更する指示が含まれていた。
 
