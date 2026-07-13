@@ -52,18 +52,27 @@ fi
 SUPABASE_TARGET="${DAYOPT_SUPABASE_TARGET:-local}"
 
 if [[ "$SUPABASE_TARGET" == "local" ]]; then
-  if ! local_supabase_env="$(supabase status -o env 2>/dev/null)"; then
-    error "Supabase local が起動していません。"
-    cat >&2 <<EOF
+  if ! command -v supabase >/dev/null 2>&1; then
+    error "Supabase CLI が見つかりません。"
+    exit 1
+  fi
 
-通常の local dev は Supabase local を参照します。
-先に Supabase を起動してください:
-  supabase start
+  if ! local_supabase_env="$(supabase status -o env 2>/dev/null)"; then
+    echo "Supabase local を起動します..." >&2
+    if ! supabase start >/dev/null; then
+      error "Supabase local を起動できませんでした。Docker の状態を確認してください。"
+      cat >&2 <<EOF
 
 一時的に 1Password の Supabase refs をそのまま使う場合:
   DAYOPT_SUPABASE_TARGET=op pnpm dev
 EOF
-    exit 1
+      exit 1
+    fi
+
+    if ! local_supabase_env="$(supabase status -o env 2>/dev/null)"; then
+      error "起動後の Supabase local から URL / key を取得できませんでした。"
+      exit 1
+    fi
   fi
 
   get_local_supabase_env() {

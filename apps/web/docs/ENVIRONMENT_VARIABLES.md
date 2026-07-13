@@ -15,7 +15,7 @@ op run --env-file=../../.op-env.local -- npm run dev
 
 `.env.local` に実値を置く運用は廃止。Vercel CLI などで生成された `.env.local` は unsafe / temporary として扱い、作業後に削除する。
 
-product app の `pnpm dev` は通常 Supabase local を参照する。`.op-env.local` の Supabase refs をそのまま使う一時作業では `DAYOPT_SUPABASE_TARGET=op pnpm dev` を使う。
+product app の `pnpm dev` は通常 Supabase local を参照し、停止中なら自動起動する。`.op-env.local` の Supabase refs をそのまま使う一時作業では `DAYOPT_SUPABASE_TARGET=op pnpm dev` を使う。
 
 ---
 
