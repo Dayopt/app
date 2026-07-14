@@ -12,7 +12,7 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 
 - Day / Week / Multi-Day（2〜9日）で、表示範囲と基準日をURLに保持する
 - 各日カラムをPlanレーンとRecordレーンに分ける。Planは控えめなoutline、Recordは塗りで表示する
-- 作成・編集時の保存先は`end_at > now`ならPlan、`end_at <= now`ならRecordとして自動決定する
+- 新規作成時の保存先は`end_at > now`ならPlan、`end_at <= now`ならRecordとして自動決定し、既存Plan / Recordの編集では種別を維持する
 - 15分gridへのsnap、dragによる移動・resize、keyboard操作、tag filterを提供する
 - 過去Planの時間は凍結し、Recordの時間は訂正できる
 - `panel=review` / `panel=diff`で単一の右panel slotを開く。panel UIはReview featureが所有し、Calendarは表示範囲とcompositionを所有する

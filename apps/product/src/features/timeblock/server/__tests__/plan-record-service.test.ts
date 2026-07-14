@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock, createMockSupabase } from '@/lib/test/trpc-test-helpers';
 import { PlanService } from '../plan-service';
@@ -16,8 +16,14 @@ vi.mock('@/lib/supabase/oauth', () => ({
 const USER_ID = 'test-user-id';
 
 beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
   vi.clearAllMocks();
   adminRpc.mockResolvedValue({ data: null, error: null });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 function createPlanService(mockSupabase = createMockSupabase()) {
@@ -118,12 +124,73 @@ describe('PlanService.create', () => {
 });
 
 describe('PlanService.update', () => {
-  it('過去 plan の時間変更を許可する', async () => {
+  it('過去 plan の時間変更を拒否する', async () => {
     const existing = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
-    const updated = { ...existing, start_at: '2026-03-17T09:00:00.000Z' };
+    const { service, mockSupabase } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+
+    await expect(
+      service.update({
+        userId: USER_ID,
+        planId: existing.id,
+        input: { start_at: '2026-03-17T09:00:00.000Z' },
+      }),
+    ).rejects.toMatchObject({ code: 'PLAN_TIME_LOCKED' });
+
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1);
+  });
+
+  it('過去 plan を未来へ移動し直す時間変更も拒否する', async () => {
+    const existing = createPlan({
+      end_at: '2026-03-17T11:00:00.000Z',
+      start_at: '2026-03-17T10:00:00.000Z',
+    });
+    const { service, mockSupabase } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+
+    await expect(
+      service.update({
+        userId: USER_ID,
+        planId: existing.id,
+        input: {
+          start_at: '2030-03-17T10:00:00.000Z',
+          end_at: '2030-03-17T11:00:00.000Z',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'PLAN_TIME_LOCKED' });
+
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1);
+  });
+
+  it('終了が将来の plan を現在以前へ縮める時間変更を拒否する', async () => {
+    const existing = createPlan();
+    const { service, mockSupabase } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+
+    await expect(
+      service.update({
+        userId: USER_ID,
+        planId: existing.id,
+        input: {
+          start_at: '2026-07-15T11:00:00.000Z',
+          end_at: '2026-07-15T12:00:00.000Z',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'PLAN_IN_PAST' });
+
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1);
+  });
+
+  it('終了が将来の plan は将来範囲内で時間変更できる', async () => {
+    const existing = createPlan();
+    const updated = {
+      ...existing,
+      start_at: '2030-03-17T12:00:00.000Z',
+      end_at: '2030-03-17T13:00:00.000Z',
+    };
     const { service, mockSupabase } = createPlanService();
     let callCount = 0;
     mockSupabase.from.mockImplementation(() => {
@@ -137,17 +204,17 @@ describe('PlanService.update', () => {
       service.update({
         userId: USER_ID,
         planId: existing.id,
-        input: { start_at: '2026-03-17T09:00:00.000Z' },
+        input: { start_at: updated.start_at, end_at: updated.end_at },
       }),
-    ).resolves.toMatchObject({ start_at: updated.start_at });
+    ).resolves.toMatchObject({ start_at: updated.start_at, end_at: updated.end_at });
   });
 
-  it('過去 plan でも title 更新は許可する', async () => {
+  it('過去 plan でもタグとメモの更新は許可する', async () => {
     const existing = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
-    const updated = { ...existing, title: 'Updated' };
+    const updated = { ...existing, note: 'Updated note', tag_id: 'tag-1' };
     const { service, mockSupabase } = createPlanService();
     let callCount = 0;
     mockSupabase.from.mockImplementation(() => {
@@ -159,9 +226,9 @@ describe('PlanService.update', () => {
       service.update({
         userId: USER_ID,
         planId: existing.id,
-        input: { title: 'Updated' },
+        input: { note: 'Updated note', tagId: 'tag-1' },
       }),
-    ).resolves.toMatchObject({ title: 'Updated' });
+    ).resolves.toMatchObject({ note: 'Updated note', tag_id: 'tag-1' });
   });
 });
 

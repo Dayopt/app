@@ -18,7 +18,7 @@ import { databaseTables } from '@/lib/database';
 import { useDebouncedCallback } from '@/lib/hooks/useDebounce';
 import { toast } from '@/lib/toast';
 
-import type { TimeblockDestination } from '../../domain/timeblock-destination';
+import { isPlanTimeEditable, type TimeblockDestination } from '../../domain/timeblock-destination';
 import {
   type TimeblockSavePatch,
   useCoalescedTimeblockSave,
@@ -177,6 +177,10 @@ export function TimeblockInspectorForm({
   // --- 日時・メモ（自動保存） ---
   const handleDateTimeChange = useCallback(
     (next: TimeModelEditorValue) => {
+      if (kind === 'plan' && !isPlanTimeEditable(next.endAt)) {
+        toast.error(t('timeblock.editor.timeLocked'));
+        return;
+      }
       setValue(next);
       if (!isValidTimeModelRange(next)) return;
       enqueueSave({
@@ -184,7 +188,7 @@ export function TimeblockInspectorForm({
         end_at: next.endAt.toISOString(),
       });
     },
-    [enqueueSave],
+    [kind, enqueueSave, t],
   );
 
   const handleNoteChange = useCallback(

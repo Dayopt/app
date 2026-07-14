@@ -8,7 +8,9 @@ import {
 } from '../TimeblockEditor';
 
 vi.mock('@/features/timeblock', () => ({
-  DateTimeSection: () => <div data-testid="date-time-section" />,
+  DateTimeSection: ({ disabled = false }: { disabled?: boolean }) => (
+    <div data-disabled={String(disabled)} data-testid="date-time-section" />
+  ),
 }));
 
 const value: TimeModelEditorValue = {
@@ -43,10 +45,9 @@ describe('TimeblockEditor', () => {
     expect(screen.queryByText('plan')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('title')).not.toBeInTheDocument();
     expect(screen.getByText('0/1000')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'note' })).toHaveClass(
+    expect(screen.getByRole('button', { name: 'note' })).toHaveClass(
       'bg-input',
       'border-transparent',
-      'resize-none',
     );
     expect(screen.queryByRole('button', { name: 'save' })).not.toBeInTheDocument();
   });
@@ -63,11 +64,67 @@ describe('TimeblockEditor', () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'note' }));
     const note = screen.getByRole('textbox', { name: 'note' });
     fireEvent.change(note, { target: { value: '調査メモ' } });
     fireEvent.blur(note);
 
     expect(onNoteChange).toHaveBeenCalledWith('調査メモ');
     expect(onNoteBlur).toHaveBeenCalledOnce();
+  });
+
+  it('過去Planでは日時だけを無効化し、メモ編集は維持する', () => {
+    render(
+      <TimeblockEditor
+        value={{
+          ...value,
+          startAt: new Date('2020-07-14T09:00:00.000Z'),
+          endAt: new Date('2020-07-14T10:00:00.000Z'),
+        }}
+        onDateTimeChange={vi.fn()}
+        onNoteChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('date-time-section')).toHaveAttribute('data-disabled', 'true');
+    const note = screen.getByRole('button', { name: 'note' });
+    expect(note).toHaveAttribute('tabindex', '0');
+    fireEvent.click(note);
+    expect(screen.getByRole('textbox', { name: 'note' })).not.toBeDisabled();
+    expect(screen.getByText('timeLocked')).toBeInTheDocument();
+  });
+
+  it('過去Recordでは日時とメモを編集できる', () => {
+    render(
+      <TimeblockEditor
+        value={{
+          ...value,
+          source: 'record',
+          startAt: new Date('2020-07-14T09:00:00.000Z'),
+          endAt: new Date('2020-07-14T10:00:00.000Z'),
+        }}
+        onDateTimeChange={vi.fn()}
+        onNoteChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('date-time-section')).toHaveAttribute('data-disabled', 'false');
+    const note = screen.getByRole('button', { name: 'note' });
+    expect(note).toHaveAttribute('tabindex', '0');
+    fireEvent.click(note);
+    expect(screen.getByRole('textbox', { name: 'note' })).not.toBeDisabled();
+    expect(screen.queryByText('timeLocked')).not.toBeInTheDocument();
+  });
+
+  it('全体を無効化した場合は日時とメモを編集できない', () => {
+    render(
+      <TimeblockEditor value={value} onDateTimeChange={vi.fn()} onNoteChange={vi.fn()} disabled />,
+    );
+
+    expect(screen.getByTestId('date-time-section')).toHaveAttribute('data-disabled', 'true');
+    const note = screen.getByRole('button', { name: 'note' });
+    expect(note).toHaveAttribute('tabindex', '-1');
+    fireEvent.click(note);
+    expect(screen.queryByRole('textbox', { name: 'note' })).not.toBeInTheDocument();
   });
 });

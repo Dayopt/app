@@ -12,10 +12,10 @@ Plan / Recordのcard、editor、inspector、record action component群。Storybo
 | -------------- | -------------------------------------------------------------- |
 | TimeblockCard  | Plan / Record、upcoming / active / past、selected、dragging    |
 | Inspector      | desktop popover / mobile drawer、time locked、validation error |
-| Editor         | Plan / Record destination表示、conflict、submitting            |
+| Editor         | 未来Plan、過去Planのtime locked、Record、全体disabled          |
 | Record actions | そのまま記録、日単位の一括確定、pending                        |
 
-- destination chipは選択UIではなく、入力時間から導出された状態表示
+- Inspectorで開いたPlan / Recordは時間編集で暗黙変換しない
 - past Planは時間fieldをdisabledにし、内容訂正とrecord actionは残す
 - product rule、DB、RPCはStorybookに複製しない
 
@@ -66,10 +66,9 @@ TimeblockCard                         カレンダー表示カード（ドラッ
 
 ## 過去 Plan の扱い
 
-- 予定時間の変更（移動・リサイズ）: 可
-- タイトル・タグ・メモの訂正: 可
+- 予定時間の変更（移動・リサイズ）: 不可
+- タグ・メモの訂正: 可
 - 過去日付への新規 Plan 追加: 不可（実際にやったことは予定外の Record へ）
 - ワンタップ記録 / skip / 削除: 可
 
-詳細仕様は `docs/product/specs/plan-record.md` を参照。
 正本は `docs/product/specs/plan-record.md` を参照する。

@@ -16,9 +16,15 @@ type Story = StoryObj<typeof meta>;
 const futureValue: TimeModelEditorValue = {
   note: '',
   tagId: null,
-  startAt: new Date('2026-07-11T09:00:00'),
-  endAt: new Date('2026-07-11T10:00:00'),
+  startAt: new Date('2099-07-11T09:00:00'),
+  endAt: new Date('2099-07-11T10:00:00'),
   source: 'plan',
+};
+
+const pastPlanValue: TimeModelEditorValue = {
+  ...futureValue,
+  startAt: new Date('2020-07-09T09:00:00'),
+  endAt: new Date('2020-07-09T10:00:00'),
 };
 
 /** 未来の Plan の日時・メモ編集。 */
@@ -40,7 +46,7 @@ export const Plan: Story = {
   },
 };
 
-/** 過去の Plan の日時・メモ編集。 */
+/** 過去の Plan の日時ロックとメモ編集。 */
 export const PastPlan: Story = {
   args: {
     value: futureValue,
@@ -48,10 +54,7 @@ export const PastPlan: Story = {
     onNoteChange: () => undefined,
   },
   render: function PastPlanStory() {
-    const [value, setValue] = useState<TimeModelEditorValue>({
-      ...futureValue,
-      endAt: new Date('2026-07-09T10:00:00'),
-    });
+    const [value, setValue] = useState<TimeModelEditorValue>(pastPlanValue);
     return (
       <TimeblockEditor
         value={value}
@@ -71,12 +74,18 @@ export const AllPatterns: Story = {
   },
   render: function AllPatternsStory() {
     const [value, setValue] = useState(futureValue);
+    const [pastValue, setPastValue] = useState(pastPlanValue);
     return (
       <div className="space-y-6">
         <TimeblockEditor
           value={value}
           onDateTimeChange={setValue}
           onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
+        />
+        <TimeblockEditor
+          value={pastValue}
+          onDateTimeChange={setPastValue}
+          onNoteChange={(note) => setPastValue((current) => ({ ...current, note }))}
         />
         <TimeblockEditor
           value={value}
