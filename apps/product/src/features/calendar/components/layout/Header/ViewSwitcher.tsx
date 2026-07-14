@@ -25,8 +25,7 @@ import {
 } from '@dayopt/components';
 import type { ShortcutDef } from '../../../hooks/keyboard/shortcut-registry';
 import { registerShortcuts } from '../../../hooks/keyboard/shortcut-registry';
-import type { CalendarViewType } from '../../../types/calendar.types';
-import { isMultiDayView } from '../../../types/calendar.types';
+import { getMultiDayCount, type CalendarViewType } from '../../../types/calendar.types';
 
 /** ViewSwitcher コンポーネントのプロパティ */
 interface ViewSwitcherProps {
@@ -39,25 +38,27 @@ interface ViewSwitcherProps {
 /** ビュー選択オプションの定義 */
 interface MainViewOption {
   value: CalendarViewType;
-  labelKey: string;
+  count: number;
   shortcut: string;
 }
 
 const MAIN_VIEW_OPTIONS: MainViewOption[] = [
-  { value: 'day', labelKey: 'calendar.views.day', shortcut: 'D' },
-  { value: 'week', labelKey: 'calendar.views.week', shortcut: 'W' },
+  { value: 'day', count: 1, shortcut: '1' },
+  { value: '2day', count: 2, shortcut: '2' },
+  { value: '3day', count: 3, shortcut: '3' },
+  { value: '4day', count: 4, shortcut: '4' },
+  { value: '5day', count: 5, shortcut: '5' },
+  { value: '6day', count: 6, shortcut: '6' },
+  { value: 'week', count: 7, shortcut: '7' },
 ];
-
-const DAY_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 const DENSITY_OPTIONS = ['compact', 'default', 'spacious'] as const;
 
 /**
- * ビュー切り替えドロップダウン（Google Calendar風サブメニュー構造）
+ * ビュー切り替えドロップダウン（1〜7日のビューを直接表示）
  *
  * メニュー構造:
- * - 日 (D) / 週 (W) / アジェンダ (A)
- * - 日数 > 2日間〜9日間
+ * - 1日 / 2日 / ... / 7日
  * - ビューの設定 > 週末を表示
  */
 export function ViewSwitcher({
@@ -87,12 +88,17 @@ export function ViewSwitcher({
     [onSettingsChange, updateSettings],
   );
 
-  const currentLabel = isMultiDayView(currentView)
-    ? t('calendar.views.multiday', { count: parseInt(currentView) })
-    : t(
-        MAIN_VIEW_OPTIONS.find((opt) => opt.value === currentView)?.labelKey ??
-          'calendar.views.week',
-      );
+  const currentLabel =
+    currentView === 'day'
+      ? t('calendar.views.day')
+      : t('calendar.views.multiday', {
+          count: currentView === 'week' ? 7 : getMultiDayCount(currentView),
+        });
+
+  const getMainViewLabel = (option: MainViewOption): string =>
+    option.count === 1
+      ? t('calendar.views.day')
+      : t('calendar.views.multiday', { count: option.count });
 
   const handleSelect = useCallback(
     (value: CalendarViewType) => {
@@ -109,7 +115,7 @@ export function ViewSwitcher({
     persistSettings({ showWeekNumbers: !showWeekNumbers });
   }, [showWeekNumbers, persistSettings]);
 
-  // キーボードショートカット: D, W, 0-9（レジストリ経由、モバイルガードはuseShortcutRegistryで実施）
+  // キーボードショートカット: 1〜7
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -117,51 +123,63 @@ export function ViewSwitcher({
 
   useEffect(() => {
     const shortcuts: ShortcutDef[] = [
-      // D → Day View
-      {
-        key: 'D',
-        description: 'Day View に切り替え（D）',
-        handler: (e) => {
-          e.preventDefault();
-          onChangeRef.current('day');
-        },
-      },
-      // W → Week View
-      {
-        key: 'W',
-        description: 'Week View に切り替え（W）',
-        handler: (e) => {
-          e.preventDefault();
-          onChangeRef.current('week');
-        },
-      },
       // 1 → Day View
       {
         key: '1',
-        description: 'Day View に切り替え（1）',
+        description: '1日表示に切り替え（1）',
         handler: (e) => {
           e.preventDefault();
           onChangeRef.current('day');
         },
       },
-      // 0 → Week View
       {
-        key: '0',
-        description: 'Week View に切り替え（0）',
+        key: '2',
+        description: '2日表示に切り替え（2）',
+        handler: (e) => {
+          e.preventDefault();
+          onChangeRef.current('2day');
+        },
+      },
+      {
+        key: '3',
+        description: '3日表示に切り替え（3）',
+        handler: (e) => {
+          e.preventDefault();
+          onChangeRef.current('3day');
+        },
+      },
+      {
+        key: '4',
+        description: '4日表示に切り替え（4）',
+        handler: (e) => {
+          e.preventDefault();
+          onChangeRef.current('4day');
+        },
+      },
+      {
+        key: '5',
+        description: '5日表示に切り替え（5）',
+        handler: (e) => {
+          e.preventDefault();
+          onChangeRef.current('5day');
+        },
+      },
+      {
+        key: '6',
+        description: '6日表示に切り替え（6）',
+        handler: (e) => {
+          e.preventDefault();
+          onChangeRef.current('6day');
+        },
+      },
+      {
+        key: '7',
+        description: '7日表示に切り替え（7）',
         handler: (e) => {
           e.preventDefault();
           onChangeRef.current('week');
         },
       },
-      // 2-9 → N-day View
-      ...([2, 3, 4, 5, 6, 7, 8, 9] as const).map((n): ShortcutDef => ({
-        key: String(n),
-        description: `${n}-Day View に切り替え`,
-        handler: (e) => {
-          e.preventDefault();
-          onChangeRef.current(`${n}day` as CalendarViewType);
-        },
-      })),
     ];
 
     return registerShortcuts(shortcuts);
@@ -187,7 +205,7 @@ export function ViewSwitcher({
             onClick={() => handleSelect(option.value)}
             className="flex items-center justify-between gap-2"
           >
-            <span>{t(option.labelKey)}</span>
+            <span>{getMainViewLabel(option)}</span>
             <div className="flex items-center gap-2">
               {currentView === option.value && <Check className="text-primary size-4" />}
               {currentView !== option.value && <span className="w-4" />}
@@ -199,36 +217,6 @@ export function ViewSwitcher({
         ))}
 
         <DropdownMenuSeparator />
-
-        {/* 日数サブメニュー */}
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <span>{t('calendar.views.daysSubmenu')}</span>
-            {isMultiDayView(currentView) && <Check className="text-primary ml-auto size-4" />}
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            {DAY_COUNTS.map((count) => {
-              const view = `${count}day` as CalendarViewType;
-              const isActive = currentView === view;
-              return (
-                <DropdownMenuItem
-                  key={count}
-                  onClick={() => handleSelect(view)}
-                  className="flex items-center justify-between gap-4"
-                >
-                  <span>{t('calendar.views.multiday', { count })}</span>
-                  <div className="flex items-center gap-2">
-                    {isActive && <Check className="text-primary size-4" />}
-                    {!isActive && <span className="w-4" />}
-                    <span className="bg-surface-container text-muted-foreground rounded-lg px-2 py-1 font-mono text-xs">
-                      {count}
-                    </span>
-                  </div>
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
 
         {/* ビューの設定サブメニュー */}
         <DropdownMenuSub>
