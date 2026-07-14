@@ -28,11 +28,7 @@ import {
   TagQuickSelector,
   useCreateTag,
 } from '@/features/tags';
-import {
-  resolveTimeblockDestination,
-  timeblockTintColor,
-  useTimeblockWriteMutations,
-} from '@/features/timeblock';
+import { resolveTimeblockDestination, useTimeblockWriteMutations } from '@/features/timeblock';
 import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
@@ -41,6 +37,7 @@ import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@dayopt/components';
 
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
+import { DEFAULT_PLAN_LANE_WIDTH_PERCENT } from '../../../../../lib/two-lane-layout';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
 
 import { Z_INDEX } from '../../constants/grid.constants';
@@ -242,28 +239,8 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   }, [waitingForModal, clearPendingSelection]);
 
   const timeFormat = useUserPreferences((s) => s.timeFormat);
-  const [nowForPastCheck, setNowForPastCheck] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!pendingSelection) return;
-    queueMicrotask(() => setNowForPastCheck(Date.now()));
-  }, [pendingSelection]);
 
   // 現在の selection が他 entry と重なるかを live 判定（resize や外部更新に追随）。
-  // 過去時間帯は保存時に自動で unplanned になるため、preview もダッシュ枠の unplanned 風に切替える。
-  const isPast = (() => {
-    if (nowForPastCheck === null) return false;
-    if (!pendingSelection) return false;
-    const { date: selDate, endHour, endMinute } = pendingSelection;
-    const endLocal = new Date(
-      selDate.getFullYear(),
-      selDate.getMonth(),
-      selDate.getDate(),
-      endHour,
-      endMinute,
-    );
-    return endLocal.getTime() <= nowForPastCheck;
-  })();
 
   // hooks は早期 return より前で呼ぶ必要があるため、null セーフに書く。
   const hasConflict = useMemo(() => {
@@ -304,7 +281,6 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   if (date && !isSameDay(date, pendingSelection.date)) return null;
 
   const { startHour, startMinute, endHour, endMinute } = pendingSelection;
-  const isPlannedGapSelection = pendingSelection.creationSource === 'planned-gap';
 
   // 選択範囲のピクセル計算
   const startMinutes = startHour * 60 + startMinute;
@@ -320,12 +296,26 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const datePattern = locale === 'ja' ? 'M/d (E)' : 'E, MMM d';
   const pickerTimeLabel = `${format(pendingSelection.date, datePattern, { locale: dateFnsLocale })} ${timeLabel}`;
 
+  const selectionEndLocal = new Date(
+    pendingSelection.date.getFullYear(),
+    pendingSelection.date.getMonth(),
+    pendingSelection.date.getDate(),
+    endHour,
+    endMinute,
+  );
+  const destination = resolveTimeblockDestination(convertFromTimezone(selectionEndLocal, timezone));
+  const isPlan = destination === 'plan';
+  const destinationLabel = tCalendar(`event.preview.${destination}`);
+  const pickerContextLabel = `${destinationLabel} · ${pickerTimeLabel}`;
+  const laneLeft = isPlan ? 0 : DEFAULT_PLAN_LANE_WIDTH_PERCENT;
+  const laneWidth = isPlan
+    ? DEFAULT_PLAN_LANE_WIDTH_PERCENT
+    : 100 - DEFAULT_PLAN_LANE_WIDTH_PERCENT;
+
   // ホバー中タグの色を解決
-  const accentColor = hoveredTag
-    ? getTagColorClasses(hoveredTag.color).cssVar
-    : 'var(--entry-default)';
-  // TimeblockCard と同じ 18% color-mix tint を使い、確定後カードと背景色を揃える
-  const tintColor = timeblockTintColor(accentColor);
+  const hoveredColorClasses = hoveredTag ? getTagColorClasses(hoveredTag.color) : null;
+  const planBorderClass = hoveredColorClasses?.border ?? 'border-border';
+  const recordSurfaceClass = hoveredColorClasses?.tint ?? 'bg-card';
   const displayName = hoveredTag?.name ?? tCalendar('event.selectTag');
 
   // 下端 handle: end time だけを 15 分単位で更新
@@ -428,104 +418,68 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         <div
           ref={highlightRef}
           className={cn(
-            'animate-in fade-in-0 pointer-events-auto absolute flex transition-colors duration-150 motion-reduce:animate-none',
-            'rounded-r-lg',
+            'animate-in fade-in-0 text-foreground pointer-events-auto absolute flex flex-col gap-1 overflow-hidden rounded-lg px-2 py-2 text-xs transition-colors duration-150 motion-reduce:animate-none',
+            isPlan ? cn('border-2 bg-transparent', planBorderClass) : recordSurfaceClass,
           )}
           style={{
             top: selectionTop,
-            left: isPlannedGapSelection ? '50%' : 0,
-            right: 0,
+            left: `${laneLeft}%`,
+            width: `calc(${laneWidth}% - 4px)`,
             height: selectionHeight,
             touchAction: 'none',
-            // past（unplanned 風）も確定後カードと同じ作り: 左アクセント + tint 塗り + 3 辺破線
-            ...(isPast && !hasConflict
-              ? {
-                  borderTop: `2px dashed ${accentColor}`,
-                  borderRight: `2px dashed ${accentColor}`,
-                  borderBottom: `2px dashed ${accentColor}`,
-                  borderRadius: '0 8px 8px 0',
-                }
-              : {}),
           }}
           onPointerDown={handleBodyPointerDown}
         >
           {hasConflict ? (
-            // drag/resize/新規選択と同一の ConflictOverlay に統一。
-            // ブロックは rounded-r-lg（左角四角 + 3px アクセント）なので左角を四角にして全面を覆う。
             <ConflictOverlay
               message={tEntry('errors.timeOverlap')}
               timeLabel={timeLabel}
               compact={selectionHeight < 40}
-              className="absolute inset-0 rounded-l-none"
+              className="absolute inset-0"
             />
+          ) : selectionHeight < 40 ? (
+            <div className="flex min-w-0 items-center gap-1">
+              {hoveredTag?.icon && (
+                <TagIcon
+                  icon={hoveredTag.icon}
+                  color={hoveredTag.color}
+                  size="sm"
+                  className="shrink-0"
+                />
+              )}
+              <span className="truncate font-medium">
+                {hoveredTag ? displayName : destinationLabel}
+                {!hoveredTag && (
+                  <>
+                    {' · '}
+                    <span className="tabular-nums">{timeLabel}</span>
+                  </>
+                )}
+              </span>
+            </div>
           ) : (
             <>
-              {/* past は確定後の unplanned と同じ左アクセント、upcoming は文言位置合わせのスペーサー。 */}
-              <div
-                className="shrink-0 transition-colors duration-150"
-                style={{ width: '3px', backgroundColor: isPast ? accentColor : tintColor }}
-              />
-              {/* カード本体 — past も確定後カードと同じ tint 塗り */}
-              <div
-                className={cn(
-                  'min-w-0 flex-1 overflow-hidden transition-colors duration-150',
-                  'rounded-r-lg',
-                )}
-                style={{ backgroundColor: tintColor }}
-              >
-                {selectionHeight < 40 ? (
-                  <div className="flex h-full items-center gap-1 px-2">
-                    {hoveredTag?.icon && (
-                      <TagIcon
-                        icon={hoveredTag.icon}
-                        color={hoveredTag.color}
-                        size="sm"
-                        className="shrink-0"
-                      />
-                    )}
-                    <span
-                      className={cn(
-                        'truncate text-xs',
-                        hoveredTag
-                          ? 'text-foreground font-normal'
-                          : 'text-muted-foreground tabular-nums',
-                      )}
-                    >
-                      {hoveredTag ? displayName : timeLabel}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex h-full flex-col gap-1 p-2">
-                    <div className="flex items-center gap-1">
-                      {hoveredTag?.icon && (
-                        <TagIcon
-                          icon={hoveredTag.icon}
-                          color={hoveredTag.color}
-                          size="sm"
-                          className="shrink-0"
-                        />
-                      )}
-                      <span
-                        className={cn(
-                          'min-w-0 truncate text-sm leading-tight font-normal',
-                          hoveredTag ? 'text-foreground' : 'text-muted-foreground',
-                        )}
-                      >
-                        {displayName}
-                      </span>
-                    </div>
-                    <span className="text-muted-foreground text-xs leading-tight tabular-nums">
-                      {timeLabel}
-                    </span>
-                  </div>
-                )}
+              <div className="flex min-h-0 items-start justify-between gap-1">
+                <div className="flex min-w-0 items-center gap-1">
+                  {hoveredTag?.icon && (
+                    <TagIcon
+                      icon={hoveredTag.icon}
+                      color={hoveredTag.color}
+                      size="sm"
+                      className="shrink-0"
+                    />
+                  )}
+                  <span className="truncate font-medium">{displayName}</span>
+                </div>
+                <span className="text-muted-foreground shrink-0">{destinationLabel}</span>
               </div>
+              <span className="text-muted-foreground truncate tabular-nums">{timeLabel}</span>
             </>
           )}
-          {/* 下端 visual indicator pill */}
+          {/* 下端リサイズ横棒は非表示統一。実際のリサイズは slider が担保。 */}
           <span
             aria-hidden
-            className="bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full"
+            className="bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 hidden h-1 w-8 -translate-x-1/2 rounded-full"
             style={{ zIndex: 1 }}
           />
           {/* 下端 invisible resize handle (44px touch target) */}
@@ -561,7 +515,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         onCreateAndSelect={handleCreateAndSelect}
         onTagHover={handleTagHover}
         anchorRef={highlightRef}
-        timeLabel={pickerTimeLabel}
+        timeLabel={pickerContextLabel}
       />
     </>
   );
