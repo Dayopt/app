@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-07-14
 ---
 
 # インフラ・環境・API/Routing 総覧
@@ -104,6 +104,14 @@ main merge
   ├── Supabase main deployment
   └── Vercel Production
 ```
+
+Vercel の正規 deployment source は `Dayopt/dayopt` の GitHub 連携だけとする。
+Preview は branch push / PR、Production は `main` merge から作成する。CLI、REST API、Deploy Hook、
+Marketplace integration、v0 から新規 Production deployment を作らない。緊急時は正常な既存 deployment の
+`Promote to Production` を rollback に使う。
+
+Deployment Policies による強制は [判断ログ](./log/2026-07-14-vercel-github-only-deployment-policy.md) のとおり、
+現在の Hobby plan では利用できない。Pro / Enterprise へ変更するまでは運用規約と既存の GitHub / Vercel 設定で統制する。
 
 ### トラブルシューティング
 
