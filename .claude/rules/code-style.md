@@ -46,7 +46,7 @@ Server Component をデフォルト。useState / useEffect / イベントハン�
 ## セマンティックトークン補足
 
 - 透過（`/10`など）は `state-*` トークンのみ許可
-- 睡眠時間帯は `bg-chronotype-sleep` を使用
+- domain固有色は`packages/foundations`で公開済みのsemantic tokenだけを使用する
 
 ## Tailwind v4 既知の落とし穴
 

@@ -4,108 +4,24 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Settings
 
-ユーザー設定のフルスクリーンモーダル。Notion風のカテゴリナビゲーション + 各種設定ページ。
+profile、display、data、billing、accountを扱うsettings dialog component群。Storybookではcategory navigation、desktop / mobile layout、form stateを確認する。
 
----
+## Categories
 
-## カテゴリ一覧
+| Category | 主な表示                        |
+| -------- | ------------------------------- |
+| Profile  | profileとidentity               |
+| Display  | theme、timezone、日付・時間表示 |
+| Data     | exportとdata control            |
+| Billing  | Free / Pro、Checkout、Portal    |
+| Account  | password、MFA、account deletion |
 
-| カテゴリ            | 説明                                               |
-| ------------------- | -------------------------------------------------- |
-| **General**         | テーマ、言語、日付フォーマット                     |
-| **Calendar**        | タイムゾーン、時間形式、週開始日、ビューデフォルト |
-| **Personalization** | ACT価値観、重要度ランキング                        |
-| **Notifications**   | メール/プッシュ通知、リマインダー設定              |
-| **Data Controls**   | GDPR データエクスポート、バックアップ              |
-| **Integrations**    | APIキー管理、外部連携                              |
-| **Account**         | プロフィール、メール、パスワード、MFA              |
-| **Subscription**    | プラン管理（UIスタブ）                             |
+## Visual states
 
----
+- desktop dialog / mobile sheet
+- category list / selected category
+- loading / saved / validation error
+- billingのFree / trialing / active / past_due / canceled
+- destructive account actionのconfirmation
 
-## コンポーネント構成
-
-```
-SettingsModal                   フルスクリーンモーダル
-├── SettingsModalSidebar        カテゴリナビゲーション
-├── SettingsModalContent        コンテンツ描画
-│   ├── preferences-settings    テーマ・言語・日付形式
-│   ├── calendar-settings       タイムゾーン・時間形式
-│   ├── notification-settings   通知トグル
-│   ├── data-export-settings    データエクスポート
-│   ├── integration-settings    APIキー・外部連携
-│   └── account-settings        プロフィール・認証
-└── SettingsModalMobileView     モバイル最適化
-
-SectionCard                    再利用可能カードラッパー
-LabeledRow                      フォーム行コンポーネント
-```
-
-### ダイアログ
-
-| ダイアログ              | 用途                   |
-| ----------------------- | ---------------------- |
-| `DisplayNameDialog`     | 表示名変更             |
-| `AvatarChangeDialog`    | アバター変更           |
-| `EmailChangeDialog`     | メールアドレス変更     |
-| `PasswordChangeDialog`  | パスワード変更         |
-| `AccountDeletionDialog` | アカウント削除（GDPR） |
-
----
-
-## 状態管理
-
-### useSettingsModalStore
-
-| State              | 説明           |
-| ------------------ | -------------- |
-| `isOpen`           | モーダル開閉   |
-| `selectedCategory` | 選択中カテゴリ |
-
-### userSettings query cache
-
-| State                   | 説明                       |
-| ----------------------- | -------------------------- |
-| timezone                | タイムゾーン               |
-| timeFormat / dateFormat | 時間・日付形式             |
-| weekStartsOn            | 週開始日                   |
-| showWeekNumbers         | 週番号表示                 |
-| defaultDuration         | 新規エントリの既定時間     |
-| snapInterval            | ドラッグ操作のスナップ間隔 |
-
-参照は `@/lib/hooks/useUserPreferences`、更新は `@/lib/hooks/useUpdateUserSettings` を使用する。
-
----
-
-## Hooks
-
-| Hook                        | 用途                           |
-| --------------------------- | ------------------------------ |
-| `useUserSettings()`         | DB同期（fetch + mutation）     |
-| `useAutoSaveSettings()`     | デバウンス自動保存             |
-| `useDateFormat()`           | 日付フォーマットユーティリティ |
-| `useMFA()`                  | 多要素認証ロジック             |
-| `useSettingsModalURLSync()` | URL状態同期                    |
-
----
-
-## tRPC ルーター
-
-| エンドポイント        | タイプ   | 説明                                  |
-| --------------------- | -------- | ------------------------------------- |
-| `userSettings.get`    | query    | ユーザー設定取得                      |
-| `userSettings.update` | mutation | 設定更新（Zodスキーマバリデーション） |
-
----
-
-## デザイン仕様
-
-| 項目           | 値                                         |
-| -------------- | ------------------------------------------ |
-| PC表示         | Dialog（フルスクリーン風）                 |
-| モバイル       | Sheet（ボトムアップ）                      |
-| ナビゲーション | 左サイドバー（PC）/ リスト選択（モバイル） |
-
----
-
-**最終更新**: 2026-02-17
+category定義の正本は`features/settings/constants.ts`、外部挙動はroot `docs/product/specs/settings.md`を参照する。router、DB、feature DAGはStorybookへ複製しない。

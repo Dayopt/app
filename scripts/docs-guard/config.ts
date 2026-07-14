@@ -8,9 +8,8 @@ const __dirname = dirname(__filename);
 export const ROOT = resolve(__dirname, '../..');
 export const DOCS_DIR = resolve(ROOT, 'docs');
 
-// frontmatter (status / last_verified) が必須のストック対象ディレクトリ。
-// 各ドメイン直下の log/ はログ・時点もの・append-only系のため対象外。
-export const FRONTMATTER_REQUIRED_DIRS = [
+// status / last_verified が必須の stock domain。
+export const STOCK_DIRS = [
   'business',
   'product',
   'marketing',
@@ -19,7 +18,7 @@ export const FRONTMATTER_REQUIRED_DIRS = [
   'company',
 ];
 
-// 書き換え禁止（append-only）対象ディレクトリ。各ドメインの log/latest.md のみ例外で上書き可。
+// 書き換え禁止対象。新規追加後は frozen とし、supersede metadata 以外を変更しない。
 export const APPEND_ONLY_DIRS = [
   'docs/business/log',
   'docs/product/log',
@@ -28,21 +27,15 @@ export const APPEND_ONLY_DIRS = [
   'docs/operations/log',
   'docs/company/log',
 ];
-export const APPEND_ONLY_EXCLUDE = ['docs/engineering/log/latest.md'];
+
+// latest alias は履歴を上書きするため禁止する。旧aliasの削除だけmigrationとして許可する。
+export const FORBIDDEN_LOG_ALIASES = ['docs/engineering/log/latest.md'];
 
 // リンク切れチェックで「凍結された過去の記録」として warning 扱いにするディレクトリ。
 export const LINK_CHECK_SOFT_DIRS = [...APPEND_ONLY_DIRS];
 
-// frontmatter 必須チェックから除外するファイル（グロブではなく完全一致 or 前方一致）。
-// secrets.md: サンドボックス権限で編集不可（フォローアップ課題）。
-// releases/notes-v*.md: 発行時点で凍結される release note スナップショット（journal 相当）。
-// data/db/rls-snapshot.md: scripts/generate-rls-snapshot.ts の自動生成物。手で編集しない前提で
-// frontmatterを持たせると `pnpm rls:snapshot:check`（Integration Tests）がdriftとして検知する。
-export const FRONTMATTER_EXCLUDE = [
-  'docs/operations/secrets.md',
-  'docs/engineering/data/db/rls-snapshot.md',
-];
-export const FRONTMATTER_EXCLUDE_PATTERNS = [/^docs\/operations\/releases\/notes-v[\d.]+\.md$/];
+// 手書きfrontmatterを付けないgenerated file。完全一致だけを例外にする。
+export const GENERATED_DOCS = ['docs/engineering/data/db/rls-snapshot.md'];
 
 // 命名規約チェックの追加許容パターン（kebab-case の対象外だが正当なもの）。
 // リリースノートの semver ファイル名（notes-v0.13.0.md 等）。

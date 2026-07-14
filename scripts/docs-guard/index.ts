@@ -4,9 +4,9 @@
  *
  * docs/ の機械的ガードを4 checker で実行する。
  *  - link-check          : 相対リンク切れ
- *  - frontmatter-check   : ストック対象への status / last_verified 必須
+ *  - frontmatter-check   : path別metadata / code path / Project lifecycle
  *  - naming-check        : kebab-case 命名規約
- *  - append-only-guard   : 各ドメイン log/ の書き換え禁止
+ *  - append-only-guard   : 各ドメイン log/ の凍結契約
  *
  * Usage:
  *   tsx scripts/docs-guard/index.ts

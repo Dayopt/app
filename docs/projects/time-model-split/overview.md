@@ -1,5 +1,5 @@
 ---
-status: current
+status: done
 last_verified: 2026-07-13
 code: apps/product/src/features/timeblock
 ---

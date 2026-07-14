@@ -440,7 +440,7 @@ LIMIT 20;
 
 環境変数と Secrets の値そのものの管理（1Password 経由の注入、schema、ローテーション手順）は [secrets.md](./secrets.md) を正本とする。本ファイルでは重複を避けるため、GitHub Actions 側の利用箇所（第1部）とセキュリティ監視の対象範囲（第2部）のみを扱う。
 
-> **統合作業メモ**: 統合元の `docs/operations/security/environment-secrets.md` は、ファイル名が `*secret*` パターンに一致するためツール権限（deny rule）でAIから読み取れず、本ファイルへの内容統合ができなかった。`secrets.md` と同様に現状のまま残置している。内容を確認・統合する場合は人間が直接編集するか、deny rule の一時的な例外設定が必要。
+GitHub / Vercel / Supabase側のreplicaとenvironment scopeは[environment-secrets.md](./security/environment-secrets.md)に分冊する。AIも値を出力せず、通常のrepo fileとして両文書を参照する。
 
 ---
 

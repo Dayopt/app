@@ -1,16 +1,12 @@
 /**
- * Check: 追記専用ガード（最重要）
+ * Check: log immutability
  *
- * 各ドメイン直下の log/ は「ログは書き換えない、訂正は supersede」の規約を持つ
- * append-only 領域。
- * base ref との差分で "M"（modified）扱いのファイルがあれば原則 fail する。
- *
- * 例外: 変更内容が frontmatter への `superseded_by:` 行追加、または
- * `status: superseded` 行追加のみである場合は pass にする（削除行が無く、
- * 追加行が全てこのパターンに一致する場合のみ）。
+ * base refからworking treeまで（committed / staged / unstaged / untracked）を検査する。
+ * 新規fileは許可し、既存fileはsupersede metadataの追記以外を拒否する。
  */
 
-import { APPEND_ONLY_DIRS, APPEND_ONLY_EXCLUDE, colors, git, resolveBaseRef } from '../config.ts';
+import { APPEND_ONLY_DIRS, colors, FORBIDDEN_LOG_ALIASES, git, resolveBaseRef } from '../config.ts';
+import { listGitChanges } from '../git-changes.ts';
 
 export interface AppendOnlyViolation {
   file: string;
@@ -18,20 +14,15 @@ export interface AppendOnlyViolation {
 }
 
 const SUPERSEDE_LINE_RE = /^\+(superseded_by:\s*\S+|status:\s*superseded)\s*$/;
-// 追加された空行（frontmatter/本文の区切り整形）は supersede 追記に伴う自然な差分として許容
 const BLANK_ADDITION_RE = /^\+\s*$/;
 
-function isSupersedeOnlyDiff(diff: string): boolean {
+export function isSupersedeOnlyDiff(diff: string): boolean {
   const lines = diff.split('\n');
   let hasAddition = false;
 
   for (const line of lines) {
     if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('@@')) continue;
-
-    if (line.startsWith('-')) {
-      // 削除行が1行でもあれば supersede-only ではない
-      return false;
-    }
+    if (line.startsWith('-')) return false;
 
     if (line.startsWith('+')) {
       if (BLANK_ADDITION_RE.test(line)) continue;
@@ -43,29 +34,44 @@ function isSupersedeOnlyDiff(diff: string): boolean {
   return hasAddition;
 }
 
+function isLogPath(path: string): boolean {
+  return APPEND_ONLY_DIRS.some((directory) => path.startsWith(`${directory}/`));
+}
+
 export function runAppendOnlyGuard(): AppendOnlyViolation[] {
   const baseRef = resolveBaseRef();
   const violations: AppendOnlyViolation[] = [];
 
-  const pathspecs = [...APPEND_ONLY_DIRS, ...APPEND_ONLY_EXCLUDE.map((p) => `:(exclude)${p}`)];
+  for (const change of listGitChanges('docs')) {
+    const touchesLog =
+      isLogPath(change.path) || (change.oldPath ? isLogPath(change.oldPath) : false);
+    if (!touchesLog) continue;
 
-  const modifiedRaw = git(
-    `diff --diff-filter=M --name-only ${baseRef}...HEAD -- ${pathspecs.map((p) => `"${p}"`).join(' ')}`,
-  ).trim();
+    if (change.status === 'added') continue;
 
-  if (!modifiedRaw) return violations;
+    if (change.status === 'deleted' && FORBIDDEN_LOG_ALIASES.includes(change.path)) {
+      continue;
+    }
 
-  const modifiedFiles = modifiedRaw.split('\n').filter(Boolean);
+    if (change.status === 'deleted') {
+      violations.push({ file: change.path, reason: '凍結済みlogを削除している' });
+      continue;
+    }
 
-  for (const file of modifiedFiles) {
-    const diff = git(`diff -U0 ${baseRef}...HEAD -- "${file}"`);
+    if (change.status === 'renamed') {
+      violations.push({
+        file: change.oldPath ?? change.path,
+        reason: `凍結済みlogをrenameしている: ${change.path}`,
+      });
+      continue;
+    }
 
+    const diff = git(`diff -U0 ${baseRef} -- "${change.path}"`);
     if (isSupersedeOnlyDiff(diff)) continue;
 
     violations.push({
-      file,
-      reason:
-        'append-only 領域のファイルが書き換えられている（supersede は superseded_by: / status: superseded の行追加のみで行う）',
+      file: change.path,
+      reason: '凍結済みlogの変更はsuperseded_by（legacyはstatus: superseded）の追記だけ許可',
     });
   }
 
@@ -74,13 +80,13 @@ export function runAppendOnlyGuard(): AppendOnlyViolation[] {
 
 export function reportAppendOnlyGuard(violations: AppendOnlyViolation[]): boolean {
   if (violations.length === 0) {
-    console.log(`${colors.green}✓${colors.reset} 追記専用ガード: 違反なし`);
+    console.log(`${colors.green}✓${colors.reset} log凍結ガード: 違反なし`);
     return true;
   }
 
-  console.log(`${colors.red}✗${colors.reset} 追記専用ガード違反: ${violations.length}件`);
-  for (const v of violations) {
-    console.log(`  ${colors.yellow}${v.file}${colors.reset}: ${v.reason}`);
+  console.log(`${colors.red}✗${colors.reset} log凍結ガード: ${violations.length}件`);
+  for (const violation of violations) {
+    console.log(`  ${colors.yellow}${violation.file}${colors.reset}: ${violation.reason}`);
   }
   return false;
 }

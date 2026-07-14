@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-14
 ---
 
 # decision テンプレ
@@ -9,8 +9,8 @@ last_verified: 2026-07-03
 
 ```markdown
 ---
-status: current # current | superseded | frozen
-updated: YYYY-MM-DD
+status: frozen
+date: YYYY-MM-DD
 ---
 
 # 決めたこと(1行)
@@ -24,4 +24,4 @@ updated: YYYY-MM-DD
 ## 影響・やること
 ```
 
-書いたら凍結し、編集しない。訂正が必要な場合は新しいログを追加し、古い方の `status` を `superseded` に変更する。
+書いたら凍結し、編集しない。訂正が必要な場合は新しいログを追加し、古い方へ新しいrepo-relative pathを`superseded_by`として追記する。

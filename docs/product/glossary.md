@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-07-14
 ---
 
 # Dayopt Glossary — 用語集
@@ -159,7 +159,7 @@ Dayopt固有のドメイン概念とコードベースで使用される用語�
 - DB: `records` テーブル
 - `plan_id`(nullable): あり = 予定に対する記録、なし = 予定外の記録
 - source: `manual` / `from_plan` / `auto_migrated` / `external_calendar` / `api`
-- `fulfillment_score` は Record 側のみが持つ属性(Plan にはない)
+- `fulfillment_score` は物理DBと互換schemaに残るlegacy field。現在のUI用語・Review契約には含めない
 
 #### TimeblockState(ブロック状態)
 
@@ -185,16 +185,6 @@ Calendar は Plan レーンと Record レーンを横並びで表示する。
 
 ブロック作成・編集時に保存先を選ぶ UI は存在しない。`end_at > now` なら Plan、`end_at <= now` なら Record として一意に決まる。境界をまたぐ編集で表示チップが自動的に切り替わる。
 
-#### FulfillmentScore(達成度スコア)
-
-Record に対してユーザーが付ける1-3の主観的達成度。Stats機能で集計される。Plan には存在しない(予定の時点では達成度を測れないため)。
-
-| スコア | 意味   |
-| ------ | ------ |
-| 1      | 低い   |
-| 2      | 中程度 |
-| 3      | 高い   |
-
 ### 時間管理
 
 #### TimeBoxing(タイムボクシング)
@@ -207,30 +197,15 @@ Record に対してユーザーが付ける1-3の主観的達成度。Stats機�
 「Time waits for no one」 — 過去は変更できないという原則。
 
 - 過去 Plan の `start_at` / `end_at` は変更不可(title / tag / note のみ訂正可)
-- Record は過去の記録そのものなので、時間・タグ・note・`fulfillment_score` を訂正可能
+- Record は過去の記録そのものなので、時間・タグ・noteを訂正可能
 - UI: 過去 Plan は disabled 表示 + ロジックガードの二重防御
 - 意思決定ログ: [ADR-025](log/2026-07-09-time-model-split.md)、[時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
 
-### ユーザー属性
+### Legacy code terms
 
-#### Chronotype(クロノタイプ)
+#### Chronotype / FulfillmentScore
 
-ユーザーの生体リズムに基づく生産性パターン。4タイプ:
-
-| タイプ          | 特徴              | ピーク時間帯     |
-| --------------- | ----------------- | ---------------- |
-| Lion(ライオン)  | 早起き型          | 朝               |
-| Bear(クマ)      | 標準型(人口の55%) | 午前中〜昼       |
-| Wolf(オオカミ)  | 夜型              | 午後〜夜         |
-| Dolphin(イルカ) | 不規則型          | 短い集中バースト |
-
-- Onboarding時にクイズで判定
-- Stats のエネルギーマップで可視化
-- 型: `src/types/chronotype.ts`
-
-#### ProductivityZone(生産性ゾーン)
-
-クロノタイプから導出される時間帯別の集中度レベル。カレンダー背景色で視覚表現。
+どちらも現在のUI・プロダクト仕様からは削除済み。`packages/domain`、物理DB、生成型、migrationに互換資産が残るため検索結果には現れるが、新規UI・機能設計の入力にしない。残存状態は[Engineering Architecture](../engineering/architecture.md#plan--record-分離adr-025)を参照する。
 
 ### UI機能
 
@@ -242,17 +217,10 @@ Record に対してユーザーが付ける1-3の主観的達成度。Stats機�
 - 各タグにカラーとアイコンを設定可能(10色パレット)
 - Feature: `src/features/tags/`
 
-#### Palette(パレット)
-
-サイドバーに表示される「よく使うブロック」のクイック挿入機能。
-頻度 × 最終使用日のスコアリングで自動ランク付け。1タップで現在時刻にブロックを作成。
-
-- Feature: `src/features/palette/`
-
 #### Inspector(インスペクタ)
 
 カレンダー上のブロック(Plan / Record)をクリックした際に開く詳細パネル。
-時間変更、タグ付け、ノート、達成度記録などを行う。
+時間変更、タグ付け、ノート編集などを行う。
 
 - Component: `src/features/timeblock/components/editor/`
 
@@ -262,15 +230,16 @@ Record に対してユーザーが付ける1-3の主観的達成度。Stats機�
 
 DAG構造の依存関係を持つ機能分類:
 
-| レイヤー      | 依存可能な対象 | 含まれる機能                              |
-| ------------- | -------------- | ----------------------------------------- |
-| Layer 0       | なし(基盤)     | Tags, Chronotype                          |
-| Layer 1       | Layer 0 のみ   | Timeblock                                 |
-| Layer 2       | Layer 0, 1     | Calendar, Stats, Search, History, Palette |
-| Cross-cutting | 制約なし       | Settings, Auth, Notifications             |
+| レイヤー    | 依存可能な対象 | 含まれる機能     |
+| ----------- | -------------- | ---------------- |
+| Layer 0     | なし           | Tags             |
+| Layer 1     | Layer 0        | Timeblock        |
+| Layer 2     | Layer 0, 1     | Calendar, Review |
+| Independent | なし           | Auth, Contact    |
+| Composition | 必要なfeature  | Settings         |
 
-- 意思決定ログ: [feature-sliced architecture](../engineering/log/2026-02-26-feature-sliced-architecture.md)
-- ESLint: `lint:boundaries` で強制
+- machine-readableな正本は`apps/product/eslint.config.mjs`、説明は[Feature Boundaries](../../.claude/rules/feature-boundaries.md)
+- ESLint: `pnpm lint:boundaries` で強制
 
 #### Composition Layer
 

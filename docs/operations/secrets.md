@@ -1,4 +1,8 @@
-import { Meta } from '@storybook/blocks';
+---
+status: current
+last_verified: 2026-07-14
+code: scripts/env/schema.ts
+---
 
 # Secrets Management
 
@@ -26,7 +30,7 @@ PR ごとの Supabase Preview Branch credentials は例外。Supabase / Vercel i
 
 ### ① API キー / アクセストークン
 
-プログラム的アクセス権の鍵。Supabase service role, Stripe secret, Anthropic, Sentry auth token, Vercel token, GitHub PAT など。
+プログラム的アクセス権の鍵。Supabase service role、Stripe secret、Sentry auth token、Vercel token、GitHub PATなど。任意・legacyのprovider tokenも同じ分類で扱うが、runtime要件かどうかは`scripts/env/schema.ts`で判定する。
 
 ### ② SSH 鍵 / 署名鍵
 
@@ -81,19 +85,19 @@ Staging と同構造。Stripe のみ item 名を `stripe-live` にする。本�
 
 ### `Dayopt-Shared`
 
-| Item                 | Fields                                                                                        | 用途                               |
-| -------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `turnstile`          | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile               |
-| `anthropic`          | `ANTHROPIC_API_KEY`                                                                           | AI API                             |
-| `resend`             | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Email sending                      |
-| `sentry`             | `SENTRY_AUTH_TOKEN`                                                                           | Sentry release upload              |
-| `github-contact-pat` | `GITHUB_TOKEN`, `GITHUB_CONTACT_REPO`                                                         | Contact form GitHub Issue 作成     |
-| `github-login`       | password, TOTP, recovery codes                                                                | GitHub account login               |
-| `github-ssh`         | SSH private key                                                                               | GitHub SSH Agent                   |
-| `vercel`             | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Vercel CLI / future automation     |
-| `google`             | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification             |
-| `domain`             | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                    |
-| `recovery-codes`     | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側 |
+| Item                 | Fields                                                                                        | 用途                                            |
+| -------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `turnstile`          | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile                            |
+| `anthropic`          | `ANTHROPIC_API_KEY`                                                                           | optional / legacy key。現行runtime consumerなし |
+| `resend`             | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Email sending                                   |
+| `sentry`             | `SENTRY_AUTH_TOKEN`                                                                           | Sentry release upload                           |
+| `github-contact-pat` | `GITHUB_TOKEN`, `GITHUB_CONTACT_REPO`                                                         | Contact form GitHub Issue 作成                  |
+| `github-login`       | password, TOTP, recovery codes                                                                | GitHub account login                            |
+| `github-ssh`         | SSH private key                                                                               | GitHub SSH Agent                                |
+| `vercel`             | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Vercel CLI / future automation                  |
+| `google`             | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                          |
+| `domain`             | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                 |
+| `recovery-codes`     | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側              |
 
 ---
 
@@ -209,6 +213,6 @@ reCAPTCHA 関連 env は旧方式。新規設定・docs・example には追加�
 ## 関連
 
 - `.op-env.local.example` — local injection 参照例
-- `docs/architecture/bot-protection.md` — Turnstile 実装
-- `docs/architecture/environments.md` — Supabase / deployment 環境構成
-- `docs/operations/security/github-actions.md` — GitHub Actions secrets
+- `apps/web/src/lib/turnstile/` — Turnstile 実装
+- `docs/engineering/infra.md` — Supabase / deployment 環境構成
+- `docs/operations/security/environment-secrets.md` — GitHub / Vercel / Supabase replica
