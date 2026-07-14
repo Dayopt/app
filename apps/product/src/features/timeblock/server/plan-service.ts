@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { databaseTables } from '@/lib/database';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { TimeblockOverlapService } from './timeblock-overlap-service';
 import { TimeblockServiceError } from './timeblock-service-error';
@@ -183,7 +184,8 @@ export class PlanService {
 
   async restore(options: DeletePlanOptions): Promise<{ success: boolean }> {
     const { userId, planId } = options;
-    const { error } = await this.supabase.rpc('restore_plan', {
+    const adminClient = createServiceRoleClient();
+    const { error } = await adminClient.rpc('restore_plan', {
       p_plan_id: planId,
       p_user_id: userId,
     });
