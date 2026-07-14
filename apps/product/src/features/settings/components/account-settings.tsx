@@ -8,10 +8,10 @@ import { LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
-import { useRouter } from '@/lib/i18n/navigation';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@dayopt/components';
+import { useRouter } from '@dayopt/i18n/navigation';
 
 import { LabeledRow } from '@/components/ui/display/LabeledRow';
 import { SectionCard } from '@/components/ui/display/SectionCard';

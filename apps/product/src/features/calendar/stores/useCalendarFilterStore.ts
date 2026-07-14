@@ -6,7 +6,7 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 
 import { createPlatformStorage } from '@/lib/zustand/storage';
 
@@ -81,164 +81,190 @@ interface SerializedCalendarFilterState {
 // カスタムシリアライザー（Setの永続化対応）
 const setSerializer = {
   serialize: (state: CalendarFilterState): SerializedCalendarFilterState => ({
-    ...state,
     visibleTagIds: Array.from(state.visibleTagIds),
+    initialized: state.initialized,
   }),
-  deserialize: (state: SerializedCalendarFilterState): CalendarFilterState => ({
-    ...state,
-    visibleTagIds: new Set(state.visibleTagIds),
-  }),
+  deserialize: (state: unknown): CalendarFilterState => {
+    if (typeof state !== 'object' || state === null) {
+      return { visibleTagIds: new Set<string>(), initialized: false };
+    }
+
+    const rawVisibleTagIds = Reflect.get(state, 'visibleTagIds');
+    const rawInitialized = Reflect.get(state, 'initialized');
+    const visibleTagIds = Array.isArray(rawVisibleTagIds)
+      ? rawVisibleTagIds.filter((tagId): tagId is string => typeof tagId === 'string')
+      : [];
+
+    return {
+      visibleTagIds: new Set(visibleTagIds),
+      initialized: rawInitialized === true,
+    };
+  },
 };
+
+export function migrateCalendarFilterState(
+  persistedState: unknown,
+  version: number,
+): CalendarFilterState {
+  if (version < 5 || typeof persistedState !== 'object' || persistedState === null) {
+    return { visibleTagIds: new Set<string>(), initialized: false };
+  }
+
+  const rawVisibleTagIds = Reflect.get(persistedState, 'visibleTagIds');
+  const rawInitialized = Reflect.get(persistedState, 'initialized');
+  const visibleTagIds =
+    rawVisibleTagIds instanceof Set
+      ? Array.from(rawVisibleTagIds).filter((tagId): tagId is string => typeof tagId === 'string')
+      : [];
+
+  return {
+    visibleTagIds: new Set(visibleTagIds),
+    initialized: rawInitialized === true,
+  };
+}
 
 /** カレンダーのタグ表示フィルターを管理するZustandストア（localStorageに永続化） */
 export const useCalendarFilterStore = create<CalendarFilterStore>()(
-  persist(
-    (set, get) => ({
-      // 初期状態
-      visibleTagIds: new Set<string>(),
-      initialized: false,
+  devtools(
+    persist<CalendarFilterStore, [], [], CalendarFilterState>(
+      (set, get) => ({
+        // 初期状態
+        visibleTagIds: new Set<string>(),
+        initialized: false,
 
-      // アクション
+        // アクション
 
-      toggleTag: (tagId) =>
-        set((state) => {
-          const newSet = new Set(state.visibleTagIds);
-          if (newSet.has(tagId)) {
-            newSet.delete(tagId);
-          } else {
-            newSet.add(tagId);
-          }
-          return { visibleTagIds: newSet };
-        }),
+        toggleTag: (tagId) =>
+          set((state) => {
+            const newSet = new Set(state.visibleTagIds);
+            if (newSet.has(tagId)) {
+              newSet.delete(tagId);
+            } else {
+              newSet.add(tagId);
+            }
+            return { visibleTagIds: newSet };
+          }),
 
-      showAllTags: (tagIds) =>
-        set(() => ({
-          visibleTagIds: new Set(tagIds),
-        })),
+        showAllTags: (tagIds) =>
+          set(() => ({
+            visibleTagIds: new Set(tagIds),
+          })),
 
-      hideAllTags: () =>
-        set(() => ({
-          visibleTagIds: new Set(),
-        })),
+        hideAllTags: () =>
+          set(() => ({
+            visibleTagIds: new Set(),
+          })),
 
-      showGroupTags: (tagIds) =>
-        set((state) => {
-          const newSet = new Set(state.visibleTagIds);
-          tagIds.forEach((id) => newSet.add(id));
-          return { visibleTagIds: newSet };
-        }),
-
-      hideGroupTags: (tagIds) =>
-        set((state) => {
-          const newSet = new Set(state.visibleTagIds);
-          tagIds.forEach((id) => newSet.delete(id));
-          return { visibleTagIds: newSet };
-        }),
-
-      toggleGroupTags: (tagIds) =>
-        set((state) => {
-          const newSet = new Set(state.visibleTagIds);
-          // 全てONなら全てOFF、それ以外は全てON
-          const allVisible = tagIds.every((id) => state.visibleTagIds.has(id));
-          if (allVisible) {
-            tagIds.forEach((id) => newSet.delete(id));
-          } else {
+        showGroupTags: (tagIds) =>
+          set((state) => {
+            const newSet = new Set(state.visibleTagIds);
             tagIds.forEach((id) => newSet.add(id));
+            return { visibleTagIds: newSet };
+          }),
+
+        hideGroupTags: (tagIds) =>
+          set((state) => {
+            const newSet = new Set(state.visibleTagIds);
+            tagIds.forEach((id) => newSet.delete(id));
+            return { visibleTagIds: newSet };
+          }),
+
+        toggleGroupTags: (tagIds) =>
+          set((state) => {
+            const newSet = new Set(state.visibleTagIds);
+            // 全てONなら全てOFF、それ以外は全てON
+            const allVisible = tagIds.every((id) => state.visibleTagIds.has(id));
+            if (allVisible) {
+              tagIds.forEach((id) => newSet.delete(id));
+            } else {
+              tagIds.forEach((id) => newSet.add(id));
+            }
+            return { visibleTagIds: newSet };
+          }),
+
+        syncWithTags: (tagIds) =>
+          set((state) => {
+            if (!state.initialized) {
+              // 初回は全タグを表示
+              return {
+                visibleTagIds: new Set(tagIds),
+                initialized: true,
+              };
+            }
+
+            // 2 回目以降: 既存の visible / hidden toggle を保持しつつ
+            //   - 新規タグは visible として追加
+            //   - 削除済みタグ（orphan ID）は除去
+            const tagIdSet = new Set(tagIds);
+            const newSet = new Set<string>();
+            for (const id of state.visibleTagIds) {
+              if (tagIdSet.has(id)) newSet.add(id);
+            }
+            for (const id of tagIds) {
+              if (!state.visibleTagIds.has(id)) newSet.add(id);
+            }
+            return { visibleTagIds: newSet };
+          }),
+
+        removeTag: (tagId) =>
+          set((state) => {
+            const newSet = new Set(state.visibleTagIds);
+            newSet.delete(tagId);
+            return { visibleTagIds: newSet };
+          }),
+
+        showOnlyTag: (tagId) =>
+          set(() => ({
+            visibleTagIds: new Set([tagId]),
+          })),
+
+        showOnlyGroupTags: (tagIds) =>
+          set(() => ({
+            visibleTagIds: new Set(tagIds),
+          })),
+
+        isTagVisible: (tagId) => get().visibleTagIds.has(tagId),
+
+        getGroupVisibility: (tagIds) => {
+          if (tagIds.length === 0) return 'none';
+          const state = get();
+          const visibleCount = tagIds.filter((id) => state.visibleTagIds.has(id)).length;
+          if (visibleCount === 0) return 'none';
+          if (visibleCount === tagIds.length) return 'all';
+          return 'some';
+        },
+
+        matchesTagFilter: (tagId) => {
+          const state = get();
+
+          // タグなし → 常に表示（タグなしフィルター廃止）
+          if (tagId === null) {
+            return true;
           }
-          return { visibleTagIds: newSet };
-        }),
 
-      syncWithTags: (tagIds) =>
-        set((state) => {
-          if (!state.initialized) {
-            // 初回は全タグを表示
-            return {
-              visibleTagIds: new Set(tagIds),
-              initialized: true,
-            };
-          }
+          return state.visibleTagIds.has(tagId);
+        },
 
-          // 2 回目以降: 既存の visible / hidden toggle を保持しつつ
-          //   - 新規タグは visible として追加
-          //   - 削除済みタグ（orphan ID）は除去
-          const tagIdSet = new Set(tagIds);
-          const newSet = new Set<string>();
-          for (const id of state.visibleTagIds) {
-            if (tagIdSet.has(id)) newSet.add(id);
-          }
-          for (const id of tagIds) {
-            if (!state.visibleTagIds.has(id)) newSet.add(id);
-          }
-          return { visibleTagIds: newSet };
-        }),
-
-      removeTag: (tagId) =>
-        set((state) => {
-          const newSet = new Set(state.visibleTagIds);
-          newSet.delete(tagId);
-          return { visibleTagIds: newSet };
-        }),
-
-      showOnlyTag: (tagId) =>
-        set(() => ({
-          visibleTagIds: new Set([tagId]),
-        })),
-
-      showOnlyGroupTags: (tagIds) =>
-        set(() => ({
-          visibleTagIds: new Set(tagIds),
-        })),
-
-      isTagVisible: (tagId) => get().visibleTagIds.has(tagId),
-
-      getGroupVisibility: (tagIds) => {
-        if (tagIds.length === 0) return 'none';
-        const state = get();
-        const visibleCount = tagIds.filter((id) => state.visibleTagIds.has(id)).length;
-        if (visibleCount === 0) return 'none';
-        if (visibleCount === tagIds.length) return 'all';
-        return 'some';
-      },
-
-      matchesTagFilter: (tagId) => {
-        const state = get();
-
-        // タグなし → 常に表示（タグなしフィルター廃止）
-        if (tagId === null) {
-          return true;
-        }
-
-        return state.visibleTagIds.has(tagId);
-      },
-
-      isEntryVisible: (tagId) => {
-        return get().matchesTagFilter(tagId);
-      },
-    }),
-    {
-      name: 'calendar-filter-storage',
-      // バージョンを上げるとlocalStorageがリセットされる
-      // v2: visibleTagIds競合問題の修正に伴いリセット
-      // v3: showUntagged削除、matchesTagFilter/isPlanVisible単一タグ対応
-      // v4: ItemType ('plan'|'record') → TimeblockOrigin ('planned'|'unplanned') に変更
-      version: 5,
-      storage: createPlatformStorage<CalendarFilterState>({
-        serialize: (state) => setSerializer.serialize(state),
-        deserialize: (raw) => setSerializer.deserialize(raw as SerializedCalendarFilterState),
+        isEntryVisible: (tagId) => {
+          return get().matchesTagFilter(tagId);
+        },
       }),
-      // バージョンマイグレーション: 古いバージョンからの移行時はリセット
-      migrate: (persistedState, version) => {
-        if (version < 5) {
-          // v5: visibleTypes (origin filter) を削除 — unplanned origin 廃止
-          const persisted = persistedState as Record<string, unknown>;
-          delete persisted.visibleTypes;
-          return {
-            visibleTagIds: new Set<string>(),
-            initialized: false,
-          } as unknown as CalendarFilterStore;
-        }
-        return persistedState as CalendarFilterStore;
+      {
+        name: 'calendar-filter-storage',
+        // バージョンを上げるとlocalStorageがリセットされる
+        // v2: visibleTagIds競合問題の修正に伴いリセット
+        // v3: showUntagged削除、matchesTagFilter/isPlanVisible単一タグ対応
+        // v4: ItemType ('plan'|'record') → TimeblockOrigin ('planned'|'unplanned') に変更
+        version: 5,
+        storage: createPlatformStorage<CalendarFilterState>({
+          serialize: setSerializer.serialize,
+          deserialize: setSerializer.deserialize,
+        }),
+        partialize: ({ visibleTagIds, initialized }) => ({ visibleTagIds, initialized }),
+        // v5: visibleTypes (origin filter) を削除 — unplanned origin 廃止
+        migrate: migrateCalendarFilterState,
       },
-    },
+    ),
+    { name: 'calendar-filter-store', enabled: process.env.NODE_ENV !== 'production' },
   ),
 );

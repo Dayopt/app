@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { useCalendarFilterStore } from '../useCalendarFilterStore';
+import { migrateCalendarFilterState, useCalendarFilterStore } from '../useCalendarFilterStore';
 
 describe('useCalendarFilterStore', () => {
   beforeEach(() => {
+    localStorage.clear();
     useCalendarFilterStore.setState({
       visibleTagIds: new Set<string>(),
       initialized: false,
@@ -13,6 +14,30 @@ describe('useCalendarFilterStore', () => {
   describe('初期状態', () => {
     it('未初期化状態', () => {
       expect(useCalendarFilterStore.getState().initialized).toBe(false);
+    });
+  });
+
+  describe('永続化', () => {
+    it('Setを配列へ変換し、stateだけを保存する', () => {
+      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2']);
+      useCalendarFilterStore.setState({ initialized: true });
+
+      expect(JSON.parse(localStorage.getItem('calendar-filter-storage') ?? '')).toEqual({
+        state: {
+          visibleTagIds: ['tag-1', 'tag-2'],
+          initialized: true,
+        },
+        version: 5,
+      });
+    });
+
+    it('v4以前の状態を初期値へ移行する', () => {
+      expect(
+        migrateCalendarFilterState(
+          { visibleTagIds: new Set(['tag-1']), initialized: true, visibleTypes: ['planned'] },
+          4,
+        ),
+      ).toEqual({ visibleTagIds: new Set<string>(), initialized: false });
     });
   });
 

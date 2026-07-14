@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl';
 import NextImage from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
-import { Link } from '@/lib/i18n/navigation';
 import {
   Button,
   Card,
@@ -21,6 +20,7 @@ import {
   HoverTooltip,
   Input,
 } from '@dayopt/components';
+import { Link } from '@dayopt/i18n/navigation';
 
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 import { useAuthStore } from '../stores/useAuthStore';

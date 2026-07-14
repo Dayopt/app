@@ -11,7 +11,7 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 
 import { platformStorage } from '@/lib/zustand/storage';
 
@@ -32,30 +32,36 @@ export function migrateCalendarDisplayModeState(
   persistedState: unknown,
   version: number,
 ): CalendarDisplayModeState {
-  const persisted = persistedState as { mobileWeekDisplayMode?: unknown };
+  const mobileWeekDisplayMode =
+    typeof persistedState === 'object' && persistedState !== null
+      ? Reflect.get(persistedState, 'mobileWeekDisplayMode')
+      : undefined;
 
-  if (version < 2 && persisted.mobileWeekDisplayMode === 'logged') {
+  if (version < 2 && mobileWeekDisplayMode === 'logged') {
     return { mobileWeekDisplayMode: 'recorded' };
   }
 
   return {
-    mobileWeekDisplayMode: persisted.mobileWeekDisplayMode === 'planned' ? 'planned' : 'recorded',
+    mobileWeekDisplayMode: mobileWeekDisplayMode === 'planned' ? 'planned' : 'recorded',
   };
 }
 
 /** Calendar 2レーン表示のモバイル Week 表示切替を管理する Zustand ストア（localStorage 永続化） */
 export const useCalendarDisplayModeStore = create<CalendarDisplayModeStore>()(
-  persist(
-    (set) => ({
-      mobileWeekDisplayMode: 'recorded',
-      setMobileWeekDisplayMode: (mode) => set({ mobileWeekDisplayMode: mode }),
-    }),
-    {
-      name: 'calendar-display-mode-storage',
-      version: 2,
-      storage: platformStorage<CalendarDisplayModeState>(),
-      migrate: (persistedState, version) =>
-        migrateCalendarDisplayModeState(persistedState, version) as CalendarDisplayModeStore,
-    },
+  devtools(
+    persist<CalendarDisplayModeStore, [], [], CalendarDisplayModeState>(
+      (set) => ({
+        mobileWeekDisplayMode: 'recorded',
+        setMobileWeekDisplayMode: (mode) => set({ mobileWeekDisplayMode: mode }),
+      }),
+      {
+        name: 'calendar-display-mode-storage',
+        version: 2,
+        storage: platformStorage<CalendarDisplayModeState>(),
+        partialize: ({ mobileWeekDisplayMode }) => ({ mobileWeekDisplayMode }),
+        migrate: migrateCalendarDisplayModeState,
+      },
+    ),
+    { name: 'calendar-display-mode-store', enabled: process.env.NODE_ENV !== 'production' },
   ),
 );

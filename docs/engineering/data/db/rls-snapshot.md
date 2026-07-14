@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 38 件 / RLS 対象テーブル 13 件 / GRANT 88 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 38 件 / RLS 対象テーブル 13 件 / GRANT 84 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -69,13 +69,13 @@
 
 ### plans
 
-| policy                                | cmd    | permissive | roles           | USING                                                              | WITH CHECK                              |
-| ------------------------------------- | ------ | ---------- | --------------- | ------------------------------------------------------------------ | --------------------------------------- |
-| Service role has full access to plans | ALL    | PERMISSIVE | {service_role}  | true                                                               | true                                    |
-| Users can delete own plans            | DELETE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id)                            | —                                       |
-| Users can insert own plans            | INSERT | PERMISSIVE | {authenticated} | —                                                                  | (( SELECT auth.uid() AS uid) = user_id) |
-| Users can view own plans              | SELECT | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (deleted_at IS NULL)) | —                                       |
-| Users can update own plans            | UPDATE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id)                            | (( SELECT auth.uid() AS uid) = user_id) |
+| policy                                | cmd    | permissive | roles           | USING                                                                                                                                                 | WITH CHECK                              |
+| ------------------------------------- | ------ | ---------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Service role has full access to plans | ALL    | PERMISSIVE | {service_role}  | true                                                                                                                                                  | true                                    |
+| Users can delete own plans            | DELETE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id)                                                                                                               | —                                       |
+| Users can insert own plans            | INSERT | PERMISSIVE | {authenticated} | —                                                                                                                                                     | (( SELECT auth.uid() AS uid) = user_id) |
+| Users can view own plans              | SELECT | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND ((deleted_at IS NULL) OR (current_setting('dayopt.soft_delete_user_id'::text, true) = (user_id)::text))) | —                                       |
+| Users can update own plans            | UPDATE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id)                                                                                                               | (( SELECT auth.uid() AS uid) = user_id) |
 
 ### profiles
 
@@ -90,13 +90,13 @@
 
 ### records
 
-| policy                                  | cmd    | permissive | roles           | USING                                                                           | WITH CHECK                                                                      |
-| --------------------------------------- | ------ | ---------- | --------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Service role has full access to records | ALL    | PERMISSIVE | {service_role}  | true                                                                            | true                                                                            |
-| Users can delete own records            | DELETE | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text)) | —                                                                               |
-| Users can insert own records            | INSERT | PERMISSIVE | {authenticated} | —                                                                               | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text)) |
-| Users can view own records              | SELECT | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (deleted_at IS NULL))              | —                                                                               |
-| Users can update own records            | UPDATE | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text)) | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text)) |
+| policy                                  | cmd    | permissive | roles           | USING                                                                                                                                                 | WITH CHECK                                                                      |
+| --------------------------------------- | ------ | ---------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Service role has full access to records | ALL    | PERMISSIVE | {service_role}  | true                                                                                                                                                  | true                                                                            |
+| Users can delete own records            | DELETE | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text))                                                                       | —                                                                               |
+| Users can insert own records            | INSERT | PERMISSIVE | {authenticated} | —                                                                                                                                                     | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text)) |
+| Users can view own records              | SELECT | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND ((deleted_at IS NULL) OR (current_setting('dayopt.soft_delete_user_id'::text, true) = (user_id)::text))) | —                                                                               |
+| Users can update own records            | UPDATE | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text))                                                                       | ((( SELECT auth.uid() AS uid) = user_id) AND (source <> 'auto_migrated'::text)) |
 
 ### reports
 
@@ -165,14 +165,11 @@
 | routine     | public.increment_tag_sort_orders(p_user_id uuid)                                                                                                                                                                                                 | service_role        | EXECUTE                        |
 | routine     | public.invoke_edge_function(p_function_name text, p_body jsonb)                                                                                                                                                                                  | service_role        | EXECUTE                        |
 | routine     | public.issue_oauth_token_pair(p_user_id uuid, p_client_id text, p_scopes text[], p_refresh_hash text, p_access_hash text, p_refresh_expires_at timestamp with time zone, p_access_expires_at timestamp with time zone, p_parent_refresh_id uuid) | service_role        | EXECUTE                        |
-| routine     | public.merge_tags_with_hierarchy(p_user_id uuid, p_source_tag_id uuid, p_target_tag_id uuid)                                                                                                                                                     | authenticated       | EXECUTE                        |
 | routine     | public.merge_tags_with_hierarchy(p_user_id uuid, p_source_tag_id uuid, p_target_tag_id uuid)                                                                                                                                                     | service_role        | EXECUTE                        |
 | routine     | public.prevent_time_model_source_change()                                                                                                                                                                                                        | service_role        | EXECUTE                        |
 | routine     | public.rename_tag_group(p_user_id uuid, p_old_prefix text, p_new_prefix text)                                                                                                                                                                    | authenticated       | EXECUTE                        |
 | routine     | public.rename_tag_group(p_user_id uuid, p_old_prefix text, p_new_prefix text)                                                                                                                                                                    | service_role        | EXECUTE                        |
-| routine     | public.restore_plan(p_plan_id uuid, p_user_id uuid)                                                                                                                                                                                              | authenticated       | EXECUTE                        |
 | routine     | public.restore_plan(p_plan_id uuid, p_user_id uuid)                                                                                                                                                                                              | service_role        | EXECUTE                        |
-| routine     | public.restore_record(p_record_id uuid, p_user_id uuid)                                                                                                                                                                                          | authenticated       | EXECUTE                        |
 | routine     | public.restore_record(p_record_id uuid, p_user_id uuid)                                                                                                                                                                                          | service_role        | EXECUTE                        |
 | routine     | public.soft_delete_plan(p_plan_id uuid, p_user_id uuid)                                                                                                                                                                                          | authenticated       | EXECUTE                        |
 | routine     | public.soft_delete_plan(p_plan_id uuid, p_user_id uuid)                                                                                                                                                                                          | service_role        | EXECUTE                        |
@@ -183,7 +180,6 @@
 | routine     | public.update_personalization(p_user_id uuid, p_path text, p_value jsonb)                                                                                                                                                                        | authenticated       | EXECUTE                        |
 | routine     | public.update_personalization(p_user_id uuid, p_path text, p_value jsonb)                                                                                                                                                                        | service_role        | EXECUTE                        |
 | routine     | public.update_updated_at()                                                                                                                                                                                                                       | service_role        | EXECUTE                        |
-| routine     | public.use_recovery_code(p_user_id uuid, p_code_hash text)                                                                                                                                                                                       | authenticated       | EXECUTE                        |
 | routine     | public.use_recovery_code(p_user_id uuid, p_code_hash text)                                                                                                                                                                                       | service_role        | EXECUTE                        |
 | routine     | public.vault_secret_exists(p_name text)                                                                                                                                                                                                          | service_role        | EXECUTE                        |
 | table       | public.email_suppressions                                                                                                                                                                                                                        | anon                | DELETE, INSERT, SELECT, UPDATE |

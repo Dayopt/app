@@ -1284,12 +1284,6 @@
   },
   {
     "name": "@types/node",
-    "version": "25.9.4",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-  },
-  {
-    "name": "@types/node",
     "version": "25.9.5",
     "license": "MIT",
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"

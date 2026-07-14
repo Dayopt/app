@@ -1,8 +1,8 @@
 'use client';
 
 import { Turnstile, isTurnstileEnabled } from '@/lib/turnstile';
-import { Link } from '@/platform/i18n/navigation';
 import { Button, Input, Label, RadioGroup, RadioGroupItem, Textarea } from '@dayopt/components';
+import { Link } from '@dayopt/i18n/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';

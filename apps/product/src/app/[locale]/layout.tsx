@@ -3,8 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
 
 import { getAppUrl } from '@/lib/app-url';
-import type { Locale } from '@/lib/i18n/routing';
-import { routing } from '@/lib/i18n/routing';
+import type { Locale } from '@dayopt/i18n/routing';
+import { routing } from '@dayopt/i18n/routing';
 
 interface LocaleLayoutProps {
   children: React.ReactNode;

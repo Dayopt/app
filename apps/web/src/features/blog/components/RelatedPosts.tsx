@@ -1,7 +1,7 @@
 'use client';
 
-import { Link } from '@/platform/i18n/navigation';
 import { Container, Heading, Text } from '@dayopt/components';
+import { Link } from '@dayopt/i18n/navigation';
 import { ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { BlogPostMeta } from '../lib/blog';

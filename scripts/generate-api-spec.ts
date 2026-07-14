@@ -58,7 +58,7 @@ async function loadRuntimeModules(): Promise<{
   installServerOnlyShim();
 
   const [{ ERROR_CODE_MAP }, { appRouter }] = await Promise.all([
-    import('../apps/product/src/lib/trpc/errors'),
+    import('../apps/product/src/lib/trpc/error-code-map'),
     import('../apps/product/src/lib/trpc/root'),
   ]);
 

@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-02
+last_verified: 2026-07-14
 ---
 
 # Stripe 課金統合
@@ -14,12 +14,12 @@ Dayoptの Stripe サブスクリプション課金システムの技術ドキュ
 | 項目           | 内容                                        |
 | -------------- | ------------------------------------------- |
 | プラン構成     | Free ($0) / Pro ($5/月)                     |
-| 年額           | $48/年（20% OFF）                           |
+| 年額           | 未実装（現行 Price ID は月額のみ）          |
 | トライアル     | 7日間無料                                   |
 | 決済基盤       | Stripe Checkout + Customer Portal + Webhook |
 | ステータス管理 | Supabase `profiles` テーブル                |
 
-ユーザーは Free プランで基本機能を利用し、Pro にアップグレードすると全指標・無制限タグ・API・データエクスポート・無制限AIが解放される。
+現行 entitlement は `pro_access` の1種類。Free/Pro の最終的な機能境界は [#1336](https://github.com/tanakatomoya/dayopt/issues/1336) で確定する。`BILLING_ENFORCED` の既定値は `false` で、その間 `proProcedure` は認証後にゲートせず通過する。
 
 ---
 
@@ -30,14 +30,15 @@ Router → Service → Stripe/Supabase の3層構造に準拠。
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Client (BillingSettings)                           │
-│    api.billing.getInfo.useQuery()                   │
+│    api.billing.getOverview.useQuery()               │
 │    api.billing.createCheckoutSession.useMutation()  │
 │    api.billing.createPortalSession.useMutation()    │
 └──────────────────────┬──────────────────────────────┘
                        │ tRPC
 ┌──────────────────────▼──────────────────────────────┐
 │  billing-router.ts (Router層)                       │
-│    getInfo / createCheckoutSession / createPortalSession
+│    getInfo / getOverview / getPaymentMethod / getInvoices
+│    createCheckoutSession / createPortalSession
 └──────────────────────┬──────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────┐
@@ -93,7 +94,7 @@ type SubscriptionStatus = 'free' | 'active' | 'past_due' | 'canceled' | 'trialin
 | `free`     | 未課金 / 完全解約後      | 不可    |
 | `trialing` | 7日間トライアル中        | **可**  |
 | `active`   | 有効なサブスクリプション | **可**  |
-| `past_due` | 支払い遅延（リトライ中） | 不可    |
+| `past_due` | 支払い遅延（リトライ中） | **可**  |
 | `canceled` | 解約済み                 | 不可    |
 
 ### Stripe Status マッピング
@@ -163,13 +164,14 @@ Proユーザー "プランを管理" クリック
 
 ### proProcedure
 
-`src/platform/trpc/procedures.ts` で定義。`protectedProcedure` を拡張し、Pro プラン判定を追加。
+`apps/product/src/lib/trpc/procedures.ts` で定義。`protectedProcedure` を拡張し、`BILLING_ENFORCED=true` のときだけ Pro プラン判定を追加する。
 
 ```typescript
 export const proProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  // profiles.subscription_status を確認
+  if (!isBillingEnforced()) return next({ ctx });
+  // enforcement 有効時だけ profiles.subscription_status を確認
   const status = profile.subscription_status;
-  const isProActive = status === 'active' || status === 'trialing';
+  const isProActive = status === 'active' || status === 'trialing' || status === 'past_due';
 
   if (!isProActive) {
     throw new TRPCError({
@@ -259,13 +261,14 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 ## 関連ファイル
 
-| ファイル                                                            | 役割                                                       |
-| ------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `src/platform/stripe/client.ts`                                     | Stripe クライアント初期化（`getStripe` / `requireStripe`） |
-| `src/features/settings/server/billing-service.ts`                   | 課金ビジネスロジック（Service層）                          |
-| `src/features/settings/server/billing-router.ts`                    | tRPC Router（Router層）                                    |
-| `src/app/api/webhooks/stripe/route.ts`                              | Webhook エンドポイント                                     |
-| `src/platform/trpc/procedures.ts`                                   | `proProcedure` 定義                                        |
-| `src/features/settings/components/billing-settings.tsx`             | 課金設定UI                                                 |
-| `supabase/migrations/20260317120000_add_stripe_billing_columns.sql` | DBマイグレーション                                         |
-| `src/stories/docs/Pricing.mdx`                                      | 価格戦略ドキュメント                                       |
+| ファイル                                                             | 役割                                                       |
+| -------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `apps/product/src/lib/stripe/client.ts`                              | Stripe クライアント初期化（`getStripe` / `requireStripe`） |
+| `apps/product/src/features/settings/server/billing-service.ts`       | 課金ビジネスロジック（Service層）                          |
+| `apps/product/src/features/settings/server/billing-router.ts`        | tRPC Router（Router層）                                    |
+| `apps/product/src/app/api/webhooks/stripe/route.ts`                  | Webhook エンドポイント                                     |
+| `apps/product/src/lib/trpc/procedures.ts`                            | `proProcedure` 定義                                        |
+| `apps/product/src/features/settings/components/billing-settings.tsx` | 課金設定UI                                                 |
+| `supabase/migrations/20260317120000_add_stripe_billing_columns.sql`  | DBマイグレーション                                         |
+| `packages/billing/src/pricing.ts`                                    | Free / Pro の表示価格と7日トライアル                       |
+| `packages/billing/src/entitlement.ts`                                | `pro_access` entitlement                                   |

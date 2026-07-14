@@ -1,115 +1,133 @@
 # docs/ 運用規約
 
-このディレクトリが唯一の情報源(SSOT)。外部ツール(Notion等)にある情報は正ではない。矛盾したらここが勝つ。
-ただしコードが消費する値(デザイントークン・アセット等)は `packages/` が正。docsには意図と所在だけ書く。
+このディレクトリは、Dayopt の事業・プロダクト・設計・運用に関する内部情報の正本（SSOT）。コードが消費する値はコードを正とし、docs には判断、振る舞い、所在を書く。
 
-読者は「自分(創業者)と AI」の2者のみ。チーム向けの探しやすさより、AI が grep / glob で横断的に読める予測可能な規約を優先する。
+主な読者は創業者、開発者、AI。AI が単独で検索しても「現在の正」「過去の記録」「実装場所」を区別できる予測可能な構造を優先する。
 
-## ドメイン(第一軸)
+## 情報面の責務
 
-責務ごとに分ける。一緒に変わるものは一緒に置く。
+| 面                      | 書くこと                                                     | 書かないこと                                  |
+| ----------------------- | ------------------------------------------------------------ | --------------------------------------------- |
+| `docs/`                 | 複数 component / package を跨ぐ仕様、設計、判断、運用        | props catalog、コードから取得できる定数の複製 |
+| Storybook               | 単一 component の使い方、variant、visual state、interaction  | DB schema、feature DAG、system data flow      |
+| app / package README    | その領域固有の入口、実行コマンド、正本へのリンク             | monorepo 全体の規約の複製                     |
+| `apps/web/content/docs` | 外部ユーザー向けの利用説明                                   | 内部アーキテクチャ・運用                      |
+| code / manifest         | package version、schema、env定義、design token等の機械消費値 | 判断理由や利用者向け仕様                      |
 
-| ドメイン       | 責務                                        | 備考                                                      |
-| -------------- | ------------------------------------------- | --------------------------------------------------------- |
-| `business/`    | 事業のWhy(ビジョン・コンセプト・価格・指標) | 会社/事業のコンセプトはここ。`strategy.md` が最上位・不変 |
-| `product/`     | プロダクトのWhat/Why(原則・仕様・用語)      | 体験の設計基準は `principles.md`、機能仕様は `specs/`     |
-| `marketing/`   | 広げ方(チャネル運用・トンマナ)              | SNS複数運用のため独立ドメイン                             |
-| `engineering/` | How(アーキテクチャ・規約・インフラ)         | `architecture/` `guides/` を統合                          |
-| `operations/`  | 日々の回し方(runbook・監視・法務)           |                                                           |
-| `company/`     | 会社そのものの管理(契約・登記)              | 「忘れると致命的だが誰もリマインドしない」情報の置き場    |
+同じ説明を複数面に置かない。境界を跨ぐ場合は正本へリンクする。
 
-## ストック / ログ(第二軸、命名規約で表現)
+## ドメイン
 
-| 種類     | 命名                                 | 扱い                                    |
-| -------- | ------------------------------------ | --------------------------------------- |
-| ストック | 日付プレフィックスなし(`pricing.md`) | 常に最新を保つ。過去版は git 履歴が持つ |
-| ログ     | `YYYY-MM-DD-slug.md`                 | 書いたら凍結。追記も編集もしない        |
+| ドメイン       | 責務                                      | 主な入口                                         |
+| -------------- | ----------------------------------------- | ------------------------------------------------ |
+| `business/`    | 事業の Why、対象、価格、指標              | `strategy.md`, `pricing.md`                      |
+| `product/`     | プロダクトの What / Why、原則、仕様、用語 | `principles.md`, `specs/`, `glossary.md`         |
+| `marketing/`   | 広げ方、チャネル、トーン                  | `strategy.md`, `voice.md`, `channels/`           |
+| `engineering/` | architecture、規約、infra                 | `architecture.md`, `conventions*.md`, `infra.md` |
+| `operations/`  | runbook、monitoring、security、legal      | `runbook.md`, `monitoring.md`, `security.md`     |
+| `company/`     | 契約、登記、外部サービス                  | `accounts.md`                                    |
+| `projects/`    | 複数領域を跨ぐ有限の実装計画と完了記録    | `{project}/overview.md`, `summary.md`            |
 
-ログは各ドメイン直下の `log/` に**種類を問わずフラットに**置く(決定記録・月次レビュー・調査ログ・作業ログすべて)。ファイル名を見た瞬間に「信じていい現在の正」か「当時の記録」かが判別できることが目的。`log/` の中身は grep で当時の文脈を引く用途なので、日付+内容のファイル名で十分検索可能。
+## 現在・Project・履歴
 
-階層は掘らない(原則2階層まで)。ディレクトリはファイルが3つを超えたら作る。空の骸骨ディレクトリは先回りして作らない。
+### Stock — 現在の正
 
-## フロントマター
-
-全ファイルに軽いフロントマターを付ける。
+日付 prefix のないファイル。常に現行状態へ更新し、過去版は Git 履歴に任せる。
 
 ```yaml
 ---
-status: current # current | superseded | frozen(ログ)
-last_verified: 2026-07-03
-code: apps/product/src/features/timeblock # (任意) 対応するコードのパス
+status: current # current | superseded
+last_verified: 2026-07-14
+code: apps/product/src/features/timeblock # 任意。repo 内の実在 path
 ---
 ```
 
-`superseded` のファイルは引用しないこと。古くなったストックは `superseded` を付けてその場に残すか、消して git に任せる。`archive/` ディレクトリは作らない。
+- `current`: 現在参照してよい
+- `superseded`: 正本ではない。通常は新しい正本へのリンクを本文に置く
+- `last_verified`: 内容をコード・外部状態・一次資料と照合した日。本文を眺めただけでは更新しない
+- `code`: scalar または配列。symbol や glob ではなく、実在する repo-relative path を書く
 
-## ルーティング(この質問はこのファイルが正)
+### Project — 有限の作業状態
 
-| 質問                            | 正                            |
-| ------------------------------- | ----------------------------- |
-| なぜこのプロダクトを作るか      | `business/strategy.md`        |
-| 今の価格・プランは?             | `business/pricing.md`         |
-| 誰向けのプロダクト?             | `business/icp.md`             |
-| 事業指標の定義は?               | `business/kpi.md`             |
-| 訴求・コピーの方針は?           | `business/messaging.md`       |
-| プロダクト原則・やらないことは? | `product/principles.md`       |
-| この機能の仕様は?               | `product/specs/*.md`          |
-| 用語の定義は?                   | `product/glossary.md`         |
-| SNSの投稿トーンは?              | `marketing/voice.md`          |
-| このアカウントの方針は?         | `marketing/channels/*.md`     |
-| 全体構成の現在地は?             | `engineering/architecture.md` |
-| コーディング規約は?             | `engineering/conventions*.md` |
-| 環境・デプロイ・シークレットは? | `engineering/infra.md`        |
-| 障害対応・リリース手順は?       | `operations/runbook.md`       |
-| 監視・アラートは?               | `operations/monitoring.md`    |
-| セキュリティ方針は?             | `operations/security.md`      |
-| 規約/ポリシーの所在は?          | `operations/legal.md`         |
-| 契約中のサービス・支払いは?     | `company/accounts.md`         |
-| ロゴ・デザイントークンは?       | `packages/`(docsには所在のみ) |
-| なぜ○○と決めた?                 | 各ドメインの `log/` を grep   |
+Project の状態は `docs/projects/{name}/overview.md` だけを正本にする。
 
-## docs と packages の境界(二重管理の防止)
+```yaml
+---
+status: active # active | paused | done
+last_verified: 2026-07-14
+code:
+  - apps/product/src/features/calendar
+  - apps/product/src/features/review
+---
+```
 
-**コードが消費する値は packages が正。docs は値を書かず、意図とパスだけ書く。**
+- `active`: 実装または検証が進行中
+- `paused`: 意図的に停止中
+- `done`: acceptance criteria を満たした。directory 内に `summary.md` が必須
+- step / summary は通常の stock metadata（`current | superseded`）を使う
 
-| 情報                     | 正                                                   | docs 側に書くこと                                                                     |
-| ------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| デザイントークン・カラー | `packages/foundations`                               | なぜこの色か・使い分けの判断基準・`→ packages/...` へのポインタ。値そのものは書かない |
-| ロゴ等のバイナリアセット | `packages/assets`                                    | 所在のみ                                                                              |
-| コピー・文言             | 方針は `business/messaging.md`、LP上の全文はコード側 | 訴求を変える時は messaging.md を先に更新 → AI がLPを書き換える順序を守る              |
+### Log — 当時の記録
 
-## どこに置くか(決定木)
+各ドメイン直下の `log/YYYY-MM-DD-slug.md`。初回作成後は凍結し、追記・修正しない。
 
-迷ったら上から順に判定する。
+```yaml
+---
+status: frozen
+date: 2026-07-14 # filename の日付と一致
+code: apps/product/src/features/review # 任意
+superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追記
+---
+```
 
-1. **過去のある時点の記録か?** → 該当ドメインの `log/YYYY-MM-DD-slug.md`
-2. **単一のUIコンポーネントに閉じる話か?** → Storybook。docsには書かない
-3. **現在の真実か?** → 上記ドメイン表に従ってストックへ
-4. **それでも迷ったら** → 最も近いドメインの `log/YYYY-MM-DD-slug.md` に置く。書かないのが最悪。あとで昇格・整理すればいい
+- 訂正は新しい log を作り、古い log には `superseded_by` だけを追加する
+- `superseded_by` がある log を現在の判断根拠として引用しない
+- 旧契約で作られた log は移行しない。path と Git 履歴によって過去資料として扱う
+- `latest.md` のような上書き alias は作らない。必要なら日付順に検索する
 
-## Storybookとの分界
+## 質問から正本へのルーティング
 
-単一コンポーネントに閉じるもの(使い方・props・見た目・振る舞い)はStorybook。
-コンポーネントを跨ぐもの(デザイン原則、UX方針、UI状態の横断整理)と、コード以外のすべてはdocs。
-docsからStorybookへはリンクで参照し、内容を複製しない。逆も同じ。
+| 質問                           | 正本                                                         |
+| ------------------------------ | ------------------------------------------------------------ |
+| なぜ作るか / 誰向けか          | `business/strategy.md`, `business/icp.md`                    |
+| 現在の価格・課金契約           | `product/specs/billing.md`、価格判断は `business/pricing.md` |
+| プロダクト原則・不採用方針     | `product/principles.md`                                      |
+| 現在の機能仕様                 | `product/specs/*.md`                                         |
+| UI / code用語                  | `product/glossary.md`                                        |
+| 訴求・コピー                   | `business/messaging.md`                                      |
+| 全体 architecture / state flow | `engineering/architecture.md`                                |
+| coding / API / frontend 規約   | `engineering/conventions*.md` と `.claude/rules/`            |
+| env・deploy・secret            | `engineering/infra.md`, `operations/secrets.md`              |
+| 障害対応・release              | `operations/runbook.md`                                      |
+| 監視・alert                    | `operations/monitoring.md`                                   |
+| security                       | `operations/security.md`                                     |
+| 契約サービス                   | `company/accounts.md`                                        |
+| 進行中・完了Project            | `projects/*/overview.md`, `summary.md`                       |
+| なぜその判断になったか         | 各ドメインの `log/` を日付・slugで検索                       |
 
-## 書き方の約束
+## 書く場所の決定木
 
-- 1ファイル1トピック。冒頭に1〜2行の要約を書く(地図を経由せずgrepで直接着地した読者にも文脈が伝わるように)
-- ファイル名はkebab-case。ディレクトリで表現できる語は繰り返さない(`marketing/channels/x.md` ○ / `marketing/channels/channel-x.md` ✗)
-- ログは書き換えない。訂正は新しいエントリを追加し、古い方の `status` を `superseded` にする
-- 図はMermaidで描く(diffとgrepが効くように)
-- 生成物(rls-snapshot.md等)は手書きdocsとして扱わない。置く場合は生成元と生成コマンドを冒頭に明記する
-- 同じ内容を2箇所に書かない。リンクで参照する
+1. 過去のある時点の記録か → 該当ドメインの `log/`
+2. 有限の複数step作業か → `projects/{name}/`
+3. 単一componentに閉じる visual / interaction contractか → Storybook
+4. 現在の横断的な真実か → 該当ドメインの stock
+5. コードが消費する値か → code / packageを正本にし、docsは意図とpathだけを書く
 
-## 長期運用
+## 書き方
 
-- `log/` が 50 ファイルを超えたら `log/2026/` のように年で切る。日付プレフィックス規約はそのままなので grep は壊れない
-- 年次棚卸し: 全ストックを見て `superseded` を付ける/消す、ログから昇格すべき学びを拾う
-- 月次レビュー: business と marketing の `log/` に月1枚([_templates/monthly-review.md](./_templates/monthly-review.md))
-- 意思決定の記録: ストック更新 + `log/` への決定記録([_templates/decision.md](./_templates/decision.md))を同一コミットで
+- 1ファイル1トピック。冒頭1〜2行で対象と現在性を説明する
+- **現在の振る舞い**、**目標・仮説**、**過去の経緯**を同じ箇条書きで混ぜない
+- 機能specは実装済みの外部挙動だけを書く。未実装はProject、理由はlogへ分ける
+- exact version、env名、価格値などコードに正本がある値はpathを示し、不要に複製しない
+- Mermaidを優先し、画像だけに設計情報を閉じ込めない
+- generated fileは生成元とcheck commandを冒頭に明記し、手編集しない
+- file / directory名はkebab-case。`log/`は日付prefixを使う
 
-## 更新責務
+## 運用
 
-このdocsの維持は主にAIの仕事。具体的な責務はリポジトリ直下の `AGENTS.md` に定義してある。
-ディレクトリ構成を変えたら、このREADMEの地図と決定木も同時に更新すること。
+- featureの振る舞いを変えたら同じ変更で該当specを更新する
+- 意思決定はstock更新と新規decision logを同じ変更に含める
+- 月次 `/gardening` は当月journalを一度だけ作る。追加の発見は新しい日付付きnoteへ分ける
+- `pnpm docs:check` はlink、metadata、path、naming、Project lifecycle、append-onlyを検証する
+- `log/`が50件を超えたら年directoryへ分割してよい。日付prefixは維持する
+
+テンプレートは [`_templates/`](./_templates/)、AIの自発的な更新責務はroot [`AGENTS.md`](../AGENTS.md)を参照する。

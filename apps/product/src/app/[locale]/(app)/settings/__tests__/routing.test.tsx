@@ -21,7 +21,7 @@ vi.mock('next-intl', () => ({
   useLocale: () => 'ja',
 }));
 
-vi.mock('@/lib/i18n/navigation', async () => {
+vi.mock('@dayopt/i18n/navigation', async () => {
   const React = await import('react');
   return {
     Link: ({ children, href, ...props }: { children: React.ReactNode; href: string }) =>

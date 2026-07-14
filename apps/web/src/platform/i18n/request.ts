@@ -1,6 +1,5 @@
-import { getRequestConfig } from 'next-intl/server';
-
-import { routing } from './routing';
+import { createI18nRequestConfig } from '@dayopt/i18n/request';
+import type { Locale } from '@dayopt/i18n/routing';
 
 /**
  * ネームスペース一覧
@@ -11,7 +10,7 @@ const NAMESPACES = ['common', 'legal', 'marketing', 'search'] as const;
 /**
  * 全ネームスペースをロードしてマージ
  */
-async function loadMessages(locale: string): Promise<Record<string, unknown>> {
+async function loadMessages(locale: Locale): Promise<Record<string, unknown>> {
   const messages: Record<string, unknown> = {};
 
   const namespaceModules = await Promise.all(
@@ -33,17 +32,4 @@ async function loadMessages(locale: string): Promise<Record<string, unknown>> {
   return messages;
 }
 
-export default getRequestConfig(async ({ requestLocale }) => {
-  // requestLocale は通常、ミドルウェアから提供される
-  let locale = await requestLocale;
-
-  // 無効またはサポートされていない言語の場合、デフォルトにフォールバック
-  if (!locale || !routing.locales.includes(locale as (typeof routing.locales)[number])) {
-    locale = routing.defaultLocale;
-  }
-
-  return {
-    locale,
-    messages: await loadMessages(locale),
-  };
-});
+export default createI18nRequestConfig(loadMessages);

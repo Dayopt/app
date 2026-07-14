@@ -4,13 +4,20 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Calendar
 
-時間管理の中核ビュー。エントリをタイムグリッド上に表示し、ドラッグ&ドロップで直感的に操作する。
+PlanとRecordを時間gridに描画するcomponent群。Storybookではviewごとの密度、2lane表現、drag state、empty stateを確認する。
 
-エントリカード（`TimeblockCard`）は `@/features/timeblock` に定義。カレンダーはそれを利用して描画する。
+## Visual contract
 
----
+| View        | 確認する状態                                         |
+| ----------- | ---------------------------------------------------- |
+| Day         | 1日grid、Plan / Record lane、current time            |
+| Week        | 7日密度、weekend、複数日の差分marker                 |
+| Multi-Day   | 2〜9日の可変column                                   |
+| Interaction | selection、drag preview、context menu、inline create |
 
-## ビュー一覧
+- Planはoutline / 淡色、Recordは塗りを基本にする
+- Review / Diff panelのcomponentとStoryはReview featureが所有する
+- Calendar Storyはpanel内部やDB data flowを説明しない
 
 | ビュー        | 説明                   | コンポーネント |
 | ------------- | ---------------------- | -------------- |
@@ -124,3 +131,5 @@ CalendarController              メインエントリポイント
 ---
 
 **最終更新**: 2026-03-16
+
+外部挙動は `docs/product/specs/calendar.md`、システム状態の流れは `docs/engineering/architecture.md` を参照する。

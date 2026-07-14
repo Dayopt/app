@@ -1,9 +1,8 @@
 ---
 status: current
-last_verified: 2026-07-09
+last_verified: 2026-07-14
 code:
   - supabase/migrations/20260708232500_add_time_model_tables.sql
-  - apps/product/src/features/timeblock/domain/entry-time-model.ts
 ---
 
 # Step 2: entries → plans / logs backfill migration

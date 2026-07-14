@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-07-14
 code: apps/product/src
 ---
 
@@ -63,10 +63,10 @@ features/{name}/
 
 #### domain を作らない判断（実例）
 
-| Feature      | 理由                                                                              |
-| ------------ | --------------------------------------------------------------------------------- |
-| `chronotype` | UI と store だけで完結。pure logic がほぼ存在しない                               |
-| `settings`   | composition なので business rule は外部 feature が持つ。settings 自体は rule なし |
+| Feature    | 理由                                                                              |
+| ---------- | --------------------------------------------------------------------------------- |
+| `contact`  | serviceへの入力受け渡しが中心で、独立したpure domain ruleが薄い                   |
+| `settings` | composition なので business rule は外部 feature が持つ。settings 自体は rule なし |
 
 「pure logic が無い feature には domain が無い」のが正しい状態。無理に domain を切ると逆に追跡コストが増える。
 
@@ -81,10 +81,10 @@ features/{name}/
 ### DAG Layer
 
 ```
-Layer 0 (基盤):       tags, chronotype
+Layer 0 (基盤):       tags
 Layer 1 (中核):       timeblock
-Layer 2 (体験):       calendar, review, ai, palette
-Independent:          auth, notifications, contact, onboarding, tour
+Layer 2 (体験):       calendar, review
+Independent:          auth, contact
 Composition:          settings  (= 通常 feature DAG には乗せない)
 ```
 
@@ -96,7 +96,7 @@ Composition:          settings  (= 通常 feature DAG には乗せない)
 
 - barrel は「ページから見た public API」のみを export
 - 子 feature 化（`calendar-view` / `calendar-filter` / `calendar-interaction`）は launch 後に検討
-- decomposition plan: `~/.claude/plans/p1-5-calendar-decomposition.md`
+- 子featureへの分割はactive Projectではない。着手時に`docs/projects/`へoverviewを作る
 
 ---
 
@@ -547,14 +547,17 @@ PlanService / RecordService
 `TimeblockState === 'past'` の Timeblock は読み取り専用。スケジュール変更は不可。
 
 ```tsx
-// ❌ 過去エントリの start_time を変更
-updateEntry({ id, start_time: newTime }); // past の場合エラー
+// ❌ 過去Planの時間を変更
+updatePlan({ id, startAt: newTime }); // pastの場合エラー
 
-// ✅ 許可される操作（実績記録のみ）
-updateEntry({ id, actual_start, actual_end, fulfillment_score, note });
+// ✅ 過去Planの内容を訂正
+updatePlan({ id, note, tagId });
+
+// ✅ 実際に使った時間はRecordとして作成・訂正
+updateRecord({ id, startAt, endAt, note });
 ```
 
-**二重防御**: UI（disabled 表示）+ ロジックガード（`assertEntryEditable()`）の両方で制御。
+**二重防御**: UIの`isPlanTimeEditable()`判定とserver側の時間更新制約の両方で制御。
 
 詳細: ADR-015 時間不変原則（`docs/product/log/`）
 
@@ -678,15 +681,15 @@ git commit -m "fix(ui): ボタンのカラーをセマンティックトーク�
 
 ### 関連ドキュメント
 
-| ドキュメント                                                      | 内容                   |
-| ----------------------------------------------------------------- | ---------------------- |
-| Developer Map（`docs/log/archive/developer-map.md`）              | ディレクトリ構成ガイド |
-| Domain Glossary（`docs/product/glossary.md`）                     | ドメイン用語定義       |
-| [`conventions-api.md`](./conventions-api.md) のエラーパターン辞書 | エラーコード体系       |
+| ドキュメント                                                      | 内容                           |
+| ----------------------------------------------------------------- | ------------------------------ |
+| [Repository root](../../README.md)                                | workspace と主要コマンドの入口 |
+| [Domain Glossary](../product/glossary.md)                         | ドメイン用語定義               |
+| [`conventions-api.md`](./conventions-api.md) のエラーパターン辞書 | エラーコード体系               |
 
 ---
 
 ## 参考
 
 - `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）
-- `ADR-012 Feature-Sliced Architecture`
+- [ADR-012 Feature-Sliced Architecture](./log/2026-02-26-feature-sliced-architecture.md)

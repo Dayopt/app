@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { databaseTables } from '@/lib/database';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { TimeblockOverlapService } from './timeblock-overlap-service';
 import { TimeblockServiceError } from './timeblock-service-error';
@@ -193,7 +194,8 @@ export class RecordService {
 
   async restore(options: DeleteRecordOptions): Promise<{ success: boolean }> {
     const { userId, recordId } = options;
-    const { error } = await this.supabase.rpc('restore_record', {
+    const adminClient = createServiceRoleClient();
+    const { error } = await adminClient.rpc('restore_record', {
       p_record_id: recordId,
       p_user_id: userId,
     });

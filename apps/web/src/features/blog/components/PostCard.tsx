@@ -1,7 +1,7 @@
 'use client';
 
-import { Link } from '@/platform/i18n/navigation';
 import { Heading } from '@dayopt/components';
+import { Link } from '@dayopt/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { BlogPostMeta } from '../lib/blog';
 import { isBlogCategoryKey } from '../lib/categories';

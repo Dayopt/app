@@ -9,9 +9,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createChainableMock, createMockSupabase } from '@/lib/test/trpc-test-helpers';
 
 const adminFrom = vi.hoisted(() => vi.fn());
+const adminRpc = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/supabase/oauth', () => ({
-  createServiceRoleClient: () => ({ from: adminFrom }),
+  createServiceRoleClient: () => ({ from: adminFrom, rpc: adminRpc }),
 }));
 
 import { createTagService, TagService, TagServiceError } from '../tag-service';
@@ -25,6 +26,7 @@ describe('TagService', () => {
     vi.clearAllMocks();
     mockSupabase = createMockSupabase();
     adminFrom.mockImplementation(() => createChainableMock([], null));
+    adminRpc.mockResolvedValue({ data: null, error: null });
     service = createTagService(mockSupabase as unknown as Parameters<typeof createTagService>[0]);
   });
 
@@ -478,7 +480,7 @@ describe('TagService', () => {
         targetTag,
         sourceChildrenCount: 0,
       });
-      mockSupabase.rpc.mockResolvedValueOnce({
+      adminRpc.mockResolvedValueOnce({
         data: { migrated: 5, children_reparented: 0 },
         error: null,
       });
@@ -489,11 +491,15 @@ describe('TagService', () => {
         targetTagId: 'tgt',
       });
 
-      expect(mockSupabase.rpc).toHaveBeenCalledWith('merge_tags_with_hierarchy', {
+      expect(adminRpc).toHaveBeenCalledWith('merge_tags_with_hierarchy', {
         p_user_id: userId,
         p_source_tag_id: 'src',
         p_target_tag_id: 'tgt',
       });
+      expect(mockSupabase.rpc).not.toHaveBeenCalledWith(
+        'merge_tags_with_hierarchy',
+        expect.anything(),
+      );
       expect(result.success).toBe(true);
       expect(result.mergedAssociations).toBe(5);
       expect(result.targetTag).toMatchObject(targetTag);
@@ -515,7 +521,7 @@ describe('TagService', () => {
       ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
 
       // RPC は呼ばれない（早期 throw）
-      expect(mockSupabase.rpc).not.toHaveBeenCalled();
+      expect(adminRpc).not.toHaveBeenCalled();
     });
 
     it('should throw MERGE_FAILED on RPC error', async () => {
@@ -527,7 +533,7 @@ describe('TagService', () => {
         targetTag,
         sourceChildrenCount: 0,
       });
-      mockSupabase.rpc.mockResolvedValueOnce({
+      adminRpc.mockResolvedValueOnce({
         data: null,
         error: { message: 'rpc failed' },
       });
@@ -546,7 +552,7 @@ describe('TagService', () => {
         targetTag,
         sourceChildrenCount: 0,
       });
-      mockSupabase.rpc.mockResolvedValueOnce({ data: null, error: null });
+      adminRpc.mockResolvedValueOnce({ data: null, error: null });
 
       const result = await service.merge({
         userId,

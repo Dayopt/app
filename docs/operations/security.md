@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-07-14
 ---
 
 # セキュリティ方針
@@ -440,4 +440,56 @@ LIMIT 20;
 
 環境変数と Secrets の値そのものの管理（1Password 経由の注入、schema、ローテーション手順）は [secrets.md](./secrets.md) を正本とする。本ファイルでは重複を避けるため、GitHub Actions 側の利用箇所（第1部）とセキュリティ監視の対象範囲（第2部）のみを扱う。
 
-> **統合作業メモ**: 統合元の `docs/operations/security/environment-secrets.md` は、ファイル名が `*secret*` パターンに一致するためツール権限（deny rule）でAIから読み取れず、本ファイルへの内容統合ができなかった。`secrets.md` と同様に現状のまま残置している。内容を確認・統合する場合は人間が直接編集するか、deny rule の一時的な例外設定が必要。
+GitHub / Vercel / Supabase側のreplicaとenvironment scopeは[environment-secrets.md](./security/environment-secrets.md)に分冊する。AIも値を出力せず、通常のrepo fileとして両文書を参照する。
+
+---
+
+# 第4部: Supabase RPC 権限
+
+Issue #1564 で、Production Security Advisorの
+`authenticated_security_definer_function_executable` 13件を次の契約へ整理した。
+
+## RPC判断表
+
+| RPC                              | server caller                          | EXECUTE role                    | 実行属性           | 判断                                                                                          |
+| -------------------------------- | -------------------------------------- | ------------------------------- | ------------------ | --------------------------------------------------------------------------------------------- |
+| `batch_rename_tags`              | `TagService`のuser-scoped client       | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで更新する                                                        |
+| `batch_reorder_tags_hierarchy`   | `TagService`のuser-scoped client       | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLS、`p_user_id` guard、tag parent owner triggerで更新する                              |
+| `rename_tag_group`               | `TagService`のuser-scoped client       | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで更新する                                                        |
+| `confirm_day_plans_to_records`   | `PlanService`のuser-scoped client      | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardでPlanをRecordへ確定する                                          |
+| `count_unused_recovery_codes`    | `RecoveryService`のuser-scoped client  | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで件数だけ返す                                                    |
+| `update_personalization`         | user-scoped client                     | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで設定を更新する                                                  |
+| `soft_delete_plan`               | `PlanService`のuser-scoped client      | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで論理削除する                                                    |
+| `soft_delete_record`             | `RecordService`のuser-scoped client    | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardを使い、`auto_migrated`を常に拒否する                             |
+| `merge_tags(uuid, uuid[], uuid)` | callerなし                             | なし                            | DROP               | Productionだけに残った旧table参照overloadを`CASCADE`なしで削除する                            |
+| `merge_tags_with_hierarchy`      | `TagService`のservice-role client      | `service_role`                  | `SECURITY DEFINER` | deleted Plan/Recordを含む関連更新が必要。service-role JWTを確認し、全更新を`p_user_id`で絞る  |
+| `restore_plan`                   | `PlanService`のservice-role client     | `service_role`                  | `SECURITY DEFINER` | authenticated SELECTから隠れたdeleted rowを復元するためdefinerを維持する                      |
+| `restore_record`                 | `RecordService`のservice-role client   | `service_role`                  | `SECURITY DEFINER` | deleted row復元のためdefinerを維持し、`auto_migrated`を常に拒否する                           |
+| `use_recovery_code`              | `RecoveryService`のservice-role client | `service_role`                  | `SECURITY DEFINER` | recovery codeにauthenticated UPDATE policyを追加せず、service-role JWTと`p_user_id`で消費する |
+
+全対象で`PUBLIC`と`anon`の`EXECUTE`を明示的にREVOKEする。service-role-onlyの4 RPCは
+`authenticated`もREVOKEし、`search_path = ''`と完全修飾したrelation名を必須とする。
+protected routerは入力からuser IDを受けず、`ctx.userId`だけをserviceへ渡す。
+
+## soft-delete時のRLS境界
+
+PlanとRecordの通常SELECTは`deleted_at IS NULL`を維持する。invoker RPCが更新した直後の行にも
+SELECT policyが評価されるため、`soft_delete_plan`と`soft_delete_record`はtransaction-localな
+`dayopt.soft_delete_user_id`を設定する。SELECT policyはこの値がrow ownerと一致する同一RPC
+transaction内だけdeleted rowを許可する。PostgRESTの通常SELECTや次のtransactionには値が残らず、
+deleted rowはauthenticated clientへ露出しない。
+
+## tag hierarchy
+
+migration適用前にcross-user parentを検査し、1件でもあれば自動修復せず失敗させる。
+`check_tag_hierarchy()`はINSERTとUPDATEの両方で、parentとchildの`user_id`をNULL安全に比較する。
+RPC、直接table操作、service-role操作のすべてに同じ制約を適用する。
+
+## 検証
+
+- LocalとPR PreviewでSecurity Advisorの該当WARNが0件
+- 8 invoker RPCのowner成功とcross-user拒否
+- 4 definer RPCのauthenticated `42501`とservice-role成功
+- `auto_migrated` Recordのdelete/restore拒否
+- foreign parentのRPC、直接INSERT、直接UPDATE拒否
+- [RLS snapshot](../engineering/data/db/rls-snapshot.md)のdrift check

@@ -10,9 +10,9 @@ import {
   ShareButton,
 } from '@/features/blog';
 import { TableOfContentsCards } from '@/features/docs';
-import { Link } from '@/platform/i18n/navigation';
-import { routing } from '@/platform/i18n/routing';
 import { generateSEOMetadata, siteConfig } from '@/platform/seo/metadata';
+import { Link } from '@dayopt/i18n/navigation';
+import { routing } from '@dayopt/i18n/routing';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { MDXRemote } from 'next-mdx-remote/rsc';

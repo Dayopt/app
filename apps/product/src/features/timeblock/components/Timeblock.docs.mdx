@@ -4,21 +4,20 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Timeblock（Plan / Record）
 
-予定（Plan）と記録（Record）を独立エンティティとして扱う時間ブロック機能。
-カレンダー上の 2 レーン表示・作成/編集エディタ・統計サービスを提供する。
+Plan / Recordのcard、editor、inspector、record action component群。Storybookではentity kindと時間状態ごとの見た目・操作可能性を確認する。
 
----
+## Visual states
 
-## 概要
+| 対象           | 主な状態                                                       |
+| -------------- | -------------------------------------------------------------- |
+| TimeblockCard  | Plan / Record、upcoming / active / past、selected、dragging    |
+| Inspector      | desktop popover / mobile drawer、time locked、validation error |
+| Editor         | Plan / Record destination表示、conflict、submitting            |
+| Record actions | そのまま記録、日単位の一括確定、pending                        |
 
-| 項目         | 値                                                                 |
-| ------------ | ------------------------------------------------------------------ |
-| エンティティ | `plans`（予定）/ `records`（記録）。1 Plan : N Record（`plan_id`） |
-| 保存先ルール | `end_at > now` → Plan、`end_at <= now` → Record（選択 UI なし）    |
-| 時間位置     | `upcoming` / `active` / `past`（`getTimeblockState()` で自動判定） |
-| タグ         | `tag_id` → `tags`（1 ブロック 1 タグ）                             |
-| skip         | Plan の「やらなかった」マーカー（`skipped_at`）。未記録とは別状態  |
-| 重なり制約   | Plan 同士 / Record 同士は EXCLUDE で禁止。Plan × Record は許可     |
+- destination chipは選択UIではなく、入力時間から導出された状態表示
+- past Planは時間fieldをdisabledにし、内容訂正とrecord actionは残す
+- product rule、DB、RPCはStorybookに複製しない
 
 ---
 
@@ -73,3 +72,4 @@ TimeblockCard                         カレンダー表示カード（ドラッ
 - ワンタップ記録 / skip / 削除: 可
 
 詳細仕様は `docs/product/specs/plan-record.md` を参照。
+正本は `docs/product/specs/plan-record.md` を参照する。

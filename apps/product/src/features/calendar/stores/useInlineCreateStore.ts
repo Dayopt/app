@@ -45,7 +45,7 @@ const useInlineCreateStoreBase = create<InlineCreateState>()(
             : state,
         ),
     }),
-    { name: 'inline-create', enabled: process.env.NODE_ENV !== 'production' },
+    { name: 'inline-create-store', enabled: process.env.NODE_ENV !== 'production' },
   ),
 );
 

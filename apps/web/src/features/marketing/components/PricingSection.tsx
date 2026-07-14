@@ -1,4 +1,3 @@
-import { Link } from '@/platform/i18n/navigation';
 import { dayoptPlans, dayoptPricing } from '@dayopt/billing';
 import {
   Badge,
@@ -11,6 +10,7 @@ import {
   CardTitle,
   Container,
 } from '@dayopt/components';
+import { Link } from '@dayopt/i18n/navigation';
 import { Check } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 

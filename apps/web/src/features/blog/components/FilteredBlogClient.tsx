@@ -4,7 +4,7 @@ import { EmptyState } from '@/components/ui/feedback/empty-state';
 import { SearchInput } from '@/components/ui/inputs/search-input';
 import { ContentPagination } from '@/components/ui/navigation/content-pagination';
 import { cn } from '@/lib/utils';
-import { Link } from '@/platform/i18n/navigation';
+import { Link } from '@dayopt/i18n/navigation';
 import { Rss, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';

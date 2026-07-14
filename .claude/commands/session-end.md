@@ -1,10 +1,10 @@
 ---
-description: 当日の作業要点を docs/engineering/log/ に記録し latest.md を更新する
+description: 当日の作業要点を docs/engineering/log/ の日付付きログに記録する
 ---
 
 # /session-end
 
-今日の作業を振り返り、`docs/engineering/log/YYYY-MM-DD-session.md` にセッションログを書き、`docs/engineering/log/latest.md` を更新する。作業ログは横断的な開発作業のため engineering ドメインに集約する(business/product 固有の意思決定は別途 `/decision` で当該ドメインに記録する)。
+今日の作業を振り返り、`docs/engineering/log/YYYY-MM-DD-session.md` にセッションログを書く。作業ログは横断的な開発作業のため engineering ドメインに集約する(business/product 固有の意思決定は別途 `/decision` で当該ドメインに記録する)。
 
 > 月次ロールアップ(`docs/engineering/log/YYYY-MM-01-journal.md`)への蒸留はここでは行わない。月次で `/gardening` がまとめて行う(session ログを月末に読み返して journal 相当のログへ蒸留する設計。日次で書くと粒度が細かすぎ、月次で読み返す時に重複整理が必要になるため)。
 
@@ -23,7 +23,7 @@ description: 当日の作業要点を docs/engineering/log/ に記録し latest.
 ```yaml
 ---
 status: frozen
-updated: YYYY-MM-DD
+date: YYYY-MM-DD
 ---
 
 date: YYYY-MM-DD
@@ -59,13 +59,9 @@ next:
 
 該当がなければ optional フィールドは省略する。空配列 `[]` で埋めない。
 
-### latest.md の更新
-
-セッションログを `YYYY-MM-DD-session.md` に書いた後、同じ内容を `docs/engineering/log/latest.md` に上書きコピーする(`latest.md` のみ append-only ガードの例外で上書き可)。AGENTS.md / rules からのポインタが常に最新セッションを指すために必要。
-
 ## 守ること
 
 - セッションログには主観を入れない(散文・感想は書かない)
 - `conventions` と `learned` は特に丁寧に書く。月次ロールアップ・ガーデニングで最も参照される
-- 確認不要。ファイル作成 → latest.md 更新 → コミットまで一気に実行する
+- 確認不要。日付付きファイルの作成まで一気に実行する。同日ファイルがすでに存在する場合は書き換えず、内容を表す別slugのnoteを新規作成する
 - ユーザーの声・障害が今日あった場合はこのコマンドとは別に `/note` で `feedback-` / `incident-` prefix のメモを残す(AGENTS.md の責務セクション参照)

@@ -4,73 +4,22 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Sidebar
 
-サイドバーはアプリの左側に常駐するナビゲーション・操作パネル。
-Composition Layer パターンで各 feature を組み立てる。
+Calendar作業面のnavigationとfilterをまとめるshell component。Storybookではlayout、responsive state、section spacingだけを確認する。
 
----
-
-## 構成
+## 現在の構成
 
 ```
-Sidebar (Container)
-├── Header           Dayoptロゴ + 検索 + 閉じるボタン
-├── ScrollArea       gap-4 (16px) で各セクションを配置
-│   ├── MiniCalendar     月カレンダー（PCのみ、見出しなし）
-│   ├── ViewSwitcherList
-│   ├── CalendarFilterList
-│   │   └── SidebarSection "タグ"
-│   │       └── TagRow × N    チェックボックス + タグ名
-│   ├── Palette
-│   │   └── SidebarSection "パレット"
-│   │       └── BlockItem × N  ● 塗りドット + duration
-│   └── SidebarUtilities       テーマ切替
-└── Footer           UserMenu + アクション
+Sidebar
+├── header
+├── MiniCalendar       desktop
+├── ViewSwitcherList
+├── CalendarFilterList
+├── SidebarUtilities
+└── footer / UserMenu
 ```
 
----
+- section間のspacingは親containerのgapで管理し、子componentに個別marginを持たせない
+- mobileではMiniCalendarを隠し、view switchとfilterを優先する
+- sidebarはfeatureのbusiness logicを所有せず、app composition layerが公開componentを組み立てる
 
-## ファイル構成
-
-| ファイル             | 役割                                                       |
-| -------------------- | ---------------------------------------------------------- |
-| `Sidebar.tsx`        | コンテナ: `<aside>` + ヘッダー + スクロール領域 + フッター |
-| `SidebarSection.tsx` | セクション（title + action スロット）                      |
-| `BlockItem.tsx`      | パレットのブロックアイテム（アイコン + タグ名 + duration） |
-| `UserMenu.tsx`       | フッターのユーザーアバター/名前                            |
-| `SidebarContent.tsx` | Composition Layer: feature コンポーネントの組み立て        |
-
----
-
-## セクション間スペーシング
-
-`Sidebar.tsx` のスクロール領域に `gap-4`（16px）を設定。
-各セクションは `mt-*` 等の自前マージンを持たず、親の gap で統一。
-
----
-
-## タグカラーの統一
-
-全コンポーネントで `getTagColorClasses(color).cssVar`（`var(--tag-blue)` 等）を使用。
-
-| コンポーネント                 | カラー適用方法                                            |
-| ------------------------------ | --------------------------------------------------------- |
-| チェックボックス (TagFlatList) | `style={{ borderColor, backgroundColor }}` で inline 適用 |
-| パレットドット (BlockItem)     | `style={{ backgroundColor }}` で inline 適用              |
-| カラーパレットピッカー         | `TAG_COLOR_MAP[name].dot` Tailwind クラス                 |
-
-`@theme inline` で登録された `bg-tag-blue` 等の Tailwind クラスも利用可能だが、
-動的な色名を扱うコンポーネントでは `cssVar` による inline style を使用する。
-
----
-
-## Composition Layer
-
-`SidebarContent.tsx` が Calendar 作業面に必要な feature コンポーネントを組み立てる。
-feature 間の直接 import は禁止（`@/features/X` を他 feature から import しない）。
-
-```tsx
-// SidebarContent.tsx（Composition Layer）
-import { CalendarFilterList } from '@/features/calendar';
-import { Palette } from '@/features/palette';
-import { SidebarSection } from '@/components/shell/sidebar';
-```
+実際のcompositionは`apps/product/src/app/[locale]/(app)/_shell/SidebarContent.tsx`、横断architectureはroot `docs/engineering/architecture.md`を参照する。

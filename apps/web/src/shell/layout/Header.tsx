@@ -1,8 +1,8 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Link, usePathname } from '@/platform/i18n/navigation';
 import { Button, Logo } from '@dayopt/components';
+import { Link, usePathname } from '@dayopt/i18n/navigation';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Menu, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';

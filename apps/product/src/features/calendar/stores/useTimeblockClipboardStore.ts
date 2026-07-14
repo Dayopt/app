@@ -2,6 +2,7 @@
 
 import type { ClipboardTimeblock } from '@/features/timeblock';
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
 export type { ClipboardTimeblock } from '@/features/timeblock';
 
@@ -42,29 +43,34 @@ type TimeblockClipboardStore = TimeblockClipboardState & TimeblockClipboardActio
  * - コピー: エントリの情報を保存
  * - ペースト: 保存された情報を使って新規エントリをドラフトモードで作成
  */
-export const useTimeblockClipboardStore = create<TimeblockClipboardStore>((set, get) => ({
-  // State
-  copiedTimeblock: null,
-  lastClickedPosition: null,
+export const useTimeblockClipboardStore = create<TimeblockClipboardStore>()(
+  devtools(
+    (set, get) => ({
+      // State
+      copiedTimeblock: null,
+      lastClickedPosition: null,
 
-  // Actions
-  copyTimeblock: (entry) => {
-    set({ copiedTimeblock: entry });
-  },
+      // Actions
+      copyTimeblock: (entry) => {
+        set({ copiedTimeblock: entry });
+      },
 
-  clearClipboard: () => {
-    set({ copiedTimeblock: null });
-  },
+      clearClipboard: () => {
+        set({ copiedTimeblock: null });
+      },
 
-  hasCopiedTimeblock: () => {
-    return get().copiedTimeblock !== null;
-  },
+      hasCopiedTimeblock: () => {
+        return get().copiedTimeblock !== null;
+      },
 
-  setLastClickedPosition: (position) => {
-    set({ lastClickedPosition: position });
-  },
+      setLastClickedPosition: (position) => {
+        set({ lastClickedPosition: position });
+      },
 
-  clearLastClickedPosition: () => {
-    set({ lastClickedPosition: null });
-  },
-}));
+      clearLastClickedPosition: () => {
+        set({ lastClickedPosition: null });
+      },
+    }),
+    { name: 'timeblock-clipboard-store', enabled: process.env.NODE_ENV !== 'production' },
+  ),
+);

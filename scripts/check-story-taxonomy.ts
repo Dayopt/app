@@ -41,13 +41,11 @@ const SCAN_DIRS = [
  * 物理位置 → 許容 title prefix（ADR-023 の移行ルール表に準拠）。
  *
  * 評価は配列の上から順。最初にマッチした rule を採用するため、
- * より具体的な path（tokens / emails）を product/src より前に置く。
+ * より具体的な path（emails）を product/src より前に置く。
  * どの rule にもマッチしない story は taxonomy 対象外として skip する
  * （例: .storybook/stories/docs の Welcome / Glossary など top-level doc）。
  */
 const TAXONOMY_RULES: { match: string; allowed: string[] }[] = [
-  // 例外: token doc は物理的には product 配下だが Shared/Foundations に揃える
-  { match: 'apps/product/src/lib/styles/tokens', allowed: ['Shared/Foundations'] },
   { match: 'apps/product/src/emails', allowed: ['Product/Emails'] },
   // product の component / feature / app-shell。straggler 例外で Components も許容
   { match: 'apps/product/src', allowed: ['Product/Components', 'Product/Features'] },

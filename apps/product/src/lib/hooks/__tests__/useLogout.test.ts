@@ -11,7 +11,7 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock('@/lib/i18n/navigation', () => ({
+vi.mock('@dayopt/i18n/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
     refresh: mockRefresh,

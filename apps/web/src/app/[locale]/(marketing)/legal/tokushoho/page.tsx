@@ -1,5 +1,5 @@
-import type { Locale } from '@/platform/i18n/routing';
 import { dayoptContact } from '@dayopt/config';
+import type { Locale } from '@dayopt/i18n/routing';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 

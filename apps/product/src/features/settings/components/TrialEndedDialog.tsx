@@ -4,7 +4,7 @@ import { useRef } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { useRouter } from '@/lib/i18n/navigation';
+import { useRouter } from '@dayopt/i18n/navigation';
 
 import {
   AlertDialog,

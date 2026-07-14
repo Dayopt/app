@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-07-14
 code: apps/product/src
 ---
 
@@ -12,19 +12,21 @@ Dayopt のシステム構成、データフロー、DB スキーマ、技術選�
 
 ## 技術スタック
 
+ここでは役割と採用理由だけを扱う。正確なversionはrootと各workspaceの`package.json`、DB runtimeはSupabase Dashboardを正とする。
+
 ### フロントエンド
 
-- **Next.js 15 (App Router)** — React フレームワーク。ファイルベースルーティング、Server Components / Client Components、`next/image` による画像最適化
-- **React 19** — UI ライブラリ。業界標準、Server Components サポート
+- **Next.js App Router** — React フレームワーク。ファイルベースルーティング、Server Components / Client Components、`next/image` による画像最適化
+- **React** — UI ライブラリ。業界標準、Server Components サポート
 - **TypeScript** — 型安全性、IDE 補完、バグ防止
-- **Tailwind CSS v4 + shadcn/ui** — ユーティリティファーストのスタイリングと、Radix UI ベースのカスタマイズ可能な UI コンポーネント
+- **Tailwind CSS + shadcn/ui** — ユーティリティファーストのスタイリングと、Radix UI ベースのカスタマイズ可能な UI コンポーネント
 - **Zustand** — クライアント状態管理。Redux よりボイラープレートが少なく学習コストが低い
 - **TanStack Query** — サーバー状態のキャッシング・自動リフェッチ・楽観的更新
 
 ### バックエンド
 
-- **Supabase (PostgreSQL v17)** — 認証・DB・リアルタイムを一体で提供する BaaS。PostgreSQL（SQL が使える）、RLS によるセキュリティ、オープンソースである点が採用理由
-- **tRPC v11** — クライアント⇔サーバー間の E2E 型安全な API 通信。スキーマ自動生成不要、型の不整合はコンパイルエラーになる
+- **Supabase (PostgreSQL)** — 認証・DB・リアルタイムを一体で提供する BaaS。PostgreSQL（SQL が使える）、RLS によるセキュリティ、オープンソースである点が採用理由
+- **tRPC** — クライアント⇔サーバー間の E2E 型安全な API 通信。スキーマ自動生成不要、型の不整合はコンパイルエラーになる
 - **Zod** — バリデーション。型推論と tRPC 統合
 
 ### ホスティング・デプロイ
@@ -34,18 +36,18 @@ Dayopt のシステム構成、データフロー、DB スキーマ、技術選�
 
 ### 技術選定の理由まとめ
 
-| 技術            | 採用理由                             |
-| --------------- | ------------------------------------ |
-| Next.js 15      | React の公式推奨、Vercel との親和性  |
-| React 19        | 業界標準、Server Components サポート |
-| TypeScript      | 型安全性、IDE 補完、バグ防止         |
-| tRPC v11        | E2E 型安全、コード量削減             |
-| Zustand         | シンプル、Redux 不要                 |
-| TanStack Query  | キャッシング、リフェッチ             |
-| Supabase        | 認証、DB、リアルタイム一体型         |
-| Tailwind CSS v4 | ユーティリティファースト             |
-| shadcn/ui       | カスタマイズ可能、Radix UI ベース    |
-| Zod             | 型推論、tRPC と統合                  |
+| 技術           | 採用理由                             |
+| -------------- | ------------------------------------ |
+| Next.js        | React の公式推奨、Vercel との親和性  |
+| React          | 業界標準、Server Components サポート |
+| TypeScript     | 型安全性、IDE 補完、バグ防止         |
+| tRPC           | E2E 型安全、コード量削減             |
+| Zustand        | シンプル、Redux 不要                 |
+| TanStack Query | キャッシング、リフェッチ             |
+| Supabase       | 認証、DB、リアルタイム一体型         |
+| Tailwind CSS   | ユーティリティファースト             |
+| shadcn/ui      | カスタマイズ可能、Radix UI ベース    |
+| Zod            | 型推論、tRPC と統合                  |
 
 Zustand と TanStack Query の使い分け:
 
@@ -151,41 +153,58 @@ end
 ```mermaid
 graph TD
 subgraph Features
-CAL["calendar"]
-ENT["entry"]
-TAG["tags"]
-AUTH["auth"]
-STAT["stats"]
-SET["settings"]
-AI["ai"]
-CHRONO["chronotype"]
-SEARCH["search"]
-ONBOARD["onboarding"]
-TOUR["tour"]
-CONTACT["contact"]
+TAG["tags (Layer 0)"]
+TB["timeblock (Layer 1)"]
+CAL["calendar (Layer 2 / hub)"]
+REV["review (Layer 2)"]
+AUTH["auth (independent)"]
+CONTACT["contact (independent)"]
+SET["settings (composition)"]
 end
 
     subgraph Composition["Composition Layer"]
-        SHELL["src/shell/"]
-        PLAT["src/platform/"]
-        COMP["src/components/"]
-        STORE["src/stores/"]
-        TYPES["src/types/"]
+        APP["app/**/_composition + layout"]
+        LIB["lib/*"]
+        STORE["lib/stores/*"]
     end
 
-    CAL -->|"hooks"| COMP
-    ENT -->|"hooks"| COMP
-    TAG --> STORE
-    AUTH --> PLAT
-    STAT --> STORE
+    TB --> TAG
+    CAL --> TB
+    CAL --> TAG
+    REV --> TB
+    REV --> TAG
+    APP --> CAL
+    APP --> REV
+    APP --> AUTH
     SET --> STORE
-    CHRONO --> TYPES
-
-    SHELL --> CAL
-    SHELL --> ENT
-    SHELL --> TAG
-    SHELL --> SEARCH
+    CAL --> STORE
+    LIB --> STORE
 ```
+
+依存方向の正はリポジトリルートの [`.claude/rules/feature-boundaries.md`](../../.claude/rules/feature-boundaries.md) と
+`apps/product/eslint.config.mjs`。`settings` は cross-cutting composition、`calendar` はページ全体を合成する hub として扱う。
+
+### Calendar の Plan / Record と UI state
+
+Calendar は Plan（予定）と Record（記録）を別レーンで描画し、`records.plan_id` で 1 Plan : N Record を表現する。
+
+```mermaid
+flowchart LR
+    URL["URL: date / view / panel"] --> NAV["CalendarNavigationContext"]
+    NAV --> CLIENT["CalendarViewClient"]
+    CLIENT --> CTRL["CalendarController"]
+    CLIENT --> PANEL["right-side panel: review / diff"]
+    CTRL --> QUERY["tRPC + TanStack Query"]
+    QUERY --> SERVICE["timeblock router / service"]
+    SERVICE --> DB["Supabase: plans / records"]
+    ZS["Zustand: transient interaction + persisted display/filter"] --> CTRL
+    NAV -.->|"command / mirror only"| ZS
+```
+
+- 日付・view range・右パネルの表示可否は URL と `CalendarNavigationContext` が source of truth。
+- `CalendarViewClient` が `CalendarController` と右側パネルを合成する。Review/Diff は独立ページではなく Calendar shell に追従する。
+- Zustand は drag、inline create、clipboard、inspector、shell などの一時 UI state と、表示モード・タグフィルターのユーザー設定だけを担う。URL/Context の値を永続化しない。
+- Plan / Record / tag などのサーバーデータは Zustand に複製せず、tRPC / TanStack Query 経由で扱う。
 
 ### 各レイヤーの役割
 
@@ -335,10 +354,10 @@ USING (auth.uid() = user_id);
 
 ## Database Architecture
 
-> **テーブル数**: 12 | **PostgreSQL**: v17
+> **RLS 対象 public テーブル数**: 13 | **PostgreSQL**: v17
 
-Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Production）で運用。
-全テーブルに Row Level Security (RLS) を適用し、マルチテナントのデータ分離を実現。
+Dayopt は Supabase（PostgreSQL）を使用する。本番は Pro organization の `dayopt` project、PR ごとの検証は ephemeral Preview Branches を使い、永続 Staging project は置かない。
+RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapshot.md`](./data/db/rls-snapshot.md) を正とする。
 
 ### テーブル一覧
 
@@ -347,16 +366,16 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
 | テーブル                     | 役割                                                             | 主要カラム                                                                                                |
 | ---------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | **plans**                    | Plan（予定）。これからやる時間の宣言                             | title, tag_id, start_at, end_at, skipped_at, source, external_calendar_event_id                           |
-| **records**                  | Record（記録）。`plan_id` で 1 Plan : N Record                   | title, tag_id, plan_id, start_at, end_at, source, fulfillment_score(1-5), external_calendar_event_id      |
+| **records**                  | Record（記録）。`plan_id` で 1 Plan : N Record                   | title, tag_id, plan_id, start_at, end_at, source, external_calendar_event_id                              |
 | **external_calendar_events** | 外部カレンダー同期ミラー（テーブルのみ存在。同期実装は Phase 2） | provider, provider_calendar_id, provider_event_id, start_at, end_at, status, dismissed_at, last_synced_at |
 | **tags**                     | 階層タグ（親子1階層）                                            | name, color, parent_id, sort_order, is_active                                                             |
 
 #### ユーザー設定（2テーブル）
 
-| テーブル          | 役割                                    | 主要カラム                                                                  |
-| ----------------- | --------------------------------------- | --------------------------------------------------------------------------- |
-| **profiles**      | ユーザープロフィール（auth.usersと1:1） | email, username, full_name, avatar_url                                      |
-| **user_settings** | 表示設定                                | timezone, theme, time*format, chronotype*_, snap*interval, business_hours*_ |
+| テーブル          | 役割                                    | 主要カラム                                                                                                      |
+| ----------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **profiles**      | ユーザープロフィール（auth.usersと1:1） | email, username, full_name, avatar_url                                                                          |
+| **user_settings** | 表示設定                                | timezone, theme, time format, snap interval, business hours。物理スキーマの legacy 列はプロダクト契約に含めない |
 
 #### セキュリティ/監査（1テーブル）
 
@@ -398,7 +417,7 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
                     │ user_id (FK)      │ 1:N  │ user_id (FK)       │
                     │ title, note       │      │ title, note        │
                     │ start_at/end_at   │      │ start_at/end_at    │
-                    │ skipped_at        │      │ fulfillment_score  │
+                    │ skipped_at        │      │ plan_id (nullable) │
                     │ source            │      │ source             │
                     │ external_calendar_│      │ external_calendar_ │
                     │  event_id (FK)    │      │  event_id (FK)     │
@@ -449,7 +468,7 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
 
 - 状態導出（`upcoming` / `active` / `past`）は Plan / Record それぞれの時間位置から行う
 - 保存先は選択 UI ではなく `end_at > now` か否かで一意に決まる（`end_at > now` → Plan、`end_at <= now` → Record）
-- `fulfillment_score`（1-5）は Record 側のみが持つ属性。Plan には存在しない
+- 物理 DB に残る `fulfillment_score` / `chronotype_settings` は legacy 列であり、現行のプロダクト向け Plan / Record・設定契約では使用しない
 - 詳細は [ADR-025](../product/log/2026-07-09-time-model-split.md) 参照
 
 #### Tags の階層制限
@@ -514,6 +533,7 @@ Dayopt の monorepo は、アプリを増やすためだけではなく、責務
 - `packages/foundations`（旧 `packages/design`）: design tokens / theme css / CSS variables。React components, domain logic, DB 型は入れない。
 - `packages/components`（旧 `packages/ui`）: React UI primitives / reusable components。Supabase, Stripe, feature-specific business rules は入れない。
 - `packages/config`: public constants / metadata / URL definitions。secrets, request-scoped values, server-only clients は入れない。
+- `packages/i18n`: product / web 共通の next-intl routing / navigation / request locale fallback。message loader や app 固有 Provider は入れない。
 - `packages/domain`: Dayopt domain model / pure types / helpers。DB row shape, React, Next, Supabase, Zustand は入れない。消費者は現状 product のみだが、純粋ロジックの隔離層として package を維持する。
 - `packages/assets`: 複数 app で共有する静的素材の原本（logo / app icon / OGP image）。React component は入れない。
 - `apps/product/src/lib/database`（旧 `packages/database`）: Supabase/Postgres boundary。generated types / table names / row helper types を扱う。product 専用のため package ではなく product-local。
@@ -529,6 +549,7 @@ apps/product, apps/web, apps/storybook
   -> packages/foundations
 
 apps/product, apps/web
+  -> packages/i18n
   -> packages/config
   -> packages/billing
 
@@ -542,7 +563,8 @@ apps/product
 ### Current Phase
 
 `packages/foundations`, `packages/components`, `packages/config`, `packages/domain` は最小の公開面を持つ package として運用中。
-`packages/domain` は Dayopt の意味を表す pure TypeScript package で、現時点では `TimeRange`, `EntryOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`, `Chronotype` などの軽い型・定数・helper だけを持つ。
+`packages/i18n` は `packages/config` の locale 定義を使い、product / web に共通する next-intl adapter の公開面を環境別 subpath に限定して提供する。
+`packages/domain` は Dayopt の意味を表すpure TypeScript packageで、`TimeRange`, `TimeblockOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`等の軽い型・定数・helperを持つ。Chronotype型はcompatibility residueであり、現行product featureを表さない。
 
 DB boundary は `apps/product/src/lib/database`（旧 `packages/database`、product-local 化済み）が Supabase generated types と DB row helper を担う。DB access を含む service は product 側に残す。
 `packages/billing` は Free / Pro の公開 plan model, subscription status, `pro_access` entitlement, pricing 表示用定数の境界として運用中。Stripe SDK / secret / webhook / checkout / portal は product 側の server-only 境界に残す。
@@ -555,6 +577,7 @@ DB boundary は `apps/product/src/lib/database`（旧 `packages/database`、prod
 Source of truth:
 
 - URL / domain / contact / public brand constants: `packages/config`
+- next-intl routing / navigation / request locale fallback: `packages/i18n`
 - Plan / Record source・time range・time conflict / date-time preference / pure Dayopt concept: `packages/domain`
 - Supabase generated type / table name / row helper type: `apps/product/src/lib/database`
 - Free / Pro plan / subscription status / `pro_access` entitlement / public pricing: `packages/billing`
@@ -565,7 +588,7 @@ Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文�
 
 Package foundation は第一段階として運用可能な状態にある。root scripts の `build:packages`, `typecheck:packages`, `check:workspace`, `lint:boundaries`, `build`, `build:web`, `build-storybook` は現在の package 構成を検証対象に含め、CI も `packages-build` job で `pnpm build:packages` を実行する。
 
-apps への adoption は完了している。[ADR-021](./log/2026-06-22-shared-packages-canonical-and-app-shims.md)（2026-06-22）で packages を canonical とし、product / web は shim を介さず直接 import する形に統一した。UI・トークンの app 側重複は解消済みで、app 側 `components/` に残るのは app 固有（i18n 結合が強いもの）のみ。残る follow-up は `.from('table')` への `databaseTables` 段階適用など小粒のものに限られる。
+apps への adoption は完了している。[ADR-021](./log/2026-06-22-shared-packages-canonical-and-app-shims.md)（2026-06-22）で packages を canonical とし、product / web は shim を介さず直接 import する形に統一した。UI・トークンの app 側重複は解消済みで、i18n も routing / navigation を `@dayopt/i18n/*` から直接 import する。app 側には message loading と next-intl plugin entrypoint を担う `request.ts`、app 固有 Provider だけを残す。残る follow-up は `.from('table')` への `databaseTables` 段階適用など小粒のものに限られる。
 
 ### Package Boundaries
 
@@ -616,6 +639,23 @@ Product/web が共有する public constants の置き場。副作用を持た�
 - request-scoped value
 - Next.js metadata generator 本体
 - server-only client
+
+#### `packages/i18n`
+
+product / web が共有する next-intl adapter の置き場。`packages/config` の locale constants を唯一の source of truth とし、実行環境が異なる API は root barrel を作らず `./routing`, `./navigation`, `./request` の subpath から公開する。
+
+入れてよいもの:
+
+- next-intl routing 定義と locale-aware navigation
+- request locale の検証と default locale fallback
+- app 固有 message loader を受け取る request config factory
+
+入れないもの:
+
+- app alias や `apps/*` への import
+- message JSON / namespace discovery /固定 namespace 配列
+- app 固有 Provider / plugin entrypoint
+- Next.js / React の直接 import
 
 #### `packages/domain`
 
@@ -683,6 +723,7 @@ product 専用（web・他 package から参照なし）のため package では
 - UI だけで成立し、domain を知らない: `packages/components`
 - 見た目の token / CSS variable / theme: `packages/foundations`
 - URL / metadata / public constants: `packages/config`
+- locale-aware routing / navigation / request fallback: `packages/i18n`
 - DB なしで説明できる Dayopt の business definition: `packages/domain`
 - 複数 app で共有する静的素材の原本: `packages/assets`
 - Supabase row / generated type / domain converter: `apps/product/src/lib/database`（product-local）
@@ -705,7 +746,7 @@ Storybook の story title top-level は所有境界（package / app）で分け�
 
 | title prefix           | Source of truth                                                                                                |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `Shared/Foundations/*` | `packages/foundations`。例外: `apps/product/src/lib/styles/tokens`（token doc、物理位置は product 側）も許容   |
+| `Shared/Foundations/*` | `packages/foundations`                                                                                         |
 | `Shared/Components/*`  | `packages/components`                                                                                          |
 | `Shared/Patterns/*`    | `apps/storybook/.storybook/stories/patterns`（`@dayopt/components` のみに依存する pattern）                    |
 | `Product/Components/*` | `apps/product/src/components/**`（app 固有 component。`apps/product/src/features/**` の straggler も一部含む） |

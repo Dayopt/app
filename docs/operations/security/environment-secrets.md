@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-08
+last_verified: 2026-07-14
 ---
 
 # Environment Secrets
@@ -41,7 +41,7 @@ GitHub branch protection では、通常の CI check に加えて Supabase integ
 Preview scope に production Supabase credentials を手動設定しない。
 既に入っている場合は削除するか、Preview から外して Supabase integration 管理に寄せる。
 
-### Vercel readiness audit (2026-07-08)
+### Vercel readiness audit (2026-07-14)
 
 対象 project は Vercel team `Dayopt` の `product` と `web`。
 確認は secret 値ではなく metadata と未認証レスポンスだけを見る。
@@ -78,8 +78,14 @@ Supabase integration 由来の production DB / key も `production` target の�
 | `product` | `GITHUB_TOKEN`              | `sensitive`          | `encrypted` |
 | `web`     | `GITHUB_TOKEN`              | `sensitive`          | `encrypted` |
 
-Development scope の secret は Vercel Sensitive Env の対象外として `encrypted` のまま残す。
-今後の棚卸しでは、development / preview に long-lived secret が必要かを用途ごとに確認する。
+Preview は `RECOVERY_CODE_PEPPER` と `SENTRY_AUTH_TOKEN` を維持する。
+前者は production mode の env validation / recovery code 処理、後者は Preview sourcemap upload に必要。
+実サービスへの書き込み権限を持つ `GITHUB_TOKEN` と `RESEND_API_KEY` は Preview から削除する。
+
+Development scope の secret は削除する。local の正規経路は `.op-env.local` + `op run` であり、
+Vercel Development env を replica として使わない。削除前に 1Password master の存在確認を必須とし、
+1Password CLI が未認証の時は変更しない。2026-07-14 の監査では認証できず、削除は未適用。
+詳細は [Vercel environment variable scope audit](../log/2026-07-14-vercel-env-scope-audit.md) を参照する。
 
 `NEXT_PUBLIC_*` と repository 名などの公開 metadata は secret 扱いにしない。
 `NEXT_PUBLIC_TURNSTILE_SITE_KEY` は public key なので、`sensitive` のままでも事故ではないが必須ではない。

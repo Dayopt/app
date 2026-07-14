@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import NextImage from 'next/image';
 
-import { Link } from '@/lib/i18n/navigation';
+import { Link } from '@dayopt/i18n/navigation';
 
 import {
   Button,

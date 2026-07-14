@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-14
 ---
 
 # monthly-review テンプレ
@@ -10,7 +10,7 @@ last_verified: 2026-07-03
 ```markdown
 ---
 status: frozen
-updated: YYYY-MM-DD
+date: YYYY-MM-DD
 ---
 
 # YYYY年MM月ふりかえり

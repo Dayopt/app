@@ -27,7 +27,7 @@ description: 各ドメインの log/ に時点ものの調査・監査・実験�
    ```markdown
    ---
    status: frozen
-   updated: YYYY-MM-DD
+   date: YYYY-MM-DD
    ---
 
    # <タイトル>
@@ -46,5 +46,5 @@ description: 各ドメインの log/ に時点ものの調査・監査・実験�
 ## 守ること
 
 - 1ファイル1トピック
-- 一度作成した note は書き換えない。追記・訂正が必要なら新しい `/note` を作り、古い方の frontmatter に `status: superseded` を追記する
+- 一度作成した note は書き換えない。追記・訂正が必要なら新しい `/note` を作り、古い方の frontmatter に新しいrepo-relative pathを`superseded_by`として追記する
 - ストックへ昇格すべき内容が見つかったら、その場で反映せず `/gardening` の対象としてメモに残す(月次でまとめて処理する)

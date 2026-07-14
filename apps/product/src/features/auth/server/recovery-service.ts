@@ -43,7 +43,8 @@ export class RecoveryService {
       throw new RecoveryServiceError('RECOVERY_INVALID', 'RECOVERY_INVALID');
     }
 
-    const { data: used, error: rpcError } = await this.supabase.rpc('use_recovery_code', {
+    const adminClient = createServiceRoleClient();
+    const { data: used, error: rpcError } = await adminClient.rpc('use_recovery_code', {
       p_user_id: userId,
       p_code_hash: matchedCode.code_hash,
     });
@@ -57,7 +58,6 @@ export class RecoveryService {
     }
 
     try {
-      const adminClient = createServiceRoleClient();
       const { data: factors } = await adminClient.auth.admin.mfa.listFactors({ userId });
 
       if (factors?.factors) {
