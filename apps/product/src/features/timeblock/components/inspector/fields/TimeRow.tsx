@@ -63,7 +63,9 @@ export function TimeRow({
           hasError={hasError}
           testId={testId ? `${testId}-start` : undefined}
         />
-        <ArrowRight className="text-muted-foreground size-3.5 flex-shrink-0" />
+        <span className="inline-flex h-8 items-center">
+          <ArrowRight className="text-muted-foreground size-3.5 flex-shrink-0 leading-none" />
+        </span>
         <TimeInput
           value={endTime}
           onChange={onEndChange}
