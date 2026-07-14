@@ -42,5 +42,5 @@ export function createDayoptUrl(base: DayoptUrlBase, path = ''): string {
 }
 
 export const dayoptProductUrls = {
-  signup: createDayoptUrl(dayoptUrls.product, '/signup'),
+  signup: createDayoptUrl(dayoptUrls.product, '/auth/signup'),
 } as const;

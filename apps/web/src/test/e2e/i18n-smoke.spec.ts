@@ -22,6 +22,8 @@ test('footer の言語切替で locale prefix と hero copy が切り替わる',
 });
 
 test('登録 CTA が product signup に統一されている', async ({ page }) => {
+  expect(dayoptProductUrls.signup).toBe('https://app.dayopt.app/auth/signup');
+
   await page.goto('/');
 
   const signupHrefs = await page
