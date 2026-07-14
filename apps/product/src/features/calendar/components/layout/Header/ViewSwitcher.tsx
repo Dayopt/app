@@ -226,6 +226,10 @@ export function ViewSwitcher({
         </DropdownMenuCheckboxItem>
         <DropdownMenuSeparator />
 
+        <span className="text-muted-foreground px-2 py-1 text-xs font-medium">
+          {t('calendar.views.density')}
+        </span>
+
         {DENSITY_OPTIONS.map((d) => (
           <DropdownMenuCheckboxItem
             key={d}
