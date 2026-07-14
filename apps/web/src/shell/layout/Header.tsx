@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { Button, Logo } from '@dayopt/components';
+import { dayoptProductUrls } from '@dayopt/config';
 import { Link, usePathname } from '@dayopt/i18n/navigation';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Menu, X } from 'lucide-react';
@@ -86,7 +87,7 @@ export function Header() {
               <Link href="/login">{t('actions.login')}</Link>
             </Button>
             <Button variant="primary" size="default" asChild>
-              <Link href="/signup">{t('actions.signup')}</Link>
+              <a href={dayoptProductUrls.signup}>{t('actions.signup')}</a>
             </Button>
           </div>
 
@@ -96,7 +97,7 @@ export function Header() {
               <Link href="/login">{t('actions.login')}</Link>
             </Button>
             <Button variant="primary" size="sm" asChild>
-              <Link href="/signup">{t('actions.signup')}</Link>
+              <a href={dayoptProductUrls.signup}>{t('actions.signup')}</a>
             </Button>
             <Button
               variant="ghost"

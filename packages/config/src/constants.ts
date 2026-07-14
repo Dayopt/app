@@ -40,3 +40,7 @@ export function createDayoptUrl(base: DayoptUrlBase, path = ''): string {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return `${base}${normalizedPath}`;
 }
+
+export const dayoptProductUrls = {
+  signup: createDayoptUrl(dayoptUrls.product, '/signup'),
+} as const;

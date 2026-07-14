@@ -35,25 +35,14 @@ export interface SiteConfig {
 
 export const siteConfig: SiteConfig = {
   name: dayoptBrand.name,
-  title: 'Dayopt - スケーラブルなアプリケーションのためのモダンSaaSプラットフォーム',
+  title: '守れる計画を、立てられるように。 | Dayopt',
   description:
-    'Dayoptで次世代のSaaSアプリケーションを構築、デプロイ、スケール。認証、ユーザー管理、請求処理など包括的なツールを提供します。',
+    '計画と実績を、ひとつのタイムラインに。ズレが見えるから、明日の計画がうまくなる。知的労働者のための、いちばん軽いタイムボクシングツール。',
   url: getSiteUrl(),
   ogImage: '/og-image.png',
   creator: dayoptBrand.teamName,
   twitterHandle: dayoptBrand.twitterHandle,
-  keywords: [
-    'SaaS',
-    'Software as a Service',
-    'API',
-    'Authentication',
-    'User Management',
-    'Billing',
-    'React',
-    'Next.js',
-    'TypeScript',
-    'Modern Development',
-  ],
+  keywords: ['タイムボクシング', '時間管理', '計画', '実績', '振り返り', 'カレンダー'],
   locale: 'ja',
   alternateLocales: [...SUPPORTED_LOCALES],
 };
@@ -124,9 +113,13 @@ export function generateSEOMetadata(data: SEOData = {}): Metadata {
       ? `${siteConfig.url}${normalizedPath}`
       : `${siteConfig.url}/${locale}${normalizedPath}`;
 
+  const ogSearchParams = new URLSearchParams({
+    title: title || siteConfig.title,
+    description,
+  });
   const pageImage = image
     ? `${siteConfig.url}${image}`
-    : `${siteConfig.url}/api/og?title=${encodeURIComponent(title || siteConfig.title)}`;
+    : `${siteConfig.url}/api/og?${ogSearchParams.toString()}`;
 
   const allKeywords = [...siteConfig.keywords, ...keywords, ...tags].filter(Boolean);
 

@@ -3,6 +3,7 @@ export {
   dayoptBrand,
   dayoptContact,
   dayoptDomains,
+  dayoptProductUrls,
   dayoptUrls,
   type DayoptUrlBase,
 } from './constants';
