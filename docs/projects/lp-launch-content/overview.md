@@ -1,6 +1,6 @@
 ---
-status: current
-last_verified: 2026-07-06
+status: active
+last_verified: 2026-07-14
 code: apps/web/src/features/marketing
 ---
 

@@ -1,6 +1,9 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-07-14
+code:
+  - apps/storybook/.storybook
+  - apps/storybook/package.json
 ---
 
 # Dayopt Storybook
@@ -110,7 +113,7 @@ src/components/ui/my-component.docs.mdx        # Docs（テーブルが必要な
 
 ### 命名規則（所有境界 taxonomy）
 
-story の `title:` の **top-level は所有境界（どの package / app の資産か）** で分ける。第二階層以下は責務ベース。決定の経緯は ADR-023（`docs/log/decisions/`）。
+story の `title:` の **top-level は所有境界（どの package / app の資産か）** で分ける。第二階層以下は責務ベース。決定の経緯は [ADR-023](./log/2026-06-24-storybook-ownership-taxonomy.md)。
 
 - `Shared/Foundations/Colors` → デザイントークン
 - `Shared/Components/Actions/Button` → 共有 UI コンポーネント（`packages/components`）
@@ -174,7 +177,7 @@ Story作成時に確認：
 | 順番 | ドキュメント                                        | 内容                                       |
 | ---- | --------------------------------------------------- | ------------------------------------------ |
 | 1    | [Dayopt コンセプト](../business/strategy.md)        | Dayoptとは何か、ジョブ、プロダクト原則     |
-| 2    | [Domain Glossary](../product/glossary.md)           | Plan, Record, Chronotype 等のドメイン用語  |
+| 2    | [Domain Glossary](../product/glossary.md)           | Plan, Record, Tag 等のドメイン用語         |
 | 3    | [Architecture](./architecture.md)                   | monorepo packages の責務境界とデータフロー |
 | 4    | [Common Pitfalls](./conventions.md#common-pitfalls) | よくある間違いと正しいパターン             |
 | 5    | Colors（Storybook: Shared/Foundations/Colors）      | カラートークン、Surface体系                |
@@ -185,7 +188,7 @@ Story作成時に確認：
 
 ## Storybook 公式用語集
 
-Storybook 8 の構成要素を公式用語に基づいて整理したリファレンス。
+このリポジトリで使う Storybook の構成要素を、公式用語に基づいて整理したリファレンス。正確なバージョンと addon 一覧は `apps/storybook/package.json`、有効な設定は `apps/storybook/.storybook/` を正とする。
 
 ### 1. ファイルとフォーマット
 
@@ -239,7 +242,7 @@ export const Destructive: Story = {
 | **Args**            | Meta / Story          | Story に渡す props（コンポーネントの入力値）。Controls パネルから操作可能。                                                                                                      |
 | **ArgTypes**        | Meta / Story          | Args の型情報と Controls パネルでの表示方法を定義。`control` の種類（select, boolean 等）や `options` を指定する。                                                               |
 | **Render function** | Story                 | Story の描画方法をカスタムする関数。`render: (args) => <Component {...args} />`。複数コンポーネントの組み合わせ表示に使う。                                                      |
-| **Play function**   | Story                 | Story の描画後に自動実行されるインタラクション関数。`@storybook/addon-interactions` と組み合わせてユーザー操作をシミュレーションする。                                           |
+| **Play function**   | Story                 | Story の描画後に自動実行されるインタラクション関数。`storybook/test` の `userEvent` や `expect` を使って操作と assertion を記述する。                                            |
 | **Decorators**      | Meta / Story / Global | Story を囲むラッパー。Provider 注入やレイアウト調整に使う。Dayopt では `preview.tsx` でグローバル Decorator を設定（テーマ切替、`NextIntlClientProvider`、`TRPCMockProvider`）。 |
 | **Parameters**      | Meta / Story / Global | Story や addon の振る舞いを制御する静的メタデータ。`backgrounds`, `docs`, `a11y` など addon ごとの設定を持つ。                                                                   |
 | **Tags**            | Meta / Story          | Story の分類ラベル。`'autodocs'` で自動ドキュメント生成を有効化する。                                                                                                            |
@@ -269,31 +272,30 @@ export const Destructive: Story = {
 | **Canvas**         | Story を描画するメインエリア。1 つの Story を単独で表示する。                                                                                                                                                                                                          |
 | **Docs page**      | `tags: ['autodocs']` で自動生成されるドキュメントページ。コンポーネントの全 Story と props テーブルを一覧表示する。Dayopt では `DocsTemplate` でページレイアウトをカスタム。                                                                                           |
 | **Controls panel** | ArgTypes に基づくインタラクティブな props 操作パネル。Story の Args をリアルタイムに変更できる。                                                                                                                                                                       |
-| **Actions panel**  | イベントハンドラ（`onClick`, `onChange` 等）の呼び出しログを表示するパネル。                                                                                                                                                                                           |
 | **Toolbar**        | 上部バー。GlobalTypes で定義したツールを配置する。Dayopt ではテーマ切替（Light / Dark）を設定。                                                                                                                                                                        |
-| **Addons panel**   | 下部のタブ切替パネル。Controls, Actions, A11y などの addon が表示される。                                                                                                                                                                                              |
+| **Addons panel**   | 下部のタブ切替パネル。Controls、Accessibility、Vitest など、有効な addon の UI が表示される。                                                                                                                                                                          |
 
 ### 4. インフラ（設定ファイル）
 
 `.storybook/` ディレクトリに配置する設定ファイル群。
 
-| ファイル        | 役割                                                                          | Dayopt での設定内容                                                                                                              |
-| --------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **main.ts**     | Storybook の中核設定。Story 対象ファイル、addons、framework を定義。          | stories glob, framework: `react-vite`, addons: docs / essentials / a11y / interactions, `reactDocgen: 'react-docgen-typescript'` |
-| **preview.tsx** | Story 描画環境の設定。グローバル Decorators, Parameters, GlobalTypes を定義。 | テーマ切替 Decorator、`NextIntlClientProvider` / `TRPCMockProvider` の注入、a11y ルール設定、Controls matchers                   |
-| **manager.ts**  | Storybook UI そのもの（Sidebar, Toolbar）の外観設定。                         | テーマ、ブランディングなど                                                                                                       |
+| ファイル        | 役割                                                                 | Dayopt での設定内容                                                                          |
+| --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| **main.ts**     | Storybook の中核設定。Story 対象ファイル、addons、framework を定義。 | stories glob、`@storybook/nextjs-vite`、Docs / A11y / Vitest / MCP / dark mode、React Docgen |
+| **preview.tsx** | Story 描画環境の設定。グローバル Decorators と Parameters を定義。   | テーマ、`NextIntlClientProvider` / `TRPCMockProvider`、store mock、viewport、a11y、Controls  |
+| **manager.ts**  | Storybook UI そのもの（Sidebar, Toolbar）の外観設定。                | OS 設定に沿うテーマ、Controls panel、zoom 非表示                                             |
 
 #### Addons（拡張機能パッケージ）
 
 Dayopt で使用している addon:
 
-| Addon                           | 説明                                                                |
-| ------------------------------- | ------------------------------------------------------------------- |
-| `@storybook/addon-docs`         | MDX サポートと autodocs 自動生成。`remarkGfm` プラグインを追加。    |
-| `@storybook/addon-essentials`   | Controls, Actions, Viewport, Backgrounds 等のバンドル。             |
-| `@storybook/addon-a11y`         | axe-core ベースのアクセシビリティチェック。WCAG 2.1 AA 準拠で設定。 |
-| `@storybook/addon-interactions` | Play function のステップ実行・デバッグ。                            |
-| `@storybook/addon-onboarding`   | 初回利用時のガイド。                                                |
+| Addon                          | 説明                                                                |
+| ------------------------------ | ------------------------------------------------------------------- |
+| `@storybook/addon-docs`        | MDX サポートと autodocs 自動生成。`remarkGfm` を追加する。          |
+| `@storybook/addon-a11y`        | axe-core ベースのアクセシビリティ検査。CI では違反を error にする。 |
+| `@storybook/addon-vitest`      | Vitest と Storybook のテスト統合。                                  |
+| `@storybook/addon-mcp`         | AI から Storybook の Story と docs を調査するための MCP。           |
+| `@vueless/storybook-dark-mode` | Light / Dark のテーマ切替。                                         |
 
 ### 5. 自動ドキュメント生成
 

@@ -80,7 +80,7 @@ Dayopt の作業を進める際の規約。作業規模に応じて進め方を�
 - `sidebar-v2-design`（旧 Phase 2-D）
 - `feature-colocation-migration`（旧 Phase 2-E）
 - `tag-management-refactor`
-- `watching-ai-implementation`
+- `calendar-state-unification`
 
 **悪い例**:
 
@@ -100,6 +100,8 @@ docs/projects/{project-name}/
 └── step-X-detail.md   — Step 詳細設計書（必要なら）
 ```
 
+`overview.md` の `status` は進行中なら `active`、意図的に止めるなら `paused` とする。step文書は通常のstockとして `status: current` を使う。
+
 または簡略形式として `docs/projects/{project-name}-detail.md` 1 ファイル。
 
 ### 完了後
@@ -107,6 +109,8 @@ docs/projects/{project-name}/
 Project 完了時も同じ `docs/projects/{project-name}/` に置いたまま `summary.md` を追加:
 
 ```
+
+完了時は `overview.md` を `status: done` にし、`summary.md` を `status: current` で追加する。`done` と `summary.md` は常に同じ変更に含める。
 docs/projects/{project-name}/
 ├── overview.md
 ├── step-X-detail.md

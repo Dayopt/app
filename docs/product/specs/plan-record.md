@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-07-14
 code: apps/product/src/features/timeblock
 ---
 
@@ -46,7 +46,7 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 | 過去日付への新規 Plan 追加       | ✗（実際にやったことは予定外の Record へ） |
 | ワンタップ記録 / skip / 削除     | ○                                         |
 
-end が未来の Plan（進行中含む）は自由に編集できる。ただし end を過去へ縮める操作は不可（早く終わったなら短い Record で記録する）。Record 側は過去の記録なので通常の訂正（時間・タグ・note・fulfillment_score）が可能。
+end が未来の Plan（進行中含む）は自由に編集できる。ただし end を過去へ縮める操作は不可（早く終わったなら短い Record で記録する）。Record 側は過去の記録なので時間・タグ・noteを訂正できる。
 
 ## 重なり制約
 
@@ -54,9 +54,9 @@ end が未来の Plan（進行中含む）は自由に編集できる。ただ�
 - Plan × Record: 許可（予定と記録は別レイヤーなので重なってよい）
 - 緩和は実質不可逆（一度重なりデータが入ると再強化にデータ犠牲が伴う）
 
-## fulfillment_score
+## Legacy compatibility field
 
-達成度スコア（1-3）は Record 側の属性。Plan には存在しない（予定の時点では達成度を測れないため）。
+物理`records.fulfillment_score`と一部server schema / 集計互換コードは残っているが、現在のUIは達成度を入力・表示せず、Reviewの現行プロダクト契約にも含めない。新機能はこのfieldへ依存しない。
 
 ## 関連する意思決定
 

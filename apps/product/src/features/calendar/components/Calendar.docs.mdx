@@ -4,122 +4,19 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Calendar
 
-時間管理の中核ビュー。エントリをタイムグリッド上に表示し、ドラッグ&ドロップで直感的に操作する。
+PlanとRecordを時間gridに描画するcomponent群。Storybookではviewごとの密度、2lane表現、drag state、empty stateを確認する。
 
-エントリカード（`TimeblockCard`）は `@/features/timeblock` に定義。カレンダーはそれを利用して描画する。
+## Visual contract
 
----
+| View        | 確認する状態                                         |
+| ----------- | ---------------------------------------------------- |
+| Day         | 1日grid、Plan / Record lane、current time            |
+| Week        | 7日密度、weekend、複数日の差分marker                 |
+| Multi-Day   | 2〜9日の可変column                                   |
+| Interaction | selection、drag preview、context menu、inline create |
 
-## ビュー一覧
+- Planはoutline / 淡色、Recordは塗りを基本にする
+- Review / Diff panelのcomponentとStoryはReview featureが所有する
+- Calendar Storyはpanel内部やDB data flowを説明しない
 
-| ビュー        | 説明                   | コンポーネント |
-| ------------- | ---------------------- | -------------- |
-| **Day**       | 1日のタイムグリッド    | `DayView`      |
-| **Week**      | 7日間のタイムグリッド  | `WeekView`     |
-| **Multi-Day** | 2〜9日間のカスタム表示 | `MultiDayView` |
-
-ビュー切替は `ViewSwitcherList` コンポーネントで行い、`CalendarNavigationContext` で状態管理。
-Review / Diff は view ではなく Calendar の単一 panel slot に表示する。Storybook 上の panel 表示は `Product/Features/Review` が所有し、Calendar は時間軸表示だけを扱う。
-
----
-
-## コンポーネント構成
-
-```
-CalendarController              メインエントリポイント
-├── layout/
-│   ├── CalendarLayout          レイアウトラッパー
-│   └── Header/
-│       ├── ViewSwitcher        ビュー切替（PC・ドロップダウン）
-│       ├── ViewSwitcherList    ビュー切替（モバイル・リスト）
-│       └── DateRangeDisplay    日付範囲表示
-├── views/
-│   ├── DayView/                1日ビュー
-│   ├── WeekView/               週ビュー
-│   ├── MultiDayView/           N日ビュー
-│   └── shared/
-│       ├── grid/               TimeGrid, TimeColumn, GridLines, CurrentTimeLine
-│       ├── DayColumn/          日カラム
-│       ├── CalendarDragSelection/  ドラッグ選択レイヤー
-│       └── EventContextMenu    右クリックメニュー
-├── tag-filter/                 タグフィルターUI（インライン rename 対応）
-├── animations/                 ビュー遷移アニメーション
-└── controller/                 ビュー描画ディスパッチ
-```
-
----
-
-## 状態管理
-
-### Zustand Stores
-
-| Store                    | 用途                                 | persist |
-| ------------------------ | ------------------------------------ | ------- |
-| `useCalendarFilterStore` | タイプ/タグのフィルター              | Yes     |
-| `useCalendarDragStore`   | ドラッグ元・ゴースト・プレビュー時間 | No      |
-| `useCalendarScrollStore` | スクロール位置同期                   | No      |
-
-### Context
-
-| Context                     | 用途                                    |
-| --------------------------- | --------------------------------------- |
-| `CalendarNavigationContext` | 日付・ビュー・panel・ナビゲーション操作 |
-| `CalendarGridProvider`      | グリッド計算の共有                      |
-
----
-
-## ドラッグ & ドロップ
-
-- **技術**: `@dnd-kit/core`
-- **ソース**: カレンダーグリッド、アサイド
-- **ターゲット**: タイムグリッドセル
-- **センサー**: PointerSensor（8px閾値）、TouchSensor（250ms遅延）
-- **機能**: ドラッグプレビュー、時間計算、モバイルハプティクス
-
----
-
-## フィルター
-
-| フィルター | 説明                         |
-| ---------- | ---------------------------- |
-| タイプ別   | エントリタイプの表示切替     |
-| タグ別     | 階層対応のマルチタグフィルタ |
-| 未タグ     | タグなしアイテムの表示トグル |
-
-`useCalendarFilterStore` で管理、localStorage に永続化。
-
----
-
-## コンテキストメニュー
-
-| メニュー               | トリガー                 | アクション                       |
-| ---------------------- | ------------------------ | -------------------------------- |
-| `EventContextMenu`     | エントリカード右クリック | 編集、複製、削除、ステータス変更 |
-| `EmptyAreaContextMenu` | 空エリア右クリック       | プラン作成、レコード作成         |
-
----
-
-## データ同期
-
-`refetchOnWindowFocus`（TanStack Query）でタブ切り替え時にデータを自動再取得。
-
----
-
-## DB テーブル
-
-| テーブル  | 用途                                                       |
-| --------- | ---------------------------------------------------------- |
-| `entries` | エントリデータ（タイトル、時間、タグ、ステータス等を統合） |
-| `tags`    | マスタータグ（`entries.tag_id` で参照）                    |
-
----
-
-## キーボード操作
-
-- ビュー切替、日付ナビゲーション、プラン選択
-- 週末トグルショートカット
-- Escape でキャンセル
-
----
-
-**最終更新**: 2026-03-16
+外部挙動はroot `docs/product/specs/calendar.md`、system state flowは`docs/engineering/architecture.md`を参照する。

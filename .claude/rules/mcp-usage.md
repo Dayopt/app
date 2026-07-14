@@ -15,7 +15,7 @@
 
 - **常時使う**: `context7` / `sentry` / `github` / `vercel`
 - **オンデマンドで使う**: `eagle` / `supabase-local` / `storybook` / `supabase`(cloud)
-- `context7` はバージョン依存の判断では原則使う。Next.js 15 / React 19 / tRPC / Supabase client / TanStack Query / Zustand などは記憶だけで判断しない。
+- `context7` はバージョン依存の判断では原則使う。Next.js / React / tRPC / Supabase client / TanStack Query / Zustand などはmanifestでexact versionを確認し、記憶だけで判断しない。
 - `sentry` / `vercel` は OAuth 方式。初回や期限切れ時に `/mcp` で承認する。token 管理は不要。
 - `supabase`(cloud) / `github` は `.mcp.json` の起動コマンドが `op run` で `op://` を自己解決する。zsh ラッパー起動に依存しない。token は repo に置かない。
 - `supabase`(cloud) は production project（read-only 既定）を参照する。schema/RLS の確認用。書き込みを伴う migration は `supabase-local` → PR Preview → production の既存フロー（`supabase` skill）で行う。
@@ -76,7 +76,7 @@
 - **Before use**:
   - CLI 側の生存確認は `npx -y @upstash/context7-mcp@latest --version` で行う
   - Claude MCP 経由では `resolve-library-id` から `query-docs` の順に確認する
-- **境界ケース**: 「知っている」と思っても、Next.js 15 App Router や React 19 の新 hook など cutoff 付近のトピックは必ず `query-docs` で確認してから回答する。
+- **境界ケース**: 「知っている」と思っても、current Next.js App RouterやReactの新hookなどversion依存のトピックは必ずmanifestを確認し、`query-docs`で一次資料を確認してから回答する。
 
 ### Eagle (`mcp__eagle__*`)
 

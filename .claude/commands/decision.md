@@ -17,8 +17,8 @@ description: 各ドメインの log/ に意思決定ログを新規作成する
 
    ```markdown
    ---
-   status: current
-   updated: YYYY-MM-DD
+   status: frozen
+   date: YYYY-MM-DD
    ---
 
    # 決めたこと(1行)
@@ -37,6 +37,6 @@ description: 各ドメインの log/ に意思決定ログを新規作成する
 
 ## 守ること
 
-- 一度作成した decision ファイルは書き換えない。訂正が必要になったら新しい `/decision` を実行し、古い方の frontmatter に `status: superseded` を追記する(本文は書き換えない)
+- 一度作成した decision ファイルは書き換えない。訂正が必要になったら新しい `/decision` を実行し、古い方の frontmatter に新しいrepo-relative pathを`superseded_by`として追記する(本文は書き換えない)
 - 技術判断・プロダクト判断・事業判断を区別せず同じテンプレートを使う。置き場所(ドメイン)だけで分類する
 - 連番管理は不要(日付が一意性を担保する)。同日に複数決定があれば slug で区別する

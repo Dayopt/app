@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-07-14
 code: apps/product/src
 ---
 
@@ -731,7 +731,7 @@ const { data, isLoading } = useQuery({
 
 ## Next.js パフォーマンス最適化
 
-Dayoptで実装済みのNext.js 15 App Router向けパフォーマンス最適化の技術リファレンス。
+Dayoptで実装済みのNext.js App Router向けパフォーマンス最適化の技術リファレンス。exact versionは`apps/product/package.json`を参照する。
 
 ### 実装済み最適化一覧
 

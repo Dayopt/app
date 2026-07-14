@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-14
 ---
 
 # 運用ツール（Eagle / ライセンスコンプライアンス / Skill Triggers / 管理者スクリプト）
@@ -34,10 +34,10 @@ Dayopt Design/
 ├── Features/                      ← 機能コンポーネント（自動管理）
 │   ├── Calendar/                  ← Views/{Day,Week,Grid}, Header, Sidebar...
 │   ├── Settings/                  ← Account, Display, Billing, Data...
-│   ├── Stats/                     ← Badges, Insights, Progress, Review...
-│   ├── Entry/                     ← Card, Content, Inspector/...
+│   ├── Review/                    ← Reflection, Diff, Insights...
+│   ├── Timeblock/                 ← Plan/Record Card, Editor, Inspector...
 │   ├── Auth/                      ← Login, Signup, MFA...
-│   └── Tags/ Onboarding/ Tour/ etc.
+│   └── Tags/ Contact/ etc.
 ├── Foundations/                    ← カラー、タイポグラフィ、spacing、radius
 ├── Inspiration/                   ← 参考UI・UXリファレンス
 │   ├── Timeboxing/
@@ -97,8 +97,8 @@ Dayopt Design/
 #### Feature セクション（自動検出）
 
 - `calendar` / `stats` / `settings` / `entry` / `auth`
-- `tags` / `tour` / `onboarding` / `chronotype`
-- `notifications` / `history` / `palette` / `search` / `contact`
+- `tags` / `timeblock` / `calendar` / `review`
+- `auth` / `contact` / `settings`
 
 #### パスセグメント（自動付与）
 
@@ -176,7 +176,7 @@ token-{type}-{name}.png
 
 ```
 token-color-palette-full.png
-token-color-chronotype-zones.png
+token-color-timeblock-states.png
 token-typography-scale.png
 token-radius-specimens.png
 token-icon-sizes.png
@@ -262,9 +262,8 @@ Eagle MCP → `get_item_info` → メモからパスを抽出して応答でき�
 | --------------------------------------- | ------ | ------- | -------------------------------- |
 | Features/Calendar/Views/                | ✓      | ✓       | Day/Week/Grid のページレイアウト |
 | Features/Settings/                      | ✓      | ✓       | 設定画面各種                     |
-| Features/Stats/                         | ✓      | ✓       | 統計タブ各種                     |
+| Features/Review/                        | ✓      | ✓       | Calendar右panel                  |
 | Features/Auth/                          | ✓      | ✓       | 認証画面                         |
-| Features/Onboarding/                    | ✓      | ✓       | オンボーディング                 |
 | Product/Components/Shell/Sidebar/       | ✓      | ✓       | デスクトップでレイアウト変化     |
 | Shared/Components/                      | ✓      | -       | プリミティブ（差分小）           |
 | Product/Components/                     | ✓      | -       | ユーティリティ                   |

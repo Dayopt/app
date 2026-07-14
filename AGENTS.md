@@ -11,7 +11,7 @@ Codex 用の入口。詳細ルールは既存の `.claude/rules/` を canonical 
 
 ## Tech Stack
 
-Next.js 15 App Router / React 19 / TypeScript strict / Tailwind CSS v4 / Zustand / Supabase / tRPC v11 / Zod / shadcn/ui / Sentry
+Next.js App Router / React / TypeScript strict / Tailwind CSS / Zustand / Supabase / tRPC / Zod / shadcn/ui / Sentry。exact version は各 `package.json` と lockfile を正とする
 
 ## Commands
 
@@ -48,7 +48,7 @@ pnpm db:fresh
 pnpm quality:deadcode
 
 # docs
-pnpm docs:check               # リンク切れ/frontmatter/命名/append-only を検証（CI と同一）
+pnpm docs:check               # link/metadata/path/project/命名/append-only を検証（CI と同一）
 ```
 
 ## Non-Negotiables
@@ -105,7 +105,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 | `/decision`     | 各ドメインの `log/` に `YYYY-MM-DD-slug.md` で意思決定ログを新規作成         |
 | `/plan-review`  | 直前の実装 plan を plan-fact-checker / plan-critic の 2 agent で並列レビュー |
 | `/note`         | 各ドメインの `log/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応） |
-| `/session-end`  | 当日の作業を `docs/engineering/log/YYYY-MM-DD-session.md` に記録し `latest.md` を更新 |
+| `/session-end`  | 当日の作業を `docs/engineering/log/YYYY-MM-DD-session.md` に記録                         |
 | `/gardening`    | 月次: セッションログ→月次ロールアップ蒸留、ストック鮮度triage、notes昇格、スモークテスト |
 
 ## Rule Map

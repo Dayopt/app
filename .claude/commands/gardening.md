@@ -4,13 +4,13 @@ description: 月次ガーデニング — セッションログを月次ロー�
 
 # /gardening
 
-月次で docs/ 全体の鮮度と一貫性を保守する。6ステップを順に実施し、最後に当月ロールアップへ記録して終わる。
+月次で docs/ 全体の鮮度と一貫性を保守する。6ステップを順に実施し、当月のjournalを1回だけ新規作成して終わる。`docs/engineering/log/YYYY-MM-01-journal.md` がすでに存在する場合は再編集せず、月次ガーデニング済みと報告する。追加監査が必要なら別の日付付きnoteを作る。
 
 ## 手順
 
 ### 1. セッションログ → 月次ロールアップへの蒸留
 
-先月分の `docs/engineering/log/YYYY-MM-DD-session.md` を全て読み、`docs/engineering/log/YYYY-MM-01-journal.md`(先月分)に蒸留する。該当月ファイルが存在しなければ新規作成する。
+先月分の `docs/engineering/log/YYYY-MM-DD-session.md` を全て読み、今回新規作成する当月の`docs/engineering/log/YYYY-MM-01-journal.md`に蒸留する。
 
 蒸留の観点: できごと / 決定 / 学び / 数値(コミット数、変更規模など)。セッションログの生ログをそのまま転記せず、意味のある単位にまとめる。
 
@@ -43,13 +43,13 @@ feedback / incident の note は、対応がまだ `operations/` 側の手順に
 
 `dispatch` skill（`.agents/skills/dispatch/SKILL.md`）の操作 C（sweep）を実施する。issue の外に溜まった作業（advisors / Dependabot alerts / 監査ログ残タスク / 生成スクリプトの故障 / 放置 PR）を検出し、見つけたら同 skill の intake で起票する。結果はステップ 6 のロールアップに件数を記録する。
 
-### 6. 月次ロールアップへの記録
+### 6. 当月journalの作成
 
-このガーデニング実施の内容(蒸留したセッション件数、triageした上位10件の対応、昇格したnote、スモークテストの結果)を当月 `docs/engineering/log/YYYY-MM-01-journal.md` に追記して終了する。
+ステップ1の蒸留と、今回のガーデニング実施内容(蒸留したセッション件数、triageした上位10件の対応、昇格したnote、スモークテストの結果)をまとめ、当月`docs/engineering/log/YYYY-MM-01-journal.md`を新規作成して終了する。frontmatterは`status: frozen`と`date: YYYY-MM-01`を使う。
 
 ## 守ること
 
-- ステップ1のロールアップ追記は「先月分」のファイルに対して行う(今月分ではない)。書き終わったら追記専用(append-only)
+- journalを含むlogは初回commit後に追記・編集しない。当月journalが存在する場合は`YYYY-MM-DD-gardening-<topic>.md`を新規作成する
 - ステップ2のストック修正は通常の編集(append-only ではない)。ただしその修正内容自体はロールアップに残す
 - このコマンドの最後に、当月分のロールアップファイルが存在する状態になっていること(AGENTS.md の月次ガーデニング提案トリガーの解除条件)
 - `archive/` ディレクトリは作らない(`docs/README.md` §フロントマター 参照)。役目を終えたストックは `status: superseded` を付けてその場に残すか、git に任せて削除する

@@ -12,19 +12,21 @@ Dayopt のシステム構成、データフロー、DB スキーマ、技術選�
 
 ## 技術スタック
 
+ここでは役割と採用理由だけを扱う。正確なversionはrootと各workspaceの`package.json`、DB runtimeはSupabase Dashboardを正とする。
+
 ### フロントエンド
 
-- **Next.js 16 (App Router)** — React フレームワーク。ファイルベースルーティング、Server Components / Client Components、`next/image` による画像最適化
-- **React 19** — UI ライブラリ。業界標準、Server Components サポート
+- **Next.js App Router** — React フレームワーク。ファイルベースルーティング、Server Components / Client Components、`next/image` による画像最適化
+- **React** — UI ライブラリ。業界標準、Server Components サポート
 - **TypeScript** — 型安全性、IDE 補完、バグ防止
-- **Tailwind CSS v4 + shadcn/ui** — ユーティリティファーストのスタイリングと、Radix UI ベースのカスタマイズ可能な UI コンポーネント
+- **Tailwind CSS + shadcn/ui** — ユーティリティファーストのスタイリングと、Radix UI ベースのカスタマイズ可能な UI コンポーネント
 - **Zustand** — クライアント状態管理。Redux よりボイラープレートが少なく学習コストが低い
 - **TanStack Query** — サーバー状態のキャッシング・自動リフェッチ・楽観的更新
 
 ### バックエンド
 
-- **Supabase (PostgreSQL v17)** — 認証・DB・リアルタイムを一体で提供する BaaS。PostgreSQL（SQL が使える）、RLS によるセキュリティ、オープンソースである点が採用理由
-- **tRPC v11** — クライアント⇔サーバー間の E2E 型安全な API 通信。スキーマ自動生成不要、型の不整合はコンパイルエラーになる
+- **Supabase (PostgreSQL)** — 認証・DB・リアルタイムを一体で提供する BaaS。PostgreSQL（SQL が使える）、RLS によるセキュリティ、オープンソースである点が採用理由
+- **tRPC** — クライアント⇔サーバー間の E2E 型安全な API 通信。スキーマ自動生成不要、型の不整合はコンパイルエラーになる
 - **Zod** — バリデーション。型推論と tRPC 統合
 
 ### ホスティング・デプロイ
@@ -34,18 +36,18 @@ Dayopt のシステム構成、データフロー、DB スキーマ、技術選�
 
 ### 技術選定の理由まとめ
 
-| 技術            | 採用理由                             |
-| --------------- | ------------------------------------ |
-| Next.js 16      | React の公式推奨、Vercel との親和性  |
-| React 19        | 業界標準、Server Components サポート |
-| TypeScript      | 型安全性、IDE 補完、バグ防止         |
-| tRPC v11        | E2E 型安全、コード量削減             |
-| Zustand         | シンプル、Redux 不要                 |
-| TanStack Query  | キャッシング、リフェッチ             |
-| Supabase        | 認証、DB、リアルタイム一体型         |
-| Tailwind CSS v4 | ユーティリティファースト             |
-| shadcn/ui       | カスタマイズ可能、Radix UI ベース    |
-| Zod             | 型推論、tRPC と統合                  |
+| 技術           | 採用理由                             |
+| -------------- | ------------------------------------ |
+| Next.js        | React の公式推奨、Vercel との親和性  |
+| React          | 業界標準、Server Components サポート |
+| TypeScript     | 型安全性、IDE 補完、バグ防止         |
+| tRPC           | E2E 型安全、コード量削減             |
+| Zustand        | シンプル、Redux 不要                 |
+| TanStack Query | キャッシング、リフェッチ             |
+| Supabase       | 認証、DB、リアルタイム一体型         |
+| Tailwind CSS   | ユーティリティファースト             |
+| shadcn/ui      | カスタマイズ可能、Radix UI ベース    |
+| Zod            | 型推論、tRPC と統合                  |
 
 Zustand と TanStack Query の使い分け:
 
@@ -562,7 +564,7 @@ apps/product
 
 `packages/foundations`, `packages/components`, `packages/config`, `packages/domain` は最小の公開面を持つ package として運用中。
 `packages/i18n` は `packages/config` の locale 定義を使い、product / web に共通する next-intl adapter の公開面を環境別 subpath に限定して提供する。
-`packages/domain` は Dayopt の意味を表す pure TypeScript package で、現時点では `TimeRange`, `EntryOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`, `Chronotype` などの軽い型・定数・helper だけを持つ。
+`packages/domain` は Dayopt の意味を表すpure TypeScript packageで、`TimeRange`, `TimeblockOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`等の軽い型・定数・helperを持つ。Chronotype型はcompatibility residueであり、現行product featureを表さない。
 
 DB boundary は `apps/product/src/lib/database`（旧 `packages/database`、product-local 化済み）が Supabase generated types と DB row helper を担う。DB access を含む service は product 側に残す。
 `packages/billing` は Free / Pro の公開 plan model, subscription status, `pro_access` entitlement, pricing 表示用定数の境界として運用中。Stripe SDK / secret / webhook / checkout / portal は product 側の server-only 境界に残す。
