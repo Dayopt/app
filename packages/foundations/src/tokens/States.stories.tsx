@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-
-import { Button, Input } from '@dayopt/components';
+import type { ButtonHTMLAttributes, InputHTMLAttributes } from 'react';
 
 const meta = {
   title: 'Shared/Foundations/States',
@@ -13,7 +12,38 @@ const meta = {
 export default meta;
 type Story = StoryObj;
 
-export const Overview: Story = {
+interface StateButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'default' | 'outline' | 'ghost' | 'destructive';
+}
+
+const buttonVariantClasses: Record<NonNullable<StateButtonProps['variant']>, string> = {
+  default: 'bg-primary text-primary-foreground hover:bg-primary-hover',
+  outline: 'border-border bg-background hover:bg-state-hover border',
+  ghost: 'hover:bg-state-hover',
+  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive-hover',
+};
+
+function StateButton({ variant = 'default', ...props }: StateButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`focus-visible:ring-primary inline-flex h-8 items-center justify-center rounded-lg px-4 text-sm font-medium outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 ${buttonVariantClasses[variant]}`}
+      {...props}
+    />
+  );
+}
+
+function StateInput(props: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      className="border-border bg-muted placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary aria-invalid:border-destructive h-8 w-full rounded-lg border px-3 py-1 text-sm outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50"
+      {...props}
+    />
+  );
+}
+
+/** State token の定義と操作例をまとめて確認する。 */
+export const AllPatterns: Story = {
   render: () => (
     <div>
       <h1 className="mb-2 text-2xl font-medium">States（使い方とデモ）</h1>
@@ -101,11 +131,11 @@ export const Overview: Story = {
               <h3 className="text-muted-foreground mb-2 text-sm font-medium">default</h3>
               <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
-                  <Button>Default</Button>
+                  <StateButton>Default</StateButton>
                   <p className="text-muted-foreground text-xs">通常</p>
                 </div>
                 <div className="space-y-1 text-center">
-                  <Button disabled>Disabled</Button>
+                  <StateButton disabled>Disabled</StateButton>
                   <p className="text-muted-foreground text-xs">無効</p>
                 </div>
               </div>
@@ -116,13 +146,13 @@ export const Overview: Story = {
               <h3 className="text-muted-foreground mb-2 text-sm font-medium">outline</h3>
               <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
-                  <Button variant="outline">Default</Button>
+                  <StateButton variant="outline">Default</StateButton>
                   <p className="text-muted-foreground text-xs">通常</p>
                 </div>
                 <div className="space-y-1 text-center">
-                  <Button variant="outline" disabled>
+                  <StateButton variant="outline" disabled>
                     Disabled
-                  </Button>
+                  </StateButton>
                   <p className="text-muted-foreground text-xs">無効</p>
                 </div>
               </div>
@@ -133,13 +163,13 @@ export const Overview: Story = {
               <h3 className="text-muted-foreground mb-2 text-sm font-medium">ghost</h3>
               <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
-                  <Button variant="ghost">Default</Button>
+                  <StateButton variant="ghost">Default</StateButton>
                   <p className="text-muted-foreground text-xs">通常</p>
                 </div>
                 <div className="space-y-1 text-center">
-                  <Button variant="ghost" disabled>
+                  <StateButton variant="ghost" disabled>
                     Disabled
-                  </Button>
+                  </StateButton>
                   <p className="text-muted-foreground text-xs">無効</p>
                 </div>
               </div>
@@ -150,13 +180,13 @@ export const Overview: Story = {
               <h3 className="text-muted-foreground mb-2 text-sm font-medium">destructive</h3>
               <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
-                  <Button variant="destructive">Default</Button>
+                  <StateButton variant="destructive">Default</StateButton>
                   <p className="text-muted-foreground text-xs">通常</p>
                 </div>
                 <div className="space-y-1 text-center">
-                  <Button variant="destructive" disabled>
+                  <StateButton variant="destructive" disabled>
                     Disabled
-                  </Button>
+                  </StateButton>
                   <p className="text-muted-foreground text-xs">無効</p>
                 </div>
               </div>
@@ -173,19 +203,19 @@ export const Overview: Story = {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-medium">Default</p>
-              <Input placeholder="入力してください" />
+              <StateInput placeholder="入力してください" />
             </div>
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-medium">Focus（Tab で確認）</p>
-              <Input placeholder="フォーカスしてみて" />
+              <StateInput placeholder="フォーカスしてみて" />
             </div>
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-medium">Error</p>
-              <Input placeholder="エラー" aria-invalid="true" />
+              <StateInput placeholder="エラー" aria-invalid="true" />
             </div>
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-medium">Disabled</p>
-              <Input placeholder="無効" disabled />
+              <StateInput placeholder="無効" disabled />
             </div>
           </div>
         </section>

@@ -705,7 +705,7 @@ Storybook の story title top-level は所有境界（package / app）で分け�
 
 | title prefix           | Source of truth                                                                                                |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `Shared/Foundations/*` | `packages/foundations`。例外: `apps/product/src/lib/styles/tokens`（token doc、物理位置は product 側）も許容   |
+| `Shared/Foundations/*` | `packages/foundations`                                                                                         |
 | `Shared/Components/*`  | `packages/components`                                                                                          |
 | `Shared/Patterns/*`    | `apps/storybook/.storybook/stories/patterns`（`@dayopt/components` のみに依存する pattern）                    |
 | `Product/Components/*` | `apps/product/src/components/**`（app 固有 component。`apps/product/src/features/**` の straggler も一部含む） |
