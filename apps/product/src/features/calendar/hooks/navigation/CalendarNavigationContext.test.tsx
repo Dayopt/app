@@ -263,7 +263,7 @@ describe('CalendarNavigationProvider', () => {
     );
   });
 
-  it('opens review panel on week view with reviewTagId', () => {
+  it('opens review panel on current view with reviewTagId', () => {
     window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
     mockPathname = '/ja/day';
 
@@ -274,11 +274,11 @@ describe('CalendarNavigationProvider', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'review-on' }));
-    expect(screen.getByTestId('view')).toHaveTextContent('week');
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
     expect(screen.getByTestId('panel')).toHaveTextContent('review');
     expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/week?date=2026-03-25&panel=review&reviewTagId=tag-1',
+      '/ja/day?date=2026-03-25&panel=review&reviewTagId=tag-1',
     );
   });
 

@@ -394,6 +394,7 @@ function SortableParentBlock({
   const router = useRouter();
   const navigation = useCalendarNavigation();
   const reviewDate = navigation?.currentDate ?? new Date();
+  const reviewViewType = navigation?.viewType ?? 'week';
   const updateTagMutation = useUpdateTag();
   const { openTagRenameModal, openTagCreateModal } = useTagModalNavigation();
   const {
@@ -480,7 +481,9 @@ function SortableParentBlock({
               })
             }
             onViewStats={() =>
-              router.push(buildCalendarReviewPanelPath(locale, reviewDate, node.tag.id))
+              router.push(
+                buildCalendarReviewPanelPath(locale, reviewDate, node.tag.id, reviewViewType),
+              )
             }
             onDeleteGroup={() => onDeleteTag(node.tag.id, node.tag.name)}
             onRowClick={() => onOpenPopover(node.tag.id)}
@@ -581,6 +584,7 @@ function SortableTagItem({
   const router = useRouter();
   const navigation = useCalendarNavigation();
   const reviewDate = navigation?.currentDate ?? new Date();
+  const reviewViewType = navigation?.viewType ?? 'week';
   const {
     attributes,
     listeners,
@@ -752,7 +756,9 @@ function SortableTagItem({
                 }
                 onShowOnlyTag={onShowOnlyTag}
                 onViewStats={() =>
-                  router.push(buildCalendarReviewPanelPath(locale, reviewDate, tag.id))
+                  router.push(
+                    buildCalendarReviewPanelPath(locale, reviewDate, tag.id, reviewViewType),
+                  )
                 }
                 onDeleteTag={onDeleteTag}
               />

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useTimeblockWriteMutations } from '@/features/timeblock';
 import { toast } from '@/lib/toast';
 
+import { useCalendarNavigation } from '../../hooks/navigation/CalendarNavigationContext';
 import { buildCalendarReviewPanelPath } from '../../lib/panel-url';
 import type { CalendarEvent } from '../../types/calendar.types';
 
@@ -22,6 +23,8 @@ export function useTimeblockContextActions() {
   const locale = useLocale();
   const t = useTranslations();
   const { deleteRecord, deletePlan, skipPlan, unskipPlan } = useTimeblockWriteMutations();
+  const navigation = useCalendarNavigation();
+  const viewType = navigation?.viewType ?? 'week';
 
   const handleDeleteTimeblock = useCallback(
     (entry: CalendarEvent) => {
@@ -42,10 +45,11 @@ export function useTimeblockContextActions() {
           locale,
           entry.startDate ?? entry.actualStartDate ?? new Date(),
           entry.tagId,
+          viewType,
         ),
       );
     },
-    [router, locale],
+    [router, locale, viewType],
   );
 
   const handleSkip = useCallback(
