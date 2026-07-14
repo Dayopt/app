@@ -12,9 +12,7 @@
     "lint": {
       "outputs": []
     },
-    "test:run": {
-      "outputs": ["coverage/**"]
-    },
+    "test:run": {},
     "storybook": {
       "cache": false,
       "persistent": true

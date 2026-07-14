@@ -50,19 +50,16 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      - uses: ./.github/actions/setup
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - run: corepack enable
-      - run: pnpm install --frozen-lockfile
 
       - id: supabase-version
         run: |
           version=$(node -p "require('./apps/product/package.json').devDependencies.supabase")
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - uses: supabase/setup-cli@v3
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
         with:
           # package.json の Supabase CLI と同じバージョンを使い、ローカルと CI の挙動を揃える
           version: ${{ steps.supabase-version.outputs.version }}
