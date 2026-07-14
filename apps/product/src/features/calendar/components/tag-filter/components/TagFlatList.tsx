@@ -515,7 +515,6 @@ function SortableParentBlock({
             id={childContainerId(node.tag.id)}
             className={cn(
               'ml-4 space-y-1 rounded-xl border border-dashed border-transparent px-1 py-1',
-              activeDragId && canDropChildHere && 'bg-muted/30',
             )}
           >
             {!collapsed
@@ -780,7 +779,7 @@ function SortableTagItem({
             id={childContainerId(tag.id)}
             className={cn(
               'ml-4 h-4 rounded-xl border border-dashed border-transparent',
-              canAcceptChildren ? 'bg-muted/30' : 'hidden',
+              canAcceptChildren ? 'bg-transparent' : 'hidden',
             )}
           />
         ) : null}
