@@ -7,6 +7,7 @@ import { useCallback, useEffect } from 'react';
 
 import { Toaster } from '@/components/ui/feedback/toast';
 import {
+  CalendarViewType,
   buildCalendarReviewPanelPath,
   isCalendarViewPath,
   useCalendarNavigation,
@@ -81,14 +82,23 @@ export function GlobalOverlays() {
   // 競合し「inspector だけ閉じて panel に到達しない」問題を解消する。
   const handleViewStats = useCallback(
     (tagId: string) => {
+      const pathWithoutLocale = pathname?.replace(/^\/(ja|en)/, '') ?? '';
+      const currentViewSegment = pathWithoutLocale.split('/')[1]?.split('?')[0] ?? '';
+      const fallbackView: CalendarViewType = isCalendarViewPath(pathWithoutLocale)
+        ? currentViewSegment === 'day' ||
+          currentViewSegment === 'week' ||
+          /^\d+day$/.test(currentViewSegment)
+          ? (currentViewSegment as CalendarViewType)
+          : 'week'
+        : 'week';
       if (calendarNavigation) {
         calendarNavigation.setPanelKind('review', { reviewTagId: tagId });
       } else {
-        router.push(buildCalendarReviewPanelPath(locale, new Date(), tagId));
+        router.push(buildCalendarReviewPanelPath(locale, new Date(), tagId, fallbackView));
       }
       closeInspector();
     },
-    [calendarNavigation, closeInspector, router, locale],
+    [calendarNavigation, closeInspector, pathname, router, locale],
   );
 
   return (
