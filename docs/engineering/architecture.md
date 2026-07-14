@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-07-14
 code: apps/product/src
 ---
 
@@ -14,7 +14,7 @@ Dayopt のシステム構成、データフロー、DB スキーマ、技術選�
 
 ### フロントエンド
 
-- **Next.js 15 (App Router)** — React フレームワーク。ファイルベースルーティング、Server Components / Client Components、`next/image` による画像最適化
+- **Next.js 16 (App Router)** — React フレームワーク。ファイルベースルーティング、Server Components / Client Components、`next/image` による画像最適化
 - **React 19** — UI ライブラリ。業界標準、Server Components サポート
 - **TypeScript** — 型安全性、IDE 補完、バグ防止
 - **Tailwind CSS v4 + shadcn/ui** — ユーティリティファーストのスタイリングと、Radix UI ベースのカスタマイズ可能な UI コンポーネント
@@ -36,7 +36,7 @@ Dayopt のシステム構成、データフロー、DB スキーマ、技術選�
 
 | 技術            | 採用理由                             |
 | --------------- | ------------------------------------ |
-| Next.js 15      | React の公式推奨、Vercel との親和性  |
+| Next.js 16      | React の公式推奨、Vercel との親和性  |
 | React 19        | 業界標準、Server Components サポート |
 | TypeScript      | 型安全性、IDE 補完、バグ防止         |
 | tRPC v11        | E2E 型安全、コード量削減             |
@@ -151,41 +151,58 @@ end
 ```mermaid
 graph TD
 subgraph Features
-CAL["calendar"]
-ENT["entry"]
-TAG["tags"]
-AUTH["auth"]
-STAT["stats"]
-SET["settings"]
-AI["ai"]
-CHRONO["chronotype"]
-SEARCH["search"]
-ONBOARD["onboarding"]
-TOUR["tour"]
-CONTACT["contact"]
+TAG["tags (Layer 0)"]
+TB["timeblock (Layer 1)"]
+CAL["calendar (Layer 2 / hub)"]
+REV["review (Layer 2)"]
+AUTH["auth (independent)"]
+CONTACT["contact (independent)"]
+SET["settings (composition)"]
 end
 
     subgraph Composition["Composition Layer"]
-        SHELL["src/shell/"]
-        PLAT["src/platform/"]
-        COMP["src/components/"]
-        STORE["src/stores/"]
-        TYPES["src/types/"]
+        APP["app/**/_composition + layout"]
+        LIB["lib/*"]
+        STORE["lib/stores/*"]
     end
 
-    CAL -->|"hooks"| COMP
-    ENT -->|"hooks"| COMP
-    TAG --> STORE
-    AUTH --> PLAT
-    STAT --> STORE
+    TB --> TAG
+    CAL --> TB
+    CAL --> TAG
+    REV --> TB
+    REV --> TAG
+    APP --> CAL
+    APP --> REV
+    APP --> AUTH
     SET --> STORE
-    CHRONO --> TYPES
-
-    SHELL --> CAL
-    SHELL --> ENT
-    SHELL --> TAG
-    SHELL --> SEARCH
+    CAL --> STORE
+    LIB --> STORE
 ```
+
+依存方向の正はリポジトリルートの [`.claude/rules/feature-boundaries.md`](../../.claude/rules/feature-boundaries.md) と
+`apps/product/eslint.config.mjs`。`settings` は cross-cutting composition、`calendar` はページ全体を合成する hub として扱う。
+
+### Calendar の Plan / Record と UI state
+
+Calendar は Plan（予定）と Record（記録）を別レーンで描画し、`records.plan_id` で 1 Plan : N Record を表現する。
+
+```mermaid
+flowchart LR
+    URL["URL: date / view / panel"] --> NAV["CalendarNavigationContext"]
+    NAV --> CLIENT["CalendarViewClient"]
+    CLIENT --> CTRL["CalendarController"]
+    CLIENT --> PANEL["right-side panel: review / diff"]
+    CTRL --> QUERY["tRPC + TanStack Query"]
+    QUERY --> SERVICE["timeblock router / service"]
+    SERVICE --> DB["Supabase: plans / records"]
+    ZS["Zustand: transient interaction + persisted display/filter"] --> CTRL
+    NAV -.->|"command / mirror only"| ZS
+```
+
+- 日付・view range・右パネルの表示可否は URL と `CalendarNavigationContext` が source of truth。
+- `CalendarViewClient` が `CalendarController` と右側パネルを合成する。Review/Diff は独立ページではなく Calendar shell に追従する。
+- Zustand は drag、inline create、clipboard、inspector、shell などの一時 UI state と、表示モード・タグフィルターのユーザー設定だけを担う。URL/Context の値を永続化しない。
+- Plan / Record / tag などのサーバーデータは Zustand に複製せず、tRPC / TanStack Query 経由で扱う。
 
 ### 各レイヤーの役割
 
@@ -335,10 +352,10 @@ USING (auth.uid() = user_id);
 
 ## Database Architecture
 
-> **テーブル数**: 12 | **PostgreSQL**: v17
+> **RLS 対象 public テーブル数**: 13 | **PostgreSQL**: v17
 
-Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Production）で運用。
-全テーブルに Row Level Security (RLS) を適用し、マルチテナントのデータ分離を実現。
+Dayopt は Supabase（PostgreSQL）を使用する。本番は Pro organization の `dayopt` project、PR ごとの検証は ephemeral Preview Branches を使い、永続 Staging project は置かない。
+RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapshot.md`](./data/db/rls-snapshot.md) を正とする。
 
 ### テーブル一覧
 
@@ -347,16 +364,16 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
 | テーブル                     | 役割                                                             | 主要カラム                                                                                                |
 | ---------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | **plans**                    | Plan（予定）。これからやる時間の宣言                             | title, tag_id, start_at, end_at, skipped_at, source, external_calendar_event_id                           |
-| **records**                  | Record（記録）。`plan_id` で 1 Plan : N Record                   | title, tag_id, plan_id, start_at, end_at, source, fulfillment_score(1-5), external_calendar_event_id      |
+| **records**                  | Record（記録）。`plan_id` で 1 Plan : N Record                   | title, tag_id, plan_id, start_at, end_at, source, external_calendar_event_id                              |
 | **external_calendar_events** | 外部カレンダー同期ミラー（テーブルのみ存在。同期実装は Phase 2） | provider, provider_calendar_id, provider_event_id, start_at, end_at, status, dismissed_at, last_synced_at |
 | **tags**                     | 階層タグ（親子1階層）                                            | name, color, parent_id, sort_order, is_active                                                             |
 
 #### ユーザー設定（2テーブル）
 
-| テーブル          | 役割                                    | 主要カラム                                                                  |
-| ----------------- | --------------------------------------- | --------------------------------------------------------------------------- |
-| **profiles**      | ユーザープロフィール（auth.usersと1:1） | email, username, full_name, avatar_url                                      |
-| **user_settings** | 表示設定                                | timezone, theme, time*format, chronotype*_, snap*interval, business_hours*_ |
+| テーブル          | 役割                                    | 主要カラム                                                                                                      |
+| ----------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **profiles**      | ユーザープロフィール（auth.usersと1:1） | email, username, full_name, avatar_url                                                                          |
+| **user_settings** | 表示設定                                | timezone, theme, time format, snap interval, business hours。物理スキーマの legacy 列はプロダクト契約に含めない |
 
 #### セキュリティ/監査（1テーブル）
 
@@ -398,7 +415,7 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
                     │ user_id (FK)      │ 1:N  │ user_id (FK)       │
                     │ title, note       │      │ title, note        │
                     │ start_at/end_at   │      │ start_at/end_at    │
-                    │ skipped_at        │      │ fulfillment_score  │
+                    │ skipped_at        │      │ plan_id (nullable) │
                     │ source            │      │ source             │
                     │ external_calendar_│      │ external_calendar_ │
                     │  event_id (FK)    │      │  event_id (FK)     │
@@ -449,7 +466,7 @@ Dayopt は Supabase（PostgreSQL）を使用し、3環境（Local / Staging / Pr
 
 - 状態導出（`upcoming` / `active` / `past`）は Plan / Record それぞれの時間位置から行う
 - 保存先は選択 UI ではなく `end_at > now` か否かで一意に決まる（`end_at > now` → Plan、`end_at <= now` → Record）
-- `fulfillment_score`（1-5）は Record 側のみが持つ属性。Plan には存在しない
+- 物理 DB に残る `fulfillment_score` / `chronotype_settings` は legacy 列であり、現行のプロダクト向け Plan / Record・設定契約では使用しない
 - 詳細は [ADR-025](../product/log/2026-07-09-time-model-split.md) 参照
 
 #### Tags の階層制限

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 import type { CalendarEvent } from '../types/calendar.types';
 
 /**
@@ -58,27 +59,32 @@ const initialState: CalendarDragState = {
 };
 
 /** カレンダーのドラッグ状態を管理するZustandストア */
-export const useCalendarDragStore = create<CalendarDragState & CalendarDragActions>((set) => ({
-  ...initialState,
+export const useCalendarDragStore = create<CalendarDragState & CalendarDragActions>()(
+  devtools(
+    (set) => ({
+      ...initialState,
 
-  startDrag: (timeblockId, entry, dateIndex, lane = 'plan') =>
-    set({
-      draggedEntryId: timeblockId,
-      draggedEntry: entry,
-      originalDateIndex: dateIndex,
-      targetDateIndex: dateIndex,
-      isDragging: true,
-      previewTime: null,
-      snappedPosition: null,
-      sourceLane: lane,
-      targetLane: lane,
+      startDrag: (timeblockId, entry, dateIndex, lane = 'plan') =>
+        set({
+          draggedEntryId: timeblockId,
+          draggedEntry: entry,
+          originalDateIndex: dateIndex,
+          targetDateIndex: dateIndex,
+          isDragging: true,
+          previewTime: null,
+          snappedPosition: null,
+          sourceLane: lane,
+          targetLane: lane,
+        }),
+
+      updateDrag: (updates) =>
+        set((state) => ({
+          ...state,
+          ...updates,
+        })),
+
+      endDrag: () => set(initialState),
     }),
-
-  updateDrag: (updates) =>
-    set((state) => ({
-      ...state,
-      ...updates,
-    })),
-
-  endDrag: () => set(initialState),
-}));
+    { name: 'calendar-drag-store', enabled: process.env.NODE_ENV !== 'production' },
+  ),
+);

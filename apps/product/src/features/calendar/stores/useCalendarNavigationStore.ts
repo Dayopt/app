@@ -13,6 +13,7 @@
  */
 
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
 import type { CalendarViewType } from '../lib/constants';
 
@@ -39,12 +40,17 @@ interface CalendarNavigationStore {
 }
 
 /** カレンダーの日付ナビゲーションを仲介するZustandストア */
-export const useCalendarNavigationStore = create<CalendarNavigationStore>()((set) => ({
-  pendingDate: null,
-  viewedDate: new Date(),
-  viewType: 'week',
-  navigateTo: (date) => set({ pendingDate: date }),
-  clearPending: () => set({ pendingDate: null }),
-  _syncViewedDate: (date) => set({ viewedDate: date }),
-  _syncViewType: (viewType) => set({ viewType }),
-}));
+export const useCalendarNavigationStore = create<CalendarNavigationStore>()(
+  devtools(
+    (set) => ({
+      pendingDate: null,
+      viewedDate: new Date(),
+      viewType: 'week',
+      navigateTo: (date) => set({ pendingDate: date }),
+      clearPending: () => set({ pendingDate: null }),
+      _syncViewedDate: (date) => set({ viewedDate: date }),
+      _syncViewType: (viewType) => set({ viewType }),
+    }),
+    { name: 'calendar-navigation-store', enabled: process.env.NODE_ENV !== 'production' },
+  ),
+);

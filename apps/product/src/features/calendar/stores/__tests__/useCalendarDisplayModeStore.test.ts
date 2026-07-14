@@ -7,6 +7,7 @@ import {
 
 describe('useCalendarDisplayModeStore', () => {
   beforeEach(() => {
+    localStorage.clear();
     useCalendarDisplayModeStore.setState({ mobileWeekDisplayMode: 'recorded' });
   });
 
@@ -25,6 +26,15 @@ describe('useCalendarDisplayModeStore', () => {
   it('v1 の logged を recorded へ移行する', () => {
     expect(migrateCalendarDisplayModeState({ mobileWeekDisplayMode: 'logged' }, 1)).toEqual({
       mobileWeekDisplayMode: 'recorded',
+    });
+  });
+
+  it('表示モードだけを永続化し、action は保存しない', () => {
+    useCalendarDisplayModeStore.getState().setMobileWeekDisplayMode('planned');
+
+    expect(JSON.parse(localStorage.getItem('calendar-display-mode-storage') ?? '')).toEqual({
+      state: { mobileWeekDisplayMode: 'planned' },
+      version: 2,
     });
   });
 });

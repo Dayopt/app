@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-02
+last_verified: 2026-07-14
 ---
 
 # X (Twitter)
@@ -65,4 +65,4 @@ last_verified: 2026-07-02
 
 ---
 
-_更新日: 2026-01-22_
+_更新日: 2026-07-14（アカウントURLの到達のみ確認。投稿状況は未確認）_
