@@ -11,9 +11,9 @@ import { isValidCategory, SETTINGS_CATEGORIES, SettingsContent } from '@/feature
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
-import { Link, useRouter } from '@/lib/i18n/navigation';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button } from '@dayopt/components';
+import { Link, useRouter } from '@dayopt/i18n/navigation';
 
 import { buildSettingsReturnQuery, normalizeSettingsReturnPath } from '../_utils/settings-return';
 

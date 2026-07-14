@@ -58,20 +58,42 @@ test.describe('Smoke: ルーティング', () => {
 });
 
 test.describe('Smoke: 認証フロー', () => {
+  for (const scenario of [
+    {
+      locale: 'en',
+      loginPath: '/auth/login',
+      heading: 'Welcome back',
+      signupLink: 'Sign up',
+      signupPath: '/auth/signup',
+    },
+    {
+      locale: 'ja',
+      loginPath: '/ja/auth/login',
+      heading: 'ログイン',
+      signupLink: '新規登録',
+      signupPath: '/ja/auth/signup',
+    },
+  ]) {
+    test(`${scenario.locale}: login から signup へ locale prefix を保って遷移する`, async ({
+      page,
+    }) => {
+      await page.goto(scenario.loginPath);
+
+      await expect(page.getByRole('heading', { level: 1, name: scenario.heading })).toBeVisible();
+      await page.getByRole('link', { name: scenario.signupLink }).click();
+
+      await expect(page).toHaveURL(new RegExp(`${scenario.signupPath}/?$`));
+    });
+  }
+
   test('ログインフォームが表示される', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/auth/login');
 
-    // 認証ページにリダイレクトされた場合
-    const isAuthPage = page.url().match(/\/(login|auth|signin)/i);
-    if (isAuthPage) {
-      // メールとパスワードの入力欄が存在する
-      const emailInput = page.locator('input[type="email"], input[name="email"]').first();
-      const passwordInput = page.locator('input[type="password"]').first();
+    const emailInput = page.locator('input[type="email"], input[name="email"]').first();
+    const passwordInput = page.locator('input[type="password"]').first();
 
-      await expect(emailInput).toBeVisible({ timeout: 10000 });
-      await expect(passwordInput).toBeVisible();
-    }
+    await expect(emailInput).toBeVisible({ timeout: 10000 });
+    await expect(passwordInput).toBeVisible();
   });
 
   test.describe('認証済みユーザー', () => {

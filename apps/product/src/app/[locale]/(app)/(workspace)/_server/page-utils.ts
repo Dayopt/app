@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 
 import { parseCalendarDateParam } from '@/features/calendar';
-import type { Locale } from '@/lib/i18n/routing';
+import type { Locale } from '@dayopt/i18n/routing';
 
 /**
  * searchParams から日付を解析する

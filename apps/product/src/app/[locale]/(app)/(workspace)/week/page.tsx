@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import type { Locale } from '@/lib/i18n/routing';
 import { HydrationBoundary } from '@/lib/trpc/server';
+import type { Locale } from '@dayopt/i18n/routing';
 
 import { CalendarViewClient } from '../_composition/CalendarViewClient';
 import { prefetchCalendarData } from '../_server/calendar-prefetch';

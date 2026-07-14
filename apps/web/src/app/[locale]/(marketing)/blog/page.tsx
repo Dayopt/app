@@ -1,6 +1,6 @@
 import { FilteredBlogClient, getAllBlogPostMetas } from '@/features/blog';
-import { routing } from '@/platform/i18n/routing';
 import { generateSEOMetadata } from '@/platform/seo/metadata';
+import { routing } from '@dayopt/i18n/routing';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 

@@ -1,7 +1,5 @@
 'use client';
 
-import { usePathname, useRouter } from '@/platform/i18n/navigation';
-import { routing, type Locale } from '@/platform/i18n/routing';
 import {
   Button,
   DropdownMenu,
@@ -9,6 +7,8 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@dayopt/components';
+import { usePathname, useRouter } from '@dayopt/i18n/navigation';
+import { routing, type Locale } from '@dayopt/i18n/routing';
 import { ChevronDown, Globe } from 'lucide-react';
 import { useLocale } from 'next-intl';
 import * as React from 'react';

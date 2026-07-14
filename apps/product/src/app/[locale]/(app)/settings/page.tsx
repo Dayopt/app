@@ -1,6 +1,6 @@
 'use client';
 
-import { Link, useRouter } from '@/lib/i18n/navigation';
+import { Link, useRouter } from '@dayopt/i18n/navigation';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 

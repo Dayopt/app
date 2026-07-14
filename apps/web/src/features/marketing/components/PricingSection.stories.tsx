@@ -2,7 +2,7 @@
  * Pricing セクション（Landing）の Storybook Story。
  *
  * async Server Component（next-intl/server）を experimentalRSC + next-intl/server モックで描画。
- * PricingSection は @/platform/i18n/navigation（Link）を使うため、main.ts viteFinal で
+ * PricingSection は /i18n/navigation（Link）を使うため、main.ts viteFinal で
  * web 側へ alias 済み。料金は @dayopt/billing を参照。locale 駆動のため variant は ja / en。
  */
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';

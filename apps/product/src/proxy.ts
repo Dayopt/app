@@ -9,9 +9,9 @@ import {
   isPublicProductPath,
   isPublicRewritePath,
 } from '@/lib/auth/domain';
-import { routing } from '@/lib/i18n/routing';
 import { logger } from '@/lib/logger';
 import { updateSession } from '@/lib/supabase/middleware';
+import { routing } from '@dayopt/i18n/routing';
 
 // next-intlのミドルウェアを作成
 const intlMiddleware = createMiddleware(routing);

@@ -514,6 +514,7 @@ Dayopt の monorepo は、アプリを増やすためだけではなく、責務
 - `packages/foundations`（旧 `packages/design`）: design tokens / theme css / CSS variables。React components, domain logic, DB 型は入れない。
 - `packages/components`（旧 `packages/ui`）: React UI primitives / reusable components。Supabase, Stripe, feature-specific business rules は入れない。
 - `packages/config`: public constants / metadata / URL definitions。secrets, request-scoped values, server-only clients は入れない。
+- `packages/i18n`: product / web 共通の next-intl routing / navigation / request locale fallback。message loader や app 固有 Provider は入れない。
 - `packages/domain`: Dayopt domain model / pure types / helpers。DB row shape, React, Next, Supabase, Zustand は入れない。消費者は現状 product のみだが、純粋ロジックの隔離層として package を維持する。
 - `packages/assets`: 複数 app で共有する静的素材の原本（logo / app icon / OGP image）。React component は入れない。
 - `apps/product/src/lib/database`（旧 `packages/database`）: Supabase/Postgres boundary。generated types / table names / row helper types を扱う。product 専用のため package ではなく product-local。
@@ -529,6 +530,7 @@ apps/product, apps/web, apps/storybook
   -> packages/foundations
 
 apps/product, apps/web
+  -> packages/i18n
   -> packages/config
   -> packages/billing
 
@@ -542,6 +544,7 @@ apps/product
 ### Current Phase
 
 `packages/foundations`, `packages/components`, `packages/config`, `packages/domain` は最小の公開面を持つ package として運用中。
+`packages/i18n` は `packages/config` の locale 定義を使い、product / web に共通する next-intl adapter の公開面を環境別 subpath に限定して提供する。
 `packages/domain` は Dayopt の意味を表す pure TypeScript package で、現時点では `TimeRange`, `EntryOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`, `Chronotype` などの軽い型・定数・helper だけを持つ。
 
 DB boundary は `apps/product/src/lib/database`（旧 `packages/database`、product-local 化済み）が Supabase generated types と DB row helper を担う。DB access を含む service は product 側に残す。
@@ -555,6 +558,7 @@ DB boundary は `apps/product/src/lib/database`（旧 `packages/database`、prod
 Source of truth:
 
 - URL / domain / contact / public brand constants: `packages/config`
+- next-intl routing / navigation / request locale fallback: `packages/i18n`
 - Plan / Record source・time range・time conflict / date-time preference / pure Dayopt concept: `packages/domain`
 - Supabase generated type / table name / row helper type: `apps/product/src/lib/database`
 - Free / Pro plan / subscription status / `pro_access` entitlement / public pricing: `packages/billing`
@@ -565,7 +569,7 @@ Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文�
 
 Package foundation は第一段階として運用可能な状態にある。root scripts の `build:packages`, `typecheck:packages`, `check:workspace`, `lint:boundaries`, `build`, `build:web`, `build-storybook` は現在の package 構成を検証対象に含め、CI も `packages-build` job で `pnpm build:packages` を実行する。
 
-apps への adoption は完了している。[ADR-021](./log/2026-06-22-shared-packages-canonical-and-app-shims.md)（2026-06-22）で packages を canonical とし、product / web は shim を介さず直接 import する形に統一した。UI・トークンの app 側重複は解消済みで、app 側 `components/` に残るのは app 固有（i18n 結合が強いもの）のみ。残る follow-up は `.from('table')` への `databaseTables` 段階適用など小粒のものに限られる。
+apps への adoption は完了している。[ADR-021](./log/2026-06-22-shared-packages-canonical-and-app-shims.md)（2026-06-22）で packages を canonical とし、product / web は shim を介さず直接 import する形に統一した。UI・トークンの app 側重複は解消済みで、i18n も routing / navigation を `@dayopt/i18n/*` から直接 import する。app 側には message loading と next-intl plugin entrypoint を担う `request.ts`、app 固有 Provider だけを残す。残る follow-up は `.from('table')` への `databaseTables` 段階適用など小粒のものに限られる。
 
 ### Package Boundaries
 
@@ -616,6 +620,23 @@ Product/web が共有する public constants の置き場。副作用を持た�
 - request-scoped value
 - Next.js metadata generator 本体
 - server-only client
+
+#### `packages/i18n`
+
+product / web が共有する next-intl adapter の置き場。`packages/config` の locale constants を唯一の source of truth とし、実行環境が異なる API は root barrel を作らず `./routing`, `./navigation`, `./request` の subpath から公開する。
+
+入れてよいもの:
+
+- next-intl routing 定義と locale-aware navigation
+- request locale の検証と default locale fallback
+- app 固有 message loader を受け取る request config factory
+
+入れないもの:
+
+- app alias や `apps/*` への import
+- message JSON / namespace discovery /固定 namespace 配列
+- app 固有 Provider / plugin entrypoint
+- Next.js / React の直接 import
 
 #### `packages/domain`
 
@@ -683,6 +704,7 @@ product 専用（web・他 package から参照なし）のため package では
 - UI だけで成立し、domain を知らない: `packages/components`
 - 見た目の token / CSS variable / theme: `packages/foundations`
 - URL / metadata / public constants: `packages/config`
+- locale-aware routing / navigation / request fallback: `packages/i18n`
 - DB なしで説明できる Dayopt の business definition: `packages/domain`
 - 複数 app で共有する静的素材の原本: `packages/assets`
 - Supabase row / generated type / domain converter: `apps/product/src/lib/database`（product-local）

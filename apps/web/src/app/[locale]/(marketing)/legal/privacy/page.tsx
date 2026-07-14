@@ -1,5 +1,5 @@
-import { Link } from '@/platform/i18n/navigation';
-import type { Locale } from '@/platform/i18n/routing';
+import { Link } from '@dayopt/i18n/navigation';
+import type { Locale } from '@dayopt/i18n/routing';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 

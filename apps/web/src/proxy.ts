@@ -1,5 +1,5 @@
+import { routing } from '@dayopt/i18n/routing';
 import createMiddleware from 'next-intl/middleware';
-import { routing } from './platform/i18n/routing';
 
 export default createMiddleware(routing);
 

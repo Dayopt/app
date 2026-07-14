@@ -1,11 +1,10 @@
 import { readdir } from 'fs/promises';
 import { join } from 'path';
 
-import { getRequestConfig } from 'next-intl/server';
+import { createI18nRequestConfig } from '@dayopt/i18n/request';
+import type { Locale } from '@dayopt/i18n/routing';
 
 import { logger } from '@/lib/logger';
-
-import { routing } from './routing';
 
 /**
  * messages/{locale}/ 内の .json ファイルからネームスペースを自動検出
@@ -14,7 +13,7 @@ import { routing } from './routing';
  */
 const namespaceCache = new Map<string, string[]>();
 
-async function discoverNamespaces(locale: string): Promise<string[]> {
+async function discoverNamespaces(locale: Locale): Promise<string[]> {
   const cached = namespaceCache.get(locale);
   if (cached) return cached;
 
@@ -28,7 +27,7 @@ async function discoverNamespaces(locale: string): Promise<string[]> {
 /**
  * 全ネームスペースをロードしてマージ
  */
-async function loadMessages(locale: string): Promise<Record<string, unknown>> {
+async function loadMessages(locale: Locale): Promise<Record<string, unknown>> {
   const namespaces = await discoverNamespaces(locale);
   const messages: Record<string, unknown> = {};
 
@@ -52,17 +51,4 @@ async function loadMessages(locale: string): Promise<Record<string, unknown>> {
 }
 
 /** next-intlのリクエスト設定 — ロケールとメッセージをリクエストごとに解決する */
-export default getRequestConfig(async ({ requestLocale }) => {
-  // requestLocale は通常、ミドルウェアから提供される
-  let locale = await requestLocale;
-
-  // 無効またはサポートされていない言語の場合、デフォルトにフォールバック
-  if (!locale || !routing.locales.includes(locale as (typeof routing.locales)[number])) {
-    locale = routing.defaultLocale;
-  }
-
-  return {
-    locale,
-    messages: await loadMessages(locale),
-  };
-});
+export default createI18nRequestConfig(loadMessages);

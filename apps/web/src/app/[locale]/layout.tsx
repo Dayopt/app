@@ -1,4 +1,4 @@
-import { routing, type Locale } from '@/platform/i18n/routing';
+import { routing, type Locale } from '@dayopt/i18n/routing';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
