@@ -431,19 +431,19 @@ function SortableParentBlock({
   // moveTagTree は常に over item の直前に挿入するため、line は常に top edge
   const showDropLine = !isMobile && overIndex === index && activeIndex !== overIndex;
 
-  // ドラッグ中は transform を打ち消し、source を原位置に opacity-30 で残す
-  // （TimeblockCard と同じ「後ろに薄く残る」見え方）
+  // 一般的な dnd-kit 動作に合わせ、ドラッグ中も transform を反映させて追従させる
   const style = isMobile
     ? undefined
     : {
-        transform: isDragging ? undefined : CSS.Translate.toString(transform),
+        transform: CSS.Translate.toString(transform),
         transition,
+        opacity: isDragging ? 0.3 : 1,
       };
 
   return (
     <div
       style={style}
-      className={cn(!isMobile && isDragging && 'pointer-events-none opacity-30')}
+      className={cn(!isMobile && isDragging && 'pointer-events-none')}
       role="listitem"
     >
       <div ref={setNodeRef} className="relative" {...attributes} {...listeners}>
@@ -613,13 +613,13 @@ function SortableTagItem({
   } | null>(null);
 
   const isPopoverOpen = openPopoverTagId === tag.id;
-  // ドラッグ中は transform を打ち消し、source を原位置に opacity-30 で残す
-  // （TimeblockCard と同じ「後ろに薄く残る」見え方）
+  // 一般的な dnd-kit 動作に合わせ、ドラッグ中も transform を反映させて追従させる
   const style = isMobile
     ? undefined
     : {
-        transform: isDragging ? undefined : CSS.Translate.toString(transform),
+        transform: CSS.Translate.toString(transform),
         transition,
+        opacity: isDragging ? 0.3 : 1,
       };
 
   // moveTagTree は常に over item の直前に挿入するため、line は常に top edge
