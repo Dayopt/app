@@ -3,15 +3,16 @@
 import { useEffect, useRef } from 'react';
 
 import {
+  type ClipboardTimeblock,
   resolveTimeblockDestination,
   useTimeblockInspectorStore,
   useTimeblockWriteMutations,
 } from '@/features/timeblock';
-import { localTimeToUTCISO } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
+import { resolveTimeblockClipboardPaste } from '../../lib/timeblock-clipboard-paste';
 import { useTimeblockClipboardStore } from '../../stores/useTimeblockClipboardStore';
 import type { ShortcutDef } from './shortcut-registry';
 import { registerShortcuts } from './shortcut-registry';
@@ -27,14 +28,7 @@ interface UseCalendarTimeblockKeyboardOptions {
   /** 新規Timeblock作成時の初期データ取得関数（現在の日時など） */
   getInitialEntryData?: () => { start_time?: string; end_time?: string } | undefined;
   /** 現在選択中のTimeblockのコピー情報を取得する関数 */
-  getSelectedEntryForCopy?: () => {
-    title: string;
-    description: string | null;
-    startHour: number;
-    startMinute: number;
-    duration: number;
-    tagId: string | null | undefined;
-  } | null;
+  getSelectedEntryForCopy?: () => ClipboardTimeblock | null;
   /** ペースト先の日付を取得する関数（デフォルトは現在表示中の日付） */
   getPasteDateForKeyboard?: () => Date;
 }
@@ -196,36 +190,26 @@ export function useCalendarEventKeyboard({
             const targetDate =
               lastClicked?.date ?? getPasteDateForKeyboardRef.current?.() ?? new Date();
 
-            // ユーザーのタイムゾーンを考慮してUTC ISOに変換する
-            const tz = timezoneRef.current;
-            const startTimeISO = localTimeToUTCISO(
+            const paste = resolveTimeblockClipboardPaste({
+              copiedTimeblock,
               targetDate,
-              copiedTimeblock.startHour,
-              copiedTimeblock.startMinute,
-              tz,
-            );
-            const endMs = new Date(startTimeISO).getTime() + copiedTimeblock.duration * 60 * 1000;
-            const endTimeISO = new Date(endMs).toISOString();
+              timezone: timezoneRef.current,
+            });
+            if (!paste.ok) {
+              toast.error(tRef.current(`calendar.clipboard.${paste.reason}`));
+              return;
+            }
 
-            // 保存先は end ルールで一意に決める（コピー元の予定/記録の別を引き継がない）
-            const destination = resolveTimeblockDestination(endTimeISO);
-            const pasteInput = {
-              title: copiedTimeblock.title,
-              note: copiedTimeblock.description ?? undefined,
-              tagId: copiedTimeblock.tagId ?? undefined,
-              start_at: startTimeISO,
-              end_at: endTimeISO,
-            };
             const onPasted = (result: { id: string } | undefined) => {
               if (result?.id) {
-                openInspectorRef.current(result.id, destination);
+                openInspectorRef.current(result.id, paste.kind);
               }
             };
             const onPasteFailed = () => logger.error('Failed to paste entry');
-            if (destination === 'plan') {
-              createPlanRef.current.mutateAsync(pasteInput).then(onPasted).catch(onPasteFailed);
+            if (paste.kind === 'plan') {
+              createPlanRef.current.mutateAsync(paste.input).then(onPasted).catch(onPasteFailed);
             } else {
-              createRecordRef.current.mutateAsync(pasteInput).then(onPasted).catch(onPasteFailed);
+              createRecordRef.current.mutateAsync(paste.input).then(onPasted).catch(onPasteFailed);
             }
           }
         },

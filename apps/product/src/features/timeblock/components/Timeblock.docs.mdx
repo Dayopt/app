@@ -27,9 +27,8 @@ import { Meta } from '@storybook/addon-docs/blocks';
 ```
 TimeblockInspector                    Inspector シェル（PC: FloatingPopover / Mobile: Drawer）
 └── TimeblockInspectorForm            Plan / Record 共有の編集フォーム
-    ├── TimeblockDestinationChip      保存先の表示（end 位置で自動切替、セレクタではない）
-    ├── TagRow / DateRow / TimeRow    入力 row（inspector/fields、他 feature からも再利用）
-    └── TimeConflictAlert             重なり警告
+    ├── TagRow                        タグ選択 + 共通メニュー（振り返り / コピー / 削除等）
+    └── DateTimeSection / メモ        自動保存される共有編集フィールド
 
 TimeblockEditor                       インライン作成エディタ（タグパレット等から）
 TimeblockRecordActions                記録導線（ワンタップ「そのまま記録」/ ConfirmDayButton）
@@ -62,11 +61,13 @@ TimeblockCard                         カレンダー表示カード（ドラッ
 | `useTimeblockRecordMutations`                  | ワンタップ記録 / この日を確定                      |
 | `useInspectorURLSync` / `useInspectorKeyboard` | URL 同期・キーボード操作                           |
 
+コピーは表示内容と Plan / Record の種別だけを保持する。`id` / `plan_id` は保持せず、貼り付け時は同じ種別の独立した Timeblock を作る。
+
 ---
 
-## 過去 Plan の扱い（時間だけ凍結）
+## 過去 Plan の扱い
 
-- 予定時間の変更（移動・リサイズ）: 不可（差分データの信頼性を守る）
+- 予定時間の変更（移動・リサイズ）: 可
 - タイトル・タグ・メモの訂正: 可
 - 過去日付への新規 Plan 追加: 不可（実際にやったことは予定外の Record へ）
 - ワンタップ記録 / skip / 削除: 可

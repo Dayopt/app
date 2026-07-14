@@ -28,6 +28,7 @@ const pastEnd = new Date('2026-03-18T11:00:00');
 /** 完了済み planned entry（全項目表示の前提） */
 const completedPlannedEntry: CalendarEvent = {
   id: 'entry-1',
+  kind: 'plan',
   title: 'デザインレビュー',
   description: '週次デザインシンク',
   startDate: past,
@@ -73,6 +74,7 @@ const upcomingPlannedEntry: CalendarEvent = {
 const unplannedEntry: CalendarEvent = {
   ...completedPlannedEntry,
   id: 'entry-4',
+  kind: 'record',
   origin: 'unplanned',
 };
 
@@ -114,6 +116,7 @@ function ContextMenuTrigger({
 const allHandlers = {
   onDelete: fn(),
   onViewStats: fn(),
+  onCopy: fn(),
   onMarkUnplanned: fn(),
   onRestorePlanned: fn(),
 };
@@ -127,12 +130,13 @@ export const Default: Story = {
   render: () => <ContextMenuTrigger entry={completedPlannedEntry} menuProps={allHandlers} />,
 };
 
-/** 削除のみ。 */
-export const DeleteOnly: Story = {
+/** コピーと削除。 */
+export const CopyAndDelete: Story = {
   render: () => (
     <ContextMenuTrigger
       entry={completedPlannedEntry}
       menuProps={{
+        onCopy: fn(),
         onDelete: fn(),
       }}
     />
@@ -202,12 +206,13 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">削除のみ</span>
+        <span className="text-muted-foreground text-xs">コピーと削除</span>
         <div className="relative" style={{ height: 80 }}>
           <EventContextMenu
             entry={completedPlannedEntry}
             position={{ x: 0, y: 0 }}
             onClose={fn()}
+            onCopy={fn()}
             onDelete={fn()}
           />
         </div>

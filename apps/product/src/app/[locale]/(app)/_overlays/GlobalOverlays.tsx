@@ -1,6 +1,6 @@
 'use client';
 
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
@@ -11,9 +11,12 @@ import {
   buildCalendarReviewPanelPath,
   isCalendarViewPath,
   useCalendarNavigation,
+  useTimeblockClipboardStore,
 } from '@/features/calendar';
+import type { ClipboardTimeblock } from '@/features/timeblock';
 import { useTimeblockInspectorStore } from '@/features/timeblock';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { toast } from '@/lib/toast';
 
 const ContactDialog = dynamic(
   () =>
@@ -47,6 +50,7 @@ const TimeblockInspector = dynamic(
  */
 export function GlobalOverlays() {
   const locale = useLocale();
+  const t = useTranslations();
   const router = useRouter();
   const pathname = usePathname();
   const calendarNavigation = useCalendarNavigation();
@@ -57,6 +61,7 @@ export function GlobalOverlays() {
   const settingsOpen = activeSheet?.type === 'settings';
   const isInspectorOpen = useTimeblockInspectorStore((s) => s.isOpen);
   const closeInspector = useTimeblockInspectorStore((s) => s.closeInspector);
+  const copyTimeblock = useTimeblockClipboardStore((s) => s.copyTimeblock);
 
   // C4: モーダル（Settings/Contact）が開いたら Inspector を閉じる（排他制御）
   useEffect(() => {
@@ -101,6 +106,14 @@ export function GlobalOverlays() {
     [calendarNavigation, closeInspector, pathname, router, locale],
   );
 
+  const handleCopy = useCallback(
+    (timeblock: ClipboardTimeblock) => {
+      copyTimeblock(timeblock);
+      toast.success(t('common.toast.copied'));
+    },
+    [copyTimeblock, t],
+  );
+
   return (
     <>
       <ContactDialog
@@ -110,7 +123,7 @@ export function GlobalOverlays() {
         }}
       />
       <SettingsDialog />
-      <TimeblockInspector onViewStats={handleViewStats} />
+      <TimeblockInspector onViewStats={handleViewStats} onCopy={handleCopy} />
       <Toaster />
     </>
   );

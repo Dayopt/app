@@ -135,15 +135,10 @@ export class PlanService {
     const nextEndAt = input.end_at ?? existing.end_at;
     const updatesTime = input.start_at !== undefined || input.end_at !== undefined;
 
-    if (updatesTime && this.isPastPlan(existing)) {
-      throw new TimeblockServiceError(
-        'PLAN_TIME_LOCKED',
-        'Past plan time fields cannot be changed.',
-      );
-    }
-
     this.validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
-    if (updatesTime) this.ensurePlanCanBeCreated(nextEndAt);
+    if (updatesTime && new Date(nextEndAt).getTime() > Date.now()) {
+      this.ensurePlanCanBeCreated(nextEndAt);
+    }
 
     if (preventOverlappingPlans && updatesTime) {
       await this.ensureNoPlanOverlap(userId, nextStartAt, nextEndAt, planId);

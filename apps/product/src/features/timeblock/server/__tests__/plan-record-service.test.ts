@@ -107,13 +107,20 @@ describe('PlanService.create', () => {
 });
 
 describe('PlanService.update', () => {
-  it('過去 plan の時間変更を拒否する', async () => {
+  it('過去 plan の時間変更を許可する', async () => {
     const existing = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
+    const updated = { ...existing, start_at: '2026-03-17T09:00:00.000Z' };
     const { service, mockSupabase } = createPlanService();
-    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return createChainableMock(existing);
+      if (callCount === 2) return createChainableMock([]);
+      return createChainableMock(updated);
+    });
 
     await expect(
       service.update({
@@ -121,7 +128,7 @@ describe('PlanService.update', () => {
         planId: existing.id,
         input: { start_at: '2026-03-17T09:00:00.000Z' },
       }),
-    ).rejects.toMatchObject({ code: 'PLAN_TIME_LOCKED' });
+    ).resolves.toMatchObject({ start_at: updated.start_at });
   });
 
   it('過去 plan でも title 更新は許可する', async () => {

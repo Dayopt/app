@@ -4,25 +4,35 @@
  * TimeblockInspector のフォーム（Level 2）
  *
  * plan / record の 1 行を受け取り、TagRow ヘッダー + TimeblockEditor を描画する。
- * タグ変更は即時保存、note / 時間は保存ボタンで確定する。
+ * タグと確定済み日時は即時保存、note はデバウンスして自動保存する。
  * auto_migrated の record は RLS で不変のため読み取り専用として扱う。
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses, resolveTagColor, useCreateTag, useTagsMap } from '@/features/tags';
 import type { Row } from '@/lib/database';
 import { databaseTables } from '@/lib/database';
+import { useDebouncedCallback } from '@/lib/hooks/useDebounce';
 import { toast } from '@/lib/toast';
 
 import type { TimeblockDestination } from '../../domain/timeblock-destination';
-import { isPlanTimeEditable } from '../../domain/timeblock-destination';
+import {
+  type TimeblockSavePatch,
+  useCoalescedTimeblockSave,
+} from '../../hooks/useCoalescedTimeblockSave';
 import { useTimeblockWriteMutations } from '../../hooks/useTimeblockWriteMutations';
+import type { ClipboardTimeblock } from '../../lib/timeblock-clipboard';
+import { createClipboardTimeblock } from '../../lib/timeblock-clipboard';
 import { getTimeblockMenuItems } from '../../lib/timeblock-menu-items';
 import { TagRow } from '../inspector/fields';
-import { TimeblockEditor, type TimeModelEditorValue } from './TimeblockEditor';
+import {
+  isValidTimeModelRange,
+  TimeblockEditor,
+  type TimeModelEditorValue,
+} from './TimeblockEditor';
 import { RecordPlanButton } from './TimeblockRecordActions';
 
 type PlanRow = Row<'plans'>;
@@ -35,19 +45,27 @@ interface TimeModelInspectorFormProps {
   /** plan に紐づく record が存在するか（記録済み判定。record では常に false） */
   isRecorded: boolean;
   onViewStats?: ((tagId: string) => void) | undefined;
+  onCopy?: ((timeblock: ClipboardTimeblock) => void) | undefined;
   /** Inspector を閉じるコールバック（Mobile Drawer のみ渡す） */
   onCloseInspector?: (() => void) | undefined;
   /** 削除成功後に Inspector を閉じる */
   onDeleted: () => void;
 }
 
-/** plan / record 共通の Inspector フォーム。タグ即時保存 + エディタ submit 保存。 */
+const NOTE_SAVE_DELAY_MS = 600;
+
+function normalizeNote(note: string): string | null {
+  return note.trim() === '' ? null : note;
+}
+
+/** plan / record 共通の Inspector フォーム。タグ・日時・メモをフィールド別に自動保存する。 */
 export function TimeblockInspectorForm({
   kind,
   plan,
   record,
   isRecorded,
   onViewStats,
+  onCopy,
   onCloseInspector,
   onDeleted,
 }: TimeModelInspectorFormProps) {
@@ -68,6 +86,7 @@ export function TimeblockInspectorForm({
   const target: PlanRow | RecordRow | undefined = kind === 'plan' ? plan : record;
   const targetId = target?.id ?? null;
   const targetUpdatedAt = target?.updated_at ?? null;
+  const latestUpdatedAtRef = useRef(targetUpdatedAt);
 
   const [value, setValue] = useState<TimeModelEditorValue>(() => ({
     note: target?.note ?? '',
@@ -81,7 +100,44 @@ export function TimeblockInspectorForm({
   const isMigrated = kind === 'record' && record?.source === 'auto_migrated';
   const isPast = kind === 'record' || (target != null && new Date(target.end_at) <= new Date());
   const isSkipped = kind === 'plan' && plan?.skipped_at != null;
-  const timeLocked = kind === 'plan' && target != null && !isPlanTimeEditable(target.end_at);
+
+  useEffect(() => {
+    latestUpdatedAtRef.current = targetUpdatedAt;
+  }, [targetUpdatedAt]);
+
+  const savePatch = useCallback(
+    async (patch: TimeblockSavePatch) => {
+      if (!targetId || isMigrated) return;
+      const input = {
+        id: targetId,
+        data: patch,
+        ...(latestUpdatedAtRef.current ? { expectedUpdatedAt: latestUpdatedAtRef.current } : {}),
+      };
+      const updated =
+        kind === 'plan'
+          ? await updatePlan.mutateAsync(input)
+          : await updateRecord.mutateAsync(input);
+      if (updated) latestUpdatedAtRef.current = updated.updated_at;
+    },
+    [kind, targetId, isMigrated, updatePlan, updateRecord],
+  );
+  const enqueueSave = useCoalescedTimeblockSave(savePatch);
+
+  const pendingNoteRef = useRef(value.note);
+  const noteDirtyRef = useRef(false);
+  const [scheduleNoteSave, cancelScheduledNoteSave] = useDebouncedCallback((note: string) => {
+    noteDirtyRef.current = false;
+    enqueueSave({ note: normalizeNote(note) });
+  }, NOTE_SAVE_DELAY_MS);
+
+  const flushNoteSave = useCallback(() => {
+    cancelScheduledNoteSave();
+    if (!noteDirtyRef.current) return;
+    noteDirtyRef.current = false;
+    enqueueSave({ note: normalizeNote(pendingNoteRef.current) });
+  }, [cancelScheduledNoteSave, enqueueSave]);
+
+  useEffect(() => () => flushNoteSave(), [flushNoteSave]);
 
   // --- タグ（即時保存） ---
   const selectedTag = value.tagId ? getTagById(value.tagId) : undefined;
@@ -91,13 +147,9 @@ export function TimeblockInspectorForm({
     (tagId: string | null) => {
       if (!targetId || isMigrated) return;
       setValue((prev) => ({ ...prev, tagId }));
-      if (kind === 'plan') {
-        updatePlan.mutate({ id: targetId, data: { tagId } });
-      } else {
-        updateRecord.mutate({ id: targetId, data: { tagId } });
-      }
+      enqueueSave({ tagId });
     },
-    [kind, targetId, isMigrated, updatePlan, updateRecord],
+    [targetId, isMigrated, enqueueSave],
   );
 
   const handleCreateAndSelectTag = useCallback(
@@ -122,26 +174,42 @@ export function TimeblockInspectorForm({
     [createTagMutation, handleTagChange, t],
   );
 
-  // --- 保存（note / 時間） ---
-  const handleSubmit = useCallback(() => {
-    if (!targetId || !targetUpdatedAt || isMigrated) return;
-    const data = {
-      note: value.note.trim() === '' ? null : value.note,
-      tagId: value.tagId,
-      // 過去 plan の時間はサーバーが PLAN_TIME_LOCKED で拒否するため送らない
-      ...(timeLocked
-        ? {}
-        : { start_at: value.startAt.toISOString(), end_at: value.endAt.toISOString() }),
-    };
-    const options = {
-      onSuccess: () => toast.success(t('timeblock.editor.toast.saved')),
-    };
-    if (kind === 'plan') {
-      updatePlan.mutate({ id: targetId, data, expectedUpdatedAt: targetUpdatedAt }, options);
-    } else {
-      updateRecord.mutate({ id: targetId, data, expectedUpdatedAt: targetUpdatedAt }, options);
-    }
-  }, [kind, targetId, targetUpdatedAt, isMigrated, timeLocked, value, updatePlan, updateRecord, t]);
+  // --- 日時・メモ（自動保存） ---
+  const handleDateTimeChange = useCallback(
+    (next: TimeModelEditorValue) => {
+      setValue(next);
+      if (!isValidTimeModelRange(next)) return;
+      enqueueSave({
+        start_at: next.startAt.toISOString(),
+        end_at: next.endAt.toISOString(),
+      });
+    },
+    [enqueueSave],
+  );
+
+  const handleNoteChange = useCallback(
+    (note: string) => {
+      setValue((prev) => ({ ...prev, note }));
+      pendingNoteRef.current = note;
+      noteDirtyRef.current = true;
+      scheduleNoteSave(note);
+    },
+    [scheduleNoteSave],
+  );
+
+  const handleCopy = useCallback(() => {
+    if (!target || !onCopy) return;
+    onCopy(
+      createClipboardTimeblock({
+        kind,
+        title: target.title,
+        description: normalizeNote(value.note),
+        startAt: value.startAt,
+        endAt: value.endAt,
+        tagId: value.tagId,
+      }),
+    );
+  }, [kind, onCopy, target, value]);
 
   // --- スキップ / 削除 ---
   const handleSkip = useCallback(() => {
@@ -192,18 +260,13 @@ export function TimeblockInspectorForm({
     isPast,
     isSkipped,
     onViewStats: onViewStats && value.tagId ? () => onViewStats(value.tagId ?? '') : undefined,
+    onCopy: onCopy ? handleCopy : undefined,
     onSkip: kind === 'plan' && !isRecorded ? handleSkip : undefined,
     onUnskip: kind === 'plan' ? handleUnskip : undefined,
     onDelete: isMigrated ? undefined : handleDelete,
   });
 
   if (!target) return null;
-
-  const isSubmitting =
-    updatePlan.isPending ||
-    updateRecord.isPending ||
-    deletePlan.isPending ||
-    deleteRecord.isPending;
 
   return (
     <div className="space-y-3 p-4">
@@ -225,9 +288,10 @@ export function TimeblockInspectorForm({
 
       <TimeblockEditor
         value={value}
-        onChange={setValue}
-        onSubmit={handleSubmit}
-        isSubmitting={isSubmitting || isMigrated}
+        onDateTimeChange={handleDateTimeChange}
+        onNoteChange={handleNoteChange}
+        onNoteBlur={flushNoteSave}
+        disabled={deletePlan.isPending || deleteRecord.isPending || isMigrated}
       />
 
       {kind === 'plan' && isPast && !isSkipped && !isRecorded && targetId ? (

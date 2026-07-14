@@ -9,12 +9,12 @@
  */
 
 import type { LucideIcon } from 'lucide-react';
-import { BarChart3, CalendarOff, CircleSlash, RotateCcw, Trash2 } from 'lucide-react';
+import { BarChart3, CalendarOff, CircleSlash, Copy, RotateCcw, Trash2 } from 'lucide-react';
 
 import type { TimeblockOrigin } from '@dayopt/domain';
 
 export type TimeblockMenuItemKey =
-  'viewStats' | 'markUnplanned' | 'restorePlanned' | 'skip' | 'unskip' | 'delete';
+  'viewStats' | 'copy' | 'markUnplanned' | 'restorePlanned' | 'skip' | 'unskip' | 'delete';
 
 export interface TimeblockMenuItem {
   key: TimeblockMenuItemKey;
@@ -42,6 +42,7 @@ interface TimeblockMenuItemsArgs {
   /** スキップ済み（skipped_at あり）か。skip / unskip の表示切替に使う */
   isSkipped?: boolean | undefined;
   onViewStats?: (() => void) | undefined;
+  onCopy?: (() => void) | undefined;
   onMarkUnplanned?: (() => void) | undefined;
   onRestorePlanned?: (() => void) | undefined;
   onSkip?: (() => void) | undefined;
@@ -56,6 +57,7 @@ export function getTimeblockMenuItems({
   isPast = false,
   isSkipped = false,
   onViewStats,
+  onCopy,
   onMarkUnplanned,
   onRestorePlanned,
   onSkip,
@@ -73,6 +75,15 @@ export function getTimeblockMenuItems({
           icon: BarChart3,
           dangerous: false,
           onSelect: onViewStats,
+        }
+      : null,
+    onCopy
+      ? {
+          key: 'copy',
+          labelKey: 'common.actions.copy',
+          icon: Copy,
+          dangerous: false,
+          onSelect: onCopy,
         }
       : null,
     onMarkUnplanned && isPlanned && !isUpcoming

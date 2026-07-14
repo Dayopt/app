@@ -23,30 +23,68 @@ const futureValue: TimeModelEditorValue = {
 
 /** 未来の Plan の日時・メモ編集。 */
 export const Plan: Story = {
-  args: { value: futureValue, onChange: () => undefined, onSubmit: () => undefined },
+  args: {
+    value: futureValue,
+    onDateTimeChange: () => undefined,
+    onNoteChange: () => undefined,
+  },
   render: function PlanStory() {
     const [value, setValue] = useState(futureValue);
-    return <TimeblockEditor value={value} onChange={setValue} onSubmit={() => undefined} />;
+    return (
+      <TimeblockEditor
+        value={value}
+        onDateTimeChange={setValue}
+        onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
+      />
+    );
   },
 };
 
-/** 過去 Plan は時間だけ変更できない。 */
+/** 過去の Plan の日時・メモ編集。 */
 export const PastPlan: Story = {
-  args: { value: futureValue, onChange: () => undefined, onSubmit: () => undefined },
+  args: {
+    value: futureValue,
+    onDateTimeChange: () => undefined,
+    onNoteChange: () => undefined,
+  },
   render: function PastPlanStory() {
     const [value, setValue] = useState<TimeModelEditorValue>({
       ...futureValue,
       endAt: new Date('2026-07-09T10:00:00'),
     });
-    return <TimeblockEditor value={value} onChange={setValue} onSubmit={() => undefined} />;
+    return (
+      <TimeblockEditor
+        value={value}
+        onDateTimeChange={setValue}
+        onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
+      />
+    );
   },
 };
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
-  args: { value: futureValue, onChange: () => undefined, onSubmit: () => undefined },
+  args: {
+    value: futureValue,
+    onDateTimeChange: () => undefined,
+    onNoteChange: () => undefined,
+  },
   render: function AllPatternsStory() {
     const [value, setValue] = useState(futureValue);
-    return <TimeblockEditor value={value} onChange={setValue} onSubmit={() => undefined} />;
+    return (
+      <div className="space-y-6">
+        <TimeblockEditor
+          value={value}
+          onDateTimeChange={setValue}
+          onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
+        />
+        <TimeblockEditor
+          value={value}
+          onDateTimeChange={setValue}
+          onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
+          disabled
+        />
+      </div>
+    );
   },
 };

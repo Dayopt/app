@@ -22,6 +22,7 @@ import { api } from '@/lib/trpc';
 import { Drawer, DrawerContent, DrawerTitle, Spinner } from '@dayopt/components';
 
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
+import type { ClipboardTimeblock } from '../../lib/timeblock-clipboard';
 import { useTimeblockInspectorStore } from '../../stores/useTimeblockInspectorStore';
 import { FloatingPopover } from '../inspector/FloatingPopover';
 import { useInspectorKeyboard } from '../inspector/hooks';
@@ -36,10 +37,12 @@ function InspectorURLSyncHandler() {
 interface TimeModelInspectorProps {
   /** 振り返り panel を開くコールバック（Composition Layer から注入） */
   onViewStats?: ((tagId: string) => void) | undefined;
+  /** Timeblockを独立複製用のクリップボードへ保存する。 */
+  onCopy?: ((timeblock: ClipboardTimeblock) => void) | undefined;
 }
 
 /** plans / records 対応 Inspector のトップレベル（モバイル=Drawer / PC=FloatingPopover） */
-export function TimeblockInspector({ onViewStats }: TimeModelInspectorProps) {
+export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
@@ -105,12 +108,13 @@ export function TimeblockInspector({ onViewStats }: TimeModelInspectorProps) {
   } else {
     content = (
       <TimeblockInspectorForm
-        key={`${timeblockKind}:${target.id}:${target.updated_at}`}
+        key={`${timeblockKind}:${target.id}`}
         kind={timeblockKind}
         plan={plan}
         record={record}
         isRecorded={(recordedQuery.data?.length ?? 0) > 0}
         onViewStats={onViewStats}
+        onCopy={onCopy}
         onCloseInspector={isMobile ? handleClose : undefined}
         onDeleted={handleClose}
       />

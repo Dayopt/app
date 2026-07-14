@@ -1,16 +1,11 @@
 'use client';
 
-import { Calendar, Clock, StickyNote } from 'lucide-react';
+import { StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { DateRow, TimeRow } from '@/features/timeblock';
-import { Button } from '@dayopt/components';
+import { DateTimeSection } from '@/features/timeblock';
 
-import {
-  isPlanTimeEditable,
-  resolveTimeblockDestination,
-  type TimeblockDestination,
-} from '../../domain/timeblock-destination';
+import type { TimeblockDestination } from '../../domain/timeblock-destination';
 import { NoteSection } from '../inspector/fields';
 
 export interface TimeModelEditorValue {
@@ -24,9 +19,10 @@ export interface TimeModelEditorValue {
 
 interface TimeModelEditorProps {
   value: TimeModelEditorValue;
-  onChange: (next: TimeModelEditorValue) => void;
-  onSubmit: (destination: TimeblockDestination) => void;
-  isSubmitting?: boolean | undefined;
+  onDateTimeChange: (next: TimeModelEditorValue) => void;
+  onNoteChange: (note: string) => void;
+  onNoteBlur?: (() => void) | undefined;
+  disabled?: boolean | undefined;
 }
 
 function formatTime(date: Date): string {
@@ -40,63 +36,54 @@ function withTime(date: Date, value: string): Date {
   return next;
 }
 
-/** Plan / Record 共通エディタ。詳細画面では日時とメモだけを編集する。 */
-export function TimeblockEditor({ value, onChange, onSubmit, isSubmitting }: TimeModelEditorProps) {
+export function isValidTimeModelRange(value: TimeModelEditorValue): boolean {
+  return value.startAt.getTime() < value.endAt.getTime();
+}
+
+/** Plan / Record 共通エディタ。確定した入力は上位で自動保存する。 */
+export function TimeblockEditor({
+  value,
+  onDateTimeChange,
+  onNoteChange,
+  onNoteBlur,
+  disabled,
+}: TimeModelEditorProps) {
   const t = useTranslations('timeblock.editor');
-  const destination = resolveTimeblockDestination(value.endAt);
-  const timeLocked = value.source === 'plan' && !isPlanTimeEditable(value.endAt);
 
   return (
-    <form
-      className="space-y-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit(destination);
-      }}
-    >
-      {timeLocked && (
-        <div className="flex justify-end">
-          <span className="text-muted-foreground text-xs">{t('timeLocked')}</span>
-        </div>
-      )}
+    <div className="space-y-3">
       <div className="bg-muted rounded-2xl px-4 py-2">
-        <DateRow
-          label={t('date')}
-          icon={Calendar}
+        <DateTimeSection
+          dateLabel={t('date')}
+          timeLabel={t('time')}
           selectedDate={value.startAt}
-          onDateChange={(date) => {
-            if (!date || timeLocked) return;
+          onDateSelect={(date) => {
             const startAt = new Date(date);
             startAt.setHours(value.startAt.getHours(), value.startAt.getMinutes(), 0, 0);
             const endAt = new Date(date);
             endAt.setHours(value.endAt.getHours(), value.endAt.getMinutes(), 0, 0);
-            onChange({ ...value, startAt, endAt });
+            onDateTimeChange({ ...value, startAt, endAt });
           }}
-        />
-        <TimeRow
-          label={t('time')}
-          icon={Clock}
           startTime={formatTime(value.startAt)}
+          onStartChange={(next) =>
+            onDateTimeChange({ ...value, startAt: withTime(value.startAt, next) })
+          }
           endTime={formatTime(value.endAt)}
-          onStartChange={(next) => onChange({ ...value, startAt: withTime(value.startAt, next) })}
-          onEndChange={(next) => onChange({ ...value, endAt: withTime(value.endAt, next) })}
-          disabled={timeLocked || isSubmitting === true}
-          isPrimary={destination === 'record'}
+          onEndChange={(next) => onDateTimeChange({ ...value, endAt: withTime(value.endAt, next) })}
+          disabled={disabled === true}
+          hasError={!isValidTimeModelRange(value)}
         />
       </div>
-      <NoteSection
-        label={t('note')}
-        icon={StickyNote}
-        note={value.note}
-        onNoteChange={(note) => onChange({ ...value, note })}
-        placeholder={t('notePlaceholder')}
-        disabled={isSubmitting}
-      />
-      <div className="flex justify-end">
-        <Button type="submit" size="sm" disabled={isSubmitting}>
-          {t('save')}
-        </Button>
+      <div onBlurCapture={onNoteBlur}>
+        <NoteSection
+          label={t('note')}
+          icon={StickyNote}
+          note={value.note}
+          onNoteChange={onNoteChange}
+          placeholder={t('notePlaceholder')}
+          disabled={disabled}
+        />
       </div>
-    </form>
+    </div>
   );
 }

@@ -7,6 +7,10 @@
       "description": "タイムボクシングでスケジュールを計画。日・週・月単位で予定を確認・管理。"
     },
     "title": "カレンダー",
+    "clipboard": {
+      "planRequiresFuture": "予定は未来の時間に貼り付けてください",
+      "recordRequiresPast": "記録は過去の時間に貼り付けてください"
+    },
     "panel": {
       "resizeLabel": "右パネルの幅を変更"
     },
