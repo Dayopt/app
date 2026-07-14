@@ -66,6 +66,49 @@ code: apps/product
     expect(reasons).toEqual([]);
   });
 
+  it('正常系: codeのarrayにある実在pathをすべて検証する', () => {
+    const root = createRoot();
+    createFile(root, 'apps/product/index.ts');
+    createFile(root, 'packages/domain/index.ts');
+
+    const reasons = validateDocumentMetadata({
+      content: `---
+status: current
+last_verified: 2026-07-14
+code:
+  - apps/product
+  - packages/domain
+---
+`,
+      relativePath: 'docs/engineering/architecture.md',
+      root,
+      today: '2026-07-14',
+    });
+
+    expect(reasons).toEqual([]);
+  });
+
+  it('エラー系: codeのarrayに含まれる不在pathを報告する', () => {
+    const root = createRoot();
+    createFile(root, 'apps/product/index.ts');
+
+    const reasons = validateDocumentMetadata({
+      content: `---
+status: current
+last_verified: 2026-07-14
+code:
+  - apps/product
+  - packages/missing
+---
+`,
+      relativePath: 'docs/engineering/architecture.md',
+      root,
+      today: '2026-07-14',
+    });
+
+    expect(reasons).toEqual(['codeのpathが存在しない: packages/missing']);
+  });
+
   it('エラー系: stockの不正status・未来日・不在pathを報告する', () => {
     const reasons = validateDocumentMetadata({
       content: `---
@@ -84,6 +127,21 @@ code: apps/missing
       'last_verifiedが有効な過去日付ではない: 2026-07-15',
       'codeのpathが存在しない: apps/missing',
     ]);
+  });
+
+  it('エラー系: stockの実在しないカレンダー日付を拒否する', () => {
+    const reasons = validateDocumentMetadata({
+      content: `---
+status: current
+last_verified: 2026-02-30
+---
+`,
+      relativePath: 'docs/engineering/architecture.md',
+      root: createRoot(),
+      today: '2026-07-14',
+    });
+
+    expect(reasons).toEqual(['last_verifiedが有効な過去日付ではない: 2026-02-30']);
   });
 
   it('境界: done Projectにはsummary.mdを要求する', () => {
@@ -133,7 +191,7 @@ status: frozen
 date: 2026-07-14
 ---
 `,
-      relativePath: 'docs/product/log/latest.md',
+      relativePath: 'docs/engineering/log/latest.md',
       root: createRoot(),
       today: '2026-07-14',
     });
@@ -158,6 +216,56 @@ superseded_by: docs/product/log/2026-08-01-new.md
     });
 
     expect(reasons).toEqual([]);
+  });
+
+  it('エラー系: superseded_byのarray指定を拒否する', () => {
+    const root = createRoot();
+    createFile(root, 'docs/product/log/2026-08-01-new.md');
+
+    const reasons = validateDocumentMetadata({
+      content: `---
+status: frozen
+date: 2026-07-14
+superseded_by:
+  - docs/product/log/2026-08-01-new.md
+---
+`,
+      relativePath: 'docs/product/log/2026-07-14-old.md',
+      root,
+      today: '2026-08-01',
+    });
+
+    expect(reasons).toEqual(['superseded_byはscalarのrepo-relative pathで指定する']);
+  });
+
+  it('境界: secrets.mdはstock契約の検証対象にする', () => {
+    const reasons = validateDocumentMetadata({
+      content: '# Secrets\n',
+      relativePath: 'docs/operations/secrets.md',
+      root: createRoot(),
+      today: '2026-07-14',
+    });
+
+    expect(reasons).toEqual([
+      'frontmatterがない',
+      'frontmatterにstatusがない',
+      'frontmatterにlast_verifiedがない',
+    ]);
+  });
+
+  it('境界: RLS snapshotと似たpathはgenerated例外にしない', () => {
+    const reasons = validateDocumentMetadata({
+      content: '# snapshot\n',
+      relativePath: 'docs/engineering/data/db/rls-snapshot-copy.md',
+      root: createRoot(),
+      today: '2026-07-14',
+    });
+
+    expect(reasons).toEqual([
+      'frontmatterがない',
+      'frontmatterにstatusがない',
+      'frontmatterにlast_verifiedがない',
+    ]);
   });
 
   it('generated snapshotは生成情報だけを検証する', () => {
