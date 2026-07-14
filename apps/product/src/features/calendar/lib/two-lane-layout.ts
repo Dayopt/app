@@ -46,7 +46,7 @@ interface CalculateTwoLaneLayoutOptions {
 }
 
 const DAY_MINUTES = 24 * 60;
-const DEFAULT_PLAN_LANE_WIDTH_PERCENT = 38;
+export const DEFAULT_PLAN_LANE_WIDTH_PERCENT = 38;
 
 /** カラム内の pointer X から Plan / Record の drop 先レーンを決める。 */
 export function resolveTwoLaneFromPointer(

@@ -162,9 +162,10 @@ export function checkClientSideOverlapByKind(
   draggedEventId: string,
   previewStartTime: Date,
   previewEndTime: Date,
+  now: number = Date.now(),
 ): boolean {
   const draggedEvent = events.find((event) => event.id === draggedEventId);
-  const kind = draggedEvent?.kind ?? 'plan';
+  const kind = draggedEvent?.kind ?? (previewEndTime.getTime() > now ? 'plan' : 'record');
   const start = previewStartTime.getTime();
   const end = previewEndTime.getTime();
 

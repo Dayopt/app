@@ -23,7 +23,7 @@ import {
 } from '../../../../../domain/interaction/selection-rules';
 import { pixelsToTime as pixelsToTimeRaw } from '../../../../../domain/interaction/time-math';
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
-import { checkClientSideOverlap } from '../../../../../lib/overlap';
+import { checkClientSideOverlapByKind } from '../../../../../lib/overlap';
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 
 import type { CalendarEvent } from '../../../../../types/calendar.types';
@@ -247,7 +247,7 @@ export function useDragSelection({
         startTime.setHours(selection.startHour, selection.startMinute, 0, 0);
         const endTime = new Date(date);
         endTime.setHours(selection.endHour, selection.endMinute, 0, 0);
-        if (checkClientSideOverlap(plans, '', startTime, endTime)) {
+        if (checkClientSideOverlapByKind(plans, '', startTime, endTime)) {
           toast.error(t('errors.timeOverlap'));
         } else {
           handler(selection);
@@ -346,7 +346,7 @@ export function useDragSelection({
         startTime.setHours(sel.startHour, sel.startMinute, 0, 0);
         const endTime = new Date(propsRef.current.date);
         endTime.setHours(sel.endHour, sel.endMinute, 0, 0);
-        const isOverlapping = checkClientSideOverlap(
+        const isOverlapping = checkClientSideOverlapByKind(
           propsRef.current.plans,
           '',
           startTime,
@@ -428,7 +428,7 @@ export function useDragSelection({
         startTime.setHours(sel.startHour, sel.startMinute, 0, 0);
         const endTime = new Date(propsRef.current.date);
         endTime.setHours(sel.endHour, sel.endMinute, 0, 0);
-        const isOverlapping = checkClientSideOverlap(
+        const isOverlapping = checkClientSideOverlapByKind(
           propsRef.current.plans,
           '',
           startTime,
@@ -483,7 +483,7 @@ export function useDragSelection({
           p.defaultDuration,
         );
 
-        if (checkClientSideOverlap(p.plans, '', startTime, endTime)) {
+        if (checkClientSideOverlapByKind(p.plans, '', startTime, endTime)) {
           toast.error(p.t('errors.timeOverlap'));
           dispatch({ type: 'CANCEL' });
           return;

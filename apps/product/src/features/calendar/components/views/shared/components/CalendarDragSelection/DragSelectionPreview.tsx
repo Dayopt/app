@@ -3,7 +3,7 @@
 /**
  * ドラッグ選択のプレビュー表示コンポーネント
  *
- * InlineTagPaletteのハイライトと同じデザインで統一。
+ * Plan / Record の2レーンカードと同じデザインで統一。
  * 重複時のみ赤背景 + エラーメッセージを表示。
  */
 
@@ -11,9 +11,9 @@ import { memo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { timeblockTintColor } from '@/features/timeblock';
 import { cn } from '@dayopt/components';
 
+import { DEFAULT_PLAN_LANE_WIDTH_PERCENT } from '../../../../../lib/two-lane-layout';
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 import { ConflictOverlay } from '../ConflictOverlay';
 
@@ -32,7 +32,7 @@ interface DragSelectionPreviewProps {
 
 /**
  * ドラッグ選択範囲のプレビュー表示
- * - InlineTagPaletteのハイライトと同じ見た目（entry-default + 時間ラベル）
+ * - Plan は左レーンのアウトライン、Record は右レーンの塗りカード
  * - 重複時は赤背景でエラー表示
  */
 export const DragSelectionPreview = memo(function DragSelectionPreview({
@@ -53,11 +53,15 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
 
   const timeLabel = `${formatTime(selection.startHour, selection.startMinute)} – ${formatTime(selection.endHour, selection.endMinute)}`;
 
-  // 過去時間帯は保存時に自動で unplanned になるため、preview もダッシュ枠の unplanned 風に切替える。
+  // 保存先と同じ境界条件: end > now は Plan、それ以外は Record。
   const nowForPastCheck = Date.now();
   const endDateTime = new Date(date);
   endDateTime.setHours(selection.endHour, selection.endMinute, 0, 0);
-  const isPast = endDateTime.getTime() <= nowForPastCheck;
+  const kind = endDateTime.getTime() > nowForPastCheck ? 'plan' : 'record';
+  const isPlan = kind === 'plan';
+  const left = isPlan ? 0 : DEFAULT_PLAN_LANE_WIDTH_PERCENT;
+  const width = isPlan ? DEFAULT_PLAN_LANE_WIDTH_PERCENT : 100 - DEFAULT_PLAN_LANE_WIDTH_PERCENT;
+  const destinationLabel = tCalendar(`event.preview.${kind}`);
 
   // 重複時は全面 destructive 化（drag/resize のゴーストと同一の ConflictOverlay に統一）
   if (isOverlapping) {
@@ -66,53 +70,43 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
         message={tEntry('errors.timeOverlap')}
         timeLabel={timeLabel}
         compact={height < 40}
-        className="pointer-events-none absolute right-0 left-0"
-        style={{ top, height, zIndex: 1000 }}
+        className="pointer-events-none absolute"
+        style={{ top, left: `${left}%`, width: `calc(${width}% - 4px)`, height, zIndex: 1000 }}
       />
     );
   }
 
-  // 通常時: TimeblockCardと同じデザイン（左アクセント + tint 塗り + 右角丸 + 時間）
-  // 過去時間帯（unplanned 風）も確定後カードと同じ作り: アクセント + tint 塗り + 3 辺破線のみ差分
+  // 通常時: 確定後の TwoLane カードと同じレーン位置・surface・角丸・余白。
   const isCompact = height < 40;
 
   return (
     <div
+      data-drag-selection-preview={kind}
       className={cn(
-        'pointer-events-none absolute right-0 left-0 flex rounded-r-lg',
-        isPast && 'border-entry-default border-t-2 border-r-2 border-b-2 border-dashed',
+        'text-foreground pointer-events-none absolute flex flex-col gap-1 overflow-hidden rounded-lg px-2 py-2 text-xs',
+        isPlan ? 'border-border border-2 bg-transparent' : 'bg-card',
       )}
       style={{
         top,
+        left: `${left}%`,
+        width: `calc(${width}% - 4px)`,
         height,
         zIndex: 1000,
       }}
     >
-      {/* upcoming はアクセント無し。文言位置を合わせる 3px スペーサーのみ（本体と同色で不可視）。 */}
-      <div
-        className="shrink-0"
-        style={{ width: '3px', backgroundColor: timeblockTintColor('var(--entry-default)') }}
-      />
-      {/* カード本体 — TimeblockCard と同じ 18% color-mix tint（neutral base） */}
-      <div
-        className="min-w-0 flex-1 overflow-hidden rounded-r-lg"
-        style={{ backgroundColor: timeblockTintColor('var(--entry-default)') }}
-      >
-        {isCompact ? (
-          <div className="flex h-full items-center px-2">
-            <span className="text-muted-foreground truncate text-xs tabular-nums">{timeLabel}</span>
+      {isCompact ? (
+        <span className="truncate font-medium">
+          {destinationLabel} · <span className="tabular-nums">{timeLabel}</span>
+        </span>
+      ) : (
+        <>
+          <div className="flex min-h-0 items-start justify-between gap-1">
+            <span className="truncate font-medium">{tCalendar('event.selectTag')}</span>
+            <span className="text-muted-foreground shrink-0">{destinationLabel}</span>
           </div>
-        ) : (
-          <div className="flex h-full flex-col gap-1 p-2">
-            <span className="text-muted-foreground text-sm leading-tight font-normal">
-              {tCalendar('event.selectTag')}
-            </span>
-            <span className="text-muted-foreground text-xs leading-tight tabular-nums">
-              {timeLabel}
-            </span>
-          </div>
-        )}
-      </div>
+          <span className="text-muted-foreground truncate tabular-nums">{timeLabel}</span>
+        </>
+      )}
     </div>
   );
 });
