@@ -23,7 +23,6 @@ import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useLogout } from '@/lib/hooks/useLogout';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
-import { useRouter } from '@/lib/i18n/navigation';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { getInitials } from '@/lib/user';
 import {
@@ -41,6 +40,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@dayopt/components';
+import { useRouter } from '@dayopt/i18n/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 
 import type { SettingsCategory } from '@/lib/types/settings';

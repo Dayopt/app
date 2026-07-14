@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-import type { Locale } from '@/lib/i18n';
+import type { Locale } from '@dayopt/i18n/routing';
 
 interface PageProps {
   params: Promise<{ locale: Locale }>;

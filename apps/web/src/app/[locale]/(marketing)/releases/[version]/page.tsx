@@ -7,8 +7,8 @@ import {
   getRelatedReleases,
   getRelease,
 } from '@/features/releases';
-import { Link } from '@/platform/i18n/navigation';
 import { Container } from '@dayopt/components';
+import { Link } from '@dayopt/i18n/navigation';
 import { ArrowLeft, ArrowLeftRight, Info, TriangleAlert } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';

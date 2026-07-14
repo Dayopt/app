@@ -1,0 +1,28 @@
+{
+  "name": "@dayopt/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./navigation": "./src/navigation.ts",
+    "./request": "./src/request.ts",
+    "./routing": "./src/routing.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test:run": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dayopt/config": "workspace:*"
+  },
+  "peerDependencies": {
+    "next-intl": "^4.13.2"
+  },
+  "devDependencies": {
+    "next-intl": "^4.13.2",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}

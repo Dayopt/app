@@ -1,4 +1,4 @@
-import { Link } from '@/platform/i18n/navigation';
+import { Link } from '@dayopt/i18n/navigation';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';

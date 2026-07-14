@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 
 import { getLocale, getTranslations } from 'next-intl/server';
 
-import { redirect } from '@/lib/i18n/navigation';
-import type { routing } from '@/lib/i18n/routing';
 import { validateAuthorizeInput, type AuthorizeValidationError } from '@/lib/oauth-server';
+import { redirect } from '@dayopt/i18n/navigation';
+import type { routing } from '@dayopt/i18n/routing';
 
 import { OAuthErrorPanel } from '../_components/OAuthErrorPanel';
 

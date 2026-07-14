@@ -2,7 +2,6 @@
  * i18nモジュールのエントリポイント
  */
 export { IntlProvider } from './IntlProvider';
-export type { Locale } from './routing';
 
 /**
  * メッセージオブジェクトから指定したnamespaceだけを抽出する

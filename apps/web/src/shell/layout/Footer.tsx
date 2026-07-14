@@ -2,9 +2,9 @@
 
 import { LanguageSwitcher } from '@/components/ui/actions/language-switcher';
 import { ThemeToggle } from '@/components/ui/actions/theme-toggle';
-import { Link } from '@/platform/i18n/navigation';
 import { Logo } from '@dayopt/components';
 import { dayoptBrand } from '@dayopt/config';
+import { Link } from '@dayopt/i18n/navigation';
 import { useTranslations } from 'next-intl';
 
 // SNS Icons

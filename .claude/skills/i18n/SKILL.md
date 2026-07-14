@@ -45,6 +45,10 @@ Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 
 ## アーキテクチャ（重要）
 
+### 共有 next-intl adapter
+
+`packages/i18n` が routing / navigation / request locale fallback を共有する。consumer は `@dayopt/i18n/routing` または `@dayopt/i18n/navigation` を直接 import し、app-local shim は作らない。両 app の `request.ts` は next-intl plugin entrypoint と app 固有 message loader のために残す。
+
 ### namespace 自動検出（apps/product）
 
 `apps/product/src/lib/i18n/request.ts` が `messages/{locale}/` ディレクトリを**自動スキャン**してすべての `.json` を読み込む。**手動の NAMESPACES 配列への登録は不要**。
@@ -78,9 +82,9 @@ apps/product/messages/en/calendar.json → 自動で calendar namespace を検�
 | `sidebar`      | サイドバー                                |
 | `tags`         | タグ機能                                  |
 
-### packages/ui は next-intl 非依存
+### packages/components は next-intl 非依存
 
-`packages/ui` から `next-intl` を import しない。翻訳は apps 側の責務。テキストは props/children で受け取る。
+`packages/components` から `next-intl` を import しない。翻訳は apps 側の責務。テキストは props/children で受け取る。next-intl に依存してよい共有 package は adapter 境界の `packages/i18n` だけ。
 
 ## 使用パターン
 
@@ -298,9 +302,11 @@ t('actions.save');
 - `docs/product/glossary.md` - UI 用語の source of truth
 - `docs/product/glossary.md#禁止表記一覧` - 禁止表記一覧
 - `docs/engineering/i18n.md` - 実装ガイド（詳細版）
-- `apps/product/src/lib/i18n/routing.ts` - ルーティング設定
+- `packages/i18n/src/routing.ts` - 共通ルーティング設定
+- `packages/i18n/src/navigation.ts` - 共通ナビゲーションユーティリティ
+- `packages/i18n/src/request.ts` - locale fallback と request config factory
 - `apps/product/src/lib/i18n/request.ts` - メッセージローダー（自動検出）
-- `apps/product/src/lib/i18n/navigation.ts` - ナビゲーションユーティリティ
+- `apps/web/src/platform/i18n/request.ts` - メッセージローダー（固定 namespace）
 - `apps/product/src/lib/i18n/scripts/check-keys.ts` - キー差分チェック（`pnpm i18n:check`）
 - `apps/product/src/lib/i18n/scripts/find-unused.ts` - 未使用キー検出（`pnpm i18n:unused`）
 - `scripts/i18n/check-glossary.ts` - 禁止表記スキャン（`pnpm copy:check`）

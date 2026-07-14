@@ -1,8 +1,8 @@
 import { DocArticle } from '@/features/docs';
 import { getAllContent } from '@/lib/mdx';
-import { Link } from '@/platform/i18n/navigation';
 import { ContentData } from '@/types/content';
 import { Heading, Text } from '@dayopt/components';
+import { Link } from '@dayopt/i18n/navigation';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { notFound, redirect } from 'next/navigation';
