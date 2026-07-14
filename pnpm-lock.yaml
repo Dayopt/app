@@ -707,6 +707,9 @@ importers:
       '@next/eslint-plugin-next':
         specifier: ^16.2.10
         version: 16.2.10
+      '@playwright/test':
+        specifier: ^1.61.1
+        version: 1.61.1
       '@tailwindcss/postcss':
         specifier: ^4.3.2
         version: 4.3.2
