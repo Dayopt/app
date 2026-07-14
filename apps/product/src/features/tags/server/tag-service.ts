@@ -741,14 +741,12 @@ export class TagService {
       throw new TagServiceError('INVALID_INPUT', 'Cannot merge a parent tag into a child tag.');
     }
 
-    const { data: rpcData, error: rpcError } = await this.supabase.rpc(
-      'merge_tags_with_hierarchy',
-      {
-        p_user_id: userId,
-        p_source_tag_id: sourceTagId,
-        p_target_tag_id: targetTagId,
-      },
-    );
+    const adminClient = createServiceRoleClient();
+    const { data: rpcData, error: rpcError } = await adminClient.rpc('merge_tags_with_hierarchy', {
+      p_user_id: userId,
+      p_source_tag_id: sourceTagId,
+      p_target_tag_id: targetTagId,
+    });
 
     if (rpcError) {
       throw new TagServiceError(

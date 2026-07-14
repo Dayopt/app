@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock, createMockSupabase } from '@/lib/test/trpc-test-helpers';
 import { PlanService } from '../plan-service';
@@ -7,7 +7,18 @@ import { TimeblockServiceError } from '../timeblock-service-error';
 import type { PlanRow, RecordRow } from '../timeblock-types';
 import type { ServiceSupabaseClient } from '../types';
 
+const adminRpc = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/supabase/oauth', () => ({
+  createServiceRoleClient: () => ({ rpc: adminRpc }),
+}));
+
 const USER_ID = 'test-user-id';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  adminRpc.mockResolvedValue({ data: null, error: null });
+});
 
 function createPlanService(mockSupabase = createMockSupabase()) {
   return {
@@ -242,6 +253,29 @@ describe('PlanService.skip', () => {
   });
 });
 
+describe('PlanService soft delete', () => {
+  it('deleteはuser client、restoreはservice-role clientを使う', async () => {
+    const { service, mockSupabase } = createPlanService();
+    mockSupabase.rpc.mockResolvedValue({ data: null, error: null });
+
+    await expect(service.delete({ userId: USER_ID, planId: 'plan-1' })).resolves.toEqual({
+      success: true,
+    });
+    await expect(service.restore({ userId: USER_ID, planId: 'plan-1' })).resolves.toEqual({
+      success: true,
+    });
+
+    expect(mockSupabase.rpc).toHaveBeenCalledWith('soft_delete_plan', {
+      p_plan_id: 'plan-1',
+      p_user_id: USER_ID,
+    });
+    expect(adminRpc).toHaveBeenCalledWith('restore_plan', {
+      p_plan_id: 'plan-1',
+      p_user_id: USER_ID,
+    });
+  });
+});
+
 describe('PlanService.confirmDay', () => {
   it('confirm_day_plans_to_records RPC へ user と day range を渡す', async () => {
     const record = createRecord({ source: 'from_plan' });
@@ -369,7 +403,7 @@ describe('RecordService.create', () => {
 });
 
 describe('RecordService soft delete', () => {
-  it('Record 正本 RPC で delete / restore する', async () => {
+  it('deleteはuser client、restoreはservice-role clientを使う', async () => {
     const { service, mockSupabase } = createRecordService();
     mockSupabase.rpc.mockResolvedValue({ data: null, error: null });
 
@@ -380,11 +414,11 @@ describe('RecordService soft delete', () => {
       success: true,
     });
 
-    expect(mockSupabase.rpc).toHaveBeenNthCalledWith(1, 'soft_delete_record', {
+    expect(mockSupabase.rpc).toHaveBeenCalledWith('soft_delete_record', {
       p_record_id: 'record-1',
       p_user_id: USER_ID,
     });
-    expect(mockSupabase.rpc).toHaveBeenNthCalledWith(2, 'restore_record', {
+    expect(adminRpc).toHaveBeenCalledWith('restore_record', {
       p_record_id: 'record-1',
       p_user_id: USER_ID,
     });
@@ -393,6 +427,7 @@ describe('RecordService soft delete', () => {
   it('delete / restore失敗時もRecord語彙でエラーを返す', async () => {
     const { service, mockSupabase } = createRecordService();
     mockSupabase.rpc.mockResolvedValue({ data: null, error: { message: 'denied' } });
+    adminRpc.mockResolvedValue({ data: null, error: { message: 'denied' } });
 
     await expect(service.delete({ userId: USER_ID, recordId: 'record-1' })).rejects.toThrow(
       'Failed to delete record: denied',
