@@ -215,7 +215,6 @@ export function ViewSwitcher({
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuSeparator />
         <DropdownMenuCheckboxItem checked={showWeekends} onCheckedChange={handleToggleWeekends}>
           {t('calendar.views.showWeekends')}
         </DropdownMenuCheckboxItem>
