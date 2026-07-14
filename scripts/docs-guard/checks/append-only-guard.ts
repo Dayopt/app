@@ -5,12 +5,26 @@
  * 新規fileは許可し、既存fileはsupersede metadataの追記以外を拒否する。
  */
 
-import { APPEND_ONLY_DIRS, colors, FORBIDDEN_LOG_ALIASES, git, resolveBaseRef } from '../config.ts';
+import { execSync } from 'node:child_process';
+
+import {
+  APPEND_ONLY_DIRS,
+  colors,
+  FORBIDDEN_LOG_ALIASES,
+  git,
+  resolveBaseRef,
+  ROOT,
+} from '../config.ts';
 import { listGitChanges } from '../git-changes.ts';
 
 export interface AppendOnlyViolation {
   file: string;
   reason: string;
+}
+
+interface RunAppendOnlyGuardOptions {
+  baseRef?: string;
+  root?: string;
 }
 
 const SUPERSEDE_LINE_RE = /^\+(superseded_by:\s*\S+|status:\s*superseded)\s*$/;
@@ -38,11 +52,16 @@ function isLogPath(path: string): boolean {
   return APPEND_ONLY_DIRS.some((directory) => path.startsWith(`${directory}/`));
 }
 
-export function runAppendOnlyGuard(): AppendOnlyViolation[] {
-  const baseRef = resolveBaseRef();
+export function runAppendOnlyGuard({
+  baseRef = resolveBaseRef(),
+  root = ROOT,
+}: RunAppendOnlyGuardOptions = {}): AppendOnlyViolation[] {
+  const runGit = (args: string): string =>
+    root === ROOT ? git(args) : execSync(`git ${args}`, { cwd: root, encoding: 'utf8' });
+  const mergeBase = runGit(`merge-base ${baseRef} HEAD`).trim();
   const violations: AppendOnlyViolation[] = [];
 
-  for (const change of listGitChanges('docs')) {
+  for (const change of listGitChanges('docs', { baseRef, root })) {
     const touchesLog =
       isLogPath(change.path) || (change.oldPath ? isLogPath(change.oldPath) : false);
     if (!touchesLog) continue;
@@ -66,7 +85,7 @@ export function runAppendOnlyGuard(): AppendOnlyViolation[] {
       continue;
     }
 
-    const diff = git(`diff -U0 ${baseRef} -- "${change.path}"`);
+    const diff = runGit(`diff -U0 ${mergeBase} -- "${change.path}"`);
     if (isSupersedeOnlyDiff(diff)) continue;
 
     violations.push({
