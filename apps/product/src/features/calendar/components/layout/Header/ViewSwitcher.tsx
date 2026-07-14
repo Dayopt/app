@@ -18,9 +18,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@dayopt/components';
 import type { ShortcutDef } from '../../../hooks/keyboard/shortcut-registry';
@@ -59,7 +56,7 @@ const DENSITY_OPTIONS = ['compact', 'default', 'spacious'] as const;
  *
  * メニュー構造:
  * - 1日 / 2日 / ... / 7日
- * - ビューの設定 > 週末を表示
+ * - 週表示設定（週末表示 / 週番号 / 密度 / 一般設定）
  */
 export function ViewSwitcher({
   currentView,
@@ -218,42 +215,40 @@ export function ViewSwitcher({
 
         <DropdownMenuSeparator />
 
-        {/* ビューの設定サブメニュー */}
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <span>{t('calendar.views.viewSettings')}</span>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuCheckboxItem checked={showWeekends} onCheckedChange={handleToggleWeekends}>
-              {t('calendar.views.showWeekends')}
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={showWeekNumbers}
-              onCheckedChange={handleToggleWeekNumbers}
-            >
-              {t('calendar.views.showWeekNumbers')}
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>{t('calendar.views.density')}</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                {DENSITY_OPTIONS.map((d) => (
-                  <DropdownMenuCheckboxItem
-                    key={d}
-                    checked={hourHeightDensity === d}
-                    onCheckedChange={() => persistSettings({ hourHeightDensity: d })}
-                  >
-                    {t(`calendar.views.density_${d}`)}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => useShellStore.getState().openSettings('display')}>
-              {t('calendar.views.generalSettings')}
-            </DropdownMenuItem>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        <DropdownMenuSeparator />
+
+        <span className="text-muted-foreground px-2 py-1 text-xs font-medium">
+          {t('calendar.views.viewSettings')}
+        </span>
+
+        <DropdownMenuCheckboxItem checked={showWeekends} onCheckedChange={handleToggleWeekends}>
+          {t('calendar.views.showWeekends')}
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={showWeekNumbers}
+          onCheckedChange={handleToggleWeekNumbers}
+        >
+          {t('calendar.views.showWeekNumbers')}
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator />
+
+        <span className="text-muted-foreground px-2 py-1 text-xs font-medium">
+          {t('calendar.views.density')}
+        </span>
+        {DENSITY_OPTIONS.map((d) => (
+          <DropdownMenuCheckboxItem
+            key={d}
+            checked={hourHeightDensity === d}
+            onCheckedChange={() => persistSettings({ hourHeightDensity: d })}
+          >
+            {t(`calendar.views.density_${d}`)}
+          </DropdownMenuCheckboxItem>
+        ))}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => useShellStore.getState().openSettings('display')}>
+          {t('calendar.views.generalSettings')}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
