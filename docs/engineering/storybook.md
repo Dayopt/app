@@ -134,7 +134,6 @@ story の `title:` の **top-level は所有境界（どの package / app の資
 | `apps/web/src/**`                            | `Web/`                                                      |
 
 - **Patterns の依存ベース分離**: import が `@/`（product 内部）に依存 → `Product/Patterns/`。`@dayopt/components` だけに依存 → `Shared/Patterns/`。
-- **例外**: `apps/product/src/lib/styles/tokens/**` の token doc はサイドバー一貫性を優先し `Shared/Foundations/States` に揃える（title と物理位置の軽微な不一致を許容）。
 
 このルールは `scripts/check-story-taxonomy.ts` が CI（`pnpm storybook:taxonomy`）で機械検証する。逸脱した title は lint job で hard-fail する。
 
