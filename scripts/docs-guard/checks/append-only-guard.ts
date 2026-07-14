@@ -6,6 +6,8 @@
  */
 
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import {
   APPEND_ONLY_DIRS,
@@ -16,6 +18,7 @@ import {
   ROOT,
 } from '../config.ts';
 import { listGitChanges } from '../git-changes.ts';
+import { isFrontmatterSupersededByAddition, usesFrozenLogContract } from './frontmatter-check.ts';
 
 export interface AppendOnlyViolation {
   file: string;
@@ -27,25 +30,38 @@ interface RunAppendOnlyGuardOptions {
   root?: string;
 }
 
-const SUPERSEDE_LINE_RE = /^\+(superseded_by:\s*\S+|status:\s*superseded)\s*$/;
-const BLANK_ADDITION_RE = /^\+\s*$/;
+const SUPERSEDED_BY_LINE_RE = /^\+superseded_by:\s*\S+\s*$/;
+const LEGACY_STATUS_LINE_RE = /^\+status:\s*superseded\s*$/;
 
-export function isSupersedeOnlyDiff(diff: string): boolean {
+interface SupersedeDiffOptions {
+  allowLegacyStatus?: boolean;
+}
+
+export function isSupersedeOnlyDiff(
+  diff: string,
+  { allowLegacyStatus = true }: SupersedeDiffOptions = {},
+): boolean {
   const lines = diff.split('\n');
-  let hasAddition = false;
+  const additions: string[] = [];
+  let inHunk = false;
 
   for (const line of lines) {
-    if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('@@')) continue;
+    if (line.startsWith('@@')) {
+      inHunk = true;
+      continue;
+    }
+    if (!inHunk) continue;
     if (line.startsWith('-')) return false;
 
-    if (line.startsWith('+')) {
-      if (BLANK_ADDITION_RE.test(line)) continue;
-      if (!SUPERSEDE_LINE_RE.test(line)) return false;
-      hasAddition = true;
-    }
+    if (line.startsWith('+')) additions.push(line);
   }
 
-  return hasAddition;
+  if (additions.length !== 1) return false;
+  const [addition] = additions;
+  return (
+    (addition !== undefined && SUPERSEDED_BY_LINE_RE.test(addition)) ||
+    (allowLegacyStatus && addition !== undefined && LEGACY_STATUS_LINE_RE.test(addition))
+  );
 }
 
 function isLogPath(path: string): boolean {
@@ -86,11 +102,24 @@ export function runAppendOnlyGuard({
     }
 
     const diff = runGit(`diff -U0 ${mergeBase} -- "${change.path}"`);
-    if (isSupersedeOnlyDiff(diff)) continue;
+    const previousContent = runGit(`show ${mergeBase}:"${change.path}"`);
+    const usesFrozenContract = usesFrozenLogContract(previousContent, change.path);
+    const hasAllowedDiff = isSupersedeOnlyDiff(diff, {
+      allowLegacyStatus: !usesFrozenContract,
+    });
+
+    if (hasAllowedDiff && !usesFrozenContract) continue;
+
+    if (hasAllowedDiff && usesFrozenContract) {
+      const currentContent = readFileSync(resolve(root, change.path), 'utf8');
+      if (isFrontmatterSupersededByAddition(previousContent, currentContent)) continue;
+    }
 
     violations.push({
       file: change.path,
-      reason: '凍結済みlogの変更はsuperseded_by（legacyはstatus: superseded）の追記だけ許可',
+      reason: usesFrozenContract
+        ? '新契約logの変更はfrontmatterへのsuperseded_by追記だけ許可'
+        : 'legacy logの変更はsuperseded_byまたはstatus: supersededの単一行追記だけ許可',
     });
   }
 
