@@ -90,7 +90,7 @@ export function PlanLaneCard({
       role="button"
       aria-label={displayName}
       className={cn(
-        'pointer-events-auto absolute overflow-hidden rounded-lg border-2 px-2 py-1 text-xs',
+        'pointer-events-auto absolute flex flex-col gap-1 overflow-hidden rounded-lg border-2 px-2 py-2 text-xs',
         borderClass,
         // skip / 記録済みは控えめに沈める。未記録の過去 plan は静かなプロンプトとして
         // 破線で「まだ何かが足りない」を示す。
