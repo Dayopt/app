@@ -149,8 +149,12 @@ npm run lint:boundaries  # feature境界違反
 - [ ] Vercel Dashboard → Deployments
 - [ ] 正常に動作していた直前のデプロイを見つける
 - [ ] **"..." → "Promote to Production"** で2クリックロールバック
+- [ ] CLI / REST API / Redeploy で新しいProduction buildを作らない
 - [ ] ロールバック後: 本番サイトで動作確認
 - [ ] 落ち着いて原因調査 → 修正 → 再デプロイ
+
+通常のProduction deployは `Dayopt/dayopt` の `main` mergeだけを使う。
+`Promote to Production` は正常な既存deploymentへ戻す緊急操作で、新規buildの作成経路ではない。
 
 ### 振り返り
 
