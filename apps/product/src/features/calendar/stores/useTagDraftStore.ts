@@ -30,6 +30,7 @@ interface TagDraftState {
   draft: TagDraft | null;
   openDraft: (draft: TagDraft) => void;
   updateTimes: (next: { startTime?: string; endTime?: string; date?: Date }) => void;
+  updateTag: (nextTag: DraftTagSummary) => void;
   closeDraft: () => void;
 }
 
@@ -49,6 +50,11 @@ const useTagDraftStoreBase = create<TagDraftState>()(
               ...(next.date !== undefined ? { date: next.date } : {}),
             },
           };
+        }),
+      updateTag: (nextTag) =>
+        set((state) => {
+          if (!state.draft) return state;
+          return { draft: { ...state.draft, tag: nextTag } };
         }),
       closeDraft: () => set({ draft: null }),
     }),

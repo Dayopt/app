@@ -65,6 +65,8 @@ export { ConfirmDayButton } from './components/editor/TimeblockRecordActions';
 // Components (Inspector fields — 他 feature から再利用可能な入力 row)
 // =============================================================================
 export { DateRow } from './components/inspector/fields/DateRow';
+export { DateTimeSection } from './components/inspector/fields/DateTimeSection';
+export { TagRow } from './components/inspector/fields/TagRow';
 export { TimeConflictAlert } from './components/inspector/fields/TimeConflictAlert';
 export { TimeRow } from './components/inspector/fields/TimeRow';
 

@@ -10,6 +10,7 @@ import {
   collectTimeModelLaneItems,
   hasTimeModelLaneConflict,
 } from '@/features/calendar/lib/overlap';
+import { resolveTagColor, useCreateTag, useTagsMap } from '@/features/tags';
 import { resolveTimeblockDestination, useTimeblockWriteMutations } from '@/features/timeblock';
 import { toast } from '@/lib/toast';
 import {
@@ -84,22 +85,25 @@ export function TagTimeblockCreatePopover({
   const t = useTranslations();
   const { createRecord, createPlan, deleteRecord, deletePlan } = useTimeblockWriteMutations();
   const queryClient = useQueryClient();
+  const createTagMutation = useCreateTag({ showToast: false });
+  const { getTagById } = useTagsMap();
 
   const draft = useTagDraftStore((s) => s.draft);
   const openDraft = useTagDraftStore((s) => s.openDraft);
   const updateTimes = useTagDraftStore((s) => s.updateTimes);
+  const updateTag = useTagDraftStore((s) => s.updateTag);
   const closeDraft = useTagDraftStore((s) => s.closeDraft);
 
-  const isThisTag = draft?.tag.id === tag.id;
-  const selectedDate = isThisTag ? draft.date : startOfDay(new Date());
-  const startTime = isThisTag ? draft.startTime : '09:00';
-  const endTime = isThisTag ? draft.endTime : '10:00';
+  const currentTag = draft?.tag ?? tag;
+  const selectedDate = draft ? draft.date : startOfDay(new Date());
+  const startTime = draft ? draft.startTime : '09:00';
+  const endTime = draft ? draft.endTime : '10:00';
 
   // open=true & store に対応する draft が無いとき seed する（tap 時に TagFlatList 側で
   // call する代替。row 側の handler を変更しなくて済む）
   useEffect(() => {
     if (!open) return;
-    if (draft?.tag.id === tag.id) return;
+    if (draft) return;
     const date = startOfDay(new Date());
     const seedStart = defaultStartHHMM(date);
     openDraft({
@@ -149,6 +153,47 @@ export function TagTimeblockCreatePopover({
     closeDraft();
   }, [closeDraft, onOpenChange]);
 
+  const handleTagChange = useCallback(
+    (nextTagId: string | null) => {
+      if (!nextTagId) return;
+      const nextTag = getTagById(nextTagId);
+      if (!nextTag) return;
+
+      const normalizedColor = resolveTagColor(nextTag.color);
+      const nextDraftTag = {
+        id: nextTag.id,
+        name: nextTag.name,
+        color: normalizedColor,
+        icon: nextTag.icon ?? null,
+      };
+
+      updateTag(nextDraftTag);
+    },
+    [getTagById, updateTag],
+  );
+
+  const handleCreateAndSelectTag = useCallback(
+    async (name: string, color?: string | null, icon?: string | null, parentId?: string | null) => {
+      try {
+        const created = await createTagMutation.mutateAsync({
+          name,
+          color: resolveTagColor(color),
+          icon: icon ?? undefined,
+          parentId: parentId ?? undefined,
+        });
+        handleTagChange(created.id);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (message.includes('duplicate') || message.includes('already exists')) {
+          toast.error(t('tags.errors.duplicateName'));
+        } else {
+          toast.error(t('tags.errors.createFailed'));
+        }
+      }
+    },
+    [createTagMutation, handleTagChange, t],
+  );
+
   // クライアント側で時間重複を判定（drag / Inspector と同じ規範）。
   // 重複時は inline alert + submit disabled で hard-block し、mutation を発火させない。
   // 同一レーンのみ判定（plan×plan / record×record）。plan×record は許可。
@@ -172,10 +217,10 @@ export function TagTimeblockCreatePopover({
     const startDate = combineDateAndHHMM(selectedDate, startTime);
     const endDate = combineDateAndHHMM(selectedDate, endTime);
     const destination = resolveTimeblockDestination(endDate);
-    const displayTitle = tag.name;
+    const displayTitle = currentTag.name;
     const input = {
-      title: tag.name,
-      tagId: tag.id,
+      title: currentTag.name,
+      tagId: currentTag.id,
       start_at: startDate.toISOString(),
       end_at: endDate.toISOString(),
     };
@@ -216,13 +261,15 @@ export function TagTimeblockCreatePopover({
     selectedDate,
     startTime,
     t,
-    tag.id,
-    tag.name,
+    currentTag.id,
+    currentTag.name,
   ]);
 
   const formNode = (
     <TagTimeblockCreateForm
-      tag={tag}
+      tag={currentTag}
+      onTagChange={handleTagChange}
+      onCreateAndSelect={handleCreateAndSelectTag}
       selectedDate={selectedDate}
       onDateSelect={handleDateSelect}
       startTime={startTime}
@@ -248,7 +295,7 @@ export function TagTimeblockCreatePopover({
         repositionInputs={false}
       >
         <DrawerContent className="flex flex-col gap-0 overflow-hidden p-0">
-          <DrawerTitle className="sr-only">{tag.name}</DrawerTitle>
+          <DrawerTitle className="sr-only">{currentTag.name}</DrawerTitle>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-lg">{formNode}</div>
           </div>
