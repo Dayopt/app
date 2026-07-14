@@ -242,7 +242,7 @@ export function DraftTimeblock({ draft, hourHeight }: DraftTimeblockProps) {
         {/* resize pill — pointer-events を有効化 */}
         <span
           aria-hidden
-          className="bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full opacity-100"
+          className="bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 hidden h-1 w-8 -translate-x-1/2 rounded-full opacity-100"
           style={{ zIndex: 1 }}
         />
         <div
