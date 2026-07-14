@@ -31,6 +31,24 @@ function createRepository(): string {
   return root;
 }
 
+function addFrozenLog(root: string): string {
+  const path = 'docs/product/log/2026-07-14-frozen.md';
+  write(
+    root,
+    path,
+    `---
+status: frozen
+date: 2026-07-14
+---
+
+# Frozen log
+`,
+  );
+  git(root, 'add', path);
+  git(root, 'commit', '-qm', 'add frozen log');
+  return path;
+}
+
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) {
     rmSync(directory, { force: true, recursive: true });
@@ -79,9 +97,121 @@ describe('isSupersedeOnlyDiff', () => {
 `),
     ).toBe(false);
   });
+
+  it('エラー系: metadata追記と同時の空行追加も拒否する', () => {
+    expect(
+      isSupersedeOnlyDiff(`--- a/log.md
++++ b/log.md
+@@ -3,0 +4,2 @@
++superseded_by: docs/product/log/2026-08-01-new.md
++
+`),
+    ).toBe(false);
+  });
+
+  it('エラー系: hunk内の+++で始まる追加行をfile headerと誤認しない', () => {
+    expect(
+      isSupersedeOnlyDiff(`--- a/log.md
++++ b/log.md
+@@ -3,0 +4,2 @@
++superseded_by: docs/product/log/2026-08-01-new.md
++++ hidden body
+`),
+    ).toBe(false);
+  });
+
+  it('エラー系: hunk内の---で始まる削除行をfile headerと誤認しない', () => {
+    expect(
+      isSupersedeOnlyDiff(`--- a/log.md
++++ b/log.md
+@@ -3,1 +3,1 @@
+--- hidden body
++superseded_by: docs/product/log/2026-08-01-new.md
+`),
+    ).toBe(false);
+  });
 });
 
 describe('runAppendOnlyGuard', () => {
+  it('正常系: 新契約logのfrontmatterへのsuperseded_by追記を許可する', () => {
+    const root = createRepository();
+    const path = addFrozenLog(root);
+    write(
+      root,
+      path,
+      `---
+status: frozen
+date: 2026-07-14
+superseded_by: docs/product/log/2026-08-01-new.md
+---
+
+# Frozen log
+`,
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([]);
+  });
+
+  it('正常系: legacy logのstatus追記は互換性のため許可する', () => {
+    const root = createRepository();
+    write(
+      root,
+      'docs/product/log/2026-07-01-source.md',
+      '---\ntitle: Source\nstatus: superseded\n---\n',
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([]);
+  });
+
+  it('エラー系: 新契約logへのlegacy status追記を拒否する', () => {
+    const root = createRepository();
+    const path = addFrozenLog(root);
+    write(
+      root,
+      path,
+      `---
+status: frozen
+status: superseded
+date: 2026-07-14
+---
+
+# Frozen log
+`,
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([
+      {
+        file: path,
+        reason: '新契約logの変更はfrontmatterへのsuperseded_by追記だけ許可',
+      },
+    ]);
+  });
+
+  it('エラー系: 新契約logの本文へのsuperseded_by追記を拒否する', () => {
+    const root = createRepository();
+    const path = addFrozenLog(root);
+    write(
+      root,
+      path,
+      `---
+status: frozen
+date: 2026-07-14
+---
+
+# Frozen log
+
+superseded_by: docs/product/log/2026-08-01-new.md
+`,
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([
+      {
+        file: path,
+        reason: '新契約logの変更はfrontmatterへのsuperseded_by追記だけ許可',
+      },
+    ]);
+  });
+
   it('base refが同じlogを先行更新していてもbranch側の追記だけを検査する', () => {
     const root = createRepository();
     git(root, 'branch', 'base');

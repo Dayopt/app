@@ -108,10 +108,14 @@ function currentDateInTokyo(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' });
 }
 
-function isValidDate(value: string, today: string): boolean {
-  if (!DATE_RE.test(value) || value > today) return false;
+function isCalendarDate(value: string): boolean {
+  if (!DATE_RE.test(value)) return false;
   const parsed = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function isValidDate(value: string, today: string): boolean {
+  return value <= today && isCalendarDate(value);
 }
 
 function getString(fields: ReadonlyMap<string, MetadataValue>, key: string): string | undefined {
@@ -134,6 +138,40 @@ function isReadme(path: string): boolean {
 
 function isLogDocument(path: string): boolean {
   return /^docs\/(business|product|marketing|engineering|operations|company)\/log\//.test(path);
+}
+
+function getLogFilenameDate(relativePath: string): string | undefined {
+  return relativePath.match(/\/log\/(?:\d{4}\/)?(\d{4}-\d{2}-\d{2})-/)?.[1];
+}
+
+export function usesFrozenLogContract(content: string, relativePath: string): boolean {
+  const parsed = parseFrontmatter(content);
+  const date = getString(parsed.fields, 'date');
+
+  return (
+    parsed.errors.length === 0 &&
+    getString(parsed.fields, 'status') === 'frozen' &&
+    date !== undefined &&
+    date === getLogFilenameDate(relativePath) &&
+    isCalendarDate(date)
+  );
+}
+
+export function isFrontmatterSupersededByAddition(
+  previousContent: string,
+  currentContent: string,
+): boolean {
+  const previous = parseFrontmatter(previousContent);
+  const current = parseFrontmatter(currentContent);
+  const currentValue = current.fields.get('superseded_by');
+
+  return (
+    previous.errors.length === 0 &&
+    !previous.fields.has('superseded_by') &&
+    current.errors.length === 0 &&
+    typeof currentValue === 'string' &&
+    currentValue.length > 0
+  );
 }
 
 export function classifyDocument(
@@ -219,7 +257,7 @@ function validateLog(
   const reasons: string[] = [];
   const status = getString(fields, 'status');
   const date = getString(fields, 'date');
-  const filenameDate = relativePath.match(/\/log\/(?:\d{4}\/)?(\d{4}-\d{2}-\d{2})-/)?.[1];
+  const filenameDate = getLogFilenameDate(relativePath);
 
   if (status !== 'frozen') reasons.push('新規logのstatusはfrozenにする');
   if (!filenameDate) reasons.push('新規logのfilenameはYYYY-MM-DD-slug.mdにする');
@@ -281,10 +319,14 @@ export function validateDocumentMetadata({
     if (reason) reasons.push(reason);
   }
 
-  const supersededBy = getString(parsed.fields, 'superseded_by');
-  if (supersededBy) {
-    const reason = validateRepoPath(root, supersededBy, 'superseded_by');
-    if (reason) reasons.push(reason);
+  const supersededBy = parsed.fields.get('superseded_by');
+  if (supersededBy !== undefined) {
+    if (typeof supersededBy !== 'string' || supersededBy.length === 0) {
+      reasons.push('superseded_byはscalarのrepo-relative pathで指定する');
+    } else {
+      const reason = validateRepoPath(root, supersededBy, 'superseded_by');
+      if (reason) reasons.push(reason);
+    }
   }
 
   return reasons;
