@@ -50,8 +50,8 @@ function parseNameStatus(output: string): GitChange[] {
 }
 
 /**
- * base refからworking treeまでの変更を返す。
- * `git diff <base>` はcommitted/staged/unstagedを含み、untrackedだけ別途追加する。
+ * base refとのmerge baseからworking treeまでの変更を返す。
+ * merge baseへの`git diff`はcommitted/staged/unstagedを含み、untrackedだけ別途追加する。
  */
 export function listGitChanges(
   pathspec = 'docs',
@@ -59,8 +59,9 @@ export function listGitChanges(
 ): GitChange[] {
   const runGit = (args: string): string =>
     root === ROOT ? git(args) : execSync(`git ${args}`, { cwd: root, encoding: 'utf8' });
+  const mergeBase = runGit(`merge-base ${baseRef} HEAD`).trim();
   const tracked = parseNameStatus(
-    runGit(`diff --name-status --find-renames ${baseRef} -- "${pathspec}"`),
+    runGit(`diff --name-status --find-renames ${mergeBase} -- "${pathspec}"`),
   );
   const untrackedOutput = runGit(`ls-files --others --exclude-standard -- "${pathspec}"`).trim();
   const untracked: GitChange[] = untrackedOutput

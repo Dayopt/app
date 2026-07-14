@@ -56,4 +56,24 @@ describe('listGitChanges', () => {
       ]),
     );
   });
+
+  it('base refが先行していてもmerge base以降のbranch差分だけを返す', () => {
+    const root = createRepository();
+    git(root, 'branch', 'base');
+    git(root, 'branch', 'feature');
+
+    git(root, 'switch', '-q', 'base');
+    write(root, 'docs/base-only.md', 'base only\n');
+    git(root, 'add', 'docs/base-only.md');
+    git(root, 'commit', '-qm', 'advance base');
+
+    git(root, 'switch', '-q', 'feature');
+    write(root, 'docs/feature-only.md', 'feature only\n');
+    git(root, 'add', 'docs/feature-only.md');
+    git(root, 'commit', '-qm', 'feature change');
+
+    const changes = listGitChanges('docs', { baseRef: 'base', root });
+
+    expect(changes).toEqual([{ path: 'docs/feature-only.md', status: 'added' }]);
+  });
 });
