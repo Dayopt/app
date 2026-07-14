@@ -46,6 +46,7 @@ interface CalculateTwoLaneLayoutOptions {
 }
 
 const DAY_MINUTES = 24 * 60;
+const TWO_LANE_MIN_GAP_PX = 2;
 export const DEFAULT_PLAN_LANE_WIDTH_PERCENT = 38;
 
 /** カラム内の pointer X から Plan / Record の drop 先レーンを決める。 */
@@ -61,6 +62,46 @@ export function resolveTwoLaneFromPointer(
 
 function minutesSinceMidnight(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
+}
+
+function buildLaneLayout<T extends { displayStartDate: Date; displayEndDate: Date; id: string }>(
+  items: ReadonlyArray<T>,
+  laneLeft: number,
+  laneWidth: number,
+  hourHeight: number,
+): Array<TwoLaneLayoutItem<T>> {
+  const sorted = items
+    .map((entry) => {
+      const { top, height } = timeToPosition(
+        entry.displayStartDate,
+        entry.displayEndDate,
+        hourHeight,
+      );
+      return { entry, top, height };
+    })
+    .sort((a, b) => a.top - b.top || a.entry.id.localeCompare(b.entry.id));
+
+  const layouts: Array<TwoLaneLayoutItem<T>> = [];
+  let previousBottomPx: number | null = null;
+
+  for (const item of sorted) {
+    const top =
+      previousBottomPx === null
+        ? item.top
+        : Math.max(item.top, previousBottomPx + TWO_LANE_MIN_GAP_PX);
+    const { height } = item;
+    const position: TwoLanePosition = {
+      top,
+      height,
+      left: laneLeft,
+      width: laneWidth,
+    };
+
+    layouts.push({ entry: item.entry, position });
+    previousBottomPx = top + height;
+  }
+
+  return layouts;
 }
 
 /**
@@ -91,27 +132,13 @@ export function calculateTwoLaneLayout({
   planLaneWidthPercent = DEFAULT_PLAN_LANE_WIDTH_PERCENT,
 }: CalculateTwoLaneLayoutOptions): TwoLaneLayoutResult {
   const recordLaneWidthPercent = 100 - planLaneWidthPercent;
-
-  const planLayouts = plans.map((entry) => {
-    const { top, height } = timeToPosition(
-      entry.displayStartDate,
-      entry.displayEndDate,
-      hourHeight,
-    );
-    return { entry, position: { top, height, left: 0, width: planLaneWidthPercent } };
-  });
-
-  const recordLayouts = records.map((entry) => {
-    const { top, height } = timeToPosition(
-      entry.displayStartDate,
-      entry.displayEndDate,
-      hourHeight,
-    );
-    return {
-      entry,
-      position: { top, height, left: planLaneWidthPercent, width: recordLaneWidthPercent },
-    };
-  });
+  const planLayouts = buildLaneLayout(plans, 0, planLaneWidthPercent, hourHeight);
+  const recordLayouts = buildLaneLayout(
+    records,
+    planLaneWidthPercent,
+    recordLaneWidthPercent,
+    hourHeight,
+  );
 
   return { planLayouts, recordLayouts };
 }
@@ -128,20 +155,39 @@ export function calculateTwoLaneStylesForCalendarEvents(
 ): Record<string, TwoLanePosition> {
   const recordLaneWidthPercent = 100 - planLaneWidthPercent;
   const styles: Record<string, TwoLanePosition> = {};
+  const records = [];
+  const plans = [];
 
   for (const event of events) {
     const start = event.displayStartDate ?? event.startDate;
     const end = event.displayEndDate ?? event.endDate;
     if (!start || !end) continue;
+    if (event.kind === 'record') {
+      records.push({
+        ...event,
+        displayStartDate: start,
+        displayEndDate: end,
+      });
+    } else {
+      plans.push({
+        ...event,
+        displayStartDate: start,
+        displayEndDate: end,
+      });
+    }
+  }
 
-    const { top, height } = timeToPosition(start, end, hourHeight);
-    const isRecord = event.kind === 'record';
-    styles[event.id] = {
-      top,
-      height,
-      left: isRecord ? planLaneWidthPercent : 0,
-      width: isRecord ? recordLaneWidthPercent : planLaneWidthPercent,
-    };
+  for (const { entry, position } of buildLaneLayout(plans, 0, planLaneWidthPercent, hourHeight)) {
+    styles[entry.id] = position;
+  }
+
+  for (const { entry, position } of buildLaneLayout(
+    records,
+    planLaneWidthPercent,
+    recordLaneWidthPercent,
+    hourHeight,
+  )) {
+    styles[entry.id] = position;
   }
 
   return styles;
