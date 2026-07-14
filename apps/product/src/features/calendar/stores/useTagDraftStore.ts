@@ -52,7 +52,7 @@ const useTagDraftStoreBase = create<TagDraftState>()(
         }),
       closeDraft: () => set({ draft: null }),
     }),
-    { name: 'tag-draft', enabled: process.env.NODE_ENV !== 'production' },
+    { name: 'tag-draft-store', enabled: process.env.NODE_ENV !== 'production' },
   ),
 );
 
