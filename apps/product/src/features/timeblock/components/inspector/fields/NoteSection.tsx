@@ -1,6 +1,7 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 
 interface NoteSectionProps {
@@ -11,6 +12,91 @@ interface NoteSectionProps {
   placeholder?: string | undefined;
   disabled?: boolean | undefined;
   maxLength?: number | undefined;
+}
+
+function splitTrailingPunctuation(url: string): {
+  value: string;
+  suffix: string;
+} {
+  let end = url.length;
+  while (end > 0) {
+    const char = url[end - 1];
+    if (/[\])}>"'\u3001\u3002.,!?;:、。!?]/.test(char)) {
+      end -= 1;
+    } else {
+      break;
+    }
+  }
+  return {
+    value: url.slice(0, end),
+    suffix: url.slice(end),
+  };
+}
+
+function renderNoteWithLinks(note: string): ReactNode {
+  const urlRegex = /(?:https?:\/\/|www\.)[^\s<>"'`]+/g;
+
+  const renderLine = (line: string, lineIndex: number) => {
+    const nodes: Array<ReactNode> = [];
+    let lastIndex = 0;
+    const matches = Array.from(line.matchAll(urlRegex));
+
+    matches.forEach((match, matchIndex) => {
+      if (match.index === undefined) return;
+
+      if (match.index > lastIndex) {
+        nodes.push(
+          <span key={`text-${lineIndex}-${matchIndex}-prefix`}>
+            {line.slice(lastIndex, match.index)}
+          </span>,
+        );
+      }
+
+      const token = match[0];
+      const { value: urlValue, suffix } = splitTrailingPunctuation(token);
+      const href = urlValue.startsWith('www.') ? `https://${urlValue}` : urlValue;
+
+      nodes.push(
+        <a
+          key={`link-${lineIndex}-${matchIndex}`}
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="text-primary hover:text-primary/90 underline underline-offset-2"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {urlValue}
+        </a>,
+      );
+
+      if (suffix.length > 0) {
+        nodes.push(<span key={`text-${lineIndex}-${matchIndex}-suffix`}>{suffix}</span>);
+      }
+      lastIndex = match.index + token.length;
+    });
+
+    if (lastIndex < line.length) {
+      nodes.push(<span key={`text-${lineIndex}-tail`}>{line.slice(lastIndex)}</span>);
+    }
+
+    return <span key={`line-${lineIndex}`}>{nodes.length > 0 ? nodes : line}</span>;
+  };
+
+  const lines = note.split('\n');
+  return (
+    <p className="whitespace-pre-wrap">
+      {lines.map((line, lineIndex, all) => {
+        const lineNode = renderLine(line, lineIndex);
+        if (lineIndex === all.length - 1) return lineNode;
+        return (
+          <span key={`line-wrap-${lineIndex}`}>
+            {lineNode}
+            <br />
+          </span>
+        );
+      })}
+    </p>
+  );
 }
 
 function stripHtml(html: string): string {
@@ -41,12 +127,16 @@ export function NoteSection({
   const displayNote = useMemo(() => stripHtml(note), [note]);
   const [localNote, setLocalNote] = useState(displayNote);
   const [isFocused, setIsFocused] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [previousDisplayNote, setPreviousDisplayNote] = useState(displayNote);
 
   if (previousDisplayNote !== displayNote) {
     setPreviousDisplayNote(displayNote);
     if (!isFocused) setLocalNote(displayNote);
   }
+
+  const showLinkifiedNote = !isEditing || disabled;
+  const shouldShowPlaceholder = displayNote.length === 0;
 
   return (
     <div className="flex flex-col gap-2">
@@ -59,24 +149,57 @@ export function NoteSection({
           {localNote.length}/{maxLength}
         </span>
       </div>
-      <textarea
-        value={localNote}
-        onChange={(event) => {
-          setLocalNote(event.target.value);
-          onNoteChange(event.target.value);
-        }}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => {
-          setIsFocused(false);
-          setLocalNote(displayNote);
-        }}
-        placeholder={placeholder}
-        disabled={disabled}
-        maxLength={maxLength}
-        aria-label={label}
-        rows={1}
-        className="bg-input text-foreground placeholder:text-muted-foreground focus-visible:ring-ring field-sizing-content max-h-40 min-h-11 resize-none overflow-y-auto rounded-lg border border-transparent px-4 py-2 text-sm leading-normal shadow-xs outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
-      />
+      {showLinkifiedNote ? (
+        <div
+          role="button"
+          tabIndex={disabled ? -1 : 0}
+          className="bg-input text-foreground hover:bg-state-hover focus-visible:ring-ring relative flex max-h-40 min-h-11 cursor-text items-start overflow-y-auto rounded-lg border border-transparent px-4 py-2 text-left text-sm leading-normal shadow-xs outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => {
+            if (!disabled) {
+              setIsEditing(true);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setIsEditing(true);
+            }
+          }}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          aria-label={label}
+        >
+          <span className="block min-h-6 w-full text-left text-sm leading-normal">
+            {shouldShowPlaceholder && placeholder ? (
+              <span className="text-muted-foreground">{placeholder}</span>
+            ) : (
+              renderNoteWithLinks(displayNote)
+            )}
+          </span>
+        </div>
+      ) : (
+        <textarea
+          value={localNote}
+          onChange={(event) => {
+            setLocalNote(event.target.value);
+            onNoteChange(event.target.value);
+          }}
+          onFocus={() => {
+            setIsFocused(true);
+          }}
+          onBlur={() => {
+            setIsFocused(false);
+            setIsEditing(false);
+            setLocalNote(displayNote);
+          }}
+          placeholder={placeholder}
+          disabled={disabled}
+          maxLength={maxLength}
+          aria-label={label}
+          rows={1}
+          className="bg-input text-foreground placeholder:text-muted-foreground focus-visible:ring-ring field-sizing-content max-h-40 min-h-11 resize-none overflow-y-auto rounded-lg border border-transparent px-4 py-2 text-sm leading-normal shadow-xs outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+        />
+      )}
     </div>
   );
 }
