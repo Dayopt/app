@@ -132,6 +132,10 @@ function isReadme(path: string): boolean {
   return /\/(readme|index)\.md$/i.test(path);
 }
 
+function isLogDocument(path: string): boolean {
+  return /^docs\/(business|product|marketing|engineering|operations|company)\/log\//.test(path);
+}
+
 export function classifyDocument(
   relativePath: string,
   isAddedLog: boolean,
@@ -146,9 +150,7 @@ export function classifyDocument(
     return 'project-document';
   }
 
-  if (
-    /^docs\/(business|product|marketing|engineering|operations|company)\/log\//.test(relativePath)
-  ) {
+  if (isLogDocument(relativePath)) {
     return isAddedLog ? 'log' : undefined;
   }
 
@@ -220,6 +222,7 @@ function validateLog(
   const filenameDate = relativePath.match(/\/log\/(?:\d{4}\/)?(\d{4}-\d{2}-\d{2})-/)?.[1];
 
   if (status !== 'frozen') reasons.push('新規logのstatusはfrozenにする');
+  if (!filenameDate) reasons.push('新規logのfilenameはYYYY-MM-DD-slug.mdにする');
   if (!date) reasons.push('新規logにdateがない');
   else {
     if (!isValidDate(date, today)) reasons.push(`dateが有効な過去日付ではない: ${date}`);
@@ -227,6 +230,19 @@ function validateLog(
       reasons.push(`dateがfilenameと一致しない: ${date} != ${filenameDate}`);
     }
   }
+  return reasons;
+}
+
+export function validateExistingLogSupersededBy(content: string, root = ROOT): string[] {
+  const reasons: string[] = [];
+  const values = [...content.matchAll(/^superseded_by:\s*(\S+)\s*$/gm)].map((match) => match[1]);
+
+  for (const value of values) {
+    if (!value) continue;
+    const reason = validateRepoPath(root, value, 'superseded_by');
+    if (reason) reasons.push(reason);
+  }
+
   return reasons;
 }
 
@@ -277,10 +293,10 @@ export function validateDocumentMetadata({
 export async function runFrontmatterCheck(): Promise<FrontmatterViolation[]> {
   const violations: FrontmatterViolation[] = [];
   const files = await glob('**/*.md', { cwd: DOCS_DIR, absolute: true });
+  const changes = listGitChanges('docs');
+  const changesByPath = new Map(changes.map((change) => [change.path, change]));
   const addedPaths = new Set(
-    listGitChanges('docs')
-      .filter((change) => change.status === 'added')
-      .map((change) => change.path),
+    changes.filter((change) => change.status === 'added').map((change) => change.path),
   );
 
   for (const file of files) {
@@ -290,11 +306,18 @@ export async function runFrontmatterCheck(): Promise<FrontmatterViolation[]> {
       continue;
     }
 
+    const content = readFileSync(file, 'utf8');
+    const change = changesByPath.get(relativePath);
     const kind = classifyDocument(relativePath, addedPaths.has(relativePath));
+    if (!kind && isLogDocument(relativePath) && change?.status === 'modified') {
+      const reasons = validateExistingLogSupersededBy(content);
+      for (const reason of reasons) violations.push({ file, reason });
+      continue;
+    }
     if (!kind) continue;
 
     const reasons = validateDocumentMetadata({
-      content: readFileSync(file, 'utf8'),
+      content,
       relativePath,
     });
     for (const reason of reasons) violations.push({ file, reason });
