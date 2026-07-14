@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Row } from '@/lib/database';
@@ -7,6 +7,7 @@ import { TimeblockInspectorForm } from '../TimeblockInspectorForm';
 
 const mocks = vi.hoisted(() => ({
   enqueueSave: vi.fn(),
+  flushSave: vi.fn(),
   toastError: vi.fn(),
 }));
 
@@ -25,7 +26,10 @@ vi.mock('@/lib/toast', () => ({
 }));
 
 vi.mock('../../../hooks/useCoalescedTimeblockSave', () => ({
-  useCoalescedTimeblockSave: () => mocks.enqueueSave,
+  useCoalescedTimeblockSave: () => ({
+    enqueue: mocks.enqueueSave,
+    flush: mocks.flushSave,
+  }),
 }));
 
 vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
@@ -53,7 +57,11 @@ vi.mock('../../inspector/fields', () => ({
 }));
 
 vi.mock('../TimeblockRecordActions', () => ({
-  RecordPlanButton: () => null,
+  RecordPlanButton: ({ beforeRecord }: { beforeRecord: () => Promise<void> }) => (
+    <button type="button" onClick={() => void beforeRecord()}>
+      prepare-record
+    </button>
+  ),
 }));
 
 vi.mock('../TimeblockEditor', () => ({
@@ -62,6 +70,7 @@ vi.mock('../TimeblockEditor', () => ({
   TimeblockEditor: ({
     value,
     onDateTimeChange,
+    onNoteChange,
   }: {
     value: {
       note: string;
@@ -77,6 +86,7 @@ vi.mock('../TimeblockEditor', () => ({
       endAt: Date;
       source: 'plan' | 'record';
     }) => void;
+    onNoteChange: (note: string) => void;
   }) => (
     <>
       <output data-testid="current-end">{value.endAt.toISOString()}</output>
@@ -92,6 +102,9 @@ vi.mock('../TimeblockEditor', () => ({
       >
         move-to-now
       </button>
+      <button type="button" onClick={() => onNoteChange('最新メモ')}>
+        edit-note
+      </button>
     </>
   ),
 }));
@@ -99,7 +112,7 @@ vi.mock('../TimeblockEditor', () => ({
 const futurePlan = {
   id: 'plan-1',
   user_id: 'user-1',
-  tag_id: null,
+  tag_id: '00000000-0000-4000-8000-000000000001',
   external_calendar_event_id: null,
   title: 'Future plan',
   note: null,
@@ -112,11 +125,18 @@ const futurePlan = {
   updated_at: '2026-07-15T10:00:00.000Z',
 } satisfies Row<'plans'>;
 
+const pastPlan = {
+  ...futurePlan,
+  start_at: '2026-07-15T10:00:00.000Z',
+  end_at: '2026-07-15T11:00:00.000Z',
+} satisfies Row<'plans'>;
+
 describe('TimeblockInspectorForm', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
     vi.clearAllMocks();
+    mocks.flushSave.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -140,5 +160,24 @@ describe('TimeblockInspectorForm', () => {
     expect(screen.getByTestId('current-end')).toHaveTextContent('2026-07-15T14:00:00.000Z');
     expect(mocks.enqueueSave).not.toHaveBeenCalled();
     expect(mocks.toastError).toHaveBeenCalledWith('timeblock.editor.timeLocked');
+  });
+
+  it('記録前にdebounceを止め、最新のタグとメモをsnapshot保存する', () => {
+    render(
+      <TimeblockInspectorForm kind="plan" plan={pastPlan} isRecorded={false} onDeleted={vi.fn()} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'edit-note' }));
+    expect(mocks.enqueueSave).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'prepare-record' }));
+
+    expect(mocks.flushSave).toHaveBeenCalledWith({
+      note: '最新メモ',
+      tagId: '00000000-0000-4000-8000-000000000001',
+    });
+
+    act(() => vi.advanceTimersByTime(600));
+    expect(mocks.enqueueSave).not.toHaveBeenCalled();
   });
 });

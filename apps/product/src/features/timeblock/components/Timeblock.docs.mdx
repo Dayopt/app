@@ -17,6 +17,7 @@ Plan / Recordのcard、editor、inspector、record action component群。Storybo
 
 - Inspectorで開いたPlan / Recordは時間編集で暗黙変換しない
 - past Planは時間fieldをdisabledにし、内容訂正とrecord actionは残す
+- 「そのまま記録」のpendingは、最新のタグ・メモ保存からRecord作成まで継続する
 - product rule、DB、RPCはStorybookに複製しない
 
 ---
@@ -57,6 +58,7 @@ TimeblockCard                         カレンダー表示カード（ドラッ
 | ---------------------------------------------- | -------------------------------------------------- |
 | `useTimeblockInspectorStore`                   | Inspector 開閉、対象 id / kind（plan / record）    |
 | `useTimeblockWriteMutations`                   | Plan / Record の作成・更新・削除（楽観的更新付き） |
+| `useCoalescedTimeblockSave`                    | 自動保存の直列化、最新差分の集約、記録前barrier    |
 | `useTimeblockRecordMutations`                  | ワンタップ記録 / この日を確定                      |
 | `useInspectorURLSync` / `useInspectorKeyboard` | URL 同期・キーボード操作                           |
 

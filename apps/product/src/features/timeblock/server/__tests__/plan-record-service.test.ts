@@ -253,15 +253,29 @@ describe('PlanService.record', () => {
     });
     const { service, mockSupabase } = createPlanService();
     let recordsCallCount = 0;
+    let recordInsertQuery: ReturnType<typeof createChainableMock> | undefined;
     mockSupabase.from.mockImplementation((table: string) => {
       if (table === 'plans') return createChainableMock(plan);
       recordsCallCount++;
-      return createChainableMock(recordsCallCount <= 2 ? [] : record);
+      if (recordsCallCount <= 2) return createChainableMock([]);
+      recordInsertQuery = createChainableMock(record);
+      return recordInsertQuery;
     });
 
     await expect(service.record({ userId: USER_ID, planId: plan.id })).resolves.toMatchObject({
       plan_id: plan.id,
       source: 'from_plan',
+    });
+    expect(recordInsertQuery?.insert).toHaveBeenCalledWith({
+      user_id: USER_ID,
+      title: plan.title,
+      note: plan.note,
+      tag_id: plan.tag_id,
+      plan_id: plan.id,
+      external_calendar_event_id: null,
+      source: 'from_plan',
+      start_at: plan.start_at,
+      end_at: plan.end_at,
     });
   });
 

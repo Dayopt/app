@@ -121,7 +121,7 @@ export function TimeblockInspectorForm({
     },
     [kind, targetId, isMigrated, updatePlan, updateRecord],
   );
-  const enqueueSave = useCoalescedTimeblockSave(savePatch);
+  const { enqueue: enqueueSave, flush: flushSave } = useCoalescedTimeblockSave(savePatch);
 
   const pendingNoteRef = useRef(value.note);
   const noteDirtyRef = useRef(false);
@@ -200,6 +200,15 @@ export function TimeblockInspectorForm({
     },
     [scheduleNoteSave],
   );
+
+  const flushBeforeRecord = useCallback(() => {
+    cancelScheduledNoteSave();
+    noteDirtyRef.current = false;
+    return flushSave({
+      note: normalizeNote(pendingNoteRef.current),
+      tagId: value.tagId,
+    });
+  }, [cancelScheduledNoteSave, flushSave, value.tagId]);
 
   const handleCopy = useCallback(() => {
     if (!target || !onCopy) return;
@@ -300,7 +309,7 @@ export function TimeblockInspectorForm({
 
       {kind === 'plan' && isPast && !isSkipped && !isRecorded && targetId ? (
         <div className="flex justify-start">
-          <RecordPlanButton planId={targetId} />
+          <RecordPlanButton planId={targetId} beforeRecord={flushBeforeRecord} />
         </div>
       ) : null}
     </div>

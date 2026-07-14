@@ -9,8 +9,20 @@ export interface TimeblockSavePatch {
   end_at?: string;
 }
 
+interface SaveWaiter {
+  resolve: () => void;
+  reject: (reason: unknown) => void;
+}
+
+export interface CoalescedTimeblockSaveControls {
+  enqueue: (patch: TimeblockSavePatch) => void;
+  /** patch を含む保存 batch の完了を待ち、失敗時は reject する。 */
+  flush: (patch: TimeblockSavePatch) => Promise<void>;
+}
+
 class CoalescedTimeblockSaveQueue {
   private pending: TimeblockSavePatch | null = null;
+  private pendingWaiters: SaveWaiter[] = [];
   private isSaving = false;
 
   constructor(private save: (patch: TimeblockSavePatch) => Promise<unknown>) {}
@@ -20,15 +32,29 @@ class CoalescedTimeblockSaveQueue {
   }
 
   enqueue(patch: TimeblockSavePatch): void {
-    this.pending = { ...this.pending, ...patch };
+    this.mergePending(patch);
     this.runNext();
+  }
+
+  flush(patch: TimeblockSavePatch): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.mergePending(patch);
+      this.pendingWaiters.push({ resolve, reject });
+      this.runNext();
+    });
+  }
+
+  private mergePending(patch: TimeblockSavePatch): void {
+    this.pending = { ...this.pending, ...patch };
   }
 
   private runNext(): void {
     if (this.isSaving || this.pending === null) return;
 
     const next = this.pending;
+    const waiters = this.pendingWaiters;
     this.pending = null;
+    this.pendingWaiters = [];
     this.isSaving = true;
 
     const continueQueue = () => {
@@ -36,7 +62,16 @@ class CoalescedTimeblockSaveQueue {
       this.runNext();
     };
 
-    void this.save(next).then(continueQueue, continueQueue);
+    void this.save(next).then(
+      () => {
+        for (const waiter of waiters) waiter.resolve();
+        continueQueue();
+      },
+      (error: unknown) => {
+        for (const waiter of waiters) waiter.reject(error);
+        continueQueue();
+      },
+    );
   }
 }
 
@@ -46,12 +81,15 @@ class CoalescedTimeblockSaveQueue {
  */
 export function useCoalescedTimeblockSave(
   onSave: (patch: TimeblockSavePatch) => Promise<unknown>,
-): (patch: TimeblockSavePatch) => void {
+): CoalescedTimeblockSaveControls {
   const [queue] = useState(() => new CoalescedTimeblockSaveQueue(onSave));
 
   useEffect(() => {
     queue.setSave(onSave);
   }, [onSave, queue]);
 
-  return useCallback((patch: TimeblockSavePatch) => queue.enqueue(patch), [queue]);
+  const enqueue = useCallback((patch: TimeblockSavePatch) => queue.enqueue(patch), [queue]);
+  const flush = useCallback((patch: TimeblockSavePatch) => queue.flush(patch), [queue]);
+
+  return { enqueue, flush };
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { Button } from '@dayopt/components';
 import { useTranslations } from 'next-intl';
 
@@ -7,20 +9,39 @@ import { useTimeblockRecordMutations } from '../../hooks/useTimeblockRecordMutat
 
 interface RecordPlanButtonProps {
   planId: string;
+  beforeRecord: () => Promise<void>;
   disabled?: boolean | undefined;
 }
 
 /** 過去 Plan を同じ時間帯の Record として記録するワンタップ導線。 */
-export function RecordPlanButton({ planId, disabled = false }: RecordPlanButtonProps) {
+export function RecordPlanButton({
+  planId,
+  beforeRecord,
+  disabled = false,
+}: RecordPlanButtonProps) {
   const t = useTranslations('timeblock.editor');
   const { recordPlan } = useTimeblockRecordMutations();
+  const [isPreparing, setIsPreparing] = useState(false);
+  const isPending = isPreparing || recordPlan.isPending;
+
+  const handleRecord = () => {
+    if (disabled || isPending) return;
+    setIsPreparing(true);
+    void beforeRecord().then(
+      () => {
+        recordPlan.mutate({ id: planId }, { onSettled: () => setIsPreparing(false) });
+      },
+      () => setIsPreparing(false),
+    );
+  };
 
   return (
     <Button
       type="button"
       size="sm"
-      onClick={() => recordPlan.mutate({ id: planId })}
-      disabled={disabled || recordPlan.isPending}
+      onClick={handleRecord}
+      disabled={disabled || isPending}
+      aria-busy={isPending}
     >
       {t('recordAsIs')}
     </Button>
