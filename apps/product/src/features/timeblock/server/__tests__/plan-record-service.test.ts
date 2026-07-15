@@ -442,6 +442,7 @@ describe('PlanService.record', () => {
       start_at: plan.start_at,
       end_at: plan.end_at,
     });
+    expect(recordInsertQuery?.select).toHaveBeenCalledWith(publicRecordSelect);
   });
 
   it('active record が紐づく plan の再記録を拒否する', async () => {
@@ -532,8 +533,9 @@ describe('PlanService soft delete', () => {
 describe('PlanService.confirmDay', () => {
   it('confirm_day_plans_to_records RPC へ user と day range を渡す', async () => {
     const record = createRecord({ source: 'from_plan' });
+    const legacyRecord = { ...record, fulfillment_score: 3 };
     const { service, mockSupabase } = createPlanService();
-    mockSupabase.rpc.mockResolvedValue({ data: [record], error: null });
+    mockSupabase.rpc.mockResolvedValue({ data: [legacyRecord], error: null });
 
     await expect(
       service.confirmDay({

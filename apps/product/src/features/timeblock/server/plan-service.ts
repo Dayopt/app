@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { databaseTables } from '@/lib/database';
+import { databaseTables, publicRecordSelect, toPublicRecordRow } from '@/lib/database';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
@@ -286,7 +286,7 @@ export class PlanService {
         start_at: plan.start_at,
         end_at: plan.end_at,
       })
-      .select()
+      .select(publicRecordSelect)
       .single();
 
     if (error) {
@@ -311,7 +311,7 @@ export class PlanService {
       this.handleRecordMutationError(error, 'Failed to confirm day plans');
     }
 
-    return data ?? [];
+    return (data ?? []).map(toPublicRecordRow);
   }
 
   private toPlanUpdate(input: UpdatePlanOptions['input']): PlanUpdate {
