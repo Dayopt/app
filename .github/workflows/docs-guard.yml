@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  NODE_VERSION: '22'
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -43,8 +40,6 @@ jobs:
 
       - uses: ./.github/actions/setup
         if: steps.docs-changed.outputs.changed == 'true'
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: pnpm docs:check
         if: steps.docs-changed.outputs.changed == 'true'
