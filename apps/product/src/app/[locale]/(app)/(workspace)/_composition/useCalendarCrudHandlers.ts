@@ -20,8 +20,9 @@ import {
   useTimeblockContextActions,
   useTimeblockOperations,
 } from '@/features/calendar';
-import { createClipboardTimeblock } from '@/features/timeblock';
 import { toast } from '@/lib/toast';
+
+import { createCalendarEventClipboardTimeblock } from './createCalendarEventClipboardTimeblock';
 
 // =============================================================================
 // Types
@@ -113,32 +114,14 @@ export function useCalendarCrudHandlers({
   const getSelectedEntryForCopy = useCallback(() => {
     if (!selectedTimeblockId) return null;
     const entry = filteredEvents.find((p) => p.id === selectedTimeblockId);
-    if (!entry) return null;
-
-    if (!entry.kind || !entry.startDate || !entry.endDate) return null;
-    return createClipboardTimeblock({
-      kind: entry.kind,
-      title: entry.title,
-      description: entry.description ?? null,
-      startAt: entry.startDate,
-      endAt: entry.endDate,
-      tagId: entry.tagId,
-    });
+    return entry ? createCalendarEventClipboardTimeblock(entry) : null;
   }, [selectedTimeblockId, filteredEvents]);
 
   const handleCopy = useCallback(
     (entry: CalendarEvent) => {
-      if (!entry.kind || !entry.startDate || !entry.endDate) return;
-      copyTimeblock(
-        createClipboardTimeblock({
-          kind: entry.kind,
-          title: entry.title,
-          description: entry.description ?? null,
-          startAt: entry.startDate,
-          endAt: entry.endDate,
-          tagId: entry.tagId,
-        }),
-      );
+      const timeblock = createCalendarEventClipboardTimeblock(entry);
+      if (!timeblock) return;
+      copyTimeblock(timeblock);
       toast.success(t('common.toast.copied'));
     },
     [copyTimeblock, t],
