@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  BadgeCheck,
-  CalendarX2,
-  Clock3,
-  Gauge,
-  GitCompareArrows,
-  type LucideIcon,
-} from 'lucide-react';
+import { CalendarX2, Clock3, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, type ReactNode } from 'react';
 
@@ -97,19 +90,16 @@ export function WeeklyReflectionPanel({
         {signal.detail && <p className="text-muted-foreground mt-1 text-sm">{signal.detail}</p>}
       </section>
 
-      <div className="grid grid-cols-3 gap-2">
-        <PanelMetric
-          icon={Clock3}
+      <dl className="border-border-subtle divide-border-subtle divide-y rounded-lg border">
+        <ReviewMetricRow
           label={t('overview.trackedTime')}
           value={formatMinutesDuration(trackedMinutes)}
         />
-        <PanelMetric
-          icon={Gauge}
+        <ReviewMetricRow
           label={t('overview.planAccuracy')}
           value={planAccuracyRate === null ? t('metrics.noData') : formatPercent(planAccuracyRate)}
         />
-        <PanelMetric
-          icon={confirmedRate == null ? GitCompareArrows : BadgeCheck}
+        <ReviewMetricRow
           label={confirmedRate == null ? t('overview.diff') : t('review.confirmedRate')}
           value={confirmedRate == null ? formatVariance(diffMinutes) : formatPercent(confirmedRate)}
           valueClassName={
@@ -118,7 +108,7 @@ export function WeeklyReflectionPanel({
               : undefined
           }
         />
-      </div>
+      </dl>
 
       <ReflectionSection title={t('review.timePLTitle')}>
         {compactTimePLRows.length === 0 ? (
@@ -188,28 +178,21 @@ function ReflectionSection({ title, children }: { title: string; children: React
   );
 }
 
-function PanelMetric({
-  icon: Icon,
+export function ReviewMetricRow({
   label,
   value,
   valueClassName,
 }: {
-  icon: LucideIcon;
   label: string;
   value: string;
   valueClassName?: string | undefined;
 }) {
   return (
-    <div className="border-border-subtle min-w-0 rounded-lg border p-2.5">
-      <div className="text-muted-foreground flex min-w-0 items-center gap-1 text-xs">
-        <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-        <span className="truncate">{label}</span>
-      </div>
-      <div
-        className={cn('mt-2 truncate font-mono text-sm font-medium tabular-nums', valueClassName)}
-      >
+    <div className="flex min-h-11 min-w-0 items-center gap-2 px-3 py-2">
+      <dt className="text-muted-foreground min-w-0 flex-1 text-xs">{label}</dt>
+      <dd className={cn('shrink-0 font-mono text-sm font-medium tabular-nums', valueClassName)}>
         {value}
-      </div>
+      </dd>
     </div>
   );
 }
@@ -260,7 +243,7 @@ function EstimationBiasRow({ row }: { row: WeeklyReflectionEstimationRow }) {
   const deviation = Math.round(row.avgDeviationMinutes);
 
   return (
-    <div className="flex min-h-11 min-w-0 items-center gap-3 px-2 py-2">
+    <div className="flex min-h-11 min-w-0 items-center gap-2 px-2 py-2">
       <TagIcon icon={null} color={resolveTagColor(row.tagColor)} size="sm" />
       <span className="text-foreground min-w-0 flex-1 truncate text-sm">{row.tagName}</span>
       <span className="text-muted-foreground shrink-0 font-mono text-xs tabular-nums">

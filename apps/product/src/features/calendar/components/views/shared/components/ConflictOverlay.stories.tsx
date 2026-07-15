@@ -2,25 +2,28 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { ConflictOverlay } from './ConflictOverlay';
 
+const MESSAGE = 'この時間帯には既に予定があります';
+
 /**
  * 重複検出時の destructive オーバーレイ。drag / resize / 新規選択 /
  * タグ下書きの 5 面で共有する「この時間帯には既に予定があります」表示。
  */
 const meta = {
   title: 'Product/Features/Calendar/Interaction/ConflictOverlay',
+  component: ConflictOverlay,
+  args: { message: MESSAGE },
   // color-contrast: text-destructive on bg-destructive-tint（設計上可読）
   parameters: { layout: 'padded', a11y: { test: 'todo' } },
   tags: ['autodocs'],
-} satisfies Meta;
+} satisfies Meta<typeof ConflictOverlay>;
 
 export default meta;
-type Story = StoryObj;
+type Story = StoryObj<typeof meta>;
 
 // ---------------------------------------------------------------------------
 // ヘルパー
 // ---------------------------------------------------------------------------
 
-const MESSAGE = 'この時間帯には既に予定があります';
 const PREVIEW_TIME = {
   start: new Date(2026, 5, 5, 9, 0),
   end: new Date(2026, 5, 5, 10, 0),
@@ -70,6 +73,20 @@ export const WithTimeLabel: Story = {
   ),
 };
 
+/** previewTimeをユーザー設定の12時間表記で整形するケース。 */
+export const TwelveHour: Story = {
+  render: () => (
+    <Slot>
+      <ConflictOverlay
+        message={MESSAGE}
+        previewTime={PREVIEW_TIME}
+        timeFormat="12h"
+        className="h-full"
+      />
+    </Slot>
+  ),
+};
+
 /** compact（高さ < 40px の小ブロック）。メッセージ 1 行のみ縦中央。 */
 export const Compact: Story = {
   render: () => (
@@ -102,6 +119,14 @@ export const AllPatterns: Story = {
       </Slot>
       <Slot>
         <ConflictOverlay message={MESSAGE} timeLabel="1:00 PM – 2:00 PM" className="h-full" />
+      </Slot>
+      <Slot>
+        <ConflictOverlay
+          message={MESSAGE}
+          previewTime={PREVIEW_TIME}
+          timeFormat="12h"
+          className="h-full"
+        />
       </Slot>
       <Slot height={28}>
         <ConflictOverlay message={MESSAGE} compact className="h-full" />

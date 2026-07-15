@@ -1,8 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildDragPreviewEntry } from '../CalendarGridContent';
+import { buildDragPreviewEntry, resolveCalendarLanePresentation } from '../CalendarGridContent';
 
 describe('CalendarGridContent', () => {
+  it.each([
+    ['day', false],
+    ['3day', false],
+    ['5day', true],
+    ['week', true],
+  ] as const)('%s は共通38%%レーンと表示密度を解決する', (viewMode, compactCards) => {
+    expect(resolveCalendarLanePresentation(viewMode)).toEqual({
+      planLaneWidthPercent: 38,
+      compactCards,
+    });
+  });
+
   it('drag preview は planned と actual のズレを保って表示用 entry を作る', () => {
     const entry = {
       id: 'entry-1',

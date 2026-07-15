@@ -8,11 +8,15 @@ import { useTagsMap } from '@/features/tags';
 import { TimeblockCard, useTimeblockRecordMutations } from '@/features/timeblock';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@dayopt/components';
 
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
-import { calculateTwoLaneStylesForCalendarEvents } from '../../../../lib/two-lane-layout';
+import {
+  calculateTwoLaneStylesForCalendarEvents,
+  DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+} from '../../../../lib/two-lane-layout';
 import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
@@ -110,6 +114,21 @@ interface CalendarGridContentProps {
   className?: string | undefined;
 }
 
+type CalendarGridViewMode = NonNullable<CalendarGridContentProps['viewMode']>;
+
+export function resolveCalendarLanePresentation(viewMode: CalendarGridViewMode): {
+  planLaneWidthPercent: number;
+  compactCards: boolean;
+} {
+  const visibleDayCount =
+    viewMode === 'day' ? 1 : viewMode === 'week' ? 7 : Number.parseInt(viewMode, 10);
+
+  return {
+    planLaneWidthPercent: DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+    compactCards: visibleDayCount >= 5,
+  };
+}
+
 // ========================================
 // Component
 // ========================================
@@ -132,6 +151,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 }: CalendarGridContentProps) {
   const { getTagById } = useTagsMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+  const { defaultDuration, timeFormat } = useUserPreferences();
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
@@ -142,8 +162,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
-  // Week/複数日ビューはカラム幅が狭いため Plan レーンを細くする（Day は既定 38%）。
-  const planLaneWidthPercent = viewMode === 'day' ? 38 : 20;
+  const { planLaneWidthPercent, compactCards } = resolveCalendarLanePresentation(viewMode);
 
   const wrappedOnEventUpdate = useCallback(
     (
@@ -216,6 +235,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
           hourHeight={HOUR_HEIGHT}
           showActualDiff={enableCrossDayDrag}
           showDayDiffMarker={dayDiffEntryIds?.has(entry.id) ?? false}
+          timeFormat={timeFormat}
           style={{ position: 'relative' }}
         />
       );
@@ -228,6 +248,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       HOUR_HEIGHT,
       enableCrossDayDrag,
       dayDiffEntryIds,
+      timeFormat,
     ],
   );
 
@@ -237,7 +258,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       Array.from({ length: 24 }, (_, hour) => (
         <div
           key={hour}
-          className={`relative ${hour < 23 ? 'border-border border-b' : ''}`}
+          className={`relative ${hour < 23 ? 'border-border-subtle border-b' : ''}`}
           style={{ height: HOUR_HEIGHT }}
         />
       )),
@@ -258,6 +279,8 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
         onTimeRangeSelect={onTimeRangeSelect}
         disabled={isActive}
         plans={allEventsForOverlapCheck ?? entries}
+        defaultDuration={defaultDuration}
+        timeFormat={timeFormat}
       >
         <div className="absolute inset-0" style={{ height: gridHeight }}>
           {timeGrid}
@@ -281,6 +304,8 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
               interactionState={state}
               dayIndex={dayIndex}
               enableCrossDayDrag={enableCrossDayDrag}
+              compactCards={compactCards}
+              timeFormat={timeFormat}
               onEntryClick={onEntryClick}
               onEntryContextMenu={onEntryContextMenu}
               onPointerDown={handlers.handlePointerDown}
@@ -299,7 +324,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       </div>
 
       {/* React Portal ゴースト（DOM clone廃止） */}
-      <GhostRenderer state={state} renderGhost={renderGhost} />
+      <GhostRenderer state={state} renderGhost={renderGhost} timeFormat={timeFormat} />
     </div>
   );
 });

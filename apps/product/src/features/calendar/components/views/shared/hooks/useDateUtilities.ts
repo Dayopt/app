@@ -5,7 +5,9 @@
 
 import { useMemo } from 'react';
 
-import { addDays, startOfWeek, subDays } from '@/lib/date';
+import { addDays, startOfWeek } from '@/lib/date';
+
+import { generateMultiDayDates } from '../../../../domain/view-range';
 
 /** useDateUtilities フックのオプション */
 interface UseDateUtilitiesOptions {
@@ -35,55 +37,6 @@ interface UseDateUtilitiesReturn {
  * - MultiDayView(5day): 中央日±2日の5日間
  * - MultiDayView: 中央日±floor(dayCount/2)日のN日間（2-9日）
  */
-/**
- * N日間の日付配列を生成（中央日基準、週末非表示対応）
- */
-export function generateMultiDayDates(
-  referenceDate: Date,
-  count: number,
-  showWeekends: boolean,
-): Date[] {
-  const offset = Math.floor(count / 2);
-
-  if (!showWeekends) {
-    // 中央日が週末の場合、次の平日を探す
-    let checkDate = referenceDate;
-    while (checkDate.getDay() === 0 || checkDate.getDay() === 6) {
-      checkDate = addDays(checkDate, 1);
-    }
-
-    // 前方の平日を探す
-    const prevDates: Date[] = [];
-    let tempDate = subDays(checkDate, 1);
-    while (prevDates.length < offset) {
-      if (tempDate.getDay() !== 0 && tempDate.getDay() !== 6) {
-        prevDates.unshift(tempDate);
-      }
-      tempDate = subDays(tempDate, 1);
-    }
-
-    // 後方の平日を探す
-    const nextDates: Date[] = [];
-    const remaining = count - 1 - offset; // 中央日を除いた後方の日数
-    tempDate = addDays(checkDate, 1);
-    while (nextDates.length < remaining) {
-      if (tempDate.getDay() !== 0 && tempDate.getDay() !== 6) {
-        nextDates.push(tempDate);
-      }
-      tempDate = addDays(tempDate, 1);
-    }
-
-    return [...prevDates, checkDate, ...nextDates];
-  }
-
-  // 週末表示時は単純に前後N日
-  const dates: Date[] = [];
-  for (let i = -offset; i < count - offset; i++) {
-    dates.push(i === 0 ? referenceDate : addDays(referenceDate, i));
-  }
-  return dates;
-}
-
 export function useDateUtilities({
   referenceDate,
   viewType,

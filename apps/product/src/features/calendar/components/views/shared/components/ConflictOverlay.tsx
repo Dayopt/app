@@ -9,13 +9,15 @@
  * className で呼び出し側に委ねる。
  *
  * - 時刻ラベルは `timeLabel`（12h/24h 整形済み文字列）優先、無ければ
- *   `previewTime` から 24h 表記で算出する。
+ *   `previewTime` と `timeFormat` から算出する。
  * - `compact`（小さいブロック向け）はメッセージ 1 行のみを縦中央に表示する。
  */
 
 import type React from 'react';
 
+import { formatTimeString } from '@/lib/date';
 import { cn } from '@dayopt/components';
+import type { TimeFormat } from '@dayopt/domain';
 
 import type { TimeRange } from '../../../../domain/interaction/types';
 
@@ -24,6 +26,7 @@ export function ConflictOverlay({
   message,
   previewTime,
   timeLabel,
+  timeFormat = '24h',
   compact = false,
   className,
   style,
@@ -33,6 +36,8 @@ export function ConflictOverlay({
   previewTime?: TimeRange;
   /** 整形済み時刻ラベル（12h/24h 対応）。指定時は previewTime より優先 */
   timeLabel?: string;
+  /** previewTime を整形する時刻表記 */
+  timeFormat?: TimeFormat;
   /** 小さいブロック向け: メッセージ 1 行のみ縦中央表示 */
   compact?: boolean;
   className?: string;
@@ -42,7 +47,7 @@ export function ConflictOverlay({
   const resolvedLabel =
     timeLabel ??
     (previewTime
-      ? `${previewTime.start.getHours()}:${String(previewTime.start.getMinutes()).padStart(2, '0')} – ${previewTime.end.getHours()}:${String(previewTime.end.getMinutes()).padStart(2, '0')}`
+      ? `${formatTimeString(previewTime.start.getHours(), previewTime.start.getMinutes(), timeFormat)} – ${formatTimeString(previewTime.end.getHours(), previewTime.end.getMinutes(), timeFormat)}`
       : null);
 
   if (compact) {

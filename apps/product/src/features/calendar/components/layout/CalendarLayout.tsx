@@ -16,6 +16,7 @@ import {
 
 import {
   ANIMATED_WIDTH_PANEL_TRANSITION_CLASS,
+  ANIMATED_WIDTH_PANEL_TRANSITION_MS,
   AnimatedWidthPanel,
 } from '@/components/shell/AnimatedWidthPanel';
 import { AppHeader } from '@/components/shell/AppHeader';
@@ -36,7 +37,11 @@ const SIDE_RAIL_DEFAULT_WIDTH = 256;
 const SIDE_RAIL_MIN_WIDTH = 256;
 const SIDE_RAIL_MAX_WIDTH = 560;
 const SIDE_RAIL_RESIZE_STEP = 32;
-const SIDE_RAIL_SHEET_MAX_PAGE_WIDTH = 1024;
+const CALENDAR_MIN_CONTENT_WIDTH = 768;
+const SIDE_RAIL_SPACE_RECOVERY_SETTLE_MS = ANIMATED_WIDTH_PANEL_TRANSITION_MS + 40;
+
+type SideRailSpaceRecoveryPhase =
+  'idle' | 'suppressing' | 'suppressed' | 'restoring-inline' | 'restoring-sheet';
 
 /** CalendarLayout コンポーネントのプロパティ */
 interface CalendarLayoutProps {
@@ -80,8 +85,8 @@ interface CalendarLayoutProps {
   sideRailTitle?: string | undefined;
   sideRailDescription?: string | undefined;
   sideRailResizeLabel?: string | undefined;
-  sideRailRecoverableWidth?: number | undefined;
-  onSideRailRecoverableWidthRequest?: (() => void) | undefined;
+  recoverableSidebarWidth?: number | undefined;
+  onSideRailSpaceRecoveryChange?: ((recovering: boolean) => void) | undefined;
 }
 
 /**
@@ -123,8 +128,8 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     sideRailTitle,
     sideRailDescription,
     sideRailResizeLabel,
-    sideRailRecoverableWidth = 0,
-    onSideRailRecoverableWidthRequest,
+    recoverableSidebarWidth = 0,
+    onSideRailSpaceRecoveryChange,
   }) => {
     const t = useTranslations('calendar');
     const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
@@ -133,9 +138,12 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
     const [sideRailWidth, setSideRailWidth] = useState(SIDE_RAIL_DEFAULT_WIDTH);
     const [layoutWidth, setLayoutWidth] = useState<number | null>(null);
-    const [recoveringSideRailSpace, setRecoveringSideRailSpace] = useState(false);
+    const [sideRailSpaceRecoveryPhase, setSideRailSpaceRecoveryPhase] =
+      useState<SideRailSpaceRecoveryPhase>('idle');
     const [sideRailResizing, setSideRailResizing] = useState(false);
     const layoutRef = useRef<HTMLDivElement | null>(null);
+    const sidebarSuppressionAppliedRef = useRef(false);
+    const sideRailSpaceRecoveryChangeRef = useRef(onSideRailSpaceRecoveryChange);
 
     // ナビゲーション方向 + キーの追跡（スライドアニメーション用）
     const [slide, setSlide] = useState<{ key: number; direction: 'prev' | 'next' | null }>({
@@ -191,23 +199,42 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           ? 'calendar-slide-prev'
           : '';
     const desktopSideRailRequested = Boolean(sideRail && sideRailOpen && !isMobile);
+    const layoutWidthWithoutSidebarSuppression =
+      sideRailSpaceRecoveryPhase === 'suppressed' && layoutWidth !== null
+        ? Math.max(0, layoutWidth - recoverableSidebarWidth)
+        : layoutWidth;
+    const sideRailMaxWidth = resolveSideRailMaxWidth({
+      layoutWidth: layoutWidthWithoutSidebarSuppression,
+      recoverableWidth: onSideRailSpaceRecoveryChange ? recoverableSidebarWidth : 0,
+      minContentWidth: CALENDAR_MIN_CONTENT_WIDTH,
+    });
+    const effectiveSideRailWidth = Math.min(sideRailWidth, sideRailMaxWidth);
     const desktopSideRailNeedsSpace =
       desktopSideRailRequested &&
       shouldUseSideRailSheet({
-        layoutWidth,
-        maxPageWidth: SIDE_RAIL_SHEET_MAX_PAGE_WIDTH,
+        layoutWidth: layoutWidthWithoutSidebarSuppression,
+        sideRailWidth: effectiveSideRailWidth,
+        minContentWidth: CALENDAR_MIN_CONTENT_WIDTH,
       });
-    const desktopSideRailSheet =
-      desktopSideRailNeedsSpace &&
-      !recoveringSideRailSpace &&
-      !canRecoverSideRailSpace({
-        layoutWidth,
-        recoverableWidth: sideRailRecoverableWidth,
-        maxPageWidth: SIDE_RAIL_SHEET_MAX_PAGE_WIDTH,
+    const desktopSideRailCanRecover =
+      Boolean(onSideRailSpaceRecoveryChange) &&
+      canRecoverSideRailSpace({
+        layoutWidth: layoutWidthWithoutSidebarSuppression,
+        sideRailWidth: effectiveSideRailWidth,
+        recoverableWidth: recoverableSidebarWidth,
+        minContentWidth: CALENDAR_MIN_CONTENT_WIDTH,
       });
+    const desktopSideRailSheet = desktopSideRailRequested
+      ? sideRailSpaceRecoveryPhase === 'restoring-sheet'
+        ? true
+        : sideRailSpaceRecoveryPhase === 'suppressing' ||
+            sideRailSpaceRecoveryPhase === 'restoring-inline'
+          ? false
+          : desktopSideRailNeedsSpace && !desktopSideRailCanRecover
+      : false;
     const desktopSideRailOpen = desktopSideRailRequested && !desktopSideRailSheet;
     const contentStyle = {
-      marginRight: desktopSideRailOpen ? sideRailWidth : 0,
+      marginRight: desktopSideRailOpen ? effectiveSideRailWidth : 0,
     } satisfies React.CSSProperties;
     const resolvedSideRailTitle = sideRailTitle ?? t('title');
     const resolvedSideRailDescription = sideRailDescription ?? t('meta.description');
@@ -221,37 +248,76 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     const sheetSideRailIsSheet = desktopSideRailSheet || mobileSideRailPresentation === 'sheet';
 
     useEffect(() => {
-      if (!recoveringSideRailSpace) return;
-      if (layoutWidth !== null && layoutWidth >= SIDE_RAIL_SHEET_MAX_PAGE_WIDTH) {
-        setRecoveringSideRailSpace(false);
+      if (onSideRailSpaceRecoveryChange) {
+        sideRailSpaceRecoveryChangeRef.current = onSideRailSpaceRecoveryChange;
       }
-    }, [layoutWidth, recoveringSideRailSpace]);
+    }, [onSideRailSpaceRecoveryChange]);
 
     useEffect(() => {
-      if (!desktopSideRailNeedsSpace) return;
-      if (!onSideRailRecoverableWidthRequest) return;
-      if (
-        !canRecoverSideRailSpace({
-          layoutWidth,
-          recoverableWidth: sideRailRecoverableWidth,
-          maxPageWidth: SIDE_RAIL_SHEET_MAX_PAGE_WIDTH,
-        })
-      ) {
+      setSideRailWidth((width) => Math.min(width, sideRailMaxWidth));
+    }, [sideRailMaxWidth]);
+
+    useEffect(() => {
+      if (sideRailSpaceRecoveryPhase === 'idle') {
+        if (!desktopSideRailNeedsSpace || !desktopSideRailCanRecover) return;
+
+        sidebarSuppressionAppliedRef.current = true;
+        setSideRailSpaceRecoveryPhase('suppressing');
+        onSideRailSpaceRecoveryChange?.(true);
         return;
       }
 
-      setRecoveringSideRailSpace(true);
-      onSideRailRecoverableWidthRequest();
-      const timeout = window.setTimeout(() => {
-        setRecoveringSideRailSpace(false);
-      }, 240);
-      return () => window.clearTimeout(timeout);
+      if (sideRailSpaceRecoveryPhase === 'suppressing') {
+        if (desktopSideRailRequested && onSideRailSpaceRecoveryChange) return;
+
+        sidebarSuppressionAppliedRef.current = false;
+        setSideRailSpaceRecoveryPhase('restoring-inline');
+        sideRailSpaceRecoveryChangeRef.current?.(false);
+        return;
+      }
+
+      if (sideRailSpaceRecoveryPhase !== 'suppressed') return;
+      if (desktopSideRailRequested && desktopSideRailNeedsSpace && desktopSideRailCanRecover) {
+        return;
+      }
+
+      sidebarSuppressionAppliedRef.current = false;
+      setSideRailSpaceRecoveryPhase(
+        desktopSideRailRequested && desktopSideRailNeedsSpace
+          ? 'restoring-sheet'
+          : 'restoring-inline',
+      );
+      sideRailSpaceRecoveryChangeRef.current?.(false);
     }, [
+      desktopSideRailCanRecover,
       desktopSideRailNeedsSpace,
-      layoutWidth,
-      onSideRailRecoverableWidthRequest,
-      sideRailRecoverableWidth,
+      desktopSideRailRequested,
+      onSideRailSpaceRecoveryChange,
+      sideRailSpaceRecoveryPhase,
     ]);
+
+    useEffect(() => {
+      if (sideRailSpaceRecoveryPhase === 'idle' || sideRailSpaceRecoveryPhase === 'suppressed') {
+        return;
+      }
+
+      const timeout = window.setTimeout(() => {
+        setSideRailSpaceRecoveryPhase(
+          sideRailSpaceRecoveryPhase === 'suppressing' ? 'suppressed' : 'idle',
+        );
+      }, SIDE_RAIL_SPACE_RECOVERY_SETTLE_MS);
+      return () => window.clearTimeout(timeout);
+    }, [sideRailSpaceRecoveryPhase]);
+
+    useEffect(
+      () => () => {
+        if (!sidebarSuppressionAppliedRef.current) return;
+
+        sidebarSuppressionAppliedRef.current = false;
+        sideRailSpaceRecoveryChangeRef.current?.(false);
+      },
+      [],
+    );
 
     const handleSideRailResizeStart = useCallback(
       (event: React.PointerEvent<HTMLDivElement>) => {
@@ -269,7 +335,9 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         document.body.style.userSelect = 'none';
 
         const handlePointerMove = (moveEvent: PointerEvent) => {
-          setSideRailWidth(clampSideRailWidth(startWidth - (moveEvent.clientX - startX)));
+          setSideRailWidth(
+            clampSideRailWidth(startWidth - (moveEvent.clientX - startX), sideRailMaxWidth),
+          );
         };
         const handlePointerUp = () => {
           setSideRailResizing(false);
@@ -282,20 +350,24 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp, { once: true });
       },
-      [sideRailWidth],
+      [sideRailMaxWidth, sideRailWidth],
     );
 
     const handleSideRailResizeKeyDown = useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'ArrowLeft') {
           event.preventDefault();
-          setSideRailWidth((width) => clampSideRailWidth(width + SIDE_RAIL_RESIZE_STEP));
+          setSideRailWidth((width) =>
+            clampSideRailWidth(width + SIDE_RAIL_RESIZE_STEP, sideRailMaxWidth),
+          );
           return;
         }
 
         if (event.key === 'ArrowRight') {
           event.preventDefault();
-          setSideRailWidth((width) => clampSideRailWidth(width - SIDE_RAIL_RESIZE_STEP));
+          setSideRailWidth((width) =>
+            clampSideRailWidth(width - SIDE_RAIL_RESIZE_STEP, sideRailMaxWidth),
+          );
           return;
         }
 
@@ -307,10 +379,10 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
 
         if (event.key === 'End') {
           event.preventDefault();
-          setSideRailWidth(SIDE_RAIL_MAX_WIDTH);
+          setSideRailWidth(sideRailMaxWidth);
         }
       },
-      [],
+      [sideRailMaxWidth],
     );
 
     return (
@@ -381,7 +453,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
 
         <AnimatedWidthPanel
           open={desktopSideRailOpen}
-          width={sideRailWidth}
+          width={effectiveSideRailWidth}
           side="right"
           disableTransition={sideRailResizing}
           className="absolute top-0 right-0 bottom-0 hidden md:flex"
@@ -393,8 +465,8 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
             aria-label={resolvedSideRailResizeLabel}
             aria-orientation="vertical"
             aria-valuemin={SIDE_RAIL_MIN_WIDTH}
-            aria-valuemax={SIDE_RAIL_MAX_WIDTH}
-            aria-valuenow={sideRailWidth}
+            aria-valuemax={sideRailMaxWidth}
+            aria-valuenow={effectiveSideRailWidth}
             tabIndex={0}
             className="hover:bg-state-hover focus-visible:outline-ring absolute inset-y-0 left-0 w-2 -translate-x-1 cursor-col-resize transition-colors duration-150 focus-visible:outline-2"
             onPointerDown={handleSideRailResizeStart}
@@ -428,31 +500,49 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
 
 CalendarLayout.displayName = 'CalendarLayout';
 
-function clampSideRailWidth(width: number): number {
-  return Math.min(SIDE_RAIL_MAX_WIDTH, Math.max(SIDE_RAIL_MIN_WIDTH, width));
+function clampSideRailWidth(width: number, maxWidth = SIDE_RAIL_MAX_WIDTH): number {
+  return Math.min(maxWidth, Math.max(SIDE_RAIL_MIN_WIDTH, width));
+}
+
+export function resolveSideRailMaxWidth({
+  layoutWidth,
+  recoverableWidth,
+  minContentWidth,
+}: {
+  layoutWidth: number | null;
+  recoverableWidth: number;
+  minContentWidth: number;
+}): number {
+  if (layoutWidth === null) return SIDE_RAIL_MAX_WIDTH;
+
+  return clampSideRailWidth(layoutWidth + recoverableWidth - minContentWidth);
 }
 
 export function shouldUseSideRailSheet({
   layoutWidth,
-  maxPageWidth,
+  sideRailWidth,
+  minContentWidth,
 }: {
   layoutWidth: number | null;
-  maxPageWidth: number;
+  sideRailWidth: number;
+  minContentWidth: number;
 }): boolean {
   if (layoutWidth === null) return false;
-  return layoutWidth < maxPageWidth;
+  return layoutWidth - sideRailWidth < minContentWidth;
 }
 
 export function canRecoverSideRailSpace({
   layoutWidth,
+  sideRailWidth,
   recoverableWidth,
-  maxPageWidth,
+  minContentWidth,
 }: {
   layoutWidth: number | null;
+  sideRailWidth: number;
   recoverableWidth: number;
-  maxPageWidth: number;
+  minContentWidth: number;
 }): boolean {
   if (layoutWidth === null) return false;
   if (recoverableWidth <= 0) return false;
-  return layoutWidth + recoverableWidth >= maxPageWidth;
+  return layoutWidth + recoverableWidth - sideRailWidth >= minContentWidth;
 }

@@ -21,8 +21,9 @@ import {
 import { deriveAccuracy, deriveBarComparison, deriveStatement } from '../../domain/timePL/derivers';
 import { useReviewPageData } from '../../hooks/useReviewPageData';
 import { useTimePLData } from '../../hooks/useTimePLData';
+import type { ReviewDisplayRange } from '../../lib/compute-date-range';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
-import { WeeklyReflectionPanel } from '../reflection/WeeklyReflectionPanel';
+import { ReviewMetricRow, WeeklyReflectionPanel } from '../reflection/WeeklyReflectionPanel';
 import {
   formatMinutesDuration,
   formatVariance,
@@ -33,6 +34,7 @@ const ALL_SCOPE_VALUE = '__all__';
 
 interface CalendarReviewPanelProps {
   currentDate: Date;
+  displayRange: ReviewDisplayRange;
   selectedTagId: string | null;
   onSelectedTagIdChange: (tagId: string | null) => void;
   onClose: () => void;
@@ -42,6 +44,7 @@ interface CalendarReviewPanelProps {
 
 export function CalendarReviewPanel({
   currentDate,
+  displayRange,
   selectedTagId,
   onSelectedTagIdChange,
   onClose,
@@ -50,17 +53,19 @@ export function CalendarReviewPanel({
 }: CalendarReviewPanelProps) {
   const t = useTranslations('calendar.stats');
   const tAll = useTranslations();
-  const setGranularity = useReviewFilterStore((s) => s.setGranularity);
   const setCurrentDate = useReviewFilterStore((s) => s.setCurrentDate);
   const { data: tags } = useTags();
 
   useEffect(() => {
-    setGranularity('week');
     setCurrentDate(currentDate);
-  }, [currentDate, setCurrentDate, setGranularity]);
+  }, [currentDate, setCurrentDate]);
 
-  const { data: pageData, isPending, isError } = useReviewPageData();
-  const { data: timePLData, isPending: isTimePLPending, isError: isTimePLError } = useTimePLData();
+  const { data: pageData, isPending, isError } = useReviewPageData(displayRange, currentDate);
+  const {
+    data: timePLData,
+    isPending: isTimePLPending,
+    isError: isTimePLError,
+  } = useTimePLData(displayRange);
 
   const statement = useMemo(() => (timePLData ? deriveStatement(timePLData) : null), [timePLData]);
   const accuracy = useMemo(() => (timePLData ? deriveAccuracy(timePLData) : null), [timePLData]);
@@ -154,16 +159,16 @@ export function CalendarReviewPanel({
                 <h3 className="min-w-0 flex-1 truncate text-sm font-medium">{selectedTagName}</h3>
               </div>
               {selectedRow ? (
-                <dl className="mt-4 grid grid-cols-3 gap-3">
-                  <MiniStat
+                <dl className="border-border-subtle divide-border-subtle mt-4 divide-y rounded-lg border">
+                  <ReviewMetricRow
                     label={t('overview.planned')}
                     value={formatMinutesDuration(selectedRow.budgetMinutes)}
                   />
-                  <MiniStat
+                  <ReviewMetricRow
                     label={t('overview.actual')}
                     value={formatMinutesDuration(selectedRow.actualMinutes)}
                   />
-                  <MiniStat
+                  <ReviewMetricRow
                     label={t('overview.diff')}
                     value={formatVariance(selectedRow.varianceMinutes)}
                     valueClassName={getVarianceColor(selectedRow.variancePercent)}
@@ -201,25 +206,6 @@ function ReviewPanelSkeleton() {
       </div>
       <Skeleton className="h-72 rounded-lg" />
       <Skeleton className="h-32 rounded-lg" />
-    </div>
-  );
-}
-
-function MiniStat({
-  label,
-  value,
-  valueClassName,
-}: {
-  label: string;
-  value: string;
-  valueClassName?: string | undefined;
-}) {
-  return (
-    <div>
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className={cn('mt-1 font-mono text-sm font-medium tabular-nums', valueClassName)}>
-        {value}
-      </dd>
     </div>
   );
 }

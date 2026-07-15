@@ -13,7 +13,9 @@ import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses } from '@/features/tags';
 import type { PlanEvent } from '@/features/timeblock';
+import { formatTimeString } from '@/lib/date';
 import { cn } from '@dayopt/components';
+import type { TimeFormat } from '@dayopt/domain';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 
@@ -28,6 +30,10 @@ interface PlanLaneCardProps {
   disableDrag?: boolean | undefined;
   /** 過去 plan などリサイズだけを禁止する場合 true */
   disableResize?: boolean | undefined;
+  /** 複数日表示の狭い列では secondary detail と余白を減らす */
+  compact?: boolean | undefined;
+  /** ユーザー設定に基づく時刻表記 */
+  timeFormat?: TimeFormat | undefined;
   onClick?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
@@ -41,9 +47,8 @@ const MIN_HEIGHT = 20;
 const DETAIL_HEIGHT_THRESHOLD = 40;
 const RESIZE_HANDLE_HEIGHT = 20;
 
-function formatTimeRange(start: Date, end: Date): string {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${pad(start.getHours())}:${pad(start.getMinutes())}–${pad(end.getHours())}:${pad(end.getMinutes())}`;
+function formatTimeRange(start: Date, end: Date, timeFormat: TimeFormat): string {
+  return `${formatTimeString(start.getHours(), start.getMinutes(), timeFormat)}–${formatTimeString(end.getHours(), end.getMinutes(), timeFormat)}`;
 }
 
 /** skip 済み plan の斜線ハッチング背景。TimeblockCard の skip 表現を踏襲。 */
@@ -59,6 +64,8 @@ export function PlanLaneCard({
   isActive = false,
   disableDrag = false,
   disableResize = false,
+  compact = false,
+  timeFormat = '24h',
   onClick,
   onContextMenu,
   onPointerDown,
@@ -73,7 +80,7 @@ export function PlanLaneCard({
   const isSkipped = event.status === 'skipped';
   const isUnrecorded = event.status === 'unrecorded';
   const isRecorded = event.status === 'recorded';
-  const showDetails = position.height >= DETAIL_HEIGHT_THRESHOLD;
+  const showDetails = !compact && position.height >= DETAIL_HEIGHT_THRESHOLD;
   const canDrag = !disableDrag && Boolean(onPointerDown);
 
   return (
@@ -85,13 +92,15 @@ export function PlanLaneCard({
       role="button"
       aria-label={event.title || t('timeblock.untitled')}
       className={cn(
-        'absolute overflow-hidden rounded-lg border-2 px-2 py-1 text-xs',
+        'absolute overflow-hidden rounded-lg py-1 text-xs',
+        compact ? 'border px-1' : 'border-2 px-2',
         borderClass,
         // skip / 記録済みは控えめに沈める。未記録の過去 plan は静かなプロンプトとして
         // 破線で「まだ何かが足りない」を示す。
         isSkipped ? 'opacity-50' : isRecorded ? 'opacity-60' : 'opacity-100',
         isUnrecorded ? 'border-dashed' : 'border-solid',
         'text-foreground bg-transparent',
+        'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
         isActive && 'ring-ring ring-2',
         canDrag ? 'cursor-grab' : 'cursor-pointer',
         className,
@@ -124,7 +133,7 @@ export function PlanLaneCard({
       <p className="truncate font-medium">{event.title || t('timeblock.untitled')}</p>
       {showDetails && (
         <p className="text-muted-foreground truncate">
-          {formatTimeRange(event.displayStartDate, event.displayEndDate)}
+          {formatTimeRange(event.displayStartDate, event.displayEndDate, timeFormat)}
         </p>
       )}
       {canDrag && !disableResize && onResizeStart && (

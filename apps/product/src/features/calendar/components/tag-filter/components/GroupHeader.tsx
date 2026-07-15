@@ -120,7 +120,6 @@ export function GroupHeader({
         'group/item hover:bg-state-hover flex w-full min-w-0 cursor-pointer items-center rounded-lg text-sm',
         isMobile ? 'h-11' : 'h-8',
         (menuOpen || highlighted) && 'bg-state-selected',
-        !checked && !indeterminate && 'opacity-50',
       )}
       onClick={handleRowClick}
       onContextMenu={handleContextMenu}
@@ -129,7 +128,14 @@ export function GroupHeader({
       <span className="ml-2 shrink-0">
         <TagIcon icon={currentIcon ?? null} color={displayColor} size="sm" />
       </span>
-      <span className="text-foreground ml-2 min-w-0 truncate">{label}</span>
+      <span
+        className={cn(
+          'ml-2 min-w-0 truncate',
+          checked || indeterminate ? 'text-foreground' : 'text-muted-foreground',
+        )}
+      >
+        {label}
+      </span>
 
       {/* chevron: 親行 onClick に波及させず、折りたたみのみを担当する独立ボタン */}
       <button
@@ -161,8 +167,10 @@ export function GroupHeader({
         onPointerDown={(e) => e.stopPropagation()}
         className={cn(
           // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素のヒットエリア拡張に before:content-[''] の空文字指定が必須
-          "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-['']",
-          checked || indeterminate ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
+          "text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-[''] focus-visible:ring-2 focus-visible:outline-none",
+          checked || indeterminate
+            ? 'opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100 focus-visible:opacity-100'
+            : 'opacity-100',
           isMobile && 'opacity-100',
         )}
         aria-label={
@@ -180,8 +188,8 @@ export function GroupHeader({
           <button
             type="button"
             aria-label={t('calendar.filter.tagMenu')}
-            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target
-            className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 before:absolute before:-inset-2.5 before:content-[''] [@media(hover:none)]:opacity-100"
+            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の 44px ヒットエリアに空 content が必要
+            className="text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 after:absolute after:inset-0 after:m-auto after:size-11 after:content-[''] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(hover:none)]:opacity-100"
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
           >

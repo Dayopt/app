@@ -20,6 +20,54 @@ function createService(tableData: Record<string, ReturnType<typeof createChainab
   };
 }
 
+function createVisibleDaysReviewService() {
+  const timeblocks = [
+    {
+      id: 'visible-thursday',
+      tag_id: 'tag-1',
+      plan_id: null,
+      source: 'manual',
+      start_at: '2026-01-15T09:00:00Z',
+      end_at: '2026-01-15T10:00:00Z',
+      fulfillment_score: null,
+    },
+    {
+      id: 'hidden-saturday',
+      tag_id: 'tag-1',
+      plan_id: null,
+      source: 'manual',
+      start_at: '2026-01-17T09:00:00Z',
+      end_at: '2026-01-17T11:00:00Z',
+      fulfillment_score: null,
+    },
+    {
+      id: 'visible-monday',
+      tag_id: 'tag-1',
+      plan_id: null,
+      source: 'manual',
+      start_at: '2026-01-19T09:00:00Z',
+      end_at: '2026-01-19T09:45:00Z',
+      fulfillment_score: null,
+    },
+    {
+      id: 'previous-monday',
+      tag_id: 'tag-1',
+      plan_id: null,
+      source: 'manual',
+      start_at: '2026-01-12T09:00:00Z',
+      end_at: '2026-01-12T09:30:00Z',
+      fulfillment_score: null,
+    },
+  ];
+
+  return createService({
+    user_settings: createChainableMock({ timezone: 'UTC' }),
+    records: createChainableMock(timeblocks),
+    plans: createChainableMock(timeblocks),
+    tags: createChainableMock([{ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: 'brain' }]),
+  });
+}
+
 beforeEach(() => {
   invalidateUserTimezoneCache(USER_ID);
 });
@@ -185,6 +233,59 @@ describe('StatisticsService.getBlankRate', () => {
       scheduledMinutes: 60,
       blankMinutes: 900,
       blankRate: 900 / 960,
+    });
+  });
+});
+
+describe('StatisticsService Review visible days', () => {
+  const rangeInput = {
+    startDate: '2026-01-15T00:00:00.000Z',
+    endDate: '2026-01-19T23:59:59.999Z',
+    prevStart: '2026-01-12T00:00:00.000Z',
+    prevEnd: '2026-01-14T23:59:59.999Z',
+    visibleDateKeys: ['2026-01-15', '2026-01-16', '2026-01-19'],
+    prevVisibleDateKeys: ['2026-01-12', '2026-01-13', '2026-01-14'],
+    wakeHour: 7,
+    sleepHour: 23,
+  };
+
+  it('Time P/L は非表示の週末を予実と可用時間から除外する', async () => {
+    const { service } = createVisibleDaysReviewService();
+
+    const result = await service.getTimePLData(USER_ID, rangeInput);
+
+    expect(result.tags).toEqual([
+      {
+        tagId: 'tag-1',
+        tagName: 'Deep Work',
+        tagColor: 'blue',
+        tagIcon: 'brain',
+        budgetMinutes: 105,
+        actualMinutes: 105,
+        isPlanned: true,
+      },
+    ]);
+    expect(result.prevTags).toEqual([
+      expect.objectContaining({ budgetMinutes: 30, actualMinutes: 30 }),
+    ]);
+    expect(result.availableMinutes).toBe(3 * 16 * 60);
+  });
+
+  it('Review summary は非表示の週末をoverviewとblank rateから除外する', async () => {
+    const { service } = createVisibleDaysReviewService();
+
+    const result = await service.getStatsPageData(USER_ID, {
+      ...rangeInput,
+      year: 2026,
+      monthlyMonths: 3,
+    });
+
+    expect(result.overview).toMatchObject({ totalMinutes: 105, totalEntries: 2 });
+    expect(result.prevOverview).toMatchObject({ totalMinutes: 30, totalEntries: 1 });
+    expect(result.blankRate).toEqual({
+      availableMinutes: 3 * 16 * 60,
+      scheduledMinutes: 105,
+      blankRate: (3 * 16 * 60 - 105) / (3 * 16 * 60),
     });
   });
 });

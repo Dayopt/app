@@ -22,6 +22,7 @@ import { useTranslations } from 'next-intl';
 interface CalendarDataLayerInput {
   viewType: CalendarViewType;
   currentDate: Date;
+  showWeekends: boolean;
 }
 
 interface CalendarDataLayerResult {
@@ -43,6 +44,7 @@ interface CalendarDataLayerResult {
 export function useCalendarDataLayer({
   viewType,
   currentDate,
+  showWeekends,
 }: CalendarDataLayerInput): CalendarDataLayerResult {
   const tError = useTranslations('calendar.error');
 
@@ -58,6 +60,7 @@ export function useCalendarDataLayer({
   } = useCalendarData({
     viewType,
     currentDate,
+    showWeekends,
   });
 
   // エントリ取得エラー時にtoast通知 + 再試行アクション

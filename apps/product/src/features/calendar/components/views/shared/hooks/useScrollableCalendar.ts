@@ -117,6 +117,9 @@ export const useScrollableCalendar = ({
         return;
       }
 
+      // Calendar内のcardやReact Portalからbubbleしたキー操作は各UIに委ねる。
+      if (e.target !== e.currentTarget) return;
+
       const container = scrollContainerRef.current;
       const currentScroll = container.scrollTop;
 
@@ -157,22 +160,6 @@ export const useScrollableCalendar = ({
     },
     [enableKeyboardNavigation, hourHeight],
   );
-
-  // グローバルキーボードイベントのリスナー
-  useEffect(() => {
-    if (!enableKeyboardNavigation) {
-      return;
-    }
-
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      handleKeyDown(e);
-    };
-
-    document.addEventListener('keydown', handleGlobalKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleGlobalKeyDown);
-    };
-  }, [enableKeyboardNavigation, handleKeyDown]);
 
   return {
     scrollContainerRef,
