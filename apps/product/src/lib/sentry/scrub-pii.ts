@@ -36,6 +36,9 @@ const PII_KEYS = new Set([
   'apikey',
   'recoverycode',
   'recovery_code',
+  // tRPC GET fallback / request bodyに検索語を残さない。
+  'input',
+  'search',
 ]);
 
 // URL を値として持つ key 群。`url` と完全一致するキーだけだと CSP report の
@@ -133,6 +136,19 @@ function scrubValue(value: unknown, depth: number): unknown {
   return value;
 }
 
+/** JSON request bodyはparseしてfield名ベースのscrubを適用する。 */
+function scrubRequestData(value: unknown): unknown {
+  if (isPlainObject(value)) return scrubObject(value, 0);
+  if (Array.isArray(value)) return scrubValue(value, 0);
+  if (typeof value !== 'string') return value;
+
+  try {
+    return JSON.stringify(scrubValue(JSON.parse(value), 0));
+  } catch {
+    return scrubString(value);
+  }
+}
+
 function scrubObject(obj: Record<string, unknown>, depth: number): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
@@ -188,8 +204,7 @@ export function scrubSentryEvent(event: ErrorEvent): ErrorEvent {
       req.query_string = scrubQueryString(req.query_string);
     }
     if (typeof req.cookies === 'string') req.cookies = REDACTED;
-    if (isPlainObject(req.data)) req.data = scrubObject(req.data, 0);
-    else if (typeof req.data === 'string') req.data = scrubString(req.data);
+    req.data = scrubRequestData(req.data);
     cloned.request = req;
   }
 

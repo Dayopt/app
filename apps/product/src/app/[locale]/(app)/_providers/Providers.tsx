@@ -34,6 +34,7 @@ import {
   PERSIST_MAX_AGE_MS,
   queryPersister,
 } from '@/lib/tanstack-query/persist-storage';
+import { shouldPersistQuery } from '@/lib/tanstack-query/should-persist-query';
 
 // axe-core アクセシビリティチェッカー: 開発環境のみ
 const AxeAccessibilityChecker =
@@ -50,6 +51,7 @@ const AxeAccessibilityChecker =
 import { AuthStoreInitializer } from '@/features/auth';
 import { UserSettingsInitializer } from '@/features/settings';
 import { api, getBaseUrl } from '@/lib/trpc';
+import { containsPrivateTimeblockSearch } from '@/lib/trpc/logger-policy';
 import { ThemeProvider } from './theme-provider';
 
 // SessionMonitorProviderを遅延ロード（セッション失効通知 + タイムアウト警告）
@@ -169,11 +171,20 @@ export function Providers({ children }: ProvidersProps) {
     api.createClient({
       links: [
         loggerLink({
-          enabled: (opts) => opts.direction === 'down' && opts.result instanceof Error,
+          enabled: (opts) => {
+            if (opts.direction !== 'down' || !(opts.result instanceof Error)) return false;
+            // loggerLink のdown型はoperation fieldsを省略しているが、runtimeではopがspreadされる。
+            if (!('path' in opts) || !('input' in opts) || typeof opts.path !== 'string') {
+              return true;
+            }
+            return !containsPrivateTimeblockSearch({ path: opts.path, input: opts.input });
+          },
         }),
         httpBatchLink({
           url: `${getBaseUrl()}/api/trpc`,
           transformer: superjson,
+          // Query input（検索語を含む）をURL・proxy logへ残さない。
+          methodOverride: 'POST',
           headers() {
             const headers: Record<string, string> = {};
             if (typeof window !== 'undefined') {
@@ -202,9 +213,8 @@ export function Providers({ children }: ProvidersProps) {
         // デプロイ毎にキャッシュを破棄（stale なキャッシュを本番で表示しないため）
         buster: CACHE_BUSTER,
         dehydrateOptions: {
-          shouldDehydrateQuery: (query) =>
-            // 成功・データあり のクエリのみ永続化（エラー状態は永続化しない）
-            query.state.status === 'success' && query.state.data !== undefined,
+          // 成功・データあり、かつ persist=false でないqueryだけを永続化する。
+          shouldDehydrateQuery: shouldPersistQuery,
           // mutation は永続化しない
           shouldDehydrateMutation: () => false,
         },

@@ -12,6 +12,7 @@
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 
 import { logger } from '@/lib/logger';
+import { getTrpcErrorLogInput } from '@/lib/trpc/logger-policy';
 import { createFetchTRPCContext } from '@/lib/trpc/procedures';
 import { appRouter } from '@/lib/trpc/root';
 
@@ -22,6 +23,8 @@ function handler(req: Request) {
     endpoint: '/api/trpc',
     req,
     router: appRouter,
+    // Clientはquery inputをURLへ残さないため、queryもPOSTで送る。
+    allowMethodOverride: true,
     createContext: createFetchTRPCContext,
     onError: ({ error, type, path, input, ctx }) => {
       logger.error('tRPC Error:', {
@@ -29,7 +32,7 @@ function handler(req: Request) {
         path,
         error: error.message,
         code: error.code,
-        input: process.env.NODE_ENV === 'development' ? input : '[REDACTED]',
+        input: getTrpcErrorLogInput({ path: path ?? '', input }, process.env.NODE_ENV),
         userId: ctx?.userId,
         timestamp: new Date().toISOString(),
       });

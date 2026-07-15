@@ -55,6 +55,34 @@ describe('scrubSentryEvent', () => {
     );
   });
 
+  it('tRPC GET fallbackのinput query全体を伏せる', () => {
+    const result = scrubSentryEvent(
+      makeEvent({
+        request: {
+          url: 'https://app.example.com/api/trpc/plans.list?input=%7B%22search%22%3A%22private+words%22%7D',
+          query_string: 'input=%7B%22search%22%3A%22private+words%22%7D',
+        },
+      }),
+    );
+
+    expect(result.request?.url).not.toContain('private');
+    expect(result.request?.query_string).not.toContain('private');
+  });
+
+  it('JSON request body内のsearch fieldを伏せる', () => {
+    const result = scrubSentryEvent(
+      makeEvent({
+        request: {
+          data: JSON.stringify({ 0: { json: { search: 'private words', limit: 21 } } }),
+        },
+      }),
+    );
+
+    expect(result.request?.data).toBe(
+      JSON.stringify({ 0: { json: { search: '[REDACTED]', limit: 21 } } }),
+    );
+  });
+
   it('scrubs sensitive header names case-insensitively', () => {
     const result = scrubSentryEvent(
       makeEvent({
