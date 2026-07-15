@@ -3,7 +3,6 @@
 import {
   Book,
   Building,
-  ChevronDown,
   Crown,
   ExternalLink,
   FileText,
@@ -45,7 +44,86 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import type { SettingsCategory } from '@/lib/types/settings';
 
-/** ユーザーメニュー（アバター + ドロップダウン）。設定・ヘルプ・ログアウトへのアクセスを提供する。 */
+/** アカウントメニューとSidebarのヘルプメニューで共有する項目。 */
+export function HelpMenuItems() {
+  const t = useTranslations();
+  const locale = useLocale();
+  const openSheet = useShellStore((s) => s.openSheet);
+
+  return (
+    <>
+      <DropdownMenuItem asChild>
+        <Link
+          href="https://github.com/Dayopt/dayopt/releases"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Megaphone />
+          {t('navigation.navUser.helpSubmenu.releaseNotes')}
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link href={dayoptUrls.docs} target="_blank" rel="noopener noreferrer">
+          <Book />
+          <span className="flex-1">{t('navigation.navUser.helpSubmenu.documentation')}</span>
+          <ExternalLink className="text-muted-foreground size-3.5" />
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem asChild>
+        <a
+          href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/terms`)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <FileText />
+          <span className="flex-1">{t('navigation.navUser.helpSubmenu.termsOfService')}</span>
+          <ExternalLink className="text-muted-foreground size-3.5" />
+        </a>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <a
+          href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/privacy`)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <FileText />
+          <span className="flex-1">{t('navigation.navUser.helpSubmenu.privacyPolicy')}</span>
+          <ExternalLink className="text-muted-foreground size-3.5" />
+        </a>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <a
+          href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/tokushoho`)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Building />
+          <span className="flex-1">{t('navigation.navUser.helpSubmenu.tokushoho')}</span>
+          <ExternalLink className="text-muted-foreground size-3.5" />
+        </a>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <a
+          href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/security`)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Shield />
+          <span className="flex-1">{t('navigation.navUser.helpSubmenu.security')}</span>
+          <ExternalLink className="text-muted-foreground size-3.5" />
+        </a>
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onSelect={() => openSheet({ type: 'contact' })}>
+        <MessageSquare />
+        {t('navigation.navUser.helpSubmenu.contact')}
+      </DropdownMenuItem>
+    </>
+  );
+}
+
+/** ユーザー名から開くアカウントメニュー。設定・ヘルプ・ログアウトへのアクセスを提供する。 */
 export function UserMenu({
   user,
 }: {
@@ -58,10 +136,8 @@ export function UserMenu({
   const router = useRouter();
   const { logout, isLoggingOut } = useLogout();
   const t = useTranslations();
-  const locale = useLocale();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const openSettings = useShellStore((s) => s.openSettings);
-  const openSheet = useShellStore((s) => s.openSheet);
 
   const handleOpenSettings = (category: SettingsCategory) => {
     if (isMobile) {
@@ -76,17 +152,10 @@ export function UserMenu({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="hover:bg-state-hover data-[state=open]:bg-state-selected flex w-fit items-center gap-2 rounded-lg px-2 py-2 text-left text-sm outline-hidden"
+          className="hover:bg-state-hover data-[state=open]:bg-state-selected flex w-full min-w-0 items-center rounded-lg px-2 py-2 text-left text-sm outline-hidden"
           aria-label={t('navigation.navUser.accountMenuLabel', { name: user.name })}
         >
-          <Avatar size="xs" className="rounded-2xl">
-            {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}
-            <AvatarFallback className="bg-foreground text-background rounded-2xl text-xs">
-              {getInitials(user.name)}
-            </AvatarFallback>
-          </Avatar>
-          <span className="max-w-20 truncate font-normal">{user.name}</span>
-          <ChevronDown className="text-muted-foreground size-4 shrink-0" />
+          <span className="min-w-0 flex-1 truncate font-normal">{user.name}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -142,79 +211,7 @@ export function UserMenu({
               {t('navigation.navUser.help')}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="border-input">
-              <DropdownMenuItem asChild>
-                <Link
-                  href="https://github.com/Dayopt/dayopt/releases"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Megaphone />
-                  {t('navigation.navUser.helpSubmenu.releaseNotes')}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={dayoptUrls.docs} target="_blank" rel="noopener noreferrer">
-                  <Book />
-                  <span className="flex-1">
-                    {t('navigation.navUser.helpSubmenu.documentation')}
-                  </span>
-                  <ExternalLink className="text-muted-foreground size-3.5" />
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <a
-                  href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/terms`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <FileText />
-                  <span className="flex-1">
-                    {t('navigation.navUser.helpSubmenu.termsOfService')}
-                  </span>
-                  <ExternalLink className="text-muted-foreground size-3.5" />
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <a
-                  href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/privacy`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <FileText />
-                  <span className="flex-1">
-                    {t('navigation.navUser.helpSubmenu.privacyPolicy')}
-                  </span>
-                  <ExternalLink className="text-muted-foreground size-3.5" />
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <a
-                  href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/tokushoho`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Building />
-                  <span className="flex-1">{t('navigation.navUser.helpSubmenu.tokushoho')}</span>
-                  <ExternalLink className="text-muted-foreground size-3.5" />
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <a
-                  href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/security`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Shield />
-                  <span className="flex-1">{t('navigation.navUser.helpSubmenu.security')}</span>
-                  <ExternalLink className="text-muted-foreground size-3.5" />
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => openSheet({ type: 'contact' })}>
-                <MessageSquare />
-                {t('navigation.navUser.helpSubmenu.contact')}
-              </DropdownMenuItem>
+              <HelpMenuItems />
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         </DropdownMenuGroup>

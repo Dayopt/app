@@ -36,7 +36,7 @@ function MockSidebarContent() {
   );
 }
 
-/** サイドバーコンテナ。Dayoptロゴ + 検索 + 閉じるボタン、children スロット、UserMenu + footerActions。 */
+/** サイドバーコンテナ。Dayoptロゴ + 閉じるボタン、children スロット、UserMenu + ヘルプボタン。 */
 const meta = {
   title: 'Product/Components/Shell/Sidebar/Container',
   component: Sidebar,
@@ -138,7 +138,7 @@ export const Empty: Story = {
  * 実装構成:
  * - ヘッダー: Dayoptロゴ + 検索ボタン + PanelLeft閉じるボタン
  * - コンテンツ: composition layerから注入（children スロット）
- * - フッター: UserMenu
+ * - フッター: UserMenu + ヘルプボタン
  */
 export const Interactive: StoryObj = {
   render: () => <InteractiveDemo />,

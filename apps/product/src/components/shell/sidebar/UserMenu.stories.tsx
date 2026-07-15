@@ -5,11 +5,18 @@ import { UserMenu } from './UserMenu';
 /** UserMenu - サイドバーフッターのユーザーメニュー */
 const meta = {
   title: 'Product/Components/Shell/Sidebar/UserMenu',
+  component: UserMenu,
   parameters: {
-    layout: 'fullscreen',
+    layout: 'centered',
+  },
+  args: {
+    user: { name: '田中 太郎', email: 'taro.tanaka@example.com', avatar: null },
+  },
+  argTypes: {
+    user: { control: false },
   },
   tags: ['autodocs'],
-} satisfies Meta;
+} satisfies Meta<typeof UserMenu>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -21,33 +28,39 @@ type Story = StoryObj<typeof meta>;
 /** デフォルト表示。アバター画像なし。 */
 export const Default: Story = {
   render: () => (
-    <UserMenu user={{ name: '田中 太郎', email: 'taro.tanaka@example.com', avatar: null }} />
+    <div className="w-64">
+      <UserMenu user={{ name: '田中 太郎', email: 'taro.tanaka@example.com', avatar: null }} />
+    </div>
   ),
 };
 
 /** アバター画像あり。 */
 export const WithAvatar: Story = {
   render: () => (
-    <UserMenu
-      user={{
-        name: 'Jane Smith',
-        email: 'jane.smith@example.com',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=jane',
-      }}
-    />
+    <div className="w-64">
+      <UserMenu
+        user={{
+          name: 'Jane Smith',
+          email: 'jane.smith@example.com',
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=jane',
+        }}
+      />
+    </div>
   ),
 };
 
 /** 長い名前（truncate 確認用）。 */
 export const LongName: Story = {
   render: () => (
-    <UserMenu
-      user={{
-        name: 'Very Long Username That Should Be Truncated',
-        email: 'very.long.email.address@example.com',
-        avatar: null,
-      }}
-    />
+    <div className="w-64">
+      <UserMenu
+        user={{
+          name: 'Very Long Username That Should Be Truncated',
+          email: 'very.long.email.address@example.com',
+          avatar: null,
+        }}
+      />
+    </div>
   ),
 };
 
@@ -66,13 +79,11 @@ export const AllPatterns: Story = {
     },
   },
   render: () => (
-    <div className="flex flex-col items-start gap-6">
-      <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">アバター画像なし</span>
+    <div className="flex w-64 flex-col gap-6">
+      <div>
         <UserMenu user={{ name: '田中 太郎', email: 'taro@example.com', avatar: null }} />
       </div>
-      <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">アバター画像あり</span>
+      <div>
         <UserMenu
           user={{
             name: 'Jane Smith',
@@ -81,8 +92,7 @@ export const AllPatterns: Story = {
           }}
         />
       </div>
-      <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">長い名前（truncate）</span>
+      <div>
         <UserMenu
           user={{
             name: 'Very Long Username That Truncates',
