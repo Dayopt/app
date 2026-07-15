@@ -1,7 +1,7 @@
 import { MockWindow } from './MockWindow';
 
 /**
- * LearnMock — 週次インサイト（time P&L、パターン検出、精度の推移）
+ * LearnMock — 週次所見（予定と記録、パターン、見積もり傾向）
  * ダミーデータ。後で実プロダクト画面に差し替える。
  */
 export function LearnMock() {
@@ -34,27 +34,27 @@ export function LearnMock() {
       <div className="flex size-full flex-col p-4 select-none">
         {/* Header */}
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-foreground text-sm font-medium">Weekly Insights</span>
+          <span className="text-foreground text-sm font-medium">Weekly Review</span>
           <span className="bg-container text-muted-foreground rounded px-2 py-0.5 text-xs">
             Mar 3 – 9
           </span>
         </div>
 
         <div className="flex flex-1 flex-col gap-2.5">
-          {/* Time P&L */}
+          {/* Plan and Record */}
           <div className="bg-container rounded-lg p-3">
-            <div className="text-muted-foreground mb-2 text-xs font-medium">Time P&L</div>
+            <div className="text-muted-foreground mb-2 text-xs font-medium">Plan and Record</div>
             <div className="flex items-baseline gap-3 text-xs">
               <div>
                 <span className="text-muted-foreground">Plan </span>
                 <span className="text-foreground font-medium">32h</span>
               </div>
               <div>
-                <span className="text-muted-foreground">Actual </span>
+                <span className="text-muted-foreground">Record </span>
                 <span className="text-foreground font-medium">28.5h</span>
               </div>
               <div>
-                <span className="text-muted-foreground">Delta </span>
+                <span className="text-muted-foreground">Difference </span>
                 <span className="text-destructive font-medium">-3.5h</span>
               </div>
             </div>
@@ -71,7 +71,7 @@ export function LearnMock() {
 
           {/* Patterns — Heatmap */}
           <div className="bg-container rounded-lg p-3">
-            <div className="text-muted-foreground mb-1.5 text-xs font-medium">Patterns</div>
+            <div className="text-muted-foreground mb-1.5 text-xs font-medium">Weekly pattern</div>
             <p className="text-foreground mb-2 text-xs">Deep work accuracy peaks on Tue & Wed AM</p>
             {/* Day labels */}
             <div className="mb-1 grid grid-cols-7 gap-1">
@@ -89,9 +89,9 @@ export function LearnMock() {
             </div>
           </div>
 
-          {/* Accuracy Trend */}
+          {/* Estimate Trend */}
           <div className="bg-container rounded-lg p-3">
-            <div className="text-muted-foreground mb-2 text-xs font-medium">Accuracy Trend</div>
+            <div className="text-muted-foreground mb-2 text-xs font-medium">Estimate trend</div>
             <div className="flex items-end gap-2">
               {weeks.map((week, i) => {
                 const isLatest = i === weeks.length - 1;
@@ -115,7 +115,7 @@ export function LearnMock() {
             {/* Insight */}
             <div className="mt-2 flex items-center gap-1 text-xs">
               <span className="text-success font-medium">↑ 14%</span>
-              <span className="text-muted-foreground">improvement over 4 weeks</span>
+              <span className="text-muted-foreground">closer than 4 weeks ago</span>
             </div>
           </div>
         </div>

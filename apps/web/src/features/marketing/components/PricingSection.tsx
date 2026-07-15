@@ -10,7 +10,7 @@ import {
   CardTitle,
   Container,
 } from '@dayopt/components';
-import { Link } from '@dayopt/i18n/navigation';
+import { dayoptProductUrls } from '@dayopt/config';
 import { Check } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
@@ -85,7 +85,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
             </CardContent>
             <CardFooter>
               <Button className="w-full" variant="outline" size="lg" asChild>
-                <Link href="/signup">{t('pricing.plans.free.cta')}</Link>
+                <a href={dayoptProductUrls.signup}>{t('pricing.plans.free.cta')}</a>
               </Button>
             </CardFooter>
           </Card>
@@ -122,7 +122,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
             </CardContent>
             <CardFooter>
               <Button className="w-full" variant="primary" size="lg" asChild>
-                <Link href="/signup">{t('pricing.plans.pro.cta')}</Link>
+                <a href={dayoptProductUrls.signup}>{t('pricing.plans.pro.cta')}</a>
               </Button>
             </CardFooter>
           </Card>
