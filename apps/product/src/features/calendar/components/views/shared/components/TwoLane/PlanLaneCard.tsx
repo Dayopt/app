@@ -11,18 +11,22 @@ import type React from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { getTagColorClasses } from '@/features/tags';
+import { getTagColorClasses, TagIcon } from '@/features/tags';
 import type { PlanEvent } from '@/features/timeblock';
 import { formatTimeString } from '@/lib/date';
 import { cn } from '@dayopt/components';
 import type { TimeFormat } from '@dayopt/domain';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
+import { DayDiffMarker } from './DayDiffMarker';
 
 interface PlanLaneCardProps {
   event: PlanEvent;
   position: TwoLanePosition;
+  /** Calendar カードの表示名。title ではなくタグを source of truth とする。 */
+  tagName: string | null;
   tagColor?: string | null | undefined;
+  tagIcon?: string | null | undefined;
   className?: string | undefined;
   /** Inspector で選択中か（強調表示） */
   isActive?: boolean | undefined;
@@ -30,10 +34,14 @@ interface PlanLaneCardProps {
   disableDrag?: boolean | undefined;
   /** 過去 plan などリサイズだけを禁止する場合 true */
   disableResize?: boolean | undefined;
+  /** Compare panel に表示中の entry であることを示す */
+  showDayDiffMarker?: boolean | undefined;
   /** 複数日表示の狭い列では secondary detail と余白を減らす */
   compact?: boolean | undefined;
   /** ユーザー設定に基づく時刻表記 */
   timeFormat?: TimeFormat | undefined;
+  /** false の場合はdrag ghostなど表示専用として操作・focus対象から外す */
+  interactive?: boolean | undefined;
   onClick?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
@@ -59,13 +67,17 @@ function skippedHatchImage(accentColor: string): string {
 export function PlanLaneCard({
   event,
   position,
+  tagName,
   tagColor = null,
+  tagIcon = null,
   className,
   isActive = false,
   disableDrag = false,
   disableResize = false,
+  showDayDiffMarker = false,
   compact = false,
   timeFormat = '24h',
+  interactive = true,
   onClick,
   onContextMenu,
   onPointerDown,
@@ -76,23 +88,25 @@ export function PlanLaneCard({
   const t = useTranslations();
   const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
   const borderClass = colorClasses?.border ?? 'border-border';
+  const displayName = tagName ?? t('common.tags.noTag');
 
   const isSkipped = event.status === 'skipped';
   const isUnrecorded = event.status === 'unrecorded';
   const isRecorded = event.status === 'recorded';
   const showDetails = !compact && position.height >= DETAIL_HEIGHT_THRESHOLD;
-  const canDrag = !disableDrag && Boolean(onPointerDown);
-
+  const canDrag = interactive && !disableDrag && Boolean(onPointerDown);
   return (
     <div
       data-plan-lane-card
       data-plan-status={event.status}
-      data-entry-block="true"
-      tabIndex={0}
-      role="button"
-      aria-label={event.title || t('timeblock.untitled')}
+      data-entry-block={interactive ? 'true' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      role={interactive ? 'button' : undefined}
+      aria-label={interactive ? displayName : undefined}
+      aria-hidden={interactive ? undefined : true}
       className={cn(
-        'absolute overflow-hidden rounded-lg py-1 text-xs',
+        'absolute flex flex-col gap-1 overflow-hidden rounded-lg py-1 text-xs',
+        interactive ? 'pointer-events-auto' : 'pointer-events-none',
         compact ? 'border px-1' : 'border-2 px-2',
         borderClass,
         // skip / 記録済みは控えめに沈める。未記録の過去 plan は静かなプロンプトとして
@@ -102,7 +116,8 @@ export function PlanLaneCard({
         'text-foreground bg-transparent',
         'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
         isActive && 'ring-ring ring-2',
-        canDrag ? 'cursor-grab' : 'cursor-pointer',
+        showDayDiffMarker && 'pr-7',
+        interactive && (canDrag ? 'cursor-grab' : 'cursor-pointer'),
         className,
       )}
       style={{
@@ -115,27 +130,43 @@ export function PlanLaneCard({
           : {}),
         ...styleOverride,
       }}
-      onClick={(e) => onClick?.(event, e)}
-      onContextMenu={(e) => onContextMenu?.(event, e)}
-      onMouseDown={(e) => {
-        if (e.button === 0 && canDrag) onPointerDown?.(event, e);
-      }}
-      onTouchStart={(e) => {
-        if (canDrag) onTouchStart?.(event, e);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick?.(event, e as unknown as React.MouseEvent);
-        }
-      }}
+      onClick={interactive ? (e) => onClick?.(event, e) : undefined}
+      onContextMenu={interactive ? (e) => onContextMenu?.(event, e) : undefined}
+      onMouseDown={
+        interactive
+          ? (e) => {
+              if (e.button === 0 && canDrag) onPointerDown?.(event, e);
+            }
+          : undefined
+      }
+      onTouchStart={
+        interactive
+          ? (e) => {
+              if (canDrag) onTouchStart?.(event, e);
+            }
+          : undefined
+      }
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.(event, e as unknown as React.MouseEvent);
+              }
+            }
+          : undefined
+      }
     >
-      <p className="truncate font-medium">{event.title || t('timeblock.untitled')}</p>
+      <p className="flex min-h-0 items-start gap-1 truncate font-medium">
+        <TagIcon icon={tagIcon} color={tagColor ?? undefined} size="sm" className="shrink-0" />
+        <span className="truncate">{displayName}</span>
+      </p>
       {showDetails && (
         <p className="text-muted-foreground truncate">
           {formatTimeRange(event.displayStartDate, event.displayEndDate, timeFormat)}
         </p>
       )}
+      {showDayDiffMarker && <DayDiffMarker />}
       {canDrag && !disableResize && onResizeStart && (
         <div
           role="slider"

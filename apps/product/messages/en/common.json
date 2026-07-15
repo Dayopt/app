@@ -84,6 +84,7 @@
       "remove": "Remove",
       "view": "View",
       "duplicate": "Duplicate",
+      "copy": "Copy",
       "move": "Move",
       "paste": "Paste",
       "createNew": "Create New",

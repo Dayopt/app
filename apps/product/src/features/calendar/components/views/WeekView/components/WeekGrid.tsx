@@ -4,7 +4,10 @@ import React from 'react';
 
 import { getWeek } from 'date-fns';
 
+import { useCalendarDisplayModeStore } from '@/features/calendar/stores/useCalendarDisplayModeStore';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { isTodayInTimezone } from '@/lib/date/timezone';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@dayopt/components';
 
@@ -17,6 +20,7 @@ import {
 import { CalendarGridContent } from '../../shared/components/CalendarGridContent';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import { useWeekTimeblocks } from '../hooks/useWeekTimeblocks';
+import { MobileWeekLaneSwitcher } from './MobileWeekLaneSwitcher';
 
 import type { WeekGridProps } from '../../../../types/week-view.types';
 
@@ -33,7 +37,7 @@ import type { WeekGridProps } from '../../../../types/week-view.types';
 export const WeekGrid = ({
   weekDates,
   events,
-  allTimeblocks: _allTimeblocks,
+  allTimeblocks,
   eventsByDate: _eventsByDate,
   todayIndex: _todayIndex,
   disabledTimeblockId,
@@ -47,6 +51,14 @@ export const WeekGrid = ({
 }: WeekGridProps) => {
   const timezone = useUserPreferences((s) => s.timezone);
   const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
+  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+  const mobileWeekDisplayMode = useCalendarDisplayModeStore((s) => s.mobileWeekDisplayMode);
+  const setMobileWeekDisplayMode = useCalendarDisplayModeStore((s) => s.setMobileWeekDisplayMode);
+  const laneDisplayMode: 'both' | 'plan' | 'record' = isMobile
+    ? mobileWeekDisplayMode === 'planned'
+      ? 'plan'
+      : 'record'
+    : 'both';
 
   // レスポンシブな時間高さ
   const hourHeight = useResponsiveHourHeight();
@@ -108,6 +120,14 @@ export const WeekGrid = ({
 
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
+      {isMobile ? (
+        <MobileWeekLaneSwitcher
+          value={mobileWeekDisplayMode}
+          onValueChange={setMobileWeekDisplayMode}
+          className="mx-2 my-1 shrink-0"
+        />
+      ) : null}
+
       {/* 固定日付ヘッダー */}
       <CalendarDateHeader header={headerComponent} weekNumber={weekNumber} />
 
@@ -134,7 +154,7 @@ export const WeekGrid = ({
                 entries={dayEvents}
                 viewMode="week"
                 dayIndex={dayIndex}
-                allEventsForOverlapCheck={events}
+                allEventsForOverlapCheck={allTimeblocks ?? events}
                 displayDates={weekDates}
                 onEntryClick={onEventClick}
                 onEntryContextMenu={onEventContextMenu}
@@ -142,6 +162,7 @@ export const WeekGrid = ({
                 onTimeRangeSelect={onTimeRangeSelect}
                 disabledTimeblockId={disabledTimeblockId}
                 dayDiffEntryIds={dayDiffEntryIds}
+                laneDisplayMode={laneDisplayMode}
                 className="h-full"
               />
             </div>

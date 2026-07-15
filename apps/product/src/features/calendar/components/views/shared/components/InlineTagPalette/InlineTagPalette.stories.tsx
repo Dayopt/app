@@ -10,6 +10,7 @@
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
+import type { Tag } from '@/features/tags';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
 import { InlineTagPalette } from './InlineTagPalette';
 
@@ -22,13 +23,51 @@ const DEFAULT_HOUR_HEIGHT = 60;
 
 /**
  * 未来日付（ストーリー固定値）。
- * 過去日付だと unplanned 風の破線プレビューになるため、通常の tinted
- * ハイライト（確定後カードと同じ見た目）を見せる目的で未来に固定する。
+ * Plan レーンのアウトラインカードを見せる目的で未来に固定する。
  */
 const FUTURE_DAY = new Date('2099-01-01T00:00:00.000Z');
 
-/** 過去日付（unplanned 風の破線プレビューを確認する用） */
+/** 過去日付（Record レーンの塗りカードを確認する用） */
 const PAST_DAY = new Date('2020-01-01T00:00:00.000Z');
+
+const GROUPED_TAGS = [
+  {
+    id: 'work',
+    user_id: 'storybook-user',
+    name: '仕事',
+    color: 'blue',
+    icon: 'briefcase',
+    parent_id: null,
+    sort_order: 0,
+    is_active: true,
+    created_at: '2026-07-14T00:00:00.000Z',
+    updated_at: '2026-07-14T00:00:00.000Z',
+  },
+  {
+    id: 'development',
+    user_id: 'storybook-user',
+    name: '開発',
+    color: 'indigo',
+    icon: 'code',
+    parent_id: 'work',
+    sort_order: 0,
+    is_active: true,
+    created_at: '2026-07-14T00:00:00.000Z',
+    updated_at: '2026-07-14T00:00:00.000Z',
+  },
+  {
+    id: 'meeting',
+    user_id: 'storybook-user',
+    name: '会議',
+    color: 'violet',
+    icon: 'users',
+    parent_id: 'work',
+    sort_order: 1,
+    is_active: true,
+    created_at: '2026-07-14T00:00:00.000Z',
+    updated_at: '2026-07-14T00:00:00.000Z',
+  },
+] satisfies Tag[];
 
 // ─────────────────────────────────────────────────────────
 // Meta
@@ -66,6 +105,31 @@ type Story = StoryObj<typeof meta>;
  * タグあり状態。選択ハイライトとタグ選択パネルが表示される。
  */
 export const Default: Story = {
+  decorators: [
+    (Story) => {
+      useInlineCreateStore.setState({
+        pendingSelection: {
+          date: FUTURE_DAY,
+          startHour: 9,
+          startMinute: 0,
+          endHour: 10,
+          endMinute: 0,
+        },
+      });
+      return (
+        <div className="relative h-[1440px] w-full">
+          <Story />
+        </div>
+      );
+    },
+  ],
+};
+
+/** 親タグの直下に小タグを展開する表示。 */
+export const GroupedTags: Story = {
+  parameters: {
+    trpcMocks: { 'tags.list': { data: GROUPED_TAGS } },
+  },
   decorators: [
     (Story) => {
       useInlineCreateStore.setState({
@@ -171,10 +235,9 @@ export const EmptyTags: Story = {
 };
 
 /**
- * 過去の時間帯（unplanned 風の破線プレビュー）
+ * 過去の時間帯（Record レーンの塗りカード）
  *
- * 過去に確定すると保存時に自動で unplanned 扱いになるため、
- * プレビューもタグ色なしの破線枠で表示される。
+ * 過去に確定すると Record として保存されるため、右レーンで表示される。
  */
 export const PastSelection: Story = {
   decorators: [
@@ -206,6 +269,31 @@ export const NoPendingSelection: Story = {
   decorators: [
     (Story) => {
       useInlineCreateStore.setState({ pendingSelection: null });
+      return (
+        <div className="relative h-[1440px] w-full">
+          <Story />
+        </div>
+      );
+    },
+  ],
+};
+
+/** 全パターンの基準となるインタラクティブ表示。 */
+export const AllPatterns: Story = {
+  parameters: {
+    trpcMocks: { 'tags.list': { data: GROUPED_TAGS } },
+  },
+  decorators: [
+    (Story) => {
+      useInlineCreateStore.setState({
+        pendingSelection: {
+          date: FUTURE_DAY,
+          startHour: 9,
+          startMinute: 0,
+          endHour: 10,
+          endMinute: 0,
+        },
+      });
       return (
         <div className="relative h-[1440px] w-full">
           <Story />

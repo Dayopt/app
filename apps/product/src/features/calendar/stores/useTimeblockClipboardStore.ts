@@ -1,25 +1,10 @@
 'use client';
 
+import type { ClipboardTimeblock } from '@/features/timeblock';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-/**
- * クリップボードにコピーされたエントリの情報
- */
-export interface ClipboardTimeblock {
-  /** タイトル */
-  title: string;
-  /** 説明 */
-  description: string | null;
-  /** 期間（分単位） */
-  duration: number;
-  /** 開始時刻（時） */
-  startHour: number;
-  /** 開始時刻（分） */
-  startMinute: number;
-  /** タグID */
-  tagId: string | null | undefined;
-}
+export type { ClipboardTimeblock } from '@/features/timeblock';
 
 /**
  * 最後にクリックした日付（Googleカレンダー互換のペースト用）

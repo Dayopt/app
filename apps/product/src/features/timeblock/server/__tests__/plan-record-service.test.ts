@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock, createMockSupabase } from '@/lib/test/trpc-test-helpers';
 import { PlanService } from '../plan-service';
@@ -17,8 +17,14 @@ const USER_ID = 'test-user-id';
 const TAG_ID = '72cc49b4-7e57-4a85-9346-0e90b2db78e2';
 
 beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
   vi.clearAllMocks();
   adminRpc.mockResolvedValue({ data: null, error: null });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 function createPlanService(mockSupabase = createMockSupabase()) {
@@ -135,6 +141,27 @@ describe('PlanService.list', () => {
     expect(caught).toMatchObject({ code: 'FETCH_FAILED', message: 'Failed to fetch records' });
     expect(caught.message).not.toContain(privateError);
   });
+
+  it('user scopeを維持して指定したidに絞り込む', async () => {
+    const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'];
+    const query = createChainableMock([]);
+    const { service, mockSupabase } = createPlanService();
+    mockSupabase.from.mockReturnValue(query);
+
+    await expect(service.list({ userId: USER_ID, ids })).resolves.toEqual([]);
+
+    expect(query.eq).toHaveBeenCalledWith('user_id', USER_ID);
+    expect(query.is).toHaveBeenCalledWith('deleted_at', null);
+    expect(query.in).toHaveBeenCalledWith('id', ids);
+  });
+
+  it('idsが空配列ならDBへ問い合わせず空配列を返す', async () => {
+    const { service, mockSupabase } = createPlanService();
+
+    await expect(service.list({ userId: USER_ID, ids: [] })).resolves.toEqual([]);
+
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
 });
 
 describe('RecordService.list', () => {
@@ -191,6 +218,30 @@ describe('RecordService.list', () => {
     expect(recordQuery.or).toHaveBeenCalledWith(
       `title.ilike.%Research%,note.ilike.%Research%,tag_id.in.(${TAG_ID})`,
     );
+  });
+
+  it('user scopeを維持して指定したplan_idに絞り込む', async () => {
+    const planIds = [
+      '11111111-1111-4111-8111-111111111111',
+      '22222222-2222-4222-8222-222222222222',
+    ];
+    const query = createChainableMock([]);
+    const { service, mockSupabase } = createRecordService();
+    mockSupabase.from.mockReturnValue(query);
+
+    await expect(service.list({ userId: USER_ID, planIds })).resolves.toEqual([]);
+
+    expect(query.eq).toHaveBeenCalledWith('user_id', USER_ID);
+    expect(query.is).toHaveBeenCalledWith('deleted_at', null);
+    expect(query.in).toHaveBeenCalledWith('plan_id', planIds);
+  });
+
+  it('planIdsが空配列ならDBへ問い合わせず空配列を返す', async () => {
+    const { service, mockSupabase } = createRecordService();
+
+    await expect(service.list({ userId: USER_ID, planIds: [] })).resolves.toEqual([]);
+
+    expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 });
 
@@ -254,14 +305,82 @@ describe('PlanService.update', () => {
         input: { start_at: '2026-03-17T09:00:00.000Z' },
       }),
     ).rejects.toMatchObject({ code: 'PLAN_TIME_LOCKED' });
+
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1);
   });
 
-  it('過去 plan でも title 更新は許可する', async () => {
+  it('過去 plan を未来へ移動し直す時間変更も拒否する', async () => {
     const existing = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
-    const updated = { ...existing, title: 'Updated' };
+    const { service, mockSupabase } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+
+    await expect(
+      service.update({
+        userId: USER_ID,
+        planId: existing.id,
+        input: {
+          start_at: '2030-03-17T10:00:00.000Z',
+          end_at: '2030-03-17T11:00:00.000Z',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'PLAN_TIME_LOCKED' });
+
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1);
+  });
+
+  it('終了が将来の plan を現在以前へ縮める時間変更を拒否する', async () => {
+    const existing = createPlan();
+    const { service, mockSupabase } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+
+    await expect(
+      service.update({
+        userId: USER_ID,
+        planId: existing.id,
+        input: {
+          start_at: '2026-07-15T11:00:00.000Z',
+          end_at: '2026-07-15T12:00:00.000Z',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'PLAN_IN_PAST' });
+
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1);
+  });
+
+  it('終了が将来の plan は将来範囲内で時間変更できる', async () => {
+    const existing = createPlan();
+    const updated = {
+      ...existing,
+      start_at: '2030-03-17T12:00:00.000Z',
+      end_at: '2030-03-17T13:00:00.000Z',
+    };
+    const { service, mockSupabase } = createPlanService();
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return createChainableMock(existing);
+      if (callCount === 2) return createChainableMock([]);
+      return createChainableMock(updated);
+    });
+
+    await expect(
+      service.update({
+        userId: USER_ID,
+        planId: existing.id,
+        input: { start_at: updated.start_at, end_at: updated.end_at },
+      }),
+    ).resolves.toMatchObject({ start_at: updated.start_at, end_at: updated.end_at });
+  });
+
+  it('過去 plan でもタグとメモの更新は許可する', async () => {
+    const existing = createPlan({
+      end_at: '2026-03-17T11:00:00.000Z',
+      start_at: '2026-03-17T10:00:00.000Z',
+    });
+    const updated = { ...existing, note: 'Updated note', tag_id: 'tag-1' };
     const { service, mockSupabase } = createPlanService();
     let callCount = 0;
     mockSupabase.from.mockImplementation(() => {
@@ -273,9 +392,9 @@ describe('PlanService.update', () => {
       service.update({
         userId: USER_ID,
         planId: existing.id,
-        input: { title: 'Updated' },
+        input: { note: 'Updated note', tagId: 'tag-1' },
       }),
-    ).resolves.toMatchObject({ title: 'Updated' });
+    ).resolves.toMatchObject({ note: 'Updated note', tag_id: 'tag-1' });
   });
 });
 
@@ -300,15 +419,29 @@ describe('PlanService.record', () => {
     });
     const { service, mockSupabase } = createPlanService();
     let recordsCallCount = 0;
+    let recordInsertQuery: ReturnType<typeof createChainableMock> | undefined;
     mockSupabase.from.mockImplementation((table: string) => {
       if (table === 'plans') return createChainableMock(plan);
       recordsCallCount++;
-      return createChainableMock(recordsCallCount <= 2 ? [] : record);
+      if (recordsCallCount <= 2) return createChainableMock([]);
+      recordInsertQuery = createChainableMock(record);
+      return recordInsertQuery;
     });
 
     await expect(service.record({ userId: USER_ID, planId: plan.id })).resolves.toMatchObject({
       plan_id: plan.id,
       source: 'from_plan',
+    });
+    expect(recordInsertQuery?.insert).toHaveBeenCalledWith({
+      user_id: USER_ID,
+      title: plan.title,
+      note: plan.note,
+      tag_id: plan.tag_id,
+      plan_id: plan.id,
+      external_calendar_event_id: null,
+      source: 'from_plan',
+      start_at: plan.start_at,
+      end_at: plan.end_at,
     });
   });
 
@@ -502,6 +635,33 @@ describe('RecordService.create', () => {
         },
       }),
     ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
+
+    expect(mockSupabase.from).toHaveBeenCalledWith('plans');
+  });
+
+  it('skip済みplanへの紐づけを拒否する', async () => {
+    const { service, mockSupabase } = createRecordService();
+    mockSupabase.from.mockReturnValue(
+      createChainableMock(
+        createPlan({
+          start_at: '2026-03-17T09:00:00.000Z',
+          end_at: '2026-03-17T10:00:00.000Z',
+          skipped_at: '2026-03-17T11:00:00.000Z',
+        }),
+      ),
+    );
+
+    await expect(
+      service.create({
+        userId: USER_ID,
+        input: {
+          title: 'Linked record',
+          planId: 'plan-1',
+          start_at: '2026-03-17T10:15:00.000Z',
+          end_at: '2026-03-17T10:45:00.000Z',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
 
     expect(mockSupabase.from).toHaveBeenCalledWith('plans');
   });

@@ -4,6 +4,7 @@ import type { ClipboardTimeblock } from '../useTimeblockClipboardStore';
 import { useTimeblockClipboardStore } from '../useTimeblockClipboardStore';
 
 const mockEntry: ClipboardTimeblock = {
+  kind: 'plan',
   title: 'テストエントリ',
   description: '説明文',
   duration: 60,

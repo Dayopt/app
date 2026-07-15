@@ -109,6 +109,54 @@ const diff: ReviewDiffResult = {
   ],
 };
 
+const balancedDiff: ReviewDiffResult = {
+  summary: {
+    plannedMinutes: 90,
+    actualMinutes: 90,
+    diffMinutes: 0,
+    unplannedMinutes: 0,
+    missedMinutes: 30,
+  },
+  items: [
+    item({
+      id: 'recorded:entry-balanced-over',
+      timeblockId: 'entry-balanced-over',
+      kind: 'recorded',
+      title: 'Planning',
+      tagId: 'tag-admin',
+      color: 'var(--tag-amber)',
+      plannedStart: makeDate(11),
+      plannedEnd: makeDate(12),
+      actualStart: makeDate(11),
+      actualEnd: makeDate(12, 30),
+      plannedMinutes: 60,
+      actualMinutes: 90,
+      diffMinutes: 30,
+      startDiffMinutes: 0,
+      endDiffMinutes: 30,
+      sortTime: makeDate(11).getTime(),
+    }),
+    item({
+      id: 'missed:entry-balanced-under',
+      timeblockId: 'entry-balanced-under',
+      kind: 'missed',
+      title: 'Email batch',
+      tagId: 'tag-admin',
+      color: 'var(--tag-amber)',
+      plannedStart: makeDate(15),
+      plannedEnd: makeDate(15, 30),
+      actualStart: null,
+      actualEnd: null,
+      plannedMinutes: 30,
+      actualMinutes: 0,
+      diffMinutes: -30,
+      startDiffMinutes: 0,
+      endDiffMinutes: 0,
+      sortTime: makeDate(15).getTime(),
+    }),
+  ],
+};
+
 const emptyDiff: ReviewDiffResult = {
   summary: {
     plannedMinutes: 60,
@@ -150,6 +198,16 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     diff,
+    onItemClick: fn(),
+    onClose: fn(),
+    className: 'border-border-subtle h-96 w-64 border',
+  },
+};
+
+/** 正負の差分が相殺された状態。 */
+export const Balanced: Story = {
+  args: {
+    diff: balancedDiff,
     onItemClick: fn(),
     onClose: fn(),
     className: 'border-border-subtle h-96 w-64 border',
@@ -207,6 +265,12 @@ export const AllPatterns: Story = {
     <div className="flex flex-wrap items-start gap-4">
       <ReviewDiffPanel
         diff={diff}
+        onItemClick={fn()}
+        onClose={fn()}
+        className="border-border-subtle h-96 w-64 border"
+      />
+      <ReviewDiffPanel
+        diff={balancedDiff}
         onItemClick={fn()}
         onClose={fn()}
         className="border-border-subtle h-96 w-64 border"

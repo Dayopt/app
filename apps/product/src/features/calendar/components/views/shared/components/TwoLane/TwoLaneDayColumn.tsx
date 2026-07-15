@@ -44,22 +44,32 @@ export function TwoLaneDayColumn({
 
   return (
     <div data-two-lane-day-column className={cn('relative h-full w-full', className)}>
-      {planLayouts.map(({ entry, position }) => (
-        <PlanLaneCard
-          key={entry.id}
-          event={entry}
-          position={position}
-          tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
-        />
-      ))}
-      {recordLayouts.map(({ entry, position }) => (
-        <RecordLaneCard
-          key={entry.id}
-          event={entry}
-          position={position}
-          tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
-        />
-      ))}
+      {planLayouts.map(({ entry, position }) => {
+        const tag = entry.tagId ? getTagById(entry.tagId) : undefined;
+        return (
+          <PlanLaneCard
+            key={entry.id}
+            event={entry}
+            position={position}
+            tagName={tag?.name ?? null}
+            tagColor={tag?.color ?? null}
+            tagIcon={tag?.icon ?? null}
+          />
+        );
+      })}
+      {recordLayouts.map(({ entry, position }) => {
+        const tag = entry.tagId ? getTagById(entry.tagId) : undefined;
+        return (
+          <RecordLaneCard
+            key={entry.id}
+            event={entry}
+            position={position}
+            tagName={tag?.name ?? null}
+            tagColor={tag?.color ?? null}
+            tagIcon={tag?.icon ?? null}
+          />
+        );
+      })}
     </div>
   );
 }

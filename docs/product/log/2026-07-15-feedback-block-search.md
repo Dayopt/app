@@ -1,6 +1,7 @@
 ---
 status: frozen
 date: 2026-07-15
+superseded_by: docs/product/log/2026-07-15-feedback-block-search-duplicate-inspector.md
 ---
 
 # ブロック検索を簡易な再利用導線として検討したい

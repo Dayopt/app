@@ -202,17 +202,26 @@ gh pr merge <PR番号> --merge --delete-branch
 
 ```bash
 gh pr merge <N> --merge --delete-branch  # remote は deleteBranchOnMerge でも自動削除
-git worktree remove <worktree-path>      # branch が worktree に checkout されている場合は先に
+# 1) 通常時: worktree から切り離してからローカル branch を削除
+git worktree remove <worktree-path>      # worktree 側の checkout を先に解放
 git branch -d <branch>                   # merge 済みなら -d が通る（-D は使わない）
+
+# 2) worktree remove が失敗する場合（dirty/uncommitted 差分など）
+git -C <worktree-path> status --porcelain    # ワークツリーの差分確認
+git -C <worktree-path> checkout main          # worktree 内で main に戻す
+git worktree remove <worktree-path> --force    # 差分がない/確認済みなら強制解除
+git branch -d <branch>                        # 依然として merge 済みなら実行
 ```
 
-順序に意味がある: **worktree に checkout されたブランチは削除できない**ため、`git worktree remove` が先。
+順序に意味がある: **worktree が参照する branch を先に解除しないと branch 削除が不可能**なため `worktree remove` を優先する。
+ただし `worktree remove` がそのまま通らない場合は、worktree 内で主系列（例: `main`）へ checkout してから、`remove --force` や `branch -d` を続行する。
 
 ### 削除時の安全確認
 
-- 削除前に `git -C <worktree-path> status --porcelain` が空であることを確認する。未コミット差分が残る worktree はユーザー作業として扱い、勝手に消さない（確認を取る）
+- 削除前に `git -C <worktree-path> status --porcelain` が空であることを確認する。未コミット差分が残る worktree はユーザー作業として扱うため、消去前に確認を取る
 - **`rm -rf` で worktree を直接消さない**。git の管理情報が残って孤児化する。必ず `git worktree remove` を使う
-- gitignore された生成物（`.next/` 等）だけが残って `remove` が拒否される場合は、tracked ファイルに差分がないことを確認した上で `git worktree remove --force`
+- gitignore された生成物（`.next/` 等）だけが残って `remove` が拒否される場合は、tracked ファイル差分がないことを確認した上で `git worktree remove --force`
+- `git branch -d <branch>` が `not fully merged` で失敗したら、原則 `-D` は使わずユーザー確認を取る（保留/close の再確認、必要なら別 PR 化）
 
 ### 定期掃除（月次 sweep で実施）
 

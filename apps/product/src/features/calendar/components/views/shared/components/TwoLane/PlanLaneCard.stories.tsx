@@ -6,16 +6,6 @@ import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 
 import { PlanLaneCard } from './PlanLaneCard';
 
-/** Plan レーン用カード。overview.md §4「過去 Plan の見え方」の全 status variant。 */
-const meta = {
-  title: 'Product/Features/Calendar/TwoLane/PlanLaneCard',
-  parameters: { layout: 'padded' },
-  tags: ['autodocs'],
-} satisfies Meta;
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
 function Slot({ children, height = 90 }: { children: React.ReactNode; height?: number }) {
   return (
     <div
@@ -47,10 +37,35 @@ function makeEvent(status: PlanEventStatus, overrides: Partial<PlanEvent> = {}):
   };
 }
 
+/** Plan レーン用カード。overview.md §4「過去 Plan の見え方」の全 status variant。 */
+const meta = {
+  title: 'Product/Features/Calendar/TwoLane/PlanLaneCard',
+  component: PlanLaneCard,
+  parameters: { layout: 'padded' },
+  tags: ['autodocs'],
+  args: {
+    event: makeEvent('upcoming'),
+    position: basePosition,
+    tagName: 'Deep Work',
+  },
+  argTypes: {
+    showDayDiffMarker: { control: 'boolean' },
+    interactive: { control: 'boolean' },
+  },
+} satisfies Meta<typeof PlanLaneCard>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
 export const Upcoming: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard event={makeEvent('upcoming')} position={basePosition} tagColor="blue" />
+      <PlanLaneCard
+        event={makeEvent('upcoming')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="blue"
+      />
     </Slot>
   ),
 };
@@ -58,7 +73,12 @@ export const Upcoming: Story = {
 export const Active: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard event={makeEvent('active')} position={basePosition} tagColor="teal" />
+      <PlanLaneCard
+        event={makeEvent('active')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="teal"
+      />
     </Slot>
   ),
 };
@@ -67,7 +87,12 @@ export const Active: Story = {
 export const Unrecorded: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard event={makeEvent('unrecorded')} position={basePosition} tagColor="amber" />
+      <PlanLaneCard
+        event={makeEvent('unrecorded')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="amber"
+      />
     </Slot>
   ),
 };
@@ -76,7 +101,12 @@ export const Unrecorded: Story = {
 export const Recorded: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard event={makeEvent('recorded')} position={basePosition} tagColor="indigo" />
+      <PlanLaneCard
+        event={makeEvent('recorded')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="indigo"
+      />
     </Slot>
   ),
 };
@@ -85,18 +115,24 @@ export const Recorded: Story = {
 export const Skipped: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard event={makeEvent('skipped')} position={basePosition} tagColor="gray" />
+      <PlanLaneCard
+        event={makeEvent('skipped')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="gray"
+      />
     </Slot>
   ),
 };
 
-/** タイトル未設定。 */
-export const Untitled: Story = {
+/** タグ未設定。title は表示へフォールバックしない。 */
+export const NoTag: Story = {
   render: () => (
     <Slot>
       <PlanLaneCard
-        event={makeEvent('upcoming', { title: '' })}
+        event={makeEvent('upcoming')}
         position={basePosition}
+        tagName={null}
         tagColor="violet"
       />
     </Slot>
@@ -110,7 +146,39 @@ export const Compact: Story = {
       <PlanLaneCard
         event={makeEvent('upcoming')}
         position={{ ...basePosition, height: 24 }}
+        tagName="Deep Work"
         tagColor="red"
+      />
+    </Slot>
+  ),
+};
+
+/** Compare panel に表示中のPlan。 */
+export const CompareTarget: Story = {
+  render: () => (
+    <Slot>
+      <PlanLaneCard
+        event={makeEvent('recorded')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="indigo"
+        showDayDiffMarker
+      />
+    </Slot>
+  ),
+};
+
+/** Drag中の表示専用preview。操作・focus対象にしない。 */
+export const GhostPreview: Story = {
+  render: () => (
+    <Slot>
+      <PlanLaneCard
+        event={makeEvent('upcoming')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="blue"
+        interactive={false}
+        className="shadow-card"
       />
     </Slot>
   ),
@@ -123,6 +191,7 @@ export const NarrowLane: Story = {
       <PlanLaneCard
         event={makeEvent('upcoming', { title: 'デザインレビュー' })}
         position={{ ...basePosition, left: 0, width: 100 }}
+        tagName="Deep Work"
         tagColor="blue"
         compact
       />
@@ -130,6 +199,7 @@ export const NarrowLane: Story = {
   ),
 };
 
+/** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-wrap items-start gap-4">
@@ -142,17 +212,31 @@ export const AllPatterns: Story = {
           ['skipped', 'gray'],
         ] as const
       ).map(([status, color]) => (
-        <div key={status} className="space-y-2">
-          <p className="text-muted-foreground text-xs">{status}</p>
-          <Slot>
-            <PlanLaneCard event={makeEvent(status)} position={basePosition} tagColor={color} />
-          </Slot>
-        </div>
+        <Slot key={status}>
+          <PlanLaneCard
+            event={makeEvent(status)}
+            position={basePosition}
+            tagName="Deep Work"
+            tagColor={color}
+            showDayDiffMarker={status === 'recorded'}
+          />
+        </Slot>
       ))}
+      <Slot>
+        <PlanLaneCard
+          event={makeEvent('upcoming')}
+          position={basePosition}
+          tagName="Deep Work"
+          tagColor="blue"
+          interactive={false}
+          className="shadow-card"
+        />
+      </Slot>
       <div className="border-border relative h-24 w-12 overflow-hidden rounded-lg border">
         <PlanLaneCard
           event={makeEvent('upcoming', { title: 'デザインレビュー' })}
           position={{ ...basePosition, left: 0, width: 100 }}
+          tagName="Deep Work"
           tagColor="blue"
           compact
         />

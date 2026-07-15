@@ -31,6 +31,7 @@ import type {
   InteractionContext,
   InteractionEffect,
   InteractionState,
+  TimeRange,
   TimeblockRect,
 } from '../domain/interaction/types';
 
@@ -68,7 +69,7 @@ export interface UseInteractionProps {
     },
   ) => Promise<void | { skipToast: true }> | void;
   /** Plan を Record レーンへdropした時の記録化 */
-  onPlanRecord?: ((planId: string) => void) | undefined;
+  onPlanRecord?: ((planId: string, range: TimeRange) => void) | undefined;
   /** Callback when an event is clicked (not dragged) */
   onEventClick?: (event: CalendarEvent) => void;
   /** Callback when a time range is selected on the grid */
@@ -185,6 +186,9 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
 
   // Cached day-column NodeList — populated at drag-start, cleared on drag-end
   const dayColumnsRef = useRef<NodeListOf<HTMLElement> | null>(null);
+  // pending → dragging の初回mousemoveでも、pointer位置から解決したレーンを失わない。
+  // reducer effect の DRAG_STORE_START より前にレーンを解決するため、一時refで受け渡す。
+  const pendingTargetLaneRef = useRef<'plan' | 'record' | null>(null);
   // machine は DRAG_STORE_END → DROP の順でeffectを出すため、drop判定用laneを別refに保持する。
   const dragLaneRef = useRef<{ source: 'plan' | 'record'; target: 'plan' | 'record' } | null>(null);
 
@@ -209,13 +213,25 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
       },
       // 自動記録モデルでは drag / resize とも「planned のみ移動・確定済み actual は固定」で
       // 重複判定が同一なため operation は使わない（machine の API 形状だけ維持する）
-      checkOverlap: (
-        timeblockId: string,
-        start: Date,
-        end: Date,
-        _operation: 'drag' | 'resize',
-      ) => {
-        return checkClientSideOverlapByKind(r.allEvents, timeblockId, start, end);
+      checkOverlap: (timeblockId: string, start: Date, end: Date, operation: 'drag' | 'resize') => {
+        const sourceKind = r.events.find((event) => event.id === timeblockId)?.kind;
+        const targetLane = pendingTargetLaneRef.current ?? dragLaneRef.current?.target;
+        // レーン間dropでkindが変わるのは Plan → Record だけ。
+        // RecordをPlan側へ寄せてもRecordの時間更新なので、Record同士の重複を判定する。
+        const targetKind =
+          operation === 'drag' &&
+          sourceKind &&
+          targetLane &&
+          isPlanRecordDrop(sourceKind, targetLane)
+            ? 'record'
+            : sourceKind;
+        return checkClientSideOverlapByKind(
+          r.allEvents,
+          timeblockId,
+          start,
+          end,
+          targetKind ? { targetKind } : undefined,
+        );
       },
     };
   }
@@ -253,6 +269,8 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           break;
 
         case 'EVENT_CLICK': {
+          pendingTargetLaneRef.current = null;
+          dragLaneRef.current = null;
           const event = r.events.find((e) => e.id === effect.timeblockId);
           if (event) r.onEventClick?.(event);
           break;
@@ -265,7 +283,13 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
             dragLaneRef.current &&
             isPlanRecordDrop(dragLaneRef.current.source, dragLaneRef.current.target)
           ) {
-            r.onPlanRecord?.(effect.timeblockId);
+            const now = Date.now();
+            const planEnd = event.endDate ?? event.displayEndDate;
+            const canCreateLinkedRecord =
+              planEnd.getTime() <= now && !event.isSkipped && effect.time.end.getTime() <= now;
+            if (canCreateLinkedRecord) {
+              r.onPlanRecord?.(effect.timeblockId, effect.time);
+            }
             break;
           }
           // 過去PlanはRecordレーンへの記録dropだけ許可し、同一レーンの時間移動は無視する。
@@ -315,9 +339,12 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           const plan = r.events.find((e) => e.id === effect.timeblockId);
           if (plan) {
             const lane = plan.kind ?? 'plan';
-            dragLaneRef.current = { source: lane, target: lane };
+            const targetLane = pendingTargetLaneRef.current ?? lane;
+            dragLaneRef.current = { source: lane, target: targetLane };
             r.startDragStore(effect.timeblockId, plan, effect.dateIndex, lane);
+            if (targetLane !== lane) r.updateDragStore({ targetLane });
           }
+          pendingTargetLaneRef.current = null;
           // Cache day-column elements once at drag-start
           dayColumnsRef.current = document.querySelectorAll<HTMLElement>(
             '[data-calendar-day-index]',
@@ -422,7 +449,8 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           return point.clientX >= rect.left && point.clientX < rect.right;
         });
       }
-      if (stateRef.current.mode === 'dragging' && targetColumn) {
+      const interactionMode = stateRef.current.mode;
+      if ((interactionMode === 'pending' || interactionMode === 'dragging') && targetColumn) {
         const rect = targetColumn.getBoundingClientRect();
         const targetLane = resolveTwoLaneFromPointer(
           point.clientX,
@@ -430,8 +458,12 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
           rect.width,
           r.planLaneWidthPercent,
         );
-        if (dragLaneRef.current) dragLaneRef.current.target = targetLane;
-        r.updateDragStore({ targetLane });
+        if (interactionMode === 'pending') {
+          pendingTargetLaneRef.current = targetLane;
+        } else {
+          if (dragLaneRef.current) dragLaneRef.current.target = targetLane;
+          r.updateDragStore({ targetLane });
+        }
       }
 
       // Prevent scroll during active drag/resize/select
@@ -498,6 +530,8 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
     (timeblockId: string, e: React.MouseEvent, position: TimeblockRect, dateIndex: number = 0) => {
       if (e.button !== 0) return;
       const r = latestRef.current;
+      pendingTargetLaneRef.current = null;
+      dragLaneRef.current = null;
       // Disabled plan → direct click
       if (r.disabledPlanId && timeblockId === r.disabledPlanId) {
         const event = r.events.find((ev) => ev.id === timeblockId);
@@ -520,6 +554,8 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
   const handleTouchStart = useCallback(
     (timeblockId: string, e: React.TouchEvent, position: TimeblockRect, dateIndex: number = 0) => {
       const r = latestRef.current;
+      pendingTargetLaneRef.current = null;
+      dragLaneRef.current = null;
       if (r.disabledPlanId && timeblockId === r.disabledPlanId) return;
       dispatch({
         type: 'TOUCH_START',

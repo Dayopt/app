@@ -122,7 +122,7 @@ export const GridSwipe: Story = {
   },
 };
 
-/** インタラクティブデモ。日付タップで展開/折りたたみ切替。日付選択でパネルが閉じる。 */
+/** インタラクティブデモ。日付タップで展開/折りたたみ切替。日付選択後もパネルを維持する。 */
 export const Interactive: Story = {
   render: function InteractiveStory() {
     const [date, setDate] = useState(new Date(2026, 2, 25));

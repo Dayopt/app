@@ -5,7 +5,11 @@ import React, { useCallback } from 'react';
 import { isSameDay } from 'date-fns';
 
 import { useTagsMap } from '@/features/tags';
-import { TimeblockCard, useTimeblockRecordMutations } from '@/features/timeblock';
+import {
+  isPlanRecordDrop,
+  resolveTimeblockDestination,
+  useTimeblockWriteMutations,
+} from '@/features/timeblock';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
@@ -14,9 +18,15 @@ import { cn } from '@dayopt/components';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import {
+  calendarEventToPlanEvent,
+  calendarEventToRecordEvent,
+} from '../../../../lib/calendar-event-to-lane-event';
+import { buildPlanRecordDropInput } from '../../../../lib/plan-record-drop';
+import {
   calculateTwoLaneStylesForCalendarEvents,
   DEFAULT_PLAN_LANE_WIDTH_PERCENT,
 } from '../../../../lib/two-lane-layout';
+import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
@@ -24,6 +34,8 @@ import type { DateTimeSelection } from './CalendarDragSelection';
 import { CalendarDragSelection } from './CalendarDragSelection';
 import { DraftTimeblock } from './DraftTimeblock';
 import { InlineTagPalette } from './InlineTagPalette';
+import { PlanLaneCard } from './TwoLane/PlanLaneCard';
+import { RecordLaneCard } from './TwoLane/RecordLaneCard';
 import { TwoLaneTimeblockRenderer } from './TwoLaneTimeblockRenderer';
 
 // ========================================
@@ -111,12 +123,17 @@ interface CalendarGridContentProps {
   disabledTimeblockId?: string | null | undefined;
   /** compare Rail に出ている entry の ID 一覧 */
   dayDiffEntryIds?: ReadonlySet<string> | undefined;
+  /** モバイルWeekで表示するレーン。選択レーンは日カラム全幅で表示する */
+  laneDisplayMode?: 'both' | 'plan' | 'record' | undefined;
   className?: string | undefined;
 }
 
 type CalendarGridViewMode = NonNullable<CalendarGridContentProps['viewMode']>;
 
-export function resolveCalendarLanePresentation(viewMode: CalendarGridViewMode): {
+export function resolveCalendarLanePresentation(
+  viewMode: CalendarGridViewMode,
+  laneDisplayMode: 'both' | 'plan' | 'record' = 'both',
+): {
   planLaneWidthPercent: number;
   compactCards: boolean;
 } {
@@ -124,7 +141,12 @@ export function resolveCalendarLanePresentation(viewMode: CalendarGridViewMode):
     viewMode === 'day' ? 1 : viewMode === 'week' ? 7 : Number.parseInt(viewMode, 10);
 
   return {
-    planLaneWidthPercent: DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+    planLaneWidthPercent:
+      laneDisplayMode === 'plan'
+        ? 100
+        : laneDisplayMode === 'record'
+          ? 0
+          : DEFAULT_PLAN_LANE_WIDTH_PERCENT,
     compactCards: visibleDayCount >= 5,
   };
 }
@@ -147,6 +169,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   onTimeRangeSelect,
   disabledTimeblockId,
   dayDiffEntryIds,
+  laneDisplayMode = 'both',
   className,
 }: CalendarGridContentProps) {
   const { getTagById } = useTagsMap();
@@ -155,14 +178,24 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
-  const { recordPlan } = useTimeblockRecordMutations();
+  const { createRecord } = useTimeblockWriteMutations();
 
   // Tag タップで開いている draft entry（同日のときだけ block を描画）
   const tagDraft = useTagDraftStore((s) => s.draft);
 
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
-  const { planLaneWidthPercent, compactCards } = resolveCalendarLanePresentation(viewMode);
+  const { planLaneWidthPercent, compactCards } = resolveCalendarLanePresentation(
+    viewMode,
+    laneDisplayMode,
+  );
+  const visibleEntries = React.useMemo(() => {
+    if (laneDisplayMode === 'both') return entries;
+    return entries.filter((entry) => {
+      const kind = entry.kind ?? resolveTimeblockDestination(entry.endDate ?? entry.displayEndDate);
+      return kind === laneDisplayMode;
+    });
+  }, [entries, laneDisplayMode]);
 
   const wrappedOnEventUpdate = useCallback(
     (
@@ -178,16 +211,25 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     [onEventUpdate],
   );
 
+  const handlePlanRecord = useCallback(
+    (planId: string, range: { start: Date; end: Date }) => {
+      const plan = entries.find((entry) => entry.id === planId && entry.kind === 'plan');
+      if (!plan) return;
+      createRecord.mutate(buildPlanRecordDropInput(plan, range));
+    },
+    [createRecord, entries],
+  );
+
   // 統合インタラクション（drag/resize/click）
   const { state, handlers } = useInteraction({
     date,
-    events: entries,
+    events: visibleEntries,
     ...(allEventsForOverlapCheck ? { allEventsForOverlapCheck } : {}),
     ...(displayDates ? { displayDates } : {}),
     viewMode,
     hourHeight: HOUR_HEIGHT,
     planLaneWidthPercent,
-    onPlanRecord: (planId) => recordPlan.mutate({ id: planId }),
+    onPlanRecord: handlePlanRecord,
     ...(onEventUpdate ? { onEventUpdate: wrappedOnEventUpdate } : {}),
     ...(onEntryClick ? { onEventClick: onEntryClick } : {}),
     ...(disabledTimeblockId != null
@@ -205,8 +247,9 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   // Step 8: 2レーン座標（plan=左/record=右）。entries は既に kind 付き CalendarEvent。
   const twoLaneStyles = React.useMemo(
-    () => calculateTwoLaneStylesForCalendarEvents(entries, HOUR_HEIGHT, planLaneWidthPercent),
-    [entries, HOUR_HEIGHT, planLaneWidthPercent],
+    () =>
+      calculateTwoLaneStylesForCalendarEvents(visibleEntries, HOUR_HEIGHT, planLaneWidthPercent),
+    [visibleEntries, HOUR_HEIGHT, planLaneWidthPercent],
   );
 
   // ドラッグゴースト描画コールバック
@@ -218,35 +261,66 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       timeblockId: string;
       previewTime: { start: Date; end: Date };
     }) => {
-      const entry = entries.find((e) => e.id === timeblockId);
+      const entry = visibleEntries.find((e) => e.id === timeblockId);
       if (!entry) return null;
       const previewEntry = buildDragPreviewEntry(entry, previewTime);
       const tag = entry.tagId ? getTagById(entry.tagId) : null;
-      const ghostHeight = Math.max(twoLaneStyles[timeblockId]?.height ?? 20, 20);
-      return (
-        <TimeblockCard
-          entry={previewEntry}
-          tagName={tag?.name ?? null}
-          tagColor={tag?.color ?? null}
-          tagIcon={tag?.icon ?? null}
-          isMobile={isMobile}
-          position={{ top: 0, left: 0, width: 100, height: ghostHeight }}
-          plannedHeight={ghostHeight}
-          hourHeight={HOUR_HEIGHT}
-          showActualDiff={enableCrossDayDrag}
-          showDayDiffMarker={dayDiffEntryIds?.has(entry.id) ?? false}
-          timeFormat={timeFormat}
-          style={{ position: 'relative' }}
-        />
-      );
+      const ghostHeight = Math.max(twoLaneStyles[timeblockId]?.height ?? 20, isMobile ? 40 : 20);
+      const sourceKind =
+        entry.kind ?? resolveTimeblockDestination(entry.endDate ?? entry.displayEndDate);
+      const targetLane = useCalendarDragStore.getState().targetLane ?? sourceKind;
+      const previewKind = isPlanRecordDrop(sourceKind, targetLane) ? 'record' : sourceKind;
+      const position =
+        previewKind === 'plan'
+          ? { top: 0, left: 0, width: planLaneWidthPercent, height: ghostHeight }
+          : {
+              top: 0,
+              left: planLaneWidthPercent,
+              width: 100 - planLaneWidthPercent,
+              height: ghostHeight,
+            };
+      const sharedProps = {
+        position,
+        tagName: tag?.name ?? null,
+        tagColor: tag?.color ?? null,
+        tagIcon: tag?.icon ?? null,
+        compact: compactCards,
+        timeFormat,
+        interactive: false,
+        showDayDiffMarker: dayDiffEntryIds?.has(entry.id) ?? false,
+        className: 'shadow-card',
+      } as const;
+
+      if (previewKind === 'plan') {
+        return (
+          <PlanLaneCard
+            {...sharedProps}
+            event={calendarEventToPlanEvent(previewEntry, allEventsForOverlapCheck ?? entries)}
+          />
+        );
+      }
+
+      const recordPreview =
+        sourceKind === 'plan'
+          ? {
+              ...previewEntry,
+              kind: 'record' as const,
+              planId: entry.id,
+              diffMinutes: undefined,
+            }
+          : previewEntry;
+
+      return <RecordLaneCard {...sharedProps} event={calendarEventToRecordEvent(recordPreview)} />;
     },
     [
       entries,
+      visibleEntries,
+      allEventsForOverlapCheck,
       twoLaneStyles,
       getTagById,
       isMobile,
-      HOUR_HEIGHT,
-      enableCrossDayDrag,
+      planLaneWidthPercent,
+      compactCards,
       dayDiffEntryIds,
       timeFormat,
     ],
@@ -289,7 +363,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
       {/* エントリ表示エリア */}
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
-        {entries.map((entry) => {
+        {visibleEntries.map((entry) => {
           const position = twoLaneStyles[entry.id];
           if (!position) return null;
 
@@ -304,6 +378,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
               interactionState={state}
               dayIndex={dayIndex}
               enableCrossDayDrag={enableCrossDayDrag}
+              showDayDiffMarker={dayDiffEntryIds?.has(entry.id) ?? false}
               compactCards={compactCards}
               timeFormat={timeFormat}
               onEntryClick={onEntryClick}

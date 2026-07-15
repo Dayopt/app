@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import type { TimeblockDestination } from '../domain/timeblock-destination';
+import type { TimeblockDuplicateDraft } from '../lib/timeblock-duplicate';
 
 /**
  * Timeblock Inspector 状態管理
@@ -31,6 +32,8 @@ interface TimeblockInspectorState {
   timeblockKind: TimeblockDestination;
   /** Inspector のアンカー位置（クリックされたブロックの位置） */
   anchorRect: AnchorRect | null;
+  /** 複製時だけ保持する独立新規ブロックの下書き。 */
+  duplicateDraft: TimeblockDuplicateDraft | null;
 }
 
 /**
@@ -39,6 +42,10 @@ interface TimeblockInspectorState {
 interface TimeblockInspectorActions {
   /** Inspector を開く */
   openInspector: (timeblockId: string, kind?: TimeblockDestination) => void;
+  /** 元ブロックを参照しながら複製下書きを開く。 */
+  openDuplicate: (draft: TimeblockDuplicateDraft) => void;
+  /** 複製を取り消して元ブロックの詳細へ戻る。 */
+  cancelDuplicate: () => void;
   /** Inspector を閉じる */
   closeInspector: () => void;
   /** アンカー位置を設定 */
@@ -58,6 +65,7 @@ export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
       timeblockId: null,
       timeblockKind: 'plan',
       anchorRect: null,
+      duplicateDraft: null,
 
       setAnchorRect: (rect) => set({ anchorRect: rect }, false, 'setAnchorRect'),
 
@@ -67,10 +75,25 @@ export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
             isOpen: true,
             timeblockId,
             timeblockKind: kind,
+            duplicateDraft: null,
           },
           false,
           'openInspector',
         ),
+
+      openDuplicate: (draft) =>
+        set(
+          {
+            isOpen: true,
+            timeblockId: draft.sourceId,
+            timeblockKind: draft.kind,
+            duplicateDraft: draft,
+          },
+          false,
+          'openDuplicate',
+        ),
+
+      cancelDuplicate: () => set({ duplicateDraft: null }, false, 'cancelDuplicate'),
 
       closeInspector: () => {
         // カレンダーのドラッグ選択をクリア
@@ -83,6 +106,7 @@ export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
             timeblockId: null,
             timeblockKind: 'plan',
             anchorRect: null,
+            duplicateDraft: null,
           },
           false,
           'closeInspector',

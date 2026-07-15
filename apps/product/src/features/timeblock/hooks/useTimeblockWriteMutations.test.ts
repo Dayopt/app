@@ -18,8 +18,8 @@ const row = {
   deleted_at: null,
 };
 
-function listKey(input: Record<string, unknown>) {
-  return [['records', 'list'], { input, type: 'query' }];
+function listKey(input: Record<string, unknown>, lane: 'plans' | 'records' = 'records') {
+  return [[lane, 'list'], { input, type: 'query' }];
 }
 
 describe('useTimeblockWriteMutations', () => {
@@ -34,6 +34,26 @@ describe('useTimeblockWriteMutations', () => {
     expect(
       doesTimeModelListQueryIncludeRow(listKey({ planId: 'plan-1', limit: 1 }), row, 'records'),
     ).toBe(true);
+  });
+
+  it('関連コンテキストのID配列に一致する行だけを対象にする', () => {
+    expect(doesTimeModelListQueryIncludeRow(listKey({ planIds: ['plan-1'] }), row, 'records')).toBe(
+      true,
+    );
+    expect(doesTimeModelListQueryIncludeRow(listKey({ planIds: ['plan-2'] }), row, 'records')).toBe(
+      false,
+    );
+    expect(doesTimeModelListQueryIncludeRow(listKey({ planIds: [] }), row, 'records')).toBe(false);
+
+    expect(
+      doesTimeModelListQueryIncludeRow(listKey({ ids: ['record-1'] }, 'plans'), row, 'plans'),
+    ).toBe(true);
+    expect(
+      doesTimeModelListQueryIncludeRow(listKey({ ids: ['plan-2'] }, 'plans'), row, 'plans'),
+    ).toBe(false);
+    expect(doesTimeModelListQueryIncludeRow(listKey({ ids: [] }, 'plans'), row, 'plans')).toBe(
+      false,
+    );
   });
 
   it('表示期間と重なる行だけを対象にする（offset付きcreateは除外）', () => {

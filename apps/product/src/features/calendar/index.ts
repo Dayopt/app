@@ -11,6 +11,7 @@
 // Main Controller
 // =============================================================================
 export { CalendarController } from './components/CalendarController';
+export { ShortcutCheatSheetDialog } from './components/ShortcutCheatSheetDialog';
 
 // =============================================================================
 // Layout Components
@@ -75,7 +76,6 @@ export { isCalendarDiffView } from './types/calendar.types';
 // =============================================================================
 // Lib / Utils
 // =============================================================================
-export { buildClipboardTimeblock } from './lib/clipboard-timeblock';
 export { parseCalendarDateParam } from './lib/date-param';
 export { buildCalendarReviewPanelPath } from './lib/panel-url';
 export { isCalendarViewPath } from './lib/route-utils';

@@ -33,6 +33,7 @@
       "help": "ヘルプ",
       "helpSubmenu": {
         "helpCenter": "ヘルプセンター",
+        "keyboardShortcuts": "キーボードショートカット",
         "releaseNotes": "リリースノート",
         "documentation": "ドキュメント",
         "termsOfService": "利用規約",

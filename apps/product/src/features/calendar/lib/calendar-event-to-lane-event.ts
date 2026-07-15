@@ -3,8 +3,9 @@
  * `PlanEvent` / `RecordEvent` 表示型へ変換するアダプタ。
  *
  * `useCalendarData` は Plan / Record から CalendarEvent を作る際に kind/planId/recordSource を
- * 既に埋めているため、ここでは同じ視野内の他イベント（`allEvents`）から
- * 記録済み判定・差分計算に必要な情報だけを逆引きする。
+ * 既に埋めているため、ここではCalendarが取得した関連イベント（`allEvents`）から
+ * Plan の記録済み判定に必要な情報だけを逆引きする。Record の差分は
+ * `useCalendarData` が 1 Plan : N Record を集約して代表 Record に事前計算する。
  */
 
 import type { PlanEvent, PlanEventStatus, RecordEvent } from '@/features/timeblock';
@@ -47,16 +48,7 @@ export function calendarEventToPlanEvent(
 }
 
 /** kind='record' の CalendarEvent を RecordLaneCard 用の RecordEvent へ変換する */
-export function calendarEventToRecordEvent(
-  event: CalendarEvent,
-  allEvents: ReadonlyArray<CalendarEvent>,
-): RecordEvent {
-  const plan =
-    event.planId != null
-      ? allEvents.find((e) => e.kind === 'plan' && e.id === event.planId)
-      : undefined;
-  const diffMinutes = plan ? event.duration - plan.duration : undefined;
-
+export function calendarEventToRecordEvent(event: CalendarEvent): RecordEvent {
   return {
     id: event.id,
     title: event.title,
@@ -69,6 +61,6 @@ export function calendarEventToRecordEvent(
     displayEndDate: event.displayEndDate,
     duration: event.duration,
     fulfillmentScore: null,
-    diffMinutes,
+    diffMinutes: event.diffMinutes,
   };
 }

@@ -33,9 +33,11 @@ function isTimeblockQuery(query: { queryKey: unknown }): boolean {
 }
 
 interface TimeModelListFilter {
+  ids?: string[];
   search?: string;
   tagId?: string;
   planId?: string;
+  planIds?: string[];
   startDate?: string;
   endDate?: string;
   includeSkipped?: boolean;
@@ -77,8 +79,15 @@ export function doesTimeModelListQueryIncludeRow(
   const filter = getListFilter(queryKey);
   if (row.deleted_at != null) return false;
   if (operation === 'create' && (filter.offset ?? 0) > 0) return false;
+  if (lane === 'plans' && filter.ids && !filter.ids.includes(row.id)) return false;
   if (filter.tagId && row.tag_id !== filter.tagId) return false;
   if (lane === 'records' && filter.planId && row.plan_id !== filter.planId) return false;
+  if (
+    lane === 'records' &&
+    filter.planIds &&
+    (row.plan_id == null || !filter.planIds.includes(row.plan_id))
+  )
+    return false;
   if (lane === 'plans' && filter.includeSkipped === false && row.skipped_at != null) return false;
 
   if (filter.search) {
@@ -126,16 +135,22 @@ interface MutationContext {
   tempId?: string;
 }
 
+interface UseTimeblockWriteMutationsOptions {
+  /** create の時間重複をフォーム内で表示する場合に指定する。指定時は重複トーストを出さない。 */
+  onCreateTimeOverlap?: (() => void) | undefined;
+}
+
 /**
  * Plan / Record の書き込み mutation 群。
  *
  * optimistic-update skill に従い、create は temp 行 insert、update は該当行 patch、
  * delete は行除去を onMutate で行い、onError で snapshot rollback、onSettled で再検証する。
  */
-export function useTimeblockWriteMutations() {
+export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOptions = {}) {
   const utils = api.useUtils();
   const queryClient = useQueryClient();
   const t = useTranslations('timeblock.editor');
+  const { onCreateTimeOverlap } = options;
 
   type PlanListItem = NonNullable<Awaited<ReturnType<typeof utils.plans.list.fetch>>>[number];
   type RecordListItem = NonNullable<Awaited<ReturnType<typeof utils.records.list.fetch>>>[number];
@@ -157,6 +172,14 @@ export function useTimeblockWriteMutations() {
 
   const reportError = (error: { message: string }) => {
     toast.error(isTimeOverlapError(error) ? t('toast.overlap') : t('toast.saveFailed'));
+  };
+
+  const reportCreateError = (error: { message: string }) => {
+    if (isTimeOverlapError(error) && onCreateTimeOverlap) {
+      onCreateTimeOverlap();
+      return;
+    }
+    reportError(error);
   };
 
   const insertIntoMatchingLists = <T extends TimeModelListRow>(
@@ -224,7 +247,7 @@ export function useTimeblockWriteMutations() {
     },
     onError: (error, _input, context) => {
       restore(context);
-      reportError(error);
+      reportCreateError(error);
     },
     onSettled: invalidate,
   });
@@ -259,7 +282,7 @@ export function useTimeblockWriteMutations() {
     },
     onError: (error, _input, context) => {
       restore(context);
-      reportError(error);
+      reportCreateError(error);
     },
     onSettled: invalidate,
   });

@@ -15,7 +15,7 @@ import { devtools, persist } from 'zustand/middleware';
 
 import { platformStorage } from '@/lib/zustand/storage';
 
-type MobileWeekDisplayMode = 'planned' | 'recorded';
+export type MobileWeekDisplayMode = 'planned' | 'recorded';
 
 interface CalendarDisplayModeState {
   /** モバイル Week 表示で「予定だけ」か「記録だけ」か */

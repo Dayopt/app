@@ -56,6 +56,7 @@ type SheetType =
   | { type: 'contact' }
   | { type: 'settings'; category: SettingsCategory }
   | { type: 'timeblockSearch' }
+  | { type: 'shortcutCheatSheet' }
   | { type: 'tagMerge'; sourceTag: TagMergeSourceTag }
   | { type: 'tagRename'; tag: TagRenameTarget }
   | { type: 'tagCreate'; context: TagCreateContext };

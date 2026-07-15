@@ -34,15 +34,26 @@ const formatTime = (hour: number, minute: number) => {
 // Stories
 // ---------------------------------------------------------------------------
 
-/** ドラッグ選択中のプレビュー。 */
-export const Default: Story = {
-  // color-contrast: text-muted-foreground on plan card background
-  parameters: { a11y: { test: 'todo' } },
+/** 未来時間に作るPlanのプレビュー。 */
+export const FuturePlan: Story = {
   render: () => (
     <Slot>
       <DragSelectionPreview
         selection={{ startHour: 0, startMinute: 0, endHour: 1, endMinute: 0 }}
         date={new Date('2099-01-01T00:00:00')}
+        formatTime={formatTime}
+      />
+    </Slot>
+  ),
+};
+
+/** 過去時間に作るRecordのプレビュー。 */
+export const PastRecord: Story = {
+  render: () => (
+    <Slot>
+      <DragSelectionPreview
+        selection={{ startHour: 0, startMinute: 0, endHour: 1, endMinute: 0 }}
+        date={new Date('2000-01-01T00:00:00')}
         formatTime={formatTime}
       />
     </Slot>
@@ -65,14 +76,19 @@ export const Overlapping: Story = {
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
-  // color-contrast: text-muted-foreground on plan card background
-  parameters: { a11y: { test: 'todo' } },
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <Slot>
         <DragSelectionPreview
           selection={{ startHour: 0, startMinute: 0, endHour: 1, endMinute: 0 }}
           date={new Date('2099-01-01T00:00:00')}
+          formatTime={formatTime}
+        />
+      </Slot>
+      <Slot>
+        <DragSelectionPreview
+          selection={{ startHour: 0, startMinute: 0, endHour: 1, endMinute: 0 }}
+          date={new Date('2000-01-01T00:00:00')}
           formatTime={formatTime}
         />
       </Slot>

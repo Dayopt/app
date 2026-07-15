@@ -70,7 +70,7 @@ supabase start
 pnpm dev
 ```
 
-`pnpm dev` は `op run` 経由のまま。デフォルトでは `supabase status -o env` から Supabase local の URL / anon key / service role key を取得し、値を表示せずに product app へ渡す。`.env.local` の実値保存は禁止。
+`pnpm dev` は `op run` 経由のまま。デフォルトでは Supabase local が停止中なら自動起動し、`supabase status -o env` から URL / anon key / service role key を取得して、値を表示せずに product app へ渡す。`.env.local` の実値保存は禁止。
 
 一時的に `.op-env.local` の Supabase refs をそのまま使う場合だけ、明示的に切り替える。
 

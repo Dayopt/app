@@ -51,6 +51,7 @@ describeWithEnv('Block search', () => {
 
   let adminSupabase: SupabaseClient;
   let planId: string;
+  let recordId: string;
   const planDate = offsetDateParam(14);
   const recordDate = offsetDateParam(-14);
 
@@ -112,15 +113,20 @@ describeWithEnv('Block search', () => {
     if (planError) throw new Error(planError.message);
     planId = plan.id;
 
-    const { error: recordError } = await adminSupabase.from('records').insert({
-      user_id: TEST_USER_ID,
-      tag_id: tag.id,
-      title: RECORD_TITLE,
-      start_at: isoAt(recordDate, '09:00'),
-      end_at: isoAt(recordDate, '10:00'),
-      source: 'manual',
-    });
+    const { data: record, error: recordError } = await adminSupabase
+      .from('records')
+      .insert({
+        user_id: TEST_USER_ID,
+        tag_id: tag.id,
+        title: RECORD_TITLE,
+        start_at: isoAt(recordDate, '09:00'),
+        end_at: isoAt(recordDate, '10:00'),
+        source: 'manual',
+      })
+      .select('id')
+      .single();
     if (recordError) throw new Error(recordError.message);
+    recordId = record.id;
   });
 
   test.afterAll(async () => {
@@ -137,16 +143,19 @@ describeWithEnv('Block search', () => {
     await login(page);
   });
 
-  test('desktop shortcut・copy・tag検索・Inspector遷移がつながる', async ({ page }, testInfo) => {
+  test('desktop shortcut・tag検索・Inspector遷移がつながる', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only');
 
-    const beforeCopyUrl = page.url();
     await page.keyboard.press('Control+K');
     const input = page.getByRole('combobox', { name: '予定と記録を検索' });
     await input.fill(RECORD_TITLE);
-    await page.getByRole('option', { name: `「${RECORD_TITLE}」を複製用にコピー` }).click();
+    await page.getByText(RECORD_TITLE).click();
     await expect(input).toHaveCount(0);
-    expect(page.url()).toBe(beforeCopyUrl);
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('timeblock'))
+      .toBe(`record:${recordId}`);
+    expect(new URL(page.url()).searchParams.get('date')).toBe(recordDate);
+    await expect(page.getByRole('dialog', { name: RECORD_TITLE })).toBeVisible();
 
     await page.getByRole('button', { name: 'ブロックを検索' }).first().click();
     await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(TAG_NAME);

@@ -21,7 +21,8 @@ Codex が Dayopt repo で branch / commit / PR / merge を扱う時の薄い ove
 
 ## Pull Request
 
-- PR は draft で作成する。ただしユーザーが ready 指定した場合は ready にする
+- PR は最初から ready で作成する。
+- draft での作成は、ユーザーが明示的に要求した場合のみ許可する
 - PR body には変更点、理由、検証を入れる
 - issue 対応なら `Closes #NNNN` を本文に入れる
 
@@ -31,3 +32,11 @@ Codex が Dayopt repo で branch / commit / PR / merge を扱う時の薄い ove
 - 理由: main の履歴に branch の分岐と合流を残すため
 - `--squash` / `--rebase` は GitHub 設定でハード無効化済み（`--admin` でも迂回不可）。release 運用も merge commit に統一されている。squash が必要な稀なケースは repo 設定変更が前提
 - merge 前に PR が mergeable で、required checks が成功していることを確認する
+
+## Branch cleanup（マージ後）
+
+- マージ済み PR のブランチ削除は、通常順で実施する:
+  - `git worktree remove <worktree-path>`（worktree が branch を持っている場合に先に解除）
+  - `git branch -d <branch>`（merge 済みなら成功）
+- `worktree remove` が失敗する場合は、worktree 内で `main` に checkout してから再度実施する
+- `git branch -d` が `not fully merged` で失敗したときは `-D` は原則禁止。必要ならユーザー判断で別途確認

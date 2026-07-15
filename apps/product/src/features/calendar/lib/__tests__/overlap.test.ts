@@ -4,7 +4,11 @@ import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 
 import type { CalendarEvent } from '../../types/calendar.types';
 
-import { buildNewTimeblockOverlapTarget, checkClientSideOverlap } from '../overlap';
+import {
+  buildNewTimeblockOverlapTarget,
+  checkClientSideOverlap,
+  checkClientSideOverlapByKind,
+} from '../overlap';
 
 function createEvent(
   overrides: Partial<CalendarEvent> & { id: string; startDate: Date; endDate: Date },
@@ -327,5 +331,135 @@ describe('checkClientSideOverlap', () => {
         new Date('2026-01-15T10:45'),
       ),
     ).toBe(true);
+  });
+});
+
+describe('checkClientSideOverlapByKind', () => {
+  const now = new Date('2026-01-15T12:00').getTime();
+
+  it('未来のPlanは重なるRecordがあっても作成できる', () => {
+    const record = createEvent({
+      id: 'record',
+      kind: 'record',
+      startDate: new Date('2026-01-16T10:00'),
+      endDate: new Date('2026-01-16T11:00'),
+    });
+
+    expect(
+      checkClientSideOverlapByKind(
+        [record],
+        '',
+        new Date('2026-01-16T10:15'),
+        new Date('2026-01-16T10:45'),
+        { now },
+      ),
+    ).toBe(false);
+  });
+
+  it('未来のPlanは重なるPlanがあると作成できない', () => {
+    const plan = createEvent({
+      id: 'plan',
+      kind: 'plan',
+      startDate: new Date('2026-01-16T10:00'),
+      endDate: new Date('2026-01-16T11:00'),
+    });
+
+    expect(
+      checkClientSideOverlapByKind(
+        [plan],
+        '',
+        new Date('2026-01-16T10:15'),
+        new Date('2026-01-16T10:45'),
+        { now },
+      ),
+    ).toBe(true);
+  });
+
+  it('過去のRecordは重なるPlanがあっても作成できる', () => {
+    const plan = createEvent({
+      id: 'plan',
+      kind: 'plan',
+      startDate: new Date('2026-01-15T10:00'),
+      endDate: new Date('2026-01-15T11:00'),
+    });
+
+    expect(
+      checkClientSideOverlapByKind(
+        [plan],
+        '',
+        new Date('2026-01-15T10:15'),
+        new Date('2026-01-15T10:45'),
+        { now },
+      ),
+    ).toBe(false);
+  });
+
+  it('過去のRecordは重なるRecordがあると作成できない', () => {
+    const record = createEvent({
+      id: 'record',
+      kind: 'record',
+      startDate: new Date('2026-01-15T10:00'),
+      endDate: new Date('2026-01-15T11:00'),
+    });
+
+    expect(
+      checkClientSideOverlapByKind(
+        [record],
+        '',
+        new Date('2026-01-15T10:15'),
+        new Date('2026-01-15T10:45'),
+        { now },
+      ),
+    ).toBe(true);
+  });
+
+  it('Plan→Record dropはドラッグ元PlanではなくRecordとの重複を判定する', () => {
+    const plan = createEvent({
+      id: 'plan',
+      kind: 'plan',
+      startDate: new Date('2026-01-15T09:00'),
+      endDate: new Date('2026-01-15T10:00'),
+    });
+    const record = createEvent({
+      id: 'record',
+      kind: 'record',
+      startDate: new Date('2026-01-15T10:00'),
+      endDate: new Date('2026-01-15T11:00'),
+    });
+
+    expect(
+      checkClientSideOverlapByKind(
+        [plan, record],
+        plan.id,
+        new Date('2026-01-15T10:15'),
+        new Date('2026-01-15T10:45'),
+        { now, targetKind: 'record' },
+      ),
+    ).toBe(true);
+  });
+
+  it('Record→Plan laneでも元のRecord kindを指定すればPlan重複を無視する', () => {
+    const record = createEvent({
+      id: 'record',
+      kind: 'record',
+      startDate: new Date('2026-01-15T09:00'),
+      endDate: new Date('2026-01-15T10:00'),
+    });
+    const plan = createEvent({
+      id: 'plan',
+      kind: 'plan',
+      startDate: new Date('2026-01-15T10:00'),
+      endDate: new Date('2026-01-15T11:00'),
+    });
+
+    expect(
+      checkClientSideOverlapByKind(
+        [record, plan],
+        record.id,
+        new Date('2026-01-15T10:15'),
+        new Date('2026-01-15T10:45'),
+        { now, targetKind: 'record' },
+      ),
+    ).toBe(false);
   });
 });

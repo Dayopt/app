@@ -11,7 +11,7 @@ code: apps/product/src/features/contact
 ## 現在の振る舞い
 
 - フォーム経由でユーザーの声（感想・要望・不具合報告）を受け付ける
-- 送信内容は GitHub Issue として自動起票する（repo: `GITHUB_CONTACT_REPO`、labels: `contact` / `feedback` / `app` / カテゴリ）。Web側（dayopt.app/contact）と同一フォーマット
+- 送信内容は GitHub Issue として自動起票する（repo: `GITHUB_CONTACT_REPO`、labels: 運用側で決めた正規ラベル（`type` / `priority` / `status` / `area` / `size` / `quality` / `scope`））。Web側（dayopt.app/contact）と同一フォーマット
 - **起票は best-effort**: GitHub API の失敗・env 未設定時もユーザーの送信は成功扱いとし、内容を構造化ログと Sentry event（`source: contact`）へ退避する。フィードバックはどの経路でも失われない
 - GitHub API 呼び出しは 10 秒でタイムアウト（Web側と同値）
 - レート制限は userId ベース（Upstash）

@@ -10,16 +10,18 @@
 import { useCallback, useMemo } from 'react';
 
 import { addHours, startOfHour } from 'date-fns';
+import { useTranslations } from 'next-intl';
 
 import type { CalendarEvent } from '@/features/calendar';
 import {
-  buildClipboardTimeblock,
   useCalendarEventKeyboard,
   useCalendarHandlers,
+  useTimeblockClipboardStore,
   useTimeblockContextActions,
   useTimeblockOperations,
 } from '@/features/calendar';
-import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
+import { createClipboardTimeblock } from '@/features/timeblock';
+import { toast } from '@/lib/toast';
 
 // =============================================================================
 // Types
@@ -51,6 +53,7 @@ interface CalendarCrudHandlersResult {
   onDeleteTimeblock: (timeblockId: string) => void;
   onDeleteTimeblockConfirm: (entry: CalendarEvent) => void;
   onViewStats: (entry: CalendarEvent) => void;
+  onCopy: (entry: CalendarEvent) => void;
   onSkip: (entry: CalendarEvent) => void;
   onUnskip: (entry: CalendarEvent) => void;
 }
@@ -64,7 +67,8 @@ export function useCalendarCrudHandlers({
   filteredEvents,
   currentDate,
 }: CalendarCrudHandlersInput): CalendarCrudHandlersResult {
-  const timezone = useUserPreferences((preferences) => preferences.timezone);
+  const t = useTranslations();
+  const copyTimeblock = useTimeblockClipboardStore((state) => state.copyTimeblock);
   // =========================================================================
   // Calendar Handlers（click, create, drag-select）
   // =========================================================================
@@ -111,19 +115,34 @@ export function useCalendarCrudHandlers({
     const entry = filteredEvents.find((p) => p.id === selectedTimeblockId);
     if (!entry) return null;
 
-    if (!entry.startDate || !entry.endDate) return null;
+    if (!entry.kind || !entry.startDate || !entry.endDate) return null;
+    return createClipboardTimeblock({
+      kind: entry.kind,
+      title: entry.title,
+      description: entry.description ?? null,
+      startAt: entry.startDate,
+      endAt: entry.endDate,
+      tagId: entry.tagId,
+    });
+  }, [selectedTimeblockId, filteredEvents]);
 
-    return buildClipboardTimeblock(
-      {
-        title: entry.title,
-        note: entry.description,
-        tagId: entry.tagId,
-        startAt: entry.startDate,
-        endAt: entry.endDate,
-      },
-      timezone,
-    );
-  }, [selectedTimeblockId, filteredEvents, timezone]);
+  const handleCopy = useCallback(
+    (entry: CalendarEvent) => {
+      if (!entry.kind || !entry.startDate || !entry.endDate) return;
+      copyTimeblock(
+        createClipboardTimeblock({
+          kind: entry.kind,
+          title: entry.title,
+          description: entry.description ?? null,
+          startAt: entry.startDate,
+          endAt: entry.endDate,
+          tagId: entry.tagId,
+        }),
+      );
+      toast.success(t('common.toast.copied'));
+    },
+    [copyTimeblock, t],
+  );
 
   const getPasteDateForKeyboard = useCallback(() => {
     return currentDate;
@@ -157,6 +176,7 @@ export function useCalendarCrudHandlers({
       onDeleteTimeblock: deleteTimeblock,
       onDeleteTimeblockConfirm: handleDeleteTimeblockConfirm,
       onViewStats: handleViewStats,
+      onCopy: handleCopy,
       onSkip: handleSkip,
       onUnskip: handleUnskip,
     }),
@@ -168,6 +188,7 @@ export function useCalendarCrudHandlers({
       deleteTimeblock,
       handleDeleteTimeblockConfirm,
       handleViewStats,
+      handleCopy,
       handleSkip,
       handleUnskip,
     ],

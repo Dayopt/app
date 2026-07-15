@@ -49,7 +49,7 @@ DB の `plans` テーブルに対応する独立エンティティ。これか�
 
 - UI: 「予定」
 - 禁止: 「計画」(名詞としては使わない。動詞「計画する」は文脈により可)、「エントリ」(旧モデルの呼称。ADR-025 で廃止)
-- 過去の Plan は時間凍結。title / tag / note のみ訂正可
+- 過去の Plan は時間凍結。タグ / note のみ訂正可
 
 #### record / 記録
 
@@ -183,7 +183,7 @@ Calendar は Plan レーンと Record レーンを横並びで表示する。
 
 #### 保存先ルール
 
-ブロック作成・編集時に保存先を選ぶ UI は存在しない。`end_at > now` なら Plan、`end_at <= now` なら Record として一意に決まる。境界をまたぐ編集で表示チップが自動的に切り替わる。
+新規作成時に保存先を選ぶ UI は存在しない。`end_at > now` なら Plan、`end_at <= now` なら Record として一意に決まる。既存 Plan / Record の編集では種別を維持し、相互変換しない。
 
 ### 時間管理
 
@@ -196,7 +196,7 @@ Calendar は Plan レーンと Record レーンを横並びで表示する。
 
 「Time waits for no one」 — 過去は変更できないという原則。
 
-- 過去 Plan の `start_at` / `end_at` は変更不可(title / tag / note のみ訂正可)
+- 過去 Plan の `start_at` / `end_at` は変更不可（タグ / note のみ訂正可）
 - Record は過去の記録そのものなので、時間・タグ・noteを訂正可能
 - UI: 過去 Plan は disabled 表示 + ロジックガードの二重防御
 - 意思決定ログ: [ADR-025](log/2026-07-09-time-model-split.md)、[時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)

@@ -124,6 +124,42 @@ describe('calculateTwoLaneLayout', () => {
     expect(result.planLayouts).toHaveLength(2);
     expect(result.planLayouts[1]?.position).toMatchObject({ top: 660, height: 30 });
   });
+
+  it('同一レーンで隣接するイベントは2pxだけ離す', () => {
+    const result = calculateTwoLaneLayout({
+      plans: [
+        makePlan({ id: 'p1' }),
+        makePlan({
+          id: 'p2',
+          displayStartDate: localDate(10, 0),
+          displayEndDate: localDate(10, 30),
+        }),
+      ],
+      records: [],
+      hourHeight: HOUR_HEIGHT,
+    });
+    expect(result.planLayouts[1]?.position).toMatchObject({ top: 602, height: 30 });
+  });
+
+  it('レコードレーンでも隣接イベント間に2pxの間隔を入れる', () => {
+    const result = calculateTwoLaneLayout({
+      plans: [],
+      records: [
+        makeRecord({
+          id: 'r1',
+          displayStartDate: localDate(9, 0),
+          displayEndDate: localDate(10, 0),
+        }),
+        makeRecord({
+          id: 'r2',
+          displayStartDate: localDate(10, 0),
+          displayEndDate: localDate(11, 0),
+        }),
+      ],
+      hourHeight: HOUR_HEIGHT,
+    });
+    expect(result.recordLayouts[1]?.position).toMatchObject({ top: 602, height: 60 });
+  });
 });
 
 describe('resolveTwoLaneFromPointer', () => {
@@ -131,6 +167,11 @@ describe('resolveTwoLaneFromPointer', () => {
     expect(DEFAULT_PLAN_LANE_WIDTH_PERCENT).toBe(38);
     expect(resolveTwoLaneFromPointer(137, 100, 100)).toBe('plan');
     expect(resolveTwoLaneFromPointer(138, 100, 100)).toBe('record');
+  });
+
+  it('既定値に戻した38%幅を反映する', () => {
+    expect(resolveTwoLaneFromPointer(137, 100, 100, 38)).toBe('plan');
+    expect(resolveTwoLaneFromPointer(138, 100, 100, 38)).toBe('record');
   });
 
   it('明示した境界幅を反映する', () => {

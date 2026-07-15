@@ -110,7 +110,7 @@ cp .op-env.local.example .op-env.local
 pnpm dev
 ```
 
-`pnpm dev` は `.op-env.local` の存在を確認し、`.env.local` / `apps/product/.env.local` / `apps/web/.env.local` が残っている場合は fail する。通常は Supabase local を参照し、`supabase status -o env` の結果から URL / key を値表示なしで注入する。
+`pnpm dev` は `.op-env.local` の存在を確認し、`.env.local` / `apps/product/.env.local` / `apps/web/.env.local` が残っている場合は fail する。通常は Supabase local を参照し、停止中なら自動起動してから `supabase status -o env` の結果を URL / key として値表示なしで注入する。
 
 `.op-env.local` の Supabase refs をそのまま使う一時作業だけ `DAYOPT_SUPABASE_TARGET=op pnpm dev` を使う。素の起動が必要な一時作業だけ `pnpm dev:raw` を使う。
 

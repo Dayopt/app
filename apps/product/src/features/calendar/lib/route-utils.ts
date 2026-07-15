@@ -23,6 +23,6 @@ export function isCalendarViewPath(pathWithoutLocale: string): boolean {
   if (!clean) return false;
 
   if (CALENDAR_VIEWS.includes(clean)) return true;
-  // multi-day view: 2day〜9day（厳密に「数字+day」のみ）
-  return /^\d+day$/.test(clean);
+  // multi-day view: 2day〜7day（厳密に「2〜7の1桁+day」のみ）
+  return /^[2-7]day$/.test(clean);
 }

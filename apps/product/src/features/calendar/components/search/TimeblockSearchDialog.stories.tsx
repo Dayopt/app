@@ -82,7 +82,6 @@ const meta = {
     open: true,
     onOpenChange: fn(),
     onOpenResult: fn(),
-    onCopyResult: fn(),
   },
 } satisfies Meta<typeof TimeblockSearchDialog>;
 
@@ -164,7 +163,6 @@ const STATIC_RESULT: TimeblockSearchResult = {
 const STATIC_TAGS = new Map(TAGS.map((tag) => [tag.id, tag]));
 const STATIC_CALLBACKS = {
   onOpenResult: fn(),
-  onCopyResult: fn(),
   onRetry: fn(),
 };
 

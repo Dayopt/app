@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { Copy, LoaderCircle, SearchX } from 'lucide-react';
+import { LoaderCircle, SearchX } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { TagIcon, useTags } from '@/features/tags';
@@ -31,7 +31,6 @@ interface TimeblockSearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onOpenResult: (result: TimeblockSearchResult) => void;
-  onCopyResult: (result: TimeblockSearchResult) => void;
 }
 
 interface SearchTag {
@@ -52,7 +51,6 @@ interface TimeblockSearchContentProps {
   timezone: string;
   timeFormat: '24h' | '12h';
   onOpenResult: (result: TimeblockSearchResult) => void;
-  onCopyResult: (result: TimeblockSearchResult) => void;
   onRetry: () => void;
 }
 
@@ -104,7 +102,6 @@ export function TimeblockSearchContent({
   timezone,
   timeFormat,
   onOpenResult,
-  onCopyResult,
   onRetry,
 }: TimeblockSearchContentProps) {
   const t = useTranslations();
@@ -168,51 +165,40 @@ export function TimeblockSearchContent({
           const searchableValue = [query, result.kind, result.title, result.note, tag?.name, index]
             .filter((value) => value != null)
             .join(' ');
-          const copyLabel = t('calendar.search.copy', { title: displayTitle });
 
           return (
-            <div key={`${result.kind}:${result.id}`} className="relative" role="presentation">
-              <CommandItem
-                value={searchableValue}
-                className="min-h-16 w-full gap-3 py-2 pr-14"
-                onSelect={() => onOpenResult(result)}
-              >
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="border-border text-muted-foreground shrink-0 rounded border px-1.5 py-0.5 text-xs">
-                      {t(`calendar.search.kind.${result.kind}`)}
+            <CommandItem
+              key={`${result.kind}:${result.id}`}
+              value={searchableValue}
+              className="min-h-16 w-full gap-3 py-2"
+              onSelect={() => onOpenResult(result)}
+            >
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="border-border text-muted-foreground shrink-0 rounded border px-1.5 py-0.5 text-xs">
+                    {t(`calendar.search.kind.${result.kind}`)}
+                  </span>
+                  {result.isSkipped ? (
+                    <span className="text-muted-foreground shrink-0 text-xs">
+                      {t('calendar.search.skipped')}
                     </span>
-                    {result.isSkipped ? (
-                      <span className="text-muted-foreground shrink-0 text-xs">
-                        {t('calendar.search.skipped')}
-                      </span>
-                    ) : null}
-                    {tag ? (
-                      <span className="text-muted-foreground flex min-w-0 items-center gap-1 text-xs">
-                        <TagIcon icon={tag.icon} color={tag.color} size="sm" />
-                        <span className="truncate">{tag.name}</span>
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="truncate text-sm font-medium">{displayTitle}</p>
-                  {result.note ? (
-                    <p className="text-muted-foreground line-clamp-1 text-xs">{result.note}</p>
                   ) : null}
-                  <p className="text-muted-foreground text-xs tabular-nums">
-                    {formatResultDateTime(result, locale, timezone, timeFormat)}
-                  </p>
+                  {tag ? (
+                    <span className="text-muted-foreground flex min-w-0 items-center gap-1 text-xs">
+                      <TagIcon icon={tag.icon} color={tag.color} size="sm" />
+                      <span className="truncate">{tag.name}</span>
+                    </span>
+                  ) : null}
                 </div>
-              </CommandItem>
-              <CommandItem
-                value={`${searchableValue} copy`}
-                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 z-10 min-h-11 min-w-11 -translate-y-1/2 justify-center p-0 md:min-h-8 md:min-w-8"
-                aria-label={copyLabel}
-                title={copyLabel}
-                onSelect={() => onCopyResult(result)}
-              >
-                <Copy className="size-4" aria-hidden="true" />
-              </CommandItem>
-            </div>
+                <p className="truncate text-sm font-medium">{displayTitle}</p>
+                {result.note ? (
+                  <p className="text-muted-foreground line-clamp-1 text-xs">{result.note}</p>
+                ) : null}
+                <p className="text-muted-foreground text-xs tabular-nums">
+                  {formatResultDateTime(result, locale, timezone, timeFormat)}
+                </p>
+              </div>
+            </CommandItem>
           );
         })}
       </CommandGroup>
@@ -230,7 +216,6 @@ export function TimeblockSearchDialog({
   open,
   onOpenChange,
   onOpenResult,
-  onCopyResult,
 }: TimeblockSearchDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -242,6 +227,7 @@ export function TimeblockSearchDialog({
     setDebouncedQuery,
     SEARCH_DEBOUNCE_MS,
   );
+  const wasOpenRef = useRef(open);
   const hasDebouncedQuery = debouncedQuery.length > 0;
 
   const searchInput = useMemo(
@@ -296,12 +282,22 @@ export function TimeblockSearchDialog({
     hasDebouncedQuery &&
     (plansQuery.isError || recordsQuery.isError || tagsQuery.isError);
 
-  const resetAndClose = useCallback(() => {
+  const resetSearch = useCallback(() => {
     cancelDebounce();
     setQuery('');
     setDebouncedQuery('');
+  }, [cancelDebounce]);
+
+  const resetAndClose = useCallback(() => {
+    resetSearch();
     onOpenChange(false);
-  }, [cancelDebounce, onOpenChange]);
+  }, [onOpenChange, resetSearch]);
+
+  // shellの排他制御など、controlled prop側から閉じられた場合も検索語を破棄する。
+  useEffect(() => {
+    if (wasOpenRef.current && !open) resetSearch();
+    wasOpenRef.current = open;
+  }, [open, resetSearch]);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -334,14 +330,6 @@ export function TimeblockSearchDialog({
       resetAndClose();
     },
     [onOpenResult, resetAndClose],
-  );
-
-  const handleCopyResult = useCallback(
-    (result: TimeblockSearchResult) => {
-      onCopyResult(result);
-      resetAndClose();
-    },
-    [onCopyResult, resetAndClose],
   );
 
   const retry = useCallback(() => {
@@ -377,7 +365,6 @@ export function TimeblockSearchDialog({
           timezone={timezone}
           timeFormat={timeFormat}
           onOpenResult={handleOpenResult}
-          onCopyResult={handleCopyResult}
           onRetry={retry}
         />
       </CommandList>

@@ -1,20 +1,15 @@
 'use client';
 
-import { Calendar, Clock, StickyNote } from 'lucide-react';
+import { StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { DateRow, TimeRow } from '@/features/timeblock';
-import { Button, Input, Textarea } from '@dayopt/components';
+import { DateTimeSection } from '@/features/timeblock';
 
-import {
-  isPlanTimeEditable,
-  resolveTimeblockDestination,
-  type TimeblockDestination,
-} from '../../domain/timeblock-destination';
-import { TimeblockDestinationChip } from './TimeblockDestinationChip';
+import { isPlanTimeEditable, type TimeblockDestination } from '../../domain/timeblock-destination';
+import { NoteSection } from '../inspector/fields';
+import { TimeConflictAlert } from '../inspector/fields/TimeConflictAlert';
 
 export interface TimeModelEditorValue {
-  title: string;
   note: string;
   tagId: string | null;
   startAt: Date;
@@ -25,9 +20,12 @@ export interface TimeModelEditorValue {
 
 interface TimeModelEditorProps {
   value: TimeModelEditorValue;
-  onChange: (next: TimeModelEditorValue) => void;
-  onSubmit: (destination: TimeblockDestination) => void;
-  isSubmitting?: boolean | undefined;
+  onDateTimeChange: (next: TimeModelEditorValue) => void;
+  onNoteChange: (note: string) => void;
+  onNoteBlur?: (() => void) | undefined;
+  /** 日時入力に紐づけて表示するエラー。 */
+  dateTimeError?: string | undefined;
+  disabled?: boolean | undefined;
 }
 
 function formatTime(date: Date): string {
@@ -41,77 +39,75 @@ function withTime(date: Date, value: string): Date {
   return next;
 }
 
-/** Plan / Record 共通エディタ。保存先は end_at から表示専用で導出する。 */
-export function TimeblockEditor({ value, onChange, onSubmit, isSubmitting }: TimeModelEditorProps) {
+export function isValidTimeModelRange(value: TimeModelEditorValue): boolean {
+  return value.startAt.getTime() < value.endAt.getTime();
+}
+
+/** Plan / Record 共通エディタ。確定した入力は上位で自動保存する。 */
+export function TimeblockEditor({
+  value,
+  onDateTimeChange,
+  onNoteChange,
+  onNoteBlur,
+  dateTimeError,
+  disabled,
+}: TimeModelEditorProps) {
   const t = useTranslations('timeblock.editor');
-  const destination = resolveTimeblockDestination(value.endAt);
   const timeLocked = value.source === 'plan' && !isPlanTimeEditable(value.endAt);
+  const hasDateTimeError = !isValidTimeModelRange(value) || dateTimeError != null;
 
   return (
-    <form
-      className="space-y-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit(destination);
-      }}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <TimeblockDestinationChip destination={destination} />
-        {timeLocked && <span className="text-muted-foreground text-xs">{t('timeLocked')}</span>}
-      </div>
-      <Input
-        value={value.title}
-        onChange={(event) => onChange({ ...value, title: event.target.value })}
-        placeholder={t('titlePlaceholder')}
-        aria-label={t('title')}
-        disabled={isSubmitting}
-      />
-      <div className="bg-muted rounded-2xl px-4 py-2">
-        <DateRow
-          label={t('date')}
-          icon={Calendar}
-          selectedDate={value.startAt}
-          onDateChange={(date) => {
-            if (!date || timeLocked) return;
-            const startAt = new Date(date);
-            startAt.setHours(value.startAt.getHours(), value.startAt.getMinutes(), 0, 0);
-            const endAt = new Date(date);
-            endAt.setHours(value.endAt.getHours(), value.endAt.getMinutes(), 0, 0);
-            onChange({ ...value, startAt, endAt });
-          }}
-        />
-        <TimeRow
-          label={t('time')}
-          icon={Clock}
-          startTime={formatTime(value.startAt)}
-          endTime={formatTime(value.endAt)}
-          onStartChange={(next) => onChange({ ...value, startAt: withTime(value.startAt, next) })}
-          onEndChange={(next) => onChange({ ...value, endAt: withTime(value.endAt, next) })}
-          disabled={timeLocked || isSubmitting === true}
-          isPrimary={destination === 'record'}
-        />
-      </div>
+    <div className="space-y-3">
+      {timeLocked ? (
+        <div className="flex justify-end">
+          <span className="text-muted-foreground text-xs">{t('timeLocked')}</span>
+        </div>
+      ) : null}
       <div className="space-y-1">
-        <label
-          className="text-muted-foreground flex items-center gap-2 text-sm"
-          htmlFor="time-model-note"
+        <div className="bg-muted rounded-2xl px-4 py-2">
+          <DateTimeSection
+            dateLabel={t('date')}
+            timeLabel={t('time')}
+            selectedDate={value.startAt}
+            onDateSelect={(date) => {
+              const startAt = new Date(date);
+              startAt.setHours(value.startAt.getHours(), value.startAt.getMinutes(), 0, 0);
+              const endAt = new Date(date);
+              endAt.setHours(value.endAt.getHours(), value.endAt.getMinutes(), 0, 0);
+              onDateTimeChange({ ...value, startAt, endAt });
+            }}
+            startTime={formatTime(value.startAt)}
+            onStartChange={(next) =>
+              onDateTimeChange({ ...value, startAt: withTime(value.startAt, next) })
+            }
+            endTime={formatTime(value.endAt)}
+            onEndChange={(next) =>
+              onDateTimeChange({ ...value, endAt: withTime(value.endAt, next) })
+            }
+            disabled={disabled === true || timeLocked}
+            hasError={hasDateTimeError}
+          />
+        </div>
+        <div
+          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- sidebar create と同じ expand/collapse animation
+          className={`grid transition-[grid-template-rows] duration-200 ${dateTimeError ? 'grid-rows-expanded mt-2' : 'grid-rows-collapsed'}`}
+          aria-hidden={!dateTimeError}
         >
-          <StickyNote className="size-4" />
-          {t('note')}
-        </label>
-        <Textarea
-          id="time-model-note"
-          value={value.note}
-          onChange={(event) => onChange({ ...value, note: event.target.value })}
+          <div className="overflow-hidden">
+            <TimeConflictAlert message={dateTimeError ?? ''} />
+          </div>
+        </div>
+      </div>
+      <div onBlurCapture={onNoteBlur}>
+        <NoteSection
+          label={t('note')}
+          icon={StickyNote}
+          note={value.note}
+          onNoteChange={onNoteChange}
           placeholder={t('notePlaceholder')}
-          disabled={isSubmitting}
+          disabled={disabled}
         />
       </div>
-      <div className="flex justify-end">
-        <Button type="submit" size="sm" disabled={isSubmitting || value.title.trim().length === 0}>
-          {t('save')}
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 }

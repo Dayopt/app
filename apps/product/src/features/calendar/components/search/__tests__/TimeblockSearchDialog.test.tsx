@@ -71,7 +71,6 @@ function renderDialog(overrides: Partial<React.ComponentProps<typeof TimeblockSe
     open: true,
     onOpenChange: vi.fn(),
     onOpenResult: vi.fn(),
-    onCopyResult: vi.fn(),
     ...overrides,
   };
   render(<TimeblockSearchDialog {...props} />);
@@ -137,27 +136,8 @@ describe('TimeblockSearchDialog', () => {
     expect(props.onOpenResult).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'plan-1', kind: 'plan' }),
     );
-    expect(props.onCopyResult).not.toHaveBeenCalled();
     expect(props.onOpenChange).toHaveBeenCalledWith(false);
     expect(screen.getByRole('combobox')).toHaveValue('');
-  });
-
-  it('コピー操作は行のopen callbackを発火させずに閉じる', async () => {
-    const props = renderDialog();
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'work' } });
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(300);
-    });
-    const copyOption = screen.getByRole('option', { name: 'calendar.search.copy' });
-    expect(copyOption.closest('[role="listbox"]')).not.toBeNull();
-    fireEvent.click(copyOption);
-
-    expect(props.onCopyResult).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'plan-1', kind: 'plan' }),
-    );
-    expect(props.onOpenResult).not.toHaveBeenCalled();
-    expect(props.onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it('閉じる操作で検索語をリセットする', () => {
@@ -168,6 +148,28 @@ describe('TimeblockSearchDialog', () => {
 
     expect(props.onOpenChange).toHaveBeenCalledWith(false);
     expect(screen.getByRole('combobox')).toHaveValue('');
+  });
+
+  it('controlled openが外部からfalseになった場合も検索語を破棄する', async () => {
+    const props = {
+      onOpenChange: vi.fn(),
+      onOpenResult: vi.fn(),
+    };
+    const { rerender } = render(<TimeblockSearchDialog open {...props} />);
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'work' } });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    rerender(<TimeblockSearchDialog open={false} {...props} />);
+    rerender(<TimeblockSearchDialog open {...props} />);
+
+    expect(screen.getByRole('combobox')).toHaveValue('');
+    expect(mockPlansUseQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: '' }),
+      expect.objectContaining({ enabled: false }),
+    );
   });
 });
 
@@ -199,7 +201,6 @@ describe('TimeblockSearchContent', () => {
       timezone: 'Asia/Tokyo',
       timeFormat: '24h' as const,
       onOpenResult: vi.fn(),
-      onCopyResult: vi.fn(),
       onRetry: vi.fn(),
       ...overrides,
     };

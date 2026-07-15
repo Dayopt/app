@@ -36,6 +36,7 @@ interface TwoLaneEntryRendererProps {
   interactionState: InteractionState;
   dayIndex: number;
   enableCrossDayDrag: boolean;
+  showDayDiffMarker?: boolean | undefined;
   compactCards: boolean;
   timeFormat: TimeFormat;
   onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
@@ -89,6 +90,7 @@ export function TwoLaneTimeblockRenderer({
   interactionState,
   dayIndex,
   enableCrossDayDrag,
+  showDayDiffMarker = false,
   compactCards,
   timeFormat,
   onEntryClick,
@@ -119,7 +121,10 @@ export function TwoLaneTimeblockRenderer({
       ? { zIndex: 1000 }
       : {};
 
-  const tagColor = entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null;
+  const tag = entry.tagId ? getTagById(entry.tagId) : undefined;
+  const tagName = tag?.name ?? null;
+  const tagColor = tag?.color ?? null;
+  const tagIcon = tag?.icon ?? null;
   const isActive = isInspectorOpen && inspectorEntryId === entry.id;
   // eslint-disable-next-line react-hooks/purity -- 過去 plan / auto_migrated ロック判定。再レンダーごとの now で十分（TimeblockContextMenu と同じ運用）
   const now = Date.now();
@@ -164,10 +169,13 @@ export function TwoLaneTimeblockRenderer({
       <PlanLaneCard
         event={calendarEventToPlanEvent(entry, allEvents)}
         position={previewPosition}
+        tagName={tagName}
         tagColor={tagColor}
+        tagIcon={tagIcon}
         isActive={isActive}
         disableDrag={disableDrag}
         disableResize={disableResize}
+        showDayDiffMarker={showDayDiffMarker}
         compact={compactCards}
         timeFormat={timeFormat}
         styleOverride={styleOverride}
@@ -182,11 +190,14 @@ export function TwoLaneTimeblockRenderer({
 
   return (
     <RecordLaneCard
-      event={calendarEventToRecordEvent(entry, allEvents)}
+      event={calendarEventToRecordEvent(entry)}
       position={previewPosition}
+      tagName={tagName}
       tagColor={tagColor}
+      tagIcon={tagIcon}
       isActive={isActive}
       disableDrag={disableDrag}
+      showDayDiffMarker={showDayDiffMarker}
       compact={compactCards}
       timeFormat={timeFormat}
       styleOverride={styleOverride}

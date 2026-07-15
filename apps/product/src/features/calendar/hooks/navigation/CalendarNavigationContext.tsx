@@ -35,6 +35,11 @@ function isValidViewType(view: string): view is CalendarViewType {
   return false;
 }
 
+/** モバイルで提供する表示。Weekはレーン切替で密度を確保し、2〜9日は対象外とする。 */
+function isMobileCalendarViewSupported(view: CalendarViewType): boolean {
+  return view === 'day' || view === 'week';
+}
+
 function normalizePanelForView(
   viewType: CalendarViewType,
   panelKind: CalendarPanelKind | null,
@@ -128,7 +133,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     initialPanel?.reviewTagId ?? null,
   );
 
-  // モバイル判定（day view固定に使用）
+  // モバイル判定（Day / Week以外の表示を制限するために使用）
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const isMobileRef = useRef(isMobile);
 
@@ -194,10 +199,10 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     [],
   );
 
-  // モバイルでday以外のビューが設定された場合、強制的にdayに切替
-  // （URL直アクセスやブラウザ戻る/進むでweek URLに遷移した場合のガード）
+  // モバイルで未対応の複数日ビューが設定された場合、dayへ切替
+  // （URL直アクセスやブラウザ戻る/進むで2〜9day URLに遷移した場合のガード）
   React.useEffect(() => {
-    if (isCalendarPage && isMobile && viewType !== 'day') {
+    if (isCalendarPage && isMobile && !isMobileCalendarViewSupported(viewType)) {
       startTransition(() => {
         setViewType('day');
         const nextPanelKind = normalizePanelForView('day', panelKindRef.current);
@@ -218,10 +223,10 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
 
   // URL由来の initialView が変更されたら viewType を同期
   // （ブラウザ戻る/進む、直接URL入力時）
-  // モバイルでは day 以外への変更を拒否（Effect A の replaceState と競合防止）
+  // モバイルでは Day / Week 以外への変更を拒否（Effect A の replaceState と競合防止）
   React.useEffect(() => {
     if (isCalendarPage && initialView !== viewType) {
-      if (isMobileRef.current && initialView !== 'day') return;
+      if (isMobileRef.current && !isMobileCalendarViewSupported(initialView)) return;
       setViewType(initialView);
       const nextPanel = readCalendarPanelState(initialView);
       setPanelKindState(nextPanel.panelKind);
@@ -262,7 +267,9 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
       if (!resolved.isCalendarPage) return;
 
       const nextView =
-        isMobileRef.current && resolved.initialView !== 'day' ? 'day' : resolved.initialView;
+        isMobileRef.current && !isMobileCalendarViewSupported(resolved.initialView)
+          ? 'day'
+          : resolved.initialView;
       const nextPanel = readCalendarPanelState(nextView);
 
       startTransition(() => {
@@ -299,8 +306,8 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
 
   const changeView = useCallback(
     (view: CalendarViewType) => {
-      // モバイルではday viewのみ許可
-      if (isMobileRef.current && view !== 'day') return;
+      // モバイルではDay / Weekのみ許可
+      if (isMobileRef.current && !isMobileCalendarViewSupported(view)) return;
       const nextPanelKind = normalizePanelForView(view, panelKindRef.current);
       const nextReviewTagId = nextPanelKind === 'review' ? reviewTagIdRef.current : null;
 

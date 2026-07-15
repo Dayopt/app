@@ -7,17 +7,18 @@ import { useCallback, useEffect } from 'react';
 
 import { Toaster } from '@/components/ui/feedback/toast';
 import {
+  CalendarViewType,
+  ShortcutCheatSheetDialog,
   buildCalendarReviewPanelPath,
-  buildClipboardTimeblock,
   buildTimeblockSearchResultPath,
   isCalendarViewPath,
-  type TimeblockSearchResult,
   useCalendarNavigation,
   useShortcutRegistry,
   useTimeblockClipboardStore,
   useTimeblockSearchShortcut,
+  type TimeblockSearchResult,
 } from '@/features/calendar';
-import { useTimeblockInspectorStore } from '@/features/timeblock';
+import { useTimeblockInspectorStore, type ClipboardTimeblock } from '@/features/timeblock';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { toast } from '@/lib/toast';
@@ -78,16 +79,17 @@ export function GlobalOverlays() {
   const contactOpen = activeSheet?.type === 'contact';
   const settingsOpen = activeSheet?.type === 'settings';
   const timeblockSearchOpen = activeSheet?.type === 'timeblockSearch';
+  const shortcutCheatSheetOpen = activeSheet?.type === 'shortcutCheatSheet';
   const isInspectorOpen = useTimeblockInspectorStore((s) => s.isOpen);
   const closeInspector = useTimeblockInspectorStore((s) => s.closeInspector);
   const copyTimeblock = useTimeblockClipboardStore((state) => state.copyTimeblock);
 
-  // shell overlay（Settings/Contact/Search）が開いたら Inspector を閉じる（排他制御）
+  // shell overlayが開いたら Inspector を閉じる（排他制御）
   useEffect(() => {
-    if (settingsOpen || contactOpen || timeblockSearchOpen) {
+    if (settingsOpen || contactOpen || timeblockSearchOpen || shortcutCheatSheetOpen) {
       closeInspector();
     }
-  }, [settingsOpen, contactOpen, timeblockSearchOpen, closeInspector]);
+  }, [settingsOpen, contactOpen, timeblockSearchOpen, shortcutCheatSheetOpen, closeInspector]);
 
   // Inspector は Calendar ビュー専用 — workspace ビュー外への遷移で自動 close。
   // URL は平坦化済み（/day, /week, /Nday）のため isCalendarViewPath で判定する。
@@ -106,14 +108,31 @@ export function GlobalOverlays() {
   // 競合し「inspector だけ閉じて panel に到達しない」問題を解消する。
   const handleViewStats = useCallback(
     (tagId: string) => {
+      const pathWithoutLocale = pathname?.replace(/^\/(ja|en)/, '') ?? '';
+      const currentViewSegment = pathWithoutLocale.split('/')[1]?.split('?')[0] ?? '';
+      const fallbackView: CalendarViewType = isCalendarViewPath(pathWithoutLocale)
+        ? currentViewSegment === 'day' ||
+          currentViewSegment === 'week' ||
+          /^\d+day$/.test(currentViewSegment)
+          ? (currentViewSegment as CalendarViewType)
+          : 'week'
+        : 'week';
       if (calendarNavigation) {
         calendarNavigation.setPanelKind('review', { reviewTagId: tagId });
       } else {
-        router.push(buildCalendarReviewPanelPath(locale, new Date(), tagId));
+        router.push(buildCalendarReviewPanelPath(locale, new Date(), tagId, fallbackView));
       }
       closeInspector();
     },
-    [calendarNavigation, closeInspector, router, locale],
+    [calendarNavigation, closeInspector, pathname, router, locale],
+  );
+
+  const handleCopy = useCallback(
+    (timeblock: ClipboardTimeblock) => {
+      copyTimeblock(timeblock);
+      toast.success(t('common.toast.copied'));
+    },
+    [copyTimeblock, t],
   );
 
   const handleSearchOpenChange = useCallback(
@@ -142,25 +161,6 @@ export function GlobalOverlays() {
     [locale, router, timezone],
   );
 
-  const handleCopySearchResult = useCallback(
-    (result: TimeblockSearchResult) => {
-      copyTimeblock(
-        buildClipboardTimeblock(
-          {
-            title: result.title,
-            note: result.note,
-            tagId: result.tagId,
-            startAt: result.startAt,
-            endAt: result.endAt,
-          },
-          timezone,
-        ),
-      );
-      toast.success(t('common.toast.copied'));
-    },
-    [copyTimeblock, t, timezone],
-  );
-
   return (
     <>
       <ContactDialog
@@ -174,9 +174,14 @@ export function GlobalOverlays() {
         open={timeblockSearchOpen}
         onOpenChange={handleSearchOpenChange}
         onOpenResult={handleOpenSearchResult}
-        onCopyResult={handleCopySearchResult}
       />
-      <TimeblockInspector onViewStats={handleViewStats} />
+      <ShortcutCheatSheetDialog
+        open={shortcutCheatSheetOpen}
+        onOpenChange={(open) => {
+          if (!open) closeSheet();
+        }}
+      />
+      <TimeblockInspector onViewStats={handleViewStats} onCopy={handleCopy} />
       <Toaster />
     </>
   );

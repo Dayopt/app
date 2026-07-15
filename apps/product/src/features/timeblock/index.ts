@@ -10,6 +10,7 @@
 // =============================================================================
 // Types
 // =============================================================================
+export type { ClipboardTimeblock } from './lib/timeblock-clipboard';
 export type { CalendarEvent } from './types/calendar-event';
 export type { PlanEvent, PlanEventStatus } from './types/plan-event';
 export type { RecordEvent } from './types/record-event';
@@ -17,7 +18,7 @@ export type { RecordEvent } from './types/record-event';
 // =============================================================================
 // Hooks
 // =============================================================================
-export { useTimeblockRecordMutations, useTimeblockWriteMutations } from './hooks';
+export { useTimeblockWriteMutations } from './hooks';
 
 // =============================================================================
 // Stores
@@ -50,6 +51,8 @@ export { isNewTimeblock } from './lib/new-timeblock-tracker';
 // =============================================================================
 // Lib (timeblock menu items — 右クリック / Inspector メニュー共通の項目定義)
 // =============================================================================
+export { createClipboardTimeblock } from './lib/timeblock-clipboard';
+export { createTimeblockDuplicateDraft } from './lib/timeblock-duplicate';
 export { getTimeblockMenuItems } from './lib/timeblock-menu-items';
 // =============================================================================
 // Components (TimeblockCard)
@@ -65,8 +68,8 @@ export { ConfirmDayButton } from './components/editor/TimeblockRecordActions';
 // =============================================================================
 // Components (Inspector fields — 他 feature から再利用可能な入力 row)
 // =============================================================================
-export { DateRow } from './components/inspector/fields/DateRow';
+export { DateTimeSection } from './components/inspector/fields/DateTimeSection';
+export { TagRow } from './components/inspector/fields/TagRow';
 export { TimeConflictAlert } from './components/inspector/fields/TimeConflictAlert';
-export { TimeRow } from './components/inspector/fields/TimeRow';
 
 // ここにないものはfeature内部専用
