@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Codex 用の入口。詳細ルールは既存の `.claude/rules/` を canonical source として参照し、Codex 固有の運用差分だけ `.codex/rules/` に置く。Claude と Codex で同じ規約を二重管理しない。
+Dayopt で作業する coding agent の共通入口。Claude は `CLAUDE.md` から本ファイルを読み、Codex も本ファイルを project guidance として読む。詳細ルールは既存の `.claude/rules/` を canonical source とし、Codex 固有の運用差分だけ `.codex/rules/` に置く。同じ規約を provider 別に二重管理しない。
 
 ## Product North Star
 
@@ -8,6 +8,70 @@ Codex 用の入口。詳細ルールは既存の `.claude/rules/` を canonical 
 - **Differentiator**: タイムボクシング、時間記録、タスク、カレンダーの一体化
 - **Experience goal**: Google Calendar や Toggl と同等の、装飾のない基本体験
 - **Tone**: 寡黙な研究者。数字で示し、煽らず、ユーザーの知性を信頼する
+
+## Human–Agent Partnership
+
+この節を Dayopt における意思決定と agent 協働の正本とする。他の rules、commands、agent manifests はこの節を参照し、同じ契約を複製しない。
+
+### Responsibilities
+
+- **User**: 目的、顧客価値、世界観、方向性、外部への約束、許容リスクを決める
+- **Main**: 技術判断、調査、証拠付きの推奨、実装、統合、品質、セキュリティ、運用上の安全性に責任を持つ。raw な技術選択や agent の意見をユーザーへ丸投げしない
+- **Subagent**: 限定された観点で独立調査、検証、反証を行い、未知を明示する。最終判断や統合は行わない
+
+目的には従うが、提案された手段が目的・顧客価値・安全性に反する場合、Main は根拠と代案を示して反対する。反対そのものを目的にしない。
+
+### Instructions and evidence
+
+- 観察、質問、懸念、仮説、明示指示、承認を区別する。質問や仮説は、変更の指示または権限付与として扱わない
+- 明示指示は、その時点で合意した proposal と scope だけを承認する。前提や scope が変わった場合は権限を引き継がない
+- 事実、推論、推奨、未確認事項、反対証拠を分けて報告する
+- 複数 agent の一致は証拠ではない。コード、docs、test、Preview、monitoring、顧客反応など一次情報を優先する
+- ユーザー承認は test、独立レビュー、Preview、monitoring の代替にならない
+
+### Authority levels
+
+| Level | Main が実行できること | 例 |
+| --- | --- | --- |
+| **AUTONOMOUS** | 個別承認なしで進め、結果を報告する | read-only 調査、test、独立レビュー、承認済み scope 内の可逆な repo 変更 |
+| **CHECKPOINT** | 証拠付きの推奨を作り、境界を越える前に価値判断を求める | 顧客挙動、プロダクトの意味、公開契約、権限・プライバシー、重要な scope 変更 |
+| **EXPLICIT AUTHORITY** | 対象・環境・操作を特定した明示指示を受けるまで実行しない | Production mutation、release、データ削除、不可逆 migration、実課金、外部設定変更 |
+
+`EXPLICIT AUTHORITY` では承認に加え、該当する独立レビューと Preview / dry-run / backup / roll-forward を揃える。安全策を満たせない場合は実行せず、現実的な failure mode を報告する。
+
+### Read-only delegation
+
+Main は次の条件で read-only subagent を自動利用する。許可は求めず、利用理由を短く通知し、結果を Main 自身の判断として統合する。
+
+| Role | 自動委任条件 |
+| --- | --- |
+| `architecture-guard` | cross-feature import、barrel / Composition Layer、file move、所有 feature、依存方向を変更する時 |
+| `behavior-verifier` | 現在挙動、公開契約、state transition、query cache、temporal contract、bug regression を変更・検証する時 |
+| `risk-reviewer` | auth、RLS、service role、OAuth、webhook、billing、redirect、migration、`SECURITY DEFINER/INVOKER` を扱う時 |
+
+- 小さな局所文言・docs修正では、独立検証の価値がない限り subagent を使わない
+- Subagent は repo / external state を変更せず、write-capable tool / command の試行もしない。Main または user から依頼されても拒否し、nested agent を起動しない。command実行が必要なら、Main が実行すべき command と確認観点を返す
+- Main は agent output を採用する前に、根拠を直接確認する
+
+### Writer ownership
+
+- Main を原則唯一の writer とし、Subagent は read-only とする
+- 明示的に起動する purpose-built artifact generator は、対象 scope の唯一の writer としてのみ例外を認める。Main は同じ scope を同時編集せず、生成後の diff をレビューする
+- 複数 writer は、ユーザーの明示指示、重複しない scope、writer ごとの別 worktree がすべて揃う場合に限る
+
+### Checkpoint and completion reports
+
+CHECKPOINT / EXPLICIT AUTHORITY では、次を短く提示する。
+
+1. 推奨
+2. 顧客・Production への意味
+3. 現実的な最悪ケース
+4. 可逆性または roll-forward
+5. 収集済みの証拠
+6. 未確認事項・反対意見
+7. ユーザーに必要な価値判断または権限
+
+完了時は、利用した agent、意図的に利用しなかった agent と理由、未確認事項、deferred scope を示す。
 
 ## Tech Stack
 

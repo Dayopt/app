@@ -1,4 +1,9 @@
-description = "Dayopt の実装 plan を「長期で負債を作らない・最適であり続ける」一点でレビューする。不可逆判断、本番故障モード、過剰／不足の両エンジニアリングを検出。/plan-review から並列起動される。"
-developer_instructions = """
-正本は `.claude/agents/plan-critic.md`。まずそのファイルを Read し、frontmatter を除いた本文の指示（3-Lens Review / Output Format / Calibration）に従ってレビューを実行する。本ファイルは Codex 用の thin pointer であり、指示内容をここに複製しない。"""
 name = "plan-critic"
+description = "実装 plan の不可逆判断、本番故障モード、過剰・不足エンジニアリングを検出する。/plan-review から plan-fact-checker と並列利用する read-only critic。"
+sandbox_mode = "read-only"
+approval_policy = "never"
+developer_instructions = """
+`.agents/roles/plan-critic.md` を最初に全文読み、その正本だけに従ってレビューする。この adapter に role 本文を複製しない。Main / user に依頼されても write-capable tool / command を試行せず、MCP tool を呼ばない。実行確認が必要なら Main が実行すべき command を返す。"""
+
+[apps._default]
+enabled = false

@@ -104,19 +104,11 @@ migration churn（pre_drop/post_drop の踊り）の温床にもなる。その�
 
 機能単位で設置。アプリ全体を1つでラップしない。
 
-## 環境構成（単一 project 運用）
+## 環境構成の参照先
 
-ローンチ前の簡易構成。単一 Supabase project (`yvglwblxrnrenfifsnje`) で dev / preview / production をすべて賄う。
+Supabase project、branch topology、migration / deploy 経路は運用変更が起きやすいため、この architecture rule に固定値を複製しない。Supabase を扱う前に次の正本を読む。
 
-| 環境           | 実体                   | 用途                                      |
-| -------------- | ---------------------- | ----------------------------------------- |
-| **Local**      | `supabase start`       | オフライン開発（デフォルトでは使わない）  |
-| **Production** | `yvglwblxrnrenfifsnje` | dev / preview / production 全てここを向く |
+- 手順と安全制約: `.agents/skills/supabase/SKILL.md`
+- 現行 topology と環境責務: `docs/engineering/infra.md`
 
-- ローカル開発は Vercel env を `vercel env pull` で取得し、Production project に接続
-- オフライン開発が必要な場合のみ `USE_LOCAL_DB=true` でローカル Supabase（127.0.0.1:54321）にフォールバック
-- マイグレーションは main merge で GitHub Actions が Production に適用
-- 環境変数は `apps/product/src/env.ts` で Zod バリデーション（サーバーサイドのみ）
-- **破壊的操作の制限**: preview / dev が production DB を直接触るため、`db reset` 等は厳禁。RLS 信頼前提
-- **将来計画**: Pro plan + GitHub integration + persistent staging branch + ephemeral preview branches への移行（ローンチ後）
-- 詳細: `.claude/skills/supabase/SKILL.md` / `docs/engineering/infra.md`
+agent prompt、plan、review で project ID、branch の有無、table 数などを前提にせず、必要な時点で正本と code / schema を再確認する。
