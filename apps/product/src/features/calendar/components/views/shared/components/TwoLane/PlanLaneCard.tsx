@@ -16,6 +16,7 @@ import type { PlanEvent } from '@/features/timeblock';
 import { cn } from '@dayopt/components';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
+import { DayDiffMarker } from './DayDiffMarker';
 
 interface PlanLaneCardProps {
   event: PlanEvent;
@@ -31,6 +32,8 @@ interface PlanLaneCardProps {
   disableDrag?: boolean | undefined;
   /** 過去 plan などリサイズだけを禁止する場合 true */
   disableResize?: boolean | undefined;
+  /** Compare panel に表示中の entry であることを示す */
+  showDayDiffMarker?: boolean | undefined;
   onClick?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
@@ -64,6 +67,7 @@ export function PlanLaneCard({
   isActive = false,
   disableDrag = false,
   disableResize = false,
+  showDayDiffMarker = false,
   onClick,
   onContextMenu,
   onPointerDown,
@@ -98,6 +102,7 @@ export function PlanLaneCard({
         isUnrecorded ? 'border-dashed' : 'border-solid',
         'text-foreground bg-transparent',
         isActive && 'ring-ring ring-2',
+        showDayDiffMarker && 'pr-7',
         canDrag ? 'cursor-grab' : 'cursor-pointer',
         className,
       )}
@@ -135,6 +140,7 @@ export function PlanLaneCard({
           {formatTimeRange(event.displayStartDate, event.displayEndDate)}
         </p>
       )}
+      {showDayDiffMarker && <DayDiffMarker />}
       {canDrag && !disableResize && onResizeStart && (
         <div
           role="slider"

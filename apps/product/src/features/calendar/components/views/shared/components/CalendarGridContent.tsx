@@ -291,6 +291,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
               interactionState={state}
               dayIndex={dayIndex}
               enableCrossDayDrag={enableCrossDayDrag}
+              showDayDiffMarker={dayDiffEntryIds?.has(entry.id) ?? false}
               onEntryClick={onEntryClick}
               onEntryContextMenu={onEntryContextMenu}
               onPointerDown={handlers.handlePointerDown}

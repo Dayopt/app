@@ -215,7 +215,10 @@ export function computeTimeblockDayDiffs(
       continue;
     }
 
-    items.push(buildRecordedItem(plan, linkedRecords, duration, bounds));
+    const recordedItem = buildRecordedItem(plan, linkedRecords, duration, bounds);
+    if (recordedItem.diffMinutes !== 0) {
+      items.push(recordedItem);
+    }
   }
 
   items.sort((a, b) => a.sortTime - b.sortTime || a.title.localeCompare(b.title));

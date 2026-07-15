@@ -17,6 +17,7 @@ import type { RecordEvent } from '@/features/timeblock';
 import { cn } from '@dayopt/components';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
+import { DayDiffMarker } from './DayDiffMarker';
 import { DiffBadge } from './DiffBadge';
 
 interface RecordLaneCardProps {
@@ -31,6 +32,8 @@ interface RecordLaneCardProps {
   isActive?: boolean | undefined;
   /** auto_migrated など RLS で不変な record。ドラッグ・リサイズを禁止する */
   disableDrag?: boolean | undefined;
+  /** Compare panel に表示中の entry であることを示す */
+  showDayDiffMarker?: boolean | undefined;
   onClick?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
@@ -59,6 +62,7 @@ export function RecordLaneCard({
   className,
   isActive = false,
   disableDrag = false,
+  showDayDiffMarker = false,
   onClick,
   onContextMenu,
   onPointerDown,
@@ -86,6 +90,7 @@ export function RecordLaneCard({
         colorClasses?.tint ?? 'bg-card',
         'text-foreground',
         isActive && 'ring-ring ring-2',
+        showDayDiffMarker && 'pr-7',
         canDrag ? 'cursor-grab' : 'cursor-pointer',
         className,
       )}
@@ -128,6 +133,7 @@ export function RecordLaneCard({
           {t('timeblock.inspector.unplanned')}
         </span>
       )}
+      {showDayDiffMarker && <DayDiffMarker />}
       {canDrag && onResizeStart && (
         <div
           role="slider"

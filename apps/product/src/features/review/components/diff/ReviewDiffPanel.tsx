@@ -113,7 +113,7 @@ export function ReviewDiffPanel({
           <SummaryMetric
             label={t('calendar.compare.rail.summary.diff')}
             value={formatSignedDuration(t, diff.summary.diffMinutes)}
-            valueClassName={diff.summary.diffMinutes >= 0 ? 'text-success' : 'text-destructive'}
+            valueClassName="text-foreground"
             emphasis
           />
           <SummaryMetric
@@ -232,16 +232,18 @@ function SummaryMetric({
 function DiffBadge({ item }: { item: ReviewDiffItem }) {
   const t = useTranslations();
 
+  if (item.diffMinutes === 0 && item.startDiffMinutes === 0 && item.endDiffMinutes === 0) {
+    return null;
+  }
+
   const content = diffBadgeLabel(t, item);
-  const isPositive = item.kind === 'unplanned' || item.diffMinutes > 0 || item.startDiffMinutes < 0;
-  const Icon = isPositive ? ArrowUp : ArrowDown;
+  const pointsUp = item.kind === 'unplanned' || item.diffMinutes > 0 || item.startDiffMinutes < 0;
+  const Icon = pointsUp ? ArrowUp : ArrowDown;
 
   return (
     <span
-      className={cn(
-        'bg-container border-border-subtle mt-1 flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs tabular-nums',
-        isPositive ? 'text-success' : 'text-destructive',
-      )}
+      data-review-diff-badge
+      className="bg-container border-border-subtle text-foreground mt-1 flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs tabular-nums"
     >
       <Icon className="size-3.5" aria-hidden="true" />
       {content}

@@ -6,18 +6,6 @@ import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 
 import { RecordLaneCard } from './RecordLaneCard';
 
-/**
- * Record レーン用カード。塗り(主役)+差分バッジ(±0非表示)+予定外マーカーの全 variant。
- */
-const meta = {
-  title: 'Product/Features/Calendar/TwoLane/RecordLaneCard',
-  parameters: { layout: 'padded' },
-  tags: ['autodocs'],
-} satisfies Meta;
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
 function Slot({ children, height = 90 }: { children: React.ReactNode; height?: number }) {
   return (
     <div
@@ -49,6 +37,25 @@ function makeEvent(overrides: Partial<RecordEvent> = {}): RecordEvent {
     ...overrides,
   };
 }
+
+/**
+ * Record レーン用カード。塗り(主役)+差分バッジ(±0非表示)+予定外マーカーの全 variant。
+ */
+const meta = {
+  title: 'Product/Features/Calendar/TwoLane/RecordLaneCard',
+  component: RecordLaneCard,
+  parameters: { layout: 'padded' },
+  tags: ['autodocs'],
+  args: {
+    event: makeEvent(),
+    position: basePosition,
+    tagName: 'Deep Work',
+  },
+  argTypes: { showDayDiffMarker: { control: 'boolean' } },
+} satisfies Meta<typeof RecordLaneCard>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 /** plan_id あり・差分なし(±0)。バッジは表示しない。 */
 export const RecordedNoDiff: Story = {
@@ -134,53 +141,58 @@ export const Compact: Story = {
   ),
 };
 
+/** Compare panel に表示中の予定外Record。 */
+export const CompareTarget: Story = {
+  render: () => (
+    <Slot>
+      <RecordLaneCard
+        event={makeEvent({ planId: null, diffMinutes: undefined })}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="violet"
+        showDayDiffMarker
+      />
+    </Slot>
+  ),
+};
+
+/** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-wrap items-start gap-4">
-      <div className="space-y-2">
-        <p className="text-muted-foreground text-xs">差分なし</p>
-        <Slot>
-          <RecordLaneCard
-            event={makeEvent({ diffMinutes: 0 })}
-            position={basePosition}
-            tagName="Deep Work"
-            tagColor="blue"
-          />
-        </Slot>
-      </div>
-      <div className="space-y-2">
-        <p className="text-muted-foreground text-xs">超過(+20min)</p>
-        <Slot>
-          <RecordLaneCard
-            event={makeEvent({ diffMinutes: 20 })}
-            position={basePosition}
-            tagName="Deep Work"
-            tagColor="teal"
-          />
-        </Slot>
-      </div>
-      <div className="space-y-2">
-        <p className="text-muted-foreground text-xs">前倒し(-15min)</p>
-        <Slot>
-          <RecordLaneCard
-            event={makeEvent({ diffMinutes: -15 })}
-            position={basePosition}
-            tagName="Deep Work"
-            tagColor="amber"
-          />
-        </Slot>
-      </div>
-      <div className="space-y-2">
-        <p className="text-muted-foreground text-xs">予定外</p>
-        <Slot>
-          <RecordLaneCard
-            event={makeEvent({ planId: null, diffMinutes: undefined })}
-            position={basePosition}
-            tagName="Deep Work"
-            tagColor="violet"
-          />
-        </Slot>
-      </div>
+      <Slot>
+        <RecordLaneCard
+          event={makeEvent({ diffMinutes: 0 })}
+          position={basePosition}
+          tagName="Deep Work"
+          tagColor="blue"
+        />
+      </Slot>
+      <Slot>
+        <RecordLaneCard
+          event={makeEvent({ diffMinutes: 20 })}
+          position={basePosition}
+          tagName="Deep Work"
+          tagColor="teal"
+        />
+      </Slot>
+      <Slot>
+        <RecordLaneCard
+          event={makeEvent({ diffMinutes: -15 })}
+          position={basePosition}
+          tagName="Deep Work"
+          tagColor="amber"
+        />
+      </Slot>
+      <Slot>
+        <RecordLaneCard
+          event={makeEvent({ planId: null, diffMinutes: undefined })}
+          position={basePosition}
+          tagName="Deep Work"
+          tagColor="violet"
+          showDayDiffMarker
+        />
+      </Slot>
     </div>
   ),
 };

@@ -76,4 +76,56 @@ describe('TwoLane cards', () => {
     expect(screen.getByRole('button', { name: 'common.tags.noTag' })).toBeInTheDocument();
     expect(screen.queryByText('Legacy plan title')).not.toBeInTheDocument();
   });
+
+  it('Compare対象のPlanカードにmarkerを表示する', () => {
+    const { container } = render(
+      <PlanLaneCard event={plan} position={position} tagName="Deep Work" showDayDiffMarker />,
+    );
+
+    expect(container.querySelector('[data-entry-day-diff-marker]')).not.toBeNull();
+  });
+
+  it('Compare対象のRecordカードにmarkerを表示する', () => {
+    const { container } = render(
+      <RecordLaneCard event={record} position={position} tagName="Deep Work" showDayDiffMarker />,
+    );
+
+    expect(container.querySelector('[data-entry-day-diff-marker]')).not.toBeNull();
+  });
+
+  it('Compare対象でないカードにはmarkerを表示しない', () => {
+    const { container } = render(
+      <div>
+        <PlanLaneCard event={plan} position={position} tagName="Deep Work" />
+        <RecordLaneCard event={record} position={position} tagName="Deep Work" />
+      </div>,
+    );
+
+    expect(container.querySelector('[data-entry-day-diff-marker]')).toBeNull();
+  });
+
+  it('Recordカードは差分0のbadgeを隠し、差分がある場合も中立色で表示する', () => {
+    const { container, rerender } = render(
+      <RecordLaneCard
+        event={{ ...record, diffMinutes: 0 }}
+        position={position}
+        tagName="Deep Work"
+      />,
+    );
+
+    expect(container.querySelector('[data-record-diff-badge]')).toBeNull();
+
+    rerender(
+      <RecordLaneCard
+        event={{ ...record, diffMinutes: 20 }}
+        position={position}
+        tagName="Deep Work"
+      />,
+    );
+
+    const badge = container.querySelector('[data-record-diff-badge]');
+    expect(badge).not.toBeNull();
+    expect(badge).toHaveClass('text-foreground');
+    expect(badge).not.toHaveClass('text-success', 'text-destructive');
+  });
 });

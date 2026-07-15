@@ -17,6 +17,8 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 - 過去Planの時間は凍結し、Recordの時間は訂正できる
 - 過去PlanをRecordレーンへdragすると、drop previewの時間帯で元Planに紐づくRecordを作る。元Planは移動せず、Record同士が重ならなければ同じPlanへ複数回記録できる
 - 1つのPlanに複数のRecordがある場合、Calendarの差分は関連Recordの合計時間から計算し、代表するRecord card 1枚だけに表示する。`±0`は表示しない
+- `panel=diff`では差分一覧の対象をcompare markerで通常cardにも示す。予定に対する記録・skip・未記録はPlan、予定外の記録はRecordを対象とし、関連Recordすべてへ重複表示しない
+- 差分の正負は符号と方向iconで示し、成功・失敗を意味する色は使わない
 - `panel=review` / `panel=diff`で単一の右panel slotを開く。panel UIはReview featureが所有し、Calendarは表示範囲とcompositionを所有する
 - Diffの対象期間はCalendarの現在viewを正とし、day / week / multi-dayの範囲をそのまま使う
 

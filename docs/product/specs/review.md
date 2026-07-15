@@ -17,6 +17,8 @@ Calendarの右panelでPlanとRecordの差分を読み、次の計画に使うた
 - DiffはCalendarが取得したPlan / Recordとその関連コンテキストから導出し、Review専用RPCは呼ばない
 - 差分は未記録、やらなかった、予定に対する記録、予定外の記録を基礎に表示する
 - 予定に対する記録はPlan単位でまとめ、複数の関連Recordがある場合は記録時間を合計してPlanとの差分を計算する
+- Planとの差分が`±0`の項目は一覧に表示しない。期間全体の差分が0の場合はsummaryの`0分`を中立表示する
+- 差分の正負は符号と方向iconで示し、成功・失敗を意味する色や評価ラベルは使わない
 - PlanとRecordが別日の場合、PlanはPlan自身の日、RecordはRecord自身の日へ計上する。Planの日は未記録、Recordの日は関係を保った記録として表示する
 - Review UIとStorybookはReview featureが所有し、Calendar shellがpanel slotへ合成する
 

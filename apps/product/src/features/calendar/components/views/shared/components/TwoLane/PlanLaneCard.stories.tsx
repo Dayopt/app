@@ -6,16 +6,6 @@ import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 
 import { PlanLaneCard } from './PlanLaneCard';
 
-/** Plan レーン用カード。overview.md §4「過去 Plan の見え方」の全 status variant。 */
-const meta = {
-  title: 'Product/Features/Calendar/TwoLane/PlanLaneCard',
-  parameters: { layout: 'padded' },
-  tags: ['autodocs'],
-} satisfies Meta;
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
 function Slot({ children, height = 90 }: { children: React.ReactNode; height?: number }) {
   return (
     <div
@@ -46,6 +36,23 @@ function makeEvent(status: PlanEventStatus, overrides: Partial<PlanEvent> = {}):
     ...overrides,
   };
 }
+
+/** Plan レーン用カード。overview.md §4「過去 Plan の見え方」の全 status variant。 */
+const meta = {
+  title: 'Product/Features/Calendar/TwoLane/PlanLaneCard',
+  component: PlanLaneCard,
+  parameters: { layout: 'padded' },
+  tags: ['autodocs'],
+  args: {
+    event: makeEvent('upcoming'),
+    position: basePosition,
+    tagName: 'Deep Work',
+  },
+  argTypes: { showDayDiffMarker: { control: 'boolean' } },
+} satisfies Meta<typeof PlanLaneCard>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Upcoming: Story = {
   render: () => (
@@ -143,6 +150,22 @@ export const Compact: Story = {
   ),
 };
 
+/** Compare panel に表示中のPlan。 */
+export const CompareTarget: Story = {
+  render: () => (
+    <Slot>
+      <PlanLaneCard
+        event={makeEvent('recorded')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="indigo"
+        showDayDiffMarker
+      />
+    </Slot>
+  ),
+};
+
+/** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-wrap items-start gap-4">
@@ -155,17 +178,15 @@ export const AllPatterns: Story = {
           ['skipped', 'gray'],
         ] as const
       ).map(([status, color]) => (
-        <div key={status} className="space-y-2">
-          <p className="text-muted-foreground text-xs">{status}</p>
-          <Slot>
-            <PlanLaneCard
-              event={makeEvent(status)}
-              position={basePosition}
-              tagName="Deep Work"
-              tagColor={color}
-            />
-          </Slot>
-        </div>
+        <Slot key={status}>
+          <PlanLaneCard
+            event={makeEvent(status)}
+            position={basePosition}
+            tagName="Deep Work"
+            tagColor={color}
+            showDayDiffMarker={status === 'recorded'}
+          />
+        </Slot>
       ))}
     </div>
   ),
