@@ -32,7 +32,7 @@ available under the Apache 2.0 license (https://github.com/puppeteer/puppeteer/b
 
 
 ================================================================================
-import-in-the-middle@3.3.0
+import-in-the-middle@3.3.1
 ================================================================================
 
 import-in-the-middle is licensed for use as follows:
