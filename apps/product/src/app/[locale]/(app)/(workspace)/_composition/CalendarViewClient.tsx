@@ -150,6 +150,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const reviewPanel = (
     <CalendarReviewPanel
       currentDate={currentDate}
+      displayRange={composition.viewDateRange}
       selectedTagId={reviewTagId}
       onSelectedTagIdChange={setReviewTagId}
       onClose={() => setPanelKind(null)}
@@ -158,6 +159,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const mobileReviewPanel = (
     <CalendarReviewPanel
       currentDate={currentDate}
+      displayRange={composition.viewDateRange}
       selectedTagId={reviewTagId}
       onSelectedTagIdChange={setReviewTagId}
       onClose={() => setPanelKind(null)}

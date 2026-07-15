@@ -479,9 +479,14 @@ function SortableParentBlock({
                 parent_id: node.tag.parent_id ?? null,
               })
             }
-            onViewStats={() =>
-              router.push(buildCalendarReviewPanelPath(locale, reviewDate, node.tag.id))
-            }
+            onViewStats={() => {
+              if (navigation) {
+                navigation.setPanelKind('review', { reviewTagId: node.tag.id });
+                return;
+              }
+
+              router.push(buildCalendarReviewPanelPath(locale, reviewDate, node.tag.id));
+            }}
             onDeleteGroup={() => onDeleteTag(node.tag.id, node.tag.name)}
             onRowClick={() => onOpenPopover(node.tag.id)}
             highlighted={isPopoverOpen}
@@ -751,9 +756,14 @@ function SortableTagItem({
                   openTagMergeModal({ id: tag.id, name: tag.name, color: tag.color ?? null })
                 }
                 onShowOnlyTag={onShowOnlyTag}
-                onViewStats={() =>
-                  router.push(buildCalendarReviewPanelPath(locale, reviewDate, tag.id))
-                }
+                onViewStats={() => {
+                  if (navigation) {
+                    navigation.setPanelKind('review', { reviewTagId: tag.id });
+                    return;
+                  }
+
+                  router.push(buildCalendarReviewPanelPath(locale, reviewDate, tag.id));
+                }}
                 onDeleteTag={onDeleteTag}
               />
             </DropdownMenu>

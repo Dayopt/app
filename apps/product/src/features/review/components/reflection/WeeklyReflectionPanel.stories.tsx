@@ -50,7 +50,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 週次 Review の1画面構成。 */
+/** Calendar の表示範囲に対応する Review。 */
 export const Default: Story = {
   args: {
     trackedMinutes: 2220,

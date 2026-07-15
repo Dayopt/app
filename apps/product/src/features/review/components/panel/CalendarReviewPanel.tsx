@@ -21,6 +21,7 @@ import {
 import { deriveAccuracy, deriveBarComparison, deriveStatement } from '../../domain/timePL/derivers';
 import { useReviewPageData } from '../../hooks/useReviewPageData';
 import { useTimePLData } from '../../hooks/useTimePLData';
+import type { ReviewDisplayRange } from '../../lib/compute-date-range';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
 import { ReviewMetricRow, WeeklyReflectionPanel } from '../reflection/WeeklyReflectionPanel';
 import {
@@ -33,6 +34,7 @@ const ALL_SCOPE_VALUE = '__all__';
 
 interface CalendarReviewPanelProps {
   currentDate: Date;
+  displayRange: ReviewDisplayRange;
   selectedTagId: string | null;
   onSelectedTagIdChange: (tagId: string | null) => void;
   onClose: () => void;
@@ -42,6 +44,7 @@ interface CalendarReviewPanelProps {
 
 export function CalendarReviewPanel({
   currentDate,
+  displayRange,
   selectedTagId,
   onSelectedTagIdChange,
   onClose,
@@ -50,17 +53,19 @@ export function CalendarReviewPanel({
 }: CalendarReviewPanelProps) {
   const t = useTranslations('calendar.stats');
   const tAll = useTranslations();
-  const setGranularity = useReviewFilterStore((s) => s.setGranularity);
   const setCurrentDate = useReviewFilterStore((s) => s.setCurrentDate);
   const { data: tags } = useTags();
 
   useEffect(() => {
-    setGranularity('week');
     setCurrentDate(currentDate);
-  }, [currentDate, setCurrentDate, setGranularity]);
+  }, [currentDate, setCurrentDate]);
 
-  const { data: pageData, isPending, isError } = useReviewPageData();
-  const { data: timePLData, isPending: isTimePLPending, isError: isTimePLError } = useTimePLData();
+  const { data: pageData, isPending, isError } = useReviewPageData(displayRange, currentDate);
+  const {
+    data: timePLData,
+    isPending: isTimePLPending,
+    isError: isTimePLError,
+  } = useTimePLData(displayRange);
 
   const statement = useMemo(() => (timePLData ? deriveStatement(timePLData) : null), [timePLData]);
   const accuracy = useMemo(() => (timePLData ? deriveAccuracy(timePLData) : null), [timePLData]);
