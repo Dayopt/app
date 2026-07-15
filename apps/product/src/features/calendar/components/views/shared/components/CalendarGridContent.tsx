@@ -12,7 +12,10 @@ import { cn } from '@dayopt/components';
 
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
-import { calculateTwoLaneStylesForCalendarEvents } from '../../../../lib/two-lane-layout';
+import {
+  calculateTwoLaneStylesForCalendarEvents,
+  DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+} from '../../../../lib/two-lane-layout';
 import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
@@ -110,6 +113,21 @@ interface CalendarGridContentProps {
   className?: string | undefined;
 }
 
+type CalendarGridViewMode = NonNullable<CalendarGridContentProps['viewMode']>;
+
+export function resolveCalendarLanePresentation(viewMode: CalendarGridViewMode): {
+  planLaneWidthPercent: number;
+  compactCards: boolean;
+} {
+  const visibleDayCount =
+    viewMode === 'day' ? 1 : viewMode === 'week' ? 7 : Number.parseInt(viewMode, 10);
+
+  return {
+    planLaneWidthPercent: DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+    compactCards: visibleDayCount >= 5,
+  };
+}
+
 // ========================================
 // Component
 // ========================================
@@ -142,8 +160,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
-  // Week/複数日ビューはカラム幅が狭いため Plan レーンを細くする（Day は既定 38%）。
-  const planLaneWidthPercent = viewMode === 'day' ? 38 : 20;
+  const { planLaneWidthPercent, compactCards } = resolveCalendarLanePresentation(viewMode);
 
   const wrappedOnEventUpdate = useCallback(
     (
@@ -281,6 +298,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
               interactionState={state}
               dayIndex={dayIndex}
               enableCrossDayDrag={enableCrossDayDrag}
+              compactCards={compactCards}
               onEntryClick={onEntryClick}
               onEntryContextMenu={onEntryContextMenu}
               onPointerDown={handlers.handlePointerDown}

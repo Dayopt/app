@@ -35,6 +35,7 @@ interface TwoLaneEntryRendererProps {
   interactionState: InteractionState;
   dayIndex: number;
   enableCrossDayDrag: boolean;
+  compactCards: boolean;
   onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
   onEntryContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown: (
@@ -86,6 +87,7 @@ export function TwoLaneTimeblockRenderer({
   interactionState,
   dayIndex,
   enableCrossDayDrag,
+  compactCards,
   onEntryClick,
   onEntryContextMenu,
   onPointerDown,
@@ -163,6 +165,7 @@ export function TwoLaneTimeblockRenderer({
         isActive={isActive}
         disableDrag={disableDrag}
         disableResize={disableResize}
+        compact={compactCards}
         styleOverride={styleOverride}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
@@ -180,6 +183,7 @@ export function TwoLaneTimeblockRenderer({
       tagColor={tagColor}
       isActive={isActive}
       disableDrag={disableDrag}
+      compact={compactCards}
       styleOverride={styleOverride}
       onClick={handleClick}
       onContextMenu={handleContextMenu}

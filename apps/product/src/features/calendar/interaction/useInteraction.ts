@@ -17,7 +17,7 @@ import type { CalendarEvent } from '../types/calendar.types';
 import { isPlanRecordDrop } from '@/features/timeblock';
 import { checkClientSideOverlapByKind } from '../lib/overlap';
 import { hasCalendarActualRangeDiff } from '../lib/timeblock-time';
-import { resolveTwoLaneFromPointer } from '../lib/two-lane-layout';
+import { DEFAULT_PLAN_LANE_WIDTH_PERCENT, resolveTwoLaneFromPointer } from '../lib/two-lane-layout';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
 import { IDLE, interactionReducer } from '../domain/interaction/machine';
@@ -145,7 +145,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
     events: props.events,
     allEvents: props.allEventsForOverlapCheck ?? props.events,
     hourHeight: props.hourHeight,
-    planLaneWidthPercent: props.planLaneWidthPercent ?? 38,
+    planLaneWidthPercent: props.planLaneWidthPercent ?? DEFAULT_PLAN_LANE_WIDTH_PERCENT,
     date: props.date,
     displayDates: props.displayDates,
     viewMode: props.viewMode ?? 'day',
@@ -164,7 +164,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
     events: props.events,
     allEvents: props.allEventsForOverlapCheck ?? props.events,
     hourHeight: props.hourHeight,
-    planLaneWidthPercent: props.planLaneWidthPercent ?? 38,
+    planLaneWidthPercent: props.planLaneWidthPercent ?? DEFAULT_PLAN_LANE_WIDTH_PERCENT,
     date: props.date,
     displayDates: props.displayDates,
     viewMode: props.viewMode ?? 'day',

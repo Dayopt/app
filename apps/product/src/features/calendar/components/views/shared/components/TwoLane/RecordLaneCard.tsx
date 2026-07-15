@@ -28,6 +28,8 @@ interface RecordLaneCardProps {
   isActive?: boolean | undefined;
   /** auto_migrated など RLS で不変な record。ドラッグ・リサイズを禁止する */
   disableDrag?: boolean | undefined;
+  /** 複数日表示の狭い列では secondary detail と余白を減らす */
+  compact?: boolean | undefined;
   onClick?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
@@ -54,6 +56,7 @@ export function RecordLaneCard({
   className,
   isActive = false,
   disableDrag = false,
+  compact = false,
   onClick,
   onContextMenu,
   onPointerDown,
@@ -65,7 +68,7 @@ export function RecordLaneCard({
   const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
   const isUnplanned = event.planId == null;
   const hasDiff = event.diffMinutes != null && event.diffMinutes !== 0;
-  const showDetails = position.height >= DETAIL_HEIGHT_THRESHOLD;
+  const showDetails = !compact && position.height >= DETAIL_HEIGHT_THRESHOLD;
   const canDrag = !disableDrag && Boolean(onPointerDown);
 
   return (
@@ -77,7 +80,8 @@ export function RecordLaneCard({
       role="button"
       aria-label={event.title || t('timeblock.untitled')}
       className={cn(
-        'absolute flex flex-col gap-1 overflow-hidden rounded-lg px-2 py-1 text-xs',
+        'absolute flex flex-col gap-1 overflow-hidden rounded-lg py-1 text-xs',
+        compact ? 'px-1' : 'px-2',
         colorClasses?.tint ?? 'bg-card',
         'text-foreground',
         isActive && 'ring-ring ring-2',
@@ -108,14 +112,14 @@ export function RecordLaneCard({
     >
       <div className="flex items-start justify-between gap-1">
         <p className="truncate font-medium">{event.title || t('timeblock.untitled')}</p>
-        {hasDiff && <DiffBadge diffMinutes={event.diffMinutes ?? 0} />}
+        {hasDiff && !compact && <DiffBadge diffMinutes={event.diffMinutes ?? 0} />}
       </div>
       {showDetails && (
         <p className="text-muted-foreground truncate">
           {formatTimeRange(event.displayStartDate, event.displayEndDate)}
         </p>
       )}
-      {isUnplanned && (
+      {isUnplanned && !compact && (
         <span data-record-unplanned-marker className="text-muted-foreground truncate">
           {t('timeblock.inspector.unplanned')}
         </span>

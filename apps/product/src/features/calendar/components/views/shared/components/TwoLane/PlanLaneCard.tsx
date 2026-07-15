@@ -28,6 +28,8 @@ interface PlanLaneCardProps {
   disableDrag?: boolean | undefined;
   /** 過去 plan などリサイズだけを禁止する場合 true */
   disableResize?: boolean | undefined;
+  /** 複数日表示の狭い列では secondary detail と余白を減らす */
+  compact?: boolean | undefined;
   onClick?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown?: ((event: PlanEvent, e: React.MouseEvent) => void) | undefined;
@@ -59,6 +61,7 @@ export function PlanLaneCard({
   isActive = false,
   disableDrag = false,
   disableResize = false,
+  compact = false,
   onClick,
   onContextMenu,
   onPointerDown,
@@ -73,7 +76,7 @@ export function PlanLaneCard({
   const isSkipped = event.status === 'skipped';
   const isUnrecorded = event.status === 'unrecorded';
   const isRecorded = event.status === 'recorded';
-  const showDetails = position.height >= DETAIL_HEIGHT_THRESHOLD;
+  const showDetails = !compact && position.height >= DETAIL_HEIGHT_THRESHOLD;
   const canDrag = !disableDrag && Boolean(onPointerDown);
 
   return (
@@ -85,7 +88,8 @@ export function PlanLaneCard({
       role="button"
       aria-label={event.title || t('timeblock.untitled')}
       className={cn(
-        'absolute overflow-hidden rounded-lg border-2 px-2 py-1 text-xs',
+        'absolute overflow-hidden rounded-lg py-1 text-xs',
+        compact ? 'border px-1' : 'border-2 px-2',
         borderClass,
         // skip / 記録済みは控えめに沈める。未記録の過去 plan は静かなプロンプトとして
         // 破線で「まだ何かが足りない」を示す。
