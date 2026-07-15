@@ -73,7 +73,7 @@ export const Default: Story = {
     onTagClick: fn(),
   },
   render: (args) => (
-    <div className="border-border-subtle w-80 border p-4">
+    <div className="border-border-subtle w-64 border p-4">
       <WeeklyReflectionPanel {...args} />
     </div>
   ),
@@ -101,7 +101,7 @@ export const BlankHeavy: Story = {
     onTagClick: fn(),
   },
   render: (args) => (
-    <div className="border-border-subtle w-80 border p-4">
+    <div className="border-border-subtle w-64 border p-4">
       <WeeklyReflectionPanel {...args} />
     </div>
   ),
@@ -120,7 +120,7 @@ export const MinimalData: Story = {
     skipSummary: null,
   },
   render: (args) => (
-    <div className="border-border-subtle w-80 border p-4">
+    <div className="border-border-subtle w-64 border p-4">
       <WeeklyReflectionPanel {...args} />
     </div>
   ),
@@ -137,7 +137,7 @@ export const AllPatterns: Story = {
   },
   render: () => (
     <div className="flex flex-wrap items-start gap-4">
-      <div className="border-border-subtle w-80 border p-4">
+      <div className="border-border-subtle w-64 border p-4">
         <WeeklyReflectionPanel
           trackedMinutes={2220}
           planAccuracyRate={0.9}
@@ -159,7 +159,7 @@ export const AllPatterns: Story = {
           onTagClick={fn()}
         />
       </div>
-      <div className="border-border-subtle w-80 border p-4">
+      <div className="border-border-subtle w-64 border p-4">
         <WeeklyReflectionPanel
           trackedMinutes={1620}
           planAccuracyRate={0.82}
@@ -180,7 +180,7 @@ export const AllPatterns: Story = {
           onTagClick={fn()}
         />
       </div>
-      <div className="border-border-subtle w-80 border p-4">
+      <div className="border-border-subtle w-64 border p-4">
         <WeeklyReflectionPanel
           trackedMinutes={420}
           planAccuracyRate={null}

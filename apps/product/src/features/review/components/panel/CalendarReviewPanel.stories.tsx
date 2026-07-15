@@ -82,7 +82,7 @@ export const Default: Story = {
     selectedTagId: null,
     onSelectedTagIdChange: noop,
     onClose: noop,
-    className: 'border-border-subtle h-[560px] w-80 border',
+    className: 'border-border-subtle h-[560px] w-64 border',
   },
 };
 
@@ -93,7 +93,7 @@ export const TagSelected: Story = {
     selectedTagId: '1',
     onSelectedTagIdChange: noop,
     onClose: noop,
-    className: 'border-border-subtle h-[560px] w-80 border',
+    className: 'border-border-subtle h-[560px] w-64 border',
   },
 };
 
@@ -119,7 +119,7 @@ export const Loading: Story = {
     selectedTagId: null,
     onSelectedTagIdChange: noop,
     onClose: noop,
-    className: 'border-border-subtle h-[560px] w-80 border',
+    className: 'border-border-subtle h-[560px] w-64 border',
   },
   parameters: { trpcPending: true },
 };
@@ -131,7 +131,7 @@ export const Error: Story = {
     selectedTagId: null,
     onSelectedTagIdChange: noop,
     onClose: noop,
-    className: 'border-border-subtle h-[560px] w-80 border',
+    className: 'border-border-subtle h-[560px] w-64 border',
   },
   parameters: {
     trpcError: { path: 'statistics.getStatsPageData', code: 'INTERNAL_SERVER_ERROR' },
@@ -153,14 +153,14 @@ export const AllPatterns: Story = {
         selectedTagId={null}
         onSelectedTagIdChange={noop}
         onClose={noop}
-        className="border-border-subtle h-[560px] w-80 border"
+        className="border-border-subtle h-[560px] w-64 border"
       />
       <CalendarReviewPanel
         currentDate={new Date(2026, 3, 1)}
         selectedTagId="1"
         onSelectedTagIdChange={noop}
         onClose={noop}
-        className="border-border-subtle h-[560px] w-80 border"
+        className="border-border-subtle h-[560px] w-64 border"
       />
       <CalendarReviewPanel
         currentDate={new Date(2026, 3, 1)}
@@ -168,7 +168,7 @@ export const AllPatterns: Story = {
         onSelectedTagIdChange={noop}
         onClose={noop}
         variant="sheet"
-        className="w-80"
+        className="w-64"
       />
     </div>
   ),

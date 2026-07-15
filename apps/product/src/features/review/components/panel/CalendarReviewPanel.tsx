@@ -22,7 +22,7 @@ import { deriveAccuracy, deriveBarComparison, deriveStatement } from '../../doma
 import { useReviewPageData } from '../../hooks/useReviewPageData';
 import { useTimePLData } from '../../hooks/useTimePLData';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
-import { WeeklyReflectionPanel } from '../reflection/WeeklyReflectionPanel';
+import { ReviewMetricRow, WeeklyReflectionPanel } from '../reflection/WeeklyReflectionPanel';
 import {
   formatMinutesDuration,
   formatVariance,
@@ -154,16 +154,16 @@ export function CalendarReviewPanel({
                 <h3 className="min-w-0 flex-1 truncate text-sm font-medium">{selectedTagName}</h3>
               </div>
               {selectedRow ? (
-                <dl className="mt-4 grid grid-cols-3 gap-3">
-                  <MiniStat
+                <dl className="border-border-subtle divide-border-subtle mt-4 divide-y rounded-lg border">
+                  <ReviewMetricRow
                     label={t('overview.planned')}
                     value={formatMinutesDuration(selectedRow.budgetMinutes)}
                   />
-                  <MiniStat
+                  <ReviewMetricRow
                     label={t('overview.actual')}
                     value={formatMinutesDuration(selectedRow.actualMinutes)}
                   />
-                  <MiniStat
+                  <ReviewMetricRow
                     label={t('overview.diff')}
                     value={formatVariance(selectedRow.varianceMinutes)}
                     valueClassName={getVarianceColor(selectedRow.variancePercent)}
@@ -201,25 +201,6 @@ function ReviewPanelSkeleton() {
       </div>
       <Skeleton className="h-72 rounded-lg" />
       <Skeleton className="h-32 rounded-lg" />
-    </div>
-  );
-}
-
-function MiniStat({
-  label,
-  value,
-  valueClassName,
-}: {
-  label: string;
-  value: string;
-  valueClassName?: string | undefined;
-}) {
-  return (
-    <div>
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className={cn('mt-1 font-mono text-sm font-medium tabular-nums', valueClassName)}>
-        {value}
-      </dd>
     </div>
   );
 }
