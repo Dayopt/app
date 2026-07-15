@@ -52,6 +52,7 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
   tagName = null,
   tagColor = null,
   tagIcon = null,
+  timeFormat = '24h',
   position,
   onClick,
   onContextMenu,
@@ -421,7 +422,7 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
   // `group/entry` は子の resize handle icon が hover 時に visible になるための trigger
   const timeblockCardClasses = cn(
     'group/entry relative flex rounded-r-lg',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+    'focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
     // Draft: state-selected オーバーレイ
     isDraft &&
       // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の rounded-[inherit] は親カードの角丸継承が必須
@@ -697,6 +698,7 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
                 tagIcon={tagIcon}
                 isCompact={actualLayerHeight < 40}
                 showTime={actualLayerHeight >= 30}
+                timeFormat={timeFormat}
                 previewTime={previewTime}
               />
             )}
@@ -733,6 +735,7 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
             tagIcon={tagIcon}
             isCompact={contentLayerHeight < 40}
             showTime={contentLayerHeight >= 30}
+            timeFormat={timeFormat}
             previewTime={previewTime}
           />
         </div>

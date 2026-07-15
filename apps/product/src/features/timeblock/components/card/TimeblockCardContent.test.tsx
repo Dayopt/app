@@ -26,6 +26,12 @@ function renderContent(plan: CalendarEvent) {
 }
 
 describe('TimeblockCardContent', () => {
+  it('12時間表記ではカードの時刻範囲をAM/PMで表示する', () => {
+    render(<TimeblockCardContent plan={baseEntry} tagName="dev" timeFormat="12h" />);
+
+    expect(screen.getByText('1:00 PM 〜 3:00 PM')).toBeInTheDocument();
+  });
+
   it('actual がずれた planned entry は Inspector と同じ予定/記録ラベルをアイコン行に持つ', () => {
     const { container } = renderContent({
       ...baseEntry,
