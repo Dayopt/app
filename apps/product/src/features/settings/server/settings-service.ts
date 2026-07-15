@@ -95,9 +95,11 @@ export class SettingsService {
     if (input.theme !== undefined) updateData.theme = input.theme;
     if (input.preferredLocale !== undefined) updateData.preferred_locale = input.preferredLocale;
 
-    const { error } = await this.supabase
+    const { data, error } = await this.supabase
       .from('user_settings')
-      .upsert(updateData, { onConflict: 'user_id' });
+      .upsert(updateData, { onConflict: 'user_id' })
+      .select(publicUserSettingsSelect)
+      .single();
 
     if (!error && input.timezone !== undefined) {
       invalidateUserTimezoneCache(userId);
@@ -123,7 +125,7 @@ export class SettingsService {
       throw new SettingsServiceError('UPDATE_FAILED', error.message);
     }
 
-    return { success: true };
+    return { success: true, settings: data };
   }
 
   async updateProfile(userId: string, input: ProfileUpdateInput) {

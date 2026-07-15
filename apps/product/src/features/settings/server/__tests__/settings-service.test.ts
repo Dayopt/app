@@ -138,8 +138,9 @@ describe('SettingsService', () => {
         },
         { onConflict: 'user_id' },
       );
+      expect(query.select).toHaveBeenCalledWith(publicUserSettingsSelect);
       expect(invalidateUserTimezoneCache).toHaveBeenCalledWith(USER_ID);
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, settings: settingsRow });
     });
 
     it('personalization を2つの atomic RPC で部分更新する', async () => {
