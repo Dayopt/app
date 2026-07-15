@@ -79,6 +79,55 @@ function createRecord(overrides: Partial<RecordRow> = {}): RecordRow {
   };
 }
 
+describe('PlanService.list', () => {
+  it('user scopeを維持して指定したidに絞り込む', async () => {
+    const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'];
+    const query = createChainableMock([]);
+    const { service, mockSupabase } = createPlanService();
+    mockSupabase.from.mockReturnValue(query);
+
+    await expect(service.list({ userId: USER_ID, ids })).resolves.toEqual([]);
+
+    expect(query.eq).toHaveBeenCalledWith('user_id', USER_ID);
+    expect(query.is).toHaveBeenCalledWith('deleted_at', null);
+    expect(query.in).toHaveBeenCalledWith('id', ids);
+  });
+
+  it('idsが空配列ならDBへ問い合わせず空配列を返す', async () => {
+    const { service, mockSupabase } = createPlanService();
+
+    await expect(service.list({ userId: USER_ID, ids: [] })).resolves.toEqual([]);
+
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+});
+
+describe('RecordService.list', () => {
+  it('user scopeを維持して指定したplan_idに絞り込む', async () => {
+    const planIds = [
+      '11111111-1111-4111-8111-111111111111',
+      '22222222-2222-4222-8222-222222222222',
+    ];
+    const query = createChainableMock([]);
+    const { service, mockSupabase } = createRecordService();
+    mockSupabase.from.mockReturnValue(query);
+
+    await expect(service.list({ userId: USER_ID, planIds })).resolves.toEqual([]);
+
+    expect(query.eq).toHaveBeenCalledWith('user_id', USER_ID);
+    expect(query.is).toHaveBeenCalledWith('deleted_at', null);
+    expect(query.in).toHaveBeenCalledWith('plan_id', planIds);
+  });
+
+  it('planIdsが空配列ならDBへ問い合わせず空配列を返す', async () => {
+    const { service, mockSupabase } = createRecordService();
+
+    await expect(service.list({ userId: USER_ID, planIds: [] })).resolves.toEqual([]);
+
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+});
+
 describe('PlanService.create', () => {
   it('過去に完了する plan 作成を拒否する', async () => {
     const { service, mockSupabase } = createPlanService();
@@ -469,6 +518,33 @@ describe('RecordService.create', () => {
         },
       }),
     ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
+
+    expect(mockSupabase.from).toHaveBeenCalledWith('plans');
+  });
+
+  it('skip済みplanへの紐づけを拒否する', async () => {
+    const { service, mockSupabase } = createRecordService();
+    mockSupabase.from.mockReturnValue(
+      createChainableMock(
+        createPlan({
+          start_at: '2026-03-17T09:00:00.000Z',
+          end_at: '2026-03-17T10:00:00.000Z',
+          skipped_at: '2026-03-17T11:00:00.000Z',
+        }),
+      ),
+    );
+
+    await expect(
+      service.create({
+        userId: USER_ID,
+        input: {
+          title: 'Linked record',
+          planId: 'plan-1',
+          start_at: '2026-03-17T10:15:00.000Z',
+          end_at: '2026-03-17T10:45:00.000Z',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
 
     expect(mockSupabase.from).toHaveBeenCalledWith('plans');
   });

@@ -15,6 +15,7 @@ import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFi
 
 import { calculateViewDateRange } from '../../../domain/view-range';
 import { applyTimezoneToDisplayDates } from '../../../lib/plan-data-adapter';
+import { expandRecordRowsToRecordEvents } from '../../../lib/record-event-adapter';
 
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../../../types/calendar.types';
 import { getMultiDayCount, isMultiDayView } from '../../../types/calendar.types';
@@ -44,6 +45,17 @@ function toTZEndISO(date: Date, timezone: string): string {
   });
   const localDateStr = formatter.format(date);
   return fromZonedTime(new Date(`${localDateStr}T23:59:59.999`), timezone).toISOString();
+}
+
+/** 表示範囲の行を先頭に保ったまま、関連取得で得た同一行を id 単位で統合する。 */
+function mergeRowsById<T extends { id: string }>(
+  ...groups: ReadonlyArray<ReadonlyArray<T> | undefined>
+): T[] {
+  const rowsById = new Map<string, T>();
+  for (const group of groups) {
+    for (const row of group ?? []) rowsById.set(row.id, row);
+  }
+  return Array.from(rowsById.values());
 }
 
 interface UseCalendarDataOptions {
@@ -110,12 +122,72 @@ export function useCalendarData({
     sortOrder: 'asc',
     limit: 100,
   });
-  const timeblocksError = plansQuery.error ?? recordsQuery.error;
-  const isTimeblocksLoading = plansQuery.isLoading || recordsQuery.isLoading;
-  const isTimeblocksFetching = plansQuery.isFetching || recordsQuery.isFetching;
+
+  // Calendar の表示範囲外に分割された Record も 1:N 集計へ含める。
+  // 1 query のID配列を100件以内に保つため、表示中Planと、表示中Recordだけが参照する
+  // 範囲外Planを別queryに分ける。
+  const visiblePlanIds = useMemo(
+    () => (plansQuery.data ?? []).map((plan) => plan.id),
+    [plansQuery.data],
+  );
+  const externalPlanIds = useMemo(() => {
+    const visiblePlanIdSet = new Set(visiblePlanIds);
+    return Array.from(
+      new Set(
+        (recordsQuery.data ?? [])
+          .map((record) => record.plan_id)
+          .filter((planId): planId is string => planId != null && !visiblePlanIdSet.has(planId)),
+      ),
+    );
+  }, [recordsQuery.data, visiblePlanIds]);
+
+  const visiblePlanRecordsQuery = api.records.list.useQuery(
+    { planIds: visiblePlanIds, sortBy: 'start_at', sortOrder: 'asc' },
+    { enabled: visiblePlanIds.length > 0 },
+  );
+  const externalPlansQuery = api.plans.list.useQuery(
+    { ids: externalPlanIds, sortBy: 'start_at', sortOrder: 'asc' },
+    { enabled: externalPlanIds.length > 0 },
+  );
+  const externalPlanRecordsQuery = api.records.list.useQuery(
+    { planIds: externalPlanIds, sortBy: 'start_at', sortOrder: 'asc' },
+    { enabled: externalPlanIds.length > 0 },
+  );
+
+  const timeblocksError =
+    plansQuery.error ??
+    recordsQuery.error ??
+    visiblePlanRecordsQuery.error ??
+    externalPlansQuery.error ??
+    externalPlanRecordsQuery.error;
+  const isTimeblocksLoading =
+    plansQuery.isLoading ||
+    recordsQuery.isLoading ||
+    visiblePlanRecordsQuery.isLoading ||
+    externalPlansQuery.isLoading ||
+    externalPlanRecordsQuery.isLoading;
+  const isTimeblocksFetching =
+    plansQuery.isFetching ||
+    recordsQuery.isFetching ||
+    visiblePlanRecordsQuery.isFetching ||
+    externalPlansQuery.isFetching ||
+    externalPlanRecordsQuery.isFetching;
   const refetchTimeblocks = useCallback(
-    () => Promise.all([plansQuery.refetch(), recordsQuery.refetch()]),
-    [recordsQuery, plansQuery],
+    () =>
+      Promise.all([
+        plansQuery.refetch(),
+        recordsQuery.refetch(),
+        visiblePlanRecordsQuery.refetch(),
+        externalPlansQuery.refetch(),
+        externalPlanRecordsQuery.refetch(),
+      ]),
+    [
+      externalPlanRecordsQuery,
+      externalPlansQuery,
+      recordsQuery,
+      plansQuery,
+      visiblePlanRecordsQuery,
+    ],
   );
 
   // タグマスタ取得（TimeblockCard等で使用するためキャッシュをwarm up + フィルタ同期）
@@ -229,8 +301,14 @@ export function useCalendarData({
   // Step 8 の表示互換射影。既存のカードと DnD の段階的置換が完了するまで
   // CalendarEvent は view model としてだけ維持し、データ取得は time model に固定する。
   const allCalendarEvents = useMemo(() => {
-    const plans = plansQuery.data ?? [];
-    const records = recordsQuery.data ?? [];
+    const visiblePlans = plansQuery.data ?? [];
+    const visibleRecords = recordsQuery.data ?? [];
+    const plans = mergeRowsById(visiblePlans, externalPlansQuery.data);
+    const records = mergeRowsById(
+      visibleRecords,
+      visiblePlanRecordsQuery.data,
+      externalPlanRecordsQuery.data,
+    );
     const now = new Date();
     const planEvents = plans.map((plan) => {
       const startDate = new Date(plan.start_at);
@@ -265,40 +343,54 @@ export function useCalendarData({
         timezone,
       );
     });
-    const recordEvents = records.map((record) => {
-      const startDate = new Date(record.start_at);
-      const endDate = new Date(record.end_at);
-      return applyTimezoneToDisplayDates(
-        {
-          id: record.id,
-          title: record.title,
-          description: record.note ?? undefined,
-          startDate,
-          endDate,
-          status: 'closed' as const,
-          color: '',
-          tagId: record.tag_id,
-          createdAt: new Date(record.created_at),
-          updatedAt: new Date(record.updated_at),
-          displayStartDate: startDate,
-          displayEndDate: endDate,
-          duration: Math.round((endDate.getTime() - startDate.getTime()) / 60_000),
-          isMultiDay: !tzIsSameDay(startDate, endDate, timezone),
-          origin: record.plan_id ? 'planned' : 'unplanned',
-          timeblockState: 'past' as const,
-          actualStartDate: startDate,
-          actualEndDate: endDate,
-          plannedStartDate: null,
-          plannedEndDate: null,
-          kind: 'record' as const,
-          planId: record.plan_id,
-          recordSource: record.source,
-        },
-        timezone,
-      );
+    const plannedMinutesByPlanId = new Map(
+      planEvents.map((plan) => [plan.id, plan.duration] as const),
+    );
+    const recordRowsById = new Map(records.map((record) => [record.id, record] as const));
+    const recordEvents = expandRecordRowsToRecordEvents(records, {
+      timezone,
+      plannedMinutesByPlanId,
+      primaryCandidateRecordIds: new Set(visibleRecords.map((record) => record.id)),
+    }).map((record) => {
+      const sourceRow = recordRowsById.get(record.id);
+      if (!sourceRow) return null;
+
+      return {
+        id: record.id,
+        title: record.title,
+        description: record.note ?? undefined,
+        startDate: record.startDate,
+        endDate: record.endDate,
+        status: 'closed' as const,
+        color: '',
+        tagId: record.tagId,
+        createdAt: new Date(sourceRow.created_at),
+        updatedAt: new Date(sourceRow.updated_at),
+        displayStartDate: record.displayStartDate,
+        displayEndDate: record.displayEndDate,
+        duration: record.duration,
+        isMultiDay: !tzIsSameDay(record.startDate, record.endDate, timezone),
+        origin: record.planId ? ('planned' as const) : ('unplanned' as const),
+        timeblockState: 'past' as const,
+        actualStartDate: record.startDate,
+        actualEndDate: record.endDate,
+        plannedStartDate: null,
+        plannedEndDate: null,
+        kind: 'record' as const,
+        planId: record.planId,
+        recordSource: sourceRow.source,
+        diffMinutes: record.diffMinutes,
+      };
     });
-    return [...planEvents, ...recordEvents];
-  }, [recordsQuery.data, plansQuery.data, timezone]);
+    return [...planEvents, ...recordEvents.filter((record) => record != null)];
+  }, [
+    externalPlanRecordsQuery.data,
+    externalPlansQuery.data,
+    plansQuery.data,
+    recordsQuery.data,
+    timezone,
+    visiblePlanRecordsQuery.data,
+  ]);
 
   // 表示範囲のイベントをフィルタリング
   const filteredEvents = useMemo(() => {

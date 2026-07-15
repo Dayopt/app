@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TimeblockRect } from '../../domain/interaction/types';
 import { useCalendarDragStore } from '../../stores/useCalendarDragStore';
@@ -19,13 +19,14 @@ const baseEvent: CalendarEvent = {
 } as unknown as CalendarEvent;
 
 const rect: TimeblockRect = { top: 540, left: 0, width: 200, height: 60 };
+const now = new Date('2026-01-15T12:00:00').getTime();
 
-function createMouseEvent(): React.MouseEvent {
+function createMouseEvent(clientX: number = 100, clientY: number = 540): React.MouseEvent {
   return {
     button: 0,
     preventDefault: () => {},
     stopPropagation: () => {},
-    nativeEvent: { clientX: 100, clientY: 540 },
+    nativeEvent: { clientX, clientY },
   } as unknown as React.MouseEvent;
 }
 
@@ -40,7 +41,13 @@ function makeProps(overrides: Partial<UseInteractionProps> = {}): UseInteraction
 }
 
 beforeEach(() => {
+  vi.spyOn(Date, 'now').mockReturnValue(now);
   useCalendarDragStore.getState().endDrag();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  document.querySelectorAll('[data-calendar-day-index]').forEach((element) => element.remove());
 });
 
 function completeDrag(hook: { result: { current: ReturnType<typeof useInteraction> } }) {
@@ -59,6 +66,46 @@ function completeDrag(hook: { result: { current: ReturnType<typeof useInteractio
   });
 }
 
+function createDayColumn(): HTMLElement {
+  const column = document.createElement('div');
+  column.dataset.calendarDayIndex = '0';
+  column.getBoundingClientRect = () =>
+    ({
+      bottom: 1440,
+      height: 1440,
+      left: 0,
+      right: 200,
+      top: 0,
+      width: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }) as DOMRect;
+  document.body.appendChild(column);
+  return column;
+}
+
+function dropIntoRecordLane(
+  hook: { result: { current: ReturnType<typeof useInteraction> } },
+  moveY: number = 570,
+): void {
+  act(() => {
+    hook.result.current.dispatch({
+      type: 'POINTER_DOWN',
+      timeblockId: 'entry-1',
+      point: { clientX: 20, clientY: 540 },
+      originalPosition: rect,
+      dateIndex: 0,
+    });
+    hook.result.current.dispatch({
+      type: 'POINTER_MOVE',
+      point: { clientX: 180, clientY: moveY },
+    });
+    useCalendarDragStore.getState().updateDrag({ targetLane: 'record' });
+    hook.result.current.dispatch({ type: 'POINTER_UP' });
+  });
+}
+
 describe('useInteraction Plan → Record drop', () => {
   it('Recordレーンへのdropはplan更新ではなく記録mutationへ委譲する', () => {
     const onEventUpdate = vi.fn();
@@ -71,7 +118,151 @@ describe('useInteraction Plan → Record drop', () => {
       hook.result.current.dispatch({ type: 'POINTER_UP' });
     });
 
-    expect(onPlanRecord).toHaveBeenCalledWith('entry-1');
+    expect(onPlanRecord).toHaveBeenCalledWith('entry-1', {
+      start: new Date('2026-01-15T09:30:00'),
+      end: new Date('2026-01-15T10:30:00'),
+    });
+    expect(onEventUpdate).not.toHaveBeenCalled();
+  });
+
+  it('最初のmousemoveでRecordレーンへ入った場合もtarget laneとpreview rangeを保持する', () => {
+    createDayColumn();
+    const onPlanRecord = vi.fn();
+    const hook = renderHook(() => useInteraction(makeProps({ onPlanRecord })));
+
+    act(() => {
+      hook.result.current.dispatch({
+        type: 'POINTER_DOWN',
+        timeblockId: 'entry-1',
+        point: { clientX: 20, clientY: 540 },
+        originalPosition: rect,
+        dateIndex: 0,
+      });
+    });
+    act(() => {
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 180, clientY: 570 }));
+    });
+
+    expect(hook.result.current.state.mode).toBe('dragging');
+    expect(useCalendarDragStore.getState().targetLane).toBe('record');
+
+    act(() => hook.result.current.dispatch({ type: 'POINTER_UP' }));
+
+    expect(onPlanRecord).toHaveBeenCalledWith('entry-1', {
+      start: new Date('2026-01-15T09:30:00'),
+      end: new Date('2026-01-15T10:30:00'),
+    });
+  });
+
+  it('連続dragでは前回のRecord targetを引き継がず最初のmousemoveでPlan laneへ戻る', () => {
+    createDayColumn();
+    const onPlanRecord = vi.fn();
+    const hook = renderHook(() => useInteraction(makeProps({ onPlanRecord })));
+
+    act(() => {
+      hook.result.current.handlers.handlePointerDown('entry-1', createMouseEvent(20, 540), rect);
+    });
+    act(() => {
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 180, clientY: 570 }));
+    });
+    act(() => hook.result.current.dispatch({ type: 'POINTER_UP' }));
+
+    expect(onPlanRecord).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      hook.result.current.handlers.handlePointerDown('entry-1', createMouseEvent(20, 540), rect);
+    });
+    act(() => {
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 40, clientY: 600 }));
+    });
+
+    expect(useCalendarDragStore.getState().targetLane).toBe('plan');
+
+    act(() => hook.result.current.dispatch({ type: 'POINTER_UP' }));
+
+    expect(onPlanRecord).toHaveBeenCalledTimes(1);
+  });
+
+  it('タグフィルターで非表示のRecordとも重複を検出してdropを拒否する', () => {
+    createDayColumn();
+    const onPlanRecord = vi.fn();
+    const record = {
+      ...baseEvent,
+      id: 'record-1',
+      kind: 'record' as const,
+      origin: 'unplanned' as const,
+      startDate: new Date('2026-01-15T09:15:00'),
+      endDate: new Date('2026-01-15T10:45:00'),
+    };
+    const hook = renderHook(() =>
+      useInteraction(
+        makeProps({
+          events: [baseEvent],
+          allEventsForOverlapCheck: [baseEvent, record],
+          onPlanRecord,
+        }),
+      ),
+    );
+
+    act(() => {
+      hook.result.current.dispatch({
+        type: 'POINTER_DOWN',
+        timeblockId: 'entry-1',
+        point: { clientX: 20, clientY: 540 },
+        originalPosition: rect,
+        dateIndex: 0,
+      });
+    });
+    act(() => {
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 180, clientY: 570 }));
+    });
+
+    expect(hook.result.current.state).toMatchObject({ mode: 'dragging', isOverlapping: true });
+
+    act(() => hook.result.current.dispatch({ type: 'POINTER_UP' }));
+
+    expect(onPlanRecord).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      'active Plan',
+      {
+        ...baseEvent,
+        startDate: new Date('2026-01-15T11:00:00'),
+        endDate: new Date('2026-01-15T13:00:00'),
+      },
+    ],
+    [
+      'future Plan',
+      {
+        ...baseEvent,
+        startDate: new Date('2026-01-16T09:00:00'),
+        endDate: new Date('2026-01-16T10:00:00'),
+      },
+    ],
+    ['skipped Plan', { ...baseEvent, isSkipped: true }],
+  ])('%sはRecordレーンへdropしても記録callbackを呼ばない', (_label, event) => {
+    const onEventUpdate = vi.fn();
+    const onPlanRecord = vi.fn();
+    const hook = renderHook(() =>
+      useInteraction(makeProps({ events: [event], onEventUpdate, onPlanRecord })),
+    );
+
+    dropIntoRecordLane(hook);
+
+    expect(onPlanRecord).not.toHaveBeenCalled();
+    expect(onEventUpdate).not.toHaveBeenCalled();
+  });
+
+  it('drop previewの終了が未来なら過去Planでも記録callbackを呼ばない', () => {
+    const onEventUpdate = vi.fn();
+    const onPlanRecord = vi.fn();
+    const hook = renderHook(() => useInteraction(makeProps({ onEventUpdate, onPlanRecord })));
+
+    dropIntoRecordLane(hook, 720);
+
+    expect(onPlanRecord).not.toHaveBeenCalled();
     expect(onEventUpdate).not.toHaveBeenCalled();
   });
 

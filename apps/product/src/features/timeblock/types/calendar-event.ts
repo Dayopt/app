@@ -39,8 +39,13 @@ export interface CalendarEvent {
   kind?: TimeblockDestination | undefined;
   /** record が紐づく plan の id（plan 行・予定外 record では null） */
   planId?: string | null | undefined;
-  /** record の作成元（manual / plan_record / auto_migrated / external_calendar）。auto_migrated は RLS で不変 */
+  /** record の作成元（manual / from_plan / auto_migrated / external_calendar）。auto_migrated は RLS で不変 */
   recordSource?: string | undefined;
+  /**
+   * 紐づく Plan に対する Record 群の合計実績差分（実績 - 予定、分）。
+   * 1 Plan : N Record では代表 Record 1件だけが値を持ち、他の Record は undefined。
+   */
+  diffMinutes?: number | undefined;
   // Optional properties used in various contexts
   userId?: string | undefined; // 所有者ID
   location?: string | undefined; // 場所

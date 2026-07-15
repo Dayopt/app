@@ -29,6 +29,7 @@ export class RecordService {
       userId,
       tagId,
       planId,
+      planIds,
       search,
       startDate,
       endDate,
@@ -38,6 +39,8 @@ export class RecordService {
       offset,
     } = options;
 
+    if (planIds?.length === 0) return [];
+
     let query = this.supabase
       .from(databaseTables.records)
       .select('*')
@@ -46,6 +49,7 @@ export class RecordService {
 
     if (tagId) query = query.eq('tag_id', tagId);
     if (planId) query = query.eq('plan_id', planId);
+    if (planIds) query = query.in('plan_id', planIds);
 
     if (search) {
       const sanitized = this.sanitizeSearch(search);

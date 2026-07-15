@@ -5,13 +5,14 @@ import React, { useCallback } from 'react';
 import { isSameDay } from 'date-fns';
 
 import { useTagsMap } from '@/features/tags';
-import { TimeblockCard, useTimeblockRecordMutations } from '@/features/timeblock';
+import { TimeblockCard, useTimeblockWriteMutations } from '@/features/timeblock';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@dayopt/components';
 
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
+import { buildPlanRecordDropInput } from '../../../../lib/plan-record-drop';
 import { calculateTwoLaneStylesForCalendarEvents } from '../../../../lib/two-lane-layout';
 import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
@@ -135,7 +136,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
-  const { recordPlan } = useTimeblockRecordMutations();
+  const { createRecord } = useTimeblockWriteMutations();
 
   // Tag タップで開いている draft entry（同日のときだけ block を描画）
   const tagDraft = useTagDraftStore((s) => s.draft);
@@ -159,6 +160,15 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     [onEventUpdate],
   );
 
+  const handlePlanRecord = useCallback(
+    (planId: string, range: { start: Date; end: Date }) => {
+      const plan = entries.find((entry) => entry.id === planId && entry.kind === 'plan');
+      if (!plan) return;
+      createRecord.mutate(buildPlanRecordDropInput(plan, range));
+    },
+    [createRecord, entries],
+  );
+
   // 統合インタラクション（drag/resize/click）
   const { state, handlers } = useInteraction({
     date,
@@ -168,7 +178,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     viewMode,
     hourHeight: HOUR_HEIGHT,
     planLaneWidthPercent,
-    onPlanRecord: (planId) => recordPlan.mutate({ id: planId }),
+    onPlanRecord: handlePlanRecord,
     ...(onEventUpdate ? { onEventUpdate: wrappedOnEventUpdate } : {}),
     ...(onEntryClick ? { onEventClick: onEntryClick } : {}),
     ...(disabledTimeblockId != null

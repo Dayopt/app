@@ -180,7 +180,7 @@ export function TwoLaneTimeblockRenderer({
 
   return (
     <RecordLaneCard
-      event={calendarEventToRecordEvent(entry, allEvents)}
+      event={calendarEventToRecordEvent(entry)}
       position={previewPosition}
       tagName={tagName}
       tagColor={tagColor}

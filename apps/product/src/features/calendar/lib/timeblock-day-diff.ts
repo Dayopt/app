@@ -9,6 +9,8 @@ interface TimeModelPlanDiffInput {
   endAt: Date;
   skippedAt: Date | null;
   deletedAt?: Date | null | undefined;
+  /** false の Plan は関連判定にだけ使い、選択範囲の予定時間には含めない。 */
+  isIncludedInDiff?: boolean | undefined;
 }
 
 interface TimeModelRecordDiffInput {
@@ -67,6 +69,43 @@ function clippedMinutes(start: Date, end: Date, bounds: TimeModelDayDiffBounds):
   return Math.max(0, Math.round((clippedEnd.getTime() - clippedStart.getTime()) / 60_000));
 }
 
+function buildRecordedItem(
+  plan: TimeModelPlanDiffInput,
+  linkedRecords: readonly TimeModelRecordDiffInput[],
+  plannedMinutes: number,
+  bounds: TimeModelDayDiffBounds,
+): TimeModelDayDiffItem {
+  const sortedLinkedRecords = [...linkedRecords].sort(
+    (a, b) => a.startAt.getTime() - b.startAt.getTime(),
+  );
+  const actualMinutes = sortedLinkedRecords.reduce(
+    (total, record) => total + clippedMinutes(record.startAt, record.endAt, bounds),
+    0,
+  );
+  const firstRecord = sortedLinkedRecords[0];
+  const lastRecord = sortedLinkedRecords[sortedLinkedRecords.length - 1];
+
+  return {
+    id: `recorded:${plan.id}`,
+    timeblockId: plan.id,
+    kind: 'recorded',
+    title: plan.title,
+    tagId: plan.tagId,
+    color: plan.color,
+    planId: plan.id,
+    plannedStart: plan.startAt,
+    plannedEnd: plan.endAt,
+    actualStart: firstRecord?.startAt ?? null,
+    actualEnd: lastRecord?.endAt ?? null,
+    plannedMinutes,
+    actualMinutes,
+    diffMinutes: actualMinutes - plannedMinutes,
+    startDiffMinutes: 0,
+    endDiffMinutes: 0,
+    sortTime: firstRecord?.startAt.getTime() ?? plan.startAt.getTime(),
+  };
+}
+
 /**
  * Step 7 の Plan / Record 1:N 差分。既存 entries ベースの day-diff とは並存し、Step 8 で接続する。
  * Record は Record 自身の日に、Plan は Plan 自身の日に集計される。
@@ -118,8 +157,16 @@ export function computeTimeblockDayDiffs(
   }
 
   for (const plan of activePlans) {
-    const duration = clippedMinutes(plan.startAt, plan.endAt, bounds);
-    if (duration === 0) continue;
+    const duration =
+      plan.isIncludedInDiff === false ? 0 : clippedMinutes(plan.startAt, plan.endAt, bounds);
+    const linkedRecords = recordsByPlanId.get(plan.id) ?? [];
+    if (duration === 0) {
+      // Record は自身の日へ計上する。Plan が範囲外でも関係を保ち、予定外には落とさない。
+      if (linkedRecords.length > 0) {
+        items.push(buildRecordedItem(plan, linkedRecords, 0, bounds));
+      }
+      continue;
+    }
     plannedMinutes += duration;
     if (plan.skippedAt) {
       items.push({
@@ -144,7 +191,6 @@ export function computeTimeblockDayDiffs(
       continue;
     }
 
-    const linkedRecords = recordsByPlanId.get(plan.id) ?? [];
     if (linkedRecords.length === 0) {
       unrecordedMinutes += duration;
       items.push({
@@ -169,32 +215,7 @@ export function computeTimeblockDayDiffs(
       continue;
     }
 
-    const linkedMinutes = linkedRecords.reduce(
-      (total, record) => total + clippedMinutes(record.startAt, record.endAt, bounds),
-      0,
-    );
-    const sortedLinkedRecords = [...linkedRecords].sort(
-      (a, b) => a.startAt.getTime() - b.startAt.getTime(),
-    );
-    items.push({
-      id: `recorded:${plan.id}`,
-      timeblockId: plan.id,
-      kind: 'recorded',
-      title: plan.title,
-      tagId: plan.tagId,
-      color: plan.color,
-      planId: plan.id,
-      plannedStart: plan.startAt,
-      plannedEnd: plan.endAt,
-      actualStart: sortedLinkedRecords[0]?.startAt ?? null,
-      actualEnd: sortedLinkedRecords[sortedLinkedRecords.length - 1]?.endAt ?? null,
-      plannedMinutes: duration,
-      actualMinutes: linkedMinutes,
-      diffMinutes: linkedMinutes - duration,
-      startDiffMinutes: 0,
-      endDiffMinutes: 0,
-      sortTime: plan.startAt.getTime(),
-    });
+    items.push(buildRecordedItem(plan, linkedRecords, duration, bounds));
   }
 
   items.sort((a, b) => a.sortTime - b.sortTime || a.title.localeCompare(b.title));

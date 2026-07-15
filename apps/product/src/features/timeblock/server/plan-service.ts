@@ -30,6 +30,7 @@ export class PlanService {
   async list(options: ListPlansOptions): Promise<PlanRow[]> {
     const {
       userId,
+      ids,
       tagId,
       search,
       startDate,
@@ -41,12 +42,15 @@ export class PlanService {
       offset,
     } = options;
 
+    if (ids?.length === 0) return [];
+
     let query = this.supabase
       .from('plans')
       .select('*')
       .eq('user_id', userId)
       .is('deleted_at', null);
 
+    if (ids) query = query.in('id', ids);
     if (tagId) query = query.eq('tag_id', tagId);
     if (!includeSkipped) query = query.is('skipped_at', null);
 

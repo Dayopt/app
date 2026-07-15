@@ -55,9 +55,18 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 
 ## 記録導線（3つ）
 
-- **ワンタップ「そのまま記録」** — Plan の時間帯をそのままコピーした Record を1タップで作成
-- **Record レーンへのドラッグ** — Plan カードを Record レーンへドラッグ（リサイズすればずれ込みで記録できる）
+- **ワンタップ「そのまま記録」** — Plan の時間帯をそのままコピーし、`source = 'from_plan'` の Record を1件作成する。active な関連 Record がある Plan には重ねて作成しない
+- **Record レーンへのドラッグ** — ドロップ時のプレビュー範囲を使い、`source = 'manual'` かつ元 Plan の `plan_id` を持つ Record を作成する。元 Plan の時間は変更せず、Record 同士が重ならない範囲で同じ Plan に複数の Record を紐づけられる
 - **一括「この日を確定」** — その日の未記録 Plan をまとめて `confirm_day_plans_to_records` で Record 化
+
+ワンタップは予定どおりの時間を1件で確定する導線、Record レーンへのドラッグは実際の時間帯や分割した作業を記録する導線として使い分ける。
+
+## Calendar の差分表示
+
+- 同じ Plan に複数の関連 Record がある場合、差分は **関連 Record の合計時間 − Plan の時間** で計算する
+- 差分バッジは関連 Record 群の代表カード1枚だけに表示し、各 Record に同じ Plan 時間を引いて差分を重複表示しない
+- 差分が `±0` の場合はバッジを表示しない
+- `plan_id` がない Record は予定外の記録として扱い、Plan との差分バッジは表示しない
 
 ## コピー / 貼り付け
 
@@ -85,6 +94,7 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 
 - Plan 同士・Record 同士: EXCLUDE 制約で禁止（半開区間 `[)`、per-user、`deleted_at IS NULL` のみ対象）
 - Plan × Record: 許可（予定と記録は別レイヤーなので重なってよい）
+- Plan を Record レーンへドラッグする時は、ドロップ範囲を既存 Record と照合する。Plan との重なりは拒否理由にしない
 - 緩和は実質不可逆（一度重なりデータが入ると再強化にデータ犠牲が伴う）
 
 ## Legacy compatibility field

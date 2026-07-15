@@ -67,6 +67,11 @@ interface ExpandRecordRowsOptions {
   timezone: string;
   /** plan id -> 所要時間（分）。1 plan に複数 record が紐づく場合も同じ plan 時間を参照する */
   plannedMinutesByPlanId: ReadonlyMap<string, number>;
+  /**
+   * 差分を表示する代表 Record の候補。Calendar では現在の表示期間内にある Record を渡し、
+   * 別日にある関連 Record も合計しつつ、表示中のカードへ差分を載せる。
+   */
+  primaryCandidateRecordIds?: ReadonlySet<string>;
 }
 
 /**
@@ -76,8 +81,9 @@ interface ExpandRecordRowsOptions {
  * 個々の record 単位で `duration - plannedMinutes` を計算すると両方に `-30min` の
  * バッジが付くが、実際は合計 60 分で予定どおり）。
  *
- * そのため差分は「代表 record」（`source='from_plan'` を優先、無ければ最初の record）
- * 1 件にのみ、合計実績時間ベースで付与し、他の record は `diffMinutes` を持たない。
+ * そのため差分は「代表 record」1 件にのみ、合計実績時間ベースで付与し、他の record は
+ * `diffMinutes` を持たない。表示候補が指定された場合はその中から選び、各候補群では
+ * `source='from_plan'` を優先する。
  */
 export function expandRecordRowsToRecordEvents(
   rows: ReadonlyArray<RecordEventSourceRow>,
@@ -90,7 +96,7 @@ export function expandRecordRowsToRecordEvents(
   );
 
   const totalActualMinutesByPlanId = new Map<string, number>();
-  const primaryRecordIdByPlanId = new Map<string, string>();
+  const rowsByPlanId = new Map<string, RecordEventSourceRow[]>();
 
   rows.forEach((row, i) => {
     if (row.plan_id == null) return;
@@ -100,11 +106,20 @@ export function expandRecordRowsToRecordEvents(
       (totalActualMinutesByPlanId.get(row.plan_id) ?? 0) + events[i]!.duration,
     );
 
-    const currentPrimaryId = primaryRecordIdByPlanId.get(row.plan_id);
-    if (!currentPrimaryId || row.source === 'from_plan') {
-      primaryRecordIdByPlanId.set(row.plan_id, row.id);
-    }
+    const group = rowsByPlanId.get(row.plan_id) ?? [];
+    group.push(row);
+    rowsByPlanId.set(row.plan_id, group);
   });
+
+  const primaryRecordIdByPlanId = new Map<string, string>();
+  for (const [planId, group] of rowsByPlanId) {
+    const preferredGroup = options.primaryCandidateRecordIds
+      ? group.filter((row) => options.primaryCandidateRecordIds?.has(row.id))
+      : [];
+    const candidates = preferredGroup.length > 0 ? preferredGroup : group;
+    const primary = candidates.find((row) => row.source === 'from_plan') ?? candidates[0];
+    if (primary) primaryRecordIdByPlanId.set(planId, primary.id);
+  }
 
   return rows.map((row, i) => {
     const event = events[i]!;

@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-07-15
 code: apps/product/src/features/calendar
 ---
 
@@ -15,6 +15,8 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 - 新規作成時の保存先は`end_at > now`ならPlan、`end_at <= now`ならRecordとして自動決定し、既存Plan / Recordの編集では種別を維持する
 - 15分gridへのsnap、dragによる移動・resize、keyboard操作、tag filterを提供する
 - 過去Planの時間は凍結し、Recordの時間は訂正できる
+- 過去PlanをRecordレーンへdragすると、drop previewの時間帯で元Planに紐づくRecordを作る。元Planは移動せず、Record同士が重ならなければ同じPlanへ複数回記録できる
+- 1つのPlanに複数のRecordがある場合、Calendarの差分は関連Recordの合計時間から計算し、代表するRecord card 1枚だけに表示する。`±0`は表示しない
 - `panel=review` / `panel=diff`で単一の右panel slotを開く。panel UIはReview featureが所有し、Calendarは表示範囲とcompositionを所有する
 - Diffの対象期間はCalendarの現在viewを正とし、day / week / multi-dayの範囲をそのまま使う
 

@@ -33,7 +33,7 @@ import type { WeekGridProps } from '../../../../types/week-view.types';
 export const WeekGrid = ({
   weekDates,
   events,
-  allTimeblocks: _allTimeblocks,
+  allTimeblocks,
   eventsByDate: _eventsByDate,
   todayIndex: _todayIndex,
   disabledTimeblockId,
@@ -137,7 +137,7 @@ export const WeekGrid = ({
                 entries={dayEvents}
                 viewMode="week"
                 dayIndex={dayIndex}
-                allEventsForOverlapCheck={events}
+                allEventsForOverlapCheck={allTimeblocks ?? events}
                 displayDates={weekDates}
                 onEntryClick={onEventClick}
                 onEntryContextMenu={onEventContextMenu}

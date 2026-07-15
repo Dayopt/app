@@ -351,7 +351,7 @@ describe('checkClientSideOverlapByKind', () => {
         '',
         new Date('2026-01-16T10:15'),
         new Date('2026-01-16T10:45'),
-        now,
+        { now },
       ),
     ).toBe(false);
   });
@@ -370,7 +370,7 @@ describe('checkClientSideOverlapByKind', () => {
         '',
         new Date('2026-01-16T10:15'),
         new Date('2026-01-16T10:45'),
-        now,
+        { now },
       ),
     ).toBe(true);
   });
@@ -389,7 +389,7 @@ describe('checkClientSideOverlapByKind', () => {
         '',
         new Date('2026-01-15T10:15'),
         new Date('2026-01-15T10:45'),
-        now,
+        { now },
       ),
     ).toBe(false);
   });
@@ -408,8 +408,58 @@ describe('checkClientSideOverlapByKind', () => {
         '',
         new Date('2026-01-15T10:15'),
         new Date('2026-01-15T10:45'),
-        now,
+        { now },
       ),
     ).toBe(true);
+  });
+
+  it('Plan→Record dropはドラッグ元PlanではなくRecordとの重複を判定する', () => {
+    const plan = createEvent({
+      id: 'plan',
+      kind: 'plan',
+      startDate: new Date('2026-01-15T09:00'),
+      endDate: new Date('2026-01-15T10:00'),
+    });
+    const record = createEvent({
+      id: 'record',
+      kind: 'record',
+      startDate: new Date('2026-01-15T10:00'),
+      endDate: new Date('2026-01-15T11:00'),
+    });
+
+    expect(
+      checkClientSideOverlapByKind(
+        [plan, record],
+        plan.id,
+        new Date('2026-01-15T10:15'),
+        new Date('2026-01-15T10:45'),
+        { now, targetKind: 'record' },
+      ),
+    ).toBe(true);
+  });
+
+  it('Record→Plan laneでも元のRecord kindを指定すればPlan重複を無視する', () => {
+    const record = createEvent({
+      id: 'record',
+      kind: 'record',
+      startDate: new Date('2026-01-15T09:00'),
+      endDate: new Date('2026-01-15T10:00'),
+    });
+    const plan = createEvent({
+      id: 'plan',
+      kind: 'plan',
+      startDate: new Date('2026-01-15T10:00'),
+      endDate: new Date('2026-01-15T11:00'),
+    });
+
+    expect(
+      checkClientSideOverlapByKind(
+        [record, plan],
+        record.id,
+        new Date('2026-01-15T10:15'),
+        new Date('2026-01-15T10:45'),
+        { now, targetKind: 'record' },
+      ),
+    ).toBe(false);
   });
 });

@@ -164,6 +164,59 @@ describe('expandRecordRowsToRecordEvents', () => {
     expect(events.find((e) => e.id === 'l2')?.diffMinutes).toBeUndefined();
   });
 
+  it('manual Recordが先でもfrom_plan Recordを代表として優先する', () => {
+    const rows = [
+      makeRow({
+        id: 'manual',
+        plan_id: 'p1',
+        source: 'manual',
+        start_at: '2026-07-10T09:00:00Z',
+        end_at: '2026-07-10T09:20:00Z',
+      }),
+      makeRow({
+        id: 'from-plan',
+        plan_id: 'p1',
+        source: 'from_plan',
+        start_at: '2026-07-10T09:20:00Z',
+        end_at: '2026-07-10T09:40:00Z',
+      }),
+    ];
+    const events = expandRecordRowsToRecordEvents(rows, {
+      timezone: 'UTC',
+      plannedMinutesByPlanId: new Map([['p1', 60]]),
+    });
+
+    expect(events.find((event) => event.id === 'manual')?.diffMinutes).toBeUndefined();
+    expect(events.find((event) => event.id === 'from-plan')?.diffMinutes).toBe(-20);
+  });
+
+  it('表示期間外の関連Recordも合計しつつ表示期間内のRecordを代表にする', () => {
+    const rows = [
+      makeRow({
+        id: 'outside-view',
+        plan_id: 'p1',
+        source: 'from_plan',
+        start_at: '2026-07-09T09:00:00Z',
+        end_at: '2026-07-09T09:40:00Z',
+      }),
+      makeRow({
+        id: 'inside-view',
+        plan_id: 'p1',
+        source: 'manual',
+        start_at: '2026-07-10T09:00:00Z',
+        end_at: '2026-07-10T09:30:00Z',
+      }),
+    ];
+    const events = expandRecordRowsToRecordEvents(rows, {
+      timezone: 'UTC',
+      plannedMinutesByPlanId: new Map([['p1', 60]]),
+      primaryCandidateRecordIds: new Set(['inside-view']),
+    });
+
+    expect(events.find((event) => event.id === 'outside-view')?.diffMinutes).toBeUndefined();
+    expect(events.find((event) => event.id === 'inside-view')?.diffMinutes).toBe(10);
+  });
+
   it('秒以下の端数は truncateToMinute 後の duration で集計する（生の timestamp 差分を使わない）', () => {
     // 09:00:31 - 10:00:00 は truncateToMinute で 09:00:00 - 10:00:00 = 60分。
     // 生の timestamp 差分（59分29秒）を丸めると 59分になり、60分 plan に対して

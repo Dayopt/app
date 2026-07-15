@@ -28,7 +28,7 @@ export function MultiDayView({
   dayCount,
   dateRange: _dateRange,
   entries,
-  allTimeblocks: _allTimeblocks,
+  allTimeblocks,
   currentDate,
   centerDate: _centerDate,
   showWeekends = true,
@@ -140,7 +140,7 @@ export function MultiDayView({
                   entries={dayEntries}
                   viewMode={viewMode}
                   dayIndex={dayIndex}
-                  allEventsForOverlapCheck={entries}
+                  allEventsForOverlapCheck={allTimeblocks ?? entries}
                   displayDates={displayDates}
                   onEntryClick={onEntryClick}
                   onEntryContextMenu={onEntryContextMenu}

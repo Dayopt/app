@@ -224,8 +224,8 @@ export function CalendarController({
     [calendarDiffDays, currentDate, timezone, viewDateRange.end, viewDateRange.start, viewType],
   );
   // Step 8: compare rail は plans/records（kind 付き CalendarEvent）から直接集計する。
-  // タグ可視性・週末除外は絞るが、範囲内の時間クリップは computeTimeblockDayDiffs 側の
-  // clippedMinutes に委ねる（0分は自動的に除外される）。
+  // タグ可視性・週末除外は集計対象から外すが、Plan は Record の関係解決用contextとして残す。
+  // 連続範囲内の時間クリップは computeTimeblockDayDiffs 側の clippedMinutes に委ねる。
   const isWithinVisibleDayBounds = useCallback(
     (start: Date, end: Date) => {
       if (viewType === 'day' || showWeekends) return true;
@@ -237,7 +237,7 @@ export function CalendarController({
     void visibleTagIds;
     if (!calendarDiffEnabled) return [];
     return allTimeblocks
-      .filter((entry) => entry.kind === 'plan' && isEntryVisible(entry.tagId ?? null))
+      .filter((entry) => entry.kind === 'plan')
       .map((entry) => ({
         id: entry.id,
         title: entry.title,
@@ -246,8 +246,14 @@ export function CalendarController({
         startAt: entry.startDate ?? entry.displayStartDate,
         endAt: entry.endDate ?? entry.displayEndDate,
         skippedAt: entry.isSkipped ? (entry.startDate ?? entry.displayStartDate) : null,
-      }))
-      .filter((plan) => isWithinVisibleDayBounds(plan.startAt, plan.endAt));
+        // 範囲外・非表示タグのPlanも、表示中Recordの関係解決には残す。
+        isIncludedInDiff:
+          isEntryVisible(entry.tagId ?? null) &&
+          isWithinVisibleDayBounds(
+            entry.startDate ?? entry.displayStartDate,
+            entry.endDate ?? entry.displayEndDate,
+          ),
+      }));
   }, [allTimeblocks, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds, visibleTagIds]);
   const calendarDiffRecords = useMemo(() => {
     if (!calendarDiffEnabled) return [];

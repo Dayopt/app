@@ -33,9 +33,11 @@ function isTimeblockQuery(query: { queryKey: unknown }): boolean {
 }
 
 interface TimeModelListFilter {
+  ids?: string[];
   search?: string;
   tagId?: string;
   planId?: string;
+  planIds?: string[];
   startDate?: string;
   endDate?: string;
   includeSkipped?: boolean;
@@ -77,8 +79,15 @@ export function doesTimeModelListQueryIncludeRow(
   const filter = getListFilter(queryKey);
   if (row.deleted_at != null) return false;
   if (operation === 'create' && (filter.offset ?? 0) > 0) return false;
+  if (lane === 'plans' && filter.ids && !filter.ids.includes(row.id)) return false;
   if (filter.tagId && row.tag_id !== filter.tagId) return false;
   if (lane === 'records' && filter.planId && row.plan_id !== filter.planId) return false;
+  if (
+    lane === 'records' &&
+    filter.planIds &&
+    (row.plan_id == null || !filter.planIds.includes(row.plan_id))
+  )
+    return false;
   if (lane === 'plans' && filter.includeSkipped === false && row.skipped_at != null) return false;
 
   if (filter.search) {
