@@ -12,6 +12,7 @@ import {
   buildCalendarReviewPanelPath,
   buildTimeblockSearchResultPath,
   isCalendarViewPath,
+  resolveTimeblockSearchResultDate,
   useCalendarNavigation,
   useShortcutRegistry,
   useTimeblockClipboardStore,
@@ -148,6 +149,9 @@ export function GlobalOverlays() {
 
   const handleOpenSearchResult = useCallback(
     (result: TimeblockSearchResult) => {
+      calendarNavigation?.navigateToDate(
+        resolveTimeblockSearchResultDate(result.startAt, timezone),
+      );
       router.push(
         buildTimeblockSearchResultPath({
           locale,
@@ -158,7 +162,7 @@ export function GlobalOverlays() {
         }),
       );
     },
-    [locale, router, timezone],
+    [calendarNavigation, locale, router, timezone],
   );
 
   return (

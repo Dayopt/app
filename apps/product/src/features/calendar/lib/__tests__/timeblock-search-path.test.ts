@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildTimeblockSearchResultPath } from '../timeblock-search-path';
+import {
+  buildTimeblockSearchResultPath,
+  resolveTimeblockSearchResultDate,
+} from '../timeblock-search-path';
 
 describe('buildTimeblockSearchResultPath', () => {
   it('ユーザーTZの日付とPlanインスペクターをURLへ含める', () => {
@@ -25,5 +28,16 @@ describe('buildTimeblockSearchResultPath', () => {
         kind: 'record',
       }),
     ).toBe('/en/day?date=2026-07-14&timeblock=record%3Arecord-1');
+  });
+});
+
+describe('resolveTimeblockSearchResultDate', () => {
+  it('Calendar timezoneの日付をローカル正午として返す', () => {
+    const result = resolveTimeblockSearchResultDate('2026-07-14T23:30:00.000Z', 'Asia/Tokyo');
+
+    expect(result.getFullYear()).toBe(2026);
+    expect(result.getMonth()).toBe(6);
+    expect(result.getDate()).toBe(15);
+    expect(result.getHours()).toBe(12);
   });
 });

@@ -79,7 +79,10 @@ export { isCalendarDiffView } from './types/calendar.types';
 export { parseCalendarDateParam } from './lib/date-param';
 export { buildCalendarReviewPanelPath } from './lib/panel-url';
 export { isCalendarViewPath } from './lib/route-utils';
-export { buildTimeblockSearchResultPath } from './lib/timeblock-search-path';
+export {
+  buildTimeblockSearchResultPath,
+  resolveTimeblockSearchResultDate,
+} from './lib/timeblock-search-path';
 export type { TimeblockSearchResult } from './lib/timeblock-search-results';
 
 // ここにないものはfeature内部専用
