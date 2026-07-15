@@ -14,7 +14,7 @@ updates:
 
     # ラベル設定（securityは自動付与に任せる）
     labels:
-      - 'dependencies'
+      - 'type:chore'
 
     # レビュアー設定
     reviewers:
@@ -133,8 +133,8 @@ updates:
       timezone: 'Asia/Tokyo'
 
     labels:
-      - 'dependencies'
-      - 'github-actions'
+      - 'type:chore'
+      - 'area:infrastructure'
 
     reviewers:
       - 't3-nico'
