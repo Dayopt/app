@@ -6,11 +6,10 @@ import {
   Crown,
   ExternalLink,
   FileText,
-  HelpCircle,
+  Keyboard,
   LogOut,
   Megaphone,
   MessageSquare,
-  Palette,
   Settings,
   Shield,
   UserCircle,
@@ -34,9 +33,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@dayopt/components';
 import { useRouter } from '@dayopt/i18n/navigation';
@@ -52,6 +48,11 @@ export function HelpMenuItems() {
 
   return (
     <>
+      <DropdownMenuItem onSelect={() => openSheet({ type: 'shortcutCheatSheet' })}>
+        <Keyboard />
+        {t('navigation.navUser.helpSubmenu.keyboardShortcuts')}
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
       <DropdownMenuItem asChild>
         <Link
           href="https://github.com/Dayopt/dayopt/releases"
@@ -123,7 +124,7 @@ export function HelpMenuItems() {
   );
 }
 
-/** ユーザー名から開くアカウントメニュー。設定・ヘルプ・ログアウトへのアクセスを提供する。 */
+/** ユーザー名から開くアカウントメニュー。設定・ログアウトへのアクセスを提供する。 */
 export function UserMenu({
   user,
 }: {
@@ -152,9 +153,15 @@ export function UserMenu({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="hover:bg-state-hover data-[state=open]:bg-state-selected flex w-full min-w-0 items-center rounded-lg px-2 py-2 text-left text-sm outline-hidden"
+          className="hover:bg-state-hover data-[state=open]:bg-state-selected flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-2 text-left text-sm outline-hidden"
           aria-label={t('navigation.navUser.accountMenuLabel', { name: user.name })}
         >
+          <Avatar size="xs" className="shrink-0 rounded-2xl">
+            {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}
+            <AvatarFallback className="bg-foreground text-background rounded-2xl text-xs">
+              {getInitials(user.name)}
+            </AvatarFallback>
+          </Avatar>
           <span className="min-w-0 flex-1 truncate font-normal">{user.name}</span>
         </button>
       </DropdownMenuTrigger>
@@ -191,29 +198,16 @@ export function UserMenu({
             <Crown />
             {t('navigation.navUser.upgradePlan')}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleOpenSettings('display')}>
-            <Palette />
-            {t('navigation.navUser.personalize')}
-          </DropdownMenuItem>
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
 
-        {/* 設定とヘルプ */}
+        {/* 設定 */}
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => handleOpenSettings('profile')}>
             <Settings />
             {t('navigation.navUser.settings')}
           </DropdownMenuItem>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <HelpCircle />
-              {t('navigation.navUser.help')}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="border-input">
-              <HelpMenuItems />
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />

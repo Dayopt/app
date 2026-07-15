@@ -21,6 +21,7 @@ Sidebar
 - section間のspacingは親containerのgapで管理し、子componentに個別marginを持たせない
 - mobileではMiniCalendarを隠し、view switchとfilterを優先する
 - sidebarはfeatureのbusiness logicを所有せず、app composition layerが公開componentを組み立てる
-- footerはユーザー名を左、丸囲みの「？」アイコンを右に配置する。ユーザー名はアカウントメニュー、「？」アイコンはヘルプメニューを開く
+- footerはユーザー名を左、丸囲みの「？」アイコンを右に配置する。ユーザー名はアカウントメニュー、「？」アイコンはボタン右側のメイン領域へ、下端を揃えてショートカット一覧を含むヘルプメニューを開く
+- アカウントメニューはアカウント、アップグレード、設定、ログアウトだけを表示し、パーソナライズとヘルプは置かない
 
 実際のcompositionは`apps/product/src/app/[locale]/(app)/_shell/SidebarContent.tsx`、横断architectureはroot `docs/engineering/architecture.md`を参照する。

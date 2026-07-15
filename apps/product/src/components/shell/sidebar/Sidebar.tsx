@@ -40,7 +40,12 @@ function SidebarHelpMenu() {
           </Button>
         </DropdownMenuTrigger>
       </HoverTooltip>
-      <DropdownMenuContent className="border-input min-w-56" side="top" align="end" sideOffset={4}>
+      <DropdownMenuContent
+        className="border-input min-w-56"
+        side="right"
+        align="end"
+        sideOffset={4}
+      >
         <HelpMenuItems />
       </DropdownMenuContent>
     </DropdownMenu>
