@@ -5,7 +5,7 @@
  * user.deleteAccount 実行時に送信
  */
 
-import { Body, Container, Head, Html, Link, Section, Text } from '@react-email/components';
+import { Body, Container, Head, Html, Link, Section, Text } from 'react-email';
 
 import { dayoptUrls } from '@dayopt/config';
 

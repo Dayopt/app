@@ -5,7 +5,7 @@
  * トリガー: Cron job / scheduled function (trial_end - 3日)
  */
 
-import { Body, Button, Container, Head, Html, Section, Text } from '@react-email/components';
+import { Body, Button, Container, Head, Html, Section, Text } from 'react-email';
 
 import { dayoptUrls } from '@dayopt/config';
 

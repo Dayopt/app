@@ -5,7 +5,7 @@
  * トリガー: customer.subscription.updated (trialing → canceled/free)
  */
 
-import { Body, Button, Container, Head, Html, Section, Text } from '@react-email/components';
+import { Body, Button, Container, Head, Html, Section, Text } from 'react-email';
 
 import { dayoptUrls } from '@dayopt/config';
 

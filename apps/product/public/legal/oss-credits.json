@@ -117,6 +117,13 @@
   },
   {
     "name": "@babel/parser",
+    "version": "7.29.2",
+    "license": "MIT",
+    "repository": "https://github.com/babel/babel.git",
+    "publisher": "The Babel Team (https://babel.dev/team)"
+  },
+  {
+    "name": "@babel/parser",
     "version": "7.29.7",
     "license": "MIT",
     "repository": "https://github.com/babel/babel.git",
@@ -125,6 +132,13 @@
   {
     "name": "@babel/template",
     "version": "7.29.7",
+    "license": "MIT",
+    "repository": "https://github.com/babel/babel.git",
+    "publisher": "The Babel Team (https://babel.dev/team)"
+  },
+  {
+    "name": "@babel/traverse",
+    "version": "7.29.0",
     "license": "MIT",
     "repository": "https://github.com/babel/babel.git",
     "publisher": "The Babel Team (https://babel.dev/team)"
@@ -735,132 +749,8 @@
     "repository": "https://github.com/radix-ui/primitives.git"
   },
   {
-    "name": "@react-email/body",
-    "version": "0.3.0",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/button",
-    "version": "0.2.1",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/code-block",
-    "version": "0.2.1",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/code-inline",
-    "version": "0.0.6",
-    "license": "MIT"
-  },
-  {
-    "name": "@react-email/column",
-    "version": "0.0.14",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/components",
-    "version": "1.0.12",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/container",
-    "version": "0.0.16",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/font",
-    "version": "0.0.10",
-    "license": "MIT"
-  },
-  {
-    "name": "@react-email/head",
-    "version": "0.0.13",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/heading",
-    "version": "0.0.16",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/hr",
-    "version": "0.0.12",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/html",
-    "version": "0.0.12",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/img",
-    "version": "0.0.12",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/link",
-    "version": "0.0.13",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/markdown",
-    "version": "0.0.18",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/preview",
-    "version": "0.0.14",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/render",
-    "version": "2.0.6",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
     "name": "@react-email/render",
     "version": "2.1.0",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/row",
-    "version": "0.0.13",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/section",
-    "version": "0.0.17",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/tailwind",
-    "version": "2.0.7",
-    "license": "MIT",
-    "repository": "https://github.com/resend/react-email.git"
-  },
-  {
-    "name": "@react-email/text",
-    "version": "0.1.6",
     "license": "MIT",
     "repository": "https://github.com/resend/react-email.git"
   },
@@ -1038,6 +928,12 @@
     "publisher": "Sentry"
   },
   {
+    "name": "@socket.io/component-emitter",
+    "version": "3.1.2",
+    "license": "MIT",
+    "repository": "https://github.com/socketio/emitter.git"
+  },
+  {
     "name": "@stablelib/base64",
     "version": "1.0.1",
     "license": "MIT",
@@ -1205,6 +1101,12 @@
     "publisher": "KATT"
   },
   {
+    "name": "@types/cors",
+    "version": "2.8.19",
+    "license": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
+  },
+  {
     "name": "@types/d3-array",
     "version": "3.2.2",
     "license": "MIT",
@@ -1309,6 +1211,12 @@
   {
     "name": "@types/use-sync-external-store",
     "version": "0.0.6",
+    "license": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
+  },
+  {
+    "name": "@types/ws",
+    "version": "8.18.1",
     "license": "MIT",
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
   },
@@ -1462,6 +1370,12 @@
   },
   {
     "name": "accepts",
+    "version": "1.3.8",
+    "license": "MIT",
+    "repository": "jshttp/accepts"
+  },
+  {
+    "name": "accepts",
     "version": "2.0.0",
     "license": "MIT",
     "repository": "jshttp/accepts"
@@ -1543,6 +1457,12 @@
     "publisher": "David Bonnet <david@bonnet.cc>"
   },
   {
+    "name": "atomically",
+    "version": "2.1.1",
+    "license": "MIT",
+    "repository": "github:fabiospampinato/atomically"
+  },
+  {
     "name": "attr-accept",
     "version": "2.2.5",
     "license": "MIT",
@@ -1560,6 +1480,13 @@
     "version": "4.0.4",
     "license": "MIT",
     "repository": "git://github.com/juliangruber/balanced-match.git"
+  },
+  {
+    "name": "base64id",
+    "version": "2.0.0",
+    "license": "MIT",
+    "repository": "https://github.com/faeldt/base64id.git",
+    "publisher": "Kristian Faeldt <faeldt_kristian@cyberagent.co.jp>"
   },
   {
     "name": "baseline-browser-mapping",
@@ -1635,11 +1562,24 @@
     "publisher": "Ben Briggs"
   },
   {
+    "name": "chokidar",
+    "version": "4.0.3",
+    "license": "MIT",
+    "repository": "https://github.com/paulmillr/chokidar.git",
+    "publisher": "Paul Miller (https://paulmillr.com)"
+  },
+  {
     "name": "chrome-trace-event",
     "version": "1.0.4",
     "license": "MIT",
     "repository": "github:samccone/chrome-trace-event",
     "publisher": "Trent Mick, Sam Saccone"
+  },
+  {
+    "name": "citty",
+    "version": "0.2.2",
+    "license": "MIT",
+    "repository": "unjs/citty"
   },
   {
     "name": "cjs-module-lexer",
@@ -1698,6 +1638,13 @@
   },
   {
     "name": "commander",
+    "version": "13.1.0",
+    "license": "MIT",
+    "repository": "https://github.com/tj/commander.js.git",
+    "publisher": "TJ Holowaychuk <tj@vision-media.ca>"
+  },
+  {
+    "name": "commander",
     "version": "2.20.3",
     "license": "MIT",
     "repository": "https://github.com/tj/commander.js.git",
@@ -1709,6 +1656,13 @@
     "license": "MIT",
     "repository": "http://github.com/substack/node-commondir.git",
     "publisher": "James Halliday"
+  },
+  {
+    "name": "conf",
+    "version": "15.1.0",
+    "license": "MIT",
+    "repository": "sindresorhus/conf",
+    "publisher": "Sindre Sorhus"
   },
   {
     "name": "content-disposition",
@@ -1779,6 +1733,13 @@
     "license": "MIT",
     "repository": "git@github.com:moxystudio/node-cross-spawn.git",
     "publisher": "André Cruz <andre@moxy.studio>"
+  },
+  {
+    "name": "css-tree",
+    "version": "3.2.1",
+    "license": "MIT",
+    "repository": "csstree/csstree",
+    "publisher": "Roman Dvornov <rdvornov@gmail.com> (https://github.com/lahmatiy)"
   },
   {
     "name": "cssesc",
@@ -1885,6 +1846,19 @@
     "publisher": "Marnus Weststrate <marnusw@gmail.com>"
   },
   {
+    "name": "debounce",
+    "version": "2.2.0",
+    "license": "MIT",
+    "repository": "sindresorhus/debounce"
+  },
+  {
+    "name": "debounce-fn",
+    "version": "6.0.0",
+    "license": "MIT",
+    "repository": "sindresorhus/debounce-fn",
+    "publisher": "Sindre Sorhus"
+  },
+  {
     "name": "debug",
     "version": "4.4.3",
     "license": "MIT",
@@ -1967,6 +1941,13 @@
     "publisher": "Felix Boehm <me@feedic.com>"
   },
   {
+    "name": "dot-prop",
+    "version": "10.1.0",
+    "license": "MIT",
+    "repository": "sindresorhus/dot-prop",
+    "publisher": "Sindre Sorhus"
+  },
+  {
     "name": "dotenv",
     "version": "16.6.1",
     "license": "BSD-2-Clause",
@@ -2007,6 +1988,19 @@
     "repository": "pillarjs/encodeurl"
   },
   {
+    "name": "engine.io",
+    "version": "6.6.9",
+    "license": "MIT",
+    "repository": "https://github.com/socketio/socket.io.git",
+    "publisher": "Guillermo Rauch <guillermo@learnboost.com>"
+  },
+  {
+    "name": "engine.io-parser",
+    "version": "5.2.3",
+    "license": "MIT",
+    "repository": "https://github.com/socketio/socket.io.git"
+  },
+  {
     "name": "enhanced-resolve",
     "version": "5.24.1",
     "license": "MIT",
@@ -2019,6 +2013,13 @@
     "license": "BSD-2-Clause",
     "repository": "git://github.com/fb55/entities.git",
     "publisher": "Felix Boehm <me@feedic.com>"
+  },
+  {
+    "name": "env-paths",
+    "version": "3.0.0",
+    "license": "MIT",
+    "repository": "sindresorhus/env-paths",
+    "publisher": "Sindre Sorhus"
   },
   {
     "name": "es-define-property",
@@ -2491,6 +2492,13 @@
     "publisher": "Rich Harris"
   },
   {
+    "name": "is-unicode-supported",
+    "version": "2.1.0",
+    "license": "MIT",
+    "repository": "sindresorhus/is-unicode-supported",
+    "publisher": "Sindre Sorhus"
+  },
+  {
     "name": "is-what",
     "version": "5.5.0",
     "license": "MIT",
@@ -2509,6 +2517,12 @@
     "version": "27.5.1",
     "license": "MIT",
     "repository": "https://github.com/facebook/jest.git"
+  },
+  {
+    "name": "jiti",
+    "version": "2.6.1",
+    "license": "MIT",
+    "repository": "unjs/jiti"
   },
   {
     "name": "jose",
@@ -2553,6 +2567,13 @@
     "publisher": "Aseem Kishore <aseem.kishore@gmail.com>"
   },
   {
+    "name": "kleur",
+    "version": "3.0.3",
+    "license": "MIT",
+    "repository": "lukeed/kleur",
+    "publisher": "Luke Edwards"
+  },
+  {
     "name": "leac",
     "version": "0.6.0",
     "license": "MIT",
@@ -2578,6 +2599,13 @@
     "version": "6.0.0",
     "license": "MIT",
     "repository": "sindresorhus/locate-path",
+    "publisher": "Sindre Sorhus"
+  },
+  {
+    "name": "log-symbols",
+    "version": "7.0.1",
+    "license": "MIT",
+    "repository": "sindresorhus/log-symbols",
     "publisher": "Sindre Sorhus"
   },
   {
@@ -2630,6 +2658,13 @@
     "publisher": "Jordan Harband <ljharb@gmail.com>"
   },
   {
+    "name": "mdn-data",
+    "version": "2.27.1",
+    "license": "CC0-1.0",
+    "repository": "https://github.com/mdn/data.git",
+    "publisher": "Mozilla Developer Network"
+  },
+  {
     "name": "media-typer",
     "version": "1.1.0",
     "license": "MIT",
@@ -2658,9 +2693,21 @@
   },
   {
     "name": "mime-db",
+    "version": "1.52.0",
+    "license": "MIT",
+    "repository": "jshttp/mime-db"
+  },
+  {
+    "name": "mime-db",
     "version": "1.54.0",
     "license": "MIT",
     "repository": "jshttp/mime-db"
+  },
+  {
+    "name": "mime-types",
+    "version": "2.1.35",
+    "license": "MIT",
+    "repository": "jshttp/mime-types"
   },
   {
     "name": "mime-types",
@@ -2669,11 +2716,25 @@
     "repository": "jshttp/mime-types"
   },
   {
+    "name": "mimic-function",
+    "version": "5.0.1",
+    "license": "MIT",
+    "repository": "sindresorhus/mimic-function",
+    "publisher": "Sindre Sorhus"
+  },
+  {
     "name": "minimatch",
     "version": "10.2.5",
     "license": "BlueOak-1.0.0",
     "repository": "git@github.com:isaacs/minimatch",
     "publisher": "Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me)"
+  },
+  {
+    "name": "minimist",
+    "version": "1.2.8",
+    "license": "MIT",
+    "repository": "git://github.com/minimistjs/minimist.git",
+    "publisher": "James Halliday"
   },
   {
     "name": "minipass",
@@ -2701,6 +2762,12 @@
     "license": "MIT",
     "repository": "ai/nanoid",
     "publisher": "Andrey Sitnik <andrey@sitnik.ru>"
+  },
+  {
+    "name": "negotiator",
+    "version": "0.6.3",
+    "license": "MIT",
+    "repository": "jshttp/negotiator"
   },
   {
     "name": "negotiator",
@@ -2759,6 +2826,19 @@
     "license": "MIT",
     "repository": "https://github.com/chicoxyzzy/node-releases.git",
     "publisher": "Sergey Rubanov <chi187@gmail.com>"
+  },
+  {
+    "name": "normalize-path",
+    "version": "3.0.0",
+    "license": "MIT",
+    "repository": "jonschlinkert/normalize-path",
+    "publisher": "Jon Schlinkert (https://github.com/jonschlinkert)"
+  },
+  {
+    "name": "nypm",
+    "version": "0.6.6",
+    "license": "MIT",
+    "repository": "unjs/nypm"
   },
   {
     "name": "object-assign",
@@ -2863,6 +2943,12 @@
     "repository": "https://github.com/pillarjs/path-to-regexp.git"
   },
   {
+    "name": "pathe",
+    "version": "2.0.3",
+    "license": "MIT",
+    "repository": "unjs/pathe"
+  },
+  {
     "name": "peberminta",
     "version": "0.9.0",
     "license": "MIT",
@@ -2882,6 +2968,13 @@
     "license": "MIT",
     "repository": "micromatch/picomatch",
     "publisher": "Jon Schlinkert (https://github.com/jonschlinkert)"
+  },
+  {
+    "name": "picospinner",
+    "version": "3.0.0",
+    "license": "MIT",
+    "repository": "https://github.com/PondWader/picospinner#readme",
+    "publisher": "PondWader"
   },
   {
     "name": "pkce-challenge",
@@ -2946,7 +3039,7 @@
   },
   {
     "name": "prettier",
-    "version": "3.9.4",
+    "version": "3.9.5",
     "license": "MIT",
     "repository": "prettier/prettier",
     "publisher": "James Long"
@@ -2964,6 +3057,13 @@
     "license": "MIT",
     "repository": "git://github.com/visionmedia/node-progress",
     "publisher": "TJ Holowaychuk <tj@vision-media.ca>"
+  },
+  {
+    "name": "prompts",
+    "version": "2.4.2",
+    "license": "MIT",
+    "repository": "terkelg/prompts",
+    "publisher": "Terkel Gjervig"
   },
   {
     "name": "prop-types",
@@ -3032,6 +3132,12 @@
     "publisher": "Param Aggarwal"
   },
   {
+    "name": "react-email",
+    "version": "6.8.1",
+    "license": "MIT",
+    "repository": "https://github.com/resend/react-email.git"
+  },
+  {
     "name": "react-hook-form",
     "version": "7.81.0",
     "license": "MIT",
@@ -3077,6 +3183,13 @@
     "license": "MIT",
     "repository": "https://github.com/theKashey/react-style-singleton",
     "publisher": "Anton Korzunov (thekashey@gmail.com)"
+  },
+  {
+    "name": "readdirp",
+    "version": "4.1.2",
+    "license": "MIT",
+    "repository": "git://github.com/paulmillr/readdirp.git",
+    "publisher": "Thorsten Lorenz <thlorenz@gmx.de> (thlorenz.com)"
   },
   {
     "name": "recharts",
@@ -3284,6 +3397,31 @@
     "publisher": "Jordan Harband <ljharb@gmail.com>"
   },
   {
+    "name": "sisteransi",
+    "version": "1.0.5",
+    "license": "MIT",
+    "repository": "https://github.com/terkelg/sisteransi",
+    "publisher": "Terkel Gjervig"
+  },
+  {
+    "name": "socket.io",
+    "version": "4.8.3",
+    "license": "MIT",
+    "repository": "https://github.com/socketio/socket.io.git"
+  },
+  {
+    "name": "socket.io-adapter",
+    "version": "2.5.8",
+    "license": "MIT",
+    "repository": "https://github.com/socketio/socket.io.git"
+  },
+  {
+    "name": "socket.io-parser",
+    "version": "4.2.6",
+    "license": "MIT",
+    "repository": "https://github.com/socketio/socket.io.git"
+  },
+  {
     "name": "sonner",
     "version": "2.0.7",
     "license": "MIT",
@@ -3345,11 +3483,30 @@
     "publisher": "Sindre Sorhus"
   },
   {
+    "name": "strip-bom",
+    "version": "3.0.0",
+    "license": "MIT",
+    "repository": "sindresorhus/strip-bom",
+    "publisher": "Sindre Sorhus"
+  },
+  {
     "name": "stripe",
     "version": "20.4.1",
     "license": "MIT",
     "repository": "https://github.com/stripe/stripe-node",
     "publisher": "Stripe <support@stripe.com> (https://stripe.com/)"
+  },
+  {
+    "name": "stubborn-fs",
+    "version": "2.0.0",
+    "license": "MIT",
+    "repository": "github:fabiospampinato/stubborn-fs"
+  },
+  {
+    "name": "stubborn-utils",
+    "version": "1.0.2",
+    "license": "MIT",
+    "repository": "github:fabiospampinato/stubborn-utils"
   },
   {
     "name": "styled-jsx",
@@ -3372,17 +3529,18 @@
     "publisher": "Sindre Sorhus"
   },
   {
+    "name": "tagged-tag",
+    "version": "1.0.0",
+    "license": "MIT",
+    "repository": "sindresorhus/tagged-tag",
+    "publisher": "Sindre Sorhus"
+  },
+  {
     "name": "tailwind-merge",
     "version": "3.6.0",
     "license": "MIT",
     "repository": "https://github.com/dcastil/tailwind-merge.git",
     "publisher": "Dany Castillo"
-  },
-  {
-    "name": "tailwindcss",
-    "version": "4.3.1",
-    "license": "MIT",
-    "repository": "https://github.com/tailwindlabs/tailwindcss.git"
   },
   {
     "name": "tailwindcss",
@@ -3419,6 +3577,13 @@
     "publisher": "Alex Reardon <alexreardon@gmail.com>"
   },
   {
+    "name": "tinyexec",
+    "version": "1.2.4",
+    "license": "MIT",
+    "repository": "https://github.com/tinylibs/tinyexec.git",
+    "publisher": "James Garbutt (https://github.com/43081j)"
+  },
+  {
     "name": "toidentifier",
     "version": "1.0.1",
     "license": "MIT",
@@ -3431,6 +3596,13 @@
     "license": "MIT",
     "repository": "https://github.com/Sebmaster/tr46.js.git",
     "publisher": "Sebastian Mayr <npm@smayr.name>"
+  },
+  {
+    "name": "tsconfig-paths",
+    "version": "4.2.0",
+    "license": "MIT",
+    "repository": "https://github.com/dividab/tsconfig-paths",
+    "publisher": "Jonas Kello"
   },
   {
     "name": "tslib",
@@ -3447,6 +3619,13 @@
     "publisher": "Sindre Sorhus"
   },
   {
+    "name": "type-fest",
+    "version": "5.8.0",
+    "license": "(MIT OR CC0-1.0)",
+    "repository": "sindresorhus/type-fest",
+    "publisher": "Sindre Sorhus"
+  },
+  {
     "name": "type-is",
     "version": "2.1.0",
     "license": "MIT",
@@ -3458,6 +3637,13 @@
     "license": "Apache-2.0",
     "repository": "https://github.com/microsoft/TypeScript.git",
     "publisher": "Microsoft Corp."
+  },
+  {
+    "name": "uint8array-extras",
+    "version": "1.5.0",
+    "license": "MIT",
+    "repository": "sindresorhus/uint8array-extras",
+    "publisher": "Sindre Sorhus"
   },
   {
     "name": "uncrypto",
@@ -3582,6 +3768,12 @@
     "publisher": "Sebastian Mayr <github@smayr.name>"
   },
   {
+    "name": "when-exit",
+    "version": "2.1.5",
+    "license": "MIT",
+    "repository": "github:fabiospampinato/when-exit"
+  },
+  {
     "name": "which",
     "version": "2.0.2",
     "license": "ISC",
@@ -3608,6 +3800,13 @@
     "license": "ISC",
     "repository": "https://github.com/npm/wrappy",
     "publisher": "Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)"
+  },
+  {
+    "name": "ws",
+    "version": "8.21.0",
+    "license": "MIT",
+    "repository": "https://github.com/websockets/ws.git",
+    "publisher": "Einar Otto Stangvik <einaros@gmail.com> (http://2x.io)"
   },
   {
     "name": "y18n",
@@ -3641,6 +3840,13 @@
     "version": "0.1.0",
     "license": "MIT",
     "repository": "sindresorhus/yocto-queue",
+    "publisher": "Sindre Sorhus"
+  },
+  {
+    "name": "yoctocolors",
+    "version": "2.1.2",
+    "license": "MIT",
+    "repository": "sindresorhus/yoctocolors",
     "publisher": "Sindre Sorhus"
   },
   {

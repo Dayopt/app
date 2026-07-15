@@ -6,7 +6,7 @@
  * NOTE: supabase/functions/send-auth-email/ConfirmEmail.tsx と同一内容を維持
  */
 
-import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
+import { Body, Button, Container, Head, Html, Link, Section, Text } from 'react-email';
 
 import { dayoptUrls } from '@dayopt/config';
 

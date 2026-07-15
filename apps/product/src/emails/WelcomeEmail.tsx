@@ -3,7 +3,7 @@
  * 新規ユーザー登録時のウェルカムメール
  */
 
-import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
+import { Body, Button, Container, Head, Html, Link, Section, Text } from 'react-email';
 
 import { dayoptUrls } from '@dayopt/config';
 
