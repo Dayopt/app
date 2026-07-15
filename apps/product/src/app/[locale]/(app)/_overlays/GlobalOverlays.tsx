@@ -8,6 +8,7 @@ import { useCallback, useEffect } from 'react';
 import { Toaster } from '@/components/ui/feedback/toast';
 import {
   CalendarViewType,
+  ShortcutCheatSheetDialog,
   buildCalendarReviewPanelPath,
   isCalendarViewPath,
   useCalendarNavigation,
@@ -59,16 +60,17 @@ export function GlobalOverlays() {
   const closeSheet = useShellStore.use.closeSheet();
   const contactOpen = activeSheet?.type === 'contact';
   const settingsOpen = activeSheet?.type === 'settings';
+  const shortcutCheatSheetOpen = activeSheet?.type === 'shortcutCheatSheet';
   const isInspectorOpen = useTimeblockInspectorStore((s) => s.isOpen);
   const closeInspector = useTimeblockInspectorStore((s) => s.closeInspector);
   const copyTimeblock = useTimeblockClipboardStore((s) => s.copyTimeblock);
 
-  // C4: モーダル（Settings/Contact）が開いたら Inspector を閉じる（排他制御）
+  // C4: モーダルが開いたら Inspector を閉じる（排他制御）
   useEffect(() => {
-    if (settingsOpen || contactOpen) {
+    if (settingsOpen || contactOpen || shortcutCheatSheetOpen) {
       closeInspector();
     }
-  }, [settingsOpen, contactOpen, closeInspector]);
+  }, [settingsOpen, contactOpen, shortcutCheatSheetOpen, closeInspector]);
 
   // Inspector は Calendar ビュー専用 — workspace ビュー外への遷移で自動 close。
   // URL は平坦化済み（/day, /week, /Nday）のため isCalendarViewPath で判定する。
@@ -123,6 +125,12 @@ export function GlobalOverlays() {
         }}
       />
       <SettingsDialog />
+      <ShortcutCheatSheetDialog
+        open={shortcutCheatSheetOpen}
+        onOpenChange={(open) => {
+          if (!open) closeSheet();
+        }}
+      />
       <TimeblockInspector onViewStats={handleViewStats} onCopy={handleCopy} />
       <Toaster />
     </>

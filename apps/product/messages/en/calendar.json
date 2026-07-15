@@ -7,6 +7,35 @@
       "description": "Plan your schedule with time boxing. View and manage your plans by day, week, or month."
     },
     "title": "Calendar",
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "groups": {
+        "general": "General",
+        "navigation": "Navigation",
+        "views": "Views",
+        "blocks": "Blocks"
+      },
+      "actions": {
+        "open": "Open keyboard shortcuts",
+        "previousPeriod": "Go to the previous period",
+        "nextPeriod": "Go to the next period",
+        "today": "Go to today",
+        "dayView": "Show 1 day",
+        "twoDayView": "Show 2 days",
+        "threeDayView": "Show 3 days",
+        "fourDayView": "Show 4 days",
+        "fiveDayView": "Show 5 days",
+        "sixDayView": "Show 6 days",
+        "weekView": "Show 7 days",
+        "toggleWeekends": "Show or hide weekends",
+        "createBlock": "Create a block",
+        "createBlockNow": "Create a block at the current time",
+        "copyBlock": "Copy the selected block",
+        "pasteBlock": "Paste the copied block",
+        "deleteBlock": "Delete the selected block",
+        "closeInspector": "Close block details"
+      }
+    },
     "clipboard": {
       "planRequiresFuture": "Plans can only be pasted into future time",
       "recordRequiresPast": "Records can only be pasted into past time"
