@@ -342,7 +342,7 @@ export function TimeblockSearchDialog({
       onOpenChange={handleOpenChange}
       title={t('calendar.search.title')}
       description={t('calendar.search.description')}
-      className="sm:max-w-xl"
+      className="sm:max-w-xl [&_[data-slot=dialog-close]]:top-2 [&_[data-slot=dialog-close]]:right-2"
     >
       <CommandInput
         value={query}
