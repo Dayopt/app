@@ -7,10 +7,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    const title = searchParams.get('title') || 'Dayopt';
+    const title = searchParams.get('title') || '守れる計画を、立てられるように。';
     const description =
       searchParams.get('description') ||
-      'スケーラブルなアプリケーションのためのモダンSaaSプラットフォーム';
+      '計画と実績を、ひとつのタイムラインに。ズレが見えるから、明日の計画がうまくなる。';
     const type = searchParams.get('type') || 'default';
     const category = searchParams.get('category');
     const author = searchParams.get('author');

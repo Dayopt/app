@@ -1,16 +1,16 @@
 {
   "marketing": {
     "hero": {
-      "title": "One workflow. Every day, a little better.",
-      "subtitle": "A simple loop: plan, execute, reflect. Each cycle, your estimates get sharper and your days get calmer.",
-      "cta": "Begin With One Day",
+      "title": "Plan days you can actually keep.",
+      "subtitle": "Your plan and what actually happened, in one timeline. See where they drift — and get better at planning. The lightest timeboxing tool for knowledge workers.",
+      "cta": "Get started free",
       "headline": {
-        "words": ["Own", "your", "time."],
-        "highlightIndex": 2
+        "words": ["Plan", "days", "you", "can", "actually", "keep."],
+        "highlightIndex": 5
       },
-      "subcopy": "Plan, track, and learn — in one timeline. The timeboxing app that shows where your time actually goes.",
+      "subcopy": "Your plan and what actually happened, in one timeline. See where they drift — and get better at planning. The lightest timeboxing tool for knowledge workers.",
       "ctaPrimary": "Get started free",
-      "ctaNote": "Free for 14 days · No credit card required",
+      "ctaNote": "No credit card required",
       "mocks": {
         "plan": "Plan",
         "track": "Track",
@@ -34,27 +34,6 @@
         }
       }
     },
-    "solution": {
-      "title": "How Dayopt works",
-      "subtitle": "Three steps to take control of your day.",
-      "steps": {
-        "plan": {
-          "number": "01",
-          "title": "Plan",
-          "description": "Drag tasks onto your calendar as time blocks. Syncs with Google Calendar. Commit to real hours — not wishful thinking."
-        },
-        "execute": {
-          "number": "02",
-          "title": "Execute",
-          "description": "Work through your blocks one at a time. One click to start, one click to finish. No timers to babysit."
-        },
-        "reflect": {
-          "number": "03",
-          "title": "Reflect",
-          "description": "You planned 4 hours of deep work but delivered 2.5. Why? Dayopt shows you the patterns — so tomorrow is better."
-        }
-      }
-    },
     "how": {
       "eyebrow": "How it works",
       "title": "Your time. Planned, tracked, and understood.",
@@ -72,8 +51,8 @@
         },
         "learn": {
           "number": "03",
-          "title": "Get smarter every week",
-          "description": "AI detects your patterns and shows your time P&L. See what's working, what's not, and what to change."
+          "title": "Get better at planning",
+          "description": "Dayopt turns the gap between plan and reality into simple insights. Your estimates get sharper week over week."
         }
       },
       "cycle": {
@@ -81,52 +60,6 @@
         "track": "Track",
         "learn": "Learn",
         "repeat": "repeat"
-      }
-    },
-    "features": {
-      "grid": {
-        "title": "What makes Dayopt different",
-        "subtitle": "Features you won't find in a regular calendar or to-do app."
-      },
-      "items": {
-        "accuracyScore": {
-          "title": "Accuracy Score",
-          "description": "Not a grade. A mirror. See the gap between intention and execution — then gradually close it.",
-          "example": "Plan 2 hours of deep work, complete 1.5 → score 75%. Track weekly trends to improve your estimates."
-        },
-        "energyMapping": {
-          "title": "Energy Mapping",
-          "description": "Your body has a rhythm. Map it. Then stop fighting your energy and start working with it.",
-          "example": "One tap after each block. After a week, see your peak hours and schedule important work there."
-        },
-        "aiReflection": {
-          "title": "AI Reflection",
-          "description": "AI-powered, but human-focused. Insights that help you gradually become more intentional about your time.",
-          "example": "Weekly summary: 'Deep work on Tuesday afternoons has a 90% completion rate. Consider blocking more.'"
-        }
-      },
-      "integrations": {
-        "title": "Works with your tools",
-        "items": ["Google Calendar sync", "Keyboard shortcuts", "API access"]
-      }
-    },
-    "mission": {
-      "title": "Why Dayopt exists",
-      "description": "I built Dayopt because I kept losing days to reactive work. I had a calendar and a to-do list, but nothing that helped me plan realistically, stay on track, and learn from how I actually spent my time.",
-      "builderNote": "Built by an indie developer. Open development, no VC pressure, no data selling.",
-      "values": {
-        "simple": {
-          "title": "Simple by design",
-          "description": "No feature bloat. One workflow — plan, execute, reflect — done well."
-        },
-        "honest": {
-          "title": "Honest time tracking",
-          "description": "Not about billing hours. About understanding where your time really goes."
-        },
-        "private": {
-          "title": "Your data, your business",
-          "description": "No ads, no selling data. You pay for the product, not with your attention."
-        }
       }
     },
     "pricing": {
@@ -138,35 +71,34 @@
       "plans": {
         "free": {
           "name": "Free",
-          "description": "Everything you need to experience timeboxing",
+          "description": "Core planning, tracking, and Review stay free",
           "price": "$0",
           "period": "",
           "cta": "Start Free",
           "features": [
-            "Up to 3 projects",
-            "1GB storage",
-            "Basic analytics",
-            "Community support",
-            "API access"
+            "Calendar — day, week, and multi-day views",
+            "Plan and Record tracking",
+            "Core Review metrics",
+            "Tags"
           ]
         },
         "pro": {
           "name": "Pro",
           "badge": "Recommended",
-          "description": "Unlimited projects, AI insights, and advanced analytics",
+          "description": "Every Review metric, unlimited tags, and open data access",
           "price": "$5",
           "period": "/month",
           "priceDaily": "About 15¢ a day",
           "cta": "Try Pro Free",
           "highlights": [
-            "Unlimited projects & 100GB storage",
-            "AI-powered weekly insights",
-            "Advanced analytics & trends",
-            "Priority support"
+            "All Review metrics",
+            "Unlimited tags",
+            "API and MCP access",
+            "Data export"
           ]
         }
       },
-      "trialNote": "No credit card required. Start free, upgrade anytime."
+      "trialNote": "7-day free trial · No credit card required"
     },
     "contact": {
       "title": "Get in Touch",

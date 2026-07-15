@@ -44,6 +44,15 @@
 .hero-delay-7 {
   animation-delay: 1000ms;
 }
+.hero-delay-8 {
+  animation-delay: 1200ms;
+}
+.hero-delay-9 {
+  animation-delay: 1350ms;
+}
+.hero-delay-10 {
+  animation-delay: 1500ms;
+}
 
 /* Ambient glow behind headline — breathing */
 @keyframes hero-glow-breathe {
