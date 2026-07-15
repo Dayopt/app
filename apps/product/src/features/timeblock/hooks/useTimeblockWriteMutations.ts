@@ -90,11 +90,8 @@ export function doesTimeModelListQueryIncludeRow(
     return false;
   if (lane === 'plans' && filter.includeSkipped === false && row.skipped_at != null) return false;
 
-  if (filter.search) {
-    const search = filter.search.toLocaleLowerCase();
-    const haystack = `${row.title}\n${row.note ?? ''}`.toLocaleLowerCase();
-    if (!haystack.includes(search)) return false;
-  }
+  // tag名はlist rowだけでは解決できないため、検索cacheの一致判定はserver再検証へ任せる。
+  if (filter.search) return false;
 
   if (filter.startDate && filter.endDate) {
     if (!(
@@ -189,6 +186,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
   ) => {
     const predicate = lane === 'plans' ? isPlansListQuery : isRecordsListQuery;
     for (const [queryKey, data] of queryClient.getQueriesData<T[]>({ predicate })) {
+      if (getListFilter(queryKey).search) continue;
       if (!doesTimeModelListQueryIncludeRow(queryKey, row, lane, 'create')) continue;
       const old = data ?? [];
       const next = old.filter((candidate) => candidate.id !== replaceId && candidate.id !== row.id);
@@ -203,6 +201,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
   ) => {
     const predicate = lane === 'plans' ? isPlansListQuery : isRecordsListQuery;
     for (const [queryKey, data] of queryClient.getQueriesData<T[]>({ predicate })) {
+      if (getListFilter(queryKey).search) continue;
       if (!data?.some((row) => row.id === id)) continue;
       const patched = data.map((row) => (row.id === id ? patch(row) : row));
       const filtered = patched.filter(

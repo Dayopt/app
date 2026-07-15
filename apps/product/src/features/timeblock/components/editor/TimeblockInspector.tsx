@@ -16,6 +16,7 @@ import { Suspense, useCallback, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
+import { useTagsMap } from '@/features/tags';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { api } from '@/lib/trpc';
@@ -49,6 +50,7 @@ const INSPECTOR_FOCUSABLE_SELECTOR =
 export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+  const { getTagById } = useTagsMap();
 
   const isOpen = useTimeblockInspectorStore((state) => state.isOpen);
   const timeblockId = useTimeblockInspectorStore((state) => state.timeblockId);
@@ -153,7 +155,9 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
   });
 
   // --- コンテンツ（loading / error / empty / form） ---
-  const title = duplicateDraft?.title || target?.title || t('timeblock.inspector.noTitle');
+  const displayTagId = duplicateDraft?.tagId ?? target?.tag_id;
+  const title =
+    (displayTagId ? getTagById(displayTagId)?.name : undefined) ?? t('common.tags.noTag');
   let content: React.ReactNode;
 
   if (duplicateDraft) {

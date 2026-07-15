@@ -161,8 +161,8 @@ export function TimeblockSearchContent({
       <CommandGroup heading={t('calendar.search.results')}>
         {results.map((result, index) => {
           const tag = result.tagId ? tagsById.get(result.tagId) : undefined;
-          const displayTitle = result.title || t('timeblock.untitled');
-          const searchableValue = [query, result.kind, result.title, result.note, tag?.name, index]
+          const displayName = tag?.name ?? t('common.tags.noTag');
+          const searchableValue = [query, result.kind, result.note, tag?.name, index]
             .filter((value) => value != null)
             .join(' ');
 
@@ -183,14 +183,11 @@ export function TimeblockSearchContent({
                       {t('calendar.search.skipped')}
                     </span>
                   ) : null}
-                  {tag ? (
-                    <span className="text-muted-foreground flex min-w-0 items-center gap-1 text-xs">
-                      <TagIcon icon={tag.icon} color={tag.color} size="sm" />
-                      <span className="truncate">{tag.name}</span>
-                    </span>
-                  ) : null}
                 </div>
-                <p className="truncate text-sm font-medium">{displayTitle}</p>
+                <p className="flex min-w-0 items-center gap-1 text-sm font-medium">
+                  {tag ? <TagIcon icon={tag.icon} color={tag.color} size="sm" /> : null}
+                  <span className="truncate">{displayName}</span>
+                </p>
                 {result.note ? (
                   <p className="text-muted-foreground line-clamp-1 text-xs">{result.note}</p>
                 ) : null}
@@ -336,6 +333,24 @@ export function TimeblockSearchDialog({
     void Promise.all([plansQuery.refetch(), recordsQuery.refetch(), tagsQuery.refetch()]);
   }, [plansQuery, recordsQuery, tagsQuery]);
 
+  const searchContent = (
+    <TimeblockSearchContent
+      query={query}
+      results={merged.results}
+      tagsById={tagsById}
+      isLoading={isLoading}
+      isError={isError}
+      hasMore={merged.hasMore}
+      locale={locale}
+      timezone={timezone}
+      timeFormat={timeFormat}
+      onOpenResult={handleOpenResult}
+      onRetry={retry}
+    />
+  );
+  const hasResultList =
+    query.trim().length > 0 && !isLoading && !isError && merged.results.length > 0;
+
   return (
     <CommandDialog
       open={open}
@@ -353,21 +368,19 @@ export function TimeblockSearchDialog({
         autoFocus
         data-sentry-mask
       />
-      <CommandList aria-busy={isLoading} data-sentry-block>
-        <TimeblockSearchContent
-          query={query}
-          results={merged.results}
-          tagsById={tagsById}
-          isLoading={isLoading}
-          isError={isError}
-          hasMore={merged.hasMore}
-          locale={locale}
-          timezone={timezone}
-          timeFormat={timeFormat}
-          onOpenResult={handleOpenResult}
-          onRetry={retry}
-        />
-      </CommandList>
+      {hasResultList ? (
+        <CommandList aria-busy={false} data-sentry-block>
+          {searchContent}
+        </CommandList>
+      ) : (
+        <div
+          className="max-h-80 overflow-x-hidden overflow-y-auto"
+          aria-busy={isLoading}
+          data-sentry-block
+        >
+          {searchContent}
+        </div>
+      )}
     </CommandDialog>
   );
 }

@@ -27,7 +27,7 @@ function createTimeblockRow(id: string, startAt: string, overrides: Record<strin
   return {
     id,
     user_id: 'user-1',
-    title: id,
+    title: `compatibility-${id}`,
     note: null,
     tag_id: 'tag-work',
     start_at: startAt,
@@ -43,20 +43,17 @@ function createTimeblockRow(id: string, startAt: string, overrides: Record<strin
 
 const PLANS = [
   createTimeblockRow('plan-1', '2026-07-15T00:00:00.000Z', {
-    title: 'Deep work',
     note: 'Outline the next product iteration',
     skipped_at: null,
   }),
   createTimeblockRow('plan-2', '2026-07-13T05:00:00.000Z', {
-    title: 'Weekly planning',
-    note: null,
+    note: 'Review the week',
     skipped_at: '2026-07-13T07:00:00.000Z',
   }),
 ];
 
 const RECORDS = [
   createTimeblockRow('record-1', '2026-07-14T01:30:00.000Z', {
-    title: 'Design review',
     note: 'Calendar search states',
     plan_id: 'plan-1',
     fulfillment_score: null,
@@ -110,7 +107,7 @@ export const OverLimit: Story = {
         createTimeblockRow(
           `plan-${index + 1}`,
           new Date(Date.UTC(2026, 6, 31 - index, 0, 0)).toISOString(),
-          { title: `Search result ${index + 1}`, skipped_at: null },
+          { note: `Search result ${index + 1}`, skipped_at: null },
         ),
       ),
       'records.list': [],
@@ -153,7 +150,6 @@ export const MobileDrawer: Story = {
 const STATIC_RESULT: TimeblockSearchResult = {
   kind: 'plan',
   id: 'plan-static',
-  title: 'Deep work',
   note: 'Outline the next product iteration',
   tagId: 'tag-work',
   startAt: '2026-07-15T00:00:00.000Z',
@@ -179,9 +175,26 @@ function StaticPattern({
   isError?: boolean;
   hasMore?: boolean;
 }) {
+  const hasResultList = query.trim().length > 0 && !isLoading && !isError && results.length > 0;
+
   return (
     <Command className="border-border h-72 border">
-      <CommandList className="max-h-none">
+      {hasResultList ? (
+        <CommandList className="max-h-none">
+          <TimeblockSearchContent
+            query={query}
+            results={results}
+            tagsById={STATIC_TAGS}
+            isLoading={isLoading}
+            isError={isError}
+            hasMore={hasMore}
+            locale="en"
+            timezone="Asia/Tokyo"
+            timeFormat="24h"
+            {...STATIC_CALLBACKS}
+          />
+        </CommandList>
+      ) : (
         <TimeblockSearchContent
           query={query}
           results={results}
@@ -194,7 +207,7 @@ function StaticPattern({
           timeFormat="24h"
           {...STATIC_CALLBACKS}
         />
-      </CommandList>
+      )}
     </Command>
   );
 }

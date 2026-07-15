@@ -80,20 +80,21 @@ describe('useTimeblockWriteMutations', () => {
     expect(doesTimeModelListQueryIncludeRow(listKey({ offset: 10 }), row, 'records')).toBe(false);
   });
 
-  it('tagとsearch filterを両方満たす場合だけ対象にする', () => {
+  it('tag filterは行から判定する', () => {
+    expect(doesTimeModelListQueryIncludeRow(listKey({ tagId: 'tag-1' }), row, 'records')).toBe(
+      true,
+    );
+    expect(doesTimeModelListQueryIncludeRow(listKey({ tagId: 'tag-2' }), row, 'records')).toBe(
+      false,
+    );
+  });
+
+  it('tag名を解決できないsearch cacheは楽観更新の一致対象にしない', () => {
+    expect(doesTimeModelListQueryIncludeRow(listKey({ search: 'focus' }), row, 'records')).toBe(
+      false,
+    );
     expect(
-      doesTimeModelListQueryIncludeRow(
-        listKey({ tagId: 'tag-1', search: 'focus' }),
-        row,
-        'records',
-      ),
-    ).toBe(true);
-    expect(
-      doesTimeModelListQueryIncludeRow(
-        listKey({ tagId: 'tag-2', search: 'focus' }),
-        row,
-        'records',
-      ),
+      doesTimeModelListQueryIncludeRow(listKey({ search: 'deep work' }), row, 'records', 'update'),
     ).toBe(false);
   });
 });

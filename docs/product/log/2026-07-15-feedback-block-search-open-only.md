@@ -1,6 +1,7 @@
 ---
 status: frozen
 date: 2026-07-15
+superseded_by: docs/product/log/2026-07-15-feedback-block-search-tag-note.md
 code: apps/product/src/features/calendar/components/search/TimeblockSearchDialog.tsx
 ---
 

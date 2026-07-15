@@ -114,7 +114,7 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 
 ## 関連する意思決定
 
-- [検索結果は対象ブロックを開く操作に限定する](../log/2026-07-15-feedback-block-search-open-only.md)
+- [検索対象と表示をtag・メモに揃え、結果は対象ブロックを開く操作に限定する](../log/2026-07-15-feedback-block-search-tag-note.md)
 - [ADR-025 時間管理モデルを Plan / Record / 外部カレンダーミラーの3概念に分割する](../log/2026-07-09-time-model-split.md)
 - [ADR-015 時間不変原則](../log/2026-03-10-time-immutability-principle.md)
 - [ADR-018 時間重なりの全面禁止](../log/2026-05-13-time-overlap-prohibition.md)

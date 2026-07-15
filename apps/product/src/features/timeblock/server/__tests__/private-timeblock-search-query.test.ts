@@ -35,7 +35,7 @@ describe('runPrivateTimeblockSearchQuery', () => {
   });
 
   it('transport例外のURLや検索語を呼び出し側へ出さない', async () => {
-    const privateMessage = 'GET /rest/v1/plans?or=title.ilike.private-words';
+    const privateMessage = 'GET /rest/v1/plans?or=note.ilike.private-words';
 
     const caught = await runPrivateTimeblockSearchQuery(() =>
       Promise.reject(new Error(privateMessage)),

@@ -24,7 +24,7 @@ function sanitizeTimeblockSearch(search: string): string {
 }
 
 /**
- * title / note / active tag name の部分一致を表す PostgREST filter を構築する。
+ * note / active tag name の部分一致を表す PostgREST filter を構築する。
  * tag ID は user-owned な active tag のクエリ結果だけを使用する。
  */
 export async function buildTimeblockSearchFilter(
@@ -48,7 +48,7 @@ export async function buildTimeblockSearchFilter(
     throw new TimeblockServiceError('FETCH_FAILED', 'Failed to search timeblock tags');
   }
 
-  const filters = [`title.ilike.%${sanitizedSearch}%`, `note.ilike.%${sanitizedSearch}%`];
+  const filters = [`note.ilike.%${sanitizedSearch}%`];
   const matchingTagIds = (matchingTags ?? []).map((tag) => tag.id);
 
   if (matchingTagIds.length > 0) {

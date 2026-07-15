@@ -81,8 +81,8 @@ function createRecord(overrides: Partial<RecordRow> = {}): RecordRow {
 }
 
 describe('PlanService.list', () => {
-  it('同一userのactive tag名をtitle・noteと同じOR条件で検索する', async () => {
-    const plan = createPlan({ tag_id: TAG_ID, title: 'Focused work' });
+  it('同一userのactive tag名をnoteと同じOR条件で検索する', async () => {
+    const plan = createPlan({ tag_id: TAG_ID, title: 'Legacy plan title' });
     const planQuery = createChainableMock([plan]);
     const tagQuery = createChainableMock([{ id: TAG_ID }]);
     const { service, mockSupabase } = createPlanService();
@@ -101,9 +101,8 @@ describe('PlanService.list', () => {
     expect(planQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
     expect(planQuery.is).toHaveBeenCalledWith('deleted_at', null);
     expect(planQuery.is).not.toHaveBeenCalledWith('skipped_at', null);
-    expect(planQuery.or).toHaveBeenCalledWith(
-      `title.ilike.%Focus%,note.ilike.%Focus%,tag_id.in.(${TAG_ID})`,
-    );
+    expect(planQuery.or).toHaveBeenCalledWith(`note.ilike.%Focus%,tag_id.in.(${TAG_ID})`);
+    expect(planQuery.or).not.toHaveBeenCalledWith(expect.stringContaining('title.ilike'));
     expect(planQuery.order).toHaveBeenCalledWith('start_at', { ascending: false });
     expect(planQuery.limit).toHaveBeenCalledWith(21);
   });
@@ -125,7 +124,7 @@ describe('PlanService.list', () => {
   });
 
   it('検索query失敗時はDB messageを例外へ含めない', async () => {
-    const privateError = 'parse failed near title.ilike.%private words%';
+    const privateError = 'parse failed near note.ilike.%private words%';
     const recordQuery = createChainableMock([], { message: privateError });
     const tagQuery = createChainableMock([]);
     const { service, mockSupabase } = createRecordService();
@@ -165,8 +164,8 @@ describe('PlanService.list', () => {
 });
 
 describe('RecordService.list', () => {
-  it('特殊文字を除去し、tagが一致しない場合もtitle・noteをOR検索する', async () => {
-    const record = createRecord({ title: 'Deep work' });
+  it('特殊文字を除去し、tagが一致しない場合もnoteを検索する', async () => {
+    const record = createRecord({ note: 'Deep work', title: 'Legacy title' });
     const recordQuery = createChainableMock([record]);
     const tagQuery = createChainableMock([]);
     const { service, mockSupabase } = createRecordService();
@@ -188,7 +187,8 @@ describe('RecordService.list', () => {
     expect(tagQuery.ilike).toHaveBeenCalledWith('name', '%deepwork%');
     expect(recordQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
     expect(recordQuery.is).toHaveBeenCalledWith('deleted_at', null);
-    expect(recordQuery.or).toHaveBeenCalledWith('title.ilike.%deepwork%,note.ilike.%deepwork%');
+    expect(recordQuery.or).toHaveBeenCalledWith('note.ilike.%deepwork%');
+    expect(recordQuery.or).not.toHaveBeenCalledWith(expect.stringContaining('title.ilike'));
     expect(recordQuery.order).toHaveBeenCalledWith('start_at', { ascending: false });
     expect(recordQuery.limit).toHaveBeenCalledWith(21);
   });
@@ -215,9 +215,7 @@ describe('RecordService.list', () => {
 
     await expect(service.list({ userId: USER_ID, search: 'Research' })).resolves.toEqual([record]);
 
-    expect(recordQuery.or).toHaveBeenCalledWith(
-      `title.ilike.%Research%,note.ilike.%Research%,tag_id.in.(${TAG_ID})`,
-    );
+    expect(recordQuery.or).toHaveBeenCalledWith(`note.ilike.%Research%,tag_id.in.(${TAG_ID})`);
   });
 
   it('user scopeを維持して指定したplan_idに絞り込む', async () => {

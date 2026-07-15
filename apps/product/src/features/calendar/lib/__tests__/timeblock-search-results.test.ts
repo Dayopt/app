@@ -12,7 +12,6 @@ function createRow(
 ): TimeblockSearchSourceRow {
   return {
     id,
-    title: id,
     note: null,
     tag_id: null,
     start_at: startAt,
@@ -32,6 +31,7 @@ describe('mergeTimeblockSearchResults', () => {
     const merged = mergeTimeblockSearchResults(plans, records);
 
     expect(merged.results.map(({ id }) => id)).toEqual(['plan-new', 'record-middle', 'plan-old']);
+    expect(merged.results[0]).not.toHaveProperty('title');
     expect(merged.hasMore).toBe(false);
   });
 

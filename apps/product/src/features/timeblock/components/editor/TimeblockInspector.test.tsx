@@ -23,6 +23,13 @@ vi.mock('@/lib/hooks/useMediaQuery', () => ({
   useMediaQuery: () => false,
 }));
 
+vi.mock('@/features/tags', () => ({
+  useTagsMap: () => ({
+    getTagById: (tagId: string) =>
+      tagId === 'tag-1' ? { id: tagId, name: 'Work', color: 'blue', icon: null } : undefined,
+  }),
+}));
+
 vi.mock('@/lib/trpc', () => ({
   api: {
     plans: {
@@ -44,8 +51,10 @@ vi.mock('../inspector/hooks', () => ({
 }));
 
 vi.mock('../inspector/FloatingPopover', () => ({
-  FloatingPopover: ({ children }: { children: React.ReactNode }) => (
-    <div role="dialog">{children}</div>
+  FloatingPopover: ({ children, title }: { children: React.ReactNode; title: string }) => (
+    <div role="dialog" aria-label={title}>
+      {children}
+    </div>
   ),
 }));
 
@@ -93,7 +102,7 @@ const plan = {
   user_id: 'user-1',
   tag_id: 'tag-1',
   external_calendar_event_id: null,
-  title: 'API development',
+  title: 'Legacy plan title',
   note: null,
   start_at: '2026-07-14T09:00:00.000Z',
   end_at: '2026-07-14T10:00:00.000Z',
@@ -111,7 +120,7 @@ const record = {
   plan_id: plan.id,
   external_calendar_event_id: null,
   fulfillment_score: null,
-  title: 'API development',
+  title: 'Legacy record title',
   note: null,
   start_at: '2026-07-14T09:05:00.000Z',
   end_at: '2026-07-14T09:55:00.000Z',
@@ -166,6 +175,7 @@ describe('TimeblockInspector relationships', () => {
     act(() => useTimeblockInspectorStore.getState().openInspector(plan.id, 'plan'));
     render(<TimeblockInspector />);
 
+    expect(screen.getByRole('dialog', { name: 'Work' })).toBeInTheDocument();
     expect(screen.getByTestId('inspector-kind')).toHaveTextContent('plan');
     expect(screen.getByTestId('relationship-kind')).toHaveTextContent('plan');
     expect(mocks.recordsList).toHaveBeenCalledWith(
@@ -223,6 +233,7 @@ describe('TimeblockInspector relationships', () => {
     );
     render(<TimeblockInspector />);
 
+    expect(screen.getByRole('dialog', { name: 'Work' })).toBeInTheDocument();
     expect(screen.getByTestId('inspector-mode')).toHaveTextContent('duplicate');
     expect(mocks.planGetById).toHaveBeenCalledWith(
       { id: plan.id },

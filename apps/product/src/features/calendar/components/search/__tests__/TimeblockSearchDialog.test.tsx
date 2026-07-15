@@ -14,7 +14,7 @@ const mockTagsRefetch = vi.fn();
 
 const PLAN_ROW = {
   id: 'plan-1',
-  title: 'Deep work',
+  title: 'Legacy deep work title',
   note: 'Outline the product iteration',
   tag_id: 'tag-work',
   start_at: '2026-07-15T00:00:00.000Z',
@@ -92,7 +92,8 @@ describe('TimeblockSearchDialog', () => {
   it('空の検索語ではqueryを無効にし、300ms後に検索条件を渡す', async () => {
     renderDialog();
 
-    expect(screen.getByRole('listbox')).toHaveAttribute('data-sentry-block');
+    expect(screen.getByRole('dialog').querySelector('[data-sentry-block]')).toBeInTheDocument();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 
     expect(mockPlansUseQuery).toHaveBeenLastCalledWith(
       expect.objectContaining({ search: '' }),
@@ -131,7 +132,8 @@ describe('TimeblockSearchDialog', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(300);
     });
-    fireEvent.click(screen.getByText('Deep work'));
+    expect(screen.queryByText('Legacy deep work title')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Work'));
 
     expect(props.onOpenResult).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'plan-1', kind: 'plan' }),
@@ -177,7 +179,6 @@ describe('TimeblockSearchContent', () => {
   const result: TimeblockSearchResult = {
     kind: 'record',
     id: 'record-1',
-    title: 'Design review',
     note: 'Calendar search states',
     tagId: 'tag-work',
     startAt: '2026-07-14T01:30:00.000Z',
@@ -205,25 +206,44 @@ describe('TimeblockSearchContent', () => {
       ...overrides,
     };
 
+    const hasResultList =
+      props.query.trim().length > 0 &&
+      !props.isLoading &&
+      !props.isError &&
+      props.results.length > 0;
     render(
       <Command>
-        <CommandList>
-          <TimeblockSearchContent {...props} />
-        </CommandList>
+        {hasResultList ? (
+          <CommandList>
+            <TimeblockSearchContent {...props} />
+          </CommandList>
+        ) : (
+          <div>
+            <TimeblockSearchContent {...props} />
+          </div>
+        )}
       </Command>,
     );
     return props;
   }
 
-  it('kind・タグ・タイトル・ノート・日時を表示し、IDは表示しない', () => {
+  it('kind・タグ・ノート・日時を表示し、IDは表示しない', () => {
     renderContent();
 
     expect(screen.getByText('calendar.search.kind.record')).toBeInTheDocument();
     expect(screen.getByText('Work')).toBeInTheDocument();
-    expect(screen.getByText('Design review')).toBeInTheDocument();
     expect(screen.getByText('Calendar search states')).toBeInTheDocument();
     expect(screen.getByText(/2026/)).toBeInTheDocument();
     expect(screen.queryByText('record-1')).not.toBeInTheDocument();
+  });
+
+  it('タグを解決できない結果はタグなしを表示名にする', () => {
+    renderContent({
+      results: [{ ...result, tagId: null }],
+      tagsById: new Map(),
+    });
+
+    expect(screen.getByText('common.tags.noTag')).toBeInTheDocument();
   });
 
   it('エラー時に再試行できる', () => {
@@ -232,7 +252,8 @@ describe('TimeblockSearchContent', () => {
     fireEvent.click(screen.getByRole('button', { name: 'calendar.search.retry' }));
 
     expect(props.onRetry).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('Design review')).not.toBeInTheDocument();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(screen.queryByText('Calendar search states')).not.toBeInTheDocument();
   });
 
   it('検索中を表示する', () => {

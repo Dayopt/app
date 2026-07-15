@@ -14,13 +14,13 @@ Calendarを主役のまま保ち、必要なときだけ全期間のPlan / Recor
 
 ## Goal
 
-- 覚えているタイトル・メモ・tag名から、削除されていないPlan / Recordへ到達できる
+- 覚えているtag名・メモから、削除されていないPlan / Recordへ到達できる
 - 検索結果から対象日と元ブロックのInspectorへ到達できる
 - 低頻度機能としてdesktop / mobile双方の通常操作を圧迫しない
 
 ## Minimum Viable Approach
 
-1. 既存のPlan / Record list検索をtag名にも拡張し、空欄では取得せず、全期間から開始日時の新しい順に20件を表示する
+1. 既存のPlan / Record list検索をactiveなtag名とメモに揃え、空欄では取得せず、全期間から開始日時の新しい順に20件を表示する
 2. shellの非永続overlayとしてresponsiveな検索dialogを置き、Sidebar、展開したmobile mini calendar、`Cmd/Ctrl+K`から同じ操作で開く
 3. 結果の選択は対象日のCalendarと元ブロックのInspectorを開き、検索内には副操作を置かない
 4. 日本語・英語、keyboard / IME、loading / empty / error / retry、mobile touch targetを既存patternに揃える
@@ -28,8 +28,8 @@ Calendarを主役のまま保ち、必要なときだけ全期間のPlan / Recor
 
 ## Acceptance Criteria
 
-- タイトル・メモ・tag名の部分一致でPlan / Recordを検索でき、skip済みPlanを含み、削除済みデータと別ユーザーのデータを返さない
-- 結果はPlan / Recordの別と日時を示し、内部IDを表示しない
+- activeなtag名・メモの部分一致でPlan / Recordを検索でき、skip済みPlanを含み、削除済みデータと別ユーザーのデータを返さない
+- 結果はPlan / Recordの別、表示名となるtag、メモ、日時を示し、DB互換の`title`と内部IDを表示しない
 - desktop trigger、mobile trigger、`Cmd/Ctrl+K`が同じdialogを開き、入力・IME・他overlayの操作と競合しない
 - 結果を選ぶと対象日と元ブロックのInspectorへ移動し、検索結果内には複製操作を表示しない
 - 空欄、loading、0件、20件超、片方の取得失敗を含む状態が定義され、検索語を履歴・log・analyticsへ保存しない
@@ -40,7 +40,7 @@ Calendarを主役のまま保ち、必要なときだけ全期間のPlan / Recor
 | 変更                | 永続data / APIへの影響           | 戻し方                           |
 | ------------------- | -------------------------------- | -------------------------------- |
 | triggerと検索dialog | なし                             | shell variantとUI wiringをrevert |
-| list検索のtag名対応 | request / response shape変更なし | 検索条件をタイトル・メモへ戻す   |
+| list検索のtag名対応 | request / response shape変更なし | tag名条件を外してメモだけへ戻す  |
 
 ## Existing Code to Reuse
 
@@ -57,6 +57,6 @@ Calendarを主役のまま保ち、必要なときだけ全期間のPlan / Recor
 
 ## Related Documents
 
-- [検索結果を開く操作へ限定する決定](../../product/log/2026-07-15-feedback-block-search-open-only.md)
+- [検索対象と表示をtag・メモに揃える決定](../../product/log/2026-07-15-feedback-block-search-tag-note.md)
 - [Calendar仕様](../../product/specs/calendar.md)
 - [Plan / Record仕様](../../product/specs/plan-record.md)

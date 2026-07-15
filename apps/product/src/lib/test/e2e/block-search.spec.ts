@@ -15,8 +15,10 @@ const TEST_EMAIL = `block-search-${TEST_RUN_ID}@example.com`;
 const TEST_PASSWORD = 'test-password-123';
 const SEARCH_TOKEN = TEST_RUN_ID.slice(0, 8);
 const TAG_NAME = `Search tag ${SEARCH_TOKEN}`;
-const PLAN_TITLE = `Search plan ${SEARCH_TOKEN}`;
-const RECORD_TITLE = `Search record ${SEARCH_TOKEN}`;
+const PLAN_NOTE = `Plan note ${SEARCH_TOKEN}`;
+const RECORD_NOTE = `Record note ${SEARCH_TOKEN}`;
+const PLAN_COMPATIBILITY_TITLE = `Legacy plan ${SEARCH_TOKEN}`;
+const RECORD_COMPATIBILITY_TITLE = `Legacy record ${SEARCH_TOKEN}`;
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
@@ -104,7 +106,8 @@ describeWithEnv('Block search', () => {
       .insert({
         user_id: TEST_USER_ID,
         tag_id: tag.id,
-        title: PLAN_TITLE,
+        title: PLAN_COMPATIBILITY_TITLE,
+        note: PLAN_NOTE,
         start_at: isoAt(planDate, '09:00'),
         end_at: isoAt(planDate, '10:00'),
       })
@@ -118,7 +121,8 @@ describeWithEnv('Block search', () => {
       .insert({
         user_id: TEST_USER_ID,
         tag_id: tag.id,
-        title: RECORD_TITLE,
+        title: RECORD_COMPATIBILITY_TITLE,
+        note: RECORD_NOTE,
         start_at: isoAt(recordDate, '09:00'),
         end_at: isoAt(recordDate, '10:00'),
         source: 'manual',
@@ -143,31 +147,31 @@ describeWithEnv('Block search', () => {
     await login(page);
   });
 
-  test('desktop shortcut・tag検索・Inspector遷移がつながる', async ({ page }, testInfo) => {
+  test('desktop shortcut・note/tag検索・Inspector遷移がつながる', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only');
 
     await page.keyboard.press('Control+K');
     const input = page.getByRole('combobox', { name: '予定と記録を検索' });
-    await input.fill(RECORD_TITLE);
-    await page.getByText(RECORD_TITLE).click();
+    await input.fill(RECORD_NOTE);
+    await page.getByText(RECORD_NOTE).click();
     await expect(input).toHaveCount(0);
     await expect
       .poll(() => new URL(page.url()).searchParams.get('timeblock'))
       .toBe(`record:${recordId}`);
     expect(new URL(page.url()).searchParams.get('date')).toBe(recordDate);
-    await expect(page.getByRole('dialog', { name: RECORD_TITLE })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: TAG_NAME })).toBeVisible();
 
     await page.getByRole('button', { name: 'ブロックを検索' }).first().click();
     await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(TAG_NAME);
-    await expect(page.getByText(PLAN_TITLE)).toBeVisible();
-    await expect(page.getByText(RECORD_TITLE)).toBeVisible();
-    await page.getByText(PLAN_TITLE).click();
+    await expect(page.getByText(PLAN_NOTE)).toBeVisible();
+    await expect(page.getByText(RECORD_NOTE)).toBeVisible();
+    await page.getByText(PLAN_NOTE).click();
 
     await expect
       .poll(() => new URL(page.url()).searchParams.get('timeblock'))
       .toBe(`plan:${planId}`);
     expect(new URL(page.url()).searchParams.get('date')).toBe(planDate);
-    await expect(page.getByRole('dialog', { name: PLAN_TITLE })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: TAG_NAME })).toBeVisible();
   });
 
   test('mobileは展開mini calendarから検索を開ける', async ({ page }, testInfo) => {
@@ -177,7 +181,7 @@ describeWithEnv('Block search', () => {
     await page.getByRole('button', { name: 'ブロックを検索' }).click();
     await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(TAG_NAME);
 
-    await expect(page.getByText(PLAN_TITLE)).toBeVisible();
-    await expect(page.getByText(RECORD_TITLE)).toBeVisible();
+    await expect(page.getByText(PLAN_NOTE)).toBeVisible();
+    await expect(page.getByText(RECORD_NOTE)).toBeVisible();
   });
 });

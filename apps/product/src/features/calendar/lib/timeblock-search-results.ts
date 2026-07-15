@@ -3,7 +3,6 @@ export type TimeblockSearchResultKind = 'plan' | 'record';
 /** Search UI が plans.list / records.list から使う最小行 shape。 */
 export interface TimeblockSearchSourceRow {
   id: string;
-  title: string;
   note: string | null;
   tag_id: string | null;
   start_at: string;
@@ -15,7 +14,6 @@ export interface TimeblockSearchSourceRow {
 export interface TimeblockSearchResult {
   kind: TimeblockSearchResultKind;
   id: string;
-  title: string;
   note: string | null;
   tagId: string | null;
   startAt: string;
@@ -35,7 +33,6 @@ function toSearchResult(
   return {
     kind,
     id: row.id,
-    title: row.title,
     note: row.note,
     tagId: row.tag_id,
     startAt: row.start_at,
