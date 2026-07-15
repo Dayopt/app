@@ -129,10 +129,7 @@ export function MultiDayView({
             return (
               <div
                 key={date.toISOString()}
-                className={cn(
-                  'relative flex-1',
-                  dayIndex < displayDates.length - 1 && 'border-border border-r',
-                )}
+                className="relative flex-1"
                 style={{ width: `${100 / displayDates.length}%` }}
               >
                 <CalendarGridContent

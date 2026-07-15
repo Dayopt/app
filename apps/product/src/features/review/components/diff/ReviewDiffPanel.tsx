@@ -71,7 +71,7 @@ export function ReviewDiffPanel({
 }: ReviewDiffPanelProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const timezone = useUserPreferences((s) => s.timezone);
+  const { timeFormat, timezone } = useUserPreferences();
   const { getTagById } = useTagsMap();
   const isSheet = variant === 'sheet';
   const timeFormatter = useMemo(
@@ -79,10 +79,10 @@ export function ReviewDiffPanel({
       new Intl.DateTimeFormat(locale, {
         hour: '2-digit',
         minute: '2-digit',
-        hourCycle: 'h23',
+        hourCycle: timeFormat === '24h' ? 'h23' : 'h12',
         timeZone: timezone,
       }),
-    [locale, timezone],
+    [locale, timeFormat, timezone],
   );
 
   return (
@@ -243,7 +243,7 @@ function DiffBadge({ item }: { item: ReviewDiffItem }) {
   return (
     <span
       data-review-diff-badge
-      className="bg-container border-border-subtle text-foreground mt-1 flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs tabular-nums"
+      className="bg-container text-muted-foreground border-border-subtle mt-1 flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs tabular-nums"
     >
       <Icon className="size-3.5" aria-hidden="true" />
       {content}

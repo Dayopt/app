@@ -12,6 +12,22 @@ import {
   handleStatsError,
 } from './statistics-shared';
 
+const reviewDateKeyInput = z.string().refine(
+  (value) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  },
+  { message: '日付は有効なYYYY-MM-DD形式で指定してください' },
+);
+const reviewVisibleDateKeysInput = z
+  .array(reviewDateKeyInput)
+  .min(1)
+  .max(9)
+  .refine((dateKeys) => new Set(dateKeys).size === dateKeys.length, {
+    message: '表示日を重複して指定できません',
+  });
+
 export const statisticsSummaryRouter = createTRPCRouter({
   /** 連続アクティブ日数（streak）を計算 */
   getStreak: protectedProcedure
@@ -78,6 +94,8 @@ export const statisticsSummaryRouter = createTRPCRouter({
         endDate: z.string().datetime({ offset: true }),
         prevStart: z.string().datetime({ offset: true }).optional(),
         prevEnd: z.string().datetime({ offset: true }).optional(),
+        visibleDateKeys: reviewVisibleDateKeysInput.optional(),
+        prevVisibleDateKeys: reviewVisibleDateKeysInput.optional(),
         wakeHour: z.number().min(0).max(23).default(7),
         sleepHour: z.number().min(0).max(23).default(23),
       }),
@@ -103,6 +121,8 @@ export const statisticsSummaryRouter = createTRPCRouter({
         endDate: z.string().datetime({ offset: true }),
         prevStart: z.string().datetime({ offset: true }),
         prevEnd: z.string().datetime({ offset: true }),
+        visibleDateKeys: reviewVisibleDateKeysInput.optional(),
+        prevVisibleDateKeys: reviewVisibleDateKeysInput.optional(),
         year: z.number().int().min(2000).max(2100),
         monthlyMonths: z.number().int().min(1).max(24).default(3),
         wakeHour: z.number().min(0).max(23).default(7),

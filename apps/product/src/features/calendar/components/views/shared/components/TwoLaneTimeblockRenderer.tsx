@@ -15,6 +15,7 @@ import type React from 'react';
 
 import { useTagsMap } from '@/features/tags';
 import { resolveTimeblockDestination, useTimeblockInspectorStore } from '@/features/timeblock';
+import type { TimeFormat } from '@dayopt/domain';
 
 import type { InteractionState } from '../../../../domain/interaction/types';
 import {
@@ -36,6 +37,8 @@ interface TwoLaneEntryRendererProps {
   dayIndex: number;
   enableCrossDayDrag: boolean;
   showDayDiffMarker?: boolean | undefined;
+  compactCards: boolean;
+  timeFormat: TimeFormat;
   onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
   onEntryContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown: (
@@ -88,6 +91,8 @@ export function TwoLaneTimeblockRenderer({
   dayIndex,
   enableCrossDayDrag,
   showDayDiffMarker = false,
+  compactCards,
+  timeFormat,
   onEntryClick,
   onEntryContextMenu,
   onPointerDown,
@@ -171,6 +176,8 @@ export function TwoLaneTimeblockRenderer({
         disableDrag={disableDrag}
         disableResize={disableResize}
         showDayDiffMarker={showDayDiffMarker}
+        compact={compactCards}
+        timeFormat={timeFormat}
         styleOverride={styleOverride}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
@@ -191,6 +198,8 @@ export function TwoLaneTimeblockRenderer({
       isActive={isActive}
       disableDrag={disableDrag}
       showDayDiffMarker={showDayDiffMarker}
+      compact={compactCards}
+      timeFormat={timeFormat}
       styleOverride={styleOverride}
       onClick={handleClick}
       onContextMenu={handleContextMenu}

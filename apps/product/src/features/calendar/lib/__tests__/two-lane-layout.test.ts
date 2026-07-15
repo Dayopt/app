@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import type { PlanEvent, RecordEvent } from '@/features/timeblock';
-import { calculateTwoLaneLayout, resolveTwoLaneFromPointer } from '../two-lane-layout';
+import {
+  calculateTwoLaneLayout,
+  DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+  resolveTwoLaneFromPointer,
+} from '../two-lane-layout';
 
 const HOUR_HEIGHT = 60;
 
@@ -159,7 +163,8 @@ describe('calculateTwoLaneLayout', () => {
 });
 
 describe('resolveTwoLaneFromPointer', () => {
-  it('既定38%の境界より左をPlan、右をRecordにする', () => {
+  it('全ビュー共通の既定38%境界より左をPlan、右をRecordにする', () => {
+    expect(DEFAULT_PLAN_LANE_WIDTH_PERCENT).toBe(38);
     expect(resolveTwoLaneFromPointer(137, 100, 100)).toBe('plan');
     expect(resolveTwoLaneFromPointer(138, 100, 100)).toBe('record');
   });
@@ -167,5 +172,10 @@ describe('resolveTwoLaneFromPointer', () => {
   it('既定値に戻した38%幅を反映する', () => {
     expect(resolveTwoLaneFromPointer(137, 100, 100, 38)).toBe('plan');
     expect(resolveTwoLaneFromPointer(138, 100, 100, 38)).toBe('record');
+  });
+
+  it('明示した境界幅を反映する', () => {
+    expect(resolveTwoLaneFromPointer(149, 100, 100, 50)).toBe('plan');
+    expect(resolveTwoLaneFromPointer(150, 100, 100, 50)).toBe('record');
   });
 });

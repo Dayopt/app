@@ -15,6 +15,9 @@ vi.mock('@/features/timeblock', () => ({
 }));
 
 vi.mock('@/lib/hooks/useMediaQuery', () => ({ useMediaQuery: () => false }));
+vi.mock('@/lib/hooks/useUserPreferences', () => ({
+  useUserPreferences: () => ({ defaultDuration: 30, timeFormat: '24h' }),
+}));
 
 vi.mock('@/features/calendar/interaction', () => ({
   useInteraction: () => ({
@@ -61,9 +64,37 @@ vi.mock('../TwoLaneTimeblockRenderer', () => ({
   ),
 }));
 
-import { buildDragPreviewEntry, CalendarGridContent } from '../CalendarGridContent';
+import {
+  buildDragPreviewEntry,
+  CalendarGridContent,
+  resolveCalendarLanePresentation,
+} from '../CalendarGridContent';
 
 describe('CalendarGridContent', () => {
+  it.each([
+    ['day', false],
+    ['3day', false],
+    ['5day', true],
+    ['week', true],
+  ] as const)('%s は共通38%%レーンと表示密度を解決する', (viewMode, compactCards) => {
+    expect(resolveCalendarLanePresentation(viewMode)).toEqual({
+      planLaneWidthPercent: 38,
+      compactCards,
+    });
+  });
+
+  it.each([
+    ['day', false],
+    ['3day', false],
+    ['5day', true],
+    ['week', true],
+  ] as const)('%s は共通38%%レーンと表示密度を解決する', (viewMode, compactCards) => {
+    expect(resolveCalendarLanePresentation(viewMode)).toEqual({
+      planLaneWidthPercent: 38,
+      compactCards,
+    });
+  });
+
   it('drag preview は planned と actual のズレを保って表示用 entry を作る', () => {
     const entry = {
       id: 'entry-1',

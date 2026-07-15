@@ -21,7 +21,7 @@ function splitTrailingPunctuation(url: string): {
   let end = url.length;
   while (end > 0) {
     const char = url[end - 1];
-    if (/[\])}>"'\u3001\u3002.,!?;:、。!?]/.test(char)) {
+    if (char !== undefined && /[\])}>"'\u3001\u3002.,!?;:、。!?]/.test(char)) {
       end -= 1;
     } else {
       break;

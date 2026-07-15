@@ -188,17 +188,19 @@ interface BlankRateRangeInput {
   endDate?: string | undefined;
   wakeHour: number;
   sleepHour: number;
+  visibleDayCount?: number | undefined;
 }
 
 /** `get_blank_rate` / `get_stats_kpi_summary` の blankRate 部分と同じ計算式。 */
 export function computeBlankRate(
   scheduledMinutes: number,
-  { startDate, endDate, wakeHour, sleepHour }: BlankRateRangeInput,
+  { startDate, endDate, wakeHour, sleepHour, visibleDayCount }: BlankRateRangeInput,
 ): { availableMinutes: number; scheduledMinutes: number; blankMinutes: number; blankRate: number } {
   const days =
-    startDate && endDate
+    visibleDayCount ??
+    (startDate && endDate
       ? Math.max(1, (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86_400_000)
-      : 7;
+      : 7);
 
   const dailyMinutes =
     sleepHour <= wakeHour ? (24 - wakeHour + sleepHour) * 60 : (sleepHour - wakeHour) * 60;
@@ -219,6 +221,7 @@ interface AvailableMinutesInclusiveInput {
   wakeHour: number;
   sleepHour: number;
   timezone: string;
+  visibleDayCount?: number | undefined;
 }
 
 /** `get_time_pl_data` の available CTE 相当（tz 日付の inclusive 日数差）。 */
@@ -228,10 +231,12 @@ export function computeAvailableMinutesInclusive({
   wakeHour,
   sleepHour,
   timezone,
+  visibleDayCount,
 }: AvailableMinutesInclusiveInput): number {
   const startDay = formatInTimeZone(new Date(startDate), timezone, 'yyyy-MM-dd');
   const endDay = formatInTimeZone(new Date(endDate), timezone, 'yyyy-MM-dd');
   const dayCount =
+    visibleDayCount ??
     Math.round(
       (new Date(`${endDay}T00:00:00Z`).getTime() - new Date(`${startDay}T00:00:00Z`).getTime()) /
         86_400_000,

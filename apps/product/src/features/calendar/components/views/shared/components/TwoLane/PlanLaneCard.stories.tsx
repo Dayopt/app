@@ -165,6 +165,21 @@ export const CompareTarget: Story = {
   ),
 };
 
+/** Week / multi-day の狭い Plan レーン。 */
+export const NarrowLane: Story = {
+  render: () => (
+    <div className="border-border relative h-24 w-12 overflow-hidden rounded-lg border">
+      <PlanLaneCard
+        event={makeEvent('upcoming', { title: 'デザインレビュー' })}
+        position={{ ...basePosition, left: 0, width: 100 }}
+        tagName="Deep Work"
+        tagColor="blue"
+        compact
+      />
+    </div>
+  ),
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
@@ -188,6 +203,15 @@ export const AllPatterns: Story = {
           />
         </Slot>
       ))}
+      <div className="border-border relative h-24 w-12 overflow-hidden rounded-lg border">
+        <PlanLaneCard
+          event={makeEvent('upcoming', { title: 'デザインレビュー' })}
+          position={{ ...basePosition, left: 0, width: 100 }}
+          tagName="Deep Work"
+          tagColor="blue"
+          compact
+        />
+      </div>
     </div>
   ),
 };

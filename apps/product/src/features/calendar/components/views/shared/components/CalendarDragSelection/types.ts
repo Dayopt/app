@@ -2,6 +2,8 @@
  * CalendarDragSelection 型定義
  */
 
+import type { TimeFormat } from '@dayopt/domain';
+
 import type { CalendarEvent } from '../../../../../types/calendar.types';
 
 /** ドラッグ選択の時間範囲（時・分単位） */
@@ -34,6 +36,10 @@ export interface CalendarDragSelectionProps {
   disabled?: boolean | undefined;
   /** 重複チェック用のプラン一覧 */
   plans?: CalendarEvent[] | undefined;
+  /** 新規作成時の既定時間（分） */
+  defaultDuration: number;
+  /** ユーザー設定に基づく時刻表記 */
+  timeFormat: TimeFormat;
 }
 
 /** 定数 */

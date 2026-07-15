@@ -88,6 +88,8 @@ interface TimePLInput {
   endDate: string;
   prevStart?: string | undefined;
   prevEnd?: string | undefined;
+  visibleDateKeys?: readonly string[] | undefined;
+  prevVisibleDateKeys?: readonly string[] | undefined;
   wakeHour: number;
   sleepHour: number;
 }
@@ -97,6 +99,8 @@ interface StatsPageDataInput {
   endDate: string;
   prevStart: string;
   prevEnd: string;
+  visibleDateKeys?: readonly string[] | undefined;
+  prevVisibleDateKeys?: readonly string[] | undefined;
   year: number;
   monthlyMonths: number;
   wakeHour: number;
@@ -112,6 +116,19 @@ interface TagDashboardInput {
 
 function roundTo1(value: number): number {
   return Math.round(value * 10) / 10;
+}
+
+function filterRowsByVisibleDateKeys<T extends { start_at: string }>(
+  rows: readonly T[],
+  visibleDateKeys: readonly string[] | undefined,
+  timezone: string,
+): T[] {
+  if (!visibleDateKeys) return [...rows];
+
+  const visibleDateKeySet = new Set(visibleDateKeys);
+  return rows.filter((row) =>
+    visibleDateKeySet.has(formatInTimeZone(new Date(row.start_at), timezone, 'yyyy-MM-dd')),
+  );
 }
 
 export class StatisticsService {
@@ -296,22 +313,39 @@ export class StatisticsService {
 
   /** `get_time_pl_data` 相当。タグ別の予実（budget/actual）+ 日次ポイント。 */
   async getTimePLData(userId: string, input: TimePLInput): Promise<TimePLResponse> {
-    const { startDate, endDate, prevStart, prevEnd, wakeHour, sleepHour } = input;
+    const {
+      startDate,
+      endDate,
+      prevStart,
+      prevEnd,
+      visibleDateKeys,
+      prevVisibleDateKeys,
+      wakeHour,
+      sleepHour,
+    } = input;
     const timezone = await getUserTimezone(this.supabase, userId);
 
-    const [plans, records, tagsById] = await Promise.all([
+    const [rangePlans, rangeRecords, tagsById] = await Promise.all([
       this.fetchPlans(userId, { startDate, endDate }),
       this.fetchRecords(userId, { startDate, endDate }),
       this.fetchTagsById(userId),
     ]);
+    const plans = filterRowsByVisibleDateKeys(rangePlans, visibleDateKeys, timezone);
+    const records = filterRowsByVisibleDateKeys(rangeRecords, visibleDateKeys, timezone);
     const tags = this.buildTagPL(plans, records, tagsById);
 
     let prevTags: TimePLResponse['prevTags'] = [];
     if (prevStart && prevEnd) {
-      const [prevPlans, prevRecords] = await Promise.all([
+      const [rangePrevPlans, rangePrevRecords] = await Promise.all([
         this.fetchPlans(userId, { startDate: prevStart, endDate: prevEnd }),
         this.fetchRecords(userId, { startDate: prevStart, endDate: prevEnd }),
       ]);
+      const prevPlans = filterRowsByVisibleDateKeys(rangePrevPlans, prevVisibleDateKeys, timezone);
+      const prevRecords = filterRowsByVisibleDateKeys(
+        rangePrevRecords,
+        prevVisibleDateKeys,
+        timezone,
+      );
       prevTags = this.buildTagPL(prevPlans, prevRecords, tagsById);
     }
 
@@ -321,6 +355,7 @@ export class StatisticsService {
       wakeHour,
       sleepHour,
       timezone,
+      visibleDayCount: visibleDateKeys?.length,
     });
 
     return { tags, prevTags, availableMinutes };
@@ -328,8 +363,18 @@ export class StatisticsService {
 
   /** `get_stats_page_data` 相当。Review panel 用データを一括構築する。 */
   async getStatsPageData(userId: string, input: StatsPageDataInput): Promise<StatsPageData> {
-    const { startDate, endDate, prevStart, prevEnd, year, monthlyMonths, wakeHour, sleepHour } =
-      input;
+    const {
+      startDate,
+      endDate,
+      prevStart,
+      prevEnd,
+      visibleDateKeys,
+      prevVisibleDateKeys,
+      year,
+      monthlyMonths,
+      wakeHour,
+      sleepHour,
+    } = input;
     const timezone = await getUserTimezone(this.supabase, userId);
 
     const startOfYear = fromZonedTime(`${year}-01-01T00:00:00`, timezone).toISOString();
@@ -338,16 +383,31 @@ export class StatisticsService {
     const [nowYear, nowMonth] = nowStr.split('-').map(Number) as [number, number];
     const monthlyStartDate = getMonthlyStartDate(nowYear, nowMonth, monthlyMonths);
 
-    const [records, plans, prevRecords, prevPlans, yearRecords, monthlyRecords, tagsById] =
-      await Promise.all([
-        this.fetchRecords(userId, { startDate, endDate }),
-        this.fetchPlans(userId, { startDate, endDate }),
-        this.fetchRecords(userId, { startDate: prevStart, endDate: prevEnd }),
-        this.fetchPlans(userId, { startDate: prevStart, endDate: prevEnd }),
-        this.fetchRecords(userId, { startDate: startOfYear, endDate: startOfNextYear }),
-        this.fetchRecords(userId, { startDate: monthlyStartDate.toISOString() }),
-        this.fetchTagsById(userId),
-      ]);
+    const [
+      rangeRecords,
+      rangePlans,
+      rangePrevRecords,
+      rangePrevPlans,
+      yearRecords,
+      monthlyRecords,
+      tagsById,
+    ] = await Promise.all([
+      this.fetchRecords(userId, { startDate, endDate }),
+      this.fetchPlans(userId, { startDate, endDate }),
+      this.fetchRecords(userId, { startDate: prevStart, endDate: prevEnd }),
+      this.fetchPlans(userId, { startDate: prevStart, endDate: prevEnd }),
+      this.fetchRecords(userId, { startDate: startOfYear, endDate: startOfNextYear }),
+      this.fetchRecords(userId, { startDate: monthlyStartDate.toISOString() }),
+      this.fetchTagsById(userId),
+    ]);
+    const records = filterRowsByVisibleDateKeys(rangeRecords, visibleDateKeys, timezone);
+    const plans = filterRowsByVisibleDateKeys(rangePlans, visibleDateKeys, timezone);
+    const prevRecords = filterRowsByVisibleDateKeys(
+      rangePrevRecords,
+      prevVisibleDateKeys,
+      timezone,
+    );
+    const prevPlans = filterRowsByVisibleDateKeys(rangePrevPlans, prevVisibleDateKeys, timezone);
 
     const overview = this.buildOverviewSection(records);
     const prevOverview = this.buildOverviewSection(prevRecords);
@@ -361,6 +421,7 @@ export class StatisticsService {
       endDate,
       wakeHour,
       sleepHour,
+      visibleDayCount: visibleDateKeys?.length,
     });
 
     const timeByTag = transformTimeByTagResponse(this.buildTimeByTagRows(records, tagsById));

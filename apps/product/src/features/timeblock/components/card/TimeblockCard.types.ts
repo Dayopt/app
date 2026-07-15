@@ -2,6 +2,7 @@
  * TimeblockCard 専用の型定義
  */
 
+import type { TimeFormat } from '@dayopt/domain';
 import type { CalendarEvent } from '../../types/calendar-event';
 
 import type { AnchorRect } from '../../stores/useTimeblockInspectorStore';
@@ -16,6 +17,8 @@ export interface TimeblockCardProps {
   tagColor?: string | null | undefined;
   /** 解決済みタグアイコン名（null = アイコンなし） */
   tagIcon?: string | null | undefined;
+  /** ユーザー設定に基づく時刻表記 */
+  timeFormat?: TimeFormat | undefined;
   position?: TimeblockCardPosition | undefined;
   onClick?: ((entry: CalendarEvent) => void) | undefined;
   onContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;

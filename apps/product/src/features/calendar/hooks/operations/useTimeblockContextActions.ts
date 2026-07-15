@@ -8,9 +8,9 @@ import { useRouter } from 'next/navigation';
 import { useTimeblockWriteMutations } from '@/features/timeblock';
 import { toast } from '@/lib/toast';
 
-import { useCalendarNavigation } from '../../hooks/navigation/CalendarNavigationContext';
 import { buildCalendarReviewPanelPath } from '../../lib/panel-url';
 import type { CalendarEvent } from '../../types/calendar.types';
+import { useCalendarNavigation } from '../navigation/CalendarNavigationContext';
 
 /**
  * コンテキストメニューで使用する plan / record 操作アクションを提供するフック
@@ -22,9 +22,8 @@ export function useTimeblockContextActions() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations();
-  const { deleteRecord, deletePlan, skipPlan, unskipPlan } = useTimeblockWriteMutations();
   const navigation = useCalendarNavigation();
-  const viewType = navigation?.viewType ?? 'week';
+  const { deleteRecord, deletePlan, skipPlan, unskipPlan } = useTimeblockWriteMutations();
 
   const handleDeleteTimeblock = useCallback(
     (entry: CalendarEvent) => {
@@ -40,16 +39,20 @@ export function useTimeblockContextActions() {
   const handleViewStats = useCallback(
     (entry: CalendarEvent) => {
       if (!entry.tagId) return;
+      if (navigation) {
+        navigation.setPanelKind('review', { reviewTagId: entry.tagId });
+        return;
+      }
+
       router.push(
         buildCalendarReviewPanelPath(
           locale,
           entry.startDate ?? entry.actualStartDate ?? new Date(),
           entry.tagId,
-          viewType,
         ),
       );
     },
-    [router, locale, viewType],
+    [navigation, router, locale],
   );
 
   const handleSkip = useCallback(

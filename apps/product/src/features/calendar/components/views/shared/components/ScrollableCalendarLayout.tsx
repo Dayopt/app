@@ -202,7 +202,7 @@ export const ScrollableCalendarLayout = ({
                 startHour={0}
                 endHour={24}
                 hourHeight={HOUR_HEIGHT}
-                format="24h"
+                format={timeFormat}
                 className="h-full"
               />
               {/* 現在時刻ラベル（Apple Calendar風） */}
@@ -237,7 +237,7 @@ export const ScrollableCalendarLayout = ({
                   key={date.toISOString()}
                   className={cn(
                     'flex-1',
-                    index < displayDates.length - 1 && 'border-border border-r',
+                    index < displayDates.length - 1 && 'border-border-subtle border-r',
                   )}
                 />
               ))}

@@ -12,7 +12,7 @@
 
 import { ChartNoAxesColumnIncreasing, PanelLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { FeatureErrorBoundary } from '@/components/ui/feedback/error-boundary';
 import {
@@ -39,7 +39,8 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const t = useTranslations();
   const calendarNavigation = useCalendarNavigation();
   const sidebar = useShellStore.use.sidebar();
-  const closeSidebar = useShellStore.use.closeSidebar();
+  const suppressSidebar = useShellStore.use.suppressSidebar();
+  const restoreSidebar = useShellStore.use.restoreSidebar();
   const toggleSidebar = useShellStore.use.toggleSidebar();
 
   // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
@@ -92,8 +93,26 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
     },
     [setPanelKind],
   );
+  const handleSideRailSpaceRecoveryChange = useCallback(
+    (recovering: boolean) => {
+      if (recovering) {
+        suppressSidebar();
+        return;
+      }
+
+      restoreSidebar();
+    },
+    [restoreSidebar, suppressSidebar],
+  );
   const isReviewPanelActive = panelKind === 'review' || panelKind === 'analytics';
   const isDiffPanelActive = panelKind === 'diff';
+  const reviewDisplayRange = useMemo(
+    () => ({
+      ...composition.viewDateRange,
+      showWeekends: composition.showWeekends,
+    }),
+    [composition.showWeekends, composition.viewDateRange],
+  );
   const reviewToggle = (
     <HoverTooltip content={t('calendar.stats.review.tooltip')} side="bottom">
       <Button
@@ -138,6 +157,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const reviewPanel = (
     <CalendarReviewPanel
       currentDate={currentDate}
+      displayRange={reviewDisplayRange}
       selectedTagId={reviewTagId}
       onSelectedTagIdChange={setReviewTagId}
       onClose={() => setPanelKind(null)}
@@ -146,6 +166,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const mobileReviewPanel = (
     <CalendarReviewPanel
       currentDate={currentDate}
+      displayRange={reviewDisplayRange}
       selectedTagId={reviewTagId}
       onSelectedTagIdChange={setReviewTagId}
       onClose={() => setPanelKind(null)}
@@ -229,8 +250,8 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           }}
           panelRailTitle={panelRailTitle}
           panelRailDescription={panelRailDescription}
-          sideRailRecoverableWidth={sidebar.open ? sidebar.width : 0}
-          onSideRailRecoverableWidthRequest={closeSidebar}
+          recoverableSidebarWidth={sidebar.open ? sidebar.width : 0}
+          onSideRailSpaceRecoveryChange={handleSideRailSpaceRecoveryChange}
         />
       </FeatureErrorBoundary>
     </div>

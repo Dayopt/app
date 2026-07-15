@@ -112,7 +112,7 @@ export function TagTimeblockCreatePopover({
       startTime: seedStart,
       endTime: addMinutesToHHMM(seedStart, FALLBACK_DURATION_MINUTES),
     });
-  }, [open, draft?.tag.id, tag, openDraft]);
+  }, [open, draft, tag, openDraft]);
 
   const handleDateSelect = useCallback(
     (next: Date) => {

@@ -31,6 +31,15 @@ describe('calculateViewDateRange', () => {
       expect(range.days).toHaveLength(7);
       expect(range.start.getDay()).toBe(0); // 日曜日
     });
+
+    it('週末非表示では実際に表示する月〜金を範囲にする', () => {
+      const date = new Date('2026-01-15T12:00:00');
+      const range = calculateViewDateRange('week', date, 1, false);
+
+      expect(range.days.map((day) => day.getDay())).toEqual([1, 2, 3, 4, 5]);
+      expect(range.start.getDay()).toBe(1);
+      expect(range.end.getDay()).toBe(5);
+    });
   });
 
   describe('multi-day view', () => {
@@ -50,6 +59,15 @@ describe('calculateViewDateRange', () => {
       const range = calculateViewDateRange('5day', date);
 
       expect(range.days).toHaveLength(5);
+    });
+
+    it('週末非表示では表示する営業日を飛ばさず query 範囲へ含める', () => {
+      const friday = new Date('2026-01-16T12:00:00');
+      const range = calculateViewDateRange('3day', friday, 1, false);
+
+      expect(range.days.map((day) => day.getDate())).toEqual([15, 16, 19]);
+      expect(range.start.getDate()).toBe(15);
+      expect(range.end.getDate()).toBe(19);
     });
   });
 });

@@ -156,43 +156,78 @@ export const CompareTarget: Story = {
   ),
 };
 
-/** 全パターン一覧。 */
+/** Week / 5-day の狭い Record レーン。secondary detail は省略する。 */
+export const NarrowLane: Story = {
+  render: () => (
+    <div className="border-border relative h-24 w-16 overflow-hidden rounded-lg border">
+      <RecordLaneCard
+        event={makeEvent({ title: 'デザインレビュー', diffMinutes: 20 })}
+        position={{ ...basePosition, left: 0, width: 100 }}
+        tagName="Deep Work"
+        tagColor="teal"
+        compact
+      />
+    </div>
+  ),
+};
+
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-wrap items-start gap-4">
-      <Slot>
+      <div className="space-y-2">
+        <p className="text-muted-foreground text-xs">差分なし</p>
+        <Slot>
+          <RecordLaneCard
+            event={makeEvent({ diffMinutes: 0 })}
+            position={basePosition}
+            tagName="Deep Work"
+            tagColor="blue"
+          />
+        </Slot>
+      </div>
+      <div className="space-y-2">
+        <p className="text-muted-foreground text-xs">超過(+20min)</p>
+        <Slot>
+          <RecordLaneCard
+            event={makeEvent({ diffMinutes: 20 })}
+            position={basePosition}
+            tagName="Deep Work"
+            tagColor="teal"
+          />
+        </Slot>
+      </div>
+      <div className="space-y-2">
+        <p className="text-muted-foreground text-xs">前倒し(-15min)</p>
+        <Slot>
+          <RecordLaneCard
+            event={makeEvent({ diffMinutes: -15 })}
+            position={basePosition}
+            tagName="Deep Work"
+            tagColor="amber"
+          />
+        </Slot>
+      </div>
+      <div className="space-y-2">
+        <p className="text-muted-foreground text-xs">予定外</p>
+        <Slot>
+          <RecordLaneCard
+            event={makeEvent({ planId: null, diffMinutes: undefined })}
+            position={basePosition}
+            tagName="Deep Work"
+            tagColor="violet"
+            showDayDiffMarker
+          />
+        </Slot>
+      </div>
+      <div className="border-border relative h-24 w-16 overflow-hidden rounded-lg border">
         <RecordLaneCard
-          event={makeEvent({ diffMinutes: 0 })}
-          position={basePosition}
-          tagName="Deep Work"
-          tagColor="blue"
-        />
-      </Slot>
-      <Slot>
-        <RecordLaneCard
-          event={makeEvent({ diffMinutes: 20 })}
-          position={basePosition}
+          event={makeEvent({ title: 'デザインレビュー', diffMinutes: 20 })}
+          position={{ ...basePosition, left: 0, width: 100 }}
           tagName="Deep Work"
           tagColor="teal"
+          compact
         />
-      </Slot>
-      <Slot>
-        <RecordLaneCard
-          event={makeEvent({ diffMinutes: -15 })}
-          position={basePosition}
-          tagName="Deep Work"
-          tagColor="amber"
-        />
-      </Slot>
-      <Slot>
-        <RecordLaneCard
-          event={makeEvent({ planId: null, diffMinutes: undefined })}
-          position={basePosition}
-          tagName="Deep Work"
-          tagColor="violet"
-          showDayDiffMarker
-        />
-      </Slot>
+      </div>
     </div>
   ),
 };

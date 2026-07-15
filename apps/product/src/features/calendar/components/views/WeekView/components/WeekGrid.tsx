@@ -126,10 +126,7 @@ export const WeekGrid = ({
           return (
             <div
               key={date.toISOString()}
-              className={cn(
-                'relative flex-1 overflow-visible',
-                dayIndex < weekDates.length - 1 ? 'border-border border-r' : '',
-              )}
+              className="relative flex-1 overflow-visible"
               style={{ width: `${100 / weekDates.length}%` }}
             >
               <CalendarGridContent

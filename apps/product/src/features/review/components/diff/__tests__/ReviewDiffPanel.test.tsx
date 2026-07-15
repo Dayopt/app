@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ReviewDiffResult } from '../ReviewDiffPanel';
 import { ReviewDiffPanel } from '../ReviewDiffPanel';
@@ -11,9 +11,15 @@ vi.mock('@/features/tags', () => ({
   }),
 }));
 
+let mockTimeFormat: '12h' | '24h' = '24h';
+
 vi.mock('@/lib/hooks/useUserPreferences', () => ({
-  useUserPreferences: <T,>(selector: (preferences: { timezone: string }) => T) =>
-    selector({ timezone: 'UTC' }),
+  useUserPreferences: <T,>(
+    selector?: (preferences: { timezone: string; timeFormat: '12h' | '24h' }) => T,
+  ) => {
+    const preferences = { timezone: 'UTC', timeFormat: mockTimeFormat } as const;
+    return selector ? selector(preferences) : preferences;
+  },
 }));
 
 const start = new Date('2026-06-18T09:00:00.000Z');
@@ -60,6 +66,18 @@ function diff(overrides: Partial<ReviewDiffResult> = {}): ReviewDiffResult {
 }
 
 describe('ReviewDiffPanel', () => {
+  beforeEach(() => {
+    mockTimeFormat = '24h';
+  });
+
+  it('12時間表記では項目の開始時刻をAM/PMで表示する', () => {
+    mockTimeFormat = '12h';
+
+    render(<ReviewDiffPanel diff={diff()} />);
+
+    expect(screen.getByText(/9:30 AM/i)).toBeInTheDocument();
+  });
+
   it('diff がないとき empty state を表示する', () => {
     render(
       <ReviewDiffPanel
@@ -80,10 +98,33 @@ describe('ReviewDiffPanel', () => {
   });
 
   it('summary と chronological list を表示する', () => {
-    render(<ReviewDiffPanel diff={diff()} />);
+    const { container } = render(<ReviewDiffPanel diff={diff()} />);
 
     expect(screen.getByText('calendar.compare.rail.summary.planned')).toBeInTheDocument();
     expect(screen.getByText('Focus')).toBeInTheDocument();
+    expect(container.querySelector('[data-review-diff-badge]')).toHaveClass(
+      'text-muted-foreground',
+    );
+  });
+
+  it.each([30, -30])('summary の増減 %i 分を評価色にしない', (diffMinutes) => {
+    render(
+      <ReviewDiffPanel
+        diff={diff({
+          summary: {
+            plannedMinutes: 60,
+            actualMinutes: 60 + diffMinutes,
+            diffMinutes,
+            unplannedMinutes: 0,
+            missedMinutes: 0,
+          },
+        })}
+      />,
+    );
+
+    const summaryLabel = screen.getByText('calendar.compare.rail.summary.diff');
+    const summaryValue = summaryLabel.parentElement?.querySelector('dd');
+    expect(summaryValue).not.toHaveClass('text-success', 'text-destructive');
   });
 
   it('summary の差分は正負や0にかかわらず中立色で表示する', () => {
@@ -161,11 +202,11 @@ describe('ReviewDiffPanel', () => {
     const badges = [...container.querySelectorAll('[data-review-diff-badge]')];
 
     expect(badges).toHaveLength(2);
-    expect(badges[0]).toHaveClass('text-foreground');
+    expect(badges[0]).toHaveClass('text-muted-foreground');
     expect(badges[0]).not.toHaveClass('text-success', 'text-destructive');
     expect(badges[0]).toHaveTextContent(/^\+/);
     expect(badges[0]?.querySelector('.lucide-arrow-up')).toBeInTheDocument();
-    expect(badges[1]).toHaveClass('text-foreground');
+    expect(badges[1]).toHaveClass('text-muted-foreground');
     expect(badges[1]).not.toHaveClass('text-success', 'text-destructive');
     expect(badges[1]).toHaveTextContent(/^-/);
     expect(badges[1]?.querySelector('.lucide-arrow-down')).toBeInTheDocument();

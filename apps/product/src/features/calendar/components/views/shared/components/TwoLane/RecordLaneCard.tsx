@@ -14,7 +14,9 @@ import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses, TagIcon } from '@/features/tags';
 import type { RecordEvent } from '@/features/timeblock';
+import { formatTimeString } from '@/lib/date';
 import { cn } from '@dayopt/components';
+import type { TimeFormat } from '@dayopt/domain';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 import { DayDiffMarker } from './DayDiffMarker';
@@ -34,6 +36,10 @@ interface RecordLaneCardProps {
   disableDrag?: boolean | undefined;
   /** Compare panel に表示中の entry であることを示す */
   showDayDiffMarker?: boolean | undefined;
+  /** 複数日表示の狭い列では secondary detail と余白を減らす */
+  compact?: boolean | undefined;
+  /** ユーザー設定に基づく時刻表記 */
+  timeFormat?: TimeFormat | undefined;
   onClick?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
@@ -48,9 +54,8 @@ const MIN_HEIGHT = 20;
 const DETAIL_HEIGHT_THRESHOLD = 40;
 const RESIZE_HANDLE_HEIGHT = 20;
 
-function formatTimeRange(start: Date, end: Date): string {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${pad(start.getHours())}:${pad(start.getMinutes())}–${pad(end.getHours())}:${pad(end.getMinutes())}`;
+function formatTimeRange(start: Date, end: Date, timeFormat: TimeFormat): string {
+  return `${formatTimeString(start.getHours(), start.getMinutes(), timeFormat)}–${formatTimeString(end.getHours(), end.getMinutes(), timeFormat)}`;
 }
 
 export function RecordLaneCard({
@@ -63,6 +68,8 @@ export function RecordLaneCard({
   isActive = false,
   disableDrag = false,
   showDayDiffMarker = false,
+  compact = false,
+  timeFormat = '24h',
   onClick,
   onContextMenu,
   onPointerDown,
@@ -75,7 +82,7 @@ export function RecordLaneCard({
   const displayName = tagName ?? t('common.tags.noTag');
   const isUnplanned = event.planId == null;
   const hasDiff = event.diffMinutes != null && event.diffMinutes !== 0;
-  const showDetails = position.height >= DETAIL_HEIGHT_THRESHOLD;
+  const showDetails = !compact && position.height >= DETAIL_HEIGHT_THRESHOLD;
   const canDrag = !disableDrag && Boolean(onPointerDown);
   return (
     <div
@@ -86,9 +93,11 @@ export function RecordLaneCard({
       role="button"
       aria-label={displayName}
       className={cn(
-        'pointer-events-auto absolute flex flex-col gap-1 overflow-hidden rounded-lg px-2 py-2 text-xs',
+        'pointer-events-auto absolute flex flex-col gap-1 overflow-hidden rounded-lg py-1 text-xs',
+        compact ? 'px-1' : 'px-2',
         colorClasses?.tint ?? 'bg-card',
         'text-foreground',
+        'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
         isActive && 'ring-ring ring-2',
         showDayDiffMarker && 'pr-7',
         canDrag ? 'cursor-grab' : 'cursor-pointer',
@@ -121,14 +130,14 @@ export function RecordLaneCard({
           <TagIcon icon={tagIcon} color={tagColor ?? undefined} size="sm" className="shrink-0" />
           <span className="truncate">{displayName}</span>
         </p>
-        {hasDiff && <DiffBadge diffMinutes={event.diffMinutes ?? 0} />}
+        {hasDiff && !compact && <DiffBadge diffMinutes={event.diffMinutes ?? 0} />}
       </div>
       {showDetails && (
         <p className="text-muted-foreground truncate">
-          {formatTimeRange(event.displayStartDate, event.displayEndDate)}
+          {formatTimeRange(event.displayStartDate, event.displayEndDate, timeFormat)}
         </p>
       )}
-      {isUnplanned && (
+      {isUnplanned && !compact && (
         <span data-record-unplanned-marker className="text-muted-foreground truncate">
           {t('timeblock.inspector.unplanned')}
         </span>

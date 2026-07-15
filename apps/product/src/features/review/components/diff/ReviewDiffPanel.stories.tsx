@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
 import { PRESET_USER_SETTINGS } from '@dayopt/storybook/mocks/presets';
+import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 
 import type { ReviewDiffItem, ReviewDiffResult } from './ReviewDiffPanel';
 import { ReviewDiffPanel } from './ReviewDiffPanel';
@@ -172,6 +173,11 @@ const tags = [
   { id: 'tag-admin', name: 'Admin', color: 'amber', icon: null, sort_order: 1 },
 ];
 
+const TWELVE_HOUR_SETTINGS = {
+  ...PRESET_USER_SETTINGS.default,
+  timeFormat: '12h' as const,
+};
+
 const meta = {
   title: 'Product/Features/Review/Diff/ReviewDiffPanel',
   component: ReviewDiffPanel,
@@ -205,6 +211,22 @@ export const Balanced: Story = {
     onItemClick: fn(),
     onClose: fn(),
     className: 'border-border-subtle h-96 w-64 border',
+  },
+};
+
+/** 項目の開始時刻を12時間表記で表示する。 */
+export const TwelveHour: Story = {
+  args: {
+    diff,
+    onItemClick: fn(),
+    onClose: fn(),
+    className: 'border-border-subtle h-96 w-64 border',
+  },
+  parameters: {
+    trpcMocks: {
+      'userSettings.get': TWELVE_HOUR_SETTINGS,
+      'tags.list': tags,
+    },
   },
 };
 
@@ -258,6 +280,13 @@ export const AllPatterns: Story = {
         onItemClick={fn()}
         className="border-border-subtle h-96 w-64 border"
       />
+      <StoryTRPCProvider mocks={{ 'userSettings.get': TWELVE_HOUR_SETTINGS, 'tags.list': tags }}>
+        <ReviewDiffPanel
+          diff={diff}
+          onItemClick={fn()}
+          className="border-border-subtle h-96 w-64 border"
+        />
+      </StoryTRPCProvider>
       <div className="bg-card border-border-subtle shadow-card w-80 rounded-2xl border">
         <ReviewDiffPanel diff={emptyDiff} onItemClick={fn()} onClose={fn()} variant="sheet" />
       </div>

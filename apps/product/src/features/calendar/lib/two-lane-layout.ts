@@ -46,8 +46,9 @@ interface CalculateTwoLaneLayoutOptions {
 }
 
 const DAY_MINUTES = 24 * 60;
-const TWO_LANE_MIN_GAP_PX = 2;
+/** day / week / multi-day で共有する Plan / Record レーン幅の契約。 */
 export const DEFAULT_PLAN_LANE_WIDTH_PERCENT = 38;
+const TWO_LANE_MIN_GAP_PX: number = 2;
 
 /** カラム内の pointer X から Plan / Record の drop 先レーンを決める。 */
 export function resolveTwoLaneFromPointer(
@@ -85,7 +86,7 @@ function buildLaneLayout<T extends { displayStartDate: Date; displayEndDate: Dat
   let previousBottomPx: number | null = null;
 
   for (const item of sorted) {
-    const top =
+    const top: number =
       previousBottomPx === null
         ? item.top
         : Math.max(item.top, previousBottomPx + TWO_LANE_MIN_GAP_PX);

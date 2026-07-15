@@ -14,12 +14,17 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 - 各日カラムをPlanレーンとRecordレーンに分ける。Planは控えめなoutline、Recordは塗りで表示する
 - 新規作成時の保存先は`end_at > now`ならPlan、`end_at <= now`ならRecordとして自動決定し、既存Plan / Recordの編集では種別を維持する
 - 15分gridへのsnap、dragによる移動・resize、keyboard操作、tag filterを提供する
+- Calendarの時間軸、card、選択 / drag preview、Diff panelの時刻表示はユーザー設定の12時間 / 24時間表記に従う。Inspectorの入力・保存値は`HH:mm`を正とする
+- scroll keyはfocus中のCalendar gridだけが処理し、入力、IME、menu / dialog中はglobal shortcutを実行しない
+- hour gridとday dividerは内部線としてsubtleに表示し、同じ境界を重ねて描画しない
+- Diffは符号と方向を数字・iconで示し、増減そのものをsuccess / destructive色で評価しない
 - 過去Planの時間は凍結し、Recordの時間は訂正できる
 - 過去PlanをRecordレーンへdragすると、drop previewの時間帯で元Planに紐づくRecordを作る。元Planは移動せず、Record同士が重ならなければ同じPlanへ複数回記録できる
 - 1つのPlanに複数のRecordがある場合、Calendarの差分は関連Recordの合計時間から計算し、代表するRecord card 1枚だけに表示する。`±0`は表示しない
 - `panel=diff`では差分一覧の対象をcompare markerで通常cardにも示す。予定に対する記録・skip・未記録はPlan、予定外の記録はRecordを対象とし、関連Recordすべてへ重複表示しない
 - 差分の正負は符号と方向iconで示し、成功・失敗を意味する色は使わない
 - `panel=review` / `panel=diff`で単一の右panel slotを開く。panel UIはReview featureが所有し、Calendarは表示範囲とcompositionを所有する
+- Review / Time P/Lの集計対象日はCalendarの表示日配列を正とし、週末非表示時は範囲内の土日を含めない
 - Diffの対象期間はCalendarの現在viewを正とし、day / week / multi-dayの範囲をそのまま使う
 
 ## Stateの正本

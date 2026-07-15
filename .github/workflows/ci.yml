@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  NODE_VERSION: '22'
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -26,8 +23,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       # 独立した lint チェックを 1 step 内の shell background lane で並列実行する（#1422）。
       # 2026-06-25 GA の native `parallel` 構文は hosted runner 未対応（workflow parse error）
@@ -76,8 +71,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
       - run: pnpm typecheck
 
   packages-build:
@@ -89,8 +82,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
       - run: pnpm build:packages
 
   # ── Stage 2 (~3 min) ─────────────────────────────────
@@ -103,8 +94,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
       - name: Product unit tests with coverage
         run: pnpm test:coverage
 
@@ -123,8 +112,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.0.0
         with:
@@ -173,8 +160,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.0.0
         with:
@@ -194,8 +179,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Download build diagnostics
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.0
@@ -237,8 +220,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium chromium-headless-shell
@@ -275,8 +256,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Playwright browser
         run: pnpm --filter @dayopt/web exec playwright install --with-deps chromium chromium-headless-shell

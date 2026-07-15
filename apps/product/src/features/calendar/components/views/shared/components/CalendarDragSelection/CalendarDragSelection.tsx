@@ -27,6 +27,8 @@ export const CalendarDragSelection = ({
   children,
   disabled = false,
   plans = [],
+  defaultDuration,
+  timeFormat,
 }: CalendarDragSelectionProps) => {
   const hourHeight = useResponsiveHourHeight();
 
@@ -47,6 +49,8 @@ export const CalendarDragSelection = ({
     onDoubleClick,
     plans,
     hourHeight,
+    defaultDuration,
+    timeFormat,
   });
 
   return (
