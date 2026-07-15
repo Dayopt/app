@@ -49,6 +49,7 @@ function toTZEndISO(date: Date, timezone: string): string {
 interface UseCalendarDataOptions {
   viewType: CalendarViewType;
   currentDate: Date;
+  showWeekends: boolean;
 }
 
 interface UseCalendarDataResult {
@@ -77,6 +78,7 @@ interface UseCalendarDataResult {
 export function useCalendarData({
   viewType,
   currentDate,
+  showWeekends,
 }: UseCalendarDataOptions): UseCalendarDataResult {
   // 週の開始日設定とタイムゾーンを取得
   const weekStartsOn = useUserPreferences((state) => state.weekStartsOn);
@@ -84,8 +86,8 @@ export function useCalendarData({
 
   // ビューに応じた期間計算（週の開始日設定を反映）
   const viewDateRange = useMemo(() => {
-    return calculateViewDateRange(viewType, currentDate, weekStartsOn);
-  }, [viewType, currentDate, weekStartsOn]);
+    return calculateViewDateRange(viewType, currentDate, weekStartsOn, showWeekends);
+  }, [viewType, currentDate, weekStartsOn, showWeekends]);
 
   // 日付範囲をISO 8601形式に変換（サーバーサイドフィルタ用）
   // toISOString()はTZ依存のためユーザーTZのローカル深夜をUTC ISOに変換して使用
@@ -136,7 +138,7 @@ export function useCalendarData({
   // 隣接期間のプリフェッチ（ナビゲーション高速化、viewType別に最適化）
   useEffect(() => {
     const prefetchRange = (date: Date, view: CalendarViewType = viewType) => {
-      const range = calculateViewDateRange(view, date, weekStartsOn);
+      const range = calculateViewDateRange(view, date, weekStartsOn, showWeekends);
       const input = {
         startDate: toTZStartISO(range.start, timezone),
         endDate: toTZEndISO(range.end, timezone),
@@ -163,7 +165,15 @@ export function useCalendarData({
       prefetchRange(subDays(currentDate, 7));
       prefetchRange(addDays(currentDate, 7));
     }
-  }, [currentDate, viewType, weekStartsOn, timezone, utils.records.list, utils.plans.list]);
+  }, [
+    currentDate,
+    viewType,
+    weekStartsOn,
+    showWeekends,
+    timezone,
+    utils.records.list,
+    utils.plans.list,
+  ]);
 
   // 指定方向のナビゲーション先を事前取得（ホバー/タッチ時に呼ばれる）
   const prefetchDirection = useCallback(
@@ -190,7 +200,7 @@ export function useCalendarData({
         }
       }
 
-      const range = calculateViewDateRange(viewType, targetDate, weekStartsOn);
+      const range = calculateViewDateRange(viewType, targetDate, weekStartsOn, showWeekends);
       const input = {
         startDate: toTZStartISO(range.start, timezone),
         endDate: toTZEndISO(range.end, timezone),
@@ -200,13 +210,21 @@ export function useCalendarData({
       };
       void Promise.all([utils.plans.list.prefetch(input), utils.records.list.prefetch(input)]);
     },
-    [currentDate, viewType, weekStartsOn, timezone, utils.records.list, utils.plans.list],
+    [
+      currentDate,
+      viewType,
+      weekStartsOn,
+      showWeekends,
+      timezone,
+      utils.records.list,
+      utils.plans.list,
+    ],
   );
 
   // ビュー切り替え先の日付範囲を即座にprefetch（useEffect経由の1レンダー遅延を回避）
   const prefetchForView = useCallback(
     (newViewType: CalendarViewType) => {
-      const range = calculateViewDateRange(newViewType, currentDate, weekStartsOn);
+      const range = calculateViewDateRange(newViewType, currentDate, weekStartsOn, showWeekends);
       const input = {
         startDate: toTZStartISO(range.start, timezone),
         endDate: toTZEndISO(range.end, timezone),
@@ -216,7 +234,7 @@ export function useCalendarData({
       };
       void Promise.all([utils.plans.list.prefetch(input), utils.records.list.prefetch(input)]);
     },
-    [currentDate, weekStartsOn, timezone, utils.records.list, utils.plans.list],
+    [currentDate, weekStartsOn, showWeekends, timezone, utils.records.list, utils.plans.list],
   );
 
   // フィルター関数と状態を取得（ストアに統一）

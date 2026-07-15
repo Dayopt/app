@@ -125,20 +125,24 @@ export function useCalendarComposition({
   // =========================================================================
   // Sub-hooks
   // =========================================================================
-  const dataLayer = useCalendarDataLayer({ viewType, currentDate });
-
-  const crudHandlers = useCalendarCrudHandlers({
-    selectedTimeblockId,
-    filteredEvents: dataLayer.filteredEvents,
-    currentDate,
-  });
-
   const navHandlers = useCalendarNavHandlers({
     viewType,
     currentDate,
     navigateRelative,
     navigateToDate,
     changeView,
+  });
+
+  const dataLayer = useCalendarDataLayer({
+    viewType,
+    currentDate,
+    showWeekends: navHandlers.showWeekends,
+  });
+
+  const crudHandlers = useCalendarCrudHandlers({
+    selectedTimeblockId,
+    filteredEvents: dataLayer.filteredEvents,
+    currentDate,
   });
 
   // =========================================================================

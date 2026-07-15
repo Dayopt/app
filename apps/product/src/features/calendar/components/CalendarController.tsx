@@ -24,9 +24,7 @@ import { resolveCalendarDayDiffBounds, resolveCalendarRangeDiffBounds } from '..
 import { computeTimeblockDayDiffs } from '../lib/timeblock-day-diff';
 import { useCalendarFilterStore } from '../stores/useCalendarFilterStore';
 import {
-  getMultiDayCount,
   isCalendarDiffView,
-  isMultiDayView,
   type CalendarEvent,
   type CalendarViewType,
   type ViewDateRange,
@@ -38,7 +36,6 @@ import { initializePreload } from './controller/utils';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import { CalendarLayout } from './layout/CalendarLayout';
 import { EventContextMenu, MobileTouchHint } from './views/shared/components';
-import { generateMultiDayDates } from './views/shared/hooks/useDateUtilities';
 
 // 初回ロード時にビューをプリロード
 initializePreload();
@@ -195,13 +192,10 @@ export function CalendarController({
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
-  const calendarDiffDays = useMemo(() => {
-    if (isMultiDayView(viewType)) {
-      return generateMultiDayDates(currentDate, getMultiDayCount(viewType), showWeekends);
-    }
-    if (viewType === 'day' || showWeekends) return viewDateRange.days;
-    return viewDateRange.days.filter((day) => !isWeekend(day));
-  }, [currentDate, showWeekends, viewDateRange.days, viewType]);
+  const calendarDiffDays = useMemo(
+    () => (showWeekends ? viewDateRange.days : viewDateRange.days.filter((day) => !isWeekend(day))),
+    [showWeekends, viewDateRange.days],
+  );
   const calendarDiffEnabled =
     showActualDiff &&
     isCalendarDiffView(viewType) &&
