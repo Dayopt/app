@@ -8,13 +8,13 @@ Plan / Recordのcard、editor、inspector、record action component群。Storybo
 
 ## Visual states
 
-| 対象           | 主な状態                                                            |
-| -------------- | ------------------------------------------------------------------- |
-| TimeblockCard  | Plan / Record、upcoming / active / past、selected、dragging         |
-| Inspector      | desktop popover / mobile drawer、time locked、validation error      |
-| Editor         | 未来Plan、過去Planのtime locked、Record、全体disabled               |
-| Record actions | そのまま記録、日単位の一括確定、pending                             |
-| Relationships  | Planの関連Record一覧、Recordの元Plan、loading / error / unavailable |
+| 対象           | 主な状態                                                                   |
+| -------------- | -------------------------------------------------------------------------- |
+| TimeblockCard  | Plan / Record、upcoming / active / past、selected、dragging                |
+| Inspector      | desktop popover / mobile drawer、time locked、複製下書き、validation error |
+| Editor         | 未来Plan、過去Planのtime locked、Record、全体disabled                      |
+| Record actions | そのまま記録、日単位の一括確定、pending                                    |
+| Relationships  | Planの関連Record一覧、Recordの元Plan、loading / error / unavailable        |
 
 - Inspectorで開いたPlan / Recordは時間編集で暗黙変換しない
 - past Planは時間fieldをdisabledにし、内容訂正とrecord actionは残す
@@ -29,7 +29,7 @@ Plan / Recordのcard、editor、inspector、record action component群。Storybo
 ```
 TimeblockInspector                    Inspector シェル（PC: FloatingPopover / Mobile: Drawer）
 └── TimeblockInspectorForm            Plan / Record 共有の編集フォーム
-    ├── TagRow                        タグ選択 + 共通メニュー（振り返り / コピー / 削除等）
+    ├── TagRow                        タグ選択 + 共通メニュー（振り返り / コピー / 複製 / 削除等）
     ├── DateTimeSection / メモ        自動保存される共有編集フィールド
     └── TimeblockRelationshipSection  関連Record / 元Planの人間向け表示と詳細切替
 
@@ -59,13 +59,15 @@ TimeblockCard                         カレンダー表示カード（ドラッ
 
 | 対象                                           | 用途                                               |
 | ---------------------------------------------- | -------------------------------------------------- |
-| `useTimeblockInspectorStore`                   | Inspector 開閉、対象 id / kind（plan / record）    |
+| `useTimeblockInspectorStore`                   | Inspector 開閉、対象 id / kind、複製下書き         |
 | `useTimeblockWriteMutations`                   | Plan / Record の作成・更新・削除（楽観的更新付き） |
 | `useCoalescedTimeblockSave`                    | 自動保存の直列化、最新差分の集約、記録前barrier    |
 | `useTimeblockRecordMutations`                  | ワンタップ記録 / この日を確定                      |
 | `useInspectorURLSync` / `useInspectorKeyboard` | URL 同期・キーボード操作                           |
 
 コピーは表示内容と Plan / Record の種別だけを保持する。`id` / `plan_id` は保持せず、貼り付け時は同じ種別の独立した Timeblock を作る。
+
+複製は同じ内容を未保存の詳細カードへ展開し、独立した Plan / Record を1件作る。時間重複時はサイドバー作成と同じ `TimeConflictAlert` を表示し、日時を変更するまで作成を無効にする。複製下書きでは編集時の自動保存を行わない。
 
 ---
 

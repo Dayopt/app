@@ -15,6 +15,7 @@ interface TimeblockContextMenuProps {
   onDelete?: ((entry: CalendarEvent) => void) | undefined;
   onViewStats?: ((entry: CalendarEvent) => void) | undefined;
   onCopy?: ((entry: CalendarEvent) => void) | undefined;
+  onDuplicate?: ((entry: CalendarEvent) => void) | undefined;
   onMarkUnplanned?: ((entry: CalendarEvent) => void) | undefined;
   onRestorePlanned?: ((entry: CalendarEvent) => void) | undefined;
   onSkip?: ((entry: CalendarEvent) => void) | undefined;
@@ -29,6 +30,7 @@ export const EventContextMenu = ({
   onDelete,
   onViewStats,
   onCopy,
+  onDuplicate,
   onMarkUnplanned,
   onRestorePlanned,
   onSkip,
@@ -132,6 +134,7 @@ export const EventContextMenu = ({
     isSkipped: entry.isSkipped,
     onViewStats: onViewStats ? () => onViewStats(entry) : undefined,
     onCopy: onCopy ? () => onCopy(entry) : undefined,
+    onDuplicate: onDuplicate ? () => onDuplicate(entry) : undefined,
     onMarkUnplanned: onMarkUnplanned && !entry.isSkipped ? () => onMarkUnplanned(entry) : undefined,
     onRestorePlanned: onRestorePlanned ? () => onRestorePlanned(entry) : undefined,
     onSkip: onSkip ? () => onSkip(entry) : undefined,

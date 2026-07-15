@@ -17,6 +17,7 @@ import type { Row } from '@/lib/database';
 import { databaseTables } from '@/lib/database';
 import { useDebouncedCallback } from '@/lib/hooks/useDebounce';
 import { toast } from '@/lib/toast';
+import { Button } from '@dayopt/components';
 
 import { isPlanTimeEditable, type TimeblockDestination } from '../../domain/timeblock-destination';
 import {
@@ -26,6 +27,13 @@ import {
 import { useTimeblockWriteMutations } from '../../hooks/useTimeblockWriteMutations';
 import type { ClipboardTimeblock } from '../../lib/timeblock-clipboard';
 import { createClipboardTimeblock } from '../../lib/timeblock-clipboard';
+import {
+  buildTimeblockDuplicateCreateInput,
+  createTimeblockDuplicateDraft,
+  getTimeblockDuplicateValidationReason,
+  type TimeblockDuplicateDraft,
+  type TimeblockDuplicateValidationReason,
+} from '../../lib/timeblock-duplicate';
 import { getTimeblockMenuItems } from '../../lib/timeblock-menu-items';
 import { TagRow } from '../inspector/fields';
 import {
@@ -66,6 +74,14 @@ interface TimeModelInspectorFormProps {
   onOpenRelationship?: ((id: string, kind: TimeblockDestination) => void) | undefined;
   onViewStats?: ((tagId: string) => void) | undefined;
   onCopy?: ((timeblock: ClipboardTimeblock) => void) | undefined;
+  /** 現在の入力内容から独立複製の下書きを開く。 */
+  onStartDuplicate?: ((draft: TimeblockDuplicateDraft) => void) | undefined;
+  /** 複製用の未保存下書き。指定時は既存行を自動保存しない。 */
+  duplicateDraft?: TimeblockDuplicateDraft | undefined;
+  /** 複製を取り消して元ブロックの詳細へ戻る。 */
+  onCancelDuplicate?: (() => void) | undefined;
+  /** 複製作成後に新しいブロックをInspectorで開く。 */
+  onDuplicateCreated?: ((id: string, kind: TimeblockDestination) => void) | undefined;
   /** Inspector を閉じるコールバック（Mobile Drawer のみ渡す） */
   onCloseInspector?: (() => void) | undefined;
   /** 削除成功後に Inspector を閉じる */
@@ -78,6 +94,22 @@ function normalizeNote(note: string): string | null {
   return note.trim() === '' ? null : note;
 }
 
+function getDuplicateValidationMessageKey(
+  reason: TimeblockDuplicateValidationReason,
+):
+  | 'timeblock.editor.duplicate.validation.invalidRange'
+  | 'timeblock.editor.duplicate.validation.planRequiresFuture'
+  | 'timeblock.editor.duplicate.validation.recordRequiresPast' {
+  switch (reason) {
+    case 'invalidRange':
+      return 'timeblock.editor.duplicate.validation.invalidRange';
+    case 'planRequiresFuture':
+      return 'timeblock.editor.duplicate.validation.planRequiresFuture';
+    case 'recordRequiresPast':
+      return 'timeblock.editor.duplicate.validation.recordRequiresPast';
+  }
+}
+
 /** plan / record 共通の Inspector フォーム。タグ・日時・メモをフィールド別に自動保存する。 */
 export function TimeblockInspectorForm({
   kind,
@@ -87,13 +119,22 @@ export function TimeblockInspectorForm({
   onOpenRelationship,
   onViewStats,
   onCopy,
+  onStartDuplicate,
+  duplicateDraft,
+  onCancelDuplicate,
+  onDuplicateCreated,
   onCloseInspector,
   onDeleted,
 }: TimeModelInspectorFormProps) {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
+  const isDuplicateMode = duplicateDraft != null;
+  const [duplicateHasTimeConflict, setDuplicateHasTimeConflict] = useState(false);
+  const handleDuplicateTimeOverlap = useCallback(() => setDuplicateHasTimeConflict(true), []);
   const {
+    createRecord,
+    createPlan,
     deleteRecord,
     deletePlan,
     restoreRecord,
@@ -102,23 +143,34 @@ export function TimeblockInspectorForm({
     unskipPlan,
     updateRecord,
     updatePlan,
-  } = useTimeblockWriteMutations();
+  } = useTimeblockWriteMutations(
+    isDuplicateMode ? { onCreateTimeOverlap: handleDuplicateTimeOverlap } : undefined,
+  );
 
   const target: PlanRow | RecordRow | undefined = kind === 'plan' ? plan : record;
-  const targetId = target?.id ?? null;
+  const targetId = isDuplicateMode ? null : (target?.id ?? null);
   const targetUpdatedAt = target?.updated_at ?? null;
   const latestUpdatedAtRef = useRef(targetUpdatedAt);
 
   const [value, setValue] = useState<TimeModelEditorValue>(() => ({
-    note: target?.note ?? '',
-    tagId: target?.tag_id ?? null,
-    startAt: target ? new Date(target.start_at) : new Date(),
-    endAt: target ? new Date(target.end_at) : new Date(),
-    source: kind,
+    note: duplicateDraft?.note ?? target?.note ?? '',
+    tagId: duplicateDraft?.tagId ?? target?.tag_id ?? null,
+    startAt: duplicateDraft
+      ? new Date(duplicateDraft.startAt)
+      : target
+        ? new Date(target.start_at)
+        : new Date(),
+    endAt: duplicateDraft
+      ? new Date(duplicateDraft.endAt)
+      : target
+        ? new Date(target.end_at)
+        : new Date(),
+    ...(isDuplicateMode ? {} : { source: kind }),
   }));
+  const [duplicateValidationNow] = useState(() => new Date());
 
   // auto_migrated record は RLS で update / delete とも拒否されるため UI 側も読み取り専用にする
-  const isMigrated = kind === 'record' && record?.source === 'auto_migrated';
+  const isMigrated = !isDuplicateMode && kind === 'record' && record?.source === 'auto_migrated';
   const isPast = kind === 'record' || (target != null && new Date(target.end_at) <= new Date());
   const isSkipped = kind === 'plan' && plan?.skipped_at != null;
   const planRelationships = relationships?.kind === 'plan' ? relationships : undefined;
@@ -170,11 +222,12 @@ export function TimeblockInspectorForm({
 
   const handleTagChange = useCallback(
     (tagId: string | null) => {
-      if (!targetId || isMigrated) return;
+      if (isMigrated) return;
       setValue((prev) => ({ ...prev, tagId }));
+      if (isDuplicateMode || !targetId) return;
       enqueueSave({ tagId });
     },
-    [targetId, isMigrated, enqueueSave],
+    [targetId, isMigrated, isDuplicateMode, enqueueSave],
   );
 
   const handleCreateAndSelectTag = useCallback(
@@ -202,28 +255,30 @@ export function TimeblockInspectorForm({
   // --- 日時・メモ（自動保存） ---
   const handleDateTimeChange = useCallback(
     (next: TimeModelEditorValue) => {
-      if (kind === 'plan' && !isPlanTimeEditable(next.endAt)) {
+      if (!isDuplicateMode && kind === 'plan' && !isPlanTimeEditable(next.endAt)) {
         toast.error(t('timeblock.editor.timeLocked'));
         return;
       }
+      if (isDuplicateMode) setDuplicateHasTimeConflict(false);
       setValue(next);
-      if (!isValidTimeModelRange(next)) return;
+      if (isDuplicateMode || !isValidTimeModelRange(next)) return;
       enqueueSave({
         start_at: next.startAt.toISOString(),
         end_at: next.endAt.toISOString(),
       });
     },
-    [kind, enqueueSave, t],
+    [kind, isDuplicateMode, enqueueSave, t],
   );
 
   const handleNoteChange = useCallback(
     (note: string) => {
       setValue((prev) => ({ ...prev, note }));
+      if (isDuplicateMode) return;
       pendingNoteRef.current = note;
       noteDirtyRef.current = true;
       scheduleNoteSave(note);
     },
-    [scheduleNoteSave],
+    [isDuplicateMode, scheduleNoteSave],
   );
 
   const flushBeforeRecord = useCallback(() => {
@@ -248,6 +303,55 @@ export function TimeblockInspectorForm({
       }),
     );
   }, [kind, onCopy, target, value]);
+
+  const handleStartDuplicate = useCallback(() => {
+    if (!target || !onStartDuplicate) return;
+    onStartDuplicate(
+      createTimeblockDuplicateDraft({
+        sourceId: target.id,
+        kind,
+        title: target.title,
+        note: normalizeNote(value.note),
+        tagId: value.tagId,
+        startAt: value.startAt,
+        endAt: value.endAt,
+      }),
+    );
+  }, [kind, onStartDuplicate, target, value]);
+
+  const duplicateValidationReason = duplicateDraft
+    ? getTimeblockDuplicateValidationReason(duplicateDraft, value, duplicateValidationNow)
+    : null;
+  const duplicateValidationMessage = duplicateHasTimeConflict
+    ? t('timeblock.errors.timeOverlap')
+    : duplicateValidationReason
+      ? t(getDuplicateValidationMessageKey(duplicateValidationReason))
+      : undefined;
+
+  const handleCreateDuplicate = useCallback(() => {
+    if (!duplicateDraft || duplicateValidationReason !== null || duplicateHasTimeConflict) return;
+    const input = buildTimeblockDuplicateCreateInput(duplicateDraft, value);
+    const onSuccess = (created: { id: string } | null | undefined) => {
+      if (!created) return;
+      toast.success(t('timeblock.editor.duplicate.created'));
+      onDuplicateCreated?.(created.id, duplicateDraft.kind);
+    };
+
+    if (duplicateDraft.kind === 'plan') {
+      createPlan.mutate(input, { onSuccess });
+    } else {
+      createRecord.mutate(input, { onSuccess });
+    }
+  }, [
+    createPlan,
+    createRecord,
+    duplicateDraft,
+    duplicateHasTimeConflict,
+    duplicateValidationReason,
+    onDuplicateCreated,
+    t,
+    value,
+  ]);
 
   // --- スキップ / 削除 ---
   const handleSkip = useCallback(() => {
@@ -290,21 +394,25 @@ export function TimeblockInspectorForm({
     );
   }, [kind, targetId, deletePlan, deleteRecord, restorePlan, restoreRecord, onDeleted, t]);
 
-  const menuItems = getTimeblockMenuItems({
-    // time model では変換系（markUnplanned / restorePlanned）を出さないため
-    // plan → planned / record → unplanned の対応で表示条件だけ流用する
-    origin: kind === 'plan' ? 'planned' : 'unplanned',
-    tagId: value.tagId,
-    isPast,
-    isSkipped,
-    onViewStats: onViewStats && value.tagId ? () => onViewStats(value.tagId ?? '') : undefined,
-    onCopy: onCopy ? handleCopy : undefined,
-    onSkip: kind === 'plan' && isRecordStateResolved && !hasRelatedRecords ? handleSkip : undefined,
-    onUnskip: kind === 'plan' ? handleUnskip : undefined,
-    onDelete: isMigrated ? undefined : handleDelete,
-  });
+  const menuItems = isDuplicateMode
+    ? []
+    : getTimeblockMenuItems({
+        // time model では変換系（markUnplanned / restorePlanned）を出さないため
+        // plan → planned / record → unplanned の対応で表示条件だけ流用する
+        origin: kind === 'plan' ? 'planned' : 'unplanned',
+        tagId: value.tagId,
+        isPast,
+        isSkipped,
+        onViewStats: onViewStats && value.tagId ? () => onViewStats(value.tagId ?? '') : undefined,
+        onCopy: onCopy ? handleCopy : undefined,
+        onDuplicate: onStartDuplicate ? handleStartDuplicate : undefined,
+        onSkip:
+          kind === 'plan' && isRecordStateResolved && !hasRelatedRecords ? handleSkip : undefined,
+        onUnskip: kind === 'plan' ? handleUnskip : undefined,
+        onDelete: isMigrated ? undefined : handleDelete,
+      });
 
-  if (!target) return null;
+  if (!target && !duplicateDraft) return null;
 
   const toRelationshipItem = (row: PlanRow | RecordRow): TimeblockRelationshipItem => {
     const tag = row.tag_id ? getTagById(row.tag_id) : undefined;
@@ -340,11 +448,34 @@ export function TimeblockInspectorForm({
         value={value}
         onDateTimeChange={handleDateTimeChange}
         onNoteChange={handleNoteChange}
-        onNoteBlur={flushNoteSave}
-        disabled={deletePlan.isPending || deleteRecord.isPending || isMigrated}
+        onNoteBlur={isDuplicateMode ? undefined : flushNoteSave}
+        dateTimeError={duplicateValidationMessage}
+        disabled={
+          deletePlan.isPending ||
+          deleteRecord.isPending ||
+          createPlan.isPending ||
+          createRecord.isPending ||
+          isMigrated
+        }
       />
 
-      {relationships && onOpenRelationship ? (
+      {duplicateDraft ? (
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="ghost" onClick={onCancelDuplicate}>
+            {t('common.actions.cancel')}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleCreateDuplicate}
+            loading={createPlan.isPending || createRecord.isPending}
+            disabled={duplicateValidationReason !== null || duplicateHasTimeConflict}
+          >
+            {t('timeblock.editor.duplicate.create')}
+          </Button>
+        </div>
+      ) : null}
+
+      {!isDuplicateMode && relationships && onOpenRelationship ? (
         relationships.kind === 'plan' ? (
           <TimeblockRelationshipSection
             kind="plan"
@@ -364,7 +495,8 @@ export function TimeblockInspectorForm({
         )
       ) : null}
 
-      {kind === 'plan' &&
+      {!isDuplicateMode &&
+      kind === 'plan' &&
       isPast &&
       !isSkipped &&
       isRecordStateResolved &&

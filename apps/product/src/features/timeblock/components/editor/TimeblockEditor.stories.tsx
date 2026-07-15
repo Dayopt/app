@@ -8,6 +8,9 @@ const meta = {
   component: TimeblockEditor,
   tags: ['autodocs'],
   parameters: { layout: 'padded' },
+  argTypes: {
+    dateTimeError: { control: 'text' },
+  },
 } satisfies Meta<typeof TimeblockEditor>;
 
 export default meta;
@@ -65,6 +68,16 @@ export const PastPlan: Story = {
   },
 };
 
+/** サイドバー作成と共通の時間重複状態。 */
+export const TimeConflict: Story = {
+  args: {
+    value: futureValue,
+    onDateTimeChange: () => undefined,
+    onNoteChange: () => undefined,
+    dateTimeError: 'この時間帯には既に予定があります',
+  },
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   args: {
@@ -86,6 +99,12 @@ export const AllPatterns: Story = {
           value={pastValue}
           onDateTimeChange={setPastValue}
           onNoteChange={(note) => setPastValue((current) => ({ ...current, note }))}
+        />
+        <TimeblockEditor
+          value={value}
+          onDateTimeChange={setValue}
+          onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
+          dateTimeError="この時間帯には既に予定があります"
         />
         <TimeblockEditor
           value={value}

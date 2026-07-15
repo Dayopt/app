@@ -6,18 +6,6 @@ import { fn } from 'storybook/test';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { EventContextMenu } from './TimeblockContextMenu';
 
-/** エントリコンテキストメニュー。右クリックメニューとして使用する。 */
-const meta = {
-  title: 'Product/Features/Calendar/Interaction/TimeblockContextMenu',
-  parameters: {
-    layout: 'padded',
-  },
-  tags: ['autodocs'],
-} satisfies Meta;
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
 // ─────────────────────────────────────────────────────────
 // サンプルデータ
 // ─────────────────────────────────────────────────────────
@@ -78,6 +66,27 @@ const unplannedEntry: CalendarEvent = {
   origin: 'unplanned',
 };
 
+/** エントリコンテキストメニュー。右クリックメニューとして使用する。 */
+const meta = {
+  title: 'Product/Features/Calendar/Interaction/TimeblockContextMenu',
+  component: EventContextMenu,
+  parameters: {
+    layout: 'padded',
+  },
+  tags: ['autodocs'],
+  args: {
+    entry: completedPlannedEntry,
+    position: { x: 0, y: 0 },
+    onClose: fn(),
+  },
+  argTypes: {
+    onDuplicate: { control: false },
+  },
+} satisfies Meta<typeof EventContextMenu>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
 // ─────────────────────────────────────────────────────────
 // ヘルパー
 // ─────────────────────────────────────────────────────────
@@ -117,6 +126,7 @@ const allHandlers = {
   onDelete: fn(),
   onViewStats: fn(),
   onCopy: fn(),
+  onDuplicate: fn(),
   onMarkUnplanned: fn(),
   onRestorePlanned: fn(),
 };
@@ -130,13 +140,14 @@ export const Default: Story = {
   render: () => <ContextMenuTrigger entry={completedPlannedEntry} menuProps={allHandlers} />,
 };
 
-/** コピーと削除。 */
+/** コピー・複製と削除。 */
 export const CopyAndDelete: Story = {
   render: () => (
     <ContextMenuTrigger
       entry={completedPlannedEntry}
       menuProps={{
         onCopy: fn(),
+        onDuplicate: fn(),
         onDelete: fn(),
       }}
     />
@@ -206,13 +217,14 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">コピーと削除</span>
+        <span className="text-muted-foreground text-xs">コピー・複製と削除</span>
         <div className="relative" style={{ height: 80 }}>
           <EventContextMenu
             entry={completedPlannedEntry}
             position={{ x: 0, y: 0 }}
             onClose={fn()}
             onCopy={fn()}
+            onDuplicate={fn()}
             onDelete={fn()}
           />
         </div>

@@ -54,28 +54,31 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
   const timeblockId = useTimeblockInspectorStore((state) => state.timeblockId);
   const timeblockKind = useTimeblockInspectorStore((state) => state.timeblockKind);
   const anchorRect = useTimeblockInspectorStore((state) => state.anchorRect);
+  const duplicateDraft = useTimeblockInspectorStore((state) => state.duplicateDraft);
   const openInspector = useTimeblockInspectorStore((state) => state.openInspector);
+  const openDuplicate = useTimeblockInspectorStore((state) => state.openDuplicate);
+  const cancelDuplicate = useTimeblockInspectorStore((state) => state.cancelDuplicate);
   const closeInspector = useTimeblockInspectorStore((state) => state.closeInspector);
   const contentRef = useRef<HTMLDivElement>(null);
   const shouldFocusRelationshipRef = useRef(false);
 
   const planQuery = api.plans.getById.useQuery(
     { id: timeblockId ?? '' },
-    { enabled: isOpen && !!timeblockId && timeblockKind === 'plan' },
+    { enabled: isOpen && !duplicateDraft && !!timeblockId && timeblockKind === 'plan' },
   );
   const recordQuery = api.records.getById.useQuery(
     { id: timeblockId ?? '' },
-    { enabled: isOpen && !!timeblockId && timeblockKind === 'record' },
+    { enabled: isOpen && !duplicateDraft && !!timeblockId && timeblockKind === 'record' },
   );
   const relatedRecordsQuery = api.records.list.useQuery(
     { planId: timeblockId ?? '', sortBy: 'start_at', sortOrder: 'asc' },
-    { enabled: isOpen && !!timeblockId && timeblockKind === 'plan' },
+    { enabled: isOpen && !duplicateDraft && !!timeblockId && timeblockKind === 'plan' },
   );
   const originalPlanId = timeblockKind === 'record' ? recordQuery.data?.plan_id : null;
   const originalPlanQuery = api.plans.getById.useQuery(
     { id: originalPlanId ?? '' },
     {
-      enabled: isOpen && !!originalPlanId && timeblockKind === 'record',
+      enabled: isOpen && !duplicateDraft && !!originalPlanId && timeblockKind === 'record',
       retry: (failureCount, error) => (error.data?.code === 'NOT_FOUND' ? false : failureCount < 3),
     },
   );
@@ -98,6 +101,11 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
     closeInspector();
   }, [closeInspector]);
 
+  const handleCancelDuplicate = useCallback(() => {
+    shouldFocusRelationshipRef.current = true;
+    cancelDuplicate();
+  }, [cancelDuplicate]);
+
   useEffect(() => {
     if (!isOpen || activeQuery.isLoading || !shouldFocusRelationshipRef.current) return;
 
@@ -107,10 +115,10 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
 
     const focusTarget = content.querySelector<HTMLElement>(INSPECTOR_FOCUSABLE_SELECTOR);
     (focusTarget ?? content).focus();
-  }, [activeQuery.isLoading, isOpen, target?.id, timeblockKind]);
+  }, [activeQuery.isLoading, duplicateDraft, isOpen, target?.id, timeblockKind]);
 
   let relationships: TimeblockRelationships | undefined;
-  if (timeblockKind === 'plan') {
+  if (!duplicateDraft && timeblockKind === 'plan') {
     const status: 'loading' | 'error' | 'success' = relatedRecordsQuery.isError
       ? 'error'
       : relatedRecordsQuery.isSuccess
@@ -122,7 +130,7 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
       records: relatedRecordsQuery.data ?? [],
       onRetry: () => void relatedRecordsQuery.refetch(),
     };
-  } else if (originalPlanId) {
+  } else if (!duplicateDraft && originalPlanId) {
     const isUnavailable = originalPlanQuery.error?.data?.code === 'NOT_FOUND';
     const status: 'loading' | 'error' | 'success' | 'unavailable' = isUnavailable
       ? 'unavailable'
@@ -145,10 +153,22 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
   });
 
   // --- コンテンツ（loading / error / empty / form） ---
-  const title = target?.title || t('timeblock.inspector.noTitle');
+  const title = duplicateDraft?.title || target?.title || t('timeblock.inspector.noTitle');
   let content: React.ReactNode;
 
-  if (activeQuery.isLoading) {
+  if (duplicateDraft) {
+    content = (
+      <TimeblockInspectorForm
+        key={`duplicate:${duplicateDraft.kind}:${duplicateDraft.sourceId}`}
+        kind={duplicateDraft.kind}
+        duplicateDraft={duplicateDraft}
+        onCancelDuplicate={handleCancelDuplicate}
+        onDuplicateCreated={handleOpenRelationship}
+        onCloseInspector={isMobile ? handleClose : undefined}
+        onDeleted={handleClose}
+      />
+    );
+  } else if (activeQuery.isLoading) {
     content = (
       <div className="flex h-full flex-1 items-center justify-center">
         <Spinner size="lg" />
@@ -180,6 +200,7 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
         onOpenRelationship={handleOpenRelationship}
         onViewStats={onViewStats}
         onCopy={onCopy}
+        onStartDuplicate={openDuplicate}
         onCloseInspector={isMobile ? handleClose : undefined}
         onDeleted={handleClose}
       />

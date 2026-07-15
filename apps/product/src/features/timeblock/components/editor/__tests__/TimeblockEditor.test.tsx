@@ -8,8 +8,18 @@ import {
 } from '../TimeblockEditor';
 
 vi.mock('@/features/timeblock', () => ({
-  DateTimeSection: ({ disabled = false }: { disabled?: boolean }) => (
-    <div data-disabled={String(disabled)} data-testid="date-time-section" />
+  DateTimeSection: ({
+    disabled = false,
+    hasError = false,
+  }: {
+    disabled?: boolean;
+    hasError?: boolean;
+  }) => (
+    <div
+      data-disabled={String(disabled)}
+      data-has-error={String(hasError)}
+      data-testid="date-time-section"
+    />
   ),
 }));
 
@@ -71,6 +81,20 @@ describe('TimeblockEditor', () => {
 
     expect(onNoteChange).toHaveBeenCalledWith('調査メモ');
     expect(onNoteBlur).toHaveBeenCalledOnce();
+  });
+
+  it('時間重複を入力状態と共通のTimeConflictAlertで表示する', () => {
+    render(
+      <TimeblockEditor
+        value={value}
+        onDateTimeChange={vi.fn()}
+        onNoteChange={vi.fn()}
+        dateTimeError="この時間帯には既に予定があります"
+      />,
+    );
+
+    expect(screen.getByTestId('date-time-section')).toHaveAttribute('data-has-error', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent('この時間帯には既に予定があります');
   });
 
   it('過去Planでは日時だけを無効化し、メモ編集は維持する', () => {

@@ -11,6 +11,11 @@
 // Types
 // =============================================================================
 export type { ClipboardTimeblock } from './lib/timeblock-clipboard';
+export type {
+  TimeblockDuplicateDraft,
+  TimeblockDuplicateEditorValue,
+  TimeblockDuplicateValidationReason,
+} from './lib/timeblock-duplicate';
 export type { CalendarEvent } from './types/calendar-event';
 export type { PlanEvent, PlanEventStatus } from './types/plan-event';
 export type { RecordEvent } from './types/record-event';
@@ -51,6 +56,11 @@ export { isNewTimeblock } from './lib/new-timeblock-tracker';
 // Lib (timeblock menu items — 右クリック / Inspector メニュー共通の項目定義)
 // =============================================================================
 export { createClipboardTimeblock } from './lib/timeblock-clipboard';
+export {
+  buildTimeblockDuplicateCreateInput,
+  createTimeblockDuplicateDraft,
+  getTimeblockDuplicateValidationReason,
+} from './lib/timeblock-duplicate';
 export { getTimeblockMenuItems } from './lib/timeblock-menu-items';
 // =============================================================================
 // Components (TimeblockCard)

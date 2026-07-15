@@ -14,6 +14,11 @@ import { useCallback, useMemo } from 'react';
 
 import { isWeekend } from 'date-fns';
 
+import {
+  createTimeblockDuplicateDraft,
+  resolveTimeblockDestination,
+  useTimeblockInspectorStore,
+} from '@/features/timeblock';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarTimeblockActionsProvider } from '../contexts/CalendarTimeblockActionsContext';
@@ -188,12 +193,32 @@ export function CalendarController({
   // ショートカットレジストリのグローバルリスナー（1箇所のみ呼び出し）
   useShortcutRegistry();
   const timezone = useUserPreferences((preferences) => preferences.timezone);
+  const openDuplicateInspector = useTimeblockInspectorStore((state) => state.openDuplicate);
   const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
   const visibleTagIds = useCalendarFilterStore((state) => state.visibleTagIds);
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
+  const handleDuplicate = useCallback(
+    (entry: CalendarEvent) => {
+      const startAt = entry.startDate ?? entry.displayStartDate;
+      const endAt = entry.endDate ?? entry.displayEndDate;
+      const kind = entry.kind ?? resolveTimeblockDestination(endAt);
+      openDuplicateInspector(
+        createTimeblockDuplicateDraft({
+          sourceId: entry.id,
+          kind,
+          title: entry.title,
+          note: entry.description ?? null,
+          tagId: entry.tagId,
+          startAt,
+          endAt,
+        }),
+      );
+    },
+    [openDuplicateInspector],
+  );
   const calendarDiffDays = useMemo(
     () => (showWeekends ? viewDateRange.days : viewDateRange.days.filter((day) => !isWeekend(day))),
     [showWeekends, viewDateRange.days],
@@ -437,6 +462,7 @@ export function CalendarController({
           onDelete={onDeleteTimeblockConfirm}
           onViewStats={onViewStats}
           onCopy={onCopy}
+          onDuplicate={handleDuplicate}
           onMarkUnplanned={onMarkUnplanned}
           onRestorePlanned={onRestorePlanned}
           onSkip={onSkip}

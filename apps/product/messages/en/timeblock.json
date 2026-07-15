@@ -158,6 +158,15 @@
       "note": "Note",
       "notePlaceholder": "Add a note...",
       "timeLocked": "Time is fixed for past plans",
+      "duplicate": {
+        "create": "Create duplicate",
+        "created": "Duplicated",
+        "validation": {
+          "invalidRange": "The end time must be after the start time",
+          "planRequiresFuture": "Choose a future time for the Plan",
+          "recordRequiresPast": "Choose a past time for the Record"
+        }
+      },
       "recordAsIs": "Record as planned",
       "confirmDay": "Confirm day",
       "toast": {

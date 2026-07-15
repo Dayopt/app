@@ -9,12 +9,27 @@
  */
 
 import type { LucideIcon } from 'lucide-react';
-import { BarChart3, CalendarOff, CircleSlash, Copy, RotateCcw, Trash2 } from 'lucide-react';
+import {
+  BarChart3,
+  CalendarOff,
+  CircleSlash,
+  Copy,
+  CopyPlus,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react';
 
 import type { TimeblockOrigin } from '@dayopt/domain';
 
 export type TimeblockMenuItemKey =
-  'viewStats' | 'copy' | 'markUnplanned' | 'restorePlanned' | 'skip' | 'unskip' | 'delete';
+  | 'viewStats'
+  | 'copy'
+  | 'duplicate'
+  | 'markUnplanned'
+  | 'restorePlanned'
+  | 'skip'
+  | 'unskip'
+  | 'delete';
 
 export interface TimeblockMenuItem {
   key: TimeblockMenuItemKey;
@@ -43,6 +58,7 @@ interface TimeblockMenuItemsArgs {
   isSkipped?: boolean | undefined;
   onViewStats?: (() => void) | undefined;
   onCopy?: (() => void) | undefined;
+  onDuplicate?: (() => void) | undefined;
   onMarkUnplanned?: (() => void) | undefined;
   onRestorePlanned?: (() => void) | undefined;
   onSkip?: (() => void) | undefined;
@@ -58,6 +74,7 @@ export function getTimeblockMenuItems({
   isSkipped = false,
   onViewStats,
   onCopy,
+  onDuplicate,
   onMarkUnplanned,
   onRestorePlanned,
   onSkip,
@@ -84,6 +101,15 @@ export function getTimeblockMenuItems({
           icon: Copy,
           dangerous: false,
           onSelect: onCopy,
+        }
+      : null,
+    onDuplicate
+      ? {
+          key: 'duplicate',
+          labelKey: 'common.actions.duplicate',
+          icon: CopyPlus,
+          dangerous: false,
+          onSelect: onDuplicate,
         }
       : null,
     onMarkUnplanned && isPlanned && !isUpcoming

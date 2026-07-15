@@ -3,12 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Row } from '@/lib/database';
 
+import { createTimeblockDuplicateDraft } from '../../../lib/timeblock-duplicate';
 import { TimeblockInspectorForm } from '../TimeblockInspectorForm';
 
 const mocks = vi.hoisted(() => ({
   enqueueSave: vi.fn(),
   flushSave: vi.fn(),
   toastError: vi.fn(),
+  createPlanMutate: vi.fn(),
+  createRecordMutate: vi.fn(),
+  onCreateTimeOverlap: undefined as (() => void) | undefined,
 }));
 
 vi.mock('@/features/tags', () => ({
@@ -33,13 +37,16 @@ vi.mock('../../../hooks/useCoalescedTimeblockSave', () => ({
 }));
 
 vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
-  useTimeblockWriteMutations: () => {
+  useTimeblockWriteMutations: (options?: { onCreateTimeOverlap?: () => void }) => {
+    mocks.onCreateTimeOverlap = options?.onCreateTimeOverlap;
     const mutation = {
       isPending: false,
       mutate: vi.fn(),
       mutateAsync: vi.fn(),
     };
     return {
+      createRecord: { ...mutation, mutate: mocks.createRecordMutate },
+      createPlan: { ...mutation, mutate: mocks.createPlanMutate },
       deleteRecord: mutation,
       deletePlan: mutation,
       restoreRecord: mutation,
@@ -53,7 +60,15 @@ vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
 }));
 
 vi.mock('../../inspector/fields', () => ({
-  TagRow: () => null,
+  TagRow: ({ menuItems }: { menuItems?: Array<{ key: string; onSelect: () => void }> }) => (
+    <>
+      {menuItems?.map((item) => (
+        <button key={item.key} type="button" onClick={item.onSelect}>
+          {item.key}
+        </button>
+      ))}
+    </>
+  ),
 }));
 
 vi.mock('../TimeblockRecordActions', () => ({
@@ -86,25 +101,28 @@ vi.mock('../TimeblockEditor', () => ({
     value,
     onDateTimeChange,
     onNoteChange,
+    dateTimeError,
   }: {
     value: {
       note: string;
       tagId: string | null;
       startAt: Date;
       endAt: Date;
-      source: 'plan' | 'record';
+      source?: 'plan' | 'record';
     };
     onDateTimeChange: (next: {
       note: string;
       tagId: string | null;
       startAt: Date;
       endAt: Date;
-      source: 'plan' | 'record';
+      source?: 'plan' | 'record';
     }) => void;
     onNoteChange: (note: string) => void;
+    dateTimeError?: string;
   }) => (
     <>
       <output data-testid="current-end">{value.endAt.toISOString()}</output>
+      {dateTimeError ? <output data-testid="date-time-error">{dateTimeError}</output> : null}
       <button
         type="button"
         onClick={() =>
@@ -119,6 +137,30 @@ vi.mock('../TimeblockEditor', () => ({
       </button>
       <button type="button" onClick={() => onNoteChange('最新メモ')}>
         edit-note
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onDateTimeChange({
+            ...value,
+            startAt: new Date('2026-07-15T15:00:00.000Z'),
+            endAt: new Date('2026-07-15T16:00:00.000Z'),
+          })
+        }
+      >
+        move-to-future
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onDateTimeChange({
+            ...value,
+            startAt: new Date('2026-07-15T07:00:00.000Z'),
+            endAt: new Date('2026-07-15T08:00:00.000Z'),
+          })
+        }
+      >
+        move-to-past
       </button>
     </>
   ),
@@ -168,6 +210,9 @@ describe('TimeblockInspectorForm', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
     vi.clearAllMocks();
+    mocks.createPlanMutate.mockReset();
+    mocks.createRecordMutate.mockReset();
+    mocks.onCreateTimeOverlap = undefined;
     mocks.flushSave.mockResolvedValue(undefined);
   });
 
@@ -270,5 +315,126 @@ describe('TimeblockInspectorForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'complete-record' }));
     expect(onOpenRelationship).toHaveBeenCalledWith('record-created', 'record');
+  });
+
+  it('詳細メニューから現在の入力内容を複製下書きへ渡す', () => {
+    const onStartDuplicate = vi.fn();
+    render(
+      <TimeblockInspectorForm
+        kind="plan"
+        plan={futurePlan}
+        onStartDuplicate={onStartDuplicate}
+        onDeleted={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'edit-note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'duplicate' }));
+
+    expect(onStartDuplicate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceId: futurePlan.id,
+        kind: 'plan',
+        title: futurePlan.title,
+        note: '最新メモ',
+        tagId: futurePlan.tag_id,
+        startAt: futurePlan.start_at,
+        endAt: futurePlan.end_at,
+      }),
+    );
+  });
+
+  it('Plan複製の時間重複をインライン表示し、日時変更後に独立したPlanを作成する', () => {
+    const onDuplicateCreated = vi.fn();
+    const duplicateDraft = createTimeblockDuplicateDraft({
+      sourceId: futurePlan.id,
+      kind: 'plan',
+      title: futurePlan.title,
+      note: futurePlan.note,
+      tagId: futurePlan.tag_id,
+      startAt: new Date(futurePlan.start_at),
+      endAt: new Date(futurePlan.end_at),
+    });
+    mocks.createPlanMutate.mockImplementationOnce(() => mocks.onCreateTimeOverlap?.());
+
+    render(
+      <TimeblockInspectorForm
+        kind="plan"
+        duplicateDraft={duplicateDraft}
+        onDuplicateCreated={onDuplicateCreated}
+        onDeleted={vi.fn()}
+      />,
+    );
+
+    const createButton = screen.getByRole('button', {
+      name: 'timeblock.editor.duplicate.create',
+    });
+    expect(createButton).toBeEnabled();
+    expect(screen.queryByTestId('date-time-error')).not.toBeInTheDocument();
+
+    fireEvent.click(createButton);
+    expect(screen.getByTestId('date-time-error')).toHaveTextContent('timeblock.errors.timeOverlap');
+    expect(createButton).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'move-to-future' }));
+    expect(screen.queryByTestId('date-time-error')).not.toBeInTheDocument();
+    expect(createButton).toBeEnabled();
+
+    mocks.createPlanMutate.mockImplementation(
+      (_input, options: { onSuccess?: (created: { id: string }) => void }) =>
+        options.onSuccess?.({ id: 'plan-copy' }),
+    );
+    fireEvent.click(createButton);
+
+    expect(mocks.createPlanMutate).toHaveBeenLastCalledWith(
+      {
+        title: futurePlan.title,
+        tagId: futurePlan.tag_id,
+        start_at: '2026-07-15T15:00:00.000Z',
+        end_at: '2026-07-15T16:00:00.000Z',
+      },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+    expect(onDuplicateCreated).toHaveBeenCalledWith('plan-copy', 'plan');
+    expect(mocks.enqueueSave).not.toHaveBeenCalled();
+  });
+
+  it('Record複製はplanIdを持たない独立Recordを作成する', () => {
+    const onDuplicateCreated = vi.fn();
+    const duplicateDraft = createTimeblockDuplicateDraft({
+      sourceId: relatedRecord.id,
+      kind: 'record',
+      title: relatedRecord.title,
+      note: relatedRecord.note,
+      tagId: relatedRecord.tag_id,
+      startAt: new Date(relatedRecord.start_at),
+      endAt: new Date(relatedRecord.end_at),
+    });
+    mocks.createRecordMutate.mockImplementation(
+      (_input, options: { onSuccess?: (created: { id: string }) => void }) =>
+        options.onSuccess?.({ id: 'record-copy' }),
+    );
+
+    render(
+      <TimeblockInspectorForm
+        kind="record"
+        duplicateDraft={duplicateDraft}
+        onDuplicateCreated={onDuplicateCreated}
+        onDeleted={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'move-to-past' }));
+    fireEvent.click(screen.getByRole('button', { name: 'timeblock.editor.duplicate.create' }));
+
+    const input = mocks.createRecordMutate.mock.calls[0]?.[0];
+    expect(input).toEqual({
+      title: relatedRecord.title,
+      tagId: relatedRecord.tag_id,
+      start_at: '2026-07-15T07:00:00.000Z',
+      end_at: '2026-07-15T08:00:00.000Z',
+    });
+    expect(input).not.toHaveProperty('planId');
+    expect(onDuplicateCreated).toHaveBeenCalledWith('record-copy', 'record');
   });
 });

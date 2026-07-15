@@ -77,6 +77,15 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 - `Cmd/Ctrl+V` はコピー元の種別を維持する。Plan は未来、Record は過去にだけ貼り付けられ、条件外では種別を暗黙変換せずエラーを表示する
 - Plan と Record の関連を作るのは「そのまま記録」などの記録導線だけ。通常のコピーでは関連を作らない
 
+## 複製
+
+- 詳細 Inspector とカードの右クリックにある共通の `…` メニューから、Plan / Record の両方を複製できる
+- 複製を選ぶと同じ Inspector に未保存の詳細カードを表示し、タグ、メモ、所要時間、Plan / Record の種別を引き継ぐ
+- Plan は未来、Record は過去の時間だけを受け付け、種別を暗黙変換しない
+- 作成時に同一レーンの既存ブロックと重複した場合は行を作らず、サイドバーのタグ作成と同じ `TimeConflictAlert` を日時入力の直下に表示する。重複トーストは出さず、日時を変更するまで作成を無効にする
+- 複製下書きは自動保存せず、「複製を作成」で独立した新規行を作る。元の `id` / `plan_id`、skip、関連 Record、外部カレンダー関係は引き継がない
+- キャンセル時は新規行を作らず、元ブロックの詳細へ戻る
+
 ## DB 契約
 
 物理 DB、正本 RPC、生成型は Record に統一済み。テーブルは `records`、一括確定は `confirm_day_plans_to_records`、soft delete / restore は `soft_delete_record` / `restore_record` を使う。旧 `logs` view と Log 名 RPC alias は存在しない。

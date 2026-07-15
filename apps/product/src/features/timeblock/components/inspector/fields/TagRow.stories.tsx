@@ -53,6 +53,7 @@ const fullPlannedMenu = getTimeblockMenuItems({
   tagId: 'tag-1',
   onViewStats: fn(),
   onCopy: fn(),
+  onDuplicate: fn(),
   onMarkUnplanned: fn(),
   onDelete: fn(),
 });
@@ -62,6 +63,7 @@ const unplannedMenu = getTimeblockMenuItems({
   tagId: 'tag-1',
   onViewStats: fn(),
   onCopy: fn(),
+  onDuplicate: fn(),
   onRestorePlanned: fn(),
   onDelete: fn(),
 });
@@ -70,6 +72,7 @@ const copyAndDeleteMenu = getTimeblockMenuItems({
   origin: 'planned',
   tagId: 'tag-1',
   onCopy: fn(),
+  onDuplicate: fn(),
   onDelete: fn(),
 });
 
@@ -80,6 +83,7 @@ const upcomingPlannedMenu = getTimeblockMenuItems({
   isUpcoming: true,
   onViewStats: fn(),
   onCopy: fn(),
+  onDuplicate: fn(),
   onMarkUnplanned: fn(),
   onDelete: fn(),
 });
@@ -104,7 +108,7 @@ export const WithMenu: Story = {
   ),
 };
 
-/** コピーと削除（振り返りなし）。 */
+/** コピー・複製と削除（振り返りなし）。 */
 export const CopyAndDelete: Story = {
   render: () => (
     <div className="w-72">
@@ -205,7 +209,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs">コピーと削除</p>
+        <p className="text-muted-foreground text-xs">コピー・複製と削除</p>
         <TagRow
           tagId="tag-4"
           tagName="運動"

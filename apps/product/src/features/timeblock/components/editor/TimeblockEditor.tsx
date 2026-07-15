@@ -7,6 +7,7 @@ import { DateTimeSection } from '@/features/timeblock';
 
 import { isPlanTimeEditable, type TimeblockDestination } from '../../domain/timeblock-destination';
 import { NoteSection } from '../inspector/fields';
+import { TimeConflictAlert } from '../inspector/fields/TimeConflictAlert';
 
 export interface TimeModelEditorValue {
   note: string;
@@ -22,6 +23,8 @@ interface TimeModelEditorProps {
   onDateTimeChange: (next: TimeModelEditorValue) => void;
   onNoteChange: (note: string) => void;
   onNoteBlur?: (() => void) | undefined;
+  /** 日時入力に紐づけて表示するエラー。 */
+  dateTimeError?: string | undefined;
   disabled?: boolean | undefined;
 }
 
@@ -46,10 +49,12 @@ export function TimeblockEditor({
   onDateTimeChange,
   onNoteChange,
   onNoteBlur,
+  dateTimeError,
   disabled,
 }: TimeModelEditorProps) {
   const t = useTranslations('timeblock.editor');
   const timeLocked = value.source === 'plan' && !isPlanTimeEditable(value.endAt);
+  const hasDateTimeError = !isValidTimeModelRange(value) || dateTimeError != null;
 
   return (
     <div className="space-y-3">
@@ -58,27 +63,40 @@ export function TimeblockEditor({
           <span className="text-muted-foreground text-xs">{t('timeLocked')}</span>
         </div>
       ) : null}
-      <div className="bg-muted rounded-2xl px-4 py-2">
-        <DateTimeSection
-          dateLabel={t('date')}
-          timeLabel={t('time')}
-          selectedDate={value.startAt}
-          onDateSelect={(date) => {
-            const startAt = new Date(date);
-            startAt.setHours(value.startAt.getHours(), value.startAt.getMinutes(), 0, 0);
-            const endAt = new Date(date);
-            endAt.setHours(value.endAt.getHours(), value.endAt.getMinutes(), 0, 0);
-            onDateTimeChange({ ...value, startAt, endAt });
-          }}
-          startTime={formatTime(value.startAt)}
-          onStartChange={(next) =>
-            onDateTimeChange({ ...value, startAt: withTime(value.startAt, next) })
-          }
-          endTime={formatTime(value.endAt)}
-          onEndChange={(next) => onDateTimeChange({ ...value, endAt: withTime(value.endAt, next) })}
-          disabled={disabled === true || timeLocked}
-          hasError={!isValidTimeModelRange(value)}
-        />
+      <div className="space-y-1">
+        <div className="bg-muted rounded-2xl px-4 py-2">
+          <DateTimeSection
+            dateLabel={t('date')}
+            timeLabel={t('time')}
+            selectedDate={value.startAt}
+            onDateSelect={(date) => {
+              const startAt = new Date(date);
+              startAt.setHours(value.startAt.getHours(), value.startAt.getMinutes(), 0, 0);
+              const endAt = new Date(date);
+              endAt.setHours(value.endAt.getHours(), value.endAt.getMinutes(), 0, 0);
+              onDateTimeChange({ ...value, startAt, endAt });
+            }}
+            startTime={formatTime(value.startAt)}
+            onStartChange={(next) =>
+              onDateTimeChange({ ...value, startAt: withTime(value.startAt, next) })
+            }
+            endTime={formatTime(value.endAt)}
+            onEndChange={(next) =>
+              onDateTimeChange({ ...value, endAt: withTime(value.endAt, next) })
+            }
+            disabled={disabled === true || timeLocked}
+            hasError={hasDateTimeError}
+          />
+        </div>
+        <div
+          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- sidebar create と同じ expand/collapse animation
+          className={`grid transition-[grid-template-rows] duration-200 ${dateTimeError ? 'grid-rows-expanded mt-2' : 'grid-rows-collapsed'}`}
+          aria-hidden={!dateTimeError}
+        >
+          <div className="overflow-hidden">
+            <TimeConflictAlert message={dateTimeError ?? ''} />
+          </div>
+        </div>
       </div>
       <div onBlurCapture={onNoteBlur}>
         <NoteSection

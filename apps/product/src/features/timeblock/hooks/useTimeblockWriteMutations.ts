@@ -135,16 +135,22 @@ interface MutationContext {
   tempId?: string;
 }
 
+interface UseTimeblockWriteMutationsOptions {
+  /** create の時間重複をフォーム内で表示する場合に指定する。指定時は重複トーストを出さない。 */
+  onCreateTimeOverlap?: (() => void) | undefined;
+}
+
 /**
  * Plan / Record の書き込み mutation 群。
  *
  * optimistic-update skill に従い、create は temp 行 insert、update は該当行 patch、
  * delete は行除去を onMutate で行い、onError で snapshot rollback、onSettled で再検証する。
  */
-export function useTimeblockWriteMutations() {
+export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOptions = {}) {
   const utils = api.useUtils();
   const queryClient = useQueryClient();
   const t = useTranslations('timeblock.editor');
+  const { onCreateTimeOverlap } = options;
 
   type PlanListItem = NonNullable<Awaited<ReturnType<typeof utils.plans.list.fetch>>>[number];
   type RecordListItem = NonNullable<Awaited<ReturnType<typeof utils.records.list.fetch>>>[number];
@@ -166,6 +172,14 @@ export function useTimeblockWriteMutations() {
 
   const reportError = (error: { message: string }) => {
     toast.error(isTimeOverlapError(error) ? t('toast.overlap') : t('toast.saveFailed'));
+  };
+
+  const reportCreateError = (error: { message: string }) => {
+    if (isTimeOverlapError(error) && onCreateTimeOverlap) {
+      onCreateTimeOverlap();
+      return;
+    }
+    reportError(error);
   };
 
   const insertIntoMatchingLists = <T extends TimeModelListRow>(
@@ -233,7 +247,7 @@ export function useTimeblockWriteMutations() {
     },
     onError: (error, _input, context) => {
       restore(context);
-      reportError(error);
+      reportCreateError(error);
     },
     onSettled: invalidate,
   });
@@ -268,7 +282,7 @@ export function useTimeblockWriteMutations() {
     },
     onError: (error, _input, context) => {
       restore(context);
-      reportError(error);
+      reportCreateError(error);
     },
     onSettled: invalidate,
   });

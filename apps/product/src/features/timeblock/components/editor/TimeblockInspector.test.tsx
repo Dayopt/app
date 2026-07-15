@@ -52,17 +52,22 @@ vi.mock('../inspector/FloatingPopover', () => ({
 vi.mock('./TimeblockInspectorForm', () => ({
   TimeblockInspectorForm: ({
     kind,
+    duplicateDraft,
     relationships,
     onOpenRelationship,
+    onCancelDuplicate,
   }: {
     kind: 'plan' | 'record';
+    duplicateDraft?: { sourceId: string };
     relationships?:
       | { kind: 'plan'; status: string; records: Array<{ id: string }> }
       | { kind: 'record'; status: string; plan: { id: string } | null };
     onOpenRelationship?: (id: string, kind: 'plan' | 'record') => void;
+    onCancelDuplicate?: () => void;
   }) => (
     <div>
       <output data-testid="inspector-kind">{kind}</output>
+      <output data-testid="inspector-mode">{duplicateDraft ? 'duplicate' : 'view'}</output>
       <output data-testid="relationship-status">{relationships?.status ?? 'none'}</output>
       <output data-testid="relationship-kind">{relationships?.kind ?? 'none'}</output>
       <button
@@ -75,6 +80,9 @@ vi.mock('./TimeblockInspectorForm', () => ({
         }
       >
         open-related
+      </button>
+      <button type="button" onClick={onCancelDuplicate}>
+        cancel-duplicate
       </button>
     </div>
   ),
@@ -198,5 +206,32 @@ describe('TimeblockInspector relationships', () => {
     const retry = originalPlanCall?.[1].retry as
       ((failureCount: number, error: { data?: { code?: string } }) => boolean) | undefined;
     expect(retry?.(0, { data: { code: 'NOT_FOUND' } })).toBe(false);
+  });
+
+  it('複製下書きを直接表示し、キャンセルで元ブロックの詳細へ戻る', async () => {
+    const user = userEvent.setup();
+    act(() =>
+      useTimeblockInspectorStore.getState().openDuplicate({
+        sourceId: plan.id,
+        kind: 'plan',
+        title: plan.title,
+        note: plan.note,
+        tagId: plan.tag_id,
+        startAt: plan.start_at,
+        endAt: plan.end_at,
+      }),
+    );
+    render(<TimeblockInspector />);
+
+    expect(screen.getByTestId('inspector-mode')).toHaveTextContent('duplicate');
+    expect(mocks.planGetById).toHaveBeenCalledWith(
+      { id: plan.id },
+      expect.objectContaining({ enabled: false }),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'cancel-duplicate' }));
+
+    expect(screen.getByTestId('inspector-mode')).toHaveTextContent('view');
+    expect(useTimeblockInspectorStore.getState().duplicateDraft).toBeNull();
   });
 });
