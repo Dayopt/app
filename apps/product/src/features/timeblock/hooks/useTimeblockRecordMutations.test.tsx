@@ -1,11 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Row } from '@/lib/database';
+import type { PublicRecordRow } from '@/lib/database';
 
 import { useTimeblockRecordMutations } from './useTimeblockRecordMutations';
 
-type RecordRow = Row<'records'>;
+type RecordRow = PublicRecordRow;
 
 interface MutationCallbacks<TData> {
   onSuccess?: (data: TData) => void;
@@ -71,7 +71,6 @@ const record = {
   tag_id: 'tag-1',
   plan_id: 'plan-1',
   external_calendar_event_id: null,
-  fulfillment_score: null,
   title: 'API development',
   note: 'Done',
   start_at: '2026-07-14T09:00:00.000Z',

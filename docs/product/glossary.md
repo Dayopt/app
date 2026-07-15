@@ -159,7 +159,6 @@ Dayopt固有のドメイン概念とコードベースで使用される用語�
 - DB: `records` テーブル
 - `plan_id`(nullable): あり = 予定に対する記録、なし = 予定外の記録
 - source: `manual` / `from_plan` / `auto_migrated` / `external_calendar` / `api`
-- `fulfillment_score` は物理DBと互換schemaに残るlegacy field。現在のUI用語・Review契約には含めない
 
 #### TimeblockState(ブロック状態)
 
@@ -200,12 +199,6 @@ Calendar は Plan レーンと Record レーンを横並びで表示する。
 - Record は過去の記録そのものなので、時間・タグ・noteを訂正可能
 - UI: 過去 Plan は disabled 表示 + ロジックガードの二重防御
 - 意思決定ログ: [ADR-025](log/2026-07-09-time-model-split.md)、[時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
-
-### Legacy code terms
-
-#### Chronotype / FulfillmentScore
-
-どちらも現在のUI・プロダクト仕様からは削除済み。`packages/domain`、物理DB、生成型、migrationに互換資産が残るため検索結果には現れるが、新規UI・機能設計の入力にしない。残存状態は[Engineering Architecture](../engineering/architecture.md#plan--record-分離adr-025)を参照する。
 
 ### UI機能
 

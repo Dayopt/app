@@ -56,7 +56,6 @@ export const confirmDaySchema = z
 
 const baseRecordSchema = baseTimeblockSchema.extend({
   planId: z.string().uuid().nullable().optional(),
-  fulfillmentScore: z.number().int().min(1).max(3).nullable().optional(),
 });
 
 export const createRecordSchema = baseRecordSchema.superRefine(timeRangeRefine);

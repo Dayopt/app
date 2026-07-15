@@ -468,7 +468,6 @@ RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapsho
 
 - 状態導出（`upcoming` / `active` / `past`）は Plan / Record それぞれの時間位置から行う
 - 保存先は選択 UI ではなく `end_at > now` か否かで一意に決まる（`end_at > now` → Plan、`end_at <= now` → Record）
-- 物理 DB に残る `fulfillment_score` / `chronotype_settings` は legacy 列であり、現行のプロダクト向け Plan / Record・設定契約では使用しない
 - 詳細は [ADR-025](../product/log/2026-07-09-time-model-split.md) 参照
 
 #### Tags の階層制限
@@ -564,7 +563,7 @@ apps/product
 
 `packages/foundations`, `packages/components`, `packages/config`, `packages/domain` は最小の公開面を持つ package として運用中。
 `packages/i18n` は `packages/config` の locale 定義を使い、product / web に共通する next-intl adapter の公開面を環境別 subpath に限定して提供する。
-`packages/domain` は Dayopt の意味を表すpure TypeScript packageで、`TimeRange`, `TimeblockOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`等の軽い型・定数・helperを持つ。Chronotype型はcompatibility residueであり、現行product featureを表さない。
+`packages/domain` は Dayopt の意味を表すpure TypeScript packageで、`TimeRange`, `TimeblockOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`等の軽い型・定数・helperを持つ。
 
 DB boundary は `apps/product/src/lib/database`（旧 `packages/database`、product-local 化済み）が Supabase generated types と DB row helper を担う。DB access を含む service は product 側に残す。
 `packages/billing` は Free / Pro の公開 plan model, subscription status, `pro_access` entitlement, pricing 表示用定数の境界として運用中。Stripe SDK / secret / webhook / checkout / portal は product 側の server-only 境界に残す。

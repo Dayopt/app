@@ -86,8 +86,8 @@ INSERT INTO auth.identities (
 -- ユーザー設定
 -- ============================================================
 
-INSERT INTO public.user_settings (user_id, timezone, time_format, week_starts_on, default_duration, chronotype_settings)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Asia/Tokyo', '24h', 1, 60, '{"type": "bear"}');
+INSERT INTO public.user_settings (user_id, timezone, time_format, week_starts_on, default_duration)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Asia/Tokyo', '24h', 1, 60);
 
 -- ============================================================
 -- タグ（5つの基本カテゴリ）
@@ -104,7 +104,6 @@ INSERT INTO public.tags (id, user_id, name, color, sort_order) VALUES
 -- Plan / Record（2週間分: 今日を基準に14日前〜今日）
 -- ============================================================
 -- 平日は4-6 timeblock/日、週末は1-2 timeblock/日
--- fulfillment_score: 1-3のリアルな分布
 
 DO $$
 DECLARE
@@ -133,12 +132,12 @@ BEGIN
         v_tag_ids[1])
       RETURNING id INTO v_plan_id;
       INSERT INTO public.records (
-        user_id, plan_id, title, start_at, end_at, source, fulfillment_score, tag_id
+        user_id, plan_id, title, start_at, end_at, source, tag_id
       ) VALUES (
         v_user_id, v_plan_id, 'API開発',
         (v_date || ' 09:00:00')::TIMESTAMPTZ,
         (v_date || ' 11:00:00')::TIMESTAMPTZ,
-        'from_plan', (ARRAY[2, 3, 3, 2, 3])[i % 5 + 1], v_tag_ids[1]
+        'from_plan', v_tag_ids[1]
       );
 
       -- 午前ミーティング (11:00-12:00)
@@ -149,12 +148,12 @@ BEGIN
         v_tag_ids[3])
       RETURNING id INTO v_plan_id;
       INSERT INTO public.records (
-        user_id, plan_id, title, start_at, end_at, source, fulfillment_score, tag_id
+        user_id, plan_id, title, start_at, end_at, source, tag_id
       ) VALUES (
         v_user_id, v_plan_id, 'チームスタンドアップ',
         (v_date || ' 11:00:00')::TIMESTAMPTZ,
         (v_date || ' 11:30:00')::TIMESTAMPTZ,
-        'from_plan', (ARRAY[2, 2, 1, 2, 2])[i % 5 + 1], v_tag_ids[3]
+        'from_plan', v_tag_ids[3]
       );
 
       -- 午後のフロントエンド開発 (13:00-15:00)
@@ -165,12 +164,12 @@ BEGIN
         v_tag_ids[2])
       RETURNING id INTO v_plan_id;
       INSERT INTO public.records (
-        user_id, plan_id, title, start_at, end_at, source, fulfillment_score, tag_id
+        user_id, plan_id, title, start_at, end_at, source, tag_id
       ) VALUES (
         v_user_id, v_plan_id, 'UIコンポーネント実装',
         (v_date || ' 13:00:00')::TIMESTAMPTZ,
         (v_date || ' 15:00:00')::TIMESTAMPTZ,
-        'from_plan', (ARRAY[3, 2, 3, 3, 2])[i % 5 + 1], v_tag_ids[2]
+        'from_plan', v_tag_ids[2]
       );
 
       -- 午後の学習 (15:30-16:30) — 隔日
@@ -182,23 +181,23 @@ BEGIN
           v_tag_ids[4])
         RETURNING id INTO v_plan_id;
         INSERT INTO public.records (
-          user_id, plan_id, title, start_at, end_at, source, fulfillment_score, tag_id
+          user_id, plan_id, title, start_at, end_at, source, tag_id
         ) VALUES (
           v_user_id, v_plan_id, 'TypeScript勉強会',
           (v_date || ' 15:30:00')::TIMESTAMPTZ,
           (v_date || ' 16:30:00')::TIMESTAMPTZ,
-          'from_plan', 3, v_tag_ids[4]
+          'from_plan', v_tag_ids[4]
         );
       END IF;
 
       -- 突発タスク（一部の日のみ）は Record だけを作る
       IF i % 3 = 0 THEN
         INSERT INTO public.records (
-          user_id, title, start_at, end_at, fulfillment_score, tag_id
+          user_id, title, start_at, end_at, tag_id
         ) VALUES (v_user_id, '緊急バグ対応',
           (v_date || ' 16:30:00')::TIMESTAMPTZ,
           (v_date || ' 17:30:00')::TIMESTAMPTZ,
-          1, v_tag_ids[1]);
+          v_tag_ids[1]);
       END IF;
 
     ELSE
@@ -210,12 +209,12 @@ BEGIN
         v_tag_ids[5])
       RETURNING id INTO v_plan_id;
       INSERT INTO public.records (
-        user_id, plan_id, title, start_at, end_at, source, fulfillment_score, tag_id
+        user_id, plan_id, title, start_at, end_at, source, tag_id
       ) VALUES (
         v_user_id, v_plan_id, '個人プロジェクト',
         (v_date || ' 10:00:00')::TIMESTAMPTZ,
         (v_date || ' 12:00:00')::TIMESTAMPTZ,
-        'from_plan', 3, v_tag_ids[5]
+        'from_plan', v_tag_ids[5]
       );
     END IF;
   END LOOP;

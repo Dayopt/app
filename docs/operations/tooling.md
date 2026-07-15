@@ -96,9 +96,8 @@ Dayopt Design/
 
 #### Feature セクション（自動検出）
 
-- `calendar` / `stats` / `settings` / `entry` / `auth`
-- `tags` / `timeblock` / `calendar` / `review`
-- `auth` / `contact` / `settings`
+- `auth` / `calendar` / `contact` / `review`
+- `settings` / `tags` / `timeblock`
 
 #### パスセグメント（自動付与）
 
@@ -120,7 +119,7 @@ Storybook タイトルの階層がそのままタグになる。
 
 #### インスピレーション紐づけ
 
-- `ref:{component-name}` — 例: `ref:bottom-sheet`, `ref:entry-card`
+- `ref:{component-name}` — 例: `ref:bottom-sheet`, `ref:timeblock-card`
 - インスピレーション画像と実装スナップショットの両方に付与
 
 ### 2.2 タグ自動生成ルール
@@ -141,7 +140,7 @@ Story name: AllPatterns
 1. `--` の左側をパスとして分割 → 最後のセグメントがコンポーネント名、それ以外がフォルダパス+タグ
 2. `--` の右側をバリアント+テーマ+ビューポートとして分割
 3. パスの各セグメントが自動的にタグ化される（kebab-case）
-4. Feature セクション名（calendar, stats 等）がパスに含まれていれば自動付与
+4. 現行 Feature セクション名（calendar, timeblock 等）がパスに含まれていれば自動付与
 
 ## 3. ファイル命名規約
 
@@ -161,7 +160,7 @@ Components_UI_Button--Default_light_mobile.png
 Components_Shell_AppHeader--Default_dark_mobile.png
 Features_Calendar_Views_Grid_TimeColumn--Default_light_desktop.png
 Features_Settings_DisplaySettings--Default_dark_mobile.png
-Features_Entry_Card--WithRecord_light_mobile.png
+Features_Timeblock_Card--WithRecord_light_mobile.png
 Foundations_Colors--AllColors_dark_mobile.png
 Foundations_Icons--Sizes_light_mobile.png
 ```
@@ -192,7 +191,7 @@ token-icon-sizes.png
 
 ```
 2026-04-08_ph-hero-v1.png
-2026-04-08_ph-gallery-stats-v2.png
+2026-04-08_ph-gallery-review-v2.png
 2026-04-10_lp-og-image-v1.png
 2026-04-12_social-launch-announcement-v1.png
 ```
@@ -251,10 +250,10 @@ Eagle MCP → `get_item_info` → メモからパスを抽出して応答でき�
 
 ### 5.1 撮影対象ビューポート
 
-| ビューポート | 幅     | 用途                         |
-| ------------ | ------ | ---------------------------- |
-| mobile       | 375px  | メイン。全コンポーネント     |
-| desktop      | 1280px | Statsページ等の2カラム時のみ |
+| ビューポート | 幅     | 用途                        |
+| ------------ | ------ | --------------------------- |
+| mobile       | 375px  | メイン。全コンポーネント    |
+| desktop      | 1280px | Calendar 等の広幅レイアウト |
 
 ### 5.2 ルール（Storybook カテゴリ準拠）
 
@@ -315,7 +314,7 @@ Eagle検索: "ref:bottom-sheet"
 → 結果:
   - [inspiration] Uber Eats の bottom sheet UI → ★4
   - [inspiration] Apple Maps の地図上 sheet → ★3
-  - [component] organisms-bottom-sheet--create-entry-light-mobile.png → ★5 current
+  - [component] organisms-bottom-sheet--create-timeblock-light-mobile.png → ★5 current
 ```
 
 「このコンポーネント、どの参考UIを元にデザインしたっけ？」に即答できる。

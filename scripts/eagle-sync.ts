@@ -40,6 +40,7 @@ import {
 
 import {
   buildAnnotation,
+  EAGLE_FEATURE_TAGS,
   isSkippable,
   parseScreenshotFilename,
   type ParsedScreenshot,
@@ -238,19 +239,7 @@ async function setupTagGroups(): Promise<void> {
     },
     {
       name: 'Feature',
-      tags: [
-        'calendar',
-        'stats',
-        'settings',
-        'entry',
-        'auth',
-        'tags',
-        'chronotype',
-        'notifications',
-        'palette',
-        'search',
-        'contact',
-      ],
+      tags: [...EAGLE_FEATURE_TAGS],
       iconColor: 'orange' as const,
     },
     {

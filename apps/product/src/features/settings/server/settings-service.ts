@@ -2,12 +2,17 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database, Insert } from '@/lib/database';
+import {
+  publicUserSettingsSelect,
+  type Database,
+  type Insert,
+  type PublicUserSettingsRow,
+} from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { invalidateUserTimezoneCache } from '@/lib/server/user-timezone-cache';
 import { ServiceError } from '@/lib/trpc/errors';
 
-type UserSettingsInsert = Insert<'user_settings'>;
+type UserSettingsInsert = Pick<Insert<'user_settings'>, keyof PublicUserSettingsRow>;
 
 interface UserSettingsUpdateInput {
   timezone?: string | undefined;
@@ -36,7 +41,7 @@ export class SettingsService {
   async get(userId: string) {
     const { data, error } = await this.supabase
       .from('user_settings')
-      .select('*')
+      .select(publicUserSettingsSelect)
       .eq('user_id', userId)
       .single();
 
@@ -90,11 +95,9 @@ export class SettingsService {
     if (input.theme !== undefined) updateData.theme = input.theme;
     if (input.preferredLocale !== undefined) updateData.preferred_locale = input.preferredLocale;
 
-    const { data, error } = await this.supabase
+    const { error } = await this.supabase
       .from('user_settings')
-      .upsert(updateData, { onConflict: 'user_id' })
-      .select()
-      .single();
+      .upsert(updateData, { onConflict: 'user_id' });
 
     if (!error && input.timezone !== undefined) {
       invalidateUserTimezoneCache(userId);
@@ -120,7 +123,7 @@ export class SettingsService {
       throw new SettingsServiceError('UPDATE_FAILED', error.message);
     }
 
-    return { success: true, settings: data };
+    return { success: true };
   }
 
   async updateProfile(userId: string, input: ProfileUpdateInput) {
@@ -142,7 +145,7 @@ export class SettingsService {
   async getICalToken(userId: string) {
     const { data, error } = await this.supabase
       .from('user_settings')
-      .select('*')
+      .select('ical_feed_token')
       .eq('user_id', userId)
       .single();
 
@@ -170,7 +173,7 @@ export class SettingsService {
       .from('user_settings')
       .update({ ical_feed_token: newToken } as never)
       .eq('user_id', userId)
-      .select('*')
+      .select('ical_feed_token')
       .single();
 
     if (updateError) {

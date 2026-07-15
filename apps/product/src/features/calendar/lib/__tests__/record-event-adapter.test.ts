@@ -16,7 +16,6 @@ function makeRow(overrides: Partial<RecordEventSourceRow> = {}): RecordEventSour
     source: 'manual',
     start_at: '2026-07-10T09:00:00Z',
     end_at: '2026-07-10T10:00:00Z',
-    fulfillment_score: null,
     ...overrides,
   };
 }

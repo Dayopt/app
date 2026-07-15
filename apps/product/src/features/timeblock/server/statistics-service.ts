@@ -63,7 +63,6 @@ interface StatRecordRow {
   source: string;
   start_at: string;
   end_at: string;
-  fulfillment_score: number | null;
 }
 
 interface TagLookupRow {
@@ -436,12 +435,8 @@ export class StatisticsService {
       dow: row.dow,
       totalMinutes: row.total_minutes,
     }));
-    const energyMap = groupEnergyMap(records, timezone).map(
-      ({ avgFulfillment: _avgFulfillment, ...rest }) => rest,
-    );
-    const prevEnergyMap = groupEnergyMap(prevRecords, timezone).map(
-      ({ avgFulfillment: _avgFulfillment, ...rest }) => rest,
-    );
+    const energyMap = groupEnergyMap(records, timezone);
+    const prevEnergyMap = groupEnergyMap(prevRecords, timezone);
 
     const estimationAccuracy = transformEstimationAccuracy(
       await this.computeEstimationAccuracy(userId, plans, tagsById),
@@ -581,7 +576,7 @@ export class StatisticsService {
       (sum, record) => sum + minutesBetween(record.start_at, record.end_at),
       0,
     );
-    const recordCount = records.filter((record) => record.fulfillment_score != null).length;
+    const recordCount = records.length;
     const totalEntries = records.length;
     const plannedEntries = records.filter((record) => record.plan_id != null).length;
     return {
@@ -669,7 +664,7 @@ export class StatisticsService {
   private async fetchRecords(userId: string, range: DateRangeInput = {}): Promise<StatRecordRow[]> {
     let query = this.supabase
       .from(databaseTables.records)
-      .select('id, tag_id, plan_id, source, start_at, end_at, fulfillment_score')
+      .select('id, tag_id, plan_id, source, start_at, end_at')
       .eq('user_id', userId)
       .is('deleted_at', null);
     if (range.startDate) query = query.gte('start_at', range.startDate);
@@ -683,7 +678,7 @@ export class StatisticsService {
   private async fetchRecordsByPlanIds(userId: string, planIds: string[]): Promise<StatRecordRow[]> {
     const { data, error } = await this.supabase
       .from(databaseTables.records)
-      .select('id, tag_id, plan_id, source, start_at, end_at, fulfillment_score')
+      .select('id, tag_id, plan_id, source, start_at, end_at')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .in('plan_id', planIds);
@@ -734,7 +729,7 @@ export class StatisticsService {
   ): Promise<Array<StatRecordRow & { title: string; note: string | null }>> {
     const { data, error } = await this.supabase
       .from(databaseTables.records)
-      .select('id, title, note, tag_id, plan_id, source, start_at, end_at, fulfillment_score')
+      .select('id, title, note, tag_id, plan_id, source, start_at, end_at')
       .eq('user_id', userId)
       .eq('tag_id', tagId)
       .is('deleted_at', null)

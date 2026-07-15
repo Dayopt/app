@@ -53,7 +53,6 @@ function makeRecord(overrides: Partial<RecordEvent> = {}): RecordEvent {
     displayStartDate: start,
     displayEndDate: end,
     duration: 60,
-    fulfillmentScore: null,
     ...overrides,
   };
 }

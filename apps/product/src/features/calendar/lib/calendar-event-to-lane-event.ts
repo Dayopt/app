@@ -60,7 +60,6 @@ export function calendarEventToRecordEvent(event: CalendarEvent): RecordEvent {
     displayStartDate: event.displayStartDate,
     displayEndDate: event.displayEndDate,
     duration: event.duration,
-    fulfillmentScore: null,
     diffMinutes: event.diffMinutes,
   };
 }

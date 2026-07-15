@@ -105,7 +105,7 @@ WITH inserted_plan AS (
   RETURNING id, user_id, title, note, start_at
 )
 INSERT INTO public.records (
-  user_id, plan_id, title, note, start_at, end_at, source, fulfillment_score
+  user_id, plan_id, title, note, start_at, end_at, source
 )
 SELECT
   user_id,
@@ -114,8 +114,7 @@ SELECT
   note,
   start_at,
   NOW() - INTERVAL '50 minutes',
-  'from_plan',
-  3
+  'from_plan'
 FROM inserted_plan;
 
 -- サンプルタグ
