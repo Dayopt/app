@@ -52,7 +52,6 @@ const CSV_COLUMNS = [
   'end_at',
   'source',
   'skipped_at',
-  'fulfillment_score',
   'created_at',
   'updated_at',
   'deleted_at',

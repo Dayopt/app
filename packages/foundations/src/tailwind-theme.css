@@ -78,9 +78,6 @@
   --color-heatmap-scale-2: var(--heatmap-scale-2);
   --color-heatmap-scale-3: var(--heatmap-scale-3);
   --color-heatmap-scale-4: var(--heatmap-scale-4);
-  --color-fulfillment-high: var(--fulfillment-high);
-  --color-fulfillment-mid: var(--fulfillment-mid);
-  --color-fulfillment-low: var(--fulfillment-low);
 
   /* ============================================
    * Shadow トークン
@@ -119,12 +116,6 @@
   --color-tag-violet-tint: var(--tag-violet-tint);
   --color-tag-pink-tint: var(--tag-pink-tint);
   --color-tag-gray-tint: var(--tag-gray-tint);
-
-  /* Chronotype — テキスト + 背景 tint */
-  --color-chronotype-deep: var(--chronotype-deep);
-  --color-chronotype-ease: var(--chronotype-ease);
-  --color-chronotype-deep-tint: var(--chronotype-deep-tint);
-  --color-chronotype-ease-tint: var(--chronotype-ease-tint);
 
   /* Now Indicator */
   --color-now-indicator: var(--now-indicator);

@@ -124,7 +124,7 @@ npx tsx scripts/eagle-cleanup.ts --force      # 確認スキップ
 
 ### Feature セクション（自動検出）
 
-- `calendar` / `stats` / `settings` / `entry` / `auth` / `tags` / `tour` / `onboarding` / `chronotype` / `notifications` / `history` / `palette` / `search` / `contact`
+- `auth` / `calendar` / `contact` / `review` / `settings` / `tags` / `timeblock`
 
 ### インスピレーション紐づけ
 
@@ -148,10 +148,10 @@ Components/
 Features/
   Calendar/    ← Views/{Day,Week,Grid}, Header, Sidebar...
   Settings/    ← Account, Display, Billing, Data...
-  Stats/       ← Badges, Insights, Progress, Review...
-  Entry/       ← Card, Content, Inspector/...
+  Review/      ← Metrics, Progress, Review...
+  Timeblock/   ← Card, Content, Inspector/...
   Auth/        ← Login, Signup, MFA...
-  Tags/  Onboarding/  Tour/  etc.
+  Tags/  Contact/
 Foundations/   ← Colors, Icons, Spacing, Typography...
 Inspiration/
   Timeboxing/  Dashboard/  Mobile UX/
@@ -166,9 +166,9 @@ Archive/
 | ------------------------- | ------ | ------- | ---------------------------- |
 | Features/Calendar/Views/  | ✓      | ✓       | ページレイアウトが変わる     |
 | Features/Settings/        | ✓      | ✓       | 設定画面各種                 |
-| Features/Stats/           | ✓      | ✓       | 統計タブ                     |
+| Features/Review/          | ✓      | ✓       | レビューパネル               |
 | Features/Auth/            | ✓      | ✓       | 認証画面                     |
-| Features/Onboarding/      | ✓      | ✓       | オンボーディング             |
+| Features/Timeblock/       | ✓      | ✓       | タイムブロック編集           |
 | Components/Shell/Sidebar/ | ✓      | ✓       | デスクトップでレイアウト変化 |
 | その他すべて              | ✓      | -       | レスポンシブ差分が小さい     |
 

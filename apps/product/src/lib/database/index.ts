@@ -8,5 +8,6 @@ export type {
   TablesInsert,
   TablesUpdate,
 } from './generated/database.types';
+export * from './public-projections';
 export * from './tables';
 export * from './types';

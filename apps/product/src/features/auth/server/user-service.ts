@@ -9,8 +9,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database, Row } from '@/lib/database';
-import { databaseTables } from '@/lib/database';
+import type { Database, PublicRecordRow, PublicUserSettingsRow, Row } from '@/lib/database';
+import { databaseTables, publicRecordSelect, publicUserSettingsSelect } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { getStripe } from '@/lib/stripe/client';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
@@ -68,9 +68,9 @@ interface ExportDataResult {
   data: {
     profile: Row<'profiles'> | null;
     plans: Row<'plans'>[];
-    records: Row<typeof databaseTables.records>[];
+    records: PublicRecordRow[];
     tags: Row<'tags'>[];
-    userSettings: Row<'user_settings'> | null;
+    userSettings: PublicUserSettingsRow | null;
   };
 }
 
@@ -239,9 +239,13 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         await Promise.all([
           supabase.from('profiles').select('*').eq('id', userId).single(),
           adminClient.from('plans').select('*').eq('user_id', userId),
-          adminClient.from(databaseTables.records).select('*').eq('user_id', userId),
+          adminClient.from(databaseTables.records).select(publicRecordSelect).eq('user_id', userId),
           supabase.from('tags').select('*').eq('user_id', userId),
-          supabase.from('user_settings').select('*').eq('user_id', userId).single(),
+          supabase
+            .from('user_settings')
+            .select(publicUserSettingsSelect)
+            .eq('user_id', userId)
+            .single(),
         ]);
 
       if (profileResult.error && profileResult.error.code !== 'PGRST116') {

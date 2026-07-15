@@ -1,4 +1,4 @@
-import type { Insert, Row, Update } from '@/lib/database';
+import type { Insert, PublicRecordRow, Row, Update } from '@/lib/database';
 import { databaseTables } from '@/lib/database';
 import type {
   ConfirmDayInput,
@@ -14,9 +14,9 @@ export type PlanRow = Row<'plans'>;
 export type PlanInsert = Insert<'plans'>;
 export type PlanUpdate = Update<'plans'>;
 
-export type RecordRow = Row<typeof databaseTables.records>;
-export type RecordInsert = Insert<typeof databaseTables.records>;
-export type RecordUpdate = Update<typeof databaseTables.records>;
+export type RecordRow = PublicRecordRow;
+export type RecordInsert = Pick<Insert<typeof databaseTables.records>, keyof PublicRecordRow>;
+export type RecordUpdate = Pick<Update<typeof databaseTables.records>, keyof PublicRecordRow>;
 
 export interface ListPlansOptions extends PlanFilter {
   userId: string;

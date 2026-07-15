@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { publicUserSettingsSelect } from '@/lib/database';
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
 import { SettingsService, SettingsServiceError } from '../settings-service';
@@ -22,7 +23,6 @@ const settingsRow = {
   show_week_numbers: false,
   default_duration: 30,
   snap_interval: 15,
-  chronotype_settings: null,
   default_view: 'week',
   hour_height_density: 'default',
   theme: 'system',
@@ -79,6 +79,7 @@ describe('SettingsService', () => {
           paymentErrorDialogLastShownAt: '2026-06-15T00:00:00.000Z',
         },
       });
+      expect(query.select).toHaveBeenCalledWith(publicUserSettingsSelect);
       expect(query.eq).toHaveBeenCalledWith('user_id', USER_ID);
     });
 
@@ -137,6 +138,7 @@ describe('SettingsService', () => {
         },
         { onConflict: 'user_id' },
       );
+      expect(query.select).toHaveBeenCalledWith(publicUserSettingsSelect);
       expect(invalidateUserTimezoneCache).toHaveBeenCalledWith(USER_ID);
       expect(result).toEqual({ success: true, settings: settingsRow });
     });

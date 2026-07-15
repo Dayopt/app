@@ -7,7 +7,7 @@
  *
  * フォルダ構造は Storybook のタイトル階層をそのまま反映:
  *   Components/UI/Button → Eagle フォルダ Components/UI
- *   Features/Entry/Card  → Eagle フォルダ Features/Entry
+ *   Features/Timeblock/Card → Eagle フォルダ Features/Timeblock
  *   Foundations/Colors    → Eagle フォルダ Foundations
  *
  * Usage:
@@ -46,6 +46,17 @@ export interface ParsedScreenshot {
 
 const THEMES = new Set(['light', 'dark']);
 const VIEWPORTS = new Set(['mobile', 'desktop']);
+
+/** Eagle で管理する現行 feature タグ */
+export const EAGLE_FEATURE_TAGS = [
+  'auth',
+  'calendar',
+  'contact',
+  'review',
+  'settings',
+  'tags',
+  'timeblock',
+] as const;
 
 /** スキップ対象のプレフィックス */
 const SKIP_PREFIXES = [/^Docs[_/]/i, /^Patterns[_/]/i];
@@ -144,20 +155,7 @@ export function parseScreenshotFilename(filename: string): ParsedScreenshot {
   if (viewport) tags.push(viewport);
 
   // Feature セクションタグ（パスに含まれるセクション名を自動付与）
-  const featureSections = [
-    'calendar',
-    'stats',
-    'settings',
-    'entry',
-    'auth',
-    'tags',
-    'chronotype',
-    'notifications',
-    'palette',
-    'search',
-    'contact',
-  ];
-  for (const section of featureSections) {
+  for (const section of EAGLE_FEATURE_TAGS) {
     if (storyPath.toLowerCase().includes(section) && !tags.includes(section)) {
       tags.push(section);
       break;
@@ -231,7 +229,7 @@ if (isDirectRun) {
     'Components_UI_Button--Primary_dark_mobile.png',
     'Components_UI_Button--AllPatterns_light_mobile.png',
     'Components_Shell_AppHeader--Default_dark_mobile.png',
-    'Features_Entry_Card--WithRecord_light_mobile.png',
+    'Features_Timeblock_Card--WithRecord_light_mobile.png',
     'Features_Settings_DisplaySettings--Default_dark_mobile.png',
     'Features_Calendar_Sidebar_TagFilter_CreateTagButton--Default_light_mobile.png',
     'Foundations_Colors--AllColors_light_mobile.png',

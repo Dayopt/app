@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { publicRecordSelect, publicUserSettingsSelect } from '@/lib/database';
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
 const getStripe = vi.hoisted(() => vi.fn());
@@ -274,8 +275,8 @@ describe('createUserService', () => {
       const records = [{ id: 'record-1', user_id: USER_ID }];
       const tags = [{ id: 'tag-1', user_id: USER_ID }];
       const settings = { id: 'settings-1', user_id: USER_ID };
-      mockAdminTables({ plans: { data: plans }, records: { data: records } });
-      const { service } = createSupabase({
+      const adminQueries = mockAdminTables({ plans: { data: plans }, records: { data: records } });
+      const { service, query } = createSupabase({
         tables: {
           profiles: { data: profile },
           tags: { data: tags },
@@ -294,6 +295,8 @@ describe('createUserService', () => {
         tags,
         userSettings: settings,
       });
+      expect(adminQueries.get('records')?.select).toHaveBeenCalledWith(publicRecordSelect);
+      expect(query('user_settings').select).toHaveBeenCalledWith(publicUserSettingsSelect);
     });
 
     it('profileが未作成ならnullとしてexportする', async () => {

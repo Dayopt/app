@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Row } from '@/lib/database';
+import type { PublicRecordRow, Row } from '@/lib/database';
 
 import { useTimeblockInspectorStore } from '../../stores/useTimeblockInspectorStore';
 
@@ -119,7 +119,6 @@ const record = {
   tag_id: 'tag-1',
   plan_id: plan.id,
   external_calendar_event_id: null,
-  fulfillment_score: null,
   title: 'Legacy record title',
   note: null,
   start_at: '2026-07-14T09:05:00.000Z',
@@ -128,7 +127,7 @@ const record = {
   deleted_at: null,
   created_at: '2026-07-14T10:00:00.000Z',
   updated_at: '2026-07-14T10:00:00.000Z',
-} satisfies Row<'records'>;
+} satisfies PublicRecordRow;
 
 function success<T>(data: T) {
   return {

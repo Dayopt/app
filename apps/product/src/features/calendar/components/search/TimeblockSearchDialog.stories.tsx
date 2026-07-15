@@ -56,7 +56,6 @@ const RECORDS = [
   createTimeblockRow('record-1', '2026-07-14T01:30:00.000Z', {
     note: 'Calendar search states',
     plan_id: 'plan-1',
-    fulfillment_score: null,
   }),
 ];
 

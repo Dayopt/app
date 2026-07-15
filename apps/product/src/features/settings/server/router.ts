@@ -57,7 +57,7 @@ export const userSettingsRouter = createTRPCRouter({
    * 設定取得
    */
   get: protectedProcedure
-    .meta({ description: 'ユーザー設定取得（カレンダー・表示・クロノタイプ等）' })
+    .meta({ description: 'ユーザー設定取得（カレンダー・表示等）' })
     .query(async ({ ctx }) => {
       try {
         const userId = ctx.userId;

@@ -480,7 +480,7 @@ const BADGE_SET: IconEntry[] = [
   { icon: Sun, name: 'Sun', usage: 'deep-zone' },
   { icon: BarChart3, name: 'BarChart3', usage: 'full-day' },
   { icon: FolderOpen, name: 'FolderOpen', usage: 'group-first' },
-  { icon: SunMoon, name: 'SunMoon', usage: 'chronotype-trio' },
+  { icon: SunMoon, name: 'SunMoon', usage: 'day-night-cycle' },
   { icon: Sunrise, name: 'Sunrise', usage: 'early-bird' },
   { icon: Calendar, name: 'Calendar', usage: 'full-week / six-months' },
   { icon: Trophy, name: 'Trophy', usage: 'weekly-champion' },

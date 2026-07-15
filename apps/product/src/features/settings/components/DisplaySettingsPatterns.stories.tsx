@@ -28,7 +28,6 @@ const TIMEZONES = getTimeZones();
  * Section 1: 言語とテーマ
  * Section 2: 時間とタイムゾーン
  * Section 3: デフォルトビュー
- * Section 4: クロノタイプ（enabled時のみ）
  */
 function DisplaySettingsDemo() {
   const [language, setLanguage] = useState('ja');

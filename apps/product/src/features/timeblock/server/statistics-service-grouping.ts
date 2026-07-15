@@ -27,10 +27,6 @@ interface TagTimeRangeRow extends TimeRangeRow {
   tag_id: string | null;
 }
 
-interface FulfillmentTimeRangeRow extends TimeRangeRow {
-  fulfillment_score: number | null;
-}
-
 /** 分単位の所要時間（丸めなし）。 */
 export function minutesBetween(startAt: string, endAt: string): number {
   return (new Date(endAt).getTime() - new Date(startAt).getTime()) / 60000;
@@ -103,24 +99,21 @@ export function groupHoursByMonth(
     .sort((a, b) => a.month.localeCompare(b.month));
 }
 
-/** `get_stats_page_data` の energy_map CTE 相当: (hour, dow) 別の平均充足度・合計分・件数。 */
+/** `get_stats_page_data` の energy_map CTE 相当: (hour, dow) 別の合計分・件数。 */
 export function groupEnergyMap(
-  rows: ReadonlyArray<FulfillmentTimeRangeRow>,
+  rows: ReadonlyArray<TimeRangeRow>,
   timezone: string,
 ): Array<{
   hour: number;
   dow: number;
   totalMinutes: number;
   recordCount: number;
-  avgFulfillment: number | null;
 }> {
   interface Bucket {
     hour: number;
     dow: number;
     totalMinutes: number;
     recordCount: number;
-    fulfillmentSum: number;
-    fulfillmentCount: number;
   }
   const buckets = new Map<string, Bucket>();
   for (const row of rows) {
@@ -133,15 +126,9 @@ export function groupEnergyMap(
       dow,
       totalMinutes: 0,
       recordCount: 0,
-      fulfillmentSum: 0,
-      fulfillmentCount: 0,
     };
     bucket.totalMinutes += minutesBetween(row.start_at, row.end_at);
     bucket.recordCount += 1;
-    if (row.fulfillment_score != null) {
-      bucket.fulfillmentSum += row.fulfillment_score;
-      bucket.fulfillmentCount += 1;
-    }
     buckets.set(key, bucket);
   }
   return Array.from(buckets.values()).map((bucket) => ({
@@ -149,8 +136,6 @@ export function groupEnergyMap(
     dow: bucket.dow,
     totalMinutes: bucket.totalMinutes,
     recordCount: bucket.recordCount,
-    avgFulfillment:
-      bucket.fulfillmentCount > 0 ? bucket.fulfillmentSum / bucket.fulfillmentCount : null,
   }));
 }
 

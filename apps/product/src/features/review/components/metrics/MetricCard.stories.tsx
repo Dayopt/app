@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { ArrowLeftRight, Clock, Flame, Gauge, Ratio, Star, Target, Timer } from 'lucide-react';
+import { ArrowLeftRight, Clock, Flame, Gauge, Ratio, Target, Timer } from 'lucide-react';
 
 import { MetricCard } from './MetricCard';
 
@@ -116,16 +116,6 @@ export const HoursMinutesValue: Story = {
   },
 };
 
-/** 充実度スコア */
-export const FulfillmentValue: Story = {
-  args: {
-    label: 'Avg Fulfillment',
-    valueParts: { primary: '3.8', unit: '' },
-    icon: Star,
-    trend: { direction: 'up', delta: 0.1, isPositive: true },
-  },
-};
-
 /** Hero: 合計時間（col-span-2） */
 export const HeroTotalTime: Story = {
   args: {
@@ -147,7 +137,7 @@ export const HeroStreak: Story = {
   },
 };
 
-/** 8カード横並び（グリッドプレビュー — hero含む） */
+/** 7カード横並び（グリッドプレビュー — hero含む） */
 export const GridPreview: Story = {
   args: {
     label: '',
@@ -161,12 +151,6 @@ export const GridPreview: Story = {
         icon={Clock}
         variant="hero"
         trend={{ direction: 'up', delta: 0.12, isPositive: true }}
-      />
-      <MetricCard
-        label="Avg Fulfillment"
-        valueParts={{ primary: '3.8', unit: '' }}
-        icon={Star}
-        trend={{ direction: 'up', delta: 0.1, isPositive: true }}
       />
       <MetricCard
         label="Plan Rate"
@@ -230,7 +214,6 @@ export const GridLoading: Story = {
         variant="hero"
         isLoading
       />
-      <MetricCard label="Avg Fulfillment" valueParts={{ primary: '-', unit: '' }} isLoading />
       <MetricCard label="Plan Rate" valueParts={{ primary: '-', unit: '' }} isLoading />
       <MetricCard label="Streak" valueParts={{ primary: '-', unit: '' }} variant="hero" isLoading />
       <MetricCard label="Estimation Accuracy" valueParts={{ primary: '-', unit: '' }} isLoading />
@@ -333,15 +316,6 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-4 text-xs">FulfillmentValue（充実度スコア）</p>
-        <MetricCard
-          label="Avg Fulfillment"
-          valueParts={{ primary: '3.8', unit: '' }}
-          icon={Star}
-          trend={{ direction: 'up', delta: 0.1, isPositive: true }}
-        />
-      </div>
-      <div>
         <p className="text-muted-foreground mb-4 text-xs">HeroTotalTime（Hero: 合計時間）</p>
         <MetricCard
           label="Total Time"
@@ -361,7 +335,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="w-full">
-        <p className="text-muted-foreground mb-4 text-xs">GridPreview（8カード横並び）</p>
+        <p className="text-muted-foreground mb-4 text-xs">GridPreview（7カード横並び）</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <MetricCard
             label="Total Time"
@@ -369,12 +343,6 @@ export const AllPatterns: Story = {
             icon={Clock}
             variant="hero"
             trend={{ direction: 'up', delta: 0.12, isPositive: true }}
-          />
-          <MetricCard
-            label="Avg Fulfillment"
-            valueParts={{ primary: '3.8', unit: '' }}
-            icon={Star}
-            trend={{ direction: 'up', delta: 0.1, isPositive: true }}
           />
           <MetricCard
             label="Plan Rate"
@@ -431,7 +399,6 @@ export const AllPatterns: Story = {
             variant="hero"
             isLoading
           />
-          <MetricCard label="Avg Fulfillment" valueParts={{ primary: '-', unit: '' }} isLoading />
           <MetricCard label="Plan Rate" valueParts={{ primary: '-', unit: '' }} isLoading />
           <MetricCard
             label="Streak"
