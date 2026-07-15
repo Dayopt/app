@@ -146,10 +146,13 @@ const DialogContent = ({
   className,
   children,
   showCloseButton = true,
+  showOverlay = true,
   size,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
+  /** 背景overlayを表示するか。default: true */
+  showOverlay?: boolean;
   /** サイズ（max-width）。未指定時は className の max-w- or デフォルト lg */
   size?: DialogSize;
 }) => {
@@ -186,7 +189,7 @@ const DialogContent = ({
   if (mode === 'drawer') {
     return (
       <DrawerPortalInternal>
-        <DrawerOverlayInternal />
+        {showOverlay ? <DrawerOverlayInternal /> : null}
         <DrawerPrimitive.Content
           data-slot="dialog-content"
           className={cn(
@@ -213,7 +216,7 @@ const DialogContent = ({
 
   return (
     <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay />
+      {showOverlay ? <DialogOverlay /> : null}
       <DialogPrimitive.Content
         ref={contentRef}
         data-slot="dialog-content"

@@ -39,6 +39,7 @@ interface TagBadgeListProps {
   excludeIds?: readonly string[];
   searchable?: boolean;
   supportDrilldown?: boolean;
+  hierarchyMode?: 'drilldown' | 'grouped';
   onCreate?: (() => void) | undefined;
   onTagHover?: ((info: TagBadgeListHoverInfo | null) => void) | undefined;
   asRadioGroup?: boolean;
@@ -127,6 +128,7 @@ export function TagBadgeList({
   excludeIds,
   searchable = false,
   supportDrilldown = true,
+  hierarchyMode = 'drilldown',
   onCreate,
   onTagHover,
   asRadioGroup = false,
@@ -163,7 +165,7 @@ export function TagBadgeList({
 
   const showCreateButton = Boolean(onCreate);
 
-  if (view.type === 'drill') {
+  if (hierarchyMode === 'drilldown' && view.type === 'drill') {
     const parentNode = tree.find((node) => node.tag.id === view.parentId);
     const parent = parentNode?.tag;
     const children = parentNode?.children ?? [];
@@ -243,25 +245,61 @@ export function TagBadgeList({
           </p>
         ) : null}
 
-        {tree.map(({ tag, children }) => (
-          <TagBadgeCell
-            key={tag.id}
-            tag={tag}
-            displayName={tag.name}
-            isSelected={selectedId === tag.id}
-            hasChildren={supportDrilldown && children.length > 0}
-            onSelect={() => {
-              if (supportDrilldown && children.length > 0) {
-                setView({ type: 'drill', parentId: tag.id });
-                return;
-              }
-              onSelect(tag.id, tag.name);
-            }}
-            onHover={handleHover}
-            onHoverEnd={handleHoverEnd}
-            asRadio={asRadioGroup}
-          />
-        ))}
+        {tree.map(({ tag, children }) => {
+          if (supportDrilldown && hierarchyMode === 'grouped' && children.length > 0) {
+            return (
+              <div key={tag.id} data-tag-group={tag.id} className="flex w-full flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <TagBadgeCell
+                    tag={tag}
+                    displayName={tag.name}
+                    isSelected={selectedId === tag.id}
+                    hasChildren={false}
+                    onSelect={() => onSelect(tag.id, tag.name)}
+                    onHover={handleHover}
+                    onHoverEnd={handleHoverEnd}
+                    asRadio={asRadioGroup}
+                  />
+                </div>
+                <div data-tag-children={tag.id} className="ml-4 flex flex-wrap gap-2">
+                  {children.map((child) => (
+                    <TagBadgeCell
+                      key={child.id}
+                      tag={child}
+                      displayName={child.name}
+                      isSelected={selectedId === child.id}
+                      hasChildren={false}
+                      onSelect={() => onSelect(child.id, child.name)}
+                      onHover={handleHover}
+                      onHoverEnd={handleHoverEnd}
+                      asRadio={asRadioGroup}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <TagBadgeCell
+              key={tag.id}
+              tag={tag}
+              displayName={tag.name}
+              isSelected={selectedId === tag.id}
+              hasChildren={supportDrilldown && children.length > 0}
+              onSelect={() => {
+                if (supportDrilldown && children.length > 0) {
+                  setView({ type: 'drill', parentId: tag.id });
+                  return;
+                }
+                onSelect(tag.id, tag.name);
+              }}
+              onHover={handleHover}
+              onHoverEnd={handleHoverEnd}
+              asRadio={asRadioGroup}
+            />
+          );
+        })}
 
         {showCreateButton ? (
           <CreateBadge label={t('tagSelector.new')} onClick={() => onCreate?.()} />

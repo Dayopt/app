@@ -20,7 +20,7 @@ import { useDayView } from './hooks/useDayView';
 export const DayView = ({
   dateRange: _dateRange,
   entries,
-  allTimeblocks: _allTimeblocks,
+  allTimeblocks,
   currentDate,
   showWeekends: _showWeekends = true,
   showActualDiff: _showActualDiff = false,
@@ -147,6 +147,7 @@ export const DayView = ({
             entries={dayEvents}
             viewMode="day"
             dayIndex={0}
+            allEventsForOverlapCheck={allTimeblocks ?? entries}
             onEntryClick={onEntryClick}
             onEntryContextMenu={onEntryContextMenu}
             onEventUpdate={handleEventTimeUpdate}

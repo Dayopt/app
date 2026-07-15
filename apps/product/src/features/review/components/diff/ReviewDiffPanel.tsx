@@ -113,6 +113,7 @@ export function ReviewDiffPanel({
           <SummaryMetric
             label={t('calendar.compare.rail.summary.diff')}
             value={formatSignedDuration(t, diff.summary.diffMinutes)}
+            valueClassName="text-foreground"
             emphasis
           />
           <SummaryMetric
@@ -204,10 +205,12 @@ export function ReviewDiffPanel({
 function SummaryMetric({
   label,
   value,
+  valueClassName,
   emphasis = false,
 }: {
   label: string;
   value: string;
+  valueClassName?: string | undefined;
   emphasis?: boolean | undefined;
 }) {
   return (
@@ -217,6 +220,7 @@ function SummaryMetric({
         className={cn(
           'text-right font-mono text-sm font-medium tabular-nums',
           emphasis && 'text-base',
+          valueClassName,
         )}
       >
         {value}
@@ -227,6 +231,10 @@ function SummaryMetric({
 
 function DiffBadge({ item }: { item: ReviewDiffItem }) {
   const t = useTranslations();
+
+  if (item.diffMinutes === 0 && item.startDiffMinutes === 0 && item.endDiffMinutes === 0) {
+    return null;
+  }
 
   const content = diffBadgeLabel(t, item);
   const pointsUp = item.kind === 'unplanned' || item.diffMinutes > 0 || item.startDiffMinutes < 0;

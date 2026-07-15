@@ -55,6 +55,8 @@ export interface TagCreateContext {
 type SheetType =
   | { type: 'contact' }
   | { type: 'settings'; category: SettingsCategory }
+  | { type: 'timeblockSearch' }
+  | { type: 'shortcutCheatSheet' }
   | { type: 'tagMerge'; sourceTag: TagMergeSourceTag }
   | { type: 'tagRename'; tag: TagRenameTarget }
   | { type: 'tagCreate'; context: TagCreateContext };
@@ -98,6 +100,10 @@ interface ShellStoreActions {
   // Sheets
   openSheet: (sheet: SheetType) => void;
   closeSheet: () => void;
+
+  // Timeblock search convenience
+  openTimeblockSearch: () => void;
+  closeTimeblockSearch: () => void;
 
   // Settings convenience（既存APIとの互換性）
   openSettings: (category?: SettingsCategory) => void;
@@ -157,6 +163,16 @@ const useShellStoreBase = create<ShellStoreState & ShellStoreActions>()(
         // ── Sheet Actions ──
         openSheet: (sheet) => set({ activeSheet: sheet }, false, 'openSheet'),
         closeSheet: () => set({ activeSheet: null }, false, 'closeSheet'),
+
+        // ── Timeblock Search Convenience ──
+        openTimeblockSearch: () =>
+          set({ activeSheet: { type: 'timeblockSearch' } }, false, 'openTimeblockSearch'),
+        closeTimeblockSearch: () => {
+          const { activeSheet } = get();
+          if (activeSheet?.type === 'timeblockSearch') {
+            set({ activeSheet: null }, false, 'closeTimeblockSearch');
+          }
+        },
 
         // ── Settings Convenience ──
         openSettings: (category = 'profile') =>

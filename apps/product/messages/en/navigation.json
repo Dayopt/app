@@ -33,6 +33,7 @@
       "help": "Help",
       "helpSubmenu": {
         "helpCenter": "Help Center",
+        "keyboardShortcuts": "Keyboard shortcuts",
         "releaseNotes": "Release Notes",
         "documentation": "Documentation",
         "termsOfService": "Terms of Service",

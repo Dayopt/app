@@ -15,9 +15,12 @@ Calendarの右panelでPlanとRecordの差分を読み、次の計画に使うた
 - day / week / 2〜9day multi-dayのviewを維持したままpanelを開閉できる
 - 週末非表示時は、Calendarに実際に表示されている日だけをReview / Time P/Lの集計対象にする。先頭日と末尾日の間にある非表示の土日は含めない
 - Reflectionは表示日と、その直前の同じ表示日数を比較する。週末非表示時は比較期間も土日を飛ばす。既存の集計結果をrule-basedな純粋関数で要約し、LLMやin-app AIは使わない
-- DiffはCalendarが表示中のPlan / Recordから導出し、追加RPCを呼ばない
+- DiffはCalendarが取得したPlan / Recordとその関連コンテキストから導出し、Review専用RPCは呼ばない
 - 差分は未記録、やらなかった、予定に対する記録、予定外の記録を基礎に表示する
-- Diff panel（`panel=diff`）の増減は符号と方向で示し、success / destructive色による善悪判定は行わない
+- 予定に対する記録はPlan単位でまとめ、複数の関連Recordがある場合は記録時間を合計してPlanとの差分を計算する
+- Planとの差分が`±0`の項目は一覧に表示しない。期間全体の差分が0の場合はsummaryの`0分`を中立表示する
+- 差分の正負は符号と方向iconで示し、成功・失敗を意味する色や評価ラベルは使わない
+- PlanとRecordが別日の場合、PlanはPlan自身の日、RecordはRecord自身の日へ計上する。Planの日は未記録、Recordの日は関係を保った記録として表示する
 - Review UIとStorybookはReview featureが所有し、Calendar shellがpanel slotへ合成する
 
 ## URL契約

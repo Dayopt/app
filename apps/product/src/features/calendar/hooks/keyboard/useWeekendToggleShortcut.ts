@@ -46,6 +46,11 @@ export function useWeekendToggleShortcut(
       key: 'Cmd+W',
       description: '週末表示切り替え',
       priority: 10, // useCalendarKeyboardのCmd+Wより高い優先度
+      help: {
+        group: 'views',
+        labelKey: 'calendar.shortcuts.actions.toggleWeekends',
+        order: 170,
+      },
       handler: (event) => {
         event.preventDefault();
         event.stopPropagation();

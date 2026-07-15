@@ -12,28 +12,36 @@ import type React from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { getTagColorClasses } from '@/features/tags';
+import { getTagColorClasses, TagIcon } from '@/features/tags';
 import type { RecordEvent } from '@/features/timeblock';
 import { formatTimeString } from '@/lib/date';
 import { cn } from '@dayopt/components';
 import type { TimeFormat } from '@dayopt/domain';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
+import { DayDiffMarker } from './DayDiffMarker';
 import { DiffBadge } from './DiffBadge';
 
 interface RecordLaneCardProps {
   event: RecordEvent;
   position: TwoLanePosition;
+  /** Calendar カードの表示名。title ではなくタグを source of truth とする。 */
+  tagName: string | null;
   tagColor?: string | null | undefined;
+  tagIcon?: string | null | undefined;
   className?: string | undefined;
   /** Inspector で選択中か（強調表示） */
   isActive?: boolean | undefined;
   /** auto_migrated など RLS で不変な record。ドラッグ・リサイズを禁止する */
   disableDrag?: boolean | undefined;
+  /** Compare panel に表示中の entry であることを示す */
+  showDayDiffMarker?: boolean | undefined;
   /** 複数日表示の狭い列では secondary detail と余白を減らす */
   compact?: boolean | undefined;
   /** ユーザー設定に基づく時刻表記 */
   timeFormat?: TimeFormat | undefined;
+  /** false の場合はdrag ghostなど表示専用として操作・focus対象から外す */
+  interactive?: boolean | undefined;
   onClick?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
@@ -55,12 +63,16 @@ function formatTimeRange(start: Date, end: Date, timeFormat: TimeFormat): string
 export function RecordLaneCard({
   event,
   position,
+  tagName,
   tagColor = null,
+  tagIcon = null,
   className,
   isActive = false,
   disableDrag = false,
+  showDayDiffMarker = false,
   compact = false,
   timeFormat = '24h',
+  interactive = true,
   onClick,
   onContextMenu,
   onPointerDown,
@@ -70,27 +82,30 @@ export function RecordLaneCard({
 }: RecordLaneCardProps) {
   const t = useTranslations();
   const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
+  const displayName = tagName ?? t('common.tags.noTag');
   const isUnplanned = event.planId == null;
   const hasDiff = event.diffMinutes != null && event.diffMinutes !== 0;
   const showDetails = !compact && position.height >= DETAIL_HEIGHT_THRESHOLD;
-  const canDrag = !disableDrag && Boolean(onPointerDown);
-
+  const canDrag = interactive && !disableDrag && Boolean(onPointerDown);
   return (
     <div
       data-record-lane-card
       data-record-planned={!isUnplanned}
-      data-entry-block="true"
-      tabIndex={0}
-      role="button"
-      aria-label={event.title || t('timeblock.untitled')}
+      data-entry-block={interactive ? 'true' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      role={interactive ? 'button' : undefined}
+      aria-label={interactive ? displayName : undefined}
+      aria-hidden={interactive ? undefined : true}
       className={cn(
         'absolute flex flex-col gap-1 overflow-hidden rounded-lg py-1 text-xs',
+        interactive ? 'pointer-events-auto' : 'pointer-events-none',
         compact ? 'px-1' : 'px-2',
         colorClasses?.tint ?? 'bg-card',
         'text-foreground',
         'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
         isActive && 'ring-ring ring-2',
-        canDrag ? 'cursor-grab' : 'cursor-pointer',
+        showDayDiffMarker && 'pr-7',
+        interactive && (canDrag ? 'cursor-grab' : 'cursor-pointer'),
         className,
       )}
       style={{
@@ -100,23 +115,38 @@ export function RecordLaneCard({
         height: `${Math.max(position.height, MIN_HEIGHT)}px`,
         ...styleOverride,
       }}
-      onClick={(e) => onClick?.(event, e)}
-      onContextMenu={(e) => onContextMenu?.(event, e)}
-      onMouseDown={(e) => {
-        if (e.button === 0 && canDrag) onPointerDown?.(event, e);
-      }}
-      onTouchStart={(e) => {
-        if (canDrag) onTouchStart?.(event, e);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick?.(event, e as unknown as React.MouseEvent);
-        }
-      }}
+      onClick={interactive ? (e) => onClick?.(event, e) : undefined}
+      onContextMenu={interactive ? (e) => onContextMenu?.(event, e) : undefined}
+      onMouseDown={
+        interactive
+          ? (e) => {
+              if (e.button === 0 && canDrag) onPointerDown?.(event, e);
+            }
+          : undefined
+      }
+      onTouchStart={
+        interactive
+          ? (e) => {
+              if (canDrag) onTouchStart?.(event, e);
+            }
+          : undefined
+      }
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.(event, e as unknown as React.MouseEvent);
+              }
+            }
+          : undefined
+      }
     >
       <div className="flex items-start justify-between gap-1">
-        <p className="truncate font-medium">{event.title || t('timeblock.untitled')}</p>
+        <p className="flex min-h-0 items-start gap-1 truncate font-medium">
+          <TagIcon icon={tagIcon} color={tagColor ?? undefined} size="sm" className="shrink-0" />
+          <span className="truncate">{displayName}</span>
+        </p>
         {hasDiff && !compact && <DiffBadge diffMinutes={event.diffMinutes ?? 0} />}
       </div>
       {showDetails && (
@@ -129,6 +159,7 @@ export function RecordLaneCard({
           {t('timeblock.inspector.unplanned')}
         </span>
       )}
+      {showDayDiffMarker && <DayDiffMarker />}
       {canDrag && onResizeStart && (
         <div
           role="slider"

@@ -12,7 +12,7 @@ describe('isCalendarViewPath', () => {
       expect(isCalendarViewPath('/week')).toBe(true);
     });
 
-    it.each(['2day', '3day', '5day', '7day', '9day'])('/%s（multi-day view）→ true', (segment) => {
+    it.each(['2day', '3day', '5day', '7day'])('/%s（multi-day view）→ true', (segment) => {
       expect(isCalendarViewPath(`/${segment}`)).toBe(true);
     });
 
@@ -50,6 +50,8 @@ describe('isCalendarViewPath', () => {
       expect(isCalendarViewPath('/3day-archive')).toBe(false);
       expect(isCalendarViewPath('/dayweek')).toBe(false);
       expect(isCalendarViewPath('/day2')).toBe(false);
+      expect(isCalendarViewPath('/8day')).toBe(false);
+      expect(isCalendarViewPath('/9day')).toBe(false);
     });
 
     it('day 単位のみで数字なしは false', () => {

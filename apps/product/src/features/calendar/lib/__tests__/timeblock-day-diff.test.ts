@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { computeTimeblockDayDiffs } from '../timeblock-day-diff';
 
-const at = (hour: number) => new Date(`2026-07-10T${String(hour).padStart(2, '0')}:00:00.000Z`);
+const at = (hour: number, minute = 0) =>
+  new Date(
+    `2026-07-10T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00.000Z`,
+  );
 const plan = {
   id: 'plan-1',
   title: 'Plan',
@@ -50,8 +53,133 @@ describe('computeTimeblockDayDiffs', () => {
     );
     expect(result.items[0]).toMatchObject({
       kind: 'recorded',
+      timeblockId: plan.id,
       actualMinutes: 120,
       diffMinutes: 60,
+    });
+  });
+
+  it('1件の関連 Record が Plan と一致する場合は±0を差分一覧に含めない', () => {
+    const result = computeTimeblockDayDiffs(
+      [plan],
+      [
+        {
+          id: 'record-1',
+          planId: plan.id,
+          title: 'Record',
+          tagId: 'tag-1',
+          color: 'blue',
+          startAt: at(9),
+          endAt: at(10),
+        },
+      ],
+    );
+
+    expect(result.summary.diffMinutes).toBe(0);
+    expect(result.items).toEqual([]);
+  });
+
+  it('複数の関連 Record の合計が Plan と一致する場合も±0を差分一覧に含めない', () => {
+    const result = computeTimeblockDayDiffs(
+      [plan],
+      [
+        {
+          id: 'record-1',
+          planId: plan.id,
+          title: 'Record',
+          tagId: 'tag-1',
+          color: 'blue',
+          startAt: at(9),
+          endAt: at(9, 30),
+        },
+        {
+          id: 'record-2',
+          planId: plan.id,
+          title: 'Record',
+          tagId: 'tag-1',
+          color: 'blue',
+          startAt: at(9, 30),
+          endAt: at(10),
+        },
+      ],
+    );
+
+    expect(result.summary).toMatchObject({
+      plannedMinutes: 60,
+      actualMinutes: 60,
+      diffMinutes: 0,
+    });
+    expect(result.items).toEqual([]);
+  });
+
+  it('Planが表示範囲外でも範囲内の関連Recordを予定に対する記録として残す', () => {
+    const records = [
+      {
+        id: 'record-next-day',
+        planId: plan.id,
+        title: 'Record',
+        tagId: 'tag-1',
+        color: 'blue',
+        startAt: new Date('2026-07-11T09:00:00.000Z'),
+        endAt: new Date('2026-07-11T10:00:00.000Z'),
+      },
+    ];
+    const result = computeTimeblockDayDiffs([plan], records, {
+      dayStart: new Date('2026-07-11T00:00:00.000Z'),
+      dayEnd: new Date('2026-07-12T00:00:00.000Z'),
+    });
+
+    expect(result.summary).toMatchObject({
+      plannedMinutes: 0,
+      actualMinutes: 60,
+      unplannedMinutes: 0,
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      kind: 'recorded',
+      timeblockId: plan.id,
+      plannedMinutes: 0,
+      actualMinutes: 60,
+      diffMinutes: 60,
+    });
+
+    const planDayResult = computeTimeblockDayDiffs([plan], records, {
+      dayStart: new Date('2026-07-10T00:00:00.000Z'),
+      dayEnd: new Date('2026-07-11T00:00:00.000Z'),
+    });
+    expect(planDayResult.summary).toMatchObject({
+      plannedMinutes: 60,
+      actualMinutes: 0,
+      unrecordedMinutes: 60,
+    });
+    expect(planDayResult.items[0]?.kind).toBe('unrecorded');
+  });
+
+  it('集計対象外のPlanを関連判定だけに使う', () => {
+    const result = computeTimeblockDayDiffs(
+      [{ ...plan, isIncludedInDiff: false }],
+      [
+        {
+          id: 'visible-record',
+          planId: plan.id,
+          title: 'Record',
+          tagId: 'tag-2',
+          color: 'green',
+          startAt: at(9),
+          endAt: at(10),
+        },
+      ],
+    );
+
+    expect(result.summary).toMatchObject({
+      plannedMinutes: 0,
+      actualMinutes: 60,
+      unplannedMinutes: 0,
+    });
+    expect(result.items[0]).toMatchObject({
+      kind: 'recorded',
+      plannedMinutes: 0,
+      actualMinutes: 60,
     });
   });
 
@@ -70,7 +198,7 @@ describe('computeTimeblockDayDiffs', () => {
       [record],
     );
     expect(result.summary.unplannedMinutes).toBe(60);
-    expect(result.items[0]?.kind).toBe('unplanned');
+    expect(result.items[0]).toMatchObject({ kind: 'unplanned', timeblockId: record.id });
   });
 
   it('skip は予定を残し、未記録には含めない', () => {

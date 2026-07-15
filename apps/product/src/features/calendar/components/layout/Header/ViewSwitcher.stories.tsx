@@ -8,7 +8,7 @@ import { ViewSwitcher } from './ViewSwitcher';
 
 /**
  * ビュー切り替えドロップダウン（日/週/日数サブメニュー/ビューの設定）。
- * キーボードショートカット対応（D, W, 1-9, 0）。
+ * キーボードショートカット対応（D, W, 1-7, 0）。
  */
 const meta = {
   title: 'Product/Features/Calendar/Header/ViewSwitcher',

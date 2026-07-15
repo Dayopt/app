@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { handleGlobalKeyDown, registerShortcut } from '../shortcut-registry';
+import {
+  getRegisteredShortcutHelpItems,
+  handleGlobalKeyDown,
+  registerShortcut,
+} from '../shortcut-registry';
 
 const unregisterCallbacks: Array<() => void> = [];
 
@@ -81,6 +85,26 @@ describe('shortcut-registry', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  it('Cmd/Ctrl修飾キーを同じコンボとして扱う', () => {
+    const handler = registerTestShortcut({ key: 'Cmd+K' });
+
+    dispatchKeyDown(document.body, { key: 'k', metaKey: true });
+    dispatchKeyDown(document.body, { key: 'k', ctrlKey: true });
+
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
+  it('疑問符キーを処理し、入力中は無視する', () => {
+    const handler = registerTestShortcut({ key: 'Shift+?' });
+    const input = document.createElement('input');
+    document.body.append(input);
+
+    dispatchKeyDown(document.body, { key: '?', shiftKey: true });
+    dispatchKeyDown(input, { key: '?', shiftKey: true });
+
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
   it.each([
     ['input', () => document.createElement('input')],
     ['textarea', () => document.createElement('textarea')],
@@ -146,5 +170,34 @@ describe('shortcut-registry', () => {
     dispatchKeyDown(target, { key: 'Escape' });
 
     expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('同じ操作の複数キーを1つのチートシート項目へまとめる', () => {
+    for (const [key, order] of [
+      ['Delete', 10],
+      ['Backspace', 10],
+    ] as const) {
+      unregisterCallbacks.push(
+        registerShortcut({
+          key,
+          description: `delete with ${key}`,
+          handler: vi.fn(),
+          help: {
+            group: 'blocks',
+            labelKey: 'calendar.shortcuts.actions.deleteBlock',
+            order,
+          },
+        }),
+      );
+    }
+
+    expect(getRegisteredShortcutHelpItems()).toEqual([
+      {
+        group: 'blocks',
+        labelKey: 'calendar.shortcuts.actions.deleteBlock',
+        order: 10,
+        keys: ['Delete', 'Backspace'],
+      },
+    ]);
   });
 });

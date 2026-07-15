@@ -2,7 +2,7 @@ import { addMonths } from 'date-fns';
 import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { fn, userEvent, within } from 'storybook/test';
+import { expect, fn, userEvent, within } from 'storybook/test';
 
 import { MobileCalendarHeader } from './MobileCalendarHeader';
 
@@ -36,6 +36,9 @@ export const Expanded: Story = {
     const canvas = within(canvasElement);
     const toggle = canvas.getByRole('button', { expanded: false });
     await userEvent.click(toggle);
+    await expect(
+      canvas.getByRole('button', { name: /Search blocks|ブロックを検索/i }),
+    ).toBeVisible();
   },
 };
 
@@ -119,7 +122,7 @@ export const GridSwipe: Story = {
   },
 };
 
-/** インタラクティブデモ。日付タップで展開/折りたたみ切替。日付選択でパネルが閉じる。 */
+/** インタラクティブデモ。日付タップで展開/折りたたみ切替。日付選択後もパネルを維持する。 */
 export const Interactive: Story = {
   render: function InteractiveStory() {
     const [date, setDate] = useState(new Date(2026, 2, 25));
@@ -144,4 +147,23 @@ export const Interactive: Story = {
       </div>
     );
   },
+};
+
+/** 折りたたみ・展開状態の一覧。 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="grid gap-6">
+      <MobileCalendarHeader
+        currentDate={new Date(2026, 2, 25)}
+        onNavigate={fn()}
+        onDateSelect={fn()}
+      />
+      <MobileCalendarHeader
+        currentDate={new Date(2026, 2, 25)}
+        onNavigate={fn()}
+        onDateSelect={fn()}
+        defaultExpanded
+      />
+    </div>
+  ),
 };

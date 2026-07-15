@@ -1,15 +1,21 @@
 'use client';
 
-import { PanelLeft } from 'lucide-react';
+import { CircleHelp, PanelLeft, Search } from 'lucide-react';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
 
 import { APP_NAME } from '@/lib/app-info';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { Button, HoverTooltip } from '@dayopt/components';
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  HoverTooltip,
+} from '@dayopt/components';
 import { useTranslations } from 'next-intl';
 
-import { UserMenu } from './UserMenu';
+import { HelpMenuItems, UserMenu } from './UserMenu';
 
 interface SidebarProps {
   /** Sidebarのコンテンツ（composition layerから注入） */
@@ -22,9 +28,34 @@ interface SidebarProps {
   'aria-label'?: string;
 }
 
+function SidebarHelpMenu() {
+  const t = useTranslations();
+
+  return (
+    <DropdownMenu>
+      <HoverTooltip content={t('navigation.sidebar.getHelp')} side="top">
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" icon size="sm" aria-label={t('navigation.sidebar.getHelp')}>
+            <CircleHelp className="size-4" aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+      </HoverTooltip>
+      <DropdownMenuContent
+        className="border-input min-w-56"
+        side="right"
+        align="end"
+        sideOffset={4}
+      >
+        <HelpMenuItems />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /** サイドバーコンテナ（ヘッダー + スクロール領域 + フッター） */
 export function Sidebar({ children, user, footerActions, 'aria-label': ariaLabel }: SidebarProps) {
   const closeSidebar = useShellStore.use.closeSidebar();
+  const openTimeblockSearch = useShellStore.use.openTimeblockSearch();
   const t = useTranslations();
 
   return (
@@ -46,6 +77,17 @@ export function Sidebar({ children, user, footerActions, 'aria-label': ariaLabel
           <span className="text-foreground text-sm font-medium tracking-tight">{APP_NAME}</span>
         </div>
         <div className="flex items-center">
+          <HoverTooltip content={t('calendar.search.open')} side="bottom">
+            <Button
+              variant="ghost"
+              icon
+              size="sm"
+              onClick={openTimeblockSearch}
+              aria-label={t('calendar.search.open')}
+            >
+              <Search className="size-4" />
+            </Button>
+          </HoverTooltip>
           <HoverTooltip content={t('navigation.sidebar.closeSidebar')} side="bottom">
             <Button
               variant="ghost"
@@ -67,11 +109,16 @@ export function Sidebar({ children, user, footerActions, 'aria-label': ariaLabel
         {children}
       </div>
 
-      {/* Footer - UserMenu + Actions */}
+      {/* Footer - UserMenu + Help */}
       <div className="shrink-0 px-2 py-2">
-        <div className="flex items-center justify-between">
-          <UserMenu user={user} />
-          <div className="flex items-center">{footerActions}</div>
+        <div className="flex min-w-0 items-center gap-1">
+          <div className="min-w-0 flex-1">
+            <UserMenu user={user} />
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {footerActions}
+            <SidebarHelpMenu />
+          </div>
         </div>
       </div>
     </aside>

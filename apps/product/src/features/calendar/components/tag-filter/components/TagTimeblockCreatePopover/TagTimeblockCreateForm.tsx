@@ -1,10 +1,9 @@
 'use client';
 
-import { Calendar, Clock, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { TagIcon } from '@/features/tags';
-import { DateRow, TimeConflictAlert, TimeRow } from '@/features/timeblock';
+import { DateTimeSection, TagRow, TimeConflictAlert } from '@/features/timeblock';
 import { Button, cn } from '@dayopt/components';
 
 export interface TagEntryCreateFormProps {
@@ -24,6 +23,13 @@ export interface TagEntryCreateFormProps {
   onCancel: () => void;
   isSubmitting?: boolean;
   hasError?: boolean;
+  onTagChange: (tagId: string | null) => void;
+  onCreateAndSelect: (
+    name: string,
+    color?: string | null,
+    icon?: string | null,
+    parentId?: string | null,
+  ) => Promise<void> | void;
   surface?: 'card' | 'sheet';
   className?: string;
 }
@@ -48,12 +54,15 @@ export function TagTimeblockCreateForm({
   onEndTimeChange,
   onSubmit,
   onCancel,
+  onTagChange,
+  onCreateAndSelect,
   isSubmitting = false,
   hasError = false,
   surface = 'card',
   className,
 }: TagEntryCreateFormProps) {
   const t = useTranslations();
+  const tEditor = useTranslations('timeblock.editor');
   const scheduleClassName = surface === 'sheet' ? 'mt-2' : 'bg-muted mt-2 rounded-2xl';
   const scheduleBodyClassName =
     surface === 'sheet' ? 'flex flex-col gap-2' : 'flex flex-col gap-2 px-4 pt-2 pb-4';
@@ -65,12 +74,16 @@ export function TagTimeblockCreateForm({
       className={cn('px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6', className)}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Row 0: タグ名ヘッダー（Inspector の TagRow 相当） + 右端に close × */}
-      <div className="flex min-h-9 items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <TagIcon icon={tag.icon} color={tag.color} size="sm" />
-          <span className="truncate text-base font-medium">{tag.name}</span>
-        </div>
+      {/* Row 0: 詳細と同様に TagRow を使ってタグを切り替え可能にする */}
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <TagRow
+          tagId={tag.id}
+          tagName={tag.name}
+          tagIcon={tag.icon}
+          tagColor={tag.color}
+          onTagChange={onTagChange}
+          onCreateAndSelect={onCreateAndSelect}
+        />
         <button
           type="button"
           onClick={onCancel}
@@ -84,20 +97,14 @@ export function TagTimeblockCreateForm({
       {/* スケジュール */}
       <div className={scheduleClassName}>
         <div className={scheduleBodyClassName}>
-          <DateRow
-            label={t('timeblock.inspector.time.date')}
-            icon={Calendar}
+          <DateTimeSection
+            dateLabel={tEditor('date')}
+            timeLabel={tEditor('time')}
             selectedDate={selectedDate}
-            onDateChange={(d) => {
-              if (d) onDateSelect(d);
-            }}
-          />
-          <TimeRow
-            label={t('timeblock.inspector.time.planned')}
-            icon={Clock}
+            onDateSelect={onDateSelect}
             startTime={startTime}
-            endTime={endTime}
             onStartChange={onStartTimeChange}
+            endTime={endTime}
             onEndChange={onEndTimeChange}
             hasError={hasError}
             testId="tag-entry-create-planned-time"

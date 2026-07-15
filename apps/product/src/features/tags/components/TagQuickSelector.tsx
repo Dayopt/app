@@ -145,6 +145,7 @@ function TagQuickSelectorContent({
           onSelect={handleSelect}
           onCreate={handleOpenCreate}
           onTagHover={onTagHover}
+          hierarchyMode="grouped"
         />
       </div>
     );
@@ -159,6 +160,7 @@ function TagQuickSelectorContent({
         onSelect={handleSelect}
         onCreate={handleOpenCreate}
         onTagHover={onTagHover}
+        hierarchyMode="grouped"
       />
     </div>
   );
@@ -213,7 +215,7 @@ export function TagQuickSelector({
 
     const update = () => {
       const rect = anchor.getBoundingClientRect();
-      const panelWidth = 384; // max-w-sm = 24rem = 384px
+      const panelWidth = 320; // w-80 = 20rem = 320px
       setPosition(calcAnchoredPosition(rect, panelWidth));
     };
 
@@ -245,37 +247,20 @@ export function TagQuickSelector({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, isMobile, onOpenChange]);
 
-  // PC: 背景コンテンツを inert にしてポインタイベントのリークを防止
-  const backdropRef = useRef<HTMLDivElement>(null);
+  // PC: カレンダーを操作可能なまま、パネルとアンカー外の pointer down だけで閉じる。
   useEffect(() => {
     if (!open || isMobile) return;
 
-    const backdrop = backdropRef.current;
-    if (!backdrop) return;
-
-    const inerted: Element[] = [];
-    for (const child of document.body.children) {
-      if (child === backdrop || child === backdrop.parentElement) continue;
-      if (!child.hasAttribute('inert')) {
-        child.setAttribute('inert', '');
-        inerted.push(child);
-      }
-    }
-
-    return () => {
-      for (const el of inerted) {
-        el.removeAttribute('inert');
-      }
-    };
-  }, [open, isMobile]);
-
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (panelRef.current?.contains(e.target as Node)) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (panelRef.current?.contains(target)) return;
+      if (anchorRef?.current?.contains(target)) return;
       onOpenChange(false);
-    },
-    [onOpenChange],
-  );
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [open, isMobile, anchorRef, onOpenChange]);
 
   const closeSelf = useCallback(() => {
     onOpenChange(false);
@@ -311,47 +296,37 @@ export function TagQuickSelector({
 
   const panel = (
     <div
-      ref={backdropRef}
-      className="z-overlay-popover fixed inset-0"
-      onClick={handleBackdropClick}
+      ref={panelRef}
+      role="dialog"
+      aria-label={t('tagSelector.title')}
+      className={cn(
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- セレクタ高は viewport 単位 70vh が必要でトークン化不可
+        'bg-card border-border-subtle shadow-card z-overlay-popover fixed flex max-h-[70vh] w-80 flex-col rounded-lg border',
+        'animate-in fade-in duration-150',
+      )}
+      style={position ? { top: position.top, left: position.left } : { visibility: 'hidden' }}
     >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="false"
-        aria-label={t('tagSelector.title')}
-        className={cn(
-          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- セレクタ高は viewport 単位 70vh が必要でトークン化不可
-          'bg-card border-border-subtle shadow-card absolute flex max-h-[70vh] w-full max-w-sm flex-col rounded-2xl border',
-          'animate-in fade-in duration-150',
-        )}
-        style={position ? { top: position.top, left: position.left } : undefined}
-      >
-        <div className="px-4 pt-4 pb-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">{t('tagSelector.title')}</h2>
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className={cn(
-                'text-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
-                'hover:bg-state-hover',
-              )}
-              aria-label="Close"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-          {timeLabel && <p className="text-muted-foreground text-sm">{timeLabel}</p>}
+      <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
+        <div className="min-w-0">
+          <h2 className="font-medium">{t('tagSelector.title')}</h2>
+          {timeLabel && <p className="text-muted-foreground truncate text-sm">{timeLabel}</p>}
         </div>
-
-        <TagQuickSelectorContent
-          onSelect={onSelect}
-          onCreateAndSelect={onCreateAndSelect}
-          onTagHover={onTagHover}
-          closeSelf={closeSelf}
-        />
+        <button
+          type="button"
+          onClick={() => onOpenChange(false)}
+          className="text-foreground hover:bg-state-hover flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors"
+          aria-label={t('actions.close')}
+        >
+          <X className="size-4" />
+        </button>
       </div>
+
+      <TagQuickSelectorContent
+        onSelect={onSelect}
+        onCreateAndSelect={onCreateAndSelect}
+        onTagHover={onTagHover}
+        closeSelf={closeSelf}
+      />
     </div>
   );
 

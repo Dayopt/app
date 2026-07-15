@@ -765,14 +765,11 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
             height: `${isUnplanned ? visualHeight : plannedHeight}px`,
           }}
         >
-          {/* drawer pill 風 affordance — PC は hover で出現、Mobile は isActive のとき常時 visible。
-              pointer-events-none で click は下にある handle が拾う。 */}
+          {/* リサイズハンドルの見た目（横棒）は非表示に統一。
+              pointer-events-none なので、実際のリサイズ操作は下の slider が担保し続ける。 */}
           <span
             aria-hidden
-            className={cn(
-              'bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-150',
-              isMobile && isActive ? 'opacity-100' : 'opacity-0 group-hover/entry:opacity-100',
-            )}
+            className="bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 hidden h-1 w-8 -translate-x-1/2 rounded-full"
             style={{ zIndex: 11 }}
           />
           <div

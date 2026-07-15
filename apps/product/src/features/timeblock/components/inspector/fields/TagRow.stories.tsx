@@ -52,6 +52,8 @@ const fullPlannedMenu = getTimeblockMenuItems({
   origin: 'planned',
   tagId: 'tag-1',
   onViewStats: fn(),
+  onCopy: fn(),
+  onDuplicate: fn(),
   onMarkUnplanned: fn(),
   onDelete: fn(),
 });
@@ -60,13 +62,17 @@ const unplannedMenu = getTimeblockMenuItems({
   origin: 'unplanned',
   tagId: 'tag-1',
   onViewStats: fn(),
+  onCopy: fn(),
+  onDuplicate: fn(),
   onRestorePlanned: fn(),
   onDelete: fn(),
 });
 
-const deleteOnlyMenu = getTimeblockMenuItems({
+const copyAndDeleteMenu = getTimeblockMenuItems({
   origin: 'planned',
   tagId: 'tag-1',
+  onCopy: fn(),
+  onDuplicate: fn(),
   onDelete: fn(),
 });
 
@@ -76,6 +82,8 @@ const upcomingPlannedMenu = getTimeblockMenuItems({
   tagId: 'tag-1',
   isUpcoming: true,
   onViewStats: fn(),
+  onCopy: fn(),
+  onDuplicate: fn(),
   onMarkUnplanned: fn(),
   onDelete: fn(),
 });
@@ -100,8 +108,8 @@ export const WithMenu: Story = {
   ),
 };
 
-/** 削除のみ（統計なし）。 */
-export const DeleteOnly: Story = {
+/** コピー・複製と削除（振り返りなし）。 */
+export const CopyAndDelete: Story = {
   render: () => (
     <div className="w-72">
       <TagRow
@@ -110,7 +118,7 @@ export const DeleteOnly: Story = {
         tagColorClasses={greenTag}
         onTagChange={fn()}
         onCreateAndSelect={fn()}
-        menuItems={deleteOnlyMenu}
+        menuItems={copyAndDeleteMenu}
       />
     </div>
   ),
@@ -201,14 +209,14 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs">削除のみ</p>
+        <p className="text-muted-foreground text-xs">コピー・複製と削除</p>
         <TagRow
           tagId="tag-4"
           tagName="運動"
           tagColorClasses={greenTag}
           onTagChange={fn()}
           onCreateAndSelect={fn()}
-          menuItems={deleteOnlyMenu}
+          menuItems={copyAndDeleteMenu}
         />
       </div>
       <div className="space-y-1">

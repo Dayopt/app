@@ -40,13 +40,13 @@ const record: RecordEvent = {
 
 describe('TwoLane cards time format', () => {
   it('Planカードを12時間表記で表示する', () => {
-    render(<PlanLaneCard event={plan} position={position} timeFormat="12h" />);
+    render(<PlanLaneCard event={plan} position={position} tagName="Focus" timeFormat="12h" />);
 
     expect(screen.getByText('1:05 PM–2:30 PM')).toBeInTheDocument();
   });
 
   it('Recordカードを12時間表記で表示する', () => {
-    render(<RecordLaneCard event={record} position={position} timeFormat="12h" />);
+    render(<RecordLaneCard event={record} position={position} tagName="Focus" timeFormat="12h" />);
 
     expect(screen.getByText('1:05 PM–2:30 PM')).toBeInTheDocument();
   });
@@ -55,7 +55,7 @@ describe('TwoLane cards time format', () => {
 describe('TwoLane cards keyboard interaction', () => {
   it('PlanカードをbuttonとしてEnterで開く', () => {
     const onClick = vi.fn();
-    render(<PlanLaneCard event={plan} position={position} onClick={onClick} />);
+    render(<PlanLaneCard event={plan} position={position} tagName="Focus" onClick={onClick} />);
 
     const card = screen.getByRole('button', { name: 'Focus' });
     expect(card).toHaveClass('focus-visible:ring-ring');
@@ -66,7 +66,7 @@ describe('TwoLane cards keyboard interaction', () => {
 
   it('RecordカードをbuttonとしてSpaceで開く', () => {
     const onClick = vi.fn();
-    render(<RecordLaneCard event={record} position={position} onClick={onClick} />);
+    render(<RecordLaneCard event={record} position={position} tagName="Focus" onClick={onClick} />);
 
     const card = screen.getByRole('button', { name: 'Focus' });
     expect(card).toHaveClass('focus-visible:ring-ring');

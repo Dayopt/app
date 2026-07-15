@@ -162,9 +162,18 @@ export function checkClientSideOverlapByKind(
   draggedEventId: string,
   previewStartTime: Date,
   previewEndTime: Date,
+  options: {
+    /** レーン間ドラッグ時に、ドラッグ元ではなくdrop先のkindで判定する。 */
+    targetKind?: NonNullable<CalendarEvent['kind']>;
+    now?: number;
+  } = {},
 ): boolean {
+  const now = options.now ?? Date.now();
   const draggedEvent = events.find((event) => event.id === draggedEventId);
-  const kind = draggedEvent?.kind ?? 'plan';
+  const kind =
+    options.targetKind ??
+    draggedEvent?.kind ??
+    (previewEndTime.getTime() > now ? 'plan' : 'record');
   const start = previewStartTime.getTime();
   const end = previewEndTime.getTime();
 

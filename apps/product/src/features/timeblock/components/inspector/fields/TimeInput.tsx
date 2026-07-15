@@ -131,7 +131,7 @@ export function TimeInput({
   }, [popoverOpen, draft, value, filteredOptions]);
 
   const baseClasses = cn(
-    'flex h-8 rounded-lg bg-transparent px-2 text-base tabular-nums outline-none transition-colors',
+    'flex h-8 items-center rounded-lg bg-transparent px-2 text-base tabular-nums leading-none outline-none transition-colors',
     'disabled:cursor-default disabled:opacity-50',
     hasError ? 'text-destructive ring-destructive ring-2' : 'hover:bg-state-hover',
   );

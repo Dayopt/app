@@ -10,14 +10,19 @@
 import { useCallback, useMemo } from 'react';
 
 import { addHours, startOfHour } from 'date-fns';
+import { useTranslations } from 'next-intl';
 
 import type { CalendarEvent } from '@/features/calendar';
 import {
   useCalendarEventKeyboard,
   useCalendarHandlers,
+  useTimeblockClipboardStore,
   useTimeblockContextActions,
   useTimeblockOperations,
 } from '@/features/calendar';
+import { toast } from '@/lib/toast';
+
+import { createCalendarEventClipboardTimeblock } from './createCalendarEventClipboardTimeblock';
 
 // =============================================================================
 // Types
@@ -49,6 +54,7 @@ interface CalendarCrudHandlersResult {
   onDeleteTimeblock: (timeblockId: string) => void;
   onDeleteTimeblockConfirm: (entry: CalendarEvent) => void;
   onViewStats: (entry: CalendarEvent) => void;
+  onCopy: (entry: CalendarEvent) => void;
   onSkip: (entry: CalendarEvent) => void;
   onUnskip: (entry: CalendarEvent) => void;
 }
@@ -62,6 +68,8 @@ export function useCalendarCrudHandlers({
   filteredEvents,
   currentDate,
 }: CalendarCrudHandlersInput): CalendarCrudHandlersResult {
+  const t = useTranslations();
+  const copyTimeblock = useTimeblockClipboardStore((state) => state.copyTimeblock);
   // =========================================================================
   // Calendar Handlers（click, create, drag-select）
   // =========================================================================
@@ -106,24 +114,18 @@ export function useCalendarCrudHandlers({
   const getSelectedEntryForCopy = useCallback(() => {
     if (!selectedTimeblockId) return null;
     const entry = filteredEvents.find((p) => p.id === selectedTimeblockId);
-    if (!entry) return null;
-
-    const startHour = entry.startDate?.getHours() ?? 0;
-    const startMinute = entry.startDate?.getMinutes() ?? 0;
-    const duration =
-      entry.endDate && entry.startDate
-        ? (entry.endDate.getTime() - entry.startDate.getTime()) / 60000
-        : 60;
-
-    return {
-      title: entry.title,
-      description: entry.description ?? null,
-      startHour,
-      startMinute,
-      duration,
-      tagId: entry.tagId,
-    };
+    return entry ? createCalendarEventClipboardTimeblock(entry) : null;
   }, [selectedTimeblockId, filteredEvents]);
+
+  const handleCopy = useCallback(
+    (entry: CalendarEvent) => {
+      const timeblock = createCalendarEventClipboardTimeblock(entry);
+      if (!timeblock) return;
+      copyTimeblock(timeblock);
+      toast.success(t('common.toast.copied'));
+    },
+    [copyTimeblock, t],
+  );
 
   const getPasteDateForKeyboard = useCallback(() => {
     return currentDate;
@@ -157,6 +159,7 @@ export function useCalendarCrudHandlers({
       onDeleteTimeblock: deleteTimeblock,
       onDeleteTimeblockConfirm: handleDeleteTimeblockConfirm,
       onViewStats: handleViewStats,
+      onCopy: handleCopy,
       onSkip: handleSkip,
       onUnskip: handleUnskip,
     }),
@@ -168,6 +171,7 @@ export function useCalendarCrudHandlers({
       deleteTimeblock,
       handleDeleteTimeblockConfirm,
       handleViewStats,
+      handleCopy,
       handleSkip,
       handleUnskip,
     ],

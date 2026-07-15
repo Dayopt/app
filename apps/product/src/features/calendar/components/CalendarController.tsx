@@ -14,11 +14,15 @@ import { useCallback, useMemo } from 'react';
 
 import { isWeekend } from 'date-fns';
 
+import {
+  createTimeblockDuplicateDraft,
+  resolveTimeblockDestination,
+  useTimeblockInspectorStore,
+} from '@/features/timeblock';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarTimeblockActionsProvider } from '../contexts/CalendarTimeblockActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
-import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
 import { resolveCalendarDayDiffBounds, resolveCalendarRangeDiffBounds } from '../lib/day-diff';
 import { computeTimeblockDayDiffs } from '../lib/timeblock-day-diff';
@@ -87,6 +91,7 @@ interface CalendarControllerProps {
   // --- Context menu actions ---
   onDeleteTimeblockConfirm: (entry: CalendarEvent) => void;
   onViewStats: (entry: CalendarEvent) => void;
+  onCopy: (entry: CalendarEvent) => void;
   // plan ⇄ record 変換は time model に procedure が存在しないため optional（渡さなければメニュー非表示）
   onMarkUnplanned?: ((entry: CalendarEvent) => void) | undefined;
   onRestorePlanned?: ((entry: CalendarEvent) => void) | undefined;
@@ -150,6 +155,7 @@ export function CalendarController({
   onDeleteTimeblock,
   onDeleteTimeblockConfirm,
   onViewStats,
+  onCopy,
   onMarkUnplanned,
   onRestorePlanned,
   onSkip,
@@ -183,15 +189,33 @@ export function CalendarController({
   // Calendar-internal hooks
   // =========================================================================
 
-  // ショートカットレジストリのグローバルリスナー（1箇所のみ呼び出し）
-  useShortcutRegistry();
   const timezone = useUserPreferences((preferences) => preferences.timezone);
+  const openDuplicateInspector = useTimeblockInspectorStore((state) => state.openDuplicate);
   const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
   const visibleTagIds = useCalendarFilterStore((state) => state.visibleTagIds);
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
+  const handleDuplicate = useCallback(
+    (entry: CalendarEvent) => {
+      const startAt = entry.startDate ?? entry.displayStartDate;
+      const endAt = entry.endDate ?? entry.displayEndDate;
+      const kind = entry.kind ?? resolveTimeblockDestination(endAt);
+      openDuplicateInspector(
+        createTimeblockDuplicateDraft({
+          sourceId: entry.id,
+          kind,
+          title: entry.title,
+          note: entry.description ?? null,
+          tagId: entry.tagId,
+          startAt,
+          endAt,
+        }),
+      );
+    },
+    [openDuplicateInspector],
+  );
   const calendarDiffDays = useMemo(
     () => (showWeekends ? viewDateRange.days : viewDateRange.days.filter((day) => !isWeekend(day))),
     [showWeekends, viewDateRange.days],
@@ -216,8 +240,8 @@ export function CalendarController({
     [calendarDiffDays, currentDate, timezone, viewDateRange.end, viewDateRange.start, viewType],
   );
   // Step 8: compare rail は plans/records（kind 付き CalendarEvent）から直接集計する。
-  // タグ可視性・週末除外は絞るが、範囲内の時間クリップは computeTimeblockDayDiffs 側の
-  // clippedMinutes に委ねる（0分は自動的に除外される）。
+  // タグ可視性・週末除外は集計対象から外すが、Plan は Record の関係解決用contextとして残す。
+  // 連続範囲内の時間クリップは computeTimeblockDayDiffs 側の clippedMinutes に委ねる。
   const isWithinVisibleDayBounds = useCallback(
     (start: Date, end: Date) => {
       if (viewType === 'day' || showWeekends) return true;
@@ -229,7 +253,7 @@ export function CalendarController({
     void visibleTagIds;
     if (!calendarDiffEnabled) return [];
     return allTimeblocks
-      .filter((entry) => entry.kind === 'plan' && isEntryVisible(entry.tagId ?? null))
+      .filter((entry) => entry.kind === 'plan')
       .map((entry) => ({
         id: entry.id,
         title: entry.title,
@@ -238,8 +262,14 @@ export function CalendarController({
         startAt: entry.startDate ?? entry.displayStartDate,
         endAt: entry.endDate ?? entry.displayEndDate,
         skippedAt: entry.isSkipped ? (entry.startDate ?? entry.displayStartDate) : null,
-      }))
-      .filter((plan) => isWithinVisibleDayBounds(plan.startAt, plan.endAt));
+        // 範囲外・非表示タグのPlanも、表示中Recordの関係解決には残す。
+        isIncludedInDiff:
+          isEntryVisible(entry.tagId ?? null) &&
+          isWithinVisibleDayBounds(
+            entry.startDate ?? entry.displayStartDate,
+            entry.endDate ?? entry.displayEndDate,
+          ),
+      }));
   }, [allTimeblocks, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds, visibleTagIds]);
   const calendarDiffRecords = useMemo(() => {
     if (!calendarDiffEnabled) return [];
@@ -428,6 +458,8 @@ export function CalendarController({
           onClose={handleCloseContextMenu}
           onDelete={onDeleteTimeblockConfirm}
           onViewStats={onViewStats}
+          onCopy={onCopy}
+          onDuplicate={handleDuplicate}
           onMarkUnplanned={onMarkUnplanned}
           onRestorePlanned={onRestorePlanned}
           onSkip={onSkip}

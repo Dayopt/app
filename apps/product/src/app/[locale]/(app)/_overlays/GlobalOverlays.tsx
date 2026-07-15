@@ -1,18 +1,28 @@
 'use client';
 
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
 
 import { Toaster } from '@/components/ui/feedback/toast';
 import {
+  CalendarViewType,
+  ShortcutCheatSheetDialog,
   buildCalendarReviewPanelPath,
+  buildTimeblockSearchResultPath,
   isCalendarViewPath,
+  resolveTimeblockSearchResultDate,
   useCalendarNavigation,
+  useShortcutRegistry,
+  useTimeblockClipboardStore,
+  useTimeblockSearchShortcut,
+  type TimeblockSearchResult,
 } from '@/features/calendar';
-import { useTimeblockInspectorStore } from '@/features/timeblock';
+import { useTimeblockInspectorStore, type ClipboardTimeblock } from '@/features/timeblock';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { toast } from '@/lib/toast';
 
 const ContactDialog = dynamic(
   () =>
@@ -38,6 +48,14 @@ const TimeblockInspector = dynamic(
   { ssr: false },
 );
 
+const TimeblockSearchDialog = dynamic(
+  () =>
+    import('@/features/calendar/components/search/TimeblockSearchDialog').then((m) => ({
+      default: m.TimeblockSearchDialog,
+    })),
+  { ssr: false },
+);
+
 /**
  * グローバルオーバーレイ群
  *
@@ -45,24 +63,34 @@ const TimeblockInspector = dynamic(
  * layout.tsx から分離し、追加/削除を一箇所で管理する。
  */
 export function GlobalOverlays() {
+  useShortcutRegistry();
+  useTimeblockSearchShortcut();
+
   const locale = useLocale();
+  const t = useTranslations();
   const router = useRouter();
   const pathname = usePathname();
   const calendarNavigation = useCalendarNavigation();
+  const timezone = useUserPreferences((preferences) => preferences.timezone);
 
   const activeSheet = useShellStore.use.activeSheet();
   const closeSheet = useShellStore.use.closeSheet();
+  const openTimeblockSearch = useShellStore.use.openTimeblockSearch();
+  const closeTimeblockSearch = useShellStore.use.closeTimeblockSearch();
   const contactOpen = activeSheet?.type === 'contact';
   const settingsOpen = activeSheet?.type === 'settings';
+  const timeblockSearchOpen = activeSheet?.type === 'timeblockSearch';
+  const shortcutCheatSheetOpen = activeSheet?.type === 'shortcutCheatSheet';
   const isInspectorOpen = useTimeblockInspectorStore((s) => s.isOpen);
   const closeInspector = useTimeblockInspectorStore((s) => s.closeInspector);
+  const copyTimeblock = useTimeblockClipboardStore((state) => state.copyTimeblock);
 
-  // C4: モーダル（Settings/Contact）が開いたら Inspector を閉じる（排他制御）
+  // shell overlayが開いたら Inspector を閉じる（排他制御）
   useEffect(() => {
-    if (settingsOpen || contactOpen) {
+    if (settingsOpen || contactOpen || timeblockSearchOpen || shortcutCheatSheetOpen) {
       closeInspector();
     }
-  }, [settingsOpen, contactOpen, closeInspector]);
+  }, [settingsOpen, contactOpen, timeblockSearchOpen, shortcutCheatSheetOpen, closeInspector]);
 
   // Inspector は Calendar ビュー専用 — workspace ビュー外への遷移で自動 close。
   // URL は平坦化済み（/day, /week, /Nday）のため isCalendarViewPath で判定する。
@@ -81,14 +109,60 @@ export function GlobalOverlays() {
   // 競合し「inspector だけ閉じて panel に到達しない」問題を解消する。
   const handleViewStats = useCallback(
     (tagId: string) => {
+      const pathWithoutLocale = pathname?.replace(/^\/(ja|en)/, '') ?? '';
+      const currentViewSegment = pathWithoutLocale.split('/')[1]?.split('?')[0] ?? '';
+      const fallbackView: CalendarViewType = isCalendarViewPath(pathWithoutLocale)
+        ? currentViewSegment === 'day' ||
+          currentViewSegment === 'week' ||
+          /^\d+day$/.test(currentViewSegment)
+          ? (currentViewSegment as CalendarViewType)
+          : 'week'
+        : 'week';
       if (calendarNavigation) {
         calendarNavigation.setPanelKind('review', { reviewTagId: tagId });
       } else {
-        router.push(buildCalendarReviewPanelPath(locale, new Date(), tagId));
+        router.push(buildCalendarReviewPanelPath(locale, new Date(), tagId, fallbackView));
       }
       closeInspector();
     },
-    [calendarNavigation, closeInspector, router, locale],
+    [calendarNavigation, closeInspector, pathname, router, locale],
+  );
+
+  const handleCopy = useCallback(
+    (timeblock: ClipboardTimeblock) => {
+      copyTimeblock(timeblock);
+      toast.success(t('common.toast.copied'));
+    },
+    [copyTimeblock, t],
+  );
+
+  const handleSearchOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        openTimeblockSearch();
+      } else {
+        closeTimeblockSearch();
+      }
+    },
+    [closeTimeblockSearch, openTimeblockSearch],
+  );
+
+  const handleOpenSearchResult = useCallback(
+    (result: TimeblockSearchResult) => {
+      calendarNavigation?.navigateToDate(
+        resolveTimeblockSearchResultDate(result.startAt, timezone),
+      );
+      router.push(
+        buildTimeblockSearchResultPath({
+          locale,
+          startAt: result.startAt,
+          timezone,
+          timeblockId: result.id,
+          kind: result.kind,
+        }),
+      );
+    },
+    [calendarNavigation, locale, router, timezone],
   );
 
   return (
@@ -100,7 +174,18 @@ export function GlobalOverlays() {
         }}
       />
       <SettingsDialog />
-      <TimeblockInspector onViewStats={handleViewStats} />
+      <TimeblockSearchDialog
+        open={timeblockSearchOpen}
+        onOpenChange={handleSearchOpenChange}
+        onOpenResult={handleOpenSearchResult}
+      />
+      <ShortcutCheatSheetDialog
+        open={shortcutCheatSheetOpen}
+        onOpenChange={(open) => {
+          if (!open) closeSheet();
+        }}
+      />
+      <TimeblockInspector onViewStats={handleViewStats} onCopy={handleCopy} />
       <Toaster />
     </>
   );

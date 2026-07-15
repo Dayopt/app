@@ -139,29 +139,43 @@
       "deleteConfirmDescription": "This view configuration will be deleted. This action cannot be undone.",
       "deleteConfirm": "Delete"
     },
+    "relationships": {
+      "relatedRecords": "Related records",
+      "recordSummary": "{count, plural, one {# record} other {# records}} · {duration} total",
+      "originalPlan": "Original plan",
+      "originalPlanUnavailable": "Original plan is unavailable",
+      "openRecord": "Open record: {tag}, {dateTime}, {duration}",
+      "openPlan": "Open original plan: {tag}, {dateTime}, {duration}",
+      "loadFailed": "Could not load relationships"
+    },
     "editor": {
       "destination": {
         "plan": "Save as plan",
         "record": "Save as record"
       },
-      "title": "Title",
-      "titlePlaceholder": "What did you do?",
       "date": "Date",
       "time": "Time",
       "note": "Note",
       "notePlaceholder": "Add a note...",
-      "save": "Save",
       "timeLocked": "Time is fixed for past plans",
+      "duplicate": {
+        "create": "Create duplicate",
+        "created": "Duplicated",
+        "validation": {
+          "invalidRange": "The end time must be after the start time",
+          "planRequiresFuture": "Choose a future time for the Plan",
+          "recordRequiresPast": "Choose a past time for the Record"
+        }
+      },
       "recordAsIs": "Record as planned",
       "confirmDay": "Confirm day",
       "toast": {
         "recorded": "Recorded ✓",
         "dayConfirmed": "Day recorded ✓",
         "overlap": "This time slot is already taken",
-        "saveFailed": "Could not save. Please try again",
+        "saveFailed": "Could not save. Your changes are still here. Please try again",
         "recordFailed": "Could not record. Please try again",
         "confirmFailed": "Could not confirm the day. Please try again",
-        "saved": "Saved ✓",
         "deleted": "Deleted",
         "deleteFailed": "Could not delete. Please try again",
         "restored": "Restored",

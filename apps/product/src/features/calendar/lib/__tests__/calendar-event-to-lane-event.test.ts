@@ -1,0 +1,51 @@
+import { describe, expect, it } from 'vitest';
+
+import type { CalendarEvent } from '../../types/calendar.types';
+import { calendarEventToRecordEvent } from '../calendar-event-to-lane-event';
+
+const startDate = new Date('2026-07-10T09:00:00.000Z');
+const endDate = new Date('2026-07-10T09:30:00.000Z');
+
+function makeRecordEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+  return {
+    id: 'record-1',
+    title: 'Deep Work',
+    startDate,
+    endDate,
+    status: 'closed',
+    color: '',
+    createdAt: startDate,
+    updatedAt: startDate,
+    displayStartDate: startDate,
+    displayEndDate: endDate,
+    duration: 30,
+    isMultiDay: false,
+    origin: 'planned',
+    timeblockState: 'past',
+    kind: 'record',
+    planId: 'plan-1',
+    recordSource: 'from_plan',
+    ...overrides,
+  };
+}
+
+describe('calendarEventToRecordEvent', () => {
+  it('集約済みの合計差分を代表Recordへ引き継ぐ', () => {
+    const event = calendarEventToRecordEvent(makeRecordEvent({ diffMinutes: -20 }));
+
+    expect(event).toMatchObject({
+      id: 'record-1',
+      duration: 30,
+      planId: 'plan-1',
+      diffMinutes: -20,
+    });
+  });
+
+  it('secondary Recordは個別のPlan差分を再計算しない', () => {
+    const event = calendarEventToRecordEvent(
+      makeRecordEvent({ id: 'record-2', recordSource: 'manual', diffMinutes: undefined }),
+    );
+
+    expect(event.diffMinutes).toBeUndefined();
+  });
+});

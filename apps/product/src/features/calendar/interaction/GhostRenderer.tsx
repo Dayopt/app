@@ -197,6 +197,15 @@ export function GhostRenderer({ state, renderGhost, timeFormat }: GhostRendererP
     willChange: 'transform',
   };
 
+  const customContent = state.isOverlapping
+    ? null
+    : renderGhost?.({
+        timeblockId: state.timeblockId,
+        previewTime: state.previewTime,
+        isOverlapping: false,
+        mode: 'dragging',
+      });
+
   // 重複時は全面 destructive、そうでなければ通常 ghost を描画
   const content = state.isOverlapping ? (
     <ConflictOverlay
@@ -206,18 +215,15 @@ export function GhostRenderer({ state, renderGhost, timeFormat }: GhostRendererP
       className="h-full"
     />
   ) : (
-    renderGhost?.({
-      timeblockId: state.timeblockId,
-      previewTime: state.previewTime,
-      isOverlapping: false,
-      mode: 'dragging',
-    })
+    customContent
   );
 
   return createPortal(
     <div
       className={cn(
-        'shadow-card pointer-events-none rounded-lg',
+        'pointer-events-none rounded-lg',
+        // custom ghostはカード自身がlane幅のshadowを持つ。fallback / conflictだけwrapperへ付与する。
+        (state.isOverlapping || customContent == null) && 'shadow-card',
         // 重複時は不透明で文字をくっきり読ませる。通常時のみ opacity-85 でゴースト感を出す。
         state.isOverlapping ? 'cursor-not-allowed' : 'opacity-85',
       )}

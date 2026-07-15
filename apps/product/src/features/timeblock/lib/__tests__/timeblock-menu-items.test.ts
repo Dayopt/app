@@ -15,6 +15,8 @@ describe('getTimeblockMenuItems', () => {
   const baseArgs = {
     tagId: 'tag-1',
     onViewStats: noop,
+    onCopy: noop,
+    onDuplicate: noop,
     onMarkUnplanned: noop,
     onRestorePlanned: noop,
     onDelete: noop,
@@ -44,6 +46,28 @@ describe('getTimeblockMenuItems', () => {
       expect(keys({ ...baseArgs, origin: 'unplanned', isUpcoming: false })).not.toContain(
         'markUnplanned',
       );
+    });
+  });
+
+  describe('copy', () => {
+    it('ハンドラ指定時は種別に関係なく表示する', () => {
+      expect(keys({ ...baseArgs, origin: 'planned' })).toContain('copy');
+      expect(keys({ ...baseArgs, origin: 'unplanned' })).toContain('copy');
+    });
+
+    it('ハンドラ未指定なら表示しない', () => {
+      expect(keys({ origin: 'planned', tagId: null })).not.toContain('copy');
+    });
+  });
+
+  describe('duplicate', () => {
+    it('ハンドラ指定時はPlanとRecordの両方に表示する', () => {
+      expect(keys({ ...baseArgs, origin: 'planned' })).toContain('duplicate');
+      expect(keys({ ...baseArgs, origin: 'unplanned' })).toContain('duplicate');
+    });
+
+    it('ハンドラ未指定なら表示しない', () => {
+      expect(keys({ origin: 'planned', tagId: null })).not.toContain('duplicate');
     });
   });
 

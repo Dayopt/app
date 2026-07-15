@@ -3,7 +3,9 @@ import 'server-only';
 import { databaseTables } from '@/lib/database';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
+import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
 import { TimeblockOverlapService } from './timeblock-overlap-service';
+import { buildTimeblockSearchFilter } from './timeblock-search-query';
 import { TimeblockServiceError } from './timeblock-service-error';
 import type {
   CreateRecordOptions,
@@ -29,6 +31,7 @@ export class RecordService {
       userId,
       tagId,
       planId,
+      planIds,
       search,
       startDate,
       endDate,
@@ -38,6 +41,8 @@ export class RecordService {
       offset,
     } = options;
 
+    if (planIds?.length === 0) return [];
+
     let query = this.supabase
       .from(databaseTables.records)
       .select('*')
@@ -46,12 +51,15 @@ export class RecordService {
 
     if (tagId) query = query.eq('tag_id', tagId);
     if (planId) query = query.eq('plan_id', planId);
+    if (planIds) query = query.in('plan_id', planIds);
 
     if (search) {
-      const sanitized = this.sanitizeSearch(search);
-      if (sanitized.length > 0) {
-        query = query.or(`title.ilike.%${sanitized}%,note.ilike.%${sanitized}%`);
-      }
+      const searchFilter = await buildTimeblockSearchFilter({
+        supabase: this.supabase,
+        userId,
+        search,
+      });
+      query = query.or(searchFilter);
     }
 
     if (startDate && endDate) {
@@ -67,10 +75,16 @@ export class RecordService {
     if (limit) query = query.limit(limit);
     if (offset) query = query.range(offset, offset + (limit ?? 100) - 1);
 
-    const { data, error } = await query;
+    const { data, error } = search
+      ? await runPrivateTimeblockSearchQuery(() => query)
+      : await query;
 
     if (error) {
-      throw new TimeblockServiceError('FETCH_FAILED', `Failed to fetch records: ${error.message}`);
+      // 検索時のDB messageはPostgREST filter（検索語）を含み得るため連結しない。
+      const message = search
+        ? 'Failed to fetch records'
+        : `Failed to fetch records: ${error.message}`;
+      throw new TimeblockServiceError('FETCH_FAILED', message);
     }
 
     return data ?? [];
@@ -311,10 +325,6 @@ export class RecordService {
       );
     }
     throw new TimeblockServiceError(code, `${prefix}: ${error.message}`);
-  }
-
-  private sanitizeSearch(search: string): string {
-    return search.replace(/[.,()\\%*:]/g, '');
   }
 }
 

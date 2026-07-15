@@ -55,6 +55,29 @@ describe('useInspectorURLSync', () => {
     });
   });
 
+  it('client navigationで追加されたURLパラメータへ追従する', () => {
+    const { rerender } = renderHook(() => useInspectorURLSync());
+
+    window.history.replaceState({}, '', '/ja/day?timeblock=plan%3Asearched-plan');
+    rerender();
+
+    expect(useTimeblockInspectorStore.getState()).toMatchObject({
+      timeblockId: 'searched-plan',
+      timeblockKind: 'plan',
+      isOpen: true,
+    });
+  });
+
+  it('storeから閉じた時はURLパラメータを削除し、直前のURLから開き直さない', () => {
+    window.history.replaceState({}, '', '/ja/day?timeblock=record%3Arecord-id');
+    renderHook(() => useInspectorURLSync());
+
+    act(() => useTimeblockInspectorStore.getState().closeInspector());
+
+    expect(replace).toHaveBeenLastCalledWith('/ja/day', { scroll: false });
+    expect(useTimeblockInspectorStore.getState().isOpen).toBe(false);
+  });
+
   it('旧log URLは受理しない', () => {
     window.history.replaceState({}, '', '/ja/day?timeblock=log%3Alegacy-id');
     renderHook(() => useInspectorURLSync());

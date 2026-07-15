@@ -138,7 +138,7 @@ export const TimeblockCardContent = memo<TimeblockCardContentProps>(function Tim
   if (isCompact) {
     return (
       <div className="flex h-full items-center gap-1">
-        {tagIcon && <TagIcon icon={tagIcon} color={tagColor} size="sm" className="shrink-0" />}
+        <TagIcon icon={tagIcon} color={tagColor} size="sm" className="shrink-0" />
         {tagName ? (
           <span className="text-foreground truncate text-sm leading-tight font-normal">
             {tagName}
@@ -155,7 +155,7 @@ export const TimeblockCardContent = memo<TimeblockCardContentProps>(function Tim
   return (
     <div className="relative flex h-full flex-col gap-1 overflow-hidden">
       <div className="flex flex-shrink-0 items-center gap-1 text-sm leading-tight font-normal">
-        {tagIcon && <TagIcon icon={tagIcon} color={tagColor} size="sm" className="shrink-0" />}
+        <TagIcon icon={tagIcon} color={tagColor} size="sm" className="shrink-0" />
         {tagName ? (
           <span className="text-foreground truncate">{tagName}</span>
         ) : (

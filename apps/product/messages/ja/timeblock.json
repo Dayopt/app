@@ -139,29 +139,43 @@
       "deleteConfirmDescription": "この表示設定は完全に削除されます。取り消せません",
       "deleteConfirm": "削除"
     },
+    "relationships": {
+      "relatedRecords": "関連する記録",
+      "recordSummary": "{count}件 · 計{duration}",
+      "originalPlan": "元の予定",
+      "originalPlanUnavailable": "元の予定を表示できません",
+      "openRecord": "記録を開く: {tag}、{dateTime}、{duration}",
+      "openPlan": "元の予定を開く: {tag}、{dateTime}、{duration}",
+      "loadFailed": "関連を読み込めませんでした"
+    },
     "editor": {
       "destination": {
         "plan": "予定として保存",
         "record": "記録として保存"
       },
-      "title": "タイトル",
-      "titlePlaceholder": "何をしましたか？",
       "date": "日付",
       "time": "時間",
       "note": "メモ",
       "notePlaceholder": "例: 集中できた",
-      "save": "保存",
       "timeLocked": "過去の予定の時間は変更できません",
+      "duplicate": {
+        "create": "複製を作成",
+        "created": "複製しました",
+        "validation": {
+          "invalidRange": "終了時刻は開始時刻より後にしてください",
+          "planRequiresFuture": "予定は未来の時間を選んでください",
+          "recordRequiresPast": "記録は過去の時間を選んでください"
+        }
+      },
       "recordAsIs": "そのまま記録",
       "confirmDay": "この日を確定",
       "toast": {
         "recorded": "記録しました ✓",
         "dayConfirmed": "この日を記録しました ✓",
         "overlap": "この時間帯には既に記録があります",
-        "saveFailed": "保存できませんでした。もう一度お試しください",
+        "saveFailed": "保存できませんでした。入力内容は保持されています。もう一度お試しください",
         "recordFailed": "記録できませんでした。もう一度お試しください",
         "confirmFailed": "この日を確定できませんでした。もう一度お試しください",
-        "saved": "保存しました ✓",
         "deleted": "削除しました",
         "deleteFailed": "削除できませんでした。もう一度お試しください",
         "restored": "復元しました",

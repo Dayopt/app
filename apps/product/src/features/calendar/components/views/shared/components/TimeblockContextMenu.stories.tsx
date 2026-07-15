@@ -6,18 +6,6 @@ import { fn } from 'storybook/test';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { EventContextMenu } from './TimeblockContextMenu';
 
-/** エントリコンテキストメニュー。右クリックメニューとして使用する。 */
-const meta = {
-  title: 'Product/Features/Calendar/Interaction/TimeblockContextMenu',
-  parameters: {
-    layout: 'padded',
-  },
-  tags: ['autodocs'],
-} satisfies Meta;
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
 // ─────────────────────────────────────────────────────────
 // サンプルデータ
 // ─────────────────────────────────────────────────────────
@@ -28,6 +16,7 @@ const pastEnd = new Date('2026-03-18T11:00:00');
 /** 完了済み planned entry（全項目表示の前提） */
 const completedPlannedEntry: CalendarEvent = {
   id: 'entry-1',
+  kind: 'plan',
   title: 'デザインレビュー',
   description: '週次デザインシンク',
   startDate: past,
@@ -73,8 +62,30 @@ const upcomingPlannedEntry: CalendarEvent = {
 const unplannedEntry: CalendarEvent = {
   ...completedPlannedEntry,
   id: 'entry-4',
+  kind: 'record',
   origin: 'unplanned',
 };
+
+/** エントリコンテキストメニュー。右クリックメニューとして使用する。 */
+const meta = {
+  title: 'Product/Features/Calendar/Interaction/TimeblockContextMenu',
+  component: EventContextMenu,
+  parameters: {
+    layout: 'padded',
+  },
+  tags: ['autodocs'],
+  args: {
+    entry: completedPlannedEntry,
+    position: { x: 0, y: 0 },
+    onClose: fn(),
+  },
+  argTypes: {
+    onDuplicate: { control: false },
+  },
+} satisfies Meta<typeof EventContextMenu>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 // ─────────────────────────────────────────────────────────
 // ヘルパー
@@ -114,6 +125,8 @@ function ContextMenuTrigger({
 const allHandlers = {
   onDelete: fn(),
   onViewStats: fn(),
+  onCopy: fn(),
+  onDuplicate: fn(),
   onMarkUnplanned: fn(),
   onRestorePlanned: fn(),
 };
@@ -127,12 +140,14 @@ export const Default: Story = {
   render: () => <ContextMenuTrigger entry={completedPlannedEntry} menuProps={allHandlers} />,
 };
 
-/** 削除のみ。 */
-export const DeleteOnly: Story = {
+/** コピー・複製と削除。 */
+export const CopyAndDelete: Story = {
   render: () => (
     <ContextMenuTrigger
       entry={completedPlannedEntry}
       menuProps={{
+        onCopy: fn(),
+        onDuplicate: fn(),
         onDelete: fn(),
       }}
     />
@@ -202,12 +217,14 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">削除のみ</span>
+        <span className="text-muted-foreground text-xs">コピー・複製と削除</span>
         <div className="relative" style={{ height: 80 }}>
           <EventContextMenu
             entry={completedPlannedEntry}
             position={{ x: 0, y: 0 }}
             onClose={fn()}
+            onCopy={fn()}
+            onDuplicate={fn()}
             onDelete={fn()}
           />
         </div>
