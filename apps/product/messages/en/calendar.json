@@ -429,6 +429,9 @@
       }
     },
     "mobile": {
+      "weekLaneSwitcher": {
+        "ariaLabel": "Blocks to show"
+      },
       "touchHint": {
         "title": "Long press to create",
         "description": "Press and hold on the timeline to create a new timeblock"

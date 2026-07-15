@@ -361,6 +361,55 @@ describe('CalendarNavigationProvider', () => {
     );
   });
 
+  it('モバイルでもWeekへ切り替えられる', () => {
+    mockUseMediaQuery.mockReturnValue(true);
+    window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
+    mockPathname = '/ja/day';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'week' }));
+
+    expect(screen.getByTestId('view')).toHaveTextContent('week');
+    expect(window.location.pathname + window.location.search).toBe('/ja/week?date=2026-03-25');
+  });
+
+  it('モバイルのWeek直URLをdayへ戻さない', () => {
+    mockUseMediaQuery.mockReturnValue(true);
+    window.history.replaceState(null, '', '/ja/week?date=2026-03-25');
+    mockPathname = '/ja/week';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('view')).toHaveTextContent('week');
+    expect(window.location.pathname + window.location.search).toBe('/ja/week?date=2026-03-25');
+  });
+
+  it('モバイルでは未対応の複数日表示へ切り替えない', () => {
+    mockUseMediaQuery.mockReturnValue(true);
+    window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
+    mockPathname = '/ja/day';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '3day' }));
+
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
+    expect(window.location.pathname + window.location.search).toBe('/ja/day?date=2026-03-25');
+  });
+
   it('preserves calendar state when the current route is not a calendar page', () => {
     window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
     mockPathname = '/ja/day';

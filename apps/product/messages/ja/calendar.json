@@ -429,6 +429,9 @@
       }
     },
     "mobile": {
+      "weekLaneSwitcher": {
+        "ariaLabel": "表示するブロック"
+      },
       "touchHint": {
         "title": "長押しで作成",
         "description": "タイムライン上を長押しして新しいタイムブロックを作成"

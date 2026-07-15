@@ -26,6 +26,10 @@ const MAIN_VIEW_OPTIONS: MainViewOption[] = [
   { value: 'week', count: 7, shortcut: '7', icon: CalendarRange },
 ];
 
+const MOBILE_VIEW_OPTIONS = MAIN_VIEW_OPTIONS.filter(
+  (option) => option.value === 'day' || option.value === 'week',
+);
+
 /**
  * サイドバー用ビュー切り替えリスト（モバイル専用）
  *
@@ -52,7 +56,7 @@ export function ViewSwitcherList() {
   return (
     <div className="flex flex-col gap-1 px-2 py-2 md:hidden">
       {/* メインビュー */}
-      {MAIN_VIEW_OPTIONS.map((option) => {
+      {MOBILE_VIEW_OPTIONS.map((option) => {
         const isActive = currentView === option.value;
         const Icon = option.icon;
 

@@ -40,6 +40,8 @@ interface RecordLaneCardProps {
   compact?: boolean | undefined;
   /** ユーザー設定に基づく時刻表記 */
   timeFormat?: TimeFormat | undefined;
+  /** false の場合はdrag ghostなど表示専用として操作・focus対象から外す */
+  interactive?: boolean | undefined;
   onClick?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
@@ -70,6 +72,7 @@ export function RecordLaneCard({
   showDayDiffMarker = false,
   compact = false,
   timeFormat = '24h',
+  interactive = true,
   onClick,
   onContextMenu,
   onPointerDown,
@@ -83,24 +86,26 @@ export function RecordLaneCard({
   const isUnplanned = event.planId == null;
   const hasDiff = event.diffMinutes != null && event.diffMinutes !== 0;
   const showDetails = !compact && position.height >= DETAIL_HEIGHT_THRESHOLD;
-  const canDrag = !disableDrag && Boolean(onPointerDown);
+  const canDrag = interactive && !disableDrag && Boolean(onPointerDown);
   return (
     <div
       data-record-lane-card
       data-record-planned={!isUnplanned}
-      data-entry-block="true"
-      tabIndex={0}
-      role="button"
-      aria-label={displayName}
+      data-entry-block={interactive ? 'true' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      role={interactive ? 'button' : undefined}
+      aria-label={interactive ? displayName : undefined}
+      aria-hidden={interactive ? undefined : true}
       className={cn(
-        'pointer-events-auto absolute flex flex-col gap-1 overflow-hidden rounded-lg py-1 text-xs',
+        'absolute flex flex-col gap-1 overflow-hidden rounded-lg py-1 text-xs',
+        interactive ? 'pointer-events-auto' : 'pointer-events-none',
         compact ? 'px-1' : 'px-2',
         colorClasses?.tint ?? 'bg-card',
         'text-foreground',
         'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
         isActive && 'ring-ring ring-2',
         showDayDiffMarker && 'pr-7',
-        canDrag ? 'cursor-grab' : 'cursor-pointer',
+        interactive && (canDrag ? 'cursor-grab' : 'cursor-pointer'),
         className,
       )}
       style={{
@@ -110,20 +115,32 @@ export function RecordLaneCard({
         height: `${Math.max(position.height, MIN_HEIGHT)}px`,
         ...styleOverride,
       }}
-      onClick={(e) => onClick?.(event, e)}
-      onContextMenu={(e) => onContextMenu?.(event, e)}
-      onMouseDown={(e) => {
-        if (e.button === 0 && canDrag) onPointerDown?.(event, e);
-      }}
-      onTouchStart={(e) => {
-        if (canDrag) onTouchStart?.(event, e);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick?.(event, e as unknown as React.MouseEvent);
-        }
-      }}
+      onClick={interactive ? (e) => onClick?.(event, e) : undefined}
+      onContextMenu={interactive ? (e) => onContextMenu?.(event, e) : undefined}
+      onMouseDown={
+        interactive
+          ? (e) => {
+              if (e.button === 0 && canDrag) onPointerDown?.(event, e);
+            }
+          : undefined
+      }
+      onTouchStart={
+        interactive
+          ? (e) => {
+              if (canDrag) onTouchStart?.(event, e);
+            }
+          : undefined
+      }
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.(event, e as unknown as React.MouseEvent);
+              }
+            }
+          : undefined
+      }
     >
       <div className="flex items-start justify-between gap-1">
         <p className="flex min-h-0 items-start gap-1 truncate font-medium">

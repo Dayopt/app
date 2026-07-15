@@ -51,7 +51,10 @@ const meta = {
     position: basePosition,
     tagName: 'Deep Work',
   },
-  argTypes: { showDayDiffMarker: { control: 'boolean' } },
+  argTypes: {
+    showDayDiffMarker: { control: 'boolean' },
+    interactive: { control: 'boolean' },
+  },
 } satisfies Meta<typeof RecordLaneCard>;
 
 export default meta;
@@ -156,6 +159,22 @@ export const CompareTarget: Story = {
   ),
 };
 
+/** Drag中の表示専用preview。操作・focus対象にしない。 */
+export const GhostPreview: Story = {
+  render: () => (
+    <Slot>
+      <RecordLaneCard
+        event={makeEvent({ diffMinutes: 0 })}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="blue"
+        interactive={false}
+        className="shadow-card"
+      />
+    </Slot>
+  ),
+};
+
 /** Week / 5-day の狭い Record レーン。secondary detail は省略する。 */
 export const NarrowLane: Story = {
   render: () => (
@@ -219,6 +238,16 @@ export const AllPatterns: Story = {
           />
         </Slot>
       </div>
+      <Slot>
+        <RecordLaneCard
+          event={makeEvent({ diffMinutes: 0 })}
+          position={basePosition}
+          tagName="Deep Work"
+          tagColor="blue"
+          interactive={false}
+          className="shadow-card"
+        />
+      </Slot>
       <div className="border-border relative h-24 w-16 overflow-hidden rounded-lg border">
         <RecordLaneCard
           event={makeEvent({ title: 'デザインレビュー', diffMinutes: 20 })}

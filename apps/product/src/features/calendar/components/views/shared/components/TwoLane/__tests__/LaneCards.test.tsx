@@ -77,6 +77,30 @@ describe('TwoLane cards', () => {
     expect(screen.queryByText('Legacy plan title')).not.toBeInTheDocument();
   });
 
+  it('drag ghostは操作・focus対象にしない', () => {
+    const { container } = render(
+      <div>
+        <PlanLaneCard event={plan} position={position} tagName="Deep Work" interactive={false} />
+        <RecordLaneCard
+          event={record}
+          position={position}
+          tagName="Deep Work"
+          interactive={false}
+        />
+      </div>,
+    );
+
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    for (const card of container.querySelectorAll(
+      '[data-plan-lane-card], [data-record-lane-card]',
+    )) {
+      expect(card).toHaveClass('pointer-events-none');
+      expect(card).not.toHaveAttribute('tabindex');
+      expect(card).not.toHaveAttribute('data-entry-block');
+      expect(card).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
+
   it('Compare対象のPlanカードにmarkerを表示する', () => {
     const { container } = render(
       <PlanLaneCard event={plan} position={position} tagName="Deep Work" showDayDiffMarker />,
@@ -125,7 +149,7 @@ describe('TwoLane cards', () => {
 
     const badge = container.querySelector('[data-record-diff-badge]');
     expect(badge).not.toBeNull();
-    expect(badge).toHaveClass('text-foreground');
+    expect(badge).toHaveClass('text-muted-foreground');
     expect(badge).not.toHaveClass('text-success', 'text-destructive');
   });
 });

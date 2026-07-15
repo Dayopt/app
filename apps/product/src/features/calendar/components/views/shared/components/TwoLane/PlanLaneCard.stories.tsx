@@ -48,7 +48,10 @@ const meta = {
     position: basePosition,
     tagName: 'Deep Work',
   },
-  argTypes: { showDayDiffMarker: { control: 'boolean' } },
+  argTypes: {
+    showDayDiffMarker: { control: 'boolean' },
+    interactive: { control: 'boolean' },
+  },
 } satisfies Meta<typeof PlanLaneCard>;
 
 export default meta;
@@ -165,6 +168,22 @@ export const CompareTarget: Story = {
   ),
 };
 
+/** Drag中の表示専用preview。操作・focus対象にしない。 */
+export const GhostPreview: Story = {
+  render: () => (
+    <Slot>
+      <PlanLaneCard
+        event={makeEvent('upcoming')}
+        position={basePosition}
+        tagName="Deep Work"
+        tagColor="blue"
+        interactive={false}
+        className="shadow-card"
+      />
+    </Slot>
+  ),
+};
+
 /** Week / multi-day の狭い Plan レーン。 */
 export const NarrowLane: Story = {
   render: () => (
@@ -203,6 +222,16 @@ export const AllPatterns: Story = {
           />
         </Slot>
       ))}
+      <Slot>
+        <PlanLaneCard
+          event={makeEvent('upcoming')}
+          position={basePosition}
+          tagName="Deep Work"
+          tagColor="blue"
+          interactive={false}
+          className="shadow-card"
+        />
+      </Slot>
       <div className="border-border relative h-24 w-12 overflow-hidden rounded-lg border">
         <PlanLaneCard
           event={makeEvent('upcoming', { title: 'デザインレビュー' })}

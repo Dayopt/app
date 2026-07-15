@@ -12,6 +12,7 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 
 - Day / Week / Multi-Day（2〜9日）で、表示範囲と基準日をURLに保持する
 - 各日カラムをPlanレーンとRecordレーンに分ける。Planは控えめなoutline、Recordは塗りで表示する
+- モバイルはDay / Weekを提供する。Weekでは予定または記録を切り替えて日カラム全幅に表示し、最後に選んだ表示を端末へ保持する。既定は記録
 - 新規作成時の保存先は`end_at > now`ならPlan、`end_at <= now`ならRecordとして自動決定し、既存Plan / Recordの編集では種別を維持する
 - 15分gridへのsnap、dragによる移動・resize、keyboard操作、tag filterを提供する
 - Calendarの時間軸、card、選択 / drag preview、Diff panelの時刻表示はユーザー設定の12時間 / 24時間表記に従う。Inspectorの入力・保存値は`HH:mm`を正とする
@@ -19,6 +20,7 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 - hour gridとday dividerは内部線としてsubtleに表示し、同じ境界を重ねて描画しない
 - Diffは符号と方向を数字・iconで示し、増減そのものをsuccess / destructive色で評価しない
 - 過去Planの時間は凍結し、Recordの時間は訂正できる
+- 既存カードのdrag previewは移動先のレーンと同じカードで表示する。Planはoutline、RecordとPlan→Recordの記録化previewは塗りで区別する
 - 過去PlanをRecordレーンへdragすると、drop previewの時間帯で元Planに紐づくRecordを作る。元Planは移動せず、Record同士が重ならなければ同じPlanへ複数回記録できる
 - 1つのPlanに複数のRecordがある場合、Calendarの差分は関連Recordの合計時間から計算し、代表するRecord card 1枚だけに表示する。`±0`は表示しない
 - `panel=diff`では差分一覧の対象をcompare markerで通常cardにも示す。予定に対する記録・skip・未記録はPlan、予定外の記録はRecordを対象とし、関連Recordすべてへ重複表示しない
