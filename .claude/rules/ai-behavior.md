@@ -1,58 +1,44 @@
 # AI行動規範
 
-## 拡張思考（Extended Thinking）
+Human–Agent Partnership、権限境界、read-only delegation、writer ownership の正本は `AGENTS.md` とする。本ファイルは、Main がタスクの負荷と進行方法を決めるための補足だけを定義する。
 
-| キーワード     | 思考予算       | 使用ケース                          |
-| -------------- | -------------- | ----------------------------------- |
-| `think`        | 低（5-10秒）   | 既存パターン確認、簡単なバグ特定    |
-| `think hard`   | 中（30-60秒）  | 複雑なロジック設計、選択肢比較      |
-| `think harder` | 高（2-3分）    | アーキテクチャ変更、複数機能の統合  |
-| `ultrathink`   | 最大（5-10分） | CLAUDE.md変更、プロジェクト全体方針 |
+## Reasoning effort
+
+モデル名やユーザーの magic word ではなく、不確実性、影響範囲、可逆性に合わせて reasoning effort を選ぶ。
+
+| Effort   | 使用ケース                                                                                       |
+| -------- | ------------------------------------------------------------------------------------------------ |
+| **軽量** | 対象 path が明確な検索、既存 pattern の確認、局所的で可逆な修正                                  |
+| **標準** | 通常の実装、bug fix、複数候補の比較、既存 contract の検証                                        |
+| **高**   | architecture、security、migration、複数 feature の統合、不可逆または Production-sensitive な判断 |
+
+- model / provider 固有の mapping を repo rules に固定しない
+- 高 effort は agent の人数ではなく、一次情報の質と反証の深さに使う
+- task が単純なら agent を増やさず Main が完結させる
 
 ## 曖昧な指示への対応
 
-確信度99%未満 → 必ず確認。1-5問に絞り、選択式で `defaults` 一括承認可能に。
+1. repo、docs、issue、external state から判明する事実は先に調べる
+2. 承認済み scope 内で安全かつ可逆なら、合理的な仮定を明示して進める
+3. `CHECKPOINT` または `EXPLICIT AUTHORITY` に当たる未決事項だけを、証拠付きの推奨とともにユーザーへ返す
+4. 質問、懸念、仮説を指示や承認へ読み替えない
 
-## Subagentモデル選択
+確信度の一律 threshold は使わない。確認要否は `AGENTS.md` の authority level で決める。
 
-モデル名ではなく能力ティアで指定する。具体的なモデル名は本ファイル末尾の「現行モデルマッピング」だけに書き、世代交代時はその表のみ更新する。
+## Unattended execution
 
-| ティア     | 使うべきタスク                           |
-| ---------- | ---------------------------------------- |
-| **軽量**   | ファイル検索、Grep、ドキュメント調査     |
-| **標準**   | 通常のコード実装、バグ修正（デフォルト） |
-| **最上位** | 5+ファイル変更、アーキテクチャ設計       |
+無人実行は、仕様が確定し、機械的で、可逆かつ failure が局所化される作業に限る。
 
-## auto mode 使用ガイドライン
-
-Shift+Tab で切替可能な auto mode（research preview）は「事前に十分なコンテキストが与えられており、機械的展開で完了できる長時間タスク」で推奨。
-
-| 場面                                           | auto mode   | 理由                                              |
-| ---------------------------------------------- | ----------- | ------------------------------------------------- |
-| Skill trigger 整備、文言の一括リファクタ       | ✅ 使う     | 仕様確定、機械的展開                              |
-| 全 Storybook snapshot 再生成                   | ✅ 使う     | 意思決定なし、ループ処理                          |
-| i18n キーの一括追加                            | ✅ 使う     | 翻訳ファイル更新のみで design decision を含まない |
-| Supabase schema / RLS 変更                     | ❌ 使わない | 影響範囲を途中で再確認する必要がある              |
-| 新機能の design decision を含むタスク          | ❌ 使わない | plan 通りでも途中で仕様の不明点が顕在化する       |
-| security-sensitive な変更（auth / token 処理） | ❌ 使わない | 1 手ごとの確認が品質ゲート                        |
-
-切替はタスク着手前に判断する。途中で design decision が出現したら一度 plan mode に戻す。
+- 適する: read-only audit、format / generated artifact の検証、確定済みの局所置換、独立した test 実行
+- 適さない: product decision、auth / RLS / billing、irreversible migration、Production / release、途中で外部権限が必要になる操作
+- 実行中に新しい価値判断、scope 変更、権限境界が現れたら停止し、Main が checkpoint report を作る
 
 ## 開発者への説明スタイル
 
-- 「何をするか」と「**なぜそうするか**」をセットで説明
-- 技術的負債を見つけたら積極的に解消を提案
+- 「何をするか」と「なぜそうするか」をセットで説明する
+- 技術的な選択は Main が推奨まで作り、ユーザーへ選択肢だけを投げない
+- 技術的負債を見つけたら、現在 scope との関係と別 issue 化の要否を示す
 
 ## ドキュメント提案
 
-機能実装完了後、`.claude/skills/docs-writing/SUGGEST.md` を参照。
-
-## 現行モデルマッピング
-
-モデル名を書いてよいのはこの表だけ。他の rules / skills / AGENTS.md ではティア表現を使う。
-
-| ティア     | 現行モデル（2026-07 時点）   |
-| ---------- | ---------------------------- |
-| **軽量**   | Haiku 4.5                    |
-| **標準**   | Sonnet（最新世代）           |
-| **最上位** | Opus / Fable（利用可能な方） |
+機能実装完了後、`.claude/skills/docs-writing/SUGGEST.md` を参照する。

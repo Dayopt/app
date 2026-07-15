@@ -1,38 +1,51 @@
 ---
-description: 直前の実装 plan を fact-checker と critic で並列レビューする
+description: 直前の実装 plan を fact-checker と critic で並列レビューし、Main が証拠を統合する
 ---
 
 # Plan レビュー
 
-直前に提示した実装 plan を 2 つの agent に**並列**で渡してレビューさせる。
+直前に提示した実装 plan を `plan-fact-checker` と `plan-critic` へ並列委任し、Main が検証可能な事実と技術判断を統合する。agent の投票や raw output を user の判断材料として丸投げしない。
 
 ## 手順
 
-1. **同一メッセージ内に 2 つの `Agent` tool call** を並列発行する:
-   - `subagent_type: plan-fact-checker` — plan 全文を verbatim で渡す
-   - `subagent_type: plan-critic` — plan 全文を verbatim で渡す
+1. 同一メッセージ内で 2 agent を並列起動する。
+   - `plan-fact-checker`: plan 全文を verbatim で渡す
+   - `plan-critic`: plan 全文を verbatim で渡す
+2. Main が両結果の根拠を確認し、次の順で統合する。
+   - 誤った path / symbol / table / API / 件数は plan 内で訂正する
+   - correctness、security、irreversibility、scope の指摘は一次情報と照合し、妥当なら plan に反映する
+   - agent 間の不一致は多数決にせず、code / docs / test / external state の証拠で解決する
+   - 実行を伴う確認が必要なら、read-only agent が返した command を Main が実行する
+3. 修正が plan の前提または approach を変えた場合は、修正版を再レビューする。局所的な事実訂正だけなら Main の再確認でよい。
+4. 未解決事項を authority level で分類する。
+   - `AUTONOMOUS`: Main が推奨を採用して plan を完成させる
+   - `CHECKPOINT` / `EXPLICIT AUTHORITY`: `AGENTS.md` の checkpoint report を作り、必要な価値判断または権限だけを user に求める
+5. user decision が不要なら、統合済みの完成 plan を提示する。
 
-   plan は要約しない。自分のコメント・予断を加えない。
+## 出力
 
-2. 両 agent の結果が揃ったら、user に**統合レポート**を提示する:
+```markdown
+## Fact verification
 
-   ```
-   ## Fact Check
-   <plan-fact-checker の出力をそのまま>
+- 訂正・確認した事実と根拠
 
-   ## Critic
-   <plan-critic の出力をそのまま>
+## Technical review
 
-   ## 統合判定
-   <一文。fact-checker に ✗ または ⚠ があれば critic の verdict に関わらず REVISE 寄せ。critic verdict と組み合わせて最終判定>
-   ```
+- 採用した指摘、退けた指摘と根拠
 
-3. user に次のアクションを問う:
-   「plan を修正する／このまま進める／議論する」
+## Main recommendation
+
+- 統合済みの推奨と次の action
+
+## User decision required
+
+- CHECKPOINT / EXPLICIT AUTHORITY がある場合だけ記載
+```
 
 ## 守ること
 
-- agent 出力を**要約・整形しない**（verdict が歪む）
-- critic / fact-checker の指摘を勝手に反映しない（次のアクションは user が決める）
-- 2 agent は必ず**並列**起動（直列にしない、コスト 2 倍）
-- 統合判定の一文以外、自分の意見を足さない
+- 2 agent は必ず並列起動する
+- plan は要約せず、同一内容を両 agent へ渡す
+- agent の一致自体を evidence として扱わない
+- 技術的に解決できる指摘を user の選択問題へ変換しない
+- agent の finding を無検証で採用しない
