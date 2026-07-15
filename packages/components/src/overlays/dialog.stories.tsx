@@ -127,6 +127,22 @@ export const WithoutCloseButton: Story = {
   ),
 };
 
+export const WithoutOverlay: Story = {
+  render: () => (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline">背景オーバーレイなし</Button>
+      </DialogTrigger>
+      <DialogContent showOverlay={false}>
+        <DialogHeader>
+          <DialogTitle>背景オーバーレイなし</DialogTitle>
+          <DialogDescription>背景を暗く覆わずに表示するダイアログです。</DialogDescription>
+        </DialogHeader>
+      </DialogContent>
+    </Dialog>
+  ),
+};
+
 export const CustomWidth: Story = {
   render: () => (
     <Dialog>
@@ -284,6 +300,18 @@ export const AllPatterns: Story = {
             <Button variant="outline">キャンセル</Button>
             <Button>作成</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline">背景オーバーレイなし</Button>
+        </DialogTrigger>
+        <DialogContent showOverlay={false}>
+          <DialogHeader>
+            <DialogTitle>ショートカット一覧</DialogTitle>
+            <DialogDescription>背景を維持したまま補助情報を表示します。</DialogDescription>
+          </DialogHeader>
         </DialogContent>
       </Dialog>
     </div>

@@ -120,6 +120,11 @@ export function useCalendarEventKeyboard({
         key: 'Escape',
         description: 'Inspectorを閉じる',
         priority: 0,
+        help: {
+          group: 'blocks',
+          labelKey: 'calendar.shortcuts.actions.closeInspector',
+          order: 250,
+        },
         handler: (e) => {
           if (isOpenRef.current) {
             e.preventDefault();
@@ -131,6 +136,11 @@ export function useCalendarEventKeyboard({
         key: 'Delete',
         description: '選択中Timeblockを削除',
         priority: 0,
+        help: {
+          group: 'blocks',
+          labelKey: 'calendar.shortcuts.actions.deleteBlock',
+          order: 240,
+        },
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           if (isOpenRef.current && timeblockIdRef.current) {
@@ -147,6 +157,11 @@ export function useCalendarEventKeyboard({
         key: 'Backspace',
         description: '選択中Timeblockを削除（Backspace）',
         priority: 0,
+        help: {
+          group: 'blocks',
+          labelKey: 'calendar.shortcuts.actions.deleteBlock',
+          order: 240,
+        },
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           if (isOpenRef.current && timeblockIdRef.current) {
@@ -163,6 +178,11 @@ export function useCalendarEventKeyboard({
         key: 'Cmd+C',
         description: '選択中Timeblockをコピー',
         priority: 0,
+        help: {
+          group: 'blocks',
+          labelKey: 'calendar.shortcuts.actions.copyBlock',
+          order: 220,
+        },
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           if (isOpenRef.current && timeblockIdRef.current) {
@@ -179,6 +199,11 @@ export function useCalendarEventKeyboard({
         key: 'Cmd+V',
         description: 'コピーしたTimeblockをペースト',
         priority: 0,
+        help: {
+          group: 'blocks',
+          labelKey: 'calendar.shortcuts.actions.pasteBlock',
+          order: 230,
+        },
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           const clipboard = useTimeblockClipboardStore.getState();
@@ -218,6 +243,11 @@ export function useCalendarEventKeyboard({
         key: 'C',
         description: '新規Timeblock作成',
         priority: 0,
+        help: {
+          group: 'blocks',
+          labelKey: 'calendar.shortcuts.actions.createBlock',
+          order: 200,
+        },
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           e.preventDefault();
@@ -255,6 +285,11 @@ export function useCalendarEventKeyboard({
         key: 'Shift+C',
         description: '新規Timeblock作成（現在時刻から15分）',
         priority: 0,
+        help: {
+          group: 'blocks',
+          labelKey: 'calendar.shortcuts.actions.createBlockNow',
+          order: 210,
+        },
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           e.preventDefault();
