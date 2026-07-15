@@ -4,6 +4,8 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 
+import { convertNoteHtmlToText } from './note-html-to-text';
+
 interface NoteSectionProps {
   label: string;
   icon?: LucideIcon | undefined;
@@ -99,21 +101,6 @@ function renderNoteWithLinks(note: string): ReactNode {
   );
 }
 
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .trim();
-}
-
 /** Inspector専用の、内容に合わせて伸びるコンパクトなメモ入力欄。 */
 export function NoteSection({
   label,
@@ -124,7 +111,7 @@ export function NoteSection({
   disabled = false,
   maxLength = 1000,
 }: NoteSectionProps) {
-  const displayNote = useMemo(() => stripHtml(note), [note]);
+  const displayNote = useMemo(() => convertNoteHtmlToText(note), [note]);
   const [localNote, setLocalNote] = useState(displayNote);
   const [isFocused, setIsFocused] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
