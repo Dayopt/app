@@ -1,6 +1,6 @@
 'use client';
 
-import { PanelLeft } from 'lucide-react';
+import { PanelLeft, Search } from 'lucide-react';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
 
@@ -25,6 +25,7 @@ interface SidebarProps {
 /** サイドバーコンテナ（ヘッダー + スクロール領域 + フッター） */
 export function Sidebar({ children, user, footerActions, 'aria-label': ariaLabel }: SidebarProps) {
   const closeSidebar = useShellStore.use.closeSidebar();
+  const openTimeblockSearch = useShellStore.use.openTimeblockSearch();
   const t = useTranslations();
 
   return (
@@ -46,6 +47,17 @@ export function Sidebar({ children, user, footerActions, 'aria-label': ariaLabel
           <span className="text-foreground text-sm font-medium tracking-tight">{APP_NAME}</span>
         </div>
         <div className="flex items-center">
+          <HoverTooltip content={t('calendar.search.open')} side="bottom">
+            <Button
+              variant="ghost"
+              icon
+              size="sm"
+              onClick={openTimeblockSearch}
+              aria-label={t('calendar.search.open')}
+            >
+              <Search className="size-4" />
+            </Button>
+          </HoverTooltip>
           <HoverTooltip content={t('navigation.sidebar.closeSidebar')} side="bottom">
             <Button
               variant="ghost"

@@ -28,6 +28,7 @@ export { useTimeblockInspectorStore } from './stores/useTimeblockInspectorStore'
 // Lib (actual-time overlay)
 // =============================================================================
 export { computeActualTimeDiffOverlay, formatDiffMinutes } from './lib/actual-time-overlay';
+export { TIMEBLOCK_PARAM, serializeTimeblockParam } from './lib/inspector-url';
 export { timeblockTintColor } from './lib/timeblock-tint';
 
 // =============================================================================

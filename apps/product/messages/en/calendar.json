@@ -3,6 +3,26 @@
     "aside": {
       "search": "Search"
     },
+    "search": {
+      "open": "Search blocks",
+      "title": "Search blocks",
+      "description": "Find plans and records from your calendar history.",
+      "placeholder": "Search titles, notes, and tags...",
+      "inputLabel": "Search plans and records",
+      "initial": "Search your plans and records by title, note, or tag.",
+      "loading": "Searching...",
+      "empty": "No blocks found.",
+      "error": "Search is unavailable right now.",
+      "retry": "Retry",
+      "results": "Blocks",
+      "overflow": "Showing the newest {count} results. Refine your search to find more.",
+      "copy": "Copy {title} for duplication",
+      "skipped": "Skipped",
+      "kind": {
+        "plan": "Plan",
+        "record": "Record"
+      }
+    },
     "meta": {
       "description": "Plan your schedule with time boxing. View and manage your plans by day, week, or month."
     },

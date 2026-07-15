@@ -33,3 +33,26 @@ describe('useShellStore - Sidebar suppression', () => {
     });
   });
 });
+
+describe('useShellStore - Timeblock search', () => {
+  beforeEach(() => {
+    useShellStore.setState({ activeSheet: null });
+  });
+
+  it('opens and closes the search overlay', () => {
+    useShellStore.getState().openTimeblockSearch();
+    expect(useShellStore.getState().activeSheet).toEqual({ type: 'timeblockSearch' });
+
+    useShellStore.getState().closeTimeblockSearch();
+    expect(useShellStore.getState().activeSheet).toBeNull();
+  });
+
+  it('does not persist the search overlay', () => {
+    useShellStore.getState().openTimeblockSearch();
+
+    const partialize = useShellStore.persist.getOptions().partialize;
+    expect(partialize?.(useShellStore.getState())).toEqual({
+      sidebar: useShellStore.getState().sidebar,
+    });
+  });
+});

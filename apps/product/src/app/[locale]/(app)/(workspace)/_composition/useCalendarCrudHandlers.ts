@@ -13,11 +13,13 @@ import { addHours, startOfHour } from 'date-fns';
 
 import type { CalendarEvent } from '@/features/calendar';
 import {
+  buildClipboardTimeblock,
   useCalendarEventKeyboard,
   useCalendarHandlers,
   useTimeblockContextActions,
   useTimeblockOperations,
 } from '@/features/calendar';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 // =============================================================================
 // Types
@@ -62,6 +64,7 @@ export function useCalendarCrudHandlers({
   filteredEvents,
   currentDate,
 }: CalendarCrudHandlersInput): CalendarCrudHandlersResult {
+  const timezone = useUserPreferences((preferences) => preferences.timezone);
   // =========================================================================
   // Calendar Handlers（click, create, drag-select）
   // =========================================================================
@@ -108,22 +111,19 @@ export function useCalendarCrudHandlers({
     const entry = filteredEvents.find((p) => p.id === selectedTimeblockId);
     if (!entry) return null;
 
-    const startHour = entry.startDate?.getHours() ?? 0;
-    const startMinute = entry.startDate?.getMinutes() ?? 0;
-    const duration =
-      entry.endDate && entry.startDate
-        ? (entry.endDate.getTime() - entry.startDate.getTime()) / 60000
-        : 60;
+    if (!entry.startDate || !entry.endDate) return null;
 
-    return {
-      title: entry.title,
-      description: entry.description ?? null,
-      startHour,
-      startMinute,
-      duration,
-      tagId: entry.tagId,
-    };
-  }, [selectedTimeblockId, filteredEvents]);
+    return buildClipboardTimeblock(
+      {
+        title: entry.title,
+        note: entry.description,
+        tagId: entry.tagId,
+        startAt: entry.startDate,
+        endAt: entry.endDate,
+      },
+      timezone,
+    );
+  }, [selectedTimeblockId, filteredEvents, timezone]);
 
   const getPasteDateForKeyboard = useCallback(() => {
     return currentDate;

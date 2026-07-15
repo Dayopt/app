@@ -50,6 +50,7 @@ export {
 export { useCalendarSettings } from './hooks/useCalendarSettings';
 export { useCalendarNavigationStore } from './stores/useCalendarNavigationStore';
 export type { UserSettings } from './stores/userSettings';
+export { useTimeblockClipboardStore } from './stores/useTimeblockClipboardStore';
 // =============================================================================
 // Hooks
 // =============================================================================
@@ -59,6 +60,8 @@ export { useCalendarData } from './components/controller/hooks/useCalendarData';
 export { useCalendarHandlers } from './components/controller/hooks/useCalendarHandlers';
 export { useCalendarNavigationHandlers } from './components/controller/hooks/useCalendarNavigationHandlers';
 export { useCalendarEventKeyboard } from './hooks/keyboard/useCalendarTimeblockKeyboard';
+export { useShortcutRegistry } from './hooks/keyboard/useShortcutRegistry';
+export { useTimeblockSearchShortcut } from './hooks/keyboard/useTimeblockSearchShortcut';
 export { useWeekendToggleShortcut } from './hooks/keyboard/useWeekendToggleShortcut';
 export { useTimeblockContextActions } from './hooks/operations/useTimeblockContextActions';
 export { useTimeblockOperations } from './hooks/operations/useTimeblockOperations';
@@ -72,8 +75,11 @@ export { isCalendarDiffView } from './types/calendar.types';
 // =============================================================================
 // Lib / Utils
 // =============================================================================
+export { buildClipboardTimeblock } from './lib/clipboard-timeblock';
 export { parseCalendarDateParam } from './lib/date-param';
 export { buildCalendarReviewPanelPath } from './lib/panel-url';
 export { isCalendarViewPath } from './lib/route-utils';
+export { buildTimeblockSearchResultPath } from './lib/timeblock-search-path';
+export type { TimeblockSearchResult } from './lib/timeblock-search-results';
 
 // ここにないものはfeature内部専用

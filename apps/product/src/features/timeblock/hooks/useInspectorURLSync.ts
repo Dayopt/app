@@ -3,27 +3,12 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
-import type { TimeblockDestination } from '../domain/timeblock-destination';
+import {
+  parseTimeblockParam,
+  serializeTimeblockParam,
+  TIMEBLOCK_PARAM,
+} from '../lib/inspector-url';
 import { useTimeblockInspectorStore } from '../stores/useTimeblockInspectorStore';
-
-const TIMEBLOCK_PARAM = 'timeblock';
-
-/** `plan:{uuid}` / `record:{uuid}` を分解する。 */
-function parseTimeblockParam(
-  param: string,
-): { timeblockId: string; kind: TimeblockDestination } | null {
-  if (param.startsWith('plan:') && param.length > 5) {
-    return { timeblockId: param.slice(5), kind: 'plan' };
-  }
-  if (param.startsWith('record:') && param.length > 7) {
-    return { timeblockId: param.slice(7), kind: 'record' };
-  }
-  return null;
-}
-
-function serializeTimeblockParam(timeblockId: string, kind: TimeblockDestination): string {
-  return `${kind}:${timeblockId}`;
-}
 
 /**
  * インスペクタとURLクエリパラメータを同期するフック
@@ -50,31 +35,27 @@ export function useInspectorURLSync() {
   const prevIsOpenRef = useRef(isOpen);
   const prevEntryIdRef = useRef(timeblockId);
   const prevEntryKindRef = useRef(timeblockKind);
-  const isUpdatingFromURLRef = useRef(false);
+  const previousURLParamRef = useRef<string | null | undefined>(undefined);
 
-  // 初回マウント時のみ: URLパラメータからインスペクタを開く
+  // URLパラメータからインスペクタを開く（検索結果などのclient navigationにも追従）。
   useEffect(() => {
     if (!searchParams) return;
 
     const timeblockParam = searchParams.get(TIMEBLOCK_PARAM);
+    if (previousURLParamRef.current === timeblockParam) return;
+    previousURLParamRef.current = timeblockParam;
+    if (!timeblockParam) return;
 
-    if (timeblockParam) {
-      isUpdatingFromURLRef.current = true;
-      const parsed = parseTimeblockParam(timeblockParam);
-      if (parsed) openInspector(parsed.timeblockId, parsed.kind);
-      setTimeout(() => {
-        isUpdatingFromURLRef.current = false;
-      }, 0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 初回マウント時のみ URL から復元する意図的な mount-only effect
-  }, []);
+    const parsed = parseTimeblockParam(timeblockParam);
+    if (!parsed) return;
+    if (isOpen && parsed.timeblockId === timeblockId && parsed.kind === timeblockKind) return;
+
+    openInspector(parsed.timeblockId, parsed.kind);
+  }, [isOpen, openInspector, searchParams, timeblockId, timeblockKind]);
 
   // インスペクタ状態変更時: URLを更新
   useEffect(() => {
     if (!searchParams || !pathname) return;
-
-    // URLからの更新中は何もしない（無限ループ防止）
-    if (isUpdatingFromURLRef.current) return;
 
     // 状態が実際に変更されたかチェック
     const stateChanged =
@@ -122,8 +103,6 @@ export function useInspectorURLSync() {
       const params = new URLSearchParams(window.location.search);
       const timeblockParam = params.get(TIMEBLOCK_PARAM);
 
-      isUpdatingFromURLRef.current = true;
-
       if (timeblockParam) {
         const parsed = parseTimeblockParam(timeblockParam);
         if (parsed && (parsed.timeblockId !== timeblockId || parsed.kind !== timeblockKind)) {
@@ -132,10 +111,6 @@ export function useInspectorURLSync() {
       } else if (isOpen && timeblockId) {
         closeInspector();
       }
-
-      setTimeout(() => {
-        isUpdatingFromURLRef.current = false;
-      }, 0);
     };
 
     window.addEventListener('popstate', handlePopState);

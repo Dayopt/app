@@ -81,6 +81,15 @@ describe('shortcut-registry', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  it('Cmd/Ctrl修飾キーを同じコンボとして扱う', () => {
+    const handler = registerTestShortcut({ key: 'Cmd+K' });
+
+    dispatchKeyDown(document.body, { key: 'k', metaKey: true });
+    dispatchKeyDown(document.body, { key: 'k', ctrlKey: true });
+
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
   it.each([
     ['input', () => document.createElement('input')],
     ['textarea', () => document.createElement('textarea')],

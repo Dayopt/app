@@ -18,7 +18,6 @@ import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarTimeblockActionsProvider } from '../contexts/CalendarTimeblockActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
-import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
 import { resolveCalendarDayDiffBounds, resolveCalendarRangeDiffBounds } from '../lib/day-diff';
 import { computeTimeblockDayDiffs } from '../lib/timeblock-day-diff';
@@ -183,8 +182,6 @@ export function CalendarController({
   // Calendar-internal hooks
   // =========================================================================
 
-  // ショートカットレジストリのグローバルリスナー（1箇所のみ呼び出し）
-  useShortcutRegistry();
   const timezone = useUserPreferences((preferences) => preferences.timezone);
   const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
   const visibleTagIds = useCalendarFilterStore((state) => state.visibleTagIds);

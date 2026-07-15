@@ -2,13 +2,14 @@
 
 import { format, getWeek, isSameMonth } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { memo, useCallback, useState, type ReactNode } from 'react';
 
 import { AppHeader } from '@/components/shell/AppHeader';
 import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button, cn } from '@dayopt/components';
 
 import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
@@ -50,6 +51,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     const locale = useLocale();
     const dateFnsLocale = locale === 'ja' ? ja : enUS;
     const [isExpanded, setIsExpanded] = useState(defaultExpanded ?? false);
+    const openTimeblockSearch = useShellStore.use.openTimeblockSearch();
 
     // viewMonth: グリッドスワイプで独立して変化する表示月
     const [viewMonth, setViewMonth] = useState(() => currentDate);
@@ -171,6 +173,19 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
         >
           <div className="overflow-hidden">
             <div>
+              <div className="px-3 pt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground min-h-11 w-full justify-start gap-2"
+                  onClick={openTimeblockSearch}
+                  aria-label={t('search.open')}
+                >
+                  <Search className="size-4" />
+                  <span>{t('search.open')}</span>
+                </Button>
+              </div>
+
               {/* 月グリッド */}
               <MobileMonthGrid
                 viewMonth={viewMonth}
