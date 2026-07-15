@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-07-15
 code: apps/product/src/features/timeblock
 ---
 
@@ -54,12 +54,20 @@ end が未来の Plan（進行中含む）は自由に編集できる。ただ�
 - Plan × Record: 許可（予定と記録は別レイヤーなので重なってよい）
 - 緩和は実質不可逆（一度重なりデータが入ると再強化にデータ犠牲が伴う）
 
+## 検索からの再利用
+
+- 検索結果の「複製用にコピー」は新しいPlan / Recordを即時作成せず、タイトル・メモ・tag・長さ・開始時刻をDayopt内clipboardへ入れる
+- `id`と`plan_id`はコピーしない。コピーは元ブロックとの関係を作らず、PlanからRecordを作る記録導線とも区別する
+- 貼り付け先は利用者が選び、Plan / Recordの保存先は貼り付け後の時間に対する既存の`end_at > now`ルールで決まる
+- 検索結果を開く操作とコピー操作は分離し、コピーでは現在のCalendar表示日を移動しない
+
 ## Legacy compatibility field
 
 物理`records.fulfillment_score`と一部server schema / 集計互換コードは残っているが、現在のUIは達成度を入力・表示せず、Reviewの現行プロダクト契約にも含めない。新機能はこのfieldへ依存しない。
 
 ## 関連する意思決定
 
+- [ブロック検索を履歴の確認と再利用に限定する](../log/2026-07-15-feedback-block-search.md)
 - [ADR-025 時間管理モデルを Plan / Record / 外部カレンダーミラーの3概念に分割する](../log/2026-07-09-time-model-split.md)
 - [ADR-015 時間不変原則](../log/2026-03-10-time-immutability-principle.md)
 - [ADR-018 時間重なりの全面禁止](../log/2026-05-13-time-overlap-prohibition.md)

@@ -32,8 +32,17 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 
 実装上のdata flowと依存境界は[Engineering Architecture](../../engineering/architecture.md)、component variantはStorybookを参照する。
 
+## ブロック検索
+
+- 検索はCalendar内の補助導線であり、独立pageやcommand paletteにはしない。desktopはSidebar、mobileは展開したmini calendarから開き、`Cmd/Ctrl+K`でも開ける
+- 削除されていない全期間のPlan / Recordを、タイトル・メモ・tag名の部分一致で検索する。skip済みPlanも履歴として含め、tag自体は結果にしない
+- 空の検索語では取得せず、結果は開始日時の新しい順に20件まで表示する。検索履歴や最近使った項目は保存しない
+- 結果にはPlan / Recordの別、tag、タイトル、メモの抜粋、日時を表示し、内部IDは表示しない
+- 結果を選ぶと対象日のCalendarへ移動し、URLで対象ブロックのInspectorを開く。コピー操作は移動せず、再利用する内容だけをDayopt内clipboardへ渡す
+
 ## 関連する意思決定
 
+- [ブロック検索を履歴の確認と再利用に限定する](../log/2026-07-15-feedback-block-search.md)
 - [ADR-025: Plan / Record / 外部カレンダーミラーへの分割](../log/2026-07-09-time-model-split.md)
 - [時間不変原則](../log/2026-03-10-time-immutability-principle.md)
 - [機能スコープ](../log/2026-06-16-feature-non-adoption.md)
