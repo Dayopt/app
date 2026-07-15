@@ -5,7 +5,7 @@
  * トリガー: invoice.payment_failed webhook
  */
 
-import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
+import { Body, Button, Container, Head, Html, Link, Section, Text } from 'react-email';
 
 import { dayoptUrls } from '@dayopt/config';
 

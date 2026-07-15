@@ -5,7 +5,7 @@
  * トリガー: checkout.session.completed (status=trialing)
  */
 
-import { Body, Button, Container, Head, Html, Section, Text } from '@react-email/components';
+import { Body, Button, Container, Head, Html, Section, Text } from 'react-email';
 
 import { dayoptUrls } from '@dayopt/config';
 

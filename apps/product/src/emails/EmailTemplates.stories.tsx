@@ -10,8 +10,8 @@
 
 import { useEffect, useState } from 'react';
 
-import { render } from '@react-email/render';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { render } from 'react-email';
 
 import { AccountDeletionEmail } from './AccountDeletionEmail';
 import { CancellationConfirmEmail } from './CancellationConfirmEmail';
