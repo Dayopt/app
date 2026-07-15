@@ -138,7 +138,7 @@ describe('calculateTwoLaneLayout', () => {
       records: [],
       hourHeight: HOUR_HEIGHT,
     });
-    expect(result.planLayouts[1]?.position).toMatchObject({ top: 602, height: 30 });
+    expect(result.planLayouts[1]?.position).toMatchObject({ top: 602, height: 28 });
   });
 
   it('レコードレーンでも隣接イベント間に2pxの間隔を入れる', () => {
@@ -158,7 +158,28 @@ describe('calculateTwoLaneLayout', () => {
       ],
       hourHeight: HOUR_HEIGHT,
     });
-    expect(result.recordLayouts[1]?.position).toMatchObject({ top: 602, height: 60 });
+    expect(result.recordLayouts[1]?.position).toMatchObject({ top: 602, height: 58 });
+  });
+
+  it('連続する短いイベントでも間隔を累積させず24:00内に収める', () => {
+    const plans = Array.from({ length: 96 }, (_, index) => {
+      const startMinutes = index * 15;
+      const endMinutes = startMinutes + 15;
+      return makePlan({
+        id: `p${index}`,
+        displayStartDate: localDate(Math.floor(startMinutes / 60), startMinutes % 60),
+        displayEndDate:
+          endMinutes === 24 * 60
+            ? localDate(0, 0, 11)
+            : localDate(Math.floor(endMinutes / 60), endMinutes % 60),
+      });
+    });
+
+    const result = calculateTwoLaneLayout({ plans, records: [], hourHeight: HOUR_HEIGHT });
+    const lastPosition = result.planLayouts.at(-1)?.position;
+
+    expect(lastPosition).toEqual({ top: 1427, height: 13, left: 0, width: 38 });
+    expect((lastPosition?.top ?? 0) + (lastPosition?.height ?? 0)).toBe(24 * HOUR_HEIGHT);
   });
 });
 

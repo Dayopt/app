@@ -83,14 +83,15 @@ function buildLaneLayout<T extends { displayStartDate: Date; displayEndDate: Dat
     .sort((a, b) => a.top - b.top || a.entry.id.localeCompare(b.entry.id));
 
   const layouts: Array<TwoLaneLayoutItem<T>> = [];
-  let previousBottomPx: number | null = null;
+  let previousOriginalBottomPx: number | null = null;
 
   for (const item of sorted) {
-    const top: number =
-      previousBottomPx === null
-        ? item.top
-        : Math.max(item.top, previousBottomPx + TWO_LANE_MIN_GAP_PX);
-    const { height } = item;
+    const gapOffset =
+      previousOriginalBottomPx === null
+        ? 0
+        : Math.max(previousOriginalBottomPx + TWO_LANE_MIN_GAP_PX - item.top, 0);
+    const top = item.top + gapOffset;
+    const height = Math.max(item.height - gapOffset, 0);
     const position: TwoLanePosition = {
       top,
       height,
@@ -99,7 +100,7 @@ function buildLaneLayout<T extends { displayStartDate: Date; displayEndDate: Dat
     };
 
     layouts.push({ entry: item.entry, position });
-    previousBottomPx = top + height;
+    previousOriginalBottomPx = item.top + item.height;
   }
 
   return layouts;
