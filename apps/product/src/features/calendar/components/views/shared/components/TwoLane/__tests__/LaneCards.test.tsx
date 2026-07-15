@@ -36,7 +36,6 @@ const record: RecordEvent = {
   displayStartDate: startDate,
   displayEndDate: endDate,
   duration: 60,
-  fulfillmentScore: null,
 };
 
 describe('TwoLane cards', () => {

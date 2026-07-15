@@ -130,7 +130,7 @@ column / table の削除を伴う機能撤去は 3 段階に分け、1 PR に混
 2. **稼働確認** — 本番でエラーが出ていないことを Sentry で確認する
 3. **migration drop** — 参照ゼロを確認してから `DROP COLUMN` / `DROP TABLE` migration を別 PR で適用する
 
-先に drop すると、旧コードが動いている deploy 間隙で本番エラーになる。fulfillment_score / chronotype 削除（2026-06 core-slim）で確立した手順。
+先に drop すると、旧コードが動いている deploy 間隙で本番エラーになる。core column 削除で確立した手順。
 
 ### 命名規則
 

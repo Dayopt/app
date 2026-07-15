@@ -1,4 +1,3 @@
-export * from './chronotype';
 export * from './review';
 export * from './tag';
 export * from './time-conflict';

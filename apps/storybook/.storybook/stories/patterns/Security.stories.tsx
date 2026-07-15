@@ -265,7 +265,7 @@ export const Overview: Story = {
                   <td className="py-2">
                     <code className="bg-container rounded px-1 text-xs">z.string().uuid()</code>
                   </td>
-                  <td className="py-2">entryId, tagId, planId</td>
+                  <td className="py-2">timeblockId, tagId, planId</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2 font-medium">文字列</td>
@@ -283,7 +283,7 @@ export const Overview: Story = {
                       z.number().int().min(0).max(N)
                     </code>
                   </td>
-                  <td className="py-2">fulfillment_score (1-3), planned_duration_minutes</td>
+                  <td className="py-2">sort_order, default_duration</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2 font-medium">列挙</td>
@@ -347,7 +347,7 @@ export const tagsRouter = createTRPCRouter({
                   <td className="py-2">RLS + CASCADE</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-medium">エントリー削除</td>
+                  <td className="py-2 font-medium">タイムブロック削除</td>
                   <td className="py-2">destructive 確認</td>
                   <td className="py-2">protectedProcedure + userId</td>
                   <td className="py-2">soft delete (deleted_at)</td>
@@ -356,7 +356,7 @@ export const tagsRouter = createTRPCRouter({
                   <td className="py-2 font-medium">タグ削除</td>
                   <td className="py-2">destructive 確認 + 影響件数表示</td>
                   <td className="py-2">protectedProcedure + userId</td>
-                  <td className="py-2">entries.tag_id SET NULL</td>
+                  <td className="py-2">plans / records の tag_id SET NULL</td>
                 </tr>
                 <tr>
                   <td className="py-2 font-medium">MFA 無効化</td>

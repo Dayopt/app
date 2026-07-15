@@ -35,7 +35,6 @@ const record: RecordEvent = {
   displayStartDate: start,
   displayEndDate: end,
   duration: 85,
-  fulfillmentScore: null,
 };
 
 describe('TwoLane cards time format', () => {

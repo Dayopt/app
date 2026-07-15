@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { databaseTables } from '@/lib/database';
+import { databaseTables, publicRecordSelect } from '@/lib/database';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
@@ -45,7 +45,7 @@ export class RecordService {
 
     let query = this.supabase
       .from(databaseTables.records)
-      .select('*')
+      .select(publicRecordSelect)
       .eq('user_id', userId)
       .is('deleted_at', null);
 
@@ -94,7 +94,7 @@ export class RecordService {
     const { userId, recordId } = options;
     const { data, error } = await this.supabase
       .from(databaseTables.records)
-      .select('*')
+      .select(publicRecordSelect)
       .eq('id', recordId)
       .eq('user_id', userId)
       .is('deleted_at', null)
@@ -131,13 +131,12 @@ export class RecordService {
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
       start_at: input.start_at,
       end_at: input.end_at,
-      fulfillment_score: input.fulfillmentScore ?? null,
     };
 
     const { data, error } = await this.supabase
       .from(databaseTables.records)
       .insert(insertData)
-      .select()
+      .select(publicRecordSelect)
       .single();
 
     if (error) {
@@ -182,7 +181,7 @@ export class RecordService {
       .update(updateData)
       .eq('id', recordId)
       .eq('user_id', userId)
-      .select()
+      .select(publicRecordSelect)
       .single();
 
     if (error) {
@@ -235,9 +234,6 @@ export class RecordService {
     }
     if (input.start_at !== undefined) updateData.start_at = input.start_at;
     if (input.end_at !== undefined) updateData.end_at = input.end_at;
-    if (input.fulfillmentScore !== undefined) {
-      updateData.fulfillment_score = input.fulfillmentScore;
-    }
     return updateData;
   }
 

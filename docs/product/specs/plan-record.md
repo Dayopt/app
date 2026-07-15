@@ -108,10 +108,6 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 - Plan を Record レーンへドラッグする時は、ドロップ範囲を既存 Record と照合する。Plan との重なりは拒否理由にしない
 - 緩和は実質不可逆（一度重なりデータが入ると再強化にデータ犠牲が伴う）
 
-## Legacy compatibility field
-
-物理`records.fulfillment_score`と一部server schema / 集計互換コードは残っているが、現在のUIは達成度を入力・表示せず、Reviewの現行プロダクト契約にも含めない。新機能はこのfieldへ依存しない。
-
 ## 関連する意思決定
 
 - [検索対象と表示をtag・メモに揃え、結果は対象ブロックを開く操作に限定する](../log/2026-07-15-feedback-block-search-tag-note.md)

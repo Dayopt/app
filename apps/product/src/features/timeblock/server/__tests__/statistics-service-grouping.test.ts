@@ -79,22 +79,13 @@ describe('groupHoursByMonth', () => {
 });
 
 describe('groupEnergyMap', () => {
-  it('(hour, dow) ごとに平均充足度・合計分・件数を集計する', () => {
+  it('(hour, dow) ごとに合計分・件数を集計する', () => {
     const rows = [
-      { start_at: '2026-07-01T00:00:00Z', end_at: '2026-07-01T00:30:00Z', fulfillment_score: 2 },
-      { start_at: '2026-07-01T00:10:00Z', end_at: '2026-07-01T00:40:00Z', fulfillment_score: 3 },
+      { start_at: '2026-07-01T00:00:00Z', end_at: '2026-07-01T00:30:00Z' },
+      { start_at: '2026-07-01T00:10:00Z', end_at: '2026-07-01T00:40:00Z' },
     ];
     const result = groupEnergyMap(rows, TZ);
-    expect(result).toEqual([
-      { hour: 9, dow: 3, totalMinutes: 60, recordCount: 2, avgFulfillment: 2.5 },
-    ]);
-  });
-
-  it('fulfillment_score が全て null なら avgFulfillment は null', () => {
-    const rows = [
-      { start_at: '2026-07-01T00:00:00Z', end_at: '2026-07-01T00:30:00Z', fulfillment_score: null },
-    ];
-    expect(groupEnergyMap(rows, TZ)[0]?.avgFulfillment).toBeNull();
+    expect(result).toEqual([{ hour: 9, dow: 3, totalMinutes: 60, recordCount: 2 }]);
   });
 });
 

@@ -29,7 +29,6 @@ function createVisibleDaysReviewService() {
       source: 'manual',
       start_at: '2026-01-15T09:00:00Z',
       end_at: '2026-01-15T10:00:00Z',
-      fulfillment_score: null,
     },
     {
       id: 'hidden-saturday',
@@ -38,7 +37,6 @@ function createVisibleDaysReviewService() {
       source: 'manual',
       start_at: '2026-01-17T09:00:00Z',
       end_at: '2026-01-17T11:00:00Z',
-      fulfillment_score: null,
     },
     {
       id: 'visible-monday',
@@ -47,7 +45,6 @@ function createVisibleDaysReviewService() {
       source: 'manual',
       start_at: '2026-01-19T09:00:00Z',
       end_at: '2026-01-19T09:45:00Z',
-      fulfillment_score: null,
     },
     {
       id: 'previous-monday',
@@ -56,7 +53,6 @@ function createVisibleDaysReviewService() {
       source: 'manual',
       start_at: '2026-01-12T09:00:00Z',
       end_at: '2026-01-12T09:30:00Z',
-      fulfillment_score: null,
     },
   ];
 
@@ -83,7 +79,6 @@ describe('StatisticsService.getTagStats', () => {
           source: 'manual',
           start_at: '2026-07-01T00:00:00Z',
           end_at: '2026-07-01T01:00:00Z',
-          fulfillment_score: null,
         },
         {
           id: 'l2',
@@ -92,7 +87,6 @@ describe('StatisticsService.getTagStats', () => {
           source: 'manual',
           start_at: '2026-07-02T00:00:00Z',
           end_at: '2026-07-02T01:00:00Z',
-          fulfillment_score: null,
         },
         {
           id: 'l3',
@@ -101,7 +95,6 @@ describe('StatisticsService.getTagStats', () => {
           source: 'manual',
           start_at: '2026-07-01T00:00:00Z',
           end_at: '2026-07-01T01:00:00Z',
-          fulfillment_score: null,
         },
       ]),
     });
@@ -132,7 +125,6 @@ describe('StatisticsService.getTimeByTag', () => {
           source: 'manual',
           start_at: '2026-07-01T00:00:00Z',
           end_at: '2026-07-01T01:00:00Z',
-          fulfillment_score: null,
         },
         {
           id: 'l2',
@@ -141,7 +133,6 @@ describe('StatisticsService.getTimeByTag', () => {
           source: 'manual',
           start_at: '2026-07-01T00:00:00Z',
           end_at: '2026-07-01T03:00:00Z',
-          fulfillment_score: null,
         },
       ]),
       tags: createChainableMock([
@@ -185,7 +176,6 @@ describe('StatisticsService.getEstimationAccuracy', () => {
           source: 'from_plan',
           start_at: '2026-07-01T00:00:00Z',
           end_at: '2026-07-01T01:30:00Z',
-          fulfillment_score: null,
         },
         {
           id: 'l2',
@@ -194,7 +184,6 @@ describe('StatisticsService.getEstimationAccuracy', () => {
           source: 'auto_migrated',
           start_at: '2026-07-02T00:00:00Z',
           end_at: '2026-07-02T00:30:00Z',
-          fulfillment_score: null,
         },
       ]),
     });
@@ -305,7 +294,6 @@ describe('StatisticsService.getTagDashboard', () => {
           source: 'from_plan',
           start_at: '2026-07-01T00:00:00Z',
           end_at: '2026-07-01T01:00:00Z',
-          fulfillment_score: null,
         },
       ]),
       plans: createChainableMock([

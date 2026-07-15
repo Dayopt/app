@@ -13,8 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses, resolveTagColor, useCreateTag, useTagsMap } from '@/features/tags';
-import type { Row } from '@/lib/database';
-import { databaseTables } from '@/lib/database';
+import type { PublicRecordRow, Row } from '@/lib/database';
 import { useDebouncedCallback } from '@/lib/hooks/useDebounce';
 import { toast } from '@/lib/toast';
 import { Button } from '@dayopt/components';
@@ -48,7 +47,7 @@ import {
 } from './TimeblockRelationshipSection';
 
 type PlanRow = Row<'plans'>;
-type RecordRow = Row<typeof databaseTables.records>;
+type RecordRow = PublicRecordRow;
 
 export type TimeblockRelationships =
   | {

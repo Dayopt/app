@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { publicRecordSelect } from '@/lib/database';
 import { createChainableMock, createMockSupabase } from '@/lib/test/trpc-test-helpers';
 import { PlanService } from '../plan-service';
 import { RecordService } from '../record-service';
@@ -66,7 +67,6 @@ function createRecord(overrides: Partial<RecordRow> = {}): RecordRow {
     deleted_at: null,
     end_at: '2026-03-17T11:00:00.000Z',
     external_calendar_event_id: null,
-    fulfillment_score: null,
     id: 'record-1',
     note: null,
     plan_id: null,
@@ -186,6 +186,7 @@ describe('RecordService.list', () => {
     expect(tagQuery.eq).toHaveBeenCalledWith('is_active', true);
     expect(tagQuery.ilike).toHaveBeenCalledWith('name', '%deepwork%');
     expect(recordQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
+    expect(recordQuery.select).toHaveBeenCalledWith(publicRecordSelect);
     expect(recordQuery.is).toHaveBeenCalledWith('deleted_at', null);
     expect(recordQuery.or).toHaveBeenCalledWith('note.ilike.%deepwork%');
     expect(recordQuery.or).not.toHaveBeenCalledWith(expect.stringContaining('title.ilike'));
@@ -441,6 +442,7 @@ describe('PlanService.record', () => {
       start_at: plan.start_at,
       end_at: plan.end_at,
     });
+    expect(recordInsertQuery?.select).toHaveBeenCalledWith(publicRecordSelect);
   });
 
   it('active record が紐づく plan の再記録を拒否する', async () => {
@@ -531,8 +533,9 @@ describe('PlanService soft delete', () => {
 describe('PlanService.confirmDay', () => {
   it('confirm_day_plans_to_records RPC へ user と day range を渡す', async () => {
     const record = createRecord({ source: 'from_plan' });
+    const legacyRecord = { ...record, fulfillment_score: 3 };
     const { service, mockSupabase } = createPlanService();
-    mockSupabase.rpc.mockResolvedValue({ data: [record], error: null });
+    mockSupabase.rpc.mockResolvedValue({ data: [legacyRecord], error: null });
 
     await expect(
       service.confirmDay({

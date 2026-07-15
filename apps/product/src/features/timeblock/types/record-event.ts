@@ -20,7 +20,6 @@ export interface RecordEvent {
   displayEndDate: Date;
   /** 分単位の所要時間 */
   duration: number;
-  fulfillmentScore: number | null;
   /** 実績 − 予定（分）。`planId` が無い record では undefined。 */
   diffMinutes?: number | undefined;
   /** 未保存のプレビュー状態 */

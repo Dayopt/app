@@ -324,13 +324,12 @@ server transformer は基本的に **1 procedure 1 file**。
 features/timeblock/server/
   statistics-overview-transform.ts
   statistics-time-by-tag-transform.ts
-  statistics-energy-map-transform.ts
-  statistics-kpi-unpackers.ts          # ← 例外: 5 unpacker を集約
+  statistics-kpi-unpackers.ts          # ← 例外: 4 unpacker を集約
 ```
 
 **例外**: 同ドメインの subset shape を扱う関連 unpacker は 1 file に集約してよい。
 
-例: `statistics-kpi-unpackers.ts` は 5 つの KPI unpacker (`unpackCumulativeTime` / `unpackAvgFulfillment` / `unpackEntryRate` / `unpackContextSwitches` / `unpackBlankRate`) を集約。これらは:
+例: `statistics-kpi-unpackers.ts` は 4 つの KPI unpacker (`unpackCumulativeTime` / `unpackPlanRate` / `unpackContextSwitches` / `unpackBlankRate`) を集約。これらは:
 
 - 全て `get_stats_kpi_summary` の subset shape を扱う
 - 全て同じ default / rename ロジックを共有
@@ -344,25 +343,25 @@ features/timeblock/server/
 
 #### 重複の典型例
 
-`get_plan_rate` を直接読む procedure と `get_stats_kpi_summary.planRate` から読む procedure が、**同じ default + rename ロジックを別々に書いていた**:
+`get_plan_rate` を直接読む procedure と `get_stats_kpi_summary.planRate` から読む procedure が、**同じ default ロジックを別々に書いていた**:
 
 ```ts
-// getEntryRate (flat, 個別 RPC)
+// getPlanRate (flat, 個別 RPC)
 return {
   totalEntries: result?.totalEntries ?? 0,
   plannedEntries: result?.plannedEntries ?? 0,
-  entryRate: result?.planRate ?? 0, // ← rename
+  planRate: result?.planRate ?? 0,
 };
 
 // transformStatsOverviewResponse (nested, summary RPC)
-entryRate: {
+planRate: {
   totalEntries: result?.planRate?.totalEntries ?? 0,
   plannedEntries: result?.planRate?.plannedEntries ?? 0,
-  entryRate: result?.planRate?.planRate ?? 0,  // ← rename
+  planRate: result?.planRate?.planRate ?? 0,
 }
 ```
 
-これは `unpackEntryRate(data)` を共通化することで両方から再利用可能になり、片方だけ挙動が乖離するリスクを排除できる。
+これは `unpackPlanRate(data)` を共通化することで両方から再利用可能になり、片方だけ挙動が乖離するリスクを排除できる。
 
 #### 統合しない判断
 
@@ -402,8 +401,7 @@ export function transformStatsOverviewResponse(data: unknown): StatsOverviewResu
   const result = data as Partial<StatsKpiSummaryRpcResult> | null | undefined;
   return {
     cumulativeTime: unpackCumulativeTime(result?.cumulativeTime),
-    avgFulfillment: unpackAvgFulfillment(result?.avgFulfillment),
-    entryRate: unpackEntryRate(result?.planRate), // ← outer key rename
+    planRate: unpackPlanRate(result?.planRate),
     contextSwitches: unpackContextSwitches(result?.contextSwitches),
     blankRate: unpackBlankRate(result?.blankRate),
   };
@@ -411,7 +409,7 @@ export function transformStatsOverviewResponse(data: unknown): StatsOverviewResu
 ```
 
 - RPC `get_stats_kpi_summary` の response shape (camelCase + `planRate` 構造) に密結合
-- `planRate → entryRate` の rename は RPC↔tRPC adapter の役割
+- default 埋めは RPC↔tRPC adapter の役割
 - domain には置けない（RPC shape を握っている）
 
 ---

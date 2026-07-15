@@ -18,7 +18,6 @@ export interface RecordEventSourceRow {
   source: string;
   start_at: string;
   end_at: string;
-  fulfillment_score: number | null;
 }
 
 /** TZ変換やDBから読み出した秒以下のずれが所要時間計算にノイズを混ぜないよう truncate する */
@@ -58,7 +57,6 @@ export function recordRowToRecordEvent(
     displayStartDate: convertToTimezone(startDate, options.timezone),
     displayEndDate: convertToTimezone(endDate, options.timezone),
     duration,
-    fulfillmentScore: row.fulfillment_score,
     diffMinutes,
   };
 }

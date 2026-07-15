@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Row } from '@/lib/database';
+import type { PublicRecordRow, Row } from '@/lib/database';
 
 import { createTimeblockDuplicateDraft } from '../../../lib/timeblock-duplicate';
 import { TimeblockInspectorForm } from '../TimeblockInspectorForm';
@@ -194,7 +194,6 @@ const relatedRecord = {
   tag_id: '00000000-0000-4000-8000-000000000001',
   plan_id: pastPlan.id,
   external_calendar_event_id: null,
-  fulfillment_score: null,
   title: 'Recorded work',
   note: null,
   start_at: '2026-07-15T10:00:00.000Z',
@@ -203,7 +202,7 @@ const relatedRecord = {
   deleted_at: null,
   created_at: '2026-07-15T10:00:00.000Z',
   updated_at: '2026-07-15T10:00:00.000Z',
-} satisfies Row<'records'>;
+} satisfies PublicRecordRow;
 
 describe('TimeblockInspectorForm', () => {
   beforeEach(() => {
