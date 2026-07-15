@@ -36,7 +36,7 @@ code:
 2. right rail の inline / sheet 判定が rail 自身の resize 幅を見ず、空間回復のために Sidebar の永続 open 状態を書き換える
 3. Review の summary が狭い rail 内で三つの bordered card に分かれ、label truncation と border の重なりが起きる
 4. Review を開くと desktop では week へ強制遷移し、Calendar view を正本とする現行仕様とずれる
-5. locale / time format、keyboard interaction、細かな token 違反には追加の整合余地があるが、上記より優先度は低い
+5. 12/24時間設定、keyboard interaction、内部 grid 線、tag 行の状態表現、Diff 色に局所的な不整合が残る
 
 ## Minimum Viable Approach
 
@@ -46,6 +46,7 @@ code:
 4. Review summary は card の集合ではなく、ひとつの静かな data list にして label と値の対応を優先する
 5. Storybook は実運用の 256px rail 幅を標準 fixture にし、狭幅状態を回帰確認できるようにする
 6. Review / tag detail の panel navigation は現在の Calendar view を保ち、集計もその表示範囲と直前の同日数を使う
+7. 時刻表示、keyboard event の所有範囲、内部線、Diff の色を既存設定と semantic token に揃える
 
 ## Acceptance Criteria
 
@@ -58,6 +59,11 @@ code:
 - day / week / multi-day で Review を開いても view route が維持される
 - 週末非表示の week / multi-day でも、Calendar header・entry query・Review query が実際の先頭列から末尾列までを同じ期間として扱う
 - Review の RPC input が Calendar の表示範囲と、その直前の同日数を使う
+- Calendar の時間軸、選択 preview、Plan / Record card、drag 表示、Diff panel がユーザーの12/24時間設定に従う
+- Calendar の scroll key は focus 中の grid だけが処理し、入力、IME、menu / dialog の操作を global shortcut が奪わない
+- hour grid と day divider は重複せず、内部線には `border-border-subtle` を使う
+- 非表示 tag は disabled に見せず、keyboard focus 時にも行 action が見える
+- Calendar / Review の Diff panel は符号と方向を保ち、増減を success / destructive 色で判定しない
 - 関連 unit test、Storybook AllPatterns、`pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries`、`pnpm docs:check` が通る
 
 ## Delivery
@@ -67,16 +73,18 @@ code:
 3. **Review hierarchy** — 256px rail 向け summary hierarchy と Storybook fixture を更新する
 4. **Navigation trust** — Review / tag detail で Calendar view と query range を一致させる
 5. **Verification** — focused test、Storybook taxonomy、repo 必須 check を実行する
+6. **Final polish** — 12/24時間表示、keyboard event 境界、grid / tag density、neutral Diff を既存 contract に揃える
 
 ## Reversibility Table
 
-| 変更                          | 永続 data / API への影響           | 戻し方                                |
-| ----------------------------- | ---------------------------------- | ------------------------------------- |
-| transient Sidebar suppression | なし。persist 対象外               | store field と shell wiring を revert |
-| rail breakpoint               | なし。client layout のみ           | helper と threshold を revert         |
-| lane width                    | なし。表示と pointer boundary のみ | shared constant の利用を revert       |
-| Review summary hierarchy      | なし。DOM / style のみ             | component と Story を revert          |
-| panel navigation              | なし。既存 URL contract 内         | navigation callback を revert         |
+| 変更                          | 永続 data / API への影響             | 戻し方                                    |
+| ----------------------------- | ------------------------------------ | ----------------------------------------- |
+| transient Sidebar suppression | なし。persist 対象外                 | store field と shell wiring を revert     |
+| rail breakpoint               | なし。client layout のみ             | helper と threshold を revert             |
+| lane width                    | なし。表示と pointer boundary のみ   | shared constant の利用を revert           |
+| Review summary hierarchy      | なし。DOM / style のみ               | component と Story を revert              |
+| panel navigation              | なし。既存 URL contract 内           | navigation callback を revert             |
+| final polish                  | なし。表示と client interaction のみ | formatter / class / event guard を revert |
 
 ## Existing Code to Reuse
 
@@ -85,6 +93,9 @@ code:
 - `two-lane-layout.ts` の既定 38% contract と pointer boundary calculation
 - `CalendarNavigationContext` の URL 同期と panel normalization
 - Review の既存 formatter、semantic token、`AllPatterns` Story
+- `useUserPreferences` の `timeFormat` と `formatTimeString`
+- keyboard shortcut registry の中央 guard
+- `border-border-subtle` と既存の focus-visible ring pattern
 
 ## What I'm Not Doing
 
@@ -92,7 +103,10 @@ code:
 - 新しい spacing scale、radius、shadow、direct color の追加
 - Review を独立 page に戻すこと、Toggl 型の分析 dashboard を増やすこと
 - metric の意味、database schema、tRPC response、Plan / Record model の変更
-- locale / 12-24h 表示、全 keyboard interaction、全 grid line の一括修正。初期変更の検証後に別 scope として判断する
+- Inspector の12時間入力。保存契約が `HH:mm` のため、AM / PM parse と period control を別途設計する
+- keyboard resize と階層 tag reorder。分単位 ARIA と collision contract を含めて別 scope で統一する
+- browser / OS 標準 shortcut と競合する key mapping の再設計
+- Storybook のみで使われる旧 chart / legacy component の一括整理
 
 ## Reference principles
 

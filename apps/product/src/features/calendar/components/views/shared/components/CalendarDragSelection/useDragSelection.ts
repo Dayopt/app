@@ -14,8 +14,8 @@ import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { formatTimeString } from '@/lib/date';
-import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { toast } from '@/lib/toast';
+import type { TimeFormat } from '@dayopt/domain';
 
 import {
   calculateSelection,
@@ -42,6 +42,8 @@ interface UseDragSelectionOptions {
   onDoubleClick?: ((selection: DateTimeSelection) => void) | undefined;
   plans?: CalendarEvent[] | undefined;
   hourHeight?: number | undefined;
+  defaultDuration: number;
+  timeFormat: TimeFormat;
 }
 
 interface UseDragSelectionReturn {
@@ -182,8 +184,9 @@ export function useDragSelection({
   onDoubleClick: onDoubleClickProp,
   plans = [],
   hourHeight = HOUR_HEIGHT,
+  defaultDuration,
+  timeFormat,
 }: UseDragSelectionOptions): UseDragSelectionReturn {
-  const defaultDuration = useUserPreferences((state) => state.defaultDuration);
   const { tap } = useHapticFeedback();
   const t = useTranslations('timeblock');
 
@@ -221,9 +224,12 @@ export function useDragSelection({
 
   const pixelsToTime = useCallback((y: number) => pixelsToTimeRaw(y, hourHeight), [hourHeight]);
 
-  const formatTime = useCallback((hour: number, minute: number): string => {
-    return formatTimeString(hour, minute);
-  }, []);
+  const formatTime = useCallback(
+    (hour: number, minute: number): string => {
+      return formatTimeString(hour, minute, timeFormat);
+    },
+    [timeFormat],
+  );
 
   const clearTimer = useCallback(() => {
     if (longPressTimer.current) {

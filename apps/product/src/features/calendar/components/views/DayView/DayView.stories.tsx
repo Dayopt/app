@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
+import { PRESET_USER_SETTINGS } from '@dayopt/storybook/mocks/presets';
+import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 import { computeCalendarDayDiffs } from '../../../lib/day-diff';
 import type { CalendarEvent, ViewDateRange } from '../../../types/calendar.types';
 
@@ -124,12 +126,34 @@ const defaultHandlers = {
   onNavigateToday: fn(),
 };
 
+const TWELVE_HOUR_SETTINGS = {
+  ...PRESET_USER_SETTINGS.default,
+  timeFormat: '12h' as const,
+};
+
 // ─────────────────────────────────────────────────────────
 // Stories
 // ─────────────────────────────────────────────────────────
 
 /** デフォルト（プランあり） */
 export const Default: Story = {
+  render: () => (
+    <div className="h-[700px]">
+      <DayView
+        dateRange={todayRange}
+        entries={mockPlans}
+        currentDate={today}
+        {...defaultHandlers}
+      />
+    </div>
+  ),
+};
+
+/** ユーザー設定を反映した12時間表記。 */
+export const TwelveHour: Story = {
+  parameters: {
+    trpcMocks: { 'userSettings.get': TWELVE_HOUR_SETTINGS },
+  },
   render: () => (
     <div className="h-[700px]">
       <DayView
@@ -342,6 +366,16 @@ export const AllPatterns: Story = {
           {...defaultHandlers}
         />
       </div>
+      <StoryTRPCProvider mocks={{ 'userSettings.get': TWELVE_HOUR_SETTINGS }}>
+        <div className="h-[500px] w-full">
+          <DayView
+            dateRange={todayRange}
+            entries={mockPlans}
+            currentDate={today}
+            {...defaultHandlers}
+          />
+        </div>
+      </StoryTRPCProvider>
     </div>
   ),
 };

@@ -221,7 +221,7 @@ export function TagFlatList({
       onDragCancel={handleDragCancel}
     >
       <SortableContext items={rootIds} strategy={noopSortingStrategy}>
-        <DroppableArea id={ROOT} role="list" className="space-y-1 rounded-xl">
+        <DroppableArea id={ROOT} role="list" className="space-y-1 rounded-lg">
           {displayedNodes.map((node) => (
             <TagTreeItem
               key={node.tag.id}
@@ -516,7 +516,7 @@ function SortableParentBlock({
           <DroppableArea
             id={childContainerId(node.tag.id)}
             className={cn(
-              'ml-4 space-y-1 rounded-xl border border-dashed border-transparent px-1 py-1',
+              'ml-4 space-y-1 rounded-lg border border-dashed border-transparent px-1 py-1',
               activeDragId && canDropChildHere && 'bg-muted/30',
             )}
           >
@@ -685,7 +685,6 @@ function SortableTagItem({
               'hover:bg-state-hover',
               menuOpen && 'bg-state-selected',
               isPopoverOpen && 'bg-state-selected',
-              !checked && 'opacity-50',
             )}
             onClick={() => onOpenPopover(tag.id)}
           >
@@ -699,7 +698,9 @@ function SortableTagItem({
               disabled={menuOpen}
               wrapperClassName="ml-2 min-w-0 flex-1"
             >
-              <span className="min-w-0 truncate">{tag.name}</span>
+              <span className={cn('min-w-0 truncate', !checked && 'text-muted-foreground')}>
+                {tag.name}
+              </span>
             </HoverTooltip>
 
             <button
@@ -712,8 +713,10 @@ function SortableTagItem({
               aria-label={checked ? t('calendar.filter.hide') : t('calendar.filter.show')}
               className={cn(
                 // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素のヒットエリア拡張に before:content-[''] の空文字指定が必須
-                "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-['']",
-                checked ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
+                "text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-[''] focus-visible:ring-2 focus-visible:outline-none",
+                checked
+                  ? 'opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100 focus-visible:opacity-100'
+                  : 'opacity-100',
                 isMobile && 'opacity-100',
               )}
             >
@@ -727,7 +730,8 @@ function SortableTagItem({
                 <button
                   type="button"
                   aria-label={t('calendar.filter.tagMenu')}
-                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/item:opacity-100 [@media(hover:none)]:opacity-100"
+                  // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の 44px ヒットエリアに空 content が必要
+                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 after:absolute after:inset-0 after:m-auto after:size-11 after:content-[''] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(hover:none)]:opacity-100"
                   onClick={(event) => event.stopPropagation()}
                   onPointerDown={(event) => event.stopPropagation()}
                 >
@@ -783,7 +787,7 @@ function SortableTagItem({
           <DroppableArea
             id={childContainerId(tag.id)}
             className={cn(
-              'ml-4 h-4 rounded-xl border border-dashed border-transparent',
+              'ml-4 h-4 rounded-lg border border-dashed border-transparent',
               canAcceptChildren ? 'bg-muted/30' : 'hidden',
             )}
           />

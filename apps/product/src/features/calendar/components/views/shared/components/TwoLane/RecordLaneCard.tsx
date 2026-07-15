@@ -14,7 +14,9 @@ import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses } from '@/features/tags';
 import type { RecordEvent } from '@/features/timeblock';
+import { formatTimeString } from '@/lib/date';
 import { cn } from '@dayopt/components';
+import type { TimeFormat } from '@dayopt/domain';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 import { DiffBadge } from './DiffBadge';
@@ -30,6 +32,8 @@ interface RecordLaneCardProps {
   disableDrag?: boolean | undefined;
   /** 複数日表示の狭い列では secondary detail と余白を減らす */
   compact?: boolean | undefined;
+  /** ユーザー設定に基づく時刻表記 */
+  timeFormat?: TimeFormat | undefined;
   onClick?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onContextMenu?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown?: ((event: RecordEvent, e: React.MouseEvent) => void) | undefined;
@@ -44,9 +48,8 @@ const MIN_HEIGHT = 20;
 const DETAIL_HEIGHT_THRESHOLD = 40;
 const RESIZE_HANDLE_HEIGHT = 20;
 
-function formatTimeRange(start: Date, end: Date): string {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${pad(start.getHours())}:${pad(start.getMinutes())}–${pad(end.getHours())}:${pad(end.getMinutes())}`;
+function formatTimeRange(start: Date, end: Date, timeFormat: TimeFormat): string {
+  return `${formatTimeString(start.getHours(), start.getMinutes(), timeFormat)}–${formatTimeString(end.getHours(), end.getMinutes(), timeFormat)}`;
 }
 
 export function RecordLaneCard({
@@ -57,6 +60,7 @@ export function RecordLaneCard({
   isActive = false,
   disableDrag = false,
   compact = false,
+  timeFormat = '24h',
   onClick,
   onContextMenu,
   onPointerDown,
@@ -84,6 +88,7 @@ export function RecordLaneCard({
         compact ? 'px-1' : 'px-2',
         colorClasses?.tint ?? 'bg-card',
         'text-foreground',
+        'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
         isActive && 'ring-ring ring-2',
         canDrag ? 'cursor-grab' : 'cursor-pointer',
         className,
@@ -116,7 +121,7 @@ export function RecordLaneCard({
       </div>
       {showDetails && (
         <p className="text-muted-foreground truncate">
-          {formatTimeRange(event.displayStartDate, event.displayEndDate)}
+          {formatTimeRange(event.displayStartDate, event.displayEndDate, timeFormat)}
         </p>
       )}
       {isUnplanned && !compact && (

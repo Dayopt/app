@@ -3,7 +3,7 @@
  *
  * copywriting「判定せず数字で示す」に従い、±0 は非表示（何も描画しない）。
  * 視覚言語は `features/review/components/diff/ReviewDiffPanel.tsx` の
- * DiffBadge（bg-container + 方向アイコン + success/destructive）を踏襲するが、
+ * DiffBadge（bg-container + 方向アイコン + 中立色）を踏襲するが、
  * feature DAG（calendar は review を import できない）のため独立実装する。
  */
 'use client';
@@ -30,8 +30,7 @@ export function DiffBadge({ diffMinutes, className }: DiffBadgeProps) {
     <span
       data-record-diff-badge
       className={cn(
-        'bg-container border-border-subtle inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs tabular-nums',
-        isOver ? 'text-success' : 'text-destructive',
+        'bg-container text-muted-foreground border-border-subtle inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs tabular-nums',
         className,
       )}
     >

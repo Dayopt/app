@@ -17,8 +17,10 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { formatTimeString } from '@/lib/date';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@dayopt/components';
+import type { TimeFormat } from '@dayopt/domain';
 
 import { ConflictOverlay } from '../components/views/shared/components/ConflictOverlay';
 import type { InteractionState, TimeRange } from '../domain/interaction/types';
@@ -32,6 +34,8 @@ interface GhostRendererProps {
   state: InteractionState;
   /** Children to render as ghost content (typically a PlanCard) */
   renderGhost?: (params: GhostRenderParams) => React.ReactNode;
+  /** ユーザー設定に基づく時刻表記 */
+  timeFormat: TimeFormat;
 }
 
 /** GhostRendererのrenderGhostコールバックに渡されるパラメータ */
@@ -62,12 +66,16 @@ const SNAP_BACK_DURATION = 200;
  */
 const MIN_GHOST_HEIGHT_MOBILE = 40;
 
+function formatPreviewTimeRange(previewTime: TimeRange, timeFormat: TimeFormat): string {
+  return `${formatTimeString(previewTime.start.getHours(), previewTime.start.getMinutes(), timeFormat)} – ${formatTimeString(previewTime.end.getHours(), previewTime.end.getMinutes(), timeFormat)}`;
+}
+
 // ========================================
 // Component
 // ========================================
 
 /** ドラッグ中のゴースト要素をReact Portalで描画するコンポーネント */
-export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
+export function GhostRenderer({ state, renderGhost, timeFormat }: GhostRendererProps) {
   const t = useTranslations('timeblock');
   const isMobile = useIsMobile();
   const minGhostHeight = isMobile ? MIN_GHOST_HEIGHT_MOBILE : 0;
@@ -115,6 +123,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
     const content = (
       <ConflictOverlay
         previewTime={prev.previewTime}
+        timeFormat={timeFormat}
         message={t('errors.timeOverlap')}
         className="h-full"
       />
@@ -130,7 +139,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
 
     const timer = setTimeout(() => setSnapBack(null), SNAP_BACK_DURATION);
     return () => clearTimeout(timer);
-  }, [state, t]);
+  }, [state, t, timeFormat]);
 
   // スナップバックアニメーション中
   if (snapBack) {
@@ -192,6 +201,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
   const content = state.isOverlapping ? (
     <ConflictOverlay
       previewTime={state.previewTime}
+      timeFormat={timeFormat}
       message={t('errors.timeOverlap')}
       className="h-full"
     />
@@ -215,11 +225,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
     >
       {content ?? (
         <div className="bg-container rounded-lg px-2 py-1 text-sm">
-          {state.previewTime.start.getHours()}:
-          {String(state.previewTime.start.getMinutes()).padStart(2, '0')}
-          {' - '}
-          {state.previewTime.end.getHours()}:
-          {String(state.previewTime.end.getMinutes()).padStart(2, '0')}
+          {formatPreviewTimeRange(state.previewTime, timeFormat)}
         </div>
       )}
     </div>,
