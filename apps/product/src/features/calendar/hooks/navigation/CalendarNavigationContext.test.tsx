@@ -45,6 +45,9 @@ function TestConsumer() {
       >
         review-on
       </button>
+      <button type="button" onClick={() => navigation.setReviewTagId('tag-2')}>
+        review-tag-change
+      </button>
       <button type="button" onClick={() => navigation.changeView('week')}>
         week
       </button>
@@ -263,7 +266,7 @@ describe('CalendarNavigationProvider', () => {
     );
   });
 
-  it('opens review panel on week view with reviewTagId', () => {
+  it('keeps day view when opening the review panel with reviewTagId', () => {
     window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
     mockPathname = '/ja/day';
 
@@ -274,11 +277,67 @@ describe('CalendarNavigationProvider', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'review-on' }));
-    expect(screen.getByTestId('view')).toHaveTextContent('week');
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
     expect(screen.getByTestId('panel')).toHaveTextContent('review');
     expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
     expect(window.location.pathname + window.location.search).toBe(
+      '/ja/day?date=2026-03-25&panel=review&reviewTagId=tag-1',
+    );
+  });
+
+  it('keeps week view when opening the review panel', () => {
+    window.history.replaceState(null, '', '/ja/week?date=2026-03-25');
+    mockPathname = '/ja/week';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'review-on' }));
+    expect(screen.getByTestId('view')).toHaveTextContent('week');
+    expect(window.location.pathname + window.location.search).toBe(
       '/ja/week?date=2026-03-25&panel=review&reviewTagId=tag-1',
+    );
+  });
+
+  it('keeps multi-day view when opening the review panel', () => {
+    window.history.replaceState(null, '', '/ja/3day?date=2026-03-25');
+    mockPathname = '/ja/3day';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'review-on' }));
+    expect(screen.getByTestId('view')).toHaveTextContent('3day');
+    expect(window.location.pathname + window.location.search).toBe(
+      '/ja/3day?date=2026-03-25&panel=review&reviewTagId=tag-1',
+    );
+  });
+
+  it('keeps the current view when changing the review tag', () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/ja/3day?date=2026-03-25&panel=review&reviewTagId=tag-1',
+    );
+    mockPathname = '/ja/3day';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'review-tag-change' }));
+    expect(screen.getByTestId('view')).toHaveTextContent('3day');
+    expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-2');
+    expect(window.location.pathname + window.location.search).toBe(
+      '/ja/3day?date=2026-03-25&panel=review&reviewTagId=tag-2',
     );
   });
 

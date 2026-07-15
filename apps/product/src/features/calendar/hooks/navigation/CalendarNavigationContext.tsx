@@ -323,11 +323,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
           ? isCalendarDiffView(viewTypeRef.current)
             ? viewTypeRef.current
             : 'day'
-          : nextPanelKind === 'review'
-            ? isMobileRef.current
-              ? 'day'
-              : 'week'
-            : viewTypeRef.current;
+          : viewTypeRef.current;
       const normalizedPanel = normalizePanelForView(nextView, nextPanelKind);
       const nextReviewTagId =
         normalizedPanel === 'review' ? (options?.reviewTagId ?? reviewTagIdRef.current) : null;
@@ -350,12 +346,13 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
 
   const setReviewTagId = useCallback(
     (nextReviewTagId: string | null) => {
+      const nextView = viewTypeRef.current;
       startTransition(() => {
-        setViewType('week');
+        setViewType(nextView);
         setPanelKindState('review');
         setReviewTagIdState(nextReviewTagId);
       });
-      writeCalendarUrl('week', currentDateRef.current, 'review', nextReviewTagId, 'replace');
+      writeCalendarUrl(nextView, currentDateRef.current, 'review', nextReviewTagId, 'replace');
     },
     [writeCalendarUrl],
   );

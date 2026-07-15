@@ -31,6 +31,18 @@ describe('TimeblockCard', () => {
   };
 
   describe('基本レンダリング', () => {
+    it('timeFormatをカード内容へ渡す', () => {
+      render(
+        <TimeblockCard
+          entry={{ ...mockEvent, origin: 'planned', timeblockState: 'upcoming' }}
+          position={mockPosition}
+          timeFormat="12h"
+        />,
+      );
+
+      expect(screen.getByText('10:00 AM 〜 11:00 AM')).toBeInTheDocument();
+    });
+
     it('イベントが正しく表示される', () => {
       render(<TimeblockCard entry={mockEvent} position={mockPosition} />);
 
@@ -50,6 +62,7 @@ describe('TimeblockCard', () => {
       const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       expect(eventBlock).toHaveAttribute('aria-label', 'entry: テストイベント');
       expect(eventBlock).toHaveAttribute('tabIndex', '0');
+      expect(eventBlock).toHaveClass('focus-visible:ring-ring');
     });
 
     it('day compare marker を表示できる', () => {

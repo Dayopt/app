@@ -10,7 +10,8 @@ import { Clock, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { TagIcon } from '@/features/tags';
-import { formatTime } from '@/lib/date';
+import { formatTimeString } from '@/lib/date';
+import type { TimeFormat } from '@dayopt/domain';
 import type { CalendarEvent } from '../../types/calendar-event';
 
 interface TimeblockCardContentProps {
@@ -20,7 +21,7 @@ interface TimeblockCardContentProps {
   tagIcon?: string | null;
   isCompact?: boolean;
   showTime?: boolean;
-  timeFormat?: '12h' | '24h';
+  timeFormat?: TimeFormat;
   previewTime?: { start: Date; end: Date } | null;
 }
 
@@ -54,8 +55,8 @@ function sameTime(
   );
 }
 
-function formatCardTimeRange(start: Date, end: Date, timeFormat: '12h' | '24h'): string {
-  return `${formatTime(start, timeFormat)} 〜 ${formatTime(end, timeFormat)}`;
+function formatCardTimeRange(start: Date, end: Date, timeFormat: TimeFormat): string {
+  return `${formatTimeString(start.getHours(), start.getMinutes(), timeFormat)} 〜 ${formatTimeString(end.getHours(), end.getMinutes(), timeFormat)}`;
 }
 
 /** エントリカードの内部コンテンツ（タグ名・時間範囲・リマインダーアイコン） */

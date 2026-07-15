@@ -1,11 +1,76 @@
+import { fromZonedTime } from 'date-fns-tz';
+
 import { addWeeks } from '@/lib/date/core';
 import { tzWeekEnd, tzWeekStart } from '@/lib/date/timezone';
 
 import type { ReviewGranularity } from '../stores/useReviewFilterStore';
 
+export interface ReviewDisplayRange {
+  start: Date;
+  end: Date;
+  days: readonly Date[];
+  showWeekends: boolean;
+}
+
+interface ReviewDateRange {
+  startDate: string;
+  endDate: string;
+}
+
 // ============================================================
 // Public API
 // ============================================================
+
+/**
+ * Calendar の表示日付を、ユーザー timezone の日境界へ変換する。
+ *
+ * displayRange の Date は Calendar が描画するローカル日付なので、時刻として再解釈せず
+ * 年月日の成分をそのまま使う。
+ *
+ * current / previous とも実際の表示日キーを返す。前期間は表示日数と同じ日数を
+ * 直前へずらし、週末非表示時は土日を飛ばす。
+ */
+export function computeCalendarDisplayDateRanges(
+  displayRange: ReviewDisplayRange,
+  timezone: string,
+): {
+  dateRange: ReviewDateRange;
+  prevDateRange: ReviewDateRange;
+  dayCount: number;
+  visibleDateKeys: string[];
+  prevVisibleDateKeys: string[];
+} {
+  const visibleDateKeys = Array.from(
+    new Set(
+      (displayRange.days.length > 0 ? displayRange.days : [displayRange.start]).map(
+        toCalendarDateKey,
+      ),
+    ),
+  ).sort();
+  const startDateKey = visibleDateKeys[0] ?? toCalendarDateKey(displayRange.start);
+  const endDateKey = visibleDateKeys[visibleDateKeys.length - 1] ?? startDateKey;
+  const dayCount = visibleDateKeys.length;
+  const prevVisibleDateKeys = getPreviousVisibleDateKeys(
+    startDateKey,
+    dayCount,
+    displayRange.showWeekends,
+  );
+  const prevStartDateKey = prevVisibleDateKeys[0] ?? shiftDateKey(startDateKey, -1);
+  const prevEndDateKey = prevVisibleDateKeys[prevVisibleDateKeys.length - 1] ?? prevStartDateKey;
+
+  return {
+    dateRange: toDateRange(startDateKey, endDateKey, timezone),
+    prevDateRange: toDateRange(prevStartDateKey, prevEndDateKey, timezone),
+    dayCount,
+    visibleDateKeys,
+    prevVisibleDateKeys,
+  };
+}
+
+/** Calendar から同期的に渡された基準日を優先し、range と year の query 世代を揃える。 */
+export function resolveReviewQueryYear(calendarDate: Date | undefined, fallbackDate: Date): number {
+  return (calendarDate ?? fallbackDate).getFullYear();
+}
 
 /**
  * 基準日から週次 Review の絶対的な日付範囲を算出
@@ -58,4 +123,47 @@ export function computePreviousDateRange(
  */
 export function computeMonthCount(_granularity: ReviewGranularity): number {
   return 3;
+}
+
+function toDateRange(startDateKey: string, endDateKey: string, timezone: string): ReviewDateRange {
+  return {
+    startDate: fromZonedTime(`${startDateKey}T00:00:00.000`, timezone).toISOString(),
+    endDate: fromZonedTime(`${endDateKey}T23:59:59.999`, timezone).toISOString(),
+  };
+}
+
+function shiftDateKey(dateKey: string, dayDelta: number): string {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + dayDelta);
+  return date.toISOString().slice(0, 10);
+}
+
+function getPreviousVisibleDateKeys(
+  startDateKey: string,
+  dayCount: number,
+  showWeekends: boolean,
+): string[] {
+  const dateKeys: string[] = [];
+  let candidate = shiftDateKey(startDateKey, -1);
+
+  while (dateKeys.length < dayCount) {
+    if (showWeekends || !isWeekendDateKey(candidate)) {
+      dateKeys.unshift(candidate);
+    }
+    candidate = shiftDateKey(candidate, -1);
+  }
+
+  return dateKeys;
+}
+
+function isWeekendDateKey(dateKey: string): boolean {
+  const dayOfWeek = new Date(`${dateKey}T00:00:00.000Z`).getUTCDay();
+  return dayOfWeek === 0 || dayOfWeek === 6;
+}
+
+function toCalendarDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

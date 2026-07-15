@@ -35,6 +35,7 @@ interface DesktopLayoutProps {
 export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
   const pathname = usePathname();
   const sidebar = useShellStore.use.sidebar();
+  const sidebarSuppressed = useShellStore.use.sidebarSuppressed();
   const banner = useAppInlineBanner();
   const toggleSidebar = useShellStore.use.toggleSidebar();
   const title = useShellStore.use.pageTitle();
@@ -50,6 +51,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
     const pathWithoutLocale = pathname?.replace(new RegExp(`^/${locale}`), '') ?? '';
     return isCalendarViewPath(pathWithoutLocale);
   }, [pathname, locale]);
+  const sidebarVisible = sidebar.open && !sidebarSuppressed;
 
   // サイドバーが閉じているときに表示するトグルボタン
   const sidebarToggle = !sidebar.open ? (
@@ -68,7 +70,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
       <div className="flex min-h-0 flex-1">
         {/* Sidebar（固定幅256px、開閉可能） */}
         <AnimatedWidthPanel
-          open={sidebar.open}
+          open={sidebarVisible}
           width={sidebar.width}
           className="h-full"
           innerClassName="h-full"

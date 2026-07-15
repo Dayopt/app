@@ -139,9 +139,9 @@ export function CalendarFilterList() {
         >
           {isLoading ? (
             <div className="space-y-1 py-1">
-              <Skeleton className="h-6 w-full" />
-              <Skeleton className="h-6 w-full" />
-              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
             </div>
           ) : nodes && nodes.length > 0 ? (
             <TagFlatList

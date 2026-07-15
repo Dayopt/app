@@ -71,7 +71,7 @@ export function ReviewDiffPanel({
 }: ReviewDiffPanelProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const timezone = useUserPreferences((s) => s.timezone);
+  const { timeFormat, timezone } = useUserPreferences();
   const { getTagById } = useTagsMap();
   const isSheet = variant === 'sheet';
   const timeFormatter = useMemo(
@@ -79,10 +79,10 @@ export function ReviewDiffPanel({
       new Intl.DateTimeFormat(locale, {
         hour: '2-digit',
         minute: '2-digit',
-        hourCycle: 'h23',
+        hourCycle: timeFormat === '24h' ? 'h23' : 'h12',
         timeZone: timezone,
       }),
-    [locale, timezone],
+    [locale, timeFormat, timezone],
   );
 
   return (
@@ -113,7 +113,6 @@ export function ReviewDiffPanel({
           <SummaryMetric
             label={t('calendar.compare.rail.summary.diff')}
             value={formatSignedDuration(t, diff.summary.diffMinutes)}
-            valueClassName={diff.summary.diffMinutes >= 0 ? 'text-success' : 'text-destructive'}
             emphasis
           />
           <SummaryMetric
@@ -205,12 +204,10 @@ export function ReviewDiffPanel({
 function SummaryMetric({
   label,
   value,
-  valueClassName,
   emphasis = false,
 }: {
   label: string;
   value: string;
-  valueClassName?: string | undefined;
   emphasis?: boolean | undefined;
 }) {
   return (
@@ -220,7 +217,6 @@ function SummaryMetric({
         className={cn(
           'text-right font-mono text-sm font-medium tabular-nums',
           emphasis && 'text-base',
-          valueClassName,
         )}
       >
         {value}
@@ -233,15 +229,13 @@ function DiffBadge({ item }: { item: ReviewDiffItem }) {
   const t = useTranslations();
 
   const content = diffBadgeLabel(t, item);
-  const isPositive = item.kind === 'unplanned' || item.diffMinutes > 0 || item.startDiffMinutes < 0;
-  const Icon = isPositive ? ArrowUp : ArrowDown;
+  const pointsUp = item.kind === 'unplanned' || item.diffMinutes > 0 || item.startDiffMinutes < 0;
+  const Icon = pointsUp ? ArrowUp : ArrowDown;
 
   return (
     <span
-      className={cn(
-        'bg-container border-border-subtle mt-1 flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs tabular-nums',
-        isPositive ? 'text-success' : 'text-destructive',
-      )}
+      data-review-diff-badge
+      className="bg-container text-muted-foreground border-border-subtle mt-1 flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs tabular-nums"
     >
       <Icon className="size-3.5" aria-hidden="true" />
       {content}

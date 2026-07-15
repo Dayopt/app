@@ -5,6 +5,12 @@ import { MOCK_WEEK_GOOD } from '../time-pl/data/timePL.mocks';
 import { CalendarReviewPanel } from './CalendarReviewPanel';
 
 const noop = () => {};
+const DISPLAY_RANGE = {
+  start: new Date(2026, 2, 30),
+  end: new Date(2026, 3, 5, 23, 59, 59, 999),
+  days: Array.from({ length: 7 }, (_, index) => new Date(2026, 2, 30 + index)),
+  showWeekends: true,
+};
 
 const MOCK_PAGE_DATA: StatsPageData = {
   overview: {
@@ -75,14 +81,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Calendar panel slot に表示される週次 Review。 */
+/** Calendar panel slot に表示される Review。 */
 export const Default: Story = {
   args: {
     currentDate: new Date(2026, 3, 1),
+    displayRange: DISPLAY_RANGE,
     selectedTagId: null,
     onSelectedTagIdChange: noop,
     onClose: noop,
-    className: 'border-border-subtle h-[560px] w-80 border',
+    className: 'border-border-subtle h-[560px] w-64 border',
   },
 };
 
@@ -90,10 +97,11 @@ export const Default: Story = {
 export const TagSelected: Story = {
   args: {
     currentDate: new Date(2026, 3, 1),
+    displayRange: DISPLAY_RANGE,
     selectedTagId: '1',
     onSelectedTagIdChange: noop,
     onClose: noop,
-    className: 'border-border-subtle h-[560px] w-80 border',
+    className: 'border-border-subtle h-[560px] w-64 border',
   },
 };
 
@@ -104,6 +112,7 @@ export const MobileSheet: Story = {
   },
   args: {
     currentDate: new Date(2026, 3, 1),
+    displayRange: DISPLAY_RANGE,
     selectedTagId: null,
     onSelectedTagIdChange: noop,
     onClose: noop,
@@ -116,10 +125,11 @@ export const MobileSheet: Story = {
 export const Loading: Story = {
   args: {
     currentDate: new Date(2026, 3, 1),
+    displayRange: DISPLAY_RANGE,
     selectedTagId: null,
     onSelectedTagIdChange: noop,
     onClose: noop,
-    className: 'border-border-subtle h-[560px] w-80 border',
+    className: 'border-border-subtle h-[560px] w-64 border',
   },
   parameters: { trpcPending: true },
 };
@@ -128,10 +138,11 @@ export const Loading: Story = {
 export const Error: Story = {
   args: {
     currentDate: new Date(2026, 3, 1),
+    displayRange: DISPLAY_RANGE,
     selectedTagId: null,
     onSelectedTagIdChange: noop,
     onClose: noop,
-    className: 'border-border-subtle h-[560px] w-80 border',
+    className: 'border-border-subtle h-[560px] w-64 border',
   },
   parameters: {
     trpcError: { path: 'statistics.getStatsPageData', code: 'INTERNAL_SERVER_ERROR' },
@@ -142,6 +153,7 @@ export const Error: Story = {
 export const AllPatterns: Story = {
   args: {
     currentDate: new Date(2026, 3, 1),
+    displayRange: DISPLAY_RANGE,
     selectedTagId: null,
     onSelectedTagIdChange: noop,
     onClose: noop,
@@ -150,25 +162,28 @@ export const AllPatterns: Story = {
     <div className="flex flex-wrap items-start gap-4">
       <CalendarReviewPanel
         currentDate={new Date(2026, 3, 1)}
+        displayRange={DISPLAY_RANGE}
         selectedTagId={null}
         onSelectedTagIdChange={noop}
         onClose={noop}
-        className="border-border-subtle h-[560px] w-80 border"
+        className="border-border-subtle h-[560px] w-64 border"
       />
       <CalendarReviewPanel
         currentDate={new Date(2026, 3, 1)}
+        displayRange={DISPLAY_RANGE}
         selectedTagId="1"
         onSelectedTagIdChange={noop}
         onClose={noop}
-        className="border-border-subtle h-[560px] w-80 border"
+        className="border-border-subtle h-[560px] w-64 border"
       />
       <CalendarReviewPanel
         currentDate={new Date(2026, 3, 1)}
+        displayRange={DISPLAY_RANGE}
         selectedTagId={null}
         onSelectedTagIdChange={noop}
         onClose={noop}
         variant="sheet"
-        className="w-80"
+        className="w-64"
       />
     </div>
   ),

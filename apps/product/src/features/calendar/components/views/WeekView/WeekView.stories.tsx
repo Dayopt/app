@@ -208,6 +208,20 @@ export const Default: Story = {
   ),
 };
 
+/** inline right rail と共存できる最小 Calendar 幅。 */
+export const MinimumInlineWidth: Story = {
+  render: () => (
+    <div className="h-[700px] w-full max-w-3xl">
+      <WeekView
+        dateRange={weekRange}
+        entries={mockPlans}
+        currentDate={today}
+        {...defaultHandlers}
+      />
+    </div>
+  ),
+};
+
 /** 空（プランなし） */
 export const Empty: Story = {
   render: () => (
@@ -331,6 +345,15 @@ export const AllPatterns: Story = {
           dateRange={weekRange}
           entries={mockPlans}
           allTimeblocks={[...mockPlans, overdueEntry]}
+          currentDate={today}
+          {...defaultHandlers}
+        />
+      </div>
+
+      <div className="h-[500px] w-full max-w-3xl">
+        <WeekView
+          dateRange={weekRange}
+          entries={mockPlans}
           currentDate={today}
           {...defaultHandlers}
         />

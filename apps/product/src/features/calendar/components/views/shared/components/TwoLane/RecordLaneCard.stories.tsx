@@ -128,6 +128,20 @@ export const Compact: Story = {
   ),
 };
 
+/** Week / 5-day の狭い Record レーン。secondary detail は省略する。 */
+export const NarrowLane: Story = {
+  render: () => (
+    <div className="border-border relative h-24 w-16 overflow-hidden rounded-lg border">
+      <RecordLaneCard
+        event={makeEvent({ title: 'デザインレビュー', diffMinutes: 20 })}
+        position={{ ...basePosition, left: 0, width: 100 }}
+        tagColor="teal"
+        compact
+      />
+    </div>
+  ),
+};
+
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-wrap items-start gap-4">
@@ -170,6 +184,14 @@ export const AllPatterns: Story = {
             tagColor="violet"
           />
         </Slot>
+      </div>
+      <div className="border-border relative h-24 w-16 overflow-hidden rounded-lg border">
+        <RecordLaneCard
+          event={makeEvent({ title: 'デザインレビュー', diffMinutes: 20 })}
+          position={{ ...basePosition, left: 0, width: 100 }}
+          tagColor="teal"
+          compact
+        />
       </div>
     </div>
   ),

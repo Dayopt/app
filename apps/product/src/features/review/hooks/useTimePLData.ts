@@ -9,7 +9,12 @@ import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
 
 import type { TimePLInput } from '../domain/timePL/types';
-import { computePreviousDateRange, computeStatsDateRange } from '../lib/compute-date-range';
+import {
+  computeCalendarDisplayDateRanges,
+  computePreviousDateRange,
+  computeStatsDateRange,
+  type ReviewDisplayRange,
+} from '../lib/compute-date-range';
 import { useReviewFilterStore } from '../stores/useReviewFilterStore';
 
 /** get_time_pl_data RPC のレスポンス型 */
@@ -38,23 +43,29 @@ interface TimePLRpcResponse {
 /**
  * useTimePLData — Time P/L 用データを専用 RPC で取得し TimePLInput に変換
  *
- * useReviewFilterStore の粒度・日付を使い、
+ * Calendar の displayRange を優先し、未指定時は useReviewFilterStore の週次範囲を使う。
  * DB から予実データ + 日次ポイントを取得して TimePLInput に詰める。
  */
-export function useTimePLData() {
+export function useTimePLData(displayRange?: ReviewDisplayRange | undefined) {
   const currentDate = useReviewFilterStore((s) => s.currentDate);
   const granularity = useReviewFilterStore((s) => s.granularity);
   const timezone = useUserPreferences((s) => s.timezone);
   const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
 
-  const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-  const prevDateRange = useMemo(
-    () => computePreviousDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
+  const { dateRange, prevDateRange, dayCount, visibleDateKeys, prevVisibleDateKeys } =
+    useMemo(() => {
+      if (displayRange) {
+        return computeCalendarDisplayDateRanges(displayRange, timezone);
+      }
+
+      return {
+        dateRange: computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
+        prevDateRange: computePreviousDateRange(currentDate, granularity, timezone, weekStartsOn),
+        dayCount: 7,
+        visibleDateKeys: undefined,
+        prevVisibleDateKeys: undefined,
+      };
+    }, [currentDate, displayRange, granularity, timezone, weekStartsOn]);
 
   const input = useMemo(
     () => ({
@@ -62,8 +73,10 @@ export function useTimePLData() {
       endDate: dateRange.endDate,
       prevStart: prevDateRange.startDate,
       prevEnd: prevDateRange.endDate,
+      ...(visibleDateKeys ? { visibleDateKeys } : {}),
+      ...(prevVisibleDateKeys ? { prevVisibleDateKeys } : {}),
     }),
-    [dateRange, prevDateRange],
+    [dateRange, prevDateRange, prevVisibleDateKeys, visibleDateKeys],
   );
 
   const query = api.statistics.getTimePL.useQuery(input);
@@ -74,8 +87,8 @@ export function useTimePLData() {
 
     return {
       period: {
-        granularity,
-        label: formatPeriodLabel(currentDate, timezone),
+        granularity: dayCount === 1 ? 'day' : dayCount === 7 ? 'week' : 'range',
+        label: formatPeriodLabel(dateRange, timezone),
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       },
@@ -102,7 +115,7 @@ export function useTimePLData() {
             }))
           : undefined,
     };
-  }, [query.data, granularity, dateRange, timezone, currentDate]);
+  }, [query.data, dayCount, dateRange, timezone]);
 
   return {
     data: timePLInput,
@@ -114,6 +127,11 @@ export function useTimePLData() {
 
 // ── Internal ──
 
-function formatPeriodLabel(date: Date, timezone: string): string {
-  return formatInTimeZone(date, timezone, 'M/d') + '〜';
+function formatPeriodLabel(
+  dateRange: { startDate: string; endDate: string },
+  timezone: string,
+): string {
+  const start = formatInTimeZone(new Date(dateRange.startDate), timezone, 'M/d');
+  const end = formatInTimeZone(new Date(dateRange.endDate), timezone, 'M/d');
+  return start === end ? start : `${start}–${end}`;
 }

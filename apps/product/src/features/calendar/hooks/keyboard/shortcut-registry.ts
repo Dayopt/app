@@ -133,33 +133,50 @@ export function registerShortcuts(defs: ShortcutDef[]): () => void {
   };
 }
 
-/**
- * 現在のactiveElementが入力フィールドかどうかを判定する
- */
-function isInputFocused(): boolean {
-  const { activeElement } = document;
-  if (!activeElement) return false;
-  return (
-    activeElement.tagName === 'INPUT' ||
-    activeElement.tagName === 'TEXTAREA' ||
-    activeElement.getAttribute('contenteditable') === 'true' ||
-    activeElement.getAttribute('role') === 'textbox'
-  );
+const EDITABLE_SELECTOR = 'input, textarea, select, [role="textbox"], [role="combobox"]';
+const OVERLAY_SELECTOR = '[role="dialog"], [role="menu"], [role="listbox"]';
+
+/** グローバルショートカットを受け取った要素を解決する。 */
+function getEventElement(event: KeyboardEvent): Element | null {
+  if (event.target instanceof Element) return event.target;
+  return document.activeElement instanceof Element ? document.activeElement : null;
+}
+
+/** 入力・選択操作を行う要素かどうかを判定する。 */
+function isEditableElement(element: Element): boolean {
+  if (element.closest(EDITABLE_SELECTOR)) return true;
+
+  const contentEditable = element.closest('[contenteditable]');
+  return contentEditable !== null && contentEditable.getAttribute('contenteditable') !== 'false';
+}
+
+/** dialog/menu/listbox が所有するキー操作かどうかを判定する。 */
+function isInsideOverlay(element: Element): boolean {
+  return element.closest(OVERLAY_SELECTOR) !== null;
 }
 
 /**
  * グローバルkeydownイベントを処理する
  *
  * レジストリに登録されたショートカットを照合し、最も優先度の高いハンドラを実行する。
- * 入力フィールドにフォーカスがある場合はスキップ（Escapeは例外）。
+ * 入力フィールドやoverlay内のキー操作、および既に処理済みのイベントはスキップする。
+ * ただし未処理のEscapeはInspectorなどのglobal closeへ渡す。
  */
 export function handleGlobalKeyDown(event: KeyboardEvent): void {
+  if (event.defaultPrevented || event.isComposing) return;
+
   const combo = normalizeKeyCombo(event);
+  const eventElement = getEventElement(event);
+  if (
+    combo !== 'Escape' &&
+    eventElement &&
+    (isEditableElement(eventElement) || isInsideOverlay(eventElement))
+  ) {
+    return;
+  }
+
   const entries = registry.get(combo);
   if (!entries || entries.length === 0) return;
-
-  // Escape以外は入力フィールド内でスキップ
-  if (combo !== 'Escape' && isInputFocused()) return;
 
   // 優先度が最も高いハンドラを実行（既にソート済み）
   const topEntry = entries[0];

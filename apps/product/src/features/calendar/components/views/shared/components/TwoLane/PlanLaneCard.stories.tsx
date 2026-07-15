@@ -116,6 +116,20 @@ export const Compact: Story = {
   ),
 };
 
+/** Week / multi-day の狭い Plan レーン。 */
+export const NarrowLane: Story = {
+  render: () => (
+    <div className="border-border relative h-24 w-12 overflow-hidden rounded-lg border">
+      <PlanLaneCard
+        event={makeEvent('upcoming', { title: 'デザインレビュー' })}
+        position={{ ...basePosition, left: 0, width: 100 }}
+        tagColor="blue"
+        compact
+      />
+    </div>
+  ),
+};
+
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-wrap items-start gap-4">
@@ -135,6 +149,14 @@ export const AllPatterns: Story = {
           </Slot>
         </div>
       ))}
+      <div className="border-border relative h-24 w-12 overflow-hidden rounded-lg border">
+        <PlanLaneCard
+          event={makeEvent('upcoming', { title: 'デザインレビュー' })}
+          position={{ ...basePosition, left: 0, width: 100 }}
+          tagColor="blue"
+          compact
+        />
+      </div>
     </div>
   ),
 };
