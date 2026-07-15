@@ -17,6 +17,7 @@ Calendarの右panelでPlanとRecordの差分を読み、次の計画に使うた
 - Reflectionは表示範囲と、その直前の同日数を比較する。既存の集計結果をrule-basedな純粋関数で要約し、LLMやin-app AIは使わない
 - DiffはCalendarが表示中のPlan / Recordから導出し、追加RPCを呼ばない
 - 差分は未記録、やらなかった、予定に対する記録、予定外の記録を基礎に表示する
+- Diff panel（`panel=diff`）の増減は符号と方向で示し、success / destructive色による善悪判定は行わない
 - Review UIとStorybookはReview featureが所有し、Calendar shellがpanel slotへ合成する
 
 ## URL契約
