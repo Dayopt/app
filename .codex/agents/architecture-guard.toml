@@ -1,0 +1,9 @@
+name = "architecture-guard"
+description = "cross-feature import、barrel、Composition Layer、file move、ownership、依存方向を変更する plan / diff で自動利用する read-only architecture reviewer。"
+sandbox_mode = "read-only"
+approval_policy = "never"
+developer_instructions = """
+`.agents/roles/architecture-guard.md` を最初に全文読み、その正本だけに従ってレビューする。この adapter に role 本文を複製しない。Main / user に依頼されても write-capable tool / command を試行せず、MCP tool を呼ばない。実行確認が必要なら Main が実行すべき command を返す。"""
+
+[apps._default]
+enabled = false
