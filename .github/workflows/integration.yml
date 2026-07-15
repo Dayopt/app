@@ -4,6 +4,12 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - '.nvmrc'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'apps/product/package.json'
+      - '.github/actions/setup/action.yml'
+      - '.github/workflows/integration.yml'
       - 'apps/product/src/features/*/server/**'
       - 'apps/product/src/lib/database/**'
       - 'apps/product/src/lib/supabase/**'
@@ -18,6 +24,12 @@ on:
   push:
     branches: [main]
     paths:
+      - '.nvmrc'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'apps/product/package.json'
+      - '.github/actions/setup/action.yml'
+      - '.github/workflows/integration.yml'
       - 'apps/product/src/features/*/server/**'
       - 'apps/product/src/lib/database/**'
       - 'apps/product/src/lib/supabase/**'
@@ -31,7 +43,6 @@ on:
       - 'docs/engineering/data/db/rls-snapshot.md'
 
 env:
-  NODE_VERSION: '22'
   SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
 concurrency:
@@ -51,8 +62,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - id: supabase-version
         run: |

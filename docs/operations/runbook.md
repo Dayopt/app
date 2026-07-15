@@ -624,7 +624,7 @@ ORDER BY created_at DESC;
 
 ```bash
 # Node.js & npm
-node --version  # v20以上
+node --version  # v24
 npm --version
 
 # GitHub CLI

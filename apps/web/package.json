@@ -3,6 +3,9 @@
   "version": "0.27.0",
   "description": "Modern, high-performance marketing website built with Next.js 16, featuring comprehensive accessibility (WCAG 2.1 AA), enterprise-grade security, and type-safe development",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "type": "module",
   "author": "Dayopt Team",
   "license": "UNLICENSED",
@@ -102,7 +105,7 @@
     "@tailwindcss/postcss": "^4.3.2",
     "@tailwindcss/typography": "^0.5.20",
     "@types/mdx": "^2.0.14",
-    "@types/node": "^25",
+    "@types/node": "^24.13.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@typescript-eslint/eslint-plugin": "^8.63.0",
