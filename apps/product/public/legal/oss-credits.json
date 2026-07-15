@@ -956,14 +956,14 @@
   },
   {
     "name": "@supabase/auth-js",
-    "version": "2.110.2",
+    "version": "2.110.5",
     "license": "MIT",
     "repository": "https://github.com/supabase/supabase-js.git",
     "publisher": "Supabase"
   },
   {
     "name": "@supabase/functions-js",
-    "version": "2.110.2",
+    "version": "2.110.5",
     "license": "MIT",
     "repository": "https://github.com/supabase/supabase-js.git",
     "publisher": "Supabase"
@@ -977,35 +977,35 @@
   },
   {
     "name": "@supabase/postgrest-js",
-    "version": "2.110.2",
+    "version": "2.110.5",
     "license": "MIT",
     "repository": "https://github.com/supabase/supabase-js.git",
     "publisher": "Supabase"
   },
   {
     "name": "@supabase/realtime-js",
-    "version": "2.110.2",
+    "version": "2.110.5",
     "license": "MIT",
     "repository": "https://github.com/supabase/supabase-js.git",
     "publisher": "Supabase"
   },
   {
     "name": "@supabase/ssr",
-    "version": "0.12.0",
+    "version": "0.12.3",
     "license": "MIT",
     "repository": "https://github.com/supabase/ssr.git",
     "publisher": "Supabase, Inc."
   },
   {
     "name": "@supabase/storage-js",
-    "version": "2.110.2",
+    "version": "2.110.5",
     "license": "MIT",
     "repository": "https://github.com/supabase/supabase-js.git",
     "publisher": "Supabase"
   },
   {
     "name": "@supabase/supabase-js",
-    "version": "2.110.2",
+    "version": "2.110.5",
     "license": "MIT",
     "repository": "https://github.com/supabase/supabase-js.git",
     "publisher": "Supabase"
@@ -1495,6 +1495,12 @@
     "repository": "https://github.com/web-platform-dx/baseline-browser-mapping.git"
   },
   {
+    "name": "baseline-browser-mapping",
+    "version": "2.10.43",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/web-platform-dx/baseline-browser-mapping.git"
+  },
+  {
     "name": "body-parser",
     "version": "2.2.2",
     "license": "MIT",
@@ -1508,7 +1514,7 @@
   },
   {
     "name": "browserslist",
-    "version": "4.28.4",
+    "version": "4.28.6",
     "license": "MIT",
     "repository": "browserslist/browserslist",
     "publisher": "Andrey Sitnik <andrey@sitnik.es>"
@@ -1549,14 +1555,14 @@
   },
   {
     "name": "caniuse-lite",
-    "version": "1.0.30001799",
+    "version": "1.0.30001800",
     "license": "CC-BY-4.0",
     "repository": "browserslist/caniuse-lite",
     "publisher": "Ben Briggs"
   },
   {
     "name": "caniuse-lite",
-    "version": "1.0.30001800",
+    "version": "1.0.30001805",
     "license": "CC-BY-4.0",
     "repository": "browserslist/caniuse-lite",
     "publisher": "Ben Briggs"
@@ -1969,7 +1975,7 @@
   },
   {
     "name": "electron-to-chromium",
-    "version": "1.5.380",
+    "version": "1.5.389",
     "license": "ISC",
     "repository": "https://github.com/Kilian/electron-to-chromium.git",
     "publisher": "Kilian Valkhof"
@@ -2002,9 +2008,9 @@
   },
   {
     "name": "enhanced-resolve",
-    "version": "5.24.1",
+    "version": "5.24.2",
     "license": "MIT",
-    "repository": "git://github.com/webpack/enhanced-resolve.git",
+    "repository": "https://github.com/webpack/enhanced-resolve.git",
     "publisher": "Tobias Koppers @sokra"
   },
   {
@@ -2038,6 +2044,13 @@
   {
     "name": "es-module-lexer",
     "version": "2.3.0",
+    "license": "MIT",
+    "repository": "https://github.com/guybedford/es-module-lexer.git",
+    "publisher": "Guy Bedford"
+  },
+  {
+    "name": "es-module-lexer",
+    "version": "2.3.1",
     "license": "MIT",
     "repository": "https://github.com/guybedford/es-module-lexer.git",
     "publisher": "Guy Bedford"
@@ -2822,7 +2835,7 @@
   },
   {
     "name": "node-releases",
-    "version": "2.0.50",
+    "version": "2.0.51",
     "license": "MIT",
     "repository": "https://github.com/chicoxyzzy/node-releases.git",
     "publisher": "Sergey Rubanov <chi187@gmail.com>"
@@ -3019,14 +3032,14 @@
   },
   {
     "name": "postcss",
-    "version": "8.5.16",
+    "version": "8.5.18",
     "license": "MIT",
     "repository": "postcss/postcss",
     "publisher": "Andrey Sitnik <andrey@sitnik.es>"
   },
   {
     "name": "postcss",
-    "version": "8.5.18",
+    "version": "8.5.19",
     "license": "MIT",
     "repository": "postcss/postcss",
     "publisher": "Andrey Sitnik <andrey@sitnik.es>"
@@ -3557,7 +3570,7 @@
   },
   {
     "name": "terser",
-    "version": "5.48.0",
+    "version": "5.49.0",
     "license": "BSD-2-Clause",
     "repository": "https://github.com/terser/terser",
     "publisher": "Mihai Bazon <mihai.bazon@gmail.com> (http://lisperator.net/)"
@@ -3755,7 +3768,7 @@
   },
   {
     "name": "webpack-sources",
-    "version": "3.5.0",
+    "version": "3.5.1",
     "license": "MIT",
     "repository": "https://github.com/webpack/webpack-sources.git",
     "publisher": "Tobias Koppers @sokra"
