@@ -20,8 +20,8 @@ import { toast } from '@/lib/toast';
 
 import { isPlanTimeEditable, type TimeblockDestination } from '../../domain/timeblock-destination';
 import {
-  type TimeblockSavePatch,
   useCoalescedTimeblockSave,
+  type TimeblockSavePatch,
 } from '../../hooks/useCoalescedTimeblockSave';
 import { useTimeblockWriteMutations } from '../../hooks/useTimeblockWriteMutations';
 import type { ClipboardTimeblock } from '../../lib/timeblock-clipboard';
@@ -34,16 +34,36 @@ import {
   type TimeModelEditorValue,
 } from './TimeblockEditor';
 import { RecordPlanButton } from './TimeblockRecordActions';
+import {
+  TimeblockRelationshipSection,
+  type TimeblockRelationshipItem,
+} from './TimeblockRelationshipSection';
 
 type PlanRow = Row<'plans'>;
 type RecordRow = Row<typeof databaseTables.records>;
+
+export type TimeblockRelationships =
+  | {
+      kind: 'plan';
+      status: 'loading' | 'error' | 'success';
+      records: readonly RecordRow[];
+      onRetry: () => void;
+    }
+  | {
+      kind: 'record';
+      status: 'loading' | 'error' | 'success' | 'unavailable';
+      plan: PlanRow | null;
+      onRetry: () => void;
+    };
 
 interface TimeModelInspectorFormProps {
   kind: TimeblockDestination;
   plan?: PlanRow | undefined;
   record?: RecordRow | undefined;
-  /** plan に紐づく record が存在するか（記録済み判定。record では常に false） */
-  isRecorded: boolean;
+  /** Plan / Record の関係取得状態と表示対象。 */
+  relationships?: TimeblockRelationships | undefined;
+  /** 関係行または記録直後の対象を同じ Inspector で開く。 */
+  onOpenRelationship?: ((id: string, kind: TimeblockDestination) => void) | undefined;
   onViewStats?: ((tagId: string) => void) | undefined;
   onCopy?: ((timeblock: ClipboardTimeblock) => void) | undefined;
   /** Inspector を閉じるコールバック（Mobile Drawer のみ渡す） */
@@ -63,7 +83,8 @@ export function TimeblockInspectorForm({
   kind,
   plan,
   record,
-  isRecorded,
+  relationships,
+  onOpenRelationship,
   onViewStats,
   onCopy,
   onCloseInspector,
@@ -100,6 +121,10 @@ export function TimeblockInspectorForm({
   const isMigrated = kind === 'record' && record?.source === 'auto_migrated';
   const isPast = kind === 'record' || (target != null && new Date(target.end_at) <= new Date());
   const isSkipped = kind === 'plan' && plan?.skipped_at != null;
+  const planRelationships = relationships?.kind === 'plan' ? relationships : undefined;
+  const isRecordStateResolved = kind !== 'plan' || planRelationships?.status === 'success';
+  const hasRelatedRecords =
+    planRelationships?.status === 'success' && planRelationships.records.length > 0;
 
   useEffect(() => {
     latestUpdatedAtRef.current = targetUpdatedAt;
@@ -274,12 +299,24 @@ export function TimeblockInspectorForm({
     isSkipped,
     onViewStats: onViewStats && value.tagId ? () => onViewStats(value.tagId ?? '') : undefined,
     onCopy: onCopy ? handleCopy : undefined,
-    onSkip: kind === 'plan' && !isRecorded ? handleSkip : undefined,
+    onSkip: kind === 'plan' && isRecordStateResolved && !hasRelatedRecords ? handleSkip : undefined,
     onUnskip: kind === 'plan' ? handleUnskip : undefined,
     onDelete: isMigrated ? undefined : handleDelete,
   });
 
   if (!target) return null;
+
+  const toRelationshipItem = (row: PlanRow | RecordRow): TimeblockRelationshipItem => {
+    const tag = row.tag_id ? getTagById(row.tag_id) : undefined;
+    return {
+      id: row.id,
+      tagName: tag?.name ?? t('common.tags.noTag'),
+      tagColor: tag?.color ?? null,
+      tagIcon: tag?.icon ?? null,
+      startAt: new Date(row.start_at),
+      endAt: new Date(row.end_at),
+    };
+  };
 
   return (
     <div className="space-y-3 p-4">
@@ -307,9 +344,40 @@ export function TimeblockInspectorForm({
         disabled={deletePlan.isPending || deleteRecord.isPending || isMigrated}
       />
 
-      {kind === 'plan' && isPast && !isSkipped && !isRecorded && targetId ? (
+      {relationships && onOpenRelationship ? (
+        relationships.kind === 'plan' ? (
+          <TimeblockRelationshipSection
+            kind="plan"
+            status={relationships.status}
+            records={relationships.records.map(toRelationshipItem)}
+            onOpen={onOpenRelationship}
+            onRetry={relationships.onRetry}
+          />
+        ) : (
+          <TimeblockRelationshipSection
+            kind="record"
+            status={relationships.status}
+            plan={relationships.plan ? toRelationshipItem(relationships.plan) : null}
+            onOpen={onOpenRelationship}
+            onRetry={relationships.onRetry}
+          />
+        )
+      ) : null}
+
+      {kind === 'plan' &&
+      isPast &&
+      !isSkipped &&
+      isRecordStateResolved &&
+      !hasRelatedRecords &&
+      targetId ? (
         <div className="flex justify-start">
-          <RecordPlanButton planId={targetId} beforeRecord={flushBeforeRecord} />
+          <RecordPlanButton
+            planId={targetId}
+            beforeRecord={flushBeforeRecord}
+            onRecorded={
+              onOpenRelationship ? (recordId) => onOpenRelationship(recordId, 'record') : undefined
+            }
+          />
         </div>
       ) : null}
     </div>

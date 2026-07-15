@@ -43,10 +43,12 @@ describe('TimeblockRecordActions', () => {
     const user = userEvent.setup();
     const preparation = createDeferred();
     const beforeRecord = vi.fn(() => preparation.promise);
+    const onRecorded = vi.fn();
     render(
       createElement(RecordPlanButton, {
         planId: '00000000-0000-4000-8000-000000000001',
         beforeRecord,
+        onRecorded,
       }),
     );
 
@@ -68,7 +70,10 @@ describe('TimeblockRecordActions', () => {
     );
 
     const mutationOptions = mocks.recordPlan.mock.calls[0]?.[1] as
-      { onSettled?: () => void } | undefined;
+      { onSuccess?: (record: { id: string }) => void; onSettled?: () => void } | undefined;
+    act(() => mutationOptions?.onSuccess?.({ id: 'record-1' }));
+    expect(onRecorded).toHaveBeenCalledWith('record-1');
+
     act(() => mutationOptions?.onSettled?.());
 
     expect(button).toBeEnabled();

@@ -139,6 +139,15 @@
       "deleteConfirmDescription": "この表示設定は完全に削除されます。取り消せません",
       "deleteConfirm": "削除"
     },
+    "relationships": {
+      "relatedRecords": "関連する記録",
+      "recordSummary": "{count}件 · 計{duration}",
+      "originalPlan": "元の予定",
+      "originalPlanUnavailable": "元の予定を表示できません",
+      "openRecord": "記録を開く: {tag}、{dateTime}、{duration}",
+      "openPlan": "元の予定を開く: {tag}、{dateTime}、{duration}",
+      "loadFailed": "関連を読み込めませんでした"
+    },
     "editor": {
       "destination": {
         "plan": "予定として保存",

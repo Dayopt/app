@@ -139,6 +139,15 @@
       "deleteConfirmDescription": "This view configuration will be deleted. This action cannot be undone.",
       "deleteConfirm": "Delete"
     },
+    "relationships": {
+      "relatedRecords": "Related records",
+      "recordSummary": "{count, plural, one {# record} other {# records}} · {duration} total",
+      "originalPlan": "Original plan",
+      "originalPlanUnavailable": "Original plan is unavailable",
+      "openRecord": "Open record: {tag}, {dateTime}, {duration}",
+      "openPlan": "Open original plan: {tag}, {dateTime}, {duration}",
+      "loadFailed": "Could not load relationships"
+    },
     "editor": {
       "destination": {
         "plan": "Save as plan",

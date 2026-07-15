@@ -57,11 +57,26 @@ vi.mock('../../inspector/fields', () => ({
 }));
 
 vi.mock('../TimeblockRecordActions', () => ({
-  RecordPlanButton: ({ beforeRecord }: { beforeRecord: () => Promise<void> }) => (
-    <button type="button" onClick={() => void beforeRecord()}>
-      prepare-record
-    </button>
+  RecordPlanButton: ({
+    beforeRecord,
+    onRecorded,
+  }: {
+    beforeRecord: () => Promise<void>;
+    onRecorded?: (recordId: string) => void;
+  }) => (
+    <>
+      <button type="button" onClick={() => void beforeRecord()}>
+        prepare-record
+      </button>
+      <button type="button" onClick={() => onRecorded?.('record-created')}>
+        complete-record
+      </button>
+    </>
   ),
+}));
+
+vi.mock('../TimeblockRelationshipSection', () => ({
+  TimeblockRelationshipSection: () => null,
 }));
 
 vi.mock('../TimeblockEditor', () => ({
@@ -131,6 +146,23 @@ const pastPlan = {
   end_at: '2026-07-15T11:00:00.000Z',
 } satisfies Row<'plans'>;
 
+const relatedRecord = {
+  id: 'record-1',
+  user_id: 'user-1',
+  tag_id: '00000000-0000-4000-8000-000000000001',
+  plan_id: pastPlan.id,
+  external_calendar_event_id: null,
+  fulfillment_score: null,
+  title: 'Recorded work',
+  note: null,
+  start_at: '2026-07-15T10:00:00.000Z',
+  end_at: '2026-07-15T11:00:00.000Z',
+  source: 'from_plan',
+  deleted_at: null,
+  created_at: '2026-07-15T10:00:00.000Z',
+  updated_at: '2026-07-15T10:00:00.000Z',
+} satisfies Row<'records'>;
+
 describe('TimeblockInspectorForm', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -144,14 +176,7 @@ describe('TimeblockInspectorForm', () => {
   });
 
   it('未来Planの終了を現在以前へ変更せず、保存キューにも送らない', () => {
-    render(
-      <TimeblockInspectorForm
-        kind="plan"
-        plan={futurePlan}
-        isRecorded={false}
-        onDeleted={vi.fn()}
-      />,
-    );
+    render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
 
     expect(screen.getByTestId('current-end')).toHaveTextContent('2026-07-15T14:00:00.000Z');
 
@@ -164,7 +189,12 @@ describe('TimeblockInspectorForm', () => {
 
   it('記録前にdebounceを止め、最新のタグとメモをsnapshot保存する', () => {
     render(
-      <TimeblockInspectorForm kind="plan" plan={pastPlan} isRecorded={false} onDeleted={vi.fn()} />,
+      <TimeblockInspectorForm
+        kind="plan"
+        plan={pastPlan}
+        relationships={{ kind: 'plan', status: 'success', records: [], onRetry: vi.fn() }}
+        onDeleted={vi.fn()}
+      />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'edit-note' }));
@@ -179,5 +209,66 @@ describe('TimeblockInspectorForm', () => {
 
     act(() => vi.advanceTimersByTime(600));
     expect(mocks.enqueueSave).not.toHaveBeenCalled();
+  });
+
+  it('関係取得を解決するまで記録導線を出さず、0件成功時だけ表示する', () => {
+    const { rerender } = render(
+      <TimeblockInspectorForm
+        kind="plan"
+        plan={pastPlan}
+        relationships={{ kind: 'plan', status: 'loading', records: [], onRetry: vi.fn() }}
+        onOpenRelationship={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'prepare-record' })).not.toBeInTheDocument();
+
+    rerender(
+      <TimeblockInspectorForm
+        kind="plan"
+        plan={pastPlan}
+        relationships={{ kind: 'plan', status: 'success', records: [], onRetry: vi.fn() }}
+        onOpenRelationship={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'prepare-record' })).toBeInTheDocument();
+  });
+
+  it('関連RecordがあるPlanには記録導線を重ねて表示しない', () => {
+    render(
+      <TimeblockInspectorForm
+        kind="plan"
+        plan={pastPlan}
+        relationships={{
+          kind: 'plan',
+          status: 'success',
+          records: [relatedRecord],
+          onRetry: vi.fn(),
+        }}
+        onOpenRelationship={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'prepare-record' })).not.toBeInTheDocument();
+  });
+
+  it('記録成功後のRecord IDをInspector切替へ渡す', () => {
+    const onOpenRelationship = vi.fn();
+    render(
+      <TimeblockInspectorForm
+        kind="plan"
+        plan={pastPlan}
+        relationships={{ kind: 'plan', status: 'success', records: [], onRetry: vi.fn() }}
+        onOpenRelationship={onOpenRelationship}
+        onDeleted={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'complete-record' }));
+    expect(onOpenRelationship).toHaveBeenCalledWith('record-created', 'record');
   });
 });

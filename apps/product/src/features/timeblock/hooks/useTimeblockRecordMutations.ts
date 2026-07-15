@@ -33,6 +33,7 @@ export function useTimeblockRecordMutations() {
     },
     onSuccess: (record) => {
       utils.records.list.setData(undefined, (old) => (old ? [...old, record] : [record]));
+      utils.records.getById.setData({ id: record.id }, record);
       toast.success(t('toast.recorded'));
     },
     onError: (error, _input, context) => {
@@ -54,6 +55,9 @@ export function useTimeblockRecordMutations() {
     },
     onSuccess: (records) => {
       utils.records.list.setData(undefined, (old) => (old ? [...old, ...records] : records));
+      for (const record of records) {
+        utils.records.getById.setData({ id: record.id }, record);
+      }
       toast.success(t('toast.dayConfirmed'));
     },
     onError: (error, _input, context) => {

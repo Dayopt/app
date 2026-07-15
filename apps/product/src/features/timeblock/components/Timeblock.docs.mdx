@@ -8,16 +8,18 @@ Plan / Recordのcard、editor、inspector、record action component群。Storybo
 
 ## Visual states
 
-| 対象           | 主な状態                                                       |
-| -------------- | -------------------------------------------------------------- |
-| TimeblockCard  | Plan / Record、upcoming / active / past、selected、dragging    |
-| Inspector      | desktop popover / mobile drawer、time locked、validation error |
-| Editor         | 未来Plan、過去Planのtime locked、Record、全体disabled          |
-| Record actions | そのまま記録、日単位の一括確定、pending                        |
+| 対象           | 主な状態                                                            |
+| -------------- | ------------------------------------------------------------------- |
+| TimeblockCard  | Plan / Record、upcoming / active / past、selected、dragging         |
+| Inspector      | desktop popover / mobile drawer、time locked、validation error      |
+| Editor         | 未来Plan、過去Planのtime locked、Record、全体disabled               |
+| Record actions | そのまま記録、日単位の一括確定、pending                             |
+| Relationships  | Planの関連Record一覧、Recordの元Plan、loading / error / unavailable |
 
 - Inspectorで開いたPlan / Recordは時間編集で暗黙変換しない
 - past Planは時間fieldをdisabledにし、内容訂正とrecord actionは残す
 - 「そのまま記録」のpendingは、最新のタグ・メモ保存からRecord作成まで継続する
+- Plan / Recordの関係はraw IDではなくタグと日時で示し、行選択で同じInspectorの対象を切り替える
 - product rule、DB、RPCはStorybookに複製しない
 
 ---
@@ -28,7 +30,8 @@ Plan / Recordのcard、editor、inspector、record action component群。Storybo
 TimeblockInspector                    Inspector シェル（PC: FloatingPopover / Mobile: Drawer）
 └── TimeblockInspectorForm            Plan / Record 共有の編集フォーム
     ├── TagRow                        タグ選択 + 共通メニュー（振り返り / コピー / 削除等）
-    └── DateTimeSection / メモ        自動保存される共有編集フィールド
+    ├── DateTimeSection / メモ        自動保存される共有編集フィールド
+    └── TimeblockRelationshipSection  関連Record / 元Planの人間向け表示と詳細切替
 
 TimeblockEditor                       インライン作成エディタ（タグパレット等から）
 TimeblockRecordActions                記録導線（ワンタップ「そのまま記録」/ ConfirmDayButton）

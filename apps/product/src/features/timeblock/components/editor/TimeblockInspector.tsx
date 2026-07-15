@@ -11,7 +11,7 @@
  * 旧 TimeblockInspector（entries 用）の置き換え。旧実装は Step 9 で削除する。
  */
 
-import { Suspense, useCallback } from 'react';
+import { Suspense, useCallback, useEffect, useRef } from 'react';
 
 import { useTranslations } from 'next-intl';
 
@@ -21,12 +21,13 @@ import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { api } from '@/lib/trpc';
 import { Drawer, DrawerContent, DrawerTitle, Spinner } from '@dayopt/components';
 
+import type { TimeblockDestination } from '../../domain/timeblock-destination';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
 import type { ClipboardTimeblock } from '../../lib/timeblock-clipboard';
 import { useTimeblockInspectorStore } from '../../stores/useTimeblockInspectorStore';
 import { FloatingPopover } from '../inspector/FloatingPopover';
 import { useInspectorKeyboard } from '../inspector/hooks';
-import { TimeblockInspectorForm } from './TimeblockInspectorForm';
+import { TimeblockInspectorForm, type TimeblockRelationships } from './TimeblockInspectorForm';
 
 /** URL同期（useSearchParams は Suspense が必要なため分離） */
 function InspectorURLSyncHandler() {
@@ -41,6 +42,9 @@ interface TimeModelInspectorProps {
   onCopy?: ((timeblock: ClipboardTimeblock) => void) | undefined;
 }
 
+const INSPECTOR_FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 /** plans / records 対応 Inspector のトップレベル（モバイル=Drawer / PC=FloatingPopover） */
 export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorProps) {
   const t = useTranslations();
@@ -50,7 +54,10 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
   const timeblockId = useTimeblockInspectorStore((state) => state.timeblockId);
   const timeblockKind = useTimeblockInspectorStore((state) => state.timeblockKind);
   const anchorRect = useTimeblockInspectorStore((state) => state.anchorRect);
+  const openInspector = useTimeblockInspectorStore((state) => state.openInspector);
   const closeInspector = useTimeblockInspectorStore((state) => state.closeInspector);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const shouldFocusRelationshipRef = useRef(false);
 
   const planQuery = api.plans.getById.useQuery(
     { id: timeblockId ?? '' },
@@ -60,10 +67,17 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
     { id: timeblockId ?? '' },
     { enabled: isOpen && !!timeblockId && timeblockKind === 'record' },
   );
-  // 過去 plan の記録済み判定（RecordPlanButton / skip 表示の切替に使う）
-  const recordedQuery = api.records.list.useQuery(
-    { planId: timeblockId ?? '', limit: 1 },
+  const relatedRecordsQuery = api.records.list.useQuery(
+    { planId: timeblockId ?? '', sortBy: 'start_at', sortOrder: 'asc' },
     { enabled: isOpen && !!timeblockId && timeblockKind === 'plan' },
+  );
+  const originalPlanId = timeblockKind === 'record' ? recordQuery.data?.plan_id : null;
+  const originalPlanQuery = api.plans.getById.useQuery(
+    { id: originalPlanId ?? '' },
+    {
+      enabled: isOpen && !!originalPlanId && timeblockKind === 'record',
+      retry: (failureCount, error) => (error.data?.code === 'NOT_FOUND' ? false : failureCount < 3),
+    },
   );
 
   const activeQuery = timeblockKind === 'plan' ? planQuery : recordQuery;
@@ -71,9 +85,59 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
   const record = timeblockKind === 'record' ? recordQuery.data : undefined;
   const target = plan ?? record;
 
+  const handleOpenRelationship = useCallback(
+    (id: string, kind: TimeblockDestination) => {
+      shouldFocusRelationshipRef.current = true;
+      openInspector(id, kind);
+    },
+    [openInspector],
+  );
+
   const handleClose = useCallback(() => {
+    shouldFocusRelationshipRef.current = false;
     closeInspector();
   }, [closeInspector]);
+
+  useEffect(() => {
+    if (!isOpen || activeQuery.isLoading || !shouldFocusRelationshipRef.current) return;
+
+    shouldFocusRelationshipRef.current = false;
+    const content = contentRef.current;
+    if (!content) return;
+
+    const focusTarget = content.querySelector<HTMLElement>(INSPECTOR_FOCUSABLE_SELECTOR);
+    (focusTarget ?? content).focus();
+  }, [activeQuery.isLoading, isOpen, target?.id, timeblockKind]);
+
+  let relationships: TimeblockRelationships | undefined;
+  if (timeblockKind === 'plan') {
+    const status: 'loading' | 'error' | 'success' = relatedRecordsQuery.isError
+      ? 'error'
+      : relatedRecordsQuery.isSuccess
+        ? 'success'
+        : 'loading';
+    relationships = {
+      kind: 'plan',
+      status,
+      records: relatedRecordsQuery.data ?? [],
+      onRetry: () => void relatedRecordsQuery.refetch(),
+    };
+  } else if (originalPlanId) {
+    const isUnavailable = originalPlanQuery.error?.data?.code === 'NOT_FOUND';
+    const status: 'loading' | 'error' | 'success' | 'unavailable' = isUnavailable
+      ? 'unavailable'
+      : originalPlanQuery.isError
+        ? 'error'
+        : originalPlanQuery.isSuccess
+          ? 'success'
+          : 'loading';
+    relationships = {
+      kind: 'record',
+      status,
+      plan: originalPlanQuery.data ?? null,
+      onRetry: () => void originalPlanQuery.refetch(),
+    };
+  }
 
   useInspectorKeyboard({
     isOpen,
@@ -112,7 +176,8 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
         kind={timeblockKind}
         plan={plan}
         record={record}
-        isRecorded={(recordedQuery.data?.length ?? 0) > 0}
+        relationships={relationships}
+        onOpenRelationship={handleOpenRelationship}
         onViewStats={onViewStats}
         onCopy={onCopy}
         onCloseInspector={isMobile ? handleClose : undefined}
@@ -120,6 +185,12 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
       />
     );
   }
+
+  const contentElement = (
+    <div ref={contentRef} tabIndex={-1} className="focus:outline-none">
+      {content}
+    </div>
+  );
 
   // URL同期は常時有効（popstateリスナーをInspector閉じ中も維持するため）
   const urlSyncElement = (
@@ -144,13 +215,13 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
           <DrawerContent className="flex flex-col gap-0 overflow-hidden p-0">
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <div className="mx-auto w-full max-w-lg">{content}</div>
+              <div className="mx-auto w-full max-w-lg">{contentElement}</div>
             </div>
           </DrawerContent>
         </Drawer>
       ) : (
         <FloatingPopover onClose={handleClose} title={title} anchorRect={anchorRect}>
-          {content}
+          {contentElement}
         </FloatingPopover>
       )}
     </>
