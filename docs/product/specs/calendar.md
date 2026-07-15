@@ -20,6 +20,7 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 - Diffは符号と方向を数字・iconで示し、増減そのものをsuccess / destructive色で評価しない
 - 過去Planの時間は凍結し、Recordの時間は訂正できる
 - `panel=review` / `panel=diff`で単一の右panel slotを開く。panel UIはReview featureが所有し、Calendarは表示範囲とcompositionを所有する
+- Review / Time P/Lの集計対象日はCalendarの表示日配列を正とし、週末非表示時は範囲内の土日を含めない
 - Diffの対象期間はCalendarの現在viewを正とし、day / week / multi-dayの範囲をそのまま使う
 
 ## Stateの正本

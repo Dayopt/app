@@ -8,6 +8,8 @@ const noop = () => {};
 const DISPLAY_RANGE = {
   start: new Date(2026, 2, 30),
   end: new Date(2026, 3, 5, 23, 59, 59, 999),
+  days: Array.from({ length: 7 }, (_, index) => new Date(2026, 2, 30 + index)),
+  showWeekends: true,
 };
 
 const MOCK_PAGE_DATA: StatsPageData = {

@@ -52,17 +52,20 @@ export function useTimePLData(displayRange?: ReviewDisplayRange | undefined) {
   const timezone = useUserPreferences((s) => s.timezone);
   const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
 
-  const { dateRange, prevDateRange, dayCount } = useMemo(() => {
-    if (displayRange) {
-      return computeCalendarDisplayDateRanges(displayRange, timezone);
-    }
+  const { dateRange, prevDateRange, dayCount, visibleDateKeys, prevVisibleDateKeys } =
+    useMemo(() => {
+      if (displayRange) {
+        return computeCalendarDisplayDateRanges(displayRange, timezone);
+      }
 
-    return {
-      dateRange: computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
-      prevDateRange: computePreviousDateRange(currentDate, granularity, timezone, weekStartsOn),
-      dayCount: 7,
-    };
-  }, [currentDate, displayRange, granularity, timezone, weekStartsOn]);
+      return {
+        dateRange: computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
+        prevDateRange: computePreviousDateRange(currentDate, granularity, timezone, weekStartsOn),
+        dayCount: 7,
+        visibleDateKeys: undefined,
+        prevVisibleDateKeys: undefined,
+      };
+    }, [currentDate, displayRange, granularity, timezone, weekStartsOn]);
 
   const input = useMemo(
     () => ({
@@ -70,8 +73,10 @@ export function useTimePLData(displayRange?: ReviewDisplayRange | undefined) {
       endDate: dateRange.endDate,
       prevStart: prevDateRange.startDate,
       prevEnd: prevDateRange.endDate,
+      ...(visibleDateKeys ? { visibleDateKeys } : {}),
+      ...(prevVisibleDateKeys ? { prevVisibleDateKeys } : {}),
     }),
-    [dateRange, prevDateRange],
+    [dateRange, prevDateRange, prevVisibleDateKeys, visibleDateKeys],
   );
 
   const query = api.statistics.getTimePL.useQuery(input);

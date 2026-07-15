@@ -35,7 +35,7 @@ export function useReviewPageData(
   const timezone = useUserPreferences((s) => s.timezone);
   const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
 
-  const { dateRange, prevDateRange } = useMemo(() => {
+  const { dateRange, prevDateRange, visibleDateKeys, prevVisibleDateKeys } = useMemo(() => {
     if (displayRange) {
       return computeCalendarDisplayDateRanges(displayRange, timezone);
     }
@@ -43,6 +43,8 @@ export function useReviewPageData(
     return {
       dateRange: computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
       prevDateRange: computePreviousDateRange(currentDate, granularity, timezone, weekStartsOn),
+      visibleDateKeys: undefined,
+      prevVisibleDateKeys: undefined,
     };
   }, [currentDate, displayRange, granularity, timezone, weekStartsOn]);
   const queryYear = resolveReviewQueryYear(calendarDate, currentDate);
@@ -54,8 +56,10 @@ export function useReviewPageData(
       prevEnd: prevDateRange.endDate,
       year: queryYear,
       monthlyMonths: computeMonthCount(granularity),
+      ...(visibleDateKeys ? { visibleDateKeys } : {}),
+      ...(prevVisibleDateKeys ? { prevVisibleDateKeys } : {}),
     }),
-    [dateRange, prevDateRange, queryYear, granularity],
+    [dateRange, granularity, prevDateRange, prevVisibleDateKeys, queryYear, visibleDateKeys],
   );
 
   const query = api.statistics.getStatsPageData.useQuery(input);

@@ -13,8 +13,8 @@ Calendarの右panelでPlanとRecordの差分を読み、次の計画に使うた
 - 独立したReview pageは持たず、Calendarのcontextual panelとして表示する
 - `panel=review`と`panel=diff`は、どちらもCalendarの表示範囲に対応する内容を表示する
 - day / week / 2〜9day multi-dayのviewを維持したままpanelを開閉できる
-- 週末非表示時も、Calendarに表示される先頭日から末尾日までをpanelの期間として使う
-- Reflectionは表示範囲と、その直前の同日数を比較する。既存の集計結果をrule-basedな純粋関数で要約し、LLMやin-app AIは使わない
+- 週末非表示時は、Calendarに実際に表示されている日だけをReview / Time P/Lの集計対象にする。先頭日と末尾日の間にある非表示の土日は含めない
+- Reflectionは表示日と、その直前の同じ表示日数を比較する。週末非表示時は比較期間も土日を飛ばす。既存の集計結果をrule-basedな純粋関数で要約し、LLMやin-app AIは使わない
 - DiffはCalendarが表示中のPlan / Recordから導出し、追加RPCを呼ばない
 - 差分は未記録、やらなかった、予定に対する記録、予定外の記録を基礎に表示する
 - Diff panel（`panel=diff`）の増減は符号と方向で示し、success / destructive色による善悪判定は行わない

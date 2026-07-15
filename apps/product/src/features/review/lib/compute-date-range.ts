@@ -5,11 +5,11 @@ import { tzWeekEnd, tzWeekStart } from '@/lib/date/timezone';
 
 import type { ReviewGranularity } from '../stores/useReviewFilterStore';
 
-const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
-
 export interface ReviewDisplayRange {
   start: Date;
   end: Date;
+  days: readonly Date[];
+  showWeekends: boolean;
 }
 
 interface ReviewDateRange {
@@ -27,8 +27,8 @@ interface ReviewDateRange {
  * displayRange の Date は Calendar が描画するローカル日付なので、時刻として再解釈せず
  * 年月日の成分をそのまま使う。
  *
- * 前期間は表示日数と同じ日数を直前へずらす。ミリ秒差ではなく日付をずらすことで、
- * DST をまたいでも同じ数のローカル日を比較対象にする。
+ * current / previous とも実際の表示日キーを返す。前期間は表示日数と同じ日数を
+ * 直前へずらし、週末非表示時は土日を飛ばす。
  */
 export function computeCalendarDisplayDateRanges(
   displayRange: ReviewDisplayRange,
@@ -37,17 +37,33 @@ export function computeCalendarDisplayDateRanges(
   dateRange: ReviewDateRange;
   prevDateRange: ReviewDateRange;
   dayCount: number;
+  visibleDateKeys: string[];
+  prevVisibleDateKeys: string[];
 } {
-  const startDateKey = toCalendarDateKey(displayRange.start);
-  const endDateKey = toCalendarDateKey(displayRange.end);
-  const dayCount = getInclusiveDayCount(startDateKey, endDateKey);
-  const prevStartDateKey = shiftDateKey(startDateKey, -dayCount);
-  const prevEndDateKey = shiftDateKey(startDateKey, -1);
+  const visibleDateKeys = Array.from(
+    new Set(
+      (displayRange.days.length > 0 ? displayRange.days : [displayRange.start]).map(
+        toCalendarDateKey,
+      ),
+    ),
+  ).sort();
+  const startDateKey = visibleDateKeys[0] ?? toCalendarDateKey(displayRange.start);
+  const endDateKey = visibleDateKeys[visibleDateKeys.length - 1] ?? startDateKey;
+  const dayCount = visibleDateKeys.length;
+  const prevVisibleDateKeys = getPreviousVisibleDateKeys(
+    startDateKey,
+    dayCount,
+    displayRange.showWeekends,
+  );
+  const prevStartDateKey = prevVisibleDateKeys[0] ?? shiftDateKey(startDateKey, -1);
+  const prevEndDateKey = prevVisibleDateKeys[prevVisibleDateKeys.length - 1] ?? prevStartDateKey;
 
   return {
     dateRange: toDateRange(startDateKey, endDateKey, timezone),
     prevDateRange: toDateRange(prevStartDateKey, prevEndDateKey, timezone),
     dayCount,
+    visibleDateKeys,
+    prevVisibleDateKeys,
   };
 }
 
@@ -116,16 +132,33 @@ function toDateRange(startDateKey: string, endDateKey: string, timezone: string)
   };
 }
 
-function getInclusiveDayCount(startDateKey: string, endDateKey: string): number {
-  const start = Date.parse(`${startDateKey}T00:00:00.000Z`);
-  const end = Date.parse(`${endDateKey}T00:00:00.000Z`);
-  return Math.max(1, Math.round((end - start) / MILLISECONDS_PER_DAY) + 1);
-}
-
 function shiftDateKey(dateKey: string, dayDelta: number): string {
   const date = new Date(`${dateKey}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + dayDelta);
   return date.toISOString().slice(0, 10);
+}
+
+function getPreviousVisibleDateKeys(
+  startDateKey: string,
+  dayCount: number,
+  showWeekends: boolean,
+): string[] {
+  const dateKeys: string[] = [];
+  let candidate = shiftDateKey(startDateKey, -1);
+
+  while (dateKeys.length < dayCount) {
+    if (showWeekends || !isWeekendDateKey(candidate)) {
+      dateKeys.unshift(candidate);
+    }
+    candidate = shiftDateKey(candidate, -1);
+  }
+
+  return dateKeys;
+}
+
+function isWeekendDateKey(dateKey: string): boolean {
+  const dayOfWeek = new Date(`${dateKey}T00:00:00.000Z`).getUTCDay();
+  return dayOfWeek === 0 || dayOfWeek === 6;
 }
 
 function toCalendarDateKey(date: Date): string {

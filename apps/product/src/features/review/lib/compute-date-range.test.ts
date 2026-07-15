@@ -14,6 +14,8 @@ describe('computeCalendarDisplayDateRanges', () => {
       {
         start: new Date(2026, 2, 10, 0, 0, 0, 0),
         end: new Date(2026, 2, 10, 23, 59, 59, 999),
+        days: [new Date(2026, 2, 10)],
+        showWeekends: true,
       },
       'UTC',
     );
@@ -28,6 +30,8 @@ describe('computeCalendarDisplayDateRanges', () => {
         endDate: '2026-03-09T23:59:59.999Z',
       },
       dayCount: 1,
+      visibleDateKeys: ['2026-03-10'],
+      prevVisibleDateKeys: ['2026-03-09'],
     });
   });
 
@@ -36,6 +40,8 @@ describe('computeCalendarDisplayDateRanges', () => {
       {
         start: new Date(2026, 2, 9, 0, 0, 0, 0),
         end: new Date(2026, 2, 15, 23, 59, 59, 999),
+        days: Array.from({ length: 7 }, (_, index) => new Date(2026, 2, 9 + index)),
+        showWeekends: true,
       },
       'Asia/Tokyo',
     );
@@ -50,6 +56,24 @@ describe('computeCalendarDisplayDateRanges', () => {
         endDate: '2026-03-08T14:59:59.999Z',
       },
       dayCount: 7,
+      visibleDateKeys: [
+        '2026-03-09',
+        '2026-03-10',
+        '2026-03-11',
+        '2026-03-12',
+        '2026-03-13',
+        '2026-03-14',
+        '2026-03-15',
+      ],
+      prevVisibleDateKeys: [
+        '2026-03-02',
+        '2026-03-03',
+        '2026-03-04',
+        '2026-03-05',
+        '2026-03-06',
+        '2026-03-07',
+        '2026-03-08',
+      ],
     });
   });
 
@@ -58,6 +82,8 @@ describe('computeCalendarDisplayDateRanges', () => {
       {
         start: new Date(2026, 2, 7, 0, 0, 0, 0),
         end: new Date(2026, 2, 9, 23, 59, 59, 999),
+        days: [new Date(2026, 2, 7), new Date(2026, 2, 8), new Date(2026, 2, 9)],
+        showWeekends: true,
       },
       'America/New_York',
     );
@@ -72,6 +98,34 @@ describe('computeCalendarDisplayDateRanges', () => {
         endDate: '2026-03-07T04:59:59.999Z',
       },
       dayCount: 3,
+      visibleDateKeys: ['2026-03-07', '2026-03-08', '2026-03-09'],
+      prevVisibleDateKeys: ['2026-03-04', '2026-03-05', '2026-03-06'],
+    });
+  });
+
+  it('週末非表示のmulti-dayは表示日だけを返し、前期間も土日を飛ばす', () => {
+    const result = computeCalendarDisplayDateRanges(
+      {
+        start: new Date(2026, 0, 15, 0, 0, 0, 0),
+        end: new Date(2026, 0, 19, 23, 59, 59, 999),
+        days: [new Date(2026, 0, 15), new Date(2026, 0, 16), new Date(2026, 0, 19)],
+        showWeekends: false,
+      },
+      'UTC',
+    );
+
+    expect(result).toEqual({
+      dateRange: {
+        startDate: '2026-01-15T00:00:00.000Z',
+        endDate: '2026-01-19T23:59:59.999Z',
+      },
+      prevDateRange: {
+        startDate: '2026-01-12T00:00:00.000Z',
+        endDate: '2026-01-14T23:59:59.999Z',
+      },
+      dayCount: 3,
+      visibleDateKeys: ['2026-01-15', '2026-01-16', '2026-01-19'],
+      prevVisibleDateKeys: ['2026-01-12', '2026-01-13', '2026-01-14'],
     });
   });
 });

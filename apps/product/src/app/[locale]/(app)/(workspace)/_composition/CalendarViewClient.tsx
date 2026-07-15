@@ -12,7 +12,7 @@
 
 import { ChartNoAxesColumnIncreasing, PanelLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { FeatureErrorBoundary } from '@/components/ui/feedback/error-boundary';
 import {
@@ -106,6 +106,13 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   );
   const isReviewPanelActive = panelKind === 'review' || panelKind === 'analytics';
   const isDiffPanelActive = panelKind === 'diff';
+  const reviewDisplayRange = useMemo(
+    () => ({
+      ...composition.viewDateRange,
+      showWeekends: composition.showWeekends,
+    }),
+    [composition.showWeekends, composition.viewDateRange],
+  );
   const reviewToggle = (
     <HoverTooltip content={t('calendar.stats.review.tooltip')} side="bottom">
       <Button
@@ -150,7 +157,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const reviewPanel = (
     <CalendarReviewPanel
       currentDate={currentDate}
-      displayRange={composition.viewDateRange}
+      displayRange={reviewDisplayRange}
       selectedTagId={reviewTagId}
       onSelectedTagIdChange={setReviewTagId}
       onClose={() => setPanelKind(null)}
@@ -159,7 +166,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const mobileReviewPanel = (
     <CalendarReviewPanel
       currentDate={currentDate}
-      displayRange={composition.viewDateRange}
+      displayRange={reviewDisplayRange}
       selectedTagId={reviewTagId}
       onSelectedTagIdChange={setReviewTagId}
       onClose={() => setPanelKind(null)}
