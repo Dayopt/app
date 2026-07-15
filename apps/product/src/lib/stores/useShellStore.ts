@@ -70,6 +70,9 @@ interface ShellStoreState {
     width: number;
   };
 
+  /** Calendar rail の表示領域を確保するための一時的な非表示状態（persist 対象外） */
+  sidebarSuppressed: boolean;
+
   /** ページタイトル（PageHeaderで表示） */
   pageTitle: string;
 
@@ -85,6 +88,8 @@ interface ShellStoreActions {
   closeSidebar: () => void;
   toggleSidebar: () => void;
   setSidebarWidth: (width: number) => void;
+  suppressSidebar: () => void;
+  restoreSidebar: () => void;
 
   // Page title
   setPageTitle: (title: string) => void;
@@ -125,6 +130,7 @@ const useShellStoreBase = create<ShellStoreState & ShellStoreActions>()(
           open: true,
           width: DEFAULT_SIDEBAR_WIDTH,
         },
+        sidebarSuppressed: false,
         pageTitle: '',
         activeSheet: null,
 
@@ -141,6 +147,8 @@ const useShellStoreBase = create<ShellStoreState & ShellStoreActions>()(
           ),
         setSidebarWidth: (width) =>
           set((state) => ({ sidebar: { ...state.sidebar, width } }), false, 'setSidebarWidth'),
+        suppressSidebar: () => set({ sidebarSuppressed: true }, false, 'suppressSidebar'),
+        restoreSidebar: () => set({ sidebarSuppressed: false }, false, 'restoreSidebar'),
 
         // ── Page Title Actions ──
         setPageTitle: (title) => set({ pageTitle: title }, false, 'setPageTitle'),

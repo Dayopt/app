@@ -39,7 +39,8 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const t = useTranslations();
   const calendarNavigation = useCalendarNavigation();
   const sidebar = useShellStore.use.sidebar();
-  const closeSidebar = useShellStore.use.closeSidebar();
+  const suppressSidebar = useShellStore.use.suppressSidebar();
+  const restoreSidebar = useShellStore.use.restoreSidebar();
   const toggleSidebar = useShellStore.use.toggleSidebar();
 
   // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
@@ -91,6 +92,17 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
       setPanelKind(checked ? 'diff' : null);
     },
     [setPanelKind],
+  );
+  const handleSideRailSpaceRecoveryChange = useCallback(
+    (recovering: boolean) => {
+      if (recovering) {
+        suppressSidebar();
+        return;
+      }
+
+      restoreSidebar();
+    },
+    [restoreSidebar, suppressSidebar],
   );
   const isReviewPanelActive = panelKind === 'review' || panelKind === 'analytics';
   const isDiffPanelActive = panelKind === 'diff';
@@ -228,8 +240,8 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           }}
           panelRailTitle={panelRailTitle}
           panelRailDescription={panelRailDescription}
-          sideRailRecoverableWidth={sidebar.open ? sidebar.width : 0}
-          onSideRailRecoverableWidthRequest={closeSidebar}
+          recoverableSidebarWidth={sidebar.open ? sidebar.width : 0}
+          onSideRailSpaceRecoveryChange={handleSideRailSpaceRecoveryChange}
         />
       </FeatureErrorBoundary>
     </div>

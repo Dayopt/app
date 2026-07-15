@@ -123,8 +123,8 @@ interface CalendarControllerProps {
   onPanelRailOpenChange?: ((open: boolean) => void) | undefined;
   panelRailTitle?: string | undefined;
   panelRailDescription?: string | undefined;
-  sideRailRecoverableWidth?: number | undefined;
-  onSideRailRecoverableWidthRequest?: (() => void) | undefined;
+  recoverableSidebarWidth?: number | undefined;
+  onSideRailSpaceRecoveryChange?: ((recovering: boolean) => void) | undefined;
 }
 
 interface CalendarCompareRailRenderProps {
@@ -177,8 +177,8 @@ export function CalendarController({
   onPanelRailOpenChange,
   panelRailTitle,
   panelRailDescription,
-  sideRailRecoverableWidth,
-  onSideRailRecoverableWidthRequest,
+  recoverableSidebarWidth,
+  onSideRailSpaceRecoveryChange,
 }: CalendarControllerProps) {
   const t = useTranslations();
 
@@ -421,8 +421,8 @@ export function CalendarController({
         sideRailTitle={activeRailTitle}
         sideRailDescription={activeRailDescription}
         sideRailResizeLabel={t('calendar.panel.resizeLabel')}
-        sideRailRecoverableWidth={sideRailRecoverableWidth}
-        onSideRailRecoverableWidthRequest={onSideRailRecoverableWidthRequest}
+        recoverableSidebarWidth={recoverableSidebarWidth}
+        onSideRailSpaceRecoveryChange={onSideRailSpaceRecoveryChange}
       >
         <CalendarViewRenderer viewType={viewType} commonProps={commonProps} />
       </CalendarLayout>
