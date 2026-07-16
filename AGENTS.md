@@ -189,6 +189,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 | `.claude/rules/mcp-usage.md` | Sentry / Supabase / Context7 / Vercel / Eagle |
 | `.claude/rules/skill-design.md` | project skill の設計・更新 |
 | `.codex/rules/README.md` | Codex 固有の薄い overlay |
+| `.codex/rules/browser.md` | Codex で UI / Storybook を視覚確認する時の browser 優先順位 |
 
 ## Skills
 
