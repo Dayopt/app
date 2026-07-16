@@ -6,6 +6,7 @@ import { AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { logger } from '@/lib/logger';
+import { captureClientBoundaryError } from '@/lib/sentry';
 import { Button } from '@dayopt/components';
 
 interface ErrorProps {
@@ -23,7 +24,13 @@ export function CalendarError({ error, reset }: ErrorProps) {
   const t = useTranslations('calendar.error');
 
   useEffect(() => {
-    logger.error('[Calendar Error]', error);
+    logger.error('[Calendar Error]', { errorType: error.name, digest: error.digest });
+    captureClientBoundaryError(error, {
+      feature: 'calendar',
+      operation: 'render',
+      route: window.location.pathname,
+      source: 'calendar_error_boundary',
+    });
   }, [error]);
 
   return (

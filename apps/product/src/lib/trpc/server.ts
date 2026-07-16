@@ -34,6 +34,7 @@ import superjson from 'superjson';
 
 import { env } from '@/env';
 import type { Database } from '@/lib/database';
+import { observeAuthOperation } from '@/lib/sentry';
 import type { Context } from '@/lib/trpc/procedures';
 import { appRouter } from '@/lib/trpc/root';
 
@@ -81,13 +82,13 @@ async function createServerContext(): Promise<Context> {
     // getUser()はSupabase Authサーバーに問い合わせてJWTを検証する
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await observeAuthOperation('rsc_trpc_get_user', () => supabase.auth.getUser());
 
     if (user) {
       userId = user.id;
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await observeAuthOperation('rsc_trpc_get_session', () => supabase.auth.getSession());
       sessionId = session?.access_token;
     }
   } catch {

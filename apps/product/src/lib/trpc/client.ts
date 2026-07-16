@@ -3,11 +3,10 @@
  * クライアント側API呼び出しの型安全性確保
  */
 
-import { createTRPCProxyClient, httpBatchLink, loggerLink } from '@trpc/client';
+import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
 import superjson from 'superjson';
 
-import { containsPrivateTimeblockSearch } from '@/lib/trpc/logger-policy';
 import type { AppRouter } from '@/lib/trpc/root';
 
 /**
@@ -20,13 +19,7 @@ export const trpc = createTRPCReact<AppRouter>();
  */
 export const vanillaTrpc = createTRPCProxyClient<AppRouter>({
   links: [
-    loggerLink({
-      enabled: (opts) => {
-        if (opts.direction !== 'down' || !(opts.result instanceof Error)) return false;
-        if (!('path' in opts) || !('input' in opts) || typeof opts.path !== 'string') return true;
-        return !containsPrivateTimeblockSearch({ path: opts.path, input: opts.input });
-      },
-    }),
+    // loggerLinkはoperation input（認証コード等）をconsoleへ渡すため使わない。
     httpBatchLink({
       url: '/api/trpc',
       transformer: superjson,

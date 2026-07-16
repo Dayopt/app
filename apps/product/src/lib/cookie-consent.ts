@@ -7,18 +7,19 @@
  * - 必須Cookieは常に有効（無効化不可）
  */
 
+import {
+  BROWSER_TELEMETRY_CONSENT_EVENT,
+  BROWSER_TELEMETRY_CONSENT_STORAGE_KEY,
+  getBrowserTelemetryConsentStorage,
+  readBrowserTelemetryConsent,
+  type BrowserTelemetryConsent,
+} from '@dayopt/observability';
+
 /** Cookieのカテゴリ種別 */
 type CookieCategory = 'necessary' | 'analytics' | 'marketing';
 
 /** Cookie同意の状態を表すインターフェース */
-interface CookieConsent {
-  necessary: boolean; // 常にtrue（無効化不可）
-  analytics: boolean;
-  marketing: boolean;
-  timestamp: number; // 同意取得日時（UNIX timestamp）
-}
-
-const STORAGE_KEY = 'dayopt_cookie_consent';
+type CookieConsent = BrowserTelemetryConsent;
 
 /**
  * Cookie同意状態を取得
@@ -30,21 +31,7 @@ export const getCookieConsent = (): CookieConsent | null => {
     return null; // SSR対応
   }
 
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      return null;
-    }
-
-    const consent = JSON.parse(stored) as CookieConsent;
-
-    // 必須Cookieは常に有効
-    consent.necessary = true;
-
-    return consent;
-  } catch {
-    return null;
-  }
+  return readBrowserTelemetryConsent(getBrowserTelemetryConsentStorage());
 };
 
 /**
@@ -60,6 +47,9 @@ export const setCookieConsent = (
   }
 
   try {
+    const storage = getBrowserTelemetryConsentStorage();
+    if (!storage) return;
+
     const newConsent: CookieConsent = {
       necessary: true, // 必須Cookieは常に有効
       analytics: consent.analytics ?? false,
@@ -67,10 +57,10 @@ export const setCookieConsent = (
       timestamp: Date.now(),
     };
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newConsent));
+    storage.setItem(BROWSER_TELEMETRY_CONSENT_STORAGE_KEY, JSON.stringify(newConsent));
 
     // カスタムイベント発火（他のコンポーネントで同意状態変更を検知可能）
-    window.dispatchEvent(new CustomEvent('cookieConsentChanged', { detail: newConsent }));
+    window.dispatchEvent(new CustomEvent(BROWSER_TELEMETRY_CONSENT_EVENT, { detail: newConsent }));
   } catch {
     // localStorage書き込み失敗時は黙って無視
   }
@@ -105,11 +95,12 @@ export const resetCookieConsent = (): void => {
   }
 
   try {
-    localStorage.removeItem(STORAGE_KEY);
-    window.dispatchEvent(new CustomEvent('cookieConsentChanged', { detail: null }));
+    getBrowserTelemetryConsentStorage()?.removeItem(BROWSER_TELEMETRY_CONSENT_STORAGE_KEY);
   } catch {
-    // localStorage操作失敗時は黙って無視
+    // localStorage操作失敗時も、実行中telemetryの停止通知は続行する
   }
+
+  window.dispatchEvent(new CustomEvent(BROWSER_TELEMETRY_CONSENT_EVENT, { detail: null }));
 };
 
 /**

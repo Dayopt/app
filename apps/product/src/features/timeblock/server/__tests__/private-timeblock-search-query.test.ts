@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const addEventProcessor = vi.hoisted(() => vi.fn());
 const suppressTracing = vi.hoisted(() => vi.fn());
 const withScope = vi.hoisted(() => vi.fn());
+const captureUnexpectedError = vi.hoisted(() => vi.fn());
 
 vi.mock('@sentry/nextjs', () => ({
   suppressTracing,
   withScope,
 }));
+vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 
 import { runPrivateTimeblockSearchQuery } from '../private-timeblock-search-query';
 
@@ -36,15 +38,23 @@ describe('runPrivateTimeblockSearchQuery', () => {
 
   it('transport例外のURLや検索語を呼び出し側へ出さない', async () => {
     const privateMessage = 'GET /rest/v1/plans?or=note.ilike.private-words';
+    const original = new Error(privateMessage);
 
-    const caught = await runPrivateTimeblockSearchQuery(() =>
-      Promise.reject(new Error(privateMessage)),
-    ).catch((error: unknown) => error);
+    const caught = await runPrivateTimeblockSearchQuery(() => Promise.reject(original)).catch(
+      (error: unknown) => error,
+    );
 
     expect(caught).toMatchObject({
       code: 'FETCH_FAILED',
       message: 'Failed to execute timeblock search',
     });
     expect((caught as Error).message).not.toContain('private-words');
+    expect((caught as Error).cause).toBe(original);
+    expect(captureUnexpectedError).toHaveBeenCalledTimes(1);
+    expect(captureUnexpectedError).toHaveBeenCalledWith(original, {
+      feature: 'timeblock',
+      operation: 'private_search_query',
+      source: 'supabase_query',
+    });
   });
 });

@@ -4,10 +4,69 @@
  * すべてのサービスエラーをTRPCエラーに変換するための統一ヘルパー
  */
 
-import * as Sentry from '@sentry/nextjs';
+import { isExplicitUserCancellation } from '@dayopt/observability';
 import { TRPCError } from '@trpc/server';
 
+import { captureUnexpectedError, isExpectedAuthError } from '@/lib/sentry';
+
 import { ERROR_CODE_MAP, type TRPCErrorCode } from './error-code-map';
+
+const EXPECTED_TRPC_CODES = new Set<TRPCError['code']>([
+  'PARSE_ERROR',
+  'BAD_REQUEST',
+  'UNAUTHORIZED',
+  'PAYMENT_REQUIRED',
+  'FORBIDDEN',
+  'NOT_FOUND',
+  'METHOD_NOT_SUPPORTED',
+  'CONFLICT',
+  'PRECONDITION_FAILED',
+  'PAYLOAD_TOO_LARGE',
+  'UNSUPPORTED_MEDIA_TYPE',
+  'UNPROCESSABLE_CONTENT',
+  'TOO_MANY_REQUESTS',
+]);
+
+/** Client/validation outcomes are expected and must not create Sentry Issues. */
+export function isExpectedTrpcError(error: TRPCError): boolean {
+  return (
+    EXPECTED_TRPC_CODES.has(error.code) ||
+    (error.code === 'CLIENT_CLOSED_REQUEST' && isExplicitUserCancellation(getOriginalError(error)))
+  );
+}
+
+/** Return the deepest Error cause so Sentry retains the original stack. */
+export function getOriginalError(error: Error): Error {
+  const seen = new WeakSet<Error>();
+  let current = error;
+
+  while (current.cause instanceof Error && !seen.has(current.cause)) {
+    seen.add(current);
+    current = current.cause;
+  }
+
+  return current;
+}
+
+/** Captures only unexpected failures which the tRPC HTTP adapter will serialize. */
+export function captureUnexpectedTrpcAdapterError(
+  error: TRPCError,
+  operation: string,
+  route = '/api/trpc',
+): void {
+  if (isExpectedTrpcError(error)) return;
+
+  const original = getOriginalError(error);
+  if (isExpectedAuthError(original)) return;
+
+  captureUnexpectedError(original, {
+    errorCode: error.code,
+    feature: 'trpc',
+    operation,
+    route,
+    source: 'trpc_adapter',
+  });
+}
 
 /**
  * サービスエラーの基底クラス
@@ -19,8 +78,9 @@ export class ServiceError extends Error {
   constructor(
     public readonly code: string,
     message: string,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = 'ServiceError';
   }
 }
@@ -55,19 +115,30 @@ function hasErrorCode(error: unknown): error is Error & { code: string } {
  * ```
  */
 export function handleServiceError(error: unknown): never {
-  // TRPCError の場合はそのまま再スロー
+  // 既存のTRPCErrorは同じinstanceを再スローし、予期しないserver failureだけを報告する。
   if (error instanceof TRPCError) {
+    const original = getOriginalError(error);
+    if (!isExpectedTrpcError(error) && !isExpectedAuthError(original)) {
+      captureUnexpectedError(original, {
+        errorCode: error.code,
+        source: 'trpc_service',
+        operation: 'handle_trpc_error',
+      });
+    }
     throw error;
   }
 
   // codeプロパティを持つエラー（ServiceError, TagServiceError等）
   if (hasErrorCode(error)) {
     const trpcCode = ERROR_CODE_MAP[error.code] ?? 'INTERNAL_SERVER_ERROR';
+    const original = getOriginalError(error);
 
     // サーバー側の異常（INTERNAL_SERVER_ERROR）のみSentryに報告
-    if (trpcCode === 'INTERNAL_SERVER_ERROR') {
-      Sentry.captureException(error, {
-        tags: { serviceErrorCode: error.code, source: 'trpc_service' },
+    if (trpcCode === 'INTERNAL_SERVER_ERROR' && !isExpectedAuthError(original)) {
+      captureUnexpectedError(original, {
+        errorCode: error.code,
+        source: 'trpc_service',
+        operation: 'handle_service_error',
       });
     }
 
@@ -79,9 +150,13 @@ export function handleServiceError(error: unknown): never {
   }
 
   // 未知のエラーは常にSentryに報告
-  Sentry.captureException(error, {
-    tags: { source: 'trpc_service', errorType: 'unknown' },
-  });
+  const unexpectedError = error instanceof Error ? error : new Error('Unknown service error');
+  if (!isExpectedAuthError(unexpectedError)) {
+    captureUnexpectedError(unexpectedError, {
+      source: 'trpc_service',
+      operation: 'handle_unknown_error',
+    });
+  }
 
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
@@ -89,7 +164,7 @@ export function handleServiceError(error: unknown): never {
       'INTERNAL_SERVER_ERROR',
       error instanceof Error ? error.message : 'Unknown error occurred',
     ),
-    cause: error,
+    cause: unexpectedError,
   });
 }
 

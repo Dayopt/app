@@ -26,7 +26,7 @@ import { useState } from 'react';
 
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { httpBatchLink, loggerLink, TRPCClientError } from '@trpc/client';
+import { httpBatchLink, TRPCClientError } from '@trpc/client';
 import superjson from 'superjson';
 
 import {
@@ -51,7 +51,7 @@ const AxeAccessibilityChecker =
 import { AuthStoreInitializer } from '@/features/auth';
 import { UserSettingsInitializer } from '@/features/settings';
 import { api, getBaseUrl } from '@/lib/trpc';
-import { containsPrivateTimeblockSearch } from '@/lib/trpc/logger-policy';
+import { captureUnexpectedTrpcClientFailure } from '@/lib/trpc/client-errors';
 import { ThemeProvider } from './theme-provider';
 
 // SessionMonitorProviderを遅延ロード（セッション失効通知 + タイムアウト警告）
@@ -133,10 +133,22 @@ export function Providers({ children }: ProvidersProps) {
       new QueryClient({
         // グローバルエラーハンドリング: 認証エラー時は自動でログインページへリダイレクト
         queryCache: new QueryCache({
-          onError: (error) => handleAuthError(error),
+          onError: (error) => {
+            handleAuthError(error);
+            captureUnexpectedTrpcClientFailure(error, {
+              feature: 'trpc',
+              operation: 'query_cache',
+            });
+          },
         }),
         mutationCache: new MutationCache({
-          onError: (error) => handleAuthError(error),
+          onError: (error) => {
+            handleAuthError(error);
+            captureUnexpectedTrpcClientFailure(error, {
+              feature: 'trpc',
+              operation: 'mutation_cache',
+            });
+          },
         }),
         defaultOptions: {
           queries: {
@@ -170,16 +182,7 @@ export function Providers({ children }: ProvidersProps) {
   const [trpcClient] = useState(() =>
     api.createClient({
       links: [
-        loggerLink({
-          enabled: (opts) => {
-            if (opts.direction !== 'down' || !(opts.result instanceof Error)) return false;
-            // loggerLink のdown型はoperation fieldsを省略しているが、runtimeではopがspreadされる。
-            if (!('path' in opts) || !('input' in opts) || typeof opts.path !== 'string') {
-              return true;
-            }
-            return !containsPrivateTimeblockSearch({ path: opts.path, input: opts.input });
-          },
-        }),
+        // loggerLinkはoperation input（contact本文・email・password等）をconsoleへ渡すため使わない。
         httpBatchLink({
           url: `${getBaseUrl()}/api/trpc`,
           transformer: superjson,

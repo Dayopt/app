@@ -3,7 +3,7 @@ import { expect, waitFor, within } from 'storybook/test';
 
 import { CookieConsentBanner } from './CookieConsentBanner';
 
-const STORAGE_KEY = 'dayopt_cookie_consent';
+import { BROWSER_TELEMETRY_CONSENT_STORAGE_KEY } from '@dayopt/observability';
 
 const meta = {
   title: 'Product/Components/Shell/CookieConsentBanner',
@@ -28,7 +28,7 @@ export const Default: Story = {
   decorators: [
     (Story) => {
       // 同意記録をクリアしてバナーが表示される状態にする
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(BROWSER_TELEMETRY_CONSENT_STORAGE_KEY);
       return (
         <div className="relative min-h-[200px]">
           <Story />
@@ -56,7 +56,7 @@ export const ConsentAlreadyGiven: Story = {
     (Story) => {
       // 同意記録を設定しておく
       localStorage.setItem(
-        STORAGE_KEY,
+        BROWSER_TELEMETRY_CONSENT_STORAGE_KEY,
         JSON.stringify({
           necessary: true,
           analytics: true,

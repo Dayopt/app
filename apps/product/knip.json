@@ -2,7 +2,8 @@
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
     "src/app/**/{page,layout,loading,error,not-found,default,template,route,global-error,opengraph-image,sitemap}.{ts,tsx}",
-    "src/lib/i18n/request.ts"
+    "src/lib/i18n/request.ts",
+    "src/lib/i18n/scripts/find-unused.ts"
   ],
   "project": ["src/**/*.{ts,tsx}"],
   "ignore": [

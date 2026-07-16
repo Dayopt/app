@@ -12,6 +12,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, PublicRecordRow, PublicUserSettingsRow, Row } from '@/lib/database';
 import { databaseTables, publicRecordSelect, publicUserSettingsSelect } from '@/lib/database';
 import { logger } from '@/lib/logger';
+import {
+  captureUnexpectedDatabaseError,
+  captureUnexpectedError,
+  observeAuthOperation,
+} from '@/lib/sentry';
 import { getStripe } from '@/lib/stripe/client';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
@@ -29,9 +34,11 @@ export class UserServiceError extends ServiceError {
       | 'INVALID_PASSWORD'
       | 'INVALID_INPUT',
     message: string,
+    options?: ErrorOptions,
   ) {
     super(code, message);
     this.name = 'UserServiceError';
+    if (options?.cause !== undefined) this.cause = options.cause;
   }
 }
 
@@ -97,10 +104,14 @@ export function createUserService(supabase: SupabaseClient<Database>) {
       }
 
       // パスワード確認
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: userEmail,
-        password,
-      });
+      const { error: signInError } = await observeAuthOperation(
+        'delete_account_reauthenticate',
+        () =>
+          supabase.auth.signInWithPassword({
+            email: userEmail,
+            password,
+          }),
+      );
 
       if (signInError) {
         throw new UserServiceError('INVALID_PASSWORD', 'Invalid password');
@@ -108,62 +119,82 @@ export function createUserService(supabase: SupabaseClient<Database>) {
 
       // Storage のアバター画像を削除
       try {
-        const { data: files } = await supabase.storage.from('avatars').list(userId);
+        const { data: files, error: listError } = await supabase.storage
+          .from('avatars')
+          .list(userId);
+        if (listError) throw new Error('Avatar listing failed', { cause: listError });
         if (files && files.length > 0) {
           const filePaths = files.map((f) => `${userId}/${f.name}`);
-          await supabase.storage.from('avatars').remove(filePaths);
+          const { error: removeError } = await supabase.storage.from('avatars').remove(filePaths);
+          if (removeError) throw new Error('Avatar removal failed', { cause: removeError });
         }
       } catch (storageError) {
-        logger.warn(
-          'Failed to delete avatar files, continuing with account deletion',
-          storageError,
-        );
+        const original =
+          storageError instanceof Error ? storageError : new Error('Avatar cleanup failed');
+        captureUnexpectedError(original, {
+          feature: 'account_deletion',
+          operation: 'delete_avatar_files',
+          source: 'supabase_storage',
+        });
+        throw new UserServiceError('DELETE_FAILED', 'Failed to delete avatar files', {
+          cause: original,
+        });
       }
 
       // Stripe サブスクリプション解約 + Customer 削除（GDPR対応）
-      const stripe = getStripe();
-      if (stripe) {
-        try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+        if (profileError) throw new Error('Billing profile lookup failed', { cause: profileError });
 
-          const stripeCustomerId = (profile as Record<string, unknown> | null)
-            ?.stripe_customer_id as string | null;
+        const stripeCustomerId = (profile as Record<string, unknown> | null)?.stripe_customer_id as
+          string | null;
 
-          if (stripeCustomerId) {
-            // 全サブスクリプションを即時解約（active, trialing, past_due, paused）
-            const subscriptions = await stripe.subscriptions.list({
-              customer: stripeCustomerId,
-            });
-            for (const sub of subscriptions.data) {
-              if (['active', 'trialing', 'past_due', 'paused'].includes(sub.status)) {
-                await stripe.subscriptions.cancel(sub.id);
-              }
+        if (stripeCustomerId) {
+          const stripe = getStripe();
+          if (!stripe) throw new Error('Stripe is not configured for billing data deletion');
+
+          // 全サブスクリプションを即時解約（active, trialing, past_due, paused）
+          const subscriptions = await stripe.subscriptions.list({
+            customer: stripeCustomerId,
+          });
+          for (const sub of subscriptions.data) {
+            if (['active', 'trialing', 'past_due', 'paused'].includes(sub.status)) {
+              await stripe.subscriptions.cancel(sub.id);
             }
-
-            // Customer 削除（支払い情報・請求書も削除）
-            await stripe.customers.del(stripeCustomerId);
           }
-        } catch (stripeError) {
-          logger.warn(
-            'Failed to cancel Stripe subscription, continuing with account deletion',
-            stripeError,
-          );
+
+          // Customer 削除（支払い情報・請求書も削除）
+          await stripe.customers.del(stripeCustomerId);
         }
+      } catch (stripeError) {
+        const original =
+          stripeError instanceof Error ? stripeError : new Error('Stripe cleanup failed');
+        captureUnexpectedError(original, {
+          feature: 'account_deletion',
+          operation: 'delete_stripe_customer',
+          source: 'stripe',
+        });
+        throw new UserServiceError('DELETE_FAILED', 'Failed to delete billing data', {
+          cause: original,
+        });
       }
 
       // auth.users を削除 → CASCADE DELETE により全テーブルのユーザーデータが自動削除される
       const adminClient = createServiceRoleClient();
-      const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
+      const { error: deleteError } = await observeAuthOperation(
+        'delete_account_admin_delete_user',
+        () => adminClient.auth.admin.deleteUser(userId),
+        { feature: 'account_deletion' },
+      );
 
       if (deleteError) {
-        throw new UserServiceError(
-          'DELETE_FAILED',
-          `Failed to delete account: ${deleteError.message}`,
-        );
+        throw new UserServiceError('DELETE_FAILED', 'Failed to delete account', {
+          cause: deleteError,
+        });
       }
 
       logger.info('Account deleted successfully', { userId });
@@ -188,10 +219,13 @@ export function createUserService(supabase: SupabaseClient<Database>) {
           .select('id');
         if (error) {
           const resource = table === databaseTables.records ? 'records' : table;
-          throw new UserServiceError(
-            'DELETE_DATA_FAILED',
-            `${resource} deletion failed: ${error.message}`,
-          );
+          const original = captureUnexpectedDatabaseError(error, {
+            feature: 'account_data',
+            operation: `delete_${resource}`,
+          });
+          throw new UserServiceError('DELETE_DATA_FAILED', `${resource} deletion failed`, {
+            cause: original,
+          });
         }
         deletedCount += deleted?.length ?? 0;
       }
@@ -216,10 +250,13 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         const { error } = await adminClient.from(table).delete().eq('user_id', userId);
         if (error) {
           const resource = table === databaseTables.records ? 'records' : table;
-          throw new UserServiceError(
-            'DELETE_DATA_FAILED',
-            `${resource} deletion failed: ${error.message}`,
-          );
+          const original = captureUnexpectedDatabaseError(error, {
+            feature: 'account_data',
+            operation: `delete_all_${resource}`,
+          });
+          throw new UserServiceError('DELETE_DATA_FAILED', `${resource} deletion failed`, {
+            cause: original,
+          });
         }
       }
 
@@ -249,28 +286,41 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         ]);
 
       if (profileResult.error && profileResult.error.code !== 'PGRST116') {
-        throw new UserServiceError(
-          'EXPORT_FAILED',
-          `Profile fetch error: ${profileResult.error.message}`,
-        );
+        const original = captureUnexpectedDatabaseError(profileResult.error, {
+          feature: 'account_export',
+          operation: 'fetch_profile',
+        });
+        throw new UserServiceError('EXPORT_FAILED', 'Profile fetch failed', { cause: original });
       }
       if (plansResult.error) {
-        throw new UserServiceError(
-          'EXPORT_FAILED',
-          `Plans fetch error: ${plansResult.error.message}`,
-        );
+        const original = captureUnexpectedDatabaseError(plansResult.error, {
+          feature: 'account_export',
+          operation: 'fetch_plans',
+        });
+        throw new UserServiceError('EXPORT_FAILED', 'Plans fetch failed', { cause: original });
       }
       if (recordsResult.error) {
-        throw new UserServiceError(
-          'EXPORT_FAILED',
-          `Records fetch error: ${recordsResult.error.message}`,
-        );
+        const original = captureUnexpectedDatabaseError(recordsResult.error, {
+          feature: 'account_export',
+          operation: 'fetch_records',
+        });
+        throw new UserServiceError('EXPORT_FAILED', 'Records fetch failed', { cause: original });
       }
       if (tagsResult.error) {
-        throw new UserServiceError(
-          'EXPORT_FAILED',
-          `Tags fetch error: ${tagsResult.error.message}`,
-        );
+        const original = captureUnexpectedDatabaseError(tagsResult.error, {
+          feature: 'account_export',
+          operation: 'fetch_tags',
+        });
+        throw new UserServiceError('EXPORT_FAILED', 'Tags fetch failed', { cause: original });
+      }
+      if (userSettingsResult.error && userSettingsResult.error.code !== 'PGRST116') {
+        const original = captureUnexpectedDatabaseError(userSettingsResult.error, {
+          feature: 'account_export',
+          operation: 'fetch_user_settings',
+        });
+        throw new UserServiceError('EXPORT_FAILED', 'User settings fetch failed', {
+          cause: original,
+        });
       }
       return {
         exportedAt: new Date().toISOString(),

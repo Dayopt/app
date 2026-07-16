@@ -42,17 +42,11 @@ export function setupMockUpdateQuery(
   existingData: unknown,
   updatedData: unknown,
 ) {
-  let callCount = 0;
   const mock = createChainableMock(existingData);
 
-  // Update single() to return different data based on call count
-  mock.single = vi.fn().mockImplementation(() => {
-    callCount++;
-    return Promise.resolve({
-      data: callCount === 1 ? existingData : updatedData,
-      error: null,
-    });
-  });
+  // getById は maybeSingle()、更新結果は single() で返る。
+  mock.maybeSingle = vi.fn().mockResolvedValue({ data: existingData, error: null });
+  mock.single = vi.fn().mockResolvedValue({ data: updatedData, error: null });
 
   mockFrom.mockReturnValue(mock);
   return mock;

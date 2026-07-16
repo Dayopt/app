@@ -5,8 +5,25 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { logger } from '@/lib/logger';
-import { captureBusinessEvent } from '@/lib/sentry';
+import {
+  captureUnexpectedAuthError,
+  captureUnexpectedDatabaseError,
+  captureUnexpectedError,
+  observeAuthOperation,
+} from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
+
+class ExpectedMfaOperationError extends Error {}
+
+function captureMfaAuthFailure(error: unknown, operation: string): void {
+  captureUnexpectedAuthError(error, { feature: 'mfa', operation });
+}
+
+function captureMfaClientFailure(error: unknown, operation: string): void {
+  if (error instanceof ExpectedMfaOperationError) return;
+  const original = error instanceof Error ? error : new Error('Unexpected MFA client failure');
+  captureUnexpectedError(original, { feature: 'mfa', operation, source: 'mfa_client' });
+}
 
 interface MFAState {
   hasMFA: boolean;
@@ -75,24 +92,43 @@ export function useMFA(): UseMFAReturn {
   // MFA状態チェック
   const checkMFAStatus = useCallback(async () => {
     try {
-      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+      if (factorsError) {
+        captureMfaAuthFailure(factorsError, 'list_factors');
+        return;
+      }
       if (factors && factors.totp.length > 0) {
         const verifiedFactor = factors.totp.find((f) => f.status === 'verified');
         setHasMFA(!!verifiedFactor);
 
         // リカバリーコード数を取得
         if (verifiedFactor) {
-          const { data: userData } = await supabase.auth.getUser();
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (userError) {
+            captureMfaAuthFailure(userError, 'get_user');
+            return;
+          }
           if (userData.user?.id) {
-            const { data: countData } = await supabase.rpc('count_unused_recovery_codes', {
-              p_user_id: userData.user.id,
-            });
+            const { data: countData, error: countError } = await supabase.rpc(
+              'count_unused_recovery_codes',
+              {
+                p_user_id: userData.user.id,
+              },
+            );
+            if (countError) {
+              captureUnexpectedDatabaseError(countError, {
+                feature: 'mfa',
+                operation: 'count_recovery_codes',
+              });
+              return;
+            }
             setRecoveryCodeCount(typeof countData === 'number' ? countData : 0);
           }
         }
       }
     } catch (err) {
       logger.error('MFA status check error:', err);
+      captureMfaClientFailure(err, 'check_status');
     }
   }, [supabase]);
 
@@ -109,6 +145,7 @@ export function useMFA(): UseMFAReturn {
       return codes;
     } catch (err) {
       logger.error('Recovery code generation error:', err);
+      captureMfaClientFailure(err, 'generate_recovery_codes');
       return null;
     }
   }, []);
@@ -131,7 +168,8 @@ export function useMFA(): UseMFAReturn {
       });
 
       if (enrollError) {
-        throw new Error(`${t('common.errors.mfa.enrollFailed')}: ${enrollError.message}`);
+        captureMfaAuthFailure(enrollError, 'enroll');
+        throw new ExpectedMfaOperationError(t('common.errors.mfa.enrollFailed'));
       }
 
       if (data) {
@@ -146,6 +184,7 @@ export function useMFA(): UseMFAReturn {
       }
     } catch (err) {
       logger.error('MFA enrollment error:', err);
+      captureMfaClientFailure(err, 'enroll');
       const errorMessage = err instanceof Error ? err.message : t('common.errors.mfa.setupFailed');
       setError(errorMessage);
     } finally {
@@ -175,7 +214,8 @@ export function useMFA(): UseMFAReturn {
       });
 
       if (challengeError) {
-        throw new Error(`${t('common.errors.mfa.challengeFailed')}: ${challengeError.message}`);
+        captureMfaAuthFailure(challengeError, 'challenge');
+        throw new ExpectedMfaOperationError(t('common.errors.mfa.challengeFailed'));
       }
 
       const { error: verifyError } = await supabase.auth.mfa.verify({
@@ -185,13 +225,18 @@ export function useMFA(): UseMFAReturn {
       });
 
       if (verifyError) {
-        throw new Error(`${t('common.errors.mfa.verifyFailed')}: ${verifyError.message}`);
+        captureMfaAuthFailure(verifyError, 'verify');
+        throw new ExpectedMfaOperationError(t('common.errors.mfa.verifyFailed'));
       }
 
       // セッションを更新（AAL2に昇格）
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData } = await observeAuthOperation('get_session_after_mfa_verify', () =>
+        supabase.auth.getSession(),
+      );
       if (sessionData?.session) {
-        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        await observeAuthOperation('get_authenticator_assurance_level', () =>
+          supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+        );
       }
 
       // リカバリーコードを生成
@@ -201,7 +246,6 @@ export function useMFA(): UseMFAReturn {
         setRecoveryCodeCount(codes.length);
       }
 
-      captureBusinessEvent('account.mfa_changed', { action: 'enroll' });
       setSuccess(t('common.errors.mfa.enabled'));
       setHasMFA(true);
       setShowMFASetup(false);
@@ -213,6 +257,7 @@ export function useMFA(): UseMFAReturn {
       await checkMFAStatus();
     } catch (err) {
       logger.error('MFA verification error:', err);
+      captureMfaClientFailure(err, 'verify');
       const errorMessage =
         err instanceof Error ? err.message : t('common.errors.mfa.verificationFailed');
       setError(errorMessage);
@@ -248,7 +293,8 @@ export function useMFA(): UseMFAReturn {
         const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
 
         if (listError) {
-          throw new Error(`${t('common.errors.mfa.factorListFailed')}: ${listError.message}`);
+          captureMfaAuthFailure(listError, 'list_factors_for_disable');
+          throw new ExpectedMfaOperationError(t('common.errors.mfa.factorListFailed'));
         }
 
         if (!factors || factors.totp.length === 0) {
@@ -269,7 +315,8 @@ export function useMFA(): UseMFAReturn {
         });
 
         if (challengeError) {
-          throw new Error(`${t('common.errors.mfa.challengeFailed')}: ${challengeError.message}`);
+          captureMfaAuthFailure(challengeError, 'challenge_disable');
+          throw new ExpectedMfaOperationError(t('common.errors.mfa.challengeFailed'));
         }
 
         // チャレンジを検証してAAL2に昇格
@@ -280,7 +327,8 @@ export function useMFA(): UseMFAReturn {
         });
 
         if (verifyError) {
-          throw new Error(t('common.errors.mfa.codeInvalid'));
+          captureMfaAuthFailure(verifyError, 'verify_disable');
+          throw new ExpectedMfaOperationError(t('common.errors.mfa.codeInvalid'));
         }
 
         // AAL2セッションでMFA無効化
@@ -289,10 +337,10 @@ export function useMFA(): UseMFAReturn {
         });
 
         if (unenrollError) {
-          throw new Error(`${t('common.errors.mfa.disableFailed')}: ${unenrollError.message}`);
+          captureMfaAuthFailure(unenrollError, 'unenroll');
+          throw new ExpectedMfaOperationError(t('common.errors.mfa.disableFailed'));
         }
 
-        captureBusinessEvent('account.mfa_changed', { action: 'unenroll' });
         setSuccess(t('common.errors.mfa.disabled'));
         setHasMFA(false);
         setShowDisableDialog(false);
@@ -300,6 +348,7 @@ export function useMFA(): UseMFAReturn {
         await checkMFAStatus();
       } catch (err) {
         logger.error('MFA disable error:', err);
+        captureMfaClientFailure(err, 'disable');
         const errorMessage =
           err instanceof Error ? err.message : t('common.errors.mfa.disableGeneralFailed');
         setError(errorMessage);
@@ -314,9 +363,12 @@ export function useMFA(): UseMFAReturn {
   const cancelSetup = useCallback(async () => {
     if (factorId) {
       try {
-        await supabase.auth.mfa.unenroll({ factorId });
+        await observeAuthOperation('unenroll_pending_mfa_factor', () =>
+          supabase.auth.mfa.unenroll({ factorId }),
+        );
       } catch (err) {
         logger.error('Failed to unenroll pending factor:', err);
+        captureMfaClientFailure(err, 'cancel_setup');
       }
     }
     setShowMFASetup(false);
@@ -353,6 +405,7 @@ export function useMFA(): UseMFAReturn {
       }
     } catch (err) {
       logger.error('Recovery code regeneration error:', err);
+      captureMfaClientFailure(err, 'regenerate_recovery_codes');
       setError(t('settings.account.mfa.recoveryCodes.regenerateFailed'));
     } finally {
       setIsLoading(false);

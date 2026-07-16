@@ -5,6 +5,7 @@ import 'server-only';
  */
 
 import { databaseTables } from '@/lib/database';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { getUserTimezone } from '@/lib/server/user-timezone-cache';
 
 import {
@@ -14,6 +15,7 @@ import {
 } from '../domain/tag-dashboard';
 
 import type { StatPlanRow, StatRecordRow } from './statistics-fetchers';
+import { TimeblockServiceError } from './timeblock-service-error';
 import type { ServiceSupabaseClient } from './types';
 
 export interface TagDashboardInput {
@@ -95,8 +97,14 @@ export class StatisticsTagDashboardService {
       .eq('user_id', userId)
       .eq('id', tagId)
       .eq('is_active', true)
-      .single();
-    if (error || !data) throw new Error(`Tag not found: ${error?.message ?? tagId}`);
+      .maybeSingle();
+    if (error) {
+      throw captureUnexpectedDatabaseError(error, {
+        feature: 'statistics',
+        operation: 'fetch_tag_by_id',
+      });
+    }
+    if (!data) throw new TimeblockServiceError('NOT_FOUND', 'Tag not found');
     return data;
   }
 
@@ -115,7 +123,12 @@ export class StatisticsTagDashboardService {
       .lt('start_at', endDate)
       .gt('end_at', startDate)
       .order('start_at', { ascending: true });
-    if (error) throw new Error(`Failed to fetch records for tag dashboard: ${error.message}`);
+    if (error) {
+      throw captureUnexpectedDatabaseError(error, {
+        feature: 'statistics',
+        operation: 'fetch_tag_dashboard_records',
+      });
+    }
     return data ?? [];
   }
 
@@ -136,7 +149,12 @@ export class StatisticsTagDashboardService {
       .lt('start_at', endDate)
       .gt('end_at', startDate)
       .order('start_at', { ascending: true });
-    if (error) throw new Error(`Failed to fetch plans for tag dashboard: ${error.message}`);
+    if (error) {
+      throw captureUnexpectedDatabaseError(error, {
+        feature: 'statistics',
+        operation: 'fetch_tag_dashboard_plans',
+      });
+    }
     return data ?? [];
   }
 }

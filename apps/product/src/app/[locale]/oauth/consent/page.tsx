@@ -7,6 +7,7 @@ import {
   type AuthorizeValidationError,
   type SupportedScope,
 } from '@/lib/oauth-server';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@dayopt/components';
 
@@ -56,7 +57,7 @@ export default async function ConsentPage({ searchParams }: ConsentPageProps) {
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await observeAuthOperation('oauth_consent_get_user', () => supabase.auth.getUser());
 
   const t = await getTranslations('oauth.consent');
   const clientName = validation.client.displayName;

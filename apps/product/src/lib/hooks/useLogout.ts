@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { logger } from '@/lib/logger';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/lib/toast';
 import { useRouter } from '@dayopt/i18n/navigation';
@@ -28,7 +29,7 @@ export function useLogout() {
     setIsLoggingOut(true);
     try {
       const supabase = createClient();
-      await supabase.auth.signOut();
+      await observeAuthOperation('sign_out', () => supabase.auth.signOut());
       toast.success(t('navigation.navUser.logoutSuccess'));
       router.push('/auth/login');
       router.refresh();

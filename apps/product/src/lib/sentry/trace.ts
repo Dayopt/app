@@ -133,20 +133,8 @@ function withTrace<T>(
 
             // エラー時もメトリクスを記録
             Sentry.setMeasurement(`${name}_duration`, duration, 'millisecond');
-            Sentry.captureException(error, {
-              tags: {
-                trace_name: name,
-                trace_duration_ms: String(duration),
-                trace_operation: options?.op || 'function',
-                ...options?.tags,
-              },
-              extra: {
-                duration,
-                operation: options?.op || 'function',
-                data: options?.data,
-              },
-            });
-
+            // 呼び出し元のerror boundary / service handlerが一度だけIssue化する。
+            // trace helperはspanを終了して元Errorをそのまま伝播する。
             throw error;
           });
       }

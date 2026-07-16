@@ -15,6 +15,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 
 import { logger } from '@/lib/logger';
+import { captureClientBoundaryError } from '@/lib/sentry';
 import { Button, Card } from '@dayopt/components';
 
 interface ErrorProps {
@@ -26,7 +27,13 @@ export default function AppError({ error, reset }: ErrorProps) {
   const t = useTranslations('error.global');
 
   useEffect(() => {
-    logger.error('[App Error]', error);
+    logger.error('[App Error]', { errorType: error.name, digest: error.digest });
+    captureClientBoundaryError(error, {
+      feature: 'app',
+      operation: 'render',
+      route: window.location.pathname,
+      source: 'app_error_boundary',
+    });
   }, [error]);
 
   return (

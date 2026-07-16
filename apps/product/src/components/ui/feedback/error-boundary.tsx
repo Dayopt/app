@@ -7,13 +7,14 @@
 
 import { Component, ErrorInfo, ReactNode } from 'react';
 
-import { handleReactError, SentryErrorHandler } from '@/lib/sentry';
+import { handleReactError } from '@/lib/sentry';
 import { useTranslations } from 'next-intl';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  featureName?: string;
 }
 
 interface State {
@@ -115,21 +116,10 @@ class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Sentryにエラーを送信（自動分類・優先度付き）
-    handleReactError(error, errorInfo);
-
-    // 操作コンテキストの記録
-    SentryErrorHandler.setOperationContext({
-      page: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
-      action: 'component_error',
-      feature: 'error_boundary',
-      component_stack: errorInfo.componentStack,
-    });
-
-    // パンくずリスト記録
-    SentryErrorHandler.addBreadcrumb({
-      message: `React Error Boundary caught: ${error.message}`,
-      category: 'error',
-      level: 'error',
+    handleReactError(error, errorInfo, {
+      route: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
+      operation: 'component_render',
+      feature: this.props.featureName ?? 'error_boundary',
     });
 
     // カスタムエラーハンドラーがあれば呼び出し
@@ -170,15 +160,7 @@ export function FeatureErrorBoundary({
 }) {
   return (
     <ErrorBoundary
-      onError={(error) => {
-        // 機能固有のエラーコンテキスト設定
-        SentryErrorHandler.setOperationContext({
-          page: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
-          action: 'feature_error',
-          feature: featureName,
-          error_message: error.message,
-        });
-      }}
+      featureName={featureName}
       fallback={fallback || <FeatureErrorFallback featureName={featureName} />}
     >
       {children}

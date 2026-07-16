@@ -200,19 +200,11 @@ cat src/app/api/middleware/rate-limit.ts
 - **Keys**: 保存されているキーの確認（`ratelimit:api:*`など）
 - **Logs**: エラーログの確認
 
-### Sentry統合
+### エラー監視との境界
 
-レート制限超過は自動的にSentryに報告されます：
-
-```typescript
-// src/app/api/middleware/rate-limit.ts
-if (!success) {
-  captureMessage('Rate limit exceeded', {
-    level: 'warning',
-    tags: { clientId },
-  });
-}
-```
+レート制限超過（HTTP 429）は想定内の制御結果として扱い、Sentry Issue にはしません。
+件数・傾向は Upstash Analytics と構造化ログで確認します。識別子やリクエスト内容を
+Sentry の message・tag・context に追加しないでください。
 
 ## 🔗 参考リンク
 

@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@/features/auth';
 import { checkPasswordPwned } from '@/lib/auth/pwned-password';
 import { logger } from '@/lib/logger';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
 import { api } from '@/lib/trpc';
 import { getDisplayName } from '@/lib/user';
@@ -99,10 +100,14 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
 
         // Step 1: Verify current password explicitly so preview/local
         // environments stay safe even if Auth config has not been synced yet.
-        const { error: reAuthError } = await supabase.auth.signInWithPassword({
-          email: user.email,
-          password: currentPassword,
-        });
+        const { error: reAuthError } = await observeAuthOperation(
+          'reauthenticate_password_change',
+          () =>
+            supabase.auth.signInWithPassword({
+              email: user.email!,
+              password: currentPassword,
+            }),
+        );
 
         if (reAuthError) {
           throw new Error(t('settings.account.passwordIncorrect'));
@@ -116,10 +121,12 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
 
         // Step 3: Update password. Supabase secure password change validates
         // the current password server-side when `current_password` is provided.
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: newPassword,
-          current_password: currentPassword,
-        });
+        const { error: updateError } = await observeAuthOperation('update_password', () =>
+          supabase.auth.updateUser({
+            password: newPassword,
+            current_password: currentPassword,
+          }),
+        );
 
         if (updateError) {
           if (isCurrentPasswordError(updateError)) {
@@ -129,7 +136,9 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
         }
 
         // Step 4: Sign out other sessions
-        await supabase.auth.signOut({ scope: 'others' });
+        await observeAuthOperation('sign_out_other_sessions', () =>
+          supabase.auth.signOut({ scope: 'others' }),
+        );
 
         // Step 5: Send password changed notification email (fire-and-forget)
         sendPasswordChangedEmail({

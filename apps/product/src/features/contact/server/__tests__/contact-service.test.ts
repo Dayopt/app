@@ -19,10 +19,9 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
-const mockCaptureException = vi.fn();
-vi.mock('@sentry/nextjs', () => ({
-  captureException: (...args: unknown[]) => mockCaptureException(...args),
-  addBreadcrumb: vi.fn(),
+const mockCaptureUnexpectedError = vi.fn();
+vi.mock('@/lib/sentry', () => ({
+  captureUnexpectedError: (...args: unknown[]) => mockCaptureUnexpectedError(...args),
 }));
 
 async function importService(envOverrides?: Record<string, string>) {
@@ -159,9 +158,7 @@ describe('createGitHubIssue', () => {
       text: () => Promise.resolve('Validation Failed'),
     });
 
-    await expect(createGitHubIssue(defaultParams)).rejects.toThrow(
-      'GitHub API error (422): Validation Failed',
-    );
+    await expect(createGitHubIssue(defaultParams)).rejects.toThrow('GitHub API error (422)');
   });
 
   it('エラー系: 環境変数が未設定', async () => {
@@ -252,6 +249,19 @@ describe('createGitHubIssue', () => {
     await expect(createGitHubIssue(defaultParams)).rejects.toBe(networkError);
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
+
+  it('2xxでもGitHub response schemaが不正なら失敗する', async () => {
+    const { createGitHubIssue } = await importService();
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ html_url: 'not-a-url', number: '1' }),
+    });
+
+    await expect(createGitHubIssue(defaultParams)).rejects.toMatchObject({
+      code: 'GITHUB_API_FAILED',
+      message: 'GitHub API returned an invalid response',
+    });
+  });
 });
 
 describe('deliverContactFeedback', () => {
@@ -275,10 +285,10 @@ describe('deliverContactFeedback', () => {
       issueNumber: 5,
     });
     expect(mockLoggerError).not.toHaveBeenCalled();
-    expect(mockCaptureException).not.toHaveBeenCalled();
+    expect(mockCaptureUnexpectedError).not.toHaveBeenCalled();
   });
 
-  it('best-effort: GitHub API 失敗時も throw せず delivered: false を返す', async () => {
+  it('GitHub API 失敗時は成功を偽装せず再送可能な例外を返す', async () => {
     const { deliverContactFeedback } = await importService();
 
     mockFetch.mockResolvedValueOnce({
@@ -287,67 +297,61 @@ describe('deliverContactFeedback', () => {
       text: () => Promise.resolve('Internal Server Error'),
     });
 
-    const result = await deliverContactFeedback(defaultParams);
-
-    expect(result).toEqual({ delivered: false });
+    await expect(deliverContactFeedback(defaultParams)).rejects.toMatchObject({
+      code: 'GITHUB_API_FAILED',
+    });
   });
 
-  it('best-effort: 失敗時にフィードバック内容を構造化ログへ退避する', async () => {
+  it('失敗時のログにフィードバック本文やemailを含めない', async () => {
     const { deliverContactFeedback } = await importService();
 
     const networkError = new TypeError('fetch failed');
     mockFetch.mockRejectedValueOnce(networkError);
 
-    await deliverContactFeedback(defaultParams);
+    await expect(deliverContactFeedback(defaultParams)).rejects.toBe(networkError);
 
-    expect(mockLoggerError).toHaveBeenCalledWith(
-      'Contact feedback delivery to GitHub failed',
-      expect.objectContaining({
-        userId: 'user-123',
-        userEmail: 'test@example.com',
-        category: 'bug',
-        message: 'Something is broken',
-        environment: defaultParams.input.environment,
-        error: 'fetch failed',
-      }),
-    );
+    expect(mockLoggerError).toHaveBeenCalledWith('Contact feedback delivery to GitHub failed', {
+      userId: 'user-123',
+      category: 'bug',
+      errorType: 'TypeError',
+    });
+    expect(JSON.stringify(mockLoggerError.mock.calls)).not.toContain('test@example.com');
+    expect(JSON.stringify(mockLoggerError.mock.calls)).not.toContain('Something is broken');
   });
 
-  it('best-effort: 失敗時に Sentry へ内容つきで capture する', async () => {
+  it('Sentryには元のErrorと技術コンテキストだけを渡す', async () => {
     const { deliverContactFeedback } = await importService();
 
     const networkError = new TypeError('fetch failed');
     mockFetch.mockRejectedValueOnce(networkError);
 
-    await deliverContactFeedback(defaultParams);
+    await expect(deliverContactFeedback(defaultParams)).rejects.toBe(networkError);
 
-    expect(mockCaptureException).toHaveBeenCalledWith(
-      networkError,
-      expect.objectContaining({
-        tags: { source: 'contact', operation: 'github_issue_create' },
-        user: { id: 'user-123' },
-        extra: expect.objectContaining({
-          category: 'bug',
-          message: 'Something is broken',
-        }),
-      }),
+    expect(mockCaptureUnexpectedError).toHaveBeenCalledWith(networkError, {
+      feature: 'contact',
+      source: 'contact',
+      operation: 'github_issue_create',
+      userId: 'user-123',
+    });
+    expect(JSON.stringify(mockCaptureUnexpectedError.mock.calls)).not.toContain('test@example.com');
+    expect(JSON.stringify(mockCaptureUnexpectedError.mock.calls)).not.toContain(
+      'Something is broken',
     );
   });
 
-  it('best-effort: 環境変数未設定でも throw せず内容を退避する', async () => {
+  it('環境変数未設定時も成功扱いにせず本文をログへ退避しない', async () => {
     const { deliverContactFeedback } = await importService({
       GITHUB_TOKEN: '',
       GITHUB_CONTACT_REPO: '',
     });
 
-    const result = await deliverContactFeedback(defaultParams);
-
-    expect(result).toEqual({ delivered: false });
+    await expect(deliverContactFeedback(defaultParams)).rejects.toMatchObject({
+      code: 'GITHUB_API_FAILED',
+    });
     expect(mockFetch).not.toHaveBeenCalled();
-    expect(mockLoggerError).toHaveBeenCalledWith(
-      'Contact feedback delivery to GitHub failed',
-      expect.objectContaining({ message: 'Something is broken' }),
-    );
-    expect(mockCaptureException).toHaveBeenCalled();
+    expect(mockLoggerError).toHaveBeenCalled();
+    expect(mockCaptureUnexpectedError).toHaveBeenCalled();
+    expect(JSON.stringify(mockLoggerError.mock.calls)).not.toContain('test@example.com');
+    expect(JSON.stringify(mockLoggerError.mock.calls)).not.toContain('Something is broken');
   });
 });

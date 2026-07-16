@@ -16,7 +16,7 @@
           "title": "収集する情報",
           "accountInfo": "アカウント情報（メールアドレス、名前、プロフィール画像）",
           "usageData": "サービス利用データ（タスク、カレンダー、設定）",
-          "technicalData": "技術データ（IPアドレス、ブラウザ情報、デバイス情報）",
+          "technicalData": "最小限の技術診断情報（アプリケーションのバージョン、ルートのパス、ブラウザまたはデバイスの種別、エラーまたはトレースの識別子）。Sentryイベントには、リクエスト本文、メールアドレス、URLのクエリ文字列、Cookie、認証情報を含めません。",
           "cookies": "Cookie及び類似技術"
         },
         "dataUsage": {
@@ -24,15 +24,15 @@
           "serviceProvision": "サービスの提供・運営・改善",
           "userSupport": "ユーザーサポートとお問い合わせ対応",
           "security": "不正利用の防止とセキュリティ維持",
-          "analytics": "サービス分析と機能改善",
+          "analytics": "サービスの信頼性を保つためのProductionサーバー・Edgeエラー監視と、分析への同意後に限ったブラウザエラー監視、パフォーマンス分析",
           "communication": "重要なお知らせとサービス更新の通知"
         },
         "dataSharing": {
           "title": "第三者提供",
           "intro": "当サービスは以下のサービスプロバイダーと連携しています：",
           "supabase": "Supabase（認証・データベース）",
-          "vercel": "Vercel（ホスティング）",
-          "sentry": "Sentry（エラー監視）",
+          "vercel": "Vercel（ホスティング。Vercel AnalyticsとSpeed Insightsは分析への同意後のみ）",
+          "sentry": "Sentry（Productionのサーバー・Edgeエラー監視。ブラウザエラー監視は分析への同意後のみ。Session Replayは無効）。ProductとWebサイトのデータは別々のSentryプロジェクトで管理します。",
           "note": "これらのプロバイダーは、各社のプライバシーポリシーに基づいて情報を管理します。"
         },
         "dataRetention": {
@@ -59,11 +59,11 @@
         },
         "cookies": {
           "title": "Cookieについて",
-          "intro": "当サービスは、ユーザー体験の向上のためにCookieを使用します。",
+          "intro": "当サービスの運営に必要なCookieとローカルストレージを使用します。任意のブラウザ計測は、分析への同意によって制御できます。",
           "essential": "必須Cookie（ログイン状態の維持）",
-          "analytics": "分析Cookie（利用状況の把握）",
+          "analytics": "任意の分析技術（ブラウザ版Sentry、Vercel Analytics、Speed Insights）",
           "preference": "設定Cookie（ユーザー設定の保存）",
-          "control": "ブラウザ設定でCookieを無効化できますが、一部機能が制限される場合があります。"
+          "control": "分析を拒否した場合、任意のブラウザ計測は起動せず、主要機能は引き続き利用できます。サービス障害の診断に必要なため、サニタイズ済みのProductionサーバー・Edgeエラー監視は継続します。"
         },
         "children": {
           "title": "未成年者について",

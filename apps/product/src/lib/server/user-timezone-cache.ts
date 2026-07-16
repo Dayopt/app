@@ -14,6 +14,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { databaseTables, type Database } from '@/lib/database';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 
 interface TzCacheEntry {
   timezone: string;
@@ -37,11 +38,17 @@ export async function getUserTimezone(
     return cached.timezone;
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from(databaseTables.userSettings)
     .select('timezone')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
+  if (error) {
+    captureUnexpectedDatabaseError(error, {
+      feature: 'user_settings',
+      operation: 'get_cached_user_timezone',
+    });
+  }
   const timezone = (data?.timezone as string | null | undefined) ?? 'UTC';
 
   tzCache.set(userId, { timezone, expiresAt: now + TZ_CACHE_TTL_MS });

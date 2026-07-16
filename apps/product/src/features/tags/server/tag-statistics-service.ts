@@ -3,7 +3,7 @@ import 'server-only';
 import type { Database } from '@/lib/database';
 import { databaseTables } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { TagServiceError } from './tag-service-error';
+import { createTagDatabaseError } from './tag-service-error';
 
 export interface TagStatsRow {
   id: string;
@@ -30,7 +30,12 @@ export class TagStatisticsService {
       .eq('user_id', userId)
       .eq('is_active', true);
     if (tagsError) {
-      throw new TagServiceError('FETCH_FAILED', `Failed to fetch tags: ${tagsError.message}`);
+      throw createTagDatabaseError(
+        tagsError,
+        'FETCH_FAILED',
+        'Failed to fetch tags',
+        'fetch_tag_statistics_tags',
+      );
     }
     if (!tags || tags.length === 0) return [];
 
@@ -41,7 +46,12 @@ export class TagStatisticsService {
       .is('deleted_at', null)
       .not('tag_id', 'is', null);
     if (recordsError) {
-      throw new TagServiceError('FETCH_FAILED', `Failed to fetch records: ${recordsError.message}`);
+      throw createTagDatabaseError(
+        recordsError,
+        'FETCH_FAILED',
+        'Failed to fetch tag records',
+        'fetch_tag_statistics_records',
+      );
     }
 
     const statsMap = new Map<string, { record_count: number; last_used: string }>();

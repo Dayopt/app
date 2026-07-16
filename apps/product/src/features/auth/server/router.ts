@@ -15,7 +15,7 @@
 import { z } from 'zod';
 
 import { isValidRecoveryCodeFormat } from '@/lib/auth/recovery-codes';
-import { captureBusinessEvent } from '@/lib/sentry';
+import { observeAuthOperation } from '@/lib/sentry';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import { createRecoveryService } from './recovery-service';
@@ -41,7 +41,9 @@ export const userRouter = createTRPCRouter({
         const {
           data: { user },
           error: authError,
-        } = await ctx.supabase.auth.getUser();
+        } = await observeAuthOperation('delete_account_get_user', () =>
+          ctx.supabase.auth.getUser(),
+        );
 
         if (authError || !user || !user.email) {
           throw new UserServiceError('UNAUTHORIZED', 'Authentication required');
@@ -55,7 +57,6 @@ export const userRouter = createTRPCRouter({
           confirmText: input.confirmText,
         });
 
-        captureBusinessEvent('account.deleted', {}, 'warning');
         return result;
       } catch (error) {
         return handleServiceError(error);

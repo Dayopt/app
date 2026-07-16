@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { Database } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { TagServiceError } from './tag-service-error';
+import { createTagDatabaseError } from './tag-service-error';
 
 /**
  * 兄弟タグの末尾 sort_order + 1 を返す
@@ -27,9 +27,11 @@ export async function getNextSortOrder(
   const { data, error } = await query.order('sort_order', { ascending: false }).limit(1);
 
   if (error) {
-    throw new TagServiceError(
+    throw createTagDatabaseError(
+      error,
       'FETCH_FAILED',
-      `Failed to resolve sibling sort order: ${error.message}`,
+      'Failed to resolve sibling sort order',
+      'get_next_tag_sort_order',
     );
   }
 
@@ -60,9 +62,11 @@ export async function makeRoomAtTop(
   const { data: siblings, error } = await query.order('sort_order', { ascending: true });
 
   if (error) {
-    throw new TagServiceError(
+    throw createTagDatabaseError(
+      error,
       'FETCH_FAILED',
-      `Failed to resolve sibling sort order: ${error.message}`,
+      'Failed to resolve sibling sort order',
+      'list_sibling_tag_sort_order',
     );
   }
 
@@ -76,9 +80,11 @@ export async function makeRoomAtTop(
   });
 
   if (reorderError) {
-    throw new TagServiceError(
+    throw createTagDatabaseError(
+      reorderError,
       'UPDATE_FAILED',
-      `Failed to shift tag sort orders: ${reorderError.message}`,
+      'Failed to shift tag sort orders',
+      'shift_tag_sort_orders',
     );
   }
 }

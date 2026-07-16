@@ -13,6 +13,7 @@ import { useForm } from 'react-hook-form';
 
 import { logger } from '@/lib/logger';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
+import { captureUnexpectedAuthError, observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
 import { isTurnstileEnabled, Turnstile, type TurnstileInstance } from '@/lib/turnstile';
 import {
@@ -125,8 +126,10 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
 
         // MFAチェック（セキュリティ上必須 - エラー時もMFA画面へ誘導）
         const supabase = createClient();
-        const { data: aalData, error: mfaError } =
-          await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        const { data: aalData, error: mfaError } = await observeAuthOperation(
+          'get_authenticator_assurance_level',
+          () => supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+        );
 
         // MFA検証画面へのリダイレクトURL構築
         // MFAVerifyPage は searchParams.get('next') でlocale付きパスを受け取る
@@ -158,6 +161,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
       }
     } catch (err) {
       logger.error('[LoginForm] Unexpected error:', err);
+      captureUnexpectedAuthError(err, { operation: 'login_form' });
       setSubmitError(t('auth.errors.unexpectedError') || 'An unexpected error occurred');
       setTurnstileToken(null);
       turnstileRef.current?.reset();

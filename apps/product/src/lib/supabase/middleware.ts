@@ -42,6 +42,7 @@
  * @see https://supabase.com/docs/guides/auth/server-side/nextjs
  */
 
+import { captureUnexpectedAuthError } from '@/lib/sentry';
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -97,9 +98,20 @@ export async function updateSession(request: NextRequest) {
   // ⚠️ 重要: getUser() を呼び出すことで、期限切れトークンが自動リフレッシュされる
   // この呼び出しにより、上記の setAll() が実行され、新しいトークンがCookieに保存される
   // パフォーマンス最適化: ユーザー情報も返すことで、呼び出し元での重複取得を防止
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null;
+  try {
+    const authResult = await supabase.auth.getUser();
+    captureUnexpectedAuthError(authResult.error, {
+      operation: 'middleware_get_user',
+      source: 'supabase_auth',
+    });
+    if (!authResult.error) user = authResult.data.user;
+  } catch (error) {
+    captureUnexpectedAuthError(error, {
+      operation: 'middleware_get_user',
+      source: 'supabase_auth',
+    });
+  }
 
   return { response, supabase, user };
 }

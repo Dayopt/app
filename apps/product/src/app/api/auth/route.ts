@@ -19,6 +19,11 @@ import {
   passwordResetRateLimit,
   withUpstashRateLimit,
 } from '@/lib/rate-limit/upstash';
+import {
+  captureUnexpectedAuthError,
+  isExpectedAuthError,
+  observeAuthOperation,
+} from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
 const authPostSchema = z.discriminatedUnion('action', [
@@ -66,6 +71,19 @@ async function checkRateLimit(request: NextRequest, rateLimit: typeof loginRateL
   return null;
 }
 
+function expectedAuthErrorResponse(error: unknown): NextResponse {
+  const providerStatus =
+    error !== null && typeof error === 'object' && 'status' in error
+      ? (error as { status?: unknown }).status
+      : undefined;
+  const status =
+    typeof providerStatus === 'number' && providerStatus >= 400 && providerStatus < 500
+      ? providerStatus
+      : 400;
+
+  return NextResponse.json({ error: 'Authentication request rejected' }, { status });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -75,16 +93,24 @@ export async function GET(request: NextRequest) {
     switch (action) {
       case 'session':
         // getUser()でJWT署名を検証してからセッション取得
-        const { data: sessionUserData, error: sessionUserError } = await supabase.auth.getUser();
+        const { data: sessionUserData, error: sessionUserError } = await observeAuthOperation(
+          'api_auth_get_session_user',
+          () => supabase.auth.getUser(),
+        );
         if (sessionUserError || !sessionUserData.user) {
           return NextResponse.json({ session: null });
         }
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await observeAuthOperation('api_auth_get_session', () =>
+          supabase.auth.getSession(),
+        );
         if (error) throw error;
         return NextResponse.json({ session: data.session });
 
       case 'user':
-        const { data: userData, error: userError } = await supabase.auth.getUser();
+        const { data: userData, error: userError } = await observeAuthOperation(
+          'api_auth_get_user',
+          () => supabase.auth.getUser(),
+        );
         if (userError) throw userError;
         return NextResponse.json({ user: userData.user });
 
@@ -92,14 +118,25 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
   } catch (error) {
-    logger.error('Auth GET error', { error });
+    if (isExpectedAuthError(error)) return expectedAuthErrorResponse(error);
+    logger.error('Auth GET request failed');
+    captureUnexpectedAuthError(error, {
+      operation: 'api_auth_get',
+      route: '/api/auth',
+      source: 'auth_api',
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
     const parsed = authPostSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -138,10 +175,14 @@ export async function POST(request: NextRequest) {
 
     switch (validated.action) {
       case 'signin': {
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: validated.email,
-          password: validated.password,
-        });
+        const { data: signInData, error: signInError } = await observeAuthOperation(
+          'api_auth_sign_in',
+          () =>
+            supabase.auth.signInWithPassword({
+              email: validated.email,
+              password: validated.password,
+            }),
+        );
         if (signInError) throw signInError;
         return NextResponse.json({ user: signInData.user, session: signInData.session });
       }
@@ -149,27 +190,35 @@ export async function POST(request: NextRequest) {
       case 'signup': {
         // Cloudflare Turnstile の検証は Supabase Auth (Bot Protection) が
         // captchaToken を受け取って内部で実行する。
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: validated.email,
-          password: validated.password,
-          ...(validated.turnstileToken && {
-            options: { captchaToken: validated.turnstileToken },
-          }),
-        });
+        const { data: signUpData, error: signUpError } = await observeAuthOperation(
+          'api_auth_sign_up',
+          () =>
+            supabase.auth.signUp({
+              email: validated.email,
+              password: validated.password,
+              ...(validated.turnstileToken && {
+                options: { captchaToken: validated.turnstileToken },
+              }),
+            }),
+        );
         if (signUpError) throw signUpError;
         return NextResponse.json({ user: signUpData.user, session: signUpData.session });
       }
 
       case 'signout': {
-        const { error: signOutError } = await supabase.auth.signOut();
+        const { error: signOutError } = await observeAuthOperation('api_auth_sign_out', () =>
+          supabase.auth.signOut(),
+        );
         if (signOutError) throw signOutError;
         return NextResponse.json({ success: true });
       }
 
       case 'reset-password': {
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(validated.email, {
-          redirectTo: `${getAppUrl()}/auth/reset-password`,
-        });
+        const { error: resetError } = await observeAuthOperation('api_auth_reset_password', () =>
+          supabase.auth.resetPasswordForEmail(validated.email, {
+            redirectTo: `${getAppUrl()}/auth/reset-password`,
+          }),
+        );
         if (resetError) throw resetError;
         return NextResponse.json({ success: true });
       }
@@ -178,7 +227,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
   } catch (error) {
-    logger.error('Auth POST error', { error });
+    if (isExpectedAuthError(error)) return expectedAuthErrorResponse(error);
+    logger.error('Auth POST request failed');
+    captureUnexpectedAuthError(error, {
+      operation: 'api_auth_post',
+      route: '/api/auth',
+      source: 'auth_api',
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

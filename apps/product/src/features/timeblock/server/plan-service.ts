@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { databaseTables, publicRecordSelect, toPublicRecordRow } from '@/lib/database';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import {
@@ -94,9 +95,13 @@ export class PlanService {
       : await query;
 
     if (error) {
-      // 検索時のDB messageはPostgREST filter（検索語）を含み得るため連結しない。
-      const message = search ? 'Failed to fetch plans' : `Failed to fetch plans: ${error.message}`;
-      throw new TimeblockServiceError('FETCH_FAILED', message);
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'list_plans',
+      });
+      throw new TimeblockServiceError('FETCH_FAILED', 'Failed to fetch plans', {
+        cause: original,
+      });
     }
 
     return data ?? [];
@@ -110,9 +115,18 @@ export class PlanService {
       .eq('id', planId)
       .eq('user_id', userId)
       .is('deleted_at', null)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'get_plan_by_id',
+      });
+      throw new TimeblockServiceError('FETCH_FAILED', 'Failed to fetch plan', {
+        cause: original,
+      });
+    }
+    if (!data) {
       throw new TimeblockServiceError('NOT_FOUND', 'Plan not found');
     }
 
@@ -199,7 +213,13 @@ export class PlanService {
     });
 
     if (error) {
-      throw new TimeblockServiceError('DELETE_FAILED', `Failed to delete plan: ${error.message}`);
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'delete_plan',
+      });
+      throw new TimeblockServiceError('DELETE_FAILED', 'Failed to delete plan', {
+        cause: original,
+      });
     }
 
     return { success: true };
@@ -214,7 +234,13 @@ export class PlanService {
     });
 
     if (error) {
-      throw new TimeblockServiceError('RESTORE_FAILED', `Failed to restore plan: ${error.message}`);
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'restore_plan',
+      });
+      throw new TimeblockServiceError('RESTORE_FAILED', 'Failed to restore plan', {
+        cause: original,
+      });
     }
 
     return { success: true };
@@ -242,7 +268,13 @@ export class PlanService {
       .single();
 
     if (error) {
-      throw new TimeblockServiceError('UPDATE_FAILED', `Failed to skip plan: ${error.message}`);
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'skip_plan',
+      });
+      throw new TimeblockServiceError('UPDATE_FAILED', 'Failed to skip plan', {
+        cause: original,
+      });
     }
 
     return data;
@@ -263,7 +295,13 @@ export class PlanService {
       .single();
 
     if (error) {
-      throw new TimeblockServiceError('UPDATE_FAILED', `Failed to unskip plan: ${error.message}`);
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'unskip_plan',
+      });
+      throw new TimeblockServiceError('UPDATE_FAILED', 'Failed to unskip plan', {
+        cause: original,
+      });
     }
 
     return data;

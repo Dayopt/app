@@ -8,6 +8,7 @@ import 'server-only';
  */
 
 import { databaseTables } from '@/lib/database';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 
 import type { TimeblockOverlapService } from './timeblock-overlap-service';
 import { TimeblockServiceError } from './timeblock-service-error';
@@ -108,10 +109,13 @@ export async function ensurePlanNotRecorded(
     .limit(1);
 
   if (error) {
-    throw new TimeblockServiceError(
-      'FETCH_FAILED',
-      `Failed to check recorded plan: ${error.message}`,
-    );
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'timeblock',
+      operation: 'check_plan_recorded',
+    });
+    throw new TimeblockServiceError('FETCH_FAILED', 'Failed to check recorded plan', {
+      cause: original,
+    });
   }
 
   if ((data ?? []).length > 0) {
@@ -130,7 +134,11 @@ export function handleMutationError(
       'This time range overlaps with an existing item.',
     );
   }
-  throw new TimeblockServiceError(code, `${prefix}: ${error.message}`);
+  const original = captureUnexpectedDatabaseError(error, {
+    feature: 'timeblock',
+    operation: code.toLowerCase(),
+  });
+  throw new TimeblockServiceError(code, prefix, { cause: original });
 }
 
 export function handleRecordMutationError(

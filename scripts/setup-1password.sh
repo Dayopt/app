@@ -113,12 +113,6 @@ run item create --category=apicredential --vault=Dayopt-Staging --title=resend \
   --tags=dayopt,staging notesPlain="$NOTES" \
   'RESEND_WEBHOOK_SECRET[concealed]='
 
-run item create --category=apicredential --vault=Dayopt-Staging --title=sentry \
-  --tags=dayopt,staging notesPlain="$NOTES" \
-  'NEXT_PUBLIC_SENTRY_DSN[text]=' \
-  'SENTRY_ORG[text]=' \
-  'SENTRY_PROJECT[text]='
-
 run item create --category=apicredential --vault=Dayopt-Staging --title=app \
   --tags=dayopt,staging notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
   'NEXT_PUBLIC_APP_URL[text]=' \
@@ -158,6 +152,7 @@ run item create --category=apicredential --vault=Dayopt-Production --title=resen
 run item create --category=apicredential --vault=Dayopt-Production --title=sentry \
   --tags=dayopt,production notesPlain="$NOTES" \
   'NEXT_PUBLIC_SENTRY_DSN[text]=' \
+  'SENTRY_DSN[text]=' \
   'SENTRY_ORG[text]=' \
   'SENTRY_PROJECT[text]='
 

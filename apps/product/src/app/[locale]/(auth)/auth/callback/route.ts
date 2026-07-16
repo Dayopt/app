@@ -17,6 +17,7 @@ import { NextResponse } from 'next/server';
 
 import { logger } from '@/lib/logger';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: Request) {
@@ -28,14 +29,16 @@ export async function GET(request: Request) {
     const supabase = await createClient();
 
     // AuthCodeをセッションに交換
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await observeAuthOperation('exchange_code_for_session', () =>
+      supabase.auth.exchangeCodeForSession(code),
+    );
 
     if (!error) {
       // 成功した場合は元のページまたはデフォルトページへリダイレクト
       return NextResponse.redirect(new URL(next, request.url));
     }
 
-    logger.warn({ message: error.message }, '[auth/callback] exchangeCodeForSession failed');
+    logger.warn('Auth callback code exchange failed');
     return NextResponse.redirect(new URL('/auth/login?error=auth_callback_error', request.url));
   }
 
