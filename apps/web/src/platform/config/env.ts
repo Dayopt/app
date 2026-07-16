@@ -68,6 +68,22 @@ export interface EnvConfig {
    */
   VERCEL_URL?: string;
 
+  /** Vercel deployment target. Sentry runtime is enabled only for production. */
+  VERCEL_ENV?: string;
+
+  /** Browser-visible copy of VERCEL_ENV injected by next.config.mjs. */
+  NEXT_PUBLIC_VERCEL_ENV?: string;
+
+  // ============================================================================
+  // Observability - Sentry (Web project)
+  // ============================================================================
+
+  /** Browser DSN. This is a public ingest identifier, not an auth token. */
+  NEXT_PUBLIC_SENTRY_DSN?: string;
+
+  /** Server/Edge DSN for the dedicated Web Sentry project. */
+  SENTRY_DSN?: string;
+
   // ============================================================================
   // セキュリティ設定
   // ============================================================================
@@ -90,15 +106,15 @@ export interface EnvConfig {
    * GitHub Personal Access Token
    *
    * @required コンタクトフォームを使用する場合は必須
-   * @scope 'repo' (プライベートリポジトリの場合) または 'public_repo'
+   * @scope Fine-grained token with Issues write access to the configured private repository
    */
   GITHUB_TOKEN?: string;
 
   /**
-   * GitHub リポジトリ (owner/repo 形式)
+   * コンタクト内容を保存するprivate GitHubリポジトリ (owner/repo 形式)
    *
-   * @default 'Dayopt/dayopt'
-   * @example 'your-org/your-repo'
+   * @required Productionでは必須。public repositoryは拒否する
+   * @example 'your-org/private-contact-repo'
    */
   GITHUB_CONTACT_REPO?: string;
 
@@ -109,16 +125,16 @@ export interface EnvConfig {
   /**
    * Upstash Redis REST API URL
    *
-   * @description レート制限機能を使用する場合は設定してください
-   * @optional 未設定の場合はメモリベースのレート制限にフォールバック
+   * @description Productionのcontact / search / CSP reportレート制限に必須
+   * @optional Preview / Developmentでは未設定時にレート制限をスキップ
    */
   UPSTASH_REDIS_REST_URL?: string;
 
   /**
    * Upstash Redis REST API Token
    *
-   * @description レート制限機能を使用する場合は設定してください
-   * @optional 未設定の場合はメモリベースのレート制限にフォールバック
+   * @description Productionのcontact / search / CSP reportレート制限に必須
+   * @optional Preview / Developmentでは未設定時にレート制限をスキップ
    */
   UPSTASH_REDIS_REST_TOKEN?: string;
 
@@ -222,8 +238,9 @@ export function assertProductionRuntimeEnv(env: Partial<EnvConfig> = loadEnv()):
     return;
   }
 
-  // production NODE_ENV 以外は assert 対象外 (dev は warn 系で別途案内)
-  if (env.NODE_ENV !== 'production') {
+  // Vercel Production 以外は assert 対象外。Preview は NODE_ENV=production のため
+  // NODE_ENV だけで判定すると、観測を行わない Preview に secret を要求してしまう。
+  if (env.VERCEL_ENV !== 'production') {
     return;
   }
 
@@ -237,11 +254,26 @@ export function assertProductionRuntimeEnv(env: Partial<EnvConfig> = loadEnv()):
     errors.push('GITHUB_TOKEN is not set. Contact form will not work.');
   }
 
+  if (!env.GITHUB_CONTACT_REPO) {
+    errors.push('GITHUB_CONTACT_REPO is required for the private contact repository.');
+  }
+
+  const requiredSentryEnv = [
+    ['NEXT_PUBLIC_SENTRY_DSN', env.NEXT_PUBLIC_SENTRY_DSN],
+    ['SENTRY_DSN', env.SENTRY_DSN],
+  ] as const;
+
+  for (const [name, value] of requiredSentryEnv) {
+    if (!value) {
+      errors.push(`${name} is required for Web Sentry in Vercel Production`);
+    }
+  }
+
   const hasTurnstileSite = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const hasTurnstileSecret = !!env.TURNSTILE_SECRET_KEY;
-  if (hasTurnstileSite !== hasTurnstileSecret) {
+  if (!hasTurnstileSite || !hasTurnstileSecret) {
     errors.push(
-      'Both NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY should be set together.',
+      'NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY are required in production.',
     );
   }
 
@@ -310,6 +342,12 @@ export function loadEnv(): EnvConfig {
     NEXT_PUBLIC_APP_URL: rawEnv.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_SITE_URL: rawEnv.NEXT_PUBLIC_SITE_URL,
     VERCEL_URL: rawEnv.VERCEL_URL,
+    VERCEL_ENV: rawEnv.VERCEL_ENV,
+    NEXT_PUBLIC_VERCEL_ENV: rawEnv.NEXT_PUBLIC_VERCEL_ENV,
+
+    // Sentry (dedicated Web project)
+    NEXT_PUBLIC_SENTRY_DSN: rawEnv.NEXT_PUBLIC_SENTRY_DSN,
+    SENTRY_DSN: rawEnv.SENTRY_DSN,
 
     // セキュリティ設定
     PRIVACY_PROTECTION_MODE: parsePrivacyMode(rawEnv.PRIVACY_PROTECTION_MODE),

@@ -9,6 +9,8 @@ import {
 } from '@/lib/error-utils';
 import { useCallback, useState } from 'react';
 
+import { fetchSearchResults } from '../search-client';
+
 export interface SearchResult {
   id: string;
   title: string;
@@ -34,15 +36,8 @@ export function useSearch() {
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/search?q=${encodeURIComponent(query)}&locale=${encodeURIComponent(locale)}`,
-      );
-      if (!response.ok) {
-        throw new Error(`Search failed with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setResults(data.results || []);
+      const results = await fetchSearchResults({ query, locale, operation: 'search_hook' });
+      setResults(results);
     } catch (err) {
       const errorMessage = getErrorMessage(err);
       const structuredError = createStructuredError(

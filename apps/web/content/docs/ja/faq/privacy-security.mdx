@@ -77,7 +77,7 @@ AI Reflectionはあなた個人のデータに基づいてインサイトを生�
 
 ## Cookieはどう使われていますか？
 
-必要最小限のCookieのみ使用しています。トラッキング目的のサードパーティCookieは使用していません。詳細はプライバシーポリシーをご確認ください。
+セッションと設定のために必須Cookieを使用します。ブラウザ版Sentry、Vercel Analytics、Speed Insightsは、分析へ同意した後にのみ起動します。Session Replayは、現行SDKでReplay payloadからURLのクエリ文字列を確実に除去できないため無効にしています。Productionでは、サービス障害を診断するため、同意の選択にかかわらずサニタイズ済みのサーバー・Edgeエラー監視を継続します。ProductとWebサイトの計測データは別々のSentryプロジェクトで管理し、Sentryイベントにはリクエスト本文、メールアドレス、URLのクエリ文字列、Cookie、認証情報を含めません。詳細は[Cookieポリシー](/legal/cookies)と[プライバシーポリシー](/legal/privacy)をご確認ください。
 
 ## 社内のセキュリティポリシーで承認が必要なのですが、情報をもらえますか？
 

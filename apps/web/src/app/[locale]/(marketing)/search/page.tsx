@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
+import { fetchSearchResults } from '@/features/search/search-client';
+
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -24,10 +26,9 @@ function SearchResults() {
     if (q) {
       setIsLoading(true);
       // 実際の検索API呼び出し
-      fetch(`/api/search?q=${encodeURIComponent(q)}&locale=${encodeURIComponent(locale)}`)
-        .then((response) => response.json())
-        .then((data) => {
-          setResults(data.results || []);
+      fetchSearchResults({ query: q, locale, operation: 'search_page' })
+        .then((searchResults) => {
+          setResults(searchResults);
           setIsLoading(false);
         })
         .catch((_error) => {

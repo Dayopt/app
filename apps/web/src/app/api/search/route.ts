@@ -1,5 +1,11 @@
 import { apiError, ErrorCode } from '@/platform/api/api-response';
-import { getClientIp, searchRateLimit } from '@/platform/security/rate-limit';
+import { captureUnexpectedWebError } from '@/platform/observability/capture-unexpected-error';
+import { resolveTechnicalRequestId } from '@/platform/observability/technical-error-context';
+import {
+  getClientIp,
+  hashRateLimitIdentifier,
+  searchRateLimit,
+} from '@/platform/security/rate-limit';
 import fs from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
@@ -22,19 +28,9 @@ function loadSearchIndex(): Record<string, SearchIndexEntry[]> {
 
   const indexPath = path.join(process.cwd(), 'public', 'search-index.json');
 
-  if (!fs.existsSync(indexPath)) {
-    console.warn('[Search API] search-index.json not found. Run `npm run generate:search-index`.');
-    return {};
-  }
-
-  try {
-    const raw = fs.readFileSync(indexPath, 'utf-8');
-    indexCache = JSON.parse(raw) as Record<string, SearchIndexEntry[]>;
-    return indexCache;
-  } catch (err) {
-    console.error('[Search API] Failed to load search-index.json:', err);
-    return {};
-  }
+  const raw = fs.readFileSync(indexPath, 'utf-8');
+  indexCache = JSON.parse(raw) as Record<string, SearchIndexEntry[]>;
+  return indexCache;
 }
 
 function getBreadcrumbs(entry: SearchIndexEntry): string[] {
@@ -51,17 +47,31 @@ function getBreadcrumbs(entry: SearchIndexEntry): string[] {
 }
 
 export async function GET(request: NextRequest) {
+  const requestId = resolveTechnicalRequestId(request.headers);
+  const requestContext = requestId ? { requestId } : {};
+  let rateLimitResult: Awaited<ReturnType<typeof searchRateLimit.limit>>;
   try {
-    // レート制限チェック
     const ip = getClientIp(request);
-    const { success } = await searchRateLimit.limit(ip);
+    rateLimitResult = await searchRateLimit.limit(await hashRateLimitIdentifier(ip));
+  } catch (error) {
+    captureUnexpectedWebError(error, {
+      feature: 'search',
+      operation: 'rate_limit',
+      route: '/api/search',
+      ...requestContext,
+    });
+    return apiError('Search temporarily unavailable', 503, {
+      code: ErrorCode.EXTERNAL_SERVICE_ERROR,
+    });
+  }
 
-    if (!success) {
-      return apiError('Too many requests. Please try again later.', 429, {
-        code: ErrorCode.RATE_LIMIT_EXCEEDED,
-      });
-    }
+  if (!rateLimitResult.success) {
+    return apiError('Too many requests. Please try again later.', 429, {
+      code: ErrorCode.RATE_LIMIT_EXCEEDED,
+    });
+  }
 
+  try {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q');
 
@@ -112,7 +122,13 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ results: results.slice(0, 50) });
-  } catch {
+  } catch (error) {
+    captureUnexpectedWebError(error, {
+      feature: 'search',
+      operation: 'search_request',
+      route: '/api/search',
+      ...requestContext,
+    });
     return apiError('Search failed', 500, { code: ErrorCode.INTERNAL_ERROR });
   }
 }

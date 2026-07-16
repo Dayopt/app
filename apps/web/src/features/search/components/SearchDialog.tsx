@@ -8,6 +8,8 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
+import { fetchSearchResults } from '../search-client';
+
 interface SearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -59,17 +61,18 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
 
     const abortController = new AbortController();
     const timeoutId = setTimeout(() => {
-      fetch(`/api/search?q=${encodeURIComponent(query)}&locale=${encodeURIComponent(locale)}`, {
+      fetchSearchResults({
+        query,
+        locale,
+        operation: 'search_dialog_preview',
         signal: abortController.signal,
       })
-        .then((response) => response.json())
-        .then((data: SearchResponse) => {
-          setPreviewResults((data.results || []).slice(0, 3));
+        .then((results) => {
+          setPreviewResults(results.slice(0, 3));
         })
         .catch((error) => {
-          if (error instanceof Error && error.name !== 'AbortError') {
-            setPreviewResults([]);
-          }
+          if (error instanceof Error && error.name === 'AbortError') return;
+          setPreviewResults([]);
         });
     }, 300); // 300ms debounce
 
