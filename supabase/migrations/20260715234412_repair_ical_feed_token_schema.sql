@@ -4,8 +4,13 @@ SET LOCAL lock_timeout = '5s';
 
 -- 20260317100000 is recorded as applied in production, but the column and
 -- index are absent. Reconcile the physical schema without rewriting history.
+-- Adding the nullable column without its volatile default keeps this
+-- AccessExclusive lock to a metadata-only operation.
 ALTER TABLE public.user_settings
-  ADD COLUMN IF NOT EXISTS ical_feed_token UUID DEFAULT gen_random_uuid();
+  ADD COLUMN IF NOT EXISTS ical_feed_token UUID;
+
+ALTER TABLE public.user_settings
+  ALTER COLUMN ical_feed_token SET DEFAULT gen_random_uuid();
 
 DO $$
 BEGIN
@@ -26,6 +31,36 @@ BEGIN
   END IF;
 END;
 $$;
+
+COMMIT;
+
+-- Backfill after releasing the AccessExclusive lock. Existing settings rows
+-- receive the same token initialization as the original migration.
+BEGIN;
+
+SET LOCAL lock_timeout = '5s';
+
+UPDATE public.user_settings
+SET ical_feed_token = gen_random_uuid()
+WHERE ical_feed_token IS NULL;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.user_settings
+    WHERE ical_feed_token IS NULL
+  ) THEN
+    RAISE EXCEPTION 'public.user_settings.ical_feed_token backfill is incomplete';
+  END IF;
+END;
+$$;
+
+COMMIT;
+
+BEGIN;
+
+SET LOCAL lock_timeout = '5s';
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_settings_ical_feed_token
   ON public.user_settings (ical_feed_token)
