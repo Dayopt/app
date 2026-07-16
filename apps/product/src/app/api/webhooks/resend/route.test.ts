@@ -48,7 +48,7 @@ describe('Resend webhook', () => {
     );
   });
 
-  it('bounceをemail単位でupsertし、複合conflict keyを使わない', async () => {
+  it('bounceをschemaの複合unique keyでupsertする', async () => {
     const upsert = vi.fn().mockResolvedValue({ error: null });
     createServiceRoleClient.mockReturnValue({ from: vi.fn(() => ({ upsert })) });
     verifyWebhook.mockReturnValue({
@@ -65,7 +65,7 @@ describe('Resend webhook', () => {
         reason: 'bounce',
         source_event_id: 'email-1',
       },
-      { onConflict: 'email' },
+      { onConflict: 'email,reason' },
     );
     expect(JSON.stringify(logger)).not.toContain('private@example.com');
   });

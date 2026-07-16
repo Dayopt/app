@@ -48,7 +48,7 @@ async function recordSuppression(
         reason,
         source_event_id: sourceEventId ?? null,
       },
-      { onConflict: 'email' },
+      { onConflict: 'email,reason' },
     );
 
     if (error) {
