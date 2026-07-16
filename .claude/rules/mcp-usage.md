@@ -92,13 +92,15 @@
 ### Playwright (`mcp__playwright__*`)
 
 - **Invoke when**:
-  - UI 変更実装後、Stats ページ / Hero / block-visual 等のビジュアル結果をスクリーンショットで確認する
+  - 同じ操作を反復できる形で検証する必要がある時、または複数 viewport / variant のスクリーンショット比較を行う時
   - E2E スモーク（`apps/product/playwright.config.ts`）が失敗した際の再現状況を撮影する
-  - Storybook の variant レンダリングを検証する
+  - 共有 browser surface が利用できず、独立した browser で視覚 evidence を取得する必要がある時
 - **Before use**:
   - 検証対象（`pnpm storybook` の localhost:6006、または `pnpm dev` の app）が起動していることを確認する
   - 初回は `@playwright/mcp` がブラウザバイナリを取得するため、`browser_navigate` の初回呼び出しが遅延しうる
-- **境界ケース**: 「型チェック・lint は通った」だけで完了報告しない。UI 変更は Playwright スクリーンショットで視覚確認するまでが完了。
+- **境界ケース**:
+  - 「型チェック・lint は通った」だけで完了報告しない。UI 変更は provider の共有 browser、Preview、または Playwright のいずれかで視覚確認する
+  - 既存の共有 browser で単発の視覚確認を完了できる時は、同じ evidence のために独立 Playwright browser を追加で起動しない
 
 ### Storybook (`mcp__storybook__*`)
 
@@ -111,7 +113,7 @@
 - **Before use**:
   - `pnpm storybook`（localhost:6006）が起動していることを確認する（`nc -z localhost 6006`）。トークンは不要
   - Storybook が落ちている場合は MCP 接続失敗を異常扱いしない（eagle / supabase-local と同じオンデマンド運用）
-- **境界ケース**: 視覚的な regression 確認は Playwright スクリーンショットの領域。Storybook MCP は props / story 構成 / docs の「構造化知識」取得に使い、見た目の検証には使わない。
+- **境界ケース**: Storybook MCP は props / story 構成 / docs の「構造化知識」取得に使い、見た目の検証には使わない。視覚確認は共有 browser surface を優先し、反復可能な自動回帰確認が必要な時だけ Playwright を使う。
 
 ### GitHub (`mcp__github__*`)
 

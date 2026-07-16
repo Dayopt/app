@@ -126,6 +126,25 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
       expect(result).toBeDefined();
       expect(result?.timezone).toBe('Asia/Tokyo');
       expect(result?.timeFormat).toBe('24h');
+      expect(result).not.toHaveProperty('chronotype_settings');
+    });
+
+    it('should create and regenerate an iCal feed token', async () => {
+      await adminSupabase.from('user_settings').delete().eq('user_id', TEST_USER_ID);
+
+      const caller = createTestCaller(userSettingsRouter, ctx);
+      await caller.update({ timezone: 'Asia/Tokyo' });
+
+      const initial = await caller.getICalToken();
+      expect(initial.token).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+
+      const regenerated = await caller.regenerateICalToken();
+      expect(regenerated.token).not.toBe(initial.token);
+
+      const current = await caller.getICalToken();
+      expect(current.token).toBe(regenerated.token);
     });
   });
 

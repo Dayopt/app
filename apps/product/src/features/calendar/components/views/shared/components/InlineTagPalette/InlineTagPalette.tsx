@@ -6,33 +6,22 @@
  * カレンダーグリッド上でドラッグ確定後に表示される。
  * 選択範囲のハイライトをグリッド上に描画し、
  * TagQuickSelector（Drawer/Dialog）でタグ選択 → エントリ作成。
+ *
+ * entry 作成・競合判定は useInlineTagPaletteCreation、
+ * リサイズ / long-press 移動は inline-selection-gestures に分離している。
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { toast } from '@/lib/toast';
-import { useQueryClient } from '@tanstack/react-query';
 import { format, isSameDay } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
-import {
-  collectTimeModelLaneItems,
-  hasTimeModelLaneConflict,
-} from '@/features/calendar/lib/overlap';
-import type { HoveredTagInfo } from '@/features/tags';
-import {
-  getTagColorClasses,
-  resolveTagColor,
-  TagIcon,
-  TagQuickSelector,
-  useCreateTag,
-} from '@/features/tags';
-import { resolveTimeblockDestination, useTimeblockWriteMutations } from '@/features/timeblock';
+import { getTagColorClasses, TagIcon, TagQuickSelector } from '@/features/tags';
+import { resolveTimeblockDestination } from '@/features/timeblock';
 import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { logger } from '@/lib/logger';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@dayopt/components';
 
@@ -41,8 +30,12 @@ import { DEFAULT_PLAN_LANE_WIDTH_PERCENT } from '../../../../../lib/two-lane-lay
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
 
 import { Z_INDEX } from '../../constants/grid.constants';
-import { DRAG_CONSTANTS } from '../CalendarDragSelection/types';
 import { ConflictOverlay } from '../ConflictOverlay';
+import {
+  createBodyPointerDownHandler,
+  createResizeStartHandler,
+} from './inline-selection-gestures';
+import { useInlineTagPaletteCreation } from './useInlineTagPaletteCreation';
 
 /** InlineTagPalette コンポーネントのプロパティ */
 interface InlineTagPaletteProps {
@@ -59,142 +52,14 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const updateSelectionTimes = useInlineCreateStore.use.updateSelectionTimes();
   const timezone = useUserPreferences((s) => s.timezone);
   const locale = useLocale();
-  const t = useTranslations('tags');
   const tCalendar = useTranslations('calendar');
   const tEntry = useTranslations('timeblock');
   const { tap, impact } = useHapticFeedback();
 
-  const queryClient = useQueryClient();
-  const { createRecord, createPlan } = useTimeblockWriteMutations();
-  const createTagMutation = useCreateTag({ showToast: false });
-  const [isCreating, setIsCreating] = useState(false);
-  const [hoveredTag, setHoveredTag] = useState<HoveredTagInfo | null>(null);
-  const lockedRef = useRef(false);
   const highlightRef = useRef<HTMLDivElement>(null);
 
-  // 選択後はホバークリアを無視（mouseLeaveでちらつかないように）
-  const handleTagHover = useCallback((tag: HoveredTagInfo | null) => {
-    if (tag === null && lockedRef.current) return;
-    setHoveredTag(tag);
-  }, []);
-
-  // plan / record 作成ハンドラー（タグ必須、タグ名をタイトルに設定）
-  const handleCreate = useCallback(
-    (tagId: string, tagName: string) => {
-      if (!pendingSelection || isCreating) return;
-
-      const { date: selDate, startHour, startMinute, endHour, endMinute } = pendingSelection;
-
-      // ローカル時刻 → UTC変換
-      const localStart = new Date(
-        selDate.getFullYear(),
-        selDate.getMonth(),
-        selDate.getDate(),
-        startHour,
-        startMinute,
-      );
-      const localEnd = new Date(
-        selDate.getFullYear(),
-        selDate.getMonth(),
-        selDate.getDate(),
-        endHour,
-        endMinute,
-      );
-
-      const utcStart = convertFromTimezone(localStart, timezone);
-      const utcEnd = convertFromTimezone(localEnd, timezone);
-
-      // 保存先は end ルールで一意に決める（lane はドラッグ起点の表示ヒントに留める）
-      const destination = resolveTimeblockDestination(utcEnd);
-
-      // 事前 overlap 判定（TagSelector を開いている間の resize / 他クライアント更新による race を回避）
-      // 同一レーンのみ禁止（plan×plan / record×record）。plan×record は許可。
-      const laneItems = collectTimeModelLaneItems(
-        queryClient,
-        destination === 'plan' ? 'plans' : 'records',
-      );
-      if (hasTimeModelLaneConflict(laneItems, utcStart, utcEnd)) {
-        toast.error(tEntry('errors.timeOverlap'));
-        clearPendingSelection();
-        return;
-      }
-
-      lockedRef.current = true;
-      setIsCreating(true);
-
-      logger.log('🏷️ InlineTagPalette: Creating', {
-        destination,
-        start: utcStart.toISOString(),
-        end: utcEnd.toISOString(),
-        tagId,
-        title: tagName,
-      });
-
-      // ハイライトを即座に消す（pendingSelectionの値は既にローカル変数に展開済み）
-      clearPendingSelection();
-
-      const mutation = destination === 'plan' ? createPlan : createRecord;
-      mutation.mutate(
-        {
-          title: tagName,
-          start_at: utcStart.toISOString(),
-          end_at: utcEnd.toISOString(),
-          tagId,
-        },
-        {
-          onSuccess: () => {
-            setIsCreating(false);
-            toast.success(
-              destination === 'plan'
-                ? tEntry('editor.toast.planCreated')
-                : tEntry('editor.toast.recorded'),
-            );
-          },
-          onError: () => setIsCreating(false),
-        },
-      );
-    },
-    [
-      pendingSelection,
-      isCreating,
-      timezone,
-      createPlan,
-      createRecord,
-      clearPendingSelection,
-      queryClient,
-      tEntry,
-    ],
-  );
-
-  // 新規タグ作成 → エントリ作成
-  const handleCreateAndSelect = useCallback(
-    async (name: string, color?: string | null, icon?: string | null, parentId?: string | null) => {
-      if (!pendingSelection || isCreating) return;
-
-      setIsCreating(true);
-      try {
-        const newTag = await createTagMutation.mutateAsync({
-          name,
-          color: resolveTagColor(color),
-          icon: icon ?? undefined,
-          parentId: parentId ?? undefined,
-        });
-        // mutateAsync resolved → handleCreate で続行
-        handleCreate(newTag.id, name);
-      } catch (err) {
-        setIsCreating(false);
-        const message = err instanceof Error ? err.message : String(err);
-        if (message.includes('GROUP_NAME_CONFLICT') || message.includes('group_conflict')) {
-          toast.error(t('errors.groupNameConflict'));
-        } else if (message.includes('duplicate') || message.includes('already exists')) {
-          toast.error(t('errors.duplicateName'));
-        } else {
-          toast.error(t('errors.createFailed'));
-        }
-      }
-    },
-    [pendingSelection, isCreating, createTagMutation, handleCreate, t],
-  );
+  const { hoveredTag, handleTagHover, handleCreate, handleCreateAndSelect, hasConflict } =
+    useInlineTagPaletteCreation();
 
   // selector の open は pendingSelection と分離する。
   // 「+」で modal に遷移する時は selector を閉じつつ pendingSelection を保持する必要がある
@@ -240,42 +105,6 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
   const timeFormat = useUserPreferences((s) => s.timeFormat);
 
-  // 現在の selection が他 entry と重なるかを live 判定（resize や外部更新に追随）。
-
-  // hooks は早期 return より前で呼ぶ必要があるため、null セーフに書く。
-  const hasConflict = useMemo(() => {
-    if (!pendingSelection) return false;
-    const { date: selDate, startHour, startMinute, endHour, endMinute } = pendingSelection;
-    const startMin = startHour * 60 + startMinute;
-    const endMin = endHour * 60 + endMinute;
-    if (endMin <= startMin) return false;
-
-    const localStart = new Date(
-      selDate.getFullYear(),
-      selDate.getMonth(),
-      selDate.getDate(),
-      startHour,
-      startMinute,
-    );
-    const localEnd = new Date(
-      selDate.getFullYear(),
-      selDate.getMonth(),
-      selDate.getDate(),
-      endHour,
-      endMinute,
-    );
-    const utcStart = convertFromTimezone(localStart, timezone);
-    const utcEnd = convertFromTimezone(localEnd, timezone);
-
-    // 保存先レーンと同じレーンのみ判定（plan×record は共存可）
-    const destination = resolveTimeblockDestination(utcEnd);
-    const laneItems = collectTimeModelLaneItems(
-      queryClient,
-      destination === 'plan' ? 'plans' : 'records',
-    );
-    return hasTimeModelLaneConflict(laneItems, utcStart, utcEnd);
-  }, [queryClient, pendingSelection, timezone]);
-
   // 日付が指定されている場合、対象日と一致するカラムのみ表示
   if (!pendingSelection) return null;
   if (date && !isSameDay(date, pendingSelection.date)) return null;
@@ -318,94 +147,22 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const recordSurfaceClass = hoveredColorClasses?.tint ?? 'bg-card';
   const displayName = hoveredTag?.name ?? tCalendar('event.selectTag');
 
-  // 下端 handle: end time だけを 15 分単位で更新
-  const handleResizeStart = (clientY: number) => {
-    const baseEndMin = endMinutes;
-    const minEndMin = startMinutes + 15;
-    let lastEndMin = baseEndMin;
+  const handleResizeStart = createResizeStartHandler({
+    hourHeight,
+    startMinutes,
+    endMinutes,
+    updateSelectionTimes,
+    tap,
+  });
 
-    const onMove = (event: PointerEvent) => {
-      const deltaMin = Math.round(((event.clientY - clientY) * 60) / hourHeight / 15) * 15;
-      const next = Math.max(minEndMin, Math.min(24 * 60, baseEndMin + deltaMin));
-      if (next === lastEndMin) return;
-      lastEndMin = next;
-      updateSelectionTimes({ endHour: Math.floor(next / 60), endMinute: next % 60 });
-      tap();
-    };
-
-    const onEnd = () => {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onEnd);
-      document.removeEventListener('pointercancel', onEnd);
-    };
-
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onEnd);
-    document.addEventListener('pointercancel', onEnd);
-  };
-
-  // 本体 long-press: 300ms 静止で move mode に入り、duration 維持で全体を移動
-  const handleBodyPointerDown = (e: React.PointerEvent) => {
-    const startClientX = e.clientX;
-    const startClientY = e.clientY;
-    const baseStartMin = startMinutes;
-    const duration = endMinutes - startMinutes;
-    let phase: 'pending' | 'moving' | 'cancelled' = 'pending';
-    let lastStartMin = baseStartMin;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    const cleanup = () => {
-      if (timer !== null) {
-        clearTimeout(timer);
-        timer = null;
-      }
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onEnd);
-      document.removeEventListener('pointercancel', onEnd);
-    };
-
-    const onMove = (event: PointerEvent) => {
-      if (phase === 'cancelled') return;
-      if (phase === 'pending') {
-        const dx = Math.abs(event.clientX - startClientX);
-        const dy = Math.abs(event.clientY - startClientY);
-        if (
-          dx > DRAG_CONSTANTS.LONG_PRESS_MOVE_THRESHOLD ||
-          dy > DRAG_CONSTANTS.LONG_PRESS_VERTICAL_THRESHOLD
-        ) {
-          phase = 'cancelled';
-          cleanup();
-        }
-        return;
-      }
-      // moving
-      const deltaMin = Math.round(((event.clientY - startClientY) * 60) / hourHeight / 15) * 15;
-      const next = Math.max(0, Math.min(24 * 60 - duration, baseStartMin + deltaMin));
-      if (next === lastStartMin) return;
-      lastStartMin = next;
-      const nextEnd = next + duration;
-      updateSelectionTimes({
-        startHour: Math.floor(next / 60),
-        startMinute: next % 60,
-        endHour: Math.floor(nextEnd / 60),
-        endMinute: nextEnd % 60,
-      });
-      tap();
-    };
-
-    const onEnd = () => {
-      cleanup();
-    };
-
-    timer = setTimeout(() => {
-      phase = 'moving';
-      impact();
-    }, DRAG_CONSTANTS.LONG_PRESS_DURATION);
-
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onEnd);
-    document.addEventListener('pointercancel', onEnd);
-  };
+  const handleBodyPointerDown = createBodyPointerDownHandler({
+    hourHeight,
+    startMinutes,
+    endMinutes,
+    updateSelectionTimes,
+    tap,
+    impact,
+  });
 
   return (
     <>

@@ -79,6 +79,7 @@ describe('SettingsService', () => {
           paymentErrorDialogLastShownAt: '2026-06-15T00:00:00.000Z',
         },
       });
+      expect(result).not.toHaveProperty('chronotype_settings');
       expect(query.select).toHaveBeenCalledWith(publicUserSettingsSelect);
       expect(query.eq).toHaveBeenCalledWith('user_id', USER_ID);
     });
