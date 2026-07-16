@@ -157,10 +157,12 @@ commit 前に必ず `git diff --cached` で index 内容を確認する。Edit �
 
 ### Storybook 視覚確認
 
-UI 変更を含む作業では、Storybook 起動して視覚確認を Tomoya 側で実施:
+UI 変更を含む作業では、関連 Story がある場合は Storybook を起動し、Main が視覚確認する。ユーザーと画面を共有できる provider では、同じ browser surface を優先する:
 
 - 既存 stories の regression なし
 - 新規 stories の描画確認
+- browser の選択は provider 固有の overlay に従う。Codex は `.codex/rules/browser.md` を正本とする
+- Tomoya の確認は最終的なプロダクト判断として追加できるが、Main 自身の検証の代替にはしない
 
 ## マージ方式
 

@@ -29,6 +29,7 @@ Codex review agent は `sandbox_mode = "read-only"`、`approval_policy = "never"
 
 - `git-workflow.md` — Codex での branch / commit / PR / merge 運用
 - `mcp.md` — Codex 固有の MCP 起動範囲と 1Password masking 運用
+- `browser.md` — Codex での共有 Chrome、内蔵 Browser、Playwright の選択順
 
 ## Canonical References
 
