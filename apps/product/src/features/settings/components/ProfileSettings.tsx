@@ -11,8 +11,8 @@ import { useAuthStore } from '@/features/auth';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { Avatar, AvatarFallback, AvatarImage } from '@dayopt/components';
 
-import { AvatarChangeDialog } from './avatar-change-dialog';
-import { DisplayNameDialog } from './display-name-dialog';
+import { AvatarChangeDialog } from './AvatarChangeDialog';
+import { DisplayNameDialog } from './DisplayNameDialog';
 
 /**
  * プロフィール設定コンポーネント

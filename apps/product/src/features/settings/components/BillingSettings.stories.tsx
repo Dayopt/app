@@ -15,7 +15,7 @@ import type {
   PaymentMethod,
 } from '../server/billing-service';
 
-import { BillingSettings } from './billing-settings';
+import { BillingSettings } from './BillingSettings';
 
 // ─────────────────────────────────────────────────────────
 // Mock Data

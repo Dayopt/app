@@ -12,7 +12,7 @@ import { fn } from 'storybook/test';
 
 import { Button } from '@dayopt/components';
 
-import { EmailChangeDialog } from './email-change-dialog';
+import { EmailChangeDialog } from './EmailChangeDialog';
 
 const meta = {
   title: 'Product/Features/Settings/EmailChangeDialog',

@@ -17,7 +17,7 @@ import { fn } from 'storybook/test';
 import { PRESET_AUTH } from '@dayopt/storybook/mocks/presets';
 
 import type { UseMFAReturn } from '../hooks/useMFA';
-import { AccountSettings } from './account-settings';
+import { AccountSettings } from './AccountSettings';
 
 // ─────────────────────────────────────────────────────────
 // モックファクトリ
