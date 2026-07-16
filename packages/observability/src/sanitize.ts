@@ -171,7 +171,6 @@ const SAFE_BREADCRUMB_DATA_KEYS = new Set([
   'url',
 ]);
 
-const EMAIL_RE = /[\w.+-]+@[\w-]+\.[A-Za-z]{2,}/g;
 const JWT_RE = /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g;
 const LONG_TOKEN_RE = /\b[A-Za-z0-9_-]{32,}\b/g;
 const AUTHORIZATION_SECRET_RE =
@@ -191,9 +190,84 @@ function normalizedKey(key: string): string {
   return key.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+function isAsciiLetter(code: number): boolean {
+  return (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+}
+
+function isAsciiDigit(code: number): boolean {
+  return code >= 48 && code <= 57;
+}
+
+function isEmailLocalCharacter(code: number): boolean {
+  return (
+    isAsciiLetter(code) ||
+    isAsciiDigit(code) ||
+    code === 95 ||
+    code === 46 ||
+    code === 43 ||
+    code === 45
+  );
+}
+
+function isEmailDomainCharacter(code: number): boolean {
+  return isAsciiLetter(code) || isAsciiDigit(code) || code === 95 || code === 45 || code === 46;
+}
+
+function findEmailDomainEnd(value: string, atIndex: number): number | null {
+  let end = atIndex + 1;
+  while (end < value.length && isEmailDomainCharacter(value.charCodeAt(end))) end += 1;
+  while (end > atIndex + 1 && value.charCodeAt(end - 1) === 46) end -= 1;
+
+  let lastDot = -1;
+  let previousWasDot = false;
+  for (let index = atIndex + 1; index < end; index += 1) {
+    const isDot = value.charCodeAt(index) === 46;
+    if (isDot) {
+      if (index === atIndex + 1 || previousWasDot) return null;
+      lastDot = index;
+    }
+    previousWasDot = isDot;
+  }
+
+  if (lastDot < atIndex + 2 || end - lastDot < 3) return null;
+  for (let index = lastDot + 1; index < end; index += 1) {
+    if (!isAsciiLetter(value.charCodeAt(index))) return null;
+  }
+  return end;
+}
+
+function redactEmails(value: string): string {
+  let appendFrom = 0;
+  let searchFrom = 0;
+  const output: string[] = [];
+
+  while (searchFrom < value.length) {
+    const atIndex = value.indexOf('@', searchFrom);
+    if (atIndex < 0) break;
+
+    let localStart = atIndex;
+    while (localStart > appendFrom && isEmailLocalCharacter(value.charCodeAt(localStart - 1))) {
+      localStart -= 1;
+    }
+
+    const domainEnd = localStart < atIndex ? findEmailDomainEnd(value, atIndex) : null;
+    if (domainEnd === null) {
+      searchFrom = atIndex + 1;
+      continue;
+    }
+
+    output.push(value.slice(appendFrom, localStart), REDACTED_EMAIL);
+    appendFrom = domainEnd;
+    searchFrom = domainEnd;
+  }
+
+  if (output.length === 0) return value;
+  output.push(value.slice(appendFrom));
+  return output.join('');
+}
+
 function redactTokenSecrets(value: string): string {
-  return value
-    .replace(EMAIL_RE, REDACTED_EMAIL)
+  return redactEmails(value)
     .replace(JWT_RE, REDACTED_TOKEN)
     .replace(LONG_TOKEN_RE, (match) => (match.startsWith('REDACTED') ? match : REDACTED_TOKEN));
 }

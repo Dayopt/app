@@ -108,6 +108,23 @@ describe('sanitizeSentryEvent', () => {
     ]);
   });
 
+  it('redacts email addresses with a linear scanner and handles long plus-only input', () => {
+    const longUntrustedValue = '+'.repeat(100_000);
+    const result = sanitizeSentryEvent({
+      contexts: {
+        react: {
+          componentStack: `Widget alice+alerts@example.com ${longUntrustedValue}`,
+        },
+      },
+    });
+
+    expect(result.contexts).toEqual({
+      react: {
+        componentStack: `Widget [REDACTED_EMAIL] ${longUntrustedValue}`,
+      },
+    });
+  });
+
   it('redacts compound secret labels and the complete Authorization credential', () => {
     const result = sanitizeSentryEvent({
       request: {
