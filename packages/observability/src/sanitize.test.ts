@@ -125,6 +125,40 @@ describe('sanitizeSentryEvent', () => {
     });
   });
 
+  it.each([
+    ['alice@example.com-test', '[REDACTED_EMAIL]-test'],
+    ['alice@example.com_suffix', '[REDACTED_EMAIL]_suffix'],
+    ['alice@example.com123', '[REDACTED_EMAIL]123'],
+    ['alice@example.com.foo1', '[REDACTED_EMAIL]1'],
+    ['alice@example.xn--p1ai', '[REDACTED_EMAIL]--p1ai'],
+    ['alice@example.com...next', '[REDACTED_EMAIL]...next'],
+  ])(
+    'redacts the valid email prefix when domain-like suffix data follows: %s',
+    (value, expected) => {
+      const result = sanitizeSentryEvent({
+        contexts: { react: { componentStack: `Widget ${value}` } },
+      });
+
+      expect(result.contexts).toEqual({
+        react: { componentStack: `Widget ${expected}` },
+      });
+    },
+  );
+
+  it('redacts multiple email addresses in one value', () => {
+    const result = sanitizeSentryEvent({
+      contexts: {
+        react: { componentStack: 'alice@example.com followed by bob@example.org' },
+      },
+    });
+
+    expect(result.contexts).toEqual({
+      react: {
+        componentStack: '[REDACTED_EMAIL] followed by [REDACTED_EMAIL]',
+      },
+    });
+  });
+
   it('redacts compound secret labels and the complete Authorization credential', () => {
     const result = sanitizeSentryEvent({
       request: {

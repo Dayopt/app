@@ -214,26 +214,30 @@ function isEmailDomainCharacter(code: number): boolean {
 }
 
 function findEmailDomainEnd(value: string, atIndex: number): number | null {
-  let end = atIndex + 1;
-  while (end < value.length && isEmailDomainCharacter(value.charCodeAt(end))) end += 1;
-  while (end > atIndex + 1 && value.charCodeAt(end - 1) === 46) end -= 1;
+  let index = atIndex + 1;
+  let labelLength = 0;
+  let labelContainsOnlyLetters = true;
+  let sawDot = false;
+  let lastValidEnd: number | null = null;
 
-  let lastDot = -1;
-  let previousWasDot = false;
-  for (let index = atIndex + 1; index < end; index += 1) {
-    const isDot = value.charCodeAt(index) === 46;
-    if (isDot) {
-      if (index === atIndex + 1 || previousWasDot) return null;
-      lastDot = index;
+  while (index < value.length && isEmailDomainCharacter(value.charCodeAt(index))) {
+    const code = value.charCodeAt(index);
+    if (code === 46) {
+      if (labelLength === 0) break;
+      sawDot = true;
+      labelLength = 0;
+      labelContainsOnlyLetters = true;
+      index += 1;
+      continue;
     }
-    previousWasDot = isDot;
+
+    labelLength += 1;
+    labelContainsOnlyLetters &&= isAsciiLetter(code);
+    index += 1;
+    if (sawDot && labelLength >= 2 && labelContainsOnlyLetters) lastValidEnd = index;
   }
 
-  if (lastDot < atIndex + 2 || end - lastDot < 3) return null;
-  for (let index = lastDot + 1; index < end; index += 1) {
-    if (!isAsciiLetter(value.charCodeAt(index))) return null;
-  }
-  return end;
+  return lastValidEnd;
 }
 
 function redactEmails(value: string): string {
