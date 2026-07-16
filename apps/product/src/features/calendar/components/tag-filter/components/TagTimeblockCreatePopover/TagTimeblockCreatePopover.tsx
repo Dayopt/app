@@ -6,12 +6,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { isSameDay, startOfDay } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
-import {
-  collectTimeModelLaneItems,
-  hasTimeModelLaneConflict,
-} from '@/features/calendar/lib/overlap';
 import { resolveTagColor, useCreateTag, useTagsMap } from '@/features/tags';
-import { resolveTimeblockDestination, useTimeblockWriteMutations } from '@/features/timeblock';
+import {
+  collectTimeblockLaneItems,
+  hasTimeblockLaneConflict,
+  resolveTimeblockDestination,
+  useTimeblockWriteMutations,
+} from '@/features/timeblock';
 import { toast } from '@/lib/toast';
 import {
   Drawer,
@@ -204,11 +205,11 @@ export function TagTimeblockCreatePopover({
     if (endDate.getTime() <= startDate.getTime()) return false;
 
     const destination = resolveTimeblockDestination(endDate);
-    const laneItems = collectTimeModelLaneItems(
+    const laneItems = collectTimeblockLaneItems(
       queryClient,
       destination === 'plan' ? 'plans' : 'records',
     );
-    return hasTimeModelLaneConflict(laneItems, startDate, endDate);
+    return hasTimeblockLaneConflict(laneItems, startDate, endDate);
   }, [queryClient, selectedDate, startTime, endTime]);
 
   const handleSubmit = useCallback(() => {
