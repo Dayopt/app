@@ -38,9 +38,9 @@ export function SettingsDialog() {
         <div className="flex h-full min-w-0 flex-1 flex-col">
           <SettingsContent category={category} />
         </div>
-        <DialogClose className="text-muted-foreground hover:text-foreground hover:bg-state-hover active:bg-state-hover focus-visible:ring-ring absolute top-2 right-2 z-10 flex size-8 items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-hidden">
+        <DialogClose className="text-muted-foreground hover:text-foreground hover:bg-state-hover active:bg-state-hover focus-visible:ring-ring absolute top-2 right-2 z-10 flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-hidden md:size-8 md:min-h-0 md:min-w-0">
           <XIcon className="size-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">{t('common.actions.close')}</span>
         </DialogClose>
       </DialogContent>
     </Dialog>

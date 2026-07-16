@@ -58,8 +58,8 @@ export function ShortcutCheatSheetDialog({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} responsive="dialog">
-      <DialogContent size="xl" showOverlay={false} className="max-h-160 overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange} responsive="dialog" modal={false}>
+      <DialogContent size="xl" className="max-h-160 overflow-y-auto">
         <DialogHeader className="text-left">
           <DialogTitle>{t('calendar.shortcuts.title')}</DialogTitle>
         </DialogHeader>

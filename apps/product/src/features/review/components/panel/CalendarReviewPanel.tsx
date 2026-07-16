@@ -123,7 +123,10 @@ export function CalendarReviewPanel({
             variant="ghost"
             size="sm"
             icon
-            className="text-muted-foreground hover:text-foreground -mr-2"
+            className={cn(
+              'text-muted-foreground hover:text-foreground -mr-2',
+              isSheet && 'min-h-11 min-w-11',
+            )}
             onClick={onClose}
             aria-label={tAll('actions.close')}
           >

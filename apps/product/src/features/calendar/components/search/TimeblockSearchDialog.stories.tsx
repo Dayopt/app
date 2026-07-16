@@ -137,8 +137,11 @@ export const Error: Story = {
   play: async ({ canvasElement }) => enterSearch(canvasElement, 'work'),
 };
 
-/** モバイル幅では同じCommandDialogを下部Drawerとして表示する。 */
+/** モバイル幅では検索欄を上部に固定した全高Drawerとして表示する。 */
 export const MobileDrawer: Story = {
+  args: {
+    responsive: 'drawer',
+  },
   parameters: {
     layout: 'fullscreen',
     viewport: { defaultViewport: 'mobile1' },

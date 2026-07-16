@@ -6,8 +6,10 @@ import { Drawer as DrawerPrimitive } from 'vaul';
 
 import { cn } from '../cn';
 
-function Drawer({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />;
+type DrawerProps = React.ComponentProps<typeof DrawerPrimitive.Root> & { modal?: never };
+
+function Drawer({ ...props }: DrawerProps) {
+  return <DrawerPrimitive.Root data-slot="drawer" modal {...props} />;
 }
 
 function DrawerTrigger({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Trigger>) {
@@ -35,6 +37,22 @@ function DrawerHandle({
   );
 }
 
+function DrawerOverlay({
+  className,
+  ...props
+}: React.ComponentProps<typeof DrawerPrimitive.Overlay>) {
+  return (
+    <DrawerPrimitive.Overlay
+      data-slot="drawer-overlay"
+      className={cn(
+        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-overlay z-sheet fixed inset-0 backdrop-blur-md data-[state=closed]:pointer-events-none motion-reduce:animate-none',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 function DrawerContent({
   className,
   children,
@@ -42,6 +60,7 @@ function DrawerContent({
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
   return (
     <DrawerPortal data-slot="drawer-portal">
+      <DrawerOverlay />
       <DrawerPrimitive.Content
         data-slot="drawer-content"
         className={cn(
@@ -76,7 +95,7 @@ function DrawerFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="drawer-footer"
-      className={cn('mt-auto flex flex-row gap-2 p-4 [&>*]:flex-1', className)}
+      className={cn('mt-auto flex flex-row gap-2 p-4 [&>*]:min-h-11 [&>*]:flex-1', className)}
       {...props}
     />
   );

@@ -7,6 +7,7 @@ import { Button, Sheet, SheetContent, SheetHeader, SheetTitle } from '@dayopt/co
 
 /**
  * Sheet - スライドインパネル。
+ * すべてモーダルとして表示し、背景操作を止める共通オーバーレイを伴う。
  *
  * ## 閉じるボタンのガイドライン
  *
@@ -93,6 +94,7 @@ export const AllPatterns: Story = {
 
     const body = within(document.body);
     await expect(await body.findByText('メニュー')).toBeVisible();
+    await expect(document.querySelector('[data-slot="sheet-overlay"]')).toBeInTheDocument();
 
     const closeButton = await body.findByRole('button', { name: /close/i });
     await userEvent.click(closeButton);

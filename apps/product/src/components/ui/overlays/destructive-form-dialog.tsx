@@ -136,7 +136,7 @@ export function DestructiveFormDialog({
             {description && <DrawerDescription>{description}</DrawerDescription>}
           </DrawerHeader>
           {children}
-          <div className="border-border mt-auto flex flex-row justify-end gap-2 border-t p-4">
+          <div className="border-border mt-auto flex flex-row justify-end gap-2 border-t p-4 [&>*]:min-h-11">
             {footerButtons}
           </div>
         </DrawerContent>

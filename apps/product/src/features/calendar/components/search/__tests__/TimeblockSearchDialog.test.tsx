@@ -152,6 +152,16 @@ describe('TimeblockSearchDialog', () => {
     expect(screen.getByRole('combobox')).toHaveValue('');
   });
 
+  it('モバイル用キャンセル操作で検索語をリセットして閉じる', () => {
+    const props = renderDialog();
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'work' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.actions.cancel' }));
+
+    expect(props.onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.getByRole('combobox')).toHaveValue('');
+  });
+
   it('controlled openが外部からfalseになった場合も検索語を破棄する', async () => {
     const props = {
       onOpenChange: vi.fn(),

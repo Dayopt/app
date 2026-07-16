@@ -31,6 +31,7 @@ interface TimeblockSearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onOpenResult: (result: TimeblockSearchResult) => void;
+  responsive?: React.ComponentProps<typeof CommandDialog>['responsive'];
 }
 
 interface SearchTag {
@@ -118,7 +119,7 @@ export function TimeblockSearchContent({
   if (isError) {
     return (
       <div
-        className="flex min-h-40 flex-col items-center justify-center gap-3 px-6 text-center"
+        className="flex min-h-40 flex-col items-center justify-center gap-2 px-6 text-center"
         role="alert"
       >
         <SearchX className="text-muted-foreground size-5" aria-hidden="true" />
@@ -170,12 +171,12 @@ export function TimeblockSearchContent({
             <CommandItem
               key={`${result.kind}:${result.id}`}
               value={searchableValue}
-              className="min-h-16 w-full gap-3 py-2"
+              className="min-h-16 w-full gap-2 py-2"
               onSelect={() => onOpenResult(result)}
             >
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="border-border text-muted-foreground shrink-0 rounded border px-1.5 py-0.5 text-xs">
+                  <span className="border-border text-muted-foreground shrink-0 rounded border px-2 py-1 text-xs">
                     {t(`calendar.search.kind.${result.kind}`)}
                   </span>
                   {result.isSkipped ? (
@@ -200,7 +201,7 @@ export function TimeblockSearchContent({
         })}
       </CommandGroup>
       {hasMore ? (
-        <p className="border-border text-muted-foreground border-t px-4 py-3 text-xs" role="note">
+        <p className="border-border text-muted-foreground border-t px-4 py-2 text-xs" role="note">
           {t('calendar.search.overflow', { count: SEARCH_DISPLAY_LIMIT })}
         </p>
       ) : null}
@@ -213,6 +214,7 @@ export function TimeblockSearchDialog({
   open,
   onOpenChange,
   onOpenResult,
+  responsive = 'auto',
 }: TimeblockSearchDialogProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -355,26 +357,45 @@ export function TimeblockSearchDialog({
     <CommandDialog
       open={open}
       onOpenChange={handleOpenChange}
+      responsive={responsive}
       title={t('calendar.search.title')}
       description={t('calendar.search.description')}
+      mobilePresentation="full-height"
       className="sm:max-w-xl [&_[data-slot=dialog-close]]:top-2 [&_[data-slot=dialog-close]]:right-2"
     >
-      <CommandInput
-        value={query}
-        onValueChange={handleQueryChange}
-        placeholder={t('calendar.search.placeholder')}
-        aria-label={t('calendar.search.inputLabel')}
-        maxLength={200}
-        autoFocus
-        data-sentry-mask
-      />
+      <div className="border-border flex shrink-0 items-center gap-1 border-b p-2 md:contents md:border-0 md:p-0">
+        <CommandInput
+          value={query}
+          onValueChange={handleQueryChange}
+          placeholder={t('calendar.search.placeholder')}
+          aria-label={t('calendar.search.inputLabel')}
+          className="h-11 py-0 text-base md:h-12 md:py-4 md:text-sm"
+          containerClassName="!h-11 min-w-0 flex-1 rounded-lg border-0 bg-muted px-4 md:!h-12 md:w-full md:flex-none md:rounded-none md:border-b md:bg-transparent"
+          maxLength={200}
+          autoFocus
+          data-sentry-mask
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="lg"
+          className="shrink-0 px-2 md:hidden"
+          onClick={resetAndClose}
+        >
+          {t('common.actions.cancel')}
+        </Button>
+      </div>
       {hasResultList ? (
-        <CommandList aria-busy={false} data-sentry-block>
+        <CommandList
+          className="max-h-none min-h-0 flex-1 md:max-h-80 md:flex-none"
+          aria-busy={false}
+          data-sentry-block
+        >
           {searchContent}
         </CommandList>
       ) : (
         <div
-          className="max-h-80 overflow-x-hidden overflow-y-auto"
+          className="max-h-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto md:max-h-80 md:flex-none"
           aria-busy={isLoading}
           data-sentry-block
         >
