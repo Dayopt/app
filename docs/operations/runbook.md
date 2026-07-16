@@ -63,7 +63,8 @@ NEXT_PUBLIC_MAINTENANCE_MODE=true
 ### 検知
 
 - [ ] Sentry: `tags.errorCategory:DB` のエラー急増
-- [ ] `/api/health` → 503（`checks.database: "error"`）
+- [ ] production `/api/health` → 503 / `{ "status": "unhealthy" }`
+- [ ] Vercel runtime log の `[health]` eventで `database: "error"`
 - [ ] https://status.supabase.com に障害報告あり
 
 ### 初動
@@ -79,7 +80,7 @@ NEXT_PUBLIC_MAINTENANCE_MODE=true
 - [ ] https://status.supabase.com を継続監視
 - [ ] メンテナンスモード有効化
 - [ ] Status Pageの復旧通知を待つ
-- [ ] 復旧後: `/api/health` で `checks.database: "ok"` を確認
+- [ ] 復旧後: production `/api/health` が連続して `{ "status": "healthy" }` を返すことを確認
 - [ ] メンテナンスモード解除
 
 #### ケースB: 環境変数ミス

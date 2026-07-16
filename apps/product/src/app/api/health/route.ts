@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-import { isUpstashEnabled } from '@/lib/rate-limit/upstash';
+import { logger } from '@/lib/logger';
+
+import { resolveHealthStatus, type OverallHealthStatus } from './health-status';
 
 /**
  * Health Check API エンドポイント
@@ -11,7 +13,7 @@ import { isUpstashEnabled } from '@/lib/rate-limit/upstash';
  */
 
 interface HealthStatus {
-  status: 'healthy' | 'unhealthy' | 'degraded';
+  status: OverallHealthStatus;
   timestamp: string;
   uptime: number;
   version: string;
@@ -19,7 +21,6 @@ interface HealthStatus {
   checks: {
     database: 'ok' | 'error' | 'warning';
     redis: 'ok' | 'error' | 'warning' | 'skipped';
-    memory: 'ok' | 'error' | 'warning';
   };
   details?: {
     error?: string;
@@ -31,14 +32,35 @@ interface HealthStatus {
 const DB_CHECK_TIMEOUT_MS = 5_000;
 
 /**
- * データベース接続チェック — 実際に SELECT 1 で疎通確認
+ * production で必須の環境変数が揃っていることを確認する。
+ * Preview では production 専用 secret を要求しない。
+ */
+async function hasValidProductionEnvironment(): Promise<boolean> {
+  if (!isProduction()) {
+    return true;
+  }
+
+  try {
+    const { env } = await import('@/env');
+    void env.NEXT_PUBLIC_SUPABASE_URL;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * データベース接続チェック — profiles への副作用のない SELECT で疎通確認
  */
 async function checkDatabase(): Promise<'ok' | 'error' | 'warning'> {
   const dbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const dbKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const dbKey = isProduction()
+    ? serviceRoleKey
+    : (serviceRoleKey ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   if (!dbUrl || !dbKey) {
-    return 'warning';
+    return isProduction() ? 'error' : 'warning';
   }
 
   try {
@@ -50,14 +72,9 @@ async function checkDatabase(): Promise<'ok' | 'error' | 'warning'> {
       },
     });
 
-    const { error } = await supabase.rpc('ping' as never);
+    const { error } = await supabase.from('profiles').select('id').limit(1);
 
-    // ping RPC が無くても、接続自体は成功する（PGRST202 = function not found = DB is alive）
-    if (error && !error.message.includes('ping') && !error.code?.startsWith('PGRST')) {
-      return 'error';
-    }
-
-    return 'ok';
+    return error ? 'error' : 'ok';
   } catch {
     return 'error';
   }
@@ -67,43 +84,23 @@ async function checkDatabase(): Promise<'ok' | 'error' | 'warning'> {
  * Redis（Upstash）接続チェック
  */
 async function checkRedis(): Promise<'ok' | 'error' | 'warning' | 'skipped'> {
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const isUpstashEnabled = Boolean(redisUrl && redisToken);
+
   if (!isUpstashEnabled) {
-    return 'skipped';
+    return isProduction() ? 'error' : 'skipped';
   }
 
   try {
     const { Redis } = await import('@upstash/redis');
     const redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      url: redisUrl!,
+      token: redisToken!,
     });
 
     const pong = await redis.ping();
     return pong === 'PONG' ? 'ok' : 'warning';
-  } catch {
-    return 'error';
-  }
-}
-
-/**
- * メモリ使用量チェック
- */
-function checkMemory(): 'ok' | 'error' | 'warning' {
-  try {
-    const memUsage = process.memoryUsage();
-    const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
-    const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
-
-    // メモリ使用率が80%以上で警告、95%以上でエラー
-    const usageRatio = heapUsedMB / heapTotalMB;
-
-    if (usageRatio > 0.95) {
-      return 'error';
-    } else if (usageRatio > 0.8) {
-      return 'warning';
-    }
-
-    return 'ok';
   } catch {
     return 'error';
   }
@@ -143,7 +140,11 @@ function getEnvironment(): string {
  * 本番環境かどうかを判定
  */
 function isProduction(): boolean {
-  return process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+  if (process.env.VERCEL_ENV) {
+    return process.env.VERCEL_ENV === 'production';
+  }
+
+  return process.env.NODE_ENV === 'production';
 }
 
 /**
@@ -153,26 +154,40 @@ function isProduction(): boolean {
  * 本番環境ではステータスのみ返す（情報露出防止）
  */
 export async function GET() {
+  const startTime = Date.now();
+
   try {
-    const startTime = Date.now();
-
     // 各種チェックを並行実行
-    const [dbStatus, redisStatus] = await Promise.all([checkDatabase(), checkRedis()]);
+    const [hasValidEnvironment, dbStatus, redisStatus] = await Promise.all([
+      hasValidProductionEnvironment(),
+      checkDatabase(),
+      checkRedis(),
+    ]);
 
-    const memoryStatus = checkMemory();
-
-    // 全体的な状態を判定（skipped は無視）
-    const checkResults = [dbStatus, redisStatus, memoryStatus].filter((s) => s !== 'skipped');
-    const hasError = checkResults.includes('error');
-    const hasWarning = checkResults.includes('warning');
-
-    const overallStatus: HealthStatus['status'] = hasError
-      ? 'unhealthy'
-      : hasWarning
-        ? 'degraded'
-        : 'healthy';
+    const overallStatus = resolveHealthStatus([
+      hasValidEnvironment ? 'ok' : 'error',
+      dbStatus,
+      redisStatus,
+    ]);
 
     const httpStatus = overallStatus === 'healthy' ? 200 : overallStatus === 'degraded' ? 200 : 503;
+    const responseTime = Date.now() - startTime;
+
+    if (overallStatus === 'unhealthy') {
+      logger.error('[health] dependency check failed', {
+        status: overallStatus,
+        database: dbStatus,
+        redis: redisStatus,
+        responseTimeMs: responseTime,
+      });
+    } else if (overallStatus === 'degraded') {
+      logger.warn('[health] dependency check degraded', {
+        status: overallStatus,
+        database: dbStatus,
+        redis: redisStatus,
+        responseTimeMs: responseTime,
+      });
+    }
 
     // 本番環境ではステータスのみ返す（内部情報の露出を防止）
     if (isProduction()) {
@@ -196,7 +211,6 @@ export async function GET() {
       checks: {
         database: dbStatus,
         redis: redisStatus,
-        memory: memoryStatus,
       },
     };
 
@@ -204,15 +218,12 @@ export async function GET() {
     const warnings: string[] = [];
     if (dbStatus === 'warning') warnings.push('Database configuration incomplete');
     if (dbStatus === 'error') warnings.push('Database connection failed');
+    if (redisStatus === 'warning') warnings.push('Redis connection degraded');
     if (redisStatus === 'error') warnings.push('Redis connection failed');
-    if (redisStatus === 'skipped') warnings.push('Redis not configured (rate limiting degraded)');
-    if (memoryStatus === 'warning') warnings.push('High memory usage detected');
 
     if (warnings.length > 0) {
       healthStatus.details = { warnings };
     }
-
-    const responseTime = Date.now() - startTime;
 
     // レスポンス時間をヘッダーに追加
     const response = NextResponse.json(healthStatus, { status: httpStatus });
@@ -222,7 +233,16 @@ export async function GET() {
     response.headers.set('X-Health-Check-Version', '1.0');
 
     return response;
-  } catch (error) {
+  } catch {
+    const responseTime = Date.now() - startTime;
+
+    logger.error('[health] check failed', {
+      status: 'unhealthy',
+      database: 'error',
+      redis: 'error',
+      responseTimeMs: responseTime,
+    });
+
     // 本番環境ではエラー詳細を隠す
     if (isProduction()) {
       return NextResponse.json({ status: 'unhealthy' }, { status: 503 });
@@ -238,10 +258,9 @@ export async function GET() {
       checks: {
         database: 'error',
         redis: 'error',
-        memory: 'error',
       },
       details: {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Health check failed',
       },
     };
 
