@@ -6,7 +6,8 @@
  * 責務: 時間範囲のドラッグ選択・ダブルクリック・タッチ操作。
  * ドロップゾーン管理は CalendarDropZone に移管済み。
  *
- * useSelectionEvents を統合し、useReducer でシンプルに状態管理。
+ * 状態遷移は selection-reducer.ts、move 時の選択範囲計算は selection-move.ts
+ * に分離した純粋関数を使う。
  */
 
 import { useCallback, useEffect, useReducer, useRef } from 'react';
@@ -15,167 +16,16 @@ import { useTranslations } from 'next-intl';
 
 import { formatTimeString } from '@/lib/date';
 import { toast } from '@/lib/toast';
-import type { TimeFormat } from '@dayopt/domain';
 
-import {
-  calculateSelection,
-  createInstantSelection,
-} from '../../../../../domain/interaction/selection-rules';
 import { pixelsToTime as pixelsToTimeRaw } from '../../../../../domain/interaction/time-math';
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
-import { checkClientSideOverlapByKind } from '../../../../../lib/overlap';
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 
-import type { CalendarEvent } from '../../../../../types/calendar.types';
-import type { DateTimeSelection, TimeRange } from './types';
+import { computeSelectionMove, resolveInstantSelection } from './selection-move';
+import { IDLE, selectionReducer } from './selection-reducer';
+import type { UseDragSelectionOptions, UseDragSelectionReturn } from './types';
 import { DRAG_CONSTANTS } from './types';
-
-// ========================================
-// Types
-// ========================================
-
-interface UseDragSelectionOptions {
-  date: Date;
-  dayIndex?: number | undefined;
-  disabled?: boolean | undefined;
-  onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
-  onDoubleClick?: ((selection: DateTimeSelection) => void) | undefined;
-  plans?: CalendarEvent[] | undefined;
-  hourHeight?: number | undefined;
-  defaultDuration: number;
-  timeFormat: TimeFormat;
-}
-
-interface UseDragSelectionReturn {
-  isSelecting: boolean;
-  selection: TimeRange | null;
-  showSelectionPreview: boolean;
-  isOverlapping: boolean;
-  containerRef: React.RefObject<HTMLDivElement | null>;
-  handleMouseDown: (e: React.MouseEvent) => void;
-  handleDoubleClick: (e: React.MouseEvent) => void;
-  handleTouchStart: (e: React.TouchEvent) => void;
-  formatTime: (hour: number, minute: number) => string;
-}
-
-// ========================================
-// Reducer
-// ========================================
-
-type SelectionMode =
-  | { type: 'idle' }
-  | {
-      type: 'mouse-selecting';
-      start: { hour: number; minute: number };
-      startPixelY: number;
-      hasDragged: boolean;
-      selection: TimeRange;
-      isOverlapping: boolean;
-    }
-  | {
-      type: 'touch-pending';
-      startPixelY: number;
-      startPos: { x: number; y: number };
-      startTime: { hour: number; minute: number };
-    }
-  | {
-      type: 'touch-selecting';
-      start: { hour: number; minute: number };
-      startPixelY: number;
-      hasDragged: boolean;
-      selection: TimeRange;
-      isOverlapping: boolean;
-    }
-  | {
-      type: 'show-external';
-      selection: TimeRange;
-    };
-
-type SelectionAction =
-  | { type: 'MOUSE_DOWN'; start: { hour: number; minute: number }; startPixelY: number }
-  | { type: 'MOUSE_MOVE'; selection: TimeRange; hasDragged: boolean; isOverlapping: boolean }
-  | { type: 'MOUSE_UP' }
-  | {
-      type: 'TOUCH_START';
-      startTime: { hour: number; minute: number };
-      startPixelY: number;
-      startPos: { x: number; y: number };
-    }
-  | { type: 'LONGPRESS_FIRED'; start: { hour: number; minute: number }; startPixelY: number }
-  | { type: 'TOUCH_MOVE'; selection: TimeRange; hasDragged: boolean; isOverlapping: boolean }
-  | { type: 'TOUCH_END' }
-  | { type: 'CANCEL' }
-  | { type: 'SHOW_EXTERNAL'; selection: TimeRange };
-
-const IDLE: SelectionMode = { type: 'idle' };
-
-function selectionReducer(state: SelectionMode, action: SelectionAction): SelectionMode {
-  switch (action.type) {
-    case 'MOUSE_DOWN':
-      return {
-        type: 'mouse-selecting',
-        start: action.start,
-        startPixelY: action.startPixelY,
-        hasDragged: false,
-        selection: {
-          startHour: action.start.hour,
-          startMinute: action.start.minute,
-          endHour: action.start.hour,
-          endMinute: action.start.minute + 15,
-        },
-        isOverlapping: false,
-      };
-    case 'MOUSE_MOVE':
-      if (state.type !== 'mouse-selecting') return state;
-      return {
-        ...state,
-        selection: action.selection,
-        hasDragged: action.hasDragged,
-        isOverlapping: action.isOverlapping,
-      };
-    case 'MOUSE_UP':
-    case 'TOUCH_END':
-    case 'CANCEL':
-      return IDLE;
-    case 'TOUCH_START':
-      return {
-        type: 'touch-pending',
-        startPixelY: action.startPixelY,
-        startPos: action.startPos,
-        startTime: action.startTime,
-      };
-    case 'LONGPRESS_FIRED':
-      return {
-        type: 'touch-selecting',
-        start: action.start,
-        startPixelY: action.startPixelY,
-        hasDragged: false,
-        selection: {
-          startHour: action.start.hour,
-          startMinute: action.start.minute,
-          endHour: action.start.hour,
-          endMinute: action.start.minute + 15,
-        },
-        isOverlapping: false,
-      };
-    case 'TOUCH_MOVE':
-      if (state.type !== 'touch-selecting') return state;
-      return {
-        ...state,
-        selection: action.selection,
-        hasDragged: action.hasDragged,
-        isOverlapping: action.isOverlapping,
-      };
-    case 'SHOW_EXTERNAL':
-      return { type: 'show-external', selection: action.selection };
-    default:
-      return state;
-  }
-}
-
-// ========================================
-// Hook
-// ========================================
+import { useSelectionExternalEvents } from './useSelectionExternalEvents';
 
 export function useDragSelection({
   date,
@@ -248,12 +98,13 @@ export function useDragSelection({
       const time = pixelsToTime(e.clientY - rect.top);
       const handler = onDoubleClickProp || onTimeRangeSelect;
       if (handler) {
-        const selection = createInstantSelection(time, date, defaultDuration);
-        const startTime = new Date(date);
-        startTime.setHours(selection.startHour, selection.startMinute, 0, 0);
-        const endTime = new Date(date);
-        endTime.setHours(selection.endHour, selection.endMinute, 0, 0);
-        if (checkClientSideOverlapByKind(plans, '', startTime, endTime)) {
+        const { selection, isOverlapping } = resolveInstantSelection(
+          time,
+          date,
+          defaultDuration,
+          plans,
+        );
+        if (isOverlapping) {
           toast.error(t('errors.timeOverlap'));
         } else {
           handler(selection);
@@ -331,35 +182,26 @@ export function useDragSelection({
 
         const rect = containerRef.current.getBoundingClientRect();
         const y = e.clientY - rect.top;
-        const current = pixelsToTimeRaw(y, propsRef.current.hourHeight);
-        const sel = calculateSelection(mode.start, current);
+        const result = computeSelectionMove({
+          y,
+          hourHeight: propsRef.current.hourHeight,
+          start: mode.start,
+          startPixelY: mode.startPixelY,
+          hasDragged: mode.hasDragged,
+          date: propsRef.current.date,
+          plans: propsRef.current.plans,
+          lastSnap: lastSnapRef.current,
+        });
 
-        const hasDragged =
-          mode.hasDragged || Math.abs(y - mode.startPixelY) > DRAG_CONSTANTS.MIN_DRAG_DISTANCE;
+        if (result.snapChanged) propsRef.current.tap();
+        lastSnapRef.current = result.snap;
 
-        // ハプティック
-        const startMin = sel.startHour * 60 + sel.startMinute;
-        const endMin = sel.endHour * 60 + sel.endMinute;
-        if (
-          lastSnapRef.current &&
-          (startMin !== lastSnapRef.current.startMin || endMin !== lastSnapRef.current.endMin)
-        ) {
-          propsRef.current.tap();
-        }
-        lastSnapRef.current = { startMin, endMin };
-
-        const startTime = new Date(propsRef.current.date);
-        startTime.setHours(sel.startHour, sel.startMinute, 0, 0);
-        const endTime = new Date(propsRef.current.date);
-        endTime.setHours(sel.endHour, sel.endMinute, 0, 0);
-        const isOverlapping = checkClientSideOverlapByKind(
-          propsRef.current.plans,
-          '',
-          startTime,
-          endTime,
-        );
-
-        dispatch({ type: 'MOUSE_MOVE', selection: sel, hasDragged, isOverlapping });
+        dispatch({
+          type: 'MOUSE_MOVE',
+          selection: result.selection,
+          hasDragged: result.hasDragged,
+          isOverlapping: result.isOverlapping,
+        });
       });
     };
 
@@ -414,34 +256,26 @@ export function useDragSelection({
 
         const touchRect = containerRef.current.getBoundingClientRect();
         const touchY = touch.clientY - touchRect.top;
-        const current = pixelsToTimeRaw(touchY, propsRef.current.hourHeight);
-        const sel = calculateSelection(mode.start, current);
+        const result = computeSelectionMove({
+          y: touchY,
+          hourHeight: propsRef.current.hourHeight,
+          start: mode.start,
+          startPixelY: mode.startPixelY,
+          hasDragged: mode.hasDragged,
+          date: propsRef.current.date,
+          plans: propsRef.current.plans,
+          lastSnap: lastSnapRef.current,
+        });
 
-        const hasDragged =
-          mode.hasDragged || Math.abs(touchY - mode.startPixelY) > DRAG_CONSTANTS.MIN_DRAG_DISTANCE;
+        if (result.snapChanged) propsRef.current.tap();
+        lastSnapRef.current = result.snap;
 
-        const startMin = sel.startHour * 60 + sel.startMinute;
-        const endMin = sel.endHour * 60 + sel.endMinute;
-        if (
-          lastSnapRef.current &&
-          (startMin !== lastSnapRef.current.startMin || endMin !== lastSnapRef.current.endMin)
-        ) {
-          propsRef.current.tap();
-        }
-        lastSnapRef.current = { startMin, endMin };
-
-        const startTime = new Date(propsRef.current.date);
-        startTime.setHours(sel.startHour, sel.startMinute, 0, 0);
-        const endTime = new Date(propsRef.current.date);
-        endTime.setHours(sel.endHour, sel.endMinute, 0, 0);
-        const isOverlapping = checkClientSideOverlapByKind(
-          propsRef.current.plans,
-          '',
-          startTime,
-          endTime,
-        );
-
-        dispatch({ type: 'TOUCH_MOVE', selection: sel, hasDragged, isOverlapping });
+        dispatch({
+          type: 'TOUCH_MOVE',
+          selection: result.selection,
+          hasDragged: result.hasDragged,
+          isOverlapping: result.isOverlapping,
+        });
       });
     };
 
@@ -474,22 +308,14 @@ export function useDragSelection({
         }
       } else if (handler) {
         // クライアント側overlap検出（サーバーエラーを未然に防ぐ）
-        const startTime = new Date(p.date);
-        startTime.setHours(sel.startHour, sel.startMinute, 0, 0);
-        const endTotal = Math.min(
-          sel.startHour * 60 + sel.startMinute + p.defaultDuration,
-          24 * 60 - 1,
-        );
-        const endTime = new Date(p.date);
-        endTime.setHours(Math.floor(endTotal / 60), endTotal % 60, 0, 0);
-
-        const instant = createInstantSelection(
+        const { selection: instant, isOverlapping } = resolveInstantSelection(
           { hour: sel.startHour, minute: sel.startMinute },
           p.date,
           p.defaultDuration,
+          p.plans,
         );
 
-        if (checkClientSideOverlapByKind(p.plans, '', startTime, endTime)) {
+        if (isOverlapping) {
           toast.error(p.t('errors.timeOverlap'));
           dispatch({ type: 'CANCEL' });
           return;
@@ -527,27 +353,7 @@ export function useDragSelection({
   }, [isActive, mode, clearTimer]);
 
   // Custom events: calendar-drag-cancel / calendar-show-selection
-  useEffect(() => {
-    const onCancel = () => {
-      clearTimer();
-      dispatch({ type: 'CANCEL' });
-    };
-    const onShowSelection = (e: CustomEvent) => {
-      const { date: eventDate, startHour, startMinute, endHour, endMinute } = e.detail;
-      if (new Date(eventDate).toDateString() === date.toDateString()) {
-        dispatch({
-          type: 'SHOW_EXTERNAL',
-          selection: { startHour, startMinute, endHour, endMinute },
-        });
-      }
-    };
-    window.addEventListener('calendar-drag-cancel', onCancel);
-    window.addEventListener('calendar-show-selection', onShowSelection as EventListener);
-    return () => {
-      window.removeEventListener('calendar-drag-cancel', onCancel);
-      window.removeEventListener('calendar-show-selection', onShowSelection as EventListener);
-    };
-  }, [date, clearTimer]);
+  useSelectionExternalEvents(date, dispatch, clearTimer);
 
   // Derived state
   const selection =
