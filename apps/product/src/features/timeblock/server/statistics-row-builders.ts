@@ -12,7 +12,7 @@ import type { StatPlanRow, StatRecordRow, TagLookupRow } from './statistics-fetc
 import { minutesBetween } from './statistics-service-grouping';
 import type { TimePLResponse } from './statistics-shared';
 
-export function roundTo1(value: number): number {
+function roundTo1(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
