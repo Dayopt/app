@@ -13,7 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@dayopt/components';
-import { ColorPaletteMenuItems, getColorDisplayName } from './color-palette-picker';
+import { ColorPaletteMenuItems, getColorDisplayName } from './ColorPaletteMenuItems';
 
 const meta = {
   title: 'Product/Components/ColorPaletteMenuItems',

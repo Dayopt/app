@@ -12,7 +12,7 @@ export {
   // Modals & Dialogs
   TagDeleteStrategyDialog,
 } from './components';
-export { ColorPaletteMenuItems } from './components/color-palette-picker';
+export { ColorPaletteMenuItems } from './components/ColorPaletteMenuItems';
 export { IconPickerDropdownItems } from './components/IconPicker';
 export { TagIcon } from './components/TagIcon';
 export { TagQuickSelector } from './components/TagQuickSelector';
