@@ -42,6 +42,32 @@ export interface CalendarDragSelectionProps {
   timeFormat: TimeFormat;
 }
 
+/** useDragSelection フックへの入力プロパティ */
+export interface UseDragSelectionOptions {
+  date: Date;
+  dayIndex?: number | undefined;
+  disabled?: boolean | undefined;
+  onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
+  onDoubleClick?: ((selection: DateTimeSelection) => void) | undefined;
+  plans?: CalendarEvent[] | undefined;
+  hourHeight?: number | undefined;
+  defaultDuration: number;
+  timeFormat: TimeFormat;
+}
+
+/** useDragSelection フックの戻り値 */
+export interface UseDragSelectionReturn {
+  isSelecting: boolean;
+  selection: TimeRange | null;
+  showSelectionPreview: boolean;
+  isOverlapping: boolean;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  handleMouseDown: (e: React.MouseEvent) => void;
+  handleDoubleClick: (e: React.MouseEvent) => void;
+  handleTouchStart: (e: React.TouchEvent) => void;
+  formatTime: (hour: number, minute: number) => string;
+}
+
 /** 定数 */
 export const DRAG_CONSTANTS = {
   /** 長押し検出時間（Google/Apple標準: 300-500ms） */
