@@ -2,7 +2,9 @@
   "timeblock": {
     "untitled": "Untitled",
     "errors": {
-      "timeOverlap": "This time slot is already taken"
+      "timeOverlap": "This time slot is already taken",
+      "planTimeOverlap": "This time overlaps with another Plan",
+      "recordTimeOverlap": "This time overlaps with another Record"
     },
     "toast": {
       "created": "\"{title}\" created",

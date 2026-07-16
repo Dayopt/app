@@ -135,6 +135,16 @@ interface MutationContext {
 interface UseTimeblockWriteMutationsOptions {
   /** create の時間重複をフォーム内で表示する場合に指定する。指定時は重複トーストを出さない。 */
   onCreateTimeOverlap?: (() => void) | undefined;
+  /** update の時間重複をフォーム内で表示する場合に指定する。指定時は重複トーストを出さない。 */
+  onUpdateTimeOverlap?: ((input: TimeblockOverlapUpdateInput) => void) | undefined;
+}
+
+export interface TimeblockOverlapUpdateInput {
+  id: string;
+  data: {
+    start_at?: string | undefined;
+    end_at?: string | undefined;
+  };
 }
 
 /**
@@ -147,7 +157,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
   const utils = api.useUtils();
   const queryClient = useQueryClient();
   const t = useTranslations('timeblock.editor');
-  const { onCreateTimeOverlap } = options;
+  const { onCreateTimeOverlap, onUpdateTimeOverlap } = options;
 
   type PlanListItem = NonNullable<Awaited<ReturnType<typeof utils.plans.list.fetch>>>[number];
   type RecordListItem = NonNullable<Awaited<ReturnType<typeof utils.records.list.fetch>>>[number];
@@ -174,6 +184,14 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
   const reportCreateError = (error: { message: string }) => {
     if (isTimeOverlapError(error) && onCreateTimeOverlap) {
       onCreateTimeOverlap();
+      return;
+    }
+    reportError(error);
+  };
+
+  const reportUpdateError = (error: { message: string }, input: TimeblockOverlapUpdateInput) => {
+    if (isTimeOverlapError(error) && onUpdateTimeOverlap) {
+      onUpdateTimeOverlap(input);
       return;
     }
     reportError(error);
@@ -300,9 +318,9 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
       utils.plans.getById.setData({ id: input.id }, (old) => (old ? patch(old) : old));
       return context;
     },
-    onError: (error, _input, context) => {
+    onError: (error, input, context) => {
       restore(context);
-      reportError(error);
+      reportUpdateError(error, input);
     },
     onSettled: invalidate,
   });
@@ -322,9 +340,9 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
       utils.records.getById.setData({ id: input.id }, (old) => (old ? patch(old) : old));
       return context;
     },
-    onError: (error, _input, context) => {
+    onError: (error, input, context) => {
       restore(context);
-      reportError(error);
+      reportUpdateError(error, input);
     },
     onSettled: invalidate,
   });

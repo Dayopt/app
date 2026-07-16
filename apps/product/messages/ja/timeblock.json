@@ -2,7 +2,9 @@
   "timeblock": {
     "untitled": "無題",
     "errors": {
-      "timeOverlap": "この時間帯には既に予定があります"
+      "timeOverlap": "この時間帯には既に予定があります",
+      "planTimeOverlap": "この時間帯には既に予定があります",
+      "recordTimeOverlap": "この時間帯には既に記録があります"
     },
     "toast": {
       "created": "「{title}」を記録しました ✓",
