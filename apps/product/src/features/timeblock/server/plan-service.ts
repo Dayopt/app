@@ -3,6 +3,18 @@ import 'server-only';
 import { databaseTables, publicRecordSelect, toPublicRecordRow } from '@/lib/database';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
+import {
+  assertOptimisticLock,
+  ensureNoPlanOverlap,
+  ensureNoRecordOverlap,
+  ensurePlanCanBeCreated,
+  ensurePlanNotRecorded,
+  handleMutationError,
+  handleRecordMutationError,
+  isPastPlan,
+  toPlanUpdate,
+  validateRange,
+} from './plan-guards';
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
 import { TimeblockOverlapService } from './timeblock-overlap-service';
 import { buildTimeblockSearchFilter } from './timeblock-search-query';
@@ -15,7 +27,6 @@ import type {
   ListPlansOptions,
   PlanInsert,
   PlanRow,
-  PlanUpdate,
   RecordPlanOptions,
   RecordRow,
   UpdatePlanOptions,
@@ -111,11 +122,11 @@ export class PlanService {
   async create(options: CreatePlanOptions): Promise<PlanRow> {
     const { userId, input, preventOverlappingPlans = true } = options;
 
-    this.validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
-    this.ensurePlanCanBeCreated(input.end_at);
+    validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
+    ensurePlanCanBeCreated(input.end_at);
 
     if (preventOverlappingPlans) {
-      await this.ensureNoPlanOverlap(userId, input.start_at, input.end_at);
+      await ensureNoPlanOverlap(this.overlapService, userId, input.start_at, input.end_at);
     }
 
     const insertData: PlanInsert = {
@@ -132,7 +143,7 @@ export class PlanService {
     const { data, error } = await this.supabase.from('plans').insert(insertData).select().single();
 
     if (error) {
-      this.handleMutationError(error, 'CREATE_FAILED', 'Failed to create plan');
+      handleMutationError(error, 'CREATE_FAILED', 'Failed to create plan');
     }
 
     return data;
@@ -142,27 +153,27 @@ export class PlanService {
     const { userId, planId, input, expectedUpdatedAt, preventOverlappingPlans = true } = options;
     const existing = await this.getById({ userId, planId });
 
-    this.assertOptimisticLock(expectedUpdatedAt, existing.updated_at);
+    assertOptimisticLock(expectedUpdatedAt, existing.updated_at);
 
     const nextStartAt = input.start_at ?? existing.start_at;
     const nextEndAt = input.end_at ?? existing.end_at;
     const updatesTime = input.start_at !== undefined || input.end_at !== undefined;
 
-    if (updatesTime && this.isPastPlan(existing)) {
+    if (updatesTime && isPastPlan(existing)) {
       throw new TimeblockServiceError(
         'PLAN_TIME_LOCKED',
         'Past plan time fields cannot be changed.',
       );
     }
 
-    this.validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
-    if (updatesTime) this.ensurePlanCanBeCreated(nextEndAt);
+    validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
+    if (updatesTime) ensurePlanCanBeCreated(nextEndAt);
 
     if (preventOverlappingPlans && updatesTime) {
-      await this.ensureNoPlanOverlap(userId, nextStartAt, nextEndAt, planId);
+      await ensureNoPlanOverlap(this.overlapService, userId, nextStartAt, nextEndAt, planId);
     }
 
-    const updateData = this.toPlanUpdate(input);
+    const updateData = toPlanUpdate(input);
     if (Object.keys(updateData).length === 0) return existing;
 
     const { data, error } = await this.supabase
@@ -174,7 +185,7 @@ export class PlanService {
       .single();
 
     if (error) {
-      this.handleMutationError(error, 'UPDATE_FAILED', 'Failed to update plan');
+      handleMutationError(error, 'UPDATE_FAILED', 'Failed to update plan');
     }
 
     return data;
@@ -213,14 +224,14 @@ export class PlanService {
     const { userId, planId } = options;
     const existing = await this.getById({ userId, planId });
 
-    if (!this.isPastPlan(existing)) {
+    if (!isPastPlan(existing)) {
       throw new TimeblockServiceError(
         'SKIP_IN_FUTURE',
         'Future plans cannot be skipped. Delete the plan instead.',
       );
     }
 
-    await this.ensurePlanNotRecorded(userId, planId);
+    await ensurePlanNotRecorded(this.supabase, userId, planId);
 
     const { data, error } = await this.supabase
       .from('plans')
@@ -262,7 +273,7 @@ export class PlanService {
     const { userId, planId } = options;
     const plan = await this.getById({ userId, planId });
 
-    if (!this.isPastPlan(plan)) {
+    if (!isPastPlan(plan)) {
       throw new TimeblockServiceError('RECORD_IN_FUTURE', 'Future plans cannot be recorded.');
     }
 
@@ -270,8 +281,8 @@ export class PlanService {
       throw new TimeblockServiceError('INVALID_INPUT', 'Skipped plans cannot be recorded.');
     }
 
-    await this.ensurePlanNotRecorded(userId, planId);
-    await this.ensureNoRecordOverlap(userId, plan.start_at, plan.end_at);
+    await ensurePlanNotRecorded(this.supabase, userId, planId);
+    await ensureNoRecordOverlap(this.overlapService, userId, plan.start_at, plan.end_at);
 
     const { data, error } = await this.supabase
       .from(databaseTables.records)
@@ -290,7 +301,7 @@ export class PlanService {
       .single();
 
     if (error) {
-      this.handleRecordMutationError(error, 'Failed to record plan');
+      handleRecordMutationError(error, 'Failed to record plan');
     }
 
     return data;
@@ -298,7 +309,7 @@ export class PlanService {
 
   async confirmDay(options: ConfirmDayPlansOptions): Promise<RecordRow[]> {
     const { userId, input } = options;
-    this.validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
+    validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
 
     const { data, error } = await this.supabase.rpc('confirm_day_plans_to_records', {
       p_confirmed_at: new Date().toISOString(),
@@ -308,133 +319,10 @@ export class PlanService {
     });
 
     if (error) {
-      this.handleRecordMutationError(error, 'Failed to confirm day plans');
+      handleRecordMutationError(error, 'Failed to confirm day plans');
     }
 
     return (data ?? []).map(toPublicRecordRow);
-  }
-
-  private toPlanUpdate(input: UpdatePlanOptions['input']): PlanUpdate {
-    const updateData: PlanUpdate = {};
-    if (input.title !== undefined) updateData.title = input.title;
-    if (input.note !== undefined) updateData.note = input.note;
-    if (input.tagId !== undefined) updateData.tag_id = input.tagId;
-    if (input.externalCalendarEventId !== undefined) {
-      updateData.external_calendar_event_id = input.externalCalendarEventId;
-    }
-    if (input.start_at !== undefined) updateData.start_at = input.start_at;
-    if (input.end_at !== undefined) updateData.end_at = input.end_at;
-    return updateData;
-  }
-
-  private validateRange(startAt: string, endAt: string, code: string): void {
-    const startMs = new Date(startAt).getTime();
-    const endMs = new Date(endAt).getTime();
-    if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) {
-      throw new TimeblockServiceError(code, 'Time range end must be after start.');
-    }
-  }
-
-  private ensurePlanCanBeCreated(endAt: string): void {
-    if (new Date(endAt).getTime() <= Date.now()) {
-      throw new TimeblockServiceError('PLAN_IN_PAST', 'Plans must end in the future.');
-    }
-  }
-
-  private assertOptimisticLock(
-    expectedUpdatedAt: string | undefined,
-    actualUpdatedAt: string,
-  ): void {
-    if (!expectedUpdatedAt) return;
-    if (new Date(expectedUpdatedAt).getTime() !== new Date(actualUpdatedAt).getTime()) {
-      throw new TimeblockServiceError(
-        'CONFLICT',
-        'This plan was updated elsewhere. Reload the latest data.',
-      );
-    }
-  }
-
-  private isPastPlan(plan: PlanRow): boolean {
-    return new Date(plan.end_at).getTime() <= Date.now();
-  }
-
-  private async ensureNoPlanOverlap(
-    userId: string,
-    startAt: string,
-    endAt: string,
-    excludePlanId?: string,
-  ): Promise<void> {
-    const overlappingIds = await this.overlapService.checkPlans({
-      userId,
-      startAt,
-      endAt,
-      ...(excludePlanId !== undefined && { excludePlanId }),
-    });
-    if (overlappingIds.length > 0) {
-      throw new TimeblockServiceError(
-        'TIME_OVERLAP',
-        `Plan time overlaps with existing plans (${overlappingIds.length})`,
-      );
-    }
-  }
-
-  private async ensureNoRecordOverlap(
-    userId: string,
-    startAt: string,
-    endAt: string,
-  ): Promise<void> {
-    const overlappingIds = await this.overlapService.checkRecords({ userId, startAt, endAt });
-    if (overlappingIds.length > 0) {
-      throw new TimeblockServiceError(
-        'TIME_OVERLAP',
-        `Record time overlaps with existing records (${overlappingIds.length})`,
-      );
-    }
-  }
-
-  private async ensurePlanNotRecorded(userId: string, planId: string): Promise<void> {
-    const { data, error } = await this.supabase
-      .from(databaseTables.records)
-      .select('id')
-      .eq('user_id', userId)
-      .eq('plan_id', planId)
-      .is('deleted_at', null)
-      .limit(1);
-
-    if (error) {
-      throw new TimeblockServiceError(
-        'FETCH_FAILED',
-        `Failed to check recorded plan: ${error.message}`,
-      );
-    }
-
-    if ((data ?? []).length > 0) {
-      throw new TimeblockServiceError('ALREADY_RECORDED', 'Plan already has an active record.');
-    }
-  }
-
-  private handleMutationError(
-    error: { code?: string; message: string },
-    code: string,
-    prefix: string,
-  ): never {
-    if (error.code === '23P01') {
-      throw new TimeblockServiceError(
-        'TIME_OVERLAP',
-        'This time range overlaps with an existing item.',
-      );
-    }
-    throw new TimeblockServiceError(code, `${prefix}: ${error.message}`);
-  }
-
-  private handleRecordMutationError(
-    error: { code?: string; message: string },
-    prefix: string,
-  ): never {
-    if (error.code === '23505') {
-      throw new TimeblockServiceError('ALREADY_RECORDED', 'Plan already has an active record.');
-    }
-    this.handleMutationError(error, 'CREATE_FAILED', prefix);
   }
 }
 
