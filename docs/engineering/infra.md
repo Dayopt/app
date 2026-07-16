@@ -294,21 +294,21 @@ Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や
 
 ### 一覧
 
-| Path                       | Method     | 認証                   | Rate Limit                 | Runtime                  | 副作用 / 説明                                                                                                                                                                         |
-| -------------------------- | ---------- | ---------------------- | -------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/api/health`              | GET        | なし                   | なし                       | nodejs                   | DB / Upstash Redis の疎通を check し `healthy` / `degraded` / `unhealthy` を返す。production は `{ status }` だけを公開。デプロイ後の動作確認・モニタリング用                         |
-| `/api/csp-report`          | POST       | なし                   | なし                       | nodejs                   | ブラウザから CSP 違反レポートを受け取り Sentry に送信。`chrome-extension://` 等の拡張機能由来は除外                                                                                   |
-| `/api/trpc/[trpc]`         | GET / POST | procedure 依存         | procedure 依存             | nodejs                   | tRPC procedure のルーティング本体。すべての procedure (`@/lib/trpc/root`) をここで受ける。cache: 認証済み `private, no-store` / 未認証 `no-cache`                                     |
-| `/api/beacon/entry-save`   | POST       | Supabase Auth (Cookie) | なし                       | nodejs                   | `navigator.sendBeacon()` 経由のエントリ緊急保存。ブラウザ閉じ時に tRPC mutation が使えないための fallback。`useDebouncedSave` から呼ばれる                                            |
-| `/api/auth`                | GET / POST | mixed                  | POST 10/分（login/reset）  | nodejs                   | Supabase 認証管理。POST: signin / signup / reset / verify。GET: session / user 取得                                                                                                   |
-| `/api/v1/calendar/[token]` | GET        | token (URL)            | あり (`icalFeedRateLimit`) | nodejs                   | iCal フィード配信。秘密 token で RLS バイパス、Service Role で対象ユーザーの plans を `plansToICal` で iCalendar 形式に変換                                                           |
-| `/api/webhooks/resend`     | POST       | Resend signature       | なし                       | nodejs (maxDuration 30s) | Resend からの bounce / complained / delivered を受け、bounce/complained は Supabase の suppression list に書込                                                                        |
-| `/api/webhooks/stripe`     | POST       | Stripe signature       | なし                       | nodejs (maxDuration 30s) | checkout.session.completed / customer.subscription.updated / customer.subscription.deleted を処理。subscription state の DB 反映、トランザクションメール送信、Sentry へのイベント記録 |
+| Path                       | Method     | 認証                   | Rate Limit                 | Runtime                  | 副作用 / 説明                                                                                                                                                                                                                |
+| -------------------------- | ---------- | ---------------------- | -------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/health`              | GET        | なし                   | なし                       | nodejs                   | DB / Upstash Redis の疎通を check し `healthy` / `degraded` / `unhealthy` を返す。production は `{ status }` だけを公開。デプロイ後の動作確認・モニタリング用                                                                |
+| `/api/csp-report`          | POST       | なし                   | あり (`apiRateLimit`)      | nodejs                   | 16 KiB以下のCSP reportをZod検証し、URL queryを除去してdirective単位でSentryへ送信。`chrome-extension://` 等の拡張機能由来は除外                                                                                              |
+| `/api/trpc/[trpc]`         | GET / POST | procedure 依存         | procedure 依存             | nodejs                   | tRPC procedure のルーティング本体。すべての procedure (`@/lib/trpc/root`) をここで受ける。cache: 認証済み `private, no-store` / 未認証 `no-cache`                                                                            |
+| `/api/beacon/entry-save`   | POST       | Supabase Auth (Cookie) | なし                       | nodejs                   | `navigator.sendBeacon()` 経由のエントリ緊急保存。ブラウザ閉じ時に tRPC mutation が使えないための fallback。`useDebouncedSave` から呼ばれる                                                                                   |
+| `/api/auth`                | GET / POST | mixed                  | POST 10/分（login/reset）  | nodejs                   | Supabase 認証管理。POST: signin / signup / reset / verify。GET: session / user 取得                                                                                                                                          |
+| `/api/v1/calendar/[token]` | GET        | token (URL)            | あり (`icalFeedRateLimit`) | nodejs                   | iCal フィード配信。秘密 token で RLS バイパス、Service Role で対象ユーザーの plans を `plansToICal` で iCalendar 形式に変換                                                                                                  |
+| `/api/webhooks/resend`     | POST       | Resend signature       | なし                       | nodejs (maxDuration 30s) | Resend からの bounce / complained / delivered を受け、bounce/complained は Supabase の suppression list に書込                                                                                                               |
+| `/api/webhooks/stripe`     | POST       | Stripe signature       | なし                       | nodejs (maxDuration 30s) | checkout.session.completed / customer.subscription.updated / customer.subscription.deleted を処理。subscription state の DB 反映、トランザクションメール送信。正常イベントは構造化ログ、予期しない処理障害だけをSentryへ送信 |
 
 ### 共通方針
 
 - **Runtime**: 全 endpoint `nodejs`。`edge` は使用していない（Supabase server client / Stripe SDK が node API 依存のため）
-- **エラーログ**: `@/lib/logger` で構造化ログ。webhook / 認証エラーは Sentry にも送信
+- **エラーログ**: `@/lib/logger` で構造化ログ。webhook / 認証のうち予期しない障害だけをSentryへ一度送信し、認証失敗などの想定内レスポンスはIssue化しない
 - **入力バリデーション**: Zod (`@/lib/zod`) を全ハンドラで使用
 - **Supabase アクセス**: 一般 endpoint は `@/lib/supabase/server` の `createClient`（Cookie ベース、RLS 適用）。webhook と iCal feed は `@/lib/supabase/oauth` の `createServiceRoleClient`（RLS バイパス）
 - **REST 維持の理由**: tRPC を主軸としつつ、以下は REST のままにする:
@@ -807,9 +807,11 @@ npm run docs:validate       # リンク + ルール検証
 #### Sentry
 
 ```bash
-npm run sentry:test         # Sentry接続テスト
-npm run sentry:verify       # Sentry設定検証
+pnpm --filter @dayopt/product exec vitest --project unit run src/app/api/csp-report/__tests__/route.test.ts
+pnpm --filter @dayopt/product exec vitest --project unit run src/lib/sentry/scrub-pii.test.ts
 ```
+
+runtimeとsource map uploadはVercel Productionだけで有効にする。CI / Preview buildではSentry credentialsを渡さない。Production smokeは恒久scriptにせず、対象projectと一時endpointの撤去条件を決めてから実施する。
 
 #### Git ログ
 
