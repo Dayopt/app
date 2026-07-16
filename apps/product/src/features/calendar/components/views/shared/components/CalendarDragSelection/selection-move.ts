@@ -35,7 +35,7 @@ export interface SelectionMoveInput {
   lastSnap: { startMin: number; endMin: number } | null;
 }
 
-export interface SelectionMoveResult {
+interface SelectionMoveResult {
   selection: TimeRange;
   hasDragged: boolean;
   isOverlapping: boolean;

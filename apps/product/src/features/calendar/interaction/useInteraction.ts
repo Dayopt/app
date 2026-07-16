@@ -38,7 +38,7 @@ import type {
 } from './interaction-runtime';
 import { useInteractionCursor, useInteractionListeners } from './useInteractionListeners';
 
-export type { UseInteractionProps, UseInteractionReturn } from './interaction-runtime';
+export type { UseInteractionProps } from './interaction-runtime';
 
 /** 純粋状態機械をReactに接続する統合インタラクションフック */
 export function useInteraction(props: UseInteractionProps): UseInteractionReturn {

@@ -23,7 +23,7 @@ import { DroppableArea, noopSortingStrategy } from './TagFlatListDnd';
 import { TagTimeblockCreatePopover } from './TagTimeblockCreatePopover';
 import { type TreeTag, canBecomeChild, childContainerId } from './move-tag-tree';
 
-export interface SortableParentBlockProps {
+interface SortableParentBlockProps {
   node: TagTreeNode;
   allTags: Tag[];
   visibleTagIds: Set<string>;

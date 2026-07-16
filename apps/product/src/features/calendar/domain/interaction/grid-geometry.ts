@@ -26,7 +26,7 @@ export function maxAbsDelta(a: Point, b: Point): number {
   return Math.max(Math.abs(a.clientX - b.clientX), Math.abs(a.clientY - b.clientY));
 }
 
-export type GridSnap = ReturnType<typeof snapToGrid>;
+type GridSnap = ReturnType<typeof snapToGrid>;
 
 export function snapEndToGrid(yPx: number, hourHeight: number, intervalMin: number): GridSnap {
   const pxPerInterval = (hourHeight / 60) * intervalMin;

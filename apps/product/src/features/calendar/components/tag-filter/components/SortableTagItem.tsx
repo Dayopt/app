@@ -24,7 +24,7 @@ import { DroppableArea } from './TagFlatListDnd';
 import { TagTimeblockCreatePopover } from './TagTimeblockCreatePopover';
 import { childContainerId } from './move-tag-tree';
 
-export interface SortableTagItemProps {
+interface SortableTagItemProps {
   tag: Tag;
   allTags: Tag[];
   checked: boolean;
