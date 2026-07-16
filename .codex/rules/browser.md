@@ -8,6 +8,7 @@ Codex で Dayopt の UI、Storybook、Preview を視覚確認する時の browse
    - 視覚確認が必要になってから、開いている tab の title / URL を read-only で確認する
    - 対象の Dayopt、Storybook、Preview tab があれば、その exact tab を claim して再利用する
    - 同じ URL への `goto` や不要な reload を行わず、ユーザーの表示状態とログイン済み session を保つ
+   - final evidence にする前に、現在の変更が反映済みかを確認する。HMR 完了や変更箇所の描画から freshness を証明できない時は 1 回 reload し、必要な UI state を復元してから確認する
 2. **必要な時だけ同じ Chrome に tab を開く**
    - 関連 tab がなく、画面を開かないと確認できない時だけ、接続済み Chrome に対象 URL を 1 tab 開く
    - Tomoya が続けて確認する画面は、作業後もその tab を残す
