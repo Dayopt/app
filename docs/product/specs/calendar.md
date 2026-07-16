@@ -10,7 +10,8 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 
 ## 現在の振る舞い
 
-- Day / Week / Multi-Day（2〜9日）で、表示範囲と基準日をURLに保持する
+- Day / Week / Multi-Day（2〜7日）で、表示範囲と基準日をURLに保持する
+- Multi-Dayは選択した日数を表示列数として維持し、基準日を中央に配置する。週末非表示では土日を除いたN営業日を表示する。Weekは週境界を正とする別viewで、週末非表示時は平日の5日を表示する
 - 各日カラムをPlanレーンとRecordレーンに分ける。Planは控えめなoutline、Recordは塗りで表示する
 - モバイルはDay / Weekを提供する。Weekでは予定または記録を切り替えて日カラム全幅に表示し、最後に選んだ表示を端末へ保持する。既定は記録
 - モバイルの検索、作成、Inspector、tag / 日時picker、振り返りpanelは[Mobile overlays](./mobile-overlays.md)のmodal性とdismiss契約に従う
@@ -50,6 +51,7 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 
 ## 関連する意思決定
 
+- [7日表示をWeekではなく中央基準の7営業日として扱う](../log/2026-07-16-feedback-calendar-seven-day-weekend-hidden.md)
 - [検索対象と表示をtag・メモに揃え、結果は対象ブロックを開く操作に限定する](../log/2026-07-15-feedback-block-search-tag-note.md)
 - [ADR-025: Plan / Record / 外部カレンダーミラーへの分割](../log/2026-07-09-time-model-split.md)
 - [時間不変原則](../log/2026-03-10-time-immutability-principle.md)

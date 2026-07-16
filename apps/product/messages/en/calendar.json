@@ -42,7 +42,7 @@
         "fourDayView": "Show 4 days",
         "fiveDayView": "Show 5 days",
         "sixDayView": "Show 6 days",
-        "weekView": "Show 7 days",
+        "sevenDayView": "Show 7 days",
         "toggleWeekends": "Show or hide weekends",
         "createBlock": "Create a block",
         "createBlockNow": "Create a block at the current time",

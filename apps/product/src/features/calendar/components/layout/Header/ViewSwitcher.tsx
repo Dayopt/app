@@ -46,7 +46,7 @@ const MAIN_VIEW_OPTIONS: MainViewOption[] = [
   { value: '4day', count: 4, shortcut: '4' },
   { value: '5day', count: 5, shortcut: '5' },
   { value: '6day', count: 6, shortcut: '6' },
-  { value: 'week', count: 7, shortcut: '7' },
+  { value: '7day', count: 7, shortcut: '7' },
 ];
 
 const DENSITY_OPTIONS = ['compact', 'default', 'spacious'] as const;
@@ -88,9 +88,9 @@ export function ViewSwitcher({
   const currentLabel =
     currentView === 'day'
       ? t('calendar.views.day')
-      : t('calendar.views.multiday', {
-          count: currentView === 'week' ? 7 : getMultiDayCount(currentView),
-        });
+      : currentView === 'week'
+        ? t('calendar.views.week')
+        : t('calendar.views.multiday', { count: getMultiDayCount(currentView) });
 
   const getMainViewLabel = (option: MainViewOption): string =>
     option.count === 1
@@ -204,12 +204,12 @@ export function ViewSwitcher({
         description: '7日表示に切り替え（7）',
         help: {
           group: 'views',
-          labelKey: 'calendar.shortcuts.actions.weekView',
+          labelKey: 'calendar.shortcuts.actions.sevenDayView',
           order: 160,
         },
         handler: (e) => {
           e.preventDefault();
-          onChangeRef.current('week');
+          onChangeRef.current('7day');
         },
       },
     ];

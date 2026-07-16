@@ -21,7 +21,7 @@ interface UseCalendarKeyboardProps {
  * - Cmd/Ctrl + 1: Day View
  * - Cmd/Ctrl + 3: 3-Day View
  * - Cmd/Ctrl + 5: 5-Day View
- * - Cmd/Ctrl + 7: Week View
+ * - Cmd/Ctrl + 7: 7-Day View
  * - Cmd/Ctrl + W: 週末表示切り替え
  */
 export const useCalendarKeyboard = ({
@@ -121,15 +121,15 @@ export const useCalendarKeyboard = ({
       },
       {
         key: 'Cmd+7',
-        description: 'Week View に切り替え',
+        description: '7-Day View に切り替え',
         help: {
           group: 'views',
-          labelKey: 'calendar.shortcuts.actions.weekView',
+          labelKey: 'calendar.shortcuts.actions.sevenDayView',
           order: 160,
         },
         handler: (e) => {
           e.preventDefault();
-          onViewChangeRef.current('week');
+          onViewChangeRef.current('7day');
         },
       },
       {

@@ -68,6 +68,13 @@ export const FiveDayView: Story = {
   },
 };
 
+/** 7日間ビュー選択状態。 */
+export const SevenDayView: Story = {
+  args: {
+    currentView: '7day',
+  },
+};
+
 /** インタラクティブ版（週から開始）。クリックでビューが切り替わる。 */
 export const Interactive: Story = {
   args: { currentView: 'week' },
@@ -96,6 +103,10 @@ export const AllPatterns: Story = {
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs">3日間ビュー</p>
         <ViewSwitcher currentView="3day" onChange={fn()} />
+      </div>
+      <div className="space-y-2">
+        <p className="text-muted-foreground text-xs">7日間ビュー</p>
+        <ViewSwitcher currentView="7day" onChange={fn()} />
       </div>
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs">インタラクティブ（週→切り替え可）</p>

@@ -26,7 +26,7 @@ export type ShortcutHelpLabelKey =
   | 'calendar.shortcuts.actions.fourDayView'
   | 'calendar.shortcuts.actions.fiveDayView'
   | 'calendar.shortcuts.actions.sixDayView'
-  | 'calendar.shortcuts.actions.weekView'
+  | 'calendar.shortcuts.actions.sevenDayView'
   | 'calendar.shortcuts.actions.toggleWeekends'
   | 'calendar.shortcuts.actions.createBlock'
   | 'calendar.shortcuts.actions.createBlockNow'
