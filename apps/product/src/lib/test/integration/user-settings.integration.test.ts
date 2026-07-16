@@ -126,6 +126,7 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
       expect(result).toBeDefined();
       expect(result?.timezone).toBe('Asia/Tokyo');
       expect(result?.timeFormat).toBe('24h');
+      expect(result).not.toHaveProperty('chronotype_settings');
     });
 
     it('should create and regenerate an iCal feed token', async () => {

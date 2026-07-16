@@ -93,7 +93,6 @@ CREATE TABLE public.records (
   start_at TIMESTAMPTZ NOT NULL,
   end_at TIMESTAMPTZ NOT NULL,
   source TEXT NOT NULL DEFAULT 'manual', -- manual / from_plan / auto_migrated / external_calendar / api
-  fulfillment_score INTEGER,
   deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -166,8 +165,6 @@ CREATE TABLE public.user_settings (
   show_week_numbers BOOLEAN NOT NULL DEFAULT false,
   default_view TEXT NOT NULL DEFAULT 'week',
   hour_height_density TEXT NOT NULL DEFAULT 'default', -- compact / default / comfortable
-  -- クロノタイプ
-  chronotype_settings JSONB,      -- { type: 'bear'|'lion'|'wolf'|'dolphin' } or null
   -- ロケール
   preferred_locale TEXT NOT NULL DEFAULT 'en',   -- en / ja
   -- テーマ

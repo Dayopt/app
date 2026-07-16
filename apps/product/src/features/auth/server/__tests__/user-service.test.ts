@@ -295,6 +295,9 @@ describe('createUserService', () => {
         tags,
         userSettings: settings,
       });
+      expect(result.data.records).toHaveLength(1);
+      expect(result.data.records[0]).not.toHaveProperty('fulfillment_score');
+      expect(result.data.userSettings).not.toHaveProperty('chronotype_settings');
       expect(adminQueries.get('records')?.select).toHaveBeenCalledWith(publicRecordSelect);
       expect(query('user_settings').select).toHaveBeenCalledWith(publicUserSettingsSelect);
     });
