@@ -1,7 +1,17 @@
 'use server';
 
 import { generateRecoveryCodes, hashRecoveryCode } from '@/lib/auth/recovery-codes';
+import { captureUnexpectedDatabaseError, observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
+
+const RECOVERY_CODE_FAILURE = 'Failed to generate recovery codes';
+
+function captureRecoveryCodeFailure(error: unknown, operation: string): void {
+  captureUnexpectedDatabaseError(error, {
+    feature: 'mfa_recovery_codes',
+    operation,
+  });
+}
 
 /**
  * リカバリーコードを生成しDBに保存する Server Action
@@ -17,7 +27,7 @@ export async function generateAndSaveRecoveryCodesAction(): Promise<{
     const supabase = await createClient();
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await observeAuthOperation('recovery_codes_get_user', () => supabase.auth.getUser());
 
     if (!user) {
       return { codes: null, error: 'User not found' };
@@ -26,7 +36,14 @@ export async function generateAndSaveRecoveryCodesAction(): Promise<{
     const codes = generateRecoveryCodes();
 
     // 既存のコードを削除
-    await supabase.from('mfa_recovery_codes').delete().eq('user_id', user.id);
+    const { error: deleteError } = await supabase
+      .from('mfa_recovery_codes')
+      .delete()
+      .eq('user_id', user.id);
+    if (deleteError) {
+      captureRecoveryCodeFailure(deleteError, 'delete_existing_codes');
+      return { codes: null, error: RECOVERY_CODE_FAILURE };
+    }
 
     // 新しいコードを保存
     const codesForDb = codes.map((code) => ({
@@ -37,11 +54,13 @@ export async function generateAndSaveRecoveryCodesAction(): Promise<{
     const { error: insertError } = await supabase.from('mfa_recovery_codes').insert(codesForDb);
 
     if (insertError) {
-      return { codes: null, error: insertError.message };
+      captureRecoveryCodeFailure(insertError, 'insert_new_codes');
+      return { codes: null, error: RECOVERY_CODE_FAILURE };
     }
 
     return { codes, error: null };
   } catch (err) {
-    return { codes: null, error: err instanceof Error ? err.message : 'Unknown error' };
+    captureRecoveryCodeFailure(err, 'generate_and_save_codes');
+    return { codes: null, error: RECOVERY_CODE_FAILURE };
   }
 }

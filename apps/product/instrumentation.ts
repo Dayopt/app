@@ -40,6 +40,10 @@ export const onRequestError = async (
       | undefined;
   },
 ) => {
+  const isSentryProduction = process.env.VERCEL_ENV === 'production';
+  const hasSentryDsn = Boolean(process.env.SENTRY_DSN);
+  if (!isSentryProduction || !hasSentryDsn) return;
+
   const { captureRequestError } = await import('@sentry/nextjs');
 
   captureRequestError(err, request, context);

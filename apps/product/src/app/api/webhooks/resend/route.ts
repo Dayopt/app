@@ -19,6 +19,7 @@ export const maxDuration = 30;
 
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
+import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 // 遅延初期化: ビルド時にAPI_KEYが未設定でもクラッシュしないようにする
@@ -47,13 +48,19 @@ async function recordSuppression(
         reason,
         source_event_id: sourceEventId ?? null,
       },
-      { onConflict: 'email,reason' },
+      { onConflict: 'email' },
     );
 
     if (error) {
-      logger.error('Failed to record email suppression', { email, reason, error });
+      logger.error('Failed to record email suppression', { reason });
+      throw captureUnexpectedDatabaseError(error, {
+        feature: 'email',
+        operation: 'record_email_suppression',
+        route: '/api/webhooks/resend',
+        ...(sourceEventId ? { requestId: sourceEventId } : {}),
+      });
     } else {
-      logger.info('Email suppression recorded', { email, reason });
+      logger.info('Email suppression recorded', { reason });
     }
   }
 }
@@ -63,6 +70,12 @@ export async function POST(request: NextRequest) {
     // Webhook署名検証
     if (!WEBHOOK_SECRET) {
       logger.error('RESEND_WEBHOOK_SECRET is not configured');
+      captureUnexpectedError(new Error('Resend webhook secret is not configured'), {
+        feature: 'email',
+        operation: 'resend_webhook_configuration',
+        route: '/api/webhooks/resend',
+        source: 'resend_webhook',
+      });
       return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
     }
 
@@ -99,8 +112,6 @@ export async function POST(request: NextRequest) {
         const bouncedTo = event.data.to;
         logger.error('Email bounced', {
           emailId: event.data.email_id,
-          to: bouncedTo,
-          subject: event.data.subject,
         });
         await recordSuppression(bouncedTo, 'bounce', event.data.email_id);
         break;
@@ -110,8 +121,6 @@ export async function POST(request: NextRequest) {
         const complainedTo = event.data.to;
         logger.error('Email spam complaint', {
           emailId: event.data.email_id,
-          to: complainedTo,
-          subject: event.data.subject,
         });
         await recordSuppression(complainedTo, 'complaint', event.data.email_id);
         break;
@@ -120,14 +129,12 @@ export async function POST(request: NextRequest) {
       case 'email.delivered':
         logger.info('Email delivered', {
           emailId: event.data.email_id,
-          to: event.data.to,
         });
         break;
 
       case 'email.delivery_delayed':
         logger.warn('Email delivery delayed', {
           emailId: event.data.email_id,
-          to: event.data.to,
         });
         break;
 
@@ -140,7 +147,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
-    logger.error('Resend webhook error', { error });
-    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    logger.error('Resend webhook processing failed');
+    const original = error instanceof Error ? error : new Error('Unknown Resend webhook failure');
+    captureUnexpectedError(original, {
+      feature: 'email',
+      operation: 'resend_webhook_processing',
+      route: '/api/webhooks/resend',
+      source: 'resend_webhook',
+    });
+    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
 }

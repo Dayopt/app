@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
 import {
   Button,
@@ -43,21 +44,22 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
 
     try {
       // 1. パスワード確認（現在のメールアドレスで再認証）
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: currentEmail,
-        password,
-      });
+      const { error: signInError } = await observeAuthOperation('reauthenticate_email_change', () =>
+        supabase.auth.signInWithPassword({ email: currentEmail, password }),
+      );
 
       if (signInError) {
         throw new Error(tErrors('auth.wrongPassword'));
       }
 
       // 2. メールアドレス更新（確認メール送信）
-      const { error: updateError } = await supabase.auth.updateUser(
-        { email: newEmail },
-        {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+      const { error: updateError } = await observeAuthOperation('update_email', () =>
+        supabase.auth.updateUser(
+          { email: newEmail },
+          {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        ),
       );
 
       if (updateError) {

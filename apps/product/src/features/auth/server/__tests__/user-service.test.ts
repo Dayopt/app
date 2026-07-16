@@ -8,6 +8,8 @@ const deleteUser = vi.hoisted(() => vi.fn());
 const loggerInfo = vi.hoisted(() => vi.fn());
 const loggerWarn = vi.hoisted(() => vi.fn());
 const adminFrom = vi.hoisted(() => vi.fn());
+const captureUnexpectedError = vi.hoisted(() => vi.fn());
+const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/stripe/client', () => ({ getStripe }));
 vi.mock('@/lib/supabase/oauth', () => ({
@@ -15,6 +17,11 @@ vi.mock('@/lib/supabase/oauth', () => ({
 }));
 vi.mock('@/lib/logger', () => ({
   logger: { info: loggerInfo, warn: loggerWarn },
+}));
+vi.mock('@/lib/sentry', () => ({
+  captureUnexpectedDatabaseError,
+  captureUnexpectedError,
+  observeAuthOperation: async (_operation: string, call: () => PromiseLike<unknown>) => call(),
 }));
 
 import { createUserService } from '../user-service';
@@ -98,6 +105,9 @@ describe('createUserService', () => {
     getStripe.mockReturnValue(null);
     deleteUser.mockResolvedValue({ data: {}, error: null });
     adminFrom.mockImplementation(() => createChainableMock([], null));
+    captureUnexpectedDatabaseError.mockImplementation((error: unknown) =>
+      error instanceof Error ? error : new Error('Unexpected database failure', { cause: error }),
+    );
   });
 
   describe('deleteAccount', () => {
@@ -137,16 +147,17 @@ describe('createUserService', () => {
       expect(deleteUser).toHaveBeenCalledWith(USER_ID);
     });
 
-    it('Storage削除失敗時もaccount削除を継続する', async () => {
+    it('Storage削除失敗時はfail closedでaccount削除を止める', async () => {
       const storageError = new Error('storage unavailable');
       const { service } = createSupabase({ storageError });
 
-      await expect(service.deleteAccount(deleteOptions())).resolves.toEqual({ success: true });
-      expect(loggerWarn).toHaveBeenCalledWith(
-        'Failed to delete avatar files, continuing with account deletion',
-        storageError,
-      );
-      expect(deleteUser).toHaveBeenCalledWith(USER_ID);
+      await expect(service.deleteAccount(deleteOptions())).rejects.toMatchObject({
+        code: 'DELETE_FAILED',
+        message: 'Failed to delete avatar files',
+        cause: storageError,
+      });
+      expect(captureUnexpectedError).toHaveBeenCalledOnce();
+      expect(deleteUser).not.toHaveBeenCalled();
     });
 
     it('有効なStripe subscriptionを解約してcustomerを削除する', async () => {
@@ -176,7 +187,7 @@ describe('createUserService', () => {
       expect(deleteCustomer).toHaveBeenCalledWith('cus_123');
     });
 
-    it('Stripe処理失敗時もaccount削除を継続する', async () => {
+    it('Stripe処理失敗時はfail closedでaccount削除を止める', async () => {
       const stripeError = new Error('stripe unavailable');
       getStripe.mockReturnValue({
         subscriptions: { list: vi.fn().mockRejectedValue(stripeError) },
@@ -186,21 +197,24 @@ describe('createUserService', () => {
         tables: { profiles: { data: { stripe_customer_id: 'cus_123' } } },
       });
 
-      await expect(service.deleteAccount(deleteOptions())).resolves.toEqual({ success: true });
-      expect(loggerWarn).toHaveBeenCalledWith(
-        'Failed to cancel Stripe subscription, continuing with account deletion',
-        stripeError,
-      );
-      expect(deleteUser).toHaveBeenCalledWith(USER_ID);
+      await expect(service.deleteAccount(deleteOptions())).rejects.toMatchObject({
+        code: 'DELETE_FAILED',
+        message: 'Failed to delete billing data',
+        cause: stripeError,
+      });
+      expect(captureUnexpectedError).toHaveBeenCalledOnce();
+      expect(deleteUser).not.toHaveBeenCalled();
     });
 
     it('admin user削除失敗をDELETE_FAILEDに変換する', async () => {
-      deleteUser.mockResolvedValue({ data: null, error: { message: 'delete failed' } });
+      const deleteError = new Error('delete failed');
+      deleteUser.mockResolvedValue({ data: null, error: deleteError });
       const { service } = createSupabase();
 
       await expect(service.deleteAccount(deleteOptions())).rejects.toMatchObject({
         code: 'DELETE_FAILED',
-        message: 'Failed to delete account: delete failed',
+        message: 'Failed to delete account',
+        cause: deleteError,
       });
     });
   });
@@ -229,7 +243,7 @@ describe('createUserService', () => {
 
       await expect(service.deleteBlocks(USER_ID)).rejects.toMatchObject({
         code: 'DELETE_DATA_FAILED',
-        message: 'records deletion failed: records failed',
+        message: 'records deletion failed',
       });
     });
   });
@@ -262,7 +276,7 @@ describe('createUserService', () => {
 
       await expect(service.deleteAllData(USER_ID)).rejects.toMatchObject({
         code: 'DELETE_DATA_FAILED',
-        message: 'plans deletion failed: plans failed',
+        message: 'plans deletion failed',
       });
       expect(adminFrom).not.toHaveBeenCalledWith('tags');
     });
@@ -332,7 +346,7 @@ describe('createUserService', () => {
 
       await expect(service.exportData({ userId: USER_ID })).rejects.toMatchObject({
         code: 'EXPORT_FAILED',
-        message: 'Plans fetch error: plans fetch failed',
+        message: 'Plans fetch failed',
       });
     });
 
@@ -348,7 +362,7 @@ describe('createUserService', () => {
 
       await expect(service.exportData({ userId: USER_ID })).rejects.toMatchObject({
         code: 'EXPORT_FAILED',
-        message: 'Tags fetch error: tags fetch failed',
+        message: 'Tags fetch failed',
       });
     });
   });

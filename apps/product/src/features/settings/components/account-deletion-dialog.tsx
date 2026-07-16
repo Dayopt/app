@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 
 import { LabeledRow } from '@/components/ui/display/LabeledRow';
 import { logger } from '@/lib/logger';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
 import { api } from '@/lib/trpc';
 import {
@@ -46,7 +47,9 @@ export function AccountDeletionDialog() {
       // ローカルセッションをクリアしてからリダイレクト
       try {
         const supabase = createClient();
-        await supabase.auth.signOut();
+        await observeAuthOperation('sign_out_after_account_deletion', () =>
+          supabase.auth.signOut(),
+        );
       } catch {
         // auth.users 削除済みのため signOut が失敗する可能性がある — 無視して続行
       }

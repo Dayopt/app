@@ -103,6 +103,9 @@ jobs:
       - name: Shared i18n unit tests
         run: pnpm --filter @dayopt/i18n test:run
 
+      - name: Shared observability unit tests
+        run: pnpm --filter @dayopt/observability test:run
+
   build:
     name: "\U0001F3D7\uFE0F Build"
     runs-on: ubuntu-latest
@@ -125,9 +128,6 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder' }}
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       - name: Check for leaked secrets in client bundle
         run: |

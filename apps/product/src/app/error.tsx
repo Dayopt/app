@@ -10,7 +10,8 @@
 import { useEffect } from 'react';
 
 import { Button, Card } from '@dayopt/components';
-import * as Sentry from '@sentry/nextjs';
+
+import { captureClientBoundaryError } from '@/lib/sentry';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -24,23 +25,16 @@ const ERROR_TEXT = {
   showDetails: 'Show details',
   retry: 'Try again',
   goHome: 'Go to Home',
-  sentryReport: 'This error has been automatically reported.',
+  recoveryHint: 'Try again or reload the page.',
 };
 
 export default function RootError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    Sentry.captureException(error, {
-      tags: {
-        error_boundary: 'root_error',
-        error_type: 'react_render_error',
-      },
-      contexts: {
-        react_error: {
-          componentStack: error.stack,
-          digest: error.digest,
-          message: error.message,
-        },
-      },
+    captureClientBoundaryError(error, {
+      feature: 'root',
+      operation: 'render',
+      route: window.location.pathname,
+      source: 'root_error_boundary',
     });
   }, [error]);
 
@@ -84,7 +78,7 @@ export default function RootError({ error, reset }: ErrorProps) {
           </Button>
         </div>
 
-        <p className="text-muted-foreground mt-6 text-center text-xs">{ERROR_TEXT.sentryReport}</p>
+        <p className="text-muted-foreground mt-6 text-center text-xs">{ERROR_TEXT.recoveryHint}</p>
       </Card>
     </div>
   );

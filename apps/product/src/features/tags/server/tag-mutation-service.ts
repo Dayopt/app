@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Tag } from '../types';
 import type { TagQueryService } from './tag-query-service';
 import { transformDbTag } from './tag-row-transform';
-import { TagServiceError } from './tag-service-error';
+import { createTagDatabaseError, TagServiceError } from './tag-service-error';
 import { getNextSortOrder, makeRoomAtTop } from './tag-sort-order';
 
 /** タグ作成入力 */
@@ -85,7 +85,7 @@ export class TagMutationService {
       if (error.code === '23505') {
         throw new TagServiceError('DUPLICATE_NAME', 'Tag with this name already exists');
       }
-      throw new TagServiceError('CREATE_FAILED', `Failed to create tag: ${error.message}`);
+      throw createTagDatabaseError(error, 'CREATE_FAILED', 'Failed to create tag', 'create_tag');
     }
 
     return transformDbTag(data);
@@ -142,9 +142,11 @@ export class TagMutationService {
           .eq('is_active', true);
 
         if (childCountError) {
-          throw new TagServiceError(
+          throw createTagDatabaseError(
+            childCountError,
             'FETCH_FAILED',
-            `Failed to verify tag children: ${childCountError.message}`,
+            'Failed to verify tag children',
+            'verify_tag_children',
           );
         }
 
@@ -174,7 +176,7 @@ export class TagMutationService {
       if (error.code === '23505') {
         throw new TagServiceError('DUPLICATE_NAME', 'Tag with this name already exists');
       }
-      throw new TagServiceError('UPDATE_FAILED', `Failed to update tag: ${error.message}`);
+      throw createTagDatabaseError(error, 'UPDATE_FAILED', 'Failed to update tag', 'update_tag');
     }
 
     return transformDbTag(data);

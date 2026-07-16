@@ -3,6 +3,7 @@ import 'server-only';
 import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
+import { captureUnexpectedMcpToolError } from '@/lib/mcp/tool-error';
 import { createMcpTrpcCaller } from '@/lib/mcp/trpc-bridge';
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -161,7 +162,8 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
           ],
         };
       } catch (err) {
-        logger.error({ err, userId: ctx.userId }, '[mcp] entries.list failed');
+        captureUnexpectedMcpToolError(err, 'entries_list');
+        logger.error('MCP entries list failed');
         return {
           content: [{ type: 'text' as const, text: 'Failed to list entries. Please try again.' }],
           isError: true,

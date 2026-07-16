@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { Database } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { TagServiceError } from './tag-service-error';
+import { createTagDatabaseError, TagServiceError } from './tag-service-error';
 
 export interface ReorderTagUpdate {
   id: string;
@@ -27,7 +27,12 @@ export class TagReorderService {
       .eq('user_id', userId)
       .in('id', tagIds);
     if (fetchError) {
-      throw new TagServiceError('FETCH_FAILED', `Failed to verify tags: ${fetchError.message}`);
+      throw createTagDatabaseError(
+        fetchError,
+        'FETCH_FAILED',
+        'Failed to verify tags',
+        'verify_reordered_tags',
+      );
     }
 
     const existingIds = new Set(existingTags?.map((tag) => tag.id) ?? []);
@@ -59,7 +64,12 @@ export class TagReorderService {
       },
     );
     if (rpcError) {
-      throw new TagServiceError('UPDATE_FAILED', `Failed to reorder tags: ${rpcError.message}`);
+      throw createTagDatabaseError(
+        rpcError,
+        'UPDATE_FAILED',
+        'Failed to reorder tags',
+        'reorder_tags',
+      );
     }
     return { count: typeof updatedCount === 'number' ? updatedCount : updates.length };
   }

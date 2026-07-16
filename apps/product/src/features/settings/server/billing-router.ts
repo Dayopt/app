@@ -3,11 +3,9 @@
  * Stripe サブスクリプション管理API
  */
 
-import * as Sentry from '@sentry/nextjs';
 import { TRPCError } from '@trpc/server';
 
-import { logger } from '@/lib/logger';
-import { captureBusinessEvent } from '@/lib/sentry';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
@@ -61,19 +59,14 @@ export const billingRouter = createTRPCRouter({
         const {
           data: { user },
           error: authError,
-        } = await ctx.supabase.auth.getUser();
+        } = await observeAuthOperation('billing_checkout_get_user', () =>
+          ctx.supabase.auth.getUser(),
+        );
 
         if (authError) {
-          logger.error('Billing auth.getUser failed', {
-            error: authError.message,
-            userId: ctx.userId,
-          });
-          Sentry.captureException(authError, {
-            tags: { source: 'billing', operation: 'checkout_auth' },
-          });
           throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch user info: ${authError.message}`,
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
             cause: authError,
           });
         }
@@ -88,7 +81,6 @@ export const billingRouter = createTRPCRouter({
         const serviceRoleSupabase = createServiceRoleClient();
         const url = await createCheckoutSession(serviceRoleSupabase, ctx.userId, user.email);
 
-        captureBusinessEvent('billing.checkout_started', { plan: 'pro' });
         return { url };
       } catch (error) {
         handleServiceError(error);

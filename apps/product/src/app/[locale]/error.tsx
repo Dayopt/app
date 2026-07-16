@@ -14,6 +14,7 @@ import { AlertCircle } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { logger } from '@/lib/logger';
+import { captureClientBoundaryError } from '@/lib/sentry';
 import { Button, Card } from '@dayopt/components';
 
 interface ErrorProps {
@@ -23,7 +24,13 @@ interface ErrorProps {
 
 export default function LocaleError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    logger.error('[Locale Error]', error);
+    logger.error('[Locale Error]', { errorType: error.name, digest: error.digest });
+    captureClientBoundaryError(error, {
+      feature: 'locale',
+      operation: 'render',
+      route: window.location.pathname,
+      source: 'locale_error_boundary',
+    });
   }, [error]);
 
   return (
@@ -53,7 +60,7 @@ export default function LocaleError({ error, reset }: ErrorProps) {
           </Button>
         </div>
 
-        <p className="text-muted-foreground text-xs">This error has been automatically reported.</p>
+        <p className="text-muted-foreground text-xs">Try again or reload the page.</p>
       </Card>
     </div>
   );

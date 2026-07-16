@@ -8,8 +8,14 @@ const listFactors = vi.hoisted(() => vi.fn());
 const deleteFactor = vi.hoisted(() => vi.fn());
 const verifyRecoveryCode = vi.hoisted(() => vi.fn());
 const adminRpc = vi.hoisted(() => vi.fn());
+const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/auth/recovery-codes', () => ({ verifyRecoveryCode }));
+
+vi.mock('@/lib/sentry', () => ({
+  captureUnexpectedDatabaseError,
+  observeAuthOperation: async (_operation: string, call: () => PromiseLike<unknown>) => call(),
+}));
 
 vi.mock('@/lib/supabase/oauth', () => ({
   createServiceRoleClient: () => ({
@@ -48,6 +54,9 @@ describe('RecoveryService', () => {
     );
     listFactors.mockResolvedValue({ data: { factors: [] }, error: null });
     deleteFactor.mockResolvedValue({ data: {}, error: null });
+    captureUnexpectedDatabaseError.mockImplementation((error: unknown) =>
+      error instanceof Error ? error : new Error('Unexpected database failure', { cause: error }),
+    );
   });
 
   it('一致したコードを消費し、verified factorだけを削除して残数を返す', async () => {
@@ -102,13 +111,19 @@ describe('RecoveryService', () => {
   });
 
   it('コード取得エラーを RECOVERY_FAILED にする', async () => {
+    const fetchError = { message: 'fetch failed', code: 'PGRST000' };
     const { service } = createService({
-      fetchError: { message: 'fetch failed', code: 'PGRST000' },
+      fetchError,
     });
 
     await expect(service.verify({ userId: USER_ID, code: CODE })).rejects.toMatchObject({
       code: 'RECOVERY_FAILED',
-      message: 'fetch failed',
+      message: 'Failed to fetch recovery codes',
+      cause: expect.objectContaining({ cause: fetchError }),
+    });
+    expect(captureUnexpectedDatabaseError).toHaveBeenCalledWith(fetchError, {
+      feature: 'mfa_recovery',
+      operation: 'fetch_recovery_codes',
     });
   });
 
@@ -123,17 +138,23 @@ describe('RecoveryService', () => {
       message: 'Failed to use recovery code',
     });
     expect(listFactors).not.toHaveBeenCalled();
+    expect(captureUnexpectedDatabaseError).toHaveBeenCalledOnce();
   });
 
   it('残数取得の失敗は非致命的として0を返す', async () => {
+    const countError = { message: 'count failed' };
     const { service } = createService({
       codes: [{ id: 'code-1', code_hash: 'matching-hash' }],
-      rpcResults: [{ data: null, error: { message: 'count failed' } }],
+      rpcResults: [{ data: null, error: countError }],
     });
 
     await expect(service.verify({ userId: USER_ID, code: CODE })).resolves.toEqual({
       success: true,
       remainingCodes: 0,
+    });
+    expect(captureUnexpectedDatabaseError).toHaveBeenCalledWith(countError, {
+      feature: 'mfa_recovery',
+      operation: 'count_remaining_recovery_codes',
     });
   });
 });

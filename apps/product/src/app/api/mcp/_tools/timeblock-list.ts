@@ -3,6 +3,7 @@ import 'server-only';
 import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
+import { captureUnexpectedMcpToolError } from '@/lib/mcp/tool-error';
 import { createMcpTrpcCaller } from '@/lib/mcp/trpc-bridge';
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -55,7 +56,8 @@ export function registerTimeblockListTools(server: McpServer, ctx: McpRequestCon
             ],
           };
         } catch (error) {
-          logger.error({ error, model, userId: ctx.userId }, `[mcp] ${model}.list failed`);
+          captureUnexpectedMcpToolError(error, `${model}_list`);
+          logger.error(`MCP ${model} list failed`);
           return {
             content: [
               { type: 'text' as const, text: `Failed to list ${model}. Please try again.` },

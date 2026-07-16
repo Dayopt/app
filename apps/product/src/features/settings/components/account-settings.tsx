@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
 import { logger } from '@/lib/logger';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@dayopt/components';
 import { useRouter } from '@dayopt/i18n/navigation';
@@ -49,7 +50,7 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
     setIsLoggingOut(true);
     try {
       const supabase = createClient();
-      await supabase.auth.signOut();
+      await observeAuthOperation('sign_out', () => supabase.auth.signOut());
       toast.success(t('navigation.navUser.logoutSuccess'));
       router.push('/auth/login');
       router.refresh();

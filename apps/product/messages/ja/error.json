@@ -7,12 +7,12 @@
       "showDetails": "エラー詳細を表示",
       "retry": "再試行",
       "goHome": "ホームに戻る",
-      "sentryReport": "エラー報告を自動送信済み"
+      "sentryReport": "再試行するか、ページを再読み込みしてください。"
     },
     "boundary": {
       "title": "予期しないエラーが発生した",
       "description": "アプリケーションでエラーが発生した",
-      "autoReport": "エラー報告を自動送信",
+      "autoReport": "再試行するか、ページを再読み込みしてください。",
       "retry": "再試行",
       "reload": "ページをリロード",
       "devTitle": "開発環境 - コンポーネントエラー",

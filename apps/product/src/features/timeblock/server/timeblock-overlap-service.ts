@@ -2,6 +2,7 @@ import 'server-only';
 
 import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import type { ServiceSupabaseClient } from './types';
 
 interface TimeModelOverlapOptions {
@@ -35,8 +36,11 @@ export class TimeblockOverlapService {
 
     const { data, error } = await query;
     if (error) {
-      logger.error('Plan overlap check failed', { error });
-      return [];
+      logger.error('Plan overlap check failed');
+      throw captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'check_plan_overlap',
+      });
     }
 
     return data?.map((row) => row.id) ?? [];
@@ -56,8 +60,11 @@ export class TimeblockOverlapService {
 
     const { data, error } = await query;
     if (error) {
-      logger.error('Record overlap check failed', { error });
-      return [];
+      logger.error('Record overlap check failed');
+      throw captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'check_record_overlap',
+      });
     }
 
     return data?.map((row) => row.id) ?? [];

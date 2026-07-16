@@ -14,7 +14,7 @@
 
 import { useEffect } from 'react';
 
-import * as Sentry from '@sentry/nextjs';
+import { captureClientBoundaryError } from '@/lib/sentry';
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -29,7 +29,7 @@ const ERROR_TEXT = {
   showDetails: 'Show details',
   retry: 'Try again',
   goHome: 'Go to Home',
-  sentryReport: 'This error has been automatically reported.',
+  recoveryHint: 'Try again or reload the page.',
 };
 
 /**
@@ -98,24 +98,11 @@ function ErrorButton({
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    Sentry.captureException(error, {
-      tags: {
-        error_boundary: 'global_error',
-        error_type: 'react_render_error',
-      },
-      contexts: {
-        react_error: {
-          componentStack: error.stack,
-          digest: error.digest,
-          message: error.message,
-        },
-      },
-      extra: {
-        errorInfo: {
-          componentStack: error.stack,
-          errorBoundary: 'GlobalError',
-        },
-      },
+    captureClientBoundaryError(error, {
+      feature: 'root_layout',
+      operation: 'render',
+      route: window.location.pathname,
+      source: 'global_error_boundary',
     });
   }, [error]);
 
@@ -246,7 +233,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 marginBottom: 0,
               }}
             >
-              {ERROR_TEXT.sentryReport}
+              {ERROR_TEXT.recoveryHint}
             </p>
           </div>
         </div>

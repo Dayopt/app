@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { plansToICal } from '@/features/timeblock';
 import { logger } from '@/lib/logger';
 import { icalFeedRateLimit } from '@/lib/rate-limit/upstash';
+import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 /**
@@ -27,9 +28,16 @@ async function getUserIdByToken(token: string): Promise<string | null> {
     .from('user_settings')
     .select('user_id')
     .eq('ical_feed_token' as never, token)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) {
+    throw captureUnexpectedDatabaseError(error, {
+      feature: 'calendar_feed',
+      operation: 'resolve_feed_token',
+      route: '/api/v1/calendar/[token]',
+    });
+  }
+  if (!data) return null;
   return (data as Record<string, unknown>).user_id as string;
 }
 
@@ -67,8 +75,12 @@ async function getPlansForFeed(userId: string) {
     .limit(1000);
 
   if (error) {
-    logger.error('[iCal Feed] plans fetch error', error);
-    return [];
+    logger.error('iCal feed plans fetch failed');
+    throw captureUnexpectedDatabaseError(error, {
+      feature: 'calendar_feed',
+      operation: 'fetch_feed_plans',
+      route: '/api/v1/calendar/[token]',
+    });
   }
 
   // tags リレーションからタグ名を抽出
@@ -151,9 +163,17 @@ async function checkRateLimit(token: string): Promise<{
       return { limited: false };
     } catch (error) {
       // Redis障害時はインメモリにフォールバック（可用性優先）
-      logger.warn('[iCal Feed] Upstash rate limit failed, falling back to in-memory', {
-        error: error instanceof Error ? error.message : String(error),
+      const original =
+        error instanceof Error
+          ? error
+          : new Error('iCal rate limit check failed', { cause: error });
+      captureUnexpectedError(original, {
+        feature: 'calendar_feed',
+        operation: 'check_rate_limit',
+        route: '/api/v1/calendar/[token]',
+        source: 'upstash',
       });
+      logger.warn('iCal rate limit failed; using in-memory fallback');
     }
   }
 
@@ -168,44 +188,56 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
-  const { token: rawToken } = await params;
+  try {
+    const { token: rawToken } = await params;
 
-  // .ics 拡張子を除去
-  const token = rawToken.replace(/\.ics$/, '');
+    // .ics 拡張子を除去
+    const token = rawToken.replace(/\.ics$/, '');
 
-  // UUIDバリデーション
-  if (!isValidUUID(token)) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
-  }
+    // UUIDバリデーション
+    if (!isValidUUID(token)) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
+    }
 
-  // per-token レート制限（Upstash優先、インメモリフォールバック）
-  const rateLimit = await checkRateLimit(token);
-  if (rateLimit.limited) {
-    return NextResponse.json(
-      { error: 'Too many requests' },
-      {
-        status: 429,
-        headers: rateLimit.headers ?? { 'Retry-After': rateLimit.retryAfter ?? '60' },
+    // per-token レート制限（Upstash優先、インメモリフォールバック）
+    const rateLimit = await checkRateLimit(token);
+    if (rateLimit.limited) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        {
+          status: 429,
+          headers: rateLimit.headers ?? { 'Retry-After': rateLimit.retryAfter ?? '60' },
+        },
+      );
+    }
+
+    // トークンでユーザー特定
+    const userId = await getUserIdByToken(token);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // エントリ取得 → iCal変換
+    const plans = await getPlansForFeed(userId);
+    const ical = plansToICal(plans);
+
+    return new NextResponse(ical, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/calendar; charset=utf-8',
+        'Content-Disposition': 'inline; filename="dayopt.ics"',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
-    );
+    });
+  } catch (error) {
+    const original =
+      error instanceof Error ? error : new Error('Unexpected iCal feed failure', { cause: error });
+    captureUnexpectedError(original, {
+      feature: 'calendar_feed',
+      operation: 'serve_feed',
+      route: '/api/v1/calendar/[token]',
+    });
+    logger.error('iCal feed request failed');
+    return NextResponse.json({ error: 'Calendar feed unavailable' }, { status: 500 });
   }
-
-  // トークンでユーザー特定
-  const userId = await getUserIdByToken(token);
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // エントリ取得 → iCal変換
-  const plans = await getPlansForFeed(userId);
-  const ical = plansToICal(plans);
-
-  return new NextResponse(ical, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/calendar; charset=utf-8',
-      'Content-Disposition': 'inline; filename="dayopt.ics"',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-    },
-  });
 }

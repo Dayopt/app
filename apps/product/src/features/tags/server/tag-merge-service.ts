@@ -3,10 +3,9 @@ import 'server-only';
 import type { Database } from '@/lib/database';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { formatRpcErrorDetail } from '../domain/tag-merge';
 import type { Tag } from '../types';
 import type { TagQueryService } from './tag-query-service';
-import { TagServiceError } from './tag-service-error';
+import { createTagDatabaseError, TagServiceError } from './tag-service-error';
 
 /** タグマージオプション */
 export interface MergeTagsOptions {
@@ -66,9 +65,11 @@ export class TagMergeService {
       .eq('is_active', true);
 
     if (sourceChildrenError) {
-      throw new TagServiceError(
+      throw createTagDatabaseError(
+        sourceChildrenError,
         'FETCH_FAILED',
-        `Failed to inspect source tag children: ${sourceChildrenError.message}`,
+        'Failed to inspect source tag children',
+        'inspect_source_tag_children',
       );
     }
 
@@ -84,9 +85,11 @@ export class TagMergeService {
     });
 
     if (rpcError) {
-      throw new TagServiceError(
+      throw createTagDatabaseError(
+        rpcError,
         'MERGE_FAILED',
-        `Failed to merge tags atomically: ${formatRpcErrorDetail(rpcError)}`,
+        'Failed to merge tags atomically',
+        'merge_tags',
       );
     }
 

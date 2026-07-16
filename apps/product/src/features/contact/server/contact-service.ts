@@ -8,10 +8,11 @@ import 'server-only';
  * App側は環境情報・プラン情報を自動付与
  */
 
-import * as Sentry from '@sentry/nextjs';
+import { z } from 'zod';
 
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
+import { captureUnexpectedError } from '@/lib/sentry';
 import { ServiceError } from '@/lib/trpc/errors';
 
 import type { ContactFormInput } from '../types';
@@ -43,9 +44,17 @@ interface CreateIssueResult {
   issueNumber: number;
 }
 
-/** GitHub Issue 起票の結果。失敗してもフィードバック自体は失われない */
-export type DeliverContactFeedbackResult =
-  { delivered: true; issueUrl: string; issueNumber: number } | { delivered: false };
+const githubIssueResponseSchema = z.object({
+  html_url: z.string().url(),
+  number: z.number().int().positive(),
+});
+
+/** GitHub Issue 起票に成功した結果。失敗時は再送可能にするため例外を返す。 */
+export type DeliverContactFeedbackResult = {
+  delivered: true;
+  issueUrl: string;
+  issueNumber: number;
+};
 
 /**
  * GitHub Issue を作成する
@@ -99,14 +108,14 @@ export async function createGitHubIssue(params: CreateIssueParams): Promise<Crea
     });
 
     if (!response.ok) {
-      const errorBody = await response.text();
-      throw new ServiceError(
-        'GITHUB_API_FAILED',
-        `GitHub API error (${response.status}): ${errorBody}`,
-      );
+      throw new ServiceError('GITHUB_API_FAILED', `GitHub API error (${response.status})`);
     }
 
-    const data = (await response.json()) as { html_url: string; number: number };
+    const parsedResponse = githubIssueResponseSchema.safeParse(await response.json());
+    if (!parsedResponse.success) {
+      throw new ServiceError('GITHUB_API_FAILED', 'GitHub API returned an invalid response');
+    }
+    const data = parsedResponse.data;
 
     return {
       issueUrl: data.html_url,
@@ -118,11 +127,10 @@ export async function createGitHubIssue(params: CreateIssueParams): Promise<Crea
 }
 
 /**
- * フィードバックを GitHub Issue として起票する（best-effort）
+ * フィードバックを GitHub Issue として起票する。
  *
- * 初期ユーザーの声はこのプロダクトで最も回収不能な資産なので、起票に失敗しても
- * ユーザーの送信は失敗させない。内容を構造化ログと Sentry event に退避してから
- * `delivered: false` を返す（呼び出し元は成功として扱ってよい）。
+ * 失敗時はPIIを含まない技術情報だけをログとSentryへ送り、元のErrorを再throwする。
+ * UIはダイアログと本文を保持し、ユーザーが再送できる状態にする。
  */
 export async function deliverContactFeedback(
   params: CreateIssueParams,
@@ -131,29 +139,23 @@ export async function deliverContactFeedback(
     const result = await createGitHubIssue(params);
     return { delivered: true, ...result };
   } catch (error) {
-    const { userId, userEmail, input } = params;
+    const { userId, input } = params;
+    const originalError =
+      error instanceof Error ? error : new Error('Unknown contact delivery failure');
 
     logger.error('Contact feedback delivery to GitHub failed', {
       userId,
-      userEmail,
       category: input.category,
-      message: input.message,
-      environment: input.environment,
-      error: error instanceof Error ? error.message : String(error),
+      errorType: originalError.name,
     });
 
-    // Sentry の extra は PII scrub（scrub-pii.ts）で email が redact されるため、
-    // 送信者の特定は user.id 側で担保する
-    Sentry.captureException(error instanceof Error ? error : new Error(String(error)), {
-      tags: { source: 'contact', operation: 'github_issue_create' },
-      user: { id: userId },
-      extra: {
-        category: input.category,
-        message: input.message,
-        environment: input.environment,
-      },
+    captureUnexpectedError(originalError, {
+      feature: 'contact',
+      source: 'contact',
+      operation: 'github_issue_create',
+      userId,
     });
 
-    return { delivered: false };
+    throw originalError;
   }
 }

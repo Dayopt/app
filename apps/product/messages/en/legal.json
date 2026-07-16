@@ -16,7 +16,7 @@
           "title": "Information We Collect",
           "accountInfo": "Account Information (email address, name, profile picture)",
           "usageData": "Service Usage Data (tasks, calendar, settings)",
-          "technicalData": "Technical Data (IP address, browser information, device information)",
+          "technicalData": "Minimal Technical Diagnostics (application version, route path, browser or device type, and error or trace identifiers). Sentry events exclude request bodies, email addresses, URL query strings, cookies, and authorization credentials.",
           "cookies": "Cookies and similar technologies"
         },
         "dataUsage": {
@@ -24,15 +24,15 @@
           "serviceProvision": "Providing, operating, and improving the Service",
           "userSupport": "User support and responding to inquiries",
           "security": "Preventing unauthorized use and maintaining security",
-          "analytics": "Service analysis and feature improvements",
+          "analytics": "Production server and edge error monitoring for service reliability, plus browser error monitoring and performance analytics only after analytics consent",
           "communication": "Sending important notices and service updates"
         },
         "dataSharing": {
           "title": "Third-Party Services",
           "intro": "We work with the following service providers:",
           "supabase": "Supabase (authentication & database)",
-          "vercel": "Vercel (hosting)",
-          "sentry": "Sentry (error monitoring)",
+          "vercel": "Vercel (hosting; Vercel Analytics and Speed Insights only after analytics consent)",
+          "sentry": "Sentry (Production server and edge error monitoring; browser error monitoring only after analytics consent; Session Replay is disabled). Product and Website data are kept in separate Sentry projects.",
           "note": "These providers manage information according to their respective privacy policies."
         },
         "dataRetention": {
@@ -59,11 +59,11 @@
         },
         "cookies": {
           "title": "About Cookies",
-          "intro": "We use cookies to improve user experience.",
+          "intro": "We use essential cookies and local storage to operate the Service. Optional browser telemetry is controlled by your analytics consent.",
           "essential": "Essential Cookies (maintain login state)",
-          "analytics": "Analytics Cookies (understand usage)",
+          "analytics": "Optional Analytics Technologies (browser Sentry, Vercel Analytics, and Speed Insights)",
           "preference": "Preference Cookies (save user settings)",
-          "control": "You can disable cookies in your browser settings, but some features may be limited."
+          "control": "If you decline analytics, optional browser telemetry does not start and core features remain available. Sanitized Production server and edge error monitoring continues because it is required to diagnose service failures."
         },
         "children": {
           "title": "Children's Privacy",

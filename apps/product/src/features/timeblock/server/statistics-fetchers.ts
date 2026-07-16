@@ -7,6 +7,7 @@ import 'server-only';
  */
 
 import { databaseTables } from '@/lib/database';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 
 import type { ServiceSupabaseClient } from './types';
 
@@ -52,7 +53,12 @@ export async function fetchRecords(
   if (range.endDate) query = query.lt('start_at', range.endDate);
 
   const { data, error } = await query;
-  if (error) throw new Error(`Failed to fetch records: ${error.message}`);
+  if (error) {
+    throw captureUnexpectedDatabaseError(error, {
+      feature: 'statistics',
+      operation: 'fetch_records',
+    });
+  }
   return data ?? [];
 }
 
@@ -67,7 +73,12 @@ export async function fetchRecordsByPlanIds(
     .eq('user_id', userId)
     .is('deleted_at', null)
     .in('plan_id', planIds);
-  if (error) throw new Error(`Failed to fetch records by plan ids: ${error.message}`);
+  if (error) {
+    throw captureUnexpectedDatabaseError(error, {
+      feature: 'statistics',
+      operation: 'fetch_records_by_plan_ids',
+    });
+  }
   return data ?? [];
 }
 
@@ -85,7 +96,12 @@ export async function fetchPlans(
   if (range.endDate) query = query.lt('start_at', range.endDate);
 
   const { data, error } = await query;
-  if (error) throw new Error(`Failed to fetch plans: ${error.message}`);
+  if (error) {
+    throw captureUnexpectedDatabaseError(error, {
+      feature: 'statistics',
+      operation: 'fetch_plans',
+    });
+  }
   return data ?? [];
 }
 
@@ -97,6 +113,11 @@ export async function fetchTagsById(
     .from('tags')
     .select('id, name, color, icon')
     .eq('user_id', userId);
-  if (error) throw new Error(`Failed to fetch tags: ${error.message}`);
+  if (error) {
+    throw captureUnexpectedDatabaseError(error, {
+      feature: 'statistics',
+      operation: 'fetch_tags',
+    });
+  }
   return new Map((data ?? []).map((tag) => [tag.id, tag]));
 }

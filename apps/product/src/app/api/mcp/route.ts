@@ -6,6 +6,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { logger } from '@/lib/logger';
 import { extractBearerToken, verifyAccessToken } from '@/lib/mcp';
 import { OAuthServerError } from '@/lib/oauth-server';
+import { captureUnexpectedError } from '@/lib/sentry';
 
 import { createMcpServer } from './_server';
 
@@ -71,7 +72,14 @@ async function handle(request: NextRequest): Promise<Response> {
       },
     });
   } catch (err) {
-    logger.error({ err }, '[mcp] transport handleRequest failed');
+    const original =
+      err instanceof Error ? err : new Error('Unexpected MCP transport failure', { cause: err });
+    captureUnexpectedError(original, {
+      feature: 'mcp',
+      operation: 'handle_transport_request',
+      route: '/api/mcp',
+    });
+    logger.error('MCP transport request failed');
     return NextResponse.json(
       { jsonrpc: '2.0', error: { code: -32603, message: 'Internal error' }, id: null },
       { status: 500 },
@@ -84,8 +92,19 @@ function authErrorResponse(err: unknown): Response {
   // OAuthServerError は err.httpStatus を尊重 (auth failure=401 / server_error=500 を保つ)。
   // 5xx を 401 に丸めると client が再認証ループに入って真の障害が観測できない。
   const status = isOAuthErr ? err.httpStatus : 500;
-  if (!isOAuthErr) {
-    logger.error({ err }, '[mcp] auth unexpected error');
+  if (status >= 500) {
+    const original =
+      isOAuthErr && err.cause instanceof Error
+        ? err.cause
+        : err instanceof Error
+          ? err
+          : new Error('Unexpected MCP authentication failure', { cause: err });
+    captureUnexpectedError(original, {
+      feature: 'mcp',
+      operation: 'authenticate_request',
+      route: '/api/mcp',
+    });
+    logger.error('MCP request authentication failed');
   }
 
   // WWW-Authenticate は client が再認証へ進めるサインなので 401 のときだけ付ける。
@@ -97,7 +116,8 @@ function authErrorResponse(err: unknown): Response {
   return new Response(
     JSON.stringify({
       error: isOAuthErr ? err.code : 'server_error',
-      error_description: isOAuthErr ? err.message : 'Unexpected error',
+      error_description:
+        isOAuthErr && status < 500 ? err.message : 'Authentication service unavailable',
     }),
     {
       status,

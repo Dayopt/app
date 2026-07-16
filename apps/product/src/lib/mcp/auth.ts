@@ -9,6 +9,7 @@ import {
   type OAuthClientId,
   type SupportedScope,
 } from '@/lib/oauth-server';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 
 interface VerifiedAccessToken {
   /** oauth_tokens.id (chain 追跡用)。 */
@@ -41,7 +42,13 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
     .maybeSingle();
 
   if (error) {
-    throw new OAuthServerError('server_error', error.message, 500);
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'mcp',
+      operation: 'verify_access_token',
+    });
+    throw new OAuthServerError('server_error', 'Access token verification failed', 500, {
+      cause: original,
+    });
   }
   if (!row) {
     throw new OAuthServerError('invalid_grant', 'Access token not found', 401);
@@ -64,7 +71,11 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
     .eq('id', row.id)
     .then(({ error: updateError }) => {
       if (updateError) {
-        logger.warn({ err: updateError }, '[mcp] failed to update last_used_at');
+        captureUnexpectedDatabaseError(updateError, {
+          feature: 'mcp',
+          operation: 'update_access_token_last_used_at',
+        });
+        logger.warn('MCP access token usage timestamp update failed');
       }
     });
 

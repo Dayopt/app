@@ -1,18 +1,21 @@
-import bundleAnalyzer from '@next/bundle-analyzer'
-import nextEnv from '@next/env'
-import { withSentryConfig } from '@sentry/nextjs'
-import createNextIntlPlugin from 'next-intl/plugin'
-import { fileURLToPath } from 'url'
+import { assertProductionSentryBuildEnv, failSentryBuild } from '@dayopt/observability/build-gate';
+import bundleAnalyzer from '@next/bundle-analyzer';
+import nextEnv from '@next/env';
+import { withSentryConfig } from '@sentry/nextjs';
+import createNextIntlPlugin from 'next-intl/plugin';
+import { fileURLToPath } from 'url';
 
-const { loadEnvConfig } = nextEnv
-const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
-loadEnvConfig(repoRoot)
+const { loadEnvConfig } = nextEnv;
+const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
+loadEnvConfig(repoRoot);
 
-const withNextIntl = createNextIntlPlugin('./src/lib/i18n/request.ts')
+const withNextIntl = createNextIntlPlugin('./src/lib/i18n/request.ts');
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
-})
+});
+
+const isSentryProductionBuild = assertProductionSentryBuildEnv(process.env, 'Product');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -27,7 +30,8 @@ const nextConfig = {
 
   // 環境変数設定
   env: {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    NEXT_PUBLIC_SUPABASE_URL:
+      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '',
     NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version || '0.0.0',
@@ -51,7 +55,7 @@ const nextConfig = {
           destination: '/_next/:path*',
         },
       ],
-    }
+    };
   },
 
   // セキュリティヘッダー設定
@@ -151,7 +155,7 @@ const nextConfig = {
           },
         ],
       },
-    ]
+    ];
   },
 
   // 画像最適化設定
@@ -227,12 +231,9 @@ const nextConfig = {
   compiler: {
     // GAFAベストプラクティス: 本番環境でconsole.log/info/debugを削除
     // error/warnは残す（エラー監視のため）
-    removeConsole:
-      process.env.NODE_ENV === 'production'
-        ? { exclude: ['error', 'warn'] }
-        : false,
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
-}
+};
 
 /**
  * Sentry設定オプション
@@ -243,14 +244,10 @@ const sentryOptions = {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
+  errorHandler: failSentryBuild,
 
-  // release 名: Vercel が build 時に自動提供する commit SHA を明示する。
-  // source map upload と runtime（init では上書きしない）を同一 release に揃え、
-  // stack trace 解決を担保する。Vercel 外（ローカル build 等）では未定義のため
-  // plugin の自動検出にフォールバックする。
-  ...(process.env.VERCEL_GIT_COMMIT_SHA && {
-    release: { name: process.env.VERCEL_GIT_COMMIT_SHA },
-  }),
+  // Production gateが必須化したcommit SHAをrelease/source mapで共通利用する。
+  release: { name: process.env.VERCEL_GIT_COMMIT_SHA },
 
   // ソースマップ設定
   sourcemaps: {
@@ -260,17 +257,23 @@ const sentryOptions = {
 
   // ビルドログ制御
   silent: !process.env.CI, // CI環境以外ではログを抑制
-  disableLogger: true, // Sentryロガーを無効化
+
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 
   // パフォーマンス最適化
   widenClientFileUpload: true, // クライアントファイルのアップロード範囲拡大
 
-  // Next.js固有設定
-  hideSourceMaps: true, // 本番環境でソースマップを非公開
   // NOTE: tunnelRouteは削除済み - CSPヘッダーでSentryドメインを許可しているため不要
   // tunnelRoute有効時、ルートハンドラーが自動生成されない問題でイベントが失われていた
-}
+};
 
-// withNextIntl → withBundleAnalyzer → withSentryConfig の順で適用
-// 重要: Sentryが最後に適用されるようにする
-export default withSentryConfig(withBundleAnalyzer(withNextIntl(nextConfig)), sentryOptions)
+const configuredNext = withBundleAnalyzer(withNextIntl(nextConfig));
+
+// Preview/local builds do not create empty Sentry releases or upload source maps.
+export default isSentryProductionBuild
+  ? withSentryConfig(configuredNext, sentryOptions)
+  : configuredNext;

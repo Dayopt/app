@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Tag, TagDeleteStrategy } from '../types';
 import { applyTagStrategy, countTagAssociations } from './tag-association-strategy';
 import type { TagQueryService } from './tag-query-service';
-import { TagServiceError } from './tag-service-error';
+import { createTagDatabaseError, TagServiceError } from './tag-service-error';
 import { getNextSortOrder } from './tag-sort-order';
 
 /**
@@ -41,9 +41,11 @@ export class TagDeleteService {
       .eq('is_active', true);
 
     if (childTagsError) {
-      throw new TagServiceError(
+      throw createTagDatabaseError(
+        childTagsError,
         'FETCH_FAILED',
-        `Failed to inspect tag children: ${childTagsError.message}`,
+        'Failed to inspect tag children',
+        'inspect_tag_children',
       );
     }
 
@@ -86,9 +88,11 @@ export class TagDeleteService {
 
       const promoteChildrenError = childUpdateResults.find((result) => result.error)?.error;
       if (promoteChildrenError) {
-        throw new TagServiceError(
+        throw createTagDatabaseError(
+          promoteChildrenError,
           'UPDATE_FAILED',
-          `Failed to promote child tags: ${promoteChildrenError.message}`,
+          'Failed to promote child tags',
+          'promote_child_tags',
         );
       }
     }
@@ -101,7 +105,7 @@ export class TagDeleteService {
       .eq('user_id', userId);
 
     if (error) {
-      throw new TagServiceError('DELETE_FAILED', `Failed to delete tag: ${error.message}`);
+      throw createTagDatabaseError(error, 'DELETE_FAILED', 'Failed to delete tag', 'delete_tag');
     }
 
     return tag;
@@ -133,9 +137,11 @@ export class TagDeleteService {
       .like('name', `${prefix}:%`);
 
     if (fetchError) {
-      throw new TagServiceError(
+      throw createTagDatabaseError(
+        fetchError,
         'FETCH_FAILED',
-        `Failed to fetch group tags: ${fetchError.message}`,
+        'Failed to fetch group tags',
+        'fetch_group_tags_for_deletion',
       );
     }
 
@@ -177,7 +183,12 @@ export class TagDeleteService {
       .eq('user_id', userId);
 
     if (deleteError) {
-      throw new TagServiceError('DELETE_FAILED', `Failed to delete group: ${deleteError.message}`);
+      throw createTagDatabaseError(
+        deleteError,
+        'DELETE_FAILED',
+        'Failed to delete tag group',
+        'delete_tag_group',
+      );
     }
 
     return { deletedCount: tagIds.length };

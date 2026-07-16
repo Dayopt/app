@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { AvatarUpload } from '@/components/ui/inputs/avatar-upload';
 import { useAuthStore } from '@/features/auth';
 import { logger } from '@/lib/logger';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
 import { deleteAvatar, uploadAvatar } from '@/lib/supabase/storage';
 import { api } from '@/lib/trpc';
@@ -51,9 +52,9 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
 
         await updateProfile.mutateAsync({ avatarUrl: publicUrl });
 
-        await supabase.auth.updateUser({
-          data: { avatar_url: publicUrl },
-        });
+        await observeAuthOperation('update_avatar_metadata', () =>
+          supabase.auth.updateUser({ data: { avatar_url: publicUrl } }),
+        );
       } catch (error) {
         logger.error('Avatar upload error:', error);
         throw error;
@@ -74,9 +75,9 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
 
       await updateProfile.mutateAsync({ avatarUrl: null });
 
-      await supabase.auth.updateUser({
-        data: { avatar_url: null },
-      });
+      await observeAuthOperation('remove_avatar_metadata', () =>
+        supabase.auth.updateUser({ data: { avatar_url: null } }),
+      );
     } catch (error) {
       logger.error('Avatar delete error:', error);
       throw error;

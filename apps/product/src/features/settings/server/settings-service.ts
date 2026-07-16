@@ -9,6 +9,7 @@ import {
   type PublicUserSettingsRow,
 } from '@/lib/database';
 import { logger } from '@/lib/logger';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { invalidateUserTimezoneCache } from '@/lib/server/user-timezone-cache';
 import { ServiceError } from '@/lib/trpc/errors';
 
@@ -46,8 +47,14 @@ export class SettingsService {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      logger.error('UserSettings fetch error', { error });
-      throw new SettingsServiceError('FETCH_FAILED', error.message);
+      logger.error('User settings fetch failed');
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'settings',
+        operation: 'get_user_settings',
+      });
+      throw new SettingsServiceError('FETCH_FAILED', 'Failed to fetch user settings', {
+        cause: original,
+      });
     }
 
     if (!data) return null;
@@ -101,28 +108,50 @@ export class SettingsService {
       .select(publicUserSettingsSelect)
       .single();
 
-    if (!error && input.timezone !== undefined) {
-      invalidateUserTimezoneCache(userId);
+    if (error) {
+      logger.error('User settings update failed');
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'settings',
+        operation: 'update_user_settings',
+      });
+      throw new SettingsServiceError('UPDATE_FAILED', 'Failed to update user settings', {
+        cause: original,
+      });
     }
 
+    if (input.timezone !== undefined) invalidateUserTimezoneCache(userId);
+
     if (input.dismissedTrialEndedDialog !== undefined) {
-      await this.supabase.rpc('update_personalization', {
+      const { error: personalizationError } = await this.supabase.rpc('update_personalization', {
         p_user_id: userId,
         p_path: 'dismissedTrialEndedDialog',
         p_value: true,
       });
+      if (personalizationError) {
+        const original = captureUnexpectedDatabaseError(personalizationError, {
+          feature: 'settings',
+          operation: 'dismiss_trial_ended_dialog',
+        });
+        throw new SettingsServiceError('UPDATE_FAILED', 'Failed to update personalization', {
+          cause: original,
+        });
+      }
     }
     if (input.paymentErrorDialogLastShownAt !== undefined) {
-      await this.supabase.rpc('update_personalization', {
+      const { error: personalizationError } = await this.supabase.rpc('update_personalization', {
         p_user_id: userId,
         p_path: 'paymentErrorDialogLastShownAt',
         p_value: input.paymentErrorDialogLastShownAt,
       });
-    }
-
-    if (error) {
-      logger.error('UserSettings update error', { error });
-      throw new SettingsServiceError('UPDATE_FAILED', error.message);
+      if (personalizationError) {
+        const original = captureUnexpectedDatabaseError(personalizationError, {
+          feature: 'settings',
+          operation: 'update_payment_dialog_timestamp',
+        });
+        throw new SettingsServiceError('UPDATE_FAILED', 'Failed to update personalization', {
+          cause: original,
+        });
+      }
     }
 
     return { success: true, settings: data };
@@ -137,8 +166,14 @@ export class SettingsService {
 
     const { error } = await this.supabase.from('profiles').update(updateData).eq('id', userId);
     if (error) {
-      logger.error('Profile update error', { error });
-      throw new SettingsServiceError('UPDATE_FAILED', error.message);
+      logger.error('Profile update failed');
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'settings',
+        operation: 'update_profile',
+      });
+      throw new SettingsServiceError('UPDATE_FAILED', 'Failed to update profile', {
+        cause: original,
+      });
     }
 
     return { success: true };
@@ -152,8 +187,14 @@ export class SettingsService {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      logger.error('iCal token fetch error:', error);
-      throw new SettingsServiceError('FETCH_FAILED', error.message);
+      logger.error('iCal token fetch failed');
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'settings',
+        operation: 'get_ical_token',
+      });
+      throw new SettingsServiceError('FETCH_FAILED', 'Failed to fetch iCal token', {
+        cause: original,
+      });
     }
 
     const token = (data as Record<string, unknown> | null)?.ical_feed_token;
@@ -167,8 +208,14 @@ export class SettingsService {
       .upsert({ user_id: userId }, { onConflict: 'user_id' });
 
     if (error) {
-      logger.error('iCal token upsert error:', error);
-      throw new SettingsServiceError('UPDATE_FAILED', error.message);
+      logger.error('iCal token initialization failed');
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'settings',
+        operation: 'initialize_ical_token',
+      });
+      throw new SettingsServiceError('UPDATE_FAILED', 'Failed to initialize iCal token', {
+        cause: original,
+      });
     }
 
     const { data: updated, error: updateError } = await this.supabase
@@ -179,8 +226,14 @@ export class SettingsService {
       .single();
 
     if (updateError) {
-      logger.error('iCal token update error:', updateError);
-      throw new SettingsServiceError('UPDATE_FAILED', updateError.message);
+      logger.error('iCal token update failed');
+      const original = captureUnexpectedDatabaseError(updateError, {
+        feature: 'settings',
+        operation: 'regenerate_ical_token',
+      });
+      throw new SettingsServiceError('UPDATE_FAILED', 'Failed to regenerate iCal token', {
+        cause: original,
+      });
     }
 
     const token = (updated as Record<string, unknown>).ical_feed_token;
@@ -189,8 +242,8 @@ export class SettingsService {
 }
 
 export class SettingsServiceError extends ServiceError {
-  constructor(code: string, message: string) {
-    super(code, message);
+  constructor(code: string, message: string, options?: ErrorOptions) {
+    super(code, message, options);
     this.name = 'SettingsServiceError';
   }
 }

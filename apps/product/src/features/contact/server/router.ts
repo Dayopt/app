@@ -8,7 +8,7 @@ import { TRPCError } from '@trpc/server';
 
 import { logger } from '@/lib/logger';
 import { contactRateLimit } from '@/lib/rate-limit/upstash';
-import { handleServiceError } from '@/lib/trpc/errors';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { contactFormSchema } from '../schemas';
@@ -35,18 +35,20 @@ export const contactRouter = createTRPCRouter({
       const {
         data: { user },
         error: authError,
-      } = await ctx.supabase.auth.getUser();
+      } = await observeAuthOperation('contact_get_user', () => ctx.supabase.auth.getUser());
 
       if (authError) {
-        logger.error('Failed to get user for contact form', { error: authError });
-        handleServiceError(authError);
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required',
+          cause: authError,
+        });
       }
 
       const userEmail = user?.email ?? 'unknown';
       const userName = user?.user_metadata?.full_name ?? 'Unknown';
 
-      // 起票失敗時も deliverContactFeedback 内で内容がログ/Sentryに退避されるため、
-      // ユーザーへは常に成功を返す（フィードバックを失わせない）
+      // 起票失敗時は例外をclientへ返し、フォーム本文を保持したまま再送可能にする。
       const result = await deliverContactFeedback({
         userId: ctx.userId,
         userEmail,
@@ -57,8 +59,8 @@ export const contactRouter = createTRPCRouter({
       logger.info('Contact form submitted', {
         userId: ctx.userId,
         category: input.category,
-        delivered: result.delivered,
-        issueNumber: result.delivered ? result.issueNumber : undefined,
+        delivered: true,
+        issueNumber: result.issueNumber,
       });
 
       return { success: true as const };

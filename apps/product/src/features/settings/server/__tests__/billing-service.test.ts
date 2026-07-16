@@ -167,17 +167,19 @@ describe('billing-service', () => {
       ).resolves.toBeUndefined();
     });
 
-    it('存在しない stripe_customer_id: 例外なし（warn ログのみ）', async () => {
+    it('存在しない stripe_customer_id は更新失敗として扱う', async () => {
       // 0行更新を返す
       const updateMock = createChainableMock([]);
       const supabase = {
         from: () => updateMock,
       } as never;
 
-      // 例外を投げずに完了する
       await expect(
         syncSubscriptionStatus(supabase, 'cus_nonexistent', null, 'canceled'),
-      ).resolves.toBeUndefined();
+      ).rejects.toMatchObject({
+        code: 'UPDATE_FAILED',
+        message: 'No billing profile was updated for the Stripe customer',
+      });
     });
 
     it('DB更新エラーで BillingServiceError', async () => {

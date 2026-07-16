@@ -463,22 +463,28 @@ export type Database = {
       };
       stripe_webhook_events: {
         Row: {
+          claimed_at: string;
           event_id: string;
           event_type: string;
           id: string;
-          processed_at: string;
+          processed_at: string | null;
+          status: 'processing' | 'processed' | 'failed';
         };
         Insert: {
+          claimed_at?: string;
           event_id: string;
           event_type: string;
           id?: string;
-          processed_at?: string;
+          processed_at?: string | null;
+          status?: 'processing' | 'processed' | 'failed';
         };
         Update: {
+          claimed_at?: string;
           event_id?: string;
           event_type?: string;
           id?: string;
-          processed_at?: string;
+          processed_at?: string | null;
+          status?: 'processing' | 'processed' | 'failed';
         };
         Relationships: [];
       };
@@ -594,6 +600,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      claim_stripe_webhook_event: {
+        Args: {
+          p_event_id: string;
+          p_event_type: string;
+          p_stale_before: string;
+        };
+        Returns: string;
+      };
       batch_rename_tags: {
         Args: { p_new_names: string[]; p_tag_ids: string[]; p_user_id: string };
         Returns: number;

@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
 import { logger } from '@/lib/logger';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
@@ -50,9 +51,10 @@ export function DisplayNameDialog({ open, onOpenChange, currentName }: DisplayNa
       try {
         await updateProfile.mutateAsync({ fullName: displayName.trim() });
 
-        const { error: authError } = await supabase.auth.updateUser({
-          data: { full_name: displayName.trim() },
-        });
+        const { error: authError } = await observeAuthOperation(
+          'update_display_name_metadata',
+          () => supabase.auth.updateUser({ data: { full_name: displayName.trim() } }),
+        );
 
         if (authError) {
           logger.error('Auth metadata update error:', authError);

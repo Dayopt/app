@@ -9,12 +9,17 @@ import * as Sentry from '@sentry/nextjs';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
-/** ログ引数を200文字以内の文字列に変換（breadcrumb用） */
+/**
+ * breadcrumb には安定したログ名だけを残す。
+ *
+ * structured args を stringify すると、field 名を失った短い認証コードや検索語が
+ * beforeBreadcrumb の path-aware scrubber をすり抜けるため送信しない。
+ */
 function toBreadcrumbMessage(args: unknown[]): string {
-  return args
-    .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
-    .join(' ')
-    .slice(0, 200);
+  return (args.find((arg): arg is string => typeof arg === 'string') ?? '[structured log]').slice(
+    0,
+    200,
+  );
 }
 
 /** アプリケーション統一ロガー（error/warnはSentry breadcrumbも記録） */
