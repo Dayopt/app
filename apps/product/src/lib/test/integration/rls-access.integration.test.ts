@@ -789,6 +789,7 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       );
       expect(confirmError).toBeNull();
       expect(confirmed).toHaveLength(1);
+      expect(confirmed?.[0]).not.toHaveProperty('fulfillment_score');
 
       const { data: count, error: countError } = await supabaseB.rpc(
         'count_unused_recovery_codes',

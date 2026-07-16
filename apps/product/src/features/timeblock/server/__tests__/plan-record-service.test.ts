@@ -205,6 +205,18 @@ describe('RecordService.list', () => {
     expect(recordQuery.or).toHaveBeenCalledWith('id.is.null');
   });
 
+  it('non-empty一覧にfulfillment_scoreを含めない', async () => {
+    const record = createRecord();
+    const query = createChainableMock([record]);
+    const { service, mockSupabase } = createRecordService();
+    mockSupabase.from.mockReturnValue(query);
+
+    const result = await service.list({ userId: USER_ID });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).not.toHaveProperty('fulfillment_score');
+  });
+
   it('tag名一致をrecordのOR条件へ加える', async () => {
     const record = createRecord({ tag_id: TAG_ID });
     const recordQuery = createChainableMock([record]);
@@ -533,9 +545,8 @@ describe('PlanService soft delete', () => {
 describe('PlanService.confirmDay', () => {
   it('confirm_day_plans_to_records RPC へ user と day range を渡す', async () => {
     const record = createRecord({ source: 'from_plan' });
-    const legacyRecord = { ...record, fulfillment_score: 3 };
     const { service, mockSupabase } = createPlanService();
-    mockSupabase.rpc.mockResolvedValue({ data: [legacyRecord], error: null });
+    mockSupabase.rpc.mockResolvedValue({ data: [record], error: null });
 
     await expect(
       service.confirmDay({

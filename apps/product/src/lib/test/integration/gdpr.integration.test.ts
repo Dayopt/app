@@ -119,6 +119,12 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       start_at: '2026-01-03T09:00:00Z',
       end_at: '2026-01-03T10:00:00Z',
     });
+
+    const { error: settingsError } = await adminSupabase.from('user_settings').insert({
+      user_id: TEST_USER_ID,
+      timezone: 'Asia/Tokyo',
+    });
+    expect(settingsError).toBeNull();
   });
 
   afterAll(async () => {
@@ -133,6 +139,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     await adminSupabase.from('records').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('plans').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('tags').delete().eq('user_id', TEST_USER_ID);
+    await adminSupabase.from('user_settings').delete().eq('user_id', TEST_USER_ID);
 
     // テスト用ユーザーを削除（auth.usersから削除するとprofilesもカスケード削除される）
     await adminSupabase.auth.admin.deleteUser(TEST_USER_ID);
@@ -191,6 +198,9 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
         (record: { title?: string }) => record.title === 'GDPR Test Record',
       );
       expect(testRecord).toBeDefined();
+      expect(testRecord).not.toHaveProperty('fulfillment_score');
+      expect(result.data.userSettings).not.toBeNull();
+      expect(result.data.userSettings).not.toHaveProperty('chronotype_settings');
     });
 
     it('should include user tags in export', async () => {

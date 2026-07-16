@@ -359,7 +359,6 @@ export type Database = {
           deleted_at: string | null;
           end_at: string;
           external_calendar_event_id: string | null;
-          fulfillment_score: number | null;
           id: string;
           note: string | null;
           plan_id: string | null;
@@ -375,7 +374,6 @@ export type Database = {
           deleted_at?: string | null;
           end_at: string;
           external_calendar_event_id?: string | null;
-          fulfillment_score?: number | null;
           id?: string;
           note?: string | null;
           plan_id?: string | null;
@@ -391,7 +389,6 @@ export type Database = {
           deleted_at?: string | null;
           end_at?: string;
           external_calendar_event_id?: string | null;
-          fulfillment_score?: number | null;
           id?: string;
           note?: string | null;
           plan_id?: string | null;
@@ -529,7 +526,6 @@ export type Database = {
       };
       user_settings: {
         Row: {
-          chronotype_settings: Json | null;
           created_at: string;
           default_duration: number;
           default_view: string;
@@ -549,7 +545,6 @@ export type Database = {
           week_starts_on: number;
         };
         Insert: {
-          chronotype_settings?: Json | null;
           created_at?: string;
           default_duration?: number;
           default_view?: string;
@@ -569,7 +564,6 @@ export type Database = {
           week_starts_on?: number;
         };
         Update: {
-          chronotype_settings?: Json | null;
           created_at?: string;
           default_duration?: number;
           default_view?: string;
@@ -628,7 +622,6 @@ export type Database = {
           deleted_at: string | null;
           end_at: string;
           external_calendar_event_id: string | null;
-          fulfillment_score: number | null;
           id: string;
           note: string | null;
           plan_id: string | null;
