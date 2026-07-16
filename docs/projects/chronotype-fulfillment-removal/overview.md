@@ -1,6 +1,6 @@
 ---
-status: active
-last_verified: 2026-07-15
+status: done
+last_verified: 2026-07-16
 code:
   - apps/product/src/features/timeblock
   - apps/product/src/features/calendar
@@ -45,6 +45,8 @@ Chronotype と FulfillmentScore を Dayopt のプロダクト概念、runtime co
 4. 新規 migration で `user_settings.chronotype_settings` と `records.fulfillment_score` を drop する
 5. canonical schema と seed を更新し、generated types を再生成する
 6. Preview Branch と local schema で migration を検証し、production 適用後に対象語の現行残存がゼロであることを確認する
+
+Phase 1 と Phase 2 は 2026-07-16 に完了した。production の適用結果と最終契約は [summary.md](./summary.md) を参照する。
 
 ## Acceptance Criteria
 
