@@ -54,8 +54,8 @@
           "anthropic": "Anthropic, PBC — AI機能（チャット、週間レビューインサイト）。データ保管場所：米国。お客様のデータはAnthropicのAPI利用規約に基づいて処理され、モデルトレーニングには使用されません。",
           "openai": "OpenAI, LLC — AI機能（オプション、ユーザーが自身のAPIキーを提供した場合）。データ保管場所：米国。APIを通じて処理されるデータは、OpenAIのAPIデータ利用ポリシーに基づき、モデルトレーニングには使用されません。",
           "resend": "Resend, Inc. — トランザクションメール配信（アカウント通知、請求確認）。データ保管場所：米国",
-          "upstash": "Upstash, Inc. — サーバーレスRedisによるレート制限および不正利用防止。データ保管場所：米国。IPハッシュとリクエスト数のみが一時的に保存されます。",
-          "github": "GitHub, Inc. — お問い合わせフォームの送信内容（氏名、メールアドレス、カテゴリ、本文）は、アクセスを制限したprivate repositoryに限ってIssueとして保管します。Webサイトからの送信前にrepositoryがprivateであることを検証します。データ保管場所は米国です。",
+          "upstash": "Upstash, Inc. — サーバーレスRedisによるレート制限および不正利用防止。データ保管場所：米国。ハッシュ化した技術的なリクエスト識別子とリクエスト数を一時的に保存します。",
+          "github": "GitHub, Inc. — お問い合わせフォームの送信内容（氏名、メールアドレス、カテゴリ、本文）は、アクセスを制限したprivate repositoryに限ってIssueとして保管します。ProductとWebサイトのすべての送信前にrepositoryがprivateであることを検証します。データ保管場所は米国です。",
           "cloudflare": "Cloudflare, Inc. — フォームのbot対策としてTurnstileを使用します。検証のため、Turnstile tokenと送信元IPアドレスをCloudflareへ送ります。データはCloudflareのglobal networkで処理されます。",
           "changes": "新しいサブプロセッサーの導入または既存のサブプロセッサー契約の重要な変更を行う場合、少なくとも30日前に通知します。"
         },

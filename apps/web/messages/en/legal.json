@@ -55,8 +55,8 @@
           "anthropic": "Anthropic, PBC — AI-powered features (chat, weekly review insights). Data location: United States. Your data is processed under Anthropic's API terms and is not used for model training.",
           "openai": "OpenAI, LLC — AI-powered features (optional, when user provides their own API key). Data location: United States. Data processed via API is not used for model training per OpenAI's API data usage policy.",
           "resend": "Resend, Inc. — Transactional email delivery (account notifications, billing confirmations). Data location: United States",
-          "upstash": "Upstash, Inc. — Rate limiting and abuse prevention via serverless Redis. Data location: United States. Only IP hashes and request counts are stored temporarily.",
-          "github": "GitHub, Inc. — Contact form submissions (name, email address, category, and message) are stored as Issues only in an access-restricted private repository. Repository privacy is verified before a Website submission. Data location: United States.",
+          "upstash": "Upstash, Inc. — Rate limiting and abuse prevention via serverless Redis. Data location: United States. Hashed technical request identifiers and request counts are stored temporarily.",
+          "github": "GitHub, Inc. — Contact form submissions (name, email address, category, and message) are stored as Issues only in an access-restricted private repository. Repository privacy is verified before every Product or Website submission. Data location: United States.",
           "cloudflare": "Cloudflare, Inc. — Turnstile bot protection for forms. A Turnstile token and the requester's IP address are sent to Cloudflare for verification. Data is processed on Cloudflare's global network.",
           "changes": "We will notify you at least 30 days before engaging a new sub-processor or making material changes to existing sub-processor arrangements."
         },
