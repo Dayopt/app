@@ -5,6 +5,8 @@ import { withSentryConfig } from '@sentry/nextjs';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { fileURLToPath } from 'url';
 
+import { assertProductOperationalProductionBuildEnv } from './production-build-gate.mjs';
+
 const { loadEnvConfig } = nextEnv;
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
 loadEnvConfig(repoRoot);
@@ -16,6 +18,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const isSentryProductionBuild = assertProductionSentryBuildEnv(process.env, 'Product');
+assertProductOperationalProductionBuildEnv(process.env);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

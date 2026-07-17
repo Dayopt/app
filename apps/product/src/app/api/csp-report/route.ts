@@ -1,17 +1,51 @@
+import { dayoptUrls } from '@dayopt/config';
 import { sanitizeObservabilityUrl } from '@dayopt/observability';
 import * as Sentry from '@sentry/nextjs';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
-import { apiRateLimit, withUpstashRateLimit } from '@/lib/rate-limit/upstash';
+import {
+  cspReportGlobalRateLimit,
+  cspReportRateLimit,
+  withUpstashRateLimit,
+} from '@/lib/rate-limit/upstash';
+import { captureUnexpectedError } from '@/lib/sentry';
 
 const MAX_REPORT_BYTES = 16 * 1024;
 const MAX_URI_LENGTH = 4096;
 const MAX_POLICY_LENGTH = 12_000;
+const CSP_REPORT_CONTENT_TYPE = 'application/csp-report';
+const TRUSTED_DOCUMENT_ORIGIN = new URL(dayoptUrls.product).origin;
 
 /** ブラウザ拡張機能由来のCSP違反はSentryに送信しない（クォータ節約） */
 const IGNORED_URI_PREFIXES = ['chrome-extension://', 'moz-extension://', 'safari-extension://'];
+const KNOWN_CSP_DIRECTIVES = new Set([
+  'base-uri',
+  'child-src',
+  'connect-src',
+  'default-src',
+  'font-src',
+  'form-action',
+  'frame-ancestors',
+  'frame-src',
+  'img-src',
+  'manifest-src',
+  'media-src',
+  'object-src',
+  'prefetch-src',
+  'report-uri',
+  'require-trusted-types-for',
+  'script-src',
+  'script-src-attr',
+  'script-src-elem',
+  'style-src',
+  'style-src-attr',
+  'style-src-elem',
+  'trusted-types',
+  'upgrade-insecure-requests',
+  'worker-src',
+]);
 
 const cspReportSchema = z.object({
   'csp-report': z
@@ -39,6 +73,10 @@ class ReportTooLargeError extends Error {}
  */
 
 export async function POST(request: NextRequest) {
+  if (!hasCspReportContentType(request.headers.get('content-type'))) {
+    return NextResponse.json({ error: 'Unsupported content type' }, { status: 415 });
+  }
+
   const rateLimitResponse = await checkRateLimit(request);
   if (rateLimitResponse) return rateLimitResponse;
 
@@ -52,6 +90,9 @@ export async function POST(request: NextRequest) {
     }
 
     const cspReport = parseResult.data['csp-report'];
+    if (!hasTrustedDocumentOrigin(cspReport['document-uri'])) {
+      return NextResponse.json({ error: 'Invalid report origin' }, { status: 400 });
+    }
     const rawBlockedUri = cspReport['blocked-uri'];
     const documentUri = sanitizeReportUri(cspReport['document-uri']);
     const blockedUri = sanitizeReportUri(rawBlockedUri);
@@ -105,16 +146,41 @@ export async function POST(request: NextRequest) {
 }
 
 async function checkRateLimit(request: NextRequest): Promise<NextResponse | null> {
-  const result = await withUpstashRateLimit(request, apiRateLimit);
-  if (!result) {
+  const clientResult = await withUpstashRateLimit(request, cspReportRateLimit);
+  if (clientResult.state !== 'checked') {
     logger.warn('[CSP Report Rejected]', { reason: 'rate_limit_unavailable' });
-    return NextResponse.json(
-      { error: 'Temporarily unavailable' },
-      { status: 503, headers: { 'Retry-After': '60' } },
-    );
+    return rateLimitUnavailableResponse();
   }
-  if (result.success) return null;
+  if (!clientResult.success) return rateLimitedResponse(clientResult);
 
+  if (!cspReportGlobalRateLimit) {
+    logger.warn('[CSP Report Rejected]', { reason: 'global_rate_limit_unavailable' });
+    return rateLimitUnavailableResponse();
+  }
+
+  try {
+    const globalResult = await cspReportGlobalRateLimit.limit('all-clients');
+    if (!globalResult.success) return rateLimitedResponse(globalResult);
+    return null;
+  } catch (error) {
+    const original =
+      error instanceof Error ? error : new Error('CSP global rate limit check failed');
+    captureUnexpectedError(original, {
+      feature: 'security',
+      operation: 'csp_global_rate_limit_check',
+      route: '/api/csp-report',
+      source: 'upstash',
+    });
+    logger.warn('[CSP Report Rejected]', { reason: 'global_rate_limit_unavailable' });
+    return rateLimitUnavailableResponse();
+  }
+}
+
+function rateLimitedResponse(result: {
+  limit: number;
+  remaining: number;
+  reset: number;
+}): NextResponse {
   return NextResponse.json(
     { error: 'Too many reports' },
     {
@@ -126,6 +192,13 @@ async function checkRateLimit(request: NextRequest): Promise<NextResponse | null
         'Retry-After': Math.max(1, Math.ceil((result.reset - Date.now()) / 1000)).toString(),
       },
     },
+  );
+}
+
+function rateLimitUnavailableResponse(): NextResponse {
+  return NextResponse.json(
+    { error: 'Temporarily unavailable' },
+    { status: 503, headers: { 'Retry-After': '60' } },
   );
 }
 
@@ -172,7 +245,19 @@ async function readJsonBody(request: NextRequest): Promise<unknown> {
 function normalizeDirective(value: string): string {
   const directive = value.trim().toLowerCase().split(/\s+/u)[0] ?? '';
   const safeDirective = directive.replace(/[^a-z0-9-]/gu, '').slice(0, 64);
-  return safeDirective || 'unknown';
+  return KNOWN_CSP_DIRECTIVES.has(safeDirective) ? safeDirective : 'unknown';
+}
+
+function hasCspReportContentType(value: string | null): boolean {
+  return value?.split(';', 1)[0]?.trim().toLowerCase() === CSP_REPORT_CONTENT_TYPE;
+}
+
+function hasTrustedDocumentOrigin(value: string): boolean {
+  try {
+    return new URL(value).origin === TRUSTED_DOCUMENT_ORIGIN;
+  } catch {
+    return false;
+  }
 }
 
 function sanitizeReportUri(value: string | undefined): string | undefined {
