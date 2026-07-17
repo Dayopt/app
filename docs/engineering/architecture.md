@@ -533,6 +533,7 @@ Dayopt の monorepo は、アプリを増やすためだけではなく、責務
 - `packages/components`（旧 `packages/ui`）: React UI primitives / reusable components。Supabase, Stripe, feature-specific business rules は入れない。
 - `packages/config`: public constants / metadata / URL definitions。secrets, request-scoped values, server-only clients は入れない。
 - `packages/i18n`: product / web 共通の next-intl routing / navigation / request locale fallback。message loader や app 固有 Provider は入れない。
+- `packages/observability`: product / web 共通のPII sanitizer、技術context型、明示的cancel判定、browser telemetry consent契約。root exportはprovider非依存とし、明示的な`./build-gate` subpathだけにSentry Production buildのcredential / upload失敗policyを置く。Sentry SDK、Next.js、app固有capture経路は入れない。
 - `packages/domain`: Dayopt domain model / pure types / helpers。DB row shape, React, Next, Supabase, Zustand は入れない。消費者は現状 product のみだが、純粋ロジックの隔離層として package を維持する。
 - `packages/assets`: 複数 app で共有する静的素材の原本（logo / app icon / OGP image）。React component は入れない。
 - `apps/product/src/lib/database`（旧 `packages/database`）: Supabase/Postgres boundary。generated types / table names / row helper types を扱う。product 専用のため package ではなく product-local。
@@ -551,6 +552,7 @@ apps/product, apps/web
   -> packages/i18n
   -> packages/config
   -> packages/billing
+  -> packages/observability
 
 apps/product
   -> packages/domain
@@ -561,8 +563,9 @@ apps/product
 
 ### Current Phase
 
-`packages/foundations`, `packages/components`, `packages/config`, `packages/domain` は最小の公開面を持つ package として運用中。
+`packages/foundations`, `packages/components`, `packages/config`, `packages/domain`, `packages/observability` は最小の公開面を持つ package として運用中。
 `packages/i18n` は `packages/config` の locale 定義を使い、product / web に共通する next-intl adapter の公開面を環境別 subpath に限定して提供する。
+`packages/observability` のroot exportはprovider非依存のprivacy / consent契約だけを公開する。Sentryの初期化、DSN値、sampling、upload実行、app固有routeは各appに残し、Production build gateの純粋な検証policyだけを`./build-gate` subpathで共有する。
 `packages/domain` は Dayopt の意味を表すpure TypeScript packageで、`TimeRange`, `TimeblockOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`等の軽い型・定数・helperを持つ。
 
 DB boundary は `apps/product/src/lib/database`（旧 `packages/database`、product-local 化済み）が Supabase generated types と DB row helper を担う。DB access を含む service は product 側に残す。
@@ -577,6 +580,7 @@ Source of truth:
 
 - URL / domain / contact / public brand constants: `packages/config`
 - next-intl routing / navigation / request locale fallback: `packages/i18n`
+- Sentry event sanitizer / technical context / explicit cancellation / browser telemetry consent / Production build gate policy: `packages/observability`
 - Plan / Record source・time range・time conflict / date-time preference / pure Dayopt concept: `packages/domain`
 - Supabase generated type / table name / row helper type: `apps/product/src/lib/database`
 - Free / Pro plan / subscription status / `pro_access` entitlement / public pricing: `packages/billing`
@@ -655,6 +659,25 @@ product / web が共有する next-intl adapter の置き場。`packages/config`
 - message JSON / namespace discovery /固定 namespace 配列
 - app 固有 Provider / plugin entrypoint
 - Next.js / React の直接 import
+
+#### `packages/observability`
+
+Product / Webが同じprivacy boundaryとbrowser telemetry同意判定を使うためのprovider非依存契約。Sentry protocol IDを保持しながら、任意content、secret、URL queryをdrop-by-defaultで除去する。
+
+入れてよいもの:
+
+- pure TypeScriptのevent / transaction / span / breadcrumb sanitizer
+- 技術contextのallowlist型と正規化
+- 明示的なuser cancellation判定
+- 既存`dayopt_cookie_consent`形式を読むbrowser telemetry consent helper
+- explicitな`./build-gate` subpathに置く、secret値を保持しないProduction build-time policy helper
+
+入れないもの:
+
+- `@sentry/*` SDK、DSN値、sampling rate、release / source map uploadの実行
+- Next.js instrumentation / route handler / error boundary
+- app固有のfeature、logger、capture経路
+- operator smokeやapp固有runtime Production env
 
 #### `packages/domain`
 

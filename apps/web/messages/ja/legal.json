@@ -17,7 +17,7 @@
           "title": "収集する情報",
           "accountInfo": "アカウント情報（メールアドレス、名前、プロフィール画像）",
           "usageData": "サービス利用データ（タスク、カレンダー、設定）",
-          "technicalData": "技術データ（IPアドレス、ブラウザ情報、デバイス情報）",
+          "technicalData": "最小限の技術診断情報（アプリケーションのバージョン、ルートのパス、ブラウザまたはデバイスの種別、エラーまたはトレースの識別子）。Sentryイベントには、リクエスト本文、メールアドレス、URLのクエリ文字列、Cookie、認証情報を含めません。",
           "cookies": "Cookie及び類似技術"
         },
         "dataUsage": {
@@ -25,15 +25,17 @@
           "serviceProvision": "サービスの提供・運営・改善",
           "userSupport": "ユーザーサポートとお問い合わせ対応",
           "security": "不正利用の防止とセキュリティ維持",
-          "analytics": "サービス分析と機能改善",
+          "analytics": "サービスの信頼性を保つためのProductionサーバー・Edgeエラー監視と、分析への同意後に限ったブラウザエラー監視、パフォーマンス分析",
           "communication": "重要なお知らせとサービス更新の通知"
         },
         "dataSharing": {
           "title": "第三者提供",
           "intro": "当サービスは以下のサービスプロバイダーと連携しています：",
           "supabase": "Supabase（認証・データベース）",
-          "vercel": "Vercel（ホスティング）",
-          "sentry": "Sentry（エラー監視）",
+          "vercel": "Vercel（ホスティング。Vercel AnalyticsとSpeed Insightsは分析への同意後のみ）",
+          "sentry": "Sentry（Productionのサーバー・Edgeエラー監視。ブラウザエラー監視は分析への同意後のみ。Session Replayは無効）。ProductとWebサイトのデータは別々のSentryプロジェクトで管理します。",
+          "github": "GitHub（お問い合わせフォーム送信内容のアクセス制限付き保管）",
+          "cloudflare": "Cloudflare Turnstile（フォームのbot対策）",
           "note": "これらのプロバイダーは、各社のプライバシーポリシーに基づいて情報を管理します。"
         },
         "dataOwnership": {
@@ -46,14 +48,15 @@
           "title": "サブプロセッサー",
           "intro": "当サービスの提供を支援するため、以下のサブプロセッサーを利用しています。各サブプロセッサーとはデータ処理契約（DPA）を締結しています：",
           "supabase": "Supabase, Inc. — 認証およびデータベースサービス。データ保管場所：AWS US-East-1（米国バージニア北部）",
-          "vercel": "Vercel, Inc. — ホスティング、サーバーレス関数、エッジ配信、ウェブ分析（Vercel Analytics / Speed Insights）。データ保管場所：グローバルエッジネットワーク",
-          "sentry": "Functional Software, Inc.（Sentry） — エラー監視および診断。データ保管場所：米国",
+          "vercel": "Vercel, Inc. — ホスティング、サーバーレス関数、Edge配信。Vercel AnalyticsとSpeed Insightsは分析への同意後に限りブラウザで動作します。データ保管場所はグローバルエッジネットワークです。",
+          "sentry": "Functional Software, Inc.（Sentry） — 分析への同意にかかわらず、サニタイズ済みのProductionサーバー・Edgeエラー監視を行います。ブラウザエラー監視は分析への同意後のみ動作します。Session Replayは、現行SDKでReplay payloadからURLのクエリ文字列を確実に除去できないため無効にしています。ProductとWebサイトのデータは別々のプロジェクトで管理します。Sentryイベントには、リクエスト本文、メールアドレス、URLのクエリ文字列、Cookie、認証情報を含めません。データ保管場所は米国です。",
           "stripe": "Stripe, Inc. — 決済処理およびサブスクリプション管理。データ保管場所：米国。StripeはPCI DSS Level 1認定を取得しています。クレジットカード番号は当社サーバーに保存されません。",
           "anthropic": "Anthropic, PBC — AI機能（チャット、週間レビューインサイト）。データ保管場所：米国。お客様のデータはAnthropicのAPI利用規約に基づいて処理され、モデルトレーニングには使用されません。",
           "openai": "OpenAI, LLC — AI機能（オプション、ユーザーが自身のAPIキーを提供した場合）。データ保管場所：米国。APIを通じて処理されるデータは、OpenAIのAPIデータ利用ポリシーに基づき、モデルトレーニングには使用されません。",
           "resend": "Resend, Inc. — トランザクションメール配信（アカウント通知、請求確認）。データ保管場所：米国",
-          "upstash": "Upstash, Inc. — サーバーレスRedisによるレート制限および不正利用防止。データ保管場所：米国。IPハッシュとリクエスト数のみが一時的に保存されます。",
-          "google": "Google LLC — フォームでのボット防止のためのreCAPTCHA v2/v3。Googleは利用データを収集する場合があり、Googleのプライバシーポリシーが適用されます。",
+          "upstash": "Upstash, Inc. — サーバーレスRedisによるレート制限および不正利用防止。データ保管場所：米国。ハッシュ化した技術的なリクエスト識別子とリクエスト数を一時的に保存します。",
+          "github": "GitHub, Inc. — お問い合わせフォームの送信内容（氏名、メールアドレス、カテゴリ、本文）は、アクセスを制限したprivate repositoryに限ってIssueとして保管します。ProductとWebサイトのすべての送信前にrepositoryがprivateであることを検証します。データ保管場所は米国です。",
+          "cloudflare": "Cloudflare, Inc. — フォームのbot対策としてTurnstileを使用します。検証のため、Turnstile tokenと送信元IPアドレスをCloudflareへ送ります。データはCloudflareのglobal networkで処理されます。",
           "changes": "新しいサブプロセッサーの導入または既存のサブプロセッサー契約の重要な変更を行う場合、少なくとも30日前に通知します。"
         },
         "internationalTransfers": {
@@ -67,8 +70,8 @@
           "title": "処理の法的根拠",
           "intro": "当サービスは、以下の法的根拠に基づいて個人データを処理します（GDPRおよび類似の規制に基づく）：",
           "contract": "契約の履行 — お客様がご登録いただいたサービスの提供に必要な処理（アカウント管理、タスク保存、カレンダー同期を含む）",
-          "consent": "同意 — 分析Cookieやマーケティングコミュニケーションへのオプトインなど、お客様が明示的な同意を行った場合",
-          "legitimate": "正当な利益 — サービス改善、セキュリティ監視、不正防止のための処理（お客様の権利に優先しない範囲において）",
+          "consent": "同意 — ブラウザ版Sentry、Vercel Analytics、Speed Insightsは、分析へ同意した場合に限り動作します",
+          "legitimate": "正当な利益 — サニタイズ済みのProductionサーバー・Edgeエラー監視、セキュリティ監視、不正防止のための処理（お客様の権利に優先しない範囲において）",
           "legal": "法的義務 — 適用される法律、規制、または法的手続きに従うために必要な処理"
         },
         "dataProcessing": {
@@ -76,7 +79,7 @@
           "intro": "以下に、個人データの各カテゴリの処理方法を説明します：",
           "accountData": "アカウントデータ（メールアドレス、名前、アバター） — アカウントの作成・管理、本人確認、サービス関連の通知の送信に使用されます",
           "usageData": "利用データ（タスク、プラン、カレンダーエントリ、設定） — コアサービス機能の提供、生産性に関するインサイトの生成、機能改善に使用されます",
-          "technicalData": "技術データ（IPアドレス、ブラウザ、デバイス情報） — セキュリティ監視、パフォーマンス最適化、エラー診断に使用されます",
+          "technicalData": "最小限の技術診断情報（アプリケーションのバージョン、ルートのパス、ブラウザまたはデバイスの種別、エラーまたはトレースの識別子） — Productionでは、予期しない障害の調査のためにサニタイズ済みのサーバー・Edge診断情報を処理します。ブラウザの診断情報とパフォーマンスデータは分析への同意後のみ処理します。Sentryイベントには、リクエスト本文、メールアドレス、URLのクエリ文字列、Cookie、認証情報を含めません。",
           "automated": "当サービスは、お客様に法的または同様に重大な影響を及ぼす自動化された意思決定やプロファイリングを行いません。AI機能（週間レビューインサイトなど）は提案のみを提供し、お客様に代わって意思決定を行うことはありません。",
           "exportInfo": "アカウント設定からいつでも標準形式（JSON、CSV）でデータをエクスポートできます。データポータビリティをサポートしており、お客様のデータを他のサービスに移行することが可能です。"
         },
@@ -114,11 +117,11 @@
         },
         "cookies": {
           "title": "Cookieについて",
-          "intro": "当サービスは、ユーザー体験の向上のためにCookieを使用します。",
+          "intro": "当サービスの運営に必要なCookieとローカルストレージを使用します。任意のブラウザ計測は、分析への同意によって制御できます。",
           "essential": "必須Cookie（ログイン状態の維持）",
-          "analytics": "分析Cookie（利用状況の把握）",
+          "analytics": "任意の分析技術（ブラウザ版Sentry、Vercel Analytics、Speed Insights）",
           "preference": "設定Cookie（ユーザー設定の保存）",
-          "control": "ブラウザ設定でCookieを無効化できますが、一部機能が制限される場合があります。",
+          "control": "分析を拒否した場合、任意のブラウザ計測は起動せず、主要機能は引き続き利用できます。サービス障害の診断に必要なため、サニタイズ済みのProductionサーバー・Edgeエラー監視は継続します。",
           "policyLink": "Cookieの使用に関する詳細は、Cookieポリシーをご確認ください。"
         },
         "dataBreach": {
@@ -349,8 +352,8 @@
           },
           "analytics": {
             "name": "分析Cookie",
-            "description": "訪問者がサービスをどのように利用しているかを理解するためのCookieです。すべての分析データは集約され匿名化されます。",
-            "examples": "ページビュー、機能使用パターン、パフォーマンス指標"
+            "description": "ブラウザエラーの診断とパフォーマンス・利用状況の把握に使う、任意のCookieおよび類似のブラウザ技術です。ブラウザ版Sentry、Vercel Analytics、Speed Insightsは分析への同意後のみ起動します。Session Replayは無効にしています。",
+            "examples": "ブラウザエラー、ページビュー、パフォーマンス指標"
           },
           "preference": {
             "name": "設定Cookie",
@@ -392,34 +395,34 @@
             "duration": "1年"
           },
           "cookieConsent": {
-            "name": "cookie-consent",
+            "name": "dayopt_cookie_consent（ローカルストレージ）",
             "provider": "Dayopt",
             "purpose": "Cookie同意状態の記録",
             "category": "必須",
-            "duration": "1年"
+            "duration": "削除されるまで"
           },
           "vercelAnalytics": {
             "name": "va_*",
             "provider": "Vercel",
-            "purpose": "ウェブ分析（ページビュー、パフォーマンス指標）",
+            "purpose": "分析への同意後のVercel AnalyticsとSpeed Insights",
             "category": "分析",
             "duration": "セッション"
           },
-          "recaptcha": {
-            "name": "_GRECAPTCHA",
-            "provider": "Google",
-            "purpose": "フォームでのボット防止とスパム防止",
+          "turnstile": {
+            "name": "Cloudflare Turnstileのブラウザ技術",
+            "provider": "Cloudflare",
+            "purpose": "フォームのbot・spam対策。検証tokenとIPアドレスをCloudflareが処理します",
             "category": "必須",
-            "duration": "6ヶ月"
+            "duration": "検証ごと。provider側で管理"
           }
         },
         "thirdParty": {
           "title": "サードパーティCookie",
-          "content": "一部のCookieは、当サービスのページに表示されるサードパーティサービスによって設定されます。当社はこれらのCookieを管理していません。当サービスを通じてCookieを設定するサードパーティは以下の通りです：",
-          "vercel": "Vercel — ホスティングとパフォーマンス分析（Vercel Analytics / Speed Insights）。ページ読み込み時間の測定、ページビューの追跡、配信の最適化に使用されます。データは集約され匿名化されます。",
-          "sentry": "Sentry — エラー監視と診断。アプリケーションエラーの検出と診断に使用され、信頼性の向上に役立てています。",
-          "recaptcha": "Google reCAPTCHA — フォーム（お問い合わせ、サインアップ）でのボット防止。Googleはデバイスおよびアプリケーションデータなどのハードウェアおよびソフトウェア情報を収集し、分析のためにGoogleに送信する場合があります。Googleのプライバシーポリシーおよび利用規約が適用されます。",
-          "note": "各プロバイダーのCookieの使用方法については、各社のプライバシーポリシーをご参照ください。"
+          "content": "一部のサードパーティサービスは、サービス運営に必要なサーバー診断情報を処理するか、任意のCookieおよび類似のブラウザ技術を使用します。任意のブラウザ計測は、分析への同意がない限り起動しません。",
+          "vercel": "Vercel — ホスティングと配信は分析への同意がなくても提供します。Vercel AnalyticsとSpeed Insightsは分析への同意後に限りブラウザで動作します。",
+          "sentry": "Sentry — 分析への同意にかかわらず、サニタイズ済みのProductionサーバー・Edgeエラー監視を行います。ブラウザ版Sentryは分析への同意後のみ動作します。Session Replayは、現行SDKでReplay payloadからURLのクエリ文字列を確実に除去できないため無効にしています。ProductとWebサイトのデータは別々のSentryプロジェクトで管理します。Sentryイベントには、リクエスト本文、メールアドレス、URLのクエリ文字列、Cookie、認証情報を含めません。",
+          "turnstile": "Cloudflare Turnstile — フォームに必要なbot対策です。検証tokenと送信元IPアドレスをCloudflareへ送ります。Cloudflareは同社のプライバシーポリシーに基づき、必要なブラウザ保存領域とdevice signalを使用する場合があります。",
+          "note": "各プロバイダーによるデータ処理とブラウザ技術の使用については、各社のプライバシーポリシーをご参照ください。"
         },
         "manageCookies": {
           "title": "Cookieの管理方法",
@@ -431,7 +434,7 @@
         },
         "impact": {
           "title": "Cookie無効化の影響",
-          "content": "必須Cookieを無効にすると、ログインやコア機能の使用ができなくなります。設定Cookieを無効にすると、言語やテーマなどの設定がセッション間で記憶されなくなります。分析Cookieを無効にしても、サービスの利用には影響ありません。"
+          "content": "必須Cookieを無効にすると、サインインや主要機能の使用ができなくなります。設定Cookieを無効にすると、言語やテーマなどの設定がセッション間で記憶されなくなります。分析を拒否しても主要機能には影響せず、ブラウザ版Sentry、Vercel Analytics、Speed Insightsは起動しません。Session Replayは無効にしています。サービス障害を診断するため、サニタイズ済みのProductionサーバー・Edgeエラー監視は継続します。"
         },
         "doNotTrack": {
           "title": "Do Not Trackシグナル",

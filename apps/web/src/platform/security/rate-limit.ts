@@ -7,11 +7,14 @@ import { PHASE_PRODUCTION_BUILD } from 'next/constants';
  * レート制限設定
  *
  * Upstash Redis を使用したレート制限。
- * 環境変数が設定されていない場合はレート制限をスキップ（開発環境用）
+ * 環境変数がない場合、Preview / Developmentだけはpass-throughにし、
+ * Vercel Productionではfail-closedにする。
  */
 
 const hasRedis = !!(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN);
 const isProductionBuild = process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD;
+const isVercelProduction = env.VERCEL_ENV === 'production';
+const RATE_LIMIT_TIMEOUT_MS = 2_000;
 
 // Redis クライアント（Upstash 設定時のみ）
 const redis = hasRedis
@@ -34,6 +37,19 @@ if (!hasRedis && !isProductionBuild) {
  */
 type RatelimitResponse = Awaited<ReturnType<Ratelimit['limit']>>;
 
+export class RateLimitUnavailableError extends Error {
+  constructor() {
+    super('Rate-limit backend is unavailable');
+    this.name = 'RateLimitUnavailableError';
+  }
+}
+
+/** Upstash returns success=true on SDK timeout; convert that fail-open result into an error. */
+export function requireAvailableRateLimitResult(result: RatelimitResponse): RatelimitResponse {
+  if (result.reason === 'timeout') throw new RateLimitUnavailableError();
+  return result;
+}
+
 /**
  * Redis 未設定時のパススルー結果
  */
@@ -47,33 +63,43 @@ const passthroughResult: RatelimitResponse = {
 };
 
 /**
- * Ratelimit または Redis 未設定時のパススルーラッパー
+ * Ratelimit wrapper。Redis未設定のVercel Productionはfail-closedにする。
  */
 function createRateLimiter(
   limiter: ReturnType<typeof Ratelimit.slidingWindow>,
   prefix: string,
 ): { limit: (identifier: string) => Promise<RatelimitResponse> } {
   if (!redis) {
-    return { limit: async () => passthroughResult };
+    return {
+      limit: async () => {
+        if (isVercelProduction) throw new RateLimitUnavailableError();
+        return passthroughResult;
+      },
+    };
   }
 
-  return new Ratelimit({
+  const rateLimit = new Ratelimit({
     redis,
     limiter,
     analytics: false,
     prefix,
+    timeout: RATE_LIMIT_TIMEOUT_MS,
   });
+  return {
+    limit: async (identifier) => requireAvailableRateLimitResult(await rateLimit.limit(identifier)),
+  };
 }
 
 /**
  * コンタクトフォーム用レート制限
  *
  * - 同一IPから5分間に3回まで
- * - Upstash 未設定時はレート制限なし
+ * - Upstash 未設定時はPreview / Developmentだけレート制限なし
+ * - Vercel Productionでは未設定・timeoutともfail-closed
  */
 export const contactRateLimit = createRateLimiter(
   Ratelimit.slidingWindow(3, '5 m'),
-  'ratelimit:contact',
+  'ratelimit:web:contact',
 );
 
 /**
@@ -83,8 +109,28 @@ export const contactRateLimit = createRateLimiter(
  */
 export const searchRateLimit = createRateLimiter(
   Ratelimit.slidingWindow(30, '1 m'),
-  'ratelimit:search',
+  'ratelimit:web:search',
 );
+
+/** CSP reports are unauthenticated browser input and need a separate low-volume quota. */
+export const cspReportRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(20, '1 m'),
+  'ratelimit:web:csp-report',
+);
+
+/** Bound aggregate CSP ingestion even when abuse is distributed across many IPs. */
+export const cspReportGlobalRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(120, '1 m'),
+  'ratelimit:web:csp-report-global',
+);
+
+/** Persist only a one-way IP-derived identifier in Upstash. */
+export async function hashRateLimitIdentifier(identifier: string): Promise<string> {
+  const bytes = new Uint8Array(
+    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identifier)),
+  );
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 /**
  * IP アドレスの取得

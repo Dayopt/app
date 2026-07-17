@@ -36,7 +36,7 @@ export default async function PrivacyPolicyPage({ params }: PageProps) {
   const t = await getTranslations({ locale });
 
   // 最終更新日（実際のプロジェクトでは、CMSや設定ファイルから取得）
-  const lastUpdated = '2026-03-23';
+  const lastUpdated = '2026-07-17';
 
   return (
     <div className="bg-background container mx-auto min-h-screen max-w-4xl px-4 py-12 md:px-8 md:py-16">
@@ -100,6 +100,8 @@ export default async function PrivacyPolicyPage({ params }: PageProps) {
             <li>{t('legal.privacy.sections.dataSharing.supabase')}</li>
             <li>{t('legal.privacy.sections.dataSharing.vercel')}</li>
             <li>{t('legal.privacy.sections.dataSharing.sentry')}</li>
+            <li>{t('legal.privacy.sections.dataSharing.github')}</li>
+            <li>{t('legal.privacy.sections.dataSharing.cloudflare')}</li>
           </ul>
           <p className="text-muted-foreground mt-4 text-sm">
             {t('legal.privacy.sections.dataSharing.note')}
@@ -137,7 +139,8 @@ export default async function PrivacyPolicyPage({ params }: PageProps) {
             <li>{t('legal.privacy.sections.subProcessors.openai')}</li>
             <li>{t('legal.privacy.sections.subProcessors.resend')}</li>
             <li>{t('legal.privacy.sections.subProcessors.upstash')}</li>
-            <li>{t('legal.privacy.sections.subProcessors.google')}</li>
+            <li>{t('legal.privacy.sections.subProcessors.github')}</li>
+            <li>{t('legal.privacy.sections.subProcessors.cloudflare')}</li>
           </ul>
           <p className="text-muted-foreground mt-4 text-sm">
             {t('legal.privacy.sections.subProcessors.changes')}

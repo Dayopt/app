@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-07-16
 ---
 
 # セキュリティ方針
@@ -332,93 +332,36 @@ CREATE TABLE audit_logs (
 
 ## CSP違反モニタリング
 
-### Report-Onlyモード（Phase 1-2）
+ProductのCSPは`apps/product/src/proxy.ts`で強制し、違反は`/api/csp-report`へ送る。report endpointは公開入力境界として次を適用する。
 
-現在CSPはReport-Onlyモードで動作中。違反は記録されるが、ブロックはされない。
-
-**CSP違反エンドポイント**: `/api/csp-report`
-
-**モニタリング期間**: 2週間
-
-**次のステップ**:
-
-1. CSP違反ログを確認
-2. 正当な違反に対してポリシーを調整
-3. 強制モード（enforcement）に移行
+- JSON bodyは16 KiBを上限とし、Zod schemaに合わないreportを400、上限超過を413で拒否する
+- ProductionではUpstashによるIP単位rate limitを適用し、超過時は429を返す
+- document / blocked / source URLからqueryとfragmentを除去し、ブラウザ拡張由来の違反はSentryへ送らない
+- 有効な違反だけを`csp-violation`として、directive単位の固定fingerprintでSentryへ送る
 
 ### 違反レポート確認
 
-```sql
--- Supabase: CSP違反ログ確認
-SELECT
-  document_uri,
-  violated_directive,
-  blocked_uri,
-  COUNT(*) as violation_count
-FROM csp_reports
-WHERE created_at > NOW() - INTERVAL '7 days'
-GROUP BY document_uri, violated_directive, blocked_uri
-ORDER BY violation_count DESC
-LIMIT 20;
-```
+Sentry Issuesで`type:csp-violation`を指定し、directive、正規化済みblocked URI、releaseを確認する。生のURL queryやreport bodyをissue、docs、chatへ転記しない。
 
 ## セキュリティメトリクス
 
 ### 成功基準（KPI）
 
-#### Phase 1: 基盤整備（完了）
-
-- [x] HSTS適用率: 100%
-- [x] CSP Report-Only有効化: 100%
-- [x] Dependabot有効化: 完了
-- [x] 週次npm audit: 自動化
-
-#### Phase 2: 強化（完了）
-
-- [x] CSRF保護レベル: Enterprise Grade
-- [x] セッション管理: OWASP準拠
-- [x] エラーハンドリング: 情報漏洩ゼロ
-- [x] OWASP ZAP統合: 完了
-
-#### Phase 3: 運用監視（進行中）
-
-- [ ] Upstash Redisデプロイ: 待機中
-- [x] 監査ログ実装: 完了
-- [x] セキュリティレポート自動化: 完了
-- [ ] CSP強制モード移行: 2週間後
+- HSTSとCSP enforcementがproduction responseに付くこと
+- `/api/csp-report`のinvalid / oversized / rate-limited inputがSentry quotaを消費しないこと
+- npm auditとGitHub Actionsのsecurity checkが継続して成功すること
+- SentryのCSP IssueにURL query、cookie、authorization、user contentが含まれないこと
 
 ### ダッシュボード（セキュリティ）
 
-**現在利用可能**:
-
 - GitHub Actions Security Audit（週次）
 - npm audit結果（CI/CD統合）
-- OWASP ZAP スキャン結果
-
-**Phase 3完了後**:
-
 - Upstash Redis Analytics
-- Supabase監査ログダッシュボード
-- 週次セキュリティレポートIssue
+- Sentry Issues / quota / discarded event
 
 ## アラート（セキュリティ）
 
-### Critical イベント
-
-以下のイベントは即座にSentryに送信される:
-
-1. **不正アクセス試行**（`UNAUTHORIZED_ACCESS_ATTEMPT`）
-2. **セッションハイジャック検知**（`SESSION_HIJACK_ATTEMPT`）
-3. **権限昇格の異常**（`PERMISSION_ESCALATION`）
-4. **CSRF攻撃検知**（`CSRF_TOKEN_MISMATCH`）
-
-### GitHub Issue自動作成
-
-以下の場合、自動的にGitHub Issueが作成される:
-
-1. **OWASP ZAP**: Critical/High脆弱性検出時
-2. **npm audit**: High/Critical脆弱性検出時
-3. **セキュリティレポート**: 生成失敗時
+Sentryの高優先度Issue通知はemailを正規channelとする。認証失敗やvalidation errorなどのexpected errorはIssue化せず、認証攻撃の調査はSupabase Auth logとrate limit analyticsを併用する。閾値と対応手順は[monitoring](./monitoring.md)と[runbook](./runbook.md)を正とする。
 
 ## 関連ドキュメント（セキュリティ監視）
 

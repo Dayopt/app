@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-07-16
 ---
 
 # Environment Secrets
@@ -23,12 +23,13 @@ Supabase migration の production 適用は GitHub Actions ではなく Supabase
 
 GitHub branch protection では、通常の CI check に加えて Supabase integration の Preview Branch check を required にする。
 
-| Secret                  | 用途                               | 方針                             |
-| ----------------------- | ---------------------------------- | -------------------------------- |
-| `CODECOV_TOKEN`         | coverage upload                    | CI 用 replica                    |
-| `LHCI_GITHUB_APP_TOKEN` | Lighthouse CI                      | CI 用 replica                    |
-| `SENTRY_AUTH_TOKEN`     | release / sourcemap 操作が必要な時 | 1Password から同期               |
-| `SUPABASE_ACCESS_TOKEN` | emergency / manual operation       | 通常 migration flow では使わない |
+| Secret                  | 用途                         | 方針                             |
+| ----------------------- | ---------------------------- | -------------------------------- |
+| `CODECOV_TOKEN`         | coverage upload              | CI 用 replica                    |
+| `LHCI_GITHUB_APP_TOKEN` | Lighthouse CI                | CI 用 replica                    |
+| `SUPABASE_ACCESS_TOKEN` | emergency / manual operation | 通常 migration flow では使わない |
+
+GitHub Actions の通常 build は release / source map upload を行わないため、Sentry metadata と `SENTRY_AUTH_TOKEN` を渡さない。
 
 ## Vercel
 
@@ -40,6 +41,20 @@ GitHub branch protection では、通常の CI check に加えて Supabase integ
 
 Preview scope に production Supabase credentials を手動設定しない。
 既に入っている場合は削除するか、Preview から外して Supabase integration 管理に寄せる。
+
+### Sentry
+
+`product` と `web` は別 Sentry project を使う。両Vercel projectでenv名は共通だが、`NEXT_PUBLIC_SENTRY_DSN`、`SENTRY_DSN`、`SENTRY_PROJECT`は各project固有の値とする。`SENTRY_ORG`とbuild tokenは共通でよい。
+
+| Vercel target | Sentry env                                                                      |
+| ------------- | ------------------------------------------------------------------------------- |
+| Production    | 5変数すべて。`SENTRY_AUTH_TOKEN`はSensitive、残りは公開metadata / DSNとして扱う |
+| Preview       | 設定しない。runtime、release作成、source map uploadを行わない                   |
+| Development   | 設定しない。localもSentryへ送信しない                                           |
+
+Production replicaはProductが`Dayopt-Production/sentry`、Webが`Dayopt-Production/sentry-web`をmetadata / DSNのmasterとする。build tokenだけは`Dayopt-Shared/sentry`の単一fieldを両projectへ同期する。
+
+2026-07-16 のVercel確認では、Product / Webとも5変数をProductionだけに設定し、Preview / DevelopmentにはSentry envがないことを確認した。1Password CLIは未認証だったため、上記item / fieldが実在し空でないことは未確認である。master側の確認と不足fieldの整理はblocked中の[#1558](https://github.com/Dayopt/dayopt/issues/1558)で行い、確認前に推測でitemを変更しない。
 
 ### Vercel readiness audit (2026-07-14)
 
@@ -68,23 +83,23 @@ Supabase integration 由来の production DB / key も `production` target の�
 次の server-only secret は Vercel CLI API で `sensitive` に更新済み。
 値は読まず、`vercel api` で env type だけを変更した。
 
-| Project   | Env                         | Production / Preview | Development |
-| --------- | --------------------------- | -------------------- | ----------- |
-| `product` | `SUPABASE_SERVICE_ROLE_KEY` | `sensitive`          | n/a         |
-| `product` | `RECOVERY_CODE_PEPPER`      | `sensitive`          | `encrypted` |
-| `product` | `RESEND_API_KEY`            | `sensitive`          | `encrypted` |
-| `product` | `RESEND_WEBHOOK_SECRET`     | `sensitive`          | n/a         |
-| `product` | `SENTRY_AUTH_TOKEN`         | `sensitive`          | `encrypted` |
-| `product` | `GITHUB_TOKEN`              | `sensitive`          | `encrypted` |
-| `web`     | `GITHUB_TOKEN`              | `sensitive`          | `encrypted` |
+| Project   | Env                         | Production  | Preview     | Development |
+| --------- | --------------------------- | ----------- | ----------- | ----------- |
+| `product` | `SUPABASE_SERVICE_ROLE_KEY` | `sensitive` | n/a         | n/a         |
+| `product` | `RECOVERY_CODE_PEPPER`      | `sensitive` | `encrypted` | `encrypted` |
+| `product` | `RESEND_API_KEY`            | `sensitive` | `encrypted` | `encrypted` |
+| `product` | `RESEND_WEBHOOK_SECRET`     | `sensitive` | n/a         | n/a         |
+| `product` | `SENTRY_AUTH_TOKEN`         | `sensitive` | n/a         | n/a         |
+| `web`     | `SENTRY_AUTH_TOKEN`         | `sensitive` | n/a         | n/a         |
+| `product` | `GITHUB_TOKEN`              | `sensitive` | `encrypted` | `encrypted` |
+| `web`     | `GITHUB_TOKEN`              | `sensitive` | `encrypted` | `encrypted` |
 
-Preview は `RECOVERY_CODE_PEPPER` と `SENTRY_AUTH_TOKEN` を維持する。
-前者は production mode の env validation / recovery code 処理、後者は Preview sourcemap upload に必要。
+Preview は `RECOVERY_CODE_PEPPER` を維持する。production mode のenv validation / recovery code処理に必要なためである。`SENTRY_AUTH_TOKEN`はPreviewから削除する。
 実サービスへの書き込み権限を持つ `GITHUB_TOKEN` と `RESEND_API_KEY` は Preview から削除する。
 
 Development scope の secret は削除する。local の正規経路は `.op-env.local` + `op run` であり、
 Vercel Development env を replica として使わない。削除前に 1Password master の存在確認を必須とし、
-1Password CLI が未認証の時は変更しない。2026-07-14 の監査では認証できず、削除は未適用。
+1Password CLI が未認証の時は変更しない。2026-07-16 の監査でも認証できず、Sentry以外の既存Development secret削除は未適用。
 詳細は [Vercel environment variable scope audit](../log/2026-07-14-vercel-env-scope-audit.md) を参照する。
 
 `NEXT_PUBLIC_*` と repository 名などの公開 metadata は secret 扱いにしない。
