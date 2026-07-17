@@ -15,7 +15,7 @@
 
 import type React from 'react';
 
-import { formatTimeString } from '@/lib/date';
+import { formatTimeRange } from '@/lib/date';
 import { cn } from '@dayopt/components';
 import type { TimeFormat } from '@dayopt/domain';
 
@@ -46,9 +46,7 @@ export function ConflictOverlay({
 }) {
   const resolvedLabel =
     timeLabel ??
-    (previewTime
-      ? `${formatTimeString(previewTime.start.getHours(), previewTime.start.getMinutes(), timeFormat)} – ${formatTimeString(previewTime.end.getHours(), previewTime.end.getMinutes(), timeFormat)}`
-      : null);
+    (previewTime ? formatTimeRange(previewTime.start, previewTime.end, timeFormat, ' – ') : null);
 
   if (compact) {
     return (

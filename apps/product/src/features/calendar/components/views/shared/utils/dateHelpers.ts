@@ -8,32 +8,6 @@
 import { tzIsSameDay } from '@/lib/date/timezone';
 
 /**
- * 日付をフォーマット（カレンダービュー用・ロケール対応）
- */
-export function formatDate(
-  date: Date,
-  format: 'short' | 'long' | 'numeric' = 'short',
-  locale: string = 'ja',
-): string {
-  const dateLocale = locale === 'ja' ? 'ja-JP' : 'en-US';
-
-  switch (format) {
-    case 'numeric':
-      return `${date.getDate()}`;
-    case 'short':
-      return date.toLocaleDateString(dateLocale, { day: 'numeric', weekday: 'short' });
-    case 'long':
-      return date.toLocaleDateString(dateLocale, {
-        month: 'short',
-        day: 'numeric',
-        weekday: 'short',
-      });
-    default:
-      return `${date.getDate()}`;
-  }
-}
-
-/**
  * イベントの妥当性をチェック
  */
 export function isValidEvent<T extends { startDate?: Date | string | null }>(event: T): boolean {

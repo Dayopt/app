@@ -4,6 +4,7 @@ import { StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { DateTimeSection } from '@/features/timeblock';
+import { formatHHmm } from '@/lib/date';
 
 import { isPlanTimeEditable, type TimeblockDestination } from '../../domain/timeblock-destination';
 import { NoteSection } from '../inspector/fields';
@@ -26,10 +27,6 @@ interface TimeModelEditorProps {
   /** 日時入力に紐づけて表示するエラー。 */
   dateTimeError?: string | undefined;
   disabled?: boolean | undefined;
-}
-
-function formatTime(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
 function withTime(date: Date, value: string): Date {
@@ -76,11 +73,11 @@ export function TimeblockEditor({
               endAt.setHours(value.endAt.getHours(), value.endAt.getMinutes(), 0, 0);
               onDateTimeChange({ ...value, startAt, endAt });
             }}
-            startTime={formatTime(value.startAt)}
+            startTime={formatHHmm(value.startAt.getHours(), value.startAt.getMinutes())}
             onStartChange={(next) =>
               onDateTimeChange({ ...value, startAt: withTime(value.startAt, next) })
             }
-            endTime={formatTime(value.endAt)}
+            endTime={formatHHmm(value.endAt.getHours(), value.endAt.getMinutes())}
             onEndChange={(next) =>
               onDateTimeChange({ ...value, endAt: withTime(value.endAt, next) })
             }

@@ -33,3 +33,35 @@ export function formatTimeString(
   }
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
+
+/**
+ * 開始・終了時刻を範囲文字列にフォーマット（例: "09:00–17:00" / "9:00 AM – 5:00 PM"）。
+ *
+ * 区切り文字は呼び出し側で指定する（既定は en-dash）。
+ */
+export function formatTimeRange(
+  start: Date,
+  end: Date,
+  format: '24h' | '12h' = '24h',
+  separator = '–',
+): string {
+  const startText = formatTimeString(start.getHours(), start.getMinutes(), format);
+  const endText = formatTimeString(end.getHours(), end.getMinutes(), format);
+  return `${startText}${separator}${endText}`;
+}
+
+/**
+ * 開始時刻と終了時刻（"HH:mm"）から所要時間（分）を算出。
+ *
+ * @returns 正の分数。無効な入力や負の差分は 0 を返す
+ */
+export function computeDuration(start: string, end: string): number {
+  if (!start || !end) return 0;
+  const [startH, startM] = start.split(':').map(Number);
+  const [endH, endM] = end.split(':').map(Number);
+  if (isNaN(startH!) || isNaN(startM!) || isNaN(endH!) || isNaN(endM!)) return 0;
+  const startMinutes = startH! * 60 + startM!;
+  const endMinutes = endH! * 60 + endM!;
+  const duration = endMinutes - startMinutes;
+  return duration > 0 ? duration : 0;
+}

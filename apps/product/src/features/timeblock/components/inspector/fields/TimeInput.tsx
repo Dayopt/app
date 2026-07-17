@@ -11,10 +11,15 @@ import {
 
 import { CheckIcon } from 'lucide-react';
 
-import { formatHHmm, formatTimeString, parseTimeString } from '@/lib/date';
+import {
+  computeDuration,
+  formatDurationMinutes,
+  formatHHmm,
+  formatTimeString,
+  parseTimeString,
+} from '@/lib/date';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { computeDuration, formatDurationDisplay } from '@/lib/time-utils';
 import {
   cn,
   Drawer,
@@ -315,10 +320,9 @@ export function TimeInput({
           {filteredOptions.map((option, index) => {
             const isCurrent = option === value;
             const isHighlighted = index === highlightedIndex;
-            const durationLabel =
-              minTime && minTimeMinutes >= 0
-                ? formatDurationDisplay(computeDuration(minTime, option))
-                : '';
+            const durationMinutes =
+              minTime && minTimeMinutes >= 0 ? computeDuration(minTime, option) : 0;
+            const durationLabel = durationMinutes > 0 ? formatDurationMinutes(durationMinutes) : '';
             return (
               <button
                 key={option}

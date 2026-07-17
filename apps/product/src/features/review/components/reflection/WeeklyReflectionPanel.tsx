@@ -5,14 +5,11 @@ import { useTranslations } from 'next-intl';
 import { useMemo, type ReactNode } from 'react';
 
 import { resolveTagColor, TagIcon } from '@/features/tags';
+import { formatDurationMinutes } from '@/lib/date';
 import { cn } from '@dayopt/components';
 
 import type { BarComparisonRow } from '../../domain/timePL/types';
-import {
-  formatMinutesDuration,
-  formatVariance,
-  getVarianceColor,
-} from '../time-pl/data/timePL.presentation';
+import { formatVariance, getVarianceColor } from '../time-pl/data/timePL.presentation';
 
 const MAX_TIME_PL_ROWS = 5;
 const MAX_ESTIMATION_ROWS = 3;
@@ -93,7 +90,7 @@ export function WeeklyReflectionPanel({
       <dl className="border-border-subtle divide-border-subtle divide-y rounded-lg border">
         <ReviewMetricRow
           label={t('overview.trackedTime')}
-          value={formatMinutesDuration(trackedMinutes)}
+          value={formatDurationMinutes(trackedMinutes)}
         />
         <ReviewMetricRow
           label={t('overview.planAccuracy')}
@@ -146,7 +143,7 @@ export function WeeklyReflectionPanel({
               icon={CalendarX2}
               label={t('review.skipTitle')}
               value={t('review.skipValue', { count: skipSummary.skippedCount })}
-              detail={formatMinutesDuration(skipSummary.skippedMinutes)}
+              detail={formatDurationMinutes(skipSummary.skippedMinutes)}
             />
           )}
           {blankSummary && (
@@ -155,7 +152,7 @@ export function WeeklyReflectionPanel({
               label={t('review.blankTitle')}
               value={formatPercent(blankSummary.blankRate)}
               detail={t('review.blankDetail', {
-                time: formatMinutesDuration(
+                time: formatDurationMinutes(
                   blankSummary.availableMinutes - blankSummary.scheduledMinutes,
                 ),
               })}
@@ -210,7 +207,7 @@ function TimePLRow({
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{row.tagName}</span>
         <span className="text-muted-foreground mt-1 block font-mono text-xs tabular-nums">
-          {formatMinutesDuration(row.budgetMinutes)} / {formatMinutesDuration(row.actualMinutes)}
+          {formatDurationMinutes(row.budgetMinutes)} / {formatDurationMinutes(row.actualMinutes)}
         </span>
       </span>
       <span
@@ -247,8 +244,8 @@ function EstimationBiasRow({ row }: { row: WeeklyReflectionEstimationRow }) {
       <TagIcon icon={null} color={resolveTagColor(row.tagColor)} size="sm" />
       <span className="text-foreground min-w-0 flex-1 truncate text-sm">{row.tagName}</span>
       <span className="text-muted-foreground shrink-0 font-mono text-xs tabular-nums">
-        {formatMinutesDuration(Math.round(row.avgPlannedMinutes))} /{' '}
-        {formatMinutesDuration(Math.round(row.avgActualMinutes))}
+        {formatDurationMinutes(Math.round(row.avgPlannedMinutes))} /{' '}
+        {formatDurationMinutes(Math.round(row.avgActualMinutes))}
       </span>
       <span
         className={cn(

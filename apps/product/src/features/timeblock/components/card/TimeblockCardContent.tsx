@@ -10,7 +10,7 @@ import { Clock, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { TagIcon } from '@/features/tags';
-import { formatTimeString } from '@/lib/date';
+import { formatTimeRange } from '@/lib/date';
 import type { TimeFormat } from '@dayopt/domain';
 import type { CalendarEvent } from '../../types/calendar-event';
 
@@ -53,10 +53,6 @@ function sameTime(
   return (
     firstStart.getTime() === secondStart.getTime() && firstEnd.getTime() === secondEnd.getTime()
   );
-}
-
-function formatCardTimeRange(start: Date, end: Date, timeFormat: TimeFormat): string {
-  return `${formatTimeString(start.getHours(), start.getMinutes(), timeFormat)} 〜 ${formatTimeString(end.getHours(), end.getMinutes(), timeFormat)}`;
 }
 
 /** エントリカードの内部コンテンツ（タグ名・時間範囲・リマインダーアイコン） */
@@ -187,7 +183,7 @@ export const TimeblockCardContent = memo<TimeblockCardContentProps>(function Tim
               )}
               <span className="text-muted-foreground min-w-0 truncate whitespace-nowrap tabular-nums">
                 {row.start && row.end
-                  ? formatCardTimeRange(row.start, row.end, timeFormat)
+                  ? formatTimeRange(row.start, row.end, timeFormat, ' 〜 ')
                   : t('calendar.event.noTimeSet')}
               </span>
             </div>
