@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { SESSION_CONFIG, SESSION_SECURITY } from '@/lib/auth/session-config';
 import { logger } from '@/lib/logger';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
 
 import { useAuthStore } from '../stores/useAuthStore';
@@ -69,7 +70,9 @@ export function useSessionMonitor(): SessionMonitorState {
   const extendSession = useCallback(async () => {
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.refreshSession();
+      const { error } = await observeAuthOperation('refresh_session', () =>
+        supabase.auth.refreshSession(),
+      );
 
       if (error) {
         logger.error('[SessionMonitor] Failed to extend session:', error);

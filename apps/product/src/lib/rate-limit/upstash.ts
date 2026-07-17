@@ -14,12 +14,14 @@ import { Redis } from '@upstash/redis';
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
 import { extractClientIp } from '@/lib/security/ip-validation';
+import { captureUnexpectedError } from '@/lib/sentry';
 
 const UPSTASH_REDIS_REST_URL = env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_REDIS_REST_TOKEN = env.UPSTASH_REDIS_REST_TOKEN;
 
 /** Upstash Redisが有効かどうか（環境変数が設定されている場合のみtrue） */
 export const isUpstashEnabled = Boolean(UPSTASH_REDIS_REST_URL && UPSTASH_REDIS_REST_TOKEN);
+const isProductionBuild = process.env.NEXT_PHASE === 'phase-production-build';
 
 /**
  * Redis接続（環境変数が設定されている場合のみ）
@@ -31,107 +33,129 @@ if (isUpstashEnabled) {
     url: UPSTASH_REDIS_REST_URL!,
     token: UPSTASH_REDIS_REST_TOKEN!,
   });
-} else {
-  // production では src/env.ts の .refine が起動時に throw するため、ここに到達するのは dev/test のみ
+} else if (!isProductionBuild) {
+  // Production runtimeはenv validation、Production buildはapp-local build gateが不足を拒否する。
   logger.warn(
     '[RateLimit] Upstash is not configured. Falling back to in-memory rate limiting — single-instance only, breaks on multi-replica deployments.',
   );
 }
 
-/**
- * API用レート制限
- * 10リクエスト / 10秒（Sliding Window）
- */
-export const apiRateLimit =
-  isUpstashEnabled && redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(10, '10 s'),
-        analytics: true,
-        prefix: 'ratelimit:api',
-      })
-    : null;
+export const RATE_LIMIT_TIMEOUT_MS = 2_000;
+
+type RatelimitResponse = Awaited<ReturnType<Ratelimit['limit']>>;
+
+interface ProductRateLimiter {
+  limit(identifier: string): Promise<RatelimitResponse>;
+}
+
+export class RateLimitUnavailableError extends Error {
+  constructor(cause?: unknown) {
+    super('Rate-limit backend is unavailable', cause === undefined ? undefined : { cause });
+    this.name = 'RateLimitUnavailableError';
+  }
+}
+
+/** Upstash SDK timeoutはsuccess=trueを返すため、明示的にbackend unavailableへ変換する。 */
+export function requireAvailableRateLimitResult(result: RatelimitResponse): RatelimitResponse {
+  if (result.reason === 'timeout') throw new RateLimitUnavailableError();
+  return result;
+}
+
+/** Upstash keyにはraw IP、user ID、tokenを残さず、namespace prefix付きSHA-256だけを渡す。 */
+export async function hashRateLimitIdentifier(identifier: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(`dayopt-product:${identifier}`),
+  );
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function createRateLimiter(
+  limiter: ReturnType<typeof Ratelimit.slidingWindow>,
+  prefix: string,
+): ProductRateLimiter | null {
+  if (!redis) return null;
+
+  const rateLimit = new Ratelimit({
+    redis,
+    limiter,
+    analytics: false,
+    prefix,
+    timeout: RATE_LIMIT_TIMEOUT_MS,
+  });
+
+  return {
+    limit: async (identifier) =>
+      requireAvailableRateLimitResult(
+        await rateLimit.limit(await hashRateLimitIdentifier(identifier)),
+      ),
+  };
+}
 
 /**
  * ログイン用レート制限（より厳格）
  * 5リクエスト / 15分（Sliding Window）
  */
-export const loginRateLimit =
-  isUpstashEnabled && redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(5, '15 m'),
-        analytics: true,
-        prefix: 'ratelimit:login',
-      })
-    : null;
+export const loginRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(5, '15 m'),
+  'ratelimit:product:login',
+);
 
 /**
  * パスワードリセット用レート制限
  * 3リクエスト / 1時間
  */
-export const passwordResetRateLimit =
-  isUpstashEnabled && redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(3, '1 h'),
-        analytics: true,
-        prefix: 'ratelimit:password-reset',
-      })
-    : null;
+export const passwordResetRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(3, '1 h'),
+  'ratelimit:product:password-reset',
+);
 
 /**
  * お問い合わせ用レート制限
  * 5リクエスト / 1時間（Sliding Window）
  */
-export const contactRateLimit =
-  isUpstashEnabled && redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(5, '1 h'),
-        analytics: true,
-        prefix: 'ratelimit:contact',
-      })
-    : null;
+export const contactRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(5, '1 h'),
+  'ratelimit:product:contact',
+);
 
 /**
  * tRPC protectedProcedure 用レート制限
  * 100リクエスト / 1分 per user
  */
-export const trpcUserRateLimit =
-  isUpstashEnabled && redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(100, '1 m'),
-        prefix: 'ratelimit:trpc:user',
-      })
-    : null;
+export const trpcUserRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(100, '1 m'),
+  'ratelimit:product:trpc:user',
+);
 
 /**
  * エントリ作成の日次上限
  * 500リクエスト / 24時間 per user
  */
-export const timeblockCreateRateLimit =
-  isUpstashEnabled && redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(500, '24 h'),
-        prefix: 'ratelimit:timeblock:create',
-      })
-    : null;
+export const timeblockCreateRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(500, '24 h'),
+  'ratelimit:product:timeblock:create',
+);
 
 /**
  * iCalフィード用レート制限
  * 10リクエスト / 1分 per token（外部カレンダーアプリからの購読用）
  */
-export const icalFeedRateLimit =
-  isUpstashEnabled && redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(10, '1 m'),
-        prefix: 'ratelimit:ical-feed',
-      })
-    : null;
+export const icalFeedRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(10, '1 m'),
+  'ratelimit:product:ical-feed',
+);
+
+/** CSP reportは公開入力なのでIP単位と全体上限を別々に持つ。 */
+export const cspReportRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(20, '1 m'),
+  'ratelimit:product:csp-report',
+);
+
+export const cspReportGlobalRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(120, '1 m'),
+  'ratelimit:product:csp-report-global',
+);
 
 /**
  * 汎用レート制限ミドルウェア
@@ -141,9 +165,10 @@ export const icalFeedRateLimit =
  * import { withUpstashRateLimit } from '@/lib/rate-limit/upstash'
  *
  * export async function POST(request: Request) {
- *   const result = await withUpstashRateLimit(request, apiRateLimit)
+ *   const result = await withUpstashRateLimit(request, loginRateLimit)
  *
- *   if (!result.success) {
+ *   if (result.state === 'unavailable') return new Response('Unavailable', { status: 503 })
+ *   if (result.state === 'checked' && !result.success) {
  *     return new Response('Too Many Requests', {
  *       status: 429,
  *       headers: {
@@ -159,19 +184,20 @@ export const icalFeedRateLimit =
  * }
  * ```
  */
+type RateLimitCheckResult =
+  | { state: 'disabled' }
+  | { state: 'unavailable' }
+  | ({ state: 'checked' } & Pick<
+      RatelimitResponse,
+      'success' | 'limit' | 'remaining' | 'reset' | 'pending'
+    >);
+
 export async function withUpstashRateLimit(
   request: Request,
-  rateLimit: Ratelimit | null,
-): Promise<{
-  success: boolean;
-  limit: number;
-  remaining: number;
-  reset: number;
-  pending: Promise<unknown>;
-} | null> {
+  rateLimit: ProductRateLimiter | null,
+): Promise<RateLimitCheckResult> {
   if (!rateLimit) {
-    // Upstash未設定の場合はスキップ（インメモリ実装にフォールバック）
-    return null;
+    return { state: 'disabled' };
   }
 
   // クライアント識別子取得
@@ -180,22 +206,22 @@ export async function withUpstashRateLimit(
   try {
     // レート制限チェック
     const { success, limit, remaining, reset, pending } = await rateLimit.limit(identifier);
-    return { success, limit, remaining, reset, pending };
+    return { state: 'checked', success, limit, remaining, reset, pending };
   } catch (error) {
-    // Redis接続エラー等の場合はログを出力し、レート制限をスキップ（可用性優先）
-    logger.error('[RateLimit] Upstash rate limit check failed:', {
-      identifier,
-      error: error instanceof Error ? error.message : String(error),
+    logger.error('[RateLimit] Upstash rate limit check failed');
+    const original = error instanceof Error ? error : new Error('Upstash rate limit check failed');
+    captureUnexpectedError(original, {
+      feature: 'rate_limit',
+      operation: 'upstash_rate_limit_check',
+      source: 'upstash',
     });
-    // エラー時はnullを返してインメモリ実装にフォールバック
-    return null;
+    return { state: 'unavailable' };
   }
 }
 
 /**
  * クライアント識別子の取得
- * - 認証済み: ユーザーID
- * - 未認証: IPアドレス
+ * 公開requestは検証済みIPを使い、limiter factory内でSHA-256化する。
  */
 function getClientIdentifier(request: Request): string {
   // IPアドレスをフォールバック

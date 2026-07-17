@@ -136,19 +136,22 @@ describe('billing-router', () => {
       );
     });
 
-    it('auth.getUser 失敗で INTERNAL_SERVER_ERROR', async () => {
+    it('期限切れsessionは UNAUTHORIZED として扱う', async () => {
       const ctx = createMockContext({ userId: 'user-1' });
 
       const mockSupabase = ctx.supabase as unknown as Record<string, unknown>;
       (mockSupabase.auth as Record<string, unknown>).getUser = vi.fn().mockResolvedValue({
         data: { user: null },
-        error: { message: 'Auth service unavailable' },
+        error: Object.assign(new Error('session expired'), {
+          status: 401,
+          code: 'session_expired',
+        }),
       });
 
       const caller = createCaller(ctx);
 
       await expect(caller.createCheckoutSession()).rejects.toThrow(
-        expect.objectContaining({ code: 'INTERNAL_SERVER_ERROR' }),
+        expect.objectContaining({ code: 'UNAUTHORIZED' }),
       );
     });
 

@@ -16,7 +16,7 @@
     },
     "submit": "Send",
     "submitSuccess": "Your message has been sent. Thank you!",
-    "submitError": "Failed to send your message. Please try again.",
+    "submitError": "Failed to send your message. Your text is still here; please try again.",
     "rateLimited": "You've sent too many messages recently. Please try again later."
   }
 }

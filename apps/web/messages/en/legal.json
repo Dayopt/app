@@ -18,7 +18,7 @@
           "title": "Information We Collect",
           "accountInfo": "Account Information (email address, name, profile picture)",
           "usageData": "Service Usage Data (tasks, calendar, settings)",
-          "technicalData": "Technical Data (IP address, browser information, device information)",
+          "technicalData": "Minimal Technical Diagnostics (application version, route path, browser or device type, and error or trace identifiers). Sentry events exclude request bodies, email addresses, URL query strings, cookies, and authorization credentials.",
           "cookies": "Cookies and similar technologies"
         },
         "dataUsage": {
@@ -26,15 +26,17 @@
           "serviceProvision": "Providing, operating, and improving the Service",
           "userSupport": "User support and responding to inquiries",
           "security": "Preventing unauthorized use and maintaining security",
-          "analytics": "Service analysis and feature improvements",
+          "analytics": "Production server and edge error monitoring for service reliability, plus browser error monitoring and performance analytics only after analytics consent",
           "communication": "Sending important notices and service updates"
         },
         "dataSharing": {
           "title": "Third-Party Services",
           "intro": "We work with the following service providers:",
           "supabase": "Supabase (authentication & database)",
-          "vercel": "Vercel (hosting)",
-          "sentry": "Sentry (error monitoring)",
+          "vercel": "Vercel (hosting; Vercel Analytics and Speed Insights only after analytics consent)",
+          "sentry": "Sentry (Production server and edge error monitoring; browser error monitoring only after analytics consent; Session Replay is disabled). Product and Website data are kept in separate Sentry projects.",
+          "github": "GitHub (access-restricted storage for contact form submissions)",
+          "cloudflare": "Cloudflare Turnstile (bot protection for forms)",
           "note": "These providers manage information according to their respective privacy policies."
         },
         "dataOwnership": {
@@ -47,14 +49,15 @@
           "title": "Sub-Processors",
           "intro": "We engage the following sub-processors to assist in providing the Service. Each sub-processor has entered into a Data Processing Agreement (DPA) with us:",
           "supabase": "Supabase, Inc. — Authentication and database services. Data location: AWS US-East-1 (N. Virginia, USA)",
-          "vercel": "Vercel, Inc. — Hosting, serverless functions, edge delivery, and web analytics (Vercel Analytics / Speed Insights). Data location: Global Edge Network",
-          "sentry": "Functional Software, Inc. (Sentry) — Error monitoring and diagnostics. Data location: United States",
+          "vercel": "Vercel, Inc. — Hosting, serverless functions, and edge delivery. Vercel Analytics and Speed Insights run in the browser only after analytics consent. Data location: Global Edge Network",
+          "sentry": "Functional Software, Inc. (Sentry) — Sanitized Production server and edge error monitoring runs regardless of analytics consent. Browser error monitoring runs only after analytics consent. Session Replay is disabled because the current SDK cannot guarantee removal of URL query strings from Replay payloads. Product and Website data are kept in separate projects. Sentry events exclude request bodies, email addresses, URL query strings, cookies, and authorization credentials. Data location: United States",
           "stripe": "Stripe, Inc. — Payment processing and subscription management. Data location: United States. Stripe is PCI DSS Level 1 certified. We do not store credit card numbers on our servers.",
           "anthropic": "Anthropic, PBC — AI-powered features (chat, weekly review insights). Data location: United States. Your data is processed under Anthropic's API terms and is not used for model training.",
           "openai": "OpenAI, LLC — AI-powered features (optional, when user provides their own API key). Data location: United States. Data processed via API is not used for model training per OpenAI's API data usage policy.",
           "resend": "Resend, Inc. — Transactional email delivery (account notifications, billing confirmations). Data location: United States",
-          "upstash": "Upstash, Inc. — Rate limiting and abuse prevention via serverless Redis. Data location: United States. Only IP hashes and request counts are stored temporarily.",
-          "google": "Google LLC — reCAPTCHA v2/v3 for bot protection on forms. Google may collect usage data subject to Google's Privacy Policy.",
+          "upstash": "Upstash, Inc. — Rate limiting and abuse prevention via serverless Redis. Data location: United States. Hashed technical request identifiers and request counts are stored temporarily.",
+          "github": "GitHub, Inc. — Contact form submissions (name, email address, category, and message) are stored as Issues only in an access-restricted private repository. Repository privacy is verified before every Product or Website submission. Data location: United States.",
+          "cloudflare": "Cloudflare, Inc. — Turnstile bot protection for forms. A Turnstile token and the requester's IP address are sent to Cloudflare for verification. Data is processed on Cloudflare's global network.",
           "changes": "We will notify you at least 30 days before engaging a new sub-processor or making material changes to existing sub-processor arrangements."
         },
         "internationalTransfers": {
@@ -68,8 +71,8 @@
           "title": "Legal Basis for Processing",
           "intro": "We process your personal data on the following legal bases (as applicable under GDPR and similar regulations):",
           "contract": "Contract Performance — Processing necessary to provide the Service you have signed up for, including account management, task storage, and calendar synchronization",
-          "consent": "Consent — Where you have given explicit consent, such as opting in to analytics cookies or marketing communications",
-          "legitimate": "Legitimate Interests — Processing for service improvement, security monitoring, and fraud prevention, where these interests are not overridden by your rights",
+          "consent": "Consent — Browser Sentry, Vercel Analytics, and Speed Insights run only after you opt in to analytics",
+          "legitimate": "Legitimate Interests — Sanitized Production server and edge error monitoring, security monitoring, and fraud prevention, where these interests are not overridden by your rights",
           "legal": "Legal Obligation — Where processing is required to comply with applicable laws, regulations, or legal proceedings"
         },
         "aiFeatures": {
@@ -86,7 +89,7 @@
           "intro": "The following describes how we process each category of personal data:",
           "accountData": "Account Data (email, name, avatar) — Processed to create and manage your account, authenticate your identity, and communicate service-related notices",
           "usageData": "Usage Data (tasks, plans, calendar entries, settings) — Processed to provide core Service functionality, generate productivity insights, and improve features",
-          "technicalData": "Technical Data (IP address, browser, device information) — Processed for security monitoring, performance optimization, and error diagnostics",
+          "technicalData": "Minimal Technical Diagnostics (application version, route path, browser or device type, and error or trace identifiers) — Sanitized server and edge diagnostics are processed in Production to investigate unexpected failures. Browser diagnostics and performance data are processed only after analytics consent. Sentry events exclude request bodies, email addresses, URL query strings, cookies, and authorization credentials.",
           "automated": "We do not engage in automated decision-making or profiling that produces legal or similarly significant effects on you. AI-powered features (such as weekly review insights) provide suggestions only and do not make decisions on your behalf.",
           "exportInfo": "You can export your data in standard formats (JSON, CSV) at any time from your account settings. We support data portability to ensure you can move your data to another service if desired."
         },
@@ -115,11 +118,11 @@
         },
         "cookies": {
           "title": "About Cookies",
-          "intro": "We use cookies to improve user experience.",
+          "intro": "We use essential cookies and local storage to operate the Service. Optional browser telemetry is controlled by your analytics consent.",
           "essential": "Essential Cookies (maintain login state)",
-          "analytics": "Analytics Cookies (understand usage)",
+          "analytics": "Optional Analytics Technologies (browser Sentry, Vercel Analytics, and Speed Insights)",
           "preference": "Preference Cookies (save user settings)",
-          "control": "You can disable cookies in your browser settings, but some features may be limited.",
+          "control": "If you decline analytics, optional browser telemetry does not start and core features remain available. Sanitized Production server and edge error monitoring continues because it is required to diagnose service failures.",
           "policyLink": "For detailed information about our use of cookies, please see our Cookie Policy."
         },
         "dataBreach": {
@@ -351,8 +354,8 @@
           },
           "analytics": {
             "name": "Analytics Cookies",
-            "description": "These cookies help us understand how visitors interact with the Service by collecting and reporting usage information. All analytics data is aggregated and anonymized.",
-            "examples": "Page views, feature usage patterns, performance metrics"
+            "description": "These optional cookies and similar browser technologies help us diagnose browser errors and understand performance and usage. Browser Sentry, Vercel Analytics, and Speed Insights start only after analytics consent. Session Replay is disabled.",
+            "examples": "Browser errors, page views, and performance metrics"
           },
           "preference": {
             "name": "Preference Cookies",
@@ -394,34 +397,34 @@
             "duration": "1 year"
           },
           "cookieConsent": {
-            "name": "cookie-consent",
+            "name": "dayopt_cookie_consent (local storage)",
             "provider": "Dayopt",
             "purpose": "Records your cookie consent preferences",
             "category": "Essential",
-            "duration": "1 year"
+            "duration": "Until cleared"
           },
           "vercelAnalytics": {
             "name": "va_*",
             "provider": "Vercel",
-            "purpose": "Web analytics (page views, performance metrics)",
+            "purpose": "Vercel Analytics and Speed Insights after analytics consent",
             "category": "Analytics",
             "duration": "Session"
           },
-          "recaptcha": {
-            "name": "_GRECAPTCHA",
-            "provider": "Google",
-            "purpose": "Bot protection and spam prevention on forms",
+          "turnstile": {
+            "name": "Cloudflare Turnstile browser technology",
+            "provider": "Cloudflare",
+            "purpose": "Bot protection and spam prevention on forms; a verification token and IP address are processed by Cloudflare",
             "category": "Essential",
-            "duration": "6 months"
+            "duration": "Per verification; provider-controlled"
           }
         },
         "thirdParty": {
           "title": "Third-Party Cookies",
-          "content": "Some cookies are placed by third-party services that appear on our pages. We do not control these cookies. The third parties that set cookies through our Service include:",
-          "vercel": "Vercel — Hosting and performance analytics (Vercel Analytics / Speed Insights). Used to measure page load times, track page views, and optimize delivery. Data is aggregated and anonymized.",
-          "sentry": "Sentry — Error monitoring and diagnostics. Used to detect and diagnose application errors to improve reliability.",
-          "recaptcha": "Google reCAPTCHA — Bot protection on forms (contact, signup). Google may collect hardware and software information, such as device and application data, and send it to Google for analysis. Subject to Google's Privacy Policy and Terms of Service.",
-          "note": "Please refer to each provider's privacy policy for more information about how they use cookies."
+          "content": "Some third-party services process essential server diagnostics or use optional cookies and similar browser technologies. Optional browser telemetry does not start unless you give analytics consent.",
+          "vercel": "Vercel — Hosting and delivery remain available without analytics consent. Vercel Analytics and Speed Insights run in the browser only after analytics consent.",
+          "sentry": "Sentry — Sanitized Production server and edge error monitoring runs regardless of analytics consent. Browser Sentry runs only after analytics consent. Session Replay is disabled because the current SDK cannot guarantee removal of URL query strings from Replay payloads. Product and Website data are kept in separate Sentry projects. Sentry events exclude request bodies, email addresses, URL query strings, cookies, and authorization credentials.",
+          "turnstile": "Cloudflare Turnstile — Essential bot protection on forms. A verification token and the requester's IP address are sent to Cloudflare. Cloudflare may use necessary browser storage and device signals under its Privacy Policy.",
+          "note": "Please refer to each provider's privacy policy for more information about its processing and use of browser technologies."
         },
         "manageCookies": {
           "title": "How to Manage Cookies",
@@ -433,7 +436,7 @@
         },
         "impact": {
           "title": "Impact of Disabling Cookies",
-          "content": "If you disable essential cookies, you will not be able to log in or use core features of the Service. Disabling preference cookies means your settings (such as language and theme) will not be remembered between sessions. Disabling analytics cookies will not affect your use of the Service."
+          "content": "If you disable essential cookies, you will not be able to log in or use core features of the Service. Disabling preference cookies means your settings (such as language and theme) will not be remembered between sessions. Declining analytics does not affect core features; browser Sentry, Vercel Analytics, and Speed Insights do not start. Session Replay is disabled. Sanitized Production server and edge error monitoring remains active to diagnose service failures."
         },
         "doNotTrack": {
           "title": "Do Not Track Signals",

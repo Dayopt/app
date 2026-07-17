@@ -4,10 +4,8 @@
  *
  * @see docs/product/specs/auth.md
  */
-import * as Sentry from '@sentry/nextjs';
-
 import { logger } from '@/lib/logger';
-import { captureBusinessEvent } from '@/lib/sentry';
+import { captureUnexpectedAuthError, observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
 import type {
   AuthError,
@@ -83,7 +81,9 @@ export const useAuthStore = create<AuthState>()(
           const supabase = createClient();
 
           // タイムアウト付きでgetSession実行
-          const sessionPromise = supabase.auth.getSession();
+          const sessionPromise = observeAuthOperation('get_session', () =>
+            supabase.auth.getSession(),
+          );
           const timeoutPromise = new Promise<{ data: { session: null }; error: null }>(
             (resolve) => {
               setTimeout(() => {
@@ -109,11 +109,6 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
 
-          // Sentryにユーザーコンテキストを設定（IDのみ、GDPR準拠）
-          if (data.session?.user) {
-            Sentry.setUser({ id: data.session.user.id });
-          }
-
           // Auth state changeリスナーは非同期で設定（ブロックしない）
           try {
             const {
@@ -124,13 +119,6 @@ export const useAuthStore = create<AuthState>()(
                 session,
                 user: session?.user ?? null,
               });
-
-              // Sentryユーザーコンテキストを同期
-              if (session?.user) {
-                Sentry.setUser({ id: session.user.id });
-              } else {
-                Sentry.setUser(null);
-              }
 
               // C2: セッション失効の検出 — 以前ログイン済みだったのに session が消えた場合
               if (previousUser && !session?.user && event === 'SIGNED_OUT') {
@@ -146,10 +134,12 @@ export const useAuthStore = create<AuthState>()(
             }
           } catch (listenerError) {
             logger.warn('[AuthStore] Failed to set up auth state listener:', listenerError);
+            captureUnexpectedAuthError(listenerError, { operation: 'subscribe_auth_state' });
             // リスナー設定失敗は致命的ではない
           }
         } catch (err) {
           logger.error('[AuthStore] Initialization error:', err);
+          captureUnexpectedAuthError(err, { operation: 'initialize' });
           // エラー時もloadingをfalseにして画面表示を許可
           set({ error: null, loading: false, user: null, session: null });
         }
@@ -175,6 +165,7 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (result.error) {
+            captureUnexpectedAuthError(result.error, { operation: 'sign_up' });
             const safeError = getAuthErrorKey(result.error.message, 'signup');
             set({ error: safeError, loading: false });
           } else {
@@ -188,6 +179,7 @@ export const useAuthStore = create<AuthState>()(
 
           return result;
         } catch (err) {
+          captureUnexpectedAuthError(err, { operation: 'sign_up' });
           const safeError = resolveAuthErrorKey(err, 'signup');
           set({ error: safeError, loading: false });
           return {
@@ -213,6 +205,7 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (result.error) {
+            captureUnexpectedAuthError(result.error, { operation: 'sign_in' });
             const safeError = getAuthErrorKey(result.error.message, 'login');
             set({ error: safeError, loading: false });
           } else {
@@ -222,11 +215,11 @@ export const useAuthStore = create<AuthState>()(
               loading: false,
               error: null,
             });
-            captureBusinessEvent('auth.login', { method: 'password' });
           }
 
           return result;
         } catch (err) {
+          captureUnexpectedAuthError(err, { operation: 'sign_in' });
           const safeError = resolveAuthErrorKey(err, 'login');
           set({ error: safeError, loading: false });
           return {
@@ -250,14 +243,14 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (result.error) {
+            captureUnexpectedAuthError(result.error, { operation: 'sign_in_oauth' });
             const safeError = getAuthErrorKey(result.error.message, 'oauth');
             set({ error: safeError, loading: false });
-          } else {
-            captureBusinessEvent('auth.login', { method: 'oauth', provider });
           }
 
           return result;
         } catch (err) {
+          captureUnexpectedAuthError(err, { operation: 'sign_in_oauth' });
           const safeError = resolveAuthErrorKey(err, 'oauth');
           set({ error: safeError, loading: false });
           return {
@@ -276,6 +269,7 @@ export const useAuthStore = create<AuthState>()(
           const result = await supabase.auth.signOut();
 
           if (result.error) {
+            captureUnexpectedAuthError(result.error, { operation: 'sign_out' });
             set({ error: 'auth.errors.unexpectedError', loading: false });
           } else {
             set({
@@ -287,7 +281,8 @@ export const useAuthStore = create<AuthState>()(
           }
 
           return { error: result.error };
-        } catch {
+        } catch (err) {
+          captureUnexpectedAuthError(err, { operation: 'sign_out' });
           set({ error: 'auth.errors.unexpectedError', loading: false });
           return { error: { message: 'auth.errors.unexpectedError' } as AuthError };
         }
@@ -305,6 +300,7 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (result.error) {
+            captureUnexpectedAuthError(result.error, { operation: 'reset_password' });
             const safeError = getAuthErrorKey(result.error.message, 'resetPassword');
             set({ error: safeError, loading: false });
           } else {
@@ -312,7 +308,8 @@ export const useAuthStore = create<AuthState>()(
           }
 
           return { error: result.error };
-        } catch {
+        } catch (err) {
+          captureUnexpectedAuthError(err, { operation: 'reset_password' });
           set({ error: 'auth.errors.unexpectedError', loading: false });
           return { error: { message: 'auth.errors.unexpectedError' } as AuthError };
         }
@@ -327,6 +324,7 @@ export const useAuthStore = create<AuthState>()(
           const result = await supabase.auth.updateUser({ password });
 
           if (result.error) {
+            captureUnexpectedAuthError(result.error, { operation: 'update_password' });
             const safeError = getAuthErrorKey(result.error.message, 'updatePassword');
             set({ error: safeError, loading: false });
           } else {
@@ -334,7 +332,8 @@ export const useAuthStore = create<AuthState>()(
           }
 
           return result;
-        } catch {
+        } catch (err) {
+          captureUnexpectedAuthError(err, { operation: 'update_password' });
           set({ error: 'auth.errors.unexpectedError', loading: false });
           return {
             data: { user: null },

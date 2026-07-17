@@ -62,6 +62,15 @@
       "morePages": "その他のページ",
       "pagination": "ページネーション",
       "more": "その他"
+    },
+    "cookies": {
+      "banner": {
+        "title": "Cookie設定",
+        "description": "サイトの性能と予期しないエラーの把握に分析を使用します。必須の保存領域だけでも利用できます。",
+        "learnMore": "Cookieポリシー",
+        "necessaryOnly": "必須のみ",
+        "allowAnalytics": "分析を許可"
+      }
     }
   },
   "footer": {

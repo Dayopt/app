@@ -3,13 +3,10 @@
 import { useTranslations } from 'next-intl';
 
 import { TagIcon } from '@/features/tags';
+import { formatDurationMinutes } from '@/lib/date';
 import { cn } from '@dayopt/components';
 
-import {
-  formatMinutesDuration,
-  formatVariance,
-  getVarianceColor,
-} from '../data/timePL.presentation';
+import { formatVariance, getVarianceColor } from '../data/timePL.presentation';
 
 import type { BarComparisonRow } from '@/features/review/domain/timePL/types';
 
@@ -90,7 +87,7 @@ function Bar({
           variant === 'budget' ? 'text-muted-foreground' : 'text-foreground',
         )}
       >
-        {formatMinutesDuration(minutes)}
+        {formatDurationMinutes(minutes)}
       </span>
     </div>
   );

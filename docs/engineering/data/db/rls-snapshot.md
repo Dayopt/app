@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 38 件 / RLS 対象テーブル 13 件 / GRANT 84 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 38 件 / RLS 対象テーブル 13 件 / GRANT 85 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -147,6 +147,7 @@
 | routine     | public.batch_reorder_tags_hierarchy(p_user_id uuid, p_tag_ids uuid[], p_parent_ids uuid[], p_sort_orders integer[])                                                                                                                              | service_role        | EXECUTE                        |
 | routine     | public.check_tag_has_children()                                                                                                                                                                                                                  | service_role        | EXECUTE                        |
 | routine     | public.check_tag_hierarchy()                                                                                                                                                                                                                     | service_role        | EXECUTE                        |
+| routine     | public.claim_stripe_webhook_event(p_event_id text, p_event_type text, p_stale_before timestamp with time zone)                                                                                                                                   | service_role        | EXECUTE                        |
 | routine     | public.confirm_day_plans_to_records(p_user_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_confirmed_at timestamp with time zone)                                                                             | authenticated       | EXECUTE                        |
 | routine     | public.confirm_day_plans_to_records(p_user_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_confirmed_at timestamp with time zone)                                                                             | service_role        | EXECUTE                        |
 | routine     | public.count_unused_recovery_codes(p_user_id uuid)                                                                                                                                                                                               | authenticated       | EXECUTE                        |

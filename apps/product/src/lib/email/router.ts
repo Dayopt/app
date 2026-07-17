@@ -28,6 +28,7 @@ import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
+import { captureUnexpectedDatabaseError, observeAuthOperation } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { handleServiceError } from '@/lib/trpc/errors';
 import type { Context } from '@/lib/trpc/procedures';
@@ -45,11 +46,17 @@ const APP_URL = getAppUrl();
  * 未設定の場合は 'en' にフォールバック
  */
 async function getUserLocale(supabase: SupabaseClient, userId: string): Promise<EmailLocale> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from(databaseTables.userSettings)
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
+  if (error) {
+    throw captureUnexpectedDatabaseError(error, {
+      feature: 'email',
+      operation: 'get_user_locale',
+    });
+  }
   const locale = (data as Record<string, unknown> | null)?.preferred_locale;
   return (locale as EmailLocale) ?? 'en';
 }
@@ -62,11 +69,14 @@ async function verifyEmailOwnership(ctx: Context, inputEmail: string): Promise<v
   const {
     data: { user },
     error,
-  } = await ctx.supabase.auth.getUser();
+  } = await observeAuthOperation('email_verify_ownership', () => ctx.supabase.auth.getUser());
 
   if (error) {
-    logger.error('Failed to fetch user info for email verification', { error });
-    handleServiceError(error);
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Authentication required',
+      cause: error,
+    });
   }
 
   if (!user?.email || user.email !== inputEmail) {
@@ -89,8 +99,16 @@ async function isEmailSuppressed(email: string): Promise<boolean> {
     .limit(1);
 
   if (error) {
-    logger.error('Failed to check email suppression', { error });
-    return false;
+    logger.error('Failed to check email suppression');
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'email',
+      operation: 'check_email_suppression',
+    });
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Unable to verify email delivery status',
+      cause: original,
+    });
   }
 
   return data.length > 0;
@@ -125,8 +143,12 @@ async function sendEmail({
   });
 
   if (error) {
-    logger.error(`${context} failed`, { error });
-    handleServiceError(error);
+    logger.error(`${context} failed`);
+    const original =
+      error instanceof Error
+        ? error
+        : new Error('Transactional email provider failed', { cause: error });
+    handleServiceError(original);
   }
 
   logger.info(`${context} sent`, { emailId: data?.id });
@@ -475,7 +497,9 @@ export const emailRouter = createTRPCRouter({
 
         const userId = ctx.userId;
         if (userId) {
-          const { data: userData } = await ctx.supabase.auth.getUser();
+          const { data: userData } = await observeAuthOperation('email_test_get_user', () =>
+            ctx.supabase.auth.getUser(),
+          );
           if (userData?.user?.email && userData.user.email !== input.to) {
             throw new TRPCError({
               code: 'FORBIDDEN',

@@ -1,25 +1,25 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-07-16
 ---
 
 # 契約サービス一覧
 
 Dayopt が運用時に依存する外部サービスの索引。ここでは用途と確認先を管理し、料金・上限・契約プランの値は各サービスの管理画面または請求書を正とする。コード上の依存は `package.json`、環境変数は `scripts/env/schema.ts` と Vercel / 1Password の設定を確認する。
 
-| サービス             | 用途                                    | リポジトリ内の確認先                                                                                        | 契約情報の正本                            |
-| -------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| Vercel               | Web 配信、Functions、Analytics          | `vercel.json`、`.github/workflows/`                                                                         | Vercel dashboard / invoice                |
-| Supabase             | PostgreSQL、Auth、Storage、Realtime     | `supabase/`、`packages/supabase/`                                                                           | Supabase organization dashboard / invoice |
-| Sentry               | エラー・パフォーマンス監視              | `apps/product/sentry.*.config.ts`、`apps/web/sentry.*.config.ts`、[monitoring](../operations/monitoring.md) | Sentry organization settings / invoice    |
-| Upstash Redis        | rate limit の共有 backend               | `packages/rate-limit/`                                                                                      | provider dashboard / invoice              |
-| Stripe               | subscription、Checkout、Portal、Webhook | `apps/product/src/features/billing/`、[billing spec](../product/specs/billing.md)                           | Stripe dashboard                          |
-| Resend               | transactional email                     | `packages/email/`                                                                                           | Resend dashboard / invoice                |
-| GitHub               | repository、Issues / PR、Actions        | `.github/`                                                                                                  | repository / organization settings        |
-| Cloudflare Turnstile | 公開フォームの bot 対策                 | `apps/web/src/features/contact/`                                                                            | Cloudflare dashboard                      |
-| 1Password            | secret の master 管理とローカル注入     | `.op-env.local.example`、`scripts/env/`、[secrets](../operations/secrets.md)                                | 1Password admin console / invoice         |
-| Slack                | 課金イベント通知の任意 webhook          | `apps/product/src/features/billing/server/notifications/`                                                   | Slack workspace settings                  |
-| ドメインレジストラ   | `dayopt.app` の登録・更新               | DNS / registrar console                                                                                     | registrar invoice                         |
+| サービス             | 用途                                    | リポジトリ内の確認先                                                                           | 契約情報の正本                            |
+| -------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Vercel               | Web 配信、Functions、Analytics          | `vercel.json`、`.github/workflows/`                                                            | Vercel dashboard / invoice                |
+| Supabase             | PostgreSQL、Auth、Storage、Realtime     | `supabase/`、`packages/supabase/`                                                              | Supabase organization dashboard / invoice |
+| Sentry               | エラー・パフォーマンス監視              | Product / Web の別project、`packages/observability`、[monitoring](../operations/monitoring.md) | Sentry organization settings / invoice    |
+| Upstash Redis        | rate limit の共有 backend               | `apps/product/src/lib/rate-limit/`、`apps/web/src/platform/security/rate-limit.ts`             | provider dashboard / invoice              |
+| Stripe               | subscription、Checkout、Portal、Webhook | `apps/product/src/features/billing/`、[billing spec](../product/specs/billing.md)              | Stripe dashboard                          |
+| Resend               | transactional email                     | `packages/email/`                                                                              | Resend dashboard / invoice                |
+| GitHub               | repository、Issues / PR、Actions        | `.github/`                                                                                     | repository / organization settings        |
+| Cloudflare Turnstile | 公開フォームの bot 対策                 | `apps/web/src/features/contact/`                                                               | Cloudflare dashboard                      |
+| 1Password            | secret の master 管理とローカル注入     | `.op-env.local.example`、`scripts/env/`、[secrets](../operations/secrets.md)                   | 1Password admin console / invoice         |
+| Slack                | 課金イベント通知の任意 webhook          | `apps/product/src/features/billing/server/notifications/`                                      | Slack workspace settings                  |
+| ドメインレジストラ   | `dayopt.app` の登録・更新               | DNS / registrar console                                                                        | registrar invoice                         |
 
 ## 更新ルール
 

@@ -7,6 +7,7 @@ import {
   refreshAccessToken,
   resolveClient,
 } from '@/lib/oauth-server';
+import { captureUnexpectedError } from '@/lib/sentry';
 
 /**
  * RFC 6749 §3.2 - Token Endpoint
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
 
       const client = resolveClient(clientId);
       if (!client) {
-        throw new OAuthServerError('invalid_client', `Unknown client_id: ${clientId}`);
+        throw new OAuthServerError('invalid_client', 'Unknown client_id');
       }
 
       const tokens = await exchangeAuthorizationCode({
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
 
       const client = resolveClient(clientId);
       if (!client) {
-        throw new OAuthServerError('invalid_client', `Unknown client_id: ${clientId}`);
+        throw new OAuthServerError('invalid_client', 'Unknown client_id');
       }
 
       const tokens = await refreshAccessToken({
@@ -70,10 +71,30 @@ export async function POST(request: NextRequest) {
     );
   } catch (err) {
     if (err instanceof OAuthServerError) {
+      if (err.httpStatus >= 500) {
+        const original = err.cause instanceof Error ? err.cause : err;
+        captureUnexpectedError(original, {
+          feature: 'oauth',
+          operation: 'token_endpoint',
+          route: '/api/oauth/token',
+        });
+        logger.error('OAuth token endpoint failed');
+      }
       return errorResponse(err);
     }
-    logger.error({ err }, '[oauth] /token unexpected error');
-    return errorResponse(new OAuthServerError('server_error', 'Unexpected error', 500));
+    const original =
+      err instanceof Error
+        ? err
+        : new Error('Unexpected OAuth token endpoint failure', { cause: err });
+    captureUnexpectedError(original, {
+      feature: 'oauth',
+      operation: 'token_endpoint',
+      route: '/api/oauth/token',
+    });
+    logger.error('OAuth token endpoint failed');
+    return errorResponse(
+      new OAuthServerError('server_error', 'Unexpected error', 500, { cause: original }),
+    );
   }
 }
 
@@ -107,7 +128,10 @@ function tokenResponse(body: unknown) {
 
 function errorResponse(err: OAuthServerError) {
   return NextResponse.json(
-    { error: err.code, error_description: err.message },
+    {
+      error: err.code,
+      error_description: err.httpStatus >= 500 ? 'OAuth server error' : err.message,
+    },
     {
       status: err.httpStatus,
       headers: {

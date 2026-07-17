@@ -8,6 +8,7 @@ import {
   generateAuthorizationCode,
   validateAuthorizeInput,
 } from '@/lib/oauth-server';
+import { captureUnexpectedDatabaseError, observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -46,7 +47,7 @@ export async function processConsent(formData: FormData) {
   const {
     data: { user },
     error: authError,
-  } = await supabase.auth.getUser();
+  } = await observeAuthOperation('oauth_consent_action_get_user', () => supabase.auth.getUser());
   if (authError || !user) {
     redirect('/auth/login');
   }
@@ -73,7 +74,12 @@ export async function processConsent(formData: FormData) {
   });
 
   if (insertError) {
-    logger.error({ err: insertError }, '[oauth] failed to persist authorization code');
+    logger.error('[oauth] failed to persist authorization code');
+    captureUnexpectedDatabaseError(insertError, {
+      feature: 'oauth',
+      operation: 'persist_authorization_code',
+      route: '/oauth/consent',
+    });
     redirectUrl.searchParams.set('error', 'server_error');
     redirect(redirectUrl.toString());
   }

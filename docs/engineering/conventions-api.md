@@ -704,20 +704,23 @@ const error = createAppError(
 
 ### Sentry連携
 
-エラーは自動的にSentryに送信され、以下で分類される:
+Sentry Issue は予期しない障害だけに限定する。validation、認証失敗、404、conflict、
+rate limit などの想定内レスポンスは送信しない。tRPC / Next.js の中央adapterが扱う障害は
+そこで一度だけcaptureし、個別のserviceから重ねて送らない。
 
-| 分類                   | 内容                                             |
-| ---------------------- | ------------------------------------------------ |
-| **タグ**               | errorCode, errorCategory, severity, domain, team |
-| **コンテキスト**       | errorPattern, errorMetadata                      |
-| **フィンガープリント** | 自動グルーピング                                 |
+中央adapterの外にあるError Boundaryなどでは、元の`Error`とstackを保持したまま
+`captureUnexpectedError`を使う。付与できるのはfeature、operation、route、request IDなどの
+技術コンテキストだけで、本文、email、検索語、認証情報、任意のmetadataは渡さない。
+一般エラーに手動fingerprintは設定せず、Sentry標準のgroupingを使う。
 
 ```typescript
-import { reportToSentry } from '@/lib/sentry';
-import { AppError } from '@/config/error-patterns';
+import { captureUnexpectedError } from '@/lib/sentry';
 
-const appError = new AppError('操作に失敗', 'SYSTEM_ERROR_500', { context: 'example' });
-reportToSentry(appError);
+captureUnexpectedError(error, {
+  feature: 'calendar',
+  operation: 'load_entries',
+  route: '/api/calendar',
+});
 ```
 
 ### マイグレーション（従来 → エラーパターン）

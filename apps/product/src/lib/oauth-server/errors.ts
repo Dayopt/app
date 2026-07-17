@@ -20,8 +20,9 @@ export class OAuthServerError extends Error {
     public readonly code: OAuthErrorCode,
     message: string,
     public readonly httpStatus = 400,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = 'OAuthServerError';
   }
 }

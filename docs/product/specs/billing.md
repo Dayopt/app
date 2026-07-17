@@ -261,14 +261,14 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 ## 関連ファイル
 
-| ファイル                                                             | 役割                                                       |
-| -------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `apps/product/src/lib/stripe/client.ts`                              | Stripe クライアント初期化（`getStripe` / `requireStripe`） |
-| `apps/product/src/features/settings/server/billing-service.ts`       | 課金ビジネスロジック（Service層）                          |
-| `apps/product/src/features/settings/server/billing-router.ts`        | tRPC Router（Router層）                                    |
-| `apps/product/src/app/api/webhooks/stripe/route.ts`                  | Webhook エンドポイント                                     |
-| `apps/product/src/lib/trpc/procedures.ts`                            | `proProcedure` 定義                                        |
-| `apps/product/src/features/settings/components/billing-settings.tsx` | 課金設定UI                                                 |
-| `supabase/migrations/20260317120000_add_stripe_billing_columns.sql`  | DBマイグレーション                                         |
-| `packages/billing/src/pricing.ts`                                    | Free / Pro の表示価格と7日トライアル                       |
-| `packages/billing/src/entitlement.ts`                                | `pro_access` entitlement                                   |
+| ファイル                                                            | 役割                                                       |
+| ------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `apps/product/src/lib/stripe/client.ts`                             | Stripe クライアント初期化（`getStripe` / `requireStripe`） |
+| `apps/product/src/features/settings/server/billing-service.ts`      | 課金ビジネスロジック（Service層）                          |
+| `apps/product/src/features/settings/server/billing-router.ts`       | tRPC Router（Router層）                                    |
+| `apps/product/src/app/api/webhooks/stripe/route.ts`                 | Webhook エンドポイント                                     |
+| `apps/product/src/lib/trpc/procedures.ts`                           | `proProcedure` 定義                                        |
+| `apps/product/src/features/settings/components/BillingSettings.tsx` | 課金設定UI                                                 |
+| `supabase/migrations/20260317120000_add_stripe_billing_columns.sql` | DBマイグレーション                                         |
+| `packages/billing/src/pricing.ts`                                   | Free / Pro の表示価格と7日トライアル                       |
+| `packages/billing/src/entitlement.ts`                               | `pro_access` entitlement                                   |

@@ -10,6 +10,7 @@ import {
   isPublicRewritePath,
 } from '@/lib/auth/domain';
 import { logger } from '@/lib/logger';
+import { captureUnexpectedError, observeAuthOperation } from '@/lib/sentry';
 import { updateSession } from '@/lib/supabase/middleware';
 import { routing } from '@dayopt/i18n/routing';
 
@@ -19,6 +20,20 @@ const intlMiddleware = createMiddleware(routing);
 const MCP_HOST = dayoptDomains.mcp;
 const CSP_HEADER = 'Content-Security-Policy';
 const CSP_REPORT_URI = '/api/csp-report';
+
+function getSentryIngestOrigin(dsn: string | undefined): string | undefined {
+  if (!dsn) return undefined;
+
+  try {
+    const parsed = new URL(dsn);
+    if (parsed.protocol !== 'https:' || !parsed.username) return undefined;
+    return parsed.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+const SENTRY_INGEST_ORIGIN = getSentryIngestOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
 
 function createCspNonce(): string {
   const bytes = new Uint8Array(16);
@@ -36,8 +51,7 @@ function buildContentSecurityPolicy(nonce: string): string {
     'https://vitals.vercel-insights.com',
     'https://api.pwnedpasswords.com',
     'https://challenges.cloudflare.com',
-    'https://*.sentry.io',
-    'https://*.ingest.sentry.io',
+    ...(SENTRY_INGEST_ORIGIN ? [SENTRY_INGEST_ORIGIN] : []),
     ...(isDevelopment ? ['http://127.0.0.1:54321', 'http://localhost:54321'] : []),
   ].join(' ');
 
@@ -199,10 +213,10 @@ export async function proxy(request: NextRequest) {
     return applyCsp(intlResponse, contentSecurityPolicy);
   }
 
-  // Supabaseセッションを更新（ユーザー情報も同時取得 - 重複呼び出し防止で高速化）
-  const { response, supabase, user } = await updateSession(request);
-
   try {
+    // Supabaseセッションを更新（ユーザー情報も同時取得 - 重複呼び出し防止で高速化）
+    const { response, supabase, user } = await updateSession(request);
+
     // 環境変数で認証をスキップ（開発環境用）
     const skipAuth =
       process.env.SKIP_AUTH_IN_DEV === 'true' && process.env.NODE_ENV === 'development';
@@ -237,7 +251,17 @@ export async function proxy(request: NextRequest) {
 
     // MFA AAL強制（認証済みユーザーのみ）
     if (user && isProtectedPath && !isMFAVerifyPath) {
-      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      const { data: aalData, error: aalError } = await observeAuthOperation(
+        'proxy_get_authenticator_assurance_level',
+        () => supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+      );
+      if (aalError) {
+        logger.warn('MFA assurance lookup failed; redirecting to login');
+        return redirectWithCsp(
+          new URL(getLocalizedPath('/auth/login', currentLocale), request.url),
+          contentSecurityPolicy,
+        );
+      }
       if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
         // MFA有効だがまだ検証していない → mfa-verifyへ強制リダイレクト
         return redirectWithCsp(
@@ -254,7 +278,14 @@ export async function proxy(request: NextRequest) {
 
     return applyCsp(response, contentSecurityPolicy);
   } catch (error) {
-    logger.error('Proxy error:', error);
+    const original =
+      error instanceof Error ? error : new Error('Unexpected proxy failure', { cause: error });
+    captureUnexpectedError(original, {
+      feature: 'auth',
+      operation: 'proxy_request',
+      source: 'next_proxy',
+    });
+    logger.error('Proxy request failed');
     return redirectWithCsp(
       new URL(getLocalizedPath('/auth/login', currentLocale), request.url),
       contentSecurityPolicy,

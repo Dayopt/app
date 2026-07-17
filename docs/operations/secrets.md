@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-07-16
 code: scripts/env/schema.ts
 ---
 
@@ -57,6 +57,8 @@ Google OAuth client secret、Apple Developer `.p8`、証明書、service account
 
 field 名は可能な限り current code の env 名と一致させる。`.op-env.local.example` はこの schema の参照だけを持つ。
 
+以下は期待schemaであり、2026-07-16時点では1Password CLIが未認証のため、各item / fieldの実在とempty状態を再確認できていない。Vercel Production replicaは確認済みだが、1Password masterの是正はblocked中の[#1558](https://github.com/Dayopt/dayopt/issues/1558)を所有者とし、確認前に重複変更しない。
+
 ### `Dayopt-Staging`
 
 通常の PR Preview では使わない。persistent staging を追加した時、または local dev 用の長寿命参照が必要な時だけ使う。
@@ -67,12 +69,11 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 | `upstash`     | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               | Redis rate limit / cache            |
 | `stripe-test` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    | Stripe test mode                    |
 | `resend`      | `RESEND_WEBHOOK_SECRET`                                                                                                                                                            | Resend webhook secret               |
-| `sentry`      | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`                                                                                                                           | Sentry project metadata / DSN       |
 | `app`         | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              | App URL / recovery code HMAC pepper |
 
 ### `Dayopt-Production`
 
-Staging と同構造。Stripe のみ item 名を `stripe-live` にする。本番 secret は通常ローカルから参照せず、Vercel / Supabase Dashboard へ replica として同期する。
+本番 secret は通常ローカルから参照せず、Vercel / Supabase Dashboard へ replica として同期する。Sentry は Product / Web で project を分離するため、metadata / DSN の item も分ける。
 
 | Item          | Fields                                                                                                                                                                             |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -80,24 +81,25 @@ Staging と同構造。Stripe のみ item 名を `stripe-live` にする。本�
 | `upstash`     | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               |
 | `stripe-live` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    |
 | `resend`      | `RESEND_WEBHOOK_SECRET`                                                                                                                                                            |
-| `sentry`      | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`                                                                                                                           |
+| `sentry`      | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`（Product）                                                                                                  |
+| `sentry-web`  | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`（Web）                                                                                                      |
 | `app`         | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              |
 
 ### `Dayopt-Shared`
 
-| Item                 | Fields                                                                                        | 用途                                            |
-| -------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `turnstile`          | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile                            |
-| `anthropic`          | `ANTHROPIC_API_KEY`                                                                           | optional / legacy key。現行runtime consumerなし |
-| `resend`             | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Email sending                                   |
-| `sentry`             | `SENTRY_AUTH_TOKEN`                                                                           | Sentry release upload                           |
-| `github-contact-pat` | `GITHUB_TOKEN`, `GITHUB_CONTACT_REPO`                                                         | Contact form GitHub Issue 作成                  |
-| `github-login`       | password, TOTP, recovery codes                                                                | GitHub account login                            |
-| `github-ssh`         | SSH private key                                                                               | GitHub SSH Agent                                |
-| `vercel`             | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Vercel CLI / future automation                  |
-| `google`             | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                          |
-| `domain`             | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                 |
-| `recovery-codes`     | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側              |
+| Item                 | Fields                                                                                        | 用途                                                  |
+| -------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `turnstile`          | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile                                  |
+| `anthropic`          | `ANTHROPIC_API_KEY`                                                                           | optional / legacy key。現行runtime consumerなし       |
+| `resend`             | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Email sending                                         |
+| `sentry`             | `SENTRY_AUTH_TOKEN`                                                                           | Product / Web の Production release upload            |
+| `github-contact-pat` | `GITHUB_TOKEN`, `GITHUB_CONTACT_REPO`                                                         | private repository限定のContact form GitHub Issue作成 |
+| `github-login`       | password, TOTP, recovery codes                                                                | GitHub account login                                  |
+| `github-ssh`         | SSH private key                                                                               | GitHub SSH Agent                                      |
+| `vercel`             | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Vercel CLI / future automation                        |
+| `google`             | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                                |
+| `domain`             | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                       |
+| `recovery-codes`     | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側                    |
 
 ---
 
@@ -113,6 +115,8 @@ pnpm dev
 `pnpm dev` は `.op-env.local` の存在を確認し、`.env.local` / `apps/product/.env.local` / `apps/web/.env.local` が残っている場合は fail する。通常は Supabase local を参照し、停止中なら自動起動してから `supabase status -o env` の結果を URL / key として値表示なしで注入する。
 
 `.op-env.local` の Supabase refs をそのまま使う一時作業だけ `DAYOPT_SUPABASE_TARGET=op pnpm dev` を使う。素の起動が必要な一時作業だけ `pnpm dev:raw` を使う。
+
+Sentry runtime と source map upload は Production 限定のため、local の `.op-env.local`、GitHub Actions、Vercel Preview / Development に Sentry env を複製しない。Vercel の `product` と `web` は同じ標準 env 名を使い、それぞれ `Dayopt-Production/sentry` と `Dayopt-Production/sentry-web` の値を Production target だけへ同期する。`SENTRY_AUTH_TOKEN` は `Dayopt-Shared/sentry` の単一 fieldをmasterとし、両projectのProduction targetへSensitive replicaとして同期する。
 
 `.op-env.local` には `op://` 参照だけを書く。実値、dummy secret、placeholder secret は書かない。
 
@@ -185,6 +189,8 @@ pnpm vercel:env:pull:unsafe
 ## Bot Protection
 
 Cloudflare Turnstile が canonical provider。`NEXT_PUBLIC_TURNSTILE_SITE_KEY` は app / web の browser 側で使い、`TURNSTILE_SECRET_KEY` は web contact form と Supabase Dashboard replica で使う。
+
+`GITHUB_CONTACT_REPO`はアクセスを制限したprivate repositoryを必須とする。公開repositoryを指定しない。Product / WebはIssue本文を送る前にGitHub APIでvisibilityを検証し、privateを確認できない場合はfail-closedにする。
 
 reCAPTCHA 関連 env は旧方式。新規設定・docs・example には追加しない。
 

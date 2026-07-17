@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   acceptAllCookies,
@@ -37,6 +37,17 @@ describe('cookie-consent', () => {
       setCookieConsent({ analytics: false, marketing: false });
       const consent = getCookieConsent();
       expect(consent!.necessary).toBe(true);
+    });
+
+    it('localStorageが利用できない場合は未同意として扱う', () => {
+      const storageSpy = vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+        throw new DOMException('blocked', 'SecurityError');
+      });
+
+      expect(getCookieConsent()).toBeNull();
+      expect(needsCookieConsent()).toBe(true);
+
+      storageSpy.mockRestore();
     });
   });
 
@@ -80,6 +91,16 @@ describe('cookie-consent', () => {
       acceptAllCookies();
       resetCookieConsent();
       expect(getCookieConsent()).toBeNull();
+    });
+
+    it('resetをtelemetry拒否として通知する', () => {
+      const handler = vi.fn();
+      window.addEventListener('cookieConsentChanged', handler);
+
+      resetCookieConsent();
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ detail: null }));
+      window.removeEventListener('cookieConsentChanged', handler);
     });
   });
 

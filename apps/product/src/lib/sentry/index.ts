@@ -6,4 +6,12 @@
  */
 
 // メイン統合機能（実利用 API のみ）
-export { SentryErrorHandler, captureBusinessEvent, handleReactError } from './integration';
+export {
+  captureClientBoundaryError,
+  captureUnexpectedAuthError,
+  captureUnexpectedDatabaseError,
+  captureUnexpectedError,
+  handleReactError,
+  isExpectedAuthError,
+  observeAuthOperation,
+} from './integration';

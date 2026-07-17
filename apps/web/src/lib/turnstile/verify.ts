@@ -5,6 +5,7 @@
  */
 
 import { env } from '@/platform/config/env';
+import { z } from 'zod';
 
 import { TURNSTILE_CONFIG } from './config';
 
@@ -16,6 +17,15 @@ export interface TurnstileVerifyResponse {
   action?: string;
   cdata?: string;
 }
+
+const turnstileVerifyResponseSchema = z.object({
+  success: z.boolean(),
+  'error-codes': z.array(z.string()).optional(),
+  challenge_ts: z.string().optional(),
+  hostname: z.string().optional(),
+  action: z.string().optional(),
+  cdata: z.string().optional(),
+});
 
 function isDevelopment(): boolean {
   return process.env.NODE_ENV === 'development';
@@ -34,26 +44,28 @@ export async function verifyTurnstile(
     return { success: false, 'error-codes': ['missing-input-response'] };
   }
 
-  try {
-    const body = new URLSearchParams({
-      secret: env.TURNSTILE_SECRET_KEY ?? '',
-      response: token,
-    });
-    if (remoteIp) body.append('remoteip', remoteIp);
-
-    const response = await fetch(TURNSTILE_CONFIG.VERIFY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Turnstile API returned ${response.status}`);
-    }
-
-    return (await response.json()) as TurnstileVerifyResponse;
-  } catch (error) {
-    console.error('[Turnstile] Verification error:', error);
-    return { success: false, 'error-codes': ['verification-failed'] };
+  if (!env.TURNSTILE_SECRET_KEY) {
+    throw new Error('Turnstile secret key is not configured');
   }
+
+  const body = new URLSearchParams({
+    secret: env.TURNSTILE_SECRET_KEY,
+    response: token,
+  });
+  if (remoteIp) body.append('remoteip', remoteIp);
+
+  const response = await fetch(TURNSTILE_CONFIG.VERIFY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+
+  if (!response.ok) {
+    throw new Error('Turnstile verification service returned an unsuccessful response');
+  }
+
+  const parsed = turnstileVerifyResponseSchema.safeParse(await response.json());
+  if (!parsed.success)
+    throw new Error('Turnstile verification service returned an invalid response');
+  return parsed.data;
 }

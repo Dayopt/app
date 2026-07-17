@@ -98,7 +98,7 @@ describe('SettingsService', () => {
       await expect(service.get(USER_ID)).rejects.toMatchObject({
         name: 'SettingsServiceError',
         code: 'FETCH_FAILED',
-        message: 'Fetch failed',
+        message: 'Failed to fetch user settings',
       });
     });
   });
@@ -204,7 +204,7 @@ describe('SettingsService', () => {
       await expect(service.updateProfile(USER_ID, { avatarUrl: null })).rejects.toMatchObject({
         name: 'SettingsServiceError',
         code: 'UPDATE_FAILED',
-        message: 'Profile failed',
+        message: 'Failed to update profile',
       });
     });
   });
@@ -252,7 +252,7 @@ describe('SettingsService', () => {
 
       await expect(service.regenerateICalToken(USER_ID)).rejects.toMatchObject({
         code: 'UPDATE_FAILED',
-        message: 'Token update failed',
+        message: 'Failed to regenerate iCal token',
       });
     });
   });

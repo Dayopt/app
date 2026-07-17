@@ -14,108 +14,23 @@
 
 import { useEffect } from 'react';
 
-import * as Sentry from '@sentry/nextjs';
+import { captureClientBoundaryError } from '@/lib/sentry';
+
+import { ErrorButton } from './_global-error/ErrorButton';
+import { ERROR_TEXT, FALLBACK_STYLES } from './_global-error/fallback-content';
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
   reset: () => void;
 }
 
-// Static text for global error page (outside i18n context)
-const ERROR_TEXT = {
-  title: 'Something went wrong',
-  description: 'We apologize for the inconvenience. An unexpected error occurred.',
-  errorId: 'Error ID',
-  showDetails: 'Show details',
-  retry: 'Try again',
-  goHome: 'Go to Home',
-  sentryReport: 'This error has been automatically reported.',
-};
-
-/**
- * デザインシステム準拠のフォールバックCSS変数
- *
- * primitives.css / colors.css のOKLCH値をそのまま使用。
- * Root Layout のCSSが読めない場合でもデザインシステムと一貫した色を提供する。
- */
-const FALLBACK_STYLES = `
-  :root {
-    --ge-background: oklch(0.12 0 0);
-    --ge-foreground: oklch(0.99 0 0);
-    --ge-card: oklch(0.24 0 0);
-    --ge-card-inset: oklch(0.16 0 0);
-    --ge-border: oklch(0.3715 0 0);
-    --ge-muted: oklch(0.78 0 0);
-    --ge-primary: oklch(0.5 0.188 259.8145);
-    --ge-destructive: oklch(0.65 0.24 25.33);
-  }
-`;
-
-/**
- * インラインスタイルのみで動作するボタン
- *
- * global-error.tsx では shadcn/ui Button が正常に動作しない可能性があるため、
- * CSS変数に依存しないインラインスタイルを使用する。
- */
-function ErrorButton({
-  children,
-  onClick,
-  variant = 'primary',
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  variant?: 'primary' | 'outline';
-}) {
-  const baseStyle: React.CSSProperties = {
-    display: 'block',
-    width: '100%',
-    padding: '0.625rem 1rem',
-    borderRadius: '0.375rem',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-    textAlign: 'center',
-    cursor: 'pointer',
-    border: 'none',
-    transition: 'opacity 0.15s',
-  };
-
-  const styles: React.CSSProperties =
-    variant === 'primary'
-      ? { ...baseStyle, backgroundColor: 'var(--ge-primary)', color: 'var(--ge-foreground)' }
-      : {
-          ...baseStyle,
-          backgroundColor: 'transparent',
-          color: 'var(--ge-muted)',
-          border: '1px solid var(--ge-border)',
-        };
-
-  return (
-    <button onClick={onClick} style={styles}>
-      {children}
-    </button>
-  );
-}
-
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    Sentry.captureException(error, {
-      tags: {
-        error_boundary: 'global_error',
-        error_type: 'react_render_error',
-      },
-      contexts: {
-        react_error: {
-          componentStack: error.stack,
-          digest: error.digest,
-          message: error.message,
-        },
-      },
-      extra: {
-        errorInfo: {
-          componentStack: error.stack,
-          errorBoundary: 'GlobalError',
-        },
-      },
+    captureClientBoundaryError(error, {
+      feature: 'root_layout',
+      operation: 'render',
+      route: window.location.pathname,
+      source: 'global_error_boundary',
     });
   }, [error]);
 
@@ -246,7 +161,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 marginBottom: 0,
               }}
             >
-              {ERROR_TEXT.sentryReport}
+              {ERROR_TEXT.recoveryHint}
             </p>
           </div>
         </div>

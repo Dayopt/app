@@ -279,6 +279,28 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // Composition Feature (settings): 他featureへのimportは許可するが、deep importは禁止（barrelのみ）
+  // .claude/rules/feature-boundaries.md の「Composition Feature: settings」参照
+  {
+    files: ['src/features/settings/**/*.{ts,tsx}'],
+    ignores: ['**/*.stories.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              // サブディレクトリ列挙だと server/domain/schemas 等の新設パスを
+              // 見逃す（Codex review 指摘）。catch-all で deep import 全体を禁止する。
+              group: ['@/features/*/**'],
+              message: 'settings は composition feature のため他featureへのimportは許可されるが、deep importは禁止。barrel（@/features/featureName）経由で使用。',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // ── 3. app/: feature deep import禁止（barrelのみ） ──
   {
     files: ['src/app/**/*.{ts,tsx}'],

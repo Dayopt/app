@@ -14,6 +14,7 @@ import type { EmailOtpType } from '@supabase/auth-js';
 import { type NextRequest, NextResponse } from 'next/server';
 
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
+import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
@@ -24,10 +25,12 @@ export async function GET(request: NextRequest) {
 
   if (tokenHash && type) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type,
-    });
+    const { error } = await observeAuthOperation('verify_email_otp', () =>
+      supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type,
+      }),
+    );
 
     if (!error) {
       return NextResponse.redirect(new URL(next, request.url));

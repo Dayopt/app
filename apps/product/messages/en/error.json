@@ -7,12 +7,12 @@
       "showDetails": "Show error details",
       "retry": "Retry",
       "goHome": "Go Home",
-      "sentryReport": "The error has been automatically reported"
+      "sentryReport": "Try again or reload the page."
     },
     "boundary": {
       "title": "An unexpected error occurred",
       "description": "We're sorry. An error occurred in the application.",
-      "autoReport": "An error report will be sent automatically.",
+      "autoReport": "Try again or reload the page.",
       "retry": "Retry",
       "reload": "Reload Page",
       "devTitle": "Development - Component Error",

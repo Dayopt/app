@@ -9,6 +9,13 @@
  */
 'use client';
 
+import {
+  BROWSER_TELEMETRY_CONSENT_EVENT,
+  getBrowserTelemetryConsentStorage,
+  hasAnalyticsConsent,
+  isBrowserTelemetryConsentStorageChange,
+  resolveAnalyticsConsentDetail,
+} from '@dayopt/observability';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 
@@ -26,20 +33,71 @@ export function DeferredAnalytics() {
   const [shouldLoad, setShouldLoad] = useState(false);
 
   useEffect(() => {
-    // requestIdleCallbackでメインスレッドがアイドル時に読み込み
-    if ('requestIdleCallback' in window) {
-      const handle = requestIdleCallback(
-        () => {
-          setShouldLoad(true);
-        },
-        { timeout: 2000 },
-      ); // 最大2秒後には読み込み
-      return () => cancelIdleCallback(handle);
-    } else {
-      // フォールバック: 1秒後に読み込み
-      const timer = setTimeout(() => setShouldLoad(true), 1000);
-      return () => clearTimeout(timer);
+    if (process.env.NEXT_PUBLIC_VERCEL_ENV !== 'production') return;
+
+    let idleHandle: number | undefined;
+    let timerHandle: ReturnType<typeof setTimeout> | undefined;
+    let scheduled = false;
+
+    const cancelScheduledLoad = () => {
+      if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle);
+      if (timerHandle !== undefined) clearTimeout(timerHandle);
+      idleHandle = undefined;
+      timerHandle = undefined;
+      scheduled = false;
+    };
+
+    const scheduleLoad = () => {
+      if (scheduled) return;
+      scheduled = true;
+
+      const enableIfStillAllowed = () => {
+        scheduled = false;
+        if (hasAnalyticsConsent(getBrowserTelemetryConsentStorage())) setShouldLoad(true);
+      };
+
+      if ('requestIdleCallback' in window) {
+        idleHandle = window.requestIdleCallback(enableIfStillAllowed, { timeout: 2000 });
+      } else {
+        timerHandle = setTimeout(enableIfStillAllowed, 1000);
+      }
+    };
+
+    const handleConsentChanged = (event: Event) => {
+      const analyticsConsent = resolveAnalyticsConsentDetail(
+        (event as CustomEvent<unknown>).detail,
+      );
+      if (analyticsConsent === null) return;
+
+      if (analyticsConsent && hasAnalyticsConsent(getBrowserTelemetryConsentStorage())) {
+        scheduleLoad();
+      } else {
+        cancelScheduledLoad();
+        setShouldLoad(false);
+      }
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (!isBrowserTelemetryConsentStorageChange(event.key)) return;
+
+      if (hasAnalyticsConsent(getBrowserTelemetryConsentStorage())) {
+        scheduleLoad();
+      } else {
+        cancelScheduledLoad();
+        setShouldLoad(false);
+      }
+    };
+
+    if (hasAnalyticsConsent(getBrowserTelemetryConsentStorage())) {
+      scheduleLoad();
     }
+
+    window.addEventListener(BROWSER_TELEMETRY_CONSENT_EVENT, handleConsentChanged);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      cancelScheduledLoad();
+      window.removeEventListener(BROWSER_TELEMETRY_CONSENT_EVENT, handleConsentChanged);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   if (!shouldLoad) return null;

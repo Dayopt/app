@@ -37,6 +37,13 @@ vi.mock('@/features/tags', () => ({
 vi.mock('@/lib/date', () => ({
   isSameDay: (start: Date, end: Date) =>
     start.toISOString().slice(0, 10) === end.toISOString().slice(0, 10),
+  formatDurationMinutes: (totalMinutes: number) => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours === 0) return `${minutes}m`;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}m`;
+  },
 }));
 
 vi.mock('@/lib/hooks/useDateFormat', () => ({

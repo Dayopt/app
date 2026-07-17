@@ -13,7 +13,7 @@ import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses, TagIcon } from '@/features/tags';
 import type { PlanEvent } from '@/features/timeblock';
-import { formatTimeString } from '@/lib/date';
+import { formatTimeRange } from '@/lib/date';
 import { cn } from '@dayopt/components';
 import type { TimeFormat } from '@dayopt/domain';
 
@@ -54,10 +54,6 @@ interface PlanLaneCardProps {
 const MIN_HEIGHT = 20;
 const DETAIL_HEIGHT_THRESHOLD = 40;
 const RESIZE_HANDLE_HEIGHT = 20;
-
-function formatTimeRange(start: Date, end: Date, timeFormat: TimeFormat): string {
-  return `${formatTimeString(start.getHours(), start.getMinutes(), timeFormat)}–${formatTimeString(end.getHours(), end.getMinutes(), timeFormat)}`;
-}
 
 /** skip 済み plan の斜線ハッチング背景。TimeblockCard の skip 表現を踏襲。 */
 function skippedHatchImage(accentColor: string): string {

@@ -2,6 +2,7 @@
 
 import type { TagColorName } from '@/features/tags';
 import { TagIcon } from '@/features/tags';
+import { formatDurationMinutes } from '@/lib/date';
 import { cn } from '@dayopt/components';
 
 interface TagSegment {
@@ -57,7 +58,7 @@ export function TagBreakdownBar({
                 onTagClick && 'hover:bg-state-hover cursor-pointer transition-colors',
               )}
               style={{ width: `${pct}%`, backgroundColor: `var(--tag-${seg.tagColor})` }}
-              title={`${seg.tagName}: ${formatMinutes(seg.minutes)} (${Math.round(pct)}%)`}
+              title={`${seg.tagName}: ${formatDurationMinutes(seg.minutes)} (${Math.round(pct)}%)`}
               onClick={() => onTagClick?.(seg.tagId)}
             />
           );
@@ -82,7 +83,7 @@ export function TagBreakdownBar({
                 <TagIcon icon={seg.tagIcon ?? null} color={seg.tagColor} size="sm" />
                 <span className="text-foreground truncate">{seg.tagName}</span>
                 <span className="text-muted-foreground">
-                  {formatMinutes(seg.minutes)} ({pct}%)
+                  {formatDurationMinutes(seg.minutes)} ({pct}%)
                 </span>
               </button>
             );
@@ -91,13 +92,4 @@ export function TagBreakdownBar({
       )}
     </div>
   );
-}
-
-function formatMinutes(mins: number): string {
-  if (mins >= 60) {
-    const h = Math.floor(mins / 60);
-    const m = Math.round(mins % 60);
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
-  }
-  return `${Math.round(mins)}m`;
 }

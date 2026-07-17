@@ -12,7 +12,7 @@
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 
 import { logger } from '@/lib/logger';
-import { getTrpcErrorLogInput } from '@/lib/trpc/logger-policy';
+import { captureUnexpectedTrpcAdapterError } from '@/lib/trpc/errors';
 import { createFetchTRPCContext } from '@/lib/trpc/procedures';
 import { appRouter } from '@/lib/trpc/root';
 
@@ -26,15 +26,12 @@ function handler(req: Request) {
     // Clientはquery inputをURLへ残さないため、queryもPOSTで送る。
     allowMethodOverride: true,
     createContext: createFetchTRPCContext,
-    onError: ({ error, type, path, input, ctx }) => {
-      logger.error('tRPC Error:', {
+    onError: ({ error, type, path }) => {
+      captureUnexpectedTrpcAdapterError(error, path ?? 'unknown');
+      logger.error('tRPC request failed', {
         type,
         path,
-        error: error.message,
         code: error.code,
-        input: getTrpcErrorLogInput({ path: path ?? '', input }, process.env.NODE_ENV),
-        userId: ctx?.userId,
-        timestamp: new Date().toISOString(),
       });
     },
     responseMeta: ({ ctx }) => {

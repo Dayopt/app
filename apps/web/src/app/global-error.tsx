@@ -1,6 +1,7 @@
 'use client';
 
 import { isDevelopment } from '@/platform/config/env';
+import { captureBoundaryError } from '@/platform/observability/capture-boundary-error';
 import { Button, Container, Heading, Text } from '@dayopt/components';
 import { useEffect } from 'react';
 
@@ -11,8 +12,7 @@ interface GlobalErrorProps {
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    // Log the error to your error reporting service
-    console.error('Global error:', error);
+    captureBoundaryError(error, 'global_error');
   }, [error]);
 
   return (
@@ -28,8 +28,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               </Heading>
 
               <Text variant="muted" className="mb-8">
-                An unexpected error occurred. This has been automatically reported to our team and
-                we&apos;re working to fix it.
+                An unexpected error occurred. Please try again. If it continues, contact support.
               </Text>
 
               <div className="space-y-4">

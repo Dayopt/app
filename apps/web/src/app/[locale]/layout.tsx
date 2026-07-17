@@ -3,6 +3,9 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
+import { BrowserTelemetry } from '@/shell/privacy/BrowserTelemetry';
+import { CookieConsentBanner } from '@/shell/privacy/CookieConsentBanner';
+
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
@@ -31,5 +34,11 @@ export default async function LocaleLayout({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- rest destructuring で除外する legal/ossCredits は意図的に未使用
   const { legal, ossCredits, ...clientMessages } = messages as Record<string, unknown>;
 
-  return <NextIntlClientProvider messages={clientMessages}>{children}</NextIntlClientProvider>;
+  return (
+    <NextIntlClientProvider messages={clientMessages}>
+      {children}
+      <BrowserTelemetry />
+      <CookieConsentBanner />
+    </NextIntlClientProvider>
+  );
 }

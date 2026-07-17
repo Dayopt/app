@@ -24,10 +24,7 @@
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
-import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { httpBatchLink, loggerLink, TRPCClientError } from '@trpc/client';
-import superjson from 'superjson';
 
 import {
   CACHE_BUSTER,
@@ -50,8 +47,9 @@ const AxeAccessibilityChecker =
 
 import { AuthStoreInitializer } from '@/features/auth';
 import { UserSettingsInitializer } from '@/features/settings';
-import { api, getBaseUrl } from '@/lib/trpc';
-import { containsPrivateTimeblockSearch } from '@/lib/trpc/logger-policy';
+import { api } from '@/lib/trpc';
+import { createAppTrpcClient } from '@/lib/trpc/browser-client';
+import { createAppQueryClient } from '@/lib/trpc/query-client';
 import { ThemeProvider } from './theme-provider';
 
 // SessionMonitorProviderを遅延ロード（セッション失効通知 + タイムアウト警告）
@@ -95,110 +93,10 @@ interface ProvidersProps {
   children: React.ReactNode;
 }
 
-/**
- * 認証エラーかどうかを判定
- * UNAUTHORIZED(401)エラーの場合はログインページへリダイレクト
- */
-function isAuthError(error: unknown): boolean {
-  if (error instanceof TRPCClientError) {
-    // tRPCエラーの場合、data.codeまたはHTTPステータスをチェック
-    const code = error.data?.code;
-    if (code === 'UNAUTHORIZED') return true;
-
-    // HTTPステータスコードもチェック
-    const httpStatus = error.data?.httpStatus;
-    if (httpStatus === 401) return true;
-  }
-  return false;
-}
-
-/**
- * 認証エラー時にログインページへリダイレクト
- */
-function handleAuthError(error: unknown): void {
-  if (typeof window === 'undefined') return;
-
-  if (isAuthError(error)) {
-    // 現在のパスのみ保存（query stringは含めない — 2次オープンリダイレクト防止）
-    const currentPath = window.location.pathname;
-    const loginUrl = `/auth/login?redirect=${encodeURIComponent(currentPath)}`;
-    window.location.href = loginUrl;
-  }
-}
-
 /** 認証必須ページ用フルProviders（tRPC・テーマ・検索等の全機能を提供） */
 export function Providers({ children }: ProvidersProps) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        // グローバルエラーハンドリング: 認証エラー時は自動でログインページへリダイレクト
-        queryCache: new QueryCache({
-          onError: (error) => handleAuthError(error),
-        }),
-        mutationCache: new MutationCache({
-          onError: (error) => handleAuthError(error),
-        }),
-        defaultOptions: {
-          queries: {
-            networkMode: 'offlineFirst', // オフライン時もキャッシュデータを表示
-            staleTime: 5 * 60 * 1000, // 5分（一般的なデータのデフォルト）
-            // PERSIST_MAX_AGE_MS（2時間）以上にする必要がある。
-            // 永続化から復元されたデータが GC される前に読み込まれるために必須。
-            gcTime: PERSIST_MAX_AGE_MS, // 2時間（query cache の IndexedDB 永続化）
-            refetchOnWindowFocus: true, // 業界標準：タブ切り替え時にstaleなデータのみ再フェッチ
-            refetchOnReconnect: 'always',
-            retry: (failureCount, error) => {
-              // 認証エラーはリトライしない（すぐにリダイレクト）
-              if (isAuthError(error)) return false;
-              // 404もリトライしない
-              if (error && 'status' in error && error.status === 404) return false;
-              return failureCount < 3;
-            },
-            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-          },
-          mutations: {
-            retry: (failureCount, error) => {
-              // 認証エラーはリトライしない
-              if (isAuthError(error)) return false;
-              return failureCount < 1;
-            },
-          },
-        },
-      }),
-  );
-
-  const [trpcClient] = useState(() =>
-    api.createClient({
-      links: [
-        loggerLink({
-          enabled: (opts) => {
-            if (opts.direction !== 'down' || !(opts.result instanceof Error)) return false;
-            // loggerLink のdown型はoperation fieldsを省略しているが、runtimeではopがspreadされる。
-            if (!('path' in opts) || !('input' in opts) || typeof opts.path !== 'string') {
-              return true;
-            }
-            return !containsPrivateTimeblockSearch({ path: opts.path, input: opts.input });
-          },
-        }),
-        httpBatchLink({
-          url: `${getBaseUrl()}/api/trpc`,
-          transformer: superjson,
-          // Query input（検索語を含む）をURL・proxy logへ残さない。
-          methodOverride: 'POST',
-          headers() {
-            const headers: Record<string, string> = {};
-            if (typeof window !== 'undefined') {
-              const token = localStorage.getItem('auth_token');
-              if (token) {
-                headers.authorization = `Bearer ${token}`;
-              }
-            }
-            return headers;
-          },
-        }),
-      ],
-    }),
-  );
+  const [queryClient] = useState(() => createAppQueryClient());
+  const [trpcClient] = useState(() => createAppTrpcClient());
 
   // Provider階層（最適化済み）
   // Context Provider: PersistQueryClientProvider → api.Provider → ThemeProvider

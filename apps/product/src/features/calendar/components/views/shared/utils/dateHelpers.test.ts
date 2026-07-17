@@ -4,8 +4,6 @@ import {
   addDays,
   addMinutes,
   endOfDay,
-  formatTime,
-  formatTimeRange,
   generateDateRange,
   getDateKey,
   getDaysDifference,
@@ -20,7 +18,7 @@ import {
   startOfDay,
 } from '@/lib/date';
 
-import { formatDate, getTodayIndex, isValidEvent } from './dateHelpers';
+import { getTodayIndex, isValidEvent } from './dateHelpers';
 
 describe('dateHelpers', () => {
   describe('isToday', () => {
@@ -82,59 +80,6 @@ describe('dateHelpers', () => {
       expect(result.getSeconds()).toBe(59);
       expect(result.getMilliseconds()).toBe(999);
       expect(result.getDate()).toBe(15);
-    });
-  });
-
-  describe('formatDate', () => {
-    it('short形式で日付をフォーマットする', () => {
-      const date = new Date('2024-06-15'); // 土曜日
-      expect(formatDate(date, 'short')).toBe('15日(土)');
-    });
-
-    it('long形式で日付をフォーマットする', () => {
-      const date = new Date('2024-06-15');
-      expect(formatDate(date, 'long')).toBe('6月15日(土)');
-    });
-
-    it('numeric形式で日付をフォーマットする', () => {
-      const date = new Date('2024-06-15');
-      expect(formatDate(date, 'numeric')).toBe('15');
-    });
-  });
-
-  describe('formatTime', () => {
-    it('24時間形式で時刻をフォーマットする', () => {
-      const date = new Date('2024-06-15T09:05:00');
-      expect(formatTime(date, '24h')).toBe('9:05');
-    });
-
-    it('12時間形式（AM）で時刻をフォーマットする', () => {
-      const date = new Date('2024-06-15T09:05:00');
-      expect(formatTime(date, '12h')).toBe('9:05 AM');
-    });
-
-    it('12時間形式（PM）で時刻をフォーマットする', () => {
-      const date = new Date('2024-06-15T15:30:00');
-      expect(formatTime(date, '12h')).toBe('3:30 PM');
-    });
-
-    it('深夜0時を12時間形式で正しくフォーマットする', () => {
-      const date = new Date('2024-06-15T00:00:00');
-      expect(formatTime(date, '12h')).toBe('12:00 AM');
-    });
-  });
-
-  describe('formatTimeRange', () => {
-    it('時間範囲を24時間形式でフォーマットする', () => {
-      const start = new Date('2024-06-15T09:00:00');
-      const end = new Date('2024-06-15T10:30:00');
-      expect(formatTimeRange(start, end, '24h')).toBe('9:00 - 10:30');
-    });
-
-    it('時間範囲を12時間形式でフォーマットする', () => {
-      const start = new Date('2024-06-15T14:00:00');
-      const end = new Date('2024-06-15T15:30:00');
-      expect(formatTimeRange(start, end, '12h')).toBe('2:00 PM - 3:30 PM');
     });
   });
 

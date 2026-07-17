@@ -10,6 +10,8 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { submitContactRequest } from './contact-client';
+
 const CATEGORY_OPTIONS = ['bug', 'feature', 'question', 'other'] as const;
 
 function createContactSchema(t: (key: string) => string) {
@@ -87,16 +89,7 @@ export function ContactForm() {
     setSubmitError(null);
 
     try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, turnstileToken }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to submit');
-      }
-
+      await submitContactRequest({ ...data, turnstileToken });
       setIsSubmitted(true);
     } catch {
       setSubmitError(t('form.submitError'));

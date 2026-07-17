@@ -23,7 +23,6 @@ import { headers } from 'next/headers';
 import { Suspense } from 'react';
 
 import { DeferredAnalytics } from '@/lib/analytics/DeferredAnalytics';
-import { WebVitalsReporter } from '@/lib/sentry/WebVitalsReporter';
 import { cn } from '@dayopt/components';
 
 // next/font による最適化されたフォント読み込み（Variable Font: optical size軸有効）
@@ -196,7 +195,6 @@ const RootLayout = async ({ children, params }: RootLayoutProps) => {
         />
         <Suspense fallback={null}>
           {children}
-          <WebVitalsReporter />
           {/* LCP/TBT改善: Analyticsを遅延読み込み（-300ms/-150ms） */}
           <DeferredAnalytics />
         </Suspense>

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import type { Database } from '@/lib/database';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractTagSuffixes, partitionByExistingName } from '../domain/tag-ungroup';
 import type { Tag } from '../types';
@@ -49,7 +50,13 @@ export class TagGroupService {
       if (rpcError.code === '23505') {
         throw new TagServiceError('DUPLICATE_NAME', 'A tag with the new name already exists');
       }
-      throw new TagServiceError('UPDATE_FAILED', `Failed to rename group: ${rpcError.message}`);
+      const original = captureUnexpectedDatabaseError(rpcError, {
+        feature: 'tags',
+        operation: 'rename_tag_group',
+      });
+      throw new TagServiceError('UPDATE_FAILED', 'Failed to rename tag group', {
+        cause: original,
+      });
     }
 
     if (!updatedTags || updatedTags.length === 0) {
@@ -86,10 +93,11 @@ export class TagGroupService {
       .like('name', `${prefix}:%`);
 
     if (fetchError) {
-      throw new TagServiceError(
-        'FETCH_FAILED',
-        `Failed to fetch group tags: ${fetchError.message}`,
-      );
+      const original = captureUnexpectedDatabaseError(fetchError, {
+        feature: 'tags',
+        operation: 'fetch_tag_group',
+      });
+      throw new TagServiceError('FETCH_FAILED', 'Failed to fetch tag group', { cause: original });
     }
 
     if (!matchingTags || matchingTags.length === 0) {
@@ -101,11 +109,21 @@ export class TagGroupService {
 
     // 全 suffix 名で既存タグを一括検索（衝突チェック）
     const suffixNames = [...new Set(tagSuffixes.map((t) => t.suffix))];
-    const { data: existingTags } = await this.supabase
+    const { data: existingTags, error: existingTagsError } = await this.supabase
       .from('tags')
       .select('*')
       .eq('user_id', userId)
       .in('name', suffixNames);
+
+    if (existingTagsError) {
+      const original = captureUnexpectedDatabaseError(existingTagsError, {
+        feature: 'tags',
+        operation: 'check_ungroup_conflicts',
+      });
+      throw new TagServiceError('FETCH_FAILED', 'Failed to check tag conflicts', {
+        cause: original,
+      });
+    }
 
     const existingByName = new Map((existingTags ?? []).map((t) => [t.name, t]));
 
@@ -140,22 +158,35 @@ export class TagGroupService {
       });
 
       if (renameError) {
-        throw new TagServiceError(
-          'UPDATE_FAILED',
-          `Failed to ungroup tags: ${renameError.message}`,
-        );
+        const original = captureUnexpectedDatabaseError(renameError, {
+          feature: 'tags',
+          operation: 'batch_rename_ungrouped_tags',
+        });
+        throw new TagServiceError('UPDATE_FAILED', 'Failed to ungroup tags', {
+          cause: original,
+        });
       }
     }
 
     // prefix 名の単体タグが存在するか確認（リネーム後の状態で再チェック）
     const willHavePrefix = nonConflicts.some((t) => t.suffix === prefix);
     if (!willHavePrefix) {
-      const { data: existingParent } = await this.supabase
+      const { data: existingParent, error: parentLookupError } = await this.supabase
         .from('tags')
         .select('id')
         .eq('user_id', userId)
         .eq('name', prefix)
         .maybeSingle();
+
+      if (parentLookupError) {
+        const original = captureUnexpectedDatabaseError(parentLookupError, {
+          feature: 'tags',
+          operation: 'find_ungroup_parent_tag',
+        });
+        throw new TagServiceError('FETCH_FAILED', 'Failed to find parent tag', {
+          cause: original,
+        });
+      }
 
       if (!existingParent) {
         const representativeColor = matchingTags[0]?.color ?? 'blue';
@@ -174,10 +205,13 @@ export class TagGroupService {
           .single();
 
         if (createError && createError.code !== '23505') {
-          throw new TagServiceError(
-            'CREATE_FAILED',
-            `Failed to create parent tag: ${createError.message}`,
-          );
+          const original = captureUnexpectedDatabaseError(createError, {
+            feature: 'tags',
+            operation: 'create_ungroup_parent_tag',
+          });
+          throw new TagServiceError('CREATE_FAILED', 'Failed to create parent tag', {
+            cause: original,
+          });
         }
       }
     }

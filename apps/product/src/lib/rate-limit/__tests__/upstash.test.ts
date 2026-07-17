@@ -1,190 +1,157 @@
-/**
- * Upstash Rate Limit Unit Tests
- *
- * レート制限機能のユニットテスト
- * Upstash未設定時のフォールバック動作を検証
- */
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+const mocks = vi.hoisted(() => ({
+  captureUnexpectedError: vi.fn(),
+  loggerError: vi.fn(),
+}));
+
+vi.mock('@/lib/logger', () => ({
+  logger: { error: mocks.loggerError, warn: vi.fn() },
+}));
+
+vi.mock('@/lib/sentry', () => ({
+  captureUnexpectedError: mocks.captureUnexpectedError,
+}));
 
 import {
-  apiRateLimit,
+  contactRateLimit,
+  cspReportGlobalRateLimit,
+  cspReportRateLimit,
+  hashRateLimitIdentifier,
   isUpstashEnabled,
   loginRateLimit,
   passwordResetRateLimit,
   RATE_LIMIT_PRESETS,
+  RATE_LIMIT_TIMEOUT_MS,
+  RateLimitUnavailableError,
+  requireAvailableRateLimitResult,
   timeblockCreateRateLimit,
   trpcUserRateLimit,
   UPSTASH_COST_ESTIMATE,
   withUpstashRateLimit,
 } from '../upstash';
 
+const allowedResult = {
+  success: true,
+  limit: 5,
+  remaining: 4,
+  reset: 10_000,
+  pending: Promise.resolve(),
+  reason: undefined,
+};
+
 describe('Upstash Rate Limit', () => {
-  describe('Configuration', () => {
-    it('should export isUpstashEnabled flag', () => {
-      expect(typeof isUpstashEnabled).toBe('boolean');
-    });
-
-    it('should be disabled when environment variables are not set', () => {
-      // テスト環境ではUpstashが設定されていないはず
-      if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-        expect(isUpstashEnabled).toBe(false);
-      }
-    });
-
-    it('should export rate limit instances (null when disabled)', () => {
-      if (!isUpstashEnabled) {
-        expect(apiRateLimit).toBeNull();
-        expect(loginRateLimit).toBeNull();
-        expect(passwordResetRateLimit).toBeNull();
-        expect(trpcUserRateLimit).toBeNull();
-        expect(timeblockCreateRateLimit).toBeNull();
-      }
-    });
-  });
-
-  describe('Rate Limit Presets', () => {
-    it('should define API preset', () => {
-      expect(RATE_LIMIT_PRESETS.api).toBeDefined();
-      expect(RATE_LIMIT_PRESETS.api.requests).toBe(60);
-      expect(RATE_LIMIT_PRESETS.api.window).toBe('1 m');
-    });
-
-    it('should define auth preset with stricter limits', () => {
-      expect(RATE_LIMIT_PRESETS.auth).toBeDefined();
-      expect(RATE_LIMIT_PRESETS.auth.requests).toBe(5);
-      expect(RATE_LIMIT_PRESETS.auth.window).toBe('15 m');
-    });
-
-    it('should define password reset preset with strictest limits', () => {
-      expect(RATE_LIMIT_PRESETS.passwordReset).toBeDefined();
-      expect(RATE_LIMIT_PRESETS.passwordReset.requests).toBe(3);
-      expect(RATE_LIMIT_PRESETS.passwordReset.window).toBe('1 h');
-    });
-
-    it('should define search preset', () => {
-      expect(RATE_LIMIT_PRESETS.search).toBeDefined();
-      expect(RATE_LIMIT_PRESETS.search.requests).toBe(30);
-    });
-
-    it('should define upload preset', () => {
-      expect(RATE_LIMIT_PRESETS.upload).toBeDefined();
-      expect(RATE_LIMIT_PRESETS.upload.requests).toBe(10);
-      expect(RATE_LIMIT_PRESETS.upload.window).toBe('1 h');
-    });
-
-    it('should have descriptions for all presets', () => {
-      Object.values(RATE_LIMIT_PRESETS).forEach((preset) => {
-        expect(preset.description).toBeDefined();
-        expect(typeof preset.description).toBe('string');
-      });
-    });
-  });
-
-  describe('Cost Estimate', () => {
-    it('should define cost estimate constants', () => {
-      expect(UPSTASH_COST_ESTIMATE.freeQuota).toBe(10_000);
-      expect(UPSTASH_COST_ESTIMATE.pricePerHundredThousand).toBe(0.2);
-      expect(UPSTASH_COST_ESTIMATE.estimatedMonthlyRequests).toBe(3_000_000);
-      expect(UPSTASH_COST_ESTIMATE.estimatedMonthlyCost).toBe(6);
-    });
-  });
-
-  describe('withUpstashRateLimit', () => {
-    it('should return null when rate limit is null', async () => {
-      const mockRequest = new Request('https://example.com/api/test', {
-        headers: {
-          'x-forwarded-for': '192.168.1.1',
-        },
-      });
-
-      const result = await withUpstashRateLimit(mockRequest, null);
-
-      expect(result).toBeNull();
-    });
-
-    it('should handle request without IP headers', async () => {
-      const mockRequest = new Request('https://example.com/api/test');
-
-      const result = await withUpstashRateLimit(mockRequest, null);
-
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('New Rate Limit Instances (Phase 1+2)', () => {
-    it('should export trpcUserRateLimit (null when Upstash disabled)', () => {
-      if (!isUpstashEnabled) {
-        expect(trpcUserRateLimit).toBeNull();
-      } else {
-        expect(trpcUserRateLimit).not.toBeNull();
-      }
-    });
-
-    it('should export timeblockCreateRateLimit (null when Upstash disabled)', () => {
-      if (!isUpstashEnabled) {
-        expect(timeblockCreateRateLimit).toBeNull();
-      } else {
-        expect(timeblockCreateRateLimit).not.toBeNull();
-      }
-    });
-  });
-
-  describe('Rate Limit Ordering', () => {
-    it('should have stricter limits for sensitive operations', () => {
-      // API > search > auth > password reset (より厳しい順)
-      expect(RATE_LIMIT_PRESETS.api.requests).toBeGreaterThan(RATE_LIMIT_PRESETS.search.requests);
-      expect(RATE_LIMIT_PRESETS.search.requests).toBeGreaterThan(RATE_LIMIT_PRESETS.auth.requests);
-      expect(RATE_LIMIT_PRESETS.auth.requests).toBeGreaterThan(
-        RATE_LIMIT_PRESETS.passwordReset.requests,
-      );
-    });
-  });
-});
-
-describe('Upstash Rate Limit with Mock', () => {
-  const originalEnv = process.env;
-
-  beforeEach(() => {
-    vi.resetModules();
-    process.env = { ...originalEnv };
-  });
-
   afterEach(() => {
-    process.env = originalEnv;
+    vi.clearAllMocks();
+    vi.doUnmock('@upstash/ratelimit');
+    vi.doUnmock('@upstash/redis');
+    vi.doUnmock('@/env');
   });
 
-  it('should enable when environment variables are set', async () => {
-    // 環境変数をモック設定
-    process.env.UPSTASH_REDIS_REST_URL = 'https://mock.upstash.io';
-    process.env.UPSTASH_REDIS_REST_TOKEN = 'mock-token';
-
-    // モジュールを再インポートして環境変数の効果を確認
-    // 注意: この方法は実際のRedis接続を試みるため、
-    // 本番環境では適切なモックが必要
-    const enabled = Boolean(
-      process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-    );
-    expect(enabled).toBe(true);
+  it('keeps local/test limiters disabled when credentials are absent', () => {
+    expect(isUpstashEnabled).toBe(false);
+    expect(loginRateLimit).toBeNull();
+    expect(passwordResetRateLimit).toBeNull();
+    expect(contactRateLimit).toBeNull();
+    expect(trpcUserRateLimit).toBeNull();
+    expect(timeblockCreateRateLimit).toBeNull();
+    expect(cspReportRateLimit).toBeNull();
+    expect(cspReportGlobalRateLimit).toBeNull();
   });
 
-  it('should disable when URL is missing', () => {
-    delete process.env.UPSTASH_REDIS_REST_URL;
-    process.env.UPSTASH_REDIS_REST_TOKEN = 'mock-token';
+  it('hashes identifiers deterministically without retaining raw IP or user IDs', async () => {
+    const rawIdentifier = 'ip:203.0.113.10';
+    const first = await hashRateLimitIdentifier(rawIdentifier);
+    const second = await hashRateLimitIdentifier(rawIdentifier);
 
-    const enabled = Boolean(
-      process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-    );
-    expect(enabled).toBe(false);
+    expect(first).toBe(second);
+    expect(first).toMatch(/^[a-f0-9]{64}$/u);
+    expect(first).not.toContain(rawIdentifier);
+    expect(await hashRateLimitIdentifier('user-123')).not.toBe(first);
   });
 
-  it('should disable when token is missing', () => {
-    process.env.UPSTASH_REDIS_REST_URL = 'https://mock.upstash.io';
-    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  it('converts the SDK fail-open timeout result into backend unavailable', () => {
+    expect(() =>
+      requireAvailableRateLimitResult({ ...allowedResult, reason: 'timeout' } as never),
+    ).toThrow(RateLimitUnavailableError);
+    expect(requireAvailableRateLimitResult(allowedResult as never)).toBe(allowedResult);
+  });
 
-    const enabled = Boolean(
-      process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-    );
-    expect(enabled).toBe(false);
+  it('distinguishes disabled, checked, and unavailable checks and captures the original error once', async () => {
+    const request = new Request('https://app.dayopt.app/api/auth', {
+      headers: { 'x-real-ip': '203.0.113.10' },
+    });
+    await expect(withUpstashRateLimit(request, null)).resolves.toEqual({ state: 'disabled' });
+
+    const allowedLimiter = { limit: vi.fn().mockResolvedValue(allowedResult) };
+    await expect(withUpstashRateLimit(request, allowedLimiter)).resolves.toEqual({
+      state: 'checked',
+      success: true,
+      limit: 5,
+      remaining: 4,
+      reset: 10_000,
+      pending: allowedResult.pending,
+    });
+
+    const backendError = new Error('redis unavailable');
+    const unavailableLimiter = { limit: vi.fn().mockRejectedValue(backendError) };
+    await expect(withUpstashRateLimit(request, unavailableLimiter)).resolves.toEqual({
+      state: 'unavailable',
+    });
+    expect(mocks.captureUnexpectedError).toHaveBeenCalledOnce();
+    expect(mocks.captureUnexpectedError).toHaveBeenCalledWith(backendError, {
+      feature: 'rate_limit',
+      operation: 'upstash_rate_limit_check',
+      source: 'upstash',
+    });
+  });
+
+  it('constructs every enabled limiter with no analytics, a 2 second timeout, and hashed keys', async () => {
+    vi.resetModules();
+    const constructorOptions: Array<Record<string, unknown>> = [];
+    const limit = vi.fn().mockResolvedValue(allowedResult);
+
+    class MockRatelimit {
+      static slidingWindow(requests: number, window: string) {
+        return { requests, window };
+      }
+
+      constructor(options: Record<string, unknown>) {
+        constructorOptions.push(options);
+      }
+
+      limit = limit;
+    }
+
+    vi.doMock('@upstash/ratelimit', () => ({ Ratelimit: MockRatelimit }));
+    vi.doMock('@upstash/redis', () => ({ Redis: class MockRedis {} }));
+    vi.doMock('@/env', () => ({
+      env: {
+        UPSTASH_REDIS_REST_URL: 'https://example.upstash.io',
+        UPSTASH_REDIS_REST_TOKEN: 'configured',
+      },
+    }));
+
+    const enabledModule = await import('../upstash');
+    expect(constructorOptions).toHaveLength(8);
+    for (const options of constructorOptions) {
+      expect(options.analytics).toBe(false);
+      expect(options.timeout).toBe(RATE_LIMIT_TIMEOUT_MS);
+      expect(options.prefix).toMatch(/^ratelimit:product:/u);
+    }
+
+    await enabledModule.loginRateLimit?.limit('ip:203.0.113.10');
+    const persistedIdentifier = limit.mock.calls.at(-1)?.[0];
+    expect(persistedIdentifier).toMatch(/^[a-f0-9]{64}$/u);
+    expect(persistedIdentifier).not.toContain('203.0.113.10');
+  });
+
+  it('keeps documented presets and cost constants stable', () => {
+    expect(RATE_LIMIT_PRESETS.api.requests).toBe(60);
+    expect(RATE_LIMIT_PRESETS.auth.requests).toBe(5);
+    expect(RATE_LIMIT_PRESETS.passwordReset.requests).toBe(3);
+    expect(RATE_LIMIT_PRESETS.search.requests).toBe(30);
+    expect(RATE_LIMIT_PRESETS.upload.requests).toBe(10);
+    expect(UPSTASH_COST_ESTIMATE.estimatedMonthlyCost).toBe(6);
   });
 });

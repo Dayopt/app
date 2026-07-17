@@ -723,10 +723,10 @@ describe('RecordService soft delete', () => {
     adminRpc.mockResolvedValue({ data: null, error: { message: 'denied' } });
 
     await expect(service.delete({ userId: USER_ID, recordId: 'record-1' })).rejects.toThrow(
-      'Failed to delete record: denied',
+      'Failed to delete record',
     );
     await expect(service.restore({ userId: USER_ID, recordId: 'record-1' })).rejects.toThrow(
-      'Failed to restore record: denied',
+      'Failed to restore record',
     );
   });
 });

@@ -3,8 +3,6 @@ import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
 import { Toaster } from '@dayopt/components';
 import { dayoptBrand, dayoptContact } from '@dayopt/config';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata } from 'next';
 import './globals.css';
 
@@ -82,8 +80,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <Toaster />
         </ThemeProvider>
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );

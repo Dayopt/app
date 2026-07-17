@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { databaseTables, publicRecordSelect } from '@/lib/database';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
@@ -80,11 +81,13 @@ export class RecordService {
       : await query;
 
     if (error) {
-      // 検索時のDB messageはPostgREST filter（検索語）を含み得るため連結しない。
-      const message = search
-        ? 'Failed to fetch records'
-        : `Failed to fetch records: ${error.message}`;
-      throw new TimeblockServiceError('FETCH_FAILED', message);
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'list_records',
+      });
+      throw new TimeblockServiceError('FETCH_FAILED', 'Failed to fetch records', {
+        cause: original,
+      });
     }
 
     return data ?? [];
@@ -98,9 +101,18 @@ export class RecordService {
       .eq('id', recordId)
       .eq('user_id', userId)
       .is('deleted_at', null)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'get_record_by_id',
+      });
+      throw new TimeblockServiceError('FETCH_FAILED', 'Failed to fetch record', {
+        cause: original,
+      });
+    }
+    if (!data) {
       throw new TimeblockServiceError('NOT_FOUND', 'Record not found');
     }
 
@@ -199,7 +211,13 @@ export class RecordService {
     });
 
     if (error) {
-      throw new TimeblockServiceError('DELETE_FAILED', `Failed to delete record: ${error.message}`);
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'delete_record',
+      });
+      throw new TimeblockServiceError('DELETE_FAILED', 'Failed to delete record', {
+        cause: original,
+      });
     }
 
     return { success: true };
@@ -214,10 +232,13 @@ export class RecordService {
     });
 
     if (error) {
-      throw new TimeblockServiceError(
-        'RESTORE_FAILED',
-        `Failed to restore record: ${error.message}`,
-      );
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'restore_record',
+      });
+      throw new TimeblockServiceError('RESTORE_FAILED', 'Failed to restore record', {
+        cause: original,
+      });
     }
 
     return { success: true };
@@ -291,9 +312,18 @@ export class RecordService {
       .eq('id', planId)
       .eq('user_id', userId)
       .is('deleted_at', null)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'timeblock',
+        operation: 'get_recordable_plan',
+      });
+      throw new TimeblockServiceError('FETCH_FAILED', 'Failed to fetch linked plan', {
+        cause: original,
+      });
+    }
+    if (!data) {
       throw new TimeblockServiceError('NOT_FOUND', 'Plan not found');
     }
 
@@ -320,7 +350,11 @@ export class RecordService {
         'This time range overlaps with an existing item.',
       );
     }
-    throw new TimeblockServiceError(code, `${prefix}: ${error.message}`);
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'timeblock',
+      operation: code.toLowerCase(),
+    });
+    throw new TimeblockServiceError(code, prefix, { cause: original });
   }
 }
 

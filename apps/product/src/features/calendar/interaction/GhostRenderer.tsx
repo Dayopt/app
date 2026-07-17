@@ -17,7 +17,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { formatTimeString } from '@/lib/date';
+import { formatTimeRange } from '@/lib/date';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@dayopt/components';
 import type { TimeFormat } from '@dayopt/domain';
@@ -65,10 +65,6 @@ const SNAP_BACK_DURATION = 200;
  * 最小 40px に底上げすることで「掴めるチップ」として視認できる。
  */
 const MIN_GHOST_HEIGHT_MOBILE = 40;
-
-function formatPreviewTimeRange(previewTime: TimeRange, timeFormat: TimeFormat): string {
-  return `${formatTimeString(previewTime.start.getHours(), previewTime.start.getMinutes(), timeFormat)} – ${formatTimeString(previewTime.end.getHours(), previewTime.end.getMinutes(), timeFormat)}`;
-}
 
 // ========================================
 // Component
@@ -231,7 +227,7 @@ export function GhostRenderer({ state, renderGhost, timeFormat }: GhostRendererP
     >
       {content ?? (
         <div className="bg-container rounded-lg px-2 py-1 text-sm">
-          {formatPreviewTimeRange(state.previewTime, timeFormat)}
+          {formatTimeRange(state.previewTime.start, state.previewTime.end, timeFormat, ' – ')}
         </div>
       )}
     </div>,

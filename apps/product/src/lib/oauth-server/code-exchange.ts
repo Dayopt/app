@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { databaseTables } from '@/lib/database';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import type { OAuthClientId } from './clients';
 import { createOAuthDbClient } from './db';
 import { OAuthServerError } from './errors';
@@ -55,7 +56,13 @@ export async function exchangeAuthorizationCode(
     .select('user_id, client_id, code_challenge, scopes');
 
   if (consumeError) {
-    throw new OAuthServerError('server_error', consumeError.message, 500);
+    const original = captureUnexpectedDatabaseError(consumeError, {
+      feature: 'oauth',
+      operation: 'consume_authorization_code',
+    });
+    throw new OAuthServerError('server_error', 'Authorization code exchange failed', 500, {
+      cause: original,
+    });
   }
   if (!rows || rows.length !== 1) {
     throw new OAuthServerError('invalid_grant', 'Invalid or expired authorization code');
@@ -108,7 +115,13 @@ export async function refreshAccessToken(input: RefreshAccessTokenInput): Promis
     .select('id, user_id, client_id, scopes');
 
   if (revokeError) {
-    throw new OAuthServerError('server_error', revokeError.message, 500);
+    const original = captureUnexpectedDatabaseError(revokeError, {
+      feature: 'oauth',
+      operation: 'rotate_refresh_token',
+    });
+    throw new OAuthServerError('server_error', 'Refresh token rotation failed', 500, {
+      cause: original,
+    });
   }
   if (!rows || rows.length !== 1) {
     throw new OAuthServerError('invalid_grant', 'Invalid or expired refresh token');
@@ -158,7 +171,16 @@ async function issueTokenPair(input: IssueTokenPairInput): Promise<TokenResponse
     .select('id')
     .single();
   if (refreshInsertError || !refreshRow) {
-    throw new OAuthServerError('server_error', 'Failed to issue refresh token', 500);
+    const original = captureUnexpectedDatabaseError(
+      refreshInsertError ?? new Error('Refresh token insert returned no row'),
+      {
+        feature: 'oauth',
+        operation: 'issue_refresh_token',
+      },
+    );
+    throw new OAuthServerError('server_error', 'Failed to issue refresh token', 500, {
+      cause: original,
+    });
   }
 
   const { error: accessInsertError } = await db.from(databaseTables.oauthTokens).insert({
@@ -171,7 +193,13 @@ async function issueTokenPair(input: IssueTokenPairInput): Promise<TokenResponse
     parent_token_id: refreshRow.id,
   });
   if (accessInsertError) {
-    throw new OAuthServerError('server_error', 'Failed to issue access token', 500);
+    const original = captureUnexpectedDatabaseError(accessInsertError, {
+      feature: 'oauth',
+      operation: 'issue_access_token',
+    });
+    throw new OAuthServerError('server_error', 'Failed to issue access token', 500, {
+      cause: original,
+    });
   }
 
   return {

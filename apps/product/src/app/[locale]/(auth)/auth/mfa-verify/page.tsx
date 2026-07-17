@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
-import * as Sentry from '@sentry/nextjs';
-
 import { logger } from '@/lib/logger';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
+import { captureUnexpectedError, observeAuthOperation } from '@/lib/sentry';
 import { toast } from '@/lib/toast';
+import { captureUnexpectedTrpcClientFailure } from '@/lib/trpc/client-errors';
 import { useTranslations } from 'next-intl';
 
 import { MFAVerifyForm } from '@/features/auth';
@@ -36,16 +36,27 @@ export default function MFAVerifyPage() {
 
   const checkMFARequired = useCallback(async () => {
     try {
-      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const { data: factors, error: factorsError } = await observeAuthOperation(
+        'mfa_list_factors',
+        () => supabase.auth.mfa.listFactors(),
+        { route: '/auth/mfa-verify' },
+      );
+
+      if (factorsError) {
+        setError(t('common.errors.mfa.verifyFailed'));
+        return;
+      }
 
       if (factors && factors.totp.length > 0) {
         const verifiedFactor = factors.totp.find((f) => f.status === 'verified');
         if (verifiedFactor) {
           setFactorId(verifiedFactor.id);
 
-          const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
-            factorId: verifiedFactor.id,
-          });
+          const { data: challengeData, error: challengeError } = await observeAuthOperation(
+            'mfa_challenge',
+            () => supabase.auth.mfa.challenge({ factorId: verifiedFactor.id }),
+            { route: '/auth/mfa-verify' },
+          );
 
           if (challengeError) {
             setError(t('common.errors.mfa.challengeFailed'));
@@ -63,8 +74,12 @@ export default function MFAVerifyPage() {
       }
     } catch (err) {
       logger.error('MFA initialization failed:', err);
-      Sentry.captureException(err, {
-        tags: { source: 'mfa_verify', operation: 'init' },
+      const unexpectedError = err instanceof Error ? err : new Error('Unknown MFA init error');
+      captureUnexpectedError(unexpectedError, {
+        feature: 'auth',
+        source: 'mfa_verify',
+        operation: 'init',
+        route: '/auth/mfa-verify',
       });
       setError(t('common.errors.mfa.verifyFailed'));
     }
@@ -89,11 +104,16 @@ export default function MFAVerifyPage() {
     setError(null);
 
     try {
-      const { error: verifyError } = await supabase.auth.mfa.verify({
-        factorId,
-        challengeId,
-        code: verificationCode,
-      });
+      const { error: verifyError } = await observeAuthOperation(
+        'mfa_verify',
+        () =>
+          supabase.auth.mfa.verify({
+            factorId,
+            challengeId,
+            code: verificationCode,
+          }),
+        { route: '/auth/mfa-verify' },
+      );
 
       if (verifyError) {
         throw new Error(verifyError.message);
@@ -135,10 +155,12 @@ export default function MFAVerifyPage() {
       } else if (message.includes('RECOVERY_INVALID')) {
         setError(t('auth.mfaVerify.recoveryInvalid'));
       } else {
-        logger.error('MFA recovery verification failed:', err);
-        Sentry.captureException(err, {
-          tags: { source: 'mfa_verify', operation: 'recovery' },
+        const captured = captureUnexpectedTrpcClientFailure(err, {
+          feature: 'auth',
+          operation: 'verify_recovery_code',
+          route: '/auth/mfa-verify',
         });
+        if (captured) logger.error('MFA recovery transport failed');
         setError(t('common.errors.generic'));
       }
       setRecoveryCode('');

@@ -1,7 +1,5 @@
 import 'server-only';
 
-import * as Sentry from '@sentry/nextjs';
-
 import type { OAuthClientId, SupportedScope } from '@/lib/oauth-server';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { appRouter } from '@/lib/trpc/root';
@@ -24,8 +22,6 @@ interface McpTrpcContextInput {
 
 export function createMcpTrpcCaller(input: McpTrpcContextInput) {
   const supabase = createServiceRoleClient();
-  Sentry.setTag('mcp.client_id', input.clientId);
-  Sentry.setUser({ id: input.userId });
 
   return appRouter.createCaller({
     req: { headers: {}, cookies: {} },

@@ -6,11 +6,10 @@
  *
  * @example
  * ```typescript
- * import { convertToTimezone, formatInTimezone, getBrowserTimezone } from '@/lib/date';
+ * import { convertToTimezone, getTimezoneAbbreviation } from '@/lib/date/timezone';
  *
- * const browserTz = getBrowserTimezone();
  * const localDate = convertToTimezone(utcDate, userTz);
- * const formatted = formatInTimezone(utcDate, userTz, 'yyyy-MM-dd HH:mm');
+ * const abbr = getTimezoneAbbreviation(userTz); // "JST"
  * ```
  */
 

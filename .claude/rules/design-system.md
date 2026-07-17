@@ -214,7 +214,7 @@ paths:
 - 消去: 自動消去 + swipe(mobile) + Esc/クリック(desktop)
 - アクション: テキストリンク（brand color）。ボタン形状にしない
 - Undo 可能な操作: `action: { label: '元に戻す', onClick }` を付与
-- `toast.info()` / `toast.warning()` は非推奨。Inline Banner に移行
+- `info` / `warning` の toast は提供しない。該当用途は Inline Banner(`@dayopt/components` の `InlineBanner` + `@/lib/hooks/useInlineBanner`)を使う
 - ページレベルの持続的エラーは Toast ではなく `ErrorState` / インライン通知を使用
 - **import**: `import { toast } from '@/lib/toast'`（`sonner` 直接禁止）
 

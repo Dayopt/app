@@ -1,26 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  formatMinutesDuration,
-  formatVariance,
-  getAccuracyColors,
-  getVarianceColor,
-} from '../timePL.presentation';
-
-describe('formatMinutesDuration', () => {
-  it('formats hours and minutes', () => {
-    expect(formatMinutesDuration(150)).toBe('2h 30m');
-    expect(formatMinutesDuration(60)).toBe('1h');
-    expect(formatMinutesDuration(45)).toBe('45m');
-    expect(formatMinutesDuration(0)).toBe('0m');
-  });
-});
+import { formatVariance, getAccuracyColors, getVarianceColor } from '../timePL.presentation';
 
 describe('formatVariance', () => {
   it('formats with sign', () => {
     expect(formatVariance(90)).toBe('+1h 30m');
     expect(formatVariance(-45)).toBe('-45m');
     expect(formatVariance(0)).toBe('±0');
+  });
+
+  it('符号付きで境界値をフォーマット', () => {
+    expect(formatVariance(60)).toBe('+1h');
+    expect(formatVariance(-60)).toBe('-1h');
+    expect(formatVariance(1)).toBe('+1m');
+    expect(formatVariance(-119)).toBe('-1h 59m');
   });
 });
 

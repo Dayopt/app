@@ -2,8 +2,8 @@
  * 日付ユーティリティライブラリ
  *
  * `@/lib/date` 経由で実際に参照されている API のみ re-export。
- * deep import (`@/lib/date/core`, `@/lib/date/format`, `@/lib/date/timezone`,
- * `@/lib/date/constants`) も並行して利用可能。
+ * deep import (`@/lib/date/core`, `@/lib/date/duration`, `@/lib/date/timeString`,
+ * `@/lib/date/timezone`, `@/lib/date/constants`) も並行して利用可能。
  */
 
 // ========================================
@@ -29,16 +29,22 @@ export {
 } from './core';
 
 // ========================================
-// Format - フォーマット
+// Duration - 期間フォーマット
 // ========================================
-export { formatTime, formatTimeRange } from './format';
+export { formatDurationMinutes } from './duration';
 
 // ========================================
 // TimeString - "HH:mm" パース / フォーマット
 // ========================================
-export { formatHHmm, formatTimeString, parseTimeString } from './timeString';
+export {
+  computeDuration,
+  formatHHmm,
+  formatTimeRange,
+  formatTimeString,
+  parseTimeString,
+} from './timeString';
 
 // ========================================
 // 定数の再エクスポート
 // ========================================
-export { CACHE_5_MINUTES, MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE } from './constants';
+export { CACHE_5_MINUTES, MS_PER_MINUTE } from './constants';

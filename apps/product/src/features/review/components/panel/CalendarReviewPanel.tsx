@@ -7,6 +7,7 @@ import { useEffect, useMemo } from 'react';
 import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { TagIcon, useTags } from '@/features/tags';
+import { formatDurationMinutes } from '@/lib/date';
 import {
   Button,
   cn,
@@ -24,11 +25,7 @@ import { useTimePLData } from '../../hooks/useTimePLData';
 import type { ReviewDisplayRange } from '../../lib/compute-date-range';
 import { useReviewFilterStore } from '../../stores/useReviewFilterStore';
 import { ReviewMetricRow, WeeklyReflectionPanel } from '../reflection/WeeklyReflectionPanel';
-import {
-  formatMinutesDuration,
-  formatVariance,
-  getVarianceColor,
-} from '../time-pl/data/timePL.presentation';
+import { formatVariance, getVarianceColor } from '../time-pl/data/timePL.presentation';
 
 const ALL_SCOPE_VALUE = '__all__';
 
@@ -165,11 +162,11 @@ export function CalendarReviewPanel({
                 <dl className="border-border-subtle divide-border-subtle mt-4 divide-y rounded-lg border">
                   <ReviewMetricRow
                     label={t('overview.planned')}
-                    value={formatMinutesDuration(selectedRow.budgetMinutes)}
+                    value={formatDurationMinutes(selectedRow.budgetMinutes)}
                   />
                   <ReviewMetricRow
                     label={t('overview.actual')}
-                    value={formatMinutesDuration(selectedRow.actualMinutes)}
+                    value={formatDurationMinutes(selectedRow.actualMinutes)}
                   />
                   <ReviewMetricRow
                     label={t('overview.diff')}

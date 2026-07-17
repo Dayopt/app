@@ -17,6 +17,11 @@ import { env } from '@/env';
 import { canAccessProFeatures, type ProductAccessLevel } from '@/lib/auth/domain';
 import { isBillingEnforced } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
+import {
+  captureUnexpectedDatabaseError,
+  captureUnexpectedError,
+  observeAuthOperation,
+} from '@/lib/sentry';
 // 循環依存防止: barrel `@/lib/mcp` は trpc-bridge を再 export し、それが appRouter →
 // feature router → procedures.ts と辿るため、ここでは auth.ts を直 import する。
 import { extractBearerToken, verifyAccessToken } from '@/lib/mcp/auth';
@@ -131,11 +136,32 @@ async function createTRPCContext(opts: {
       supabase = createServiceRoleClient();
     } catch (error) {
       if (error instanceof OAuthServerError) {
-        logger.error('OAuth token verification failed', { message: error.message });
+        if (error.httpStatus >= 500) {
+          const original = error.cause instanceof Error ? error.cause : error;
+          captureUnexpectedError(original, {
+            feature: 'mcp',
+            operation: 'create_trpc_oauth_context',
+          });
+          logger.error('OAuth token verification failed');
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'OAuth authentication service unavailable',
+            cause: error,
+          });
+        }
+        logger.warn('OAuth access token rejected');
+      } else {
+        const original =
+          error instanceof Error ? error : new Error('Unexpected OAuth authentication failure');
+        captureUnexpectedError(original, {
+          feature: 'mcp',
+          operation: 'create_trpc_oauth_context',
+        });
+        logger.error('OAuth token verification failed');
       }
       throw new TRPCError({
         code: 'UNAUTHORIZED',
-        message: error instanceof OAuthServerError ? error.message : 'OAuth authentication failed',
+        message: 'OAuth authentication failed',
         cause: error,
       });
     }
@@ -187,7 +213,7 @@ async function createTRPCContext(opts: {
       // getUser()はSupabase Authサーバーに問い合わせてJWTを検証する（getSession()は署名未検証）
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await observeAuthOperation('trpc_context_get_user', () => supabase.auth.getUser());
 
       if (user) {
         userId = user.id;
@@ -195,34 +221,34 @@ async function createTRPCContext(opts: {
         try {
           const {
             data: { session },
-          } = await supabase.auth.getSession();
+          } = await observeAuthOperation('trpc_context_get_session', () =>
+            supabase.auth.getSession(),
+          );
           sessionId = session?.access_token;
-        } catch (error) {
-          logger.warn('Session token lookup failed', {
-            message: error instanceof Error ? error.message : 'Unknown error',
-          });
+        } catch {
+          logger.warn('Session token lookup failed');
         }
 
         try {
-          const { data: aalData, error: aalError } =
-            await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          const { data: aalData, error: aalError } = await observeAuthOperation(
+            'trpc_context_get_authenticator_assurance_level',
+            () => supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+          );
           mfaAssurance = {
             currentLevel: normalizeMfaAssuranceLevel(aalData?.currentLevel),
             nextLevel: normalizeMfaAssuranceLevel(aalData?.nextLevel),
             lookupFailed: Boolean(aalError),
           };
           if (aalError) {
-            logger.warn('MFA assurance lookup failed', { message: aalError.message });
+            logger.warn('MFA assurance lookup failed');
           }
-        } catch (error) {
+        } catch {
           mfaAssurance = {
             currentLevel: null,
             nextLevel: null,
             lookupFailed: true,
           };
-          logger.warn('MFA assurance lookup threw', {
-            message: error instanceof Error ? error.message : 'Unknown error',
-          });
+          logger.warn('MFA assurance lookup threw');
         }
       }
     } catch {
@@ -355,8 +381,14 @@ async function isUserRateLimited(userId: string): Promise<boolean> {
     try {
       const { success } = await trpcUserRateLimit.limit(userId);
       return !success;
-    } catch {
+    } catch (error) {
       // Redis エラー時はインメモリにフォールバック（可用性優先）
+      const original = error instanceof Error ? error : new Error('tRPC rate limit check failed');
+      captureUnexpectedError(original, {
+        feature: 'rate_limit',
+        operation: 'trpc_user_rate_limit_check',
+        source: 'upstash',
+      });
       return isUserRateLimitedInMemory(userId);
     }
   }
@@ -377,6 +409,7 @@ export const protectedProcedure = t.procedure
         cause: new ServiceError('INVALID_TOKEN', 'Authentication required'),
       });
     }
+    const userId = ctx.userId;
 
     if (ctx.authMode === 'oauth') {
       const requiredScope = OAUTH_TRPC_SCOPE_REQUIREMENTS[path];
@@ -412,21 +445,22 @@ export const protectedProcedure = t.procedure
     }
 
     // per-userId レート制限
-    if (await isUserRateLimited(ctx.userId)) {
+    if (await isUserRateLimited(userId)) {
       throw new TRPCError({
         code: 'TOO_MANY_REQUESTS',
         message: 'Too many requests. Please try again later.',
       });
     }
 
-    // Sentryにユーザーコンテキストを設定（IDのみ、GDPR準拠）
-    Sentry.setUser({ id: ctx.userId });
-
-    return next({
-      ctx: {
-        ...ctx,
-        userId: ctx.userId, // TypeScriptの型保証のため
-      },
+    // Request-localなscopeに内部IDだけを設定し、並行requestへ漏らさない。
+    return Sentry.withIsolationScope(async (scope) => {
+      scope.setUser({ id: userId });
+      return next({
+        ctx: {
+          ...ctx,
+          userId,
+        },
+      });
     });
   });
 
@@ -458,18 +492,19 @@ export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async (
       .single();
 
     if (error) {
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'billing',
+        operation: 'check_pro_subscription',
+      });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to fetch profile: ${error.message}`,
-        cause: new ServiceError('FETCH_FAILED', 'Failed to fetch profile for pro check'),
+        message: 'Failed to verify subscription status',
+        cause: original,
       });
     }
 
     status = (data as Record<string, unknown> | null)?.subscription_status as string | undefined;
   }
-
-  // Sentryにプラン情報をタグ付け（エラー分析時のフィルタ用）
-  Sentry.setTag('user.plan', status ?? 'free');
 
   const isProActive = canAccessProFeatures(status);
 

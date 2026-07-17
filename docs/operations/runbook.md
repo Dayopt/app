@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-07-16
 ---
 
 # Runbook（障害対応・リリース手順）
@@ -50,19 +50,20 @@ NEXT_PUBLIC_MAINTENANCE_MODE=true
 
 ### 重要ダッシュボードURL
 
-| ダッシュボード  | URL                                       |
-| --------------- | ----------------------------------------- |
-| Vercel          | https://vercel.com/dashboard              |
-| Sentry          | https://sentry.io（プロジェクト: dayopt） |
-| Supabase        | https://supabase.com/dashboard            |
-| Stripe          | https://dashboard.stripe.com              |
-| Supabase Status | https://status.supabase.com               |
+| ダッシュボード  | URL                                             |
+| --------------- | ----------------------------------------------- |
+| Vercel          | https://vercel.com/dashboard                    |
+| Sentry Product  | https://sentry.io（プロジェクト: `dayopt`）     |
+| Sentry Web      | https://sentry.io（プロジェクト: `dayopt-web`） |
+| Supabase        | https://supabase.com/dashboard                  |
+| Stripe          | https://dashboard.stripe.com                    |
+| Supabase Status | https://status.supabase.com                     |
 
 ## Playbook 1: Supabase障害（P0）
 
 ### 検知
 
-- [ ] Sentry: `tags.errorCategory:DB` のエラー急増
+- [ ] Sentry Product: `environment:production` でerror急増を確認し、`release`と許可済みの`feature` / `operation` / `route` / `source`で絞り込む
 - [ ] production `/api/health` → 503 / `{ "status": "unhealthy" }`
 - [ ] Vercel runtime log の `[health]` eventで `database: "error"`
 - [ ] https://status.supabase.com に障害報告あり
@@ -215,22 +216,15 @@ npm run lint:boundaries  # feature境界違反
 
 ### 検知
 
-- [ ] Sentryアラート: 1時間に50件超のエラー
-- [ ] Sentry Dashboard → Issues → 直近1時間でソート
+- [ ] Sentryの高優先度Issue通知またはDashboardのerror増加を確認
+- [ ] Product / Webのどちらのprojectか、environmentがproductionかを確認
 
 ### トリアージ
 
-エラーカテゴリで優先度を判断（`src/platform/sentry/integration.ts` のカテゴリ定義）:
-
-| カテゴリ       | Sentryタグ                 | 優先度          | アクション             |
-| -------------- | -------------------------- | --------------- | ---------------------- |
-| **DB**         | `errorCategory:DB`         | P0 → Playbook 1 | 即時対応               |
-| **AUTH**       | `errorCategory:AUTH`       | P1              | 認証系を確認           |
-| **SYSTEM**     | `errorCategory:SYSTEM`     | P1              | インフラ確認           |
-| **EXTERNAL**   | `errorCategory:EXTERNAL`   | P2              | 外部サービス障害を待機 |
-| **BIZ**        | `errorCategory:BIZ`        | P3              | 通常バグ修正           |
-| **VALIDATION** | `errorCategory:VALIDATION` | P3              | 入力バリデーション改善 |
-| **RATE**       | `errorCategory:RATE`       | P3              | レート制限調整         |
+- [ ] release、first seen、last seen、event数、影響routeを確認
+- [ ] stack traceが元のTypeScript行へ解決されているか確認
+- [ ] trace IDが有効か確認し、同時刻のVercel function logと照合
+- [ ] request body、cookie、authorization、email、user content、URL queryがeventに含まれていないことを確認
 
 ### 復旧
 
@@ -243,7 +237,7 @@ npm run lint:boundaries  # feature境界違反
 
 #### ケースB: 外部サービス障害
 
-- [ ] エラーの `errorCategory` が `EXTERNAL` か確認
+- [ ] stack、operation、breadcrumbから外部サービス起因か確認
 - [ ] 該当サービスのStatus Pageを確認
 - [ ] 復旧を待機（メンテナンスモードは不要な場合が多い）
 - [ ] 復旧後: Sentryでエラーが止まったか確認
@@ -259,8 +253,10 @@ npm run lint:boundaries  # feature境界違反
 
 大量エラー時にクォータを消費しすぎないよう:
 
-- [ ] Sentry Dashboard → Settings → Rate Limits が設定されているか確認
-- [ ] 必要に応じて一時的にRate Limitを引き下げる
+- [ ] accepted / discarded / filtered / rate-limitedの推移を確認
+- [ ] spike protectionとinbound filterが有効か確認
+- [ ] CSP急増時はdirectiveと正規化済みblocked URIを確認し、endpointの429発生も照合
+- [ ] 緊急のsampling変更は対象projectと復旧値をincident logへ記録してから行う
 
 ### 振り返り
 
@@ -273,7 +269,7 @@ npm run lint:boundaries  # feature境界違反
 ### 検知
 
 - [ ] Sentry: `type:csp-violation` の急増
-- [ ] Sentry: `errorCategory:AUTH` の急増（認証失敗の連続）
+- [ ] Supabase Auth log / Upstash request metricsで認証失敗の連続を確認（Ratelimit Analyticsとraw identifier保存は無効）
 - [ ] Supabase Dashboard → Authentication → Logs に不審なアクティビティ
 
 ### 初動: まず止める
@@ -385,7 +381,7 @@ ORDER BY created_at DESC;
 - **マイグレーションロールバック**: `docs/engineering/infra.md`
 - **ヘルスチェック実装**: `src/app/api/health/route.ts`
 - **Stripe Webhook実装**: `src/app/api/webhooks/stripe/route.ts`
-- **エラーカテゴリ定義**: `src/platform/sentry/integration.ts`
+- **Sentry runtime contract**: [monitoring.md](./monitoring.md)
 - **メンテナンスページ**: `src/app/maintenance/route.ts`
 
 ---

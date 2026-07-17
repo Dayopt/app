@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { getDateKey } from '@/lib/date';
 
 const DATE_PARAM_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -34,5 +34,5 @@ export function parseCalendarDateParam(value: string | null | undefined): Date |
 }
 
 export function formatCalendarDateParam(date: Date): string {
-  return format(date, 'yyyy-MM-dd');
+  return getDateKey(date);
 }

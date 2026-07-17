@@ -5,7 +5,7 @@ import { databaseTables } from '@/lib/database';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { TagDeleteStrategy } from '../types';
-import { TagServiceError } from './tag-service-error';
+import { createTagDatabaseError, TagServiceError } from './tag-service-error';
 
 /**
  * タグに紐づく Plan / Record の総数を数える
@@ -27,9 +27,11 @@ export async function countTagAssociations(
 
   const failed = results.find((result) => result.error);
   if (failed?.error) {
-    throw new TagServiceError(
+    throw createTagDatabaseError(
+      failed.error,
       'FETCH_FAILED',
-      `Failed to inspect tag associations: ${failed.error.message}`,
+      'Failed to inspect tag associations',
+      'count_tag_associations',
     );
   }
   return results.reduce((total, result) => total + (result.count ?? 0), 0);
@@ -58,7 +60,12 @@ export async function applyTagStrategy(options: {
         .in('tag_id', tagIds)
         .eq('user_id', userId);
       if (error) {
-        throw new TagServiceError('UPDATE_FAILED', `Failed to reassign ${table}: ${error.message}`);
+        throw createTagDatabaseError(
+          error,
+          'UPDATE_FAILED',
+          'Failed to reassign tag associations',
+          'reassign_tag_associations',
+        );
       }
     }
     return;
@@ -70,9 +77,11 @@ export async function applyTagStrategy(options: {
     .in('tag_id', tagIds)
     .eq('user_id', userId);
   if (planLookupError) {
-    throw new TagServiceError(
+    throw createTagDatabaseError(
+      planLookupError,
       'FETCH_FAILED',
-      `Failed to inspect plans for tag deletion: ${planLookupError.message}`,
+      'Failed to inspect plans for tag deletion',
+      'inspect_tagged_plans',
     );
   }
 
@@ -82,9 +91,11 @@ export async function applyTagStrategy(options: {
     .in('tag_id', tagIds)
     .eq('user_id', userId);
   if (recordDeleteError) {
-    throw new TagServiceError(
+    throw createTagDatabaseError(
+      recordDeleteError,
       'DELETE_FAILED',
-      `Failed to delete records: ${recordDeleteError.message}`,
+      'Failed to delete tagged records',
+      'delete_tagged_records',
     );
   }
 
@@ -96,9 +107,11 @@ export async function applyTagStrategy(options: {
       .in('plan_id', planIds)
       .eq('user_id', userId);
     if (detachError) {
-      throw new TagServiceError(
+      throw createTagDatabaseError(
+        detachError,
         'UPDATE_FAILED',
-        `Failed to detach records from deleted plans: ${detachError.message}`,
+        'Failed to detach records from deleted plans',
+        'detach_records_from_deleted_plans',
       );
     }
   }
@@ -109,9 +122,11 @@ export async function applyTagStrategy(options: {
     .in('tag_id', tagIds)
     .eq('user_id', userId);
   if (planDeleteError) {
-    throw new TagServiceError(
+    throw createTagDatabaseError(
+      planDeleteError,
       'DELETE_FAILED',
-      `Failed to delete plans: ${planDeleteError.message}`,
+      'Failed to delete tagged plans',
+      'delete_tagged_plans',
     );
   }
 }

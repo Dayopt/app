@@ -91,6 +91,15 @@
       "morePages": "More pages",
       "pagination": "pagination",
       "more": "More"
+    },
+    "cookies": {
+      "banner": {
+        "title": "Cookie settings",
+        "description": "Analytics help us understand site performance and unexpected errors. The site works with necessary storage only.",
+        "learnMore": "Cookie Policy",
+        "necessaryOnly": "Necessary only",
+        "allowAnalytics": "Allow analytics"
+      }
     }
   },
   "errors": {

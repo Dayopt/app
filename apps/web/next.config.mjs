@@ -1,23 +1,59 @@
-import bundleAnalyzer from '@next/bundle-analyzer'
-import createNextIntlPlugin from 'next-intl/plugin'
+import { assertProductionSentryBuildEnv, failSentryBuild } from '@dayopt/observability/build-gate';
+import bundleAnalyzer from '@next/bundle-analyzer';
+import { withSentryConfig } from '@sentry/nextjs';
+import createNextIntlPlugin from 'next-intl/plugin';
 
-const withNextIntl = createNextIntlPlugin('./src/platform/i18n/request.ts')
+import { assertWebOperationalProductionBuildEnv } from './production-build-gate.mjs';
+import { buildWebContentSecurityPolicy } from './security-headers.mjs';
+
+const isVercelProduction = assertProductionSentryBuildEnv(process.env, 'Web');
+assertWebOperationalProductionBuildEnv(process.env);
+
+function getSentryIngestOrigin(dsn, name) {
+  if (!dsn) return undefined;
+
+  try {
+    const parsed = new URL(dsn);
+    if (parsed.protocol !== 'https:' || !parsed.username) {
+      throw new Error('DSN must use HTTPS and include a public key');
+    }
+    return parsed.origin;
+  } catch (error) {
+    if (isVercelProduction) {
+      throw new Error(`${name} is not a valid Sentry DSN`, { cause: error });
+    }
+    return undefined;
+  }
+}
+
+const sentryIngestOrigin = getSentryIngestOrigin(
+  process.env.NEXT_PUBLIC_SENTRY_DSN,
+  'NEXT_PUBLIC_SENTRY_DSN',
+);
+getSentryIngestOrigin(process.env.SENTRY_DSN, 'SENTRY_DSN');
+
+const withNextIntl = createNextIntlPlugin('./src/platform/i18n/request.ts');
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
-})
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
 
+  env: {
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV || '',
+  },
+
   // セキュリティヘッダー設定
   async headers() {
     // 開発環境では unsafe-eval が必要（Hot Reload用）
-    const isDev = process.env.NODE_ENV === 'development'
-    const scriptSrc = isDev
-      ? "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com"
-      : "script-src 'self' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com"
+    const isDev = process.env.NODE_ENV === 'development';
+    const contentSecurityPolicy = buildWebContentSecurityPolicy({
+      isDevelopment: isDev,
+      sentryIngestOrigin,
+    });
 
     return [
       {
@@ -31,20 +67,7 @@ const nextConfig = {
           // CSP（Content Security Policy）
           {
             key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              scriptSrc,
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https: blob:",
-              "font-src 'self' data:",
-              "connect-src 'self' https://vercel.live https://vitals.vercel-insights.com",
-              "frame-src 'self' https://vercel.live",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'none'",
-              'upgrade-insecure-requests',
-            ].join('; '),
+            value: contentSecurityPolicy,
           },
           // Clickjacking対策
           {
@@ -111,7 +134,7 @@ const nextConfig = {
           },
         ],
       },
-    ]
+    ];
   },
 
   // 旧ページ → ホームページセクションへ301リダイレクト
@@ -157,14 +180,14 @@ const nextConfig = {
         destination: '/:locale/releases',
         permanent: true,
       },
-    ]
+    ];
   },
 
   // Multi-zones設定: LP（web）とアプリ（app）を同一ドメインで運用
   // web側にないパスはapp側（dayopt-app）にフォールバック
   // @see https://nextjs.org/docs/app/building-your-application/deploying/multi-zones
   async rewrites() {
-    const appDomain = process.env.APP_DOMAIN || 'https://dayopt-app.vercel.app'
+    const appDomain = process.env.APP_DOMAIN || 'https://dayopt-app.vercel.app';
 
     return {
       // app側のアセットをプロキシ
@@ -193,7 +216,7 @@ const nextConfig = {
           destination: `${appDomain}/ja/settings/:path*`,
         },
       ],
-    }
+    };
   },
 
   // Turbopack configuration (default bundler in Next.js 16)
@@ -204,10 +227,7 @@ const nextConfig = {
   // ビルド最適化
   compiler: {
     // 本番環境でconsole.log/info/debugを削除、error/warnは残す
-    removeConsole:
-      process.env.NODE_ENV === 'production'
-        ? { exclude: ['error', 'warn'] }
-        : false,
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
 
   experimental: {
@@ -253,7 +273,7 @@ const nextConfig = {
   // Simplified webpack configuration
   webpack: (config, { dev, isServer }) => {
     // Add explicit file extensions for better module resolution
-    config.resolve.extensions = ['.tsx', '.ts', '.jsx', '.js', '.json']
+    config.resolve.extensions = ['.tsx', '.ts', '.jsx', '.js', '.json'];
 
     // Only apply optimizations in production
     if (!dev && !isServer) {
@@ -303,13 +323,36 @@ const nextConfig = {
             },
           },
         },
-      }
+      };
     }
 
-    return config
+    return config;
   },
 
   poweredByHeader: false,
-}
+};
 
-export default withNextIntl(withBundleAnalyzer(nextConfig))
+const configuredNext = withNextIntl(withBundleAnalyzer(nextConfig));
+
+const sentryBuildOptions = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  errorHandler: failSentryBuild,
+  release: { name: process.env.VERCEL_GIT_COMMIT_SHA },
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+};
+
+// Preview/CI は runtime 送信も release/source map upload も行わない。
+export default isVercelProduction
+  ? withSentryConfig(configuredNext, sentryBuildOptions)
+  : configuredNext;

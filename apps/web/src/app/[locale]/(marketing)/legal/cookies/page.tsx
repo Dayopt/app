@@ -34,7 +34,7 @@ export default async function CookiePolicyPage({ params }: PageProps) {
   const { locale = 'ja' } = await params;
   const t = await getTranslations({ locale });
 
-  const lastUpdated = '2026-03-23';
+  const lastUpdated = '2026-07-17';
 
   const cookieItems = [
     'supabaseAuth',
@@ -42,7 +42,7 @@ export default async function CookiePolicyPage({ params }: PageProps) {
     'theme',
     'cookieConsent',
     'vercelAnalytics',
-    'recaptcha',
+    'turnstile',
   ] as const;
 
   return (
@@ -168,7 +168,7 @@ export default async function CookiePolicyPage({ params }: PageProps) {
           <ul className="text-foreground list-inside list-disc space-y-2 leading-relaxed">
             <li>{t('legal.cookies.sections.thirdParty.vercel')}</li>
             <li>{t('legal.cookies.sections.thirdParty.sentry')}</li>
-            <li>{t('legal.cookies.sections.thirdParty.recaptcha')}</li>
+            <li>{t('legal.cookies.sections.thirdParty.turnstile')}</li>
           </ul>
           <p className="text-muted-foreground mt-4 text-sm">
             {t('legal.cookies.sections.thirdParty.note')}

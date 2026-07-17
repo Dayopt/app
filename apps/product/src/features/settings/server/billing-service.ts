@@ -14,6 +14,7 @@ import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import type { Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
+import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { requireStripe } from '@/lib/stripe/client';
 import { ServiceError } from '@/lib/trpc/errors';
 import { dayoptProTrialDays, type SubscriptionStatus } from '@dayopt/billing';
@@ -49,9 +50,10 @@ export interface InvoiceItem {
 
 /** 課金サービス固有のエラークラス */
 export class BillingServiceError extends ServiceError {
-  constructor(code: string, message: string) {
+  constructor(code: string, message: string, options?: ErrorOptions) {
     super(code, message);
     this.name = 'BillingServiceError';
+    if (options?.cause !== undefined) this.cause = options.cause;
   }
 }
 
@@ -80,8 +82,14 @@ export async function getBillingInfo(
   const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
 
   if (error) {
-    logger.error('Failed to fetch billing info', { userId, error });
-    throw new BillingServiceError('FETCH_FAILED', 'Failed to fetch billing info');
+    logger.error('Failed to fetch billing info');
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'billing',
+      operation: 'get_billing_info',
+    });
+    throw new BillingServiceError('FETCH_FAILED', 'Failed to fetch billing info', {
+      cause: original,
+    });
   }
 
   // profiles型にはstripe系カラムが未反映のため Record 経由で取得
@@ -104,7 +112,21 @@ async function getOrCreateCustomer(
   email: string,
 ): Promise<string> {
   // 既存の customer_id を確認
-  const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+  const { data, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (profileError) {
+    const original = captureUnexpectedDatabaseError(profileError, {
+      feature: 'billing',
+      operation: 'get_stripe_customer',
+    });
+    throw new BillingServiceError('FETCH_FAILED', 'Failed to fetch Stripe customer', {
+      cause: original,
+    });
+  }
 
   const existingCustomerId = (data as Record<string, unknown> | null)?.stripe_customer_id as
     string | null;
@@ -128,8 +150,14 @@ async function getOrCreateCustomer(
     .eq('id', userId);
 
   if (error) {
-    logger.error('Failed to save stripe_customer_id', { userId, error });
-    throw new BillingServiceError('UPDATE_FAILED', 'Failed to save Stripe customer');
+    logger.error('Failed to save stripe_customer_id', { userId });
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'billing',
+      operation: 'save_stripe_customer',
+    });
+    throw new BillingServiceError('UPDATE_FAILED', 'Failed to save Stripe customer', {
+      cause: original,
+    });
   }
 
   return customer.id;
@@ -295,8 +323,14 @@ export async function getBillingOverview(
   const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
 
   if (error) {
-    logger.error('Failed to fetch billing info', { userId, error });
-    throw new BillingServiceError('FETCH_FAILED', 'Failed to fetch billing info');
+    logger.error('Failed to fetch billing info');
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'billing',
+      operation: 'get_billing_overview',
+    });
+    throw new BillingServiceError('FETCH_FAILED', 'Failed to fetch billing info', {
+      cause: original,
+    });
   }
 
   const profile = data as Record<string, unknown>;
@@ -399,18 +433,27 @@ export async function syncSubscriptionStatus(
     .select('id');
 
   if (error) {
-    logger.error('Failed to sync subscription status', { stripeCustomerId, status, error });
-    throw new BillingServiceError('UPDATE_FAILED', 'Failed to sync subscription status');
+    logger.error('Failed to sync subscription status', { status });
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'billing',
+      operation: 'sync_subscription_status',
+    });
+    throw new BillingServiceError('UPDATE_FAILED', 'Failed to sync subscription status', {
+      cause: original,
+    });
   }
 
   const rowsUpdated = data?.length ?? 0;
 
   if (rowsUpdated === 0) {
-    logger.warn('No profile found for stripe_customer_id during sync', {
-      stripeCustomerId,
-      status,
-    });
+    throw new BillingServiceError(
+      'UPDATE_FAILED',
+      'No billing profile was updated for the Stripe customer',
+      {
+        cause: new Error('Stripe subscription sync updated zero profiles'),
+      },
+    );
   }
 
-  logger.info('Subscription status synced', { stripeCustomerId, status, rowsUpdated });
+  logger.info('Subscription status synced', { status, rowsUpdated });
 }
