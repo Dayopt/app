@@ -1,8 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeDuration } from '../timeString';
+import { computeDuration, formatTimeRange } from '../timeString';
 
 describe('date/timeString', () => {
+  describe('formatTimeRange', () => {
+    const start = new Date(2026, 0, 15, 9, 0);
+    const end = new Date(2026, 0, 15, 17, 30);
+
+    it('既定の区切り（en-dash・スペースなし）で 24h フォーマット', () => {
+      expect(formatTimeRange(start, end, '24h')).toBe('09:00–17:30');
+    });
+
+    it('12h フォーマット', () => {
+      expect(formatTimeRange(start, end, '12h')).toBe('9:00 AM–5:30 PM');
+    });
+
+    it('区切り文字を指定できる（スペース付き en-dash / 波ダッシュ）', () => {
+      expect(formatTimeRange(start, end, '24h', ' – ')).toBe('09:00 – 17:30');
+      expect(formatTimeRange(start, end, '24h', ' 〜 ')).toBe('09:00 〜 17:30');
+    });
+  });
+
   describe('computeDuration', () => {
     it('正常な開始・終了から分数を算出', () => {
       expect(computeDuration('09:00', '10:00')).toBe(60);

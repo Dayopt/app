@@ -36,7 +36,13 @@ export { formatDurationMinutes } from './duration';
 // ========================================
 // TimeString - "HH:mm" パース / フォーマット
 // ========================================
-export { computeDuration, formatHHmm, formatTimeString, parseTimeString } from './timeString';
+export {
+  computeDuration,
+  formatHHmm,
+  formatTimeRange,
+  formatTimeString,
+  parseTimeString,
+} from './timeString';
 
 // ========================================
 // 定数の再エクスポート
