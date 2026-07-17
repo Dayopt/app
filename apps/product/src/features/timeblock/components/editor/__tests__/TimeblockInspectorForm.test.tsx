@@ -13,6 +13,26 @@ const mocks = vi.hoisted(() => ({
   createPlanMutate: vi.fn(),
   createRecordMutate: vi.fn(),
   onCreateTimeOverlap: undefined as (() => void) | undefined,
+  onUpdateTimeOverlap: undefined as
+    | ((input: {
+        id: string;
+        data: { start_at?: string | undefined; end_at?: string | undefined };
+      }) => void)
+    | undefined,
+  cachedPlans: [] as Array<{ id: string; start_at: string; end_at: string }>,
+  cachedRecords: [] as Array<{ id: string; start_at: string; end_at: string }>,
+}));
+
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({
+    getQueriesData: ({ predicate }: { predicate: (query: { queryKey: unknown }) => boolean }) => {
+      const entries: Array<[unknown, Array<{ id: string; start_at: string; end_at: string }>]> = [
+        [[['plans', 'list'], { input: {} }], mocks.cachedPlans],
+        [[['records', 'list'], { input: {} }], mocks.cachedRecords],
+      ];
+      return entries.filter(([queryKey]) => predicate({ queryKey }));
+    },
+  }),
 }));
 
 vi.mock('@/features/tags', () => ({
@@ -37,8 +57,15 @@ vi.mock('../../../hooks/useCoalescedTimeblockSave', () => ({
 }));
 
 vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
-  useTimeblockWriteMutations: (options?: { onCreateTimeOverlap?: () => void }) => {
+  useTimeblockWriteMutations: (options?: {
+    onCreateTimeOverlap?: () => void;
+    onUpdateTimeOverlap?: (input: {
+      id: string;
+      data: { start_at?: string | undefined; end_at?: string | undefined };
+    }) => void;
+  }) => {
     mocks.onCreateTimeOverlap = options?.onCreateTimeOverlap;
+    mocks.onUpdateTimeOverlap = options?.onUpdateTimeOverlap;
     const mutation = {
       isPending: false,
       mutate: vi.fn(),
@@ -212,6 +239,9 @@ describe('TimeblockInspectorForm', () => {
     mocks.createPlanMutate.mockReset();
     mocks.createRecordMutate.mockReset();
     mocks.onCreateTimeOverlap = undefined;
+    mocks.onUpdateTimeOverlap = undefined;
+    mocks.cachedPlans = [];
+    mocks.cachedRecords = [];
     mocks.flushSave.mockResolvedValue(undefined);
   });
 
@@ -229,6 +259,122 @@ describe('TimeblockInspectorForm', () => {
     expect(screen.getByTestId('current-end')).toHaveTextContent('2026-07-15T14:00:00.000Z');
     expect(mocks.enqueueSave).not.toHaveBeenCalled();
     expect(mocks.toastError).toHaveBeenCalledWith('timeblock.editor.timeLocked');
+  });
+
+  it('Planを別のPlanと重なる時間へ変更するとインライン表示し、保存しない', () => {
+    mocks.cachedPlans = [
+      futurePlan,
+      {
+        id: 'plan-2',
+        start_at: '2026-07-15T15:00:00.000Z',
+        end_at: '2026-07-15T16:00:00.000Z',
+      },
+    ];
+    render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'move-to-future' }));
+
+    expect(screen.getByTestId('date-time-error')).toHaveTextContent(
+      'timeblock.errors.planTimeOverlap',
+    );
+    expect(mocks.enqueueSave).not.toHaveBeenCalled();
+  });
+
+  it('Recordを別のRecordと重なる時間へ変更するとインライン表示し、保存しない', () => {
+    mocks.cachedRecords = [
+      relatedRecord,
+      {
+        id: 'record-2',
+        start_at: '2026-07-15T07:00:00.000Z',
+        end_at: '2026-07-15T08:00:00.000Z',
+      },
+    ];
+    render(<TimeblockInspectorForm kind="record" record={relatedRecord} onDeleted={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'move-to-past' }));
+
+    expect(screen.getByTestId('date-time-error')).toHaveTextContent(
+      'timeblock.errors.recordTimeOverlap',
+    );
+    expect(mocks.enqueueSave).not.toHaveBeenCalled();
+  });
+
+  it('PlanとRecordの相互重複は許可して保存する', () => {
+    mocks.cachedPlans = [futurePlan];
+    mocks.cachedRecords = [
+      {
+        id: 'record-2',
+        start_at: '2026-07-15T15:00:00.000Z',
+        end_at: '2026-07-15T16:00:00.000Z',
+      },
+    ];
+    render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'move-to-future' }));
+
+    expect(screen.queryByTestId('date-time-error')).not.toBeInTheDocument();
+    expect(mocks.enqueueSave).toHaveBeenCalledWith({
+      start_at: '2026-07-15T15:00:00.000Z',
+      end_at: '2026-07-15T16:00:00.000Z',
+    });
+  });
+
+  it('編集中の行自身は重複から除外する', () => {
+    mocks.cachedPlans = [
+      {
+        id: futurePlan.id,
+        start_at: '2026-07-15T15:00:00.000Z',
+        end_at: '2026-07-15T16:00:00.000Z',
+      },
+    ];
+    render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'move-to-future' }));
+
+    expect(screen.queryByTestId('date-time-error')).not.toBeInTheDocument();
+    expect(mocks.enqueueSave).toHaveBeenCalledOnce();
+  });
+
+  it('競合後に空き時間へ変更するとエラーを解除して保存する', () => {
+    mocks.cachedPlans = [
+      futurePlan,
+      {
+        id: 'plan-2',
+        start_at: '2026-07-15T15:00:00.000Z',
+        end_at: '2026-07-15T16:00:00.000Z',
+      },
+    ];
+    render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'move-to-future' }));
+    expect(screen.getByTestId('date-time-error')).toBeInTheDocument();
+
+    mocks.cachedPlans = [futurePlan];
+    fireEvent.click(screen.getByRole('button', { name: 'move-to-future' }));
+
+    expect(screen.queryByTestId('date-time-error')).not.toBeInTheDocument();
+    expect(mocks.enqueueSave).toHaveBeenCalledWith({
+      start_at: '2026-07-15T15:00:00.000Z',
+      end_at: '2026-07-15T16:00:00.000Z',
+    });
+  });
+
+  it('serverが現在の時間変更を重複拒否した場合もインライン表示する', () => {
+    render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'move-to-future' }));
+
+    act(() =>
+      mocks.onUpdateTimeOverlap?.({
+        id: futurePlan.id,
+        data: {
+          start_at: '2026-07-15T15:00:00.000Z',
+          end_at: '2026-07-15T16:00:00.000Z',
+        },
+      }),
+    );
+
+    expect(screen.getByTestId('date-time-error')).toHaveTextContent(
+      'timeblock.errors.planTimeOverlap',
+    );
   });
 
   it('記録前にdebounceを止め、最新のタグとメモをsnapshot保存する', () => {
@@ -372,7 +518,9 @@ describe('TimeblockInspectorForm', () => {
     expect(screen.queryByTestId('date-time-error')).not.toBeInTheDocument();
 
     fireEvent.click(createButton);
-    expect(screen.getByTestId('date-time-error')).toHaveTextContent('timeblock.errors.timeOverlap');
+    expect(screen.getByTestId('date-time-error')).toHaveTextContent(
+      'timeblock.errors.planTimeOverlap',
+    );
     expect(createButton).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'move-to-future' }));

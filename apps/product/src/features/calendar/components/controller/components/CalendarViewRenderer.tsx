@@ -30,8 +30,13 @@ const MultiDayView = React.lazy(() =>
 );
 /** モバイルでは列数が多すぎると狭くなるため、最大3日にフォールバック */
 const MOBILE_MAX_DAYS = 3;
-/** タブレット（サイドバー込み512px幅）では5日まで */
+/** 週ビューのタブレットフォールバックは5日まで */
 const TABLET_MAX_DAYS = 5;
+
+/** 複数日ビューはモバイル以外ではユーザーが指定した列数を維持する。 */
+export function resolveMultiDayColumnCount(requestedDays: number, isMobile: boolean): number {
+  return isMobile ? Math.min(requestedDays, MOBILE_MAX_DAYS) : requestedDays;
+}
 
 /** CalendarViewRenderer コンポーネントのプロパティ */
 interface CalendarViewRendererProps {
@@ -61,7 +66,7 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
 
     if (isMultiDayView(viewType)) {
       const requestedDays = getMultiDayCount(viewType);
-      const dayCount = Math.min(requestedDays, maxDays);
+      const dayCount = resolveMultiDayColumnCount(requestedDays, isMobile);
       return (
         <Suspense fallback={<CalendarViewSkeleton />}>
           <MultiDayView dayCount={dayCount} {...commonProps} />

@@ -17,9 +17,14 @@ import { useIsMobile } from '../hooks/useIsMobile';
 type DialogMode = 'dialog' | 'drawer';
 
 const DialogModeContext = React.createContext<DialogMode>('dialog');
+const DialogModalContext = React.createContext(true);
 
 function useDialogMode(): DialogMode {
   return React.useContext(DialogModeContext);
+}
+
+function useDialogModal(): boolean {
+  return React.useContext(DialogModalContext);
 }
 
 // ---------------------------------------------------------------------------
@@ -27,13 +32,14 @@ function useDialogMode(): DialogMode {
 // ---------------------------------------------------------------------------
 
 type DialogResponsive = 'auto' | 'dialog' | 'drawer';
+type DialogMobilePresentation = 'sheet' | 'full-height';
 
 interface DialogProps extends React.ComponentProps<typeof DialogPrimitive.Root> {
   /** レスポンシブ制御。'auto' = PC:Dialog / モバイル:Drawer。default: 'auto' */
   responsive?: DialogResponsive;
 }
 
-const Dialog = ({ responsive = 'auto', ...props }: DialogProps) => {
+const Dialog = ({ responsive = 'auto', modal = true, ...props }: DialogProps) => {
   const isMobile = useIsMobile();
   const mounted = useHasMounted();
 
@@ -45,20 +51,26 @@ const Dialog = ({ responsive = 'auto', ...props }: DialogProps) => {
         : isMobile
           ? 'drawer'
           : 'dialog';
+  // Mobile bottom sheets are always modal. Background-interactive surfaces use a panel/popover.
+  const resolvedModal = mode === 'drawer' ? true : modal;
 
   // SSR / hydration: drawer は mount 後のみ
   if (mode === 'drawer') {
     if (!mounted) return null;
     return (
       <DialogModeContext.Provider value="drawer">
-        <DrawerPrimitive.Root data-slot="dialog" {...props} />
+        <DialogModalContext.Provider value={resolvedModal}>
+          <DrawerPrimitive.Root data-slot="dialog" modal={resolvedModal} {...props} />
+        </DialogModalContext.Provider>
       </DialogModeContext.Provider>
     );
   }
 
   return (
     <DialogModeContext.Provider value="dialog">
-      <DialogPrimitive.Root data-slot="dialog" {...props} />
+      <DialogModalContext.Provider value={resolvedModal}>
+        <DialogPrimitive.Root data-slot="dialog" modal={resolvedModal} {...props} />
+      </DialogModalContext.Provider>
     </DialogModeContext.Provider>
   );
 };
@@ -146,17 +158,18 @@ const DialogContent = ({
   className,
   children,
   showCloseButton = true,
-  showOverlay = true,
+  mobilePresentation = 'sheet',
   size,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
-  /** 背景overlayを表示するか。default: true */
-  showOverlay?: boolean;
+  /** Drawer時の高さ。full-heightは検索など入力中心の画面に使う。default: sheet */
+  mobilePresentation?: DialogMobilePresentation;
   /** サイズ（max-width）。未指定時は className の max-w- or デフォルト lg */
   size?: DialogSize;
 }) => {
   const mode = useDialogMode();
+  const modal = useDialogModal();
   const contentRef = React.useRef<HTMLDivElement>(null);
 
   // モバイルキーボード表示時にダイアログを上にシフト + 高さ制約（dialog mode のみ）
@@ -189,12 +202,14 @@ const DialogContent = ({
   if (mode === 'drawer') {
     return (
       <DrawerPortalInternal>
-        {showOverlay ? <DrawerOverlayInternal /> : null}
+        {modal ? <DrawerOverlayInternal /> : null}
         <DrawerPrimitive.Content
           data-slot="dialog-content"
           className={cn(
             'group/drawer-content bg-card z-sheet shadow-card fixed flex h-auto flex-col',
-            'border-border inset-x-0 bottom-0 mt-24 max-h-[80vh] rounded-t-2xl border-t',
+            mobilePresentation === 'full-height'
+              ? 'pt-safe pb-safe inset-0 h-dvh max-h-dvh rounded-none border-0 shadow-none'
+              : 'border-border inset-x-0 bottom-0 mt-24 max-h-[80vh] rounded-t-2xl border-t',
             className,
           )}
           {...(props as React.ComponentProps<typeof DrawerPrimitive.Content>)}
@@ -216,7 +231,7 @@ const DialogContent = ({
 
   return (
     <DialogPortal data-slot="dialog-portal">
-      {showOverlay ? <DialogOverlay /> : null}
+      {modal ? <DialogOverlay /> : null}
       <DialogPrimitive.Content
         ref={contentRef}
         data-slot="dialog-content"
@@ -278,7 +293,7 @@ const DialogFooter = ({ className, ...props }: React.ComponentProps<'div'>) => {
       data-slot="dialog-footer"
       className={cn(
         mode === 'drawer'
-          ? 'mt-auto flex flex-row gap-2 p-4 [&>*]:flex-1'
+          ? 'mt-auto flex flex-row gap-2 p-4 [&>*]:min-h-11 [&>*]:flex-1'
           : 'flex flex-row justify-end gap-2',
         className,
       )}
@@ -370,4 +385,5 @@ export {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  type DialogMobilePresentation,
 };

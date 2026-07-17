@@ -69,6 +69,14 @@ describe('calculateViewDateRange', () => {
       expect(range.start.getDate()).toBe(15);
       expect(range.end.getDate()).toBe(19);
     });
+
+    it('7dayかつ週末非表示では中央日を基準に7営業日を返す', () => {
+      const thursday = new Date('2026-01-15T12:00:00');
+      const range = calculateViewDateRange('7day', thursday, 1, false);
+
+      expect(range.days).toHaveLength(7);
+      expect(range.days.map((day) => day.getDay())).toEqual([1, 2, 3, 4, 5, 1, 2]);
+    });
   });
 });
 

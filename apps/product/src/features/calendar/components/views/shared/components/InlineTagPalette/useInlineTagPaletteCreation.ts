@@ -13,13 +13,14 @@ import { toast } from '@/lib/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import {
-  collectTimeModelLaneItems,
-  hasTimeModelLaneConflict,
-} from '@/features/calendar/lib/overlap';
 import type { HoveredTagInfo } from '@/features/tags';
 import { resolveTagColor, useCreateTag } from '@/features/tags';
-import { resolveTimeblockDestination, useTimeblockWriteMutations } from '@/features/timeblock';
+import {
+  collectTimeblockLaneItems,
+  hasTimeblockLaneConflict,
+  resolveTimeblockDestination,
+  useTimeblockWriteMutations,
+} from '@/features/timeblock';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { logger } from '@/lib/logger';
@@ -77,11 +78,11 @@ export function useInlineTagPaletteCreation() {
 
       // 事前 overlap 判定（TagSelector を開いている間の resize / 他クライアント更新による race を回避）
       // 同一レーンのみ禁止（plan×plan / record×record）。plan×record は許可。
-      const laneItems = collectTimeModelLaneItems(
+      const laneItems = collectTimeblockLaneItems(
         queryClient,
         destination === 'plan' ? 'plans' : 'records',
       );
-      if (hasTimeModelLaneConflict(laneItems, utcStart, utcEnd)) {
+      if (hasTimeblockLaneConflict(laneItems, utcStart, utcEnd)) {
         toast.error(tEntry('errors.timeOverlap'));
         clearPendingSelection();
         return;
@@ -191,11 +192,11 @@ export function useInlineTagPaletteCreation() {
 
     // 保存先レーンと同じレーンのみ判定（plan×record は共存可）
     const destination = resolveTimeblockDestination(utcEnd);
-    const laneItems = collectTimeModelLaneItems(
+    const laneItems = collectTimeblockLaneItems(
       queryClient,
       destination === 'plan' ? 'plans' : 'records',
     );
-    return hasTimeModelLaneConflict(laneItems, utcStart, utcEnd);
+    return hasTimeblockLaneConflict(laneItems, utcStart, utcEnd);
   }, [queryClient, pendingSelection, timezone]);
 
   return {

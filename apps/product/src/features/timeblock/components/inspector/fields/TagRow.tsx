@@ -111,7 +111,7 @@ export function TagRow({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-10 items-center justify-center rounded-lg transition-colors"
+                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-11 items-center justify-center rounded-lg transition-colors"
                   aria-label={t('common.actions.more')}
                 >
                   <MoreHorizontal className="size-5" />
@@ -142,7 +142,7 @@ export function TagRow({
             <button
               type="button"
               onClick={onCloseInspector}
-              className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-10 items-center justify-center rounded-lg transition-colors"
+              className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-11 items-center justify-center rounded-lg transition-colors"
               aria-label={t('common.actions.close')}
             >
               <X className="size-5" />

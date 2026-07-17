@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-07-15
+last_verified: 2026-07-16
 code:
   - apps/product/src/components/shell/sidebar
   - apps/product/src/features/calendar
@@ -21,7 +21,7 @@ Calendarを主役のまま保ち、必要なときだけ全期間のPlan / Recor
 ## Minimum Viable Approach
 
 1. 既存のPlan / Record list検索をactiveなtag名とメモに揃え、空欄では取得せず、全期間から開始日時の新しい順に20件を表示する
-2. shellの非永続overlayとしてresponsiveな検索dialogを置き、Sidebar、展開したmobile mini calendar、`Cmd/Ctrl+K`から同じ操作で開く
+2. shellの非永続overlayとしてresponsiveな検索dialogを置き、Sidebar、展開したmobile mini calendar、`Cmd/Ctrl+K`から同じ操作で開く。mobileは検索欄とキャンセルを固定した全高bottom sheetにする
 3. 結果の選択は対象日のCalendarと元ブロックのInspectorを開き、検索内には副操作を置かない
 4. 日本語・英語、keyboard / IME、loading / empty / error / retry、mobile touch targetを既存patternに揃える
 5. service、pure logic、component、Storybook、E2Eで検索・移動の契約を検証する
@@ -30,7 +30,7 @@ Calendarを主役のまま保ち、必要なときだけ全期間のPlan / Recor
 
 - activeなtag名・メモの部分一致でPlan / Recordを検索でき、skip済みPlanを含み、削除済みデータと別ユーザーのデータを返さない
 - 結果はPlan / Recordの別、表示名となるtag、メモ、日時を示し、DB互換の`title`と内部IDを表示しない
-- desktop trigger、mobile trigger、`Cmd/Ctrl+K`が同じdialogを開き、入力・IME・他overlayの操作と競合しない
+- desktop trigger、mobile trigger、`Cmd/Ctrl+K`が同じ検索を開き、mobileはkeyboard表示中も固定した検索欄とscroll可能な結果領域を維持し、入力・IME・他overlayの操作と競合しない
 - 結果を選ぶと対象日と元ブロックのInspectorへ移動し、検索結果内には複製操作を表示しない
 - 空欄、loading、0件、20件超、片方の取得失敗を含む状態が定義され、検索語を履歴・log・analyticsへ保存しない
 - focused test、Storybook AllPatterns、i18n / copy check、repo必須check、`pnpm docs:check`が通る

@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses, resolveTagColor, useCreateTag, useTagsMap } from '@/features/tags';
@@ -23,7 +24,10 @@ import {
   useCoalescedTimeblockSave,
   type TimeblockSavePatch,
 } from '../../hooks/useCoalescedTimeblockSave';
-import { useTimeblockWriteMutations } from '../../hooks/useTimeblockWriteMutations';
+import {
+  useTimeblockWriteMutations,
+  type TimeblockOverlapUpdateInput,
+} from '../../hooks/useTimeblockWriteMutations';
 import type { ClipboardTimeblock } from '../../lib/timeblock-clipboard';
 import { createClipboardTimeblock } from '../../lib/timeblock-clipboard';
 import {
@@ -33,6 +37,10 @@ import {
   type TimeblockDuplicateDraft,
   type TimeblockDuplicateValidationReason,
 } from '../../lib/timeblock-duplicate';
+import {
+  collectTimeblockLaneItems,
+  hasTimeblockLaneConflict,
+} from '../../lib/timeblock-lane-conflict';
 import { getTimeblockMenuItems } from '../../lib/timeblock-menu-items';
 import { TagRow } from '../inspector/fields';
 import {
@@ -109,6 +117,14 @@ function getDuplicateValidationMessageKey(
   }
 }
 
+function getTimeOverlapMessageKey(
+  kind: TimeblockDestination,
+): 'timeblock.errors.planTimeOverlap' | 'timeblock.errors.recordTimeOverlap' {
+  return kind === 'plan'
+    ? 'timeblock.errors.planTimeOverlap'
+    : 'timeblock.errors.recordTimeOverlap';
+}
+
 /** plan / record 共通の Inspector フォーム。タグ・日時・メモをフィールド別に自動保存する。 */
 export function TimeblockInspectorForm({
   kind,
@@ -126,11 +142,22 @@ export function TimeblockInspectorForm({
   onDeleted,
 }: TimeModelInspectorFormProps) {
   const t = useTranslations();
+  const queryClient = useQueryClient();
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
   const isDuplicateMode = duplicateDraft != null;
-  const [duplicateHasTimeConflict, setDuplicateHasTimeConflict] = useState(false);
-  const handleDuplicateTimeOverlap = useCallback(() => setDuplicateHasTimeConflict(true), []);
+  const [hasTimeConflict, setHasTimeConflict] = useState(false);
+  const latestTimeValueRef = useRef({ startAt: '', endAt: '' });
+  const handleCreateTimeOverlap = useCallback(() => setHasTimeConflict(true), []);
+  const handleUpdateTimeOverlap = useCallback((input: TimeblockOverlapUpdateInput) => {
+    const { start_at: startAt, end_at: endAt } = input.data;
+    if (
+      startAt === latestTimeValueRef.current.startAt &&
+      endAt === latestTimeValueRef.current.endAt
+    ) {
+      setHasTimeConflict(true);
+    }
+  }, []);
   const {
     createRecord,
     createPlan,
@@ -143,7 +170,9 @@ export function TimeblockInspectorForm({
     updateRecord,
     updatePlan,
   } = useTimeblockWriteMutations(
-    isDuplicateMode ? { onCreateTimeOverlap: handleDuplicateTimeOverlap } : undefined,
+    isDuplicateMode
+      ? { onCreateTimeOverlap: handleCreateTimeOverlap }
+      : { onUpdateTimeOverlap: handleUpdateTimeOverlap },
   );
 
   const target: PlanRow | RecordRow | undefined = kind === 'plan' ? plan : record;
@@ -167,6 +196,13 @@ export function TimeblockInspectorForm({
     ...(isDuplicateMode ? {} : { source: kind }),
   }));
   const [duplicateValidationNow] = useState(() => new Date());
+
+  useEffect(() => {
+    latestTimeValueRef.current = {
+      startAt: value.startAt.toISOString(),
+      endAt: value.endAt.toISOString(),
+    };
+  }, [value.startAt, value.endAt]);
 
   // auto_migrated record は RLS で update / delete とも拒否されるため UI 側も読み取り専用にする
   const isMigrated = !isDuplicateMode && kind === 'record' && record?.source === 'auto_migrated';
@@ -258,15 +294,23 @@ export function TimeblockInspectorForm({
         toast.error(t('timeblock.editor.timeLocked'));
         return;
       }
-      if (isDuplicateMode) setDuplicateHasTimeConflict(false);
+      setHasTimeConflict(false);
       setValue(next);
       if (isDuplicateMode || !isValidTimeModelRange(next)) return;
+      const laneItems = collectTimeblockLaneItems(
+        queryClient,
+        kind === 'plan' ? 'plans' : 'records',
+      );
+      if (hasTimeblockLaneConflict(laneItems, next.startAt, next.endAt, targetId ?? undefined)) {
+        setHasTimeConflict(true);
+        return;
+      }
       enqueueSave({
         start_at: next.startAt.toISOString(),
         end_at: next.endAt.toISOString(),
       });
     },
-    [kind, isDuplicateMode, enqueueSave, t],
+    [kind, isDuplicateMode, queryClient, targetId, enqueueSave, t],
   );
 
   const handleNoteChange = useCallback(
@@ -321,14 +365,14 @@ export function TimeblockInspectorForm({
   const duplicateValidationReason = duplicateDraft
     ? getTimeblockDuplicateValidationReason(duplicateDraft, value, duplicateValidationNow)
     : null;
-  const duplicateValidationMessage = duplicateHasTimeConflict
-    ? t('timeblock.errors.timeOverlap')
+  const dateTimeError = hasTimeConflict
+    ? t(getTimeOverlapMessageKey(duplicateDraft?.kind ?? kind))
     : duplicateValidationReason
       ? t(getDuplicateValidationMessageKey(duplicateValidationReason))
       : undefined;
 
   const handleCreateDuplicate = useCallback(() => {
-    if (!duplicateDraft || duplicateValidationReason !== null || duplicateHasTimeConflict) return;
+    if (!duplicateDraft || duplicateValidationReason !== null || hasTimeConflict) return;
     const input = buildTimeblockDuplicateCreateInput(duplicateDraft, value);
     const onSuccess = (created: { id: string } | null | undefined) => {
       if (!created) return;
@@ -345,7 +389,7 @@ export function TimeblockInspectorForm({
     createPlan,
     createRecord,
     duplicateDraft,
-    duplicateHasTimeConflict,
+    hasTimeConflict,
     duplicateValidationReason,
     onDuplicateCreated,
     t,
@@ -448,7 +492,7 @@ export function TimeblockInspectorForm({
         onDateTimeChange={handleDateTimeChange}
         onNoteChange={handleNoteChange}
         onNoteBlur={isDuplicateMode ? undefined : flushNoteSave}
-        dateTimeError={duplicateValidationMessage}
+        dateTimeError={dateTimeError}
         disabled={
           deletePlan.isPending ||
           deleteRecord.isPending ||
@@ -467,7 +511,7 @@ export function TimeblockInspectorForm({
             type="button"
             onClick={handleCreateDuplicate}
             loading={createPlan.isPending || createRecord.isPending}
-            disabled={duplicateValidationReason !== null || duplicateHasTimeConflict}
+            disabled={duplicateValidationReason !== null || hasTimeConflict}
           >
             {t('timeblock.editor.duplicate.create')}
           </Button>

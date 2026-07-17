@@ -11,6 +11,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  type DialogMobilePresentation,
 } from '../overlays/dialog';
 
 const Command = ({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) => {
@@ -32,12 +33,14 @@ const CommandDialog = ({
   children,
   className,
   showCloseButton = true,
+  mobilePresentation = 'sheet',
   ...props
 }: React.ComponentProps<typeof Dialog> & {
   title?: string;
   description?: string;
   className?: string;
   showCloseButton?: boolean;
+  mobilePresentation?: DialogMobilePresentation;
 }) => {
   return (
     <Dialog {...props}>
@@ -48,6 +51,7 @@ const CommandDialog = ({
       <DialogContent
         className={cn(className, 'overflow-hidden p-0')}
         showCloseButton={showCloseButton}
+        mobilePresentation={mobilePresentation}
       >
         <Command className="[&_[cmdk-group-heading]]:text-muted-foreground **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-normal [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-4 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
           {children}
@@ -59,12 +63,19 @@ const CommandDialog = ({
 
 const CommandInput = ({
   className,
+  containerClassName,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) => {
+}: React.ComponentProps<typeof CommandPrimitive.Input> & {
+  /** 検索iconとinputを包む外枠のclass。 */
+  containerClassName?: string;
+}) => {
   return (
     <div
       data-slot="command-input-wrapper"
-      className="border-b-border flex h-10 items-center gap-2 border-b px-4"
+      className={cn(
+        'border-b-border flex h-10 items-center gap-2 border-b px-4',
+        containerClassName,
+      )}
     >
       <SearchIcon className="size-4 shrink-0 opacity-50" />
       <CommandPrimitive.Input

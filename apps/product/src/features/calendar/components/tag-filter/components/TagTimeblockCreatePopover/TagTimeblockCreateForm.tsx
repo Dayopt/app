@@ -88,7 +88,10 @@ export function TagTimeblockCreateForm({
           type="button"
           onClick={onCancel}
           aria-label={t('common.actions.close')}
-          className="text-muted-foreground hover:text-foreground hover:bg-state-hover -mr-2 flex size-10 items-center justify-center rounded-lg transition-colors"
+          className={cn(
+            'text-muted-foreground hover:text-foreground hover:bg-state-hover -mr-2 flex items-center justify-center rounded-lg transition-colors',
+            surface === 'sheet' ? 'size-11' : 'size-10',
+          )}
         >
           <X className="size-5" />
         </button>
@@ -125,12 +128,18 @@ export function TagTimeblockCreateForm({
 
       {/* アクション（キャンセル / 作成） */}
       <div className="mt-4 flex items-center justify-end gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting}>
+        <Button
+          type="button"
+          variant="ghost"
+          size={surface === 'sheet' ? 'lg' : 'sm'}
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
           {t('common.actions.cancel')}
         </Button>
         <Button
           type="button"
-          size="sm"
+          size={surface === 'sheet' ? 'lg' : 'sm'}
           onClick={onSubmit}
           disabled={isSubmitting || !startTime || !endTime || hasError}
         >

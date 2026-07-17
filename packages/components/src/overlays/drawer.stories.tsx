@@ -27,6 +27,34 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** 背景操作を止める標準のmodal form。 */
+export const ModalForm: Story = {
+  render: function ModalFormStory() {
+    const [open, setOpen] = useState(false);
+
+    return (
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerTrigger asChild>
+          <Button variant="outline">フォームを開く</Button>
+        </DrawerTrigger>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>表示名を変更</DrawerTitle>
+            <DrawerDescription>変更内容は保存するまで反映されません。</DrawerDescription>
+          </DrawerHeader>
+          <div className="bg-muted mx-4 h-11 rounded-lg" />
+          <DrawerFooter>
+            <DrawerClose asChild>
+              <Button variant="outline">キャンセル</Button>
+            </DrawerClose>
+            <Button>保存</Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  },
+};
+
 export const AllPatterns: Story = {
   render: function DrawerStory() {
     const [basicOpen, setBasicOpen] = useState(false);
@@ -154,6 +182,7 @@ export const AllPatterns: Story = {
 
     const body = within(document.body);
     await expect(await body.findByText('アプリケーションの設定を変更します。')).toBeVisible();
+    await expect(document.querySelector('[data-slot="drawer-overlay"]')).toBeInTheDocument();
 
     const cancelButton = await body.findByRole('button', { name: 'キャンセル' });
     await userEvent.click(cancelButton);

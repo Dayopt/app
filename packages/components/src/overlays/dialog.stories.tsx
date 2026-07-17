@@ -4,6 +4,7 @@ import { expect, userEvent, within } from 'storybook/test';
 import {
   Button,
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -17,16 +18,17 @@ import {
 /**
  * Dialog - モーダルダイアログ。
  *
- * ## 閉じるボタン（×）のガイドライン
+ * ## モバイルSheetのガイドライン
  *
- * | パターン | 閉じるボタン | 理由 |
- * |----------|-------------|------|
- * | フォーム・設定ダイアログ | あり（デフォルト） | コンテンツ量が多く、フッターが画面外になりうる |
- * | 確認ダイアログ（AlertDialog） | なし | ユーザーに選択を強制する（Cancel/OK で十分） |
- * | フルスクリーン Sheet（モバイル） | ヘッダーに配置 | デフォルト位置ではなくヘッダーUI内に統合 |
- * | カスタムレイアウト（サイドバー付き等） | showCloseButton={false} + DialogClose でカスタム配置 | デフォルト位置がコンテンツと干渉する場合 |
+ * | パターン | 閉じ方 | modal |
+ * |----------|--------|-------|
+ * | 検索 | 一時的な検索状態を破棄する「キャンセル」 | true |
+ * | 作成・編集フォーム | 「キャンセル」+ 主要action | true |
+ * | 自動保存の詳細 | 閉じるicon | true |
+ * | 即時確定picker | 選択で閉じる | true |
+ * | 背景と同時操作する補助panel | 閉じるiconまたはswipe | false |
  *
- * **原則**: スクロールが発生しうるモーダル → 閉じるボタンあり、小さい確認ダイアログ → なし
+ * **原則**: mobile bottom sheetは常にmodal。背景と同時操作するUIはpanel / popoverを使う。
  */
 const meta = {
   title: 'Shared/Components/Overlays/Dialog',
@@ -129,11 +131,11 @@ export const WithoutCloseButton: Story = {
 
 export const WithoutOverlay: Story = {
   render: () => (
-    <Dialog>
+    <Dialog responsive="dialog" modal={false}>
       <DialogTrigger asChild>
         <Button variant="outline">背景オーバーレイなし</Button>
       </DialogTrigger>
-      <DialogContent showOverlay={false}>
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>背景オーバーレイなし</DialogTitle>
           <DialogDescription>背景を暗く覆わずに表示するダイアログです。</DialogDescription>
@@ -262,6 +264,26 @@ export const ForceDrawer: Story = {
   ),
 };
 
+/** 入力や長い一覧を扱うモバイル向けの全高Drawer。 */
+export const FullHeightDrawer: Story = {
+  render: () => (
+    <Dialog responsive="drawer">
+      <DialogTrigger asChild>
+        <Button variant="outline">全高Drawer</Button>
+      </DialogTrigger>
+      <DialogContent mobilePresentation="full-height" showCloseButton={false}>
+        <DialogHeader className="border-border flex-row items-center justify-between border-b pb-4">
+          <DialogTitle>検索</DialogTitle>
+          <DialogClose asChild>
+            <Button variant="ghost">キャンセル</Button>
+          </DialogClose>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">検索結果</div>
+      </DialogContent>
+    </Dialog>
+  ),
+};
+
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
@@ -287,13 +309,13 @@ export const AllPatterns: Story = {
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>新規タスク</DialogTitle>
-            <DialogDescription>新しいタスクを作成します。</DialogDescription>
+            <DialogTitle>新しいブロック</DialogTitle>
+            <DialogDescription>新しいブロックを作成します。</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="task-name">タスク名</Label>
-              <Input id="task-name" placeholder="タスク名を入力" />
+              <Label htmlFor="block-name">ブロック名</Label>
+              <Input id="block-name" placeholder="ブロック名を入力" />
             </div>
           </div>
           <DialogFooter>
@@ -303,15 +325,30 @@ export const AllPatterns: Story = {
         </DialogContent>
       </Dialog>
 
-      <Dialog>
+      <Dialog responsive="dialog" modal={false}>
         <DialogTrigger asChild>
           <Button variant="outline">背景オーバーレイなし</Button>
         </DialogTrigger>
-        <DialogContent showOverlay={false}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>ショートカット一覧</DialogTitle>
             <DialogDescription>背景を維持したまま補助情報を表示します。</DialogDescription>
           </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog responsive="drawer">
+        <DialogTrigger asChild>
+          <Button variant="outline">全高Drawer</Button>
+        </DialogTrigger>
+        <DialogContent mobilePresentation="full-height" showCloseButton={false}>
+          <DialogHeader className="border-border flex-row items-center justify-between border-b pb-4">
+            <DialogTitle>検索</DialogTitle>
+            <DialogClose asChild>
+              <Button variant="ghost">キャンセル</Button>
+            </DialogClose>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">検索結果</div>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-15
+last_verified: 2026-07-16
 code: apps/product/src/features/calendar
 ---
 
@@ -10,9 +10,11 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 
 ## 現在の振る舞い
 
-- Day / Week / Multi-Day（2〜9日）で、表示範囲と基準日をURLに保持する
+- Day / Week / Multi-Day（2〜7日）で、表示範囲と基準日をURLに保持する
+- Multi-Dayは選択した日数を表示列数として維持し、基準日を中央に配置する。週末非表示では土日を除いたN営業日を表示する。Weekは週境界を正とする別viewで、週末非表示時は平日の5日を表示する
 - 各日カラムをPlanレーンとRecordレーンに分ける。Planは控えめなoutline、Recordは塗りで表示する
 - モバイルはDay / Weekを提供する。Weekでは予定または記録を切り替えて日カラム全幅に表示し、最後に選んだ表示を端末へ保持する。既定は記録
+- モバイルの検索、作成、Inspector、tag / 日時picker、振り返りpanelは[Mobile overlays](./mobile-overlays.md)のmodal性とdismiss契約に従う
 - 新規作成時の保存先は`end_at > now`ならPlan、`end_at <= now`ならRecordとして自動決定し、既存Plan / Recordの編集では種別を維持する
 - 15分gridへのsnap、dragによる移動・resize、keyboard操作、tag filterを提供する
 - `?`キーまたはSidebar右端のヘルプメニューから、現在登録されているkeyboard shortcut一覧を背景overlayなしの横長2列で開く。操作行の区切り線は表示しない。キー表記は利用中platform、説明はlocaleに合わせる
@@ -41,7 +43,7 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 
 ## ブロック検索
 
-- 検索はCalendar内の補助導線であり、独立pageやcommand paletteにはしない。desktopはSidebar、mobileは展開したmini calendarから開き、`Cmd/Ctrl+K`でも開ける
+- 検索はCalendar内の補助導線であり、独立pageやcommand paletteにはしない。desktopはSidebar、mobileは展開したmini calendarから開き、`Cmd/Ctrl+K`でも開ける。mobileでは検索欄とキャンセルを上部に固定した全高bottom sheetを使い、結果領域だけをscrollする
 - 削除されていない全期間のPlan / Recordを、activeなtag名とメモの部分一致で検索する。skip済みPlanも履歴として含め、tag自体は結果にしない
 - 空の検索語では取得せず、結果は開始日時の新しい順に20件まで表示する。検索履歴や最近使った項目は保存しない
 - 結果にはPlan / Recordの別、表示名となるtag、メモの抜粋、日時を表示する。DB互換の`title`と内部IDは表示しない
@@ -49,6 +51,7 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 
 ## 関連する意思決定
 
+- [7日表示をWeekではなく中央基準の7営業日として扱う](../log/2026-07-16-feedback-calendar-seven-day-weekend-hidden.md)
 - [検索対象と表示をtag・メモに揃え、結果は対象ブロックを開く操作に限定する](../log/2026-07-15-feedback-block-search-tag-note.md)
 - [ADR-025: Plan / Record / 外部カレンダーミラーへの分割](../log/2026-07-09-time-model-split.md)
 - [時間不変原則](../log/2026-03-10-time-immutability-principle.md)

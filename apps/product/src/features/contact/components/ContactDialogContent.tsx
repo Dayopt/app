@@ -65,12 +65,14 @@ function ContactForm({
   categoryLabel,
   labels,
   onClose,
+  mobile,
 }: {
   onSubmit: (input: { category: ContactCategory; message: string }) => void;
   isPending: boolean;
   categoryLabel: (category: ContactCategory) => string;
   labels: ContactDialogContentProps['labels'];
   onClose: () => void;
+  mobile: boolean;
 }) {
   const [category, setCategory] = useState<ContactCategory>('bug');
   const [message, setMessage] = useState('');
@@ -138,10 +140,21 @@ function ContactForm({
 
       {/* フッター: 横並び */}
       <div className="flex flex-row justify-end gap-2 p-4 md:p-0 md:pt-4">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+        <Button
+          type="button"
+          variant="outline"
+          size={mobile ? 'lg' : 'default'}
+          onClick={onClose}
+          disabled={isPending}
+        >
           {labels.cancel}
         </Button>
-        <Button type="submit" loading={isPending} disabled={isPending}>
+        <Button
+          type="submit"
+          size={mobile ? 'lg' : 'default'}
+          loading={isPending}
+          disabled={isPending}
+        >
           {labels.submit}
         </Button>
       </div>
@@ -195,6 +208,7 @@ export function ContactDialogContent({
             categoryLabel={categoryLabel}
             labels={labels}
             onClose={handleClose}
+            mobile
           />
 
           <DrawerFooter className="sr-only">
@@ -229,6 +243,7 @@ export function ContactDialogContent({
           categoryLabel={categoryLabel}
           labels={labels}
           onClose={handleClose}
+          mobile={false}
         />
       </DialogContent>
     </Dialog>

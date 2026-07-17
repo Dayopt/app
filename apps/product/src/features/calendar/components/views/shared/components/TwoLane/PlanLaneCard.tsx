@@ -113,7 +113,7 @@ export function PlanLaneCard({
         'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
         isActive && 'ring-ring ring-2',
         showDayDiffMarker && 'pr-7',
-        interactive && (canDrag ? 'cursor-grab' : 'cursor-pointer'),
+        interactive && 'cursor-pointer',
         className,
       )}
       style={{

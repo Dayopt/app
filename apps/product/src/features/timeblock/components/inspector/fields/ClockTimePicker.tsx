@@ -435,9 +435,14 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
             {t('actions.now')}
           </Button>
         </div>
-        <Button variant="primary" size="lg" className="w-full" onClick={handleConfirm}>
-          {t('actions.save')}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="lg" className="flex-1" onClick={onClose}>
+            {t('actions.cancel')}
+          </Button>
+          <Button variant="primary" size="lg" className="flex-1" onClick={handleConfirm}>
+            {t('actions.save')}
+          </Button>
+        </div>
       </div>
     </div>
   );
