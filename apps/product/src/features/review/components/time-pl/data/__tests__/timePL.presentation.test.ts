@@ -1,31 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  formatMinutesDuration,
-  formatVariance,
-  getAccuracyColors,
-  getVarianceColor,
-} from '../timePL.presentation';
-
-describe('formatMinutesDuration', () => {
-  // 共通入力テーブル（整数）— lib/date の canonical formatDurationMinutes へ統合後も
-  // この出力を維持する（表示を変えない）。
-  it.each([
-    [0, '0m'],
-    [1, '1m'],
-    [45, '45m'],
-    [59, '59m'],
-    [60, '1h'],
-    [61, '1h 1m'],
-    [90, '1h 30m'],
-    [119, '1h 59m'],
-    [120, '2h'],
-    [150, '2h 30m'],
-    [1439, '23h 59m'],
-  ])('%i分 → %s', (input, expected) => {
-    expect(formatMinutesDuration(input)).toBe(expected);
-  });
-});
+import { formatVariance, getAccuracyColors, getVarianceColor } from '../timePL.presentation';
 
 describe('formatVariance', () => {
   it('formats with sign', () => {

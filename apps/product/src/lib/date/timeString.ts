@@ -33,3 +33,19 @@ export function formatTimeString(
   }
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
+
+/**
+ * 開始時刻と終了時刻（"HH:mm"）から所要時間（分）を算出。
+ *
+ * @returns 正の分数。無効な入力や負の差分は 0 を返す
+ */
+export function computeDuration(start: string, end: string): number {
+  if (!start || !end) return 0;
+  const [startH, startM] = start.split(':').map(Number);
+  const [endH, endM] = end.split(':').map(Number);
+  if (isNaN(startH!) || isNaN(startM!) || isNaN(endH!) || isNaN(endM!)) return 0;
+  const startMinutes = startH! * 60 + startM!;
+  const endMinutes = endH! * 60 + endM!;
+  const duration = endMinutes - startMinutes;
+  return duration > 0 ? duration : 0;
+}

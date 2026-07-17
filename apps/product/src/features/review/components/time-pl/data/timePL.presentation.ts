@@ -5,24 +5,15 @@
  * domain logic ではないため、derivation 側 (`features/review/domain/timePL/`) には置かない。
  */
 
-import type { AccuracyStatus } from '@/features/review/domain/timePL/types';
+import { formatDurationMinutes } from '@/lib/date';
 
-/** 分を "2h 30m" 形式にフォーマット */
-export function formatMinutesDuration(minutes: number): string {
-  const abs = Math.abs(minutes);
-  if (abs >= 60) {
-    const h = Math.floor(abs / 60);
-    const m = Math.round(abs % 60);
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
-  }
-  return `${Math.round(abs)}m`;
-}
+import type { AccuracyStatus } from '@/features/review/domain/timePL/types';
 
 /** 差異を符号付きフォーマット */
 export function formatVariance(minutes: number): string {
   if (minutes === 0) return '±0';
   const sign = minutes > 0 ? '+' : '-';
-  return `${sign}${formatMinutesDuration(minutes)}`;
+  return `${sign}${formatDurationMinutes(Math.abs(minutes))}`;
 }
 
 /** 乖離率 → テキストカラークラス */

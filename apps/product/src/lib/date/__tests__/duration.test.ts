@@ -4,9 +4,8 @@ import { formatDurationMinutes } from '../duration';
 
 describe('date/duration', () => {
   describe('formatDurationMinutes', () => {
-    // 共通入力テーブル（整数）— duration formatter 統合後も canonical はこの契約を維持する。
-    // 統合対象（formatDurationDisplay / formatMinutesDuration / formatMetricValue / 各 local）は
-    // 整数入力でこの出力に一致する。
+    // 共通入力テーブル（整数）— この canonical に統合された各 formatter は
+    // 整数入力でこの出力に一致する（表示を変えない）。
     it.each([
       [0, '0m'],
       [1, '1m'],

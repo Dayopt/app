@@ -3,9 +3,8 @@
 import { useTranslations } from 'next-intl';
 
 import { resolveTagColor, TagIcon } from '@/features/tags';
+import { formatDurationMinutes } from '@/lib/date';
 import { cn } from '@dayopt/components';
-
-import { formatMinutesDuration } from '../time-pl/data/timePL.presentation';
 
 /** 表示する最大タグ数（エントリ数の多い順） */
 const MAX_ROWS = 6;
@@ -65,8 +64,8 @@ export function EstimationAccuracyList({
             <TagIcon icon={null} color={resolveTagColor(row.tagColor)} size="sm" />
             <span className="text-foreground min-w-0 flex-1 truncate text-sm">{row.tagName}</span>
             <span className="text-muted-foreground font-mono text-sm tabular-nums">
-              {formatMinutesDuration(Math.round(row.avgPlannedMinutes))} →{' '}
-              {formatMinutesDuration(Math.round(row.avgActualMinutes))}
+              {formatDurationMinutes(Math.round(row.avgPlannedMinutes))} →{' '}
+              {formatDurationMinutes(Math.round(row.avgActualMinutes))}
             </span>
             <span
               className={cn(

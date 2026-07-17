@@ -17,39 +17,6 @@ import type {
 // =============================================================================
 
 /**
- * メトリクス値を表示用文字列にフォーマット
- *
- * MetricFormat 全対応:
- *   duration   → "38h 15m" (分→時間+分)
- *   percentage → "72%"
- *   minutes    → "12m" / "1h 30m"
- *   count      → "3.2"
- *   score      → "3.8" (小数1桁)
- *   days       → "23 days"
- */
-export function formatMetricValue(value: number, type: MetricFormat): string {
-  switch (type) {
-    case 'percentage':
-      return `${Math.round(value * 100)}%`;
-    case 'duration':
-    case 'minutes': {
-      if (value >= 60) {
-        const hours = Math.floor(value / 60);
-        const mins = Math.round(value % 60);
-        return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-      }
-      return `${Math.round(value)}m`;
-    }
-    case 'count':
-      return value % 1 === 0 ? String(value) : value.toFixed(1);
-    case 'score':
-      return value.toFixed(1);
-    case 'days':
-      return `${Math.round(value)} days`;
-  }
-}
-
-/**
  * メトリクス値を数値と単位に分離してフォーマット
  *
  * weather.com 風に数値を大きく、単位を小さく表示するため
