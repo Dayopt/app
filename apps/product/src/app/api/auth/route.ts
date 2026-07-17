@@ -53,7 +53,14 @@ const authPostSchema = z.discriminatedUnion('action', [
 async function checkRateLimit(request: NextRequest, rateLimit: typeof loginRateLimit) {
   const result = await withUpstashRateLimit(request, rateLimit);
 
-  if (result && !result.success) {
+  if (result.state === 'unavailable') {
+    return NextResponse.json(
+      { error: 'Temporarily unavailable' },
+      { status: 503, headers: { 'Retry-After': '60' } },
+    );
+  }
+
+  if (result.state === 'checked' && !result.success) {
     return NextResponse.json(
       { error: 'Too many requests. Please try again later.' },
       {

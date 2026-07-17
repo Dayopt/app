@@ -18,7 +18,7 @@ import { ServiceError } from '@/lib/trpc/errors';
 import type { ContactFormInput } from '../types';
 
 const GITHUB_TOKEN = env.GITHUB_TOKEN;
-/** Web側と同じ変数名 (e.g. "Dayopt/dayopt") */
+/** Web側と同じ変数名。アクセス制限したprivate repositoryのみ許可する。 */
 const GITHUB_CONTACT_REPO = env.GITHUB_CONTACT_REPO;
 
 /** GitHub API のタイムアウト（Web側 apps/web/src/app/api/contact/route.ts と同値） */
@@ -48,6 +48,45 @@ const githubIssueResponseSchema = z.object({
   html_url: z.string().url(),
   number: z.number().int().positive(),
 });
+const githubRepositoryResponseSchema = z.object({ private: z.boolean() });
+const githubRepositoryNameSchema = z.string().regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u);
+
+async function requirePrivateGitHubRepository(
+  repository: string,
+  token: string,
+  signal: AbortSignal,
+): Promise<string> {
+  const parsedRepository = githubRepositoryNameSchema.safeParse(repository);
+  if (!parsedRepository.success) {
+    throw new ServiceError('GITHUB_API_FAILED', 'GitHub contact repository is invalid');
+  }
+
+  const [owner, name] = parsedRepository.data.split('/');
+  if (!owner || !name) {
+    throw new ServiceError('GITHUB_API_FAILED', 'GitHub contact repository is invalid');
+  }
+  const repositoryPath = `${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
+  const response = await fetch(`https://api.github.com/repos/${repositoryPath}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: 'application/vnd.github.v3+json',
+    },
+    signal,
+  });
+  if (!response.ok) {
+    throw new ServiceError(
+      'GITHUB_API_FAILED',
+      'GitHub contact repository privacy could not be verified',
+    );
+  }
+
+  const parsedResponse = githubRepositoryResponseSchema.safeParse(await response.json());
+  if (!parsedResponse.success || !parsedResponse.data.private) {
+    throw new ServiceError('GITHUB_API_FAILED', 'GitHub contact repository must be private');
+  }
+  return repositoryPath;
+}
 
 /** GitHub Issue 起票に成功した結果。失敗時は再送可能にするため例外を返す。 */
 export type DeliverContactFeedbackResult = {
@@ -64,35 +103,39 @@ export async function createGitHubIssue(params: CreateIssueParams): Promise<Crea
     throw new ServiceError('GITHUB_API_FAILED', 'GitHub API configuration is missing');
   }
 
-  const { userId, userEmail, userName, input } = params;
-  const categoryLabel = CATEGORY_LABELS[input.category] ?? input.category;
-  const env = input.environment;
-
-  const issueBody = [
-    `> via **Dayopt App**`,
-    '',
-    `**From:** ${userName} (${userEmail})`,
-    `**User ID:** \`${userId}\``,
-    `**Plan:** Free`,
-    `**Category:** ${categoryLabel}`,
-    '',
-    '**Environment:**',
-    `- App Version: ${env.appVersion}`,
-    `- OS: ${env.os}`,
-    `- Browser: ${env.browser}`,
-    `- Timezone: ${env.timezone}`,
-    `- Language: ${env.language}`,
-    '',
-    '---',
-    '',
-    input.message,
-  ].join('\n');
-
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), GITHUB_API_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`https://api.github.com/repos/${GITHUB_CONTACT_REPO}/issues`, {
+    const repositoryPath = await requirePrivateGitHubRepository(
+      GITHUB_CONTACT_REPO,
+      GITHUB_TOKEN,
+      controller.signal,
+    );
+    const { userId, userEmail, userName, input } = params;
+    const categoryLabel = CATEGORY_LABELS[input.category] ?? input.category;
+    const environment = input.environment;
+    const issueBody = [
+      `> via **Dayopt App**`,
+      '',
+      `**From:** ${userName} (${userEmail})`,
+      `**User ID:** \`${userId}\``,
+      `**Plan:** Free`,
+      `**Category:** ${categoryLabel}`,
+      '',
+      '**Environment:**',
+      `- App Version: ${environment.appVersion}`,
+      `- OS: ${environment.os}`,
+      `- Browser: ${environment.browser}`,
+      `- Timezone: ${environment.timezone}`,
+      `- Language: ${environment.language}`,
+      '',
+      '---',
+      '',
+      input.message,
+    ].join('\n');
+
+    const response = await fetch(`https://api.github.com/repos/${repositoryPath}/issues`, {
       method: 'POST',
       headers: {
         Authorization: `token ${GITHUB_TOKEN}`,

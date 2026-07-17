@@ -33,6 +33,13 @@ async function importService(envOverrides?: Record<string, string>) {
   return import('../contact-service');
 }
 
+function mockPrivateRepository(isPrivate = true) {
+  mockFetch.mockResolvedValueOnce({
+    ok: true,
+    json: () => Promise.resolve({ private: isPrivate }),
+  });
+}
+
 const defaultParams = {
   userId: 'user-123',
   userEmail: 'test@example.com',
@@ -58,6 +65,7 @@ describe('createGitHubIssue', () => {
   it('正常系: GitHub Issue を作成する', async () => {
     const { createGitHubIssue } = await importService();
 
+    mockPrivateRepository();
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ html_url: 'https://github.com/issues/1', number: 1 }),
@@ -84,6 +92,7 @@ describe('createGitHubIssue', () => {
   it('正常系: Issue 本文にユーザー情報とメッセージが含まれる', async () => {
     const { createGitHubIssue } = await importService();
 
+    mockPrivateRepository();
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ html_url: 'https://github.com/issues/2', number: 2 }),
@@ -91,7 +100,7 @@ describe('createGitHubIssue', () => {
 
     await createGitHubIssue(defaultParams);
 
-    const fetchCall = mockFetch.mock.calls[0]!;
+    const fetchCall = mockFetch.mock.calls[1]!;
     const body = JSON.parse((fetchCall[1] as RequestInit).body as string) as {
       title: string;
       body: string;
@@ -123,6 +132,7 @@ describe('createGitHubIssue', () => {
     ];
 
     for (const { input, label } of categories) {
+      mockPrivateRepository();
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ html_url: 'https://github.com/issues/1', number: 1 }),
@@ -152,6 +162,7 @@ describe('createGitHubIssue', () => {
   it('エラー系: GitHub API がエラーを返す', async () => {
     const { createGitHubIssue } = await importService();
 
+    mockPrivateRepository();
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 422,
@@ -174,6 +185,7 @@ describe('createGitHubIssue', () => {
 
   it('GitHub API向けの必須headerとlabelsとtimeout signalを送る', async () => {
     const { createGitHubIssue } = await importService();
+    mockPrivateRepository();
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ html_url: 'https://github.com/issues/3', number: 3 }),
@@ -192,7 +204,7 @@ describe('createGitHubIssue', () => {
         body: expect.any(String),
       }),
     );
-    const request = mockFetch.mock.calls[0]![1] as RequestInit;
+    const request = mockFetch.mock.calls[1]![1] as RequestInit;
     expect(JSON.parse(request.body as string)).toMatchObject({
       labels: ['contact', 'feedback', 'app', 'bug'],
     });
@@ -201,6 +213,7 @@ describe('createGitHubIssue', () => {
 
   it('複数行とUnicodeを含むmessageをそのまま保持する', async () => {
     const { createGitHubIssue } = await importService();
+    mockPrivateRepository();
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ html_url: 'https://github.com/issues/4', number: 4 }),
@@ -212,7 +225,7 @@ describe('createGitHubIssue', () => {
       input: { ...defaultParams.input, message },
     });
 
-    const request = mockFetch.mock.calls[0]![1] as RequestInit;
+    const request = mockFetch.mock.calls[1]![1] as RequestInit;
     const body = JSON.parse(request.body as string) as { body: string };
     expect(body.body).toContain(message);
   });
@@ -252,6 +265,7 @@ describe('createGitHubIssue', () => {
 
   it('2xxでもGitHub response schemaが不正なら失敗する', async () => {
     const { createGitHubIssue } = await importService();
+    mockPrivateRepository();
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ html_url: 'not-a-url', number: '1' }),
@@ -261,6 +275,34 @@ describe('createGitHubIssue', () => {
       code: 'GITHUB_API_FAILED',
       message: 'GitHub API returned an invalid response',
     });
+  });
+
+  it('repositoryがpublicならcontact PIIをPOSTしない', async () => {
+    const { createGitHubIssue } = await importService();
+    mockPrivateRepository(false);
+
+    await expect(createGitHubIssue(defaultParams)).rejects.toMatchObject({
+      code: 'GITHUB_API_FAILED',
+      message: 'GitHub contact repository must be private',
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch.mock.calls[0]?.[1]).toMatchObject({ method: 'GET' });
+    expect(JSON.stringify(mockFetch.mock.calls)).not.toContain('test@example.com');
+    expect(JSON.stringify(mockFetch.mock.calls)).not.toContain('Something is broken');
+  });
+
+  it('repository設定が不正ならGitHubへ接続しない', async () => {
+    const { createGitHubIssue } = await importService({
+      GITHUB_TOKEN: 'ghp_test_token',
+      GITHUB_CONTACT_REPO: 'not-an-owner-repo',
+    });
+
+    await expect(createGitHubIssue(defaultParams)).rejects.toMatchObject({
+      code: 'GITHUB_API_FAILED',
+      message: 'GitHub contact repository is invalid',
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });
 
@@ -272,6 +314,7 @@ describe('deliverContactFeedback', () => {
   it('正常系: 起票成功時は delivered: true と issue 情報を返す', async () => {
     const { deliverContactFeedback } = await importService();
 
+    mockPrivateRepository();
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ html_url: 'https://github.com/issues/5', number: 5 }),
@@ -291,6 +334,7 @@ describe('deliverContactFeedback', () => {
   it('GitHub API 失敗時は成功を偽装せず再送可能な例外を返す', async () => {
     const { deliverContactFeedback } = await importService();
 
+    mockPrivateRepository();
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,

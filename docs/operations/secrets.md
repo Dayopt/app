@@ -190,7 +190,7 @@ pnpm vercel:env:pull:unsafe
 
 Cloudflare Turnstile が canonical provider。`NEXT_PUBLIC_TURNSTILE_SITE_KEY` は app / web の browser 側で使い、`TURNSTILE_SECRET_KEY` は web contact form と Supabase Dashboard replica で使う。
 
-`GITHUB_CONTACT_REPO`はアクセスを制限したprivate repositoryを必須とする。公開repositoryを指定しない。WebはIssue本文を送る前にGitHub APIでvisibilityを検証し、privateを確認できない場合はfail-closedにする。
+`GITHUB_CONTACT_REPO`はアクセスを制限したprivate repositoryを必須とする。公開repositoryを指定しない。Product / WebはIssue本文を送る前にGitHub APIでvisibilityを検証し、privateを確認できない場合はfail-closedにする。
 
 reCAPTCHA 関連 env は旧方式。新規設定・docs・example には追加しない。
 

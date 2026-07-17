@@ -269,7 +269,7 @@ npm run lint:boundaries  # feature境界違反
 ### 検知
 
 - [ ] Sentry: `type:csp-violation` の急増
-- [ ] Supabase Auth log / Upstash analyticsで認証失敗の連続を確認
+- [ ] Supabase Auth log / Upstash request metricsで認証失敗の連続を確認（Ratelimit Analyticsとraw identifier保存は無効）
 - [ ] Supabase Dashboard → Authentication → Logs に不審なアクティビティ
 
 ### 初動: まず止める
