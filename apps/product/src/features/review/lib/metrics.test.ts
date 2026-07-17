@@ -60,6 +60,16 @@ describe('formatMetricValue', () => {
     it('formats 30 as 30m', () => {
       expect(formatMetricValue(30, 'duration')).toBe('30m');
     });
+
+    // 境界値 — lib/date canonical への統合後も維持する契約
+    it.each([
+      [59, '59m'],
+      [61, '1h 1m'],
+      [119, '1h 59m'],
+      [1439, '23h 59m'],
+    ])('formats %i as %s', (input, expected) => {
+      expect(formatMetricValue(input, 'duration')).toBe(expected);
+    });
   });
 
   describe('count', () => {
