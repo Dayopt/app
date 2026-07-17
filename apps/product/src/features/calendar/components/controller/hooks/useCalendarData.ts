@@ -13,12 +13,16 @@ import { api } from '@/lib/trpc';
 
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 
-import { calculateViewDateRange } from '../../../domain/view-range';
+import {
+  calculateViewDateRange,
+  getNextPeriod,
+  getPreviousPeriod,
+} from '../../../domain/view-range';
 import { applyTimezoneToDisplayDates } from '../../../lib/plan-data-adapter';
 import { expandRecordRowsToRecordEvents } from '../../../lib/record-event-adapter';
 
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../../../types/calendar.types';
-import { getMultiDayCount, isMultiDayView } from '../../../types/calendar.types';
+import { isMultiDayView } from '../../../types/calendar.types';
 
 /**
  * ローカル日付の 00:00:00 をユーザーTZのUTC ISO文字列に変換
@@ -229,9 +233,8 @@ export function useCalendarData({
       }
     } else if (isMultiDayView(viewType)) {
       // multi-dayビュー: 前後1期間分をprefetch
-      const count = getMultiDayCount(viewType);
-      prefetchRange(subDays(currentDate, count));
-      prefetchRange(addDays(currentDate, count));
+      prefetchRange(getPreviousPeriod(viewType, currentDate, showWeekends));
+      prefetchRange(getNextPeriod(viewType, currentDate, showWeekends));
     } else {
       // weekビュー: 前後1週間をprefetch
       prefetchRange(subDays(currentDate, 7));
@@ -255,12 +258,14 @@ export function useCalendarData({
       if (direction === 'today') {
         targetDate = new Date();
       } else {
-        const multiplier = direction === 'next' ? 1 : -1;
-        targetDate = new Date(currentDate);
-
         if (isMultiDayView(viewType)) {
-          targetDate.setDate(currentDate.getDate() + getMultiDayCount(viewType) * multiplier);
+          targetDate =
+            direction === 'next'
+              ? getNextPeriod(viewType, currentDate, showWeekends)
+              : getPreviousPeriod(viewType, currentDate, showWeekends);
         } else {
+          const multiplier = direction === 'next' ? 1 : -1;
+          targetDate = new Date(currentDate);
           switch (viewType) {
             case 'day':
               targetDate.setDate(currentDate.getDate() + 1 * multiplier);

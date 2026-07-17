@@ -51,6 +51,7 @@ describe('GET /api/health', () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
     vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'service-role-sentinel');
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key-sentinel');
+    vi.stubEnv('NEXT_PUBLIC_APP_VERSION', '0.32.0');
     vi.stubEnv('VERCEL_ENV', '');
     vi.stubEnv('UPSTASH_REDIS_REST_URL', '');
     vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', '');
@@ -77,6 +78,7 @@ describe('GET /api/health', () => {
 
     expect(response.status).toBe(200);
     expect(body.status).toBe('healthy');
+    expect(body.version).toBe('0.32.0');
     expect(body.checks).toEqual({ database: 'ok', redis: 'skipped' });
     expect(body.checks).not.toHaveProperty('memory');
     expect(mocks.from).toHaveBeenCalledWith('profiles');

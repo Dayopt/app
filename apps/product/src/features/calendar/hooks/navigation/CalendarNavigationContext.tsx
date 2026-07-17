@@ -16,10 +16,11 @@ import { useCalendarNavigationStore } from '@/features/calendar/stores/useCalend
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 
+import { getNextPeriod, getPreviousPeriod } from '../../domain/view-range';
 import { formatCalendarDateParam, parseCalendarDateParam } from '../../lib/date-param';
 import { isCalendarViewPath } from '../../lib/route-utils';
 import type { CalendarViewType } from '../../types/calendar.types';
-import { getMultiDayCount, isCalendarDiffView, isMultiDayView } from '../../types/calendar.types';
+import { isCalendarDiffView } from '../../types/calendar.types';
 
 type CalendarPanelKind = 'review' | 'diff' | 'analytics' | null;
 
@@ -30,12 +31,12 @@ function isValidViewType(view: string): view is CalendarViewType {
   const match = view.match(/^(\d+)day$/);
   if (match) {
     const n = parseInt(match[1]!);
-    return n >= 2 && n <= 9;
+    return n >= 2 && n <= 7;
   }
   return false;
 }
 
-/** モバイルで提供する表示。Weekはレーン切替で密度を確保し、2〜9日は対象外とする。 */
+/** モバイルで提供する表示。Weekはレーン切替で密度を確保し、2〜7日は対象外とする。 */
 function isMobileCalendarViewSupported(view: CalendarViewType): boolean {
   return view === 'day' || view === 'week';
 }
@@ -101,7 +102,7 @@ interface CalendarNavigationContextValue {
   isPending: boolean;
   navigateToDate: (date: Date, updateUrl?: boolean) => void;
   changeView: (view: CalendarViewType) => void;
-  navigateRelative: (direction: 'prev' | 'next' | 'today') => void;
+  navigateRelative: (direction: 'prev' | 'next' | 'today', showWeekends?: boolean) => void;
   setPanelKind: (panelKind: CalendarPanelKind | null, options?: { reviewTagId?: string }) => void;
   setReviewTagId: (reviewTagId: string | null) => void;
 }
@@ -200,7 +201,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
   );
 
   // モバイルで未対応の複数日ビューが設定された場合、dayへ切替
-  // （URL直アクセスやブラウザ戻る/進むで2〜9day URLに遷移した場合のガード）
+  // （URL直アクセスやブラウザ戻る/進むで2〜7day URLに遷移した場合のガード）
   React.useEffect(() => {
     if (isCalendarPage && isMobile && !isMobileCalendarViewSupported(viewType)) {
       startTransition(() => {
@@ -365,31 +366,16 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
   );
 
   const navigateRelative = useCallback(
-    (direction: 'prev' | 'next' | 'today') => {
+    (direction: 'prev' | 'next' | 'today', showWeekends = true) => {
       let newDate: Date;
 
       if (direction === 'today') {
         newDate = new Date();
       } else {
-        const multiplier = direction === 'next' ? 1 : -1;
-        newDate = new Date(currentDateRef.current);
-
-        if (isMultiDayView(viewTypeRef.current)) {
-          newDate.setDate(
-            currentDateRef.current.getDate() + getMultiDayCount(viewTypeRef.current) * multiplier,
-          );
-        } else {
-          switch (viewTypeRef.current) {
-            case 'day':
-              newDate.setDate(currentDateRef.current.getDate() + 1 * multiplier);
-              break;
-            case 'week':
-              newDate.setDate(currentDateRef.current.getDate() + 7 * multiplier);
-              break;
-            default:
-              newDate.setDate(currentDateRef.current.getDate() + 7 * multiplier);
-          }
-        }
+        newDate =
+          direction === 'next'
+            ? getNextPeriod(viewTypeRef.current, currentDateRef.current, showWeekends)
+            : getPreviousPeriod(viewTypeRef.current, currentDateRef.current, showWeekends);
       }
 
       navigateToDate(newDate, true);

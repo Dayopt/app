@@ -22,7 +22,7 @@ import { CalendarGridContent } from '../shared/components/CalendarGridContent';
 import { useMultiDayView } from './hooks/useMultiDayView';
 
 /**
- * MultiDayView - N日間表示の汎用コンポーネント（2〜9日間）
+ * MultiDayView - N日間表示の汎用コンポーネント（2〜7日間）
  */
 export function MultiDayView({
   dayCount,

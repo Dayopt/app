@@ -157,9 +157,9 @@ export const queryPersister: Persister = {
 export const PERSIST_MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2時間
 
 /**
- * キャッシュバスターの文字列（デプロイ毎に変わる）
+ * キャッシュバスターの文字列（リリースversion変更時に変わる）
  *
- * next.config.mjs で NEXT_PUBLIC_APP_VERSION として npm_package_version を注入済み。
- * バージョンが変わるとキャッシュが自動的に破棄される。
+ * next.config.mjs でroot package.jsonのversionをNEXT_PUBLIC_APP_VERSIONとして注入済み。
+ * リリースversionが変わるとキャッシュが自動的に破棄される。
  */
 export const CACHE_BUSTER = process.env.NEXT_PUBLIC_APP_VERSION ?? 'dev';
