@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { calculateViewDateRange, getNextPeriod, getPreviousPeriod } from '../view-range';
 
+const multiDayViewTypes = ['2day', '3day', '4day', '5day', '6day', '7day'] as const;
+const weekendRoundTripCases = multiDayViewTypes.flatMap((viewType) =>
+  ['2026-01-17T12:00:00', '2026-01-18T12:00:00'].map((anchor) => [viewType, anchor] as const),
+);
+
 describe('calculateViewDateRange', () => {
   describe('day view', () => {
     it('1日分の範囲を返す', () => {
@@ -121,6 +126,28 @@ describe('getNextPeriod', () => {
       ),
     ).toBe(false);
   });
+
+  it('週末anchorの3dayは次期間から戻ると元の表示期間を復元する', () => {
+    const weekend = new Date('2026-01-17T12:00:00');
+    const current = calculateViewDateRange('3day', weekend, 1, false);
+    const nextDate = getNextPeriod('3day', weekend, false);
+    const next = calculateViewDateRange('3day', nextDate, 1, false);
+    const restoredDate = getPreviousPeriod('3day', nextDate, false);
+    const restored = calculateViewDateRange('3day', restoredDate, 1, false);
+
+    expect(nextDate.toISOString().slice(0, 10)).toBe('2026-01-22');
+    expect(next.days.map((day) => day.toISOString().slice(0, 10))).toEqual([
+      '2026-01-21',
+      '2026-01-22',
+      '2026-01-23',
+    ]);
+    expect(
+      next.days.some((day) =>
+        current.days.some((currentDay) => currentDay.getTime() === day.getTime()),
+      ),
+    ).toBe(false);
+    expect(restored.days).toEqual(current.days);
+  });
 });
 
 describe('getPreviousPeriod', () => {
@@ -164,4 +191,67 @@ describe('getPreviousPeriod', () => {
       ),
     ).toBe(false);
   });
+
+  it('週末anchorの3dayは前期間から進むと元の表示期間を復元する', () => {
+    const weekend = new Date('2026-01-17T12:00:00');
+    const current = calculateViewDateRange('3day', weekend, 1, false);
+    const previousDate = getPreviousPeriod('3day', weekend, false);
+    const previous = calculateViewDateRange('3day', previousDate, 1, false);
+    const restoredDate = getNextPeriod('3day', previousDate, false);
+    const restored = calculateViewDateRange('3day', restoredDate, 1, false);
+
+    expect(previousDate.toISOString().slice(0, 10)).toBe('2026-01-14');
+    expect(previous.days.map((day) => day.toISOString().slice(0, 10))).toEqual([
+      '2026-01-13',
+      '2026-01-14',
+      '2026-01-15',
+    ]);
+    expect(
+      previous.days.some((day) =>
+        current.days.some((currentDay) => currentDay.getTime() === day.getTime()),
+      ),
+    ).toBe(false);
+    expect(restored.days).toEqual(current.days);
+  });
+});
+
+describe('週末非表示multi-dayの期間移動', () => {
+  it.each(weekendRoundTripCases)(
+    '%sは週末anchor %sでも前後の期間と重複せず往復できる',
+    (viewType, anchor) => {
+      const weekend = new Date(anchor);
+      const current = calculateViewDateRange(viewType, weekend, 1, false);
+
+      const nextDate = getNextPeriod(viewType, weekend, false);
+      const next = calculateViewDateRange(viewType, nextDate, 1, false);
+      const restoredFromNext = calculateViewDateRange(
+        viewType,
+        getPreviousPeriod(viewType, nextDate, false),
+        1,
+        false,
+      );
+
+      const previousDate = getPreviousPeriod(viewType, weekend, false);
+      const previous = calculateViewDateRange(viewType, previousDate, 1, false);
+      const restoredFromPrevious = calculateViewDateRange(
+        viewType,
+        getNextPeriod(viewType, previousDate, false),
+        1,
+        false,
+      );
+
+      expect(
+        next.days.some((day) =>
+          current.days.some((currentDay) => currentDay.getTime() === day.getTime()),
+        ),
+      ).toBe(false);
+      expect(
+        previous.days.some((day) =>
+          current.days.some((currentDay) => currentDay.getTime() === day.getTime()),
+        ),
+      ).toBe(false);
+      expect(restoredFromNext.days).toEqual(current.days);
+      expect(restoredFromPrevious.days).toEqual(current.days);
+    },
+  );
 });

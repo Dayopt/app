@@ -20,6 +20,15 @@ import { subDays } from '@/lib/date';
 import type { CalendarViewType, ViewDateRange } from '../types/calendar.types';
 import { getMultiDayCount, isMultiDayView } from '../types/calendar.types';
 
+/** 週末を、週末非表示の表示範囲が中央日として扱う次の平日へ揃える。 */
+function normalizeBusinessDayAnchor(referenceDate: Date): Date {
+  let anchor = referenceDate;
+  while (anchor.getDay() === 0 || anchor.getDay() === 6) {
+    anchor = addDays(anchor, 1);
+  }
+  return anchor;
+}
+
 /**
  * ビューの日付範囲を計算
  * @param viewType - カレンダーのビュータイプ
@@ -90,10 +99,7 @@ export function generateMultiDayDates(
   const offset = Math.floor(count / 2);
 
   if (!showWeekends) {
-    let centerDate = referenceDate;
-    while (centerDate.getDay() === 0 || centerDate.getDay() === 6) {
-      centerDate = addDays(centerDate, 1);
-    }
+    const centerDate = normalizeBusinessDayAnchor(referenceDate);
 
     const previousDates: Date[] = [];
     let candidate = subDays(centerDate, 1);
@@ -132,7 +138,9 @@ export function getNextPeriod(
 ): Date {
   if (isMultiDayView(viewType)) {
     const dayCount = getMultiDayCount(viewType);
-    return showWeekends ? addDays(currentDate, dayCount) : addBusinessDays(currentDate, dayCount);
+    return showWeekends
+      ? addDays(currentDate, dayCount)
+      : addBusinessDays(normalizeBusinessDayAnchor(currentDate), dayCount);
   }
   switch (viewType) {
     case 'day':
@@ -154,7 +162,9 @@ export function getPreviousPeriod(
 ): Date {
   if (isMultiDayView(viewType)) {
     const dayCount = getMultiDayCount(viewType);
-    return showWeekends ? subDays(currentDate, dayCount) : subBusinessDays(currentDate, dayCount);
+    return showWeekends
+      ? subDays(currentDate, dayCount)
+      : subBusinessDays(normalizeBusinessDayAnchor(currentDate), dayCount);
   }
   switch (viewType) {
     case 'day':

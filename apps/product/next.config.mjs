@@ -6,6 +6,7 @@ import createNextIntlPlugin from 'next-intl/plugin';
 import { fileURLToPath } from 'url';
 
 import { assertProductOperationalProductionBuildEnv } from './production-build-gate.mjs';
+import { releaseVersion } from './release-version.mjs';
 
 const { loadEnvConfig } = nextEnv;
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -37,7 +38,7 @@ const nextConfig = {
       process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '',
-    NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version || '0.0.0',
+    NEXT_PUBLIC_APP_VERSION: releaseVersion,
     // client 側で Vercel 環境を判別するため露出。preview は NODE_ENV=production だが
     // VERCEL_ENV=preview なので、Sentry を production のみ有効化する gate に必要。
     NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV || '',

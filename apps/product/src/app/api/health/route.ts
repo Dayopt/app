@@ -117,12 +117,7 @@ function getUptime(): number {
  * アプリケーションバージョンを取得
  */
 function getVersion(): string {
-  try {
-    // package.json から版数取得
-    return process.env.npm_package_version || '0.0.0';
-  } catch {
-    return 'unknown';
-  }
+  return process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0';
 }
 
 /**
