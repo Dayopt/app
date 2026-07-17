@@ -18,7 +18,7 @@ import { fn } from 'storybook/test';
 import { Button } from '@dayopt/components';
 
 import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
-import { TagMergeModal } from './tag-merge-modal';
+import { TagMergeModal } from './TagMergeModal';
 
 // ─────────────────────────────────────────────────────────
 // モックデータ

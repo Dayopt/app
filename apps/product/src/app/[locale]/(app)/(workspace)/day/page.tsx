@@ -6,9 +6,9 @@ import { HydrationBoundary } from '@/lib/trpc/server';
 import type { Locale } from '@dayopt/i18n/routing';
 
 import { CalendarViewClient } from '../_composition/CalendarViewClient';
+import { getCalendarTranslations, parseDateParam } from '../_server/calendar-page-params';
 import { prefetchCalendarData } from '../_server/calendar-prefetch';
 import { CalendarSkeleton } from '../_server/CalendarSkeleton';
-import { getCalendarTranslations, parseDateParam } from '../_server/page-utils';
 
 export const dynamic = 'force-dynamic';
 

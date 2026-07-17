@@ -2,7 +2,7 @@
 
 import { useShellStore } from '@/lib/stores/useShellStore';
 
-import { TagRenameModal } from './tag-rename-modal';
+import { TagRenameModal } from './TagRenameModal';
 
 /**
  * グローバルに配置するタグリネームモーダル

@@ -51,18 +51,18 @@ RPC row の snake_case shape に密結合した変換（snake → camel rename /
 
 ### 特徴
 
-- ESLint の feature boundary 制約から **除外**（`features/settings/` 配下は他 feature の deep import を許容）
+- ESLint の feature boundary 制約(上位/下位の層制限)からは **除外**。ただし deep import 禁止(barrel のみ許可)は他 feature と同様に強制される(`features/settings/**` 専用ルール)
 - 他 feature の store / barrel を組み合わせて「設定」UI を合成する composition feature
 - **自身の domain は持たない**（business rule は composing される側の feature が持つ）
 - server route (`userSettingsRouter`, `billingRouter`) は settings UI からの書き込み入口として settings 配下に同居
 
 ### deep import 優先順
 
-settings → 他 feature の deep import は composition の責務上必要なので許容するが、優先順を守る:
+settings → 他 feature の参照はどの feature に対しても許可されるが、**deep import(`@/features/X/hooks/*` 等)は ESLint で error**。優先順を守る:
 
 1. **`apps/product/src/lib/stores/*` から取得できる場合は lib 経由を優先**（例: `@/lib/stores/useShellStore`）
 2. **feature の barrel に export されている場合は barrel 経由を優先**（例: `@/features/auth` の barrel）
-3. **本当に deep import が必要なケースに限定**（例: barrel に出ていない `@/features/calendar/stores/userSettings`）
+3. **barrel に無い場合は先に barrel へ export を追加する**。個別ケースで回避できない場合のみ、理由コメント付きの `eslint-disable-next-line`（`.claude/rules/code-style.md` の運用に従う）を最終手段とする
 
 ### Layer 1 → Layer 2 は不可（adapter は source 側に置く）
 

@@ -12,11 +12,11 @@ const categoryComponents: Record<
   SettingsCategory,
   React.LazyExoticComponent<React.ComponentType<object>>
 > = {
-  profile: lazy(() => import('./profile-settings').then((m) => ({ default: m.ProfileSettings }))),
-  display: lazy(() => import('./display-settings').then((m) => ({ default: m.DisplaySettings }))),
-  data: lazy(() => import('./data-settings').then((m) => ({ default: m.DataSettings }))),
-  billing: lazy(() => import('./billing-settings').then((m) => ({ default: m.BillingSettings }))),
-  account: lazy(() => import('./account-settings').then((m) => ({ default: m.AccountSettings }))),
+  profile: lazy(() => import('./ProfileSettings').then((m) => ({ default: m.ProfileSettings }))),
+  display: lazy(() => import('./DisplaySettings').then((m) => ({ default: m.DisplaySettings }))),
+  data: lazy(() => import('./DataSettings').then((m) => ({ default: m.DataSettings }))),
+  billing: lazy(() => import('./BillingSettings').then((m) => ({ default: m.BillingSettings }))),
+  account: lazy(() => import('./AccountSettings').then((m) => ({ default: m.AccountSettings }))),
 };
 
 const VALID_CATEGORIES = new Set<string>(['profile', 'display', 'data', 'billing', 'account']);

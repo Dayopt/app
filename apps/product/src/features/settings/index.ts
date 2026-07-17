@@ -25,6 +25,7 @@ export { SETTINGS_CATEGORIES } from './constants';
 // =============================================================================
 // Components (for Composition Layer / routing pages)
 // =============================================================================
+export { MobileAccountOverview } from './components/MobileAccountOverview';
 export { SettingsContent, isValidCategory } from './components/SettingsContent';
 export { UserSettingsInitializer } from './components/UserSettingsInitializer';
 

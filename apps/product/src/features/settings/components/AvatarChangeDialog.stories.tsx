@@ -14,7 +14,7 @@ import { Button } from '@dayopt/components';
 
 import { PRESET_AUTH } from '@dayopt/storybook/mocks/presets';
 
-import { AvatarChangeDialog } from './avatar-change-dialog';
+import { AvatarChangeDialog } from './AvatarChangeDialog';
 
 // ─────────────────────────────────────────────────────────
 // Mock Data
