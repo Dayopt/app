@@ -17,10 +17,16 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
+const rateLimitMocks = vi.hoisted(() => ({ globalLimit: vi.fn() }));
+
 vi.mock('@/lib/rate-limit/upstash', () => ({
-  apiRateLimit: {},
+  cspReportRateLimit: {},
+  cspReportGlobalRateLimit: { limit: rateLimitMocks.globalLimit },
   withUpstashRateLimit: vi.fn(),
 }));
+
+const captureUnexpectedError = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 
 const validReport = {
   'csp-report': {
@@ -74,9 +80,17 @@ describe('/api/csp-report', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(withUpstashRateLimit).mockResolvedValue({
+      state: 'checked',
       success: true,
       limit: 10,
       remaining: 9,
+      reset: Date.now() + 60_000,
+      pending: Promise.resolve(),
+    });
+    rateLimitMocks.globalLimit.mockResolvedValue({
+      success: true,
+      limit: 120,
+      remaining: 119,
       reset: Date.now() + 60_000,
       pending: Promise.resolve(),
     });
@@ -129,6 +143,52 @@ describe('/api/csp-report', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       '[CSP Violation]',
       expect.objectContaining({ blockedUri: 'chrome-extension://[redacted]' }),
+    );
+  });
+
+  it('rejects non-CSP content types before rate limiting or reading the body', async () => {
+    const response = await POST(
+      createRequest(JSON.stringify(validReport), { 'content-type': 'application/json' }),
+    );
+
+    expect(response.status).toBe(415);
+    expect(withUpstashRateLimit).not.toHaveBeenCalled();
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+  });
+
+  it('rejects reports that claim a document outside the Product origin', async () => {
+    const externalReport = {
+      ...validReport,
+      'csp-report': {
+        ...validReport['csp-report'],
+        'document-uri': 'https://attacker.example/calendar',
+      },
+    };
+
+    const response = await POST(createRequest(JSON.stringify(externalReport)));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'Invalid report origin' });
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+  });
+
+  it('groups unrecognized directives into a fixed unknown bucket', async () => {
+    const unknownDirectiveReport = {
+      ...validReport,
+      'csp-report': {
+        ...validReport['csp-report'],
+        'violated-directive': 'attacker-controlled-directive-123',
+      },
+    };
+
+    await POST(createRequest(JSON.stringify(unknownDirectiveReport)));
+
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      'CSP Violation: unknown',
+      expect.objectContaining({
+        fingerprint: ['csp-violation', 'unknown'],
+        tags: { type: 'csp-violation', directive: 'unknown' },
+      }),
     );
   });
 
@@ -224,6 +284,7 @@ describe('/api/csp-report', () => {
 
   it('returns rate-limit headers without reading or capturing the report', async () => {
     vi.mocked(withUpstashRateLimit).mockResolvedValue({
+      state: 'checked',
       success: false,
       limit: 10,
       remaining: 0,
@@ -241,13 +302,46 @@ describe('/api/csp-report', () => {
   });
 
   it('fails closed when the rate-limit backend is unavailable', async () => {
-    vi.mocked(withUpstashRateLimit).mockResolvedValue(null);
+    vi.mocked(withUpstashRateLimit).mockResolvedValue({ state: 'unavailable' });
 
     const response = await POST(createRequest(JSON.stringify(validReport)));
 
     expect(response.status).toBe(503);
     expect(response.headers.get('Retry-After')).toBe('60');
     await expect(response.json()).resolves.toEqual({ error: 'Temporarily unavailable' });
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+  });
+
+  it('applies an aggregate quota after the per-IP quota succeeds', async () => {
+    rateLimitMocks.globalLimit.mockResolvedValue({
+      success: false,
+      limit: 120,
+      remaining: 0,
+      reset: Date.now() + 60_000,
+      pending: Promise.resolve(),
+    });
+
+    const response = await POST(createRequest(JSON.stringify(validReport)));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('X-RateLimit-Limit')).toBe('120');
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+  });
+
+  it('fails closed and captures the original aggregate limiter failure once', async () => {
+    const backendError = new Error('redis unavailable');
+    rateLimitMocks.globalLimit.mockRejectedValue(backendError);
+
+    const response = await POST(createRequest(JSON.stringify(validReport)));
+
+    expect(response.status).toBe(503);
+    expect(captureUnexpectedError).toHaveBeenCalledOnce();
+    expect(captureUnexpectedError).toHaveBeenCalledWith(backendError, {
+      feature: 'security',
+      operation: 'csp_global_rate_limit_check',
+      route: '/api/csp-report',
+      source: 'upstash',
+    });
     expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
 

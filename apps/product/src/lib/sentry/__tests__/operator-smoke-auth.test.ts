@@ -4,7 +4,10 @@ import { createHash } from 'node:crypto';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { authorizeProductOperatorSmoke } from '../operator-smoke-auth';
+import {
+  authorizeProductOperatorSmoke,
+  classifyOperatorSmokeRateLimitResult,
+} from '../operator-smoke-auth';
 
 const NOW = Date.parse('2026-07-16T10:00:00.000Z');
 const TOKEN = 'A'.repeat(43);
@@ -41,6 +44,14 @@ describe('authorizeProductOperatorSmoke', () => {
   );
 
   beforeEach(() => vi.clearAllMocks());
+
+  it('treats the Upstash SDK fail-open timeout result as unavailable', () => {
+    expect(classifyOperatorSmokeRateLimitResult({ success: true, reason: 'timeout' })).toBe(
+      'unavailable',
+    );
+    expect(classifyOperatorSmokeRateLimitResult({ success: true })).toBe('allowed');
+    expect(classifyOperatorSmokeRateLimitResult({ success: false })).toBe('limited');
+  });
 
   it('authorizes a same-origin Production request with a matching digest', async () => {
     const result = await authorizeProductOperatorSmoke(request(), {

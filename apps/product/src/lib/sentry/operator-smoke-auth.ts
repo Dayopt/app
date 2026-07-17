@@ -8,9 +8,18 @@ const TOKEN_PATTERN = /^Bearer ([A-Za-z0-9_-]{43})$/u;
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/u;
 const ABSOLUTE_ACTIVE_FROM_MS = Date.parse('2026-07-16T10:00:00.000Z');
 const ABSOLUTE_DEADLINE_MS = Date.parse('2026-07-16T14:00:00.000Z');
+const SMOKE_RATE_LIMIT_TIMEOUT_MS = 2_000;
 
 type SmokeEnvironment = Record<string, string | undefined>;
 type RateLimitResult = 'allowed' | 'limited' | 'unavailable';
+
+export function classifyOperatorSmokeRateLimitResult(result: {
+  success: boolean;
+  reason?: string;
+}): RateLimitResult {
+  if (result.reason === 'timeout') return 'unavailable';
+  return result.success ? 'allowed' : 'limited';
+}
 
 interface OperatorSmokeDependencies {
   env?: SmokeEnvironment;
@@ -118,9 +127,10 @@ async function checkProductSmokeRateLimit(
         limiter: Ratelimit.slidingWindow(12, '1 h'),
         analytics: false,
         prefix: 'ratelimit:product:sentry-smoke:ip',
+        timeout: SMOKE_RATE_LIMIT_TIMEOUT_MS,
       });
       const addressDigest = bytesToHex(await sha256(clientAddress(request)));
-      return (await perIp.limit(addressDigest)).success ? 'allowed' : 'limited';
+      return classifyOperatorSmokeRateLimitResult(await perIp.limit(addressDigest));
     }
 
     const global = new Ratelimit({
@@ -128,8 +138,9 @@ async function checkProductSmokeRateLimit(
       limiter: Ratelimit.slidingWindow(50, '1 h'),
       analytics: false,
       prefix: 'ratelimit:product:sentry-smoke:global',
+      timeout: SMOKE_RATE_LIMIT_TIMEOUT_MS,
     });
-    return (await global.limit('all')).success ? 'allowed' : 'limited';
+    return classifyOperatorSmokeRateLimitResult(await global.limit('all'));
   } catch {
     return 'unavailable';
   }
