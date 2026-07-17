@@ -7,8 +7,7 @@ import { useTranslations } from 'next-intl';
 
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { TagIcon } from '@/features/tags';
-import { isSameDay } from '@/lib/date';
-import { formatDurationMinutes } from '@/lib/date/format';
+import { formatDurationMinutes, isSameDay } from '@/lib/date';
 import { useDateFormat } from '@/lib/hooks/useDateFormat';
 import { Skeleton } from '@dayopt/components';
 

@@ -1,9 +1,6 @@
 /** 1分 = 60,000ミリ秒 */
 export const MS_PER_MINUTE = 1000 * 60;
 
-/** 1時間 = 3,600,000ミリ秒 */
-export const MS_PER_HOUR = 1000 * 60 * 60;
-
 /** 1日 = 86,400,000ミリ秒 */
 export const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
