@@ -17,17 +17,22 @@
 /**
  * 期間（分）を簡潔にフォーマット
  *
+ * 分単位の集計値は小数（例: 秒精度の合計を丸めた 0.1 分刻み）になりうるため、
+ * 表示直前に丸める。符号は無視する（符号付き表示は呼び出し側で組み立てる）。
+ *
  * @example
  * ```typescript
  * formatDurationMinutes(90); // "1h 30m"
  * formatDurationMinutes(45); // "45m"
+ * formatDurationMinutes(90.5); // "1h 31m"
  * ```
  */
 export function formatDurationMinutes(totalMinutes: number): string {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours === 0) return `${minutes}m`;
-  if (minutes === 0) return `${hours}h`;
-  return `${hours}h ${minutes}m`;
+  const abs = Math.abs(totalMinutes);
+  if (abs >= 60) {
+    const hours = Math.floor(abs / 60);
+    const minutes = Math.round(abs % 60);
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+  return `${Math.round(abs)}m`;
 }
