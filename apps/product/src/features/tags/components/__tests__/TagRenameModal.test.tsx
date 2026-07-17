@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TagRenameModal } from '../tag-rename-modal';
+import { TagRenameModal } from '../TagRenameModal';
 
 import type { TagRenameTarget } from '@/lib/stores/useShellStore';
 import type { Tag } from '../../types';

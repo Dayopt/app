@@ -93,18 +93,6 @@ export const Overview: Story = {
                 <X className="size-4" />
               </button>
             </div>
-
-            {/* Info Toast */}
-            <div className="bg-background border-border-subtle shadow-card flex items-center gap-2 rounded-lg border p-4">
-              <Info className="text-info size-5 shrink-0" />
-              <div className="flex-1">
-                <p className="font-medium">更新があります</p>
-                <p className="text-muted-foreground text-sm">新しい機能が追加されました</p>
-              </div>
-              <button type="button" className="text-muted-foreground hover:text-foreground">
-                <X className="size-4" />
-              </button>
-            </div>
           </div>
 
           <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
@@ -117,9 +105,6 @@ toast.success('保存しました');
 toast.error('保存に失敗しました', {
   description: 'もう一度お試しください',
 });
-
-// 情報
-toast.info('更新があります');
 
 // カスタム
 toast('カスタムメッセージ', {

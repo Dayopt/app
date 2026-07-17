@@ -15,7 +15,7 @@ import { Button } from '@dayopt/components';
 
 import { PRESET_AUTH } from '@dayopt/storybook/mocks/presets';
 
-import { PasswordChangeDialog } from './password-change-dialog';
+import { PasswordChangeDialog } from './PasswordChangeDialog';
 
 const meta = {
   title: 'Product/Features/Settings/PasswordChangeDialog',

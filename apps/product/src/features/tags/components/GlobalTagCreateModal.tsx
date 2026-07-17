@@ -2,7 +2,7 @@
 
 import { useShellStore } from '@/lib/stores/useShellStore';
 
-import { TagCreateModal } from './tag-create-modal';
+import { TagCreateModal } from './TagCreateModal';
 
 /**
  * グローバルに配置するタグ新規作成モーダル

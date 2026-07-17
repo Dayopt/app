@@ -8,7 +8,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { PRESET_AUTH, PRESET_USER_SETTINGS } from '@dayopt/storybook/mocks/presets';
 
-import { ProfileSettings } from './profile-settings';
+import { ProfileSettings } from './ProfileSettings';
 
 // ─────────────────────────────────────────────────────────
 // Meta

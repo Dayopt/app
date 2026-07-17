@@ -89,7 +89,7 @@ Auth=unauthenticated のとき Entry/Plan は無関係 → 実効 **~330通り**
 
 ### 2-C. Billing Settings
 
-**関連ファイル**: `src/features/settings/components/billing-settings.tsx`
+**関連ファイル**: `src/features/settings/components/BillingSettings.tsx`
 
 | Plan          | Device | 状態                           | 対応                                                    |
 | ------------- | ------ | ------------------------------ | ------------------------------------------------------- |
