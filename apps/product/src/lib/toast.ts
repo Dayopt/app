@@ -36,7 +36,7 @@ const stripDescription = (data?: ExternalToast): ExternalToast | undefined => {
   return rest;
 };
 
-export const toast: typeof sonnerToast = Object.assign(
+export const toast = Object.assign(
   (...args: Parameters<typeof sonnerToast>) =>
     sonnerToast(args[0], { duration: getDuration(args[1]), ...stripDescription(args[1]) }),
   {
@@ -44,12 +44,6 @@ export const toast: typeof sonnerToast = Object.assign(
       sonnerToast.success(message, { duration: getDuration(data), ...stripDescription(data) }),
     error: (message: TitleT, data?: ExternalToast) =>
       sonnerToast.error(message, { duration: getDuration(data), ...stripDescription(data) }),
-    /** @deprecated Inline Banner に移行予定。見た目は通常トーストと同一。 */
-    info: (message: TitleT, data?: ExternalToast) =>
-      sonnerToast.info(message, { duration: getDuration(data), ...stripDescription(data) }),
-    /** @deprecated Inline Banner に移行予定。見た目は通常トーストと同一。 */
-    warning: (message: TitleT, data?: ExternalToast) =>
-      sonnerToast.warning(message, { duration: getDuration(data), ...stripDescription(data) }),
     loading: sonnerToast.loading,
     message: sonnerToast.message,
     promise: sonnerToast.promise,

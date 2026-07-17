@@ -8,7 +8,7 @@
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { AccountDeletionDialog } from './account-deletion-dialog';
+import { AccountDeletionDialog } from './AccountDeletionDialog';
 
 const meta = {
   title: 'Product/Features/Settings/AccountDeletionDialog',

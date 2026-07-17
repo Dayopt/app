@@ -12,7 +12,7 @@ import { useShellStore } from '@/lib/stores/useShellStore';
 import { PRESET_USER_SETTINGS } from '@dayopt/storybook/mocks/presets';
 import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 
-import { DisplaySettings } from './display-settings';
+import { DisplaySettings } from './DisplaySettings';
 
 // ─────────────────────────────────────────────────────────
 // Meta

@@ -15,7 +15,7 @@ import { fn } from 'storybook/test';
 import { Button } from '@dayopt/components';
 
 import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
-import { TagRenameModal } from './tag-rename-modal';
+import { TagRenameModal } from './TagRenameModal';
 
 const MOCK_TAGS = [
   {

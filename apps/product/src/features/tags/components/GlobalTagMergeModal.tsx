@@ -1,7 +1,7 @@
 'use client';
 
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { TagMergeModal } from './tag-merge-modal';
+import { TagMergeModal } from './TagMergeModal';
 
 /**
  * グローバルに配置するタグマージモーダル

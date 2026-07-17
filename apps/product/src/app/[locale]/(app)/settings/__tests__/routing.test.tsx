@@ -33,11 +33,17 @@ vi.mock('@dayopt/i18n/navigation', async () => {
   };
 });
 
-vi.mock('@/features/settings', () => ({
+// MobileAccountOverview は barrel を経由せず '../constants' を直接 import するため、
+// SETTINGS_CATEGORIES はここで mock し、barrel 側は re-export を通じて同じ値を受け取る。
+vi.mock('@/features/settings/constants', () => ({
   SETTINGS_CATEGORIES: [
     { id: 'profile', labelKey: 'settings.category.profile', icon: () => <span>icon</span> },
     { id: 'billing', labelKey: 'settings.category.billing', icon: () => <span>icon</span> },
   ],
+}));
+
+vi.mock('@/features/settings', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/settings')>()),
   isValidCategory: (category: string) => ['profile', 'billing'].includes(category),
   SettingsContent: ({ category }: { category: string }) => <div>{category}</div>,
 }));

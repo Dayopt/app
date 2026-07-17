@@ -9,8 +9,8 @@ import { CACHE_5_MINUTES } from '@/lib/date';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
 
-import { useCalendarSettings } from '@/features/calendar/hooks/useCalendarSettings';
-import type { UserSettings } from '@/features/calendar/stores/userSettings';
+import type { UserSettings } from '@/features/calendar';
+import { useCalendarSettings } from '@/features/calendar';
 import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 
 /**

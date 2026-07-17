@@ -57,7 +57,9 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 // query-backedな2つのsettings hookは固定値を返す
-vi.mock('@/features/calendar/hooks/useCalendarSettings', () => ({
+// useUserSettings.ts は @/features/calendar の barrel 経由で import するため、
+// 同じ barrel path を mock する(deep path を mock しても実装の import を捕捉できない)。
+vi.mock('@/features/calendar', () => ({
   useCalendarSettings: () => ({
     defaultView: 'week',
     showWeekends: true,

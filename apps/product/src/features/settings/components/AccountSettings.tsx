@@ -16,9 +16,9 @@ import { useRouter } from '@dayopt/i18n/navigation';
 
 import { LabeledRow } from '@/components/ui/display/LabeledRow';
 import { SectionCard } from '@/components/ui/display/SectionCard';
-import { AccountDeletionDialog } from './account-deletion-dialog';
-import { EmailChangeDialog } from './email-change-dialog';
-import { PasswordChangeDialog } from './password-change-dialog';
+import { AccountDeletionDialog } from './AccountDeletionDialog';
+import { EmailChangeDialog } from './EmailChangeDialog';
+import { PasswordChangeDialog } from './PasswordChangeDialog';
 import { type MFASectionProps, MFASection } from './sections/MFASection';
 
 /** AccountSettings のプロップス定義 */

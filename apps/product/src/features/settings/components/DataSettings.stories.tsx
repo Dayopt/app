@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 
-import { DataSettings } from './data-settings';
+import { DataSettings } from './DataSettings';
 
 // ─────────────────────────────────────────────────────────
 // Meta
