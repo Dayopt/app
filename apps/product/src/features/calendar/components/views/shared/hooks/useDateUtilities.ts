@@ -15,7 +15,7 @@ interface UseDateUtilitiesOptions {
   viewType: 'week' | 'threeday' | 'fiveday' | 'multiday';
   weekStartsOn?: 0 | 1 | 6;
   showWeekends?: boolean;
-  dayCount?: number; // multiday用の表示日数（2-9）
+  dayCount?: number; // multiday用の表示日数（2-7）
 }
 
 /** useDateUtilities フックの戻り値 */
@@ -35,7 +35,7 @@ interface UseDateUtilitiesReturn {
  * - WeekView: 週の7日間
  * - MultiDayView(3day): 中央日±1日の3日間
  * - MultiDayView(5day): 中央日±2日の5日間
- * - MultiDayView: 中央日±floor(dayCount/2)日のN日間（2-9日）
+ * - MultiDayView: 中央日±floor(dayCount/2)日のN日間（2-7日）
  */
 export function useDateUtilities({
   referenceDate,

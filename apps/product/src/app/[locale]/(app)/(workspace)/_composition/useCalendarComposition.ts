@@ -37,7 +37,7 @@ interface CalendarCompositionInput {
   /** 現在の表示日付 */
   currentDate: Date;
   /** 相対ナビゲーション */
-  navigateRelative: (direction: 'prev' | 'next' | 'today') => void;
+  navigateRelative: (direction: 'prev' | 'next' | 'today', showWeekends?: boolean) => void;
   /** 日付指定ナビゲーション */
   navigateToDate: (date: Date) => void;
   /** ビュー変更 */

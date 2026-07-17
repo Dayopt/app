@@ -8,22 +8,15 @@ import { HydrationBoundary } from '@/lib/trpc/server';
 import type { Locale } from '@dayopt/i18n/routing';
 
 import { CalendarViewClient } from '../_composition/CalendarViewClient';
-import { getCalendarTranslations, parseDateParam } from '../_server/calendar-page-params';
+import {
+  getCalendarTranslations,
+  parseDateParam,
+  parseMultiDayViewParam,
+} from '../_server/calendar-page-params';
 import { prefetchCalendarData } from '../_server/calendar-prefetch';
 import { CalendarSkeleton } from '../_server/CalendarSkeleton';
 
 export const dynamic = 'force-dynamic';
-
-/**
- * 有効な multi-day ビュー（2day〜9day）かバリデーション
- */
-function parseMultiDay(nday: string): MultiDayViewType | null {
-  const match = nday.match(/^(\d+)day$/);
-  if (!match) return null;
-  const n = parseInt(match[1]!);
-  if (n < 2 || n > 9) return null;
-  return nday as MultiDayViewType;
-}
 
 export async function generateMetadata({
   params,
@@ -73,7 +66,7 @@ const MultiDayPage = async ({
   const { nday, locale = 'ja' } = await params;
   const { date } = await searchParams;
 
-  const viewType = parseMultiDay(nday);
+  const viewType = parseMultiDayViewParam(nday);
   if (!viewType) {
     notFound();
   }

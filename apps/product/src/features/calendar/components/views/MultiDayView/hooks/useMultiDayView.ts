@@ -27,7 +27,7 @@ interface UseMultiDayViewReturn {
  *
  * @description
  * - centerDateを中心にdayCount日間を生成
- * - 2〜9日間に対応
+ * - 2〜7日間に対応
  */
 export function useMultiDayView({
   centerDate,

@@ -13,7 +13,7 @@ interface UseCalendarNavigationHandlersOptions {
   viewType: CalendarViewType;
   currentDate: Date;
   showWeekends: boolean;
-  navigateRelative: (direction: 'prev' | 'next' | 'today') => void;
+  navigateRelative: (direction: 'prev' | 'next' | 'today', showWeekends?: boolean) => void;
   navigateToDate: (date: Date) => void;
   changeView: (view: CalendarViewType) => void;
 }
@@ -53,10 +53,10 @@ export function useCalendarNavigationHandlers({
       );
 
       // 特別な処理が必要かチェック
-      const needsWeekendSkip = (viewType === 'day' || viewType === '3day') && !showWeekends;
+      const needsWeekendSkip = viewType === 'day' && !showWeekends;
 
       if (!needsWeekendSkip) {
-        navigateRelative(direction);
+        navigateRelative(direction, showWeekends);
         return;
       }
 
@@ -65,7 +65,7 @@ export function useCalendarNavigationHandlers({
         if (handleTodayWithWeekendSkip()) {
           return;
         }
-        navigateRelative(direction);
+        navigateRelative(direction, showWeekends);
         return;
       }
 
@@ -75,7 +75,7 @@ export function useCalendarNavigationHandlers({
       }
 
       // フォールバックとして通常処理
-      navigateRelative(direction);
+      navigateRelative(direction, showWeekends);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- advanced-use-latest パターンで安定化済み
     [navigateRelative, currentDate, viewType, showWeekends],

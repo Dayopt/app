@@ -4,7 +4,16 @@
  * ビューの日付範囲、ピリオド移動の計算を提供。
  */
 
-import { addDays, addWeeks, eachDayOfInterval, endOfWeek, startOfWeek, subWeeks } from 'date-fns';
+import {
+  addBusinessDays,
+  addDays,
+  addWeeks,
+  eachDayOfInterval,
+  endOfWeek,
+  startOfWeek,
+  subBusinessDays,
+  subWeeks,
+} from 'date-fns';
 
 import { subDays } from '@/lib/date';
 
@@ -116,9 +125,14 @@ export function generateMultiDayDates(
 /**
  * 次の期間を取得
  */
-export function getNextPeriod(viewType: CalendarViewType, currentDate: Date): Date {
+export function getNextPeriod(
+  viewType: CalendarViewType,
+  currentDate: Date,
+  showWeekends = true,
+): Date {
   if (isMultiDayView(viewType)) {
-    return addDays(currentDate, getMultiDayCount(viewType));
+    const dayCount = getMultiDayCount(viewType);
+    return showWeekends ? addDays(currentDate, dayCount) : addBusinessDays(currentDate, dayCount);
   }
   switch (viewType) {
     case 'day':
@@ -133,9 +147,14 @@ export function getNextPeriod(viewType: CalendarViewType, currentDate: Date): Da
 /**
  * 前の期間を取得
  */
-export function getPreviousPeriod(viewType: CalendarViewType, currentDate: Date): Date {
+export function getPreviousPeriod(
+  viewType: CalendarViewType,
+  currentDate: Date,
+  showWeekends = true,
+): Date {
   if (isMultiDayView(viewType)) {
-    return subDays(currentDate, getMultiDayCount(viewType));
+    const dayCount = getMultiDayCount(viewType);
+    return showWeekends ? subDays(currentDate, dayCount) : subBusinessDays(currentDate, dayCount);
   }
   switch (viewType) {
     case 'day':

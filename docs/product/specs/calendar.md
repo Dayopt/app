@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-16
+last_verified: 2026-07-17
 code: apps/product/src/features/calendar
 ---
 
@@ -12,6 +12,7 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 
 - Day / Week / Multi-Day（2〜7日）で、表示範囲と基準日をURLに保持する
 - Multi-Dayは選択した日数を表示列数として維持し、基準日を中央に配置する。週末非表示では土日を除いたN営業日を表示する。Weekは週境界を正とする別viewで、週末非表示時は平日の5日を表示する
+- Multi-Dayの前後移動は表示列数と同じN日単位とし、週末非表示ではN営業日単位で移動する。隣接する期間に同じ表示日を重複させない
 - 各日カラムをPlanレーンとRecordレーンに分ける。Planは控えめなoutline、Recordは塗りで表示する
 - モバイルはDay / Weekを提供する。Weekでは予定または記録を切り替えて日カラム全幅に表示し、最後に選んだ表示を端末へ保持する。既定は記録
 - モバイルの検索、作成、Inspector、tag / 日時picker、振り返りpanelは[Mobile overlays](./mobile-overlays.md)のmodal性とdismiss契約に従う

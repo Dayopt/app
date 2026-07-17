@@ -98,6 +98,29 @@ describe('getNextPeriod', () => {
     const next = getNextPeriod('3day', date);
     expect(next.getDate()).toBe(18);
   });
+
+  it('週末非表示の7dayは7営業日進み、表示日が前期間と重複しない', () => {
+    const date = new Date('2026-01-15T12:00:00');
+    const current = calculateViewDateRange('7day', date, 1, false);
+    const nextDate = getNextPeriod('7day', date, false);
+    const next = calculateViewDateRange('7day', nextDate, 1, false);
+
+    expect(nextDate.toISOString().slice(0, 10)).toBe('2026-01-26');
+    expect(next.days.map((day) => day.toISOString().slice(0, 10))).toEqual([
+      '2026-01-21',
+      '2026-01-22',
+      '2026-01-23',
+      '2026-01-26',
+      '2026-01-27',
+      '2026-01-28',
+      '2026-01-29',
+    ]);
+    expect(
+      next.days.some((day) =>
+        current.days.some((currentDay) => currentDay.getTime() === day.getTime()),
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('getPreviousPeriod', () => {
@@ -117,5 +140,28 @@ describe('getPreviousPeriod', () => {
     const date = new Date('2026-01-15');
     const prev = getPreviousPeriod('3day', date);
     expect(prev.getDate()).toBe(12);
+  });
+
+  it('週末非表示の7dayは7営業日戻り、表示日が次期間と重複しない', () => {
+    const date = new Date('2026-01-15T12:00:00');
+    const current = calculateViewDateRange('7day', date, 1, false);
+    const previousDate = getPreviousPeriod('7day', date, false);
+    const previous = calculateViewDateRange('7day', previousDate, 1, false);
+
+    expect(previousDate.toISOString().slice(0, 10)).toBe('2026-01-06');
+    expect(previous.days.map((day) => day.toISOString().slice(0, 10))).toEqual([
+      '2026-01-01',
+      '2026-01-02',
+      '2026-01-05',
+      '2026-01-06',
+      '2026-01-07',
+      '2026-01-08',
+      '2026-01-09',
+    ]);
+    expect(
+      previous.days.some((day) =>
+        current.days.some((currentDay) => currentDay.getTime() === day.getTime()),
+      ),
+    ).toBe(false);
   });
 });
