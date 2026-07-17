@@ -12,7 +12,7 @@ Dayopt が運用時に依存する外部サービスの索引。ここでは用�
 | Vercel               | Web 配信、Functions、Analytics          | `vercel.json`、`.github/workflows/`                                                            | Vercel dashboard / invoice                |
 | Supabase             | PostgreSQL、Auth、Storage、Realtime     | `supabase/`、`packages/supabase/`                                                              | Supabase organization dashboard / invoice |
 | Sentry               | エラー・パフォーマンス監視              | Product / Web の別project、`packages/observability`、[monitoring](../operations/monitoring.md) | Sentry organization settings / invoice    |
-| Upstash Redis        | rate limit の共有 backend               | `packages/rate-limit/`                                                                         | provider dashboard / invoice              |
+| Upstash Redis        | rate limit の共有 backend               | `apps/product/src/lib/rate-limit/`、`apps/web/src/platform/security/rate-limit.ts`             | provider dashboard / invoice              |
 | Stripe               | subscription、Checkout、Portal、Webhook | `apps/product/src/features/billing/`、[billing spec](../product/specs/billing.md)              | Stripe dashboard                          |
 | Resend               | transactional email                     | `packages/email/`                                                                              | Resend dashboard / invoice                |
 | GitHub               | repository、Issues / PR、Actions        | `.github/`                                                                                     | repository / organization settings        |

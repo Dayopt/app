@@ -335,7 +335,8 @@ CREATE TABLE audit_logs (
 ProductのCSPは`apps/product/src/proxy.ts`で強制し、違反は`/api/csp-report`へ送る。report endpointは公開入力境界として次を適用する。
 
 - JSON bodyは16 KiBを上限とし、Zod schemaに合わないreportを400、上限超過を413で拒否する
-- ProductionではUpstashによるIP単位rate limitを適用し、超過時は429を返す
+- ProductionではSHA-256化したIP単位20/分と全体120/分のUpstash rate limitを適用し、超過時は429、backend unavailable時はbodyを読まず503を返す
+- `application/csp-report`以外とProduct origin以外のdocument URIを拒否し、未知のdirectiveは`unknown`へ固定する
 - document / blocked / source URLからqueryとfragmentを除去し、ブラウザ拡張由来の違反はSentryへ送らない
 - 有効な違反だけを`csp-violation`として、directive単位の固定fingerprintでSentryへ送る
 
@@ -356,7 +357,7 @@ Sentry Issuesで`type:csp-violation`を指定し、directive、正規化済みbl
 
 - GitHub Actions Security Audit（週次）
 - npm audit結果（CI/CD統合）
-- Upstash Redis Analytics
+- Upstash Redis request / latency / error metrics（Ratelimit Analyticsとraw identifier保存は無効）
 - Sentry Issues / quota / discarded event
 
 ## アラート（セキュリティ）
