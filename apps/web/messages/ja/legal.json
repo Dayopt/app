@@ -17,6 +17,7 @@
           "title": "収集する情報",
           "accountInfo": "アカウント情報（メールアドレス、名前、プロフィール画像）",
           "usageData": "サービス利用データ（タスク、カレンダー、設定）",
+          "contactData": "お問い合わせのやり取り（氏名、メールアドレス、カテゴリ、本文、および認証済みProductからの送信では限定的なアプリ・ブラウザ環境情報）",
           "technicalData": "最小限の技術診断情報（アプリケーションのバージョン、ルートのパス、ブラウザまたはデバイスの種別、エラーまたはトレースの識別子）。Sentryイベントには、リクエスト本文、メールアドレス、URLのクエリ文字列、Cookie、認証情報を含めません。",
           "cookies": "Cookie及び類似技術"
         },
@@ -34,7 +35,9 @@
           "supabase": "Supabase（認証・データベース）",
           "vercel": "Vercel（ホスティング。Vercel AnalyticsとSpeed Insightsは分析への同意後のみ）",
           "sentry": "Sentry（Productionのサーバー・Edgeエラー監視。ブラウザエラー監視は分析への同意後のみ。Session Replayは無効）。ProductとWebサイトのデータは別々のSentryプロジェクトで管理します。",
-          "github": "GitHub（お問い合わせフォーム送信内容のアクセス制限付き保管）",
+          "resend": "Resend（お問い合わせおよびトランザクションメールの送信）",
+          "cloudflareEmail": "Cloudflare Email Routing（受信したサポートメールのサポート用メールボックスへの転送）",
+          "google": "Google Gmail（お問い合わせ対応に使用するアクセス制限付きメールボックス）",
           "cloudflare": "Cloudflare Turnstile（フォームのbot対策）",
           "note": "これらのプロバイダーは、各社のプライバシーポリシーに基づいて情報を管理します。"
         },
@@ -46,16 +49,17 @@
         },
         "subProcessors": {
           "title": "サブプロセッサー",
-          "intro": "当サービスの提供を支援するため、以下のサブプロセッサーを利用しています。各サブプロセッサーとはデータ処理契約（DPA）を締結しています：",
+          "intro": "当サービスの提供を支援するため、以下のプロバイダーを利用しています：",
           "supabase": "Supabase, Inc. — 認証およびデータベースサービス。データ保管場所：AWS US-East-1（米国バージニア北部）",
           "vercel": "Vercel, Inc. — ホスティング、サーバーレス関数、Edge配信。Vercel AnalyticsとSpeed Insightsは分析への同意後に限りブラウザで動作します。データ保管場所はグローバルエッジネットワークです。",
           "sentry": "Functional Software, Inc.（Sentry） — 分析への同意にかかわらず、サニタイズ済みのProductionサーバー・Edgeエラー監視を行います。ブラウザエラー監視は分析への同意後のみ動作します。Session Replayは、現行SDKでReplay payloadからURLのクエリ文字列を確実に除去できないため無効にしています。ProductとWebサイトのデータは別々のプロジェクトで管理します。Sentryイベントには、リクエスト本文、メールアドレス、URLのクエリ文字列、Cookie、認証情報を含めません。データ保管場所は米国です。",
           "stripe": "Stripe, Inc. — 決済処理およびサブスクリプション管理。データ保管場所：米国。StripeはPCI DSS Level 1認定を取得しています。クレジットカード番号は当社サーバーに保存されません。",
           "anthropic": "Anthropic, PBC — AI機能（チャット、週間レビューインサイト）。データ保管場所：米国。お客様のデータはAnthropicのAPI利用規約に基づいて処理され、モデルトレーニングには使用されません。",
           "openai": "OpenAI, LLC — AI機能（オプション、ユーザーが自身のAPIキーを提供した場合）。データ保管場所：米国。APIを通じて処理されるデータは、OpenAIのAPIデータ利用ポリシーに基づき、モデルトレーニングには使用されません。",
-          "resend": "Resend, Inc. — トランザクションメール配信（アカウント通知、請求確認）。データ保管場所：米国",
+          "resend": "Resend, Inc. — お問い合わせおよびトランザクションメールの送信（アカウント通知、請求確認を含む）。データ保管場所：米国",
           "upstash": "Upstash, Inc. — サーバーレスRedisによるレート制限および不正利用防止。データ保管場所：米国。ハッシュ化した技術的なリクエスト識別子とリクエスト数を一時的に保存します。",
-          "github": "GitHub, Inc. — お問い合わせフォームの送信内容（氏名、メールアドレス、カテゴリ、本文）は、アクセスを制限したprivate repositoryに限ってIssueとして保管します。ProductとWebサイトのすべての送信前にrepositoryがprivateであることを検証します。データ保管場所は米国です。",
+          "cloudflareEmail": "Cloudflare, Inc. — Email Routingはsupport@dayopt.app宛のメールを受信し、アクセス制限付きのサポート用メールボックスへ転送します。データはCloudflareのglobal networkで処理されます。",
+          "google": "Google LLC — Gmailを、お問い合わせの受信・管理・返信に使用するアクセス制限付きメールボックスとして利用します。データ保管場所はGoogleのインフラおよびアカウント設定により異なります。",
           "cloudflare": "Cloudflare, Inc. — フォームのbot対策としてTurnstileを使用します。検証のため、Turnstile tokenと送信元IPアドレスをCloudflareへ送ります。データはCloudflareのglobal networkで処理されます。",
           "changes": "新しいサブプロセッサーの導入または既存のサブプロセッサー契約の重要な変更を行う場合、少なくとも30日前に通知します。"
         },
@@ -96,6 +100,7 @@
           "title": "データ保持期間",
           "active": "アカウント有効期間中は保持します",
           "deleted": "アカウント削除後30日以内に完全削除します",
+          "contact": "お問い合わせのやり取りは定期的に見直し、解決後に不要となった時点で削除します。ただし、法令、安全管理、または紛争対応のために保持が必要な場合を除きます",
           "legal": "法令により保持が義務付けられる場合を除きます"
         },
         "userRights": {

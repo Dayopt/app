@@ -1,0 +1,91 @@
+name: Production Config Audit
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: production-config-audit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit Vercel metadata (trusted)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # pull_request_target must execute only the trusted base revision, never PR code.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+
+      - name: Audit Vercel environment metadata
+        id: audit
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          set +e
+          node scripts/production-config-audit.mjs
+          audit_exit=$?
+          set -e
+          echo "exit_code=$audit_exit" >> "$GITHUB_OUTPUT"
+
+      - name: Publish Production Config Audit status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUDIT_EXIT: ${{ steps.audit.outputs.exit_code || '1' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$AUDIT_EXIT" = "0" ]; then
+            state=success
+            description="Vercel metadata matches the Production contract"
+          else
+            state=failure
+            description="Vercel metadata does not match the Production contract"
+          fi
+
+          shas=()
+          if [ -n "$PR_NUMBER" ]; then
+            head_sha=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq '.head.sha')
+            merge_sha=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq '.merge_commit_sha // empty')
+            shas+=("$head_sha")
+            if [ -n "$merge_sha" ] && [ "$merge_sha" != "$head_sha" ]; then
+              shas+=("$merge_sha")
+            fi
+          else
+            shas+=("$GITHUB_SHA")
+          fi
+
+          for sha in "${shas[@]}"; do
+            if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::Refusing to publish status for an invalid commit SHA"
+              exit 1
+            fi
+            gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" \
+              -f state="$state" \
+              -f context="Production Config Audit" \
+              -f description="$description" \
+              -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+              >/dev/null
+          done
+
+      - name: Enforce audit result
+        if: always()
+        env:
+          AUDIT_EXIT: ${{ steps.audit.outputs.exit_code || '1' }}
+        run: exit "$AUDIT_EXIT"

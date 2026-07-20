@@ -1,39 +1,115 @@
 /**
- * Resend Webhook エンドポイント
+ * Product-owned Resend webhook.
  *
- * Resend Dashboard → Webhooks でこのURLを登録:
- *   dayoptUrls.marketing + /api/webhooks/resend
- *
- * 監視イベント:
- * - email.bounced: バウンス検知（無効アドレス）
- * - email.complained: スパム苦情
- * - email.delivered: 配信成功（ログ用）
- *
- * @see https://resend.com/docs/dashboard/webhooks/introduction
+ * The app-specific signing secret, source tag, and Redis lease keep Product
+ * delivery events isolated and idempotent while preserving transactional-email
+ * suppression behavior.
  */
 
+import { dayoptContact, dayoptContactDeliverySources } from '@dayopt/config';
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-export const maxDuration = 30;
-
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
+import {
+  claimResendWebhookEvent,
+  completeResendWebhookEvent,
+  releaseResendWebhookEvent,
+} from '@/lib/rate-limit/upstash';
 import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
-// 遅延初期化: ビルド時にAPI_KEYが未設定でもクラッシュしないようにする
+export const maxDuration = 30;
+export const runtime = 'nodejs';
+
 function getResend() {
   return new Resend(env.RESEND_API_KEY);
 }
-const WEBHOOK_SECRET = env.RESEND_WEBHOOK_SECRET;
 
-/**
- * バウンス/苦情のメールアドレスをサプレッションリストに記録
- *
- * Resend の to フィールドは string[] なので、全アドレスを記録する。
- * UNIQUE制約で重複は無視（ON CONFLICT DO NOTHING）。
- */
+const MAX_WEBHOOK_BODY_BYTES = 64 * 1024;
+
+class WebhookBodyTooLargeError extends Error {}
+
+class SuppressionWriteError extends Error {
+  constructor(
+    public readonly sourceEventId: string | undefined,
+    cause: unknown,
+  ) {
+    super('Failed to record email suppression', { cause });
+    this.name = 'SuppressionWriteError';
+  }
+}
+
+type EmailEventData = {
+  email_id: string;
+  to: string[];
+  tags?: Record<string, string>;
+};
+
+function isEmailEventData(data: unknown): data is EmailEventData {
+  if (!data || typeof data !== 'object') return false;
+  const candidate = data as Partial<EmailEventData>;
+  return (
+    typeof candidate.email_id === 'string' &&
+    Array.isArray(candidate.to) &&
+    candidate.to.every((address) => typeof address === 'string')
+  );
+}
+
+function isContactDelivery(data: EmailEventData, source: string): boolean {
+  return (
+    data.to.some((address) => address.toLowerCase() === dayoptContact.supportEmail) &&
+    data.tags?.source === source
+  );
+}
+
+async function readWebhookBody(request: NextRequest): Promise<string> {
+  const contentLength = request.headers.get('content-length');
+  if (contentLength) {
+    const declaredBytes = Number.parseInt(contentLength, 10);
+    if (Number.isFinite(declaredBytes) && declaredBytes > MAX_WEBHOOK_BODY_BYTES) {
+      throw new WebhookBodyTooLargeError();
+    }
+  }
+
+  if (!request.body) return '';
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let receivedBytes = 0;
+  let payload = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      receivedBytes += value.byteLength;
+      if (receivedBytes > MAX_WEBHOOK_BODY_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new WebhookBodyTooLargeError();
+      }
+      payload += decoder.decode(value, { stream: true });
+    }
+    return payload + decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function captureContactDeliveryFailure(eventType: string, data: EmailEventData): void {
+  logger.error('Contact email delivery failed', {
+    eventType,
+    emailId: data.email_id,
+  });
+  captureUnexpectedError(new Error(`Contact email delivery failed: ${eventType}`), {
+    feature: 'contact',
+    operation: 'email_delivery_status',
+    route: '/api/webhooks/resend',
+    source: 'resend_webhook',
+    requestId: data.email_id,
+  });
+}
+
 async function recordSuppression(
   addresses: string[],
   reason: 'bounce' | 'complaint',
@@ -53,22 +129,18 @@ async function recordSuppression(
 
     if (error) {
       logger.error('Failed to record email suppression', { reason });
-      throw captureUnexpectedDatabaseError(error, {
-        feature: 'email',
-        operation: 'record_email_suppression',
-        route: '/api/webhooks/resend',
-        ...(sourceEventId ? { requestId: sourceEventId } : {}),
-      });
-    } else {
-      logger.info('Email suppression recorded', { reason });
+      throw new SuppressionWriteError(sourceEventId, error);
     }
+    logger.info('Email suppression recorded', { reason });
   }
 }
 
 export async function POST(request: NextRequest) {
+  let claimedEvent: { id: string; token: string } | undefined;
+
   try {
-    // Webhook署名検証
-    if (!WEBHOOK_SECRET) {
+    const webhookSecret = env.RESEND_WEBHOOK_SECRET?.trim();
+    if (!webhookSecret) {
       logger.error('RESEND_WEBHOOK_SECRET is not configured');
       captureUnexpectedError(new Error('Resend webhook secret is not configured'), {
         feature: 'email',
@@ -79,9 +151,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
     }
 
-    const payload = await request.text();
-
-    // svixヘッダーを抽出（Resendが内部的にsvixを使用）
     const svixId = request.headers.get('svix-id');
     const svixTimestamp = request.headers.get('svix-timestamp');
     const svixSignature = request.headers.get('svix-signature');
@@ -91,70 +160,135 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing signature headers' }, { status: 401 });
     }
 
+    let payload: string;
+    try {
+      payload = await readWebhookBody(request);
+    } catch (error) {
+      if (error instanceof WebhookBodyTooLargeError) {
+        return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+      }
+      throw error;
+    }
+
     let event;
     try {
       event = getResend().webhooks.verify({
         payload,
-        headers: {
-          id: svixId,
-          timestamp: svixTimestamp,
-          signature: svixSignature,
-        },
-        webhookSecret: WEBHOOK_SECRET,
+        headers: { id: svixId, timestamp: svixTimestamp, signature: svixSignature },
+        webhookSecret,
       });
     } catch {
       logger.warn('Resend webhook signature verification failed');
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
+    if (
+      isEmailEventData(event.data) &&
+      isContactDelivery(event.data, dayoptContactDeliverySources.web)
+    ) {
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
+    const claim = await claimResendWebhookEvent(svixId);
+    if (claim.status === 'already_processed') {
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+    if (claim.status === 'in_progress') {
+      return NextResponse.json({ error: 'Webhook processing in progress' }, { status: 503 });
+    }
+    claimedEvent = { id: svixId, token: claim.token };
+
     switch (event.type) {
       case 'email.bounced': {
-        const bouncedTo = event.data.to;
-        logger.error('Email bounced', {
-          emailId: event.data.email_id,
-        });
-        await recordSuppression(bouncedTo, 'bounce', event.data.email_id);
+        if (
+          isEmailEventData(event.data) &&
+          isContactDelivery(event.data, dayoptContactDeliverySources.product)
+        ) {
+          captureContactDeliveryFailure(event.type, event.data);
+          break;
+        }
+        await recordSuppression(event.data.to, 'bounce', event.data.email_id);
         break;
       }
 
       case 'email.complained': {
-        const complainedTo = event.data.to;
-        logger.error('Email spam complaint', {
-          emailId: event.data.email_id,
-        });
-        await recordSuppression(complainedTo, 'complaint', event.data.email_id);
+        if (
+          isEmailEventData(event.data) &&
+          isContactDelivery(event.data, dayoptContactDeliverySources.product)
+        ) {
+          captureContactDeliveryFailure(event.type, event.data);
+          break;
+        }
+        await recordSuppression(event.data.to, 'complaint', event.data.email_id);
         break;
       }
 
       case 'email.delivered':
-        logger.info('Email delivered', {
-          emailId: event.data.email_id,
-        });
+        logger.info('Email delivered', { emailId: event.data.email_id });
         break;
 
       case 'email.delivery_delayed':
-        logger.warn('Email delivery delayed', {
-          emailId: event.data.email_id,
-        });
+        logger.warn('Email delivery delayed', { emailId: event.data.email_id });
+        break;
+
+      case 'email.failed':
+      case 'email.suppressed':
+        if (
+          isEmailEventData(event.data) &&
+          isContactDelivery(event.data, dayoptContactDeliverySources.product)
+        ) {
+          captureContactDeliveryFailure(event.type, event.data);
+        } else if (isEmailEventData(event.data)) {
+          logger.error('Email delivery failed', {
+            emailId: event.data.email_id,
+            type: event.type,
+          });
+        }
         break;
 
       default:
-        // sent, opened, clicked, contact, domain イベントはログのみ
-        logger.info('Resend webhook event', {
-          type: event.type,
-        });
+        logger.info('Resend webhook event', { type: event.type });
     }
 
+    await completeResendWebhookEvent(svixId, claim.token);
+    claimedEvent = undefined;
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
     logger.error('Resend webhook processing failed');
     const original = error instanceof Error ? error : new Error('Unknown Resend webhook failure');
-    captureUnexpectedError(original, {
-      feature: 'email',
-      operation: 'resend_webhook_processing',
-      route: '/api/webhooks/resend',
-      source: 'resend_webhook',
-    });
+
+    if (claimedEvent) {
+      try {
+        await releaseResendWebhookEvent(claimedEvent.id, claimedEvent.token);
+      } catch (releaseError) {
+        logger.error('Failed to release Resend webhook event claim');
+        captureUnexpectedError(
+          releaseError instanceof Error ? releaseError : new Error('Webhook lease release failed'),
+          {
+            feature: 'email',
+            operation: 'resend_webhook_lease_release',
+            route: '/api/webhooks/resend',
+            source: 'resend_webhook',
+          },
+        );
+      }
+    }
+
+    if (original instanceof SuppressionWriteError) {
+      captureUnexpectedDatabaseError(original.cause ?? original, {
+        feature: 'email',
+        operation: 'record_email_suppression',
+        route: '/api/webhooks/resend',
+        ...(original.sourceEventId ? { requestId: original.sourceEventId } : {}),
+      });
+    } else {
+      captureUnexpectedError(original, {
+        feature: 'email',
+        operation: 'resend_webhook_processing',
+        route: '/api/webhooks/resend',
+        source: 'resend_webhook',
+      });
+    }
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
 }

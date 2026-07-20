@@ -45,11 +45,13 @@ export interface SearchResponse {
  * コンタクトフォームのリクエスト型
  */
 export interface ContactRequest {
+  submissionId: string;
   name: string;
   email: string;
-  category: string;
-  subject: string;
+  category: 'bug' | 'feature' | 'question' | 'other';
   message: string;
+  website?: string;
+  turnstileToken?: string;
 }
 
 /**
@@ -58,8 +60,7 @@ export interface ContactRequest {
  * @endpoint POST /api/contact
  */
 export interface ContactResponse {
-  success: boolean;
-  issueNumber: number;
+  success: true;
 }
 
 // ============================================================================

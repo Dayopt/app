@@ -113,6 +113,10 @@ run item create --category=apicredential --vault=Dayopt-Staging --title=resend \
   --tags=dayopt,staging notesPlain="$NOTES" \
   'RESEND_WEBHOOK_SECRET[concealed]='
 
+run item create --category=apicredential --vault=Dayopt-Staging --title=resend-web \
+  --tags=dayopt,staging notesPlain="$NOTES" \
+  'RESEND_WEBHOOK_SECRET[concealed]='
+
 run item create --category=apicredential --vault=Dayopt-Staging --title=app \
   --tags=dayopt,staging notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
   'NEXT_PUBLIC_APP_URL[text]=' \
@@ -149,6 +153,10 @@ run item create --category=apicredential --vault=Dayopt-Production --title=resen
   --tags=dayopt,production notesPlain="$NOTES" \
   'RESEND_WEBHOOK_SECRET[concealed]='
 
+run item create --category=apicredential --vault=Dayopt-Production --title=resend-web \
+  --tags=dayopt,production notesPlain="$NOTES" \
+  'RESEND_WEBHOOK_SECRET[concealed]='
+
 run item create --category=apicredential --vault=Dayopt-Production --title=sentry \
   --tags=dayopt,production notesPlain="$NOTES" \
   'NEXT_PUBLIC_SENTRY_DSN[text]=' \
@@ -177,9 +185,13 @@ run item create --category=apicredential --vault=Dayopt-Shared --title=anthropic
   'ANTHROPIC_API_KEY[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Shared --title=resend \
-  --tags=dayopt,shared notesPlain="$NOTES"$'\nwebhook secret は Dayopt-Staging/resend, Dayopt-Production/resend に別途' \
+  --tags=dayopt,shared notesPlain="$NOTES"$'\nwebhook secret は Product=resend / Web=resend-web として環境ごとに分離' \
   'RESEND_API_KEY[concealed]=' \
   'RESEND_FROM_EMAIL[text]='
+
+run item create --category=apicredential --vault=Dayopt-Shared --title=resend-support-replies \
+  --tags=dayopt,shared notesPlain="$NOTES"$'\nGmail Send mail as 専用。Sending access / dayopt.app限定。アプリ用keyと共用しない。' \
+  'RESEND_SMTP_API_KEY[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Shared --title=sentry \
   --tags=dayopt,shared notesPlain="$NOTES" \
@@ -189,11 +201,6 @@ run item create --category=apicredential --vault=Dayopt-Shared --title=turnstile
   --tags=dayopt,shared notesPlain="$NOTES" \
   'NEXT_PUBLIC_TURNSTILE_SITE_KEY[text]=' \
   'TURNSTILE_SECRET_KEY[concealed]='
-
-run item create --category=apicredential --vault=Dayopt-Shared --title=github-contact-pat \
-  --tags=dayopt,shared notesPlain="$NOTES" \
-  'GITHUB_TOKEN[concealed]=' \
-  'GITHUB_CONTACT_REPO[text]='
 
 run item create --category=login --vault=Dayopt-Shared --title=github-login \
   --tags=dayopt,shared notesPlain="$NOTES"$'\nGitHub account login item. 既存 item がある場合は move + merge する。' \
@@ -251,9 +258,6 @@ cat <<'EOF'
 
 以下は Development / ワーク vault の既存 item を Dayopt-Shared に移動する候補。
 GUI で item を右クリック → Move → Dayopt-Shared を選択するのが最も安全。
-
-  Development/GitHub PAT - Dayopt Website Contact  →  Dayopt-Shared/github-contact-pat にリネーム
-      (既に Dayopt 専用 PAT なので、move + rename + "GITHUB_CONTACT_REPO" field 追加)
 
   Development/GitHub (SSH_KEY)  →  Dayopt-Shared/github-ssh にリネーム
       ※ Dayopt commit にこの key を使っているか確認してから移動する

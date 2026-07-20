@@ -18,6 +18,7 @@
           "title": "Information We Collect",
           "accountInfo": "Account Information (email address, name, profile picture)",
           "usageData": "Service Usage Data (tasks, calendar, settings)",
+          "contactData": "Contact correspondence (name, email address, category, message, and, for authenticated Product submissions, limited application and browser environment details)",
           "technicalData": "Minimal Technical Diagnostics (application version, route path, browser or device type, and error or trace identifiers). Sentry events exclude request bodies, email addresses, URL query strings, cookies, and authorization credentials.",
           "cookies": "Cookies and similar technologies"
         },
@@ -35,7 +36,9 @@
           "supabase": "Supabase (authentication & database)",
           "vercel": "Vercel (hosting; Vercel Analytics and Speed Insights only after analytics consent)",
           "sentry": "Sentry (Production server and edge error monitoring; browser error monitoring only after analytics consent; Session Replay is disabled). Product and Website data are kept in separate Sentry projects.",
-          "github": "GitHub (access-restricted storage for contact form submissions)",
+          "resend": "Resend (outbound contact and transactional email delivery)",
+          "cloudflareEmail": "Cloudflare Email Routing (routing inbound support email to the support mailbox)",
+          "google": "Google Gmail (access-controlled destination mailbox for support correspondence)",
           "cloudflare": "Cloudflare Turnstile (bot protection for forms)",
           "note": "These providers manage information according to their respective privacy policies."
         },
@@ -47,16 +50,17 @@
         },
         "subProcessors": {
           "title": "Sub-Processors",
-          "intro": "We engage the following sub-processors to assist in providing the Service. Each sub-processor has entered into a Data Processing Agreement (DPA) with us:",
+          "intro": "We use the following providers to assist in providing the Service:",
           "supabase": "Supabase, Inc. — Authentication and database services. Data location: AWS US-East-1 (N. Virginia, USA)",
           "vercel": "Vercel, Inc. — Hosting, serverless functions, and edge delivery. Vercel Analytics and Speed Insights run in the browser only after analytics consent. Data location: Global Edge Network",
           "sentry": "Functional Software, Inc. (Sentry) — Sanitized Production server and edge error monitoring runs regardless of analytics consent. Browser error monitoring runs only after analytics consent. Session Replay is disabled because the current SDK cannot guarantee removal of URL query strings from Replay payloads. Product and Website data are kept in separate projects. Sentry events exclude request bodies, email addresses, URL query strings, cookies, and authorization credentials. Data location: United States",
           "stripe": "Stripe, Inc. — Payment processing and subscription management. Data location: United States. Stripe is PCI DSS Level 1 certified. We do not store credit card numbers on our servers.",
           "anthropic": "Anthropic, PBC — AI-powered features (chat, weekly review insights). Data location: United States. Your data is processed under Anthropic's API terms and is not used for model training.",
           "openai": "OpenAI, LLC — AI-powered features (optional, when user provides their own API key). Data location: United States. Data processed via API is not used for model training per OpenAI's API data usage policy.",
-          "resend": "Resend, Inc. — Transactional email delivery (account notifications, billing confirmations). Data location: United States",
+          "resend": "Resend, Inc. — Outbound contact and transactional email delivery (including account notifications and billing confirmations). Data location: United States",
           "upstash": "Upstash, Inc. — Rate limiting and abuse prevention via serverless Redis. Data location: United States. Hashed technical request identifiers and request counts are stored temporarily.",
-          "github": "GitHub, Inc. — Contact form submissions (name, email address, category, and message) are stored as Issues only in an access-restricted private repository. Repository privacy is verified before every Product or Website submission. Data location: United States.",
+          "cloudflareEmail": "Cloudflare, Inc. — Email Routing receives mail addressed to support@dayopt.app and forwards it to the access-controlled support mailbox. Data is processed on Cloudflare's global network.",
+          "google": "Google LLC — Gmail is the access-controlled destination mailbox used to receive, manage, and reply to support correspondence. Data location depends on Google's infrastructure and account configuration.",
           "cloudflare": "Cloudflare, Inc. — Turnstile bot protection for forms. A Turnstile token and the requester's IP address are sent to Cloudflare for verification. Data is processed on Cloudflare's global network.",
           "changes": "We will notify you at least 30 days before engaging a new sub-processor or making material changes to existing sub-processor arrangements."
         },
@@ -97,6 +101,7 @@
           "title": "Data Retention",
           "active": "We retain your data while your account is active",
           "deleted": "Data is permanently deleted within 30 days after account deletion",
+          "contact": "Support correspondence is reviewed periodically and deleted after the inquiry is resolved when it is no longer needed, except where retention is required for legal, security, or dispute-handling purposes",
           "legal": "Except where retention is required by law"
         },
         "userRights": {

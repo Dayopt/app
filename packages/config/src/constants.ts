@@ -2,7 +2,6 @@ export const dayoptDomains = {
   marketing: 'dayopt.app',
   product: 'app.dayopt.app',
   mcp: 'mcp.dayopt.app',
-  docs: 'docs.dayopt.app',
   www: 'www.dayopt.app',
 } as const;
 
@@ -10,7 +9,7 @@ export const dayoptUrls = {
   marketing: `https://${dayoptDomains.marketing}`,
   product: `https://${dayoptDomains.product}`,
   mcp: `https://${dayoptDomains.mcp}`,
-  docs: `https://${dayoptDomains.docs}`,
+  docs: `https://${dayoptDomains.marketing}/docs`,
   www: `https://${dayoptDomains.www}`,
 } as const;
 
@@ -18,6 +17,12 @@ export const dayoptContact = {
   supportEmail: 'support@dayopt.app',
   securityEmail: 'security@dayopt.app',
   contactEmail: 'contact@dayopt.app',
+} as const;
+
+/** Stable Resend tags used to route contact delivery status to the owning app. */
+export const dayoptContactDeliverySources = {
+  product: 'contact-product',
+  web: 'contact-web',
 } as const;
 
 export const dayoptBrand = {

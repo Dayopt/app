@@ -2,6 +2,7 @@ export {
   createDayoptUrl,
   dayoptBrand,
   dayoptContact,
+  dayoptContactDeliverySources,
   dayoptDomains,
   dayoptProductUrls,
   dayoptUrls,

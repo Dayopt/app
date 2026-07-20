@@ -7,7 +7,7 @@
 import { TRPCError } from '@trpc/server';
 
 import { logger } from '@/lib/logger';
-import { contactRateLimit } from '@/lib/rate-limit/upstash';
+import { contactGlobalRateLimit, contactRateLimit } from '@/lib/rate-limit/upstash';
 import { observeAuthOperation } from '@/lib/sentry';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
@@ -17,12 +17,22 @@ import { deliverContactFeedback } from './contact-service';
 /** お問い合わせフォームのtRPCルーター */
 export const contactRouter = createTRPCRouter({
   submit: protectedProcedure
-    .meta({ description: 'お問い合わせ送信（GitHub Issue作成）' })
+    .meta({ description: 'お問い合わせ送信（サポートメール配送）' })
     .input(contactFormSchema)
     .mutation(async ({ ctx, input }) => {
       // レート制限チェック（userId ベース）
       if (contactRateLimit) {
         const { success } = await contactRateLimit.limit(ctx.userId);
+        if (!success) {
+          throw new TRPCError({
+            code: 'TOO_MANY_REQUESTS',
+            message: 'Too many contact requests. Please try again later.',
+          });
+        }
+      }
+
+      if (contactGlobalRateLimit) {
+        const { success } = await contactGlobalRateLimit.limit('global');
         if (!success) {
           throw new TRPCError({
             code: 'TOO_MANY_REQUESTS',
@@ -45,22 +55,27 @@ export const contactRouter = createTRPCRouter({
         });
       }
 
-      const userEmail = user?.email ?? 'unknown';
-      const userName = user?.user_metadata?.full_name ?? 'Unknown';
+      if (!user?.email) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Authenticated email address is required',
+        });
+      }
+
+      const fullName = user.user_metadata?.full_name;
+      const userName =
+        typeof fullName === 'string' && fullName.trim() ? fullName.trim().slice(0, 100) : 'Unknown';
 
       // 起票失敗時は例外をclientへ返し、フォーム本文を保持したまま再送可能にする。
-      const result = await deliverContactFeedback({
-        userId: ctx.userId,
-        userEmail,
+      await deliverContactFeedback({
+        userEmail: user.email,
         userName,
         input,
       });
 
       logger.info('Contact form submitted', {
-        userId: ctx.userId,
         category: input.category,
         delivered: true,
-        issueNumber: result.issueNumber,
       });
 
       return { success: true as const };

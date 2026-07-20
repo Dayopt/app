@@ -9,9 +9,10 @@ vi.mock('@/platform/observability/capture-unexpected-error', () => ({
 import { submitContactRequest } from './contact-client';
 
 const privatePayload = {
+  submissionId: '550e8400-e29b-41d4-a716-446655440000',
   name: 'Private Name',
   email: 'private@example.com',
-  category: 'question',
+  category: 'question' as const,
   message: 'This is a private contact message.',
   website: '',
   turnstileToken: 'private-turnstile-token',
@@ -56,9 +57,31 @@ describe('submitContactRequest', () => {
   });
 
   it('resolves without capture for a successful response', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
 
     await expect(submitContactRequest(privatePayload)).resolves.toBeUndefined();
     expect(captureUnexpectedWebError).not.toHaveBeenCalled();
+    const sentBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as Record<
+      string,
+      unknown
+    >;
+    expect(sentBody).toMatchObject({
+      submissionId: privatePayload.submissionId,
+      turnstileToken: privatePayload.turnstileToken,
+    });
+  });
+
+  it('omits a null Turnstile token from the JSON payload', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await submitContactRequest({ ...privatePayload, turnstileToken: null });
+
+    const sentBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as Record<
+      string,
+      unknown
+    >;
+    expect(sentBody).not.toHaveProperty('turnstileToken');
   });
 });

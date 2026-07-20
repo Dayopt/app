@@ -30,7 +30,7 @@ export const Turnstile = forwardRef<TurnstileInstance, TurnstileProps>(function 
       onSuccess={onSuccess}
       onError={onError}
       onExpire={onExpire}
-      options={{ language: locale, theme }}
+      options={{ action: TURNSTILE_CONFIG.ACTION, language: locale, theme }}
     />
   );
 });

@@ -14,6 +14,9 @@ vi.mock('@/lib/sentry', () => ({
 }));
 
 import {
+  claimResendWebhookEvent,
+  completeResendWebhookEvent,
+  contactGlobalRateLimit,
   contactRateLimit,
   cspReportGlobalRateLimit,
   cspReportRateLimit,
@@ -24,6 +27,7 @@ import {
   RATE_LIMIT_PRESETS,
   RATE_LIMIT_TIMEOUT_MS,
   RateLimitUnavailableError,
+  releaseResendWebhookEvent,
   requireAvailableRateLimitResult,
   timeblockCreateRateLimit,
   trpcUserRateLimit,
@@ -46,6 +50,7 @@ describe('Upstash Rate Limit', () => {
     vi.doUnmock('@upstash/ratelimit');
     vi.doUnmock('@upstash/redis');
     vi.doUnmock('@/env');
+    vi.unstubAllEnvs();
   });
 
   it('keeps local/test limiters disabled when credentials are absent', () => {
@@ -53,6 +58,7 @@ describe('Upstash Rate Limit', () => {
     expect(loginRateLimit).toBeNull();
     expect(passwordResetRateLimit).toBeNull();
     expect(contactRateLimit).toBeNull();
+    expect(contactGlobalRateLimit).toBeNull();
     expect(trpcUserRateLimit).toBeNull();
     expect(timeblockCreateRateLimit).toBeNull();
     expect(cspReportRateLimit).toBeNull();
@@ -75,6 +81,19 @@ describe('Upstash Rate Limit', () => {
       requireAvailableRateLimitResult({ ...allowedResult, reason: 'timeout' } as never),
     ).toThrow(RateLimitUnavailableError);
     expect(requireAvailableRateLimitResult(allowedResult as never)).toBe(allowedResult);
+  });
+
+  it('uses local webhook leases outside Production and fails closed without Redis in Production', async () => {
+    const claim = await claimResendWebhookEvent('event-1');
+    expect(claim).toMatchObject({ status: 'claimed' });
+    if (claim.status !== 'claimed') throw new Error('Expected a local claim');
+    await expect(completeResendWebhookEvent('event-1', claim.token)).resolves.toBeUndefined();
+    await expect(releaseResendWebhookEvent('event-1', claim.token)).resolves.toBeUndefined();
+
+    vi.stubEnv('VERCEL_ENV', 'production');
+    await expect(claimResendWebhookEvent('event-2')).rejects.toBeInstanceOf(
+      RateLimitUnavailableError,
+    );
   });
 
   it('distinguishes disabled, checked, and unavailable checks and captures the original error once', async () => {
@@ -133,7 +152,7 @@ describe('Upstash Rate Limit', () => {
     }));
 
     const enabledModule = await import('../upstash');
-    expect(constructorOptions).toHaveLength(8);
+    expect(constructorOptions).toHaveLength(9);
     for (const options of constructorOptions) {
       expect(options.analytics).toBe(false);
       expect(options.timeout).toBe(RATE_LIMIT_TIMEOUT_MS);

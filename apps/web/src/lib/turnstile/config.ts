@@ -6,6 +6,7 @@
  */
 
 export const TURNSTILE_CONFIG = {
+  ACTION: 'contact',
   SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '',
   VERIFY_URL: 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
 } as const;

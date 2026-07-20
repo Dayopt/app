@@ -36,7 +36,7 @@ export default async function PrivacyPolicyPage({ params }: PageProps) {
   const t = await getTranslations({ locale });
 
   // 最終更新日（実際のプロジェクトでは、CMSや設定ファイルから取得）
-  const lastUpdated = '2026-07-17';
+  const lastUpdated = '2026-07-21';
 
   return (
     <div className="bg-background container mx-auto min-h-screen max-w-4xl px-4 py-12 md:px-8 md:py-16">
@@ -69,6 +69,7 @@ export default async function PrivacyPolicyPage({ params }: PageProps) {
           <ul className="text-foreground list-inside list-disc space-y-2 leading-relaxed">
             <li>{t('legal.privacy.sections.dataCollection.accountInfo')}</li>
             <li>{t('legal.privacy.sections.dataCollection.usageData')}</li>
+            <li>{t('legal.privacy.sections.dataCollection.contactData')}</li>
             <li>{t('legal.privacy.sections.dataCollection.technicalData')}</li>
             <li>{t('legal.privacy.sections.dataCollection.cookies')}</li>
           </ul>
@@ -100,7 +101,9 @@ export default async function PrivacyPolicyPage({ params }: PageProps) {
             <li>{t('legal.privacy.sections.dataSharing.supabase')}</li>
             <li>{t('legal.privacy.sections.dataSharing.vercel')}</li>
             <li>{t('legal.privacy.sections.dataSharing.sentry')}</li>
-            <li>{t('legal.privacy.sections.dataSharing.github')}</li>
+            <li>{t('legal.privacy.sections.dataSharing.resend')}</li>
+            <li>{t('legal.privacy.sections.dataSharing.cloudflareEmail')}</li>
+            <li>{t('legal.privacy.sections.dataSharing.google')}</li>
             <li>{t('legal.privacy.sections.dataSharing.cloudflare')}</li>
           </ul>
           <p className="text-muted-foreground mt-4 text-sm">
@@ -139,7 +142,8 @@ export default async function PrivacyPolicyPage({ params }: PageProps) {
             <li>{t('legal.privacy.sections.subProcessors.openai')}</li>
             <li>{t('legal.privacy.sections.subProcessors.resend')}</li>
             <li>{t('legal.privacy.sections.subProcessors.upstash')}</li>
-            <li>{t('legal.privacy.sections.subProcessors.github')}</li>
+            <li>{t('legal.privacy.sections.subProcessors.cloudflareEmail')}</li>
+            <li>{t('legal.privacy.sections.subProcessors.google')}</li>
             <li>{t('legal.privacy.sections.subProcessors.cloudflare')}</li>
           </ul>
           <p className="text-muted-foreground mt-4 text-sm">
@@ -224,6 +228,7 @@ export default async function PrivacyPolicyPage({ params }: PageProps) {
           <ul className="text-foreground list-inside list-disc space-y-2 leading-relaxed">
             <li>{t('legal.privacy.sections.dataRetention.active')}</li>
             <li>{t('legal.privacy.sections.dataRetention.deleted')}</li>
+            <li>{t('legal.privacy.sections.dataRetention.contact')}</li>
             <li>{t('legal.privacy.sections.dataRetention.legal')}</li>
           </ul>
         </section>

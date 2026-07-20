@@ -50,6 +50,7 @@ describe('contactFormSchema', () => {
   };
 
   const validInput = {
+    submissionId: '550e8400-e29b-41d4-a716-446655440000',
     category: 'bug',
     message: 'This is a valid message with enough characters.',
     environment: validEnvironment,
@@ -79,6 +80,20 @@ describe('contactFormSchema', () => {
   });
 
   it('エラー系: カテゴリが未指定', () => {
-    expect(() => contactFormSchema.parse({ message: 'Valid message here.' })).toThrow();
+    expect(() => contactFormSchema.parse({ ...validInput, category: undefined })).toThrow();
+  });
+
+  it('エラー系: submissionIdがUUIDではない', () => {
+    expect(() => contactFormSchema.parse({ ...validInput, submissionId: 'not-a-uuid' })).toThrow();
+  });
+
+  it('エラー系: 未知のフィールドを拒否する', () => {
+    expect(() => contactFormSchema.parse({ ...validInput, unexpected: true })).toThrow();
+    expect(() =>
+      contactFormSchema.parse({
+        ...validInput,
+        environment: { ...validEnvironment, unexpected: true },
+      }),
+    ).toThrow();
   });
 });

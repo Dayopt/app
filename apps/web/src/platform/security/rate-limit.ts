@@ -102,6 +102,12 @@ export const contactRateLimit = createRateLimiter(
   'ratelimit:web:contact',
 );
 
+/** Bound aggregate contact-email spend even when abuse is distributed. */
+export const contactGlobalRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(60, '1 h'),
+  'ratelimit:web:contact-global',
+);
+
 /**
  * 検索API用レート制限
  *
@@ -124,12 +130,26 @@ export const cspReportGlobalRateLimit = createRateLimiter(
   'ratelimit:web:csp-report-global',
 );
 
-/** Persist only a one-way IP-derived identifier in Upstash. */
+function bytesToHex(bytes: ArrayBuffer): string {
+  return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/** Persist only a secret-keyed, one-way identifier in Upstash. */
 export async function hashRateLimitIdentifier(identifier: string): Promise<string> {
-  const bytes = new Uint8Array(
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identifier)),
+  const encoder = new TextEncoder();
+  const value = encoder.encode(`dayopt-web:${identifier}`);
+  const secret = env.UPSTASH_REDIS_REST_TOKEN?.trim();
+
+  if (!secret) return bytesToHex(await crypto.subtle.digest('SHA-256', value));
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
   );
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return bytesToHex(await crypto.subtle.sign('HMAC', key, value));
 }
 
 /**
@@ -138,6 +158,11 @@ export async function hashRateLimitIdentifier(identifier: string): Promise<strin
  * Vercel の x-forwarded-for ヘッダーまたは x-real-ip から IP を取得
  */
 export function getClientIp(request: Request): string {
+  const vercelForwardedFor = request.headers.get('x-vercel-forwarded-for');
+  if (vercelForwardedFor) {
+    return vercelForwardedFor.split(',')[0]?.trim() ?? '127.0.0.1';
+  }
+
   const forwardedFor = request.headers.get('x-forwarded-for');
 
   if (forwardedFor) {

@@ -1,4 +1,5 @@
 import { dayoptUrls } from '@dayopt/config';
+import { z } from 'zod';
 
 /**
  * 環境変数の型定義とバリデーション
@@ -99,24 +100,17 @@ export interface EnvConfig {
   PRIVACY_PROTECTION_MODE?: PrivacyMode;
 
   // ============================================================================
-  // 外部サービス - GitHub
+  // 外部サービス - Resend
   // ============================================================================
 
-  /**
-   * GitHub Personal Access Token
-   *
-   * @required コンタクトフォームを使用する場合は必須
-   * @scope Fine-grained token with Issues write access to the configured private repository
-   */
-  GITHUB_TOKEN?: string;
+  /** Server-only Resend key used to deliver contact submissions. */
+  RESEND_API_KEY?: string;
 
-  /**
-   * コンタクト内容を保存するprivate GitHubリポジトリ (owner/repo 形式)
-   *
-   * @required Productionでは必須。public repositoryは拒否する
-   * @example 'your-org/private-contact-repo'
-   */
-  GITHUB_CONTACT_REPO?: string;
+  /** Verified Dayopt sender address. The recipient is fixed in @dayopt/config. */
+  RESEND_FROM_EMAIL?: string;
+
+  /** Signing secret for the Web project's Resend delivery-status webhook. */
+  RESEND_WEBHOOK_SECRET?: string;
 
   // ============================================================================
   // 外部サービス - Upstash (Rate Limiting)
@@ -250,12 +244,21 @@ export function assertProductionRuntimeEnv(env: Partial<EnvConfig> = loadEnv()):
     errors.push('NEXT_PUBLIC_APP_URL or VERCEL_URL is required in production environment');
   }
 
-  if (!env.GITHUB_TOKEN) {
-    errors.push('GITHUB_TOKEN is not set. Contact form will not work.');
+  if (!env.RESEND_API_KEY?.trim()) {
+    errors.push('RESEND_API_KEY is required for the Production contact form');
   }
 
-  if (!env.GITHUB_CONTACT_REPO) {
-    errors.push('GITHUB_CONTACT_REPO is required for the private contact repository.');
+  const senderResult = z.string().trim().email().safeParse(env.RESEND_FROM_EMAIL);
+  if (
+    !senderResult.success ||
+    senderResult.data.toLowerCase() === 'onboarding@resend.dev' ||
+    !senderResult.data.toLowerCase().endsWith('@dayopt.app')
+  ) {
+    errors.push('A verified RESEND_FROM_EMAIL is required for the Production contact form');
+  }
+
+  if (!env.RESEND_WEBHOOK_SECRET?.trim()) {
+    errors.push('RESEND_WEBHOOK_SECRET is required for Web contact delivery monitoring');
   }
 
   const requiredSentryEnv = [
@@ -269,11 +272,11 @@ export function assertProductionRuntimeEnv(env: Partial<EnvConfig> = loadEnv()):
     }
   }
 
-  const hasTurnstileSite = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-  const hasTurnstileSecret = !!env.TURNSTILE_SECRET_KEY;
+  const hasTurnstileSite = Boolean(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim());
+  const hasTurnstileSecret = Boolean(env.TURNSTILE_SECRET_KEY?.trim());
   if (!hasTurnstileSite || !hasTurnstileSecret) {
     errors.push(
-      'NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY are required in production.',
+      'NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY are required in Vercel Production.',
     );
   }
 
@@ -303,12 +306,14 @@ function warnMissingDevEnv(env: Partial<EnvConfig>): void {
     return;
   }
 
-  if (!env.GITHUB_TOKEN) {
-    console.warn('[ENV WARNING] GITHUB_TOKEN is not set. Contact form will not work.');
+  if (env.RESEND_API_KEY || env.RESEND_FROM_EMAIL || env.RESEND_WEBHOOK_SECRET) {
+    console.warn(
+      '[ENV WARNING] Contact Resend configuration is Production-only and is ignored in Development.',
+    );
   }
 
-  const hasTurnstileSite = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-  const hasTurnstileSecret = !!env.TURNSTILE_SECRET_KEY;
+  const hasTurnstileSite = Boolean(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim());
+  const hasTurnstileSecret = Boolean(env.TURNSTILE_SECRET_KEY?.trim());
   if (hasTurnstileSite !== hasTurnstileSecret) {
     console.warn(
       '[ENV WARNING] Both NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY should be set together.',
@@ -352,9 +357,10 @@ export function loadEnv(): EnvConfig {
     // セキュリティ設定
     PRIVACY_PROTECTION_MODE: parsePrivacyMode(rawEnv.PRIVACY_PROTECTION_MODE),
 
-    // GitHub
-    GITHUB_TOKEN: rawEnv.GITHUB_TOKEN,
-    GITHUB_CONTACT_REPO: rawEnv.GITHUB_CONTACT_REPO,
+    // Resend
+    RESEND_API_KEY: rawEnv.RESEND_API_KEY,
+    RESEND_FROM_EMAIL: rawEnv.RESEND_FROM_EMAIL,
+    RESEND_WEBHOOK_SECRET: rawEnv.RESEND_WEBHOOK_SECRET,
 
     // Upstash
     UPSTASH_REDIS_REST_URL: rawEnv.UPSTASH_REDIS_REST_URL,

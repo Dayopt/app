@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-16
+last_verified: 2026-07-21
 code: scripts/env/schema.ts
 ---
 
@@ -17,6 +17,7 @@ code: scripts/env/schema.ts
 3. **external environments are replicas** — Vercel / GitHub Actions / Supabase Dashboard は 1Password から同期される複製
 4. **値を表示しない** — 確認は存在確認だけにし、secret 本体を terminal / docs / issue / chat に出さない
 5. **Turnstile is canonical** — bot protection は Cloudflare Turnstile を正とし、reCAPTCHA は旧方式として扱う
+6. **contact credentials are separated** — app配送、app別webhook署名、Gmail返信SMTPの権限を共用しない
 
 PR ごとの Supabase Preview Branch credentials は例外。Supabase / Vercel integration が作る ephemeral replica であり、1Password には保存しない。
 
@@ -63,13 +64,14 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 
 通常の PR Preview では使わない。persistent staging を追加した時、または local dev 用の長寿命参照が必要な時だけ使う。
 
-| Item          | Fields                                                                                                                                                                             | 用途                                |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `supabase`    | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET` | Supabase local / preview 相当の接続 |
-| `upstash`     | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               | Redis rate limit / cache            |
-| `stripe-test` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    | Stripe test mode                    |
-| `resend`      | `RESEND_WEBHOOK_SECRET`                                                                                                                                                            | Resend webhook secret               |
-| `app`         | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              | App URL / recovery code HMAC pepper |
+| Item          | Fields                                                                                                                                                                             | 用途                                  |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `supabase`    | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET` | Supabase local / preview 相当の接続   |
+| `upstash`     | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               | Redis rate limit / cache              |
+| `stripe-test` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    | Stripe test mode                      |
+| `resend`      | `RESEND_WEBHOOK_SECRET`                                                                                                                                                            | optional stagingのProduct webhook署名 |
+| `resend-web`  | `RESEND_WEBHOOK_SECRET`                                                                                                                                                            | optional stagingのWeb webhook署名     |
+| `app`         | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              | App URL / recovery code HMAC pepper   |
 
 ### `Dayopt-Production`
 
@@ -80,26 +82,27 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 | `supabase`    | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET` |
 | `upstash`     | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               |
 | `stripe-live` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    |
-| `resend`      | `RESEND_WEBHOOK_SECRET`                                                                                                                                                            |
+| `resend`      | `RESEND_WEBHOOK_SECRET`（Product）                                                                                                                                                 |
+| `resend-web`  | `RESEND_WEBHOOK_SECRET`（Web、Productと別値）                                                                                                                                      |
 | `sentry`      | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`（Product）                                                                                                  |
 | `sentry-web`  | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`（Web）                                                                                                      |
 | `app`         | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              |
 
 ### `Dayopt-Shared`
 
-| Item                 | Fields                                                                                        | 用途                                                  |
-| -------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `turnstile`          | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile                                  |
-| `anthropic`          | `ANTHROPIC_API_KEY`                                                                           | optional / legacy key。現行runtime consumerなし       |
-| `resend`             | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Email sending                                         |
-| `sentry`             | `SENTRY_AUTH_TOKEN`                                                                           | Product / Web の Production release upload            |
-| `github-contact-pat` | `GITHUB_TOKEN`, `GITHUB_CONTACT_REPO`                                                         | private repository限定のContact form GitHub Issue作成 |
-| `github-login`       | password, TOTP, recovery codes                                                                | GitHub account login                                  |
-| `github-ssh`         | SSH private key                                                                               | GitHub SSH Agent                                      |
-| `vercel`             | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Vercel CLI / future automation                        |
-| `google`             | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                                |
-| `domain`             | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                       |
-| `recovery-codes`     | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側                    |
+| Item                     | Fields                                                                                        | 用途                                                |
+| ------------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `turnstile`              | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile                                |
+| `anthropic`              | `ANTHROPIC_API_KEY`                                                                           | optional / legacy key。現行runtime consumerなし     |
+| `resend`                 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Product / WebのProduction email sending master      |
+| `resend-support-replies` | `RESEND_SMTP_API_KEY`                                                                         | Gmail Send mail as専用。Sending access / domain限定 |
+| `sentry`                 | `SENTRY_AUTH_TOKEN`                                                                           | Product / Web の Production release upload          |
+| `github-login`           | password, TOTP, recovery codes                                                                | GitHub account login                                |
+| `github-ssh`             | SSH private key                                                                               | GitHub SSH Agent                                    |
+| `vercel`                 | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Vercel CLI / future automation                      |
+| `google`                 | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                              |
+| `domain`                 | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                     |
+| `recovery-codes`         | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側                  |
 
 ---
 
@@ -148,6 +151,10 @@ Vercel Production Env は runtime / build 用の replica。1Password を先に�
 
 Vercel Preview の Supabase env vars は Supabase Vercel integration が PR Preview Branch credentials を注入する。Preview scope に production Supabase credentials を手動設定しない。
 
+Contact送信用の`RESEND_API_KEY` / `RESEND_FROM_EMAIL`とapp別`RESEND_WEBHOOK_SECRET`はProduct / WebのProductionだけへ同期する。送信credentialはPreview / Developmentへ置かない。Vercel metadataは`scripts/production-config-audit.mjs`でkey / target / typeだけを確認する。
+
+旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`のVercel replicaと専用PATは、Resendの両Production smokeと30分観察が終わるまで保持する。current schemaの新規作成対象からは外し、観察後に[問い合わせメール運用](./contact-email.md)の順で削除・失効する。
+
 ### GitHub Secrets
 
 GitHub Actions Secrets は CI/CD 用の replica。build / e2e 用 public env などは 1Password から手動同期する。Migration は Supabase GitHub integration が担当するため、GitHub Actions から `supabase db push` しない。
@@ -186,11 +193,11 @@ pnpm vercel:env:pull:unsafe
 
 ---
 
-## Bot Protection
+## Contact Delivery / Bot Protection
 
 Cloudflare Turnstile が canonical provider。`NEXT_PUBLIC_TURNSTILE_SITE_KEY` は app / web の browser 側で使い、`TURNSTILE_SECRET_KEY` は web contact form と Supabase Dashboard replica で使う。
 
-`GITHUB_CONTACT_REPO`はアクセスを制限したprivate repositoryを必須とする。公開repositoryを指定しない。Product / WebはIssue本文を送る前にGitHub APIでvisibilityを検証し、privateを確認できない場合はfail-closedにする。
+Product / Webの問い合わせはProductionだけResendへ送る。From / To / 件名はserver固定、送信者emailはReply-Toだけに使い、app別webhook署名secretを共用しない。Gmailの返信には`resend-support-replies`の専用SMTP keyだけを使う。
 
 reCAPTCHA 関連 env は旧方式。新規設定・docs・example には追加しない。
 
@@ -222,3 +229,4 @@ reCAPTCHA 関連 env は旧方式。新規設定・docs・example には追加�
 - `apps/web/src/lib/turnstile/` — Turnstile 実装
 - `docs/engineering/infra.md` — Supabase / deployment 環境構成
 - `docs/operations/security/environment-secrets.md` — GitHub / Vercel / Supabase replica
+- `docs/operations/contact-email.md` — 問い合わせのDNS / mailbox / release運用

@@ -1,9 +1,10 @@
 import { captureUnexpectedWebError } from '@/platform/observability/capture-unexpected-error';
 
 interface ContactSubmissionPayload {
+  submissionId: string;
   name: string;
   email: string;
-  category: string;
+  category: 'bug' | 'feature' | 'question' | 'other';
   message: string;
   website?: string;
   turnstileToken: string | null;
@@ -19,10 +20,14 @@ class ContactResponseError extends Error {
 /** HTTP responses are observed by the server boundary; only browser transport failures are captured. */
 export async function submitContactRequest(payload: ContactSubmissionPayload): Promise<void> {
   try {
+    const { turnstileToken, ...contactPayload } = payload;
     const response = await fetch('/api/contact', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...contactPayload,
+        ...(turnstileToken ? { turnstileToken } : {}),
+      }),
     });
 
     if (!response.ok) throw new ContactResponseError();
