@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/class-names';
 import { Button, Logo } from '@dayopt/components';
 import { dayoptProductUrls } from '@dayopt/config';
 import { Link, usePathname } from '@dayopt/i18n/navigation';
