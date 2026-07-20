@@ -44,11 +44,11 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
-    "@storybook/addon-docs": "^10.5.0",
-    "@storybook/nextjs-vite": "^10.5.0",
+    "@storybook/addon-docs": "^10.5.2",
+    "@storybook/nextjs-vite": "^10.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "storybook": "^10.5.0",
+    "storybook": "^10.5.2",
     "typescript": "^5"
   }
 }
