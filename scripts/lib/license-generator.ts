@@ -394,6 +394,8 @@ function isPlatformSpecificCredit(credit: Pick<CreditInfo, 'name'>): boolean {
     credit.name.startsWith('@rollup/rollup-') ||
     credit.name.startsWith('@sentry/cli-') ||
     credit.name.startsWith('@swc/core-') ||
+    credit.name.startsWith('@tailwindcss/oxide-') ||
+    credit.name.startsWith('lightningcss-') ||
     credit.name === 'fsevents'
   );
 }

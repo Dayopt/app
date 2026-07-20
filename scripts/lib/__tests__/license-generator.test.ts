@@ -128,6 +128,16 @@ describe('normalizeGeneratedFileForCheck', () => {
           license: 'MIT',
         },
         {
+          name: '@tailwindcss/oxide-linux-x64-gnu',
+          version: '4.3.3',
+          license: 'MIT',
+        },
+        {
+          name: 'lightningcss-linux-x64-gnu',
+          version: '1.30.2',
+          license: 'MPL-2.0',
+        },
+        {
           name: 'react',
           version: '19.2.7',
           license: 'MIT',
@@ -142,6 +152,16 @@ describe('normalizeGeneratedFileForCheck', () => {
           name: '@next/swc-darwin-arm64',
           version: '16.2.9',
           license: 'MIT',
+        },
+        {
+          name: '@tailwindcss/oxide-darwin-arm64',
+          version: '4.3.3',
+          license: 'MIT',
+        },
+        {
+          name: 'lightningcss-darwin-arm64',
+          version: '1.30.2',
+          license: 'MPL-2.0',
         },
         {
           name: 'fsevents',
