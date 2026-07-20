@@ -10,7 +10,7 @@ NOTICE files that must be preserved according to the license terms.
 
 
 ================================================================================
-@apm-js-collab/code-transformer@0.15.0
+@apm-js-collab/code-transformer@0.18.0
 ================================================================================
 
 Orchestrion-JS
