@@ -8,7 +8,7 @@ function validProductionRuntimeEnv(): Partial<EnvConfig> {
     VERCEL_ENV: 'production',
     NEXT_PUBLIC_APP_URL: 'https://dayopt.app',
     RESEND_API_KEY: 'configured',
-    RESEND_FROM_EMAIL: 'noreply@send.dayopt.app',
+    RESEND_FROM_EMAIL: 'noreply@dayopt.app',
     RESEND_WEBHOOK_SECRET: 'configured',
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'site-key',
     TURNSTILE_SECRET_KEY: 'secret-key',
@@ -55,7 +55,7 @@ describe('assertProductionRuntimeEnv', () => {
     const expectedOrder = [
       'NEXT_PUBLIC_APP_URL or VERCEL_URL',
       'RESEND_API_KEY is required',
-      'A verified RESEND_FROM_EMAIL is required',
+      'An apex dayopt.app RESEND_FROM_EMAIL is required',
       'RESEND_WEBHOOK_SECRET is required',
       'NEXT_PUBLIC_SENTRY_DSN is required',
       'SENTRY_DSN is required',
@@ -84,11 +84,12 @@ describe('assertProductionRuntimeEnv', () => {
       'contact@example.com',
       'contact@notdayopt.app',
       'contact@dayopt.app.example.com',
+      'noreply@send.dayopt.app',
     ]) {
       const invalidSender = validProductionRuntimeEnv();
       invalidSender.RESEND_FROM_EMAIL = sender;
       expect(() => assertProductionRuntimeEnv(invalidSender)).toThrow(
-        'A verified RESEND_FROM_EMAIL is required for the Production contact form',
+        'An apex dayopt.app RESEND_FROM_EMAIL is required for the Production contact form',
       );
     }
 

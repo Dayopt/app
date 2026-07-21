@@ -12,7 +12,7 @@ import { z } from 'zod';
 function isDayoptEmailAddress(value: string): boolean {
   const normalized = value.trim().toLowerCase();
   const domain = normalized.slice(normalized.lastIndexOf('@') + 1);
-  return domain === 'dayopt.app' || domain.endsWith('.dayopt.app');
+  return domain === 'dayopt.app';
 }
 
 function isRedirectUriList(value: string | undefined): boolean {
@@ -138,7 +138,7 @@ const serverSchema = z
     },
     {
       message:
-        'RESEND_API_KEY / verified RESEND_FROM_EMAIL / RESEND_WEBHOOK_SECRET はVercel Productionで必須です',
+        'RESEND_API_KEY / apex dayopt.app RESEND_FROM_EMAIL / RESEND_WEBHOOK_SECRET はVercel Productionで必須です',
       path: ['RESEND_API_KEY'],
     },
   );

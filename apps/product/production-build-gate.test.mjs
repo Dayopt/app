@@ -9,7 +9,7 @@ function completeProductionEnv() {
   return {
     VERCEL_ENV: 'production',
     RESEND_API_KEY: 'safe-dummy-key',
-    RESEND_FROM_EMAIL: 'noreply@send.dayopt.app',
+    RESEND_FROM_EMAIL: 'noreply@dayopt.app',
     RESEND_WEBHOOK_SECRET: 'safe-dummy-webhook-secret',
     UPSTASH_REDIS_REST_URL: 'https://example.upstash.io',
     UPSTASH_REDIS_REST_TOKEN: 'safe-dummy-token',
@@ -36,8 +36,8 @@ describe('Product operational production build gate', () => {
     );
   });
 
-  it.each(['contact-sender@dayopt.app', 'noreply@send.dayopt.app'])(
-    'accepts a verified Dayopt sender (%s)',
+  it.each(['contact-sender@dayopt.app', ' NoReply@Dayopt.App '])(
+    'accepts an apex dayopt.app sender (%s)',
     (sender) => {
       expect(
         assertProductOperationalProductionBuildEnv({
@@ -53,6 +53,7 @@ describe('Product operational production build gate', () => {
     'sender@example.com',
     'sender@notdayopt.app',
     'sender@dayopt.app.example.com',
+    'noreply@send.dayopt.app',
     'sender@.dayopt.app',
     'not-an-email',
   ])('rejects an invalid Resend sender (%s)', (sender) => {
@@ -61,18 +62,17 @@ describe('Product operational production build gate', () => {
         ...completeProductionEnv(),
         RESEND_FROM_EMAIL: sender,
       }),
-    ).toThrow('Product production build requires a verified Dayopt RESEND_FROM_EMAIL');
+    ).toThrow('Product production build requires an apex dayopt.app RESEND_FROM_EMAIL');
   });
 
-  it('rejects a Resend sender longer than 254 characters', () => {
-    const oversizedSender = `${'a'.repeat(64)}@${'b'.repeat(59)}.${'c'.repeat(59)}.${'d'.repeat(59)}.dayopt.app`;
-    expect(oversizedSender).toHaveLength(255);
+  it('rejects a Resend sender with a local part longer than 64 characters', () => {
+    const oversizedSender = `${'a'.repeat(65)}@dayopt.app`;
     expect(() =>
       assertProductOperationalProductionBuildEnv({
         ...completeProductionEnv(),
         RESEND_FROM_EMAIL: oversizedSender,
       }),
-    ).toThrow('Product production build requires a verified Dayopt RESEND_FROM_EMAIL');
+    ).toThrow('Product production build requires an apex dayopt.app RESEND_FROM_EMAIL');
   });
 
   it('rejects a malformed Upstash URL before build work starts', () => {

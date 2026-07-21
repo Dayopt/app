@@ -38,7 +38,7 @@ const emailAddressSchema = z
 const senderEmailSchema = emailAddressSchema.refine((value) => {
   const normalized = value.toLowerCase();
   const domain = normalized.slice(normalized.lastIndexOf('@') + 1);
-  return domain === 'dayopt.app' || domain.endsWith('.dayopt.app');
+  return domain === 'dayopt.app';
 });
 const resendSuccessSchema = z.object({ id: z.string().min(1) });
 

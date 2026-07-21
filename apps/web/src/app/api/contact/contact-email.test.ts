@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   env: {
     VERCEL_ENV: 'production' as string | undefined,
     RESEND_API_KEY: 'resend-test-key' as string | undefined,
-    RESEND_FROM_EMAIL: 'noreply@send.dayopt.app' as string | undefined,
+    RESEND_FROM_EMAIL: 'noreply@dayopt.app' as string | undefined,
   },
   fetch: vi.fn(),
 }));
@@ -27,7 +27,7 @@ describe('Web sendContactEmail', () => {
     vi.clearAllMocks();
     mocks.env.VERCEL_ENV = 'production';
     mocks.env.RESEND_API_KEY = 'resend-test-key';
-    mocks.env.RESEND_FROM_EMAIL = 'noreply@send.dayopt.app';
+    mocks.env.RESEND_FROM_EMAIL = 'noreply@dayopt.app';
     mocks.fetch.mockImplementation(async () => Response.json({ id: 'email-1' }));
     vi.stubGlobal('fetch', mocks.fetch);
   });
@@ -54,7 +54,7 @@ describe('Web sendContactEmail', () => {
     });
     const body = JSON.parse(String(request.body)) as Record<string, unknown>;
     expect(body).toEqual({
-      from: 'Dayopt Contact <noreply@send.dayopt.app>',
+      from: 'Dayopt Contact <noreply@dayopt.app>',
       to: ['support@dayopt.app'],
       reply_to: 'private@example.com',
       subject: '[Dayopt Contact][Web][Question]',
@@ -77,7 +77,7 @@ describe('Web sendContactEmail', () => {
     expect(body).not.toHaveProperty('attachments');
   });
 
-  it('also accepts a sender on the apex Dayopt domain', async () => {
+  it('accepts another sender on the verified apex Dayopt domain', async () => {
     mocks.env.RESEND_FROM_EMAIL = 'contact-sender@dayopt.app';
 
     await sendContactEmail(input);
@@ -100,12 +100,13 @@ describe('Web sendContactEmail', () => {
   );
 
   it.each([
-    { key: undefined, from: 'noreply@send.dayopt.app' },
+    { key: undefined, from: 'noreply@dayopt.app' },
     { key: 'resend-test-key', from: undefined },
     { key: 'resend-test-key', from: 'onboarding@resend.dev' },
     { key: 'resend-test-key', from: 'sender@example.com' },
     { key: 'resend-test-key', from: 'sender@notdayopt.app' },
     { key: 'resend-test-key', from: 'sender@dayopt.app.example.com' },
+    { key: 'resend-test-key', from: 'noreply@send.dayopt.app' },
   ])('fails closed for invalid email configuration', async ({ key, from }) => {
     mocks.env.RESEND_API_KEY = key;
     mocks.env.RESEND_FROM_EMAIL = from;

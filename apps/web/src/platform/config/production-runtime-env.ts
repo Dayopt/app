@@ -6,7 +6,7 @@ import { loadEnv } from './load-env';
 function isDayoptEmailAddress(value: string): boolean {
   const normalized = value.trim().toLowerCase();
   const domain = normalized.slice(normalized.lastIndexOf('@') + 1);
-  return domain === 'dayopt.app' || domain.endsWith('.dayopt.app');
+  return domain === 'dayopt.app';
 }
 
 export function assertProductionRuntimeEnv(env: Partial<EnvConfig> = loadEnv()): void {
@@ -30,7 +30,7 @@ export function assertProductionRuntimeEnv(env: Partial<EnvConfig> = loadEnv()):
     senderResult.data.toLowerCase() === 'onboarding@resend.dev' ||
     !isDayoptEmailAddress(senderResult.data)
   ) {
-    errors.push('A verified RESEND_FROM_EMAIL is required for the Production contact form');
+    errors.push('An apex dayopt.app RESEND_FROM_EMAIL is required for the Production contact form');
   }
 
   if (!env.RESEND_WEBHOOK_SECRET?.trim()) {
