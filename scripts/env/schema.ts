@@ -60,9 +60,6 @@ export const envSchema: EnvSchemaEntry[] = [
   envEntry('TURNSTILE_SECRET_KEY', false, 'secret', 'shared', shared, 'turnstile'),
   envEntry('ANTHROPIC_API_KEY', false, 'secret', 'shared', shared, 'anthropic'),
 
-  envEntry('GITHUB_TOKEN', false, 'secret', 'shared', shared, 'github-contact-pat'),
-  envEntry('GITHUB_CONTACT_REPO', false, 'public', 'shared', shared, 'github-contact-pat'),
-
   envEntry('VERCEL_TOKEN', false, 'secret', 'shared', shared, 'vercel'),
   envEntry('VERCEL_TEAM_ID', false, 'public', 'shared', shared, 'vercel'),
   envEntry('VERCEL_PROJECT_ID_STAGING', false, 'public', 'shared', shared, 'vercel'),
@@ -94,6 +91,7 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
     'stripe-live',
   ),
   envEntry('RESEND_WEBHOOK_SECRET', false, 'secret', 'production', production, 'resend'),
+  envEntry('RESEND_WEBHOOK_SECRET', false, 'secret', 'production', production, 'resend-web'),
   envEntry('NEXT_PUBLIC_SENTRY_DSN', true, 'public', 'production', production, 'sentry'),
   envEntry('SENTRY_DSN', true, 'public', 'production', production, 'sentry'),
   envEntry('SENTRY_ORG', true, 'public', 'production', production, 'sentry'),
@@ -112,6 +110,7 @@ export const operationalItems: OperationalItem[] = [
   { vault: shared, item: 'github-login' },
   { vault: shared, item: 'github-ssh' },
   { vault: shared, item: 'domain' },
+  { vault: shared, item: 'resend-support-replies' },
   { vault: shared, item: 'recovery-codes' },
 ];
 

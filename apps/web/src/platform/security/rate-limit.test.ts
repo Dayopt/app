@@ -1,8 +1,7 @@
-import { createHash } from 'node:crypto';
-
 import { describe, expect, it } from 'vitest';
 
 import {
+  getClientIp,
   hashRateLimitIdentifier,
   RateLimitUnavailableError,
   requireAvailableRateLimitResult,
@@ -23,10 +22,21 @@ describe('Web rate-limit privacy and availability contract', () => {
   it('hashes raw IP identifiers before they reach Upstash', async () => {
     const rawIp = '203.0.113.10';
 
-    await expect(hashRateLimitIdentifier(rawIp)).resolves.toBe(
-      createHash('sha256').update(rawIp).digest('hex'),
-    );
-    await expect(hashRateLimitIdentifier(rawIp)).resolves.not.toContain(rawIp);
+    const first = await hashRateLimitIdentifier(rawIp);
+    const second = await hashRateLimitIdentifier(rawIp);
+    expect(first).toBe(second);
+    expect(first).toMatch(/^[a-f0-9]{64}$/u);
+    expect(first).not.toContain(rawIp);
+  });
+
+  it('prefers the Vercel-controlled forwarded IP header', () => {
+    const request = new Request('https://dayopt.app', {
+      headers: {
+        'x-vercel-forwarded-for': '203.0.113.10',
+        'x-forwarded-for': '198.51.100.20',
+      },
+    });
+    expect(getClientIp(request)).toBe('203.0.113.10');
   });
 
   it('rejects the SDK fail-open timeout response', () => {

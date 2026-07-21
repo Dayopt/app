@@ -83,4 +83,17 @@ describe('getLegalDocument', () => {
     expect(getLegalDocument('en', 'privacy').frontMatter.title).toBe('Privacy Policy');
     expect(getLegalDocument('ja', 'privacy').frontMatter.title).toBe('プライバシーポリシー');
   });
+
+  it('問い合わせ配送providerと保持契約を両localeのprivacy文書へ保持する', () => {
+    for (const locale of ['en', 'ja'] as const) {
+      const { content } = getLegalDocument(locale, 'privacy');
+
+      expect(content).toContain('contactData:');
+      expect(content).toContain('resend:');
+      expect(content).toContain('cloudflareEmail:');
+      expect(content).toContain('google:');
+      expect(content).toContain('contact:');
+      expect(content).not.toContain("github: 'GitHub");
+    }
+  });
 });

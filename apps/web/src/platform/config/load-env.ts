@@ -22,12 +22,14 @@ function warnMissingDevEnv(env: Partial<EnvConfig>): void {
     return;
   }
 
-  if (!env.GITHUB_TOKEN) {
-    console.warn('[ENV WARNING] GITHUB_TOKEN is not set. Contact form will not work.');
+  if (env.RESEND_API_KEY || env.RESEND_FROM_EMAIL || env.RESEND_WEBHOOK_SECRET) {
+    console.warn(
+      '[ENV WARNING] Contact Resend configuration is Production-only and is ignored in Development.',
+    );
   }
 
-  const hasTurnstileSite = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-  const hasTurnstileSecret = !!env.TURNSTILE_SECRET_KEY;
+  const hasTurnstileSite = Boolean(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim());
+  const hasTurnstileSecret = Boolean(env.TURNSTILE_SECRET_KEY?.trim());
   if (hasTurnstileSite !== hasTurnstileSecret) {
     console.warn(
       '[ENV WARNING] Both NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY should be set together.',
@@ -56,8 +58,9 @@ export function loadEnv(): EnvConfig {
     NEXT_PUBLIC_SENTRY_DSN: rawEnv.NEXT_PUBLIC_SENTRY_DSN,
     SENTRY_DSN: rawEnv.SENTRY_DSN,
     PRIVACY_PROTECTION_MODE: parsePrivacyMode(rawEnv.PRIVACY_PROTECTION_MODE),
-    GITHUB_TOKEN: rawEnv.GITHUB_TOKEN,
-    GITHUB_CONTACT_REPO: rawEnv.GITHUB_CONTACT_REPO,
+    RESEND_API_KEY: rawEnv.RESEND_API_KEY,
+    RESEND_FROM_EMAIL: rawEnv.RESEND_FROM_EMAIL,
+    RESEND_WEBHOOK_SECRET: rawEnv.RESEND_WEBHOOK_SECRET,
     UPSTASH_REDIS_REST_URL: rawEnv.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: rawEnv.UPSTASH_REDIS_REST_TOKEN,
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: rawEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY,

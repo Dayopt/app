@@ -8,28 +8,47 @@ import {
 function completeProductionEnv() {
   return {
     VERCEL_ENV: 'production',
-    GITHUB_TOKEN: 'configured',
-    GITHUB_CONTACT_REPO: 'Dayopt/contact-private',
+    RESEND_API_KEY: 'safe-dummy-key',
+    RESEND_FROM_EMAIL: 'contact-sender@dayopt.app',
+    RESEND_WEBHOOK_SECRET: 'safe-dummy-webhook-secret',
     UPSTASH_REDIS_REST_URL: 'https://example.upstash.io',
-    UPSTASH_REDIS_REST_TOKEN: 'configured',
+    UPSTASH_REDIS_REST_TOKEN: 'safe-dummy-token',
   };
 }
 
 describe('Product operational production build gate', () => {
-  it('does not require Production-only credentials in Preview or CI', () => {
+  it('skips Preview and non-Vercel CI', () => {
     expect(assertProductOperationalProductionBuildEnv({ VERCEL_ENV: 'preview' })).toBe(false);
     expect(assertProductOperationalProductionBuildEnv({ CI: 'true' })).toBe(false);
   });
 
-  it('lists missing credentials without printing values', () => {
+  it('does not let CI bypass a Vercel Production contract', () => {
+    expect(() =>
+      assertProductOperationalProductionBuildEnv({ VERCEL_ENV: 'production', CI: 'true' }),
+    ).toThrow(`Product production build requires: ${REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV.join(', ')}`);
+  });
+
+  it('lists missing names without printing values', () => {
     expect(() => assertProductOperationalProductionBuildEnv({ VERCEL_ENV: 'production' })).toThrow(
       `Product production build requires: ${REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV.join(', ')}`,
     );
   });
 
-  it('accepts complete Production operational credentials', () => {
+  it('accepts a complete safe Production contract', () => {
     expect(assertProductOperationalProductionBuildEnv(completeProductionEnv())).toBe(true);
   });
+
+  it.each(['onboarding@resend.dev', 'sender@example.com', 'not-an-email'])(
+    'rejects an invalid Resend sender (%s)',
+    (sender) => {
+      expect(() =>
+        assertProductOperationalProductionBuildEnv({
+          ...completeProductionEnv(),
+          RESEND_FROM_EMAIL: sender,
+        }),
+      ).toThrow('Product production build requires a verified Dayopt RESEND_FROM_EMAIL');
+    },
+  );
 
   it('rejects a malformed Upstash URL before build work starts', () => {
     expect(() =>
@@ -38,14 +57,5 @@ describe('Product operational production build gate', () => {
         UPSTASH_REDIS_REST_URL: 'not-a-url',
       }),
     ).toThrow('Product production build requires a valid UPSTASH_REDIS_REST_URL');
-  });
-
-  it('refuses the known public contact repository before build work starts', () => {
-    expect(() =>
-      assertProductOperationalProductionBuildEnv({
-        ...completeProductionEnv(),
-        GITHUB_CONTACT_REPO: 'Dayopt/dayopt',
-      }),
-    ).toThrow('Product production build refuses the public Dayopt/dayopt contact repository');
   });
 });

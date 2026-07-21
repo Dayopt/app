@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-07-21
 code: apps/product/src/features
 ---
 
@@ -438,12 +438,12 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 - error: `ServiceError`（base、subclass なし）
 - skins: tRPC のみ
 
-##### `createGitHubIssue(params)` — L43
+##### `sendContactEmail(params)` / `deliverContactFeedback(params)`
 
-- input: `CreateIssueParams { userId, userEmail, userName, input: ContactFormInput }`
-- output: `Promise<CreateIssueResult { issueUrl, issueNumber }>`
-- error: `ServiceError(GITHUB_API_FAILED)`
-- side effect: **GitHub REST API**（issue 作成）, env vars `GITHUB_TOKEN` / `GITHUB_CONTACT_REPO` 読取
+- input: `ContactEmailParams { userEmail, userName, input: ContactFormInput }`
+- output: `sendContactEmail`は`Promise<void>`、adapterは`Promise<{ delivered: true }>`
+- error: `ServiceError(CONTACT_DELIVERY_FAILED)`またはtimeoutの`Error`
+- side effect: **Resend Email API**（固定To / From / 件名、Reply-To、source tag、idempotency key）, Production envのResend設定読取
 - 注: 原則 4 該当。JSDoc に副作用を明記する。
 
 #### BillingService
@@ -526,10 +526,10 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 
 #### Delta 4: 副作用の JSDoc 明示（全 service 横断）
 
-- 原則 4 違反: side effect を持つ method（特に Stripe / GitHub API を呼ぶもの）の JSDoc に副作用列挙が不徹底。
+- 原則 4 違反: side effect を持つmethod（特にStripe / email APIを呼ぶもの）のJSDocに副作用列挙が不徹底。
 - 対象（"★" を付けていないが原則 4 該当）:
   - `UserService.deleteAccount` — Stripe + Storage + Auth admin + RLS bypass
-  - `ContactService.createGitHubIssue` — GitHub REST API + env vars
+  - `ContactService.sendContactEmail` — Resend Email API + env vars
   - `BillingService.createCheckoutSession` / `createPortalSession` — Stripe API
   - `BillingService.getPaymentMethod` / `getInvoices` / `getBillingOverview` — Stripe API
 - Target: 各 method の JSDoc 冒頭に `@sideEffect` 形式（or 自然文）で外部 I/O を列挙。

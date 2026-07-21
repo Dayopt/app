@@ -35,7 +35,7 @@ const PRIVACY_SECTIONS: readonly SectionLayout[] = [
     blocks: [
       {
         type: 'list',
-        keys: ['accountInfo', 'usageData', 'technicalData', 'cookies'],
+        keys: ['accountInfo', 'usageData', 'contactData', 'technicalData', 'cookies'],
       },
     ],
   },
@@ -52,7 +52,10 @@ const PRIVACY_SECTIONS: readonly SectionLayout[] = [
     key: 'dataSharing',
     blocks: [
       { type: 'paragraph', key: 'intro', position: 'before' },
-      { type: 'list', keys: ['supabase', 'vercel', 'sentry', 'github', 'cloudflare'] },
+      {
+        type: 'list',
+        keys: ['supabase', 'vercel', 'sentry', 'resend', 'cloudflareEmail', 'google', 'cloudflare'],
+      },
       { type: 'note', key: 'note' },
     ],
   },
@@ -78,7 +81,8 @@ const PRIVACY_SECTIONS: readonly SectionLayout[] = [
           'openai',
           'resend',
           'upstash',
-          'github',
+          'cloudflareEmail',
+          'google',
           'cloudflare',
         ],
       },
@@ -118,7 +122,10 @@ const PRIVACY_SECTIONS: readonly SectionLayout[] = [
       },
     ],
   },
-  { key: 'dataRetention', blocks: [{ type: 'list', keys: ['active', 'deleted', 'legal'] }] },
+  {
+    key: 'dataRetention',
+    blocks: [{ type: 'list', keys: ['active', 'deleted', 'contact', 'legal'] }],
+  },
   {
     key: 'userRights',
     blocks: [

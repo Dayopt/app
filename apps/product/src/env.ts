@@ -42,10 +42,6 @@ const serverSchema = z
     RESEND_WEBHOOK_SECRET: z.string().optional(),
     RESEND_FROM_EMAIL: z.string().email().optional(),
 
-    // GitHub
-    GITHUB_TOKEN: z.string().optional(),
-    GITHUB_CONTACT_REPO: z.string().optional(),
-
     // Cloudflare Turnstile (client-side site key only; secret is stored in Supabase Auth Bot Protection)
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
 
@@ -119,6 +115,25 @@ const serverSchema = z
       message:
         'UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN は本番環境では必須です（インメモリfallbackはmulti-replicaで歯抜けになる）',
       path: ['UPSTASH_REDIS_REST_URL'],
+    },
+  )
+  .refine(
+    (data) => {
+      if (!(data.NODE_ENV === 'production' && data.VERCEL_ENV === 'production')) return true;
+
+      const sender = data.RESEND_FROM_EMAIL?.trim().toLowerCase();
+      return Boolean(
+        data.RESEND_API_KEY?.trim() &&
+        data.RESEND_WEBHOOK_SECRET?.trim() &&
+        sender &&
+        sender !== 'onboarding@resend.dev' &&
+        sender.endsWith('@dayopt.app'),
+      );
+    },
+    {
+      message:
+        'RESEND_API_KEY / verified RESEND_FROM_EMAIL / RESEND_WEBHOOK_SECRET はVercel Productionで必須です',
+      path: ['RESEND_API_KEY'],
     },
   );
 

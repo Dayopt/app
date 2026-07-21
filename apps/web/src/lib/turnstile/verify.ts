@@ -4,10 +4,18 @@
  * siteverify endpoint に secret + token を POST し、success boolean を返す。
  */
 
-import { env } from '@/platform/config/env';
+import { dayoptDomains } from '@dayopt/config';
 import { z } from 'zod';
 
+import { env } from '@/platform/config/env';
+
 import { TURNSTILE_CONFIG } from './config';
+
+const TURNSTILE_VERIFY_TIMEOUT_MS = 5_000;
+const PRODUCTION_HOSTNAMES: ReadonlySet<string> = new Set([
+  dayoptDomains.marketing,
+  dayoptDomains.www,
+]);
 
 export interface TurnstileVerifyResponse {
   success: boolean;
@@ -58,6 +66,7 @@ export async function verifyTurnstile(
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
+    signal: AbortSignal.timeout(TURNSTILE_VERIFY_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -67,5 +76,17 @@ export async function verifyTurnstile(
   const parsed = turnstileVerifyResponseSchema.safeParse(await response.json());
   if (!parsed.success)
     throw new Error('Turnstile verification service returned an invalid response');
+  if (parsed.data.success && parsed.data.action !== TURNSTILE_CONFIG.ACTION) {
+    return { success: false, 'error-codes': ['action-mismatch'] };
+  }
+
+  if (
+    parsed.data.success &&
+    env.VERCEL_ENV === 'production' &&
+    (!parsed.data.hostname || !PRODUCTION_HOSTNAMES.has(parsed.data.hostname.toLowerCase()))
+  ) {
+    return { success: false, 'error-codes': ['hostname-mismatch'] };
+  }
+
   return parsed.data;
 }

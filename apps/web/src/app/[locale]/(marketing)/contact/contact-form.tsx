@@ -6,8 +6,8 @@ import { Link } from '@dayopt/i18n/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useRef, useState } from 'react';
+import { Controller, useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
 import { submitContactRequest } from './contact-client';
@@ -16,15 +16,30 @@ const CATEGORY_OPTIONS = ['bug', 'feature', 'question', 'other'] as const;
 
 function createContactSchema(t: (key: string) => string) {
   return z.object({
-    name: z.string().min(1, t('form.name.required')).max(50, t('form.name.maxLength')),
-    email: z.string().min(1, t('form.email.invalid')).email(t('form.email.invalid')),
-    category: z.string().min(1, t('form.category.required')),
+    name: z.string().trim().min(1, t('form.name.required')).max(50, t('form.name.maxLength')),
+    email: z
+      .string()
+      .trim()
+      .min(1, t('form.email.invalid'))
+      .max(254, t('form.email.invalid'))
+      .email(t('form.email.invalid'))
+      .refine((value) => !/[\r\n,]/u.test(value), t('form.email.invalid')),
+    category: z.enum(CATEGORY_OPTIONS, { error: t('form.category.required') }),
     message: z.string().min(10, t('form.message.minLength')).max(1000, t('form.message.maxLength')),
     website: z.string().max(0).optional(),
   });
 }
 
 type ContactFormValues = z.infer<ReturnType<typeof createContactSchema>>;
+
+type SubmissionAttempt = {
+  submissionId: string;
+  payloadKey: string;
+};
+
+function getSubmissionPayloadKey(data: ContactFormValues): string {
+  return JSON.stringify([data.name, data.email, data.category, data.message]);
+}
 
 /** 必須ラベルコンポーネント（デジタル庁ガイドライン準拠） */
 function RequiredBadge() {
@@ -55,6 +70,8 @@ export function ContactForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileAttempt, setTurnstileAttempt] = useState(0);
+  const submissionAttemptRef = useRef<SubmissionAttempt | null>(null);
 
   const turnstileEnabled = isTurnstileEnabled();
   const turnstileLocale: 'ja' | 'en' | 'auto' =
@@ -73,11 +90,10 @@ export function ContactForm() {
     // monorepo (pnpm) で apps/product(zod3) と apps/web(zod4) を併存させているため、
     // @hookform/resolvers の zod adapter が strict 隔離下で型解決できない。
     // ランタイムは正常。zod version 統一は follow-up PR で対応する。
-    resolver: zodResolver(contactSchema as never),
+    resolver: zodResolver(contactSchema as never) as Resolver<ContactFormValues>,
     defaultValues: {
       name: '',
       email: '',
-      category: '',
       message: '',
       website: '',
     },
@@ -87,12 +103,21 @@ export function ContactForm() {
 
   async function onSubmit(data: ContactFormValues) {
     setSubmitError(null);
+    const payloadKey = getSubmissionPayloadKey(data);
+    const previousAttempt = submissionAttemptRef.current;
+    const submissionId =
+      previousAttempt?.payloadKey === payloadKey
+        ? previousAttempt.submissionId
+        : crypto.randomUUID();
+    submissionAttemptRef.current = { submissionId, payloadKey };
 
     try {
-      await submitContactRequest({ ...data, turnstileToken });
+      await submitContactRequest({ ...data, submissionId, turnstileToken });
       setIsSubmitted(true);
     } catch {
       setSubmitError(t('form.submitError'));
+      setTurnstileToken(null);
+      setTurnstileAttempt((attempt) => attempt + 1);
     }
   }
 
@@ -101,6 +126,7 @@ export function ContactForm() {
     setIsSubmitted(false);
     setSubmitError(null);
     setTurnstileToken(null);
+    submissionAttemptRef.current = null;
   }
 
   if (isSubmitted) {
@@ -227,6 +253,7 @@ export function ContactForm() {
       {turnstileEnabled && (
         <div className="flex justify-center">
           <Turnstile
+            key={turnstileAttempt}
             onSuccess={(token) => setTurnstileToken(token)}
             onError={() => setTurnstileToken(null)}
             onExpire={() => setTurnstileToken(null)}

@@ -61,13 +61,26 @@ export function requireAvailableRateLimitResult(result: RatelimitResponse): Rate
   return result;
 }
 
-/** Upstash keyにはraw IP、user ID、tokenを残さず、namespace prefix付きSHA-256だけを渡す。 */
+function bytesToHex(bytes: ArrayBuffer): string {
+  return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/** Upstash keyにはraw IP、user ID、tokenを残さず、secret付きHMACだけを渡す。 */
 export async function hashRateLimitIdentifier(identifier: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(`dayopt-product:${identifier}`),
+  const encoder = new TextEncoder();
+  const value = encoder.encode(`dayopt-product:${identifier}`);
+  const secret = UPSTASH_REDIS_REST_TOKEN?.trim();
+
+  if (!secret) return bytesToHex(await crypto.subtle.digest('SHA-256', value));
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
   );
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return bytesToHex(await crypto.subtle.sign('HMAC', key, value));
 }
 
 function createRateLimiter(
@@ -118,6 +131,84 @@ export const contactRateLimit = createRateLimiter(
   Ratelimit.slidingWindow(5, '1 h'),
   'ratelimit:product:contact',
 );
+
+/** お問い合わせ配送全体の予算上限: 60リクエスト / 1時間。 */
+export const contactGlobalRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(60, '1 h'),
+  'ratelimit:product:contact-global',
+);
+
+const RESEND_WEBHOOK_PROCESSING_SECONDS = 5 * 60;
+/** Resendの自動retryと30日間のmanual replay運用を越えて重複を抑止する。 */
+export const RESEND_WEBHOOK_PROCESSED_SECONDS = 35 * 24 * 60 * 60;
+
+type ResendWebhookClaim =
+  | { status: 'claimed'; token: string }
+  | { status: 'already_processed' }
+  | { status: 'in_progress' };
+
+async function getResendWebhookKey(eventId: string): Promise<string> {
+  return `webhook:product:resend:${await hashRateLimitIdentifier(`resend-event:${eventId}`)}`;
+}
+
+function assertWebhookRedisAvailable(): void {
+  if (!redis && process.env.VERCEL_ENV === 'production') {
+    throw new RateLimitUnavailableError();
+  }
+}
+
+/** Reserve a signed Resend event with a five-minute processing lease. */
+export async function claimResendWebhookEvent(eventId: string): Promise<ResendWebhookClaim> {
+  const token = crypto.randomUUID();
+  assertWebhookRedisAvailable();
+  if (!redis) return { status: 'claimed', token };
+
+  const result = await redis.eval<[string, number], string>(
+    `local current = redis.call('GET', KEYS[1])
+if current == 'processed' then return 'already_processed' end
+if current then return 'in_progress' end
+redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])
+return 'claimed'`,
+    [await getResendWebhookKey(eventId)],
+    [`processing:${token}`, RESEND_WEBHOOK_PROCESSING_SECONDS],
+  );
+
+  if (result === 'claimed') return { status: 'claimed', token };
+  if (result === 'already_processed' || result === 'in_progress') return { status: result };
+  throw new Error('Resend webhook claim returned an invalid state');
+}
+
+/** Mark a fully handled Resend event terminal before acknowledging it. */
+export async function completeResendWebhookEvent(eventId: string, token: string): Promise<void> {
+  assertWebhookRedisAvailable();
+  if (!redis) return;
+
+  const result = await redis.eval<[string, string, number], number>(
+    `if redis.call('GET', KEYS[1]) == ARGV[1] then
+  redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])
+  return 1
+end
+return 0`,
+    [await getResendWebhookKey(eventId)],
+    [`processing:${token}`, 'processed', RESEND_WEBHOOK_PROCESSED_SECONDS],
+  );
+  if (result !== 1) throw new Error('Resend webhook processing lease is no longer owned');
+}
+
+/** Release only the failed processing lease owned by this invocation. */
+export async function releaseResendWebhookEvent(eventId: string, token: string): Promise<void> {
+  assertWebhookRedisAvailable();
+  if (!redis) return;
+
+  await redis.eval<[string], number>(
+    `if redis.call('GET', KEYS[1]) == ARGV[1] then
+  return redis.call('DEL', KEYS[1])
+end
+return 0`,
+    [await getResendWebhookKey(eventId)],
+    [`processing:${token}`],
+  );
+}
 
 /**
  * tRPC protectedProcedure 用レート制限

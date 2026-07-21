@@ -1,11 +1,19 @@
 export const REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV = [
-  'GITHUB_TOKEN',
-  'GITHUB_CONTACT_REPO',
+  'RESEND_API_KEY',
+  'RESEND_FROM_EMAIL',
+  'RESEND_WEBHOOK_SECRET',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
 ];
 
-/** Prevent a Production deploy with pass-through rate limits or public contact PII storage. */
+function isVerifiedDayoptSender(value) {
+  if (typeof value !== 'string') return false;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'onboarding@resend.dev' || !normalized.endsWith('@dayopt.app')) return false;
+  return /^[^\s@]+@[^\s@]+$/u.test(normalized);
+}
+
+/** Prevent a Production deploy with unavailable delivery, monitoring, or abuse controls. */
 export function assertProductOperationalProductionBuildEnv(env) {
   if (env.VERCEL_ENV !== 'production') return false;
 
@@ -16,12 +24,8 @@ export function assertProductOperationalProductionBuildEnv(env) {
     throw new Error(`Product production build requires: ${missingNames.join(', ')}`);
   }
 
-  const githubContactRepo = env.GITHUB_CONTACT_REPO.trim();
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(githubContactRepo)) {
-    throw new Error('Product production build requires a valid GITHUB_CONTACT_REPO');
-  }
-  if (githubContactRepo.toLowerCase() === 'dayopt/dayopt') {
-    throw new Error('Product production build refuses the public Dayopt/dayopt contact repository');
+  if (!isVerifiedDayoptSender(env.RESEND_FROM_EMAIL)) {
+    throw new Error('Product production build requires a verified Dayopt RESEND_FROM_EMAIL');
   }
 
   try {

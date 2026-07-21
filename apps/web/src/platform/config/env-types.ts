@@ -13,8 +13,9 @@ export interface EnvConfig {
   NEXT_PUBLIC_SENTRY_DSN?: string;
   SENTRY_DSN?: string;
   PRIVACY_PROTECTION_MODE?: PrivacyMode;
-  GITHUB_TOKEN?: string;
-  GITHUB_CONTACT_REPO?: string;
+  RESEND_API_KEY?: string;
+  RESEND_FROM_EMAIL?: string;
+  RESEND_WEBHOOK_SECRET?: string;
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
   NEXT_PUBLIC_TURNSTILE_SITE_KEY?: string;

@@ -1,50 +1,33 @@
-/**
- * Contact Service Unit Tests
- */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+const mocks = vi.hoisted(() => ({
+  fetch: vi.fn(),
+  loggerError: vi.fn(),
+}));
 
-// fetch モック
-const mockFetch = vi.fn();
-vi.stubGlobal('fetch', mockFetch);
-
-const mockLoggerError = vi.fn();
 vi.mock('@/lib/logger', () => ({
   logger: {
     log: vi.fn(),
-    error: (...args: unknown[]) => mockLoggerError(...args),
+    error: mocks.loggerError,
     warn: vi.fn(),
     info: vi.fn(),
     debug: vi.fn(),
   },
 }));
 
-const mockCaptureUnexpectedError = vi.fn();
-vi.mock('@/lib/sentry', () => ({
-  captureUnexpectedError: (...args: unknown[]) => mockCaptureUnexpectedError(...args),
-}));
-
-async function importService(envOverrides?: Record<string, string>) {
+async function importService(envOverrides: Record<string, string> = {}) {
   vi.resetModules();
-
-  vi.stubEnv('GITHUB_TOKEN', envOverrides?.GITHUB_TOKEN ?? 'ghp_test_token');
-  vi.stubEnv('GITHUB_CONTACT_REPO', envOverrides?.GITHUB_CONTACT_REPO ?? 'test-owner/test-repo');
-
+  vi.stubEnv('VERCEL_ENV', envOverrides.VERCEL_ENV ?? 'production');
+  vi.stubEnv('RESEND_API_KEY', envOverrides.RESEND_API_KEY ?? 'resend-test-key');
+  vi.stubEnv('RESEND_FROM_EMAIL', envOverrides.RESEND_FROM_EMAIL ?? 'contact-sender@dayopt.app');
   return import('../contact-service');
 }
 
-function mockPrivateRepository(isPrivate = true) {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: () => Promise.resolve({ private: isPrivate }),
-  });
-}
-
 const defaultParams = {
-  userId: 'user-123',
   userEmail: 'test@example.com',
   userName: 'Test User',
   input: {
+    submissionId: '550e8400-e29b-41d4-a716-446655440000',
     category: 'bug' as const,
     message: 'Something is broken',
     environment: {
@@ -57,345 +40,265 @@ const defaultParams = {
   },
 };
 
-describe('createGitHubIssue', () => {
+describe('sendContactEmail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetch.mockImplementation(async () => Response.json({ id: 'email-1' }));
+    vi.stubGlobal('fetch', mocks.fetch);
   });
 
-  it('正常系: GitHub Issue を作成する', async () => {
-    const { createGitHubIssue } = await importService();
-
-    mockPrivateRepository();
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ html_url: 'https://github.com/issues/1', number: 1 }),
-    });
-
-    const result = await createGitHubIssue(defaultParams);
-
-    expect(result).toEqual({
-      issueUrl: 'https://github.com/issues/1',
-      issueNumber: 1,
-    });
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.github.com/repos/test-owner/test-repo/issues',
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          Authorization: 'token ghp_test_token',
-        }),
-      }),
-    );
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
-  it('正常系: Issue 本文にユーザー情報とメッセージが含まれる', async () => {
-    const { createGitHubIssue } = await importService();
+  it('sends a fixed-header plain-text Product contact email', async () => {
+    const { sendContactEmail } = await importService();
 
-    mockPrivateRepository();
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ html_url: 'https://github.com/issues/2', number: 2 }),
+    await sendContactEmail(defaultParams);
+
+    expect(mocks.fetch).toHaveBeenCalledOnce();
+    const [url, request] = mocks.fetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.resend.com/emails');
+    expect(request).toMatchObject({
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer resend-test-key',
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'contact-product-550e8400-e29b-41d4-a716-446655440000',
+      },
+      signal: expect.any(AbortSignal),
     });
-
-    await createGitHubIssue(defaultParams);
-
-    const fetchCall = mockFetch.mock.calls[1]!;
-    const body = JSON.parse((fetchCall[1] as RequestInit).body as string) as {
-      title: string;
-      body: string;
-      labels: string[];
-    };
-
-    expect(body.title).toBe('[App] [Bug] Test User');
-    expect(body.body).toContain('via **Dayopt App**');
-    expect(body.body).toContain('**From:** Test User (test@example.com)');
-    expect(body.body).toContain('`user-123`');
-    expect(body.body).toContain('Something is broken');
-    expect(body.body).toContain('**Environment:**');
-    expect(body.body).toContain('App Version: 0.19.0');
-    expect(body.body).toContain('OS: macOS 15.0');
-    expect(body.body).toContain('Browser: Chrome 120.0');
-    expect(body.body).toContain('Timezone: Asia/Tokyo');
-    expect(body.body).toContain('Language: ja');
-    expect(body.labels).toEqual(['contact', 'feedback', 'app', 'bug']);
+    const body = JSON.parse(String(request.body)) as Record<string, unknown>;
+    expect(body).toEqual({
+      from: 'Dayopt Contact <contact-sender@dayopt.app>',
+      to: ['support@dayopt.app'],
+      reply_to: 'test@example.com',
+      subject: '[Dayopt Contact][Product][Bug]',
+      text: [
+        'Authenticated submission from the Dayopt Product contact form.',
+        '',
+        'Category: Bug',
+        'Name: Test User',
+        'Email: test@example.com',
+        '',
+        'Environment:',
+        '- App Version: 0.19.0',
+        '- OS: macOS 15.0',
+        '- Browser: Chrome 120.0',
+        '- Timezone: Asia/Tokyo',
+        '- Language: ja',
+        '',
+        'Message:',
+        'Something is broken',
+      ].join('\n'),
+      tags: [
+        { name: 'source', value: 'contact-product' },
+        { name: 'category', value: 'bug' },
+      ],
+    });
+    expect(body).not.toHaveProperty('html');
+    expect(body).not.toHaveProperty('headers');
+    expect(body).not.toHaveProperty('attachments');
   });
 
-  it('正常系: カテゴリごとのラベルが正しい', async () => {
-    const { createGitHubIssue } = await importService();
+  it.each(['preview', 'development', ''])(
+    'refuses delivery outside Vercel Production even when credentials exist (%s)',
+    async (vercelEnv) => {
+      const { sendContactEmail } = await importService({ VERCEL_ENV: vercelEnv });
 
+      await expect(sendContactEmail(defaultParams)).rejects.toMatchObject({
+        code: 'CONTACT_DELIVERY_FAILED',
+        message: 'Contact email delivery is available only in Production',
+      });
+      expect(mocks.fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { RESEND_API_KEY: '', RESEND_FROM_EMAIL: 'contact-sender@dayopt.app' },
+    { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: '' },
+    { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: 'onboarding@resend.dev' },
+    { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: 'sender@example.com' },
+  ])('fails closed when email configuration is invalid', async (envOverrides) => {
+    const { sendContactEmail } = await importService(envOverrides);
+
+    await expect(sendContactEmail(defaultParams)).rejects.toMatchObject({
+      code: 'CONTACT_DELIVERY_FAILED',
+      message: 'Contact email configuration is missing or invalid',
+    });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects a reply address that could add another recipient', async () => {
+    const { sendContactEmail } = await importService();
+
+    await expect(
+      sendContactEmail({ ...defaultParams, userEmail: 'a@example.com,b@example.com' }),
+    ).rejects.toMatchObject({
+      code: 'CONTACT_DELIVERY_FAILED',
+      message: 'Contact email reply address is invalid',
+    });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it('maps every category to a fixed non-PII subject', async () => {
+    const { sendContactEmail } = await importService();
     const categories = [
-      { input: 'bug' as const, label: 'Bug' },
-      { input: 'feature' as const, label: 'Feature' },
-      { input: 'question' as const, label: 'Question' },
-      { input: 'other' as const, label: 'Other' },
-    ];
+      ['bug', 'Bug'],
+      ['feature', 'Feature'],
+      ['question', 'Question'],
+      ['other', 'Other'],
+    ] as const;
 
-    for (const { input, label } of categories) {
-      mockPrivateRepository();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ html_url: 'https://github.com/issues/1', number: 1 }),
-      });
-
-      await createGitHubIssue({
+    for (const [category, label] of categories) {
+      await sendContactEmail({
         ...defaultParams,
-        input: {
-          category: input,
-          message: 'Test message for category',
-          environment: defaultParams.input.environment,
-        },
+        input: { ...defaultParams.input, category },
       });
-
-      const fetchCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1]!;
-      const body = JSON.parse((fetchCall[1] as RequestInit).body as string) as {
-        title: string;
-        labels: string[];
-      };
-
-      expect(body.title).toBe(`[App] [${label}] Test User`);
-      expect(body.labels).toContain(input);
-      expect(body.labels).toContain('app');
+      const request = mocks.fetch.mock.calls.at(-1)?.[1] as RequestInit | undefined;
+      const body = JSON.parse(String(request?.body)) as { subject: string };
+      expect(body.subject).toBe(`[Dayopt Contact][Product][${label}]`);
     }
   });
 
-  it('エラー系: GitHub API がエラーを返す', async () => {
-    const { createGitHubIssue } = await importService();
+  it('normalizes a provider-returned error without retaining its body', async () => {
+    const { sendContactEmail } = await importService();
+    mocks.fetch.mockResolvedValue(
+      Response.json(
+        { message: `provider echoed ${defaultParams.userEmail} ${defaultParams.input.message}` },
+        { status: 422 },
+      ),
+    );
 
-    mockPrivateRepository();
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 422,
-      text: () => Promise.resolve('Validation Failed'),
+    const error = await sendContactEmail(defaultParams).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({
+      code: 'CONTACT_DELIVERY_FAILED',
+      message: 'Contact email provider returned an unsuccessful response',
     });
-
-    await expect(createGitHubIssue(defaultParams)).rejects.toThrow('GitHub API error (422)');
+    expect(JSON.stringify(error)).not.toContain(defaultParams.userEmail);
+    expect(JSON.stringify(error)).not.toContain(defaultParams.input.message);
   });
 
-  it('エラー系: 環境変数が未設定', async () => {
-    const { createGitHubIssue } = await importService({
-      GITHUB_TOKEN: '',
-      GITHUB_CONTACT_REPO: '',
-    });
+  it('rejects a malformed successful provider response without an email ID', async () => {
+    const { sendContactEmail } = await importService();
+    mocks.fetch.mockResolvedValue(Response.json({ unexpected: true }));
 
-    await expect(createGitHubIssue(defaultParams)).rejects.toThrow(
-      'GitHub API configuration is missing',
-    );
+    await expect(sendContactEmail(defaultParams)).rejects.toMatchObject({
+      code: 'CONTACT_DELIVERY_FAILED',
+      message: 'Contact email provider returned an unsuccessful response',
+    });
   });
 
-  it('GitHub API向けの必須headerとlabelsとtimeout signalを送る', async () => {
-    const { createGitHubIssue } = await importService();
-    mockPrivateRepository();
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ html_url: 'https://github.com/issues/3', number: 3 }),
-    });
-
-    await createGitHubIssue(defaultParams);
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.github.com/repos/test-owner/test-repo/issues',
-      expect.objectContaining({
-        headers: {
-          Authorization: 'token ghp_test_token',
-          'Content-Type': 'application/json',
-          Accept: 'application/vnd.github.v3+json',
-        },
-        body: expect.any(String),
-      }),
+  it('stops waiting after ten seconds while retaining the idempotency key for retry', async () => {
+    vi.useFakeTimers();
+    const { sendContactEmail } = await importService();
+    mocks.fetch.mockImplementation(
+      (_url: unknown, options: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          if (!(options.signal instanceof AbortSignal)) throw new Error('Missing abort signal');
+          options.signal.addEventListener(
+            'abort',
+            () => reject(new DOMException('The operation was aborted', 'AbortError')),
+            { once: true },
+          );
+        }),
     );
-    const request = mockFetch.mock.calls[1]![1] as RequestInit;
-    expect(JSON.parse(request.body as string)).toMatchObject({
-      labels: ['contact', 'feedback', 'app', 'bug'],
+
+    const delivery = sendContactEmail(defaultParams);
+    const assertion = expect(delivery).rejects.toThrow('Contact email delivery timed out');
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    await assertion;
+    const request = mocks.fetch.mock.calls[0]?.[1] as RequestInit;
+    expect(request.headers).toMatchObject({
+      'Idempotency-Key': 'contact-product-550e8400-e29b-41d4-a716-446655440000',
     });
     expect(request.signal).toBeInstanceOf(AbortSignal);
+    expect(request.signal?.aborted).toBe(true);
   });
 
-  it('複数行とUnicodeを含むmessageをそのまま保持する', async () => {
-    const { createGitHubIssue } = await importService();
-    mockPrivateRepository();
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ html_url: 'https://github.com/issues/4', number: 4 }),
+  it('also aborts when response headers arrive but the response body stalls', async () => {
+    vi.useFakeTimers();
+    const { sendContactEmail } = await importService();
+    mocks.fetch.mockImplementation(async (_url: unknown, options: RequestInit) => {
+      if (!(options.signal instanceof AbortSignal)) throw new Error('Missing abort signal');
+      return {
+        ok: true,
+        json: () =>
+          new Promise((_resolve, reject) => {
+            options.signal?.addEventListener(
+              'abort',
+              () => reject(new DOMException('The operation was aborted', 'AbortError')),
+              { once: true },
+            );
+          }),
+      } as Response;
     });
-    const message = '一行目\n\nSecond line: <script>alert(1)</script>';
 
-    await createGitHubIssue({
-      ...defaultParams,
-      input: { ...defaultParams.input, message },
-    });
+    const delivery = sendContactEmail(defaultParams);
+    const assertion = expect(delivery).rejects.toThrow('Contact email delivery timed out');
+    await vi.advanceTimersByTimeAsync(10_000);
 
-    const request = mockFetch.mock.calls[1]![1] as RequestInit;
-    const body = JSON.parse(request.body as string) as { body: string };
-    expect(body.body).toContain(message);
+    await assertion;
   });
 
-  it('GITHUB_TOKENだけ未設定でもAPIを呼ばない', async () => {
-    const { createGitHubIssue } = await importService({
-      GITHUB_TOKEN: '',
-      GITHUB_CONTACT_REPO: 'test-owner/test-repo',
-    });
+  it('preserves a thrown transport Error for the tRPC adapter capture', async () => {
+    const { sendContactEmail } = await importService();
+    const original = new TypeError('fetch failed');
+    mocks.fetch.mockRejectedValue(original);
 
-    await expect(createGitHubIssue(defaultParams)).rejects.toMatchObject({
-      code: 'GITHUB_API_FAILED',
-    });
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
-
-  it('GITHUB_CONTACT_REPOだけ未設定でもAPIを呼ばない', async () => {
-    const { createGitHubIssue } = await importService({
-      GITHUB_TOKEN: 'ghp_test_token',
-      GITHUB_CONTACT_REPO: '',
-    });
-
-    await expect(createGitHubIssue(defaultParams)).rejects.toMatchObject({
-      code: 'GITHUB_API_FAILED',
-    });
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
-
-  it('network errorを呼び出し元へ伝播する', async () => {
-    const { createGitHubIssue } = await importService();
-    const networkError = new TypeError('fetch failed');
-    mockFetch.mockRejectedValueOnce(networkError);
-
-    await expect(createGitHubIssue(defaultParams)).rejects.toBe(networkError);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('2xxでもGitHub response schemaが不正なら失敗する', async () => {
-    const { createGitHubIssue } = await importService();
-    mockPrivateRepository();
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ html_url: 'not-a-url', number: '1' }),
-    });
-
-    await expect(createGitHubIssue(defaultParams)).rejects.toMatchObject({
-      code: 'GITHUB_API_FAILED',
-      message: 'GitHub API returned an invalid response',
-    });
-  });
-
-  it('repositoryがpublicならcontact PIIをPOSTしない', async () => {
-    const { createGitHubIssue } = await importService();
-    mockPrivateRepository(false);
-
-    await expect(createGitHubIssue(defaultParams)).rejects.toMatchObject({
-      code: 'GITHUB_API_FAILED',
-      message: 'GitHub contact repository must be private',
-    });
-
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls[0]?.[1]).toMatchObject({ method: 'GET' });
-    expect(JSON.stringify(mockFetch.mock.calls)).not.toContain('test@example.com');
-    expect(JSON.stringify(mockFetch.mock.calls)).not.toContain('Something is broken');
-  });
-
-  it('repository設定が不正ならGitHubへ接続しない', async () => {
-    const { createGitHubIssue } = await importService({
-      GITHUB_TOKEN: 'ghp_test_token',
-      GITHUB_CONTACT_REPO: 'not-an-owner-repo',
-    });
-
-    await expect(createGitHubIssue(defaultParams)).rejects.toMatchObject({
-      code: 'GITHUB_API_FAILED',
-      message: 'GitHub contact repository is invalid',
-    });
-    expect(mockFetch).not.toHaveBeenCalled();
+    await expect(sendContactEmail(defaultParams)).rejects.toBe(original);
   });
 });
 
 describe('deliverContactFeedback', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetch.mockImplementation(async () => Response.json({ id: 'email-1' }));
+    vi.stubGlobal('fetch', mocks.fetch);
   });
 
-  it('正常系: 起票成功時は delivered: true と issue 情報を返す', async () => {
-    const { deliverContactFeedback } = await importService();
-
-    mockPrivateRepository();
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ html_url: 'https://github.com/issues/5', number: 5 }),
-    });
-
-    const result = await deliverContactFeedback(defaultParams);
-
-    expect(result).toEqual({
-      delivered: true,
-      issueUrl: 'https://github.com/issues/5',
-      issueNumber: 5,
-    });
-    expect(mockLoggerError).not.toHaveBeenCalled();
-    expect(mockCaptureUnexpectedError).not.toHaveBeenCalled();
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
-  it('GitHub API 失敗時は成功を偽装せず再送可能な例外を返す', async () => {
+  it('returns only the stable delivery result on success', async () => {
     const { deliverContactFeedback } = await importService();
 
-    mockPrivateRepository();
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      text: () => Promise.resolve('Internal Server Error'),
-    });
-
-    await expect(deliverContactFeedback(defaultParams)).rejects.toMatchObject({
-      code: 'GITHUB_API_FAILED',
-    });
+    await expect(deliverContactFeedback(defaultParams)).resolves.toEqual({ delivered: true });
+    expect(mocks.loggerError).not.toHaveBeenCalled();
   });
 
-  it('失敗時のログにフィードバック本文やemailを含めない', async () => {
+  it('logs only technical context and rethrows the original transport Error', async () => {
     const { deliverContactFeedback } = await importService();
+    const original = new TypeError('fetch failed');
+    mocks.fetch.mockRejectedValue(original);
 
-    const networkError = new TypeError('fetch failed');
-    mockFetch.mockRejectedValueOnce(networkError);
+    await expect(deliverContactFeedback(defaultParams)).rejects.toBe(original);
 
-    await expect(deliverContactFeedback(defaultParams)).rejects.toBe(networkError);
-
-    expect(mockLoggerError).toHaveBeenCalledWith('Contact feedback delivery to GitHub failed', {
-      userId: 'user-123',
+    expect(mocks.loggerError).toHaveBeenCalledWith('Contact feedback email delivery failed', {
       category: 'bug',
       errorType: 'TypeError',
     });
-    expect(JSON.stringify(mockLoggerError.mock.calls)).not.toContain('test@example.com');
-    expect(JSON.stringify(mockLoggerError.mock.calls)).not.toContain('Something is broken');
+    expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain(defaultParams.userEmail);
+    expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain(defaultParams.input.message);
+    expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain(defaultParams.userName);
   });
 
-  it('Sentryには元のErrorと技術コンテキストだけを渡す', async () => {
-    const { deliverContactFeedback } = await importService();
-
-    const networkError = new TypeError('fetch failed');
-    mockFetch.mockRejectedValueOnce(networkError);
-
-    await expect(deliverContactFeedback(defaultParams)).rejects.toBe(networkError);
-
-    expect(mockCaptureUnexpectedError).toHaveBeenCalledWith(networkError, {
-      feature: 'contact',
-      source: 'contact',
-      operation: 'github_issue_create',
-      userId: 'user-123',
-    });
-    expect(JSON.stringify(mockCaptureUnexpectedError.mock.calls)).not.toContain('test@example.com');
-    expect(JSON.stringify(mockCaptureUnexpectedError.mock.calls)).not.toContain(
-      'Something is broken',
-    );
-  });
-
-  it('環境変数未設定時も成功扱いにせず本文をログへ退避しない', async () => {
+  it('leaves the tRPC adapter as the single Sentry report boundary', async () => {
     const { deliverContactFeedback } = await importService({
-      GITHUB_TOKEN: '',
-      GITHUB_CONTACT_REPO: '',
+      RESEND_API_KEY: '',
+      RESEND_FROM_EMAIL: '',
     });
 
     await expect(deliverContactFeedback(defaultParams)).rejects.toMatchObject({
-      code: 'GITHUB_API_FAILED',
+      code: 'CONTACT_DELIVERY_FAILED',
     });
-    expect(mockFetch).not.toHaveBeenCalled();
-    expect(mockLoggerError).toHaveBeenCalled();
-    expect(mockCaptureUnexpectedError).toHaveBeenCalled();
-    expect(JSON.stringify(mockLoggerError.mock.calls)).not.toContain('test@example.com');
-    expect(JSON.stringify(mockLoggerError.mock.calls)).not.toContain('Something is broken');
+    expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(mocks.loggerError).toHaveBeenCalledOnce();
   });
 });

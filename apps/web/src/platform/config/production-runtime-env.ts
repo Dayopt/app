@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import { EnvValidationError, type EnvConfig } from './env-types';
 import { loadEnv } from './load-env';
 
@@ -12,12 +14,21 @@ export function assertProductionRuntimeEnv(env: Partial<EnvConfig> = loadEnv()):
     errors.push('NEXT_PUBLIC_APP_URL or VERCEL_URL is required in production environment');
   }
 
-  if (!env.GITHUB_TOKEN) {
-    errors.push('GITHUB_TOKEN is not set. Contact form will not work.');
+  if (!env.RESEND_API_KEY?.trim()) {
+    errors.push('RESEND_API_KEY is required for the Production contact form');
   }
 
-  if (!env.GITHUB_CONTACT_REPO) {
-    errors.push('GITHUB_CONTACT_REPO is required for the private contact repository.');
+  const senderResult = z.string().trim().email().safeParse(env.RESEND_FROM_EMAIL);
+  if (
+    !senderResult.success ||
+    senderResult.data.toLowerCase() === 'onboarding@resend.dev' ||
+    !senderResult.data.toLowerCase().endsWith('@dayopt.app')
+  ) {
+    errors.push('A verified RESEND_FROM_EMAIL is required for the Production contact form');
+  }
+
+  if (!env.RESEND_WEBHOOK_SECRET?.trim()) {
+    errors.push('RESEND_WEBHOOK_SECRET is required for Web contact delivery monitoring');
   }
 
   const requiredSentryEnv = [
@@ -31,11 +42,11 @@ export function assertProductionRuntimeEnv(env: Partial<EnvConfig> = loadEnv()):
     }
   }
 
-  const hasTurnstileSite = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-  const hasTurnstileSecret = !!env.TURNSTILE_SECRET_KEY;
+  const hasTurnstileSite = Boolean(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim());
+  const hasTurnstileSecret = Boolean(env.TURNSTILE_SECRET_KEY?.trim());
   if (!hasTurnstileSite || !hasTurnstileSecret) {
     errors.push(
-      'NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY are required in production.',
+      'NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY are required in Vercel Production.',
     );
   }
 

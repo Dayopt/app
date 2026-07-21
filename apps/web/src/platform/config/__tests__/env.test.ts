@@ -6,11 +6,12 @@ function validProductionRuntimeEnv(): Partial<EnvConfig> {
   return {
     NODE_ENV: 'production',
     VERCEL_ENV: 'production',
-    NEXT_PUBLIC_APP_URL: 'https://dayopt.com',
-    GITHUB_TOKEN: 'configured',
-    GITHUB_CONTACT_REPO: 'Dayopt/contact-private',
-    NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'configured',
-    TURNSTILE_SECRET_KEY: 'configured',
+    NEXT_PUBLIC_APP_URL: 'https://dayopt.app',
+    RESEND_API_KEY: 'configured',
+    RESEND_FROM_EMAIL: 'contact-sender@dayopt.app',
+    RESEND_WEBHOOK_SECRET: 'configured',
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'site-key',
+    TURNSTILE_SECRET_KEY: 'secret-key',
     UPSTASH_REDIS_REST_URL: 'https://example.upstash.io',
     UPSTASH_REDIS_REST_TOKEN: 'configured',
     NEXT_PUBLIC_SENTRY_DSN: 'https://public@example.ingest.sentry.io/1',
@@ -49,8 +50,9 @@ describe('assertProductionRuntimeEnv', () => {
     const message = (thrown as Error).message;
     const expectedOrder = [
       'NEXT_PUBLIC_APP_URL or VERCEL_URL',
-      'GITHUB_TOKEN is not set',
-      'GITHUB_CONTACT_REPO is required',
+      'RESEND_API_KEY is required',
+      'A verified RESEND_FROM_EMAIL is required',
+      'RESEND_WEBHOOK_SECRET is required',
       'NEXT_PUBLIC_SENTRY_DSN is required',
       'SENTRY_DSN is required',
       'NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY',
@@ -62,6 +64,44 @@ describe('assertProductionRuntimeEnv', () => {
       const index = message.indexOf(part);
       expect(index).toBeGreaterThan(previousIndex);
       previousIndex = index;
+    }
+  });
+
+  it('Resend key・検証済みsender・Web固有webhook secretを要求する', () => {
+    const missingKey = validProductionRuntimeEnv();
+    delete missingKey.RESEND_API_KEY;
+    expect(() => assertProductionRuntimeEnv(missingKey)).toThrow(
+      'RESEND_API_KEY is required for the Production contact form',
+    );
+
+    for (const sender of ['onboarding@resend.dev', 'not-an-email', 'contact@example.com']) {
+      const invalidSender = validProductionRuntimeEnv();
+      invalidSender.RESEND_FROM_EMAIL = sender;
+      expect(() => assertProductionRuntimeEnv(invalidSender)).toThrow(
+        'A verified RESEND_FROM_EMAIL is required for the Production contact form',
+      );
+    }
+
+    const missingWebhookSecret = validProductionRuntimeEnv();
+    delete missingWebhookSecret.RESEND_WEBHOOK_SECRET;
+    expect(() => assertProductionRuntimeEnv(missingWebhookSecret)).toThrow(
+      'RESEND_WEBHOOK_SECRET is required for Web contact delivery monitoring',
+    );
+  });
+
+  it('Turnstile keyの空白値を拒否する', () => {
+    for (const [siteKey, secretKey] of [
+      ['', 'secret-key'],
+      ['site-key', ''],
+      ['   ', 'secret-key'],
+      ['site-key', '   '],
+    ] as const) {
+      const invalidKeys = validProductionRuntimeEnv();
+      invalidKeys.NEXT_PUBLIC_TURNSTILE_SITE_KEY = siteKey;
+      invalidKeys.TURNSTILE_SECRET_KEY = secretKey;
+      expect(() => assertProductionRuntimeEnv(invalidKeys)).toThrow(
+        'NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY are required in Vercel Production',
+      );
     }
   });
 
@@ -97,9 +137,9 @@ describe('loadEnv', () => {
     });
   });
 
-  it('development で不足・片側設定を3件 warning する', () => {
+  it('development でProduction専用Resendと片側設定を3件 warning する', () => {
     vi.stubEnv('NODE_ENV', 'development');
-    vi.stubEnv('GITHUB_TOKEN', '');
+    vi.stubEnv('RESEND_API_KEY', 'configured');
     vi.stubEnv('NEXT_PUBLIC_TURNSTILE_SITE_KEY', 'configured');
     vi.stubEnv('TURNSTILE_SECRET_KEY', '');
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://example.upstash.io');
@@ -109,7 +149,9 @@ describe('loadEnv', () => {
     loadEnv();
 
     expect(warn.mock.calls).toEqual([
-      ['[ENV WARNING] GITHUB_TOKEN is not set. Contact form will not work.'],
+      [
+        '[ENV WARNING] Contact Resend configuration is Production-only and is ignored in Development.',
+      ],
       [
         '[ENV WARNING] Both NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY should be set together.',
       ],

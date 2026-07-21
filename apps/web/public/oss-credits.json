@@ -668,6 +668,12 @@
     "repository": "https://github.com/radix-ui/primitives.git"
   },
   {
+    "name": "@react-email/render",
+    "version": "2.1.0",
+    "license": "MIT",
+    "repository": "https://github.com/resend/react-email.git"
+  },
+  {
     "name": "@rollup/plugin-commonjs",
     "version": "28.0.1",
     "license": "MIT",
@@ -694,6 +700,13 @@
     "license": "MIT",
     "repository": "schummar/schummar-translate",
     "publisher": "Marco Schumacher"
+  },
+  {
+    "name": "@selderee/plugin-htmlparser2",
+    "version": "0.11.0",
+    "license": "MIT",
+    "repository": "https://github.com/mxxii/selderee.git",
+    "publisher": "KillyMXI"
   },
   {
     "name": "@sentry/babel-plugin-component-annotate",
@@ -825,6 +838,13 @@
     "license": "MIT",
     "repository": "git://github.com/getsentry/sentry-javascript-bundler-plugins.git",
     "publisher": "Sentry"
+  },
+  {
+    "name": "@stablelib/base64",
+    "version": "1.0.1",
+    "license": "MIT",
+    "repository": "https://github.com/StableLib/stablelib",
+    "publisher": "Dmitry Chestnykh"
   },
   {
     "name": "@standard-schema/utils",
@@ -1377,6 +1397,12 @@
     "publisher": "Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
   },
   {
+    "name": "deepmerge",
+    "version": "4.3.1",
+    "license": "MIT",
+    "repository": "git://github.com/TehShrike/deepmerge.git"
+  },
+  {
     "name": "dequal",
     "version": "2.0.3",
     "license": "MIT",
@@ -1405,6 +1431,34 @@
     "publisher": "Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
   },
   {
+    "name": "dom-serializer",
+    "version": "2.0.0",
+    "license": "MIT",
+    "repository": "git://github.com/cheeriojs/dom-serializer.git",
+    "publisher": "Felix Boehm <me@feedic.com>"
+  },
+  {
+    "name": "domelementtype",
+    "version": "2.3.0",
+    "license": "BSD-2-Clause",
+    "repository": "git://github.com/fb55/domelementtype.git",
+    "publisher": "Felix Boehm <me@feedic.com>"
+  },
+  {
+    "name": "domhandler",
+    "version": "5.0.3",
+    "license": "BSD-2-Clause",
+    "repository": "git://github.com/fb55/domhandler.git",
+    "publisher": "Felix Boehm <me@feedic.com>"
+  },
+  {
+    "name": "domutils",
+    "version": "3.2.2",
+    "license": "BSD-2-Clause",
+    "repository": "git://github.com/fb55/domutils.git",
+    "publisher": "Felix Boehm <me@feedic.com>"
+  },
+  {
     "name": "dotenv",
     "version": "16.6.1",
     "license": "BSD-2-Clause",
@@ -1423,6 +1477,13 @@
     "license": "MIT",
     "repository": "https://github.com/webpack/enhanced-resolve.git",
     "publisher": "Tobias Koppers @sokra"
+  },
+  {
+    "name": "entities",
+    "version": "4.5.0",
+    "license": "BSD-2-Clause",
+    "repository": "git://github.com/fb55/entities.git",
+    "publisher": "Felix Boehm <me@feedic.com>"
   },
   {
     "name": "es-module-lexer",
@@ -1588,6 +1649,13 @@
     "publisher": "Evgeny Poberezkin"
   },
   {
+    "name": "fast-sha256",
+    "version": "1.3.0",
+    "license": "Unlicense",
+    "repository": "https://github.com/dchest/fast-sha256-js",
+    "publisher": "Dmitry Chestnykh"
+  },
+  {
     "name": "fast-uri",
     "version": "3.1.3",
     "license": "BSD-3-Clause",
@@ -1730,6 +1798,27 @@
     "license": "BSD-3-Clause",
     "repository": "git://github.com/highlightjs/highlight.js.git",
     "publisher": "Josh Goebel <hello@joshgoebel.com>"
+  },
+  {
+    "name": "html-to-text",
+    "version": "9.0.5",
+    "license": "MIT",
+    "repository": "git://github.com/html-to-text/node-html-to-text.git",
+    "publisher": "Malte Legenhausen <legenhausen@werk85.de>"
+  },
+  {
+    "name": "html5parser",
+    "version": "3.0.0",
+    "license": "MIT",
+    "repository": "https://github.com/acrazing/html5parser.git",
+    "publisher": "acrazing <joking.young@gmail.com>"
+  },
+  {
+    "name": "htmlparser2",
+    "version": "8.0.2",
+    "license": "MIT",
+    "repository": "git://github.com/fb55/htmlparser2.git",
+    "publisher": "Felix Boehm <me@feedic.com>"
   },
   {
     "name": "https-proxy-agent",
@@ -1889,6 +1978,13 @@
     "license": "MIT",
     "repository": "jonschlinkert/kind-of",
     "publisher": "Jon Schlinkert (https://github.com/jonschlinkert)"
+  },
+  {
+    "name": "leac",
+    "version": "0.6.0",
+    "license": "MIT",
+    "repository": "https://github.com/mxxii/leac.git",
+    "publisher": "KillyMXI"
   },
   {
     "name": "lightningcss-darwin-arm64",
@@ -2471,6 +2567,13 @@
     "publisher": "Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
   },
   {
+    "name": "parseley",
+    "version": "0.12.1",
+    "license": "MIT",
+    "repository": "https://github.com/mxxii/parseley.git",
+    "publisher": "KillyMXI"
+  },
+  {
     "name": "path-exists",
     "version": "4.0.0",
     "license": "MIT",
@@ -2483,6 +2586,13 @@
     "license": "BlueOak-1.0.0",
     "repository": "https://github.com/isaacs/path-scurry",
     "publisher": "Isaac Z. Schlueter <i@izs.me> (https://blog.izs.me)"
+  },
+  {
+    "name": "peberminta",
+    "version": "0.9.0",
+    "license": "MIT",
+    "repository": "https://github.com/mxxii/peberminta.git",
+    "publisher": "KillyMXI"
   },
   {
     "name": "picocolors",
@@ -2520,6 +2630,13 @@
     "publisher": "Jan Amann <jan@amann.work>"
   },
   {
+    "name": "postal-mime",
+    "version": "2.7.4",
+    "license": "MIT-0",
+    "repository": "https://github.com/postalsys/postal-mime.git",
+    "publisher": "Andris Reinman"
+  },
+  {
     "name": "postcss",
     "version": "8.5.19",
     "license": "MIT",
@@ -2532,6 +2649,13 @@
     "license": "MIT",
     "repository": "postcss/postcss",
     "publisher": "Andrey Sitnik <andrey@sitnik.es>"
+  },
+  {
+    "name": "prettier",
+    "version": "3.9.5",
+    "license": "MIT",
+    "repository": "prettier/prettier",
+    "publisher": "James Long"
   },
   {
     "name": "progress",
@@ -2693,6 +2817,12 @@
     "publisher": "Thomas Watson Steen <w@tson.dk> (https://twitter.com/wa7son)"
   },
   {
+    "name": "resend",
+    "version": "6.17.2",
+    "license": "MIT",
+    "repository": "https://github.com/resend/resend-node.git"
+  },
+  {
     "name": "rollup",
     "version": "4.62.2",
     "license": "MIT",
@@ -2720,6 +2850,13 @@
     "publisher": "Jon Schlinkert (https://github.com/jonschlinkert)"
   },
   {
+    "name": "selderee",
+    "version": "0.11.0",
+    "license": "MIT",
+    "repository": "https://github.com/mxxii/selderee.git",
+    "publisher": "KillyMXI"
+  },
+  {
     "name": "semifies",
     "version": "1.0.0",
     "license": "Apache-2.0",
@@ -2739,6 +2876,12 @@
     "license": "ISC",
     "repository": "https://github.com/npm/node-semver.git",
     "publisher": "GitHub Inc."
+  },
+  {
+    "name": "server-only",
+    "version": "0.0.1",
+    "license": "MIT",
+    "repository": "https://reactjs.org/"
   },
   {
     "name": "sharp",
@@ -2801,6 +2944,13 @@
     "license": "MIT",
     "repository": "https://github.com/errwischt/stacktrace-parser.git",
     "publisher": "Georg Tavonius <g.tavonius@gmail.com> (http://jaz-lounge.com)"
+  },
+  {
+    "name": "standardwebhooks",
+    "version": "1.0.0",
+    "license": "MIT",
+    "repository": "https://github.com/standard-webhooks/standard-webhooks",
+    "publisher": "Standard Webhooks"
   },
   {
     "name": "stringify-entities",

@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-16
+last_verified: 2026-07-21
 ---
 
 # Environment Secrets
@@ -23,11 +23,13 @@ Supabase migration の production 適用は GitHub Actions ではなく Supabase
 
 GitHub branch protection では、通常の CI check に加えて Supabase integration の Preview Branch check を required にする。
 
-| Secret                  | 用途                         | 方針                             |
-| ----------------------- | ---------------------------- | -------------------------------- |
-| `CODECOV_TOKEN`         | coverage upload              | CI 用 replica                    |
-| `LHCI_GITHUB_APP_TOKEN` | Lighthouse CI                | CI 用 replica                    |
-| `SUPABASE_ACCESS_TOKEN` | emergency / manual operation | 通常 migration flow では使わない |
+| Secret                  | 用途                         | 方針                                       |
+| ----------------------- | ---------------------------- | ------------------------------------------ |
+| `CODECOV_TOKEN`         | coverage upload              | CI 用 replica                              |
+| `LHCI_GITHUB_APP_TOKEN` | Lighthouse CI                | CI 用 replica                              |
+| `SUPABASE_ACCESS_TOKEN` | emergency / manual operation | 通常 migration flow では使わない           |
+| `VERCEL_TOKEN`          | Production Config Audit      | env metadata読取に限定                     |
+| `VERCEL_ORG_ID`         | Production Config Audit      | 1Password `VERCEL_TEAM_ID`のGitHub replica |
 
 GitHub Actions の通常 build は release / source map upload を行わないため、Sentry metadata と `SENTRY_AUTH_TOKEN` を渡さない。
 
@@ -80,27 +82,29 @@ Production replicaはProductが`Dayopt-Production/sentry`、Webが`Dayopt-Produc
 `product` Preview に production Supabase credentials は見えない。
 Supabase integration 由来の production DB / key も `production` target のみ。
 
-次の server-only secret は Vercel CLI API で `sensitive` に更新済み。
-値は読まず、`vercel api` で env type だけを変更した。
+2026-07-21にVercel APIで値を復号せずkey / target / typeだけを再確認した。Contact移行前の状態は次のとおりで、まだProduction契約を満たさない。
 
-| Project   | Env                         | Production  | Preview     | Development |
-| --------- | --------------------------- | ----------- | ----------- | ----------- |
-| `product` | `SUPABASE_SERVICE_ROLE_KEY` | `sensitive` | n/a         | n/a         |
-| `product` | `RECOVERY_CODE_PEPPER`      | `sensitive` | `encrypted` | `encrypted` |
-| `product` | `RESEND_API_KEY`            | `sensitive` | `encrypted` | `encrypted` |
-| `product` | `RESEND_WEBHOOK_SECRET`     | `sensitive` | n/a         | n/a         |
-| `product` | `SENTRY_AUTH_TOKEN`         | `sensitive` | n/a         | n/a         |
-| `web`     | `SENTRY_AUTH_TOKEN`         | `sensitive` | n/a         | n/a         |
-| `product` | `GITHUB_TOKEN`              | `sensitive` | `encrypted` | `encrypted` |
-| `web`     | `GITHUB_TOKEN`              | `sensitive` | `encrypted` | `encrypted` |
+| Project   | Metadata                                 | 確認結果                                                | Merge前の対応                               |
+| --------- | ---------------------------------------- | ------------------------------------------------------- | ------------------------------------------- |
+| `product` | `RESEND_API_KEY`                         | Production / PreviewはSensitive、DevelopmentはEncrypted | Productionだけへ限定する                    |
+| `product` | `RESEND_FROM_EMAIL`                      | Production / Preview / Developmentに存在                | Productionだけへ限定する                    |
+| `product` | `RESEND_WEBHOOK_SECRET`                  | Production Sensitive                                    | 維持する                                    |
+| `web`     | Resend 3変数                             | いずれも存在しない                                      | Productionへ追加する                        |
+| 両方      | Upstash 2変数                            | Productionに存在                                        | tokenをSensitiveのまま維持する              |
+| `web`     | Turnstile 2変数                          | Productionに存在                                        | secretをSensitiveのまま維持する             |
+| 両方      | 旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO` | Production / Preview / Developmentに残存                | smokeと30分観察後まで保持し、その後削除する |
 
-Preview は `RECOVERY_CODE_PEPPER` を維持する。production mode のenv validation / recovery code処理に必要なためである。`SENTRY_AUTH_TOKEN`はPreviewから削除する。
-実サービスへの書き込み権限を持つ `GITHUB_TOKEN` と `RESEND_API_KEY` は Preview から削除する。
+Contactの目標契約:
 
-Development scope の secret は削除する。local の正規経路は `.op-env.local` + `op run` であり、
-Vercel Development env を replica として使わない。削除前に 1Password master の存在確認を必須とし、
-1Password CLI が未認証の時は変更しない。2026-07-16 の監査でも認証できず、Sentry以外の既存Development secret削除は未適用。
-詳細は [Vercel environment variable scope audit](../log/2026-07-14-vercel-env-scope-audit.md) を参照する。
+- Product / WebのProductionに`RESEND_API_KEY`、`RESEND_FROM_EMAIL`、app別`RESEND_WEBHOOK_SECRET`を置く
+- `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`はSensitive typeかつProduction targetだけにする
+- Product / Webのwebhook secretが異なることはmetadataでは証明できないため、Resend / Vercel dashboardで値を表示せず確認する
+- `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`がPreview / Developmentにあれば`Production Config Audit`を失敗させる
+- 旧GitHub envの不在検査はProduction smoke後に`AUDIT_FORBID_LEGACY_CONTACT_ENV=true`で有効にする
+
+Previewは`RECOVERY_CODE_PEPPER`を維持する。production modeのenv validation / recovery code処理に必要なためである。その他のDevelopment secret cleanupは[#1558](https://github.com/Dayopt/dayopt/issues/1558)のscopeとし、Contact切替と混ぜない。
+
+履歴は[Vercel environment variable scope audit](../log/2026-07-14-vercel-env-scope-audit.md)、Contact切替の手順は[問い合わせメール運用](../contact-email.md)を参照する。
 
 `NEXT_PUBLIC_*` と repository 名などの公開 metadata は secret 扱いにしない。
 `NEXT_PUBLIC_TURNSTILE_SITE_KEY` は public key なので、`sensitive` のままでも事故ではないが必須ではない。
