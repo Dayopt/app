@@ -43,7 +43,7 @@ export function TrackVisual() {
       <div className="flex w-full max-w-[260px] flex-col gap-3">
         {rows.map((row) => (
           <div key={row.label} className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground text-[10px] opacity-60">{row.label}</span>
+            <span className="text-muted-foreground text-[10px]">{row.label}</span>
             <div
               className="bg-primary/20 text-primary flex h-4 items-center rounded-sm px-1.5 text-[9px] font-medium"
               style={{ width: row.planW }}

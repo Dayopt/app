@@ -90,7 +90,7 @@ export function TrackMock() {
             <span className="text-muted-foreground text-xs">Accuracy</span>
             <div className="flex items-center gap-2">
               <span className="text-foreground text-lg font-medium">82%</span>
-              <span className="bg-tag-green/15 text-tag-green rounded-full px-2 py-0.5 text-xs font-medium">
+              <span className="bg-success-tint text-success rounded-full px-2 py-0.5 text-xs font-medium">
                 Good
               </span>
             </div>
