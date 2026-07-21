@@ -128,6 +128,18 @@ Deployment Policies による強制は [判断ログ](./log/2026-07-14-vercel-gi
 
 現在有効な job と依存関係は `.github/workflows/ci.yml` を正とする。ローカルの標準入口は `pnpm check`、個別コマンドは `AGENTS.md` を参照する。
 
+### GitHub品質サービス
+
+GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品質ゲートには採用しない。追加のActions利用・active committer課金を避け、保守性・信頼性の検査は既存のCI、CodeQL、自動コードレビューで担保する。
+
+- Required checksはrepository rulesetと`.github/workflows/ci.yml`を正とし、Code Quality由来のcheckを追加しない
+- セキュリティ静的解析はGitHub CodeQLを継続する
+- Copilotのautomatic first reviewとCodex reviewを継続する
+- カバレッジ閾値が必要になった場合はVitest / CIで直接管理する
+- Code Qualityを再評価する場合は、有効化前にbilling impactと既存品質ゲートとの差分を確認する
+
+判断と2026-07-21時点の外部設定証跡は[判断ログ](./log/2026-07-21-github-code-quality-disabled.md)に記録する。
+
 - `Production Contract`は安全なdummy値だけを使い、Product / WebのProduction build gateがResend、Upstash、Web Turnstileを要求することを検査する
 - `Production Config Audit`はtrusted base revisionのscriptだけを実行し、Vercel APIからenvのkey / target / typeだけを検査する。secret値は取得・出力せず、PR codeへVercel tokenを渡さない
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`はProductionだけをtargetにし、Preview / Developmentへの設定をaudit failureにする
