@@ -38,7 +38,7 @@ export function ThemeToggle() {
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="default" aria-label="Change theme">
           <CurrentIcon className="size-4" />
