@@ -17,7 +17,7 @@ export interface GlobalErrorFailureContext {
   fallbackStyles: string;
   errorName: string;
   errorMessage: string;
-  errorDigest?: string;
+  errorDigest: string | undefined;
   shouldShowDetails: boolean;
 }
 
