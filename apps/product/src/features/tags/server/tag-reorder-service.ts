@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { Database } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { toParentIdsRpcArg } from './tag-rpc-args';
 import { createTagDatabaseError, TagServiceError } from './tag-service-error';
 
 export interface ReorderTagUpdate {
@@ -59,7 +60,7 @@ export class TagReorderService {
       {
         p_user_id: userId,
         p_tag_ids: updates.map((update) => update.id),
-        p_parent_ids: updates.map((update) => update.parent_id) as never,
+        p_parent_ids: toParentIdsRpcArg(updates.map((update) => update.parent_id)),
         p_sort_orders: updates.map((update) => update.sort_order),
       },
     );
