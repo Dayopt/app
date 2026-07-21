@@ -3,7 +3,7 @@ import {
   parseFrontMatter,
   releaseFrontMatterSchema,
 } from '@/lib/content-schemas';
-import { calculateReadingTime } from '@/lib/utils';
+import { calculateReadingTime } from '@/lib/reading-time';
 import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';
