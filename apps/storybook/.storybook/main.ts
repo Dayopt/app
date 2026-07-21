@@ -98,20 +98,10 @@ const config: StorybookConfig = {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...config.resolve.alias,
-      // '@' は product/src 固定だが、apps/web の component も '@/' を使う。product と衝突しない
-      // web 固有パス（product に同一ファイルが無いもの）だけを web/src へ向ける。'@'(product) より
-      // 先に並べて優先させる（Vite alias は配列順で最初の一致を採用）。
-      // ※ importer 起点の汎用 resolver plugin は Storybook の Vite 環境で resolveId が効かず断念。
-      '@/platform': path.resolve(__dirname, '../../web/src/platform'),
-      '@/lib/utils': path.resolve(__dirname, '../../web/src/lib/utils'),
-      '@/components/ui/actions/theme-toggle': path.resolve(
-        __dirname,
-        '../../web/src/components/ui/actions/theme-toggle',
-      ),
-      '@/components/ui/actions/language-switcher': path.resolve(
-        __dirname,
-        '../../web/src/components/ui/actions/language-switcher',
-      ),
+      // '@' は product/src、'@web' は web/src。prefix が別なので product との衝突や
+      // Vite alias の順序依存は発生しない（#1499: apps/web の import alias を '@/' から
+      // '@web/' へ変更し、per-path whitelist を撤廃した）。
+      '@web': path.resolve(__dirname, '../../web/src'),
       '@': path.resolve(__dirname, '../../product/src'),
       '@dayopt/storybook': path.resolve(__dirname),
       // next-intl（React未定義エラー回避）— next/image, next/link, next/navigation は @storybook/nextjs-vite が自動解決

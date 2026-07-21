@@ -1,8 +1,8 @@
 'use client';
 
-import { ContentHeader } from '@/components/content/ContentHeader';
-import { EmptyState } from '@/components/ui/feedback/empty-state';
-import { ContentPagination } from '@/components/ui/navigation/content-pagination';
+import { ContentHeader } from '@web/components/content/ContentHeader';
+import { EmptyState } from '@web/components/ui/feedback/empty-state';
+import { ContentPagination } from '@web/components/ui/navigation/content-pagination';
 import { FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';

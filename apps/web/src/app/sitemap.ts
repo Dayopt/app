@@ -1,9 +1,9 @@
 import { SUPPORTED_LOCALES } from '@dayopt/config';
 
-import { getAllBlogPostMetas } from '@/features/blog';
-import { getAllReleaseMetas } from '@/features/releases';
-import { getAllContent } from '@/lib/mdx';
-import { siteConfig } from '@/platform/seo/metadata';
+import { getAllBlogPostMetas } from '@web/features/blog';
+import { getAllReleaseMetas } from '@web/features/releases';
+import { getAllContent } from '@web/lib/mdx';
+import { siteConfig } from '@web/platform/seo/metadata';
 import { MetadataRoute } from 'next';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

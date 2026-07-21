@@ -6,6 +6,7 @@
  * self-provide して web の common.json（common namespace）を渡す。locale 駆動なので ja / en。
  */
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { page } from '@vitest/browser/context';
 import { NextIntlClientProvider } from 'next-intl';
 import { expect, userEvent, within } from 'storybook/test';
 
@@ -49,6 +50,9 @@ export const MobileMenu: Story = {
     </NextIntlClientProvider>
   ),
   play: async ({ canvasElement }) => {
+    // lg:hidden の Tailwind breakpoint を実際に発火させるため、テスト用 iframe を
+    // モバイル幅にリサイズする（addon-viewport 未導入のため parameters.viewport は効かない）
+    await page.viewport(320, 568);
     const canvas = within(canvasElement);
     const openButton = await canvas.findByRole('button', { name: 'メニューを開く' });
     await userEvent.click(openButton);
@@ -60,6 +64,18 @@ export const MobileMenu: Story = {
 
 /** 全ロケール一覧。 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: {
+      options: {
+        // カタログ表示のため ja/en の Header を2つ並べており、実ページでは
+        // header（banner landmark）は1つのみ描画されるため誤検知
+        rules: {
+          'landmark-no-duplicate-banner': { enabled: false },
+          'landmark-unique': { enabled: false },
+        },
+      },
+    },
+  },
   render: () => (
     <div className="flex flex-col gap-8">
       <NextIntlClientProvider locale="ja" messages={commonJa}>

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/platform/config/env', () => ({
+vi.mock('@web/platform/config/env', () => ({
   env: {
     GOOGLE_SITE_VERIFICATION: 'google-code',
     YANDEX_VERIFICATION: 'yandex-code',

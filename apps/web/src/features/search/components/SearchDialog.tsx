@@ -1,8 +1,8 @@
 'use client';
 
-import { Highlight } from '@/lib/highlight';
-import type { SearchResponse } from '@/types/api';
 import { Badge, Button, Dialog, DialogContent, Input } from '@dayopt/components';
+import { Highlight } from '@web/lib/highlight';
+import type { SearchResponse } from '@web/types/api';
 import { Clock, Edit, FileText, Package, Search, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';

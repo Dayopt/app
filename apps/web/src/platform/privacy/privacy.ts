@@ -1,4 +1,4 @@
-import { env } from '@/platform/config/env';
+import { env } from '@web/platform/config/env';
 
 /**
  * プライバシー保護ユーティリティ

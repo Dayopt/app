@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/platform/config/env', () => ({ isDevelopment: true }));
+vi.mock('@web/platform/config/env', () => ({ isDevelopment: true }));
 
 import { createStructuredError, ErrorCategory, ErrorLevel, logError } from '../structured-error';
 

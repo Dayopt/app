@@ -9,7 +9,7 @@ import {
   cspReportRateLimit,
   getClientIp,
   hashRateLimitIdentifier,
-} from '@/platform/security/rate-limit';
+} from '@web/platform/security/rate-limit';
 
 const MAX_REPORT_BYTES = 16 * 1024;
 const MAX_URI_LENGTH = 4096;

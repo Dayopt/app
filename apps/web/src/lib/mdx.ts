@@ -1,11 +1,11 @@
+import { SUPPORTED_LOCALES } from '@dayopt/config';
 import type {
   ContentCategory,
   ContentCollection,
   ContentData,
   FrontMatter,
   SerializedContent,
-} from '@/types/content';
-import { SUPPORTED_LOCALES } from '@dayopt/config';
+} from '@web/types/content';
 import fs from 'fs';
 import matter from 'gray-matter';
 import { serialize } from 'next-mdx-remote/serialize';

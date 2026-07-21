@@ -1,4 +1,4 @@
-import { generateAnchorId } from '@/features/docs/lib/toc';
+import { generateAnchorId } from '@web/features/docs/lib/toc';
 import type { MDXComponents } from 'mdx/types';
 import Image from 'next/image';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';

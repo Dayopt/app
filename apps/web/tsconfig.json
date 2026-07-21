@@ -19,7 +19,7 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@web/*": ["./src/*"]
     },
     "types": ["node"],
     "forceConsistentCasingInFileNames": true,

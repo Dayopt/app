@@ -1,8 +1,8 @@
 'use client';
 
-import { RootErrorState } from '@/components/errors/RootErrorState';
-import { isDevelopment } from '@/platform/config/env';
-import { captureBoundaryError } from '@/platform/observability/capture-boundary-error';
+import { RootErrorState } from '@web/components/errors/RootErrorState';
+import { isDevelopment } from '@web/platform/config/env';
+import { captureBoundaryError } from '@web/platform/observability/capture-boundary-error';
 import { useEffect } from 'react';
 
 export default function Error({

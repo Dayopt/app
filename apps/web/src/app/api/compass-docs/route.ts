@@ -1,4 +1,4 @@
-import { apiError, apiSuccess, ErrorCode } from '@/platform/api/api-response';
+import { apiError, apiSuccess, ErrorCode } from '@web/platform/api/api-response';
 import { existsSync, readFileSync } from 'fs';
 import { glob } from 'glob';
 import { NextRequest } from 'next/server';

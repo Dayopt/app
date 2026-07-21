@@ -2,14 +2,14 @@ import {
   type BlogFrontMatter,
   blogFrontMatterSchema,
   parseFrontMatter,
-} from '@/lib/content-schemas';
+} from '@web/lib/content-schemas';
 import {
   createStructuredError,
   ErrorCategory,
   ErrorLevel,
   logError,
-} from '@/lib/errors/structured-error';
-import { calculateReadingTime } from '@/lib/reading-time';
+} from '@web/lib/errors/structured-error';
+import { calculateReadingTime } from '@web/lib/reading-time';
 import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';

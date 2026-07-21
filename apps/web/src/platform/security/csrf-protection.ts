@@ -1,5 +1,5 @@
-import { env } from '@/platform/config/env';
 import { dayoptUrls } from '@dayopt/config';
+import { env } from '@web/platform/config/env';
 import { NextRequest } from 'next/server';
 
 /**

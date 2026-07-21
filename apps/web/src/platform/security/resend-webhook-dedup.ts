@@ -2,7 +2,7 @@ import 'server-only';
 
 import { Redis } from '@upstash/redis';
 
-import { env } from '@/platform/config/env';
+import { env } from '@web/platform/config/env';
 
 import { hashRateLimitIdentifier, RateLimitUnavailableError } from './rate-limit';
 

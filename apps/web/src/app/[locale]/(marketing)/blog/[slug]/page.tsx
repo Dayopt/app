@@ -1,4 +1,6 @@
-import { createMDXComponents } from '@/components/content/ContentMDXComponents';
+import { Link } from '@dayopt/i18n/navigation';
+import { routing } from '@dayopt/i18n/routing';
+import { createMDXComponents } from '@web/components/content/ContentMDXComponents';
 import {
   BLOG_CATEGORY_KEYS,
   FilteredBlogClient,
@@ -8,11 +10,9 @@ import {
   isBlogCategoryKey,
   RelatedPosts,
   ShareButton,
-} from '@/features/blog';
-import { TableOfContentsCards } from '@/features/docs';
-import { generateSEOMetadata, siteConfig } from '@/platform/seo/metadata';
-import { Link } from '@dayopt/i18n/navigation';
-import { routing } from '@dayopt/i18n/routing';
+} from '@web/features/blog';
+import { TableOfContentsCards } from '@web/features/docs';
+import { generateSEOMetadata, siteConfig } from '@web/platform/seo/metadata';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { MDXRemote } from 'next-mdx-remote/rsc';

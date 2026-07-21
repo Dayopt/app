@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import {
   needsBrowserTelemetryConsent,
   persistBrowserTelemetryConsent,
-} from '@/platform/privacy/browser-telemetry-consent';
+} from '@web/platform/privacy/browser-telemetry-consent';
 
 interface CookieConsentBannerViewProps {
   title: string;

@@ -2,8 +2,8 @@ import {
   type ReleaseFrontMatter as ReleaseFrontMatterType,
   parseFrontMatter,
   releaseFrontMatterSchema,
-} from '@/lib/content-schemas';
-import { calculateReadingTime } from '@/lib/reading-time';
+} from '@web/lib/content-schemas';
+import { calculateReadingTime } from '@web/lib/reading-time';
 import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';

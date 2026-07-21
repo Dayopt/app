@@ -1,6 +1,6 @@
-import { generateSEOMetadata } from '@/platform/seo/metadata';
 import { Container } from '@dayopt/components';
 import { routing } from '@dayopt/i18n/routing';
+import { generateSEOMetadata } from '@web/platform/seo/metadata';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import dynamic from 'next/dynamic';

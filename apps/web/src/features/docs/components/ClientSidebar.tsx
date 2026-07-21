@@ -1,7 +1,7 @@
 'use client';
 
-import { type NavigationItem, type NavigationSection } from '@/shell/navigation';
 import { Input } from '@dayopt/components';
+import { type NavigationItem, type NavigationSection } from '@web/shell/navigation';
 import { ExternalLink, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';

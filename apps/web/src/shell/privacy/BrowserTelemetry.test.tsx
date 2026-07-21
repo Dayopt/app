@@ -19,7 +19,7 @@ vi.mock('next/dynamic', () => ({
   },
 }));
 
-import { persistBrowserTelemetryConsent } from '@/platform/privacy/browser-telemetry-consent';
+import { persistBrowserTelemetryConsent } from '@web/platform/privacy/browser-telemetry-consent';
 
 import { BrowserTelemetry } from './BrowserTelemetry';
 

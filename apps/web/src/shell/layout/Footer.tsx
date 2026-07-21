@@ -1,10 +1,10 @@
 'use client';
 
-import { LanguageSwitcher } from '@/components/ui/actions/language-switcher';
-import { ThemeToggle } from '@/components/ui/actions/theme-toggle';
 import { Logo } from '@dayopt/components';
 import { dayoptBrand } from '@dayopt/config';
 import { Link } from '@dayopt/i18n/navigation';
+import { LanguageSwitcher } from '@web/components/ui/actions/language-switcher';
+import { ThemeToggle } from '@web/components/ui/actions/theme-toggle';
 import { useTranslations } from 'next-intl';
 
 // SNS Icons

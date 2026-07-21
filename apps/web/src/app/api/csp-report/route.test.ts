@@ -10,7 +10,7 @@ const rateLimit = vi.hoisted(() => ({
 }));
 
 vi.mock('@sentry/nextjs', () => ({ captureMessage: vi.fn() }));
-vi.mock('@/platform/security/rate-limit', () => rateLimit);
+vi.mock('@web/platform/security/rate-limit', () => rateLimit);
 
 import { HEAD, POST } from './route';
 

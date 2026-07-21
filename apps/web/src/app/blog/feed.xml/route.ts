@@ -1,5 +1,5 @@
-import { getAllBlogPostMetas } from '@/features/blog';
-import { siteConfig } from '@/platform/seo/metadata';
+import { getAllBlogPostMetas } from '@web/features/blog';
+import { siteConfig } from '@web/platform/seo/metadata';
 
 export const revalidate = 3600;
 

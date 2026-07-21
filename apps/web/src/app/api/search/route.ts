@@ -1,11 +1,11 @@
-import { apiError, ErrorCode } from '@/platform/api/api-response';
-import { captureUnexpectedWebError } from '@/platform/observability/capture-unexpected-error';
-import { resolveTechnicalRequestId } from '@/platform/observability/technical-error-context';
+import { apiError, ErrorCode } from '@web/platform/api/api-response';
+import { captureUnexpectedWebError } from '@web/platform/observability/capture-unexpected-error';
+import { resolveTechnicalRequestId } from '@web/platform/observability/technical-error-context';
 import {
   getClientIp,
   hashRateLimitIdentifier,
   searchRateLimit,
-} from '@/platform/security/rate-limit';
+} from '@web/platform/security/rate-limit';
 import fs from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';

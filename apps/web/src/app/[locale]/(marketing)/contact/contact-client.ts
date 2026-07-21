@@ -1,4 +1,4 @@
-import { captureUnexpectedWebError } from '@/platform/observability/capture-unexpected-error';
+import { captureUnexpectedWebError } from '@web/platform/observability/capture-unexpected-error';
 
 interface ContactSubmissionPayload {
   submissionId: string;

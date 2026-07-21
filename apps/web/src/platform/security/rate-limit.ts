@@ -1,6 +1,6 @@
-import { env } from '@/platform/config/env';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { env } from '@web/platform/config/env';
 import { PHASE_PRODUCTION_BUILD } from 'next/constants';
 
 /**

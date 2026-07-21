@@ -1,5 +1,5 @@
-import { getAllContent } from '@/lib/mdx';
-import type { ContentData } from '@/types/content';
+import { getAllContent } from '@web/lib/mdx';
+import type { ContentData } from '@web/types/content';
 import { getTranslations } from 'next-intl/server';
 
 export interface NavItem {

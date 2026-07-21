@@ -1,10 +1,10 @@
 'use client';
 
-import { cn } from '@/lib/class-names';
 import { Button, Logo } from '@dayopt/components';
 import { dayoptProductUrls } from '@dayopt/config';
 import { Link, usePathname } from '@dayopt/i18n/navigation';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { cn } from '@web/lib/class-names';
 import { Menu, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';

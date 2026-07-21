@@ -1,5 +1,5 @@
-import { env, getAppUrl } from '@/platform/config/env';
 import { createDayoptUrl, dayoptBrand, dayoptUrls } from '@dayopt/config';
+import { env, getAppUrl } from '@web/platform/config/env';
 import type { Metadata } from 'next';
 
 interface SEOProps {

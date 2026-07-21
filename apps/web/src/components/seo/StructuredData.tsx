@@ -1,4 +1,4 @@
-import { generateStructuredData } from '@/platform/seo/metadata';
+import { generateStructuredData } from '@web/platform/seo/metadata';
 
 type StructuredDataValue =
   | string

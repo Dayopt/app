@@ -1,10 +1,10 @@
-import { DocArticle } from '@/features/docs';
-import { getMDXContentForRSC } from '@/lib/mdx';
-import { generateSEOMetadata } from '@/platform/seo/metadata';
-import { generateDocsNavigation } from '@/shell/navigation';
 import { Heading, Text } from '@dayopt/components';
 import { Link } from '@dayopt/i18n/navigation';
 import { routing } from '@dayopt/i18n/routing';
+import { DocArticle } from '@web/features/docs';
+import { getMDXContentForRSC } from '@web/lib/mdx';
+import { generateSEOMetadata } from '@web/platform/seo/metadata';
+import { generateDocsNavigation } from '@web/shell/navigation';
 import { FileText } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
