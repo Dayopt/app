@@ -17,7 +17,8 @@ import { useEffect } from 'react';
 import { captureClientBoundaryError } from '@/lib/sentry';
 
 import { ErrorButton } from './_global-error/ErrorButton';
-import { ERROR_TEXT, FALLBACK_STYLES } from './_global-error/fallback-content';
+import { buildFailureContext } from './_global-error/failure';
+import { createGlobalErrorActions } from './_global-error/actions';
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -34,11 +35,14 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
     });
   }, [error]);
 
+  const failure = buildFailureContext(error);
+  const actions = createGlobalErrorActions({ reset });
+
   return (
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <style dangerouslySetInnerHTML={{ __html: FALLBACK_STYLES }} />
+        <style dangerouslySetInnerHTML={{ __html: failure.fallbackStyles }} />
       </head>
       <body
         style={{
@@ -81,14 +85,14 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                   marginBottom: '0.5rem',
                 }}
               >
-                {ERROR_TEXT.title}
+                {failure.title}
               </h1>
               <p style={{ color: 'var(--ge-muted)', margin: 0, lineHeight: 1.5 }}>
-                {ERROR_TEXT.description}
+                {failure.description}
               </p>
             </div>
 
-            {error.digest && (
+            {failure.errorDigest && (
               <div
                 style={{
                   backgroundColor: 'var(--ge-card-inset)',
@@ -99,13 +103,13 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 }}
               >
                 <p style={{ color: 'var(--ge-muted)', margin: 0 }}>
-                  {ERROR_TEXT.errorId}:{' '}
-                  <code style={{ fontFamily: 'monospace' }}>{error.digest}</code>
+                  {failure.errorIdLabel}:{' '}
+                  <code style={{ fontFamily: 'monospace' }}>{failure.errorDigest}</code>
                 </p>
               </div>
             )}
 
-            {process.env.NODE_ENV === 'development' && (
+            {failure.shouldShowDetails && (
               <details style={{ marginBottom: '1.5rem' }}>
                 <summary
                   style={{
@@ -115,7 +119,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                     padding: '0.25rem',
                   }}
                 >
-                  {ERROR_TEXT.showDetails}
+                  {failure.showDetailsLabel}
                 </summary>
                 <div
                   style={{
@@ -126,7 +130,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                   }}
                 >
                   <p style={{ fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                    {error.name}
+                    {failure.errorName}
                   </p>
                   <pre
                     style={{
@@ -139,16 +143,16 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                       wordBreak: 'break-word',
                     }}
                   >
-                    {error.message}
+                    {failure.errorMessage}
                   </pre>
                 </div>
               </details>
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <ErrorButton onClick={reset}>{ERROR_TEXT.retry}</ErrorButton>
-              <ErrorButton variant="outline" onClick={() => (window.location.href = '/')}>
-                {ERROR_TEXT.goHome}
+              <ErrorButton onClick={actions.retry}>{failure.retryLabel}</ErrorButton>
+              <ErrorButton variant="outline" onClick={actions.goHome}>
+                {failure.goHomeLabel}
               </ErrorButton>
             </div>
 
@@ -161,7 +165,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 marginBottom: 0,
               }}
             >
-              {ERROR_TEXT.recoveryHint}
+              {failure.recoveryHint}
             </p>
           </div>
         </div>
