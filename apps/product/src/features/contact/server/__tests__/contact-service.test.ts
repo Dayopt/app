@@ -19,7 +19,7 @@ async function importService(envOverrides: Record<string, string> = {}) {
   vi.resetModules();
   vi.stubEnv('VERCEL_ENV', envOverrides.VERCEL_ENV ?? 'production');
   vi.stubEnv('RESEND_API_KEY', envOverrides.RESEND_API_KEY ?? 'resend-test-key');
-  vi.stubEnv('RESEND_FROM_EMAIL', envOverrides.RESEND_FROM_EMAIL ?? 'contact-sender@dayopt.app');
+  vi.stubEnv('RESEND_FROM_EMAIL', envOverrides.RESEND_FROM_EMAIL ?? 'noreply@send.dayopt.app');
   return import('../contact-service');
 }
 
@@ -72,7 +72,7 @@ describe('sendContactEmail', () => {
     });
     const body = JSON.parse(String(request.body)) as Record<string, unknown>;
     expect(body).toEqual({
-      from: 'Dayopt Contact <contact-sender@dayopt.app>',
+      from: 'Dayopt Contact <noreply@send.dayopt.app>',
       to: ['support@dayopt.app'],
       reply_to: 'test@example.com',
       subject: '[Dayopt Contact][Product][Bug]',
@@ -103,6 +103,18 @@ describe('sendContactEmail', () => {
     expect(body).not.toHaveProperty('attachments');
   });
 
+  it('also accepts a sender on the apex Dayopt domain', async () => {
+    const { sendContactEmail } = await importService({
+      RESEND_FROM_EMAIL: 'contact-sender@dayopt.app',
+    });
+
+    await sendContactEmail(defaultParams);
+
+    const request = mocks.fetch.mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(String(request.body)) as { from: string };
+    expect(body.from).toBe('Dayopt Contact <contact-sender@dayopt.app>');
+  });
+
   it.each(['preview', 'development', ''])(
     'refuses delivery outside Vercel Production even when credentials exist (%s)',
     async (vercelEnv) => {
@@ -117,10 +129,12 @@ describe('sendContactEmail', () => {
   );
 
   it.each([
-    { RESEND_API_KEY: '', RESEND_FROM_EMAIL: 'contact-sender@dayopt.app' },
+    { RESEND_API_KEY: '', RESEND_FROM_EMAIL: 'noreply@send.dayopt.app' },
     { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: '' },
     { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: 'onboarding@resend.dev' },
     { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: 'sender@example.com' },
+    { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: 'sender@notdayopt.app' },
+    { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: 'sender@dayopt.app.example.com' },
   ])('fails closed when email configuration is invalid', async (envOverrides) => {
     const { sendContactEmail } = await importService(envOverrides);
 

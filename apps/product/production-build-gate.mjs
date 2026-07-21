@@ -9,8 +9,28 @@ export const REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV = [
 function isVerifiedDayoptSender(value) {
   if (typeof value !== 'string') return false;
   const normalized = value.trim().toLowerCase();
-  if (normalized === 'onboarding@resend.dev' || !normalized.endsWith('@dayopt.app')) return false;
-  return /^[^\s@]+@[^\s@]+$/u.test(normalized);
+  if (normalized.length > 254) return false;
+  if (normalized === 'onboarding@resend.dev') return false;
+
+  const parts = normalized.split('@');
+  if (parts.length !== 2) return false;
+  const [localPart, domain] = parts;
+  if (
+    !localPart ||
+    localPart.length > 64 ||
+    localPart.startsWith('.') ||
+    localPart.endsWith('.') ||
+    localPart.includes('..') ||
+    !/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/u.test(localPart)
+  ) {
+    return false;
+  }
+
+  if (domain !== 'dayopt.app' && !domain.endsWith('.dayopt.app')) return false;
+  return (
+    domain.length <= 253 &&
+    domain.split('.').every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u.test(label))
+  );
 }
 
 /** Prevent a Production deploy with unavailable delivery, monitoring, or abuse controls. */

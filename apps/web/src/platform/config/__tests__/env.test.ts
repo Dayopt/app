@@ -8,7 +8,7 @@ function validProductionRuntimeEnv(): Partial<EnvConfig> {
     VERCEL_ENV: 'production',
     NEXT_PUBLIC_APP_URL: 'https://dayopt.app',
     RESEND_API_KEY: 'configured',
-    RESEND_FROM_EMAIL: 'contact-sender@dayopt.app',
+    RESEND_FROM_EMAIL: 'noreply@send.dayopt.app',
     RESEND_WEBHOOK_SECRET: 'configured',
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'site-key',
     TURNSTILE_SECRET_KEY: 'secret-key',
@@ -27,6 +27,10 @@ afterEach(() => {
 describe('assertProductionRuntimeEnv', () => {
   it('完全な Vercel Production env を受け入れる', () => {
     expect(() => assertProductionRuntimeEnv(validProductionRuntimeEnv())).not.toThrow();
+
+    const apexSender = validProductionRuntimeEnv();
+    apexSender.RESEND_FROM_EMAIL = 'contact-sender@dayopt.app';
+    expect(() => assertProductionRuntimeEnv(apexSender)).not.toThrow();
   });
 
   it('CI と Preview では production secret を要求しない', () => {
@@ -74,7 +78,13 @@ describe('assertProductionRuntimeEnv', () => {
       'RESEND_API_KEY is required for the Production contact form',
     );
 
-    for (const sender of ['onboarding@resend.dev', 'not-an-email', 'contact@example.com']) {
+    for (const sender of [
+      'onboarding@resend.dev',
+      'not-an-email',
+      'contact@example.com',
+      'contact@notdayopt.app',
+      'contact@dayopt.app.example.com',
+    ]) {
       const invalidSender = validProductionRuntimeEnv();
       invalidSender.RESEND_FROM_EMAIL = sender;
       expect(() => assertProductionRuntimeEnv(invalidSender)).toThrow(
