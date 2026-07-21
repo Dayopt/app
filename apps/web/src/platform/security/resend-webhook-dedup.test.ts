@@ -19,6 +19,7 @@ import {
   claimResendWebhookEvent,
   completeResendWebhookEvent,
   releaseResendWebhookEvent,
+  RESEND_WEBHOOK_PROCESSED_SECONDS,
 } from './resend-webhook-dedup';
 
 describe('Web Resend webhook deduplication availability', () => {
@@ -39,5 +40,9 @@ describe('Web Resend webhook deduplication availability', () => {
     await expect(claimResendWebhookEvent('event-1')).rejects.toThrow();
     await expect(completeResendWebhookEvent('event-1', 'lease-1')).rejects.toThrow();
     await expect(releaseResendWebhookEvent('event-1', 'lease-1')).rejects.toThrow();
+  });
+
+  it('retains processed markers beyond the provider replay window', () => {
+    expect(RESEND_WEBHOOK_PROCESSED_SECONDS).toBe(35 * 24 * 60 * 60);
   });
 });

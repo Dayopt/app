@@ -139,7 +139,8 @@ export const contactGlobalRateLimit = createRateLimiter(
 );
 
 const RESEND_WEBHOOK_PROCESSING_SECONDS = 5 * 60;
-const RESEND_WEBHOOK_PROCESSED_SECONDS = 24 * 60 * 60;
+/** Resendの自動retryと30日間のmanual replay運用を越えて重複を抑止する。 */
+export const RESEND_WEBHOOK_PROCESSED_SECONDS = 35 * 24 * 60 * 60;
 
 type ResendWebhookClaim =
   | { status: 'claimed'; token: string }

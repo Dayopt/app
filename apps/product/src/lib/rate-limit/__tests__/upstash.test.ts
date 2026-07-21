@@ -29,6 +29,7 @@ import {
   RateLimitUnavailableError,
   releaseResendWebhookEvent,
   requireAvailableRateLimitResult,
+  RESEND_WEBHOOK_PROCESSED_SECONDS,
   timeblockCreateRateLimit,
   trpcUserRateLimit,
   UPSTASH_COST_ESTIMATE,
@@ -172,5 +173,6 @@ describe('Upstash Rate Limit', () => {
     expect(RATE_LIMIT_PRESETS.search.requests).toBe(30);
     expect(RATE_LIMIT_PRESETS.upload.requests).toBe(10);
     expect(UPSTASH_COST_ESTIMATE.estimatedMonthlyCost).toBe(6);
+    expect(RESEND_WEBHOOK_PROCESSED_SECONDS).toBe(35 * 24 * 60 * 60);
   });
 });

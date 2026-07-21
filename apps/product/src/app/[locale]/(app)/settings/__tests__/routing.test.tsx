@@ -162,6 +162,9 @@ describe('settings route hydration guards', () => {
       'href',
       '/settings/profile?returnTo=%2Fweek%3Fdate%3D2026-06-22%26panel%3Dreview',
     );
+    expect(
+      screen.getByRole('link', { name: 'settings.accountPage.documentation' }),
+    ).toHaveAttribute('href', 'https://dayopt.app/docs');
   });
 
   it('does not redirect desktop category page before mount state is ready', () => {

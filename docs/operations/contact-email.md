@@ -114,6 +114,8 @@ node scripts/production-config-audit.mjs
    - logger / Sentryに問い合わせ本文、氏名、email、raw bodyがない
 5. 30分観察し、新しい配送failure、rate-limit backend error、署名error、重複eventがないことを確認する
 
+processed markerはPIIを含まないevent IDのHMACだけを35日間保持する。これはResendの自動retry期間と通常の30日以内のmanual replayを越える重複排除窓である。35日を過ぎたeventを再投入する場合は、既存Sentry eventを先に確認し、重複通知として扱う。
+
 timeout後の再送やbounce / complaintを実在する第三者addressへ故意に発生させない。必要なfailure検証はunit testまたは所有するtest addressで行う。
 
 ## 5. Releaseと旧経路cleanup

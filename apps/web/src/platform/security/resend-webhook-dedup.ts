@@ -15,7 +15,8 @@ const redis =
     : undefined;
 
 const PROCESSING_SECONDS = 5 * 60;
-const PROCESSED_SECONDS = 24 * 60 * 60;
+/** Resendの自動retryと30日間のmanual replay運用を越えて重複を抑止する。 */
+export const RESEND_WEBHOOK_PROCESSED_SECONDS = 35 * 24 * 60 * 60;
 
 type ResendWebhookClaim =
   | { status: 'claimed'; token: string }
@@ -64,7 +65,7 @@ export async function completeResendWebhookEvent(eventId: string, token: string)
 end
 return 0`,
     [await getWebhookKey(eventId)],
-    [`processing:${token}`, 'processed', PROCESSED_SECONDS],
+    [`processing:${token}`, 'processed', RESEND_WEBHOOK_PROCESSED_SECONDS],
   );
   if (result !== 1) throw new Error('Resend webhook processing lease is no longer owned');
 }
