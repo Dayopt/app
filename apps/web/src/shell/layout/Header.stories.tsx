@@ -8,7 +8,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { NextIntlClientProvider } from 'next-intl';
 import { expect, userEvent, within } from 'storybook/test';
-import { page } from 'vitest/browser';
 
 import commonEn from '../../../messages/en/common.json';
 import commonJa from '../../../messages/ja/common.json';
@@ -51,8 +50,16 @@ export const MobileMenu: Story = {
   ),
   play: async ({ canvasElement }) => {
     // lg:hidden の Tailwind breakpoint を実際に発火させるため、テスト用 iframe を
-    // モバイル幅にリサイズする（addon-viewport 未導入のため parameters.viewport は効かない）
-    await page.viewport(320, 568);
+    // モバイル幅にリサイズする（addon-viewport 未導入のため parameters.viewport は効かない）。
+    // vitest/browser は Vitest Browser Mode 専用で、通常の Storybook（pnpm storybook /
+    // build-storybook）からは import できずモジュール読み込み自体が失敗するため、
+    // 動的 import + try/catch でガードし test-storybook 実行時のみリサイズする
+    try {
+      const { page } = await import('vitest/browser');
+      await page.viewport(320, 568);
+    } catch {
+      // 通常の Storybook では viewport をリサイズできないため、実ブラウザ幅に委ねる
+    }
     const canvas = within(canvasElement);
     const openButton = await canvas.findByRole('button', { name: 'メニューを開く' });
     await userEvent.click(openButton);
