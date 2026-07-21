@@ -1,6 +1,9 @@
 ---
-status: current
-updated: 2026-07-21
+status: frozen
+date: 2026-07-21
+code:
+  - apps/storybook/.storybook/main.ts
+  - apps/web/tsconfig.json
 ---
 
 # apps/web の import alias を '@/' から '@web/' へ変更する（Storybook whitelist の恒久対応）
