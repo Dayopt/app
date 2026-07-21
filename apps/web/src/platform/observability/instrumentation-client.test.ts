@@ -41,6 +41,7 @@ describe('Web browser Sentry consent lifecycle', () => {
   });
 
   afterEach(() => {
+    delete window.__DAYOPT_WEB_SENTRY_SMOKE__;
     reloadSpy.mockRestore();
     vi.unstubAllEnvs();
   });
@@ -55,6 +56,23 @@ describe('Web browser Sentry consent lifecycle', () => {
     expect(options?.integrations).toEqual([{ name: 'browser-tracing' }]);
     expect(options).not.toHaveProperty('replaysSessionSampleRate');
     expect(options).not.toHaveProperty('replaysOnErrorSampleRate');
+    const tracesSampler = options?.tracesSampler as (context: {
+      name: string;
+      inheritOrSampleWith: (sampleRate: number) => number;
+    }) => number;
+    expect(
+      tracesSampler({
+        name: 'operator.sentry_smoke.browser',
+        inheritOrSampleWith: (sampleRate) => sampleRate,
+      }),
+    ).toBe(1);
+    expect(
+      tracesSampler({
+        name: 'GET /[locale]',
+        inheritOrSampleWith: (sampleRate) => sampleRate,
+      }),
+    ).toBe(0.1);
+    expect(window.__DAYOPT_WEB_SENTRY_SMOKE__).toBeTypeOf('function');
 
     persistAndNotify(true);
     expect(sentry.init).toHaveBeenCalledTimes(1);
@@ -62,6 +80,7 @@ describe('Web browser Sentry consent lifecycle', () => {
     persistAndNotify(false);
     expect(sentry.clientOptions.enabled).toBe(false);
     expect(reloadSpy).toHaveBeenCalledTimes(1);
+    expect(window.__DAYOPT_WEB_SENTRY_SMOKE__).toBeUndefined();
 
     persistAndNotify(true);
     expect(sentry.clientOptions.enabled).toBe(false);
@@ -102,5 +121,6 @@ describe('Web browser Sentry consent lifecycle', () => {
     await import('../../../instrumentation-client');
 
     expect(sentry.init).not.toHaveBeenCalled();
+    expect(window.__DAYOPT_WEB_SENTRY_SMOKE__).toBeUndefined();
   });
 });
