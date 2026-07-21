@@ -1,0 +1,145 @@
+---
+title: 'Cookie Policy'
+description: 'How Dayopt uses cookies and similar technologies'
+lastUpdated: 'Last Updated: 2026-07-17'
+---
+
+<CookieDocument
+  data={{
+    sections: {
+      introduction: {
+        title: 'Introduction',
+        content:
+          'This Cookie Policy explains how Dayopt ("we", "us", or "our") uses cookies and similar technologies when you visit or use our Service. It explains what these technologies are, why we use them, and your rights to control our use of them. This policy should be read together with our Privacy Policy.',
+      },
+      whatAreCookies: {
+        title: 'What Are Cookies',
+        content:
+          'Cookies are small text files that are placed on your device (computer, tablet, or mobile phone) when you visit a website. They are widely used to make websites work more efficiently, provide a better user experience, and supply information to site owners. Cookies can be "persistent" (remain on your device until they expire or are deleted) or "session" (deleted when you close your browser).',
+      },
+      categories: {
+        title: 'Cookie Categories',
+        essential: {
+          name: 'Essential Cookies',
+          description:
+            'These cookies are strictly necessary for the Service to function. They enable core features such as authentication, session management, and security protection. The Service cannot operate properly without these cookies.',
+          examples: 'Authentication tokens, CSRF protection, session management',
+        },
+        analytics: {
+          name: 'Analytics Cookies',
+          description:
+            'These optional cookies and similar browser technologies help us diagnose browser errors and understand performance and usage. Browser Sentry, Vercel Analytics, and Speed Insights start only after analytics consent. Session Replay is disabled.',
+          examples: 'Browser errors, page views, and performance metrics',
+        },
+        preference: {
+          name: 'Preference Cookies',
+          description:
+            'These cookies remember your settings and preferences to provide a personalized experience. They are set when you change a setting and persist across sessions.',
+          examples: 'Language preference, theme selection (light/dark mode), display settings',
+        },
+        marketing: {
+          name: 'Marketing Cookies',
+          description:
+            'These cookies are used to deliver relevant advertisements and track the effectiveness of marketing campaigns.',
+          note: 'Dayopt does not currently use marketing cookies. If this changes in the future, we will update this policy and request your consent.',
+        },
+      },
+      specificCookies: {
+        title: 'Specific Cookies We Use',
+        headerName: 'Cookie Name',
+        headerProvider: 'Provider',
+        headerPurpose: 'Purpose',
+        headerCategory: 'Category',
+        headerDuration: 'Duration',
+        supabaseAuth: {
+          name: 'sb-*-auth-token',
+          provider: 'Supabase',
+          purpose: 'Maintains your authenticated session',
+          category: 'Essential',
+          duration: 'Session',
+        },
+        nextLocale: {
+          name: 'NEXT_LOCALE',
+          provider: 'Next.js',
+          purpose: 'Stores your language preference',
+          category: 'Preference',
+          duration: '1 year',
+        },
+        theme: {
+          name: 'theme',
+          provider: 'Dayopt',
+          purpose: 'Stores your theme preference (light/dark/system)',
+          category: 'Preference',
+          duration: '1 year',
+        },
+        cookieConsent: {
+          name: 'dayopt_cookie_consent (local storage)',
+          provider: 'Dayopt',
+          purpose: 'Records your cookie consent preferences',
+          category: 'Essential',
+          duration: 'Until cleared',
+        },
+        vercelAnalytics: {
+          name: 'va_*',
+          provider: 'Vercel',
+          purpose: 'Vercel Analytics and Speed Insights after analytics consent',
+          category: 'Analytics',
+          duration: 'Session',
+        },
+        turnstile: {
+          name: 'Cloudflare Turnstile browser technology',
+          provider: 'Cloudflare',
+          purpose:
+            'Bot protection and spam prevention on forms; a verification token and IP address are processed by Cloudflare',
+          category: 'Essential',
+          duration: 'Per verification; provider-controlled',
+        },
+      },
+      thirdParty: {
+        title: 'Third-Party Cookies',
+        content:
+          'Some third-party services process essential server diagnostics or use optional cookies and similar browser technologies. Optional browser telemetry does not start unless you give analytics consent.',
+        vercel:
+          'Vercel — Hosting and delivery remain available without analytics consent. Vercel Analytics and Speed Insights run in the browser only after analytics consent.',
+        sentry:
+          'Sentry — Sanitized Production server and edge error monitoring runs regardless of analytics consent. Browser Sentry runs only after analytics consent. Session Replay is disabled because the current SDK cannot guarantee removal of URL query strings from Replay payloads. Product and Website data are kept in separate Sentry projects. Sentry events exclude request bodies, email addresses, URL query strings, cookies, and authorization credentials.',
+        turnstile:
+          "Cloudflare Turnstile — Essential bot protection on forms. A verification token and the requester's IP address are sent to Cloudflare. Cloudflare may use necessary browser storage and device signals under its Privacy Policy.",
+        note: "Please refer to each provider's privacy policy for more information about its processing and use of browser technologies.",
+      },
+      manageCookies: {
+        title: 'How to Manage Cookies',
+        intro:
+          'You can control and manage cookies through your browser settings. Please note that removing or blocking certain cookies may impact your experience and the functionality of the Service.',
+        chrome: 'Google Chrome: Settings > Privacy and Security > Cookies and other site data',
+        firefox: 'Mozilla Firefox: Settings > Privacy & Security > Cookies and Site Data',
+        safari: 'Safari: Preferences > Privacy > Manage Website Data',
+        edge: 'Microsoft Edge: Settings > Privacy, search, and services > Cookies and site permissions',
+      },
+      impact: {
+        title: 'Impact of Disabling Cookies',
+        content:
+          'If you disable essential cookies, you will not be able to log in or use core features of the Service. Disabling preference cookies means your settings (such as language and theme) will not be remembered between sessions. Declining analytics does not affect core features; browser Sentry, Vercel Analytics, and Speed Insights do not start. Session Replay is disabled. Sanitized Production server and edge error monitoring remains active to diagnose service failures.',
+      },
+      doNotTrack: {
+        title: 'Do Not Track Signals',
+        content:
+          'Some browsers offer a "Do Not Track" (DNT) setting that sends a signal to websites requesting that your browsing activity not be tracked. There is currently no universally accepted standard for how to respond to DNT signals. We do not currently respond to DNT signals, but we limit our use of tracking technologies to essential and analytics purposes as described in this policy. We do not engage in cross-site tracking or sell your data to third parties.',
+      },
+      changes: {
+        title: 'Updates to This Policy',
+        content:
+          'We may update this Cookie Policy from time to time to reflect changes in technology, regulation, or our business practices. We will notify you of any material changes by posting the updated policy on this page with a revised "Last Updated" date.',
+      },
+      contact: {
+        title: 'Contact Us',
+        content: 'If you have questions about our use of cookies, please contact us at:',
+      },
+    },
+    contactLabels: {
+      email: 'Email',
+      website: 'Website',
+    },
+    privacyLinkLabel: 'Privacy Policy',
+  }}
+/>

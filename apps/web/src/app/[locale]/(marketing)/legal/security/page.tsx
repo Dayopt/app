@@ -1,32 +1,25 @@
 import type { Locale } from '@dayopt/i18n/routing';
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
 
-import { SecurityContent } from './security-content';
+import { LegalDocument } from '../_components/LegalDocument';
+import { getLegalDocument } from '../_lib/legal-content';
 
-// ISR: 法的ページは1日ごとに再検証
 export const revalidate = 86400;
 
-/**
- * メタデータ生成（SEO対策）
- */
-interface MetadataProps {
+interface PageProps {
   params: Promise<{ locale?: Locale }>;
 }
 
-export async function generateMetadata({ params }: MetadataProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale = 'ja' } = await params;
-  const t = await getTranslations({ locale });
-
+  const { frontMatter } = getLegalDocument(locale, 'security');
   return {
-    title: `${t('legal.security.header.title')} - Dayopt`,
-    description: t('legal.security.header.description'),
+    title: `${frontMatter.title} - Dayopt`,
+    description: frontMatter.description,
   };
 }
 
-/**
- * セキュリティポリシーページ（Server Component）
- */
-export default function SecurityPage() {
-  return <SecurityContent />;
+export default async function SecurityPage({ params }: PageProps) {
+  const { locale = 'ja' } = await params;
+  return <LegalDocument locale={locale} slug="security" />;
 }

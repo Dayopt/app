@@ -1,5 +1,5 @@
 import { generateEnhancedMetadata, StructuredData } from '@/components/seo/EnhancedSEO';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/class-names';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
 import { Toaster } from '@dayopt/components';
 import { dayoptBrand, dayoptContact } from '@dayopt/config';

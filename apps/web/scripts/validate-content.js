@@ -23,20 +23,30 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const REQUIRED_FIELDS = {
   blog: ['title', 'description', 'publishedAt', 'tags', 'category', 'author'],
   docs: ['title', 'description', 'category', 'slug'],
+  legal: ['title', 'description', 'lastUpdated'],
   releases: ['version', 'date', 'title', 'description', 'tags', 'breaking', 'featured'],
 };
 
 const DATE_FIELDS = {
   blog: ['publishedAt', 'updatedAt'],
   docs: ['publishedAt', 'updatedAt'],
+  legal: [],
   releases: ['date'],
 };
 
+export const REQUIRED_LEGAL_DOCUMENTS = [
+  'cookies.mdx',
+  'privacy.mdx',
+  'security.mdx',
+  'terms.mdx',
+  'tokushoho.mdx',
+];
+
 // ─── フロントマターパーサー ─────────────────────────────────
 
-function parseFrontMatter(content) {
+export function parseFrontMatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!match) return { data: {} };
+  if (!match) return { data: {}, body: content };
 
   const yaml = match[1];
   const data = {};
@@ -73,6 +83,7 @@ function parseFrontMatter(content) {
 
       if (rawValue === '' || rawValue === null) {
         arrayMode = true;
+        data[currentKey] = null;
       } else if (rawValue === 'true') {
         data[currentKey] = true;
       } else if (rawValue === 'false') {
@@ -87,19 +98,27 @@ function parseFrontMatter(content) {
     }
   }
 
-  return { data };
+  return { data, body: content.slice(match[0].length) };
 }
 
 // ─── バリデーション ─────────────────────────────────────────
 
-function validateFrontMatter(fm, type, isDraft) {
+export function validateFrontMatter(fm, type, isDraft) {
   const errors = [];
   const warnings = [];
-  const report = isDraft ? warnings : errors;
+  const report = type === 'legal' || !isDraft ? errors : warnings;
 
   for (const field of REQUIRED_FIELDS[type]) {
     if (fm[field] === undefined || fm[field] === null || fm[field] === '') {
       report.push(`Missing required field: '${field}'`);
+    }
+  }
+
+  if (type === 'legal') {
+    for (const field of Object.keys(fm)) {
+      if (!REQUIRED_FIELDS.legal.includes(field)) {
+        report.push(`Unexpected legal frontmatter field: '${field}'`);
+      }
     }
   }
 
@@ -110,7 +129,7 @@ function validateFrontMatter(fm, type, isDraft) {
     }
   }
 
-  if (type !== 'docs') {
+  if (type !== 'docs' && type !== 'legal') {
     const tags = fm.tags;
     if (Array.isArray(tags)) {
       if (tags.length > 0 && tags.length < 3) {
@@ -122,11 +141,15 @@ function validateFrontMatter(fm, type, isDraft) {
     }
   }
 
-  if (!fm.ai) {
+  if (type !== 'legal' && !fm.ai) {
     warnings.push(`'ai' metadata not set (recommended for RAG)`);
   }
 
   return { errors, warnings };
+}
+
+export function validateLegalBody(body) {
+  return body.trim() ? [] : ['Legal document content must not be empty'];
 }
 
 // ─── ファイルスキャン ───────────────────────────────────────
@@ -149,11 +172,11 @@ function findMdxFiles(dir) {
 // ─── 言語対称性チェック ─────────────────────────────────────
 
 function checkLanguageSymmetry(type) {
-  const warnings = [];
+  const issues = [];
   const enDir = path.join(CONTENT_DIR, type, 'en');
   const jaDir = path.join(CONTENT_DIR, type, 'ja');
 
-  if (!fs.existsSync(enDir) || !fs.existsSync(jaDir)) return warnings;
+  if (!fs.existsSync(enDir) || !fs.existsSync(jaDir)) return issues;
 
   const enFiles = findMdxFiles(enDir).map((f) => path.relative(enDir, f).replace(/\\/g, '/'));
   const jaFiles = new Set(
@@ -162,17 +185,39 @@ function checkLanguageSymmetry(type) {
 
   for (const enFile of enFiles) {
     if (!jaFiles.has(enFile)) {
-      warnings.push(`Missing ja counterpart: content/${type}/en/${enFile}`);
+      issues.push(`Missing ja counterpart: content/${type}/en/${enFile}`);
     }
   }
 
-  return warnings;
+  if (type === 'legal') {
+    const enFileSet = new Set(enFiles);
+    for (const jaFile of jaFiles) {
+      if (!enFileSet.has(jaFile)) {
+        issues.push(`Missing en counterpart: content/${type}/ja/${jaFile}`);
+      }
+    }
+  }
+
+  return issues;
+}
+
+function checkRequiredLegalDocuments() {
+  const errors = [];
+  for (const locale of ['en', 'ja']) {
+    const localeDir = path.join(CONTENT_DIR, 'legal', locale);
+    for (const file of REQUIRED_LEGAL_DOCUMENTS) {
+      if (!fs.existsSync(path.join(localeDir, file))) {
+        errors.push(`Missing required legal document: content/legal/${locale}/${file}`);
+      }
+    }
+  }
+  return errors;
 }
 
 // ─── メイン ────────────────────────────────────────────────
 
 function main() {
-  const types = ['blog', 'docs', 'releases'];
+  const types = ['blog', 'docs', 'legal', 'releases'];
   let totalFiles = 0;
   let totalErrors = 0;
   let totalWarnings = 0;
@@ -182,19 +227,30 @@ function main() {
     const typeDir = path.join(CONTENT_DIR, type);
     const files = findMdxFiles(typeDir);
 
-    const symWarnings = checkLanguageSymmetry(type);
-    for (const w of symWarnings) {
-      allOutput.push({ file: null, message: w });
-      totalWarnings++;
+    const symmetryIssues = checkLanguageSymmetry(type);
+    for (const issue of symmetryIssues) {
+      allOutput.push({ file: null, message: issue, isError: type === 'legal' });
+      if (type === 'legal') totalErrors++;
+      else totalWarnings++;
+    }
+
+    if (type === 'legal') {
+      for (const error of checkRequiredLegalDocuments()) {
+        allOutput.push({ file: null, message: error, isError: true });
+        totalErrors++;
+      }
     }
 
     for (const file of files) {
       totalFiles++;
       const content = fs.readFileSync(file, 'utf8');
-      const { data: fm } = parseFrontMatter(content);
+      const { data: fm, body } = parseFrontMatter(content);
       const isDraft = fm.draft === true;
 
       const { errors, warnings } = validateFrontMatter(fm, type, isDraft);
+      if (type === 'legal') {
+        errors.push(...validateLegalBody(body));
+      }
 
       if (errors.length > 0 || warnings.length > 0) {
         const relPath = path.relative(process.cwd(), file).replace(/\\/g, '/');
@@ -209,7 +265,7 @@ function main() {
   console.log('');
   for (const item of allOutput) {
     if (item.file === null) {
-      console.log(`  ⚠️  ${item.message}`);
+      console.log(`  ${item.isError ? '❌' : '⚠️ '} ${item.message}`);
     } else {
       const icon = item.errors.length > 0 ? '❌' : '⚠️ ';
       const draftLabel = item.isDraft ? ' [draft]' : '';
@@ -234,4 +290,6 @@ function main() {
   }
 }
 
-main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}

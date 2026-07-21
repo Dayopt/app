@@ -1,0 +1,219 @@
+---
+title: 'Privacy Policy'
+description: 'How Dayopt handles your personal information'
+lastUpdated: 'Last Updated: 2026-07-17'
+---
+
+<PrivacyDocument
+  data={{
+    sections: {
+      introduction: {
+        title: 'Introduction',
+        content:
+          'Dayopt (the "Service") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, and protect your personal information.',
+      },
+      dataCollection: {
+        title: 'Information We Collect',
+        accountInfo: 'Account Information (email address, name, profile picture)',
+        usageData: 'Service Usage Data (tasks, calendar, settings)',
+        technicalData:
+          'Minimal Technical Diagnostics (application version, route path, browser or device type, and error or trace identifiers). Sentry events exclude request bodies, email addresses, URL query strings, cookies, and authorization credentials.',
+        cookies: 'Cookies and similar technologies',
+      },
+      dataUsage: {
+        title: 'How We Use Your Information',
+        serviceProvision: 'Providing, operating, and improving the Service',
+        userSupport: 'User support and responding to inquiries',
+        security: 'Preventing unauthorized use and maintaining security',
+        analytics:
+          'Production server and edge error monitoring for service reliability, plus browser error monitoring and performance analytics only after analytics consent',
+        communication: 'Sending important notices and service updates',
+      },
+      dataSharing: {
+        title: 'Third-Party Services',
+        intro: 'We work with the following service providers:',
+        supabase: 'Supabase (authentication & database)',
+        vercel:
+          'Vercel (hosting; Vercel Analytics and Speed Insights only after analytics consent)',
+        sentry:
+          'Sentry (Production server and edge error monitoring; browser error monitoring only after analytics consent; Session Replay is disabled). Product and Website data are kept in separate Sentry projects.',
+        github: 'GitHub (access-restricted storage for contact form submissions)',
+        cloudflare: 'Cloudflare Turnstile (bot protection for forms)',
+        note: 'These providers manage information according to their respective privacy policies.',
+      },
+      dataOwnership: {
+        title: 'Data Ownership',
+        content:
+          'You retain full ownership of all data you create, upload, or store through the Service. Dayopt does not claim any intellectual property rights over your data.',
+        export:
+          'You may export your data at any time through the account settings page. Exports are available in standard formats (JSON, CSV) to ensure portability.',
+        termination:
+          'Upon account deletion or service discontinuation, you will have at least 30 days to export your data before it is permanently removed from our systems.',
+      },
+      subProcessors: {
+        title: 'Sub-Processors',
+        intro:
+          'We engage the following sub-processors to assist in providing the Service. Each sub-processor has entered into a Data Processing Agreement (DPA) with us:',
+        supabase:
+          'Supabase, Inc. — Authentication and database services. Data location: AWS US-East-1 (N. Virginia, USA)',
+        vercel:
+          'Vercel, Inc. — Hosting, serverless functions, and edge delivery. Vercel Analytics and Speed Insights run in the browser only after analytics consent. Data location: Global Edge Network',
+        sentry:
+          'Functional Software, Inc. (Sentry) — Sanitized Production server and edge error monitoring runs regardless of analytics consent. Browser error monitoring runs only after analytics consent. Session Replay is disabled because the current SDK cannot guarantee removal of URL query strings from Replay payloads. Product and Website data are kept in separate projects. Sentry events exclude request bodies, email addresses, URL query strings, cookies, and authorization credentials. Data location: United States',
+        stripe:
+          'Stripe, Inc. — Payment processing and subscription management. Data location: United States. Stripe is PCI DSS Level 1 certified. We do not store credit card numbers on our servers.',
+        anthropic:
+          "Anthropic, PBC — AI-powered features (chat, weekly review insights). Data location: United States. Your data is processed under Anthropic's API terms and is not used for model training.",
+        openai:
+          "OpenAI, LLC — AI-powered features (optional, when user provides their own API key). Data location: United States. Data processed via API is not used for model training per OpenAI's API data usage policy.",
+        resend:
+          'Resend, Inc. — Transactional email delivery (account notifications, billing confirmations). Data location: United States',
+        upstash:
+          'Upstash, Inc. — Rate limiting and abuse prevention via serverless Redis. Data location: United States. Hashed technical request identifiers and request counts are stored temporarily.',
+        github:
+          'GitHub, Inc. — Contact form submissions (name, email address, category, and message) are stored as Issues only in an access-restricted private repository. Repository privacy is verified before every Product or Website submission. Data location: United States.',
+        cloudflare:
+          "Cloudflare, Inc. — Turnstile bot protection for forms. A Turnstile token and the requester's IP address are sent to Cloudflare for verification. Data is processed on Cloudflare's global network.",
+        changes:
+          'We will notify you at least 30 days before engaging a new sub-processor or making material changes to existing sub-processor arrangements.',
+      },
+      internationalTransfers: {
+        title: 'International Data Transfers',
+        content:
+          'Your data may be transferred to and processed in countries other than your country of residence.',
+        location:
+          'Primary data storage: AWS US-East-1 (N. Virginia, USA) via Supabase. Edge caching and serverless functions are distributed globally via Vercel.',
+        safeguards:
+          'For transfers from the EU/EEA, we rely on Standard Contractual Clauses (SCCs) approved by the European Commission to ensure adequate data protection.',
+        japan:
+          'For transfers from Japan, we comply with the Act on the Protection of Personal Information (APPI) requirements for cross-border data transfers, including obtaining consent and ensuring the recipient country provides an equivalent level of protection.',
+      },
+      legalBasis: {
+        title: 'Legal Basis for Processing',
+        intro:
+          'We process your personal data on the following legal bases (as applicable under GDPR and similar regulations):',
+        contract:
+          'Contract Performance — Processing necessary to provide the Service you have signed up for, including account management, task storage, and calendar synchronization',
+        consent:
+          'Consent — Browser Sentry, Vercel Analytics, and Speed Insights run only after you opt in to analytics',
+        legitimate:
+          'Legitimate Interests — Sanitized Production server and edge error monitoring, security monitoring, and fraud prevention, where these interests are not overridden by your rights',
+        legal:
+          'Legal Obligation — Where processing is required to comply with applicable laws, regulations, or legal proceedings',
+      },
+      aiFeatures: {
+        title: 'AI-Powered Features',
+        intro:
+          'The Service includes optional AI-powered features that process your data to provide productivity insights and suggestions:',
+        whatIsSent:
+          'When you use AI features, the following data may be sent to our AI providers (Anthropic or OpenAI): task titles and descriptions, time tracking data, energy mapping data, and calendar entries. This data is used solely to generate contextual suggestions and insights.',
+        noTraining:
+          'Your data is NOT used to train AI models. Both Anthropic and OpenAI process API requests without using the data for model training or improvement, as specified in their respective API data usage policies.',
+        byok: 'You may optionally provide your own API key (Bring Your Own Key) for OpenAI or Anthropic. When using your own key, requests are sent directly to the provider under your own API agreement. Your API key is encrypted and stored locally on your device, not on our servers.',
+        limitations:
+          'AI-generated content is provided for informational purposes only. We do not guarantee the accuracy, completeness, or reliability of AI outputs. You should review all AI-generated suggestions before acting on them.',
+        optOut:
+          'AI features are optional. You can use the Service without enabling any AI functionality. Free tier users are limited to 30 AI interactions per month.',
+      },
+      dataProcessing: {
+        title: 'Data Processing Details',
+        intro: 'The following describes how we process each category of personal data:',
+        accountData:
+          'Account Data (email, name, avatar) — Processed to create and manage your account, authenticate your identity, and communicate service-related notices',
+        usageData:
+          'Usage Data (tasks, plans, calendar entries, settings) — Processed to provide core Service functionality, generate productivity insights, and improve features',
+        technicalData:
+          'Minimal Technical Diagnostics (application version, route path, browser or device type, and error or trace identifiers) — Sanitized server and edge diagnostics are processed in Production to investigate unexpected failures. Browser diagnostics and performance data are processed only after analytics consent. Sentry events exclude request bodies, email addresses, URL query strings, cookies, and authorization credentials.',
+        automated:
+          'We do not engage in automated decision-making or profiling that produces legal or similarly significant effects on you. AI-powered features (such as weekly review insights) provide suggestions only and do not make decisions on your behalf.',
+        exportInfo:
+          'You can export your data in standard formats (JSON, CSV) at any time from your account settings. We support data portability to ensure you can move your data to another service if desired.',
+      },
+      dataRetention: {
+        title: 'Data Retention',
+        active: 'We retain your data while your account is active',
+        deleted: 'Data is permanently deleted within 30 days after account deletion',
+        legal: 'Except where retention is required by law',
+      },
+      userRights: {
+        title: 'Your Rights',
+        access: 'Right to access your personal information',
+        correction: 'Right to correct your personal information',
+        deletion: 'Right to delete your personal information (right to be forgotten)',
+        portability: 'Right to data portability',
+        objection: 'Right to object to processing',
+        complaint:
+          'Right to lodge a complaint with a supervisory authority (e.g., your local data protection authority under GDPR, or the Personal Information Protection Commission in Japan)',
+        contact:
+          'To exercise these rights, please contact us through the settings page or contact form.',
+      },
+      security: {
+        title: 'Security Measures',
+        measures:
+          'We implement industry-standard security measures to protect your personal information from unauthorized access, loss, damage, alteration, and disclosure.',
+        encryption: 'SSL/TLS encryption for data transmission',
+        access: 'Access control and authentication systems',
+        monitoring: 'Regular security audits',
+      },
+      cookies: {
+        title: 'About Cookies',
+        intro:
+          'We use essential cookies and local storage to operate the Service. Optional browser telemetry is controlled by your analytics consent.',
+        essential: 'Essential Cookies (maintain login state)',
+        analytics:
+          'Optional Analytics Technologies (browser Sentry, Vercel Analytics, and Speed Insights)',
+        preference: 'Preference Cookies (save user settings)',
+        control:
+          'If you decline analytics, optional browser telemetry does not start and core features remain available. Sanitized Production server and edge error monitoring continues because it is required to diagnose service failures.',
+        policyLink:
+          'For detailed information about our use of cookies, please see our Cookie Policy.',
+      },
+      dataBreach: {
+        title: 'Data Breach Notification',
+        content:
+          'In the event of a personal data breach that is likely to result in a risk to your rights and freedoms, we will:',
+        notify:
+          'Notify the relevant supervisory authority within 72 hours of becoming aware of the breach, as required by GDPR Article 33',
+        inform:
+          'Inform affected users without undue delay when the breach is likely to result in a high risk to their rights and freedoms',
+        document: 'Document all breaches, including the facts, effects, and remedial actions taken',
+        measures:
+          'Take immediate steps to contain and remediate the breach, and implement measures to prevent recurrence',
+      },
+      ccpa: {
+        title: 'California Privacy Rights (CCPA/CPRA)',
+        intro:
+          'If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA) and the California Privacy Rights Act (CPRA):',
+        know: 'Right to Know — You have the right to request information about the categories and specific pieces of personal information we have collected about you',
+        delete:
+          'Right to Delete — You have the right to request deletion of your personal information, subject to certain exceptions',
+        noSell:
+          'Right to Opt-Out of Sale — We do not sell your personal information to third parties. We do not share your personal information for cross-context behavioral advertising.',
+        nondiscrimination:
+          'Right to Non-Discrimination — We will not discriminate against you for exercising any of your CCPA/CPRA rights',
+        categories:
+          'Categories of personal information we collect: identifiers (email, name), commercial information (subscription status), internet activity (usage data, device info), and inferences drawn from the above',
+        contactPrefix: 'To exercise your California privacy rights, contact us at ',
+        contactSuffix: ' or through your account settings.',
+      },
+      children: {
+        title: "Children's Privacy",
+        content:
+          'Our Service is not intended for children under 13 years old, and we do not knowingly collect personal information from them.',
+      },
+      changes: {
+        title: 'Policy Changes',
+        content:
+          'This Privacy Policy may be updated due to legal changes or business reviews. We will notify users in advance of any significant changes.',
+      },
+      contact: {
+        title: 'Contact Us',
+        content: 'If you have any questions or concerns about privacy, please contact us at:',
+      },
+    },
+    contactLabels: {
+      email: 'Email',
+      website: 'Website',
+    },
+  }}
+/>
