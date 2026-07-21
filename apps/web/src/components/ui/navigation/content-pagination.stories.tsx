@@ -42,6 +42,15 @@ export const FewPages: Story = {
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   args: { currentPage: 1, totalPages: 10 },
+  parameters: {
+    a11y: {
+      options: {
+        // カタログ表示のため同じ aria-label="pagination" の nav が4つ並ぶ。実ページでは
+        // ContentPagination は1ページに1つのみ描画されるため landmark-unique は誤検知
+        rules: { 'landmark-unique': { enabled: false } },
+      },
+    },
+  },
   render: () => (
     <div className="flex flex-col gap-6">
       <ContentPagination currentPage={1} totalPages={10} basePath="/blog" />
