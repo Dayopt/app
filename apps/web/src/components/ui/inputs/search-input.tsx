@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/class-names';
 import { Button, Input } from '@dayopt/components';
 import { Search, X } from 'lucide-react';
 

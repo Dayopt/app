@@ -1,0 +1,144 @@
+---
+title: 'Cookieポリシー'
+description: 'Dayoptにおけるクッキーおよび類似技術の使用について'
+lastUpdated: '最終更新日: 2026-07-17'
+---
+
+<CookieDocument
+  data={{
+    sections: {
+      introduction: {
+        title: 'はじめに',
+        content:
+          '本Cookieポリシーは、Dayopt（以下「当社」）が当サービスへのアクセスまたは利用時にクッキーおよび類似技術をどのように使用するかを説明します。これらの技術の内容、使用理由、およびお客様の管理権限について説明します。本ポリシーはプライバシーポリシーと併せてお読みください。',
+      },
+      whatAreCookies: {
+        title: 'Cookieとは',
+        content:
+          'Cookieとは、ウェブサイトを訪問した際にお客様のデバイス（パソコン、タブレット、スマートフォン）に保存される小さなテキストファイルです。ウェブサイトの効率的な動作、ユーザー体験の向上、およびサイト運営者への情報提供のために広く使用されています。Cookieは「永続的」（有効期限まで、または削除されるまでデバイスに残る）または「セッション」（ブラウザを閉じると削除される）のいずれかです。',
+      },
+      categories: {
+        title: 'Cookieのカテゴリ',
+        essential: {
+          name: '必須Cookie',
+          description:
+            '当サービスの機能に不可欠なCookieです。認証、セッション管理、セキュリティ保護などのコア機能を有効にします。これらのCookieなしでは、サービスは正常に動作しません。',
+          examples: '認証トークン、CSRF保護、セッション管理',
+        },
+        analytics: {
+          name: '分析Cookie',
+          description:
+            'ブラウザエラーの診断とパフォーマンス・利用状況の把握に使う、任意のCookieおよび類似のブラウザ技術です。ブラウザ版Sentry、Vercel Analytics、Speed Insightsは分析への同意後のみ起動します。Session Replayは無効にしています。',
+          examples: 'ブラウザエラー、ページビュー、パフォーマンス指標',
+        },
+        preference: {
+          name: '設定Cookie',
+          description:
+            'お客様の設定と好みを記憶し、パーソナライズされた体験を提供するCookieです。設定を変更した際に設定され、セッション間で保持されます。',
+          examples: '言語設定、テーマ選択（ライト/ダークモード）、表示設定',
+        },
+        marketing: {
+          name: 'マーケティングCookie',
+          description:
+            '関連性の高い広告の配信とマーケティングキャンペーンの効果測定に使用されるCookieです。',
+          note: 'Dayoptは現在マーケティングCookieを使用していません。将来変更される場合は、本ポリシーを更新し、お客様の同意を取得します。',
+        },
+      },
+      specificCookies: {
+        title: '使用するCookie一覧',
+        headerName: 'Cookie名',
+        headerProvider: '提供元',
+        headerPurpose: '目的',
+        headerCategory: 'カテゴリ',
+        headerDuration: '有効期間',
+        supabaseAuth: {
+          name: 'sb-*-auth-token',
+          provider: 'Supabase',
+          purpose: '認証セッションの維持',
+          category: '必須',
+          duration: 'セッション',
+        },
+        nextLocale: {
+          name: 'NEXT_LOCALE',
+          provider: 'Next.js',
+          purpose: '言語設定の保存',
+          category: '設定',
+          duration: '1年',
+        },
+        theme: {
+          name: 'theme',
+          provider: 'Dayopt',
+          purpose: 'テーマ設定の保存（ライト/ダーク/システム）',
+          category: '設定',
+          duration: '1年',
+        },
+        cookieConsent: {
+          name: 'dayopt_cookie_consent（ローカルストレージ）',
+          provider: 'Dayopt',
+          purpose: 'Cookie同意状態の記録',
+          category: '必須',
+          duration: '削除されるまで',
+        },
+        vercelAnalytics: {
+          name: 'va_*',
+          provider: 'Vercel',
+          purpose: '分析への同意後のVercel AnalyticsとSpeed Insights',
+          category: '分析',
+          duration: 'セッション',
+        },
+        turnstile: {
+          name: 'Cloudflare Turnstileのブラウザ技術',
+          provider: 'Cloudflare',
+          purpose: 'フォームのbot・spam対策。検証tokenとIPアドレスをCloudflareが処理します',
+          category: '必須',
+          duration: '検証ごと。provider側で管理',
+        },
+      },
+      thirdParty: {
+        title: 'サードパーティCookie',
+        content:
+          '一部のサードパーティサービスは、サービス運営に必要なサーバー診断情報を処理するか、任意のCookieおよび類似のブラウザ技術を使用します。任意のブラウザ計測は、分析への同意がない限り起動しません。',
+        vercel:
+          'Vercel — ホスティングと配信は分析への同意がなくても提供します。Vercel AnalyticsとSpeed Insightsは分析への同意後に限りブラウザで動作します。',
+        sentry:
+          'Sentry — 分析への同意にかかわらず、サニタイズ済みのProductionサーバー・Edgeエラー監視を行います。ブラウザ版Sentryは分析への同意後のみ動作します。Session Replayは、現行SDKでReplay payloadからURLのクエリ文字列を確実に除去できないため無効にしています。ProductとWebサイトのデータは別々のSentryプロジェクトで管理します。Sentryイベントには、リクエスト本文、メールアドレス、URLのクエリ文字列、Cookie、認証情報を含めません。',
+        turnstile:
+          'Cloudflare Turnstile — フォームに必要なbot対策です。検証tokenと送信元IPアドレスをCloudflareへ送ります。Cloudflareは同社のプライバシーポリシーに基づき、必要なブラウザ保存領域とdevice signalを使用する場合があります。',
+        note: '各プロバイダーによるデータ処理とブラウザ技術の使用については、各社のプライバシーポリシーをご参照ください。',
+      },
+      manageCookies: {
+        title: 'Cookieの管理方法',
+        intro:
+          'ブラウザの設定からCookieを管理することができます。特定のCookieを削除またはブロックすると、サービスの利用体験や機能に影響が出る場合がありますのでご注意ください。',
+        chrome: 'Google Chrome: 設定 > プライバシーとセキュリティ > Cookieとサイトデータ',
+        firefox: 'Mozilla Firefox: 設定 > プライバシーとセキュリティ > Cookieとサイトデータ',
+        safari: 'Safari: 環境設定 > プライバシー > Webサイトデータを管理',
+        edge: 'Microsoft Edge: 設定 > プライバシー、検索、サービス > Cookieとサイトのアクセス許可',
+      },
+      impact: {
+        title: 'Cookie無効化の影響',
+        content:
+          '必須Cookieを無効にすると、サインインや主要機能の使用ができなくなります。設定Cookieを無効にすると、言語やテーマなどの設定がセッション間で記憶されなくなります。分析を拒否しても主要機能には影響せず、ブラウザ版Sentry、Vercel Analytics、Speed Insightsは起動しません。Session Replayは無効にしています。サービス障害を診断するため、サニタイズ済みのProductionサーバー・Edgeエラー監視は継続します。',
+      },
+      doNotTrack: {
+        title: 'Do Not Trackシグナル',
+        content:
+          '一部のブラウザは、ウェブサイトに閲覧活動の追跡を行わないよう要求する「Do Not Track」（DNT）設定を提供しています。現在、DNTシグナルへの対応方法について普遍的に認められた標準は存在しません。当社は現在DNTシグナルに応答しておりませんが、本ポリシーに記載されているように、トラッキング技術の使用を必須および分析目的に限定しています。クロスサイトトラッキングを行ったり、お客様のデータを第三者に販売することはありません。',
+      },
+      changes: {
+        title: '本ポリシーの変更',
+        content:
+          '本Cookieポリシーは、技術、規制、または事業慣行の変更を反映するために随時更新される場合があります。重要な変更がある場合は、更新された「最終更新日」とともに本ページに掲載して通知します。',
+      },
+      contact: {
+        title: 'お問い合わせ',
+        content: 'Cookieの使用に関するご質問がある場合は、以下までご連絡ください：',
+      },
+    },
+    contactLabels: {
+      email: 'Email',
+      website: 'Website',
+    },
+    privacyLinkLabel: 'プライバシーポリシー',
+  }}
+/>

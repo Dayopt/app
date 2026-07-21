@@ -1,0 +1,120 @@
+---
+title: 'セキュリティ'
+description: 'Dayoptは、ユーザーの皆様の情報を保護するために、最高水準のセキュリティ対策を実施しています。'
+lastUpdated: '最終更新日: 2025-10-15'
+---
+
+<SecurityDocument
+  data={{
+    policy: {
+      title: 'セキュリティポリシー',
+      supportedVersions: {
+        title: 'サポート対象バージョン',
+        version: 'バージョン',
+        status: 'サポート状況',
+        v1: '1.x.x',
+        v1Status: '✅ セキュリティアップデート提供中',
+        v0: '< 1.0',
+        v0Status: '❌ サポート終了',
+      },
+      measures: {
+        title: '実装しているセキュリティ対策',
+        transportEncryption: 'HTTPS強制: すべての通信をTLS 1.3で暗号化',
+        mfa: '多要素認証 (MFA): TOTP（Time-based One-Time Password）対応',
+        rateLimit: 'レート制限: ブルートフォース攻撃防止',
+        sqlInjection: 'SQL インジェクション対策: Prisma ORM + パラメータ化クエリ',
+        xss: 'XSS対策: React自動エスケープ + Content Security Policy',
+        csrf: 'CSRF対策: SameSite Cookie + トークン検証',
+        dependencies: '依存関係管理: Dependabot による週次チェック',
+        monitoring: 'エラー監視: Sentry によるリアルタイム監視',
+      },
+    },
+    vulnerability: {
+      title: '脆弱性の報告',
+      warning: {
+        title: '⚠️ セキュリティ脆弱性は公開のGitHub Issuesで報告しないでください',
+        description:
+          '脆弱性を公開することで、悪意ある第三者に悪用される可能性があります。セキュリティチームに直接ご連絡ください。',
+      },
+      contacts: {
+        title: '報告窓口',
+        email: 'Email',
+        github: 'GitHub Security Advisory',
+        githubLink: 'Create Advisory',
+      },
+      includeInfo: {
+        title: '報告に含めるべき情報',
+        type: '脆弱性の種類（XSS, SQLインジェクション, 認証バイパス等）',
+        affectedVersions: '影響を受けるバージョン',
+        steps: '再現手順（詳細なステップ）',
+        poc: '概念実証コード（Proof of Concept, 可能であれば）',
+        impact: '潜在的な影響（データ漏洩、サービス停止等）',
+        fix: '推奨される修正方法（任意）',
+      },
+      timeline: {
+        title: '対応タイムライン',
+        severity: '深刻度',
+        initialResponse: '初動確認',
+        fixRelease: '修正リリース',
+        critical: 'Critical',
+        criticalResponse: '24時間以内',
+        criticalFix: '48時間以内',
+        high: 'High',
+        highResponse: '48時間以内',
+        highFix: '1週間以内',
+        medium: 'Medium',
+        mediumResponse: '1週間以内',
+        mediumFix: '2週間以内',
+        low: 'Low',
+        lowResponse: '2週間以内',
+        lowFix: '次回リリース',
+      },
+    },
+    disclosure: {
+      title: '責任ある開示（Responsible Disclosure）',
+      safeHarbor: {
+        title: 'セーフハーバー（Safe Harbor）',
+        description:
+          'ガイドラインに従って行われたセキュリティ研究活動に対して、法的措置を取ることはありません。',
+        allowed: {
+          title: '✅ 許可される行為',
+          ownAccount: '• 自身のアカウントでのテスト',
+          research: '• 脆弱性の調査と報告',
+          poc: '• 概念実証コードの作成',
+        },
+        prohibited: {
+          title: '❌ 禁止される行為',
+          dos: '• DoS/DDoS攻撃',
+          dataAccess: '• 他者のデータへのアクセス',
+          disclosure: '• 公開前の第三者への開示',
+        },
+      },
+    },
+    relatedDocs: {
+      title: '関連ドキュメント',
+      securityPolicy: {
+        title: 'Security Policy',
+        description: 'セキュリティポリシー詳細（GitHub）',
+      },
+      vulnerabilityDisclosure: {
+        title: 'Vulnerability Disclosure',
+        description: '脆弱性報告ガイドライン（GitHub）',
+      },
+      incidentResponse: {
+        title: 'Incident Response Plan',
+        description: 'インシデント対応計画（GitHub）',
+      },
+      privacyPolicy: {
+        title: 'Privacy Policy',
+        description: 'プライバシーポリシー',
+      },
+    },
+    contact: {
+      title: 'お問い合わせ',
+      securityTeam: 'セキュリティチーム',
+      general: '一般的なお問い合わせ',
+      thankYou:
+        'セキュリティ向上にご協力いただき、ありがとうございます。皆様の報告により、すべてのユーザーの安全性が向上します。',
+    },
+  }}
+/>
