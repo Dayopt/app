@@ -9,7 +9,7 @@ import {
   classifyOperatorSmokeRateLimitResult,
 } from '../operator-smoke-auth';
 
-const NOW = Date.parse('2026-07-16T10:00:00.000Z');
+const NOW = Date.parse('2026-07-22T01:00:00.000Z');
 const TOKEN = 'A'.repeat(43);
 const TOKEN_DIGEST = createHash('sha256').update(TOKEN).digest('hex');
 
@@ -69,7 +69,7 @@ describe('authorizeProductOperatorSmoke', () => {
     ['preview', { VERCEL_ENV: 'preview' }],
     ['disabled', { SENTRY_OPERATOR_SMOKE_ENABLED: 'false' }],
     ['expired', { SENTRY_OPERATOR_SMOKE_EXPIRES_AT: new Date(NOW).toISOString() }],
-    ['past immutable deadline', { SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-16T14:00:00.001Z' }],
+    ['past immutable deadline', { SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-22T12:00:00.001Z' }],
   ])('fails closed when configuration is %s', async (_label, override) => {
     const result = await authorizeProductOperatorSmoke(request(), {
       env: { ...activeEnvironment(), ...override },
@@ -100,9 +100,26 @@ describe('authorizeProductOperatorSmoke', () => {
     const result = await authorizeProductOperatorSmoke(request(), {
       env: {
         ...activeEnvironment(),
-        SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-16T14:00:00.001Z',
+        SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-22T12:00:00.001Z',
       },
-      now: Date.parse('2026-07-16T13:30:00.000Z'),
+      now: Date.parse('2026-07-22T11:30:00.000Z'),
+      checkRateLimit,
+    });
+
+    expect(result.authorized).toBe(false);
+    expect(checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['at', Date.parse('2026-07-22T12:00:00.000Z')],
+    ['after', Date.parse('2026-07-22T12:00:00.001Z')],
+  ])('fails closed %s the immutable deadline', async (_label, now) => {
+    const result = await authorizeProductOperatorSmoke(request(), {
+      env: {
+        ...activeEnvironment(),
+        SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-22T12:00:00.000Z',
+      },
+      now,
       checkRateLimit,
     });
 

@@ -1,34 +1,25 @@
 import 'server-only';
 
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
+import {
+  getClientIp,
+  hashRateLimitIdentifier,
+  operatorSentrySmokeGlobalRateLimit,
+  operatorSentrySmokeRateLimit,
+} from '@web/platform/security/rate-limit';
 
-const PRODUCT_ORIGIN = 'https://app.dayopt.app';
+const WEB_ORIGIN = 'https://dayopt.app';
 const TOKEN_PATTERN = /^Bearer ([A-Za-z0-9_-]{43})$/u;
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/u;
 const ABSOLUTE_ACTIVE_FROM_MS = Date.parse('2026-07-21T23:00:00.000Z');
 const ABSOLUTE_DEADLINE_MS = Date.parse('2026-07-22T12:00:00.000Z');
-const SMOKE_RATE_LIMIT_TIMEOUT_MS = 2_000;
 
 type SmokeEnvironment = Record<string, string | undefined>;
 type RateLimitResult = 'allowed' | 'limited' | 'unavailable';
 
-export function classifyOperatorSmokeRateLimitResult(result: {
-  success: boolean;
-  reason?: string;
-}): RateLimitResult {
-  if (result.reason === 'timeout') return 'unavailable';
-  return result.success ? 'allowed' : 'limited';
-}
-
 interface OperatorSmokeDependencies {
   env?: SmokeEnvironment;
   now?: number;
-  checkRateLimit?: (
-    stage: 'per-ip' | 'global',
-    request: Request,
-    env: SmokeEnvironment,
-  ) => Promise<RateLimitResult>;
+  checkRateLimit?: (stage: 'per-ip' | 'global', request: Request) => Promise<RateLimitResult>;
 }
 
 type OperatorSmokeAuthorization = { authorized: true } | { authorized: false; response: Response };
@@ -70,13 +61,9 @@ function hasActiveConfiguration(env: SmokeEnvironment, now: number): boolean {
 
 function hasSameOriginBrowserRequest(request: Request): boolean {
   return (
-    request.headers.get('origin') === PRODUCT_ORIGIN &&
+    request.headers.get('origin') === WEB_ORIGIN &&
     request.headers.get('sec-fetch-site') === 'same-origin'
   );
-}
-
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 async function sha256(value: string): Promise<Uint8Array> {
@@ -104,49 +91,24 @@ async function hasValidToken(request: Request, expectedDigest: string): Promise<
   return digestMatches(await sha256(match[1]), expectedDigest);
 }
 
-function clientAddress(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',', 1)[0]?.trim();
-  const address = forwarded || request.headers.get('x-real-ip')?.trim() || 'unknown';
-  return address.slice(0, 256);
-}
-
-async function checkProductSmokeRateLimit(
+async function checkWebSmokeRateLimit(
   stage: 'per-ip' | 'global',
   request: Request,
-  env: SmokeEnvironment,
 ): Promise<RateLimitResult> {
-  const url = env.UPSTASH_REDIS_REST_URL;
-  const token = env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return 'unavailable';
-
   try {
-    const redis = new Redis({ url, token });
-    if (stage === 'per-ip') {
-      const perIp = new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(12, '1 h'),
-        analytics: false,
-        prefix: 'ratelimit:product:sentry-smoke:ip',
-        timeout: SMOKE_RATE_LIMIT_TIMEOUT_MS,
-      });
-      const addressDigest = bytesToHex(await sha256(clientAddress(request)));
-      return classifyOperatorSmokeRateLimitResult(await perIp.limit(addressDigest));
-    }
-
-    const global = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(50, '1 h'),
-      analytics: false,
-      prefix: 'ratelimit:product:sentry-smoke:global',
-      timeout: SMOKE_RATE_LIMIT_TIMEOUT_MS,
-    });
-    return classifyOperatorSmokeRateLimitResult(await global.limit('all'));
+    const result =
+      stage === 'per-ip'
+        ? await operatorSentrySmokeRateLimit.limit(
+            await hashRateLimitIdentifier(getClientIp(request)),
+          )
+        : await operatorSentrySmokeGlobalRateLimit.limit('all');
+    return result.success ? 'allowed' : 'limited';
   } catch {
     return 'unavailable';
   }
 }
 
-export async function authorizeProductOperatorSmoke(
+export async function authorizeWebOperatorSmoke(
   request: Request,
   dependencies: OperatorSmokeDependencies = {},
 ): Promise<OperatorSmokeAuthorization> {
@@ -161,8 +123,8 @@ export async function authorizeProductOperatorSmoke(
     return { authorized: false, response: operatorSmokeUnavailableResponse() };
   }
 
-  const checkRateLimit = dependencies.checkRateLimit ?? checkProductSmokeRateLimit;
-  const perIpRateLimit = await checkRateLimit('per-ip', request, env);
+  const checkRateLimit = dependencies.checkRateLimit ?? checkWebSmokeRateLimit;
+  const perIpRateLimit = await checkRateLimit('per-ip', request);
   if (perIpRateLimit !== 'allowed') {
     return {
       authorized: false,
@@ -175,7 +137,7 @@ export async function authorizeProductOperatorSmoke(
     return { authorized: false, response: operatorSmokeUnavailableResponse() };
   }
 
-  const globalRateLimit = await checkRateLimit('global', request, env);
+  const globalRateLimit = await checkRateLimit('global', request);
   if (globalRateLimit !== 'allowed') {
     return {
       authorized: false,

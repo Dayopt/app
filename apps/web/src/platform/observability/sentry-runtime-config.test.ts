@@ -36,6 +36,23 @@ describe('Web server/edge Sentry runtime configuration', () => {
         sendDefaultPii: false,
       }),
     );
+    const serverOptions = sentry.init.mock.calls[0]?.[0];
+    const tracesSampler = serverOptions?.tracesSampler as (context: {
+      name: string;
+      inheritOrSampleWith: (sampleRate: number) => number;
+    }) => number;
+    expect(
+      tracesSampler({
+        name: 'operator.sentry_smoke.server',
+        inheritOrSampleWith: (sampleRate) => sampleRate,
+      }),
+    ).toBe(1);
+    expect(
+      tracesSampler({
+        name: 'GET /api/contact',
+        inheritOrSampleWith: (sampleRate) => sampleRate,
+      }),
+    ).toBe(0.1);
   });
 
   it.each(['preview', 'development'])('%sでは初期化しない', async (vercelEnv) => {
