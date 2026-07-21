@@ -1,5 +1,5 @@
-import { getSiteUrl } from '@/platform/config/env';
 import { dayoptBrand, SUPPORTED_LOCALES } from '@dayopt/config';
+import { getSiteUrl } from '@web/platform/config/env';
 
 export interface SiteConfig {
   name: string;

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { AlertTriangle, Clock, LogOut, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { expect, userEvent, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 import {
   AlertDialog,
@@ -192,12 +192,17 @@ export const Default: Story = {
     await userEvent.click(trigger);
 
     const body = within(document.body);
-    await expect(await body.findByText('本当に削除しますか？')).toBeVisible();
+    // Radix の fade-in アニメーション中は opacity が過渡状態になるため toBeVisible ではなく
+    // toBeInTheDocument で存在確認する（dialog.stories.tsx / popover.stories.tsx と同じ方針）
+    await expect(await body.findByText('本当に削除しますか？')).toBeInTheDocument();
 
     const cancelButton = await body.findByRole('button', { name: 'キャンセル' });
     await userEvent.click(cancelButton);
 
-    await expect(body.queryByText('本当に削除しますか？')).not.toBeInTheDocument();
+    // fade-out アニメーション完了後に unmount されるため待機する
+    await waitFor(() => {
+      expect(body.queryByText('本当に削除しますか？')).not.toBeInTheDocument();
+    });
   },
 };
 

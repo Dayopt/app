@@ -1,5 +1,5 @@
-import { FAQStructuredData } from '@/components/seo/EnhancedSEO';
-import { ContentData } from '@/types/content';
+import { FAQStructuredData } from '@web/components/seo/EnhancedSEO';
+import { ContentData } from '@web/types/content';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';

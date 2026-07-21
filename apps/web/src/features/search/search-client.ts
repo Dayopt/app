@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { captureUnexpectedWebError } from '@/platform/observability/capture-unexpected-error';
+import { captureUnexpectedWebError } from '@web/platform/observability/capture-unexpected-error';
 
 const searchResponseSchema = z.object({
   results: z.array(

@@ -5,7 +5,7 @@ const env = vi.hoisted(() => ({
   VERCEL_ENV: 'production' as string | undefined,
 }));
 
-vi.mock('@/platform/config/env', () => ({ env }));
+vi.mock('@web/platform/config/env', () => ({ env }));
 
 import { verifyTurnstile } from './verify';
 

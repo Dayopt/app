@@ -1,5 +1,5 @@
-import { ErrorLayout } from '@/components/errors/ErrorLayout';
-import { generateSEOMetadata } from '@/platform/seo/metadata';
+import { ErrorLayout } from '@web/components/errors/ErrorLayout';
+import { generateSEOMetadata } from '@web/platform/seo/metadata';
 
 export const metadata = generateSEOMetadata({
   title: 'Page Not Found - 404 Error',

@@ -1,8 +1,8 @@
-import { generateEnhancedMetadata, StructuredData } from '@/components/seo/EnhancedSEO';
-import { cn } from '@/lib/class-names';
-import { ThemeProvider } from '@/shell/providers/theme-provider';
 import { Toaster } from '@dayopt/components';
 import { dayoptBrand, dayoptContact } from '@dayopt/config';
+import { generateEnhancedMetadata, StructuredData } from '@web/components/seo/EnhancedSEO';
+import { cn } from '@web/lib/class-names';
+import { ThemeProvider } from '@web/shell/providers/theme-provider';
 import type { Metadata } from 'next';
 import './globals.css';
 

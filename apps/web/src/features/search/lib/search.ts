@@ -1,4 +1,4 @@
-import { getAllContent } from '@/lib/mdx';
+import { getAllContent } from '@web/lib/mdx';
 
 export interface SearchIndexItem {
   id: string;

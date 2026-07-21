@@ -1,8 +1,8 @@
 'use client';
 
-import { isDevelopment } from '@/platform/config/env';
-import { captureBoundaryError } from '@/platform/observability/capture-boundary-error';
 import { Button, Container, Heading, Text } from '@dayopt/components';
+import { isDevelopment } from '@web/platform/config/env';
+import { captureBoundaryError } from '@web/platform/observability/capture-boundary-error';
 import { useEffect } from 'react';
 
 interface GlobalErrorProps {

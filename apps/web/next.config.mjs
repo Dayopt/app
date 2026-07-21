@@ -237,8 +237,8 @@ const nextConfig = {
       static: 180, // 静的ルート: 3分キャッシュ
     },
     optimizePackageImports: [
-      '@/components',
-      '@/lib',
+      '@web/components',
+      '@web/lib',
       'lucide-react',
       '@radix-ui/react-dialog',
       '@radix-ui/react-dropdown-menu',

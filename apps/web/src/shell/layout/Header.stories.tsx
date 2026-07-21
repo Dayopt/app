@@ -49,6 +49,17 @@ export const MobileMenu: Story = {
     </NextIntlClientProvider>
   ),
   play: async ({ canvasElement }) => {
+    // lg:hidden の Tailwind breakpoint を実際に発火させるため、テスト用 iframe を
+    // モバイル幅にリサイズする（addon-viewport 未導入のため parameters.viewport は効かない）。
+    // vitest/browser は Vitest Browser Mode 専用で、通常の Storybook（pnpm storybook /
+    // build-storybook）からは import できずモジュール読み込み自体が失敗するため、
+    // 動的 import + try/catch でガードし test-storybook 実行時のみリサイズする
+    try {
+      const { page } = await import('vitest/browser');
+      await page.viewport(320, 568);
+    } catch {
+      // 通常の Storybook では viewport をリサイズできないため、実ブラウザ幅に委ねる
+    }
     const canvas = within(canvasElement);
     const openButton = await canvas.findByRole('button', { name: 'メニューを開く' });
     await userEvent.click(openButton);
@@ -60,6 +71,18 @@ export const MobileMenu: Story = {
 
 /** 全ロケール一覧。 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: {
+      options: {
+        // カタログ表示のため ja/en の Header を2つ並べており、実ページでは
+        // header（banner landmark）は1つのみ描画されるため誤検知
+        rules: {
+          'landmark-no-duplicate-banner': { enabled: false },
+          'landmark-unique': { enabled: false },
+        },
+      },
+    },
+  },
   render: () => (
     <div className="flex flex-col gap-8">
       <NextIntlClientProvider locale="ja" messages={commonJa}>

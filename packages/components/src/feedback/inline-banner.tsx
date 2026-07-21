@@ -34,6 +34,7 @@ function InlineBanner({ visible, message, action }: InlineBannerProps) {
             <button
               type="button"
               onClick={action.onClick}
+              tabIndex={visible ? undefined : -1}
               className="text-foreground focus-visible:ring-ring shrink-0 text-sm underline outline-none focus-visible:outline-2"
             >
               {action.label}

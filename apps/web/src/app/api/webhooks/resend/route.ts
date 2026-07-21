@@ -2,13 +2,13 @@ import { dayoptContact, dayoptContactDeliverySources } from '@dayopt/config';
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-import { env } from '@/platform/config/env';
-import { captureUnexpectedWebError } from '@/platform/observability/capture-unexpected-error';
+import { env } from '@web/platform/config/env';
+import { captureUnexpectedWebError } from '@web/platform/observability/capture-unexpected-error';
 import {
   claimResendWebhookEvent,
   completeResendWebhookEvent,
   releaseResendWebhookEvent,
-} from '@/platform/security/resend-webhook-dedup';
+} from '@web/platform/security/resend-webhook-dedup';
 
 export const maxDuration = 15;
 export const runtime = 'nodejs';

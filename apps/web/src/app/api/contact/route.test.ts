@@ -12,14 +12,14 @@ const mocks = vi.hoisted(() => ({
   verifyTurnstile: vi.fn(),
 }));
 
-vi.mock('@/lib/turnstile', () => ({ verifyTurnstile: mocks.verifyTurnstile }));
-vi.mock('@/platform/observability/capture-unexpected-error', () => ({
+vi.mock('@web/lib/turnstile', () => ({ verifyTurnstile: mocks.verifyTurnstile }));
+vi.mock('@web/platform/observability/capture-unexpected-error', () => ({
   captureUnexpectedWebError: mocks.captureUnexpectedWebError,
 }));
-vi.mock('@/platform/security/csrf-protection', () => ({
+vi.mock('@web/platform/security/csrf-protection', () => ({
   verifyCsrfToken: mocks.verifyCsrfToken,
 }));
-vi.mock('@/platform/security/rate-limit', () => ({
+vi.mock('@web/platform/security/rate-limit', () => ({
   contactGlobalRateLimit: mocks.contactGlobalRateLimit,
   contactRateLimit: mocks.contactRateLimit,
   getClientIp: mocks.getClientIp,

@@ -3,8 +3,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
-import { BrowserTelemetry } from '@/shell/privacy/BrowserTelemetry';
-import { CookieConsentBanner } from '@/shell/privacy/CookieConsentBanner';
+import { BrowserTelemetry } from '@web/shell/privacy/BrowserTelemetry';
+import { CookieConsentBanner } from '@web/shell/privacy/CookieConsentBanner';
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));

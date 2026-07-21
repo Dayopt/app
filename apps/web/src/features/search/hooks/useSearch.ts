@@ -1,12 +1,12 @@
 'use client';
 
-import { getErrorMessage } from '@/lib/errors/normalize-error';
+import { getErrorMessage } from '@web/lib/errors/normalize-error';
 import {
   createStructuredError,
   ErrorCategory,
   ErrorLevel,
   logError,
-} from '@/lib/errors/structured-error';
+} from '@web/lib/errors/structured-error';
 import { useCallback, useState } from 'react';
 
 import { fetchSearchResults } from '../search-client';

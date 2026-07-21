@@ -27,15 +27,15 @@ export function LearnVisual() {
           <div className="flex gap-4">
             <div className="flex flex-col">
               <span className="text-primary text-base font-medium tabular-nums">22.5h</span>
-              <span className="text-muted-foreground text-[9px] opacity-50">Plan</span>
+              <span className="text-muted-foreground text-[9px]">Plan</span>
             </div>
             <div className="flex flex-col">
               <span className="text-success text-base font-medium tabular-nums">18h</span>
-              <span className="text-muted-foreground text-[9px] opacity-50">Record</span>
+              <span className="text-muted-foreground text-[9px]">Record</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-tag-amber text-base font-medium tabular-nums">−4.5h</span>
-              <span className="text-muted-foreground text-[9px] opacity-50">Difference</span>
+              <span className="text-destructive text-base font-medium tabular-nums">−4.5h</span>
+              <span className="text-muted-foreground text-[9px]">Difference</span>
             </div>
           </div>
         </div>

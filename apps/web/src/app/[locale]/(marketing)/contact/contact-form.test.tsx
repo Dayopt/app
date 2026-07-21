@@ -48,7 +48,7 @@ vi.mock('@dayopt/components', () => ({
   ),
   Textarea: (props: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
 }));
-vi.mock('@/lib/turnstile', () => ({
+vi.mock('@web/lib/turnstile', () => ({
   isTurnstileEnabled: () => true,
   Turnstile: ({ onSuccess }: { onSuccess: (token: string) => void }) => (
     <button

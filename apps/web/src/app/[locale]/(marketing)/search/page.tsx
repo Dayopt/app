@@ -1,14 +1,14 @@
 'use client';
 
-import { Highlight } from '@/lib/highlight';
-import type { SearchResultItem } from '@/types/api';
 import { Badge, Button, Container, Heading, Input, Text } from '@dayopt/components';
+import { Highlight } from '@web/lib/highlight';
+import type { SearchResultItem } from '@web/types/api';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
-import { fetchSearchResults } from '@/features/search/search-client';
+import { fetchSearchResults } from '@web/features/search/search-client';
 
 function SearchResults() {
   const searchParams = useSearchParams();

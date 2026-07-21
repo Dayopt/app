@@ -1,7 +1,7 @@
-import { ClientSidebar } from '@/features/docs';
-import { Footer } from '@/shell/layout/Footer';
-import { Header } from '@/shell/layout/Header';
-import { generateDocsNavigation } from '@/shell/navigation';
+import { ClientSidebar } from '@web/features/docs';
+import { Footer } from '@web/shell/layout/Footer';
+import { Header } from '@web/shell/layout/Header';
+import { generateDocsNavigation } from '@web/shell/navigation';
 
 export default async function DocsLayout({
   children,

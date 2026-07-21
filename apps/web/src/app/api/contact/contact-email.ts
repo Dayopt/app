@@ -3,7 +3,7 @@ import 'server-only';
 import { dayoptContact, dayoptContactDeliverySources } from '@dayopt/config';
 import { z } from 'zod';
 
-import { env } from '@/platform/config/env';
+import { env } from '@web/platform/config/env';
 
 const categoryLabels = {
   bug: 'Bug',

@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('server-only', () => ({}));
-vi.mock('@/platform/config/env', () => ({ env: mocks.env }));
+vi.mock('@web/platform/config/env', () => ({ env: mocks.env }));
 vi.mock('./rate-limit', () => ({
   hashRateLimitIdentifier: vi.fn(async () => 'hashed-event'),
   RateLimitUnavailableError: class RateLimitUnavailableError extends Error {},

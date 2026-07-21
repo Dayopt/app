@@ -1,14 +1,14 @@
-import { verifyTurnstile } from '@/lib/turnstile';
-import { apiError, apiSuccess, ErrorCode } from '@/platform/api/api-response';
-import { captureUnexpectedWebError } from '@/platform/observability/capture-unexpected-error';
-import { resolveTechnicalRequestId } from '@/platform/observability/technical-error-context';
-import { verifyCsrfToken } from '@/platform/security/csrf-protection';
+import { verifyTurnstile } from '@web/lib/turnstile';
+import { apiError, apiSuccess, ErrorCode } from '@web/platform/api/api-response';
+import { captureUnexpectedWebError } from '@web/platform/observability/capture-unexpected-error';
+import { resolveTechnicalRequestId } from '@web/platform/observability/technical-error-context';
+import { verifyCsrfToken } from '@web/platform/security/csrf-protection';
 import {
   contactGlobalRateLimit,
   contactRateLimit,
   getClientIp,
   hashRateLimitIdentifier,
-} from '@/platform/security/rate-limit';
+} from '@web/platform/security/rate-limit';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 

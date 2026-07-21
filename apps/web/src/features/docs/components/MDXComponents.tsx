@@ -1,5 +1,5 @@
-import { createMDXComponents } from '@/components/content/ContentMDXComponents';
-import { generateAnchorId } from '@/features/docs/lib/toc';
+import { createMDXComponents } from '@web/components/content/ContentMDXComponents';
+import { generateAnchorId } from '@web/features/docs/lib/toc';
 import type { MDXComponents } from 'mdx/types';
 import Link from 'next/link';
 import type { ComponentPropsWithoutRef, ReactElement, ReactNode } from 'react';

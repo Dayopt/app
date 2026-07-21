@@ -7,7 +7,7 @@
 import { dayoptDomains } from '@dayopt/config';
 import { z } from 'zod';
 
-import { env } from '@/platform/config/env';
+import { env } from '@web/platform/config/env';
 
 import { TURNSTILE_CONFIG } from './config';
 

@@ -1,10 +1,10 @@
 'use client';
 
-import { EmptyState } from '@/components/ui/feedback/empty-state';
-import { SearchInput } from '@/components/ui/inputs/search-input';
-import { ContentPagination } from '@/components/ui/navigation/content-pagination';
-import { cn } from '@/lib/class-names';
 import { Link } from '@dayopt/i18n/navigation';
+import { EmptyState } from '@web/components/ui/feedback/empty-state';
+import { SearchInput } from '@web/components/ui/inputs/search-input';
+import { ContentPagination } from '@web/components/ui/navigation/content-pagination';
+import { cn } from '@web/lib/class-names';
 import { Rss, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';

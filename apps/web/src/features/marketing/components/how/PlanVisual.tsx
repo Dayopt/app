@@ -13,7 +13,7 @@ export function PlanVisual() {
       label: 'Standup',
       time: '30m',
       height: 24,
-      color: 'bg-tag-amber/15 border-l-2 border-l-tag-amber text-tag-amber',
+      color: 'bg-tag-amber-tint border-l-2 border-l-tag-amber',
     },
     {
       label: 'Deep Work',
@@ -25,13 +25,13 @@ export function PlanVisual() {
       label: 'Lunch',
       time: '1h',
       height: 32,
-      color: 'bg-tag-green/15 border-l-2 border-l-tag-green text-tag-green',
+      color: 'bg-tag-green-tint border-l-2 border-l-tag-green',
     },
     {
       label: 'Reading',
       time: '1h',
       height: 32,
-      color: 'bg-tag-violet/15 border-l-2 border-l-tag-violet text-tag-violet',
+      color: 'bg-tag-violet-tint border-l-2 border-l-tag-violet',
     },
   ];
 
@@ -61,8 +61,8 @@ export function PlanVisual() {
               className={`flex items-center justify-between rounded-md px-2.5 text-xs font-medium ${block.color}`}
               style={{ height: block.height }}
             >
-              <span>{block.label}</span>
-              <span className="text-[10px] font-normal opacity-50">{block.time}</span>
+              <span className="text-foreground">{block.label}</span>
+              <span className="text-muted-foreground text-[10px] font-normal">{block.time}</span>
             </div>
           ))}
         </div>

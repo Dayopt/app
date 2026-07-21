@@ -15,11 +15,11 @@ vi.mock('resend', () => ({
     webhooks = { verify: mocks.verify };
   },
 }));
-vi.mock('@/platform/config/env', () => ({ env: mocks.env }));
-vi.mock('@/platform/observability/capture-unexpected-error', () => ({
+vi.mock('@web/platform/config/env', () => ({ env: mocks.env }));
+vi.mock('@web/platform/observability/capture-unexpected-error', () => ({
   captureUnexpectedWebError: mocks.captureUnexpectedWebError,
 }));
-vi.mock('@/platform/security/resend-webhook-dedup', () => ({
+vi.mock('@web/platform/security/resend-webhook-dedup', () => ({
   claimResendWebhookEvent: mocks.claimResendWebhookEvent,
   completeResendWebhookEvent: mocks.completeResendWebhookEvent,
   releaseResendWebhookEvent: mocks.releaseResendWebhookEvent,

@@ -10,10 +10,10 @@ const mocks = vi.hoisted(() => ({
   searchRateLimit: { limit: vi.fn() },
 }));
 
-vi.mock('@/platform/observability/capture-unexpected-error', () => ({
+vi.mock('@web/platform/observability/capture-unexpected-error', () => ({
   captureUnexpectedWebError: mocks.captureUnexpectedWebError,
 }));
-vi.mock('@/platform/security/rate-limit', () => ({
+vi.mock('@web/platform/security/rate-limit', () => ({
   getClientIp: mocks.getClientIp,
   hashRateLimitIdentifier: mocks.hashRateLimitIdentifier,
   searchRateLimit: mocks.searchRateLimit,

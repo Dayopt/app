@@ -1,5 +1,5 @@
-import { generateSEOMetadata } from '@/platform/seo/metadata';
 import { Button, Container, Heading, Text } from '@dayopt/components';
+import { generateSEOMetadata } from '@web/platform/seo/metadata';
 import Link from 'next/link';
 
 export const metadata = generateSEOMetadata({

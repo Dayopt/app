@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Calendar, CheckSquare, Menu, Settings } from 'lucide-react';
 import { useState } from 'react';
-import { expect, userEvent, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 import { Button, Sheet, SheetContent, SheetHeader, SheetTitle } from '@dayopt/components';
 
@@ -99,6 +99,9 @@ export const AllPatterns: Story = {
     const closeButton = await body.findByRole('button', { name: /close/i });
     await userEvent.click(closeButton);
 
-    await expect(body.queryByRole('dialog', { name: 'ナビゲーション' })).not.toBeInTheDocument();
+    // Radix は data-[state=closed] の exit アニメーション（duration-300）完了後に unmount するため待機する
+    await waitFor(() => {
+      expect(body.queryByRole('dialog', { name: 'ナビゲーション' })).not.toBeInTheDocument();
+    });
   },
 };

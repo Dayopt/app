@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const captureUnexpectedWebError = vi.hoisted(() => vi.fn());
 
-vi.mock('@/platform/observability/capture-unexpected-error', () => ({
+vi.mock('@web/platform/observability/capture-unexpected-error', () => ({
   captureUnexpectedWebError,
 }));
 

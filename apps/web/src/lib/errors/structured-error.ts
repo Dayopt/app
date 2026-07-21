@@ -1,4 +1,4 @@
-import { isDevelopment } from '@/platform/config/env';
+import { isDevelopment } from '@web/platform/config/env';
 
 import { toError } from './normalize-error';
 

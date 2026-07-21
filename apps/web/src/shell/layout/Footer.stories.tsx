@@ -42,6 +42,18 @@ export const En: Story = {
 
 /** 全ロケール一覧。 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: {
+      options: {
+        // カタログ表示のため ja/en の Footer を2つ並べており、実ページでは
+        // footer（contentinfo landmark）は1つのみ描画されるため誤検知
+        rules: {
+          'landmark-no-duplicate-contentinfo': { enabled: false },
+          'landmark-unique': { enabled: false },
+        },
+      },
+    },
+  },
   render: () => (
     <div className="flex flex-col gap-8">
       <NextIntlClientProvider locale="ja" messages={commonJa}>
