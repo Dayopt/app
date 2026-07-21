@@ -26,11 +26,7 @@ function isVerifiedDayoptSender(value) {
     return false;
   }
 
-  if (domain !== 'dayopt.app' && !domain.endsWith('.dayopt.app')) return false;
-  return (
-    domain.length <= 253 &&
-    domain.split('.').every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u.test(label))
-  );
+  return domain === 'dayopt.app';
 }
 
 /** Prevent a Production deploy with unavailable delivery, monitoring, or abuse controls. */
@@ -45,7 +41,7 @@ export function assertProductOperationalProductionBuildEnv(env) {
   }
 
   if (!isVerifiedDayoptSender(env.RESEND_FROM_EMAIL)) {
-    throw new Error('Product production build requires a verified Dayopt RESEND_FROM_EMAIL');
+    throw new Error('Product production build requires an apex dayopt.app RESEND_FROM_EMAIL');
   }
 
   try {

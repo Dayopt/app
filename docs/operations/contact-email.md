@@ -86,7 +86,8 @@ DNS移管で到達性を失った場合は、Vercel Registrarのnameserverを元
 5. `pnpm 1password:check`を実行し、値ではなくitem / fieldの`OK`だけを確認する
 6. master確認後にVercel / GitHubへ必要なreplicaを作る
 
-- Product / Web Productionに`RESEND_API_KEY`、検証済みの`RESEND_FROM_EMAIL`、各app固有の`RESEND_WEBHOOK_SECRET`がある
+- Product / Web Productionに`RESEND_API_KEY`、domain部分がapex `dayopt.app`と完全一致する`RESEND_FROM_EMAIL`、各app固有の`RESEND_WEBHOOK_SECRET`がある
+- `send.dayopt.app`はSPF / Return-Path用のDNS subdomainであり、Fromには使用しない
 - Product / Web ProductionにUpstash 2変数があり、Web ProductionにはTurnstile 2変数がある
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`がPreview / Developmentをtargetにしない
 - secretはVercelのSensitive typeを使う
@@ -133,15 +134,16 @@ timeout後の再送やbounce / complaintを実在する第三者addressへ故意
 
 ## 障害切り分け
 
-| 症状                                     | 確認                                                                                               |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| PreviewはReady、Production buildだけ失敗 | `Production Contract`の不足env名、Vercel Production target / typeを確認。Preview成功を根拠にしない |
-| Production formが503                     | Upstash到達性、global / per-user・per-IP quota、Turnstileを確認。rate limitをfail-openにしない     |
-| form成功だが受信しない                   | Resend delivery IDをprovider dashboardで確認し、root MXと`send`subdomain DNSを分けて確認する       |
-| Gmailで受信しない                        | Cloudflare Email Routingのroute / Destination認証 / catch-all無効を確認する                        |
-| 返信に個人Gmailが見える                  | Gmail Send mail asのFrom、Resend SMTP設定、「受信したアドレスから返信」を確認する                  |
-| webhookが401                             | app別endpointと署名secret、raw bodyが改変されていないことを確認する                                |
-| webhookが503                             | Upstash lease backendを確認する。署名済みeventを未処理のまま200にしない                            |
+| 症状                                     | 確認                                                                                                                             |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| PreviewはReady、Production buildだけ失敗 | `Production Contract`の不足env名、Vercel Production target / typeを確認。Preview成功を根拠にしない                               |
+| Production formが503                     | Upstash到達性、global / per-user・per-IP quota、Turnstileを確認。rate limitをfail-openにしない                                   |
+| form成功だが受信しない                   | Resend delivery IDをprovider dashboardで確認し、root MXと`send`subdomain DNSを分けて確認する                                     |
+| Resend APIがdomain authorizationの403    | API keyのdomain scopeとFromのdomain部分がともにapex `dayopt.app`か確認する。`send.dayopt.app`はReturn-Path用で、Fromには使わない |
+| Gmailで受信しない                        | Cloudflare Email Routingのroute / Destination認証 / catch-all無効を確認する                                                      |
+| 返信に個人Gmailが見える                  | Gmail Send mail asのFrom、Resend SMTP設定、「受信したアドレスから返信」を確認する                                                |
+| webhookが401                             | app別endpointと署名secret、raw bodyが改変されていないことを確認する                                                              |
+| webhookが503                             | Upstash lease backendを確認する。署名済みeventを未処理のまま200にしない                                                          |
 
 ## 関連
 
