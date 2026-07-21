@@ -3,6 +3,12 @@ import { z } from 'zod';
 import { EnvValidationError, type EnvConfig } from './env-types';
 import { loadEnv } from './load-env';
 
+function isDayoptEmailAddress(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  const domain = normalized.slice(normalized.lastIndexOf('@') + 1);
+  return domain === 'dayopt.app' || domain.endsWith('.dayopt.app');
+}
+
 export function assertProductionRuntimeEnv(env: Partial<EnvConfig> = loadEnv()): void {
   if (env.CI || env.VERCEL_ENV !== 'production') {
     return;
@@ -22,7 +28,7 @@ export function assertProductionRuntimeEnv(env: Partial<EnvConfig> = loadEnv()):
   if (
     !senderResult.success ||
     senderResult.data.toLowerCase() === 'onboarding@resend.dev' ||
-    !senderResult.data.toLowerCase().endsWith('@dayopt.app')
+    !isDayoptEmailAddress(senderResult.data)
   ) {
     errors.push('A verified RESEND_FROM_EMAIL is required for the Production contact form');
   }

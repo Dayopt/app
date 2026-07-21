@@ -35,9 +35,11 @@ const emailAddressSchema = z
   .max(254)
   .email()
   .refine((value) => !/[\r\n,]/u.test(value));
-const senderEmailSchema = emailAddressSchema.refine((value) =>
-  value.toLowerCase().endsWith('@dayopt.app'),
-);
+const senderEmailSchema = emailAddressSchema.refine((value) => {
+  const normalized = value.toLowerCase();
+  const domain = normalized.slice(normalized.lastIndexOf('@') + 1);
+  return domain === 'dayopt.app' || domain.endsWith('.dayopt.app');
+});
 const resendSuccessSchema = z.object({ id: z.string().min(1) });
 
 interface ContactEmailParams {

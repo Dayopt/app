@@ -9,6 +9,12 @@ import 'server-only';
 
 import { z } from 'zod';
 
+function isDayoptEmailAddress(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  const domain = normalized.slice(normalized.lastIndexOf('@') + 1);
+  return domain === 'dayopt.app' || domain.endsWith('.dayopt.app');
+}
+
 function isRedirectUriList(value: string | undefined): boolean {
   if (!value) return true;
   return value
@@ -127,7 +133,7 @@ const serverSchema = z
         data.RESEND_WEBHOOK_SECRET?.trim() &&
         sender &&
         sender !== 'onboarding@resend.dev' &&
-        sender.endsWith('@dayopt.app'),
+        isDayoptEmailAddress(sender),
       );
     },
     {
