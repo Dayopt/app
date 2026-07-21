@@ -1,4 +1,4 @@
-export interface GlobalErrorActions {
+interface GlobalErrorActions {
   retry: () => void;
   reload: () => void;
   goHome: () => void;

@@ -6,7 +6,7 @@ interface FailureErrorLike {
   digest?: string;
 }
 
-export interface GlobalErrorFailureContext {
+interface GlobalErrorFailureContext {
   title: string;
   description: string;
   errorIdLabel: string;

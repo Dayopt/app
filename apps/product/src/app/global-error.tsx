@@ -16,9 +16,9 @@ import { useEffect } from 'react';
 
 import { captureClientBoundaryError } from '@/lib/sentry';
 
+import { createGlobalErrorActions } from './_global-error/actions';
 import { ErrorButton } from './_global-error/ErrorButton';
 import { buildFailureContext } from './_global-error/failure';
-import { createGlobalErrorActions } from './_global-error/actions';
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
