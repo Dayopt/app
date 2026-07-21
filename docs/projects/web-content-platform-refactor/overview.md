@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 last_verified: 2026-07-21
 code:
   - apps/web/content
@@ -40,12 +40,12 @@ GitHub issue #1534・#1535 を、ユーザー指示により1ブランチ・1 PR
 
 ## Reversibility Table
 
-| 変更                       | 可逆性      | 戻し方                      |
-| -------------------------- | ----------- | --------------------------- |
-| platform / lib 分割        | `[minutes]` | #1535 の commit を revert   |
-| legal MDX 移行             | `[minutes]` | #1534 の commit を revert   |
-| translation key 整理       | `[minutes]` | #1534 の commit から復元    |
-| GitHub issue / PR metadata | `[minutes]` | label・本文・comment を更新 |
+| 変更                       | 可逆性 | 戻し方                      |
+| -------------------------- | ------ | --------------------------- |
+| platform / lib 分割        | 10分   | #1535 の commit を revert   |
+| legal MDX 移行             | 10分   | #1534 の commit を revert   |
+| translation key 整理       | 5分    | #1534 の commit から復元    |
+| GitHub issue / PR metadata | 5分    | label・本文・comment を更新 |
 
 schema、data migration、外部設定、Production mutation は含まない。
 
@@ -72,6 +72,23 @@ schema、data migration、外部設定、Production mutation は含まない。
 - `pnpm lint:boundaries`
 - `pnpm check`
 - en / ja の全10法務ページと、390px 幅の cookies / tokushoho / security を移行前後で比較する。
+
+### Results
+
+- `validate:content`: 81 filesを検査し、error 0。既存docsの`ai` metadata warning 1件のみ。
+- Web: lint / typecheck / 34 files・181 unit tests / buildを通過。buildは109/109 pagesを生成し、既存blog NFT warning以外の追加warningなし。
+- 法務E2E: local developmentとCI productionの両方で14/14 testsを通過。10ページの本文hash、metadata、主要href、heading/table/list数を固定した。
+- Root: typecheck / lint / boundaries / dead-code / `pnpm check` / E2E smokeを通過。Product E2Eは14 pass・4 skip、Web E2Eは14 pass。
+- i18n / docs: `i18n:check`、`copy:check`、`docs:check`を通過。
+- 視覚比較: 最新`origin/main`との本文hashは10/10一致。desktop 10枚と390px 6枚は10枚がpixel完全一致、残る6枚も文字antialias差のみ（最大0.0018%）で、サイズ・配置差なし。
+- route mode: securityを含む法務10 URLは、すべて1日revalidationのSSGとして生成された。
+
+## Completion Summary
+
+- #1535: SEO / envの既存facadeを維持しつつ責務別moduleへ分割し、Web固有error処理と汎用helperを責務名pathへ移した。Productとのerror helper共通化は行っていない。
+- #1534: en / jaの5文書をstrict frontmatter付きMDXへ移し、route-private loader・専用renderer・content validatorを追加した。連絡先はcontentへ複製せず`@dayopt/config`から注入する。
+- `architecture-guard`と`behavior-verifier`で両issueをread-onlyレビューし、contact ownership、validator strictness、development/production E2E差を修正後に再レビュー済み。risk-reviewerは対象となるauth・RLS・billing・migration等を変更しないため利用していない。
+- Production deploy、release、PR merge、法務文面や既存security linkの改善はdeferred scopeのまま。
 
 ## What I'm Not Doing
 
