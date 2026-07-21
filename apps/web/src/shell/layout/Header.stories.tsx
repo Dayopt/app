@@ -6,9 +6,9 @@
  * self-provide して web の common.json（common namespace）を渡す。locale 駆動なので ja / en。
  */
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { page } from '@vitest/browser/context';
 import { NextIntlClientProvider } from 'next-intl';
 import { expect, userEvent, within } from 'storybook/test';
+import { page } from 'vitest/browser';
 
 import commonEn from '../../../messages/en/common.json';
 import commonJa from '../../../messages/ja/common.json';
