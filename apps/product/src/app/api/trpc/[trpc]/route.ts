@@ -1,7 +1,8 @@
 /**
  * tRPC HTTP エンドポイント
  *
- * すべての tRPC procedure (`@/lib/trpc/root` の appRouter) をこのルート 1 本で受ける。
+ * すべての tRPC procedure (app/api/trpc/_server/app-router.ts の appRouter) を
+ * このルート 1 本で受ける。
  * - ルーティング: `/api/trpc/{procedure-path}` → router 経由で対応する procedure を呼出
  * - context: `createFetchTRPCContext` で Supabase auth から userId を解決
  * - エラー: error をログに記録（input は dev のみ展開、prod は REDACTED）
@@ -11,10 +12,10 @@
  */
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 
+import { appRouter } from '@/app/api/trpc/_server/app-router';
 import { logger } from '@/lib/logger';
+import { createFetchTRPCContext } from '@/lib/trpc/context';
 import { captureUnexpectedTrpcAdapterError } from '@/lib/trpc/errors';
-import { createFetchTRPCContext } from '@/lib/trpc/procedures';
-import { appRouter } from '@/lib/trpc/root';
 
 export const runtime = 'nodejs';
 

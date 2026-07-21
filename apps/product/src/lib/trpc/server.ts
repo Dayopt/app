@@ -35,7 +35,7 @@ import superjson from 'superjson';
 import { env } from '@/env';
 import type { Database } from '@/lib/database';
 import { observeAuthOperation } from '@/lib/sentry';
-import type { Context } from '@/lib/trpc/procedures';
+import type { Context } from '@/lib/trpc/context';
 import { appRouter } from '@/lib/trpc/root';
 
 // Re-export for convenience
