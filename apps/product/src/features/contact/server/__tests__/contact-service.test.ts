@@ -19,7 +19,7 @@ async function importService(envOverrides: Record<string, string> = {}) {
   vi.resetModules();
   vi.stubEnv('VERCEL_ENV', envOverrides.VERCEL_ENV ?? 'production');
   vi.stubEnv('RESEND_API_KEY', envOverrides.RESEND_API_KEY ?? 'resend-test-key');
-  vi.stubEnv('RESEND_FROM_EMAIL', envOverrides.RESEND_FROM_EMAIL ?? 'noreply@send.dayopt.app');
+  vi.stubEnv('RESEND_FROM_EMAIL', envOverrides.RESEND_FROM_EMAIL ?? 'noreply@dayopt.app');
   return import('../contact-service');
 }
 
@@ -72,7 +72,7 @@ describe('sendContactEmail', () => {
     });
     const body = JSON.parse(String(request.body)) as Record<string, unknown>;
     expect(body).toEqual({
-      from: 'Dayopt Contact <noreply@send.dayopt.app>',
+      from: 'Dayopt Contact <noreply@dayopt.app>',
       to: ['support@dayopt.app'],
       reply_to: 'test@example.com',
       subject: '[Dayopt Contact][Product][Bug]',
@@ -103,7 +103,7 @@ describe('sendContactEmail', () => {
     expect(body).not.toHaveProperty('attachments');
   });
 
-  it('also accepts a sender on the apex Dayopt domain', async () => {
+  it('accepts another sender on the verified apex Dayopt domain', async () => {
     const { sendContactEmail } = await importService({
       RESEND_FROM_EMAIL: 'contact-sender@dayopt.app',
     });
@@ -129,12 +129,13 @@ describe('sendContactEmail', () => {
   );
 
   it.each([
-    { RESEND_API_KEY: '', RESEND_FROM_EMAIL: 'noreply@send.dayopt.app' },
+    { RESEND_API_KEY: '', RESEND_FROM_EMAIL: 'noreply@dayopt.app' },
     { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: '' },
     { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: 'onboarding@resend.dev' },
     { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: 'sender@example.com' },
     { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: 'sender@notdayopt.app' },
     { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: 'sender@dayopt.app.example.com' },
+    { RESEND_API_KEY: 'resend-test-key', RESEND_FROM_EMAIL: 'noreply@send.dayopt.app' },
   ])('fails closed when email configuration is invalid', async (envOverrides) => {
     const { sendContactEmail } = await importService(envOverrides);
 

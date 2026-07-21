@@ -1,6 +1,7 @@
 ---
 status: frozen
 date: 2026-07-21
+superseded_by: docs/operations/log/2026-07-21-incident-resend-from-domain-scope.md
 code:
   - apps/product/production-build-gate.mjs
   - apps/web/production-build-gate.mjs

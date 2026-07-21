@@ -37,9 +37,6 @@ const MULTI_KEY_EXCEPTIONS: Record<string, string[]> = {
   email: [
     'emailCommon',
     'welcome',
-    'confirm',
-    'magicLink',
-    'passwordReset',
     'passwordChanged',
     'accountDeletion',
     'reminder',

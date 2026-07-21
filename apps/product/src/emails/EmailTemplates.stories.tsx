@@ -4,8 +4,8 @@
  * React Email は完全な HTML文書を生成するため、
  * render() で HTML文字列に変換し iframe の srcDoc で表示する。
  *
- * Auth メール: supabase/functions/send-auth-email/ (Deno用コピー)
- * アプリメール + Storybook用コピー: src/emails/
+ * Auth メール正本: supabase/functions/send-auth-email/
+ * アプリメール + Authメール生成プレビュー: src/emails/
  */
 
 import { useEffect, useState } from 'react';
@@ -126,8 +126,8 @@ export const Guidelines: Story = {
           <p className="pl-4">CancellationConfirmEmail.tsx — Pro解約確認</p>
           <p className="pl-4">AccountDeletionEmail.tsx — アカウント削除（GDPR）</p>
           <p className="text-muted-foreground mt-4 text-xs">
-            ※ Auth テンプレート3つは Storybook プレビュー用に src/emails/ にもコピーが存在。
-            Deno/Node.js のランタイム差異により共有不可のため、変更時は両方を更新すること。
+            ※ Auth テンプレート3つと専用stylesは pnpm auth-email:sync で Edge Function
+            正本から生成。pnpm check がドリフトを検知する。
           </p>
         </div>
       </section>
@@ -227,7 +227,7 @@ export const Guidelines: Story = {
       <section>
         <h2 className="border-border mb-4 border-b pb-2 text-lg font-medium">デザインルール</h2>
         <ul className="text-muted-foreground list-disc space-y-2 pl-6 text-sm">
-          <li>Auth / アプリ両方で styles.ts の共通スタイルを使用（同一値を維持）</li>
+          <li>Auth は Edge Function 正本から生成した専用styles、アプリメールは styles.ts を使用</li>
           <li>メールはライトモード固定（ダークモード未対応）</li>
           <li>CTA ボタンは1メールにつき1つ（明確なアクション）</li>
           <li>パスワードリセット等はフォールバックURL（コピペ用）を表示</li>
