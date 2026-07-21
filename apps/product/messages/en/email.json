@@ -16,31 +16,6 @@
     "valueProp": "Dayopt combines task planning, time tracking, and calendar views in one place — so you can see where your time actually goes.",
     "ctaButton": "Get Started"
   },
-  "confirm": {
-    "subject": "Confirm your email",
-    "heading": "Confirm your email",
-    "body": "Thanks for signing up for Dayopt. Please confirm your email address by clicking the button below.",
-    "ctaButton": "Confirm Email Address",
-    "ignoreLine": "If you didn't create an account on Dayopt, you can safely ignore this email."
-  },
-  "magicLink": {
-    "subject": "Log in to Dayopt",
-    "heading": "Log in to Dayopt",
-    "body": "Click the button below to log in to your Dayopt account. No password needed.",
-    "ctaButton": "Log In to Dayopt",
-    "expiryNote": "This link will expire in 1 hour.",
-    "ignoreLine": "If you didn't request this login link, you can safely ignore this email. Someone may have entered your email address by mistake."
-  },
-  "passwordReset": {
-    "subject": "Reset your password",
-    "heading": "Reset your password",
-    "body": "We received a request to reset your Dayopt password. Click the button below to choose a new password.",
-    "ctaButton": "Reset Password",
-    "expiryNote": "This link will expire in 24 hours.",
-    "ignoreLine": "If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.",
-    "securityNote": "If you're concerned about your account security, please visit {settingsLink} to update your password.",
-    "yourSettings": "your settings"
-  },
   "passwordChanged": {
     "subject": "Your password has been changed",
     "heading": "Your password has been changed",

@@ -22,6 +22,10 @@ type EmailFixture = {
   element: ReactElement;
 };
 
+function countHtmlOccurrences(html: string, value: string): number {
+  return html.split(value.replaceAll('&', '&amp;')).length - 1;
+}
+
 function createEmailFixtures(locale: 'en' | 'ja'): EmailFixture[] {
   return [
     {
@@ -109,4 +113,46 @@ describe('React Email templates', () => {
       expect(html.length).toBeGreaterThan(500);
     },
   );
+
+  describe('generated auth email previews', () => {
+    it('preserves the signup text, fallback name, and confirmation URL', async () => {
+      const confirmUrl = 'https://app.dayopt.app/auth/confirm?token_hash=test&type=signup';
+      const html = await render(ConfirmEmail({ userName: '', confirmUrl, locale: 'en' }));
+
+      expect(html).toContain('Hi there,');
+      expect(html).toContain('Confirm Email Address');
+      expect(countHtmlOccurrences(html, confirmUrl)).toBe(3);
+    });
+
+    it('preserves the current Japanese fallback passed by the Edge handler', async () => {
+      const html = await render(
+        ConfirmEmail({
+          userName: 'there',
+          confirmUrl: 'https://app.dayopt.app/auth/confirm?token_hash=test&type=signup',
+          locale: 'ja',
+        }),
+      );
+
+      expect(html).toContain('thereさん、こんにちは。');
+    });
+
+    it('preserves the recovery text, duplicate settings wording, and reset URL', async () => {
+      const resetUrl = 'https://app.dayopt.app/auth/reset?token_hash=test&type=recovery';
+      const html = await render(PasswordResetEmail({ userName: 'Tomoya', resetUrl, locale: 'en' }));
+
+      expect(html).toContain('This link will expire in 24 hours.');
+      expect(html.match(/your settings/g)).toHaveLength(2);
+      expect(html).toContain('href="https://app.dayopt.app/settings/profile"');
+      expect(countHtmlOccurrences(html, resetUrl)).toBe(3);
+    });
+
+    it('preserves the magic-link expiry and application link', async () => {
+      const loginUrl = 'https://app.dayopt.app/auth/magic-link?token_hash=test&type=magic_link';
+      const html = await render(MagicLinkEmail({ loginUrl, locale: 'ja' }));
+
+      expect(html).toContain('このリンクは1時間で有効期限が切れます。');
+      expect(html).toContain('href="https://app.dayopt.app"');
+      expect(countHtmlOccurrences(html, loginUrl)).toBe(3);
+    });
+  });
 });
