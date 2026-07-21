@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { Database } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { toParentIdsRpcArg } from './tag-rpc-args';
 import { createTagDatabaseError } from './tag-service-error';
 
 /**
@@ -75,7 +76,7 @@ export async function makeRoomAtTop(
   const { error: reorderError } = await supabase.rpc('batch_reorder_tags_hierarchy', {
     p_user_id: userId,
     p_tag_ids: siblings.map((tag) => tag.id),
-    p_parent_ids: siblings.map(() => parentId) as never,
+    p_parent_ids: toParentIdsRpcArg(siblings.map(() => parentId)),
     p_sort_orders: siblings.map((tag) => tag.sort_order + 1),
   });
 
