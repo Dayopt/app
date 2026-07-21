@@ -140,8 +140,38 @@ describe('Product Resend webhook', () => {
       expect(JSON.stringify(mocks.captureUnexpectedError.mock.calls)).not.toContain(
         'support@dayopt.app',
       );
+      expect(mocks.completeResendWebhookEvent.mock.invocationCallOrder[0]).toBeLessThan(
+        mocks.captureUnexpectedError.mock.invocationCallOrder[0]!,
+      );
     },
   );
+
+  it('retries a contact terminal-marker failure without duplicating the delivery Issue', async () => {
+    mocks.verifyWebhook.mockReturnValue({
+      type: 'email.failed',
+      data: {
+        to: ['support@dayopt.app'],
+        email_id: 'contact-email-retry',
+        tags: { source: 'contact-product' },
+      },
+    });
+    mocks.completeResendWebhookEvent
+      .mockRejectedValueOnce(new Error('complete failed'))
+      .mockResolvedValueOnce(undefined);
+
+    expect((await POST(request())).status).toBe(500);
+    expect(mocks.releaseResendWebhookEvent).toHaveBeenCalledWith('event-1', 'lease-1');
+    const deliveryCapturesAfterFailure = mocks.captureUnexpectedError.mock.calls.filter(
+      ([, context]) => context.operation === 'email_delivery_status',
+    );
+    expect(deliveryCapturesAfterFailure).toHaveLength(0);
+
+    expect((await POST(request())).status).toBe(200);
+    const deliveryCapturesAfterRetry = mocks.captureUnexpectedError.mock.calls.filter(
+      ([, context]) => context.operation === 'email_delivery_status',
+    );
+    expect(deliveryCapturesAfterRetry).toHaveLength(1);
+  });
 
   it('leaves Web contact events to the Web-specific endpoint', async () => {
     mocks.verifyWebhook.mockReturnValue({

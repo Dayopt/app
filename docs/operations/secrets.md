@@ -70,7 +70,6 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 | `upstash`     | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               | Redis rate limit / cache              |
 | `stripe-test` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    | Stripe test mode                      |
 | `resend`      | `RESEND_WEBHOOK_SECRET`                                                                                                                                                            | optional stagingのProduct webhook署名 |
-| `resend-web`  | `RESEND_WEBHOOK_SECRET`                                                                                                                                                            | optional stagingのWeb webhook署名     |
 | `app`         | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              | App URL / recovery code HMAC pepper   |
 
 ### `Dayopt-Production`
@@ -172,6 +171,8 @@ Supabase Auth Bot Protection、Auth hooks、Edge Functions、Vault secrets は S
 3. `op read` や `op run` で **値を表示せず** 存在確認する
 4. 旧 key がある場合は発行元サービスで revoke する
 5. 変更内容は docs / PR には field 名と同期先だけを書く
+
+`scripts/setup-1password.sh`は3 vaultが空の時だけ使う初回bootstrap専用。既存vaultへ新しいitem / fieldを追加する時はGUIまたは対象を限定した`op item create` / `op item edit`でmasterを先に更新し、`pnpm 1password:check`で値を表示せず検証してからreplicaへ同期する。
 
 存在確認の例:
 

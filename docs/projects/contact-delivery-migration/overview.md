@@ -51,9 +51,9 @@ Issue [#1646](https://github.com/Dayopt/dayopt/issues/1646) の`status:blocked`�
 - Product / Webが同一SHAでReadyになり、各フォーム1通の受信、Reply-To、webhook、Sentry / logのPII不在を確認する
 - 30分の観察後に`v0.32.1`tagとGitHub Releaseを作り、旧GitHub env / PATと作業branch / worktreeを整理する
 
-## Bootstrap Constraint
+## Trusted Audit Constraint
 
-`pull_request_target` workflowはtrusted base revisionだけを実行するため、追加した`Production Config Audit`は導入PR自身では起動しない。導入PRではMainが同じscriptを現在のtrusted branchからmetadata-onlyで実行し、merge後の初回成功を確認してからrequired statusへ昇格する。PR codeへ`VERCEL_TOKEN`を渡す例外は作らない。
+`pull_request_target` workflowはtrusted base revisionだけを実行するため、追加した`Production Config Audit`は導入PR自身では起動しない。また、audit contractを変更する将来のPRではbase contractの結果をheadの証拠にできない。workflowは変更前後のfilenameを検査してcontractの編集・renameを検出し、該当時はfailする。通常CIでsafe dummy testを通したうえで、maintainerがexact head SHAをレビューしたclean checkoutからmetadata-only auditを行う。merge後の初回成功を確認してからrequired statusを継続する。未レビューのPR codeへ`VERCEL_TOKEN`を渡す例外は作らない。
 
 ## Reversibility
 

@@ -160,8 +160,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    captureWebContactDeliveryFailure(event.type, eventData);
     await completeResendWebhookEvent(svixId, claim.token);
+    // Persist the terminal marker before emitting the Sentry side effect. If Redis
+    // is unavailable, Resend can retry without creating a duplicate Issue.
+    captureWebContactDeliveryFailure(event.type, eventData);
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
     try {

@@ -137,6 +137,7 @@ async function recordSuppression(
 
 export async function POST(request: NextRequest) {
   let claimedEvent: { id: string; token: string } | undefined;
+  let contactDeliveryFailure: { eventType: string; data: EmailEventData } | undefined;
 
   try {
     const webhookSecret = env.RESEND_WEBHOOK_SECRET?.trim();
@@ -204,7 +205,7 @@ export async function POST(request: NextRequest) {
           isEmailEventData(event.data) &&
           isContactDelivery(event.data, dayoptContactDeliverySources.product)
         ) {
-          captureContactDeliveryFailure(event.type, event.data);
+          contactDeliveryFailure = { eventType: event.type, data: event.data };
           break;
         }
         await recordSuppression(event.data.to, 'bounce', event.data.email_id);
@@ -216,7 +217,7 @@ export async function POST(request: NextRequest) {
           isEmailEventData(event.data) &&
           isContactDelivery(event.data, dayoptContactDeliverySources.product)
         ) {
-          captureContactDeliveryFailure(event.type, event.data);
+          contactDeliveryFailure = { eventType: event.type, data: event.data };
           break;
         }
         await recordSuppression(event.data.to, 'complaint', event.data.email_id);
@@ -237,7 +238,7 @@ export async function POST(request: NextRequest) {
           isEmailEventData(event.data) &&
           isContactDelivery(event.data, dayoptContactDeliverySources.product)
         ) {
-          captureContactDeliveryFailure(event.type, event.data);
+          contactDeliveryFailure = { eventType: event.type, data: event.data };
         } else if (isEmailEventData(event.data)) {
           logger.error('Email delivery failed', {
             emailId: event.data.email_id,
@@ -252,6 +253,12 @@ export async function POST(request: NextRequest) {
 
     await completeResendWebhookEvent(svixId, claim.token);
     claimedEvent = undefined;
+    // The terminal marker must win the race with the observable side effect.
+    // Otherwise a marker failure followed by a provider retry creates a second
+    // Sentry Issue for the same signed event.
+    if (contactDeliveryFailure) {
+      captureContactDeliveryFailure(contactDeliveryFailure.eventType, contactDeliveryFailure.data);
+    }
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
     logger.error('Resend webhook processing failed');

@@ -1,29 +1,14 @@
+import { REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV } from '../apps/product/production-build-gate.mjs';
+import { REQUIRED_WEB_OPERATIONAL_BUILD_ENV } from '../apps/web/production-build-gate.mjs';
+
 const PROJECT_CONTRACTS = {
   product: {
-    requiredProduction: [
-      'RESEND_API_KEY',
-      'RESEND_FROM_EMAIL',
-      'RESEND_WEBHOOK_SECRET',
-      'UPSTASH_REDIS_REST_URL',
-      'UPSTASH_REDIS_REST_TOKEN',
-    ],
-    requiredSensitive: [
-      'RESEND_API_KEY',
-      'RESEND_WEBHOOK_SECRET',
-      'UPSTASH_REDIS_REST_TOKEN',
-    ],
+    requiredProduction: REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV,
+    requiredSensitive: ['RESEND_API_KEY', 'RESEND_WEBHOOK_SECRET', 'UPSTASH_REDIS_REST_TOKEN'],
     forbiddenNonProduction: ['RESEND_API_KEY', 'RESEND_WEBHOOK_SECRET'],
   },
   web: {
-    requiredProduction: [
-      'RESEND_API_KEY',
-      'RESEND_FROM_EMAIL',
-      'RESEND_WEBHOOK_SECRET',
-      'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
-      'TURNSTILE_SECRET_KEY',
-      'UPSTASH_REDIS_REST_URL',
-      'UPSTASH_REDIS_REST_TOKEN',
-    ],
+    requiredProduction: REQUIRED_WEB_OPERATIONAL_BUILD_ENV,
     requiredSensitive: [
       'RESEND_API_KEY',
       'RESEND_WEBHOOK_SECRET',
@@ -103,9 +88,7 @@ export function auditProjectMetadata(projectName, response, options = {}) {
 }
 
 async function fetchProjectMetadata(projectName, token, teamId, fetchImpl) {
-  const url = new URL(
-    `https://api.vercel.com/v10/projects/${encodeURIComponent(projectName)}/env`,
-  );
+  const url = new URL(`https://api.vercel.com/v10/projects/${encodeURIComponent(projectName)}/env`);
   url.searchParams.set('teamId', teamId);
 
   const response = await fetchImpl(url, {
@@ -124,25 +107,25 @@ export async function runProductionConfigAudit({
   fetchImpl = fetch,
 }) {
   if (!token) throw new Error('VERCEL_TOKEN is required for Production Config Audit');
-  if (!teamId) throw new Error('VERCEL_ORG_ID is required for Production Config Audit');
+  if (!teamId) throw new Error('VERCEL_TEAM_ID is required for Production Config Audit');
 
   const allErrors = [];
   for (const projectName of Object.keys(PROJECT_CONTRACTS)) {
     const response = await fetchProjectMetadata(projectName, token, teamId, fetchImpl);
-    allErrors.push(
-      ...auditProjectMetadata(projectName, response, { forbidLegacyContactEnv }),
-    );
+    allErrors.push(...auditProjectMetadata(projectName, response, { forbidLegacyContactEnv }));
   }
 
   if (allErrors.length > 0) {
-    throw new Error(`Production Config Audit failed:\n${allErrors.map((error) => `- ${error}`).join('\n')}`);
+    throw new Error(
+      `Production Config Audit failed:\n${allErrors.map((error) => `- ${error}`).join('\n')}`,
+    );
   }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   runProductionConfigAudit({
     token: process.env.VERCEL_TOKEN,
-    teamId: process.env.VERCEL_ORG_ID,
+    teamId: process.env.VERCEL_TEAM_ID,
     forbidLegacyContactEnv: process.env.AUDIT_FORBID_LEGACY_CONTACT_ENV === 'true',
   })
     .then(() => {

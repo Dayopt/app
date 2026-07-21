@@ -81,6 +81,9 @@ describe('Web Resend webhook', () => {
       expect(JSON.stringify(mocks.captureUnexpectedWebError.mock.calls)).not.toContain(
         'support@dayopt.app',
       );
+      expect(mocks.completeResendWebhookEvent.mock.invocationCallOrder[0]).toBeLessThan(
+        mocks.captureUnexpectedWebError.mock.invocationCallOrder[0]!,
+      );
     },
   );
 
@@ -114,9 +117,11 @@ describe('Web Resend webhook', () => {
     expect(mocks.completeResendWebhookEvent).not.toHaveBeenCalled();
   });
 
-  it('releases its lease when terminal marking fails', async () => {
+  it('retries a terminal-marker failure without duplicating the delivery Issue', async () => {
     mocks.verify.mockReturnValue(contactFailure());
-    mocks.completeResendWebhookEvent.mockRejectedValue(new Error('Redis unavailable'));
+    mocks.completeResendWebhookEvent
+      .mockRejectedValueOnce(new Error('Redis unavailable'))
+      .mockResolvedValueOnce(undefined);
 
     expect((await POST(request())).status).toBe(500);
     expect(mocks.releaseResendWebhookEvent).toHaveBeenCalledWith('event-1', 'lease-1');
@@ -129,6 +134,17 @@ describe('Web Resend webhook', () => {
         source: 'resend_webhook',
       },
     );
+
+    const deliveryCapturesAfterFailure = mocks.captureUnexpectedWebError.mock.calls.filter(
+      ([, context]) => context.operation === 'email_delivery_status',
+    );
+    expect(deliveryCapturesAfterFailure).toHaveLength(0);
+
+    expect((await POST(request())).status).toBe(200);
+    const deliveryCapturesAfterRetry = mocks.captureUnexpectedWebError.mock.calls.filter(
+      ([, context]) => context.operation === 'email_delivery_status',
+    );
+    expect(deliveryCapturesAfterRetry).toHaveLength(1);
   });
 
   it('captures lease release failures without request data', async () => {

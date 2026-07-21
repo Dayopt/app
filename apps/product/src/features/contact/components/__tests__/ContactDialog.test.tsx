@@ -52,7 +52,7 @@ describe('ContactDialog idempotency contract', () => {
     vi.restoreAllMocks();
   });
 
-  it('reuses an ID only while the exact email payload stays unchanged', () => {
+  it('reuses an ID only while the Product contact intent stays unchanged', () => {
     render(<ContactDialog open onOpenChange={vi.fn()} />);
 
     act(() => mocks.contentSubmit?.({ category: 'bug', message: 'Original private message' }));

@@ -77,6 +77,15 @@ DNS移管で到達性を失った場合は、Vercel Registrarのnameserverを元
 
 3点のユーザーcheckpoint後にIssue #1646の`status:blocked`を解除し、次を値を表示せず確認する。
 
+既存1Password環境では`setup-1password.sh`を実行しない。このscriptは空のvault向け初回bootstrap専用なので、masterを次の順で手動更新する。
+
+1. `Dayopt-Shared/resend`にapp配送用`RESEND_API_KEY` / `RESEND_FROM_EMAIL`があることを確認する
+2. `Dayopt-Production/resend`のProduct用`RESEND_WEBHOOK_SECRET`を確認する
+3. `Dayopt-Production/resend-web`を作成し、Productと異なるWeb用`RESEND_WEBHOOK_SECRET`を保存する
+4. 前節で作成した`Dayopt-Shared/resend-support-replies`を確認する
+5. `pnpm 1password:check`を実行し、値ではなくitem / fieldの`OK`だけを確認する
+6. master確認後にVercel / GitHubへ必要なreplicaを作る
+
 - Product / Web Productionに`RESEND_API_KEY`、検証済みの`RESEND_FROM_EMAIL`、各app固有の`RESEND_WEBHOOK_SECRET`がある
 - Product / Web ProductionにUpstash 2変数があり、Web ProductionにはTurnstile 2変数がある
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`がPreview / Developmentをtargetにしない
@@ -89,6 +98,8 @@ node scripts/production-config-audit.mjs
 ```
 
 このscriptはVercel API responseからkey / target / typeだけを取り出す。値の一致、sender domainの検証状態、Product / Web secretが異なることは証明できないため、Resend / Vercel dashboardで別途確認する。
+
+`scripts/production-config-audit.mjs`、両appの`production-build-gate.mjs`、audit workflow自体を変更するPRでは、base revisionのaudit結果をheadの証拠として扱わない。通常CIのsafe dummy testに加え、maintainerがexact head SHAのdiffをレビューしたclean checkoutでmetadata-only auditを実行し、その成功statusをhead SHAへ付ける。merge後のpushでも新contractが成功してからrequired statusを継続する。
 
 ## 4. DeployとProduction smoke
 

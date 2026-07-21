@@ -15,7 +15,7 @@ ProductとWebから受け付けた問い合わせを、Production限定で`suppo
 - Productは認証済みユーザー向け`contact.submit`、Webは公開`POST /api/contact`で問い合わせを受け付ける
 - 両interfaceは`submissionId: uuid`を必須とし、成功時は`{ success: true }`を返す
 - 配送先は固定の`support@dayopt.app`。From、件名、source tagはserverが固定し、検証済みの送信者emailだけをReply-Toに使う
-- 配送はResend APIを使い、10秒でtimeoutする。同じ正規化済みpayloadの再送は同じ`submissionId`とidempotency keyを使い、内容を編集した後は新しいIDを使う
+- 配送はResend APIを使い、10秒でtimeoutする。同じclient contact intentの再送は同じ`submissionId`とidempotency keyを使い、フォーム内容を編集した後は新しいIDを使う。Productの氏名・emailは配送時に認証済みprofileから取得するmetadataであり、intent IDには含めない
 - 配送に失敗した場合は成功表示にせず入力を保持する。WebはTurnstile tokenだけを破棄し、再検証する
 - credentialが存在してもProduction以外では配送しない。Preview / Developmentは実受信箱へ書き込まない
 - Productはuser単位と全体、WebはIP単位と全体のrate limitをUpstashで適用する。Productionでbackendを利用できない時は配送せずfail-closedにする

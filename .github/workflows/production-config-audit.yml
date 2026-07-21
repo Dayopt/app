@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
   statuses: write
 
 concurrency:
@@ -32,11 +33,29 @@ jobs:
         with:
           node-version: 24
 
+      - name: Detect audit contract changes
+        id: contract
+        if: github.event_name == 'pull_request_target'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Check both sides of a rename so a protected contract cannot evade
+          # the trusted-head checkpoint by moving to a new path.
+          changed_files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[] | .filename, (.previous_filename // empty)')
+          if printf '%s\n' "$changed_files" | grep -Eq '^(scripts/production-config-audit\.mjs|apps/product/production-build-gate\.mjs|apps/web/production-build-gate\.mjs|\.github/workflows/production-config-audit\.yml)$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Audit Vercel environment metadata
         id: audit
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          # GitHub keeps the existing VERCEL_ORG_ID replica; the runtime contract
+          # uses the canonical 1Password/schema name VERCEL_TEAM_ID.
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
           set +e
           node scripts/production-config-audit.mjs
@@ -49,9 +68,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           AUDIT_EXIT: ${{ steps.audit.outputs.exit_code || '1' }}
+          CONTRACT_CHANGED: ${{ steps.contract.outputs.changed || 'false' }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          if [ "$AUDIT_EXIT" = "0" ]; then
+          if [ "$CONTRACT_CHANGED" = "true" ]; then
+            state=failure
+            description="Audit contract changed; trusted head audit is required"
+          elif [ "$AUDIT_EXIT" = "0" ]; then
             state=success
             description="Vercel metadata matches the Production contract"
           else
@@ -88,4 +111,9 @@ jobs:
         if: always()
         env:
           AUDIT_EXIT: ${{ steps.audit.outputs.exit_code || '1' }}
-        run: exit "$AUDIT_EXIT"
+          CONTRACT_CHANGED: ${{ steps.contract.outputs.changed || 'false' }}
+        run: |
+          if [ "$CONTRACT_CHANGED" = "true" ]; then
+            exit 1
+          fi
+          exit "$AUDIT_EXIT"

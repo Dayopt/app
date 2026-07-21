@@ -14,32 +14,41 @@ import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import { contactFormSchema } from '../schemas';
 import { deliverContactFeedback } from './contact-service';
 
+type ContactRateLimiter = typeof contactRateLimit;
+
+async function enforceContactRateLimit(
+  rateLimit: ContactRateLimiter,
+  identifier: string,
+): Promise<void> {
+  if (!rateLimit) return;
+
+  let success: boolean;
+  try {
+    ({ success } = await rateLimit.limit(identifier));
+  } catch (error) {
+    throw new TRPCError({
+      code: 'SERVICE_UNAVAILABLE',
+      message: 'Contact rate-limit service is unavailable',
+      cause: error,
+    });
+  }
+
+  if (!success) {
+    throw new TRPCError({
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Too many contact requests. Please try again later.',
+    });
+  }
+}
+
 /** お問い合わせフォームのtRPCルーター */
 export const contactRouter = createTRPCRouter({
   submit: protectedProcedure
     .meta({ description: 'お問い合わせ送信（サポートメール配送）' })
     .input(contactFormSchema)
     .mutation(async ({ ctx, input }) => {
-      // レート制限チェック（userId ベース）
-      if (contactRateLimit) {
-        const { success } = await contactRateLimit.limit(ctx.userId);
-        if (!success) {
-          throw new TRPCError({
-            code: 'TOO_MANY_REQUESTS',
-            message: 'Too many contact requests. Please try again later.',
-          });
-        }
-      }
-
-      if (contactGlobalRateLimit) {
-        const { success } = await contactGlobalRateLimit.limit('global');
-        if (!success) {
-          throw new TRPCError({
-            code: 'TOO_MANY_REQUESTS',
-            message: 'Too many contact requests. Please try again later.',
-          });
-        }
-      }
+      await enforceContactRateLimit(contactRateLimit, ctx.userId);
+      await enforceContactRateLimit(contactGlobalRateLimit, 'global');
 
       // ユーザー情報を取得
       const {
