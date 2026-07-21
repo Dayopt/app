@@ -197,8 +197,7 @@ export class SettingsService {
       });
     }
 
-    const token = (data as Record<string, unknown> | null)?.ical_feed_token;
-    return { token: (token as string) ?? null };
+    return { token: data?.ical_feed_token ?? null };
   }
 
   async regenerateICalToken(userId: string) {
@@ -220,7 +219,7 @@ export class SettingsService {
 
     const { data: updated, error: updateError } = await this.supabase
       .from('user_settings')
-      .update({ ical_feed_token: newToken } as never)
+      .update({ ical_feed_token: newToken })
       .eq('user_id', userId)
       .select('ical_feed_token')
       .single();

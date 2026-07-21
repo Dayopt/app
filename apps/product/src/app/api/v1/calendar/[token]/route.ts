@@ -23,11 +23,10 @@ import { createServiceRoleClient } from '@/lib/supabase/oauth';
 async function getUserIdByToken(token: string): Promise<string | null> {
   const supabase = createServiceRoleClient();
 
-  // ical_feed_tokenは生成型に未反映のため filter で直接クエリ
   const { data, error } = await supabase
     .from('user_settings')
     .select('user_id')
-    .eq('ical_feed_token' as never, token)
+    .eq('ical_feed_token', token)
     .maybeSingle();
 
   if (error) {
@@ -38,7 +37,7 @@ async function getUserIdByToken(token: string): Promise<string | null> {
     });
   }
   if (!data) return null;
-  return (data as Record<string, unknown>).user_id as string;
+  return data.user_id;
 }
 
 /**
@@ -85,8 +84,7 @@ async function getPlansForFeed(userId: string) {
 
   // tags リレーションからタグ名を抽出
   return (plans ?? []).map((plan) => {
-    const tags = plan.tags as unknown as { name: string } | null;
-    const tagName = tags?.name ?? null;
+    const tagName = plan.tags?.name ?? null;
     return {
       id: plan.id,
       title: plan.title,
