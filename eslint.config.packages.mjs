@@ -5,6 +5,15 @@
 // eslint.config.mjs から re-export して使う（base path を package 自身に置くため）。
 // @see apps/product/eslint.config.mjs — app 側の設定
 // @see docs/engineering/architecture.md#package-boundaries
+//
+// tailwindcss/no-arbitrary-value（apps/product のみ適用、eslint-plugin-tailwindcss 未導入）:
+// @dayopt/components は shadcn/radix 由来の primitive 層で、残存する arbitrary value
+// 30 箇所中 27 箇所が構造的に token 化不可（transition 対象プロパティ指定 / viewport・
+// calc 単位 / pseudo-element content / grid template / radix CSS 変数）。適用しても
+// 理由付き disable が primitive 層に恒久的に増えるだけで signal がないため、意図的に
+// packages には適用しない判断。
+// @see https://github.com/Dayopt/dayopt/issues/1679
+// @see docs/engineering/log/2026-07-23-packages-components-no-arbitrary-value.md
 
 import nextTs from 'eslint-config-next/typescript';
 import storybook from 'eslint-plugin-storybook';
