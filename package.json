@@ -89,7 +89,7 @@
     "size:why": "pnpm --filter @dayopt/product size:why",
     "size:budget": "pnpm --filter @dayopt/product size:budget",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
-    "format:check": "pnpm exec prettier --check \"apps/product/src/**/*.{ts,tsx,js,jsx,json,md}\" && pnpm exec prettier --check \"package.json\" \"packages/*/package.json\" \"apps/*/package.json\" \"docs/**/*.md\"",
+    "format:check": "pnpm exec prettier --check \"apps/product/src/**/*.{ts,tsx,js,jsx,json,md}\" && pnpm exec prettier --check \"packages/*/src/**/*.{ts,tsx,css,md,mdx}\" && pnpm exec prettier --check \"package.json\" \"packages/*/package.json\" \"apps/*/package.json\" \"docs/**/*.md\"",
     "security:check": "pnpm --filter @dayopt/product security:check",
     "security:check:production": "pnpm --filter @dayopt/product security:check:production",
     "storybook:coverage": "pnpm --filter @dayopt/product storybook:coverage",

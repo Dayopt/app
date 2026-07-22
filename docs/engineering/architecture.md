@@ -591,6 +591,8 @@ Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文�
 
 Package foundation は第一段階として運用可能な状態にある。root scripts の `build:packages`, `typecheck:packages`, `check:workspace`, `lint:boundaries`, `build`, `build:web`, `build-storybook` は現在の package 構成を検証対象に含め、CI も `packages-build` job で `pnpm build:packages` を実行する。
 
+品質ゲートは apps と同じ水準に揃っている。tsconfig の共通部分は root `tsconfig.base.json` に集約し、各 package はそこから `extends` して固有オプションだけを持つ。ESLint は root `eslint.config.packages.mjs` を共有 flat config とし、各 package の `eslint.config.mjs` が re-export する。全 package が `lint: eslint src --max-warnings 0` を持つため `turbo run lint`（= `pnpm lint`）と CI の lint job が packages を検証対象に含む。Prettier も root `format:check` が `packages/*/src` の TS/TSX/CSS/MDX を対象にする。packages は Next.js に依存しないため、app 側の `core-web-vitals` ではなく TypeScript ルール + Storybook plugin を base にする。
+
 apps への adoption は完了している。[ADR-021](./log/2026-06-22-shared-packages-canonical-and-app-shims.md)（2026-06-22）で packages を canonical とし、product / web は shim を介さず直接 import する形に統一した。UI・トークンの app 側重複は解消済みで、i18n も routing / navigation を `@dayopt/i18n/*` から直接 import する。app 側には message loading と next-intl plugin entrypoint を担う `request.ts`、app 固有 Provider だけを残す。残る follow-up は `.from('table')` への `databaseTables` 段階適用など小粒のものに限られる。
 
 ### Package Boundaries
@@ -599,6 +601,8 @@ apps への adoption は完了している。[ADR-021](./log/2026-06-22-shared-p
 
 Dayopt の見た目の source of truth。React component は持たず、tokens と theme（+ token showcase の Story）だけを扱う。
 CSS variables は無 prefix（`--background`, `--primary`, `--radius-*` など）が唯一の canonical 体系。旧 `--dayopt-*` prefix は ADR-021 で廃止した。
+
+公開面は `exports` の `./tokens.css` と `./scrollbar.css` の 2 subpath だけ。個別 token CSS（`src/tokens/*.css`, `src/tailwind-theme.css`）は `tokens.css` が相対 import で集約して供給し、直接 import できる subpath としては公開しない。docs やコメントから個別ファイルを指す時は、import 可能な subpath と誤読されないよう `packages/foundations/src/tokens/colors.css` のような repo 相対 path で書く。
 
 Storybook 表示: `Shared/Foundations/*`（Colors / Typography / Spacing / Radius / Elevation / Z-Index / Motion / Icons / Overview）
 
@@ -761,6 +765,8 @@ Storybook は `packages/foundations` と `packages/components` の公開面を�
 - `packages/components`: props と状態を `Shared/Components/*` で可視化する。
 - `packages/domain`, `packages/billing`, `apps/product/src/lib/database`: UI カタログではなく docs と decision table で境界を説明する。
 - `apps/product` 固有の feature component は `Product/*` に残し、汎用化できたものだけ `packages/components` に移す。
+
+`apps/storybook` が `@dayopt/product` に加えて `@dayopt/foundations` / `@dayopt/components` を直接 dependencies に持つのは意図的で、product 経由の二重経路ではない。`.storybook/main.ts` の `stories` glob が両 package の `src` を直接読み込み、`packages/components/src/*.stories.tsx` は `@dayopt/components` を package 名で self-import する。直接依存は Storybook build の実入力を宣言している。
 
 ### Ownership And Operations
 

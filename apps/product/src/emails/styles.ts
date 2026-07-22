@@ -4,7 +4,7 @@
  * AuthメールのStorybook生成物は auth-email-styles.generated.ts を使用する
  *
  * メールクライアントは CSS変数(var(--xxx)) や OKLCH をサポートしないため、
- * @dayopt/foundations/src/tokens/colors.css のセマンティックトークンを hex に変換して定義。
+ * packages/foundations/src/tokens/colors.css のセマンティックトークンを hex に変換して定義。
  *
  * トークンマッピング (tokens/colors.css :root → hex):
  *   --background    oklch(0.99 0 0)             → #fafafa

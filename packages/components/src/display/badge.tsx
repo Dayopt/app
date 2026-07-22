@@ -19,7 +19,7 @@ import { cn } from '../cn';
  * | info        | 情報、ニュートラル（アウトライン）           | ベータ、更新あり             |
  * | destructive | エラー、マイナス、削除                       | エラー、-5%、無効            |
  */
-// eslint-disable-next-line tailwindcss/no-arbitrary-value -- specific transition properties
+// transition-[color,box-shadow] は遷移対象プロパティを限定する意図的な arbitrary value
 const badgeVariants = cva(
   'inline-flex items-center justify-center rounded-lg border px-2 py-1 text-xs font-normal w-fit whitespace-nowrap shrink-0 [&>svg]:size-3.5 gap-1 [&>svg]:pointer-events-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-ring aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden',
   {
