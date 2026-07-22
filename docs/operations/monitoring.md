@@ -1,9 +1,9 @@
 ---
 status: current
-last_verified: 2026-07-16
+last_verified: 2026-07-22
 code:
   - packages/observability
-  - apps/product/instrumentation.ts
+  - apps/product/src/instrumentation.ts
   - apps/product/instrumentation-client.ts
   - apps/web/src/instrumentation.ts
   - apps/web/instrumentation-client.ts
