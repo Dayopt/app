@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "eagle": {
-      "type": "http",
-      "url": "http://127.0.0.1:41596/mcp"
-    },
     "supabase-local": {
       "type": "http",
       "url": "http://127.0.0.1:54321/mcp"
@@ -11,16 +7,6 @@
     "storybook": {
       "type": "http",
       "url": "http://localhost:6006/mcp"
-    },
-    "context7": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"],
-      "env": {}
-    },
-    "sentry": {
-      "type": "http",
-      "url": "https://mcp.sentry.dev/mcp"
     },
     "supabase": {
       "type": "stdio",
@@ -37,24 +23,6 @@
       "env": {
         "SUPABASE_ACCESS_TOKEN": "op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN"
       }
-    },
-    "playwright": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"],
-      "env": {}
-    },
-    "github": {
-      "type": "stdio",
-      "command": "op",
-      "args": ["run", "--", "github-mcp-server", "stdio"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "op://Dayopt-Shared/github-mcp-pat/credential"
-      }
-    },
-    "vercel": {
-      "type": "http",
-      "url": "https://mcp.vercel.com"
     }
   }
 }
