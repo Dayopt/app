@@ -74,3 +74,69 @@ lastUpdated: Last Updated
     expect(validateLegalBody(body)).toEqual(['Legal document content must not be empty']);
   });
 });
+
+describe('blog/releases tags validation', () => {
+  const baseBlogFm = {
+    title: 'Post',
+    description: 'Description',
+    publishedAt: '2026-01-01',
+    category: 'guide',
+    author: 'Dayopt Team',
+  };
+
+  it('tags 未指定は必須フィールド欠落として報告する', () => {
+    const result = validateFrontMatter({ ...baseBlogFm }, 'blog', false);
+    expect(result.errors).toContain("Missing required field: 'tags'");
+  });
+
+  it('tags: [] も必須フィールド欠落として報告する（空配列のすり抜けを防ぐ）', () => {
+    const result = validateFrontMatter({ ...baseBlogFm, tags: [] }, 'blog', false);
+    expect(result.errors).toContain("Missing required field: 'tags'");
+  });
+
+  it('tags が1-2件だと Too few tags を報告する', () => {
+    const result = validateFrontMatter({ ...baseBlogFm, tags: ['solo'] }, 'blog', false);
+    expect(result.errors).toContain('Too few tags (min: 3, found: 1)');
+  });
+
+  it('tags が3-6件なら tags関連のエラーは出さない', () => {
+    const result = validateFrontMatter(
+      { ...baseBlogFm, tags: ['a', 'b', 'c'] },
+      'blog',
+      false,
+    );
+    expect(result.errors.filter((e) => e.includes('tags'))).toEqual([]);
+  });
+
+  it('tags が7件超だと Too many tags を報告する', () => {
+    const result = validateFrontMatter(
+      { ...baseBlogFm, tags: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] },
+      'blog',
+      false,
+    );
+    expect(result.errors).toContain('Too many tags (max: 6, found: 7)');
+  });
+
+  it('draft: true では tags 欠落は warning に降格する', () => {
+    const result = validateFrontMatter({ ...baseBlogFm }, 'blog', true);
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toContain("Missing required field: 'tags'");
+  });
+
+  it('releases でも tags: [] を必須フィールド欠落として報告する', () => {
+    const result = validateFrontMatter(
+      {
+        version: 'v1.0.0',
+        date: '2026-01-01',
+        title: 'Release',
+        description: 'Description',
+        tags: [],
+        breaking: false,
+        featured: false,
+      },
+      'releases',
+      false,
+    );
+    expect(result.errors).toContain("Missing required field: 'tags'");
+  });
+});

@@ -62,6 +62,27 @@ describe('blogFrontMatterSchema', () => {
     expect(result.ai?.difficulty).toBe('beginner');
     expect(result.ai?.relatedDocs).toEqual(['/docs/intro']);
   });
+
+  it('tags が剥ぎ取られずパースされる', () => {
+    const data = {
+      title: 'Tagged Post',
+      publishedAt: '2026-01-01',
+      tags: ['timeboxing', 'productivity'],
+    };
+
+    const result = blogFrontMatterSchema.parse(data);
+    expect(result.tags).toEqual(['timeboxing', 'productivity']);
+  });
+
+  it('tags 未指定時は空配列を補完（省略時に例外を投げない）', () => {
+    const data = {
+      title: 'Untagged Post',
+      publishedAt: '2026-01-01',
+    };
+
+    const result = blogFrontMatterSchema.parse(data);
+    expect(result.tags).toEqual([]);
+  });
 });
 
 describe('releaseFrontMatterSchema', () => {
@@ -93,6 +114,18 @@ describe('releaseFrontMatterSchema', () => {
     const result = releaseFrontMatterSchema.parse(data);
     expect(result.breaking).toBe(false);
     expect(result.featured).toBe(false);
+    expect(result.tags).toEqual([]);
+  });
+
+  it('tags が剥ぎ取られずパースされる（過去のスキーマ欠落による回帰確認）', () => {
+    const data = {
+      version: 'v1.0.0',
+      date: '2026-01-01',
+      tags: ['new-features', 'improvements'],
+    };
+
+    const result = releaseFrontMatterSchema.parse(data);
+    expect(result.tags).toEqual(['new-features', 'improvements']);
   });
 });
 

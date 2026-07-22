@@ -109,7 +109,13 @@ export function validateFrontMatter(fm, type, isDraft) {
   const report = type === 'legal' || !isDraft ? errors : warnings;
 
   for (const field of REQUIRED_FIELDS[type]) {
-    if (fm[field] === undefined || fm[field] === null || fm[field] === '') {
+    const value = fm[field];
+    const isMissing =
+      value === undefined ||
+      value === null ||
+      value === '' ||
+      (Array.isArray(value) && value.length === 0);
+    if (isMissing) {
       report.push(`Missing required field: '${field}'`);
     }
   }
