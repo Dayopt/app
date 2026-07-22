@@ -6,6 +6,8 @@ import { logger } from '@/lib/logger';
 import {
   createOAuthDbClient,
   generateAuthorizationCode,
+  hasWriteScope,
+  isClientWriteEnabled,
   validateAuthorizeInput,
 } from '@/lib/oauth-server';
 import { captureUnexpectedDatabaseError, observeAuthOperation } from '@/lib/sentry';
@@ -33,6 +35,7 @@ export async function processConsent(formData: FormData) {
     code_challenge_method: 'S256',
     scope: get('scope'),
     state: get('state'),
+    resource: get('resource'),
   });
 
   if (!validation.ok) {
@@ -63,14 +66,15 @@ export async function processConsent(formData: FormData) {
 
   const { code, hash } = generateAuthorizationCode();
   const dbClient = createOAuthDbClient();
-  const { error: insertError } = await dbClient.from('oauth_authorization_codes').insert({
-    code_hash: hash,
-    user_id: user.id,
-    client_id: validation.client.id,
-    redirect_uri: validation.redirectUri,
-    code_challenge: validation.codeChallenge,
-    code_challenge_method: 'S256',
-    scopes: validation.scopes,
+  const { error: insertError } = await dbClient.rpc('create_oauth_authorization_grant_v2', {
+    p_code_hash: hash,
+    p_user_id: user.id,
+    p_client_id: validation.client.id,
+    p_resource_uri: validation.resourceUri,
+    p_redirect_uri: validation.redirectUri,
+    p_code_challenge: validation.codeChallenge,
+    p_scopes: validation.scopes,
+    p_write_enabled: hasWriteScope(validation.scopes) && isClientWriteEnabled(validation.client.id),
   });
 
   if (insertError) {

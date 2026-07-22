@@ -34,6 +34,7 @@ const ERROR_MESSAGE_KEY: Record<AuthorizeValidationError, string> = {
   invalid_redirect_uri: 'invalidRedirectUri',
   missing_pkce: 'missingPkce',
   invalid_scope: 'invalidScope',
+  invalid_resource: 'invalidResource',
 };
 
 export default async function AuthorizePage({ searchParams }: AuthorizePageProps) {
@@ -51,6 +52,7 @@ export default async function AuthorizePage({ searchParams }: AuthorizePageProps
     code_challenge_method: stringParam('code_challenge_method'),
     scope: stringParam('scope'),
     state: stringParam('state'),
+    resource: stringParam('resource'),
   });
 
   if (!validation.ok) {
@@ -67,6 +69,7 @@ export default async function AuthorizePage({ searchParams }: AuthorizePageProps
     redirect_uri: validation.redirectUri,
     code_challenge: validation.codeChallenge,
     scope: validation.scopes.join(' '),
+    resource: validation.resourceUri,
   });
   if (validation.state) consentQuery.set('state', validation.state);
 

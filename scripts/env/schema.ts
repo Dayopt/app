@@ -56,6 +56,8 @@ export const envSchema: EnvSchemaEntry[] = [
   envEntry('NEXT_PUBLIC_APP_URL', true, 'public', 'local', staging, 'app'),
   envEntry('NEXT_PUBLIC_SITE_URL', false, 'public', 'staging', staging, 'app'),
   envEntry('RECOVERY_CODE_PEPPER', false, 'secret', 'staging', staging, 'app'),
+  envEntry('MCP_CANONICAL_RESOURCE_URI', false, 'public', 'staging', staging, 'app'),
+  envEntry('MCP_WRITE_ENABLED_CLIENTS', false, 'public', 'staging', staging, 'app'),
 
   envEntry('NEXT_PUBLIC_TURNSTILE_SITE_KEY', false, 'public', 'shared', shared, 'turnstile'),
   envEntry('TURNSTILE_SECRET_KEY', false, 'secret', 'shared', shared, 'turnstile'),
@@ -105,6 +107,8 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
   envEntry('NEXT_PUBLIC_APP_URL', false, 'public', 'production', production, 'app'),
   envEntry('NEXT_PUBLIC_SITE_URL', false, 'public', 'production', production, 'app'),
   envEntry('RECOVERY_CODE_PEPPER', false, 'secret', 'production', production, 'app'),
+  envEntry('MCP_CANONICAL_RESOURCE_URI', false, 'public', 'production', production, 'app'),
+  envEntry('MCP_WRITE_ENABLED_CLIENTS', false, 'public', 'production', production, 'app'),
 ];
 
 export const operationalItems: OperationalItem[] = [

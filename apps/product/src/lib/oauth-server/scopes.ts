@@ -1,19 +1,37 @@
 import 'server-only';
 
-/**
- * Phase 1 で metadata に declare する scope。
- * 実装は read:entries のみ。read:tags / read:stats は Phase 2 で tool 追加時に有効化。
- */
-export const SUPPORTED_SCOPES = ['read:entries', 'read:tags', 'read:stats'] as const;
+/** OAuth grants that Dayopt understands. Tool discovery is filtered separately. */
+export const SUPPORTED_SCOPES = [
+  'read:entries',
+  'read:tags',
+  'read:constraints',
+  'read:stats',
+  'write:plans',
+  'delete:plans',
+  'write:records',
+  'delete:records',
+] as const;
 export type SupportedScope = (typeof SUPPORTED_SCOPES)[number];
+
+/** Public metadata advertises only the generally available minimum scope. */
+export const ADVERTISED_SCOPES = ['read:entries'] as const satisfies readonly SupportedScope[];
+
+export const WRITE_SCOPES = [
+  'write:plans',
+  'delete:plans',
+  'write:records',
+  'delete:records',
+] as const satisfies readonly SupportedScope[];
+export type WriteScope = (typeof WRITE_SCOPES)[number];
 
 const DEFAULT_SCOPES: SupportedScope[] = ['read:entries'];
 
 /**
  * 戻り値:
  *   - scope param 省略時: DEFAULT_SCOPES (OAuth spec 上 client がデフォルト想定で OK)
- *   - 明示的に valid scope を含む: 解釈可能な scope だけを返す
- *   - 明示的に渡されたが全部 unsupported: `null` (caller は invalid_scope エラーで拒否)
+ * Explicit scope input is all-or-nothing. Silently dropping an unknown scope
+ * would make the consent screen authorize a different grant than the client
+ * requested.
  */
 export function parseRequestedScope(
   scopeParam: string | null | undefined,
@@ -21,8 +39,14 @@ export function parseRequestedScope(
   if (!scopeParam) return DEFAULT_SCOPES;
   const requested = scopeParam.split(/\s+/).filter(Boolean);
   if (requested.length === 0) return DEFAULT_SCOPES;
-  const valid = requested.filter((s): s is SupportedScope =>
-    (SUPPORTED_SCOPES as readonly string[]).includes(s),
-  );
-  return valid.length > 0 ? valid : null;
+  if (!requested.every(isSupportedScope)) return null;
+  return [...new Set(requested)];
+}
+
+export function isSupportedScope(scope: string): scope is SupportedScope {
+  return (SUPPORTED_SCOPES as readonly string[]).includes(scope);
+}
+
+export function hasWriteScope(scopes: readonly SupportedScope[]): boolean {
+  return scopes.some((scope) => (WRITE_SCOPES as readonly SupportedScope[]).includes(scope));
 }

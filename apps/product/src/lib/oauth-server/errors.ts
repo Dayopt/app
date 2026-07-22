@@ -12,6 +12,7 @@ type OAuthErrorCode =
   | 'unsupported_response_type'
   | 'unsupported_grant_type'
   | 'invalid_scope'
+  | 'invalid_target'
   | 'access_denied'
   | 'server_error';
 

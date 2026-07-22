@@ -70,7 +70,7 @@ export type Database = {
           provider_calendar_id: string;
           provider_event_id: string;
           start_at: string | null;
-          status: string;
+          status: 'processing' | 'processed' | 'failed';
           title: string | null;
           updated_at: string;
           user_id: string;
@@ -104,7 +104,7 @@ export type Database = {
           provider_calendar_id?: string;
           provider_event_id?: string;
           start_at?: string | null;
-          status?: string;
+          status?: 'processing' | 'processed' | 'failed';
           title?: string | null;
           updated_at?: string;
           user_id?: string;
@@ -176,10 +176,12 @@ export type Database = {
           code_challenge: string;
           code_challenge_method: string;
           code_hash: string;
+          connection_id: string;
           consumed_at: string | null;
           created_at: string;
           expires_at: string;
           redirect_uri: string;
+          resource_uri: string;
           scopes: string[];
           user_id: string;
         };
@@ -188,10 +190,12 @@ export type Database = {
           code_challenge: string;
           code_challenge_method: string;
           code_hash: string;
+          connection_id: string;
           consumed_at?: string | null;
           created_at?: string;
           expires_at?: string;
           redirect_uri: string;
+          resource_uri?: string;
           scopes: string[];
           user_id: string;
         };
@@ -200,24 +204,94 @@ export type Database = {
           code_challenge?: string;
           code_challenge_method?: string;
           code_hash?: string;
+          connection_id?: string;
           consumed_at?: string | null;
           created_at?: string;
           expires_at?: string;
           redirect_uri?: string;
+          resource_uri?: string;
           scopes?: string[];
           user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'oauth_authorization_codes_connection_binding_fkey';
+            columns: ['connection_id', 'user_id', 'client_id', 'resource_uri'];
+            isOneToOne: false;
+            referencedRelation: 'oauth_connections';
+            referencedColumns: ['id', 'user_id', 'client_id', 'resource_uri'];
+          },
+        ];
+      };
+      oauth_connections: {
+        Row: {
+          authorized_at: string;
+          client_id: string;
+          consent_version: number;
+          created_at: string;
+          id: string;
+          last_refreshed_at: string | null;
+          last_used_at: string | null;
+          legacy_read_only: boolean;
+          reauth_required_at: string;
+          resource_uri: string;
+          revoked_at: string | null;
+          revoked_reason: string | null;
+          scopes: string[];
+          updated_at: string;
+          user_id: string;
+          write_enabled_at: string | null;
+        };
+        Insert: {
+          authorized_at?: string;
+          client_id: string;
+          consent_version?: number;
+          created_at?: string;
+          id?: string;
+          last_refreshed_at?: string | null;
+          last_used_at?: string | null;
+          legacy_read_only?: boolean;
+          reauth_required_at?: string;
+          resource_uri: string;
+          revoked_at?: string | null;
+          revoked_reason?: string | null;
+          scopes: string[];
+          updated_at?: string;
+          user_id: string;
+          write_enabled_at?: string | null;
+        };
+        Update: {
+          authorized_at?: string;
+          client_id?: string;
+          consent_version?: number;
+          created_at?: string;
+          id?: string;
+          last_refreshed_at?: string | null;
+          last_used_at?: string | null;
+          legacy_read_only?: boolean;
+          reauth_required_at?: string;
+          resource_uri?: string;
+          revoked_at?: string | null;
+          revoked_reason?: string | null;
+          scopes?: string[];
+          updated_at?: string;
+          user_id?: string;
+          write_enabled_at?: string | null;
         };
         Relationships: [];
       };
       oauth_tokens: {
         Row: {
           client_id: string;
+          connection_id: string;
           created_at: string;
           expires_at: string;
           id: string;
           last_used_at: string | null;
           parent_token_id: string | null;
+          resource_uri: string;
           revoked_at: string | null;
+          rotated_at: string | null;
           scopes: string[];
           token_hash: string;
           token_type: string;
@@ -225,12 +299,15 @@ export type Database = {
         };
         Insert: {
           client_id: string;
+          connection_id: string;
           created_at?: string;
           expires_at: string;
           id?: string;
           last_used_at?: string | null;
           parent_token_id?: string | null;
+          resource_uri?: string;
           revoked_at?: string | null;
+          rotated_at?: string | null;
           scopes?: string[];
           token_hash: string;
           token_type: string;
@@ -238,18 +315,28 @@ export type Database = {
         };
         Update: {
           client_id?: string;
+          connection_id?: string;
           created_at?: string;
           expires_at?: string;
           id?: string;
           last_used_at?: string | null;
           parent_token_id?: string | null;
+          resource_uri?: string;
           revoked_at?: string | null;
+          rotated_at?: string | null;
           scopes?: string[];
           token_hash?: string;
           token_type?: string;
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'oauth_tokens_connection_binding_fkey';
+            columns: ['connection_id', 'user_id', 'client_id', 'resource_uri'];
+            isOneToOne: false;
+            referencedRelation: 'oauth_connections';
+            referencedColumns: ['id', 'user_id', 'client_id', 'resource_uri'];
+          },
           {
             foreignKeyName: 'oauth_tokens_parent_token_id_fkey';
             columns: ['parent_token_id'];
@@ -468,7 +555,7 @@ export type Database = {
           event_type: string;
           id: string;
           processed_at: string | null;
-          status: 'processing' | 'processed' | 'failed';
+          status: string;
         };
         Insert: {
           claimed_at?: string;
@@ -484,7 +571,7 @@ export type Database = {
           event_type?: string;
           id?: string;
           processed_at?: string | null;
-          status?: 'processing' | 'processed' | 'failed';
+          status?: string;
         };
         Relationships: [];
       };
@@ -600,14 +687,6 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      claim_stripe_webhook_event: {
-        Args: {
-          p_event_id: string;
-          p_event_type: string;
-          p_stale_before: string;
-        };
-        Returns: string;
-      };
       batch_rename_tags: {
         Args: { p_new_names: string[]; p_tag_ids: string[]; p_user_id: string };
         Returns: number;
@@ -628,6 +707,14 @@ export type Database = {
           p_user_id: string;
         };
         Returns: number;
+      };
+      claim_stripe_webhook_event: {
+        Args: {
+          p_event_id: string;
+          p_event_type: string;
+          p_stale_before: string;
+        };
+        Returns: string;
       };
       confirm_day_plans_to_records: {
         Args: {
@@ -662,7 +749,41 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: number;
       };
+      create_oauth_authorization_grant_v2: {
+        Args: {
+          p_client_id: string;
+          p_code_challenge: string;
+          p_code_hash: string;
+          p_redirect_uri: string;
+          p_resource_uri: string;
+          p_scopes: string[];
+          p_user_id: string;
+          p_write_enabled?: boolean;
+        };
+        Returns: string;
+      };
       custom_access_token_hook: { Args: { event: Json }; Returns: Json };
+      exchange_oauth_authorization_code_v2: {
+        Args: {
+          p_access_hash: string;
+          p_client_id: string;
+          p_code_challenge: string;
+          p_code_hash: string;
+          p_redirect_uri: string;
+          p_refresh_hash: string;
+          p_resource_uri: string;
+        };
+        Returns: {
+          access_expires_at: string;
+          access_id: string;
+          client_id: string;
+          connection_id: string;
+          refresh_id: string;
+          resource_uri: string;
+          scopes: string[];
+          user_id: string;
+        }[];
+      };
       get_user_timezone: { Args: { p_user_id: string }; Returns: string };
       get_vault_secret: { Args: { p_name: string }; Returns: string };
       increment_tag_sort_orders: {
@@ -725,6 +846,30 @@ export type Database = {
       restore_record: {
         Args: { p_record_id: string; p_user_id: string };
         Returns: undefined;
+      };
+      revoke_oauth_connection: {
+        Args: { p_connection_id: string };
+        Returns: boolean;
+      };
+      rotate_oauth_refresh_token_v2: {
+        Args: {
+          p_client_id: string;
+          p_new_access_hash: string;
+          p_new_refresh_hash: string;
+          p_refresh_hash: string;
+          p_resource_uri: string;
+        };
+        Returns: {
+          access_expires_at: string;
+          access_id: string;
+          client_id: string;
+          connection_id: string;
+          refresh_id: string;
+          resource_uri: string;
+          scopes: string[];
+          status: string;
+          user_id: string;
+        }[];
       };
       soft_delete_plan: {
         Args: { p_plan_id: string; p_user_id: string };

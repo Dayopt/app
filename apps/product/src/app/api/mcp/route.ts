@@ -5,10 +5,11 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 
 import { logger } from '@/lib/logger';
 import { extractBearerToken, verifyAccessToken } from '@/lib/mcp';
-import { OAuthServerError } from '@/lib/oauth-server';
+import { OAuthServerError, type SupportedScope } from '@/lib/oauth-server';
 import { captureUnexpectedError } from '@/lib/sentry';
 
 import { createMcpServer } from './_server';
+import { getRequiredScopeForTool } from './_tools/registry';
 
 /**
  * MCP Streamable HTTP endpoint.
@@ -28,6 +29,8 @@ const RESOURCE_METADATA_URL = createDayoptUrl(
 );
 
 export const dynamic = 'force-dynamic';
+
+const MAX_REQUEST_BODY_BYTES = 1024 * 1024;
 
 export async function POST(request: NextRequest) {
   return handle(request);
@@ -50,10 +53,21 @@ async function handle(request: NextRequest): Promise<Response> {
     return authErrorResponse(err);
   }
 
+  const parsedRequest = await parseMcpRequestBody(request);
+  if (!parsedRequest.ok) return parsedRequest.response;
+
+  const missingScopes = collectMissingToolScopes(parsedRequest.body, auth.scopes);
+  if (missingScopes.length > 0) {
+    return insufficientScopeResponse(missingScopes);
+  }
+
   const server = createMcpServer({
+    tokenId: auth.tokenId,
+    connectionId: auth.connectionId,
     userId: auth.userId,
     clientId: auth.clientId,
     scopes: auth.scopes,
+    resourceUri: auth.resourceUri,
   });
   // Phase 1: stateless mode (sessionIdGenerator omitted = stateless per SDK semantics)
   const transport = new WebStandardStreamableHTTPServerTransport({
@@ -63,12 +77,18 @@ async function handle(request: NextRequest): Promise<Response> {
   try {
     await server.connect(transport);
     return await transport.handleRequest(request, {
+      ...(parsedRequest.body === undefined ? {} : { parsedBody: parsedRequest.body }),
       authInfo: {
         token: '<redacted>',
         clientId: auth.clientId,
         scopes: auth.scopes,
         expiresAt: auth.expiresAt,
-        extra: { userId: auth.userId, tokenId: auth.tokenId },
+        extra: {
+          userId: auth.userId,
+          tokenId: auth.tokenId,
+          connectionId: auth.connectionId,
+          resourceUri: auth.resourceUri,
+        },
       },
     });
   } catch (err) {
@@ -85,6 +105,79 @@ async function handle(request: NextRequest): Promise<Response> {
       { status: 500 },
     );
   }
+}
+
+type ParsedMcpRequest = { ok: true; body: unknown | undefined } | { ok: false; response: Response };
+
+async function parseMcpRequestBody(request: NextRequest): Promise<ParsedMcpRequest> {
+  if (request.method !== 'POST') return { ok: true, body: undefined };
+
+  const contentLength = Number(request.headers.get('content-length'));
+  if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
+    return { ok: false, response: mcpRequestErrorResponse(413, -32000, 'Request body too large') };
+  }
+
+  const bodyText = await request.text();
+  if (new TextEncoder().encode(bodyText).byteLength > MAX_REQUEST_BODY_BYTES) {
+    return { ok: false, response: mcpRequestErrorResponse(413, -32000, 'Request body too large') };
+  }
+
+  try {
+    return { ok: true, body: JSON.parse(bodyText) as unknown };
+  } catch {
+    return { ok: false, response: mcpRequestErrorResponse(400, -32700, 'Parse error') };
+  }
+}
+
+function collectMissingToolScopes(
+  body: unknown,
+  grantedScopes: readonly SupportedScope[],
+): SupportedScope[] {
+  const messages = Array.isArray(body) ? body : [body];
+  const missing = new Set<SupportedScope>();
+
+  for (const message of messages) {
+    if (!isRecord(message) || message.method !== 'tools/call' || !isRecord(message.params)) {
+      continue;
+    }
+    const toolName = message.params.name;
+    if (typeof toolName !== 'string') continue;
+    const requiredScope = getRequiredScopeForTool(toolName);
+    if (requiredScope && !grantedScopes.includes(requiredScope)) missing.add(requiredScope);
+  }
+
+  return [...missing];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function insufficientScopeResponse(scopes: readonly SupportedScope[]): Response {
+  const required = scopes.join(' ');
+  return NextResponse.json(
+    {
+      error: 'insufficient_scope',
+      error_description: 'Additional authorization is required',
+      scope: required,
+    },
+    {
+      status: 403,
+      headers: {
+        'cache-control': 'no-store',
+        'www-authenticate':
+          `Bearer error="insufficient_scope", scope="${required}", ` +
+          `resource_metadata="${RESOURCE_METADATA_URL}"`,
+      },
+    },
+  );
+}
+
+function mcpRequestErrorResponse(status: number, code: number, message: string): Response {
+  return NextResponse.json(
+    { jsonrpc: '2.0', error: { code, message }, id: null },
+    { status, headers: { 'cache-control': 'no-store' } },
+  );
 }
 
 function authErrorResponse(err: unknown): Response {

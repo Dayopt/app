@@ -62,6 +62,8 @@ const serverSchema = z
     OAUTH_CURSOR_REDIRECT_URIS: z.string().optional().refine(isRedirectUriList, {
       message: 'OAUTH_CURSOR_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
     }),
+    MCP_CANONICAL_RESOURCE_URI: z.string().url().optional(),
+    MCP_WRITE_ENABLED_CLIENTS: z.string().optional(),
 
     // Google
     GOOGLE_SITE_VERIFICATION: z.string().optional(),

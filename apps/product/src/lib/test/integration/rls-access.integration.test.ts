@@ -173,6 +173,7 @@ const userOwnedCases: UserOwnedRlsCase[] = [
         client_id: 'unknown',
         token_hash: `rls-${this.rowId}`,
         token_type: 'access',
+        scopes: ['read:entries'],
         expires_at: new Date(Date.now() + 60_000).toISOString(),
       });
       if (error) throw error;
@@ -237,7 +238,7 @@ const serviceRoleCases = [
       redirect_uri: 'https://example.com/oauth/callback',
       code_challenge: 'rls-code-challenge',
       code_challenge_method: 'S256',
-      scopes: ['read'],
+      scopes: ['read:entries'],
     },
     unauthorizedInsert: () => ({
       code_hash: `rls-${crypto.randomUUID()}`,
@@ -246,7 +247,7 @@ const serviceRoleCases = [
       redirect_uri: 'https://example.com/oauth/callback',
       code_challenge: 'rls-code-challenge',
       code_challenge_method: 'S256',
-      scopes: ['read'],
+      scopes: ['read:entries'],
     }),
     update: { consumed_at: new Date().toISOString() },
   },

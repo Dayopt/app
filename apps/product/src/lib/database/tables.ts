@@ -4,6 +4,7 @@ export const databaseTables = {
   records: 'records',
   mfaRecoveryCodes: 'mfa_recovery_codes',
   oauthAuthorizationCodes: 'oauth_authorization_codes',
+  oauthConnections: 'oauth_connections',
   oauthTokens: 'oauth_tokens',
   plans: 'plans',
   profiles: 'profiles',

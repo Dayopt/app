@@ -2,15 +2,18 @@ import 'server-only';
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import type { OAuthClientId, SupportedScope } from '@/lib/oauth-server';
+import type { CanonicalResourceUri, OAuthClientId, SupportedScope } from '@/lib/oauth-server';
 
 import { registerEntriesListTool } from './_tools/entries-list';
 import { registerTimeblockListTools } from './_tools/timeblock-list';
 
 export interface McpRequestContext {
+  tokenId: string;
+  connectionId: string;
   userId: string;
   clientId: OAuthClientId;
   scopes: SupportedScope[];
+  resourceUri: CanonicalResourceUri;
 }
 
 const SERVER_NAME = 'dayopt';
@@ -31,8 +34,10 @@ export function createMcpServer(ctx: McpRequestContext): McpServer {
     version: SERVER_VERSION,
   });
 
-  registerEntriesListTool(server, ctx);
-  registerTimeblockListTools(server, ctx);
+  if (ctx.scopes.includes('read:entries')) {
+    registerEntriesListTool(server, ctx);
+    registerTimeblockListTools(server, ctx);
+  }
 
   return server;
 }

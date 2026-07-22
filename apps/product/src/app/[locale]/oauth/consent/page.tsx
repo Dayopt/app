@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
 import {
+  hasWriteScope,
   validateAuthorizeInput,
   type AuthorizeValidationError,
   type SupportedScope,
@@ -29,6 +30,7 @@ const ERROR_MESSAGE_KEY: Record<AuthorizeValidationError, string> = {
   invalid_redirect_uri: 'invalidRedirectUri',
   missing_pkce: 'missingPkce',
   invalid_scope: 'invalidScope',
+  invalid_resource: 'invalidResource',
 };
 
 export default async function ConsentPage({ searchParams }: ConsentPageProps) {
@@ -47,6 +49,7 @@ export default async function ConsentPage({ searchParams }: ConsentPageProps) {
     code_challenge_method: 'S256',
     scope: stringParam('scope'),
     state: stringParam('state'),
+    resource: stringParam('resource'),
   });
 
   if (!validation.ok) {
@@ -81,7 +84,9 @@ export default async function ConsentPage({ searchParams }: ConsentPageProps) {
       </div>
 
       <p className="text-muted-foreground mb-6 text-xs leading-relaxed">
-        {t('readOnlyNotice', { clientName })}
+        {hasWriteScope(validation.scopes)
+          ? t('writeNotice', { clientName })
+          : t('readOnlyNotice', { clientName })}
       </p>
 
       {user?.email && (
@@ -95,6 +100,7 @@ export default async function ConsentPage({ searchParams }: ConsentPageProps) {
         <input type="hidden" name="redirect_uri" value={validation.redirectUri} />
         <input type="hidden" name="code_challenge" value={validation.codeChallenge} />
         <input type="hidden" name="scope" value={validation.scopes.join(' ')} />
+        <input type="hidden" name="resource" value={validation.resourceUri} />
         {validation.state && <input type="hidden" name="state" value={validation.state} />}
 
         <Button type="submit" name="decision" value="deny" variant="outline" className="flex-1">

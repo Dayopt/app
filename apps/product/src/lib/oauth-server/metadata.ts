@@ -2,7 +2,8 @@ import 'server-only';
 
 import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
 
-import { SUPPORTED_SCOPES } from './scopes';
+import { getCanonicalResourceUri } from './resource';
+import { ADVERTISED_SCOPES } from './scopes';
 
 /**
  * AS / RS の URL は固定値で hardcode。
@@ -15,7 +16,6 @@ import { SUPPORTED_SCOPES } from './scopes';
  * 存在しない URL を client に伝えてしまう。
  */
 const AUTHORIZATION_SERVER_URL = dayoptUrls.product;
-const MCP_RESOURCE_URL = dayoptUrls.mcp;
 
 /**
  * RFC 8414 - OAuth 2.0 Authorization Server Metadata
@@ -31,7 +31,7 @@ export function buildAuthorizationServerMetadata() {
     code_challenge_methods_supported: ['S256'],
     /** Phase 1 は public client のみ (PKCE required, no client secret). */
     token_endpoint_auth_methods_supported: ['none'],
-    scopes_supported: [...SUPPORTED_SCOPES],
+    scopes_supported: [...ADVERTISED_SCOPES],
   } as const;
 }
 
@@ -41,9 +41,9 @@ export function buildAuthorizationServerMetadata() {
  */
 export function buildProtectedResourceMetadata() {
   return {
-    resource: MCP_RESOURCE_URL,
+    resource: getCanonicalResourceUri(),
     authorization_servers: [AUTHORIZATION_SERVER_URL],
     bearer_methods_supported: ['header'],
-    scopes_supported: [...SUPPORTED_SCOPES],
+    scopes_supported: [...ADVERTISED_SCOPES],
   } as const;
 }

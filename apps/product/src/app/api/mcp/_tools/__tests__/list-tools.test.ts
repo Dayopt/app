@@ -24,9 +24,12 @@ interface TextToolResult {
 type ToolHandler = (input: ListInput) => Promise<TextToolResult>;
 
 const context: McpRequestContext = {
+  tokenId: 'token-1',
+  connectionId: 'connection-1',
   userId: 'user-1',
   clientId: 'chatgpt',
   scopes: ['read:entries'],
+  resourceUri: 'https://mcp.dayopt.app' as McpRequestContext['resourceUri'],
 };
 
 const plan = {

@@ -6,6 +6,7 @@ import {
   exchangeAuthorizationCode,
   refreshAccessToken,
   resolveClient,
+  resolveRequestedResource,
 } from '@/lib/oauth-server';
 import { captureUnexpectedError } from '@/lib/sentry';
 
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
       const clientId = required(get('client_id'), 'client_id');
       const redirectUri = required(get('redirect_uri'), 'redirect_uri');
       const codeVerifier = required(get('code_verifier'), 'code_verifier');
+      const resource = requiredResource(get('resource'));
 
       const client = resolveClient(clientId);
       if (!client) {
@@ -45,6 +47,7 @@ export async function POST(request: NextRequest) {
         client_id: client.id,
         redirect_uri: redirectUri,
         code_verifier: codeVerifier,
+        resource_uri: resource,
       });
       return tokenResponse(tokens);
     }
@@ -52,6 +55,7 @@ export async function POST(request: NextRequest) {
     if (grantType === 'refresh_token') {
       const refreshToken = required(get('refresh_token'), 'refresh_token');
       const clientId = required(get('client_id'), 'client_id');
+      const resource = requiredResource(get('resource'));
 
       const client = resolveClient(clientId);
       if (!client) {
@@ -61,6 +65,7 @@ export async function POST(request: NextRequest) {
       const tokens = await refreshAccessToken({
         refresh_token: refreshToken,
         client_id: client.id,
+        resource_uri: resource,
       });
       return tokenResponse(tokens);
     }
@@ -114,6 +119,15 @@ function required(value: string | undefined, name: string): string {
     throw new OAuthServerError('invalid_request', `Missing required parameter: ${name}`);
   }
   return value;
+}
+
+function requiredResource(value: string | undefined) {
+  const raw = required(value, 'resource');
+  const resource = resolveRequestedResource(raw);
+  if (!resource) {
+    throw new OAuthServerError('invalid_target', 'The requested resource is not supported');
+  }
+  return resource;
 }
 
 function tokenResponse(body: unknown) {

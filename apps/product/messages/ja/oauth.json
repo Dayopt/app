@@ -3,14 +3,20 @@
     "consent": {
       "pageTitle": "接続の許可",
       "heading": "{clientName} を Dayopt に接続",
-      "description": "{clientName} があなたの Dayopt の記録を読み取れるようになります。",
+      "description": "{clientName} が求めている Dayopt へのアクセスを確認してください。",
       "scopesLabel": "アクセス範囲",
       "scope": {
-        "read:entries": "記録の閲覧",
+        "read:entries": "予定と記録の閲覧",
         "read:tags": "タグの閲覧",
-        "read:stats": "統計の閲覧"
+        "read:constraints": "時間上の制約の閲覧",
+        "read:stats": "振り返り統計の閲覧",
+        "write:plans": "予定の作成と更新",
+        "delete:plans": "予定の削除と復元",
+        "write:records": "記録の作成と更新",
+        "delete:records": "記録の削除と復元"
       },
       "readOnlyNotice": "読み取りのみです。{clientName} があなたの記録を変更することはできません。",
+      "writeNotice": "{clientName} は選択された Dayopt のデータを直接変更できます。設定からいつでも接続を解除できます。",
       "approve": "接続を許可",
       "deny": "キャンセル",
       "userLabel": "{email} として接続します"
@@ -21,6 +27,7 @@
       "invalidRedirectUri": "redirect_uri が許可されていません。",
       "missingPkce": "PKCE パラメータが不足しています。",
       "invalidScope": "リクエストされた scope は対応していません。",
+      "invalidResource": "リクエストされた Dayopt resource は対応していません。",
       "unsupportedResponseType": "response_type は code のみ対応しています。",
       "consentDenied": "接続を許可しませんでした。"
     }
