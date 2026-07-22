@@ -189,7 +189,8 @@ app側の技術ドキュメント・ADR・APIドキュメントもこのスキ�
 
 ## 参考ファイル
 
-| ファイル                                         | 用途                          |
-| ------------------------------------------------ | ----------------------------- |
-| `apps/web/content/docs/ja/features/calendar.mdx` | 模範例（Feature Doc）         |
-| `apps/web/content/CLAUDE.md`                     | Frontmatterスキーマの正式定義 |
+| ファイル                                         | 用途                                                  |
+| ------------------------------------------------ | ----------------------------------------------------- |
+| `apps/web/content/docs/ja/features/calendar.mdx` | 模範例（Feature Doc）                                 |
+| `apps/web/src/lib/content-schemas.ts`            | Frontmatterスキーマの正式定義（Zod）                  |
+| `docs/operations/runbook.md` 第4部               | リリースノートのカテゴリ定義（GitHub Release と共通） |

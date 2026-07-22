@@ -88,13 +88,7 @@ ai:
 
 ### リリースノート専用タグ（UIでカラー表示）
 
-| タグ               | 色               | 用途         |
-| ------------------ | ---------------- | ------------ |
-| `new-features`     | 緑 (success)     | 新機能       |
-| `improvements`     | 青 (info)        | 改善         |
-| `bug-fixes`        | 黄 (warning)     | バグ修正     |
-| `breaking-changes` | 赤 (destructive) | 破壊的変更   |
-| `security-updates` | 紫 (primary)     | セキュリティ |
+タグは `new-features` / `improvements` / `bug-fixes` / `breaking-changes` / `security-updates` の5種類のみを使う。この5分類は GitHub Release 本文とも共通のカテゴリ定義であり、`docs/operations/runbook.md` 第4部「リリースノート執筆規約」を正とする（ここでは再定義しない）。色・アイコンは `apps/web/src/features/releases/lib/releases.ts` の `changeTypes` 配列が正（UIの表示色を決めるコード制約のため、値をここに手動複製しない）。
 
 ### バージョンバッジの色（UI自動判定）
 
@@ -106,6 +100,8 @@ ai:
 | prerelease      | 黄 (warning)     | `v0.17.0-beta.1` |
 
 ### リリースノートの本文構造
+
+見出しは上記5タグと1対1対応させる（該当カテゴリがなければ見出しごと省略）。カテゴリの意味は `docs/operations/runbook.md` 第4部と共通だが、GitHub Release本文とは異なりPRリンクを含めず、エンドユーザー向けに平易な言葉で書く（`references/style-guide.md` 参照）。
 
 ```mdx
 # v0.16.0 - Bulk Operations
@@ -125,6 +121,10 @@ ai:
 - Fixed inspector close button delay
 
 ## Breaking Changes
+
+（該当がある場合のみ）
+
+## Security Updates
 
 （該当がある場合のみ）
 ```

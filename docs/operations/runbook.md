@@ -517,10 +517,10 @@ ORDER BY created_at DESC;
 
 ### 2.2 詳細なリリースノートを作成
 
-- [ ] **このファイルの「第4部: リリースノートテンプレート」の構造を参考にリリースノートを作成**
+- [ ] **このファイルの「第4部: リリースノート執筆規約」の構造とカテゴリ定義を参考にリリースノートを作成**
   - [ ] 前回リリース以降の**全てのPR**が含まれている
   - [ ] 各PRにリンクが付いている
-  - [ ] カテゴリ別に整理されている（Added, Changed, Fixed, Performance, Breaking Changes）
+  - [ ] 第4部の5カテゴリ（新機能・改善・バグ修正・破壊的変更・セキュリティ）に整理されている
   - [ ] **Full Changelogリンクが含まれている**
     ```markdown
     **Full Changelog**: https://github.com/Dayopt/dayopt/compare/v{前バージョン}...v{今回バージョン}
@@ -912,15 +912,13 @@ gh pr list --state merged --base main --limit 100 --json number,title,mergedAt \
 
 **⚠️ 重要: 記載内容**
 
-前回リリース以降の**全てのPR**を以下のカテゴリに分類して記載：
+前回リリース以降の**全てのPR**を、第4部で定義する5カテゴリに分類して記載：
 
-- 新機能 (Added) - 各項目にPRリンクを付ける
-- 変更 (Changed) - 各項目にPRリンクを付ける
-- バグ修正 (Fixed) - 各項目にPRリンクを付ける
-- 破壊的変更 (Breaking Changes)
-- 削除 (Removed) - 各項目にPRリンクを付ける
-- パフォーマンス (Performance) - 各項目にPRリンクを付ける
-- セキュリティ (Security) - 各項目にPRリンクを付ける
+- 新機能 - 各項目にPRリンクを付ける
+- 改善（パフォーマンス改善を含む） - 各項目にPRリンクを付ける
+- バグ修正 - 各項目にPRリンクを付ける
+- 破壊的変更（互換性を壊す削除を含む）
+- セキュリティ - 各項目にPRリンクを付ける
 - Pull Requests一覧 - 全PRをリストアップ
 
 **品質基準:**
@@ -1394,9 +1392,34 @@ npm version prerelease --preid=rc
 
 ---
 
-# 第4部: リリースノートテンプレート
+# 第4部: リリースノート執筆規約
 
-AIがリリースノートを記載する際の構造テンプレート。リポジトリにリリースノートファイルをコミットする必要はなく、`gh release edit` で GitHub Release ページに直接反映する。
+GitHub Release 本文（`gh release edit` で反映）と Web公開用リリースノート（`apps/web/content/releases/{en,ja}/*.mdx`、`docs-writing` skill が担当）が共有する、唯一のカテゴリ定義。Claude・Codex・人間のいずれが書く場合もこの規約に従う。カテゴリはここでのみ定義し、他ファイル（`.claude/skills/releasing/SKILL.md`、`.claude/skills/docs-writing/templates/blog-frontmatter.md`）は再定義せずこのセクションを参照する。
+
+## カテゴリ定義（共通・唯一の正）
+
+| カテゴリ (id)      | 見出し       | icon | 振り分け方                                                                         |
+| ------------------ | ------------ | ---- | ---------------------------------------------------------------------------------- |
+| `new-features`     | 新機能       | 🎉   | 新規機能・追加された使い方                                                         |
+| `improvements`     | 改善         | 🔧   | 既存機能の変更。パフォーマンス改善もここに含める                                   |
+| `bug-fixes`        | バグ修正     | 🐛   | 不具合の修正                                                                       |
+| `breaking-changes` | 破壊的変更   | ⚠️   | 互換性を壊す変更。互換性を壊す削除もここに含める（壊さない非推奨化は改善に含める） |
+| `security-updates` | セキュリティ | 🔒   | セキュリティ関連の対応                                                             |
+
+id・アイコン・色は `apps/web/src/features/releases/lib/releases.ts` の `changeTypes` 配列を正とする（Web UIの表示色を決めるコード制約のため、値をここに手動複製しない）。この5分類を超えるカテゴリを追加しない。
+
+## 媒体ごとの違い（カテゴリは共通、トーンが違う）
+
+| 観点     | GitHub Release 本文                  | Web MDX（`apps/web/content/releases/`）             |
+| -------- | ------------------------------------ | --------------------------------------------------- |
+| 読者     | 開発者・技術的なステークホルダー     | エンドユーザー                                      |
+| 粒度     | 各項目にPRリンク付きで技術詳細を記載 | 「何ができるようになったか」中心の平易な表現        |
+| PRリンク | 必須                                 | 不要                                                |
+| 文体の正 | 本セクションの構造・チェックリスト   | `docs-writing` skill の `references/style-guide.md` |
+
+## GitHub Release テンプレート
+
+AIがリリースノートを記載する際の構造テンプレート。リポジトリにリリースノートファイルをコミットする必要はなく、`gh release edit` で GitHub Release ページに直接反映する。PR一覧の取得方法は第2部「2.1 前回リリース以降の全PRを取得」と同じ（`.claude/skills/releasing/scripts/get-merged-prs.sh` でも同等の処理が可能）。
 
 ```markdown
 # Release vX.Y.Z
@@ -1414,37 +1437,27 @@ AIがリリースノートを記載する際の構造テンプレート。リポ
 
 **⚠️ 重要**: 前回リリース（v{前バージョン}）から今回リリース（v{今回バージョン}）までの**全てのPR**を網羅して記載すること。リリースPR単体の変更だけでなく、期間中にマージされた全PRの内容を反映する。
 
-### ✨ 新機能 (Added)
+### 🎉 新機能
 
 - **機能名** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
   - 詳細説明
 
-### 🔄 変更 (Changed)
+### 🔧 改善
 
 - **変更内容** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
-  - 詳細説明
+  - 詳細説明（パフォーマンス改善もここに記載）
 
-### 🐛 バグ修正 (Fixed)
+### 🐛 バグ修正
 
 - **修正内容** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
   - 詳細説明
 
-### ⚠️ 破壊的変更 (Breaking Changes)
+### ⚠️ 破壊的変更
 
-- 破壊的変更がある場合、詳細に記載
+- 破壊的変更がある場合、詳細に記載（互換性を壊す形で削除された機能・API・コンポーネントを含む）
 - マイグレーション手順も記載
 
-### 🗑️ 削除 (Removed)
-
-- **削除内容** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
-  - 削除された機能や非推奨になった機能
-
-### ⚡ パフォーマンス (Performance)
-
-- **改善内容** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
-  - 詳細説明
-
-### 🔒 セキュリティ (Security)
+### 🔒 セキュリティ
 
 - **対応内容** ([#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}))
   - セキュリティ関連の修正
@@ -1457,13 +1470,6 @@ AIがリリースノートを記載する際の構造テンプレート。リポ
 
 **⚠️ 重要**: 前回リリースから今回リリースまでの**全てのPR**をリストアップすること。
 
-\`\`\`bash
-
-# 前回リリース以降のPR一覧を取得
-
-gh pr list --state merged --base main --search "merged:>=YYYY-MM-DD" --json number,title --jq '.[] | "- [#\(.number)](<https://github.com/Dayopt/dayopt/pull/(.number)>) - \(.title)"'
-\`\`\`
-
 - [#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}) - {PR説明}
 - [#PR番号](https://github.com/Dayopt/dayopt/pull/{PR番号}) - {PR説明}
 - ...（前回リリース以降の全PRを記載）
@@ -1471,19 +1477,19 @@ gh pr list --state merged --base main --search "merged:>=YYYY-MM-DD" --json numb
 ---
 
 **Full Changelog**: https://github.com/Dayopt/dayopt/compare/v{前バージョン}...v{今回バージョン}
-
-**🤖 Generated with [Claude Code](https://claude.com/claude-code)**
-
-**Co-Authored-By: Claude `<noreply@anthropic.com>`**
 ```
 
 ### リリースノートの品質基準
 
 - [ ] 前回リリース以降の**全てのPR**が含まれている
 - [ ] 各PRにリンクが付いている
-- [ ] カテゴリ別に整理されている（Added, Changed, Fixed, etc.）
+- [ ] 上記5カテゴリ（新機能・改善・バグ修正・破壊的変更・セキュリティ）に整理されている
 - [ ] Full Changelogリンクが正しい
 - [ ] バージョン番号が正しい
+
+## Web版リリースノートとの関係
+
+同じ変更内容から `apps/web/content/releases/{en,ja}/*.mdx` を書く場合は `docs-writing` skill（`.claude/skills/docs-writing/templates/blog-frontmatter.md`）に従う。カテゴリは上記の5分類をそのまま使い、PR一覧の収集も本パートと同じ手順を流用する。GitHub Release本文をそのまま転記せず、エンドユーザー向けに平易な言葉へ書き直す（PRリンクは含めない）。
 
 ## 過去のリリースノートスナップショット
 
