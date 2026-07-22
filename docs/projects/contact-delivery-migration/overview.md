@@ -1,6 +1,6 @@
 ---
-status: done
-last_verified: 2026-07-22
+status: active
+last_verified: 2026-07-21
 code:
   - apps/product/src/features/contact
   - apps/product/src/app/api/webhooks/resend
@@ -21,9 +21,16 @@ Product / Web の問い合わせを削除済みの private GitHub repository か
 
 ## 現在地
 
-問い合わせ配送、受信・返信、Production smoke、30分観察、`v0.32.1` releaseは完了し、Issue [#1646](https://github.com/Dayopt/dayopt/issues/1646) はclose済み。`Dayopt/contact-private`と両Vercel projectの旧GitHub envは削除済みで、旧contact PATはGitHub APIで`401`を確認後に1Password itemをarchiveした。
+| 領域       | 状態    | 証拠・残作業                                                                                                                        |
+| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Code       | 実装中  | Product / WebのResend配送、入力保持、idempotency、timeout、global rate limit、app別webhookを本branchで検証する                      |
+| CI         | 実装中  | safe dummy値だけでbuild gateを検査する`Production Contract`と、Vercel env metadataだけを検査する`Production Config Audit`を導入する |
+| 受信       | blocked | Cloudflare Active、`support@dayopt.app`のGmail転送成功が未確認                                                                      |
+| 返信       | blocked | GmailのSend mail asから`support@dayopt.app`で返信し、個人Gmail非表示・DKIM passが未確認                                             |
+| Production | blocked | Product / Webの必要env、app別webhook、同一SHA Ready、各フォーム1通のsmokeが未確認                                                   |
+| Release    | blocked | Production smoke後30分の観察、tag、GitHub Release、旧credential cleanupが未実施                                                     |
 
-Production Config Auditは旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`の再追加を常時拒否する。今後の問い合わせ配送障害は旧GitHub経路へ戻さず、Resendまたはapplication codeをroll-forwardする。
+Issue [#1646](https://github.com/Dayopt/dayopt/issues/1646) の`status:blocked`は、ユーザーから「Cloudflare Active・受信成功・support@返信成功」の3点が共有されるまで解除しない。
 
 ## Delivery
 
@@ -60,11 +67,3 @@ Production Config Auditは旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`の再追加�
 - database migration
 - 問い合わせと無関係なVercel / 1Password secret cleanup
 - 実際のCloudflare、Gmail、Resend SMTP設定（ユーザー側のcheckpoint）
-
-## Completion Summary
-
-- Product / Webの問い合わせ原文をProduction限定でResendから`support@dayopt.app`へ配送する契約へ移行した。
-- Cloudflare Email Routingによる受信と、個人Gmailを露出しない`support@dayopt.app`からの返信を確認した。
-- app別webhook、idempotency、rate limit、Turnstile、PIIをlogger / Sentryへ渡さない境界を実装・検証した。
-- Product / Webを同一releaseへdeployし、送受信smokeと30分観察後に`v0.32.1`を公開した。
-- `Dayopt/contact-private`、Vercelの旧GitHub env、失効済みcontact PATのactive運用を終了した。

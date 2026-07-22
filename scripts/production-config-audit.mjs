@@ -40,7 +40,7 @@ function metadataOnlyEntries(response) {
   });
 }
 
-export function auditProjectMetadata(projectName, response) {
+export function auditProjectMetadata(projectName, response, options = {}) {
   const contract = PROJECT_CONTRACTS[projectName];
   if (!contract) throw new Error(`Unknown Vercel project contract: ${projectName}`);
 
@@ -76,9 +76,11 @@ export function auditProjectMetadata(projectName, response) {
     }
   }
 
-  for (const key of LEGACY_CONTACT_ENV) {
-    if (entries.some((entry) => entry.key === key)) {
-      errors.push(`${projectName}: legacy ${key} must not be configured`);
+  if (options.forbidLegacyContactEnv) {
+    for (const key of LEGACY_CONTACT_ENV) {
+      if (entries.some((entry) => entry.key === key)) {
+        errors.push(`${projectName}: legacy ${key} must be removed after contact smoke`);
+      }
     }
   }
 
@@ -98,14 +100,19 @@ async function fetchProjectMetadata(projectName, token, teamId, fetchImpl) {
   return response.json();
 }
 
-export async function runProductionConfigAudit({ token, teamId, fetchImpl = fetch }) {
+export async function runProductionConfigAudit({
+  token,
+  teamId,
+  forbidLegacyContactEnv = false,
+  fetchImpl = fetch,
+}) {
   if (!token) throw new Error('VERCEL_TOKEN is required for Production Config Audit');
   if (!teamId) throw new Error('VERCEL_TEAM_ID is required for Production Config Audit');
 
   const allErrors = [];
   for (const projectName of Object.keys(PROJECT_CONTRACTS)) {
     const response = await fetchProjectMetadata(projectName, token, teamId, fetchImpl);
-    allErrors.push(...auditProjectMetadata(projectName, response));
+    allErrors.push(...auditProjectMetadata(projectName, response, { forbidLegacyContactEnv }));
   }
 
   if (allErrors.length > 0) {
@@ -119,6 +126,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   runProductionConfigAudit({
     token: process.env.VERCEL_TOKEN,
     teamId: process.env.VERCEL_TEAM_ID,
+    forbidLegacyContactEnv: process.env.AUDIT_FORBID_LEGACY_CONTACT_ENV === 'true',
   })
     .then(() => {
       console.log('Production Config Audit passed for product and web (metadata only).');

@@ -154,7 +154,7 @@ Vercel Preview の Supabase env vars は Supabase Vercel integration が PR Prev
 
 Contact送信用の`RESEND_API_KEY` / `RESEND_FROM_EMAIL`とapp別`RESEND_WEBHOOK_SECRET`はProduct / WebのProductionだけへ同期する。送信credentialはPreview / Developmentへ置かない。Vercel metadataは`scripts/production-config-audit.mjs`でkey / target / typeだけを確認する。
 
-旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`のVercel replicaは全scopeから削除済みで、Production Config Auditが再追加を常時拒否する。専用PATはGitHub APIで無効を確認して1Password itemをarchive済みであり、current schemaへ戻さない。
+旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`のVercel replicaと専用PATは、Resendの両Production smokeと30分観察が終わるまで保持する。current schemaの新規作成対象からは外し、観察後に[問い合わせメール運用](./contact-email.md)の順で削除・失効する。
 
 ### GitHub Secrets
 

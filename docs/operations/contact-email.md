@@ -92,7 +92,7 @@ DNS移管で到達性を失った場合は、Vercel Registrarのnameserverを元
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`がPreview / Developmentをtargetにしない
 - secretはVercelのSensitive typeを使う
 - Product / Webのwebhook URLと署名secretがResend側で別々に設定されている
-- 旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`は削除済みであり、再追加しない
+- 旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`はこの時点では削除しない
 
 ```bash
 node scripts/production-config-audit.mjs
@@ -119,11 +119,18 @@ processed markerはPIIを含まないevent IDのHMACだけを35日間保持す�
 
 timeout後の再送やbounce / complaintを実在する第三者addressへ故意に発生させない。必要なfailure検証はunit testまたは所有するtest addressで行う。
 
-## 5. Releaseと旧経路cleanup（完了）
+## 5. Releaseと旧経路cleanup
 
-`v0.32.1`のrelease、両Vercel projectからの旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`削除、`Dayopt/contact-private`削除は完了している。Production Config Auditは旧2 envの再追加を常時拒否する。
+観察完了後に次の順で行う。
 
-旧contact専用PATはGitHub APIで無効を確認し、1Password itemをarchiveして運用を終了した。旧経路へのrollbackは行わず、application配送に問題がある場合はResend設定またはcodeを修正してroll-forwardする。
+1. `v0.32.1`tagと詳細なGitHub Releaseを作る
+2. 両Vercel projectから旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`を削除して再deployする
+3. 旧contact専用PATを失効する
+4. `AUDIT_FORBID_LEGACY_CONTACT_ENV=true`でmetadata auditを実行する
+5. Issue #1646へPIIを含まない証跡を記録しcloseする
+6. release branchと作業worktreeを削除する
+
+`Dayopt/contact-private`は削除済みなので旧経路へのrollbackは行わない。application配送に問題がある場合はResend設定またはcodeを修正してroll-forwardする。
 
 ## 障害切り分け
 
