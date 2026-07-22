@@ -44,6 +44,31 @@ export const REQUIRED_LEGAL_DOCUMENTS = [
 
 // ─── フロントマターパーサー ─────────────────────────────────
 
+function parseInlineArray(rawValue) {
+  const inner = rawValue.slice(1, -1).trim();
+  if (inner === '') return [];
+  return inner
+    .split(',')
+    .map((item) => item.trim().replace(/^['"]|['"]$/g, ''))
+    .filter((item) => item !== '');
+}
+
+// `tags: [] # comment` のような行末インラインコメントを除去する。
+// クォート済み値は閉じクォートより後ろだけをコメット扱いにし、
+// クォート内の '#' を誤って切り落とさない。
+function stripInlineComment(rawValue) {
+  const quoteChar = rawValue[0];
+  if (quoteChar === "'" || quoteChar === '"') {
+    const closingIndex = rawValue.indexOf(quoteChar, 1);
+    if (closingIndex !== -1) {
+      return rawValue.slice(0, closingIndex + 1);
+    }
+    return rawValue;
+  }
+  const commentIndex = rawValue.search(/\s#/);
+  return commentIndex === -1 ? rawValue : rawValue.slice(0, commentIndex).trim();
+}
+
 export function parseFrontMatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return { data: {}, body: content };
@@ -60,10 +85,10 @@ export function parseFrontMatter(content) {
 
     // 配列要素
     if (/^\s+-\s/.test(line)) {
-      const value = line
-        .replace(/^\s+-\s/, '')
-        .trim()
-        .replace(/^['"]|['"]$/g, '');
+      const value = stripInlineComment(line.replace(/^\s+-\s/, '').trim()).replace(
+        /^['"]|['"]$/g,
+        '',
+      );
       if (currentKey && arrayMode) {
         if (!arrayValues[currentKey]) arrayValues[currentKey] = [];
         arrayValues[currentKey].push(value);
@@ -78,7 +103,7 @@ export function parseFrontMatter(content) {
     const keyValueMatch = line.match(/^(\w+):\s*(.*)/);
     if (keyValueMatch) {
       currentKey = keyValueMatch[1];
-      const rawValue = keyValueMatch[2].trim();
+      const rawValue = stripInlineComment(keyValueMatch[2].trim());
       arrayMode = false;
 
       if (rawValue === '' || rawValue === null) {
@@ -92,6 +117,8 @@ export function parseFrontMatter(content) {
         data[currentKey] = null;
       } else if (!Number.isNaN(Number(rawValue)) && rawValue !== '') {
         data[currentKey] = Number(rawValue);
+      } else if (rawValue.startsWith('[') && rawValue.endsWith(']')) {
+        data[currentKey] = parseInlineArray(rawValue);
       } else {
         data[currentKey] = rawValue.replace(/^['"]|['"]$/g, '');
       }
@@ -109,7 +136,13 @@ export function validateFrontMatter(fm, type, isDraft) {
   const report = type === 'legal' || !isDraft ? errors : warnings;
 
   for (const field of REQUIRED_FIELDS[type]) {
-    if (fm[field] === undefined || fm[field] === null || fm[field] === '') {
+    const value = fm[field];
+    const isMissing =
+      value === undefined ||
+      value === null ||
+      value === '' ||
+      (Array.isArray(value) && value.length === 0);
+    if (isMissing) {
       report.push(`Missing required field: '${field}'`);
     }
   }
@@ -132,7 +165,10 @@ export function validateFrontMatter(fm, type, isDraft) {
   if (type !== 'docs' && type !== 'legal') {
     const tags = fm.tags;
     if (Array.isArray(tags)) {
-      if (tags.length > 0 && tags.length < 3) {
+      // releases のタグは new-features/improvements/bug-fixes/breaking-changes/security-updates
+      // という固定5分類（docs/operations/runbook.md 第4部）で、該当する分だけ付ける。
+      // 1-2個でも正当なため、3個以上を強制する下限チェックは blog（自由記述タグ）にのみ適用する。
+      if (type === 'blog' && tags.length > 0 && tags.length < 3) {
         report.push(`Too few tags (min: 3, found: ${tags.length})`);
       }
       if (tags.length > 6) {
