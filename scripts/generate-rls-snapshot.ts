@@ -24,6 +24,8 @@ import { fileURLToPath } from 'url';
 
 import { format as formatWithPrettier } from 'prettier';
 
+import { escapeMarkdownTableCell as cell } from './lib/markdown-table';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const OUTPUT_PATH = resolve(ROOT, 'docs/engineering/data/db/rls-snapshot.md');
@@ -166,11 +168,6 @@ function fetchRealtimePublication(): RealtimePublicationRow[] {
        ) t;`,
     ) ?? []
   );
-}
-
-/** markdown 1 セル用に改行・パイプを無害化 */
-function cell(value: string): string {
-  return value.replace(/\s+/g, ' ').replace(/\|/g, '\\|').trim() || '—';
 }
 
 function render(
