@@ -25,10 +25,6 @@ const vaultCache = new Map<string, boolean>();
 const itemCache = new Map<string, ItemResult>();
 const opTimeoutMs = 20_000;
 
-function formatStatus(status: string, required: boolean): string {
-  return required || status === 'OK' ? status : `${status} (optional)`;
-}
-
 function runOp(args: string[]): CommandResult {
   const result = spawnSync('op', args, {
     encoding: 'utf8',
@@ -142,9 +138,7 @@ for (const entry of onePasswordEnvSchema) {
     status = checkField(entry.vault, entry.item, entry.field);
   }
 
-  console.log(
-    `${entry.vault} / ${entry.item} / ${entry.field}: ${formatStatus(status, entry.required)}`,
-  );
+  console.log(`${entry.vault} / ${entry.item} / ${entry.field}: ${status}`);
   if (entry.required && status !== 'OK') hasFailure = true;
 }
 
@@ -161,7 +155,7 @@ for (const item of operationalItems) {
     status = itemResult.status === 'OK' ? 'OK' : 'MISSING_ITEM';
   }
 
-  console.log(`${item.vault} / ${item.item}: ${formatStatus(status, item.required)}`);
+  console.log(`${item.vault} / ${item.item}: ${status}`);
   if (item.required && status !== 'OK') hasFailure = true;
 }
 

@@ -116,7 +116,7 @@ describe('check-1password.ts', () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain(
-      'Dayopt-Shared / google / GOOGLE_SITE_VERIFICATION: MISSING_ITEM (optional)',
+      'Dayopt-Shared / google / GOOGLE_SITE_VERIFICATION: MISSING_ITEM',
     );
   });
 
@@ -124,9 +124,7 @@ describe('check-1password.ts', () => {
     const result = runCheck({ emptyField: 'GOOGLE_SITE_VERIFICATION' });
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain(
-      'Dayopt-Shared / google / GOOGLE_SITE_VERIFICATION: EMPTY (optional)',
-    );
+    expect(result.stdout).toContain('Dayopt-Shared / google / GOOGLE_SITE_VERIFICATION: EMPTY');
   });
 
   it('required item が未作成なら失敗する', () => {

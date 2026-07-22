@@ -136,7 +136,7 @@ pnpm 1password:check
 
 - `env:check` — required env を `OK / EMPTY / MISSING` だけで確認する
 - `secrets:check` — tracked files と untracked `.env*` を scan し、literal secret は `value: [redacted]` で報告する
-- `1password:check` — 1Password の vault / item / field / empty 状態だけを確認する。schemaで`required: true`のentryまたはoperational itemが不足・空の場合だけ失敗し、optional entryは`(optional)`付きで状態を表示して成功する。item の作成・変更・削除はしない
+- `1password:check` — 1Password の vault / item / field / empty 状態だけを確認する。schemaで`required: true`のentryまたはoperational itemが不足・空の場合だけ失敗し、optional entryは不足・空の状態を表示しても成功する。item の作成・変更・削除はしない
 
 `.op-env.local.example` の `op://` 参照は正規の local injection schema なので leak として扱わない。
 
