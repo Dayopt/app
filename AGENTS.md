@@ -151,6 +151,16 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 - **命名**: `utils.ts` / `helpers.ts` を避け、責務を表す具体名にする
 - **新規 top-level feature**: `features/` 直下に新 feature を作る前に相談する
 
+## Documentation and writing
+
+ユーザー向けの Docs / Blog / Release notes を書く・編集する前に、次の 3 ファイルを読む:
+
+- `docs/ai/writing-style.md` — 日本語・英語ともに B1 相当の読みやすさ。短文・具体語・能動態。曖昧な SaaS 語（empower / leverage / seamless / robust / optimize 等）を使わない
+- `docs/ai/docs-policy.md` — Docs は usage、Blog は context / product thinking、Release notes は changes。役割を混ぜない
+- `docs/ai/review-checklist.md` — 生成直後・PR レビュー時の最終チェック
+
+公開コンテンツの運用フロー（いつ何を書くか）は `docs/marketing/content-operations.md` を正本とする。
+
 ## Docs 運用責務
 
 `docs/README.md` の地図・決定木・書き方の約束に従う。とくに以下は都度・自発的に実施する:
@@ -195,7 +205,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 
 Project skills は `.agents/skills/` を参照する。該当する作業では `SKILL.md` を先に読む。実体は `.claude/skills/` が正本で、`.agents/skills/` は各 skill への symlink（二重管理しない）。
 
-error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / audit-ai-config / dispatch
+error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / eagle-dayopt / audit-ai-config / dispatch / blog-ideas / docs-audit
 
 ## Workflow
 
