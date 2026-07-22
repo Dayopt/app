@@ -17,7 +17,7 @@ function SearchResults() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'docs' | 'blog' | 'release'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'docs' | 'blog'>('all');
 
   useEffect(() => {
     const q = searchParams.get('q') || '';
@@ -79,35 +79,17 @@ function SearchResults() {
             />
           </svg>
         );
-      case 'release':
-        return (
-          <svg
-            className="text-primary size-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m3 6V8a1 1 0 00-1-1H5a1 1 0 00-1 1v2m14 0v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8m14 0H4"
-            />
-          </svg>
-        );
       default:
         return null;
     }
   };
 
-  const getTypeBadgeVariant = (type: string): 'info' | 'success' | 'primary' | 'secondary' => {
+  const getTypeBadgeVariant = (type: string): 'info' | 'success' | 'secondary' => {
     switch (type) {
       case 'docs':
         return 'info';
       case 'blog':
         return 'success';
-      case 'release':
-        return 'primary';
       default:
         return 'secondary';
     }
@@ -168,11 +150,6 @@ function SearchResults() {
                     key: 'blog',
                     label: 'ブログ',
                     count: results.filter((r) => r.type === 'blog').length,
-                  },
-                  {
-                    key: 'release',
-                    label: 'リリース',
-                    count: results.filter((r) => r.type === 'release').length,
                   },
                 ].map((filter) => (
                   <button
@@ -239,11 +216,7 @@ function SearchResults() {
                             variant={getTypeBadgeVariant(result.type)}
                             className="px-2 py-1 text-xs"
                           >
-                            {result.type === 'docs'
-                              ? 'ドキュメント'
-                              : result.type === 'blog'
-                                ? 'ブログ'
-                                : 'リリース'}
+                            {result.type === 'docs' ? 'ドキュメント' : 'ブログ'}
                           </Badge>
                           <span className="text-muted-foreground text-xs">
                             {result.breadcrumbs?.join(' › ')}
@@ -320,7 +293,7 @@ function SearchResults() {
               検索を開始してください
             </Heading>
             <Text variant="muted" className="mb-6">
-              ドキュメント、ブログ記事、リリースノートを横断検索できます。
+              ドキュメントとブログ記事を横断検索できます。
             </Text>
             <div className="flex justify-center gap-2">
               <Badge variant="outline" className="px-4 py-1 text-sm">
@@ -328,9 +301,6 @@ function SearchResults() {
               </Badge>
               <Badge variant="outline" className="px-4 py-1 text-sm">
                 ブログ
-              </Badge>
-              <Badge variant="outline" className="px-4 py-1 text-sm">
-                リリース
               </Badge>
             </div>
           </div>

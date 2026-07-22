@@ -151,7 +151,7 @@ export function generateArticleMetadata(data: {
   authors?: string[];
   tags?: string[];
   category?: string;
-  type: 'blog' | 'docs' | 'release';
+  type: 'blog' | 'docs';
 }): Metadata {
   const { type, slug, publishedAt, updatedAt, authors, tags, category } = data;
 

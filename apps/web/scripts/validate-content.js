@@ -24,14 +24,12 @@ const REQUIRED_FIELDS = {
   blog: ['title', 'description', 'publishedAt', 'tags', 'category', 'author'],
   docs: ['title', 'description', 'category', 'slug'],
   legal: ['title', 'description', 'lastUpdated'],
-  releases: ['version', 'date', 'title', 'description', 'tags', 'breaking', 'featured'],
 };
 
 const DATE_FIELDS = {
   blog: ['publishedAt', 'updatedAt'],
   docs: ['publishedAt', 'updatedAt'],
   legal: [],
-  releases: ['date'],
 };
 
 export const REQUIRED_LEGAL_DOCUMENTS = [
@@ -165,10 +163,10 @@ export function validateFrontMatter(fm, type, isDraft) {
   if (type !== 'docs' && type !== 'legal') {
     const tags = fm.tags;
     if (Array.isArray(tags)) {
-      // releases のタグは new-features/improvements/bug-fixes/breaking-changes/security-updates
+      // release カテゴリのタグは new-features/improvements/bug-fixes/breaking-changes/security-updates
       // という固定5分類（docs/operations/runbook.md 第4部）で、該当する分だけ付ける。
-      // 1-2個でも正当なため、3個以上を強制する下限チェックは blog（自由記述タグ）にのみ適用する。
-      if (type === 'blog' && tags.length > 0 && tags.length < 3) {
+      // 1-2個でも正当なため、3個以上を強制する下限チェックは自由記述タグの blog 記事にのみ適用する。
+      if (type === 'blog' && fm.category !== 'release' && tags.length > 0 && tags.length < 3) {
         report.push(`Too few tags (min: 3, found: ${tags.length})`);
       }
       if (tags.length > 6) {
@@ -253,7 +251,7 @@ function checkRequiredLegalDocuments() {
 // ─── メイン ────────────────────────────────────────────────
 
 function main() {
-  const types = ['blog', 'docs', 'legal', 'releases'];
+  const types = ['blog', 'docs', 'legal'];
   let totalFiles = 0;
   let totalErrors = 0;
   let totalWarnings = 0;

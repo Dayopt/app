@@ -9,7 +9,7 @@ const searchResponseSchema = z.object({
       title: z.string(),
       description: z.string(),
       url: z.string(),
-      type: z.enum(['blog', 'docs', 'release']),
+      type: z.enum(['blog', 'docs']),
       breadcrumbs: z.array(z.string()).default([]),
       lastModified: z.string(),
       category: z.string().optional(),

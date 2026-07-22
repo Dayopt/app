@@ -19,11 +19,9 @@
       "blog": "Blog",
       "docs": "Documentation",
       "contact": "Contact",
-      "releases": "Releases",
       "resources": "Resources",
       "blogDescription": "Read our latest articles and tutorials",
-      "docsDescription": "Documentation and guides",
-      "releasesDescription": "Latest updates and changelog"
+      "docsDescription": "Documentation and guides"
     },
     "states": {
       "loading": "Loading...",
@@ -210,69 +208,6 @@
     "view": {
       "list": "List",
       "grid": "Grid"
-    }
-  },
-  "releases": {
-    "header": {
-      "title": "Releases",
-      "subtitle": "Latest release notes and updates"
-    },
-    "featured": "Featured",
-    "breaking": "Breaking",
-    "filters": {
-      "title": "Filters",
-      "clearAll": "Clear all",
-      "tags": "Tags",
-      "showLess": "Show less",
-      "showMore": "Show more",
-      "resultsFound": "{count} of {total} releases",
-      "featuredReleases": "Featured releases",
-      "breakingChanges": "Breaking changes",
-      "quickFilters": "Quick Filters",
-      "searchPlaceholder": "Search by version, title, or tags...",
-      "clearSearch": "Clear search",
-      "sortBy": "Sort By",
-      "orderAsc": "Oldest first",
-      "orderDesc": "Newest first",
-      "applyFilters": "Apply Filters"
-    },
-    "view": {
-      "list": "List",
-      "grid": "Grid"
-    },
-    "changeTypes": {
-      "title": "Change Types",
-      "showAll": "Show all",
-      "newFeatures": "New Features",
-      "improvements": "Improvements",
-      "bugFixes": "Bug Fixes",
-      "breakingChanges": "Breaking Changes",
-      "securityUpdates": "Security Updates"
-    },
-    "rss": {
-      "title": "Stay Updated",
-      "description": "Subscribe to our RSS feed to get notified about new releases.",
-      "link": "Subscribe to RSS"
-    },
-    "history": {
-      "title": "Release History",
-      "count": " releases"
-    },
-    "emptyState": {
-      "title": "No Releases Yet",
-      "description": "Check back later for updates."
-    },
-    "noResults": {
-      "title": "No Releases Found",
-      "description": "No releases match your current filters.",
-      "clearFilters": "Clear Filters"
-    },
-    "detail": {
-      "backToReleases": "Back to Releases",
-      "readingTime": "About {minutes} min read",
-      "viewAllReleases": "View all releases",
-      "relatedReleases": "Related Releases",
-      "relatedDescription": "Other updates related to this release"
     }
   },
   "docs": {

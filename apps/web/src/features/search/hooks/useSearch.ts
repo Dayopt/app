@@ -16,7 +16,7 @@ export interface SearchResult {
   title: string;
   description: string;
   url: string;
-  type: 'blog' | 'release' | 'docs';
+  type: 'blog' | 'docs';
   breadcrumbs: string[];
   lastModified: string;
 }

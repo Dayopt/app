@@ -3,7 +3,7 @@
 import { Badge, Button, Dialog, DialogContent, Input } from '@dayopt/components';
 import { Highlight } from '@web/lib/highlight';
 import type { SearchResponse } from '@web/types/api';
-import { Clock, Edit, FileText, Package, Search, X } from 'lucide-react';
+import { Clock, Edit, FileText, Search, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -119,15 +119,12 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
         return <FileText className="text-info size-4" />;
       case 'blog':
         return <Edit className="text-success size-4" />;
-      case 'release':
-        return <Package className="text-primary size-4" />;
       default:
         return <FileText className="text-muted-foreground size-4" />;
     }
   };
 
-  const typeLabel = (type: string) =>
-    type === 'docs' ? t('docs') : type === 'blog' ? t('blog') : t('release');
+  const typeLabel = (type: string) => (type === 'docs' ? t('docs') : t('blog'));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
