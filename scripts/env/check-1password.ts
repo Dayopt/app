@@ -19,9 +19,7 @@ type OnePasswordItem = {
 };
 
 type ItemResult =
-  | { status: 'OK'; item: OnePasswordItem }
-  | { status: 'MISSING_ITEM' }
-  | { status: 'OP_TIMEOUT' };
+  { status: 'OK'; item: OnePasswordItem } | { status: 'MISSING_ITEM' } | { status: 'OP_TIMEOUT' };
 
 const vaultCache = new Map<string, boolean>();
 const itemCache = new Map<string, ItemResult>();
@@ -141,7 +139,7 @@ for (const entry of onePasswordEnvSchema) {
   }
 
   console.log(`${entry.vault} / ${entry.item} / ${entry.field}: ${status}`);
-  if (status !== 'OK') hasFailure = true;
+  if (entry.required && status !== 'OK') hasFailure = true;
 }
 
 for (const item of operationalItems) {
@@ -158,7 +156,7 @@ for (const item of operationalItems) {
   }
 
   console.log(`${item.vault} / ${item.item}: ${status}`);
-  if (status !== 'OK') hasFailure = true;
+  if (item.required && status !== 'OK') hasFailure = true;
 }
 
 if (hasFailure) {

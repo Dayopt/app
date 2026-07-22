@@ -12,6 +12,7 @@ const TOKEN_PATTERN = /^Bearer ([A-Za-z0-9_-]{43})$/u;
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/u;
 const ABSOLUTE_ACTIVE_FROM_MS = Date.parse('2026-07-21T23:00:00.000Z');
 const ABSOLUTE_DEADLINE_MS = Date.parse('2026-07-22T12:00:00.000Z');
+const BODY_PROBE_TIMEOUT_MS = 1_000;
 
 type SmokeEnvironment = Record<string, string | undefined>;
 type RateLimitResult = 'allowed' | 'limited' | 'unavailable';
@@ -66,6 +67,36 @@ function hasSameOriginBrowserRequest(request: Request): boolean {
   );
 }
 
+function hasAllowedRequestBodyFraming(request: Request): boolean {
+  if (request.headers.has('transfer-encoding')) return false;
+
+  const contentLength = request.headers.get('content-length');
+  return contentLength === null || contentLength.trim() === '0';
+}
+
+async function hasEmptyRequestBody(request: Request): Promise<boolean> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    const reader = request.clone().body?.getReader();
+    if (!reader) return true;
+
+    const outcome = await Promise.race([
+      reader.read().then((result) => ({ kind: 'read' as const, result })),
+      new Promise<{ kind: 'timeout' }>((resolve) => {
+        timeoutId = setTimeout(() => resolve({ kind: 'timeout' }), BODY_PROBE_TIMEOUT_MS);
+      }),
+    ]);
+    void reader.cancel().catch(() => undefined);
+
+    return outcome.kind === 'read' && outcome.result.done === true;
+  } catch {
+    return false;
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
+}
+
 async function sha256(value: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)));
 }
@@ -118,7 +149,7 @@ export async function authorizeWebOperatorSmoke(
   if (
     !hasActiveConfiguration(env, now) ||
     !hasSameOriginBrowserRequest(request) ||
-    request.body !== null
+    !hasAllowedRequestBodyFraming(request)
   ) {
     return { authorized: false, response: operatorSmokeUnavailableResponse() };
   }
@@ -143,6 +174,10 @@ export async function authorizeWebOperatorSmoke(
       authorized: false,
       response: operatorSmokeUnavailableResponse(globalRateLimit === 'limited' ? 429 : 503),
     };
+  }
+
+  if (!(await hasEmptyRequestBody(request))) {
+    return { authorized: false, response: operatorSmokeUnavailableResponse() };
   }
 
   return { authorized: true };
