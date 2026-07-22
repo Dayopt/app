@@ -68,13 +68,30 @@ describe('Production Config Audit', () => {
     expect(JSON.stringify(errors)).not.toContain('private-preview-value');
   });
 
-  it('defers legacy GitHub env removal until the post-smoke flag is enabled', () => {
-    const metadata = completeProductMetadata();
-    metadata.envs.push(productionEntry('GITHUB_TOKEN', 'sensitive'));
+  it.each([
+    ['product', 'GITHUB_TOKEN', ['production']],
+    ['product', 'GITHUB_CONTACT_REPO', ['preview']],
+    ['web', 'GITHUB_TOKEN', ['development']],
+    ['web', 'GITHUB_CONTACT_REPO', ['production']],
+  ] as const)('always rejects legacy %s %s environment variables', (projectName, key, target) => {
+    const metadata = projectName === 'product' ? completeProductMetadata() : completeWebMetadata();
+    metadata.envs.push({ key, target: [...target], type: 'encrypted', value: 'private-value' });
 
-    expect(auditProjectMetadata('product', metadata)).toEqual([]);
-    expect(auditProjectMetadata('product', metadata, { forbidLegacyContactEnv: true })).toContain(
-      'product: legacy GITHUB_TOKEN must be removed after contact smoke',
+    expect(auditProjectMetadata(projectName, metadata)).toContain(
+      `${projectName}: legacy ${key} must not be configured`,
     );
+  });
+
+  it('rejects legacy environment variables through the normal audit path', async () => {
+    const productMetadata = completeProductMetadata();
+    productMetadata.envs.push(productionEntry('GITHUB_TOKEN', 'sensitive'));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(productMetadata))
+      .mockResolvedValueOnce(Response.json(completeWebMetadata()));
+
+    await expect(
+      runProductionConfigAudit({ token: 'token', teamId: 'team', fetchImpl }),
+    ).rejects.toThrow('product: legacy GITHUB_TOKEN must not be configured');
   });
 });

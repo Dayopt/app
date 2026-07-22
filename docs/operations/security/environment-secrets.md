@@ -86,17 +86,15 @@ Production replicaはProductが`Dayopt-Production/sentry`、Webが`Dayopt-Produc
 `product` Preview に production Supabase credentials は見えない。
 Supabase integration 由来の production DB / key も `production` target のみ。
 
-2026-07-21にVercel APIで値を復号せずkey / target / typeだけを再確認した。Contact移行前の状態は次のとおりで、まだProduction契約を満たさない。
+2026-07-22にVercel APIで値を復号せずkey / target / typeだけを再確認した。Contact移行後の状態は次のとおり。
 
-| Project   | Metadata                                 | 確認結果                                                | Merge前の対応                               |
-| --------- | ---------------------------------------- | ------------------------------------------------------- | ------------------------------------------- |
-| `product` | `RESEND_API_KEY`                         | Production / PreviewはSensitive、DevelopmentはEncrypted | Productionだけへ限定する                    |
-| `product` | `RESEND_FROM_EMAIL`                      | Production / Preview / Developmentに存在                | Productionだけへ限定する                    |
-| `product` | `RESEND_WEBHOOK_SECRET`                  | Production Sensitive                                    | 維持する                                    |
-| `web`     | Resend 3変数                             | いずれも存在しない                                      | Productionへ追加する                        |
-| 両方      | Upstash 2変数                            | Productionに存在                                        | tokenをSensitiveのまま維持する              |
-| `web`     | Turnstile 2変数                          | Productionに存在                                        | secretをSensitiveのまま維持する             |
-| 両方      | 旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO` | Production / Preview / Developmentに残存                | smokeと30分観察後まで保持し、その後削除する |
+| Project   | Metadata                                 | 確認結果                                                                | 現行契約                        |
+| --------- | ---------------------------------------- | ----------------------------------------------------------------------- | ------------------------------- |
+| `product` | Resend 3変数                             | API key / webhookはProduction Sensitive。sender metadataは全scopeに残存 | credentialはProduction限定      |
+| `web`     | Resend 3変数                             | Productionに存在。credentialはSensitive                                 | Production限定を維持する        |
+| 両方      | Upstash 2変数                            | Productionに存在                                                        | tokenをSensitiveのまま維持する  |
+| `web`     | Turnstile 2変数                          | Productionに存在                                                        | secretをSensitiveのまま維持する |
+| 両方      | 旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO` | 全scopeに存在しない                                                     | 再追加をauditで拒否する         |
 
 Contactの目標契約:
 
@@ -104,7 +102,7 @@ Contactの目標契約:
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`はSensitive typeかつProduction targetだけにする
 - Product / Webのwebhook secretが異なることはmetadataでは証明できないため、Resend / Vercel dashboardで値を表示せず確認する
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`がPreview / Developmentにあれば`Production Config Audit`を失敗させる
-- 旧GitHub envの不在検査はProduction smoke後に`AUDIT_FORBID_LEGACY_CONTACT_ENV=true`で有効にする
+- 旧GitHub envは全scopeで不在とし、`Production Config Audit`が再追加を常時拒否する
 
 Previewは`RECOVERY_CODE_PEPPER`を維持する。production modeのenv validation / recovery code処理に必要なためである。その他のDevelopment secret cleanupは[#1558](https://github.com/Dayopt/dayopt/issues/1558)のscopeとし、Contact切替と混ぜない。
 
