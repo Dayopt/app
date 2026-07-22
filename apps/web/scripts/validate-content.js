@@ -44,6 +44,15 @@ export const REQUIRED_LEGAL_DOCUMENTS = [
 
 // ─── フロントマターパーサー ─────────────────────────────────
 
+function parseInlineArray(rawValue) {
+  const inner = rawValue.slice(1, -1).trim();
+  if (inner === '') return [];
+  return inner
+    .split(',')
+    .map((item) => item.trim().replace(/^['"]|['"]$/g, ''))
+    .filter((item) => item !== '');
+}
+
 export function parseFrontMatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return { data: {}, body: content };
@@ -92,6 +101,8 @@ export function parseFrontMatter(content) {
         data[currentKey] = null;
       } else if (!Number.isNaN(Number(rawValue)) && rawValue !== '') {
         data[currentKey] = Number(rawValue);
+      } else if (rawValue.startsWith('[') && rawValue.endsWith(']')) {
+        data[currentKey] = parseInlineArray(rawValue);
       } else {
         data[currentKey] = rawValue.replace(/^['"]|['"]$/g, '');
       }

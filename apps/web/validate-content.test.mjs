@@ -140,3 +140,50 @@ describe('blog/releases tags validation', () => {
     expect(result.errors).toContain("Missing required field: 'tags'");
   });
 });
+
+describe('parseFrontMatter のインライン配列構文', () => {
+  function releaseMdx(tagsLine) {
+    return `---
+version: 'v1.0.0'
+date: '2026-01-01'
+title: 'Release'
+description: 'Description'
+${tagsLine}
+breaking: false
+featured: false
+---
+
+Body
+`;
+  }
+
+  it("tags: ['a', 'b'] を実際の配列としてパースする（文字列のまま残るとArray.isArrayの判定が壊れる）", () => {
+    const { data } = parseFrontMatter(releaseMdx("tags: ['improvements', 'bug-fixes']"));
+    expect(Array.isArray(data.tags)).toBe(true);
+    expect(data.tags).toEqual(['improvements', 'bug-fixes']);
+  });
+
+  it('tags: [] を空配列としてパースする', () => {
+    const { data } = parseFrontMatter(releaseMdx('tags: []'));
+    expect(Array.isArray(data.tags)).toBe(true);
+    expect(data.tags).toEqual([]);
+  });
+
+  it('インライン tags: [] は parseFrontMatter を通しても必須フィールド欠落として報告される', () => {
+    const { data } = parseFrontMatter(releaseMdx('tags: []'));
+    const result = validateFrontMatter(data, 'releases', false);
+    expect(result.errors).toContain("Missing required field: 'tags'");
+  });
+
+  it('インライン tags が1件だと parseFrontMatter を通しても Too few tags になる', () => {
+    const { data } = parseFrontMatter(releaseMdx("tags: ['solo']"));
+    const result = validateFrontMatter(data, 'releases', false);
+    expect(result.errors).toContain('Too few tags (min: 3, found: 1)');
+  });
+
+  it('インライン tags が3件なら parseFrontMatter を通しても tags関連のエラーは出ない', () => {
+    const { data } = parseFrontMatter(releaseMdx("tags: ['a', 'b', 'c']"));
+    const result = validateFrontMatter(data, 'releases', false);
+    expect(result.errors.filter((e) => e.includes('tags'))).toEqual([]);
+  });
+});
