@@ -53,6 +53,22 @@ function parseInlineArray(rawValue) {
     .filter((item) => item !== '');
 }
 
+// `tags: [] # comment` のような行末インラインコメントを除去する。
+// クォート済み値は閉じクォートより後ろだけをコメット扱いにし、
+// クォート内の '#' を誤って切り落とさない。
+function stripInlineComment(rawValue) {
+  const quoteChar = rawValue[0];
+  if (quoteChar === "'" || quoteChar === '"') {
+    const closingIndex = rawValue.indexOf(quoteChar, 1);
+    if (closingIndex !== -1) {
+      return rawValue.slice(0, closingIndex + 1);
+    }
+    return rawValue;
+  }
+  const commentIndex = rawValue.search(/\s#/);
+  return commentIndex === -1 ? rawValue : rawValue.slice(0, commentIndex).trim();
+}
+
 export function parseFrontMatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return { data: {}, body: content };
@@ -69,10 +85,10 @@ export function parseFrontMatter(content) {
 
     // 配列要素
     if (/^\s+-\s/.test(line)) {
-      const value = line
-        .replace(/^\s+-\s/, '')
-        .trim()
-        .replace(/^['"]|['"]$/g, '');
+      const value = stripInlineComment(line.replace(/^\s+-\s/, '').trim()).replace(
+        /^['"]|['"]$/g,
+        '',
+      );
       if (currentKey && arrayMode) {
         if (!arrayValues[currentKey]) arrayValues[currentKey] = [];
         arrayValues[currentKey].push(value);
@@ -87,7 +103,7 @@ export function parseFrontMatter(content) {
     const keyValueMatch = line.match(/^(\w+):\s*(.*)/);
     if (keyValueMatch) {
       currentKey = keyValueMatch[1];
-      const rawValue = keyValueMatch[2].trim();
+      const rawValue = stripInlineComment(keyValueMatch[2].trim());
       arrayMode = false;
 
       if (rawValue === '' || rawValue === null) {

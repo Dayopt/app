@@ -209,3 +209,76 @@ Body
     expect(result.errors).toContain('Too few tags (min: 3, found: 1)');
   });
 });
+
+describe('parseFrontMatter の行末インラインコメント', () => {
+  function releaseMdx(tagsLine) {
+    return `---
+version: 'v1.0.0'
+date: '2026-01-01'
+title: 'Release'
+description: 'Description'
+${tagsLine}
+breaking: false
+featured: false
+---
+
+Body
+`;
+  }
+
+  it('tags: [] # comment はコメント混じりの文字列ではなく空配列としてパースする', () => {
+    const { data } = parseFrontMatter(releaseMdx('tags: [] # intentionally empty'));
+    expect(Array.isArray(data.tags)).toBe(true);
+    expect(data.tags).toEqual([]);
+  });
+
+  it('行末コメント付きの tags: [] は必須フィールド欠落として報告される', () => {
+    const { data } = parseFrontMatter(releaseMdx('tags: [] # intentionally empty'));
+    const result = validateFrontMatter(data, 'releases', false);
+    expect(result.errors).toContain("Missing required field: 'tags'");
+  });
+
+  it('行末コメント付きのインライン配列は要素を保ったままパースする', () => {
+    const { data } = parseFrontMatter(releaseMdx("tags: ['a', 'b', 'c'] # three tags"));
+    expect(data.tags).toEqual(['a', 'b', 'c']);
+  });
+
+  it('クォート内の # はコメントとして切り落とさない', () => {
+    const { data } = parseFrontMatter(
+      `---
+version: 'v1.0.0'
+date: '2026-01-01'
+title: 'Bug #123 fix'
+description: 'Description'
+tags: ['a', 'b', 'c']
+breaking: false
+featured: false
+---
+
+Body
+`,
+    );
+    expect(data.title).toBe('Bug #123 fix');
+  });
+
+  it('複数行配列の要素につく行末コメントも除去する', () => {
+    const { data } = parseFrontMatter(
+      `---
+version: 'v1.0.0'
+date: '2026-01-01'
+title: 'Release'
+description: 'Description'
+tags:
+  - a # primary
+  - b
+  - c
+breaking: false
+featured: false
+---
+
+Body
+`,
+    );
+    expect(data.tags).toEqual(['a', 'b', 'c']);
+  });
+});
