@@ -14,7 +14,7 @@ import 'server-only';
  * @see OWASP - Account Recovery
  */
 
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac, randomInt } from 'crypto';
 
 import { env } from '@/env';
 
@@ -51,14 +51,10 @@ export function generateRecoveryCodes(): string[] {
   const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 紛らわしい文字を除外（I,O,0,1）
 
   for (let i = 0; i < RECOVERY_CODE_CONFIG.COUNT; i++) {
-    const bytes = randomBytes(RECOVERY_CODE_CONFIG.LENGTH);
     let code = '';
 
     for (let j = 0; j < RECOVERY_CODE_CONFIG.LENGTH; j++) {
-      const byte = bytes[j];
-      if (byte !== undefined) {
-        code += charset[byte % charset.length];
-      }
+      code += charset.charAt(randomInt(charset.length));
     }
 
     // フォーマット: XXXX-XXXX

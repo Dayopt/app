@@ -2,7 +2,7 @@
  * Next.js Instrumentation Hook
  * サーバー起動時にSentry SDKを初期化
  *
- * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
+ * @see https://nextjs.org/docs/app/guides/instrumentation
  * @see https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
  */
 
@@ -34,12 +34,12 @@ function resolveTechnicalRequestId(
 export async function register() {
   // Node.jsランタイム（サーバーサイド）
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await import('./sentry.server.config');
+    await import('../sentry.server.config');
   }
 
   // Edgeランタイム（Middleware、Edge API Routes）
   if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('./sentry.edge.config');
+    await import('../sentry.edge.config');
   }
 }
 

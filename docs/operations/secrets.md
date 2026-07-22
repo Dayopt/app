@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-21
+last_verified: 2026-07-22
 code: scripts/env/schema.ts
 ---
 
@@ -98,10 +98,12 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 | `sentry`                 | `SENTRY_AUTH_TOKEN`                                                                           | Product / Web の Production release upload          |
 | `github-login`           | password, TOTP, recovery codes                                                                | GitHub account login                                |
 | `github-ssh`             | SSH private key                                                                               | GitHub SSH Agent                                    |
-| `vercel`                 | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Vercel CLI / future automation                      |
+| `vercel`                 | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Production Config Audit / project metadata          |
 | `google`                 | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                              |
 | `domain`                 | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                     |
 | `recovery-codes`         | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側                  |
+
+`VERCEL_TOKEN`はautomation専用とし、local CLIのloginや`--token`引数には使わない。Production Config Auditが環境変数からprocess内で読み、Authorization headerにだけ設定する。localの確認方法とrotation順序は[Environment Secrets](./security/environment-secrets.md)を正とする。
 
 ---
 
@@ -136,7 +138,7 @@ pnpm 1password:check
 
 - `env:check` — required env を `OK / EMPTY / MISSING` だけで確認する
 - `secrets:check` — tracked files と untracked `.env*` を scan し、literal secret は `value: [redacted]` で報告する
-- `1password:check` — 1Password の vault / item / field / empty 状態だけを確認する。item の作成・変更・削除はしない
+- `1password:check` — 1Password の vault / item / field / empty 状態だけを確認する。schemaで`required: true`のentryまたはoperational itemが不足・空の場合だけ失敗し、optional entryは不足・空の状態を表示しても成功する。item の作成・変更・削除はしない
 
 `.op-env.local.example` の `op://` 参照は正規の local injection schema なので leak として扱わない。
 
