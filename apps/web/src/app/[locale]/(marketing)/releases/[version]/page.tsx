@@ -110,7 +110,7 @@ const mdxComponents = createMDXComponents({
 
     return (
       <div
-        className={`my-6 rounded-r-lg border-l-4 p-4 ${changeType.color.replace('text-', 'border-').replace('bg-', 'bg-').replace('border-', 'border-l-')}`}
+        className={`my-6 rounded-r-lg border-l-4 p-4 ${changeType.color.replace('text-', 'border-').replace('border-', 'border-l-')}`}
       >
         <div className="mb-2 flex items-center gap-2">
           <span className="text-lg" role="img" aria-label={changeType.label}>
