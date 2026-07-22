@@ -70,6 +70,31 @@ describe('authorizeWebOperatorSmoke', () => {
     });
 
     expect(result).toEqual({ authorized: true });
+    expect(normalizedRequest.bodyUsed).toBe(false);
+  });
+
+  it('accepts an empty POST stream after the Node runtime removes Content-Length 0', async () => {
+    const normalizedRequest = new Request('https://dayopt.app/api/v1/system/sentry-smoke/server', {
+      method: 'POST',
+      body: '',
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        Origin: 'https://dayopt.app',
+        'Sec-Fetch-Site': 'same-origin',
+      },
+    });
+    expect(normalizedRequest.body).not.toBeNull();
+    expect(normalizedRequest.headers.has('content-length')).toBe(false);
+
+    const result = await authorizeWebOperatorSmoke(normalizedRequest, {
+      env: activeEnvironment(),
+      now: NOW,
+      checkRateLimit,
+    });
+
+    expect(result).toEqual({ authorized: true });
+    expect(normalizedRequest.bodyUsed).toBe(false);
+    expect(checkRateLimit.mock.calls.map(([stage]) => stage)).toEqual(['per-ip', 'global']);
   });
 
   it.each([
@@ -89,12 +114,21 @@ describe('authorizeWebOperatorSmoke', () => {
     expect(checkRateLimit).not.toHaveBeenCalled();
   });
 
-  it('rejects cross-origin and body-bearing requests before rate limiting', async () => {
+  it('rejects cross-origin requests before rate limiting', async () => {
     const crossOrigin = await authorizeWebOperatorSmoke(
       request(TOKEN, 'https://attacker.example'),
       { env: activeEnvironment(), now: NOW, checkRateLimit },
     );
-    const bodyBearing = await authorizeWebOperatorSmoke(
+
+    expect(crossOrigin.authorized).toBe(false);
+    expect(checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['without a framing header', {}],
+    ['despite Content-Length 0', { 'Content-Length': '0' }],
+  ])('rejects a non-empty body %s after token verification', async (_label, headers) => {
+    const result = await authorizeWebOperatorSmoke(
       new Request('https://dayopt.app/api/v1/system/sentry-smoke/server', {
         method: 'POST',
         body: '{}',
@@ -102,14 +136,76 @@ describe('authorizeWebOperatorSmoke', () => {
           Authorization: `Bearer ${TOKEN}`,
           Origin: 'https://dayopt.app',
           'Sec-Fetch-Site': 'same-origin',
+          ...headers,
         },
       }),
       { env: activeEnvironment(), now: NOW, checkRateLimit },
     );
 
-    expect(crossOrigin.authorized).toBe(false);
-    expect(bodyBearing.authorized).toBe(false);
-    expect(checkRateLimit).not.toHaveBeenCalled();
+    expect(result.authorized).toBe(false);
+    expect(checkRateLimit.mock.calls.map(([stage]) => stage)).toEqual(['per-ip', 'global']);
+  });
+
+  it('applies global limiting before reading one non-empty chunk and cancels the clone', async () => {
+    const events: string[] = [];
+    const read = vi.fn(async () => {
+      events.push('read');
+      return { done: false, value: new Uint8Array([1]) };
+    });
+    const cancel = vi.fn(async () => undefined);
+    const smokeRequest = request();
+    vi.spyOn(smokeRequest, 'clone').mockImplementation(() => {
+      events.push('clone');
+      return { body: { getReader: () => ({ read, cancel }) } } as never;
+    });
+
+    const result = await authorizeWebOperatorSmoke(smokeRequest, {
+      env: activeEnvironment(),
+      now: NOW,
+      checkRateLimit: async (stage) => {
+        events.push(stage);
+        return 'allowed';
+      },
+    });
+
+    expect(result.authorized).toBe(false);
+    expect(events).toEqual(['per-ip', 'global', 'clone', 'read']);
+    expect(read).toHaveBeenCalledOnce();
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it('fails closed and cancels the cloned stream when the body probe times out', async () => {
+    vi.useFakeTimers();
+    try {
+      let markReadStarted: (() => void) | undefined;
+      const readStarted = new Promise<void>((resolve) => {
+        markReadStarted = resolve;
+      });
+      const read = vi.fn(() => {
+        markReadStarted?.();
+        return new Promise<never>(() => undefined);
+      });
+      const cancel = vi.fn(async () => undefined);
+      const smokeRequest = request();
+      vi.spyOn(smokeRequest, 'clone').mockReturnValue({
+        body: { getReader: () => ({ read, cancel }) },
+      } as never);
+
+      const resultPromise = authorizeWebOperatorSmoke(smokeRequest, {
+        env: activeEnvironment(),
+        now: NOW,
+        checkRateLimit,
+      });
+      await readStarted;
+      await vi.advanceTimersByTimeAsync(1_000);
+      const result = await resultPromise;
+
+      expect(result.authorized).toBe(false);
+      if (!result.authorized) expect(result.response.status).toBe(404);
+      expect(cancel).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it.each([
@@ -151,13 +247,16 @@ describe('authorizeWebOperatorSmoke', () => {
   });
 
   it('counts an invalid token and fails closed when rate limiting is unavailable', async () => {
-    const invalid = await authorizeWebOperatorSmoke(request('B'.repeat(43)), {
+    const invalidRequest = request('B'.repeat(43));
+    const cloneSpy = vi.spyOn(invalidRequest, 'clone');
+    const invalid = await authorizeWebOperatorSmoke(invalidRequest, {
       env: activeEnvironment(),
       now: NOW,
       checkRateLimit,
     });
     expect(invalid.authorized).toBe(false);
     expect(checkRateLimit).toHaveBeenCalledOnce();
+    expect(cloneSpy).not.toHaveBeenCalled();
 
     const unavailable = await authorizeWebOperatorSmoke(request(), {
       env: activeEnvironment(),
