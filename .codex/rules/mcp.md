@@ -2,6 +2,23 @@
 
 Codex 固有の MCP 起動範囲だけをここに置く。Claude 共通の MCP 方針は `.claude/rules/mcp-usage.md` を canonical source とする。
 
+## user-global 設定
+
+`context7` と `eagle` は `~/.codex/config.toml` に置く。新しい Codex 環境では、利用前に次の設定を追加する。
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+
+[mcp_servers.eagle]
+command = "/absolute/path/to/node"
+args = ["/absolute/path/to/Dayopt.library/.mcp/eagle-library/src/server.js"]
+startup_timeout_sec = 20
+tool_timeout_sec = 60
+```
+
+`eagle` の絶対パスは各環境の Node.js と Eagle library に合わせる。`context7` / `eagle` と同名の定義を `.codex/config.toml` へ追加しない。Codex は user-global と repo-local の同名 table を統合するため、HTTP の `url` と stdio の `command` / `args` が混在すると設定読込に失敗する。
+
 ## 常時起動
 
 - `github`: issue / PR / branch 状態確認で頻繁に使うため `.codex/config.toml` に置く。`op run -- github-mcp-server stdio` で `op://Dayopt-Shared/github-mcp-pat/credential` を自己解決する。
