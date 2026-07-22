@@ -66,6 +66,8 @@ secret_key = "env(VAULT_SECRET_KEY)"
 enabled = true
 # Specifies an ordered list of schema files that describe your database.
 # Supports glob patterns relative to supabase directory: "./schemas/*.sql"
+# 意図的に空のままにする: ./schemas/*.sql は declarative schema ではなく手動の読み物。
+# 理由と同期ルールは ./schemas/README.md を参照。
 schema_paths = []
 
 [db.seed]
