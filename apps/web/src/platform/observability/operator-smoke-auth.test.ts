@@ -50,6 +50,28 @@ describe('authorizeWebOperatorSmoke', () => {
     expect(checkRateLimit.mock.calls.map(([stage]) => stage)).toEqual(['per-ip', 'global']);
   });
 
+  it('accepts an empty POST normalized by the runtime to Content-Length 0', async () => {
+    const normalizedRequest = new Request('https://dayopt.app/api/v1/system/sentry-smoke/server', {
+      method: 'POST',
+      body: '',
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        'Content-Length': '0',
+        Origin: 'https://dayopt.app',
+        'Sec-Fetch-Site': 'same-origin',
+      },
+    });
+    expect(normalizedRequest.body).not.toBeNull();
+
+    const result = await authorizeWebOperatorSmoke(normalizedRequest, {
+      env: activeEnvironment(),
+      now: NOW,
+      checkRateLimit,
+    });
+
+    expect(result).toEqual({ authorized: true });
+  });
+
   it.each([
     ['preview', { VERCEL_ENV: 'preview' }],
     ['disabled', { SENTRY_OPERATOR_SMOKE_ENABLED: 'false' }],
@@ -87,6 +109,27 @@ describe('authorizeWebOperatorSmoke', () => {
 
     expect(crossOrigin.authorized).toBe(false);
     expect(bodyBearing.authorized).toBe(false);
+    expect(checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['positive content length', { 'Content-Length': '2' }],
+    ['streamed transfer', { 'Transfer-Encoding': 'chunked' }],
+  ])('rejects %s before rate limiting', async (_label, headers) => {
+    const result = await authorizeWebOperatorSmoke(
+      new Request('https://dayopt.app/api/v1/system/sentry-smoke/server', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${TOKEN}`,
+          Origin: 'https://dayopt.app',
+          'Sec-Fetch-Site': 'same-origin',
+          ...headers,
+        },
+      }),
+      { env: activeEnvironment(), now: NOW, checkRateLimit },
+    );
+
+    expect(result.authorized).toBe(false);
     expect(checkRateLimit).not.toHaveBeenCalled();
   });
 
