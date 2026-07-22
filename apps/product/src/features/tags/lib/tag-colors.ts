@@ -4,8 +4,8 @@
  * DBにはカラー名（"blue" 等）を保存。
  * レンダリングはCSS変数 + Tailwindクラス経由。HEXは使わない。
  *
- * @see @dayopt/foundations/src/tokens/colors.css — OKLCH値の定義
- * @see @dayopt/foundations/src/tailwind-theme.css — Tailwindマッピング
+ * @see packages/foundations/src/tokens/colors.css — OKLCH値の定義
+ * @see packages/foundations/src/tailwind-theme.css — Tailwindマッピング
  */
 
 // ========================================
