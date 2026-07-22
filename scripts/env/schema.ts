@@ -14,6 +14,7 @@ export type EnvSchemaEntry = {
 export type OperationalItem = {
   vault: string;
   item: string;
+  required: boolean;
 };
 
 const staging = 'Dayopt-Staging';
@@ -107,11 +108,11 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
 ];
 
 export const operationalItems: OperationalItem[] = [
-  { vault: shared, item: 'github-login' },
-  { vault: shared, item: 'github-ssh' },
-  { vault: shared, item: 'domain' },
-  { vault: shared, item: 'resend-support-replies' },
-  { vault: shared, item: 'recovery-codes' },
+  { vault: shared, item: 'github-login', required: true },
+  { vault: shared, item: 'github-ssh', required: true },
+  { vault: shared, item: 'domain', required: true },
+  { vault: shared, item: 'resend-support-replies', required: true },
+  { vault: shared, item: 'recovery-codes', required: true },
 ];
 
 export const onePasswordEnvSchema = [...envSchema, ...productionEnvSchema];

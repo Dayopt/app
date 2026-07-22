@@ -23,6 +23,9 @@ case "$1" in
     exit 0
     ;;
   item)
+    if [ -n "$FAKE_OP_MISSING_ITEM" ] && [ "$3" = "$FAKE_OP_MISSING_ITEM" ]; then
+      exit 1
+    fi
     case "$FAKE_OP_MODE" in
       error)
         printf '%s\n' "$FAKE_OP_SENTINEL" >&2
@@ -46,12 +49,18 @@ function createFakeOpDirectory(): string {
   return directory;
 }
 
-function runCheck(mode?: 'error' | 'invalid-json') {
+interface CheckOptions {
+  emptyField?: string;
+  missingItem?: string;
+  mode?: 'error' | 'invalid-json';
+}
+
+function runCheck(options: CheckOptions = {}) {
   const fakeOpDirectory = createFakeOpDirectory();
   const fields = [...new Set(onePasswordEnvSchema.map((entry) => entry.field))].map((field) => ({
     id: field,
     label: field,
-    value: sentinelSecret,
+    value: field === options.emptyField ? '' : sentinelSecret,
   }));
 
   return spawnSync('pnpm', ['exec', 'tsx', 'scripts/env/check-1password.ts'], {
@@ -60,7 +69,8 @@ function runCheck(mode?: 'error' | 'invalid-json') {
     env: {
       ...process.env,
       FAKE_OP_ITEM_JSON: JSON.stringify({ fields }),
-      FAKE_OP_MODE: mode ?? '',
+      FAKE_OP_MISSING_ITEM: options.missingItem ?? '',
+      FAKE_OP_MODE: options.mode ?? '',
       FAKE_OP_SENTINEL: sentinelSecret,
       PATH: `${fakeOpDirectory}:${process.env.PATH ?? ''}`,
     },
@@ -84,7 +94,7 @@ describe('check-1password.ts', () => {
   });
 
   it('op の失敗出力を引き継がない', () => {
-    const result = runCheck('error');
+    const result = runCheck({ mode: 'error' });
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain('MISSING_ITEM');
@@ -93,11 +103,50 @@ describe('check-1password.ts', () => {
   });
 
   it('不正な JSON の raw stdout を引き継がない', () => {
-    const result = runCheck('invalid-json');
+    const result = runCheck({ mode: 'invalid-json' });
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain('MISSING_ITEM');
     expect(result.stdout).not.toContain(sentinelSecret);
     expect(result.stderr).not.toContain(sentinelSecret);
+  });
+
+  it('optional item が未作成でも状態を表示して成功する', () => {
+    const result = runCheck({ missingItem: 'google' });
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain(
+      'Dayopt-Shared / google / GOOGLE_SITE_VERIFICATION: MISSING_ITEM (optional)',
+    );
+  });
+
+  it('optional field が空でも状態を表示して成功する', () => {
+    const result = runCheck({ emptyField: 'GOOGLE_SITE_VERIFICATION' });
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain(
+      'Dayopt-Shared / google / GOOGLE_SITE_VERIFICATION: EMPTY (optional)',
+    );
+  });
+
+  it('required item が未作成なら失敗する', () => {
+    const result = runCheck({ missingItem: 'sentry-web' });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('Dayopt-Production / sentry-web / SENTRY_DSN: MISSING_ITEM');
+  });
+
+  it('required field が空なら失敗する', () => {
+    const result = runCheck({ emptyField: 'SENTRY_DSN' });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('Dayopt-Production / sentry / SENTRY_DSN: EMPTY');
+  });
+
+  it('required operational item が未作成なら失敗する', () => {
+    const result = runCheck({ missingItem: 'recovery-codes' });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('Dayopt-Shared / recovery-codes: MISSING_ITEM');
   });
 });

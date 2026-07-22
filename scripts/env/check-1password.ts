@@ -19,13 +19,15 @@ type OnePasswordItem = {
 };
 
 type ItemResult =
-  | { status: 'OK'; item: OnePasswordItem }
-  | { status: 'MISSING_ITEM' }
-  | { status: 'OP_TIMEOUT' };
+  { status: 'OK'; item: OnePasswordItem } | { status: 'MISSING_ITEM' } | { status: 'OP_TIMEOUT' };
 
 const vaultCache = new Map<string, boolean>();
 const itemCache = new Map<string, ItemResult>();
 const opTimeoutMs = 20_000;
+
+function formatStatus(status: string, required: boolean): string {
+  return required || status === 'OK' ? status : `${status} (optional)`;
+}
 
 function runOp(args: string[]): CommandResult {
   const result = spawnSync('op', args, {
@@ -140,8 +142,10 @@ for (const entry of onePasswordEnvSchema) {
     status = checkField(entry.vault, entry.item, entry.field);
   }
 
-  console.log(`${entry.vault} / ${entry.item} / ${entry.field}: ${status}`);
-  if (status !== 'OK') hasFailure = true;
+  console.log(
+    `${entry.vault} / ${entry.item} / ${entry.field}: ${formatStatus(status, entry.required)}`,
+  );
+  if (entry.required && status !== 'OK') hasFailure = true;
 }
 
 for (const item of operationalItems) {
@@ -157,8 +161,8 @@ for (const item of operationalItems) {
     status = itemResult.status === 'OK' ? 'OK' : 'MISSING_ITEM';
   }
 
-  console.log(`${item.vault} / ${item.item}: ${status}`);
-  if (status !== 'OK') hasFailure = true;
+  console.log(`${item.vault} / ${item.item}: ${formatStatus(status, item.required)}`);
+  if (item.required && status !== 'OK') hasFailure = true;
 }
 
 if (hasFailure) {
