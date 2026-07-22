@@ -132,7 +132,7 @@ apps/web/content/
 
 - [ ] 必須フィールドがすべて記述されている
 - [ ] 日付は ISO 8601 形式（`YYYY-MM-DD`）
-- [ ] `tags` は 3-6個（空配列 `[]` は禁止、不要なら省略）
+- [ ] `tags` は空配列 `[]` にしない（blog は3-6個を目安、releases は該当する分類だけ・1-2個でも可）
 - [ ] `ai.relatedQuestions` は 3-5個（手動で記述）
 - [ ] `pnpm --filter @dayopt/web validate:content` でエラーがないことを確認した
 

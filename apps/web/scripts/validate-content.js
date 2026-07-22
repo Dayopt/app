@@ -149,7 +149,10 @@ export function validateFrontMatter(fm, type, isDraft) {
   if (type !== 'docs' && type !== 'legal') {
     const tags = fm.tags;
     if (Array.isArray(tags)) {
-      if (tags.length > 0 && tags.length < 3) {
+      // releases のタグは new-features/improvements/bug-fixes/breaking-changes/security-updates
+      // という固定5分類（docs/operations/runbook.md 第4部）で、該当する分だけ付ける。
+      // 1-2個でも正当なため、3個以上を強制する下限チェックは blog（自由記述タグ）にのみ適用する。
+      if (type === 'blog' && tags.length > 0 && tags.length < 3) {
         report.push(`Too few tags (min: 3, found: ${tags.length})`);
       }
       if (tags.length > 6) {

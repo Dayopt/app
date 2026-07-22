@@ -1408,6 +1408,8 @@ GitHub Release 本文（`gh release edit` で反映）と Web公開用リリー�
 
 id・アイコン・色は `apps/web/src/features/releases/lib/releases.ts` の `changeTypes` 配列を正とする（Web UIの表示色を決めるコード制約のため、値をここに手動複製しない）。この5分類を超えるカテゴリを追加しない。
 
+該当する分類だけを付ける。1リリースが5分類すべてに触れるとは限らないため、1-2個でも正当（blogの自由記述タグにある「3-6個を目安」はここには適用しない）。空配列だけは禁止で、最低1個は必ず該当する分類を選ぶ。
+
 ## 媒体ごとの違い（カテゴリは共通、トーンが違う）
 
 | 観点     | GitHub Release 本文                  | Web MDX（`apps/web/content/releases/`）             |

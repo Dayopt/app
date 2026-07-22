@@ -175,15 +175,37 @@ Body
     expect(result.errors).toContain("Missing required field: 'tags'");
   });
 
-  it('インライン tags が1件だと parseFrontMatter を通しても Too few tags になる', () => {
-    const { data } = parseFrontMatter(releaseMdx("tags: ['solo']"));
+  it('releases では1件でも Too few tags にならない（固定5分類のうち該当分だけでよい）', () => {
+    const { data } = parseFrontMatter(releaseMdx("tags: ['bug-fixes']"));
     const result = validateFrontMatter(data, 'releases', false);
-    expect(result.errors).toContain('Too few tags (min: 3, found: 1)');
+    expect(result.errors.filter((e) => e.includes('tags'))).toEqual([]);
+  });
+
+  it('releases では2件でも Too few tags にならない（docs-writingテンプレートの実例と同じ件数）', () => {
+    const { data } = parseFrontMatter(releaseMdx("tags: ['new-features', 'improvements']"));
+    const result = validateFrontMatter(data, 'releases', false);
+    expect(result.errors.filter((e) => e.includes('tags'))).toEqual([]);
   });
 
   it('インライン tags が3件なら parseFrontMatter を通しても tags関連のエラーは出ない', () => {
     const { data } = parseFrontMatter(releaseMdx("tags: ['a', 'b', 'c']"));
     const result = validateFrontMatter(data, 'releases', false);
     expect(result.errors.filter((e) => e.includes('tags'))).toEqual([]);
+  });
+
+  it('blog では releases と異なり1件だと Too few tags になる（3-6個ルールは blog 限定）', () => {
+    const result = validateFrontMatter(
+      {
+        title: 'Post',
+        description: 'Description',
+        publishedAt: '2026-01-01',
+        category: 'guide',
+        author: 'Dayopt Team',
+        tags: ['solo'],
+      },
+      'blog',
+      false,
+    );
+    expect(result.errors).toContain('Too few tags (min: 3, found: 1)');
   });
 });
