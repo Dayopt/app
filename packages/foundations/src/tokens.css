@@ -4,6 +4,10 @@
  *   @import '@dayopt/foundations/tokens.css';
  * で取り込む。無 prefix（--background 等）が唯一の canonical 体系。
  * 順序: primitives → semantic → @theme マッピング
+ *
+ * 公開面は package.json の exports に定義された tokens.css / scrollbar.css の
+ * 2 subpath のみ。個別 token CSS（tokens/*.css, tailwind-theme.css）は
+ * このファイル経由でのみ供給し、直接 import できる subpath としては公開しない。
  * ============================================ */
 
 @import './tokens/primitives.css';

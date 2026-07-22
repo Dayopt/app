@@ -19,7 +19,7 @@ function ScrollArea({
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
-        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- specific transition properties
+        // transition-[color,box-shadow] は遷移対象プロパティを限定する意図的な arbitrary value
         className="focus-visible:ring-ring size-full !w-full overflow-hidden transition-[color,box-shadow] outline-none focus-visible:ring-2 focus-visible:outline-1 [&>div]:!block [&>div]:!min-w-0"
       >
         {children}
