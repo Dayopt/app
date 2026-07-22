@@ -1,6 +1,6 @@
 ---
 name: docs-writing
-description: 新機能実装完了後のユーザー向けドキュメント（`apps/web/content/docs/**/*.mdx`）執筆時、リリース完了後のリリースノート（`apps/web/content/releases/{en,ja}/*.mdx`）作成時、アーキテクチャ意思決定確定後の decision ログ（技術判断・プロダクト判断ともに各ドメインの `log/YYYY-MM-DD-slug.md`）作成時、Breaking change を含む変更の merge 前の技術ドキュメント更新時、`docs-audit` skill からの docs gap フィードバック受領時に発動。AI 生成時は `draft: true` 初期値を適用する。コード内コメントや一時メモでは発動しない。
+description: 新機能実装完了後のユーザー向けドキュメント（`apps/web/content/docs/**/*.mdx`）執筆時、リリース完了後のリリースノート（`apps/web/content/blog/{en,ja}/` の `category: 'release'` 記事）作成時、アーキテクチャ意思決定確定後の decision ログ（技術判断・プロダクト判断ともに各ドメインの `log/YYYY-MM-DD-slug.md`）作成時、Breaking change を含む変更の merge 前の技術ドキュメント更新時、`docs-audit` skill からの docs gap フィードバック受領時に発動。AI 生成時は `draft: true` 初期値を適用する。コード内コメントや一時メモでは発動しない。
 effort: high
 maxTurns: 25
 ---
@@ -17,7 +17,7 @@ app側の技術ドキュメント（`docs/`）とは別物。
 **上位イベント起点（何が確定したか）:**
 
 - 新機能の public API 仕様が確定し、ユーザー向け使い方ドキュメントが必要になった時
-- リリース作業完了後、`apps/web/content/releases/{en,ja}/*.mdx` にリリースノートを書く時
+- リリース作業完了後、`apps/web/content/blog/{en,ja}/` に `category: 'release'` のリリースノート記事を書く時
 - アーキテクチャ意思決定が確定し、decision ログを書く時（技術判断・プロダクト判断ともに各ドメインの `log/YYYY-MM-DD-slug.md` が正本。`/decision` コマンド参照）
 - Breaking change を含む変更を merge する前、影響を受ける技術ドキュメントの更新が必要な時
 
@@ -52,11 +52,13 @@ AI が記事を作成する場合は必ず `draft: true` で作成し、開発�
 
 ## 対象コンテンツ種別
 
-| 種別         | ディレクトリ                              | 用途                                                    |
-| ------------ | ----------------------------------------- | ------------------------------------------------------- |
-| **docs**     | `apps/web/content/docs/**/*.mdx`          | 機能ドキュメント（Getting Started, Features, Guides等） |
-| **blog**     | `content/blog/{en,ja}/*.mdx`              | ブログ記事（機能紹介、Tips、開発裏話等）                |
-| **releases** | `apps/web/content/releases/{en,ja}/*.mdx` | リリースノート                                          |
+| 種別         | ディレクトリ                                          | 用途                                                    |
+| ------------ | ----------------------------------------------------- | ------------------------------------------------------- |
+| **docs**     | `apps/web/content/docs/**/*.mdx`                      | 機能ドキュメント（Getting Started, Features, Guides等） |
+| **blog**     | `apps/web/content/blog/{en,ja}/*.mdx`                 | ブログ記事（機能紹介、Tips、開発裏話等）                |
+| **releases** | blog と同じ。`category: 'release'` を付けた blog 記事 | リリースノート（`/blog/release` タブに表示）            |
+
+リリースノートは独立ページを持たない。blog の `release` カテゴリ記事として書く（旧 `/releases` ページは 2026-07 に廃止。`docs/marketing/log/2026-07-23-content-operations.md`）。役割分担は `docs/ai/docs-policy.md`、文章基準は `docs/ai/writing-style.md` に従う。
 
 ---
 
@@ -92,21 +94,18 @@ apps/web/content/
 ├── docs/
 │   ├── en/                    # 英語版（必須）
 │   └── ja/                    # 日本語版（必須）
-├── blog/
-│   ├── en/
-│   └── ja/
-└── releases/
-    ├── en/
+└── blog/
+    ├── en/                    # リリースノート（category: 'release'）もここに置く
     └── ja/
 ```
 
 ### ファイル名規則
 
-| 種別     | ファイル名               | 例                               |
-| -------- | ------------------------ | -------------------------------- |
-| docs     | ケバブケース             | `plans.mdx`, `weekly-review.mdx` |
-| blog     | ケバブケースで内容を表す | `timeboxing-tips.mdx`            |
-| releases | バージョン番号           | `v0.16.0.mdx`                    |
+| 種別     | ファイル名                     | 例                                      |
+| -------- | ------------------------------ | --------------------------------------- |
+| docs     | ケバブケース                   | `plans.mdx`, `weekly-review.mdx`        |
+| blog     | ケバブケースで内容を表す       | `timeboxing-tips.mdx`                   |
+| releases | バージョン番号をケバブケース化 | `v0-16-0.mdx`（URL は `/blog/v0-16-0`） |
 
 ---
 
@@ -132,7 +131,7 @@ apps/web/content/
 
 - [ ] 必須フィールドがすべて記述されている
 - [ ] 日付は ISO 8601 形式（`YYYY-MM-DD`）
-- [ ] `tags` は空配列 `[]` にしない（blog は3-6個を目安、releases は該当する分類だけ・1-2個でも可）
+- [ ] `tags` は空配列 `[]` にしない（blog は3-6個を目安、`category: 'release'` 記事は固定5分類から該当する分だけ・1-2個でも可）
 - [ ] `ai.relatedQuestions` は 3-5個（手動で記述）
 - [ ] `pnpm --filter @dayopt/web validate:content` でエラーがないことを確認した
 
