@@ -66,6 +66,15 @@ function hasSameOriginBrowserRequest(request: Request): boolean {
   );
 }
 
+function hasNoDeclaredRequestBody(request: Request): boolean {
+  if (request.headers.has('transfer-encoding')) return false;
+
+  const contentLength = request.headers.get('content-length');
+  if (contentLength !== null) return contentLength.trim() === '0';
+
+  return request.body === null;
+}
+
 async function sha256(value: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)));
 }
@@ -118,7 +127,7 @@ export async function authorizeWebOperatorSmoke(
   if (
     !hasActiveConfiguration(env, now) ||
     !hasSameOriginBrowserRequest(request) ||
-    request.body !== null
+    !hasNoDeclaredRequestBody(request)
   ) {
     return { authorized: false, response: operatorSmokeUnavailableResponse() };
   }

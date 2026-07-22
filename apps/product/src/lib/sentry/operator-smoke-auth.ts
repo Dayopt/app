@@ -75,6 +75,15 @@ function hasSameOriginBrowserRequest(request: Request): boolean {
   );
 }
 
+function hasNoDeclaredRequestBody(request: Request): boolean {
+  if (request.headers.has('transfer-encoding')) return false;
+
+  const contentLength = request.headers.get('content-length');
+  if (contentLength !== null) return contentLength.trim() === '0';
+
+  return request.body === null;
+}
+
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -156,7 +165,7 @@ export async function authorizeProductOperatorSmoke(
   if (
     !hasActiveConfiguration(env, now) ||
     !hasSameOriginBrowserRequest(request) ||
-    request.body !== null
+    !hasNoDeclaredRequestBody(request)
   ) {
     return { authorized: false, response: operatorSmokeUnavailableResponse() };
   }
