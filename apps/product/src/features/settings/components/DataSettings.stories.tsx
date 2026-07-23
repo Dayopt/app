@@ -11,6 +11,53 @@ import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 
 import { DataSettings } from './DataSettings';
 
+const PRO_OVERVIEW = {
+  billingInfo: {
+    subscriptionStatus: 'active',
+    stripeCustomerId: 'cus_story',
+    subscriptionId: 'sub_story',
+  },
+  paymentMethod: null,
+  invoices: [],
+};
+
+const FREE_OVERVIEW = {
+  billingInfo: {
+    subscriptionStatus: 'free',
+    stripeCustomerId: null,
+    subscriptionId: null,
+  },
+  paymentMethod: null,
+  invoices: [],
+};
+
+const CONNECTED_CLIENTS = [
+  {
+    id: '00000000-0000-4000-8000-000000000001',
+    clientId: 'chatgpt',
+    scopes: ['read:entries', 'write:plans'],
+    authorizedAt: '2026-07-23T00:00:00.000Z',
+    lastUsedAt: '2026-07-23T09:00:00.000Z',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000002',
+    clientId: 'claude-ai',
+    scopes: ['read:entries'],
+    authorizedAt: '2026-07-22T00:00:00.000Z',
+    lastUsedAt: null,
+  },
+];
+
+function dataSettingsMocks(
+  billingOverview: typeof PRO_OVERVIEW | typeof FREE_OVERVIEW,
+  connections: typeof CONNECTED_CLIENTS,
+) {
+  return {
+    'billing.getOverview': billingOverview,
+    'user.listOAuthConnections': connections,
+  };
+}
+
 // ─────────────────────────────────────────────────────────
 // Meta
 // ─────────────────────────────────────────────────────────
@@ -20,7 +67,7 @@ const meta = {
   component: DataSettings,
   parameters: {
     layout: 'padded',
-    trpcMocks: {},
+    trpcMocks: dataSettingsMocks(PRO_OVERVIEW, []),
   },
   tags: ['autodocs'],
   decorators: [
@@ -46,6 +93,20 @@ export const Default: Story = {
   },
 };
 
+/** 複数のAIクライアントが接続されている状態。 */
+export const ConnectedClients: Story = {
+  parameters: {
+    trpcMocks: dataSettingsMocks(PRO_OVERVIEW, CONNECTED_CLIENTS),
+  },
+};
+
+/** Freeへ変更後も既存接続を解除できる状態。 */
+export const FreeWithConnection: Story = {
+  parameters: {
+    trpcMocks: dataSettingsMocks(FREE_OVERVIEW, CONNECTED_CLIENTS.slice(0, 1)),
+  },
+};
+
 /** 全ストーリーを並べて一覧表示 */
 export const AllPatterns: Story = {
   parameters: {
@@ -53,12 +114,15 @@ export const AllPatterns: Story = {
   },
   render: () => (
     <div className="space-y-12">
-      <div>
-        <h3 className="text-foreground mb-4 text-lg font-medium">Default</h3>
-        <StoryTRPCProvider mocks={{}}>
-          <DataSettings />
-        </StoryTRPCProvider>
-      </div>
+      <StoryTRPCProvider mocks={dataSettingsMocks(PRO_OVERVIEW, [])}>
+        <DataSettings />
+      </StoryTRPCProvider>
+      <StoryTRPCProvider mocks={dataSettingsMocks(PRO_OVERVIEW, CONNECTED_CLIENTS)}>
+        <DataSettings />
+      </StoryTRPCProvider>
+      <StoryTRPCProvider mocks={dataSettingsMocks(FREE_OVERVIEW, CONNECTED_CLIENTS.slice(0, 1))}>
+        <DataSettings />
+      </StoryTRPCProvider>
     </div>
   ),
 };

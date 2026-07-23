@@ -23,6 +23,30 @@ import { createUserService, UserServiceError } from './user-service';
 
 /** ユーザー管理のtRPCルーター（アカウント削除・データ削除・エクスポート・MFA） */
 export const userRouter = createTRPCRouter({
+  listOAuthConnections: protectedProcedure
+    .meta({ description: '有効なOAuth接続一覧を取得' })
+    .query(async ({ ctx }) => {
+      try {
+        return await createUserService(ctx.supabase).listOAuthConnections(ctx.userId!);
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
+  revokeOAuthConnection: protectedProcedure
+    .meta({ description: 'OAuth接続とtoken familyを失効' })
+    .input(z.object({ connectionId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await createUserService(ctx.supabase).revokeOAuthConnection(
+          ctx.userId!,
+          input.connectionId,
+        );
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
   /**
    * アカウント即時削除
    * auth.users 削除 → CASCADE DELETE で全データ削除

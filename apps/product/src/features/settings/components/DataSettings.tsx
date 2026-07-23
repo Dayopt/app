@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import {
@@ -18,6 +18,7 @@ import {
   Download,
   ExternalLink,
   Trash2,
+  Unplug,
   Upload,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -261,17 +262,61 @@ function RestoreSection() {
 
 // ─── MCP / API ───────────────────────────────────────
 
-function McpApiSection() {
+const MCP_CLIENT_NAMES: Readonly<Record<string, string>> = {
+  'claude-ai': 'Claude',
+  chatgpt: 'ChatGPT',
+  cursor: 'Cursor',
+};
+
+const OAUTH_SCOPE_LABEL_KEYS = {
+  'read:entries': 'scope.readEntries',
+  'read:tags': 'scope.readTags',
+  'read:constraints': 'scope.readConstraints',
+  'read:stats': 'scope.readStats',
+  'write:plans': 'scope.writePlans',
+  'delete:plans': 'scope.deletePlans',
+  'write:records': 'scope.writeRecords',
+  'delete:records': 'scope.deleteRecords',
+} as const;
+
+interface PendingConnectionRevoke {
+  id: string;
+  clientName: string;
+}
+
+export function McpApiSection() {
   const t = useTranslations('settings.dataControls.mcp');
   const [copied, setCopied] = useState<'url' | null>(null);
+  const [pendingRevoke, setPendingRevoke] = useState<PendingConnectionRevoke | null>(null);
+  const utils = api.useUtils();
 
   // Pro判定: billing overview の subscription status から判定
   const billingOverview = api.billing.getOverview.useQuery(undefined, { retry: false });
+  const connections = api.user.listOAuthConnections.useQuery();
+  const revokeConnection = api.user.revokeOAuthConnection.useMutation({
+    onSuccess: async () => {
+      await utils.user.listOAuthConnections.invalidate();
+      toast.success(t('disconnectSuccess'));
+      setPendingRevoke(null);
+    },
+    onError: () => {
+      toast.error(t('disconnectFailed'));
+    },
+  });
   const subStatus = billingOverview.data?.billingInfo.subscriptionStatus;
   const currentPlan = getPlanIdForSubscriptionStatus(subStatus);
   const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
   // OAuth 接続のため client (Claude.ai etc.) に渡すのはこの URL のみ。
   const mcpServerUrl = dayoptUrls.mcp;
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }),
+    [],
+  );
 
   const handleCopy = useCallback(
     (text: string, type: 'url') => {
@@ -283,50 +328,142 @@ function McpApiSection() {
     [t],
   );
 
-  if (!canAccessPro) {
-    return (
-      <SectionCard title={t('title')}>
-        <p className="text-muted-foreground mb-4 text-base md:text-sm">{t('description')}</p>
-        <InfoBox>
-          <div className="flex items-center gap-2">
-            <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
-            <p className="text-foreground flex-1 text-base md:text-sm">{t('proRequired')}</p>
-            <Button variant="outline" size="sm" disabled>
-              {t('upgrade')}
-            </Button>
-          </div>
-        </InfoBox>
-      </SectionCard>
-    );
-  }
+  const handleDisconnect = useCallback(async () => {
+    if (!pendingRevoke) return;
+    await revokeConnection.mutateAsync({ connectionId: pendingRevoke.id });
+  }, [pendingRevoke, revokeConnection]);
+
+  const scopeLabel = (scope: string) => {
+    const key = OAUTH_SCOPE_LABEL_KEYS[scope as keyof typeof OAUTH_SCOPE_LABEL_KEYS];
+    return key ? t(key) : scope;
+  };
 
   return (
     <SectionCard title={t('title')}>
       <p className="text-muted-foreground mb-2 text-base md:text-sm">{t('description')}</p>
-      {/* Server URL */}
-      <LabeledRow label={t('serverUrl')}>
-        <div className="flex items-center gap-2">
-          <code className="text-muted-foreground font-mono text-sm">{mcpServerUrl}</code>
-          <CopyButton
-            copied={copied === 'url'}
-            onClick={() => handleCopy(mcpServerUrl, 'url')}
-            label="Copy URL"
-          />
-        </div>
-      </LabeledRow>
-      {/* Connection guide */}
-      <InfoBox className="mt-4 p-4">
-        <p className="text-muted-foreground text-base md:text-sm">
-          {t('connectionGuide')}
-          <a
-            href="#"
-            className="text-muted-foreground hover:text-foreground ml-1 inline-flex items-center gap-1 underline transition-colors"
-          >
-            {t('viewDocs')}
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </p>
-      </InfoBox>
+
+      <div className="border-border mt-5 border-t pt-5">
+        <h3 className="text-foreground text-sm font-medium">{t('connectedApps')}</h3>
+        {connections.isLoading ? (
+          <p className="text-muted-foreground mt-3 text-sm" role="status">
+            {t('loadingConnections')}
+          </p>
+        ) : connections.isError ? (
+          <div className="mt-3 flex items-center justify-between gap-3" role="alert">
+            <p className="text-muted-foreground text-sm">{t('loadConnectionsFailed')}</p>
+            <Button variant="outline" size="sm" onClick={() => connections.refetch()}>
+              {t('retry')}
+            </Button>
+          </div>
+        ) : connections.data?.length ? (
+          <ul className="mt-3 space-y-3">
+            {connections.data.map((connection) => {
+              const clientName = MCP_CLIENT_NAMES[connection.clientId] ?? connection.clientId;
+              return (
+                <li
+                  key={connection.id}
+                  className="border-border flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-start sm:justify-between"
+                >
+                  <div className="min-w-0 space-y-2">
+                    <p className="text-foreground text-sm font-medium">{clientName}</p>
+                    <div>
+                      <p className="text-muted-foreground text-xs">{t('grantedAccess')}</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {connection.scopes.map((scope) => (
+                          <span
+                            key={scope}
+                            className="bg-muted text-muted-foreground rounded-md px-2 py-1 text-xs"
+                          >
+                            {scopeLabel(scope)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="text-muted-foreground space-y-0.5 text-xs">
+                      <p>
+                        {t('authorizedOn', {
+                          date: dateFormatter.format(new Date(connection.authorizedAt)),
+                        })}
+                      </p>
+                      <p>
+                        {connection.lastUsedAt
+                          ? t('lastUsed', {
+                              date: dateFormatter.format(new Date(connection.lastUsedAt)),
+                            })
+                          : t('lastUsedNever')}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={revokeConnection.isPending}
+                    onClick={() => setPendingRevoke({ id: connection.id, clientName })}
+                  >
+                    <Unplug className="mr-2 h-4 w-4" />
+                    {t('disconnect')}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground mt-3 text-sm">{t('noConnections')}</p>
+        )}
+      </div>
+
+      <div className="border-border mt-5 border-t pt-5">
+        {canAccessPro ? (
+          <>
+            <LabeledRow label={t('serverUrl')}>
+              <div className="flex items-center gap-2">
+                <code className="text-muted-foreground font-mono text-sm">{mcpServerUrl}</code>
+                <CopyButton
+                  copied={copied === 'url'}
+                  onClick={() => handleCopy(mcpServerUrl, 'url')}
+                  label={t('copyUrl')}
+                />
+              </div>
+            </LabeledRow>
+            <InfoBox className="mt-4 p-4">
+              <p className="text-muted-foreground text-base md:text-sm">
+                {t('connectionGuide')}
+                <a
+                  href="#"
+                  className="text-muted-foreground hover:text-foreground ml-1 inline-flex items-center gap-1 underline transition-colors"
+                >
+                  {t('viewDocs')}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </p>
+            </InfoBox>
+          </>
+        ) : (
+          <InfoBox>
+            <div className="flex items-center gap-2">
+              <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
+              <p className="text-foreground flex-1 text-base md:text-sm">{t('proRequired')}</p>
+              <Button variant="outline" size="sm" disabled>
+                {t('upgrade')}
+              </Button>
+            </div>
+          </InfoBox>
+        )}
+      </div>
+
+      <ConfirmDialog
+        open={pendingRevoke !== null}
+        onClose={() => setPendingRevoke(null)}
+        onConfirm={handleDisconnect}
+        title={t('disconnectTitle')}
+        description={t('disconnectDescription', {
+          clientName: pendingRevoke?.clientName ?? '',
+        })}
+        variant="destructive"
+        icon={Unplug}
+        confirmLabel={t('disconnect')}
+        loadingLabel={t('disconnecting')}
+      />
     </SectionCard>
   );
 }

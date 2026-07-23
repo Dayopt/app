@@ -408,4 +408,67 @@ describe.skipIf(!RUN_LOCAL)('OAuth connection lifecycle integration', () => {
       httpStatus: 401,
     });
   });
+
+  it('hides foreign connections and cannot revoke them through the user session', async () => {
+    const foreignUserId = crypto.randomUUID();
+    const foreignAccess = `dop_at_${crypto.randomUUID()}`;
+    const foreignCode = `code-${crypto.randomUUID()}`;
+    const { error: createForeignError } = await admin.auth.admin.createUser({
+      id: foreignUserId,
+      email: `oauth-connection-foreign-${foreignUserId}@example.com`,
+      password,
+      email_confirm: true,
+    });
+    expect(createForeignError).toBeNull();
+
+    try {
+      const { data: foreignConnectionId, error: grantError } = await admin.rpc(
+        'create_oauth_authorization_grant_v2',
+        {
+          p_user_id: foreignUserId,
+          p_client_id: 'chatgpt',
+          p_resource_uri: resource,
+          p_scopes: ['read:entries'],
+          p_code_hash: hashToken(foreignCode),
+          p_redirect_uri: redirectUri,
+          p_code_challenge: challenge,
+          p_write_enabled: false,
+        },
+      );
+      expect(grantError).toBeNull();
+
+      const { error: exchangeError } = await admin.rpc('exchange_oauth_authorization_code_v2', {
+        p_code_hash: hashToken(foreignCode),
+        p_client_id: 'chatgpt',
+        p_redirect_uri: redirectUri,
+        p_resource_uri: resource,
+        p_code_challenge: challenge,
+        p_refresh_hash: hashToken(`dop_rt_${crypto.randomUUID()}`),
+        p_access_hash: hashToken(foreignAccess),
+      });
+      expect(exchangeError).toBeNull();
+
+      const { error: signInError } = await userClient.auth.signInWithPassword({ email, password });
+      expect(signInError).toBeNull();
+
+      const { data: visibleConnections, error: listError } = await userClient
+        .from('oauth_connections')
+        .select('id');
+      expect(listError).toBeNull();
+      expect(visibleConnections?.some(({ id }) => id === foreignConnectionId)).toBe(false);
+
+      const { data: revoked, error: revokeError } = await userClient.rpc(
+        'revoke_oauth_connection',
+        { p_connection_id: foreignConnectionId! },
+      );
+      expect(revokeError).toBeNull();
+      expect(revoked).toBe(false);
+      await expect(verifyAccessToken(foreignAccess)).resolves.toMatchObject({
+        connectionId: foreignConnectionId,
+        userId: foreignUserId,
+      });
+    } finally {
+      await admin.auth.admin.deleteUser(foreignUserId);
+    }
+  });
 });

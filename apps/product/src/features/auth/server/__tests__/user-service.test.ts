@@ -41,6 +41,7 @@ type QueryResult = {
 
 function createSupabase(options?: {
   tables?: Record<string, QueryResult>;
+  rpcResult?: QueryResult;
   signInError?: { message: string } | null;
   files?: Array<{ name: string }> | null;
   storageError?: Error;
@@ -64,16 +65,22 @@ function createSupabase(options?: {
     ? vi.fn().mockRejectedValue(options.storageError)
     : vi.fn().mockResolvedValue({ data: options?.files ?? [], error: null });
   const remove = vi.fn().mockResolvedValue({ data: [], error: null });
+  const rpc = vi.fn().mockResolvedValue({
+    data: options?.rpcResult?.data ?? null,
+    error: options?.rpcResult?.error ?? null,
+  });
 
   return {
     service: createUserService({
       from,
+      rpc,
       auth: { signInWithPassword },
       storage: { from: vi.fn(() => ({ list, remove })) },
     } as never),
     from,
     list,
     remove,
+    rpc,
     signInWithPassword,
     query: (table: string) => queries.get(table)!,
   };
@@ -114,6 +121,89 @@ describe('createUserService', () => {
     captureUnexpectedDatabaseError.mockImplementation((error: unknown) =>
       error instanceof Error ? error : new Error('Unexpected database failure', { cause: error }),
     );
+  });
+
+  describe('OAuth connections', () => {
+    const connection = {
+      id: '00000000-0000-4000-8000-000000000010',
+      client_id: 'chatgpt',
+      scopes: ['read:entries'],
+      authorized_at: '2026-07-23T00:00:00.000Z',
+      last_used_at: null,
+    };
+
+    it('有効な自分の接続だけを新しい順で返す', async () => {
+      const { service, query } = createSupabase({
+        tables: { oauth_connections: { data: [connection] } },
+      });
+
+      await expect(service.listOAuthConnections(USER_ID)).resolves.toEqual([
+        {
+          id: connection.id,
+          clientId: 'chatgpt',
+          scopes: ['read:entries'],
+          authorizedAt: connection.authorized_at,
+          lastUsedAt: null,
+        },
+      ]);
+
+      const connectionQuery = query('oauth_connections');
+      expect(connectionQuery.select).toHaveBeenCalledWith(
+        'id, client_id, scopes, authorized_at, last_used_at',
+      );
+      expect(connectionQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
+      expect(connectionQuery.is).toHaveBeenCalledWith('revoked_at', null);
+      expect(connectionQuery.order).toHaveBeenCalledWith('authorized_at', { ascending: false });
+    });
+
+    it('接続一覧のDB失敗をsanitized errorへ変換する', async () => {
+      const dbError = { message: 'private database detail' };
+      const { service } = createSupabase({
+        tables: { oauth_connections: { error: dbError } },
+      });
+
+      await expect(service.listOAuthConnections(USER_ID)).rejects.toMatchObject({
+        code: 'FETCH_FAILED',
+        message: 'OAuth connections could not be loaded',
+      });
+      expect(captureUnexpectedDatabaseError).toHaveBeenCalledWith(dbError, {
+        feature: 'oauth_connections',
+        operation: 'list_connections',
+      });
+    });
+
+    it('session RPCで選択した接続を失効する', async () => {
+      const { service, rpc } = createSupabase({ rpcResult: { data: true } });
+
+      await expect(service.revokeOAuthConnection(USER_ID, connection.id)).resolves.toEqual({
+        success: true,
+      });
+      expect(rpc).toHaveBeenCalledWith('revoke_oauth_connection', {
+        p_connection_id: connection.id,
+      });
+    });
+
+    it('foreignまたは存在しない接続をNOT_FOUNDとして扱う', async () => {
+      const { service } = createSupabase({ rpcResult: { data: false } });
+
+      await expect(service.revokeOAuthConnection(USER_ID, connection.id)).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+    });
+
+    it('接続失効のDB失敗をsanitized errorへ変換する', async () => {
+      const dbError = { message: 'private revoke detail' };
+      const { service } = createSupabase({ rpcResult: { error: dbError } });
+
+      await expect(service.revokeOAuthConnection(USER_ID, connection.id)).rejects.toMatchObject({
+        code: 'DELETE_FAILED',
+        message: 'OAuth connection could not be revoked',
+      });
+      expect(captureUnexpectedDatabaseError).toHaveBeenCalledWith(dbError, {
+        feature: 'oauth_connections',
+        operation: 'revoke_connection',
+      });
+    });
   });
 
   describe('deleteAccount', () => {

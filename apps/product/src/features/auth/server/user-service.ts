@@ -30,10 +30,12 @@ export class UserServiceError extends ServiceError {
       | 'DELETE_FAILED'
       | 'DELETE_DATA_FAILED'
       | 'EXPORT_FAILED'
+      | 'FETCH_FAILED'
       | 'UNAUTHORIZED'
       | 'INVALID_PASSWORD'
       | 'INVALID_INPUT'
-      | 'CONFLICT',
+      | 'CONFLICT'
+      | 'NOT_FOUND',
     message: string,
     options?: ErrorOptions,
   ) {
@@ -91,11 +93,72 @@ interface ExportDataResult {
   };
 }
 
+export interface OAuthConnectionSummary {
+  id: string;
+  clientId: string;
+  scopes: string[];
+  authorizedAt: string;
+  lastUsedAt: string | null;
+}
+
+const OAUTH_CONNECTION_SUMMARY_SELECT =
+  'id, client_id, scopes, authorized_at, last_used_at' as const;
+
 /**
  * User Service ファクトリ
  */
 export function createUserService(supabase: SupabaseClient<Database>) {
   return {
+    async listOAuthConnections(userId: string): Promise<OAuthConnectionSummary[]> {
+      const { data, error } = await supabase
+        .from(databaseTables.oauthConnections)
+        .select(OAUTH_CONNECTION_SUMMARY_SELECT)
+        .eq('user_id', userId)
+        .is('revoked_at', null)
+        .order('authorized_at', { ascending: false });
+
+      if (error) {
+        const original = captureUnexpectedDatabaseError(error, {
+          feature: 'oauth_connections',
+          operation: 'list_connections',
+        });
+        throw new UserServiceError('FETCH_FAILED', 'OAuth connections could not be loaded', {
+          cause: original,
+        });
+      }
+
+      return (data ?? []).map((connection) => ({
+        id: connection.id,
+        clientId: connection.client_id,
+        scopes: connection.scopes,
+        authorizedAt: connection.authorized_at,
+        lastUsedAt: connection.last_used_at,
+      }));
+    },
+
+    async revokeOAuthConnection(userId: string, connectionId: string): Promise<{ success: true }> {
+      const { data: revoked, error } = await supabase.rpc('revoke_oauth_connection', {
+        p_connection_id: connectionId,
+      });
+
+      if (error) {
+        const original = captureUnexpectedDatabaseError(error, {
+          feature: 'oauth_connections',
+          operation: 'revoke_connection',
+        });
+        throw new UserServiceError('DELETE_FAILED', 'OAuth connection could not be revoked', {
+          cause: original,
+        });
+      }
+
+      if (revoked !== true) {
+        throw new UserServiceError('NOT_FOUND', 'OAuth connection was not found');
+      }
+
+      logger.info('OAuth connection revoked', { userId, connectionId });
+      return { success: true };
+    },
+
     /**
      * アカウント即時削除
      *
