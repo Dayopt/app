@@ -514,6 +514,30 @@ describe('runProductionRelease', () => {
     expect(world.pointCalls).toEqual([]);
   });
 
+  it('rolls back a promote whose confirmation never lands', async () => {
+    // POST は受理されたが production 割当の反映が確認できない場合。
+    // 確認待ちで諦めると web だけ新 SHA という部分公開が残る。
+    const world = createReleaseWorld();
+    let clock = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/promote/dpl_web_new')) {
+        // 受理はするが production 割当は動かさない。
+        world.pointCalls.push({ project: 'web', deploymentId: 'dpl_web_new' });
+        return new Response(null, { status: 202 });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const error = await release({
+      fetchImpl,
+      nowImpl: () => (clock += 60_000),
+    }).catch((thrown: Error) => thrown);
+
+    expect(error.message).toMatch(/promote did not take effect/);
+    expect(world.rolledBack()).toEqual(['web']);
+  });
+
   it('demands a manual rollback when the automatic rollback also fails', async () => {
     const world = createReleaseWorld();
     const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {

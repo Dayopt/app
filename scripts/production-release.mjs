@@ -332,23 +332,24 @@ async function waitForProductionAssignment({
 }
 
 /**
- * production domain を指定 deployment へ向け、反映を確認する。
+ * production domain を指定 deployment へ向けるよう要求する。反映確認はしない。
  *
  * promote と rollback で同じ endpoint を使う。REST API には rollback 専用の
  * `/v1/projects/{id}/rollback/{deploymentId}` もあるが、対象が
  * `isRollbackCandidate` に限られる。promote は「任意の deployment へ production
  * traffic を向ける」ことが明記されており、復旧経路では同じ run の中で先に
  * 成功実績を作る呼び出しを再利用する方が失敗確率が低い。
+ *
+ * 要求と確認を分けているのは、POST が受理された時点で production が動きうるため。
+ * 呼び出し側は確認を待つ前に rollback 対象として記録する。
  */
-async function pointProductionTo({
+async function requestProductionPointer({
   projectName,
   projectId,
   deploymentId,
   token,
   teamId,
   fetchImpl,
-  sleepImpl,
-  nowImpl,
   action,
 }) {
   const url = apiUrl(
@@ -362,6 +363,28 @@ async function pointProductionTo({
     label: `${action}(${projectName})`,
     parseJson: false,
   });
+}
+
+/** production domain を既知の正常 deployment へ戻し、反映まで確認する。 */
+async function rollbackDeployment({
+  projectName,
+  projectId,
+  deploymentId,
+  token,
+  teamId,
+  fetchImpl,
+  sleepImpl,
+  nowImpl,
+}) {
+  await requestProductionPointer({
+    projectName,
+    projectId,
+    deploymentId,
+    token,
+    teamId,
+    fetchImpl,
+    action: 'rollback',
+  });
   return waitForProductionAssignment({
     projectName,
     deploymentId,
@@ -370,18 +393,8 @@ async function pointProductionTo({
     fetchImpl,
     sleepImpl,
     nowImpl,
-    action,
+    action: 'rollback',
   });
-}
-
-/** candidate を production domain へ昇格する。 */
-export async function promoteDeployment(options) {
-  return pointProductionTo({ ...options, action: 'promote' });
-}
-
-/** production domain を既知の正常 deployment へ戻す。 */
-export async function rollbackDeployment(options) {
-  return pointProductionTo({ ...options, action: 'rollback' });
 }
 
 function assertSimulationPoint(simulateFailure, point) {
@@ -481,23 +494,36 @@ export async function runProductionRelease({
   try {
     for (const { project, deployment } of pending) {
       assertSimulationPoint(simulateFailure, `promote:${project.name}`);
-      await promoteDeployment({
+      await requestProductionPointer({
         projectName: project.name,
         projectId: projectIds.get(project.name),
         deploymentId: deployment.id,
         token,
         teamId,
         fetchImpl,
-        sleepImpl,
-        nowImpl,
+        action: 'promote',
       });
-      logger.log(`${project.name}: promoted ${deployment.id}`);
+
+      // POST が受理された時点で production は動きうる。反映確認が timeout しても
+      // rollback 対象から漏らさないよう、確認を待つ前に記録する。
       promoted.push({
         project,
         projectId: projectIds.get(project.name),
         deployment,
         previous: before.get(project.name),
       });
+
+      await waitForProductionAssignment({
+        projectName: project.name,
+        deploymentId: deployment.id,
+        token,
+        teamId,
+        fetchImpl,
+        sleepImpl,
+        nowImpl,
+        action: 'promote',
+      });
+      logger.log(`${project.name}: promoted ${deployment.id}`);
     }
   } catch (error) {
     const rolledBack = await rollbackPromoted({
