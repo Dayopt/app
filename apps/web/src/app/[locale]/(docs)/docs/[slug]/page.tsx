@@ -2,6 +2,7 @@ import { Heading, Text } from '@dayopt/components';
 import { Link } from '@dayopt/i18n/navigation';
 import { DocArticle } from '@web/features/docs';
 import { getAllContent } from '@web/lib/mdx';
+import { generateSEOMetadata } from '@web/platform/seo/metadata';
 import { ContentData } from '@web/types/content';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -61,24 +62,26 @@ export async function generateMetadata({ params }: DocPageProps): Promise<Metada
 
     const { frontMatter } = matched;
 
-    return {
+    // hreflang は実際にその言語版が存在するロケールだけを宣言する（片方のみの docs で 404 を指さない）
+    const alternateLocales: string[] = [];
+    for (const loc of ['en', 'ja']) {
+      const content = loc === locale ? allContent : await getAllContent(loc);
+      if (content.some((c) => c.slug === slug)) alternateLocales.push(loc);
+    }
+
+    // canonical / hreflang を含む共通メタデータ生成（blog 記事と同じ経路）
+    return generateSEOMetadata({
       title: `${frontMatter.title} - Dayopt Documentation`,
       description: frontMatter.description,
-      authors: frontMatter.author ? [{ name: frontMatter.author }] : undefined,
-      openGraph: {
-        title: frontMatter.title,
-        description: frontMatter.description,
-        type: 'article',
-        publishedTime: frontMatter.publishedAt,
-        modifiedTime: frontMatter.updatedAt,
-        authors: frontMatter.author ? [frontMatter.author] : undefined,
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: frontMatter.title,
-        description: frontMatter.description,
-      },
-    };
+      url: `/${locale}/docs/${slug}`,
+      locale,
+      type: 'article',
+      publishedTime: frontMatter.publishedAt,
+      modifiedTime: frontMatter.updatedAt || frontMatter.publishedAt,
+      authors: frontMatter.author ? [frontMatter.author] : undefined,
+      section: frontMatter.category,
+      alternateLocales,
+    });
   } catch {
     return {
       title: 'Documentation - Dayopt',

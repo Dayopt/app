@@ -24,14 +24,12 @@ const REQUIRED_FIELDS = {
   blog: ['title', 'description', 'publishedAt', 'tags', 'category', 'author'],
   docs: ['title', 'description', 'category', 'slug'],
   legal: ['title', 'description', 'lastUpdated'],
-  releases: ['version', 'date', 'title', 'description', 'tags', 'breaking', 'featured'],
 };
 
 const DATE_FIELDS = {
   blog: ['publishedAt', 'updatedAt'],
   docs: ['publishedAt', 'updatedAt'],
   legal: [],
-  releases: ['date'],
 };
 
 export const REQUIRED_LEGAL_DOCUMENTS = [
@@ -130,6 +128,13 @@ export function parseFrontMatter(content) {
 
 // ─── バリデーション ─────────────────────────────────────────
 
+// blog カテゴリ taxonomy。正は src/features/blog/lib/categories.ts の BLOG_CATEGORIES
+// （このスクリプトは素の Node 実行のため TS を import できず、値を複製する。変更時は両方を更新する）
+const BLOG_CATEGORIES = ['guide', 'philosophy', 'release', 'devlog'];
+// カテゴリ key は /blog/<key> を一覧 URL として占有するため、記事 slug（ファイル名）に使えない。
+// blog/[slug]/page.tsx はカテゴリ判定が先勝ちし、同名記事は静かに不可視になる
+const RESERVED_BLOG_SLUGS = ['all', ...BLOG_CATEGORIES];
+
 export function validateFrontMatter(fm, type, isDraft) {
   const errors = [];
   const warnings = [];
@@ -162,13 +167,17 @@ export function validateFrontMatter(fm, type, isDraft) {
     }
   }
 
+  if (type === 'blog' && fm.category && !BLOG_CATEGORIES.includes(fm.category)) {
+    report.push(`Unknown blog category '${fm.category}' (allowed: ${BLOG_CATEGORIES.join(', ')})`);
+  }
+
   if (type !== 'docs' && type !== 'legal') {
     const tags = fm.tags;
     if (Array.isArray(tags)) {
-      // releases のタグは new-features/improvements/bug-fixes/breaking-changes/security-updates
+      // release カテゴリのタグは new-features/improvements/bug-fixes/breaking-changes/security-updates
       // という固定5分類（docs/operations/runbook.md 第4部）で、該当する分だけ付ける。
-      // 1-2個でも正当なため、3個以上を強制する下限チェックは blog（自由記述タグ）にのみ適用する。
-      if (type === 'blog' && tags.length > 0 && tags.length < 3) {
+      // 1-2個でも正当なため、3個以上を強制する下限チェックは自由記述タグの blog 記事にのみ適用する。
+      if (type === 'blog' && fm.category !== 'release' && tags.length > 0 && tags.length < 3) {
         report.push(`Too few tags (min: 3, found: ${tags.length})`);
       }
       if (tags.length > 6) {
@@ -250,14 +259,63 @@ function checkRequiredLegalDocuments() {
   return errors;
 }
 
+// ─── slug 契約チェック ──────────────────────────────────────
+
+// docs の公開 URL はフラット1階層（apps/web/src/lib/mdx.ts: slug = ファイル名、index.mdx はカテゴリ名）。
+// ロケール内でファイル名が重複すると同一 URL を取り合うため、エラーとして止める
+function checkDocsSlugCollisions() {
+  const errors = [];
+  for (const locale of ['en', 'ja']) {
+    const dir = path.join(CONTENT_DIR, 'docs', locale);
+    if (!fs.existsSync(dir)) continue;
+    const bySlug = new Map();
+    for (const file of findMdxFiles(dir)) {
+      const rel = path.relative(dir, file).replace(/\\/g, '/');
+      const name = path.basename(file, '.mdx');
+      const slug = name === 'index' ? rel.split('/')[0] : name;
+      const existing = bySlug.get(slug);
+      if (existing) {
+        errors.push(
+          `Docs slug collision at /docs/${slug}: content/docs/${locale}/${existing} vs content/docs/${locale}/${rel}`,
+        );
+      } else {
+        bySlug.set(slug, rel);
+      }
+    }
+  }
+  return errors;
+}
+
+function checkBlogReservedSlugs() {
+  const errors = [];
+  for (const locale of ['en', 'ja']) {
+    const dir = path.join(CONTENT_DIR, 'blog', locale);
+    if (!fs.existsSync(dir)) continue;
+    for (const file of findMdxFiles(dir)) {
+      const slug = path.basename(file, '.mdx');
+      if (RESERVED_BLOG_SLUGS.includes(slug)) {
+        errors.push(
+          `Reserved blog slug '${slug}' (content/blog/${locale}/${slug}.mdx): カテゴリ一覧 URL /blog/${slug} と衝突し記事が不可視になる`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
 // ─── メイン ────────────────────────────────────────────────
 
 function main() {
-  const types = ['blog', 'docs', 'legal', 'releases'];
+  const types = ['blog', 'docs', 'legal'];
   let totalFiles = 0;
   let totalErrors = 0;
   let totalWarnings = 0;
   const allOutput = [];
+
+  for (const error of [...checkDocsSlugCollisions(), ...checkBlogReservedSlugs()]) {
+    allOutput.push({ file: null, message: error, isError: true });
+    totalErrors++;
+  }
 
   for (const type of types) {
     const typeDir = path.join(CONTENT_DIR, type);

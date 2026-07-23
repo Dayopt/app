@@ -172,12 +172,12 @@ const nextConfig = {
       },
       {
         source: '/changelog',
-        destination: '/releases',
+        destination: '/blog/release',
         permanent: true,
       },
       {
         source: '/:locale/changelog',
-        destination: '/:locale/releases',
+        destination: '/:locale/blog/release',
         permanent: true,
       },
     ];
