@@ -16,10 +16,12 @@ OAuth MCPの1回のwrite tool callを、現在の接続権限を再検証した�
 
 ## Current implementation slice
 
-- `plans.create`のtyped DB applyとserver-only adapterはローカル実装済み。global controlはOFFのままで、MCP toolには未登録
-- 同一operationの直列・並列retry、異なるpayloadでのoperation ID再利用、90日window、再authorization、token/connection/Pro/global gate失効、account削除、通常UI commandとの同時間帯raceをintegration testで検証済み
-- adapterはraw service-role clientを公開せず、DB message・title・note・tokenをerror / log / Sentryへ渡さない。deadlockだけを同じoperation IDで一度再試行する
-- Plan update/delete/restore、Record全操作、実HTTP二経路、外部変更cache反映、Settings hard deleteとのserializationは未実装
+- Plan create/update/delete/restoreのtyped DB applyとserver-only adapterはローカル実装済み。global controlはOFFのままで、MCP toolには未登録
+- 同一operationの直列・並列retry、異なるpayloadでのoperation ID再利用、90日window、再authorization、token/connection/Pro/global gate失効、account削除、通常UI commandとのcreate/update/delete/restore raceをintegration testで検証済み
+- updateはfield省略と明示的`null`を区別し、外部calendar bindingとsourceをpublic inputから変更できないまま維持する。digestは展開後のDB rowではなくpublic requestのfield presenceを含めて固定する
+- domain command完了後、receipt insert前にauthorization期限を再検証し、command中にconnection/token/reauth期限を跨いだPlan mutationが全体rollbackされることを4操作で検証済み
+- adapterはraw service-role clientとPostgREST builderを公開せず、operation固有methodからplain resultだけを返す。versioned receiptのresource IDをrequest対象へbindし、DB message・title・note・tokenをerror / log / Sentryへ渡さない。deadlockだけを同じoperation IDで一度再試行する
+- Record全操作、実HTTP二経路、外部変更cache反映、Settings hard deleteとのserializationは未実装
 
 ## Minimum Viable Approach
 
@@ -62,6 +64,8 @@ OAuth MCPの1回のwrite tool callを、現在の接続権限を再検証した�
 - 共通lock順、authorization assertion、canonical digest、receipt advisory lock/replayはData API非公開の`private` schemaへ一度だけ実装する。各public typed RPCはrequired scope、tool名、typed domain command引数だけを所有し、private helperを呼ぶ前にservice-role JWT assertionをwrapper自身で必ず実行する
 - generic JSON executor、SQL文字列dispatch、任意table/column指定は作らない
 - createの`source`は`api`に固定する。update/delete/restoreは`expectedUpdatedAt`必須とする
+- partial updateはfield省略を現状維持、明示的`null`をnullable fieldの解除として扱い、空patchを拒否する。canonical digestはこのpresence差を保持し、DBから補完した現在値を含めない
+- domain command後、receipt insert前にconnection/token/reauth期限をDB時刻で再検証する。期限を跨いだ場合はdomain mutationとreceiptを同じtransactionでrollbackする
 - success responseは`schemaVersion: 1`、`operationId`、`resourceType`、`resourceId`、`version`、`deletedAt`、`replayed`だけの最小receiptにする。最新本文が必要ならget toolを使うが、2026-07-23現在の`plans.get` / `records.get`はregistry上の候補名だけで未登録なので、write tool公開前に実装する
 
 ### 4. MCP toolへ接続する
@@ -128,12 +132,17 @@ WHERE record.deleted_at IS NULL
 ## Existing Code to Reuse
 
 - `apps/product/src/lib/mcp/auth.ts` — token/connection bindingとruntime client gate
+- `apps/product/src/lib/mcp/mutation-contract.ts` — Plan mutation input、最小receipt、stable error contract
+- `apps/product/src/lib/mcp/mutation-db.ts` — raw service-role capabilityを閉じ込めたoperation固有DB adapter
+- `apps/product/src/lib/mcp/mutation-client.ts` — deadlock retryとDB error正規化を担うserver-only client
 - `apps/product/src/app/api/mcp/_tools/registry.ts` — 現在のscope requirement registry。tool registrationとの一元化対象
 - `apps/product/src/features/timeblock/server/timeblock-command-client.ts` — typed RPC入力とdomain error mapping
 - `apps/product/src/features/tags/server/tag-association-strategy.ts` — command外に残るservice-owned一括writer
 - `apps/product/src/features/auth/server/user-service.ts` — Settingsのblock/all-data hard deleteと既存account削除フロー
 - `supabase/migrations/20260722233722_timeblock_atomic_commands.sql` — Plan / Record typed command、CAS、ownership check
 - `supabase/migrations/20260722235621_timeblock_command_hardening.sql` — skip/link invariantとrace hardening
+- `supabase/migrations/20260723123000_mcp_plan_mutations_apply.sql` — Plan create/update/delete/restoreのtyped applyとreceipt replay
+- `supabase/migrations/20260723123100_recheck_mcp_plan_create_authority.sql` — Plan createのdomain command後authorization期限再検証
 - `supabase/migrations/20260514000918_mcp_phase_1_5.sql` — read tool call auditの既存出発点
 - `packages/billing/src/subscription.ts` — Pro entitlement status集合
 

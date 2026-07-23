@@ -30,18 +30,18 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - OAuth resource、stable connection、atomic code/refresh、DB connection revokeと古いaccess token拒否はローカル実装・検証済み。Settings revoke UIとwrite transactionとのlinearizationは未実装
 - 現在登録済みの3 toolについて`tools/list`はscopeでfilterし、cached tool callはroute前段で403 challengeを返す
 - Plan / Record同種間の時間重複は既存GiST exclusion constraintで防止済み
-- Plan / Recordのtyped command、exact CAS、DB時刻のtemporal rule、skip/link整合性はローカル実装済み。Plan createでは通常UI commandとMCP typed applyの同時実行で片方だけが成功することをDB integrationで検証済み。実session JWTのtRPC対実opaque tokenのMCP HTTP raceはPersistent Stagingで未検証
+- Plan / Recordのtyped command、exact CAS、DB時刻のtemporal rule、skip/link整合性はローカル実装済み。Planのcreate/update/delete/restoreでは通常UI commandとMCP typed applyの同時実行、stale CAS、restore対createをDB integrationで検証済み。実session JWTのtRPC対実opaque tokenのMCP HTTP raceはPersistent Stagingで未検証
 - repo上の通常UIはcreate/update/delete/restore/skip/record/confirm-dayをservice-owned commandへ切替済み。Calendar cacheもDBが返したraw `updated_at`をversionとして維持する。Production deployは未実施
 - タグ削除・再割当て・mergeとSettingsの`deleteBlocks` / `deleteAllData`はPlan / Recordを直接更新・hard deleteするservice-owned例外writerとして残る。authenticated ACL cutoverの対象ではなく、一覧化と競合試験が必要
-- DB global control、不可逆なconnection kill switch、payload-free receipt tableとreceipt-key serializationはrepo実装済み。`plans.create`のtransaction内再認可、canonical digest、typed apply、receipt replayとserver-only adapterもローカル実装・検証済み
-- global controlは初期OFFで、`plans.create` toolと運用UIは未登録なので現在のMCPは正規データを変更できない。Plan update/delete/restore、全Record apply、rolling deploy互換のauthenticated table privilegeと旧write RPC、既存read toolのstructured content、外部変更の画面反映、Learn用toolは未実装
+- DB global control、不可逆なconnection kill switch、payload-free receipt tableとreceipt-key serializationはrepo実装済み。Planのcreate/update/delete/restoreはtransaction内再認可、canonical digest、typed apply、receipt replayとserver-only adapterまでローカル実装・検証済み
+- global controlは初期OFFで、Plan write toolと運用UIは未登録なので現在のMCPは正規データを変更できない。全Record apply、rolling deploy互換のauthenticated table privilegeと旧write RPC、既存read toolのstructured content、外部変更の画面反映、Learn用toolは未実装
 
 Delivery 6段階のうち2段階がrepo上で完了し、Step 3がactive。接続と正規データ境界の基盤は成立したが、Plan → Track → Learnのend-to-end顧客価値はまだ未達。
 
 ## Minimum Viable Approach
 
 1. **MCP mutation transactionを完成させる** — connection/token/Pro entitlementをDB transaction内で再検証し、idempotency claim、typed command、成功mutation auditを兼ねる最小receiptを一括commitする。詳細は[Step 3設計](./step-3-mutation-envelope.md)を正本とする
-2. **Plan / Record CRUD toolを段階公開する** — Plan create/updateを先に閉じたintegration testで通し、delete/restore、Recordの順で同じenvelopeへ載せる。各toolは現在scopeがあるconnectionだけに列挙する
+2. **Plan / Record CRUD toolを段階公開する** — Plan create/update/delete/restoreは非公開のまま同じenvelopeで検証済み。次にRecord全操作を載せ、get/trash、画面同期、hard delete serializationを満たしてから、現在scopeがあるconnectionだけに各toolを列挙する
 3. **public write境界をcommandへ収束する** — 旧UI deploymentのdrainを確認してから、authenticatedのPlan / Record table privilegeを一旦全てrevokeして`SELECT`だけ再付与し、旧CASなしwrite RPCも別migrationでrevokeする。service-owned一括処理は例外writerとして明示する
 4. **Track → Learnを接続する** — constraints/tags/review toolとuser revision pollingを追加し、MCP変更を開いているCalendar / Inspector / Reviewへ20秒以内に反映する
 5. **3 clientでclosed betaを検証する** — persistent Stagingで再authorization、retry、parallel refresh、revoke、UI対MCP raceを通し、client単位でwrite gateを開く
@@ -100,12 +100,13 @@ Delivery 6段階のうち2段階がrepo上で完了し、Step 3がactive。接�
 - `profiles`のPro entitlementもlockして、downgrade完了後のwriteを防ぐ。MCP writeはbilling enforcementの一般flagにかかわらず`active` / `trialing` / `past_due`を必須とするproduct contractとして扱う
 - 再認可、idempotency claim、正規データ変更、成功mutation auditを兼ねる最小receiptを一括commitする。Settings revokeとscope撤回は同じconnection row lockでlinearizeする
 - createは既存のDB exclusion constraintを最終防衛線にし、constraint violationを`TIME_OVERLAP`へ変換する。Plan × Recordの重複は許可する
-- update/delete/restoreは`expectedUpdatedAt`必須。versionとdeleted stateをmutation predicateに含める
+- update/delete/restoreは`expectedUpdatedAt`必須。versionとdeleted stateをmutation predicateに含める。updateはfieldの省略を現状維持、明示的な`null`をnote/tag解除として扱い、空patchを拒否する
 - MCP createは`source = 'api'`。`from_plan`はワンタップ記録とconfirm-dayによるDayopt内部のPlan変換専用とする
 - foreign/nonexistent IDは区別せず`NOT_FOUND`とし、raw payload、title、note、tokenをreceipt/audit/logへ保存しない
 - 同一operation ID + 同一tool/digestはreceiptを再生し、異なるtoolまたはdigestは拒否する
 - 各public typed apply wrapperはprivate共通helperを呼ぶ前にservice-role JWTを独立に検証する。このassertionは新しいoperationを追加する時も省略しない
-- server adapterはraw service-role clientを公開せず、operation固有methodだけを返す。expected SQLSTATEだけをstable codeへ変換し、未知のDB failureはcodeだけを観測してraw message・cause・入力本文を破棄する
+- domain command完了後、receipt insert前にもDB時刻でconnection/token/reauth期限を再検証し、command中に権限期限を跨いだtransactionを全体rollbackする
+- server adapterはraw service-role clientやPostgREST builderを公開せず、operation固有methodからplain resultだけを返す。versioned receiptのresource IDをrequest対象へbindし、expected SQLSTATEだけをstable codeへ変換する。未知のDB failureはcodeだけを観測してraw message・cause・入力本文を破棄する
 - DB変更はexpand/cutoverの2段階にする。通常UIのprimary timeblock callerをservice-owned commandへ移した後に、別migrationでauthenticatedのPlan / Record table privilegeを全てrevokeして`SELECT`だけ再付与する。旧`soft_delete_plan`、`soft_delete_record`、`confirm_day_plans_to_records`のEXECUTEもrevokeする
 - GiST競合が`40P01`を返した場合はservice境界で一度だけ再試行し、最終的なoverlap/version errorへ正規化する
 - `confirmDay`は通常UI専用とし、tRPCとDBの両方で26時間を上限にする。MCP初期toolには公開しない
@@ -161,6 +162,9 @@ Delivery 6段階のうち2段階がrepo上で完了し、Step 3がactive。接�
 
 - `apps/product/src/lib/oauth-server` — static clients、PKCE、opaque token、metadata
 - `apps/product/src/app/api/mcp` — stateless transportとcomposition layer
+- `apps/product/src/lib/mcp/mutation-contract.ts` — Plan mutationのpublic input、最小receipt、stable error contract
+- `apps/product/src/lib/mcp/mutation-db.ts` — service-role DB applyをoperation単位に閉じ込めたadapter
+- `apps/product/src/lib/mcp/mutation-client.ts` — deadlock retryとDB error正規化を担うserver-only client
 - `apps/product/src/features/timeblock/server/timeblock-command-client.ts` — service-roleを閉じ込めた通常UI用typed command adapter
 - `apps/product/src/features/timeblock/server` — Plan / Record guards、service、overlap/error mapping
 - `apps/product/src/features/tags/server/tag-association-strategy.ts` — command外に残るservice-owned一括writer
@@ -168,6 +172,8 @@ Delivery 6段階のうち2段階がrepo上で完了し、Step 3がactive。接�
 - `supabase/migrations/20260708232500_add_time_model_tables.sql` — Plan / Record exclusion constraintとownership trigger
 - `supabase/migrations/20260514000918_mcp_phase_1_5.sql` — atomic token pair RPCとauditの既存出発点
 - `supabase/migrations/20260722233722_timeblock_atomic_commands.sql` — Plan / Recordのtyped commandとexact CAS
+- `supabase/migrations/20260723123000_mcp_plan_mutations_apply.sql` — Plan create/update/delete/restoreのtyped MCP apply
+- `supabase/migrations/20260723123100_recheck_mcp_plan_create_authority.sql` — domain command後のauthorization期限再検証
 
 ## What I'm Not Doing
 
