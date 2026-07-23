@@ -159,6 +159,8 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 - `docs/ai/docs-policy.md` — Docs は usage、Blog は context / product thinking、Release notes は changes。役割を混ぜない
 - `docs/ai/review-checklist.md` — 生成直後・PR レビュー時の最終チェック
 
+アプリ内 UI 文言（トースト・ボタン・エラー・空状態・CTA）を書く時は `docs/ai/copywriting.md` を読む。
+
 公開コンテンツの運用フロー（いつ何を書くか）は `docs/marketing/content-operations.md` を正本とする。
 
 ## Docs 運用責務
@@ -192,7 +194,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 | `.claude/rules/architecture.md` | tRPC、状態管理、ロジック配置 |
 | `.claude/rules/code-style.md` | 型、ログ、依存追加、eslint-disable |
 | `.claude/rules/design-system.md` | UI、token、spacing、icon |
-| `.claude/rules/copywriting.md` | UI 文言、トーン、CTA |
+| `docs/ai/copywriting.md` | UI 文言、トーン、CTA |
 | `.claude/rules/feature-boundaries.md` | feature DAG、Composition Layer |
 | `.claude/rules/quality.md` | test、a11y、performance |
 | `.claude/rules/temporal-constraints.md` | 過去ブロック編集制約 |

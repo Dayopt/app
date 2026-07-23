@@ -18,16 +18,16 @@
 
 ## ドメイン
 
-| ドメイン       | 責務                                      | 主な入口                                                    |
-| -------------- | ----------------------------------------- | ----------------------------------------------------------- |
-| `ai/`          | AI が文章を書く時の共通基準               | `writing-style.md`, `docs-policy.md`, `review-checklist.md` |
-| `business/`    | 事業の Why、対象、価格、指標              | `strategy.md`, `pricing.md`                                 |
-| `product/`     | プロダクトの What / Why、原則、仕様、用語 | `principles.md`, `specs/`, `glossary.md`                    |
-| `marketing/`   | 広げ方、チャネル、トーン                  | `strategy.md`, `voice.md`, `channels/`                      |
-| `engineering/` | architecture、規約、infra                 | `architecture.md`, `conventions*.md`, `infra.md`            |
-| `operations/`  | runbook、monitoring、security、legal      | `runbook.md`, `monitoring.md`, `security.md`                |
-| `company/`     | 契約、登記、外部サービス                  | `accounts.md`                                               |
-| `projects/`    | 複数領域を跨ぐ有限の実装計画と完了記録    | `{project}/overview.md`, `summary.md`                       |
+| ドメイン       | 責務                                      | 主な入口                                                                      |
+| -------------- | ----------------------------------------- | ----------------------------------------------------------------------------- |
+| `ai/`          | AI が文章を書く時の共通基準               | `writing-style.md`, `copywriting.md`, `docs-policy.md`, `review-checklist.md` |
+| `business/`    | 事業の Why、対象、価格、指標              | `strategy.md`, `pricing.md`                                                   |
+| `product/`     | プロダクトの What / Why、原則、仕様、用語 | `principles.md`, `specs/`, `glossary.md`                                      |
+| `marketing/`   | 広げ方、チャネル、トーン                  | `strategy.md`, `voice.md`, `channels/`                                        |
+| `engineering/` | architecture、規約、infra                 | `architecture.md`, `conventions*.md`, `infra.md`                              |
+| `operations/`  | runbook、monitoring、security、legal      | `runbook.md`, `monitoring.md`, `security.md`                                  |
+| `company/`     | 契約、登記、外部サービス                  | `accounts.md`                                                                 |
+| `projects/`    | 複数領域を跨ぐ有限の実装計画と完了記録    | `{project}/overview.md`, `summary.md`                                         |
 
 ## 現在・Project・履歴
 

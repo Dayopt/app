@@ -81,4 +81,4 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 - [ADR-025 時間モデル分割](../product/log/2026-07-09-time-model-split.md) / [decisions/015 時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
 - [競合調査(2026-06-15)](./log/2026-06-15-competitor-research-overview.md) — 競合深掘り（勝ち筋 = より短い儀式・より軽い入力・直接差分）
 - [`pricing.md`](./pricing.md) — 価格戦略
-- [`.claude/rules/copywriting.md`](../../.claude/rules/copywriting.md) / [`glossary`](../product/glossary.md) — トーン・用語
+- [`docs/ai/copywriting.md`](../ai/copywriting.md) / [`glossary`](../product/glossary.md) — トーン・用語

@@ -18,7 +18,7 @@ Docs / Blog / Release notes を書いた後、公開・PR レビューの前に 
 - [ ] vague SaaS words（empower / leverage / seamless / robust / optimize など）を使っていないか
 - [ ] Dayopt の Light / Fast / Minimal に合っているか（削れる文が残っていないか）
 - [ ] Docs / Blog / Release notes の役割が混ざっていないか（[docs-policy.md](./docs-policy.md)）
-- [ ] トーンが研究者ペルソナに合っているか（`.claude/rules/copywriting.md`。煽り・感嘆符の乱用がないか）
+- [ ] トーンが研究者ペルソナに合っているか（[copywriting.md](./copywriting.md)。煽り・感嘆符の乱用がないか）
 - [ ] 全角コロン「：」をテキスト中で使っていないか（`.claude/skills/docs-writing/references/style-guide.md`）
 
 ## 使い方

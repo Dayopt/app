@@ -47,6 +47,8 @@ feedback / incident の note は、対応がまだ `operations/` 側の手順に
 
 `docs-audit` skill（`.agents/skills/docs-audit/SKILL.md`）を実行し、プロダクトの実機能と公開 docs（`apps/web/content/docs/`）のギャップ・鮮度乖離・en/ja 非対称を検出して Issue 化する。あわせて `area:blog` の Issue が枯渇していれば `blog-ideas` skill の実行をユーザーに提案する（提案のみ）。検出件数・起票件数はステップ 6 のロールアップに記録する。運用フローの正本は `docs/marketing/content-operations.md`。
 
+コンテンツの数字も同時に記録する。Search Console と Vercel Analytics から、指名検索（"dayopt"）の表示・クリック、docs / blog の流入、上位クエリをステップ 6 の journal に書く（`docs/marketing/strategy.md` の指標と対応）。Search Console が未設定ならユーザーに設定を依頼する（`GOOGLE_SITE_VERIFICATION` env はコード対応済み）。
+
 ### 6. 当月journalの作成
 
 ステップ1の蒸留と、今回のガーデニング実施内容(蒸留したセッション件数、triageした上位10件の対応、昇格したnote、スモークテストの結果)をまとめ、当月`docs/engineering/log/YYYY-MM-01-journal.md`を新規作成して終了する。frontmatterは`status: frozen`と`date: YYYY-MM-01`を使う。

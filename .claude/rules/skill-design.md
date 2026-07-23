@@ -110,12 +110,12 @@ NOT 条件は「**invoke しそうに見えて実は不要**」なケースに�
 
 NOT 条件が「本来この領域を担当する他の箇所」を指す場合、redirect 先を明記する。記法は redirect 先の種類で分ける:
 
-| Redirect 先                   | 記法                                           | 例                                                           |
-| ----------------------------- | ---------------------------------------------- | ------------------------------------------------------------ |
-| 他の skill                    | `(skill-name skill の領域)` 括弧明記           | `(storybook skill の視覚検証領域、test 対象外)`              |
-| `CLAUDE.md` / rules/ のルール | `(CLAUDE.md の {rule-name} ルールに従う)`      | `(CLAUDE.md の copywriting ルールに従う、ロジック変更なし)`  |
-| 自動生成 artifact             | `(XX 後の自動反映)` など artifact の由来を明記 | `(types:generate 後の自動反映)`                              |
-| 自然な境界（redirect 先なし） | 括弧省略                                       | `単一 component 内で完結する local state（useState で十分）` |
+| Redirect 先                   | 記法                                           | 例                                                            |
+| ----------------------------- | ---------------------------------------------- | ------------------------------------------------------------- |
+| 他の skill                    | `(skill-name skill の領域)` 括弧明記           | `(storybook skill の視覚検証領域、test 対象外)`               |
+| `CLAUDE.md` / rules/ のルール | `(CLAUDE.md の {rule-name} ルールに従う)`      | `(CLAUDE.md の design-system ルールに従う、ロジック変更なし)` |
+| 自動生成 artifact             | `(XX 後の自動反映)` など artifact の由来を明記 | `(types:generate 後の自動反映)`                               |
+| 自然な境界（redirect 先なし） | 括弧省略                                       | `単一 component 内で完結する local state（useState で十分）`  |
 
 ### 4.3 明示発動型の NOT（特例）
 
