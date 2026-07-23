@@ -2,9 +2,13 @@ import 'server-only';
 
 import { databaseTables, publicRecordSelect } from '@/lib/database';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
-import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
+import { assertExactOptimisticLock } from './plan-guards';
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
+import {
+  createTimeblockCommandClient,
+  type TimeblockCommandClient,
+} from './timeblock-command-client';
 import { TimeblockOverlapService } from './timeblock-overlap-service';
 import { buildTimeblockSearchFilter } from './timeblock-search-query';
 import { TimeblockServiceError } from './timeblock-service-error';
@@ -15,16 +19,21 @@ import type {
   ListRecordsOptions,
   RecordInsert,
   RecordRow,
-  RecordUpdate,
   UpdateRecordOptions,
 } from './timeblock-types';
 import type { ServiceSupabaseClient } from './types';
 
 export class RecordService {
   private readonly overlapService: TimeblockOverlapService;
+  private commands: TimeblockCommandClient | null = null;
 
   constructor(private readonly supabase: ServiceSupabaseClient) {
     this.overlapService = new TimeblockOverlapService(supabase);
+  }
+
+  private get commandClient(): TimeblockCommandClient {
+    this.commands ??= createTimeblockCommandClient();
+    return this.commands;
   }
 
   async list(options: ListRecordsOptions): Promise<RecordRow[]> {
@@ -123,18 +132,12 @@ export class RecordService {
     const { userId, input, preventOverlappingRecords = true } = options;
 
     this.validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
-    this.ensureRecordCanBeCreated(input.end_at);
-
-    if (input.planId) {
-      await this.ensureRecordablePlan(userId, input.planId);
-    }
 
     if (preventOverlappingRecords) {
       await this.ensureNoRecordOverlap(userId, input.start_at, input.end_at);
     }
 
-    const insertData: RecordInsert = {
-      user_id: userId,
+    const insertData: Omit<RecordInsert, 'user_id'> = {
       title: input.title,
       note: input.note ?? null,
       tag_id: input.tagId ?? null,
@@ -145,17 +148,17 @@ export class RecordService {
       end_at: input.end_at,
     };
 
-    const { data, error } = await this.supabase
-      .from(databaseTables.records)
-      .insert(insertData)
-      .select(publicRecordSelect)
-      .single();
-
-    if (error) {
-      this.handleMutationError(error, 'CREATE_FAILED', 'Failed to create record');
-    }
-
-    return data;
+    return this.commandClient.createRecord({
+      userId,
+      title: insertData.title,
+      note: insertData.note ?? null,
+      tagId: insertData.tag_id ?? null,
+      planId: insertData.plan_id ?? null,
+      externalCalendarEventId: insertData.external_calendar_event_id ?? null,
+      source: insertData.source === 'external_calendar' ? 'external_calendar' : 'manual',
+      startAt: insertData.start_at,
+      endAt: insertData.end_at,
+    });
   }
 
   async update(options: UpdateRecordOptions): Promise<RecordRow> {
@@ -167,95 +170,49 @@ export class RecordService {
       preventOverlappingRecords = true,
     } = options;
     const existing = await this.getById({ userId, recordId });
-
-    this.assertOptimisticLock(expectedUpdatedAt, existing.updated_at);
+    assertExactOptimisticLock(expectedUpdatedAt, existing.updated_at);
 
     const nextStartAt = input.start_at ?? existing.start_at;
     const nextEndAt = input.end_at ?? existing.end_at;
     const updatesTime = input.start_at !== undefined || input.end_at !== undefined;
 
     this.validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
-    if (updatesTime) this.ensureRecordCanBeCreated(nextEndAt);
-
-    if (input.planId) {
-      await this.ensureRecordablePlan(userId, input.planId);
-    }
 
     if (preventOverlappingRecords && updatesTime) {
       await this.ensureNoRecordOverlap(userId, nextStartAt, nextEndAt, recordId);
     }
 
-    const updateData = this.toRecordUpdate(input);
-    if (Object.keys(updateData).length === 0) return existing;
-
-    const { data, error } = await this.supabase
-      .from(databaseTables.records)
-      .update(updateData)
-      .eq('id', recordId)
-      .eq('user_id', userId)
-      .select(publicRecordSelect)
-      .single();
-
-    if (error) {
-      this.handleMutationError(error, 'UPDATE_FAILED', 'Failed to update record');
-    }
-
-    return data;
-  }
-
-  async delete(options: DeleteRecordOptions): Promise<{ success: boolean }> {
-    const { userId, recordId } = options;
-    const { error } = await this.supabase.rpc('soft_delete_record', {
-      p_record_id: recordId,
-      p_user_id: userId,
+    return this.commandClient.updateRecord({
+      userId,
+      recordId,
+      expectedUpdatedAt,
+      title: input.title ?? existing.title,
+      note: input.note === undefined ? existing.note : input.note,
+      tagId: input.tagId === undefined ? existing.tag_id : input.tagId,
+      planId: input.planId === undefined ? existing.plan_id : input.planId,
+      externalCalendarEventId:
+        input.externalCalendarEventId === undefined
+          ? existing.external_calendar_event_id
+          : input.externalCalendarEventId,
+      source:
+        existing.source === 'external_calendar'
+          ? 'external_calendar'
+          : existing.source === 'api'
+            ? 'api'
+            : 'manual',
+      startAt: nextStartAt,
+      endAt: nextEndAt,
     });
-
-    if (error) {
-      const original = captureUnexpectedDatabaseError(error, {
-        feature: 'timeblock',
-        operation: 'delete_record',
-      });
-      throw new TimeblockServiceError('DELETE_FAILED', 'Failed to delete record', {
-        cause: original,
-      });
-    }
-
-    return { success: true };
   }
 
-  async restore(options: DeleteRecordOptions): Promise<{ success: boolean }> {
-    const { userId, recordId } = options;
-    const adminClient = createServiceRoleClient();
-    const { error } = await adminClient.rpc('restore_record', {
-      p_record_id: recordId,
-      p_user_id: userId,
-    });
-
-    if (error) {
-      const original = captureUnexpectedDatabaseError(error, {
-        feature: 'timeblock',
-        operation: 'restore_record',
-      });
-      throw new TimeblockServiceError('RESTORE_FAILED', 'Failed to restore record', {
-        cause: original,
-      });
-    }
-
-    return { success: true };
+  async delete(options: DeleteRecordOptions): Promise<RecordRow> {
+    const { userId, recordId, expectedUpdatedAt } = options;
+    return this.commandClient.deleteRecord({ userId, recordId, expectedUpdatedAt });
   }
 
-  private toRecordUpdate(input: UpdateRecordOptions['input']): RecordUpdate {
-    const updateData: RecordUpdate = {};
-    if (input.title !== undefined) updateData.title = input.title;
-    if (input.note !== undefined) updateData.note = input.note;
-    if (input.tagId !== undefined) updateData.tag_id = input.tagId;
-    if (input.planId !== undefined) updateData.plan_id = input.planId;
-    if (input.externalCalendarEventId !== undefined) {
-      updateData.external_calendar_event_id = input.externalCalendarEventId;
-    }
-    if (input.start_at !== undefined) updateData.start_at = input.start_at;
-    if (input.end_at !== undefined) updateData.end_at = input.end_at;
-    return updateData;
+  async restore(options: DeleteRecordOptions): Promise<RecordRow> {
+    const { userId, recordId, expectedUpdatedAt } = options;
+    return this.commandClient.restoreRecord({ userId, recordId, expectedUpdatedAt });
   }
 
   private validateRange(startAt: string, endAt: string, code: string): void {
@@ -263,25 +220,6 @@ export class RecordService {
     const endMs = new Date(endAt).getTime();
     if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) {
       throw new TimeblockServiceError(code, 'Time range end must be after start.');
-    }
-  }
-
-  private ensureRecordCanBeCreated(endAt: string): void {
-    if (new Date(endAt).getTime() > Date.now()) {
-      throw new TimeblockServiceError('RECORD_IN_FUTURE', 'Records cannot end in the future.');
-    }
-  }
-
-  private assertOptimisticLock(
-    expectedUpdatedAt: string | undefined,
-    actualUpdatedAt: string,
-  ): void {
-    if (!expectedUpdatedAt) return;
-    if (new Date(expectedUpdatedAt).getTime() !== new Date(actualUpdatedAt).getTime()) {
-      throw new TimeblockServiceError(
-        'CONFLICT',
-        'This record was updated elsewhere. Reload the latest data.',
-      );
     }
   }
 
@@ -303,58 +241,6 @@ export class RecordService {
         `Record time overlaps with existing records (${overlappingIds.length})`,
       );
     }
-  }
-
-  private async ensureRecordablePlan(userId: string, planId: string): Promise<void> {
-    const { data, error } = await this.supabase
-      .from('plans')
-      .select('id, end_at, skipped_at')
-      .eq('id', planId)
-      .eq('user_id', userId)
-      .is('deleted_at', null)
-      .maybeSingle();
-
-    if (error) {
-      const original = captureUnexpectedDatabaseError(error, {
-        feature: 'timeblock',
-        operation: 'get_recordable_plan',
-      });
-      throw new TimeblockServiceError('FETCH_FAILED', 'Failed to fetch linked plan', {
-        cause: original,
-      });
-    }
-    if (!data) {
-      throw new TimeblockServiceError('NOT_FOUND', 'Plan not found');
-    }
-
-    if (new Date(data.end_at).getTime() > Date.now()) {
-      throw new TimeblockServiceError(
-        'RECORD_IN_FUTURE',
-        'Future plans cannot have linked records.',
-      );
-    }
-
-    if (data.skipped_at) {
-      throw new TimeblockServiceError('INVALID_INPUT', 'Skipped plans cannot have linked records.');
-    }
-  }
-
-  private handleMutationError(
-    error: { code?: string; message: string },
-    code: string,
-    prefix: string,
-  ): never {
-    if (error.code === '23P01') {
-      throw new TimeblockServiceError(
-        'TIME_OVERLAP',
-        'This time range overlaps with an existing item.',
-      );
-    }
-    const original = captureUnexpectedDatabaseError(error, {
-      feature: 'timeblock',
-      operation: code.toLowerCase(),
-    });
-    throw new TimeblockServiceError(code, prefix, { cause: original });
   }
 }
 

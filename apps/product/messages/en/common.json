@@ -307,7 +307,8 @@
         "maxLength": "Description must be {max} characters or less"
       },
       "time": {
-        "endBeforeStart": "End time must be after start time"
+        "endBeforeStart": "End time must be after start time",
+        "rangeTooLong": "The confirmation range must be 26 hours or less"
       },
       "actualTime": {
         "endBeforeStart": "End time must be after start time"

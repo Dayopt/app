@@ -150,6 +150,24 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
     });
 
     expect(error?.code).toBe('42501');
+
+    const { error: confirmError } = await userClient.rpc('confirm_day_plans_command_v1', {
+      p_user_id: userId,
+      p_start_at: at(-24 * 60 * 60_000),
+      p_end_at: at(24 * 60 * 60_000),
+      p_confirmed_at: at(0),
+    });
+    expect(confirmError?.code).toBe('42501');
+  });
+
+  it('rejects confirm-day ranges longer than 26 hours', async () => {
+    const { error } = await admin.rpc('confirm_day_plans_command_v1', {
+      p_user_id: userId,
+      p_start_at: '2026-07-01T00:00:00.000Z',
+      p_end_at: '2026-07-02T02:00:00.001Z',
+    });
+
+    expect(error?.code).toBe('22023');
   });
 
   it('serializes concurrent Plan updates with exact compare-and-swap', async () => {
@@ -435,6 +453,42 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
       admin.from('records').select('id').eq('plan_id', plan.id).is('deleted_at', null),
     ]);
     expect(Boolean(persistedPlan?.skipped_at) && (linkedRecords?.length ?? 0) > 0).toBe(false);
+  });
+
+  it('serializes confirm-day against one-tap Plan recording', async () => {
+    const plan = await createPlan({
+      title: 'Confirm day race',
+      startAt: at(-2_000),
+      endAt: at(1_500),
+    });
+    await new Promise((resolve) => setTimeout(resolve, 1_700));
+
+    const attempts = await Promise.all([
+      admin.rpc('confirm_day_plans_command_v1', {
+        p_user_id: userId,
+        p_start_at: at(-12 * 60 * 60_000),
+        p_end_at: at(12 * 60 * 60_000),
+        p_confirmed_at: at(0),
+      }),
+      admin
+        .rpc('record_plan_command_v1', {
+          p_user_id: userId,
+          p_plan_id: plan.id,
+          p_expected_updated_at: plan.updated_at,
+        })
+        .single(),
+    ]);
+
+    expect(attempts.every(({ error }) => error === null || error.code === 'DT011')).toBe(true);
+    expect(attempts.some(({ error }) => error === null)).toBe(true);
+
+    const { data: linkedRecords, error } = await admin
+      .from('records')
+      .select('id')
+      .eq('plan_id', plan.id)
+      .is('deleted_at', null);
+    expect(error).toBeNull();
+    expect(linkedRecords).toHaveLength(1);
   });
 
   it('rejects restoring a linked Record after its Plan is skipped', async () => {

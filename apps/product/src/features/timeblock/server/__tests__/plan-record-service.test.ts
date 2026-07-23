@@ -8,20 +8,49 @@ import { TimeblockServiceError } from '../timeblock-service-error';
 import type { PlanRow, RecordRow } from '../timeblock-types';
 import type { ServiceSupabaseClient } from '../types';
 
-const adminRpc = vi.hoisted(() => vi.fn());
+const commandMocks = vi.hoisted(() => ({
+  createPlan: vi.fn(),
+  createRecord: vi.fn(),
+  confirmDay: vi.fn(),
+  deletePlan: vi.fn(),
+  deleteRecord: vi.fn(),
+  recordPlan: vi.fn(),
+  restorePlan: vi.fn(),
+  restoreRecord: vi.fn(),
+  setPlanSkipped: vi.fn(),
+  updatePlan: vi.fn(),
+  updateRecord: vi.fn(),
+}));
 
-vi.mock('@/lib/supabase/oauth', () => ({
-  createServiceRoleClient: () => ({ rpc: adminRpc }),
+vi.mock('../timeblock-command-client', () => ({
+  createTimeblockCommandClient: () => commandMocks,
 }));
 
 const USER_ID = 'test-user-id';
 const TAG_ID = '72cc49b4-7e57-4a85-9346-0e90b2db78e2';
+const EXPECTED_UPDATED_AT = '2026-07-01T00:00:00.000Z';
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
   vi.clearAllMocks();
-  adminRpc.mockResolvedValue({ data: null, error: null });
+  commandMocks.createPlan.mockResolvedValue(createPlan());
+  commandMocks.createRecord.mockResolvedValue(createRecord());
+  commandMocks.confirmDay.mockResolvedValue([]);
+  commandMocks.deletePlan.mockResolvedValue(createPlan({ deleted_at: '2026-07-15T12:00:00.000Z' }));
+  commandMocks.deleteRecord.mockResolvedValue(
+    createRecord({ deleted_at: '2026-07-15T12:00:00.000Z' }),
+  );
+  commandMocks.recordPlan.mockResolvedValue(
+    createRecord({ plan_id: 'plan-1', source: 'from_plan' }),
+  );
+  commandMocks.restorePlan.mockResolvedValue(createPlan());
+  commandMocks.restoreRecord.mockResolvedValue(createRecord());
+  commandMocks.setPlanSkipped.mockResolvedValue(
+    createPlan({ skipped_at: '2026-07-15T12:00:00.000Z' }),
+  );
+  commandMocks.updatePlan.mockResolvedValue(createPlan());
+  commandMocks.updateRecord.mockResolvedValue(createRecord());
 });
 
 afterEach(() => {
@@ -257,12 +286,16 @@ describe('RecordService.list', () => {
 });
 
 describe('PlanService.create', () => {
-  it('過去に完了する plan 作成を拒否する', async () => {
-    const { service, mockSupabase } = createPlanService();
+  it('DB clockで過去と判定された plan 作成エラーを返す', async () => {
+    const { service } = createPlanService();
+    commandMocks.createPlan.mockRejectedValue(
+      new TimeblockServiceError('PLAN_IN_PAST', 'Plans must end in the future.'),
+    );
 
     await expect(
       service.create({
         userId: USER_ID,
+        preventOverlappingPlans: false,
         input: {
           title: 'Past plan',
           start_at: '2026-03-17T10:00:00.000Z',
@@ -270,22 +303,15 @@ describe('PlanService.create', () => {
         },
       }),
     ).rejects.toMatchObject({ code: 'PLAN_IN_PAST' });
-
-    expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
   it('DB exclusion violation を TIME_OVERLAP に変換する', async () => {
     const { service, mockSupabase } = createPlanService();
     const overlapMock = createChainableMock([]);
-    const insertMock = createChainableMock(null, {
-      code: '23P01',
-      message: 'conflicting key value violates exclusion constraint',
-    });
-    let callCount = 0;
-    mockSupabase.from.mockImplementation(() => {
-      callCount++;
-      return callCount === 1 ? overlapMock : insertMock;
-    });
+    mockSupabase.from.mockReturnValue(overlapMock);
+    commandMocks.createPlan.mockRejectedValue(
+      new TimeblockServiceError('TIME_OVERLAP', 'This time range overlaps with an existing item.'),
+    );
 
     await expect(
       service.create({
@@ -301,18 +327,23 @@ describe('PlanService.create', () => {
 });
 
 describe('PlanService.update', () => {
-  it('過去 plan の時間変更を拒否する', async () => {
+  it('DB clockで過去と判定された plan の時間変更エラーを返す', async () => {
     const existing = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
     const { service, mockSupabase } = createPlanService();
     mockSupabase.from.mockReturnValue(createChainableMock(existing));
+    commandMocks.updatePlan.mockRejectedValue(
+      new TimeblockServiceError('PLAN_TIME_LOCKED', 'Past plan time is locked.'),
+    );
 
     await expect(
       service.update({
         userId: USER_ID,
         planId: existing.id,
+        expectedUpdatedAt: existing.updated_at,
+        preventOverlappingPlans: false,
         input: { start_at: '2026-03-17T09:00:00.000Z' },
       }),
     ).rejects.toMatchObject({ code: 'PLAN_TIME_LOCKED' });
@@ -320,18 +351,23 @@ describe('PlanService.update', () => {
     expect(mockSupabase.from).toHaveBeenCalledTimes(1);
   });
 
-  it('過去 plan を未来へ移動し直す時間変更も拒否する', async () => {
+  it('DB clockで過去と判定された plan を未来へ移動し直すエラーを返す', async () => {
     const existing = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
     const { service, mockSupabase } = createPlanService();
     mockSupabase.from.mockReturnValue(createChainableMock(existing));
+    commandMocks.updatePlan.mockRejectedValue(
+      new TimeblockServiceError('PLAN_TIME_LOCKED', 'Past plan time is locked.'),
+    );
 
     await expect(
       service.update({
         userId: USER_ID,
         planId: existing.id,
+        expectedUpdatedAt: existing.updated_at,
+        preventOverlappingPlans: false,
         input: {
           start_at: '2030-03-17T10:00:00.000Z',
           end_at: '2030-03-17T11:00:00.000Z',
@@ -342,15 +378,20 @@ describe('PlanService.update', () => {
     expect(mockSupabase.from).toHaveBeenCalledTimes(1);
   });
 
-  it('終了が将来の plan を現在以前へ縮める時間変更を拒否する', async () => {
+  it('DB clockで現在以前となる plan 時間変更エラーを返す', async () => {
     const existing = createPlan();
     const { service, mockSupabase } = createPlanService();
     mockSupabase.from.mockReturnValue(createChainableMock(existing));
+    commandMocks.updatePlan.mockRejectedValue(
+      new TimeblockServiceError('PLAN_IN_PAST', 'Plans must end in the future.'),
+    );
 
     await expect(
       service.update({
         userId: USER_ID,
         planId: existing.id,
+        expectedUpdatedAt: existing.updated_at,
+        preventOverlappingPlans: false,
         input: {
           start_at: '2026-07-15T11:00:00.000Z',
           end_at: '2026-07-15T12:00:00.000Z',
@@ -376,11 +417,13 @@ describe('PlanService.update', () => {
       if (callCount === 2) return createChainableMock([]);
       return createChainableMock(updated);
     });
+    commandMocks.updatePlan.mockResolvedValue(updated);
 
     await expect(
       service.update({
         userId: USER_ID,
         planId: existing.id,
+        expectedUpdatedAt: existing.updated_at,
         input: { start_at: updated.start_at, end_at: updated.end_at },
       }),
     ).resolves.toMatchObject({ start_at: updated.start_at, end_at: updated.end_at });
@@ -398,11 +441,13 @@ describe('PlanService.update', () => {
       callCount++;
       return createChainableMock(callCount === 1 ? existing : updated);
     });
+    commandMocks.updatePlan.mockResolvedValue(updated);
 
     await expect(
       service.update({
         userId: USER_ID,
         planId: existing.id,
+        expectedUpdatedAt: existing.updated_at,
         input: { note: 'Updated note', tagId: 'tag-1' },
       }),
     ).resolves.toMatchObject({ note: 'Updated note', tag_id: 'tag-1' });
@@ -428,33 +473,24 @@ describe('PlanService.record', () => {
       tag_id: plan.tag_id,
       title: plan.title,
     });
-    const { service, mockSupabase } = createPlanService();
-    let recordsCallCount = 0;
-    let recordInsertQuery: ReturnType<typeof createChainableMock> | undefined;
-    mockSupabase.from.mockImplementation((table: string) => {
-      if (table === 'plans') return createChainableMock(plan);
-      recordsCallCount++;
-      if (recordsCallCount <= 2) return createChainableMock([]);
-      recordInsertQuery = createChainableMock(record);
-      return recordInsertQuery;
-    });
+    const { service } = createPlanService();
+    commandMocks.recordPlan.mockResolvedValue(record);
 
-    await expect(service.record({ userId: USER_ID, planId: plan.id })).resolves.toMatchObject({
+    await expect(
+      service.record({
+        userId: USER_ID,
+        planId: plan.id,
+        expectedUpdatedAt: plan.updated_at,
+      }),
+    ).resolves.toMatchObject({
       plan_id: plan.id,
       source: 'from_plan',
     });
-    expect(recordInsertQuery?.insert).toHaveBeenCalledWith({
-      user_id: USER_ID,
-      title: plan.title,
-      note: plan.note,
-      tag_id: plan.tag_id,
-      plan_id: plan.id,
-      external_calendar_event_id: null,
-      source: 'from_plan',
-      start_at: plan.start_at,
-      end_at: plan.end_at,
+    expect(commandMocks.recordPlan).toHaveBeenCalledWith({
+      userId: USER_ID,
+      planId: plan.id,
+      expectedUpdatedAt: plan.updated_at,
     });
-    expect(recordInsertQuery?.select).toHaveBeenCalledWith(publicRecordSelect);
   });
 
   it('active record が紐づく plan の再記録を拒否する', async () => {
@@ -462,21 +498,18 @@ describe('PlanService.record', () => {
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
-    const existingRecord = createRecord({
-      end_at: '2026-03-17T13:00:00.000Z',
-      plan_id: plan.id,
-      start_at: '2026-03-17T12:00:00.000Z',
-    });
-    const { service, mockSupabase } = createPlanService();
-    mockSupabase.from.mockImplementation((table: string) =>
-      createChainableMock(table === 'plans' ? plan : [existingRecord]),
+    const { service } = createPlanService();
+    commandMocks.recordPlan.mockRejectedValue(
+      new TimeblockServiceError('ALREADY_RECORDED', 'Plan already has an active record.'),
     );
 
-    await expect(service.record({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
-      code: 'ALREADY_RECORDED',
-    });
-
-    expect(mockSupabase.from).toHaveBeenCalledTimes(2);
+    await expect(
+      service.record({
+        userId: USER_ID,
+        planId: plan.id,
+        expectedUpdatedAt: plan.updated_at,
+      }),
+    ).rejects.toMatchObject({ code: 'ALREADY_RECORDED' });
   });
 
   it('同時記録による from_plan 一意制約違反を再記録エラーに変換する', async () => {
@@ -484,21 +517,18 @@ describe('PlanService.record', () => {
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
-    const { service, mockSupabase } = createPlanService();
-    let recordsCallCount = 0;
-    mockSupabase.from.mockImplementation((table: string) => {
-      if (table === 'plans') return createChainableMock(plan);
-      recordsCallCount++;
-      if (recordsCallCount <= 2) return createChainableMock([]);
-      return createChainableMock(null, {
-        code: '23505',
-        message: 'duplicate key value violates unique constraint',
-      });
-    });
+    const { service } = createPlanService();
+    commandMocks.recordPlan.mockRejectedValue(
+      new TimeblockServiceError('ALREADY_RECORDED', 'Plan already has an active record.'),
+    );
 
-    await expect(service.record({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
-      code: 'ALREADY_RECORDED',
-    });
+    await expect(
+      service.record({
+        userId: USER_ID,
+        planId: plan.id,
+        expectedUpdatedAt: plan.updated_at,
+      }),
+    ).rejects.toMatchObject({ code: 'ALREADY_RECORDED' });
   });
 });
 
@@ -509,44 +539,54 @@ describe('PlanService.skip', () => {
       start_at: '2026-03-17T10:00:00.000Z',
     });
     const { service, mockSupabase } = createPlanService();
-    mockSupabase.from.mockImplementation((table: string) =>
-      createChainableMock(table === 'plans' ? plan : [createRecord({ plan_id: plan.id })]),
+    mockSupabase.from.mockReturnValue(createChainableMock(plan));
+    commandMocks.setPlanSkipped.mockRejectedValue(
+      new TimeblockServiceError('ALREADY_RECORDED', 'Plan already has an active record.'),
     );
 
-    await expect(service.skip({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
-      code: 'ALREADY_RECORDED',
-    });
+    await expect(
+      service.skip({
+        userId: USER_ID,
+        planId: plan.id,
+        expectedUpdatedAt: plan.updated_at,
+      }),
+    ).rejects.toMatchObject({ code: 'ALREADY_RECORDED' });
   });
 });
 
-describe('PlanService soft delete', () => {
-  it('deleteはuser client、restoreはservice-role clientを使う', async () => {
-    const { service, mockSupabase } = createPlanService();
-    mockSupabase.rpc.mockResolvedValue({ data: null, error: null });
+describe('PlanService atomic delete', () => {
+  it('delete / restoreへ同じraw versionを渡す', async () => {
+    const { service } = createPlanService();
 
-    await expect(service.delete({ userId: USER_ID, planId: 'plan-1' })).resolves.toEqual({
-      success: true,
+    await service.delete({
+      userId: USER_ID,
+      planId: 'plan-1',
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
-    await expect(service.restore({ userId: USER_ID, planId: 'plan-1' })).resolves.toEqual({
-      success: true,
+    await service.restore({
+      userId: USER_ID,
+      planId: 'plan-1',
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
 
-    expect(mockSupabase.rpc).toHaveBeenCalledWith('soft_delete_plan', {
-      p_plan_id: 'plan-1',
-      p_user_id: USER_ID,
+    expect(commandMocks.deletePlan).toHaveBeenCalledWith({
+      userId: USER_ID,
+      planId: 'plan-1',
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
-    expect(adminRpc).toHaveBeenCalledWith('restore_plan', {
-      p_plan_id: 'plan-1',
-      p_user_id: USER_ID,
+    expect(commandMocks.restorePlan).toHaveBeenCalledWith({
+      userId: USER_ID,
+      planId: 'plan-1',
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
   });
 });
 
 describe('PlanService.confirmDay', () => {
-  it('confirm_day_plans_to_records RPC へ user と day range を渡す', async () => {
+  it('service-owned commandへ user と day range を渡す', async () => {
     const record = createRecord({ source: 'from_plan' });
-    const { service, mockSupabase } = createPlanService();
-    mockSupabase.rpc.mockResolvedValue({ data: [record], error: null });
+    const { service } = createPlanService();
+    commandMocks.confirmDay.mockResolvedValue([record]);
 
     await expect(
       service.confirmDay({
@@ -558,22 +598,18 @@ describe('PlanService.confirmDay', () => {
       }),
     ).resolves.toEqual([record]);
 
-    expect(mockSupabase.rpc).toHaveBeenCalledWith(
-      'confirm_day_plans_to_records',
-      expect.objectContaining({
-        p_end_at: '2026-03-18T00:00:00.000Z',
-        p_start_at: '2026-03-17T00:00:00.000Z',
-        p_user_id: USER_ID,
-      }),
-    );
+    expect(commandMocks.confirmDay).toHaveBeenCalledWith({
+      endAt: '2026-03-18T00:00:00.000Z',
+      startAt: '2026-03-17T00:00:00.000Z',
+      userId: USER_ID,
+    });
   });
 
   it('同時確定による from_plan 一意制約違反を再記録エラーに変換する', async () => {
-    const { service, mockSupabase } = createPlanService();
-    mockSupabase.rpc.mockResolvedValue({
-      data: null,
-      error: { code: '23505', message: 'duplicate key value violates unique constraint' },
-    });
+    const { service } = createPlanService();
+    commandMocks.confirmDay.mockRejectedValue(
+      new TimeblockServiceError('ALREADY_RECORDED', 'Plan already has an active record.'),
+    );
 
     await expect(
       service.confirmDay({
@@ -588,21 +624,23 @@ describe('PlanService.confirmDay', () => {
 });
 
 describe('RecordService.create', () => {
-  it('未来に完了する record 作成を拒否する', async () => {
-    const { service, mockSupabase } = createRecordService();
+  it('DB clockで未来と判定された record 作成エラーを返す', async () => {
+    const { service } = createRecordService();
+    commandMocks.createRecord.mockRejectedValue(
+      new TimeblockServiceError('RECORD_IN_FUTURE', 'Records cannot end in the future.'),
+    );
 
     await expect(
       service.create({
         userId: USER_ID,
+        preventOverlappingRecords: false,
         input: {
           title: 'Future record',
           start_at: '2030-03-17T10:00:00.000Z',
           end_at: '2030-03-17T11:00:00.000Z',
         },
       }),
-    ).rejects.toBeInstanceOf(TimeblockServiceError);
-
-    expect(mockSupabase.from).not.toHaveBeenCalled();
+    ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
   });
 
   it('past plan には複数の manual record を紐づけられる', async () => {
@@ -618,6 +656,7 @@ describe('RecordService.create', () => {
       recordsCallCount++;
       return createChainableMock(recordsCallCount === 1 ? [] : record);
     });
+    commandMocks.createRecord.mockResolvedValue(record);
 
     await expect(
       service.create({
@@ -633,12 +672,15 @@ describe('RecordService.create', () => {
   });
 
   it('future plan への紐づけを拒否する', async () => {
-    const { service, mockSupabase } = createRecordService();
-    mockSupabase.from.mockReturnValue(createChainableMock(createPlan()));
+    const { service } = createRecordService();
+    commandMocks.createRecord.mockRejectedValue(
+      new TimeblockServiceError('RECORD_IN_FUTURE', 'Future plans cannot have linked records.'),
+    );
 
     await expect(
       service.create({
         userId: USER_ID,
+        preventOverlappingRecords: false,
         input: {
           title: 'Linked record',
           planId: 'plan-1',
@@ -647,25 +689,18 @@ describe('RecordService.create', () => {
         },
       }),
     ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
-
-    expect(mockSupabase.from).toHaveBeenCalledWith('plans');
   });
 
   it('skip済みplanへの紐づけを拒否する', async () => {
-    const { service, mockSupabase } = createRecordService();
-    mockSupabase.from.mockReturnValue(
-      createChainableMock(
-        createPlan({
-          start_at: '2026-03-17T09:00:00.000Z',
-          end_at: '2026-03-17T10:00:00.000Z',
-          skipped_at: '2026-03-17T11:00:00.000Z',
-        }),
-      ),
+    const { service } = createRecordService();
+    commandMocks.createRecord.mockRejectedValue(
+      new TimeblockServiceError('INVALID_INPUT', 'Skipped plans cannot have linked records.'),
     );
 
     await expect(
       service.create({
         userId: USER_ID,
+        preventOverlappingRecords: false,
         input: {
           title: 'Linked record',
           planId: 'plan-1',
@@ -674,59 +709,76 @@ describe('RecordService.create', () => {
         },
       }),
     ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
-
-    expect(mockSupabase.from).toHaveBeenCalledWith('plans');
   });
 
   it('plan 紐づけの update でも future plan を拒否する', async () => {
     const existing = createRecord();
     const { service, mockSupabase } = createRecordService();
-    mockSupabase.from.mockImplementation((table: string) =>
-      createChainableMock(table === 'records' ? existing : createPlan()),
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+    commandMocks.updateRecord.mockRejectedValue(
+      new TimeblockServiceError('RECORD_IN_FUTURE', 'Future plans cannot have linked records.'),
     );
 
     await expect(
       service.update({
         userId: USER_ID,
         recordId: existing.id,
+        expectedUpdatedAt: existing.updated_at,
         input: { planId: 'plan-1' },
       }),
     ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
   });
 });
 
-describe('RecordService soft delete', () => {
-  it('deleteはuser client、restoreはservice-role clientを使う', async () => {
-    const { service, mockSupabase } = createRecordService();
-    mockSupabase.rpc.mockResolvedValue({ data: null, error: null });
+describe('RecordService atomic delete', () => {
+  it('delete / restoreへ同じraw versionを渡す', async () => {
+    const { service } = createRecordService();
 
-    await expect(service.delete({ userId: USER_ID, recordId: 'record-1' })).resolves.toEqual({
-      success: true,
+    await service.delete({
+      userId: USER_ID,
+      recordId: 'record-1',
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
-    await expect(service.restore({ userId: USER_ID, recordId: 'record-1' })).resolves.toEqual({
-      success: true,
+    await service.restore({
+      userId: USER_ID,
+      recordId: 'record-1',
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
 
-    expect(mockSupabase.rpc).toHaveBeenCalledWith('soft_delete_record', {
-      p_record_id: 'record-1',
-      p_user_id: USER_ID,
+    expect(commandMocks.deleteRecord).toHaveBeenCalledWith({
+      userId: USER_ID,
+      recordId: 'record-1',
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
-    expect(adminRpc).toHaveBeenCalledWith('restore_record', {
-      p_record_id: 'record-1',
-      p_user_id: USER_ID,
+    expect(commandMocks.restoreRecord).toHaveBeenCalledWith({
+      userId: USER_ID,
+      recordId: 'record-1',
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
   });
 
-  it('delete / restore失敗時もRecord語彙でエラーを返す', async () => {
-    const { service, mockSupabase } = createRecordService();
-    mockSupabase.rpc.mockResolvedValue({ data: null, error: { message: 'denied' } });
-    adminRpc.mockResolvedValue({ data: null, error: { message: 'denied' } });
+  it('command失敗をそのまま返す', async () => {
+    const { service } = createRecordService();
+    commandMocks.deleteRecord.mockRejectedValue(
+      new TimeblockServiceError('CONFLICT', 'This item was updated elsewhere.'),
+    );
+    commandMocks.restoreRecord.mockRejectedValue(
+      new TimeblockServiceError('TIME_OVERLAP', 'This time range overlaps.'),
+    );
 
-    await expect(service.delete({ userId: USER_ID, recordId: 'record-1' })).rejects.toThrow(
-      'Failed to delete record',
-    );
-    await expect(service.restore({ userId: USER_ID, recordId: 'record-1' })).rejects.toThrow(
-      'Failed to restore record',
-    );
+    await expect(
+      service.delete({
+        userId: USER_ID,
+        recordId: 'record-1',
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(
+      service.restore({
+        userId: USER_ID,
+        recordId: 'record-1',
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      }),
+    ).rejects.toMatchObject({ code: 'TIME_OVERLAP' });
   });
 });

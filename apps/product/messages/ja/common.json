@@ -307,7 +307,8 @@
         "maxLength": "説明は{max}文字以内で入力してください"
       },
       "time": {
-        "endBeforeStart": "終了時間は開始時間より後にしてください"
+        "endBeforeStart": "終了時間は開始時間より後にしてください",
+        "rangeTooLong": "確定する期間は26時間以内にしてください"
       },
       "actualTime": {
         "endBeforeStart": "終了時間は開始時間より後にしてください"

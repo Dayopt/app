@@ -20,15 +20,27 @@ interface CoalescedTimeblockSaveControls {
   flush: (patch: TimeblockSavePatch) => Promise<void>;
 }
 
+interface CoalescedTimeblockSaveOptions {
+  /** true のエラーでは、古い版を前提にした待機中patchをすべて破棄する。 */
+  shouldDiscardPending?: ((error: unknown) => boolean) | undefined;
+}
+
 class CoalescedTimeblockSaveQueue {
   private pending: TimeblockSavePatch | null = null;
   private pendingWaiters: SaveWaiter[] = [];
   private isSaving = false;
 
-  constructor(private save: (patch: TimeblockSavePatch) => Promise<unknown>) {}
+  constructor(
+    private save: (patch: TimeblockSavePatch) => Promise<unknown>,
+    private shouldDiscardPending: (error: unknown) => boolean,
+  ) {}
 
   setSave(save: (patch: TimeblockSavePatch) => Promise<unknown>): void {
     this.save = save;
+  }
+
+  setShouldDiscardPending(shouldDiscardPending: (error: unknown) => boolean): void {
+    this.shouldDiscardPending = shouldDiscardPending;
   }
 
   enqueue(patch: TimeblockSavePatch): void {
@@ -69,6 +81,12 @@ class CoalescedTimeblockSaveQueue {
       },
       (error: unknown) => {
         for (const waiter of waiters) waiter.reject(error);
+        if (this.shouldDiscardPending(error)) {
+          const discardedWaiters = this.pendingWaiters;
+          this.pending = null;
+          this.pendingWaiters = [];
+          for (const waiter of discardedWaiters) waiter.reject(error);
+        }
         continueQueue();
       },
     );
@@ -81,12 +99,19 @@ class CoalescedTimeblockSaveQueue {
  */
 export function useCoalescedTimeblockSave(
   onSave: (patch: TimeblockSavePatch) => Promise<unknown>,
+  options: CoalescedTimeblockSaveOptions = {},
 ): CoalescedTimeblockSaveControls {
-  const [queue] = useState(() => new CoalescedTimeblockSaveQueue(onSave));
+  const [queue] = useState(
+    () => new CoalescedTimeblockSaveQueue(onSave, options.shouldDiscardPending ?? (() => false)),
+  );
 
   useEffect(() => {
     queue.setSave(onSave);
   }, [onSave, queue]);
+
+  useEffect(() => {
+    queue.setShouldDiscardPending(options.shouldDiscardPending ?? (() => false));
+  }, [options.shouldDiscardPending, queue]);
 
   const enqueue = useCallback((patch: TimeblockSavePatch) => queue.enqueue(patch), [queue]);
   const flush = useCallback((patch: TimeblockSavePatch) => queue.flush(patch), [queue]);

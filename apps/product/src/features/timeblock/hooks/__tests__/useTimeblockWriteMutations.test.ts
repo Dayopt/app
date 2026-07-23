@@ -1,7 +1,10 @@
+import { QueryClient, type QueryKey } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 
 import {
   doesTimeModelListQueryIncludeRow,
+  isTimeblockConflictError,
+  replaceTimeModelRowInMatchingLists,
   useTimeblockWriteMutations,
 } from '../useTimeblockWriteMutations';
 
@@ -95,6 +98,38 @@ describe('useTimeblockWriteMutations', () => {
     );
     expect(
       doesTimeModelListQueryIncludeRow(listKey({ search: 'deep work' }), row, 'records', 'update'),
+    ).toBe(false);
+  });
+
+  it('確定行がfilterを跨いだ時は元cacheから除外し一致する先頭pageへ追加する', () => {
+    const queryClient = new QueryClient();
+    const sourceKey = listKey({ tagId: 'tag-1' }) as QueryKey;
+    const destinationKey = listKey({ tagId: 'tag-2' }) as QueryKey;
+    const offsetKey = listKey({ tagId: 'tag-2', offset: 10 }) as QueryKey;
+    queryClient.setQueryData(sourceKey, [row]);
+    queryClient.setQueryData(destinationKey, []);
+    queryClient.setQueryData(offsetKey, []);
+
+    const updated = { ...row, tag_id: 'tag-2', updated_at: '2026-07-10T00:01:00.000Z' };
+    replaceTimeModelRowInMatchingLists(queryClient, 'records', updated);
+
+    expect(queryClient.getQueryData(sourceKey)).toEqual([]);
+    expect(queryClient.getQueryData(destinationKey)).toEqual([updated]);
+    expect(queryClient.getQueryData(offsetKey)).toEqual([]);
+  });
+
+  it('表示文言ではなくtRPCのstable service codeで競合を判定する', () => {
+    expect(
+      isTimeblockConflictError({
+        data: { serviceCode: 'CONFLICT' },
+        message: 'この項目は別の場所で変更されています',
+      }),
+    ).toBe(true);
+    expect(
+      isTimeblockConflictError({
+        data: { serviceCode: 'TIME_OVERLAP' },
+        message: '時間が重複しています',
+      }),
     ).toBe(false);
   });
 });

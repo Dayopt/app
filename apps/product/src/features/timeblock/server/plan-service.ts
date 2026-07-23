@@ -1,22 +1,13 @@
 import 'server-only';
 
-import { databaseTables, publicRecordSelect, toPublicRecordRow } from '@/lib/database';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
-import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
-import {
-  assertOptimisticLock,
-  ensureNoPlanOverlap,
-  ensureNoRecordOverlap,
-  ensurePlanCanBeCreated,
-  ensurePlanNotRecorded,
-  handleMutationError,
-  handleRecordMutationError,
-  isPastPlan,
-  toPlanUpdate,
-  validateRange,
-} from './plan-guards';
+import { assertExactOptimisticLock, ensureNoPlanOverlap, validateRange } from './plan-guards';
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
+import {
+  createTimeblockCommandClient,
+  type TimeblockCommandClient,
+} from './timeblock-command-client';
 import { TimeblockOverlapService } from './timeblock-overlap-service';
 import { buildTimeblockSearchFilter } from './timeblock-search-query';
 import { TimeblockServiceError } from './timeblock-service-error';
@@ -36,9 +27,15 @@ import type { ServiceSupabaseClient } from './types';
 
 export class PlanService {
   private readonly overlapService: TimeblockOverlapService;
+  private commands: TimeblockCommandClient | null = null;
 
   constructor(private readonly supabase: ServiceSupabaseClient) {
     this.overlapService = new TimeblockOverlapService(supabase);
+  }
+
+  private get commandClient(): TimeblockCommandClient {
+    this.commands ??= createTimeblockCommandClient();
+    return this.commands;
   }
 
   async list(options: ListPlansOptions): Promise<PlanRow[]> {
@@ -137,14 +134,12 @@ export class PlanService {
     const { userId, input, preventOverlappingPlans = true } = options;
 
     validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
-    ensurePlanCanBeCreated(input.end_at);
 
     if (preventOverlappingPlans) {
       await ensureNoPlanOverlap(this.overlapService, userId, input.start_at, input.end_at);
     }
 
-    const insertData: PlanInsert = {
-      user_id: userId,
+    const insertData: Omit<PlanInsert, 'user_id'> = {
       title: input.title,
       note: input.note ?? null,
       tag_id: input.tagId ?? null,
@@ -154,213 +149,83 @@ export class PlanService {
       end_at: input.end_at,
     };
 
-    const { data, error } = await this.supabase.from('plans').insert(insertData).select().single();
-
-    if (error) {
-      handleMutationError(error, 'CREATE_FAILED', 'Failed to create plan');
-    }
-
-    return data;
+    return this.commandClient.createPlan({
+      userId,
+      title: insertData.title,
+      note: insertData.note ?? null,
+      tagId: insertData.tag_id ?? null,
+      externalCalendarEventId: insertData.external_calendar_event_id ?? null,
+      source: insertData.source === 'external_calendar' ? 'external_calendar' : 'manual',
+      startAt: insertData.start_at,
+      endAt: insertData.end_at,
+    });
   }
 
   async update(options: UpdatePlanOptions): Promise<PlanRow> {
     const { userId, planId, input, expectedUpdatedAt, preventOverlappingPlans = true } = options;
     const existing = await this.getById({ userId, planId });
-
-    assertOptimisticLock(expectedUpdatedAt, existing.updated_at);
+    assertExactOptimisticLock(expectedUpdatedAt, existing.updated_at);
 
     const nextStartAt = input.start_at ?? existing.start_at;
     const nextEndAt = input.end_at ?? existing.end_at;
     const updatesTime = input.start_at !== undefined || input.end_at !== undefined;
 
-    if (updatesTime && isPastPlan(existing)) {
-      throw new TimeblockServiceError(
-        'PLAN_TIME_LOCKED',
-        'Past plan time fields cannot be changed.',
-      );
-    }
-
     validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
-    if (updatesTime) ensurePlanCanBeCreated(nextEndAt);
 
     if (preventOverlappingPlans && updatesTime) {
       await ensureNoPlanOverlap(this.overlapService, userId, nextStartAt, nextEndAt, planId);
     }
 
-    const updateData = toPlanUpdate(input);
-    if (Object.keys(updateData).length === 0) return existing;
-
-    const { data, error } = await this.supabase
-      .from('plans')
-      .update(updateData)
-      .eq('id', planId)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) {
-      handleMutationError(error, 'UPDATE_FAILED', 'Failed to update plan');
-    }
-
-    return data;
+    return this.commandClient.updatePlan({
+      userId,
+      planId,
+      expectedUpdatedAt,
+      title: input.title ?? existing.title,
+      note: input.note === undefined ? existing.note : input.note,
+      tagId: input.tagId === undefined ? existing.tag_id : input.tagId,
+      externalCalendarEventId:
+        input.externalCalendarEventId === undefined
+          ? existing.external_calendar_event_id
+          : input.externalCalendarEventId,
+      source: existing.source === 'external_calendar' ? 'external_calendar' : 'manual',
+      startAt: nextStartAt,
+      endAt: nextEndAt,
+    });
   }
 
-  async delete(options: DeletePlanOptions): Promise<{ success: boolean }> {
-    const { userId, planId } = options;
-    const { error } = await this.supabase.rpc('soft_delete_plan', {
-      p_plan_id: planId,
-      p_user_id: userId,
-    });
-
-    if (error) {
-      const original = captureUnexpectedDatabaseError(error, {
-        feature: 'timeblock',
-        operation: 'delete_plan',
-      });
-      throw new TimeblockServiceError('DELETE_FAILED', 'Failed to delete plan', {
-        cause: original,
-      });
-    }
-
-    return { success: true };
+  async delete(options: DeletePlanOptions): Promise<PlanRow> {
+    const { userId, planId, expectedUpdatedAt } = options;
+    return this.commandClient.deletePlan({ userId, planId, expectedUpdatedAt });
   }
 
-  async restore(options: DeletePlanOptions): Promise<{ success: boolean }> {
-    const { userId, planId } = options;
-    const adminClient = createServiceRoleClient();
-    const { error } = await adminClient.rpc('restore_plan', {
-      p_plan_id: planId,
-      p_user_id: userId,
-    });
-
-    if (error) {
-      const original = captureUnexpectedDatabaseError(error, {
-        feature: 'timeblock',
-        operation: 'restore_plan',
-      });
-      throw new TimeblockServiceError('RESTORE_FAILED', 'Failed to restore plan', {
-        cause: original,
-      });
-    }
-
-    return { success: true };
+  async restore(options: DeletePlanOptions): Promise<PlanRow> {
+    const { userId, planId, expectedUpdatedAt } = options;
+    return this.commandClient.restorePlan({ userId, planId, expectedUpdatedAt });
   }
 
   async skip(options: DeletePlanOptions): Promise<PlanRow> {
-    const { userId, planId } = options;
-    const existing = await this.getById({ userId, planId });
-
-    if (!isPastPlan(existing)) {
-      throw new TimeblockServiceError(
-        'SKIP_IN_FUTURE',
-        'Future plans cannot be skipped. Delete the plan instead.',
-      );
-    }
-
-    await ensurePlanNotRecorded(this.supabase, userId, planId);
-
-    const { data, error } = await this.supabase
-      .from('plans')
-      .update({ skipped_at: new Date().toISOString() })
-      .eq('id', planId)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) {
-      const original = captureUnexpectedDatabaseError(error, {
-        feature: 'timeblock',
-        operation: 'skip_plan',
-      });
-      throw new TimeblockServiceError('UPDATE_FAILED', 'Failed to skip plan', {
-        cause: original,
-      });
-    }
-
-    return data;
+    const { userId, planId, expectedUpdatedAt } = options;
+    return this.commandClient.setPlanSkipped({ userId, planId, expectedUpdatedAt, skipped: true });
   }
 
   async unskip(options: DeletePlanOptions): Promise<PlanRow> {
-    const { userId, planId } = options;
-    const existing = await this.getById({ userId, planId });
-
-    if (!existing.skipped_at) return existing;
-
-    const { data, error } = await this.supabase
-      .from('plans')
-      .update({ skipped_at: null })
-      .eq('id', planId)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) {
-      const original = captureUnexpectedDatabaseError(error, {
-        feature: 'timeblock',
-        operation: 'unskip_plan',
-      });
-      throw new TimeblockServiceError('UPDATE_FAILED', 'Failed to unskip plan', {
-        cause: original,
-      });
-    }
-
-    return data;
+    const { userId, planId, expectedUpdatedAt } = options;
+    return this.commandClient.setPlanSkipped({ userId, planId, expectedUpdatedAt, skipped: false });
   }
 
   async record(options: RecordPlanOptions): Promise<RecordRow> {
-    const { userId, planId } = options;
-    const plan = await this.getById({ userId, planId });
-
-    if (!isPastPlan(plan)) {
-      throw new TimeblockServiceError('RECORD_IN_FUTURE', 'Future plans cannot be recorded.');
-    }
-
-    if (plan.skipped_at) {
-      throw new TimeblockServiceError('INVALID_INPUT', 'Skipped plans cannot be recorded.');
-    }
-
-    await ensurePlanNotRecorded(this.supabase, userId, planId);
-    await ensureNoRecordOverlap(this.overlapService, userId, plan.start_at, plan.end_at);
-
-    const { data, error } = await this.supabase
-      .from(databaseTables.records)
-      .insert({
-        user_id: userId,
-        title: plan.title,
-        note: plan.note,
-        tag_id: plan.tag_id,
-        plan_id: plan.id,
-        external_calendar_event_id: null,
-        source: 'from_plan',
-        start_at: plan.start_at,
-        end_at: plan.end_at,
-      })
-      .select(publicRecordSelect)
-      .single();
-
-    if (error) {
-      handleRecordMutationError(error, 'Failed to record plan');
-    }
-
-    return data;
+    const { userId, planId, expectedUpdatedAt } = options;
+    return this.commandClient.recordPlan({ userId, planId, expectedUpdatedAt });
   }
 
   async confirmDay(options: ConfirmDayPlansOptions): Promise<RecordRow[]> {
     const { userId, input } = options;
     validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
-
-    const { data, error } = await this.supabase.rpc('confirm_day_plans_to_records', {
-      p_confirmed_at: new Date().toISOString(),
-      p_end_at: input.end_at,
-      p_start_at: input.start_at,
-      p_user_id: userId,
+    return this.commandClient.confirmDay({
+      userId,
+      startAt: input.start_at,
+      endAt: input.end_at,
     });
-
-    if (error) {
-      handleRecordMutationError(error, 'Failed to confirm day plans');
-    }
-
-    return (data ?? []).map(toPublicRecordRow);
   }
 }
 

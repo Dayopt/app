@@ -728,6 +728,35 @@ export type Database = {
         };
         Returns: string;
       };
+      confirm_day_plans_command_v1: {
+        Args: {
+          p_confirmed_at?: string;
+          p_end_at: string;
+          p_start_at: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       confirm_day_plans_to_records: {
         Args: {
           p_confirmed_at?: string;

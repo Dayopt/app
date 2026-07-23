@@ -59,6 +59,7 @@ const baseEvent: CalendarEvent = {
   color: 'var(--primary)',
   createdAt: now,
   updatedAt: now,
+  version: '2026-07-15T00:00:00.000000Z',
   displayStartDate: makeDate(today, 10, 0),
   displayEndDate: makeDate(today, 11, 0),
   duration: 60,

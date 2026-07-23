@@ -22,7 +22,7 @@ interface UseCalendarTimeblockKeyboardOptions {
   /** ショートカットを有効にするか */
   enabled?: boolean;
   /** 現在選択中（Inspector表示中）のTimeblockを削除する関数 */
-  onDeleteTimeblock?: (timeblockId: string) => Promise<void>;
+  onDeleteTimeblock?: (timeblockId: string) => Promise<boolean | void>;
   /** 現在選択中のTimeblockのタイトルを取得する関数 */
   getSelectedEntryTitle?: () => string | null;
   /** 新規Timeblock作成時の初期データ取得関数（現在の日時など） */
@@ -147,8 +147,14 @@ export function useCalendarEventKeyboard({
             e.preventDefault();
             const deleteCallback = onDeleteTimeblockRef.current;
             if (deleteCallback) {
-              void deleteCallback(timeblockIdRef.current);
-              closeInspectorRef.current();
+              const deletingTimeblockId = timeblockIdRef.current;
+              void deleteCallback(deletingTimeblockId)
+                .then((deleted) => {
+                  if (deleted !== false && timeblockIdRef.current === deletingTimeblockId) {
+                    closeInspectorRef.current();
+                  }
+                })
+                .catch(() => logger.error('Failed to delete entry'));
             }
           }
         },
@@ -168,8 +174,14 @@ export function useCalendarEventKeyboard({
             e.preventDefault();
             const deleteCallback = onDeleteTimeblockRef.current;
             if (deleteCallback) {
-              void deleteCallback(timeblockIdRef.current);
-              closeInspectorRef.current();
+              const deletingTimeblockId = timeblockIdRef.current;
+              void deleteCallback(deletingTimeblockId)
+                .then((deleted) => {
+                  if (deleted !== false && timeblockIdRef.current === deletingTimeblockId) {
+                    closeInspectorRef.current();
+                  }
+                })
+                .catch(() => logger.error('Failed to delete entry'));
             }
           }
         },

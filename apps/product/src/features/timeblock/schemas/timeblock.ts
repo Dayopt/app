@@ -13,6 +13,28 @@ const timeRangeRefine = <T extends Record<string, unknown>>(data: T, ctx: z.Refi
   }
 };
 
+const MAX_CONFIRM_DAY_RANGE_MS = 26 * 60 * 60 * 1000;
+
+const confirmDayRangeRefine = <T extends Record<string, unknown>>(
+  data: T,
+  ctx: z.RefinementCtx,
+) => {
+  timeRangeRefine(data, ctx);
+  const startAt = typeof data.start_at === 'string' ? Date.parse(data.start_at) : Number.NaN;
+  const endAt = typeof data.end_at === 'string' ? Date.parse(data.end_at) : Number.NaN;
+  if (
+    Number.isFinite(startAt) &&
+    Number.isFinite(endAt) &&
+    endAt - startAt > MAX_CONFIRM_DAY_RANGE_MS
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'validation.time.rangeTooLong',
+      path: ['end_at'],
+    });
+  }
+};
+
 const baseTimeblockSchema = z.object({
   title: z.string().min(1, 'validation.title.required').max(200, 'validation.title.maxLength'),
   note: z.string().max(10000, 'validation.note.maxLength').nullable().optional(),
@@ -45,6 +67,7 @@ export const planFilterSchema = z.object({
 
 export const recordPlanSchema = z.object({
   id: z.string().uuid('validation.invalidUuid'),
+  expectedUpdatedAt: z.string().datetime({ offset: true }),
 });
 
 export const confirmDaySchema = z
@@ -52,7 +75,7 @@ export const confirmDaySchema = z
     start_at: z.string().datetime({ offset: true }),
     end_at: z.string().datetime({ offset: true }),
   })
-  .superRefine(timeRangeRefine);
+  .superRefine(confirmDayRangeRefine);
 
 const baseRecordSchema = baseTimeblockSchema.extend({
   planId: z.string().uuid().nullable().optional(),

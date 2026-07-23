@@ -9,7 +9,8 @@ import { useTimeblockRecordMutations } from '../../hooks/useTimeblockRecordMutat
 
 interface RecordPlanButtonProps {
   planId: string;
-  beforeRecord: () => Promise<void>;
+  beforeRecord: () => Promise<string>;
+  onPreparingChange?: ((isPreparing: boolean) => void) | undefined;
   onRecorded?: ((recordId: string) => void) | undefined;
   disabled?: boolean | undefined;
 }
@@ -18,6 +19,7 @@ interface RecordPlanButtonProps {
 export function RecordPlanButton({
   planId,
   beforeRecord,
+  onPreparingChange,
   onRecorded,
   disabled = false,
 }: RecordPlanButtonProps) {
@@ -29,17 +31,24 @@ export function RecordPlanButton({
   const handleRecord = () => {
     if (disabled || isPending) return;
     setIsPreparing(true);
+    onPreparingChange?.(true);
     void beforeRecord().then(
-      () => {
+      (expectedUpdatedAt) => {
         recordPlan.mutate(
-          { id: planId },
+          { id: planId, expectedUpdatedAt },
           {
             onSuccess: (record) => onRecorded?.(record.id),
-            onSettled: () => setIsPreparing(false),
+            onSettled: () => {
+              setIsPreparing(false);
+              onPreparingChange?.(false);
+            },
           },
         );
       },
-      () => setIsPreparing(false),
+      () => {
+        setIsPreparing(false);
+        onPreparingChange?.(false);
+      },
     );
   };
 

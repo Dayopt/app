@@ -26,8 +26,8 @@ vi.mock('@/features/timeblock', async () => {
       createRecord: { mutate: createRecordMutate },
       updatePlan: { mutate: updatePlanMutate },
       updateRecord: { mutate: updateRecordMutate },
-      deletePlan: { mutate: deletePlanMutate },
-      deleteRecord: { mutate: deleteRecordMutate },
+      deletePlan: { mutate: deletePlanMutate, mutateAsync: deletePlanMutate },
+      deleteRecord: { mutate: deleteRecordMutate, mutateAsync: deleteRecordMutate },
     }),
   };
 });
@@ -66,6 +66,7 @@ function makeEvent(overrides: Partial<CalendarEvent> & { id: string }): Calendar
     color: '',
     createdAt: start,
     updatedAt: start,
+    version: '2026-04-26T00:00:00.000001Z',
     displayStartDate: start,
     displayEndDate: end,
     duration: 60,
@@ -86,7 +87,16 @@ function makeCache(
   lane: 'plans' | 'records',
   rows: Array<{ id: string; start_at: string; end_at: string }>,
 ): Array<[unknown, unknown]> {
-  return [[[[lane, 'list'], {}], rows]];
+  return [
+    [
+      [[lane, 'list'], {}],
+      rows.map((row) => ({
+        ...row,
+        source: 'manual',
+        updated_at: '2026-04-26T00:00:00.000001Z',
+      })),
+    ],
+  ];
 }
 
 /** getQueriesData のモック実装: 実装同様 predicate({queryKey}) でフィルタする */
@@ -132,7 +142,10 @@ describe('useTimeblockOperations', () => {
       const { result } = renderHook(() => useTimeblockOperations());
       await result.current.handleTimeblockDelete('plan-1');
 
-      expect(deletePlanMutate).toHaveBeenCalledWith({ id: 'plan-1' });
+      expect(deletePlanMutate).toHaveBeenCalledWith({
+        id: 'plan-1',
+        expectedUpdatedAt: '2026-04-26T00:00:00.000001Z',
+      });
       expect(deleteRecordMutate).not.toHaveBeenCalled();
     });
 
@@ -150,7 +163,10 @@ describe('useTimeblockOperations', () => {
       const { result } = renderHook(() => useTimeblockOperations());
       await result.current.handleTimeblockDelete('record-1');
 
-      expect(deleteRecordMutate).toHaveBeenCalledWith({ id: 'record-1' });
+      expect(deleteRecordMutate).toHaveBeenCalledWith({
+        id: 'record-1',
+        expectedUpdatedAt: '2026-04-26T00:00:00.000001Z',
+      });
       expect(deletePlanMutate).not.toHaveBeenCalled();
     });
 
@@ -178,6 +194,7 @@ describe('useTimeblockOperations', () => {
             start_at: '2026-04-27T01:00:00.000Z',
             end_at: '2026-04-27T02:00:00.000Z',
           },
+          expectedUpdatedAt: '2026-04-26T00:00:00.000001Z',
         },
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
@@ -199,6 +216,7 @@ describe('useTimeblockOperations', () => {
             start_at: '2026-04-25T01:00:00.000Z',
             end_at: '2026-04-25T02:00:00.000Z',
           },
+          expectedUpdatedAt: '2026-04-26T00:00:00.000001Z',
         },
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
@@ -273,8 +291,10 @@ describe('useTimeblockOperations', () => {
       const { result } = renderHook(() => useTimeblockOperations());
       await result.current.handleUpdateTimeblock(event);
 
-      const onSuccess = updatePlanMutate.mock.calls[0]?.[1].onSuccess as () => void;
-      onSuccess();
+      const onSuccess = updatePlanMutate.mock.calls[0]?.[1].onSuccess as (updated: {
+        updated_at: string;
+      }) => void;
+      onSuccess({ updated_at: '2026-04-26T00:00:01.000002Z' });
 
       expect(toastSuccess).toHaveBeenCalledTimes(1);
       const [, opts] = toastSuccess.mock.calls[0] as [string, { action: { onClick: () => void } }];
@@ -282,6 +302,7 @@ describe('useTimeblockOperations', () => {
 
       expect(updatePlanMutate).toHaveBeenLastCalledWith({
         id: 'plan-1',
+        expectedUpdatedAt: '2026-04-26T00:00:01.000002Z',
         data: {
           start_at: '2026-04-27T00:00:00.000Z',
           end_at: '2026-04-27T00:30:00.000Z',
@@ -324,6 +345,7 @@ describe('useTimeblockOperations', () => {
             start_at: '2026-04-27T01:00:00.000Z',
             end_at: '2026-04-27T02:00:00.000Z',
           },
+          expectedUpdatedAt: '2026-04-26T00:00:00.000001Z',
         },
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );

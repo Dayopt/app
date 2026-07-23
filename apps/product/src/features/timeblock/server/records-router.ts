@@ -52,7 +52,7 @@ export const recordsRouter = createTRPCRouter({
     .input(
       recordIdSchema.extend({
         data: updateRecordSchema,
-        expectedUpdatedAt: z.string().datetime({ offset: true }).optional(),
+        expectedUpdatedAt: z.string().datetime({ offset: true }),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -71,11 +71,15 @@ export const recordsRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .meta({ description: 'Soft delete record' })
-    .input(recordIdSchema)
+    .input(recordIdSchema.extend({ expectedUpdatedAt: z.string().datetime({ offset: true }) }))
     .mutation(async ({ ctx, input }) => {
       const service = createRecordService(ctx.supabase);
       try {
-        return await service.delete({ userId: ctx.userId, recordId: input.id });
+        return await service.delete({
+          userId: ctx.userId,
+          recordId: input.id,
+          expectedUpdatedAt: input.expectedUpdatedAt,
+        });
       } catch (error) {
         handleServiceError(error);
       }
@@ -83,11 +87,15 @@ export const recordsRouter = createTRPCRouter({
 
   restore: protectedProcedure
     .meta({ description: 'Restore soft-deleted record' })
-    .input(recordIdSchema)
+    .input(recordIdSchema.extend({ expectedUpdatedAt: z.string().datetime({ offset: true }) }))
     .mutation(async ({ ctx, input }) => {
       const service = createRecordService(ctx.supabase);
       try {
-        return await service.restore({ userId: ctx.userId, recordId: input.id });
+        return await service.restore({
+          userId: ctx.userId,
+          recordId: input.id,
+          expectedUpdatedAt: input.expectedUpdatedAt,
+        });
       } catch (error) {
         handleServiceError(error);
       }

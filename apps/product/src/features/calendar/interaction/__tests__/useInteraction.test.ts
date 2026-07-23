@@ -16,6 +16,7 @@ const baseEvent: CalendarEvent = {
   actualStartDate: null,
   actualEndDate: null,
   kind: 'plan',
+  version: '2026-01-15T08:00:00.000000Z',
 } as unknown as CalendarEvent;
 
 const rect: TimeblockRect = { top: 540, left: 0, width: 200, height: 60 };
@@ -421,6 +422,40 @@ describe('useInteraction resize completion', () => {
     expect(onEventUpdate).toHaveBeenCalledWith(
       'entry-1',
       expect.not.objectContaining({ keepActualTime: true }),
+    );
+  });
+});
+
+describe('useInteraction optimistic version', () => {
+  it('drag開始後にcacheが更新されても開始時のraw versionで更新する', () => {
+    const onEventUpdate = vi.fn();
+    const originalVersion = '2026-01-15T08:00:00.000001Z';
+    const refreshedVersion = '2026-01-15T08:00:00.000002Z';
+    const originalEvent: CalendarEvent = {
+      ...baseEvent,
+      kind: 'record',
+      version: originalVersion,
+    };
+    const { result, rerender } = renderHook(
+      ({ events }: { events: CalendarEvent[] }) =>
+        useInteraction(makeProps({ events, onEventUpdate })),
+      { initialProps: { events: [originalEvent] } },
+    );
+
+    act(() => {
+      result.current.handlers.handlePointerDown('entry-1', createMouseEvent(20, 540), rect);
+      result.current.dispatch({
+        type: 'POINTER_MOVE',
+        point: { clientX: 80, clientY: 570 },
+      });
+    });
+
+    rerender({ events: [{ ...originalEvent, version: refreshedVersion }] });
+    act(() => result.current.dispatch({ type: 'POINTER_UP' }));
+
+    expect(onEventUpdate).toHaveBeenCalledWith(
+      'entry-1',
+      expect.objectContaining({ expectedUpdatedAt: originalVersion }),
     );
   });
 });

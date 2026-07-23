@@ -9,6 +9,7 @@ import superjson from 'superjson';
 
 import { type ProductAccessLevel } from '@/lib/auth/domain';
 import type { Context } from '@/lib/trpc/context';
+import { ServiceError } from '@/lib/trpc/errors';
 
 /**
  * プロシージャメタデータ（API仕様書自動生成用）
@@ -42,12 +43,15 @@ export const t = initTRPC
         isProduction && SERVER_ERROR_CODES.has(error.code)
           ? 'サーバーエラーが発生した'
           : shape.message;
+      const serviceCode = error.cause instanceof ServiceError ? error.cause.code : undefined;
 
       return {
         ...shape,
         message,
         data: {
           ...shape.data,
+          /** UIが文言ではなく安定したdomain outcomeを判定するための公開コード。 */
+          serviceCode,
           // 開発環境でのみスタックトレースを含める
           stack: isProduction ? undefined : error.stack,
         },

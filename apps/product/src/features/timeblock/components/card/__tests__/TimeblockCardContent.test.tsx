@@ -14,6 +14,7 @@ const baseEntry: CalendarEvent = {
   color: 'blue',
   createdAt: new Date('2026-06-04T00:00:00'),
   updatedAt: new Date('2026-06-04T00:00:00'),
+  version: '2026-06-04T00:00:00.000000Z',
   displayStartDate: new Date('2026-06-04T13:00:00'),
   displayEndDate: new Date('2026-06-04T15:00:00'),
   duration: 120,

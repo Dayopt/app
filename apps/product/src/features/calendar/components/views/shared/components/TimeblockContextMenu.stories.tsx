@@ -26,6 +26,7 @@ const completedPlannedEntry: CalendarEvent = {
   tagId: 'tag-1',
   createdAt: new Date(),
   updatedAt: new Date(),
+  version: '2026-07-15T00:00:00.000000Z',
   displayStartDate: past,
   displayEndDate: pastEnd,
   duration: 60,

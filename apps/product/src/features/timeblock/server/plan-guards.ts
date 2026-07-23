@@ -12,7 +12,7 @@ import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 
 import type { TimeblockOverlapService } from './timeblock-overlap-service';
 import { TimeblockServiceError } from './timeblock-service-error';
-import type { PlanRow, PlanUpdate, UpdatePlanOptions } from './timeblock-types';
+import type { PlanUpdate, UpdatePlanOptions } from './timeblock-types';
 import type { ServiceSupabaseClient } from './types';
 
 export function toPlanUpdate(input: UpdatePlanOptions['input']): PlanUpdate {
@@ -36,27 +36,16 @@ export function validateRange(startAt: string, endAt: string, code: string): voi
   }
 }
 
-export function ensurePlanCanBeCreated(endAt: string): void {
-  if (new Date(endAt).getTime() <= Date.now()) {
-    throw new TimeblockServiceError('PLAN_IN_PAST', 'Plans must end in the future.');
-  }
-}
-
-export function assertOptimisticLock(
-  expectedUpdatedAt: string | undefined,
+export function assertExactOptimisticLock(
+  expectedUpdatedAt: string,
   actualUpdatedAt: string,
 ): void {
-  if (!expectedUpdatedAt) return;
-  if (new Date(expectedUpdatedAt).getTime() !== new Date(actualUpdatedAt).getTime()) {
+  if (expectedUpdatedAt !== actualUpdatedAt) {
     throw new TimeblockServiceError(
       'CONFLICT',
       'This plan was updated elsewhere. Reload the latest data.',
     );
   }
-}
-
-export function isPastPlan(plan: PlanRow): boolean {
-  return new Date(plan.end_at).getTime() <= Date.now();
 }
 
 export async function ensureNoPlanOverlap(

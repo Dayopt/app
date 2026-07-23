@@ -9,9 +9,14 @@ import { TimeblockInspectorForm } from '../TimeblockInspectorForm';
 const mocks = vi.hoisted(() => ({
   enqueueSave: vi.fn(),
   flushSave: vi.fn(),
+  savePatch: undefined as
+    ((patch: { note?: string | null; tagId?: string | null }) => Promise<unknown>) | undefined,
   toastError: vi.fn(),
   createPlanMutate: vi.fn(),
   createRecordMutate: vi.fn(),
+  updatePlanMutateAsync: vi.fn(),
+  fetchPlanById: vi.fn(),
+  isConflict: false,
   onCreateTimeOverlap: undefined as (() => void) | undefined,
   onUpdateTimeOverlap: undefined as
     | ((input: {
@@ -50,13 +55,19 @@ vi.mock('@/lib/toast', () => ({
 }));
 
 vi.mock('../../../hooks/useCoalescedTimeblockSave', () => ({
-  useCoalescedTimeblockSave: () => ({
-    enqueue: mocks.enqueueSave,
-    flush: mocks.flushSave,
-  }),
+  useCoalescedTimeblockSave: (
+    savePatch: (patch: { note?: string | null; tagId?: string | null }) => Promise<unknown>,
+  ) => {
+    mocks.savePatch = savePatch;
+    return {
+      enqueue: mocks.enqueueSave,
+      flush: mocks.flushSave,
+    };
+  },
 }));
 
 vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
+  isTimeblockConflictError: () => mocks.isConflict,
   useTimeblockWriteMutations: (options?: {
     onCreateTimeOverlap?: () => void;
     onUpdateTimeOverlap?: (input: {
@@ -76,12 +87,14 @@ vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
       createPlan: { ...mutation, mutate: mocks.createPlanMutate },
       deleteRecord: mutation,
       deletePlan: mutation,
+      fetchPlanById: mocks.fetchPlanById,
+      fetchRecordById: vi.fn(),
       restoreRecord: mutation,
       restorePlan: mutation,
       skipPlan: mutation,
       unskipPlan: mutation,
       updateRecord: mutation,
-      updatePlan: mutation,
+      updatePlan: { ...mutation, mutateAsync: mocks.updatePlanMutateAsync },
     };
   },
 }));
@@ -238,6 +251,10 @@ describe('TimeblockInspectorForm', () => {
     vi.clearAllMocks();
     mocks.createPlanMutate.mockReset();
     mocks.createRecordMutate.mockReset();
+    mocks.updatePlanMutateAsync.mockReset();
+    mocks.fetchPlanById.mockReset();
+    mocks.savePatch = undefined;
+    mocks.isConflict = false;
     mocks.onCreateTimeOverlap = undefined;
     mocks.onUpdateTimeOverlap = undefined;
     mocks.cachedPlans = [];
@@ -375,6 +392,25 @@ describe('TimeblockInspectorForm', () => {
     expect(screen.getByTestId('date-time-error')).toHaveTextContent(
       'timeblock.errors.planTimeOverlap',
     );
+  });
+
+  it('競合後の最新行取得にも失敗した場合はInspectorをfail closedにする', async () => {
+    const conflict = new Error('conflict');
+    mocks.isConflict = true;
+    mocks.updatePlanMutateAsync.mockRejectedValue(conflict);
+    mocks.fetchPlanById.mockRejectedValue(new Error('fetch failed'));
+    render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
+
+    await act(async () => {
+      await expect(mocks.savePatch?.({ note: '競合する保存' })).rejects.toBe(conflict);
+    });
+
+    expect(mocks.fetchPlanById).toHaveBeenCalledWith(futurePlan.id);
+    expect(screen.getByText('timeblock.editor.toast.conflict')).toBeInTheDocument();
+
+    mocks.enqueueSave.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'move-to-future' }));
+    expect(mocks.enqueueSave).not.toHaveBeenCalled();
   });
 
   it('記録前にdebounceを止め、最新のタグとメモをsnapshot保存する', () => {

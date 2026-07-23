@@ -37,18 +37,20 @@ export interface UpdatePlanOptions {
   userId: string;
   planId: string;
   input: UpdatePlanInput;
-  expectedUpdatedAt?: string | undefined;
+  expectedUpdatedAt: string;
   preventOverlappingPlans?: boolean;
 }
 
 export interface DeletePlanOptions {
   userId: string;
   planId: string;
+  expectedUpdatedAt: string;
 }
 
 export interface RecordPlanOptions {
   userId: string;
   planId: string;
+  expectedUpdatedAt: string;
 }
 
 export interface ConfirmDayPlansOptions {
@@ -75,11 +77,12 @@ export interface UpdateRecordOptions {
   userId: string;
   recordId: string;
   input: UpdateRecordInput;
-  expectedUpdatedAt?: string | undefined;
+  expectedUpdatedAt: string;
   preventOverlappingRecords?: boolean;
 }
 
 export interface DeleteRecordOptions {
   userId: string;
   recordId: string;
+  expectedUpdatedAt: string;
 }

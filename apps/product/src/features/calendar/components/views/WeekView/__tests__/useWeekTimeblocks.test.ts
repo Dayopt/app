@@ -17,6 +17,7 @@ const createMockEntry = (overrides: Partial<CalendarEvent> = {}): CalendarEvent 
   isMultiDay: false,
   createdAt: new Date(),
   updatedAt: new Date(),
+  version: '2026-07-15T00:00:00.000000Z',
   ...overrides,
 });
 

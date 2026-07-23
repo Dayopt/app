@@ -54,7 +54,7 @@ export const plansRouter = createTRPCRouter({
     .input(
       planIdSchema.extend({
         data: updatePlanSchema,
-        expectedUpdatedAt: z.string().datetime({ offset: true }).optional(),
+        expectedUpdatedAt: z.string().datetime({ offset: true }),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -73,11 +73,15 @@ export const plansRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .meta({ description: 'Soft delete plan' })
-    .input(planIdSchema)
+    .input(planIdSchema.extend({ expectedUpdatedAt: z.string().datetime({ offset: true }) }))
     .mutation(async ({ ctx, input }) => {
       const service = createPlanService(ctx.supabase);
       try {
-        return await service.delete({ userId: ctx.userId, planId: input.id });
+        return await service.delete({
+          userId: ctx.userId,
+          planId: input.id,
+          expectedUpdatedAt: input.expectedUpdatedAt,
+        });
       } catch (error) {
         handleServiceError(error);
       }
@@ -85,11 +89,15 @@ export const plansRouter = createTRPCRouter({
 
   restore: protectedProcedure
     .meta({ description: 'Restore soft-deleted plan' })
-    .input(planIdSchema)
+    .input(planIdSchema.extend({ expectedUpdatedAt: z.string().datetime({ offset: true }) }))
     .mutation(async ({ ctx, input }) => {
       const service = createPlanService(ctx.supabase);
       try {
-        return await service.restore({ userId: ctx.userId, planId: input.id });
+        return await service.restore({
+          userId: ctx.userId,
+          planId: input.id,
+          expectedUpdatedAt: input.expectedUpdatedAt,
+        });
       } catch (error) {
         handleServiceError(error);
       }
@@ -97,11 +105,15 @@ export const plansRouter = createTRPCRouter({
 
   skip: protectedProcedure
     .meta({ description: 'Skip past plan' })
-    .input(planIdSchema)
+    .input(planIdSchema.extend({ expectedUpdatedAt: z.string().datetime({ offset: true }) }))
     .mutation(async ({ ctx, input }) => {
       const service = createPlanService(ctx.supabase);
       try {
-        return await service.skip({ userId: ctx.userId, planId: input.id });
+        return await service.skip({
+          userId: ctx.userId,
+          planId: input.id,
+          expectedUpdatedAt: input.expectedUpdatedAt,
+        });
       } catch (error) {
         handleServiceError(error);
       }
@@ -109,11 +121,15 @@ export const plansRouter = createTRPCRouter({
 
   unskip: protectedProcedure
     .meta({ description: 'Unskip plan' })
-    .input(planIdSchema)
+    .input(planIdSchema.extend({ expectedUpdatedAt: z.string().datetime({ offset: true }) }))
     .mutation(async ({ ctx, input }) => {
       const service = createPlanService(ctx.supabase);
       try {
-        return await service.unskip({ userId: ctx.userId, planId: input.id });
+        return await service.unskip({
+          userId: ctx.userId,
+          planId: input.id,
+          expectedUpdatedAt: input.expectedUpdatedAt,
+        });
       } catch (error) {
         handleServiceError(error);
       }
@@ -125,7 +141,11 @@ export const plansRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const service = createPlanService(ctx.supabase);
       try {
-        return await service.record({ userId: ctx.userId, planId: input.id });
+        return await service.record({
+          userId: ctx.userId,
+          planId: input.id,
+          expectedUpdatedAt: input.expectedUpdatedAt,
+        });
       } catch (error) {
         handleServiceError(error);
       }

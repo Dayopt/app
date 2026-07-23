@@ -16,12 +16,14 @@ const mocks = vi.hoisted(() => ({
   confirmDayCallbacks: undefined as MutationCallbacks<RecordRow[]> | undefined,
   listSetData: vi.fn(),
   getByIdSetData: vi.fn(),
+  getQueriesData: vi.fn(),
+  setQueryData: vi.fn(),
 }));
 
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({
-    getQueriesData: vi.fn(() => []),
-    setQueryData: vi.fn(),
+    getQueriesData: mocks.getQueriesData,
+    setQueryData: mocks.setQueryData,
   }),
 }));
 
@@ -81,11 +83,18 @@ const record = {
   updated_at: '2026-07-14T10:00:00.000Z',
 } satisfies RecordRow;
 
+const matchingListKey = [['records', 'list'], { input: { planId: 'plan-1' }, type: 'query' }];
+const unrelatedListKey = [['records', 'list'], { input: { planId: 'plan-2' }, type: 'query' }];
+
 describe('useTimeblockRecordMutations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.recordCallbacks = undefined;
     mocks.confirmDayCallbacks = undefined;
+    mocks.getQueriesData.mockReturnValue([
+      [matchingListKey, []],
+      [unrelatedListKey, []],
+    ]);
   });
 
   it('ワンタップ記録の返却行を一覧と詳細cacheへ同時に反映する', () => {
@@ -94,12 +103,11 @@ describe('useTimeblockRecordMutations', () => {
     act(() => mocks.recordCallbacks?.onSuccess?.(record));
 
     expect(mocks.getByIdSetData).toHaveBeenCalledWith({ id: record.id }, record);
-    const listUpdater = mocks.listSetData.mock.calls[0]?.[1] as
-      ((old: RecordRow[] | undefined) => RecordRow[]) | undefined;
-    expect(listUpdater?.(undefined)).toEqual([record]);
+    expect(mocks.setQueryData).toHaveBeenCalledWith(matchingListKey, [record]);
+    expect(mocks.setQueryData).not.toHaveBeenCalledWith(unrelatedListKey, expect.anything());
   });
 
-  it('日次確定の返却行も詳細cacheへ反映する', () => {
+  it('日次確定の返却行もfilter済み一覧と詳細cacheへ反映する', () => {
     const secondRecord = { ...record, id: 'record-2' };
     renderHook(() => useTimeblockRecordMutations());
 
@@ -107,5 +115,6 @@ describe('useTimeblockRecordMutations', () => {
 
     expect(mocks.getByIdSetData).toHaveBeenNthCalledWith(1, { id: record.id }, record);
     expect(mocks.getByIdSetData).toHaveBeenNthCalledWith(2, { id: secondRecord.id }, secondRecord);
+    expect(mocks.setQueryData).toHaveBeenCalledWith(matchingListKey, [record]);
   });
 });
