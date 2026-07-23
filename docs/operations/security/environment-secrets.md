@@ -23,19 +23,21 @@ Supabase migration の production 適用は GitHub Actions ではなく Supabase
 
 GitHub branch protection では、通常の CI check に加えて Supabase integration の Preview Branch check を required にする。
 
-| Secret                  | 用途                         | 方針                                       |
-| ----------------------- | ---------------------------- | ------------------------------------------ |
-| `CODECOV_TOKEN`         | coverage upload              | CI 用 replica                              |
-| `LHCI_GITHUB_APP_TOKEN` | Lighthouse CI                | CI 用 replica                              |
-| `SUPABASE_ACCESS_TOKEN` | emergency / manual operation | 通常 migration flow では使わない           |
-| `VERCEL_TOKEN`          | Production Config Audit      | env metadata読取に限定                     |
-| `VERCEL_ORG_ID`         | Production Config Audit      | 1Password `VERCEL_TEAM_ID`のGitHub replica |
+| Secret                             | 用途                                         | 方針                                                  |
+| ---------------------------------- | -------------------------------------------- | ----------------------------------------------------- |
+| `CODECOV_TOKEN`                    | coverage upload                              | CI 用 replica                                         |
+| `LHCI_GITHUB_APP_TOKEN`            | Lighthouse CI                                | CI 用 replica                                         |
+| `SUPABASE_ACCESS_TOKEN`            | emergency / manual operation                 | 通常 migration flow では使わない                      |
+| `VERCEL_TOKEN`                     | Production Config Audit / Production Release | env metadata読取とProduction promote / rollbackに限定 |
+| `VERCEL_ORG_ID`                    | Production Config Audit / Production Release | 1Password `VERCEL_TEAM_ID`のGitHub replica            |
+| `VERCEL_AUTOMATION_BYPASS_PRODUCT` | Production Release smoke                     | Product の Protection Bypass for Automation           |
+| `VERCEL_AUTOMATION_BYPASS_WEB`     | Production Release smoke                     | Web の Protection Bypass for Automation               |
 
 GitHub Actions の通常 build は release / source map upload を行わないため、Sentry metadata と `SENTRY_AUTH_TOKEN` を渡さない。
 
-`VERCEL_TOKEN`をlocal CLIの`--token`引数へ渡さない。Vercel CLIはpaginationなどの再実行案内に引数値を含める場合がある。localのmetadata確認はconnector、Dashboard、または対話login済みCLIを使う。Production Config Auditは1Password masterから同期したGitHub replicaを環境変数で受け取り、process内でAuthorization headerにだけ設定する。
+`VERCEL_TOKEN`をlocal CLIの`--token`引数へ渡さない。Vercel CLIはpaginationなどの再実行案内に引数値を含める場合がある。localのmetadata確認はconnector、Dashboard、または対話login済みCLIを使う。Production Config AuditとProduction Releaseは1Password masterから同期したGitHub replicaを環境変数で受け取り、process内でAuthorization headerにだけ設定する。Protection Bypass secretも同様に、smoke requestのheaderにだけ設定してlogやerror messageへ出さない。
 
-露出が疑われる場合は値を表示・比較せず、replacement作成 → 1Password master更新 → GitHub replica更新 → trusted branchでProduction Config Audit成功確認 → 旧token revokeの順でrotateする。事故記録は[Vercel CLI token出力 incident](../log/2026-07-22-incident-vercel-cli-token-output.md)を参照する。
+露出が疑われる場合は値を表示・比較せず、replacement作成 → 1Password master更新 → GitHub replica更新 → trusted branchでProduction Config Audit成功確認 → 旧token revokeの順でrotateする。旧tokenを先にrevokeするとauditとProduction Releaseの両方が止まるため、この順序を崩さない。事故記録は[Vercel CLI token出力 incident](../log/2026-07-22-incident-vercel-cli-token-output.md)を参照する。
 
 ## Vercel
 

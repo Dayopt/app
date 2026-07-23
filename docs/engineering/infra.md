@@ -102,25 +102,45 @@ feature branch → PR
         ↓
 main merge
   ├── Supabase main deployment
-  └── Vercel Production
+  └── Vercel Production build（domain 未割当の candidate）
+        ↓
+      Production Release workflow（同一 SHA / smoke / audit）
+        ↓
+      promote → Production domain
 ```
 
 Vercel の正規 deployment source は `Dayopt/dayopt` の GitHub 連携だけとする。
-Preview は branch push / PR、Production は `main` merge から作成する。CLI、REST API、Deploy Hook、
-Marketplace integration、v0 から新規 Production deployment を作らない。緊急時は正常な既存 deployment の
-`Promote to Production` を rollback に使う。
+Preview は branch push / PR、Production build は `main` merge から作成する。CLI、REST API、Deploy Hook、
+Marketplace integration、v0 から新規 Production deployment を作らない。
 
-Deployment Policies による強制は [判断ログ](./log/2026-07-14-vercel-github-only-deployment-policy.md) のとおり、
-現在の Hobby plan では利用できない。Pro / Enterprise へ変更するまでは運用規約と既存の GitHub / Vercel 設定で統制する。
+### merge と Production 公開の分離
+
+Product / Web は Auto-assign Custom Production Domains を無効化してある。main への merge が作るのは
+domain 未割当の Production build だけで、Production domain の切り替えは `.github/workflows/release.yml`
+（`Production Release`）の promote だけが行う。workflow は次を満たした時だけ promote する。
+
+- Product / Web の Production build が **同一 merge SHA** で両方 `READY`
+- 各 candidate の unique URL への read-only smoke が成功（Deployment Protection があるため
+  Protection Bypass for Automation の secret が必須）
+- live な Vercel metadata に対する Production Config Audit が成功
+
+promote 順は web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
+片方だけ公開された状態は残さない。失敗時は Production domain が現行 SHA のまま維持される（fail-safe）。
+
+緊急時は正常な既存 deployment の `Instant Rollback` / `Promote to Production` を使う。手順は
+[runbook](../operations/runbook.md) の Playbook 2 を正とする。
+
+Deployment Policies による強制は [判断ログ](./log/2026-07-14-vercel-github-only-deployment-policy.md) を参照する。
 
 ### トラブルシューティング
 
-| 症状                                   | 対処                                                                           |
-| -------------------------------------- | ------------------------------------------------------------------------------ |
-| Supabase PR check が出ない             | Supabase GitHub integration / required check 設定を確認                        |
-| Vercel Preview が production DB を見る | Vercel Preview env から production Supabase vars を削除し integration を再同期 |
-| migration が Preview Branch で失敗     | Supabase deployment log を確認し、migration を修正して PR branch に push       |
-| Production に反映されない              | Supabase GitHub integration の production deployment log を確認                |
+| 症状                                    | 対処                                                                           |
+| --------------------------------------- | ------------------------------------------------------------------------------ |
+| Supabase PR check が出ない              | Supabase GitHub integration / required check 設定を確認                        |
+| Vercel Preview が production DB を見る  | Vercel Preview env から production Supabase vars を削除し integration を再同期 |
+| migration が Preview Branch で失敗      | Supabase deployment log を確認し、migration を修正して PR branch に push       |
+| Production に反映されない               | `gh run list --workflow=release.yml` で promote が成功しているか確認           |
+| Supabase 側が Production に反映されない | Supabase GitHub integration の production deployment log を確認                |
 
 ---
 
@@ -144,6 +164,22 @@ GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品�
 - `Production Config Audit`はtrusted base revisionのscriptだけを実行し、Vercel APIからenvのkey / target / typeだけを検査する。secret値は取得・出力せず、PR codeへVercel tokenを渡さない
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`はProductionだけをtargetにし、Preview / Developmentへの設定をaudit failureにする
 - workflow導入PRでは`pull_request_target`がまだbaseにないため、同じscriptをmetadata-onlyで手動実行し、merge後の初回trusted run成功後にrequired statusへ昇格する
+
+### merge gate の required checks
+
+main ruleset の required status checks は `ci.yml` の 7 job に加えて次を含める。
+
+| context                   | 発行元            | 目的                                                       |
+| ------------------------- | ----------------- | ---------------------------------------------------------- |
+| `Production Config Audit` | GitHub Actions    | live な Vercel env metadata が Production 契約を満たすこと |
+| `Vercel – product`        | Vercel GitHub App | Product の Preview build が成功すること                    |
+| `Vercel – web`            | Vercel GitHub App | Web の Preview build が成功すること                        |
+
+- `Vercel – product` / `Vercel – web` の区切り文字は en dash（U+2013）で、hyphen ではない
+- Vercel の check context は **project 名に由来する**。project を rename すると required check が一致しなくなり、
+  全 PR が merge 不能になる。rename する場合は ruleset を先に更新する
+- 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。設定しない
+- `Production Release` は merge 後の証跡であり、required check にはしない
 
 段階的導入案と当時の計測値は履歴であり、現行構成として複製しない。経緯は [ADR-016](./log/2026-03-19-ci-quality-gates-roadmap.md) に残す。
 

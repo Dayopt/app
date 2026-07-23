@@ -111,17 +111,47 @@ supabase functions deploy --use-api
 
 ## Playbook 2: Vercelデプロイ失敗（P1）
 
+### 前提: mergeとProduction公開は分離されている
+
+main へ merge しても Production domain は切り替わらない。Product / Web は Auto-assign Custom Production Domains を無効化してあり、merge が作るのは **domain 未割当の Production build（candidate）** だけである。`Production Release` workflow が同一 merge SHA の両 candidate を READY まで待ち、smoke と Production Config Audit を通してから promote する。
+
+このため「本番が新しくならない」ことは、それ自体では障害ではない。**現行 Production は既知の正常 deployment のまま応答し続けている**。復旧の緊急度は「本番が壊れたか」ではなく「本番が古いままか」で判断する。
+
 ### 検知
 
-- [ ] GitHub Actions / Vercel Dashboardでデプロイ失敗通知
+- [ ] GitHub Actions で `Production Release` が failure
+- [ ] Vercel Dashboardでビルド失敗通知
 - [ ] 本番サイトが古いバージョンのまま（新機能が反映されない）
 
 ### 初動
 
-- [ ] Vercel Dashboard → Deployments → 失敗デプロイのログを開く
-- [ ] 失敗フェーズを特定: lint / typecheck / build のどれか
+- [ ] `gh run list --workflow=release.yml --limit 3` で直近の release run を確認
+- [ ] run summary で「どこで止まったか」を特定: candidate build / smoke / audit / promote
+- [ ] 本番 domain が正常応答しているか確認
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://dayopt.app/
+curl -s -o /dev/null -w "%{http_code}\n" https://app.dayopt.app/api/health
+```
 
 ### 復旧
+
+#### ケース0: candidate build / smoke / audit の失敗（promote 前）
+
+promote は行われていないので、**Production domain は現行 SHA のまま無傷**。緊急操作は不要。
+
+- [ ] run summary のエラーを確認し、原因に応じてケースA / B を実施
+- [ ] 修正を main へ merge すると、新しい SHA で release gate が再実行される
+- [ ] 同じ SHA を再試行するだけなら `gh workflow run release.yml -f sha=<SHA>`
+- [ ] smoke が Deployment Protection で止まった場合は、対象 project の Protection Bypass for Automation と repository secret（`VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB`）を確認する
+
+#### ケース0-B: 片方だけ promote された（部分リリース）
+
+release workflow は promote 順を web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
+
+- [ ] run log で `rolled back to <deployment id>` を確認する
+- [ ] `MANUAL ROLLBACK REQUIRED` が出ている場合は自動 rollback も失敗している。メッセージ中の deployment id へ手動で戻す（ケースC の手順）
+- [ ] run summary の `previous` deployment id が手動 rollback の戻し先になる
 
 #### ケースA: CI失敗（lint / typecheck）
 
@@ -148,21 +178,39 @@ npm run lint:boundaries  # feature境界違反
 
 #### ケースC: 緊急ロールバック（本番が壊れている場合）
 
+promote 済みの deployment に問題があった場合だけ使う。
+
 - [ ] Vercel Dashboard → Deployments
-- [ ] 正常に動作していた直前のデプロイを見つける
-- [ ] **"..." → "Promote to Production"** で2クリックロールバック
+- [ ] 正常に動作していた直前のデプロイを見つける（release run summary の `previous` deployment id が最も確実）
+- [ ] **"..." → "Instant Rollback"（または "Promote to Production"）** で2クリックロールバック
 - [ ] CLI / REST API / Redeploy で新しいProduction buildを作らない
+- [ ] Product / Web の片方だけ戻すと SHA が食い違う。**両方を同じ SHA へ揃える**
 - [ ] ロールバック後: 本番サイトで動作確認
 - [ ] 落ち着いて原因調査 → 修正 → 再デプロイ
 
-通常のProduction deployは `Dayopt/dayopt` の `main` mergeだけを使う。
-`Promote to Production` は正常な既存deploymentへ戻す緊急操作で、新規buildの作成経路ではない。
+Vercel の rollback はビルド成果物だけを戻す。**DB migration と変更済み環境変数は戻らない**。migration を含むリリースでは、直前 deployment がそのまま動く後方互換期間（expand/contract）を事前に確保しておく。
+
+通常のProduction公開は `main` merge → `Production Release` workflow の promote だけを使う。
+`Instant Rollback` / `Promote to Production` は正常な既存deploymentへ戻す緊急操作で、新規buildの作成経路ではない。
+
+#### ケースD: Force Promote（break-glass）
+
+release gate 自体が壊れていて、かつ Production を今すぐ前進させる必要がある時だけ使う。smoke と Production Config Audit をスキップするため、通常運用では使わない。
+
+```bash
+gh workflow run release.yml -f sha=<SHA> -f force=true -f reason="<なぜ gate を飛ばすか>"
+```
+
+- [ ] reason は必須。空だと workflow が停止する
+- [ ] 実行後、`docs/operations/log/YYYY-MM-DD-incident-*.md` に使用理由と結果を記録する
+- [ ] gate の障害そのものを issue 化して、break-glass を常用しない
 
 ### 振り返り
 
 - [ ] pre-commitフック（typecheck/lint）がスキップされていなかったか
 - [ ] `.env.example` に新しい環境変数が追加されているか
 - [ ] ビルドエラーの場合: ローカルで `npm run build` を実行してから push するフローに
+- [ ] Force Promote を使った場合: gate 側の欠陥が issue 化されているか
 
 ## Playbook 3: Stripe Webhook停止（P1）
 
@@ -1070,13 +1118,14 @@ npm run analytics:stats
 
 #### 2. ロールバック実行
 
-```bash
-# Vercelで前のデプロイに戻す
-npm run deploy:rollback
+Vercel Dashboard から Product / Web **両方**を同じ SHA の deployment へ戻す。戻し先は `Production Release` run summary の `previous` deployment id が最も確実。
 
-# または Vercel UI から前のデプロイをPromote
-# https://vercel.com/Dayopt/dayopt/deployments
-```
+- https://vercel.com/dayopt/product/deployments
+- https://vercel.com/dayopt/web/deployments
+
+対象 deployment の "..." → **Instant Rollback**（または Promote to Production）。新しい Production build は作らない。
+
+戻るのはビルド成果物だけで、**DB migration と変更済み環境変数は戻らない**。migration を含むリリースでは、戻し先の deployment が現在のスキーマで動くことを先に確認する。
 
 #### 3. GitHub Releaseの対応
 
@@ -1097,7 +1146,10 @@ gh issue create \
 # （通常のリリースフローと同じ: Phase 0 → 4）
 #   npm version patch --no-git-tag-version → commit → PR → merge（merge commit, ブランチ削除）
 
-# main 取り込み後、main 上でタグを打って push（Release は自動作成される）
+# main 取り込み後、Production Release の promote 完了を待つ
+gh run watch --exit-status
+
+# promote と観察が終わってからタグを打つ（Release は自動作成される）
 git checkout main && git pull origin main
 git tag v${VERSION_PATCH}
 git push origin v${VERSION_PATCH}

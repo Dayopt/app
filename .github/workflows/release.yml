@@ -1,0 +1,124 @@
+name: Production Release
+
+# main へ merge しても Production domain は自動で切り替わらない。
+# Auto-assign Custom Production Domains を無効化した Product / Web に対し、
+# このワークフローだけが「同一 SHA・両 project 成功」を確認して promote する。
+# タグと GitHub Release は promote と観察が終わった後の証跡であり、deploy trigger ではない。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Release target commit SHA (40 hex). Defaults to the current ref.'
+        required: false
+      force:
+        description: 'Break-glass Force Promote: skip smoke and Production Config Audit'
+        type: boolean
+        default: false
+      reason:
+        description: 'Required when force is enabled. Recorded in the commit status.'
+        required: false
+      simulate_failure:
+        description: 'Drill only: smoke:web | smoke:product | promote:web | promote:product'
+        required: false
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  # 実行中の release は中断しない。中断すると片方だけ promote された状態が残りうる。
+  group: production-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Promote Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # push:main と workflow_dispatch はどちらも trusted ref。PR code は実行しない。
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+
+      - name: Require a reason for Force Promote
+        if: inputs.force
+        env:
+          REASON: ${{ inputs.reason }}
+        run: |
+          if [ -z "$REASON" ]; then
+            echo "::error::Force Promote requires a reason. Record it here and in the ops log."
+            exit 1
+          fi
+
+      - name: Resolve release SHA
+        id: target
+        env:
+          INPUT_SHA: ${{ inputs.sha }}
+        run: |
+          sha="${INPUT_SHA:-$GITHUB_SHA}"
+          if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Release target must be a 40 character commit SHA"
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Wait, smoke, and promote Production
+        id: release
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          # GitHub keeps the existing VERCEL_ORG_ID replica; the runtime contract
+          # uses the canonical 1Password/schema name VERCEL_TEAM_ID.
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
+          # Deployment Protection guards candidate unique URLs, so smoke needs
+          # each project's Protection Bypass for Automation secret.
+          VERCEL_BYPASS_PRODUCT: ${{ secrets.VERCEL_AUTOMATION_BYPASS_PRODUCT }}
+          VERCEL_BYPASS_WEB: ${{ secrets.VERCEL_AUTOMATION_BYPASS_WEB }}
+          RELEASE_SHA: ${{ steps.target.outputs.sha }}
+          RELEASE_FORCE: ${{ inputs.force }}
+          RELEASE_SIMULATE_FAILURE: ${{ github.event_name == 'workflow_dispatch' && inputs.simulate_failure || '' }}
+        run: |
+          set +e
+          node scripts/production-release.mjs
+          release_exit=$?
+          set -e
+          echo "exit_code=$release_exit" >> "$GITHUB_OUTPUT"
+
+      - name: Publish Production Release status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_EXIT: ${{ steps.release.outputs.exit_code || '1' }}
+          RELEASE_SHA: ${{ steps.target.outputs.sha }}
+          FORCED: ${{ inputs.force }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          if [ "$RELEASE_EXIT" = "0" ]; then
+            state=success
+            description="Production serves this commit"
+          else
+            state=failure
+            description="Release gate stopped before or during promote; see the run summary"
+          fi
+          if [ "$FORCED" = "true" ]; then
+            description="Force Promote: $REASON"
+          fi
+
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$RELEASE_SHA" \
+            -f state="$state" \
+            -f context="Production Release" \
+            -f description="${description:0:140}" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            >/dev/null
+
+      - name: Enforce release result
+        if: always()
+        run: exit ${{ steps.release.outputs.exit_code || '1' }}

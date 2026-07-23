@@ -7,10 +7,11 @@ on:
 
 permissions:
   contents: write
+  statuses: read
 
-# デプロイはmainマージ時にVercelが自動実行するため、
+# Production公開はmainマージ後のProduction Release workflowがpromoteで行う。
 # このワークフローはGitHub Releaseの作成のみを担当する。
-# タグはバージョン記録用であり、デプロイトリガーではない。
+# タグはpromoteと観察が終わった後の証跡であり、デプロイトリガーではない。
 
 jobs:
   release:
@@ -29,6 +30,19 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "version_number=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      # 未promoteのSHAへタグを打つと、Releaseだけが先行して証跡が実態とずれる。
+      - name: Verify the tagged commit is live in Production
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          state=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/status" \
+            --jq '.statuses[] | select(.context == "Production Release") | .state' | head -n 1)
+          if [ "$state" != "success" ]; then
+            echo "::error::Production Release has not succeeded for this commit (state: ${state:-missing})."
+            echo "::error::Promote and observe Production first, then re-push the tag."
+            exit 1
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.0
