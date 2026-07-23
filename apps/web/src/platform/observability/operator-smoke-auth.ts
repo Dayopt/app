@@ -10,8 +10,8 @@ import {
 const WEB_ORIGIN = 'https://dayopt.app';
 const TOKEN_PATTERN = /^Bearer ([A-Za-z0-9_-]{43})$/u;
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/u;
-const ABSOLUTE_ACTIVE_FROM_MS = Date.parse('2026-07-21T23:00:00.000Z');
-const ABSOLUTE_DEADLINE_MS = Date.parse('2026-07-22T12:00:00.000Z');
+const ABSOLUTE_ACTIVE_FROM_MS = Date.parse('2026-07-23T01:00:00.000Z');
+const ABSOLUTE_DEADLINE_MS = Date.parse('2026-07-23T03:00:00.000Z');
 const BODY_PROBE_TIMEOUT_MS = 1_000;
 
 type SmokeEnvironment = Record<string, string | undefined>;

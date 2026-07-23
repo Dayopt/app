@@ -207,6 +207,34 @@ describe('sendContactEmail', () => {
     });
   });
 
+  it('retains a safe SyntaxError cause for invalid provider JSON without response PII', async () => {
+    const privateResponse = `private ${defaultParams.userEmail} ${defaultParams.input.message}`;
+    const { sendContactEmail } = await importService();
+    mocks.fetch.mockResolvedValue(
+      new Response(privateResponse, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const error = await sendContactEmail(defaultParams).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({
+      code: 'CONTACT_DELIVERY_FAILED',
+      message: 'Contact email provider returned an unsuccessful response',
+      cause: expect.objectContaining({
+        name: 'SyntaxError',
+        message: 'Contact email provider returned invalid JSON',
+      }),
+    });
+    const serializedError = `${String(error)}\n${String((error as Error).cause)}\n${
+      (error as Error).cause instanceof Error ? ((error as Error).cause as Error).stack : ''
+    }`;
+    expect(serializedError).not.toContain(defaultParams.userEmail);
+    expect(serializedError).not.toContain(defaultParams.input.message);
+    expect(serializedError).not.toContain(privateResponse);
+  });
+
   it('stops waiting after ten seconds while retaining the idempotency key for retry', async () => {
     vi.useFakeTimers();
     const { sendContactEmail } = await importService();

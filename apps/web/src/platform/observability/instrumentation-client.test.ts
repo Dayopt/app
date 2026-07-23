@@ -123,4 +123,20 @@ describe('Web browser Sentry consent lifecycle', () => {
     expect(sentry.init).not.toHaveBeenCalled();
     expect(window.__DAYOPT_WEB_SENTRY_SMOKE__).toBeUndefined();
   });
+
+  it('disables Zod JIT before application schemas can probe eval support', async () => {
+    const { util } = await import('zod/v4/core');
+    const allowsEvalBefore = Object.getOwnPropertyDescriptor(util.allowsEval, 'value');
+    expect(allowsEvalBefore?.get).toBeTypeOf('function');
+
+    await import('../../../instrumentation-client');
+    const { config, z } = await import('zod');
+    const schema = z.object({ value: z.string() });
+
+    expect(schema.safeParse({ value: 'ok' }).success).toBe(true);
+    expect(config().jitless).toBe(true);
+    expect(Object.getOwnPropertyDescriptor(util.allowsEval, 'value')?.get).toBe(
+      allowsEvalBefore?.get,
+    );
+  });
 });
