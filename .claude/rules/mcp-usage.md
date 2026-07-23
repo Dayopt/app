@@ -2,12 +2,26 @@
 
 モデルによってはツール呼び出しが控えめになる傾向がある。モデルによらず、以下の場面では積極的に MCP を呼ぶこと。推測より確認を優先する。
 
-接続済みサーバーは `.mcp.json` を参照（eagle / supabase-local / storybook / supabase / context7 / sentry / playwright / github / vercel）。有効化は各自の `.claude/settings.local.json`（gitignore 対象＝ローカル専用）の `enabledMcpjsonServers` で対象を列挙して行う。
+MCP サーバーの定義は **global 設定に一本化する**（Claude: `~/.claude.json` の user scope `mcpServers`、Codex: `~/.codex/config.toml` の `[mcp_servers.*]`）。**repo 側に MCP 定義を置かない**。repo と global の両方に同名サーバーがあるとキー単位でマージされ、方式が食い違うと壊れる（2026-07-23 に repo 定義を撤去。経緯は [2026-07-23-mcp-global-consolidation.md](../../docs/engineering/log/2026-07-23-mcp-global-consolidation.md)）。
+
+全 9 サーバーの登録内容。新しいマシンではこの表を元に global へ登録する:
+
+| Server             | 種別         | 登録内容                                                                                                                                                                                                                   |
+| ------------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eagle`            | http         | `http://127.0.0.1:41596/mcp`（Codex は Dayopt.library 内の自作 server を使う）                                                                                                                                             |
+| `supabase-local`   | http         | `http://127.0.0.1:54321/mcp`                                                                                                                                                                                               |
+| `storybook`        | http         | `http://localhost:6006/mcp`                                                                                                                                                                                                |
+| `sentry`           | http (OAuth) | `https://mcp.sentry.dev/mcp`                                                                                                                                                                                               |
+| `vercel`           | http (OAuth) | `https://mcp.vercel.com`                                                                                                                                                                                                   |
+| `context7`         | stdio        | `npx -y @upstash/context7-mcp@latest`（Codex は hosted `https://mcp.context7.com/mcp`）                                                                                                                                    |
+| `playwright`       | stdio        | `npx -y @playwright/mcp@latest`                                                                                                                                                                                            |
+| `supabase` (cloud) | stdio        | `op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje` / env `SUPABASE_ACCESS_TOKEN=op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN`（Codex は supabase plugin で代替） |
+| `github`           | stdio        | `op run -- github-mcp-server stdio` / env `GITHUB_PERSONAL_ACCESS_TOKEN=op://Dayopt-Shared/github-mcp-pat/credential`                                                                                                      |
 
 認証方式はサーバーごとに 2 通り（#1142 → 2026-06-16 整理）:
 
 1. **OAuth 承認方式**（`/mcp` で承認、トークン管理不要）: `sentry` / `vercel`。`sentry` は `https://mcp.sentry.dev/mcp` を直叩きする hosted MCP。
-2. **`.mcp.json` 内 `op run` 自己解決方式**: `supabase`(cloud) / `github`。MCP プロセスの起動コマンド自体を `op run -- <bin>` でラップし、spawn 時に 1Password が `op://` 参照を解決する。**Claude 本体の起動経路に依存しない**（desktop アプリ起動でも動く）。token 系 MCP はこの方式を標準とする。
+2. **global 設定内 `op run` 自己解決方式**: `supabase`(cloud) / `github`。MCP プロセスの起動コマンド自体を `op run -- <bin>` でラップし、spawn 時に 1Password が `op://` 参照を解決する。**Claude 本体の起動経路に依存しない**（desktop アプリ起動でも動く）。token 系 MCP はこの方式を標準とする。
 
 **トークンを平文でハードコードしない**。env 注入を要する MCP はもう無いため、**Claude 起動に zsh の `op run` ラッパーは不要**（過去の `.op-env.mcp` / wrapper 方式は廃止）。前提は `op` CLI + 1Password desktop 統合が使えること。`op run` は stdout / stderr の secret masking が既定で有効なので、MCP server へ env token を渡す用途では `--no-masking` を付けない。
 
@@ -17,11 +31,11 @@
 - **オンデマンドで使う**: `eagle` / `supabase-local` / `storybook` / `supabase`(cloud)
 - `context7` はバージョン依存の判断では原則使う。Next.js / React / tRPC / Supabase client / TanStack Query / Zustand などはmanifestでexact versionを確認し、記憶だけで判断しない。
 - `sentry` / `vercel` は OAuth 方式。初回や期限切れ時に `/mcp` で承認する。token 管理は不要。
-- `supabase`(cloud) / `github` は `.mcp.json` の起動コマンドが `op run` で `op://` を自己解決する。zsh ラッパー起動に依存しない。token は repo に置かない。
+- `supabase`(cloud) / `github` は global 設定の起動コマンドが `op run` で `op://` を自己解決する。zsh ラッパー起動に依存しない。token は repo に置かない。
 - `supabase`(cloud) は production project（read-only 既定）を参照する。schema/RLS の確認用。書き込みを伴う migration は `supabase-local` → PR Preview → production の既存フロー（`supabase` skill）で行う。
 - `supabase-local` は migration / RLS / schema 確認時だけ Docker Desktop と `supabase start` を起動する。通常のレビュー・実装ではローカル DB が落ちていても異常扱いしない。
 - `eagle` はローカル Eagle app が起動している時だけ使う。Eagle app が落ちている場合は MCP 接続失敗を異常扱いしない。
-- `~/.claude/settings.json` に残る未定義 MCP 権限（例: `lighthouse`）は過去の許可履歴として扱い、必要になった時に別途棚卸しする。`storybook` は公式アドオン方式で `.mcp.json` に正式登録済み（過去の third-party `storybook-mcp` 履歴とは別物）。
+- `~/.claude/settings.json` に残る未定義 MCP 権限（例: `lighthouse`）は過去の許可履歴として扱い、必要になった時に別途棚卸しする。`storybook` は公式アドオン方式で global 設定に正式登録済み（過去の third-party `storybook-mcp` 履歴とは別物）。
 
 ## 接続済み MCP サーバー
 
@@ -32,7 +46,7 @@
   - デプロイ直後の不具合調査時は `find_releases` で最新リリースのエラー増加を確認する
   - スタックトレースから原因が曖昧なとき `analyze_issue_with_seer` で一次切り分けを行う
 - **Before use**:
-  - **OAuth 承認方式**（2026-06-16 移行）。`.mcp.json` の `sentry` は hosted MCP `https://mcp.sentry.dev/mcp` を直叩きする。トークン注入・env 変数は不要。
+  - **OAuth 承認方式**（2026-06-16 移行）。`sentry` は hosted MCP `https://mcp.sentry.dev/mcp` を直叩きする。トークン注入・env 変数は不要。旧 `npx @sentry/mcp-server` + `SENTRY_ACCESS_TOKEN` 方式は廃止済みで、repo にこの定義を復活させると global の url 定義とマージされて `url is not supported for stdio` で MCP 全体が起動しなくなる。
   - 未承認 / 期限切れなら `/mcp` で `sentry` を承認する（github / vercel と同じフロー）。承認後の OAuth トークンは Claude 側にキャッシュされ、desktop アプリ起動・zsh ターミナル起動のどちらでも動く。
   - 疎通確認は `whoami` または `find_organizations`（`dayopt` org が返れば OK。OAuth ではログインユーザー権限で org/project が見えるため、旧 integration token 時代の「`find_organizations` が `[]`」制約は解消）。
 - **`Authorization Expired` / 401 が出たら**: `/mcp` で `sentry` を再承認する。OAuth トークンの失効サイン。env トークン (`SENTRY_ACCESS_TOKEN`) 注入経路はもう使わない（hosted OAuth へ移行済み）。
@@ -52,8 +66,8 @@
   - ローカルを起動せずに本番テーブル構成を素早く参照したい時
 - **Before use**:
   - `supabase-local`: Docker Desktop 起動後に `npx supabase status`、`nc -vz 127.0.0.1 54321` で待ち受け確認。`list_tables` が通れば利用可
-  - `supabase`(cloud): `.mcp.json` の起動コマンドが `op run -- npx ...` でラップされ、spawn 時に `op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN` を自己解決する（zsh ラッパー起動に依存しない）。`op` CLI + 1Password desktop 統合が前提。`list_tables` で疎通確認。失敗時は 1Password 未起動 or `op` が PATH に無いことを疑う
-- **絶対ルール**: `supabase`(cloud) は `.mcp.json` で `--read-only` + `--project-ref=yvglwblxrnrenfifsnje`（production）に固定。**cloud 経由で書き込み・migration はしない**。schema 変更は `supabase-local` → PR Preview → production の既存フロー（`supabase` skill）で行う。
+  - `supabase`(cloud): global 設定の起動コマンドが `op run -- npx ...` でラップされ、spawn 時に `op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN` を自己解決する（zsh ラッパー起動に依存しない）。`op` CLI + 1Password desktop 統合が前提。`list_tables` で疎通確認。失敗時は 1Password 未起動 or `op` が PATH に無いことを疑う
+- **絶対ルール**: `supabase`(cloud) は global 設定で `--read-only` + `--project-ref=yvglwblxrnrenfifsnje`（production）に固定。**cloud 経由で書き込み・migration はしない**。schema 変更は `supabase-local` → PR Preview → production の既存フロー（`supabase` skill）で行う。
 - **境界ケース**: `pnpm types:generate` を走らせる前に、スキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。現在は単一 project 運用のため dev / preview / production すべて同じ Production project を参照する。
 
 ### Vercel (`mcp__vercel__*`)
@@ -133,7 +147,7 @@ Eagle は「目で見て判断する素材」の視覚検索ライブラリ。�
   - リリースノート作成時にマージ済み PR 一覧を構造化データで取得する
   - 複数 PR や issue の横断集計を行う時
 - **Before use**:
-  - **stdio + op run 自己解決方式**（2026-06-16 移行）。`.mcp.json` の `github` は `op run -- github-mcp-server stdio` を起動し、spawn 時に `op://Dayopt-Shared/github-mcp-pat/credential`（PAT）を `GITHUB_PERSONAL_ACCESS_TOKEN` に解決する。zsh ラッパー起動に依存しない。
+  - **stdio + op run 自己解決方式**（2026-06-16 移行）。global 設定の `github` は `op run -- github-mcp-server stdio` を起動し、spawn 時に `op://Dayopt-Shared/github-mcp-pat/credential`（PAT）を `GITHUB_PERSONAL_ACCESS_TOKEN` に解決する。zsh ラッパー起動に依存しない。
   - 前提: 公式バイナリ `github-mcp-server`（`brew install github-mcp-server`）+ `op` CLI + 1Password desktop 統合。`claude mcp get github` が `✔ Connected` なら利用可。
   - GitHub の remote MCP (`api.githubcopilot.com`) は OAuth(DCR) 非対応のため OAuth 方式は使えない（#1142 で確認、2026-06 時点でも未対応）。ローカル stdio 版 + op run がトークン管理を repo に漏らさない最善手。
 - **境界ケース**: 単純な単一取得（`gh pr view N`）は `gh` CLI で十分。構造化抽出や横断集計が必要なときに MCP を使う。
