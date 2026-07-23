@@ -8,11 +8,49 @@ import {
   MCP_TOOL_DESCRIPTORS,
   mergeMcpChallengeScopes,
 } from '../registry';
-import { registerRecordsListTool } from '../timeblock-list';
+import {
+  registerPlansGetTool,
+  registerPlansTrashListTool,
+  registerRecordsGetTool,
+  registerRecordsTrashListTool,
+} from '../timeblock-detail';
+import { registerPlansListTool, registerRecordsListTool } from '../timeblock-list';
 
 const createMcpTrpcCaller = vi.hoisted(() => vi.fn());
+const listDeletedPlans = vi.hoisted(() => vi.fn());
+const listDeletedRecords = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/mcp/trpc-bridge', () => ({ createMcpTrpcCaller }));
+vi.mock('@/features/timeblock/server/service-index', () => ({
+  createTimeblockTrashReadClient: () => ({ listDeletedPlans, listDeletedRecords }),
+  TimeblockTrashReadError: class TimeblockTrashReadError extends Error {},
+  transformPlanReadModel: (row: Record<string, unknown>) => ({
+    id: row.id,
+    title: row.title,
+    note: row.note,
+    tagId: row.tag_id,
+    startAt: row.start_at,
+    endAt: row.end_at,
+    source: row.source,
+    skippedAt: row.skipped_at,
+    deletedAt: row.deleted_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }),
+  transformRecordReadModel: (row: Record<string, unknown>) => ({
+    id: row.id,
+    title: row.title,
+    note: row.note,
+    tagId: row.tag_id,
+    planId: row.plan_id,
+    startAt: row.start_at,
+    endAt: row.end_at,
+    source: row.source,
+    deletedAt: row.deleted_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }),
+}));
 
 interface ListInput {
   startDate?: string;
@@ -23,10 +61,11 @@ interface ListInput {
 
 interface TextToolResult {
   content: Array<{ type: 'text'; text: string }>;
+  structuredContent?: Record<string, unknown>;
   isError?: boolean;
 }
 
-type ToolHandler = (input: ListInput) => Promise<TextToolResult>;
+type ToolHandler = (input: ListInput & Record<string, unknown>) => Promise<TextToolResult>;
 
 const context: McpRequestContext = {
   tokenId: 'token-1',
@@ -98,30 +137,51 @@ describe('MCP list tools public contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createMcpTrpcCaller.mockReturnValue({
-      plans: { list: vi.fn().mockResolvedValue([plan]) },
-      records: { list: vi.fn().mockResolvedValue([record]) },
+      plans: {
+        getById: vi.fn().mockResolvedValue(plan),
+        list: vi.fn().mockResolvedValue([plan]),
+      },
+      records: {
+        getById: vi.fn().mockResolvedValue(record),
+        list: vi.fn().mockResolvedValue([record]),
+      },
     });
+    listDeletedPlans.mockResolvedValue([{ ...plan, deleted_at: '2026-07-02T00:00:00.000Z' }]);
+    listDeletedRecords.mockResolvedValue([{ ...record, deleted_at: '2026-07-02T00:00:00.000Z' }]);
   });
 
-  it('records.listはnon-empty結果にfulfillment_scoreを含めない', async () => {
+  it('plans.listとrecords.listはschemaVersion付きstructuredContentだけに公開fieldを返す', async () => {
     const { handlers, server } = createServerDouble();
+    registerPlansListTool(server, context);
     registerRecordsListTool(server, context);
 
-    const result = parseText(await getHandler(handlers, 'records.list')({}));
-    const records = result.records as Array<Record<string, unknown>>;
+    const planResult = await getHandler(handlers, 'plans.list')({});
+    const recordResult = await getHandler(handlers, 'records.list')({});
+    const plans = parseText(planResult).plans as Array<Record<string, unknown>>;
+    const records = parseText(recordResult).records as Array<Record<string, unknown>>;
 
-    expect(result.count).toBe(1);
+    expect(planResult.structuredContent).toMatchObject({ schemaVersion: 1, count: 1 });
+    expect(recordResult.structuredContent).toMatchObject({ schemaVersion: 1, count: 1 });
+    expect(plans).toHaveLength(1);
     expect(records).toHaveLength(1);
-    expect(records[0]).not.toHaveProperty('fulfillment_score');
+    for (const row of [...plans, ...records]) {
+      expect(row).not.toHaveProperty('user_id');
+      expect(row).not.toHaveProperty('external_calendar_event_id');
+      expect(row).not.toHaveProperty('start_at');
+      expect(row).not.toHaveProperty('fulfillment_score');
+    }
   });
 
   it('entries.listはnon-empty結果に削除対象キーを含めない', async () => {
     const { handlers, server } = createServerDouble();
     registerEntriesListTool(server, context);
 
-    const result = parseText(await getHandler(handlers, 'entries.list')({}));
+    const toolResult = await getHandler(handlers, 'entries.list')({});
+    const result = parseText(toolResult);
     const entries = result.entries as Array<Record<string, unknown>>;
 
+    expect(toolResult.structuredContent).toEqual(result);
+    expect(result.schemaVersion).toBe(1);
     expect(result.count).toBe(2);
     expect(entries).toHaveLength(2);
     for (const entry of entries) {
@@ -130,12 +190,55 @@ describe('MCP list tools public contract', () => {
     }
   });
 
+  it('getとtrashは内部bindingを返さず、trashをcontext userへ固定する', async () => {
+    const { handlers, server } = createServerDouble();
+    registerPlansGetTool(server, context);
+    registerRecordsGetTool(server, context);
+    registerPlansTrashListTool(server, { ...context, scopes: ['read:entries', 'delete:plans'] });
+    registerRecordsTrashListTool(server, {
+      ...context,
+      scopes: ['read:entries', 'delete:records'],
+    });
+
+    const planResult = parseText(await getHandler(handlers, 'plans.get')({ planId: plan.id }));
+    const recordResult = parseText(
+      await getHandler(handlers, 'records.get')({ recordId: record.id }),
+    );
+    const planTrashResult = parseText(await getHandler(handlers, 'plans.trash.list')({ limit: 7 }));
+    const recordTrashResult = parseText(
+      await getHandler(handlers, 'records.trash.list')({ limit: 8 }),
+    );
+
+    expect(planResult).toMatchObject({ schemaVersion: 1, plan: { id: plan.id } });
+    expect(recordResult).toMatchObject({ schemaVersion: 1, record: { id: record.id } });
+    expect(planTrashResult).toMatchObject({ schemaVersion: 1, count: 1 });
+    expect(recordTrashResult).toMatchObject({ schemaVersion: 1, count: 1 });
+    expect(listDeletedPlans).toHaveBeenCalledWith(context.userId, 7);
+    expect(listDeletedRecords).toHaveBeenCalledWith(context.userId, 8);
+  });
+
   it('descriptor、scope preflight、実登録toolの集合が一致する', () => {
     const { handlers, server } = createServerDouble();
     for (const descriptor of MCP_TOOL_DESCRIPTORS) descriptor.register(server, context);
 
     const descriptorNames = MCP_TOOL_DESCRIPTORS.map((descriptor) => descriptor.name);
-    expect(descriptorNames).toEqual(['entries.list', 'plans.list', 'records.list']);
+    expect(descriptorNames).toEqual([
+      'entries.list',
+      'plans.list',
+      'plans.get',
+      'plans.create',
+      'plans.update',
+      'plans.trash.list',
+      'plans.delete',
+      'plans.restore',
+      'records.list',
+      'records.get',
+      'records.create',
+      'records.update',
+      'records.trash.list',
+      'records.delete',
+      'records.restore',
+    ]);
     expect(new Set(descriptorNames).size).toBe(descriptorNames.length);
     expect([...handlers.keys()].sort()).toEqual([...descriptorNames].sort());
     for (const descriptor of MCP_TOOL_DESCRIPTORS) {
@@ -150,8 +253,11 @@ describe('MCP list tools public contract', () => {
         expect.any(Function),
       );
     }
-    expect(getRequiredScopeForTool('plans.get')).toBeNull();
-    expect(getRequiredScopeForTool('plans.create')).toBeNull();
+    expect(getRequiredScopeForTool('plans.get')).toBe('read:entries');
+    expect(getRequiredScopeForTool('plans.trash.list')).toBe('delete:plans');
+    expect(getRequiredScopeForTool('plans.create')).toBe('write:plans');
+    expect(getRequiredScopeForTool('records.delete')).toBe('delete:records');
+    expect(getRequiredScopeForTool('plans.skip')).toBeNull();
   });
 
   it('step-up challengeはbase read、既存grant、不足write scopeを重複なく保持する', () => {

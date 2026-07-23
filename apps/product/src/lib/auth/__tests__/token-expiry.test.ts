@@ -17,9 +17,11 @@ const authTestRouter = createTRPCRouter({
   whoami: protectedProcedure.query(({ ctx }) => ({ userId: ctx.userId })),
   plans: createTRPCRouter({
     list: protectedProcedure.query(() => 'plans'),
+    getById: protectedProcedure.query(() => 'plan'),
   }),
   records: createTRPCRouter({
     list: protectedProcedure.query(() => 'records'),
+    getById: protectedProcedure.query(() => 'record'),
   }),
   userSettings: createTRPCRouter({
     update: protectedProcedure.mutation(() => 'updated'),
@@ -107,7 +109,7 @@ describe('トークン期限切れ・セッション検証', () => {
       expect(result.userId).toBe('user-1');
     });
 
-    it('OAuth read:entries token は read-only の plans.list / records.list だけ通過する', async () => {
+    it('OAuth read:entries token は allowlist済みのlist / getだけ通過する', async () => {
       const ctx = createMockContext({
         userId: 'user-1',
         authMode: 'oauth',
@@ -117,13 +119,29 @@ describe('トークン期限切れ・セッション検証', () => {
       const caller = createCaller(ctx as never);
 
       await expect(caller.plans.list()).resolves.toBe('plans');
+      await expect(caller.plans.getById()).resolves.toBe('plan');
       await expect(caller.records.list()).resolves.toBe('records');
+      await expect(caller.records.getById()).resolves.toBe('record');
       await expect(caller.userSettings.update()).rejects.toThrow(
         expect.objectContaining({ code: 'FORBIDDEN' }),
       );
     });
 
-    it('OAuth token は scope なしで plans.list / records.list を通過できない', async () => {
+    it('OAuth internal callerはsession用rate limit bucketを消費しない', async () => {
+      const ctx = createMockContext({
+        userId: 'oauth-rate-limit-boundary-user',
+        authMode: 'oauth',
+        oauthClientId: 'chatgpt',
+        oauthScopes: ['read:entries'],
+      });
+      const caller = createCaller(ctx as never);
+
+      for (let count = 0; count < 110; count += 1) {
+        await expect(caller.plans.list()).resolves.toBe('plans');
+      }
+    });
+
+    it('OAuth token は scope なしで plans / records のlist / getを通過できない', async () => {
       const ctx = createMockContext({
         userId: 'user-1',
         authMode: 'oauth',
@@ -135,7 +153,13 @@ describe('トークン期限切れ・セッション検証', () => {
       await expect(caller.plans.list()).rejects.toThrow(
         expect.objectContaining({ code: 'FORBIDDEN' }),
       );
+      await expect(caller.plans.getById()).rejects.toThrow(
+        expect.objectContaining({ code: 'FORBIDDEN' }),
+      );
       await expect(caller.records.list()).rejects.toThrow(
+        expect.objectContaining({ code: 'FORBIDDEN' }),
+      );
+      await expect(caller.records.getById()).rejects.toThrow(
         expect.objectContaining({ code: 'FORBIDDEN' }),
       );
     });

@@ -4,7 +4,23 @@ import { ADVERTISED_SCOPES, type SupportedScope } from '@/lib/oauth-server';
 
 import type { McpRequestContext } from '../_context';
 import { registerEntriesListTool } from './entries-list';
+import {
+  registerPlansGetTool,
+  registerPlansTrashListTool,
+  registerRecordsGetTool,
+  registerRecordsTrashListTool,
+} from './timeblock-detail';
 import { registerPlansListTool, registerRecordsListTool } from './timeblock-list';
+import {
+  registerPlansCreateTool,
+  registerPlansDeleteTool,
+  registerPlansRestoreTool,
+  registerPlansUpdateTool,
+  registerRecordsCreateTool,
+  registerRecordsDeleteTool,
+  registerRecordsRestoreTool,
+  registerRecordsUpdateTool,
+} from './timeblock-mutations';
 
 interface McpToolDescriptor {
   name: string;
@@ -25,9 +41,69 @@ export const MCP_TOOL_DESCRIPTORS = [
     register: registerPlansListTool,
   },
   {
+    name: 'plans.get',
+    requiredScope: 'read:entries',
+    register: registerPlansGetTool,
+  },
+  {
+    name: 'plans.create',
+    requiredScope: 'write:plans',
+    register: registerPlansCreateTool,
+  },
+  {
+    name: 'plans.update',
+    requiredScope: 'write:plans',
+    register: registerPlansUpdateTool,
+  },
+  {
+    name: 'plans.trash.list',
+    requiredScope: 'delete:plans',
+    register: registerPlansTrashListTool,
+  },
+  {
+    name: 'plans.delete',
+    requiredScope: 'delete:plans',
+    register: registerPlansDeleteTool,
+  },
+  {
+    name: 'plans.restore',
+    requiredScope: 'delete:plans',
+    register: registerPlansRestoreTool,
+  },
+  {
     name: 'records.list',
     requiredScope: 'read:entries',
     register: registerRecordsListTool,
+  },
+  {
+    name: 'records.get',
+    requiredScope: 'read:entries',
+    register: registerRecordsGetTool,
+  },
+  {
+    name: 'records.create',
+    requiredScope: 'write:records',
+    register: registerRecordsCreateTool,
+  },
+  {
+    name: 'records.update',
+    requiredScope: 'write:records',
+    register: registerRecordsUpdateTool,
+  },
+  {
+    name: 'records.trash.list',
+    requiredScope: 'delete:records',
+    register: registerRecordsTrashListTool,
+  },
+  {
+    name: 'records.delete',
+    requiredScope: 'delete:records',
+    register: registerRecordsDeleteTool,
+  },
+  {
+    name: 'records.restore',
+    requiredScope: 'delete:records',
+    register: registerRecordsRestoreTool,
   },
 ] as const satisfies readonly McpToolDescriptor[];
 

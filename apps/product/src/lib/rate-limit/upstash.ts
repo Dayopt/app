@@ -219,6 +219,18 @@ export const trpcUserRateLimit = createRateLimiter(
   'ratelimit:product:trpc:user',
 );
 
+/** MCP token検証前のcoarse IP ceiling。認証後は別のuser limitで絞る。 */
+export const mcpPreAuthRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(1_200, '1 m'),
+  'ratelimit:product:mcp:pre-auth',
+);
+
+/** MCP protected resource用: tool discovery/read/writeをuser単位でまとめて制限する。 */
+export const mcpUserRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(120, '1 m'),
+  'ratelimit:product:mcp:user',
+);
+
 /**
  * エントリ作成の日次上限
  * 500リクエスト / 24時間 per user

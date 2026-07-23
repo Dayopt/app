@@ -7,12 +7,18 @@ const verifyAccessToken = vi.hoisted(() => vi.fn());
 const createMcpServer = vi.hoisted(() => vi.fn());
 const connect = vi.hoisted(() => vi.fn());
 const handleRequest = vi.hoisted(() => vi.fn());
+const checkMcpPreAuthRateLimit = vi.hoisted(() => vi.fn());
+const checkMcpUserRateLimit = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/mcp', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/mcp')>()),
   verifyAccessToken,
 }));
 vi.mock('../_server', () => ({ createMcpServer }));
+vi.mock('@/lib/mcp/request-rate-limit', () => ({
+  checkMcpPreAuthRateLimit,
+  checkMcpUserRateLimit,
+}));
 vi.mock('@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js', () => ({
   WebStandardStreamableHTTPServerTransport: class {
     handleRequest(request: Request, options: unknown) {
@@ -46,7 +52,9 @@ function createRequest(body: unknown, authorization: string | null = 'Bearer opa
 describe('MCP route scope preflight', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    checkMcpPreAuthRateLimit.mockResolvedValue('allowed');
     verifyAccessToken.mockResolvedValue(baseAuth);
+    checkMcpUserRateLimit.mockResolvedValue('allowed');
     createMcpServer.mockReturnValue({ connect });
     connect.mockResolvedValue(undefined);
     handleRequest.mockResolvedValue(
@@ -79,11 +87,7 @@ describe('MCP route scope preflight', () => {
     expect(handleRequest).not.toHaveBeenCalled();
   });
 
-  it('fails the whole batch before executing any call when one tool lacks scope', async () => {
-    verifyAccessToken.mockResolvedValue({
-      ...baseAuth,
-      scopes: ['read:tags'],
-    });
+  it('rejects JSON-RPC batch before executing any call', async () => {
     const response = await POST(
       createRequest([
         { jsonrpc: '2.0', method: 'tools/list', id: 1 },
@@ -96,8 +100,42 @@ describe('MCP route scope preflight', () => {
       ]),
     );
 
+    expect(response.status).toBe(400);
+    expect(response.headers.get('www-authenticate')).toBeNull();
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: -32600, message: 'JSON-RPC batch is not supported' },
+    });
+    expect(createMcpServer).not.toHaveBeenCalled();
+    expect(handleRequest).not.toHaveBeenCalled();
+  });
+
+  it('challenges a cached trash call with base read and the missing delete scope', async () => {
+    const response = await POST(
+      createRequest({
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: { name: 'plans.trash.list', arguments: {} },
+        id: 1,
+      }),
+    );
+
     expect(response.status).toBe(403);
-    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries read:tags"');
+    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries delete:plans"');
+    expect(handleRequest).not.toHaveBeenCalled();
+  });
+
+  it('challenges a cached mutation call with the complete read and write grant', async () => {
+    const response = await POST(
+      createRequest({
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: { name: 'plans.create', arguments: {} },
+        id: 1,
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries write:plans"');
     expect(handleRequest).not.toHaveBeenCalled();
   });
 
@@ -124,6 +162,52 @@ describe('MCP route scope preflight', () => {
       expect.any(NextRequest),
       expect.objectContaining({ parsedBody: body }),
     );
+    expect(checkMcpUserRateLimit).toHaveBeenCalledWith(baseAuth.userId);
+    expect(checkMcpPreAuthRateLimit).toHaveBeenCalledWith(expect.any(NextRequest));
+  });
+
+  it('limits unauthenticated traffic before bearer token database verification', async () => {
+    checkMcpPreAuthRateLimit.mockResolvedValueOnce('limited');
+
+    const response = await POST(createRequest({ jsonrpc: '2.0', method: 'tools/list', id: 1 }));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('retry-after')).toBe('60');
+    expect(verifyAccessToken).not.toHaveBeenCalled();
+    expect(checkMcpUserRateLimit).not.toHaveBeenCalled();
+    expect(createMcpServer).not.toHaveBeenCalled();
+  });
+
+  it('returns 429 without a bearer challenge when the authenticated user exceeds the limit', async () => {
+    checkMcpUserRateLimit.mockResolvedValueOnce('limited');
+
+    const response = await POST(createRequest({ jsonrpc: '2.0', method: 'tools/list', id: 1 }));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('retry-after')).toBe('60');
+    expect(response.headers.get('www-authenticate')).toBeNull();
+    await expect(response.json()).resolves.toMatchObject({
+      error: { message: 'Too many requests' },
+    });
+    expect(createMcpServer).not.toHaveBeenCalled();
+    expect(handleRequest).not.toHaveBeenCalled();
+  });
+
+  it('returns retryable 503 without triggering reauthorization when rate limiting is unavailable', async () => {
+    checkMcpUserRateLimit.mockResolvedValueOnce('unavailable');
+
+    const response = await POST(createRequest({ jsonrpc: '2.0', method: 'tools/list', id: 1 }));
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('retry-after')).toBe('5');
+    expect(response.headers.get('www-authenticate')).toBeNull();
+    await expect(response.json()).resolves.toMatchObject({
+      error: { message: 'Rate limit service unavailable' },
+    });
+    expect(createMcpServer).not.toHaveBeenCalled();
+    expect(handleRequest).not.toHaveBeenCalled();
   });
 
   it('does not issue a scope challenge for an unregistered candidate tool name', async () => {
@@ -142,7 +226,7 @@ describe('MCP route scope preflight', () => {
       createRequest({
         jsonrpc: '2.0',
         method: 'tools/call',
-        params: { name: 'plans.create', arguments: {} },
+        params: { name: 'plans.skip', arguments: {} },
         id: 1,
       }),
     );

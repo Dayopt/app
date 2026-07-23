@@ -23,6 +23,8 @@ import {
   hashRateLimitIdentifier,
   isUpstashEnabled,
   loginRateLimit,
+  mcpPreAuthRateLimit,
+  mcpUserRateLimit,
   passwordResetRateLimit,
   RATE_LIMIT_PRESETS,
   RATE_LIMIT_TIMEOUT_MS,
@@ -61,6 +63,8 @@ describe('Upstash Rate Limit', () => {
     expect(contactRateLimit).toBeNull();
     expect(contactGlobalRateLimit).toBeNull();
     expect(trpcUserRateLimit).toBeNull();
+    expect(mcpPreAuthRateLimit).toBeNull();
+    expect(mcpUserRateLimit).toBeNull();
     expect(timeblockCreateRateLimit).toBeNull();
     expect(cspReportRateLimit).toBeNull();
     expect(cspReportGlobalRateLimit).toBeNull();
@@ -153,7 +157,7 @@ describe('Upstash Rate Limit', () => {
     }));
 
     const enabledModule = await import('../upstash');
-    expect(constructorOptions).toHaveLength(9);
+    expect(constructorOptions).toHaveLength(11);
     for (const options of constructorOptions) {
       expect(options.analytics).toBe(false);
       expect(options.timeout).toBe(RATE_LIMIT_TIMEOUT_MS);

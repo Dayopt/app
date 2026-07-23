@@ -93,7 +93,7 @@ interface ExportDataResult {
   };
 }
 
-export interface OAuthConnectionSummary {
+interface OAuthConnectionSummary {
   id: string;
   clientId: string;
   scopes: string[];

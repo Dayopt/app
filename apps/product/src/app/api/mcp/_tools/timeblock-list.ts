@@ -2,6 +2,10 @@ import 'server-only';
 
 import { z } from 'zod';
 
+import {
+  transformPlanReadModel,
+  transformRecordReadModel,
+} from '@/features/timeblock/server/service-index';
 import { logger } from '@/lib/logger';
 import { captureUnexpectedMcpToolError } from '@/lib/mcp/tool-error';
 import { createMcpTrpcCaller } from '@/lib/mcp/trpc-bridge';
@@ -9,13 +13,17 @@ import { createMcpTrpcCaller } from '@/lib/mcp/trpc-bridge';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import type { McpRequestContext } from '../_context';
+import { MCP_PLAN_LIST_OUTPUT_SCHEMA, MCP_RECORD_LIST_OUTPUT_SCHEMA } from './timeblock-contract';
+import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
 
-const inputSchema = {
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  tagId: z.string().uuid().optional(),
-  limit: z.number().int().min(1).max(100).optional(),
-};
+const inputSchema = z
+  .object({
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+    tagId: z.string().uuid().optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+  })
+  .strict();
 
 /** Step 8: Plan / Record を個別に公開する。entries.list は互換のため残す。 */
 export function registerPlansListTool(server: McpServer, ctx: McpRequestContext) {
@@ -37,10 +45,14 @@ function registerTimeblockListTool(
       title: `List Dayopt ${model}`,
       description: `List authenticated user's ${model}.`,
       inputSchema,
+      outputSchema: model === 'plans' ? MCP_PLAN_LIST_OUTPUT_SCHEMA : MCP_RECORD_LIST_OUTPUT_SCHEMA,
     },
     async ({ startDate, endDate, tagId, limit }) => {
       if (!ctx.scopes.includes('read:entries')) {
-        return { content: [{ type: 'text' as const, text: 'Access denied.' }], isError: true };
+        return createMcpToolError(
+          'INSUFFICIENT_SCOPE',
+          'This connection does not have read access to Dayopt entries.',
+        );
       }
       try {
         const trpc = createMcpTrpcCaller({
@@ -54,25 +66,39 @@ function registerTimeblockListTool(
           ...(endDate ? { endDate } : {}),
           ...(tagId ? { tagId } : {}),
         };
-        const rows =
-          model === 'plans'
-            ? await trpc.plans.list({ ...input, sortBy: 'start_at', sortOrder: 'desc' })
-            : await trpc.records.list({ ...input, sortBy: 'start_at', sortOrder: 'desc' });
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({ count: rows.length, [model]: rows }, null, 2),
-            },
-          ],
-        };
+        if (model === 'plans') {
+          const rows = await trpc.plans.list({
+            ...input,
+            sortBy: 'start_at',
+            sortOrder: 'desc',
+          });
+          const plans = rows.map(transformPlanReadModel);
+          return createMcpToolSuccess({
+            schemaVersion: MCP_TOOL_SCHEMA_VERSION,
+            count: plans.length,
+            plans,
+          });
+        }
+
+        const rows = await trpc.records.list({
+          ...input,
+          sortBy: 'start_at',
+          sortOrder: 'desc',
+        });
+        const records = rows.map(transformRecordReadModel);
+        return createMcpToolSuccess({
+          schemaVersion: MCP_TOOL_SCHEMA_VERSION,
+          count: records.length,
+          records,
+        });
       } catch (error) {
         captureUnexpectedMcpToolError(error, `${model}_list`);
         logger.error(`MCP ${model} list failed`);
-        return {
-          content: [{ type: 'text' as const, text: `Failed to list ${model}. Please try again.` }],
-          isError: true,
-        };
+        return createMcpToolError(
+          'READ_FAILED',
+          `Failed to list ${model}. Please try again.`,
+          true,
+        );
       }
     },
   );

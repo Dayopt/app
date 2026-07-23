@@ -23,7 +23,9 @@ const userRequestLog = new Map<string, number[]>();
 
 const OAUTH_TRPC_SCOPE_REQUIREMENTS: Partial<Record<string, SupportedScope>> = {
   'plans.list': 'read:entries',
+  'plans.getById': 'read:entries',
   'records.list': 'read:entries',
+  'records.getById': 'read:entries',
 };
 
 const MFA_CHALLENGE_TRPC_PATHS = new Set(['user.verifyRecoveryCode']);
@@ -116,8 +118,9 @@ export const protectedProcedure = t.procedure
       }
     }
 
-    // per-userId レート制限
-    if (await isUserRateLimited(userId)) {
+    // OAuth internal callerは認証済みMCP endpointの専用user limiterで一度だけ制限する。
+    // ここでも消費するとentries.listが二重課金され、UI sessionともbucketが干渉する。
+    if (ctx.authMode !== 'oauth' && (await isUserRateLimited(userId))) {
       throw new TRPCError({
         code: 'TOO_MANY_REQUESTS',
         message: 'Too many requests. Please try again later.',

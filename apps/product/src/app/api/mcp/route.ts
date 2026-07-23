@@ -5,6 +5,11 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 
 import { logger } from '@/lib/logger';
 import { extractBearerToken, verifyAccessToken } from '@/lib/mcp';
+import {
+  checkMcpPreAuthRateLimit,
+  checkMcpUserRateLimit,
+  type McpRateLimitState,
+} from '@/lib/mcp/request-rate-limit';
 import { ADVERTISED_SCOPES, OAuthServerError, type SupportedScope } from '@/lib/oauth-server';
 import { captureUnexpectedError } from '@/lib/sentry';
 
@@ -45,6 +50,9 @@ export async function DELETE(request: NextRequest) {
 }
 
 async function handle(request: NextRequest): Promise<Response> {
+  const preAuthRateLimitState = await checkMcpPreAuthRateLimit(request);
+  if (preAuthRateLimitState !== 'allowed') return rateLimitErrorResponse(preAuthRateLimitState);
+
   let auth;
   try {
     const token = extractBearerToken(request.headers.get('authorization'));
@@ -52,6 +60,9 @@ async function handle(request: NextRequest): Promise<Response> {
   } catch (err) {
     return authErrorResponse(err);
   }
+
+  const rateLimitState = await checkMcpUserRateLimit(auth.userId);
+  if (rateLimitState !== 'allowed') return rateLimitErrorResponse(rateLimitState);
 
   const parsedRequest = await parseMcpRequestBody(request);
   if (!parsedRequest.ok) return parsedRequest.response;
@@ -123,7 +134,14 @@ async function parseMcpRequestBody(request: NextRequest): Promise<ParsedMcpReque
   }
 
   try {
-    return { ok: true, body: JSON.parse(bodyText) as unknown };
+    const body = JSON.parse(bodyText) as unknown;
+    if (Array.isArray(body)) {
+      return {
+        ok: false,
+        response: mcpRequestErrorResponse(400, -32600, 'JSON-RPC batch is not supported'),
+      };
+    }
+    return { ok: true, body };
   } catch {
     return { ok: false, response: mcpRequestErrorResponse(400, -32700, 'Parse error') };
   }
@@ -133,18 +151,13 @@ function collectMissingToolScopes(
   body: unknown,
   grantedScopes: readonly SupportedScope[],
 ): SupportedScope[] {
-  const messages = Array.isArray(body) ? body : [body];
   const missing = new Set<SupportedScope>();
 
-  for (const message of messages) {
-    if (!isRecord(message) || message.method !== 'tools/call' || !isRecord(message.params)) {
-      continue;
-    }
-    const toolName = message.params.name;
-    if (typeof toolName !== 'string') continue;
-    const requiredScope = getRequiredScopeForTool(toolName);
-    if (requiredScope && !grantedScopes.includes(requiredScope)) missing.add(requiredScope);
-  }
+  if (!isRecord(body) || body.method !== 'tools/call' || !isRecord(body.params)) return [];
+  const toolName = body.params.name;
+  if (typeof toolName !== 'string') return [];
+  const requiredScope = getRequiredScopeForTool(toolName);
+  if (requiredScope && !grantedScopes.includes(requiredScope)) missing.add(requiredScope);
 
   return [...missing];
 }
@@ -181,6 +194,27 @@ function mcpRequestErrorResponse(status: number, code: number, message: string):
   return NextResponse.json(
     { jsonrpc: '2.0', error: { code, message }, id: null },
     { status, headers: { 'cache-control': 'no-store' } },
+  );
+}
+
+function rateLimitErrorResponse(state: Exclude<McpRateLimitState, 'allowed'>): Response {
+  const unavailable = state === 'unavailable';
+  return NextResponse.json(
+    {
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message: unavailable ? 'Rate limit service unavailable' : 'Too many requests',
+      },
+      id: null,
+    },
+    {
+      status: unavailable ? 503 : 429,
+      headers: {
+        'cache-control': 'no-store',
+        'retry-after': unavailable ? '5' : '60',
+      },
+    },
   );
 }
 

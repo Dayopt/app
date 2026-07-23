@@ -1,9 +1,15 @@
 /**
  * Service Module
  *
- * plans / records 操作のサービス層エクスポート。
- * router で使う factory のみを公開する。
+ * plans / records 操作のserver-side composition entry point。
+ * routerやMCP adapterが使うnarrow factory / transformerだけを公開する。
  */
 
+export {
+  TimeblockTrashReadError,
+  createTimeblockTrashReadClient,
+  transformPlanReadModel,
+  transformRecordReadModel,
+} from './mcp-timeblock-read-client';
 export { createPlanService } from './plan-service';
 export { createRecordService } from './record-service';
