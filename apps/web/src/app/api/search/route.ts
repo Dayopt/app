@@ -15,7 +15,7 @@ interface SearchIndexEntry {
   title: string;
   description: string;
   url: string;
-  type: 'blog' | 'docs' | 'release';
+  type: 'blog' | 'docs';
   category: string;
   date: string;
 }
@@ -37,8 +37,6 @@ function getBreadcrumbs(entry: SearchIndexEntry): string[] {
   switch (entry.type) {
     case 'blog':
       return ['Blog', entry.category || 'Uncategorized'];
-    case 'release':
-      return ['Releases', entry.id];
     case 'docs':
       return ['Documentation', entry.category || 'Uncategorized'];
     default:

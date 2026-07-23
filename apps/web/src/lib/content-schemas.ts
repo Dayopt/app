@@ -42,25 +42,6 @@ export const blogFrontMatterSchema = z.object({
 
 export type BlogFrontMatter = z.infer<typeof blogFrontMatterSchema>;
 
-// === リリースノートフロントマター ===
-
-export const releaseFrontMatterSchema = z.object({
-  version: z.string().min(1, 'version は必須です'),
-  date: z.string().min(1, 'date は必須です'),
-  title: z.string().default(''),
-  description: z.string().default(''),
-  tags: z.array(z.string()).default([]),
-  breaking: z.boolean().default(false),
-  featured: z.boolean().default(false),
-  prerelease: z.boolean().optional(),
-  author: z.string().optional(),
-  authorAvatar: z.string().optional(),
-  coverImage: z.string().optional(),
-  ai: aiMetadataSchema,
-});
-
-export type ReleaseFrontMatter = z.infer<typeof releaseFrontMatterSchema>;
-
 // === ドキュメントフロントマター ===
 
 export const docFrontMatterSchema = z.object({

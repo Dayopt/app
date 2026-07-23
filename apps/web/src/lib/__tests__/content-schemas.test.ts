@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  blogFrontMatterSchema,
-  docFrontMatterSchema,
-  parseFrontMatter,
-  releaseFrontMatterSchema,
-} from '../content-schemas';
+import { blogFrontMatterSchema, docFrontMatterSchema, parseFrontMatter } from '../content-schemas';
 
 describe('blogFrontMatterSchema', () => {
   it('有効なフロントマターをパース', () => {
@@ -82,50 +77,6 @@ describe('blogFrontMatterSchema', () => {
 
     const result = blogFrontMatterSchema.parse(data);
     expect(result.tags).toEqual([]);
-  });
-});
-
-describe('releaseFrontMatterSchema', () => {
-  it('有効なリリースフロントマターをパース', () => {
-    const data = {
-      version: 'v1.0.0',
-      date: '2026-01-01',
-      title: 'Release v1.0.0',
-      description: 'First release',
-      tags: ['new-features'],
-      breaking: false,
-      featured: true,
-    };
-
-    const result = releaseFrontMatterSchema.parse(data);
-    expect(result.version).toBe('v1.0.0');
-    expect(result.breaking).toBe(false);
-    expect(result.featured).toBe(true);
-  });
-
-  it('version が空だとバリデーションエラー', () => {
-    const data = { version: '', date: '2026-01-01' };
-    const result = releaseFrontMatterSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
-
-  it('デフォルト値を補完', () => {
-    const data = { version: 'v0.1.0', date: '2026-01-01' };
-    const result = releaseFrontMatterSchema.parse(data);
-    expect(result.breaking).toBe(false);
-    expect(result.featured).toBe(false);
-    expect(result.tags).toEqual([]);
-  });
-
-  it('tags が剥ぎ取られずパースされる（過去のスキーマ欠落による回帰確認）', () => {
-    const data = {
-      version: 'v1.0.0',
-      date: '2026-01-01',
-      tags: ['new-features', 'improvements'],
-    };
-
-    const result = releaseFrontMatterSchema.parse(data);
-    expect(result.tags).toEqual(['new-features', 'improvements']);
   });
 });
 

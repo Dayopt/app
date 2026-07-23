@@ -24,7 +24,7 @@ Dayoptでの統一エラー処理パターンを支援するスキル。
 
 - 型定義のみの変更（エラーフロー未変更、`AppError` 型の export 追加など）
 - テストの正常系 assertion 追加のみ（エラーパスを触らない）
-- UI 文言のみの error message 修正（`CLAUDE.md` の copywriting ルールに従う、ロジック変更なし）
+- UI 文言のみの error message 修正（`docs/ai/copywriting.md` に従う、ロジック変更なし）
 
 ## エラー処理の全体像
 

@@ -216,6 +216,10 @@ done
 gh release edit v${VERSION} --notes-file /tmp/release-notes-v${VERSION}.md
 ```
 
+#### Step 5: Web 公開リリースノート
+
+エンドユーザー向けの Web 版リリースノートは、`docs-writing` skill で `apps/web/content/blog/{en,ja}/` に `category: 'release'` の blog 記事として作成する（`/blog/release` タブに表示。独立した releases ページは持たない）。GitHub Release 本文と同じ5分類タクソノミーを使い、PR リンクを含めず平易な言葉で書く。
+
 #### チェックリスト
 
 - [ ] 各PRのコミットを確認した
