@@ -9,6 +9,7 @@ describe('OAuth MCP resource normalization', () => {
     'HTTPS://mcp.dayopt.app',
     'https://mcp.dayopt.app/',
     'https://mcp.dayopt.app:443',
+    'HTTPS://MCP.DAYOPT.APP:443/',
   ])('accepts an equivalent canonical origin: %s', (value) => {
     expect(resolveRequestedResource(value)).toBe('https://mcp.dayopt.app');
   });
