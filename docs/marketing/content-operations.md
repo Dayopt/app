@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-23
+last_verified: 2026-07-24
 ---
 
 # コンテンツ運用（正本）
@@ -37,6 +37,24 @@ Storybook は公開ヘルプ化しない。ヘルプページの役割は `apps/
 
 ブログは起票までを自動リズムに入れ、執筆は切り離す。docs は網羅性が価値なので更新を義務化し、ブログは `docs/marketing/voice.md` の 3 本柱に合うものだけ選んで書く（義務化すると禁止している「AI 大量生成の没個性コンテンツ」になる）。
 
+## 機能 ⇄ 公開 docs ⇄ LP の対応（`pnpm docs:coverage`）
+
+対応表の正本は `docs/product/specs/` の frontmatter とし、別ファイルの対応表を持たない。実装 PR ごとに spec を更新する既存の義務にそのまま乗る。
+
+| フィールド    | 意味                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------- |
+| `public_docs` | この機能に対応する公開 docs の slug（= `/docs/<slug>`）。公開 docs 不要なら `[]`      |
+| `lp`          | LP がこの機能について約束している文言。`apps/web/messages/en/marketing.json` から写す |
+
+`pnpm docs:coverage` が spec を軸に実ファイルと LP を突き合わせ、次を Markdown で出力する。判断材料を出すだけのレポートで、exit code は常に 0。
+
+- 各 slug の en / ja の状態（公開 / draft / placeholder / なし）
+- LP が約束しているのに対応する spec が無いもの（内部 spec の欠落）
+- spec が書いている LP 文言が現在の LP に無いもの（LP 改稿で取り残された記述）
+- `public_docs` 未記入の spec、どの spec にも紐づかない公開 docs、en/ja の非対称
+
+未執筆のページは `draft: true` + `placeholder: true` の骨格として置く。`placeholder: true` なのに `draft: false` のページは `validate:content` が error で止める。`draft` は「隠す」、`placeholder` は「中身がまだ無い」を表し、カバレッジ上で区別する。
+
 ## 言語ポリシー
 
 | 種別                                       | ポリシー                                                                        |
@@ -49,7 +67,7 @@ blog まで両言語必須にすると solo 運用で執筆が止まる。書け
 
 ## 月次ガーデニング
 
-`/gardening` の Step 5.6 で `docs-audit` skill を実行し、機能 ↔ 公開 docs のギャップ・鮮度乖離・en/ja 非対称を Issue 化する。翌月のコンテンツバックログはここから補充する。あわせて Search Console / Vercel Analytics の数字（指名検索・docs/blog 流入・上位クエリ）を月次 journal に記録し、書きっぱなしを防ぐ。
+`/gardening` の Step 5.6 で `docs-audit` skill を実行し、機能 ↔ 公開 docs のギャップ・鮮度乖離・en/ja 非対称を Issue 化する。ギャップと非対称の一次情報は `pnpm docs:coverage` の出力を使い、目視の棚卸しから始めない。翌月のコンテンツバックログはここから補充する。あわせて Search Console / Vercel Analytics の数字（指名検索・docs/blog 流入・上位クエリ）を月次 journal に記録し、書きっぱなしを防ぐ。
 
 ## SEO 方針
 
