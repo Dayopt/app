@@ -1,9 +1,12 @@
 export const MCP_MUTATION_RECEIPT_SCHEMA_VERSION = 1 as const;
 
-export interface McpPlanCreateInput {
+interface McpMutationBinding {
   connectionId: string;
   accessTokenId: string;
   operationId: string;
+}
+
+export interface McpPlanCreateInput extends McpMutationBinding {
   title: string;
   note: string | null;
   tagId: string | null;
@@ -11,16 +14,39 @@ export interface McpPlanCreateInput {
   endAt: string;
 }
 
-export interface McpPlanCreateReceipt {
+interface McpPlanVersionedInput extends McpMutationBinding {
+  planId: string;
+  /** Raw PostgreSQL timestamptz version. Do not round-trip through Date. */
+  expectedUpdatedAt: string;
+}
+
+export interface McpPlanUpdateInput extends McpPlanVersionedInput {
+  /** Omitted fields are preserved. An explicit null clears note or tag. */
+  title?: string;
+  note?: string | null;
+  tagId?: string | null;
+  startAt?: string;
+  endAt?: string;
+}
+
+export type McpPlanDeleteInput = McpPlanVersionedInput;
+export type McpPlanRestoreInput = McpPlanVersionedInput;
+
+interface McpPlanMutationReceipt<TDeletedAt extends string | null> {
   schemaVersion: typeof MCP_MUTATION_RECEIPT_SCHEMA_VERSION;
   operationId: string;
   resourceType: 'plan';
   resourceId: string;
   /** Raw PostgreSQL timestamptz version. Do not round-trip through Date. */
   version: string;
-  deletedAt: null;
+  deletedAt: TDeletedAt;
   replayed: boolean;
 }
+
+export type McpPlanCreateReceipt = McpPlanMutationReceipt<null>;
+export type McpPlanUpdateReceipt = McpPlanMutationReceipt<null>;
+export type McpPlanDeleteReceipt = McpPlanMutationReceipt<string>;
+export type McpPlanRestoreReceipt = McpPlanMutationReceipt<null>;
 
 export type McpMutationErrorCode =
   | 'ALREADY_RECORDED'

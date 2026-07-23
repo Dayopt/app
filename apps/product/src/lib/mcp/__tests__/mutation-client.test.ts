@@ -4,13 +4,21 @@ import { McpMutationClient } from '../mutation-client';
 
 const mocks = vi.hoisted(() => ({
   applyPlanCreate: vi.fn(),
+  applyPlanDelete: vi.fn(),
+  applyPlanRestore: vi.fn(),
+  applyPlanUpdate: vi.fn(),
   captureUnexpectedDatabaseError: vi.fn(
     (error: Error, _context?: Record<string, unknown>) => error,
   ),
 }));
 
 vi.mock('../mutation-db', () => ({
-  createMcpMutationDb: () => ({ applyPlanCreate: mocks.applyPlanCreate }),
+  createMcpMutationDb: () => ({
+    applyPlanCreate: mocks.applyPlanCreate,
+    applyPlanDelete: mocks.applyPlanDelete,
+    applyPlanRestore: mocks.applyPlanRestore,
+    applyPlanUpdate: mocks.applyPlanUpdate,
+  }),
 }));
 
 vi.mock('@/lib/sentry', () => ({
@@ -36,6 +44,19 @@ const receipt = {
   version: '2026-07-23T12:34:56.123456Z',
   deleted_at: null,
   replayed: false,
+};
+
+const versionedInput = {
+  connectionId: input.connectionId,
+  accessTokenId: input.accessTokenId,
+  operationId: input.operationId,
+  planId: receipt.resource_id,
+  expectedUpdatedAt: receipt.version,
+};
+
+const deletedReceipt = {
+  ...receipt,
+  deleted_at: '2026-07-23T12:35:00.654321Z',
 };
 
 describe('McpMutationClient', () => {
@@ -64,6 +85,98 @@ describe('McpMutationClient', () => {
       p_start_at: input.startAt,
       p_tag_id: null,
       p_title: input.title,
+    });
+  });
+
+  it('partial Plan updateのfield presenceと明示nullをそのままRPCへ渡す', async () => {
+    mocks.applyPlanUpdate.mockResolvedValue({ data: [receipt], error: null });
+
+    await expect(
+      new McpMutationClient().updatePlan({
+        ...versionedInput,
+        title: 'Updated title',
+        note: null,
+        tagId: null,
+        endAt: '2026-07-24T03:00:00.000000Z',
+      }),
+    ).resolves.toEqual({
+      schemaVersion: 1,
+      operationId: input.operationId,
+      resourceType: 'plan',
+      resourceId: receipt.resource_id,
+      version: receipt.version,
+      deletedAt: null,
+      replayed: false,
+    });
+    expect(mocks.applyPlanUpdate).toHaveBeenCalledWith({
+      p_access_token_id: input.accessTokenId,
+      p_connection_id: input.connectionId,
+      p_end_at: '2026-07-24T03:00:00.000000Z',
+      p_end_at_present: true,
+      p_expected_updated_at: receipt.version,
+      p_note: null,
+      p_note_present: true,
+      p_operation_id: input.operationId,
+      p_plan_id: receipt.resource_id,
+      p_start_at: null,
+      p_start_at_present: false,
+      p_tag_id: null,
+      p_tag_id_present: true,
+      p_title: 'Updated title',
+      p_title_present: true,
+    });
+  });
+
+  it('Plan updateもdeadlockだけを一度再試行する', async () => {
+    mocks.applyPlanUpdate
+      .mockResolvedValueOnce({ data: null, error: { code: '40P01' } })
+      .mockResolvedValueOnce({ data: [receipt], error: null });
+
+    await expect(
+      new McpMutationClient().updatePlan({ ...versionedInput, title: 'Retry update' }),
+    ).resolves.toMatchObject({ resourceId: receipt.resource_id, version: receipt.version });
+    expect(mocks.applyPlanUpdate).toHaveBeenCalledTimes(2);
+  });
+
+  it('Plan deleteのraw versionとnon-null deletedAtを保つ', async () => {
+    mocks.applyPlanDelete.mockResolvedValue({ data: [deletedReceipt], error: null });
+
+    await expect(new McpMutationClient().deletePlan(versionedInput)).resolves.toEqual({
+      schemaVersion: 1,
+      operationId: input.operationId,
+      resourceType: 'plan',
+      resourceId: receipt.resource_id,
+      version: receipt.version,
+      deletedAt: deletedReceipt.deleted_at,
+      replayed: false,
+    });
+    expect(mocks.applyPlanDelete).toHaveBeenCalledWith({
+      p_access_token_id: input.accessTokenId,
+      p_connection_id: input.connectionId,
+      p_expected_updated_at: receipt.version,
+      p_operation_id: input.operationId,
+      p_plan_id: receipt.resource_id,
+    });
+  });
+
+  it('Plan restoreはactive receiptだけを返す', async () => {
+    mocks.applyPlanRestore.mockResolvedValue({ data: [receipt], error: null });
+
+    await expect(new McpMutationClient().restorePlan(versionedInput)).resolves.toEqual({
+      schemaVersion: 1,
+      operationId: input.operationId,
+      resourceType: 'plan',
+      resourceId: receipt.resource_id,
+      version: receipt.version,
+      deletedAt: null,
+      replayed: false,
+    });
+    expect(mocks.applyPlanRestore).toHaveBeenCalledWith({
+      p_access_token_id: input.accessTokenId,
+      p_connection_id: input.connectionId,
+      p_expected_updated_at: receipt.version,
+      p_operation_id: input.operationId,
+      p_plan_id: receipt.resource_id,
     });
   });
 
@@ -105,6 +218,8 @@ describe('McpMutationClient', () => {
     ['22023', 'INVALID_INPUT'],
     ['DT003', 'INVALID_TIME_RANGE'],
     ['DT004', 'PLAN_IN_PAST'],
+    ['DT002', 'CONFLICT'],
+    ['DT006', 'PLAN_TIME_LOCKED'],
     ['DT001', 'NOT_FOUND'],
     ['23P01', 'TIME_OVERLAP'],
   ])('%sを%sへ変換し、DB messageを返さない', async (databaseCode, expectedCode) => {
@@ -234,6 +349,87 @@ describe('McpMutationClient', () => {
     expect(mocks.captureUnexpectedDatabaseError).toHaveBeenCalledWith(
       expect.objectContaining({ code: 'INVALID_RECEIPT' }),
       { feature: 'mcp', operation: 'apply_mcp_plan_create' },
+    );
+  });
+
+  it('updateでdeleted receiptを受け取った場合は内部異常として扱う', async () => {
+    mocks.applyPlanUpdate.mockResolvedValue({ data: [deletedReceipt], error: null });
+
+    await expect(
+      new McpMutationClient().updatePlan({ ...versionedInput, title: 'Invalid receipt' }),
+    ).rejects.toMatchObject({ code: 'MUTATION_FAILED' });
+    expect(mocks.captureUnexpectedDatabaseError).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'INVALID_RECEIPT' }),
+      { feature: 'mcp', operation: 'apply_mcp_plan_update' },
+    );
+  });
+
+  it('deleteでactive receiptを受け取った場合は内部異常として扱う', async () => {
+    mocks.applyPlanDelete.mockResolvedValue({ data: [receipt], error: null });
+
+    await expect(new McpMutationClient().deletePlan(versionedInput)).rejects.toMatchObject({
+      code: 'MUTATION_FAILED',
+    });
+    expect(mocks.captureUnexpectedDatabaseError).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'INVALID_RECEIPT' }),
+      { feature: 'mcp', operation: 'apply_mcp_plan_delete' },
+    );
+  });
+
+  it('restoreでdeleted receiptを受け取った場合は内部異常として扱う', async () => {
+    mocks.applyPlanRestore.mockResolvedValue({ data: [deletedReceipt], error: null });
+
+    await expect(new McpMutationClient().restorePlan(versionedInput)).rejects.toMatchObject({
+      code: 'MUTATION_FAILED',
+    });
+    expect(mocks.captureUnexpectedDatabaseError).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'INVALID_RECEIPT' }),
+      { feature: 'mcp', operation: 'apply_mcp_plan_restore' },
+    );
+  });
+
+  it('update receiptを要求Plan IDへbindする', async () => {
+    mocks.applyPlanUpdate.mockResolvedValue({
+      data: [{ ...receipt, resource_id: '00000000-0000-4000-8000-000000000099' }],
+      error: null,
+    });
+
+    await expect(
+      new McpMutationClient().updatePlan({ ...versionedInput, title: 'Wrong resource' }),
+    ).rejects.toMatchObject({ code: 'MUTATION_FAILED' });
+    expect(mocks.captureUnexpectedDatabaseError).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'INVALID_RECEIPT' }),
+      { feature: 'mcp', operation: 'apply_mcp_plan_update' },
+    );
+  });
+
+  it('delete receiptを要求Plan IDへbindする', async () => {
+    mocks.applyPlanDelete.mockResolvedValue({
+      data: [{ ...deletedReceipt, resource_id: '00000000-0000-4000-8000-000000000099' }],
+      error: null,
+    });
+
+    await expect(new McpMutationClient().deletePlan(versionedInput)).rejects.toMatchObject({
+      code: 'MUTATION_FAILED',
+    });
+    expect(mocks.captureUnexpectedDatabaseError).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'INVALID_RECEIPT' }),
+      { feature: 'mcp', operation: 'apply_mcp_plan_delete' },
+    );
+  });
+
+  it('restore receiptを要求Plan IDへbindする', async () => {
+    mocks.applyPlanRestore.mockResolvedValue({
+      data: [{ ...receipt, resource_id: '00000000-0000-4000-8000-000000000099' }],
+      error: null,
+    });
+
+    await expect(new McpMutationClient().restorePlan(versionedInput)).rejects.toMatchObject({
+      code: 'MUTATION_FAILED',
+    });
+    expect(mocks.captureUnexpectedDatabaseError).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'INVALID_RECEIPT' }),
+      { feature: 'mcp', operation: 'apply_mcp_plan_restore' },
     );
   });
 });

@@ -8,6 +8,12 @@ import {
   type McpMutationErrorCode,
   type McpPlanCreateInput,
   type McpPlanCreateReceipt,
+  type McpPlanDeleteInput,
+  type McpPlanDeleteReceipt,
+  type McpPlanRestoreInput,
+  type McpPlanRestoreReceipt,
+  type McpPlanUpdateInput,
+  type McpPlanUpdateReceipt,
 } from './mutation-contract';
 import { createMcpMutationDb } from './mutation-db';
 
@@ -87,20 +93,21 @@ function throwMutationDatabaseError(error: MutationDatabaseError, operation: str
   });
 }
 
-interface PlanCreateReceiptRow {
+interface PlanReceiptRow<TDeletedAt extends string | null> {
   schema_version: typeof MCP_MUTATION_RECEIPT_SCHEMA_VERSION;
   operation_id: string;
   resource_type: 'plan';
   resource_id: string;
   version: string;
-  deleted_at: null;
+  deleted_at: TDeletedAt;
   replayed: boolean;
 }
 
-function isPlanCreateReceipt(
+function hasPlanReceiptShape(
   row: unknown,
   expectedOperationId: string,
-): row is PlanCreateReceiptRow {
+  expectedResourceId?: string,
+): row is PlanReceiptRow<string | null> {
   if (row === null || typeof row !== 'object' || Array.isArray(row)) return false;
   const candidate = row as Record<string, unknown>;
   return (
@@ -108,10 +115,92 @@ function isPlanCreateReceipt(
     candidate.operation_id === expectedOperationId &&
     candidate.resource_type === 'plan' &&
     typeof candidate.resource_id === 'string' &&
+    (expectedResourceId === undefined || candidate.resource_id === expectedResourceId) &&
     typeof candidate.version === 'string' &&
-    candidate.deleted_at === null &&
     typeof candidate.replayed === 'boolean'
   );
+}
+
+function isActivePlanReceipt(
+  row: unknown,
+  expectedOperationId: string,
+  expectedResourceId?: string,
+): row is PlanReceiptRow<null> {
+  return (
+    hasPlanReceiptShape(row, expectedOperationId, expectedResourceId) && row.deleted_at === null
+  );
+}
+
+function isDeletedPlanReceipt(
+  row: unknown,
+  expectedOperationId: string,
+  expectedResourceId: string,
+): row is PlanReceiptRow<string> {
+  return (
+    hasPlanReceiptShape(row, expectedOperationId, expectedResourceId) &&
+    typeof row.deleted_at === 'string'
+  );
+}
+
+function toPlanReceipt<TDeletedAt extends string | null>(row: PlanReceiptRow<TDeletedAt>) {
+  return {
+    schemaVersion: row.schema_version,
+    operationId: row.operation_id,
+    resourceType: row.resource_type,
+    resourceId: row.resource_id,
+    version: row.version,
+    deletedAt: row.deleted_at,
+    replayed: row.replayed,
+  };
+}
+
+interface MutationRpcResult {
+  data: unknown[] | null;
+  error: MutationDatabaseError | null;
+}
+
+async function requestMutationRows(
+  request: () => PromiseLike<MutationRpcResult>,
+  operation: string,
+): Promise<unknown[]> {
+  let result: MutationRpcResult;
+  try {
+    result = await request();
+    if (result.error?.code === '40P01') result = await request();
+  } catch (error) {
+    const code =
+      error !== null && typeof error === 'object' && 'code' in error ? error.code : undefined;
+    throwMutationDatabaseError({ code }, operation);
+  }
+
+  if (result.error) throwMutationDatabaseError(result.error, operation);
+  return result.data ?? [];
+}
+
+function requireActivePlanReceipt(
+  rows: unknown[],
+  operationId: string,
+  operation: string,
+  expectedResourceId?: string,
+): PlanReceiptRow<null> {
+  const row = rows.length === 1 ? rows[0] : undefined;
+  if (!isActivePlanReceipt(row, operationId, expectedResourceId)) {
+    throwMutationDatabaseError({ code: 'INVALID_RECEIPT' }, operation);
+  }
+  return row;
+}
+
+function requireDeletedPlanReceipt(
+  rows: unknown[],
+  operationId: string,
+  operation: string,
+  expectedResourceId: string,
+): PlanReceiptRow<string> {
+  const row = rows.length === 1 ? rows[0] : undefined;
+  if (!isDeletedPlanReceipt(row, operationId, expectedResourceId)) {
+    throwMutationDatabaseError({ code: 'INVALID_RECEIPT' }, operation);
+  }
+  return row;
 }
 
 /**
@@ -136,35 +225,68 @@ export class McpMutationClient {
         p_title: input.title,
       });
 
-    let result;
-    try {
-      result = await request();
-      if (result.error?.code === '40P01') result = await request();
-    } catch (error) {
-      const code =
-        error !== null && typeof error === 'object' && 'code' in error ? error.code : undefined;
-      throwMutationDatabaseError({ code }, operation);
-    }
-
-    if (result.error) throwMutationDatabaseError(result.error, operation);
-
-    const row: unknown = result.data?.length === 1 ? result.data[0] : undefined;
-    if (!isPlanCreateReceipt(row, input.operationId)) {
-      throwMutationDatabaseError({ code: 'INVALID_RECEIPT' }, operation);
-    }
-
-    return {
-      schemaVersion: row.schema_version,
-      operationId: row.operation_id,
-      resourceType: row.resource_type,
-      resourceId: row.resource_id,
-      version: row.version,
-      deletedAt: row.deleted_at,
-      replayed: row.replayed,
-    };
+    const rows = await requestMutationRows(request, operation);
+    return toPlanReceipt(requireActivePlanReceipt(rows, input.operationId, operation));
   }
-}
 
-export function createMcpMutationClient(): McpMutationClient {
-  return new McpMutationClient();
+  async updatePlan(input: McpPlanUpdateInput): Promise<McpPlanUpdateReceipt> {
+    const operation = 'apply_mcp_plan_update';
+    const request = () =>
+      this.db.applyPlanUpdate({
+        p_access_token_id: input.accessTokenId,
+        p_connection_id: input.connectionId,
+        p_end_at: input.endAt ?? null,
+        p_end_at_present: input.endAt !== undefined,
+        p_expected_updated_at: input.expectedUpdatedAt,
+        p_note: input.note ?? null,
+        p_note_present: input.note !== undefined,
+        p_operation_id: input.operationId,
+        p_plan_id: input.planId,
+        p_start_at: input.startAt ?? null,
+        p_start_at_present: input.startAt !== undefined,
+        p_tag_id: input.tagId ?? null,
+        p_tag_id_present: input.tagId !== undefined,
+        p_title: input.title ?? null,
+        p_title_present: input.title !== undefined,
+      });
+
+    const rows = await requestMutationRows(request, operation);
+    return toPlanReceipt(
+      requireActivePlanReceipt(rows, input.operationId, operation, input.planId),
+    );
+  }
+
+  async deletePlan(input: McpPlanDeleteInput): Promise<McpPlanDeleteReceipt> {
+    const operation = 'apply_mcp_plan_delete';
+    const request = () =>
+      this.db.applyPlanDelete({
+        p_access_token_id: input.accessTokenId,
+        p_connection_id: input.connectionId,
+        p_expected_updated_at: input.expectedUpdatedAt,
+        p_operation_id: input.operationId,
+        p_plan_id: input.planId,
+      });
+
+    const rows = await requestMutationRows(request, operation);
+    return toPlanReceipt(
+      requireDeletedPlanReceipt(rows, input.operationId, operation, input.planId),
+    );
+  }
+
+  async restorePlan(input: McpPlanRestoreInput): Promise<McpPlanRestoreReceipt> {
+    const operation = 'apply_mcp_plan_restore';
+    const request = () =>
+      this.db.applyPlanRestore({
+        p_access_token_id: input.accessTokenId,
+        p_connection_id: input.connectionId,
+        p_expected_updated_at: input.expectedUpdatedAt,
+        p_operation_id: input.operationId,
+        p_plan_id: input.planId,
+      });
+
+    const rows = await requestMutationRows(request, operation);
+    return toPlanReceipt(
+      requireActivePlanReceipt(rows, input.operationId, operation, input.planId),
+    );
+  }
 }
