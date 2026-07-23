@@ -18,6 +18,7 @@ const IGNORED_URI_PREFIXES = ['chrome-extension://', 'moz-extension://', 'safari
 const CSP_REPORT_CONTENT_TYPE = 'application/csp-report';
 const TRUSTED_DOCUMENT_ORIGIN = new URL(dayoptUrls.marketing).origin;
 const VERCEL_TOOLBAR_ORIGIN = 'https://vercel.live';
+const VERCEL_TOOLBAR_FONT_PATHS = new Set(['/geist.woff2', '/geist_mono.woff2']);
 const KNOWN_CSP_DIRECTIVES = new Set([
   'base-uri',
   'child-src',
@@ -93,8 +94,9 @@ export async function POST(request: NextRequest) {
     );
     const isVercelToolbarFontViolation =
       directive === 'font-src' &&
-      hasOrigin(rawBlockedUri, VERCEL_TOOLBAR_ORIGIN) &&
-      hasOrigin(report['source-file'], VERCEL_TOOLBAR_ORIGIN);
+      isVercelToolbarFont(rawBlockedUri) &&
+      (report['source-file'] === undefined ||
+        hasOrigin(report['source-file'], VERCEL_TOOLBAR_ORIGIN));
 
     if (!isExtensionViolation && !isVercelToolbarFontViolation) {
       Sentry.captureMessage(`CSP Violation: ${directive}`, {
@@ -221,6 +223,15 @@ function hasOrigin(value: string | undefined, expectedOrigin: string): boolean {
 
   try {
     return new URL(value).origin === expectedOrigin;
+  } catch {
+    return false;
+  }
+}
+
+function isVercelToolbarFont(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.origin === VERCEL_TOOLBAR_ORIGIN && VERCEL_TOOLBAR_FONT_PATHS.has(url.pathname);
   } catch {
     return false;
   }
