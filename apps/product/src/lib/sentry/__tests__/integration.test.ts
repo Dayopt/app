@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AuthSessionMissingError } from '@supabase/auth-js';
+
 const sentry = vi.hoisted(() => ({
   addBreadcrumb: vi.fn(),
   captureException: vi.fn(),
@@ -105,6 +107,21 @@ describe('Product Sentry capture helpers', () => {
       operation: 'sign_in',
       source: 'supabase_auth',
     });
+  });
+
+  it('drops the Supabase missing-session outcome without hiding other SDK 400 failures', () => {
+    const missingSession = new AuthSessionMissingError();
+    const providerDisabled = Object.assign(new Error('provider disabled'), {
+      status: 400,
+      code: 'provider_disabled',
+    });
+
+    expect(isExpectedAuthError(missingSession)).toBe(true);
+    captureUnexpectedAuthError(missingSession, { operation: 'get_user' });
+    captureUnexpectedAuthError(providerDisabled, { operation: 'sign_in_oauth' });
+
+    expect(sentry.captureException).toHaveBeenCalledOnce();
+    expect(sentry.captureException).toHaveBeenCalledWith(providerDisabled);
   });
 
   it('captures configuration and SDK 4xx errors instead of classifying by status alone', () => {

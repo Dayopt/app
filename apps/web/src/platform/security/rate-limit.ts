@@ -130,18 +130,6 @@ export const cspReportGlobalRateLimit = createRateLimiter(
   'ratelimit:web:csp-report-global',
 );
 
-/** Temporary, tightly bounded quota for the operator-only Sentry smoke window. */
-export const operatorSentrySmokeRateLimit = createRateLimiter(
-  Ratelimit.slidingWindow(12, '1 h'),
-  'ratelimit:web:sentry-smoke:ip',
-);
-
-/** Bound the entire temporary smoke surface even when requests are distributed. */
-export const operatorSentrySmokeGlobalRateLimit = createRateLimiter(
-  Ratelimit.slidingWindow(50, '1 h'),
-  'ratelimit:web:sentry-smoke:global',
-);
-
 function bytesToHex(bytes: ArrayBuffer): string {
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
     );
     const isVercelToolbarFontViolation =
       directive === 'font-src' &&
-      hasOriginAndPath(rawBlockedUri, VERCEL_TOOLBAR_ORIGIN, '/geist.woff2') &&
-      hasOriginAndPath(report['source-file'], VERCEL_TOOLBAR_ORIGIN, '/_next-live/feedback/', true);
+      hasOrigin(rawBlockedUri, VERCEL_TOOLBAR_ORIGIN) &&
+      hasOrigin(report['source-file'], VERCEL_TOOLBAR_ORIGIN);
 
     if (!isExtensionViolation && !isVercelToolbarFontViolation) {
       Sentry.captureMessage(`CSP Violation: ${directive}`, {
@@ -221,25 +221,6 @@ function hasOrigin(value: string | undefined, expectedOrigin: string): boolean {
 
   try {
     return new URL(value).origin === expectedOrigin;
-  } catch {
-    return false;
-  }
-}
-
-function hasOriginAndPath(
-  value: string | undefined,
-  expectedOrigin: string,
-  expectedPath: string,
-  allowPathSuffix = false,
-): boolean {
-  if (value === undefined) return false;
-
-  try {
-    const url = new URL(value);
-    return (
-      url.origin === expectedOrigin &&
-      (allowPathSuffix ? url.pathname.startsWith(expectedPath) : url.pathname === expectedPath)
-    );
   } catch {
     return false;
   }

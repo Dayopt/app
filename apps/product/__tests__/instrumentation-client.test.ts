@@ -36,27 +36,26 @@ describe('Product browser Sentry consent lifecycle', () => {
     localStorage.clear();
     vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', 'https://public@example.ingest.sentry.io/1');
     vi.stubEnv('NEXT_PUBLIC_VERCEL_ENV', 'production');
-    delete window.__DAYOPT_PRODUCT_SENTRY_SMOKE__;
     reloadSpy = vi.spyOn(window.location, 'reload').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    delete window.__DAYOPT_PRODUCT_SENTRY_SMOKE__;
     reloadSpy.mockRestore();
   });
 
   it('does not initialize before consent and disables/re-enables one client', async () => {
     await import('../instrumentation-client');
     expect(sentry.init).not.toHaveBeenCalled();
-    expect(window.__DAYOPT_PRODUCT_SENTRY_SMOKE__).toBeUndefined();
+    expect('__DAYOPT_PRODUCT_SENTRY_SMOKE__' in window).toBe(false);
 
     persistAndNotify(true);
     expect(sentry.init).toHaveBeenCalledTimes(1);
     expect(sentry.clientOptions.enabled).toBe(true);
-    expect(window.__DAYOPT_PRODUCT_SENTRY_SMOKE__).toBeTypeOf('function');
-    expect(
-      await window.__DAYOPT_PRODUCT_SENTRY_SMOKE__?.({ token: 'short', surface: 'server' }),
-    ).toEqual({ ok: false, surface: 'invalid' });
+    expect('__DAYOPT_PRODUCT_SENTRY_SMOKE__' in window).toBe(false);
+    const tracesSampler = sentry.init.mock.calls[0]?.[0].tracesSampler as (context: {
+      inheritOrSampleWith: (sampleRate: number) => number;
+    }) => number;
+    expect(tracesSampler({ inheritOrSampleWith: (sampleRate) => sampleRate })).toBe(0.1);
 
     persistAndNotify(true);
     expect(sentry.init).toHaveBeenCalledTimes(1);
@@ -68,7 +67,7 @@ describe('Product browser Sentry consent lifecycle', () => {
 
     persistAndNotify(false);
     expect(sentry.clientOptions.enabled).toBe(false);
-    expect(window.__DAYOPT_PRODUCT_SENTRY_SMOKE__).toBeUndefined();
+    expect('__DAYOPT_PRODUCT_SENTRY_SMOKE__' in window).toBe(false);
     expect(reloadSpy).toHaveBeenCalledTimes(1);
 
     persistAndNotify(true);

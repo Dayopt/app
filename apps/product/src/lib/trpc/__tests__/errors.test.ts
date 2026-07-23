@@ -152,21 +152,6 @@ describe('handleServiceError observability', () => {
     });
   });
 
-  it('uses the explicit adapter route for an isolated operator smoke', () => {
-    const cause = new Error('operator smoke');
-    const error = new TRPCError({ code: 'INTERNAL_SERVER_ERROR', cause });
-
-    captureUnexpectedTrpcAdapterError(error, 'capture', '/api/v1/system/sentry-smoke/trpc');
-
-    expect(captureUnexpectedError).toHaveBeenCalledWith(cause, {
-      errorCode: 'INTERNAL_SERVER_ERROR',
-      feature: 'trpc',
-      operation: 'capture',
-      route: '/api/v1/system/sentry-smoke/trpc',
-      source: 'trpc_adapter',
-    });
-  });
-
   it('does not re-capture an expected Auth cause at the HTTP adapter boundary', () => {
     const authError = Object.assign(new Error('session expired'), {
       status: 401,

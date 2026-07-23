@@ -9,10 +9,6 @@ import * as Sentry from '@sentry/nextjs';
 import { config as configureZod } from 'zod';
 
 import {
-  installWebOperatorSentrySmoke,
-  uninstallWebOperatorSentrySmoke,
-} from './src/platform/observability/operator-smoke-client';
-import {
   sanitizeBreadcrumbEvent,
   sanitizeErrorEvent,
   sanitizeSpanEvent,
@@ -26,7 +22,6 @@ export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 const isProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
-const OPERATOR_SMOKE_TRACE_PREFIX = 'operator.sentry_smoke.';
 let initialized = false;
 let browserTelemetryAllowed = false;
 let revocationReloadRequested = false;
@@ -59,15 +54,13 @@ function initializeBrowserSentry(): void {
     enabled: true,
     environment: 'production',
     sendDefaultPii: false,
-    tracesSampler: ({ name, inheritOrSampleWith }) =>
-      name.startsWith(OPERATOR_SMOKE_TRACE_PREFIX) ? 1 : inheritOrSampleWith(0.1),
+    tracesSampler: ({ inheritOrSampleWith }) => inheritOrSampleWith(0.1),
     integrations: [Sentry.browserTracingIntegration({ enableInp: true })],
     beforeSend: (event, hint) => sanitizeErrorEvent(event, hint),
     beforeSendTransaction: (event) => sanitizeTransactionEvent(event),
     beforeSendSpan: (span) => sanitizeSpanEvent(span),
     beforeBreadcrumb: (breadcrumb) => sanitizeBreadcrumbEvent(breadcrumb),
   });
-  installWebOperatorSentrySmoke();
 }
 
 function setSentryClientEnabled(enabled: boolean): void {
@@ -79,7 +72,6 @@ function applyBrowserTelemetryConsent(allowed: boolean): void {
   browserTelemetryAllowed = allowed && hasStoredAnalyticsConsent();
 
   if (!browserTelemetryAllowed) {
-    uninstallWebOperatorSentrySmoke();
     setSentryClientEnabled(false);
     if (initialized && !revocationReloadRequested) {
       revocationReloadRequested = true;
