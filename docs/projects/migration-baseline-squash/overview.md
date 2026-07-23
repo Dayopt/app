@@ -188,9 +188,21 @@ diff /tmp/types-before.ts /tmp/types-after.ts    # 差分ゼロが合格
 supabase db diff --linked
 ```
 
-**ただし `db diff` は行データを見ない。** storage bucket の列値と、production 側に残っている GRANT の欠落は、この差分では検出できない（§前回障害）。手順 3 の手当てはレビューで突き合わせる。
+**ただし `db diff` は行データを見ない。** storage bucket の行はスキーマではなくデータなので、公式ドキュメントも bucket の変更を `db diff` の既知の非対応ケースとして挙げている。手順 3 の写経ミスや書き漏れはこのゲートを素通りし、**新しい local / Preview 環境でだけ壊れる**（§前回障害と同じ形）。
 
-**差分が出た場合は squash を中止し、原因を先に潰す。**
+そのため、`db reset` 後のローカル DB から**実際に読み戻して**手順 1 の production スナップショットと突き合わせる。目視ではなく差分コマンドで判定する。
+
+```bash
+psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -At -F',' \
+  -c "select id, public, file_size_limit, array_to_string(allowed_mime_types, '|')
+      from storage.buckets order by id;" > /tmp/buckets-local.csv
+# 手順 1 の production スナップショットを同じ形式で /tmp/buckets-prod.csv に保存しておく
+diff /tmp/buckets-local.csv /tmp/buckets-prod.csv    # 差分ゼロが合格
+```
+
+同様に、GRANT が落ちていないことも `information_schema.role_table_grants` をローカルと production で読み比べて確認する。前回はここが漏れて実障害になった。
+
+**いずれかで差分が出た場合は squash を中止し、原因を先に潰す。**
 
 ### 6. production の履歴を合わせる
 
@@ -225,15 +237,15 @@ Preview branch は clean DB に migration を適用する方式なので、こ�
 
 ## リスクと可逆性
 
-| リスク                                      | 影響                                             | 対応                                                          |
-| ------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------- |
-| GRANT の欠落                                | **clean local / Preview のみ壊れる**（前例あり） | 手順 3-2 で明示確認 + 手順 7 の Preview 実機確認              |
-| storage bucket の列の写経漏れ               | 新規環境だけバケット制約が緩む（前例あり）       | 手順 1 の全カラムスナップショットを PR に貼り、レビューで突合 |
-| dump 出力が production スキーマとずれる     | 新規環境だけ壊れる                               | 手順 5 の差分ゼロ確認を通過ゲートにする。ずれたら中止         |
-| 退避漏れ（年リテラル等）                    | 適用済み SQL の再実行を招く                      | 手順 4 の年非依存コマンド + 件数突合                          |
-| `migration repair` の対象漏れ               | production 履歴とローカルが不一致                | 手順 7 の `migration list --linked` で一致を確認              |
-| 手順 6 の窓の間に merge される              | production の migration 適用経路が閉塞           | 実施ウィンドウ中の main merge 凍結                            |
-| squash 直後に hotfix migration が必要になる | 手順が輻輳する                                   | 判定基準 3（リリース直後の静穏期）で回避                      |
+| リスク                                      | 影響                                             | 対応                                                                                      |
+| ------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| GRANT の欠落                                | **clean local / Preview のみ壊れる**（前例あり） | 手順 3-2 の明示確認 + 手順 5 の grant 読み戻し + 手順 7 の Preview 実機確認               |
+| storage bucket の列の写経漏れ               | 新規環境だけバケット制約が緩む（前例あり）       | 手順 5 でローカルから読み戻し production スナップショットと突合（`db diff` では検出不可） |
+| dump 出力が production スキーマとずれる     | 新規環境だけ壊れる                               | 手順 5 の差分ゼロ確認を通過ゲートにする。ずれたら中止                                     |
+| 退避漏れ（年リテラル等）                    | 適用済み SQL の再実行を招く                      | 手順 4 の年非依存コマンド + 件数突合                                                      |
+| `migration repair` の対象漏れ               | production 履歴とローカルが不一致                | 手順 7 の `migration list --linked` で一致を確認                                          |
+| 手順 6 の窓の間に merge される              | production の migration 適用経路が閉塞           | 実施ウィンドウ中の main merge 凍結                                                        |
+| squash 直後に hotfix migration が必要になる | 手順が輻輳する                                   | 判定基準 3（リリース直後の静穏期）で回避                                                  |
 
 **可逆性は `[hours]`**。roll-forward を基本とする。
 
@@ -259,7 +271,7 @@ production の `supabase_migrations.schema_migrations` を書き換えるため�
 - [ ] **承認** — 対象（production project `yvglwblxrnrenfifsnje`）・環境・操作（退避分への `migration repair --status reverted`）を特定した明示指示を得る
 - [ ] **独立レビュー** — `risk-reviewer` に手順書と repair 対象 version 一覧をレビューさせ、結果を実施 issue に貼る（AGENTS.md の Read-only delegation で `migration` は自動委任条件）
 - [ ] **backup** — 手順 1 の `schema_migrations` 全行スナップショットを取得済みで、実施 issue に貼ってある
-- [ ] **Preview / dry-run** — 手順 5 の差分ゼロと手順 7 の Preview branch 実機確認を通過ゲートとし、各出力を PR に貼る
+- [ ] **Preview / dry-run** — 手順 5 の差分ゼロ（型 / `db diff` / **storage bucket と GRANT の読み戻し**）と手順 7 の Preview branch 実機確認を通過ゲートとし、各出力を PR に貼る
 - [ ] **roll-forward** — §リスクと可逆性 の復帰手順を、backup から生成した version 一覧付きで実施 issue に転記する（ファイルを先に戻す順序を含む）
 - [ ] 上記のいずれかを満たせない場合は**実施しない**。現実的な failure mode を報告して中止する
 
