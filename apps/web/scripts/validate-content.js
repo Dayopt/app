@@ -186,6 +186,13 @@ export function validateFrontMatter(fm, type, isDraft) {
     }
   }
 
+  // placeholder（本文が未執筆の骨格）は必ず draft でなければならない。
+  // 別製品のテンプレートがそのまま公開されていた事故（2026-07-24 監査）の再発防止で、
+  // isDraft による warning 降格を通さず常に error にする
+  if (fm.placeholder === true && fm.draft !== true) {
+    errors.push(`'placeholder: true' requires 'draft: true' (未執筆ページは公開できない)`);
+  }
+
   if (type !== 'legal' && !fm.ai) {
     warnings.push(`'ai' metadata not set (recommended for RAG)`);
   }
@@ -286,6 +293,93 @@ function checkDocsSlugCollisions() {
   return errors;
 }
 
+// routing の slug と category はファイル配置から導出され、frontmatter の同名フィールドは
+// mdx.ts に上書きされて無視される。記述値がずれても動作は壊れないが、内部リンクを書く時の
+// 参照先として読まれるため嘘になる
+function checkDocsSlugMatchesRouting() {
+  const errors = [];
+  for (const locale of ['en', 'ja']) {
+    const dir = path.join(CONTENT_DIR, 'docs', locale);
+    if (!fs.existsSync(dir)) continue;
+    for (const file of findMdxFiles(dir)) {
+      const rel = path.relative(dir, file).replace(/\\/g, '/');
+      const name = path.basename(file, '.mdx');
+      const routingSlug = name === 'index' ? rel.split('/')[0] : name;
+      const routingCategory = rel.split('/')[0];
+      const { data: fm } = parseFrontMatter(fs.readFileSync(file, 'utf8'));
+      if (fm.slug && fm.slug !== routingSlug) {
+        errors.push(
+          `Slug mismatch in content/docs/${locale}/${rel}: frontmatter '${fm.slug}' but routing serves /docs/${routingSlug}`,
+        );
+      }
+      if (fm.category && fm.category !== routingCategory) {
+        errors.push(
+          `Category mismatch in content/docs/${locale}/${rel}: frontmatter '${fm.category}' but directory says '${routingCategory}'`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
+// 公開ページから 404 へのリンクを止める。リンク先が「そもそも無い」のは書き間違いなので error、
+// 「ファイルはあるが draft」のは公開待ちの状態問題なので warning に分ける（draft を外せば直る。
+// どこが公開待ちかは pnpm docs:coverage が一覧する）
+function checkDocsInternalLinks() {
+  const errors = [];
+  const warnings = [];
+
+  for (const locale of ['en', 'ja']) {
+    const dir = path.join(CONTENT_DIR, 'docs', locale);
+    if (!fs.existsSync(dir)) continue;
+
+    const files = findMdxFiles(dir);
+    const published = new Set();
+    const unpublished = new Set();
+    for (const file of files) {
+      const rel = path.relative(dir, file).replace(/\\/g, '/');
+      const name = path.basename(file, '.mdx');
+      const slug = name === 'index' ? rel.split('/')[0] : name;
+      const { data: fm } = parseFrontMatter(fs.readFileSync(file, 'utf8'));
+      (fm.draft === true ? unpublished : published).add(slug);
+    }
+
+    for (const file of files) {
+      const rel = path.relative(dir, file).replace(/\\/g, '/');
+      const content = fs.readFileSync(file, 'utf8');
+      const { data: fm } = parseFrontMatter(content);
+      const isDraft = fm.draft === true;
+
+      const targets = new Set();
+      for (const [, href] of content.matchAll(/\]\((\/docs\/[a-z0-9/-]+)\)/g)) targets.add(href);
+      for (const [, href] of content.matchAll(/^\s+- '(\/docs\/[a-z0-9/-]+)'$/gm))
+        targets.add(href);
+
+      for (const href of targets) {
+        const slug = href.replace(/^\/docs\//, '');
+        if (published.has(slug)) continue;
+
+        const where = `content/docs/${locale}/${rel}`;
+        if (unpublished.has(slug)) {
+          // draft 同士のリンクは一緒に公開されるため 404 にならない。
+          // 公開ページから未公開ページを指している場合だけが実害
+          if (!isDraft) {
+            warnings.push(
+              `Link to unpublished doc in ${where}: ${href} (リンク先が draft のため 404)`,
+            );
+          }
+        } else if (isDraft) {
+          warnings.push(`Dead internal link in ${where}: ${href} (該当 slug のファイルなし)`);
+        } else {
+          errors.push(`Dead internal link in ${where}: ${href} (該当 slug のファイルなし)`);
+        }
+      }
+    }
+  }
+
+  return { errors, warnings };
+}
+
 function checkBlogReservedSlugs() {
   const errors = [];
   for (const locale of ['en', 'ja']) {
@@ -312,9 +406,21 @@ function main() {
   let totalWarnings = 0;
   const allOutput = [];
 
-  for (const error of [...checkDocsSlugCollisions(), ...checkBlogReservedSlugs()]) {
+  const linkIssues = checkDocsInternalLinks();
+
+  for (const error of [
+    ...checkDocsSlugCollisions(),
+    ...checkDocsSlugMatchesRouting(),
+    ...checkBlogReservedSlugs(),
+    ...linkIssues.errors,
+  ]) {
     allOutput.push({ file: null, message: error, isError: true });
     totalErrors++;
+  }
+
+  for (const warning of linkIssues.warnings) {
+    allOutput.push({ file: null, message: warning, isError: false });
+    totalWarnings++;
   }
 
   for (const type of types) {
