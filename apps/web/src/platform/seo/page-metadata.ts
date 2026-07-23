@@ -56,6 +56,7 @@ export function generateSEOMetadata(data: SEOData = {}): Metadata {
     section,
     tags = [],
     locale = siteConfig.locale,
+    alternateLocales,
     noindex = false,
   } = data;
 
@@ -75,6 +76,19 @@ export function generateSEOMetadata(data: SEOData = {}): Metadata {
     : `${siteConfig.url}/api/og?${ogSearchParams.toString()}`;
 
   const allKeywords = [...siteConfig.keywords, ...keywords, ...tags].filter(Boolean);
+
+  // hreflang は実在するロケール版だけを宣言する。片方のロケールにしかないコンテンツで
+  // 存在しない URL を alternate として広告すると 404 を指すため（alternateLocales 未指定時は全ロケール）
+  const hreflangLocales = alternateLocales ?? ['en', 'ja'];
+  const localeUrl = (loc: string) =>
+    loc === 'en'
+      ? `${siteConfig.url}${normalizedPath}`
+      : `${siteConfig.url}/${loc}${normalizedPath}`;
+  const languages: Record<string, string> = {};
+  if (hreflangLocales.includes('en')) languages['en-US'] = localeUrl('en');
+  if (hreflangLocales.includes('ja')) languages['ja-JP'] = localeUrl('ja');
+  // x-default は en 版があれば en、なければ存在する唯一の版を指す
+  languages['x-default'] = hreflangLocales.includes('en') ? localeUrl('en') : canonicalUrl;
 
   return {
     metadataBase: new URL(siteConfig.url),
@@ -97,11 +111,7 @@ export function generateSEOMetadata(data: SEOData = {}): Metadata {
     },
     alternates: {
       canonical: canonicalUrl,
-      languages: {
-        'en-US': `${siteConfig.url}${normalizedPath}`,
-        'ja-JP': `${siteConfig.url}/ja${normalizedPath}`,
-        'x-default': `${siteConfig.url}${normalizedPath}`,
-      },
+      languages,
     },
     openGraph: {
       type: type as 'website' | 'article',
