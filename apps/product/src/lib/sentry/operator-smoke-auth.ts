@@ -6,8 +6,8 @@ import { Redis } from '@upstash/redis';
 const PRODUCT_ORIGIN = 'https://app.dayopt.app';
 const TOKEN_PATTERN = /^Bearer ([A-Za-z0-9_-]{43})$/u;
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/u;
-const ABSOLUTE_ACTIVE_FROM_MS = Date.parse('2026-07-21T23:00:00.000Z');
-const ABSOLUTE_DEADLINE_MS = Date.parse('2026-07-22T12:00:00.000Z');
+const ABSOLUTE_ACTIVE_FROM_MS = Date.parse('2026-07-23T01:00:00.000Z');
+const ABSOLUTE_DEADLINE_MS = Date.parse('2026-07-23T03:00:00.000Z');
 const BODY_PROBE_TIMEOUT_MS = 1_000;
 const SMOKE_RATE_LIMIT_TIMEOUT_MS = 2_000;
 
@@ -114,6 +114,22 @@ async function sha256(value: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)));
 }
 
+export async function hashProductOperatorSmokeClientAddress(
+  address: string,
+  secret: string,
+): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const value = encoder.encode(`dayopt-product:operator-smoke:${address}`);
+  return bytesToHex(new Uint8Array(await crypto.subtle.sign('HMAC', key, value)));
+}
+
 function digestMatches(actual: Uint8Array, expectedHex: string): boolean {
   if (actual.length !== 32 || !DIGEST_PATTERN.test(expectedHex)) return false;
 
@@ -135,9 +151,11 @@ async function hasValidToken(request: Request, expectedDigest: string): Promise<
   return digestMatches(await sha256(match[1]), expectedDigest);
 }
 
-function clientAddress(request: Request): string {
+export function getProductOperatorSmokeClientAddress(request: Request): string {
+  const vercelForwarded = request.headers.get('x-vercel-forwarded-for')?.split(',', 1)[0]?.trim();
   const forwarded = request.headers.get('x-forwarded-for')?.split(',', 1)[0]?.trim();
-  const address = forwarded || request.headers.get('x-real-ip')?.trim() || 'unknown';
+  const address =
+    vercelForwarded || forwarded || request.headers.get('x-real-ip')?.trim() || 'unknown';
   return address.slice(0, 256);
 }
 
@@ -160,7 +178,10 @@ async function checkProductSmokeRateLimit(
         prefix: 'ratelimit:product:sentry-smoke:ip',
         timeout: SMOKE_RATE_LIMIT_TIMEOUT_MS,
       });
-      const addressDigest = bytesToHex(await sha256(clientAddress(request)));
+      const addressDigest = await hashProductOperatorSmokeClientAddress(
+        getProductOperatorSmokeClientAddress(request),
+        token,
+      );
       return classifyOperatorSmokeRateLimitResult(await perIp.limit(addressDigest));
     }
 

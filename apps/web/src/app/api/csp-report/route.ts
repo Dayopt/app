@@ -17,6 +17,7 @@ const MAX_POLICY_LENGTH = 12_000;
 const IGNORED_URI_PREFIXES = ['chrome-extension://', 'moz-extension://', 'safari-extension://'];
 const CSP_REPORT_CONTENT_TYPE = 'application/csp-report';
 const TRUSTED_DOCUMENT_ORIGIN = new URL(dayoptUrls.marketing).origin;
+const VERCEL_TOOLBAR_ORIGIN = 'https://vercel.live';
 const KNOWN_CSP_DIRECTIVES = new Set([
   'base-uri',
   'child-src',
@@ -90,8 +91,12 @@ export async function POST(request: NextRequest) {
     const isExtensionViolation = IGNORED_URI_PREFIXES.some((prefix) =>
       rawBlockedUri.startsWith(prefix),
     );
+    const isVercelToolbarFontViolation =
+      directive === 'font-src' &&
+      hasOriginAndPath(rawBlockedUri, VERCEL_TOOLBAR_ORIGIN, '/geist.woff2') &&
+      hasOriginAndPath(report['source-file'], VERCEL_TOOLBAR_ORIGIN, '/_next-live/feedback/', true);
 
-    if (!isExtensionViolation) {
+    if (!isExtensionViolation && !isVercelToolbarFontViolation) {
       Sentry.captureMessage(`CSP Violation: ${directive}`, {
         level: 'warning',
         fingerprint: ['csp-violation', directive],
@@ -208,8 +213,33 @@ function hasCspReportContentType(value: string | null): boolean {
 }
 
 function hasTrustedDocumentOrigin(value: string): boolean {
+  return hasOrigin(value, TRUSTED_DOCUMENT_ORIGIN);
+}
+
+function hasOrigin(value: string | undefined, expectedOrigin: string): boolean {
+  if (value === undefined) return false;
+
   try {
-    return new URL(value).origin === TRUSTED_DOCUMENT_ORIGIN;
+    return new URL(value).origin === expectedOrigin;
+  } catch {
+    return false;
+  }
+}
+
+function hasOriginAndPath(
+  value: string | undefined,
+  expectedOrigin: string,
+  expectedPath: string,
+  allowPathSuffix = false,
+): boolean {
+  if (value === undefined) return false;
+
+  try {
+    const url = new URL(value);
+    return (
+      url.origin === expectedOrigin &&
+      (allowPathSuffix ? url.pathname.startsWith(expectedPath) : url.pathname === expectedPath)
+    );
   } catch {
     return false;
   }

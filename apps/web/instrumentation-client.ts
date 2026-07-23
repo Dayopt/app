@@ -6,6 +6,7 @@ import {
   resolveAnalyticsConsentDetail,
 } from '@dayopt/observability';
 import * as Sentry from '@sentry/nextjs';
+import { config as configureZod } from 'zod';
 
 import {
   installWebOperatorSentrySmoke,
@@ -17,6 +18,9 @@ import {
   sanitizeSpanEvent,
   sanitizeTransactionEvent,
 } from './src/platform/observability/sentry-sanitizers';
+
+// Production CSP forbids eval. Configure Zod before application schemas are constructed.
+configureZod({ jitless: true });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
