@@ -577,18 +577,10 @@ export async function runProductionRelease({
         nowImpl,
         action: 'promote',
       });
-      await restoreAutoAssignCustomDomains({
-        projectName: project.name,
-        projectId: projectIds.get(project.name),
-        expected: autoAssign.get(project.name),
-        token,
-        teamId,
-        fetchImpl,
-        logger,
-      });
       logger.log(`${project.name}: promoted ${deployment.id}`);
     }
   } catch (error) {
+    // rollback も promote endpoint を使うため、設定の復元は rollback の後に行う。
     const rolledBack = await rollbackPromoted({
       promoted,
       token,
@@ -600,6 +592,32 @@ export async function runProductionRelease({
       cause: error,
     });
     throw Object.assign(error, { rolledBack });
+  }
+
+  // 設定の復元は promote の try/catch から外す。ここで失敗しても production は
+  // 正しい SHA を配信しており、正常なリリースを rollback する理由にならない。
+  // ただし放置すると次の merge が gate を迂回するため、run は失敗させる。
+  const drifted = [];
+  for (const entry of promoted) {
+    try {
+      await restoreAutoAssignCustomDomains({
+        projectName: entry.project.name,
+        projectId: entry.projectId,
+        expected: entry.autoAssignCustomDomains,
+        token,
+        teamId,
+        fetchImpl,
+        logger,
+      });
+    } catch {
+      drifted.push(entry.project.name);
+    }
+  }
+  if (drifted.length > 0) {
+    throw new ReleaseError(
+      `Production serves ${sha}, but autoAssignCustomDomains could not be restored for ` +
+        `${drifted.join(', ')}. Set it back before the next merge or the release gate is bypassed.`,
+    );
   }
 
   return { status: 'promoted', sha, promoted, rolledBack: [] };

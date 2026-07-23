@@ -603,6 +603,24 @@ describe('runProductionRelease', () => {
     expect(world.autoAssign).toEqual({ web: true, product: true });
   });
 
+  it('fails the run without rolling back when the setting cannot be restored', async () => {
+    // 設定復元の失敗で正常なリリースを巻き戻すと、production が理由なく旧 SHA へ戻る。
+    // production はそのままにし、run だけ失敗させて次の merge 前の対処を促す。
+    const world = createReleaseWorld();
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') {
+        return new Response(null, { status: 500 });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const error = await release({ fetchImpl }).catch((thrown: Error) => thrown);
+
+    expect(error.message).toMatch(/autoAssignCustomDomains could not be restored/);
+    expect(world.promoted()).toEqual(['web', 'product']);
+    expect(world.rolledBack()).toEqual([]);
+  });
+
   it('skips smoke and audit under Force Promote', async () => {
     const world = createReleaseWorld();
     const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
