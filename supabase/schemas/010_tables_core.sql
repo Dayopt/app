@@ -3,7 +3,7 @@
 -- ============================================================
 -- Dayopt のドメインモデルの中核テーブル
 -- 実際のマイグレーションは migrations/ を参照
--- 最終同期日: 2026-07-13
+-- 最終同期日: 2026-07-24
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -13,6 +13,7 @@
 --   - 20260708232500_add_time_model_tables.sql
 --   - 20260712212527_records_table_and_drop_entries.sql
 --   - 20260712213550_rename_record_constraint_triggers.sql
+--   - 20260723233814_add_calendar_connection_tables.sql
 --
 -- カラム順序の規則:
 --   1. id (PK)
@@ -38,11 +39,63 @@ CREATE TABLE public.profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- calendar_connections: 外部カレンダーのアカウント接続（Phase 2 / external-calendar-import）
+-- 同一 provider の複数アカウントを許容する（UNIQUE は user_id + provider + provider_account_id）
+-- access token は保存しない。refresh_token_enc は AES-256-GCM 暗号文
+-- refresh_token_enc / granted_scopes / provider_account_id は authenticated へ grant しない
+-- （column-scoped SELECT。詳細は rls-snapshot.md）
+CREATE TABLE public.calendar_connections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,                 -- google 等。free text + not-blank（enum 不使用）
+  provider_account_id TEXT NOT NULL,      -- Google の sub
+  provider_account_email TEXT,
+  granted_scopes TEXT[] NOT NULL,
+  refresh_token_enc TEXT NOT NULL,
+  status TEXT NOT NULL,                   -- active / reauth_required
+  last_synced_at TIMESTAMPTZ,
+  last_sync_error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- calendar_connections 関連 constraint / trigger:
+--   calendar_connections_status_check             -> status IN ('active','reauth_required')
+--   calendar_connections_granted_scopes_not_empty -> cardinality > 0 かつ NULL 要素なし
+--   calendar_connections_id_user_id_unique        -> 子テーブルの複合 FK 参照先
+--   calendar_connections_provider_account_unique  -> user_id + provider + provider_account_id
+--   trigger_update_calendar_connections_updated_at -> update_updated_at()
+
+-- calendar_connection_calendars: 取り込み対象として選択されたカレンダー
+-- 選択可能な一覧は provider API からオンデマンド取得し保存しない
+-- sync_token は per-calendar cursor（NULL = 次回 full sync）
+CREATE TABLE public.calendar_connection_calendars (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  connection_id UUID NOT NULL,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  provider_calendar_id TEXT NOT NULL,
+  calendar_name TEXT,
+  sync_token TEXT,
+  last_synced_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- calendar_connection_calendars 関連 constraint / trigger:
+--   calendar_connection_calendars_connection_owner_fkey
+--     -> (connection_id, user_id) が calendar_connections(id, user_id) を参照（ON DELETE CASCADE）
+--        owner 整合は constraint trigger ではなくこの複合 FK で担保する
+--   calendar_connection_calendars_provider_calendar_unique -> connection_id + provider_calendar_id
+--   trigger_update_calendar_connection_calendars_updated_at -> update_updated_at()
+
 -- external_calendar_events: 外部カレンダー同期ミラー
 -- Phase 1 では FK の受け皿だけを追加し、OAuth / sync / ghost UI は Phase 2 で実装する
+-- connection_id は Phase 2 で追加（ON DELETE SET NULL）。切断後も plans / records が参照する
+-- 行は履歴のアンカーとして残るため CASCADE にしない
 CREATE TABLE public.external_calendar_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  connection_id UUID REFERENCES public.calendar_connections(id) ON DELETE SET NULL,
   provider TEXT NOT NULL,
   provider_calendar_id TEXT NOT NULL,
   provider_event_id TEXT NOT NULL,
@@ -57,6 +110,12 @@ CREATE TABLE public.external_calendar_events (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- external_calendar_events 関連 constraint / index:
+--   external_calendar_events_provider_event_unique
+--     -> user_id + provider + connection_id + provider_calendar_id + provider_event_id
+--        connection_id を含むのは、同一 provider の複数アカウントが同じ共有カレンダーを
+--        購読しても行が衝突しないようにするため
 
 -- plans: Dayopt 内の予定
 CREATE TABLE public.plans (
