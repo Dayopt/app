@@ -39,7 +39,10 @@ migration を含む open PR がゼロ / 進行中の大規模スキーマ変更 
 - `supabase migration squash` は**使わない**。pin 版 CLI 2.109.1 の `--version` は「出力先」ではなく「squash 範囲の終端」であり、`--version 00000000000000` は実質 no-op になる。さらに squash は圧縮対象ファイルを自分で削除して最新タイムスタンプのファイルへ書き込むため、version 据え置きの決定とも `_archive/` への `git mv` とも衝突する。前回同様 `supabase db dump --local` でスキーマを書き出す
 - 出力に含まれないのはスキーマ定義以外（`INSERT` / `UPDATE` / `DELETE`）。公式リファレンスは欠落対象に cron ジョブ・storage バケット・vault シークレットを明記している
 - production の実測では pg_cron job 0 件・vault secret 0 件・storage bucket 2 件。旧 baseline の cron 4 件は対象テーブル削除に伴い unschedule 済みで、**新 baseline に写経してはならない**
-- storage bucket は `public` だけでは足りない。**avatars の 5MiB 制限と MIME allowlist を設定した migration は 142 件のどこにも存在せず**、production の値は migration から再現できない。squash はこれを版管理下へ戻す機会でもある
+- **`db dump` は既定で `auth` / `storage` などの managed schema を除外する**（pin 版で `--dry-run` により実測）。現行 baseline が持つ `auth.users` のトリガー（プロフィール自動生成）と `storage.objects` の RLS ポリシーは出力に含まれず、手当てしなければ新規登録とストレージのアクセス制御が壊れる
+- 権限は table 単位だけでは足りない。`custom_access_token_hook` の `supabase_auth_admin` への `EXECUTE`（routine 権限）と、`profiles` の課金列を守る column 権限も検証対象に含める
+- **`config.toml` の `[storage.buckets.*]` はローカル専用ではない。** Supabase の GitHub integration は `Deploy to production` 有効時に config.toml 宣言のバケットを production へデプロイし、Branching 有効時は ephemeral branch へも同期する。Dayopt は両方を有効にしている。したがって `avatars` の正本は config.toml、`attachments` の正本は migration という分裂状態にある。新 baseline では config.toml に宣言のあるバケットの `INSERT` を書かず、二重定義を作らない
+- **clean 環境の検証を production 変更より前に置く。** squash PR 自身の Preview branch が、production を触る前に得られる唯一の clean 環境である
 
 この「旧 baseline の記述と現在の実態がずれている」状態こそ squash で解消したい対象であり、同時に写経ミスが最も起きやすい箇所でもあるため、計画側で個別のリスク項目として扱う。
 
