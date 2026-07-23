@@ -5,7 +5,7 @@ import { getAllContent } from '@web/lib/mdx';
 import { generateSEOMetadata } from '@web/platform/seo/metadata';
 import { ContentData } from '@web/types/content';
 import { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound, redirect } from 'next/navigation';
 
 interface PageParams {
@@ -41,7 +41,9 @@ export async function generateStaticParams(): Promise<PageParams[]> {
     }
 
     return params;
-  } catch {
+  } catch (error) {
+    // 静かに [] を返すと全 docs が動的レンダリングへ降格するため、原因を必ず出力する
+    console.error('[Docs] generateStaticParams failed:', error);
     return [];
   }
 }
@@ -113,6 +115,8 @@ function getAdjacentPages(
 // Main page component
 export default async function DocPage({ params }: DocPageProps) {
   const { locale, slug } = await params;
+  // 静的レンダリングを有効にする（これがないと動的レンダリングにフォールバックする）
+  setRequestLocale(locale);
   const tDocs = await getTranslations('docs');
 
   let allContent: ContentData[];
