@@ -34,10 +34,12 @@ migration を含む open PR がゼロ / 進行中の大規模スキーマ変更 
 
 調査で判明した最重要の技術的制約:
 
-- `supabase migration squash` の出力は**スキーマのみのダンプ相当**で、`INSERT` / `UPDATE` / `DELETE` が落ちる。公式リファレンスは欠落対象に cron ジョブ・storage バケット・vault シークレットを明記している
-- 現行 baseline は `storage.buckets` への `INSERT` 2 件と `cron.schedule` 4 件を保持しており、**生の squash 出力ではなく手でキュレーションされた成果物**だった。今回も手当てが要る
+- **前回 squash は写経漏れを 2 件出しており、うち 1 件は実障害になった。** `20260713121911_restore_baseline_table_grants.sql` の冒頭コメントが経緯を記録している。squash された baseline が default table grant を含まず、production は archive 済み履歴から grant を引き継いでいた一方、clean な local / Preview DB では RLS ポリシーが走る前にクライアントが失敗した。修復は squash の約 4 か月後（2026-07-13）。もう 1 件は storage bucket の `text/csv` 欠落で、未修復のまま
+- production だけを見ていると気づけない種類の欠落である点が重要。`db diff --linked` は production と比較するため、production 側に grant が残っている限り差分に現れない
+- `supabase migration squash` は**使わない**。pin 版 CLI 2.109.1 の `--version` は「出力先」ではなく「squash 範囲の終端」であり、`--version 00000000000000` は実質 no-op になる。さらに squash は圧縮対象ファイルを自分で削除して最新タイムスタンプのファイルへ書き込むため、version 据え置きの決定とも `_archive/` への `git mv` とも衝突する。前回同様 `supabase db dump --local` でスキーマを書き出す
+- 出力に含まれないのはスキーマ定義以外（`INSERT` / `UPDATE` / `DELETE`）。公式リファレンスは欠落対象に cron ジョブ・storage バケット・vault シークレットを明記している
 - production の実測では pg_cron job 0 件・vault secret 0 件・storage bucket 2 件。旧 baseline の cron 4 件は対象テーブル削除に伴い unschedule 済みで、**新 baseline に写経してはならない**
-- `avatars` バケットは旧 baseline で `public = false` として作られ、後続 migration で `true` に変更されている。新 baseline は production の現在値を書く
+- storage bucket は `public` だけでは足りない。**avatars の 5MiB 制限と MIME allowlist を設定した migration は 142 件のどこにも存在せず**、production の値は migration から再現できない。squash はこれを版管理下へ戻す機会でもある
 
 この「旧 baseline の記述と現在の実態がずれている」状態こそ squash で解消したい対象であり、同時に写経ミスが最も起きやすい箇所でもあるため、計画側で個別のリスク項目として扱う。
 
@@ -62,7 +64,8 @@ R-08 の scope は計画策定までで、squash は production の migration �
 ## 影響・やること
 
 - 実施は本決定の範囲外。判定基準 3 条件を満たした時点で、計画書のチェックリストに沿って実施用 issue を起票する
-- 計画書に記載した production の実測値（cron 0 / vault 0 / storage bucket 2）は 2026-07-23 時点。**実施時に必ず取り直す**
-- CLI の `migration squash` / `migration repair` のフラグは、実施時点の pin 版（現在 `2.109.1`）で公式リファレンスに再照合する
+- 実施は production の履歴書き換えを含むため、AGENTS.md の EXPLICIT AUTHORITY として**承認・独立レビュー（`risk-reviewer`）・backup・Preview / dry-run・roll-forward を揃える**。承認だけでは着手条件を満たさない
+- 計画書に記載した production の実測値（cron 0 / vault 0 / storage bucket 2 の全カラム）は 2026-07-23 時点。**実施時に必ず取り直す**
+- CLI の `db dump` / `migration repair` のフラグは、実施時点の pin 版（現在 `2.109.1`）で `--help` に再照合する
 - 実施時は [#1462 migration failure recovery](https://github.com/Dayopt/dayopt/issues/1462) の復旧手順と矛盾しないか確認する
 - 関連 issue: [#1523](https://github.com/Dayopt/dayopt/issues/1523)
