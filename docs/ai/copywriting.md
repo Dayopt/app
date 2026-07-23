@@ -1,3 +1,8 @@
+---
+status: current
+last_verified: 2026-07-23
+---
+
 # Dayopt Copywriting Tone Guide v3
 
 ## 人格定義
@@ -305,7 +310,7 @@ Dayopt全体で「地図」のメタファーを一貫して使う。地図は�
 
 事実ベース。過剰な歓迎はしない。「前回の記録」を見せることで一貫性が働く。
 
-離脱メールやプッシュ通知での追い立ては行わない（[`docs/product/log/2026-06-16-feature-non-adoption.md`](../../docs/product/log/2026-06-16-feature-non-adoption.md)）。復帰はユーザーが自発的に戻った時のこのバナーのみで迎える。
+離脱メールやプッシュ通知での追い立ては行わない（[`docs/product/log/2026-06-16-feature-non-adoption.md`](../product/log/2026-06-16-feature-non-adoption.md)）。復帰はユーザーが自発的に戻った時のこのバナーのみで迎える。
 
 ---
 

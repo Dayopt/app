@@ -44,20 +44,21 @@ ai:
 | `draft`        | boolean  | ❌   | 下書き（デフォルト: `false`、`true` で非公開） |
 | `ai`           | object   | ❌   | AI/RAGメタデータ                               |
 
-## releases Frontmatter テンプレート
+## リリースノート記事（blog の `category: 'release'`）
+
+リリースノートは独立した content 種別ではなく、blog 記事として書く。ファイルは `apps/web/content/blog/{en,ja}/v0-16-0.mdx` のようにバージョンをケバブケース化した名前にする。frontmatter は blog スキーマそのままで、以下を固定する。
 
 ```yaml
 ---
-version: 'v0.16.0'
-date: '2026-02-19'
-title: 'Bulk Operations'
+title: 'v0.16.0 — Bulk Operations'
 description: 'Added support for bulk edit/delete operations for plans and records.'
+publishedAt: '2026-02-19'
 tags: ['new-features', 'improvements']
-breaking: false
-featured: true
-prerelease: false
+category: 'release'
 author: 'Dayopt Team'
 authorAvatar: '/avatars/dayopt-team.jpg'
+featured: false
+draft: false
 
 ai:
   relatedQuestions:
@@ -69,35 +70,14 @@ ai:
 ---
 ```
 
-### releases フィールド定義
+- `title` は `vX.Y.Z — 内容の要約` 形式（バージョン番号を先頭に含める）
+- `publishedAt` はリリース日（ISO 8601）
+- `category` は必ず `'release'`（`/blog/release` タブに表示される条件）
+- `ai.relatedDocs` で該当する docs ページへリンクする
 
-| フィールド     | 型       | 必須 | 説明                                            |
-| -------------- | -------- | ---- | ----------------------------------------------- |
-| `version`      | string   | ✅   | バージョン番号（`v` プレフィックス付き semver） |
-| `date`         | string   | ✅   | リリース日（ISO 8601）                          |
-| `title`        | string   | ✅   | 内容の要約タイトル（バージョン番号は含めない）  |
-| `description`  | string   | ✅   | 説明文（SEO + AI要約）                          |
-| `tags`         | string[] | ✅   | 変更種別タグ（UIカラー対応）                    |
-| `breaking`     | boolean  | ✅   | 破壊的変更を含むか                              |
-| `featured`     | boolean  | ✅   | 注目リリースか                                  |
-| `prerelease`   | boolean  | ❌   | プレリリースか（デフォルト: `false`）           |
-| `author`       | string   | ❌   | 著者名                                          |
-| `authorAvatar` | string   | ❌   | アバター画像パス                                |
-| `coverImage`   | string   | ❌   | カバー画像パス                                  |
-| `ai`           | object   | ❌   | AI/RAGメタデータ                                |
+### リリースノート専用タグ
 
-### リリースノート専用タグ（UIでカラー表示）
-
-タグは `new-features` / `improvements` / `bug-fixes` / `breaking-changes` / `security-updates` の5種類のみを使う。この5分類は GitHub Release 本文とも共通のカテゴリ定義であり、`docs/operations/runbook.md` 第4部「リリースノート執筆規約」を正とする（ここでは再定義しない）。色・アイコンは `apps/web/src/features/releases/lib/releases.ts` の `changeTypes` 配列が正（UIの表示色を決めるコード制約のため、値をここに手動複製しない）。
-
-### バージョンバッジの色（UI自動判定）
-
-| パターン        | 色               | 例               |
-| --------------- | ---------------- | ---------------- |
-| major (`x.0.0`) | 赤 (destructive) | `v2.0.0`         |
-| minor (`x.y.0`) | 青 (info)        | `v0.16.0`        |
-| patch (`x.y.z`) | 緑 (success)     | `v0.16.1`        |
-| prerelease      | 黄 (warning)     | `v0.17.0-beta.1` |
+タグは `new-features` / `improvements` / `bug-fixes` / `breaking-changes` / `security-updates` の5種類のみを使う。この5分類は GitHub Release 本文とも共通のカテゴリ定義であり、`docs/operations/runbook.md` 第4部「リリースノート執筆規約」を正とする（ここでは再定義しない）。`category: 'release'` 記事に限り、タグは該当する分だけ付ける（1-2個でも可。通常 blog の3個下限は適用されない。`apps/web/scripts/validate-content.js` 参照）。
 
 ### リリースノートの本文構造
 

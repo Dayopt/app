@@ -1,0 +1,21 @@
+# Dayopt
+
+> Dayopt is a timeboxing app for individuals. It combines planning, time tracking, tasks, and calendar in one place. You plan your day with time blocks, record what actually happened, and see the patterns.
+
+Dayopt shows what actually happened with your time, not just what you planned.
+
+## Docs
+
+- [Documentation](https://dayopt.app/docs): How to use Dayopt. Start here.
+- [Plans](https://dayopt.app/docs/plans): Create time blocks for your day.
+- [Records](https://dayopt.app/docs/records): Track what actually happened.
+
+## Blog
+
+- [Blog](https://dayopt.app/blog): Guides on timeboxing, product thinking, and development notes.
+- [Release Notes](https://dayopt.app/blog/release): What changed in each version.
+
+## Optional
+
+- [Japanese docs](https://dayopt.app/ja/docs): 日本語ドキュメント
+- [RSS feed](https://dayopt.app/blog/feed.xml): Blog updates.
