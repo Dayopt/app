@@ -33,8 +33,8 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - Plan / Recordのtyped command、exact CAS、DB時刻のtemporal rule、skip/link整合性はローカル実装済み。service-role command同士のDB制約raceは検証済みだが、session UI対OAuth MCPの実二経路raceは未検証
 - repo上の通常UIはcreate/update/delete/restore/skip/record/confirm-dayをservice-owned commandへ切替済み。Calendar cacheもDBが返したraw `updated_at`をversionとして維持する。Production deployは未実施
 - タグ削除・再割当て・mergeとSettingsの`deleteBlocks` / `deleteAllData`はPlan / Recordを直接更新・hard deleteするservice-owned例外writerとして残る。authenticated ACL cutoverの対象ではなく、一覧化と競合試験が必要
-- write scopeはclient allowlist経由でconnectionへ発行可能で、`write_enabled_at`のgrant markerも存在するが、安全にOFFへ戻す独立kill switchと運用導線は未実装。write toolは未登録なので現在は正規データを変更できない
-- rolling deploy互換のauthenticated table privilegeと旧write RPC、MCP write envelope、冪等性、mutation audit、既存read toolのstructured content、外部変更の画面反映、Learn用toolは未実装
+- DB global control、不可逆なconnection kill switch、payload-free receipt tableとreceipt-key serializationはrepo実装済み。global controlは初期OFFで、運用UIとwrite toolは未実装なので現在は正規データを変更できない
+- rolling deploy互換のauthenticated table privilegeと旧write RPC、transaction内再認可・digest・typed apply・receipt replay、既存read toolのstructured content、外部変更の画面反映、Learn用toolは未実装
 
 Delivery 6段階のうち2段階がrepo上で完了し、Step 3がactive。接続と正規データ境界の基盤は成立したが、Plan → Track → Learnのend-to-end顧客価値はまだ未達。
 
@@ -86,8 +86,8 @@ Delivery 6段階のうち2段階がrepo上で完了し、Step 3がactive。接�
 
 - `tools/list`は現在のconnectionで実行可能なtoolだけを返す
 - cached tool callはhandlerとDB transactionで再認可し、scope不足ならHTTP 403 + `WWW-Authenticate`を返す
-- 現在のbeta write scope発行は`MCP_WRITE_ENABLED_CLIENTS`によるclient allowlist。`write_enabled_at`はgrant markerとして維持し、別のnullable `write_disabled_at`を不可逆なconnection kill switchとして追加する。scope変更または再有効化は再authorization + reconnectとする
-- DBのglobal control、client allowlist、connection kill switch、granted scopeが全てONの時だけwrite scopeをeffectiveにする。いずれかがOFFでもread scopeは維持し、write toolだけを非表示、cached callを403にする。runtime envはdiscovery/新規grant用であり、in-flight applyの停止境界には使わない
+- 現在のbeta write scope発行は`MCP_WRITE_ENABLED_CLIENTS`によるclient allowlist。`write_enabled_at`はgrant marker、nullable `write_disabled_at`は不可逆なconnection kill switchとして維持する。scope変更または再有効化は再authorization + reconnectとする
+- runtime client allowlistはdiscovery、新規grant、HTTP token preflightを制御するが、in-flight applyの停止完了境界には使わない。DBのglobal control、authorization時のconnection grant marker、connection kill switch、granted scopeが全てONの時だけwrite scopeをeffectiveにする。いずれかがOFFでもread scopeは維持し、write toolだけを非表示、cached callを403にする。client停止は対象connectionを全てdisableしたtransactionの完了を境界とし、その後にruntime allowlistを閉じる
 - 既存list toolのtext出力は維持し、`schemaVersion: 1`のstructured contentを追加する
 - `plans.delete` / `records.delete`はsoft deleteを意味する。trash list/delete/restoreは削除済みデータへの権限を含むため`delete:*` scopeへまとめる
 - mutation inputの`operationId`をidempotency keyとして使い、別のpublic `idempotencyKey`は作らない。receipt fieldは[Step 3設計](./step-3-mutation-envelope.md)を候補とする
@@ -96,7 +96,7 @@ Delivery 6段階のうち2段階がrepo上で完了し、Step 3がactive。接�
 ### Mutation contract
 
 - Plan / Recordそれぞれのcreate/update/soft-delete/restoreをtyped commandとして実装し、generic JSON executorは作らない
-- MCP mutation transactionのlock順は`global control → connection → access token → profile → receipt → domain resource`に固定する。user/client/resource/scope/expiry/revoke/write gateを再検証する
+- MCP mutation transactionのlock順は`global control → connection → access token → profile → receipt advisory lock → domain resource`に固定する。user/client/resource/scope/expiry/revoke/write gateを再検証する。global controlの変更はrevision CASを使い、緊急停止より古いenable要求を拒否する
 - `profiles`のPro entitlementもlockして、downgrade完了後のwriteを防ぐ。MCP writeはbilling enforcementの一般flagにかかわらず`active` / `trialing` / `past_due`を必須とするproduct contractとして扱う
 - 再認可、idempotency claim、正規データ変更、成功mutation auditを兼ねる最小receiptを一括commitする。Settings revokeとscope撤回は同じconnection row lockでlinearizeする
 - createは既存のDB exclusion constraintを最終防衛線にし、constraint violationを`TIME_OVERLAP`へ変換する。Plan × Recordの重複は許可する
@@ -182,5 +182,5 @@ Delivery 6段階のうち2段階がrepo上で完了し、Step 3がactive。接�
 6. **Production UI command deploy** — service-owned command版UIをdeployし、create/update/delete/restore/skip/record/confirm-dayをsmokeする。旧deploymentと旧runtime callerのdrainを確認する
 7. **Production ACL-only PR** — authenticatedからPlan / Recordの全table privilegeをrevokeし、`SELECT`だけ再付与する。旧3 write RPCのEXECUTEもrevokeする。問題時はStaging検証済みの逆GRANT migrationを使う
 8. **Production MCP expand / tool deploy** — receipt、typed apply、durable global/connection kill switchを先にDBへ追加し、必要version確認後にtool codeを全gate OFFでdeployする
-9. **Closed beta** — durable global control、client allowlist、connection gateを順に開き、外部変更反映SLAと成功mutation audit欠損を監視する
+9. **Closed beta** — durable global control、runtime client allowlist、connection grantを順に開き、外部変更反映SLAと成功mutation audit欠損を監視する
 10. **Production authority** — Production migration、ACL contract、write有効化、旧token失効は証拠を分け、それぞれ対象と環境を示して明示権限を得る

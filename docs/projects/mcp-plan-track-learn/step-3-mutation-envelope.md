@@ -22,37 +22,37 @@ OAuth MCPの1回のwrite tool callを、現在の接続権限を再検証した�
 - service-ownedのwrite receipt tableを追加し、`user_id + client_id + operation_id`を一意にする。適用元`connection_id`は監査fieldとして別に保持する
 - success receiptをMCP mutation auditの正本とし、request digest、tool名、resource種別、resource ID、適用時version、適用時刻だけを保持する。既存`oauth_audit_log`へ同じ成功mutationを二重記録しない
 - digestはDB内で`SHA-256(canonical JSON { envelopeVersion, toolName, normalizedArgs })`として構成する。stored tool名とdigestの両方が一致する時だけ既存receiptを返し、片方でも異なれば`IDEMPOTENCY_KEY_REUSED`で拒否する
-- claimと正規データ変更は同じtransactionなので、失敗操作の占有rowは残さない。同じ操作の並列実行はunique keyの待機後に片方がreceipt replayになる
-- receipt tableはRLSを有効化し、`PUBLIC` / `anon` / `authenticated`から全権限をrevokeする。service roleにはapplyに必要な`SELECT` / `INSERT`だけを付与し、ユーザー向け監査表示は本文を返さない別service経路で後から追加する
+- authorizationをlock下で確認した後、`user_id + client_id + operation_id`から作るtransaction advisory lockをreceipt lockとして取得する。既存receiptを確認してからdomain commandを実行し、成功fieldが全て揃った完成receiptだけを最後にinsertする。同じ操作の並列実行はadvisory lock待機後に片方がreceipt replayとなり、失敗transactionや未完成claim rowは残らない
+- receipt tableはRLSを有効化し、`PUBLIC` / `anon` / `authenticated`から全権限をrevokeする。service roleにも直接`INSERT` / `UPDATE` / `DELETE`を付与せず、成功receiptはtyped `SECURITY DEFINER` applyだけがdomain mutationと同じtransactionでinsertする。監査用の最小`SELECT`だけをservice roleへ付与し、ユーザー向け表示は本文を返さない別service経路で後から追加する
 - 同じuser/clientの再authorization後も、現在のauthorizationを先に検証した上で同じoperation ID + tool/digestのreceiptを再生する。response lossとconnection更新が重なっても正規データを二重適用しない
 - receiptの`user_id` FKは`ON DELETE CASCADE`、監査用`origin_connection_id` FKは`ON DELETE SET NULL`とする。connection削除後もuser/client/operation IDの冪等性証跡を維持し、account削除時は既存`auth.admin.deleteUser()`のDB transactionで即時消去する
-- public idempotency windowは成功mutationから90日とする。service-only receipt cleanupだけが`applied_at`から90日経過したrowを削除し、window後のoperation ID再利用は新しい操作として扱う
-- connectionの直接DELETE権限はrevokeし、service-only connection cleanup RPCだけがrevoked/expired状態をlock下で再検証してhard deleteする。receiptは削除せず`origin_connection_id = NULL`となり、90日windowを維持する
+- public idempotency windowは成功mutationから90日とする。applyはreceipt lock取得後にDB時刻で期限切れreceiptを削除してからclaimし、遅延cleanupがあってもwindow後のoperation IDを新しい操作として扱えるようにする。service-only background cleanupも同じcutoffとreceipt lockを使う
+- connectionの直接INSERT / DELETE権限はrevokeし、直接UPDATEはusage timestampだけに絞る。service-only connection cleanup RPCはauthorization code exchangeのlock順を`connection → code`へ揃えた後の別migrationで追加し、revoked/expired状態をlock下で再検証してhard deleteする。receiptは削除せず`origin_connection_id = NULL`となり、90日windowを維持する
 - 拒否attemptは成功mutation監査の保証対象に含めない。payloadを持たないsecurity log/metricとして有限保持し、success receiptと混ぜない
 
 ### 2. Apply時のauthorizationをDBで再検証する
 
 - access token、connection、user、client、canonical resourceのbindingを検証する
-- singletonのDB global control rowを追加し、全applyのlock順を`global control → connection → access token → profile → receipt → domain resource`に固定する。applyはglobalからprofileまでを共有lockし、global stop、revoke/refresh/scope/gate/downgrade writerのUPDATEとlinearizeしつつ、独立writeは不要に直列化しない
+- singletonのDB global control rowを初期OFFで追加し、全applyのlock順を`global control → connection → access token → profile → receipt advisory lock → domain resource`に固定する。applyはglobalからprofileまでを共有lockし、global stop、revoke/refresh/scope/gate/downgrade writerのUPDATEとlinearizeしつつ、独立writeは不要に直列化しない。global control変更は単調増加するrevisionのCASを必須にし、緊急停止より古いenable要求を拒否する
 - access tokenの有効期限・revoke・required scope、connectionのrevoke・reauth期限・scope・grant markerをDB時刻で検証する
 - `write_enabled_at`とは別にnullable `write_disabled_at`を追加する。DB triggerでnon-NULLからNULLへの変更とtimestamp差替えを拒否し、service-only disable RPCだけがNULLからDB時刻へ進める。一度disableしたconnectionは再authorizationで新しいconnectionを作る
-- effective writeはDB global control、client allowlist、connectionが未disable、token/connectionのrequired scopeが全て成立する時だけ許可する。gate OFF時もread scopeは維持する
+- runtime client allowlistはtool discovery、新規write grant、HTTP token preflightを制御する。DB applyはglobal control、authorization時の`write_enabled_at` grant marker、connectionが未disable、token/connectionのrequired scopeを権威とする。client単位の停止は対象connectionを全てdisableしたtransactionの完了を境界とし、その後にruntime allowlistを閉じる。gate OFF時もread scopeは維持する
 - `profiles`のentitlement rowを共有lockし、`active` / `trialing` / `past_due`以外は拒否する。MCP writeは現行の一般`BILLING_ENFORCED` flagとは独立したPro契約とする
-- runtime envはtool discoveryと新規grantのgateであり、in-flight applyの停止完了境界には使わない。global停止はDB global control rowのUPDATE完了、client停止は対象connectionのdisable RPC完了を境界とし、その後にruntime allowlistを閉じる
+- runtime envはtool discovery、新規grant、HTTP token preflightのgateであり、in-flight applyの停止完了境界には使わない。global停止はDB global control rowのUPDATE完了、client停止は対象connectionのdisable RPC完了を境界とし、その後にruntime allowlistを閉じる
 
-| DB global control | Client allowlist | Connection | Required scope | Pro      | Effective write                            |
-| ----------------- | ---------------- | ---------- | -------------- | -------- | ------------------------------------------ |
-| off               | any              | any        | any            | any      | hidden / cached call 403。read scopeは維持 |
-| on                | off              | any        | any            | any      | hidden / cached call 403。read scopeは維持 |
-| on                | on               | disabled   | any            | any      | hidden / cached call 403。read scopeは維持 |
-| on                | on               | active     | missing        | any      | hidden / cached call 403                   |
-| on                | on               | active     | granted        | inactive | hidden / cached call 403。read scopeは維持 |
-| on                | on               | active     | granted        | active   | visible。DB transactionで同じ条件を再検証  |
+| DB global control | Runtime allowlist | Connection grant | Required scope | Pro      | Effective write                            |
+| ----------------- | ----------------- | ---------------- | -------------- | -------- | ------------------------------------------ |
+| off               | any               | any              | any            | any      | hidden / cached call 403。read scopeは維持 |
+| on                | off               | any              | any            | any      | hidden / cached call 403。read scopeは維持 |
+| on                | on                | disabled         | any            | any      | hidden / cached call 403。read scopeは維持 |
+| on                | on                | active           | missing        | any      | hidden / cached call 403                   |
+| on                | on                | active           | granted        | inactive | hidden / cached call 403。read scopeは維持 |
+| on                | on                | active           | granted        | active   | visible。DB transactionで権威条件を再検証  |
 
 ### 3. Typed apply RPCだけを作る
 
 - Plan / Recordのcreate/update/delete/restoreごとにtyped apply RPCを作り、既存の`*_command_v1`をtransaction内で呼ぶ
-- service-role確認、共通lock順、authorization assertion、canonical digest、receipt claim/replayはprivate SQL helperへ一度だけ実装する。各public typed RPCはrequired scope、tool名、typed domain command引数だけを所有する
+- service-role確認、共通lock順、authorization assertion、canonical digest、receipt advisory lock/replayはData API非公開の`private` schemaへ一度だけ実装する。各public typed RPCはrequired scope、tool名、typed domain command引数だけを所有する
 - generic JSON executor、SQL文字列dispatch、任意table/column指定は作らない
 - createの`source`は`api`に固定する。update/delete/restoreは`expectedUpdatedAt`必須とする
 - success responseは`schemaVersion: 1`、`operationId`、`resourceType`、`resourceId`、`version`、`deletedAt`、`replayed`だけの最小receiptにする。最新本文が必要なら既存get toolを使う
@@ -97,7 +97,7 @@ WHERE record.deleted_at IS NULL
 - 同じuser/clientが再authorizationした後も、90日window内の同じoperation ID + tool/digestは旧receiptを再生する
 - 同じoperation ID + 異なるtoolまたはdigestは正規データを変えず拒否する
 - access token検証後からapplyまでの間にconnection revoke、scope撤回、connection gate、Pro downgrade、reauth expiry、token revokeが起きた場合は変更しない。DB barrierで各writerのcommit後に待機中applyが拒否されることを検証する
-- global controlの停止完了後はin-flight applyを含めて変更せず、再開後は新しいrequestだけを許可する
+- global controlの停止完了後はin-flight applyを含めて変更せず、再開後は新しいrequestだけを許可する。stale revisionを使ったenableは停止状態を上書きできない
 - `write_disabled_at`はNULLから一度だけ設定でき、service roleの直接UPDATEでもNULL戻し・timestamp差替えを拒否する
 - stale versionのupdate/delete/restore、restore対create、同一時間帯createを正規化されたerrorで拒否する
 - persistent Stagingで実session JWTのtRPC入口と実opaque tokenのMCP HTTP入口をDB barrierで同期し、Plan / Record双方で成功1件、失敗1件、最終行1件、stable error codeを検証する
@@ -105,7 +105,7 @@ WHERE record.deleted_at IS NULL
 - receipt/audit/log/Sentry eventにtitle、note、tag名、token、raw payloadが含まれない
 - authenticatedのPlan / Record table writeと旧3 write RPCはACL contract後に失敗し、own rowの`SELECT`、通常UI、MCP typed commandは成功する
 - authenticatedに`TRUNCATE / REFERENCES / TRIGGER / MAINTAIN`を含む不要なtable privilegeが残らない
-- 90日window内のreceiptはbackground cleanupできず、connection cleanup後もuser/client/operation IDによるreplayが成立する
+- 90日window内のreceiptはbackground cleanupできず、期限切れreceiptのeager cleanup・background cleanup・同operation applyを並列化しても一度だけ新規claimされる。connection cleanup後もuser/client/operation IDによるreplayが成立する
 - 既存account削除の`auth.admin.deleteUser()`成功時にreceiptがcascade deleteされ、Storage/Stripe/Admin APIを跨ぐ現在の削除フローへ新しい部分commitを追加しない
 
 ## Reversibility Table
