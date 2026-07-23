@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-16
+last_verified: 2026-07-23
 ---
 
 # セキュリティ方針
@@ -338,7 +338,7 @@ Product / WebのCSPは各appのsecurity header設定で強制し、違反は各a
 - ProductionではSHA-256化したIP単位20/分と全体120/分のUpstash rate limitを適用し、超過時は429、backend unavailable時はbodyを読まず503を返す
 - `application/csp-report`以外とProduct origin以外のdocument URIを拒否し、未知のdirectiveは`unknown`へ固定する
 - document / blocked / source URLからqueryとfragmentを除去し、ブラウザ拡張由来の違反はSentryへ送らない
-- WebではVercel Toolbarの`font-src`だけを、directive、blocked origin、source originがすべて一致する場合に除外し、missingやlookalike originを含むnear-missは送信する
+- WebではVercel Toolbarの`font-src`だけを、directive、blocked origin、既知font path（`/geist.woff2` / `/geist_mono.woff2`）で照合する。`source-file`がある場合はそのoriginも`https://vercel.live`に限定し、`source-file`が省略された場合だけmissingを許容する。未知font path、source origin不一致、lookalike originなどのnear-missは送信する
 - 有効な違反だけを`csp-violation`として、directive単位の固定fingerprintでSentryへ送る
 
 ### 違反レポート確認
