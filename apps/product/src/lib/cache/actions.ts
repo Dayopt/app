@@ -1,4 +1,4 @@
-'use server';
+import 'server-only';
 
 import { revalidateTag } from 'next/cache';
 
@@ -27,12 +27,18 @@ function safeRevalidateTag(tag: string): void {
  * タグのmutation（create/update/delete/merge/reorder）後に呼び出す。
  * これにより次のリクエストで最新データがDBから取得される。
  *
- * @param userId - ユーザーID
+ * この module は `'use server'` を付けない（server-only に固定する）。
+ * userId を境界内で検証せず呼び出し元から受け取るため、Server Action として
+ * 公開すると action ID の露出（GHSA-955p-x3mx-jcvp）経由で未認証呼び出しから
+ * 任意ユーザーのキャッシュを無効化できてしまう。呼び出し元は tRPC の
+ * protectedProcedure のみで client 経路は無いため、公開する必要が無い。
+ *
+ * @param userId - 認証済みユーザーのID（tRPC の `ctx.userId` を渡すこと）
  *
  * @example
  * // tRPCルーターで使用
  * await service.create({ ... });
- * await invalidateUserTagsCache(ctx.userId!);
+ * await invalidateUserTagsCache(ctx.userId);
  */
 export async function invalidateUserTagsCache(userId: string): Promise<void> {
   safeRevalidateTag(getUserTagsCacheTag(userId));

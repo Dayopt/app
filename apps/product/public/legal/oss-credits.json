@@ -323,14 +323,14 @@
   },
   {
     "name": "@next/env",
-    "version": "16.2.10",
+    "version": "16.2.11",
     "license": "MIT",
     "repository": "https://github.com/vercel/next.js",
     "publisher": "Next.js Team <support@vercel.com>"
   },
   {
     "name": "@next/swc-darwin-arm64",
-    "version": "16.2.10",
+    "version": "16.2.11",
     "license": "MIT",
     "repository": "https://github.com/vercel/next.js"
   },
@@ -1495,13 +1495,6 @@
     "license": "MIT",
     "repository": "sindresorhus/camelcase",
     "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "caniuse-lite",
-    "version": "1.0.30001805",
-    "license": "CC-BY-4.0",
-    "repository": "browserslist/caniuse-lite",
-    "publisher": "Ben Briggs"
   },
   {
     "name": "caniuse-lite",
@@ -2725,7 +2718,7 @@
   },
   {
     "name": "next",
-    "version": "16.2.10",
+    "version": "16.2.11",
     "license": "MIT",
     "repository": "vercel/next.js"
   },
@@ -2958,13 +2951,6 @@
     "license": "MIT-0",
     "repository": "https://github.com/postalsys/postal-mime.git",
     "publisher": "Andris Reinman"
-  },
-  {
-    "name": "postcss",
-    "version": "8.5.19",
-    "license": "MIT",
-    "repository": "postcss/postcss",
-    "publisher": "Andrey Sitnik <andrey@sitnik.es>"
   },
   {
     "name": "postcss",
