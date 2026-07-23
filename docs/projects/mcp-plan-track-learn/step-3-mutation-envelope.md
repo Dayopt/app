@@ -52,9 +52,9 @@ Persistent Staging / Productionへの適用、逆GRANTと再cutoverのrehearsal�
 - singletonのDB global control rowを初期OFFで追加し、全applyのlock順を`global control → auth.users → connection → access token → profile → receipt advisory lock → domain resource`に固定する。connectionからuser候補をlockなしで解決し、`auth.users`を`FOR KEY SHARE`した後に同じuser bindingのconnectionを共有lock下で再検証する。これによりaccount削除の親子FK lock順と揃えつつ、global stop、revoke/refresh/scope/gate/downgrade writerのUPDATEとlinearizeする。global control変更は単調増加するrevisionのCASを必須にし、緊急停止より古いenable要求を拒否する
 - access tokenの有効期限・revoke・required scope、connectionのrevoke・reauth期限・scope・grant markerをDB時刻で検証する
 - `write_enabled_at`とは別にnullable `write_disabled_at`を追加する。DB triggerでnon-NULLからNULLへの変更とtimestamp差替えを拒否し、service-only disable RPCだけがNULLからDB時刻へ進める。一度disableしたconnectionは再authorizationで新しいconnectionを作る
-- runtime client allowlistはtool discovery、新規write grant、HTTP token preflightを制御する。DB applyはglobal control、authorization時の`write_enabled_at` grant marker、connectionが未disable、token/connectionのrequired scopeを権威とする。client単位の停止は対象connectionを全てdisableしたtransactionの完了を境界とし、その後にruntime allowlistを閉じる。gate OFF時もread scopeは維持する
+- runtime client allowlistはtool discoveryとHTTP preflightを制御する。DBのdurable client controlは新規write grant、token検証、applyを制御し、global control、authorization時の`write_enabled_at` grant marker、connectionが未disable、token/connectionのrequired scopeとともに権威とする。client単位の停止はclient control更新と対象connectionの不可逆disableを行うtransactionの完了を境界とし、その後にruntime allowlistを閉じる。gate OFF時もread scopeは維持する
 - `profiles`のentitlement rowを共有lockし、`active` / `trialing` / `past_due`以外は拒否する。MCP writeは現行の一般`BILLING_ENFORCED` flagとは独立したPro契約とする
-- runtime envはtool discovery、新規grant、HTTP token preflightのgateであり、in-flight applyの停止完了境界には使わない。global停止はDB global control rowのUPDATE完了、client停止は対象connectionのdisable RPC完了を境界とし、その後にruntime allowlistを閉じる
+- runtime envはtool discoveryとHTTP preflightのgateであり、in-flight applyの停止完了境界には使わない。global停止はDB global control rowのUPDATE完了、client停止は同じcontrol rowのrevision CASと対象connectionの不可逆disableを行うRPC完了を境界とし、その後にruntime allowlistを閉じる
 
 | DB global control | Runtime allowlist | Connection grant | Required scope | Pro      | Effective write                            |
 | ----------------- | ----------------- | ---------------- | -------------- | -------- | ------------------------------------------ |
@@ -143,7 +143,7 @@ WHERE record.deleted_at IS NULL
 
 ## Existing Code to Reuse
 
-- `apps/product/src/lib/mcp/auth.ts` — token/connection bindingとruntime client gate
+- `apps/product/src/lib/mcp/auth.ts` — token/connection binding、runtime preflight、durable global/client gate
 - `apps/product/src/lib/mcp/mutation-contract.ts` — Plan / Record mutation input、最小receipt、stable error contract
 - `apps/product/src/lib/mcp/mutation-db.ts` — raw service-role capabilityを閉じ込めたoperation固有DB adapter
 - `apps/product/src/lib/mcp/mutation-client.ts` — deadlock retryとDB error正規化を担うserver-only client

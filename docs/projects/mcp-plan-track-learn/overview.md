@@ -34,7 +34,7 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - Plan / Recordのtyped command、exact CAS、DB時刻のtemporal rule、skip/link整合性はローカル実装済み。Plan / Record双方のcreate/update/delete/restoreで、通常UI commandとMCP typed applyの同時実行、stale CAS、restore対createをDB integrationで検証済み。実session JWTのtRPC対実opaque tokenのMCP HTTP raceはPersistent Stagingで未検証
 - repo上の通常UIはcreate/update/delete/restore/skip/record/confirm-dayをservice-owned commandへ切替済み。Calendar cacheもDBが返したraw `updated_at`をversionとして維持する。Production deployは未実施
 - タグ削除・再割当て・mergeとSettingsの`deleteBlocks` / `deleteAllData`はservice-owned commandへ収束し、通常UI/MCPの単行writeと同じuser単位transaction advisory lockで直列化するrepo実装と競合試験まで完了した。新appは最終RPC名だけを呼び、旧deployment向けRPCはowner検証付きの一時compatibility wrapperへ置き換えている。Production適用と旧wrapperのdrain後revokeは未実施
-- DB global control、不可逆なconnection kill switch、payload-free receipt tableとreceipt-key serializationはrepo実装済み。Plan / Recordのcreate/update/delete/restoreはtransaction内再認可、canonical digest、typed apply、receipt replayとserver-only adapterまでローカル実装・検証済み。Record createだけがcompleted Planへのlinkを受け、updateはPlan attribution・source・external provenanceを変更できない
+- DB global control、durableなclient単位control、不可逆なconnection kill switch、payload-free receipt tableとreceipt-key serializationはrepo実装済み。client停止はcontrol row更新と既存write connectionのdisableを同一transactionで行い、grant、token検証、applyの3境界で再検証する。再有効化しても旧connectionは復活せず、再authorizationを必須とする。Plan / Recordのcreate/update/delete/restoreはtransaction内再認可、canonical digest、typed apply、receipt replayとserver-only adapterまでローカル実装・検証済み。Record createだけがcompleted Planへのlinkを受け、updateはPlan attribution・source・external provenanceを変更できない
 - authenticatedのPlan / Record権限を`SELECT`だけにするACL cutoverはrepo実装済み。全migrationのfresh適用、継承roleを含むeffective table / column write権限のfail-closed監査、authenticated直接write拒否、旧deployment compatibility、service-role recoveryをローカル検証済み。Production適用、旧wrapperのdrain後revoke、逆GRANT rehearsalは未実施
 - global controlは初期OFFで、全write toolと運用UIは未登録なので現在のMCPは正規データを変更できない。`plans.get` / `records.get` / trash、既存read toolのstructured content、外部変更の画面反映、Settings connection UI、Learn用toolは未実装
 
@@ -90,8 +90,8 @@ Delivery 6段階のうち3段階がrepo上で完了し、Step 4がactive。接�
 - cached tool callはhandlerとDB transactionで再認可し、scope不足ならHTTP 403 + `WWW-Authenticate`を返す
 - credentialなし/unsupported auth schemeの401はerror情報を返さずdiscovery metadataだけをchallengeする。malformed Bearerは400 `invalid_request`、invalid/expired/revoked tokenは401 `invalid_token`、認可DBの不明状態は503 + `Retry-After`とし、再authorization loopへ変換しない
 - write/delete scopeは常に`read:entries`を含む。追加scopeの403 challengeは現在のgrantを失わないよう、既存scope + base read + 不足scopeの和集合を返す
-- 現在のbeta write scope発行は`MCP_WRITE_ENABLED_CLIENTS`によるclient allowlist。`write_enabled_at`はgrant marker、nullable `write_disabled_at`は不可逆なconnection kill switchとして維持する。scope変更または再有効化は再authorization + reconnectとする
-- runtime client allowlistはdiscovery、新規grant、HTTP token preflightを制御するが、in-flight applyの停止完了境界には使わない。DBのglobal control、authorization時のconnection grant marker、connection kill switch、granted scopeが全てONの時だけwrite scopeをeffectiveにする。いずれかがOFFでもread scopeは維持し、write toolだけを非表示、cached callを403にする。client停止は対象connectionを全てdisableしたtransactionの完了を境界とし、その後にruntime allowlistを閉じる
+- 現在のbeta write scope発行は`MCP_WRITE_ENABLED_CLIENTS`のruntime preflightと、`mcp_mutation_control.enabled_client_ids`のdurable client gateの両方を必須とする。`write_enabled_at`はgrant marker、nullable `write_disabled_at`は不可逆なconnection kill switchとして維持する。scope変更または再有効化は再authorization + reconnectとする
+- runtime client allowlistはdiscoveryとHTTP preflightを制御するが、権威やin-flight applyの停止完了境界には使わない。DBのglobal control、durable client control、authorization時のconnection grant marker、connection kill switch、granted scopeが全てONの時だけwrite scopeをeffectiveにする。いずれかがOFFでもread scopeは維持し、write toolだけを非表示、cached callを403にする。client停止はcontrol rowを先に更新し、対象clientのwrite connectionを同じtransactionで全てdisableする。完了後にruntime allowlistを閉じる
 - 既存list toolのtext出力は維持し、`schemaVersion: 1`のstructured contentを追加する
 - `plans.delete` / `records.delete`はsoft deleteを意味する。trash list/delete/restoreは削除済みデータへの権限を含むため`delete:*` scopeへまとめる
 - mutation inputの`operationId`をidempotency keyとして使い、別のpublic `idempotencyKey`は作らない。receipt fieldは[Step 3設計](./step-3-mutation-envelope.md)を候補とする
@@ -119,7 +119,7 @@ Delivery 6段階のうち3段階がrepo上で完了し、Step 4がactive。接�
 
 - `plans.get` / `records.get`は候補contractにだけ存在し、runtime registryには未登録。mutation receiptから最新本文を取得する導線として、公開済み扱いにせず実装・contract testを先に完了する
 - 外部MCP mutation後、現在のCalendar / Inspector cacheはlocal mutation前提で最大5分staleになり得る。user revision pollingを実装し、表示中の外部変更反映SLA 20秒を満たしてからwrite toolを列挙する
-- durableなclient単位DB gateをauthorization/applyの両方で再検証する。tool名だけのregistryは廃止済みで、descriptor sourceとexact set testへ統合済み
+- durableなclient単位DB gateはgrant、token検証、applyへ追加済み。tool名だけのregistryも廃止し、descriptor sourceとexact set testへ統合済み
 - Settingsのconnection一覧/revoke、`plans.get` / `records.get` / trash、全read toolのstructured content、revision pollingを実装する
 
 Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializationはrepo上で完了した。writerが先なら後続purgeが削除し、purgeが先なら後続writerは成功できる。この技術契約とは別に、`deleteAllData`後もOAuth connection/token/receiptが残る現在仕様を公開前に決める。
@@ -222,7 +222,7 @@ Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializatio
 6. **Production compatibility observation** — 強制reloadまたは同等の導線を維持し、旧RPC利用数、旧input、lock timeout、serialization failureが0であることを観測する。異常時はglobal MCP gateだけに頼らず通常writeを再quiesceし、Staging検証済みのforward bridgeを適用する
 7. **Production compatibility cleanup PR** — 旧instanceのdrainと旧RPC利用数0を確認してから、新timestamp migrationで一時compatibility wrapperのEXECUTEをrevokeする。適用済みmigrationは編集しない
 8. **Production tool PR** — 直前のACL schema versionを確認し、tool codeだけを全gate OFFでdeployする
-9. **Closed beta** — durable global control、runtime client allowlist、connection grantを順に開き、外部変更反映SLAと成功mutation audit欠損を監視する
+9. **Closed beta** — durable global controlをOFFのままmigrationとapp deployを完了し、旧instanceをdrainする。対象clientのdurable gate、runtime allowlist、global controlの順に開き、外部変更反映SLAと成功mutation audit欠損を監視する
 10. **Production authority** — Production migration、ACL contract、write有効化、旧token失効は証拠を分け、それぞれ対象と環境を示して明示権限を得る
 
 `20260723123500`だけ成功し`20260723123600`以降が失敗した場合は、command版appとglobal gate OFFを維持し、code rollbackしない。lock blockerを確認して同migrationを再試行し、必要なら新timestampのforward bridgeを追加する。旧codeへ戻す必要がある場合だけ、先にStaging検証済みの逆GRANT migrationを適用する。
