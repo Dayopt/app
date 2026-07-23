@@ -88,7 +88,8 @@ function createReleaseWorld(options: { productionSha?: string } = {}) {
     const method = init?.method ?? 'GET';
     const project = url.includes('web') ? 'web' : 'product';
 
-    if (!url.startsWith('https://api.vercel.com')) {
+    // smoke は deployment の unique URL を叩く。Vercel API 以外は 200 を返す。
+    if (new URL(url).origin !== 'https://api.vercel.com') {
       return new Response(null, { status: 200 });
     }
     if (method === 'POST' && url.includes('/promote/')) {

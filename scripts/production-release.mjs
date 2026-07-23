@@ -169,8 +169,14 @@ export async function waitForReadyCandidates({
 
 function isProtectionRedirect(response) {
   if (response.status < 300 || response.status >= 400) return false;
-  const location = response.headers?.get?.('location') ?? '';
-  return location.includes('vercel.com/sso-api');
+  const location = response.headers?.get?.('location');
+  if (!location) return false;
+  try {
+    const url = new URL(location);
+    return url.host === 'vercel.com' && url.pathname === '/sso-api';
+  } catch {
+    return false;
+  }
 }
 
 /**
