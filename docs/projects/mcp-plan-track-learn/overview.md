@@ -30,11 +30,11 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - OAuth resource、stable connection、atomic code/refresh、DB connection revokeと古いaccess token拒否はローカル実装・検証済み。Settings revoke UIとwrite transactionとのlinearizationは未実装
 - 現在登録済みの3 toolについて`tools/list`はscopeでfilterし、cached tool callはroute前段で403 challengeを返す
 - Plan / Record同種間の時間重複は既存GiST exclusion constraintで防止済み
-- Plan / Recordのtyped command、exact CAS、DB時刻のtemporal rule、skip/link整合性はローカル実装済み。service-role command同士のDB制約raceは検証済みだが、session UI対OAuth MCPの実二経路raceは未検証
+- Plan / Recordのtyped command、exact CAS、DB時刻のtemporal rule、skip/link整合性はローカル実装済み。Plan createでは通常UI commandとMCP typed applyの同時実行で片方だけが成功することをDB integrationで検証済み。実session JWTのtRPC対実opaque tokenのMCP HTTP raceはPersistent Stagingで未検証
 - repo上の通常UIはcreate/update/delete/restore/skip/record/confirm-dayをservice-owned commandへ切替済み。Calendar cacheもDBが返したraw `updated_at`をversionとして維持する。Production deployは未実施
 - タグ削除・再割当て・mergeとSettingsの`deleteBlocks` / `deleteAllData`はPlan / Recordを直接更新・hard deleteするservice-owned例外writerとして残る。authenticated ACL cutoverの対象ではなく、一覧化と競合試験が必要
-- DB global control、不可逆なconnection kill switch、payload-free receipt tableとreceipt-key serializationはrepo実装済み。global controlは初期OFFで、運用UIとwrite toolは未実装なので現在は正規データを変更できない
-- rolling deploy互換のauthenticated table privilegeと旧write RPC、transaction内再認可・digest・typed apply・receipt replay、既存read toolのstructured content、外部変更の画面反映、Learn用toolは未実装
+- DB global control、不可逆なconnection kill switch、payload-free receipt tableとreceipt-key serializationはrepo実装済み。`plans.create`のtransaction内再認可、canonical digest、typed apply、receipt replayとserver-only adapterもローカル実装・検証済み
+- global controlは初期OFFで、`plans.create` toolと運用UIは未登録なので現在のMCPは正規データを変更できない。Plan update/delete/restore、全Record apply、rolling deploy互換のauthenticated table privilegeと旧write RPC、既存read toolのstructured content、外部変更の画面反映、Learn用toolは未実装
 
 Delivery 6段階のうち2段階がrepo上で完了し、Step 3がactive。接続と正規データ境界の基盤は成立したが、Plan → Track → Learnのend-to-end顧客価値はまだ未達。
 
@@ -96,7 +96,7 @@ Delivery 6段階のうち2段階がrepo上で完了し、Step 3がactive。接�
 ### Mutation contract
 
 - Plan / Recordそれぞれのcreate/update/soft-delete/restoreをtyped commandとして実装し、generic JSON executorは作らない
-- MCP mutation transactionのlock順は`global control → connection → access token → profile → receipt advisory lock → domain resource`に固定する。user/client/resource/scope/expiry/revoke/write gateを再検証する。global controlの変更はrevision CASを使い、緊急停止より古いenable要求を拒否する
+- MCP mutation transactionのlock順は`global control → auth.users → connection → access token → profile → receipt advisory lock → domain resource`に固定する。connectionからuser候補をlockなしで解決し、`auth.users`をlockした後に同じuser bindingのconnectionをlock下で再検証する。user/client/resource/scope/expiry/revoke/write gateを再検証し、global controlの変更はrevision CASで緊急停止より古いenable要求を拒否する
 - `profiles`のPro entitlementもlockして、downgrade完了後のwriteを防ぐ。MCP writeはbilling enforcementの一般flagにかかわらず`active` / `trialing` / `past_due`を必須とするproduct contractとして扱う
 - 再認可、idempotency claim、正規データ変更、成功mutation auditを兼ねる最小receiptを一括commitする。Settings revokeとscope撤回は同じconnection row lockでlinearizeする
 - createは既存のDB exclusion constraintを最終防衛線にし、constraint violationを`TIME_OVERLAP`へ変換する。Plan × Recordの重複は許可する
@@ -104,9 +104,17 @@ Delivery 6段階のうち2段階がrepo上で完了し、Step 3がactive。接�
 - MCP createは`source = 'api'`。`from_plan`はワンタップ記録とconfirm-dayによるDayopt内部のPlan変換専用とする
 - foreign/nonexistent IDは区別せず`NOT_FOUND`とし、raw payload、title、note、tokenをreceipt/audit/logへ保存しない
 - 同一operation ID + 同一tool/digestはreceiptを再生し、異なるtoolまたはdigestは拒否する
+- 各public typed apply wrapperはprivate共通helperを呼ぶ前にservice-role JWTを独立に検証する。このassertionは新しいoperationを追加する時も省略しない
+- server adapterはraw service-role clientを公開せず、operation固有methodだけを返す。expected SQLSTATEだけをstable codeへ変換し、未知のDB failureはcodeだけを観測してraw message・cause・入力本文を破棄する
 - DB変更はexpand/cutoverの2段階にする。通常UIのprimary timeblock callerをservice-owned commandへ移した後に、別migrationでauthenticatedのPlan / Record table privilegeを全てrevokeして`SELECT`だけ再付与する。旧`soft_delete_plan`、`soft_delete_record`、`confirm_day_plans_to_records`のEXECUTEもrevokeする
 - GiST競合が`40P01`を返した場合はservice境界で一度だけ再試行し、最終的なoverlap/version errorへ正規化する
 - `confirmDay`は通常UI専用とし、tRPCとDBの両方で26時間を上限にする。MCP初期toolには公開しない
+
+### Write tool公開前のブロッカー
+
+- `plans.get` / `records.get`はscope registryに名前だけ存在し未登録。mutation receiptから最新本文を取得する導線として、公開済み扱いにせず実装・contract testを先に完了する
+- 外部MCP mutation後、現在のCalendar / Inspector cacheはlocal mutation前提で最大5分staleになり得る。user revision pollingを実装し、表示中の外部変更反映SLA 20秒を満たしてからwrite toolを列挙する
+- Settingsの`deleteBlocks` / `deleteAllData`はPlan / Recordを直接hard deleteする。MCP applyとのuser単位serializationと最終状態の規則を実装・競合試験してからwrite gateを開く
 
 ### Product convergence
 

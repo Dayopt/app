@@ -14,6 +14,13 @@ code:
 
 OAuth MCPの1回のwrite tool callを、現在の接続権限を再検証した単一DB transactionとして公開idempotency window内に一度だけ正規データへ反映する。
 
+## Current implementation slice
+
+- `plans.create`のtyped DB applyとserver-only adapterはローカル実装済み。global controlはOFFのままで、MCP toolには未登録
+- 同一operationの直列・並列retry、異なるpayloadでのoperation ID再利用、90日window、再authorization、token/connection/Pro/global gate失効、account削除、通常UI commandとの同時間帯raceをintegration testで検証済み
+- adapterはraw service-role clientを公開せず、DB message・title・note・tokenをerror / log / Sentryへ渡さない。deadlockだけを同じoperation IDで一度再試行する
+- Plan update/delete/restore、Record全操作、実HTTP二経路、外部変更cache反映、Settings hard deleteとのserializationは未実装
+
 ## Minimum Viable Approach
 
 ### 1. Durable receiptを追加する
@@ -33,7 +40,7 @@ OAuth MCPの1回のwrite tool callを、現在の接続権限を再検証した�
 ### 2. Apply時のauthorizationをDBで再検証する
 
 - access token、connection、user、client、canonical resourceのbindingを検証する
-- singletonのDB global control rowを初期OFFで追加し、全applyのlock順を`global control → connection → access token → profile → receipt advisory lock → domain resource`に固定する。applyはglobalからprofileまでを共有lockし、global stop、revoke/refresh/scope/gate/downgrade writerのUPDATEとlinearizeしつつ、独立writeは不要に直列化しない。global control変更は単調増加するrevisionのCASを必須にし、緊急停止より古いenable要求を拒否する
+- singletonのDB global control rowを初期OFFで追加し、全applyのlock順を`global control → auth.users → connection → access token → profile → receipt advisory lock → domain resource`に固定する。connectionからuser候補をlockなしで解決し、`auth.users`を`FOR KEY SHARE`した後に同じuser bindingのconnectionを共有lock下で再検証する。これによりaccount削除の親子FK lock順と揃えつつ、global stop、revoke/refresh/scope/gate/downgrade writerのUPDATEとlinearizeする。global control変更は単調増加するrevisionのCASを必須にし、緊急停止より古いenable要求を拒否する
 - access tokenの有効期限・revoke・required scope、connectionのrevoke・reauth期限・scope・grant markerをDB時刻で検証する
 - `write_enabled_at`とは別にnullable `write_disabled_at`を追加する。DB triggerでnon-NULLからNULLへの変更とtimestamp差替えを拒否し、service-only disable RPCだけがNULLからDB時刻へ進める。一度disableしたconnectionは再authorizationで新しいconnectionを作る
 - runtime client allowlistはtool discovery、新規write grant、HTTP token preflightを制御する。DB applyはglobal control、authorization時の`write_enabled_at` grant marker、connectionが未disable、token/connectionのrequired scopeを権威とする。client単位の停止は対象connectionを全てdisableしたtransactionの完了を境界とし、その後にruntime allowlistを閉じる。gate OFF時もread scopeは維持する
@@ -52,10 +59,10 @@ OAuth MCPの1回のwrite tool callを、現在の接続権限を再検証した�
 ### 3. Typed apply RPCだけを作る
 
 - Plan / Recordのcreate/update/delete/restoreごとにtyped apply RPCを作り、既存の`*_command_v1`をtransaction内で呼ぶ
-- service-role確認、共通lock順、authorization assertion、canonical digest、receipt advisory lock/replayはData API非公開の`private` schemaへ一度だけ実装する。各public typed RPCはrequired scope、tool名、typed domain command引数だけを所有する
+- 共通lock順、authorization assertion、canonical digest、receipt advisory lock/replayはData API非公開の`private` schemaへ一度だけ実装する。各public typed RPCはrequired scope、tool名、typed domain command引数だけを所有し、private helperを呼ぶ前にservice-role JWT assertionをwrapper自身で必ず実行する
 - generic JSON executor、SQL文字列dispatch、任意table/column指定は作らない
 - createの`source`は`api`に固定する。update/delete/restoreは`expectedUpdatedAt`必須とする
-- success responseは`schemaVersion: 1`、`operationId`、`resourceType`、`resourceId`、`version`、`deletedAt`、`replayed`だけの最小receiptにする。最新本文が必要なら既存get toolを使う
+- success responseは`schemaVersion: 1`、`operationId`、`resourceType`、`resourceId`、`version`、`deletedAt`、`replayed`だけの最小receiptにする。最新本文が必要ならget toolを使うが、2026-07-23現在の`plans.get` / `records.get`はregistry上の候補名だけで未登録なので、write tool公開前に実装する
 
 ### 4. MCP toolへ接続する
 
@@ -66,6 +73,7 @@ OAuth MCPの1回のwrite tool callを、現在の接続権限を再検証した�
 - domain errorをstable codeへ変換し、DB messageや入力本文をMCP error、log、Sentry contextへ出さない
 - `plans.delete` / `records.delete`はreversibleなsoft deleteであり、hard deleteではない。trash list/delete/restoreはいずれも`delete:*` scopeとする
 - 3 clientで同じgolden request/responseを通し、tool名、scope matrix、`operationId`、receipt schemaを公開契約のdecision logとしてclosed beta前に固定する
+- 外部mutationを開いているCalendar / Inspectorへ20秒以内に反映するuser revision pollingと、Settings `deleteBlocks` / `deleteAllData`のuser単位serializationをwrite tool登録の前提にする
 
 ### 5. Public write contractを閉じる
 
