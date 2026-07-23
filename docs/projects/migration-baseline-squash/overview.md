@@ -58,7 +58,7 @@ production だけを見ていると気づけない種類の欠落である点が
 2. **進行中の大規模スキーマ変更 project がない** — [time-model-split](../time-model-split/summary.md) は 2026-07-13 に `done`。同種の大規模変更が走っていないこと
 3. **リリース直後の静穏期** — 直近リリースが production で安定し、次のリリースまで間があること。squash 直後に hotfix migration を打つ状況を避ける
 
-さらに実施ウィンドウ中は、**migration を含むか否かに関わらず main への merge を止める**。§手順 6 の窓（後述）が理由。
+さらに実施ウィンドウ中は、**squash PR 以外の main への merge を、migration を含むか否かに関わらず止める**。手順 6（merge）と手順 7（repair）の順序が前提を成すため。
 
 > 判定基準 1 と 3 は「実施日を選ぶ」ためのもので、squash 自体を先送りする理由にはならない。migration が増え続ける限り、次のリリース境界で実施する。
 
@@ -83,17 +83,37 @@ pin 版 CLI 2.109.1 の `migration squash --help` は `--version string  Squash 
 
 ## 非スキーマオブジェクトの扱い（最重要リスク）
 
-`db dump`（および `migration squash`）が出力するのは**スキーマ定義**であり、`INSERT` / `UPDATE` / `DELETE` などのデータ行は落ちる。Supabase 公式 CLI リファレンスも、欠落対象に cron ジョブ・storage バケット・vault シークレットを明記している。
+`db dump` の出力から落ちるものは 2 種類ある。**どちらも「production では無事だが、新しい local / Preview だけが壊れる」形の障害になる**（§前回障害と同じ構造）。
+
+1. **データ行** — `INSERT` / `UPDATE` / `DELETE`。公式リファレンスも欠落対象に cron ジョブ・storage バケット・vault シークレットを明記している
+2. **managed schema のオブジェクト** — `db dump` は `--exclude-schema` に `auth` / `storage` / `extensions` / `cron` / `vault` などを既定で指定する（pin 版 2.109.1 で `--dry-run` により実測）。これらのスキーマ**内に定義された**オブジェクトは出力されない
+
+2 が特に危険で、現行 baseline は以下を持っているが `db dump` では再現されない。
+
+- `auth.users` への `AFTER INSERT` トリガー（`on_auth_user_created` → `public.handle_new_user()`）— **落ちると新規登録でプロフィールが作られない**
+- `storage.objects` への RLS ポリシー群 — **落ちるとストレージのアクセス制御が消える**
+
+> `public` のテーブルが `REFERENCES auth.users(id)` を持つのは問題ない。FK は `public` 側のテーブル定義の一部として出力される。危険なのは **auth / storage スキーマ側に住んでいるオブジェクト**（トリガー・ポリシー）。
 
 production の実測（2026-07-23）と対応方針:
 
-| オブジェクト    | production の現状                           | 新 baseline での扱い                                             |
-| --------------- | ------------------------------------------- | ---------------------------------------------------------------- |
-| table GRANT     | archive 済み履歴由来の default grant を保持 | **必ず出力に含まれることを確認**。§前回障害 1 の再発点           |
-| storage bucket  | 2 件（下表の全カラム）                      | `INSERT ... ON CONFLICT DO NOTHING` を**全カラム**で復元する     |
-| pg_cron job     | **0 件**（`cron.job` が空）                 | 何も書かない。旧 baseline の 4 件を写経しない                    |
-| vault secret    | **0 件**（`vault.secrets` が空）            | 何も書かない。vault 拡張の有効化 / helper 関数は schema 側に残る |
-| backfill 系 DML | 一度きりの実行済みデータ移行                | 復元しない（新規環境には移行対象データがない）                   |
+| オブジェクト                   | production の現状                           | 新 baseline での扱い                                             |
+| ------------------------------ | ------------------------------------------- | ---------------------------------------------------------------- |
+| `auth.users` トリガー          | 1 件（`on_auth_user_created`）              | **手で復元**。`db dump` に含まれない                             |
+| `storage.objects` RLS ポリシー | 9 件（現行 baseline とは不一致。下記参照）  | **手で復元**。`db dump` に含まれない                             |
+| table GRANT（`public`）        | archive 済み履歴由来の default grant を保持 | **必ず出力に含まれることを確認**。§前回障害 1 の再発点           |
+| storage bucket 行              | 2 件（下表の全カラム）                      | `INSERT ... ON CONFLICT DO NOTHING` を**全カラム**で復元する     |
+| pg_cron job                    | **0 件**（`cron.job` が空）                 | 何も書かない。旧 baseline の 4 件を写経しない                    |
+| vault secret                   | **0 件**（`vault.secrets` が空）            | 何も書かない。vault 拡張の有効化 / helper 関数は schema 側に残る |
+| backfill 系 DML                | 一度きりの実行済みデータ移行                | 復元しない（新規環境には移行対象データがない）                   |
+
+### storage.objects のポリシーは production と baseline が既に食い違っている
+
+production は 9 件、現行 baseline は 7 件で、**名前が一致するのは 1 件だけ**（production の `Users can upload their own avatar` に対し baseline は `Users can upload own avatar` など）。
+
+原因は §前回障害 1 と同じ機構である。production は `migration repair --status applied` で baseline を「適用済み」とマークしただけで**実行していない**ため、archive 済み migration 由来の旧ポリシーを保持し続けている。一方 local / Preview は baseline を実行するので baseline 側の 7 件になる。**現時点で両者は別物**。
+
+squash はこのずれを解消する機会でもある。実施時は production を正として読み取り、新 baseline に書く。
 
 ### storage bucket は全カラムを取る
 
@@ -129,6 +149,8 @@ read-only の supabase MCP で以下を取得し、**出力を実施 issue に�
 
 - `supabase_migrations.schema_migrations` の全行（`version` / `name`）— repair 対象一覧と roll-forward の入力
 - `storage.buckets` の全カラム — baseline へ復元する値
+- **`auth.users` の非内部トリガー**（`pg_trigger` を `tgisinternal = false` で絞る）— baseline へ復元する対象
+- **`storage.objects` の RLS ポリシー全定義**（`pg_policies` の `qual` / `with_check` を含む）— baseline へ復元する対象
 - `cron.job` / `vault.secrets` — 復元不要であることの確認
 
 ### 2. 新 baseline の生成
@@ -140,15 +162,19 @@ supabase db dump --local -f supabase/migrations/00000000000000_baseline.sql
 
 `--linked` を付けると production を対象にする。ローカルを対象にするため **`--local` を明示する**。
 
-### 3. 非スキーマオブジェクトの手当て
+生成後、**出力に `auth` / `storage` スキーマのオブジェクトが 1 つも含まれていないこと**を確認する（既定の `--exclude-schema` により必ず落ちる）。含まれていないのが正常であり、手順 3 で手当てする前提を再確認する意味を持つ。
 
-生成された baseline に対して、
+### 3. 落ちたオブジェクトの手当て
 
-1. 手順 1 で取得した `storage.buckets` の**全カラム**を `INSERT ... ON CONFLICT (id) DO NOTHING` で追記する
-2. **table GRANT が出力に含まれているか確認する**（§前回障害 1）。含まれていなければ [`20260713121911_restore_baseline_table_grants.sql`](../../../supabase/migrations/20260713121911_restore_baseline_table_grants.sql) 相当の `GRANT` を追記する
-3. cron / vault は復元しない
+生成された baseline に対して、手順 1 のスナップショットを正として以下を追記する。
 
-旧 baseline の該当ブロックは参考にとどめ、**値は手順 1 のスナップショットに合わせる**。旧 baseline の cron 4 件と `avatars.public = false` は現状とずれており、写経してはならない。
+1. **`auth.users` のトリガー** — `on_auth_user_created`（`public.handle_new_user()` を呼ぶ）。トリガー関数自体は `public` にあるので dump に含まれるが、**`auth.users` に張る `CREATE TRIGGER` は含まれない**
+2. **`storage.objects` の RLS ポリシー** — production 側の定義をそのまま書く。現行 baseline の 7 件は production の 9 件と食い違っているため、**旧 baseline から写経しない**
+3. **`storage.buckets` の全カラム** — `INSERT ... ON CONFLICT (id) DO NOTHING`
+4. **table GRANT が出力に含まれているか確認する**（§前回障害 1）。含まれていなければ [`20260713121911_restore_baseline_table_grants.sql`](../../../supabase/migrations/20260713121911_restore_baseline_table_grants.sql) 相当の `GRANT` を追記する
+5. cron / vault は復元しない
+
+旧 baseline の該当ブロックは**構造の参考にとどめ、値は必ず手順 1 のスナップショットに合わせる**。旧 baseline の cron 4 件・`avatars.public = false`・storage ポリシー 7 件はいずれも現状とずれており、写経してはならない。
 
 ### 4. 旧 migration の退避
 
@@ -160,7 +186,7 @@ find supabase/migrations -maxdepth 1 -name '*.sql' \
   -exec git mv {} supabase/migrations/_archive/ \;
 ```
 
-`2026*` のような年リテラルを使わない。実施が 2027 年以降になると `2027*` の migration が静かに取り残され、手順 6 で履歴だけ消えて再適用の対象になる。
+`2026*` のような年リテラルを使わない。実施が 2027 年以降になると `2027*` の migration が静かに取り残され、手順 7 で履歴だけ消えて再適用の対象になる。
 
 `grep -v baseline` のような名前ベースの除外も使わない。`20260713121911_restore_baseline_table_grants.sql` を誤って残す（実測で確認済み）。除外はファイル名の完全一致で行う。
 
@@ -200,11 +226,24 @@ psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -At -F',' \
 diff /tmp/buckets-local.csv /tmp/buckets-prod.csv    # 差分ゼロが合格
 ```
 
-同様に、GRANT が落ちていないことも `information_schema.role_table_grants` をローカルと production で読み比べて確認する。前回はここが漏れて実障害になった。
+同じ要領で、`db dump` から落ちる残り 3 種もローカルから読み戻して production スナップショットと突き合わせる。**ここが手順 3 の唯一の機械的な検証点**になる。
+
+- `auth.users` の非内部トリガー（`pg_trigger` / `tgisinternal = false`）
+- `storage.objects` の RLS ポリシー（`pg_policies` の `qual` / `with_check` を含む全定義）
+- table GRANT（`information_schema.role_table_grants`）— 前回はここが漏れて実障害になった
 
 **いずれかで差分が出た場合は squash を中止し、原因を先に潰す。**
 
-### 6. production の履歴を合わせる
+### 6. PR を main へ merge する（production を触る前のゲート）
+
+**production の履歴を触る前に、新 baseline 1 ファイルの状態を main へ merge する。** 順序を逆にしてはならない。
+
+- **merge が先**（正しい順序）: main は 1 ファイル、production 履歴は 142 行。integration は `00000000000000` を適用済みと判定し、未適用の migration はないので何もしない。余分な履歴行が残るだけで無害
+- **repair が先**（危険）: production 履歴が 1 行になった時点で main にはまだ 141 件の SQL が残る。この状態で何かが deploy されると、**適用済みの SQL を再実行しにいって失敗する**
+
+merge 後、production への deploy が no-op で完了したことを確認してから手順 7 へ進む。
+
+### 7. production の履歴を合わせる
 
 `migration repair` は**追跡テーブルを書き換えるだけで SQL を適用も巻き戻しもしない**。実 DB のスキーマは squash 前後で不変なので、記録の整合を取る操作に過ぎない。
 
@@ -216,9 +255,9 @@ supabase migration repair --linked --status reverted <version...>
 
 `<version...>` は可変長引数で、全 version を 1 回で渡せる。`--linked` を明示する。
 
-> **順序に窓がある。** この時点で main には新 baseline 1 ファイルがあり、production 履歴も 1 行になる。両者が揃うまでの間に main へ何かが merge されると、Supabase GitHub integration が新 baseline を「未適用」と判定して production へ再適用しにいき、既存テーブルへの `CREATE TABLE` で失敗する。**実施ウィンドウ中は migration の有無に関わらず main への merge を止める**（判定基準の補足を参照）。
+> 手順 6 を先に済ませていても、実施ウィンドウ中は **migration の有無に関わらず main への merge を止める**。squash PR 以外が割り込むと、上記の「どちらが先か」の前提が崩れる。
 
-### 7. 事後検証
+### 8. 事後検証
 
 ```bash
 supabase migration list --linked   # ローカル 1 件 / production 1 件で一致
@@ -226,7 +265,11 @@ supabase migration list --linked   # ローカル 1 件 / production 1 件で一
 
 適当な PR を 1 本開き、**新しい Preview branch が新 baseline から正常に作成される**ことを確認する。ここまで通って初めて完了とする。
 
-Preview branch は clean DB に migration を適用する方式なので、この確認は §前回障害 1（clean DB でのみ壊れる欠落）に対する最も有効なゲートになる。**アプリから avatars / attachments のアップロードを実際に試す**ところまでやる。
+Preview branch は clean DB に migration を適用する方式なので、この確認は §前回障害（clean DB でのみ壊れる欠落）に対する最も有効なゲートになる。手順 3 で手当てした 4 種すべてを実機で踏む:
+
+- **新規ユーザーで signup し、プロフィールが作られる**こと（`auth.users` トリガー）
+- **avatars / attachments のアップロードと閲覧**ができること（storage ポリシー + bucket 行）
+- 通常のデータ読み書きが RLS を通ること（table GRANT）
 
 ## preview branch / 新規環境への影響
 
@@ -237,15 +280,17 @@ Preview branch は clean DB に migration を適用する方式なので、こ�
 
 ## リスクと可逆性
 
-| リスク                                      | 影響                                             | 対応                                                                                      |
-| ------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| GRANT の欠落                                | **clean local / Preview のみ壊れる**（前例あり） | 手順 3-2 の明示確認 + 手順 5 の grant 読み戻し + 手順 7 の Preview 実機確認               |
-| storage bucket の列の写経漏れ               | 新規環境だけバケット制約が緩む（前例あり）       | 手順 5 でローカルから読み戻し production スナップショットと突合（`db diff` では検出不可） |
-| dump 出力が production スキーマとずれる     | 新規環境だけ壊れる                               | 手順 5 の差分ゼロ確認を通過ゲートにする。ずれたら中止                                     |
-| 退避漏れ（年リテラル等）                    | 適用済み SQL の再実行を招く                      | 手順 4 の年非依存コマンド + 件数突合                                                      |
-| `migration repair` の対象漏れ               | production 履歴とローカルが不一致                | 手順 7 の `migration list --linked` で一致を確認                                          |
-| 手順 6 の窓の間に merge される              | production の migration 適用経路が閉塞           | 実施ウィンドウ中の main merge 凍結                                                        |
-| squash 直後に hotfix migration が必要になる | 手順が輻輳する                                   | 判定基準 3（リリース直後の静穏期）で回避                                                  |
+| リスク                                      | 影響                                             | 対応                                                                                                    |
+| ------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `auth.users` トリガーの欠落                 | **新規登録でプロフィールが作られない**           | `db dump` が `auth` を除外する前提で手順 3-1 に組み込み + 手順 5 の読み戻し + 手順 8 の signup 実機確認 |
+| `storage.objects` ポリシーの欠落            | **ストレージのアクセス制御が消える**             | 同上（手順 3-2 / 手順 5 / 手順 8 のアップロード実機確認）                                               |
+| GRANT の欠落                                | **clean local / Preview のみ壊れる**（前例あり） | 手順 3-4 の明示確認 + 手順 5 の grant 読み戻し + 手順 8 の Preview 実機確認                             |
+| storage bucket の列の写経漏れ               | 新規環境だけバケット制約が緩む（前例あり）       | 手順 5 でローカルから読み戻し production スナップショットと突合（`db diff` では検出不可）               |
+| dump 出力が production スキーマとずれる     | 新規環境だけ壊れる                               | 手順 5 の差分ゼロ確認を通過ゲートにする。ずれたら中止                                                   |
+| 退避漏れ（年リテラル等）                    | 適用済み SQL の再実行を招く                      | 手順 4 の年非依存コマンド + 件数突合                                                                    |
+| `migration repair` の対象漏れ               | production 履歴とローカルが不一致                | 手順 8 の `migration list --linked` で一致を確認                                                        |
+| repair を merge より先に打つ                | **適用済み SQL の再実行で適用経路が閉塞**        | 手順 6（merge）を手順 7（repair）の前段ゲートにする + 実施ウィンドウ中の main merge 凍結                |
+| squash 直後に hotfix migration が必要になる | 手順が輻輳する                                   | 判定基準 3（リリース直後の静穏期）で回避                                                                |
 
 **可逆性は `[hours]`**。roll-forward を基本とする。
 
@@ -271,7 +316,8 @@ production の `supabase_migrations.schema_migrations` を書き換えるため�
 - [ ] **承認** — 対象（production project `yvglwblxrnrenfifsnje`）・環境・操作（退避分への `migration repair --status reverted`）を特定した明示指示を得る
 - [ ] **独立レビュー** — `risk-reviewer` に手順書と repair 対象 version 一覧をレビューさせ、結果を実施 issue に貼る（AGENTS.md の Read-only delegation で `migration` は自動委任条件）
 - [ ] **backup** — 手順 1 の `schema_migrations` 全行スナップショットを取得済みで、実施 issue に貼ってある
-- [ ] **Preview / dry-run** — 手順 5 の差分ゼロ（型 / `db diff` / **storage bucket と GRANT の読み戻し**）と手順 7 の Preview branch 実機確認を通過ゲートとし、各出力を PR に貼る
+- [ ] **Preview / dry-run** — 手順 5 の差分ゼロ（型 / `db diff` / **auth トリガー・storage ポリシー・bucket 行・GRANT の読み戻し**）と手順 8 の Preview 実機確認（signup とアップロードを含む）を通過ゲートとし、各出力を PR に貼る
+- [ ] **merge 順序** — 手順 6（main へ merge）を手順 7（production の repair）より先に済ませる。逆順は適用済み SQL の再実行を招く
 - [ ] **roll-forward** — §リスクと可逆性 の復帰手順を、backup から生成した version 一覧付きで実施 issue に転記する（ファイルを先に戻す順序を含む）
 - [ ] 上記のいずれかを満たせない場合は**実施しない**。現実的な failure mode を報告して中止する
 
