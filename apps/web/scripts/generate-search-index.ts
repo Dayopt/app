@@ -13,19 +13,16 @@ import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';
 
-interface SearchIndexEntry {
-  id: string;
-  title: string;
-  description: string;
-  url: string;
-  type: 'blog' | 'docs';
-  tags: string[];
-  category: string;
-  date: string;
-}
+import type { SearchIndexEntry } from '../src/features/search/lib/search-index';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content');
 const OUTPUT_PATH = path.join(process.cwd(), 'public', 'search-index.json');
+
+/**
+ * 本文からインデックスへ載せる文字数の上限。
+ * 全文を載せるとインデックスが肥大するため、導入部と主要セクションが入る長さで切る。
+ */
+const CONTENT_LIMIT = 2000;
 
 // localePrefix: 'as-needed' のため defaultLocale は prefix なし、それ以外は `/{locale}` を前置する
 function localizedUrl(locale: string, pathname: string): string {
@@ -77,7 +74,7 @@ function indexBlog(locale: string): SearchIndexEntry[] {
   for (const filePath of getMdxFiles(blogDir)) {
     try {
       const content = fs.readFileSync(filePath, 'utf-8');
-      const { data } = matter(content);
+      const { data, content: body } = matter(content);
 
       if (data.draft) continue;
 
@@ -86,6 +83,7 @@ function indexBlog(locale: string): SearchIndexEntry[] {
         id: `blog-${locale}-${slug}`,
         title: (data.title as string) || '',
         description: (data.description as string) || '',
+        content: stripMarkdown(body).slice(0, CONTENT_LIMIT),
         url: localizedUrl(locale, `/blog/${slug}`),
         type: 'blog',
         tags: (data.tags as string[]) || [],
@@ -114,17 +112,23 @@ function indexDocs(locale: string): SearchIndexEntry[] {
 
       if (data.draft) continue;
 
-      const relativePath = path.relative(docsDir, filePath);
-      const slug = relativePath.replace(/\.mdx$/, '').replace(/\\/g, '/');
+      // 公開 URL はフラット1階層（src/lib/mdx.ts と同じ規則）。
+      // ディレクトリ付きの相対パスを使うと実在しない URL を検索結果に出してしまう
+      const relativePath = path.relative(docsDir, filePath).replace(/\\/g, '/');
+      const category = relativePath.split('/')[0] || 'general';
+      const fileName = path.basename(filePath, '.mdx');
+      const slug = fileName === 'index' ? category : fileName;
+      const plainBody = stripMarkdown(body);
 
       entries.push({
         id: `docs-${locale}-${slug}`,
         title: (data.title as string) || '',
-        description: (data.description as string) || stripMarkdown(body).slice(0, 200),
+        description: (data.description as string) || plainBody.slice(0, 200),
+        content: plainBody.slice(0, CONTENT_LIMIT),
         url: localizedUrl(locale, `/docs/${slug}`),
         type: 'docs',
         tags: (data.tags as string[]) || [],
-        category: (data.category as string) || slug.split('/')[0] || 'general',
+        category: (data.category as string) || category,
         date: (data.publishedAt as string) || (data.updatedAt as string) || '',
       });
     } catch (err) {
