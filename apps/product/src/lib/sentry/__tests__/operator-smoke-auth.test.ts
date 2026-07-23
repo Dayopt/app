@@ -7,9 +7,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   authorizeProductOperatorSmoke,
   classifyOperatorSmokeRateLimitResult,
+  getProductOperatorSmokeClientAddress,
+  hashProductOperatorSmokeClientAddress,
 } from '../operator-smoke-auth';
 
-const NOW = Date.parse('2026-07-22T01:00:00.000Z');
+const NOW = Date.parse('2026-07-23T01:30:00.000Z');
 const TOKEN = 'A'.repeat(43);
 const TOKEN_DIGEST = createHash('sha256').update(TOKEN).digest('hex');
 
@@ -51,6 +53,27 @@ describe('authorizeProductOperatorSmoke', () => {
     );
     expect(classifyOperatorSmokeRateLimitResult({ success: true })).toBe('allowed');
     expect(classifyOperatorSmokeRateLimitResult({ success: false })).toBe('limited');
+  });
+
+  it('prefers the Vercel-authoritative address and stores only a secret-keyed HMAC', async () => {
+    const smokeRequest = new Request('https://app.dayopt.app', {
+      headers: {
+        'X-Vercel-Forwarded-For': '203.0.113.10, 203.0.113.11',
+        'X-Forwarded-For': '198.51.100.20',
+        'X-Real-IP': '192.0.2.30',
+      },
+    });
+    const address = getProductOperatorSmokeClientAddress(smokeRequest);
+    const first = await hashProductOperatorSmokeClientAddress(address, 'upstash-secret');
+    const second = await hashProductOperatorSmokeClientAddress(address, 'upstash-secret');
+
+    expect(address).toBe('203.0.113.10');
+    expect(first).toBe(second);
+    expect(first).toMatch(/^[a-f0-9]{64}$/u);
+    expect(first).not.toContain(address);
+    expect(await hashProductOperatorSmokeClientAddress(address, 'different-secret')).not.toBe(
+      first,
+    );
   });
 
   it('authorizes a same-origin Production request with a matching digest', async () => {
@@ -122,7 +145,7 @@ describe('authorizeProductOperatorSmoke', () => {
     ['preview', { VERCEL_ENV: 'preview' }],
     ['disabled', { SENTRY_OPERATOR_SMOKE_ENABLED: 'false' }],
     ['expired', { SENTRY_OPERATOR_SMOKE_EXPIRES_AT: new Date(NOW).toISOString() }],
-    ['past immutable deadline', { SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-22T12:00:00.001Z' }],
+    ['past immutable deadline', { SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-23T03:00:00.001Z' }],
   ])('fails closed when configuration is %s', async (_label, override) => {
     const result = await authorizeProductOperatorSmoke(request(), {
       env: { ...activeEnvironment(), ...override },
@@ -153,9 +176,9 @@ describe('authorizeProductOperatorSmoke', () => {
     const result = await authorizeProductOperatorSmoke(request(), {
       env: {
         ...activeEnvironment(),
-        SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-22T12:00:00.001Z',
+        SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-23T03:00:00.001Z',
       },
-      now: Date.parse('2026-07-22T11:30:00.000Z'),
+      now: Date.parse('2026-07-23T02:30:00.000Z'),
       checkRateLimit,
     });
 
@@ -164,13 +187,13 @@ describe('authorizeProductOperatorSmoke', () => {
   });
 
   it.each([
-    ['at', Date.parse('2026-07-22T12:00:00.000Z')],
-    ['after', Date.parse('2026-07-22T12:00:00.001Z')],
+    ['at', Date.parse('2026-07-23T03:00:00.000Z')],
+    ['after', Date.parse('2026-07-23T03:00:00.001Z')],
   ])('fails closed %s the immutable deadline', async (_label, now) => {
     const result = await authorizeProductOperatorSmoke(request(), {
       env: {
         ...activeEnvironment(),
-        SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-22T12:00:00.000Z',
+        SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-23T03:00:00.000Z',
       },
       now,
       checkRateLimit,
@@ -178,6 +201,20 @@ describe('authorizeProductOperatorSmoke', () => {
 
     expect(result.authorized).toBe(false);
     expect(checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['before', Date.parse('2026-07-23T00:59:59.999Z'), false],
+    ['at', Date.parse('2026-07-23T01:00:00.000Z'), true],
+  ] as const)('%s the immutable active time has authorized=%s', async (_label, now, authorized) => {
+    const result = await authorizeProductOperatorSmoke(request(), {
+      env: activeEnvironment(),
+      now,
+      checkRateLimit,
+    });
+
+    expect(result.authorized).toBe(authorized);
+    expect(checkRateLimit).toHaveBeenCalledTimes(authorized ? 2 : 0);
   });
 
   it.each([

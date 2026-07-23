@@ -139,10 +139,12 @@ export async function sendContactEmail(params: ContactEmailParams): Promise<void
     }
 
     let responseBody: unknown;
+    let responseParseError: SyntaxError | undefined;
     try {
       responseBody = await response.json();
     } catch (error) {
       if (abortController.signal.aborted) throw error;
+      responseParseError = new SyntaxError('Contact email provider returned invalid JSON');
       responseBody = null;
     }
 
@@ -153,6 +155,7 @@ export async function sendContactEmail(params: ContactEmailParams): Promise<void
       throw new ServiceError(
         'CONTACT_DELIVERY_FAILED',
         'Contact email provider returned an unsuccessful response',
+        responseParseError ? { cause: responseParseError } : undefined,
       );
     }
   } catch (error) {

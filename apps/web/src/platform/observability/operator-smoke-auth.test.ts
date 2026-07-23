@@ -8,7 +8,7 @@ vi.mock('server-only', () => ({}));
 
 import { authorizeWebOperatorSmoke } from './operator-smoke-auth';
 
-const NOW = Date.parse('2026-07-22T01:00:00.000Z');
+const NOW = Date.parse('2026-07-23T01:30:00.000Z');
 const TOKEN = 'A'.repeat(43);
 const TOKEN_DIGEST = createHash('sha256').update(TOKEN).digest('hex');
 
@@ -101,7 +101,7 @@ describe('authorizeWebOperatorSmoke', () => {
     ['preview', { VERCEL_ENV: 'preview' }],
     ['disabled', { SENTRY_OPERATOR_SMOKE_ENABLED: 'false' }],
     ['expired', { SENTRY_OPERATOR_SMOKE_EXPIRES_AT: new Date(NOW).toISOString() }],
-    ['past immutable deadline', { SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-22T12:00:00.001Z' }],
+    ['past immutable deadline', { SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-23T03:00:00.001Z' }],
   ])('fails closed when configuration is %s', async (_label, override) => {
     const result = await authorizeWebOperatorSmoke(request(), {
       env: { ...activeEnvironment(), ...override },
@@ -230,13 +230,13 @@ describe('authorizeWebOperatorSmoke', () => {
   });
 
   it.each([
-    ['at', Date.parse('2026-07-22T12:00:00.000Z')],
-    ['after', Date.parse('2026-07-22T12:00:00.001Z')],
+    ['at', Date.parse('2026-07-23T03:00:00.000Z')],
+    ['after', Date.parse('2026-07-23T03:00:00.001Z')],
   ])('fails closed %s the immutable deadline', async (_label, now) => {
     const result = await authorizeWebOperatorSmoke(request(), {
       env: {
         ...activeEnvironment(),
-        SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-22T12:00:00.000Z',
+        SENTRY_OPERATOR_SMOKE_EXPIRES_AT: '2026-07-23T03:00:00.000Z',
       },
       now,
       checkRateLimit,
@@ -244,6 +244,20 @@ describe('authorizeWebOperatorSmoke', () => {
 
     expect(result.authorized).toBe(false);
     expect(checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['before', Date.parse('2026-07-23T00:59:59.999Z'), false],
+    ['at', Date.parse('2026-07-23T01:00:00.000Z'), true],
+  ] as const)('%s the immutable active time has authorized=%s', async (_label, now, authorized) => {
+    const result = await authorizeWebOperatorSmoke(request(), {
+      env: activeEnvironment(),
+      now,
+      checkRateLimit,
+    });
+
+    expect(result.authorized).toBe(authorized);
+    expect(checkRateLimit).toHaveBeenCalledTimes(authorized ? 2 : 0);
   });
 
   it('counts an invalid token and fails closed when rate limiting is unavailable', async () => {

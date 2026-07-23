@@ -22,7 +22,7 @@ plans / logs を Plan レーン + Log レーンとして描画し、差分を数
 3. 差分の数字表示: `plan_id` ありの log に差分バッジ（±0 は非表示）。`plan_id` なしは「予定外」の静かなマーカーのみ。二値ラベルは使わない（copywriting「判定せず数字で示す」）
 4. 密度対応: Day = 2レーン、Week「予定+記録」= Plan を細レーン、モバイル Week = 表示切替（予定だけ / 記録だけ）。表示モードは `useCalendarSettingsStore` 系の既存 client state 置き場に追加する
 5. 過去 Plan の見え方: 未記録（end 過去・logs なし・未 skip）は静かなプロンプト付き、skip 済みは減衰表示。実績集計との整合は overview §3 の分類に従う
-6. Storybook: PlanCard / LogCard / 2レーン day column の全 variant（AllPatterns 必須）。タグごとのスクリーンショットは eagle-dayopt 運用に従う
+6. Storybook: PlanCard / LogCard / 2レーン day column の全 variant（AllPatterns 必須）。視覚確認は Storybook 本体で行う（Eagle への snapshot 同期は 2026-07-23 に廃止）
 
 ## Scope
 

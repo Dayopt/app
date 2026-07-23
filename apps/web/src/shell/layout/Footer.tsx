@@ -42,7 +42,6 @@ export function Footer() {
     resources: [
       { name: t('navigation.blog'), href: '/blog' },
       { name: t('navigation.docs'), href: '/docs' },
-      { name: t('navigation.releases'), href: '/releases' },
     ],
     support: [{ name: t('navigation.contact'), href: '/contact' }],
     legal: [

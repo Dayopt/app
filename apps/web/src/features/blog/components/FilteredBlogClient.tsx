@@ -100,7 +100,7 @@ export function FilteredBlogClient({
         <div className="flex items-center gap-2">
           {/* RSS は検索の左に配置（位置は要検討の暫定） */}
           <a
-            href="/blog/feed.xml"
+            href={`${locale === 'ja' ? '/ja' : ''}/blog/feed.xml`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"

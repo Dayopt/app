@@ -2,6 +2,7 @@ import { ClientSidebar } from '@web/features/docs';
 import { Footer } from '@web/shell/layout/Footer';
 import { Header } from '@web/shell/layout/Header';
 import { generateDocsNavigation } from '@web/shell/navigation';
+import { setRequestLocale } from 'next-intl/server';
 
 export default async function DocsLayout({
   children,
@@ -11,6 +12,8 @@ export default async function DocsLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  // 静的レンダリングを有効にする（これがないと配下が動的レンダリングになる）
+  setRequestLocale(locale);
   const navigation = await generateDocsNavigation(locale);
 
   return (
