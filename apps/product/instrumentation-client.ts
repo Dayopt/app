@@ -17,10 +17,6 @@ import {
 import * as Sentry from '@sentry/nextjs';
 
 import {
-  installProductOperatorSentrySmoke,
-  uninstallProductOperatorSentrySmoke,
-} from '@/lib/sentry/operator-smoke-client';
-import {
   scrubSentryBreadcrumb,
   scrubSentrySpan,
   scrubSentryTransaction,
@@ -33,7 +29,6 @@ export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 const SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN;
 const VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV;
 const IS_SENTRY_PRODUCTION = VERCEL_ENV === 'production';
-const OPERATOR_SMOKE_TRACE_PREFIX = 'operator.sentry_smoke.';
 let isSentryInitialized = false;
 let isBrowserTelemetryAllowed = false;
 let revocationReloadRequested = false;
@@ -61,8 +56,7 @@ function initSentry(dsn: string) {
     // release は withSentryConfig が build 時に注入する（next.config の release.name = VERCEL_GIT_COMMIT_SHA）。
     // ここで明示すると source map upload 時の release と runtime がズレるため上書きしない。
 
-    tracesSampler: ({ name, inheritOrSampleWith }) =>
-      name.startsWith(OPERATOR_SMOKE_TRACE_PREFIX) ? 1 : inheritOrSampleWith(0.1),
+    tracesSampler: ({ inheritOrSampleWith }) => inheritOrSampleWith(0.1),
 
     // デバッグモード（開発環境のみ）
     debug: false,
@@ -90,7 +84,6 @@ function initSentry(dsn: string) {
   if (typeof window !== 'undefined') {
     const isPwa = window.matchMedia('(display-mode: standalone)').matches;
     Sentry.setTag('app.platform', isPwa ? 'pwa' : 'web');
-    installProductOperatorSentrySmoke();
   }
 }
 
@@ -98,7 +91,6 @@ function applyBrowserTelemetryConsent(dsn: string, allowed: boolean): void {
   isBrowserTelemetryAllowed = allowed && hasStoredAnalyticsConsent();
 
   if (!isBrowserTelemetryAllowed) {
-    uninstallProductOperatorSentrySmoke();
     setSentryClientEnabled(false);
     if (isSentryInitialized && !revocationReloadRequested) {
       revocationReloadRequested = true;

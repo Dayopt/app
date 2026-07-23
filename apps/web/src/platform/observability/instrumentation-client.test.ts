@@ -41,7 +41,6 @@ describe('Web browser Sentry consent lifecycle', () => {
   });
 
   afterEach(() => {
-    delete window.__DAYOPT_WEB_SENTRY_SMOKE__;
     reloadSpy.mockRestore();
     vi.unstubAllEnvs();
   });
@@ -49,9 +48,11 @@ describe('Web browser Sentry consent lifecycle', () => {
   it('stays off before consent and initializes once for each grant lifecycle', async () => {
     await import('../../../instrumentation-client');
     expect(sentry.init).not.toHaveBeenCalled();
+    expect('__DAYOPT_WEB_SENTRY_SMOKE__' in window).toBe(false);
 
     persistAndNotify(true);
     expect(sentry.init).toHaveBeenCalledTimes(1);
+    expect('__DAYOPT_WEB_SENTRY_SMOKE__' in window).toBe(false);
     const options = sentry.init.mock.calls[0]?.[0];
     expect(options?.integrations).toEqual([{ name: 'browser-tracing' }]);
     expect(options).not.toHaveProperty('replaysSessionSampleRate');
@@ -62,25 +63,18 @@ describe('Web browser Sentry consent lifecycle', () => {
     }) => number;
     expect(
       tracesSampler({
-        name: 'operator.sentry_smoke.browser',
-        inheritOrSampleWith: (sampleRate) => sampleRate,
-      }),
-    ).toBe(1);
-    expect(
-      tracesSampler({
         name: 'GET /[locale]',
         inheritOrSampleWith: (sampleRate) => sampleRate,
       }),
     ).toBe(0.1);
-    expect(window.__DAYOPT_WEB_SENTRY_SMOKE__).toBeTypeOf('function');
 
     persistAndNotify(true);
     expect(sentry.init).toHaveBeenCalledTimes(1);
 
     persistAndNotify(false);
     expect(sentry.clientOptions.enabled).toBe(false);
+    expect('__DAYOPT_WEB_SENTRY_SMOKE__' in window).toBe(false);
     expect(reloadSpy).toHaveBeenCalledTimes(1);
-    expect(window.__DAYOPT_WEB_SENTRY_SMOKE__).toBeUndefined();
 
     persistAndNotify(true);
     expect(sentry.clientOptions.enabled).toBe(false);
@@ -121,7 +115,6 @@ describe('Web browser Sentry consent lifecycle', () => {
     await import('../../../instrumentation-client');
 
     expect(sentry.init).not.toHaveBeenCalled();
-    expect(window.__DAYOPT_WEB_SENTRY_SMOKE__).toBeUndefined();
   });
 
   it('disables Zod JIT before application schemas can probe eval support', async () => {

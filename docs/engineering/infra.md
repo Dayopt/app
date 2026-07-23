@@ -829,7 +829,7 @@ npm run docs:validate       # リンク + ルール検証
 
 ```bash
 pnpm --filter @dayopt/product exec vitest --project unit run src/app/api/csp-report/__tests__/route.test.ts
-pnpm --filter @dayopt/product exec vitest --project unit run src/lib/sentry/scrub-pii.test.ts
+pnpm --filter @dayopt/product exec vitest --project unit run src/lib/sentry/__tests__/scrub-pii.test.ts
 ```
 
 runtimeとsource map uploadはVercel Productionだけで有効にする。CI / Preview buildではSentry credentialsを渡さない。Production smokeは恒久scriptにせず、対象projectと一時endpointの撤去条件を決めてから実施する。

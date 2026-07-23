@@ -43,12 +43,6 @@ describe('Web server/edge Sentry runtime configuration', () => {
     }) => number;
     expect(
       tracesSampler({
-        name: 'operator.sentry_smoke.server',
-        inheritOrSampleWith: (sampleRate) => sampleRate,
-      }),
-    ).toBe(1);
-    expect(
-      tracesSampler({
         name: 'GET /api/contact',
         inheritOrSampleWith: (sampleRate) => sampleRate,
       }),

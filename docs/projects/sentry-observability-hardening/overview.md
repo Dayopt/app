@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-07-16
+last_verified: 2026-07-23
 code:
   - packages/observability
   - apps/product
@@ -35,7 +35,13 @@ Product と Web の Sentry を別 project で運用し、予期しない障害�
 - Product / Web の browser SDK、Analytics、Speed Insights は未同意・拒否時に起動せず、同意後に一度だけ起動する。Session Replay は URL query 非送信を保証できる方式がないため起動しない
 - Product / Web は別 Sentry project を使い、Preview / CI は release と source map を作成しない
 - Production test event が commit SHA release と元 TypeScript 行へ解決され、trace、alert、PII 不在を確認できる
+- Product EdgeはVercel Edge再bundleのupstream制約により元TypeScript行を例外とし、release、trace、PII不在を確認する
+- 検証用surfaceと一時envを撤去し、canonical URLと記録済み旧deployment URLが404になる
 - `pnpm test:run`、`pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries`、`pnpm lint:i18n`、`pnpm check`、`pnpm docs:check` が通る
+
+## Current status
+
+Production browserを含むevent証跡とprovider権限制限は完了した。cleanup release後24時間の再発確認、Sentry issue resolve、GitHub #1566/#1599のcloseを完了条件として追跡する。
 
 ## Reversibility
 
