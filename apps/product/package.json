@@ -63,15 +63,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "security:check": "pnpm audit --audit-level=moderate",
     "security:check:production": "pnpm audit --prod --audit-level=high",
-    "storybook:coverage": "tsx ../../scripts/check-story-coverage.ts",
-    "eagle:capture": "tsx ../../scripts/eagle-capture.ts",
-    "eagle:sync": "tsx ../../scripts/eagle-sync.ts",
-    "eagle:sync:dry": "tsx ../../scripts/eagle-sync.ts --dry-run",
-    "eagle:sync:capture": "tsx ../../scripts/eagle-capture.ts && tsx ../../scripts/eagle-sync.ts",
-    "eagle:setup": "tsx ../../scripts/eagle-sync.ts --setup",
-    "eagle:cleanup": "tsx ../../scripts/eagle-cleanup.ts",
-    "eagle:lookup": "tsx ../../scripts/eagle-lookup.ts",
-    "eagle:test": "tsx ../../scripts/eagle-api.ts"
+    "storybook:coverage": "tsx ../../scripts/check-story-coverage.ts"
   },
   "dependencies": {
     "@dayopt/billing": "workspace:*",

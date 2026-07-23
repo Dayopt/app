@@ -63,9 +63,6 @@ next-env.d.ts
 .claude/plans/
 .backup/
 
-# Eagle screenshots (auto-generated, not committed)
-/screenshots
-
 # OS
 Thumbs.db
 
