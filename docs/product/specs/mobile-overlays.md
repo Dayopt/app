@@ -1,10 +1,13 @@
 ---
 status: current
-last_verified: 2026-07-16
+last_verified: 2026-07-24
 code:
   - packages/components/src/overlays/dialog.tsx
   - packages/components/src/overlays/drawer.tsx
   - packages/components/src/overlays/sheet.tsx
+# UI の内部契約であり、ユーザーに説明する機能ではない
+public_docs: []
+lp: []
 ---
 
 # Mobile overlays（モバイルオーバーレイ）

@@ -1,7 +1,12 @@
 ---
 status: current
-last_verified: 2026-07-17
+last_verified: 2026-07-24
 code: apps/product/src/features/review
+public_docs:
+  - review
+lp:
+  - 'Core Review metrics'
+  - 'All Review metrics'
 ---
 
 # Review（振り返り）
