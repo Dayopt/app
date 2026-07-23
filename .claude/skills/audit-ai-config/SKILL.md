@@ -14,7 +14,7 @@ Dayopt の AI 協働設定を棚卸しし、不要・重複・配置間違い・
 **明示発動型** — この skill はユーザーの explicit な AI 設定棚卸し意図のみを契機に発動する。
 
 - 「AI設定を棚卸しして」「設定を整理して」など、AI 協働設定全体の audit が明示された時
-- `.claude/`、`.codex/`、`.agents/roles/`、`.agents/skills/`、`.mcp.json` の重複や配置を点検するよう指示された時
+- `.claude/`、`.codex/`、`.agents/roles/`、`.agents/skills/`、MCP 設定の重複や配置を点検するよう指示された時
 - skill / rules / commands / agents / hooks の使い分けをレビューするよう指示された時
 - AI 設定の削除候補・統合候補・発火条件改善案をまとめるよう指示された時
 
@@ -37,7 +37,7 @@ Dayopt の AI 協働設定を棚卸しし、不要・重複・配置間違い・
 - `.claude/agents/*.md` と `.codex/agents/*.toml`
 - `.claude/hooks/*`、`.codex/hooks/*`、`.codex/hooks.json`
 - `.claude/settings.json`、`.codex/config.toml`
-- `.mcp.json`
+- global MCP 設定（Claude: `~/.claude.json` user scope、Codex: `~/.codex/config.toml`。repo には置かない — `.claude/rules/mcp-usage.md` 参照）
 - `AGENTS.md`
 
 Role は次の対応も確認する。

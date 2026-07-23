@@ -1,3 +1,8 @@
+import {
+  createSearchIndex,
+  searchEntries,
+  type SearchIndexEntry,
+} from '@web/features/search/lib/search-index';
 import { apiError, ErrorCode } from '@web/platform/api/api-response';
 import { captureUnexpectedWebError } from '@web/platform/observability/capture-unexpected-error';
 import { resolveTechnicalRequestId } from '@web/platform/observability/technical-error-context';
@@ -7,40 +12,40 @@ import {
   searchRateLimit,
 } from '@web/platform/security/rate-limit';
 import fs from 'fs';
+import type MiniSearch from 'minisearch';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 
-interface SearchIndexEntry {
-  id: string;
-  title: string;
-  description: string;
-  url: string;
-  type: 'blog' | 'docs' | 'release';
-  category: string;
-  date: string;
-}
+// ビルド時に生成されたインデックスから構築した MiniSearch を locale ごとにキャッシュする
+const indexCache = new Map<string, MiniSearch<SearchIndexEntry>>();
+let rawIndexCache: Record<string, SearchIndexEntry[]> | null = null;
 
-// ビルド時に生成された検索インデックスをキャッシュ
-let indexCache: Record<string, SearchIndexEntry[]> | null = null;
-
-function loadSearchIndex(): Record<string, SearchIndexEntry[]> {
-  if (indexCache) return indexCache;
+function loadRawIndex(): Record<string, SearchIndexEntry[]> {
+  if (rawIndexCache) return rawIndexCache;
 
   const indexPath = path.join(process.cwd(), 'public', 'search-index.json');
 
   const raw = fs.readFileSync(indexPath, 'utf-8');
-  indexCache = JSON.parse(raw) as Record<string, SearchIndexEntry[]>;
-  return indexCache;
+  rawIndexCache = JSON.parse(raw) as Record<string, SearchIndexEntry[]>;
+  return rawIndexCache;
 }
 
-function getBreadcrumbs(entry: SearchIndexEntry): string[] {
-  switch (entry.type) {
+function getSearchIndex(locale: string): MiniSearch<SearchIndexEntry> {
+  const cached = indexCache.get(locale);
+  if (cached) return cached;
+
+  const entries = loadRawIndex()[locale] ?? [];
+  const index = createSearchIndex(entries);
+  indexCache.set(locale, index);
+  return index;
+}
+
+function getBreadcrumbs(type: string, category: string): string[] {
+  switch (type) {
     case 'blog':
-      return ['Blog', entry.category || 'Uncategorized'];
-    case 'release':
-      return ['Releases', entry.id];
+      return ['Blog', category || 'Uncategorized'];
     case 'docs':
-      return ['Documentation', entry.category || 'Uncategorized'];
+      return ['Documentation', category || 'Uncategorized'];
     default:
       return [];
   }
@@ -86,42 +91,18 @@ export async function GET(request: NextRequest) {
 
     const locale = searchParams.get('locale') || 'en';
 
-    // ビルド時に生成された静的インデックスを使用
-    const index = loadSearchIndex();
-    const entries = index[locale] || [];
+    // ビルド時に生成された静的インデックスから全文検索する（MiniSearch、スコア順）
+    const results = searchEntries(getSearchIndex(locale), query).map((hit) => ({
+      id: hit.id as string,
+      title: hit.title as string,
+      description: hit.description as string,
+      url: hit.url as string,
+      type: hit.type as SearchIndexEntry['type'],
+      breadcrumbs: getBreadcrumbs(hit.type as string, hit.category as string),
+      lastModified: hit.date as string,
+    }));
 
-    const searchTerm = query.toLowerCase();
-    const results = [];
-
-    for (const entry of entries) {
-      const titleMatch = entry.title.toLowerCase().includes(searchTerm);
-      const descriptionMatch = entry.description.toLowerCase().includes(searchTerm);
-
-      if (titleMatch || descriptionMatch) {
-        results.push({
-          id: entry.id,
-          title: entry.title,
-          description: entry.description,
-          url: entry.url,
-          type: entry.type,
-          breadcrumbs: getBreadcrumbs(entry),
-          lastModified: entry.date,
-        });
-      }
-    }
-
-    // Sort by relevance (prioritize title matches)
-    results.sort((a, b) => {
-      const aTitleMatch = a.title.toLowerCase().includes(searchTerm);
-      const bTitleMatch = b.title.toLowerCase().includes(searchTerm);
-
-      if (aTitleMatch && !bTitleMatch) return -1;
-      if (!aTitleMatch && bTitleMatch) return 1;
-
-      return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
-    });
-
-    return NextResponse.json({ results: results.slice(0, 50) });
+    return NextResponse.json({ results });
   } catch (error) {
     captureUnexpectedWebError(error, {
       feature: 'search',

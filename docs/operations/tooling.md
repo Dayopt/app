@@ -9,430 +9,114 @@ Eagle デザインアセット管理設計、OSSライセンスコンプライ�
 
 ---
 
-# 第1部: Dayopt Eagle デザインアセット管理設計書
+# 第1部: Eagle デザインアセット運用
 
-> このドキュメントはDayoptのデザインアセットをEagle + MCP + Claude Codeで一元管理するための設計仕様。
-> Claude CodeのSkillやCLAUDE.mdから参照する運用ドキュメントとして使用する。
+> Eagle の役割と、何を入れて何を入れないかの規約。エージェント側の invoke 条件は `.claude/rules/mcp-usage.md` の Eagle 節を正とする。
+> 2026-07-23 に v2 へ全面改訂。旧版（Storybook スナップショット自動同期パイプライン）を廃止した経緯は [2026-07-23-eagle-content-strategy.md](log/2026-07-23-eagle-content-strategy.md) を参照。
 
-## 1. ライブラリ構成
+## 1. 役割
 
-### 1.1 ライブラリ方針
+**Eagle = 「目で見て判断する素材」の視覚検索ライブラリ。** バックアップ用の保管庫ではなく、日常的に開いて探す場所とする。
 
-Dayopt専用ライブラリを新規作成する。既存の混在ライブラリとは分離。
+原則は 3 つ。
 
-- ライブラリ名: `Dayopt Design`
-- 用途: Dayoptに関するすべてのデザインアセット
+1. **カテゴリごとに「正」を 1 つに決める** — repo から再生成できるものは Eagle に置かない。手作りで再生成できないブランドクリエイティブは Eagle が正
+2. **収集物に意味づけを先回りしない** — 集めた参考 UI に一括で意味的なタグを付けない。分類は収集元アプリという機械的な事実だけに留め、横断検索は AI セマンティック検索に任せる。curation（★と pattern タグ）は使う瞬間にだけ行う
+3. **repo に Eagle 用コードを持たない** — 接点は Eagle アプリ（人）と Eagle MCP（エージェント）の 2 つだけ
 
-### 1.2 フォルダ構造
+## 2. 何を入れて、何を入れないか
 
-```
-Dayopt Design/
-├── Components/                    ← Storybookスナップショット（自動管理）
-│   ├── UI/                        ← Button, Dialog, Badge, Input, Select...
-│   ├── Shell/                     ← AppHeader, BottomTabBar, Sidebar/...
-│   └── Common/                    ← ErrorBoundary, EmptyState, DateNavigator...
-├── Features/                      ← 機能コンポーネント（自動管理）
-│   ├── Calendar/                  ← Views/{Day,Week,Grid}, Header, Sidebar...
-│   ├── Settings/                  ← Account, Display, Billing, Data...
-│   ├── Review/                    ← Reflection, Diff, Insights...
-│   ├── Timeblock/                 ← Plan/Record Card, Editor, Inspector...
-│   ├── Auth/                      ← Login, Signup, MFA...
-│   └── Tags/ Contact/ etc.
-├── Foundations/                    ← カラー、タイポグラフィ、spacing、radius
-├── Inspiration/                   ← 参考UI・UXリファレンス
-│   ├── Timeboxing/
-│   ├── Dashboard/
-│   └── Mobile UX/
-├── Marketing/                     ← ローンチ・プロモーション素材
-│   ├── Product Hunt/
-│   ├── LP/
-│   └── Social/
-└── Archive/                       ← 自動移動先（前世代スナップショット、ボツ案）
-```
+| 入れる                             | 正がどちらか | 理由                                                 |
+| ---------------------------------- | ------------ | ---------------------------------------------------- |
+| 参考 UI（競合・インスピ）          | Eagle        | 視覚で探して比べるもの。repo に存在しない            |
+| ブランドクリエイティブ             | Eagle        | 手作りの一点物。master と variant は repo に入らない |
+| 作業用素材（font / icon / illust） | Eagle        | 視覚で選ぶもの                                       |
+| リリース節目の製品スクショ         | Eagle        | 過去の姿は再生成できない                             |
 
-> フォルダ構造は Storybook のサイドバー階層をそのまま反映する。
-> コンポーネントフォルダは撮影・同期時に動的に作成される。
+| 入れない                   | 正がどちらか           | 理由                                                           |
+| -------------------------- | ---------------------- | -------------------------------------------------------------- |
+| Storybook スナップショット | Storybook 本体         | 実装カタログは常に最新の本体を見る。構造化情報は Storybook MCP |
+| design token の画像        | `packages/foundations` | コードが正。画像化すると二重管理になる                         |
+| repo 内アセットの複製      | repo                   | 配信されるファイルは repo が持つ                               |
+| 「見ないが念のため」の保管 | git / クラウド         | バックアップは Eagle の仕事ではない                            |
 
-### 1.3 スマートフォルダ（保存済み検索）
+## 3. ライブラリ構造
 
-初期セットアップ時に以下を作成:
+| フォルダ   | 中身                                                                                                  |
+| ---------- | ----------------------------------------------------------------------------------------------------- |
+| `Refs/`    | 参考 UI。収集元アプリごとにサブフォルダを分ける（`TickTick` `Tiimo` …）。判別できないものは `_triage` |
+| `Assets/`  | 作業用素材。`Icons` / `Fonts` / `Packs`                                                               |
+| `Brand/`   | ブランドクリエイティブの正（§5）                                                                      |
+| `Product/` | リリース節目のキー画面。手動・少数。ツール化しない                                                    |
+| `Archive/` | 旧世代・ボツ案・方針上ここに置かないと判断したもの                                                    |
 
-| スマートフォルダ名        | 条件                               |
-| ------------------------- | ---------------------------------- |
-| 🔍 要レビュー             | ★3以下 AND タグ `current`          |
-| 🌙 Darkモード全件         | タグ `dark`                        |
-| 📅 今週更新               | 更新日 = 今週 AND タグ `component` |
-| ⚠️ ブランドカラー逸脱候補 | タグ `color-check`                 |
-| 🔗 インスピ→実装リンク    | タグが `ref:` プレフィックスを含む |
+curated（★4 以上）は横断ビューとして見たいので、Eagle アプリ上でスマートフォルダ `⭐ Picks`（rating ≥ 4）を作る。**スマートフォルダは MCP から作成できない**（この Eagle ビルドに `smart_folder_*` ツールが無い）ため、アプリ上での手作業になる。
 
-## 2. タグ体系
+新しい参考 UI を保存する時は、browser extension の保存ダイアログで `Refs/{アプリ名}` を選ぶ。該当フォルダが無ければ作る。
 
-### 2.1 タグカテゴリ
+## 4. タグと★
 
-タグはフラットだが、プレフィックスで意味的にグループ化する。
+**全量タグ付けはしない。** raw の横断検索は AI セマンティック検索（`ai_search_by_text`）が担う。タグは curated だけに付ける。
 
-#### 種別（必須・自動付与）
+> AI 検索はプラグイン側のインデックス構築が前提。未構築だと `ai_search_by_text` はエラーを返す。`ai_search_status` の `totalSyncedItems` で確認し、構築は Eagle アプリの AI Search プラグイン画面から行う。
 
-- `component` — Storybookスナップショット
-- `token` — デザイントークン素材
-- `inspiration` — 参考UI
-- `marketing` — LP/PH/SNS素材
+**pattern タグ（12 語彙）**: `onboarding` / `paywall` / `empty-state` / `calendar` / `timer` / `stats` / `settings` / `navigation` / `bottom-sheet` / `list` / `widget` / `notification`
 
-#### 状態（必須・自動付与）
+語彙を増やす前に、既存語彙で表現できないかを先に確認する。増やすほど付ける手が重くなり、curation が止まる。
 
-- `current` — 最新の正スナップショット
-- `deprecated` — 前世代（Archive移動済み）
-- `draft` — WIP・検討中
+**★の意味**:
 
-#### テーマ
+| ★   | 意味                            |
+| --- | ------------------------------- |
+| ★5  | Dayopt で実際に参照して採用した |
+| ★4  | 良い参考。見返す価値がある      |
+| 無  | 未評価（大多数はこれで正常）    |
 
-- `light`
-- `dark`
+## 5. Brand/ — 一枚系クリエイティブ
 
-#### ビューポート
+OGP・SNS 画像・Product Hunt ギャラリー・LP ヒーローなど。手作りの一点物で再生成できないため、**Eagle が正となる唯一のカテゴリ**。
 
-- `mobile` — 375px
-- `desktop` — 1280px
-
-#### Feature セクション（自動検出）
-
-- `auth` / `calendar` / `contact` / `review`
-- `settings` / `tags` / `timeblock`
-
-#### パスセグメント（自動付与）
-
-Storybook タイトルの階層がそのままタグになる。
-例: `Shared/Components/Actions/Button` → `components`, `ui`, `button`
-
-#### デザイン要素（任意・手動）
-
-- `color:primary-blue`
-- `color:amber-h70`
-- `color:green-h150`
-- `tab-bar`
-
-#### バージョン（リリース単位）
-
-- `v0.9` — プレローンチ
-- `v1.0` — ローンチ版
-- 以降インクリメント
-
-#### インスピレーション紐づけ
-
-- `ref:{component-name}` — 例: `ref:bottom-sheet`, `ref:timeblock-card`
-- インスピレーション画像と実装スナップショットの両方に付与
-
-### 2.2 タグ自動生成ルール
-
-Storybook タイトル階層とバリアント名からタグを自動生成する。
+全チャンネルで一貫したブランドを保つ鍵は、完成品ではなく **共通素材の層を分離すること**。OGP も SNS も PH も同じ素材プールから作られる状態にする。
 
 ```
-Storybook title: Shared/Components/Actions/Button
-Story name: AllPatterns
-ファイル名: Components_UI_Button--AllPatterns_dark_mobile.png
-
-→ 自動タグ:
-  component, current, button, components, ui, allpatterns, dark, mobile
+Brand/
+├── Logo/            ← ロゴ・ロックアップ・アイコンの全 variant（全チャンネル共通の源泉）
+├── ProductShots/    ← クリーンに撮った製品スクショの canonical 版（創作の共通材料）
+├── OGP/             ← OGP 完成品の master export
+├── SNS/             ← SNS 投稿画像の完成品
+├── ProductHunt/     ← PH ギャラリー・サムネイル
+├── LP/              ← LP / blog 用画像の master
+└── Inspiration/     ← 他社の OGP / SNS / バナーの参考
 ```
 
-パース規則:
+運用ルールは 3 つ。
 
-1. `--` の左側をパスとして分割 → 最後のセグメントがコンポーネント名、それ以外がフォルダパス+タグ
-2. `--` の右側をバリアント+テーマ+ビューポートとして分割
-3. パスの各セグメントが自動的にタグ化される（kebab-case）
-4. 現行 Feature セクション名（calendar, timeblock 等）がパスに含まれていれば自動付与
+1. **命名**: `{YYYY-MM-DD}_{用途}`（例: `2026-08-01_v0.28-release-ogp`）。時系列で並び、過去の告知が辿れる
+2. **出所を annotation に残す**: 元データへのリンク（Figma URL 等）と掲載先（repo path / 投稿 URL）。「あの画像の元データどれ?」を構造的に潰す
+3. **タグは campaign + 状態**: `v0.28` / `launch` などの campaign タグ + `shipped` / `draft`。スマートフォルダ `Brand: shipped` が「世に出た創作物の全量」になり、次の制作時にトーンを揃える参照点になる
 
-## 3. ファイル命名規約
+`ProductShots/` を撮り直したら、旧版に `deprecated` を付けて残す。過去の姿は再生成できない。
 
-### 3.1 Storybookスナップショット（自動生成）
+## 6. 運用
 
-```
-{StorybookTitle}--{StoryName}_{theme}_{viewport}.png
-```
+定常メンテナンス作業は無い。以下の 2 つだけを習慣にする。
 
-Storybook のタイトル階層がそのままファイル名になる（`/` は `_` に変換）。
+- 良い参考 UI を見つけたら Eagle browser extension で保存する（タグ付けは任意）
+- 一枚系クリエイティブを作ったら `Brand/` の該当フォルダへ保存し、命名と annotation を書く
 
-具体例:
+curation（★と pattern タグ）は義務ではなく、検索して実際に使った瞬間にだけ行う。サボってもアプリ別ビューと AI 検索は機能し続ける。
 
-```
-Components_UI_Button--AllPatterns_dark_mobile.png
-Components_UI_Button--Default_light_mobile.png
-Components_Shell_AppHeader--Default_dark_mobile.png
-Features_Calendar_Views_Grid_TimeColumn--Default_light_desktop.png
-Features_Settings_DisplaySettings--Default_dark_mobile.png
-Features_Timeblock_Card--WithRecord_light_mobile.png
-Foundations_Colors--AllColors_dark_mobile.png
-Foundations_Icons--Sizes_light_mobile.png
-```
+新規セットアップは 2 つに分かれる。
 
-### 3.2 デザイントークン素材
-
-```
-token-{type}-{name}.png
-```
-
-例:
-
-```
-token-color-palette-full.png
-token-color-timeblock-states.png
-token-typography-scale.png
-token-radius-specimens.png
-token-icon-sizes.png
-```
-
-### 3.3 マーケティング素材
-
-```
-{YYYY-MM-DD}_{channel}-{description}-{version}.png
-```
-
-例:
-
-```
-2026-04-08_ph-hero-v1.png
-2026-04-08_ph-gallery-review-v2.png
-2026-04-10_lp-og-image-v1.png
-2026-04-12_social-launch-announcement-v1.png
-```
-
-### 3.4 インスピレーション
-
-命名制約なし。Eagle取込時の元ファイル名をそのまま使用。
-タグ（種別 `inspiration` + 参考先 `ref:{name}` + カテゴリ）で管理。
-
-## 4. ライフサイクル管理
-
-### 4.1 スナップショットの世代管理ポリシー
-
-**最新のみをComponents/に保持。前回分はArchive/へ自動移動。**
-
-スナップショット更新フロー:
-
-1. Storycapが新しい画像を `screenshots/` に出力
-2. スクリプトがComponents/内の同名ファイルを検知
-3. 既存ファイルに `deprecated` タグを付与、`current` タグを除去
-4. 既存ファイルをArchive/フォルダへ移動
-5. 新しいファイルをComponents/の適切なサブフォルダへ追加
-6. タグ自動付与（`current` + ファイル名パースによるタグ群）
-
-### 4.2 Archive保持期間
-
-- **30日経過した `deprecated` アイテムは自動削除**（moveToTrash）
-- 必要に応じて削除前に★5を付ければ保持対象から除外
-
-### 4.3 ★レーティングの運用ルール
-
-| ★    | 意味           | 用途                                   |
-| ---- | -------------- | -------------------------------------- |
-| ★5   | 確定・保護対象 | 削除対象から除外。リリース確定デザイン |
-| ★4   | 承認済み       | レビュー完了、問題なし                 |
-| ★3   | 要レビュー     | 自動生成直後のデフォルト               |
-| ★2   | 要修正         | 問題あり、修正予定                     |
-| ★1   | ボツ           | 次回クリーンアップで削除候補           |
-| なし | 未評価         | 新規取込直後                           |
-
-### 4.4 メモ（annotation）フィールドの活用
-
-Storybookスナップショットには以下を自動でメモに格納:
-
-```
-storybook: http://localhost:6006/?path=/story/{story-id}
-source: src/components/{path}/{ComponentName}.tsx
-captured: 2026-04-08T14:30:00+09:00
-storycap-hash: {前回との差分検知用ハッシュ}
-```
-
-Claude Codeが「このコンポーネントのソースどこ？」と聞かれたとき、
-Eagle MCP → `get_item_info` → メモからパスを抽出して応答できる。
-
-## 5. ビューポート戦略
-
-### 5.1 撮影対象ビューポート
-
-| ビューポート | 幅     | 用途                        |
-| ------------ | ------ | --------------------------- |
-| mobile       | 375px  | メイン。全コンポーネント    |
-| desktop      | 1280px | Calendar 等の広幅レイアウト |
-
-### 5.2 ルール（Storybook カテゴリ準拠）
-
-| カテゴリ                                | mobile | desktop | 理由                             |
-| --------------------------------------- | ------ | ------- | -------------------------------- |
-| Features/Calendar/Views/                | ✓      | ✓       | Day/Week/Grid のページレイアウト |
-| Features/Settings/                      | ✓      | ✓       | 設定画面各種                     |
-| Features/Review/                        | ✓      | ✓       | Calendar右panel                  |
-| Features/Auth/                          | ✓      | ✓       | 認証画面                         |
-| Product/Components/Shell/Sidebar/       | ✓      | ✓       | デスクトップでレイアウト変化     |
-| Shared/Components/                      | ✓      | -       | プリミティブ（差分小）           |
-| Product/Components/                     | ✓      | -       | ユーティリティ                   |
-| Product/Components/Shell/ (Sidebar以外) | ✓      | -       | BottomTabBar, AppHeader          |
-| Foundations/                            | ✓      | -       | デザイントークン                 |
-| その他 Feature コンポーネント           | ✓      | -       | 個別UIパーツ                     |
-
-フォルダは分けず、タグ（`mobile` / `desktop`）で管理。
-
-## 6. Eagle固有機能の役割割り当て
-
-| Eagle機能              | Dayoptでの用途                                              |
-| ---------------------- | ----------------------------------------------------------- |
-| ★レーティング          | デザインレビュー状態（§4.3参照）                            |
-| メモ                   | Storybook URL、ソースパス、撮影日時、差分ハッシュ           |
-| カラーパレット自動抽出 | ブランドカラー準拠チェック。逸脱時に `color-check` タグ付与 |
-| スマートフォルダ       | 動的ビュー（§1.3参照）                                      |
-| タグ                   | 全メタデータの中心（§2参照）                                |
-
-### 6.1 カラーパレット準拠チェック
-
-Eagleが画像から自動抽出する支配色を、Dayoptブランドカラーと照合:
-
-```
-ブランドカラー定義:
-- Primary Blue: #2563EB (近傍許容: ΔE < 15)
-- Amber H70 (Deep zone): #F59E0B
-- Green H150 (Ease zone): #22C55E
-- Neutral Gray系: #F8FAFC ~ #0F172A
-
-許容外の支配色が検出された場合 → `color-check` タグを自動付与
-```
-
-## 7. インスピレーション → 実装のトレーサビリティ
-
-### 7.1 紐づけルール
-
-参考デザインを保存するとき:
-
-1. `inspiration` タグを付与
-2. 参考にするコンポーネントの `ref:{component-name}` タグを付与
-
-実装スナップショットにも同じ `ref:{component-name}` タグが自動で付く。
-
-### 7.2 活用例
-
-```
-Eagle検索: "ref:bottom-sheet"
-→ 結果:
-  - [inspiration] Uber Eats の bottom sheet UI → ★4
-  - [inspiration] Apple Maps の地図上 sheet → ★3
-  - [component] organisms-bottom-sheet--create-timeblock-light-mobile.png → ★5 current
-```
-
-「このコンポーネント、どの参考UIを元にデザインしたっけ？」に即答できる。
-
-## 8. スナップショットパイプライン
-
-### 8.1 全体フロー
-
-```
-[Storybook]
-    ↓ Storycap (Playwright)
-[screenshots/]  ← ローカルに画像出力
-    ↓ eagle-sync スクリプト
-[Eagle MCP]
-    ├── addFromPath → Components/{category}/
-    ├── update → タグ自動付与
-    ├── update → メモにメタデータ格納
-    └── (既存分) → deprecated化 → Archive/へ移動
-```
-
-### 8.2 Storycap設定方針
-
-```js
-// .storycap.config.js
-module.exports = {
-  serverCmd: 'npx storybook dev -p 6006 --no-open',
-  captureTimeout: 10000,
-  viewports: {
-    mobile: { width: 375, height: 812 },
-    desktop: { width: 1280, height: 800 },
-  },
-  // ファイル名テンプレート（命名規約に準拠）
-  outDir: './screenshots',
-  // 各storyに対して light/dark × mobile/desktop の組み合わせ
-};
-```
-
-### 8.3 eagle-sync スクリプト概要
-
-```
-入力: screenshots/ ディレクトリ内の .png ファイル群
-処理:
-  1. ファイル名をパースしてメタデータ抽出
-  2. Eagle MCP: get_folder_list → 対象フォルダID取得
-  3. Eagle MCP: get_item_list → 同名の既存アイテム検索
-  4. 既存あり → update（deprecated タグ付与）→ 別フォルダへ移動相当の処理
-  5. Eagle MCP: add_item_from_path → 新規追加
-  6. Eagle MCP: update → タグ・メモ一括設定
-  7. レポート出力（追加N件、更新N件、削除候補N件）
-```
-
-### 8.4 実行タイミング
-
-- **手動**: Claude Codeから `eagle-sync` スキルを呼び出し
-- **CI連携（将来）**: GitHub Actions の post-merge でStorycap → eagle-sync
-- **推奨頻度**: 機能ブランチマージ後、またはデザイン変更コミット後
-
-## 9. Claude Code Skill設計
-
-### 9.1 スキル一覧
-
-| スキル名          | トリガー例                                         | 動作                                      |
-| ----------------- | -------------------------------------------------- | ----------------------------------------- |
-| eagle-sync        | 「スナップショット更新して」                       | Storycap実行 → Eagle取込 → レポート       |
-| eagle-lookup      | 「BottomSheetのデザイン見せて」                    | Eagle MCP検索 → サムネイル/メタデータ返却 |
-| eagle-review      | 「未レビューのコンポーネント一覧」                 | ★3以下 + current を検索してリスト表示     |
-| eagle-cleanup     | 「Archiveの古いスナップショット整理して」          | 30日超のdeprecatedアイテムをmoveToTrash   |
-| eagle-inspiration | 「bottom-sheetの参考UIと実装を並べて」             | ref:タグで検索、インスピと実装を対比表示  |
-| eagle-color-check | 「ブランドカラーから外れてるコンポーネントある？」 | color-checkタグのアイテムをリスト表示     |
-
-### 9.2 ディレクトリ配置
-
-```
-~/.claude/skills/eagle-dayopt/
-├── SKILL.md                  ← スキル本体（description + 手順）
-├── scripts/
-│   ├── eagle-sync.sh         ← Storycap実行 + Eagle取込
-│   ├── eagle-cleanup.sh      ← Archive整理
-│   └── parse-filename.ts     ← ファイル名→タグ変換ユーティリティ
-├── references/
-│   └── tag-taxonomy.md       ← タグ体系リファレンス（§2を抽出）
-└── assets/
-    └── storycap.config.js    ← Storycap設定テンプレート
-```
-
-## 10. 初期セットアップ手順
-
-### Phase 1: Eagle側
-
-1. Dayopt Design ライブラリ新規作成
-2. フォルダ構造作成（§1.2）
-3. スマートフォルダ作成（§1.3）
-
-### Phase 2: パイプライン構築
-
-4. Storycap導入・設定
-5. eagle-sync スクリプト実装
-6. ファイル命名テンプレート→タグ変換ロジック実装
-7. ライフサイクル管理（deprecated化・Archive移動）実装
-8. メモフィールド自動格納実装
-
-### Phase 3: Claude Code Skill
-
-9. SKILL.md作成（eagle-dayoptスキル）
-10. scripts/ 実装
-11. 動作確認（手動トリガーで一連のフロー実行）
-
-### Phase 4: 運用開始
-
-12. 既存インスピレーション画像をInspiration/へ移動・タグ付け
-13. デザイントークン素材を撮影・取込
-14. マーケティング素材フォルダにPH/LP用素材を整理
+- **MCP で作れるもの**: §3 の実フォルダ（`folder_create`）と §4 のタググループ（`tag_group_create`）。エージェントに依頼できる
+- **Eagle アプリ上の手作業**: スマートフォルダ（`⭐ Picks` など）。このビルドの MCP に `smart_folder_*` tool は無いため、エージェントからは作成できない
 
 ## 変更履歴（Eagle）
 
-| 日付       | 内容     |
-| ---------- | -------- |
-| 2026-04-08 | 初版作成 |
+| 日付       | 内容                                                                    |
+| ---------- | ----------------------------------------------------------------------- |
+| 2026-04-08 | 初版作成（Storybook スナップショット自動同期パイプラインとして設計）    |
+| 2026-07-23 | v2 へ全面改訂。同期パイプラインを廃止し、視覚参照ライブラリとして再定義 |
 
 ---
 

@@ -49,11 +49,7 @@ export function getOriginalError(error: Error): Error {
 }
 
 /** Captures only unexpected failures which the tRPC HTTP adapter will serialize. */
-export function captureUnexpectedTrpcAdapterError(
-  error: TRPCError,
-  operation: string,
-  route = '/api/trpc',
-): void {
+export function captureUnexpectedTrpcAdapterError(error: TRPCError, operation: string): void {
   if (isExpectedTrpcError(error)) return;
 
   const original = getOriginalError(error);
@@ -63,7 +59,7 @@ export function captureUnexpectedTrpcAdapterError(
     errorCode: error.code,
     feature: 'trpc',
     operation,
-    route,
+    route: '/api/trpc',
     source: 'trpc_adapter',
   });
 }

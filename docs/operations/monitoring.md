@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-22
+last_verified: 2026-07-23
 code:
   - packages/observability
   - apps/product/src/instrumentation.ts
@@ -35,7 +35,7 @@ provider plan、sampling rate、SDK versionなどの値は変わるため、pack
 - build integration と source map upload は Vercel Production build だけで実行する。CI / Preview / Development に `SENTRY_AUTH_TOKEN` を置かない
 - 両 Vercel project は同じ env 名を使うが、DSN と project 値は project scope ごとに異なる。env の正本は [secrets](./secrets.md)
 - sanitizer と同意判定は `packages/observability`、app 固有の初期化は各 app の instrumentation / Sentry config を正とする
-- user context は内部 ID だけを使う。email、user content、request body、cookie、authorization、URL query は送信しない
+- user context は内部 ID だけを使う。email、user content、request body、request header、cookie、authorization、URL query は送信しない
 - `event_id`、`trace_id`、`span_id`、release、environment など Sentry protocol 値は変更しない
 
 主なcapture経路:
@@ -50,12 +50,12 @@ expected auth / validation / not-found / conflict、Web Vitals、正常な login
 
 新しい`try/catch`やSentry captureを追加する場合は`.agents/skills/error-handling/SKILL.md`を先に読む。
 
-### Provider-side status (2026-07-16)
+### Provider-side status (2026-07-23)
 
 - Product project `dayopt` と Web project `dayopt-web` を分離済み。両projectでIP addressを保存せず、default scrub / server-side scrub / custom sensitive fieldsをorganization設定から継承する
 - 両projectでSpike Protectionを有効化し、`ChunkLoadError`は一律filterしない。browser key loaderのSession Replayも無効化している
 - Productの既存高優先度alertを維持し、Webに同等の高優先度alertを作成した。Webのtest notificationが実メールへ届くことまで確認済み
-- organizationはownerのrecovery手段を確認後、2FA必須化とjoin request停止を適用済み。team/project作成権限のowner/admin限定は現行free planでは設定項目が無効なため未適用
+- organizationはowner 1名で、2FA必須化とjoin request停止を適用済み。open team membership、memberによる招待・project作成・event削除・monitor/alert編集はすべて無効化している
 - Sentry build tokenはVercel作成のinternal integrationを使い、Issue/Event accessを付与しない。release/source map以外へ用途を広げない
 
 運用リンク:
@@ -66,17 +66,17 @@ expected auth / validation / not-found / conflict、Web Vitals、正常な login
 
 各health dashboardはunresolved Issue、release別error、transaction failure rate、transaction duration p50/p75/p95、Replay-linked error件数（期待値0）を表示する。provider設定の変更履歴とProduction smokeのevent-level証跡は[#1566](https://github.com/Dayopt/dayopt/issues/1566)に集約する。
 
-未完了はProduction smokeと、free planで設定できないteam/project作成権限制限。設定済みと推測して手順を省略しない。
+Product / Webのbrowserを含むProduction検証、alert email、source map、trace、PII境界のevent-level証跡は[#1566](https://github.com/Dayopt/dayopt/issues/1566)を正とする。Product Edgeの元TypeScript行へのsymbolicationだけはVercel Edge再bundleのupstream制約があり、release・trace・PII不在を受入条件とする。
 
-### Temporary Production smoke safety
+### Production検証用surfaceの撤去契約
 
-Production smokeは恒久APIや一般ユーザー向けUIにしない。実行時は次をすべて満たす。
+2026-07-23の検証に使ったoperator専用surfaceは恒久APIや一般ユーザー向けUIにせず、active sourceから撤去した。将来再検証が必要な場合も既存surfaceを復元して常設せず、次の契約を満たす短命変更を別途reviewする。
 
-- raw tokenはagentの短命memoryからbrowser automationへ一度だけ渡し、console、clipboard、DOM、URL、cookie、storage、docs、issueへ置かない。operator関数は入力不正・HTTP失敗を通常結果として返し、未処理exceptionを作らない
-- Vercelにはapp別tokenのSHA-256 digestだけをSensitive envとして置く。Production exact flag、埋め込みabsolute deadline、env expiry、same-origin、bodyなし、IP/global Upstash rate limitを各endpointで検証する
-- smoke名の独立traceだけを一時的に100% sampleし、span終了後のflush成功を確認する。通常trafficのsampling rateは変えない
-- smoke-enabled Product / Web deployment URLとcommit SHAを[#1566](https://github.com/Dayopt/dayopt/issues/1566)へ記録し、そのdeploymentへのrollbackを禁止する
-- 証跡取得後は、flag-off deploy、codeとenvの削除deployの順でroll-forwardする。canonical URLだけでなく、記録した旧deployment URLもabsolute deadline後にGET / POST / OPTIONSが404となることを確認する
+- raw tokenをconsole、clipboard、DOM、URL、cookie、storage、docs、issueへ残さず、providerにはapp別digestだけを置く
+- Production限定flag、固定deadline、env expiry、same-origin、空body、IP/global rate limitでfail closedにする
+- 検証traceだけを一時的に100% sampleし、通常のProduct/Web browser・server 10%と両Edge 5% samplingは変えない
+- 対象project、deployment URL、commit SHA、event、alert、削除手順を[#1566](https://github.com/Dayopt/dayopt/issues/1566)相当の運用issueへ記録する
+- flag-off deployの後にcodeと一時envを削除し、canonical URLと記録済み旧deployment URLのGET / POST / OPTIONSが404であることを確認する
 
 ## Alert policy
 
@@ -109,9 +109,13 @@ secret、request body、user contentをissue・docs・chatへ貼らない。
 ## Verification
 
 ```bash
-pnpm --filter @dayopt/product test:run -- src/lib/sentry/scrub-pii.test.ts
+pnpm --filter @dayopt/observability exec vitest run src/sanitize.test.ts
+pnpm --filter @dayopt/product exec vitest --project unit run src/lib/sentry/__tests__/scrub-pii.test.ts
+pnpm --filter @dayopt/web exec vitest run src/app/api/csp-report/route.test.ts src/platform/observability/instrumentation-client.test.ts
 pnpm typecheck
 pnpm lint
+pnpm lint:boundaries
+pnpm docs:check
 ```
 
-production dashboardへのtest event送信やalert設定変更は、目的と対象environmentを確認してから行う。test surfaceは期限、Production-only flag、token digest、same-origin、分散rate limitをすべて満たす短命な実装だけを使い、証跡取得後にコードとenvを削除する。
+production dashboardへのtest event送信やalert設定変更は、目的と対象environmentを確認して明示承認を得てから行う。repositoryには常設のtest surfaceを置かない。

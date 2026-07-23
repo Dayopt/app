@@ -111,6 +111,79 @@ describe('/api/csp-report', () => {
     expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
 
+  it.each(['geist.woff2', 'geist_mono.woff2'])(
+    'accepts Vercel Toolbar font %s without sending it to Sentry',
+    async (fontPath) => {
+      const report = {
+        ...validReport,
+        'csp-report': {
+          ...validReport['csp-report'],
+          'violated-directive': "font-src 'self'",
+          'blocked-uri': `https://vercel.live/${fontPath}`,
+          'source-file': 'https://vercel.live/_next-live/feedback/instrument.js',
+        },
+      };
+
+      expect((await POST(createRequest(JSON.stringify(report)))).status).toBe(200);
+      expect(Sentry.captureMessage).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['geist.woff2', 'geist_mono.woff2'])(
+    'accepts Vercel Toolbar font %s when source-file is omitted',
+    async (fontPath) => {
+      const report = {
+        ...validReport,
+        'csp-report': {
+          ...validReport['csp-report'],
+          'document-uri': 'https://dayopt.app/ja',
+          'violated-directive': "font-src 'self'",
+          'blocked-uri': `https://vercel.live/${fontPath}`,
+          'source-file': undefined,
+        },
+      };
+
+      expect((await POST(createRequest(JSON.stringify(report)))).status).toBe(200);
+      expect(Sentry.captureMessage).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['font-src', 'https://fonts.example.com/geist.woff2', 'https://vercel.live/instrument.js'],
+    ['font-src', 'https://vercel.live/geist.woff2', 'https://dayopt.app/_next/app.js'],
+    ['font-src', 'https://vercel.live/another-font.woff2', undefined],
+    ['font-src', 'https://vercel.live/another-font.woff2', 'https://vercel.live/instrument.js'],
+    ['font-src', 'https://vercel.live/geist.woff2', 'not-a-url'],
+    ['font-src', 'https://vercel.live/geist.woff2', ''],
+    ['script-src', 'https://vercel.live/geist.woff2', 'https://vercel.live/instrument.js'],
+    [
+      'font-src',
+      'https://vercel.live.attacker.example/geist.woff2',
+      'https://vercel.live/instrument.js',
+    ],
+    [
+      'font-src',
+      'https://vercel.live/geist.woff2',
+      'https://vercel.live.attacker.example/instrument.js',
+    ],
+  ])(
+    'captures near-miss Toolbar reports (%s, %s, %s)',
+    async (directive, blockedUri, sourceFile) => {
+      const report = {
+        ...validReport,
+        'csp-report': {
+          ...validReport['csp-report'],
+          'violated-directive': directive,
+          'blocked-uri': blockedUri,
+          'source-file': sourceFile,
+        },
+      };
+
+      expect((await POST(createRequest(JSON.stringify(report)))).status).toBe(200);
+      expect(Sentry.captureMessage).toHaveBeenCalledOnce();
+    },
+  );
+
   it('maps arbitrary directives to one fixed unknown group', async () => {
     const report = {
       ...validReport,

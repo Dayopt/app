@@ -1,11 +1,12 @@
 'use client';
 
-import { Input } from '@dayopt/components';
+import { SearchDialog } from '@web/features/search';
 import { type NavigationItem, type NavigationSection } from '@web/shell/navigation';
 import { ExternalLink, Search } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 interface NavigationItemProps {
   item: NavigationItem;
@@ -85,14 +86,35 @@ interface ClientSidebarProps {
 export function ClientSidebar({ navigation }: ClientSidebarProps) {
   const pathname = usePathname();
   const t = useTranslations('common');
+  const locale = useLocale();
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Cmd+K / Ctrl+K で検索を開く
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="flex h-full flex-col">
-      {/* Search（旧 docs ヘッダーから移設） */}
-      <div className="relative mb-6">
-        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-        <Input type="search" placeholder={t('actions.search')} size="sm" className="pl-8" />
-      </div>
+      {/* Search（旧 docs ヘッダーから移設）— 入力は SearchDialog 側で受け付ける */}
+      <button
+        type="button"
+        onClick={() => setSearchOpen(true)}
+        className="border-input bg-background text-muted-foreground hover:bg-state-hover hover:text-foreground mb-6 flex h-8 w-full items-center gap-2 rounded-md border px-3 text-sm transition-colors"
+      >
+        <Search className="size-4 flex-shrink-0" />
+        <span className="flex-1 text-left">{t('actions.search')}</span>
+      </button>
+
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} locale={locale} />
 
       {/* Navigation */}
       <nav className="flex-1 space-y-6">

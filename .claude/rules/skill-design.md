@@ -17,7 +17,7 @@ project skill は以下 6 類型のいずれかに属する。類型は descript
 | 運用系           | 複数軸（ファイル / 設定 / 環境）を跨ぐ運用支援 | 特定ファイル/設定変更         | 6（250字枠） | `supabase`                                                            |
 | 副次トリガー型   | コード変化ではなく上位イベント確定がトリガー   | 上位イベント確定後            | 7            | `docs-writing`                                                        |
 | 明示発動型       | ユーザーの explicit な意図のみを契機           | 明示的な意図発話              | 4            | `releasing`                                                           |
-| ライフサイクル型 | パイプラインの各ステージが発動契機             | パイプライン進行              | 8            | `eagle-dayopt`                                                        |
+| ライフサイクル型 | パイプラインの各ステージが発動契機             | パイプライン進行              | 8            | 現在該当なし（旧 `eagle-dayopt`、2026-07-23 撤去）                    |
 
 「要素数」は When to Use の bullet 総数（実装起点 + 診断起点）。類型ごとの目安であり、hard cap ではなく soft guidance。
 
@@ -110,12 +110,12 @@ NOT 条件は「**invoke しそうに見えて実は不要**」なケースに�
 
 NOT 条件が「本来この領域を担当する他の箇所」を指す場合、redirect 先を明記する。記法は redirect 先の種類で分ける:
 
-| Redirect 先                   | 記法                                           | 例                                                           |
-| ----------------------------- | ---------------------------------------------- | ------------------------------------------------------------ |
-| 他の skill                    | `(skill-name skill の領域)` 括弧明記           | `(storybook skill の視覚検証領域、test 対象外)`              |
-| `CLAUDE.md` / rules/ のルール | `(CLAUDE.md の {rule-name} ルールに従う)`      | `(CLAUDE.md の copywriting ルールに従う、ロジック変更なし)`  |
-| 自動生成 artifact             | `(XX 後の自動反映)` など artifact の由来を明記 | `(types:generate 後の自動反映)`                              |
-| 自然な境界（redirect 先なし） | 括弧省略                                       | `単一 component 内で完結する local state（useState で十分）` |
+| Redirect 先                   | 記法                                           | 例                                                            |
+| ----------------------------- | ---------------------------------------------- | ------------------------------------------------------------- |
+| 他の skill                    | `(skill-name skill の領域)` 括弧明記           | `(storybook skill の視覚検証領域、test 対象外)`               |
+| `CLAUDE.md` / rules/ のルール | `(CLAUDE.md の {rule-name} ルールに従う)`      | `(CLAUDE.md の design-system ルールに従う、ロジック変更なし)` |
+| 自動生成 artifact             | `(XX 後の自動反映)` など artifact の由来を明記 | `(types:generate 後の自動反映)`                               |
+| 自然な境界（redirect 先なし） | 括弧省略                                       | `単一 component 内で完結する local state（useState で十分）`  |
 
 ### 4.3 明示発動型の NOT（特例）
 

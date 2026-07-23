@@ -10,6 +10,7 @@ export const DOCS_DIR = resolve(ROOT, 'docs');
 
 // status / last_verified が必須の stock domain。
 export const STOCK_DIRS = [
+  'ai',
   'business',
   'product',
   'marketing',

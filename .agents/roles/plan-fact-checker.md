@@ -23,7 +23,7 @@
 - **table / column 主張**: 「特定 table / column を更新する」
 - **API 主張**: 「特定の tRPC procedure / RPC を呼ぶ」
 - **件数 / 数値主張**: 「N tables ある」「M migrations が存在」「K 件の呼び出し点」
-- **設定 / 規約主張**: 「CLAUDE.md の X ルールに従う」「`.mcp.json` に Y server がある」
+- **設定 / 規約主張**: 「CLAUDE.md の X ルールに従う」「global MCP 設定に Y server がある」
 
 # 検証手順
 

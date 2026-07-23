@@ -199,6 +199,7 @@ gh pr merge <PR番号> --merge --delete-branch
 
 - Claude Code は `.claude/worktrees/<name>/` に自動作成する（gitignore 済み）。Codex は `~/.codex/worktrees/` を使う。**手動で `git worktree add` する場合も `.claude/worktrees/` 配下に置く**（repo 直下や無関係な場所に散らさない）
 - 他ツールの worktree（`~/.codex/` 配下）は各ツールの管理に任せ、手動で触らない
+- `.op-env.local` は gitignore 済みのため worktree には引き継がれないが、`pnpm dev` 実行時に main checkout から自動コピーされる（`scripts/dev-with-op.sh`）。手動セットアップは不要
 
 ### マージ後の掃除（AI の責務、merge と同一セッションで実施）
 

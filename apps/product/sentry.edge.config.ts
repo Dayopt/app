@@ -21,7 +21,6 @@ const SENTRY_DSN = process.env.SENTRY_DSN;
 // VERCEL_ENVはVercelが自動設定（production, preview, development）
 const VERCEL_ENV = process.env.VERCEL_ENV;
 const IS_SENTRY_PRODUCTION = VERCEL_ENV === 'production';
-const OPERATOR_SMOKE_TRACE_PREFIX = 'operator.sentry_smoke.';
 
 // DSNが設定されている場合のみ初期化
 if (SENTRY_DSN && IS_SENTRY_PRODUCTION) {
@@ -34,8 +33,7 @@ if (SENTRY_DSN && IS_SENTRY_PRODUCTION) {
 
     // Edge環境は軽量設定
     // トレースサンプリングを低めに設定（コスト最適化）
-    tracesSampler: ({ name, inheritOrSampleWith }) =>
-      name.startsWith(OPERATOR_SMOKE_TRACE_PREFIX) ? 1 : inheritOrSampleWith(0.05),
+    tracesSampler: ({ inheritOrSampleWith }) => inheritOrSampleWith(0.05),
 
     // デバッグモード無効（Edgeは軽量に）
     debug: false,

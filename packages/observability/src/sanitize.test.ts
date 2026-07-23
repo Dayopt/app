@@ -69,9 +69,29 @@ describe('sanitizeSentryEvent', () => {
     expect(result.request).toEqual({
       url: 'https://app.dayopt.com/private',
       method: 'POST',
-      headers: { Accept: 'application/json' },
     });
     expect(result.user).toEqual({ id: userId });
+  });
+
+  it('drops every request header, including previously allowlisted technical names', () => {
+    const privateValue = 'private-patient-name';
+    const result = sanitizeSentryEvent({
+      request: {
+        url: 'https://app.dayopt.app/contact',
+        method: 'POST',
+        headers: {
+          Accept: privateValue,
+          'Content-Type': privateValue,
+          Host: privateValue,
+        },
+      },
+    });
+
+    expect(result.request).toEqual({
+      url: 'https://app.dayopt.app/contact',
+      method: 'POST',
+    });
+    expect(JSON.stringify(result)).not.toContain(privateValue);
   });
 
   it('drops user context unless the id is an internal Supabase UUID', () => {
