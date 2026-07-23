@@ -18,6 +18,10 @@ type McpMutationDatabase = {
       | 'apply_mcp_plan_delete_v1'
       | 'apply_mcp_plan_restore_v1'
       | 'apply_mcp_plan_update_v1'
+      | 'apply_mcp_record_create_v1'
+      | 'apply_mcp_record_delete_v1'
+      | 'apply_mcp_record_restore_v1'
+      | 'apply_mcp_record_update_v1'
     >;
     Enums: NoDatabaseObjects;
     CompositeTypes: NoDatabaseObjects;
@@ -45,6 +49,30 @@ type PlanUpdateRpcArgs = Omit<
 };
 type PlanDeleteRpcArgs = Database['public']['Functions']['apply_mcp_plan_delete_v1']['Args'];
 type PlanRestoreRpcArgs = Database['public']['Functions']['apply_mcp_plan_restore_v1']['Args'];
+type GeneratedRecordCreateRpcArgs =
+  Database['public']['Functions']['apply_mcp_record_create_v1']['Args'];
+type RecordCreateRpcArgs = Omit<
+  GeneratedRecordCreateRpcArgs,
+  'p_note' | 'p_plan_id' | 'p_tag_id'
+> & {
+  p_note: string | null;
+  p_plan_id: string | null;
+  p_tag_id: string | null;
+};
+type GeneratedRecordUpdateRpcArgs =
+  Database['public']['Functions']['apply_mcp_record_update_v1']['Args'];
+type RecordUpdateRpcArgs = Omit<
+  GeneratedRecordUpdateRpcArgs,
+  'p_end_at' | 'p_note' | 'p_start_at' | 'p_tag_id' | 'p_title'
+> & {
+  p_end_at: string | null;
+  p_note: string | null;
+  p_start_at: string | null;
+  p_tag_id: string | null;
+  p_title: string | null;
+};
+type RecordDeleteRpcArgs = Database['public']['Functions']['apply_mcp_record_delete_v1']['Args'];
+type RecordRestoreRpcArgs = Database['public']['Functions']['apply_mcp_record_restore_v1']['Args'];
 
 function createMcpMutationDbClient(): McpMutationDbClient {
   return createClient<McpMutationDatabase>(
@@ -96,6 +124,34 @@ export function createMcpMutationDb() {
     },
     applyPlanRestore: async (args: PlanRestoreRpcArgs) => {
       const { data, error } = await client.rpc('apply_mcp_plan_restore_v1', args);
+      return { data, error };
+    },
+    applyRecordCreate: async (args: RecordCreateRpcArgs) => {
+      const { data, error } = await client.rpc('apply_mcp_record_create_v1', {
+        ...args,
+        p_note: args.p_note as never,
+        p_plan_id: args.p_plan_id as never,
+        p_tag_id: args.p_tag_id as never,
+      });
+      return { data, error };
+    },
+    applyRecordUpdate: async (args: RecordUpdateRpcArgs) => {
+      const { data, error } = await client.rpc('apply_mcp_record_update_v1', {
+        ...args,
+        p_end_at: args.p_end_at as never,
+        p_note: args.p_note as never,
+        p_start_at: args.p_start_at as never,
+        p_tag_id: args.p_tag_id as never,
+        p_title: args.p_title as never,
+      });
+      return { data, error };
+    },
+    applyRecordDelete: async (args: RecordDeleteRpcArgs) => {
+      const { data, error } = await client.rpc('apply_mcp_record_delete_v1', args);
+      return { data, error };
+    },
+    applyRecordRestore: async (args: RecordRestoreRpcArgs) => {
+      const { data, error } = await client.rpc('apply_mcp_record_restore_v1', args);
       return { data, error };
     },
   };

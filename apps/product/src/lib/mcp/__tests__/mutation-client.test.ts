@@ -7,6 +7,10 @@ const mocks = vi.hoisted(() => ({
   applyPlanDelete: vi.fn(),
   applyPlanRestore: vi.fn(),
   applyPlanUpdate: vi.fn(),
+  applyRecordCreate: vi.fn(),
+  applyRecordDelete: vi.fn(),
+  applyRecordRestore: vi.fn(),
+  applyRecordUpdate: vi.fn(),
   captureUnexpectedDatabaseError: vi.fn(
     (error: Error, _context?: Record<string, unknown>) => error,
   ),
@@ -18,6 +22,10 @@ vi.mock('../mutation-db', () => ({
     applyPlanDelete: mocks.applyPlanDelete,
     applyPlanRestore: mocks.applyPlanRestore,
     applyPlanUpdate: mocks.applyPlanUpdate,
+    applyRecordCreate: mocks.applyRecordCreate,
+    applyRecordDelete: mocks.applyRecordDelete,
+    applyRecordRestore: mocks.applyRecordRestore,
+    applyRecordUpdate: mocks.applyRecordUpdate,
   }),
 }));
 
@@ -57,6 +65,41 @@ const versionedInput = {
 const deletedReceipt = {
   ...receipt,
   deleted_at: '2026-07-23T12:35:00.654321Z',
+};
+
+const recordInput = {
+  connectionId: input.connectionId,
+  accessTokenId: input.accessTokenId,
+  operationId: '00000000-0000-4000-8000-000000000005',
+  title: 'Private record title',
+  note: 'Private record note',
+  tagId: null,
+  planId: '00000000-0000-4000-8000-000000000006',
+  startAt: '2026-07-23T01:00:00.000000Z',
+  endAt: '2026-07-23T02:00:00.000000Z',
+};
+
+const recordReceipt = {
+  schema_version: 1,
+  operation_id: recordInput.operationId,
+  resource_type: 'record',
+  resource_id: '00000000-0000-4000-8000-000000000007',
+  version: '2026-07-23T12:36:56.123456Z',
+  deleted_at: null,
+  replayed: false,
+};
+
+const recordVersionedInput = {
+  connectionId: recordInput.connectionId,
+  accessTokenId: recordInput.accessTokenId,
+  operationId: recordInput.operationId,
+  recordId: recordReceipt.resource_id,
+  expectedUpdatedAt: recordReceipt.version,
+};
+
+const deletedRecordReceipt = {
+  ...recordReceipt,
+  deleted_at: '2026-07-23T12:37:00.654321Z',
 };
 
 describe('McpMutationClient', () => {
@@ -178,6 +221,170 @@ describe('McpMutationClient', () => {
       p_operation_id: input.operationId,
       p_plan_id: receipt.resource_id,
     });
+  });
+
+  it('typed Record createだけをRPCへ渡し、完了Planへのlinkを保つ', async () => {
+    mocks.applyRecordCreate.mockResolvedValue({ data: [recordReceipt], error: null });
+
+    await expect(new McpMutationClient().createRecord(recordInput)).resolves.toEqual({
+      schemaVersion: 1,
+      operationId: recordInput.operationId,
+      resourceType: 'record',
+      resourceId: recordReceipt.resource_id,
+      version: recordReceipt.version,
+      deletedAt: null,
+      replayed: false,
+    });
+    expect(mocks.applyRecordCreate).toHaveBeenCalledWith({
+      p_access_token_id: recordInput.accessTokenId,
+      p_connection_id: recordInput.connectionId,
+      p_end_at: recordInput.endAt,
+      p_note: recordInput.note,
+      p_operation_id: recordInput.operationId,
+      p_plan_id: recordInput.planId,
+      p_start_at: recordInput.startAt,
+      p_tag_id: null,
+      p_title: recordInput.title,
+    });
+  });
+
+  it('partial Record updateのfield presenceと明示nullを渡し、Plan linkを変更しない', async () => {
+    mocks.applyRecordUpdate.mockResolvedValue({ data: [recordReceipt], error: null });
+
+    await expect(
+      new McpMutationClient().updateRecord({
+        ...recordVersionedInput,
+        title: 'Updated record',
+        note: null,
+        tagId: null,
+        endAt: '2026-07-23T03:00:00.000000Z',
+      }),
+    ).resolves.toMatchObject({
+      resourceType: 'record',
+      resourceId: recordReceipt.resource_id,
+      version: recordReceipt.version,
+    });
+    expect(mocks.applyRecordUpdate).toHaveBeenCalledWith({
+      p_access_token_id: recordInput.accessTokenId,
+      p_connection_id: recordInput.connectionId,
+      p_end_at: '2026-07-23T03:00:00.000000Z',
+      p_end_at_present: true,
+      p_expected_updated_at: recordReceipt.version,
+      p_note: null,
+      p_note_present: true,
+      p_operation_id: recordInput.operationId,
+      p_record_id: recordReceipt.resource_id,
+      p_start_at: null,
+      p_start_at_present: false,
+      p_tag_id: null,
+      p_tag_id_present: true,
+      p_title: 'Updated record',
+      p_title_present: true,
+    });
+    expect(mocks.applyRecordUpdate.mock.calls[0]?.[0]).not.toHaveProperty('p_plan_id');
+  });
+
+  it('Record updateもdeadlockだけを一度再試行する', async () => {
+    mocks.applyRecordUpdate
+      .mockResolvedValueOnce({ data: null, error: { code: '40P01' } })
+      .mockResolvedValueOnce({ data: [recordReceipt], error: null });
+
+    await expect(
+      new McpMutationClient().updateRecord({
+        ...recordVersionedInput,
+        title: 'Retry record update',
+      }),
+    ).resolves.toMatchObject({ resourceId: recordReceipt.resource_id });
+    expect(mocks.applyRecordUpdate).toHaveBeenCalledTimes(2);
+  });
+
+  it('Record deleteはdeleted receipt、restoreはactive receiptだけを返す', async () => {
+    mocks.applyRecordDelete.mockResolvedValue({ data: [deletedRecordReceipt], error: null });
+    mocks.applyRecordRestore.mockResolvedValue({ data: [recordReceipt], error: null });
+    const client = new McpMutationClient();
+
+    await expect(client.deleteRecord(recordVersionedInput)).resolves.toMatchObject({
+      resourceType: 'record',
+      resourceId: recordReceipt.resource_id,
+      deletedAt: deletedRecordReceipt.deleted_at,
+    });
+    await expect(client.restoreRecord(recordVersionedInput)).resolves.toMatchObject({
+      resourceType: 'record',
+      resourceId: recordReceipt.resource_id,
+      deletedAt: null,
+    });
+    expect(mocks.applyRecordDelete).toHaveBeenCalledWith({
+      p_access_token_id: recordInput.accessTokenId,
+      p_connection_id: recordInput.connectionId,
+      p_expected_updated_at: recordReceipt.version,
+      p_operation_id: recordInput.operationId,
+      p_record_id: recordReceipt.resource_id,
+    });
+    expect(mocks.applyRecordRestore).toHaveBeenCalledWith({
+      p_access_token_id: recordInput.accessTokenId,
+      p_connection_id: recordInput.connectionId,
+      p_expected_updated_at: recordReceipt.version,
+      p_operation_id: recordInput.operationId,
+      p_record_id: recordReceipt.resource_id,
+    });
+  });
+
+  it.each([
+    {
+      caseName: 'different resource type',
+      method: 'update',
+      receipt: { ...recordReceipt, resource_type: 'plan' },
+    },
+    {
+      caseName: 'different Record ID',
+      method: 'update',
+      receipt: { ...recordReceipt, resource_id: '00000000-0000-4000-8000-000000000099' },
+    },
+    { caseName: 'active delete receipt', method: 'delete', receipt: recordReceipt },
+    { caseName: 'deleted restore receipt', method: 'restore', receipt: deletedRecordReceipt },
+  ])('$caseNameをRecord receipt invariant違反として扱う', async ({ method, receipt: row }) => {
+    const client = new McpMutationClient();
+    if (method === 'update') {
+      mocks.applyRecordUpdate.mockResolvedValue({ data: [row], error: null });
+      await expect(
+        client.updateRecord({ ...recordVersionedInput, title: 'Invalid receipt' }),
+      ).rejects.toMatchObject({ code: 'MUTATION_FAILED' });
+      return;
+    }
+    if (method === 'delete') {
+      mocks.applyRecordDelete.mockResolvedValue({ data: [row], error: null });
+      await expect(client.deleteRecord(recordVersionedInput)).rejects.toMatchObject({
+        code: 'MUTATION_FAILED',
+      });
+      return;
+    }
+    mocks.applyRecordRestore.mockResolvedValue({ data: [row], error: null });
+    await expect(client.restoreRecord(recordVersionedInput)).rejects.toMatchObject({
+      code: 'MUTATION_FAILED',
+    });
+  });
+
+  it('unexpected Record DB failureもcodeだけを観測し、入力本文を捨てる', async () => {
+    mocks.applyRecordCreate.mockResolvedValue({
+      data: null,
+      error: {
+        code: 'XX998',
+        message: `${recordInput.title} ${recordInput.note} dop_at_secret-token`,
+      },
+    });
+
+    await expect(new McpMutationClient().createRecord(recordInput)).rejects.toMatchObject({
+      code: 'MUTATION_FAILED',
+    });
+    const [captured, context] = mocks.captureUnexpectedDatabaseError.mock.calls[0]!;
+    expect(captured).toMatchObject({
+      code: 'XX998',
+      message: 'Unexpected MCP mutation database failure',
+    });
+    expect(JSON.stringify({ captured, context })).not.toContain(recordInput.title);
+    expect(JSON.stringify({ captured, context })).not.toContain(recordInput.note);
+    expect(JSON.stringify({ captured, context })).not.toContain('dop_at_secret-token');
+    expect(context).toEqual({ feature: 'mcp', operation: 'apply_mcp_record_create' });
   });
 
   it('deadlockだけを一度再試行し、最終DB outcomeをstable errorへ変換する', async () => {
