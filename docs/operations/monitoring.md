@@ -109,7 +109,8 @@ secret、request body、user contentをissue・docs・chatへ貼らない。
 ## Verification
 
 ```bash
-pnpm --filter @dayopt/product test:run -- src/lib/sentry/scrub-pii.test.ts
+pnpm --filter @dayopt/observability test:run -- src/sanitize.test.ts
+pnpm --filter @dayopt/product test:run -- src/lib/sentry/__tests__/scrub-pii.test.ts
 pnpm typecheck
 pnpm lint
 ```
