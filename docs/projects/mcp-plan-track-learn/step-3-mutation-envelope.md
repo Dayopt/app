@@ -73,7 +73,7 @@ Persistent Staging / Productionへの適用、逆GRANTと再cutoverのrehearsal�
 - createの`source`は`api`に固定する。update/delete/restoreは`expectedUpdatedAt`必須とする
 - partial updateはfield省略を現状維持、明示的`null`をnullable fieldの解除として扱い、空patchを拒否する。canonical digestはこのpresence差を保持し、DBから補完した現在値を含めない
 - domain command後、receipt insert前にconnection/token/reauth期限をDB時刻で再検証する。期限を跨いだ場合はdomain mutationとreceiptを同じtransactionでrollbackする
-- success responseは`schemaVersion: 1`、`operationId`、`resourceType`、`resourceId`、`version`、`deletedAt`、`replayed`だけの最小receiptにする。最新本文が必要ならget toolを使うが、2026-07-23現在の`plans.get` / `records.get`はregistry上の候補名だけで未登録なので、write tool公開前に実装する
+- success responseは`schemaVersion: 1`、`operationId`、`resourceType`、`resourceId`、`version`、`deletedAt`、`replayed`だけの最小receiptにする。最新本文が必要ならget toolを使うが、2026-07-23現在の`plans.get` / `records.get`は候補contractにだけ存在し、runtime registryには未登録なので、write tool公開前に実装する
 
 ### 4. MCP toolへ接続する
 
@@ -147,7 +147,7 @@ WHERE record.deleted_at IS NULL
 - `apps/product/src/lib/mcp/mutation-contract.ts` — Plan / Record mutation input、最小receipt、stable error contract
 - `apps/product/src/lib/mcp/mutation-db.ts` — raw service-role capabilityを閉じ込めたoperation固有DB adapter
 - `apps/product/src/lib/mcp/mutation-client.ts` — deadlock retryとDB error正規化を担うserver-only client
-- `apps/product/src/app/api/mcp/_tools/registry.ts` — 現在のscope requirement registry。tool registrationとの一元化対象
+- `apps/product/src/app/api/mcp/_tools/registry.ts` — tool名、required scope、register callbackを一元化したruntime descriptor registry
 - `apps/product/src/features/timeblock/server/timeblock-command-client.ts` — typed RPC入力とdomain error mapping
 - `apps/product/src/features/tags/server/tag-association-strategy.ts` — command外に残るservice-owned一括writer
 - `apps/product/src/features/auth/server/user-service.ts` — Settingsのblock/all-data hard deleteと既存account削除フロー

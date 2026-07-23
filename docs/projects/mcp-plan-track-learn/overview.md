@@ -26,7 +26,7 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 
 ## Current State
 
-- Streamable HTTP、PKCE S256、static client 3種、opaque token、`entries.list` / `plans.list` / `records.list`の3 toolは実装済み。他のregistry上のtool名は未登録
+- Streamable HTTP、PKCE S256、static client 3種、opaque token、`entries.list` / `plans.list` / `records.list`の3 toolは実装済み。runtime registryはtool名、required scope、register callbackを持つdescriptorを正本とし、登録集合もこの3 toolだけに一致させている。他のtool名はroadmap上の候補であり、registryには含めない
 - OAuth resource、stable connection、atomic code/refresh、DB connection revokeと古いaccess token拒否はローカル実装・検証済み。Settings revoke UIとwrite transactionとのlinearizationは未実装
 - protected resourceはcredentialなし/unsupported schemeを空bodyの401 discovery、malformed Bearerを400 `invalid_request`、invalid/expired/revoked tokenを401 `invalid_token`、scope不足を403、認可依存障害をretryableな503へ分離済み。step-up challengeは既存grant、`read:entries`、不足scopeを保持する。write/delete scopeが`read:entries`を欠くconnection/code/tokenはDB CHECKとgrant RPCの双方で拒否する
 - 現在登録済みの3 toolについて`tools/list`はscopeでfilterし、cached tool callはroute前段で403 challengeを返す
@@ -117,9 +117,9 @@ Delivery 6段階のうち3段階がrepo上で完了し、Step 4がactive。接�
 
 ### Write tool公開前のブロッカー
 
-- `plans.get` / `records.get`はscope registryに名前だけ存在し未登録。mutation receiptから最新本文を取得する導線として、公開済み扱いにせず実装・contract testを先に完了する
+- `plans.get` / `records.get`は候補contractにだけ存在し、runtime registryには未登録。mutation receiptから最新本文を取得する導線として、公開済み扱いにせず実装・contract testを先に完了する
 - 外部MCP mutation後、現在のCalendar / Inspector cacheはlocal mutation前提で最大5分staleになり得る。user revision pollingを実装し、表示中の外部変更反映SLA 20秒を満たしてからwrite toolを列挙する
-- tool名だけのregistryと実登録を一つのdescriptor sourceへ統合し、exact set testを通す。durableなclient単位DB gateもauthorization/applyの両方で再検証する
+- durableなclient単位DB gateをauthorization/applyの両方で再検証する。tool名だけのregistryは廃止済みで、descriptor sourceとexact set testへ統合済み
 - Settingsのconnection一覧/revoke、`plans.get` / `records.get` / trash、全read toolのstructured content、revision pollingを実装する
 
 Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializationはrepo上で完了した。writerが先なら後続purgeが削除し、purgeが先なら後続writerは成功できる。この技術契約とは別に、`deleteAllData`後もOAuth connection/token/receiptが残る現在仕様を公開前に決める。
