@@ -476,12 +476,16 @@ RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapsho
 
 #### トランザクション関数
 
-複数テーブルを跨ぐ操作は DB 関数で原子性を保証:
+整合性制約を伴うtimeblock mutationはDB関数で原子的に保証:
 
-- `soft_delete_plan()` / `restore_plan()` — Plan のソフトデリート / 復元
-- `soft_delete_record()` / `restore_record()` — Record のソフトデリート / 復元
-- `confirm_day_plans_to_records()` — 指定日の未記録 Plan を一括で Record 化（一括「この日を確定」）
+- `create_plan_command_v1()` / `update_plan_command_v1()` / `delete_plan_command_v1()` / `restore_plan_command_v1()` / `set_plan_skipped_command_v1()` — Plan の通常UI mutationとexact CAS
+- `create_record_command_v1()` / `update_record_command_v1()` / `delete_record_command_v1()` / `restore_record_command_v1()` — Record の通常UI mutationとexact CAS
+- `record_plan_command_v1()` / `confirm_day_plans_command_v1()` — PlanからRecordへの変換と一括「この日を確定」
 - `merge_tags_with_hierarchy()` — タグマージ + 子タグの昇格（plans / records 両方の tag_id を追随して更新）
+
+これらのtimeblock commandはservice-role限定とし、authenticatedはPlan / Recordを`SELECT`だけできる。
+旧`soft_delete_plan()` / `soft_delete_record()` / `restore_plan()` / `restore_record()` / `confirm_day_plans_to_records()`はappから呼ばず、service-role recovery用にだけ残す。
+`private.timeblock_effective_write_privileges_v1`はrole継承を含むanon / authenticatedのtable / column write権限を監査し、migrationとRLS snapshotをfail-closedにする。
 
 ### インデックス監査ランブック
 

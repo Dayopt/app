@@ -21,7 +21,14 @@ OAuth MCPの1回のwrite tool callを、現在の接続権限を再検証した�
 - updateはfield省略と明示的`null`を区別し、外部calendar bindingとsourceをpublic inputから変更できないまま維持する。RecordのPlan linkはcreate時だけ受け付け、completed Plan以外は`PLAN_NOT_RECORDABLE`で拒否する。digestは展開後のDB rowではなくpublic requestのfield presenceを含めて固定する
 - domain command完了後、receipt insert前にauthorization期限を再検証し、command中にconnection/token/reauth期限を跨いだPlan / Record mutationが全体rollbackされることを8操作で検証済み
 - adapterはraw service-role clientとPostgREST builderを公開せず、operation固有methodからplain resultだけを返す。versioned receiptのresource IDをrequest対象へbindし、DB message・title・note・tokenをerror / log / Sentryへ渡さない。deadlockだけを同じoperation IDで一度再試行する
-- 実HTTP二経路、get/trash、authenticated ACL cutover、外部変更cache反映、Settings hard deleteとのserializationは未実装
+- authenticatedのPlan / Record権限を`SELECT`だけにし、旧3 write RPCをservice-role限定にするACL cutoverはrepo実装済み。全migrationのfresh適用、継承roleを含むeffective table / column write監査、authenticated直接write拒否、service-role recoveryをローカル検証済み。Production適用と逆GRANT rehearsalは未実施
+- 実HTTP二経路、get/trash、外部変更cache反映、Settings hard deleteとのserializationは未実装
+
+## Completion boundary
+
+Step 3のrepo実装は、8つのtyped apply、durable gate / receipt、通常UI command、authenticated ACL cutover、effective privilege assertion、local fresh migration、unit / integration / DB lint / RLS snapshotが成立し、global gate OFFかつwrite tool未登録である状態を`done`とする。現在この条件を満たす。
+
+Persistent Staging / Productionへの適用、逆GRANTと再cutoverのrehearsal、旧client bundleのreload境界、Settings hard deleteとのserialization、get / trash、実HTTP二経路はStep 4 / 6のrollout条件であり、Step 3のrepo完了と区別する。Production migrationとwrite有効化は引き続き明示権限が必要。
 
 ## Minimum Viable Approach
 
@@ -81,13 +88,17 @@ OAuth MCPの1回のwrite tool callを、現在の接続権限を再検証した�
 
 ### 5. Public write contractを閉じる
 
-- 通常UI deploymentのdrainとProduction data preflightを確認してから、authenticatedのPlan / Record table privilegeを別migrationで一旦全てrevokeし、`SELECT`だけ再付与する
-- 旧`soft_delete_plan`、`soft_delete_record`、`confirm_day_plans_to_records`のEXECUTEもrevokeする。`restore_plan` / `restore_record`と新`*_command_v1`は既にservice-role限定なので重複した契約にしない
+- repoでは`20260723123500` / `20260723123600`でauthenticatedのPlan / Record table / column privilegeを全てrevokeし、`SELECT`だけ再付与した。後者は両tableを`ACCESS EXCLUSIVE` lockし、そのtransaction完了を旧browser DMLがcommitできないstrict cutover境界にする
+- 旧`soft_delete_plan`、`soft_delete_record`、`confirm_day_plans_to_records`のEXECUTEもauthenticated / anon / PUBLICからrevokeし、service-role recoveryだけを維持した。`restore_plan` / `restore_record`と新`*_command_v1`は既にservice-role限定なので重複した契約にしない
+- `20260723123700`は`has_table_privilege` / `has_column_privilege`で継承roleを含むeffective writeを検査し、migrationとRLS snapshotの両方をfail-closedにする
+- Productionでは通常UI command deploymentのdrain、role membershipを含むeffective privilege preflight、Production data preflightを確認してから同migration群を適用する
 - タグ削除・再割当て・mergeとSettingsの`deleteBlocks` / `deleteAllData`はservice-owned例外writerとして一覧化する。update/detachはrow versionを進め、hard deleteはcommandとserializeして最終状態を削除済みにできることを検証する
-- 問題時は必要最小限のtable privilegeと旧RPC EXECUTEだけを戻す追加migrationをroll-forwardとして用意する
-- deploy単位は`DB expand PR → UI command deploy → 旧browser writerゼロの観測証跡 → ACL-only PR → MCP mutation DB expand → MCP tool deploy`に分ける。全系列と逆GRANTをPersistent Stagingで先に検証し、このintegration branchをそのまま単一Production PRとしてmergeしない
+- 問題時はauthenticatedへ必要な`INSERT / UPDATE / DELETE`と旧3 RPCの`EXECUTE`だけを戻す新timestampの逆GRANT migrationを使い、`PUBLIC` / `anon` / `TRUNCATE`等は戻さない。復旧後の再cutoverにも新timestampのREVOKE + effective assertion migrationを使う
+- deploy単位は`DB expand PR（〜20260723123400、global OFF）→ migrationなしのUI command PR → 旧input利用数0の観測証跡 → ACL-only PR（20260723123500〜123700）→ MCP tool PR（全gate OFF）`に分ける。各PRは直前のProduction schema versionまたはdeployment SHAを開始条件にする。全系列と逆GRANT / 再cutoverをPersistent Stagingで先に検証し、このintegration branchをそのまま単一Production PRとしてmergeしない
 - ACL適用前後の両方で動くUI command版appをroll-forward基準にする。ACL後に旧direct-write版へcodeだけrollbackするとwrite不能になるため、先に検証済みの逆GRANT migrationを適用する
 - MCP writeを有効化するapp deploymentは、timeblock command、mutation receipt、typed apply、ACL contractの必要versionが全て適用済みの場合だけ起動する
+
+`20260723123500`が成功し、`20260723123600`のlock timeoutまたは`20260723123700`のeffective assertionで停止した場合は部分適用状態として扱う。command版appとglobal gate OFFを維持し、code rollbackせず、lock blocker / effective grant sourceを確認して同migrationを再試行する。適用済みmigrationは編集せず、修正が必要ならforward bridgeを追加する。旧codeへ戻す時だけ逆GRANTを先行する。
 
 ProductionのDB expand前に、次のread-only queryが`0`であることを証跡化する。ローカルは2026-07-23時点で`0`、Productionは未確認。違反行があれば自動修復せず、Planのskipを戻すかRecordの関係を直すかを行単位で決める。
 
@@ -117,6 +128,7 @@ WHERE record.deleted_at IS NULL
 - receipt/audit/log/Sentry eventにtitle、note、tag名、token、raw payloadが含まれない
 - authenticatedのPlan / Record table writeと旧3 write RPCはACL contract後に失敗し、own rowの`SELECT`、通常UI、MCP typed commandは成功する
 - authenticatedに`TRUNCATE / REFERENCES / TRIGGER / MAINTAIN`を含む不要なtable privilegeが残らない
+- authenticatedがwrite権限を持つ別roleを継承した場合、effective privilege assertionとRLS snapshot checkが失敗する
 - 90日window内のreceiptはbackground cleanupできず、期限切れreceiptのeager cleanup・background cleanup・同operation applyを並列化しても一度だけ新規claimされる。connection cleanup後もuser/client/operation IDによるreplayが成立する
 - 既存account削除の`auth.admin.deleteUser()`成功時にreceiptがcascade deleteされ、Storage/Stripe/Admin APIを跨ぐ現在の削除フローへ新しい部分commitを追加しない
 
@@ -146,6 +158,9 @@ WHERE record.deleted_at IS NULL
 - `supabase/migrations/20260723123200_recordable_plan_error_contract.sql` — Record link先Planの状態エラーを`DT013`へ分離
 - `supabase/migrations/20260723123300_recordable_plan_trigger_error_contract.sql` — direct triggerも同じ`DT013`契約へ統一
 - `supabase/migrations/20260723123400_mcp_record_mutations_apply.sql` — Record create/update/delete/restoreのtyped applyとreceipt replay
+- `supabase/migrations/20260723123500_timeblock_authenticated_acl_cutover.sql` — authenticatedのPlan / Record writeと旧3 RPCを閉じるcutover
+- `supabase/migrations/20260723123600_harden_timeblock_authenticated_acl_cutover.sql` — strict lock境界、全column ACL revoke、catalog assertionを追加するforward-only hardening
+- `supabase/migrations/20260723123700_harden_timeblock_effective_privileges.sql` — 継承roleを含むeffective write権限の監査viewとfail-closed assertion
 - `supabase/migrations/20260514000918_mcp_phase_1_5.sql` — read tool call auditの既存出発点
 - `packages/billing/src/subscription.ts` — Pro entitlement status集合
 

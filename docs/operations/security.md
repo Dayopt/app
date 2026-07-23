@@ -392,6 +392,7 @@ GitHub / Vercel / Supabase側のreplicaとenvironment scopeは[environment-secre
 
 Issue #1564 で、Production Security Advisorの
 `authenticated_security_definer_function_executable` 13件を次の契約へ整理した。
+2026-07-23のtimeblock command cutoverで、旧timeblock invoker 3件もservice-role限定へ移した。
 
 ## RPC判断表
 
@@ -400,28 +401,31 @@ Issue #1564 で、Production Security Advisorの
 | `batch_rename_tags`              | `TagService`のuser-scoped client       | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで更新する                                                        |
 | `batch_reorder_tags_hierarchy`   | `TagService`のuser-scoped client       | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLS、`p_user_id` guard、tag parent owner triggerで更新する                              |
 | `rename_tag_group`               | `TagService`のuser-scoped client       | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで更新する                                                        |
-| `confirm_day_plans_to_records`   | `PlanService`のuser-scoped client      | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardでPlanをRecordへ確定する                                          |
+| `confirm_day_plans_to_records`   | app callerなし                         | `service_role`                  | `SECURITY INVOKER` | command cutover後はauthenticatedからrevokeし、service-role recovery surfaceだけを維持する     |
 | `count_unused_recovery_codes`    | `RecoveryService`のuser-scoped client  | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで件数だけ返す                                                    |
 | `update_personalization`         | user-scoped client                     | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで設定を更新する                                                  |
-| `soft_delete_plan`               | `PlanService`のuser-scoped client      | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで論理削除する                                                    |
-| `soft_delete_record`             | `RecordService`のuser-scoped client    | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardを使い、`auto_migrated`を常に拒否する                             |
+| `soft_delete_plan`               | app callerなし                         | `service_role`                  | `SECURITY INVOKER` | command cutover後はauthenticatedからrevokeし、owner guardを保つrecovery surfaceだけを維持する |
+| `soft_delete_record`             | app callerなし                         | `service_role`                  | `SECURITY INVOKER` | command cutover後はauthenticatedからrevokeし、`auto_migrated`拒否を保つrecovery surfaceのみ   |
 | `merge_tags(uuid, uuid[], uuid)` | callerなし                             | なし                            | DROP               | Productionだけに残った旧table参照overloadを`CASCADE`なしで削除する                            |
 | `merge_tags_with_hierarchy`      | `TagService`のservice-role client      | `service_role`                  | `SECURITY DEFINER` | deleted Plan/Recordを含む関連更新が必要。service-role JWTを確認し、全更新を`p_user_id`で絞る  |
-| `restore_plan`                   | `PlanService`のservice-role client     | `service_role`                  | `SECURITY DEFINER` | authenticated SELECTから隠れたdeleted rowを復元するためdefinerを維持する                      |
-| `restore_record`                 | `RecordService`のservice-role client   | `service_role`                  | `SECURITY DEFINER` | deleted row復元のためdefinerを維持し、`auto_migrated`を常に拒否する                           |
+| `restore_plan`                   | app callerなし                         | `service_role`                  | `SECURITY DEFINER` | command cutover後もdeleted row用のrecovery surfaceとしてdefinerを維持する                     |
+| `restore_record`                 | app callerなし                         | `service_role`                  | `SECURITY DEFINER` | recovery surfaceとしてdefinerと`auto_migrated`拒否を維持する                                  |
 | `use_recovery_code`              | `RecoveryService`のservice-role client | `service_role`                  | `SECURITY DEFINER` | recovery codeにauthenticated UPDATE policyを追加せず、service-role JWTと`p_user_id`で消費する |
 
-全対象で`PUBLIC`と`anon`の`EXECUTE`を明示的にREVOKEする。service-role-onlyの4 RPCは
-`authenticated`もREVOKEし、`search_path = ''`と完全修飾したrelation名を必須とする。
+全対象で`PUBLIC`と`anon`の`EXECUTE`を明示的にREVOKEする。service-role-onlyの7 RPC
+（legacy timeblock invoker 3件とdefiner 4件）は`authenticated`もREVOKEする。definer RPCは
+`search_path = ''`と完全修飾したrelation名を必須とする。
 protected routerは入力からuser IDを受けず、`ctx.userId`だけをserviceへ渡す。
 
-## soft-delete時のRLS境界
+Plan / Recordのtable / column ACLは`20260723123500` / `20260723123600`でauthenticatedの`SELECT`だけへ絞る。`20260723123700`の`private.timeblock_effective_write_privileges_v1`は、別roleからの継承を含むanon / authenticatedのeffective write権限を列挙し、migration時に1件でもあれば失敗する。RLS snapshot生成も同viewを読み、driftをfail-closedにする。
 
-PlanとRecordの通常SELECTは`deleted_at IS NULL`を維持する。invoker RPCが更新した直後の行にも
-SELECT policyが評価されるため、`soft_delete_plan`と`soft_delete_record`はtransaction-localな
-`dayopt.soft_delete_user_id`を設定する。SELECT policyはこの値がrow ownerと一致する同一RPC
-transaction内だけdeleted rowを許可する。PostgRESTの通常SELECTや次のtransactionには値が残らず、
-deleted rowはauthenticated clientへ露出しない。
+## legacy soft-delete RPC
+
+PlanとRecordの通常SELECTは`deleted_at IS NULL`を維持する。通常UIはservice-role限定の
+`delete_*_command_v1`を使い、旧`soft_delete_plan` / `soft_delete_record`はrecovery専用とする。
+両RPCには旧authenticated経路との互換実装としてtransaction-localな
+`dayopt.soft_delete_user_id`設定が残るが、現行のsecurity boundaryはこのmarkerではなく
+authenticatedからのEXECUTE revokeである。app callerはなく、通常のPostgREST SELECTからdeleted rowは露出しない。
 
 ## tag hierarchy
 
@@ -432,8 +436,11 @@ RPC、直接table操作、service-role操作のすべてに同じ制約を適用
 ## 検証
 
 - LocalとPR PreviewでSecurity Advisorの該当WARNが0件
-- 8 invoker RPCのowner成功とcross-user拒否
+- 5つの継続invoker RPCのowner成功とcross-user拒否
+- legacy timeblock 3 RPCのauthenticated `42501`とservice-role recovery成功
 - 4 definer RPCのauthenticated `42501`とservice-role成功
+- authenticatedのPlan / Record `SELECT`成功と直接INSERT / UPDATE / DELETEの`42501`
+- 継承roleへPlan / Record writeを付与するとeffective privilege assertionとRLS snapshotが失敗する
 - `auto_migrated` Recordのdelete/restore拒否
 - foreign parentのRPC、直接INSERT、直接UPDATE拒否
 - [RLS snapshot](../engineering/data/db/rls-snapshot.md)のdrift check

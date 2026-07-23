@@ -304,15 +304,15 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 
 - `list(options)`: `userId` と任意の tag / search / overlap range / sort / limit / offset を受け、active row の配列を返す。DB failure は `FETCH_FAILED`、空配列は legitimate absence
 - `getById(options)`: `userId` + entity id で active row を取得し、無ければ `NOT_FOUND`
-- `create(options)`: `userId` + `input` + 同一レーン overlap guard を受ける。Plan は未来、Record は現在以前の end を要求する
-- `update(options)`: optimistic lock と同一レーン overlap guard を適用する。過去 Plan の時間 field は変更不可
-- `delete` / `restore`: Record 名・Plan 名の RPC を介した soft delete / restore
+- `create(options)`: `userId` + `input` + 任意の`preventOverlappingPlans` / `preventOverlappingRecords`を受け、service-role限定の`create_*_command_v1`で同一レーン overlapとtemporal ruleを原子的に検証する
+- `update(options)`: entity ID + `input` + 必須`expectedUpdatedAt` + 任意の`preventOverlappingPlans` / `preventOverlappingRecords`を受け、`update_*_command_v1`でexact CASと同一レーン overlapを適用する。過去 Plan の時間 field は変更不可
+- `delete` / `restore`: entity ID + 必須`expectedUpdatedAt`を受け、`delete_*_command_v1` / `restore_*_command_v1`を介してexact CAS付きsoft delete / restoreを行う
 
 ##### Plan 固有操作
 
 - `skip` / `unskip`: 過去 Plan の未実行状態を更新する。active Record がある Plan は skip しない
 - `record`: 過去 Plan から `source = 'from_plan'` の Record を1件作る
-- `confirmDay`: `confirm_day_plans_to_records` で指定 range の未記録 Plan を一括確定する
+- `confirmDay`: `confirm_day_plans_command_v1`で指定rangeの未記録Planを一括確定する
 
 全 method は `userId` を明示入力に持ち、service 内でも row filter / RPC parameter に渡す。Plan と Record の1:N、時間重複、future/past 境界は service と DB constraint の両方で守る。
 
