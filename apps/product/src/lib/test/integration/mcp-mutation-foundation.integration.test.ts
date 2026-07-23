@@ -30,7 +30,7 @@ const challenge = derivePkceS256Challenge('v'.repeat(43));
 async function readMutationControl() {
   const { data, error } = await admin
     .from('mcp_mutation_control')
-    .select('writes_enabled, revision, changed_at')
+    .select('writes_enabled, enabled_client_ids, revision, changed_at')
     .eq('singleton_key', true)
     .single();
   if (error) throw error;
@@ -41,6 +41,20 @@ async function setMutationControl(writesEnabled: boolean) {
   const current = await readMutationControl();
   const { data, error } = await admin.rpc('set_mcp_mutation_control_v1', {
     p_writes_enabled: writesEnabled,
+    p_expected_revision: current.revision,
+  });
+  if (error) throw error;
+  return data[0]!;
+}
+
+async function setClientWriteControl(
+  clientId: 'claude-ai' | 'chatgpt' | 'cursor',
+  enabled: boolean,
+) {
+  const current = await readMutationControl();
+  const { data, error } = await admin.rpc('set_mcp_client_write_control_v1', {
+    p_client_id: clientId,
+    p_enabled: enabled,
     p_expected_revision: current.revision,
   });
   if (error) throw error;
@@ -76,10 +90,12 @@ describe.skipIf(!RUN_LOCAL)('MCP mutation foundation integration', () => {
     if (signInError) throw signInError;
 
     await setMutationControl(false);
+    await setClientWriteControl('chatgpt', true);
   });
 
   afterAll(async () => {
     await setMutationControl(false);
+    await setClientWriteControl('chatgpt', false);
     await userClient.auth.signOut();
     await admin.auth.admin.deleteUser(userId);
   });
@@ -118,6 +134,25 @@ describe.skipIf(!RUN_LOCAL)('MCP mutation foundation integration', () => {
       writes_enabled: false,
       revision: stopped.revision,
     });
+
+    const clientEnabled = await setClientWriteControl('claude-ai', true);
+    const { error: staleClientControlError } = await admin.rpc('set_mcp_client_write_control_v1', {
+      p_client_id: 'claude-ai',
+      p_enabled: false,
+      p_expected_revision: stopped.revision,
+    });
+    expect(staleClientControlError?.code).toBe('DM001');
+
+    const { error: browserClientControlError } = await userClient.rpc(
+      'set_mcp_client_write_control_v1',
+      {
+        p_client_id: 'claude-ai',
+        p_enabled: false,
+        p_expected_revision: clientEnabled.revision,
+      },
+    );
+    expect(browserClientControlError?.code).toBe('42501');
+    await setClientWriteControl('claude-ai', false);
   });
 
   it('disables a connection once while retaining the direct usage timestamp update', async () => {
@@ -160,6 +195,45 @@ describe.skipIf(!RUN_LOCAL)('MCP mutation foundation integration', () => {
     expect(connection?.write_disabled_at).toBe(firstDisabledAt);
     expect(connection?.write_enabled_at).not.toBeNull();
   });
+
+  it.each([
+    ['claude-ai', 'https://claude.ai/api/mcp/auth_callback'],
+    ['chatgpt', redirectUri],
+    ['cursor', 'cursor://anysphere.cursor-mcp/oauth/callback'],
+  ] as const)(
+    'rejects an env-authorized write grant atomically while the durable %s client gate is off',
+    async (clientId, clientRedirectUri) => {
+      await setClientWriteControl(clientId, false);
+      const { count: beforeCount, error: beforeError } = await admin
+        .from('oauth_connections')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('client_id', clientId);
+      expect(beforeError).toBeNull();
+
+      const { error: grantError } = await admin.rpc('create_oauth_authorization_grant_v2', {
+        p_user_id: userId,
+        p_client_id: clientId,
+        p_resource_uri: resource,
+        p_scopes: ['read:entries', 'write:plans'],
+        p_code_hash: hashToken(`code-${crypto.randomUUID()}`),
+        p_redirect_uri: clientRedirectUri,
+        p_code_challenge: challenge,
+        p_write_enabled: true,
+      });
+      expect(grantError?.code).toBe('DM003');
+
+      const { count: afterCount, error: afterError } = await admin
+        .from('oauth_connections')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('client_id', clientId);
+      expect(afterError).toBeNull();
+      expect(afterCount).toBe(beforeCount);
+
+      if (clientId === 'chatgpt') await setClientWriteControl('chatgpt', true);
+    },
+  );
 
   it('preserves read scopes while global and connection write gates change', async () => {
     vi.stubEnv('MCP_WRITE_ENABLED_CLIENTS', 'chatgpt');
@@ -223,6 +297,19 @@ describe.skipIf(!RUN_LOCAL)('MCP mutation foundation integration', () => {
       .update({ subscription_status: 'active' })
       .eq('id', userId);
     expect(restoreProError).toBeNull();
+
+    const clientStopped = await setClientWriteControl('chatgpt', false);
+    expect(clientStopped.enabled_client_ids).not.toContain('chatgpt');
+    expect(clientStopped.disabled_connection_count).toBeGreaterThanOrEqual(1);
+    await expect(verifyAccessToken(access)).resolves.toMatchObject({
+      scopes: ['read:entries'],
+    });
+
+    const clientRestarted = await setClientWriteControl('chatgpt', true);
+    expect(clientRestarted.enabled_client_ids).toContain('chatgpt');
+    await expect(verifyAccessToken(access)).resolves.toMatchObject({
+      scopes: ['read:entries'],
+    });
 
     const { error: disableError } = await admin.rpc('disable_oauth_connection_writes_v1', {
       p_connection_id: connectionId!,

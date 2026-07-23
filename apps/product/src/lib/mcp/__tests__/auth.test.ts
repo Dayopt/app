@@ -84,7 +84,10 @@ describe('verifyAccessToken dependency failures', () => {
     vi.stubEnv('MCP_WRITE_ENABLED_CLIENTS', 'chatgpt');
     createMcpAccessDbClient.mockReturnValue(
       createAccessDb({
-        mcp_mutation_control: { data: { writes_enabled: true }, error: null },
+        mcp_mutation_control: {
+          data: { writes_enabled: true, enabled_client_ids: ['chatgpt'] },
+          error: null,
+        },
         profiles: { data: null, error: { code: 'PGRST000' } },
       }),
     );
@@ -111,6 +114,22 @@ describe('verifyAccessToken dependency failures', () => {
       code: 'invalid_token',
       httpStatus: 401,
       message: 'Access token binding is invalid',
+    });
+  });
+
+  it('preserves read access while the durable client write gate is disabled', async () => {
+    vi.stubEnv('MCP_WRITE_ENABLED_CLIENTS', 'chatgpt');
+    createMcpAccessDbClient.mockReturnValue(
+      createAccessDb({
+        mcp_mutation_control: {
+          data: { writes_enabled: true, enabled_client_ids: ['claude-ai'] },
+          error: null,
+        },
+      }),
+    );
+
+    await expect(verifyAccessToken('opaque-token')).resolves.toMatchObject({
+      scopes: ['read:entries'],
     });
   });
 });
@@ -148,7 +167,10 @@ function createAccessDb(overrides: Partial<Record<string, QueryResult>>) {
   const defaults: Record<string, QueryResult> = {
     oauth_tokens: { data: validAccessTokenRow, error: null },
     oauth_connections: { data: validConnectionRow, error: null },
-    mcp_mutation_control: { data: { writes_enabled: true }, error: null },
+    mcp_mutation_control: {
+      data: { writes_enabled: true, enabled_client_ids: ['chatgpt'] },
+      error: null,
+    },
     profiles: { data: { subscription_status: 'active' }, error: null },
   };
 
@@ -160,10 +182,12 @@ function createAccessDb(overrides: Partial<Record<string, QueryResult>>) {
 function createMaybeSingleBuilder(result: QueryResult) {
   const builder = {
     select: vi.fn(),
+    update: vi.fn(),
     eq: vi.fn(),
     maybeSingle: vi.fn().mockResolvedValue(result),
   };
   builder.select.mockReturnValue(builder);
+  builder.update.mockReturnValue(builder);
   builder.eq.mockReturnValue(builder);
   return builder;
 }

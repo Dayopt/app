@@ -232,6 +232,16 @@ async function setMutationControl(writesEnabled: boolean) {
   if (error) throw error;
 }
 
+async function setClientWriteControl(enabled: boolean) {
+  const current = await readMutationControl();
+  const { error } = await admin.rpc('set_mcp_client_write_control_v1', {
+    p_client_id: 'chatgpt',
+    p_enabled: enabled,
+    p_expected_revision: current.revision,
+  });
+  if (error) throw error;
+}
+
 async function createWriteAuthorization(
   scopes: Array<'write:records' | 'delete:records'> = ['write:records', 'delete:records'],
 ): Promise<WriteAuthorization> {
@@ -477,6 +487,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
     const { error: signInError } = await userClient.auth.signInWithPassword({ email, password });
     if (signInError) throw signInError;
 
+    await setClientWriteControl(true);
     await setMutationControl(true);
   });
 
@@ -489,6 +500,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
 
   afterAll(async () => {
     await setMutationControl(false);
+    await setClientWriteControl(false);
     await userClient.auth.signOut();
     await admin.auth.admin.deleteUser(userId);
     await admin.auth.admin.deleteUser(foreignUserId);

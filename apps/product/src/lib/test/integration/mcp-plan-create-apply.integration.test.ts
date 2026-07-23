@@ -73,6 +73,16 @@ async function setMutationControl(writesEnabled: boolean) {
   return data[0]!;
 }
 
+async function setClientWriteControl(enabled: boolean) {
+  const current = await readMutationControl();
+  const { error } = await admin.rpc('set_mcp_client_write_control_v1', {
+    p_client_id: 'chatgpt',
+    p_enabled: enabled,
+    p_expected_revision: current.revision,
+  });
+  if (error) throw error;
+}
+
 async function createWriteAuthorization(targetUserId = userId): Promise<WriteAuthorization> {
   const code = `code-${crypto.randomUUID()}`;
   const { data: connectionId, error: grantError } = await admin.rpc(
@@ -239,6 +249,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan create apply integration', () => {
     const { error: signInError } = await userClient.auth.signInWithPassword({ email, password });
     if (signInError) throw signInError;
 
+    await setClientWriteControl(true);
     await setMutationControl(true);
   });
 
@@ -248,6 +259,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan create apply integration', () => {
 
   afterAll(async () => {
     await setMutationControl(false);
+    await setClientWriteControl(false);
     await userClient.auth.signOut();
     await admin.auth.admin.deleteUser(userId);
   });
@@ -564,6 +576,59 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan create apply integration', () => {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
     expect(planCount).toBe(0);
+  });
+
+  it('linearizes client disable against an in-flight apply and requires reauthorization', async () => {
+    const authorization = await createWriteAuthorization();
+    const operationId = crypto.randomUUID();
+    const holder = await holdOperationLock(userId, operationId);
+
+    try {
+      const apply = Promise.resolve(
+        applyPlan(authorization, {
+          operationId,
+          title: 'Apply before client stop',
+          startAt: at(15 * 60 * 60_000),
+          endAt: at(16 * 60 * 60_000),
+        }),
+      );
+      await waitForAdvisoryWaiter();
+
+      const disable = setClientWriteControl(false);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await holder.release();
+
+      const [applyResult] = await Promise.all([apply, disable]);
+      expect(applyResult.error).toBeNull();
+    } finally {
+      await holder.release();
+    }
+
+    const stopped = await applyPlan(authorization, {
+      operationId: crypto.randomUUID(),
+      title: 'Rejected after client stop',
+      startAt: at(17 * 60 * 60_000),
+      endAt: at(18 * 60 * 60_000),
+    });
+    expect(stopped.error?.code).toBe('DM003');
+
+    await setClientWriteControl(true);
+    const oldConnection = await applyPlan(authorization, {
+      operationId: crypto.randomUUID(),
+      title: 'Old grant remains disabled',
+      startAt: at(19 * 60 * 60_000),
+      endAt: at(20 * 60 * 60_000),
+    });
+    expect(oldConnection.error?.code).toBe('DM004');
+
+    const reauthorized = await createWriteAuthorization();
+    const newConnection = await applyPlan(reauthorized, {
+      operationId: crypto.randomUUID(),
+      title: 'New grant after client restart',
+      startAt: at(21 * 60 * 60_000),
+      endAt: at(22 * 60 * 60_000),
+    });
+    expect(newConnection.error).toBeNull();
   });
 
   it('replays across reauthorization for the same user and client', async () => {

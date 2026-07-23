@@ -76,7 +76,7 @@ export function isAllowedRedirectUri(client: OAuthClient, redirectUri: string): 
  * Write scopes are a closed-beta capability. Client IDs are public identifiers,
  * so this is a product rollout gate rather than client authentication.
  */
-export function isClientWriteEnabled(clientId: OAuthClientId): boolean {
+export function isRuntimeClientWriteEnabled(clientId: OAuthClientId): boolean {
   const configured = env.MCP_WRITE_ENABLED_CLIENTS;
   if (!configured) return false;
 

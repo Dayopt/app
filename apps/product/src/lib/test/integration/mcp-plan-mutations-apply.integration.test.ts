@@ -222,6 +222,16 @@ async function setMutationControl(writesEnabled: boolean) {
   if (error) throw error;
 }
 
+async function setClientWriteControl(enabled: boolean) {
+  const current = await readMutationControl();
+  const { error } = await admin.rpc('set_mcp_client_write_control_v1', {
+    p_client_id: 'chatgpt',
+    p_enabled: enabled,
+    p_expected_revision: current.revision,
+  });
+  if (error) throw error;
+}
+
 async function createWriteAuthorization(): Promise<WriteAuthorization> {
   const code = `code-${crypto.randomUUID()}`;
   const { data: connectionId, error: grantError } = await admin.rpc(
@@ -415,6 +425,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
     const { error: signInError } = await userClient.auth.signInWithPassword({ email, password });
     if (signInError) throw signInError;
 
+    await setClientWriteControl(true);
     await setMutationControl(true);
   });
 
@@ -427,6 +438,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
 
   afterAll(async () => {
     await setMutationControl(false);
+    await setClientWriteControl(false);
     await userClient.auth.signOut();
     await admin.auth.admin.deleteUser(userId);
   });

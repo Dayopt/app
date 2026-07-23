@@ -2,7 +2,7 @@ import 'server-only';
 
 import {
   isAllowedRedirectUri,
-  isClientWriteEnabled,
+  isRuntimeClientWriteEnabled,
   resolveClient,
   type OAuthClient,
 } from './clients';
@@ -72,7 +72,7 @@ export function validateAuthorizeInput(input: AuthorizeInput): AuthorizeValidati
   const requestsWrite = scopes !== null && hasWriteScope(scopes);
   if (
     scopes === null ||
-    (requestsWrite && (!scopes.includes('read:entries') || !isClientWriteEnabled(client.id)))
+    (requestsWrite && (!scopes.includes('read:entries') || !isRuntimeClientWriteEnabled(client.id)))
   ) {
     return { ok: false, error: 'invalid_scope' };
   }

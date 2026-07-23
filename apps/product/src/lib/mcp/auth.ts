@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
 import {
   OAuthServerError,
   hashToken,
-  isClientWriteEnabled,
+  isRuntimeClientWriteEnabled,
   isSupportedScope,
   resolveClient,
   resolveRequestedResource,
@@ -103,12 +103,16 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
     .filter(
       (scope) =>
         !isWriteScope(scope) ||
-        (isClientWriteEnabled(client.id) &&
+        (isRuntimeClientWriteEnabled(client.id) &&
           Boolean(connection.write_enabled_at) &&
           !connection.write_disabled_at),
     );
-  const globallyFilteredScopes = await applyGlobalWriteGate(db, connectionFilteredScopes);
-  const activeScopes = await applyProWriteGate(db, row.user_id, globallyFilteredScopes);
+  const durablyFilteredScopes = await applyDurableWriteGate(
+    db,
+    client.id,
+    connectionFilteredScopes,
+  );
+  const activeScopes = await applyProWriteGate(db, row.user_id, durablyFilteredScopes);
 
   if (activeScopes.length === 0) {
     throw new OAuthServerError('invalid_token', 'OAuth connection has no active scopes', 401);
@@ -131,15 +135,16 @@ function isWriteScope(scope: SupportedScope): boolean {
   return scope.startsWith('write:') || scope.startsWith('delete:');
 }
 
-async function applyGlobalWriteGate(
+async function applyDurableWriteGate(
   db: ReturnType<typeof createMcpAccessDbClient>,
+  clientId: OAuthClientId,
   scopes: SupportedScope[],
 ): Promise<SupportedScope[]> {
   if (!scopes.some(isWriteScope)) return scopes;
 
   const { data: control, error } = await db
     .from(databaseTables.mcpMutationControl)
-    .select('writes_enabled')
+    .select('writes_enabled, enabled_client_ids')
     .eq('singleton_key', true)
     .maybeSingle();
 
@@ -153,7 +158,9 @@ async function applyGlobalWriteGate(
     );
   }
 
-  return control.writes_enabled ? scopes : scopes.filter((scope) => !isWriteScope(scope));
+  return control.writes_enabled && control.enabled_client_ids.includes(clientId)
+    ? scopes
+    : scopes.filter((scope) => !isWriteScope(scope));
 }
 
 async function applyProWriteGate(

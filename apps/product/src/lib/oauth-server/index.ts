@@ -6,7 +6,7 @@
  */
 
 export { validateAuthorizeInput, type AuthorizeValidationError } from './authorize-validation';
-export { isClientWriteEnabled, resolveClient, type OAuthClientId } from './clients';
+export { isRuntimeClientWriteEnabled, resolveClient, type OAuthClientId } from './clients';
 export { exchangeAuthorizationCode, refreshAccessToken } from './code-exchange';
 export { createOAuthDbClient } from './db';
 export { OAuthServerError } from './errors';

@@ -114,18 +114,21 @@ export type Database = {
       mcp_mutation_control: {
         Row: {
           changed_at: string;
+          enabled_client_ids: string[];
           revision: number;
           singleton_key: boolean;
           writes_enabled: boolean;
         };
         Insert: {
           changed_at?: string;
+          enabled_client_ids?: string[];
           revision?: number;
           singleton_key?: boolean;
           writes_enabled?: boolean;
         };
         Update: {
           changed_at?: string;
+          enabled_client_ids?: string[];
           revision?: number;
           singleton_key?: boolean;
           writes_enabled?: boolean;
@@ -1433,6 +1436,19 @@ export type Database = {
           scopes: string[];
           status: string;
           user_id: string;
+        }[];
+      };
+      set_mcp_client_write_control_v1: {
+        Args: {
+          p_client_id: string;
+          p_enabled: boolean;
+          p_expected_revision: number;
+        };
+        Returns: {
+          changed_at: string;
+          disabled_connection_count: number;
+          enabled_client_ids: string[];
+          revision: number;
         }[];
       };
       set_mcp_mutation_control_v1: {

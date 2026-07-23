@@ -28,6 +28,26 @@ const redirectUri = 'https://chatgpt.com/connector_platform_oauth_redirect';
 const verifier = 'v'.repeat(43);
 const challenge = derivePkceS256Challenge(verifier);
 
+async function readMutationControl() {
+  const { data, error } = await admin
+    .from('mcp_mutation_control')
+    .select('revision')
+    .eq('singleton_key', true)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function setClientWriteControl(enabled: boolean) {
+  const current = await readMutationControl();
+  const { error } = await admin.rpc('set_mcp_client_write_control_v1', {
+    p_client_id: 'chatgpt',
+    p_enabled: enabled,
+    p_expected_revision: current.revision,
+  });
+  if (error) throw error;
+}
+
 function runOwnerSql(sql: string, variables: Record<string, string>) {
   return spawnSync(
     'psql',
@@ -63,9 +83,11 @@ describe.skipIf(!RUN_LOCAL)('OAuth connection lifecycle integration', () => {
       email_confirm: true,
     });
     if (error) throw error;
+    await setClientWriteControl(true);
   });
 
   afterAll(async () => {
+    await setClientWriteControl(false);
     await userClient.auth.signOut();
     await admin.auth.admin.deleteUser(userId);
   });

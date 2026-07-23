@@ -7,7 +7,7 @@ import {
   createOAuthDbClient,
   generateAuthorizationCode,
   hasWriteScope,
-  isClientWriteEnabled,
+  isRuntimeClientWriteEnabled,
   validateAuthorizeInput,
 } from '@/lib/oauth-server';
 import { captureUnexpectedDatabaseError, observeAuthOperation } from '@/lib/sentry';
@@ -74,7 +74,8 @@ export async function processConsent(formData: FormData) {
     p_redirect_uri: validation.redirectUri,
     p_code_challenge: validation.codeChallenge,
     p_scopes: validation.scopes,
-    p_write_enabled: hasWriteScope(validation.scopes) && isClientWriteEnabled(validation.client.id),
+    p_write_enabled:
+      hasWriteScope(validation.scopes) && isRuntimeClientWriteEnabled(validation.client.id),
   });
 
   if (insertError) {
