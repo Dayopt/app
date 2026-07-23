@@ -54,25 +54,26 @@ describe('MCP route scope preflight', () => {
     );
   });
 
-  it('returns HTTP 403 with a step-up challenge before a cached write tool executes', async () => {
+  it('returns HTTP 403 before a cached registered tool executes without its scope', async () => {
+    verifyAccessToken.mockResolvedValue({ ...baseAuth, scopes: ['read:tags'] });
     const response = await POST(
       createRequest({
         jsonrpc: '2.0',
         method: 'tools/call',
-        params: { name: 'plans.create', arguments: {} },
+        params: { name: 'plans.list', arguments: {} },
         id: 1,
       }),
     );
 
     expect(response.status).toBe(403);
     expect(response.headers.get('www-authenticate')).toContain('error="insufficient_scope"');
-    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries write:plans"');
+    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries read:tags"');
     expect(response.headers.get('www-authenticate')).toContain(
       'resource_metadata="https://mcp.dayopt.app/.well-known/oauth-protected-resource"',
     );
     await expect(response.json()).resolves.toMatchObject({
       error: 'insufficient_scope',
-      scope: 'read:entries write:plans',
+      scope: 'read:entries read:tags',
     });
     expect(createMcpServer).not.toHaveBeenCalled();
     expect(handleRequest).not.toHaveBeenCalled();
@@ -81,7 +82,7 @@ describe('MCP route scope preflight', () => {
   it('fails the whole batch before executing any call when one tool lacks scope', async () => {
     verifyAccessToken.mockResolvedValue({
       ...baseAuth,
-      scopes: ['read:entries', 'read:tags'],
+      scopes: ['read:tags'],
     });
     const response = await POST(
       createRequest([
@@ -89,28 +90,22 @@ describe('MCP route scope preflight', () => {
         {
           jsonrpc: '2.0',
           method: 'tools/call',
-          params: { name: 'records.delete', arguments: {} },
+          params: { name: 'records.list', arguments: {} },
           id: 2,
         },
       ]),
     );
 
     expect(response.status).toBe(403);
-    expect(response.headers.get('www-authenticate')).toContain(
-      'scope="read:entries read:tags delete:records"',
-    );
+    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries read:tags"');
     expect(handleRequest).not.toHaveBeenCalled();
   });
 
   it('passes a permitted call and the already parsed body to the SDK transport', async () => {
-    verifyAccessToken.mockResolvedValue({
-      ...baseAuth,
-      scopes: ['read:entries', 'write:plans'],
-    });
     const body = {
       jsonrpc: '2.0',
       method: 'tools/call',
-      params: { name: 'plans.create', arguments: {} },
+      params: { name: 'plans.list', arguments: {} },
       id: 1,
     };
 
@@ -121,7 +116,7 @@ describe('MCP route scope preflight', () => {
       expect.objectContaining({
         tokenId: 'token-1',
         connectionId: 'connection-1',
-        scopes: ['read:entries', 'write:plans'],
+        scopes: ['read:entries'],
         resourceUri: 'https://mcp.dayopt.app',
       }),
     );
@@ -129,6 +124,32 @@ describe('MCP route scope preflight', () => {
       expect.any(NextRequest),
       expect.objectContaining({ parsedBody: body }),
     );
+  });
+
+  it('does not issue a scope challenge for an unregistered candidate tool name', async () => {
+    handleRequest.mockResolvedValueOnce(
+      Response.json(
+        {
+          jsonrpc: '2.0',
+          error: { code: -32601, message: 'Method not found' },
+          id: 1,
+        },
+        { status: 200 },
+      ),
+    );
+
+    const response = await POST(
+      createRequest({
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: { name: 'plans.create', arguments: {} },
+        id: 1,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('www-authenticate')).toBeNull();
+    expect(handleRequest).toHaveBeenCalledOnce();
   });
 
   it('returns a discovery challenge without an error when credentials are absent', async () => {

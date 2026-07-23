@@ -9,7 +9,7 @@ import { ADVERTISED_SCOPES, OAuthServerError, type SupportedScope } from '@/lib/
 import { captureUnexpectedError } from '@/lib/sentry';
 
 import { createMcpServer } from './_server';
-import { getRequiredScopeForTool } from './_tools/registry';
+import { getRequiredScopeForTool, mergeMcpChallengeScopes } from './_tools/registry';
 
 /**
  * MCP Streamable HTTP endpoint.
@@ -157,7 +157,7 @@ function insufficientScopeResponse(
   grantedScopes: readonly SupportedScope[],
   missingScopes: readonly SupportedScope[],
 ): Response {
-  const requiredScopes = expandChallengeScopes(grantedScopes, missingScopes);
+  const requiredScopes = mergeMcpChallengeScopes(grantedScopes, missingScopes);
   const required = requiredScopes.join(' ');
   return NextResponse.json(
     {
@@ -175,17 +175,6 @@ function insufficientScopeResponse(
       },
     },
   );
-}
-
-function expandChallengeScopes(
-  grantedScopes: readonly SupportedScope[],
-  missingScopes: readonly SupportedScope[],
-): SupportedScope[] {
-  const required = new Set<SupportedScope>();
-  for (const scope of ADVERTISED_SCOPES) required.add(scope);
-  for (const scope of grantedScopes) required.add(scope);
-  for (const scope of missingScopes) required.add(scope);
-  return [...required];
 }
 
 function mcpRequestErrorResponse(status: number, code: number, message: string): Response {

@@ -8,7 +8,7 @@ import { createMcpTrpcCaller } from '@/lib/mcp/trpc-bridge';
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import type { McpRequestContext } from '../_server';
+import type { McpRequestContext } from '../_context';
 
 /**
  * `entries.list` tool — Dayopt entries (timeboxes / records) を取得する。

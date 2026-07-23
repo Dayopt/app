@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const registerEntriesListTool = vi.hoisted(() => vi.fn());
-const registerTimeblockListTools = vi.hoisted(() => vi.fn());
+const registerPlansListTool = vi.hoisted(() => vi.fn());
+const registerRecordsListTool = vi.hoisted(() => vi.fn());
 
 vi.mock('../_tools/entries-list', () => ({ registerEntriesListTool }));
-vi.mock('../_tools/timeblock-list', () => ({ registerTimeblockListTools }));
+vi.mock('../_tools/timeblock-list', () => ({ registerPlansListTool, registerRecordsListTool }));
 
-import { createMcpServer, type McpRequestContext } from '../_server';
+import type { McpRequestContext } from '../_context';
+import { createMcpServer } from '../_server';
 
 const baseContext: McpRequestContext = {
   tokenId: 'token-1',
@@ -26,13 +28,15 @@ describe('MCP scope-filtered tool discovery', () => {
     const server = createMcpServer(baseContext);
 
     expect(registerEntriesListTool).toHaveBeenCalledWith(server, baseContext);
-    expect(registerTimeblockListTools).toHaveBeenCalledWith(server, baseContext);
+    expect(registerPlansListTool).toHaveBeenCalledWith(server, baseContext);
+    expect(registerRecordsListTool).toHaveBeenCalledWith(server, baseContext);
   });
 
   it('does not expose entry tools for an unrelated scope', () => {
     createMcpServer({ ...baseContext, scopes: ['read:tags'] });
 
     expect(registerEntriesListTool).not.toHaveBeenCalled();
-    expect(registerTimeblockListTools).not.toHaveBeenCalled();
+    expect(registerPlansListTool).not.toHaveBeenCalled();
+    expect(registerRecordsListTool).not.toHaveBeenCalled();
   });
 });

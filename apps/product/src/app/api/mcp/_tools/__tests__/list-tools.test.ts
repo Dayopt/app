@@ -1,9 +1,14 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { McpRequestContext } from '../../_server';
+import type { McpRequestContext } from '../../_context';
 import { registerEntriesListTool } from '../entries-list';
-import { registerTimeblockListTools } from '../timeblock-list';
+import {
+  getRequiredScopeForTool,
+  MCP_TOOL_DESCRIPTORS,
+  mergeMcpChallengeScopes,
+} from '../registry';
+import { registerRecordsListTool } from '../timeblock-list';
 
 const createMcpTrpcCaller = vi.hoisted(() => vi.fn());
 
@@ -72,6 +77,7 @@ function createServerDouble() {
 
   return {
     handlers,
+    registerTool,
     server: { registerTool } as unknown as McpServer,
   };
 }
@@ -99,7 +105,7 @@ describe('MCP list tools public contract', () => {
 
   it('records.listはnon-empty結果にfulfillment_scoreを含めない', async () => {
     const { handlers, server } = createServerDouble();
-    registerTimeblockListTools(server, context);
+    registerRecordsListTool(server, context);
 
     const result = parseText(await getHandler(handlers, 'records.list')({}));
     const records = result.records as Array<Record<string, unknown>>;
@@ -122,5 +128,35 @@ describe('MCP list tools public contract', () => {
       expect(entry).not.toHaveProperty('fulfillment_score');
       expect(entry).not.toHaveProperty('chronotype_settings');
     }
+  });
+
+  it('descriptor、scope preflight、実登録toolの集合が一致する', () => {
+    const { handlers, server } = createServerDouble();
+    for (const descriptor of MCP_TOOL_DESCRIPTORS) descriptor.register(server, context);
+
+    const descriptorNames = MCP_TOOL_DESCRIPTORS.map((descriptor) => descriptor.name);
+    expect(descriptorNames).toEqual(['entries.list', 'plans.list', 'records.list']);
+    expect(new Set(descriptorNames).size).toBe(descriptorNames.length);
+    expect([...handlers.keys()].sort()).toEqual([...descriptorNames].sort());
+    for (const descriptor of MCP_TOOL_DESCRIPTORS) {
+      expect(getRequiredScopeForTool(descriptor.name)).toBe(descriptor.requiredScope);
+
+      const isolated = createServerDouble();
+      descriptor.register(isolated.server, context);
+      expect(isolated.registerTool).toHaveBeenCalledOnce();
+      expect(isolated.registerTool).toHaveBeenCalledWith(
+        descriptor.name,
+        expect.any(Object),
+        expect.any(Function),
+      );
+    }
+    expect(getRequiredScopeForTool('plans.get')).toBeNull();
+    expect(getRequiredScopeForTool('plans.create')).toBeNull();
+  });
+
+  it('step-up challengeはbase read、既存grant、不足write scopeを重複なく保持する', () => {
+    expect(
+      mergeMcpChallengeScopes(['read:entries', 'read:tags'], ['read:entries', 'write:plans']),
+    ).toEqual(['read:entries', 'read:tags', 'write:plans']);
   });
 });
