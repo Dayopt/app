@@ -210,7 +210,12 @@ const userOwnedCases: UserOwnedRlsCase[] = [
   },
 ];
 
-const SERVICE_OWNED_USER_TABLE_MUTATIONS = new Set(['oauth_tokens', 'oauth_audit_log']);
+const SERVICE_OWNED_USER_TABLE_MUTATIONS = new Set([
+  'oauth_tokens',
+  'oauth_audit_log',
+  'plans',
+  'records',
+]);
 
 const serviceRoleCases = [
   {
@@ -359,6 +364,61 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         expect(data).toEqual([]);
       },
     );
+  });
+
+  it('authenticatedはown Plan / Recordをreadできるが直接writeできない', async () => {
+    const directPlanId = crypto.randomUUID();
+    const directRecordId = crypto.randomUUID();
+    const [planInsert, recordInsert, planUpdate, recordUpdate, planDelete, recordDelete] =
+      await Promise.all([
+        supabaseB.from('plans').insert({
+          id: directPlanId,
+          user_id: TEST_USER_B_ID,
+          title: 'Forbidden direct Plan',
+          source: 'manual',
+          start_at: isoAtRpcOffset(48 * 60 * 60_000),
+          end_at: isoAtRpcOffset(49 * 60 * 60_000),
+        }),
+        supabaseB.from('records').insert({
+          id: directRecordId,
+          user_id: TEST_USER_B_ID,
+          title: 'Forbidden direct Record',
+          source: 'manual',
+          start_at: '2026-01-20T00:00:00.000Z',
+          end_at: '2026-01-20T01:00:00.000Z',
+        }),
+        supabaseB
+          .from('plans')
+          .update({ title: 'Forbidden Plan update' })
+          .eq('id', TEST_USER_B_PLAN_ID),
+        supabaseB
+          .from('records')
+          .update({ title: 'Forbidden Record update' })
+          .eq('id', TEST_USER_B_RECORD_ID),
+        supabaseB.from('plans').delete().eq('id', TEST_USER_B_PLAN_ID),
+        supabaseB.from('records').delete().eq('id', TEST_USER_B_RECORD_ID),
+      ]);
+
+    for (const result of [
+      planInsert,
+      recordInsert,
+      planUpdate,
+      recordUpdate,
+      planDelete,
+      recordDelete,
+    ]) {
+      expect(result.error?.code).toBe('42501');
+    }
+
+    const [{ data: plan, error: planReadError }, { data: record, error: recordReadError }] =
+      await Promise.all([
+        supabaseB.from('plans').select('title').eq('id', TEST_USER_B_PLAN_ID).single(),
+        supabaseB.from('records').select('title').eq('id', TEST_USER_B_RECORD_ID).single(),
+      ]);
+    expect(planReadError).toBeNull();
+    expect(recordReadError).toBeNull();
+    expect(plan?.title).toBe('RLS plan');
+    expect(record?.title).toBe('RLS record');
   });
 
   describe('profiles billing column grants', () => {
@@ -696,7 +756,7 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         ]);
     });
 
-    it('8つのinvoker RPCはcross-userのp_user_idを拒否し対象を変更しない', async () => {
+    it('5つの継続invoker RPCはcross-userのp_user_idを拒否し対象を変更しない', async () => {
       const calls = [
         () =>
           supabaseA.rpc('batch_rename_tags', {
@@ -717,29 +777,12 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
             p_old_prefix: 'RPC Old',
             p_user_id: TEST_USER_B_ID,
           }),
-        () =>
-          supabaseA.rpc('confirm_day_plans_to_records', {
-            p_confirmed_at: rpcConfirmedAt,
-            p_end_at: rpcConfirmRangeEndAt,
-            p_start_at: rpcConfirmRangeStartAt,
-            p_user_id: TEST_USER_B_ID,
-          }),
         () => supabaseA.rpc('count_unused_recovery_codes', { p_user_id: TEST_USER_B_ID }),
         () =>
           supabaseA.rpc('update_personalization', {
             p_path: 'rpcCrossUser',
             p_user_id: TEST_USER_B_ID,
             p_value: { blocked: true },
-          }),
-        () =>
-          supabaseA.rpc('soft_delete_plan', {
-            p_plan_id: RPC_SOFT_DELETE_PLAN_ID,
-            p_user_id: TEST_USER_B_ID,
-          }),
-        () =>
-          supabaseA.rpc('soft_delete_record', {
-            p_record_id: RPC_SOFT_DELETE_RECORD_ID,
-            p_user_id: TEST_USER_B_ID,
           }),
       ];
 
@@ -786,7 +829,7 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       expect(JSON.stringify(settings?.personalization ?? {})).not.toContain('rpcCrossUser');
     });
 
-    it('8つのinvoker RPCはowner経路で成功する', async () => {
+    it('5つの継続invoker RPCはowner経路で成功する', async () => {
       const { data: renamed, error: renameError } = await supabaseB.rpc('batch_rename_tags', {
         p_new_names: ['RPC Batch Renamed'],
         p_tag_ids: [RPC_BATCH_TAG_ID],
@@ -814,19 +857,6 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       });
       expect(groupError).toBeNull();
 
-      const { data: confirmed, error: confirmError } = await supabaseB.rpc(
-        'confirm_day_plans_to_records',
-        {
-          p_confirmed_at: rpcConfirmedAt,
-          p_end_at: rpcConfirmRangeEndAt,
-          p_start_at: rpcConfirmRangeStartAt,
-          p_user_id: TEST_USER_B_ID,
-        },
-      );
-      expect(confirmError).toBeNull();
-      expect(confirmed).toHaveLength(1);
-      expect(confirmed?.[0]).not.toHaveProperty('fulfillment_score');
-
       const { data: count, error: countError } = await supabaseB.rpc(
         'count_unused_recovery_codes',
         { p_user_id: TEST_USER_B_ID },
@@ -840,25 +870,73 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         p_value: { allowed: true },
       });
       expect(personalizationError).toBeNull();
+    });
 
-      const { error: planError } = await supabaseB.rpc('soft_delete_plan', {
+    it('3つのlegacy timeblock RPCはauthenticated ownerにも公開しない', async () => {
+      const calls = [
+        () =>
+          supabaseB.rpc('confirm_day_plans_to_records', {
+            p_confirmed_at: rpcConfirmedAt,
+            p_end_at: rpcConfirmRangeEndAt,
+            p_start_at: rpcConfirmRangeStartAt,
+            p_user_id: TEST_USER_B_ID,
+          }),
+        () =>
+          supabaseB.rpc('soft_delete_plan', {
+            p_plan_id: RPC_SOFT_DELETE_PLAN_ID,
+            p_user_id: TEST_USER_B_ID,
+          }),
+        () =>
+          supabaseB.rpc('soft_delete_record', {
+            p_record_id: RPC_SOFT_DELETE_RECORD_ID,
+            p_user_id: TEST_USER_B_ID,
+          }),
+      ];
+
+      for (const call of calls) {
+        const { error } = await call();
+        expect(error?.code).toBe('42501');
+      }
+
+      const [{ data: plan }, { data: record }, { data: confirmed }] = await Promise.all([
+        adminSupabase.from('plans').select('deleted_at').eq('id', RPC_SOFT_DELETE_PLAN_ID).single(),
+        adminSupabase
+          .from('records')
+          .select('deleted_at')
+          .eq('id', RPC_SOFT_DELETE_RECORD_ID)
+          .single(),
+        adminSupabase.from('records').select('id').eq('plan_id', RPC_CONFIRM_PLAN_ID),
+      ]);
+      expect(plan?.deleted_at).toBeNull();
+      expect(record?.deleted_at).toBeNull();
+      expect(confirmed).toEqual([]);
+    });
+
+    it('3つのlegacy timeblock RPCはservice-role recovery経路を維持する', async () => {
+      const { data: confirmed, error: confirmError } = await adminSupabase.rpc(
+        'confirm_day_plans_to_records',
+        {
+          p_confirmed_at: rpcConfirmedAt,
+          p_end_at: rpcConfirmRangeEndAt,
+          p_start_at: rpcConfirmRangeStartAt,
+          p_user_id: TEST_USER_B_ID,
+        },
+      );
+      expect(confirmError).toBeNull();
+      expect(confirmed).toHaveLength(1);
+      expect(confirmed?.[0]).not.toHaveProperty('fulfillment_score');
+
+      const { error: planError } = await adminSupabase.rpc('soft_delete_plan', {
         p_plan_id: RPC_SOFT_DELETE_PLAN_ID,
         p_user_id: TEST_USER_B_ID,
       });
       expect(planError).toBeNull();
 
-      const { error: recordError } = await supabaseB.rpc('soft_delete_record', {
+      const { error: recordError } = await adminSupabase.rpc('soft_delete_record', {
         p_record_id: RPC_SOFT_DELETE_RECORD_ID,
         p_user_id: TEST_USER_B_ID,
       });
       expect(recordError).toBeNull();
-
-      const [{ data: deletedPlans }, { data: deletedRecords }] = await Promise.all([
-        supabaseB.from('plans').select('id').eq('id', RPC_SOFT_DELETE_PLAN_ID),
-        supabaseB.from('records').select('id').eq('id', RPC_SOFT_DELETE_RECORD_ID),
-      ]);
-      expect(deletedPlans).toEqual([]);
-      expect(deletedRecords).toEqual([]);
     });
 
     it('4つのprivileged RPCはauthenticated直接実行を42501で拒否する', async () => {

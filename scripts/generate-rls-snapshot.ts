@@ -108,7 +108,6 @@ function fetchGrants(): GrantRow[] {
            AND c.relkind IN ('r', 'p', 'v', 'm')
            AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
              IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
-           AND acl.privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
          GROUP BY object_type, object_name, grantee
        ),
        column_grants AS (
@@ -127,7 +126,6 @@ function fetchGrants(): GrantRow[] {
            AND NOT a.attisdropped
            AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
              IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
-           AND acl.privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
          GROUP BY object_type, object_name, grantee
        ),
        routine_grants AS (
