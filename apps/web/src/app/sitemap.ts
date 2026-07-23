@@ -1,4 +1,4 @@
-import { SUPPORTED_LOCALES } from '@dayopt/config';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '@dayopt/config';
 
 import { getAllBlogPostMetas } from '@web/features/blog';
 import { getAllContent } from '@web/lib/mdx';
@@ -10,6 +10,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // サポートする言語（@dayopt/config が source of truth）
   const locales = SUPPORTED_LOCALES;
 
+  // canonical（generateSEOMetadata / localePrefix: 'as-needed'）と同じ規則で URL を作る。
+  // default locale は prefix なし。sitemap と canonical の不一致は検索エンジンに矛盾シグナルを送るため揃える
+  const localizedUrl = (locale: string, path: string) =>
+    locale === DEFAULT_LOCALE ? `${baseUrl}${path}` : `${baseUrl}/${locale}${path}`;
+
   // Helper function to create pages for both locales
   const createLocalizedPages = (
     path: string,
@@ -20,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ) => {
     return locales.map((locale) => ({
-      url: `${baseUrl}/${locale}${path}`,
+      url: localizedUrl(locale, path),
       lastModified: options.lastModified,
       changeFrequency: options.changeFrequency,
       priority: options.priority,
@@ -82,7 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const blogPosts = await getAllBlogPostMetas(locale);
       blogPages.push(
         ...blogPosts.map((post) => ({
-          url: `${baseUrl}/${locale}/blog/${post.slug}`,
+          url: localizedUrl(locale, `/blog/${post.slug}`),
           lastModified: new Date(
             post.frontMatter.updatedAt || post.frontMatter.publishedAt || new Date(),
           ),
@@ -105,7 +110,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const allDocs = await getAllContent(locale);
       docPages.push(
         ...allDocs.map((doc) => ({
-          url: `${baseUrl}/${locale}/docs/${doc.slug}`,
+          url: localizedUrl(locale, `/docs/${doc.slug}`),
           lastModified: doc.frontMatter.updatedAt
             ? new Date(doc.frontMatter.updatedAt)
             : new Date(),
