@@ -15,6 +15,19 @@ error() {
   echo "❌ $1" >&2
 }
 
+# git worktree では gitignored の .op-env.local が引き継がれないため、
+# main checkout に実ファイルがあれば自動コピーする（中身は op:// 参照のみで実秘密なし）
+if [[ ! -f "$OP_ENV_PATH" ]]; then
+  git_common_dir="$(git -C "$ROOT_DIR" rev-parse --git-common-dir 2>/dev/null || true)"
+  if [[ -n "$git_common_dir" ]]; then
+    main_root="$(cd "$ROOT_DIR" && cd "$(dirname "$git_common_dir")" && pwd)"
+    if [[ "$main_root" != "$ROOT_DIR" && -f "$main_root/$OP_ENV_FILE" ]]; then
+      cp "$main_root/$OP_ENV_FILE" "$OP_ENV_PATH"
+      echo "ℹ️  worktree に $OP_ENV_FILE が無いため main checkout ($main_root) からコピーしました" >&2
+    fi
+  fi
+fi
+
 if [[ ! -f "$OP_ENV_PATH" ]]; then
   error "$OP_ENV_FILE が見つかりません。"
   cat >&2 <<EOF
