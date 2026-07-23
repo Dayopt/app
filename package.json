@@ -101,15 +101,7 @@
     "start:web": "pnpm --filter @dayopt/web start",
     "lint:web": "pnpm --filter @dayopt/web lint",
     "typecheck:web": "pnpm --filter @dayopt/web typecheck",
-    "test:web": "pnpm --filter @dayopt/web test",
-    "eagle:capture": "pnpm --filter @dayopt/product eagle:capture",
-    "eagle:sync": "pnpm --filter @dayopt/product eagle:sync",
-    "eagle:sync:dry": "pnpm --filter @dayopt/product eagle:sync:dry",
-    "eagle:sync:capture": "pnpm --filter @dayopt/product eagle:sync:capture",
-    "eagle:setup": "pnpm --filter @dayopt/product eagle:setup",
-    "eagle:cleanup": "pnpm --filter @dayopt/product eagle:cleanup",
-    "eagle:lookup": "pnpm --filter @dayopt/product eagle:lookup",
-    "eagle:test": "pnpm --filter @dayopt/product eagle:test"
+    "test:web": "pnpm --filter @dayopt/web test"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",

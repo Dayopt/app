@@ -80,14 +80,25 @@
 
 ### Eagle (`mcp__eagle__*`)
 
+Eagle は「目で見て判断する素材」の視覚検索ライブラリ。何を入れて何を入れないかの規約は [tooling.md 第1部](../../docs/operations/tooling.md#第1部-eagle-デザインアセット運用) を正とする。
+
 - **Invoke when**:
-  - Storybook スナップショットを Eagle に同期する時（`eagle-dayopt` skill の領域）
-  - デザインアセットの検索、タグ整理、Archive 管理を行う時
-  - Figma 由来の参考デザインをローカルで横断検索したい時
+  - UI 設計・改善で参考事例を探す時（`ai_search_by_text` でセマンティック検索、`item_query` でタグ・★絞り込み）
+  - font / icon / illust などの作業用素材を探す時
+  - 過去のブランドクリエイティブ（OGP / SNS / Product Hunt 用画像）と、その出所・掲載先を確認する時
+  - 参考として採用したアイテムに ★ と pattern タグを付けて curate する時
+  - フォルダ・タググループを整備する時（`folder_create` / `tag_group_create`）
 - **Before use**:
   - `nc -vz 127.0.0.1 41596` で Eagle app 側の待ち受けを確認する
-  - `GET http://127.0.0.1:41596/mcp` が `405 Method Not Allowed` を返せば endpoint は生存している
-- **境界ケース**: スクリーンショット撮影は「タグごと」に行うルール（push ごとではない）。詳細は `eagle-dayopt` skill に従う。
+  - MCP tool の直接呼び出しは `POST http://127.0.0.1:41596/api/tools/call` に `{"tool": "...", "params": {...}}`。**引数キーは `params`**。`arguments` など他のキーは検証を通らず黙って無視され、全件返却などの誤った結果になる
+  - 利用可能な tool と入力スキーマは `GET http://127.0.0.1:41596/api/tools/list` が正。ドキュメントや過去のコードに載っていても存在しない tool がある（例: `smart_folder_*` はこのビルドに無い。スマートフォルダは Eagle アプリで手作業）
+  - `item_get` の `limit` 既定は全件。ページングは `limit` + `offset`
+  - `ai_search_status` の `totalSyncedItems` で AI 検索インデックスを確認する。未構築だと `ai_search_by_text` はエラーになる。構築は Eagle アプリの AI Search プラグイン画面から行う
+  - `item_query` はタグ・annotation を対象とし、**ファイル名では検索できない**。名前で絞るなら `item_get` + クライアント側フィルタ
+- **境界ケース**:
+  - **実装の見た目を確認したい時は Eagle を開かない。** Storybook 本体（視覚）と Storybook MCP（構造化情報）が正。Eagle に実装スナップショットは置かない
+  - 大量の raw 参考 UI に一括タグ付け・一括フォルダ移動をしない。横断検索は AI 検索、アプリ別閲覧はスマートフォルダで元データ無変更のまま行う
+  - ライブラリのアイテムを削除・trash 移動しない。処分はユーザーの判断領域
 
 ### Playwright (`mcp__playwright__*`)
 
