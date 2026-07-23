@@ -10,10 +10,6 @@ export { isClientWriteEnabled, resolveClient, type OAuthClientId } from './clien
 export { exchangeAuthorizationCode, refreshAccessToken } from './code-exchange';
 export { createOAuthDbClient } from './db';
 export { OAuthServerError } from './errors';
-export {
-  getCanonicalResourceUri,
-  resolveRequestedResource,
-  type CanonicalResourceUri,
-} from './resource';
-export { hasWriteScope, isSupportedScope, type SupportedScope, type WriteScope } from './scopes';
+export { resolveRequestedResource, type CanonicalResourceUri } from './resource';
+export { hasWriteScope, isSupportedScope, type SupportedScope } from './scopes';
 export { generateAuthorizationCode, hashToken } from './tokens';

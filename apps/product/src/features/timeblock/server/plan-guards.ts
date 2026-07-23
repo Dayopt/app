@@ -12,21 +12,7 @@ import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 
 import type { TimeblockOverlapService } from './timeblock-overlap-service';
 import { TimeblockServiceError } from './timeblock-service-error';
-import type { PlanUpdate, UpdatePlanOptions } from './timeblock-types';
 import type { ServiceSupabaseClient } from './types';
-
-export function toPlanUpdate(input: UpdatePlanOptions['input']): PlanUpdate {
-  const updateData: PlanUpdate = {};
-  if (input.title !== undefined) updateData.title = input.title;
-  if (input.note !== undefined) updateData.note = input.note;
-  if (input.tagId !== undefined) updateData.tag_id = input.tagId;
-  if (input.externalCalendarEventId !== undefined) {
-    updateData.external_calendar_event_id = input.externalCalendarEventId;
-  }
-  if (input.start_at !== undefined) updateData.start_at = input.start_at;
-  if (input.end_at !== undefined) updateData.end_at = input.end_at;
-  return updateData;
-}
 
 export function validateRange(startAt: string, endAt: string, code: string): void {
   const startMs = new Date(startAt).getTime();
@@ -65,21 +51,6 @@ export async function ensureNoPlanOverlap(
     throw new TimeblockServiceError(
       'TIME_OVERLAP',
       `Plan time overlaps with existing plans (${overlappingIds.length})`,
-    );
-  }
-}
-
-export async function ensureNoRecordOverlap(
-  overlapService: TimeblockOverlapService,
-  userId: string,
-  startAt: string,
-  endAt: string,
-): Promise<void> {
-  const overlappingIds = await overlapService.checkRecords({ userId, startAt, endAt });
-  if (overlappingIds.length > 0) {
-    throw new TimeblockServiceError(
-      'TIME_OVERLAP',
-      `Record time overlaps with existing records (${overlappingIds.length})`,
     );
   }
 }

@@ -40,14 +40,6 @@ export function generateAuthorizationCode(): IssuedAuthorizationCode {
   return { code, hash: hashToken(code) };
 }
 
-/**
- * RFC 7636 §4.6 PKCE S256 verification:
- *   challenge === BASE64URL(SHA256(verifier))
- */
-export function verifyPkceS256(verifier: string, challenge: string): boolean {
-  return derivePkceS256Challenge(verifier) === challenge;
-}
-
 export function derivePkceS256Challenge(verifier: string): string {
   return createHash('sha256').update(verifier).digest('base64url');
 }

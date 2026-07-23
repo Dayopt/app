@@ -47,7 +47,7 @@ interface TimeModelListFilter {
   offset?: number;
 }
 
-export interface TimeModelListRow {
+interface TimeModelListRow {
   id: string;
   title: string;
   note: string | null;

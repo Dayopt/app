@@ -16,13 +16,12 @@ export type SupportedScope = (typeof SUPPORTED_SCOPES)[number];
 /** Public metadata advertises only the generally available minimum scope. */
 export const ADVERTISED_SCOPES = ['read:entries'] as const satisfies readonly SupportedScope[];
 
-export const WRITE_SCOPES = [
+const WRITE_SCOPES = [
   'write:plans',
   'delete:plans',
   'write:records',
   'delete:records',
 ] as const satisfies readonly SupportedScope[];
-export type WriteScope = (typeof WRITE_SCOPES)[number];
 
 const DEFAULT_SCOPES: SupportedScope[] = ['read:entries'];
 
