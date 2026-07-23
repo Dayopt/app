@@ -28,16 +28,17 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - OAuth resource、stable connection、atomic code/refresh、connection revokeはローカル実装・検証済み
 - `tools/list`は現在scopeでfilterし、cached tool callはroute前段で403 challengeを返す
 - Plan / Record同種間の時間重複は既存GiST exclusion constraintで防止済み
-- MCP write、stable connection、原子的CAS、冪等性、mutation audit、外部変更の画面反映、Learn用toolは未実装
+- Plan / Recordのtyped command、exact CAS、DB時刻のtemporal rule、skip/link整合性はローカル実装・race検証済み
+- UIのcommand切替、authenticated直接DMLの廃止、MCP write envelope、冪等性、mutation audit、外部変更の画面反映、Learn用toolは未実装
 
-接続基盤は半分以上、Plan → Track → Learnの顧客価値は約4分の1が現在地。
+接続と正規データ境界の基盤は半分以上、Plan → Track → Learnの顧客価値は約3分の1が現在地。
 
 ## Delivery
 
 | Step                           | Outcome                                                                             | State   |
 | ------------------------------ | ----------------------------------------------------------------------------------- | ------- |
 | 1. OAuth connection foundation | canonical resource、stable connection、atomic code/refresh、revoke、scope filtering | done    |
-| 2. Atomic mutation foundation  | UI/MCP共通のCAS、DB overlap、idempotency、audit、revoke linearization               | active  |
+| 2. Atomic mutation foundation  | typed command/CASはdone。UI cutover、idempotency、audit、revoke linearization       | active  |
 | 3. Plan / Record MCP CRUD      | create/update/delete/restore/get/trash、structured errors/receipts                  | pending |
 | 4. Context and Learn           | tags、constraints、review、Plan → Track → Learn E2E                                 | pending |
 | 5. Product convergence         | user revision polling、Settings connection UI、retention、docs                      | pending |
@@ -80,6 +81,8 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - MCP createは`source = 'api'`。`from_plan`は既存のワンタップ記録専用とする
 - foreign/nonexistent IDは区別せず`NOT_FOUND`とし、raw payload、title、note、tokenをreceipt/audit/logへ保存しない
 - 同一idempotency key + 同一digestはreceiptを再生し、異なるdigestは拒否する
+- DB変更はexpand/cutoverの2段階にする。全UI callerをservice-owned commandへ移した後に、別migrationでauthenticated直接DMLと旧CASなしRPCをrevokeする
+- GiST競合が`40P01`を返した場合はservice境界で一度だけ再試行し、最終的なoverlap/version errorへ正規化する
 
 ### Product convergence
 

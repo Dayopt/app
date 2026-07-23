@@ -43,6 +43,19 @@ const TEST_EMAIL_B = `test-rls-b-${TEST_USER_B_ID}@example.com`;
 const TEST_PASSWORD = 'test-password-123';
 const SKIP_INTEGRATION = process.env.SKIP_INTEGRATION_TESTS === 'true';
 const ACCESS_DENIED_MESSAGE = 'Access denied: user_id mismatch';
+const RPC_TIME_ANCHOR = Date.now();
+const isoAtRpcOffset = (offsetMs: number) => new Date(RPC_TIME_ANCHOR + offsetMs).toISOString();
+const TEST_USER_B_PLAN_START_AT = isoAtRpcOffset(24 * 60 * 60_000);
+const TEST_USER_B_PLAN_END_AT = isoAtRpcOffset(25 * 60 * 60_000);
+const RPC_SOFT_DELETE_PLAN_START_AT = isoAtRpcOffset(4 * 60 * 60_000);
+const RPC_SOFT_DELETE_PLAN_END_AT = isoAtRpcOffset(5 * 60 * 60_000);
+const RPC_RESTORE_PLAN_START_AT = isoAtRpcOffset(6 * 60 * 60_000);
+const RPC_RESTORE_PLAN_END_AT = isoAtRpcOffset(7 * 60 * 60_000);
+let rpcConfirmPlanStartAt = '';
+let rpcConfirmPlanEndAt = '';
+let rpcConfirmRangeStartAt = '';
+let rpcConfirmRangeEndAt = '';
+let rpcConfirmedAt = '';
 
 const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -80,8 +93,8 @@ const userOwnedCases: UserOwnedRlsCase[] = [
         user_id: TEST_USER_B_ID,
         title: 'RLS plan',
         source: 'manual',
-        start_at: '2026-06-15T09:00:00.000Z',
-        end_at: '2026-06-15T10:00:00.000Z',
+        start_at: TEST_USER_B_PLAN_START_AT,
+        end_at: TEST_USER_B_PLAN_END_AT,
       });
       if (error) throw error;
     },
@@ -196,6 +209,8 @@ const userOwnedCases: UserOwnedRlsCase[] = [
     update: { tool_name: 'foreign_update' },
   },
 ];
+
+const SERVICE_OWNED_USER_TABLE_MUTATIONS = new Set(['oauth_tokens', 'oauth_audit_log']);
 
 const serviceRoleCases = [
   {
@@ -336,6 +351,10 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         }
 
         const { data, error } = await query;
+        if (operation !== 'select' && SERVICE_OWNED_USER_TABLE_MUTATIONS.has(testCase.table)) {
+          expect(error?.code).toBe('42501');
+          return;
+        }
         expect(error).toBeNull();
         expect(data).toEqual([]);
       },
@@ -445,6 +464,10 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         }
 
         const { data, error } = await query;
+        if (testCase.table === 'oauth_authorization_codes') {
+          expect(error?.code).toBe('42501');
+          return;
+        }
         expect(error).toBeNull();
         expect(data).toEqual([]);
       },
@@ -500,6 +523,13 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
 
   describe('Issue #1564 RPC permission matrix', () => {
     beforeAll(async () => {
+      const confirmAnchor = Date.now();
+      rpcConfirmPlanStartAt = new Date(confirmAnchor - 1_000).toISOString();
+      rpcConfirmPlanEndAt = new Date(confirmAnchor + 1_500).toISOString();
+      rpcConfirmRangeStartAt = new Date(confirmAnchor - 3_000).toISOString();
+      rpcConfirmRangeEndAt = new Date(confirmAnchor + 3_000).toISOString();
+      rpcConfirmedAt = new Date(confirmAnchor + 2_000).toISOString();
+
       const { error: tagError } = await adminSupabase.from('tags').insert([
         {
           id: RPC_BATCH_TAG_ID,
@@ -552,28 +582,33 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
           user_id: TEST_USER_B_ID,
           title: 'RPC soft-delete plan',
           source: 'manual',
-          start_at: '2026-01-10T00:00:00.000Z',
-          end_at: '2026-01-10T01:00:00.000Z',
+          start_at: RPC_SOFT_DELETE_PLAN_START_AT,
+          end_at: RPC_SOFT_DELETE_PLAN_END_AT,
         },
         {
           id: RPC_CONFIRM_PLAN_ID,
           user_id: TEST_USER_B_ID,
           title: 'RPC confirm plan',
           source: 'manual',
-          start_at: '2026-01-11T00:00:00.000Z',
-          end_at: '2026-01-11T01:00:00.000Z',
+          start_at: rpcConfirmPlanStartAt,
+          end_at: rpcConfirmPlanEndAt,
         },
         {
           id: RPC_RESTORE_PLAN_ID,
           user_id: TEST_USER_B_ID,
           title: 'RPC restore plan',
           source: 'manual',
-          start_at: '2026-01-12T00:00:00.000Z',
-          end_at: '2026-01-12T01:00:00.000Z',
-          deleted_at: '2026-01-12T02:00:00.000Z',
+          start_at: RPC_RESTORE_PLAN_START_AT,
+          end_at: RPC_RESTORE_PLAN_END_AT,
+          deleted_at: rpcConfirmedAt,
         },
       ]);
       if (planError) throw planError;
+
+      const waitForConfirmablePlanMs = new Date(rpcConfirmPlanEndAt).getTime() - Date.now() + 50;
+      if (waitForConfirmablePlanMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, waitForConfirmablePlanMs));
+      }
 
       const { error: recordError } = await adminSupabase.from('records').insert([
         {
@@ -684,9 +719,9 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
           }),
         () =>
           supabaseA.rpc('confirm_day_plans_to_records', {
-            p_confirmed_at: '2026-01-12T00:00:00.000Z',
-            p_end_at: '2026-01-12T00:00:00.000Z',
-            p_start_at: '2026-01-11T00:00:00.000Z',
+            p_confirmed_at: rpcConfirmedAt,
+            p_end_at: rpcConfirmRangeEndAt,
+            p_start_at: rpcConfirmRangeStartAt,
             p_user_id: TEST_USER_B_ID,
           }),
         () => supabaseA.rpc('count_unused_recovery_codes', { p_user_id: TEST_USER_B_ID }),
@@ -782,9 +817,9 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       const { data: confirmed, error: confirmError } = await supabaseB.rpc(
         'confirm_day_plans_to_records',
         {
-          p_confirmed_at: '2026-01-12T00:00:00.000Z',
-          p_end_at: '2026-01-12T00:00:00.000Z',
-          p_start_at: '2026-01-11T00:00:00.000Z',
+          p_confirmed_at: rpcConfirmedAt,
+          p_end_at: rpcConfirmRangeEndAt,
+          p_start_at: rpcConfirmRangeStartAt,
           p_user_id: TEST_USER_B_ID,
         },
       );

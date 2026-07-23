@@ -687,6 +687,18 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      assert_active_timeblock_tag_v1: {
+        Args: { p_tag_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      assert_timeblock_content_v1: {
+        Args: { p_note: string; p_title: string };
+        Returns: undefined;
+      };
+      assert_timeblock_external_event_v1: {
+        Args: { p_external_calendar_event_id: string; p_user_id: string };
+        Returns: undefined;
+      };
       batch_rename_tags: {
         Args: { p_new_names: string[]; p_tag_ids: string[]; p_user_id: string };
         Returns: number;
@@ -762,7 +774,130 @@ export type Database = {
         };
         Returns: string;
       };
+      create_plan_command_v1: {
+        Args: {
+          p_end_at: string;
+          p_external_calendar_event_id: string;
+          p_note: string;
+          p_source: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      create_record_command_v1: {
+        Args: {
+          p_end_at: string;
+          p_external_calendar_event_id: string;
+          p_note: string;
+          p_plan_id: string;
+          p_source: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       custom_access_token_hook: { Args: { event: Json }; Returns: Json };
+      delete_plan_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_plan_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      delete_record_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_record_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       exchange_oauth_authorization_code_v2: {
         Args: {
           p_access_hash: string;
@@ -810,6 +945,30 @@ export type Database = {
           refresh_id: string;
         }[];
       };
+      lock_recordable_plan_v1: {
+        Args: { p_plan_id: string; p_user_id: string };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       merge_tags_with_hierarchy: {
         Args: {
           p_source_tag_id: string;
@@ -817,6 +976,34 @@ export type Database = {
           p_user_id: string;
         };
         Returns: Json;
+      };
+      record_plan_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_plan_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       rename_tag_group: {
         Args: { p_new_prefix: string; p_old_prefix: string; p_user_id: string };
@@ -843,9 +1030,65 @@ export type Database = {
         Args: { p_plan_id: string; p_user_id: string };
         Returns: undefined;
       };
+      restore_plan_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_plan_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       restore_record: {
         Args: { p_record_id: string; p_user_id: string };
         Returns: undefined;
+      };
+      restore_record_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_record_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       revoke_oauth_connection: {
         Args: { p_connection_id: string };
@@ -871,6 +1114,35 @@ export type Database = {
           user_id: string;
         }[];
       };
+      set_plan_skipped_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_plan_id: string;
+          p_skipped: boolean;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       soft_delete_plan: {
         Args: { p_plan_id: string; p_user_id: string };
         Returns: undefined;
@@ -886,6 +1158,75 @@ export type Database = {
       update_personalization: {
         Args: { p_path: string; p_user_id: string; p_value: Json };
         Returns: undefined;
+      };
+      update_plan_command_v1: {
+        Args: {
+          p_end_at: string;
+          p_expected_updated_at: string;
+          p_external_calendar_event_id: string;
+          p_note: string;
+          p_plan_id: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      update_record_command_v1: {
+        Args: {
+          p_end_at: string;
+          p_expected_updated_at: string;
+          p_external_calendar_event_id: string;
+          p_note: string;
+          p_plan_id: string;
+          p_record_id: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       use_recovery_code: {
         Args: { p_code_hash: string; p_user_id: string };

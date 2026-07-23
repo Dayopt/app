@@ -109,8 +109,8 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     await adminSupabase.from('plans').insert({
       user_id: TEST_USER_ID,
       title: 'GDPR Test Plan',
-      start_at: '2026-01-02T09:00:00Z',
-      end_at: '2026-01-02T10:00:00Z',
+      start_at: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
+      end_at: new Date(Date.now() + 25 * 60 * 60_000).toISOString(),
     });
 
     await adminSupabase.from('records').insert({
