@@ -106,7 +106,10 @@ Brand/
 
 curation（★と pattern タグ）は義務ではなく、検索して実際に使った瞬間にだけ行う。サボってもアプリ別ビューと AI 検索は機能し続ける。
 
-新規セットアップ時は Eagle アプリ上で、§3 の実フォルダ・§4 のタググループ・スマートフォルダ（`Refs: {アプリ名}` / `⭐ Picks` / `Brand: shipped`）を作る。エージェントに依頼する場合は Eagle MCP の `folder_create` / `smart_folder_create` / `tag_group_create` を使う。
+新規セットアップは 2 つに分かれる。
+
+- **MCP で作れるもの**: §3 の実フォルダ（`folder_create`）と §4 のタググループ（`tag_group_create`）。エージェントに依頼できる
+- **Eagle アプリ上の手作業**: スマートフォルダ（`⭐ Picks` など）。このビルドの MCP に `smart_folder_*` tool は無いため、エージェントからは作成できない
 
 ## 変更履歴（Eagle）
 
