@@ -23,15 +23,15 @@ Supabase migration の production 適用は GitHub Actions ではなく Supabase
 
 GitHub branch protection では、通常の CI check に加えて Supabase integration の Preview Branch check を required にする。
 
-| Secret                             | 用途                                         | 方針                                                  |
-| ---------------------------------- | -------------------------------------------- | ----------------------------------------------------- |
-| `CODECOV_TOKEN`                    | coverage upload                              | CI 用 replica                                         |
-| `LHCI_GITHUB_APP_TOKEN`            | Lighthouse CI                                | CI 用 replica                                         |
-| `SUPABASE_ACCESS_TOKEN`            | emergency / manual operation                 | 通常 migration flow では使わない                      |
-| `VERCEL_TOKEN`                     | Production Config Audit / Production Release | env metadata読取とProduction promote / rollbackに限定 |
-| `VERCEL_ORG_ID`                    | Production Config Audit / Production Release | 1Password `VERCEL_TEAM_ID`のGitHub replica            |
-| `VERCEL_AUTOMATION_BYPASS_PRODUCT` | Production Release smoke                     | Product の Protection Bypass for Automation           |
-| `VERCEL_AUTOMATION_BYPASS_WEB`     | Production Release smoke                     | Web の Protection Bypass for Automation               |
+| Secret                             | 用途                                         | 方針                                                                                          |
+| ---------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `CODECOV_TOKEN`                    | coverage upload                              | CI 用 replica                                                                                 |
+| `LHCI_GITHUB_APP_TOKEN`            | Lighthouse CI                                | CI 用 replica                                                                                 |
+| `SUPABASE_ACCESS_TOKEN`            | emergency / manual operation                 | 通常 migration flow では使わない                                                              |
+| `VERCEL_TOKEN`                     | Production Config Audit / Production Release | env metadata読取、Production promote / rollback、promoteの副作用で戻るproject設定の復元に限定 |
+| `VERCEL_ORG_ID`                    | Production Config Audit / Production Release | 1Password `VERCEL_TEAM_ID`のGitHub replica                                                    |
+| `VERCEL_AUTOMATION_BYPASS_PRODUCT` | Production Release smoke                     | Product の Protection Bypass for Automation                                                   |
+| `VERCEL_AUTOMATION_BYPASS_WEB`     | Production Release smoke                     | Web の Protection Bypass for Automation                                                       |
 
 GitHub Actions の通常 build は release / source map upload を行わないため、Sentry metadata と `SENTRY_AUTH_TOKEN` を渡さない。
 

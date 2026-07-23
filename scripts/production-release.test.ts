@@ -95,8 +95,17 @@ function auditMetadata(project: 'product' | 'web') {
  * 両 project が candidate を持つ既定シナリオ。
  * promote と rollback は同じ endpoint を使うので、対象 deployment id で区別する。
  */
-function createReleaseWorld(options: { productionSha?: string; smokeBody?: string } = {}) {
+function createReleaseWorld(
+  options: { productionSha?: string; smokeBody?: string; autoAssign?: boolean | null } = {},
+) {
   const previous = { web: 'dpl_web_old', product: 'dpl_product_old' };
+  // Vercel の promote endpoint は autoAssignCustomDomains を true に戻す
+  // （vercel/vercel#15095）。その副作用を再現する。
+  const autoAssign: Record<string, boolean | null> = {
+    web: options.autoAssign === undefined ? false : options.autoAssign,
+    product: options.autoAssign === undefined ? false : options.autoAssign,
+  };
+  const patches: { project: string; value: unknown }[] = [];
   const production: Record<string, { id: string; sha: string; createdAt: number }> = {
     web: { id: previous.web, sha: options.productionSha ?? OLD_SHA, createdAt: 1000 },
     product: { id: previous.product, sha: options.productionSha ?? OLD_SHA, createdAt: 1000 },
@@ -117,11 +126,19 @@ function createReleaseWorld(options: { productionSha?: string; smokeBody?: strin
 
     const project = url.includes('web') ? 'web' : 'product';
 
+    if (method === 'PATCH' && url.includes('/v9/projects/')) {
+      const value = JSON.parse(String(init?.body ?? '{}')).autoAssignCustomDomains;
+      patches.push({ project, value });
+      autoAssign[project] = value;
+      return new Response(null, { status: 200 });
+    }
     if (method === 'POST' && url.includes('/promote/')) {
       const deploymentId = url.split('/promote/')[1]!.split('?')[0]!;
       // promote / rollback は project 名ではなく prj_ ID を使う。
       expect(url).toContain(`/projects/prj_${project}/promote/`);
       pointCalls.push({ project, deploymentId });
+      // 副作用: 設定が true へ戻る。
+      if (autoAssign[project] !== null) autoAssign[project] = true;
       const isRollback = deploymentId === previous[project as 'web' | 'product'];
       production[project] = isRollback
         ? { id: deploymentId, sha: OLD_SHA, createdAt: 1000 }
@@ -138,6 +155,7 @@ function createReleaseWorld(options: { productionSha?: string; smokeBody?: strin
       const current = production[project]!;
       return Response.json({
         id: `prj_${project}`,
+        autoAssignCustomDomains: autoAssign[project],
         targets: {
           production: {
             id: current.id,
@@ -155,7 +173,7 @@ function createReleaseWorld(options: { productionSha?: string; smokeBody?: strin
   const rolledBack = () =>
     pointCalls.filter((call) => call.deploymentId.endsWith('_old')).map((call) => call.project);
 
-  return { fetchImpl, pointCalls, promoted, rolledBack };
+  return { fetchImpl, pointCalls, promoted, rolledBack, patches, autoAssign };
 }
 
 function release(overrides: Record<string, unknown> = {}) {
@@ -556,6 +574,33 @@ describe('runProductionRelease', () => {
     expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
     expect(error.message).toContain('dpl_web_old');
     expect(error.message).not.toContain(TOKEN);
+  });
+
+  it('restores autoAssignCustomDomains that promote flips back on', async () => {
+    // vercel/vercel#15095: promote endpoint が project 設定を書き換える。
+    // 放置すると次の main merge が gate を通らず直接公開される。
+    const world = createReleaseWorld();
+
+    await expect(release({ fetchImpl: world.fetchImpl })).resolves.toMatchObject({
+      status: 'promoted',
+    });
+
+    expect(world.patches).toEqual([
+      { project: 'web', value: false },
+      { project: 'product', value: false },
+    ]);
+    expect(world.autoAssign).toEqual({ web: false, product: false });
+  });
+
+  it('leaves autoAssignCustomDomains alone while it is intentionally enabled', async () => {
+    // 段階適用の Phase A では Auto-assign が ON のままでよい。
+    // 事前値へ戻すだけなので、勝手に無効化しない。
+    const world = createReleaseWorld({ autoAssign: true });
+
+    await release({ fetchImpl: world.fetchImpl });
+
+    expect(world.patches).toEqual([]);
+    expect(world.autoAssign).toEqual({ web: true, product: true });
   });
 
   it('skips smoke and audit under Force Promote', async () => {

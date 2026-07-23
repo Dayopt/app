@@ -63,13 +63,16 @@ function apiUrl(path, teamId, params = {}) {
   return url;
 }
 
-async function callVercel(url, { token, fetchImpl, method = 'GET', label, parseJson = true }) {
+async function callVercel(
+  url,
+  { token, fetchImpl, method = 'GET', label, body, parseJson = true },
+) {
   const headers = { Authorization: `Bearer ${token}` };
   const init = { method, headers };
-  if (method === 'POST') {
+  if (method !== 'GET') {
     // 公式 client は promote / rollback に空の JSON body を送る。
     headers['Content-Type'] = 'application/json';
-    init.body = '{}';
+    init.body = JSON.stringify(body ?? {});
   }
 
   const response = await fetchImpl(url, init);
@@ -144,7 +147,43 @@ export async function getProjectState({ projectName, token, teamId, fetchImpl })
   return {
     projectId: body.id,
     production: normalizeDeployment(body?.targets?.production),
+    // promote endpoint がこの設定を書き換えるため、事前値を控えて後で戻す。
+    autoAssignCustomDomains: body.autoAssignCustomDomains ?? null,
   };
+}
+
+/**
+ * promote / rollback の副作用で書き換わった Auto-assign Custom Domains を戻す。
+ *
+ * `POST /v10/projects/{id}/promote/{deploymentId}` は project 設定の
+ * `autoAssignCustomDomains` を `true` に戻す（vercel/vercel#15095、未修正）。
+ * 放置すると次の main merge が gate を通らず直接公開されるため、
+ * release の直前に観測した値へ必ず戻す。
+ */
+async function restoreAutoAssignCustomDomains({
+  projectName,
+  projectId,
+  expected,
+  token,
+  teamId,
+  fetchImpl,
+  logger,
+}) {
+  if (typeof expected !== 'boolean') return false;
+
+  const current = await getProjectState({ projectName, token, teamId, fetchImpl });
+  if (current.autoAssignCustomDomains === expected) return false;
+
+  await callVercel(apiUrl(`/v9/projects/${encodeURIComponent(projectId)}`, teamId), {
+    token,
+    fetchImpl,
+    method: 'PATCH',
+    label: `restore-auto-assign(${projectName})`,
+    body: { autoAssignCustomDomains: expected },
+    parseJson: false,
+  });
+  logger.log(`${projectName}: restored autoAssignCustomDomains to ${expected}`);
+  return true;
 }
 
 /**
@@ -370,11 +409,13 @@ async function rollbackDeployment({
   projectName,
   projectId,
   deploymentId,
+  autoAssignCustomDomains,
   token,
   teamId,
   fetchImpl,
   sleepImpl,
   nowImpl,
+  logger,
 }) {
   await requestProductionPointer({
     projectName,
@@ -385,7 +426,7 @@ async function rollbackDeployment({
     fetchImpl,
     action: 'rollback',
   });
-  return waitForProductionAssignment({
+  const production = await waitForProductionAssignment({
     projectName,
     deploymentId,
     token,
@@ -395,6 +436,16 @@ async function rollbackDeployment({
     nowImpl,
     action: 'rollback',
   });
+  await restoreAutoAssignCustomDomains({
+    projectName,
+    projectId,
+    expected: autoAssignCustomDomains,
+    token,
+    teamId,
+    fetchImpl,
+    logger,
+  });
+  return production;
 }
 
 function assertSimulationPoint(simulateFailure, point) {
@@ -427,10 +478,12 @@ export async function runProductionRelease({
   }
 
   const projectIds = new Map();
+  const autoAssign = new Map();
   const before = new Map();
   for (const project of projects) {
     const state = await getProjectState({ projectName: project.name, token, teamId, fetchImpl });
     projectIds.set(project.name, state.projectId);
+    autoAssign.set(project.name, state.autoAssignCustomDomains);
     before.set(project.name, state.production);
   }
 
@@ -509,6 +562,7 @@ export async function runProductionRelease({
       promoted.push({
         project,
         projectId: projectIds.get(project.name),
+        autoAssignCustomDomains: autoAssign.get(project.name),
         deployment,
         previous: before.get(project.name),
       });
@@ -522,6 +576,15 @@ export async function runProductionRelease({
         sleepImpl,
         nowImpl,
         action: 'promote',
+      });
+      await restoreAutoAssignCustomDomains({
+        projectName: project.name,
+        projectId: projectIds.get(project.name),
+        expected: autoAssign.get(project.name),
+        token,
+        teamId,
+        fetchImpl,
+        logger,
       });
       logger.log(`${project.name}: promoted ${deployment.id}`);
     }
@@ -564,6 +627,8 @@ async function rollbackPromoted({
       await rollbackDeployment({
         projectName: entry.project.name,
         projectId: entry.projectId,
+        autoAssignCustomDomains: entry.autoAssignCustomDomains,
+        logger,
         deploymentId: entry.previous.id,
         token,
         teamId,

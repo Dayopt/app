@@ -130,6 +130,11 @@ promote 順は web → product に固定し、2 つ目が失敗した場合は 1
 対象 SHA より新しい Production deployment が既に live の場合は promote せず、`Production Release` status
 を failure にする。live でない commit に tag を打てないようにするためで、run 自体も失敗として扱う。
 
+**Vercel 側の既知バグへの対処**: promote endpoint は project 設定の `autoAssignCustomDomains` を
+`true` へ戻す（[vercel/vercel#15095](https://github.com/vercel/vercel/issues/15095)、未修正）。放置すると
+次の main merge が gate を通らず直接公開される。release script は promote / rollback の直前に観測した値を
+そのまま復元する。無効化していれば無効のまま、段階適用中で有効なら有効のままになる。
+
 ### release workflow の信頼境界
 
 `release.yml` は Vercel の promote / rollback 権限を持つ token を扱う。実行する script は常に
