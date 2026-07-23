@@ -764,6 +764,27 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      apply_mcp_plan_create_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_end_at: string;
+          p_note: string;
+          p_operation_id: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
       assert_active_timeblock_tag_v1: {
         Args: { p_tag_id: string; p_user_id: string };
         Returns: undefined;

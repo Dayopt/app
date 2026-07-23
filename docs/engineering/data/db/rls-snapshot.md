@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 39 件 / RLS 対象テーブル 16 件 / GRANT 109 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 39 件 / RLS 対象テーブル 16 件 / GRANT 110 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -150,6 +150,7 @@
 | column      | public.profiles.full_name                                                                                                                                                                                                                                                              | authenticated       | INSERT, UPDATE                 |
 | column      | public.profiles.id                                                                                                                                                                                                                                                                     | authenticated       | INSERT                         |
 | column      | public.profiles.updated_at                                                                                                                                                                                                                                                             | authenticated       | UPDATE                         |
+| routine     | public.apply_mcp_plan_create_v1(p_connection_id uuid, p_access_token_id uuid, p_operation_id uuid, p_title text, p_note text, p_tag_id uuid, p_start_at timestamp with time zone, p_end_at timestamp with time zone)                                                                   | service_role        | EXECUTE                        |
 | routine     | public.assert_active_timeblock_tag_v1(p_user_id uuid, p_tag_id uuid)                                                                                                                                                                                                                   | service_role        | EXECUTE                        |
 | routine     | public.assert_timeblock_content_v1(p_title text, p_note text)                                                                                                                                                                                                                          | service_role        | EXECUTE                        |
 | routine     | public.assert_timeblock_external_event_v1(p_user_id uuid, p_external_calendar_event_id uuid)                                                                                                                                                                                           | service_role        | EXECUTE                        |
