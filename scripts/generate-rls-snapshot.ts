@@ -51,6 +51,12 @@ type PolicyRow = {
 type RlsRow = { table: string; rls: boolean; forced: boolean };
 type GrantRow = { object_type: string; object_name: string; grantee: string; privileges: string };
 type RealtimePublicationRow = { schemaname: string; tablename: string };
+type EffectiveTimeblockWritePrivilegeRow = {
+  object_type: string;
+  grantee: string;
+  object_name: string;
+  privilege_type: string;
+};
 
 /** psql で 1 行 JSON を取り出す（複数行・特殊文字に強い） */
 function queryJson<T>(sql: string): T {
@@ -168,11 +174,26 @@ function fetchRealtimePublication(): RealtimePublicationRow[] {
   );
 }
 
+function fetchEffectiveTimeblockWritePrivileges(): EffectiveTimeblockWritePrivilegeRow[] {
+  return (
+    queryJson<EffectiveTimeblockWritePrivilegeRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(violation) ORDER BY
+                violation.grantee,
+                violation.object_type,
+                violation.object_name,
+                violation.privilege_type
+              ), '[]'::json)
+       FROM private.timeblock_effective_write_privileges_v1 AS violation;`,
+    ) ?? []
+  );
+}
+
 function render(
   policies: PolicyRow[],
   rlsTables: RlsRow[],
   grants: GrantRow[],
   realtimePublication: RealtimePublicationRow[],
+  effectiveTimeblockWritePrivileges: EffectiveTimeblockWritePrivilegeRow[],
 ): string {
   const policyByTable = new Map<string, PolicyRow[]>();
   for (const p of policies) {
@@ -235,6 +256,15 @@ function render(
   }
   lines.push('');
 
+  lines.push('## Plan / Record effective write境界');
+  lines.push('');
+  lines.push(
+    effectiveTimeblockWritePrivileges.length === 0
+      ? '- ✅ `anon` / `authenticated`のeffective table / column write権限なし'
+      : '- ❌ effective write権限あり（snapshot生成を停止する）',
+  );
+  lines.push('');
+
   lines.push('## Realtime publication');
   lines.push('');
   lines.push('`supabase_realtime` に含まれる public table。空なら Realtime 公開なし。');
@@ -255,11 +285,20 @@ function render(
 async function main(): Promise<void> {
   let content: string;
   try {
+    const effectiveTimeblockWritePrivileges = fetchEffectiveTimeblockWritePrivileges();
+    if (effectiveTimeblockWritePrivileges.length > 0) {
+      const violation = effectiveTimeblockWritePrivileges[0]!;
+      throw new Error(
+        `${violation.grantee} has effective ${violation.privilege_type} on ${violation.object_type} ${violation.object_name}`,
+      );
+    }
+
     const raw = render(
       fetchPolicies(),
       fetchRlsTables(),
       fetchGrants(),
       fetchRealtimePublication(),
+      effectiveTimeblockWritePrivileges,
     );
     // commit 時の lint-staged prettier と同一整形を施し、--check の drift を防ぐ
     // （raw のままだと prettier がテーブルを整列して常に差分になる）

@@ -258,6 +258,10 @@
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                      | authenticated       | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                      | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 
+## Plan / Record effective write境界
+
+- ✅ `anon` / `authenticated`のeffective table / column write権限なし
+
 ## Realtime publication
 
 `supabase_realtime` に含まれる public table。空なら Realtime 公開なし。
