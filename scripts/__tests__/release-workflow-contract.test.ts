@@ -3,6 +3,8 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { WORST_CASE_RELEASE_MS } from '../production-release.mjs';
+
 /**
  * Production Release workflow は Vercel の promote / rollback 権限を持つ token を
  * 扱うため、信頼境界を YAML の形で固定する。bash step は unit test できないので、
@@ -61,6 +63,20 @@ describe('release workflow contract', () => {
     expect(release).toContain('steps.release.outputs.release_status');
     const publishStep = release.slice(release.indexOf('Publish Production Release status'));
     expect(publishStep).toMatch(/RELEASE_STATUS" = "superseded"[\s\S]{0,200}state=failure/);
+  });
+
+  it('allows more wall clock than the script can consume', () => {
+    // job が先に kill されると、rollback 途中の片系 promote が
+    // 手動 rollback の手掛かり（run summary の previous id）ごと消える。
+    const timeoutMinutes = Number(release.match(/timeout-minutes:\s*(\d+)/)?.[1]);
+    expect(timeoutMinutes).toBeGreaterThan(0);
+    expect(timeoutMinutes * 60_000).toBeGreaterThan(WORST_CASE_RELEASE_MS);
+    // checkout / setup / API 往復のぶんの余裕も残す。
+    expect(timeoutMinutes * 60_000 - WORST_CASE_RELEASE_MS).toBeGreaterThanOrEqual(10 * 60_000);
+  });
+
+  it('attaches the job to an environment that can gate non-main dispatches', () => {
+    expect(release).toMatch(/^\s*environment:\s*production-release\s*$/m);
   });
 
   it('gates GitHub Release creation on a live Production Release status', () => {

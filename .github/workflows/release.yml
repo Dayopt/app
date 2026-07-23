@@ -37,7 +37,16 @@ jobs:
   release:
     name: Promote Production
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # この environment に deployment branch policy（main のみ）を設定すると、
+    # main 以外の ref からの dispatch は job 開始前に GitHub 側で拒否される。
+    # policy 未設定の間は素通りするため、設定するまで残存リスクは閉じない。
+    # 手順は docs/engineering/infra.md を参照。
+    environment: production-release
+    # scripts/production-release.mjs の WORST_CASE_RELEASE_MS を必ず上回ること。
+    # 下回ると rollback の途中で job が kill され、片方だけ promote された
+    # production が手動 rollback の手掛かりごと失われる。
+    # scripts/__tests__/release-workflow-contract.test.ts が不等式を守る。
+    timeout-minutes: 70
     steps:
       # 実行する workflow / script は常に dispatch した ref のものを使う。
       # inputs.sha は release 対象を指す data であって、実行するコードではない。

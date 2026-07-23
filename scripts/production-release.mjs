@@ -44,7 +44,20 @@ const ASSIGN_TIMEOUT_MS = 5 * 60 * 1000;
 const ASSIGN_POLL_MS = 5 * 1000;
 const SMOKE_ATTEMPTS = 3;
 const SMOKE_TIMEOUT_MS = 15 * 1000;
+const SMOKE_RETRY_DELAY_MS = 2 * 1000;
 const TERMINAL_FAILURE_STATES = new Set(['ERROR', 'CANCELED', 'DELETED']);
+
+/**
+ * この script が費やしうる最悪時間。workflow の `timeout-minutes` がこれを
+ * 下回ると、rollback の途中で job が kill され、片方だけ promote された
+ * production が手動 rollback の手掛かりごと失われる。
+ * 内訳: candidate 待機 + 全 smoke の retry + promote 反映待ち + rollback 反映待ち。
+ */
+export const WORST_CASE_RELEASE_MS =
+  READY_TIMEOUT_MS +
+  RELEASE_PROJECTS.reduce((total, project) => total + project.smokeChecks.length, 0) *
+    (SMOKE_ATTEMPTS * SMOKE_TIMEOUT_MS + (SMOKE_ATTEMPTS - 1) * SMOKE_RETRY_DELAY_MS) +
+  RELEASE_PROJECTS.length * ASSIGN_TIMEOUT_MS * 2;
 
 export class ReleaseError extends Error {
   constructor(message, { manualRollback } = {}) {
@@ -335,7 +348,7 @@ export async function smokeDeployment({
         );
       }
 
-      if (attempt < attempts) await sleepImpl(2000);
+      if (attempt < attempts) await sleepImpl(SMOKE_RETRY_DELAY_MS);
     }
 
     if (lastError) throw lastError;

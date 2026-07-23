@@ -146,9 +146,19 @@ promote 順は web → product に固定し、2 つ目が失敗した場合は 1
 「merge 済みか」の確認であって、コード実行の防御ではない。
 
 **未解決の残存リスク**: `actions: write` を持つ主体が main 以外の ref から dispatch すると、その ref の
-script が Production secret 付きで動く。YAML の条件では塞げない。閉じるには release job へ専用の
-environment（deployment branch policy を `main` に限定）を作り、Vercel 系 secret を repository secret から
-environment secret へ移す必要がある。GitHub 設定の変更なので、実施はユーザーの明示承認下で行う。
+script が Production secret 付きで動く。YAML の条件では塞げない（攻撃者の branch では条件ごと消せる）。
+
+release job は `environment: production-release` を宣言済みなので、閉じるのに必要なのは GitHub 設定だけ。
+**設定するまでこのリスクは開いたまま**である点に注意する。
+
+1. Settings → Environments → `production-release` を開く（初回 run で自動作成される）
+2. Deployment branch policy を Selected branches にし、`main` だけを許可する
+3. `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_AUTOMATION_BYPASS_PRODUCT` /
+   `VERCEL_AUTOMATION_BYPASS_WEB` を repository secret から environment secret へ移す
+
+2 だけでも main 以外からの dispatch は job 開始前に拒否される。3 は secret の露出範囲を
+この job に限定するための追加措置。いずれも Production 経路に触る設定変更なので、
+実施はユーザーの明示承認下で行う。
 
 緊急時は正常な既存 deployment の `Instant Rollback` / `Promote to Production` を使う。手順は
 [runbook](../operations/runbook.md) の Playbook 2 を正とする。
