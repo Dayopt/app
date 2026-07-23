@@ -153,7 +153,6 @@ const BUILT_IN_BOOLEAN_FIELDS: Record<string, ReadonlySet<string>> = {
   os: new Set(['rooted']),
 };
 
-const SAFE_REQUEST_HEADER_KEYS = new Set(['accept', 'content-type', 'host']);
 const CUSTOM_CONTEXT_KEYS = new Set(['react']);
 const SAFE_BREADCRUMB_DATA_KEYS = new Set([
   'category',
@@ -414,15 +413,6 @@ function sanitizeRequest(request: ObservabilityRecord): ObservabilityRecord {
   const sanitized: ObservabilityRecord = {};
   if (typeof request.url === 'string') sanitized.url = sanitizeObservabilityUrl(request.url);
   if (typeof request.method === 'string') sanitized.method = sanitizeString(request.method);
-
-  if (isRecord(request.headers)) {
-    const headers: ObservabilityRecord = {};
-    for (const [key, value] of Object.entries(request.headers)) {
-      if (!SAFE_REQUEST_HEADER_KEYS.has(key.toLowerCase())) continue;
-      if (typeof value === 'string') headers[key] = sanitizeString(value);
-    }
-    if (Object.keys(headers).length > 0) sanitized.headers = headers;
-  }
 
   return sanitized;
 }
