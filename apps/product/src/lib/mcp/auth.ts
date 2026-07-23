@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { canAccessProFeatures } from '@/lib/auth/domain';
 import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import {
@@ -106,7 +107,8 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
           Boolean(connection.write_enabled_at) &&
           !connection.write_disabled_at),
     );
-  const activeScopes = await applyGlobalWriteGate(db, connectionFilteredScopes);
+  const globallyFilteredScopes = await applyGlobalWriteGate(db, connectionFilteredScopes);
+  const activeScopes = await applyProWriteGate(db, row.user_id, globallyFilteredScopes);
 
   if (activeScopes.length === 0) {
     throw new OAuthServerError('invalid_grant', 'OAuth connection has no active scopes', 401);
@@ -150,6 +152,32 @@ async function applyGlobalWriteGate(
   }
 
   return control?.writes_enabled ? scopes : scopes.filter((scope) => !isWriteScope(scope));
+}
+
+async function applyProWriteGate(
+  db: ReturnType<typeof createMcpAccessDbClient>,
+  userId: string,
+  scopes: SupportedScope[],
+): Promise<SupportedScope[]> {
+  if (!scopes.some(isWriteScope)) return scopes;
+
+  const { data: profile, error } = await db
+    .from(databaseTables.profiles)
+    .select('subscription_status')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    captureUnexpectedDatabaseError(error, {
+      feature: 'mcp',
+      operation: 'verify_mcp_pro_entitlement',
+    });
+    logger.warn('MCP Pro entitlement verification failed');
+  }
+
+  return profile && canAccessProFeatures(profile.subscription_status)
+    ? scopes
+    : scopes.filter((scope) => !isWriteScope(scope));
 }
 
 function parseStoredScopes(scopes: string[]): SupportedScope[] | null {

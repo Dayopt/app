@@ -10,7 +10,7 @@ type McpAccessDatabase = {
   public: {
     Tables: Pick<
       Database['public']['Tables'],
-      'mcp_mutation_control' | 'oauth_connections' | 'oauth_tokens'
+      'mcp_mutation_control' | 'oauth_connections' | 'oauth_tokens' | 'profiles'
     >;
     Views: Record<string, never>;
     Functions: Record<string, never>;

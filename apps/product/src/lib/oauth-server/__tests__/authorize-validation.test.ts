@@ -136,4 +136,13 @@ describe('validateAuthorizeInput resource, PKCE, and scopes', () => {
 
     expect(enabled.ok).toBe(true);
   });
+
+  it('requires read:entries in every closed-beta write grant', () => {
+    vi.stubEnv('MCP_WRITE_ENABLED_CLIENTS', 'chatgpt');
+
+    expect(validateAuthorizeInput({ ...baseAuthorizeInput, scope: 'write:plans' })).toEqual({
+      ok: false,
+      error: 'invalid_scope',
+    });
+  });
 });

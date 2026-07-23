@@ -69,7 +69,11 @@ export function validateAuthorizeInput(input: AuthorizeInput): AuthorizeValidati
     return { ok: false, error: 'invalid_resource' };
   }
   const scopes = parseRequestedScope(input.scope);
-  if (scopes === null || (hasWriteScope(scopes) && !isClientWriteEnabled(client.id))) {
+  const requestsWrite = scopes !== null && hasWriteScope(scopes);
+  if (
+    scopes === null ||
+    (requestsWrite && (!scopes.includes('read:entries') || !isClientWriteEnabled(client.id)))
+  ) {
     return { ok: false, error: 'invalid_scope' };
   }
   return {

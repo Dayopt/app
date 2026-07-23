@@ -165,6 +165,12 @@ describe.skipIf(!RUN_LOCAL)('MCP mutation foundation integration', () => {
     vi.stubEnv('MCP_WRITE_ENABLED_CLIENTS', 'chatgpt');
     await setMutationControl(false);
 
+    const { error: activateProError } = await admin
+      .from('profiles')
+      .update({ subscription_status: 'active' })
+      .eq('id', userId);
+    expect(activateProError).toBeNull();
+
     const code = `code-${crypto.randomUUID()}`;
     const access = `dop_at_${crypto.randomUUID()}`;
     const refresh = `dop_rt_${crypto.randomUUID()}`;
@@ -202,6 +208,21 @@ describe.skipIf(!RUN_LOCAL)('MCP mutation foundation integration', () => {
     await expect(verifyAccessToken(access)).resolves.toMatchObject({
       scopes: ['read:entries', 'write:plans'],
     });
+
+    const { error: downgradeError } = await admin
+      .from('profiles')
+      .update({ subscription_status: 'free' })
+      .eq('id', userId);
+    expect(downgradeError).toBeNull();
+    await expect(verifyAccessToken(access)).resolves.toMatchObject({
+      scopes: ['read:entries'],
+    });
+
+    const { error: restoreProError } = await admin
+      .from('profiles')
+      .update({ subscription_status: 'active' })
+      .eq('id', userId);
+    expect(restoreProError).toBeNull();
 
     const { error: disableError } = await admin.rpc('disable_oauth_connection_writes_v1', {
       p_connection_id: connectionId!,
