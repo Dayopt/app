@@ -128,6 +128,13 @@ export function parseFrontMatter(content) {
 
 // ─── バリデーション ─────────────────────────────────────────
 
+// blog カテゴリ taxonomy。正は src/features/blog/lib/categories.ts の BLOG_CATEGORIES
+// （このスクリプトは素の Node 実行のため TS を import できず、値を複製する。変更時は両方を更新する）
+const BLOG_CATEGORIES = ['guide', 'philosophy', 'release', 'devlog'];
+// カテゴリ key は /blog/<key> を一覧 URL として占有するため、記事 slug（ファイル名）に使えない。
+// blog/[slug]/page.tsx はカテゴリ判定が先勝ちし、同名記事は静かに不可視になる
+const RESERVED_BLOG_SLUGS = ['all', ...BLOG_CATEGORIES];
+
 export function validateFrontMatter(fm, type, isDraft) {
   const errors = [];
   const warnings = [];
@@ -158,6 +165,10 @@ export function validateFrontMatter(fm, type, isDraft) {
     if (val && typeof val === 'string' && !DATE_PATTERN.test(val)) {
       report.push(`Invalid date format for '${field}': expected YYYY-MM-DD, got '${val}'`);
     }
+  }
+
+  if (type === 'blog' && fm.category && !BLOG_CATEGORIES.includes(fm.category)) {
+    report.push(`Unknown blog category '${fm.category}' (allowed: ${BLOG_CATEGORIES.join(', ')})`);
   }
 
   if (type !== 'docs' && type !== 'legal') {
@@ -248,6 +259,50 @@ function checkRequiredLegalDocuments() {
   return errors;
 }
 
+// ─── slug 契約チェック ──────────────────────────────────────
+
+// docs の公開 URL はフラット1階層（apps/web/src/lib/mdx.ts: slug = ファイル名、index.mdx はカテゴリ名）。
+// ロケール内でファイル名が重複すると同一 URL を取り合うため、エラーとして止める
+function checkDocsSlugCollisions() {
+  const errors = [];
+  for (const locale of ['en', 'ja']) {
+    const dir = path.join(CONTENT_DIR, 'docs', locale);
+    if (!fs.existsSync(dir)) continue;
+    const bySlug = new Map();
+    for (const file of findMdxFiles(dir)) {
+      const rel = path.relative(dir, file).replace(/\\/g, '/');
+      const name = path.basename(file, '.mdx');
+      const slug = name === 'index' ? rel.split('/')[0] : name;
+      const existing = bySlug.get(slug);
+      if (existing) {
+        errors.push(
+          `Docs slug collision at /docs/${slug}: content/docs/${locale}/${existing} vs content/docs/${locale}/${rel}`,
+        );
+      } else {
+        bySlug.set(slug, rel);
+      }
+    }
+  }
+  return errors;
+}
+
+function checkBlogReservedSlugs() {
+  const errors = [];
+  for (const locale of ['en', 'ja']) {
+    const dir = path.join(CONTENT_DIR, 'blog', locale);
+    if (!fs.existsSync(dir)) continue;
+    for (const file of findMdxFiles(dir)) {
+      const slug = path.basename(file, '.mdx');
+      if (RESERVED_BLOG_SLUGS.includes(slug)) {
+        errors.push(
+          `Reserved blog slug '${slug}' (content/blog/${locale}/${slug}.mdx): カテゴリ一覧 URL /blog/${slug} と衝突し記事が不可視になる`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
 // ─── メイン ────────────────────────────────────────────────
 
 function main() {
@@ -256,6 +311,11 @@ function main() {
   let totalErrors = 0;
   let totalWarnings = 0;
   const allOutput = [];
+
+  for (const error of [...checkDocsSlugCollisions(), ...checkBlogReservedSlugs()]) {
+    allOutput.push({ file: null, message: error, isError: true });
+    totalErrors++;
+  }
 
   for (const type of types) {
     const typeDir = path.join(CONTENT_DIR, type);

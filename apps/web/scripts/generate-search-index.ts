@@ -8,6 +8,7 @@
  * 使用方法: tsx scripts/generate-search-index.ts
  */
 
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '@dayopt/config';
 import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';
@@ -26,10 +27,7 @@ interface SearchIndexEntry {
 const CONTENT_DIR = path.join(process.cwd(), 'content');
 const OUTPUT_PATH = path.join(process.cwd(), 'public', 'search-index.json');
 
-// routing.ts の defaultLocale と一致させる (localePrefix: 'as-needed' のため
-// defaultLocale は prefix なし、それ以外は `/{locale}` を前置する)
-const DEFAULT_LOCALE = 'en';
-
+// localePrefix: 'as-needed' のため defaultLocale は prefix なし、それ以外は `/{locale}` を前置する
 function localizedUrl(locale: string, pathname: string): string {
   return locale === DEFAULT_LOCALE ? pathname : `/${locale}${pathname}`;
 }
@@ -141,7 +139,7 @@ function indexDocs(locale: string): SearchIndexEntry[] {
 function main() {
   console.log('[SearchIndex] 検索インデックス生成を開始...');
 
-  const locales = ['en', 'ja'];
+  const locales = SUPPORTED_LOCALES;
   const index: Record<string, SearchIndexEntry[]> = {};
 
   for (const locale of locales) {
