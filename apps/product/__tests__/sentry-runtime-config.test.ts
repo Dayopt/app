@@ -36,6 +36,15 @@ describe('Product server/edge Sentry runtime configuration', () => {
         sendDefaultPii: false,
       }),
     );
+    const serverSampler = sentry.init.mock.calls[0]?.[0].tracesSampler as (context: {
+      inheritOrSampleWith: (sampleRate: number) => number;
+    }) => number;
+    const edgeSampler = sentry.init.mock.calls[1]?.[0].tracesSampler as (context: {
+      inheritOrSampleWith: (sampleRate: number) => number;
+    }) => number;
+
+    expect(serverSampler({ inheritOrSampleWith: (sampleRate) => sampleRate })).toBe(0.1);
+    expect(edgeSampler({ inheritOrSampleWith: (sampleRate) => sampleRate })).toBe(0.05);
   });
 
   it.each(['preview', 'development'])('%sでは初期化しない', async (vercelEnv) => {

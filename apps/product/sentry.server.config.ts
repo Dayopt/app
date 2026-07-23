@@ -21,7 +21,6 @@ const SENTRY_DSN = process.env.SENTRY_DSN;
 // VERCEL_ENVはVercelが自動設定（production, preview, development）
 const VERCEL_ENV = process.env.VERCEL_ENV;
 const IS_SENTRY_PRODUCTION = VERCEL_ENV === 'production';
-const OPERATOR_SMOKE_TRACE_PREFIX = 'operator.sentry_smoke.';
 
 // DSNが設定されている場合のみ初期化
 if (SENTRY_DSN && IS_SENTRY_PRODUCTION) {
@@ -32,8 +31,7 @@ if (SENTRY_DSN && IS_SENTRY_PRODUCTION) {
     // release は withSentryConfig が build 時に注入する（next.config の release.name = VERCEL_GIT_COMMIT_SHA）。
     // ここで明示すると source map upload 時の release と runtime がズレるため上書きしない。
 
-    tracesSampler: ({ name, inheritOrSampleWith }) =>
-      name.startsWith(OPERATOR_SMOKE_TRACE_PREFIX) ? 1 : inheritOrSampleWith(0.1),
+    tracesSampler: ({ inheritOrSampleWith }) => inheritOrSampleWith(0.1),
 
     // デバッグモード（開発環境のみ）
     debug: false,
