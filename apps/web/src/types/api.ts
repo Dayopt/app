@@ -12,7 +12,7 @@
 /**
  * 検索結果のタイプ
  */
-export type SearchResultType = 'blog' | 'docs' | 'release';
+export type SearchResultType = 'blog' | 'docs';
 
 /**
  * 検索結果の単一アイテム

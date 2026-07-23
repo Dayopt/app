@@ -1,13 +1,14 @@
 /**
  * ビルド時に検索インデックスJSONを生成するスクリプト
  *
- * 全コンテンツ（blog, docs, releases）を読み込み、
+ * 全コンテンツ（blog, docs）を読み込み、
  * public/search-index.json に出力する。
  * CDN経由で配信可能になり、APIルートへのリクエストが不要になる。
  *
  * 使用方法: tsx scripts/generate-search-index.ts
  */
 
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '@dayopt/config';
 import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';
@@ -17,7 +18,7 @@ interface SearchIndexEntry {
   title: string;
   description: string;
   url: string;
-  type: 'blog' | 'docs' | 'release';
+  type: 'blog' | 'docs';
   tags: string[];
   category: string;
   date: string;
@@ -26,10 +27,7 @@ interface SearchIndexEntry {
 const CONTENT_DIR = path.join(process.cwd(), 'content');
 const OUTPUT_PATH = path.join(process.cwd(), 'public', 'search-index.json');
 
-// routing.ts の defaultLocale と一致させる (localePrefix: 'as-needed' のため
-// defaultLocale は prefix なし、それ以外は `/{locale}` を前置する)
-const DEFAULT_LOCALE = 'en';
-
+// localePrefix: 'as-needed' のため defaultLocale は prefix なし、それ以外は `/{locale}` を前置する
 function localizedUrl(locale: string, pathname: string): string {
   return locale === DEFAULT_LOCALE ? pathname : `/${locale}${pathname}`;
 }
@@ -137,48 +135,15 @@ function indexDocs(locale: string): SearchIndexEntry[] {
   return entries;
 }
 
-/**
- * リリースノートをインデックスに追加
- */
-function indexReleases(locale: string): SearchIndexEntry[] {
-  const releasesDir = path.join(CONTENT_DIR, 'releases', locale);
-  const entries: SearchIndexEntry[] = [];
-
-  for (const filePath of getMdxFiles(releasesDir)) {
-    try {
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const { data } = matter(content);
-
-      const slug = path.basename(filePath, '.mdx');
-      const version = (data.version as string) || slug;
-
-      entries.push({
-        id: `release-${locale}-${slug}`,
-        title: (data.title as string) || `Release ${version}`,
-        description: (data.description as string) || '',
-        url: localizedUrl(locale, `/releases/${version}`),
-        type: 'release',
-        tags: (data.tags as string[]) || [],
-        category: 'releases',
-        date: (data.date as string) || '',
-      });
-    } catch (err) {
-      console.error(`[SearchIndex] Failed to index release: ${filePath}`, err);
-    }
-  }
-
-  return entries;
-}
-
 // メイン処理
 function main() {
   console.log('[SearchIndex] 検索インデックス生成を開始...');
 
-  const locales = ['en', 'ja'];
+  const locales = SUPPORTED_LOCALES;
   const index: Record<string, SearchIndexEntry[]> = {};
 
   for (const locale of locales) {
-    const entries = [...indexBlog(locale), ...indexDocs(locale), ...indexReleases(locale)];
+    const entries = [...indexBlog(locale), ...indexDocs(locale)];
     index[locale] = entries;
     console.log(`[SearchIndex] ${locale}: ${entries.length} エントリ`);
   }

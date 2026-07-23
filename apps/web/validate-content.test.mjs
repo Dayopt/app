@@ -75,7 +75,7 @@ lastUpdated: Last Updated
   });
 });
 
-describe('blog/releases tags validation', () => {
+describe('blog tags validation', () => {
   const baseBlogFm = {
     title: 'Post',
     description: 'Description',
@@ -123,34 +123,36 @@ describe('blog/releases tags validation', () => {
     expect(result.warnings).toContain("Missing required field: 'tags'");
   });
 
-  it('releases でも tags: [] を必須フィールド欠落として報告する', () => {
+  it('release カテゴリ記事でも tags: [] を必須フィールド欠落として報告する', () => {
     const result = validateFrontMatter(
-      {
-        version: 'v1.0.0',
-        date: '2026-01-01',
-        title: 'Release',
-        description: 'Description',
-        tags: [],
-        breaking: false,
-        featured: false,
-      },
-      'releases',
+      { ...baseBlogFm, category: 'release', tags: [] },
+      'blog',
       false,
     );
     expect(result.errors).toContain("Missing required field: 'tags'");
+  });
+
+  it('taxonomy 外の category はエラーとして報告する', () => {
+    const result = validateFrontMatter(
+      { ...baseBlogFm, category: 'general', tags: ['a', 'b', 'c'] },
+      'blog',
+      false,
+    );
+    expect(result.errors).toContain(
+      "Unknown blog category 'general' (allowed: guide, philosophy, release, devlog)",
+    );
   });
 });
 
 describe('parseFrontMatter のインライン配列構文', () => {
   function releaseMdx(tagsLine) {
     return `---
-version: 'v1.0.0'
-date: '2026-01-01'
-title: 'Release'
+title: 'v1.0.0 — Release'
 description: 'Description'
+publishedAt: '2026-01-01'
+category: 'release'
+author: 'Dayopt Team'
 ${tagsLine}
-breaking: false
-featured: false
 ---
 
 Body
@@ -171,29 +173,29 @@ Body
 
   it('インライン tags: [] は parseFrontMatter を通しても必須フィールド欠落として報告される', () => {
     const { data } = parseFrontMatter(releaseMdx('tags: []'));
-    const result = validateFrontMatter(data, 'releases', false);
+    const result = validateFrontMatter(data, 'blog', false);
     expect(result.errors).toContain("Missing required field: 'tags'");
   });
 
-  it('releases では1件でも Too few tags にならない（固定5分類のうち該当分だけでよい）', () => {
+  it('release カテゴリでは1件でも Too few tags にならない（固定5分類のうち該当分だけでよい）', () => {
     const { data } = parseFrontMatter(releaseMdx("tags: ['bug-fixes']"));
-    const result = validateFrontMatter(data, 'releases', false);
+    const result = validateFrontMatter(data, 'blog', false);
     expect(result.errors.filter((e) => e.includes('tags'))).toEqual([]);
   });
 
-  it('releases では2件でも Too few tags にならない（docs-writingテンプレートの実例と同じ件数）', () => {
+  it('release カテゴリでは2件でも Too few tags にならない（docs-writingテンプレートの実例と同じ件数）', () => {
     const { data } = parseFrontMatter(releaseMdx("tags: ['new-features', 'improvements']"));
-    const result = validateFrontMatter(data, 'releases', false);
+    const result = validateFrontMatter(data, 'blog', false);
     expect(result.errors.filter((e) => e.includes('tags'))).toEqual([]);
   });
 
   it('インライン tags が3件なら parseFrontMatter を通しても tags関連のエラーは出ない', () => {
     const { data } = parseFrontMatter(releaseMdx("tags: ['a', 'b', 'c']"));
-    const result = validateFrontMatter(data, 'releases', false);
+    const result = validateFrontMatter(data, 'blog', false);
     expect(result.errors.filter((e) => e.includes('tags'))).toEqual([]);
   });
 
-  it('blog では releases と異なり1件だと Too few tags になる（3-6個ルールは blog 限定）', () => {
+  it('通常 blog 記事は release カテゴリと異なり1件だと Too few tags になる（3個下限は自由記述タグ限定）', () => {
     const result = validateFrontMatter(
       {
         title: 'Post',
@@ -213,13 +215,12 @@ Body
 describe('parseFrontMatter の行末インラインコメント', () => {
   function releaseMdx(tagsLine) {
     return `---
-version: 'v1.0.0'
-date: '2026-01-01'
-title: 'Release'
+title: 'v1.0.0 — Release'
 description: 'Description'
+publishedAt: '2026-01-01'
+category: 'release'
+author: 'Dayopt Team'
 ${tagsLine}
-breaking: false
-featured: false
 ---
 
 Body
@@ -234,7 +235,7 @@ Body
 
   it('行末コメント付きの tags: [] は必須フィールド欠落として報告される', () => {
     const { data } = parseFrontMatter(releaseMdx('tags: [] # intentionally empty'));
-    const result = validateFrontMatter(data, 'releases', false);
+    const result = validateFrontMatter(data, 'blog', false);
     expect(result.errors).toContain("Missing required field: 'tags'");
   });
 
@@ -246,13 +247,12 @@ Body
   it('クォート内の # はコメントとして切り落とさない', () => {
     const { data } = parseFrontMatter(
       `---
-version: 'v1.0.0'
-date: '2026-01-01'
 title: 'Bug #123 fix'
 description: 'Description'
+publishedAt: '2026-01-01'
+category: 'release'
+author: 'Dayopt Team'
 tags: ['a', 'b', 'c']
-breaking: false
-featured: false
 ---
 
 Body
@@ -264,16 +264,15 @@ Body
   it('複数行配列の要素につく行末コメントも除去する', () => {
     const { data } = parseFrontMatter(
       `---
-version: 'v1.0.0'
-date: '2026-01-01'
-title: 'Release'
+title: 'v1.0.0 — Release'
 description: 'Description'
+publishedAt: '2026-01-01'
+category: 'release'
+author: 'Dayopt Team'
 tags:
   - a # primary
   - b
   - c
-breaking: false
-featured: false
 ---
 
 Body

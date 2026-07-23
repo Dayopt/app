@@ -91,6 +91,13 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
 
   const { frontMatter } = post;
 
+  // hreflang は実際にその言語版が存在するロケールだけを宣言する（主言語のみの記事で 404 を指さない）
+  const alternateLocales: string[] = [];
+  for (const loc of ['en', 'ja']) {
+    const exists = loc === locale ? true : (await getBlogPost(slug, loc)) !== null;
+    if (exists) alternateLocales.push(loc);
+  }
+
   return generateSEOMetadata({
     title: frontMatter.title,
     description: frontMatter.description,
@@ -102,6 +109,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
     authors: [frontMatter.author],
     image: frontMatter.coverImage,
     section: frontMatter.category,
+    alternateLocales,
   });
 }
 

@@ -6,11 +6,9 @@
       "blog": "ブログ",
       "docs": "ドキュメント",
       "contact": "お問い合わせ",
-      "releases": "リリース",
       "resources": "リソース",
       "blogDescription": "最新の記事とチュートリアル",
-      "docsDescription": "ドキュメントとガイド",
-      "releasesDescription": "最新のアップデートと変更履歴"
+      "docsDescription": "ドキュメントとガイド"
     },
     "actions": {
       "search": "検索",
@@ -179,69 +177,6 @@
     "view": {
       "list": "リスト",
       "grid": "グリッド"
-    }
-  },
-  "releases": {
-    "header": {
-      "title": "リリース",
-      "subtitle": "最新のリリースノートと更新情報"
-    },
-    "featured": "注目",
-    "breaking": "破壊的変更",
-    "filters": {
-      "title": "フィルター",
-      "clearAll": "すべてクリア",
-      "tags": "タグ",
-      "showLess": "表示を減らす",
-      "showMore": "さらに表示",
-      "resultsFound": "{total}件中{count}件のリリース",
-      "featuredReleases": "注目のリリース",
-      "breakingChanges": "破壊的変更",
-      "quickFilters": "クイックフィルター",
-      "searchPlaceholder": "バージョン、タイトル、タグで検索...",
-      "clearSearch": "検索をクリア",
-      "sortBy": "並び替え",
-      "orderAsc": "古い順",
-      "orderDesc": "新しい順",
-      "applyFilters": "フィルターを適用"
-    },
-    "view": {
-      "list": "リスト",
-      "grid": "グリッド"
-    },
-    "changeTypes": {
-      "title": "変更タイプ",
-      "showAll": "すべて表示",
-      "newFeatures": "新機能",
-      "improvements": "改善",
-      "bugFixes": "バグ修正",
-      "breakingChanges": "破壊的変更",
-      "securityUpdates": "セキュリティアップデート"
-    },
-    "rss": {
-      "title": "最新情報を受け取る",
-      "description": "RSSフィードを購読して、新しいリリースの通知を受け取りましょう。",
-      "link": "RSSを購読"
-    },
-    "history": {
-      "title": "リリース履歴",
-      "count": "件"
-    },
-    "emptyState": {
-      "title": "リリースはまだありません",
-      "description": "後で更新をご確認ください。"
-    },
-    "noResults": {
-      "title": "リリースが見つかりません",
-      "description": "現在のフィルターに一致するリリースはありません。",
-      "clearFilters": "フィルターをクリア"
-    },
-    "detail": {
-      "backToReleases": "リリース一覧に戻る",
-      "readingTime": "約{minutes}分で読了",
-      "viewAllReleases": "すべてのリリースを見る",
-      "relatedReleases": "関連リリース",
-      "relatedDescription": "このリリースに関連するアップデート"
     }
   },
   "docs": {
