@@ -39,10 +39,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      # push:main と workflow_dispatch はどちらも trusted ref。PR code は実行しない。
+      # 実行する workflow / script は常に dispatch した ref のものを使う。
+      # inputs.sha は release 対象を指す data であって、実行するコードではない。
+      # ref に渡すと、未 merge の commit が持つ script を Production 権限で走らせられる。
+      #
+      # 残存リスク: main 以外の ref から dispatch すると、その ref の script が
+      # Production secret 付きで動く。これは YAML の if では塞げず、environment の
+      # deployment branch policy でしか閉じられない（infra.md に手順を記載）。
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ inputs.sha || github.sha }}
           persist-credentials: false
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
@@ -59,9 +64,10 @@ jobs:
             exit 1
           fi
 
-      - name: Resolve release SHA
+      - name: Resolve and validate release SHA
         id: target
         env:
+          GH_TOKEN: ${{ github.token }}
           INPUT_SHA: ${{ inputs.sha }}
         run: |
           sha="${INPUT_SHA:-$GITHUB_SHA}"
@@ -69,6 +75,21 @@ jobs:
             echo "::error::Release target must be a 40 character commit SHA"
             exit 1
           fi
+
+          # push:main の github.sha は GitHub 側が供給する main 上の commit なので
+          # 検証しない。人が渡した値のときだけ main 包含を確認し、GitHub API の
+          # 一時障害が通常の release を止めないようにする。
+          if [ -n "$INPUT_SHA" ]; then
+            # `main` という名の tag との曖昧さを避けるため heads/main で明示する。
+            # 404 なら gh が非 0 終了し、代入が set -e に拾われて fail closed になる
+            # （`export status=$(...)` にすると壊れるので前置しない）。
+            status=$(gh api "repos/$GITHUB_REPOSITORY/compare/heads/main...$sha" --jq '.status')
+            if [ "$status" != "identical" ] && [ "$status" != "behind" ]; then
+              echo "::error::Release target must already be merged into main (compare status: $status)"
+              exit 1
+            fi
+          fi
+
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Wait, smoke, and promote Production
@@ -92,24 +113,40 @@ jobs:
           set -e
           echo "exit_code=$release_exit" >> "$GITHUB_OUTPUT"
 
+      # SHA が解決できていない場合は publish しない。空の SHA へ POST すると
+      # 404 で step が落ちるだけで、何の情報も残らない。
       - name: Publish Production Release status
-        if: always()
+        if: always() && steps.target.outputs.sha != ''
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_EXIT: ${{ steps.release.outputs.exit_code || '1' }}
+          RELEASE_STATUS: ${{ steps.release.outputs.release_status || 'failed' }}
           RELEASE_SHA: ${{ steps.target.outputs.sha }}
           FORCED: ${{ inputs.force }}
           REASON: ${{ inputs.reason }}
         run: |
-          if [ "$RELEASE_EXIT" = "0" ]; then
-            state=success
-            description="Production serves this commit"
-          else
+          if [[ ! "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Refusing to publish status for an invalid commit SHA"
+            exit 1
+          fi
+
+          if [ "$RELEASE_EXIT" != "0" ]; then
             state=failure
             description="Release gate stopped before or during promote; see the run summary"
-          fi
-          if [ "$FORCED" = "true" ]; then
-            description="Force Promote: $REASON"
+            if [ "$FORCED" = "true" ]; then
+              description="Force Promote failed: $REASON"
+            fi
+          elif [ "$RELEASE_STATUS" = "superseded" ]; then
+            # promote は 1 件も行われていない。この commit は live ではないので
+            # success を出すと create-release.yml の gate を素通りしてしまう。
+            state=failure
+            description="Superseded: a newer deployment already serves Production"
+          else
+            state=success
+            description="Production serves this commit"
+            if [ "$FORCED" = "true" ]; then
+              description="Force Promote: $REASON"
+            fi
           fi
 
           gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$RELEASE_SHA" \
@@ -121,4 +158,15 @@ jobs:
 
       - name: Enforce release result
         if: always()
-        run: exit ${{ steps.release.outputs.exit_code || '1' }}
+        env:
+          RELEASE_EXIT: ${{ steps.release.outputs.exit_code || '1' }}
+          RELEASE_STATUS: ${{ steps.release.outputs.release_status || 'failed' }}
+        run: |
+          if [ "$RELEASE_EXIT" != "0" ]; then
+            exit "$RELEASE_EXIT"
+          fi
+          if [ "$RELEASE_STATUS" = "superseded" ]; then
+            echo "::error::Target SHA is not live; a newer Production deployment already serves Production."
+            exit 1
+          fi
+          exit 0

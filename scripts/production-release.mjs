@@ -7,21 +7,36 @@ const API_ORIGIN = 'https://api.vercel.com';
 /**
  * promote 順序 = 配列順。web を先に promote するため、2 つ目(product)が失敗した時に
  * rollback 対象になるのは web 側だけになる。
+ *
+ * smoke は status だけでは足りない。product は未知 path でも 200 を返し
+ * （`/[locale]/[nday]` が任意の 1 segment に一致する）、Next.js は streaming 中の
+ * 失敗も 200 のまま返す。そこで Next.js が返す `x-matched-path` で
+ * 「どの route が応答したか」を確定させ、内容が意味を持つ endpoint だけ本文も見る。
  */
 export const RELEASE_PROJECTS = [
   {
     name: 'web',
     bypassEnv: 'VERCEL_BYPASS_WEB',
-    productionOrigin: 'https://dayopt.app',
-    smokePaths: ['/', '/ja'],
+    smokeChecks: [
+      { path: '/', matchedPath: '/en' },
+      { path: '/ja', matchedPath: '/ja' },
+    ],
   },
   {
     name: 'product',
     bypassEnv: 'VERCEL_BYPASS_PRODUCT',
-    productionOrigin: 'https://app.dayopt.app',
-    smokePaths: ['/api/health', '/login'],
+    smokeChecks: [
+      // health は degraded でも 200 を返すので、本文で healthy を確認する。
+      { path: '/api/health', matchedPath: '/api/health', contains: '"status":"healthy"' },
+      { path: '/auth/login', matchedPath: '/[locale]/auth/login' },
+      // ja message bundle のロードまで通す。namespace 欠落は既知の事故モード。
+      { path: '/ja/auth/login', matchedPath: '/[locale]/auth/login' },
+    ],
   },
 ];
+
+/** 200 のまま streaming 中に失敗した Next.js response の目印。 */
+const STREAMED_FAILURE_MARKERS = ['NEXT_HTTP_ERROR_FALLBACK', 'NEXT_REDIRECT'];
 
 const READY_TIMEOUT_MS = 25 * 60 * 1000;
 const READY_POLL_MS = 15 * 1000;
@@ -48,16 +63,22 @@ function apiUrl(path, teamId, params = {}) {
   return url;
 }
 
-async function callVercel(url, { token, fetchImpl, method = 'GET', label }) {
-  const response = await fetchImpl(url, {
-    method,
-    headers: { Authorization: `Bearer ${token}` },
-  });
+async function callVercel(url, { token, fetchImpl, method = 'GET', label, parseJson = true }) {
+  const headers = { Authorization: `Bearer ${token}` };
+  const init = { method, headers };
+  if (method === 'POST') {
+    // 公式 client は promote / rollback に空の JSON body を送る。
+    headers['Content-Type'] = 'application/json';
+    init.body = '{}';
+  }
+
+  const response = await fetchImpl(url, init);
   if (!response.ok) {
     // Response body may echo request context; report the status only.
     throw new ReleaseError(`Vercel API ${label} failed with status ${response.status}`);
   }
-  return response.json();
+  // promote / rollback answer 201 / 202 and may carry an empty body.
+  return parseJson ? response.json() : null;
 }
 
 function normalizeDeployment(raw) {
@@ -69,15 +90,19 @@ function normalizeDeployment(raw) {
     url: typeof raw.url === 'string' ? raw.url : null,
     state: raw.readyState ?? raw.state ?? null,
     createdAt: raw.createdAt ?? raw.created ?? null,
+    target: raw.target ?? null,
+    // GitHub 連携以外（CLI / API）の deployment はこの値を持たない。
+    // 正規経路の build だけを release 対象にするため、これを必須にする。
     sha: raw.meta?.githubCommitSha ?? null,
   };
 }
 
 /** target SHA の production deployment を 1 件返す。無ければ null。 */
 export async function findDeploymentForSha({ projectName, sha, token, teamId, fetchImpl }) {
-  const url = apiUrl('/v6/deployments', teamId, {
+  const url = apiUrl('/v7/deployments', teamId, {
     projectId: projectName,
     target: 'production',
+    sha,
     limit: '20',
   });
   const body = await callVercel(url, {
@@ -87,23 +112,39 @@ export async function findDeploymentForSha({ projectName, sha, token, teamId, fe
   });
 
   const deployments = Array.isArray(body?.deployments) ? body.deployments : [];
+  // server 側の filter を信用しきらず、SHA と target を手元で再確認する。
   const matches = deployments
     .map(normalizeDeployment)
-    .filter((deployment) => deployment !== null && deployment.sha === sha)
+    .filter(
+      (deployment) =>
+        deployment !== null && deployment.sha === sha && deployment.target === 'production',
+    )
     .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
 
   return matches[0] ?? null;
 }
 
-/** 現在 production domain に割り当てられている deployment。未割当なら null。 */
-export async function getCurrentProduction({ projectName, token, teamId, fetchImpl }) {
+/**
+ * project の現在状態を 1 回の呼び出しで取る。
+ *
+ * `/v9/projects/{idOrName}` は名前で引けるが、promote / rollback の path は
+ * `prj_` ID を要求する。ここで得た ID を以降の書き込みに使い、名前解決の
+ * 曖昧さを release 経路から外す。
+ */
+export async function getProjectState({ projectName, token, teamId, fetchImpl }) {
   const url = apiUrl(`/v9/projects/${encodeURIComponent(projectName)}`, teamId);
   const body = await callVercel(url, {
     token,
     fetchImpl,
     label: `project(${projectName})`,
   });
-  return normalizeDeployment(body?.targets?.production);
+  if (typeof body?.id !== 'string') {
+    throw new ReleaseError(`${projectName}: could not resolve the Vercel project id`);
+  }
+  return {
+    projectId: body.id,
+    production: normalizeDeployment(body?.targets?.production),
+  };
 }
 
 /**
@@ -186,7 +227,7 @@ function isProtectionRedirect(response) {
 export async function smokeDeployment({
   projectName,
   deploymentUrl,
-  paths,
+  checks,
   bypassSecret,
   fetchImpl,
   sleepImpl,
@@ -194,9 +235,13 @@ export async function smokeDeployment({
   attempts = SMOKE_ATTEMPTS,
   timeoutMs = SMOKE_TIMEOUT_MS,
 }) {
-  const headers = bypassSecret ? { 'x-vercel-protection-bypass': bypassSecret } : {};
+  const headers = {
+    // 明示しないと locale 検出でトップページが別 locale へ redirect されうる。
+    'accept-language': 'en',
+    ...(bypassSecret ? { 'x-vercel-protection-bypass': bypassSecret } : {}),
+  };
 
-  for (const path of paths) {
+  for (const { path, matchedPath, contains } of checks) {
     let lastError = null;
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -215,6 +260,28 @@ export async function smokeDeployment({
           );
         }
         if (response.status === 200) {
+          // 以下の不一致は routing / render の問題なので retry しても変わらない。
+          const matched = response.headers?.get?.('x-matched-path');
+          if (matchedPath && matched !== matchedPath) {
+            throw new ReleaseError(
+              `${projectName}: smoke ${path} was served by ${matched ?? 'an unknown route'} ` +
+                `(expected ${matchedPath})`,
+            );
+          }
+
+          const body = await response.text();
+          const streamedFailure = STREAMED_FAILURE_MARKERS.find((marker) => body.includes(marker));
+          if (streamedFailure) {
+            throw new ReleaseError(
+              `${projectName}: smoke ${path} returned 200 but streamed ${streamedFailure}`,
+            );
+          }
+          if (contains && !body.includes(contains)) {
+            throw new ReleaseError(
+              `${projectName}: smoke ${path} returned 200 without the expected content`,
+            );
+          }
+
           lastError = null;
           break;
         }
@@ -252,8 +319,8 @@ async function waitForProductionAssignment({
   const deadline = nowImpl() + timeoutMs;
 
   for (;;) {
-    const current = await getCurrentProduction({ projectName, token, teamId, fetchImpl });
-    if (current?.id === deploymentId) return current;
+    const { production } = await getProjectState({ projectName, token, teamId, fetchImpl });
+    if (production?.id === deploymentId) return production;
 
     if (nowImpl() >= deadline) {
       throw new ReleaseError(
@@ -264,25 +331,36 @@ async function waitForProductionAssignment({
   }
 }
 
-/** deployment を production domain へ昇格し、反映を確認する。 */
-export async function promoteDeployment({
+/**
+ * production domain を指定 deployment へ向け、反映を確認する。
+ *
+ * promote と rollback で同じ endpoint を使う。REST API には rollback 専用の
+ * `/v1/projects/{id}/rollback/{deploymentId}` もあるが、対象が
+ * `isRollbackCandidate` に限られる。promote は「任意の deployment へ production
+ * traffic を向ける」ことが明記されており、復旧経路では同じ run の中で先に
+ * 成功実績を作る呼び出しを再利用する方が失敗確率が低い。
+ */
+async function pointProductionTo({
   projectName,
+  projectId,
   deploymentId,
   token,
   teamId,
   fetchImpl,
   sleepImpl,
   nowImpl,
+  action,
 }) {
   const url = apiUrl(
-    `/v10/projects/${encodeURIComponent(projectName)}/promote/${encodeURIComponent(deploymentId)}`,
+    `/v10/projects/${encodeURIComponent(projectId)}/promote/${encodeURIComponent(deploymentId)}`,
     teamId,
   );
   await callVercel(url, {
     token,
     fetchImpl,
     method: 'POST',
-    label: `promote(${projectName})`,
+    label: `${action}(${projectName})`,
+    parseJson: false,
   });
   return waitForProductionAssignment({
     projectName,
@@ -292,40 +370,18 @@ export async function promoteDeployment({
     fetchImpl,
     sleepImpl,
     nowImpl,
-    action: 'promote',
+    action,
   });
 }
 
-/** production domain を既知の正常 deployment へ戻し、反映を確認する。 */
-export async function rollbackDeployment({
-  projectName,
-  deploymentId,
-  token,
-  teamId,
-  fetchImpl,
-  sleepImpl,
-  nowImpl,
-}) {
-  const url = apiUrl(
-    `/v1/projects/${encodeURIComponent(projectName)}/rollback/${encodeURIComponent(deploymentId)}`,
-    teamId,
-  );
-  await callVercel(url, {
-    token,
-    fetchImpl,
-    method: 'POST',
-    label: `rollback(${projectName})`,
-  });
-  return waitForProductionAssignment({
-    projectName,
-    deploymentId,
-    token,
-    teamId,
-    fetchImpl,
-    sleepImpl,
-    nowImpl,
-    action: 'rollback',
-  });
+/** candidate を production domain へ昇格する。 */
+export async function promoteDeployment(options) {
+  return pointProductionTo({ ...options, action: 'promote' });
+}
+
+/** production domain を既知の正常 deployment へ戻す。 */
+export async function rollbackDeployment(options) {
+  return pointProductionTo({ ...options, action: 'rollback' });
 }
 
 function assertSimulationPoint(simulateFailure, point) {
@@ -357,12 +413,12 @@ export async function runProductionRelease({
     throw new ReleaseError('RELEASE_SHA must be a 40 character commit SHA');
   }
 
+  const projectIds = new Map();
   const before = new Map();
   for (const project of projects) {
-    before.set(
-      project.name,
-      await getCurrentProduction({ projectName: project.name, token, teamId, fetchImpl }),
-    );
+    const state = await getProjectState({ projectName: project.name, token, teamId, fetchImpl });
+    projectIds.set(project.name, state.projectId);
+    before.set(project.name, state.production);
   }
 
   if (projects.every((project) => before.get(project.name)?.sha === sha)) {
@@ -409,7 +465,7 @@ export async function runProductionRelease({
       await smokeDeployment({
         projectName: project.name,
         deploymentUrl: deployment.url,
-        paths: project.smokePaths,
+        checks: project.smokeChecks,
         bypassSecret: bypassSecrets[project.name],
         fetchImpl,
         sleepImpl,
@@ -427,6 +483,7 @@ export async function runProductionRelease({
       assertSimulationPoint(simulateFailure, `promote:${project.name}`);
       await promoteDeployment({
         projectName: project.name,
+        projectId: projectIds.get(project.name),
         deploymentId: deployment.id,
         token,
         teamId,
@@ -435,7 +492,12 @@ export async function runProductionRelease({
         nowImpl,
       });
       logger.log(`${project.name}: promoted ${deployment.id}`);
-      promoted.push({ project, deployment, previous: before.get(project.name) });
+      promoted.push({
+        project,
+        projectId: projectIds.get(project.name),
+        deployment,
+        previous: before.get(project.name),
+      });
     }
   } catch (error) {
     const rolledBack = await rollbackPromoted({
@@ -475,6 +537,7 @@ async function rollbackPromoted({
     try {
       await rollbackDeployment({
         projectName: entry.project.name,
+        projectId: entry.projectId,
         deploymentId: entry.previous.id,
         token,
         teamId,
@@ -506,6 +569,16 @@ function writeStepSummary(lines) {
   appendFileSync(path, `${lines.join('\n')}\n`);
 }
 
+/** workflow が status publish と run の合否を別々に決められるようにする。 */
+export const RELEASE_STATUSES = new Set(['already-released', 'promoted', 'superseded', 'failed']);
+
+export function writeReleaseStatus(status, { env = process.env } = {}) {
+  const path = env.GITHUB_OUTPUT;
+  // 固定集合以外は書かない。任意文字列を GITHUB_OUTPUT へ流さない。
+  if (!path || !RELEASE_STATUSES.has(status)) return;
+  appendFileSync(path, `release_status=${status}\n`);
+}
+
 function summarize(result) {
   const lines = [
     '## Production Release',
@@ -521,6 +594,13 @@ function summarize(result) {
   }
   if (result.promoted.length > 0) {
     lines.push('', 'Manual rollback targets are the `previous` deployment ids above.');
+  }
+  if (result.status === 'superseded') {
+    lines.push(
+      '',
+      'A newer Production deployment already serves Production. Nothing was promoted,',
+      'and this commit is **not** live. Do not tag it.',
+    );
   }
   return lines;
 }
@@ -540,11 +620,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   })
     .then((result) => {
       writeStepSummary(summarize(result));
+      writeReleaseStatus(result.status);
       console.log(`Production Release finished: ${result.status}`);
     })
     .catch((error) => {
       const message = error instanceof Error ? error.message : 'Production Release failed';
       writeStepSummary(['## Production Release', '', `- Failed: ${message}`]);
+      writeReleaseStatus('failed');
       console.error(message);
       process.exitCode = 1;
     });

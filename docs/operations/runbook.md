@@ -142,7 +142,7 @@ promote は行われていないので、**Production domain は現行 SHA の�
 
 - [ ] run summary のエラーを確認し、原因に応じてケースA / B を実施
 - [ ] 修正を main へ merge すると、新しい SHA で release gate が再実行される
-- [ ] 同じ SHA を再試行するだけなら `gh workflow run release.yml -f sha=<SHA>`
+- [ ] 同じ SHA を再試行するだけなら `gh workflow run release.yml -f sha=<SHA>` - `sha` は main に merge 済みの commit だけを受け付ける - `--ref` は付けない。付けるとその ref の script が Production 権限で動く
 - [ ] smoke が Deployment Protection で止まった場合は、対象 project の Protection Bypass for Automation と repository secret（`VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB`）を確認する
 
 #### ケース0-B: 片方だけ promote された（部分リリース）
@@ -200,6 +200,8 @@ release gate 自体が壊れていて、かつ Production を今すぐ前進さ�
 ```bash
 gh workflow run release.yml -f sha=<SHA> -f force=true -f reason="<なぜ gate を飛ばすか>"
 ```
+
+`--ref` は付けない。release script は常に main のものを使う。
 
 - [ ] reason は必須。空だと workflow が停止する
 - [ ] 実行後、`docs/operations/log/YYYY-MM-DD-incident-*.md` に使用理由と結果を記録する

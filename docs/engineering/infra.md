@@ -127,6 +127,24 @@ domain 未割当の Production build だけで、Production domain の切り替�
 promote 順は web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
 片方だけ公開された状態は残さない。失敗時は Production domain が現行 SHA のまま維持される（fail-safe）。
 
+対象 SHA より新しい Production deployment が既に live の場合は promote せず、`Production Release` status
+を failure にする。live でない commit に tag を打てないようにするためで、run 自体も失敗として扱う。
+
+### release workflow の信頼境界
+
+`release.yml` は Vercel の promote / rollback 権限を持つ token を扱う。実行する script は常に
+**workflow を dispatch した ref のもの**を使い、`sha` 入力は release 対象を指す data としてだけ扱う。
+`actions/checkout` の `ref` に入力 SHA を渡すと、未 merge の commit が持つ script が Production 権限で
+動く。この制約は `scripts/__tests__/release-workflow-contract.test.ts` が回帰から守る。
+
+手動 dispatch の `sha` は main に merge 済みであることを compare API で確認する。ただしこれは
+「merge 済みか」の確認であって、コード実行の防御ではない。
+
+**未解決の残存リスク**: `actions: write` を持つ主体が main 以外の ref から dispatch すると、その ref の
+script が Production secret 付きで動く。YAML の条件では塞げない。閉じるには release job へ専用の
+environment（deployment branch policy を `main` に限定）を作り、Vercel 系 secret を repository secret から
+environment secret へ移す必要がある。GitHub 設定の変更なので、実施はユーザーの明示承認下で行う。
+
 緊急時は正常な既存 deployment の `Instant Rollback` / `Promote to Production` を使う。手順は
 [runbook](../operations/runbook.md) の Playbook 2 を正とする。
 
