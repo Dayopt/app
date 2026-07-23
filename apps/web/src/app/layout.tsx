@@ -37,6 +37,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           title="Dayopt Blog"
           href="/blog/feed.xml"
         />
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="Dayopt ブログ"
+          hrefLang="ja"
+          href="/ja/blog/feed.xml"
+        />
         <StructuredData
           type="Organization"
           data={{

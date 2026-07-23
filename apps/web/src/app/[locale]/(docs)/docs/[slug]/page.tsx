@@ -2,10 +2,10 @@ import { Heading, Text } from '@dayopt/components';
 import { Link } from '@dayopt/i18n/navigation';
 import { DocArticle } from '@web/features/docs';
 import { getAllContent } from '@web/lib/mdx';
-import { generateSEOMetadata } from '@web/platform/seo/metadata';
+import { generateSEOMetadata, generateStructuredData } from '@web/platform/seo/metadata';
 import { ContentData } from '@web/types/content';
 import { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound, redirect } from 'next/navigation';
 
 interface PageParams {
@@ -41,7 +41,9 @@ export async function generateStaticParams(): Promise<PageParams[]> {
     }
 
     return params;
-  } catch {
+  } catch (error) {
+    // 静かに [] を返すと全 docs が動的レンダリングへ降格するため、原因を必ず出力する
+    console.error('[Docs] generateStaticParams failed:', error);
     return [];
   }
 }
@@ -113,6 +115,8 @@ function getAdjacentPages(
 // Main page component
 export default async function DocPage({ params }: DocPageProps) {
   const { locale, slug } = await params;
+  // 静的レンダリングを有効にする（これがないと動的レンダリングにフォールバックする）
+  setRequestLocale(locale);
   const tDocs = await getTranslations('docs');
 
   let allContent: ContentData[];
@@ -154,12 +158,29 @@ export default async function DocPage({ params }: DocPageProps) {
 
   const { previousPage, nextPage } = getAdjacentPages(allContent, slug);
 
+  // 検索エンジン・AI クローラ向けの構造化データ（正本は platform/seo/structured-data.ts）
+  const jsonLd = generateStructuredData('article', {
+    title: matched.frontMatter.title,
+    description: matched.frontMatter.description,
+    author: matched.frontMatter.author,
+    publishedAt: matched.frontMatter.publishedAt,
+    updatedAt: matched.frontMatter.updatedAt,
+    url: `/${locale}/docs/${slug}`,
+    category: matched.frontMatter.category,
+  });
+
   return (
-    <DocArticle
-      category={matched.frontMatter.category}
-      mdxContent={matched.content}
-      previousPage={previousPage}
-      nextPage={nextPage}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <DocArticle
+        category={matched.frontMatter.category}
+        mdxContent={matched.content}
+        previousPage={previousPage}
+        nextPage={nextPage}
+      />
+    </>
   );
 }

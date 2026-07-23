@@ -12,7 +12,11 @@ import {
   ShareButton,
 } from '@web/features/blog';
 import { TableOfContentsCards } from '@web/features/docs';
-import { generateSEOMetadata, siteConfig } from '@web/platform/seo/metadata';
+import {
+  generateSEOMetadata,
+  generateStructuredData,
+  siteConfig,
+} from '@web/platform/seo/metadata';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { MDXRemote } from 'next-mdx-remote/rsc';
@@ -190,25 +194,22 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       date: post.frontMatter.publishedAt,
     }).toString()}`;
 
+  // JSON-LD は platform/seo/structured-data.ts を正本にする（記事系で定義を重複させない）
   const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BlogPosting',
-    headline: post.frontMatter.title,
-    description: post.frontMatter.description,
-    author: {
-      '@type': 'Person',
-      name: post.frontMatter.author,
-    },
-    datePublished: post.frontMatter.publishedAt,
-    dateModified: post.frontMatter.updatedAt || post.frontMatter.publishedAt,
-    articleSection: post.frontMatter.category,
+    ...generateStructuredData('article', {
+      articleType: 'BlogPosting',
+      title: post.frontMatter.title,
+      description: post.frontMatter.description,
+      author: post.frontMatter.author,
+      publishedAt: post.frontMatter.publishedAt,
+      updatedAt: post.frontMatter.updatedAt,
+      image: post.frontMatter.coverImage,
+      url: `/${locale}/blog/${slug}`,
+      category: post.frontMatter.category,
+      tags: post.frontMatter.tags,
+    }),
     wordCount: post.readingTime * 200,
     timeRequired: `PT${post.readingTime}M`,
-    image: post.frontMatter.coverImage,
-    publisher: {
-      '@type': 'Organization',
-      name: 'Dayopt Platform',
-    },
   };
 
   return (

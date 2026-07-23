@@ -57,7 +57,7 @@ blog まで両言語必須にすると solo 運用で執筆が止まる。書け
 - **blog = 課題起点層。** 非指名クエリ（例: "time blocking vs todo list"）で新規読者を獲得し、本文の内部リンクで docs へ送る（topical cluster 構造）
 - **AI クローラは全面許可**（2026-07-23 決定）。AI 検索・AI アシスタント経由の言及を獲得チャネルとして扱い、frontmatter の `ai.*` メタデータ（relatedQuestions / relatedDocs / chunkStrategy）を全コンテンツで整備する
 - 数より質。`docs/marketing/strategy.md` の禁止事項（煽らない・AI 大量生成を流さない）を上位とする
-- サイト内検索は現状の単純マッチで足りる。検索インデックスが **100 エントリを超えたら** `minisearch` 化を検討する（依存は導入済み・未使用）
+- サイト内検索は `minisearch` による全文検索（本文込み）。コンテンツが数百件に増えても耐える前提で組んである。日本語は分かち書きしないため、CJK は文字 bigram に分解するトークナイザを使う（`apps/web/src/features/search/lib/search-index.ts`）
 
 ## 関連
 
