@@ -1,0 +1,41 @@
+---
+title: 'API と MCP'
+description: '自分のツールから Dayopt のデータを読み書きする。MCP で AI アシスタントを接続することもできる。'
+tags: ['api', 'mcp', 'integration', 'pro']
+author: 'Dayopt Team'
+publishedAt: '2026-07-24'
+order: 6
+category: 'features'
+slug: 'api-mcp'
+draft: true
+placeholder: true
+
+ai:
+  relatedQuestions:
+    - 'Dayopt に API はある？'
+    - 'AI アシスタントを Dayopt に接続するには？'
+    - '外部アプリにデータアクセスを許可するには？'
+  relatedDocs:
+    - '/docs/plans'
+    - '/docs/records'
+  chunkStrategy: 'h2'
+  searchable: true
+  difficulty: 'advanced'
+  contentType: 'reference'
+---
+
+# API と MCP
+
+**このページはダミーです。本文は未執筆で、公開もされていません。**
+
+料金ページは「API and MCP access」を Pro の機能として売っています。実装は存在します（`apps/product/src/app/api/v1`、`apps/product/src/app/api/mcp`、`apps/product/src/lib/oauth-server`）が、内部 spec がまだ無いため、まず spec を書く必要があります。
+
+## このページに書くこと
+
+- API で読み書きできるもの
+- アプリの認可（OAuth）の手順と、スコープの種類
+- MCP エンドポイントが公開する機能と、クライアントの接続方法
+- レート制限とエラーレスポンス
+- どちらも Pro 機能であること
+
+振る舞いの正本: まだ無い。`docs/product/specs/` に API・MCP の spec を作ることが先。
