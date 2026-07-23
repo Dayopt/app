@@ -430,6 +430,8 @@ describe('McpMutationClient', () => {
     ['DT006', 'PLAN_TIME_LOCKED'],
     ['DT001', 'NOT_FOUND'],
     ['23P01', 'TIME_OVERLAP'],
+    ['55P03', 'CONFLICT'],
+    ['57014', 'CONFLICT'],
   ])('%sを%sへ変換し、DB messageを返さない', async (databaseCode, expectedCode) => {
     mocks.applyPlanCreate.mockResolvedValue({
       data: null,

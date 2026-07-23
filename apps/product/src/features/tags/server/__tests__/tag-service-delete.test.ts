@@ -17,7 +17,6 @@ vi.mock('@/lib/supabase/oauth', () => ({
 
 import { createTagService, TagService, TagServiceError } from '../tag-service';
 import {
-  mockArrayResponse,
   mockCountResponse,
   mockSingleResponse,
   setupMockDeleteQuery,
@@ -33,7 +32,7 @@ describe('TagService', () => {
     vi.clearAllMocks();
     mockSupabase = createMockSupabase();
     adminFrom.mockImplementation(() => createChainableMock([], null));
-    adminRpc.mockResolvedValue({ data: null, error: null });
+    adminRpc.mockResolvedValue({ data: 1, error: null });
     service = createTagService(mockSupabase as unknown as Parameters<typeof createTagService>[0]);
   });
 
@@ -70,7 +69,6 @@ describe('TagService', () => {
       // 3: select entries count → 3
       mockSupabase.from
         .mockReturnValueOnce(mockSingleResponse(existingTag))
-        .mockReturnValueOnce(mockArrayResponse([]))
         .mockReturnValueOnce(mockCountResponse(3));
 
       await expect(service.delete({ userId, tagId: 'tag-1' })).rejects.toMatchObject({
@@ -79,30 +77,23 @@ describe('TagService', () => {
     });
 
     it('should throw INVALID_INPUT when reassign strategy lacks targetTagId', async () => {
-      mockSupabase.from
-        .mockReturnValueOnce(mockSingleResponse(existingTag))
-        .mockReturnValueOnce(mockArrayResponse([]));
+      mockSupabase.from.mockReturnValueOnce(mockSingleResponse(existingTag));
 
       await expect(
         service.delete({ userId, tagId: 'tag-1', strategy: 'reassign' }),
       ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     });
 
-    it('reassign strategy: should update plans / records tag_id', async () => {
+    it('reassign strategy: should use the atomic tag deletion command', async () => {
       const targetTag = { id: 'tag-2', name: 'Target', user_id: userId, parent_id: null };
 
       // 1: getById(tagId)
       // 2: select children
       // 3: getById(targetTagId)
-      const updateMock = createChainableMock(null);
-      const deleteMock = createChainableMock(null);
-      adminFrom.mockReturnValue(updateMock);
-
       mockSupabase.from
         .mockReturnValueOnce(mockSingleResponse(existingTag))
-        .mockReturnValueOnce(mockArrayResponse([]))
-        .mockReturnValueOnce(mockSingleResponse(targetTag))
-        .mockReturnValueOnce(deleteMock);
+        .mockReturnValueOnce(mockSingleResponse(targetTag));
+      adminRpc.mockResolvedValue({ data: 1, error: null });
 
       const result = await service.delete({
         userId,
@@ -111,26 +102,19 @@ describe('TagService', () => {
         targetTagId: 'tag-2',
       });
 
-      expect(updateMock.update).toHaveBeenCalledWith({ tag_id: 'tag-2' });
-      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['plans', 'records']);
-      expect(deleteMock.delete).toHaveBeenCalled();
+      expect(adminRpc).toHaveBeenCalledWith('delete_tags_with_timeblocks_command_v3', {
+        p_promote_children: true,
+        p_strategy: 'reassign',
+        p_tag_ids: ['tag-1'],
+        p_target_tag_id: 'tag-2',
+        p_user_id: userId,
+      });
       expect(result).toMatchObject(existingTag);
     });
 
-    it('delete_blocks strategy: should delete records / plans before deleting the tag', async () => {
-      const planLookupMock = createChainableMock([]);
-      const dataDeleteMock = createChainableMock(null);
-      const tagDeleteMock = createChainableMock(null);
-      adminFrom
-        .mockReturnValueOnce(planLookupMock)
-        .mockReturnValueOnce(dataDeleteMock)
-        .mockReturnValueOnce(dataDeleteMock)
-        .mockReturnValueOnce(dataDeleteMock);
-
-      mockSupabase.from
-        .mockReturnValueOnce(mockSingleResponse(existingTag))
-        .mockReturnValueOnce(mockArrayResponse([]))
-        .mockReturnValueOnce(tagDeleteMock);
+    it('delete_blocks strategy: should use the atomic tag deletion command', async () => {
+      mockSupabase.from.mockReturnValueOnce(mockSingleResponse(existingTag));
+      adminRpc.mockResolvedValue({ data: 1, error: null });
 
       await service.delete({
         userId,
@@ -138,9 +122,13 @@ describe('TagService', () => {
         strategy: 'delete_blocks',
       });
 
-      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['plans', 'records', 'plans']);
-      expect(dataDeleteMock.delete).toHaveBeenCalled();
-      expect(tagDeleteMock.delete).toHaveBeenCalled();
+      expect(adminRpc).toHaveBeenCalledWith('delete_tags_with_timeblocks_command_v3', {
+        p_promote_children: true,
+        p_strategy: 'delete_blocks',
+        p_tag_ids: ['tag-1'],
+        p_target_tag_id: null,
+        p_user_id: userId,
+      });
     });
   });
 });

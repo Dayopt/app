@@ -12,6 +12,7 @@ type TagServiceErrorCode =
   | 'MERGE_FAILED'
   | 'SAME_TAG_MERGE'
   | 'TARGET_NOT_FOUND'
+  | 'CONFLICT'
   | 'UNGROUP_CONFLICTS'
   | 'GROUP_NAME_CONFLICT';
 
@@ -31,6 +32,15 @@ export function createTagDatabaseError(
   message: string,
   operation: string,
 ): TagServiceError {
+  if (
+    error !== null &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error.code === '40P01' || error.code === '55P03' || error.code === '57014')
+  ) {
+    return new TagServiceError('CONFLICT', 'Tag data is busy. Reload and try again.');
+  }
+
   const original = captureUnexpectedDatabaseError(error, {
     feature: 'tags',
     operation,

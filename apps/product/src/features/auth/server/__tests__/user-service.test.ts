@@ -8,12 +8,17 @@ const deleteUser = vi.hoisted(() => vi.fn());
 const loggerInfo = vi.hoisted(() => vi.fn());
 const loggerWarn = vi.hoisted(() => vi.fn());
 const adminFrom = vi.hoisted(() => vi.fn());
+const adminRpc = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/stripe/client', () => ({ getStripe }));
 vi.mock('@/lib/supabase/oauth', () => ({
-  createServiceRoleClient: () => ({ auth: { admin: { deleteUser } }, from: adminFrom }),
+  createServiceRoleClient: () => ({
+    auth: { admin: { deleteUser } },
+    from: adminFrom,
+    rpc: adminRpc,
+  }),
 }));
 vi.mock('@/lib/logger', () => ({
   logger: { info: loggerInfo, warn: loggerWarn },
@@ -105,6 +110,7 @@ describe('createUserService', () => {
     getStripe.mockReturnValue(null);
     deleteUser.mockResolvedValue({ data: {}, error: null });
     adminFrom.mockImplementation(() => createChainableMock([], null));
+    adminRpc.mockResolvedValue({ data: null, error: null });
     captureUnexpectedDatabaseError.mockImplementation((error: unknown) =>
       error instanceof Error ? error : new Error('Unexpected database failure', { cause: error }),
     );
@@ -220,65 +226,65 @@ describe('createUserService', () => {
   });
 
   describe('deleteBlocks', () => {
-    it('records、plansを依存順に削除して合計件数を返す', async () => {
-      const adminQueries = mockAdminTables({
-        records: { data: [{ id: 'record-1' }] },
-        plans: { data: [{ id: 'plan-1' }, { id: 'plan-2' }] },
-      });
+    it('atomic purge RPCが返す合計件数を返す', async () => {
+      adminRpc.mockResolvedValue({ data: 3, error: null });
       const { service } = createSupabase();
 
       await expect(service.deleteBlocks(USER_ID)).resolves.toEqual({ deletedCount: 3 });
-      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['records', 'plans']);
-      for (const query of adminQueries.values()) {
-        expect(query.eq).toHaveBeenCalledWith('user_id', USER_ID);
-        expect(query.select).toHaveBeenCalledWith('id');
-      }
+      expect(adminRpc).toHaveBeenCalledWith('delete_user_timeblocks_command_v2', {
+        p_user_id: USER_ID,
+      });
     });
 
     it('削除エラーをDELETE_DATA_FAILEDに変換する', async () => {
-      mockAdminTables({
-        records: { error: { message: 'records failed' } },
-      });
+      adminRpc.mockResolvedValue({ data: null, error: { message: 'purge failed' } });
       const { service } = createSupabase();
 
       await expect(service.deleteBlocks(USER_ID)).rejects.toMatchObject({
         code: 'DELETE_DATA_FAILED',
-        message: 'records deletion failed',
+        message: 'Timeblock deletion failed',
       });
+    });
+
+    it.each(['55P03', '57014'] as const)('%sをretryable conflictへ変換する', async (code) => {
+      adminRpc.mockResolvedValue({ data: null, error: { code, message: 'private lock detail' } });
+      const { service } = createSupabase();
+
+      await expect(service.deleteBlocks(USER_ID)).rejects.toMatchObject({ code: 'CONFLICT' });
+      expect(captureUnexpectedDatabaseError).not.toHaveBeenCalled();
     });
   });
 
   describe('deleteAllData', () => {
-    it('records、plans、tags、user_settingsの順に削除する', async () => {
-      mockAdminTables({
-        records: { data: [] },
-        plans: { data: [] },
-        tags: { data: [] },
-        user_settings: { data: [] },
-      });
+    it('全データを1つのatomic purge RPCで削除する', async () => {
+      adminRpc.mockResolvedValue({ data: true, error: null });
       const { service } = createSupabase();
 
       await expect(service.deleteAllData(USER_ID)).resolves.toEqual({ success: true });
-      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual([
-        'records',
-        'plans',
-        'tags',
-        'user_settings',
-      ]);
+      expect(adminRpc).toHaveBeenCalledWith('delete_all_user_data_command_v2', {
+        p_user_id: USER_ID,
+      });
     });
 
-    it('途中の削除失敗で後続tableを削除しない', async () => {
-      mockAdminTables({
-        records: { data: [] },
-        plans: { error: { message: 'plans failed' } },
-      });
+    it('atomic purge RPCの失敗をDELETE_DATA_FAILEDに変換する', async () => {
+      adminRpc.mockResolvedValue({ data: null, error: { message: 'purge failed' } });
       const { service } = createSupabase();
 
       await expect(service.deleteAllData(USER_ID)).rejects.toMatchObject({
         code: 'DELETE_DATA_FAILED',
-        message: 'plans deletion failed',
+        message: 'User data deletion failed',
       });
-      expect(adminFrom).not.toHaveBeenCalledWith('tags');
+    });
+
+    it('lock timeoutをretryable conflictへ変換する', async () => {
+      adminRpc.mockResolvedValue({
+        data: null,
+        error: { code: '55P03', message: 'private lock detail' },
+      });
+      const { service } = createSupabase();
+
+      await expect(service.deleteAllData(USER_ID)).rejects.toMatchObject({ code: 'CONFLICT' });
+      expect(captureUnexpectedDatabaseError).not.toHaveBeenCalled();
     });
   });
 

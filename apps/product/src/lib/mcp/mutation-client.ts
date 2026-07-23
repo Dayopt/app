@@ -33,6 +33,8 @@ const EXPECTED_ERROR_CODES: Readonly<Record<string, McpMutationErrorCode>> = {
   '22004': 'INVALID_INPUT',
   '22023': 'INVALID_INPUT',
   '23P01': 'TIME_OVERLAP',
+  '55P03': 'CONFLICT',
+  '57014': 'CONFLICT',
   DM003: 'WRITE_DISABLED',
   DM004: 'AUTHORIZATION_LOST',
   DM005: 'PRO_REQUIRED',
@@ -54,7 +56,8 @@ const EXPECTED_ERROR_CODES: Readonly<Record<string, McpMutationErrorCode>> = {
 const ERROR_MESSAGES: Readonly<Record<McpMutationErrorCode, string>> = {
   ALREADY_RECORDED: 'Plan already has an active record.',
   AUTHORIZATION_LOST: 'The Dayopt connection is no longer authorized for this change.',
-  CONFLICT: 'The change conflicted with another update. Read the latest data and try again.',
+  CONFLICT:
+    'The change is busy or conflicted with another update. Read the latest data and try again.',
   FORBIDDEN: 'This item cannot be changed.',
   IDEMPOTENCY_KEY_REUSED: 'This operation ID was already used for a different change.',
   INVALID_INPUT: 'The mutation input is invalid.',

@@ -872,22 +872,22 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       expect(personalizationError).toBeNull();
     });
 
-    it('3つのlegacy timeblock RPCはauthenticated ownerにも公開しない', async () => {
+    it('旧bundle向け3 RPCはcross-user実行を拒否し対象を変更しない', async () => {
       const calls = [
         () =>
-          supabaseB.rpc('confirm_day_plans_to_records', {
+          supabaseA.rpc('confirm_day_plans_to_records', {
             p_confirmed_at: rpcConfirmedAt,
             p_end_at: rpcConfirmRangeEndAt,
             p_start_at: rpcConfirmRangeStartAt,
             p_user_id: TEST_USER_B_ID,
           }),
         () =>
-          supabaseB.rpc('soft_delete_plan', {
+          supabaseA.rpc('soft_delete_plan', {
             p_plan_id: RPC_SOFT_DELETE_PLAN_ID,
             p_user_id: TEST_USER_B_ID,
           }),
         () =>
-          supabaseB.rpc('soft_delete_record', {
+          supabaseA.rpc('soft_delete_record', {
             p_record_id: RPC_SOFT_DELETE_RECORD_ID,
             p_user_id: TEST_USER_B_ID,
           }),
@@ -912,8 +912,8 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       expect(confirmed).toEqual([]);
     });
 
-    it('3つのlegacy timeblock RPCはservice-role recovery経路を維持する', async () => {
-      const { data: confirmed, error: confirmError } = await adminSupabase.rpc(
+    it('旧bundle向け3 RPCはauthenticated owner互換をdrainまで維持する', async () => {
+      const { data: confirmed, error: confirmError } = await supabaseB.rpc(
         'confirm_day_plans_to_records',
         {
           p_confirmed_at: rpcConfirmedAt,
@@ -924,15 +924,14 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       );
       expect(confirmError).toBeNull();
       expect(confirmed).toHaveLength(1);
-      expect(confirmed?.[0]).not.toHaveProperty('fulfillment_score');
 
-      const { error: planError } = await adminSupabase.rpc('soft_delete_plan', {
+      const { error: planError } = await supabaseB.rpc('soft_delete_plan', {
         p_plan_id: RPC_SOFT_DELETE_PLAN_ID,
         p_user_id: TEST_USER_B_ID,
       });
       expect(planError).toBeNull();
 
-      const { error: recordError } = await adminSupabase.rpc('soft_delete_record', {
+      const { error: recordError } = await supabaseB.rpc('soft_delete_record', {
         p_record_id: RPC_SOFT_DELETE_RECORD_ID,
         p_user_id: TEST_USER_B_ID,
       });
@@ -970,7 +969,7 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       }
     });
 
-    it('4つのprivileged RPCはservice-role経路で成功する', async () => {
+    it('旧bundleを含む4つのprivileged RPCはservice-role経路で成功する', async () => {
       const { error: mergeError } = await adminSupabase.rpc('merge_tags_with_hierarchy', {
         p_source_tag_id: RPC_MERGE_SOURCE_TAG_ID,
         p_target_tag_id: RPC_MERGE_TARGET_TAG_ID,

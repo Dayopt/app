@@ -186,7 +186,7 @@ async function holdOperationLock(
   };
 }
 
-async function waitForAdvisoryWaiter(): Promise<void> {
+async function waitForAdvisoryWaiter(minimumWaiters = 1): Promise<void> {
   const deadline = Date.now() + 5_000;
   while (Date.now() < deadline) {
     const result = await new Promise<string>((resolve, reject) => {
@@ -214,7 +214,7 @@ async function waitForAdvisoryWaiter(): Promise<void> {
         else reject(new Error(stderr));
       });
     });
-    if (Number(result) > 0) return;
+    if (Number(result) >= minimumWaiters) return;
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   throw new Error('Timed out waiting for the apply transaction to reach the advisory lock');
@@ -318,6 +318,52 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan create apply integration', () => {
     const replayAfterDelete = await applyPlan(authorization, input);
     expect(replayAfterDelete.error).toBeNull();
     expect(replayAfterDelete.data).toEqual({ ...first.data!, replayed: true });
+  });
+
+  it('serializes writer-first MCP create with block purge and replays without recreation', async () => {
+    const authorization = await createWriteAuthorization();
+    const operationId = crypto.randomUUID();
+    const input: PlanCreateInput = {
+      operationId,
+      title: 'Purged Plan replay',
+      startAt: at(2 * 60 * 60_000),
+      endAt: at(3 * 60 * 60_000),
+    };
+
+    const holder = await holdOperationLock(userId, operationId);
+    try {
+      const firstAttempt = Promise.resolve(applyPlan(authorization, input));
+      await waitForAdvisoryWaiter();
+
+      const purgeAttempt = Promise.resolve(
+        admin.rpc('delete_user_timeblocks_command_v2', { p_user_id: userId }),
+      );
+      await waitForAdvisoryWaiter(2);
+      await holder.release();
+      const [first, purge] = await Promise.all([firstAttempt, purgeAttempt]);
+
+      expect(first.error).toBeNull();
+      const { data: deletedCount, error: purgeError } = purge;
+      expect(purgeError).toBeNull();
+      expect(deletedCount).toBe(1);
+
+      const replay = await applyPlan(authorization, input);
+      expect(replay.error).toBeNull();
+      expect(replay.data).toEqual({ ...first.data!, replayed: true });
+
+      const [{ data: plan }, { count: receiptCount }] = await Promise.all([
+        admin.from('plans').select('id').eq('id', first.data!.resource_id).maybeSingle(),
+        admin
+          .from('mcp_mutation_receipts')
+          .select('operation_id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('operation_id', operationId),
+      ]);
+      expect(plan).toBeNull();
+      expect(receiptCount).toBe(1);
+    } finally {
+      await holder.release();
+    }
   });
 
   it('serializes parallel retries into one Plan, one receipt, and one replay', async () => {

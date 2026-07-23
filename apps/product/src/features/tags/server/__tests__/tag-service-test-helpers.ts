@@ -81,7 +81,7 @@ export function mockSingleResponse(data: unknown) {
 }
 
 /** await chain で配列を返すモック（select 結果の list） */
-export function mockArrayResponse(data: unknown[]) {
+function mockArrayResponse(data: unknown[]) {
   const mock = createChainableMock(data);
   mock.then = vi
     .fn()

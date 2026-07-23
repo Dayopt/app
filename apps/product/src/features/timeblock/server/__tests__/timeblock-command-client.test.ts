@@ -112,6 +112,30 @@ describe('TimeblockCommandClient', () => {
     ).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 
+  it.each(['55P03', '57014'])(
+    '%sを観測対象外のretryable conflictへ変換する',
+    async (databaseCode) => {
+      rpc.mockResolvedValue({
+        data: null,
+        error: { code: databaseCode, message: 'private lock detail' },
+      });
+      const client = new TimeblockCommandClient();
+
+      await expect(
+        client.createPlan({
+          userId: plan.user_id,
+          title: plan.title,
+          note: null,
+          tagId: null,
+          externalCalendarEventId: null,
+          source: 'manual',
+          startAt: plan.start_at,
+          endAt: plan.end_at,
+        }),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
+    },
+  );
+
   it('未来PlanへのRecordリンクをRecord自身の未来エラーと区別する', async () => {
     rpc.mockResolvedValue({
       data: null,

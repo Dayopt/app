@@ -101,9 +101,13 @@ INSERT INTO public.tags (id, user_id, name, color, sort_order) VALUES
   ('a0000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000001', 'personal',      'pink',   4);
 
 -- ============================================================
--- Plan / Record（2週間分: 今日を基準に14日前〜今日）
+-- Plan / Record（完了済みの2週間分: 14日前〜昨日）
 -- ============================================================
 -- 平日は4-6 timeblock/日、週末は1-2 timeblock/日
+
+-- Productionでは過去のPlan作成を禁止するが、このfixtureはmigration前から
+-- 存在した「過去のPlanと紐づくRecord」を再現する。このDO statement内だけ
+-- Planの時刻triggerを止め、他のowner/FK/overlap制約は有効なままにする。
 
 DO $$
 DECLARE
@@ -119,8 +123,10 @@ DECLARE
     'a0000000-0000-0000-0000-000000000005'
   ];
 BEGIN
+  EXECUTE 'ALTER TABLE public.plans DISABLE TRIGGER validate_plan_temporal_write_v1';
+
   FOR i IN 0..13 LOOP
-    v_date := CURRENT_DATE - (13 - i);
+    v_date := CURRENT_DATE - (14 - i);
     v_dow := EXTRACT(DOW FROM v_date)::INT; -- 0=Sun, 6=Sat
 
     IF v_dow NOT IN (0, 6) THEN
@@ -218,4 +224,10 @@ BEGIN
       );
     END IF;
   END LOOP;
+  EXECUTE 'ALTER TABLE public.plans ENABLE TRIGGER validate_plan_temporal_write_v1';
+EXCEPTION
+  WHEN OTHERS THEN
+    -- EXCEPTION subtransactionのrollbackでもtriggerは戻るが、意図を明示する。
+    EXECUTE 'ALTER TABLE public.plans ENABLE TRIGGER validate_plan_temporal_write_v1';
+    RAISE;
 END $$;

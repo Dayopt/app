@@ -32,7 +32,8 @@ export class UserServiceError extends ServiceError {
       | 'EXPORT_FAILED'
       | 'UNAUTHORIZED'
       | 'INVALID_PASSWORD'
-      | 'INVALID_INPUT',
+      | 'INVALID_INPUT'
+      | 'CONFLICT',
     message: string,
     options?: ErrorOptions,
   ) {
@@ -57,6 +58,15 @@ interface DeleteAccountOptions {
  */
 interface ExportDataOptions {
   userId: string;
+}
+
+function isRetryableDatabaseContention(error: unknown): boolean {
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error.code === '40P01' || error.code === '55P03' || error.code === '57014')
+  );
 }
 
 /**
@@ -208,26 +218,25 @@ export function createUserService(supabase: SupabaseClient<Database>) {
      */
     async deleteBlocks(userId: string): Promise<{ deletedCount: number }> {
       const adminClient = createServiceRoleClient();
-      let deletedCount = 0;
+      const { data: deletedCount, error } = await adminClient.rpc(
+        'delete_user_timeblocks_command_v2',
+        { p_user_id: userId },
+      );
 
-      // records.plan_id は plans を参照するため、records → plans の順で削除する。
-      for (const table of [databaseTables.records, databaseTables.plans] as const) {
-        const { data: deleted, error } = await adminClient
-          .from(table)
-          .delete()
-          .eq('user_id', userId)
-          .select('id');
-        if (error) {
-          const resource = table === databaseTables.records ? 'records' : table;
-          const original = captureUnexpectedDatabaseError(error, {
-            feature: 'account_data',
-            operation: `delete_${resource}`,
-          });
-          throw new UserServiceError('DELETE_DATA_FAILED', `${resource} deletion failed`, {
-            cause: original,
-          });
+      if (error || deletedCount === null) {
+        if (isRetryableDatabaseContention(error)) {
+          throw new UserServiceError('CONFLICT', 'Timeblock deletion is busy. Try again.');
         }
-        deletedCount += deleted?.length ?? 0;
+        const original = captureUnexpectedDatabaseError(
+          error ?? { message: 'Timeblock purge returned no result' },
+          {
+            feature: 'account_data',
+            operation: 'delete_user_timeblocks',
+          },
+        );
+        throw new UserServiceError('DELETE_DATA_FAILED', 'Timeblock deletion failed', {
+          cause: original,
+        });
       }
 
       logger.info('Blocks deleted', { userId, count: deletedCount });
@@ -240,24 +249,24 @@ export function createUserService(supabase: SupabaseClient<Database>) {
      */
     async deleteAllData(userId: string): Promise<{ success: true }> {
       const adminClient = createServiceRoleClient();
-      // FK 依存順。service-role を使うが、全操作を認証済み userId で明示的に制限する。
-      for (const table of [
-        databaseTables.records,
-        databaseTables.plans,
-        databaseTables.tags,
-        databaseTables.userSettings,
-      ] as const) {
-        const { error } = await adminClient.from(table).delete().eq('user_id', userId);
-        if (error) {
-          const resource = table === databaseTables.records ? 'records' : table;
-          const original = captureUnexpectedDatabaseError(error, {
-            feature: 'account_data',
-            operation: `delete_all_${resource}`,
-          });
-          throw new UserServiceError('DELETE_DATA_FAILED', `${resource} deletion failed`, {
-            cause: original,
-          });
+      const { data: deleted, error } = await adminClient.rpc('delete_all_user_data_command_v2', {
+        p_user_id: userId,
+      });
+
+      if (error || deleted !== true) {
+        if (isRetryableDatabaseContention(error)) {
+          throw new UserServiceError('CONFLICT', 'User data deletion is busy. Try again.');
         }
+        const original = captureUnexpectedDatabaseError(
+          error ?? { message: 'Full data purge returned no success result' },
+          {
+            feature: 'account_data',
+            operation: 'delete_all_user_data',
+          },
+        );
+        throw new UserServiceError('DELETE_DATA_FAILED', 'User data deletion failed', {
+          cause: original,
+        });
       }
 
       logger.info('All user data deleted (account preserved)', { userId });

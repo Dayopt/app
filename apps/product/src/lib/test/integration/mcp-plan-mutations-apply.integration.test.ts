@@ -110,7 +110,14 @@ async function startLockHolder(
   process.stderr.on('data', (chunk: string) => {
     stderr += chunk;
   });
-  process.stdin.write(`BEGIN; ${statement} SELECT 'LOCKED';\n`);
+  process.stdin.write(
+    `BEGIN;
+SET LOCAL ROLE service_role;
+SELECT pg_catalog.set_config('request.jwt.claims', '{"role":"service_role"}', true);
+${statement}
+SELECT 'LOCKED';
+`,
+  );
 
   const deadline = Date.now() + 5_000;
   while (!stdout.includes('LOCKED')) {

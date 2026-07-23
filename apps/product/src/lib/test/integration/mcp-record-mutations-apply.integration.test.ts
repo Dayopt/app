@@ -48,7 +48,7 @@ interface RecordPatch {
 
 interface LockHolder {
   process: ChildProcessWithoutNullStreams;
-  release: () => Promise<void>;
+  release: (commit?: boolean) => Promise<void>;
 }
 
 function at(offsetMs: number): string {
@@ -113,7 +113,14 @@ async function startLockHolder(
   process.stderr.on('data', (chunk: string) => {
     stderr += chunk;
   });
-  process.stdin.write(`BEGIN; ${statement} SELECT 'LOCKED';\n`);
+  process.stdin.write(
+    `BEGIN;
+SET LOCAL ROLE service_role;
+SELECT pg_catalog.set_config('request.jwt.claims', '{"role":"service_role"}', true);
+${statement}
+SELECT 'LOCKED';
+`,
+  );
 
   const deadline = Date.now() + 5_000;
   while (!stdout.includes('LOCKED')) {
@@ -124,9 +131,9 @@ async function startLockHolder(
 
   return {
     process,
-    release: async () => {
+    release: async (commit = false) => {
       if (process.exitCode !== null) return;
-      process.stdin.end('ROLLBACK;\n');
+      process.stdin.end(commit ? 'COMMIT;\n' : 'ROLLBACK;\n');
       await once(process, 'close');
     },
   };
@@ -136,6 +143,13 @@ function holdRecordLock(recordId: string): Promise<LockHolder> {
   return startLockHolder(
     { record_id: recordId },
     "SELECT 1 FROM public.records WHERE id = :'record_id'::UUID FOR UPDATE;",
+  );
+}
+
+function holdUserTimeblockPurge(): Promise<LockHolder> {
+  return startLockHolder(
+    { user_id: userId },
+    "SELECT public.delete_user_timeblocks_command_v2(:'user_id'::UUID);",
   );
 }
 
@@ -554,6 +568,41 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
       .eq('start_at', linkedInput.startAt)
       .eq('end_at', linkedInput.endAt);
     expect(sameRangeCount).toBe(1);
+  });
+
+  it('serializes purge-first Settings deletion before MCP Record create', async () => {
+    const authorization = await createWriteAuthorization();
+    const operationId = crypto.randomUUID();
+    const holder = await holdUserTimeblockPurge();
+
+    try {
+      const creation = Promise.resolve(
+        applyCreate(authorization, operationId, {
+          title: 'Record after purge',
+          startAt: at(-10 * 60 * 60_000),
+          endAt: at(-9 * 60 * 60_000),
+        }),
+      );
+      await waitForLockWaiter();
+      await holder.release(true);
+
+      const created = await creation;
+      expect(created.error).toBeNull();
+      expect(created.data).toMatchObject({
+        operation_id: operationId,
+        resource_type: 'record',
+        replayed: false,
+      });
+
+      const { data: persisted } = await admin
+        .from('records')
+        .select('title')
+        .eq('id', created.data!.resource_id)
+        .single();
+      expect(persisted?.title).toBe('Record after purge');
+    } finally {
+      await holder.release(false);
+    }
   });
 
   it('applies partial updates while preserving Plan attribution and external provenance', async () => {

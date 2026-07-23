@@ -64,6 +64,8 @@ interface ConfirmDayCommandInput {
 const EXPECTED_COMMAND_ERRORS: Readonly<Record<string, string>> = {
   '22023': 'INVALID_INPUT',
   '23P01': 'TIME_OVERLAP',
+  '55P03': 'CONFLICT',
+  '57014': 'CONFLICT',
   DT001: 'NOT_FOUND',
   DT002: 'CONFLICT',
   DT003: 'INVALID_TIME_RANGE',
@@ -80,7 +82,7 @@ const EXPECTED_COMMAND_ERRORS: Readonly<Record<string, string>> = {
 
 const EXPECTED_COMMAND_MESSAGES: Readonly<Record<string, string>> = {
   ALREADY_RECORDED: 'Plan already has an active record.',
-  CONFLICT: 'This item was updated elsewhere. Reload the latest data.',
+  CONFLICT: 'This item is busy or was updated elsewhere. Reload the latest data and try again.',
   FORBIDDEN: 'This item cannot be changed.',
   INVALID_INPUT: 'The timeblock input is invalid.',
   INVALID_TIME_RANGE: 'Time range end must be after start.',

@@ -38,95 +38,42 @@ export async function countTagAssociations(
 }
 
 /**
- * タグ削除時の関連 Plan / Record 処理（reassign / delete_blocks）を適用する
+ * 関連 Plan / Record 処理とタグ削除を同じDB transactionで適用する
  */
-export async function applyTagStrategy(options: {
+export async function deleteTagsWithStrategy(options: {
   userId: string;
   tagIds: string[];
-  strategy: TagDeleteStrategy;
+  strategy: TagDeleteStrategy | 'require_empty';
   targetTagId?: string | undefined;
-}): Promise<void> {
-  const { userId, tagIds, strategy, targetTagId } = options;
+  promoteChildren: boolean;
+}): Promise<number> {
+  const { userId, tagIds, strategy, targetTagId, promoteChildren } = options;
   const adminClient = createServiceRoleClient();
+  const { data: deletedCount, error } = await adminClient.rpc(
+    'delete_tags_with_timeblocks_command_v3',
+    {
+      p_promote_children: promoteChildren,
+      p_strategy: strategy,
+      p_tag_ids: tagIds,
+      p_target_tag_id: (targetTagId ?? null) as never,
+      p_user_id: userId,
+    },
+  );
 
-  if (strategy === 'reassign') {
-    if (!targetTagId) {
-      throw new TagServiceError('INVALID_INPUT', 'targetTagId is required for reassign strategy');
-    }
-    for (const table of [databaseTables.plans, databaseTables.records] as const) {
-      const { error } = await adminClient
-        .from(table)
-        .update({ tag_id: targetTagId })
-        .in('tag_id', tagIds)
-        .eq('user_id', userId);
-      if (error) {
-        throw createTagDatabaseError(
-          error,
-          'UPDATE_FAILED',
-          'Failed to reassign tag associations',
-          'reassign_tag_associations',
-        );
-      }
-    }
-    return;
-  }
-
-  const { data: plans, error: planLookupError } = await adminClient
-    .from('plans')
-    .select('id')
-    .in('tag_id', tagIds)
-    .eq('user_id', userId);
-  if (planLookupError) {
-    throw createTagDatabaseError(
-      planLookupError,
-      'FETCH_FAILED',
-      'Failed to inspect plans for tag deletion',
-      'inspect_tagged_plans',
-    );
-  }
-
-  const { error: recordDeleteError } = await adminClient
-    .from(databaseTables.records)
-    .delete()
-    .in('tag_id', tagIds)
-    .eq('user_id', userId);
-  if (recordDeleteError) {
-    throw createTagDatabaseError(
-      recordDeleteError,
-      'DELETE_FAILED',
-      'Failed to delete tagged records',
-      'delete_tagged_records',
-    );
-  }
-
-  const planIds = (plans ?? []).map((plan) => plan.id);
-  if (planIds.length > 0) {
-    const { error: detachError } = await adminClient
-      .from(databaseTables.records)
-      .update({ plan_id: null })
-      .in('plan_id', planIds)
-      .eq('user_id', userId);
-    if (detachError) {
-      throw createTagDatabaseError(
-        detachError,
-        'UPDATE_FAILED',
-        'Failed to detach records from deleted plans',
-        'detach_records_from_deleted_plans',
+  if (error || deletedCount === null) {
+    if (error !== null && typeof error === 'object' && 'code' in error && error.code === 'DT014') {
+      throw new TagServiceError(
+        'INVALID_INPUT',
+        'Tag has associated blocks. Specify a deletion strategy.',
       );
     }
-  }
-
-  const { error: planDeleteError } = await adminClient
-    .from('plans')
-    .delete()
-    .in('tag_id', tagIds)
-    .eq('user_id', userId);
-  if (planDeleteError) {
     throw createTagDatabaseError(
-      planDeleteError,
+      error ?? { message: 'Tag deletion command returned no result' },
       'DELETE_FAILED',
-      'Failed to delete tagged plans',
-      'delete_tagged_plans',
+      'Failed to delete tags and associated blocks',
+      'delete_tags_with_timeblocks',
     );
   }
+
+  return deletedCount;
 }

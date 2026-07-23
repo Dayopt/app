@@ -640,7 +640,7 @@ export type Database = {
           event_type: string;
           id?: string;
           processed_at?: string | null;
-          status?: 'processing' | 'processed' | 'failed';
+          status?: string;
         };
         Update: {
           claimed_at?: string;
@@ -1123,6 +1123,14 @@ export type Database = {
         };
       };
       custom_access_token_hook: { Args: { event: Json }; Returns: Json };
+      delete_all_user_data_command_v1: {
+        Args: { p_user_id: string };
+        Returns: boolean;
+      };
+      delete_all_user_data_command_v2: {
+        Args: { p_user_id: string };
+        Returns: boolean;
+      };
       delete_plan_command_v1: {
         Args: {
           p_expected_updated_at: string;
@@ -1178,6 +1186,34 @@ export type Database = {
           isOneToOne: false;
           isSetofReturn: true;
         };
+      };
+      delete_tags_with_timeblocks_command_v2: {
+        Args: {
+          p_promote_children: boolean;
+          p_strategy: string;
+          p_tag_ids: string[];
+          p_target_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: number;
+      };
+      delete_tags_with_timeblocks_command_v3: {
+        Args: {
+          p_promote_children: boolean;
+          p_strategy: string;
+          p_tag_ids: string[];
+          p_target_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: number;
+      };
+      delete_user_timeblocks_command_v1: {
+        Args: { p_user_id: string };
+        Returns: number;
+      };
+      delete_user_timeblocks_command_v2: {
+        Args: { p_user_id: string };
+        Returns: number;
       };
       disable_oauth_connection_writes_v1: {
         Args: { p_connection_id: string };
