@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-15
+last_verified: 2026-07-23
 code: apps/product/src/features/timeblock
 ---
 
@@ -27,7 +27,9 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 - 保存ボタンは表示しない
 - タグは選択の確定時、日時は編集可能な状態で有効な日付・開始・終了が確定した時に自動保存する
 - メモは入力停止から600ms後に自動保存し、フォーカス解除または Inspector を閉じる時は待機中の内容を即時保存する
-- 更新は直列に実行し、保存待ちの変更は最新値へまとめる。自動保存中も入力を無効化しない
+- 更新は直列に実行し、保存待ちの変更は最新値へまとめる。各更新は表示開始時のraw `updated_at`をversionとして送り、DBが返したversionで次の更新を行う
+- 他経路の更新と競合した場合は最新行を再取得する。再取得にも失敗した間は編集を凍結し、古いversionで上書きしない
+- 自動保存中も入力を無効化しない。ただし未解決のversion競合中は追加のwriteを送らない
 - 「そのまま記録」は表示中のタグ・メモを保存キューの末尾で確定し、その保存に成功してから Record を作る。保存失敗時は記録しない
 - 過去 Plan は日時を読み取り専用にし、タグ・メモの訂正と記録操作は維持する
 
@@ -57,7 +59,7 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 
 - **ワンタップ「そのまま記録」** — Plan の時間帯をそのままコピーし、`source = 'from_plan'` の Record を1件作成する。active な関連 Record がある Plan には重ねて作成しない
 - **Record レーンへのドラッグ** — ドロップ時のプレビュー範囲を使い、`source = 'manual'` かつ元 Plan の `plan_id` を持つ Record を作成する。元 Plan の時間は変更せず、Record 同士が重ならない範囲で同じ Plan に複数の Record を紐づけられる
-- **一括「この日を確定」** — その日の未記録 Plan をまとめて `confirm_day_plans_to_records` で Record 化
+- **一括「この日を確定」** — その日の未記録 Plan をまとめて`confirm_day_plans_command_v1`でRecord化する。DSTを含む1日範囲として26時間を上限にする
 
 ワンタップは予定どおりの時間を1件で確定する導線、Record レーンへのドラッグは実際の時間帯や分割した作業を記録する導線として使い分ける。
 
@@ -95,7 +97,13 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 
 ## DB 契約
 
-物理 DB、正本 RPC、生成型は Record に統一済み。テーブルは `records`、一括確定は `confirm_day_plans_to_records`、soft delete / restore は `soft_delete_record` / `restore_record` を使う。旧 `logs` view と Log 名 RPC alias は存在しない。
+物理DB、正本command、生成型はRecordに統一済み。テーブルは`records`、通常UIのPlan / Record writeは`*_command_v1`をservice-owned adapter経由で実行する。一括確定は`confirm_day_plans_command_v1`を使う。update / soft delete / restore / skip / record化はraw `updated_at`のexact CASを必須とする。
+
+authenticated直接DMLと旧CASなしwrite RPCはrolling deploy互換のためDB上に一時的に残るが、現在のアプリケーション契約ではない。旧deploymentのdrain確認後に別migrationでrevokeする。旧`logs` viewとLog名RPC aliasは存在しない。
+
+タグ削除・再割当て・mergeは複数Plan / Recordを一括で扱うservice-owned例外writerであり、単行commandへは載せない。再割当て・merge・detachはDBの`updated_at` triggerでversionを進め、通常UIや外部writeが古いversionを上書きできないようにする。タグと一緒にブロックを削除する明示操作だけはhard deleteを行う。
+
+Settingsの「すべてのブロックを削除」と「すべてのデータを削除」もservice-ownedの明示的hard deleteであり、単行commandのsoft deleteとは別契約とする。並行する単行writeとはDB row lockで直列化し、削除操作が後なら最終状態は削除済みになる。
 
 ## 過去 Plan の時間凍結
 
