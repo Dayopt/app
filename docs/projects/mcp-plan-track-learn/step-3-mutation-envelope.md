@@ -16,12 +16,12 @@ OAuth MCPの1回のwrite tool callを、現在の接続権限を再検証した�
 
 ## Current implementation slice
 
-- Plan create/update/delete/restoreのtyped DB applyとserver-only adapterはローカル実装済み。global controlはOFFのままで、MCP toolには未登録
-- 同一operationの直列・並列retry、異なるpayloadでのoperation ID再利用、90日window、再authorization、token/connection/Pro/global gate失効、account削除、通常UI commandとのcreate/update/delete/restore raceをintegration testで検証済み
-- updateはfield省略と明示的`null`を区別し、外部calendar bindingとsourceをpublic inputから変更できないまま維持する。digestは展開後のDB rowではなくpublic requestのfield presenceを含めて固定する
-- domain command完了後、receipt insert前にauthorization期限を再検証し、command中にconnection/token/reauth期限を跨いだPlan mutationが全体rollbackされることを4操作で検証済み
+- Plan / Recordのcreate/update/delete/restoreに対するtyped DB applyとserver-only adapterはローカル実装済み。global controlはOFFのままで、MCP toolには未登録
+- Planでは同一operationの直列・並列retry、Recordでは4操作のhistorical success replayを検証済み。共通envelopeについて異なるpayloadでのoperation ID再利用、90日window、再authorization、token/connection/Pro/global gate失効、account削除を、domain側では通常UI commandとのPlan / Record create/update/delete/restore raceをintegration testで検証済み
+- updateはfield省略と明示的`null`を区別し、外部calendar bindingとsourceをpublic inputから変更できないまま維持する。RecordのPlan linkはcreate時だけ受け付け、completed Plan以外は`PLAN_NOT_RECORDABLE`で拒否する。digestは展開後のDB rowではなくpublic requestのfield presenceを含めて固定する
+- domain command完了後、receipt insert前にauthorization期限を再検証し、command中にconnection/token/reauth期限を跨いだPlan / Record mutationが全体rollbackされることを8操作で検証済み
 - adapterはraw service-role clientとPostgREST builderを公開せず、operation固有methodからplain resultだけを返す。versioned receiptのresource IDをrequest対象へbindし、DB message・title・note・tokenをerror / log / Sentryへ渡さない。deadlockだけを同じoperation IDで一度再試行する
-- Record全操作、実HTTP二経路、外部変更cache反映、Settings hard deleteとのserializationは未実装
+- 実HTTP二経路、get/trash、authenticated ACL cutover、外部変更cache反映、Settings hard deleteとのserializationは未実装
 
 ## Minimum Viable Approach
 
@@ -132,7 +132,7 @@ WHERE record.deleted_at IS NULL
 ## Existing Code to Reuse
 
 - `apps/product/src/lib/mcp/auth.ts` — token/connection bindingとruntime client gate
-- `apps/product/src/lib/mcp/mutation-contract.ts` — Plan mutation input、最小receipt、stable error contract
+- `apps/product/src/lib/mcp/mutation-contract.ts` — Plan / Record mutation input、最小receipt、stable error contract
 - `apps/product/src/lib/mcp/mutation-db.ts` — raw service-role capabilityを閉じ込めたoperation固有DB adapter
 - `apps/product/src/lib/mcp/mutation-client.ts` — deadlock retryとDB error正規化を担うserver-only client
 - `apps/product/src/app/api/mcp/_tools/registry.ts` — 現在のscope requirement registry。tool registrationとの一元化対象
@@ -143,6 +143,9 @@ WHERE record.deleted_at IS NULL
 - `supabase/migrations/20260722235621_timeblock_command_hardening.sql` — skip/link invariantとrace hardening
 - `supabase/migrations/20260723123000_mcp_plan_mutations_apply.sql` — Plan create/update/delete/restoreのtyped applyとreceipt replay
 - `supabase/migrations/20260723123100_recheck_mcp_plan_create_authority.sql` — Plan createのdomain command後authorization期限再検証
+- `supabase/migrations/20260723123200_recordable_plan_error_contract.sql` — Record link先Planの状態エラーを`DT013`へ分離
+- `supabase/migrations/20260723123300_recordable_plan_trigger_error_contract.sql` — direct triggerも同じ`DT013`契約へ統一
+- `supabase/migrations/20260723123400_mcp_record_mutations_apply.sql` — Record create/update/delete/restoreのtyped applyとreceipt replay
 - `supabase/migrations/20260514000918_mcp_phase_1_5.sql` — read tool call auditの既存出発点
 - `packages/billing/src/subscription.ts` — Pro entitlement status集合
 
