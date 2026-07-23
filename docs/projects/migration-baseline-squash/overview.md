@@ -220,17 +220,26 @@ supabase db diff --linked
 
 ```bash
 psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -At -F',' \
-  -c "select id, public, file_size_limit, array_to_string(allowed_mime_types, '|')
-      from storage.buckets order by id;" > /tmp/buckets-local.csv
-# 手順 1 の production スナップショットを同じ形式で /tmp/buckets-prod.csv に保存しておく
-diff /tmp/buckets-local.csv /tmp/buckets-prod.csv    # 差分ゼロが合格
+  -c "select tgname from pg_trigger
+      where not tgisinternal and tgrelid = 'auth.users'::regclass order by tgname;" \
+  > /tmp/auth-triggers-local.csv
+# storage.objects のポリシー、table GRANT も同様に読み出して production 側と diff する
 ```
 
-同じ要領で、`db dump` から落ちる残り 3 種もローカルから読み戻して production スナップショットと突き合わせる。**ここが手順 3 の唯一の機械的な検証点**になる。
+この読み戻しで検証できるのは、**config.toml が作らないオブジェクトだけ**である。
 
 - `auth.users` の非内部トリガー（`pg_trigger` / `tgisinternal = false`）
 - `storage.objects` の RLS ポリシー（`pg_policies` の `qual` / `with_check` を含む全定義）
 - table GRANT（`information_schema.role_table_grants`）— 前回はここが漏れて実障害になった
+
+#### `storage.buckets` だけはローカル読み戻しで検証できない
+
+`supabase/config.toml` の `[storage.buckets.avatars]` は `db reset` 時にローカルへ適用される。したがって **baseline の `INSERT` が抜けていても、ローカルの `storage.buckets` は config.toml 由来の正しい値を返す**。ローカルを読んでも合格してしまい、欠落は Preview / 新規 project でだけ表面化する。
+
+bucket は次の 2 つで検証する。ローカル DB の読み戻しを合格根拠にしない。
+
+1. **生成物そのものを検査する** — `00000000000000_baseline.sql` 内の `INSERT INTO storage.buckets` を直接読み、手順 1 のスナップショットと全カラムを突き合わせる（`grep -A5 'INSERT INTO storage.buckets' supabase/migrations/00000000000000_baseline.sql`）
+2. **PR だけから構築された環境で読む** — 手順 8 の Preview branch で `storage.buckets` を読み出して production スナップショットと diff する。config.toml の影響を受けない唯一の実環境検証
 
 **いずれかで差分が出た場合は squash を中止し、原因を先に潰す。**
 
@@ -238,10 +247,14 @@ diff /tmp/buckets-local.csv /tmp/buckets-prod.csv    # 差分ゼロが合格
 
 **production の履歴を触る前に、新 baseline 1 ファイルの状態を main へ merge する。** 順序を逆にしてはならない。
 
-- **merge が先**（正しい順序）: main は 1 ファイル、production 履歴は 142 行。integration は `00000000000000` を適用済みと判定し、未適用の migration はないので何もしない。余分な履歴行が残るだけで無害
-- **repair が先**（危険）: production 履歴が 1 行になった時点で main にはまだ 141 件の SQL が残る。この状態で何かが deploy されると、**適用済みの SQL を再実行しにいって失敗する**
+手順 6 と 7 の間には、main（1 ファイル）と production 履歴（142 行）が食い違う窓が必ず生じる。**どちらの順序でも窓は避けられない**ので、失敗の質で選ぶ。
 
-merge 後、production への deploy が no-op で完了したことを確認してから手順 7 へ進む。
+- **merge が先**（採用）: production 履歴に、ローカルに存在しない 141 version が残る。pin 版 CLI はこの状態を `missing-local` と判定し、`Remote migration versions not found in local migrations directory.` で**失敗して停止する**（バイナリ内の文字列で確認済み）。何も適用されない
+- **repair が先**（不採用）: production 履歴が 1 行になった時点で main にはまだ 141 件の SQL が残る。CLI はこれらを未適用と見なし、**適用済みの SQL を実際に再実行しにいく**。途中まで走って壊れる
+
+前者は「拒否して止まる」、後者は「壊しにいく」。前者を採る。
+
+> **merge 直後の deploy は失敗するのが正常。** これは異常ではなく、手順 7 を完了するまでの想定内の状態である。deploy の green を手順 7 の前提条件にしてはならない（構造上 green にならない）。merge と repair は**同じロック済みウィンドウ内で連続して実施し、間を空けない**。
 
 ### 7. production の履歴を合わせる
 
@@ -271,6 +284,8 @@ Preview branch は clean DB に migration を適用する方式なので、こ�
 - **avatars / attachments のアップロードと閲覧**ができること（storage ポリシー + bucket 行）
 - 通常のデータ読み書きが RLS を通ること（table GRANT）
 
+加えて、Preview branch の `storage.buckets` を全カラムで読み出し、手順 1 の production スナップショットと diff する。**config.toml の影響を受けない唯一の bucket 検証**であり、ここを通って初めて手順 3-3 が検証済みになる。
+
 ## preview branch / 新規環境への影響
 
 - **実施中の open PR**: 親の履歴が変わるため、squash 前に開いていた PR の Preview branch は不整合になる。既存 PR は squash 後に main を取り込んで Preview branch を作り直す
@@ -280,17 +295,17 @@ Preview branch は clean DB に migration を適用する方式なので、こ�
 
 ## リスクと可逆性
 
-| リスク                                      | 影響                                             | 対応                                                                                                    |
-| ------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `auth.users` トリガーの欠落                 | **新規登録でプロフィールが作られない**           | `db dump` が `auth` を除外する前提で手順 3-1 に組み込み + 手順 5 の読み戻し + 手順 8 の signup 実機確認 |
-| `storage.objects` ポリシーの欠落            | **ストレージのアクセス制御が消える**             | 同上（手順 3-2 / 手順 5 / 手順 8 のアップロード実機確認）                                               |
-| GRANT の欠落                                | **clean local / Preview のみ壊れる**（前例あり） | 手順 3-4 の明示確認 + 手順 5 の grant 読み戻し + 手順 8 の Preview 実機確認                             |
-| storage bucket の列の写経漏れ               | 新規環境だけバケット制約が緩む（前例あり）       | 手順 5 でローカルから読み戻し production スナップショットと突合（`db diff` では検出不可）               |
-| dump 出力が production スキーマとずれる     | 新規環境だけ壊れる                               | 手順 5 の差分ゼロ確認を通過ゲートにする。ずれたら中止                                                   |
-| 退避漏れ（年リテラル等）                    | 適用済み SQL の再実行を招く                      | 手順 4 の年非依存コマンド + 件数突合                                                                    |
-| `migration repair` の対象漏れ               | production 履歴とローカルが不一致                | 手順 8 の `migration list --linked` で一致を確認                                                        |
-| repair を merge より先に打つ                | **適用済み SQL の再実行で適用経路が閉塞**        | 手順 6（merge）を手順 7（repair）の前段ゲートにする + 実施ウィンドウ中の main merge 凍結                |
-| squash 直後に hotfix migration が必要になる | 手順が輻輳する                                   | 判定基準 3（リリース直後の静穏期）で回避                                                                |
+| リスク                                      | 影響                                             | 対応                                                                                                                                        |
+| ------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth.users` トリガーの欠落                 | **新規登録でプロフィールが作られない**           | `db dump` が `auth` を除外する前提で手順 3-1 に組み込み + 手順 5 の読み戻し + 手順 8 の signup 実機確認                                     |
+| `storage.objects` ポリシーの欠落            | **ストレージのアクセス制御が消える**             | 同上（手順 3-2 / 手順 5 / 手順 8 のアップロード実機確認）                                                                                   |
+| GRANT の欠落                                | **clean local / Preview のみ壊れる**（前例あり） | 手順 3-4 の明示確認 + 手順 5 の grant 読み戻し + 手順 8 の Preview 実機確認                                                                 |
+| storage bucket の列の写経漏れ               | 新規環境だけバケット制約が緩む（前例あり）       | baseline SQL の直接検査（手順 5）+ Preview branch での読み戻し（手順 8）。**ローカル読み戻しは config.toml が値を補うため合格根拠にしない** |
+| dump 出力が production スキーマとずれる     | 新規環境だけ壊れる                               | 手順 5 の差分ゼロ確認を通過ゲートにする。ずれたら中止                                                                                       |
+| 退避漏れ（年リテラル等）                    | 適用済み SQL の再実行を招く                      | 手順 4 の年非依存コマンド + 件数突合                                                                                                        |
+| `migration repair` の対象漏れ               | production 履歴とローカルが不一致                | 手順 8 の `migration list --linked` で一致を確認                                                                                            |
+| repair を merge より先に打つ                | **適用済み SQL の再実行で適用経路が閉塞**        | 手順 6（merge）を手順 7（repair）の前段ゲートにする + 実施ウィンドウ中の main merge 凍結                                                    |
+| squash 直後に hotfix migration が必要になる | 手順が輻輳する                                   | 判定基準 3（リリース直後の静穏期）で回避                                                                                                    |
 
 **可逆性は `[hours]`**。roll-forward を基本とする。
 
@@ -316,8 +331,8 @@ production の `supabase_migrations.schema_migrations` を書き換えるため�
 - [ ] **承認** — 対象（production project `yvglwblxrnrenfifsnje`）・環境・操作（退避分への `migration repair --status reverted`）を特定した明示指示を得る
 - [ ] **独立レビュー** — `risk-reviewer` に手順書と repair 対象 version 一覧をレビューさせ、結果を実施 issue に貼る（AGENTS.md の Read-only delegation で `migration` は自動委任条件）
 - [ ] **backup** — 手順 1 の `schema_migrations` 全行スナップショットを取得済みで、実施 issue に貼ってある
-- [ ] **Preview / dry-run** — 手順 5 の差分ゼロ（型 / `db diff` / **auth トリガー・storage ポリシー・bucket 行・GRANT の読み戻し**）と手順 8 の Preview 実機確認（signup とアップロードを含む）を通過ゲートとし、各出力を PR に貼る
-- [ ] **merge 順序** — 手順 6（main へ merge）を手順 7（production の repair）より先に済ませる。逆順は適用済み SQL の再実行を招く
+- [ ] **Preview / dry-run** — 手順 5 の差分ゼロ（型 / `db diff` / **auth トリガー・storage ポリシー・GRANT の読み戻し** / baseline SQL 内の bucket 行の直接検査）と手順 8 の Preview 実機確認（signup・アップロード・bucket 読み戻し）を通過ゲートとし、各出力を PR に貼る
+- [ ] **merge 順序** — 手順 6（main へ merge）を手順 7（production の repair）より先に済ませ、**同じロック済みウィンドウ内で連続実施する**。逆順は適用済み SQL の再実行を招く。merge 直後の deploy 失敗（`missing-local`）は想定内であり、これを green にすることを手順 7 の前提にしない
 - [ ] **roll-forward** — §リスクと可逆性 の復帰手順を、backup から生成した version 一覧付きで実施 issue に転記する（ファイルを先に戻す順序を含む）
 - [ ] 上記のいずれかを満たせない場合は**実施しない**。現実的な failure mode を報告して中止する
 
