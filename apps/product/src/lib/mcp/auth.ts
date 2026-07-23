@@ -4,7 +4,6 @@ import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import {
   OAuthServerError,
-  createOAuthDbClient,
   hashToken,
   isClientWriteEnabled,
   isSupportedScope,
@@ -15,6 +14,8 @@ import {
   type SupportedScope,
 } from '@/lib/oauth-server';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
+
+import { createMcpAccessDbClient } from './access-db';
 
 interface VerifiedAccessToken {
   tokenId: string;
@@ -35,7 +36,7 @@ interface VerifiedAccessToken {
  */
 export async function verifyAccessToken(token: string): Promise<VerifiedAccessToken> {
   const tokenHash = hashToken(token);
-  const db = createOAuthDbClient();
+  const db = createMcpAccessDbClient();
 
   const { data: row, error } = await db
     .from(databaseTables.oauthTokens)
@@ -67,7 +68,7 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
   const { data: connection, error: connectionError } = await db
     .from(databaseTables.oauthConnections)
     .select(
-      'id, user_id, client_id, resource_uri, scopes, write_enabled_at, revoked_at, reauth_required_at',
+      'id, user_id, client_id, resource_uri, scopes, write_enabled_at, write_disabled_at, revoked_at, reauth_required_at',
     )
     .eq('id', row.connection_id)
     .eq('user_id', row.user_id)
@@ -96,20 +97,18 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
     throw new OAuthServerError('invalid_grant', 'OAuth connection is no longer authorized', 401);
   }
 
-  const effectiveScopes = tokenScopes.filter((scope) => connectionScopes.includes(scope));
-  const clientFilteredScopes = isClientWriteEnabled(client.id)
-    ? effectiveScopes
-    : effectiveScopes.filter(
-        (scope) => !scope.startsWith('write:') && !scope.startsWith('delete:'),
-      );
+  const connectionFilteredScopes = tokenScopes
+    .filter((scope) => connectionScopes.includes(scope))
+    .filter(
+      (scope) =>
+        !isWriteScope(scope) ||
+        (isClientWriteEnabled(client.id) &&
+          Boolean(connection.write_enabled_at) &&
+          !connection.write_disabled_at),
+    );
+  const activeScopes = await applyGlobalWriteGate(db, connectionFilteredScopes);
 
-  if (
-    clientFilteredScopes.length === 0 ||
-    (clientFilteredScopes.some(
-      (scope) => scope.startsWith('write:') || scope.startsWith('delete:'),
-    ) &&
-      !connection.write_enabled_at)
-  ) {
+  if (activeScopes.length === 0) {
     throw new OAuthServerError('invalid_grant', 'OAuth connection has no active scopes', 401);
   }
 
@@ -120,10 +119,37 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
     connectionId: connection.id,
     userId: row.user_id,
     clientId: client.id,
-    scopes: clientFilteredScopes,
+    scopes: activeScopes,
     resourceUri: tokenResource,
     expiresAt: Math.floor(expiresAtMs / 1000),
   };
+}
+
+function isWriteScope(scope: SupportedScope): boolean {
+  return scope.startsWith('write:') || scope.startsWith('delete:');
+}
+
+async function applyGlobalWriteGate(
+  db: ReturnType<typeof createMcpAccessDbClient>,
+  scopes: SupportedScope[],
+): Promise<SupportedScope[]> {
+  if (!scopes.some(isWriteScope)) return scopes;
+
+  const { data: control, error } = await db
+    .from(databaseTables.mcpMutationControl)
+    .select('writes_enabled')
+    .eq('singleton_key', true)
+    .maybeSingle();
+
+  if (error) {
+    captureUnexpectedDatabaseError(error, {
+      feature: 'mcp',
+      operation: 'verify_mcp_mutation_control',
+    });
+    logger.warn('MCP mutation control verification failed');
+  }
+
+  return control?.writes_enabled ? scopes : scopes.filter((scope) => !isWriteScope(scope));
 }
 
 function parseStoredScopes(scopes: string[]): SupportedScope[] | null {
@@ -142,7 +168,7 @@ function throwDatabaseVerificationError(error: unknown, operation: string): neve
 }
 
 function updateUsageTimestamps(
-  db: ReturnType<typeof createOAuthDbClient>,
+  db: ReturnType<typeof createMcpAccessDbClient>,
   tokenId: string,
   connectionId: string,
 ): void {

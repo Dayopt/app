@@ -111,6 +111,80 @@ export type Database = {
         };
         Relationships: [];
       };
+      mcp_mutation_control: {
+        Row: {
+          changed_at: string;
+          revision: number;
+          singleton_key: boolean;
+          writes_enabled: boolean;
+        };
+        Insert: {
+          changed_at?: string;
+          revision?: number;
+          singleton_key?: boolean;
+          writes_enabled?: boolean;
+        };
+        Update: {
+          changed_at?: string;
+          revision?: number;
+          singleton_key?: boolean;
+          writes_enabled?: boolean;
+        };
+        Relationships: [];
+      };
+      mcp_mutation_receipts: {
+        Row: {
+          applied_at: string;
+          client_id: string;
+          envelope_version: number;
+          operation_id: string;
+          origin_connection_id: string | null;
+          request_digest: string;
+          resource_deleted_at: string | null;
+          resource_id: string;
+          resource_type: string;
+          resource_version: string;
+          tool_name: string;
+          user_id: string;
+        };
+        Insert: {
+          applied_at?: string;
+          client_id: string;
+          envelope_version: number;
+          operation_id: string;
+          origin_connection_id?: string | null;
+          request_digest: string;
+          resource_deleted_at?: string | null;
+          resource_id: string;
+          resource_type: string;
+          resource_version: string;
+          tool_name: string;
+          user_id: string;
+        };
+        Update: {
+          applied_at?: string;
+          client_id?: string;
+          envelope_version?: number;
+          operation_id?: string;
+          origin_connection_id?: string | null;
+          request_digest?: string;
+          resource_deleted_at?: string | null;
+          resource_id?: string;
+          resource_type?: string;
+          resource_version?: string;
+          tool_name?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'mcp_mutation_receipts_origin_connection_id_fkey';
+            columns: ['origin_connection_id'];
+            isOneToOne: false;
+            referencedRelation: 'oauth_connections';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       mfa_recovery_codes: {
         Row: {
           code_hash: string;
@@ -240,6 +314,7 @@ export type Database = {
           scopes: string[];
           updated_at: string;
           user_id: string;
+          write_disabled_at: string | null;
           write_enabled_at: string | null;
         };
         Insert: {
@@ -258,6 +333,7 @@ export type Database = {
           scopes: string[];
           updated_at?: string;
           user_id: string;
+          write_disabled_at?: string | null;
           write_enabled_at?: string | null;
         };
         Update: {
@@ -276,6 +352,7 @@ export type Database = {
           scopes?: string[];
           updated_at?: string;
           user_id?: string;
+          write_disabled_at?: string | null;
           write_enabled_at?: string | null;
         };
         Relationships: [];
@@ -728,6 +805,10 @@ export type Database = {
         };
         Returns: string;
       };
+      cleanup_mcp_mutation_receipts_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
       confirm_day_plans_command_v1: {
         Args: {
           p_confirmed_at?: string;
@@ -926,6 +1007,10 @@ export type Database = {
           isOneToOne: false;
           isSetofReturn: true;
         };
+      };
+      disable_oauth_connection_writes_v1: {
+        Args: { p_connection_id: string };
+        Returns: string;
       };
       exchange_oauth_authorization_code_v2: {
         Args: {
@@ -1141,6 +1226,14 @@ export type Database = {
           scopes: string[];
           status: string;
           user_id: string;
+        }[];
+      };
+      set_mcp_mutation_control_v1: {
+        Args: { p_expected_revision: number; p_writes_enabled: boolean };
+        Returns: {
+          changed_at: string;
+          revision: number;
+          writes_enabled: boolean;
         }[];
       };
       set_plan_skipped_command_v1: {
