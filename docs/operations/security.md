@@ -332,12 +332,13 @@ CREATE TABLE audit_logs (
 
 ## CSP違反モニタリング
 
-ProductのCSPは`apps/product/src/proxy.ts`で強制し、違反は`/api/csp-report`へ送る。report endpointは公開入力境界として次を適用する。
+Product / WebのCSPは各appのsecurity header設定で強制し、違反は各appの`/api/csp-report`へ送る。report endpointは公開入力境界として次を適用する。
 
 - JSON bodyは16 KiBを上限とし、Zod schemaに合わないreportを400、上限超過を413で拒否する
 - ProductionではSHA-256化したIP単位20/分と全体120/分のUpstash rate limitを適用し、超過時は429、backend unavailable時はbodyを読まず503を返す
 - `application/csp-report`以外とProduct origin以外のdocument URIを拒否し、未知のdirectiveは`unknown`へ固定する
 - document / blocked / source URLからqueryとfragmentを除去し、ブラウザ拡張由来の違反はSentryへ送らない
+- WebではVercel Toolbarの`font-src`だけを、directive、blocked origin、source originがすべて一致する場合に除外し、missingやlookalike originを含むnear-missは送信する
 - 有効な違反だけを`csp-violation`として、directive単位の固定fingerprintでSentryへ送る
 
 ### 違反レポート確認

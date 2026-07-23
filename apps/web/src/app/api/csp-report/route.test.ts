@@ -111,31 +111,39 @@ describe('/api/csp-report', () => {
     expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
 
-  it('accepts the exact Vercel Toolbar font violation without sending it to Sentry', async () => {
-    const report = {
-      ...validReport,
-      'csp-report': {
-        ...validReport['csp-report'],
-        'violated-directive': "font-src 'self'",
-        'blocked-uri': 'https://vercel.live/geist.woff2',
-        'source-file': 'https://vercel.live/_next-live/feedback/instrument.js',
-      },
-    };
+  it.each(['geist.woff2', 'geist_mono.woff2'])(
+    'accepts Vercel Toolbar font %s without sending it to Sentry',
+    async (fontPath) => {
+      const report = {
+        ...validReport,
+        'csp-report': {
+          ...validReport['csp-report'],
+          'violated-directive': "font-src 'self'",
+          'blocked-uri': `https://vercel.live/${fontPath}`,
+          'source-file': 'https://vercel.live/_next-live/feedback/instrument.js',
+        },
+      };
 
-    expect((await POST(createRequest(JSON.stringify(report)))).status).toBe(200);
-    expect(Sentry.captureMessage).not.toHaveBeenCalled();
-  });
+      expect((await POST(createRequest(JSON.stringify(report)))).status).toBe(200);
+      expect(Sentry.captureMessage).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     ['font-src', 'https://fonts.example.com/geist.woff2', 'https://vercel.live/instrument.js'],
     ['font-src', 'https://vercel.live/geist.woff2', 'https://dayopt.app/_next/app.js'],
+    ['script-src', 'https://vercel.live/geist.woff2', 'https://vercel.live/instrument.js'],
     [
       'font-src',
-      'https://vercel.live/another-font.woff2',
-      'https://vercel.live/_next-live/feedback/instrument.js',
+      'https://vercel.live.attacker.example/geist.woff2',
+      'https://vercel.live/instrument.js',
     ],
-    ['font-src', 'https://vercel.live/geist.woff2', 'https://vercel.live/another/instrument.js'],
-    ['script-src', 'https://vercel.live/geist.woff2', 'https://vercel.live/instrument.js'],
+    [
+      'font-src',
+      'https://vercel.live/geist.woff2',
+      'https://vercel.live.attacker.example/instrument.js',
+    ],
+    ['font-src', 'https://vercel.live/geist.woff2', undefined],
   ])(
     'captures near-miss Toolbar reports (%s, %s, %s)',
     async (directive, blockedUri, sourceFile) => {

@@ -4,6 +4,7 @@
 
 import { sanitizeTechnicalContext, type TechnicalErrorContext } from '@dayopt/observability';
 import * as Sentry from '@sentry/nextjs';
+import { isAuthSessionMissingError } from '@supabase/auth-js';
 
 interface CaptureErrorContext extends TechnicalErrorContext {
   userId?: string;
@@ -96,6 +97,8 @@ const EXPECTED_AUTH_ERROR_CODES = new Set([
 ]);
 
 export function isExpectedAuthError(error: unknown): boolean {
+  if (isAuthSessionMissingError(error)) return true;
+
   const code = authErrorCode(error);
   if (code && EXPECTED_AUTH_ERROR_CODES.has(code)) return true;
 
