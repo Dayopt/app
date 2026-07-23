@@ -849,6 +849,92 @@ export type Database = {
           version: string;
         }[];
       };
+      apply_mcp_record_create_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_end_at: string;
+          p_note: string;
+          p_operation_id: string;
+          p_plan_id: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
+      apply_mcp_record_delete_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_expected_updated_at: string;
+          p_operation_id: string;
+          p_record_id: string;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
+      apply_mcp_record_restore_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_expected_updated_at: string;
+          p_operation_id: string;
+          p_record_id: string;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
+      apply_mcp_record_update_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_end_at: string;
+          p_end_at_present: boolean;
+          p_expected_updated_at: string;
+          p_note: string;
+          p_note_present: boolean;
+          p_operation_id: string;
+          p_record_id: string;
+          p_start_at: string;
+          p_start_at_present: boolean;
+          p_tag_id: string;
+          p_tag_id_present: boolean;
+          p_title: string;
+          p_title_present: boolean;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
       assert_active_timeblock_tag_v1: {
         Args: { p_tag_id: string; p_user_id: string };
         Returns: undefined;
