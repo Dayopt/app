@@ -71,6 +71,7 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 - 差分バッジは中立色とし、正負は符号と方向アイコンで示す
 - 差分パネルを開いている間は、一覧対象のPlan / Recordカードへcompare markerを表示する
 - `plan_id` がない Record は予定外の記録として扱い、Plan との差分バッジは表示しない
+- Record自身の終了が未来なら`RECORD_IN_FUTURE`、終了していないPlanへのリンクなら`PLAN_NOT_RECORDABLE`として区別する
 
 ## コピー / 貼り付け
 

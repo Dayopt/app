@@ -40,6 +40,7 @@ const EXPECTED_ERROR_CODES: Readonly<Record<string, McpMutationErrorCode>> = {
   DT009: 'FORBIDDEN',
   DT011: 'ALREADY_RECORDED',
   DT012: 'INVALID_INPUT',
+  DT013: 'PLAN_NOT_RECORDABLE',
 };
 
 const ERROR_MESSAGES: Readonly<Record<McpMutationErrorCode, string>> = {
@@ -53,6 +54,7 @@ const ERROR_MESSAGES: Readonly<Record<McpMutationErrorCode, string>> = {
   MUTATION_FAILED: 'Dayopt could not apply the change.',
   NOT_FOUND: 'The requested item was not found.',
   PLAN_IN_PAST: 'Plans must end in the future.',
+  PLAN_NOT_RECORDABLE: 'Records can only link to completed plans.',
   PLAN_TIME_LOCKED: 'Past plan time fields cannot be changed.',
   PRO_REQUIRED: 'Dayopt Pro is required for MCP changes.',
   RECORD_IN_FUTURE: 'Records cannot end in the future.',

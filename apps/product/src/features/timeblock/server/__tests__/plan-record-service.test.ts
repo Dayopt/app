@@ -674,7 +674,7 @@ describe('RecordService.create', () => {
   it('future plan への紐づけを拒否する', async () => {
     const { service } = createRecordService();
     commandMocks.createRecord.mockRejectedValue(
-      new TimeblockServiceError('RECORD_IN_FUTURE', 'Future plans cannot have linked records.'),
+      new TimeblockServiceError('PLAN_NOT_RECORDABLE', 'Records can only link to completed plans.'),
     );
 
     await expect(
@@ -688,7 +688,7 @@ describe('RecordService.create', () => {
           end_at: '2026-03-17T11:00:00.000Z',
         },
       }),
-    ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
+    ).rejects.toMatchObject({ code: 'PLAN_NOT_RECORDABLE' });
   });
 
   it('skip済みplanへの紐づけを拒否する', async () => {
@@ -716,7 +716,7 @@ describe('RecordService.create', () => {
     const { service, mockSupabase } = createRecordService();
     mockSupabase.from.mockReturnValue(createChainableMock(existing));
     commandMocks.updateRecord.mockRejectedValue(
-      new TimeblockServiceError('RECORD_IN_FUTURE', 'Future plans cannot have linked records.'),
+      new TimeblockServiceError('PLAN_NOT_RECORDABLE', 'Records can only link to completed plans.'),
     );
 
     await expect(
@@ -726,7 +726,7 @@ describe('RecordService.create', () => {
         expectedUpdatedAt: existing.updated_at,
         input: { planId: 'plan-1' },
       }),
-    ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
+    ).rejects.toMatchObject({ code: 'PLAN_NOT_RECORDABLE' });
   });
 });
 

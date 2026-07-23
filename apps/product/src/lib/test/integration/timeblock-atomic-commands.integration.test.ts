@@ -375,6 +375,58 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
     expect(plan.id).not.toBe(record.id);
   });
 
+  it('distinguishes a future Record from a Record linked to a future Plan', async () => {
+    const plan = await createPlan({
+      title: 'Future link target',
+      startAt: at(60 * 60_000),
+      endAt: at(2 * 60 * 60_000),
+    });
+    const base = {
+      p_user_id: userId,
+      p_title: 'Record error contract',
+      p_note: dbNull,
+      p_tag_id: dbNull,
+      p_external_calendar_event_id: dbNull,
+      p_source: 'api',
+    };
+
+    const { error: futureRecordError } = await admin.rpc('create_record_command_v1', {
+      ...base,
+      p_plan_id: dbNull,
+      p_start_at: at(60 * 60_000),
+      p_end_at: at(2 * 60 * 60_000),
+    });
+    const { error: futurePlanError } = await admin.rpc('create_record_command_v1', {
+      ...base,
+      p_plan_id: plan.id,
+      p_start_at: at(-2 * 60 * 60_000),
+      p_end_at: at(-60 * 60_000),
+    });
+    const { error: directFuturePlanError } = await admin.from('records').insert({
+      user_id: userId,
+      title: 'Legacy direct writer',
+      plan_id: plan.id,
+      source: 'api',
+      start_at: at(-4 * 60 * 60_000),
+      end_at: at(-3 * 60 * 60_000),
+    });
+    const unlinked = await createRecord({
+      title: 'Legacy direct update',
+      startAt: at(-6 * 60 * 60_000),
+      endAt: at(-5 * 60 * 60_000),
+      source: 'api',
+    });
+    const { error: directRelinkError } = await admin
+      .from('records')
+      .update({ plan_id: plan.id })
+      .eq('id', unlinked.id);
+
+    expect(futureRecordError?.code).toBe('DT005');
+    expect(futurePlanError?.code).toBe('DT013');
+    expect(directFuturePlanError?.code).toBe('DT013');
+    expect(directRelinkError?.code).toBe('DT013');
+  });
+
   it('allows either Record restore or overlapping create, never both', async () => {
     const startAt = at(-9 * 60 * 60_000);
     const endAt = at(-8 * 60 * 60_000);

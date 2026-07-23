@@ -59,6 +59,7 @@ export type McpMutationErrorCode =
   | 'MUTATION_FAILED'
   | 'NOT_FOUND'
   | 'PLAN_IN_PAST'
+  | 'PLAN_NOT_RECORDABLE'
   | 'PLAN_TIME_LOCKED'
   | 'PRO_REQUIRED'
   | 'RECORD_IN_FUTURE'

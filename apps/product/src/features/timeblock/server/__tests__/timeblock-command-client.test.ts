@@ -112,6 +112,31 @@ describe('TimeblockCommandClient', () => {
     ).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 
+  it('未来PlanへのRecordリンクをRecord自身の未来エラーと区別する', async () => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: 'DT013', message: 'private linked Plan detail' },
+    });
+    const client = new TimeblockCommandClient();
+
+    await expect(
+      client.createRecord({
+        userId: plan.user_id,
+        title: 'Linked Record',
+        note: null,
+        tagId: null,
+        planId: plan.id,
+        externalCalendarEventId: null,
+        source: 'api',
+        startAt: '2026-07-22T01:00:00.000000Z',
+        endAt: '2026-07-22T02:00:00.000000Z',
+      }),
+    ).rejects.toMatchObject({
+      code: 'PLAN_NOT_RECORDABLE',
+      message: 'Records can only link to completed plans.',
+    });
+  });
+
   it('confirm-dayの対象がなければ空配列を返す', async () => {
     rpc.mockResolvedValue({ data: [], error: null });
     const client = new TimeblockCommandClient();

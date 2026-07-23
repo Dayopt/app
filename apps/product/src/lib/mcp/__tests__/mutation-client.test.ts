@@ -218,6 +218,7 @@ describe('McpMutationClient', () => {
     ['22023', 'INVALID_INPUT'],
     ['DT003', 'INVALID_TIME_RANGE'],
     ['DT004', 'PLAN_IN_PAST'],
+    ['DT013', 'PLAN_NOT_RECORDABLE'],
     ['DT002', 'CONFLICT'],
     ['DT006', 'PLAN_TIME_LOCKED'],
     ['DT001', 'NOT_FOUND'],

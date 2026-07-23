@@ -75,6 +75,7 @@ const EXPECTED_COMMAND_ERRORS: Readonly<Record<string, string>> = {
   DT009: 'FORBIDDEN',
   DT011: 'ALREADY_RECORDED',
   DT012: 'INVALID_INPUT',
+  DT013: 'PLAN_NOT_RECORDABLE',
 };
 
 const EXPECTED_COMMAND_MESSAGES: Readonly<Record<string, string>> = {
@@ -85,6 +86,7 @@ const EXPECTED_COMMAND_MESSAGES: Readonly<Record<string, string>> = {
   INVALID_TIME_RANGE: 'Time range end must be after start.',
   NOT_FOUND: 'Timeblock not found.',
   PLAN_IN_PAST: 'Plans must end in the future.',
+  PLAN_NOT_RECORDABLE: 'Records can only link to completed plans.',
   PLAN_TIME_LOCKED: 'Past plan time fields cannot be changed.',
   RECORD_IN_FUTURE: 'Records cannot end in the future.',
   SKIP_IN_FUTURE: 'Future plans cannot be skipped. Delete the plan instead.',
