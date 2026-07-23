@@ -51,19 +51,19 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
     throwDatabaseVerificationError(error, 'verify_access_token');
   }
   if (!row || row.token_type !== 'access' || row.revoked_at) {
-    throw new OAuthServerError('invalid_grant', 'Access token is invalid', 401);
+    throw new OAuthServerError('invalid_token', 'Access token is invalid', 401);
   }
 
   const expiresAtMs = new Date(row.expires_at).getTime();
   if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
-    throw new OAuthServerError('invalid_grant', 'Access token expired', 401);
+    throw new OAuthServerError('invalid_token', 'Access token expired', 401);
   }
 
   const client = resolveClient(row.client_id);
   const tokenResource = resolveRequestedResource(row.resource_uri);
   const tokenScopes = parseStoredScopes(row.scopes);
   if (!client || !tokenResource || !tokenScopes) {
-    throw new OAuthServerError('invalid_grant', 'Access token binding is invalid', 401);
+    throw new OAuthServerError('invalid_token', 'Access token binding is invalid', 401);
   }
 
   const { data: connection, error: connectionError } = await db
@@ -95,7 +95,7 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
     !Number.isFinite(reauthRequiredAt) ||
     reauthRequiredAt <= Date.now()
   ) {
-    throw new OAuthServerError('invalid_grant', 'OAuth connection is no longer authorized', 401);
+    throw new OAuthServerError('invalid_token', 'OAuth connection is no longer authorized', 401);
   }
 
   const connectionFilteredScopes = tokenScopes
@@ -111,7 +111,7 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
   const activeScopes = await applyProWriteGate(db, row.user_id, globallyFilteredScopes);
 
   if (activeScopes.length === 0) {
-    throw new OAuthServerError('invalid_grant', 'OAuth connection has no active scopes', 401);
+    throw new OAuthServerError('invalid_token', 'OAuth connection has no active scopes', 401);
   }
 
   updateUsageTimestamps(db, row.id, connection.id);
@@ -144,14 +144,16 @@ async function applyGlobalWriteGate(
     .maybeSingle();
 
   if (error) {
-    captureUnexpectedDatabaseError(error, {
-      feature: 'mcp',
-      operation: 'verify_mcp_mutation_control',
-    });
-    logger.warn('MCP mutation control verification failed');
+    throwDatabaseVerificationError(error, 'verify_mcp_mutation_control');
+  }
+  if (!control) {
+    throwDatabaseVerificationError(
+      new Error('MCP mutation control row is missing'),
+      'verify_mcp_mutation_control',
+    );
   }
 
-  return control?.writes_enabled ? scopes : scopes.filter((scope) => !isWriteScope(scope));
+  return control.writes_enabled ? scopes : scopes.filter((scope) => !isWriteScope(scope));
 }
 
 async function applyProWriteGate(
@@ -168,11 +170,7 @@ async function applyProWriteGate(
     .maybeSingle();
 
   if (error) {
-    captureUnexpectedDatabaseError(error, {
-      feature: 'mcp',
-      operation: 'verify_mcp_pro_entitlement',
-    });
-    logger.warn('MCP Pro entitlement verification failed');
+    throwDatabaseVerificationError(error, 'verify_mcp_pro_entitlement');
   }
 
   return profile && canAccessProFeatures(profile.subscription_status)
@@ -182,7 +180,9 @@ async function applyProWriteGate(
 
 function parseStoredScopes(scopes: string[]): SupportedScope[] | null {
   if (!scopes.every(isSupportedScope)) return null;
-  return [...new Set(scopes)];
+  const parsed = [...new Set(scopes)];
+  if (parsed.some(isWriteScope) && !parsed.includes('read:entries')) return null;
+  return parsed;
 }
 
 function throwDatabaseVerificationError(error: unknown, operation: string): never {
@@ -190,7 +190,7 @@ function throwDatabaseVerificationError(error: unknown, operation: string): neve
     feature: 'mcp',
     operation,
   });
-  throw new OAuthServerError('server_error', 'Access token verification failed', 500, {
+  throw new OAuthServerError('server_error', 'Access token verification failed', 503, {
     cause: original,
   });
 }
@@ -221,14 +221,17 @@ function updateUsageTimestamps(
 
 export function extractBearerToken(authHeader: string | null): string {
   if (!authHeader) {
-    throw new OAuthServerError('invalid_grant', 'Missing Authorization header', 401);
+    throw new OAuthServerError('invalid_request', 'Missing Authorization header', 401);
   }
-  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!/^Bearer(?:\s|$)/i.test(authHeader)) {
+    throw new OAuthServerError('invalid_request', 'Bearer authorization is required', 401);
+  }
+  const match = authHeader.match(/^Bearer +([A-Za-z0-9._~+/-]+=*)$/i);
   if (!match || !match[1]) {
     throw new OAuthServerError(
-      'invalid_grant',
+      'invalid_request',
       'Authorization header must be "Bearer <token>"',
-      401,
+      400,
     );
   }
   return match[1];

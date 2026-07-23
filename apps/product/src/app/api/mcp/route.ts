@@ -5,7 +5,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 
 import { logger } from '@/lib/logger';
 import { extractBearerToken, verifyAccessToken } from '@/lib/mcp';
-import { OAuthServerError, type SupportedScope } from '@/lib/oauth-server';
+import { ADVERTISED_SCOPES, OAuthServerError, type SupportedScope } from '@/lib/oauth-server';
 import { captureUnexpectedError } from '@/lib/sentry';
 
 import { createMcpServer } from './_server';
@@ -58,7 +58,7 @@ async function handle(request: NextRequest): Promise<Response> {
 
   const missingScopes = collectMissingToolScopes(parsedRequest.body, auth.scopes);
   if (missingScopes.length > 0) {
-    return insufficientScopeResponse(missingScopes);
+    return insufficientScopeResponse(auth.scopes, missingScopes);
   }
 
   const server = createMcpServer({
@@ -153,8 +153,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function insufficientScopeResponse(scopes: readonly SupportedScope[]): Response {
-  const required = scopes.join(' ');
+function insufficientScopeResponse(
+  grantedScopes: readonly SupportedScope[],
+  missingScopes: readonly SupportedScope[],
+): Response {
+  const requiredScopes = expandChallengeScopes(grantedScopes, missingScopes);
+  const required = requiredScopes.join(' ');
   return NextResponse.json(
     {
       error: 'insufficient_scope',
@@ -173,6 +177,17 @@ function insufficientScopeResponse(scopes: readonly SupportedScope[]): Response 
   );
 }
 
+function expandChallengeScopes(
+  grantedScopes: readonly SupportedScope[],
+  missingScopes: readonly SupportedScope[],
+): SupportedScope[] {
+  const required = new Set<SupportedScope>();
+  for (const scope of ADVERTISED_SCOPES) required.add(scope);
+  for (const scope of grantedScopes) required.add(scope);
+  for (const scope of missingScopes) required.add(scope);
+  return [...required];
+}
+
 function mcpRequestErrorResponse(status: number, code: number, message: string): Response {
   return NextResponse.json(
     { jsonrpc: '2.0', error: { code, message }, id: null },
@@ -182,7 +197,7 @@ function mcpRequestErrorResponse(status: number, code: number, message: string):
 
 function authErrorResponse(err: unknown): Response {
   const isOAuthErr = err instanceof OAuthServerError;
-  // OAuthServerError は err.httpStatus を尊重 (auth failure=401 / server_error=500 を保つ)。
+  // OAuthServerError は err.httpStatus を尊重 (auth failure=401 / dependency failure=503)。
   // 5xx を 401 に丸めると client が再認証ループに入って真の障害が観測できない。
   const status = isOAuthErr ? err.httpStatus : 500;
   if (status >= 500) {
@@ -200,17 +215,40 @@ function authErrorResponse(err: unknown): Response {
     logger.error('MCP request authentication failed');
   }
 
-  // WWW-Authenticate は client が再認証へ進めるサインなので 401 のときだけ付ける。
-  const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (status === 401) {
-    headers['www-authenticate'] = `Bearer resource_metadata="${RESOURCE_METADATA_URL}"`;
+  // 401 discovery/invalid token と 400 invalid_request はBearer challengeを返す。
+  const headers: Record<string, string> = { 'cache-control': 'no-store' };
+  if (status === 401 || (status === 400 && isOAuthErr && err.code === 'invalid_request')) {
+    const challengeParameters = [
+      ...(isOAuthErr && err.code === 'invalid_token' ? ['error="invalid_token"'] : []),
+      ...(isOAuthErr && err.code === 'invalid_request' && status === 400
+        ? ['error="invalid_request"']
+        : []),
+      `scope="${ADVERTISED_SCOPES.join(' ')}"`,
+      `resource_metadata="${RESOURCE_METADATA_URL}"`,
+    ];
+    headers['www-authenticate'] = `Bearer ${challengeParameters.join(', ')}`;
   }
+  if (status === 503) {
+    headers['retry-after'] = '5';
+  }
+
+  // RFC 6750 §3.1: credentialなし / unsupported auth scheme の401では、
+  // discovery challenge以外のerror情報を返さない。
+  if (status === 401 && isOAuthErr && err.code === 'invalid_request') {
+    return new Response(null, { status, headers });
+  }
+
+  headers['content-type'] = 'application/json';
 
   return new Response(
     JSON.stringify({
       error: isOAuthErr ? err.code : 'server_error',
       error_description:
-        isOAuthErr && status < 500 ? err.message : 'Authentication service unavailable',
+        isOAuthErr && err.code === 'invalid_token'
+          ? 'Access token is invalid or expired'
+          : isOAuthErr && status < 500
+            ? err.message
+            : 'Authentication service unavailable',
     }),
     {
       status,

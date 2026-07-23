@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+
 import { createClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -25,6 +27,32 @@ const resource = 'https://mcp.dayopt.app';
 const redirectUri = 'https://chatgpt.com/connector_platform_oauth_redirect';
 const verifier = 'v'.repeat(43);
 const challenge = derivePkceS256Challenge(verifier);
+
+function runOwnerSql(sql: string, variables: Record<string, string>) {
+  return spawnSync(
+    'psql',
+    [
+      '-X',
+      '-qAt',
+      '-v',
+      'ON_ERROR_STOP=1',
+      ...Object.entries(variables).flatMap(([name, value]) => ['-v', `${name}=${value}`]),
+      '-h',
+      '127.0.0.1',
+      '-p',
+      '54322',
+      '-U',
+      'postgres',
+      '-d',
+      'postgres',
+    ],
+    {
+      env: { ...process.env, PGPASSWORD: 'postgres' },
+      input: sql,
+      encoding: 'utf8',
+    },
+  );
+}
 
 describe.skipIf(!RUN_LOCAL)('OAuth connection lifecycle integration', () => {
   beforeAll(async () => {
@@ -107,6 +135,149 @@ describe.skipIf(!RUN_LOCAL)('OAuth connection lifecycle integration', () => {
       scopes: ['read:entries'],
       resourceUri: resource,
     });
+  });
+
+  it('rejects a write-only service grant without creating a connection or code', async () => {
+    const codeHash = hashToken(`write-only-code-${crypto.randomUUID()}`);
+    const { count: beforeCount, error: beforeError } = await admin
+      .from('oauth_connections')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    expect(beforeError).toBeNull();
+
+    const { error: grantError } = await admin.rpc('create_oauth_authorization_grant_v2', {
+      p_user_id: userId,
+      p_client_id: 'chatgpt',
+      p_resource_uri: resource,
+      p_scopes: ['write:plans'],
+      p_code_hash: codeHash,
+      p_redirect_uri: redirectUri,
+      p_code_challenge: challenge,
+      p_write_enabled: true,
+    });
+
+    expect(grantError).toMatchObject({ code: '22023' });
+
+    const [{ count: afterCount, error: afterError }, { data: codes, error: codeError }] =
+      await Promise.all([
+        admin
+          .from('oauth_connections')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId),
+        admin.from('oauth_authorization_codes').select('code_hash').eq('code_hash', codeHash),
+      ]);
+    expect(afterError).toBeNull();
+    expect(codeError).toBeNull();
+    expect(afterCount).toBe(beforeCount);
+    expect(codes).toEqual([]);
+  });
+
+  it('enforces the write-requires-read invariant on every stored OAuth surface', async () => {
+    const invalidConnectionInsert = runOwnerSql(
+      `
+        INSERT INTO public.oauth_connections (
+          user_id, client_id, resource_uri, scopes, write_enabled_at
+        ) VALUES (
+          :'user_id'::UUID,
+          'chatgpt',
+          'https://mcp.dayopt.app',
+          ARRAY['write:plans']::TEXT[],
+          pg_catalog.now()
+        );
+      `,
+      { user_id: userId },
+    );
+    expect(invalidConnectionInsert.status).not.toBe(0);
+    expect(invalidConnectionInsert.stderr).toContain(
+      'oauth_connections_write_requires_read_entries_check',
+    );
+
+    const validCodeHash = hashToken(`valid-code-${crypto.randomUUID()}`);
+    const { data: connectionId, error: validConnectionError } = await admin.rpc(
+      'create_oauth_authorization_grant_v2',
+      {
+        p_user_id: userId,
+        p_client_id: 'chatgpt',
+        p_resource_uri: resource,
+        p_scopes: ['read:entries', 'write:plans'],
+        p_code_hash: validCodeHash,
+        p_redirect_uri: redirectUri,
+        p_code_challenge: challenge,
+        p_write_enabled: true,
+      },
+    );
+    expect(validConnectionError).toBeNull();
+    expect(connectionId).not.toBeNull();
+
+    const invalidCodeHash = hashToken(`invalid-code-${crypto.randomUUID()}`);
+    const { error: codeError } = await admin.from('oauth_authorization_codes').insert({
+      code_hash: invalidCodeHash,
+      user_id: userId,
+      client_id: 'chatgpt',
+      redirect_uri: redirectUri,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+      scopes: ['write:plans'],
+      connection_id: connectionId!,
+      resource_uri: resource,
+    });
+    expect(codeError).toMatchObject({ code: '23514' });
+
+    const { error: codeUpdateError } = await admin
+      .from('oauth_authorization_codes')
+      .update({ scopes: ['write:plans'] })
+      .eq('code_hash', validCodeHash);
+    expect(codeUpdateError).toMatchObject({ code: '23514' });
+
+    const invalidTokenHash = hashToken(`invalid-token-${crypto.randomUUID()}`);
+    const { error: tokenError } = await admin.from('oauth_tokens').insert({
+      user_id: userId,
+      token_hash: invalidTokenHash,
+      token_type: 'access',
+      client_id: 'chatgpt',
+      scopes: ['write:plans'],
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+      connection_id: connectionId!,
+      resource_uri: resource,
+    });
+    expect(tokenError).toMatchObject({ code: '23514' });
+
+    const validTokenHash = hashToken(`valid-token-${crypto.randomUUID()}`);
+    const { error: validTokenError } = await admin.from('oauth_tokens').insert({
+      user_id: userId,
+      token_hash: validTokenHash,
+      token_type: 'access',
+      client_id: 'chatgpt',
+      scopes: ['read:entries', 'write:plans'],
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+      connection_id: connectionId!,
+      resource_uri: resource,
+    });
+    expect(validTokenError).toBeNull();
+    const { error: tokenUpdateError } = await admin
+      .from('oauth_tokens')
+      .update({ scopes: ['write:plans'] })
+      .eq('token_hash', validTokenHash);
+    expect(tokenUpdateError).toMatchObject({ code: '23514' });
+
+    const invalidConnectionUpdate = runOwnerSql(
+      `
+        UPDATE public.oauth_connections
+        SET scopes = ARRAY['write:plans']::TEXT[]
+        WHERE id = :'connection_id'::UUID;
+      `,
+      { connection_id: connectionId! },
+    );
+    expect(invalidConnectionUpdate.status).not.toBe(0);
+    expect(invalidConnectionUpdate.stderr).toContain(
+      'oauth_connections_write_requires_read_entries_check',
+    );
+
+    const cleanup = runOwnerSql(
+      `DELETE FROM public.oauth_connections WHERE id = :'connection_id'::UUID;`,
+      { connection_id: connectionId! },
+    );
+    expect(cleanup.status).toBe(0);
   });
 
   it.each([
@@ -211,7 +382,7 @@ describe.skipIf(!RUN_LOCAL)('OAuth connection lifecycle integration', () => {
     expect(revoked).toBe(true);
 
     await expect(verifyAccessToken(access)).rejects.toMatchObject({
-      code: 'invalid_grant',
+      code: 'invalid_token',
       httpStatus: 401,
     });
   });

@@ -1,13 +1,17 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { OAuthServerError } from '@/lib/oauth-server';
+
 const verifyAccessToken = vi.hoisted(() => vi.fn());
-const extractBearerToken = vi.hoisted(() => vi.fn(() => 'opaque-token'));
 const createMcpServer = vi.hoisted(() => vi.fn());
 const connect = vi.hoisted(() => vi.fn());
 const handleRequest = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/mcp', () => ({ extractBearerToken, verifyAccessToken }));
+vi.mock('@/lib/mcp', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/mcp')>()),
+  verifyAccessToken,
+}));
 vi.mock('../_server', () => ({ createMcpServer }));
 vi.mock('@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js', () => ({
   WebStandardStreamableHTTPServerTransport: class {
@@ -29,13 +33,12 @@ const baseAuth = {
   expiresAt: 1_800_000_000,
 };
 
-function createRequest(body: unknown) {
+function createRequest(body: unknown, authorization: string | null = 'Bearer opaque-token') {
+  const headers = new Headers({ 'content-type': 'application/json' });
+  if (authorization) headers.set('authorization', authorization);
   return new NextRequest('https://mcp.dayopt.app/mcp', {
     method: 'POST',
-    headers: {
-      authorization: 'Bearer opaque-token',
-      'content-type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(body),
   });
 }
@@ -63,19 +66,23 @@ describe('MCP route scope preflight', () => {
 
     expect(response.status).toBe(403);
     expect(response.headers.get('www-authenticate')).toContain('error="insufficient_scope"');
-    expect(response.headers.get('www-authenticate')).toContain('scope="write:plans"');
+    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries write:plans"');
     expect(response.headers.get('www-authenticate')).toContain(
       'resource_metadata="https://mcp.dayopt.app/.well-known/oauth-protected-resource"',
     );
     await expect(response.json()).resolves.toMatchObject({
       error: 'insufficient_scope',
-      scope: 'write:plans',
+      scope: 'read:entries write:plans',
     });
     expect(createMcpServer).not.toHaveBeenCalled();
     expect(handleRequest).not.toHaveBeenCalled();
   });
 
   it('fails the whole batch before executing any call when one tool lacks scope', async () => {
+    verifyAccessToken.mockResolvedValue({
+      ...baseAuth,
+      scopes: ['read:entries', 'read:tags'],
+    });
     const response = await POST(
       createRequest([
         { jsonrpc: '2.0', method: 'tools/list', id: 1 },
@@ -89,12 +96,17 @@ describe('MCP route scope preflight', () => {
     );
 
     expect(response.status).toBe(403);
-    expect(response.headers.get('www-authenticate')).toContain('scope="delete:records"');
+    expect(response.headers.get('www-authenticate')).toContain(
+      'scope="read:entries read:tags delete:records"',
+    );
     expect(handleRequest).not.toHaveBeenCalled();
   });
 
   it('passes a permitted call and the already parsed body to the SDK transport', async () => {
-    verifyAccessToken.mockResolvedValue({ ...baseAuth, scopes: ['write:plans'] });
+    verifyAccessToken.mockResolvedValue({
+      ...baseAuth,
+      scopes: ['read:entries', 'write:plans'],
+    });
     const body = {
       jsonrpc: '2.0',
       method: 'tools/call',
@@ -109,7 +121,7 @@ describe('MCP route scope preflight', () => {
       expect.objectContaining({
         tokenId: 'token-1',
         connectionId: 'connection-1',
-        scopes: ['write:plans'],
+        scopes: ['read:entries', 'write:plans'],
         resourceUri: 'https://mcp.dayopt.app',
       }),
     );
@@ -117,5 +129,67 @@ describe('MCP route scope preflight', () => {
       expect.any(NextRequest),
       expect.objectContaining({ parsedBody: body }),
     );
+  });
+
+  it('returns a discovery challenge without an error when credentials are absent', async () => {
+    const response = await POST(
+      createRequest({ jsonrpc: '2.0', method: 'tools/list', id: 1 }, null),
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries"');
+    expect(response.headers.get('www-authenticate')).toContain('resource_metadata=');
+    expect(response.headers.get('www-authenticate')).not.toContain('error=');
+    await expect(response.text()).resolves.toBe('');
+  });
+
+  it('returns invalid_token for expired or revoked bearer credentials', async () => {
+    verifyAccessToken.mockRejectedValueOnce(
+      new OAuthServerError('invalid_token', 'OAuth connection is no longer authorized', 401),
+    );
+
+    const response = await POST(createRequest({ jsonrpc: '2.0', method: 'tools/list', id: 1 }));
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('www-authenticate')).toContain('error="invalid_token"');
+    expect(response.headers.get('www-authenticate')).toContain('resource_metadata=');
+    await expect(response.json()).resolves.toEqual({
+      error: 'invalid_token',
+      error_description: 'Access token is invalid or expired',
+    });
+  });
+
+  it('returns an invalid_request challenge for a malformed bearer value', async () => {
+    const response = await POST(
+      createRequest({ jsonrpc: '2.0', method: 'tools/list', id: 1 }, 'Bearer token,second'),
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('www-authenticate')).toContain('Bearer error="invalid_request"');
+    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries"');
+    await expect(response.json()).resolves.toEqual({
+      error: 'invalid_request',
+      error_description: 'Authorization header must be "Bearer <token>"',
+    });
+  });
+
+  it('returns a retryable 503 when token authorization dependencies fail', async () => {
+    verifyAccessToken.mockRejectedValueOnce(
+      new OAuthServerError('server_error', 'Access token verification failed', 503),
+    );
+
+    const response = await POST(createRequest({ jsonrpc: '2.0', method: 'tools/list', id: 1 }));
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('retry-after')).toBe('5');
+    expect(response.headers.get('www-authenticate')).toBeNull();
+    await expect(response.json()).resolves.toEqual({
+      error: 'server_error',
+      error_description: 'Authentication service unavailable',
+    });
   });
 });
