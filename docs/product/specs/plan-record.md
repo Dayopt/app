@@ -100,11 +100,13 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 
 物理DB、正本command、生成型はRecordに統一済み。テーブルは`records`、通常UIのPlan / Record writeは`*_command_v1`をservice-owned adapter経由で実行する。一括確定は`confirm_day_plans_command_v1`を使う。update / soft delete / restore / skip / record化はraw `updated_at`のexact CASを必須とする。
 
-authenticated直接DMLと旧CASなしwrite RPCはrolling deploy互換のためDB上に一時的に残るが、現在のアプリケーション契約ではない。旧deploymentのdrain確認後に別migrationでrevokeする。旧`logs` viewとLog名RPC aliasは存在しない。
+authenticatedのPlan / Record直接DMLはrevoke済みで、現在のアプリケーション契約ではない。rolling deploy中の旧bundleが使う旧CASなしwrite RPCは、owner検証とuser単位lockを行う一時compatibility wrapperとしてだけ残す。旧deploymentのdrain確認後に別migrationでrevokeする。旧`logs` viewとLog名RPC aliasは存在しない。
 
-タグ削除・再割当て・mergeは複数Plan / Recordを一括で扱うservice-owned例外writerであり、単行commandへは載せない。再割当て・merge・detachはDBの`updated_at` triggerでversionを進め、通常UIや外部writeが古いversionを上書きできないようにする。タグと一緒にブロックを削除する明示操作だけはhard deleteを行う。
+タグ削除・再割当て・mergeは複数Plan / Recordを一括で扱うservice-owned例外writerであり、単行commandへは載せない。関連処理、子タグ昇格、タグ削除を一つのDB transactionとuser単位exclusive advisory lockで行う。再割当て・merge・detachはDBの`updated_at` triggerでversionを進め、通常UIや外部writeが古いversionを上書きできないようにする。タグと一緒にブロックを削除する明示操作だけはhard deleteを行う。
 
-Settingsの「すべてのブロックを削除」と「すべてのデータを削除」もservice-ownedの明示的hard deleteであり、単行commandのsoft deleteとは別契約とする。並行する単行writeとはDB row lockで直列化し、削除操作が後なら最終状態は削除済みになる。
+Settingsの「すべてのブロックを削除」と「すべてのデータを削除」もservice-ownedの明示的hard deleteであり、単行commandのsoft deleteとは別契約とする。`auth.users`のparent-first lockとuser単位exclusive advisory lockで通常UI/MCP writeを直列化する。writerが先なら後続削除後の最終状態は削除済み、削除が先なら後続writerは成功できる。
+
+「すべてのデータを削除」は現在Plan、Record、tag、user settingsを対象とし、OAuth connection/tokenとMCP mutation receiptは対象外である。接続済みappを同時に無効化するか、削除後もappがデータを追加できることを文言で明示するかはMCP write tool公開前のproduct checkpointとする。
 
 ## 過去 Plan の時間凍結
 

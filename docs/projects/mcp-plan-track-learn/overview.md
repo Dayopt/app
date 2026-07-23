@@ -32,18 +32,18 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - Plan / Record同種間の時間重複は既存GiST exclusion constraintで防止済み
 - Plan / Recordのtyped command、exact CAS、DB時刻のtemporal rule、skip/link整合性はローカル実装済み。Plan / Record双方のcreate/update/delete/restoreで、通常UI commandとMCP typed applyの同時実行、stale CAS、restore対createをDB integrationで検証済み。実session JWTのtRPC対実opaque tokenのMCP HTTP raceはPersistent Stagingで未検証
 - repo上の通常UIはcreate/update/delete/restore/skip/record/confirm-dayをservice-owned commandへ切替済み。Calendar cacheもDBが返したraw `updated_at`をversionとして維持する。Production deployは未実施
-- タグ削除・再割当て・mergeとSettingsの`deleteBlocks` / `deleteAllData`はPlan / Recordを直接更新・hard deleteするservice-owned例外writerとして残る。authenticated ACL cutoverの対象ではなく、一覧化と競合試験が必要
+- タグ削除・再割当て・mergeとSettingsの`deleteBlocks` / `deleteAllData`はservice-owned commandへ収束し、通常UI/MCPの単行writeと同じuser単位transaction advisory lockで直列化するrepo実装と競合試験まで完了した。新appは最終RPC名だけを呼び、旧deployment向けRPCはowner検証付きの一時compatibility wrapperへ置き換えている。Production適用と旧wrapperのdrain後revokeは未実施
 - DB global control、不可逆なconnection kill switch、payload-free receipt tableとreceipt-key serializationはrepo実装済み。Plan / Recordのcreate/update/delete/restoreはtransaction内再認可、canonical digest、typed apply、receipt replayとserver-only adapterまでローカル実装・検証済み。Record createだけがcompleted Planへのlinkを受け、updateはPlan attribution・source・external provenanceを変更できない
-- authenticatedのPlan / Record権限を`SELECT`だけにし、旧`soft_delete_plan` / `soft_delete_record` / `confirm_day_plans_to_records`をservice-role限定にするACL cutoverはrepo実装済み。全migrationのfresh適用、継承roleを含むeffective table / column write権限のfail-closed監査、authenticated直接write拒否、service-role recoveryをローカル検証済み。Production適用と逆GRANT rehearsalは未実施
-- global controlは初期OFFで、全write toolと運用UIは未登録なので現在のMCPは正規データを変更できない。`plans.get` / `records.get` / trash、既存read toolのstructured content、外部変更の画面反映、Settings hard deleteとのserialization、Learn用toolは未実装
+- authenticatedのPlan / Record権限を`SELECT`だけにするACL cutoverはrepo実装済み。全migrationのfresh適用、継承roleを含むeffective table / column write権限のfail-closed監査、authenticated直接write拒否、旧deployment compatibility、service-role recoveryをローカル検証済み。Production適用、旧wrapperのdrain後revoke、逆GRANT rehearsalは未実施
+- global controlは初期OFFで、全write toolと運用UIは未登録なので現在のMCPは正規データを変更できない。`plans.get` / `records.get` / trash、既存read toolのstructured content、外部変更の画面反映、Settings connection UI、Learn用toolは未実装
 
 Delivery 6段階のうち3段階がrepo上で完了し、Step 4がactive。接続と正規データ境界の基盤は成立したが、Plan → Track → Learnのend-to-end顧客価値はまだ未達。
 
 ## Minimum Viable Approach
 
 1. **MCP mutation transactionを完成させる** — connection/token/Pro entitlementをDB transaction内で再検証し、idempotency claim、typed command、成功mutation auditを兼ねる最小receiptを一括commitする。詳細は[Step 3設計](./step-3-mutation-envelope.md)を正本とする
-2. **Plan / Record CRUD toolを段階公開する** — Plan / Recordの8操作は非公開のprivate envelopeまで検証済み。次にMCP handler、get/trash、画面同期、hard delete serializationを満たしてから、現在scopeがあるconnectionだけに各toolを列挙する
-3. **public write境界をcommandへ収束する** — repo上では通常UI commandとACL cutoverまで実装済み。Productionではcommand版appを先行deployして旧writerをdrainした後に、authenticatedのPlan / Recordを`SELECT`だけへ絞るmigrationを適用する。service-owned一括処理は例外writerとして明示する
+2. **Plan / Record CRUD toolを段階公開する** — Plan / Recordの8操作は非公開のprivate envelopeまで検証済み。hard delete serializationもrepo上で完了した。次にMCP handler、get/trash、画面同期、Settings削除時の接続契約を満たしてから、現在scopeがあるconnectionだけに各toolを列挙する
+3. **public write境界をcommandへ収束する** — repo上では通常UI commandとACL cutoverまで実装済み。現在の未適用migration chainはrolling deploy中の全prefixを安全にしていないため、Productionでは書き込みquiescence下の一括cutover、または別のstaged compatibility chainを先にPersistent Stagingで実証する。service-owned一括処理は例外writerとして明示する
 4. **Track → Learnを接続する** — constraints/tags/review toolとuser revision pollingを追加し、MCP変更を開いているCalendar / Inspector / Reviewへ20秒以内に反映する
 5. **3 clientでclosed betaを検証する** — persistent Stagingで再authorization、retry、parallel refresh、revoke、UI対MCP raceを通し、client単位でwrite gateを開く
 
@@ -97,7 +97,7 @@ Delivery 6段階のうち3段階がrepo上で完了し、Step 4がactive。接�
 ### Mutation contract
 
 - Plan / Recordそれぞれのcreate/update/soft-delete/restoreをtyped commandとして実装し、generic JSON executorは作らない
-- MCP mutation transactionのlock順は`global control → auth.users → connection → access token → profile → receipt advisory lock → domain resource`に固定する。connectionからuser候補をlockなしで解決し、`auth.users`をlockした後に同じuser bindingのconnectionをlock下で再検証する。user/client/resource/scope/expiry/revoke/write gateを再検証し、global controlの変更はrevision CASで緊急停止より古いenable要求を拒否する
+- MCP mutation transactionのlock順は`global control → auth.users → user shared advisory lock → connection → access token → profile → receipt advisory lock → domain resource`に固定する。connectionからuser候補をlockなしで解決し、`auth.users`とuser write境界をlockした後に同じuser bindingのconnectionを再検証する。通常UI commandも同じshared lock、Settings hard deleteとaccount deleteはexclusive lockを取る。user/client/resource/scope/expiry/revoke/write gateを再検証し、global controlの変更はrevision CASで緊急停止より古いenable要求を拒否する
 - `profiles`のPro entitlementもlockして、downgrade完了後のwriteを防ぐ。MCP writeはbilling enforcementの一般flagにかかわらず`active` / `trialing` / `past_due`を必須とするproduct contractとして扱う
 - 再認可、idempotency claim、正規データ変更、成功mutation auditを兼ねる最小receiptを一括commitする。Settings revokeとscope撤回は同じconnection row lockでlinearizeする
 - createは既存のDB exclusion constraintを最終防衛線にし、constraint violationを`TIME_OVERLAP`へ変換する。Plan × Recordの重複は許可する
@@ -108,7 +108,7 @@ Delivery 6段階のうち3段階がrepo上で完了し、Step 4がactive。接�
 - 各public typed apply wrapperはprivate共通helperを呼ぶ前にservice-role JWTを独立に検証する。このassertionは新しいoperationを追加する時も省略しない
 - domain command完了後、receipt insert前にもDB時刻でconnection/token/reauth期限を再検証し、command中に権限期限を跨いだtransactionを全体rollbackする
 - server adapterはraw service-role clientやPostgREST builderを公開せず、operation固有methodからplain resultだけを返す。versioned receiptのresource IDをrequest対象へbindし、expected SQLSTATEだけをstable codeへ変換する。未知のDB failureはcodeだけを観測してraw message・cause・入力本文を破棄する
-- DB変更はexpand/cutoverの2段階にする。repoでは通常UIのprimary timeblock callerをservice-owned commandへ移し、後続migrationでauthenticatedのPlan / Record table / column privilegeを全てrevokeして`SELECT`だけ再付与した。旧`soft_delete_plan`、`soft_delete_record`、`confirm_day_plans_to_records`のEXECUTEもrevoke済み。Productionでは同じ順序と旧writerのdrainを適用条件にする
+- DB変更はexpand/cutoverの2段階にする。repoでは通常UIのprimary timeblock callerをservice-owned commandへ移し、後続migrationでauthenticatedのPlan / Record table / column privilegeを全てrevokeして`SELECT`だけ再付与した。rolling deploy中の旧bundleが使う`soft_delete_plan`、`soft_delete_record`、`confirm_day_plans_to_records`は、owner検証と同じuser lockを持つ一時wrapperとしてだけ残す。Productionでは全migration適用とcompatibility確認後にappを切り替え、旧instanceのdrain完了後に別migrationでwrapperをrevokeする
 - GiST競合が`40P01`を返した場合はservice境界で一度だけ再試行し、最終的なoverlap/version errorへ正規化する
 - `confirmDay`は通常UI専用とし、tRPCとDBの両方で26時間を上限にする。MCP初期toolには公開しない
 
@@ -116,7 +116,16 @@ Delivery 6段階のうち3段階がrepo上で完了し、Step 4がactive。接�
 
 - `plans.get` / `records.get`はscope registryに名前だけ存在し未登録。mutation receiptから最新本文を取得する導線として、公開済み扱いにせず実装・contract testを先に完了する
 - 外部MCP mutation後、現在のCalendar / Inspector cacheはlocal mutation前提で最大5分staleになり得る。user revision pollingを実装し、表示中の外部変更反映SLA 20秒を満たしてからwrite toolを列挙する
-- Settingsの`deleteBlocks` / `deleteAllData`はPlan / Recordを直接hard deleteする。MCP applyとのuser単位serializationと最終状態の規則を実装・競合試験してからwrite gateを開く
+- OAuth protected resourceの401/403をRFC 6750に沿うmatrixへ分離し、writeの`WWW-Authenticate`には`read:entries`を含む完全なgrantable scope集合を返す
+- tool名だけのregistryと実登録を一つのdescriptor sourceへ統合し、exact set testを通す。durableなclient単位DB gateもauthorization/applyの両方で再検証する
+- Settingsのconnection一覧/revoke、`plans.get` / `records.get` / trash、全read toolのstructured content、revision pollingを実装する
+
+Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializationはrepo上で完了した。writerが先なら後続purgeが削除し、purgeが先なら後続writerは成功できる。この技術契約とは別に、`deleteAllData`後もOAuth connection/token/receiptが残る現在仕様を公開前に決める。
+
+- **推奨**: `deleteAllData` transactionでMCP write connectionをdisable/revokeする。receiptは再作成を防ぐ最小audit/idempotency tombstoneとしてretention期間だけ残す
+- **代替**: 接続済みappは有効なままで再度データを追加できることをSettings文言で明示する
+
+この顧客契約が未決の間はwrite toolを列挙しない。
 
 ### Product convergence
 
@@ -181,6 +190,11 @@ Delivery 6段階のうち3段階がrepo上で完了し、Step 4がactive。接�
 - `supabase/migrations/20260723123500_timeblock_authenticated_acl_cutover.sql` — authenticatedをPlan / Recordの`SELECT`だけへ絞り、旧3 RPCをservice-role限定にするcutover
 - `supabase/migrations/20260723123600_harden_timeblock_authenticated_acl_cutover.sql` — `ACCESS EXCLUSIVE`境界、全column ACL revoke、catalog assertionを追加するforward-only hardening
 - `supabase/migrations/20260723123700_harden_timeblock_effective_privileges.sql` — 継承roleを含むeffective write権限の監査viewとfail-closed assertion
+- `supabase/migrations/20260723130000_serialize_timeblock_user_writes.sql`〜`20260723130500_serialize_authenticated_user_data_writes.sql` — 通常UI、MCP、tag、Settings、account deleteを同じuser lock境界へ収束する
+- `supabase/migrations/20260723130600_finalize_user_data_command_cutover.sql` — 全serialization完了後だけ新app向け最終RPC名を公開する
+- `supabase/migrations/20260723130700_restore_legacy_timeblock_rollout_compatibility.sql` — 旧bundleをowner検証付きserialized wrapperで一時的に維持する
+- `supabase/migrations/20260723130800_align_tag_require_empty_with_active_associations.sql` — active関連だけを削除確認の対象にし、trash-only blockはtagと一緒にhard deleteする既存挙動を維持する
+- `supabase/migrations/20260723130900_serialize_legacy_restore_compatibility.sql` — 旧bundleのservice-role restoreも同じuser lockへ参加させる
 
 ## What I'm Not Doing
 
@@ -195,17 +209,19 @@ Delivery 6段階のうち3段階がrepo上で完了し、Step 4がactive。接�
 
 ## Rollout Checkpoints
 
-1. **Local** — 全migration適用、unit/integration、DB lint、RLS snapshot、docs checkを通す
+1. **Local** — 全migration適用、unit/integration、DB lint、RLS snapshot、docs checkを通す。`20260723130000`〜`20260723130900`はfresh DB、177 integration、RLS/effective privilege検査まで完了
 2. **PR Preview** — read-only regressionとOAuth metadataを確認し、timeblock command migrationが`20260723011200`まで適用済みであることを確認する
-3. **Persistent Staging** — command + MCP mutation DB expand（global OFF）、UI command deploy / drain、ACL、tool code deploy（全gate OFF）の順に全系列を適用し、3 clientの再authorization、確認UI、retry、parallel refresh、revoke、UI対MCP race、逆GRANTと再cutoverのroll-forwardを確認する
+3. **Persistent Staging** — current migration chainをUI/service write quiescence下で`20260723130900`まで完走し、最終schemaへcommand版appを切り替えるmaintenance cutoverをrehearseする。別のrolling-compatible chainを作る場合は全prefixで旧/new bundle双方を試験する。その後、3 clientの再authorization、確認UI、retry、parallel refresh、revoke、UI対MCP race、逆GRANTと再cutoverのroll-forwardを確認する
 4. **Production preflight（read-only）** — skip済みPlanにactive Recordが紐づく件数が0、migrationが部分適用でないことを確認する。違反データは自動修復せず、行単位で扱いを決める
-5. **Production DB expand PR** — migrationだけを`20260723123400`まで適用し、global controlがOFFであることとschema versionを証跡化する。旧UIをexpanded DBへ接続したcompatibility smokeを通し、`20260722233722`のtriggerが旧writerにも即時作用する確認を省略しない
-6. **Production UI command PR** — migrationを含めずservice-owned command版UIをdeployし、deployment SHAを固定してcreate/update/delete/restore/skip/record/confirm-dayをsmokeする。旧bundleは必須`expectedUpdatedAt`を送らず新serverで拒否されるため、version handshakeによる強制reloadまたは同等の明示導線と、旧input利用数0の観測をACL開始条件にする
-7. **Production ACL-only PR** — 直前のschema versionとcommand deployment SHAを確認してから、`20260723123500`〜`20260723123700`だけを適用する。完了境界は`20260723123600`の`ACCESS EXCLUSIVE` transactionと後続effective privilege assertionの両方とする
+5. **Production maintenance cutover** — global control OFFを確認し、通常UIとservice-roleのtimeblock/tag/Settings writeをquiesceして旧instanceをdrainする。全migrationを`20260723130900`まで適用し、最終3 RPCだけが新app向けservice-role surfaceであることと旧5 RPCがserialized compatibility wrapperであることを確認してからcommand版appをdeployする。deployment SHAを固定してcreate/update/delete/restore/skip/record/confirm-day/tag/Settings purgeをsmokeし、その後だけ通常writeを再開する
+6. **Production compatibility observation** — 強制reloadまたは同等の導線を維持し、旧RPC利用数、旧input、lock timeout、serialization failureが0であることを観測する。異常時はglobal MCP gateだけに頼らず通常writeを再quiesceし、Staging検証済みのforward bridgeを適用する
+7. **Production compatibility cleanup PR** — 旧instanceのdrainと旧RPC利用数0を確認してから、新timestamp migrationで一時compatibility wrapperのEXECUTEをrevokeする。適用済みmigrationは編集しない
 8. **Production tool PR** — 直前のACL schema versionを確認し、tool codeだけを全gate OFFでdeployする
 9. **Closed beta** — durable global control、runtime client allowlist、connection grantを順に開き、外部変更反映SLAと成功mutation audit欠損を監視する
 10. **Production authority** — Production migration、ACL contract、write有効化、旧token失効は証拠を分け、それぞれ対象と環境を示して明示権限を得る
 
 `20260723123500`だけ成功し`20260723123600`以降が失敗した場合は、command版appとglobal gate OFFを維持し、code rollbackしない。lock blockerを確認して同migrationを再試行し、必要なら新timestampのforward bridgeを追加する。旧codeへ戻す必要がある場合だけ、先にStaging検証済みの逆GRANT migrationを適用する。
+
+`20260723130000`〜`20260723130700`には、一時的な旧RPC revoke、tag lock mode、table lockを後続migrationで置換するprefixがある。SupabaseとVercelのProduction deployにはDB先行を保証する単一transactionがないため、通常の無停止自動deployへこのchainをそのまま流さない。global MCP gate OFFだけではSettings/tagの旧writerを止められない。ProductionはHALTとし、書き込みをquiesceできるmaintenance手順、またはprefixごとに旧/new bundle双方が安全な別のstaged compatibility migration chainをPersistent Stagingで実証してから明示権限を得る。
 
 逆GRANTはauthenticatedへ必要な`INSERT / UPDATE / DELETE`と旧3 RPCの`EXECUTE`だけを戻し、`PUBLIC` / `anon` / `TRUNCATE`等を戻さない。復旧後の再cutoverは適用済みmigrationを再利用せず、新timestampのREVOKE + effective assertion migrationを使う。逆GRANTと再cutoverは一組でPersistent Staging rehearsalを完了してからProduction候補にする。
