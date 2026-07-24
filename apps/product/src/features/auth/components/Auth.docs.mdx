@@ -14,7 +14,7 @@ Supabase Auth ベースの認証システム。OAuth、MFA、セッション監�
 ユーザーアクセス
 ├── 未認証 → AuthLayout（ログイン/サインアップフォーム）
 │   ├── メール/パスワード認証
-│   └── OAuth（Google, Apple, GitHub）
+│   └── OAuth（Google のみ。Apple / Meta は不採用）
 │       └── 認証成功 → セッション確立
 ├── MFAチェック
 │   └── MFA有効 → MFA認証画面
@@ -89,11 +89,8 @@ devtools ミドルウェア付き、タイムアウト処理（5秒）。
 
 ## OAuth プロバイダー
 
-| プロバイダー | 設定             |
-| ------------ | ---------------- |
-| Google       | `auth-config.ts` |
-| Apple        | `auth-config.ts` |
-| GitHub       | `auth-config.ts` |
+Google のみ。本番の provider 設定は Supabase Dashboard が正本
+（Apple は有料 Developer Program が必須のため不採用、Meta は審査コストのため不採用。2026-07 決定）。
 
 ---
 

@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 
-import NextImage from 'next/image';
-
 import { Link } from '@dayopt/i18n/navigation';
 
 import {
@@ -58,7 +56,7 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
     return (
       <div className={cn('flex flex-col gap-6', className)} {...props}>
         <Card className="overflow-hidden p-0">
-          <CardContent className="grid p-0 md:grid-cols-2">
+          <CardContent className="p-0">
             <div className="p-6 md:p-8">
               <FieldGroup>
                 <div className="flex flex-col items-center gap-2 text-center">
@@ -75,16 +73,6 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
                 </Field>
               </FieldGroup>
             </div>
-            <div className="bg-container relative hidden md:block">
-              <NextImage
-                src="/images/placeholder.svg"
-                alt="Decorative background"
-                fill
-                loading="lazy"
-                sizes="(min-width: 768px) 50vw, 0vw"
-                className="object-cover dark:brightness-20 dark:grayscale"
-              />
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -94,7 +82,7 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="overflow-hidden p-0">
-        <CardContent className="grid p-0 md:grid-cols-2">
+        <CardContent className="p-0">
           <form className="p-6 md:p-8" onSubmit={handleSubmit}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
@@ -146,16 +134,6 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
               </FieldDescription>
             </FieldGroup>
           </form>
-          <div className="bg-container relative hidden md:block">
-            <NextImage
-              src="/images/placeholder.svg"
-              alt="Decorative background"
-              fill
-              loading="lazy"
-              sizes="(min-width: 768px) 50vw, 0vw"
-              className="object-cover dark:brightness-20 dark:grayscale"
-            />
-          </div>
         </CardContent>
       </Card>
     </div>

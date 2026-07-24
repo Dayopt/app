@@ -45,7 +45,7 @@ interface AuthState {
     password: string,
     options?: { captchaToken?: string },
   ) => Promise<AuthResponse>;
-  signInWithOAuth: (provider: 'google' | 'apple' | 'github') => Promise<OAuthResponse>;
+  signInWithOAuth: (provider: 'google') => Promise<OAuthResponse>;
   signOut: () => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   // @supabase/auth-js 2.106.2 以降 updateUser は session を含まない UserResponse を返す

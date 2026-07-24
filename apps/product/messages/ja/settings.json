@@ -120,13 +120,8 @@
           "description": "新しいコードを生成すると、既存のリカバリーコードはすべて無効になります。この操作は元に戻せません。"
         }
       },
-      "socialLogin": "ソーシャルログイン連携",
-      "socialLoginDesc": "ソーシャルログイン連携は今後のアップデートで利用可能になります",
-      "connect": "連携",
       "disconnect": "解除",
       "connected": "連携済み",
-      "notConnected": "未連携",
-      "comingSoon": "準備中",
       "session": "セッション",
       "dangerZone": "危険な操作",
       "dangerZoneDesc": "取り消すことのできない破壊的なアクション",
