@@ -25,6 +25,23 @@ PR ごとの Supabase Preview Branch credentials は例外。Supabase / Vercel i
 
 ---
 
+## AI エージェントの env ファイル境界
+
+Claude / Codex など全 coding agent に共通の境界。provider 固有の enforcement（Claude の `.claude/settings.json` deny + `pre-tool-guard.sh`、Codex の sandbox 設定）はこの節の実装であり、規約の正本はここに置く。
+
+**触ってよい（読み書き可）**:
+
+- `.env.example` — `op://` 参照スキーマの雛形。secret を含まないため、env var 追加時は agent が雛形更新まで完結する
+- `.op-env.local` / `.op-env.local.example` — 中身は `op://` 参照のみで実秘密なし
+
+**触らない（読みも書きもしない）**:
+
+- `.env` / `.env.local` / `.env.*.local` / `.env.development` / `.env.staging` / `.env.production` / `.envrc` / `supabase/.env*` — 通常は存在しないが、`vercel env pull` などで一時的に実値入りで生成されうる。読むと実値が agent の会話ログに載り、方針 4「値を表示しない」に反する
+
+secret の**利用**は制限しない。agent は `op run` 経由（`pnpm dev`、MCP の自己解決起動など）で値を見ずに secret を使う。これが 1Password 移行後の設計であり、実値ファイルを読める必要はない。
+
+---
+
 ## 保管対象
 
 「API キー」「SSH 鍵」で分類すると漏れる。**漏れた時に何が起きるか** で分類する。
