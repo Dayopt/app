@@ -11,6 +11,16 @@ const tsxBin = join(rootDir, 'node_modules/.bin/tsx');
 const temporaryDirectories: string[] = [];
 
 /**
+ * このファイル自身も `pnpm secrets:check` の走査対象になる。
+ *
+ * 「検出されるべき」fixture をソースに literal で書くと自分自身が引っかかるので、
+ * scheme を変数に出して完全な接続文字列がソース上に現れないようにする。
+ * 逆に「除外されるべき」fixture はあえて literal のまま置き、tracked file に
+ * 実在する形で例外が効くことを示す。
+ */
+const scheme = 'postgresql';
+
+/**
  * check-secrets.ts は cwd の `git ls-files` を走査対象にするので、
  * fixture ごとに使い捨ての git repo を作って本体をそのまま起動する。
  * commit は不要（`git ls-files` は index を読む）。
@@ -52,10 +62,8 @@ describe('check-secrets.ts', () => {
     });
 
     it('loopback でも既定 password でなければ検出する', () => {
-      // 実 secret が literal で 1 行に並ばないよう組み立てる（CI の gitleaks 対策）。
-      const password = 'hunter2';
       const result = runCheck({
-        'runbook.md': `psql 'postgresql://postgres:${password}@127.0.0.1:54322/postgres'\n`,
+        'runbook.md': `psql '${scheme}://postgres:hunter2@127.0.0.1:54322/postgres'\n`,
       });
 
       expect(result.status).toBe(1);
@@ -63,9 +71,8 @@ describe('check-secrets.ts', () => {
     });
 
     it('リモートホスト宛は既定 password でも検出する', () => {
-      const host = 'db.example.com';
       const result = runCheck({
-        'runbook.md': `psql 'postgresql://postgres:postgres@${host}:5432/prod'\n`,
+        'runbook.md': `psql '${scheme}://postgres:postgres@db.example.com:5432/prod'\n`,
       });
 
       expect(result.status).toBe(1);
