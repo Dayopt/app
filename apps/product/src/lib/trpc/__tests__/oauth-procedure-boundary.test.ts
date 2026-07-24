@@ -6,10 +6,21 @@ import { createCallerFactory, createTRPCRouter, protectedProcedure } from '../pr
 
 const handler = vi.fn(() => 'ok');
 const unmappedHandler = vi.fn(() => 'unmapped');
+const tagsListHandler = vi.fn(() => 'tags');
+const constraintsHandler = vi.fn(() => 'constraints');
+const neighboringHandler = vi.fn(() => 'neighboring');
 
 const testRouter = createTRPCRouter({
   plans: createTRPCRouter({
     list: protectedProcedure.query(() => handler()),
+  }),
+  tags: createTRPCRouter({
+    list: protectedProcedure.query(() => tagsListHandler()),
+    listHierarchy: protectedProcedure.query(() => neighboringHandler()),
+  }),
+  timeblockContext: createTRPCRouter({
+    getConstraints: protectedProcedure.query(() => constraintsHandler()),
+    getRevision: protectedProcedure.query(() => neighboringHandler()),
   }),
   userSettings: createTRPCRouter({
     update: protectedProcedure.mutation(() => unmappedHandler()),
@@ -75,6 +86,48 @@ describe('OAuth tRPC execution boundary', () => {
       code: 'FORBIDDEN',
     });
     expect(unmappedHandler).not.toHaveBeenCalled();
+  });
+
+  it('新しいread scopeは対応するexact procedureだけを許可する', async () => {
+    const tagsContext = createMockContext({
+      userId: 'user-1',
+      authMode: 'oauth',
+      oauthExecution: 'mcp_internal',
+      oauthScopes: ['read:tags'],
+    });
+    const constraintsContext = createMockContext({
+      userId: 'user-1',
+      authMode: 'oauth',
+      oauthExecution: 'mcp_internal',
+      oauthScopes: ['read:constraints'],
+    });
+
+    await expect(createCaller(tagsContext).tags.list()).resolves.toBe('tags');
+    await expect(createCaller(constraintsContext).timeblockContext.getConstraints()).resolves.toBe(
+      'constraints',
+    );
+    await expect(createCaller(tagsContext).timeblockContext.getConstraints()).rejects.toMatchObject(
+      {
+        code: 'FORBIDDEN',
+      },
+    );
+  });
+
+  it('同じrouterでも隣接procedureはOAuthへ公開しない', async () => {
+    const context = createMockContext({
+      userId: 'user-1',
+      authMode: 'oauth',
+      oauthExecution: 'mcp_internal',
+      oauthScopes: ['read:tags', 'read:constraints'],
+    });
+
+    await expect(createCaller(context).tags.listHierarchy()).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(createCaller(context).timeblockContext.getRevision()).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    expect(neighboringHandler).not.toHaveBeenCalled();
   });
 
   it('session procedureの既存挙動は変えない', async () => {

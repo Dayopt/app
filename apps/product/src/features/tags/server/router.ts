@@ -45,11 +45,17 @@ export const tagsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const service = createTagService(ctx.supabase);
-        const tags = await service.list({
-          userId: ctx.userId,
-          sortField: input?.sortField,
-          sortOrder: input?.sortOrder,
-        });
+        const tags =
+          ctx.authMode === 'oauth'
+            ? await service.listForMcp({
+                userId: ctx.userId,
+                ...(ctx.req.signal ? { signal: ctx.req.signal } : {}),
+              })
+            : await service.list({
+                userId: ctx.userId,
+                sortField: input?.sortField,
+                sortOrder: input?.sortOrder,
+              });
 
         return {
           data: tags,

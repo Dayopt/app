@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createMockContext } from '@/lib/test/trpc-test-helpers';
-import { createCallerFactory } from '@/lib/trpc/procedures';
+import { createCallerFactory, createTRPCRouter } from '@/lib/trpc/procedures';
 
 const getRevision = vi.hoisted(() => vi.fn());
 const getConstraints = vi.hoisted(() => vi.fn());
@@ -12,7 +12,9 @@ vi.mock('../timeblock-context-service', () => ({
 
 import { timeblockContextRouter } from '../timeblock-context-router';
 
-const createCaller = createCallerFactory(timeblockContextRouter);
+const createCaller = createCallerFactory(
+  createTRPCRouter({ timeblockContext: timeblockContextRouter }),
+);
 
 describe('timeblock context router', () => {
   beforeEach(() => {
@@ -27,14 +29,14 @@ describe('timeblock context router', () => {
 
   it('sessionのverified user IDでrevisionを取得する', async () => {
     await expect(
-      createCaller(createMockContext({ userId: 'user-1' })).getRevision(),
+      createCaller(createMockContext({ userId: 'user-1' })).timeblockContext.getRevision(),
     ).resolves.toEqual({ revision: '42' });
     expect(getRevision).toHaveBeenCalledWith('user-1');
   });
 
   it('未認証requestを拒否する', async () => {
     await expect(
-      createCaller(createMockContext({ userId: undefined })).getRevision(),
+      createCaller(createMockContext({ userId: undefined })).timeblockContext.getRevision(),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
     expect(getRevision).not.toHaveBeenCalled();
   });
@@ -46,7 +48,9 @@ describe('timeblock context router', () => {
       endDate: '2026-07-27T00:00:00+09:00',
     };
 
-    await expect(createCaller(context).getConstraints(input)).resolves.toMatchObject({
+    await expect(
+      createCaller(context).timeblockContext.getConstraints(input),
+    ).resolves.toMatchObject({
       timezone: 'Asia/Tokyo',
     });
     expect(getConstraints).toHaveBeenCalledWith('user-1', input, undefined);
@@ -56,7 +60,7 @@ describe('timeblock context router', () => {
     const context = createMockContext({ userId: 'user-1' });
 
     await expect(
-      createCaller(context).getConstraints({
+      createCaller(context).timeblockContext.getConstraints({
         startDate: '2026-01-01T00:00:00+09:00',
         endDate: '2026-02-01T00:00:00.001+09:00',
         userId: 'foreign-user',
@@ -65,14 +69,24 @@ describe('timeblock context router', () => {
     expect(getConstraints).not.toHaveBeenCalled();
   });
 
-  it('OAuth procedure allowlistに入るまでは拒否する', async () => {
+  it('OAuthはread:constraintsでgetConstraintsだけを許可する', async () => {
     const context = Object.assign(createMockContext({ userId: 'user-1' }), {
       authMode: 'oauth' as const,
-      oauthScopes: ['read:entries'] as const,
+      oauthScopes: ['read:constraints'] as const,
       oauthExecution: 'mcp_internal' as const,
     });
+    const input = {
+      startDate: '2026-07-20T00:00:00+09:00',
+      endDate: '2026-07-27T00:00:00+09:00',
+    };
 
-    await expect(createCaller(context).getRevision()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(createCaller(context).timeblockContext.getRevision()).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
     expect(getRevision).not.toHaveBeenCalled();
+    await expect(
+      createCaller(context).timeblockContext.getConstraints(input),
+    ).resolves.toMatchObject({ timezone: 'Asia/Tokyo' });
+    expect(getConstraints).toHaveBeenCalledWith('user-1', input, undefined);
   });
 });

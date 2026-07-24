@@ -2,12 +2,14 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { McpRequestContext } from '../../_context';
+import { registerConstraintsGetTool } from '../constraints-get';
 import { registerEntriesListTool } from '../entries-list';
 import {
   getRequiredScopeForTool,
   MCP_TOOL_DESCRIPTORS,
   mergeMcpChallengeScopes,
 } from '../registry';
+import { registerTagsListTool } from '../tags-list';
 import {
   registerPlansGetTool,
   registerPlansTrashListTool,
@@ -21,36 +23,45 @@ const listDeletedPlans = vi.hoisted(() => vi.fn());
 const listDeletedRecords = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/mcp/trpc-bridge', () => ({ createMcpTrpcCaller }));
-vi.mock('@/features/timeblock/server/service-index', () => ({
-  createTimeblockTrashReadClient: () => ({ listDeletedPlans, listDeletedRecords }),
-  TimeblockTrashReadError: class TimeblockTrashReadError extends Error {},
-  transformPlanReadModel: (row: Record<string, unknown>) => ({
-    id: row.id,
-    title: row.title,
-    note: row.note,
-    tagId: row.tag_id,
-    startAt: row.start_at,
-    endAt: row.end_at,
-    source: row.source,
-    skippedAt: row.skipped_at,
-    deletedAt: row.deleted_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }),
-  transformRecordReadModel: (row: Record<string, unknown>) => ({
-    id: row.id,
-    title: row.title,
-    note: row.note,
-    tagId: row.tag_id,
-    planId: row.plan_id,
-    startAt: row.start_at,
-    endAt: row.end_at,
-    source: row.source,
-    deletedAt: row.deleted_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }),
-}));
+vi.mock('@/features/timeblock/server/service-index', async () => {
+  const { z } = await import('zod');
+  return {
+    createTimeblockTrashReadClient: () => ({ listDeletedPlans, listDeletedRecords }),
+    TimeblockTrashReadError: class TimeblockTrashReadError extends Error {},
+    timeblockContextRangeSchema: z
+      .object({
+        startDate: z.string().datetime({ offset: true }),
+        endDate: z.string().datetime({ offset: true }),
+      })
+      .strict(),
+    transformPlanReadModel: (row: Record<string, unknown>) => ({
+      id: row.id,
+      title: row.title,
+      note: row.note,
+      tagId: row.tag_id,
+      startAt: row.start_at,
+      endAt: row.end_at,
+      source: row.source,
+      skippedAt: row.skipped_at,
+      deletedAt: row.deleted_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }),
+    transformRecordReadModel: (row: Record<string, unknown>) => ({
+      id: row.id,
+      title: row.title,
+      note: row.note,
+      tagId: row.tag_id,
+      planId: row.plan_id,
+      startAt: row.start_at,
+      endAt: row.end_at,
+      source: row.source,
+      deletedAt: row.deleted_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }),
+  };
+});
 
 interface ListInput {
   startDate?: string;
@@ -224,6 +235,8 @@ describe('MCP list tools public contract', () => {
     const descriptorNames = MCP_TOOL_DESCRIPTORS.map((descriptor) => descriptor.name);
     expect(descriptorNames).toEqual([
       'entries.list',
+      'tags.list',
+      'constraints.get',
       'plans.list',
       'plans.get',
       'plans.create',
@@ -254,10 +267,50 @@ describe('MCP list tools public contract', () => {
       );
     }
     expect(getRequiredScopeForTool('plans.get')).toBe('read:entries');
+    expect(getRequiredScopeForTool('tags.list')).toBe('read:tags');
+    expect(getRequiredScopeForTool('constraints.get')).toBe('read:constraints');
     expect(getRequiredScopeForTool('plans.trash.list')).toBe('delete:plans');
     expect(getRequiredScopeForTool('plans.create')).toBe('write:plans');
     expect(getRequiredScopeForTool('records.delete')).toBe('delete:records');
     expect(getRequiredScopeForTool('plans.skip')).toBeNull();
+  });
+
+  it('新しいcontext toolもdescriptorと実登録名が一致する', () => {
+    const tags = createServerDouble();
+    const constraints = createServerDouble();
+
+    registerTagsListTool(tags.server, { ...context, scopes: ['read:tags'] });
+    registerConstraintsGetTool(constraints.server, {
+      ...context,
+      scopes: ['read:constraints'],
+    });
+
+    expect([...tags.handlers.keys()]).toEqual(['tags.list']);
+    expect([...constraints.handlers.keys()]).toEqual(['constraints.get']);
+  });
+
+  it('新しいcontext toolはhandler内でもscope不足をstable errorにする', async () => {
+    const tags = createServerDouble();
+    const constraints = createServerDouble();
+    registerTagsListTool(tags.server, context);
+    registerConstraintsGetTool(constraints.server, context);
+
+    const tagsResult = await getHandler(tags.handlers, 'tags.list')({});
+    const constraintsResult = await getHandler(
+      constraints.handlers,
+      'constraints.get',
+    )({
+      startDate: '2026-07-20T00:00:00+09:00',
+      endDate: '2026-07-27T00:00:00+09:00',
+    });
+
+    expect(parseText(tagsResult)).toMatchObject({
+      error: { code: 'INSUFFICIENT_SCOPE', retryable: false },
+    });
+    expect(parseText(constraintsResult)).toMatchObject({
+      error: { code: 'INSUFFICIENT_SCOPE', retryable: false },
+    });
+    expect(createMcpTrpcCaller).not.toHaveBeenCalled();
   });
 
   it('read step-up challengeは既存grantと不足scopeだけを保持する', () => {

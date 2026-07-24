@@ -13,3 +13,4 @@ export {
 } from './mcp-timeblock-read-client';
 export { createPlanService } from './plan-service';
 export { createRecordService } from './record-service';
+export { timeblockContextRangeSchema } from './timeblock-context-contract';

@@ -8,7 +8,7 @@
       "scope": {
         "read:entries": "Read timeblocks",
         "read:tags": "Read tags",
-        "read:constraints": "Read scheduling constraints",
+        "read:constraints": "Read Plan and Record occupancy times and scheduling constraints",
         "read:stats": "Read review statistics",
         "write:plans": "Create and update plans",
         "delete:plans": "Delete and restore plans",

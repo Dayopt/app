@@ -3,7 +3,9 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { DEFAULT_SCOPES, hasWriteScope, type SupportedScope } from '@/lib/oauth-server';
 
 import type { McpRequestContext } from '../_context';
+import { registerConstraintsGetTool } from './constraints-get';
 import { registerEntriesListTool } from './entries-list';
+import { registerTagsListTool } from './tags-list';
 import {
   registerPlansGetTool,
   registerPlansTrashListTool,
@@ -34,6 +36,16 @@ export const MCP_TOOL_DESCRIPTORS = [
     name: 'entries.list',
     requiredScope: 'read:entries',
     register: registerEntriesListTool,
+  },
+  {
+    name: 'tags.list',
+    requiredScope: 'read:tags',
+    register: registerTagsListTool,
+  },
+  {
+    name: 'constraints.get',
+    requiredScope: 'read:constraints',
+    register: registerConstraintsGetTool,
   },
   {
     name: 'plans.list',
@@ -116,9 +128,11 @@ export function getRequiredScopeForTool(toolName: string): SupportedScope | null
 }
 
 export function mergeMcpChallengeScopes(
-  grantedScopes: readonly SupportedScope[],
+  effectiveScopes: readonly SupportedScope[],
   missingScopes: readonly SupportedScope[],
 ): SupportedScope[] {
   const requiredBaseScopes = hasWriteScope(missingScopes) ? DEFAULT_SCOPES : [];
-  return [...new Set<SupportedScope>([...requiredBaseScopes, ...grantedScopes, ...missingScopes])];
+  return [
+    ...new Set<SupportedScope>([...requiredBaseScopes, ...effectiveScopes, ...missingScopes]),
+  ];
 }

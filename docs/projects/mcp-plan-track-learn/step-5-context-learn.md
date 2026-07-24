@@ -39,7 +39,7 @@ Step 5のrepo完了条件は次のとおり。
 - 日時はoffset付きISO 8601とする
 - successは`schemaVersion: 1`のstructured contentを返す
 - handlerが返すerrorは既存の`schemaVersion`、stable `code` / `message` / `retryable`を持つJSON text + `isError: true`とし、structured contentを付けない
-- unknown field、不正な日時、逆転期間、31日超過はtool handlerを実行せず、MCP SDKのJSON-RPC input validation errorとして返す。handlerのstable JSON text errorとは混ぜない
+- unknown field、不正な日時、逆転期間、31日超過はtool handlerを実行せず、MCP SDK生成の`CallToolResult { isError: true }`として返す。handlerのstable JSON text errorとは混ぜない
 - tool registration、scope preflight、handler内scope確認、OAuth tRPC procedure pathをexact nameで一致させる
 
 ### `tags.list`
@@ -277,7 +277,7 @@ Exact execution mapping:
 | `constraints.get` | `read:constraints` | `timeblockContext.getConstraints` |
 | `review.get`      | `read:stats`       | `statistics.getMcpReview`         |
 
-`tools/list`はeffective scopeを持つtoolだけを返す。cached tool callはroute preflightで403 + `WWW-Authenticate`、handler内scope確認、exact tRPC procedure mappingの三境界で拒否する。router prefix単位のOAuth許可は作らない。
+`tools/list`はeffective scopeを持つtoolだけを返す。cached tool callはroute preflightで403 + `WWW-Authenticate`、handler内scope確認、exact tRPC procedure mappingの三境界で拒否する。403 challengeはgate適用後のeffective scopeと当該missing scopeを維持し、write / delete時だけ必須の`read:entries`を追加する。router prefix単位のOAuth許可は作らない。
 
 ## Revision and lock contract
 
@@ -434,7 +434,7 @@ pollerはworkspace Composition Layerに一つだけ置き、`CalendarViewClient`
 
 - runtime registryと実登録集合が18 toolで一致する
 - 4 read scopeのmetadata、default scope、scope-filtered discoveryを固定する
-- 3 toolのstrict input、structured success、SDK validation error、stable handler errorをactual SDKで検証する
+- 3 toolのstrict input、structured success、SDK生成の`isError` validation result、stable handler errorをactual SDKで検証する
 - scopeのないtoolは列挙せず、cached callは403 challengeとなる
 - outputにuser ID、title、note、timeblock ID、raw DB errorを含めない
 

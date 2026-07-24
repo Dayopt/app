@@ -18,6 +18,9 @@ const plansList = vi.hoisted(() => vi.fn());
 const plansGetById = vi.hoisted(() => vi.fn());
 const recordsList = vi.hoisted(() => vi.fn());
 const recordsGetById = vi.hoisted(() => vi.fn());
+const tagsList = vi.hoisted(() => vi.fn());
+const constraintsGet = vi.hoisted(() => vi.fn());
+const createMcpTrpcCaller = vi.hoisted(() => vi.fn());
 const listDeletedPlans = vi.hoisted(() => vi.fn());
 const listDeletedRecords = vi.hoisted(() => vi.fn());
 
@@ -71,55 +74,62 @@ const record = {
   updated_at: version,
 };
 
-vi.mock('@/lib/mcp/trpc-bridge', () => ({
-  createMcpTrpcCaller: () => ({
-    plans: {
-      getById: plansGetById,
-      list: plansList,
-    },
-    records: {
-      getById: recordsGetById,
-      list: recordsList,
-    },
-  }),
-}));
+vi.mock('@/lib/mcp/trpc-bridge', () => ({ createMcpTrpcCaller }));
 
-vi.mock('@/features/timeblock/server/service-index', () => ({
-  createTimeblockTrashReadClient: () => ({ listDeletedPlans, listDeletedRecords }),
-  TimeblockTrashReadError: class TimeblockTrashReadError extends Error {},
-  transformPlanReadModel: (row: Record<string, unknown>) => ({
-    id: row.id,
-    title: row.title,
-    note: row.note,
-    tagId: row.tag_id,
-    startAt: row.start_at,
-    endAt: row.end_at,
-    source: row.source,
-    skippedAt: row.skipped_at,
-    deletedAt: row.deleted_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }),
-  transformRecordReadModel: (row: Record<string, unknown>) => ({
-    id: row.id,
-    title: row.title,
-    note: row.note,
-    tagId: row.tag_id,
-    planId: row.plan_id,
-    startAt: row.start_at,
-    endAt: row.end_at,
-    source: row.source,
-    deletedAt: row.deleted_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }),
-}));
+vi.mock('@/features/timeblock/server/service-index', async () => {
+  const { z } = await import('zod');
+  return {
+    createTimeblockTrashReadClient: () => ({ listDeletedPlans, listDeletedRecords }),
+    TimeblockTrashReadError: class TimeblockTrashReadError extends Error {},
+    timeblockContextRangeSchema: z
+      .object({
+        startDate: z.string().datetime({ offset: true }),
+        endDate: z.string().datetime({ offset: true }),
+      })
+      .strict()
+      .superRefine((range, context) => {
+        const start = Date.parse(range.startDate);
+        const end = Date.parse(range.endDate);
+        if (start >= end || end - start > 31 * 24 * 60 * 60 * 1_000) {
+          context.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid date range' });
+        }
+      }),
+    transformPlanReadModel: (row: Record<string, unknown>) => ({
+      id: row.id,
+      title: row.title,
+      note: row.note,
+      tagId: row.tag_id,
+      startAt: row.start_at,
+      endAt: row.end_at,
+      source: row.source,
+      skippedAt: row.skipped_at,
+      deletedAt: row.deleted_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }),
+    transformRecordReadModel: (row: Record<string, unknown>) => ({
+      id: row.id,
+      title: row.title,
+      note: row.note,
+      tagId: row.tag_id,
+      planId: row.plan_id,
+      startAt: row.start_at,
+      endAt: row.end_at,
+      source: row.source,
+      deletedAt: row.deleted_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }),
+  };
+});
 
 import type { McpRequestContext } from '../../_context';
 import { createMcpServer } from '../../_server';
 
 const allScopes: McpRequestContext['scopes'] = [
   'read:entries',
+  'read:tags',
+  'read:constraints',
   'write:plans',
   'delete:plans',
   'write:records',
@@ -137,6 +147,8 @@ const context: McpRequestContext = {
 
 const expectedToolNames = [
   'entries.list',
+  'tags.list',
+  'constraints.get',
   'plans.list',
   'plans.get',
   'plans.create',
@@ -160,6 +172,74 @@ describe('MCP SDK public tool contract', () => {
     plansGetById.mockResolvedValue(plan);
     recordsList.mockResolvedValue([record]);
     recordsGetById.mockResolvedValue(record);
+    tagsList.mockResolvedValue({
+      data: [
+        {
+          id: '00000000-0000-4000-8000-000000000003',
+          name: 'Work',
+          user_id: context.userId,
+          color: 'blue',
+          icon: 'briefcase',
+          is_active: true,
+          parent_id: null,
+          sort_order: 0,
+          created_at: '2026-07-01T00:00:00.000Z',
+          updated_at: '2026-07-01T00:00:00.000Z',
+        },
+      ],
+      count: 1,
+    });
+    constraintsGet.mockResolvedValue({
+      asOf: '2026-07-24T10:00:00.000Z',
+      timezone: 'Asia/Tokyo',
+      range: {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+        endExclusive: true,
+      },
+      completeness: { complete: true, maxItemsPerLane: 5_000 },
+      occupancy: {
+        plans: [
+          {
+            startAt: '2026-07-20T01:00:00.000Z',
+            endAt: '2026-07-20T02:00:00.000Z',
+          },
+        ],
+        records: [],
+      },
+      rules: {
+        intervalBoundary: '[)',
+        overlap: {
+          planVsPlan: 'forbidden',
+          recordVsRecord: 'forbidden',
+          planVsRecord: 'allowed',
+        },
+        plans: {
+          createEnd: 'after_as_of',
+          pastPlanTimeUpdate: 'forbidden',
+          pastPlanContentUpdate: 'allowed',
+          timeUpdateEnd: 'after_as_of',
+          skippedOccupiesLane: true,
+        },
+        records: {
+          createEnd: 'at_or_before_as_of',
+          timeUpdateEnd: 'at_or_before_as_of',
+          linkedPlan: 'non_deleted_unskipped_completed',
+        },
+      },
+    });
+    createMcpTrpcCaller.mockReturnValue({
+      plans: {
+        getById: plansGetById,
+        list: plansList,
+      },
+      records: {
+        getById: recordsGetById,
+        list: recordsList,
+      },
+      tags: { list: tagsList },
+      timeblockContext: { getConstraints: constraintsGet },
+    });
     listDeletedPlans.mockResolvedValue([{ ...plan, deleted_at: version }]);
     listDeletedRecords.mockResolvedValue([{ ...record, deleted_at: version }]);
     createPlan.mockImplementation((input) =>
@@ -194,6 +274,14 @@ describe('MCP SDK public tool contract', () => {
       await client.listTools();
       const calls = [
         { name: 'entries.list', arguments: {} },
+        { name: 'tags.list', arguments: {} },
+        {
+          name: 'constraints.get',
+          arguments: {
+            startDate: '2026-07-20T00:00:00+09:00',
+            endDate: '2026-07-27T00:00:00+09:00',
+          },
+        },
         { name: 'plans.list', arguments: {} },
         { name: 'plans.get', arguments: { planId } },
         { name: 'plans.trash.list', arguments: {} },
@@ -212,6 +300,26 @@ describe('MCP SDK public tool contract', () => {
         );
       }
 
+      const tagResult = await client.callTool({ name: 'tags.list', arguments: {} });
+      const publicTag = (tagResult.structuredContent as { tags: Array<Record<string, unknown>> })
+        .tags[0];
+      expect(Object.keys(publicTag ?? {}).sort()).toEqual(
+        ['color', 'icon', 'id', 'name', 'parentId', 'sortOrder'].sort(),
+      );
+      expect(JSON.stringify(tagResult)).not.toContain(context.userId);
+
+      const constraintsResult = await client.callTool({
+        name: 'constraints.get',
+        arguments: {
+          startDate: '2026-07-20T00:00:00+09:00',
+          endDate: '2026-07-27T00:00:00+09:00',
+        },
+      });
+      expect(JSON.stringify(constraintsResult)).not.toMatch(/title|note|tagId|"id"/);
+      expect(createMcpTrpcCaller).toHaveBeenCalledWith(
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+
       const rejected = await client.callTool({
         name: 'plans.get',
         arguments: { planId, userId: 'foreign-user' },
@@ -225,6 +333,95 @@ describe('MCP SDK public tool contract', () => {
       expect(missing.structuredContent).toBeUndefined();
       expect(parseText(missing)).toMatchObject({ error: { code: 'NOT_FOUND' } });
       expect(captureUnexpectedMcpToolError).not.toHaveBeenCalled();
+    } finally {
+      await Promise.all([client.close(), server.close()]);
+    }
+  });
+
+  it('context toolのunknown fieldと不正rangeをSDKがhandler前に拒否する', async () => {
+    const { client, server } = await connectSdk(context);
+    try {
+      const rejectedTags = await client.callTool({
+        name: 'tags.list',
+        arguments: { userId: 'foreign-user' },
+      });
+      expect(rejectedTags.isError).toBe(true);
+      expect(tagsList).not.toHaveBeenCalled();
+
+      const invalidRanges = [
+        {
+          startDate: '2026-07-20T00:00:00',
+          endDate: '2026-07-27T00:00:00+09:00',
+        },
+        {
+          startDate: '2026-07-27T00:00:00+09:00',
+          endDate: '2026-07-20T00:00:00+09:00',
+        },
+        {
+          startDate: '2026-01-01T00:00:00+09:00',
+          endDate: '2026-02-01T00:00:00.001+09:00',
+        },
+        {
+          startDate: '2026-07-20T00:00:00+09:00',
+          endDate: '2026-07-27T00:00:00+09:00',
+          userId: 'foreign-user',
+        },
+      ];
+
+      for (const arguments_ of invalidRanges) {
+        const result = await client.callTool({
+          name: 'constraints.get',
+          arguments: arguments_,
+        });
+        expect(result.isError).toBe(true);
+      }
+      expect(constraintsGet).not.toHaveBeenCalled();
+    } finally {
+      await Promise.all([client.close(), server.close()]);
+    }
+  });
+
+  it('constraints handlerはdomain codeをstable errorへ戻しraw detailを隠す', async () => {
+    const { client, server } = await connectSdk(context);
+    const arguments_ = {
+      startDate: '2026-07-20T00:00:00+09:00',
+      endDate: '2026-07-27T00:00:00+09:00',
+    };
+
+    try {
+      constraintsGet.mockRejectedValueOnce(
+        new TRPCError({
+          code: 'BAD_REQUEST',
+          cause: Object.assign(new Error('private dense detail'), { code: 'RANGE_TOO_DENSE' }),
+        }),
+      );
+      const dense = await client.callTool({ name: 'constraints.get', arguments: arguments_ });
+      expect(dense.structuredContent).toBeUndefined();
+      expect(parseText(dense)).toMatchObject({
+        error: { code: 'RANGE_TOO_DENSE', retryable: false },
+      });
+      expect(JSON.stringify(dense)).not.toContain('private dense detail');
+
+      constraintsGet.mockRejectedValueOnce(
+        new TRPCError({
+          code: 'CONFLICT',
+          cause: Object.assign(new Error('private revision detail'), {
+            code: 'CONTEXT_CHANGED',
+          }),
+        }),
+      );
+      const changed = await client.callTool({ name: 'constraints.get', arguments: arguments_ });
+      expect(parseText(changed)).toMatchObject({
+        error: { code: 'CONTEXT_CHANGED', retryable: true },
+      });
+
+      constraintsGet.mockRejectedValueOnce(new Error('private database detail'));
+      const failed = await client.callTool({ name: 'constraints.get', arguments: arguments_ });
+      expect(parseText(failed)).toMatchObject({
+        error: { code: 'READ_FAILED', retryable: true },
+      });
+      expect(JSON.stringify(failed)).not.toContain('private database detail');
+      expect(captureUnexpectedMcpToolError).toHaveBeenCalledOnce();
     } finally {
       await Promise.all([client.close(), server.close()]);
     }

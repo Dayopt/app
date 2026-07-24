@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const registerEntriesListTool = vi.hoisted(() => vi.fn());
+const registerTagsListTool = vi.hoisted(() => vi.fn());
+const registerConstraintsGetTool = vi.hoisted(() => vi.fn());
 const registerPlansListTool = vi.hoisted(() => vi.fn());
 const registerRecordsListTool = vi.hoisted(() => vi.fn());
 const registerPlansGetTool = vi.hoisted(() => vi.fn());
@@ -17,6 +19,8 @@ const registerRecordsDeleteTool = vi.hoisted(() => vi.fn());
 const registerRecordsRestoreTool = vi.hoisted(() => vi.fn());
 
 vi.mock('../_tools/entries-list', () => ({ registerEntriesListTool }));
+vi.mock('../_tools/tags-list', () => ({ registerTagsListTool }));
+vi.mock('../_tools/constraints-get', () => ({ registerConstraintsGetTool }));
 vi.mock('../_tools/timeblock-list', () => ({ registerPlansListTool, registerRecordsListTool }));
 vi.mock('../_tools/timeblock-detail', () => ({
   registerPlansGetTool,
@@ -60,6 +64,8 @@ describe('MCP scope-filtered tool discovery', () => {
     expect(registerPlansGetTool).toHaveBeenCalledWith(server, baseContext);
     expect(registerRecordsListTool).toHaveBeenCalledWith(server, baseContext);
     expect(registerRecordsGetTool).toHaveBeenCalledWith(server, baseContext);
+    expect(registerTagsListTool).not.toHaveBeenCalled();
+    expect(registerConstraintsGetTool).not.toHaveBeenCalled();
     expect(registerPlansTrashListTool).not.toHaveBeenCalled();
     expect(registerRecordsTrashListTool).not.toHaveBeenCalled();
     expect(registerPlansCreateTool).not.toHaveBeenCalled();
@@ -103,9 +109,12 @@ describe('MCP scope-filtered tool discovery', () => {
     expect(registerRecordsRestoreTool).toHaveBeenCalledWith(server, context);
   });
 
-  it('does not expose entry tools for an unrelated scope', () => {
-    createMcpServer({ ...baseContext, scopes: ['read:tags'] });
+  it('read:tagsではtags.listだけを公開する', () => {
+    const context: McpRequestContext = { ...baseContext, scopes: ['read:tags'] };
+    const server = createMcpServer(context);
 
+    expect(registerTagsListTool).toHaveBeenCalledWith(server, context);
+    expect(registerConstraintsGetTool).not.toHaveBeenCalled();
     expect(registerEntriesListTool).not.toHaveBeenCalled();
     expect(registerPlansListTool).not.toHaveBeenCalled();
     expect(registerPlansGetTool).not.toHaveBeenCalled();
@@ -121,5 +130,16 @@ describe('MCP scope-filtered tool discovery', () => {
     expect(registerRecordsUpdateTool).not.toHaveBeenCalled();
     expect(registerRecordsDeleteTool).not.toHaveBeenCalled();
     expect(registerRecordsRestoreTool).not.toHaveBeenCalled();
+  });
+
+  it('read:constraintsではconstraints.getだけを公開する', () => {
+    const context: McpRequestContext = { ...baseContext, scopes: ['read:constraints'] };
+    const server = createMcpServer(context);
+
+    expect(registerConstraintsGetTool).toHaveBeenCalledWith(server, context);
+    expect(registerTagsListTool).not.toHaveBeenCalled();
+    expect(registerEntriesListTool).not.toHaveBeenCalled();
+    expect(registerPlansListTool).not.toHaveBeenCalled();
+    expect(registerRecordsListTool).not.toHaveBeenCalled();
   });
 });

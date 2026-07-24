@@ -109,6 +109,42 @@ describe('TagService', () => {
       await expect(service.list({ userId })).rejects.toThrow(TagServiceError);
       await expect(service.list({ userId })).rejects.toThrow('Failed to fetch tags');
     });
+
+    it('MCP用queryはowner・active・公開6 fieldだけを取得して既定順を保つ', async () => {
+      const mockQuery = setupMockQuery(mockSupabase.from, [
+        {
+          id: 'child',
+          name: 'Child',
+          color: 'blue',
+          icon: 'briefcase',
+          parent_id: 'root',
+          sort_order: 0,
+        },
+        {
+          id: 'root',
+          name: 'Root',
+          color: null,
+          icon: null,
+          parent_id: null,
+          sort_order: 0,
+        },
+      ]);
+
+      const signal = new AbortController().signal;
+      const result = await service.listForMcp({ userId, signal });
+
+      expect(result.map((tag) => tag.id)).toEqual(['root', 'child']);
+      expect(mockQuery.select).toHaveBeenCalledWith('id,name,color,icon,parent_id,sort_order');
+      expect(mockQuery.eq).toHaveBeenCalledWith('user_id', userId);
+      expect(mockQuery.eq).toHaveBeenCalledWith('is_active', true);
+      expect(mockQuery.abortSignal).toHaveBeenCalledWith(signal);
+      expect(result[0]).toMatchObject({
+        user_id: userId,
+        is_active: true,
+        created_at: null,
+        updated_at: null,
+      });
+    });
   });
 
   describe('getById', () => {

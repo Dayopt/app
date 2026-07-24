@@ -27,6 +27,37 @@ function transformDbTag(dbTag: DbTagRow): Tag {
 export class TagQueryService {
   constructor(private readonly supabase: SupabaseClient<Database>) {}
 
+  async listForMcp(userId: string, signal?: AbortSignal): Promise<Tag[]> {
+    const query = this.supabase
+      .from('tags')
+      .select('id,name,color,icon,parent_id,sort_order')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+    if (signal) query.abortSignal(signal);
+    const { data, error } = await query;
+    if (error) {
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'tags',
+        operation: 'list_mcp_tags',
+      });
+      throw new TagServiceError('FETCH_FAILED', 'Failed to fetch tags', { cause: original });
+    }
+
+    const tags: Tag[] = data.map((tag) => ({
+      id: tag.id,
+      name: tag.name,
+      user_id: userId,
+      color: tag.color,
+      icon: tag.icon,
+      is_active: true,
+      parent_id: tag.parent_id ?? null,
+      sort_order: tag.sort_order,
+      created_at: null,
+      updated_at: null,
+    }));
+    return flattenTagTree(buildTagTree(tags));
+  }
+
   async listHierarchy(userId: string): Promise<TagTreeNode[]> {
     const { data, error } = await this.supabase
       .from('tags')

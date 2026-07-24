@@ -26,6 +26,8 @@ const MCP_TRPC_SCOPE_REQUIREMENTS: Partial<Record<string, SupportedScope>> = {
   'plans.getById': 'read:entries',
   'records.list': 'read:entries',
   'records.getById': 'read:entries',
+  'tags.list': 'read:tags',
+  'timeblockContext.getConstraints': 'read:constraints',
 };
 
 const MFA_CHALLENGE_TRPC_PATHS = new Set(['user.verifyRecoveryCode']);

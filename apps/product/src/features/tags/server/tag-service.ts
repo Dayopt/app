@@ -83,6 +83,11 @@ export class TagService {
     return this.queryService.list(options);
   }
 
+  /** MCP read adapter向けにDB projectionを公開fieldへ限定する。 */
+  async listForMcp(options: { userId: string; signal?: AbortSignal }): Promise<Tag[]> {
+    return this.queryService.listForMcp(options.userId, options.signal);
+  }
+
   /**
    * タグID指定で取得
    *

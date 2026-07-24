@@ -167,10 +167,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function insufficientScopeResponse(
-  grantedScopes: readonly SupportedScope[],
+  effectiveScopes: readonly SupportedScope[],
   missingScopes: readonly SupportedScope[],
 ): Response {
-  const requiredScopes = mergeMcpChallengeScopes(grantedScopes, missingScopes);
+  const requiredScopes = mergeMcpChallengeScopes(effectiveScopes, missingScopes);
   const required = requiredScopes.join(' ');
   return NextResponse.json(
     {
