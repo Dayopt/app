@@ -5,27 +5,43 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 38 件 / RLS 対象テーブル 13 件 / GRANT 85 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 42 件 / RLS 対象テーブル 15 件 / GRANT 97 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
-| table                     | RLS enabled | forced |
-| ------------------------- | ----------- | ------ |
-| email_suppressions        | ✅          | —      |
-| external_calendar_events  | ✅          | —      |
-| mfa_recovery_codes        | ✅          | —      |
-| oauth_audit_log           | ✅          | —      |
-| oauth_authorization_codes | ✅          | —      |
-| oauth_tokens              | ✅          | —      |
-| plans                     | ✅          | —      |
-| profiles                  | ✅          | —      |
-| records                   | ✅          | —      |
-| reports                   | ✅          | —      |
-| stripe_webhook_events     | ✅          | —      |
-| tags                      | ✅          | —      |
-| user_settings             | ✅          | —      |
+| table                         | RLS enabled | forced |
+| ----------------------------- | ----------- | ------ |
+| calendar_connection_calendars | ✅          | —      |
+| calendar_connections          | ✅          | —      |
+| email_suppressions            | ✅          | —      |
+| external_calendar_events      | ✅          | —      |
+| mfa_recovery_codes            | ✅          | —      |
+| oauth_audit_log               | ✅          | —      |
+| oauth_authorization_codes     | ✅          | —      |
+| oauth_tokens                  | ✅          | —      |
+| plans                         | ✅          | —      |
+| profiles                      | ✅          | —      |
+| records                       | ✅          | —      |
+| reports                       | ✅          | —      |
+| stripe_webhook_events         | ✅          | —      |
+| tags                          | ✅          | —      |
+| user_settings                 | ✅          | —      |
 
 ## ポリシー一覧（table 別）
+
+### calendar_connection_calendars
+
+| policy                                                        | cmd    | permissive | roles           | USING                                   | WITH CHECK |
+| ------------------------------------------------------------- | ------ | ---------- | --------------- | --------------------------------------- | ---------- |
+| Service role has full access to calendar connection calendars | ALL    | PERMISSIVE | {service_role}  | true                                    | true       |
+| Users can view own calendar connection calendars              | SELECT | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | —          |
+
+### calendar_connections
+
+| policy                                               | cmd    | permissive | roles           | USING                                   | WITH CHECK |
+| ---------------------------------------------------- | ------ | ---------- | --------------- | --------------------------------------- | ---------- |
+| Service role has full access to calendar connections | ALL    | PERMISSIVE | {service_role}  | true                                    | true       |
+| Users can view own calendar connections              | SELECT | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | —          |
 
 ### email_suppressions
 
@@ -134,6 +150,15 @@
 
 | object type | object                                                                                                                                                                                                                                           | grantee             | privileges                     |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- | ------------------------------ |
+| column      | public.calendar_connections.created_at                                                                                                                                                                                                           | authenticated       | SELECT                         |
+| column      | public.calendar_connections.id                                                                                                                                                                                                                   | authenticated       | SELECT                         |
+| column      | public.calendar_connections.last_sync_error                                                                                                                                                                                                      | authenticated       | SELECT                         |
+| column      | public.calendar_connections.last_synced_at                                                                                                                                                                                                       | authenticated       | SELECT                         |
+| column      | public.calendar_connections.provider                                                                                                                                                                                                             | authenticated       | SELECT                         |
+| column      | public.calendar_connections.provider_account_email                                                                                                                                                                                               | authenticated       | SELECT                         |
+| column      | public.calendar_connections.status                                                                                                                                                                                                               | authenticated       | SELECT                         |
+| column      | public.calendar_connections.updated_at                                                                                                                                                                                                           | authenticated       | SELECT                         |
+| column      | public.calendar_connections.user_id                                                                                                                                                                                                              | authenticated       | SELECT                         |
 | column      | public.external_calendar_events.dismissed_at                                                                                                                                                                                                     | authenticated       | UPDATE                         |
 | column      | public.profiles.avatar_url                                                                                                                                                                                                                       | authenticated       | INSERT, UPDATE                 |
 | column      | public.profiles.email                                                                                                                                                                                                                            | authenticated       | INSERT                         |
@@ -183,6 +208,9 @@
 | routine     | public.update_updated_at()                                                                                                                                                                                                                       | service_role        | EXECUTE                        |
 | routine     | public.use_recovery_code(p_user_id uuid, p_code_hash text)                                                                                                                                                                                       | service_role        | EXECUTE                        |
 | routine     | public.vault_secret_exists(p_name text)                                                                                                                                                                                                          | service_role        | EXECUTE                        |
+| table       | public.calendar_connection_calendars                                                                                                                                                                                                             | authenticated       | SELECT                         |
+| table       | public.calendar_connection_calendars                                                                                                                                                                                                             | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.calendar_connections                                                                                                                                                                                                                      | service_role        | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.email_suppressions                                                                                                                                                                                                                        | anon                | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.email_suppressions                                                                                                                                                                                                                        | authenticated       | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.email_suppressions                                                                                                                                                                                                                        | service_role        | DELETE, INSERT, SELECT, UPDATE |

@@ -2,7 +2,7 @@
 -- RLS ポリシー一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
 -- 全ユーザーデータテーブルで RLS が有効
--- 最終同期日: 2026-07-13
+-- 最終同期日: 2026-07-24
 -- 同期対象 migration:
 --   - 20260318150000_add_entries_soft_delete.sql
 --   - 20260323000000_fix_entries_soft_delete_rls.sql
@@ -15,6 +15,7 @@
 --   - 20260712212527_records_table_and_drop_entries.sql
 --   - 20260713120023_drop_time_model_compatibility_layer.sql
 --   - 20260713121911_restore_baseline_table_grants.sql
+--   - 20260723233814_add_calendar_connection_tables.sql
 --
 -- パターン:
 --   (select auth.uid()) でキャッシュ → auth.uid() 直呼びより 94-99% 高速
@@ -40,5 +41,14 @@
 -- ■ oauth_authorization_codes: browser client は全拒否（service-role のみ）
 -- ■ oauth_audit_log: SELECT のみ user_id = auth.uid()、INSERT は service-role のみ
 -- ■ stripe_webhook_events / email_suppressions: browser client は全拒否（service-role のみ）
+-- ■ calendar_connections: SELECT のみ user_id = auth.uid()。INSERT/UPDATE/DELETE は service-role のみ
+--   authenticated への SELECT は **column-scoped**（repo 初）。
+--   grant する 9 列: id, user_id, provider, provider_account_email, status,
+--                    last_synced_at, last_sync_error, created_at, updated_at
+--   grant しない 3 列: refresh_token_enc, granted_scopes, provider_account_id
+--   → select('*') も、未 grant 列を WHERE / ORDER BY に含むクエリも 42501 になる。
+--     service 層は列を明示指定すること
+-- ■ calendar_connection_calendars: SELECT のみ user_id = auth.uid()（table 単位）。
+--   mutation は service-role のみ。sync_token は provider cursor であり credential ではない
 
 -- 詳細は baseline.sql の RLS Policies セクションを参照
