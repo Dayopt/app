@@ -633,13 +633,15 @@ export async function runProductionRelease({
     );
   }
 
+  // 以降の判定はすべて待機後の実状態を使う。movedElsewhere を抜けている時点で
+  // current は before か candidate のどちらかに一致している。
   const superseded = candidates.filter(({ project, deployment }) => {
-    const current = before.get(project.name);
+    const live = current.get(project.name);
     return (
-      current !== null &&
-      current.createdAt !== null &&
+      live !== null &&
+      live.createdAt !== null &&
       deployment.createdAt !== null &&
-      current.createdAt > deployment.createdAt
+      live.createdAt > deployment.createdAt
     );
   });
   if (superseded.length > 0) {
@@ -649,8 +651,9 @@ export async function runProductionRelease({
   }
 
   // 既に production へ出ている build は公開済みなので、gate の対象から外す。
+  // 待機中に人が同じ candidate を promote していた場合もここで除外される。
   const pending = candidates.filter(
-    ({ project, deployment }) => before.get(project.name)?.id !== deployment.id,
+    ({ project, deployment }) => current.get(project.name)?.id !== deployment.id,
   );
 
   if (force) {
@@ -683,7 +686,8 @@ export async function runProductionRelease({
         projectId: projectIds.get(project.name),
         autoAssignCustomDomains: expectedFor(project.name),
         deployment,
-        previous: before.get(project.name),
+        // rollback 先は待機後の実状態。待機中に人が動かしていたらそちらを尊重する。
+        previous: current.get(project.name),
       };
       logger.log(
         `${project.name}: promoting ${deployment.id} over ${entry.previous?.id ?? 'none'}`,

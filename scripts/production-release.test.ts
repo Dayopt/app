@@ -685,6 +685,35 @@ describe('runProductionRelease', () => {
     );
   });
 
+  it('respects a manual promote of the same candidate during the wait', async () => {
+    // 待機中に人が同じ candidate を Dashboard から promote した場合は競合ではない。
+    // 止めず、かつ二重 promote もしない。
+    const world = createReleaseWorld();
+    let webReads = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/v9/projects/web') && (init?.method ?? 'GET') === 'GET') {
+        webReads += 1;
+        if (webReads > 1) {
+          return Response.json({
+            id: 'prj_web',
+            autoAssignCustomDomains: false,
+            targets: {
+              production: { id: 'dpl_web_new', createdAt: 2000, meta: { githubCommitSha: SHA } },
+            },
+          });
+        }
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const result = await release({ fetchImpl });
+
+    expect(result.status).toBe('promoted');
+    // web は既に candidate を配信しているので promote しない。
+    expect(world.promoted()).toEqual(['product']);
+  });
+
   it('skips smoke and audit under Force Promote', async () => {
     const world = createReleaseWorld();
     const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
