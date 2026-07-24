@@ -18,7 +18,7 @@ const envMock = vi.hoisted(() => ({
 vi.mock('@/env', () => ({ env: envMock }));
 vi.mock('@/lib/supabase/server', () => ({ createClient }));
 vi.mock('@/lib/rate-limit/upstash', () => ({
-  calendarConnectStartRateLimit: { limit: rateLimit },
+  calendarConnectRateLimit: { limit: rateLimit },
 }));
 vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));

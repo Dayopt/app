@@ -6,6 +6,7 @@ const createClient = vi.hoisted(() => vi.fn());
 const saveConnection = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
+const rateLimit = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
@@ -17,6 +18,7 @@ vi.mock('@/env', () => ({ env: envMock }));
 vi.mock('@/lib/supabase/server', () => ({ createClient }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
+vi.mock('@/lib/rate-limit/upstash', () => ({ calendarConnectRateLimit: { limit: rateLimit } }));
 vi.mock('@/features/external-calendar/server/connection-service', () => ({ saveConnection }));
 
 import { GET } from '../callback/route';
@@ -86,6 +88,7 @@ describe('google calendar callback route', () => {
     createClient.mockResolvedValue({ auth: { getUser } });
     saveConnection.mockResolvedValue(undefined);
     checkProAccessForUser.mockResolvedValue('allowed');
+    rateLimit.mockResolvedValue({ success: true });
     vi.stubGlobal(
       'fetch',
       vi.fn(() => Promise.resolve(new Response(JSON.stringify(tokenResponse()), { status: 200 }))),
@@ -130,6 +133,42 @@ describe('google calendar callback route', () => {
     expect(reasonOf(response)).toBe('subscription_check_failed');
     expect(saveConnection).not.toHaveBeenCalled();
     expect(captureUnexpectedError).toHaveBeenCalled();
+  });
+
+  // cookie が自作できる以上、start を踏まずに callback を叩き続けられる。無制限だと
+  // Google の token endpoint への往復が青天井になる
+  it('rate limit を超えたら token 交換に到達しない', async () => {
+    rateLimit.mockResolvedValue({ success: false });
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('rate_limited');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  it('rate limit backend が落ちても接続は続行する', async () => {
+    rateLimit.mockRejectedValue(new Error('redis unavailable'));
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBeNull();
+    expect(saveConnection).toHaveBeenCalled();
+  });
+
+  it('不正な code による token 交換失敗は Sentry へ送らない', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 })),
+      ),
+    );
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('token_exchange_rejected');
+    // 誰でも起こせるので、capture すると quota を焼く増幅経路になる
+    expect(captureUnexpectedError).not.toHaveBeenCalled();
   });
 
   it('cookie が無ければ接続を保存しない', async () => {

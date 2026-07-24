@@ -14,7 +14,7 @@ import {
 } from '@/features/external-calendar/server/google-oauth';
 import { checkProAccessForUser } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
-import { calendarConnectStartRateLimit } from '@/lib/rate-limit/upstash';
+import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
@@ -66,9 +66,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   // Upstash 未設定なら null、Redis 障害なら throw。どちらでも接続開始は止めない
   // （可用性優先。iCal feed route と同じ判断）。
-  if (calendarConnectStartRateLimit) {
+  if (calendarConnectRateLimit) {
     try {
-      const { success } = await calendarConnectStartRateLimit.limit(`calendar-connect:${user.id}`);
+      const { success } = await calendarConnectRateLimit.limit(`calendar-connect:${user.id}`);
       if (!success) {
         return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
       }

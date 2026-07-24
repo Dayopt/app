@@ -22,6 +22,7 @@ import {
 } from '@/features/external-calendar/server/google-oauth';
 import { checkProAccessForUser } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
+import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
@@ -78,6 +79,30 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (authError || !user) {
     return NextResponse.redirect(new URL('/auth/login', requestUrl));
+  }
+
+  // start と同じ理由でここにも要る。cookie が自作できる以上、start を踏まずに callback を
+  // 叩き続けられるので、無制限だと Google の token endpoint への往復と Sentry capture が
+  // 青天井になる。start と同じ key を消費するので、正常な接続 1 回で 2 消費する。
+  if (calendarConnectRateLimit) {
+    try {
+      const { success } = await calendarConnectRateLimit.limit(`calendar-connect:${user.id}`);
+      if (!success) {
+        logger.warn('[calendar-callback] rate limit exceeded');
+        return fail('rate_limited');
+      }
+    } catch (error) {
+      captureUnexpectedError(
+        error instanceof Error ? error : new Error('calendar callback rate limit failed'),
+        {
+          feature: 'external_calendar',
+          operation: 'check_rate_limit',
+          route: '/api/integrations/google-calendar/callback',
+          source: 'upstash',
+        },
+      );
+      logger.warn('[calendar-callback] rate limit unavailable; continuing');
+    }
   }
 
   // start と同じ Pro ゲートをここでも通す。cookie は署名しておらず HttpOnly は JS を
@@ -172,12 +197,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     if (error instanceof GoogleOAuthError) {
       logger.warn('[calendar-callback] google oauth exchange failed');
-      captureUnexpectedError(error, {
-        feature: 'external_calendar',
-        operation: 'exchange_authorization_code',
-        route: '/api/integrations/google-calendar/callback',
-        errorCode: error.reason,
-      });
+
+      // 不正な code を投げれば誰でも起こせるので Sentry には送らない。送ると
+      // それ自体が quota を焼く増幅経路になる。契約違反や疎通不良だけを拾う。
+      if (error.reason !== 'token_exchange_rejected') {
+        captureUnexpectedError(error, {
+          feature: 'external_calendar',
+          operation: 'exchange_authorization_code',
+          route: '/api/integrations/google-calendar/callback',
+          errorCode: error.reason,
+        });
+      }
+
       return fail(error.reason);
     }
 
