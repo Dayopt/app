@@ -1,6 +1,9 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-07-24
+public_docs:
+  - pricing
+lp: []
 ---
 
 # Stripe 課金統合

@@ -1,7 +1,11 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-07-24
 code: apps/product/src/features/settings
+public_docs:
+  - data-export
+lp:
+  - 'Data export'
 ---
 
 # Settings（設定）

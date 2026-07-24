@@ -1,7 +1,10 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-24
 code: apps/product/src/features/auth
+public_docs:
+  - account-troubleshooting
+lp: []
 ---
 
 # Auth（認証）
