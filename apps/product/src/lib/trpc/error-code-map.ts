@@ -85,4 +85,7 @@ export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // ===== 外部カレンダー関連 =====
   SYNC_FAILED: 'INTERNAL_SERVER_ERROR',
   CONNECTION_NOT_FOUND: 'NOT_FOUND',
+  // 接続が失効し再認証が必要。ユーザー起因の想定内状態なので 500 ではなく 409 にする。
+  REAUTH_REQUIRED: 'CONFLICT',
+  PROVIDER_UNAVAILABLE: 'INTERNAL_SERVER_ERROR',
 };

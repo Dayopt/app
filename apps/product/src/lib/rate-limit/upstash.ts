@@ -254,6 +254,17 @@ export const calendarConnectRateLimit = createRateLimiter(
   'ratelimit:product:calendar-connect',
 );
 
+/**
+ * 手動同期（tRPC `syncNow`）の per-user rate limit。
+ *
+ * 1 回で全カレンダーの provider 往復が走るので、連打を抑える。cron が 15 分毎に回すため、
+ * 手動同期は補助的な導線であり 1 時間 6 回で足りる。
+ */
+export const calendarSyncNowRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(6, '1 h'),
+  'ratelimit:product:calendar-sync-now',
+);
+
 /** CSP reportは公開入力なのでIP単位と全体上限を別々に持つ。 */
 export const cspReportRateLimit = createRateLimiter(
   Ratelimit.slidingWindow(20, '1 m'),
