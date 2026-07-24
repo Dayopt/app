@@ -1,7 +1,7 @@
 ---
 status: active
 last_verified: 2026-07-24
-code: supabase/migrations/20260723233814_add_calendar_connection_tables.sql
+code: supabase/migrations/20260724000416_enforce_external_event_connection_owner.sql
 ---
 
 # external-calendar-import — 外部カレンダーを one-way で取り込む
@@ -96,10 +96,12 @@ owner 整合は **複合 FK** で担保する（Step 1 実装時の変更。当�
 
 ### 4-2b. ミラーへの connection_id 追加（Step 1 実装時の追加）
 
-`external_calendar_events` に `connection_id uuid REFERENCES calendar_connections(id) ON DELETE SET NULL` を追加し、upsert key を `(user_id, provider, connection_id, provider_calendar_id, provider_event_id)` に張り替えた。
+`external_calendar_events` に `connection_id` を追加し、upsert key を `(user_id, provider, connection_id, provider_calendar_id, provider_event_id)` に張り替えた。
 
 - **理由**: §4-1 が同一 provider の複数アカウントを許容するため、2 つの Google アカウントが同じ共有カレンダーを購読すると旧 4 列キーで行を奪い合い、切断時の prune も connection 単位に絞れない
-- **`ON DELETE SET NULL` である理由**: §8 は plans / records から参照済みのミラー行を残す。それらの FK は NO ACTION なので、CASCADE にすると切断が `23503` で丸ごと失敗する。孤立した行は §8 の言う歴史的アンカーとして `connection_id IS NULL` で残る
+- **owner 整合も複合 FK で担保する**: `FOREIGN KEY (connection_id, user_id) REFERENCES calendar_connections (id, user_id) ON DELETE SET NULL (connection_id)`。単一列 FK だと「その connection が存在する」ことしか保証せず、service_role の書き手（Step 3 の sync、Step 7 の切断）が user A のミラー行に user B の connection をぶら下げられてしまう。そうなると (a) connection 単位の prune が他ユーザーの行を巻き込み、(b) B の切断が A の行を書き換え、(c) `external_calendar_events` は table 単位 SELECT なので A が他人の connection UUID を読める。子テーブルと同じ規則を適用する（PR #1714 のレビュー指摘）
+- **`ON DELETE SET NULL (connection_id)` の列リストは必須**: 列を指定しないと `user_id` まで NULL 化しようとして `23502` になる（PG15+ の構文。local / production とも 17.6）
+- **`ON DELETE SET NULL` である理由**: §8 は plans / records から参照済みのミラー行を残す。それらの FK は NO ACTION なので、CASCADE にすると切断が `23503` で丸ごと失敗する。孤立した行は §8 の言う歴史的アンカーとして `connection_id IS NULL` で残る。`MATCH SIMPLE` なので `connection_id IS NULL` の行は FK 検査の対象外になり、孤立行は正当なまま
 - unique index は既定の `NULLS DISTINCT` のまま。孤立行は二度と upsert に参加しないので、distinct 扱いが切断を阻むことはない
 - production・local とも空テーブルの段階で入れたので backfill はゼロ
 

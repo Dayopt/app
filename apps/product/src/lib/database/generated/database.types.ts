@@ -203,11 +203,11 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: 'external_calendar_events_connection_id_fkey';
-            columns: ['connection_id'];
+            foreignKeyName: 'external_calendar_events_connection_owner_fkey';
+            columns: ['connection_id', 'user_id'];
             isOneToOne: false;
             referencedRelation: 'calendar_connections';
-            referencedColumns: ['id'];
+            referencedColumns: ['id', 'user_id'];
           },
         ];
       };

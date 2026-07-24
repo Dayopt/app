@@ -14,6 +14,7 @@
 --   - 20260712212527_records_table_and_drop_entries.sql
 --   - 20260712213550_rename_record_constraint_triggers.sql
 --   - 20260723233814_add_calendar_connection_tables.sql
+--   - 20260724000416_enforce_external_event_connection_owner.sql
 --
 -- カラム順序の規則:
 --   1. id (PK)
@@ -90,12 +91,12 @@ CREATE TABLE public.calendar_connection_calendars (
 
 -- external_calendar_events: 外部カレンダー同期ミラー
 -- Phase 1 では FK の受け皿だけを追加し、OAuth / sync / ghost UI は Phase 2 で実装する
--- connection_id は Phase 2 で追加（ON DELETE SET NULL）。切断後も plans / records が参照する
--- 行は履歴のアンカーとして残るため CASCADE にしない
+-- connection_id は Phase 2 で追加。切断後も plans / records が参照する行は履歴の
+-- アンカーとして残るため CASCADE にしない
 CREATE TABLE public.external_calendar_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  connection_id UUID REFERENCES public.calendar_connections(id) ON DELETE SET NULL,
+  connection_id UUID,
   provider TEXT NOT NULL,
   provider_calendar_id TEXT NOT NULL,
   provider_event_id TEXT NOT NULL,
@@ -116,6 +117,11 @@ CREATE TABLE public.external_calendar_events (
 --     -> user_id + provider + connection_id + provider_calendar_id + provider_event_id
 --        connection_id を含むのは、同一 provider の複数アカウントが同じ共有カレンダーを
 --        購読しても行が衝突しないようにするため
+--   external_calendar_events_connection_owner_fkey
+--     -> (connection_id, user_id) が calendar_connections(id, user_id) を参照。
+--        ON DELETE SET NULL (connection_id) — 列リスト指定が必須（bare SET NULL だと
+--        NOT NULL の user_id まで NULL 化しようとして 23502 になる）。
+--        MATCH SIMPLE なので connection_id が NULL の孤立行は検査対象外
 
 -- plans: Dayopt 内の予定
 CREATE TABLE public.plans (

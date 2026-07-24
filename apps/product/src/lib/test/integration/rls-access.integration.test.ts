@@ -583,6 +583,75 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       expect(error?.code).toBe('42501');
     });
 
+    // 複合 FK (connection_id, user_id) -> calendar_connections (id, user_id) の回帰テスト。
+    // service_role は RLS を bypass するので、cross-user の取り違えを止めるのは FK だけ。
+    // これが無いと Step 3 の sync / Step 7 の切断が他ユーザーのミラー行を巻き込む
+    it('ミラー行に他ユーザーのconnectionをぶら下げられない', async () => {
+      const { error } = await adminSupabase.from('external_calendar_events').insert({
+        user_id: TEST_USER_A_ID,
+        connection_id: CALENDAR_CONNECTION_ID, // user B の接続
+        provider: 'google',
+        provider_calendar_id: 'primary',
+        provider_event_id: `evt-cross-${crypto.randomUUID()}`,
+        title: 'cross-user link',
+        start_at: '2026-06-20T09:00:00.000Z',
+        end_at: '2026-06-20T10:00:00.000Z',
+        status: 'confirmed',
+        last_synced_at: new Date().toISOString(),
+      });
+
+      expect(error?.code).toBe('23503');
+    });
+
+    it('切断でミラー行のconnection_idだけがNULLになりuser_idは残る', async () => {
+      const connectionId = crypto.randomUUID();
+      const eventId = crypto.randomUUID();
+
+      const { error: connectionError } = await adminSupabase.from('calendar_connections').insert({
+        id: connectionId,
+        user_id: TEST_USER_B_ID,
+        provider: 'google',
+        provider_account_id: `sub-${connectionId}`,
+        granted_scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+        refresh_token_enc: 'disconnect-ciphertext',
+        status: 'active',
+      });
+      expect(connectionError).toBeNull();
+
+      const { error: eventError } = await adminSupabase.from('external_calendar_events').insert({
+        id: eventId,
+        user_id: TEST_USER_B_ID,
+        connection_id: connectionId,
+        provider: 'google',
+        provider_calendar_id: 'primary',
+        provider_event_id: `evt-disconnect-${eventId}`,
+        title: 'survives disconnect',
+        start_at: '2026-06-21T09:00:00.000Z',
+        end_at: '2026-06-21T10:00:00.000Z',
+        status: 'confirmed',
+        last_synced_at: new Date().toISOString(),
+      });
+      expect(eventError).toBeNull();
+
+      const { error: deleteError } = await adminSupabase
+        .from('calendar_connections')
+        .delete()
+        .eq('id', connectionId);
+      expect(deleteError).toBeNull();
+
+      const { data, error } = await adminSupabase
+        .from('external_calendar_events')
+        .select('connection_id, user_id')
+        .eq('id', eventId)
+        .single();
+
+      expect(error).toBeNull();
+      expect(data?.connection_id).toBeNull();
+      expect(data?.user_id).toBe(TEST_USER_B_ID);
+
+      await adminSupabase.from('external_calendar_events').delete().eq('id', eventId);
+    });
+
     // service_role は rolbypassrls = t なので、これは policy ではなく GRANT の証明
     it('service_roleはtoken列を読める', async () => {
       const { data, error } = await adminSupabase
