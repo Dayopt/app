@@ -1,0 +1,185 @@
+name: Production Release
+
+# main へ merge しても Production domain は自動で切り替わらない。
+# Auto-assign Custom Production Domains を無効化した Product / Web に対し、
+# このワークフローだけが「同一 SHA・両 project 成功」を確認して promote する。
+# タグと GitHub Release は promote と観察が終わった後の証跡であり、deploy trigger ではない。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Release target commit SHA (40 hex). Defaults to the current ref.'
+        required: false
+      force:
+        description: 'Break-glass Force Promote: skip smoke and Production Config Audit'
+        type: boolean
+        default: false
+      reason:
+        description: 'Required when force is enabled. Recorded in the commit status.'
+        required: false
+      simulate_failure:
+        description: 'Drill only: smoke:web | smoke:product | promote:web | promote:product'
+        required: false
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  # 実行中の release は中断しない。中断すると片方だけ promote された状態が残りうる。
+  group: production-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Promote Production
+    runs-on: ubuntu-latest
+    # この environment に deployment branch policy（main のみ）を設定すると、
+    # main 以外の ref からの dispatch は job 開始前に GitHub 側で拒否される。
+    # policy 未設定の間は素通りするため、設定するまで残存リスクは閉じない。
+    # 手順は docs/engineering/infra.md を参照。
+    environment: production-release
+    # scripts/production-release.mjs の WORST_CASE_RELEASE_MS を必ず上回ること。
+    # 下回ると rollback の途中で job が kill され、片方だけ promote された
+    # production が手動 rollback の手掛かりごと失われる。
+    # scripts/__tests__/release-workflow-contract.test.ts が不等式を守る。
+    timeout-minutes: 70
+    steps:
+      # 実行する workflow / script は常に dispatch した ref のものを使う。
+      # inputs.sha は release 対象を指す data であって、実行するコードではない。
+      # ref に渡すと、未 merge の commit が持つ script を Production 権限で走らせられる。
+      #
+      # 残存リスク: main 以外の ref から dispatch すると、その ref の script が
+      # Production secret 付きで動く。これは YAML の if では塞げず、environment の
+      # deployment branch policy でしか閉じられない（infra.md に手順を記載）。
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+
+      - name: Require a reason for Force Promote
+        if: inputs.force
+        env:
+          REASON: ${{ inputs.reason }}
+        run: |
+          if [ -z "$REASON" ]; then
+            echo "::error::Force Promote requires a reason. Record it here and in the ops log."
+            exit 1
+          fi
+
+      - name: Resolve and validate release SHA
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_SHA: ${{ inputs.sha }}
+        run: |
+          sha="${INPUT_SHA:-$GITHUB_SHA}"
+          if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Release target must be a 40 character commit SHA"
+            exit 1
+          fi
+
+          # push:main の github.sha は GitHub 側が供給する main 上の commit なので
+          # 検証しない。人が渡した値のときだけ main 包含を確認し、GitHub API の
+          # 一時障害が通常の release を止めないようにする。
+          if [ -n "$INPUT_SHA" ]; then
+            # `main` という名の tag との曖昧さを避けるため heads/main で明示する。
+            # 404 なら gh が非 0 終了し、代入が set -e に拾われて fail closed になる
+            # （`export status=$(...)` にすると壊れるので前置しない）。
+            status=$(gh api "repos/$GITHUB_REPOSITORY/compare/heads/main...$sha" --jq '.status')
+            if [ "$status" != "identical" ] && [ "$status" != "behind" ]; then
+              echo "::error::Release target must already be merged into main (compare status: $status)"
+              exit 1
+            fi
+          fi
+
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Wait, smoke, and promote Production
+        id: release
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          # GitHub keeps the existing VERCEL_ORG_ID replica; the runtime contract
+          # uses the canonical 1Password/schema name VERCEL_TEAM_ID.
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
+          # Deployment Protection guards candidate unique URLs, so smoke needs
+          # each project's Protection Bypass for Automation secret.
+          VERCEL_BYPASS_PRODUCT: ${{ secrets.VERCEL_AUTOMATION_BYPASS_PRODUCT }}
+          VERCEL_BYPASS_WEB: ${{ secrets.VERCEL_AUTOMATION_BYPASS_WEB }}
+          RELEASE_SHA: ${{ steps.target.outputs.sha }}
+          RELEASE_FORCE: ${{ inputs.force }}
+          # 段階適用が終わり Auto-assign Custom Production Domains を両 project で
+          # 無効化したら 'false' に変える。宣言するまでは「run 開始時点の値へ戻す」
+          # だけになり、前回 run から持ち越したドリフトを検出できない。
+          RELEASE_EXPECT_AUTO_ASSIGN: ''
+          RELEASE_SIMULATE_FAILURE: ${{ github.event_name == 'workflow_dispatch' && inputs.simulate_failure || '' }}
+        run: |
+          set +e
+          node scripts/production-release.mjs
+          release_exit=$?
+          set -e
+          echo "exit_code=$release_exit" >> "$GITHUB_OUTPUT"
+
+      # SHA が解決できていない場合は publish しない。空の SHA へ POST すると
+      # 404 で step が落ちるだけで、何の情報も残らない。
+      - name: Publish Production Release status
+        if: always() && steps.target.outputs.sha != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_EXIT: ${{ steps.release.outputs.exit_code || '1' }}
+          RELEASE_STATUS: ${{ steps.release.outputs.release_status || 'failed' }}
+          RELEASE_SHA: ${{ steps.target.outputs.sha }}
+          FORCED: ${{ inputs.force }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          if [[ ! "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Refusing to publish status for an invalid commit SHA"
+            exit 1
+          fi
+
+          if [ "$RELEASE_EXIT" != "0" ]; then
+            state=failure
+            description="Release gate stopped before or during promote; see the run summary"
+            if [ "$FORCED" = "true" ]; then
+              description="Force Promote failed: $REASON"
+            fi
+          elif [ "$RELEASE_STATUS" = "superseded" ]; then
+            # promote は 1 件も行われていない。この commit は live ではないので
+            # success を出すと create-release.yml の gate を素通りしてしまう。
+            state=failure
+            description="Superseded: a newer deployment already serves Production"
+          else
+            state=success
+            description="Production serves this commit"
+            if [ "$FORCED" = "true" ]; then
+              description="Force Promote: $REASON"
+            fi
+          fi
+
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$RELEASE_SHA" \
+            -f state="$state" \
+            -f context="Production Release" \
+            -f description="${description:0:140}" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            >/dev/null
+
+      - name: Enforce release result
+        if: always()
+        env:
+          RELEASE_EXIT: ${{ steps.release.outputs.exit_code || '1' }}
+          RELEASE_STATUS: ${{ steps.release.outputs.release_status || 'failed' }}
+        run: |
+          if [ "$RELEASE_EXIT" != "0" ]; then
+            exit "$RELEASE_EXIT"
+          fi
+          if [ "$RELEASE_STATUS" = "superseded" ]; then
+            echo "::error::Target SHA is not live; a newer Production deployment already serves Production."
+            exit 1
+          fi
+          exit 0
