@@ -13,6 +13,7 @@ import { tagsRouter } from '@/features/tags/server/router';
 import { plansRouter } from '@/features/timeblock/server/plans-router';
 import { recordsRouter } from '@/features/timeblock/server/records-router';
 import { statisticsRouter } from '@/features/timeblock/server/router-index';
+import { timeblockContextRouter } from '@/features/timeblock/server/timeblock-context-router';
 import { emailRouter } from '@/lib/email/router';
 import { createTRPCRouter } from '@/lib/trpc/router';
 
@@ -24,6 +25,7 @@ export const appRouter = createTRPCRouter({
   plans: plansRouter,
   statistics: statisticsRouter,
   tags: tagsRouter,
+  timeblockContext: timeblockContextRouter,
   user: userRouter,
   userSettings: userSettingsRouter,
 });
