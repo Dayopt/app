@@ -32,6 +32,12 @@ function isRedirectUriList(value: string | undefined): boolean {
     });
 }
 
+/** AES-256 の鍵は base64 で 32 バイトに decode できなければならない。 */
+function isBase64EncodedAes256Key(value: string | undefined): boolean {
+  if (!value) return true;
+  return Buffer.from(value.trim(), 'base64').length === 32;
+}
+
 const serverSchema = z
   .object({
     // Supabase
@@ -70,8 +76,11 @@ const serverSchema = z
     // 別の専用 OAuth client を使う。identity（誰か）と data-access（何を読めるか）を分離する。
     GOOGLE_CALENDAR_CLIENT_ID: z.string().optional(),
     GOOGLE_CALENDAR_CLIENT_SECRET: z.string().optional(),
-    // refresh token の AES-256-GCM 暗号鍵。base64 で 32 バイト。
-    CALENDAR_TOKEN_ENCRYPTION_KEY: z.string().optional(),
+    // refresh token の AES-256-GCM 暗号鍵。base64 で 32 バイト（`openssl rand -base64 32`）。
+    // 長さを boot 時に検証する。壊れた鍵のまま起動すると、同意まで取ったあと保存だけが失敗する。
+    CALENDAR_TOKEN_ENCRYPTION_KEY: z.string().optional().refine(isBase64EncodedAes256Key, {
+      message: 'CALENDAR_TOKEN_ENCRYPTION_KEY は base64 で 32 バイトの鍵にしてください',
+    }),
     // Google は redirect_uri の完全一致を要求しワイルドカードを許さない。環境ごとに登録済みの
     // URI をカンマ区切りで持ち、route 側は request host と完全一致するものを lookup して使う。
     // Vercel Production にはproduction origin だけを入れる（localhost を混ぜると

@@ -31,6 +31,17 @@ export class TokenCryptoError extends Error {
 }
 
 /**
+ * 鍵が 32 バイトへ decode できるか。
+ *
+ * route の config guard がユーザーを Google へ送る前にこれを見る。壊れた鍵で flow を
+ * 始めると、同意まで取ったあと code 交換の後で保存に失敗する。
+ */
+export function isValidEncryptionKey(keyBase64: string | undefined): boolean {
+  if (!keyBase64?.trim()) return false;
+  return Buffer.from(keyBase64.trim(), 'base64').length === KEY_BYTES;
+}
+
+/**
  * base64 の鍵文字列を 32 バイトの Buffer にする。
  *
  * env の値は Vercel から取得すると末尾に改行が残ることがあり、`@/env` の getter は

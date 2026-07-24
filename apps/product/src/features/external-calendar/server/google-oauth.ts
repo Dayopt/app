@@ -5,12 +5,14 @@ import { createHash, randomBytes } from 'node:crypto';
 import { env } from '@/env';
 
 import {
+  GOOGLE_AUTHORIZATION_SCOPES,
   GOOGLE_CALENDAR_READONLY_SCOPE,
   googleIdTokenPayloadSchema,
   googleTokenResponseSchema,
   type GoogleIdTokenPayload,
   type GoogleTokenResponse,
 } from '../schemas/google';
+import { isValidEncryptionKey } from './token-crypto';
 
 /**
  * Google OAuth client 側の処理。googleapis SDK は入れず素の fetch + zod（overview.md §5-2）。
@@ -39,13 +41,19 @@ export class GoogleOAuthError extends Error {
   }
 }
 
-/** connect フローに必要な env が揃っているか。route の config guard が使う。 */
+/**
+ * connect フローに必要な env が揃っているか。route の config guard が使う。
+ *
+ * 暗号鍵は「空でない」ではなく実際に 32 バイトへ decode できるかまで見る。長さが違う鍵だと
+ * `/start` でユーザーを Google へ送り、code 交換まで済ませてから `encryptToken` が落ちる。
+ * 同意まで取っておいて保存できない、が一番たちが悪い。
+ */
 export function isGoogleCalendarConfigured(): boolean {
   return Boolean(
     env.GOOGLE_CALENDAR_CLIENT_ID?.trim() &&
     env.GOOGLE_CALENDAR_CLIENT_SECRET?.trim() &&
-    env.CALENDAR_TOKEN_ENCRYPTION_KEY?.trim() &&
-    env.GOOGLE_CALENDAR_REDIRECT_URIS?.trim(),
+    env.GOOGLE_CALENDAR_REDIRECT_URIS?.trim() &&
+    isValidEncryptionKey(env.CALENDAR_TOKEN_ENCRYPTION_KEY),
   );
 }
 
@@ -104,7 +112,7 @@ export function buildAuthorizationUrl(params: {
   url.searchParams.set('client_id', env.GOOGLE_CALENDAR_CLIENT_ID ?? '');
   url.searchParams.set('redirect_uri', params.redirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', GOOGLE_CALENDAR_READONLY_SCOPE);
+  url.searchParams.set('scope', GOOGLE_AUTHORIZATION_SCOPES.join(' '));
   url.searchParams.set('access_type', 'offline');
   url.searchParams.set('prompt', 'consent');
   url.searchParams.set('include_granted_scopes', 'true');

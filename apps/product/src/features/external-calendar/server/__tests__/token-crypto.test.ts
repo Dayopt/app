@@ -2,7 +2,12 @@ import { createDecipheriv, randomBytes } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { decryptToken, encryptToken, TokenCryptoError } from '../token-crypto';
+import {
+  decryptToken,
+  encryptToken,
+  isValidEncryptionKey,
+  TokenCryptoError,
+} from '../token-crypto';
 
 const KEY = randomBytes(32).toString('base64');
 const OTHER_KEY = randomBytes(32).toString('base64');
@@ -72,6 +77,23 @@ describe('token-crypto', () => {
 
   it('空の token は暗号化しない', () => {
     expect(() => encryptToken('', KEY)).toThrow(TokenCryptoError);
+  });
+
+  describe('isValidEncryptionKey', () => {
+    it('32 バイトへ decode できる鍵だけを受け入れる', () => {
+      expect(isValidEncryptionKey(KEY)).toBe(true);
+      expect(isValidEncryptionKey(`${KEY}\n`)).toBe(true);
+    });
+
+    it.each([
+      ['未設定', undefined],
+      ['空文字', ''],
+      ['空白のみ', '   '],
+      ['16 バイト', randomBytes(16).toString('base64')],
+      ['64 バイト', randomBytes(64).toString('base64')],
+    ])('壊れた鍵を拒否する: %s', (_label, key) => {
+      expect(isValidEncryptionKey(key)).toBe(false);
+    });
   });
 
   it.each([

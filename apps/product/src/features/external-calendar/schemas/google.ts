@@ -7,8 +7,25 @@ import { z } from 'zod';
  * 全 string に `.max()` を置く。googleapis SDK は入れず素の fetch + zod で扱う（overview.md §5-2）。
  */
 
-/** 取り込みに必要な唯一の scope。 */
+/** 取り込みに必要な唯一の Calendar API scope。 */
 export const GOOGLE_CALENDAR_READONLY_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+
+/**
+ * 認可リクエストで要求する scope。
+ *
+ * `openid` が必須。Google が `id_token` を返すのは OpenID Connect の認証リクエスト
+ * （scope に `openid` を含むもの）に対してだけで、Calendar scope だけを要求すると
+ * token レスポンスに `id_token` が入らない。接続の同定に使う `sub` はそこからしか
+ * 取れないため、これが無いと connect が必ず失敗する。
+ * `email` は表示用の `provider_account_email` のため。
+ *
+ * @see https://developers.google.com/identity/openid-connect/openid-connect#scope-param
+ */
+export const GOOGLE_AUTHORIZATION_SCOPES = [
+  'openid',
+  'email',
+  GOOGLE_CALENDAR_READONLY_SCOPE,
+] as const;
 
 /** Google が id_token の `iss` に入れる 2 形式。片方だけ許すと本番でランダムに落ちる。 */
 const GOOGLE_ID_TOKEN_ISSUERS = ['https://accounts.google.com', 'accounts.google.com'] as const;

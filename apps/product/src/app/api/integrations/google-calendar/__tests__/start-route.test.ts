@@ -10,7 +10,7 @@ const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
-  CALENDAR_TOKEN_ENCRYPTION_KEY: 'a'.repeat(44),
+  CALENDAR_TOKEN_ENCRYPTION_KEY: 'A'.repeat(43) + '=',
   GOOGLE_CALENDAR_REDIRECT_URIS:
     'https://app.dayopt.app/api/integrations/google-calendar/callback,http://localhost:3000/api/integrations/google-calendar/callback',
 }));
@@ -37,7 +37,7 @@ describe('google calendar start route', () => {
     Object.assign(envMock, {
       GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
       GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
-      CALENDAR_TOKEN_ENCRYPTION_KEY: 'a'.repeat(44),
+      CALENDAR_TOKEN_ENCRYPTION_KEY: 'A'.repeat(43) + '=',
       GOOGLE_CALENDAR_REDIRECT_URIS:
         'https://app.dayopt.app/api/integrations/google-calendar/callback,http://localhost:3000/api/integrations/google-calendar/callback',
     });
@@ -49,6 +49,18 @@ describe('google calendar start route', () => {
 
   it('env が未設定なら 503 で止まり Google へ飛ばさない', async () => {
     envMock.GOOGLE_CALENDAR_CLIENT_ID = '';
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(503);
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it('暗号鍵の長さが不正なら Google へ送る前に 503 で止める', async () => {
+    // 空でないが 32 バイトに decode できない鍵（15 バイト）。同意まで取ってから
+    // 保存に失敗するのを防ぐ。base64 リテラルを直書きすると gitleaks の
+    // generic-api-key に引っかかるため式で組み立てる。
+    envMock.CALENDAR_TOKEN_ENCRYPTION_KEY = 'A'.repeat(20);
 
     const response = await GET(request());
 
@@ -84,8 +96,9 @@ describe('google calendar start route', () => {
     expect(location.origin + location.pathname).toBe(
       'https://accounts.google.com/o/oauth2/v2/auth',
     );
+    // openid が無いと Google は id_token を返さず、接続の同定に使う sub が取れない
     expect(location.searchParams.get('scope')).toBe(
-      'https://www.googleapis.com/auth/calendar.readonly',
+      'openid email https://www.googleapis.com/auth/calendar.readonly',
     );
     expect(location.searchParams.get('access_type')).toBe('offline');
     expect(location.searchParams.get('prompt')).toBe('consent');

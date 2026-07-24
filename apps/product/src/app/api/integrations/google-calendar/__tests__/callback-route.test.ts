@@ -8,7 +8,7 @@ const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
-  CALENDAR_TOKEN_ENCRYPTION_KEY: 'a'.repeat(44),
+  CALENDAR_TOKEN_ENCRYPTION_KEY: 'A'.repeat(43) + '=',
   GOOGLE_CALENDAR_REDIRECT_URIS: 'https://app.dayopt.app/api/integrations/google-calendar/callback',
 }));
 
