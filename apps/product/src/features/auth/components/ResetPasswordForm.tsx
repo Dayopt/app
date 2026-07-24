@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Check, Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 import {
   Button,
@@ -25,10 +25,13 @@ import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 import { passwordSchema } from '../schemas/auth.schema';
 import { useAuthStore } from '../stores/useAuthStore';
 
-/** 新しいパスワード設定フォーム。URLのaccess_token/refresh_tokenを利用してパスワードを更新する */
+/**
+ * 新しいパスワード設定フォーム。
+ * recovery リンクは /auth/confirm の verifyOtp でセッション確立済みで着地する前提
+ * （セッション無しの直接アクセスは page.tsx がサーバー側で弾く）
+ */
 export function ResetPasswordForm({ className, ...props }: React.ComponentProps<'div'>) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const params = useParams();
   const locale = (params?.locale as string) || 'ja';
   const t = useTranslations();
@@ -41,15 +44,6 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
-  const accessToken = searchParams?.get('access_token') ?? null;
-  const refreshToken = searchParams?.get('refresh_token') ?? null;
-
-  useEffect(() => {
-    if (!accessToken || !refreshToken) {
-      router.push(`/${locale}/auth`);
-    }
-  }, [accessToken, refreshToken, router, locale]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {

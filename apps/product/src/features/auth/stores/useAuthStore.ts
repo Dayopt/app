@@ -151,17 +151,16 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const supabase = createClient();
-          const supabaseOptions =
-            options?.captchaToken || options?.metadata
-              ? {
-                  ...(options?.captchaToken && { captchaToken: options.captchaToken }),
-                  ...(options?.metadata && { data: options.metadata }),
-                }
-              : undefined;
           const result = await supabase.auth.signUp({
             email,
             password,
-            ...(supabaseOptions && { options: supabaseOptions }),
+            options: {
+              // 確認メールのリンク検証後の着地先。send-auth-email hook が
+              // origin + path を confirm route の next に変換する
+              emailRedirectTo: `${window.location.origin}/week`,
+              ...(options?.captchaToken && { captchaToken: options.captchaToken }),
+              ...(options?.metadata && { data: options.metadata }),
+            },
           });
 
           if (result.error) {
