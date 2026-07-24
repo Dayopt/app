@@ -1,0 +1,58 @@
+import { z } from 'zod';
+
+/**
+ * Google OAuth / OpenID Connect のレスポンス schema。
+ *
+ * 外部から来る値なので、repo の外部入力 parse の idiom（`api/csp-report/route.ts`）に倣って
+ * 全 string に `.max()` を置く。googleapis SDK は入れず素の fetch + zod で扱う（overview.md §5-2）。
+ */
+
+/** 取り込みに必要な唯一の scope。 */
+export const GOOGLE_CALENDAR_READONLY_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+
+/** Google が id_token の `iss` に入れる 2 形式。片方だけ許すと本番でランダムに落ちる。 */
+const GOOGLE_ID_TOKEN_ISSUERS = ['https://accounts.google.com', 'accounts.google.com'] as const;
+
+/**
+ * token endpoint のレスポンス。
+ *
+ * `refresh_token` は optional。`prompt=consent` を送るので通常は必ず返るが、返らない場合に
+ * 既存行を壊さないための分岐が connection-service 側にある。
+ */
+export const googleTokenResponseSchema = z.object({
+  access_token: z.string().min(1).max(4096),
+  refresh_token: z.string().min(1).max(4096).optional(),
+  expires_in: z.number().int().positive().optional(),
+  token_type: z.string().max(64).optional(),
+  scope: z.string().min(1).max(4096),
+  id_token: z.string().min(1).max(8192),
+});
+
+export type GoogleTokenResponse = z.infer<typeof googleTokenResponseSchema>;
+
+/**
+ * id_token の payload。
+ *
+ * `sub` が接続の同定基準になる。Google は email を可変・再利用可と明示しているので、
+ * 安定識別子は `sub` だけ。`provider_account_id` にはこれを入れ、email は表示用の
+ * `provider_account_email` にしか入れない。
+ */
+export const googleIdTokenPayloadSchema = z.object({
+  iss: z.enum(GOOGLE_ID_TOKEN_ISSUERS),
+  aud: z.string().min(1).max(512),
+  sub: z.string().min(1).max(255),
+  exp: z.number().int().positive(),
+  email: z.string().email().max(320).optional(),
+});
+
+export type GoogleIdTokenPayload = z.infer<typeof googleIdTokenPayloadSchema>;
+
+/** start が cookie に載せる一時 state。callback で読み戻す。 */
+export const connectFlowStateSchema = z.object({
+  state: z.string().min(1).max(255),
+  verifier: z.string().min(1).max(255),
+  locale: z.string().min(1).max(16),
+  userId: z.string().uuid(),
+});
+
+export type ConnectFlowState = z.infer<typeof connectFlowStateSchema>;

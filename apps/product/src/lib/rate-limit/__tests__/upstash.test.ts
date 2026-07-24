@@ -153,7 +153,7 @@ describe('Upstash Rate Limit', () => {
     }));
 
     const enabledModule = await import('../upstash');
-    expect(constructorOptions).toHaveLength(9);
+    expect(constructorOptions).toHaveLength(10);
     for (const options of constructorOptions) {
       expect(options.analytics).toBe(false);
       expect(options.timeout).toBe(RATE_LIMIT_TIMEOUT_MS);

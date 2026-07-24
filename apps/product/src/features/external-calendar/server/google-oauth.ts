@@ -1,0 +1,218 @@
+import 'server-only';
+
+import { createHash, randomBytes } from 'node:crypto';
+
+import { env } from '@/env';
+
+import {
+  GOOGLE_CALENDAR_READONLY_SCOPE,
+  googleIdTokenPayloadSchema,
+  googleTokenResponseSchema,
+  type GoogleIdTokenPayload,
+  type GoogleTokenResponse,
+} from '../schemas/google';
+
+/**
+ * Google OAuth client 側の処理。googleapis SDK は入れず素の fetch + zod（overview.md §5-2）。
+ *
+ * Dayopt 自身は `lib/oauth-server/` で OAuth *provider* も実装しているが、あちらは
+ * authorization server 側の関心事で、ここは client 側。共有できるのは PKCE の計算式だけで、
+ * `ENTROPY_BYTES` も `hashToken` も module-private なので import できない。
+ */
+
+const GOOGLE_AUTHORIZE_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
+const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
+
+/** `lib/oauth-server/tokens.ts` の ENTROPY_BYTES と同値。独自の桁数を発明しない。 */
+const ENTROPY_BYTES = 32;
+
+/** supabase client（`lib/supabase/oauth.ts`）と同じ外部呼び出しタイムアウト。 */
+const TOKEN_REQUEST_TIMEOUT_MS = 15_000;
+
+export class GoogleOAuthError extends Error {
+  constructor(
+    message: string,
+    readonly reason: string,
+  ) {
+    super(message);
+    this.name = 'GoogleOAuthError';
+  }
+}
+
+/** connect フローに必要な env が揃っているか。route の config guard が使う。 */
+export function isGoogleCalendarConfigured(): boolean {
+  return Boolean(
+    env.GOOGLE_CALENDAR_CLIENT_ID?.trim() &&
+    env.GOOGLE_CALENDAR_CLIENT_SECRET?.trim() &&
+    env.CALENDAR_TOKEN_ENCRYPTION_KEY?.trim() &&
+    env.GOOGLE_CALENDAR_REDIRECT_URIS?.trim(),
+  );
+}
+
+/**
+ * request の host に完全一致する redirect URI を allowlist から引く。
+ *
+ * request から URL を組み立て直さず allowlist の文字列をそのまま返すのが要点。
+ * host は攻撃者が forwarded ヘッダで動かせるので、導出値を Google へ渡すと code を
+ * 第三者ホストへ配送させる経路になる。lookup に失敗したら接続を始めない。
+ */
+export function resolveRedirectUri(requestUrl: URL): string | null {
+  const configured = env.GOOGLE_CALENDAR_REDIRECT_URIS?.trim();
+  if (!configured) return null;
+
+  for (const candidate of configured.split(',')) {
+    const uri = candidate.trim();
+    if (!uri) continue;
+
+    try {
+      if (new URL(uri).host === requestUrl.host) return uri;
+    } catch {
+      // env の refine が弾いているはずだが、壊れた値で全体を落とさない。
+      continue;
+    }
+  }
+
+  return null;
+}
+
+type PkcePair = {
+  verifier: string;
+  challenge: string;
+};
+
+/** RFC 7636 の S256。`tokens.ts:48` の verify 側と同じ計算式。 */
+export function generatePkcePair(): PkcePair {
+  const verifier = randomBytes(ENTROPY_BYTES).toString('base64url');
+  const challenge = createHash('sha256').update(verifier).digest('base64url');
+
+  return { verifier, challenge };
+}
+
+/** CSRF 用の不透明な state。 */
+export function generateState(): string {
+  return randomBytes(ENTROPY_BYTES).toString('base64url');
+}
+
+/** 同意画面の URL。`prompt=consent` で refresh token を確実に取りに行く。 */
+export function buildAuthorizationUrl(params: {
+  redirectUri: string;
+  state: string;
+  codeChallenge: string;
+}): string {
+  const url = new URL(GOOGLE_AUTHORIZE_ENDPOINT);
+
+  url.searchParams.set('client_id', env.GOOGLE_CALENDAR_CLIENT_ID ?? '');
+  url.searchParams.set('redirect_uri', params.redirectUri);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', GOOGLE_CALENDAR_READONLY_SCOPE);
+  url.searchParams.set('access_type', 'offline');
+  url.searchParams.set('prompt', 'consent');
+  url.searchParams.set('include_granted_scopes', 'true');
+  url.searchParams.set('state', params.state);
+  url.searchParams.set('code_challenge', params.codeChallenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+
+  return url.toString();
+}
+
+/**
+ * authorization code を token に交換する。
+ *
+ * 失敗レスポンスからは `error` / `error_description` しか読まない。body 全体を握ると
+ * `code` がログや Sentry に流れる事故が起きる。
+ */
+export async function exchangeAuthorizationCode(params: {
+  code: string;
+  redirectUri: string;
+  codeVerifier: string;
+}): Promise<GoogleTokenResponse> {
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    code: params.code,
+    redirect_uri: params.redirectUri,
+    code_verifier: params.codeVerifier,
+    client_id: env.GOOGLE_CALENDAR_CLIENT_ID ?? '',
+    client_secret: env.GOOGLE_CALENDAR_CLIENT_SECRET ?? '',
+  });
+
+  let response: Response;
+  try {
+    response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body,
+      signal: AbortSignal.timeout(TOKEN_REQUEST_TIMEOUT_MS),
+    });
+  } catch {
+    throw new GoogleOAuthError('token endpoint is unreachable', 'token_endpoint_unreachable');
+  }
+
+  const payload: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const errorCode =
+      payload && typeof payload === 'object' && 'error' in payload
+        ? String((payload as { error: unknown }).error)
+        : 'unknown_error';
+    throw new GoogleOAuthError(`token exchange rejected: ${errorCode}`, 'token_exchange_rejected');
+  }
+
+  const parsed = googleTokenResponseSchema.safeParse(payload);
+  if (!parsed.success) {
+    throw new GoogleOAuthError('token response has an unexpected shape', 'token_response_invalid');
+  }
+
+  return parsed.data;
+}
+
+/**
+ * id_token の payload を読む。
+ *
+ * 署名検証はしない。TLS 直結の token endpoint から受け取ったものなので OpenID Connect
+ * Core §3.1.3.7 が署名検証の省略を認めている。JWKS を取りに行くと鍵キャッシュという
+ * 運用面が増えるだけで、この経路では防御価値が上がらない。`iss` / `aud` / `exp` は検証する。
+ */
+export function parseIdToken(idToken: string): GoogleIdTokenPayload {
+  const segments = idToken.split('.');
+  const encodedPayload = segments[1];
+  if (segments.length !== 3 || encodedPayload === undefined) {
+    throw new GoogleOAuthError('id_token is not a JWT', 'id_token_malformed');
+  }
+
+  let rawPayload: unknown;
+  try {
+    rawPayload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+  } catch {
+    throw new GoogleOAuthError('id_token payload is not JSON', 'id_token_malformed');
+  }
+
+  const parsed = googleIdTokenPayloadSchema.safeParse(rawPayload);
+  if (!parsed.success) {
+    throw new GoogleOAuthError('id_token payload has an unexpected shape', 'id_token_invalid');
+  }
+
+  if (parsed.data.aud !== env.GOOGLE_CALENDAR_CLIENT_ID) {
+    throw new GoogleOAuthError('id_token audience mismatch', 'id_token_audience_mismatch');
+  }
+
+  if (parsed.data.exp * 1000 <= Date.now()) {
+    throw new GoogleOAuthError('id_token is expired', 'id_token_expired');
+  }
+
+  return parsed.data;
+}
+
+/**
+ * 付与された scope を配列にする。
+ *
+ * `filter(Boolean)` は必須。連続スペースで空文字が混じると、`granted_scopes` の
+ * not-empty CHECK は通ってしまう一方で scope 判定だけが壊れる。
+ */
+export function parseGrantedScopes(scope: string): string[] {
+  return scope.split(' ').filter(Boolean);
+}
+
+/** granular consent で calendar だけ外されていないか。 */
+export function hasCalendarReadonlyScope(grantedScopes: string[]): boolean {
+  return grantedScopes.includes(GOOGLE_CALENDAR_READONLY_SCOPE);
+}

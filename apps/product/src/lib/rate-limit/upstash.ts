@@ -237,6 +237,18 @@ export const icalFeedRateLimit = createRateLimiter(
   'ratelimit:product:ical-feed',
 );
 
+/**
+ * 外部カレンダー接続の開始用レート制限
+ * 10リクエスト / 1時間 per user（OAuth 開始は人間の操作なので低頻度で足りる）
+ *
+ * IP ではなく user 単位。connect は認証済みユーザーの操作であり、共有 IP 配下の
+ * 別ユーザーを巻き込まない。
+ */
+export const calendarConnectStartRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(10, '1 h'),
+  'ratelimit:product:calendar-connect',
+);
+
 /** CSP reportは公開入力なのでIP単位と全体上限を別々に持つ。 */
 export const cspReportRateLimit = createRateLimiter(
   Ratelimit.slidingWindow(20, '1 m'),
