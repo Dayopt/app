@@ -124,6 +124,7 @@
       "Read(**/.env.development)",
       "Read(**/.env.staging)",
       "Read(**/.env.production)",
+      "Read(**/supabase/.env*)",
       "Read(**/.envrc)",
       "Read(~/.ssh/**)",
       "Read(~/.aws/**)",
