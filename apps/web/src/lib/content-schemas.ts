@@ -54,6 +54,9 @@ export const docFrontMatterSchema = z.object({
   category: z.string().default('general'),
   order: z.number().default(0),
   draft: z.boolean().default(false),
+  // 本文が未執筆の骨格であることを示す。draft: true と併用が必須（validate-content.js が強制）で、
+  // カバレッジ集計では「ページはあるが中身は無い」として draft と区別する
+  placeholder: z.boolean().default(false),
   featured: z.boolean().default(false),
   ai: aiMetadataSchema,
 });

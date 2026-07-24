@@ -196,9 +196,12 @@
     "overview": "概要",
     "categories": {
       "getting-started": "はじめに",
-      "features": "機能",
-      "guides": "ガイド",
-      "troubleshooting": "トラブルシューティング",
+      "plan": "一日を計画する",
+      "track": "時間を記録する",
+      "review": "振り返る",
+      "organize": "タグで整理する",
+      "data": "データを外で使う",
+      "troubleshooting": "うまく動かないとき",
       "account": "アカウント",
       "faq": "よくある質問"
     },

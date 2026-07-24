@@ -1,9 +1,12 @@
 ---
 status: current
-last_verified: 2026-07-21
+last_verified: 2026-07-24
 code:
   - apps/product/src/features/contact
   - apps/web/src/app/api/contact
+# 問い合わせ導線は /contact ページ自体が入口で、公開docsのページは持たない
+public_docs: []
+lp: []
 ---
 
 # Contact（問い合わせ・フィードバック）
