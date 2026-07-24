@@ -293,6 +293,27 @@ function checkDocsSlugCollisions() {
   return errors;
 }
 
+// docs の情報構造は最大 3 階層（カテゴリー → ページ、または カテゴリー → グループ → ページ）。
+// これより深くすると読み手が現在地を見失うため、パスの深さで機械的に止める。
+// URL はどの深さでもフラット（/docs/<ファイル名>）なので、これはナビ構造だけの制約
+function checkDocsDepth() {
+  const errors = [];
+  for (const locale of ['en', 'ja']) {
+    const dir = path.join(CONTENT_DIR, 'docs', locale);
+    if (!fs.existsSync(dir)) continue;
+    for (const file of findMdxFiles(dir)) {
+      const rel = path.relative(dir, file).replace(/\\/g, '/');
+      const depth = rel.split('/').length;
+      if (depth > 3) {
+        errors.push(
+          `Docs nesting too deep (max 3 levels): content/docs/${locale}/${rel} — カテゴリー/グループ/ページ までにする`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
 // routing の slug と category はファイル配置から導出され、frontmatter の同名フィールドは
 // mdx.ts に上書きされて無視される。記述値がずれても動作は壊れないが、内部リンクを書く時の
 // 参照先として読まれるため嘘になる
@@ -410,6 +431,7 @@ function main() {
 
   for (const error of [
     ...checkDocsSlugCollisions(),
+    ...checkDocsDepth(),
     ...checkDocsSlugMatchesRouting(),
     ...checkBlogReservedSlugs(),
     ...linkIssues.errors,
