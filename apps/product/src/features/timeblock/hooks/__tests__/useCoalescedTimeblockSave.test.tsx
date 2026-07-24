@@ -172,4 +172,78 @@ describe('useCoalescedTimeblockSave', () => {
     ).resolves.toBeUndefined();
     expect(onSave).toHaveBeenCalledTimes(2);
   });
+
+  it('進行中の保存と未開始の差分を区別する', async () => {
+    const firstSave = createDeferred();
+    const onSave = vi
+      .fn<(patch: TimeblockSavePatch) => Promise<unknown>>()
+      .mockReturnValueOnce(firstSave.promise)
+      .mockResolvedValue(undefined);
+    const { result } = renderHook(() => useCoalescedTimeblockSave(onSave));
+
+    act(() => result.current.enqueue({ note: '保存中' }));
+    expect(result.current.hasPendingChanges()).toBe(false);
+
+    act(() => result.current.enqueue({ tagId: '待機中' }));
+    expect(result.current.hasPendingChanges()).toBe(true);
+
+    firstSave.resolve();
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(result.current.hasPendingChanges()).toBe(false);
+  });
+
+  it('未開始の差分とflush waiterを破棄し、進行中の保存は継続する', async () => {
+    const firstSave = createDeferred();
+    const discardReason = new Error('external state changed');
+    const onSave = vi
+      .fn<(patch: TimeblockSavePatch) => Promise<unknown>>()
+      .mockReturnValueOnce(firstSave.promise)
+      .mockResolvedValue(undefined);
+    const { result } = renderHook(() => useCoalescedTimeblockSave(onSave));
+
+    act(() => result.current.enqueue({ note: 'すでに保存中' }));
+    let pendingFlush!: Promise<void>;
+    act(() => {
+      pendingFlush = result.current.flush({ tagId: 'まだ開始していない差分' });
+    });
+    expect(result.current.hasPendingChanges()).toBe(true);
+
+    const rejection = expect(pendingFlush).rejects.toBe(discardReason);
+    act(() => result.current.discardPending(discardReason));
+
+    await rejection;
+    expect(result.current.hasPendingChanges()).toBe(false);
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    firstSave.resolve();
+    await firstSave.promise;
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+  });
+
+  it('すでに開始したflushはdiscardPendingで完了扱いにしない', async () => {
+    const activeSave = createDeferred();
+    const onSave = vi
+      .fn<(patch: TimeblockSavePatch) => Promise<unknown>>()
+      .mockReturnValueOnce(activeSave.promise);
+    const { result } = renderHook(() => useCoalescedTimeblockSave(onSave));
+
+    let activeFlush!: Promise<void>;
+    act(() => {
+      activeFlush = result.current.flush({ note: '進行中' });
+    });
+
+    let settled = false;
+    void activeFlush.finally(() => {
+      settled = true;
+    });
+    act(() => result.current.discardPending(new Error('external state changed')));
+    await Promise.resolve();
+
+    expect(settled).toBe(false);
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    activeSave.resolve();
+    await expect(activeFlush).resolves.toBeUndefined();
+  });
 });

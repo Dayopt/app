@@ -18,6 +18,10 @@ interface CoalescedTimeblockSaveControls {
   enqueue: (patch: TimeblockSavePatch) => void;
   /** patch を含む保存 batch の完了を待ち、失敗時は reject する。 */
   flush: (patch: TimeblockSavePatch) => Promise<void>;
+  /** まだ開始していない保存差分があるかを返す。進行中の保存は含めない。 */
+  hasPendingChanges: () => boolean;
+  /** まだ開始していない保存差分と、その完了を待つ waiter を破棄する。 */
+  discardPending: (reason: unknown) => void;
 }
 
 interface CoalescedTimeblockSaveOptions {
@@ -54,6 +58,17 @@ class CoalescedTimeblockSaveQueue {
       this.pendingWaiters.push({ resolve, reject });
       this.runNext();
     });
+  }
+
+  hasPendingChanges(): boolean {
+    return this.pending !== null;
+  }
+
+  discardPending(reason: unknown): void {
+    const discardedWaiters = this.pendingWaiters;
+    this.pending = null;
+    this.pendingWaiters = [];
+    for (const waiter of discardedWaiters) waiter.reject(reason);
   }
 
   private mergePending(patch: TimeblockSavePatch): void {
@@ -96,6 +111,7 @@ class CoalescedTimeblockSaveQueue {
 /**
  * Timeblock の連続変更を直列化し、保存待ちの差分は最新値へまとめる。
  * mutation 側がエラー表示を担うため、失敗後も次の保存を継続する。
+ * 通常close時の最終保存を保つためunmountだけでは破棄せず、consumerが遷移理由に応じてdiscardする。
  */
 export function useCoalescedTimeblockSave(
   onSave: (patch: TimeblockSavePatch) => Promise<unknown>,
@@ -115,6 +131,8 @@ export function useCoalescedTimeblockSave(
 
   const enqueue = useCallback((patch: TimeblockSavePatch) => queue.enqueue(patch), [queue]);
   const flush = useCallback((patch: TimeblockSavePatch) => queue.flush(patch), [queue]);
+  const hasPendingChanges = useCallback(() => queue.hasPendingChanges(), [queue]);
+  const discardPending = useCallback((reason: unknown) => queue.discardPending(reason), [queue]);
 
-  return { enqueue, flush };
+  return { discardPending, enqueue, flush, hasPendingChanges };
 }
