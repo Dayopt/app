@@ -92,7 +92,7 @@ DNS移管で到達性を失った場合は、Vercel Registrarのnameserverを元
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`がPreview / Developmentをtargetにしない
 - secretはVercelのSensitive typeを使う
 - Product / Webのwebhook URLと署名secretがResend側で別々に設定されている
-- 旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`はこの時点では削除しない
+- 旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`がどのtargetにも存在しない
 
 ```bash
 node scripts/production-config-audit.mjs
@@ -126,7 +126,7 @@ timeout後の再送やbounce / complaintを実在する第三者addressへ故意
 1. `v0.32.1`tagと詳細なGitHub Releaseを作る
 2. 両Vercel projectから旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`を削除して再deployする
 3. 旧contact専用PATを失効する
-4. `AUDIT_FORBID_LEGACY_CONTACT_ENV=true`でmetadata auditを実行する
+4. metadata auditを実行し、旧2 envがどのtargetにも無いことを確認する
 5. Issue #1646へPIIを含まない証跡を記録しcloseする
 6. release branchと作業worktreeを削除する
 

@@ -730,24 +730,63 @@ export async function runProductionRelease({
     ({ project, deployment }) => current.get(project.name)?.id !== deployment.id,
   );
 
+  // 全 project の auto-assign を期待値へ戻す。外部の promote が待機中に設定を
+  // 飛ばしている可能性があるため、失敗して抜けるどの経路でも最後に呼ぶ。
+  // restoreAll は project 単位で失敗を握るので、この呼び出し自体は throw しない。
+  const sweepSettings = () =>
+    restoreAll({
+      entries: projects.map((project) => ({
+        project,
+        projectId: projectIds.get(project.name),
+        autoAssignCustomDomains: expectedFor(project.name),
+      })),
+      token,
+      teamId,
+      fetchImpl,
+      logger,
+    });
+
+  // 掃きで復元に失敗した project は、元の失敗と別に名指しする。放置すると次の
+  // merge が gate を迂回するのに、run の失敗理由には現れないため。
+  const reportSweepDrift = (drifted) => {
+    if (drifted.length === 0) return;
+    const message =
+      `autoAssignCustomDomains could not be restored for ${drifted.join(', ')}. ` +
+      `Set it back before the next merge or the release gate is bypassed.`;
+    logger.log(message);
+    writeStepSummary(['', `> ${message}`]);
+  };
+
   if (force) {
     logger.log('Force Promote: skipping smoke and Production Config Audit.');
   } else {
-    for (const { project, deployment } of pending) {
-      assertSimulationPoint(simulateFailure, `smoke:${project.name}`);
-      await smokeDeployment({
-        projectName: project.name,
-        deploymentUrl: deployment.url,
-        checks: project.smokeChecks,
-        bypassSecret: bypassSecrets[project.name],
-        fetchImpl,
-        sleepImpl,
-        logger,
-      });
-    }
+    // smoke は promote 対象（pending）ではなく全 candidate に対して走らせる。
+    // Auto-assign が有効な段階適用中は candidate が待機中に自動割当されて
+    // pending が空になるため、pending だけを対象にすると smoke のコードパスが
+    // 一度も実行されないまま cutover を迎えてしまう。全 candidate に走らせる
+    // ことで、毎 merge が smoke と bypass secret の実働テストを兼ねる。
+    try {
+      for (const { project, deployment } of candidates) {
+        assertSimulationPoint(simulateFailure, `smoke:${project.name}`);
+        await smokeDeployment({
+          projectName: project.name,
+          deploymentUrl: deployment.url,
+          checks: project.smokeChecks,
+          bypassSecret: bypassSecrets[project.name],
+          fetchImpl,
+          sleepImpl,
+          logger,
+        });
+      }
 
-    await runProductionConfigAudit({ token, teamId, fetchImpl });
-    logger.log('Production Config Audit passed against live Vercel metadata.');
+      await runProductionConfigAudit({ token, teamId, fetchImpl });
+      logger.log('Production Config Audit passed against live Vercel metadata.');
+    } catch (error) {
+      // 外部の promote が待機中に auto-assign を飛ばしていた場合、ここで抜けると
+      // 誰も設定を戻さない。掃いてから失敗させる。
+      reportSweepDrift(await sweepSettings());
+      throw error;
+    }
   }
 
   const promoted = [];
@@ -842,35 +881,31 @@ export async function runProductionRelease({
       logger.log(`${project.name}: promoted ${deployment.id}`);
     }
   } catch (error) {
-    const rolledBack = await rollbackPromoted({
-      promoted,
-      token,
-      teamId,
-      fetchImpl,
-      sleepImpl,
-      nowImpl,
-      logger,
-      cause: error,
-      preexistingSplit,
-      preexistingDrift: driftedProjects,
-    });
+    let rolledBack = [];
+    try {
+      rolledBack = await rollbackPromoted({
+        promoted,
+        token,
+        teamId,
+        fetchImpl,
+        sleepImpl,
+        nowImpl,
+        logger,
+        cause: error,
+        preexistingSplit,
+        preexistingDrift: driftedProjects,
+      });
+    } finally {
+      // rollback の成否に関わらず、promote しなかった project の設定も掃く。
+      reportSweepDrift(await sweepSettings());
+    }
     throw Object.assign(error, { rolledBack });
   }
 
   // promote しなかった project も掃く。pending から除外された側や、外部の promote で
   // skip した側も、その promote の副作用で設定が飛んでいることがある。
   // ループ内の復元は「窓を作らない」ため、この掃きは「取りこぼさない」ためにある。
-  const swept = await restoreAll({
-    entries: projects.map((project) => ({
-      project,
-      projectId: projectIds.get(project.name),
-      autoAssignCustomDomains: expectedFor(project.name),
-    })),
-    token,
-    teamId,
-    fetchImpl,
-    logger,
-  });
+  const swept = await sweepSettings();
   for (const name of swept) {
     if (!driftedProjects.includes(name)) driftedProjects.push(name);
   }
@@ -879,7 +914,14 @@ export async function runProductionRelease({
   // 放置すると次の merge が gate を迂回するため run は失敗させる。
   if (driftedProjects.length > 0) throw driftError(sha, driftedProjects);
 
-  return { status: 'promoted', sha, promoted, rolledBack: [], preexistingSplit };
+  return {
+    status: 'promoted',
+    sha,
+    promoted,
+    rolledBack: [],
+    preexistingSplit,
+    gateChecksRan: !force,
+  };
 }
 
 async function rollbackPromoted({
@@ -985,6 +1027,17 @@ function summarize(result) {
     lines.push(
       '',
       `Pre-existing split from an earlier run: ${result.preexistingSplit.join(', ')}.`,
+    );
+  }
+  if (result.status === 'promoted' && result.promoted.length === 0) {
+    lines.push(
+      '',
+      'Nothing was left to promote: Vercel auto-assigned the candidates (Auto-assign is on).',
+    );
+    lines.push(
+      result.gateChecksRan
+        ? 'The gate still verified smoke and the config audit against them.'
+        : 'Force Promote: smoke and the config audit were skipped, so nothing was verified.',
     );
   }
   if (result.status === 'superseded') {

@@ -742,6 +742,73 @@ describe('runProductionRelease', () => {
     expect(world.patches).toContainEqual({ project: 'web', value: false });
   });
 
+  it('smokes candidates that Vercel already auto-assigned', async () => {
+    // Auto-assign が有効な段階適用中は candidate が待機中に自動割当され、
+    // promote 対象が空になる。それでも smoke は走らせ、毎 merge を
+    // smoke と bypass secret の実働テストにする。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new'],
+    });
+
+    const result = await release({ fetchImpl: world.fetchImpl });
+
+    expect(result.status).toBe('promoted');
+    expect(world.promoted()).toEqual(['product']);
+    // promote しなかった web の candidate にも smoke が飛んでいる。
+    const smokeUrls = world.fetchImpl.mock.calls
+      .map((call) => String(call[0]))
+      .filter((url) => url.includes('dpl_web_new.vercel.app'));
+    expect(smokeUrls.length).toBeGreaterThan(0);
+  });
+
+  it('sweeps the setting even when smoke aborts the run', async () => {
+    // 待機中に外部が web candidate を promote して auto-assign が true に戻り、
+    // その後 product の smoke が失敗した場合。ここで抜けると誰も設定を戻さず、
+    // 次の merge が gate を迂回する。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new'],
+      smokeBody: '{"status":"degraded"}',
+    });
+
+    await expect(release({ fetchImpl: world.fetchImpl })).rejects.toThrow(
+      /without the expected content/,
+    );
+    expect(world.pointCalls).toEqual([]);
+    // 失敗経路でも web の設定は false へ戻っている。
+    expect(world.patches).toContainEqual({ project: 'web', value: false });
+  });
+
+  it('names projects whose setting could not be restored when smoke aborts', async () => {
+    // 掃き自体が失敗した場合、run は smoke の失敗だけを報告して終わる。
+    // auto-assign が有効なまま残る事実を名指ししないと、次の merge が
+    // gate を迂回することにオペレータが気づけない。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new'],
+      smokeBody: '{"status":"degraded"}',
+    });
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') return new Response(null, { status: 500 });
+      return world.fetchImpl(input, init);
+    });
+    const logs: string[] = [];
+    const logger = { log: (message: string) => logs.push(message) };
+
+    await expect(release({ fetchImpl, logger })).rejects.toThrow(/without the expected content/);
+    expect(logs.join('\n')).toMatch(/could not be restored for web/);
+  });
+
+  it('reports whether the gate checks actually ran', async () => {
+    const normal = createReleaseWorld();
+    await expect(release({ fetchImpl: normal.fetchImpl })).resolves.toMatchObject({
+      gateChecksRan: true,
+    });
+
+    const forced = createReleaseWorld();
+    await expect(release({ fetchImpl: forced.fetchImpl, force: true })).resolves.toMatchObject({
+      gateChecksRan: false,
+    });
+  });
+
   it('skips smoke and audit under Force Promote', async () => {
     const world = createReleaseWorld();
     const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
