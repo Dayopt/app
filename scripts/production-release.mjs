@@ -681,13 +681,29 @@ export async function runProductionRelease({
   try {
     for (const { project, deployment } of pending) {
       assertSimulationPoint(simulateFailure, `promote:${project.name}`);
+
+      // smoke と audit で数分経っている。その間に人が Instant Rollback や手動
+      // promote を行いうるので、rollback 先は promote の直前に取り直す。
+      const live = (await getProjectState({ projectName: project.name, token, teamId, fetchImpl }))
+        .production;
+
+      if (live?.id === deployment.id) {
+        logger.log(`${project.name}: another actor already promoted ${deployment.id}; skipping`);
+        continue;
+      }
+      if (live?.id !== current.get(project.name)?.id) {
+        throw new ReleaseError(
+          `${project.name}: production moved to ${live?.id ?? 'none'} while the gate was ` +
+            `running; refusing to promote ${deployment.id} over it`,
+        );
+      }
+
       const entry = {
         project,
         projectId: projectIds.get(project.name),
         autoAssignCustomDomains: expectedFor(project.name),
         deployment,
-        // rollback 先は待機後の実状態。待機中に人が動かしていたらそちらを尊重する。
-        previous: current.get(project.name),
+        previous: live,
       };
       logger.log(
         `${project.name}: promoting ${deployment.id} over ${entry.previous?.id ?? 'none'}`,

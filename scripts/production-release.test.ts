@@ -714,6 +714,37 @@ describe('runProductionRelease', () => {
     expect(world.promoted()).toEqual(['product']);
   });
 
+  it('refuses to promote when production moves during smoke and audit', async () => {
+    // 待機後の再取得と promote の間には smoke と audit があり数分かかる。
+    // その窓で人が動かしていたら上書きしない。
+    const world = createReleaseWorld();
+    let webReads = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/v9/projects/web') && (init?.method ?? 'GET') === 'GET') {
+        webReads += 1;
+        // 1回目=before, 2回目=待機後。3回目（promote 直前）で第三の deployment に。
+        if (webReads > 2) {
+          return Response.json({
+            id: 'prj_web',
+            autoAssignCustomDomains: false,
+            targets: {
+              production: {
+                id: 'dpl_web_hotfix',
+                createdAt: 1500,
+                meta: { githubCommitSha: OLD_SHA },
+              },
+            },
+          });
+        }
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    await expect(release({ fetchImpl })).rejects.toThrow(/production moved to dpl_web_hotfix/);
+    expect(world.promoted()).toEqual([]);
+  });
+
   it('skips smoke and audit under Force Promote', async () => {
     const world = createReleaseWorld();
     const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
