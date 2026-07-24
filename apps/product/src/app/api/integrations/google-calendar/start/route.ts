@@ -12,9 +12,7 @@ import {
   isGoogleCalendarConfigured,
   resolveRedirectUri,
 } from '@/features/external-calendar/server/google-oauth';
-import { canAccessProFeatures } from '@/lib/auth/domain';
-import { isBillingEnforced } from '@/lib/billing/enforcement';
-import { databaseTables } from '@/lib/database';
+import { checkProAccessForUser } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
 import { calendarConnectStartRateLimit } from '@/lib/rate-limit/upstash';
 import { captureUnexpectedError } from '@/lib/sentry';
@@ -51,28 +49,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL('/auth/login', requestUrl));
   }
 
-  if (isBillingEnforced()) {
-    const { data, error } = await supabase
-      .from(databaseTables.profiles)
-      .select('subscription_status')
-      .eq('id', user.id)
-      .single();
+  const proAccess = await checkProAccessForUser(supabase, user.id);
 
-    if (error) {
-      captureUnexpectedError(
-        error instanceof Error ? error : new Error('subscription lookup failed'),
-        {
-          feature: 'external_calendar',
-          operation: 'check_pro_subscription',
-          route: '/api/integrations/google-calendar/start',
-        },
-      );
-      return NextResponse.json({ error: 'Failed to verify subscription' }, { status: 500 });
-    }
+  if (proAccess === 'lookup_failed') {
+    captureUnexpectedError(new Error('subscription lookup failed'), {
+      feature: 'external_calendar',
+      operation: 'check_pro_subscription',
+      route: '/api/integrations/google-calendar/start',
+    });
+    return NextResponse.json({ error: 'Failed to verify subscription' }, { status: 500 });
+  }
 
-    if (!canAccessProFeatures(data?.subscription_status)) {
-      return NextResponse.json({ error: 'Pro plan required' }, { status: 403 });
-    }
+  if (proAccess === 'denied') {
+    return NextResponse.json({ error: 'Pro plan required' }, { status: 403 });
   }
 
   // Upstash 未設定なら null、Redis 障害なら throw。どちらでも接続開始は止めない

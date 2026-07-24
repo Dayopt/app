@@ -5,7 +5,7 @@ const getUser = vi.hoisted(() => vi.fn());
 const from = vi.hoisted(() => vi.fn());
 const createClient = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
-const isBillingEnforced = vi.hoisted(() => vi.fn());
+const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
@@ -20,7 +20,7 @@ vi.mock('@/lib/supabase/server', () => ({ createClient }));
 vi.mock('@/lib/rate-limit/upstash', () => ({
   calendarConnectStartRateLimit: { limit: rateLimit },
 }));
-vi.mock('@/lib/billing/enforcement', () => ({ isBillingEnforced }));
+vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 
 import { GET } from '../start/route';
@@ -44,7 +44,7 @@ describe('google calendar start route', () => {
     getUser.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
     createClient.mockResolvedValue({ auth: { getUser }, from });
     rateLimit.mockResolvedValue({ success: true });
-    isBillingEnforced.mockReturnValue(false);
+    checkProAccessForUser.mockResolvedValue('allowed');
   });
 
   it('env が未設定なら 503 で止まり Google へ飛ばさない', async () => {
@@ -149,33 +149,20 @@ describe('google calendar start route', () => {
     expect(captureUnexpectedError).toHaveBeenCalled();
   });
 
-  it('billing enforcement 有効かつ非 Pro は 403', async () => {
-    isBillingEnforced.mockReturnValue(true);
-    from.mockReturnValue({
-      select: () => ({
-        eq: () => ({
-          single: () => Promise.resolve({ data: { subscription_status: 'free' }, error: null }),
-        }),
-      }),
-    });
+  it('Pro でないユーザーは 403', async () => {
+    checkProAccessForUser.mockResolvedValue('denied');
 
     const response = await GET(request());
 
     expect(response.status).toBe(403);
   });
 
-  it('billing enforcement 有効でも Pro は通す', async () => {
-    isBillingEnforced.mockReturnValue(true);
-    from.mockReturnValue({
-      select: () => ({
-        eq: () => ({
-          single: () => Promise.resolve({ data: { subscription_status: 'active' }, error: null }),
-        }),
-      }),
-    });
+  it('subscription の参照に失敗したら 500', async () => {
+    checkProAccessForUser.mockResolvedValue('lookup_failed');
 
     const response = await GET(request());
 
-    expect(response.status).toBe(307);
+    expect(response.status).toBe(500);
+    expect(captureUnexpectedError).toHaveBeenCalled();
   });
 });

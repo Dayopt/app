@@ -5,6 +5,7 @@ const getUser = vi.hoisted(() => vi.fn());
 const createClient = vi.hoisted(() => vi.fn());
 const saveConnection = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
+const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
@@ -15,6 +16,7 @@ const envMock = vi.hoisted(() => ({
 vi.mock('@/env', () => ({ env: envMock }));
 vi.mock('@/lib/supabase/server', () => ({ createClient }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
+vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
 vi.mock('@/features/external-calendar/server/connection-service', () => ({ saveConnection }));
 
 import { GET } from '../callback/route';
@@ -83,6 +85,7 @@ describe('google calendar callback route', () => {
     getUser.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
     createClient.mockResolvedValue({ auth: { getUser } });
     saveConnection.mockResolvedValue(undefined);
+    checkProAccessForUser.mockResolvedValue('allowed');
     vi.stubGlobal(
       'fetch',
       vi.fn(() => Promise.resolve(new Response(JSON.stringify(tokenResponse()), { status: 200 }))),
@@ -105,6 +108,28 @@ describe('google calendar callback route', () => {
 
     expect(response.headers.get('location')).toContain('/auth/login');
     expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  // cookie は署名しておらず HttpOnly は JS を止めるだけなので、ユーザー自身は devtools や
+  // curl で中身を作れる。start を一度も踏まずに callback へ直接来られるため、start 側の
+  // 403 だけでは Free ユーザーを止められない
+  it('Pro でないユーザーは cookie と state が整合していても接続を作れない', async () => {
+    checkProAccessForUser.mockResolvedValue('denied');
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('pro_required');
+    expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  it('subscription の参照に失敗したら接続を保存しない', async () => {
+    checkProAccessForUser.mockResolvedValue('lookup_failed');
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('subscription_check_failed');
+    expect(saveConnection).not.toHaveBeenCalled();
+    expect(captureUnexpectedError).toHaveBeenCalled();
   });
 
   it('cookie が無ければ接続を保存しない', async () => {
