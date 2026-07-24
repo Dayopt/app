@@ -374,6 +374,7 @@ pollerはworkspace Composition Layerに一つだけ置き、`CalendarViewClient`
 - debounced note dirtyがない
 - coalesced save queueにpending patchがない
 - saveがin-flightでない
+- invalid range / overlapでqueueへ送れない日時draftがない
 
 `dirty`は上記のいずれかがtrueの状態とする。save queueは`hasPendingChanges()`と`discardPending()`を公開し、Formがlocal draftとserver snapshotの順序を判断できるようにする。
 
@@ -384,7 +385,7 @@ pollerはworkspace Composition Layerに一つだけ置き、`CalendarViewClient`
 - 表示中のdraftは保持する
 - server versionをlocal CASへ採用せず、versionをunknownにしてwriteをfreezeする
 - 既存conflict state / copyを表示する
-- in-flight saveのconflict recoveryが新snapshotでdraftを自動上書きしない
+- CAS conflict自体も同じconflicted stateへ遷移し、最新snapshotを自動取得してdraftを上書きしない
 - Inspectorを閉じて再openする操作を明示的なreload境界とする
 
 ### External delete
@@ -392,8 +393,10 @@ pollerはworkspace Composition Layerに一つだけ置き、`CalendarViewClient`
 - active Plan / Record queryは`NOT_FOUND`をretryしない
 - success済みのcached targetがある場合、Formを一度unavailable stateへ遷移させる
 - unavailable stateでdebounceをcancelし、未開始queueをdiscardし、unmount cleanupのnote flushを抑止する
+- query / mutationのどちらが先に`NOT_FOUND`を知っても、対象list行とdetail success cacheを除去する。Plan記録を含むaction mutationも同じ境界へ接続する
 - neutralな既存not-found表示へ切り替える
 - in-flight requestをcancel済みと偽らない。完了結果はunavailable stateを解除せず、後続writeへ使わない
+- cached `NOT_FOUND`を持つ再openではrefetch完了までFormをmountせず、外部restore済みならその成功snapshotを一度の再openで採用する
 
 初回から対象が存在しない場合はFormをmountせず、同じneutral not-found表示を使う。
 

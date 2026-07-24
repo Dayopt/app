@@ -26,6 +26,8 @@ import {
 } from '../../hooks/useCoalescedTimeblockSave';
 import {
   isTimeblockConflictError,
+  isTimeblockNotFoundError,
+  removeMissingTimeblockFromCache,
   useTimeblockWriteMutations,
   type TimeblockOverlapUpdateInput,
 } from '../../hooks/useTimeblockWriteMutations';
@@ -72,10 +74,14 @@ export type TimeblockRelationships =
       onRetry: () => void;
     };
 
+export type TimeblockInspectorAvailability = 'available' | 'unavailable';
+
 interface TimeModelInspectorFormProps {
   kind: TimeblockDestination;
   plan?: PlanRow | undefined;
   record?: RecordRow | undefined;
+  /** active queryで対象が削除済みと確定した場合はunavailableへ遷移する。 */
+  availability?: TimeblockInspectorAvailability | undefined;
   /** Plan / Record の関係取得状態と表示対象。 */
   relationships?: TimeblockRelationships | undefined;
   /** 関係行または記録直後の対象を同じ Inspector で開く。 */
@@ -131,6 +137,7 @@ export function TimeblockInspectorForm({
   kind,
   plan,
   record,
+  availability = 'available',
   relationships,
   onOpenRelationship,
   onViewStats,
@@ -148,6 +155,7 @@ export function TimeblockInspectorForm({
   const createTagMutation = useCreateTag({ showToast: false });
   const isDuplicateMode = duplicateDraft != null;
   const [hasTimeConflict, setHasTimeConflict] = useState(false);
+  const hasUnsavedTimeDraftRef = useRef(false);
   const latestTimeValueRef = useRef({ startAt: '', endAt: '' });
   const handleCreateTimeOverlap = useCallback(() => setHasTimeConflict(true), []);
   const handleUpdateTimeOverlap = useCallback((input: TimeblockOverlapUpdateInput) => {
@@ -156,6 +164,7 @@ export function TimeblockInspectorForm({
       startAt === latestTimeValueRef.current.startAt &&
       endAt === latestTimeValueRef.current.endAt
     ) {
+      hasUnsavedTimeDraftRef.current = true;
       setHasTimeConflict(true);
     }
   }, []);
@@ -164,8 +173,6 @@ export function TimeblockInspectorForm({
     createPlan,
     deleteRecord,
     deletePlan,
-    fetchPlanById,
-    fetchRecordById,
     restoreRecord,
     restorePlan,
     skipPlan,
@@ -181,7 +188,9 @@ export function TimeblockInspectorForm({
   const target: PlanRow | RecordRow | undefined = kind === 'plan' ? plan : record;
   const targetId = isDuplicateMode ? null : (target?.id ?? null);
   const targetUpdatedAt = target?.updated_at ?? null;
-  const latestUpdatedAtRef = useRef(targetUpdatedAt);
+  const startsUnavailable = availability === 'unavailable';
+  const latestUpdatedAtRef = useRef(startsUnavailable ? null : targetUpdatedAt);
+  const observedServerUpdatedAtRef = useRef(targetUpdatedAt);
 
   const [value, setValue] = useState<TimeModelEditorValue>(() => ({
     note: duplicateDraft?.note ?? target?.note ?? '',
@@ -200,15 +209,17 @@ export function TimeblockInspectorForm({
   }));
   const [duplicateValidationNow] = useState(() => new Date());
   const [isPreparingAction, setIsPreparingAction] = useState(false);
-  const [isRecoveringConflict, setIsRecoveringConflict] = useState(false);
   const [hasUnresolvedConflict, setHasUnresolvedConflict] = useState(false);
+  const [isUnavailable, setIsUnavailable] = useState(startsUnavailable);
   const actionPreparingRef = useRef(false);
-  const conflictRecoveringRef = useRef(false);
   const pendingNoteRef = useRef(value.note);
   const noteDirtyRef = useRef(false);
   const noteGenerationRef = useRef(0);
   const saveInFlightRef = useRef(false);
-  const activeTargetIdRef = useRef(targetId);
+  const transitionEpochRef = useRef(0);
+  const lifecycleStateRef = useRef<'available' | 'conflicted' | 'unavailable'>(
+    startsUnavailable ? 'unavailable' : 'available',
+  );
 
   useEffect(() => {
     latestTimeValueRef.current = {
@@ -226,21 +237,29 @@ export function TimeblockInspectorForm({
   const hasRelatedRecords =
     planRelationships?.status === 'success' && planRelationships.records.length > 0;
 
-  useEffect(() => {
-    const targetChanged = activeTargetIdRef.current !== targetId;
-    activeTargetIdRef.current = targetId;
-    if (targetChanged) {
-      conflictRecoveringRef.current = false;
-      setHasUnresolvedConflict(false);
-    }
-    if (targetChanged || (!noteDirtyRef.current && !saveInFlightRef.current)) {
-      latestUpdatedAtRef.current = targetUpdatedAt;
-    }
-  }, [targetId, targetUpdatedAt]);
+  const markConflicted = useCallback(() => {
+    if (lifecycleStateRef.current === 'unavailable') return;
+    transitionEpochRef.current += 1;
+    lifecycleStateRef.current = 'conflicted';
+    latestUpdatedAtRef.current = null;
+    noteGenerationRef.current += 1;
+    setHasUnresolvedConflict(true);
+  }, []);
+
+  const markUnavailable = useCallback(() => {
+    if (lifecycleStateRef.current === 'unavailable') return;
+    transitionEpochRef.current += 1;
+    lifecycleStateRef.current = 'unavailable';
+    latestUpdatedAtRef.current = null;
+    noteGenerationRef.current += 1;
+    setHasUnresolvedConflict(false);
+    setIsUnavailable(true);
+  }, []);
 
   const savePatch = useCallback(
     async (patch: TimeblockSavePatch) => {
-      if (!targetId || isMigrated) return;
+      if (!targetId || isMigrated || lifecycleStateRef.current !== 'available') return;
+      const saveEpoch = transitionEpochRef.current;
       const expectedUpdatedAt = latestUpdatedAtRef.current;
       if (!expectedUpdatedAt) throw new Error('Missing timeblock version');
       const input = {
@@ -254,35 +273,21 @@ export function TimeblockInspectorForm({
           kind === 'plan'
             ? await updatePlan.mutateAsync(input)
             : await updateRecord.mutateAsync(input);
+        if (saveEpoch !== transitionEpochRef.current || lifecycleStateRef.current !== 'available') {
+          return;
+        }
         latestUpdatedAtRef.current = updated.updated_at;
       } catch (error) {
+        if (isTimeblockNotFoundError(error)) {
+          markUnavailable();
+          throw error;
+        }
         if (isTimeblockConflictError(error)) {
-          conflictRecoveringRef.current = true;
-          setIsRecoveringConflict(true);
-          noteGenerationRef.current += 1;
-          latestUpdatedAtRef.current = null;
-          try {
-            const latest =
-              kind === 'plan' ? await fetchPlanById(targetId) : await fetchRecordById(targetId);
-            latestUpdatedAtRef.current = latest.updated_at;
-            pendingNoteRef.current = latest.note ?? '';
-            noteDirtyRef.current = false;
-            setHasTimeConflict(false);
-            setValue((previous) => ({
-              ...previous,
-              note: latest.note ?? '',
-              tagId: latest.tag_id,
-              startAt: new Date(latest.start_at),
-              endAt: new Date(latest.end_at),
-            }));
-            setHasUnresolvedConflict(false);
-            conflictRecoveringRef.current = false;
-          } catch {
-            // versionをnullのまま保ち、Inspectorを開き直すまで後続writeをfail closedにする。
-            setHasUnresolvedConflict(true);
-          } finally {
-            noteGenerationRef.current += 1;
-            setIsRecoveringConflict(false);
+          if (
+            saveEpoch === transitionEpochRef.current &&
+            lifecycleStateRef.current === 'available'
+          ) {
+            markConflicted();
           }
         }
         throw error;
@@ -290,22 +295,104 @@ export function TimeblockInspectorForm({
         saveInFlightRef.current = false;
       }
     },
-    [kind, targetId, isMigrated, updatePlan, updateRecord, fetchPlanById, fetchRecordById],
+    [kind, targetId, isMigrated, updatePlan, updateRecord, markConflicted, markUnavailable],
   );
-  const { enqueue: enqueueSave, flush: flushSave } = useCoalescedTimeblockSave(savePatch, {
-    shouldDiscardPending: isTimeblockConflictError,
+  const {
+    discardPending,
+    enqueue: enqueueSave,
+    flush: flushSave,
+    hasPendingChanges,
+  } = useCoalescedTimeblockSave(savePatch, {
+    shouldDiscardPending: (error) =>
+      isTimeblockConflictError(error) || isTimeblockNotFoundError(error),
   });
 
   const [scheduleNoteSave, cancelScheduledNoteSave] = useDebouncedCallback(
     ({ generation, note }: { generation: number; note: string }) => {
-      if (generation !== noteGenerationRef.current) return;
+      if (generation !== noteGenerationRef.current || lifecycleStateRef.current !== 'available') {
+        return;
+      }
       noteDirtyRef.current = false;
       enqueueSave({ note: normalizeNote(note) });
     },
     NOTE_SAVE_DELAY_MS,
   );
 
-  const isWriteFrozen = isPreparingAction || isRecoveringConflict || hasUnresolvedConflict;
+  const isWriteFrozen =
+    availability === 'unavailable' || isUnavailable || isPreparingAction || hasUnresolvedConflict;
+
+  useEffect(() => {
+    if (availability !== 'unavailable' || lifecycleStateRef.current === 'unavailable') return;
+
+    markUnavailable();
+  }, [availability, markUnavailable]);
+
+  useEffect(() => {
+    if (!isUnavailable) return;
+
+    cancelScheduledNoteSave();
+    discardPending(new Error('Timeblock is no longer available'));
+    if (targetId) {
+      removeMissingTimeblockFromCache(queryClient, kind === 'plan' ? 'plans' : 'records', targetId);
+    }
+  }, [cancelScheduledNoteSave, discardPending, isUnavailable, kind, queryClient, targetId]);
+
+  useEffect(() => {
+    if (
+      isDuplicateMode ||
+      availability === 'unavailable' ||
+      !target ||
+      !targetUpdatedAt ||
+      observedServerUpdatedAtRef.current === targetUpdatedAt
+    ) {
+      return;
+    }
+
+    observedServerUpdatedAtRef.current = targetUpdatedAt;
+    if (lifecycleStateRef.current !== 'available') return;
+
+    const hasLocalChanges =
+      noteDirtyRef.current ||
+      hasPendingChanges() ||
+      saveInFlightRef.current ||
+      hasUnsavedTimeDraftRef.current;
+    const isLocallyAcceptedSnapshot = latestUpdatedAtRef.current === targetUpdatedAt;
+
+    if (hasLocalChanges) {
+      if (!isLocallyAcceptedSnapshot) {
+        markConflicted();
+        cancelScheduledNoteSave();
+        discardPending(new Error('Timeblock changed outside this Inspector'));
+      }
+      return;
+    }
+
+    if (!isLocallyAcceptedSnapshot) {
+      transitionEpochRef.current += 1;
+    }
+    latestUpdatedAtRef.current = targetUpdatedAt;
+    pendingNoteRef.current = target.note ?? '';
+    noteDirtyRef.current = false;
+    hasUnsavedTimeDraftRef.current = false;
+    setHasTimeConflict(false);
+    setValue((previous) => ({
+      ...previous,
+      note: target.note ?? '',
+      tagId: target.tag_id,
+      startAt: new Date(target.start_at),
+      endAt: new Date(target.end_at),
+    }));
+  }, [
+    availability,
+    cancelScheduledNoteSave,
+    discardPending,
+    hasPendingChanges,
+    isDuplicateMode,
+    markConflicted,
+    target,
+    targetUpdatedAt,
+  ]);
+
   const setActionPreparing = useCallback((preparing: boolean) => {
     actionPreparingRef.current = preparing;
     setIsPreparingAction(preparing);
@@ -313,12 +400,19 @@ export function TimeblockInspectorForm({
 
   const flushNoteSave = useCallback(() => {
     cancelScheduledNoteSave();
-    if (!noteDirtyRef.current) return;
+    if (lifecycleStateRef.current !== 'available' || !noteDirtyRef.current) return;
     noteDirtyRef.current = false;
     enqueueSave({ note: normalizeNote(pendingNoteRef.current) });
   }, [cancelScheduledNoteSave, enqueueSave]);
 
-  useEffect(() => () => flushNoteSave(), [flushNoteSave]);
+  useEffect(
+    () => () => {
+      if (lifecycleStateRef.current === 'available') {
+        flushNoteSave();
+      }
+    },
+    [flushNoteSave],
+  );
 
   // --- タグ（即時保存） ---
   const selectedTag = value.tagId ? getTagById(value.tagId) : undefined;
@@ -326,7 +420,9 @@ export function TimeblockInspectorForm({
 
   const handleTagChange = useCallback(
     (tagId: string | null) => {
-      if (isMigrated || actionPreparingRef.current || conflictRecoveringRef.current) return;
+      if (isMigrated || actionPreparingRef.current || lifecycleStateRef.current !== 'available') {
+        return;
+      }
       setValue((prev) => ({ ...prev, tagId }));
       if (isDuplicateMode || !targetId) return;
       enqueueSave({ tagId });
@@ -359,22 +455,30 @@ export function TimeblockInspectorForm({
   // --- 日時・メモ（自動保存） ---
   const handleDateTimeChange = useCallback(
     (next: TimeModelEditorValue) => {
-      if (actionPreparingRef.current || conflictRecoveringRef.current) return;
+      if (actionPreparingRef.current || lifecycleStateRef.current !== 'available') {
+        return;
+      }
       if (!isDuplicateMode && kind === 'plan' && !isPlanTimeEditable(next.endAt)) {
         toast.error(t('timeblock.editor.timeLocked'));
         return;
       }
       setHasTimeConflict(false);
       setValue(next);
-      if (isDuplicateMode || !isValidTimeModelRange(next)) return;
+      if (isDuplicateMode) return;
+      if (!isValidTimeModelRange(next)) {
+        hasUnsavedTimeDraftRef.current = true;
+        return;
+      }
       const laneItems = collectTimeblockLaneItems(
         queryClient,
         kind === 'plan' ? 'plans' : 'records',
       );
       if (hasTimeblockLaneConflict(laneItems, next.startAt, next.endAt, targetId ?? undefined)) {
+        hasUnsavedTimeDraftRef.current = true;
         setHasTimeConflict(true);
         return;
       }
+      hasUnsavedTimeDraftRef.current = false;
       enqueueSave({
         start_at: next.startAt.toISOString(),
         end_at: next.endAt.toISOString(),
@@ -385,7 +489,9 @@ export function TimeblockInspectorForm({
 
   const handleNoteChange = useCallback(
     (note: string) => {
-      if (actionPreparingRef.current || conflictRecoveringRef.current) return;
+      if (actionPreparingRef.current || lifecycleStateRef.current !== 'available') {
+        return;
+      }
       setValue((prev) => ({ ...prev, note }));
       if (isDuplicateMode) return;
       pendingNoteRef.current = note;
@@ -397,12 +503,19 @@ export function TimeblockInspectorForm({
   );
 
   const flushPendingEdits = useCallback(async (): Promise<string> => {
+    if (lifecycleStateRef.current !== 'available') {
+      throw new Error('Timeblock write is frozen');
+    }
+    const flushEpoch = transitionEpochRef.current;
     cancelScheduledNoteSave();
     noteDirtyRef.current = false;
     await flushSave({
       note: normalizeNote(pendingNoteRef.current),
       tagId: value.tagId,
     });
+    if (flushEpoch !== transitionEpochRef.current || lifecycleStateRef.current !== 'available') {
+      throw new Error('Timeblock changed while preparing the action');
+    }
     const updatedAt = latestUpdatedAtRef.current;
     if (!updatedAt) throw new Error('Missing timeblock version');
     return updatedAt;
@@ -471,6 +584,13 @@ export function TimeblockInspectorForm({
     value,
   ]);
 
+  const handleActionError = useCallback(
+    (error: unknown) => {
+      if (isTimeblockNotFoundError(error)) markUnavailable();
+    },
+    [markUnavailable],
+  );
+
   // --- スキップ / 削除 ---
   const handleSkip = useCallback(() => {
     if (!targetId || isWriteFrozen) return;
@@ -478,9 +598,17 @@ export function TimeblockInspectorForm({
     void flushPendingEdits()
       .then((expectedUpdatedAt) => skipPlan.mutateAsync({ id: targetId, expectedUpdatedAt }))
       .then(() => toast.success(t('timeblock.editor.toast.skipped')))
-      .catch(() => undefined)
+      .catch(handleActionError)
       .finally(() => setActionPreparing(false));
-  }, [targetId, isWriteFrozen, flushPendingEdits, skipPlan, setActionPreparing, t]);
+  }, [
+    targetId,
+    isWriteFrozen,
+    flushPendingEdits,
+    skipPlan,
+    handleActionError,
+    setActionPreparing,
+    t,
+  ]);
 
   const handleUnskip = useCallback(() => {
     if (!targetId || isWriteFrozen) return;
@@ -488,9 +616,17 @@ export function TimeblockInspectorForm({
     void flushPendingEdits()
       .then((expectedUpdatedAt) => unskipPlan.mutateAsync({ id: targetId, expectedUpdatedAt }))
       .then(() => toast.success(t('timeblock.editor.toast.unskipped')))
-      .catch(() => undefined)
+      .catch(handleActionError)
       .finally(() => setActionPreparing(false));
-  }, [targetId, isWriteFrozen, flushPendingEdits, unskipPlan, setActionPreparing, t]);
+  }, [
+    targetId,
+    isWriteFrozen,
+    flushPendingEdits,
+    unskipPlan,
+    handleActionError,
+    setActionPreparing,
+    t,
+  ]);
 
   const handleDelete = useCallback(() => {
     if (!targetId || isWriteFrozen) return;
@@ -516,7 +652,7 @@ export function TimeblockInspectorForm({
           },
         });
       })
-      .catch(() => undefined)
+      .catch(handleActionError)
       .finally(() => setActionPreparing(false));
   }, [
     kind,
@@ -527,10 +663,19 @@ export function TimeblockInspectorForm({
     deleteRecord,
     restorePlan,
     restoreRecord,
+    handleActionError,
     setActionPreparing,
     onDeleted,
     t,
   ]);
+
+  if (isUnavailable) {
+    return (
+      <div className="flex h-full flex-1 items-center justify-center">
+        <p className="text-muted-foreground">{t('timeblock.inspector.notFound')}</p>
+      </div>
+    );
+  }
 
   const menuItems = isDuplicateMode
     ? []
@@ -654,6 +799,8 @@ export function TimeblockInspectorForm({
             planId={targetId}
             beforeRecord={flushPendingEdits}
             onPreparingChange={setActionPreparing}
+            disabled={isWriteFrozen}
+            onError={handleActionError}
             onRecorded={
               onOpenRelationship ? (recordId) => onOpenRelationship(recordId, 'record') : undefined
             }

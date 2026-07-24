@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   doesTimeModelListQueryIncludeRow,
   isTimeblockConflictError,
+  isTimeblockNotFoundError,
   replaceTimeModelRowInMatchingLists,
   useTimeblockWriteMutations,
 } from '../useTimeblockWriteMutations';
@@ -131,5 +132,11 @@ describe('useTimeblockWriteMutations', () => {
         message: '時間が重複しています',
       }),
     ).toBe(false);
+  });
+
+  it('service codeとtRPC codeのどちらでもNOT_FOUNDを判定する', () => {
+    expect(isTimeblockNotFoundError({ data: { serviceCode: 'NOT_FOUND' } })).toBe(true);
+    expect(isTimeblockNotFoundError({ data: { code: 'NOT_FOUND' } })).toBe(true);
+    expect(isTimeblockNotFoundError({ data: { serviceCode: 'CONFLICT' } })).toBe(false);
   });
 });

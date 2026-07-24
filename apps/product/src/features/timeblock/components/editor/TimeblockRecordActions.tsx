@@ -12,6 +12,7 @@ interface RecordPlanButtonProps {
   beforeRecord: () => Promise<string>;
   onPreparingChange?: ((isPreparing: boolean) => void) | undefined;
   onRecorded?: ((recordId: string) => void) | undefined;
+  onError?: ((error: unknown) => void) | undefined;
   disabled?: boolean | undefined;
 }
 
@@ -21,6 +22,7 @@ export function RecordPlanButton({
   beforeRecord,
   onPreparingChange,
   onRecorded,
+  onError,
   disabled = false,
 }: RecordPlanButtonProps) {
   const t = useTranslations('timeblock.editor');
@@ -37,6 +39,7 @@ export function RecordPlanButton({
         recordPlan.mutate(
           { id: planId, expectedUpdatedAt },
           {
+            ...(onError ? { onError } : {}),
             onSuccess: (record) => onRecorded?.(record.id),
             onSettled: () => {
               setIsPreparing(false);

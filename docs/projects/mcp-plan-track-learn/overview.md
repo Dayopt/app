@@ -38,9 +38,9 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - authenticatedのPlan / Record権限を`SELECT`だけにするACL cutoverはrepo実装済み。全migrationのfresh適用、継承roleを含むeffective table / column write権限のfail-closed監査、authenticated直接write拒否、旧deployment compatibility、service-role recoveryをローカル検証済み。Production適用、旧wrapperのdrain後revoke、逆GRANT rehearsalは未実施
 - Plan / Recordのcreate/update/delete/restore/get/trash、全成功結果の`schemaVersion: 1` structured content、stable JSON text error、mutation receipt、strict public input、server-injected OAuth bindingはrepo実装・SDK contract test済み。trashのservice-role readはnarrow feature adapterへ閉じ、owner/deleted predicateと最小projectionを実DBのcross-tenant testで検証する
 - global controlとdurable client controlは初期OFFで、write/delete scopeはtoken検証時にeffective scopeから落ちるため、現在のMCPはwrite toolを列挙せず正規データを変更できない
-- Plan / Record commitと同じtransactionで進むuser revision、session用revision API、Calendar workspaceのvisible中10秒pollと復帰時の即時再確認はrepo実装・検証済み。Inspectorの外部更新・削除transition、constraints/tags/review、Learn用tool、3 client golden contractは未実装
+- Plan / Record commitと同じtransactionで進むuser revision、session用revision API、Calendar workspaceのvisible中10秒pollと復帰時の即時再確認、Inspectorの外部更新・削除transitionはrepo実装・検証済み。constraints/tags/review、Learn用tool、3 client golden contractは未実装
 
-Delivery 6段階のうち4段階がrepo上で完了し、Step 5は進行中。revision境界とCalendar同期までは成立したが、Inspector、context / Learn tool、Plan → Track → Learnのend-to-end顧客価値はまだ未達。
+Delivery 6段階のうち4段階がrepo上で完了し、Step 5は進行中。revision境界、Calendar同期、Inspector競合保護までは成立したが、context / Learn tool、Plan → Track → Learnのend-to-end顧客価値はまだ未達。
 
 ## Minimum Viable Approach
 

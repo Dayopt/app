@@ -66,11 +66,17 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
 
   const planQuery = api.plans.getById.useQuery(
     { id: timeblockId ?? '' },
-    { enabled: isOpen && !duplicateDraft && !!timeblockId && timeblockKind === 'plan' },
+    {
+      enabled: isOpen && !duplicateDraft && !!timeblockId && timeblockKind === 'plan',
+      retry: (failureCount, error) => (error.data?.code === 'NOT_FOUND' ? false : failureCount < 3),
+    },
   );
   const recordQuery = api.records.getById.useQuery(
     { id: timeblockId ?? '' },
-    { enabled: isOpen && !duplicateDraft && !!timeblockId && timeblockKind === 'record' },
+    {
+      enabled: isOpen && !duplicateDraft && !!timeblockId && timeblockKind === 'record',
+      retry: (failureCount, error) => (error.data?.code === 'NOT_FOUND' ? false : failureCount < 3),
+    },
   );
   const relatedRecordsQuery = api.records.list.useQuery(
     { planId: timeblockId ?? '', sortBy: 'start_at', sortOrder: 'asc' },
@@ -89,6 +95,7 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
   const plan = timeblockKind === 'plan' ? planQuery.data : undefined;
   const record = timeblockKind === 'record' ? recordQuery.data : undefined;
   const target = plan ?? record;
+  const activeTargetNotFound = activeQuery.error?.data?.code === 'NOT_FOUND';
 
   const handleOpenRelationship = useCallback(
     (id: string, kind: TimeblockDestination) => {
@@ -172,13 +179,13 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
         onDeleted={handleClose}
       />
     );
-  } else if (activeQuery.isLoading) {
+  } else if (activeQuery.isLoading || (activeTargetNotFound && activeQuery.isFetching)) {
     content = (
       <div className="flex h-full flex-1 items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
-  } else if (activeQuery.isError) {
+  } else if (activeQuery.isError && !activeTargetNotFound) {
     content = (
       <ErrorState
         title={t('error.boundary.title')}
@@ -200,6 +207,7 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
         kind={timeblockKind}
         plan={plan}
         record={record}
+        availability={activeTargetNotFound ? 'unavailable' : 'available'}
         relationships={relationships}
         onOpenRelationship={handleOpenRelationship}
         onViewStats={onViewStats}

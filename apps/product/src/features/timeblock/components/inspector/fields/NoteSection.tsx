@@ -112,15 +112,7 @@ export function NoteSection({
   maxLength = 1000,
 }: NoteSectionProps) {
   const displayNote = useMemo(() => convertNoteHtmlToText(note), [note]);
-  const [localNote, setLocalNote] = useState(displayNote);
-  const [isFocused, setIsFocused] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [previousDisplayNote, setPreviousDisplayNote] = useState(displayNote);
-
-  if (previousDisplayNote !== displayNote) {
-    setPreviousDisplayNote(displayNote);
-    if (!isFocused) setLocalNote(displayNote);
-  }
 
   const showLinkifiedNote = !isEditing || disabled;
   const shouldShowPlaceholder = displayNote.length === 0;
@@ -133,7 +125,7 @@ export function NoteSection({
           <span className="text-muted-foreground text-sm">{label}</span>
         </div>
         <span className="text-muted-foreground -mr-2 px-2 text-xs tabular-nums">
-          {localNote.length}/{maxLength}
+          {displayNote.length}/{maxLength}
         </span>
       </div>
       {showLinkifiedNote ? (
@@ -152,8 +144,6 @@ export function NoteSection({
               setIsEditing(true);
             }
           }}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
           aria-label={label}
         >
           <span className="block min-h-6 w-full text-left text-sm leading-normal">
@@ -166,18 +156,10 @@ export function NoteSection({
         </div>
       ) : (
         <textarea
-          value={localNote}
-          onChange={(event) => {
-            setLocalNote(event.target.value);
-            onNoteChange(event.target.value);
-          }}
-          onFocus={() => {
-            setIsFocused(true);
-          }}
+          value={displayNote}
+          onChange={(event) => onNoteChange(event.target.value)}
           onBlur={() => {
-            setIsFocused(false);
             setIsEditing(false);
-            setLocalNote(displayNote);
           }}
           placeholder={placeholder}
           disabled={disabled}

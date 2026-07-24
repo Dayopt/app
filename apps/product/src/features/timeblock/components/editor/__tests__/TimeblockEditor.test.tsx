@@ -83,6 +83,28 @@ describe('TimeblockEditor', () => {
     expect(onNoteBlur).toHaveBeenCalledOnce();
   });
 
+  it('メモ編集中でもserver snapshotの変更を入力欄へ反映する', () => {
+    const { rerender } = render(
+      <TimeblockEditor
+        value={{ ...value, note: '変更前' }}
+        onDateTimeChange={vi.fn()}
+        onNoteChange={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'note' }));
+    expect(screen.getByRole('textbox', { name: 'note' })).toHaveValue('変更前');
+
+    rerender(
+      <TimeblockEditor
+        value={{ ...value, note: '外部の最新値' }}
+        onDateTimeChange={vi.fn()}
+        onNoteChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('textbox', { name: 'note' })).toHaveValue('外部の最新値');
+  });
+
   it('時間重複を入力状態と共通のTimeConflictAlertで表示する', () => {
     render(
       <TimeblockEditor

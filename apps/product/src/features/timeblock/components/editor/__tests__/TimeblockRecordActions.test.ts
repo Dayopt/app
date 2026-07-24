@@ -73,7 +73,12 @@ describe('TimeblockRecordActions', () => {
     );
 
     const mutationOptions = mocks.recordPlan.mock.calls[0]?.[1] as
-      { onSuccess?: (record: { id: string }) => void; onSettled?: () => void } | undefined;
+      | {
+          onError?: (error: unknown) => void;
+          onSuccess?: (record: { id: string }) => void;
+          onSettled?: () => void;
+        }
+      | undefined;
     act(() => mutationOptions?.onSuccess?.({ id: 'record-1' }));
     expect(onRecorded).toHaveBeenCalledWith('record-1');
 
@@ -98,6 +103,28 @@ describe('TimeblockRecordActions', () => {
 
     await waitFor(() => expect(button).toBeEnabled());
     expect(mocks.recordPlan).not.toHaveBeenCalled();
+  });
+
+  it('Plan記録の失敗をInspectorの状態遷移へ返す', async () => {
+    const user = userEvent.setup();
+    const onError = vi.fn();
+    render(
+      createElement(RecordPlanButton, {
+        planId: '00000000-0000-4000-8000-000000000001',
+        beforeRecord: vi.fn().mockResolvedValue('2026-07-01T00:00:00.000001Z'),
+        onError,
+      }),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'recordAsIs' }));
+    await waitFor(() => expect(mocks.recordPlan).toHaveBeenCalledOnce());
+    const mutationOptions = mocks.recordPlan.mock.calls[0]?.[1] as
+      { onError?: (error: unknown) => void } | undefined;
+    const error = new Error('not found');
+
+    act(() => mutationOptions?.onError?.(error));
+
+    expect(onError).toHaveBeenCalledWith(error);
   });
 
   it('Record作成中は二重実行を無効化する', () => {

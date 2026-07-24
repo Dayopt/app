@@ -10,6 +10,10 @@ import { TimeblockInspector } from '../TimeblockInspector';
 
 const mocks = vi.hoisted(() => ({
   originalPlanNotFound: false,
+  activePlanNotFound: false,
+  activePlanHasCachedTarget: false,
+  activePlanFetching: false,
+  activeRecordNotFound: false,
   planGetById: vi.fn(),
   recordGetById: vi.fn(),
   recordsList: vi.fn(),
@@ -62,12 +66,14 @@ vi.mock('../TimeblockInspectorForm', () => ({
   TimeblockInspectorForm: ({
     kind,
     duplicateDraft,
+    availability,
     relationships,
     onOpenRelationship,
     onCancelDuplicate,
   }: {
     kind: 'plan' | 'record';
     duplicateDraft?: { sourceId: string };
+    availability?: 'available' | 'unavailable';
     relationships?:
       | { kind: 'plan'; status: string; records: Array<{ id: string }> }
       | { kind: 'record'; status: string; plan: { id: string } | null };
@@ -77,6 +83,7 @@ vi.mock('../TimeblockInspectorForm', () => ({
     <div>
       <output data-testid="inspector-kind">{kind}</output>
       <output data-testid="inspector-mode">{duplicateDraft ? 'duplicate' : 'view'}</output>
+      <output data-testid="inspector-availability">{availability ?? 'available'}</output>
       <output data-testid="relationship-status">{relationships?.status ?? 'none'}</output>
       <output data-testid="relationship-kind">{relationships?.kind ?? 'none'}</output>
       <button
@@ -134,17 +141,19 @@ function success<T>(data: T) {
     data,
     error: null,
     isError: false,
+    isFetching: false,
     isLoading: false,
     isSuccess: true,
     refetch: vi.fn(),
   };
 }
 
-function notFound() {
+function notFound<T>(data?: T, isFetching = false) {
   return {
-    data: undefined,
+    data,
     error: { data: { code: 'NOT_FOUND' } },
     isError: true,
+    isFetching,
     isLoading: false,
     isSuccess: false,
     refetch: vi.fn(),
@@ -155,12 +164,28 @@ describe('TimeblockInspector relationships', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.originalPlanNotFound = false;
+    mocks.activePlanNotFound = false;
+    mocks.activePlanHasCachedTarget = false;
+    mocks.activePlanFetching = false;
+    mocks.activeRecordNotFound = false;
     mocks.planGetById.mockImplementation((input: { id: string }, options: { enabled: boolean }) => {
-      if (options.enabled && mocks.originalPlanNotFound) return notFound();
+      const activeKind = useTimeblockInspectorStore.getState().timeblockKind;
+      if (options.enabled && mocks.originalPlanNotFound && activeKind === 'record') {
+        return notFound();
+      }
+      if (options.enabled && mocks.activePlanNotFound && activeKind === 'plan') {
+        return notFound(
+          mocks.activePlanHasCachedTarget ? plan : undefined,
+          mocks.activePlanFetching,
+        );
+      }
       return success(input.id === plan.id ? plan : undefined);
     });
-    mocks.recordGetById.mockImplementation((input: { id: string }) =>
-      success(input.id === record.id ? record : undefined),
+    mocks.recordGetById.mockImplementation(
+      (input: { id: string }, options: { enabled: boolean }) => {
+        if (options.enabled && mocks.activeRecordNotFound) return notFound();
+        return success(input.id === record.id ? record : undefined);
+      },
     );
     mocks.recordsList.mockReturnValue(success([record]));
   });
@@ -215,6 +240,52 @@ describe('TimeblockInspector relationships', () => {
     const retry = originalPlanCall?.[1].retry as
       ((failureCount: number, error: { data?: { code?: string } }) => boolean) | undefined;
     expect(retry?.(0, { data: { code: 'NOT_FOUND' } })).toBe(false);
+  });
+
+  it('active queryの初回NOT_FOUNDは再試行せずneutral表示にする', () => {
+    mocks.activePlanNotFound = true;
+    act(() => useTimeblockInspectorStore.getState().openInspector(plan.id, 'plan'));
+    render(<TimeblockInspector />);
+
+    expect(screen.getByText('timeblock.inspector.notFound')).toBeInTheDocument();
+    expect(screen.queryByTestId('inspector-kind')).not.toBeInTheDocument();
+
+    const activePlanCall = mocks.planGetById.mock.calls.find(
+      ([input, options]) => input.id === plan.id && options.enabled,
+    );
+    const retry = activePlanCall?.[1].retry as
+      ((failureCount: number, error: { data?: { code?: string } }) => boolean) | undefined;
+    expect(retry?.(0, { data: { code: 'NOT_FOUND' } })).toBe(false);
+  });
+
+  it('取得済みtargetのNOT_FOUNDはFormをunavailableへ一度遷移させる', () => {
+    act(() => useTimeblockInspectorStore.getState().openInspector(plan.id, 'plan'));
+    const view = render(<TimeblockInspector />);
+    expect(screen.getByTestId('inspector-availability')).toHaveTextContent('available');
+
+    mocks.activePlanNotFound = true;
+    mocks.activePlanHasCachedTarget = true;
+    view.rerender(<TimeblockInspector />);
+
+    expect(screen.getByTestId('inspector-availability')).toHaveTextContent('unavailable');
+    expect(screen.queryByText('error.boundary.title')).not.toBeInTheDocument();
+  });
+
+  it('cached NOT_FOUNDの再openはrefetch完了までFormを作らず外部restoreを一度で採用する', () => {
+    mocks.activePlanNotFound = true;
+    mocks.activePlanHasCachedTarget = true;
+    mocks.activePlanFetching = true;
+    act(() => useTimeblockInspectorStore.getState().openInspector(plan.id, 'plan'));
+    const view = render(<TimeblockInspector />);
+
+    expect(screen.queryByTestId('inspector-kind')).not.toBeInTheDocument();
+    expect(screen.queryByText('timeblock.inspector.notFound')).not.toBeInTheDocument();
+
+    mocks.activePlanNotFound = false;
+    mocks.activePlanFetching = false;
+    view.rerender(<TimeblockInspector />);
+
+    expect(screen.getByTestId('inspector-availability')).toHaveTextContent('available');
   });
 
   it('複製下書きを直接表示し、キャンセルで元ブロックの詳細へ戻る', async () => {

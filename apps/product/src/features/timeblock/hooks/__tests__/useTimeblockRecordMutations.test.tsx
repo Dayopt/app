@@ -8,6 +8,11 @@ import { useTimeblockRecordMutations } from '../useTimeblockRecordMutations';
 type RecordRow = PublicRecordRow;
 
 interface MutationCallbacks<TData> {
+  onError?: (
+    error: { data?: { serviceCode?: string }; message: string },
+    input: { id: string },
+  ) => void;
+  onMutate?: () => Promise<void>;
   onSuccess?: (data: TData) => void;
   onSettled?: () => void;
 }
@@ -18,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   listSetData: vi.fn(),
   getByIdSetData: vi.fn(),
   getQueriesData: vi.fn(),
+  removeQueries: vi.fn(),
+  setQueriesData: vi.fn(),
   setQueryData: vi.fn(),
   statisticsInvalidate: vi.fn(),
 }));
@@ -25,6 +32,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({
     getQueriesData: mocks.getQueriesData,
+    removeQueries: mocks.removeQueries,
+    setQueriesData: mocks.setQueriesData,
     setQueryData: mocks.setQueryData,
   }),
 }));
@@ -41,10 +50,12 @@ vi.mock('@/lib/trpc', () => ({
   api: {
     useUtils: () => ({
       plans: {
+        invalidate: vi.fn(),
         list: { cancel: vi.fn(), invalidate: vi.fn() },
       },
       records: {
         getById: { setData: mocks.getByIdSetData },
+        invalidate: vi.fn(),
         list: {
           cancel: vi.fn(),
           invalidate: vi.fn(),
@@ -130,5 +141,23 @@ describe('useTimeblockRecordMutations', () => {
     act(() => mocks.confirmDayCallbacks?.onSettled?.());
 
     expect(mocks.statisticsInvalidate).toHaveBeenCalledTimes(2);
+  });
+
+  it('recordPlanのNOT_FOUNDでは古い一覧をrollbackせず対象cacheを除去する', async () => {
+    renderHook(() => useTimeblockRecordMutations());
+
+    await act(async () => {
+      await mocks.recordCallbacks?.onMutate?.();
+    });
+    act(() =>
+      mocks.recordCallbacks?.onError?.(
+        { data: { serviceCode: 'NOT_FOUND' }, message: 'not found' },
+        { id: 'plan-1' },
+      ),
+    );
+
+    expect(mocks.setQueryData).not.toHaveBeenCalled();
+    expect(mocks.setQueriesData).toHaveBeenCalledOnce();
+    expect(mocks.removeQueries).toHaveBeenCalledOnce();
   });
 });

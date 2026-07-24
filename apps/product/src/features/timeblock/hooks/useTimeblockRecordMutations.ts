@@ -6,17 +6,11 @@ import { useTranslations } from 'next-intl';
 import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
 
-import { insertTimeModelRowIntoMatchingLists } from './useTimeblockWriteMutations';
-
-function isTimeModelListQuery(query: { queryKey: unknown }): boolean {
-  const key = query.queryKey;
-  return (
-    Array.isArray(key) &&
-    Array.isArray(key[0]) &&
-    (key[0][0] === 'plans' || key[0][0] === 'records') &&
-    key[0][1] === 'list'
-  );
-}
+import {
+  insertTimeModelRowIntoMatchingLists,
+  isTimeblockNotFoundError,
+  removeMissingTimeblockFromCache,
+} from './useTimeblockWriteMutations';
 
 function isTimeOverlapError(error: { data?: unknown; message: string }): boolean {
   const serviceCode =
@@ -26,7 +20,7 @@ function isTimeOverlapError(error: { data?: unknown; message: string }): boolean
   return serviceCode === 'TIME_OVERLAP' || error.message.includes('TIME_OVERLAP');
 }
 
-/** Plan → Record の記録導線に共通の rollback / 再検証を提供する。 */
+/** Plan → Record の記録導線に共通のcache反映と再検証を提供する。 */
 export function useTimeblockRecordMutations() {
   const utils = api.useUtils();
   const queryClient = useQueryClient();
@@ -35,22 +29,21 @@ export function useTimeblockRecordMutations() {
   const recordPlan = api.plans.record.useMutation({
     onMutate: async () => {
       await Promise.all([utils.plans.list.cancel(), utils.records.list.cancel()]);
-      return { snapshots: queryClient.getQueriesData({ predicate: isTimeModelListQuery }) };
     },
     onSuccess: (record) => {
       insertTimeModelRowIntoMatchingLists(queryClient, 'records', record);
       utils.records.getById.setData({ id: record.id }, record);
       toast.success(t('toast.recorded'));
     },
-    onError: (error, _input, context) => {
-      for (const [queryKey, data] of context?.snapshots ?? []) {
-        queryClient.setQueryData(queryKey, data);
+    onError: (error, input) => {
+      if (isTimeblockNotFoundError(error)) {
+        removeMissingTimeblockFromCache(queryClient, 'plans', input.id);
       }
       toast.error(isTimeOverlapError(error) ? t('toast.overlap') : t('toast.recordFailed'));
     },
     onSettled: () => {
-      void utils.plans.list.invalidate();
-      void utils.records.list.invalidate();
+      void utils.plans.invalidate();
+      void utils.records.invalidate();
       void utils.statistics.invalidate();
     },
   });
@@ -58,7 +51,6 @@ export function useTimeblockRecordMutations() {
   const confirmDay = api.plans.confirmDay.useMutation({
     onMutate: async () => {
       await Promise.all([utils.plans.list.cancel(), utils.records.list.cancel()]);
-      return { snapshots: queryClient.getQueriesData({ predicate: isTimeModelListQuery }) };
     },
     onSuccess: (records) => {
       for (const record of records) {
@@ -67,15 +59,12 @@ export function useTimeblockRecordMutations() {
       }
       toast.success(t('toast.dayConfirmed'));
     },
-    onError: (error, _input, context) => {
-      for (const [queryKey, data] of context?.snapshots ?? []) {
-        queryClient.setQueryData(queryKey, data);
-      }
+    onError: (error) => {
       toast.error(isTimeOverlapError(error) ? t('toast.overlap') : t('toast.confirmFailed'));
     },
     onSettled: () => {
-      void utils.plans.list.invalidate();
-      void utils.records.list.invalidate();
+      void utils.plans.invalidate();
+      void utils.records.invalidate();
       void utils.statistics.invalidate();
     },
   });

@@ -6,17 +6,32 @@ import type { PublicRecordRow, Row } from '@/lib/database';
 import { createTimeblockDuplicateDraft } from '../../../lib/timeblock-duplicate';
 import { TimeblockInspectorForm } from '../TimeblockInspectorForm';
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
+
 const mocks = vi.hoisted(() => ({
   enqueueSave: vi.fn(),
   flushSave: vi.fn(),
+  discardPending: vi.fn(),
+  hasPendingChanges: vi.fn(() => false),
   savePatch: undefined as
     ((patch: { note?: string | null; tagId?: string | null }) => Promise<unknown>) | undefined,
   toastError: vi.fn(),
   createPlanMutate: vi.fn(),
   createRecordMutate: vi.fn(),
   updatePlanMutateAsync: vi.fn(),
+  skipPlanMutateAsync: vi.fn(),
+  removeMissingTimeblock: vi.fn(),
   fetchPlanById: vi.fn(),
   isConflict: false,
+  isNotFound: false,
   onCreateTimeOverlap: undefined as (() => void) | undefined,
   onUpdateTimeOverlap: undefined as
     | ((input: {
@@ -60,14 +75,18 @@ vi.mock('../../../hooks/useCoalescedTimeblockSave', () => ({
   ) => {
     mocks.savePatch = savePatch;
     return {
+      discardPending: mocks.discardPending,
       enqueue: mocks.enqueueSave,
       flush: mocks.flushSave,
+      hasPendingChanges: mocks.hasPendingChanges,
     };
   },
 }));
 
 vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
   isTimeblockConflictError: () => mocks.isConflict,
+  isTimeblockNotFoundError: () => mocks.isNotFound,
+  removeMissingTimeblockFromCache: mocks.removeMissingTimeblock,
   useTimeblockWriteMutations: (options?: {
     onCreateTimeOverlap?: () => void;
     onUpdateTimeOverlap?: (input: {
@@ -91,7 +110,7 @@ vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
       fetchRecordById: vi.fn(),
       restoreRecord: mutation,
       restorePlan: mutation,
-      skipPlan: mutation,
+      skipPlan: { ...mutation, mutateAsync: mocks.skipPlanMutateAsync },
       unskipPlan: mutation,
       updateRecord: mutation,
       updatePlan: { ...mutation, mutateAsync: mocks.updatePlanMutateAsync },
@@ -100,8 +119,15 @@ vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
 }));
 
 vi.mock('../../inspector/fields', () => ({
-  TagRow: ({ menuItems }: { menuItems?: Array<{ key: string; onSelect: () => void }> }) => (
+  TagRow: ({
+    tagId,
+    menuItems,
+  }: {
+    tagId?: string | null;
+    menuItems?: Array<{ key: string; onSelect: () => void }>;
+  }) => (
     <>
+      <output data-testid="current-tag">{tagId ?? 'none'}</output>
       {menuItems?.map((item) => (
         <button key={item.key} type="button" onClick={item.onSelect}>
           {item.key}
@@ -161,6 +187,8 @@ vi.mock('../TimeblockEditor', () => ({
     dateTimeError?: string;
   }) => (
     <>
+      <output data-testid="current-note">{value.note}</output>
+      <output data-testid="current-start">{value.startAt.toISOString()}</output>
       <output data-testid="current-end">{value.endAt.toISOString()}</output>
       {dateTimeError ? <output data-testid="date-time-error">{dateTimeError}</output> : null}
       <button
@@ -228,6 +256,15 @@ const pastPlan = {
   end_at: '2026-07-15T11:00:00.000Z',
 } satisfies Row<'plans'>;
 
+const externallyUpdatedPlan = {
+  ...futurePlan,
+  tag_id: '00000000-0000-4000-8000-000000000002',
+  note: '外部で更新されたメモ',
+  start_at: '2026-07-15T16:00:00.000Z',
+  end_at: '2026-07-15T17:00:00.000Z',
+  updated_at: '2026-07-15T12:01:00.000Z',
+} satisfies Row<'plans'>;
+
 const relatedRecord = {
   id: 'record-1',
   user_id: 'user-1',
@@ -252,14 +289,17 @@ describe('TimeblockInspectorForm', () => {
     mocks.createPlanMutate.mockReset();
     mocks.createRecordMutate.mockReset();
     mocks.updatePlanMutateAsync.mockReset();
+    mocks.skipPlanMutateAsync.mockReset();
     mocks.fetchPlanById.mockReset();
     mocks.savePatch = undefined;
     mocks.isConflict = false;
+    mocks.isNotFound = false;
     mocks.onCreateTimeOverlap = undefined;
     mocks.onUpdateTimeOverlap = undefined;
     mocks.cachedPlans = [];
     mocks.cachedRecords = [];
     mocks.flushSave.mockResolvedValue(undefined);
+    mocks.hasPendingChanges.mockReturnValue(false);
   });
 
   afterEach(() => {
@@ -394,23 +434,256 @@ describe('TimeblockInspectorForm', () => {
     );
   });
 
-  it('競合後の最新行取得にも失敗した場合はInspectorをfail closedにする', async () => {
+  it('cleanな外部更新は表示値と次回CAS versionを同じsnapshotへ同期する', async () => {
+    const { rerender } = render(
+      <TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />,
+    );
+
+    rerender(
+      <TimeblockInspectorForm kind="plan" plan={externallyUpdatedPlan} onDeleted={vi.fn()} />,
+    );
+
+    expect(screen.getByTestId('current-note')).toHaveTextContent('外部で更新されたメモ');
+    expect(screen.getByTestId('current-tag')).toHaveTextContent(externallyUpdatedPlan.tag_id);
+    expect(screen.getByTestId('current-start')).toHaveTextContent(externallyUpdatedPlan.start_at);
+    expect(screen.getByTestId('current-end')).toHaveTextContent(externallyUpdatedPlan.end_at);
+    expect(mocks.discardPending).not.toHaveBeenCalled();
+
+    mocks.updatePlanMutateAsync.mockResolvedValue({
+      ...externallyUpdatedPlan,
+      updated_at: '2026-07-15T12:02:00.000Z',
+    });
+    await act(async () => {
+      await mocks.savePatch?.({ note: '次の保存' });
+    });
+
+    expect(mocks.updatePlanMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedUpdatedAt: externallyUpdatedPlan.updated_at }),
+    );
+  });
+
+  it('debounce中の外部更新はdraftを保持してwriteをfreezeする', () => {
+    const { rerender } = render(
+      <TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'edit-note' }));
+
+    rerender(
+      <TimeblockInspectorForm kind="plan" plan={externallyUpdatedPlan} onDeleted={vi.fn()} />,
+    );
+
+    expect(screen.getByTestId('current-note')).toHaveTextContent('最新メモ');
+    expect(screen.getByText('timeblock.editor.toast.conflict')).toBeInTheDocument();
+    expect(mocks.discardPending).toHaveBeenCalledOnce();
+
+    act(() => vi.advanceTimersByTime(600));
+    expect(mocks.enqueueSave).not.toHaveBeenCalled();
+  });
+
+  it('未開始の保存差分がある外部更新はqueueを破棄してfreezeする', () => {
+    mocks.hasPendingChanges.mockReturnValue(true);
+    const { rerender } = render(
+      <TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />,
+    );
+
+    rerender(
+      <TimeblockInspectorForm kind="plan" plan={externallyUpdatedPlan} onDeleted={vi.fn()} />,
+    );
+
+    expect(screen.getByText('timeblock.editor.toast.conflict')).toBeInTheDocument();
+    expect(mocks.discardPending).toHaveBeenCalledOnce();
+  });
+
+  it('保存できない時間draftも外部更新で上書きせずfreezeする', () => {
+    mocks.cachedPlans = [
+      futurePlan,
+      {
+        id: 'plan-2',
+        start_at: '2026-07-15T15:00:00.000Z',
+        end_at: '2026-07-15T16:00:00.000Z',
+      },
+    ];
+    const { rerender } = render(
+      <TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'move-to-future' }));
+
+    rerender(
+      <TimeblockInspectorForm kind="plan" plan={externallyUpdatedPlan} onDeleted={vi.fn()} />,
+    );
+
+    expect(screen.getByTestId('current-end')).toHaveTextContent('2026-07-15T16:00:00.000Z');
+    expect(screen.getByText('timeblock.editor.toast.conflict')).toBeInTheDocument();
+    expect(mocks.discardPending).toHaveBeenCalledOnce();
+  });
+
+  it('外部更新後に進行中saveが成功してもwriteを再開しない', async () => {
+    const activeSave = createDeferred<Row<'plans'>>();
+    mocks.updatePlanMutateAsync.mockReturnValue(activeSave.promise);
+    const { rerender } = render(
+      <TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />,
+    );
+
+    const savePromise = mocks.savePatch?.({ note: '保存中' });
+    rerender(
+      <TimeblockInspectorForm kind="plan" plan={externallyUpdatedPlan} onDeleted={vi.fn()} />,
+    );
+    expect(screen.getByText('timeblock.editor.toast.conflict')).toBeInTheDocument();
+
+    activeSave.resolve({
+      ...futurePlan,
+      note: '保存中',
+      updated_at: '2026-07-15T12:00:30.000Z',
+    });
+    await act(async () => {
+      await savePromise;
+      await mocks.savePatch?.({ tagId: null });
+    });
+
+    expect(mocks.updatePlanMutateAsync).toHaveBeenCalledOnce();
+    expect(screen.getByText('timeblock.editor.toast.conflict')).toBeInTheDocument();
+  });
+
+  it('CAS競合ではserver snapshotを自動取得せずdraftを保持してfreezeする', async () => {
     const conflict = new Error('conflict');
     mocks.isConflict = true;
     mocks.updatePlanMutateAsync.mockRejectedValue(conflict);
-    mocks.fetchPlanById.mockRejectedValue(new Error('fetch failed'));
     render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'edit-note' }));
 
     await act(async () => {
       await expect(mocks.savePatch?.({ note: '競合する保存' })).rejects.toBe(conflict);
     });
 
-    expect(mocks.fetchPlanById).toHaveBeenCalledWith(futurePlan.id);
+    expect(mocks.fetchPlanById).not.toHaveBeenCalled();
+    expect(screen.getByTestId('current-note')).toHaveTextContent('最新メモ');
     expect(screen.getByText('timeblock.editor.toast.conflict')).toBeInTheDocument();
+  });
 
-    mocks.enqueueSave.mockClear();
-    fireEvent.click(screen.getByRole('button', { name: 'move-to-future' }));
+  it('外部削除ではdebounceと待機queueを破棄し、unmountでもdraftを送らない', () => {
+    const view = render(
+      <TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'edit-note' }));
+
+    view.rerender(
+      <TimeblockInspectorForm
+        kind="plan"
+        plan={futurePlan}
+        availability="unavailable"
+        onDeleted={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('timeblock.inspector.notFound')).toBeInTheDocument();
+    expect(mocks.discardPending).toHaveBeenCalledOnce();
+    expect(mocks.removeMissingTimeblock).toHaveBeenCalledWith(
+      expect.any(Object),
+      'plans',
+      futurePlan.id,
+    );
+
+    act(() => vi.advanceTimersByTime(600));
+    view.unmount();
     expect(mocks.enqueueSave).not.toHaveBeenCalled();
+  });
+
+  it('unavailable後の遅いsuccessでは同じmountを再び編集可能にしない', () => {
+    const { rerender } = render(
+      <TimeblockInspectorForm
+        kind="plan"
+        plan={futurePlan}
+        availability="unavailable"
+        onDeleted={vi.fn()}
+      />,
+    );
+
+    rerender(
+      <TimeblockInspectorForm
+        kind="plan"
+        plan={externallyUpdatedPlan}
+        availability="available"
+        onDeleted={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('timeblock.inspector.notFound')).toBeInTheDocument();
+    expect(mocks.removeMissingTimeblock).toHaveBeenCalledWith(
+      expect.any(Object),
+      'plans',
+      futurePlan.id,
+    );
+    expect(screen.queryByTestId('current-note')).not.toBeInTheDocument();
+  });
+
+  it('通常closeではdirty noteを一度だけ保存キューへ渡す', () => {
+    const view = render(
+      <TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'edit-note' }));
+
+    view.unmount();
+
+    expect(mocks.enqueueSave).toHaveBeenCalledOnce();
+    expect(mocks.enqueueSave).toHaveBeenCalledWith({ note: '最新メモ' });
+  });
+
+  it('action準備中の外部更新ではflush完了後のskipへ進まない', async () => {
+    const pendingFlush = createDeferred<void>();
+    mocks.flushSave.mockReturnValue(pendingFlush.promise);
+    const externallyUpdatedPastPlan = {
+      ...pastPlan,
+      note: '外部更新',
+      updated_at: '2026-07-15T12:01:00.000Z',
+    };
+    const { rerender } = render(
+      <TimeblockInspectorForm
+        kind="plan"
+        plan={pastPlan}
+        relationships={{ kind: 'plan', status: 'success', records: [], onRetry: vi.fn() }}
+        onDeleted={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'skip' }));
+
+    rerender(
+      <TimeblockInspectorForm
+        kind="plan"
+        plan={externallyUpdatedPastPlan}
+        relationships={{ kind: 'plan', status: 'success', records: [], onRetry: vi.fn() }}
+        onDeleted={vi.fn()}
+      />,
+    );
+    pendingFlush.resolve();
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mocks.skipPlanMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('save中のNOT_FOUNDでもunavailableへ遷移して後続writeを止める', async () => {
+    const notFoundError = new Error('not found');
+    mocks.isNotFound = true;
+    mocks.updatePlanMutateAsync.mockRejectedValue(notFoundError);
+    render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
+
+    await act(async () => {
+      await expect(mocks.savePatch?.({ note: '削除済みへの保存' })).rejects.toBe(notFoundError);
+    });
+
+    expect(screen.getByText('timeblock.inspector.notFound')).toBeInTheDocument();
+    expect(mocks.removeMissingTimeblock).toHaveBeenCalledWith(
+      expect.any(Object),
+      'plans',
+      futurePlan.id,
+    );
+
+    await act(async () => {
+      await mocks.savePatch?.({ tagId: null });
+    });
+    expect(mocks.updatePlanMutateAsync).toHaveBeenCalledOnce();
   });
 
   it('記録前にdebounceを止め、最新のタグとメモをsnapshot保存する', () => {

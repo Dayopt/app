@@ -32,6 +32,21 @@ function isTimeblockQuery(query: { queryKey: unknown }): boolean {
   );
 }
 
+function isTimeblockDetailQuery(queryKey: unknown, lane: 'plans' | 'records', id: string): boolean {
+  if (
+    !Array.isArray(queryKey) ||
+    !Array.isArray(queryKey[0]) ||
+    queryKey[0][0] !== lane ||
+    queryKey[0][1] !== 'getById'
+  ) {
+    return false;
+  }
+  const metadata = queryKey[1];
+  if (!metadata || typeof metadata !== 'object' || !('input' in metadata)) return false;
+  const input = metadata.input;
+  return input != null && typeof input === 'object' && 'id' in input && input.id === id;
+}
+
 interface TimeModelListFilter {
   ids?: string[];
   search?: string;
@@ -176,6 +191,21 @@ export function replaceTimeModelRowInMatchingLists<T extends TimeModelListRow>(
   }
 }
 
+/** NOT_FOUNDが確定した行を、再open時にsuccess cacheとして再利用しないよう除去する。 */
+export function removeMissingTimeblockFromCache(
+  queryClient: QueryClient,
+  lane: 'plans' | 'records',
+  id: string,
+): void {
+  const listPredicate = lane === 'plans' ? isPlansListQuery : isRecordsListQuery;
+  queryClient.setQueriesData<TimeModelListRow[]>({ predicate: listPredicate }, (old) =>
+    old?.filter((row) => row.id !== id),
+  );
+  queryClient.removeQueries({
+    predicate: ({ queryKey }) => isTimeblockDetailQuery(queryKey, lane, id),
+  });
+}
+
 function getTimeblockServiceCode(error: unknown): string | undefined {
   if (!error || typeof error !== 'object' || !('data' in error)) return undefined;
   const data = error.data;
@@ -201,8 +231,31 @@ export function isTimeblockConflictError(error: unknown): boolean {
   );
 }
 
+export function isTimeblockNotFoundError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  if (getTimeblockServiceCode(error) === 'NOT_FOUND') return true;
+  const data = 'data' in error ? error.data : undefined;
+  return data != null && typeof data === 'object' && 'code' in data && data.code === 'NOT_FOUND';
+}
+
+interface PendingQuerySnapshot {
+  queryKey: QueryKey;
+  data: unknown;
+  stateBeforeOptimisticWrite: object | undefined;
+}
+
+interface PendingMutationContext {
+  snapshots: ReadonlyArray<PendingQuerySnapshot>;
+}
+
+interface QueryRollbackSnapshot {
+  queryKey: QueryKey;
+  data: unknown;
+  optimisticState: object;
+}
+
 interface MutationContext {
-  snapshots: ReadonlyArray<readonly [QueryKey, unknown]>;
+  snapshots: ReadonlyArray<QueryRollbackSnapshot>;
   tempId?: string;
 }
 
@@ -236,19 +289,60 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
   type PlanListItem = NonNullable<Awaited<ReturnType<typeof utils.plans.list.fetch>>>[number];
   type RecordListItem = NonNullable<Awaited<ReturnType<typeof utils.records.list.fetch>>>[number];
 
-  const snapshot = async (): Promise<MutationContext> => {
-    await Promise.all([utils.plans.list.cancel(), utils.records.list.cancel()]);
+  const cancelTimeblockQueries = async (): Promise<void> => {
+    await queryClient.cancelQueries({ predicate: isTimeblockQuery });
+  };
+
+  const snapshot = (): PendingMutationContext => {
     return {
-      snapshots: queryClient.getQueriesData({ predicate: isTimeblockQuery }) as Array<
-        [QueryKey, unknown]
-      >,
+      snapshots: queryClient
+        .getQueriesData({ predicate: isTimeblockQuery })
+        .map(([queryKey, data]) => ({
+          data,
+          queryKey,
+          stateBeforeOptimisticWrite: queryClient.getQueryState(queryKey),
+        })),
     };
   };
 
+  const captureOptimisticChanges = (
+    context: PendingMutationContext,
+    tempId?: string,
+  ): MutationContext => {
+    const snapshots = context.snapshots.flatMap(
+      ({ data, queryKey, stateBeforeOptimisticWrite }) => {
+        const optimisticState = queryClient.getQueryState(queryKey);
+        if (optimisticState === stateBeforeOptimisticWrite || optimisticState == null) return [];
+        return [{ data, optimisticState, queryKey }];
+      },
+    );
+    return tempId === undefined ? { snapshots } : { snapshots, tempId };
+  };
+
+  const cancelWithoutOptimisticChanges = async (): Promise<MutationContext> => {
+    await cancelTimeblockQueries();
+    return { snapshots: [] };
+  };
+
   const restore = (context: MutationContext | undefined) => {
-    for (const [queryKey, data] of context?.snapshots ?? []) {
+    for (const { data, optimisticState, queryKey } of context?.snapshots ?? []) {
+      // 外部refetchなどがoptimistic write後に同じqueryを更新した場合、その新しい状態を戻さない。
+      if (queryClient.getQueryState(queryKey) !== optimisticState) continue;
       queryClient.setQueryData(queryKey, data);
     }
+  };
+
+  const restoreUnlessMissing = (
+    error: unknown,
+    context: MutationContext | undefined,
+    lane: 'plans' | 'records',
+    id: string,
+  ) => {
+    if (isTimeblockNotFoundError(error)) {
+      removeMissingTimeblockFromCache(queryClient, lane, id);
+      return;
+    }
+    restore(context);
   };
 
   const reportError = (error: { message: string }) => {
@@ -315,7 +409,8 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
 
   const createPlan = api.plans.create.useMutation({
     onMutate: async (input): Promise<MutationContext> => {
-      const context = await snapshot();
+      await cancelTimeblockQueries();
+      const context = snapshot();
       const tempId = createTempId();
       const nowIso = new Date().toISOString();
       const tempPlan: PlanListItem = {
@@ -334,7 +429,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
         updated_at: nowIso,
       };
       insertIntoMatchingLists('plans', tempPlan);
-      return { ...context, tempId };
+      return captureOptimisticChanges(context, tempId);
     },
     onSuccess: (created, _input, context) => {
       if (!created) return;
@@ -350,7 +445,8 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
 
   const createRecord = api.records.create.useMutation({
     onMutate: async (input): Promise<MutationContext> => {
-      const context = await snapshot();
+      await cancelTimeblockQueries();
+      const context = snapshot();
       const tempId = createTempId();
       const nowIso = new Date().toISOString();
       const tempRecord: RecordListItem = {
@@ -369,7 +465,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
         updated_at: nowIso,
       };
       insertIntoMatchingLists('records', tempRecord);
-      return { ...context, tempId };
+      return captureOptimisticChanges(context, tempId);
     },
     onSuccess: (created, _input, context) => {
       if (!created) return;
@@ -385,7 +481,9 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
 
   const updatePlan = api.plans.update.useMutation({
     onMutate: async (input): Promise<MutationContext> => {
-      const context = await snapshot();
+      await cancelTimeblockQueries();
+      // cancel後はawaitを挟まず、snapshotとoptimistic writeを同じ同期区間で行う。
+      const context = snapshot();
       const patch = (row: PlanListItem): PlanListItem => ({
         ...row,
         ...(input.data.title !== undefined ? { title: input.data.title } : {}),
@@ -396,14 +494,14 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
       });
       patchMatchingLists('plans', input.id, patch);
       utils.plans.getById.setData({ id: input.id }, (old) => (old ? patch(old) : old));
-      return context;
+      return captureOptimisticChanges(context);
     },
     onSuccess: (updated) => {
       replaceServerRow('plans', updated);
       utils.plans.getById.setData({ id: updated.id }, updated);
     },
     onError: (error, input, context) => {
-      restore(context);
+      restoreUnlessMissing(error, context, 'plans', input.id);
       reportUpdateError(error, input);
     },
     onSettled: invalidate,
@@ -411,7 +509,9 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
 
   const updateRecord = api.records.update.useMutation({
     onMutate: async (input): Promise<MutationContext> => {
-      const context = await snapshot();
+      await cancelTimeblockQueries();
+      // cancel後はawaitを挟まず、snapshotとoptimistic writeを同じ同期区間で行う。
+      const context = snapshot();
       const patch = (row: RecordListItem): RecordListItem => ({
         ...row,
         ...(input.data.title !== undefined ? { title: input.data.title } : {}),
@@ -422,14 +522,14 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
       });
       patchMatchingLists('records', input.id, patch);
       utils.records.getById.setData({ id: input.id }, (old) => (old ? patch(old) : old));
-      return context;
+      return captureOptimisticChanges(context);
     },
     onSuccess: (updated) => {
       replaceServerRow('records', updated);
       utils.records.getById.setData({ id: updated.id }, updated);
     },
     onError: (error, input, context) => {
-      restore(context);
+      restoreUnlessMissing(error, context, 'records', input.id);
       reportUpdateError(error, input);
     },
     onSettled: invalidate,
@@ -440,15 +540,16 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
 
   const deletePlan = api.plans.delete.useMutation({
     onMutate: async (input): Promise<MutationContext> => {
-      const context = await snapshot();
+      await cancelTimeblockQueries();
+      const context = snapshot();
       queryClient.setQueriesData<PlanListItem[]>({ predicate: isPlansListQuery }, (old) =>
         old?.filter((row) => row.id !== input.id),
       );
       utils.plans.getById.setData({ id: input.id }, undefined);
-      return context;
+      return captureOptimisticChanges(context);
     },
-    onError: (_error, _input, context) => {
-      restore(context);
+    onError: (error, input, context) => {
+      restoreUnlessMissing(error, context, 'plans', input.id);
       reportDeleteError();
     },
     onSettled: invalidate,
@@ -456,67 +557,68 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
 
   const deleteRecord = api.records.delete.useMutation({
     onMutate: async (input): Promise<MutationContext> => {
-      const context = await snapshot();
+      await cancelTimeblockQueries();
+      const context = snapshot();
       queryClient.setQueriesData<RecordListItem[]>({ predicate: isRecordsListQuery }, (old) =>
         old?.filter((row) => row.id !== input.id),
       );
       utils.records.getById.setData({ id: input.id }, undefined);
-      return context;
+      return captureOptimisticChanges(context);
     },
-    onError: (_error, _input, context) => {
-      restore(context);
+    onError: (error, input, context) => {
+      restoreUnlessMissing(error, context, 'records', input.id);
       reportDeleteError();
     },
     onSettled: invalidate,
   });
 
   const restorePlan = api.plans.restore.useMutation({
-    onMutate: snapshot,
+    onMutate: cancelWithoutOptimisticChanges,
     onSuccess: (restored) => {
       insertIntoMatchingLists('plans', restored);
       utils.plans.getById.setData({ id: restored.id }, restored);
     },
-    onError: (_error, _input, context) => {
-      restore(context);
+    onError: (error, input, context) => {
+      restoreUnlessMissing(error, context, 'plans', input.id);
       reportRestoreError();
     },
     onSettled: invalidate,
   });
 
   const restoreRecord = api.records.restore.useMutation({
-    onMutate: snapshot,
+    onMutate: cancelWithoutOptimisticChanges,
     onSuccess: (restored) => {
       insertIntoMatchingLists('records', restored);
       utils.records.getById.setData({ id: restored.id }, restored);
     },
-    onError: (_error, _input, context) => {
-      restore(context);
+    onError: (error, input, context) => {
+      restoreUnlessMissing(error, context, 'records', input.id);
       reportRestoreError();
     },
     onSettled: invalidate,
   });
 
   const skipPlan = api.plans.skip.useMutation({
-    onMutate: snapshot,
+    onMutate: cancelWithoutOptimisticChanges,
     onSuccess: (updated) => {
       replaceServerRow('plans', updated);
       utils.plans.getById.setData({ id: updated.id }, updated);
     },
-    onError: (_error, _input, context) => {
-      restore(context);
+    onError: (error, input, context) => {
+      restoreUnlessMissing(error, context, 'plans', input.id);
       toast.error(t('toast.skipFailed'));
     },
     onSettled: invalidate,
   });
 
   const unskipPlan = api.plans.unskip.useMutation({
-    onMutate: snapshot,
+    onMutate: cancelWithoutOptimisticChanges,
     onSuccess: (updated) => {
       replaceServerRow('plans', updated);
       utils.plans.getById.setData({ id: updated.id }, updated);
     },
-    onError: (_error, _input, context) => {
-      restore(context);
+    onError: (error, input, context) => {
+      restoreUnlessMissing(error, context, 'plans', input.id);
       toast.error(t('toast.skipFailed'));
     },
     onSettled: invalidate,
