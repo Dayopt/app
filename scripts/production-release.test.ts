@@ -761,6 +761,35 @@ describe('runProductionRelease', () => {
     expect(smokeUrls.length).toBeGreaterThan(0);
   });
 
+  it('sweeps the setting even when smoke aborts the run', async () => {
+    // 待機中に外部が web candidate を promote して auto-assign が true に戻り、
+    // その後 product の smoke が失敗した場合。ここで抜けると誰も設定を戻さず、
+    // 次の merge が gate を迂回する。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new'],
+      smokeBody: '{"status":"degraded"}',
+    });
+
+    await expect(release({ fetchImpl: world.fetchImpl })).rejects.toThrow(
+      /without the expected content/,
+    );
+    expect(world.pointCalls).toEqual([]);
+    // 失敗経路でも web の設定は false へ戻っている。
+    expect(world.patches).toContainEqual({ project: 'web', value: false });
+  });
+
+  it('reports whether the gate checks actually ran', async () => {
+    const normal = createReleaseWorld();
+    await expect(release({ fetchImpl: normal.fetchImpl })).resolves.toMatchObject({
+      gateChecksRan: true,
+    });
+
+    const forced = createReleaseWorld();
+    await expect(release({ fetchImpl: forced.fetchImpl, force: true })).resolves.toMatchObject({
+      gateChecksRan: false,
+    });
+  });
+
   it('skips smoke and audit under Force Promote', async () => {
     const world = createReleaseWorld();
     const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
