@@ -11,7 +11,7 @@ paths:
 
 ```
 Layer 0 (基盤):    tags                ← 他featureに依存しない
-Layer 1 (中核):    timeblock           ← Layer 0 の barrel を使える
+Layer 1 (中核):    timeblock, external-calendar ← Layer 0 の barrel を使える
 Layer 2 (体験):    calendar, review    ← Layer 0+1 を使える
 Independent:       auth, contact       ← 他featureに依存しない
 Composition:       settings            ← DAG 除外。通常feature扱いしない

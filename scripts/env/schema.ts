@@ -69,6 +69,12 @@ export const envSchema: EnvSchemaEntry[] = [
   envEntry('GOOGLE_SITE_VERIFICATION', false, 'public', 'shared', shared, 'google'),
   envEntry('YANDEX_VERIFICATION', false, 'public', 'shared', shared, 'google'),
   envEntry('YAHOO_VERIFICATION', false, 'public', 'shared', shared, 'google'),
+
+  // 外部カレンダー取り込み用の専用 OAuth client（Supabase Auth の Google provider とは別物）
+  envEntry('GOOGLE_CALENDAR_CLIENT_ID', false, 'public', 'staging', staging, 'google-calendar'),
+  envEntry('GOOGLE_CALENDAR_CLIENT_SECRET', false, 'secret', 'staging', staging, 'google-calendar'),
+  envEntry('CALENDAR_TOKEN_ENCRYPTION_KEY', false, 'secret', 'staging', staging, 'google-calendar'),
+  envEntry('GOOGLE_CALENDAR_REDIRECT_URIS', false, 'public', 'staging', staging, 'google-calendar'),
 ];
 
 export const productionEnvSchema: EnvSchemaEntry[] = [
@@ -105,6 +111,41 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
   envEntry('NEXT_PUBLIC_APP_URL', false, 'public', 'production', production, 'app'),
   envEntry('NEXT_PUBLIC_SITE_URL', false, 'public', 'production', production, 'app'),
   envEntry('RECOVERY_CODE_PEPPER', false, 'secret', 'production', production, 'app'),
+
+  envEntry(
+    'GOOGLE_CALENDAR_CLIENT_ID',
+    false,
+    'public',
+    'production',
+    production,
+    'google-calendar',
+  ),
+  envEntry(
+    'GOOGLE_CALENDAR_CLIENT_SECRET',
+    false,
+    'secret',
+    'production',
+    production,
+    'google-calendar',
+  ),
+  envEntry(
+    'CALENDAR_TOKEN_ENCRYPTION_KEY',
+    false,
+    'secret',
+    'production',
+    production,
+    'google-calendar',
+  ),
+  // production には production origin だけを入れる。localhost を混ぜると
+  // forwarded host 経由で allowlist を通過されうる。
+  envEntry(
+    'GOOGLE_CALENDAR_REDIRECT_URIS',
+    false,
+    'public',
+    'production',
+    production,
+    'google-calendar',
+  ),
 ];
 
 export const operationalItems: OperationalItem[] = [

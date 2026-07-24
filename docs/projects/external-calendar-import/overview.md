@@ -138,7 +138,7 @@ Supabase Auth の Google provider に scope を足す案は却下する。理由
 
 - Route handler 2 本: `apps/product/src/app/api/integrations/google-calendar/start/route.ts` / `.../callback/route.ts`。redirect flow は tRPC 化できないため、`/api/auth/*` と同列の「REST 維持」例外として `.claude/rules/architecture.md` の一覧に追記する
 - `start`: session 必須 + billing gate（`canAccessProFeatures` + `isBillingEnforced` を route 内で適用）。`state`（random）と PKCE `code_verifier` を signed HTTP-only cookie（10 分 TTL）に保存して Google へ redirect。confidential client なので token 交換には client_secret を併用し、PKCE は上乗せ防御
-- Auth URL params: `access_type=offline`・`prompt=consent`（refresh token を確実に取得）・`include_granted_scopes=true`
+- Auth URL params: `access_type=offline`・`prompt=consent`（refresh token を確実に取得）。**`include_granted_scopes` は付けない** — 付けると同一 client が過去に得ていた scope まで畳み込まれ、保存する refresh token が本機能に必要な範囲を超えた権限を持ちうる。callback は `calendar.readonly` の有無しか検査しないため余分な scope は素通りする。必要な scope は最初から全部要求しており incremental auth は使わない（Step 2 レビュー指摘）
 - `callback`: state/PKCE 検証 → code 交換 → id_token から `sub` / `email` を取得 → `calendar_connections` を upsert → 初回はカレンダー選択へ誘導する Settings へ redirect
 - API client は **googleapis SDK を入れず素の `fetch` + zod パース**。必要な endpoint は token / calendarList.list / events.list / revoke の 4 つだけで、依存追加規律（1 機能のために大きなライブラリを入れない）に従う
 
@@ -304,22 +304,22 @@ disconnect は次の 3 段で行う:
 
 1 Step = 1 PR。各 Step で事前調査プロンプトを使い、複雑 Step（1・3）は step-X-detail.md を作る。
 
-| Step | 内容                                                                                                                                                  | Reversibility | commits |
-| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------- |
-| 0    | 本設計書の作成・合意（Issue #1562 の成果物）                                                                                                          | [minutes]     | 1       |
-| 1    | Migration: 新 2 テーブル + RLS/GRANT/trigger 一式、`supabase/schemas` 宣言ミラー、`pnpm rls:snapshot` 再生成                                          | [hours]       | 1-2     |
-| 2    | OAuth connect: env.ts 追加、token 暗号 helper、start/callback route、feature scaffold + eslint.config.mjs DAG 追加。GCP 設定は operational TODO       | [hours]       | 2       |
-| 3    | Provider adapter（google）+ sync-service（full/incremental/410/tombstone/prune）+ Vitest（dismissed 不可侵・prune anti-join の regression test 必須） | [minutes]     | 2       |
-| 4    | tRPC router + service（§7-2 の 6 procedure、proProcedure 付与）                                                                                       | [minutes]     | 1       |
-| 5    | Vercel cron: vercel.json + `/api/cron/calendar-sync`（CRON_SECRET 検証・時間予算・課金フィルタ hook）                                                 | [hours]       | 1       |
-| 6    | Settings UI: integrations カテゴリ + コンポーネント + i18n（orphan キー接続）+ Storybook                                                              | [minutes]     | 1-2     |
-| 7    | Hardening + 完了処理: reauth_required UX、Sentry capture 整備、`summary.md` + `status: done`、user docs は docs-writing skill で提案                  | [minutes]     | 1       |
+| Step | 内容                                                                                                                                                                            | Reversibility | commits |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------- |
+| 0    | 本設計書の作成・合意（Issue #1562 の成果物）                                                                                                                                    | [minutes]     | 1       |
+| 1    | Migration: 新 2 テーブル + RLS/GRANT/trigger 一式、`supabase/schemas` 宣言ミラー、`pnpm rls:snapshot` 再生成                                                                    | [hours]       | 1-2     |
+| 2    | OAuth connect: env 4 変数（redirect URI allowlist を含む）、token 暗号 helper、start/callback route、feature scaffold + eslint.config.mjs DAG 追加。GCP 設定は operational TODO | [hours]       | 4-6     |
+| 3    | Provider adapter（google）+ sync-service（full/incremental/410/tombstone/prune）+ Vitest（dismissed 不可侵・prune anti-join の regression test 必須）                           | [minutes]     | 2       |
+| 4    | tRPC router + service（§7-2 の 6 procedure、proProcedure 付与）                                                                                                                 | [minutes]     | 1       |
+| 5    | Vercel cron: vercel.json + `/api/cron/calendar-sync`（CRON_SECRET 検証・時間予算・課金フィルタ hook）                                                                           | [hours]       | 1       |
+| 6    | Settings UI: integrations カテゴリ + コンポーネント + i18n（orphan キー接続）+ Storybook                                                                                        | [minutes]     | 1-2     |
+| 7    | Hardening + 完了処理: reauth_required UX、Sentry capture 整備、`summary.md` + `status: done`、user docs は docs-writing skill で提案                                            | [minutes]     | 1       |
 
 計 10-11 commits。マイルストーン「連携ができる」は Step 6 で到達し、Step 7 で締める。auth / RLS / OAuth / cron を扱うため、Step 1・2・5 は `risk-reviewer`、挙動変更は `behavior-verifier` の自動委任対象。
 
 ## 14. 完了条件（Definition of Done）
 
-1. Settings → Integrations から Google 接続 → カレンダー選択 → 手動同期で `external_calendar_events` に行が入る（Preview 環境で実カレンダー確認）
+1. Settings → Integrations から Google 接続 → カレンダー選択 → 手動同期で `external_calendar_events` に行が入る（**localhost と production で実カレンダー確認**。Preview では OAuth 接続を無効にしている。Google は redirect_uri の完全一致を要求しワイルドカードを許さないので、deploy ごとに変わる Preview URL は GCP に登録できない。加えて `__Host-` cookie は発行ホストにしか送られないため、cookie ホストと redirect_uri ホストがずれて必ず失敗する。Step 2 で決定）
 2. Vercel cron が 15 分毎に増分同期し、provider 側の変更・削除がミラーに反映される
 3. 切断で token が破棄され、未参照ミラー行が消える。変換受け皿（FK）に違反が出ない
 4. `reauth_required` への遷移と再接続導線が動く
