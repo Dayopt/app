@@ -33,6 +33,7 @@
     "typecheck:product": "pnpm --filter @dayopt/product typecheck",
     "typecheck:packages": "turbo run typecheck --filter='./packages/*'",
     "prepare": "husky",
+    "branch:finish": "bash scripts/git/finish-branch.sh",
     "migration:create": "supabase migration new",
     "migration:list": "supabase migration list",
     "migration:status": "supabase db diff",
