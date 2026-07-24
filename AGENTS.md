@@ -120,6 +120,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 - 既存コードを検索してから変更する。`rg` / `rg --files` を優先する
 - issue の起票・worker への作業依頼・`status:blocked` issue への着手判断は `dispatch` skill（`.agents/skills/dispatch/SKILL.md`）の規約に従う。凍結 issue には着手しない
 - 既存の未コミット差分はユーザー作業として扱い、勝手に revert / stage しない
+- env ファイルの読み書き境界は provider 共通で `docs/operations/secrets.md` §AI エージェントの env ファイル境界 に従う。`.env.example` / `.op-env.local` は触ってよく、実値が入りうる `.env` / `.env.local` 系は読みも書きもしない
 - `git add .` は避ける。必ず path-limited add で scope を固定する
 - コミット前に `git diff --cached` を確認する
 - コード変更後は `pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries` を通す
