@@ -253,7 +253,9 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
                   }
                   {...register('email')}
                 />
-                {errors.email && <FieldError id="email-error">{errors.email.message}</FieldError>}
+                {errors.email?.message && (
+                  <FieldError id="email-error">{t(errors.email.message)}</FieldError>
+                )}
               </Field>
 
               <Field>
@@ -311,8 +313,8 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
                     </Button>
                   </HoverTooltip>
                 </div>
-                {errors.password && (
-                  <FieldError id="password-error">{errors.password.message}</FieldError>
+                {errors.password?.message && (
+                  <FieldError id="password-error">{t(errors.password.message)}</FieldError>
                 )}
               </Field>
 

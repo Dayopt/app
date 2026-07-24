@@ -23,6 +23,7 @@ import {
 import { Link } from '@dayopt/i18n/navigation';
 
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
+import { passwordSchema } from '../schemas/auth.schema';
 import { useAuthStore } from '../stores/useAuthStore';
 
 /** 新しいパスワード設定フォーム。URLのaccess_token/refresh_tokenを利用してパスワードを更新する */
@@ -63,8 +64,10 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
         return;
       }
 
-      if (password.length < 12) {
-        setError(t('auth.resetPasswordForm.passwordTooShort'));
+      // signup / パスワード変更と同一のポリシー（8-64文字）を適用する
+      const parsed = passwordSchema.safeParse(password);
+      if (!parsed.success) {
+        setError(t(parsed.error.issues[0]?.message ?? 'auth.errors.unexpectedError'));
         setLoading(false);
         return;
       }
@@ -157,7 +160,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
                     aria-disabled={loading || undefined}
                     autoComplete="new-password"
                     required
-                    minLength={12}
+                    minLength={8}
                   />
                   <HoverTooltip
                     content={
@@ -199,7 +202,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
                     aria-disabled={loading || undefined}
                     autoComplete="new-password"
                     required
-                    minLength={12}
+                    minLength={8}
                   />
                   <HoverTooltip
                     content={
