@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-07-23
+last_verified: 2026-07-24
 code:
   - apps/product/src/app/api/mcp
   - apps/product/src/lib/oauth-server
@@ -37,9 +37,10 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - DB global control、durableなclient単位control、不可逆なconnection kill switch、payload-free receipt tableとreceipt-key serializationはrepo実装済み。client停止はcontrol row更新と既存write connectionのdisableを同一transactionで行い、grant、token検証、applyの3境界で再検証する。再有効化しても旧connectionは復活せず、再authorizationを必須とする。Plan / Recordのcreate/update/delete/restoreはtransaction内再認可、canonical digest、typed apply、receipt replayとserver-only adapterまでローカル実装・検証済み。Record createだけがcompleted Planへのlinkを受け、updateはPlan attribution・source・external provenanceを変更できない
 - authenticatedのPlan / Record権限を`SELECT`だけにするACL cutoverはrepo実装済み。全migrationのfresh適用、継承roleを含むeffective table / column write権限のfail-closed監査、authenticated直接write拒否、旧deployment compatibility、service-role recoveryをローカル検証済み。Production適用、旧wrapperのdrain後revoke、逆GRANT rehearsalは未実施
 - Plan / Recordのcreate/update/delete/restore/get/trash、全成功結果の`schemaVersion: 1` structured content、stable JSON text error、mutation receipt、strict public input、server-injected OAuth bindingはrepo実装・SDK contract test済み。trashのservice-role readはnarrow feature adapterへ閉じ、owner/deleted predicateと最小projectionを実DBのcross-tenant testで検証する
-- global controlとdurable client controlは初期OFFで、write/delete scopeはtoken検証時にeffective scopeから落ちるため、現在のMCPはwrite toolを列挙せず正規データを変更できない。外部変更の画面反映、constraints/tags/review、Learn用tool、3 client golden contractは未実装
+- global controlとdurable client controlは初期OFFで、write/delete scopeはtoken検証時にeffective scopeから落ちるため、現在のMCPはwrite toolを列挙せず正規データを変更できない
+- Plan / Record commitと同じtransactionで進むuser revision、session用revision API、Calendar workspaceのvisible中10秒pollと復帰時の即時再確認はrepo実装・検証済み。Inspectorの外部更新・削除transition、constraints/tags/review、Learn用tool、3 client golden contractは未実装
 
-Delivery 6段階のうち4段階がrepo上で完了し、Step 5は未着手。Plan / Record CRUDの接続面までは成立したが、Plan → Track → Learnのend-to-end顧客価値はまだ未達。
+Delivery 6段階のうち4段階がrepo上で完了し、Step 5は進行中。revision境界とCalendar同期までは成立したが、Inspector、context / Learn tool、Plan → Track → Learnのend-to-end顧客価値はまだ未達。
 
 ## Minimum Viable Approach
 
@@ -59,7 +60,7 @@ Delivery 6段階のうち4段階がrepo上で完了し、Step 5は未着手。Pl
 | 2. Atomic mutation foundation  | DB exclusion、typed command、exact CAS、DB時刻、通常UI cutover                              | done    |
 | 3. MCP mutation envelope       | transaction内再認可、冪等性、audit receipt、旧public write経路revoke                        | done    |
 | 4. Plan / Record MCP CRUD      | create/update/delete/restore/get/trash、structured success/JSON error/receipt、実二経路race | done    |
-| 5. Context and Learn           | tags、constraints、review、revision polling、Plan → Track → Learn E2E                       | pending |
+| 5. Context and Learn           | tags、constraints、review、revision polling、Plan → Track → Learn E2E                       | active  |
 | 6. Client beta verification    | ChatGPT / Claude / Cursor persistent Staging smoke、retention、client別write gate、運用docs | pending |
 
 ### OAuth and connection contract
@@ -119,7 +120,7 @@ Delivery 6段階のうち4段階がrepo上で完了し、Step 5は未着手。Pl
 ### Write tool公開前のブロッカー
 
 - Step 4でSettings connection一覧/revoke、`plans.get` / `records.get` / trash、全read toolのstructured content、8 mutation handler、actual SDK contract、実HTTP対UI raceまでは完了した
-- 外部MCP mutation後、現在のCalendar / Inspector cacheはlocal mutation前提で最大5分staleになり得る。Step 5でuser revision pollingを実装し、表示中の外部変更反映SLA 20秒を満たしてからwrite toolを列挙する
+- 外部MCP mutation後のCalendar / Inspector cacheは、repo上ではvisible中の10秒user revision pollingと復帰時の即時再確認で再検証する。実networkとrenderを含む20秒SLAはPersistent Stagingで実測し、満たすまでwrite toolを列挙しない
 - `deleteAllData`後のconnection契約を下記checkpointで決め、Step 6で3 clientのschema、retry、confirmation UXをPersistent Staging検証する
 
 Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializationはrepo上で完了した。writerが先なら後続purgeが削除し、purgeが先なら後続writerは成功できる。この技術契約とは別に、`deleteAllData`後もOAuth connection/token/receiptが残る現在仕様を公開前に決める。
@@ -133,7 +134,7 @@ Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializatio
 
 - `constraints.get`はtimezone、DB現在時刻、occupancy、既存temporal ruleだけを返す。未保存の勤務時間やdeadlineは推測しない
 - `review.get`は既存statisticsと決定論的signalを返し、集計期間と計算根拠を含める
-- user単位revisionをPlan / Record変更時に更新し、Calendar / Inspector / Review表示中だけ15秒pollする。外部変更の反映SLAは20秒以内
+- user単位revisionをPlan / Record変更時に更新し、Calendar / Inspector / Review表示中だけ10秒pollする。外部変更の反映SLAは20秒以内
 - Supabase Realtimeは再導入しない
 
 ## Acceptance Criteria

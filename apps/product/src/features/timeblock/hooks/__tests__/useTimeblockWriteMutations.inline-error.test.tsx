@@ -9,6 +9,7 @@ interface MutationCallbacks {
     input: { id: string; data: { start_at: string; end_at: string } } | undefined,
     context: undefined,
   ) => void;
+  onSettled?: () => void;
 }
 
 const mocks = vi.hoisted(() => ({
@@ -16,6 +17,9 @@ const mocks = vi.hoisted(() => ({
   recordCreateCallbacks: undefined as MutationCallbacks | undefined,
   planUpdateCallbacks: undefined as MutationCallbacks | undefined,
   recordUpdateCallbacks: undefined as MutationCallbacks | undefined,
+  plansInvalidate: vi.fn(),
+  recordsInvalidate: vi.fn(),
+  statisticsInvalidate: vi.fn(),
   toastError: vi.fn(),
 }));
 
@@ -43,14 +47,17 @@ vi.mock('@/lib/trpc', () => {
     api: {
       useUtils: () => ({
         plans: {
-          invalidate: vi.fn(),
+          invalidate: mocks.plansInvalidate,
           list: { cancel: vi.fn() },
           getById: { setData: vi.fn() },
         },
         records: {
-          invalidate: vi.fn(),
+          invalidate: mocks.recordsInvalidate,
           list: { cancel: vi.fn() },
           getById: { setData: vi.fn() },
+        },
+        statistics: {
+          invalidate: mocks.statisticsInvalidate,
         },
       }),
       plans: {
@@ -191,5 +198,15 @@ describe('useTimeblockWriteMutations create overlap presentation', () => {
 
     expect(onUpdateTimeOverlap).not.toHaveBeenCalled();
     expect(mocks.toastError).toHaveBeenLastCalledWith('toast.saveFailed');
+  });
+
+  it('mutation完了時にPlan・Record・統計cacheをまとめて再検証する', () => {
+    renderHook(() => useTimeblockWriteMutations());
+
+    act(() => mocks.planCreateCallbacks?.onSettled?.());
+
+    expect(mocks.plansInvalidate).toHaveBeenCalledOnce();
+    expect(mocks.recordsInvalidate).toHaveBeenCalledOnce();
+    expect(mocks.statisticsInvalidate).toHaveBeenCalledOnce();
   });
 });

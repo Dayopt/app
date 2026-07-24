@@ -51,6 +51,7 @@ export function useTimeblockRecordMutations() {
     onSettled: () => {
       void utils.plans.list.invalidate();
       void utils.records.list.invalidate();
+      void utils.statistics.invalidate();
     },
   });
 
@@ -75,6 +76,7 @@ export function useTimeblockRecordMutations() {
     onSettled: () => {
       void utils.plans.list.invalidate();
       void utils.records.list.invalidate();
+      void utils.statistics.invalidate();
     },
   });
 

@@ -26,6 +26,7 @@ import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button, HoverTooltip } from '@dayopt/components';
 import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
 import { useCalendarComposition } from './useCalendarComposition';
+import { useTimeblockRevisionSync } from './useTimeblockRevisionSync';
 
 interface CalendarViewClientProps {
   translations: {
@@ -42,6 +43,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const suppressSidebar = useShellStore.use.suppressSidebar();
   const restoreSidebar = useShellStore.use.restoreSidebar();
   const toggleSidebar = useShellStore.use.toggleSidebar();
+  useTimeblockRevisionSync();
 
   // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
   // calendarNavigation は常に利用可能。

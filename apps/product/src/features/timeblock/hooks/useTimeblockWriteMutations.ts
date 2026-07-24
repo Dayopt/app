@@ -306,10 +306,11 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     replaceTimeModelRowInMatchingLists(queryClient, lane, row);
   };
 
-  // getById も対象に含めて router 全体を再検証する（Inspector の updated_at 鮮度を保つ）
+  // getById と local statistics を含む関連 cache を再検証する。
   const invalidate = () => {
     void utils.plans.invalidate();
     void utils.records.invalidate();
+    void utils.statistics.invalidate();
   };
 
   const createPlan = api.plans.create.useMutation({

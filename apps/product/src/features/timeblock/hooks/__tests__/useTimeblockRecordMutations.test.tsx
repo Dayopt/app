@@ -9,6 +9,7 @@ type RecordRow = PublicRecordRow;
 
 interface MutationCallbacks<TData> {
   onSuccess?: (data: TData) => void;
+  onSettled?: () => void;
 }
 
 const mocks = vi.hoisted(() => ({
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   getByIdSetData: vi.fn(),
   getQueriesData: vi.fn(),
   setQueryData: vi.fn(),
+  statisticsInvalidate: vi.fn(),
 }));
 
 vi.mock('@tanstack/react-query', () => ({
@@ -48,6 +50,9 @@ vi.mock('@/lib/trpc', () => ({
           invalidate: vi.fn(),
           setData: mocks.listSetData,
         },
+      },
+      statistics: {
+        invalidate: mocks.statisticsInvalidate,
       },
     }),
     plans: {
@@ -116,5 +121,14 @@ describe('useTimeblockRecordMutations', () => {
     expect(mocks.getByIdSetData).toHaveBeenNthCalledWith(1, { id: record.id }, record);
     expect(mocks.getByIdSetData).toHaveBeenNthCalledWith(2, { id: secondRecord.id }, secondRecord);
     expect(mocks.setQueryData).toHaveBeenCalledWith(matchingListKey, [record]);
+  });
+
+  it('記録導線の完了時に統計cacheも即時再検証する', () => {
+    renderHook(() => useTimeblockRecordMutations());
+
+    act(() => mocks.recordCallbacks?.onSettled?.());
+    act(() => mocks.confirmDayCallbacks?.onSettled?.());
+
+    expect(mocks.statisticsInvalidate).toHaveBeenCalledTimes(2);
   });
 });
