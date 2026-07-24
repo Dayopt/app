@@ -68,13 +68,23 @@ describe('Production Config Audit', () => {
     expect(JSON.stringify(errors)).not.toContain('private-preview-value');
   });
 
-  it('defers legacy GitHub env removal until the post-smoke flag is enabled', () => {
+  it('rejects the legacy contact credentials in any environment', () => {
     const metadata = completeProductMetadata();
     metadata.envs.push(productionEntry('GITHUB_TOKEN', 'sensitive'));
+    metadata.envs.push({
+      key: 'GITHUB_CONTACT_REPO',
+      target: ['preview'],
+      type: 'plain',
+      value: 'must-not-appear',
+    });
 
-    expect(auditProjectMetadata('product', metadata)).toEqual([]);
-    expect(auditProjectMetadata('product', metadata, { forbidLegacyContactEnv: true })).toContain(
-      'product: legacy GITHUB_TOKEN must be removed after contact smoke',
-    );
+    const errors = auditProjectMetadata('product', metadata);
+
+    expect(errors).toContain('product: legacy GITHUB_TOKEN must not be configured');
+    expect(errors).toContain('product: legacy GITHUB_CONTACT_REPO must not be configured');
+  });
+
+  it('accepts metadata that no longer carries the legacy contact credentials', () => {
+    expect(auditProjectMetadata('product', completeProductMetadata())).toEqual([]);
   });
 });

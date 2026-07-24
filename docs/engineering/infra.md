@@ -137,6 +137,13 @@ workflow は次を満たした時だけ promote する。
   Protection Bypass for Automation の secret が必須）
 - live な Vercel metadata に対する Production Config Audit が成功
 
+smoke は promote 対象だけでなく **全 candidate に毎回走る**。Auto-assign が有効な段階適用中は
+candidate が待機中に自動割当されて promote 対象が空になるため、promote 対象だけを smoke すると
+cutover まで smoke のコードパスが一度も実行されない。全 candidate に走らせることで、毎 merge が
+smoke と bypass secret の実働テストになる。**bypass secret を登録するまで release run は毎回
+失敗する**（Production は Auto-assign により更新され続けるので無傷。ただし `Production Release`
+status が failure になるため、その間は tag を打てない）。
+
 promote 順は web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
 片方だけ公開された状態は残さない。失敗時は Production domain が現行 SHA のまま維持される（fail-safe）。
 

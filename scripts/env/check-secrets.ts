@@ -12,7 +12,32 @@ type Finding = {
 const maxFileBytes = 1024 * 1024;
 const ignoredPathParts = new Set(['node_modules', '.next', 'storybook-static', '.turbo', '.git']);
 
-const literalPatterns: Array<{ name: string; regex: RegExp; alwaysFlag?: boolean }> = [
+/**
+ * Supabase local の既定接続文字列だけを除外する。
+ *
+ * `postgres:postgres@127.0.0.1` は Supabase CLI が全環境へ同じ値で配る固定 default で、
+ * 秘密ではない。手順書がこの文字列を書けないと `psql` の実行例を載せられなくなる。
+ * loopback host かつ password が既定値、の両方を満たす時だけ通す。
+ */
+function isLocalPostgresUrl(match: string): boolean {
+  const loopbackHosts = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
+
+  try {
+    // 正規表現は `[^)\s]+` なので、引用符で囲まれた実行例では末尾の quote まで拾う。
+    const url = new URL(match.replace(/['"`]+$/, ''));
+    return loopbackHosts.has(url.hostname) && url.password === 'postgres';
+  } catch {
+    // parse できない形は判断材料がないので除外しない。
+    return false;
+  }
+}
+
+const literalPatterns: Array<{
+  name: string;
+  regex: RegExp;
+  alwaysFlag?: boolean;
+  isAllowedMatch?: (match: string) => boolean;
+}> = [
   { name: 'stripe_secret_key', regex: /\bsk_(?:live|test)_[A-Za-z0-9_=-]{3,}\b/, alwaysFlag: true },
   { name: 'stripe_webhook_secret', regex: /\bwhsec_[A-Za-z0-9_=-]{3,}\b/, alwaysFlag: true },
   {
@@ -30,6 +55,7 @@ const literalPatterns: Array<{ name: string; regex: RegExp; alwaysFlag?: boolean
     name: 'postgres_url_with_password',
     regex: /\bpostgres(?:ql)?:\/\/[^:\s/@]+:[^@\s]+@[^)\s]+/,
     alwaysFlag: true,
+    isAllowedMatch: isLocalPostgresUrl,
   },
   { name: 'private_key_block', regex: /-----BEGIN [A-Z ]*PRIVATE KEY-----/, alwaysFlag: true },
 ];
@@ -73,15 +99,22 @@ function isAllowedValue(rawValue: string): boolean {
     'mock',
     'changeme',
     'example',
-    'test-token',
-    'test-secret',
     'your-test-password',
     'xxx',
     'required',
     'optional',
   ]);
 
-  return exactPlaceholders.has(lower) || lower.startsWith('your_') || lower.startsWith('your-');
+  // `test-` 接頭辞は、元々 `test-token` / `test-secret` を 1 件ずつ列挙していたものの一般化。
+  // fixture を足すたびにこの Set へ追記が要る形だと必ず腐るので接頭辞で受ける。
+  // 実 secret が `test-` で始まることはない（Supabase の service role key は JWT、
+  // Stripe は sk_/whsec_ のように発行元が接頭辞を固定している）。
+  return (
+    exactPlaceholders.has(lower) ||
+    lower.startsWith('test-') ||
+    lower.startsWith('your_') ||
+    lower.startsWith('your-')
+  );
 }
 
 function isYamlFile(file: string): boolean {
@@ -172,10 +205,13 @@ function scanLine(file: string, line: string, lineNumber: number): Finding[] {
   }
 
   for (const pattern of literalPatterns) {
+    // ここは value ではなく行全体を渡す（既存挙動）。そのため `test-` 接頭辞の緩和が効くのは
+    // 行そのものが `test-` で始まる時だけで、`KEY="test-..."` の形には影響しない。
     if (!pattern.alwaysFlag && isAllowedValue(line)) continue;
     const match = line.match(pattern.regex);
     if (match) {
       if (pattern.name === 'jwt_like_token' && isAllowedJwtFixture(file, line, match[0])) continue;
+      if (pattern.isAllowedMatch?.(match[0])) continue;
       findings.push({
         file,
         line: lineNumber,
