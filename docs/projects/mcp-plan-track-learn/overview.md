@@ -26,10 +26,10 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 
 ## Current State
 
-- Streamable HTTP、PKCE S256、static client 3種、opaque tokenと、Plan / Recordの15 toolをrepo実装済み。runtime registryはtool名、required scope、register callbackを持つdescriptorを正本とし、登録集合もexact set testで固定する。`tools/list`には現在のeffective scopeで実行できるtoolだけを出す
+- Streamable HTTP、PKCE S256、static client 3種、opaque tokenと、Plan / Record / Context / Learnの18 toolをrepo実装済み。runtime registryはtool名、required scope、register callbackを持つdescriptorを正本とし、登録集合もexact set testで固定する。`tools/list`には現在のeffective scopeで実行できるtoolだけを出す
 - OAuth resource、stable connection、atomic code/refresh、DB connection revokeと古いaccess token拒否はローカル実装・検証済み。Settingsは同じclientの複数connectionを個別表示・revokeでき、revokeとwrite transactionをconnection row lockでlinearizeする
 - protected resourceはcredentialなし/unsupported schemeを空bodyの401 discovery、malformed Bearerを400 `invalid_request`、invalid/expired/revoked tokenを401 `invalid_token`、scope不足を403、認可依存障害をretryableな503へ分離済み。step-up challengeは既存grant、`read:entries`、不足scopeを保持する。write/delete scopeが`read:entries`を欠くconnection/code/tokenはDB CHECKとgrant RPCの双方で拒否する
-- `tools/list`は15 descriptorをeffective scopeでfilterし、cached tool callはroute前段で403 challengeを返す。MCP endpointはtoken検証前のcoarse IP ceilingと認証済みuser単位の専用rate limitを持ち、backend timeout時は再認証loopを起こさないretryable 503へfail closedする。[protocol revision 2025-06-18で廃止されたJSON-RPC batch](https://modelcontextprotocol.io/specification/2025-06-18/changelog)はrouteで一括拒否し、1 requestからのmutation増幅を許さない
+- `tools/list`は18 descriptorをeffective scopeでfilterし、cached tool callはroute前段で403 challengeを返す。MCP endpointはtoken検証前のcoarse IP ceilingと認証済みuser単位の専用rate limitを持ち、backend timeout時は再認証loopを起こさないretryable 503へfail closedする。[protocol revision 2025-06-18で廃止されたJSON-RPC batch](https://modelcontextprotocol.io/specification/2025-06-18/changelog)はrouteで一括拒否し、1 requestからのmutation増幅を許さない
 - Plan / Record同種間の時間重複は既存GiST exclusion constraintで防止済み
 - Plan / Recordのtyped command、exact CAS、DB時刻のtemporal rule、skip/link整合性はローカル実装済み。Plan / Record双方のcreate/update/delete/restoreで、通常UI commandとMCP typed applyの同時実行、stale CAS、restore対createをDB integrationで検証済み。実session JWTのtRPC対実opaque tokenのMCP HTTP create raceもローカルでPlan / Record双方を検証済み。Persistent Stagingの3 clientでは未検証
 - repo上の通常UIはcreate/update/delete/restore/skip/record/confirm-dayをservice-owned commandへ切替済み。Calendar cacheもDBが返したraw `updated_at`をversionとして維持する。Production deployは未実施
@@ -38,16 +38,16 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - authenticatedのPlan / Record権限を`SELECT`だけにするACL cutoverはrepo実装済み。全migrationのfresh適用、継承roleを含むeffective table / column write権限のfail-closed監査、authenticated直接write拒否、旧deployment compatibility、service-role recoveryをローカル検証済み。Production適用、旧wrapperのdrain後revoke、逆GRANT rehearsalは未実施
 - Plan / Recordのcreate/update/delete/restore/get/trash、全成功結果の`schemaVersion: 1` structured content、stable JSON text error、mutation receipt、strict public input、server-injected OAuth bindingはrepo実装・SDK contract test済み。trashのservice-role readはnarrow feature adapterへ閉じ、owner/deleted predicateと最小projectionを実DBのcross-tenant testで検証する
 - global controlとdurable client controlは初期OFFで、write/delete scopeはtoken検証時にeffective scopeから落ちるため、現在のMCPはwrite toolを列挙せず正規データを変更できない
-- Plan / Record commitと同じtransactionで進むuser revision、session用revision API、Calendar workspaceのvisible中10秒pollと復帰時の即時再確認、Inspectorの外部更新・削除transitionはrepo実装・検証済み。constraints/tags/review、Learn用tool、3 client golden contractは未実装
+- Plan / Record commitと同じtransactionで進むuser revision、session用revision API、Calendar workspaceのvisible中10秒pollと復帰時の即時再確認、Inspectorの外部更新・削除transitionをrepo実装・検証済み。`tags.list`、`constraints.get`、`review.get`も最小projectionと独立read scopeで実装し、実MCP HTTP経由のPlan → Track → Learn flowとcross-tenant read isolationをlocal DBで検証済み。Persistent Stagingの3 client golden contractと実network / render込み20秒SLAは未検証
 
-Delivery 6段階のうち4段階がrepo上で完了し、Step 5は進行中。revision境界、Calendar同期、Inspector競合保護までは成立したが、context / Learn tool、Plan → Track → Learnのend-to-end顧客価値はまだ未達。
+Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / Learn tool、revision境界、Calendar同期、Inspector競合保護、local Plan → Track → Learn flowまで成立している。残るStep 6はPersistent Stagingでの3 client検証、実network / render込み20秒SLA、retentionと運用契約の確認である。
 
 ## Minimum Viable Approach
 
 1. **MCP mutation transactionを完成させる** — connection/token/Pro entitlementをDB transaction内で再検証し、idempotency claim、typed command、成功mutation auditを兼ねる最小receiptを一括commitする。詳細は[Step 3設計](./step-3-mutation-envelope.md)を正本とする
-2. **Plan / Record CRUD toolを段階公開する** — Plan / Recordの8 mutation、get/trash、structured contract、Settings connection管理、実HTTP対UI raceまでrepo上で完了した。global/client gateはOFFのまま維持し、Step 5の画面同期と削除時の接続契約、Step 6の3 client検証後だけ段階公開する
+2. **Plan / Record CRUD toolを段階公開する** — Plan / Recordの8 mutation、get/trash、structured contract、Settings connection管理、実HTTP対UI race、Step 5の画面同期までrepo上で完了した。global/client gateはOFFのまま維持し、削除時の接続契約とStep 6の3 client検証後だけ段階公開する
 3. **public write境界をcommandへ収束する** — repo上では通常UI commandとACL cutoverまで実装済み。現在の未適用migration chainはrolling deploy中の全prefixを安全にしていないため、Productionでは書き込みquiescence下の一括cutover、または別のstaged compatibility chainを先にPersistent Stagingで実証する。service-owned一括処理は例外writerとして明示する
-4. **Track → Learnを接続する** — constraints/tags/review toolとuser revision pollingを追加し、MCP変更を開いているCalendar / Inspector / Reviewへ20秒以内に反映する
+4. **Track → Learnを接続する** — constraints/tags/review tool、user revision polling、Inspector競合保護、local MCP HTTPのgolden flowまでrepo上で完了した。実network / render込み20秒SLAはStep 6のPersistent Stagingで測定する
 5. **3 clientでclosed betaを検証する** — persistent Stagingで再authorization、retry、parallel refresh、revoke、UI対MCP raceを通し、client単位でwrite gateを開く
 
 追加のDayopt内proposal/approval state machineは作らない。tool callを操作要求として扱い、確認UIを持つclientではclient側の確認結果に従う。Dayoptはclientの確認事実ではなく、接続権限とデータ整合性を検証する。
@@ -60,7 +60,7 @@ Delivery 6段階のうち4段階がrepo上で完了し、Step 5は進行中。re
 | 2. Atomic mutation foundation  | DB exclusion、typed command、exact CAS、DB時刻、通常UI cutover                              | done    |
 | 3. MCP mutation envelope       | transaction内再認可、冪等性、audit receipt、旧public write経路revoke                        | done    |
 | 4. Plan / Record MCP CRUD      | create/update/delete/restore/get/trash、structured success/JSON error/receipt、実二経路race | done    |
-| 5. Context and Learn           | tags、constraints、review、revision polling、Plan → Track → Learn E2E                       | active  |
+| 5. Context and Learn           | tags、constraints、review、revision polling、Plan → Track → Learn E2E                       | done    |
 | 6. Client beta verification    | ChatGPT / Claude / Cursor persistent Staging smoke、retention、client別write gate、運用docs | pending |
 
 ### OAuth and connection contract
@@ -75,7 +75,7 @@ Delivery 6段階のうち4段階がrepo上で完了し、Step 5は進行中。re
 
 ### Tool and scope contract
 
-以下はrepo実装済みの候補契約。15 toolのdescriptor、実登録名、scope preflightはexact set testで一致させる。public contractとしての固定とwrite gate有効化は3 clientのgolden contract後に行う。
+以下はrepo実装済みの候補契約。18 toolのdescriptor、実登録名、scope preflightはexact set testで一致させる。public contractとしての固定とwrite gate有効化は3 clientのgolden contract後に行う。
 
 | Scope              | Tools                                                |
 | ------------------ | ---------------------------------------------------- |
@@ -217,7 +217,7 @@ Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializatio
 
 ## Rollout Checkpoints
 
-1. **Local** — 全migration適用、unit/integration、DB lint、RLS snapshot、docs checkを通す。`20260723130000`〜`20260723131150`をfresh DBへ適用し、244 unit files / 2303 tests、13 integration files / 188 testsまで完了。RLS/effective privilege検査も維持する
+1. **Local** — 現行ブランチだけのfresh DBへ全migrationを適用し、RLS snapshotを一致させた。unit、MCP SDK contract、15 integration files / 207 tests、実MCP HTTPのPlan → Track → Learn flow、cross-tenant最小projectionを通し、RLS/effective privilege検査も維持する
 2. **PR Preview** — read-only regressionとOAuth metadataを確認し、timeblock command migrationが`20260723011200`まで適用済みであることを確認する
 3. **Persistent Staging** — current migration chainをUI/service write quiescence下で`20260723131150`まで完走し、最終schemaへcommand版appを切り替えるmaintenance cutoverをrehearseする。別のrolling-compatible chainを作る場合は全prefixで旧/new bundle双方を試験する。その後、3 clientの再authorization、確認UI、retry、parallel refresh、revoke、UI対MCP race、逆GRANTと再cutoverのroll-forwardを確認する
 4. **Production preflight（read-only）** — skip済みPlanにactive Recordが紐づく件数と、`read:entries`を欠くwrite/delete connection/code/tokenが0であり、migrationが部分適用でないことを確認する。違反データは自動修復せず、OAuth rowはretention/consent判断を経た削除またはscope修復、timeblockは行単位のdomain判断を行う

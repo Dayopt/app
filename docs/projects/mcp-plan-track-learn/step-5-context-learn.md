@@ -31,6 +31,18 @@ Step 5のrepo完了条件は次のとおり。
 
 全write gateはOFFのまま維持する。このStepではPreview / Productionへdeployせず、3 toolもStep 6のgolden contract前に外部公開しない。
 
+## Implementation result
+
+2026-07-24時点で、Step 5のrepo完了条件を満たした。
+
+- 18 toolのdescriptorと実登録集合、4 read scope、`tags.list` / `constraints.get` / `review.get`の入力・成功・error契約をtestで固定した
+- actual MCP HTTP routeとlocal DBを使い、context取得、tagged Plan作成、completed PlanへRecordを紐付け、review結果から次のPlanを更新するgolden flowを通した
+- 別user、deleted row、inactive tag、untagged row、期間境界を含むfixtureでowner predicateと最小projectionを検証した
+- 現行ブランチだけのfresh DBへ全migrationを適用し、migration一致とRLS snapshot一致を確認した
+- local integrationは15 files / 207 testsを通した
+
+Persistent StagingのChatGPT / Claude / Cursor、実network / render込み20秒SLA、client別write gateと運用契約はStep 6へ残す。Preview / Productionへのdeployとgate有効化は行っていない。
+
 ## Candidate public contracts
 
 共通契約:
@@ -454,7 +466,7 @@ pollerはworkspace Composition Layerに一つだけ置き、`CalendarViewClient`
 
 ### Product flow
 
-local DBとin-memory MCP serverで次を通す。
+local DBとactual MCP HTTP routeで次を通す。
 
 1. `tags.list`と`constraints.get`
 2. tagged future Planの作成
