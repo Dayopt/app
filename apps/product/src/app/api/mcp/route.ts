@@ -10,7 +10,7 @@ import {
   checkMcpUserRateLimit,
   type McpRateLimitState,
 } from '@/lib/mcp/request-rate-limit';
-import { ADVERTISED_SCOPES, OAuthServerError, type SupportedScope } from '@/lib/oauth-server';
+import { DEFAULT_SCOPES, OAuthServerError, type SupportedScope } from '@/lib/oauth-server';
 import { captureUnexpectedError } from '@/lib/sentry';
 
 import { createMcpServer } from './_server';
@@ -246,7 +246,7 @@ function authErrorResponse(err: unknown): Response {
       ...(isOAuthErr && err.code === 'invalid_request' && status === 400
         ? ['error="invalid_request"']
         : []),
-      `scope="${ADVERTISED_SCOPES.join(' ')}"`,
+      `scope="${DEFAULT_SCOPES.join(' ')}"`,
       `resource_metadata="${RESOURCE_METADATA_URL}"`,
     ];
     headers['www-authenticate'] = `Bearer ${challengeParameters.join(', ')}`;

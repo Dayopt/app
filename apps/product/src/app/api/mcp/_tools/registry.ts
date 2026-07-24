@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import { ADVERTISED_SCOPES, type SupportedScope } from '@/lib/oauth-server';
+import { DEFAULT_SCOPES, hasWriteScope, type SupportedScope } from '@/lib/oauth-server';
 
 import type { McpRequestContext } from '../_context';
 import { registerEntriesListTool } from './entries-list';
@@ -119,5 +119,6 @@ export function mergeMcpChallengeScopes(
   grantedScopes: readonly SupportedScope[],
   missingScopes: readonly SupportedScope[],
 ): SupportedScope[] {
-  return [...new Set<SupportedScope>([...ADVERTISED_SCOPES, ...grantedScopes, ...missingScopes])];
+  const requiredBaseScopes = hasWriteScope(missingScopes) ? DEFAULT_SCOPES : [];
+  return [...new Set<SupportedScope>([...requiredBaseScopes, ...grantedScopes, ...missingScopes])];
 }

@@ -260,9 +260,18 @@ describe('MCP list tools public contract', () => {
     expect(getRequiredScopeForTool('plans.skip')).toBeNull();
   });
 
-  it('step-up challengeはbase read、既存grant、不足write scopeを重複なく保持する', () => {
-    expect(
-      mergeMcpChallengeScopes(['read:entries', 'read:tags'], ['read:entries', 'write:plans']),
-    ).toEqual(['read:entries', 'read:tags', 'write:plans']);
+  it('read step-up challengeは既存grantと不足scopeだけを保持する', () => {
+    expect(mergeMcpChallengeScopes(['read:tags'], ['read:constraints'])).toEqual([
+      'read:tags',
+      'read:constraints',
+    ]);
+  });
+
+  it('write step-up challengeはbase read、既存grant、不足scopeを重複なく保持する', () => {
+    expect(mergeMcpChallengeScopes(['read:tags'], ['write:plans'])).toEqual([
+      'read:entries',
+      'read:tags',
+      'write:plans',
+    ]);
   });
 });

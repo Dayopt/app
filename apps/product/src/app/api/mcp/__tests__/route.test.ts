@@ -75,13 +75,13 @@ describe('MCP route scope preflight', () => {
 
     expect(response.status).toBe(403);
     expect(response.headers.get('www-authenticate')).toContain('error="insufficient_scope"');
-    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries read:tags"');
+    expect(response.headers.get('www-authenticate')).toContain('scope="read:tags read:entries"');
     expect(response.headers.get('www-authenticate')).toContain(
       'resource_metadata="https://mcp.dayopt.app/.well-known/oauth-protected-resource"',
     );
     await expect(response.json()).resolves.toMatchObject({
       error: 'insufficient_scope',
-      scope: 'read:entries read:tags',
+      scope: 'read:tags read:entries',
     });
     expect(createMcpServer).not.toHaveBeenCalled();
     expect(handleRequest).not.toHaveBeenCalled();

@@ -123,6 +123,13 @@ describe('validateAuthorizeInput resource, PKCE, and scopes', () => {
     ).toEqual({ ok: false, error: 'invalid_scope' });
   });
 
+  it('scope省略時はread:entriesだけをdefault grantにする', () => {
+    const result = validateAuthorizeInput({ ...baseAuthorizeInput, scope: undefined });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.scopes).toEqual(['read:entries']);
+  });
+
   it('keeps write scopes closed unless the client is explicitly enabled', () => {
     expect(
       validateAuthorizeInput({ ...baseAuthorizeInput, scope: 'read:entries write:plans' }),

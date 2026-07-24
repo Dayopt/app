@@ -13,8 +13,13 @@ export const SUPPORTED_SCOPES = [
 ] as const;
 export type SupportedScope = (typeof SUPPORTED_SCOPES)[number];
 
-/** Public metadata advertises only the generally available minimum scope. */
-export const ADVERTISED_SCOPES = ['read:entries'] as const satisfies readonly SupportedScope[];
+/** Public metadata advertises the generally available read-only capabilities. */
+export const ADVERTISED_SCOPES = [
+  'read:entries',
+  'read:tags',
+  'read:constraints',
+  'read:stats',
+] as const satisfies readonly SupportedScope[];
 
 const WRITE_SCOPES = [
   'write:plans',
@@ -23,7 +28,7 @@ const WRITE_SCOPES = [
   'delete:records',
 ] as const satisfies readonly SupportedScope[];
 
-const DEFAULT_SCOPES: SupportedScope[] = ['read:entries'];
+export const DEFAULT_SCOPES = ['read:entries'] as const satisfies readonly SupportedScope[];
 
 /**
  * 戻り値:
@@ -35,9 +40,9 @@ const DEFAULT_SCOPES: SupportedScope[] = ['read:entries'];
 export function parseRequestedScope(
   scopeParam: string | null | undefined,
 ): SupportedScope[] | null {
-  if (!scopeParam) return DEFAULT_SCOPES;
+  if (!scopeParam) return [...DEFAULT_SCOPES];
   const requested = scopeParam.split(/\s+/).filter(Boolean);
-  if (requested.length === 0) return DEFAULT_SCOPES;
+  if (requested.length === 0) return [...DEFAULT_SCOPES];
   if (!requested.every(isSupportedScope)) return null;
   return [...new Set(requested)];
 }
