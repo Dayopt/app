@@ -6,6 +6,7 @@
  * - project document: stock contract
  * - newly added log: frozen + filenameと一致するdate
  * - code / superseded_by: 実在するrepo-relative path
+ * - product spec: public_docs（公開docsのslug）/ lp（LPの約束文言）の形式
  */
 
 import { glob } from 'glob';
@@ -45,6 +46,10 @@ export interface MetadataValidationOptions {
 const STOCK_STATUSES = new Set(['current', 'superseded']);
 const PROJECT_STATUSES = new Set(['active', 'paused', 'done']);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const SPECS_PREFIX = 'docs/product/specs/';
+// 公開docsのslug（= /docs/<slug>）。実在検証はしない。未作成のページを宣言できることが
+// レジストリの目的で、存在するかどうかは pnpm docs:coverage が報告する
+const DOC_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function stripScalar(value: string): string {
   const withoutComment = value.replace(/\s+#.*$/, '').trim();
@@ -83,7 +88,9 @@ export function parseFrontmatter(content: string): ParsedFrontmatter {
       if (fields.has(key)) errors.push(`frontmatterの${key}が重複している`);
 
       const value = stripScalar(rawValue);
-      fields.set(key, value === '' ? [] : value);
+      // 値なしは後続の list item を待つ。`[]` は「意図的に空」を表す確定した空配列
+      const isEmptyList = value === '' || value === '[]';
+      fields.set(key, isEmptyList ? [] : value);
       listKey = value === '' ? key : undefined;
       continue;
     }
@@ -271,6 +278,40 @@ function validateLog(
   return reasons;
 }
 
+/**
+ * product spec を機能レジストリとして使うための形式検証。
+ *
+ * public_docs は「この機能に対応する公開docsのslug」、lp は「LPがこの機能について
+ * 約束している文言」。どちらも未記入と空配列を区別するため、書くなら形式を守らせる。
+ * 実体の突き合わせ（ページの有無、draft/placeholder、LP文言との一致）は
+ * pnpm docs:coverage が行う。
+ */
+function validateSpecRegistry(fields: ReadonlyMap<string, MetadataValue>): string[] {
+  const reasons: string[] = [];
+
+  const publicDocs = fields.get('public_docs');
+  if (typeof publicDocs === 'string') {
+    reasons.push('public_docsは配列で書く（公開docsが無い場合は空配列）');
+  } else if (publicDocs !== undefined) {
+    for (const slug of publicDocs) {
+      if (!DOC_SLUG_RE.test(slug)) {
+        reasons.push(`public_docsはkebab-caseのslugで書く（pathや拡張子は書かない）: ${slug}`);
+      }
+    }
+  }
+
+  const lp = fields.get('lp');
+  if (typeof lp === 'string') {
+    reasons.push('lpは配列で書く（LPが言及しない場合は空配列）');
+  } else if (lp !== undefined) {
+    for (const claim of lp) {
+      if (claim.trim().length === 0) reasons.push('lpの要素が空文字になっている');
+    }
+  }
+
+  return reasons;
+}
+
 export function validateExistingLogSupersededBy(content: string, root = ROOT): string[] {
   const reasons: string[] = [];
   const values = [...content.matchAll(/^superseded_by:\s*(\S+)\s*$/gm)].map((match) => match[1]);
@@ -310,6 +351,10 @@ export function validateDocumentMetadata({
     reasons.push(...validateLog(parsed.fields, relativePath, today));
   } else {
     reasons.push(...validateStock(parsed.fields, today));
+  }
+
+  if (relativePath.startsWith(SPECS_PREFIX)) {
+    reasons.push(...validateSpecRegistry(parsed.fields));
   }
 
   const codePaths = getStrings(parsed.fields, 'code');

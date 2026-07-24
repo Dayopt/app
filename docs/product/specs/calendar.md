@@ -1,7 +1,11 @@
 ---
 status: current
-last_verified: 2026-07-17
+last_verified: 2026-07-24
 code: apps/product/src/features/calendar
+public_docs:
+  - calendar
+lp:
+  - 'Calendar — day, week, and multi-day views'
 ---
 
 # Calendar（カレンダー）

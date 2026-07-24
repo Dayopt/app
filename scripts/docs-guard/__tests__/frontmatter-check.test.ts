@@ -308,3 +308,44 @@ describe('validateExistingLogSupersededBy', () => {
     expect(validateExistingLogSupersededBy('status: superseded\n', createRoot())).toEqual([]);
   });
 });
+
+describe('product specのレジストリ形式', () => {
+  function validateSpec(frontmatter: string): string[] {
+    return validateDocumentMetadata({
+      content: `---\nstatus: current\nlast_verified: 2026-07-14\n${frontmatter}---\n`,
+      relativePath: 'docs/product/specs/review.md',
+      root: createRoot(),
+      today: '2026-07-14',
+    });
+  }
+
+  it('正常系: slugのlistと空配列を受理する', () => {
+    expect(validateSpec("public_docs:\n  - review\nlp:\n  - 'Core Review metrics'\n")).toEqual([]);
+    expect(validateSpec('public_docs: []\nlp: []\n')).toEqual([]);
+  });
+
+  it('エラー系: public_docsにpathや拡張子を書いたら拒否する', () => {
+    expect(
+      validateSpec('public_docs:\n  - apps/web/content/docs/en/features/review.mdx\n'),
+    ).toEqual([
+      'public_docsはkebab-caseのslugで書く（pathや拡張子は書かない）: apps/web/content/docs/en/features/review.mdx',
+    ]);
+  });
+
+  it('エラー系: scalarで書いたら配列を要求する', () => {
+    expect(validateSpec('public_docs: review\n')).toEqual([
+      'public_docsは配列で書く（公開docsが無い場合は空配列）',
+    ]);
+  });
+
+  it('境界: spec以外のstockには適用しない', () => {
+    const reasons = validateDocumentMetadata({
+      content: `---\nstatus: current\nlast_verified: 2026-07-14\npublic_docs: review\n---\n`,
+      relativePath: 'docs/product/principles.md',
+      root: createRoot(),
+      today: '2026-07-14',
+    });
+
+    expect(reasons).toEqual([]);
+  });
+});
