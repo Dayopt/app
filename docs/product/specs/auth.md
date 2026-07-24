@@ -14,6 +14,8 @@ Supabase Auth ベースの認証機能。
 ## 現在の振る舞い
 
 - Supabase Auth によるセッション管理（メール/パスワード、MFA検証フローを含む）
+- ソーシャルログインは Google のみ。Apple（有料 Developer Program が必須）と Meta（アプリ審査コスト）は不採用（2026-07 決定、[ログ](../log/2026-07-24-social-login-google-only.md)）。本番の provider 設定は Supabase Dashboard が正本
+- 認証メール（signup 確認 / パスワードリセット / メールアドレス変更）は Auth send_email hook → Edge Function `send-auth-email` → Resend で送信する。メールアドレス変更は Secure Email Change により現・新両アドレスへ確認メールを 2 通送る
 - `protectedProcedure` で保護された tRPC procedure が `ctx.userId` でデータアクセスを制限する
 - MFA登録済みで session assurance level が `aal1` のブラウザセッションは、画面遷移だけでなく tRPC API 側でも protected procedure を拒否する
 - RLS（Row Level Security）によるDBレベルでの認可を併用する
