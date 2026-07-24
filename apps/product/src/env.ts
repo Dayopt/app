@@ -32,6 +32,12 @@ function isRedirectUriList(value: string | undefined): boolean {
     });
 }
 
+/** AES-256 の鍵は base64 で 32 バイトに decode できなければならない。 */
+function isBase64EncodedAes256Key(value: string | undefined): boolean {
+  if (!value) return true;
+  return Buffer.from(value.trim(), 'base64').length === 32;
+}
+
 const serverSchema = z
   .object({
     // Supabase
@@ -65,6 +71,24 @@ const serverSchema = z
 
     // Google
     GOOGLE_SITE_VERIFICATION: z.string().optional(),
+
+    // Google Calendar 連携（external-calendar-import）。Supabase Auth の Google provider とは
+    // 別の専用 OAuth client を使う。identity（誰か）と data-access（何を読めるか）を分離する。
+    GOOGLE_CALENDAR_CLIENT_ID: z.string().optional(),
+    GOOGLE_CALENDAR_CLIENT_SECRET: z.string().optional(),
+    // refresh token の AES-256-GCM 暗号鍵。base64 で 32 バイト（`openssl rand -base64 32`）。
+    // 長さを boot 時に検証する。壊れた鍵のまま起動すると、同意まで取ったあと保存だけが失敗する。
+    CALENDAR_TOKEN_ENCRYPTION_KEY: z.string().optional().refine(isBase64EncodedAes256Key, {
+      message: 'CALENDAR_TOKEN_ENCRYPTION_KEY は base64 で 32 バイトの鍵にしてください',
+    }),
+    // Google は redirect_uri の完全一致を要求しワイルドカードを許さない。環境ごとに登録済みの
+    // URI をカンマ区切りで持ち、route 側は request host と完全一致するものを lookup して使う。
+    // Vercel Production にはproduction origin だけを入れる（localhost を混ぜると
+    // x-forwarded-host 経由で allowlist を通過されうる）。
+    GOOGLE_CALENDAR_REDIRECT_URIS: z.string().optional().refine(isRedirectUriList, {
+      message:
+        'GOOGLE_CALENDAR_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
+    }),
 
     // Stripe
     STRIPE_SECRET_KEY: z.string().optional(),
@@ -140,6 +164,28 @@ const serverSchema = z
       message:
         'RESEND_API_KEY / apex dayopt.app RESEND_FROM_EMAIL / RESEND_WEBHOOK_SECRET はVercel Productionで必須です',
       path: ['RESEND_API_KEY'],
+    },
+  )
+  .refine(
+    (data) => {
+      if (!(data.NODE_ENV === 'production' && data.VERCEL_ENV === 'production')) return true;
+
+      // 「全部揃うか全部無いか」。4 変数のうち一部だけ入っている状態は、connect フローが
+      // 途中まで動いて失敗する最悪の中間状態になるので許さない。
+      // 全部無い場合は route 側の config guard が 503 を返す。
+      const values = [
+        data.GOOGLE_CALENDAR_CLIENT_ID,
+        data.GOOGLE_CALENDAR_CLIENT_SECRET,
+        data.CALENDAR_TOKEN_ENCRYPTION_KEY,
+        data.GOOGLE_CALENDAR_REDIRECT_URIS,
+      ].map((value) => Boolean(value?.trim()));
+
+      return values.every(Boolean) || !values.some(Boolean);
+    },
+    {
+      message:
+        'GOOGLE_CALENDAR_CLIENT_ID / GOOGLE_CALENDAR_CLIENT_SECRET / CALENDAR_TOKEN_ENCRYPTION_KEY / GOOGLE_CALENDAR_REDIRECT_URIS は本番環境ではまとめて設定してください',
+      path: ['GOOGLE_CALENDAR_CLIENT_ID'],
     },
   );
 

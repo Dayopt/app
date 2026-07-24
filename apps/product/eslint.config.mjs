@@ -84,7 +84,7 @@ const eslintConfig = defineConfig([
   // Feature Boundary: DAG（有向非循環グラフ）モデル
   //
   // Layer 0 (基盤):   tags             — 他featureに依存しない
-  // Layer 1 (中核):   timeblock            — L0 barrel のみ
+  // Layer 1 (中核):   timeblock, external-calendar — L0 barrel のみ
   // Layer 2 (体験):   calendar, review — L0+L1 barrel のみ
   // Independent:      auth, contact    — 他featureに依存しない
   //
@@ -155,6 +155,54 @@ const eslintConfig = defineConfig([
         'error',
         {
           patterns: [
+            // 同層間禁止（自分自身は含めない）
+            {
+              group: ['@/features/external-calendar', '@/features/external-calendar/**'],
+              message: '同層featureのimport禁止。',
+            },
+            // L2 禁止
+            {
+              group: ['@/features/calendar', '@/features/calendar/**'],
+              message: '上位層featureのimport禁止。',
+            },
+            {
+              group: ['@/features/review', '@/features/review/**'],
+              message: '上位層featureのimport禁止。',
+            },
+            // Independent 禁止
+            {
+              group: ['@/features/auth', '@/features/auth/**'],
+              message: '独立featureのimport禁止。',
+            },
+            {
+              group: ['@/features/contact', '@/features/contact/**'],
+              message: '独立featureのimport禁止。',
+            },
+            // L0 deep import禁止（barrel のみ許可）
+            {
+              group: ['@/features/tags/**'],
+              message: 'barrel import（@/features/tags）のみ使用。',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // Layer 1 (external-calendar): L0 barrel のみ許可
+  {
+    files: ['src/features/external-calendar/**/*.{ts,tsx}'],
+    ignores: ['**/*.stories.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            // 同層間禁止（自分自身は含めない）
+            {
+              group: ['@/features/timeblock', '@/features/timeblock/**'],
+              message: '同層featureのimport禁止。',
+            },
             // L2 禁止
             {
               group: ['@/features/calendar', '@/features/calendar/**'],
@@ -216,6 +264,10 @@ const eslintConfig = defineConfig([
               group: ['@/features/timeblock/**'],
               message: 'barrel import（@/features/timeblock）のみ使用。',
             },
+            {
+              group: ['@/features/external-calendar/**'],
+              message: 'barrel import（@/features/external-calendar）のみ使用。',
+            },
           ],
         },
       ],
@@ -253,6 +305,10 @@ const eslintConfig = defineConfig([
             {
               group: ['@/features/timeblock/**'],
               message: 'barrel import（@/features/timeblock）のみ使用。',
+            },
+            {
+              group: ['@/features/external-calendar/**'],
+              message: 'barrel import（@/features/external-calendar）のみ使用。',
             },
           ],
         },
