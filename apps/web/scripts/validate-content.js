@@ -343,9 +343,13 @@ function checkDocsSlugMatchesRouting() {
   return errors;
 }
 
-// 公開ページから 404 へのリンクを止める。リンク先が「そもそも無い」のは書き間違いなので error、
-// 「ファイルはあるが draft」のは公開待ちの状態問題なので warning に分ける（draft を外せば直る。
-// どこが公開待ちかは pnpm docs:coverage が一覧する）
+// 公開ページから 404 へのリンクを止める。判定はリンクの出どころで分ける。
+//
+// - 本文リンク: ユーザーが実際に踏む。リンク先が無い場合も draft の場合も 404 なので error
+// - frontmatter の ai.relatedDocs: RAG 用メタデータでユーザーは踏まない。リンク先が draft
+//   なら公開時に解決するので許容し、そもそもファイルが無い場合だけ error
+//
+// リンク元自体が draft なら、まとめて公開されるまで誰も踏まないため warning に落とす。
 function checkDocsInternalLinks() {
   const errors = [];
   const warnings = [];
@@ -368,32 +372,38 @@ function checkDocsInternalLinks() {
     for (const file of files) {
       const rel = path.relative(dir, file).replace(/\\/g, '/');
       const content = fs.readFileSync(file, 'utf8');
-      const { data: fm } = parseFrontMatter(content);
+      const { data: fm, body } = parseFrontMatter(content);
       const isDraft = fm.draft === true;
 
-      const targets = new Set();
-      for (const [, href] of content.matchAll(/\]\((\/docs\/[a-z0-9/-]+)\)/g)) targets.add(href);
-      for (const [, href] of content.matchAll(/^\s+- '(\/docs\/[a-z0-9/-]+)'$/gm))
-        targets.add(href);
+      const bodyTargets = new Set();
+      for (const [, href] of body.matchAll(/\]\((\/docs\/[a-z0-9/-]+)\)/g)) bodyTargets.add(href);
+      const metaTargets = new Set();
+      for (const [, href] of content
+        .slice(0, content.length - body.length)
+        .matchAll(/^\s+- '(\/docs\/[a-z0-9/-]+)'$/gm)) {
+        if (!bodyTargets.has(href)) metaTargets.add(href);
+      }
 
-      for (const href of targets) {
+      const report = (message) => (isDraft ? warnings : errors).push(message);
+
+      for (const href of bodyTargets) {
         const slug = href.replace(/^\/docs\//, '');
         if (published.has(slug)) continue;
 
         const where = `content/docs/${locale}/${rel}`;
         if (unpublished.has(slug)) {
-          // draft 同士のリンクは一緒に公開されるため 404 にならない。
-          // 公開ページから未公開ページを指している場合だけが実害
-          if (!isDraft) {
-            warnings.push(
-              `Link to unpublished doc in ${where}: ${href} (リンク先が draft のため 404)`,
-            );
-          }
-        } else if (isDraft) {
-          warnings.push(`Dead internal link in ${where}: ${href} (該当 slug のファイルなし)`);
+          report(`Link to unpublished doc in ${where}: ${href} (リンク先が draft のため 404)`);
         } else {
-          errors.push(`Dead internal link in ${where}: ${href} (該当 slug のファイルなし)`);
+          report(`Dead internal link in ${where}: ${href} (該当 slug のファイルなし)`);
         }
+      }
+
+      for (const href of metaTargets) {
+        const slug = href.replace(/^\/docs\//, '');
+        if (published.has(slug) || unpublished.has(slug)) continue;
+        report(
+          `Dead relatedDocs entry in content/docs/${locale}/${rel}: ${href} (該当 slug のファイルなし)`,
+        );
       }
     }
   }

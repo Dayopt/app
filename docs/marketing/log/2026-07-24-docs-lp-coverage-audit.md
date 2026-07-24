@@ -56,28 +56,28 @@ ja 版はこの節が英語のまま残っている（`getting-started/index.mdx
 
 - 上記 2 ファイルを削除し、参照していた 6 ファイルのリンクを実在ページに直した
 - `placeholder: true` を導入し、`draft: false` との併用を `validate:content` の error にした（1 の再発防止）
-- 未執筆ページを placeholder スタブとして 9 本作成（calendar en / review / tags / api-mcp / data-export の en・ja）
+- 未執筆ページを placeholder スタブとして作成（review / tags / api-mcp / data-export の ja 4 本）。docs を ja 先行に切り替えたため en 側は作らない
 - `docs/product/specs/` の frontmatter に `public_docs` と `lp` を追加し、機能レジストリの正本にした。対応表を別ファイルで二重管理しない
 - `pnpm docs:coverage` を追加。spec を軸に実ファイルと LP を突き合わせ、埋まり具合・LP 逆引き・en/ja 非対称を出力する
-- 公開ページから 404 へのリンクを `validate:content` の error にした（リンク先が draft の場合は warning）
+- 公開ページの本文から 404 へのリンクを `validate:content` の error にした。リンク先が「ファイルごと無い」場合と「draft のため出ない」場合の両方を止める。frontmatter の `ai.relatedDocs` はユーザーが踏まないため draft 参照を許容し、ファイル不在だけを error にする
 
 ## 監査時点のカバレッジ
 
-`pnpm docs:coverage` の集計で、レジストリ登録済み 8 slug のうち en/ja 揃って公開済みは 2（`/docs/plans`、`/docs/pricing`）。
+`pnpm docs:coverage` の集計で、レジストリ登録済み 8 slug のうち ja で公開済みは 4（`/docs/plans`、`/docs/pricing`、`/docs/calendar`、`/docs/account-troubleshooting`）。en は ja 先行方針に切り替えたため、抜けは coverage が一覧し続ける。
 
 ## 残したもの
 
 本文の執筆と翻訳はこの作業に含めない。以下は別 issue として起票する。
 
-- quick-start の書き直し（en/ja）
+- quick-start の書き直し（ja）
 - account 系 docs の設計（何を公開するか）
 - Record docs のレビューと公開
-- troubleshooting 3 本の en 翻訳
-- placeholder スタブ 9 本の本文執筆
+- ja が固まったあとの en 追随（docs 全体）
+- placeholder スタブ 4 本の本文執筆
 - API・MCP の内部 spec 新設
 - getting-started の機能一覧を現行の機能名に直す（Stats → Review 等）と、ja 版の未翻訳部分の翻訳
 
-LP 側の文言は変更していない。Record が非公開であることは docs を公開して解消する方向とし、LP から約束を削る判断はしていない。
+LP 側の文言は変更していない。Record が非公開であることは docs を公開して解消する方向とし、LP から約束を削る判断はしていない。公開までの間は 404 を出さないよう、公開ページ本文からの Record へのリンクを外した（Codex レビュー #1717 の指摘）。Record を公開する時にリンクを戻す。
 
 `ProblemSection` は component・翻訳文言・Story が揃っているのに LP に配置されていない（`apps/web/src/app/[locale]/(marketing)/page.tsx` が import していない）。今回のスコープ外として記録だけ残す。
 

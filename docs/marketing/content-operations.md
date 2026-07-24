@@ -63,6 +63,8 @@ Storybook は公開ヘルプ化しない。ヘルプページの役割は `apps/
 
 未執筆のページは `draft: true` + `placeholder: true` の骨格として置く。`placeholder: true` なのに `draft: false` のページは `validate:content` が error で止める。`draft` は「隠す」、`placeholder` は「中身がまだ無い」を表し、カバレッジ上で区別する。
 
+**公開ページの本文から draft のページへリンクしない。** draft は `getAllContent` が除外するため 404 になる。`validate:content` が error で止める。リンクしたければ先に公開する。frontmatter の `ai.relatedDocs` はユーザーが踏まない RAG 用メタデータなので、draft を指していてもよい（公開時に解決する）。ファイルごと存在しない slug は本文・`relatedDocs` のどちらでも error。
+
 ## 言語ポリシー
 
 | 種別                                       | ポリシー                                                                                       |
