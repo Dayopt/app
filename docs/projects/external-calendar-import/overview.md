@@ -138,7 +138,7 @@ Supabase Auth の Google provider に scope を足す案は却下する。理由
 
 - Route handler 2 本: `apps/product/src/app/api/integrations/google-calendar/start/route.ts` / `.../callback/route.ts`。redirect flow は tRPC 化できないため、`/api/auth/*` と同列の「REST 維持」例外として `.claude/rules/architecture.md` の一覧に追記する
 - `start`: session 必須 + billing gate（`canAccessProFeatures` + `isBillingEnforced` を route 内で適用）。`state`（random）と PKCE `code_verifier` を signed HTTP-only cookie（10 分 TTL）に保存して Google へ redirect。confidential client なので token 交換には client_secret を併用し、PKCE は上乗せ防御
-- Auth URL params: `access_type=offline`・`prompt=consent`（refresh token を確実に取得）・`include_granted_scopes=true`
+- Auth URL params: `access_type=offline`・`prompt=consent`（refresh token を確実に取得）。**`include_granted_scopes` は付けない** — 付けると同一 client が過去に得ていた scope まで畳み込まれ、保存する refresh token が本機能に必要な範囲を超えた権限を持ちうる。callback は `calendar.readonly` の有無しか検査しないため余分な scope は素通りする。必要な scope は最初から全部要求しており incremental auth は使わない（Step 2 レビュー指摘）
 - `callback`: state/PKCE 検証 → code 交換 → id_token から `sub` / `email` を取得 → `calendar_connections` を upsert → 初回はカレンダー選択へ誘導する Settings へ redirect
 - API client は **googleapis SDK を入れず素の `fetch` + zod パース**。必要な endpoint は token / calendarList.list / events.list / revoke の 4 つだけで、依存追加規律（1 機能のために大きなライブラリを入れない）に従う
 

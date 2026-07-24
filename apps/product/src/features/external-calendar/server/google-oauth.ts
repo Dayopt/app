@@ -130,7 +130,11 @@ export function buildAuthorizationUrl(params: {
   url.searchParams.set('scope', GOOGLE_AUTHORIZATION_SCOPES.join(' '));
   url.searchParams.set('access_type', 'offline');
   url.searchParams.set('prompt', 'consent');
-  url.searchParams.set('include_granted_scopes', 'true');
+  // `include_granted_scopes` は付けない。付けると、この client が過去にそのユーザーへ
+  // 得ていた scope まで今回の認可へ畳み込まれ、保存する refresh token が本機能に必要な
+  // 範囲を超えた権限を持ちうる。callback は calendar.readonly の有無しか見ないので、
+  // 余分な scope はそのまま通ってしまう。必要な scope は最初から
+  // GOOGLE_AUTHORIZATION_SCOPES で全部要求しており、incremental auth は使っていない。
   url.searchParams.set('state', params.state);
   url.searchParams.set('code_challenge', params.codeChallenge);
   url.searchParams.set('code_challenge_method', 'S256');
