@@ -224,7 +224,26 @@ BEGIN
       );
     END IF;
   END LOOP;
+
+  -- Step 5 adds deferred revision triggers. Flush their pending events before
+  -- changing another trigger on the same table, then restore the default mode.
+  SET CONSTRAINTS
+    trigger_bump_plan_revision_after_insert,
+    trigger_bump_plan_revision_after_update,
+    trigger_bump_plan_revision_after_delete,
+    trigger_bump_record_revision_after_insert,
+    trigger_bump_record_revision_after_update,
+    trigger_bump_record_revision_after_delete
+  IMMEDIATE;
   EXECUTE 'ALTER TABLE public.plans ENABLE TRIGGER validate_plan_temporal_write_v1';
+  SET CONSTRAINTS
+    trigger_bump_plan_revision_after_insert,
+    trigger_bump_plan_revision_after_update,
+    trigger_bump_plan_revision_after_delete,
+    trigger_bump_record_revision_after_insert,
+    trigger_bump_record_revision_after_update,
+    trigger_bump_record_revision_after_delete
+  DEFERRED;
 EXCEPTION
   WHEN OTHERS THEN
     -- EXCEPTION subtransactionのrollbackでもtriggerは戻るが、意図を明示する。

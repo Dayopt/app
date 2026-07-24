@@ -306,14 +306,16 @@ revisionは変更件数ではなくopaque invalidation tokenである。server�
 Supported writerは既存のuser-scoped command / compatibility / tag / purge経路に限定し、次の順に揃える。
 
 1. global direct-write advisory lockをsharedで取得
-2. `auth.users` parent lock
-3. 既存user advisory lock
-4. transaction-localなsupported writer user IDを設定。同じtransactionで別userを要求したらfail closed
+2. transaction-localなsupported writer user IDとlock modeを設定。同じtransactionで別user・別writer modeを要求したらfail closed
+3. `auth.users` parent lock
+4. 既存user advisory lock
 5. revision rowを作成して`FOR UPDATE`
 6. domain row
 7. transaction終端のdeferred revision trigger
 
 Plan / RecordのINSERT / UPDATE / DELETEには`DEFERRABLE INITIALLY DEFERRED AFTER ROW` constraint triggerを付ける。triggerはtransaction終端で実変更のuser revisionを増やす。soft delete、restore、tag detach、bulk hard delete、FK actionをtable境界で捕捉し、rollbackではcounterを進めない。supported writerはdomain rowより前にcounterをlock済みなので、commit時に新しいlock順を作らない。
+
+同一transactionのexclusive→shared再利用は許可する。shared→exclusive upgradeは、revision rowを待つ別shared writerとのdeadlockを作り得るため、user advisory lockを取る前に`22023`で拒否する。exclusive操作を含むcompositionは最初からexclusive commandとして開始する。
 
 service-roleによる例外的な直接DMLはapp APIにしない。ただしmigration / test / recoveryで存在するため、Plan / RecordのBEFORE STATEMENT guardはsupported writer markerがないtransactionでglobal direct-write advisory lockをexclusive取得する。tagのdirect DELETEも`ON DELETE SET NULL`でPlan / Recordを変更し得るため同じguardに参加する。
 

@@ -1243,6 +1243,14 @@ export type Database = {
           user_id: string;
         }[];
       };
+      get_timeblock_context_marker_v1: {
+        Args: { p_user_id: string };
+        Returns: {
+          database_now: string;
+          revision: string;
+          timezone: string;
+        }[];
+      };
       get_user_timezone: { Args: { p_user_id: string }; Returns: string };
       get_vault_secret: { Args: { p_name: string }; Returns: string };
       increment_tag_sort_orders: {

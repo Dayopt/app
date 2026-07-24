@@ -101,7 +101,7 @@ Delivery 6段階のうち4段階がrepo上で完了し、Step 5は未着手。Pl
 ### Mutation contract
 
 - Plan / Recordそれぞれのcreate/update/soft-delete/restoreをtyped commandとして実装し、generic JSON executorは作らない
-- MCP mutation transactionのlock順は`global control → auth.users → user shared advisory lock → connection → access token → profile → receipt advisory lock → domain resource`に固定する。connectionからuser候補をlockなしで解決し、`auth.users`とuser write境界をlockした後に同じuser bindingのconnectionを再検証する。通常UI commandも同じshared lock、Settings hard deleteとaccount deleteはexclusive lockを取る。user/client/resource/scope/expiry/revoke/write gateを再検証し、global controlの変更はrevision CASで緊急停止より古いenable要求を拒否する
+- MCP mutation transactionのlock順は`global control → timeblock global shared lock → transaction user/lock-mode bind → auth.users → user shared advisory lock → revision row → connection → access token → profile → receipt advisory lock → domain resource`に固定する。connectionからuser候補をlockなしで解決し、timeblock write境界をlockした後に同じuser bindingのconnectionを再検証する。通常UI commandも同じshared lock、Settings hard deleteとaccount deleteはexclusive lockを取る。shared→exclusive upgradeと別userへのrebindはuser固有lock前に拒否する。user/client/resource/scope/expiry/revoke/write gateを再検証し、global controlの変更はrevision CASで緊急停止より古いenable要求を拒否する
 - `profiles`のPro entitlementもlockして、downgrade完了後のwriteを防ぐ。MCP writeはbilling enforcementの一般flagにかかわらず`active` / `trialing` / `past_due`を必須とするproduct contractとして扱う
 - 再認可、idempotency claim、正規データ変更、成功mutation auditを兼ねる最小receiptを一括commitする。Settings revokeとscope撤回は同じconnection row lockでlinearizeする
 - createは既存のDB exclusion constraintを最終防衛線にし、constraint violationを`TIME_OVERLAP`へ変換する。Plan × Recordの重複は許可する
