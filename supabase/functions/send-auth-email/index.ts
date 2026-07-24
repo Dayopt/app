@@ -57,22 +57,34 @@ const i18nSubjects: Record<Locale, Record<string, string>> = {
     signup: 'Confirm your Dayopt email',
     recovery: 'Reset your Dayopt password',
     magic_link: 'Log in to Dayopt',
+    email_change_current: 'Approve your Dayopt email change',
+    email_change_new: 'Confirm your new Dayopt email',
   },
   ja: {
     signup: 'Dayopt メールアドレスの確認',
     recovery: 'Dayopt パスワードのリセット',
     magic_link: 'Dayopt にログイン',
+    email_change_current: 'Dayopt メールアドレス変更の承認',
+    email_change_new: 'Dayopt 新しいメールアドレスの確認',
   },
 };
 
 /**
  * Auth メールタイプに応じた確認URLを構築
+ *
+ * @param tokenHash email_change では宛先ごとに使う hash が異なるため上書き可能にする
  */
-function buildConfirmUrl(emailData: EmailData): string {
-  const { token_hash, redirect_to, email_action_type } = emailData;
+function buildConfirmUrl(emailData: EmailData, tokenHash: string = emailData.token_hash): string {
+  const { redirect_to, email_action_type } = emailData;
   const baseUrl = redirect_to || APP_URL;
   const separator = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${separator}token_hash=${token_hash}&type=${email_action_type}`;
+  return `${baseUrl}${separator}token_hash=${tokenHash}&type=${email_action_type}`;
+}
+
+interface OutgoingEmail {
+  to: string;
+  subject: string;
+  element: React.ReactElement;
 }
 
 Deno.serve(async (req) => {
@@ -92,36 +104,84 @@ Deno.serve(async (req) => {
     const locale = await getUserLocale(user.id);
     const subjects = i18nSubjects[locale];
 
-    let subject: string;
-    let element: React.ReactElement;
+    const emails: OutgoingEmail[] = [];
 
     switch (email_data.email_action_type) {
       case 'signup': {
-        subject = subjects.signup;
-        element = React.createElement(ConfirmEmail, {
-          userName,
-          confirmUrl,
-          locale,
-          appUrl: APP_URL,
+        emails.push({
+          to: user.email,
+          subject: subjects.signup,
+          element: React.createElement(ConfirmEmail, {
+            userName,
+            confirmUrl,
+            locale,
+            appUrl: APP_URL,
+          }),
         });
         break;
       }
       case 'recovery': {
-        subject = subjects.recovery;
-        element = React.createElement(PasswordResetEmail, {
-          userName,
-          resetUrl: confirmUrl,
-          locale,
-          appUrl: APP_URL,
+        emails.push({
+          to: user.email,
+          subject: subjects.recovery,
+          element: React.createElement(PasswordResetEmail, {
+            userName,
+            resetUrl: confirmUrl,
+            locale,
+            appUrl: APP_URL,
+          }),
         });
         break;
       }
-      case 'magic_link': {
-        subject = subjects.magic_link;
-        element = React.createElement(MagicLinkEmail, {
-          loginUrl: confirmUrl,
-          locale,
-          appUrl: APP_URL,
+      // hook payload の JSON Schema は 'magiclink'、公式サンプルは 'magic_link' 表記。
+      // アプリは magic link 未使用だが、どちらが来ても処理できるよう両対応する
+      case 'magic_link':
+      case 'magiclink': {
+        emails.push({
+          to: user.email,
+          subject: subjects.magic_link,
+          element: React.createElement(MagicLinkEmail, {
+            loginUrl: confirmUrl,
+            locale,
+            appUrl: APP_URL,
+          }),
+        });
+        break;
+      }
+      case 'email_change': {
+        const newEmail = user.new_email;
+        if (!newEmail) {
+          return new Response(
+            JSON.stringify({ error: { message: 'email_change payload missing new_email' } }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        // Secure Email Change 有効時は 2 通送る。token hash のフィールド名は
+        // 後方互換のため逆転している（公式 docs 明記）:
+        //   現アドレス宛 → token_hash_new / 新アドレス宛 → token_hash
+        if (email_data.token_hash_new) {
+          emails.push({
+            to: user.email,
+            subject: subjects.email_change_current,
+            element: React.createElement(EmailChangeEmail, {
+              userName,
+              confirmUrl: buildConfirmUrl(email_data, email_data.token_hash_new),
+              newEmail,
+              variant: 'current',
+              locale,
+            }),
+          });
+        }
+        emails.push({
+          to: newEmail,
+          subject: subjects.email_change_new,
+          element: React.createElement(EmailChangeEmail, {
+            userName,
+            confirmUrl: buildConfirmUrl(email_data, email_data.token_hash),
+            newEmail,
+            variant: 'new',
+            locale,
+          }),
         });
         break;
       }
@@ -137,17 +197,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    const html = await renderAsync(element);
+    for (const { to, subject, element } of emails) {
+      const html = await renderAsync(element);
 
-    const { error } = await resend.emails.send({
-      from: `Dayopt <${FROM_EMAIL}>`,
-      to: [user.email],
-      subject,
-      html,
-    });
+      const { error } = await resend.emails.send({
+        from: `Dayopt <${FROM_EMAIL}>`,
+        to: [to],
+        subject,
+        html,
+      });
 
-    if (error) {
-      throw error;
+      if (error) {
+        throw error;
+      }
     }
   } catch (error) {
     return new Response(

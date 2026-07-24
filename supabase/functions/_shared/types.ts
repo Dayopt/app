@@ -19,6 +19,8 @@ export interface WebhookPayload {
   user: {
     id: string;
     email: string;
+    /** email_change フローで設定される変更先アドレス */
+    new_email?: string;
     user_metadata: {
       full_name?: string;
     };
