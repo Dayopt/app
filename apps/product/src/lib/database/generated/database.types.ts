@@ -33,6 +33,95 @@ export type Database = {
   };
   public: {
     Tables: {
+      calendar_connection_calendars: {
+        Row: {
+          calendar_name: string | null;
+          connection_id: string;
+          created_at: string;
+          id: string;
+          last_synced_at: string | null;
+          provider_calendar_id: string;
+          sync_token: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          calendar_name?: string | null;
+          connection_id: string;
+          created_at?: string;
+          id?: string;
+          last_synced_at?: string | null;
+          provider_calendar_id: string;
+          sync_token?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          calendar_name?: string | null;
+          connection_id?: string;
+          created_at?: string;
+          id?: string;
+          last_synced_at?: string | null;
+          provider_calendar_id?: string;
+          sync_token?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'calendar_connection_calendars_connection_owner_fkey';
+            columns: ['connection_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'calendar_connections';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
+      };
+      calendar_connections: {
+        Row: {
+          created_at: string;
+          granted_scopes: string[];
+          id: string;
+          last_sync_error: string | null;
+          last_synced_at: string | null;
+          provider: string;
+          provider_account_email: string | null;
+          provider_account_id: string;
+          refresh_token_enc: string;
+          status: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          granted_scopes: string[];
+          id?: string;
+          last_sync_error?: string | null;
+          last_synced_at?: string | null;
+          provider: string;
+          provider_account_email?: string | null;
+          provider_account_id: string;
+          refresh_token_enc: string;
+          status: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          granted_scopes?: string[];
+          id?: string;
+          last_sync_error?: string | null;
+          last_synced_at?: string | null;
+          provider?: string;
+          provider_account_email?: string | null;
+          provider_account_id?: string;
+          refresh_token_enc?: string;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       email_suppressions: {
         Row: {
           created_at: string;
@@ -60,6 +149,7 @@ export type Database = {
       external_calendar_events: {
         Row: {
           calendar_name: string | null;
+          connection_id: string | null;
           created_at: string;
           description: string | null;
           dismissed_at: string | null;
@@ -77,6 +167,7 @@ export type Database = {
         };
         Insert: {
           calendar_name?: string | null;
+          connection_id?: string | null;
           created_at?: string;
           description?: string | null;
           dismissed_at?: string | null;
@@ -94,6 +185,7 @@ export type Database = {
         };
         Update: {
           calendar_name?: string | null;
+          connection_id?: string | null;
           created_at?: string;
           description?: string | null;
           dismissed_at?: string | null;
@@ -109,7 +201,15 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'external_calendar_events_connection_owner_fkey';
+            columns: ['connection_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'calendar_connections';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
       };
       mfa_recovery_codes: {
         Row: {
@@ -600,14 +700,6 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      claim_stripe_webhook_event: {
-        Args: {
-          p_event_id: string;
-          p_event_type: string;
-          p_stale_before: string;
-        };
-        Returns: string;
-      };
       batch_rename_tags: {
         Args: { p_new_names: string[]; p_tag_ids: string[]; p_user_id: string };
         Returns: number;
@@ -628,6 +720,14 @@ export type Database = {
           p_user_id: string;
         };
         Returns: number;
+      };
+      claim_stripe_webhook_event: {
+        Args: {
+          p_event_id: string;
+          p_event_type: string;
+          p_stale_before: string;
+        };
+        Returns: string;
       };
       confirm_day_plans_to_records: {
         Args: {
