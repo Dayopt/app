@@ -96,7 +96,12 @@ function auditMetadata(project: 'product' | 'web') {
  * promote と rollback は同じ endpoint を使うので、対象 deployment id で区別する。
  */
 function createReleaseWorld(
-  options: { productionSha?: string; smokeBody?: string; autoAssign?: boolean | null } = {},
+  options: {
+    productionSha?: string;
+    smokeBody?: string;
+    autoAssign?: boolean | null;
+    webAlreadyAtTarget?: boolean;
+  } = {},
 ) {
   const previous = { web: 'dpl_web_old', product: 'dpl_product_old' };
   // Vercel の promote endpoint は autoAssignCustomDomains を true に戻す
@@ -107,7 +112,9 @@ function createReleaseWorld(
   };
   const patches: { project: string; value: unknown }[] = [];
   const production: Record<string, { id: string; sha: string; createdAt: number }> = {
-    web: { id: previous.web, sha: options.productionSha ?? OLD_SHA, createdAt: 1000 },
+    web: options.webAlreadyAtTarget
+      ? { id: 'dpl_web_new', sha: SHA, createdAt: 2000 }
+      : { id: previous.web, sha: options.productionSha ?? OLD_SHA, createdAt: 1000 },
     product: { id: previous.product, sha: options.productionSha ?? OLD_SHA, createdAt: 1000 },
   };
   const candidates = {
@@ -619,6 +626,63 @@ describe('runProductionRelease', () => {
     expect(error.message).toMatch(/autoAssignCustomDomains could not be restored/);
     expect(world.promoted()).toEqual(['web', 'product']);
     expect(world.rolledBack()).toEqual([]);
+  });
+
+  it('names a pre-existing split it cannot roll back', async () => {
+    // 前回 run が中断して web だけ公開された状態。web は戻し先を持たないので
+    // 自動 rollback の対象にできない。名指しだけはする。
+    const world = createReleaseWorld({ webAlreadyAtTarget: true });
+
+    const result = await release({ fetchImpl: world.fetchImpl });
+
+    expect(result.status).toBe('promoted');
+    expect(result.preexistingSplit).toEqual(['web']);
+    // web は既に対象 SHA を配信しているので promote しない。
+    expect(world.promoted()).toEqual(['product']);
+  });
+
+  it('refuses to promote over production that moved while waiting', async () => {
+    // 待機中にオペレータが Instant Rollback した場合、その判断を上書きしない。
+    const world = createReleaseWorld();
+    let projectReads = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/v9/projects/web') && (init?.method ?? 'GET') === 'GET') {
+        projectReads += 1;
+        // 1 回目（before snapshot）は通常、2 回目（待機後）は別 deployment。
+        if (projectReads > 1) {
+          return Response.json({
+            id: 'prj_web',
+            autoAssignCustomDomains: false,
+            targets: {
+              production: {
+                id: 'dpl_web_hotfix',
+                createdAt: 1500,
+                meta: { githubCommitSha: OLD_SHA },
+              },
+            },
+          });
+        }
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    await expect(release({ fetchImpl })).rejects.toThrow(/Production moved while waiting/);
+    expect(world.promoted()).toEqual([]);
+  });
+
+  it('still checks the setting when both projects already serve the SHA', async () => {
+    // 前回 run が復元に失敗して終わった後の再実行。ここで success を返すと
+    // auto-assign が true のまま tag gate を通ってしまう。
+    const world = createReleaseWorld({ productionSha: SHA, autoAssign: true });
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') return new Response(null, { status: 500 });
+      return world.fetchImpl(input, init);
+    });
+
+    await expect(release({ fetchImpl, expectedAutoAssign: false })).rejects.toThrow(
+      /could not be restored/,
+    );
   });
 
   it('skips smoke and audit under Force Promote', async () => {

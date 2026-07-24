@@ -115,9 +115,18 @@ Marketplace integration、v0 から新規 Production deployment を作らない�
 
 ### merge と Production 公開の分離
 
-Product / Web は Auto-assign Custom Production Domains を無効化してある。main への merge が作るのは
-domain 未割当の Production build だけで、Production domain の切り替えは `.github/workflows/release.yml`
-（`Production Release`）の promote だけが行う。workflow は次を満たした時だけ promote する。
+gate が機能する前提は **Product / Web の Auto-assign Custom Production Domains が無効**であること。
+これを無効化するまで main merge は従来どおり直接公開され、release workflow は素通りする。
+
+1. Vercel Dashboard → product / web → Settings → Git
+2. Auto-assign Custom Production Domains を OFF にする（web を先に、動作確認後 product）
+3. 両方 OFF にしたら `.github/workflows/release.yml` の `RELEASE_EXPECT_AUTO_ASSIGN` を `'false'` にする
+
+Production 設定の変更なので、実施はユーザーの明示承認下で行う。
+
+無効化後は、main への merge が作るのは domain 未割当の Production build だけになり、Production domain の
+切り替えは `.github/workflows/release.yml`（`Production Release`）の promote だけが行う。
+workflow は次を満たした時だけ promote する。
 
 - Product / Web の Production build が **同一 merge SHA** で両方 `READY`
 - 各 candidate の unique URL への read-only smoke が成功（Deployment Protection があるため
@@ -153,12 +162,18 @@ release job は `environment: production-release` を宣言済みなので、閉
 
 1. Settings → Environments → `production-release` を開く（初回 run で自動作成される）
 2. Deployment branch policy を Selected branches にし、`main` だけを許可する
-3. `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_AUTOMATION_BYPASS_PRODUCT` /
-   `VERCEL_AUTOMATION_BYPASS_WEB` を repository secret から environment secret へ移す
+3. `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB` だけを repository secret から
+   environment secret へ移す
 
-2 だけでも main 以外からの dispatch は job 開始前に拒否される。3 は secret の露出範囲を
-この job に限定するための追加措置。いずれも Production 経路に触る設定変更なので、
-実施はユーザーの明示承認下で行う。
+2 だけでも main 以外からの dispatch は job 開始前に拒否される。3 は secret の露出範囲をこの job に
+限定するための追加措置で、対象は release.yml しか読まない bypass secret 2 つに限る。
+
+**`VERCEL_TOKEN` と `VERCEL_ORG_ID` は repository secret のまま残す。** `production-config-audit.yml` の
+audit job は `pull_request_target` と `push: main` で走るため `environment:` を宣言できず、repository
+scope でこの 2 つを読む。environment secret へ移すと Production Config Audit が起動直後に落ちる。
+このため手順 3 の目的（露出範囲の限定）は bypass secret のみの部分達成になる。
+
+いずれも Production 経路に触る設定変更なので、実施はユーザーの明示承認下で行う。
 
 緊急時は正常な既存 deployment の `Instant Rollback` / `Promote to Production` を使う。手順は
 [runbook](../operations/runbook.md) の Playbook 2 を正とする。

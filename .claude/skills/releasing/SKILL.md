@@ -72,12 +72,12 @@ Phase 0: 準備（featureブランチにいる場合）
   └── 0.3 コード品質確認（lint, typecheck, test, build）
   → ユーザーにPRマージを促す
 
-Phase 1: タグ作成・リリース（mainブランチ）
+Phase 1: Production公開の確認とタグ作成（mainブランチ）
   ├── 1.1 mainブランチ最新取得
-  ├── 1.2 Gitタグ作成・プッシュ
-  └── 1.3 GitHub Actions 自動実行の確認
-       ├── 本番デプロイ
-       └── GitHub Release作成（auto-generated notes）
+  ├── 1.2 Production Release の promote 完了を待つ
+  ├── 1.3 Production を観察する（主要route / Sentry）
+  ├── 1.4 Gitタグ作成・プッシュ（promote成功の証跡）
+  └── 1.5 GitHub Release作成の確認（auto-generated notes）
 
 Phase 2: リリースノート反映
   ├── 2.1 前回リリース以降の全PRを取得

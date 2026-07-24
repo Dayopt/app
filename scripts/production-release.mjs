@@ -182,7 +182,11 @@ async function restoreAutoAssignCustomDomains({
   fetchImpl,
   logger,
 }) {
-  if (typeof expected !== 'boolean') return false;
+  if (typeof expected !== 'boolean') {
+    // gate の前提は「Auto-assign が無効であること」なので、観測できなかった事実は残す。
+    logger.log(`${projectName}: autoAssignCustomDomains was not observable; skipping restore`);
+    return false;
+  }
 
   const current = await getProjectState({ projectName, token, teamId, fetchImpl });
   if (current.autoAssignCustomDomains === expected) return false;
@@ -449,16 +453,52 @@ async function rollbackDeployment({
     nowImpl,
     action: 'rollback',
   });
-  await restoreAutoAssignCustomDomains({
-    projectName,
-    projectId,
-    expected: autoAssignCustomDomains,
-    token,
-    teamId,
-    fetchImpl,
-    logger,
-  });
-  return production;
+  // production pointer は戻っている。設定復元の失敗をここで throw すると
+  // 「rollback 自体が失敗した」と誤報し、既に戻っている先への手動 rollback を
+  // 指示することになる。両者を分けて返す。
+  let autoAssignDrifted = false;
+  try {
+    await restoreAutoAssignCustomDomains({
+      projectName,
+      projectId,
+      expected: autoAssignCustomDomains,
+      token,
+      teamId,
+      fetchImpl,
+      logger,
+    });
+  } catch {
+    autoAssignDrifted = true;
+  }
+  return { production, autoAssignDrifted };
+}
+
+/** 復元をまとめて試し、失敗した project 名だけを返す。個別失敗は throw しない。 */
+async function restoreAll({ entries, token, teamId, fetchImpl, logger }) {
+  const drifted = [];
+  for (const entry of entries) {
+    try {
+      await restoreAutoAssignCustomDomains({
+        projectName: entry.project.name,
+        projectId: entry.projectId,
+        expected: entry.autoAssignCustomDomains,
+        token,
+        teamId,
+        fetchImpl,
+        logger,
+      });
+    } catch {
+      drifted.push(entry.project.name);
+    }
+  }
+  return drifted;
+}
+
+function driftError(sha, drifted) {
+  return new ReleaseError(
+    `Production serves ${sha}, but autoAssignCustomDomains could not be restored for ` +
+      `${drifted.join(', ')}. Set it back before the next merge or the release gate is bypassed.`,
+  );
 }
 
 function assertSimulationPoint(simulateFailure, point) {
@@ -476,6 +516,10 @@ export async function runProductionRelease({
   token,
   teamId,
   force = false,
+  // gate が有効な運用（Auto-assign 無効化済み）では false を宣言する。
+  // null の間は「run 開始時点の値へ戻す」だけになり、前回 run から持ち越した
+  // ドリフトは検出できない。段階適用が終わったら宣言する。
+  expectedAutoAssign = null,
   bypassSecrets = {},
   projects = RELEASE_PROJECTS,
   simulateFailure = '',
@@ -500,9 +544,53 @@ export async function runProductionRelease({
     before.set(project.name, state.production);
   }
 
-  if (projects.every((project) => before.get(project.name)?.sha === sha)) {
+  // job が任意の時点で消えても手動 rollback 先が run に残るよう、先に書き出す。
+  const openingLines = ['## Production Release', '', `- Commit: \`${sha}\``];
+  for (const project of projects) {
+    const current = before.get(project.name);
+    const line =
+      `- ${project.name}: current production \`${current?.id ?? 'none'}\`` +
+      ` (sha \`${current?.sha ?? 'unknown'}\`, autoAssign ${autoAssign.get(project.name)})`;
+    openingLines.push(line);
+    logger.log(line.slice(2));
+  }
+  writeStepSummary(openingLines);
+
+  const expectedFor = (name) =>
+    typeof expectedAutoAssign === 'boolean' ? expectedAutoAssign : autoAssign.get(name);
+
+  const alreadyServing = projects.filter((project) => before.get(project.name)?.sha === sha);
+
+  // 前回 run が中断して片側だけ公開された状態。既に配信中の側は戻し先を持たないので
+  // 自動 rollback の対象にはできない。せめて名指しして人が判断できるようにする。
+  const preexistingSplit =
+    alreadyServing.length > 0 && alreadyServing.length < projects.length
+      ? alreadyServing.map((project) => project.name)
+      : [];
+  if (preexistingSplit.length > 0) {
+    const message =
+      `Pre-existing split: ${preexistingSplit.join(', ')} already serve ${sha} from an earlier run. ` +
+      `They are outside this run's rollback scope; check them by hand if this run fails.`;
+    logger.log(message);
+    writeStepSummary(['', `> ${message}`]);
+  }
+
+  if (alreadyServing.length === projects.length) {
     logger.log(`All projects already serve ${sha}; nothing to promote.`);
-    return { status: 'already-released', sha, promoted: [], rolledBack: [] };
+    // 前回 run が復元に失敗して終わっている可能性があるため、設定だけは見に行く。
+    const drifted = await restoreAll({
+      entries: projects.map((project) => ({
+        project,
+        projectId: projectIds.get(project.name),
+        autoAssignCustomDomains: expectedFor(project.name),
+      })),
+      token,
+      teamId,
+      fetchImpl,
+      logger,
+    });
+    if (drifted.length > 0) throw driftError(sha, drifted);
+    return { status: 'already-released', sha, promoted: [], rolledBack: [], preexistingSplit };
   }
 
   const candidates = await waitForReadyCandidates({
@@ -516,6 +604,35 @@ export async function runProductionRelease({
     logger,
   });
 
+  // 待機は最大 25 分ブロックする。その間に人が Instant Rollback や手動 promote を
+  // 行いうるため、判定は待機後の実状態で行う。
+  const current = new Map();
+  for (const project of projects) {
+    const state = await getProjectState({ projectName: project.name, token, teamId, fetchImpl });
+    current.set(project.name, state.production);
+  }
+
+  const movedElsewhere = candidates.filter(({ project, deployment }) => {
+    const now = current.get(project.name);
+    const wasId = before.get(project.name)?.id ?? null;
+    // 同じ candidate を人が先に promote した場合は競合ではない。
+    return now?.id !== wasId && now?.id !== deployment.id;
+  });
+  if (movedElsewhere.length > 0) {
+    const detail = movedElsewhere
+      .map(({ project, deployment }) => {
+        const now = current.get(project.name);
+        return (
+          `${project.name}: was ${before.get(project.name)?.id ?? 'none'}, ` +
+          `now ${now?.id ?? 'none'}, candidate ${deployment.id}`
+        );
+      })
+      .join('; ');
+    throw new ReleaseError(
+      `Production moved while waiting for candidates; refusing to promote over it (${detail})`,
+    );
+  }
+
   const superseded = candidates.filter(({ project, deployment }) => {
     const current = before.get(project.name);
     return (
@@ -528,7 +645,7 @@ export async function runProductionRelease({
   if (superseded.length > 0) {
     const names = superseded.map(({ project }) => project.name).join(', ');
     logger.log(`Skipping promote: a newer production deployment already serves ${names}.`);
-    return { status: 'superseded', sha, promoted: [], rolledBack: [] };
+    return { status: 'superseded', sha, promoted: [], rolledBack: [], preexistingSplit };
   }
 
   // 既に production へ出ている build は公開済みなので、gate の対象から外す。
@@ -557,28 +674,48 @@ export async function runProductionRelease({
   }
 
   const promoted = [];
+  const driftedProjects = [];
   try {
     for (const { project, deployment } of pending) {
       assertSimulationPoint(simulateFailure, `promote:${project.name}`);
-      await requestProductionPointer({
-        projectName: project.name,
+      const entry = {
+        project,
         projectId: projectIds.get(project.name),
-        deploymentId: deployment.id,
-        token,
-        teamId,
-        fetchImpl,
-        action: 'promote',
-      });
+        autoAssignCustomDomains: expectedFor(project.name),
+        deployment,
+        previous: before.get(project.name),
+      };
+      logger.log(
+        `${project.name}: promoting ${deployment.id} over ${entry.previous?.id ?? 'none'}`,
+      );
+
+      try {
+        await requestProductionPointer({
+          projectName: project.name,
+          projectId: entry.projectId,
+          deploymentId: deployment.id,
+          token,
+          teamId,
+          fetchImpl,
+          action: 'promote',
+        });
+      } catch (error) {
+        // POST が届いたかどうか分からない。実状態を 1 回だけ見て、実際に動いて
+        // いた時だけ rollback 対象へ入れる。無条件に入れると、何も起きていない
+        // project へ rollback promote を撃ってしまい auto-assign を壊す。
+        const state = await getProjectState({
+          projectName: project.name,
+          token,
+          teamId,
+          fetchImpl,
+        }).catch(() => null);
+        if (state?.production?.id === deployment.id) promoted.push(entry);
+        throw error;
+      }
 
       // POST が受理された時点で production は動きうる。反映確認が timeout しても
       // rollback 対象から漏らさないよう、確認を待つ前に記録する。
-      promoted.push({
-        project,
-        projectId: projectIds.get(project.name),
-        autoAssignCustomDomains: autoAssign.get(project.name),
-        deployment,
-        previous: before.get(project.name),
-      });
+      promoted.push(entry);
 
       await waitForProductionAssignment({
         projectName: project.name,
@@ -590,10 +727,16 @@ export async function runProductionRelease({
         nowImpl,
         action: 'promote',
       });
+
+      // promote は auto-assign を true に戻す。次の project の確認を待つ間ずっと
+      // 片側だけ auto-assign が有効な窓を作らないよう、ここで即座に戻す。
+      // 復元の失敗は rollback を誘発させず、drifted に積んで最後に報告する。
+      driftedProjects.push(
+        ...(await restoreAll({ entries: [entry], token, teamId, fetchImpl, logger })),
+      );
       logger.log(`${project.name}: promoted ${deployment.id}`);
     }
   } catch (error) {
-    // rollback も promote endpoint を使うため、設定の復元は rollback の後に行う。
     const rolledBack = await rollbackPromoted({
       promoted,
       token,
@@ -603,37 +746,17 @@ export async function runProductionRelease({
       nowImpl,
       logger,
       cause: error,
+      preexistingSplit,
+      preexistingDrift: driftedProjects,
     });
     throw Object.assign(error, { rolledBack });
   }
 
-  // 設定の復元は promote の try/catch から外す。ここで失敗しても production は
-  // 正しい SHA を配信しており、正常なリリースを rollback する理由にならない。
-  // ただし放置すると次の merge が gate を迂回するため、run は失敗させる。
-  const drifted = [];
-  for (const entry of promoted) {
-    try {
-      await restoreAutoAssignCustomDomains({
-        projectName: entry.project.name,
-        projectId: entry.projectId,
-        expected: entry.autoAssignCustomDomains,
-        token,
-        teamId,
-        fetchImpl,
-        logger,
-      });
-    } catch {
-      drifted.push(entry.project.name);
-    }
-  }
-  if (drifted.length > 0) {
-    throw new ReleaseError(
-      `Production serves ${sha}, but autoAssignCustomDomains could not be restored for ` +
-        `${drifted.join(', ')}. Set it back before the next merge or the release gate is bypassed.`,
-    );
-  }
+  // production は正しい SHA を配信している。設定復元の失敗で巻き戻す理由はないが、
+  // 放置すると次の merge が gate を迂回するため run は失敗させる。
+  if (driftedProjects.length > 0) throw driftError(sha, driftedProjects);
 
-  return { status: 'promoted', sha, promoted, rolledBack: [] };
+  return { status: 'promoted', sha, promoted, rolledBack: [], preexistingSplit };
 }
 
 async function rollbackPromoted({
@@ -645,9 +768,12 @@ async function rollbackPromoted({
   nowImpl,
   logger,
   cause,
+  preexistingSplit = [],
+  preexistingDrift = [],
 }) {
   const rolledBack = [];
   const stranded = [];
+  const drifted = [...preexistingDrift];
 
   for (const entry of [...promoted].reverse()) {
     if (!entry.previous?.id) {
@@ -655,7 +781,7 @@ async function rollbackPromoted({
       continue;
     }
     try {
-      await rollbackDeployment({
+      const { autoAssignDrifted } = await rollbackDeployment({
         projectName: entry.project.name,
         projectId: entry.projectId,
         autoAssignCustomDomains: entry.autoAssignCustomDomains,
@@ -667,6 +793,7 @@ async function rollbackPromoted({
         sleepImpl,
         nowImpl,
       });
+      if (autoAssignDrifted) drifted.push(entry.project.name);
       logger.log(`${entry.project.name}: rolled back to ${entry.previous.id}`);
       rolledBack.push(entry);
     } catch {
@@ -674,12 +801,25 @@ async function rollbackPromoted({
     }
   }
 
-  if (stranded.length > 0) {
-    throw new ReleaseError(
-      `MANUAL ROLLBACK REQUIRED after "${cause.message}". ` +
-        `Point production back to: ${stranded.join('; ')}`,
-      { manualRollback: stranded },
-    );
+  if (stranded.length > 0 || drifted.length > 0 || preexistingSplit.length > 0) {
+    const lines = [`Rollback after "${cause.message}" did not fully clean up.`];
+    if (stranded.length > 0) {
+      lines.push(`MANUAL ROLLBACK REQUIRED. Point production back to: ${stranded.join('; ')}`);
+    }
+    if (preexistingSplit.length > 0) {
+      lines.push(
+        `Outside this run's rollback scope: ${preexistingSplit.join(', ')} already served the ` +
+          `target SHA before it started. Check them by hand.`,
+      );
+    }
+    if (drifted.length > 0) {
+      lines.push(
+        `Production is restored, but autoAssignCustomDomains could not be restored for ` +
+          `${drifted.join(', ')}. Set it back before the next merge or the gate is bypassed.`,
+      );
+    }
+    // manualRollback は「production pointer が動かせていない」ものだけを指す。
+    throw new ReleaseError(lines.join(' '), { manualRollback: stranded });
   }
 
   return rolledBack;
@@ -717,6 +857,12 @@ function summarize(result) {
   if (result.promoted.length > 0) {
     lines.push('', 'Manual rollback targets are the `previous` deployment ids above.');
   }
+  if (result.preexistingSplit?.length > 0) {
+    lines.push(
+      '',
+      `Pre-existing split from an earlier run: ${result.preexistingSplit.join(', ')}.`,
+    );
+  }
   if (result.status === 'superseded') {
     lines.push(
       '',
@@ -737,6 +883,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     token: process.env.VERCEL_TOKEN,
     teamId: process.env.VERCEL_TEAM_ID,
     force: process.env.RELEASE_FORCE === 'true',
+    expectedAutoAssign:
+      process.env.RELEASE_EXPECT_AUTO_ASSIGN === 'false'
+        ? false
+        : process.env.RELEASE_EXPECT_AUTO_ASSIGN === 'true'
+          ? true
+          : null,
     simulateFailure: process.env.RELEASE_SIMULATE_FAILURE ?? '',
     bypassSecrets,
   })

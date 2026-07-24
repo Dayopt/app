@@ -36,8 +36,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          state=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/status" \
-            --jq '.statuses[] | select(.context == "Production Release") | .state' | head -n 1)
+          # 既定 shell は `bash -e` で pipefail が無い。gh が失敗しても head は 0 を
+          # 返すため、パイプをやめて 2 段に分ける。
+          set -o pipefail
+          statuses=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/status" \
+            --jq '.statuses[] | select(.context == "Production Release") | .state')
+          state=$(printf '%s\n' "$statuses" | head -n 1)
           if [ "$state" != "success" ]; then
             echo "::error::Production Release has not succeeded for this commit (state: ${state:-missing})."
             echo "::error::Promote and observe Production first, then re-push the tag."

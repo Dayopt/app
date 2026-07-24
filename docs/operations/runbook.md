@@ -117,6 +117,10 @@ main へ merge しても Production domain は切り替わらない。Product / 
 
 このため「本番が新しくならない」ことは、それ自体では障害ではない。**現行 Production は既知の正常 deployment のまま応答し続けている**。復旧の緊急度は「本番が壊れたか」ではなく「本番が古いままか」で判断する。
 
+ただしこれは **Auto-assign Custom Production Domains を無効化した後**の話。無効化前は main merge が
+そのまま公開されるため、release run が赤くても本番が無傷とは限らない。ケース0 へ進む前に、現在の
+production deployment がどの SHA かを Vercel Dashboard で確認する（HTTP status だけでは判別できない）。
+
 ### 検知
 
 - [ ] GitHub Actions で `Production Release` が failure
@@ -537,7 +541,7 @@ ORDER BY created_at DESC;
 
 タグpushにより以下が自動実行される：
 
-- [ ] **本番デプロイ（Vercel）が成功**
+- [ ] **`Production Release` の promote が成功**（`gh run list --workflow=release.yml --limit 1`）
 
   ```bash
   gh run list --workflow=create-release.yml --limit 1
@@ -934,7 +938,7 @@ git log -5 --oneline
 node -p "require('./package.json').version"  # → ${VERSION} になっているはず
 ```
 
-> main マージ時点で Vercel が本番へ自動デプロイする（タグはデプロイトリガーではなくバージョン記録用）。
+> main マージは domain 未割当の Production build を作るだけで、公開は `Production Release` workflow の promote が行う。タグはデプロイトリガーではなく、promote と観察が終わった後の証跡。
 
 ### Phase 2: リリースノート作成
 
@@ -1010,7 +1014,7 @@ git tag --list | tail -5
 git push origin v${VERSION}
 ```
 
-タグ push により GitHub Actions（`.github/workflows/create-release.yml`）が **GitHub Release を自動作成**する（auto-generated notes 付き）。本番デプロイは main マージ時点で Vercel が既に実行済み。
+タグ push により GitHub Actions（`.github/workflows/create-release.yml`）が **GitHub Release を自動作成**する（auto-generated notes 付き）。この workflow はデプロイしない。公開は main マージ後の `Production Release` workflow が promote 済みで、create-release はタグ SHA の `Production Release` status が success であることを確認してから Release を作る。
 
 #### 4.2 プッシュ確認
 
@@ -1377,7 +1381,7 @@ git commit -am "chore(release): v${VERSION} へ version bump"
    ↓
 3. CI・品質チェック (Quality Gate)
    ↓
-4. PR マージ (merge commit / ブランチ削除) → Vercel 自動デプロイ
+4. PR マージ (merge commit / ブランチ削除) → Vercel が Production build → `Production Release` が promote
    ↓
 5. main でタグ作成 & push
    ↓
