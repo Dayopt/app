@@ -746,6 +746,17 @@ export async function runProductionRelease({
       logger,
     });
 
+  // 掃きで復元に失敗した project は、元の失敗と別に名指しする。放置すると次の
+  // merge が gate を迂回するのに、run の失敗理由には現れないため。
+  const reportSweepDrift = (drifted) => {
+    if (drifted.length === 0) return;
+    const message =
+      `autoAssignCustomDomains could not be restored for ${drifted.join(', ')}. ` +
+      `Set it back before the next merge or the release gate is bypassed.`;
+    logger.log(message);
+    writeStepSummary(['', `> ${message}`]);
+  };
+
   if (force) {
     logger.log('Force Promote: skipping smoke and Production Config Audit.');
   } else {
@@ -773,7 +784,7 @@ export async function runProductionRelease({
     } catch (error) {
       // 外部の promote が待機中に auto-assign を飛ばしていた場合、ここで抜けると
       // 誰も設定を戻さない。掃いてから失敗させる。
-      await sweepSettings();
+      reportSweepDrift(await sweepSettings());
       throw error;
     }
   }
@@ -886,7 +897,7 @@ export async function runProductionRelease({
       });
     } finally {
       // rollback の成否に関わらず、promote しなかった project の設定も掃く。
-      await sweepSettings();
+      reportSweepDrift(await sweepSettings());
     }
     throw Object.assign(error, { rolledBack });
   }

@@ -778,6 +778,25 @@ describe('runProductionRelease', () => {
     expect(world.patches).toContainEqual({ project: 'web', value: false });
   });
 
+  it('names projects whose setting could not be restored when smoke aborts', async () => {
+    // 掃き自体が失敗した場合、run は smoke の失敗だけを報告して終わる。
+    // auto-assign が有効なまま残る事実を名指ししないと、次の merge が
+    // gate を迂回することにオペレータが気づけない。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new'],
+      smokeBody: '{"status":"degraded"}',
+    });
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') return new Response(null, { status: 500 });
+      return world.fetchImpl(input, init);
+    });
+    const logs: string[] = [];
+    const logger = { log: (message: string) => logs.push(message) };
+
+    await expect(release({ fetchImpl, logger })).rejects.toThrow(/without the expected content/);
+    expect(logs.join('\n')).toMatch(/could not be restored for web/);
+  });
+
   it('reports whether the gate checks actually ran', async () => {
     const normal = createReleaseWorld();
     await expect(release({ fetchImpl: normal.fetchImpl })).resolves.toMatchObject({
