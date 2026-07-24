@@ -17,36 +17,48 @@ const ignoredPathParts = new Set(['node_modules', '.next', 'storybook-static', '
  *
  * `postgres:postgres@127.0.0.1` は Supabase CLI が全環境へ同じ値で配る固定 default で、
  * 秘密ではない。手順書がこの文字列を書けないと `psql` の実行例を載せられなくなる。
- * loopback host かつ password が既定値、の両方を満たす時だけ通す。
+ *
+ * 判定は「マッチ全体がこの形と完全一致するか」で行う。host と password だけを見て
+ * 通すと、同じマッチに含まれる query / fragment / path に本物の値を載せられる
+ * （`...@127.0.0.1:54322/postgres?password=REAL` が host も password も既定値のまま通る）。
+ * URL parse ではなく厳格な正規表現にしているのは、percent-encoding や userinfo 内の
+ * 追加 `@` といった解釈の揺れを判断材料にしないため。
  */
-function isLocalPostgresUrl(match: string): boolean {
-  const loopbackHosts = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
+const localPostgresUrl =
+  /^postgres(?:ql)?:\/\/postgres:postgres@(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?(?:\/[A-Za-z0-9_-]*)?$/;
 
-  try {
-    // 正規表現は `[^)\s]+` なので、引用符で囲まれた実行例では末尾の quote まで拾う。
-    const url = new URL(match.replace(/['"`]+$/, ''));
-    return loopbackHosts.has(url.hostname) && url.password === 'postgres';
-  } catch {
-    // parse できない形は判断材料がないので除外しない。
-    return false;
-  }
+function isLocalPostgresUrl(match: string): boolean {
+  // 正規表現側は `[^)\s]+` なので、引用符で囲まれた実行例では末尾の記号まで拾う。
+  return localPostgresUrl.test(match.replace(/['"`,;]+$/, ''));
 }
 
+/** `matchAll` は g フラグ必須。元の定義を壊さないよう複製して付ける。 */
+function globalRegex(regex: RegExp): RegExp {
+  return regex.flags.includes('g') ? regex : new RegExp(regex.source, `${regex.flags}g`);
+}
+
+/**
+ * `alwaysFlag` は廃止した。
+ *
+ * 「placeholder らしい行では literal 検査を丸ごと省く」という前置フィルタのための旗だったが、
+ * 省略対象は jwt_like_token 1 件だけで、しかも判定に *行全体* を渡していた。そのため
+ * `test-token: eyJ…` のように行頭が placeholder らしいだけで、本物の JWT が丸ごと
+ * 見逃されていた。placeholder 値がそもそも JWT の正規表現に一致しない以上この前置フィルタに
+ * 実益はなく、正規の fixture は isAllowedJwtFixture が個別に扱う。
+ */
 const literalPatterns: Array<{
   name: string;
   regex: RegExp;
-  alwaysFlag?: boolean;
   isAllowedMatch?: (match: string) => boolean;
 }> = [
-  { name: 'stripe_secret_key', regex: /\bsk_(?:live|test)_[A-Za-z0-9_=-]{3,}\b/, alwaysFlag: true },
-  { name: 'stripe_webhook_secret', regex: /\bwhsec_[A-Za-z0-9_=-]{3,}\b/, alwaysFlag: true },
+  { name: 'stripe_secret_key', regex: /\bsk_(?:live|test)_[A-Za-z0-9_=-]{3,}\b/ },
+  { name: 'stripe_webhook_secret', regex: /\bwhsec_[A-Za-z0-9_=-]{3,}\b/ },
   {
     name: 'github_token',
     regex: /\b(?:ghp|gho)_[A-Za-z0-9_]{12,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b/,
-    alwaysFlag: true,
   },
-  { name: 'slack_token', regex: /\bxox[bp]-[A-Za-z0-9-]{10,}\b/, alwaysFlag: true },
-  { name: 'resend_api_key', regex: /\bre_[A-Za-z0-9]{20,}\b/, alwaysFlag: true },
+  { name: 'slack_token', regex: /\bxox[bp]-[A-Za-z0-9-]{10,}\b/ },
+  { name: 'resend_api_key', regex: /\bre_[A-Za-z0-9]{20,}\b/ },
   {
     name: 'jwt_like_token',
     regex: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/,
@@ -54,10 +66,9 @@ const literalPatterns: Array<{
   {
     name: 'postgres_url_with_password',
     regex: /\bpostgres(?:ql)?:\/\/[^:\s/@]+:[^@\s]+@[^)\s]+/,
-    alwaysFlag: true,
     isAllowedMatch: isLocalPostgresUrl,
   },
-  { name: 'private_key_block', regex: /-----BEGIN [A-Z ]*PRIVATE KEY-----/, alwaysFlag: true },
+  { name: 'private_key_block', regex: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
 ];
 
 const sensitiveKey =
@@ -79,6 +90,13 @@ function isTextFile(file: string): boolean {
     return false;
   }
 }
+
+/**
+ * fixture として通す値の形。**小文字化前の生の値**に対して判定すること。
+ * `lower` に当てると `test-AbC123XyZ` が `test-abc123xyz` になって通ってしまい、
+ * 「小文字だけ」という制限そのものが無意味になる。
+ */
+const fixtureValue = /^test-[a-z0-9-]*$/;
 
 function isAllowedValue(rawValue: string): boolean {
   const value = rawValue
@@ -105,13 +123,14 @@ function isAllowedValue(rawValue: string): boolean {
     'optional',
   ]);
 
-  // `test-` 接頭辞は、元々 `test-token` / `test-secret` を 1 件ずつ列挙していたものの一般化。
-  // fixture を足すたびにこの Set へ追記が要る形だと必ず腐るので接頭辞で受ける。
-  // 実 secret が `test-` で始まることはない（Supabase の service role key は JWT、
-  // Stripe は sk_/whsec_ のように発行元が接頭辞を固定している）。
+  // `test-` は元々 `test-token` / `test-secret` を 1 件ずつ列挙していたものの一般化。
+  // fixture を足すたびに Set へ追記が要る形は腐るので接頭辞で受けるが、接頭辞「だけ」を
+  // 見ると `test-` から始まる本物の値まで通る。値全体が fixture の形（小文字・数字・
+  // ハイフンのみ）であることまで要求する。実 credential は大文字・記号・base64 断片や
+  // JWT の `.` を含むため、この形には収まらない。
   return (
     exactPlaceholders.has(lower) ||
-    lower.startsWith('test-') ||
+    fixtureValue.test(value) ||
     lower.startsWith('your_') ||
     lower.startsWith('your-')
   );
@@ -205,19 +224,22 @@ function scanLine(file: string, line: string, lineNumber: number): Finding[] {
   }
 
   for (const pattern of literalPatterns) {
-    // ここは value ではなく行全体を渡す（既存挙動）。そのため `test-` 接頭辞の緩和が効くのは
-    // 行そのものが `test-` で始まる時だけで、`KEY="test-..."` の形には影響しない。
-    if (!pattern.alwaysFlag && isAllowedValue(line)) continue;
-    const match = line.match(pattern.regex);
-    if (match) {
-      if (pattern.name === 'jwt_like_token' && isAllowedJwtFixture(file, line, match[0])) continue;
-      if (pattern.isAllowedMatch?.(match[0])) continue;
+    // 1 行に複数マッチがありうる。先頭マッチだけを見て除外すると、除外対象の直後に
+    // 並べた本物の値が丸ごと素通りする（local URL と production URL を同じ行に書く形）。
+    // マッチごとに判定し、除外されないものが 1 つでもあれば報告する。
+    for (const match of line.matchAll(globalRegex(pattern.regex))) {
+      const matched = match[0];
+      if (pattern.name === 'jwt_like_token' && isAllowedJwtFixture(file, line, matched)) continue;
+      if (pattern.isAllowedMatch?.(matched)) continue;
+
       findings.push({
         file,
         line: lineNumber,
         key: assignment?.groups?.key ?? '(literal)',
         pattern: pattern.name,
       });
+      // 報告は 1 行 1 pattern につき 1 件に留める（同じ行の重複報告を増やさない）。
+      break;
     }
   }
 
