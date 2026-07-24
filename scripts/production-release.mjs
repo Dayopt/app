@@ -17,6 +17,7 @@ export const RELEASE_PROJECTS = [
   {
     name: 'web',
     bypassEnv: 'VERCEL_BYPASS_WEB',
+    productionDomain: 'dayopt.app',
     smokeChecks: [
       { path: '/', matchedPath: '/en' },
       { path: '/ja', matchedPath: '/ja' },
@@ -25,6 +26,7 @@ export const RELEASE_PROJECTS = [
   {
     name: 'product',
     bypassEnv: 'VERCEL_BYPASS_PRODUCT',
+    productionDomain: 'app.dayopt.app',
     smokeChecks: [
       // health は degraded でも 200 を返すので、本文で healthy を確認する。
       { path: '/api/health', matchedPath: '/api/health', contains: '"status":"healthy"' },
@@ -147,7 +149,7 @@ export async function findDeploymentForSha({ projectName, sha, token, teamId, fe
  * `prj_` ID を要求する。ここで得た ID を以降の書き込みに使い、名前解決の
  * 曖昧さを release 経路から外す。
  */
-export async function getProjectState({ projectName, token, teamId, fetchImpl }) {
+export async function getProjectMeta({ projectName, token, teamId, fetchImpl }) {
   const url = apiUrl(`/v9/projects/${encodeURIComponent(projectName)}`, teamId);
   const body = await callVercel(url, {
     token,
@@ -159,10 +161,57 @@ export async function getProjectState({ projectName, token, teamId, fetchImpl })
   }
   return {
     projectId: body.id,
-    production: normalizeDeployment(body?.targets?.production),
     // promote endpoint がこの設定を書き換えるため、事前値を控えて後で戻す。
     autoAssignCustomDomains: body.autoAssignCustomDomains ?? null,
   };
+}
+
+/**
+ * production domain を「今」配信している deployment を返す。未割当なら null。
+ *
+ * `/v9/projects/{id}` の `targets.production` は使えない。あれは production target の
+ * **最新** deployment を指し、まだ build 中でもその値になる。実際に merge 直後
+ * 8 秒（build 完了の 60 秒前）で新 deployment を指すことを実測した。alias が唯一
+ * 「今どれが配信しているか」を表す。
+ */
+export async function getLiveProduction({
+  projectName,
+  productionDomain,
+  projectId,
+  token,
+  teamId,
+  fetchImpl,
+}) {
+  const aliasUrl = apiUrl(`/v4/aliases/${encodeURIComponent(productionDomain)}`, teamId, {
+    projectId,
+  });
+  const alias = await callVercel(aliasUrl, {
+    token,
+    fetchImpl,
+    label: `alias(${projectName})`,
+  });
+
+  const deploymentId = alias?.deploymentId ?? alias?.deployment?.id;
+  if (typeof deploymentId !== 'string') return null;
+
+  const deployment = await callVercel(
+    apiUrl(`/v13/deployments/${encodeURIComponent(deploymentId)}`, teamId),
+    { token, fetchImpl, label: `deployment(${projectName})` },
+  );
+  return normalizeDeployment(deployment);
+}
+
+export async function getProjectState({ projectName, productionDomain, token, teamId, fetchImpl }) {
+  const meta = await getProjectMeta({ projectName, token, teamId, fetchImpl });
+  const production = await getLiveProduction({
+    projectName,
+    productionDomain,
+    projectId: meta.projectId,
+    token,
+    teamId,
+    fetchImpl,
+  });
+  return { ...meta, production };
 }
 
 /**
@@ -188,7 +237,7 @@ async function restoreAutoAssignCustomDomains({
     return false;
   }
 
-  const current = await getProjectState({ projectName, token, teamId, fetchImpl });
+  const current = await getProjectMeta({ projectName, token, teamId, fetchImpl });
   if (current.autoAssignCustomDomains === expected) return false;
 
   await callVercel(apiUrl(`/v9/projects/${encodeURIComponent(projectId)}`, teamId), {
@@ -362,6 +411,8 @@ export async function smokeDeployment({
 
 async function waitForProductionAssignment({
   projectName,
+  productionDomain,
+  projectId,
   deploymentId,
   token,
   teamId,
@@ -375,7 +426,14 @@ async function waitForProductionAssignment({
   const deadline = nowImpl() + timeoutMs;
 
   for (;;) {
-    const { production } = await getProjectState({ projectName, token, teamId, fetchImpl });
+    const production = await getLiveProduction({
+      projectName,
+      productionDomain,
+      projectId,
+      token,
+      teamId,
+      fetchImpl,
+    });
     if (production?.id === deploymentId) return production;
 
     if (nowImpl() >= deadline) {
@@ -424,6 +482,7 @@ async function requestProductionPointer({
 /** production domain を既知の正常 deployment へ戻し、反映まで確認する。 */
 async function rollbackDeployment({
   projectName,
+  productionDomain,
   projectId,
   deploymentId,
   autoAssignCustomDomains,
@@ -445,6 +504,8 @@ async function rollbackDeployment({
   });
   const production = await waitForProductionAssignment({
     projectName,
+    productionDomain,
+    projectId,
     deploymentId,
     token,
     teamId,
@@ -538,7 +599,13 @@ export async function runProductionRelease({
   const autoAssign = new Map();
   const before = new Map();
   for (const project of projects) {
-    const state = await getProjectState({ projectName: project.name, token, teamId, fetchImpl });
+    const state = await getProjectState({
+      projectName: project.name,
+      productionDomain: project.productionDomain,
+      token,
+      teamId,
+      fetchImpl,
+    });
     projectIds.set(project.name, state.projectId);
     autoAssign.set(project.name, state.autoAssignCustomDomains);
     before.set(project.name, state.production);
@@ -608,8 +675,15 @@ export async function runProductionRelease({
   // 行いうるため、判定は待機後の実状態で行う。
   const current = new Map();
   for (const project of projects) {
-    const state = await getProjectState({ projectName: project.name, token, teamId, fetchImpl });
-    current.set(project.name, state.production);
+    const state = await getLiveProduction({
+      projectName: project.name,
+      productionDomain: project.productionDomain,
+      projectId: projectIds.get(project.name),
+      token,
+      teamId,
+      fetchImpl,
+    });
+    current.set(project.name, state);
   }
 
   const movedElsewhere = candidates.filter(({ project, deployment }) => {
@@ -684,8 +758,14 @@ export async function runProductionRelease({
 
       // smoke と audit で数分経っている。その間に人が Instant Rollback や手動
       // promote を行いうるので、rollback 先は promote の直前に取り直す。
-      const live = (await getProjectState({ projectName: project.name, token, teamId, fetchImpl }))
-        .production;
+      const live = await getLiveProduction({
+        projectName: project.name,
+        productionDomain: project.productionDomain,
+        projectId: projectIds.get(project.name),
+        token,
+        teamId,
+        fetchImpl,
+      });
 
       if (live?.id === deployment.id) {
         logger.log(`${project.name}: another actor already promoted ${deployment.id}; skipping`);
@@ -724,13 +804,15 @@ export async function runProductionRelease({
         // POST が届いたかどうか分からない。実状態を 1 回だけ見て、実際に動いて
         // いた時だけ rollback 対象へ入れる。無条件に入れると、何も起きていない
         // project へ rollback promote を撃ってしまい auto-assign を壊す。
-        const state = await getProjectState({
+        const state = await getLiveProduction({
           projectName: project.name,
+          productionDomain: project.productionDomain,
+          projectId: projectIds.get(project.name),
           token,
           teamId,
           fetchImpl,
         }).catch(() => null);
-        if (state?.production?.id === deployment.id) promoted.push(entry);
+        if (state?.id === deployment.id) promoted.push(entry);
         throw error;
       }
 
@@ -740,6 +822,8 @@ export async function runProductionRelease({
 
       await waitForProductionAssignment({
         projectName: project.name,
+        productionDomain: project.productionDomain,
+        projectId: projectIds.get(project.name),
         deploymentId: deployment.id,
         token,
         teamId,
@@ -822,6 +906,7 @@ async function rollbackPromoted({
     try {
       const { autoAssignDrifted } = await rollbackDeployment({
         projectName: entry.project.name,
+        productionDomain: entry.project.productionDomain,
         projectId: entry.projectId,
         autoAssignCustomDomains: entry.autoAssignCustomDomains,
         logger,
