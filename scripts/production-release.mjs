@@ -691,6 +691,7 @@ export async function runProductionRelease({
         logger.log(`${project.name}: another actor already promoted ${deployment.id}; skipping`);
         continue;
       }
+
       if (live?.id !== current.get(project.name)?.id) {
         throw new ReleaseError(
           `${project.name}: production moved to ${live?.id ?? 'none'} while the gate was ` +
@@ -770,6 +771,24 @@ export async function runProductionRelease({
       preexistingDrift: driftedProjects,
     });
     throw Object.assign(error, { rolledBack });
+  }
+
+  // promote しなかった project も掃く。pending から除外された側や、外部の promote で
+  // skip した側も、その promote の副作用で設定が飛んでいることがある。
+  // ループ内の復元は「窓を作らない」ため、この掃きは「取りこぼさない」ためにある。
+  const swept = await restoreAll({
+    entries: projects.map((project) => ({
+      project,
+      projectId: projectIds.get(project.name),
+      autoAssignCustomDomains: expectedFor(project.name),
+    })),
+    token,
+    teamId,
+    fetchImpl,
+    logger,
+  });
+  for (const name of swept) {
+    if (!driftedProjects.includes(name)) driftedProjects.push(name);
   }
 
   // production は正しい SHA を配信している。設定復元の失敗で巻き戻す理由はないが、

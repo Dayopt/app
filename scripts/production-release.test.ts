@@ -745,6 +745,42 @@ describe('runProductionRelease', () => {
     expect(world.promoted()).toEqual([]);
   });
 
+  it('restores the setting for a project it skipped promoting', async () => {
+    // 外部が同じ candidate を promote した場合、その promote も auto-assign を
+    // true に戻す。promote を飛ばした project も設定は揃えて終える。
+    const world = createReleaseWorld();
+    let webReads = 0;
+    let webAutoAssign = false;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/v9/projects/prj_web') && (init?.method ?? 'GET') === 'PATCH') {
+        webAutoAssign = JSON.parse(String(init?.body ?? '{}')).autoAssignCustomDomains;
+        return new Response(null, { status: 200 });
+      }
+      if (url.includes('/v9/projects/web')) {
+        webReads += 1;
+        // promote 直前（3回目）で外部 promote 済み + 副作用で auto-assign が true。
+        if (webReads > 2) {
+          webAutoAssign = webReads === 3 ? true : webAutoAssign;
+          return Response.json({
+            id: 'prj_web',
+            autoAssignCustomDomains: webAutoAssign,
+            targets: {
+              production: { id: 'dpl_web_new', createdAt: 2000, meta: { githubCommitSha: SHA } },
+            },
+          });
+        }
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const result = await release({ fetchImpl });
+
+    expect(result.status).toBe('promoted');
+    // web は promote していないが、設定は false へ戻っている。
+    expect(webAutoAssign).toBe(false);
+  });
+
   it('skips smoke and audit under Force Promote', async () => {
     const world = createReleaseWorld();
     const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
