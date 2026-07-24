@@ -53,6 +53,11 @@ export interface Context {
   oauthClientId?: OAuthClientId | undefined;
   /** 検証済み OAuth scopes（oauth modeの場合のみ） */
   oauthScopes?: SupportedScope[] | undefined;
+  /**
+   * In-process MCP bridgeだけが設定する実行境界。
+   * HTTP requestのheaderやbodyからは決して設定しない。
+   */
+  oauthExecution?: 'mcp_internal' | undefined;
   /** Supabase Auth MFA assurance level（session modeの場合のみ） */
   mfaAssurance?:
     | {

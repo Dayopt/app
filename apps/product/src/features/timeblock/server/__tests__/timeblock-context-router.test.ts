@@ -37,6 +37,7 @@ describe('timeblock context router', () => {
     const context = Object.assign(createMockContext({ userId: 'user-1' }), {
       authMode: 'oauth' as const,
       oauthScopes: ['read:entries'] as const,
+      oauthExecution: 'mcp_internal' as const,
     });
 
     await expect(createCaller(context).getRevision()).rejects.toMatchObject({ code: 'FORBIDDEN' });

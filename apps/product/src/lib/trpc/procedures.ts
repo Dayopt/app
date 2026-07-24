@@ -21,7 +21,7 @@ const USER_RATE_LIMIT = 100;
 const USER_RATE_WINDOW_MS = 60 * 1000;
 const userRequestLog = new Map<string, number[]>();
 
-const OAUTH_TRPC_SCOPE_REQUIREMENTS: Partial<Record<string, SupportedScope>> = {
+const MCP_TRPC_SCOPE_REQUIREMENTS: Partial<Record<string, SupportedScope>> = {
   'plans.list': 'read:entries',
   'plans.getById': 'read:entries',
   'records.list': 'read:entries',
@@ -86,7 +86,14 @@ export const protectedProcedure = t.procedure
     const userId = ctx.userId;
 
     if (ctx.authMode === 'oauth') {
-      const requiredScope = OAUTH_TRPC_SCOPE_REQUIREMENTS[path];
+      if (ctx.oauthExecution !== 'mcp_internal') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'OAuth tokens are accepted only through the MCP endpoint',
+          cause: new ServiceError('FORBIDDEN', 'Public OAuth tRPC access denied'),
+        });
+      }
+      const requiredScope = MCP_TRPC_SCOPE_REQUIREMENTS[path];
       if (!requiredScope || !ctx.oauthScopes?.includes(requiredScope)) {
         throw new TRPCError({
           code: 'FORBIDDEN',

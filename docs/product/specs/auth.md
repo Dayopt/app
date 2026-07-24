@@ -1,7 +1,10 @@
 ---
 status: current
-last_verified: 2026-07-12
-code: apps/product/src/features/auth
+last_verified: 2026-07-24
+code:
+  - apps/product/src/features/auth
+  - apps/product/src/lib/mcp/trpc-bridge.ts
+  - apps/product/src/lib/trpc
 ---
 
 # Auth（認証）
@@ -22,9 +25,9 @@ Supabase Auth ベースの認証機能。
 - Session cookie mode: Supabase Auth の `getUser()` でユーザーを検証し、MFA登録済み `aal1 -> aal2` の状態なら `FORBIDDEN` を返す
 - MFA AAL 取得に失敗した session cookie mode は fail closed として `FORBIDDEN` を返す
 - `user.verifyRecoveryCode` は recovery-code 検証により MFA factor を解除するため、既知の `aal1 -> aal2` 状態でも通過を許可する
-- OAuth bearer mode: token を `oauth_tokens` で検証し、`client_id` と `scopes` を tRPC context に保持する
-- OAuth bearer mode の汎用 tRPC 呼び出しは、procedure path ごとの allowlist と scope が一致した場合だけ許可する
-- Phase 1 で OAuth bearer mode から許可する tRPC procedure は `plans.list` / `records.list` の read-only 2 本だけ。互換 MCP tool `entries.list` も同じ `read:entries` scope を使う
+- Dayopt OAuth token の外部データ接続面は `/api/mcp` に限定する。公開 `/api/trpc` から同じ token で汎用 procedure を実行できない
+- MCP tool は検証済みの `user_id`、`client_id`、scope を in-process tRPC bridge へ渡す。HTTP input から作れない内部 marker、procedure path ごとの allowlist、exact scope がすべて一致した場合だけ procedure を実行する
+- 現在 MCP bridge から許可する read procedure は `plans.list` / `plans.getById` / `records.list` / `records.getById` の4本。互換 MCP tool `entries.list` も同じ `read:entries` scope を使う
 
 ## OAuth / MCP redirect URI policy
 

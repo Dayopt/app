@@ -38,6 +38,7 @@ interface MockContextOptions {
   authMode?: Context['authMode'];
   oauthClientId?: OAuthClientId | undefined;
   oauthScopes?: SupportedScope[] | undefined;
+  oauthExecution?: Context['oauthExecution'];
   mfaAssurance?: Context['mfaAssurance'];
   supabaseOverrides?: Partial<MockSupabaseClient>;
 }
@@ -97,6 +98,7 @@ export function createMockContext(options: MockContextOptions = {}): Context {
     authMode = 'session',
     oauthClientId,
     oauthScopes,
+    oauthExecution,
     mfaAssurance,
     supabaseOverrides,
   } = options;
@@ -117,6 +119,7 @@ export function createMockContext(options: MockContextOptions = {}): Context {
     sessionId,
     oauthClientId,
     oauthScopes,
+    oauthExecution,
     mfaAssurance,
     supabase: mockSupabase as unknown as SupabaseClient<Database>,
     authMode,

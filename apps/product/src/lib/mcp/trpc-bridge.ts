@@ -29,6 +29,7 @@ export function createMcpTrpcCaller(input: McpTrpcContextInput) {
     userId: input.userId,
     oauthClientId: input.clientId,
     oauthScopes: input.scopes,
+    oauthExecution: 'mcp_internal',
     supabase,
     authMode: 'oauth',
   });

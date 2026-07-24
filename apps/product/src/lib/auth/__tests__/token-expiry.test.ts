@@ -115,6 +115,7 @@ describe('トークン期限切れ・セッション検証', () => {
         authMode: 'oauth',
         oauthClientId: 'claude-ai',
         oauthScopes: ['read:entries'],
+        oauthExecution: 'mcp_internal',
       });
       const caller = createCaller(ctx as never);
 
@@ -133,6 +134,7 @@ describe('トークン期限切れ・セッション検証', () => {
         authMode: 'oauth',
         oauthClientId: 'chatgpt',
         oauthScopes: ['read:entries'],
+        oauthExecution: 'mcp_internal',
       });
       const caller = createCaller(ctx as never);
 
@@ -147,6 +149,7 @@ describe('トークン期限切れ・セッション検証', () => {
         authMode: 'oauth',
         oauthClientId: 'claude-ai',
         oauthScopes: ['read:tags'],
+        oauthExecution: 'mcp_internal',
       });
       const caller = createCaller(ctx as never);
 
