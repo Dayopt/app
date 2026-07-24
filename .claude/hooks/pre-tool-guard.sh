@@ -10,8 +10,9 @@ COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
 # --- Write/Edit: 保護ファイルへの書き込みブロック ---
 if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
-  # .env ファイル
+  # .env ファイル（.env.example は op:// 参照スキーマの雛形で secret を含まないため許可）
   case "$FILE_PATH" in
+    *.env.example) ;;
     *.env|*.env.*|*.envrc)
       echo "BLOCKED: .env系ファイルへの書き込みは禁止です" >&2
       exit 2
