@@ -48,23 +48,43 @@ function deployment(uid: string, sha: string, readyState = 'READY', created = 20
   };
 }
 
-function projectTarget(id: string, sha: string, createdAt = 1000) {
+/** GET /v13/deployments/{id} が返す形。 */
+function deploymentRecord(id: string, sha: string, createdAt = 1000) {
   return {
-    id: 'prj_test',
-    targets: { production: { id, createdAt, meta: { githubCommitSha: sha } } },
+    id,
+    url: `${id}.vercel.app`,
+    readyState: 'READY',
+    createdAt,
+    target: 'production',
+    meta: { githubCommitSha: sha },
   };
+}
+
+const DOMAINS: Record<string, string> = { web: 'dayopt.app', product: 'app.dayopt.app' };
+
+/**
+ * URL からどちらの project 向けかを判定する。
+ * `target=production` の中に 'product' が含まれるので、先に取り除いてから判定する。
+ */
+function projectFromUrl(url: string): 'web' | 'product' {
+  const withoutTarget = url.replaceAll('production', '');
+  if (withoutTarget.includes('app.dayopt.app') || withoutTarget.includes('product')) {
+    return 'product';
+  }
+  return 'web';
 }
 
 const noop = { log: () => {} };
 const noSleep = () => Promise.resolve();
 
-/** URL ごとに応答を返す fetch mock。Vercel API 以外は smoke とみなす。 */
+/**
+ * live production は alias 起点で解決する。`targets.production` は build 中の
+ * deployment も指すため使えない（実測で確認済み）。
+ */
 function createVercelMock(handlers: Record<string, () => unknown>) {
   const fetchImpl = vi.fn(async (input: URL | string) => {
     const url = String(input);
-    if (new URL(url).origin !== 'https://api.vercel.com') {
-      return smokeResponse(url);
-    }
+    if (new URL(url).origin !== 'https://api.vercel.com') return smokeResponse(url);
     const key = Object.keys(handlers).find((pattern) => url.includes(pattern));
     if (!key) throw new Error(`Unhandled request: ${url}`);
     return Response.json(handlers[key]!());
@@ -93,7 +113,7 @@ function auditMetadata(project: 'product' | 'web') {
 
 /**
  * 両 project が candidate を持つ既定シナリオ。
- * promote と rollback は同じ endpoint を使うので、対象 deployment id で区別する。
+ * promote / rollback は同じ endpoint なので、対象 deployment id で区別する。
  */
 function createReleaseWorld(
   options: {
@@ -101,27 +121,34 @@ function createReleaseWorld(
     smokeBody?: string;
     autoAssign?: boolean | null;
     webAlreadyAtTarget?: boolean;
+    /** web の alias 読み取り n 回目に返す deployment id。末尾の値が以降も続く。 */
+    webAliasSequence?: string[];
   } = {},
 ) {
-  const previous = { web: 'dpl_web_old', product: 'dpl_product_old' };
-  // Vercel の promote endpoint は autoAssignCustomDomains を true に戻す
-  // （vercel/vercel#15095）。その副作用を再現する。
+  const bothAtTarget = options.productionSha === SHA;
+  const live: Record<string, string> = {
+    web: bothAtTarget || options.webAlreadyAtTarget ? 'dpl_web_new' : 'dpl_web_old',
+    product: bothAtTarget ? 'dpl_product_new' : 'dpl_product_old',
+  };
+  const store: Record<string, ReturnType<typeof deploymentRecord>> = {
+    dpl_web_old: deploymentRecord('dpl_web_old', OLD_SHA, 1000),
+    dpl_product_old: deploymentRecord('dpl_product_old', OLD_SHA, 1000),
+    dpl_web_new: deploymentRecord('dpl_web_new', SHA, 2000),
+    dpl_product_new: deploymentRecord('dpl_product_new', SHA, 2000),
+    dpl_web_hotfix: deploymentRecord('dpl_web_hotfix', OLD_SHA, 1500),
+  };
+  // promote endpoint は autoAssignCustomDomains を true に戻す（vercel/vercel#15095）。
   const autoAssign: Record<string, boolean | null> = {
     web: options.autoAssign === undefined ? false : options.autoAssign,
     product: options.autoAssign === undefined ? false : options.autoAssign,
   };
   const patches: { project: string; value: unknown }[] = [];
-  const production: Record<string, { id: string; sha: string; createdAt: number }> = {
-    web: options.webAlreadyAtTarget
-      ? { id: 'dpl_web_new', sha: SHA, createdAt: 2000 }
-      : { id: previous.web, sha: options.productionSha ?? OLD_SHA, createdAt: 1000 },
-    product: { id: previous.product, sha: options.productionSha ?? OLD_SHA, createdAt: 1000 },
-  };
   const candidates = {
     web: deployment('dpl_web_new', SHA),
     product: deployment('dpl_product_new', SHA),
   };
   const pointCalls: { project: string; deploymentId: string }[] = [];
+  let webAliasReads = 0;
 
   const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
     const url = String(input);
@@ -131,7 +158,7 @@ function createReleaseWorld(
       return smokeResponse(url, options.smokeBody);
     }
 
-    const project = url.includes('web') ? 'web' : 'product';
+    const project = projectFromUrl(url);
 
     if (method === 'PATCH' && url.includes('/v9/projects/')) {
       const value = JSON.parse(String(init?.body ?? '{}')).autoAssignCustomDomains;
@@ -141,36 +168,39 @@ function createReleaseWorld(
     }
     if (method === 'POST' && url.includes('/promote/')) {
       const deploymentId = url.split('/promote/')[1]!.split('?')[0]!;
-      // promote / rollback は project 名ではなく prj_ ID を使う。
+      // promote は project 名ではなく prj_ ID を使い、対象 project と一致すること。
       expect(url).toContain(`/projects/prj_${project}/promote/`);
       pointCalls.push({ project, deploymentId });
-      // 副作用: 設定が true へ戻る。
+      live[project] = deploymentId;
       if (autoAssign[project] !== null) autoAssign[project] = true;
-      const isRollback = deploymentId === previous[project as 'web' | 'product'];
-      production[project] = isRollback
-        ? { id: deploymentId, sha: OLD_SHA, createdAt: 1000 }
-        : { id: deploymentId, sha: SHA, createdAt: 2000 };
       return new Response(null, { status: 202 });
     }
     if (url.includes('/v7/deployments')) {
       return Response.json({ deployments: [candidates[project as 'web' | 'product']] });
     }
     if (url.includes('/env')) {
-      return Response.json(auditMetadata(project as 'product' | 'web'));
+      return Response.json(auditMetadata(project));
+    }
+    if (url.includes('/v4/aliases/')) {
+      if (project === 'web' && options.webAliasSequence) {
+        const seq = options.webAliasSequence;
+        const id = seq[Math.min(webAliasReads, seq.length - 1)]!;
+        webAliasReads += 1;
+        if (id !== live.web) {
+          // 外部の promote が起きたとみなす。promote endpoint の副作用も再現する。
+          live.web = id;
+          if (autoAssign.web !== null) autoAssign.web = true;
+        }
+        return Response.json({ deploymentId: id });
+      }
+      return Response.json({ deploymentId: live[project] });
+    }
+    if (url.includes('/v13/deployments/')) {
+      const id = url.split('/v13/deployments/')[1]!.split('?')[0]!;
+      return Response.json(store[id] ?? deploymentRecord(id, OLD_SHA, 1000));
     }
     if (url.includes('/v9/projects/')) {
-      const current = production[project]!;
-      return Response.json({
-        id: `prj_${project}`,
-        autoAssignCustomDomains: autoAssign[project],
-        targets: {
-          production: {
-            id: current.id,
-            createdAt: current.createdAt,
-            meta: { githubCommitSha: current.sha },
-          },
-        },
-      });
+      return Response.json({ id: `prj_${project}`, autoAssignCustomDomains: autoAssign[project] });
     }
     throw new Error(`Unhandled request: ${url}`);
   });
@@ -180,7 +210,7 @@ function createReleaseWorld(
   const rolledBack = () =>
     pointCalls.filter((call) => call.deploymentId.endsWith('_old')).map((call) => call.project);
 
-  return { fetchImpl, pointCalls, promoted, rolledBack, patches, autoAssign };
+  return { fetchImpl, pointCalls, promoted, rolledBack, patches, autoAssign, live, store, DOMAINS };
 }
 
 function release(overrides: Record<string, unknown> = {}) {
@@ -493,7 +523,9 @@ describe('runProductionRelease', () => {
   it('skips promote when a newer production deployment already exists', async () => {
     const { fetchImpl } = createVercelMock({
       '/v7/deployments': () => ({ deployments: [deployment('dpl_new', SHA, 'READY', 1000)] }),
-      '/v9/projects/': () => projectTarget('dpl_newer', OLD_SHA, 5000),
+      '/v4/aliases/': () => ({ deploymentId: 'dpl_newer' }),
+      '/v13/deployments/': () => deploymentRecord('dpl_newer', OLD_SHA, 5000),
+      '/v9/projects/': () => ({ id: 'prj_test', autoAssignCustomDomains: false }),
     });
 
     await expect(release({ fetchImpl })).resolves.toMatchObject({ status: 'superseded' });
@@ -643,31 +675,14 @@ describe('runProductionRelease', () => {
 
   it('refuses to promote over production that moved while waiting', async () => {
     // 待機中にオペレータが Instant Rollback した場合、その判断を上書きしない。
-    const world = createReleaseWorld();
-    let projectReads = 0;
-    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
-      const url = String(input);
-      if (url.includes('/v9/projects/web') && (init?.method ?? 'GET') === 'GET') {
-        projectReads += 1;
-        // 1 回目（before snapshot）は通常、2 回目（待機後）は別 deployment。
-        if (projectReads > 1) {
-          return Response.json({
-            id: 'prj_web',
-            autoAssignCustomDomains: false,
-            targets: {
-              production: {
-                id: 'dpl_web_hotfix',
-                createdAt: 1500,
-                meta: { githubCommitSha: OLD_SHA },
-              },
-            },
-          });
-        }
-      }
-      return world.fetchImpl(input, init);
+    // 1回目=before snapshot、2回目以降=待機後。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_hotfix'],
     });
 
-    await expect(release({ fetchImpl })).rejects.toThrow(/Production moved while waiting/);
+    await expect(release({ fetchImpl: world.fetchImpl })).rejects.toThrow(
+      /Production moved while waiting/,
+    );
     expect(world.promoted()).toEqual([]);
   });
 
@@ -686,99 +701,45 @@ describe('runProductionRelease', () => {
   });
 
   it('respects a manual promote of the same candidate during the wait', async () => {
-    // 待機中に人が同じ candidate を Dashboard から promote した場合は競合ではない。
+    // 待機中に人が同じ candidate を promote した場合は競合ではない。
     // 止めず、かつ二重 promote もしない。
-    const world = createReleaseWorld();
-    let webReads = 0;
-    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
-      const url = String(input);
-      if (url.includes('/v9/projects/web') && (init?.method ?? 'GET') === 'GET') {
-        webReads += 1;
-        if (webReads > 1) {
-          return Response.json({
-            id: 'prj_web',
-            autoAssignCustomDomains: false,
-            targets: {
-              production: { id: 'dpl_web_new', createdAt: 2000, meta: { githubCommitSha: SHA } },
-            },
-          });
-        }
-      }
-      return world.fetchImpl(input, init);
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new'],
     });
 
-    const result = await release({ fetchImpl });
+    const result = await release({ fetchImpl: world.fetchImpl });
 
     expect(result.status).toBe('promoted');
-    // web は既に candidate を配信しているので promote しない。
     expect(world.promoted()).toEqual(['product']);
   });
 
   it('refuses to promote when production moves during smoke and audit', async () => {
     // 待機後の再取得と promote の間には smoke と audit があり数分かかる。
-    // その窓で人が動かしていたら上書きしない。
-    const world = createReleaseWorld();
-    let webReads = 0;
-    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
-      const url = String(input);
-      if (url.includes('/v9/projects/web') && (init?.method ?? 'GET') === 'GET') {
-        webReads += 1;
-        // 1回目=before, 2回目=待機後。3回目（promote 直前）で第三の deployment に。
-        if (webReads > 2) {
-          return Response.json({
-            id: 'prj_web',
-            autoAssignCustomDomains: false,
-            targets: {
-              production: {
-                id: 'dpl_web_hotfix',
-                createdAt: 1500,
-                meta: { githubCommitSha: OLD_SHA },
-              },
-            },
-          });
-        }
-      }
-      return world.fetchImpl(input, init);
+    // 1回目=before, 2回目=待機後, 3回目=promote 直前。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_old', 'dpl_web_hotfix'],
     });
 
-    await expect(release({ fetchImpl })).rejects.toThrow(/production moved to dpl_web_hotfix/);
+    await expect(release({ fetchImpl: world.fetchImpl })).rejects.toThrow(
+      /production moved to dpl_web_hotfix/,
+    );
     expect(world.promoted()).toEqual([]);
   });
 
   it('restores the setting for a project it skipped promoting', async () => {
     // 外部が同じ candidate を promote した場合、その promote も auto-assign を
     // true に戻す。promote を飛ばした project も設定は揃えて終える。
-    const world = createReleaseWorld();
-    let webReads = 0;
-    let webAutoAssign = false;
-    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
-      const url = String(input);
-      if (url.includes('/v9/projects/prj_web') && (init?.method ?? 'GET') === 'PATCH') {
-        webAutoAssign = JSON.parse(String(init?.body ?? '{}')).autoAssignCustomDomains;
-        return new Response(null, { status: 200 });
-      }
-      if (url.includes('/v9/projects/web')) {
-        webReads += 1;
-        // promote 直前（3回目）で外部 promote 済み + 副作用で auto-assign が true。
-        if (webReads > 2) {
-          webAutoAssign = webReads === 3 ? true : webAutoAssign;
-          return Response.json({
-            id: 'prj_web',
-            autoAssignCustomDomains: webAutoAssign,
-            targets: {
-              production: { id: 'dpl_web_new', createdAt: 2000, meta: { githubCommitSha: SHA } },
-            },
-          });
-        }
-      }
-      return world.fetchImpl(input, init);
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new'],
+      autoAssign: false,
     });
 
-    const result = await release({ fetchImpl });
+    const result = await release({ fetchImpl: world.fetchImpl });
 
     expect(result.status).toBe('promoted');
-    // web は promote していないが、設定は false へ戻っている。
-    expect(webAutoAssign).toBe(false);
+    expect(world.promoted()).toEqual(['product']);
+    // promote していない web も、最後の掃きで false に戻る。
+    expect(world.patches).toContainEqual({ project: 'web', value: false });
   });
 
   it('skips smoke and audit under Force Promote', async () => {

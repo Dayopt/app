@@ -128,6 +128,10 @@ Production 設定の変更なので、実施はユーザーの明示承認下で
 切り替えは `.github/workflows/release.yml`（`Production Release`）の promote だけが行う。
 workflow は次を満たした時だけ promote する。
 
+「今どれが配信しているか」は **production domain の alias** から引く。`/v9/projects/{id}` の
+`targets.production` は production target の**最新** deployment を指し、build 中でもその値になるため
+使えない（merge の 8 秒後、build 完了の 60 秒前に新 deployment を指すことを実測した）。
+
 - Product / Web の Production build が **同一 merge SHA** で両方 `READY`
 - 各 candidate の unique URL への read-only smoke が成功（Deployment Protection があるため
   Protection Bypass for Automation の secret が必須）
