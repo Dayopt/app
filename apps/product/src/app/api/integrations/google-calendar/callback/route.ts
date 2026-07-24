@@ -198,14 +198,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (error instanceof GoogleOAuthError) {
       logger.warn('[calendar-callback] google oauth exchange failed');
 
-      // 不正な code を投げれば誰でも起こせるので Sentry には送らない。送ると
-      // それ自体が quota を焼く増幅経路になる。契約違反や疎通不良だけを拾う。
-      if (error.reason !== 'token_exchange_rejected') {
+      // 古い / 使用済み code は誰でも投げられるので Sentry には送らない（capture 自体が
+      // quota を焼く増幅経路になる）。それ以外は必ず送る — invalid_client や
+      // redirect_uri_mismatch、Google の 5xx を巻き込んで抑制すると、全接続が失敗
+      // しているのに無通知という状態になる。
+      if (error.reason !== 'authorization_expired') {
+        // TechnicalErrorContext のキーは allowlist なので、provider の error 種別は
+        // errorCode に畳む。HTTP status は message 側（`token exchange rejected: ...`）に残る。
         captureUnexpectedError(error, {
           feature: 'external_calendar',
           operation: 'exchange_authorization_code',
           route: '/api/integrations/google-calendar/callback',
-          errorCode: error.reason,
+          errorCode: error.providerError ?? error.reason,
+          source: 'google_token_endpoint',
         });
       }
 

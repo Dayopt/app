@@ -156,7 +156,7 @@ describe('google calendar callback route', () => {
     expect(saveConnection).toHaveBeenCalled();
   });
 
-  it('不正な code による token 交換失敗は Sentry へ送らない', async () => {
+  it('古い code による失敗（invalid_grant）は Sentry へ送らない', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() =>
@@ -166,9 +166,34 @@ describe('google calendar callback route', () => {
 
     const response = await GET(withCookie(request()));
 
-    expect(reasonOf(response)).toBe('token_exchange_rejected');
+    expect(reasonOf(response)).toBe('authorization_expired');
     // 誰でも起こせるので、capture すると quota を焼く増幅経路になる
     expect(captureUnexpectedError).not.toHaveBeenCalled();
+  });
+
+  // invalid_grant だけを抑制する。設定不備や Google 障害まで巻き込むと、全接続が
+  // 失敗しているのに無通知になる
+  it.each([
+    ['invalid_client（client_secret 不一致）', 'invalid_client', 401],
+    ['redirect_uri_mismatch（GCP 登録漏れ）', 'redirect_uri_mismatch', 400],
+    ['Google 側の障害', 'internal_failure', 500],
+  ])('%s は Sentry へ送る', async (_label, providerError, status) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify({ error: providerError }), { status })),
+      ),
+    );
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('token_exchange_rejected');
+    // provider の error 種別が errorCode に残らないと、invalid_client と Google 障害を
+    // Sentry 上で区別できない
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ errorCode: providerError, source: 'google_token_endpoint' }),
+    );
   });
 
   it('cookie が無ければ接続を保存しない', async () => {
@@ -332,7 +357,7 @@ describe('google calendar callback route', () => {
 
     const response = await GET(withCookie(request()));
 
-    expect(reasonOf(response)).toBe('token_exchange_rejected');
+    expect(reasonOf(response)).toBe('authorization_expired');
     expect(saveConnection).not.toHaveBeenCalled();
   });
 

@@ -34,12 +34,27 @@ const TOKEN_REQUEST_TIMEOUT_MS = 15_000;
 export class GoogleOAuthError extends Error {
   constructor(
     message: string,
+    /** redirect の `?reason=` に載る安定コード。 */
     readonly reason: string,
+    /** provider が返した `error` 値と HTTP status。monitoring 用に握り潰さない。 */
+    readonly providerError?: string,
+    readonly httpStatus?: number,
   ) {
     super(message);
     this.name = 'GoogleOAuthError';
   }
 }
+
+/**
+ * ユーザー入力（code）が原因で必ず起きうる provider エラー。
+ *
+ * これだけを「想定内の失敗」として扱う。`invalid_client` や `redirect_uri_mismatch`、
+ * Google の 5xx は我々の設定不備や障害であり、全接続が失敗しているのに無通知という
+ * 状態を作らないため、必ず alert 側へ回す。
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
+ */
+const USER_RECOVERABLE_PROVIDER_ERRORS = new Set(['invalid_grant']);
 
 /**
  * connect フローに必要な env が揃っているか。route の config guard が使う。
@@ -158,11 +173,25 @@ export async function exchangeAuthorizationCode(params: {
   const payload: unknown = await response.json().catch(() => null);
 
   if (!response.ok) {
+    // `error` は RFC 6749 の短い列挙値なので握っても安全。`error_description` は
+    // リクエスト内容を echo することがあるので読まない。
     const errorCode =
       payload && typeof payload === 'object' && 'error' in payload
         ? String((payload as { error: unknown }).error)
         : 'unknown_error';
-    throw new GoogleOAuthError(`token exchange rejected: ${errorCode}`, 'token_exchange_rejected');
+
+    // ユーザーが古い / 使用済み code を投げれば必ず起きる invalid_grant だけを想定内とし、
+    // 設定不備（invalid_client / redirect_uri_mismatch）や Google 障害とは別 reason にする。
+    const reason = USER_RECOVERABLE_PROVIDER_ERRORS.has(errorCode)
+      ? 'authorization_expired'
+      : 'token_exchange_rejected';
+
+    throw new GoogleOAuthError(
+      `token exchange rejected: ${errorCode}`,
+      reason,
+      errorCode,
+      response.status,
+    );
   }
 
   const parsed = googleTokenResponseSchema.safeParse(payload);
