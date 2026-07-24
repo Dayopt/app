@@ -733,7 +733,12 @@ export async function runProductionRelease({
   if (force) {
     logger.log('Force Promote: skipping smoke and Production Config Audit.');
   } else {
-    for (const { project, deployment } of pending) {
+    // smoke は promote 対象（pending）ではなく全 candidate に対して走らせる。
+    // Auto-assign が有効な段階適用中は candidate が待機中に自動割当されて
+    // pending が空になるため、pending だけを対象にすると smoke のコードパスが
+    // 一度も実行されないまま cutover を迎えてしまう。全 candidate に走らせる
+    // ことで、毎 merge が smoke と bypass secret の実働テストを兼ねる。
+    for (const { project, deployment } of candidates) {
       assertSimulationPoint(simulateFailure, `smoke:${project.name}`);
       await smokeDeployment({
         projectName: project.name,
@@ -985,6 +990,13 @@ function summarize(result) {
     lines.push(
       '',
       `Pre-existing split from an earlier run: ${result.preexistingSplit.join(', ')}.`,
+    );
+  }
+  if (result.status === 'promoted' && result.promoted.length === 0) {
+    lines.push(
+      '',
+      'Nothing was left to promote: Vercel auto-assigned the candidates (Auto-assign is on).',
+      'The gate still verified smoke and the config audit against them.',
     );
   }
   if (result.status === 'superseded') {

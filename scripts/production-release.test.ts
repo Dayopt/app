@@ -742,6 +742,25 @@ describe('runProductionRelease', () => {
     expect(world.patches).toContainEqual({ project: 'web', value: false });
   });
 
+  it('smokes candidates that Vercel already auto-assigned', async () => {
+    // Auto-assign が有効な段階適用中は candidate が待機中に自動割当され、
+    // promote 対象が空になる。それでも smoke は走らせ、毎 merge を
+    // smoke と bypass secret の実働テストにする。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new'],
+    });
+
+    const result = await release({ fetchImpl: world.fetchImpl });
+
+    expect(result.status).toBe('promoted');
+    expect(world.promoted()).toEqual(['product']);
+    // promote しなかった web の candidate にも smoke が飛んでいる。
+    const smokeUrls = world.fetchImpl.mock.calls
+      .map((call) => String(call[0]))
+      .filter((url) => url.includes('dpl_web_new.vercel.app'));
+    expect(smokeUrls.length).toBeGreaterThan(0);
+  });
+
   it('skips smoke and audit under Force Promote', async () => {
     const world = createReleaseWorld();
     const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
