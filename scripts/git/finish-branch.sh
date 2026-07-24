@@ -122,15 +122,34 @@ fi
 if [[ "$PR_STATE" == "OPEN" ]]; then
   step "PR #$PR_NUMBER をマージ"
 
-  # 失敗している required check がないか確認する
+  # 失敗している check がないか確認する（CheckRun は .conclusion、StatusContext は .state を持つ）
   FAILED_CHECKS="$(printf '%s' "$PR_JSON" | jq -r '
     (.statusCheckRollup // [])
-    | map(select((.conclusion // "") | ascii_downcase | . == "failure" or . == "cancelled" or . == "timed_out"))
+    | map(select(
+        ((.conclusion // "") | ascii_downcase | . == "failure" or . == "cancelled" or . == "timed_out")
+        or ((.state // "") | ascii_downcase | . == "failure" or . == "error")
+      ))
     | length')"
 
   if [[ "$FAILED_CHECKS" != "0" ]]; then
     error "失敗している check が $FAILED_CHECKS 件あります。マージを中止します。"
     error "gh pr checks $PR_NUMBER で詳細を確認してください。"
+    exit 1
+  fi
+
+  # 実行中・待機中の check も待つ。private repo + Free plan では GitHub 側の
+  # required check 強制が効かないため、ここで止めないと CI 完了前にマージできてしまう。
+  PENDING_CHECKS="$(printf '%s' "$PR_JSON" | jq -r '
+    (.statusCheckRollup // [])
+    | map(select(
+        ((.status // "") | ascii_downcase | . == "in_progress" or . == "queued" or . == "pending" or . == "waiting" or . == "requested")
+        or ((.state // "") | ascii_downcase | . == "pending")
+      ))
+    | length')"
+
+  if [[ "$PENDING_CHECKS" != "0" ]]; then
+    error "実行中の check が $PENDING_CHECKS 件あります。完了を待ってから再実行してください。"
+    error "gh pr checks $PR_NUMBER --watch で完了を待てます。"
     exit 1
   fi
 
