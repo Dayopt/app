@@ -238,45 +238,29 @@ describe('syncConnection — active イベントの upsert', () => {
   });
 });
 
-describe('syncConnection — prune anti-join', () => {
-  // regression（overview.md §13）: plans / records から参照される行を消さない。
-  // soft-delete 済み plan もまだ FK でミラー行を掴んでいるので除外する。
-  it('参照済み行（soft-deleted plan 参照を含む）を delete から除外する', async () => {
+describe('syncConnection — prune 委譲', () => {
+  // anti-join の詳細な regression は event-pruning.test.ts が正本。ここでは sync が
+  // window scope で prune を呼び出す配線だけを確認する（未参照行が消えること）。
+  it('window 境界の candidate select を発行し、未参照行を delete する', async () => {
     const { calls } = setupDb({
       connection: activeConnection(),
       calendars: oneCalendar(),
-      pruneCandidates: [{ id: 'ev-1' }, { id: 'ev-2' }, { id: 'ev-3' }],
-      // soft-deleted plan が ev-1 を参照している想定
+      pruneCandidates: [{ id: 'ev-1' }, { id: 'ev-2' }],
       referencedByPlans: [{ external_calendar_event_id: 'ev-1' }],
-      referencedByRecords: [{ external_calendar_event_id: 'ev-2' }],
     });
     syncCalendar.mockResolvedValue(syncResult());
 
     await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    // event-pruning の window scope は end_at/start_at の or フィルタで候補を引く
+    const candidateSelect = recordersFor(calls, 'external_calendar_events').find((recorder) =>
+      recorder.chain.some((entry) => entry.method === 'or'),
+    );
+    expect(candidateSelect).toBeDefined();
 
     const del = findCall(calls, 'external_calendar_events', 'delete');
     expect(del).toBeDefined();
-    const inArgs = argsOf(del!, 'in');
-    expect(inArgs[0]).toBe('id');
-    expect(inArgs[1]).toEqual(['ev-3']);
-
-    // plans / records の参照クエリは deleted_at で絞らない（soft-deleted も FK を掴む）
-    const plansSelect = findCall(calls, 'plans', 'select')!;
-    expect(plansSelect.chain.some((entry) => entry.method === 'is')).toBe(false);
-  });
-
-  it('全候補が参照されていれば delete を発行しない', async () => {
-    const { calls } = setupDb({
-      connection: activeConnection(),
-      calendars: oneCalendar(),
-      pruneCandidates: [{ id: 'ev-1' }],
-      referencedByPlans: [{ external_calendar_event_id: 'ev-1' }],
-    });
-    syncCalendar.mockResolvedValue(syncResult());
-
-    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
-
-    expect(findCall(calls, 'external_calendar_events', 'delete')).toBeUndefined();
+    expect(argsOf(del!, 'in')[1]).toEqual(['ev-2']);
   });
 });
 

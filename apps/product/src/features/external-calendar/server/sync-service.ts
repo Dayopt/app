@@ -7,6 +7,7 @@ import { databaseTables, type Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 
+import { deleteUnreferencedEvents } from './event-pruning';
 import { ExternalCalendarServiceError } from './external-calendar-service-error';
 import { googleCalendarAdapter } from './providers/google';
 import {
@@ -32,13 +33,7 @@ const DB_REQUEST_TIMEOUT_MS = 15_000;
 /** 取り込み window の半径。iCal export と同じ ±90 日（overview.md §1）。 */
 const WINDOW_RADIUS_MS = 90 * 24 * 60 * 60 * 1000;
 
-/** prune の 1 バッチあたり件数。max_rows=1000 と URL 長 8192B（UUID 約 210 件）に触れない。 */
-const PRUNE_BATCH_SIZE = 150;
-
-/** prune のバッチ上限。150 × 40 = 6,000 件で ±90 日 window の想定を大きく超える。 */
-const MAX_PRUNE_BATCHES = 40;
-
-/** tombstone UPDATE の 1 バッチあたり件数。同じく URL 長を意識した値。 */
+/** tombstone UPDATE の 1 バッチあたり件数。URL 長を意識した値。 */
 const TOMBSTONE_BATCH_SIZE = 150;
 
 const PROVIDER = 'google';
@@ -73,20 +68,16 @@ type SyncConnectionResult = {
 };
 
 /**
- * service_role client が触れる surface を同期に必要な 5 テーブルへ narrow する。
+ * service_role client が触れる surface を同期に必要な 3 テーブルへ narrow する。
  * `connection-service.ts` と同じ理由 — RLS を bypass する client が他テーブルへ到達できると
- * cross-tenant leak になるので compile error で止める。plans / records は anti-join のため
- * SELECT のみ使う。
+ * cross-tenant leak になるので compile error で止める。plans / records の anti-join は
+ * `event-pruning.ts` が別 client で担うので、ここには含めない。
  */
 type SyncDatabase = {
   public: {
     Tables: Pick<
       Database['public']['Tables'],
-      | 'external_calendar_events'
-      | 'calendar_connections'
-      | 'calendar_connection_calendars'
-      | 'plans'
-      | 'records'
+      'external_calendar_events' | 'calendar_connections' | 'calendar_connection_calendars'
     >;
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -226,8 +217,13 @@ export async function syncConnection(params: {
   }
 
   // 参照されていない window 外行を掃除する。connection 単位で 1 回だけ（calendar ごとに
-  // 回すと他カレンダーの行も対象になり、無駄に N 回走る）。
-  await pruneWindow(db, connection, runStartedAt);
+  // 回すと他カレンダーの行も対象になり、無駄に N 回走る）。window 境界は provider へ渡したのと
+  // 同じ値を使う。anti-join の本体は event-pruning.ts に集約している。
+  await deleteUnreferencedEvents({
+    userId,
+    connectionId,
+    scope: { kind: 'window', notBefore: window.timeMin, notAfter: window.timeMax },
+  });
 
   if (calendarsFailed > 0) {
     await writeConnectionError(db, connectionId, userId, 'partial_failure', runStartedAtIso);
@@ -466,101 +462,6 @@ async function clearSyncToken(
     .eq('provider_calendar_id', calendar.provider_calendar_id);
 
   if (error) throw error;
-}
-
-/**
- * window 外の未参照ミラー行を掃除する（overview.md §6-2-6）。
- *
- * plans / records から参照される行は anti-join で除外する。FK が NO ACTION なので参照行の
- * DELETE は 23503 になる。参照判定は `deleted_at` で絞らない — soft-delete 済みの plan も
- * まだ FK でミラー行を掴んでいる。keyset ページングで max_rows と URL 長の両方を避ける。
- */
-async function pruneWindow(
-  db: SyncClient,
-  connection: ConnectionRow,
-  runStartedAt: Date,
-): Promise<void> {
-  const lower = new Date(runStartedAt.getTime() - WINDOW_RADIUS_MS).toISOString();
-  const upper = new Date(runStartedAt.getTime() + WINDOW_RADIUS_MS).toISOString();
-
-  let cursor = '';
-
-  for (let batch = 0; batch < MAX_PRUNE_BATCHES; batch += 1) {
-    const { data: candidates, error: selectError } = await db
-      .from(databaseTables.externalCalendarEvents)
-      .select('id')
-      .eq('user_id', connection.user_id)
-      .eq('connection_id', connection.id)
-      .or(`end_at.lt.${lower},start_at.gt.${upper}`)
-      .gt('id', cursor)
-      .order('id', { ascending: true })
-      .limit(PRUNE_BATCH_SIZE);
-
-    if (selectError) {
-      captureDatabaseError(selectError, 'prune_select_candidates');
-      return;
-    }
-    if (!candidates || candidates.length === 0) return;
-
-    const ids = candidates.map((row) => row.id);
-
-    let referenced: Set<string>;
-    try {
-      referenced = await loadReferencedEventIds(db, connection.user_id, ids);
-    } catch (error) {
-      // prune はここまでの upsert / sweep の成功を壊さないよう、参照の読み取り失敗では
-      // 中断するだけにする（throw して syncConnection 全体を落とさない）。
-      captureDatabaseError(error, 'prune_load_referenced');
-      return;
-    }
-    const prunable = ids.filter((id) => !referenced.has(id));
-
-    if (prunable.length > 0) {
-      const { error: deleteError } = await db
-        .from(databaseTables.externalCalendarEvents)
-        .delete()
-        // id は user/connection スコープの select から得ているが、service_role は RLS を
-        // bypass するので user_id を明示的に添える（defense-in-depth）。
-        .eq('user_id', connection.user_id)
-        .in('id', prunable);
-
-      if (deleteError) {
-        // select と delete の間に plan が作られると 23503。次回 cron で回収されるので
-        // ここでは警告に留めて先へ進む。
-        logger.warn('[calendar-sync] prune skipped some rows due to a reference race');
-      }
-    }
-
-    cursor = ids[ids.length - 1] ?? cursor;
-    if (candidates.length < PRUNE_BATCH_SIZE) return;
-  }
-
-  logger.warn('[calendar-sync] prune stopped at the batch limit', { batches: MAX_PRUNE_BATCHES });
-}
-
-/** plans / records の両方から、与えた id を参照している external_calendar_event_id を集める。 */
-async function loadReferencedEventIds(
-  db: SyncClient,
-  userId: string,
-  ids: string[],
-): Promise<Set<string>> {
-  const referenced = new Set<string>();
-
-  for (const table of [databaseTables.plans, databaseTables.records] as const) {
-    const { data, error } = await db
-      .from(table)
-      .select('external_calendar_event_id')
-      .eq('user_id', userId)
-      .in('external_calendar_event_id', ids);
-
-    if (error) throw error;
-
-    for (const row of data ?? []) {
-      if (row.external_calendar_event_id !== null) referenced.add(row.external_calendar_event_id);
-    }
-  }
-
-  return referenced;
 }
 
 // =============================================================================
