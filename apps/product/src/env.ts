@@ -174,23 +174,27 @@ const serverSchema = z
     (data) => {
       if (!(data.NODE_ENV === 'production' && data.VERCEL_ENV === 'production')) return true;
 
-      // 「全部揃うか全部無いか」。一部だけ入っている状態は、connect フローや cron が
+      // 「全部揃うか全部無いか」。4 変数のうち一部だけ入っている状態は、connect フローが
       // 途中まで動いて失敗する最悪の中間状態になるので許さない。
-      // 全部無い場合は route 側の config guard が 503 を返す。CRON_SECRET も含めることで、
-      // calendar 連携を有効化した prod では cron 認証秘密の設定漏れを boot 時に検知する。
+      // 全部無い場合は route 側の config guard が 503 を返す。
+      //
+      // CRON_SECRET はここに含めない。あれは `Dayopt-Production/supabase` item の汎用 secret
+      // （`scripts/env/schema.ts` 参照）で、google-calendar item とはライフサイクルが別。
+      // 含めると「CRON_SECRET だけ既に設定済み + calendar 未設定」の現実的な状態で env 検証が
+      // 落ち、cron どころかアプリ全体が起動不能になる。cron 側は secret 未設定なら route が
+      // 503 を返して静かに無効化されるので、そちらの degradation で足りる。
       const values = [
         data.GOOGLE_CALENDAR_CLIENT_ID,
         data.GOOGLE_CALENDAR_CLIENT_SECRET,
         data.CALENDAR_TOKEN_ENCRYPTION_KEY,
         data.GOOGLE_CALENDAR_REDIRECT_URIS,
-        data.CRON_SECRET,
       ].map((value) => Boolean(value?.trim()));
 
       return values.every(Boolean) || !values.some(Boolean);
     },
     {
       message:
-        'GOOGLE_CALENDAR_CLIENT_ID / GOOGLE_CALENDAR_CLIENT_SECRET / CALENDAR_TOKEN_ENCRYPTION_KEY / GOOGLE_CALENDAR_REDIRECT_URIS / CRON_SECRET は本番環境ではまとめて設定してください',
+        'GOOGLE_CALENDAR_CLIENT_ID / GOOGLE_CALENDAR_CLIENT_SECRET / CALENDAR_TOKEN_ENCRYPTION_KEY / GOOGLE_CALENDAR_REDIRECT_URIS は本番環境ではまとめて設定してください',
       path: ['GOOGLE_CALENDAR_CLIENT_ID'],
     },
   );
