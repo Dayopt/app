@@ -27,7 +27,7 @@ Supabase Auth ベースの認証機能。
 - `user.verifyRecoveryCode` は recovery-code 検証により MFA factor を解除するため、既知の `aal1 -> aal2` 状態でも通過を許可する
 - Dayopt OAuth token の外部データ接続面は `/api/mcp` に限定する。公開 `/api/trpc` から同じ token で汎用 procedure を実行できない
 - MCP tool は検証済みの `user_id`、`client_id`、scope を in-process tRPC bridge へ渡す。HTTP input から作れない内部 marker、procedure path ごとの allowlist、exact scope がすべて一致した場合だけ procedure を実行する
-- 現在 MCP bridge から許可する read procedure は `plans.list` / `plans.getById` / `records.list` / `records.getById` / `tags.list` / `timeblockContext.getConstraints` の6本。各procedureはexact pathに対応するscopeだけを許可し、互換 MCP tool `entries.list` は`read:entries` scopeを使う
+- 現在 MCP bridge から許可する read procedure は `plans.list` / `plans.getById` / `records.list` / `records.getById` / `tags.list` / `timeblockContext.getConstraints` / `statistics.getMcpReview` の7本。各procedureはexact pathに対応するscopeだけを許可し、互換 MCP tool `entries.list` は`read:entries` scopeを使う
 
 ## OAuth / MCP redirect URI policy
 

@@ -26,6 +26,7 @@ const MCP_TRPC_SCOPE_REQUIREMENTS: Partial<Record<string, SupportedScope>> = {
   'plans.getById': 'read:entries',
   'records.list': 'read:entries',
   'records.getById': 'read:entries',
+  'statistics.getMcpReview': 'read:stats',
   'tags.list': 'read:tags',
   'timeblockContext.getConstraints': 'read:constraints',
 };

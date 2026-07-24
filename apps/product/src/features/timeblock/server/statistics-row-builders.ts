@@ -8,13 +8,11 @@ import 'server-only';
 
 import { formatInTimeZone } from 'date-fns-tz';
 
+import { aggregateTimePLTags } from '../domain';
+
 import type { StatPlanRow, StatRecordRow, TagLookupRow } from './statistics-fetchers';
 import { minutesBetween } from './statistics-service-grouping';
 import type { TimePLResponse } from './statistics-shared';
-
-function roundTo1(value: number): number {
-  return Math.round(value * 10) / 10;
-}
 
 export function filterRowsByVisibleDateKeys<T extends { start_at: string }>(
   rows: readonly T[],
@@ -77,39 +75,29 @@ export function buildTagPL(
   records: ReadonlyArray<StatRecordRow>,
   tagsById: ReadonlyMap<string, TagLookupRow>,
 ): TimePLResponse['tags'] {
-  interface Accumulator {
-    budget: number;
-    actual: number;
-    hasPlan: boolean;
-  }
-  const byTag = new Map<string, Accumulator>();
-
-  for (const plan of plans) {
-    if (plan.tag_id == null) continue;
-    const acc = byTag.get(plan.tag_id) ?? { budget: 0, actual: 0, hasPlan: false };
-    acc.budget += minutesBetween(plan.start_at, plan.end_at);
-    acc.hasPlan = true;
-    byTag.set(plan.tag_id, acc);
-  }
-  for (const record of records) {
-    if (record.tag_id == null) continue;
-    const acc = byTag.get(record.tag_id) ?? { budget: 0, actual: 0, hasPlan: false };
-    acc.actual += minutesBetween(record.start_at, record.end_at);
-    byTag.set(record.tag_id, acc);
-  }
-
-  return Array.from(byTag.entries())
-    .filter(([, acc]) => acc.budget > 0 || acc.actual > 0)
-    .map(([tagId, acc]) => {
-      const tag = tagsById.get(tagId);
+  return aggregateTimePLTags(
+    plans.flatMap((plan) =>
+      plan.tag_id == null
+        ? []
+        : [{ tagId: plan.tag_id, minutes: minutesBetween(plan.start_at, plan.end_at) }],
+    ),
+    records.flatMap((record) =>
+      record.tag_id == null
+        ? []
+        : [{ tagId: record.tag_id, minutes: minutesBetween(record.start_at, record.end_at) }],
+    ),
+  )
+    .filter((aggregate) => aggregate.hasPlan || aggregate.hasRecord)
+    .map((aggregate) => {
+      const tag = tagsById.get(aggregate.tagId);
       return {
-        tagId,
+        tagId: aggregate.tagId,
         tagName: tag?.name ?? '',
         tagColor: tag?.color ?? 'indigo',
         tagIcon: tag?.icon ?? null,
-        budgetMinutes: roundTo1(acc.budget),
-        actualMinutes: roundTo1(acc.actual),
-        isPlanned: acc.hasPlan,
+        budgetMinutes: aggregate.plannedMinutes,
+        actualMinutes: aggregate.recordedMinutes,
+        isPlanned: aggregate.hasPlan,
       };
     })
     .sort((a, b) => b.actualMinutes - a.actualMinutes);

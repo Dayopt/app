@@ -5,13 +5,15 @@
  * この1つの入力型から導出される。ビュー固有の計算値はここに持たず、derivers で算出する。
  */
 
+import type { PlanAccuracyStatus } from '@dayopt/domain';
+
 import type { TagColorName } from '@/features/tags';
 
 /** P/Lの表示粒度 */
 export type TimePLGranularity = 'day' | 'week' | 'range' | 'month' | 'year';
 
 /** 予算精度のステータス（±0が理想） */
-export type AccuracyStatus = 'excellent' | 'good' | 'fair' | 'poor';
+export type AccuracyStatus = PlanAccuracyStatus;
 
 /** タグ別の予実データ（正規化された入力） */
 export interface TimePLTagTimeblock {

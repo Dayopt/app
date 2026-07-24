@@ -112,6 +112,31 @@ describe('MCP route scope preflight', () => {
     expect(handleRequest).not.toHaveBeenCalled();
   });
 
+  it('cached review.getはeffective scopeへread:statsだけを追加要求する', async () => {
+    verifyAccessToken.mockResolvedValue({ ...baseAuth, scopes: ['read:constraints'] });
+
+    const response = await POST(
+      createRequest({
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: { name: 'review.get', arguments: {} },
+        id: 1,
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get('www-authenticate')).toContain(
+      'scope="read:constraints read:stats"',
+    );
+    expect(response.headers.get('www-authenticate')).not.toContain('read:entries');
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'insufficient_scope',
+      scope: 'read:constraints read:stats',
+    });
+    expect(createMcpServer).not.toHaveBeenCalled();
+    expect(handleRequest).not.toHaveBeenCalled();
+  });
+
   it('rejects JSON-RPC batch before executing any call', async () => {
     const response = await POST(
       createRequest([

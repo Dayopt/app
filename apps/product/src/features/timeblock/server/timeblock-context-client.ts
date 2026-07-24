@@ -5,6 +5,7 @@ import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { TimeblockServiceError } from './timeblock-service-error';
+import type { ServiceSupabaseClient } from './types';
 
 export interface TimeblockContextMarker {
   revision: string;
@@ -18,6 +19,11 @@ export interface TimeblockContextOccupancyRow {
   id: string;
   startAt: string;
   endAt: string;
+}
+
+export interface TimeblockContextOccupancyPage {
+  rows: TimeblockContextOccupancyRow[];
+  totalCount: number | null;
 }
 
 export interface ListTimeblockContextOccupancyPageInput {
@@ -34,7 +40,7 @@ export interface TimeblockContextReadClient {
   listOccupancyPage(
     input: ListTimeblockContextOccupancyPageInput,
     signal?: AbortSignal,
-  ): Promise<TimeblockContextOccupancyRow[]>;
+  ): Promise<TimeblockContextOccupancyPage>;
 }
 
 /**
@@ -45,38 +51,20 @@ export class TimeblockContextClient implements TimeblockContextReadClient {
   private readonly admin = createServiceRoleClient();
 
   async getMarker(userId: string, signal?: AbortSignal): Promise<TimeblockContextMarker> {
-    const query = this.admin.rpc('get_timeblock_context_marker_v1', { p_user_id: userId });
-    if (signal) query.abortSignal(signal);
-    const { data, error } = await query.single();
-
-    if (error || !data) {
-      if (signal?.aborted) {
-        throw new TimeblockServiceError('FETCH_FAILED', 'Timeblock context read was interrupted');
-      }
-      const original = captureUnexpectedDatabaseError(error ?? new Error('Marker row missing'), {
-        feature: 'timeblock',
-        operation: 'get_timeblock_context_marker',
-      });
-      throw new TimeblockServiceError('FETCH_FAILED', 'Failed to read timeblock context marker', {
-        cause: original,
-      });
-    }
-
-    return {
-      revision: data.revision,
-      databaseNow: data.database_now,
-      timezone: data.timezone,
-    };
+    return readTimeblockContextMarker(this.admin, userId, signal);
   }
 
   async listOccupancyPage(
     input: ListTimeblockContextOccupancyPageInput,
     signal?: AbortSignal,
-  ): Promise<TimeblockContextOccupancyRow[]> {
+  ): Promise<TimeblockContextOccupancyPage> {
     const table = input.lane === 'plans' ? databaseTables.plans : databaseTables.records;
-    const query = this.admin
-      .from(table)
-      .select('id,start_at,end_at')
+    const tableQuery = this.admin.from(table);
+    const query =
+      input.offset === 0
+        ? tableQuery.select('id,start_at,end_at', { count: 'exact' })
+        : tableQuery.select('id,start_at,end_at');
+    query
       .eq('user_id', input.userId)
       .is('deleted_at', null)
       .lt('start_at', input.endDate)
@@ -87,7 +75,7 @@ export class TimeblockContextClient implements TimeblockContextReadClient {
       .range(input.offset, input.offset + input.limit - 1);
     if (signal) query.abortSignal(signal);
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error || !data) {
       if (signal?.aborted) {
         throw new TimeblockServiceError('FETCH_FAILED', 'Timeblock context read was interrupted');
@@ -104,14 +92,46 @@ export class TimeblockContextClient implements TimeblockContextReadClient {
       });
     }
 
-    return data.map((row) => ({
-      id: row.id,
-      startAt: row.start_at,
-      endAt: row.end_at,
-    }));
+    return {
+      rows: data.map((row) => ({
+        id: row.id,
+        startAt: row.start_at,
+        endAt: row.end_at,
+      })),
+      totalCount: count,
+    };
   }
 }
 
 export function createTimeblockContextClient(): TimeblockContextClient {
   return new TimeblockContextClient();
+}
+
+export async function readTimeblockContextMarker(
+  admin: ServiceSupabaseClient,
+  userId: string,
+  signal?: AbortSignal,
+): Promise<TimeblockContextMarker> {
+  const query = admin.rpc('get_timeblock_context_marker_v1', { p_user_id: userId });
+  if (signal) query.abortSignal(signal);
+  const { data, error } = await query.single();
+
+  if (error || !data) {
+    if (signal?.aborted) {
+      throw new TimeblockServiceError('FETCH_FAILED', 'Timeblock context read was interrupted');
+    }
+    const original = captureUnexpectedDatabaseError(error ?? new Error('Marker row missing'), {
+      feature: 'timeblock',
+      operation: 'get_timeblock_context_marker',
+    });
+    throw new TimeblockServiceError('FETCH_FAILED', 'Failed to read timeblock context marker', {
+      cause: original,
+    });
+  }
+
+  return {
+    revision: data.revision,
+    databaseNow: data.database_now,
+    timezone: data.timezone,
+  };
 }

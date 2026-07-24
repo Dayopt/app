@@ -9,6 +9,7 @@ import {
   MCP_TOOL_DESCRIPTORS,
   mergeMcpChallengeScopes,
 } from '../registry';
+import { registerReviewGetTool } from '../review-get';
 import { registerTagsListTool } from '../tags-list';
 import {
   registerPlansGetTool,
@@ -28,6 +29,7 @@ vi.mock('@/features/timeblock/server/service-index', async () => {
   return {
     createTimeblockTrashReadClient: () => ({ listDeletedPlans, listDeletedRecords }),
     TimeblockTrashReadError: class TimeblockTrashReadError extends Error {},
+    TIMEBLOCK_REVIEW_MAX_TAGS: 1_000,
     timeblockContextRangeSchema: z
       .object({
         startDate: z.string().datetime({ offset: true }),
@@ -237,6 +239,7 @@ describe('MCP list tools public contract', () => {
       'entries.list',
       'tags.list',
       'constraints.get',
+      'review.get',
       'plans.list',
       'plans.get',
       'plans.create',
@@ -269,6 +272,7 @@ describe('MCP list tools public contract', () => {
     expect(getRequiredScopeForTool('plans.get')).toBe('read:entries');
     expect(getRequiredScopeForTool('tags.list')).toBe('read:tags');
     expect(getRequiredScopeForTool('constraints.get')).toBe('read:constraints');
+    expect(getRequiredScopeForTool('review.get')).toBe('read:stats');
     expect(getRequiredScopeForTool('plans.trash.list')).toBe('delete:plans');
     expect(getRequiredScopeForTool('plans.create')).toBe('write:plans');
     expect(getRequiredScopeForTool('records.delete')).toBe('delete:records');
@@ -278,22 +282,30 @@ describe('MCP list tools public contract', () => {
   it('新しいcontext toolもdescriptorと実登録名が一致する', () => {
     const tags = createServerDouble();
     const constraints = createServerDouble();
+    const review = createServerDouble();
 
     registerTagsListTool(tags.server, { ...context, scopes: ['read:tags'] });
     registerConstraintsGetTool(constraints.server, {
       ...context,
       scopes: ['read:constraints'],
     });
+    registerReviewGetTool(review.server, {
+      ...context,
+      scopes: ['read:stats'],
+    });
 
     expect([...tags.handlers.keys()]).toEqual(['tags.list']);
     expect([...constraints.handlers.keys()]).toEqual(['constraints.get']);
+    expect([...review.handlers.keys()]).toEqual(['review.get']);
   });
 
   it('新しいcontext toolはhandler内でもscope不足をstable errorにする', async () => {
     const tags = createServerDouble();
     const constraints = createServerDouble();
+    const review = createServerDouble();
     registerTagsListTool(tags.server, context);
     registerConstraintsGetTool(constraints.server, context);
+    registerReviewGetTool(review.server, context);
 
     const tagsResult = await getHandler(tags.handlers, 'tags.list')({});
     const constraintsResult = await getHandler(
@@ -303,11 +315,21 @@ describe('MCP list tools public contract', () => {
       startDate: '2026-07-20T00:00:00+09:00',
       endDate: '2026-07-27T00:00:00+09:00',
     });
+    const reviewResult = await getHandler(
+      review.handlers,
+      'review.get',
+    )({
+      startDate: '2026-07-20T00:00:00+09:00',
+      endDate: '2026-07-27T00:00:00+09:00',
+    });
 
     expect(parseText(tagsResult)).toMatchObject({
       error: { code: 'INSUFFICIENT_SCOPE', retryable: false },
     });
     expect(parseText(constraintsResult)).toMatchObject({
+      error: { code: 'INSUFFICIENT_SCOPE', retryable: false },
+    });
+    expect(parseText(reviewResult)).toMatchObject({
       error: { code: 'INSUFFICIENT_SCOPE', retryable: false },
     });
     expect(createMcpTrpcCaller).not.toHaveBeenCalled();

@@ -5,6 +5,8 @@
  * 日次ビューの KPI と見積もりずれ所見の入力を導出する。DB / React / TZ 非依存。
  */
 
+import { computePlanAccuracy } from '@dayopt/domain';
+
 /** 計算に必要な最小のエントリ形 */
 export interface DailySummaryTimeblock {
   origin: string | null;
@@ -63,12 +65,7 @@ export function computeDailySummary(entries: DailySummaryTimeblock[]): DailySumm
     }
   }
 
-  const planAccuracy =
-    plannedMinutes === 0
-      ? actualMinutes === 0
-        ? 1
-        : 0
-      : Math.max(0, Math.min(1, 1 - Math.abs(plannedMinutes - actualMinutes) / plannedMinutes));
+  const planAccuracy = computePlanAccuracy(plannedMinutes, actualMinutes).rate;
 
   return {
     plannedMinutes: Math.round(plannedMinutes),

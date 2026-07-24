@@ -8,6 +8,7 @@ const handler = vi.fn(() => 'ok');
 const unmappedHandler = vi.fn(() => 'unmapped');
 const tagsListHandler = vi.fn(() => 'tags');
 const constraintsHandler = vi.fn(() => 'constraints');
+const reviewHandler = vi.fn(() => 'review');
 const neighboringHandler = vi.fn(() => 'neighboring');
 
 const testRouter = createTRPCRouter({
@@ -21,6 +22,10 @@ const testRouter = createTRPCRouter({
   timeblockContext: createTRPCRouter({
     getConstraints: protectedProcedure.query(() => constraintsHandler()),
     getRevision: protectedProcedure.query(() => neighboringHandler()),
+  }),
+  statistics: createTRPCRouter({
+    getMcpReview: protectedProcedure.query(() => reviewHandler()),
+    getTimePL: protectedProcedure.query(() => neighboringHandler()),
   }),
   userSettings: createTRPCRouter({
     update: protectedProcedure.mutation(() => unmappedHandler()),
@@ -101,16 +106,26 @@ describe('OAuth tRPC execution boundary', () => {
       oauthExecution: 'mcp_internal',
       oauthScopes: ['read:constraints'],
     });
+    const reviewContext = createMockContext({
+      userId: 'user-1',
+      authMode: 'oauth',
+      oauthExecution: 'mcp_internal',
+      oauthScopes: ['read:stats'],
+    });
 
     await expect(createCaller(tagsContext).tags.list()).resolves.toBe('tags');
     await expect(createCaller(constraintsContext).timeblockContext.getConstraints()).resolves.toBe(
       'constraints',
     );
+    await expect(createCaller(reviewContext).statistics.getMcpReview()).resolves.toBe('review');
     await expect(createCaller(tagsContext).timeblockContext.getConstraints()).rejects.toMatchObject(
       {
         code: 'FORBIDDEN',
       },
     );
+    await expect(createCaller(tagsContext).statistics.getMcpReview()).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
   });
 
   it('同じrouterでも隣接procedureはOAuthへ公開しない', async () => {
@@ -118,13 +133,16 @@ describe('OAuth tRPC execution boundary', () => {
       userId: 'user-1',
       authMode: 'oauth',
       oauthExecution: 'mcp_internal',
-      oauthScopes: ['read:tags', 'read:constraints'],
+      oauthScopes: ['read:tags', 'read:constraints', 'read:stats'],
     });
 
     await expect(createCaller(context).tags.listHierarchy()).rejects.toMatchObject({
       code: 'FORBIDDEN',
     });
     await expect(createCaller(context).timeblockContext.getRevision()).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(createCaller(context).statistics.getTimePL()).rejects.toMatchObject({
       code: 'FORBIDDEN',
     });
     expect(neighboringHandler).not.toHaveBeenCalled();

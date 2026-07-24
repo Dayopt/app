@@ -18,6 +18,7 @@ const serviceMethods = vi.hoisted(() => ({
   getTimeByTag: vi.fn(),
   getTimePLData: vi.fn(),
 }));
+const getMcpReview = vi.hoisted(() => vi.fn());
 
 vi.mock('../statistics-service', () => ({
   StatisticsService: class {
@@ -35,6 +36,10 @@ vi.mock('../statistics-service', () => ({
     getTimeByTag = serviceMethods.getTimeByTag;
     getTimePLData = serviceMethods.getTimePLData;
   },
+}));
+
+vi.mock('../timeblock-review-service', () => ({
+  createTimeblockReviewService: () => ({ getMcpReview }),
 }));
 
 import { statisticsQueriesRouter } from '../statistics';
@@ -56,6 +61,10 @@ function authedCaller() {
 beforeEach(() => {
   vi.clearAllMocks();
   for (const method of Object.values(serviceMethods)) method.mockResolvedValue([]);
+  getMcpReview.mockResolvedValue({
+    asOf: '2026-07-24T10:00:00.000Z',
+    hasData: false,
+  });
   serviceMethods.getTagStats.mockResolvedValue({ counts: {}, lastUsed: {} });
   serviceMethods.getBlankRate.mockResolvedValue({
     availableMinutes: 0,
@@ -129,6 +138,27 @@ describe('statistics router: StatisticsService 委譲', () => {
 
     expect(serviceMethods.getTimePLData).toHaveBeenCalledWith(USER_ID, timePLInput);
     expect(serviceMethods.getStatsPageData).toHaveBeenCalledWith(USER_ID, pageInput);
+  });
+
+  it('MCP reviewはverified user・strict range・request signalを専用serviceへ渡す', async () => {
+    const caller = authedCaller();
+    const input = {
+      startDate: '2026-07-20T00:00:00+09:00',
+      endDate: '2026-07-27T00:00:00+09:00',
+    };
+
+    await expect(caller.getMcpReview(input)).resolves.toMatchObject({
+      asOf: '2026-07-24T10:00:00.000Z',
+    });
+    expect(getMcpReview).toHaveBeenCalledWith(USER_ID, input, undefined);
+
+    await expect(
+      caller.getMcpReview({
+        ...input,
+        userId: 'foreign-user',
+      } as never),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(getMcpReview).toHaveBeenCalledOnce();
   });
 
   it('Review procedures は不正または上限超過の表示日キーを拒否する', async () => {

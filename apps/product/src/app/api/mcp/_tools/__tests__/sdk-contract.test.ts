@@ -20,6 +20,7 @@ const recordsList = vi.hoisted(() => vi.fn());
 const recordsGetById = vi.hoisted(() => vi.fn());
 const tagsList = vi.hoisted(() => vi.fn());
 const constraintsGet = vi.hoisted(() => vi.fn());
+const reviewGet = vi.hoisted(() => vi.fn());
 const createMcpTrpcCaller = vi.hoisted(() => vi.fn());
 const listDeletedPlans = vi.hoisted(() => vi.fn());
 const listDeletedRecords = vi.hoisted(() => vi.fn());
@@ -81,6 +82,7 @@ vi.mock('@/features/timeblock/server/service-index', async () => {
   return {
     createTimeblockTrashReadClient: () => ({ listDeletedPlans, listDeletedRecords }),
     TimeblockTrashReadError: class TimeblockTrashReadError extends Error {},
+    TIMEBLOCK_REVIEW_MAX_TAGS: 1_000,
     timeblockContextRangeSchema: z
       .object({
         startDate: z.string().datetime({ offset: true }),
@@ -130,6 +132,7 @@ const allScopes: McpRequestContext['scopes'] = [
   'read:entries',
   'read:tags',
   'read:constraints',
+  'read:stats',
   'write:plans',
   'delete:plans',
   'write:records',
@@ -149,6 +152,7 @@ const expectedToolNames = [
   'entries.list',
   'tags.list',
   'constraints.get',
+  'review.get',
   'plans.list',
   'plans.get',
   'plans.create',
@@ -228,6 +232,48 @@ describe('MCP SDK public tool contract', () => {
         },
       },
     });
+    reviewGet.mockResolvedValue({
+      asOf: '2026-07-24T10:00:00.000Z',
+      period: {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+        endExclusive: true,
+        timezone: 'Asia/Tokyo',
+      },
+      basis: {
+        planMeaning: 'budget',
+        recordMeaning: 'actual',
+        rowFilter: 'active_tagged_start_in_period',
+        durationBoundary: 'full_row_not_clipped',
+        periodBoundary: '[)',
+        varianceConvention: 'planned_minus_recorded',
+      },
+      hasData: true,
+      summary: {
+        plannedMinutes: 120,
+        recordedMinutes: 90,
+        varianceMinutes: 30,
+      },
+      accuracy: { rate: 0.75, status: 'fair' },
+      tags: [
+        {
+          tagId: '00000000-0000-4000-8000-000000000003',
+          plannedMinutes: 120,
+          recordedMinutes: 90,
+          varianceMinutes: 30,
+          variancePercent: 25,
+        },
+      ],
+      signals: [
+        { code: 'plan_accuracy', rate: 0.75, status: 'fair' },
+        {
+          code: 'largest_tag_variance',
+          tagId: '00000000-0000-4000-8000-000000000003',
+          direction: 'recorded_less_than_planned',
+          absoluteMinutes: 30,
+        },
+      ],
+    });
     createMcpTrpcCaller.mockReturnValue({
       plans: {
         getById: plansGetById,
@@ -239,6 +285,7 @@ describe('MCP SDK public tool contract', () => {
       },
       tags: { list: tagsList },
       timeblockContext: { getConstraints: constraintsGet },
+      statistics: { getMcpReview: reviewGet },
     });
     listDeletedPlans.mockResolvedValue([{ ...plan, deleted_at: version }]);
     listDeletedRecords.mockResolvedValue([{ ...record, deleted_at: version }]);
@@ -282,6 +329,13 @@ describe('MCP SDK public tool contract', () => {
             endDate: '2026-07-27T00:00:00+09:00',
           },
         },
+        {
+          name: 'review.get',
+          arguments: {
+            startDate: '2026-07-20T00:00:00+09:00',
+            endDate: '2026-07-27T00:00:00+09:00',
+          },
+        },
         { name: 'plans.list', arguments: {} },
         { name: 'plans.get', arguments: { planId } },
         { name: 'plans.trash.list', arguments: {} },
@@ -316,6 +370,24 @@ describe('MCP SDK public tool contract', () => {
         },
       });
       expect(JSON.stringify(constraintsResult)).not.toMatch(/title|note|tagId|"id"/);
+      const reviewResult = await client.callTool({
+        name: 'review.get',
+        arguments: {
+          startDate: '2026-07-20T00:00:00+09:00',
+          endDate: '2026-07-27T00:00:00+09:00',
+        },
+      });
+      expect(reviewResult.structuredContent).toMatchObject({
+        schemaVersion: 1,
+        summary: {
+          plannedMinutes: 120,
+          recordedMinutes: 90,
+          varianceMinutes: 30,
+        },
+      });
+      expect(JSON.stringify(reviewResult)).not.toMatch(
+        /title|note|userId|user_id|source|timeblockId/,
+      );
       expect(createMcpTrpcCaller).toHaveBeenCalledWith(
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
@@ -369,13 +441,16 @@ describe('MCP SDK public tool contract', () => {
       ];
 
       for (const arguments_ of invalidRanges) {
-        const result = await client.callTool({
-          name: 'constraints.get',
-          arguments: arguments_,
-        });
-        expect(result.isError).toBe(true);
+        for (const name of ['constraints.get', 'review.get']) {
+          const result = await client.callTool({
+            name,
+            arguments: arguments_,
+          });
+          expect(result.isError).toBe(true);
+        }
       }
       expect(constraintsGet).not.toHaveBeenCalled();
+      expect(reviewGet).not.toHaveBeenCalled();
     } finally {
       await Promise.all([client.close(), server.close()]);
     }
@@ -427,11 +502,79 @@ describe('MCP SDK public tool contract', () => {
     }
   });
 
+  it('review handlerはdomain codeをstable errorへ戻しraw detailとcancel noiseを隠す', async () => {
+    const { client, server } = await connectSdk(context);
+    const arguments_ = {
+      startDate: '2026-07-20T00:00:00+09:00',
+      endDate: '2026-07-27T00:00:00+09:00',
+    };
+
+    try {
+      reviewGet.mockRejectedValueOnce(
+        new TRPCError({
+          code: 'BAD_REQUEST',
+          cause: Object.assign(new Error('private tag cardinality detail'), {
+            code: 'RANGE_TOO_DENSE',
+          }),
+        }),
+      );
+      const dense = await client.callTool({ name: 'review.get', arguments: arguments_ });
+      expect(dense.structuredContent).toBeUndefined();
+      expect(parseText(dense)).toMatchObject({
+        error: { code: 'RANGE_TOO_DENSE', retryable: false },
+      });
+      expect(JSON.stringify(dense)).not.toContain('private tag cardinality detail');
+
+      reviewGet.mockRejectedValueOnce(
+        new TRPCError({
+          code: 'CONFLICT',
+          cause: Object.assign(new Error('private revision detail'), {
+            code: 'CONTEXT_CHANGED',
+          }),
+        }),
+      );
+      const changed = await client.callTool({ name: 'review.get', arguments: arguments_ });
+      expect(parseText(changed)).toMatchObject({
+        error: { code: 'CONTEXT_CHANGED', retryable: true },
+      });
+
+      reviewGet.mockRejectedValueOnce(new Error('private database review detail'));
+      const failed = await client.callTool({ name: 'review.get', arguments: arguments_ });
+      expect(parseText(failed)).toMatchObject({
+        error: { code: 'READ_FAILED', retryable: true },
+      });
+      expect(JSON.stringify(failed)).not.toContain('private database review detail');
+      expect(captureUnexpectedMcpToolError).toHaveBeenCalledOnce();
+
+      reviewGet.mockRejectedValueOnce(
+        new TRPCError({
+          code: 'CLIENT_CLOSED_REQUEST',
+          cause: Object.assign(new Error('private cancellation detail'), {
+            code: 'REQUEST_CANCELLED',
+          }),
+        }),
+      );
+      const cancelled = await client.callTool({ name: 'review.get', arguments: arguments_ });
+      expect(parseText(cancelled)).toMatchObject({
+        error: { code: 'READ_FAILED', retryable: true },
+      });
+      expect(JSON.stringify(cancelled)).not.toContain('private cancellation detail');
+      expect(captureUnexpectedMcpToolError).toHaveBeenCalledOnce();
+    } finally {
+      await Promise.all([client.close(), server.close()]);
+    }
+  });
+
   it('lists the exact scope-filtered set with strict public schemas', async () => {
     const { client, server } = await connectSdk(context);
     try {
       const { tools } = await client.listTools();
       expect(tools.map(({ name }) => name)).toEqual(expectedToolNames);
+      expect(tools.find(({ name }) => name === 'review.get')?.outputSchema).toMatchObject({
+        properties: {
+          tags: { maxItems: 1_000 },
+        },
+      });
 
       const mutationTools = tools.filter(({ name }) =>
         /\.(create|update|delete|restore)$/.test(name),

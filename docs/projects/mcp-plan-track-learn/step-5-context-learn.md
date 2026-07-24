@@ -247,13 +247,14 @@ Aggregation contract:
 - tagごとのminutesを0.1分へ丸め、その値の合計をsummaryの0.1分精度とする
 - `varianceMinutes = plannedMinutes - recordedMinutes`
 - `variancePercent`は既存`computeVariance`と同じinteger percentとし、planがないtagは`null`
-- accuracyは丸め後summaryから既存`deriveAccuracy`で計算し、rateを小数第4位へ丸める
-- accuracy statusは`excellent` / `good` / `fair` / `poor`の既存thresholdを使う
+- accuracyは丸め後summaryから既存`deriveAccuracy`で計算し、公開rateだけを小数第4位へ丸める
+- accuracy statusはrate丸め前の値に`excellent` / `good` / `fair` / `poor`の既存thresholdを適用する
 - tag rowsは`max(plannedMinutes, recordedMinutes) DESC, tagId ASC`
 - largest varianceは`abs(varianceMinutes) DESC, tagId ASC`で一件を選ぶ。zeroならsignalを省略する
 - positive varianceは`recorded_less_than_planned`、negativeは`recorded_more_than_planned`
 - signal順は`plan_accuracy`、`largest_tag_variance`
 - tagged Plan / Recordが0件なら`hasData: false`、summaryは全て0、`accuracy: null`、`tags: []`、`signals: []`
+- distinct tagが1,000件を超える場合は巨大な二重serialize応答を返さず`RANGE_TOO_DENSE`にする
 - estimation deviation、skip / unrecorded、生成文、推測した改善案は返さない
 
 Handler errorsは`constraints.get`と同じ4 codeを使い、scopeだけ`read:stats`とする。
@@ -338,10 +339,11 @@ account削除時は、既存account-delete triggerがsupported exclusive lockと
 
 1. marker Aを取得する
 2. service-role adapterでowner predicateと最小projectionを固定したPlan / Record queryを実行する
-3. `start_at`とtie-break用IDで決定順にpaginationする
-4. laneごとに5,001件目を取得したらtruncateせず停止する
-5. marker Bを取得する
-6. `A.revision === B.revision && A.timezone === B.timezone`なら、BのDB時刻を`asOf`として結果を返す
+3. 最初のpageで同じpredicateのexact countを取得し、`start_at`とtie-break用IDで決定順にpaginationする
+4. exact countの`min(count, 5,001)`へ到達する前のshort pageはcomplete扱いせずfail closedにする
+5. laneごとに5,001件目を取得したらtruncateせず停止する
+6. marker Bを取得する
+7. `A.revision === B.revision && A.timezone === B.timezone`なら、BのDB時刻を`asOf`として結果を返す
 
 markerが変わった場合は全queryを一度だけ最初から再試行する。二回目も変われば`CONTEXT_CHANGED`を返す。これにより、複数のPostgREST requestの途中でcommitされたPlan / Recordを一つの結果へ混ぜない。transactionがmarker Aより前から進行中でも、commitがmarker Bより後なら全queryは旧stateを読み、次回revisionで検知できる。AとBの間にcommitすればrevision差で破棄する。
 
@@ -425,6 +427,8 @@ pollerはworkspace Composition Layerに一つだけ置き、`CalendarViewClient`
 ### Context / Review
 
 - 0件、ちょうど5,000件、5,001件、複数pageでcomplete / errorを正しく分ける
+- exact countより短いpageをsilent truncationせずfail closedにする
+- reviewのdistinct tagがちょうど1,000件なら成功し、1,001件なら`RANGE_TOO_DENSE`にする
 - owner、deleted、range overlap、tagged predicateとprojectionを固定する
 - page中にrevisionが変われば全体を一度retryし、二回変われば`CONTEXT_CHANGED`
 - timezoneが途中で変わっても同じretry契約になる
@@ -479,12 +483,11 @@ Step 6では同じgolden flowをChatGPT / Claude / CursorとPersistent Staging�
 - `apps/product/src/lib/mcp/trpc-bridge.ts` — OAuth用tRPC caller
 - `apps/product/src/lib/trpc/procedures.ts` — exact OAuth procedure scope mapping
 - `apps/product/src/features/tags/server/tag-query-service.ts` — active owner tagとhierarchy順
-- `apps/product/src/features/timeblock/server/statistics-fetchers.ts` — Plan / Recordの既存集計predicate
-- `apps/product/src/features/timeblock/server/statistics-row-builders.ts` — Time P/L aggregation
-- `apps/product/src/features/timeblock/server/statistics-summary-service.ts` — Time P/L service boundary
-- `apps/product/src/features/timeblock/server/statistics-shared.ts` — statistics input / response type
-- `apps/product/src/features/review/domain/timePL/derivers.ts` — accuracy / bar comparison
-- `apps/product/src/features/review/domain/variance.ts` — variance sign / percent
+- `packages/domain/src/review.ts` — Review UIとMCPが共有するaccuracy / variance kernel
+- `apps/product/src/features/timeblock/domain/time-pl-review.ts` — 最小Plan / Record行からの決定論的review導出
+- `apps/product/src/features/timeblock/server/timeblock-consistent-read.ts` — marker retry / timezone / cancellation / deadline
+- `apps/product/src/features/timeblock/server/timeblock-review-client.ts` — owner固定、最小projection、exact count pagination
+- `apps/product/src/features/timeblock/server/timeblock-review-service.ts` — stable readと公開review service境界
 - `apps/product/src/features/timeblock/hooks/useTimeblockWriteMutations.ts` — router invalidate
 - `apps/product/src/features/timeblock/hooks/useTimeblockRecordMutations.ts` — record / confirm-day invalidate
 - `apps/product/src/features/timeblock/hooks/useCoalescedTimeblockSave.ts` — Inspector save queue

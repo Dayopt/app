@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const registerEntriesListTool = vi.hoisted(() => vi.fn());
 const registerTagsListTool = vi.hoisted(() => vi.fn());
 const registerConstraintsGetTool = vi.hoisted(() => vi.fn());
+const registerReviewGetTool = vi.hoisted(() => vi.fn());
 const registerPlansListTool = vi.hoisted(() => vi.fn());
 const registerRecordsListTool = vi.hoisted(() => vi.fn());
 const registerPlansGetTool = vi.hoisted(() => vi.fn());
@@ -21,6 +22,7 @@ const registerRecordsRestoreTool = vi.hoisted(() => vi.fn());
 vi.mock('../_tools/entries-list', () => ({ registerEntriesListTool }));
 vi.mock('../_tools/tags-list', () => ({ registerTagsListTool }));
 vi.mock('../_tools/constraints-get', () => ({ registerConstraintsGetTool }));
+vi.mock('../_tools/review-get', () => ({ registerReviewGetTool }));
 vi.mock('../_tools/timeblock-list', () => ({ registerPlansListTool, registerRecordsListTool }));
 vi.mock('../_tools/timeblock-detail', () => ({
   registerPlansGetTool,
@@ -66,6 +68,7 @@ describe('MCP scope-filtered tool discovery', () => {
     expect(registerRecordsGetTool).toHaveBeenCalledWith(server, baseContext);
     expect(registerTagsListTool).not.toHaveBeenCalled();
     expect(registerConstraintsGetTool).not.toHaveBeenCalled();
+    expect(registerReviewGetTool).not.toHaveBeenCalled();
     expect(registerPlansTrashListTool).not.toHaveBeenCalled();
     expect(registerRecordsTrashListTool).not.toHaveBeenCalled();
     expect(registerPlansCreateTool).not.toHaveBeenCalled();
@@ -137,6 +140,18 @@ describe('MCP scope-filtered tool discovery', () => {
     const server = createMcpServer(context);
 
     expect(registerConstraintsGetTool).toHaveBeenCalledWith(server, context);
+    expect(registerTagsListTool).not.toHaveBeenCalled();
+    expect(registerEntriesListTool).not.toHaveBeenCalled();
+    expect(registerPlansListTool).not.toHaveBeenCalled();
+    expect(registerRecordsListTool).not.toHaveBeenCalled();
+  });
+
+  it('read:statsではreview.getだけを公開する', () => {
+    const context: McpRequestContext = { ...baseContext, scopes: ['read:stats'] };
+    const server = createMcpServer(context);
+
+    expect(registerReviewGetTool).toHaveBeenCalledWith(server, context);
+    expect(registerConstraintsGetTool).not.toHaveBeenCalled();
     expect(registerTagsListTool).not.toHaveBeenCalled();
     expect(registerEntriesListTool).not.toHaveBeenCalled();
     expect(registerPlansListTool).not.toHaveBeenCalled();

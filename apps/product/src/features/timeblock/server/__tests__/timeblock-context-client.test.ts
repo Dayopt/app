@@ -47,13 +47,17 @@ describe('TimeblockContextClient', () => {
   });
 
   it('owner・active・overlap・決定順・page上限をnarrow occupancy queryへ固定する', async () => {
-    const query = createChainableMock([
+    const rows = [
       {
         id: 'plan-1',
         start_at: '2026-07-24T10:00:00.000Z',
         end_at: '2026-07-24T11:00:00.000Z',
       },
-    ]);
+    ];
+    const query = createChainableMock(rows);
+    query.then!.mockImplementation((resolve: (value: unknown) => void) =>
+      resolve({ data: rows, error: null, count: 1 }),
+    );
     from.mockReturnValue(query);
     const signal = new AbortController().signal;
 
@@ -64,21 +68,24 @@ describe('TimeblockContextClient', () => {
           lane: 'plans',
           startDate: '2026-07-20T00:00:00+09:00',
           endDate: '2026-07-27T00:00:00+09:00',
-          offset: 1_000,
+          offset: 0,
           limit: 1_000,
         },
         signal,
       ),
-    ).resolves.toEqual([
-      {
-        id: 'plan-1',
-        startAt: '2026-07-24T10:00:00.000Z',
-        endAt: '2026-07-24T11:00:00.000Z',
-      },
-    ]);
+    ).resolves.toEqual({
+      rows: [
+        {
+          id: 'plan-1',
+          startAt: '2026-07-24T10:00:00.000Z',
+          endAt: '2026-07-24T11:00:00.000Z',
+        },
+      ],
+      totalCount: 1,
+    });
 
     expect(from).toHaveBeenCalledWith('plans');
-    expect(query.select).toHaveBeenCalledWith('id,start_at,end_at');
+    expect(query.select).toHaveBeenCalledWith('id,start_at,end_at', { count: 'exact' });
     expect(query.eq).toHaveBeenCalledWith('user_id', 'user-1');
     expect(query.is).toHaveBeenCalledWith('deleted_at', null);
     expect(query.lt).toHaveBeenCalledWith('start_at', '2026-07-27T00:00:00+09:00');
@@ -86,7 +93,7 @@ describe('TimeblockContextClient', () => {
     expect(query.order).toHaveBeenNthCalledWith(1, 'start_at', { ascending: true });
     expect(query.order).toHaveBeenNthCalledWith(2, 'end_at', { ascending: true });
     expect(query.order).toHaveBeenNthCalledWith(3, 'id', { ascending: true });
-    expect(query.range).toHaveBeenCalledWith(1_000, 1_999);
+    expect(query.range).toHaveBeenCalledWith(0, 999);
     expect(query.abortSignal).toHaveBeenCalledWith(signal);
   });
 

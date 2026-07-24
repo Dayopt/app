@@ -14,3 +14,4 @@ export {
 export { createPlanService } from './plan-service';
 export { createRecordService } from './record-service';
 export { timeblockContextRangeSchema } from './timeblock-context-contract';
+export { TIMEBLOCK_REVIEW_MAX_TAGS } from './timeblock-review-contract';

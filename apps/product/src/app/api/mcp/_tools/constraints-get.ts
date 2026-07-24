@@ -11,9 +11,8 @@ import {
   MCP_CONSTRAINTS_GET_INPUT_SCHEMA,
   MCP_CONSTRAINTS_GET_OUTPUT_SCHEMA,
 } from './context-contract';
+import { findMcpContextReadErrorCode } from './context-read-error';
 import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
-
-const EXPECTED_CONTEXT_CODES = new Set(['RANGE_TOO_DENSE', 'CONTEXT_CHANGED', 'REQUEST_CANCELLED']);
 
 export function registerConstraintsGetTool(server: McpServer, ctx: McpRequestContext) {
   server.registerTool(
@@ -53,7 +52,7 @@ export function registerConstraintsGetTool(server: McpServer, ctx: McpRequestCon
           rules: result.rules,
         });
       } catch (error) {
-        const contextCode = findContextErrorCode(error);
+        const contextCode = findMcpContextReadErrorCode(error);
         if (contextCode === 'RANGE_TOO_DENSE') {
           return createMcpToolError(
             'RANGE_TOO_DENSE',
@@ -79,23 +78,4 @@ export function registerConstraintsGetTool(server: McpServer, ctx: McpRequestCon
       }
     },
   );
-}
-
-function findContextErrorCode(error: unknown): string | null {
-  const seen = new WeakSet<Error>();
-  let current = error;
-
-  while (current instanceof Error && !seen.has(current)) {
-    seen.add(current);
-    if (
-      'code' in current &&
-      typeof (current as { code: unknown }).code === 'string' &&
-      EXPECTED_CONTEXT_CODES.has((current as { code: string }).code)
-    ) {
-      return (current as { code: string }).code;
-    }
-    current = current.cause;
-  }
-
-  return null;
 }

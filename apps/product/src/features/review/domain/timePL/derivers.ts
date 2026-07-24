@@ -6,8 +6,9 @@
  * React / UI / format / color に依存しない純粋ロジックのみを置く。
  */
 
-import { computeVariance } from '../variance';
+import { computePlanAccuracy, getPlanAccuracyStatus } from '@dayopt/domain';
 
+import { computeVariance } from '../variance';
 import type {
   AccuracyStatus,
   BarComparisonRow,
@@ -20,37 +21,22 @@ import type {
 
 /** 精度率 → ステータス */
 export function getAccuracyStatus(rate: number): AccuracyStatus {
-  if (rate >= 0.95) return 'excellent';
-  if (rate >= 0.85) return 'good';
-  if (rate >= 0.7) return 'fair';
-  return 'poor';
+  return getPlanAccuracyStatus(rate);
 }
 
 /** 精度を算出 */
 export function deriveAccuracy(input: TimePLInput): TimePLAccuracy {
-  const budgetTotal = input.tags.reduce((s, t) => s + t.budgetMinutes, 0);
-  const actualTotal = input.tags.reduce((s, t) => s + t.actualMinutes, 0);
+  const budgetTotal = input.tags.reduce((sum, tag) => sum + tag.budgetMinutes, 0);
+  const actualTotal = input.tags.reduce((sum, tag) => sum + tag.actualMinutes, 0);
+  const current = computePlanAccuracy(budgetTotal, actualTotal);
+  if (!input.prevTags) return current;
 
-  const rate =
-    budgetTotal === 0
-      ? actualTotal === 0
-        ? 1
-        : 0
-      : Math.max(0, Math.min(1, 1 - Math.abs(budgetTotal - actualTotal) / budgetTotal));
-
-  let prevRate: number | undefined;
-  if (input.prevTags) {
-    const prevBudget = input.prevTags.reduce((s, t) => s + t.budgetMinutes, 0);
-    const prevActual = input.prevTags.reduce((s, t) => s + t.actualMinutes, 0);
-    prevRate =
-      prevBudget === 0
-        ? prevActual === 0
-          ? 1
-          : 0
-        : Math.max(0, Math.min(1, 1 - Math.abs(prevBudget - prevActual) / prevBudget));
-  }
-
-  return { rate, status: getAccuracyStatus(rate), prevRate };
+  const prevBudget = input.prevTags.reduce((sum, tag) => sum + tag.budgetMinutes, 0);
+  const prevActual = input.prevTags.reduce((sum, tag) => sum + tag.actualMinutes, 0);
+  return {
+    ...current,
+    prevRate: computePlanAccuracy(prevBudget, prevActual).rate,
+  };
 }
 
 /** タグ配列 → ソート済みの行配列 + 合計 */

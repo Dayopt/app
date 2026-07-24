@@ -5,6 +5,7 @@ import { DEFAULT_SCOPES, hasWriteScope, type SupportedScope } from '@/lib/oauth-
 import type { McpRequestContext } from '../_context';
 import { registerConstraintsGetTool } from './constraints-get';
 import { registerEntriesListTool } from './entries-list';
+import { registerReviewGetTool } from './review-get';
 import { registerTagsListTool } from './tags-list';
 import {
   registerPlansGetTool,
@@ -46,6 +47,11 @@ export const MCP_TOOL_DESCRIPTORS = [
     name: 'constraints.get',
     requiredScope: 'read:constraints',
     register: registerConstraintsGetTool,
+  },
+  {
+    name: 'review.get',
+    requiredScope: 'read:stats',
+    register: registerReviewGetTool,
   },
   {
     name: 'plans.list',

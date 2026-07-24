@@ -41,8 +41,10 @@ function createClient(data?: {
   };
   const getMarker = vi.fn<TimeblockContextReadClient['getMarker']>();
   const listOccupancyPage = vi.fn<TimeblockContextReadClient['listOccupancyPage']>(
-    async (input: ListTimeblockContextOccupancyPageInput) =>
-      laneData[input.lane].slice(input.offset, input.offset + input.limit),
+    async (input: ListTimeblockContextOccupancyPageInput) => ({
+      rows: laneData[input.lane].slice(input.offset, input.offset + input.limit),
+      totalCount: input.offset === 0 ? laneData[input.lane].length : null,
+    }),
   );
   const client: TimeblockContextReadClient = { getMarker, listOccupancyPage };
   return { client, getMarker, listOccupancyPage };
@@ -144,10 +146,10 @@ describe('TimeblockContextService.getConstraints', () => {
 
     expect(result.occupancy.plans).toHaveLength(5_000);
     expect(listOccupancyPage.mock.calls.filter(([input]) => input.lane === 'plans')).toHaveLength(
-      6,
+      5,
     );
     expect(listOccupancyPage).toHaveBeenCalledWith(
-      expect.objectContaining({ lane: 'plans', offset: 5_000, limit: 1 }),
+      expect.objectContaining({ lane: 'plans', offset: 4_000, limit: 1_000 }),
       expect.any(AbortSignal),
     );
   });
@@ -165,6 +167,48 @@ describe('TimeblockContextService.getConstraints', () => {
       code: 'RANGE_TOO_DENSE',
     });
     expect(getMarker).toHaveBeenCalledTimes(2);
+  });
+
+  it('exact countより短いpageをcompleteとして返さない', async () => {
+    const { client, getMarker, listOccupancyPage } = createClient();
+    getMarker.mockResolvedValue(stableMarker);
+    listOccupancyPage.mockResolvedValue({
+      rows: [createRow(1)],
+      totalCount: 2,
+    });
+
+    await expect(
+      new TimeblockContextService(client).getConstraints('user-1', range),
+    ).rejects.toMatchObject({
+      code: 'FETCH_FAILED',
+      message: 'Timeblock context page was incomplete',
+    });
+    expect(getMarker).toHaveBeenCalledTimes(2);
+  });
+
+  it('short page中にrevisionが変われば全laneを一度だけ読み直す', async () => {
+    const { client, getMarker, listOccupancyPage } = createClient();
+    getMarker
+      .mockResolvedValueOnce(stableMarker)
+      .mockResolvedValueOnce({ ...stableMarker, revision: '43' })
+      .mockResolvedValueOnce({ ...stableMarker, revision: '43' })
+      .mockResolvedValueOnce({ ...stableMarker, revision: '43' });
+    let firstPlanPage = true;
+    listOccupancyPage.mockImplementation(async (input) => {
+      if (input.lane === 'plans' && firstPlanPage) {
+        firstPlanPage = false;
+        return { rows: [createRow(1)], totalCount: 2 };
+      }
+      return { rows: [], totalCount: input.offset === 0 ? 0 : null };
+    });
+
+    await expect(
+      new TimeblockContextService(client).getConstraints('user-1', range),
+    ).resolves.toMatchObject({
+      occupancy: { plans: [], records: [] },
+    });
+    expect(getMarker).toHaveBeenCalledTimes(4);
+    expect(listOccupancyPage).toHaveBeenCalledTimes(4);
   });
 
   it('revisionが変われば全laneを一度だけ最初から読み直す', async () => {
