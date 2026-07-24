@@ -137,6 +137,18 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     exit 1
   fi
 
+  # branch が main の最新を含んでいるか確認する（up-to-date gate）。
+  # CI は PR 側でしか走らせないため、古い main ベースのままマージすると
+  # 「A・B 単体では green だが合わせると壊れる」マージ順衝突を検知できない。
+  # branch protection の strict mode 相当をここで代替する。
+  BASE_STATUS="$(gh api "repos/{owner}/{repo}/compare/main...$BRANCH" --jq '.status' 2>/dev/null || echo unknown)"
+  if [[ "$BASE_STATUS" != "ahead" && "$BASE_STATUS" != "identical" ]]; then
+    error "branch が main の最新を含んでいません（compare status: $BASE_STATUS）。"
+    error "main を取り込んで push し、CI green を待ってから再実行してください:"
+    error "  git fetch origin && git merge origin/main && git push"
+    exit 1
+  fi
+
   # 実行中・待機中の check も待つ。private repo + Free plan では GitHub 側の
   # required check 強制が効かないため、ここで止めないと CI 完了前にマージできてしまう。
   PENDING_CHECKS="$(printf '%s' "$PR_JSON" | jq -r '
