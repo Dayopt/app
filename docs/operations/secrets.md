@@ -89,21 +89,21 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 
 ### `Dayopt-Shared`
 
-| Item                     | Fields                                                                                        | 用途                                                |
-| ------------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `turnstile`              | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile                                |
-| `anthropic`              | `ANTHROPIC_API_KEY`                                                                           | optional / legacy key。現行runtime consumerなし     |
-| `resend`                 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Product / WebのProduction email sending master      |
-| `resend-support-replies` | `RESEND_SMTP_API_KEY`                                                                         | Gmail Send mail as専用。Sending access / domain限定 |
-| `sentry`                 | `SENTRY_AUTH_TOKEN`                                                                           | Product / Web の Production release upload          |
-| `github-login`           | password, TOTP, recovery codes                                                                | GitHub account login                                |
-| `github-ssh`             | SSH private key                                                                               | GitHub SSH Agent                                    |
-| `vercel`                 | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Production Config Audit / project metadata          |
-| `google`                 | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                              |
-| `domain`                 | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                     |
-| `recovery-codes`         | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側                  |
+| Item                     | Fields                                                                                        | 用途                                                            |
+| ------------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `turnstile`              | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile                                            |
+| `anthropic`              | `ANTHROPIC_API_KEY`                                                                           | optional / legacy key。現行runtime consumerなし                 |
+| `resend`                 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Product / WebのProduction email sending master                  |
+| `resend-support-replies` | `RESEND_SMTP_API_KEY`                                                                         | Gmail Send mail as専用。Sending access / domain限定             |
+| `sentry`                 | `SENTRY_AUTH_TOKEN`                                                                           | Product / Web の Production release upload                      |
+| `github-login`           | password, TOTP, recovery codes                                                                | GitHub account login                                            |
+| `github-ssh`             | SSH private key                                                                               | GitHub SSH Agent                                                |
+| `vercel`                 | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Production Config Audit / Production Release / project metadata |
+| `google`                 | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                                          |
+| `domain`                 | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                                 |
+| `recovery-codes`         | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側                              |
 
-`VERCEL_TOKEN`はautomation専用とし、local CLIのloginや`--token`引数には使わない。Production Config Auditが環境変数からprocess内で読み、Authorization headerにだけ設定する。localの確認方法とrotation順序は[Environment Secrets](./security/environment-secrets.md)を正とする。
+`VERCEL_TOKEN`はautomation専用とし、local CLIのloginや`--token`引数には使わない。Production Config AuditとProduction Releaseが環境変数からprocess内で読み、Authorization headerにだけ設定する。Production Releaseはenv metadataの読取に加えて、Production deploymentのpromoteとrollbackを行う。localの確認方法とrotation順序は[Environment Secrets](./security/environment-secrets.md)を正とする。
 
 ---
 

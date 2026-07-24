@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-07-24
 code: apps/product/src
 ---
 
@@ -354,7 +354,7 @@ USING (auth.uid() = user_id);
 
 ## Database Architecture
 
-> **RLS 対象 public テーブル数**: 13 | **PostgreSQL**: v17
+> **RLS 対象 public テーブル数**: 15 | **PostgreSQL**: v17
 
 Dayopt は Supabase（PostgreSQL）を使用する。本番は Pro organization の `dayopt` project、PR ごとの検証は ephemeral Preview Branches を使い、永続 Staging project は置かない。
 RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapshot.md`](./data/db/rls-snapshot.md) を正とする。
@@ -363,12 +363,23 @@ RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapsho
 
 #### コアビジネス（4テーブル）
 
-| テーブル                     | 役割                                                             | 主要カラム                                                                                                |
-| ---------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **plans**                    | Plan（予定）。これからやる時間の宣言                             | title, tag_id, start_at, end_at, skipped_at, source, external_calendar_event_id                           |
-| **records**                  | Record（記録）。`plan_id` で 1 Plan : N Record                   | title, tag_id, plan_id, start_at, end_at, source, external_calendar_event_id                              |
-| **external_calendar_events** | 外部カレンダー同期ミラー（テーブルのみ存在。同期実装は Phase 2） | provider, provider_calendar_id, provider_event_id, start_at, end_at, status, dismissed_at, last_synced_at |
-| **tags**                     | 階層タグ（親子1階層）                                            | name, color, parent_id, sort_order, is_active                                                             |
+| テーブル                     | 役割                                                             | 主要カラム                                                                                                               |
+| ---------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **plans**                    | Plan（予定）。これからやる時間の宣言                             | title, tag_id, start_at, end_at, skipped_at, source, external_calendar_event_id                                          |
+| **records**                  | Record（記録）。`plan_id` で 1 Plan : N Record                   | title, tag_id, plan_id, start_at, end_at, source, external_calendar_event_id                                             |
+| **external_calendar_events** | 外部カレンダー同期ミラー（テーブルのみ存在。同期実装は Phase 2） | connection_id, provider, provider_calendar_id, provider_event_id, start_at, end_at, status, dismissed_at, last_synced_at |
+| **tags**                     | 階層タグ（親子1階層）                                            | name, color, parent_id, sort_order, is_active                                                                            |
+
+#### 外部カレンダー連携（2テーブル）
+
+Phase 2（external-calendar-import）で追加。OAuth / 同期 / UI は Step 2 以降。
+
+| テーブル                          | 役割                                                              | 主要カラム                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **calendar_connections**          | provider アカウント接続。同一 provider の複数アカウントを許容     | provider, provider_account_id, provider_account_email, granted_scopes, refresh_token_enc, status |
+| **calendar_connection_calendars** | 取り込み対象として選択されたカレンダーと per-calendar sync cursor | connection_id, provider_calendar_id, calendar_name, sync_token, last_synced_at                   |
+
+`calendar_connections.refresh_token_enc` / `granted_scopes` / `provider_account_id` は authenticated へ GRANT しない（column-scoped SELECT）。詳細は [`data/db/rls-snapshot.md`](./data/db/rls-snapshot.md)。
 
 #### ユーザー設定（2テーブル）
 
@@ -431,10 +442,36 @@ RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapsho
                               │───────────────────────────│
                               │ id (PK)                    │
                               │ user_id (FK)                │
+                              │ connection_id (FK, NULL)    │
                               │ provider, provider_calendar_ │
                               │  id, provider_event_id      │
                               │ start_at/end_at, status     │
                               │ dismissed_at, last_synced_at │
+                              └─────────────┬─────────────┘
+                                            │ connection_id (ON DELETE SET NULL)
+                                            ▼
+                              ┌───────────────────────────┐
+                              │   calendar_connections     │
+                              │  (provider アカウント接続) │
+                              │───────────────────────────│
+                              │ id (PK)                    │
+                              │ user_id (FK)                │
+                              │ provider, provider_account_ │
+                              │  id, provider_account_email │
+                              │ granted_scopes              │
+                              │ refresh_token_enc           │
+                              │ status, last_synced_at      │
+                              └─────────────┬─────────────┘
+                                            │ (id, user_id) 複合 FK
+                                            ▼
+                              ┌───────────────────────────┐
+                              │ calendar_connection_       │
+                              │   calendars (選択カレンダー)│
+                              │───────────────────────────│
+                              │ id (PK)                    │
+                              │ connection_id, user_id (FK) │
+                              │ provider_calendar_id        │
+                              │ calendar_name, sync_token   │
                               └───────────────────────────┘
 
 === セキュリティ/監査 ===

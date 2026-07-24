@@ -1,7 +1,12 @@
 ---
 status: current
-last_verified: 2026-07-15
+last_verified: 2026-07-24
 code: apps/product/src/features/timeblock
+public_docs:
+  - plans
+  - records
+lp:
+  - 'Plan and Record tracking'
 ---
 
 # Plan / Record（予定 / 記録）

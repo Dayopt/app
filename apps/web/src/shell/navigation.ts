@@ -28,13 +28,22 @@ export interface NavigationSection {
   items: NavigationItem[];
 }
 
-/** nav に出すカテゴリーの表示順。ここに無いカテゴリーは末尾にアルファベット順で続く。 */
+/**
+ * nav に出すカテゴリーの表示順。ここに無いカテゴリーは末尾にアルファベット順で続く。
+ *
+ * 第 1 階層は「ユーザーがやりたいこと」で並べる（計画する → 記録する → 振り返る）。
+ * 画面名・機能名で切ると製品側の改名で陳腐化するため使わない。
+ * 実在するカテゴリーだけが nav に出るので、ページの無い受け皿を書いても害はない。
+ */
 const CATEGORY_ORDER = [
   'getting-started',
-  'features',
-  'guides',
-  'troubleshooting',
+  'plan',
+  'track',
+  'review',
+  'organize',
+  'data',
   'account',
+  'troubleshooting',
   'faq',
 ] as const;
 
@@ -44,6 +53,17 @@ function toTitleCase(slug: string): string {
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+/**
+ * カテゴリー配下のグループ名（第 2 階層のディレクトリ）を返す。直下のページは undefined。
+ *
+ * `plan/recurring/exceptions.mdx` なら `recurring`。URL は slug のままフラットなので、
+ * ディレクトリはナビの構造だけを決める。深さは validate-content.js が 3 段までに制限する。
+ */
+function getGroup(content: ContentData): string | undefined {
+  const segments = content.path.replaceAll('\\', '/').split('/');
+  return segments.length > 2 ? segments[1] : undefined;
 }
 
 /**
@@ -93,8 +113,35 @@ export async function generateDocsNavigation(locale: string): Promise<Navigation
         href: isGettingStarted ? '/docs' : `/docs/${indexContent.slug}`,
       });
     }
+
+    // サブディレクトリのページは第 3 階層としてグループにまとめる。
+    // グループは最初に現れた位置に置き、グループ内の順序は order のまま維持する
+    const groups = new Map<string, NavigationItem>();
     for (const content of rest) {
-      items.push({ title: content.frontMatter.title, href: `/docs/${content.slug}` });
+      const group = getGroup(content);
+      const item: NavigationItem = {
+        title: content.frontMatter.title,
+        href: `/docs/${content.slug}`,
+      };
+
+      if (!group) {
+        items.push(item);
+        continue;
+      }
+
+      let groupItem = groups.get(group);
+      if (!groupItem) {
+        groupItem = {
+          title: t.has(`categories.${group}`) ? t(`categories.${group}`) : toTitleCase(group),
+          items: [],
+        };
+        groups.set(group, groupItem);
+        items.push(groupItem);
+      }
+
+      // グループ名と同じスラッグのページはグループ自体のリンク先にする（カテゴリー overview と同じ扱い）
+      if (content.slug === group) groupItem.href = item.href;
+      else groupItem.items?.push(item);
     }
 
     const sectionTitle = t.has(`categories.${category}`)

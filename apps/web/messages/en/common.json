@@ -226,10 +226,13 @@
     },
     "overview": "Overview",
     "categories": {
-      "getting-started": "Getting Started",
-      "features": "Features",
-      "guides": "Guides",
-      "troubleshooting": "Troubleshooting",
+      "getting-started": "Getting started",
+      "plan": "Plan your day",
+      "track": "Track your time",
+      "review": "Look back",
+      "organize": "Organize with tags",
+      "data": "Use your data elsewhere",
+      "troubleshooting": "When something breaks",
       "account": "Account",
       "faq": "FAQ"
     },

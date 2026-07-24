@@ -1,7 +1,7 @@
 ---
 status: active
-last_verified: 2026-07-23
-code: supabase/migrations/20260708232500_add_time_model_tables.sql
+last_verified: 2026-07-24
+code: supabase/migrations/20260724000416_enforce_external_event_connection_owner.sql
 ---
 
 # external-calendar-import — 外部カレンダーを one-way で取り込む
@@ -69,23 +69,41 @@ Phase 1 から継承する拘束（本書で再決定しない）:
 
 - UNIQUE `(user_id, provider, provider_account_id)` — **同一 provider の複数アカウントを最初から許容する**。schema コストはゼロで、UI は接続一覧表示で吸収する
 - access token は**保存しない**。1h TTL の一時値であり、保存すると secret 面が増えるだけ（同期のたびに refresh token から mint する。§5-3）
+- Step 1 実装時の追加（migration `20260723233814`）:
+  - `status` は `CHECK (status IN ('active','reauth_required'))`。provider 由来の値ではなくアプリが決める閉じた集合なので、ミラーの not-blank ではなく `plans_source_check` と同型にした。3 つ目の状態を足す時は migration が要る
+  - `granted_scopes` に `cardinality > 0 かつ NULL 要素なし` の CHECK。`NOT NULL` だけでは `'{}'` を通してしまい、監査用途を満たさない
+  - `refresh_token_enc` / `provider_account_id` に not-blank CHECK（ミラーの書式踏襲）
+  - 子テーブルの複合 FK 参照先として `UNIQUE (id, user_id)`
 
 ### 4-2. calendar_connection_calendars
 
 **選択済みカレンダーのみ**永続化する。選択可能な一覧は接続時・設定画面表示時にオンデマンドで provider API から取得し、保存しない。
 
-| カラム                  | 型                   | 制約                                                        |
-| ----------------------- | -------------------- | ----------------------------------------------------------- |
-| id                      | uuid PK              |                                                             |
-| connection_id           | uuid NOT NULL        | FK → calendar_connections, ON DELETE CASCADE                |
-| user_id                 | uuid NOT NULL        | RLS 簡素化のための非正規化。owner 整合は constraint trigger |
-| provider_calendar_id    | text NOT NULL        | UNIQUE `(connection_id, provider_calendar_id)`              |
-| calendar_name           | text NULL            |                                                             |
-| sync_token              | text NULL            | **per-calendar cursor**（§6-3。NULL = 次回 full sync）      |
-| last_synced_at          | timestamptz NULL     |                                                             |
-| created_at / updated_at | timestamptz NOT NULL |                                                             |
+| カラム                  | 型                   | 制約                                                    |
+| ----------------------- | -------------------- | ------------------------------------------------------- |
+| id                      | uuid PK              |                                                         |
+| connection_id           | uuid NOT NULL        | 複合 FK の一部（下記）                                  |
+| user_id                 | uuid NOT NULL        | RLS 簡素化のための非正規化。owner 整合は複合 FK（下記） |
+| provider_calendar_id    | text NOT NULL        | UNIQUE `(connection_id, provider_calendar_id)`          |
+| calendar_name           | text NULL            |                                                         |
+| sync_token              | text NULL            | **per-calendar cursor**（§6-3。NULL = 次回 full sync）  |
+| last_synced_at          | timestamptz NULL     |                                                         |
+| created_at / updated_at | timestamptz NOT NULL |                                                         |
 
 sync cursor を connection ではなく calendar 行に置く理由: Google の `syncToken` は events collection（= カレンダー）単位で発行される。connection 単位に置くと複数カレンダー選択で破綻する。Microsoft Graph の deltaLink も resource 単位なので同じ形に収まる。
+
+owner 整合は **複合 FK** で担保する（Step 1 実装時の変更。当初案は constraint trigger）。親に `UNIQUE (id, user_id)` を置き、子は `FOREIGN KEY (connection_id, user_id) REFERENCES calendar_connections (id, user_id) ON DELETE CASCADE` を持つ。constraint trigger は子側の `AFTER INSERT OR UPDATE` しか見ないため、親の `UPDATE calendar_connections SET user_id` を素通りさせる（repo はこの穴の backfill を [`20260706120100_backfill_entry_tag_owner_mismatch.sql`](../../../supabase/migrations/20260706120100_backfill_entry_tag_owner_mismatch.sql) で実際に払っている）。加えて trigger の存在確認 SELECT は lock を取らないが、RI は参照行に `FOR KEY SHARE` を取る。コストは冗長 index 1 本で、trigger 関数と REVOKE / GRANT EXECUTE の定型が不要になる。
+
+### 4-2b. ミラーへの connection_id 追加（Step 1 実装時の追加）
+
+`external_calendar_events` に `connection_id` を追加し、upsert key を `(user_id, provider, connection_id, provider_calendar_id, provider_event_id)` に張り替えた。
+
+- **理由**: §4-1 が同一 provider の複数アカウントを許容するため、2 つの Google アカウントが同じ共有カレンダーを購読すると旧 4 列キーで行を奪い合い、切断時の prune も connection 単位に絞れない
+- **owner 整合も複合 FK で担保する**: `FOREIGN KEY (connection_id, user_id) REFERENCES calendar_connections (id, user_id) ON DELETE SET NULL (connection_id)`。単一列 FK だと「その connection が存在する」ことしか保証せず、service_role の書き手（Step 3 の sync、Step 7 の切断）が user A のミラー行に user B の connection をぶら下げられてしまう。そうなると (a) connection 単位の prune が他ユーザーの行を巻き込み、(b) B の切断が A の行を書き換え、(c) `external_calendar_events` は table 単位 SELECT なので A が他人の connection UUID を読める。子テーブルと同じ規則を適用する（PR #1714 のレビュー指摘）
+- **`ON DELETE SET NULL (connection_id)` の列リストは必須**: 列を指定しないと `user_id` まで NULL 化しようとして `23502` になる（PG15+ の構文。local / production とも 17.6）
+- **`ON DELETE SET NULL` である理由**: §8 は plans / records から参照済みのミラー行を残す。それらの FK は NO ACTION なので、CASCADE にすると切断が `23503` で丸ごと失敗する。孤立した行は §8 の言う歴史的アンカーとして `connection_id IS NULL` で残る。`MATCH SIMPLE` なので `connection_id IS NULL` の行は FK 検査の対象外になり、孤立行は正当なまま
+- unique index は既定の `NULLS DISTINCT` のまま。孤立行は二度と upsert に参加しないので、distinct 扱いが切断を阻むことはない
+- production・local とも空テーブルの段階で入れたので backfill はゼロ
 
 ### 4-3. Token 保護（相談事項 → 採用: Option α + γ の組み合わせ）
 
@@ -95,15 +113,17 @@ sync cursor を connection ではなく calendar 行に置く理由: Google の 
 
 ### 4-4. RLS / GRANT（migration に 1 セットで書く）
 
-| ロール        | calendar_connections                                                                                                                                                                                                  | calendar_connection_calendars |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| authenticated | column-scoped SELECT のみ（`id, provider, provider_account_email, status, last_synced_at, last_sync_error, created_at`。**`refresh_token_enc` / `granted_scopes` は grant から除外**）+ `auth.uid() = user_id` policy | SELECT のみ + 同 policy       |
-| service_role  | ALL                                                                                                                                                                                                                   | ALL                           |
-| anon          | なし                                                                                                                                                                                                                  | なし                          |
+| ロール        | calendar_connections                                                                                                                                                                                                                                               | calendar_connection_calendars |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
+| authenticated | column-scoped SELECT のみ（`id, user_id, provider, provider_account_email, status, last_synced_at, last_sync_error, created_at, updated_at`。**`refresh_token_enc` / `granted_scopes` / `provider_account_id` は grant から除外**）+ `auth.uid() = user_id` policy | SELECT のみ + 同 policy       |
+| service_role  | ALL                                                                                                                                                                                                                                                                | ALL                           |
+| anon          | なし                                                                                                                                                                                                                                                               | なし                          |
 
 - 全 mutation（接続作成・カレンダー選択・切断）は tRPC service が `createServiceRoleClient` + 明示的な `user_id` 一致ガードで実行する。ミラーテーブルと同じ「書き込みは service_role 責務」の構図
-- 注意: column-scoped grant の下では `select('*')` が permission denied になる。service 層は明示カラム指定を徹底する
-- `pnpm rls:snapshot` を再生成し、drift を CI で検出する
+- 注意: column-scoped grant の下では `select('*')` だけでなく、**未 grant 列を `WHERE` / `ORDER BY` / `EXPLAIN` に含むクエリもすべて 42501 になる**。エラーは列名を出さず `permission denied for table` としか言わない。service 層は明示カラム指定を徹底する
+- `user_id` を grant に含めた理由（Step 1 実装時の変更）: JWT で既に既知なので開示はゼロ。除外すると repo 内で 81 箇所使われている `.eq('user_id', …)` idiom が 42501 になる。ローカル検証で「RLS の `USING` 句は呼び出し側の列権限チェックを受けない」ことは実証済み（未 grant の `user_id` を参照する policy が正しく行を絞った）ため grant は必須ではないが、次に触る人の地雷を消すために含める
+- §4-3 が挙げる「前例 2 件」はいずれも書き込み側の grant であり、**column-scoped SELECT は本 project が repo 初**
+- `pnpm rls:snapshot` を再生成し、drift を CI で検出する。ただし snapshot は SELECT / INSERT / UPDATE / DELETE しか記録せず、しかも生成元は local DB である。production の `pg_default_acl` は新規 public テーブルに anon / authenticated へ `arwdDxtm` を撒く（local は `Dxtm` のみ）ため、**REVOKE 漏れは snapshot でも CI でも検出できない**。migration 自身に `has_table_privilege` / `has_column_privilege` の invariant を書き、production 適用時に落ちるようにする
 - 2026-07-16 の [iCal schema drift incident](../../operations/log/2026-07-16-incident-production-ical-schema-drift.md) の規律に従う: 明示 transaction + `lock_timeout = '5s'`、local reset → Supabase Preview Branch 検証 → merge の経路のみ。Dashboard SQL Editor と手動 `db push` は使わない
 
 ## 5. OAuth フロー（Google）

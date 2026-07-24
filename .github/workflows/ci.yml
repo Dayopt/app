@@ -96,7 +96,7 @@ jobs:
 
       - name: Verify Product and Web Production contracts with safe dummy values
         run: |
-          pnpm exec vitest run --config vitest.scripts.config.ts scripts/production-config-audit.test.ts
+          pnpm exec vitest run --config vitest.scripts.config.ts scripts/production-config-audit.test.ts scripts/production-release.test.ts scripts/__tests__/release-workflow-contract.test.ts
           pnpm --dir apps/product exec vitest --project unit run production-build-gate.test.mjs
           pnpm --dir apps/web exec vitest run production-build-gate.test.mjs
 

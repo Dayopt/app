@@ -37,7 +37,8 @@ Dayoptプロジェクトのリリース作業を安全かつ確実に実行す�
 │  └─ Phase 0 から: version bump → 品質チェック → PRマージを促す → タグ → リリースノート
 │
 ├─ mainにいてタグがまだ？
-│  └─ Phase 1 から: タグ作成・push → リリースノート
+│  └─ Phase 1 から: promote 完了確認 → 観察 → タグ作成・push → リリースノート
+│     （Production Release status が success になるまでタグを打たない）
 │
 ├─ タグはあるがReleaseがまだ？
 │  └─ Phase 2 から: GitHub Actions確認 → リリースノート
@@ -71,12 +72,12 @@ Phase 0: 準備（featureブランチにいる場合）
   └── 0.3 コード品質確認（lint, typecheck, test, build）
   → ユーザーにPRマージを促す
 
-Phase 1: タグ作成・リリース（mainブランチ）
+Phase 1: Production公開の確認とタグ作成（mainブランチ）
   ├── 1.1 mainブランチ最新取得
-  ├── 1.2 Gitタグ作成・プッシュ
-  └── 1.3 GitHub Actions 自動実行の確認
-       ├── 本番デプロイ
-       └── GitHub Release作成（auto-generated notes）
+  ├── 1.2 Production Release の promote 完了を待つ
+  ├── 1.3 Production を観察する（主要route / Sentry）
+  ├── 1.4 Gitタグ作成・プッシュ（promote成功の証跡）
+  └── 1.5 GitHub Release作成の確認（auto-generated notes）
 
 Phase 2: リリースノート反映
   ├── 2.1 前回リリース以降の全PRを取得
@@ -126,25 +127,48 @@ git checkout main
 git pull origin main
 ```
 
-### Phase 1.2: Gitタグ作成・プッシュ
+### Phase 1.2: Production promote の完了を待つ
+
+main への merge は Product / Web の Production build を作るだけで、Production domain は切り替わらない。`Production Release` workflow が同一 SHA の両 candidate を smoke・監査してから promote する。
+
+```bash
+# promote の実行状況を確認
+gh run list --workflow=release.yml --limit 1
+gh run watch --exit-status
+
+# 対象 SHA が Production に出たことを確認
+gh api "repos/Dayopt/dayopt/commits/$(git rev-parse HEAD)/status" \
+  --jq '.statuses[] | select(.context == "Production Release") | .state'
+```
+
+`success` にならないうちはタグを打たない。失敗時は `docs/operations/runbook.md` の Playbook 2 に従う。
+
+### Phase 1.3: Production を観察する
+
+promote 直後に主要 route と監視を確認する。異常があればタグを打たず、runbook の rollback 手順へ移る。
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://dayopt.app/
+curl -s -o /dev/null -w "%{http_code}\n" https://app.dayopt.app/api/health
+```
+
+Sentry の新規 issue と Vercel の runtime log も確認する。
+
+### Phase 1.4: Gitタグ作成・プッシュ
+
+観察まで終わってからタグを打つ。タグは deploy trigger ではなく、Production 公開が成功した証跡である。
 
 ```bash
 git tag v${VERSION}
 git push origin v${VERSION}
 ```
 
-タグpushにより GitHub Actions が自動で以下を実行：
+`create-release.yml` はタグ SHA の `Production Release` status が `success` であることを確認してから GitHub Release を作成する。未 promote の SHA にタグを打つと、この検証で止まる。
 
-- 本番デプロイ（Vercel）
-- GitHub Release作成（GitHub auto-generated notes）
-
-### Phase 1.3: 自動実行の確認
+### Phase 1.5: Release 作成の確認
 
 ```bash
-# ワークフローの実行状況を確認
 gh run list --workflow=create-release.yml --limit 1
-
-# リリースが作成されたことを確認
 gh release view v${VERSION}
 ```
 
