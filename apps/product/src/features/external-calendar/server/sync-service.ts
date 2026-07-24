@@ -1,0 +1,679 @@
+import 'server-only';
+
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+import { env } from '@/env';
+import { databaseTables, type Database } from '@/lib/database';
+import { logger } from '@/lib/logger';
+import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
+
+import { ExternalCalendarServiceError } from './external-calendar-service-error';
+import { googleCalendarAdapter } from './providers/google';
+import {
+  CalendarProviderError,
+  type CalendarProviderAdapter,
+  type NormalizedExternalEvent,
+  type ProviderSession,
+  type SyncWindow,
+} from './providers/types';
+import { decryptToken, encryptToken } from './token-crypto';
+
+/**
+ * 外部カレンダー同期エンジン（overview.md §6-2）。
+ *
+ * cron route（Step 5）と tRPC `syncNow`（Step 4）が同じ `syncConnection` を呼ぶ。書き込みは
+ * すべて service_role で行い、全クエリに `user_id` を明示する（ミラーは authenticated から
+ * INSERT/DELETE できない）。
+ */
+
+/** iCal feed route / token endpoint と同じ外部呼び出しタイムアウト（`lib/supabase/oauth.ts`）。 */
+const DB_REQUEST_TIMEOUT_MS = 15_000;
+
+/** 取り込み window の半径。iCal export と同じ ±90 日（overview.md §1）。 */
+const WINDOW_RADIUS_MS = 90 * 24 * 60 * 60 * 1000;
+
+/** prune の 1 バッチあたり件数。max_rows=1000 と URL 長 8192B（UUID 約 210 件）に触れない。 */
+const PRUNE_BATCH_SIZE = 150;
+
+/** prune のバッチ上限。150 × 40 = 6,000 件で ±90 日 window の想定を大きく超える。 */
+const MAX_PRUNE_BATCHES = 40;
+
+/** tombstone UPDATE の 1 バッチあたり件数。同じく URL 長を意識した値。 */
+const TOMBSTONE_BATCH_SIZE = 150;
+
+const PROVIDER = 'google';
+
+/**
+ * `last_sync_error` に入れる安定コード。
+ *
+ * この列は authenticated に SELECT が GRANT されているので、provider の生メッセージや URL を
+ * 入れてはいけない（PII / 内部情報の露出）。値域を閉じておき、UI（Step 6）が i18n する。
+ */
+type SyncErrorCode =
+  | 'reauth_required'
+  | 'rate_limited'
+  | 'provider_unavailable'
+  | 'encryption_key_invalid'
+  | 'partial_failure';
+
+// Step 4（tRPC）/ Step 5（cron）が消費者になるまで export しない。呼び出し側は
+// Awaited<ReturnType<typeof syncConnection>> で受け、必要になった時点で export する。
+type SyncOutcome =
+  | 'synced'
+  | 'skipped_reauth_required'
+  | 'reauth_required'
+  | 'encryption_key_invalid'
+  | 'partial_failure'
+  | 'not_configured';
+
+type SyncConnectionResult = {
+  outcome: SyncOutcome;
+  calendarsSynced: number;
+  calendarsFailed: number;
+};
+
+/**
+ * service_role client が触れる surface を同期に必要な 5 テーブルへ narrow する。
+ * `connection-service.ts` と同じ理由 — RLS を bypass する client が他テーブルへ到達できると
+ * cross-tenant leak になるので compile error で止める。plans / records は anti-join のため
+ * SELECT のみ使う。
+ */
+type SyncDatabase = {
+  public: {
+    Tables: Pick<
+      Database['public']['Tables'],
+      | 'external_calendar_events'
+      | 'calendar_connections'
+      | 'calendar_connection_calendars'
+      | 'plans'
+      | 'records'
+    >;
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
+
+type SyncClient = SupabaseClient<SyncDatabase>;
+
+function createSyncDbClient(): SyncClient {
+  return createClient<SyncDatabase>(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    // narrow 版には `createServiceRoleClient` の timeout 注入が無いので、ここで足す。
+    global: {
+      fetch: (url, options) =>
+        fetch(url, {
+          ...options,
+          signal: options?.signal ?? AbortSignal.timeout(DB_REQUEST_TIMEOUT_MS),
+        }),
+    },
+  });
+}
+
+/** `refresh_token_enc` は column-scoped grant 外だが service_role なので読める。列は明示列挙する。 */
+type ConnectionRow = {
+  id: string;
+  user_id: string;
+  status: string;
+  refresh_token_enc: string;
+};
+
+type CalendarRow = {
+  provider_calendar_id: string;
+  calendar_name: string | null;
+  sync_token: string | null;
+};
+
+/**
+ * 1 接続を同期する。
+ *
+ * provider / 個別カレンダーの失敗ではここで throw しない（既に `last_sync_error` と Sentry に
+ * 記録済み）。cron が 1 接続の失敗で全体を止めないための設計。ただし connection 行すら読めない
+ * DB 障害だけは、状態を記録する術も無い真の異常なので `ExternalCalendarServiceError` を投げて
+ * 呼び出し側（cron dispatcher / tRPC）に委ねる。connection が単に存在しない場合は
+ * `outcome: 'not_configured'` を返す。
+ */
+export async function syncConnection(params: {
+  connectionId: string;
+  userId: string;
+  /** true なら全カレンダーの sync_token を無視して full sync する（overview.md §6-2 の定期 full resync 機構）。 */
+  forceFullSync?: boolean;
+}): Promise<SyncConnectionResult> {
+  const { connectionId, userId, forceFullSync = false } = params;
+  const adapter: CalendarProviderAdapter = googleCalendarAdapter;
+  const db = createSyncDbClient();
+
+  // run の生成時刻。全 upsert 行と sweep 条件の両方でこの単一値を使う。行ごとに now() を
+  // 使うと sweep の境界がぶれて正しい行を消す。
+  const runStartedAt = new Date();
+  const runStartedAtIso = runStartedAt.toISOString();
+
+  const connection = await loadConnection(db, connectionId, userId);
+  if (connection === null) {
+    return { outcome: 'not_configured', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+
+  if (connection.status === 'reauth_required') {
+    return { outcome: 'skipped_reauth_required', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+
+  let refreshToken: string;
+  try {
+    refreshToken = decryptToken(
+      connection.refresh_token_enc,
+      env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? '',
+    );
+  } catch (error) {
+    // 鍵の設定ミスは運用側のバグ。全ユーザーを再同意に追い込まないよう status は変えない。
+    captureUnexpectedError(error instanceof Error ? error : new Error('token decrypt failed'), {
+      feature: 'external_calendar',
+      operation: 'decrypt_refresh_token',
+    });
+    await writeConnectionError(db, connectionId, userId, 'encryption_key_invalid', runStartedAtIso);
+    return { outcome: 'encryption_key_invalid', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+
+  let session: ProviderSession;
+  try {
+    session = await adapter.startSession(refreshToken);
+  } catch (error) {
+    if (error instanceof CalendarProviderError && error.kind === 'reauth_required') {
+      await markReauthRequired(db, connectionId, userId, runStartedAtIso);
+      return { outcome: 'reauth_required', calendarsSynced: 0, calendarsFailed: 0 };
+    }
+    captureProviderError(error, 'start_session');
+    await writeConnectionError(db, connectionId, userId, providerErrorCode(error), runStartedAtIso);
+    return { outcome: 'partial_failure', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+
+  // Google が rotation した場合だけ保存し直す。黙って捨てると次回から死ぬ。
+  if (session.rotatedRefreshToken !== null) {
+    await persistRotatedToken(db, connectionId, userId, session.rotatedRefreshToken);
+  }
+
+  const calendars = await loadSelectedCalendars(db, connectionId, userId);
+
+  const window: SyncWindow = {
+    timeMin: new Date(runStartedAt.getTime() - WINDOW_RADIUS_MS).toISOString(),
+    timeMax: new Date(runStartedAt.getTime() + WINDOW_RADIUS_MS).toISOString(),
+  };
+
+  let calendarsSynced = 0;
+  let calendarsFailed = 0;
+  let reauthRequired = false;
+
+  for (const calendar of calendars) {
+    const outcome = await syncOneCalendar({
+      db,
+      adapter,
+      session,
+      connection,
+      calendar,
+      window,
+      runStartedAtIso,
+      forceFullSync,
+    });
+
+    if (outcome === 'synced') calendarsSynced += 1;
+    else if (outcome === 'reauth_required') reauthRequired = true;
+    else calendarsFailed += 1;
+  }
+
+  if (reauthRequired) {
+    await markReauthRequired(db, connectionId, userId, runStartedAtIso);
+    return { outcome: 'reauth_required', calendarsSynced, calendarsFailed };
+  }
+
+  // 参照されていない window 外行を掃除する。connection 単位で 1 回だけ（calendar ごとに
+  // 回すと他カレンダーの行も対象になり、無駄に N 回走る）。
+  await pruneWindow(db, connection, runStartedAt);
+
+  if (calendarsFailed > 0) {
+    await writeConnectionError(db, connectionId, userId, 'partial_failure', runStartedAtIso);
+    return { outcome: 'partial_failure', calendarsSynced, calendarsFailed };
+  }
+
+  await writeConnectionSuccess(db, connectionId, userId, runStartedAtIso);
+  return { outcome: 'synced', calendarsSynced, calendarsFailed };
+}
+
+type CalendarSyncOutcome = 'synced' | 'reauth_required' | 'failed';
+
+async function syncOneCalendar(args: {
+  db: SyncClient;
+  adapter: CalendarProviderAdapter;
+  session: ProviderSession;
+  connection: ConnectionRow;
+  calendar: CalendarRow;
+  window: SyncWindow;
+  runStartedAtIso: string;
+  forceFullSync: boolean;
+}): Promise<CalendarSyncOutcome> {
+  const { db, adapter, session, connection, calendar, window, runStartedAtIso, forceFullSync } =
+    args;
+
+  const cursor = forceFullSync ? null : calendar.sync_token;
+
+  let result: Awaited<ReturnType<CalendarProviderAdapter['syncCalendar']>>;
+  try {
+    result = await adapter.syncCalendar(session, {
+      calendarId: calendar.provider_calendar_id,
+      cursor,
+      window,
+    });
+
+    if (result.cursorInvalid) {
+      // 410。cursor を捨てて同じ run 内で 1 回だけ full sync をやり直す。
+      await clearSyncToken(db, connection, calendar);
+      result = await adapter.syncCalendar(session, {
+        calendarId: calendar.provider_calendar_id,
+        cursor: null,
+        window,
+      });
+    }
+  } catch (error) {
+    if (error instanceof CalendarProviderError && error.kind === 'reauth_required') {
+      return 'reauth_required';
+    }
+    captureProviderError(error, 'sync_calendar');
+    return 'failed';
+  }
+
+  try {
+    if (result.events.length > 0) {
+      await upsertActiveEvents(db, connection, calendar, result.events, runStartedAtIso);
+    }
+
+    const tombstoneIds = [...result.cancelledEventIds, ...result.skippedEventIds];
+    if (tombstoneIds.length > 0) {
+      await tombstoneEvents(db, connection, calendar, tombstoneIds, runStartedAtIso);
+    }
+
+    // full sync は cancelled を返さない（showDeleted 既定 false）ので、provider 側で消えた
+    // 行が active のまま残る。全ページ完走した full sync のときだけ mark-and-sweep で掃除する。
+    // ページ途中で落ちた（nextCursor === null かつ events 未完）run では走らせない。
+    if (result.usedFullSync && result.nextCursor !== null) {
+      await sweepStaleEvents(db, connection, calendar, runStartedAtIso);
+    }
+
+    // 全ページ走破に成功したときだけ cursor を確定する。途中で落ちたら保存せず、次回また
+    // 先頭からやり直す（upsert は冪等）。
+    if (result.nextCursor !== null) {
+      await saveSyncToken(db, connection, calendar, result.nextCursor, runStartedAtIso);
+    }
+
+    return 'synced';
+  } catch (error) {
+    captureDatabaseError(error, 'persist_calendar_events');
+    return 'failed';
+  }
+}
+
+// =============================================================================
+// DB 操作
+// =============================================================================
+
+async function loadConnection(
+  db: SyncClient,
+  connectionId: string,
+  userId: string,
+): Promise<ConnectionRow | null> {
+  // 列は明示列挙する。column-scoped grant のため select('*') は 42501 になる。
+  const { data, error } = await db
+    .from(databaseTables.calendarConnections)
+    .select('id, user_id, status, refresh_token_enc')
+    .eq('id', connectionId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    // connection を読めない = 状態を記録する術も無い。ここだけは throw して呼び出し側へ委ねる。
+    const normalized = captureUnexpectedDatabaseError(error, {
+      feature: 'external_calendar',
+      operation: 'load_connection',
+    });
+    throw new ExternalCalendarServiceError('SYNC_FAILED', 'failed to load calendar connection', {
+      cause: normalized,
+    });
+  }
+  return data;
+}
+
+async function loadSelectedCalendars(
+  db: SyncClient,
+  connectionId: string,
+  userId: string,
+): Promise<CalendarRow[]> {
+  const { data, error } = await db
+    .from(databaseTables.calendarConnectionCalendars)
+    .select('provider_calendar_id, calendar_name, sync_token')
+    .eq('connection_id', connectionId)
+    .eq('user_id', userId);
+
+  if (error) {
+    captureDatabaseError(error, 'load_selected_calendars');
+    return [];
+  }
+  return data ?? [];
+}
+
+async function upsertActiveEvents(
+  db: SyncClient,
+  connection: ConnectionRow,
+  calendar: CalendarRow,
+  events: NormalizedExternalEvent[],
+  runStartedAtIso: string,
+): Promise<void> {
+  // 全行のキー集合を厳密に揃える。PostgREST は配列 upsert のとき全行のキーの和集合を
+  // columns に送り、欠けた行は DEFAULT ではなく NULL で埋める。dismissed_at はキーに
+  // 含めない（§6-2-5。ON CONFLICT DO UPDATE SET の対象列は INSERT の列と同一なので、
+  // 含めなければ既存の dismissed_at が保持される）。
+  const rows = events.map((event) => ({
+    user_id: connection.user_id,
+    provider: PROVIDER,
+    connection_id: connection.id,
+    provider_calendar_id: calendar.provider_calendar_id,
+    provider_event_id: event.providerEventId,
+    title: event.title,
+    description: event.description,
+    calendar_name: calendar.calendar_name,
+    start_at: event.startAt,
+    end_at: event.endAt,
+    status: 'confirmed',
+    last_synced_at: runStartedAtIso,
+  }));
+
+  const { error } = await db.from(databaseTables.externalCalendarEvents).upsert(rows, {
+    onConflict: 'user_id,provider,connection_id,provider_calendar_id,provider_event_id',
+  });
+
+  if (error) throw error;
+}
+
+async function tombstoneEvents(
+  db: SyncClient,
+  connection: ConnectionRow,
+  calendar: CalendarRow,
+  providerEventIds: string[],
+  runStartedAtIso: string,
+): Promise<void> {
+  // UPDATE であって upsert ではない。ミラーに無い id には行を作らない（未知の cancelled 通知が
+  // sparse row を無限に増やすのを防ぐ）。既存の start_at / end_at / dismissed_at は残るので、
+  // NULL 時刻の不滅ゴミ行が生まれず prune が効く。
+  for (let i = 0; i < providerEventIds.length; i += TOMBSTONE_BATCH_SIZE) {
+    const chunk = providerEventIds.slice(i, i + TOMBSTONE_BATCH_SIZE);
+    const { error } = await db
+      .from(databaseTables.externalCalendarEvents)
+      .update({ status: 'cancelled', last_synced_at: runStartedAtIso })
+      .eq('user_id', connection.user_id)
+      .eq('connection_id', connection.id)
+      .eq('provider_calendar_id', calendar.provider_calendar_id)
+      .in('provider_event_id', chunk);
+
+    if (error) throw error;
+  }
+}
+
+async function sweepStaleEvents(
+  db: SyncClient,
+  connection: ConnectionRow,
+  calendar: CalendarRow,
+  runStartedAtIso: string,
+): Promise<void> {
+  // full sync が触れなかった（= provider から返らなかった = 削除された）行を cancelled 化する。
+  // strict 比較 last_synced_at < runStartedAt が並行 run 安全性の要（新しい run が書いた
+  // 行は消さない）。DELETE ではなく UPDATE なのは、参照済み行を消せず dismissed も残すため。
+  const { error } = await db
+    .from(databaseTables.externalCalendarEvents)
+    .update({ status: 'cancelled', last_synced_at: runStartedAtIso })
+    .eq('user_id', connection.user_id)
+    .eq('connection_id', connection.id)
+    .eq('provider_calendar_id', calendar.provider_calendar_id)
+    .lt('last_synced_at', runStartedAtIso)
+    .neq('status', 'cancelled');
+
+  if (error) throw error;
+}
+
+async function saveSyncToken(
+  db: SyncClient,
+  connection: ConnectionRow,
+  calendar: CalendarRow,
+  syncToken: string,
+  runStartedAtIso: string,
+): Promise<void> {
+  const { error } = await db
+    .from(databaseTables.calendarConnectionCalendars)
+    .update({ sync_token: syncToken, last_synced_at: runStartedAtIso })
+    .eq('user_id', connection.user_id)
+    .eq('connection_id', connection.id)
+    .eq('provider_calendar_id', calendar.provider_calendar_id);
+
+  if (error) throw error;
+}
+
+async function clearSyncToken(
+  db: SyncClient,
+  connection: ConnectionRow,
+  calendar: CalendarRow,
+): Promise<void> {
+  const { error } = await db
+    .from(databaseTables.calendarConnectionCalendars)
+    .update({ sync_token: null })
+    .eq('user_id', connection.user_id)
+    .eq('connection_id', connection.id)
+    .eq('provider_calendar_id', calendar.provider_calendar_id);
+
+  if (error) throw error;
+}
+
+/**
+ * window 外の未参照ミラー行を掃除する（overview.md §6-2-6）。
+ *
+ * plans / records から参照される行は anti-join で除外する。FK が NO ACTION なので参照行の
+ * DELETE は 23503 になる。参照判定は `deleted_at` で絞らない — soft-delete 済みの plan も
+ * まだ FK でミラー行を掴んでいる。keyset ページングで max_rows と URL 長の両方を避ける。
+ */
+async function pruneWindow(
+  db: SyncClient,
+  connection: ConnectionRow,
+  runStartedAt: Date,
+): Promise<void> {
+  const lower = new Date(runStartedAt.getTime() - WINDOW_RADIUS_MS).toISOString();
+  const upper = new Date(runStartedAt.getTime() + WINDOW_RADIUS_MS).toISOString();
+
+  let cursor = '';
+
+  for (let batch = 0; batch < MAX_PRUNE_BATCHES; batch += 1) {
+    const { data: candidates, error: selectError } = await db
+      .from(databaseTables.externalCalendarEvents)
+      .select('id')
+      .eq('user_id', connection.user_id)
+      .eq('connection_id', connection.id)
+      .or(`end_at.lt.${lower},start_at.gt.${upper}`)
+      .gt('id', cursor)
+      .order('id', { ascending: true })
+      .limit(PRUNE_BATCH_SIZE);
+
+    if (selectError) {
+      captureDatabaseError(selectError, 'prune_select_candidates');
+      return;
+    }
+    if (!candidates || candidates.length === 0) return;
+
+    const ids = candidates.map((row) => row.id);
+
+    let referenced: Set<string>;
+    try {
+      referenced = await loadReferencedEventIds(db, connection.user_id, ids);
+    } catch (error) {
+      // prune はここまでの upsert / sweep の成功を壊さないよう、参照の読み取り失敗では
+      // 中断するだけにする（throw して syncConnection 全体を落とさない）。
+      captureDatabaseError(error, 'prune_load_referenced');
+      return;
+    }
+    const prunable = ids.filter((id) => !referenced.has(id));
+
+    if (prunable.length > 0) {
+      const { error: deleteError } = await db
+        .from(databaseTables.externalCalendarEvents)
+        .delete()
+        // id は user/connection スコープの select から得ているが、service_role は RLS を
+        // bypass するので user_id を明示的に添える（defense-in-depth）。
+        .eq('user_id', connection.user_id)
+        .in('id', prunable);
+
+      if (deleteError) {
+        // select と delete の間に plan が作られると 23503。次回 cron で回収されるので
+        // ここでは警告に留めて先へ進む。
+        logger.warn('[calendar-sync] prune skipped some rows due to a reference race');
+      }
+    }
+
+    cursor = ids[ids.length - 1] ?? cursor;
+    if (candidates.length < PRUNE_BATCH_SIZE) return;
+  }
+
+  logger.warn('[calendar-sync] prune stopped at the batch limit', { batches: MAX_PRUNE_BATCHES });
+}
+
+/** plans / records の両方から、与えた id を参照している external_calendar_event_id を集める。 */
+async function loadReferencedEventIds(
+  db: SyncClient,
+  userId: string,
+  ids: string[],
+): Promise<Set<string>> {
+  const referenced = new Set<string>();
+
+  for (const table of [databaseTables.plans, databaseTables.records] as const) {
+    const { data, error } = await db
+      .from(table)
+      .select('external_calendar_event_id')
+      .eq('user_id', userId)
+      .in('external_calendar_event_id', ids);
+
+    if (error) throw error;
+
+    for (const row of data ?? []) {
+      if (row.external_calendar_event_id !== null) referenced.add(row.external_calendar_event_id);
+    }
+  }
+
+  return referenced;
+}
+
+// =============================================================================
+// connection 状態の更新
+// =============================================================================
+
+async function markReauthRequired(
+  db: SyncClient,
+  connectionId: string,
+  userId: string,
+  runStartedAtIso: string,
+): Promise<void> {
+  await updateConnection(db, connectionId, userId, {
+    status: 'reauth_required',
+    last_sync_error: 'reauth_required',
+    last_synced_at: runStartedAtIso,
+  });
+}
+
+async function writeConnectionError(
+  db: SyncClient,
+  connectionId: string,
+  userId: string,
+  code: SyncErrorCode,
+  runStartedAtIso: string,
+): Promise<void> {
+  await updateConnection(db, connectionId, userId, {
+    last_sync_error: code,
+    last_synced_at: runStartedAtIso,
+  });
+}
+
+async function writeConnectionSuccess(
+  db: SyncClient,
+  connectionId: string,
+  userId: string,
+  runStartedAtIso: string,
+): Promise<void> {
+  await updateConnection(db, connectionId, userId, {
+    last_sync_error: null,
+    last_synced_at: runStartedAtIso,
+  });
+}
+
+async function persistRotatedToken(
+  db: SyncClient,
+  connectionId: string,
+  userId: string,
+  rotatedRefreshToken: string,
+): Promise<void> {
+  try {
+    await updateConnection(db, connectionId, userId, {
+      refresh_token_enc: encryptToken(rotatedRefreshToken, env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? ''),
+    });
+  } catch (error) {
+    // 保存に失敗しても今回の同期は続行する（access token は既に mint 済み）。
+    captureUnexpectedError(error instanceof Error ? error : new Error('rotate token failed'), {
+      feature: 'external_calendar',
+      operation: 'persist_rotated_token',
+    });
+  }
+}
+
+async function updateConnection(
+  db: SyncClient,
+  connectionId: string,
+  userId: string,
+  patch: Partial<Database['public']['Tables']['calendar_connections']['Update']>,
+): Promise<void> {
+  const { error } = await db
+    .from(databaseTables.calendarConnections)
+    .update(patch)
+    .eq('id', connectionId)
+    .eq('user_id', userId);
+
+  if (error) captureDatabaseError(error, 'update_connection');
+}
+
+// =============================================================================
+// エラー整理
+// =============================================================================
+
+/** provider の生メッセージを外へ出さないよう、error → 安定コードに畳む。 */
+function providerErrorCode(error: unknown): SyncErrorCode {
+  if (error instanceof CalendarProviderError) {
+    if (error.kind === 'reauth_required') return 'reauth_required';
+    if (error.kind === 'rate_limited') return 'rate_limited';
+  }
+  return 'provider_unavailable';
+}
+
+function captureProviderError(error: unknown, operation: string): void {
+  // rate_limited / cursor_invalid は想定内なので Sentry に送らない（quota を焼く増幅経路）。
+  if (
+    error instanceof CalendarProviderError &&
+    (error.kind === 'rate_limited' || error.kind === 'cursor_invalid')
+  ) {
+    logger.warn('[calendar-sync] provider returned an expected error', { operation });
+    return;
+  }
+
+  captureUnexpectedError(error instanceof Error ? error : new Error('provider error'), {
+    feature: 'external_calendar',
+    operation,
+    source: 'google_calendar_api',
+    // errorCode は allowlist で snake_case ASCII 相当を要求する。kind は既にその形。
+    ...(error instanceof CalendarProviderError ? { errorCode: error.kind } : {}),
+  });
+}
+
+function captureDatabaseError(error: unknown, operation: string): void {
+  captureUnexpectedDatabaseError(error, {
+    feature: 'external_calendar',
+    operation,
+  });
+}
