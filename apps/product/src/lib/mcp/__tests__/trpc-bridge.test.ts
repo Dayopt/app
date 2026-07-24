@@ -37,4 +37,21 @@ describe('createMcpTrpcCaller', () => {
       authMode: 'oauth',
     });
   });
+
+  it('request cancellation signalを内部tRPC contextへ渡す', () => {
+    const signal = new AbortController().signal;
+
+    createMcpTrpcCaller({
+      userId: 'user-1',
+      clientId: 'cursor',
+      scopes: ['read:constraints'],
+      signal,
+    });
+
+    expect(createCaller).toHaveBeenCalledWith(
+      expect.objectContaining({
+        req: { headers: {}, cookies: {}, signal },
+      }),
+    );
+  });
 });

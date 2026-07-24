@@ -24,6 +24,7 @@ import { AuthMode, createServiceRoleClient, detectAuthMode } from '@/lib/supabas
 export interface TrpcRequestLike {
   headers: Record<string, string | undefined>;
   cookies: Record<string, string | undefined>;
+  signal?: AbortSignal | undefined;
   socket?: {
     remoteAddress?: string | undefined;
   };
@@ -292,6 +293,7 @@ function createRequestLike(req: Request): TrpcRequestLike {
   return {
     headers,
     cookies: parseCookieHeader(req.headers.get('cookie')),
+    signal: req.signal,
   };
 }
 

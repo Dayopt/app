@@ -72,6 +72,7 @@ export function createMockSupabase(overrides?: Partial<MockSupabaseClient>): Moc
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     range: vi.fn().mockReturnThis(),
+    abortSignal: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue({ data: null, error: null }),
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     then: vi.fn().mockImplementation((resolve) => resolve({ data: [], error: null })),
@@ -177,6 +178,7 @@ export function createChainableMock(
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     range: vi.fn().mockReturnThis(),
+    abortSignal: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue({ data, error }),
     maybeSingle: vi.fn().mockResolvedValue({ data, error }),
     then: vi.fn().mockImplementation((resolve: (value: unknown) => void) =>

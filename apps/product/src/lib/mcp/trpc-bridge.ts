@@ -18,13 +18,18 @@ interface McpTrpcContextInput {
   userId: string;
   clientId: OAuthClientId;
   scopes: SupportedScope[];
+  signal?: AbortSignal;
 }
 
 export function createMcpTrpcCaller(input: McpTrpcContextInput) {
   const supabase = createServiceRoleClient();
 
   return appRouter.createCaller({
-    req: { headers: {}, cookies: {} },
+    req: {
+      headers: {},
+      cookies: {},
+      ...(input.signal ? { signal: input.signal } : {}),
+    },
     res: {},
     userId: input.userId,
     oauthClientId: input.clientId,

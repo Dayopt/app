@@ -47,6 +47,35 @@ describe('handleServiceError observability', () => {
     });
   });
 
+  it('drops an explicit request cancellation and captures a read timeout', () => {
+    const cancelled = new ServiceError('REQUEST_CANCELLED', 'cancelled', {
+      cause: new UserCancellationError(),
+    });
+    const timeoutCause = new DOMException('timed out', 'AbortError');
+    const timeout = new ServiceError('READ_TIMEOUT', 'timed out', {
+      cause: timeoutCause,
+    });
+
+    let cancellationError: TRPCError | undefined;
+    try {
+      handleServiceError(cancelled);
+    } catch (error) {
+      cancellationError = error as TRPCError;
+    }
+    expect(cancellationError).toMatchObject({ code: 'CLIENT_CLOSED_REQUEST' });
+    expect(isExpectedTrpcError(cancellationError as TRPCError)).toBe(true);
+    expect(captureUnexpectedError).not.toHaveBeenCalled();
+
+    expect(() => handleServiceError(timeout)).toThrowError(
+      expect.objectContaining({ code: 'TIMEOUT' }),
+    );
+    expect(captureUnexpectedError).toHaveBeenCalledWith(timeoutCause, {
+      errorCode: 'READ_TIMEOUT',
+      source: 'trpc_service',
+      operation: 'handle_service_error',
+    });
+  });
+
   it.each([
     'BAD_REQUEST',
     'UNAUTHORIZED',
