@@ -12,6 +12,10 @@ import {
   type GoogleIdTokenPayload,
   type GoogleTokenResponse,
 } from '../schemas/google';
+import {
+  googleRefreshTokenResponseSchema,
+  type GoogleRefreshTokenResponse,
+} from '../schemas/google-calendar';
 import { isValidEncryptionKey } from './token-crypto';
 
 /**
@@ -24,6 +28,7 @@ import { isValidEncryptionKey } from './token-crypto';
 
 const GOOGLE_AUTHORIZE_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
+const GOOGLE_REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke';
 
 /** `lib/oauth-server/tokens.ts` の ENTROPY_BYTES と同値。独自の桁数を発明しない。 */
 const ENTROPY_BYTES = 32;
@@ -143,31 +148,30 @@ export function buildAuthorizationUrl(params: {
 }
 
 /**
- * authorization code を token に交換する。
+ * token endpoint へ form POST し、成功 body を返す。
  *
- * 失敗レスポンスからは `error` / `error_description` しか読まない。body 全体を握ると
- * `code` がログや Sentry に流れる事故が起きる。
+ * 失敗レスポンスからは `error` しか読まない。body 全体を握ると `code` や refresh token が
+ * ログや Sentry に流れる事故が起きる（`error_description` はリクエスト内容を echo する）。
+ *
+ * `invalid_grant` のときの reason を呼び出し側が決めるのは、意味が経路で違うため。
+ * code 交換の invalid_grant は「古い / 使用済み code」でユーザーがやり直せばよいが、
+ * refresh の invalid_grant は「保存済み接続が恒久的に死んだ」で再接続が要る（§5-4）。
  */
-export async function exchangeAuthorizationCode(params: {
-  code: string;
-  redirectUri: string;
-  codeVerifier: string;
-}): Promise<GoogleTokenResponse> {
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    code: params.code,
-    redirect_uri: params.redirectUri,
-    code_verifier: params.codeVerifier,
-    client_id: env.GOOGLE_CALENDAR_CLIENT_ID ?? '',
-    client_secret: env.GOOGLE_CALENDAR_CLIENT_SECRET ?? '',
-  });
-
+async function postToTokenEndpoint(params: {
+  body: URLSearchParams;
+  /** `invalid_grant` のときに使う reason。 */
+  recoverableReason: string;
+  /** それ以外の provider 拒否で使う reason。 */
+  rejectedReason: string;
+  /** エラー message の prefix。 */
+  operation: string;
+}): Promise<unknown> {
   let response: Response;
   try {
     response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body,
+      body: params.body,
       signal: AbortSignal.timeout(TOKEN_REQUEST_TIMEOUT_MS),
     });
   } catch {
@@ -177,26 +181,50 @@ export async function exchangeAuthorizationCode(params: {
   const payload: unknown = await response.json().catch(() => null);
 
   if (!response.ok) {
-    // `error` は RFC 6749 の短い列挙値なので握っても安全。`error_description` は
-    // リクエスト内容を echo することがあるので読まない。
+    // `error` は RFC 6749 の短い列挙値なので握っても安全。
     const errorCode =
       payload && typeof payload === 'object' && 'error' in payload
         ? String((payload as { error: unknown }).error)
         : 'unknown_error';
 
-    // ユーザーが古い / 使用済み code を投げれば必ず起きる invalid_grant だけを想定内とし、
-    // 設定不備（invalid_client / redirect_uri_mismatch）や Google 障害とは別 reason にする。
+    // 設定不備（invalid_client / redirect_uri_mismatch）や Google 障害は別 reason にして
+    // 必ず alert 側へ回す。
     const reason = USER_RECOVERABLE_PROVIDER_ERRORS.has(errorCode)
-      ? 'authorization_expired'
-      : 'token_exchange_rejected';
+      ? params.recoverableReason
+      : params.rejectedReason;
 
     throw new GoogleOAuthError(
-      `token exchange rejected: ${errorCode}`,
+      `${params.operation} rejected: ${errorCode}`,
       reason,
       errorCode,
       response.status,
     );
   }
+
+  return payload;
+}
+
+/**
+ * authorization code を token に交換する。
+ */
+export async function exchangeAuthorizationCode(params: {
+  code: string;
+  redirectUri: string;
+  codeVerifier: string;
+}): Promise<GoogleTokenResponse> {
+  const payload = await postToTokenEndpoint({
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: params.code,
+      redirect_uri: params.redirectUri,
+      code_verifier: params.codeVerifier,
+      client_id: env.GOOGLE_CALENDAR_CLIENT_ID ?? '',
+      client_secret: env.GOOGLE_CALENDAR_CLIENT_SECRET ?? '',
+    }),
+    recoverableReason: 'authorization_expired',
+    rejectedReason: 'token_exchange_rejected',
+    operation: 'token exchange',
+  });
 
   const parsed = googleTokenResponseSchema.safeParse(payload);
   if (!parsed.success) {
@@ -204,6 +232,84 @@ export async function exchangeAuthorizationCode(params: {
   }
 
   return parsed.data;
+}
+
+/**
+ * refresh token から access token を mint する。
+ *
+ * access token は保存しない（§5-3）。同期の実行ごとにここで作って使い切る。`expires_in` は
+ * 値が保証されていない（公式サンプルでも 3920 / 3599 と揺れる）ので、有効期限を DB に
+ * 書く実装は持たない。
+ *
+ * `refresh_token` は通常返らないが、返った場合は呼び出し側が保存し直す必要がある。
+ * 黙って捨てると、Google が rotation を始めた時に接続が静かに死ぬ。
+ */
+export async function refreshAccessToken(params: {
+  refreshToken: string;
+}): Promise<GoogleRefreshTokenResponse> {
+  const payload = await postToTokenEndpoint({
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: params.refreshToken,
+      client_id: env.GOOGLE_CALENDAR_CLIENT_ID ?? '',
+      client_secret: env.GOOGLE_CALENDAR_CLIENT_SECRET ?? '',
+    }),
+    // 接続が恒久的に死んだ状態。呼び出し側はこれを見て status='reauth_required' に落とす。
+    recoverableReason: 'refresh_token_revoked',
+    rejectedReason: 'token_refresh_rejected',
+    operation: 'token refresh',
+  });
+
+  const parsed = googleRefreshTokenResponseSchema.safeParse(payload);
+  if (!parsed.success) {
+    // 初回の code 交換用 schema は id_token を必須にしているので、ここで流用してはいけない。
+    // refresh のレスポンスに id_token は入らない。
+    throw new GoogleOAuthError(
+      'refresh response has an unexpected shape',
+      'token_response_invalid',
+    );
+  }
+
+  return parsed.data;
+}
+
+/**
+ * refresh token を revoke する。best-effort（§8-1）。
+ *
+ * token は form body に載せる。query string に置くとアクセスログ・プロキシログ・Sentry の
+ * breadcrumb に残る。
+ *
+ * 既に失効している（`400 invalid_token`）場合も成功として扱い、切断を冪等にする。
+ *
+ * 注意: revoke は GCP project 単位で効く。同じ project の別 client がそのユーザーへ持つ
+ * grant も巻き添えで無効になる。現状 client は 1 つなので実害は無いが、将来 Gmail 連携などを
+ * 同じ project に足す時はここが効いてくる。
+ *
+ * @returns 失効が確定したら true。ネットワーク断や Google の 5xx では false（呼び出し側は続行する）
+ */
+export async function revokeRefreshToken(token: string): Promise<boolean> {
+  let response: Response;
+  try {
+    response = await fetch(GOOGLE_REVOKE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ token }),
+      signal: AbortSignal.timeout(TOKEN_REQUEST_TIMEOUT_MS),
+    });
+  } catch {
+    return false;
+  }
+
+  if (response.ok) return true;
+
+  // 200 は body 空なので、ここに来るのは 4xx/5xx のみ。
+  const payload: unknown = await response.json().catch(() => null);
+  const errorCode =
+    payload && typeof payload === 'object' && 'error' in payload
+      ? String((payload as { error: unknown }).error)
+      : 'unknown_error';
+
+  return response.status === 400 && errorCode === 'invalid_token';
 }
 
 /**

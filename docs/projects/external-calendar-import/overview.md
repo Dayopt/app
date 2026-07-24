@@ -1,7 +1,7 @@
 ---
 status: active
 last_verified: 2026-07-24
-code: supabase/migrations/20260724000416_enforce_external_event_connection_owner.sql
+code: apps/product/src/features/external-calendar/server/sync-service.ts
 ---
 
 # external-calendar-import — 外部カレンダーを one-way で取り込む
@@ -170,14 +170,20 @@ cron route は「due な connection を列挙 → 時間予算内で逐次同期
 
 ### 6-2. 同期アルゴリズム（per selected calendar）
 
-1. **初回 full sync**: `events.list?timeMin=now-90d&timeMax=now+90d&singleEvents=true&maxResults=2500` を `nextPageToken` でページング。最終ページの `nextSyncToken` を `calendar_connection_calendars.sync_token` に保存
-2. **増分 sync**: `events.list?syncToken=...`（timeMin/timeMax は併用不可）。変更分を upsert key `(user_id, provider, provider_calendar_id, provider_event_id)` で upsert
-3. **tombstone**: provider 側の削除・キャンセルは `status = 'cancelled'` の sparse row として upsert（ミラーの CHECK が cancelled 行の NULL を既に許容している）
-4. **410 GONE**（syncToken 失効）: `sync_token` を NULL 化 → 次回 full resync
-5. **dismissed 不可侵**: upsert の**更新カラムリストから `dismissed_at` を必ず除外**する。「再同期で dismissed を復活させない」を機械的に保証し、full resync 経由でも復活しない。regression test 必須
-6. **window prune**: 各同期の最後に `end_at < now-90d OR start_at > now+90d` の行を削除する（未来側も対象にするのは、syncToken 増分が window 外の変更を持ち込むため）。ただし **plans / records から参照される行は anti-join で除外**する — `external_calendar_event_id` の FK は ON DELETE 句なし（NO ACTION）のため、参照行の DELETE は例外になる（migration `20260708232500` L40/L62 で確認済み）。設計と DB 制約が一致している
-7. **dismissed 行も prune 対象**: window は now 相対で前進するだけなので、window 外に出た行が full resync で再取得されることはなく、resurrection は起こり得ない。window 内の dismissed / cancelled 行は保持する（410 full resync 時の復活防止と増分削除の伝達に必要）
-8. **rate / batching**: connection 逐次・calendar 逐次。403/429 は指数 backoff 1 回 + 次回 cron 送り。現ユーザー規模では quota は問題にならない前提。閾値超過時の fan-out 化は将来課題
+Step 3（#1705）実装時に、当初案から 4 点を変更した。理由は各項に記す。実装は `features/external-calendar/server/sync-service.ts` と `providers/google.ts` が正。
+
+1. **初回 full sync**: `events.list?timeMin=now-90d&timeMax=now+90d&singleEvents=true&maxResults=2500` を `nextPageToken` でページング。ページング終了条件は `nextPageToken` の有無だけで判定する（Google は要求より少ない件数を返すので件数で打ち切らない）。**全ページ走破に成功したときだけ** 最終ページの `nextSyncToken` を `calendar_connection_calendars.sync_token` に保存する（途中で落ちたら保存せず、次回また先頭から。upsert は冪等）
+2. **増分 sync**: `events.list?syncToken=...`（timeMin/timeMax は併用不可。付けると 410 ではなく 400 が返る）。変更分を upsert key `(user_id, provider, connection_id, provider_calendar_id, provider_event_id)`（**Step 1 で connection_id を含む 5 列に張り替え済み**。当初案の 4 列で書くと対応する一意制約が無く 42P10 で落ちる）で upsert
+3. **tombstone は UPDATE**（当初案の「sparse row として upsert」から変更）: provider 側の削除・キャンセル（増分 sync が返す cancelled）と、終日化で取り込み対象外になったイベントは、`status = 'cancelled'` への **UPDATE** で表現する。**ミラーに既にある行だけ**を対象にし、未知 id では行を作らない。
+   - 当初案（sparse row upsert）を却下した理由: 増分 sync は「前回以降に削除された全イベント」を返すので、ミラーに無いイベントの cancelled 通知が必ず届く。それを sparse row として INSERT すると `start_at`/`end_at` が NULL の行ができ、§6-2-6 の prune 条件（NULL 比較で UNKNOWN）に**永久に一致しない不滅のゴミ行**になる。しかも ghost 導出は cancelled を除外するので誰にも読まれない。UPDATE なら既存の `title`/`start_at`/`end_at`/`dismissed_at` が残って prune が効き、NULL 時刻の行が構造的に生まれない
+4. **410 GONE**（syncToken 失効）: `sync_token` を NULL 化し、**同じ run 内で 1 回だけ** full sync にフォールバックする
+5. **410 → full resync 後の mark-and-sweep**（新規項）: full sync は `showDeleted` 既定 false で cancelled を返さないため、provider 側で削除された行が active のまま生き残る。これを塞ぐため、**全ページ走破に成功した full sync run の後にだけ** `(user_id, connection_id, provider_calendar_id)` スコープで `last_synced_at < runStartedAt AND status <> 'cancelled'` の行を cancelled 化する（sweep）。
+   - `runStartedAt` は run ごとの単一値で、全 upsert 行の `last_synced_at` と sweep 条件の両方に使う（行ごとに `now()` を使うと sweep 境界がぶれる）。この strict 比較が並行 run 安全性の要でもある（後発 run が書いた新しい `last_synced_at` の行は先発 run の sweep で消えない）ので、lease 列は要らない
+6. **dismissed 不可侵**: upsert payload の**キーから `dismissed_at` を必ず除外**する（PostgREST の `ON CONFLICT DO UPDATE SET` の対象列は INSERT の列リストと同一なので、含めなければ既存値が保持される）。加えて **1 upsert バッチ内の全行のキー集合を厳密に揃える**（PostgREST は配列 upsert のとき全行のキーの和集合を `columns` に送り、欠けた行を DEFAULT ではなく NULL で埋めるため、キーが不揃いだと他行の既存値を壊す）。「再同期で dismissed を復活させない」を機械的に保証し、full resync 経由でも復活しない。regression test 必須
+7. **window prune（connection 単位で 1 回）**: 1 同期 run の最後に `end_at < now-90d OR start_at > now+90d` の行を削除する（未来側も対象にするのは、syncToken 増分が window 外の変更を持ち込むため）。**calendar ごとではなく connection ごとに 1 回だけ**走らせる（window は時間軸の条件なので calendar 単位に絞る必要がなく、calendar 数だけ走らせると無駄）。plans / records から参照される行は **anti-join で除外**する — `external_calendar_event_id` の FK は ON DELETE 句なし（NO ACTION）のため、参照行の DELETE は例外になる（migration `20260708232500` L40/L62）。**参照判定は `deleted_at` で絞らない**（soft-delete 済みの plan もまだ FK でミラー行を掴んでいるので、絞ると 23503 で落ちる）。実装は keyset ページング（150 件/バッチ）で `max_rows=1000` と URL 長 8192B の両方を避ける
+8. **dismissed 行も prune 対象**: window は now 相対で前進するだけなので、window 外に出た行が full resync で再取得されることはなく、resurrection は起こり得ない。window 内の dismissed / cancelled 行は保持する（410 full resync 時の復活防止と増分削除の伝達に必要）
+9. **エラー分類**: connection 逐次・calendar 逐次。410 は sweep 付き full resync、401 / refresh の invalid_grant は `status='reauth_required'`、403/429 の usageLimits 系は jitter 付き backoff 1 回 + 次回 cron 送り、それ以外の 403（scope 剥奪・共有解除）と 404 は恒久エラー、400 は実装バグとして capture。`last_sync_error` には provider 生メッセージではなく i18n 可能な安定コード（`reauth_required` / `rate_limited` / `provider_unavailable` / `encryption_key_invalid` / `partial_failure`）を入れる（この列は authenticated が SELECT できる）
+10. **未来カバレッジの穴（Step 5 で塞ぐ）**: 増分 sync は「変更されたイベント」しか返さないため、時間経過だけで ±90d window に入ってくる未来イベントはミラーに取り込まれず、prune で消えると再配信されない。Step 3 は `syncConnection({ forceFullSync })` と sweep という**機構**だけ提供し、「カレンダー毎に 1 日 1 回 forceFullSync」という**スケジュール方針**は Step 5（#1707）で決める
 
 ### 6-3. 終日（all-day）イベント
 
@@ -232,15 +238,27 @@ connect start/callback は route handler（§5-2）。ghost 用の `listEvents` 
 
 ```ts
 interface CalendarProviderAdapter {
-  exchangeCode(code, redirectUri): { refreshToken; accountId; accountEmail; grantedScopes }
-  listCalendars(refreshToken): { id; name }[]
-  syncCalendar(refreshToken, calendarId, cursor | null, window):
-    { events: NormalizedExternalEvent[]; nextCursor: string; cursorInvalid?: boolean }
-  revoke(refreshToken): void // best-effort
+  exchangeCode({ code, redirectUri, codeVerifier }): ProviderConnectionIdentity
+  startSession(refreshToken): ProviderSession   // run 先頭で 1 回だけ access token を mint
+  listCalendars(session): ProviderCalendar[]
+  syncCalendar(session, { calendarId, cursor | null, window }): SyncCalendarResult
+  revoke(refreshToken): boolean // best-effort。失効が確定したら true
+}
+
+// SyncCalendarResult は当初案の 3 フィールドから 2 つ拡張した（実装は providers/types.ts が正）
+type SyncCalendarResult = {
+  events: NormalizedExternalEvent[]   // 取り込む timed イベント
+  cancelledEventIds: string[]         // provider 側で削除・キャンセル（増分のみ）
+  skippedEventIds: string[]           // 終日など取り込み対象外（§6-3）
+  nextCursor: string | null
+  cursorInvalid: boolean
+  usedFullSync: boolean               // sweep を撃ってよいかの判断に使う
 }
 ```
 
-- `NormalizedExternalEvent` はミラーのカラム（provider_event_id / title / description / start_at / end_at / status）に 1:1
+- `NormalizedExternalEvent` はミラーのカラム（provider_event_id / title / description / start_at / end_at）に対応。`status` は sync-service が付ける
+- **`cancelledEventIds` / `skippedEventIds` を分けた理由**: `events` だけでは「provider 側で消えた」と「こちらの都合で取り込まない」を sync-service から区別できない。とくに timed → 終日に変更されたイベントを skip で握り潰すと古い timed 行が幽霊として残るので、`skippedEventIds` で §6-2-3 の tombstone 対象に回す
+- **`startSession` を切った理由**: 当初案の `listCalendars(refreshToken)` / `syncCalendar(refreshToken, ...)` は呼び出しのたびに token 交換が走り、カレンダー N 個で N+1 回の refresh になる。§5-3 の「同期実行のたびに mint」は run 単位の話なので、run 先頭で 1 回だけ mint して session を使い回す。rotation された refresh token は `ProviderSession.rotatedRefreshToken` で返し、sync-service が保存し直す
 - `cursorInvalid` が Google の 410 と Microsoft Graph の delta 失効を共通表現する
 - Outlook 追加時に必要なのは `providers/microsoft.ts` + OAuth route 1 組のみ。**schema 変更ゼロ**（ミラー・connections とも `provider` は free text、Graph の deltaLink は `sync_token` text に収まる）
 - adapter の選択は `provider` の switch で足りる。汎用 registry / sync framework は作らない（§11）
