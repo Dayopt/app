@@ -108,3 +108,18 @@ jobs:
             git cat-file -e "$BASE" 2>/dev/null || BASE="HEAD"
           fi
           gitleaks detect --source . --redact --log-opts="${BASE}..HEAD" --exit-code 1
+
+  # gitleaks が commit 範囲しか見ない分をここで埋める。
+  # gitleaks は「このPRで新しく入った差分」、secrets:check は「今の tracked tree 全体」を見る。
+  # 両方無いと、既に main に入っている literal は誰にも検出されない状態が続く。
+  secrets-check:
+    name: "\U0001F511 secrets:check"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: ./.github/actions/setup
+
+      - name: pnpm secrets:check
+        run: pnpm secrets:check

@@ -154,7 +154,10 @@ pnpm 1password:check
 ```
 
 - `env:check` — required env を `OK / EMPTY / MISSING` だけで確認する
-- `secrets:check` — tracked files と untracked `.env*` を scan し、literal secret は `value: [redacted]` で報告する
+- `secrets:check` — tracked files と untracked `.env*` を scan し、literal secret は `value: [redacted]` で報告する。CI でも全 PR / push で走る（`docs-guard.yml` の `secrets-check` job）
+
+secret scan は 2 本立てで、担当範囲が違う。gitleaks は「この PR で新しく入った commit 範囲」だけを見る（全履歴には削除済みプレースホルダ由来の既知ノイズが積もっており、毎回 re-flag すると gate として機能しなくなるため）。`secrets:check` は「現在の tracked tree 全体」を見る。片方だけでは、既に main に入っている literal が誰にも検出されない。
+
 - `1password:check` — 1Password の vault / item / field / empty 状態だけを確認する。schemaで`required: true`のentryまたはoperational itemが不足・空の場合だけ失敗し、optional entryは不足・空の状態を表示しても成功する。item の作成・変更・削除はしない
 
 `.op-env.local.example` の `op://` 参照は正規の local injection schema なので leak として扱わない。
