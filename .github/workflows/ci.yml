@@ -1,10 +1,13 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  # main への push では走らせない。branch:finish が「branch が main 最新を
+  # 含み、その状態で CI green」をマージ前に強制するため（up-to-date gate）、
+  # マージ後の main は常に PR で検証済みの tree と一致する。
+  # 手動で main を検証したい時は workflow_dispatch を使う。
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,8 +19,6 @@ permissions:
 # private repo の Actions 課金は job ごとに 1 分単位で切り上げられるため、
 # job 数を絞り checkout + setup の重複を減らす構成にしている。
 # 実行コマンドは旧 11 job 構成と同一で、検証内容は減らしていない。
-# push:main では PR 側で検証済みの e2e / web e2e を省略し、
-# 並行レーンのマージ順衝突検知（typecheck / test / build）に絞る。
 jobs:
   static:
     name: "\U0001F50D Static Checks"
@@ -154,7 +155,6 @@ jobs:
   e2e:
     name: "\U0001F3AD E2E Tests"
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     environment: development
     timeout-minutes: 15
     steps:
@@ -206,18 +206,15 @@ jobs:
       - name: Build web
         run: pnpm build:web
 
-      # 以下 e2e は PR のみ。push:main では build 検証まで。
       - name: Install Playwright browser
-        if: github.event_name == 'pull_request'
         run: pnpm --filter @dayopt/web exec playwright install --with-deps chromium chromium-headless-shell
 
       - name: Run web E2E tests
-        if: github.event_name == 'pull_request'
         run: pnpm --filter @dayopt/web test:e2e:smoke
 
       - name: Upload web report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always() && github.event_name == 'pull_request'
+        if: always()
         with:
           name: web-playwright-report
           path: apps/web/playwright-report/
@@ -225,7 +222,7 @@ jobs:
 
       - name: Upload web test results on failure
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: failure() && github.event_name == 'pull_request'
+        if: failure()
         with:
           name: web-test-results
           path: apps/web/test-results/

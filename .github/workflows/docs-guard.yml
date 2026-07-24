@@ -1,10 +1,12 @@
 name: Docs Guard
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  # main への push では走らせない。branch:finish の up-to-date gate により、
+  # マージ後の main は常に PR で検証済みの tree と一致する（main への直接
+  # push は pre-push hook で禁止済み）。手動検証には workflow_dispatch を使う。
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
