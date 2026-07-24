@@ -80,6 +80,41 @@ describe('check-secrets.ts', () => {
     });
   });
 
+  describe('除外が他の検出を巻き込まないこと', () => {
+    // ここは PR #1724 のレビューで見つかった bypass の回帰テスト。
+    // いずれも「除外対象のすぐ隣に本物を置く」形で、修正前は素通りしていた。
+
+    it('除外される local URL と同じ行にある本番 URL を検出する', () => {
+      const result = runCheck({
+        'runbook.sh':
+          `psql ${scheme}://postgres:postgres@127.0.0.1:54322/postgres -c 'select 1'; ` +
+          `psql ${scheme}://postgres:R3alPr0dPass@db.example.com:5432/postgres -f dump.sql\n`,
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain('pattern: postgres_url_with_password');
+    });
+
+    it('local URL に query を足して本物を運ばせない', () => {
+      const result = runCheck({
+        'runbook.sh': `psql '${scheme}://postgres:postgres@127.0.0.1:54322/postgres?password=R3alPr0dPass'\n`,
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain('pattern: postgres_url_with_password');
+    });
+
+    it('行頭が test- でも JWT は検出する', () => {
+      // 行全体を placeholder 判定へ渡していたため、行頭の `test-` だけで
+      // jwt_like_token の検査が丸ごと飛んでいた。
+      const jwt = ['eyJhbGciOiJIUzI1NiJ9', 'eyJyb2xlIjoic2VydmljZV9yb2xlIn0', 'c2lnbmF0dXJl0000'];
+      const result = runCheck({ 'config.yml': `test-token: ${jwt.join('.')}\n` });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain('pattern: jwt_like_token');
+    });
+  });
+
   describe('sensitive な env 代入', () => {
     it('test- 接頭辞の fixture は通す', () => {
       const result = runCheck({
@@ -92,6 +127,19 @@ describe('check-secrets.ts', () => {
     it('placeholder でない値は検出する', () => {
       const result = runCheck({
         'stub.sh': 'SERVICE_ROLE_KEY="notaplaceholder"\n',
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain('pattern: sensitive_env_assignment');
+    });
+
+    it('test- で始まっても値全体が fixture の形でなければ検出する', () => {
+      // `test-` 接頭辞だけを見ていた頃は、これが素通りしていた。
+      // 大文字を含む時点で fixture の形（小文字・数字・ハイフン）から外れる。
+      // 実 credential らしい高エントロピー文字列を書くと gitleaks 側に拾われるので、
+      // 「fixture の形ではない」ことだけが分かる最小の値にする。
+      const result = runCheck({
+        'stub.sh': 'SERVICE_ROLE_KEY="test-NOT-A-FIXTURE"\n',
       });
 
       expect(result.status).toBe(1);
