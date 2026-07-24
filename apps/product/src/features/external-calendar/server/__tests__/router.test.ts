@@ -1,0 +1,128 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createMockContext } from '@/lib/test/trpc-test-helpers';
+import { createCallerFactory } from '@/lib/trpc/procedures';
+
+const listConnections = vi.hoisted(() => vi.fn());
+const getSyncStatus = vi.hoisted(() => vi.fn());
+const listProviderCalendars = vi.hoisted(() => vi.fn());
+const updateSelectedCalendars = vi.hoisted(() => vi.fn());
+const disconnect = vi.hoisted(() => vi.fn());
+const syncConnection = vi.hoisted(() => vi.fn());
+const rateLimit = vi.hoisted(() => vi.fn());
+const isBillingEnforced = vi.hoisted(() => vi.fn(() => false));
+
+vi.mock('../connection-service', () => ({
+  listConnections,
+  getSyncStatus,
+  listProviderCalendars,
+  updateSelectedCalendars,
+  disconnect,
+}));
+vi.mock('../sync-service', () => ({ syncConnection }));
+vi.mock('@/lib/rate-limit/upstash', () => ({
+  calendarSyncNowRateLimit: { limit: rateLimit },
+  // protectedProcedure が毎リクエスト参照する。ここでは常に成功させる。
+  trpcUserRateLimit: { limit: vi.fn().mockResolvedValue({ success: true }) },
+}));
+vi.mock('@/lib/billing/enforcement', () => ({ isBillingEnforced }));
+
+import { externalCalendarRouter } from '../router';
+
+const USER_ID = '00000000-0000-4000-8000-0000000000a1';
+const CONNECTION_ID = '00000000-0000-4000-8000-0000000000c1';
+
+const createCaller = createCallerFactory(externalCalendarRouter);
+
+function caller() {
+  return createCaller(createMockContext({ userId: USER_ID }));
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  isBillingEnforced.mockReturnValue(false);
+  rateLimit.mockResolvedValue({ success: true });
+  syncConnection.mockResolvedValue({ outcome: 'synced', calendarsSynced: 1, calendarsFailed: 0 });
+  listConnections.mockResolvedValue([]);
+  getSyncStatus.mockResolvedValue({ connection: {}, calendars: [] });
+  listProviderCalendars.mockResolvedValue([]);
+  updateSelectedCalendars.mockResolvedValue(undefined);
+  disconnect.mockResolvedValue(undefined);
+});
+
+describe('externalCalendarRouter — 認可', () => {
+  it('proProcedure は BILLING_ENFORCED off で素通りする', async () => {
+    await expect(caller().listProviderCalendars({ connectionId: CONNECTION_ID })).resolves.toEqual(
+      [],
+    );
+    await expect(caller().syncNow({ connectionId: CONNECTION_ID })).resolves.toMatchObject({
+      outcome: 'synced',
+    });
+  });
+
+  it('未認証（userId なし）は listConnections で弾かれる', async () => {
+    const unauth = createCaller(createMockContext({}));
+    await expect(unauth.listConnections()).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+});
+
+describe('externalCalendarRouter — syncNow rate limit', () => {
+  it('超過で TOO_MANY_REQUESTS を返し、sync を呼ばない', async () => {
+    rateLimit.mockResolvedValue({ success: false });
+
+    await expect(caller().syncNow({ connectionId: CONNECTION_ID })).rejects.toMatchObject({
+      code: 'TOO_MANY_REQUESTS',
+    });
+    expect(syncConnection).not.toHaveBeenCalled();
+  });
+
+  it('rate-limit サービス障害は SERVICE_UNAVAILABLE', async () => {
+    rateLimit.mockRejectedValue(new Error('upstash down'));
+
+    await expect(caller().syncNow({ connectionId: CONNECTION_ID })).rejects.toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+    });
+  });
+});
+
+describe('externalCalendarRouter — updateSelectedCalendars', () => {
+  it('選択更新後に同期を kick する', async () => {
+    await caller().updateSelectedCalendars({
+      connectionId: CONNECTION_ID,
+      calendars: [{ providerCalendarId: 'cal-a', calendarName: 'A' }],
+    });
+
+    expect(updateSelectedCalendars).toHaveBeenCalledWith(USER_ID, CONNECTION_ID, [
+      { providerCalendarId: 'cal-a', calendarName: 'A' },
+    ]);
+    expect(syncConnection).toHaveBeenCalledWith({ connectionId: CONNECTION_ID, userId: USER_ID });
+  });
+
+  it('calendarName 省略は null に正規化して渡す', async () => {
+    await caller().updateSelectedCalendars({
+      connectionId: CONNECTION_ID,
+      calendars: [{ providerCalendarId: 'cal-a' }],
+    });
+
+    expect(updateSelectedCalendars).toHaveBeenCalledWith(USER_ID, CONNECTION_ID, [
+      { providerCalendarId: 'cal-a', calendarName: null },
+    ]);
+  });
+});
+
+describe('externalCalendarRouter — disconnect', () => {
+  it('protectedProcedure なので Pro でなくても切断できる', async () => {
+    await expect(caller().disconnect({ connectionId: CONNECTION_ID })).resolves.toEqual({
+      success: true,
+    });
+    expect(disconnect).toHaveBeenCalledWith(USER_ID, CONNECTION_ID);
+  });
+});
+
+describe('externalCalendarRouter — 入力バリデーション', () => {
+  it('connectionId が uuid でなければ BAD_REQUEST', async () => {
+    await expect(caller().getSyncStatus({ connectionId: 'not-a-uuid' })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+  });
+});
