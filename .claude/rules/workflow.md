@@ -58,6 +58,10 @@ Dayopt の作業を進める際の規約。作業規模に応じて進め方を�
 
 規模を大きめに判定して手法をフル採用。overhead より手戻り回避を優先。
 
+### 規模と PR の関係
+
+**Step 分割は「作業と plan の単位」であって「merge の単位」ではない。** 大規模 project を 6 Step に割っても、PR は機能のまとまりで束ねる（§PR 粒度）。Step ごとに PR を切らない。
+
 ## Project 命名規則
 
 形式: `{domain}-{action}[-{variant}]`
@@ -164,6 +168,38 @@ UI 変更を含む作業では、関連 Story がある場合は Storybook を�
 - browser の選択は provider 固有の overlay に従う。Codex は `.codex/rules/browser.md` を正本とする
 - Tomoya の確認は最終的なプロダクト判断として追加できるが、Main 自身の検証の代替にはしない
 
+## PR 粒度
+
+策定日: 2026-07-25
+
+**標準は「機能のまとまり単位で 1 PR」。サイズを理由に PR を分割しない。** epic 全体、関連する複数 issue、複数 Step を 1 branch・1 PR に束ねるのを既定とする。分割したい時に理由を示す。
+
+### 分割してよい理由（これ以外では分割しない）
+
+- 不可逆 migration を含む変更の隔離
+- code removal と destructive migration の混在回避（[time-model-split step-9](../../docs/projects/time-model-split/step-9-cleanup.md) の教訓）
+- 独立して検証・revert したい変更（production release 経路など、壊れた時の影響が他と切り離される変更）
+
+「レビューしやすいから」「1 issue だから」「大きいから」は分割理由にならない。
+
+### 束ねた PR のレビュー
+
+複数 issue / 複数 Step を束ねた PR は、**merge 前に read-only subagent のクロスレビューを必須**とする。対象は `AGENTS.md` §Read-only delegation の自動委任条件に該当するもの（`architecture-guard` / `behavior-verifier` / `risk-reviewer`）。PR が大きい分、人間の目視レビューだけに依存しない。
+
+### なぜ束ねるか
+
+Actions 課金は **PR ごとの固定費が支配的**（2026-07-25 実測）:
+
+- CI 1 run = 18 課金分（job ごと 1 分切り上げ）。PR 1 本 ≈ 44 課金分
+- PR あたりの CI run は 1.75 回。`concurrency: cancel-in-progress` が効くため、コストは push 回数ではなく **PR 本数**にほぼ比例する
+- §Worktree 運用 の up-to-date gate により、他 PR が main に入るたび追従 push と CI 再実行が要る。**並行 PR N 本で追加 CI が O(N²)** に効く
+
+個人開発で内部レビューを前提にできる以上、PR を小さく保つ便益より、本数に比例するコストと運用オーバーヘッドの方が大きい。
+
+### 先行事例
+
+[PR #1657](https://github.com/Dayopt/dayopt/pull/1657) は #1534 / #1535 を 1 PR に束ねた。当時は「1 issue = 1 PR の意図的な例外」としてユーザーの明示指示を根拠にしていた。本節はこの例外を既定に反転させたもの。
+
 ## マージ方式
 
 策定日: 2026-06-17
@@ -195,6 +231,8 @@ gh pr merge <PR番号> --merge --delete-branch
 
 **原則: 1 worktree = 1 branch = 1 PR。役目（PR の merge / close）を終えた worktree はその場で削除する。** 放置すると worktree・ブランチ・孤児ディレクトリが積み上がり、どれが生きている作業か判別できなくなる。
 
+これは**掃除の規律であって PR のサイズの話ではない**。1 PR に何 issue・何 Step を入れるかは §PR 粒度 が決める。
+
 ### 概念整理（branch と worktree の違い）
 
 混同しやすいので明確にする。
@@ -209,7 +247,7 @@ branch 名は **`{agent}/{domain}-{action}[-{issue番号}]`** で統一する（
 
 - **agent**: `claude` / `codex` など、作った AI / 人を表す接頭辞
 - **domain-action**: Project 命名規則（本ファイル §Project 命名規則）と同型の kebab-case。例: `calendar-sync-fix`, `i18n-audit`, `sidebar-routing-unification`
-- **issue 番号**: 対応 issue があれば末尾に付ける。例: `codex/external-calendar-sync-1705`
+- **issue 番号**: 対応 issue があれば末尾に付ける。例: `codex/external-calendar-sync-1705`。複数 issue を束ねた PR（§PR 粒度）では代表 issue または epic 番号を使う。例: `claude/external-calendar-1702`
 - 良い例: `claude/calendar-sync-fix` / `codex/i18n-audit-1705`。悪い例: `claude/worktree-branch-strategy-9383e9`（内容が読めないランダム suffix）, `fix-stuff`（domain 不明）
 - **Claude Code が自動生成するランダム suffix 名は、最初の PR を作る前に `git branch -m {agent}/{domain}-{action}` でリネームする**。worktree のディレクトリ名は使い捨てなのでリネーム不要（branch 名だけ直せば PR に正しい名前が乗る）
 
