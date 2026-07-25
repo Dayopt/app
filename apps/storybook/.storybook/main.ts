@@ -123,6 +123,15 @@ const config: StorybookConfig = {
         external: [...((config.build?.rollupOptions?.external as string[]) || []), 'crypto'],
       },
     };
+    // Supabase client の env ガード用ダミー値。
+    // createClient() は env 未設定 / placeholder 値で SupabaseConfigError を投げるため、
+    // これが無いと Auth client に触れる component（AccountSettings 等）が Storybook で描画できない。
+    // Storybook から実 API は叩かないので、疎通しない値で構わない（placeholder とは別の値にする）。
+    config.define = {
+      ...config.define,
+      'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify('https://storybook.supabase.co'),
+      'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify('storybook-anon-key'),
+    };
     // React自動JSXランタイム設定
     config.esbuild = {
       ...config.esbuild,
