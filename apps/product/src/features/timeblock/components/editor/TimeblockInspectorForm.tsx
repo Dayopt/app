@@ -74,7 +74,7 @@ export type TimeblockRelationships =
       onRetry: () => void;
     };
 
-export type TimeblockInspectorAvailability = 'available' | 'unavailable';
+type TimeblockInspectorAvailability = 'available' | 'unavailable';
 
 interface TimeModelInspectorFormProps {
   kind: TimeblockDestination;
