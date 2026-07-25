@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-07-24
+last_verified: 2026-07-26
 code:
   - apps/product/src/app/api/mcp
   - apps/product/src/lib/oauth-server
@@ -39,8 +39,9 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - Plan / Recordのcreate/update/delete/restore/get/trash、全成功結果の`schemaVersion: 1` structured content、stable JSON text error、mutation receipt、strict public input、server-injected OAuth bindingはrepo実装・SDK contract test済み。trashのservice-role readはnarrow feature adapterへ閉じ、owner/deleted predicateと最小projectionを実DBのcross-tenant testで検証する
 - global controlとdurable client controlは初期OFFで、write/delete scopeはtoken検証時にeffective scopeから落ちるため、現在のMCPはwrite toolを列挙せず正規データを変更できない
 - Plan / Record commitと同じtransactionで進むuser revision、session用revision API、Calendar workspaceのvisible中10秒pollと復帰時の即時再確認、Inspectorの外部更新・削除transitionをrepo実装・検証済み。`tags.list`、`constraints.get`、`review.get`も最小projectionと独立read scopeで実装し、実MCP HTTP経由のPlan → Track → Learn flowとcross-tenant read isolationをlocal DBで検証済み。Persistent Stagingの3 client golden contractと実network / render込み20秒SLAは未検証
+- `claude-ai` / `chatgpt` / `cursor`の3 client IDを同じlocal integrationへ通し、actual token route、scope-filtered `tools/list`、Plan retry、global OFF時の非永続化、parallel refresh、target-only revokeを検証済み。client所有外のredirect origin/scheme/pathはruntimeとenv validationの両方で拒否する。authorize page、client固有UI、3 clientそれぞれのfull Plan → Track → LearnはPersistent Stagingで未検証
 
-Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / Learn tool、revision境界、Calendar同期、Inspector競合保護、local Plan → Track → Learn flowまで成立している。残るStep 6はPersistent Stagingでの3 client検証、実network / render込み20秒SLA、retentionと運用契約の確認である。
+Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / Learn tool、revision境界、Calendar同期、Inspector競合保護、local Plan → Track → Learn flowまで成立している。Step 6は[client beta verification](./step-6-client-beta.md)のrepo-side contractまで着手済みで、残りは顧客契約のcheckpoint、isolated Persistent Staging、3 clientの実UI/network証跡、20秒SLA、retention運用である。
 
 ## Minimum Viable Approach
 
@@ -48,7 +49,7 @@ Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / L
 2. **Plan / Record CRUD toolを段階公開する** — Plan / Recordの8 mutation、get/trash、structured contract、Settings connection管理、実HTTP対UI race、Step 5の画面同期までrepo上で完了した。global/client gateはOFFのまま維持し、削除時の接続契約とStep 6の3 client検証後だけ段階公開する
 3. **public write境界をcommandへ収束する** — repo上では通常UI commandとACL cutoverまで実装済み。現在の未適用migration chainはrolling deploy中の全prefixを安全にしていないため、Productionでは書き込みquiescence下の一括cutover、または別のstaged compatibility chainを先にPersistent Stagingで実証する。service-owned一括処理は例外writerとして明示する
 4. **Track → Learnを接続する** — constraints/tags/review tool、user revision polling、Inspector競合保護、local MCP HTTPのgolden flowまでrepo上で完了した。実network / render込み20秒SLAはStep 6のPersistent Stagingで測定する
-5. **3 clientでclosed betaを検証する** — persistent Stagingで再authorization、retry、parallel refresh、revoke、UI対MCP raceを通し、client単位でwrite gateを開く
+5. **3 clientでclosed betaを検証する** — [Step 6計画](./step-6-client-beta.md)に従い、isolated Persistent Stagingで再authorization、retry、parallel refresh、revoke、UI対MCP raceを通し、client単位でwrite gateを開く
 
 追加のDayopt内proposal/approval state machineは作らない。tool callを操作要求として扱い、確認UIを持つclientではclient側の確認結果に従う。Dayoptはclientの確認事実ではなく、接続権限とデータ整合性を検証する。
 
@@ -125,7 +126,7 @@ Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / L
 
 Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializationはrepo上で完了した。writerが先なら後続purgeが削除し、purgeが先なら後続writerは成功できる。この技術契約とは別に、`deleteAllData`後もOAuth connection/token/receiptが残る現在仕様を公開前に決める。
 
-- **推奨**: `deleteAllData` transactionでMCP write connectionをdisable/revokeする。receiptは再作成を防ぐ最小audit/idempotency tombstoneとしてretention期間だけ残す
+- **推奨**: local exclusive transactionで全MCP connectionとcode/tokenを失効し、Calendar connection/token/selection/cursorとユーザー所有のexternal event mirrorを削除する。local commit成功後だけprovider revokeをbest-effortで実行し、payload-free receiptは再作成を防ぐ最小audit/idempotency tombstoneとしてretention期間だけ残す
 - **代替**: 接続済みappは有効なままで再度データを追加できることをSettings文言で明示する
 
 この顧客契約が未決の間はwrite toolを列挙しない。
