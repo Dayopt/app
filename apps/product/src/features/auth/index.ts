@@ -17,6 +17,9 @@ export { SessionMonitorProvider } from './components/SessionMonitorProvider';
 /** @public Storybook security pattern uses the feature-level component contract. */
 export { SessionTimeoutDialog } from './components/SessionTimeoutDialog';
 export { SignupForm } from './components/SignupForm';
+// --- Domain ---
+/** @public ログイン手段の判定。settings がパスワード前提の UI を出し分けるために使う */
+export { hasPasswordIdentity } from './domain';
 // --- Stores ---
 export { AuthStoreInitializer } from './stores/AuthStoreInitializer';
 export { useAuthStore } from './stores/useAuthStore';
