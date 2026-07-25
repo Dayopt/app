@@ -186,6 +186,13 @@ export function validateFrontMatter(fm, type, isDraft) {
     }
   }
 
+  // placeholder（本文が未執筆の骨格）は必ず draft でなければならない。
+  // 別製品のテンプレートがそのまま公開されていた事故（2026-07-24 監査）の再発防止で、
+  // isDraft による warning 降格を通さず常に error にする
+  if (fm.placeholder === true && fm.draft !== true) {
+    errors.push(`'placeholder: true' requires 'draft: true' (未執筆ページは公開できない)`);
+  }
+
   if (type !== 'legal' && !fm.ai) {
     warnings.push(`'ai' metadata not set (recommended for RAG)`);
   }
@@ -286,6 +293,124 @@ function checkDocsSlugCollisions() {
   return errors;
 }
 
+// docs の情報構造は最大 3 階層（カテゴリー → ページ、または カテゴリー → グループ → ページ）。
+// これより深くすると読み手が現在地を見失うため、パスの深さで機械的に止める。
+// URL はどの深さでもフラット（/docs/<ファイル名>）なので、これはナビ構造だけの制約
+function checkDocsDepth() {
+  const errors = [];
+  for (const locale of ['en', 'ja']) {
+    const dir = path.join(CONTENT_DIR, 'docs', locale);
+    if (!fs.existsSync(dir)) continue;
+    for (const file of findMdxFiles(dir)) {
+      const rel = path.relative(dir, file).replace(/\\/g, '/');
+      const depth = rel.split('/').length;
+      if (depth > 3) {
+        errors.push(
+          `Docs nesting too deep (max 3 levels): content/docs/${locale}/${rel} — カテゴリー/グループ/ページ までにする`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
+// routing の slug と category はファイル配置から導出され、frontmatter の同名フィールドは
+// mdx.ts に上書きされて無視される。記述値がずれても動作は壊れないが、内部リンクを書く時の
+// 参照先として読まれるため嘘になる
+function checkDocsSlugMatchesRouting() {
+  const errors = [];
+  for (const locale of ['en', 'ja']) {
+    const dir = path.join(CONTENT_DIR, 'docs', locale);
+    if (!fs.existsSync(dir)) continue;
+    for (const file of findMdxFiles(dir)) {
+      const rel = path.relative(dir, file).replace(/\\/g, '/');
+      const name = path.basename(file, '.mdx');
+      const routingSlug = name === 'index' ? rel.split('/')[0] : name;
+      const routingCategory = rel.split('/')[0];
+      const { data: fm } = parseFrontMatter(fs.readFileSync(file, 'utf8'));
+      if (fm.slug && fm.slug !== routingSlug) {
+        errors.push(
+          `Slug mismatch in content/docs/${locale}/${rel}: frontmatter '${fm.slug}' but routing serves /docs/${routingSlug}`,
+        );
+      }
+      if (fm.category && fm.category !== routingCategory) {
+        errors.push(
+          `Category mismatch in content/docs/${locale}/${rel}: frontmatter '${fm.category}' but directory says '${routingCategory}'`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
+// 公開ページから 404 へのリンクを止める。判定はリンクの出どころで分ける。
+//
+// - 本文リンク: ユーザーが実際に踏む。リンク先が無い場合も draft の場合も 404 なので error
+// - frontmatter の ai.relatedDocs: RAG 用メタデータでユーザーは踏まない。リンク先が draft
+//   なら公開時に解決するので許容し、そもそもファイルが無い場合だけ error
+//
+// リンク元自体が draft なら、まとめて公開されるまで誰も踏まないため warning に落とす。
+function checkDocsInternalLinks() {
+  const errors = [];
+  const warnings = [];
+
+  for (const locale of ['en', 'ja']) {
+    const dir = path.join(CONTENT_DIR, 'docs', locale);
+    if (!fs.existsSync(dir)) continue;
+
+    const files = findMdxFiles(dir);
+    const published = new Set();
+    const unpublished = new Set();
+    for (const file of files) {
+      const rel = path.relative(dir, file).replace(/\\/g, '/');
+      const name = path.basename(file, '.mdx');
+      const slug = name === 'index' ? rel.split('/')[0] : name;
+      const { data: fm } = parseFrontMatter(fs.readFileSync(file, 'utf8'));
+      (fm.draft === true ? unpublished : published).add(slug);
+    }
+
+    for (const file of files) {
+      const rel = path.relative(dir, file).replace(/\\/g, '/');
+      const content = fs.readFileSync(file, 'utf8');
+      const { data: fm, body } = parseFrontMatter(content);
+      const isDraft = fm.draft === true;
+
+      const bodyTargets = new Set();
+      for (const [, href] of body.matchAll(/\]\((\/docs\/[a-z0-9/-]+)\)/g)) bodyTargets.add(href);
+      const metaTargets = new Set();
+      for (const [, href] of content
+        .slice(0, content.length - body.length)
+        .matchAll(/^\s+- '(\/docs\/[a-z0-9/-]+)'$/gm)) {
+        if (!bodyTargets.has(href)) metaTargets.add(href);
+      }
+
+      const report = (message) => (isDraft ? warnings : errors).push(message);
+
+      for (const href of bodyTargets) {
+        const slug = href.replace(/^\/docs\//, '');
+        if (published.has(slug)) continue;
+
+        const where = `content/docs/${locale}/${rel}`;
+        if (unpublished.has(slug)) {
+          report(`Link to unpublished doc in ${where}: ${href} (リンク先が draft のため 404)`);
+        } else {
+          report(`Dead internal link in ${where}: ${href} (該当 slug のファイルなし)`);
+        }
+      }
+
+      for (const href of metaTargets) {
+        const slug = href.replace(/^\/docs\//, '');
+        if (published.has(slug) || unpublished.has(slug)) continue;
+        report(
+          `Dead relatedDocs entry in content/docs/${locale}/${rel}: ${href} (該当 slug のファイルなし)`,
+        );
+      }
+    }
+  }
+
+  return { errors, warnings };
+}
+
 function checkBlogReservedSlugs() {
   const errors = [];
   for (const locale of ['en', 'ja']) {
@@ -312,9 +437,22 @@ function main() {
   let totalWarnings = 0;
   const allOutput = [];
 
-  for (const error of [...checkDocsSlugCollisions(), ...checkBlogReservedSlugs()]) {
+  const linkIssues = checkDocsInternalLinks();
+
+  for (const error of [
+    ...checkDocsSlugCollisions(),
+    ...checkDocsDepth(),
+    ...checkDocsSlugMatchesRouting(),
+    ...checkBlogReservedSlugs(),
+    ...linkIssues.errors,
+  ]) {
     allOutput.push({ file: null, message: error, isError: true });
     totalErrors++;
+  }
+
+  for (const warning of linkIssues.warnings) {
+    allOutput.push({ file: null, message: warning, isError: false });
+    totalWarnings++;
   }
 
   for (const type of types) {

@@ -14,6 +14,8 @@ vi.mock('@/lib/sentry', () => ({
 }));
 
 import {
+  calendarConnectRateLimit,
+  calendarSyncNowRateLimit,
   claimResendWebhookEvent,
   completeResendWebhookEvent,
   contactGlobalRateLimit,
@@ -21,6 +23,7 @@ import {
   cspReportGlobalRateLimit,
   cspReportRateLimit,
   hashRateLimitIdentifier,
+  icalFeedRateLimit,
   isUpstashEnabled,
   loginRateLimit,
   mcpPreAuthRateLimit,
@@ -66,6 +69,9 @@ describe('Upstash Rate Limit', () => {
     expect(mcpPreAuthRateLimit).toBeNull();
     expect(mcpUserRateLimit).toBeNull();
     expect(timeblockCreateRateLimit).toBeNull();
+    expect(icalFeedRateLimit).toBeNull();
+    expect(calendarConnectRateLimit).toBeNull();
+    expect(calendarSyncNowRateLimit).toBeNull();
     expect(cspReportRateLimit).toBeNull();
     expect(cspReportGlobalRateLimit).toBeNull();
   });
@@ -157,7 +163,21 @@ describe('Upstash Rate Limit', () => {
     }));
 
     const enabledModule = await import('../upstash');
-    expect(constructorOptions).toHaveLength(11);
+    expect(constructorOptions.map(({ prefix }) => prefix)).toEqual([
+      'ratelimit:product:login',
+      'ratelimit:product:password-reset',
+      'ratelimit:product:contact',
+      'ratelimit:product:contact-global',
+      'ratelimit:product:trpc:user',
+      'ratelimit:product:mcp:pre-auth',
+      'ratelimit:product:mcp:user',
+      'ratelimit:product:timeblock:create',
+      'ratelimit:product:ical-feed',
+      'ratelimit:product:calendar-connect',
+      'ratelimit:product:calendar-sync-now',
+      'ratelimit:product:csp-report',
+      'ratelimit:product:csp-report-global',
+    ]);
     for (const options of constructorOptions) {
       expect(options.analytics).toBe(false);
       expect(options.timeout).toBe(RATE_LIMIT_TIMEOUT_MS);

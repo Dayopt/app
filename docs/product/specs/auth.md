@@ -5,6 +5,9 @@ code:
   - apps/product/src/features/auth
   - apps/product/src/lib/mcp/trpc-bridge.ts
   - apps/product/src/lib/trpc
+public_docs:
+  - account-troubleshooting
+lp: []
 ---
 
 # Auth（認証）

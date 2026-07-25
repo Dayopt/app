@@ -1,10 +1,12 @@
 name: Docs Guard
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  # main への push では走らせない。branch:finish の up-to-date gate により、
+  # マージ後の main は常に PR で検証済みの tree と一致する（main への直接
+  # push は pre-push hook で禁止済み）。手動検証には workflow_dispatch を使う。
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,83 +15,27 @@ concurrency:
 permissions:
   contents: read
 
+# private repo の Actions 課金は job ごとに 1 分単位で切り上げられるため、
+# 旧 4 job（docs-checks / docs-reminder / gitleaks / secrets-check）を 1 job の
+# 逐次 step に統合している。チェック内容は分割時代と同一。
 jobs:
-  # docs/ に変更があるときだけ実際のチェックを走らせる。トリガー自体は絞らず、
-  # gitleaks ジョブ（リポジトリ全体対象）と同じワークフローに同居させるため job 側で判定する。
-  docs-checks:
-    name: "\U0001F4DA docs-guard"
+  guard:
+    name: "\U0001F6E1️ docs & secrets guard"
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          # append-only guard が base ref との差分を見るため full history が必要
-          fetch-depth: 0
-
-      - name: docs/ 変更の有無を確認
-        id: docs-changed
-        run: |
-          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
-          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$BASE"...HEAD -- docs/ | grep -q .; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: ./.github/actions/setup
-        if: steps.docs-changed.outputs.changed == 'true'
-
-      - name: pnpm docs:check
-        if: steps.docs-changed.outputs.changed == 'true'
-        run: pnpm docs:check
-        env:
-          DOCS_GUARD_BASE_REF: origin/${{ github.event.pull_request.base.ref || 'main' }}
-
-  docs-reminder:
-    name: "\U0001F4DD docs reminder"
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-
-      - name: src 変更に対応する docs 更新の有無を確認
-        run: |
-          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
-          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
-            BASE="HEAD~1"
-            git cat-file -e "$BASE" 2>/dev/null || BASE="HEAD"
-          fi
-
-          changed_files="$(git diff --name-only "$BASE"...HEAD)"
-          echo "$changed_files"
-
-          src_changed="$(printf '%s\n' "$changed_files" | grep -E '^apps/product/src/' || true)"
-          docs_changed="$(printf '%s\n' "$changed_files" | grep -E '^docs/' || true)"
-
-          if [ -n "$src_changed" ] && [ -z "$docs_changed" ]; then
-            echo "::warning::apps/product/src/ に変更がありますが docs/ の更新がありません。仕様・運用・アーキテクチャへの影響がないか確認してください。"
-          fi
-
-  # secret scan はリポジトリ全体・全 push/PR が対象（docs 以外の変更でも走る）
-  # org の Actions 許可リストが actions/* github/* zaproxy/* codecov/* softprops/* supabase/*
-  # oven-sh/* に限定されており gitleaks/gitleaks-action は使えないため、バイナリを直接取得して実行する。
-  gitleaks:
-    name: "\U0001F512 gitleaks"
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     env:
       GITLEAKS_VERSION: '8.9.0'
       GITLEAKS_SHA256: '188d84394cfbb287e5acf789f313fca55a385ba738cb014e7a9bef6e6b0f4d69'
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          # append-only guard と gitleaks が base ref との差分を見るため full history が必要
           fetch-depth: 0
 
+      # ── secret scan（リポジトリ全体・全 push/PR が対象）─────────────
+      # org の Actions 許可リストが actions/* github/* zaproxy/* codecov/* softprops/*
+      # supabase/* oven-sh/* に限定されており gitleaks/gitleaks-action は使えないため、
+      # バイナリを直接取得して実行する。
       - name: gitleaks インストール
         run: |
           curl -sSLO "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
@@ -108,3 +54,51 @@ jobs:
             git cat-file -e "$BASE" 2>/dev/null || BASE="HEAD"
           fi
           gitleaks detect --source . --redact --log-opts="${BASE}..HEAD" --exit-code 1
+
+      # ── docs reminder（PR のみ・warning）────────────────────────────
+      - name: src 変更に対応する docs 更新の有無を確認
+        if: github.event_name == 'pull_request'
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            BASE="HEAD~1"
+            git cat-file -e "$BASE" 2>/dev/null || BASE="HEAD"
+          fi
+
+          changed_files="$(git diff --name-only "$BASE"...HEAD)"
+          echo "$changed_files"
+
+          src_changed="$(printf '%s\n' "$changed_files" | grep -E '^apps/product/src/' || true)"
+          docs_changed="$(printf '%s\n' "$changed_files" | grep -E '^docs/' || true)"
+
+          if [ -n "$src_changed" ] && [ -z "$docs_changed" ]; then
+            echo "::warning::apps/product/src/ に変更がありますが docs/ の更新がありません。仕様・運用・アーキテクチャへの影響がないか確認してください。"
+          fi
+
+      # ── docs:check（docs/ に変更があるときだけ）──────────────────────
+      - name: docs/ 変更の有無を確認
+        id: docs-changed
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BASE"...HEAD -- docs/ | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # setup は secrets:check が常に必要とするため無条件に実行する
+      - uses: ./.github/actions/setup
+
+      # gitleaks が commit 範囲しか見ない分をここで埋める。
+      # gitleaks は「このPR/pushで新しく入った差分」、secrets:check は「今の tracked tree 全体」を見る。
+      # 両方無いと、既に main に入っている literal は誰にも検出されない状態が続く。
+      - name: pnpm secrets:check
+        run: pnpm secrets:check
+
+      - name: pnpm docs:check
+        if: steps.docs-changed.outputs.changed == 'true'
+        run: pnpm docs:check
+        env:
+          DOCS_GUARD_BASE_REF: origin/${{ github.event.pull_request.base.ref || 'main' }}

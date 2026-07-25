@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-22
+last_verified: 2026-07-24
 code: scripts/env/schema.ts
 ---
 
@@ -22,6 +22,23 @@ code: scripts/env/schema.ts
 PR ごとの Supabase Preview Branch credentials は例外。Supabase / Vercel integration が作る ephemeral replica であり、1Password には保存しない。
 
 `.env.local` に実値を置く運用は廃止。Vercel CLI などで一時生成された `.env.local` は unsafe / temporary として扱い、作業後に削除する。
+
+---
+
+## AI エージェントの env ファイル境界
+
+Claude / Codex など全 coding agent に共通の境界。provider 固有の enforcement（Claude の `.claude/settings.json` deny + `pre-tool-guard.sh`、Codex の sandbox 設定）はこの節の実装であり、規約の正本はここに置く。
+
+**触ってよい（読み書き可）**:
+
+- `.env.example` — `op://` 参照スキーマの雛形。secret を含まないため、env var 追加時は agent が雛形更新まで完結する
+- `.op-env.local` / `.op-env.local.example` — 中身は `op://` 参照のみで実秘密なし
+
+**触らない（読みも書きもしない）**:
+
+- `.env` / `.env.local` / `.env.*.local` / `.env.development` / `.env.staging` / `.env.production` / `.envrc` / `supabase/.env*` — 通常は存在しないが、`vercel env pull` などで一時的に実値入りで生成されうる。読むと実値が agent の会話ログに載り、方針 4「値を表示しない」に反する
+
+secret の**利用**は制限しない。agent は `op run` 経由（`pnpm dev`、MCP の自己解決起動など）で値を見ずに secret を使う。これが 1Password 移行後の設計であり、実値ファイルを読める必要はない。
 
 ---
 
@@ -64,46 +81,54 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 
 通常の PR Preview では使わない。persistent staging を追加した時、または local dev 用の長寿命参照が必要な時だけ使う。
 
-| Item          | Fields                                                                                                                                                                             | 用途                                  |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| `supabase`    | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET` | Supabase local / preview 相当の接続   |
-| `upstash`     | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               | Redis rate limit / cache              |
-| `stripe-test` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    | Stripe test mode                      |
-| `resend`      | `RESEND_WEBHOOK_SECRET`                                                                                                                                                            | optional stagingのProduct webhook署名 |
-| `app`         | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              | App URL / recovery code HMAC pepper   |
+| Item              | Fields                                                                                                                                                                             | 用途                                                  |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `supabase`        | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET` | Supabase local / preview 相当の接続                   |
+| `upstash`         | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               | Redis rate limit / cache                              |
+| `stripe-test`     | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    | Stripe test mode                                      |
+| `resend`          | `RESEND_WEBHOOK_SECRET`                                                                                                                                                            | optional stagingのProduct webhook署名                 |
+| `app`             | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              | App URL / recovery code HMAC pepper                   |
+| `google-calendar` | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `CALENDAR_TOKEN_ENCRYPTION_KEY`, `GOOGLE_CALENDAR_REDIRECT_URIS`                                                     | 外部カレンダー取り込みの OAuth client（local dev 用） |
 
 ### `Dayopt-Production`
 
 本番 secret は通常ローカルから参照せず、Vercel / Supabase Dashboard へ replica として同期する。Sentry は Product / Web で project を分離するため、metadata / DSN の item も分ける。
 
-| Item          | Fields                                                                                                                                                                             |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `supabase`    | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET` |
-| `upstash`     | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               |
-| `stripe-live` | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    |
-| `resend`      | `RESEND_WEBHOOK_SECRET`（Product）                                                                                                                                                 |
-| `resend-web`  | `RESEND_WEBHOOK_SECRET`（Web、Productと別値）                                                                                                                                      |
-| `sentry`      | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`（Product）                                                                                                  |
-| `sentry-web`  | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`（Web）                                                                                                      |
-| `app`         | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              |
+| Item              | Fields                                                                                                                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `supabase`        | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET` |
+| `upstash`         | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               |
+| `stripe-live`     | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    |
+| `resend`          | `RESEND_WEBHOOK_SECRET`（Product）                                                                                                                                                 |
+| `resend-web`      | `RESEND_WEBHOOK_SECRET`（Web、Productと別値）                                                                                                                                      |
+| `sentry`          | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`（Product）                                                                                                  |
+| `sentry-web`      | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`（Web）                                                                                                      |
+| `app`             | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              |
+| `google-calendar` | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `CALENDAR_TOKEN_ENCRYPTION_KEY`, `GOOGLE_CALENDAR_REDIRECT_URIS`                                                     |
+
+`google-calendar` は外部カレンダー取り込み（[#1702](https://github.com/Dayopt/dayopt/issues/1702)）専用の OAuth client で、Supabase Auth の Google provider とは別 client として作る。Supabase 側の client secret を流用しない。
+
+- `CALENDAR_TOKEN_ENCRYPTION_KEY` は保存する refresh token を AES-256-GCM で暗号化する鍵。base64 で 32 バイトに decode できる値だけを受け付ける（`openssl rand -base64 32`）。鍵を失うと既存接続の token は復号できず、全ユーザーが再接続になる
+- `GOOGLE_CALENDAR_REDIRECT_URIS` は comma 区切りの allowlist。callback は request host を allowlist と完全一致で引き、一致した文字列をそのまま Google へ渡す。Production には production origin だけを入れ、localhost を混ぜない（forwarded host 経由で allowlist を通過されうる）
+- Preview は登録しない。ephemeral hostname は Google 側に事前登録できず、`__Host-` cookie も host 固定のため、Preview では接続開始時に明示エラーを返す
 
 ### `Dayopt-Shared`
 
-| Item                     | Fields                                                                                        | 用途                                                |
-| ------------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `turnstile`              | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile                                |
-| `anthropic`              | `ANTHROPIC_API_KEY`                                                                           | optional / legacy key。現行runtime consumerなし     |
-| `resend`                 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Product / WebのProduction email sending master      |
-| `resend-support-replies` | `RESEND_SMTP_API_KEY`                                                                         | Gmail Send mail as専用。Sending access / domain限定 |
-| `sentry`                 | `SENTRY_AUTH_TOKEN`                                                                           | Product / Web の Production release upload          |
-| `github-login`           | password, TOTP, recovery codes                                                                | GitHub account login                                |
-| `github-ssh`             | SSH private key                                                                               | GitHub SSH Agent                                    |
-| `vercel`                 | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Production Config Audit / project metadata          |
-| `google`                 | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                              |
-| `domain`                 | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                     |
-| `recovery-codes`         | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側                  |
+| Item                     | Fields                                                                                        | 用途                                                            |
+| ------------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `turnstile`              | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile                                            |
+| `anthropic`              | `ANTHROPIC_API_KEY`                                                                           | optional / legacy key。現行runtime consumerなし                 |
+| `resend`                 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Product / WebのProduction email sending master                  |
+| `resend-support-replies` | `RESEND_SMTP_API_KEY`                                                                         | Gmail Send mail as専用。Sending access / domain限定             |
+| `sentry`                 | `SENTRY_AUTH_TOKEN`                                                                           | Product / Web の Production release upload                      |
+| `github-login`           | password, TOTP, recovery codes                                                                | GitHub account login                                            |
+| `github-ssh`             | SSH private key                                                                               | GitHub SSH Agent                                                |
+| `vercel`                 | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Production Config Audit / Production Release / project metadata |
+| `google`                 | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                                          |
+| `domain`                 | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                                 |
+| `recovery-codes`         | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側                              |
 
-`VERCEL_TOKEN`はautomation専用とし、local CLIのloginや`--token`引数には使わない。Production Config Auditが環境変数からprocess内で読み、Authorization headerにだけ設定する。localの確認方法とrotation順序は[Environment Secrets](./security/environment-secrets.md)を正とする。
+`VERCEL_TOKEN`はautomation専用とし、local CLIのloginや`--token`引数には使わない。Production Config AuditとProduction Releaseが環境変数からprocess内で読み、Authorization headerにだけ設定する。Production Releaseはenv metadataの読取に加えて、Production deploymentのpromoteとrollbackを行う。localの確認方法とrotation順序は[Environment Secrets](./security/environment-secrets.md)を正とする。
 
 ---
 
@@ -137,7 +162,10 @@ pnpm 1password:check
 ```
 
 - `env:check` — required env を `OK / EMPTY / MISSING` だけで確認する
-- `secrets:check` — tracked files と untracked `.env*` を scan し、literal secret は `value: [redacted]` で報告する
+- `secrets:check` — tracked files と untracked `.env*` を scan し、literal secret は `value: [redacted]` で報告する。CI でも全 PR / push で走る（`docs-guard.yml` の `secrets-check` job）
+
+secret scan は 2 本立てで、担当範囲が違う。gitleaks は「この PR で新しく入った commit 範囲」だけを見る（全履歴には削除済みプレースホルダ由来の既知ノイズが積もっており、毎回 re-flag すると gate として機能しなくなるため）。`secrets:check` は「現在の tracked tree 全体」を見る。片方だけでは、既に main に入っている literal が誰にも検出されない。
+
 - `1password:check` — 1Password の vault / item / field / empty 状態だけを確認する。schemaで`required: true`のentryまたはoperational itemが不足・空の場合だけ失敗し、optional entryは不足・空の状態を表示しても成功する。item の作成・変更・削除はしない
 
 `.op-env.local.example` の `op://` 参照は正規の local injection schema なので leak として扱わない。
@@ -154,7 +182,7 @@ Vercel Preview の Supabase env vars は Supabase Vercel integration が PR Prev
 
 Contact送信用の`RESEND_API_KEY` / `RESEND_FROM_EMAIL`とapp別`RESEND_WEBHOOK_SECRET`はProduct / WebのProductionだけへ同期する。送信credentialはPreview / Developmentへ置かない。Vercel metadataは`scripts/production-config-audit.mjs`でkey / target / typeだけを確認する。
 
-旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`のVercel replicaと専用PATは、Resendの両Production smokeと30分観察が終わるまで保持する。current schemaの新規作成対象からは外し、観察後に[問い合わせメール運用](./contact-email.md)の順で削除・失効する。
+旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`のVercel replicaは削除済みで、専用PATも失効済みである。current schemaの新規作成対象から外し、`Production Config Audit`が再設定を常時拒否する。経緯は[問い合わせメール運用](./contact-email.md)を参照する。
 
 ### GitHub Secrets
 

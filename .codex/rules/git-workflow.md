@@ -4,7 +4,9 @@ Codex が Dayopt repo で branch / commit / PR / merge を扱う時の薄い ove
 
 ## Branch
 
-- 新規作業は `codex/{short-description}` ブランチを切る
+- 新規作業は **`codex/{domain}-{action}[-{issue番号}]`** ブランチを切る（命名規則は共通。`.claude/rules/workflow.md` §命名規則 が canonical）
+  - 良い例: `codex/i18n-audit-1705` / `codex/calendar-sync-fix`
+  - 悪い例: 内容の読めないランダム名、`codex/work` のような action 不明の名前
 - 既存 dirty file はユーザー作業として扱い、関係ない限り触らない
 - `main` にいる時は作業前に branch を切る
 
@@ -35,8 +37,7 @@ Codex が Dayopt repo で branch / commit / PR / merge を扱う時の薄い ove
 
 ## Branch cleanup（マージ後）
 
-- マージ済み PR のブランチ削除は、通常順で実施する:
-  - `git worktree remove <worktree-path>`（worktree が branch を持っている場合に先に解除）
-  - `git branch -d <branch>`（merge 済みなら成功）
-- `worktree remove` が失敗する場合は、worktree 内で `main` に checkout してから再度実施する
-- `git branch -d` が `not fully merged` で失敗したときは `-D` は原則禁止。必要ならユーザー判断で別途確認
+- 標準は **`pnpm branch:finish <PR番号>`** のワンセット実行（マージ→worktree削除→branch削除→リモート確認→main最新化）。Claude / Codex / 人間で共通のスクリプト（`scripts/git/finish-branch.sh`）
+- 事前確認したい時は `pnpm branch:finish <PR番号> --dry-run`
+- スクリプトが dirty / not fully merged で停止したら、手動フォールバックは `.claude/rules/workflow.md` §Worktree 運用 の手順に従う。`git branch -d` が `not fully merged` で失敗したときは `-D` は原則禁止で、ユーザー判断を仰ぐ
+- 完了定義（5点）: ① PR マージ済み ② worktree 削除 ③ ローカル branch 削除 ④ リモート branch 消滅 ⑤ main 最新化。すべて満たして初めて作業終了

@@ -1,7 +1,12 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-07-24
 code: apps/product/src/features/tags
+public_docs:
+  - tags
+lp:
+  - 'Tags'
+  - 'Unlimited tags'
 ---
 
 # Tags（タグ）

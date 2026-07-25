@@ -120,6 +120,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 - 既存コードを検索してから変更する。`rg` / `rg --files` を優先する
 - issue の起票・worker への作業依頼・`status:blocked` issue への着手判断は `dispatch` skill（`.agents/skills/dispatch/SKILL.md`）の規約に従う。凍結 issue には着手しない
 - 既存の未コミット差分はユーザー作業として扱い、勝手に revert / stage しない
+- env ファイルの読み書き境界は provider 共通で `docs/operations/secrets.md` §AI エージェントの env ファイル境界 に従う。`.env.example` / `.op-env.local` は触ってよく、実値が入りうる `.env` / `.env.local` 系は読みも書きもしない
 - `git add .` は避ける。必ず path-limited add で scope を固定する
 - コミット前に `git diff --cached` を確認する
 - コード変更後は `pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries` を通す
@@ -134,7 +135,8 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
   | `docs`     | ドキュメントのみの変更         |
   | `test`     | テストの追加・修正             |
   | `perf`     | パフォーマンス改善             |
-- PR を merge する時は、枝分かれを履歴に残すため `gh pr merge --merge --delete-branch` を標準にする。**マージ後は同一セッション内でローカルブランチと作業に使った worktree も削除する**（worktree remove → branch -d の順。`.claude/rules/workflow.md` §Worktree 運用）
+- PR は枝分かれを履歴に残すため merge commit でマージする。**マージ〜掃除は同一セッション内で `pnpm branch:finish <PR番号>` をワンセットで実行する**（マージ→worktree削除→ローカル/リモート branch 削除→main 最新化まで。完了定義 5 点と手動フォールバックは `.claude/rules/workflow.md` §Worktree 運用）
+- branch 名は `{agent}/{domain}-{action}[-{issue番号}]` に統一する。Claude Code 自動生成のランダム名は最初の PR 作成前に `git branch -m` でリネームする（`.claude/rules/workflow.md` §命名規則）
 
 ## Coding Rules
 

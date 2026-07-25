@@ -38,6 +38,26 @@ const RPC_COUNT_CODE_ID = crypto.randomUUID();
 const RPC_USE_CODE_ID = crypto.randomUUID();
 const RPC_COUNT_CODE_HASH = `rpc-count-${crypto.randomUUID()}`;
 const RPC_USE_CODE_HASH = `rpc-use-${crypto.randomUUID()}`;
+const CALENDAR_CONNECTION_ID = crypto.randomUUID();
+const CALENDAR_CONNECTION_CALENDAR_ID = crypto.randomUUID();
+/** calendar_connections で authenticated に GRANT SELECT されている列（migration 20260723233814 と対応） */
+const CALENDAR_CONNECTION_GRANTED_COLUMNS = [
+  'id',
+  'user_id',
+  'provider',
+  'provider_account_email',
+  'status',
+  'last_synced_at',
+  'last_sync_error',
+  'created_at',
+  'updated_at',
+] as const;
+/** authenticated から読めてはいけない列 */
+const CALENDAR_CONNECTION_WITHHELD_COLUMNS = [
+  'refresh_token_enc',
+  'granted_scopes',
+  'provider_account_id',
+] as const;
 const TEST_EMAIL_A = `test-rls-a-${TEST_USER_A_ID}@example.com`;
 const TEST_EMAIL_B = `test-rls-b-${TEST_USER_B_ID}@example.com`;
 const TEST_PASSWORD = 'test-password-123';
@@ -493,6 +513,235 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         .eq('id', TEST_USER_B_ID);
 
       expect(resetError).toBeNull();
+    });
+  });
+
+  // calendar_connections は repo 初の column-scoped SELECT。userOwnedCases /
+  // serviceRoleCases のどちらの共通ブロックにも当てはまらないため独立させる
+  // （前者は select('*') と update/delete が error null を期待し、後者は
+  // "No browser client access" policy の件数と結びついている）。
+  //
+  // production の pg_default_acl は新規 public テーブルに anon/authenticated へ
+  // arwdDxtm を撒くが local は Dxtm しか撒かない。REVOKE 漏れは local 由来の
+  // rls:snapshot では検出できないので、ここと migration 内の invariant が gate になる。
+  describe('calendar connection column grants', () => {
+    beforeAll(async () => {
+      const { error: connectionError } = await adminSupabase.from('calendar_connections').insert({
+        id: CALENDAR_CONNECTION_ID,
+        user_id: TEST_USER_B_ID,
+        provider: 'google',
+        provider_account_id: `sub-${CALENDAR_CONNECTION_ID}`,
+        provider_account_email: TEST_EMAIL_B,
+        granted_scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+        refresh_token_enc: 'rls-ciphertext',
+        status: 'active',
+      });
+      if (connectionError) throw connectionError;
+
+      const { error: calendarError } = await adminSupabase
+        .from('calendar_connection_calendars')
+        .insert({
+          id: CALENDAR_CONNECTION_CALENDAR_ID,
+          connection_id: CALENDAR_CONNECTION_ID,
+          user_id: TEST_USER_B_ID,
+          provider_calendar_id: 'primary',
+          calendar_name: 'RLS calendar',
+          sync_token: 'rls-sync-token',
+        });
+      if (calendarError) throw calendarError;
+    });
+
+    afterAll(async () => {
+      // 子は複合 FK の ON DELETE CASCADE で消える
+      await adminSupabase.from('calendar_connections').delete().eq('id', CALENDAR_CONNECTION_ID);
+    });
+
+    it('ownerはgrant済みの列だけを明示指定して自分の接続を読める', async () => {
+      const { data, error } = await supabaseB
+        .from('calendar_connections')
+        .select(CALENDAR_CONNECTION_GRANTED_COLUMNS.join(', '))
+        .eq('id', CALENDAR_CONNECTION_ID);
+
+      expect(error).toBeNull();
+      expect(data).toHaveLength(1);
+    });
+
+    it("ownerでもselect('*')は列権限で拒否される", async () => {
+      const { error } = await supabaseB
+        .from('calendar_connections')
+        .select('*')
+        .eq('id', CALENDAR_CONNECTION_ID);
+
+      expect(error?.code).toBe('42501');
+    });
+
+    it.each(CALENDAR_CONNECTION_WITHHELD_COLUMNS)('ownerでも%s列は読めない', async (column) => {
+      const { error } = await supabaseB
+        .from('calendar_connections')
+        .select(column)
+        .eq('id', CALENDAR_CONNECTION_ID);
+
+      expect(error?.code).toBe('42501');
+    });
+
+    it('未grant列をfilterに使うクエリも拒否される', async () => {
+      const { error } = await supabaseB
+        .from('calendar_connections')
+        .select('id')
+        .eq('provider_account_id', `sub-${CALENDAR_CONNECTION_ID}`);
+
+      expect(error?.code).toBe('42501');
+    });
+
+    it('他ユーザーの接続はRLSで0件になる', async () => {
+      const { data, error } = await supabaseA
+        .from('calendar_connections')
+        .select('id')
+        .eq('id', CALENDAR_CONNECTION_ID);
+
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    });
+
+    it.each(['insert', 'update', 'delete'] as const)(
+      'authenticated clientの%sを拒否する',
+      async (operation) => {
+        if (operation === 'insert') {
+          const { error } = await supabaseB.from('calendar_connections').insert({
+            user_id: TEST_USER_B_ID,
+            provider: 'google',
+            provider_account_id: `sub-forbidden-${crypto.randomUUID()}`,
+            granted_scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+            refresh_token_enc: 'forbidden',
+            status: 'active',
+          });
+          expect(error?.code).toBe('42501');
+          return;
+        }
+
+        const { error } =
+          operation === 'update'
+            ? await supabaseB
+                .from('calendar_connections')
+                .update({ status: 'reauth_required' })
+                .eq('id', CALENDAR_CONNECTION_ID)
+            : await supabaseB
+                .from('calendar_connections')
+                .delete()
+                .eq('id', CALENDAR_CONNECTION_ID);
+
+        expect(error?.code).toBe('42501');
+      },
+    );
+
+    it('ownerは選択カレンダーをtable単位のSELECTで読める', async () => {
+      const { data, error } = await supabaseB
+        .from('calendar_connection_calendars')
+        .select('*')
+        .eq('id', CALENDAR_CONNECTION_CALENDAR_ID);
+
+      expect(error).toBeNull();
+      expect(data).toHaveLength(1);
+    });
+
+    it('他ユーザーの選択カレンダーはRLSで0件になる', async () => {
+      const { data, error } = await supabaseA
+        .from('calendar_connection_calendars')
+        .select('id')
+        .eq('id', CALENDAR_CONNECTION_CALENDAR_ID);
+
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    });
+
+    it('authenticated clientは選択カレンダーを変更できない', async () => {
+      const { error } = await supabaseB
+        .from('calendar_connection_calendars')
+        .update({ sync_token: 'forbidden' })
+        .eq('id', CALENDAR_CONNECTION_CALENDAR_ID);
+
+      expect(error?.code).toBe('42501');
+    });
+
+    // 複合 FK (connection_id, user_id) -> calendar_connections (id, user_id) の回帰テスト。
+    // service_role は RLS を bypass するので、cross-user の取り違えを止めるのは FK だけ。
+    // これが無いと Step 3 の sync / Step 7 の切断が他ユーザーのミラー行を巻き込む
+    it('ミラー行に他ユーザーのconnectionをぶら下げられない', async () => {
+      const { error } = await adminSupabase.from('external_calendar_events').insert({
+        user_id: TEST_USER_A_ID,
+        connection_id: CALENDAR_CONNECTION_ID, // user B の接続
+        provider: 'google',
+        provider_calendar_id: 'primary',
+        provider_event_id: `evt-cross-${crypto.randomUUID()}`,
+        title: 'cross-user link',
+        start_at: '2026-06-20T09:00:00.000Z',
+        end_at: '2026-06-20T10:00:00.000Z',
+        status: 'confirmed',
+        last_synced_at: new Date().toISOString(),
+      });
+
+      expect(error?.code).toBe('23503');
+    });
+
+    it('切断でミラー行のconnection_idだけがNULLになりuser_idは残る', async () => {
+      const connectionId = crypto.randomUUID();
+      const eventId = crypto.randomUUID();
+
+      const { error: connectionError } = await adminSupabase.from('calendar_connections').insert({
+        id: connectionId,
+        user_id: TEST_USER_B_ID,
+        provider: 'google',
+        provider_account_id: `sub-${connectionId}`,
+        granted_scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+        refresh_token_enc: 'disconnect-ciphertext',
+        status: 'active',
+      });
+      expect(connectionError).toBeNull();
+
+      const { error: eventError } = await adminSupabase.from('external_calendar_events').insert({
+        id: eventId,
+        user_id: TEST_USER_B_ID,
+        connection_id: connectionId,
+        provider: 'google',
+        provider_calendar_id: 'primary',
+        provider_event_id: `evt-disconnect-${eventId}`,
+        title: 'survives disconnect',
+        start_at: '2026-06-21T09:00:00.000Z',
+        end_at: '2026-06-21T10:00:00.000Z',
+        status: 'confirmed',
+        last_synced_at: new Date().toISOString(),
+      });
+      expect(eventError).toBeNull();
+
+      const { error: deleteError } = await adminSupabase
+        .from('calendar_connections')
+        .delete()
+        .eq('id', connectionId);
+      expect(deleteError).toBeNull();
+
+      const { data, error } = await adminSupabase
+        .from('external_calendar_events')
+        .select('connection_id, user_id')
+        .eq('id', eventId)
+        .single();
+
+      expect(error).toBeNull();
+      expect(data?.connection_id).toBeNull();
+      expect(data?.user_id).toBe(TEST_USER_B_ID);
+
+      await adminSupabase.from('external_calendar_events').delete().eq('id', eventId);
+    });
+
+    // service_role は rolbypassrls = t なので、これは policy ではなく GRANT の証明
+    it('service_roleはtoken列を読める', async () => {
+      const { data, error } = await adminSupabase
+        .from('calendar_connections')
+        .select('refresh_token_enc, granted_scopes, provider_account_id')
+        .eq('id', CALENDAR_CONNECTION_ID)
+        .single();
+
+      expect(error).toBeNull();
+      expect(data?.refresh_token_enc).toBe('rls-ciphertext');
     });
   });
 
@@ -1094,5 +1343,28 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
     ).toHaveLength(serviceRoleCases.length);
     expect(snapshot).not.toContain('### user_badges');
     expect(snapshot).not.toContain('### api_keys');
+  });
+
+  it('I-16 snapshotがcalendar_connectionsのcolumn grantを列単位で記録する', () => {
+    const snapshot = readFileSync(
+      resolve(process.cwd(), '../../docs/engineering/data/db/rls-snapshot.md'),
+      'utf8',
+    );
+
+    expect(snapshot).toContain('### calendar_connections');
+    expect(snapshot).toContain('### calendar_connection_calendars');
+
+    for (const column of CALENDAR_CONNECTION_GRANTED_COLUMNS) {
+      expect(snapshot).toContain(`public.calendar_connections.${column}`);
+    }
+    for (const column of CALENDAR_CONNECTION_WITHHELD_COLUMNS) {
+      expect(snapshot).not.toContain(`public.calendar_connections.${column}`);
+    }
+
+    // table 単位の SELECT を authenticated に与えていないことの記録。
+    // 与えてしまうと列単位の grant が意味を失う
+    expect(snapshot).not.toMatch(
+      /\| table\s+\| public\.calendar_connections\s+\| authenticated\s+\|/,
+    );
   });
 });

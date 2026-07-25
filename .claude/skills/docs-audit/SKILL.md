@@ -29,7 +29,9 @@ user_invocable: true
 
 ### Step 1: 情報収集
 
-以下のソースを並行で読み込む:
+**まず `pnpm docs:coverage` を実行する。** 機能 ⇄ 公開 docs ⇄ LP の対応表が出力され、A（未カバー）と C（en/ja 非対称）の一次情報になる。目視の棚卸しから始めない。
+
+その上で以下を並行で読み込む:
 
 1. **プロダクトの機能一覧**: `ls apps/product/src/features/` と `apps/product/src/app/` のルート構造
 2. **最近の変更**: `git log --oneline -30 -- apps/product/`
@@ -40,7 +42,12 @@ user_invocable: true
 
 #### A. 未カバーの機能
 
-`apps/product/src/features/` に存在するがユーザー向け docs がない機能を洗い出す。判定基準は「ユーザーが操作する主要機能（calendar / tags / review / settings / timeblock 等）に対応する docs があるか」。内部専用 feature は対象外。
+`docs:coverage` の出力で `なし` / `placeholder（未執筆）` の行を起点にする。加えて次の 2 つを見る。
+
+- **`public_docs` 未記入の spec** — レジストリに載っていない機能。`public_docs` を書く（公開 docs 不要なら `[]`）こと自体が起票対象
+- **LP が約束しているのに対応する spec が無いもの** — 公開 docs 以前に内部 spec が欠けている。docs より spec の作成が先
+
+`apps/product/src/features/` 側にあってレジストリのどこにも現れない機能も洗い出す。判定基準は「ユーザーが操作する主要機能に対応する docs があるか」。内部専用 feature は対象外。
 
 #### B. 鮮度チェック
 
@@ -55,7 +62,7 @@ docs の最終更新と product 側の最終コミットを比較し、乖離が
 
 #### C. en/ja 対称性
 
-`content/docs/en/` と `content/docs/ja/` のファイル対応を比較し、片側にしかないファイルを列挙する（`pnpm --filter @dayopt/web validate:content` の warning も参照）。
+`docs:coverage` の「en / ja が揃っていない」節を使う。ファイルの有無だけでなく、片側だけ draft / placeholder のものも含まれる。`pnpm --filter @dayopt/web validate:content` の warning（公開ページから未公開ページへのリンク）も併せて見る。
 
 ### Step 3: 報告
 

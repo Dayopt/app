@@ -249,6 +249,34 @@ export const icalFeedRateLimit = createRateLimiter(
   'ratelimit:product:ical-feed',
 );
 
+/**
+ * 外部カレンダー接続用レート制限（start / callback 共通）
+ * 10リクエスト / 1時間 per user（OAuth 接続は人間の操作なので低頻度で足りる）
+ *
+ * callback にも掛けるのは、flow cookie を意図的に署名していないためユーザー自身が
+ * 任意の state を作れて、start を踏まずに callback を叩き続けられるから。無制限だと
+ * Google の token endpoint への往復と Sentry capture が青天井になる。
+ * 正常な接続は start + callback で 2 消費するので、1 時間に 5 回まで試せる。
+ *
+ * IP ではなく user 単位。connect は認証済みユーザーの操作であり、共有 IP 配下の
+ * 別ユーザーを巻き込まない。
+ */
+export const calendarConnectRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(10, '1 h'),
+  'ratelimit:product:calendar-connect',
+);
+
+/**
+ * 手動同期（tRPC `syncNow`）の per-user rate limit。
+ *
+ * 1 回で全カレンダーの provider 往復が走るので、連打を抑える。cron が 15 分毎に回すため、
+ * 手動同期は補助的な導線であり 1 時間 6 回で足りる。
+ */
+export const calendarSyncNowRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(6, '1 h'),
+  'ratelimit:product:calendar-sync-now',
+);
+
 /** CSP reportは公開入力なのでIP単位と全体上限を別々に持つ。 */
 export const cspReportRateLimit = createRateLimiter(
   Ratelimit.slidingWindow(20, '1 m'),

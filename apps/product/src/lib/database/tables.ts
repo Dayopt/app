@@ -1,4 +1,6 @@
 export const databaseTables = {
+  calendarConnections: 'calendar_connections',
+  calendarConnectionCalendars: 'calendar_connection_calendars',
   emailSuppressions: 'email_suppressions',
   externalCalendarEvents: 'external_calendar_events',
   mcpMutationControl: 'mcp_mutation_control',

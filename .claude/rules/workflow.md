@@ -195,6 +195,24 @@ gh pr merge <PR番号> --merge --delete-branch
 
 **原則: 1 worktree = 1 branch = 1 PR。役目（PR の merge / close）を終えた worktree はその場で削除する。** 放置すると worktree・ブランチ・孤児ディレクトリが積み上がり、どれが生きている作業か判別できなくなる。
 
+### 概念整理（branch と worktree の違い）
+
+混同しやすいので明確にする。
+
+- **branch** = コミット履歴を指すポインタ（ラベル）。ローカルとリモート（`origin/*`）に別々に存在する
+- **worktree** = branch を実際に checkout して編集する作業ディレクトリ。1 つの repo に複数の worktree を並べ、それぞれ別 branch を同時に開ける（並行 AI セッションの土台）
+- 両者は別物: **worktree を消しても branch は残る**。だから掃除では「worktree・ローカル branch・リモート branch」の 3 つを揃えて消す必要がある。「リモートだけ残る」「ローカルだけ残る」はこの 3 点の消し忘れが原因
+
+### 命名規則
+
+branch 名は **`{agent}/{domain}-{action}[-{issue番号}]`** で統一する（provider 共通）。
+
+- **agent**: `claude` / `codex` など、作った AI / 人を表す接頭辞
+- **domain-action**: Project 命名規則（本ファイル §Project 命名規則）と同型の kebab-case。例: `calendar-sync-fix`, `i18n-audit`, `sidebar-routing-unification`
+- **issue 番号**: 対応 issue があれば末尾に付ける。例: `codex/external-calendar-sync-1705`
+- 良い例: `claude/calendar-sync-fix` / `codex/i18n-audit-1705`。悪い例: `claude/worktree-branch-strategy-9383e9`（内容が読めないランダム suffix）, `fix-stuff`（domain 不明）
+- **Claude Code が自動生成するランダム suffix 名は、最初の PR を作る前に `git branch -m {agent}/{domain}-{action}` でリネームする**。worktree のディレクトリ名は使い捨てなのでリネーム不要（branch 名だけ直せば PR に正しい名前が乗る）
+
 ### 置き場と作成
 
 - Claude Code は `.claude/worktrees/<name>/` に自動作成する（gitignore 済み）。Codex は `~/.codex/worktrees/` を使う。**手動で `git worktree add` する場合も `.claude/worktrees/` 配下に置く**（repo 直下や無関係な場所に散らさない）
@@ -203,21 +221,35 @@ gh pr merge <PR番号> --merge --delete-branch
 
 ### マージ後の掃除（AI の責務、merge と同一セッションで実施）
 
-```bash
-gh pr merge <N> --merge --delete-branch  # remote は deleteBranchOnMerge でも自動削除
-# 1) 通常時: worktree から切り離してからローカル branch を削除
-git worktree remove <worktree-path>      # worktree 側の checkout を先に解放
-git branch -d <branch>                   # merge 済みなら -d が通る（-D は使わない）
+**標準は `pnpm branch:finish <PR番号>` のワンセット実行。** マージ〜掃除〜main 最新化までを 1 コマンドで行う（`scripts/git/finish-branch.sh`。Claude / Codex / 人間で共通）。
 
-# 2) worktree remove が失敗する場合（dirty/uncommitted 差分など）
-git -C <worktree-path> status --porcelain    # ワークツリーの差分確認
-git -C <worktree-path> checkout main          # worktree 内で main に戻す
-git worktree remove <worktree-path> --force    # 差分がない/確認済みなら強制解除
-git branch -d <branch>                        # 依然として merge 済みなら実行
+```bash
+pnpm branch:finish <PR番号>            # マージ→worktree削除→branch削除→リモート確認→main最新化
+pnpm branch:finish <PR番号> --dry-run  # 実行せず予定アクションだけ確認
 ```
 
-順序に意味がある: **worktree が参照する branch を先に解除しないと branch 削除が不可能**なため `worktree remove` を優先する。
-ただし `worktree remove` がそのまま通らない場合は、worktree 内で主系列（例: `main`）へ checkout してから、`remove --force` や `branch -d` を続行する。
+スクリプトが内部で行うこと（= 手動フォールバック時にたどる手順）:
+
+1. PR 状態を取得。OPEN かつ失敗 check が無ければ `gh pr merge <N> --merge --delete-branch`（main が他 worktree で checkout 中で失敗する場合は `gh api` の直接マージにフォールバック）
+2. 該当 branch の worktree を特定し、`status --porcelain` が空であることを確認（**dirty なら停止**してユーザーに委ねる）
+3. `git worktree remove --force <path>` で worktree を解除
+4. `git fetch --prune` → main を checkout して `git pull --ff-only origin main`（**branch 削除より先に main を最新化する**）
+5. `git -C <main> branch -d <branch>`（**`-d` のみ。not fully merged なら停止**）
+6. リモートに `origin/<branch>` が残っていれば `git push origin --delete <branch>` → `git worktree prune`
+
+順序に意味がある: ① **worktree が参照する branch を先に解除しないと branch 削除が不可能**なため `worktree remove` を先に行う。② **`branch -d` の前に main を pull する**（`gh pr merge` はリモートしか更新しないので、pull 前だと branch 先端がローカル main から辿れず、追跡設定の無い branch は誤って not fully merged 扱いになる）。スクリプトが途中で停止した場合（dirty / not fully merged）は、下記「削除時の安全確認」に従って手動で判断する。
+
+### 完了定義（ワンセット）
+
+以下 5 点すべてを満たして初めて「作業終了」とする。1 つでも欠けたら未完了（「リモートだけ残る」等はこの積み残し）。
+
+1. PR がマージ済み
+2. worktree が削除済み
+3. ローカル branch が削除済み
+4. リモート branch が消滅（`git fetch --prune` 後に `origin/<branch>` が無い）
+5. main checkout が最新（`git pull --ff-only` 済み）
+
+`pnpm branch:finish` はこの 5 点を満たすと完了サマリーを出す。手動で進めた場合も同じ 5 点を自分で確認する。
 
 ### 削除時の安全確認
 

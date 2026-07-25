@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-07-24
 code: apps/product/src
 ---
 
@@ -354,7 +354,7 @@ USING (auth.uid() = user_id);
 
 ## Database Architecture
 
-> **RLS 対象 public テーブル数**: 13 | **PostgreSQL**: v17
+> **RLS 対象 public テーブル数**: 15 | **PostgreSQL**: v17
 
 Dayopt は Supabase（PostgreSQL）を使用する。本番は Pro organization の `dayopt` project、PR ごとの検証は ephemeral Preview Branches を使い、永続 Staging project は置かない。
 RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapshot.md`](./data/db/rls-snapshot.md) を正とする。
@@ -363,12 +363,23 @@ RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapsho
 
 #### コアビジネス（4テーブル）
 
-| テーブル                     | 役割                                                             | 主要カラム                                                                                                |
-| ---------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **plans**                    | Plan（予定）。これからやる時間の宣言                             | title, tag_id, start_at, end_at, skipped_at, source, external_calendar_event_id                           |
-| **records**                  | Record（記録）。`plan_id` で 1 Plan : N Record                   | title, tag_id, plan_id, start_at, end_at, source, external_calendar_event_id                              |
-| **external_calendar_events** | 外部カレンダー同期ミラー（テーブルのみ存在。同期実装は Phase 2） | provider, provider_calendar_id, provider_event_id, start_at, end_at, status, dismissed_at, last_synced_at |
-| **tags**                     | 階層タグ（親子1階層）                                            | name, color, parent_id, sort_order, is_active                                                             |
+| テーブル                     | 役割                                                             | 主要カラム                                                                                                               |
+| ---------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **plans**                    | Plan（予定）。これからやる時間の宣言                             | title, tag_id, start_at, end_at, skipped_at, source, external_calendar_event_id                                          |
+| **records**                  | Record（記録）。`plan_id` で 1 Plan : N Record                   | title, tag_id, plan_id, start_at, end_at, source, external_calendar_event_id                                             |
+| **external_calendar_events** | 外部カレンダー同期ミラー（テーブルのみ存在。同期実装は Phase 2） | connection_id, provider, provider_calendar_id, provider_event_id, start_at, end_at, status, dismissed_at, last_synced_at |
+| **tags**                     | 階層タグ（親子1階層）                                            | name, color, parent_id, sort_order, is_active                                                                            |
+
+#### 外部カレンダー連携（2テーブル）
+
+Phase 2（external-calendar-import）で追加。OAuth / 同期 / UI は Step 2 以降。
+
+| テーブル                          | 役割                                                              | 主要カラム                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **calendar_connections**          | provider アカウント接続。同一 provider の複数アカウントを許容     | provider, provider_account_id, provider_account_email, granted_scopes, refresh_token_enc, status |
+| **calendar_connection_calendars** | 取り込み対象として選択されたカレンダーと per-calendar sync cursor | connection_id, provider_calendar_id, calendar_name, sync_token, last_synced_at                   |
+
+`calendar_connections.refresh_token_enc` / `granted_scopes` / `provider_account_id` は authenticated へ GRANT しない（column-scoped SELECT）。詳細は [`data/db/rls-snapshot.md`](./data/db/rls-snapshot.md)。
 
 #### ユーザー設定（2テーブル）
 
@@ -431,10 +442,36 @@ RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapsho
                               │───────────────────────────│
                               │ id (PK)                    │
                               │ user_id (FK)                │
+                              │ connection_id (FK, NULL)    │
                               │ provider, provider_calendar_ │
                               │  id, provider_event_id      │
                               │ start_at/end_at, status     │
                               │ dismissed_at, last_synced_at │
+                              └─────────────┬─────────────┘
+                                            │ connection_id (ON DELETE SET NULL)
+                                            ▼
+                              ┌───────────────────────────┐
+                              │   calendar_connections     │
+                              │  (provider アカウント接続) │
+                              │───────────────────────────│
+                              │ id (PK)                    │
+                              │ user_id (FK)                │
+                              │ provider, provider_account_ │
+                              │  id, provider_account_email │
+                              │ granted_scopes              │
+                              │ refresh_token_enc           │
+                              │ status, last_synced_at      │
+                              └─────────────┬─────────────┘
+                                            │ (id, user_id) 複合 FK
+                                            ▼
+                              ┌───────────────────────────┐
+                              │ calendar_connection_       │
+                              │   calendars (選択カレンダー)│
+                              │───────────────────────────│
+                              │ id (PK)                    │
+                              │ connection_id, user_id (FK) │
+                              │ provider_calendar_id        │
+                              │ calendar_name, sync_token   │
                               └───────────────────────────┘
 
 === セキュリティ/監査 ===
@@ -593,9 +630,9 @@ Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文�
 
 ### Foundation Readiness
 
-Package foundation は第一段階として運用可能な状態にある。root scripts の `build:packages`, `typecheck:packages`, `check:workspace`, `lint:boundaries`, `build`, `build:web`, `build-storybook` は現在の package 構成を検証対象に含め、CI も `packages-build` job で `pnpm build:packages` を実行する。
+Package foundation は第一段階として運用可能な状態にある。root scripts の `build:packages`, `typecheck:packages`, `check:workspace`, `lint:boundaries`, `build`, `build:web`, `build-storybook` は現在の package 構成を検証対象に含め、CI も `product` job（旧 `packages-build` job）で `pnpm build:packages` を実行する。
 
-品質ゲートは apps と同じ水準に揃っている。tsconfig の共通部分は root `tsconfig.base.json` に集約し、各 package はそこから `extends` して固有オプションだけを持つ。ESLint は root `eslint.config.packages.mjs` を共有 flat config とし、各 package の `eslint.config.mjs` が re-export する。全 package が `lint: eslint src --max-warnings 0` を持つため `turbo run lint`（= `pnpm lint`）と CI の lint job が packages を検証対象に含む。Prettier も root `format:check` が `packages/*/src` の TS/TSX/CSS/MDX を対象にする。packages は Next.js に依存しないため、app 側の `core-web-vitals` ではなく TypeScript ルール + Storybook plugin を base にする。
+品質ゲートは apps と同じ水準に揃っている。tsconfig の共通部分は root `tsconfig.base.json` に集約し、各 package はそこから `extends` して固有オプションだけを持つ。ESLint は root `eslint.config.packages.mjs` を共有 flat config とし、各 package の `eslint.config.mjs` が re-export する。全 package が `lint: eslint src --max-warnings 0` を持つため `turbo run lint`（= `pnpm lint`）と CI の `static` job（旧 lint job）が packages を検証対象に含む。Prettier も root `format:check` が `packages/*/src` の TS/TSX/CSS/MDX を対象にする。packages は Next.js に依存しないため、app 側の `core-web-vitals` ではなく TypeScript ルール + Storybook plugin を base にする。
 
 apps への adoption は完了している。[ADR-021](./log/2026-06-22-shared-packages-canonical-and-app-shims.md)（2026-06-22）で packages を canonical とし、product / web は shim を介さず直接 import する形に統一した。UI・トークンの app 側重複は解消済みで、i18n も routing / navigation を `@dayopt/i18n/*` から直接 import する。app 側には message loading と next-intl plugin entrypoint を担う `request.ts`、app 固有 Provider だけを残す。残る follow-up は `.from('table')` への `databaseTables` 段階適用など小粒のものに限られる。
 
