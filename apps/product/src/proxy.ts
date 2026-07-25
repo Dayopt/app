@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { dayoptDomains } from '@dayopt/config';
 
 import {
+  isAuthPathAllowedWhileAuthenticated,
   isAuthProductPath,
   isProtectedProductPath,
   isPublicProductPath,
