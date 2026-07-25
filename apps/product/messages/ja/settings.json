@@ -19,6 +19,7 @@
       "displayNameDesc": "他のユーザーに表示される名前",
       "displayNamePlaceholder": "例: Taro",
       "email": "メールアドレス",
+      "emailManagedByProvider": "Google アカウントのメールアドレスです。変更は Google 側で行ってください。",
       "noEmail": "未設定",
       "emailDesc": "アカウントに関連付けられたメールアドレス",
       "emailPlaceholder": "メールアドレスを入力",
@@ -176,6 +177,10 @@
         "confirm": "削除を実行",
         "success": "アカウント削除をリクエストしました。30日後に完全削除されます。",
         "error": "アカウントを削除できませんでした。もう一度お試しください"
+      },
+      "loginMethod": {
+        "title": "ログイン方法",
+        "google": "Google"
       }
     },
     "calendar": {

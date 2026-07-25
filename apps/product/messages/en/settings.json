@@ -19,6 +19,7 @@
       "displayNameDesc": "Name shown to other users",
       "displayNamePlaceholder": "Enter display name",
       "email": "Email Address",
+      "emailManagedByProvider": "This is the email address from your Google account. Change it in Google.",
       "noEmail": "Not set",
       "emailDesc": "Email address associated with your account",
       "emailPlaceholder": "Enter email address",
@@ -176,6 +177,10 @@
         "confirm": "Execute Deletion",
         "success": "Account deletion requested. Permanent deletion in 30 days.",
         "error": "Failed to delete account"
+      },
+      "loginMethod": {
+        "title": "Login method",
+        "google": "Google"
       }
     },
     "calendar": {

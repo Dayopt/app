@@ -61,12 +61,12 @@ export const PRESET_USER_SETTINGS = {
 // ─────────────────────────────────────────────────────────
 
 export const PRESET_AUTH = {
-  /** 認証済みユーザー（useAuthStore.setState 用） */
+  /** 認証済みユーザー（メール+パスワードで登録。useAuthStore.setState 用） */
   authenticated: {
     user: {
       id: 'mock-user-id',
       email: 'user@example.com',
-      app_metadata: {},
+      app_metadata: { provider: 'email', providers: ['email'] },
       user_metadata: {},
       aud: 'authenticated',
       created_at: '2025-01-01T00:00:00Z',
@@ -79,11 +79,27 @@ export const PRESET_AUTH = {
       user: {
         id: 'mock-user-id',
         email: 'user@example.com',
-        app_metadata: {},
+        app_metadata: { provider: 'email', providers: ['email'] },
         user_metadata: {},
         aud: 'authenticated',
         created_at: '2025-01-01T00:00:00Z',
       },
+    } as never,
+    loading: false,
+    error: null,
+  },
+  /**
+   * Google でのみ登録したユーザー（パスワードを持たない）。
+   * パスワード前提の UI を出し分ける画面の検証に使う。
+   */
+  googleOnly: {
+    user: {
+      id: 'mock-user-google',
+      email: 'user@gmail.com',
+      app_metadata: { provider: 'google', providers: ['google'] },
+      user_metadata: { full_name: 'Tomoya' },
+      aud: 'authenticated',
+      created_at: '2025-01-01T00:00:00Z',
     } as never,
     loading: false,
     error: null,
