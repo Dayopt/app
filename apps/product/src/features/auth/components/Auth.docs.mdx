@@ -18,9 +18,12 @@ Supabase Auth ベースの認証システム。OAuth、MFA、セッション監�
 │       └── 認証成功 → セッション確立
 ├── MFAチェック
 │   └── MFA有効 → MFA認証画面
-└── 認証済み → ProtectedRoute → アプリ表示
+└── 認証済み → proxy が protected path を通す → アプリ表示
     └── SessionMonitor → 非アクティブ監視
         └── タイムアウト → SessionTimeoutDialog
+
+認証メール（signup 確認 / recovery / email_change）
+└── メール内リンク → /auth/confirm で verifyOtp → next へ着地
 ```
 
 ---
@@ -29,17 +32,19 @@ Supabase Auth ベースの認証システム。OAuth、MFA、セッション監�
 
 ```
 AuthLayout                      認証ページレイアウト
-├── LoginForm                   メール/パスワード + OAuthボタン
+├── LoginForm                   メール/パスワード + Google ボタン
 ├── SignupForm                  登録フォーム（メール確認付き）
-└── PasswordResetForm           パスワードリセット
+├── PasswordResetForm           リセットメール送信
+├── ResetPasswordForm           新パスワード設定（confirm 経由で着地）
+└── MFAVerifyForm               TOTP / リカバリーコード検証
 
-ProtectedRoute                  クライアント側ルート保護
-AuthGuard                       認証ガードラッパー
 AuthStoreInitializer            Server Component からストア初期化
 
 SessionMonitorProvider          セッション監視プロバイダー
 └── SessionTimeoutDialog        非アクティブ警告ダイアログ
 ```
+
+ルート保護のコンポーネントは持たない。認証ガードは proxy（`src/proxy.ts`）に一元化している。
 
 ---
 
@@ -69,21 +74,22 @@ devtools ミドルウェア付き、タイムアウト処理（5秒）。
 
 ## Hooks
 
-| Hook                  | 用途                                          |
-| --------------------- | --------------------------------------------- |
-| `useAuth()`           | ストアラッパー（user, session, 全アクション） |
-| `useSessionMonitor()` | セッションタイムアウト監視                    |
+| Hook                  | 用途                       |
+| --------------------- | -------------------------- |
+| `useSessionMonitor()` | セッションタイムアウト監視 |
 
 ---
 
 ## セキュリティ
 
-| 対策             | 説明                                 |
-| ---------------- | ------------------------------------ |
-| OWASP準拠        | パスワードリセットエラーのマスキング |
-| IPレートリミット | `ip-rate-limit.ts`                   |
-| 監査ログ         | `audit-log.ts`（認証イベント記録）   |
-| エラーサニタイズ | `sanitize-auth-error.ts`             |
+| 対策               | 説明                                                                             |
+| ------------------ | -------------------------------------------------------------------------------- |
+| OWASP準拠          | パスワードリセットはメール存在を漏らさない（常に成功扱いで返す）                 |
+| エラーサニタイズ   | `lib/auth-error.ts` の `getAuthErrorKey`（`sanitize-auth-error` から re-export） |
+| Bot 対策           | Cloudflare Turnstile（`lib/turnstile`）+ Supabase Auth Bot Protection            |
+| 漏洩パスワード検査 | `lib/auth/pwned-password.ts`（Have I Been Pwned）                                |
+| MFA 強制           | proxy と tRPC `protectedProcedure` の二層で AAL を fail-closed 判定              |
+| リカバリーコード   | `lib/auth/recovery-codes.ts`。HMAC pepper 付きで hash 保存                       |
 
 ---
 
@@ -96,13 +102,15 @@ Google のみ。本番の provider 設定は Supabase Dashboard が正本
 
 ## バリデーション
 
-| スキーマ       | バリデーション             |
-| -------------- | -------------------------- |
-| `loginSchema`  | メール形式、パスワード必須 |
-| `signupSchema` | メール形式、パスワード強度 |
+| スキーマ         | バリデーション                             |
+| ---------------- | ------------------------------------------ |
+| `loginSchema`    | メール形式、パスワード必須                 |
+| `signupSchema`   | メール形式、`passwordSchema`               |
+| `passwordSchema` | 8〜64 文字。signup / リセット / 変更で共通 |
 
-Zod ベースのバリデーション。
+Zod ベース。エラーメッセージは i18n キー（`auth.errors.*`）を持ち、表示側で `t()` 解決する。
+英数字必須（`letters_digits`）の検証は Supabase 側が行う。
 
 ---
 
-**最終更新**: 2026-02-17
+**最終更新**: 2026-07-25
