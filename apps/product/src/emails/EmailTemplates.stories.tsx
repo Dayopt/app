@@ -16,6 +16,7 @@ import { render } from 'react-email';
 import { AccountDeletionEmail } from './AccountDeletionEmail';
 import { CancellationConfirmEmail } from './CancellationConfirmEmail';
 import { ConfirmEmail } from './ConfirmEmail';
+import { EmailChangeEmail } from './EmailChangeEmail';
 import { MagicLinkEmail } from './MagicLinkEmail';
 import { PasswordChangedEmail } from './PasswordChangedEmail';
 import { PasswordResetEmail } from './PasswordResetEmail';
@@ -109,6 +110,9 @@ export const Guidelines: Story = {
           <p className="pl-4">styles.tsx — 共通スタイル（tokens/colors.css トークン → hex）</p>
           <p className="pl-4">ConfirmEmail.tsx — メール確認（Auth signup）</p>
           <p className="pl-4">PasswordResetEmail.tsx — PW リセット（Auth recovery）</p>
+          <p className="pl-4">
+            EmailChangeEmail.tsx — メール変更（Auth email_change / 現・新の2通）
+          </p>
           <p className="pl-4">MagicLinkEmail.tsx — マジックリンク（Auth magic_link）</p>
           <p className="text-foreground mt-4 font-medium">
             アプリメール（tRPC email router / Node.js）
@@ -126,7 +130,7 @@ export const Guidelines: Story = {
           <p className="pl-4">CancellationConfirmEmail.tsx — Pro解約確認</p>
           <p className="pl-4">AccountDeletionEmail.tsx — アカウント削除（GDPR）</p>
           <p className="text-muted-foreground mt-4 text-xs">
-            ※ Auth テンプレート3つと専用stylesは pnpm auth-email:sync で Edge Function
+            ※ Auth テンプレート4つと専用stylesは pnpm auth-email:sync で Edge Function
             正本から生成。pnpm check がドリフトを検知する。
           </p>
         </div>
@@ -171,6 +175,7 @@ export const Guidelines: Story = {
               {[
                 ['ConfirmEmail', 'メール確認', 'Auth Hook (signup)'],
                 ['PasswordResetEmail', 'PW リセット', 'Auth Hook (recovery)'],
+                ['EmailChangeEmail', 'メール変更', 'Auth Hook (email_change)'],
                 ['MagicLinkEmail', 'マジックリンク', 'Auth Hook (magic_link)'],
                 ['WelcomeEmail', '新規登録', 'email.sendWelcome'],
                 ['TrialStartEmail', 'トライアル開始', 'email.sendTrialStart'],
@@ -283,6 +288,52 @@ export const PasswordReset: Story = {
         locale: 'ja',
       })}
       title="Password Reset"
+    />
+  ),
+};
+
+/** メールアドレス変更（現アドレス宛の承認） */
+export const EmailChangeCurrent: Story = {
+  render: () => (
+    <BilingualEmailPreview
+      enElement={EmailChangeEmail({
+        userName: 'Tomoya',
+        confirmUrl: 'https://app.dayopt.app/auth/confirm?token_hash=abc123&type=email_change',
+        newEmail: 'new@example.com',
+        variant: 'current',
+        locale: 'en',
+      })}
+      jaElement={EmailChangeEmail({
+        userName: 'Tomoya',
+        confirmUrl: 'https://app.dayopt.app/auth/confirm?token_hash=abc123&type=email_change',
+        newEmail: 'new@example.com',
+        variant: 'current',
+        locale: 'ja',
+      })}
+      title="Email Change (current address)"
+    />
+  ),
+};
+
+/** メールアドレス変更（新アドレス宛の確認） */
+export const EmailChangeNew: Story = {
+  render: () => (
+    <BilingualEmailPreview
+      enElement={EmailChangeEmail({
+        userName: 'Tomoya',
+        confirmUrl: 'https://app.dayopt.app/auth/confirm?token_hash=def456&type=email_change',
+        newEmail: 'new@example.com',
+        variant: 'new',
+        locale: 'en',
+      })}
+      jaElement={EmailChangeEmail({
+        userName: 'Tomoya',
+        confirmUrl: 'https://app.dayopt.app/auth/confirm?token_hash=def456&type=email_change',
+        newEmail: 'new@example.com',
+        variant: 'new',
+        locale: 'ja',
+      })}
+      title="Email Change (new address)"
     />
   ),
 };
