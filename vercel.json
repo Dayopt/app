@@ -9,6 +9,12 @@
   "git": {
     "deploymentEnabled": true
   },
+  "crons": [
+    {
+      "path": "/api/cron/calendar-sync",
+      "schedule": "*/15 * * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/",

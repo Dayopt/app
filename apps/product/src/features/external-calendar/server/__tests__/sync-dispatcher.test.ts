@@ -1,0 +1,170 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const createServiceRoleClient = vi.hoisted(() => vi.fn());
+const syncConnection = vi.hoisted(() => vi.fn());
+const isBillingEnforced = vi.hoisted(() => vi.fn(() => false));
+const checkProAccessForUser = vi.hoisted(() => vi.fn());
+const isDailyFullSyncSlot = vi.hoisted(() => vi.fn((_connectionId: string, _now: Date) => false));
+const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn((error: unknown) => error));
+
+vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient }));
+vi.mock('@/lib/billing/enforcement', () => ({ isBillingEnforced, checkProAccessForUser }));
+vi.mock('@/lib/sentry', () => ({ captureUnexpectedDatabaseError }));
+vi.mock('@/lib/logger', () => ({
+  logger: { log: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+vi.mock('../sync-service', () => ({ syncConnection }));
+vi.mock('../sync-schedule', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../sync-schedule')>();
+  return { ...actual, isDailyFullSyncSlot };
+});
+
+import { dispatchCalendarSync } from '../sync-dispatcher';
+
+const NOW = new Date('2026-07-24T03:07:00.000Z');
+const FAR_DEADLINE = 10 ** 15; // Date.now() を超えない = 予算切れしない
+
+type Recorder = { chain: Array<{ method: string; args: unknown[] }> };
+
+/** calendar_connections の select チェーンを 1 つだけ持つ mock。 */
+function setupDb(result: { data: unknown; error: unknown }) {
+  const recorder: Recorder = { chain: [] };
+  const proxy: unknown = new Proxy(
+    {},
+    {
+      get(_t, prop: string) {
+        if (prop === 'then') {
+          return (onF: (v: typeof result) => unknown, onR?: (e: unknown) => unknown) =>
+            Promise.resolve(result).then(onF, onR);
+        }
+        return (...args: unknown[]) => {
+          recorder.chain.push({ method: prop, args });
+          return proxy;
+        };
+      },
+    },
+  );
+  const from = vi.fn(() => proxy);
+  createServiceRoleClient.mockReturnValue({ from });
+  return { recorder, from };
+}
+
+function connections(n: number) {
+  return Array.from({ length: n }, (_, index) => ({
+    id: `00000000-0000-4000-8000-${index.toString().padStart(12, '0')}`,
+    user_id: `10000000-0000-4000-8000-${index.toString().padStart(12, '0')}`,
+  }));
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  isBillingEnforced.mockReturnValue(false);
+  isDailyFullSyncSlot.mockReturnValue(false);
+  syncConnection.mockResolvedValue({ outcome: 'synced', calendarsSynced: 1, calendarsFailed: 0 });
+  checkProAccessForUser.mockResolvedValue('allowed');
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('dispatchCalendarSync — due フィルタ', () => {
+  it('active かつ stale の接続を last_synced_at 昇順で列挙する', async () => {
+    const { recorder, from } = setupDb({ data: connections(2), error: null });
+
+    await dispatchCalendarSync({ now: NOW, deadlineAt: FAR_DEADLINE });
+
+    expect(from).toHaveBeenCalledWith('calendar_connections');
+    const methods = Object.fromEntries(recorder.chain.map((e) => [e.method, e.args]));
+    // status='active' で絞る
+    expect(recorder.chain).toContainEqual({ method: 'eq', args: ['status', 'active'] });
+    // last_synced_at is null or < cutoff
+    const orArg = String(methods.or?.[0] ?? '');
+    expect(orArg).toContain('last_synced_at.is.null');
+    expect(orArg).toContain('last_synced_at.lt.');
+    // 昇順・NULL 最優先
+    expect(methods.order).toEqual(['last_synced_at', { ascending: true, nullsFirst: true }]);
+    // token 系を触らない列指定
+    expect(String(methods.select?.[0])).toBe('id, user_id');
+  });
+
+  it('列挙エラーは throw する（route が 500 にできるよう）', async () => {
+    setupDb({ data: null, error: { code: '08006' } });
+
+    await expect(dispatchCalendarSync({ now: NOW, deadlineAt: FAR_DEADLINE })).rejects.toBeTruthy();
+    expect(captureUnexpectedDatabaseError).toHaveBeenCalled();
+  });
+});
+
+describe('dispatchCalendarSync — 逐次同期', () => {
+  it('due 接続ごとに syncConnection を user_id 付きで呼ぶ', async () => {
+    setupDb({ data: connections(3), error: null });
+
+    const summary = await dispatchCalendarSync({ now: NOW, deadlineAt: FAR_DEADLINE });
+
+    expect(syncConnection).toHaveBeenCalledTimes(3);
+    expect(syncConnection).toHaveBeenCalledWith({
+      connectionId: connections(1)[0]!.id,
+      userId: connections(1)[0]!.user_id,
+      forceFullSync: false,
+    });
+    expect(summary).toMatchObject({ due: 3, processed: 3, skippedNonPro: 0, deferred: 0 });
+  });
+
+  it('full resync スロットに当たった接続だけ forceFullSync=true で呼ぶ', async () => {
+    setupDb({ data: connections(2), error: null });
+    isDailyFullSyncSlot.mockImplementation((connectionId: string) => connectionId.endsWith('001'));
+
+    await dispatchCalendarSync({ now: NOW, deadlineAt: FAR_DEADLINE });
+
+    const calls = syncConnection.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.connectionId.endsWith('000'))?.forceFullSync).toBe(false);
+    expect(calls.find((c) => c.connectionId.endsWith('001'))?.forceFullSync).toBe(true);
+  });
+});
+
+describe('dispatchCalendarSync — 時間予算', () => {
+  it('deadline を過ぎたら残りを処理せず deferred に計上する', async () => {
+    setupDb({ data: connections(3), error: null });
+    // 1 件処理したら締切を過ぎるよう、syncConnection のたびに現在時刻を進める
+    let calls = 0;
+    const past = Date.now() - 1000;
+    syncConnection.mockImplementation(async () => {
+      calls += 1;
+      return { outcome: 'synced', calendarsSynced: 0, calendarsFailed: 0 };
+    });
+
+    // deadlineAt を「1 件処理後には過ぎている」値にする: 最初のループ判定は通し、
+    // 2 週目で Date.now() >= deadlineAt にするため過去値を使う。
+    const summary = await dispatchCalendarSync({ now: NOW, deadlineAt: past });
+
+    // 最初の判定で即中断（Date.now() > past）。1 件も処理しない。
+    expect(calls).toBe(0);
+    expect(summary.processed).toBe(0);
+    expect(summary.deferred).toBe(3);
+  });
+});
+
+describe('dispatchCalendarSync — 課金ゲート', () => {
+  it('BILLING_ENFORCED off なら pro チェックせず全件処理する', async () => {
+    setupDb({ data: connections(2), error: null });
+    isBillingEnforced.mockReturnValue(false);
+
+    await dispatchCalendarSync({ now: NOW, deadlineAt: FAR_DEADLINE });
+
+    expect(checkProAccessForUser).not.toHaveBeenCalled();
+    expect(syncConnection).toHaveBeenCalledTimes(2);
+  });
+
+  it('BILLING_ENFORCED on で非 Pro は skip する', async () => {
+    setupDb({ data: connections(2), error: null });
+    isBillingEnforced.mockReturnValue(true);
+    checkProAccessForUser.mockResolvedValueOnce('allowed').mockResolvedValueOnce('denied');
+
+    const summary = await dispatchCalendarSync({ now: NOW, deadlineAt: FAR_DEADLINE });
+
+    expect(syncConnection).toHaveBeenCalledTimes(1);
+    expect(summary.skippedNonPro).toBe(1);
+    expect(summary.processed).toBe(1);
+  });
+});

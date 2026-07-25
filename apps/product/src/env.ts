@@ -89,6 +89,10 @@ const serverSchema = z
       message:
         'GOOGLE_CALENDAR_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
     }),
+    // Vercel cron（/api/cron/calendar-sync）の Bearer 認証。Vercel が cron リクエストの
+    // Authorization ヘッダに載せる値と route 側で timingSafeEqual 照合する。calendar 連携の
+    // 一部なので、下の「全部揃うか無いか」refine に含める（feature を有効化する prod でだけ必須）。
+    CRON_SECRET: z.string().optional(),
 
     // Stripe
     STRIPE_SECRET_KEY: z.string().optional(),
@@ -173,6 +177,12 @@ const serverSchema = z
       // 「全部揃うか全部無いか」。4 変数のうち一部だけ入っている状態は、connect フローが
       // 途中まで動いて失敗する最悪の中間状態になるので許さない。
       // 全部無い場合は route 側の config guard が 503 を返す。
+      //
+      // CRON_SECRET はここに含めない。あれは `Dayopt-Production/supabase` item の汎用 secret
+      // （`scripts/env/schema.ts` 参照）で、google-calendar item とはライフサイクルが別。
+      // 含めると「CRON_SECRET だけ既に設定済み + calendar 未設定」の現実的な状態で env 検証が
+      // 落ち、cron どころかアプリ全体が起動不能になる。cron 側は secret 未設定なら route が
+      // 503 を返して静かに無効化されるので、そちらの degradation で足りる。
       const values = [
         data.GOOGLE_CALENDAR_CLIENT_ID,
         data.GOOGLE_CALENDAR_CLIENT_SECRET,
