@@ -129,6 +129,9 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
                 </Button>
               </Field>
               <FieldDescription className="text-center">
+                {t('auth.passwordResetForm.googleHint')}
+              </FieldDescription>
+              <FieldDescription className="text-center">
                 {t('auth.passwordResetForm.rememberPassword')}{' '}
                 <Link href="/auth/login">{t('auth.passwordResetForm.login')}</Link>
               </FieldDescription>

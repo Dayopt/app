@@ -20,6 +20,22 @@ Supabase Auth ベースの認証機能。
 - MFA登録済みで session assurance level が `aal1` のブラウザセッションは、画面遷移だけでなく tRPC API 側でも protected procedure を拒否する
 - RLS（Row Level Security）によるDBレベルでの認可を併用する
 
+## ログイン手段によるアカウント操作の分岐
+
+Google でのみ登録したユーザーはパスワードを持たない。これを異常扱いせず、**ユーザーが実際に持っている手段で再認証する**。判定は `hasPasswordIdentity`（`lib/auth/domain/login-method.ts`）が `app_metadata.providers` から行い、UI もサーバーも同じ関数を使う。
+
+| 操作               | パスワードあり                 | Google のみ                                          |
+| ------------------ | ------------------------------ | ---------------------------------------------------- |
+| ログイン方法の表示 | 出さない（自明なため）         | 「Google」を表示する                                 |
+| メールアドレス変更 | 現パスワードで再認証して変更   | **変更させない**。Google 側が正本である旨を案内する  |
+| パスワード変更     | 現パスワードで再認証して変更   | 項目ごと出さない                                     |
+| アカウント削除     | 現パスワード + `DELETE` の入力 | MFA があれば TOTP + `DELETE`、無ければ `DELETE` のみ |
+
+- 削除時の `requiresPassword` はクライアント申告ではなく server 側の `app_metadata` から判定する
+- MFA factor の一覧を取得できない場合は fail closed で削除を止める
+- 削除の通知メールは auth.users 削除の直前に送る（削除後は送信経路が無くなるため）。送信失敗では削除を止めない
+- ログイン画面の「パスワードを忘れた」から Google ユーザーがリセットするとパスワードが新規設定される（Supabase の仕様）。サーバー側ではブロックせず、リセット画面の案内文で誘導する
+
 ## tRPC API auth policy
 
 `/api/trpc` は middleware/proxy を通らないため、API gate 自体で認証状態を再評価する。
