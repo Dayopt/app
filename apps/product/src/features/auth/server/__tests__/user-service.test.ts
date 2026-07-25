@@ -10,6 +10,9 @@ const loggerWarn = vi.hoisted(() => vi.fn());
 const adminFrom = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn());
+const sendAccountDeletionEmail = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/email/router', () => ({ sendAccountDeletionEmail }));
 
 vi.mock('@/lib/stripe/client', () => ({ getStripe }));
 vi.mock('@/lib/supabase/oauth', () => ({
@@ -39,6 +42,10 @@ function createSupabase(options?: {
   signInError?: { message: string } | null;
   files?: Array<{ name: string }> | null;
   storageError?: Error;
+  /** MFA factor 一覧。省略時は factor 無し */
+  totpFactors?: Array<{ id: string; status: string }>;
+  listFactorsError?: { message: string } | null;
+  verifyTotpError?: { message: string } | null;
 }) {
   const queries = new Map(
     Object.entries(options?.tables ?? {}).map(([table, result]) => [
@@ -60,16 +67,27 @@ function createSupabase(options?: {
     : vi.fn().mockResolvedValue({ data: options?.files ?? [], error: null });
   const remove = vi.fn().mockResolvedValue({ data: [], error: null });
 
+  const listFactors = vi.fn().mockResolvedValue({
+    data: { totp: options?.totpFactors ?? [] },
+    error: options?.listFactorsError ?? null,
+  });
+  const challengeAndVerify = vi.fn().mockResolvedValue({
+    data: null,
+    error: options?.verifyTotpError ?? null,
+  });
+
   return {
     service: createUserService({
       from,
-      auth: { signInWithPassword },
+      auth: { signInWithPassword, mfa: { listFactors, challengeAndVerify } },
       storage: { from: vi.fn(() => ({ list, remove })) },
     } as never),
     from,
     list,
     remove,
     signInWithPassword,
+    listFactors,
+    challengeAndVerify,
     query: (table: string) => queries.get(table)!,
   };
 }
@@ -89,11 +107,32 @@ function mockAdminTables(tables: Record<string, QueryResult>) {
   return queries;
 }
 
-function deleteOptions(overrides?: Partial<{ password: string; confirmText: string }>) {
+function deleteOptions(
+  overrides?: Partial<{
+    password: string;
+    totpCode: string;
+    requiresPassword: boolean;
+    confirmText: string;
+  }>,
+) {
   return {
     userId: USER_ID,
     userEmail: USER_EMAIL,
+    userName: 'Tomoya',
     password: 'correct-password',
+    requiresPassword: true,
+    confirmText: 'DELETE',
+    ...overrides,
+  };
+}
+
+/** Google のみで登録したユーザー（パスワードを持たない） */
+function googleUserDeleteOptions(overrides?: Partial<{ totpCode: string; confirmText: string }>) {
+  return {
+    userId: USER_ID,
+    userEmail: USER_EMAIL,
+    userName: 'Tomoya',
+    requiresPassword: false,
     confirmText: 'DELETE',
     ...overrides,
   };
@@ -103,6 +142,7 @@ describe('createUserService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getStripe.mockReturnValue(null);
+    sendAccountDeletionEmail.mockResolvedValue({ success: true });
     deleteUser.mockResolvedValue({ data: {}, error: null });
     adminFrom.mockImplementation(() => createChainableMock([], null));
     captureUnexpectedDatabaseError.mockImplementation((error: unknown) =>
@@ -111,7 +151,7 @@ describe('createUserService', () => {
   });
 
   describe('deleteAccount', () => {
-    it('passwordが空ならINVALID_INPUTを投げる', async () => {
+    it('パスワードを持つユーザーでpasswordが空ならINVALID_INPUTを投げる', async () => {
       const { service, signInWithPassword } = createSupabase();
 
       await expect(service.deleteAccount(deleteOptions({ password: '' }))).rejects.toMatchObject({
@@ -204,6 +244,92 @@ describe('createUserService', () => {
       });
       expect(captureUnexpectedError).toHaveBeenCalledOnce();
       expect(deleteUser).not.toHaveBeenCalled();
+    });
+
+    it('削除の前に通知メールを送る', async () => {
+      const { service } = createSupabase();
+
+      await service.deleteAccount(deleteOptions());
+
+      expect(sendAccountDeletionEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: USER_ID, email: USER_EMAIL, userName: 'Tomoya' }),
+      );
+      expect(deleteUser).toHaveBeenCalledWith(USER_ID);
+    });
+
+    it('通知メールの送信失敗では削除を止めない（削除要求を優先する）', async () => {
+      sendAccountDeletionEmail.mockRejectedValueOnce(new Error('resend down'));
+      const { service } = createSupabase();
+
+      await expect(service.deleteAccount(deleteOptions())).resolves.toEqual({ success: true });
+      expect(captureUnexpectedError).toHaveBeenCalledOnce();
+      expect(deleteUser).toHaveBeenCalledWith(USER_ID);
+    });
+
+    describe('パスワードを持たないユーザー（Google のみ）', () => {
+      it('MFA が無ければ確認テキストだけで削除できる', async () => {
+        const { service, signInWithPassword } = createSupabase();
+
+        await expect(service.deleteAccount(googleUserDeleteOptions())).resolves.toEqual({
+          success: true,
+        });
+        expect(signInWithPassword).not.toHaveBeenCalled();
+        expect(deleteUser).toHaveBeenCalledWith(USER_ID);
+      });
+
+      it('MFA が有効でコード未入力ならINVALID_INPUTを投げる', async () => {
+        const { service } = createSupabase({
+          totpFactors: [{ id: 'factor-1', status: 'verified' }],
+        });
+
+        await expect(service.deleteAccount(googleUserDeleteOptions())).rejects.toMatchObject({
+          code: 'INVALID_INPUT',
+        });
+        expect(deleteUser).not.toHaveBeenCalled();
+      });
+
+      it('MFA のコードが誤っていればINVALID_PASSWORDを投げる', async () => {
+        const { service } = createSupabase({
+          totpFactors: [{ id: 'factor-1', status: 'verified' }],
+          verifyTotpError: { message: 'invalid code' },
+        });
+
+        await expect(
+          service.deleteAccount(googleUserDeleteOptions({ totpCode: '000000' })),
+        ).rejects.toMatchObject({ code: 'INVALID_PASSWORD' });
+        expect(deleteUser).not.toHaveBeenCalled();
+      });
+
+      it('MFA のコードが正しければ削除できる', async () => {
+        const { service, challengeAndVerify } = createSupabase({
+          totpFactors: [{ id: 'factor-1', status: 'verified' }],
+        });
+
+        await expect(
+          service.deleteAccount(googleUserDeleteOptions({ totpCode: '123456' })),
+        ).resolves.toEqual({ success: true });
+        expect(challengeAndVerify).toHaveBeenCalledWith({ factorId: 'factor-1', code: '123456' });
+      });
+
+      it('未検証の factor は再認証を要求しない', async () => {
+        const { service, challengeAndVerify } = createSupabase({
+          totpFactors: [{ id: 'factor-1', status: 'unverified' }],
+        });
+
+        await expect(service.deleteAccount(googleUserDeleteOptions())).resolves.toEqual({
+          success: true,
+        });
+        expect(challengeAndVerify).not.toHaveBeenCalled();
+      });
+
+      it('factor 一覧の取得に失敗したらfail closedで削除を止める', async () => {
+        const { service } = createSupabase({ listFactorsError: { message: 'mfa unavailable' } });
+
+        await expect(service.deleteAccount(googleUserDeleteOptions())).rejects.toMatchObject({
+          code: 'DELETE_FAILED',
+        });
+        expect(deleteUser).not.toHaveBeenCalled();
+      });
     });
 
     it('admin user削除失敗をDELETE_FAILEDに変換する', async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasPasswordIdentity } from '../login-method';
+import { hasPasswordIdentity, hasVerifiedMfaFactor } from '../login-method';
 
 describe('hasPasswordIdentity', () => {
   it('メールで登録したユーザーは true', () => {
@@ -35,5 +35,21 @@ describe('hasPasswordIdentity', () => {
     expect(hasPasswordIdentity(undefined)).toBe(false);
     expect(hasPasswordIdentity({})).toBe(false);
     expect(hasPasswordIdentity({ app_metadata: {} })).toBe(false);
+  });
+});
+
+describe('hasVerifiedMfaFactor', () => {
+  it('検証済み factor があれば true', () => {
+    expect(hasVerifiedMfaFactor({ factors: [{ status: 'verified' }] })).toBe(true);
+  });
+
+  it('未検証の factor だけなら false', () => {
+    expect(hasVerifiedMfaFactor({ factors: [{ status: 'unverified' }] })).toBe(false);
+  });
+
+  it('factor が無い・user が無い場合は false', () => {
+    expect(hasVerifiedMfaFactor({ factors: [] })).toBe(false);
+    expect(hasVerifiedMfaFactor({})).toBe(false);
+    expect(hasVerifiedMfaFactor(null)).toBe(false);
   });
 });

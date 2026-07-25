@@ -17,6 +17,7 @@ type UserWithProviders = {
     provider?: string;
     providers?: string[];
   };
+  factors?: { status: string }[] | undefined;
 };
 
 /** メール+パスワードの identity を持つか（= パスワードで再認証できるか） */
@@ -28,4 +29,14 @@ export function hasPasswordIdentity(user: UserWithProviders | null | undefined):
 
   // providers が無い古いセッションは provider 単体にフォールバックする
   return provider === 'email';
+}
+
+/**
+ * 検証済みの MFA factor を持つか
+ *
+ * パスワードを持たないユーザーの再認証手段があるかの判定に使う。
+ */
+export function hasVerifiedMfaFactor(user: UserWithProviders | null | undefined): boolean {
+  if (!user?.factors) return false;
+  return user.factors.some((factor) => factor.status === 'verified');
 }

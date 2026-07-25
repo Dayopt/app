@@ -11,6 +11,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database, PublicRecordRow, PublicUserSettingsRow, Row } from '@/lib/database';
 import { databaseTables, publicRecordSelect, publicUserSettingsSelect } from '@/lib/database';
+import { sendAccountDeletionEmail } from '@/lib/email/router';
 import { logger } from '@/lib/logger';
 import {
   captureUnexpectedDatabaseError,
@@ -48,7 +49,17 @@ export class UserServiceError extends ServiceError {
 interface DeleteAccountOptions {
   userId: string;
   userEmail: string;
-  password: string;
+  /** 表示名。削除通知メールの宛名に使う */
+  userName: string;
+  /** パスワードを持つユーザーのみ必須 */
+  password?: string | undefined;
+  /** パスワードを持たないユーザーが MFA を有効にしている場合に必須 */
+  totpCode?: string | undefined;
+  /**
+   * パスワードで再認証すべきユーザーか。
+   * クライアント入力ではなく server 側の `app_metadata` から判定した値を渡すこと
+   */
+  requiresPassword: boolean;
   confirmText: string;
 }
 
@@ -93,28 +104,83 @@ export function createUserService(supabase: SupabaseClient<Database>) {
      * entries, tags 等すべてのユーザーデータが自動削除される
      */
     async deleteAccount(options: DeleteAccountOptions): Promise<DeleteAccountResult> {
-      const { userId, userEmail, password, confirmText } = options;
-
-      if (!password || !confirmText) {
-        throw new UserServiceError('INVALID_INPUT', 'Password and confirmation text are required');
-      }
+      const { userId, userEmail, userName, password, totpCode, requiresPassword, confirmText } =
+        options;
 
       if (confirmText !== 'DELETE') {
         throw new UserServiceError('INVALID_INPUT', 'Confirmation text must be "DELETE"');
       }
 
-      // パスワード確認
-      const { error: signInError } = await observeAuthOperation(
-        'delete_account_reauthenticate',
-        () =>
-          supabase.auth.signInWithPassword({
-            email: userEmail,
-            password,
-          }),
-      );
+      // 再認証。ユーザーが実際に持っている手段で確認する
+      // （Google のみのユーザーはパスワードを持たないため、パスワードに固定しない）
+      if (requiresPassword) {
+        if (!password) {
+          throw new UserServiceError('INVALID_INPUT', 'Password is required');
+        }
 
-      if (signInError) {
-        throw new UserServiceError('INVALID_PASSWORD', 'Invalid password');
+        const { error: signInError } = await observeAuthOperation(
+          'delete_account_reauthenticate',
+          () =>
+            supabase.auth.signInWithPassword({
+              email: userEmail,
+              password,
+            }),
+        );
+
+        if (signInError) {
+          throw new UserServiceError('INVALID_PASSWORD', 'Invalid password');
+        }
+      } else {
+        // パスワードを持たないユーザーは、MFA があれば TOTP で再認証する
+        const { data: factors, error: factorsError } = await observeAuthOperation(
+          'delete_account_list_factors',
+          () => supabase.auth.mfa.listFactors(),
+        );
+
+        if (factorsError) {
+          // 検証手段を確認できない状態では削除を通さない（fail closed）
+          throw new UserServiceError('DELETE_FAILED', 'Failed to verify authentication factors');
+        }
+
+        const verifiedTotp = factors?.totp?.find((factor) => factor.status === 'verified');
+        if (verifiedTotp) {
+          if (!totpCode) {
+            throw new UserServiceError('INVALID_INPUT', 'Verification code is required');
+          }
+
+          const { error: mfaError } = await observeAuthOperation('delete_account_verify_totp', () =>
+            supabase.auth.mfa.challengeAndVerify({
+              factorId: verifiedTotp.id,
+              code: totpCode,
+            }),
+          );
+
+          if (mfaError) {
+            throw new UserServiceError('INVALID_PASSWORD', 'Invalid verification code');
+          }
+        }
+        // MFA も無い場合は、確認テキストの明示入力と削除通知メールで担保する
+      }
+
+      // 削除の通知メール。auth.users を消したあとは送信経路が無くなるため先に送る。
+      // 送信失敗で削除を止めない（GDPR の削除要求を優先する）
+      try {
+        await sendAccountDeletionEmail({
+          supabase,
+          userId,
+          email: userEmail,
+          userName,
+        });
+      } catch (emailError) {
+        const original =
+          emailError instanceof Error
+            ? emailError
+            : new Error('Account deletion email failed', { cause: emailError });
+        captureUnexpectedError(original, {
+          feature: 'account_deletion',
+          operation: 'send_deletion_email',
+          source: 'resend',
+        });
       }
 
       // Storage のアバター画像を削除

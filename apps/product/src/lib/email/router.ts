@@ -155,6 +155,46 @@ async function sendEmail({
   return { success: true as const, emailId: data?.id };
 }
 
+/**
+ * アカウント削除の通知メールを送る
+ *
+ * 削除処理そのもの（`features/auth/server/user-service.ts`）からも呼ぶため、
+ * procedure ではなく関数として公開する。auth.users を消したあとは認証が切れて
+ * tRPC を呼べないので、削除の直前に送る必要がある。
+ */
+export async function sendAccountDeletionEmail({
+  supabase,
+  userId,
+  email,
+  userName,
+}: {
+  supabase: SupabaseClient;
+  userId: string;
+  email: string;
+  userName: string;
+}) {
+  const locale = await getUserLocale(supabase, userId);
+  const t = createEmailTranslator(locale);
+
+  const deletionDate = new Date().toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return sendEmail({
+    to: email,
+    subject: t('accountDeletion.subject'),
+    react: AccountDeletionEmail({
+      userName,
+      deletionDate,
+      locale,
+      appUrl: APP_URL,
+    }),
+    context: 'Account deletion email',
+  });
+}
+
 /** トランザクショナルメール送信（ウェルカム / Trial / Pro / 課金 / アカウント削除）を提供する tRPC ルーター */
 export const emailRouter = createTRPCRouter({
   sendWelcome: protectedProcedure
@@ -453,25 +493,11 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending account deletion email', { userId: ctx.userId });
 
-        const locale = await getUserLocale(ctx.supabase, ctx.userId);
-        const t = createEmailTranslator(locale);
-
-        const deletionDate = new Date().toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        });
-
-        return sendEmail({
-          to: input.email,
-          subject: t('accountDeletion.subject'),
-          react: AccountDeletionEmail({
-            userName: input.userName,
-            deletionDate,
-            locale,
-            appUrl: APP_URL,
-          }),
-          context: 'Account deletion email',
+        return await sendAccountDeletionEmail({
+          supabase: ctx.supabase,
+          userId: ctx.userId,
+          email: input.email,
+          userName: input.userName,
         });
       } catch (error) {
         return handleServiceError(error);
