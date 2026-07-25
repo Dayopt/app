@@ -56,6 +56,11 @@ export const envSchema: EnvSchemaEntry[] = [
   envEntry('NEXT_PUBLIC_APP_URL', true, 'public', 'local', staging, 'app'),
   envEntry('NEXT_PUBLIC_SITE_URL', false, 'public', 'staging', staging, 'app'),
   envEntry('RECOVERY_CODE_PEPPER', false, 'secret', 'staging', staging, 'app'),
+  envEntry('OAUTH_CLAUDE_REDIRECT_URIS', false, 'public', 'staging', staging, 'app'),
+  envEntry('OAUTH_CHATGPT_REDIRECT_URIS', false, 'public', 'staging', staging, 'app'),
+  envEntry('OAUTH_CURSOR_REDIRECT_URIS', false, 'public', 'staging', staging, 'app'),
+  envEntry('MCP_OAUTH_ENVIRONMENT', false, 'public', 'staging', staging, 'app'),
+  envEntry('OAUTH_AUTHORIZATION_SERVER_URI', false, 'public', 'staging', staging, 'app'),
   envEntry('MCP_CANONICAL_RESOURCE_URI', false, 'public', 'staging', staging, 'app'),
   envEntry('MCP_WRITE_ENABLED_CLIENTS', false, 'public', 'staging', staging, 'app'),
 
@@ -113,6 +118,11 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
   envEntry('NEXT_PUBLIC_APP_URL', false, 'public', 'production', production, 'app'),
   envEntry('NEXT_PUBLIC_SITE_URL', false, 'public', 'production', production, 'app'),
   envEntry('RECOVERY_CODE_PEPPER', false, 'secret', 'production', production, 'app'),
+  envEntry('OAUTH_CLAUDE_REDIRECT_URIS', false, 'public', 'production', production, 'app'),
+  envEntry('OAUTH_CHATGPT_REDIRECT_URIS', false, 'public', 'production', production, 'app'),
+  envEntry('OAUTH_CURSOR_REDIRECT_URIS', false, 'public', 'production', production, 'app'),
+  envEntry('MCP_OAUTH_ENVIRONMENT', false, 'public', 'production', production, 'app'),
+  envEntry('OAUTH_AUTHORIZATION_SERVER_URI', false, 'public', 'production', production, 'app'),
   envEntry('MCP_CANONICAL_RESOURCE_URI', false, 'public', 'production', production, 'app'),
   envEntry('MCP_WRITE_ENABLED_CLIENTS', false, 'public', 'production', production, 'app'),
 
