@@ -9,6 +9,8 @@ import 'server-only';
 
 import { z } from 'zod';
 
+import { isValidOAuthRedirectUriList } from '@/lib/oauth-server/redirect-uris';
+
 function isDayoptEmailAddress(value: string): boolean {
   const normalized = value.trim().toLowerCase();
   const domain = normalized.slice(normalized.lastIndexOf('@') + 1);
@@ -59,15 +61,25 @@ const serverSchema = z
 
     // Auth
     RECOVERY_CODE_PEPPER: z.string().optional(),
-    OAUTH_CLAUDE_REDIRECT_URIS: z.string().optional().refine(isRedirectUriList, {
-      message: 'OAUTH_CLAUDE_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
-    }),
-    OAUTH_CHATGPT_REDIRECT_URIS: z.string().optional().refine(isRedirectUriList, {
-      message: 'OAUTH_CHATGPT_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
-    }),
-    OAUTH_CURSOR_REDIRECT_URIS: z.string().optional().refine(isRedirectUriList, {
-      message: 'OAUTH_CURSOR_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
-    }),
+    OAUTH_CLAUDE_REDIRECT_URIS: z
+      .string()
+      .optional()
+      .refine((value) => isValidOAuthRedirectUriList('claude-ai', value), {
+        message: 'OAUTH_CLAUDE_REDIRECT_URIS はClaude所有の登録済みcallbackだけを指定してください',
+      }),
+    OAUTH_CHATGPT_REDIRECT_URIS: z
+      .string()
+      .optional()
+      .refine((value) => isValidOAuthRedirectUriList('chatgpt', value), {
+        message:
+          'OAUTH_CHATGPT_REDIRECT_URIS はChatGPT所有の登録済みcallbackだけを指定してください',
+      }),
+    OAUTH_CURSOR_REDIRECT_URIS: z
+      .string()
+      .optional()
+      .refine((value) => isValidOAuthRedirectUriList('cursor', value), {
+        message: 'OAUTH_CURSOR_REDIRECT_URIS はCursor所有の登録済みcallbackだけを指定してください',
+      }),
     MCP_CANONICAL_RESOURCE_URI: z.string().url().optional(),
     MCP_WRITE_ENABLED_CLIENTS: z.string().optional(),
 

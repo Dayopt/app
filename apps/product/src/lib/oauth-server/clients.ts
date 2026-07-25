@@ -2,6 +2,12 @@ import 'server-only';
 
 import { env } from '@/env';
 
+import {
+  DEFAULT_REDIRECT_URIS,
+  parseValidOAuthRedirectUriList,
+  type OAuthClientId,
+} from './redirect-uris';
+
 /**
  * Phase 1 static client allowlist。
  * Phase 2 で DCR (Dynamic Client Registration) に置換し、`oauth_clients` テーブル管理に移行する。
@@ -10,19 +16,13 @@ import { env } from '@/env';
  * runtime allowlist には**含めない** — wildcard redirect_uri を許可すると open client
  * onboarding になり、任意の attacker-controlled HTTPS domain に code が渡る穴ができるため。
  */
-export type OAuthClientId = 'claude-ai' | 'chatgpt' | 'cursor';
+export type { OAuthClientId } from './redirect-uris';
 
 export interface OAuthClient {
   id: OAuthClientId;
   displayName: string;
   redirectUris: readonly string[];
 }
-
-const DEFAULT_REDIRECT_URIS: Record<OAuthClientId, readonly string[]> = {
-  'claude-ai': ['https://claude.ai/api/mcp/auth_callback'],
-  chatgpt: ['https://chatgpt.com/connector_platform_oauth_redirect'],
-  cursor: ['cursor://anysphere.cursor-mcp/oauth/callback'],
-};
 
 const EXTRA_REDIRECT_URI_ENV: Record<OAuthClientId, keyof typeof env> = {
   'claude-ai': 'OAUTH_CLAUDE_REDIRECT_URIS',
@@ -45,14 +45,6 @@ const CLIENTS: Record<OAuthClientId, Omit<OAuthClient, 'redirectUris'>> = {
   },
 };
 
-function parseExtraRedirectUris(value: string | undefined): string[] {
-  if (!value) return [];
-  return value
-    .split(',')
-    .map((uri) => uri.trim())
-    .filter(Boolean);
-}
-
 export function resolveClient(clientId: string | null | undefined): OAuthClient | null {
   if (!clientId) return null;
   if (clientId in CLIENTS) {
@@ -61,7 +53,7 @@ export function resolveClient(clientId: string | null | undefined): OAuthClient 
       ...CLIENTS[id],
       redirectUris: [
         ...DEFAULT_REDIRECT_URIS[id],
-        ...parseExtraRedirectUris(env[EXTRA_REDIRECT_URI_ENV[id]]),
+        ...parseValidOAuthRedirectUriList(id, env[EXTRA_REDIRECT_URI_ENV[id]]),
       ],
     };
   }
