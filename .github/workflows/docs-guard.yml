@@ -27,7 +27,7 @@ jobs:
       GITLEAKS_VERSION: '8.9.0'
       GITLEAKS_SHA256: '188d84394cfbb287e5acf789f313fca55a385ba738cb014e7a9bef6e6b0f4d69'
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # append-only guard と gitleaks が base ref との差分を見るため full history が必要
           fetch-depth: 0
