@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
   from: vi.fn(),
+  rpc: vi.fn(),
   select: vi.fn(),
   limit: vi.fn(),
   redisPing: vi.fn(),
@@ -34,11 +35,11 @@ vi.mock('@/env', () => ({
   env: new Proxy(
     {},
     {
-      get() {
+      get(_target, property) {
         if (mocks.envValidationError) {
           throw new Error('env-validation-sentinel');
         }
-        return undefined;
+        return typeof property === 'string' ? process.env[property] : undefined;
       },
     },
   ),
@@ -54,15 +55,38 @@ describe('GET /api/health', () => {
     vi.stubEnv('NEXT_PUBLIC_APP_VERSION', '0.32.0');
     vi.stubEnv('VERCEL_ENV', '');
     vi.stubEnv('VERCEL_TARGET_ENV', '');
+    vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'production');
+    vi.stubEnv('OAUTH_AUTHORIZATION_SERVER_URI', 'https://app.dayopt.app');
+    vi.stubEnv('MCP_CANONICAL_RESOURCE_URI', 'https://mcp.dayopt.app');
     vi.stubEnv('UPSTASH_REDIS_REST_URL', '');
     vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', '');
 
     mocks.envValidationError = false;
+    mocks.rpc.mockImplementation(() =>
+      Promise.resolve({
+        data: [
+          process.env.VERCEL_TARGET_ENV === 'staging'
+            ? {
+                environment: 'staging',
+                authorization_server_uri: 'https://staging.dayopt.app',
+                resource_uri: 'https://mcp.staging.dayopt.app',
+                provisioned_at: '2026-07-26T00:00:00.000Z',
+              }
+            : {
+                environment: 'production',
+                authorization_server_uri: 'https://app.dayopt.app',
+                resource_uri: 'https://mcp.dayopt.app',
+                provisioned_at: '2026-07-26T00:00:00.000Z',
+              },
+        ],
+        error: null,
+      }),
+    );
     mocks.limit.mockResolvedValue({ data: [], error: null });
     mocks.redisPing.mockResolvedValue('PONG');
     mocks.select.mockReturnValue({ limit: mocks.limit });
     mocks.from.mockReturnValue({ select: mocks.select });
-    mocks.createClient.mockReturnValue({ from: mocks.from });
+    mocks.createClient.mockReturnValue({ from: mocks.from, rpc: mocks.rpc });
   });
 
   afterEach(() => {
@@ -115,8 +139,7 @@ describe('GET /api/health', () => {
   });
 
   it('staging Custom Environmentを依存必須かつ詳細非公開として扱う', async () => {
-    vi.stubEnv('VERCEL_ENV', 'preview');
-    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+    stubStagingOperationalEnvironment();
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://staging-example.upstash.io');
     vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'staging-redis-token-sentinel');
 
@@ -127,8 +150,7 @@ describe('GET /api/health', () => {
   });
 
   it('staging Custom EnvironmentはRedis未設定をunhealthyにする', async () => {
-    vi.stubEnv('VERCEL_ENV', 'preview');
-    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+    stubStagingOperationalEnvironment();
 
     const response = await GET();
 
@@ -137,8 +159,7 @@ describe('GET /api/health', () => {
   });
 
   it('staging Custom Environmentはnon-PONGをreadiness失敗として扱う', async () => {
-    vi.stubEnv('VERCEL_ENV', 'preview');
-    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+    stubStagingOperationalEnvironment();
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://staging-example.upstash.io');
     vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'staging-redis-token-sentinel');
     mocks.redisPing.mockResolvedValue('NOT_PONG');
@@ -175,6 +196,39 @@ describe('GET /api/health', () => {
     expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain('database-message-sentinel');
     expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain('service-role-sentinel');
     expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain('example.supabase.co');
+  });
+
+  it.each([
+    {
+      name: 'missing',
+      result: { data: [], error: null },
+    },
+    {
+      name: 'mismatched',
+      result: {
+        data: [
+          {
+            environment: 'staging',
+            authorization_server_uri: 'https://staging.dayopt.app',
+            resource_uri: 'https://mcp.staging.dayopt.app',
+            provisioned_at: '2026-07-26T00:00:00.000Z',
+          },
+        ],
+        error: null,
+      },
+    },
+  ])('production DB identity $nameをreadiness失敗にする', async ({ result }) => {
+    mocks.rpc.mockResolvedValue(result);
+    vi.stubEnv('VERCEL_ENV', 'production');
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://example.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'redis-token-sentinel');
+
+    const response = await GET();
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ status: 'unhealthy' });
+    expect(mocks.limit).not.toHaveBeenCalled();
+    expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain('staging.dayopt.app');
   });
 
   it('DB queryのtimeoutをunhealthyにする', async () => {
@@ -291,3 +345,11 @@ describe('GET /api/health', () => {
     expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain('redis-token-sentinel');
   });
 });
+
+function stubStagingOperationalEnvironment(): void {
+  vi.stubEnv('VERCEL_ENV', 'preview');
+  vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+  vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'staging');
+  vi.stubEnv('OAUTH_AUTHORIZATION_SERVER_URI', 'https://staging.dayopt.app');
+  vi.stubEnv('MCP_CANONICAL_RESOURCE_URI', 'https://mcp.staging.dayopt.app');
+}

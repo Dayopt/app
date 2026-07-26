@@ -60,6 +60,45 @@ describe('extractBearerToken', () => {
 
 describe('verifyAccessToken dependency failures', () => {
   it.each([
+    {
+      name: 'missing',
+      result: { data: [], error: null },
+    },
+    {
+      name: 'mismatched',
+      result: {
+        data: [
+          {
+            environment: 'staging',
+            authorization_server_uri: 'https://staging.dayopt.app',
+            resource_uri: 'https://mcp.staging.dayopt.app',
+            provisioned_at: '2026-07-26T00:00:00.000Z',
+          },
+        ],
+        error: null,
+      },
+    },
+    {
+      name: 'unavailable',
+      result: { data: null, error: { code: 'PGRST000' } },
+    },
+  ])('returns 503 before token lookup when DB identity is $name', async ({ result }) => {
+    const db = createAccessDb({
+      get_mcp_environment_identity_v1: result,
+    });
+    createMcpAccessDbClient.mockReturnValue(db);
+
+    await expect(verifyAccessToken('opaque-token')).rejects.toMatchObject({
+      name: 'OAuthServerError',
+      code: 'server_error',
+      httpStatus: 503,
+      message: 'Access token verification failed',
+    });
+    expect(db.from).not.toHaveBeenCalled();
+    expect(captureUnexpectedDatabaseError).toHaveBeenCalledOnce();
+  });
+
+  it.each([
     { name: 'database error', result: { data: null, error: { code: 'PGRST000' } } },
     { name: 'missing singleton row', result: { data: null, error: null } },
   ])('returns a retryable server error for a mutation-control $name', async ({ result }) => {
@@ -165,6 +204,17 @@ interface QueryResult {
 
 function createAccessDb(overrides: Partial<Record<string, QueryResult>>) {
   const defaults: Record<string, QueryResult> = {
+    get_mcp_environment_identity_v1: {
+      data: [
+        {
+          environment: 'production',
+          authorization_server_uri: 'https://app.dayopt.app',
+          resource_uri: 'https://mcp.dayopt.app',
+          provisioned_at: '2026-07-26T00:00:00.000Z',
+        },
+      ],
+      error: null,
+    },
     oauth_tokens: { data: validAccessTokenRow, error: null },
     oauth_connections: { data: validConnectionRow, error: null },
     mcp_mutation_control: {
@@ -175,6 +225,9 @@ function createAccessDb(overrides: Partial<Record<string, QueryResult>>) {
   };
 
   return {
+    rpc: vi.fn((functionName: string) =>
+      Promise.resolve(overrides[functionName] ?? defaults[functionName]!),
+    ),
     from: vi.fn((table: string) => createMaybeSingleBuilder(overrides[table] ?? defaults[table]!)),
   };
 }

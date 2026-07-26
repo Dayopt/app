@@ -14,6 +14,8 @@ import {
   type OAuthClientId,
   type SupportedScope,
 } from '@/lib/oauth-server';
+import { assertDatabaseOAuthIdentity } from '@/lib/oauth-server/database-identity';
+import { getOAuthEnvironmentConfig } from '@/lib/oauth-server/identity-env';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 
 import { createMcpAccessDbClient } from './access-db';
@@ -38,6 +40,15 @@ interface VerifiedAccessToken {
 export async function verifyAccessToken(token: string): Promise<VerifiedAccessToken> {
   const tokenHash = hashToken(token);
   const db = createMcpAccessDbClient();
+
+  try {
+    const expectedIdentity = getOAuthEnvironmentConfig();
+    await assertDatabaseOAuthIdentity(expectedIdentity, () =>
+      db.rpc('get_mcp_environment_identity_v1'),
+    );
+  } catch (error) {
+    throwDatabaseVerificationError(error, 'verify_mcp_environment_identity');
+  }
 
   const { data: row, error } = await db
     .from(databaseTables.oauthTokens)

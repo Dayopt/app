@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 import { logger } from '@/lib/logger';
+import { assertDatabaseOAuthIdentity } from '@/lib/oauth-server/database-identity';
 
 import { resolveHealthStatus, type OverallHealthStatus } from './health-status';
 
@@ -71,6 +72,14 @@ async function checkDatabase(): Promise<'ok' | 'error' | 'warning'> {
           fetch(url, { ...options, signal: AbortSignal.timeout(DB_CHECK_TIMEOUT_MS) }),
       },
     });
+
+    if (isOperationalDeployment()) {
+      const { getOAuthEnvironmentConfig } = await import('@/lib/oauth-server/identity-env');
+      const expectedIdentity = getOAuthEnvironmentConfig();
+      await assertDatabaseOAuthIdentity(expectedIdentity, () =>
+        supabase.rpc('get_mcp_environment_identity_v1'),
+      );
+    }
 
     const { error } = await supabase.from('profiles').select('id').limit(1);
 
