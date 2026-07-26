@@ -114,8 +114,9 @@ jobs:
       # artifact upload も無いため、istanbul 計装のコストをかけて作ったレポートは
       # runner 破棄とともに捨てられていた。実行するテストは完全に同一
       # （どちらも --project unit run。実測 243 files / 2278 tests で一致）。
-      # 計装のオーバーヘッドはローカル実測で 13 秒（9.5%）なので削減は 0-1 課金分。
-      # 主眼はコストより「誰も読まないレポートを作るのをやめる」こと。
+      # コスト削減は期待しないこと。CI 実測では課金分に差が出ず（7 → 7 分）、step 時間も
+      # 215 → 259 秒と逆に増えた（runner 変動が計装コストを上回る）。
+      # 目的は「誰も読まないレポートを作るのをやめる」ことだけ。
       # coverage を見たい時はローカルで pnpm test:coverage を実行する。
       - name: Product unit tests
         run: pnpm --filter @dayopt/product test:run
