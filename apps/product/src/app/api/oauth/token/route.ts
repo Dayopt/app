@@ -8,6 +8,7 @@ import {
   resolveClient,
   resolveRequestedResource,
 } from '@/lib/oauth-server';
+import { rejectUnexpectedOAuthHost } from '@/lib/oauth-server/request-host';
 import { captureUnexpectedError } from '@/lib/sentry';
 
 /**
@@ -25,6 +26,9 @@ import { captureUnexpectedError } from '@/lib/sentry';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const hostRejection = rejectUnexpectedOAuthHost(request);
+  if (hostRejection) return hostRejection;
+
   try {
     const form = await readFormBody(request);
     const get = (key: string): string | undefined => form.get(key) ?? undefined;

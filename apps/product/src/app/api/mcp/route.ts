@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 
 import { logger } from '@/lib/logger';
@@ -11,6 +10,8 @@ import {
   type McpRateLimitState,
 } from '@/lib/mcp/request-rate-limit';
 import { DEFAULT_SCOPES, OAuthServerError, type SupportedScope } from '@/lib/oauth-server';
+import { getOAuthEnvironmentConfig } from '@/lib/oauth-server/identity-env';
+import { rejectUnexpectedOAuthHost } from '@/lib/oauth-server/request-host';
 import { captureUnexpectedError } from '@/lib/sentry';
 
 import { createMcpServer } from './_server';
@@ -27,11 +28,6 @@ import { getRequiredScopeForTool, mergeMcpChallengeScopes } from './_tools/regis
  * 401 のときは `WWW-Authenticate` の `resource_metadata` で client が
  * `/.well-known/oauth-protected-resource` を辿れるようにする (MCP spec 2025-03)。
  */
-
-const RESOURCE_METADATA_URL = createDayoptUrl(
-  dayoptUrls.mcp,
-  '/.well-known/oauth-protected-resource',
-);
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +46,9 @@ export async function DELETE(request: NextRequest) {
 }
 
 async function handle(request: NextRequest): Promise<Response> {
+  const hostRejection = rejectUnexpectedOAuthHost(request);
+  if (hostRejection) return hostRejection;
+
   const preAuthRateLimitState = await checkMcpPreAuthRateLimit(request);
   if (preAuthRateLimitState !== 'allowed') return rateLimitErrorResponse(preAuthRateLimitState);
 
@@ -184,7 +183,7 @@ function insufficientScopeResponse(
         'cache-control': 'no-store',
         'www-authenticate':
           `Bearer error="insufficient_scope", scope="${required}", ` +
-          `resource_metadata="${RESOURCE_METADATA_URL}"`,
+          `resource_metadata="${getResourceMetadataUrl()}"`,
       },
     },
   );
@@ -247,7 +246,7 @@ function authErrorResponse(err: unknown): Response {
         ? ['error="invalid_request"']
         : []),
       `scope="${DEFAULT_SCOPES.join(' ')}"`,
-      `resource_metadata="${RESOURCE_METADATA_URL}"`,
+      `resource_metadata="${getResourceMetadataUrl()}"`,
     ];
     headers['www-authenticate'] = `Bearer ${challengeParameters.join(', ')}`;
   }
@@ -278,4 +277,8 @@ function authErrorResponse(err: unknown): Response {
       headers,
     },
   );
+}
+
+function getResourceMetadataUrl(): string {
+  return getOAuthEnvironmentConfig().protectedResourceMetadataUri;
 }

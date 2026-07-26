@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OAuthServerError } from '@/lib/oauth-server';
 
@@ -39,10 +39,14 @@ const baseAuth = {
   expiresAt: 1_800_000_000,
 };
 
-function createRequest(body: unknown, authorization: string | null = 'Bearer opaque-token') {
+function createRequest(
+  body: unknown,
+  authorization: string | null = 'Bearer opaque-token',
+  url = 'https://mcp.dayopt.app/mcp',
+) {
   const headers = new Headers({ 'content-type': 'application/json' });
   if (authorization) headers.set('authorization', authorization);
-  return new NextRequest('https://mcp.dayopt.app/mcp', {
+  return new NextRequest(url, {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
@@ -60,6 +64,10 @@ describe('MCP route scope preflight', () => {
     handleRequest.mockResolvedValue(
       Response.json({ jsonrpc: '2.0', result: {}, id: 1 }, { status: 200 }),
     );
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('returns HTTP 403 before a cached registered tool executes without its scope', async () => {
@@ -228,6 +236,23 @@ describe('MCP route scope preflight', () => {
     expect(createMcpServer).not.toHaveBeenCalled();
   });
 
+  it.each([
+    'https://app.dayopt.app/api/mcp',
+    'https://app.dayopt.app/api/mcp/',
+    'https://preview-product.vercel.app/api/mcp/',
+  ])(
+    'rejects a direct inactive Product API host before rate limit or token lookup: %s',
+    async (url) => {
+      const response = await POST(
+        createRequest({ jsonrpc: '2.0', method: 'tools/list', id: 1 }, 'Bearer opaque-token', url),
+      );
+
+      expect(response.status).toBe(404);
+      expect(checkMcpPreAuthRateLimit).not.toHaveBeenCalled();
+      expect(verifyAccessToken).not.toHaveBeenCalled();
+    },
+  );
+
   it('returns 429 without a bearer challenge when the authenticated user exceeds the limit', async () => {
     checkMcpUserRateLimit.mockResolvedValueOnce('limited');
 
@@ -297,6 +322,30 @@ describe('MCP route scope preflight', () => {
     expect(response.headers.get('www-authenticate')).toContain('resource_metadata=');
     expect(response.headers.get('www-authenticate')).not.toContain('error=');
     await expect(response.text()).resolves.toBe('');
+  });
+
+  it('staging challenge advertises only the fixed staging resource metadata URL', async () => {
+    vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'staging');
+    vi.stubEnv('OAUTH_AUTHORIZATION_SERVER_URI', 'https://staging.dayopt.app');
+    vi.stubEnv('MCP_CANONICAL_RESOURCE_URI', 'https://mcp.staging.dayopt.app');
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+
+    const response = await POST(
+      createRequest(
+        { jsonrpc: '2.0', method: 'tools/list', id: 1 },
+        null,
+        'https://mcp.staging.dayopt.app/mcp',
+      ),
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('www-authenticate')).toContain(
+      'resource_metadata="https://mcp.staging.dayopt.app/.well-known/oauth-protected-resource"',
+    );
+    expect(response.headers.get('www-authenticate')).not.toContain(
+      'resource_metadata="https://mcp.dayopt.app/',
+    );
   });
 
   it('returns invalid_token for expired or revoked bearer credentials', async () => {

@@ -117,7 +117,14 @@ run item create --category=apicredential --vault=Dayopt-Staging --title=app \
   --tags=dayopt,staging notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
   'NEXT_PUBLIC_APP_URL[text]=' \
   'NEXT_PUBLIC_SITE_URL[text]=' \
-  'RECOVERY_CODE_PEPPER[concealed]='
+  'RECOVERY_CODE_PEPPER[concealed]=' \
+  'OAUTH_CLAUDE_REDIRECT_URIS[text]=' \
+  'OAUTH_CHATGPT_REDIRECT_URIS[text]=' \
+  'OAUTH_CURSOR_REDIRECT_URIS[text]=' \
+  'MCP_OAUTH_ENVIRONMENT[text]=' \
+  'OAUTH_AUTHORIZATION_SERVER_URI[text]=' \
+  'MCP_CANONICAL_RESOURCE_URI[text]=' \
+  'MCP_WRITE_ENABLED_CLIENTS[text]='
 
 # ----- Dayopt-Production -----
 echo "  [Dayopt-Production]"
@@ -171,7 +178,14 @@ run item create --category=apicredential --vault=Dayopt-Production --title=app \
   --tags=dayopt,production notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
   'NEXT_PUBLIC_APP_URL[text]=' \
   'NEXT_PUBLIC_SITE_URL[text]=' \
-  'RECOVERY_CODE_PEPPER[concealed]='
+  'RECOVERY_CODE_PEPPER[concealed]=' \
+  'OAUTH_CLAUDE_REDIRECT_URIS[text]=' \
+  'OAUTH_CHATGPT_REDIRECT_URIS[text]=' \
+  'OAUTH_CURSOR_REDIRECT_URIS[text]=' \
+  'MCP_OAUTH_ENVIRONMENT[text]=' \
+  'OAUTH_AUTHORIZATION_SERVER_URI[text]=' \
+  'MCP_CANONICAL_RESOURCE_URI[text]=' \
+  'MCP_WRITE_ENABLED_CLIENTS[text]='
 
 # ----- Dayopt-Shared -----
 echo "  [Dayopt-Shared]"

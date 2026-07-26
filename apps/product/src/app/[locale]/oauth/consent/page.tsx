@@ -8,6 +8,7 @@ import {
   type AuthorizeValidationError,
   type SupportedScope,
 } from '@/lib/oauth-server';
+import { assertOAuthAuthorizationRequestHost } from '@/lib/oauth-server/authorization-request-host';
 import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@dayopt/components';
@@ -34,6 +35,8 @@ const ERROR_MESSAGE_KEY: Record<AuthorizeValidationError, string> = {
 };
 
 export default async function ConsentPage({ searchParams }: ConsentPageProps) {
+  await assertOAuthAuthorizationRequestHost();
+
   const params = await searchParams;
   const stringParam = (key: string): string | undefined => {
     const v = params[key];

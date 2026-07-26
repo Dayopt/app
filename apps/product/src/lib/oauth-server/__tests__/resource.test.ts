@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { normalizeResourceUri, resolveRequestedResource } from '../resource';
 
 describe('OAuth MCP resource normalization', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it.each([
     'https://mcp.dayopt.app',
     'https://MCP.DAYOPT.APP',
@@ -53,5 +57,18 @@ describe('OAuth MCP resource normalization', () => {
   it('normalizes only the URL identity, not a transport path', () => {
     expect(normalizeResourceUri('https://mcp.dayopt.app/')).toBe('https://mcp.dayopt.app');
     expect(normalizeResourceUri('https://mcp.dayopt.app/mcp')).toBeNull();
+  });
+
+  it('staging deployment accepts only the staging resource', () => {
+    vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'staging');
+    vi.stubEnv('OAUTH_AUTHORIZATION_SERVER_URI', 'https://staging.dayopt.app');
+    vi.stubEnv('MCP_CANONICAL_RESOURCE_URI', 'https://mcp.staging.dayopt.app');
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+
+    expect(resolveRequestedResource('https://MCP.STAGING.DAYOPT.APP:443/')).toBe(
+      'https://mcp.staging.dayopt.app',
+    );
+    expect(resolveRequestedResource('https://mcp.dayopt.app')).toBeNull();
   });
 });

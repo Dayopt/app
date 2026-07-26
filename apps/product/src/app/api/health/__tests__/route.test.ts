@@ -53,6 +53,7 @@ describe('GET /api/health', () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key-sentinel');
     vi.stubEnv('NEXT_PUBLIC_APP_VERSION', '0.32.0');
     vi.stubEnv('VERCEL_ENV', '');
+    vi.stubEnv('VERCEL_TARGET_ENV', '');
     vi.stubEnv('UPSTASH_REDIS_REST_URL', '');
     vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', '');
 
@@ -111,6 +112,41 @@ describe('GET /api/health', () => {
     expect(response.status).toBe(200);
     expect(body.status).toBe('healthy');
     expect(body.checks).toEqual({ database: 'ok', redis: 'skipped' });
+  });
+
+  it('staging Custom Environmentを依存必須かつ詳細非公開として扱う', async () => {
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://staging-example.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'staging-redis-token-sentinel');
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: 'healthy' });
+  });
+
+  it('staging Custom EnvironmentはRedis未設定をunhealthyにする', async () => {
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+
+    const response = await GET();
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ status: 'unhealthy' });
+  });
+
+  it('staging Custom Environmentはnon-PONGをreadiness失敗として扱う', async () => {
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://staging-example.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'staging-redis-token-sentinel');
+    mocks.redisPing.mockResolvedValue('NOT_PONG');
+
+    const response = await GET();
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ status: 'unhealthy' });
   });
 
   it.each(['PGRST202', 'PGRST205'])('DB query error %sをunhealthyにする', async (code) => {
@@ -188,7 +224,7 @@ describe('GET /api/health', () => {
     );
   });
 
-  it('production環境変数schemaの失敗をunhealthyとして扱う', async () => {
+  it('operational環境変数schemaの失敗をnetwork check前にunhealthyとして扱う', async () => {
     mocks.envValidationError = true;
     vi.stubEnv('VERCEL_ENV', 'production');
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://example.upstash.io');
@@ -198,10 +234,11 @@ describe('GET /api/health', () => {
 
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ status: 'unhealthy' });
-    expect(mocks.limit).toHaveBeenCalledWith(1);
+    expect(mocks.createClient).not.toHaveBeenCalled();
+    expect(mocks.redisPing).not.toHaveBeenCalled();
     expect(mocks.loggerError).toHaveBeenCalledWith(
-      '[health] dependency check failed',
-      expect.objectContaining({ status: 'unhealthy', database: 'ok', redis: 'ok' }),
+      '[health] environment check failed',
+      expect.objectContaining({ status: 'unhealthy' }),
     );
     expect(JSON.stringify(mocks.loggerError.mock.calls)).not.toContain('env-validation-sentinel');
   });

@@ -109,10 +109,11 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 `google-calendar` は外部カレンダー取り込み（[#1702](https://github.com/Dayopt/dayopt/issues/1702)）専用の OAuth client で、Supabase Auth の Google provider とは別 client として作る。Supabase 側の client secret を流用しない。
 
 - `OAUTH_CLAUDE_REDIRECT_URIS` / `OAUTH_CHATGPT_REDIRECT_URIS` / `OAUTH_CURSOR_REDIRECT_URIS` はclientが発行する追加callback URIのcomma区切りexact allowlist。wildcardやoriginだけの緩い一致は使わない。既定callbackで足りるclientではfieldを空のままにする
-- `MCP_OAUTH_ENVIRONMENT`はOAuth identityの環境marker。Persistent Staging実装までは未使用かつoptionalとし、実装後は`staging` / `production`の明示値以外を拒否する
+- `MCP_OAUTH_ENVIRONMENT`はOAuth identityの環境marker。Persistent Stagingでは`staging`を必須とし、`VERCEL_TARGET_ENV=staging`、issuer、resourceのどれかが一致しなければbuildとruntimeを停止する。Productionは未設定時だけ既存originを既定値にする
 - `OAUTH_AUTHORIZATION_SERVER_URI`は環境ごとに固定するauthorization server origin。Persistent StagingではProduction originを流用せず、resource originとは別fieldで管理する
 - `MCP_CANONICAL_RESOURCE_URI`は環境ごとに固定するMCP resource origin。transport path、query、fragmentを含めない。Persistent StagingではProduction originやProduction tokenを流用しない
 - `MCP_WRITE_ENABLED_CLIENTS`はruntime discovery/preflight用のclosed-beta allowlistであり、DBのglobal/client/connection gateを代替しない。未承認環境では空のままにする
+- Vercel Custom Environmentは`VERCEL_TARGET_ENV=staging`をlogical environmentの正本とする。`VERCEL_ENV=preview`との組み合わせだけを許可し、ProductのResend、Sentry、Stripe、billing webhook環境変数はstagingへ複製しない
 - `CALENDAR_TOKEN_ENCRYPTION_KEY` は保存する refresh token を AES-256-GCM で暗号化する鍵。base64 で 32 バイトに decode できる値だけを受け付ける（`openssl rand -base64 32`）。鍵を失うと既存接続の token は復号できず、全ユーザーが再接続になる
 - `GOOGLE_CALENDAR_REDIRECT_URIS` は comma 区切りの allowlist。callback は request host を allowlist と完全一致で引き、一致した文字列をそのまま Google へ渡す。Production には production origin だけを入れ、localhost を混ぜない（forwarded host 経由で allowlist を通過されうる）
 - Preview は登録しない。ephemeral hostname は Google 側に事前登録できず、`__Host-` cookie も host 固定のため、Preview では接続開始時に明示エラーを返す

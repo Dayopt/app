@@ -1,7 +1,7 @@
 import createMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { dayoptDomains } from '@dayopt/config';
+import { dayoptDomains, dayoptStagingDomains } from '@dayopt/config';
 
 import {
   isAuthProductPath,
@@ -10,6 +10,11 @@ import {
   isPublicRewritePath,
 } from '@/lib/auth/domain';
 import { logger } from '@/lib/logger';
+import {
+  isOAuthRequestHostAllowed,
+  isOAuthSurfacePath,
+  resolveOAuthEnvironmentConfig,
+} from '@/lib/oauth-server/identity';
 import { captureUnexpectedError, observeAuthOperation } from '@/lib/sentry';
 import { updateSession } from '@/lib/supabase/middleware';
 import { routing } from '@dayopt/i18n/routing';
@@ -17,7 +22,13 @@ import { routing } from '@dayopt/i18n/routing';
 // next-intlのミドルウェアを作成
 const intlMiddleware = createMiddleware(routing);
 
-const MCP_HOST = dayoptDomains.mcp;
+const MCP_HOSTS = new Set<string>([dayoptDomains.mcp, dayoptStagingDomains.mcp]);
+const KNOWN_OAUTH_HOSTS = new Set<string>([
+  dayoptDomains.product,
+  dayoptDomains.mcp,
+  dayoptStagingDomains.product,
+  dayoptStagingDomains.mcp,
+]);
 const CSP_HEADER = 'Content-Security-Policy';
 const CSP_REPORT_URI = '/api/csp-report';
 
@@ -148,6 +159,12 @@ function getLocalizedPath(path: string, locale: string): string {
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname;
+  const oauthHostBoundaryResponse = enforceOAuthHostBoundary(
+    hostname,
+    getPathWithoutLocale(pathname),
+  );
+  if (oauthHostBoundaryResponse) return oauthHostBoundaryResponse;
+
   const contentSecurityPolicy = prepareCspRequest(request);
 
   // 静的ファイル、API、_nextファイルはスキップ
@@ -161,7 +178,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.includes('.') ||
-    (hostname === MCP_HOST && pathname === '/') ||
+    (MCP_HOSTS.has(hostname) && pathname === '/') ||
     isPublicRewritePath(pathname)
   ) {
     return nextWithCsp(request, contentSecurityPolicy);
@@ -293,8 +310,47 @@ export async function proxy(request: NextRequest) {
   }
 }
 
+function enforceOAuthHostBoundary(hostname: string, pathname: string): NextResponse | null {
+  let identity;
+  try {
+    identity = resolveOAuthEnvironmentConfig({
+      mcpOAuthEnvironment: process.env.MCP_OAUTH_ENVIRONMENT,
+      authorizationServerUri: process.env.OAUTH_AUTHORIZATION_SERVER_URI,
+      resourceUri: process.env.MCP_CANONICAL_RESOURCE_URI,
+      vercelEnvironment: process.env.VERCEL_ENV,
+      vercelTargetEnvironment: process.env.VERCEL_TARGET_ENV,
+    });
+  } catch {
+    if (!isOAuthSurfacePath(pathname) && !KNOWN_OAUTH_HOSTS.has(hostname)) return null;
+    logger.error('OAuth deployment identity is invalid');
+    return NextResponse.json(
+      { error: 'service_unavailable' },
+      { status: 503, headers: { 'cache-control': 'no-store' } },
+    );
+  }
+
+  if (
+    isOAuthRequestHostAllowed({
+      identity,
+      hostname,
+      pathname,
+      allowLocalDevelopment: process.env.NODE_ENV === 'development' && !process.env.VERCEL_ENV,
+    })
+  ) {
+    return null;
+  }
+
+  return NextResponse.json(
+    { error: 'not_found' },
+    { status: 404, headers: { 'cache-control': 'no-store' } },
+  );
+}
+
 export const config = {
   matcher: [
+    '/api/mcp/:path*',
+    '/api/oauth/token/:path*',
+    '/.well-known/:path*',
     /*
      * Match all request paths except for the ones starting with:
      * - api (API routes)

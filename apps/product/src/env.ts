@@ -9,6 +9,7 @@ import 'server-only';
 
 import { z } from 'zod';
 
+import { resolveOAuthEnvironmentConfig } from '@/lib/oauth-server/identity';
 import { isValidOAuthRedirectUriList } from '@/lib/oauth-server/redirect-uris';
 
 function isDayoptEmailAddress(value: string): boolean {
@@ -80,6 +81,8 @@ const serverSchema = z
       .refine((value) => isValidOAuthRedirectUriList('cursor', value), {
         message: 'OAUTH_CURSOR_REDIRECT_URIS はCursor所有の登録済みcallbackだけを指定してください',
       }),
+    MCP_OAUTH_ENVIRONMENT: z.enum(['production', 'staging']).optional(),
+    OAUTH_AUTHORIZATION_SERVER_URI: z.string().url().optional(),
     MCP_CANONICAL_RESOURCE_URI: z.string().url().optional(),
     MCP_WRITE_ENABLED_CLIENTS: z.string().optional(),
 
@@ -125,7 +128,25 @@ const serverSchema = z
     BILLING_ENFORCED: z.enum(['true', 'false']).optional(),
     VERCEL_URL: z.string().optional(),
     VERCEL_ENV: z.string().optional(),
+    VERCEL_TARGET_ENV: z.string().optional(),
     SKIP_AUTH_IN_DEV: z.string().optional(),
+  })
+  .superRefine((data, context) => {
+    try {
+      resolveOAuthEnvironmentConfig({
+        mcpOAuthEnvironment: data.MCP_OAUTH_ENVIRONMENT,
+        authorizationServerUri: data.OAUTH_AUTHORIZATION_SERVER_URI,
+        resourceUri: data.MCP_CANONICAL_RESOURCE_URI,
+        vercelEnvironment: data.VERCEL_ENV,
+        vercelTargetEnvironment: data.VERCEL_TARGET_ENV,
+      });
+    } catch (error) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: error instanceof Error ? error.message : 'MCP OAuth identity is invalid',
+        path: ['MCP_OAUTH_ENVIRONMENT'],
+      });
+    }
   })
   .refine((data) => !(data.NODE_ENV === 'production' && data.SKIP_AUTH_IN_DEV === 'true'), {
     message: 'SKIP_AUTH_IN_DEV は本番環境では使用できない',

@@ -2,6 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { dayoptUrls } from '@dayopt/config';
+
 const invalidateConnections = vi.hoisted(() => vi.fn());
 const mutateAsync = vi.hoisted(() => vi.fn());
 const listOAuthConnections = vi.hoisted(() => vi.fn());
@@ -98,7 +100,7 @@ describe('McpApiSection', () => {
 
   it('Freeでも同じclientの接続を別々に表示し、選択したconnectionだけを失効する', async () => {
     const user = userEvent.setup();
-    render(<McpApiSection />);
+    render(<McpApiSection mcpServerUrl={dayoptUrls.mcp} />);
 
     expect(screen.getAllByText('ChatGPT')).toHaveLength(2);
     expect(screen.getByText('settings.dataControls.mcp.proRequired')).toBeInTheDocument();
@@ -114,5 +116,26 @@ describe('McpApiSection', () => {
       expect(mutateAsync).toHaveBeenCalledWith({ connectionId: secondConnectionId });
       expect(invalidateConnections).toHaveBeenCalledOnce();
     });
+  });
+
+  it('固定OAuth surfaceを持たない環境ではProduction MCP URLを案内しない', () => {
+    billingOverview.mockReturnValue({
+      data: {
+        billingInfo: {
+          subscriptionStatus: 'active',
+          stripeCustomerId: null,
+          subscriptionId: null,
+        },
+      },
+    });
+
+    render(<McpApiSection mcpServerUrl={null} />);
+
+    expect(screen.queryByText(dayoptUrls.mcp)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: 'settings.dataControls.mcp.copyUrl',
+      }),
+    ).not.toBeInTheDocument();
   });
 });

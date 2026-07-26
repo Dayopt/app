@@ -44,7 +44,13 @@ async function checkMcpRateLimit(
   localLimit: number,
   operation: string,
 ): Promise<McpRateLimitState> {
-  if (!limiter) return checkLocalLimit(identifier, localLimit) ? 'limited' : 'allowed';
+  if (!limiter) {
+    if (requiresDistributedMcpRateLimit(process.env)) {
+      logger.error('MCP rate limit configuration is unavailable');
+      return 'unavailable';
+    }
+    return checkLocalLimit(identifier, localLimit) ? 'limited' : 'allowed';
+  }
 
   try {
     const result = await limiter.limit(identifier);
@@ -58,6 +64,12 @@ async function checkMcpRateLimit(
     logger.error('MCP rate limit check failed');
     return 'unavailable';
   }
+}
+
+export function requiresDistributedMcpRateLimit(
+  environment: Readonly<Record<string, string | undefined>>,
+): boolean {
+  return environment.VERCEL_ENV === 'production' || environment.VERCEL_TARGET_ENV === 'staging';
 }
 
 function checkLocalLimit(identifier: string, limit: number): boolean {

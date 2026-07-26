@@ -8,18 +8,22 @@ import { Skeleton } from '@dayopt/components';
 
 import type { SettingsCategory } from '../types';
 
+const DataSettingsComponent = lazy(() =>
+  import('./DataSettings').then((module) => ({ default: module.DataSettings })),
+);
+
 const categoryComponents: Record<
-  SettingsCategory,
+  Exclude<SettingsCategory, 'data'>,
   React.LazyExoticComponent<React.ComponentType<object>>
 > = {
   profile: lazy(() => import('./ProfileSettings').then((m) => ({ default: m.ProfileSettings }))),
   display: lazy(() => import('./DisplaySettings').then((m) => ({ default: m.DisplaySettings }))),
-  data: lazy(() => import('./DataSettings').then((m) => ({ default: m.DataSettings }))),
   billing: lazy(() => import('./BillingSettings').then((m) => ({ default: m.BillingSettings }))),
   account: lazy(() => import('./AccountSettings').then((m) => ({ default: m.AccountSettings }))),
 };
 
 const VALID_CATEGORIES = new Set<string>(['profile', 'display', 'data', 'billing', 'account']);
+const PUBLIC_MCP_SERVER_URL = process.env.NEXT_PUBLIC_MCP_RESOURCE_URI?.trim() || null;
 
 /**
  * 文字列が有効な設定カテゴリかチェックする型ガード
@@ -40,7 +44,6 @@ interface SettingsContentProps {
  * ルーティングページとダイアログの両方で再利用
  */
 export function SettingsContent({ category }: SettingsContentProps) {
-  const CategoryComponent = categoryComponents[category];
   const utils = api.useUtils();
 
   // マウント時に設定データをプリフェッチ
@@ -51,10 +54,19 @@ export function SettingsContent({ category }: SettingsContentProps) {
   return (
     <div className="min-h-0 flex-1 overflow-auto p-4 sm:p-6">
       <Suspense fallback={<SettingsLoadingSkeleton />}>
-        <CategoryComponent />
+        <SettingsCategoryContent category={category} />
       </Suspense>
     </div>
   );
+}
+
+function SettingsCategoryContent({ category }: SettingsContentProps) {
+  if (category === 'data') {
+    return <DataSettingsComponent mcpServerUrl={PUBLIC_MCP_SERVER_URL} />;
+  }
+
+  const CategoryComponent = categoryComponents[category];
+  return <CategoryComponent />;
 }
 
 function SettingsLoadingSkeleton() {

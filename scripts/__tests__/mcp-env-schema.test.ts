@@ -12,6 +12,12 @@ const MCP_APP_ENV_NAMES = [
   'MCP_WRITE_ENABLED_CLIENTS',
 ] as const;
 
+const REQUIRED_STAGING_IDENTITY_NAMES = new Set([
+  'MCP_OAUTH_ENVIRONMENT',
+  'OAUTH_AUTHORIZATION_SERVER_URI',
+  'MCP_CANONICAL_RESOURCE_URI',
+]);
+
 function findExactEntry(
   schema: readonly EnvSchemaEntry[],
   envName: (typeof MCP_APP_ENV_NAMES)[number],
@@ -39,7 +45,7 @@ describe('MCP OAuth env inventory', () => {
       for (const envName of MCP_APP_ENV_NAMES) {
         expect(findExactEntry(schema, envName)).toEqual({
           envName,
-          required: false,
+          required: environment === 'staging' && REQUIRED_STAGING_IDENTITY_NAMES.has(envName),
           visibility: 'public',
           environment,
           vault,

@@ -10,6 +10,7 @@ import {
   isRuntimeClientWriteEnabled,
   validateAuthorizeInput,
 } from '@/lib/oauth-server';
+import { assertOAuthAuthorizationRequestHost } from '@/lib/oauth-server/authorization-request-host';
 import { captureUnexpectedDatabaseError, observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
@@ -22,6 +23,8 @@ import { createClient } from '@/lib/supabase/server';
  * Defense in depth: hidden field の改ざんに備え、validateAuthorizeInput を再実行する。
  */
 export async function processConsent(formData: FormData) {
+  await assertOAuthAuthorizationRequestHost();
+
   const get = (key: string): string | undefined => {
     const v = formData.get(key);
     return typeof v === 'string' ? v : undefined;

@@ -9,7 +9,6 @@ import {
   getPlanIdForSubscriptionStatus,
 } from '@dayopt/billing';
 import { Button as SharedButton } from '@dayopt/components';
-import { dayoptUrls } from '@dayopt/config';
 import {
   AlertTriangle,
   Check,
@@ -82,12 +81,12 @@ function timeblockRowsToCsv(rows: Record<string, unknown>[]): string {
  *
  * エクスポート、バックアップ復元、MCP/API、データ削除
  */
-export function DataSettings() {
+export function DataSettings({ mcpServerUrl = null }: { mcpServerUrl?: string | null }) {
   return (
     <div className="space-y-6 sm:space-y-8">
       <ExportSection />
       <RestoreSection />
-      <McpApiSection />
+      <McpApiSection mcpServerUrl={mcpServerUrl} />
       <DeletionSection />
     </div>
   );
@@ -284,7 +283,7 @@ interface PendingConnectionRevoke {
   clientName: string;
 }
 
-export function McpApiSection() {
+export function McpApiSection({ mcpServerUrl }: { mcpServerUrl: string | null }) {
   const t = useTranslations('settings.dataControls.mcp');
   const [copied, setCopied] = useState<'url' | null>(null);
   const [pendingRevoke, setPendingRevoke] = useState<PendingConnectionRevoke | null>(null);
@@ -306,8 +305,6 @@ export function McpApiSection() {
   const subStatus = billingOverview.data?.billingInfo.subscriptionStatus;
   const currentPlan = getPlanIdForSubscriptionStatus(subStatus);
   const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
-  // OAuth 接続のため client (Claude.ai etc.) に渡すのはこの URL のみ。
-  const mcpServerUrl = dayoptUrls.mcp;
   const dateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(undefined, {
@@ -412,44 +409,46 @@ export function McpApiSection() {
         )}
       </div>
 
-      <div className="border-border mt-5 border-t pt-5">
-        {canAccessPro ? (
-          <>
-            <LabeledRow label={t('serverUrl')}>
+      {(mcpServerUrl || !canAccessPro) && (
+        <div className="border-border mt-5 border-t pt-5">
+          {canAccessPro && mcpServerUrl ? (
+            <>
+              <LabeledRow label={t('serverUrl')}>
+                <div className="flex items-center gap-2">
+                  <code className="text-muted-foreground font-mono text-sm">{mcpServerUrl}</code>
+                  <CopyButton
+                    copied={copied === 'url'}
+                    onClick={() => handleCopy(mcpServerUrl, 'url')}
+                    label={t('copyUrl')}
+                  />
+                </div>
+              </LabeledRow>
+              <InfoBox className="mt-4 p-4">
+                <p className="text-muted-foreground text-base md:text-sm">
+                  {t('connectionGuide')}
+                  <a
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground ml-1 inline-flex items-center gap-1 underline transition-colors"
+                  >
+                    {t('viewDocs')}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </p>
+              </InfoBox>
+            </>
+          ) : (
+            <InfoBox>
               <div className="flex items-center gap-2">
-                <code className="text-muted-foreground font-mono text-sm">{mcpServerUrl}</code>
-                <CopyButton
-                  copied={copied === 'url'}
-                  onClick={() => handleCopy(mcpServerUrl, 'url')}
-                  label={t('copyUrl')}
-                />
+                <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
+                <p className="text-foreground flex-1 text-base md:text-sm">{t('proRequired')}</p>
+                <Button variant="outline" size="sm" disabled>
+                  {t('upgrade')}
+                </Button>
               </div>
-            </LabeledRow>
-            <InfoBox className="mt-4 p-4">
-              <p className="text-muted-foreground text-base md:text-sm">
-                {t('connectionGuide')}
-                <a
-                  href="#"
-                  className="text-muted-foreground hover:text-foreground ml-1 inline-flex items-center gap-1 underline transition-colors"
-                >
-                  {t('viewDocs')}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </p>
             </InfoBox>
-          </>
-        ) : (
-          <InfoBox>
-            <div className="flex items-center gap-2">
-              <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
-              <p className="text-foreground flex-1 text-base md:text-sm">{t('proRequired')}</p>
-              <Button variant="outline" size="sm" disabled>
-                {t('upgrade')}
-              </Button>
-            </div>
-          </InfoBox>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <ConfirmDialog
         open={pendingRevoke !== null}

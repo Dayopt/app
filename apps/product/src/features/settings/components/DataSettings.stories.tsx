@@ -7,6 +7,7 @@
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
+import { dayoptUrls } from '@dayopt/config';
 import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 
 import { DataSettings } from './DataSettings';
@@ -65,6 +66,9 @@ function dataSettingsMocks(
 const meta = {
   title: 'Product/Features/Settings/DataSettings',
   component: DataSettings,
+  args: {
+    mcpServerUrl: dayoptUrls.mcp,
+  },
   parameters: {
     layout: 'padded',
     trpcMocks: dataSettingsMocks(PRO_OVERVIEW, []),
@@ -107,6 +111,13 @@ export const FreeWithConnection: Story = {
   },
 };
 
+/** OAuth surfaceを持たないPreviewで、接続追加の導線を表示しない状態。 */
+export const OAuthUnavailable: Story = {
+  args: {
+    mcpServerUrl: null,
+  },
+};
+
 /** 全ストーリーを並べて一覧表示 */
 export const AllPatterns: Story = {
   parameters: {
@@ -115,13 +126,16 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="space-y-12">
       <StoryTRPCProvider mocks={dataSettingsMocks(PRO_OVERVIEW, [])}>
-        <DataSettings />
+        <DataSettings mcpServerUrl={dayoptUrls.mcp} />
       </StoryTRPCProvider>
       <StoryTRPCProvider mocks={dataSettingsMocks(PRO_OVERVIEW, CONNECTED_CLIENTS)}>
-        <DataSettings />
+        <DataSettings mcpServerUrl={dayoptUrls.mcp} />
       </StoryTRPCProvider>
       <StoryTRPCProvider mocks={dataSettingsMocks(FREE_OVERVIEW, CONNECTED_CLIENTS.slice(0, 1))}>
-        <DataSettings />
+        <DataSettings mcpServerUrl={dayoptUrls.mcp} />
+      </StoryTRPCProvider>
+      <StoryTRPCProvider mocks={dataSettingsMocks(PRO_OVERVIEW, [])}>
+        <DataSettings mcpServerUrl={null} />
       </StoryTRPCProvider>
     </div>
   ),

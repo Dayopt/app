@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import { validateAuthorizeInput, type AuthorizeValidationError } from '@/lib/oauth-server';
+import { assertOAuthAuthorizationRequestHost } from '@/lib/oauth-server/authorization-request-host';
 import { redirect } from '@dayopt/i18n/navigation';
 import type { routing } from '@dayopt/i18n/routing';
 
@@ -38,6 +39,8 @@ const ERROR_MESSAGE_KEY: Record<AuthorizeValidationError, string> = {
 };
 
 export default async function AuthorizePage({ searchParams }: AuthorizePageProps) {
+  await assertOAuthAuthorizationRequestHost();
+
   const params = await searchParams;
   const stringParam = (key: string): string | undefined => {
     const v = params[key];

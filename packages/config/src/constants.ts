@@ -5,12 +5,22 @@ export const dayoptDomains = {
   www: 'www.dayopt.app',
 } as const;
 
+export const dayoptStagingDomains = {
+  product: 'staging.dayopt.app',
+  mcp: 'mcp.staging.dayopt.app',
+} as const;
+
 export const dayoptUrls = {
   marketing: `https://${dayoptDomains.marketing}`,
   product: `https://${dayoptDomains.product}`,
   mcp: `https://${dayoptDomains.mcp}`,
   docs: `https://${dayoptDomains.marketing}/docs`,
   www: `https://${dayoptDomains.www}`,
+} as const;
+
+export const dayoptStagingUrls = {
+  product: `https://${dayoptStagingDomains.product}`,
+  mcp: `https://${dayoptStagingDomains.mcp}`,
 } as const;
 
 export const dayoptContact = {

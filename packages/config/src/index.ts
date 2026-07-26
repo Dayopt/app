@@ -5,6 +5,8 @@ export {
   dayoptContactDeliverySources,
   dayoptDomains,
   dayoptProductUrls,
+  dayoptStagingDomains,
+  dayoptStagingUrls,
   dayoptUrls,
   type DayoptUrlBase,
 } from './constants';

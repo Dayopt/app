@@ -12,7 +12,11 @@ vi.mock('@/lib/rate-limit/upstash', () => ({
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 vi.mock('@/lib/logger', () => ({ logger: { error: loggerError } }));
 
-import { checkMcpPreAuthRateLimit, checkMcpUserRateLimit } from '../request-rate-limit';
+import {
+  checkMcpPreAuthRateLimit,
+  checkMcpUserRateLimit,
+  requiresDistributedMcpRateLimit,
+} from '../request-rate-limit';
 
 describe('checkMcpUserRateLimit', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -45,5 +49,17 @@ describe('checkMcpUserRateLimit', () => {
     expect(captureUnexpectedError).toHaveBeenCalledOnce();
     expect(loggerError).toHaveBeenCalledWith('MCP rate limit check failed');
     expect(JSON.stringify(loggerError.mock.calls)).not.toContain('private-user-id');
+  });
+
+  it('requires a distributed limiter for Production and the staging Custom Environment', () => {
+    expect(requiresDistributedMcpRateLimit({ VERCEL_ENV: 'production' })).toBe(true);
+    expect(
+      requiresDistributedMcpRateLimit({
+        VERCEL_ENV: 'preview',
+        VERCEL_TARGET_ENV: 'staging',
+      }),
+    ).toBe(true);
+    expect(requiresDistributedMcpRateLimit({ VERCEL_ENV: 'preview' })).toBe(false);
+    expect(requiresDistributedMcpRateLimit({})).toBe(false);
   });
 });
