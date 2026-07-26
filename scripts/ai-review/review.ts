@@ -1,0 +1,563 @@
+#!/usr/bin/env node
+
+/**
+ * ai-review — 危険クラスの PR だけを外部モデルにレビューさせる pipeline。
+ *
+ * 存在理由: Dayopt のコードは実装もテストも内部レビューも同一モデル系統（Claude）が
+ * 書くため、系統固有の盲点は内部でいくら重ねても検出できない。決定論的ゲート
+ * （typecheck / lint / 2000+ unit / RLS integration / E2E）と Sentry + dogfooding が
+ * 拾えるのは「落ちる・赤くなる・目に見える」失敗までで、RLS の穴や課金の二重計上の
+ * ような「沈黙する失敗」には届かない。そこだけを、非 Anthropic 系モデルに見せる。
+ *
+ * 契約は scripts/ai-review/prompt.md（レビュー内容の正本）。本ファイルは配管だけを持つ。
+ *
+ * 判定:
+ *   P0 あり     → exit 1（check fail → branch:finish の既存マージゲートが止める）
+ *   P1 のみ     → exit 0 + PR に sticky comment
+ *   findings 0  → exit 0（無言）
+ *   API 障害等  → exit 0 + notice（インフラ障害では fail-open。所見では fail-closed）
+ *
+ * Usage:
+ *   pnpm exec tsx scripts/ai-review/review.ts --dry-run
+ *   pnpm exec tsx scripts/ai-review/review.ts --base <sha> --head <sha>
+ */
+
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+
+/**
+ * 既定モデル。Gemini 3 Pro を非 Anthropic 系の第三の目として使う（Copilot が OpenAI 系
+ * なので、Google 系を選ぶと Anthropic が書き OpenAI と Google が見る三系統になる）。
+ * model id は provider 側で改称されうるため env で差し替えられる。404 の時は
+ * 利用可能な id を notice に出す。
+ */
+export const DEFAULT_MODEL = 'gemini-3-pro-preview';
+
+/** prompt に載せる diff の上限。超過分は落とし、落とした事実を prompt に明記する。 */
+export const MAX_DIFF_BYTES = 180_000;
+/** rules 添付 1 件あたりの上限。 */
+export const MAX_ATTACHMENT_BYTES = 24_000;
+/** sticky comment の同定に使う marker。人間のコメントと衝突しない形にする。 */
+export const COMMENT_MARKER = '<!-- dayopt:ai-review -->';
+
+export type Severity = 'P0' | 'P1';
+
+export interface Finding {
+  severity: Severity;
+  title: string;
+  file: string;
+  line?: number;
+  failureScenario: string;
+  evidence: string;
+}
+
+export interface ReviewResult {
+  summary: string;
+  findings: Finding[];
+}
+
+/**
+ * レビュー対象にする危険クラス path。
+ * .github/workflows/ai-review.yml の paths filter と対応させる（contract test で固定）。
+ */
+export const DANGEROUS_PATH_PATTERNS: readonly RegExp[] = [
+  /^supabase\/migrations\//,
+  /^supabase\/functions\//,
+  /^apps\/product\/src\/features\/[^/]+\/server\//,
+  /^apps\/product\/src\/features\/auth\//,
+  /^apps\/product\/src\/lib\/(database|supabase|trpc)\//,
+  /^apps\/product\/src\/app\/api\//,
+];
+
+export interface RuleAttachment {
+  /** repo-relative path */
+  path: string;
+  /** この rules を添付する条件 */
+  when: RegExp;
+  /** 添付時の見出し */
+  label: string;
+}
+
+/**
+ * diff の内容に応じて添付する repo 規約。外部モデルは Dayopt の規約を知らないので、
+ * 「知らないから指摘できない / 知らないから的外れ」を両方潰すために渡す。
+ */
+export const RULE_ATTACHMENTS: readonly RuleAttachment[] = [
+  {
+    path: '.claude/skills/security/SKILL.md',
+    when: /^(supabase\/|apps\/product\/src\/(features\/[^/]+\/server\/|features\/auth\/|lib\/(trpc|supabase|database)\/|app\/api\/))/,
+    label: 'Dayopt security 規約',
+  },
+  {
+    path: '.claude/rules/temporal-constraints.md',
+    when: /^apps\/product\/src\/(features\/(timeblock|review|calendar)\/|lib\/(date|time))/,
+    label: 'Dayopt 時刻・過去ブロック編集制約',
+  },
+  {
+    path: '.claude/rules/feature-boundaries.md',
+    when: /^apps\/product\/src\/features\//,
+    label: 'Dayopt feature 境界',
+  },
+];
+
+/** migration を触る PR にだけ渡す、現在有効な RLS / GRANT の snapshot。 */
+export const RLS_SNAPSHOT_PATH = 'docs/engineering/data/db/rls-snapshot.md';
+
+export function isDangerousPath(file: string): boolean {
+  return DANGEROUS_PATH_PATTERNS.some((pattern) => pattern.test(file));
+}
+
+/** 添付すべき rules を、変更ファイル一覧から決める。 */
+export function selectRuleAttachments(changedFiles: readonly string[]): RuleAttachment[] {
+  return RULE_ATTACHMENTS.filter((attachment) =>
+    changedFiles.some((file) => attachment.when.test(file)),
+  );
+}
+
+function clamp(text: string, maxBytes: number, note: string): string {
+  if (Buffer.byteLength(text, 'utf8') <= maxBytes) return text;
+  return `${text.slice(0, maxBytes)}\n\n…（${note}）`;
+}
+
+/**
+ * RLS snapshot 全文は 45KB あり毎回渡すと無駄なので、diff に現れた table 名を含む
+ * section だけを抜く。1 件も一致しない時は先頭（凡例・全体方針）を渡す。
+ */
+export function extractRlsSections(snapshot: string, diff: string): string {
+  const sections = snapshot.split(/\n(?=## )/);
+  const haystack = diff.toLowerCase();
+  const matched = sections.filter((section, index) => {
+    if (index === 0) return false;
+    const heading = section.slice(0, section.indexOf('\n')).toLowerCase();
+    const tokens = heading.match(/[a-z_][a-z0-9_]{2,}/g) ?? [];
+    return tokens.some((token) => haystack.includes(token));
+  });
+
+  if (matched.length === 0) {
+    return clamp(sections[0] ?? '', MAX_ATTACHMENT_BYTES, '以降は該当 table なしのため省略');
+  }
+  return clamp(
+    matched.join('\n'),
+    MAX_ATTACHMENT_BYTES,
+    'RLS snapshot が長いため以降を省略。必要なら該当 migration を根拠にする',
+  );
+}
+
+export interface PromptInput {
+  contract: string;
+  diff: string;
+  changedFiles: readonly string[];
+  attachments: readonly { label: string; body: string }[];
+  truncated: boolean;
+}
+
+export function buildPrompt(input: PromptInput): string {
+  const parts = [input.contract, '\n---\n\n## 参考: この PR に関係する Dayopt の規約\n'];
+
+  if (input.attachments.length === 0) {
+    parts.push('（添付なし）\n');
+  }
+  for (const attachment of input.attachments) {
+    parts.push(`### ${attachment.label}\n\n${attachment.body}\n`);
+  }
+
+  parts.push('\n---\n\n## 変更されたファイル\n');
+  parts.push(
+    input.changedFiles
+      .map((file) => `- ${file}${isDangerousPath(file) ? ' ← 危険クラス' : ''}`)
+      .join('\n'),
+  );
+
+  if (input.truncated) {
+    parts.push(
+      '\n\n**注意**: diff が長いため一部を省略しています。省略部分については推測で指摘しないでください。',
+    );
+  }
+
+  parts.push('\n\n---\n\n## Diff\n\n```diff\n');
+  parts.push(input.diff);
+  parts.push('\n```\n');
+
+  return parts.join('');
+}
+
+/** Gemini structured output 用の schema。 */
+export const RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    summary: { type: 'string' },
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          severity: { type: 'string', enum: ['P0', 'P1'] },
+          title: { type: 'string' },
+          file: { type: 'string' },
+          line: { type: 'integer' },
+          failureScenario: { type: 'string' },
+          evidence: { type: 'string' },
+        },
+        required: ['severity', 'title', 'file', 'failureScenario', 'evidence'],
+      },
+    },
+  },
+  required: ['summary', 'findings'],
+} as const;
+
+/**
+ * モデル応答を検証する。shape が壊れている応答を「指摘なし」と読み替えると、
+ * 黙って gate が無効化されるため、パースできない時は throw して infra 障害扱いにする。
+ */
+export function parseReviewResponse(text: string): ReviewResult {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new Error(`モデル応答が JSON ではない: ${text.slice(0, 200)}`);
+  }
+
+  if (typeof raw !== 'object' || raw === null) {
+    throw new Error('モデル応答が object ではない');
+  }
+  const record = raw as Record<string, unknown>;
+  if (!Array.isArray(record.findings)) {
+    throw new Error('モデル応答に findings 配列がない');
+  }
+
+  const findings = record.findings.map((item, index): Finding => {
+    if (typeof item !== 'object' || item === null) {
+      throw new Error(`findings[${index}] が object ではない`);
+    }
+    const finding = item as Record<string, unknown>;
+    const severity = finding.severity;
+    if (severity !== 'P0' && severity !== 'P1') {
+      throw new Error(`findings[${index}].severity が不正: ${String(severity)}`);
+    }
+    for (const key of ['title', 'file', 'failureScenario', 'evidence'] as const) {
+      if (typeof finding[key] !== 'string' || finding[key] === '') {
+        throw new Error(`findings[${index}].${key} が空`);
+      }
+    }
+    return {
+      severity,
+      title: finding.title as string,
+      file: finding.file as string,
+      line: typeof finding.line === 'number' ? finding.line : undefined,
+      failureScenario: finding.failureScenario as string,
+      evidence: finding.evidence as string,
+    };
+  });
+
+  return {
+    summary: typeof record.summary === 'string' ? record.summary : '',
+    findings,
+  };
+}
+
+export function hasBlockingFinding(result: ReviewResult): boolean {
+  return result.findings.some((finding) => finding.severity === 'P0');
+}
+
+export function renderComment(result: ReviewResult, meta: { model: string; sha: string }): string {
+  const lines = [COMMENT_MARKER, '## 🔍 ai-review', ''];
+  lines.push(result.summary || '（要約なし）', '');
+
+  const blocking = result.findings.filter((finding) => finding.severity === 'P0');
+  if (blocking.length > 0) {
+    lines.push(
+      `**P0 が ${blocking.length} 件あるため、この check は fail しています。**`,
+      '誤検出だと判断した場合は、根拠をこの PR に書いた上で `ai-review` の必須設定を外すか、指摘を解消してください。',
+      '',
+    );
+  }
+
+  for (const finding of result.findings) {
+    const location = finding.line ? `${finding.file}:${finding.line}` : finding.file;
+    lines.push(`### ${finding.severity} — ${finding.title}`, '', `**場所**: \`${location}\``, '');
+    lines.push(`**起きること**: ${finding.failureScenario}`, '');
+    lines.push(`**根拠**: ${finding.evidence}`, '');
+  }
+
+  lines.push(
+    '---',
+    `_${meta.model} による自動レビュー（危険クラス path のみ実行 / commit \`${meta.sha.slice(0, 7)}\`）。`,
+    `契約は \`scripts/ai-review/prompt.md\`。style・設計の好みは対象外です。_`,
+  );
+
+  return lines.join('\n');
+}
+
+// ─── 以下、副作用を持つ配管 ────────────────────────────────────────────
+
+function git(args: string[]): string {
+  return execFileSync('git', args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+}
+
+export function collectChangedFiles(base: string, head: string): string[] {
+  return git(['diff', '--name-only', `${base}...${head}`])
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+}
+
+/**
+ * 危険クラスのファイルを先に、残りを後に載せる。上限で切れる時に落ちるのが
+ * 「見なくていいファイル」側になるようにするため。
+ */
+export function collectDiff(
+  base: string,
+  head: string,
+  files: readonly string[],
+): { diff: string; truncated: boolean } {
+  const dangerous = files.filter(isDangerousPath);
+  const rest = files.filter((file) => !isDangerousPath(file));
+
+  const chunks: string[] = [];
+  let truncated = false;
+  let size = 0;
+
+  for (const group of [dangerous, rest]) {
+    if (group.length === 0) continue;
+    const text = git(['diff', '--no-color', '--unified=3', `${base}...${head}`, '--', ...group]);
+    if (size + Buffer.byteLength(text, 'utf8') > MAX_DIFF_BYTES) {
+      const remaining = Math.max(0, MAX_DIFF_BYTES - size);
+      if (remaining > 0) chunks.push(text.slice(0, remaining));
+      truncated = true;
+      break;
+    }
+    chunks.push(text);
+    size += Buffer.byteLength(text, 'utf8');
+  }
+
+  return { diff: chunks.join('\n'), truncated };
+}
+
+function loadAttachments(
+  changedFiles: readonly string[],
+  diff: string,
+): { label: string; body: string }[] {
+  const attachments = selectRuleAttachments(changedFiles).map((attachment) => ({
+    label: attachment.label,
+    body: clamp(
+      readFileSync(resolve(ROOT, attachment.path), 'utf8'),
+      MAX_ATTACHMENT_BYTES,
+      '以降は省略',
+    ),
+  }));
+
+  const touchesMigrations = changedFiles.some((file) => file.startsWith('supabase/migrations/'));
+  const snapshotPath = resolve(ROOT, RLS_SNAPSHOT_PATH);
+  if (touchesMigrations && existsSync(snapshotPath)) {
+    attachments.push({
+      label: '現在有効な RLS / GRANT（該当 table 抜粋）',
+      body: extractRlsSections(readFileSync(snapshotPath, 'utf8'), diff),
+    });
+  }
+
+  return attachments;
+}
+
+function notice(message: string): void {
+  console.log(`::notice title=ai-review::${message}`);
+}
+
+function warn(message: string): void {
+  console.log(`::warning title=ai-review::${message}`);
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((done) => setTimeout(done, ms));
+}
+
+interface GeminiCallOptions {
+  apiKey: string;
+  model: string;
+  prompt: string;
+  fetchImpl?: typeof fetch;
+}
+
+export async function callGemini(options: GeminiCallOptions): Promise<ReviewResult> {
+  const doFetch = options.fetchImpl ?? fetch;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${options.model}:generateContent`;
+  const body = JSON.stringify({
+    contents: [{ role: 'user', parts: [{ text: options.prompt }] }],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: RESPONSE_SCHEMA,
+      temperature: 0,
+    },
+  });
+
+  let lastError = '';
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await doFetch(endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': options.apiKey },
+      body,
+    });
+
+    if (response.ok) {
+      const payload = (await response.json()) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+      const text = payload.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (typeof text !== 'string' || text === '') {
+        throw new Error('モデル応答が空（safety block などの可能性）');
+      }
+      return parseReviewResponse(text);
+    }
+
+    lastError = `HTTP ${response.status}: ${(await response.text()).slice(0, 300)}`;
+    if (response.status === 404) {
+      throw new Error(
+        `model "${options.model}" が見つからない。AI_REVIEW_MODEL で現行の model id を指定してください。${lastError}`,
+      );
+    }
+    // 429 / 5xx だけ retry する。400 系は投げ直しても同じ。
+    if (response.status !== 429 && response.status < 500) break;
+    await sleep(2000 * (attempt + 1));
+  }
+
+  throw new Error(`Gemini API 呼び出しに失敗: ${lastError}`);
+}
+
+interface CommentContext {
+  token: string;
+  repository: string;
+  prNumber: string;
+  fetchImpl?: typeof fetch;
+}
+
+async function upsertStickyComment(context: CommentContext, body: string): Promise<void> {
+  const doFetch = context.fetchImpl ?? fetch;
+  const headers = {
+    accept: 'application/vnd.github+json',
+    authorization: `Bearer ${context.token}`,
+    'content-type': 'application/json',
+  };
+  const base = `https://api.github.com/repos/${context.repository}`;
+
+  const listed = await doFetch(`${base}/issues/${context.prNumber}/comments?per_page=100`, {
+    headers,
+  });
+  if (!listed.ok) throw new Error(`comment 一覧の取得に失敗: HTTP ${listed.status}`);
+  const comments = (await listed.json()) as { id: number; body?: string }[];
+  const existing = comments.find((comment) => comment.body?.includes(COMMENT_MARKER));
+
+  const target = existing
+    ? `${base}/issues/comments/${existing.id}`
+    : `${base}/issues/${context.prNumber}/comments`;
+  const written = await doFetch(target, {
+    method: existing ? 'PATCH' : 'POST',
+    headers,
+    body: JSON.stringify({ body }),
+  });
+  if (!written.ok) throw new Error(`comment の投稿に失敗: HTTP ${written.status}`);
+}
+
+function argValue(argv: readonly string[], name: string): string | undefined {
+  const index = argv.indexOf(name);
+  return index >= 0 ? argv[index + 1] : undefined;
+}
+
+async function main(): Promise<number> {
+  const argv = process.argv.slice(2);
+  const dryRun = argv.includes('--dry-run');
+  // workflow の env は未設定でも空文字で渡るため、?? ではなく || で既定へ落とす。
+  const base = argValue(argv, '--base') || process.env.AI_REVIEW_BASE_SHA || 'origin/main';
+  const head = argValue(argv, '--head') || process.env.AI_REVIEW_HEAD_SHA || 'HEAD';
+  const model = process.env.AI_REVIEW_MODEL || DEFAULT_MODEL;
+
+  const changedFiles = collectChangedFiles(base, head);
+  const dangerous = changedFiles.filter(isDangerousPath);
+  if (dangerous.length === 0) {
+    notice('危険クラスの変更がないためレビューをスキップしました。');
+    return 0;
+  }
+
+  const { diff, truncated } = collectDiff(base, head, changedFiles);
+  if (diff.trim() === '') {
+    notice('diff が空のためレビューをスキップしました。');
+    return 0;
+  }
+
+  const contract = readFileSync(resolve(ROOT, 'scripts/ai-review/prompt.md'), 'utf8');
+  const attachments = loadAttachments(changedFiles, diff);
+  const prompt = buildPrompt({ contract, diff, changedFiles, attachments, truncated });
+
+  if (dryRun) {
+    console.log(`model: ${model}`);
+    console.log(`危険クラスのファイル: ${dangerous.length} / ${changedFiles.length}`);
+    console.log(`添付 rules: ${attachments.map((item) => item.label).join(', ') || 'なし'}`);
+    console.log(`prompt bytes: ${Buffer.byteLength(prompt, 'utf8')} (truncated: ${truncated})`);
+    return 0;
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    // secret 未設定・fork PR ではレビューできないが、それは所見ではないので通す。
+    warn('GEMINI_API_KEY が未設定のためレビューをスキップしました。');
+    return 0;
+  }
+
+  let result: ReviewResult;
+  try {
+    result = await callGemini({ apiKey, model, prompt });
+  } catch (error) {
+    // インフラ障害で PR を止めない。止めるのは所見があった時だけ。
+    warn(`レビューを実行できませんでした（PR はブロックしません）: ${String(error)}`);
+    return 0;
+  }
+
+  if (result.findings.length === 0) {
+    notice(`指摘なし（${dangerous.length} 件の危険クラスファイルを確認）。`);
+    return 0;
+  }
+
+  const body = renderComment(result, { model, sha: head });
+  const token = process.env.GITHUB_TOKEN;
+  const repository = process.env.GITHUB_REPOSITORY;
+  const prNumber = process.env.AI_REVIEW_PR_NUMBER;
+  if (token && repository && prNumber) {
+    try {
+      await upsertStickyComment({ token, repository, prNumber }, body);
+    } catch (error) {
+      // comment 失敗は gate の結果を変えない（gate は exit code 側）。
+      warn(`comment を投稿できませんでした: ${String(error)}`);
+    }
+  }
+
+  console.log(body);
+
+  if (hasBlockingFinding(result)) {
+    console.log(`::error title=ai-review::P0 の指摘があります。PR の comment を確認してください。`);
+    return 1;
+  }
+  notice(`P1 の指摘が ${result.findings.length} 件あります（マージはブロックしません）。`);
+  return 0;
+}
+
+// import 時（test）には実行しない。直接起動された時だけ main を回す。
+const invokedDirectly =
+  process.argv[1] !== undefined &&
+  resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
+if (invokedDirectly) {
+  main()
+    .then((code) => {
+      process.exitCode = code;
+    })
+    .catch((error: unknown) => {
+      // 想定外の例外も fail-open にする（レビュー不能で PR を止めない）。
+      warn(`予期しないエラーでレビューを中断しました: ${String(error)}`);
+      process.exitCode = 0;
+    });
+}

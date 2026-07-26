@@ -1,0 +1,58 @@
+name: AI Review
+
+# 実装と相関しない外部モデル（非 Anthropic 系）に、危険クラスの diff だけを見せる。
+# 全 PR は対象にしない。style / 設計の好みは決定論ゲート（CI）と内部レビューの領分で、
+# ここが見るのは「沈黙して失敗する」クラスだけ。契約は scripts/ai-review/prompt.md。
+#
+# paths は scripts/ai-review/review.ts の DANGEROUS_PATH_PATTERNS と対応させる
+# （contract test で固定。片方だけ広げると、走らない or 走って何も見ない状態になる）。
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/functions/**'
+      - 'apps/product/src/features/*/server/**'
+      - 'apps/product/src/features/auth/**'
+      - 'apps/product/src/lib/database/**'
+      - 'apps/product/src/lib/supabase/**'
+      - 'apps/product/src/lib/trpc/**'
+      - 'apps/product/src/app/api/**'
+      - 'scripts/ai-review/**'
+      - '.github/workflows/ai-review.yml'
+  # 上記に当たらない PR を手動でレビューさせたい時のための入口。
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: "\U0001F50D AI Review"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # base...head の diff を取るため、両端に到達できる履歴が要る。
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: Review dangerous-class diff
+        run: pnpm exec tsx scripts/ai-review/review.ts
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # model id は provider 側で改称されうるため repo variable で上書きできる。
+          AI_REVIEW_MODEL: ${{ vars.AI_REVIEW_MODEL }}
+          AI_REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          AI_REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          AI_REVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
