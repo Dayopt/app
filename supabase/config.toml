@@ -348,6 +348,17 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Edge Functions は config.toml に宣言したものだけが Preview branch / production へ
+# 自動デプロイされる。宣言が無いと、function を変更した PR をマージしても本番に反映されず、
+# 手動 `supabase functions deploy --use-api` を忘れた分だけ乖離する。
+# 値は production の現行設定（verify_jwt = true / import map は同ディレクトリの deno.json）に合わせる。
+[functions.send-auth-email]
+enabled = true
+# Auth の send_email hook から呼ばれる。ペイロードの真正性は standardwebhooks の
+# 署名検証（SEND_EMAIL_HOOK_SECRET）で担保しており、JWT 検証はその手前の入口ガード。
+verify_jwt = true
+import_map = "./functions/send-auth-email/deno.json"
+
 [analytics]
 enabled = true
 port = 54327

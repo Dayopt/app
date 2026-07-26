@@ -329,7 +329,13 @@ export function useEntityRealtime(onUpdate: () => void) {
 
 **方針**: preview branch には「PR検証に必要な function のみ」デプロイする。cron は preview で動いても意味がなく、Anthropic API 等のコスト要因になるため除外。
 
-### デプロイコマンド
+### デプロイ経路
+
+**既定は config.toml 宣言による自動デプロイ。** `supabase/config.toml` に `[functions.<slug>]` を宣言した function だけが、Preview branch と production へ自動デプロイされる。宣言が無いと、function を変更した PR をマージしても本番に反映されない(手動デプロイ忘れの分だけ乖離する)。新しい function を追加したら宣言も同じ PR に含める。
+
+手動デプロイは、緊急時や宣言前の検証に限る。
+
+### デプロイコマンド(手動)
 
 **必須: `--use-api` フラグ**(この環境に Docker がないため、デフォルトの Docker ビルドは失敗する)
 
