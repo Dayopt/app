@@ -54,6 +54,7 @@ CREATE TABLE public.calendar_connections (
   provider_account_email TEXT,
   granted_scopes TEXT[] NOT NULL,
   refresh_token_enc TEXT NOT NULL,
+  refresh_token_rotation_operation_id UUID,
   data_generation BIGINT NOT NULL DEFAULT 0,
   status TEXT NOT NULL,                   -- active / reauth_required
   last_synced_at TIMESTAMPTZ,
@@ -68,6 +69,7 @@ CREATE TABLE public.calendar_connections (
 --   calendar_connections_id_user_id_unique        -> 子テーブルの複合 FK 参照先
 --   calendar_connections_provider_account_unique  -> user_id + provider + provider_account_id
 --   data_generation -> 接続保存時のuser data purge世代。古いcallback/syncの再作成を拒否する
+--   refresh_token_rotation_operation_id -> response欠落時に同じrotationを安全に再試行するopaque ID
 --   trigger_update_calendar_connections_updated_at -> update_updated_at()
 
 -- calendar_connection_calendars: 取り込み対象として選択されたカレンダー

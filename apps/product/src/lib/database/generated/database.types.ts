@@ -89,6 +89,7 @@ export type Database = {
           provider_account_email: string | null;
           provider_account_id: string;
           refresh_token_enc: string;
+          refresh_token_rotation_operation_id: string | null;
           status: string;
           updated_at: string;
           user_id: string;
@@ -104,6 +105,7 @@ export type Database = {
           provider_account_email?: string | null;
           provider_account_id: string;
           refresh_token_enc: string;
+          refresh_token_rotation_operation_id?: string | null;
           status: string;
           updated_at?: string;
           user_id: string;
@@ -119,6 +121,7 @@ export type Database = {
           provider_account_email?: string | null;
           provider_account_id?: string;
           refresh_token_enc?: string;
+          refresh_token_rotation_operation_id?: string | null;
           status?: string;
           updated_at?: string;
           user_id?: string;
@@ -1690,6 +1693,17 @@ export type Database = {
           status: string;
           user_id: string;
         }[];
+      };
+      rotate_or_enqueue_calendar_refresh_token_command_v2: {
+        Args: {
+          p_connection_id: string;
+          p_expected_generation: number;
+          p_expected_refresh_token_enc: string;
+          p_new_refresh_token_enc: string;
+          p_operation_id: string;
+          p_user_id: string;
+        };
+        Returns: string;
       };
       save_calendar_connection_command_v1: {
         Args: {

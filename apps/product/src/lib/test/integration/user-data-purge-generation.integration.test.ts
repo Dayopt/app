@@ -58,8 +58,11 @@ function runOwnerSql(sql: string) {
 }
 
 async function holdCalendarTokenRotation(
+  operationId: string,
   connectionId: string,
-  refreshTokenEnc: string,
+  expectedGeneration: number,
+  expectedRefreshTokenEnc: string,
+  newRefreshTokenEnc: string,
 ): Promise<{ release: (commit?: boolean) => Promise<void> }> {
   const child = spawn(
     'psql',
@@ -69,9 +72,15 @@ async function holdCalendarTokenRotation(
       '-v',
       'ON_ERROR_STOP=1',
       '-v',
+      `operation_id=${operationId}`,
+      '-v',
       `connection_id=${connectionId}`,
       '-v',
-      `refresh_token_enc=${refreshTokenEnc}`,
+      `expected_generation=${expectedGeneration}`,
+      '-v',
+      `expected_refresh_token_enc=${expectedRefreshTokenEnc}`,
+      '-v',
+      `new_refresh_token_enc=${newRefreshTokenEnc}`,
       '-h',
       '127.0.0.1',
       '-p',
@@ -95,9 +104,19 @@ async function holdCalendarTokenRotation(
   });
   child.stdin.write(`
 BEGIN;
-UPDATE public.calendar_connections
-SET refresh_token_enc = :'refresh_token_enc'
-WHERE id = :'connection_id'::UUID;
+SELECT pg_catalog.set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+SELECT public.rotate_or_enqueue_calendar_refresh_token_command_v2(
+  :'operation_id'::UUID,
+  '${userId}'::UUID,
+  :'connection_id'::UUID,
+  :'expected_generation'::BIGINT,
+  :'expected_refresh_token_enc',
+  :'new_refresh_token_enc'
+);
 SELECT 'LOCKED';
 `);
 
@@ -105,6 +124,62 @@ SELECT 'LOCKED';
   while (!stdout.includes('LOCKED')) {
     if (child.exitCode !== null) throw new Error(`Token rotation holder exited: ${stderr}`);
     if (Date.now() >= deadline) throw new Error(`Timed out holding Calendar token row: ${stderr}`);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+
+  return {
+    release: async (commit = true) => {
+      if (child.exitCode !== null) return;
+      child.stdin.end(commit ? 'COMMIT;\n' : 'ROLLBACK;\n');
+      await once(child, 'close');
+    },
+  };
+}
+
+async function holdPurge(): Promise<{ release: (commit?: boolean) => Promise<void> }> {
+  const child = spawn(
+    'psql',
+    [
+      '-X',
+      '-qAt',
+      '-v',
+      'ON_ERROR_STOP=1',
+      '-h',
+      '127.0.0.1',
+      '-p',
+      '54322',
+      '-U',
+      'postgres',
+      '-d',
+      'postgres',
+    ],
+    { env: { ...process.env, PGPASSWORD: 'postgres' } },
+  );
+  let stdout = '';
+  let stderr = '';
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', (chunk: string) => {
+    stdout += chunk;
+  });
+  child.stderr.on('data', (chunk: string) => {
+    stderr += chunk;
+  });
+  child.stdin.write(`
+BEGIN;
+SELECT pg_catalog.set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+SELECT public.delete_all_user_data_command_v3('${userId}'::UUID);
+SELECT 'PURGED';
+`);
+
+  const deadline = Date.now() + 5_000;
+  while (!stdout.includes('PURGED')) {
+    if (child.exitCode !== null) throw new Error(`Purge holder exited: ${stderr}`);
+    if (Date.now() >= deadline) throw new Error(`Timed out holding purge transaction: ${stderr}`);
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
 
@@ -132,6 +207,21 @@ async function waitForPurgeLockWaiter(): Promise<void> {
   throw new Error('Timed out waiting for purge to lock the Calendar token row');
 }
 
+async function waitForRotationLockWaiter(): Promise<void> {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const result = runOwnerSql(`
+      SELECT pg_catalog.count(*)
+      FROM pg_catalog.pg_stat_activity
+      WHERE wait_event_type = 'Lock'
+        AND query LIKE '%rotate_or_enqueue_calendar_refresh_token_command_v2%';
+    `);
+    if (result.status === 0 && Number(result.stdout.trim()) > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error('Timed out waiting for Calendar token rotation to lock');
+}
+
 async function currentGeneration(targetUserId = userId): Promise<number> {
   const { data, error } = await admin.rpc('get_user_data_generation_v1', {
     p_user_id: targetUserId,
@@ -150,6 +240,7 @@ async function purge(targetUserId = userId): Promise<void> {
 async function saveCalendarConnection(
   expectedGeneration: number,
   targetUserId = userId,
+  refreshTokenEnc = `v1.${crypto.randomUUID()}.ciphertext`,
 ): Promise<string> {
   const { data, error } = await admin.rpc('save_calendar_connection_command_v1', {
     p_user_id: targetUserId,
@@ -158,7 +249,7 @@ async function saveCalendarConnection(
     p_provider_account_id: `provider-${crypto.randomUUID()}`,
     p_provider_account_email: 'calendar@example.com',
     p_granted_scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
-    p_refresh_token_enc: `v1.${crypto.randomUUID()}.ciphertext`,
+    p_refresh_token_enc: refreshTokenEnc,
   });
   if (error || !data) throw error ?? new Error('calendar connection was not saved');
   return data;
@@ -504,9 +595,16 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
 
   it('waits for a concurrent Calendar token rotation and captures the committed ciphertext', async () => {
     const generation = await currentGeneration();
-    const connectionId = await saveCalendarConnection(generation);
+    const originalCiphertext = `v1.original-${crypto.randomUUID()}.ciphertext`;
+    const connectionId = await saveCalendarConnection(generation, userId, originalCiphertext);
     const rotatedCiphertext = `v1.rotated-${crypto.randomUUID()}.ciphertext`;
-    const holder = await holdCalendarTokenRotation(connectionId, rotatedCiphertext);
+    const holder = await holdCalendarTokenRotation(
+      crypto.randomUUID(),
+      connectionId,
+      generation,
+      originalCiphertext,
+      rotatedCiphertext,
+    );
     const purgeRequest = Promise.resolve(
       admin.rpc('delete_all_user_data_command_v3', {
         p_user_id: userId,
@@ -534,9 +632,126 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
     }
   });
 
+  it('replays the same rotation operation without overwriting a concurrently changed token', async () => {
+    const generation = await currentGeneration();
+    const originalCiphertext = `v1.original-${crypto.randomUUID()}.ciphertext`;
+    const rotatedCiphertext = `v1.rotated-${crypto.randomUUID()}.ciphertext`;
+    const conflictingCiphertext = `v1.conflict-${crypto.randomUUID()}.ciphertext`;
+    const operationId = crypto.randomUUID();
+    const connectionId = await saveCalendarConnection(generation, userId, originalCiphertext);
+    const args = {
+      p_operation_id: operationId,
+      p_user_id: userId,
+      p_connection_id: connectionId,
+      p_expected_generation: generation,
+      p_expected_refresh_token_enc: originalCiphertext,
+      p_new_refresh_token_enc: rotatedCiphertext,
+    };
+
+    const first = await admin.rpc('rotate_or_enqueue_calendar_refresh_token_command_v2', args);
+    const replay = await admin.rpc('rotate_or_enqueue_calendar_refresh_token_command_v2', args);
+    expect(first.error).toBeNull();
+    expect(first.data).toBe('updated');
+    expect(replay.error).toBeNull();
+    expect(replay.data).toBe('updated');
+
+    const conflict = await admin.rpc('rotate_or_enqueue_calendar_refresh_token_command_v2', {
+      ...args,
+      p_operation_id: crypto.randomUUID(),
+      p_new_refresh_token_enc: conflictingCiphertext,
+    });
+    expect(conflict.error?.code).toBe('CA002');
+
+    const { data: connection, error: connectionError } = await admin
+      .from('calendar_connections')
+      .select('refresh_token_enc, refresh_token_rotation_operation_id')
+      .eq('id', connectionId)
+      .eq('user_id', userId)
+      .single();
+    expect(connectionError).toBeNull();
+    expect(connection).toEqual({
+      refresh_token_enc: rotatedCiphertext,
+      refresh_token_rotation_operation_id: operationId,
+    });
+  });
+
+  it('enqueues a token acquired while purge commits first without losing the captured old token', async () => {
+    const generation = await currentGeneration();
+    const originalCiphertext = `v1.original-${crypto.randomUUID()}.ciphertext`;
+    const rotatedCiphertext = `v1.rotated-${crypto.randomUUID()}.ciphertext`;
+    const operationId = crypto.randomUUID();
+    const connectionId = await saveCalendarConnection(generation, userId, originalCiphertext);
+    const holder = await holdPurge();
+    const rotationRequest = Promise.resolve(
+      admin.rpc('rotate_or_enqueue_calendar_refresh_token_command_v2', {
+        p_operation_id: operationId,
+        p_user_id: userId,
+        p_connection_id: connectionId,
+        p_expected_generation: generation,
+        p_expected_refresh_token_enc: originalCiphertext,
+        p_new_refresh_token_enc: rotatedCiphertext,
+      }),
+    );
+
+    try {
+      await waitForRotationLockWaiter();
+      await holder.release();
+
+      const { data, error } = await rotationRequest;
+      expect(error).toBeNull();
+      expect(data).toBe('enqueued');
+
+      const replay = await admin.rpc('rotate_or_enqueue_calendar_refresh_token_command_v2', {
+        p_operation_id: operationId,
+        p_user_id: userId,
+        p_connection_id: connectionId,
+        p_expected_generation: generation,
+        p_expected_refresh_token_enc: originalCiphertext,
+        p_new_refresh_token_enc: rotatedCiphertext,
+      });
+      expect(replay.error).toBeNull();
+      expect(replay.data).toBe('enqueued');
+
+      const reusedOperation = await admin.rpc(
+        'rotate_or_enqueue_calendar_refresh_token_command_v2',
+        {
+          p_operation_id: operationId,
+          p_user_id: userId,
+          p_connection_id: connectionId,
+          p_expected_generation: generation,
+          p_expected_refresh_token_enc: originalCiphertext,
+          p_new_refresh_token_enc: `v1.reused-${crypto.randomUUID()}.ciphertext`,
+        },
+      );
+      expect(reusedOperation.error?.code).toBe('CA004');
+
+      const { count: connectionCount } = await admin
+        .from('calendar_connections')
+        .select('id', { count: 'exact', head: true })
+        .eq('id', connectionId)
+        .eq('user_id', userId);
+      expect(connectionCount).toBe(0);
+
+      const outboxTokens = runOwnerSql(`
+        SELECT refresh_token_enc
+        FROM private.calendar_revoke_outbox
+        WHERE user_id = '${userId}'::UUID
+          AND source_connection_id = '${connectionId}'::UUID
+          AND refresh_token_enc IN ('${originalCiphertext}', '${rotatedCiphertext}')
+        ORDER BY refresh_token_enc;
+      `);
+      expect(outboxTokens.status, outboxTokens.stderr).toBe(0);
+      expect(outboxTokens.stdout.trim().split('\n').sort()).toEqual(
+        [originalCiphertext, rotatedCiphertext].sort(),
+      );
+    } finally {
+      await holder.release(false);
+    }
+  });
+
   it('keeps generation, save, and full purge RPCs unavailable to browser roles', async () => {
     const generation = await currentGeneration();
-    const [generationRead, save, fullPurge] = await Promise.all([
+    const [generationRead, save, rotate, fullPurge] = await Promise.all([
       authenticated.rpc('get_user_data_generation_v1', { p_user_id: userId }),
       authenticated.rpc('save_calendar_connection_command_v1', {
         p_user_id: userId,
@@ -547,11 +762,20 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
         p_granted_scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
         p_refresh_token_enc: 'forbidden-ciphertext',
       }),
+      authenticated.rpc('rotate_or_enqueue_calendar_refresh_token_command_v2', {
+        p_operation_id: crypto.randomUUID(),
+        p_user_id: userId,
+        p_connection_id: crypto.randomUUID(),
+        p_expected_generation: generation,
+        p_expected_refresh_token_enc: 'forbidden-old-ciphertext',
+        p_new_refresh_token_enc: 'forbidden-new-ciphertext',
+      }),
       authenticated.rpc('delete_all_user_data_command_v3', { p_user_id: userId }),
     ]);
 
     expect(generationRead.error?.code).toBe('42501');
     expect(save.error?.code).toBe('42501');
+    expect(rotate.error?.code).toBe('42501');
     expect(fullPurge.error?.code).toBe('42501');
   });
 });
