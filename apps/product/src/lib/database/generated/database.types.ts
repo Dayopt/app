@@ -80,6 +80,7 @@ export type Database = {
       calendar_connections: {
         Row: {
           created_at: string;
+          data_generation: number;
           granted_scopes: string[];
           id: string;
           last_sync_error: string | null;
@@ -94,6 +95,7 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
+          data_generation?: number;
           granted_scopes: string[];
           id?: string;
           last_sync_error?: string | null;
@@ -108,6 +110,7 @@ export type Database = {
         };
         Update: {
           created_at?: string;
+          data_generation?: number;
           granted_scopes?: string[];
           id?: string;
           last_sync_error?: string | null;
@@ -263,9 +266,12 @@ export type Database = {
         Row: {
           applied_at: string;
           client_id: string;
+          data_generation: number;
           envelope_version: number;
           operation_id: string;
           origin_connection_id: string | null;
+          purged_at: string | null;
+          purged_generation: number | null;
           request_digest: string;
           resource_deleted_at: string | null;
           resource_id: string;
@@ -277,9 +283,12 @@ export type Database = {
         Insert: {
           applied_at?: string;
           client_id: string;
+          data_generation?: number;
           envelope_version: number;
           operation_id: string;
           origin_connection_id?: string | null;
+          purged_at?: string | null;
+          purged_generation?: number | null;
           request_digest: string;
           resource_deleted_at?: string | null;
           resource_id: string;
@@ -291,9 +300,12 @@ export type Database = {
         Update: {
           applied_at?: string;
           client_id?: string;
+          data_generation?: number;
           envelope_version?: number;
           operation_id?: string;
           origin_connection_id?: string | null;
+          purged_at?: string | null;
+          purged_generation?: number | null;
           request_digest?: string;
           resource_deleted_at?: string | null;
           resource_id?: string;
@@ -1280,6 +1292,10 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: boolean;
       };
+      delete_all_user_data_command_v3: {
+        Args: { p_user_id: string };
+        Returns: boolean;
+      };
       delete_plan_command_v1: {
         Args: {
           p_expected_updated_at: string;
@@ -1405,6 +1421,10 @@ export type Database = {
           revision: string;
           timezone: string;
         }[];
+      };
+      get_user_data_generation_v1: {
+        Args: { p_user_id: string };
+        Returns: number;
       };
       get_user_timezone: { Args: { p_user_id: string }; Returns: string };
       get_vault_secret: { Args: { p_name: string }; Returns: string };
@@ -1613,6 +1633,18 @@ export type Database = {
           status: string;
           user_id: string;
         }[];
+      };
+      save_calendar_connection_command_v1: {
+        Args: {
+          p_expected_generation: number;
+          p_granted_scopes: string[];
+          p_provider: string;
+          p_provider_account_email: string;
+          p_provider_account_id: string;
+          p_refresh_token_enc: string;
+          p_user_id: string;
+        };
+        Returns: string;
       };
       set_mcp_client_write_control_v1: {
         Args: {
