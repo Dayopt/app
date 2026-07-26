@@ -214,6 +214,32 @@ describe('generateStructuredData', () => {
     });
   });
 
+  it('techArticle は前提知識が無い記事で dependencies を出さない', () => {
+    const result = generateStructuredData('techArticle', {
+      title: 'Guide',
+      description: 'Description',
+      publishedAt: '2026-01-01',
+      url: '/guide',
+    });
+
+    expect(result).not.toHaveProperty('dependencies');
+    // applicationCategory は SoftwareApplication の property なので TechArticle には出さない
+    expect(result).not.toHaveProperty('applicationCategory');
+    expect(result).toMatchObject({ proficiencyLevel: 'Beginner' });
+  });
+
+  it('techArticle の proficiencyLevel を frontmatter の難易度で上書きできる', () => {
+    expect(
+      generateStructuredData('techArticle', {
+        title: 'Guide',
+        description: 'Description',
+        publishedAt: '2026-01-01',
+        url: '/guide',
+        proficiencyLevel: 'advanced',
+      }),
+    ).toMatchObject({ proficiencyLevel: 'advanced' });
+  });
+
   it('techArticle、SoftwareApplication、breadcrumb の discriminator を維持する', () => {
     expect(
       generateStructuredData('techArticle', {
@@ -240,7 +266,6 @@ describe('generateStructuredData', () => {
       mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://dayopt.com/guide' },
       proficiencyLevel: 'Beginner',
       dependencies: ['Node.js'],
-      applicationCategory: 'DeveloperApplication',
     });
     expect(
       generateStructuredData('SoftwareApplication', {

@@ -1,12 +1,13 @@
 import { Heading, Text } from '@dayopt/components';
-import { Link } from '@dayopt/i18n/navigation';
+import { Link, redirect } from '@dayopt/i18n/navigation';
+import { StructuredData } from '@web/components/seo/StructuredData';
 import { DocArticle } from '@web/features/docs';
 import { getAllContent } from '@web/lib/mdx';
-import { generateSEOMetadata, generateStructuredData } from '@web/platform/seo/metadata';
+import { generateSEOMetadata } from '@web/platform/seo/metadata';
 import { ContentData } from '@web/types/content';
 import { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 
 interface PageParams {
   locale: string;
@@ -153,27 +154,26 @@ export default async function DocPage({ params }: DocPageProps) {
   // getting-started の overview (index.mdx) は /docs 自体に統一する。
   // /docs/getting-started として直接アクセスされた場合は重複コンテンツを避けるため寄せる。
   if (matched.frontMatter.category === 'getting-started' && matched.slug === 'getting-started') {
-    redirect('/docs');
+    redirect({ href: '/docs', locale });
   }
 
   const { previousPage, nextPage } = getAdjacentPages(allContent, slug);
 
-  // 検索エンジン・AI クローラ向けの構造化データ（正本は platform/seo/structured-data.ts）
-  const jsonLd = generateStructuredData('article', {
-    title: matched.frontMatter.title,
-    description: matched.frontMatter.description,
-    author: matched.frontMatter.author,
-    publishedAt: matched.frontMatter.publishedAt,
-    updatedAt: matched.frontMatter.updatedAt,
-    url: `/${locale}/docs/${slug}`,
-    category: matched.frontMatter.category,
-  });
-
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      {/* 検索エンジン・AI クローラ向けの構造化データ（正本は platform/seo/structured-data.ts）。
+          docs は操作手順の記事なので、汎用 Article ではなく TechArticle で出す。 */}
+      <StructuredData
+        type="techArticle"
+        data={{
+          title: matched.frontMatter.title,
+          description: matched.frontMatter.description,
+          publishedAt: matched.frontMatter.publishedAt,
+          updatedAt: matched.frontMatter.updatedAt,
+          url: `/${locale}/docs/${slug}`,
+          proficiencyLevel: matched.frontMatter.ai?.difficulty,
+          dependencies: matched.frontMatter.ai?.prerequisites,
+        }}
       />
       <DocArticle
         category={matched.frontMatter.category}

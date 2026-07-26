@@ -1,14 +1,16 @@
-import { Button, Heading, Text } from '@dayopt/components';
-import { getTranslations } from 'next-intl/server';
-import { headers } from 'next/headers';
-import Link from 'next/link';
+'use client';
 
-export default async function NotFound() {
-  // Try to get locale from headers or fallback to 'en'
-  const headersList = await headers();
-  const pathname = headersList.get('x-pathname') || '';
-  const locale = pathname.split('/')[1] || 'en';
-  const t = await getTranslations({ locale, namespace: 'errors' });
+import { Button, Heading, Text } from '@dayopt/components';
+import { Link } from '@dayopt/i18n/navigation';
+import { useTranslations } from 'next-intl';
+
+// Client Component にしている理由:
+// この boundary で next-intl の server API（getTranslations / getLocale）を使うと、
+// locale 解決のために request を読む可能性を Next が検出し、docs/[slug] 全体が
+// 動的レンダリングへ降格する（記事ページが SSG されなくなる）。
+// 文言は [locale]/layout.tsx の NextIntlClientProvider から client 側で取る。
+export default function NotFound() {
+  const t = useTranslations('errors');
 
   return (
     <div className="bg-background flex min-h-[60vh] items-center justify-center">
@@ -24,7 +26,7 @@ export default async function NotFound() {
         </Text>
 
         <Button asChild className="w-full">
-          <Link href={`/${locale}`}>{t('notFound.goHome')}</Link>
+          <Link href="/">{t('notFound.goHome')}</Link>
         </Button>
       </div>
     </div>
