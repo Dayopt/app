@@ -364,6 +364,18 @@ describe('workflow の contract', () => {
   it('base...head の diff が取れる履歴を取得する', () => {
     expect(WORKFLOW).toContain('fetch-depth: 0');
   });
+
+  it('script が読む AI_REVIEW_* を workflow が全て渡している', () => {
+    // 渡し忘れると「その env で切り替わるはずの挙動」が永久に既定のまま固定される。
+    // AI_REVIEW_ENFORCE がまさにそれで、読む側だけ足して配線を忘れると
+    // blocking へ切り替えられないことに誰も気づけない。
+    const source = readFileSync(join(process.cwd(), 'scripts/ai-review/review.ts'), 'utf8');
+    const read = [...source.matchAll(/process\.env\.(AI_REVIEW_[A-Z_]+)/g)].map((m) => m[1]);
+    expect(read.length).toBeGreaterThan(0);
+    for (const name of new Set(read)) {
+      expect(WORKFLOW).toContain(`${name}:`);
+    }
+  });
 });
 
 describe('バイト単位の切り詰め', () => {
