@@ -357,7 +357,9 @@ enabled = true
 # Auth の send_email hook から呼ばれる。ペイロードの真正性は standardwebhooks の
 # 署名検証（SEND_EMAIL_HOOK_SECRET）で担保しており、JWT 検証はその手前の入口ガード。
 verify_jwt = true
-import_map = "./functions/send-auth-email/deno.json"
+# import map は functions/ 直下の共有 deno.json（各 function ディレクトリ内には無い）。
+# path は config.toml からの相対で解決される。
+import_map = "./functions/deno.json"
 
 [analytics]
 enabled = true
