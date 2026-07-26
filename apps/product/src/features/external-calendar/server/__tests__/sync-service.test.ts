@@ -2,18 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CalendarProviderError } from '../providers/types';
 
-/**
- * sync-service のテスト。
- *
- * overview.md §13 が必須と定める regression test 2 件（dismissed 不可侵 / prune anti-join）を
- * 含む。Supabase client は table + operation ごとに返り値を差し替えられる専用 mock で組む。
- */
-
 const startSession = vi.hoisted(() => vi.fn());
 const syncCalendar = vi.hoisted(() => vi.fn());
 const decryptToken = vi.hoisted(() => vi.fn());
 const persistCalendarTokenRotation = vi.hoisted(() => vi.fn());
 const markCalendarConnectionReauth = vi.hoisted(() => vi.fn());
+const resolveGoogleCalendarProjectKey = vi.hoisted(() => vi.fn());
 const createClient = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn((error: unknown) => error));
@@ -31,6 +25,7 @@ vi.mock('@/lib/sentry', () => ({ captureUnexpectedError, captureUnexpectedDataba
 vi.mock('@/lib/logger', () => ({
   logger: { log: vi.fn(), error: vi.fn(), warn: loggerWarn, info: vi.fn(), debug: vi.fn() },
 }));
+vi.mock('../authority-config', () => ({ resolveGoogleCalendarProjectKey }));
 vi.mock('../token-crypto', () => ({ decryptToken }));
 vi.mock('../token-rotation', () => ({
   persistCalendarTokenRotation,
@@ -42,109 +37,132 @@ vi.mock('../providers/google', () => ({
 
 import { syncConnection } from '../sync-service';
 
-const CONNECTION_ID = '00000000-0000-4000-8000-0000000000c1';
+const PROJECT_KEY = '123456789012';
 const USER_ID = '00000000-0000-4000-8000-0000000000a1';
+const CONNECTION_ID = '00000000-0000-4000-8000-0000000000c1';
+const AUTHORITY_FENCE_ID = '00000000-0000-4000-8000-0000000000f1';
+const SELECTION_ID = '00000000-0000-4000-8000-0000000000d1';
 const CALENDAR_ID = 'primary';
-const RUN_ISO = '2026-07-24T00:00:00.000Z';
-const UPSERT_ON_CONFLICT = 'user_id,provider,connection_id,provider_calendar_id,provider_event_id';
+const DB_RUN_ISO = '2026-07-24T00:00:00.000Z';
 
-type QueryResult = { data: unknown; error: unknown };
+type RpcName =
+  | 'begin_calendar_sync_run_v1'
+  | 'clear_calendar_sync_cursor_command_v1'
+  | 'finish_calendar_sync_run_v1'
+  | 'persist_calendar_sync_result_command_v1';
 
-type Recorder = { table: string; chain: Array<{ method: string; args: unknown[] }> };
+type RpcResult = { data: unknown; error: unknown };
+type RpcResponse = RpcResult | Error;
 
-type DbConfig = {
-  connection?: Record<string, unknown> | null;
-  connectionError?: unknown;
-  calendars?: Array<Record<string, unknown>>;
-  pruneCandidates?: Array<{ id: string }>;
-  referencedByPlans?: Array<{ external_calendar_event_id: string | null }>;
-  referencedByRecords?: Array<{ external_calendar_event_id: string | null }>;
-  upsertError?: unknown;
-  deleteError?: unknown;
+type QueryRecorder = {
+  table: string;
+  chain: Array<{ method: string; args: unknown[] }>;
 };
 
-function setupDb(config: DbConfig) {
-  const calls: Recorder[] = [];
-  const counters = { pruneSelect: 0 };
+type DbConfig = {
+  calendars?: Array<Record<string, unknown>>;
+  calendarError?: unknown;
+  rpcResults?: Partial<Record<RpcName, RpcResponse[]>>;
+};
 
-  function resolve(recorder: Recorder): QueryResult {
-    const { table } = recorder;
-    const methods = recorder.chain.map((entry) => entry.method);
+function runRow(overrides: Record<string, unknown> = {}) {
+  return {
+    result: 'started',
+    data_generation: 3,
+    authority_fence_id: AUTHORITY_FENCE_ID,
+    authority_epoch: 2,
+    sync_sequence: 7,
+    run_started_at: DB_RUN_ISO,
+    refresh_token_enc: 'encrypted-refresh-token',
+    ...overrides,
+  };
+}
 
-    if (table === 'calendar_connections') {
-      if (methods.includes('maybeSingle')) {
-        return { data: config.connection ?? null, error: config.connectionError ?? null };
-      }
-      return { data: null, error: null };
-    }
-    if (table === 'calendar_connection_calendars') {
-      if (methods.includes('update')) return { data: null, error: null };
-      return { data: config.calendars ?? [], error: null };
-    }
-    if (table === 'external_calendar_events') {
-      if (methods.includes('upsert')) return { data: null, error: config.upsertError ?? null };
-      if (methods.includes('delete')) return { data: null, error: config.deleteError ?? null };
-      if (methods.includes('update')) return { data: null, error: null };
-      // prune candidate select. keyset ページングを 1 バッチで終わらせる。
-      const batch = counters.pruneSelect;
-      counters.pruneSelect += 1;
-      return { data: batch === 0 ? (config.pruneCandidates ?? []) : [], error: null };
-    }
-    if (table === 'plans') return { data: config.referencedByPlans ?? [], error: null };
-    if (table === 'records') return { data: config.referencedByRecords ?? [], error: null };
-    return { data: [], error: null };
+function oneCalendar(syncToken: string | null = 'existing-token') {
+  return [
+    {
+      id: SELECTION_ID,
+      provider_calendar_id: CALENDAR_ID,
+      sync_token: syncToken,
+    },
+  ];
+}
+
+function defaultRpcResult(name: RpcName): RpcResult {
+  if (name === 'begin_calendar_sync_run_v1') return { data: [runRow()], error: null };
+  if (name === 'clear_calendar_sync_cursor_command_v1') {
+    return { data: 'cleared', error: null };
   }
+  if (name === 'persist_calendar_sync_result_command_v1') {
+    return { data: 'persisted', error: null };
+  }
+  return { data: 'finished', error: null };
+}
+
+function setupDb(config: DbConfig = {}) {
+  const queryCalls: QueryRecorder[] = [];
+  const counters = new Map<RpcName, number>();
+
+  const rpc = vi.fn((name: RpcName, _args: unknown) => {
+    const responses = config.rpcResults?.[name] ?? [defaultRpcResult(name)];
+    const index = counters.get(name) ?? 0;
+    counters.set(name, index + 1);
+    const response = responses[Math.min(index, responses.length - 1)]!;
+    return {
+      abortSignal: vi.fn(() =>
+        response instanceof Error ? Promise.reject(response) : Promise.resolve(response),
+      ),
+    };
+  });
 
   const from = vi.fn((table: string) => {
-    const recorder: Recorder = { table, chain: [] };
-    calls.push(recorder);
-
+    const recorder: QueryRecorder = { table, chain: [] };
+    queryCalls.push(recorder);
     const proxy: unknown = new Proxy(
       {},
       {
-        get(_target, prop: string) {
-          if (prop === 'then') {
+        get(_target, property: string) {
+          if (property === 'then') {
             return (
-              onFulfilled: (value: QueryResult) => unknown,
+              onFulfilled: (value: RpcResult) => unknown,
               onRejected?: (reason: unknown) => unknown,
-            ) => Promise.resolve(resolve(recorder)).then(onFulfilled, onRejected);
+            ) =>
+              Promise.resolve({
+                data: config.calendars ?? oneCalendar(),
+                error: config.calendarError ?? null,
+              }).then(onFulfilled, onRejected);
           }
           return (...args: unknown[]) => {
-            recorder.chain.push({ method: prop, args });
-            if (prop === 'maybeSingle' || prop === 'single') {
-              return Promise.resolve(resolve(recorder));
-            }
+            recorder.chain.push({ method: property, args });
             return proxy;
           };
         },
       },
     );
-
     return proxy;
   });
 
-  createClient.mockReturnValue({ from });
-  return { calls };
+  createClient.mockReturnValue({ from, rpc });
+  return { from, queryCalls, rpc };
 }
 
-function recordersFor(calls: Recorder[], table: string): Recorder[] {
-  return calls.filter((recorder) => recorder.table === table);
-}
-
-function findCall(calls: Recorder[], table: string, method: string): Recorder | undefined {
-  return recordersFor(calls, table).find((recorder) =>
-    recorder.chain.some((entry) => entry.method === method),
-  );
-}
-
-function argsOf(recorder: Recorder, method: string): unknown[] {
-  const entry = recorder.chain.find((item) => item.method === method);
-  if (!entry) throw new Error(`method ${method} was not called`);
-  return entry.args;
+function rpcCalls(rpc: ReturnType<typeof setupDb>['rpc'], name: RpcName) {
+  return rpc.mock.calls.filter(([calledName]) => calledName === name);
 }
 
 function session() {
   return { accessToken: 'access-token', rotatedRefreshToken: null };
+}
+
+function event(overrides: Record<string, unknown> = {}) {
+  return {
+    providerEventId: 'event-1',
+    title: 'Standup',
+    description: 'daily',
+    startAt: '2026-07-24T09:00:00.000Z',
+    endAt: '2026-07-24T09:30:00.000Z',
+    ...overrides,
+  };
 }
 
 function syncResult(overrides: Record<string, unknown> = {}) {
@@ -159,243 +177,172 @@ function syncResult(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function event(overrides: Record<string, unknown> = {}) {
+function expectedFenceArgs(syncSequence = 7) {
   return {
-    providerEventId: 'ev-1',
-    title: 'Standup',
-    description: 'daily',
-    startAt: '2026-07-24T09:00:00.000Z',
-    endAt: '2026-07-24T09:30:00.000Z',
-    ...overrides,
+    p_project_key: PROJECT_KEY,
+    p_user_id: USER_ID,
+    p_connection_id: CONNECTION_ID,
+    p_expected_generation: 3,
+    p_expected_authority_fence_id: AUTHORITY_FENCE_ID,
+    p_expected_authority_epoch: 2,
+    p_expected_sync_sequence: syncSequence,
   };
-}
-
-function activeConnection() {
-  return {
-    data_generation: 3,
-    id: CONNECTION_ID,
-    user_id: USER_ID,
-    status: 'active',
-    refresh_token_enc: 'enc',
-  };
-}
-
-function oneCalendar(syncToken: string | null = 'existing-token') {
-  return [{ provider_calendar_id: CALENDAR_ID, calendar_name: 'Work', sync_token: syncToken }];
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
-  vi.setSystemTime(new Date(RUN_ISO));
-  decryptToken.mockReturnValue('refresh-token');
+  vi.setSystemTime(new Date('2026-07-25T12:00:00.000Z'));
+  resolveGoogleCalendarProjectKey.mockReturnValue(PROJECT_KEY);
+  decryptToken.mockReturnValue('plain-refresh-token');
+  startSession.mockResolvedValue(session());
+  syncCalendar.mockResolvedValue(syncResult());
   persistCalendarTokenRotation.mockResolvedValue({
     outcome: 'updated',
     markReauthIfCurrent: null,
   });
   markCalendarConnectionReauth.mockResolvedValue('marked');
-  startSession.mockResolvedValue(session());
 });
 
 afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('syncConnection — active イベントの upsert', () => {
-  // regression（overview.md §13）: 再同期で dismissed を復活させない
-  it('upsert payload に dismissed_at を含めず、全行のキー集合が一致する', async () => {
-    const { calls } = setupDb({
-      connection: activeConnection(),
-      calendars: oneCalendar(),
-    });
+describe('syncConnection — DB-issued run identity', () => {
+  it('beginのidentityとDB時刻だけをprovider・persist・finishへ渡す', async () => {
+    const { rpc } = setupDb();
     syncCalendar.mockResolvedValue(
       syncResult({
-        events: [
-          event({ providerEventId: 'ev-1' }),
-          event({ providerEventId: 'ev-2', description: null }),
-        ],
+        events: [event()],
+        cancelledEventIds: ['cancelled-1'],
       }),
     );
 
-    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+    await expect(syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID })).resolves.toEqual(
+      {
+        outcome: 'synced',
+        calendarsSynced: 1,
+        calendarsFailed: 0,
+      },
+    );
 
-    const upsert = findCall(calls, 'external_calendar_events', 'upsert');
-    expect(upsert).toBeDefined();
-    const [rows, options] = argsOf(upsert!, 'upsert') as [
-      Array<Record<string, unknown>>,
-      { onConflict: string },
-    ];
-
-    expect(options.onConflict).toBe(UPSERT_ON_CONFLICT);
-    for (const row of rows) {
-      expect(Object.prototype.hasOwnProperty.call(row, 'dismissed_at')).toBe(false);
-    }
-    // 全行のキー集合が同一でないと、PostgREST の和集合 columns で欠けた行の既存値が NULL 化される
-    const keySets = rows.map((row) => Object.keys(row).sort().join(','));
-    expect(new Set(keySets).size).toBe(1);
-    // last_synced_at は run 開始時刻の単一値
-    for (const row of rows) expect(row.last_synced_at).toBe(RUN_ISO);
+    expect(rpc).toHaveBeenCalledWith('begin_calendar_sync_run_v1', {
+      p_project_key: PROJECT_KEY,
+      p_user_id: USER_ID,
+      p_connection_id: CONNECTION_ID,
+    });
+    expect(rpc.mock.invocationCallOrder[0]).toBeLessThan(decryptToken.mock.invocationCallOrder[0]!);
+    expect(decryptToken).toHaveBeenCalledWith('encrypted-refresh-token', expect.any(String));
+    expect(syncCalendar).toHaveBeenCalledWith(
+      session(),
+      expect.objectContaining({
+        calendarId: CALENDAR_ID,
+        cursor: 'existing-token',
+        window: {
+          timeMin: '2026-04-25T00:00:00.000Z',
+          timeMax: '2026-10-22T00:00:00.000Z',
+        },
+      }),
+    );
+    expect(rpc).toHaveBeenCalledWith('persist_calendar_sync_result_command_v1', {
+      ...expectedFenceArgs(),
+      p_calendar_selection_id: SELECTION_ID,
+      p_provider_calendar_id: CALENDAR_ID,
+      p_run_started_at: DB_RUN_ISO,
+      p_events: [event()],
+      p_tombstone_event_ids: ['cancelled-1'],
+      p_used_full_sync: false,
+      p_next_cursor: 'next-sync-token',
+    });
+    expect(rpc).toHaveBeenCalledWith('finish_calendar_sync_run_v1', {
+      ...expectedFenceArgs(),
+      p_run_started_at: DB_RUN_ISO,
+      p_last_sync_error: null,
+      p_prune_window: true,
+      p_not_before: '2026-04-25T00:00:00.000Z',
+      p_not_after: '2026-10-22T00:00:00.000Z',
+    });
   });
 
-  it('connection_id と user_id を全行に載せる（複合 FK）', async () => {
-    const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar() });
-    syncCalendar.mockResolvedValue(syncResult({ events: [event()] }));
+  it('table accessはselection readだけでdirect mutationを発行しない', async () => {
+    const { from, queryCalls } = setupDb();
 
     await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
 
-    const upsert = findCall(calls, 'external_calendar_events', 'upsert')!;
-    const [rows] = argsOf(upsert, 'upsert') as [Array<Record<string, unknown>>];
-    expect(rows[0]).toMatchObject({
-      connection_id: CONNECTION_ID,
-      user_id: USER_ID,
-      provider: 'google',
+    expect(from).toHaveBeenCalledTimes(1);
+    expect(from).toHaveBeenCalledWith('calendar_connection_calendars');
+    expect(queryCalls[0]?.chain.map(({ method }) => method)).toEqual(['select', 'eq', 'eq']);
+    expect(
+      queryCalls.some((call) =>
+        call.chain.some(({ method }) => ['delete', 'insert', 'update', 'upsert'].includes(method)),
+      ),
+    ).toBe(false);
+  });
+
+  it.each([
+    ['missing', 'not_configured'],
+    ['reauth_required', 'skipped_reauth_required'],
+    ['superseded', 'superseded'],
+  ] as const)('begin結果%sではproviderを呼ばず%sへ写像する', async (result, expected) => {
+    setupDb({
+      rpcResults: {
+        begin_calendar_sync_run_v1: [{ data: [runRow({ result })], error: null }],
+      },
+    });
+
+    const actual = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(actual.outcome).toBe(expected);
+    expect(decryptToken).not.toHaveBeenCalled();
+    expect(startSession).not.toHaveBeenCalled();
+  });
+
+  it('begin response欠落後は返却できた最新sequenceだけでproviderを一度実行する', async () => {
+    const { rpc } = setupDb({
+      rpcResults: {
+        begin_calendar_sync_run_v1: [
+          new Error('response lost'),
+          { data: [runRow({ sync_sequence: 8 })], error: null },
+        ],
+      },
+    });
+
+    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(rpcCalls(rpc, 'begin_calendar_sync_run_v1')).toHaveLength(2);
+    expect(startSession).toHaveBeenCalledTimes(1);
+    expect(syncCalendar).toHaveBeenCalledTimes(1);
+    expect(rpcCalls(rpc, 'persist_calendar_sync_result_command_v1')[0]?.[1]).toMatchObject({
+      p_expected_sync_sequence: 8,
     });
   });
 });
 
-describe('syncConnection — prune 委譲', () => {
-  // anti-join の詳細な regression は event-pruning.test.ts が正本。ここでは sync が
-  // window scope で prune を呼び出す配線だけを確認する（未参照行が消えること）。
-  it('window 境界の candidate select を発行し、未参照行を delete する', async () => {
-    const { calls } = setupDb({
-      connection: activeConnection(),
-      calendars: oneCalendar(),
-      pruneCandidates: [{ id: 'ev-1' }, { id: 'ev-2' }],
-      referencedByPlans: [{ external_calendar_event_id: 'ev-1' }],
+describe('syncConnection — failure publication', () => {
+  it('復号失敗はproviderを呼ばずfenced finishへ安定コードを保存する', async () => {
+    const { rpc } = setupDb();
+    decryptToken.mockImplementation(() => {
+      throw new Error('secret key detail');
     });
-    syncCalendar.mockResolvedValue(syncResult());
 
-    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
 
-    // event-pruning の window scope は end_at/start_at の or フィルタで候補を引く
-    const candidateSelect = recordersFor(calls, 'external_calendar_events').find((recorder) =>
-      recorder.chain.some((entry) => entry.method === 'or'),
-    );
-    expect(candidateSelect).toBeDefined();
-
-    const del = findCall(calls, 'external_calendar_events', 'delete');
-    expect(del).toBeDefined();
-    expect(argsOf(del!, 'in')[1]).toEqual(['ev-2']);
-  });
-});
-
-describe('syncConnection — tombstone', () => {
-  it('cancelled / skipped id は UPDATE で cancelled 化し、upsert しない', async () => {
-    const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar() });
-    syncCalendar.mockResolvedValue(
-      syncResult({ cancelledEventIds: ['c1'], skippedEventIds: ['s1'] }),
-    );
-
-    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
-
-    // events が空なので upsert は発行されない（未知 id で行を作らない）
-    expect(findCall(calls, 'external_calendar_events', 'upsert')).toBeUndefined();
-
-    const tombstone = recordersFor(calls, 'external_calendar_events').find((recorder) =>
-      recorder.chain.some(
-        (entry) => entry.method === 'in' && entry.args[0] === 'provider_event_id',
-      ),
-    );
-    expect(tombstone).toBeDefined();
-    const inArgs = argsOf(tombstone!, 'in');
-    expect(inArgs[1]).toEqual(['c1', 's1']);
-    const updateArgs = argsOf(tombstone!, 'update')[0] as Record<string, unknown>;
-    expect(updateArgs).toMatchObject({ status: 'cancelled', last_synced_at: RUN_ISO });
-  });
-});
-
-describe('syncConnection — 410 と sweep', () => {
-  it('410 で sync_token を NULL 化し、同 run 内で full sync し直し、sweep する', async () => {
-    const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar('stale') });
-    syncCalendar
-      .mockResolvedValueOnce(syncResult({ cursorInvalid: true, usedFullSync: false }))
-      .mockResolvedValueOnce(
-        syncResult({ events: [event()], usedFullSync: true, nextCursor: 'fresh-token' }),
-      );
-
-    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
-
-    // 2 回目は cursor null（full sync）
-    expect(syncCalendar).toHaveBeenCalledTimes(2);
-    expect(syncCalendar.mock.calls[1]?.[1]).toMatchObject({ cursor: null });
-
-    // sync_token を一度 NULL 化している
-    const clearedToken = recordersFor(calls, 'calendar_connection_calendars').some((recorder) =>
-      recorder.chain.some(
-        (entry) =>
-          entry.method === 'update' &&
-          (entry.args[0] as Record<string, unknown>).sync_token === null,
-      ),
-    );
-    expect(clearedToken).toBe(true);
-
-    // full sync 完走なので sweep（lt + neq）が走る
-    const sweep = recordersFor(calls, 'external_calendar_events').find((recorder) =>
-      recorder.chain.some((entry) => entry.method === 'lt'),
-    );
-    expect(sweep).toBeDefined();
-    expect(sweep!.chain.some((entry) => entry.method === 'neq')).toBe(true);
-    const sweepLt = argsOf(sweep!, 'lt');
-    expect(sweepLt).toEqual(['last_synced_at', RUN_ISO]);
+    expect(result.outcome).toBe('encryption_key_invalid');
+    expect(startSession).not.toHaveBeenCalled();
+    expect(rpcCalls(rpc, 'persist_calendar_sync_result_command_v1')).toHaveLength(0);
+    expect(rpc).toHaveBeenCalledWith('finish_calendar_sync_run_v1', {
+      ...expectedFenceArgs(),
+      p_run_started_at: DB_RUN_ISO,
+      p_last_sync_error: 'encryption_key_invalid',
+      p_prune_window: false,
+      p_not_before: null,
+      p_not_after: null,
+    });
+    expect(JSON.stringify(captureUnexpectedError.mock.calls)).not.toContain('secret key detail');
   });
 
-  it('full sync が途中で打ち切られた（nextCursor=null）ら sweep も token 保存もしない', async () => {
-    const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar(null) });
-    syncCalendar.mockResolvedValue(
-      syncResult({ events: [event()], usedFullSync: true, nextCursor: null }),
-    );
-
-    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
-
-    // upsert は走る
-    expect(findCall(calls, 'external_calendar_events', 'upsert')).toBeDefined();
-    // sweep は走らない
-    const sweep = recordersFor(calls, 'external_calendar_events').find((recorder) =>
-      recorder.chain.some((entry) => entry.method === 'lt'),
-    );
-    expect(sweep).toBeUndefined();
-    // sync_token 保存も走らない
-    const savedToken = recordersFor(calls, 'calendar_connection_calendars').some((recorder) =>
-      recorder.chain.some(
-        (entry) =>
-          entry.method === 'update' &&
-          typeof (entry.args[0] as Record<string, unknown>).sync_token === 'string',
-      ),
-    );
-    expect(savedToken).toBe(false);
-  });
-
-  it('全ページ完走時のみ sync_token を保存する', async () => {
-    const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar('old') });
-    syncCalendar.mockResolvedValue(syncResult({ events: [event()], nextCursor: 'brand-new' }));
-
-    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
-
-    const saved = recordersFor(calls, 'calendar_connection_calendars').find((recorder) =>
-      recorder.chain.some(
-        (entry) =>
-          entry.method === 'update' &&
-          (entry.args[0] as Record<string, unknown>).sync_token === 'brand-new',
-      ),
-    );
-    expect(saved).toBeDefined();
-  });
-});
-
-describe('syncConnection — forceFullSync', () => {
-  it('sync_token があっても cursor null で呼ぶ', async () => {
-    setupDb({ connection: activeConnection(), calendars: oneCalendar('has-token') });
-    syncCalendar.mockResolvedValue(syncResult({ usedFullSync: true, nextCursor: 'tok' }));
-
-    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID, forceFullSync: true });
-
-    expect(syncCalendar.mock.calls[0]?.[1]).toMatchObject({ cursor: null });
-  });
-});
-
-describe('syncConnection — 認可と鍵', () => {
-  it('refresh の invalid_grant で観測authorityを reauth_required にする', async () => {
-    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+  it('session開始のinvalid_grantは観測したrun authorityだけをreauthへ進める', async () => {
+    setupDb();
     startSession.mockRejectedValue(
       new CalendarProviderError('revoked', 'reauth_required', 'invalid_grant', 400),
     );
@@ -406,119 +353,235 @@ describe('syncConnection — 認可と鍵', () => {
     expect(markCalendarConnectionReauth).toHaveBeenCalledWith({
       userId: USER_ID,
       connectionId: CONNECTION_ID,
+      expectedAuthorityFenceId: AUTHORITY_FENCE_ID,
+      expectedAuthorityEpoch: 2,
       expectedGeneration: 3,
-      expectedRefreshTokenEnc: 'enc',
-      lastSyncedAt: RUN_ISO,
+      expectedRefreshTokenEnc: 'encrypted-refresh-token',
+      lastSyncedAt: DB_RUN_ISO,
     });
-    // カレンダー同期は始めない
     expect(syncCalendar).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['missing', 'not_configured'],
-    ['superseded', 'partial_failure'],
-  ] as const)(
-    'invalid_grantのreauth結果が%sなら%sへ写像する',
-    async (reauthOutcome, expectedOutcome) => {
-      setupDb({ connection: activeConnection(), calendars: oneCalendar() });
-      startSession.mockRejectedValue(
-        new CalendarProviderError('revoked', 'reauth_required', 'invalid_grant', 400),
-      );
-      markCalendarConnectionReauth.mockResolvedValue(reauthOutcome);
+  it('provider開始失敗はwindow pruneをせず安定コードだけをfinishする', async () => {
+    const { rpc } = setupDb();
+    startSession.mockRejectedValue(new CalendarProviderError('quota', 'rate_limited'));
 
-      const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
 
-      expect(result.outcome).toBe(expectedOutcome);
-      expect(syncCalendar).not.toHaveBeenCalled();
-    },
-  );
-
-  it('invalid_grantのreauth結果が不明ならthrowしてretryへ委ねる', async () => {
-    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
-    startSession.mockRejectedValue(
-      new CalendarProviderError('revoked', 'reauth_required', 'invalid_grant', 400),
-    );
-    markCalendarConnectionReauth.mockResolvedValue('unresolved');
-
-    await expect(
-      syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID }),
-    ).rejects.toMatchObject({ code: 'SYNC_FAILED' });
-    expect(syncCalendar).not.toHaveBeenCalled();
-  });
-
-  it('復号失敗は status を変えず encryption_key_invalid を記録する', async () => {
-    const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar() });
-    decryptToken.mockImplementation(() => {
-      throw new Error('bad key');
+    expect(result.outcome).toBe('partial_failure');
+    expect(rpcCalls(rpc, 'finish_calendar_sync_run_v1')[0]?.[1]).toMatchObject({
+      p_last_sync_error: 'rate_limited',
+      p_prune_window: false,
+      p_not_before: null,
+      p_not_after: null,
     });
-
-    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
-
-    expect(result.outcome).toBe('encryption_key_invalid');
-    const update = findCall(calls, 'calendar_connections', 'update')!;
-    const patch = argsOf(update, 'update')[0] as Record<string, unknown>;
-    expect(patch.last_sync_error).toBe('encryption_key_invalid');
-    // 鍵の設定ミスで全ユーザーを再同意に追い込まない
-    expect(patch.status).toBeUndefined();
   });
 
-  it('reauth_required の接続は skip する', async () => {
-    setupDb({
-      connection: { ...activeConnection(), status: 'reauth_required' },
-      calendars: oneCalendar(),
+  it('個別calendar失敗はpartial_failureをpublishし他calendarを継続する', async () => {
+    const secondSelectionId = '00000000-0000-4000-8000-0000000000d2';
+    const { rpc } = setupDb({
+      calendars: [
+        ...oneCalendar(),
+        { id: secondSelectionId, provider_calendar_id: 'secondary', sync_token: null },
+      ],
     });
+    syncCalendar
+      .mockRejectedValueOnce(new CalendarProviderError('temporary', 'transient'))
+      .mockResolvedValueOnce(syncResult());
 
     const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
 
-    expect(result.outcome).toBe('skipped_reauth_required');
-    expect(startSession).not.toHaveBeenCalled();
-  });
-
-  it('接続が存在しなければ not_configured', async () => {
-    setupDb({ connection: null });
-
-    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
-
-    expect(result.outcome).toBe('not_configured');
-  });
-
-  it('connection をロードできない DB 障害は throw する', async () => {
-    setupDb({ connectionError: { code: '08006', message: 'connection refused' } });
-
-    await expect(
-      syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID }),
-    ).rejects.toMatchObject({
-      code: 'SYNC_FAILED',
+    expect(result).toEqual({
+      outcome: 'partial_failure',
+      calendarsSynced: 1,
+      calendarsFailed: 1,
+    });
+    expect(syncCalendar).toHaveBeenCalledTimes(2);
+    expect(rpcCalls(rpc, 'persist_calendar_sync_result_command_v1')).toHaveLength(1);
+    expect(rpcCalls(rpc, 'finish_calendar_sync_run_v1')[0]?.[1]).toMatchObject({
+      p_last_sync_error: 'partial_failure',
+      p_prune_window: true,
     });
   });
 });
 
-describe('syncConnection — token rotation', () => {
-  it('rotation された refresh token をgeneration-bound RPCで保存する', async () => {
-    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
-    startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
-    syncCalendar.mockResolvedValue(syncResult());
+describe('syncConnection — cursorとstale writer', () => {
+  it('410ではexact cursorをclearできた場合だけ同じrunでfull retryする', async () => {
+    const { rpc } = setupDb();
+    syncCalendar
+      .mockResolvedValueOnce(syncResult({ cursorInvalid: true }))
+      .mockResolvedValueOnce(
+        syncResult({ events: [event()], usedFullSync: true, nextCursor: 'fresh-token' }),
+      );
 
     await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
 
+    expect(rpc).toHaveBeenCalledWith('clear_calendar_sync_cursor_command_v1', {
+      ...expectedFenceArgs(),
+      p_calendar_selection_id: SELECTION_ID,
+      p_provider_calendar_id: CALENDAR_ID,
+      p_expected_sync_token: 'existing-token',
+    });
+    expect(syncCalendar).toHaveBeenCalledTimes(2);
+    expect(syncCalendar.mock.calls[1]?.[1]).toMatchObject({ cursor: null });
+    expect(rpcCalls(rpc, 'persist_calendar_sync_result_command_v1')[0]?.[1]).toMatchObject({
+      p_used_full_sync: true,
+      p_next_cursor: 'fresh-token',
+    });
+  });
+
+  it('cursor clearがresponse欠落後supersededならproviderを再実行しない', async () => {
+    const { rpc } = setupDb({
+      rpcResults: {
+        clear_calendar_sync_cursor_command_v1: [
+          new Error('response lost'),
+          { data: 'superseded', error: null },
+        ],
+      },
+    });
+    syncCalendar.mockResolvedValue(syncResult({ cursorInvalid: true }));
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('superseded');
+    expect(rpcCalls(rpc, 'clear_calendar_sync_cursor_command_v1')).toHaveLength(2);
+    expect(syncCalendar).toHaveBeenCalledTimes(1);
+    expect(rpcCalls(rpc, 'persist_calendar_sync_result_command_v1')).toHaveLength(0);
+    expect(rpcCalls(rpc, 'finish_calendar_sync_run_v1')).toHaveLength(0);
+  });
+
+  it('full retryでもcursor invalidなら空結果をpublishせずpartial failureにする', async () => {
+    const { rpc } = setupDb();
+    syncCalendar.mockResolvedValue(syncResult({ cursorInvalid: true }));
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('partial_failure');
+    expect(syncCalendar).toHaveBeenCalledTimes(2);
+    expect(rpcCalls(rpc, 'persist_calendar_sync_result_command_v1')).toHaveLength(0);
+    expect(rpcCalls(rpc, 'finish_calendar_sync_run_v1')[0]?.[1]).toMatchObject({
+      p_last_sync_error: 'partial_failure',
+    });
+  });
+
+  it('persistがsupersededならstatusをpublishせず停止する', async () => {
+    const { rpc } = setupDb({
+      rpcResults: {
+        persist_calendar_sync_result_command_v1: [{ data: 'superseded', error: null }],
+      },
+    });
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('superseded');
+    expect(rpcCalls(rpc, 'finish_calendar_sync_run_v1')).toHaveLength(0);
+  });
+
+  it('persist response欠落後はproviderを再実行せず同じresultだけを再送する', async () => {
+    const { rpc } = setupDb({
+      rpcResults: {
+        persist_calendar_sync_result_command_v1: [
+          new Error('response lost after commit'),
+          { data: 'persisted', error: null },
+        ],
+      },
+    });
+
+    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(syncCalendar).toHaveBeenCalledTimes(1);
+    const persistCalls = rpcCalls(rpc, 'persist_calendar_sync_result_command_v1');
+    expect(persistCalls).toHaveLength(2);
+    expect(persistCalls[0]).toEqual(persistCalls[1]);
+  });
+
+  it('finish response欠落後は同じcompletionだけを再送する', async () => {
+    const { rpc } = setupDb({
+      rpcResults: {
+        finish_calendar_sync_run_v1: [
+          new Error('response lost after commit'),
+          { data: 'finished', error: null },
+        ],
+      },
+    });
+
+    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    const finishCalls = rpcCalls(rpc, 'finish_calendar_sync_run_v1');
+    expect(finishCalls).toHaveLength(2);
+    expect(finishCalls[0]).toEqual(finishCalls[1]);
+    expect(syncCalendar).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('syncConnection — payload disciplineとrotation', () => {
+  it('active eventを優先しtombstoneをdedupeして単一RPCへ渡す', async () => {
+    const { rpc } = setupDb();
+    syncCalendar.mockResolvedValue(
+      syncResult({
+        events: [event(), event({ title: 'latest' })],
+        cancelledEventIds: ['event-1', 'cancelled-1', 'cancelled-1'],
+        skippedEventIds: ['skipped-1'],
+      }),
+    );
+
+    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(rpcCalls(rpc, 'persist_calendar_sync_result_command_v1')[0]?.[1]).toMatchObject({
+      p_events: [event({ title: 'latest' })],
+      p_tombstone_event_ids: ['cancelled-1', 'skipped-1'],
+    });
+  });
+
+  it('atomic上限を超えるresultはdirect writeへfallbackせずpartial failureにする', async () => {
+    const { rpc } = setupDb();
+    syncCalendar.mockResolvedValue(
+      syncResult({
+        events: Array.from({ length: 10_001 }, (_, index) =>
+          event({ providerEventId: `event-${index}` }),
+        ),
+      }),
+    );
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('partial_failure');
+    expect(rpcCalls(rpc, 'persist_calendar_sync_result_command_v1')).toHaveLength(0);
+    expect(rpcCalls(rpc, 'finish_calendar_sync_run_v1')[0]?.[1]).toMatchObject({
+      p_last_sync_error: 'partial_failure',
+    });
+  });
+
+  it('rotated tokenを同じrun authorityへ束縛し、supersededならprovider readを止める', async () => {
+    setupDb();
+    startSession.mockResolvedValue({ accessToken: 'access', rotatedRefreshToken: 'rotated' });
+    persistCalendarTokenRotation.mockResolvedValue({
+      outcome: 'superseded',
+      markReauthIfCurrent: null,
+    });
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('superseded');
     expect(persistCalendarTokenRotation).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: USER_ID,
         connectionId: CONNECTION_ID,
+        expectedAuthorityFenceId: AUTHORITY_FENCE_ID,
+        expectedAuthorityEpoch: 2,
         expectedGeneration: 3,
-        expectedRefreshTokenEnc: 'enc',
+        expectedRefreshTokenEnc: 'encrypted-refresh-token',
         rotatedRefreshToken: 'rotated',
-        provider: expect.any(Object),
-        lastSyncedAt: RUN_ISO,
+        lastSyncedAt: DB_RUN_ISO,
       }),
     );
-    expect(syncCalendar).toHaveBeenCalled();
+    expect(syncCalendar).not.toHaveBeenCalled();
   });
 
-  it('rotation更新後の同run 401を同じ新authorityの証明で再認証へ収束する', async () => {
-    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+  it('rotation後のcalendar 401は新authority closureだけをreauthへ進める', async () => {
+    setupDb();
     const markRotatedAuthority = vi.fn().mockResolvedValue('marked');
-    startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
+    startSession.mockResolvedValue({ accessToken: 'access', rotatedRefreshToken: 'rotated' });
     persistCalendarTokenRotation.mockResolvedValue({
       outcome: 'updated',
       markReauthIfCurrent: markRotatedAuthority,
@@ -529,87 +592,30 @@ describe('syncConnection — token rotation', () => {
 
     const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
 
-    expect(result).toEqual({
-      outcome: 'reauth_required',
-      calendarsSynced: 0,
-      calendarsFailed: 0,
-    });
+    expect(result.outcome).toBe('reauth_required');
     expect(markRotatedAuthority).toHaveBeenCalledTimes(1);
     expect(markCalendarConnectionReauth).not.toHaveBeenCalled();
   });
 
-  it('purgeが先行してtokenをoutboxへ退避したら後続同期を止める', async () => {
-    const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar() });
-    startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
-    persistCalendarTokenRotation.mockResolvedValue({
-      outcome: 'enqueued',
-      markReauthIfCurrent: null,
-    });
-
-    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
-
-    expect(result).toEqual({
-      outcome: 'not_configured',
-      calendarsSynced: 0,
-      calendarsFailed: 0,
-    });
-    expect(syncCalendar).not.toHaveBeenCalled();
-    expect(recordersFor(calls, 'calendar_connection_calendars')).toHaveLength(0);
-    expect(recordersFor(calls, 'external_calendar_events')).toHaveLength(0);
-    const statusWrite = recordersFor(calls, 'calendar_connections').find((recorder) =>
-      recorder.chain.some((entry) => entry.method === 'update'),
-    );
-    expect(statusWrite).toBeUndefined();
-  });
-
-  it.each([
-    ['reauth_required', 'reauth_required'],
-    ['missing', 'not_configured'],
-    ['superseded', 'partial_failure'],
-  ] as const)(
-    'token rotation結果が%sなら%sで後続同期を止める',
-    async (outcome, expectedOutcome) => {
-      setupDb({
-        connection: activeConnection(),
-        calendars: oneCalendar(),
-      });
-      startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
-      persistCalendarTokenRotation.mockResolvedValue({
-        outcome,
-        markReauthIfCurrent: null,
-      });
-
-      const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
-
-      expect(result.outcome).toBe(expectedOutcome);
-      expect(syncCalendar).not.toHaveBeenCalled();
-    },
-  );
-
-  it('token rotation結果を確定できなければ後続同期を止めてthrowする', async () => {
-    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
-    startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
-    persistCalendarTokenRotation.mockResolvedValue({
-      outcome: 'unresolved',
-      markReauthIfCurrent: null,
-    });
-
-    await expect(
-      syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID }),
-    ).rejects.toMatchObject({ code: 'SYNC_FAILED' });
-    expect(syncCalendar).not.toHaveBeenCalled();
-  });
-});
-
-describe('syncConnection — 情報漏洩', () => {
-  it('refresh token をログに出さない', async () => {
-    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+  it('refresh tokenやprovider error detailをログへ出さない', async () => {
+    setupDb();
     decryptToken.mockReturnValue('1//super-secret-refresh');
-    startSession.mockRejectedValue(new CalendarProviderError('boom', 'transient'));
-    syncCalendar.mockResolvedValue(syncResult());
+    startSession.mockRejectedValue(
+      new CalendarProviderError('provider-secret-detail', 'transient'),
+    );
 
     await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
 
-    expect(JSON.stringify(loggerWarn.mock.calls)).not.toContain('super-secret-refresh');
+    const logged = JSON.stringify([
+      loggerWarn.mock.calls,
+      captureUnexpectedError.mock.calls,
+      captureUnexpectedDatabaseError.mock.calls,
+    ]);
+    expect(logged).not.toContain('super-secret-refresh');
+    expect(logged).not.toContain('provider-secret-detail');
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'calendar provider operation failed' }),
+      expect.objectContaining({ operation: 'start_session' }),
+    );
   });
 });

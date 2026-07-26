@@ -23,12 +23,16 @@ DECLARE
   v_selection_id UUID;
   v_readded_selection_id UUID;
   v_event_id UUID;
+  v_plan_event_id UUID;
+  v_record_event_id UUID;
+  v_unreferenced_event_id UUID;
   v_run_a RECORD;
   v_run_b RECORD;
   v_run_c RECORD;
   v_run_d RECORD;
   v_run_e RECORD;
   v_run_f RECORD;
+  v_run_g RECORD;
   v_result TEXT;
 BEGIN
   IF NOT EXISTS (
@@ -393,6 +397,164 @@ BEGIN
     NULL
   ) <> 'superseded' THEN
     RAISE EXCEPTION 'older 410 fallback could mutate a newer cursor';
+  END IF;
+
+  SELECT *
+  INTO v_run_g
+  FROM public.begin_calendar_sync_run_v1(
+    v_project_key,
+    v_user_id,
+    v_connection_id
+  );
+
+  INSERT INTO public.external_calendar_events (
+    user_id,
+    connection_id,
+    provider,
+    provider_calendar_id,
+    provider_event_id,
+    title,
+    start_at,
+    end_at,
+    status,
+    last_synced_at
+  ) VALUES (
+    v_user_id,
+    v_connection_id,
+    'google',
+    'primary',
+    'plan-referenced-outside-window',
+    'Plan referenced',
+    v_run_g.run_started_at + INTERVAL '200 days',
+    v_run_g.run_started_at + INTERVAL '200 days 1 hour',
+    'confirmed',
+    v_run_g.run_started_at - INTERVAL '1 second'
+  )
+  RETURNING id INTO v_plan_event_id;
+
+  INSERT INTO public.external_calendar_events (
+    user_id,
+    connection_id,
+    provider,
+    provider_calendar_id,
+    provider_event_id,
+    title,
+    start_at,
+    end_at,
+    status,
+    last_synced_at
+  ) VALUES (
+    v_user_id,
+    v_connection_id,
+    'google',
+    'primary',
+    'record-referenced-outside-window',
+    'Record referenced',
+    v_run_g.run_started_at - INTERVAL '201 days',
+    v_run_g.run_started_at - INTERVAL '201 days' + INTERVAL '1 hour',
+    'confirmed',
+    v_run_g.run_started_at - INTERVAL '1 second'
+  )
+  RETURNING id INTO v_record_event_id;
+
+  INSERT INTO public.external_calendar_events (
+    user_id,
+    connection_id,
+    provider,
+    provider_calendar_id,
+    provider_event_id,
+    title,
+    start_at,
+    end_at,
+    status,
+    last_synced_at
+  ) VALUES (
+    v_user_id,
+    v_connection_id,
+    'google',
+    'primary',
+    'unreferenced-outside-window',
+    'Unreferenced',
+    v_run_g.run_started_at + INTERVAL '202 days',
+    v_run_g.run_started_at + INTERVAL '202 days 1 hour',
+    'confirmed',
+    v_run_g.run_started_at - INTERVAL '1 second'
+  )
+  RETURNING id INTO v_unreferenced_event_id;
+
+  INSERT INTO public.plans (
+    user_id,
+    external_calendar_event_id,
+    title,
+    start_at,
+    end_at,
+    source
+  ) VALUES (
+    v_user_id,
+    v_plan_event_id,
+    'Plan reference',
+    v_run_g.run_started_at + INTERVAL '200 days',
+    v_run_g.run_started_at + INTERVAL '200 days 1 hour',
+    'external_calendar'
+  );
+
+  INSERT INTO public.records (
+    user_id,
+    external_calendar_event_id,
+    title,
+    start_at,
+    end_at,
+    source
+  ) VALUES (
+    v_user_id,
+    v_record_event_id,
+    'Record reference',
+    v_run_g.run_started_at - INTERVAL '201 days',
+    v_run_g.run_started_at - INTERVAL '201 days' + INTERVAL '1 hour',
+    'external_calendar'
+  );
+
+  v_result := public.finish_calendar_sync_run_v1(
+    v_project_key,
+    v_user_id,
+    v_connection_id,
+    v_run_g.data_generation,
+    v_run_g.authority_fence_id,
+    v_run_g.authority_epoch,
+    v_run_g.sync_sequence,
+    v_run_g.run_started_at,
+    NULL,
+    TRUE,
+    v_run_g.run_started_at - INTERVAL '90 days',
+    v_run_g.run_started_at + INTERVAL '90 days'
+  );
+
+  IF v_result <> 'finished' THEN
+    RAISE EXCEPTION 'window prune did not finish: %', v_result;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.external_calendar_events AS event
+    WHERE event.id = v_plan_event_id
+  ) THEN
+    RAISE EXCEPTION 'window prune deleted a plan-referenced event';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.external_calendar_events AS event
+    WHERE event.id = v_record_event_id
+  ) THEN
+    RAISE EXCEPTION 'window prune deleted a record-referenced event';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.external_calendar_events AS event
+    WHERE event.id = v_unreferenced_event_id
+  ) THEN
+    RAISE EXCEPTION 'window prune preserved an unreferenced event';
   END IF;
 END;
 $$;
