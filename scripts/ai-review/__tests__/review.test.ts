@@ -14,6 +14,7 @@ import {
   extractRlsSections,
   hasBlockingFinding,
   isDangerousPath,
+  listSnapshotTables,
   parseReviewResponse,
   renderComment,
   selectRuleAttachments,
@@ -115,12 +116,16 @@ describe('rules 添付の選択', () => {
 });
 
 describe('RLS snapshot の抜粋', () => {
+  // 実ファイルと同じ二階層（`## カテゴリ` → `### <table>`）にする。
+  // 以前はここが `## plans` という実在しない構造で、実装が実ファイルで
+  // 動かなくてもテストが緑のままだった。
   const snapshot = [
     '# RLS snapshot',
     '凡例',
-    '## plans',
+    '## ポリシー一覧（table 別）',
+    '### plans',
     'plans の policy',
-    '## tags',
+    '### tags',
     'tags の policy',
   ].join('\n');
 
@@ -153,16 +158,40 @@ describe('RLS snapshot の抜粋', () => {
     expect(extracted).not.toContain('### stripe_webhook_events');
   });
 
-  it('table 単位の section を category より前に置く', () => {
+  it('該当 table の GRANT 行を clamp で落とさない', () => {
+    // category 単位で拾っていた頃は、GRANT 一覧の該当行が 25.7KB 目にあり
+    // 24KB の clamp の外だった。table 単位で組めば数 KB に収まる。
     const extracted = extractRlsSections(
       REAL_SNAPSHOT,
-      'alter policy "x" on public.oauth_tokens using (true); grant select on public.plans to authenticated;',
+      'alter policy "x" on public.oauth_tokens using (true);',
     );
-    const table = extracted.indexOf('### oauth_tokens');
-    const grant = extracted.indexOf('## GRANT');
-    expect(table).toBeGreaterThanOrEqual(0);
-    // GRANT 一覧は 100 行超あるので、先に置くと clamp で table section が落ちる
-    if (grant >= 0) expect(table).toBeLessThan(grant);
+    expect(extracted).toContain('public.oauth_tokens');
+    expect(Buffer.byteLength(extracted, 'utf8')).toBeLessThan(24_000);
+    // 無関係な table の GRANT 行まで引き込まない
+    expect(extracted).not.toContain('public.stripe_webhook_events');
+  });
+
+  it('前方一致の別 table を巻き込まない', () => {
+    const snapshot = [
+      '# snapshot',
+      '凡例',
+      '## ポリシー一覧',
+      '### oauth_tokens',
+      'oauth_tokens の policy',
+      '### oauth_tokens_archive',
+      'archive の policy',
+      '## GRANT 一覧',
+      '| table | public.oauth_tokens | authenticated | SELECT |',
+      '| table | public.oauth_tokens_archive | authenticated | SELECT |',
+    ].join('\n');
+    const extracted = extractRlsSections(snapshot, 'alter policy on public.oauth_tokens;');
+    expect(extracted).toContain('oauth_tokens の policy');
+    expect(extracted).not.toContain('archive の policy');
+    expect(extracted).not.toContain('public.oauth_tokens_archive');
+  });
+
+  it('snapshot の table 名一覧を返す', () => {
+    expect(listSnapshotTables(REAL_SNAPSHOT)).toContain('oauth_tokens');
   });
 });
 

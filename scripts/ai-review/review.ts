@@ -137,39 +137,69 @@ function clamp(text: string, maxBytes: number, note: string): string {
 }
 
 /**
- * RLS snapshot 全文は 45KB あり毎回渡すと無駄なので、diff に現れた table 名を含む
- * section だけを抜く。1 件も一致しない時は先頭（凡例・全体方針）を渡す。
+ * snapshot が知っている table 名（`### <table>` 見出し）を返す。diff 側から SQL を
+ * parse すると表記ゆれで拾い漏れるので、「snapshot にある名前が diff に出るか」の
+ * 向きで突き合わせる。
+ */
+export function listSnapshotTables(snapshot: string): string[] {
+  return [...snapshot.matchAll(/^### ([a-z_][a-z0-9_]*)\s*$/gim)].map((match) =>
+    match[1].toLowerCase(),
+  );
+}
+
+/**
+ * RLS snapshot 全文は 45KB あり毎回渡すと無駄なので、diff が触る table の情報だけを
+ * 組み立てる。1 件も一致しない時は先頭（凡例・全体方針）を渡す。
  *
- * 実ファイルは `## ポリシー一覧（table 別）` の下に `### <table>` がぶら下がる二階層。
- * `## ` だけで分割すると table 名が見出しに一度も現れず、`public` / `table` / `grant`
- * のような汎用語だけで category 単位の当たり外れが決まってしまう（= 目的の table の
- * policy が付かないまま「現行 policy の文脈あり」に見える）。`###` も分割対象にする。
- *
- * 並び順は table 単位の一致を先、category を後にする。attachment は末尾から clamp
- * されるので、巨大な GRANT 一覧が先に来ると肝心の table section が落ちる。
+ * **section 単位ではなく table 単位で組む。** snapshot は
+ * `## RLS 有効状態` / `## ポリシー一覧（table 別）`（下に `### <table>`）/ `## GRANT 一覧`
+ * の 3 カテゴリに、同じ table の情報が分散している。category 単位で拾うと
+ * (a) 見出しの汎用語（`public` など）で無関係なカテゴリが丸ごと入り、
+ * (b) 24KB の clamp で肝心の行が落ちる。実測では GRANT 一覧の該当行が 25.7KB 目にあり
+ * 上限の外だった。table 単位で必要な行だけ集めれば数 KB に収まり、この問題が消える。
  */
 export function extractRlsSections(snapshot: string, diff: string): string {
-  const sections = snapshot.split(/\n(?=#{2,3} )/);
   const haystack = diff.toLowerCase();
+  const touched = listSnapshotTables(snapshot).filter((table) => haystack.includes(table));
 
-  const matched = sections.filter((section, index) => {
-    if (index === 0) return false;
-    const heading = section.slice(0, section.indexOf('\n')).toLowerCase();
-    const tokens = heading.match(/[a-z_][a-z0-9_]{2,}/g) ?? [];
-    return tokens.some((token) => haystack.includes(token));
-  });
-
-  if (matched.length === 0) {
-    return clamp(sections[0] ?? '', MAX_ATTACHMENT_BYTES, '以降は該当 table なしのため省略');
+  if (touched.length === 0) {
+    return clamp(
+      snapshot.split(/\n(?=#{2,3} )/)[0] ?? '',
+      MAX_ATTACHMENT_BYTES,
+      '以降は該当 table なしのため省略',
+    );
   }
 
-  const tableFirst = [
-    ...matched.filter((section) => section.startsWith('### ')),
-    ...matched.filter((section) => !section.startsWith('### ')),
-  ];
+  const lines = snapshot.split('\n');
+  const parts: string[] = [];
+
+  for (const table of touched) {
+    // policy: `### <table>` から次の見出しまで
+    const start = lines.findIndex((line) => line.trim().toLowerCase() === `### ${table}`);
+    if (start >= 0) {
+      let end = start + 1;
+      while (end < lines.length && !/^#{2,3} /.test(lines[end])) end += 1;
+      parts.push(lines.slice(start, end).join('\n').trimEnd());
+    }
+
+    // RLS 有効状態: `| <table> | ✅ | — |` の行
+    const status = lines.find((line) =>
+      new RegExp(`^\\|\\s*${table}\\s*\\|`, 'i').test(line.trim()),
+    );
+    if (status) parts.push(`#### ${table} の RLS 有効状態\n\n${status.trim()}`);
+
+    // GRANT: `public.<table>` と `public.<table>.<column>` の行。
+    // `public.<table>_other` を拾わないよう、直後が識別子文字でないことを要求する。
+    const grants = lines.filter((line) =>
+      new RegExp(`public\\.${table}(?![a-z0-9_])`, 'i').test(line),
+    );
+    if (grants.length > 0) {
+      parts.push(`#### ${table} の GRANT\n\n${grants.map((line) => line.trim()).join('\n')}`);
+    }
+  }
 
   return clamp(
-    tableFirst.join('\n'),
+    parts.join('\n\n'),
     MAX_ATTACHMENT_BYTES,
     'RLS snapshot が長いため以降を省略。必要なら該当 migration を根拠にする',
   );
@@ -590,11 +620,18 @@ async function main(): Promise<number> {
   const head = argValue(argv, '--head') || process.env.AI_REVIEW_HEAD_SHA || 'HEAD';
   const model = process.env.AI_REVIEW_MODEL || DEFAULT_MODEL;
 
+  // 手動 dispatch は「paths に当たらない PR を見せたい」ための入口なので、
+  // 危険クラス判定で弾くと入口そのものが無意味な green になる。force で素通しする。
+  const force = argv.includes('--force') || process.env.AI_REVIEW_FORCE === 'true';
+
   const changedFiles = collectChangedFiles(base, head);
   const dangerous = changedFiles.filter(isDangerousPath);
-  if (dangerous.length === 0) {
+  if (dangerous.length === 0 && !force) {
     notice('危険クラスの変更がないためレビューをスキップしました。');
     return 0;
+  }
+  if (dangerous.length === 0) {
+    notice(`force 指定のため、危険クラス外の ${changedFiles.length} ファイルをレビューします。`);
   }
 
   const { diff, truncated, incompleteDangerous } = collectDiff(base, head, changedFiles);

@@ -18,9 +18,12 @@ on:
       - 'apps/product/src/lib/supabase/**'
       - 'apps/product/src/lib/trpc/**'
       - 'apps/product/src/app/api/**'
-      - 'scripts/ai-review/**'
-      - '.github/workflows/ai-review.yml'
+  # ここに scripts/ai-review/** や本ファイル自身を入れない。DANGEROUS_PATH_PATTERNS に
+  # 無いので workflow は起動するがスクリプトは即 return し、「走ったが何も見ていない」
+  # green が出るだけで課金だけかかる。reviewer 自身の変更は contract test が守る。
+  #
   # 上記に当たらない PR を手動でレビューさせたい時のための入口。
+  # AI_REVIEW_FORCE で危険クラス判定を素通しする（下の env 参照）。
   workflow_dispatch:
 
 concurrency:
@@ -54,5 +57,8 @@ jobs:
           AI_REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           AI_REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           AI_REVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
+          # 手動 dispatch は「paths に当たらない PR を見せたい」入口なので、
+          # 危険クラス判定で早期 return させると入口が無意味な green になる。
+          AI_REVIEW_FORCE: ${{ github.event_name == 'workflow_dispatch' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
