@@ -45,7 +45,8 @@ export function PlanMock() {
     },
   ];
 
-  const navItems = ['Today', 'This Week', 'Projects', 'Tags', 'Stats'];
+  // ナビ項目は product の実際のサイドバー（navigation.sidebar.navigation）に合わせる
+  const navItems = ['Calendar', 'Plan', 'Record', 'Tags', 'Review'];
   const nowPosition = '35%'; // 11:00 あたり
 
   return (
@@ -65,7 +66,7 @@ export function PlanMock() {
               <div
                 key={item}
                 className={`rounded px-2 py-1 text-xs ${
-                  item === 'Today'
+                  item === 'Calendar'
                     ? 'bg-state-active text-state-active-foreground font-medium'
                     : 'text-muted-foreground'
                 }`}
@@ -75,9 +76,9 @@ export function PlanMock() {
             ))}
           </div>
 
-          {/* Accuracy Score */}
+          {/* 指標名は実在するものだけを出す（calendar.stats.overview.planAccuracy） */}
           <div className="border-border mt-auto border-t pt-3">
-            <div className="text-muted-foreground mb-1 text-xs">Accuracy</div>
+            <div className="text-muted-foreground mb-1 text-xs">Plan accuracy</div>
             <div className="text-foreground text-xl font-medium">87%</div>
             <div className="bg-muted mt-1.5 h-1.5 w-full overflow-hidden rounded-full">
               <div className="bg-primary h-full rounded-full" style={{ width: '87%' }} />
