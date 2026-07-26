@@ -485,7 +485,8 @@ function CopyButton({
 
 // ─── Deletion ────────────────────────────────────────
 
-type DeletionTarget = 'blocks' | 'all' | null;
+type DeletionTarget =
+  { kind: 'blocks' } | { expectedGeneration: number; kind: 'all'; operationId: string } | null;
 
 function DeletionSection() {
   const t = useTranslations('settings.dataControls.deletion');
@@ -517,12 +518,35 @@ function DeletionSection() {
     },
   });
 
+  const prepareDeleteAllDataMutation = api.user.prepareDeleteAllData.useMutation({
+    onError: () => {
+      toast.error(t('deleteAllData'));
+    },
+  });
+
+  const handleOpenDeleteAll = useCallback(async () => {
+    try {
+      const preflight = await prepareDeleteAllDataMutation.mutateAsync();
+      setTarget({
+        expectedGeneration: preflight.expectedGeneration,
+        kind: 'all',
+        operationId: preflight.operationId,
+      });
+    } catch {
+      // Mutation-level and global handlers own the user-visible error and telemetry.
+    }
+  }, [prepareDeleteAllDataMutation]);
+
   const handleConfirm = useCallback(async () => {
     if (!isConfirmed) return;
-    if (target === 'blocks') {
+    if (target?.kind === 'blocks') {
       await deleteBlocksMutation.mutateAsync({ confirmText: 'DELETE' });
-    } else if (target === 'all') {
-      await deleteAllDataMutation.mutateAsync({ confirmText: 'DELETE' });
+    } else if (target?.kind === 'all') {
+      await deleteAllDataMutation.mutateAsync({
+        confirmText: 'DELETE',
+        expectedGeneration: target.expectedGeneration,
+        operationId: target.operationId,
+      });
     }
   }, [target, isConfirmed, deleteBlocksMutation, deleteAllDataMutation]);
 
@@ -534,13 +558,18 @@ function DeletionSection() {
   return (
     <SectionCard title={t('title')}>
       <LabeledRow label={t('deleteBlocks')} description={t('deleteBlocksDesc')}>
-        <Button variant="outline" size="sm" onClick={() => setTarget('blocks')}>
+        <Button variant="outline" size="sm" onClick={() => setTarget({ kind: 'blocks' })}>
           <Trash2 className="mr-2 h-4 w-4" />
           {t('deleteBlocks')}
         </Button>
       </LabeledRow>
       <LabeledRow label={t('deleteAllData')} description={t('deleteAllDataDesc')}>
-        <Button variant="outline" size="sm" onClick={() => setTarget('all')}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={prepareDeleteAllDataMutation.isPending}
+          onClick={() => void handleOpenDeleteAll()}
+        >
           <Trash2 className="mr-2 h-4 w-4" />
           {t('deleteAllData')}
         </Button>
@@ -551,7 +580,7 @@ function DeletionSection() {
         onClose={handleClose}
         onConfirm={handleConfirm}
         title={t('confirmTitle')}
-        description={target === 'blocks' ? t('confirmDeleteBlocks') : t('confirmDeleteAll')}
+        description={target?.kind === 'blocks' ? t('confirmDeleteBlocks') : t('confirmDeleteAll')}
         variant="destructive"
         confirmDisabled={!isConfirmed}
         loadingLabel={t('deleting')}

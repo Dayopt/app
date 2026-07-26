@@ -1472,6 +1472,15 @@ export type Database = {
         Args: { p_project_key: string; p_user_id: string };
         Returns: boolean;
       };
+      delete_all_user_data_command_v5: {
+        Args: {
+          p_expected_generation: number;
+          p_operation_id: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: boolean;
+      };
       delete_plan_command_v1: {
         Args: {
           p_expected_updated_at: string;
@@ -1859,6 +1868,13 @@ export type Database = {
           p_user_id: string;
         };
         Returns: string;
+      };
+      prepare_user_data_purge_v1: {
+        Args: { p_user_id: string };
+        Returns: {
+          expected_generation: number;
+          operation_id: string;
+        }[];
       };
       provision_calendar_authority_project_v1: {
         Args: { p_oauth_client_id: string; p_project_key: string };

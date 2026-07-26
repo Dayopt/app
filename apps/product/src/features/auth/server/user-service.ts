@@ -7,6 +7,8 @@ import 'server-only';
  * tRPCルーターから呼び出されるサービス層
  */
 
+import { createHash } from 'node:crypto';
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database, PublicRecordRow, PublicUserSettingsRow, Row } from '@/lib/database';
@@ -78,6 +80,25 @@ interface DeleteAccountResult {
   success: true;
 }
 
+export type UserServiceDependencies = Readonly<{
+  beforeIdentityDeletion: (input: {
+    userId: string;
+  }) => Promise<{ status: 'completed' | 'contention' }>;
+  deleteAllData: (input: {
+    expectedGeneration: number;
+    operationId: string;
+    userId: string;
+  }) => Promise<{ status: 'completed' | 'contention' }>;
+  prepareDeleteAllData: (input: { userId: string }) => Promise<
+    | {
+        expectedGeneration: number;
+        operationId: string;
+        status: 'ready';
+      }
+    | { status: 'contention' }
+  >;
+}>;
+
 /**
  * データエクスポートレスポンス
  */
@@ -104,10 +125,93 @@ interface OAuthConnectionSummary {
 const OAUTH_CONNECTION_SUMMARY_SELECT =
   'id, client_id, scopes, authorized_at, last_used_at' as const;
 
+const CANCELLABLE_SUBSCRIPTION_STATUSES = new Set([
+  'active',
+  'incomplete',
+  'past_due',
+  'paused',
+  'trialing',
+  'unpaid',
+]);
+
+function stripeDeletionIdempotencyKey(
+  userId: string,
+  resourceKind: 'customer' | 'subscription',
+  resourceId: string,
+): string {
+  const digest = createHash('sha256')
+    .update(`dayopt-account-deletion-v1:${userId}:${resourceKind}:${resourceId}`)
+    .digest('hex');
+  return `dayopt-account-deletion-v1-${resourceKind}-${digest}`;
+}
+
+async function deleteAvatarFiles(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<void> {
+  const { data: files, error: listError } = await supabase.storage.from('avatars').list(userId);
+  if (listError) throw new Error('Avatar listing failed');
+  if (!files || files.length === 0) return;
+
+  const filePaths = files.map((file) => `${userId}/${file.name}`);
+  const { error: removeError } = await supabase.storage.from('avatars').remove(filePaths);
+  if (removeError) throw new Error('Avatar removal failed');
+}
+
+async function deleteStripeCustomer(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<void> {
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('stripe_customer_id')
+    .eq('id', userId)
+    .maybeSingle();
+  if (profileError) throw new Error('Billing profile lookup failed');
+
+  const stripeCustomerId = profile?.stripe_customer_id;
+  if (!stripeCustomerId) return;
+
+  const stripe = getStripe();
+  if (!stripe) throw new Error('Stripe is not configured for billing data deletion');
+
+  // Customer削除後のresponse lossではretrieveがDeletedCustomerを返すため、
+  // 後続のaccount deletion retryでprovider mutationを繰り返さず完了扱いにできる。
+  const customer = await stripe.customers.retrieve(stripeCustomerId);
+  if ('deleted' in customer && customer.deleted) return;
+
+  // listはauto-pagination対応のasync iterable。既にcancel済みのsubscriptionは
+  // default filterに含まれず、response loss時も同じidempotency keyで安全に再送できる。
+  for await (const subscription of stripe.subscriptions.list({
+    customer: stripeCustomerId,
+  })) {
+    if (!CANCELLABLE_SUBSCRIPTION_STATUSES.has(subscription.status)) continue;
+
+    await stripe.subscriptions.cancel(
+      subscription.id,
+      {},
+      {
+        idempotencyKey: stripeDeletionIdempotencyKey(userId, 'subscription', subscription.id),
+      },
+    );
+  }
+
+  await stripe.customers.del(
+    stripeCustomerId,
+    {},
+    {
+      idempotencyKey: stripeDeletionIdempotencyKey(userId, 'customer', stripeCustomerId),
+    },
+  );
+}
+
 /**
  * User Service ファクトリ
  */
-export function createUserService(supabase: SupabaseClient<Database>) {
+export function createUserService(
+  supabase: SupabaseClient<Database>,
+  dependencies: UserServiceDependencies,
+) {
   return {
     async listOAuthConnections(userId: string): Promise<OAuthConnectionSummary[]> {
       const { data, error } = await supabase
@@ -190,69 +294,53 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         throw new UserServiceError('INVALID_PASSWORD', 'Invalid password');
       }
 
+      // Calendarはauth.usersのBEFORE DELETE triggerでもsealを必須にする。
+      // Storage / Stripeより先にprovider attemptとdurable receiptを確定する。
+      try {
+        const preparation = await dependencies.beforeIdentityDeletion({ userId });
+        if (preparation.status === 'contention') {
+          throw new UserServiceError('CONFLICT', 'Account deletion is busy. Try again.');
+        }
+      } catch (error) {
+        if (error instanceof UserServiceError) throw error;
+        const failure = new Error('Calendar account deletion preparation failed');
+        captureUnexpectedError(failure, {
+          feature: 'account_deletion',
+          operation: 'prepare_identity_deletion',
+          source: 'identity_deletion_dependency',
+        });
+        throw new UserServiceError('DELETE_FAILED', 'Failed to prepare calendar deletion', {
+          cause: failure,
+        });
+      }
+
       // Storage のアバター画像を削除
       try {
-        const { data: files, error: listError } = await supabase.storage
-          .from('avatars')
-          .list(userId);
-        if (listError) throw new Error('Avatar listing failed', { cause: listError });
-        if (files && files.length > 0) {
-          const filePaths = files.map((f) => `${userId}/${f.name}`);
-          const { error: removeError } = await supabase.storage.from('avatars').remove(filePaths);
-          if (removeError) throw new Error('Avatar removal failed', { cause: removeError });
-        }
-      } catch (storageError) {
-        const original =
-          storageError instanceof Error ? storageError : new Error('Avatar cleanup failed');
-        captureUnexpectedError(original, {
+        await deleteAvatarFiles(supabase, userId);
+      } catch {
+        const failure = new Error('Avatar cleanup failed');
+        captureUnexpectedError(failure, {
           feature: 'account_deletion',
           operation: 'delete_avatar_files',
           source: 'supabase_storage',
         });
         throw new UserServiceError('DELETE_FAILED', 'Failed to delete avatar files', {
-          cause: original,
+          cause: failure,
         });
       }
 
       // Stripe サブスクリプション解約 + Customer 削除（GDPR対応）
       try {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-        if (profileError) throw new Error('Billing profile lookup failed', { cause: profileError });
-
-        const stripeCustomerId = (profile as Record<string, unknown> | null)?.stripe_customer_id as
-          string | null;
-
-        if (stripeCustomerId) {
-          const stripe = getStripe();
-          if (!stripe) throw new Error('Stripe is not configured for billing data deletion');
-
-          // 全サブスクリプションを即時解約（active, trialing, past_due, paused）
-          const subscriptions = await stripe.subscriptions.list({
-            customer: stripeCustomerId,
-          });
-          for (const sub of subscriptions.data) {
-            if (['active', 'trialing', 'past_due', 'paused'].includes(sub.status)) {
-              await stripe.subscriptions.cancel(sub.id);
-            }
-          }
-
-          // Customer 削除（支払い情報・請求書も削除）
-          await stripe.customers.del(stripeCustomerId);
-        }
-      } catch (stripeError) {
-        const original =
-          stripeError instanceof Error ? stripeError : new Error('Stripe cleanup failed');
-        captureUnexpectedError(original, {
+        await deleteStripeCustomer(supabase, userId);
+      } catch {
+        const failure = new Error('Stripe cleanup failed');
+        captureUnexpectedError(failure, {
           feature: 'account_deletion',
           operation: 'delete_stripe_customer',
           source: 'stripe',
         });
         throw new UserServiceError('DELETE_FAILED', 'Failed to delete billing data', {
-          cause: original,
+          cause: failure,
         });
       }
 
@@ -310,25 +398,56 @@ export function createUserService(supabase: SupabaseClient<Database>) {
      * 全データを削除（アカウントは保持）
      * plans, records, tags, 設定を全削除
      */
-    async deleteAllData(userId: string): Promise<{ success: true }> {
-      const adminClient = createServiceRoleClient();
-      const { data: deleted, error } = await adminClient.rpc('delete_all_user_data_command_v2', {
-        p_user_id: userId,
-      });
-
-      if (error || deleted !== true) {
-        if (isRetryableDatabaseContention(error)) {
+    async prepareDeleteAllData(
+      userId: string,
+    ): Promise<{ expectedGeneration: number; operationId: string }> {
+      try {
+        const preflight = await dependencies.prepareDeleteAllData({ userId });
+        if (preflight.status === 'contention') {
           throw new UserServiceError('CONFLICT', 'User data deletion is busy. Try again.');
         }
-        const original = captureUnexpectedDatabaseError(
-          error ?? { message: 'Full data purge returned no success result' },
-          {
-            feature: 'account_data',
-            operation: 'delete_all_user_data',
-          },
-        );
+        return {
+          expectedGeneration: preflight.expectedGeneration,
+          operationId: preflight.operationId,
+        };
+      } catch (error) {
+        if (error instanceof UserServiceError) throw error;
+        const failure = new Error('User data deletion preflight dependency failed');
+        captureUnexpectedError(failure, {
+          feature: 'account_data',
+          operation: 'prepare_delete_all_user_data',
+          source: 'user_data_deletion_dependency',
+        });
+        throw new UserServiceError('DELETE_DATA_FAILED', 'User data deletion preparation failed', {
+          cause: failure,
+        });
+      }
+    },
+
+    async deleteAllData(
+      userId: string,
+      operationId: string,
+      expectedGeneration: number,
+    ): Promise<{ success: true }> {
+      try {
+        const deletion = await dependencies.deleteAllData({
+          expectedGeneration,
+          operationId,
+          userId,
+        });
+        if (deletion.status === 'contention') {
+          throw new UserServiceError('CONFLICT', 'User data deletion is busy. Try again.');
+        }
+      } catch (error) {
+        if (error instanceof UserServiceError) throw error;
+        const failure = new Error('User data deletion dependency failed');
+        captureUnexpectedError(failure, {
+          feature: 'account_data',
+          operation: 'delete_all_user_data',
+          source: 'user_data_deletion_dependency',
+        });
         throw new UserServiceError('DELETE_DATA_FAILED', 'User data deletion failed', {
-          cause: original,
+          cause: failure,
         });
       }
 

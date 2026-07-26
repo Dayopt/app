@@ -1,8 +1,9 @@
 ---
 status: current
-last_verified: 2026-07-24
+last_verified: 2026-07-26
 code:
   - apps/product/src/features/auth
+  - apps/product/src/features/external-calendar/server/account-deletion.ts
   - apps/product/src/lib/mcp/trpc-bridge.ts
   - apps/product/src/lib/trpc
 public_docs:
@@ -20,6 +21,22 @@ Supabase Auth ベースの認証機能。
 - `protectedProcedure` で保護された tRPC procedure が `ctx.userId` でデータアクセスを制限する
 - MFA登録済みで session assurance level が `aal1` のブラウザセッションは、画面遷移だけでなく tRPC API 側でも protected procedure を拒否する
 - RLS（Row Level Security）によるDBレベルでの認可を併用する
+
+## アカウント削除
+
+`user.deleteAccount` はパスワード再認証の後、次の順序で処理する。
+
+1. Calendar account-deletion intentを開始し、DBが返すcanonical deletion IDを採用する
+2. 各connection / revoke outbox itemをprepareする
+3. DBのprovider start markerが`started`を返した場合だけGoogle revokeを1回呼ぶ
+4. 同じoperation・lease・outcomeでfinalizeし、全itemのdurable receiptをsealする
+5. avatarを削除する
+6. Stripe subscriptionとCustomerをidempotency key付きで削除する
+7. `auth.users`を最後に削除する
+
+provider startの応答が不明な場合はGoogleを再実行しない。finalizeの応答が不明な場合は同じ引数のfinalizerだけを再送する。Calendar sealに失敗した場合はStorage、Stripe、Authを変更しない。StorageまたはStripeの失敗時はAuth identityを残し、完了済みの削除を冪等に再確認できる。
+
+「すべてのデータを削除」はaccountを保持し、Calendar authorityとoperation IDにbindした`delete_all_user_data_command_v5`を使う。確認ダイアログを開く前にDBがoperation IDと現在のuser generationを発行し、同じダイアログ内のclient retry、tRPC retry、DB retryで両方を固定する。user generationを進め、Calendar tokenをrevoke outboxへ移し、Dayopt OAuthを失効し、MCP mutation receiptをpurged generationへ固定してから、Plan、Record、report、tag、user settings、Calendar mirrorを原子的に削除する。応答が失われても同じoperation IDを再送し、完了済みなら新しく作成されたデータを削除せず成功を返す。別の操作や古いgenerationは拒否する。
 
 ## tRPC API auth policy
 

@@ -5,8 +5,13 @@
 
 import 'server-only';
 
-import { userRouter } from '@/features/auth/server/router';
+import { createUserRouter } from '@/features/auth/server/router';
 import { contactRouter } from '@/features/contact/server/router';
+import {
+  deleteAllUserDataWithCalendarAuthority,
+  prepareCalendarBeforeIdentityDeletion,
+  prepareUserDataPurgeWithCalendarAuthority,
+} from '@/features/external-calendar/server/account-deletion';
 import { externalCalendarRouter } from '@/features/external-calendar/server/router';
 import { billingRouter } from '@/features/settings/server/billing-router';
 import { userSettingsRouter } from '@/features/settings/server/router';
@@ -17,6 +22,12 @@ import { statisticsRouter } from '@/features/timeblock/server/router-index';
 import { timeblockContextRouter } from '@/features/timeblock/server/timeblock-context-router';
 import { emailRouter } from '@/lib/email/router';
 import { createTRPCRouter } from '@/lib/trpc/router';
+
+const userRouter = createUserRouter({
+  beforeIdentityDeletion: prepareCalendarBeforeIdentityDeletion,
+  deleteAllData: deleteAllUserDataWithCalendarAuthority,
+  prepareDeleteAllData: prepareUserDataPurgeWithCalendarAuthority,
+});
 
 export const appRouter = createTRPCRouter({
   billing: billingRouter,

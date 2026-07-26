@@ -109,9 +109,9 @@ authenticatedのPlan / Record直接DMLはrevoke済みで、現在のアプリケ
 
 タグ削除・再割当て・mergeは複数Plan / Recordを一括で扱うservice-owned例外writerであり、単行commandへは載せない。関連処理、子タグ昇格、タグ削除を一つのDB transactionとuser単位exclusive advisory lockで行う。再割当て・merge・detachはDBの`updated_at` triggerでversionを進め、通常UIや外部writeが古いversionを上書きできないようにする。タグと一緒にブロックを削除する明示操作だけはhard deleteを行う。
 
-Settingsの「すべてのブロックを削除」と「すべてのデータを削除」もservice-ownedの明示的hard deleteであり、単行commandのsoft deleteとは別契約とする。`auth.users`のparent-first lockとuser単位exclusive advisory lockで通常UI/MCP writeを直列化する。現在のcommandはwriterが先なら後続削除後の最終状態を削除済みにし、削除完了後に開始した新しいwriterは成功できる。目標契約では削除開始前のgenerationへbindされたMCP/Calendar writerだけを削除後に拒否する。
+Settingsの「すべてのブロックを削除」と「すべてのデータを削除」もservice-ownedの明示的hard deleteであり、単行commandのsoft deleteとは別契約とする。`auth.users`のparent-first lockとuser単位exclusive advisory lockで通常UI/MCP/Calendar writeを直列化する。削除開始前のgenerationへbindされたMCP/Calendar writerは削除後に拒否し、削除完了後に開始した新しいwriterだけを許可する。
 
-「すべてのデータを削除」は現在Plan、Record、tag、user settingsを対象とし、AI生成report、OAuth connection/tokenとMCP mutation receiptは対象外である。これは暫定挙動であり、[2026-07-26のdecision](../log/2026-07-26-mcp-delete-all-data-retention.md)でreportも削除し、MCPとCalendarの接続権限も失効する目標契約を固定した。account維持に必要なprofile、課金状態、MFA recovery codeは残す。実装と公開条件は[Step 6](../../projects/mcp-plan-track-learn/step-6-client-beta.md)で追跡する。
+「すべてのデータを削除」は`delete_all_user_data_command_v5`を使う。DBが発行したoperation IDとexpected generationを確認ダイアログからDBまで固定し、最後に完了した1組だけをuser単位で保持してresponse lossを安全にreplayする。user generationを進め、Calendar tokenをsubject-bound revoke outboxへ移し、Dayopt OAuth code/connection/tokenを失効し、MCP mutation receiptをpurged generationへ固定する。同じtransactionでPlan、Record、report、tag、user settings、Calendar connection/mirrorを削除する。別のoperationや古いgenerationは拒否し、account維持に必要なprofile、課金状態、MFA recovery codeは残す。retentionの判断根拠は[2026-07-26のdecision](../log/2026-07-26-mcp-delete-all-data-retention.md)、公開条件は[Step 6](../../projects/mcp-plan-track-learn/step-6-client-beta.md)で追跡する。
 
 ## 過去 Plan の時間凍結
 
