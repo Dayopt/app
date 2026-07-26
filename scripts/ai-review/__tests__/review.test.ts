@@ -133,6 +133,37 @@ describe('RLS snapshot の抜粋', () => {
   it('一致しない時は先頭（凡例）を返す', () => {
     expect(extractRlsSections(snapshot, 'create table unrelated_thing ();')).toContain('凡例');
   });
+
+  // 実ファイルは `## ポリシー一覧（table 別）` の下に `### <table>` がぶら下がる二階層。
+  // 偽の構造（`## <table>`）で書いたテストだと、table 名が一度も見出しに現れないまま
+  // 汎用語だけで当たっている状態を検出できない。実ファイルを直接使う。
+  const REAL_SNAPSHOT = readFileSync(
+    join(process.cwd(), 'docs/engineering/data/db/rls-snapshot.md'),
+    'utf8',
+  );
+
+  it('実ファイルの ### table 見出しを拾う', () => {
+    expect(REAL_SNAPSHOT).toContain('### oauth_tokens');
+    const extracted = extractRlsSections(
+      REAL_SNAPSHOT,
+      'alter policy "x" on public.oauth_tokens using (user_id = auth.uid());',
+    );
+    expect(extracted).toContain('### oauth_tokens');
+    // 無関係な table の policy まで引き込まない
+    expect(extracted).not.toContain('### stripe_webhook_events');
+  });
+
+  it('table 単位の section を category より前に置く', () => {
+    const extracted = extractRlsSections(
+      REAL_SNAPSHOT,
+      'alter policy "x" on public.oauth_tokens using (true); grant select on public.plans to authenticated;',
+    );
+    const table = extracted.indexOf('### oauth_tokens');
+    const grant = extracted.indexOf('## GRANT');
+    expect(table).toBeGreaterThanOrEqual(0);
+    // GRANT 一覧は 100 行超あるので、先に置くと clamp で table section が落ちる
+    if (grant >= 0) expect(table).toBeLessThan(grant);
+  });
 });
 
 describe('prompt の組み立て', () => {

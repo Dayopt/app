@@ -139,10 +139,19 @@ function clamp(text: string, maxBytes: number, note: string): string {
 /**
  * RLS snapshot 全文は 45KB あり毎回渡すと無駄なので、diff に現れた table 名を含む
  * section だけを抜く。1 件も一致しない時は先頭（凡例・全体方針）を渡す。
+ *
+ * 実ファイルは `## ポリシー一覧（table 別）` の下に `### <table>` がぶら下がる二階層。
+ * `## ` だけで分割すると table 名が見出しに一度も現れず、`public` / `table` / `grant`
+ * のような汎用語だけで category 単位の当たり外れが決まってしまう（= 目的の table の
+ * policy が付かないまま「現行 policy の文脈あり」に見える）。`###` も分割対象にする。
+ *
+ * 並び順は table 単位の一致を先、category を後にする。attachment は末尾から clamp
+ * されるので、巨大な GRANT 一覧が先に来ると肝心の table section が落ちる。
  */
 export function extractRlsSections(snapshot: string, diff: string): string {
-  const sections = snapshot.split(/\n(?=## )/);
+  const sections = snapshot.split(/\n(?=#{2,3} )/);
   const haystack = diff.toLowerCase();
+
   const matched = sections.filter((section, index) => {
     if (index === 0) return false;
     const heading = section.slice(0, section.indexOf('\n')).toLowerCase();
@@ -153,8 +162,14 @@ export function extractRlsSections(snapshot: string, diff: string): string {
   if (matched.length === 0) {
     return clamp(sections[0] ?? '', MAX_ATTACHMENT_BYTES, '以降は該当 table なしのため省略');
   }
+
+  const tableFirst = [
+    ...matched.filter((section) => section.startsWith('### ')),
+    ...matched.filter((section) => !section.startsWith('### ')),
+  ];
+
   return clamp(
-    matched.join('\n'),
+    tableFirst.join('\n'),
     MAX_ATTACHMENT_BYTES,
     'RLS snapshot が長いため以降を省略。必要なら該当 migration を根拠にする',
   );
