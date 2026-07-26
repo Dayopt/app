@@ -675,6 +675,145 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
     });
   });
 
+  it('marks only the observed Calendar token authority for reauthorization', async () => {
+    const generation = await currentGeneration();
+    const observedCiphertext = `v1.observed-${crypto.randomUUID()}.ciphertext`;
+    const connectionId = await saveCalendarConnection(generation, userId, observedCiphertext);
+    const markedAt = instant();
+
+    const marked = await admin.rpc('mark_calendar_connection_reauth_command_v2', {
+      p_user_id: userId,
+      p_connection_id: connectionId,
+      p_expected_generation: generation,
+      p_expected_refresh_token_enc: observedCiphertext,
+      p_last_synced_at: markedAt,
+    });
+    expect(marked.error).toBeNull();
+    expect(marked.data).toBe('marked');
+
+    const { data: connection, error: connectionError } = await admin
+      .from('calendar_connections')
+      .select('status, last_sync_error, last_synced_at')
+      .eq('id', connectionId)
+      .eq('user_id', userId)
+      .single();
+    expect(connectionError).toBeNull();
+    expect(connection).toMatchObject({
+      status: 'reauth_required',
+      last_sync_error: 'reauth_required',
+    });
+    expect(new Date(connection!.last_synced_at!).toISOString()).toBe(markedAt);
+  });
+
+  it('marks the exact rotation operation after its commit response is lost', async () => {
+    const generation = await currentGeneration();
+    const observedCiphertext = `v1.observed-${crypto.randomUUID()}.ciphertext`;
+    const rotatedCiphertext = `v1.rotated-${crypto.randomUUID()}.ciphertext`;
+    const operationId = crypto.randomUUID();
+    const connectionId = await saveCalendarConnection(generation, userId, observedCiphertext);
+    const rotation = await admin.rpc('rotate_or_enqueue_calendar_refresh_token_command_v2', {
+      p_operation_id: operationId,
+      p_user_id: userId,
+      p_connection_id: connectionId,
+      p_expected_generation: generation,
+      p_expected_refresh_token_enc: observedCiphertext,
+      p_new_refresh_token_enc: rotatedCiphertext,
+    });
+    expect(rotation.error).toBeNull();
+    expect(rotation.data).toBe('updated');
+
+    const fallback = await admin.rpc('mark_calendar_connection_reauth_command_v2', {
+      p_user_id: userId,
+      p_connection_id: connectionId,
+      p_expected_generation: generation,
+      p_expected_refresh_token_enc: observedCiphertext,
+      p_operation_id: operationId,
+      p_new_refresh_token_enc: rotatedCiphertext,
+      p_last_synced_at: instant(),
+    });
+    expect(fallback.error).toBeNull();
+    expect(fallback.data).toBe('marked');
+
+    const { data: connection, error: connectionError } = await admin
+      .from('calendar_connections')
+      .select('status, refresh_token_enc')
+      .eq('id', connectionId)
+      .eq('user_id', userId)
+      .single();
+    expect(connectionError).toBeNull();
+    expect(connection).toEqual({
+      status: 'reauth_required',
+      refresh_token_enc: rotatedCiphertext,
+    });
+  });
+
+  it('does not overwrite a reconnect that retained an older rotation operation ID', async () => {
+    const generation = await currentGeneration();
+    const observedCiphertext = `v1.observed-${crypto.randomUUID()}.ciphertext`;
+    const rotatedCiphertext = `v1.rotated-${crypto.randomUUID()}.ciphertext`;
+    const reconnectedCiphertext = `v1.reconnected-${crypto.randomUUID()}.ciphertext`;
+    const operationId = crypto.randomUUID();
+    const connectionId = await saveCalendarConnection(generation, userId, observedCiphertext);
+    const rotation = await admin.rpc('rotate_or_enqueue_calendar_refresh_token_command_v2', {
+      p_operation_id: operationId,
+      p_user_id: userId,
+      p_connection_id: connectionId,
+      p_expected_generation: generation,
+      p_expected_refresh_token_enc: observedCiphertext,
+      p_new_refresh_token_enc: rotatedCiphertext,
+    });
+    expect(rotation.error).toBeNull();
+    expect(rotation.data).toBe('updated');
+
+    const { error: reconnectError } = await admin
+      .from('calendar_connections')
+      .update({ refresh_token_enc: reconnectedCiphertext })
+      .eq('id', connectionId)
+      .eq('user_id', userId);
+    expect(reconnectError).toBeNull();
+
+    const fallback = await admin.rpc('mark_calendar_connection_reauth_command_v2', {
+      p_user_id: userId,
+      p_connection_id: connectionId,
+      p_expected_generation: generation,
+      p_expected_refresh_token_enc: observedCiphertext,
+      p_operation_id: operationId,
+      p_new_refresh_token_enc: rotatedCiphertext,
+      p_last_synced_at: instant(),
+    });
+    expect(fallback.error).toBeNull();
+    expect(fallback.data).toBe('superseded');
+
+    const { data: connection, error: connectionError } = await admin
+      .from('calendar_connections')
+      .select('status, refresh_token_enc')
+      .eq('id', connectionId)
+      .eq('user_id', userId)
+      .single();
+    expect(connectionError).toBeNull();
+    expect(connection).toEqual({
+      status: 'active',
+      refresh_token_enc: reconnectedCiphertext,
+    });
+  });
+
+  it('reports a Calendar reauth fallback as missing after purge advances the generation', async () => {
+    const generation = await currentGeneration();
+    const observedCiphertext = `v1.observed-${crypto.randomUUID()}.ciphertext`;
+    const connectionId = await saveCalendarConnection(generation, userId, observedCiphertext);
+    await purge();
+
+    const fallback = await admin.rpc('mark_calendar_connection_reauth_command_v2', {
+      p_user_id: userId,
+      p_connection_id: connectionId,
+      p_expected_generation: generation,
+      p_expected_refresh_token_enc: observedCiphertext,
+      p_last_synced_at: instant(),
+    });
+    expect(fallback.error).toBeNull();
+    expect(fallback.data).toBe('missing');
+  });
+
   it('enqueues a token acquired while purge commits first without losing the captured old token', async () => {
     const generation = await currentGeneration();
     const originalCiphertext = `v1.original-${crypto.randomUUID()}.ciphertext`;
@@ -751,7 +890,7 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
 
   it('keeps generation, save, and full purge RPCs unavailable to browser roles', async () => {
     const generation = await currentGeneration();
-    const [generationRead, save, rotate, fullPurge] = await Promise.all([
+    const [generationRead, save, rotate, markReauth, fullPurge] = await Promise.all([
       authenticated.rpc('get_user_data_generation_v1', { p_user_id: userId }),
       authenticated.rpc('save_calendar_connection_command_v1', {
         p_user_id: userId,
@@ -770,12 +909,20 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
         p_expected_refresh_token_enc: 'forbidden-old-ciphertext',
         p_new_refresh_token_enc: 'forbidden-new-ciphertext',
       }),
+      authenticated.rpc('mark_calendar_connection_reauth_command_v2', {
+        p_user_id: userId,
+        p_connection_id: crypto.randomUUID(),
+        p_expected_generation: generation,
+        p_expected_refresh_token_enc: 'forbidden-ciphertext',
+        p_last_synced_at: instant(),
+      }),
       authenticated.rpc('delete_all_user_data_command_v3', { p_user_id: userId }),
     ]);
 
     expect(generationRead.error?.code).toBe('42501');
     expect(save.error?.code).toBe('42501');
     expect(rotate.error?.code).toBe('42501');
+    expect(markReauth.error?.code).toBe('42501');
     expect(fullPurge.error?.code).toBe('42501');
   });
 });

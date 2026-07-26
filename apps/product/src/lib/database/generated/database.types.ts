@@ -1532,6 +1532,18 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      mark_calendar_connection_reauth_command_v2: {
+        Args: {
+          p_connection_id: string;
+          p_expected_generation: number;
+          p_expected_refresh_token_enc: string;
+          p_last_synced_at?: string;
+          p_new_refresh_token_enc?: string;
+          p_operation_id?: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       merge_tags_with_hierarchy: {
         Args: {
           p_source_tag_id: string;
