@@ -24,7 +24,8 @@ Productionと認証・DB・secretを共有しないPersistent Stagingで、ChatG
 - actual MCP HTTPのgolden flowはlocal DBと`chatgpt` client IDで検証済みだが、実clientのOAuth、confirmation UI、refresh token管理、実network/renderは未検証
 - 3 client共通のactual token route、scope-filtered`tools/list`、単一Plan mutation retry、global gate、parallel refresh、Settings revoke契約をlocal integrationで検証済み。authorize page、client自身のtoken保存/並列処理、client別Plan → Track → Learnは未検証
 - 2026-07-26のread-only external inventoryでは、Vercel projectは`product` / `web`、Supabase branchはdefault `main`だけであり、Persistent Stagingのproject/branch/固定originは存在しない
-- OAuth issuer、resource、Vercel host routingはProduction originへ固定されており、現在のままではisolated Stagingを構成できない
+- repo内ではProduction/Stagingのexact OAuth identity、Vercel host routing、generic Preview無効化、operational build/readiness gateまで実装済み。外部のPersistent Staging、DNS、secret、client registrationは未作成
+- DB identity singleton、connection/code/tokenのresource FK、grant/exchange/refresh/applyのidentity検証、service-role限定provision/getterをmigrationとして実装済み。localではdata-less Staging provisionとwrong-resource拒否をrehearseしたが、Production/Stagingには未適用
 - `deleteAllData`はPlan、Record、tag、settingsだけを削除する。AI生成report、MCP connection/token/receipt、Calendar connection/refresh token、calendar selection/sync cursor、external event mirrorは残るため、削除後に外部writeまたはcalendar syncでデータが再作成され得る
 - mutation receiptの90日cleanup RPCはあるが、定期callerは未実装。authorization code、token、connection、security eventを含むretention期間はproduct decisionとして確定したが、cleanup実装と運用証跡は未完了
 - client別redirect URI overrideとMCP resource/write allowlistはrepoのenv schema、1Password field inventory、`.op-env.local.example`へ追加済み。`apps/product/.env.example`はsecret guardが書き込みを遮断したため未更新で、実1Password/Vercel fieldの存在も未確認
@@ -81,6 +82,8 @@ schema testでは、3 clientのredirect URI overrideとMCP resource/write allowl
 
 ### 4. Environment-aware OAuth identityとretentionを実装する
 
+OAuth identity側のrepo実装は2026-07-26時点で完了した。app config、host/path、metadata、operational build/readiness、DB singleton、resource FK、grant/exchange/refresh/apply、local staging rehearsalを含む。Production/Stagingへの適用とretention/deleteAllDataは未完了である。
+
 `MCP_OAUTH_ENVIRONMENT`を`staging` / `production`の明示markerとし、CHECKPOINTで固定したexact originだけを環境変数から読む。Stagingではmarker、authorization server URI、resource URIのどれかが未設定、またはProduction値なら起動・provisionをfail closedする。Production defaultだけは現在の2 originを維持する。
 
 DBにはservice-roleだけが設定できる環境identity singletonを置き、authorization server URIとresource URIを環境ごとに一度だけ固定する。connection/code/tokenと全grant/exchange/refresh/apply RPCはresourceをこのrowへbindする。app metadata/challengeとDB identityの不一致をreadiness checkで検出し、write gateを開かない。
@@ -106,16 +109,19 @@ retentionはservice-only cleanup RPCと定期callerを一組にし、DB時刻、
 外部変更は対象と費用を確認した後の明示権限で行う。
 
 1. `dayopt` projectにGit連携前のdata-less persistent branch `staging`を作り、branch refを取得する
-2. `[remotes.staging]`へbranch ref、seed無効、signup無効、staging exact Auth URLを固定してからGit deploymentへ接続する。repoの固定password seedは適用しない
-3. Vercel `product` projectにCustom Environment `staging`と固定Product/MCP hostを作る
-4. DNS、1Password master、Vercel/Supabase replica、3 clientのredirect URIを設定する
-5. writeをquiesceした状態で全migrationを適用し、command版appへ切り替える
-6. global/client/runtime gateを全てOFFのままread-only smokeを通す
-7. 1 clientずつdurable client gate → runtime allowlist → global controlの順に開く
-8. evidence matrixを通過したclientだけをbeta対象として維持する
-9. 異常時はglobal controlを先に閉じ、client connectionをdisableし、最後にruntime allowlistを閉じる
+2. `[remotes.staging]`へbranch ref、seed無効、signup無効、staging exact Auth URLを固定する。repoの固定password seedは適用せず、app、service-role writer、Git deploymentへまだ接続しない
+3. identity migrationまでのschema、user/OAuth/audit/receiptが0件、global/client gateがOFFであることをread-onlyで確認する
+4. branch refとexact tupleを再確認し、service-role RPCでStaging identityを一度だけprovisionする。getterのexact tuple、identity tableの直接権限なし、3 resource FKの`convalidated=true`を確認する
+5. Vercel `product` projectにCustom Environment `staging`と固定Product/MCP hostを作る
+6. DNS、1Password master、Vercel/Supabase replica、3 clientのredirect URIを設定する
+7. DB identity確認後にだけappをdeployし、global/client/runtime gateを全てOFFのままread-only smokeを通す
+8. 1 clientずつdurable client gate → runtime allowlist → global controlの順に開く
+9. evidence matrixを通過したclientだけをbeta対象として維持する
+10. 異常時はglobal controlを先に閉じ、client connectionをdisableし、最後にruntime allowlistを閉じる
 
 Persistent Stagingで現在のmigration chain、逆GRANT、再cutoverもrehearseする。Productionへ同migration chainを自動適用しない。
+
+Production候補ではDB-firstを必須にする。OAuth writeをquiesceして旧instanceをdrainし、3 OAuth tableの件数とlock waiterを記録してから、`20260726013339`、`20260726015311`、`20260726021453`を連続適用する。2番目と3番目のmigration間ではlegacy code insertが一時失敗し得るため、app write停止を解除しない。exact Production identity、3 FK、function ACLを確認した後にだけidentity検証版appをdeployする。旧DBへ新appを先行するとhealthとMCP accessが503になるため、同一auto-deployへまとめない。
 
 ### 6. 3 clientのgolden evidenceを保存する
 
