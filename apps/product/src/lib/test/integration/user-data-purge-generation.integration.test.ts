@@ -266,13 +266,17 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
     });
     expect(eventError).toBeNull();
 
+    // Plan / Record の FK 先を先に確定する。Promise.all に含めると、PostgREST request の
+    // 到着順次第で tag commit 前に子が insert され、fixture 自体が非決定的に失敗する。
+    const { error: tagError } = await admin.from('tags').insert({
+      id: tagId,
+      user_id: userId,
+      name: 'Purge me',
+      sort_order: 0,
+    });
+    expect(tagError).toBeNull();
+
     const fixtureResults = await Promise.all([
-      admin.from('tags').insert({
-        id: tagId,
-        user_id: userId,
-        name: 'Purge me',
-        sort_order: 0,
-      }),
       admin
         .from('user_settings')
         .upsert({ user_id: userId, timezone: 'Asia/Tokyo' }, { onConflict: 'user_id' }),
