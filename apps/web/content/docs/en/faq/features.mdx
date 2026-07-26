@@ -1,9 +1,10 @@
 ---
 title: 'FAQ: Features'
-description: "Common questions about Dayopt's features — timeboxing, Accuracy Score, Energy Mapping, AI Reflection, and more."
-tags: ['faq', 'features', 'timeboxing', 'accuracy-score', 'energy-mapping']
+description: "Common questions about Dayopt's features — timeboxing, plans and records, tags, review metrics, and calendar import."
+tags: ['faq', 'features', 'timeboxing', 'tags', 'review']
 author: 'Dayopt Team'
 publishedAt: '2026-03-19'
+updatedAt: '2026-07-27'
 order: 2
 category: 'faq'
 slug: 'features'
@@ -11,10 +12,10 @@ slug: 'features'
 ai:
   relatedQuestions:
     - 'What is timeboxing?'
-    - 'How does the Accuracy Score work?'
-    - 'What is Energy Mapping?'
+    - 'How do plans and records differ?'
     - 'Can I use keyboard shortcuts?'
     - 'Is there a timer feature?'
+    - 'Does Dayopt work offline?'
   chunkStrategy: 'h2'
   searchable: true
   difficulty: 'beginner'
@@ -25,80 +26,70 @@ ai:
 
 ## What is timeboxing?
 
-Timeboxing is a time management method where you divide your day into fixed blocks of time, each dedicated to a specific task. Instead of working through a to-do list hoping to finish everything, you plan _when_ and _how long_ you'll work on each task. Dayopt makes this workflow simple and practical.
+Timeboxing means dividing your day into fixed blocks of time, each given to one task. Instead of working through a to-do list and hoping to finish, you decide _when_ and _how long_ you will work on each thing. Dayopt is built around this workflow.
 
 ## How do I use Dayopt?
 
-Three steps. **Plan** — drag and drop tasks onto your calendar. **Execute** — start and complete with one click. **Reflect** — review the gap between plan and reality. Through this cycle, you gradually get better at managing your time.
+Three steps. **Plan** — put your work on the calendar as time blocks. **Track** — record the time you actually spent. **Reflect** — look at the gap between the two. Repeat, and your estimates get closer to reality.
 
-## What is the Accuracy Score?
+## What is the difference between a plan and a record?
 
-It compares your planned time with actual time spent. For example, if you planned 2 hours of deep work and finished in 1.5 hours, that's 75%. It's not about blame — it's about understanding how much your estimates drift. Over time, your estimation accuracy naturally improves.
-
-## What is Energy Mapping?
-
-After completing a timebox, you can log your focus and energy level with a single tap. After about a week, you'll start seeing your peak hours. This helps you schedule your most important work when you're at your best.
-
-## What does AI Reflection tell me?
-
-It provides personalized insights based on your own data. For example: "Your Tuesday afternoon deep work sessions have a 90% completion rate. Consider scheduling more." It's not generic advice — it's drawn from your actual patterns.
-
-## How does Google Calendar sync work?
-
-It syncs both ways. Timeboxes you create in Dayopt appear on Google Calendar, and Google Calendar events appear in Dayopt. You can layer timeboxing on top of your existing schedule without disrupting anything.
+A plan is what you intend to do. A record is what you actually did. You can link a record to a plan, and Dayopt shows the difference between them. Time you did not plan is marked as unplanned.
 
 ## Can I change plans by drag and drop?
 
-Yes. When things change, just drag your timebox to a new time. Plans aren't meant to be followed perfectly — they're meant to be adjusted flexibly. Dayopt makes that adjustment easy.
+Yes. Drag a block to a new time slot, or drag its bottom edge to change the end time. Plans are meant to be adjusted, not followed perfectly.
 
 ## Are there keyboard shortcuts?
 
-Yes. Frequently used actions can be performed via keyboard shortcuts. You can create, start, and complete timeboxes without touching your mouse, so your focus stays unbroken.
-
-## Can I organize tasks by project?
-
-Yes. You can group tasks under projects. The Free plan allows up to 3 projects; Pro is unlimited. We recommend starting small and expanding as you get comfortable.
+Yes. You can create blocks, switch views, move between dates, and search without touching the mouse. Press `Shift+?` in the app to see the full list. See [Use the calendar](/docs/calendar) for the main ones.
 
 ## Is there a tagging feature?
 
-Yes. You can tag your timeboxes freely — "deep work," "meetings," "admin," and so on. When you look back, you'll immediately see where your time went.
+Yes. Tag your blocks — "deep work", "meetings", "admin" — and you can see where your time went when you review. Tags can be nested and given a color and an icon.
 
-## Can I create recurring timeboxes?
-
-Yes. Daily routines and regular tasks can be set as recurring timeboxes. This shortens your morning planning time so you can jump straight into execution.
+Each block takes **one** tag. The Free plan has a tag limit; Pro removes it.
 
 ## Is there a timer? Can I use it like Pomodoro?
 
-Dayopt isn't designed to chase you with a timer. You record starts and completions with one click. It's about maintaining awareness of "I'm focusing on this now" while working at your own pace. Rhythm, not pressure.
+Dayopt is not designed to chase you with a timer. You record what you planned and what you did. The point is rhythm, not pressure.
 
-## What happens to timeboxes I don't complete?
+## What happens to blocks I do not complete?
 
-They stay as records. Not completing something isn't a "failure" — it's data. The patterns behind why plans didn't work out help make your next plan more realistic.
+They stay. You can mark a plan as skipped, which drops it from your totals but keeps it in your history. Not doing something is data, not failure.
 
-## Can I view weekly or monthly reports?
+## What can I see when I review?
 
-The Pro plan offers advanced analytics and trends. You can track your Accuracy Score over weeks and see time breakdowns by project. The numbers aren't for judgment — they're for pattern discovery.
+The Review page shows patterns from your own data:
+
+- Tracked time and your most-used tag
+- Time by tag, and where plan and record diverged
+- Estimation accuracy per tag
+- Records by day of week and by hour
+- Blank time — the hours with no name on them
+
+The Free plan includes the basic metrics. Pro includes all of them.
+
+## Can I import my Google Calendar?
+
+Yes, on the Pro plan. Dayopt reads your Google Calendar and shows those events alongside your blocks. This is a **one-way import** — Dayopt does not write to Google Calendar.
 
 ## Does it work offline?
 
-As a PWA (Progressive Web App), basic operations work offline. Everything syncs automatically when your connection returns.
-
-## Are there notifications?
-
-You can set notifications for timebox starts and ends. We keep them minimal by design — the last thing you need is notification overload breaking your focus.
+Basic use works offline, since Dayopt runs as a PWA (Progressive Web App). Changes sync when your connection comes back.
 
 ## Does it work across multiple devices?
 
-Yes. As a web app, you can access it from any browser on PC, tablet, or smartphone. Your data syncs via the cloud, so switching devices is seamless.
+Yes. Dayopt is a web app, so you can use it from a browser on a computer, tablet, or phone. Your data syncs through the cloud.
 
 ## Is there a dark mode?
 
-Yes. You can choose from light mode, dark mode, or match your system settings. Since it's a tool you use for extended periods, we want it to be easy on your eyes.
+Yes. Choose light, dark, or follow your system setting.
 
 ## Is there an API?
 
-Yes. API access is available from the Free plan. Build your own automation workflows or connect with other tools in your stack.
+Pro includes API and MCP access. The MCP server lets an AI assistant read your blocks, and you can subscribe to your schedule from another calendar app through a feed link. Pro also includes data export.
 
-## What are Records?
+## Can I export my data?
 
-Records capture your actual time spent. Against your Plan (what you intended), Records show what actually happened. Comparing the two is the core of Dayopt's improvement cycle.
+Yes, on the Pro plan. Your time is yours, and you can take it with you.
