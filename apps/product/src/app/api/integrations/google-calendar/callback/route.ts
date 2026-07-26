@@ -20,6 +20,7 @@ import {
   parseIdToken,
   resolveRedirectUri,
 } from '@/features/external-calendar/server/google-oauth';
+import { claimCalendarOAuthAttempt } from '@/features/external-calendar/server/oauth-attempt-service';
 import { checkProAccessForUser } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
 import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
@@ -163,6 +164,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
+    const claimedAttempt = await claimCalendarOAuthAttempt({
+      userId: user.id,
+      state: flowState.state,
+      verifier: flowState.verifier,
+    });
+    if (claimedAttempt === null) {
+      logger.warn('[calendar-callback] OAuth attempt is unavailable');
+      return fail('oauth_attempt_unavailable');
+    }
+
     const tokens = await exchangeAuthorizationCode({
       code,
       redirectUri,
@@ -186,7 +197,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const idToken = parseIdToken(tokens.id_token);
 
-    await saveConnection({
+    const saveOutcome = await saveConnection({
+      attemptId: claimedAttempt.attemptId,
       userId: user.id,
       providerAccountId: idToken.sub,
       providerAccountEmail: idToken.email ?? null,
@@ -194,6 +206,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       refreshToken: tokens.refresh_token,
       encryptionKey: env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? '',
     });
+    if (saveOutcome !== 'saved') {
+      logger.warn('[calendar-callback] connection authority was superseded');
+      return fail('connection_superseded');
+    }
   } catch (error) {
     if (error instanceof GoogleOAuthError) {
       logger.warn('[calendar-callback] google oauth exchange failed');

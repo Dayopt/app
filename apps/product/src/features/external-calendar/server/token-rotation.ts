@@ -6,14 +6,17 @@ import { env } from '@/env';
 import type { Database } from '@/lib/database';
 import { captureUnexpectedError } from '@/lib/sentry';
 
+import { resolveGoogleCalendarProjectKey } from './authority-config';
 import type { CalendarProviderAdapter } from './providers/types';
 import { encryptToken } from './token-crypto';
 
 const TOKEN_RPC_TIMEOUT_MS = 4_000;
 const TOKEN_RPC_ATTEMPTS = 3;
-const ROTATION_RPC_NAME = 'rotate_or_enqueue_calendar_refresh_token_command_v2' as const;
-const MARK_REAUTH_RPC_NAME = 'mark_calendar_connection_reauth_command_v2' as const;
-const PREPARE_RECOVERY_RPC_NAME = 'prepare_calendar_token_rotation_recovery_command_v1' as const;
+const ROTATION_RPC_NAME = 'rotate_or_enqueue_calendar_refresh_token_command_v3' as const;
+const MARK_REAUTH_RPC_NAME = 'mark_calendar_connection_reauth_command_v3' as const;
+const PREPARE_RECOVERY_RPC_NAME = 'prepare_calendar_token_rotation_recovery_command_v2' as const;
+const CLAIM_DIRECT_REVOKE_RPC_NAME = 'claim_calendar_revoke_direct_attempt_v1' as const;
+const FINALIZE_REVOKE_RPC_NAME = 'finalize_calendar_revoke_attempt_v2' as const;
 
 const DEFINITIVE_ROLLBACK_CODES = new Set([
   '22023',
@@ -32,7 +35,11 @@ type CalendarTokenRotationDatabase = {
     Views: Record<string, never>;
     Functions: Pick<
       Database['public']['Functions'],
-      typeof MARK_REAUTH_RPC_NAME | typeof PREPARE_RECOVERY_RPC_NAME | typeof ROTATION_RPC_NAME
+      | typeof CLAIM_DIRECT_REVOKE_RPC_NAME
+      | typeof FINALIZE_REVOKE_RPC_NAME
+      | typeof MARK_REAUTH_RPC_NAME
+      | typeof PREPARE_RECOVERY_RPC_NAME
+      | typeof ROTATION_RPC_NAME
     >;
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -42,7 +49,7 @@ type CalendarTokenRotationDatabase = {
 type CalendarTokenRotationClient = SupabaseClient<CalendarTokenRotationDatabase>;
 
 type RotationPersistenceOutcome = 'updated' | 'enqueued' | 'rejected' | 'unresolved';
-type RotationRecoveryOutcome = 'marked' | 'missing' | 'unresolved';
+type RotationRecoveryOutcome = 'expired' | 'marked' | 'missing' | 'revoked' | 'unresolved';
 type CalendarConnectionReauthOutcome = 'marked' | 'missing' | 'superseded' | 'unresolved';
 type CalendarTokenRotationOutcome =
   'updated' | 'enqueued' | 'reauth_required' | 'missing' | 'superseded' | 'unresolved';
@@ -59,6 +66,8 @@ type PersistCalendarTokenRotationInput = {
   operationId: string;
   userId: string;
   connectionId: string;
+  expectedAuthorityFenceId: string;
+  expectedAuthorityEpoch: number;
   expectedGeneration: number;
   expectedRefreshTokenEnc: string;
   rotatedRefreshToken: string;
@@ -70,6 +79,8 @@ type PersistCalendarTokenRotationInput = {
 type MarkCalendarConnectionReauthInput = {
   userId: string;
   connectionId: string;
+  expectedAuthorityFenceId: string;
+  expectedAuthorityEpoch: number;
   expectedGeneration: number;
   expectedRefreshTokenEnc: string;
   lastSyncedAt?: string;
@@ -97,6 +108,14 @@ function createCalendarTokenRotationClient(): CalendarTokenRotationClient {
   );
 }
 
+function resolveProjectKeyOrThrow(): string {
+  const projectKey = resolveGoogleCalendarProjectKey();
+  if (projectKey === null) {
+    throw new Error('calendar authority project is not configured');
+  }
+  return projectKey;
+}
+
 /**
  * Provider が発行した新 refresh token の所有先を確定する。
  *
@@ -121,9 +140,12 @@ export async function persistCalendarTokenRotation(
 
   const args = {
     p_operation_id: input.operationId,
+    p_project_key: resolveProjectKeyOrThrow(),
     p_user_id: input.userId,
     p_connection_id: input.connectionId,
     p_expected_generation: input.expectedGeneration,
+    p_expected_authority_fence_id: input.expectedAuthorityFenceId,
+    p_expected_authority_epoch: input.expectedAuthorityEpoch,
     p_expected_refresh_token_enc: input.expectedRefreshTokenEnc,
     p_new_refresh_token_enc: newRefreshTokenEnc,
   };
@@ -136,6 +158,8 @@ export async function persistCalendarTokenRotation(
         markCalendarConnectionReauth({
           userId: input.userId,
           connectionId: input.connectionId,
+          expectedAuthorityFenceId: input.expectedAuthorityFenceId,
+          expectedAuthorityEpoch: input.expectedAuthorityEpoch,
           expectedGeneration: input.expectedGeneration,
           expectedRefreshTokenEnc: input.expectedRefreshTokenEnc,
           operationId: input.operationId,
@@ -194,9 +218,12 @@ export async function markCalendarConnectionReauth(
   input: MarkCalendarConnectionReauthInput,
 ): Promise<CalendarConnectionReauthOutcome> {
   const args = {
+    p_project_key: resolveProjectKeyOrThrow(),
     p_user_id: input.userId,
     p_connection_id: input.connectionId,
     p_expected_generation: input.expectedGeneration,
+    p_expected_authority_fence_id: input.expectedAuthorityFenceId,
+    p_expected_authority_epoch: input.expectedAuthorityEpoch,
     p_expected_refresh_token_enc: input.expectedRefreshTokenEnc,
     ...(input.operationId === undefined
       ? {}
@@ -251,9 +278,12 @@ async function recoverCalendarTokenRotation(
 ): Promise<CalendarTokenRotationResult> {
   const args = {
     p_operation_id: input.operationId,
+    p_project_key: resolveProjectKeyOrThrow(),
     p_user_id: input.userId,
     p_connection_id: input.connectionId,
     p_expected_generation: input.expectedGeneration,
+    p_expected_authority_fence_id: input.expectedAuthorityFenceId,
+    p_expected_authority_epoch: input.expectedAuthorityEpoch,
     p_expected_refresh_token_enc: input.expectedRefreshTokenEnc,
     ...(newRefreshTokenEnc === undefined ? {} : { p_new_refresh_token_enc: newRefreshTokenEnc }),
   };
@@ -267,10 +297,14 @@ async function recoverCalendarTokenRotation(
   }
 
   if (newRefreshTokenEnc === undefined) {
-    await compensateCalendarTokenRotation(input.provider, input.rotatedRefreshToken);
+    await compensateCalendarTokenRotation(input);
   }
 
-  if (recoveryOutcome === 'marked') {
+  if (
+    recoveryOutcome === 'marked' ||
+    recoveryOutcome === 'revoked' ||
+    recoveryOutcome === 'expired'
+  ) {
     return { outcome: 'reauth_required', markReauthIfCurrent: null };
   }
   return { outcome: 'missing', markReauthIfCurrent: null };
@@ -286,7 +320,12 @@ async function callRecoveryPreparation(
         .rpc(PREPARE_RECOVERY_RPC_NAME, args)
         .abortSignal(AbortSignal.timeout(TOKEN_RPC_TIMEOUT_MS));
 
-      if (!error && (data === 'marked' || data === 'missing')) return data;
+      if (
+        !error &&
+        (data === 'marked' || data === 'missing' || data === 'revoked' || data === 'expired')
+      ) {
+        return data;
+      }
 
       if (error?.code && DEFINITIVE_ROLLBACK_CODES.has(error.code)) {
         captureUnexpectedError(new Error('calendar token rotation recovery was rejected'), {
@@ -310,15 +349,50 @@ async function callRecoveryPreparation(
 }
 
 async function compensateCalendarTokenRotation(
-  provider: Pick<CalendarProviderAdapter, 'revoke'>,
-  rotatedRefreshToken: string,
+  input: PersistCalendarTokenRotationInput,
 ): Promise<boolean> {
+  let claim:
+    | Database['public']['Functions'][typeof CLAIM_DIRECT_REVOKE_RPC_NAME]['Returns'][number]
+    | undefined;
+  try {
+    const db = createCalendarTokenRotationClient();
+    const { data, error } = await db
+      .rpc(CLAIM_DIRECT_REVOKE_RPC_NAME, {
+        p_project_key: resolveProjectKeyOrThrow(),
+        p_operation_id: input.operationId,
+        p_user_id: input.userId,
+      })
+      .abortSignal(AbortSignal.timeout(TOKEN_RPC_TIMEOUT_MS));
+    if (error) throw new Error('direct Calendar revoke claim failed');
+    claim = data?.[0];
+  } catch {
+    captureUnexpectedError(new Error('calendar token rotation compensation was not claimed'), {
+      feature: 'external_calendar',
+      operation: 'claim_unpersisted_refresh_token_revoke',
+      source: 'supabase_rpc',
+    });
+    return false;
+  }
+
+  if (claim === undefined) return false;
+
+  if (Date.parse(claim.attempt_deadline_at) <= Date.now()) {
+    await finalizeDirectRevoke(input.operationId, claim.lease_id, 'not_started');
+    return false;
+  }
+
   let confirmed = false;
   try {
-    confirmed = await provider.revoke(rotatedRefreshToken);
+    confirmed = await input.provider.revoke(input.rotatedRefreshToken);
   } catch {
     // provider errorにtokenが含まれる可能性があるためcauseとして保持しない。
   }
+
+  await finalizeDirectRevoke(
+    input.operationId,
+    claim.lease_id,
+    confirmed ? 'confirmed' : 'unconfirmed',
+  );
 
   if (!confirmed) {
     captureUnexpectedError(new Error('calendar token rotation compensation was not confirmed'), {
@@ -329,4 +403,35 @@ async function compensateCalendarTokenRotation(
   }
 
   return confirmed;
+}
+
+async function finalizeDirectRevoke(
+  operationId: string,
+  leaseId: string,
+  outcome: 'confirmed' | 'not_started' | 'unconfirmed',
+): Promise<void> {
+  const args = {
+    p_project_key: resolveProjectKeyOrThrow(),
+    p_outbox_id: operationId,
+    p_lease_id: leaseId,
+    p_outcome: outcome,
+  };
+
+  for (let attempt = 0; attempt < TOKEN_RPC_ATTEMPTS; attempt += 1) {
+    try {
+      const db = createCalendarTokenRotationClient();
+      const { error } = await db
+        .rpc(FINALIZE_REVOKE_RPC_NAME, args)
+        .abortSignal(AbortSignal.timeout(TOKEN_RPC_TIMEOUT_MS));
+      if (!error) return;
+    } catch {
+      // provider callは再実行せず、同じlease/outcomeのfinalizeだけを再送する。
+    }
+  }
+
+  captureUnexpectedError(new Error('calendar token rotation compensation was not finalized'), {
+    feature: 'external_calendar',
+    operation: 'finalize_unpersisted_refresh_token_revoke',
+    source: 'supabase_rpc',
+  });
 }

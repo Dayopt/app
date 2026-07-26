@@ -107,6 +107,8 @@ function createSyncDbClient(): SyncClient {
 
 /** `refresh_token_enc` は column-scoped grant 外だが service_role なので読める。列は明示列挙する。 */
 type ConnectionRow = {
+  authority_epoch: number;
+  authority_fence_id: string;
   data_generation: number;
   id: string;
   user_id: string;
@@ -180,6 +182,8 @@ export async function syncConnection(params: {
       const reauthOutcome = await markCalendarConnectionReauth({
         userId,
         connectionId,
+        expectedAuthorityFenceId: connection.authority_fence_id,
+        expectedAuthorityEpoch: connection.authority_epoch,
         expectedGeneration: connection.data_generation,
         expectedRefreshTokenEnc: connection.refresh_token_enc,
         lastSyncedAt: runStartedAtIso,
@@ -200,6 +204,8 @@ export async function syncConnection(params: {
       operationId: rotationOperationId,
       userId,
       connectionId,
+      expectedAuthorityFenceId: connection.authority_fence_id,
+      expectedAuthorityEpoch: connection.authority_epoch,
       expectedGeneration: connection.data_generation,
       expectedRefreshTokenEnc: connection.refresh_token_enc,
       rotatedRefreshToken: session.rotatedRefreshToken,
@@ -264,6 +270,8 @@ export async function syncConnection(params: {
         ? await markCalendarConnectionReauth({
             userId,
             connectionId,
+            expectedAuthorityFenceId: connection.authority_fence_id,
+            expectedAuthorityEpoch: connection.authority_epoch,
             expectedGeneration: connection.data_generation,
             expectedRefreshTokenEnc: connection.refresh_token_enc,
             lastSyncedAt: runStartedAtIso,
@@ -374,7 +382,9 @@ async function loadConnection(
   // 列は明示列挙する。column-scoped grant のため select('*') は 42501 になる。
   const { data, error } = await db
     .from(databaseTables.calendarConnections)
-    .select('id, user_id, status, refresh_token_enc, data_generation')
+    .select(
+      'id, user_id, status, refresh_token_enc, data_generation, authority_fence_id, authority_epoch',
+    )
     .eq('id', connectionId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -389,7 +399,13 @@ async function loadConnection(
       cause: normalized,
     });
   }
-  return data;
+  if (data !== null && (data.authority_fence_id === null || data.authority_epoch === null)) {
+    throw new ExternalCalendarServiceError(
+      'SYNC_FAILED',
+      'calendar connection authority is not ready',
+    );
+  }
+  return data as ConnectionRow | null;
 }
 
 async function loadSelectedCalendars(

@@ -12,6 +12,7 @@ import {
   isGoogleCalendarConfigured,
   resolveRedirectUri,
 } from '@/features/external-calendar/server/google-oauth';
+import { beginCalendarOAuthAttempt } from '@/features/external-calendar/server/oauth-attempt-service';
 import { checkProAccessForUser } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
 import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
@@ -101,6 +102,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const state = generateState();
   const { verifier, challenge } = generatePkcePair();
   const locale = normalizeLocale(requestUrl.searchParams.get('locale') ?? undefined);
+
+  try {
+    await beginCalendarOAuthAttempt({
+      userId: user.id,
+      state,
+      verifier,
+    });
+  } catch {
+    captureUnexpectedError(new Error('calendar OAuth attempt could not be started'), {
+      feature: 'external_calendar',
+      operation: 'begin_oauth_attempt',
+      route: '/api/integrations/google-calendar/start',
+      source: 'supabase_rpc',
+    });
+    logger.error('[calendar-connect] failed to start the OAuth attempt');
+    return NextResponse.json({ error: 'Failed to start Calendar connection' }, { status: 500 });
+  }
 
   const response = NextResponse.redirect(
     buildAuthorizationUrl({ redirectUri, state, codeChallenge: challenge }),

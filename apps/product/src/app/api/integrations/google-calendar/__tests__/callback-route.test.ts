@@ -7,6 +7,7 @@ const saveConnection = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
+const claimCalendarOAuthAttempt = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: '123456789012-dayoptcalendar.apps.googleusercontent.com',
   GOOGLE_CALENDAR_PROJECT_NUMBER: '123456789012',
@@ -21,6 +22,9 @@ vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
 vi.mock('@/lib/rate-limit/upstash', () => ({ calendarConnectRateLimit: { limit: rateLimit } }));
 vi.mock('@/features/external-calendar/server/connection-service', () => ({ saveConnection }));
+vi.mock('@/features/external-calendar/server/oauth-attempt-service', () => ({
+  claimCalendarOAuthAttempt,
+}));
 
 import { GET } from '../callback/route';
 
@@ -28,6 +32,7 @@ const USER_ID = '00000000-0000-4000-8000-000000000001';
 const OTHER_USER_ID = '00000000-0000-4000-8000-000000000002';
 const STATE = 'state-value';
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+const ATTEMPT_ID = '00000000-0000-4000-8000-0000000000a1';
 
 function idToken(overrides: Record<string, unknown> = {}): string {
   const payload = {
@@ -95,7 +100,11 @@ describe('google calendar callback route', () => {
     });
     getUser.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
     createClient.mockResolvedValue({ auth: { getUser } });
-    saveConnection.mockResolvedValue(undefined);
+    saveConnection.mockResolvedValue('saved');
+    claimCalendarOAuthAttempt.mockResolvedValue({
+      attemptId: ATTEMPT_ID,
+      claimExpiresAt: '2026-07-26T00:02:00.000Z',
+    });
     checkProAccessForUser.mockResolvedValue('allowed');
     rateLimit.mockResolvedValue({ success: true });
     vi.stubGlobal(
@@ -178,6 +187,16 @@ describe('google calendar callback route', () => {
     expect(reasonOf(response)).toBe('authorization_expired');
     // 誰でも起こせるので、capture すると quota を焼く増幅経路になる
     expect(captureUnexpectedError).not.toHaveBeenCalled();
+  });
+
+  it('DB attemptをclaimできなければcodeを交換しない', async () => {
+    claimCalendarOAuthAttempt.mockResolvedValue(null);
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('oauth_attempt_unavailable');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(saveConnection).not.toHaveBeenCalled();
   });
 
   // invalid_grant だけを抑制する。設定不備や Google 障害まで巻き込むと、全接続が
@@ -314,6 +333,7 @@ describe('google calendar callback route', () => {
 
     expect(saveConnection).toHaveBeenCalledWith(
       expect.objectContaining({
+        attemptId: ATTEMPT_ID,
         userId: USER_ID,
         providerAccountId: 'google-sub-123',
         providerAccountEmail: 'user@example.com',
@@ -325,6 +345,14 @@ describe('google calendar callback route', () => {
     const location = new URL(response.headers.get('location') ?? '');
     expect(location.pathname).toBe('/ja/settings/account');
     expect(location.searchParams.get('calendar')).toBe('connected');
+  });
+
+  it('保存時にgenerationまたはauthorityを失ったtokenは接続成功にしない', async () => {
+    saveConnection.mockResolvedValue('enqueued');
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('connection_superseded');
   });
 
   it('scope の連続スペースで空文字が混ざらない', async () => {

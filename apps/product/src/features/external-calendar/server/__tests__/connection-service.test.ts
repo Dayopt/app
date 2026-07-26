@@ -7,7 +7,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { ExternalCalendarServiceError } from '../external-calendar-service-error';
 
 const createClient = vi.hoisted(() => vi.fn());
-const deleteUnreferencedEvents = vi.hoisted(() => vi.fn());
 const startSession = vi.hoisted(() => vi.fn());
 const listCalendars = vi.hoisted(() => vi.fn());
 const revoke = vi.hoisted(() => vi.fn());
@@ -15,17 +14,17 @@ const decryptToken = vi.hoisted(() => vi.fn());
 const encryptToken = vi.hoisted(() => vi.fn());
 const persistCalendarTokenRotation = vi.hoisted(() => vi.fn());
 const markCalendarConnectionReauth = vi.hoisted(() => vi.fn());
-const loggerWarn = vi.hoisted(() => vi.fn());
 
 vi.mock('@/env', () => ({
   env: {
     NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
     SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
     CALENDAR_TOKEN_ENCRYPTION_KEY: 'A'.repeat(43) + '=',
+    GOOGLE_CALENDAR_CLIENT_ID: '123456789012-dayoptcalendar.apps.googleusercontent.com',
+    GOOGLE_CALENDAR_PROJECT_NUMBER: '123456789012',
   },
 }));
 vi.mock('@supabase/supabase-js', () => ({ createClient }));
-vi.mock('../event-pruning', () => ({ deleteUnreferencedEvents }));
 vi.mock('../providers/google', () => ({
   googleCalendarAdapter: { provider: 'google', startSession, listCalendars, revoke },
 }));
@@ -34,15 +33,13 @@ vi.mock('../token-rotation', () => ({
   persistCalendarTokenRotation,
   markCalendarConnectionReauth,
 }));
-vi.mock('@/lib/logger', () => ({
-  logger: { log: vi.fn(), error: vi.fn(), warn: loggerWarn, info: vi.fn(), debug: vi.fn() },
-}));
 
 import {
   disconnect,
   getSyncStatus,
   listConnections,
   listProviderCalendars,
+  saveConnection,
   updateSelectedCalendars,
 } from '../connection-service';
 
@@ -52,8 +49,15 @@ const CONNECTION_ID = '00000000-0000-4000-8000-0000000000c1';
 type Recorder = { table: string; chain: Array<{ method: string; args: unknown[] }> };
 
 type Config = {
-  connection?: { data_generation?: number; status: string; refresh_token_enc: string } | null;
+  connection?: {
+    authority_epoch?: number | null;
+    authority_fence_id?: string | null;
+    data_generation?: number;
+    status: string;
+    refresh_token_enc: string;
+  } | null;
   childRows?: Array<{ provider_calendar_id: string }>;
+  rpcResults?: Record<string, Array<{ data: unknown; error: unknown } | Error>>;
 };
 
 function setupServiceRoleDb(config: Config) {
@@ -62,7 +66,20 @@ function setupServiceRoleDb(config: Config) {
   function resolve(recorder: Recorder): { data: unknown; error: unknown } {
     const methods = recorder.chain.map((entry) => entry.method);
     if (recorder.table === 'calendar_connections') {
-      if (methods.includes('maybeSingle')) return { data: config.connection ?? null, error: null };
+      if (methods.includes('maybeSingle')) {
+        return {
+          data:
+            config.connection === null || config.connection === undefined
+              ? null
+              : {
+                  authority_epoch: 2,
+                  authority_fence_id: '00000000-0000-4000-8000-0000000000f1',
+                  data_generation: 3,
+                  ...config.connection,
+                },
+          error: null,
+        };
+      }
       return { data: null, error: null }; // update / delete
     }
     if (recorder.table === 'calendar_connection_calendars') {
@@ -97,22 +114,25 @@ function setupServiceRoleDb(config: Config) {
     return proxy;
   });
 
-  createClient.mockReturnValue({ from });
-  return { calls };
+  const counters = new Map<string, number>();
+  const rpc = vi.fn((operation: string) => {
+    const responses = config.rpcResults?.[operation] ?? [{ data: 'updated', error: null }];
+    const index = counters.get(operation) ?? 0;
+    counters.set(operation, index + 1);
+    const response = responses[Math.min(index, responses.length - 1)]!;
+    return {
+      abortSignal: vi.fn(() =>
+        response instanceof Error ? Promise.reject(response) : Promise.resolve(response),
+      ),
+    };
+  });
+
+  createClient.mockReturnValue({ from, rpc });
+  return { calls, rpc };
 }
 
 function recordersFor(calls: Recorder[], table: string): Recorder[] {
   return calls.filter((r) => r.table === table);
-}
-
-function findWith(calls: Recorder[], table: string, method: string): Recorder | undefined {
-  return recordersFor(calls, table).find((r) => r.chain.some((e) => e.method === method));
-}
-
-function argsOf(recorder: Recorder, method: string): unknown[] {
-  const entry = recorder.chain.find((e) => e.method === method);
-  if (!entry) throw new Error(`${method} not called`);
-  return entry.args;
 }
 
 beforeEach(() => {
@@ -127,7 +147,6 @@ beforeEach(() => {
   startSession.mockResolvedValue({ accessToken: 'access', rotatedRefreshToken: null });
   listCalendars.mockResolvedValue([]);
   revoke.mockResolvedValue(true);
-  deleteUnreferencedEvents.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -210,6 +229,8 @@ describe('listProviderCalendars', () => {
     expect(markCalendarConnectionReauth).toHaveBeenCalledWith({
       userId: USER_ID,
       connectionId: CONNECTION_ID,
+      expectedAuthorityFenceId: '00000000-0000-4000-8000-0000000000f1',
+      expectedAuthorityEpoch: 2,
       expectedGeneration: 3,
       expectedRefreshTokenEnc: 'enc',
     });
@@ -227,6 +248,8 @@ describe('listProviderCalendars', () => {
       expect.objectContaining({
         userId: USER_ID,
         connectionId: CONNECTION_ID,
+        expectedAuthorityFenceId: '00000000-0000-4000-8000-0000000000f1',
+        expectedAuthorityEpoch: 2,
         expectedGeneration: 3,
         expectedRefreshTokenEnc: 'enc',
         rotatedRefreshToken: 'rotated',
@@ -299,62 +322,131 @@ describe('listProviderCalendars', () => {
 });
 
 // =============================================================================
+// saveConnection
+// =============================================================================
+
+describe('saveConnection', () => {
+  it('claim済みattemptと暗号文をfenced commandへ渡す', async () => {
+    const { rpc } = setupServiceRoleDb({
+      rpcResults: {
+        save_calendar_connection_command_v2: [{ data: 'saved', error: null }],
+      },
+    });
+
+    await expect(
+      saveConnection({
+        attemptId: '00000000-0000-4000-8000-0000000000a1',
+        userId: USER_ID,
+        providerAccountId: 'google-sub',
+        providerAccountEmail: null,
+        grantedScopes: ['calendar.readonly'],
+        refreshToken: 'plain-refresh-token',
+        encryptionKey: 'encryption-key',
+      }),
+    ).resolves.toBe('saved');
+
+    expect(encryptToken).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith('save_calendar_connection_command_v2', {
+      p_attempt_id: '00000000-0000-4000-8000-0000000000a1',
+      p_project_key: '123456789012',
+      p_user_id: USER_ID,
+      p_provider: 'google',
+      p_provider_account_id: 'google-sub',
+      p_provider_account_email: null,
+      p_granted_scopes: ['calendar.readonly'],
+      p_refresh_token_enc: 'enc',
+    });
+  });
+
+  it('response欠落後も同じciphertextで再試行する', async () => {
+    const rpc = vi
+      .fn()
+      .mockReturnValueOnce({
+        abortSignal: vi.fn(() => Promise.reject(new Error('response lost'))),
+      })
+      .mockReturnValueOnce({
+        abortSignal: vi.fn(() => Promise.resolve({ data: 'saved', error: null })),
+      });
+    createClient.mockReturnValue({ rpc });
+
+    await saveConnection({
+      attemptId: '00000000-0000-4000-8000-0000000000a1',
+      userId: USER_ID,
+      providerAccountId: 'google-sub',
+      providerAccountEmail: 'user@example.com',
+      grantedScopes: ['calendar.readonly'],
+      refreshToken: 'plain-refresh-token',
+      encryptionKey: 'encryption-key',
+    });
+
+    expect(encryptToken).toHaveBeenCalledTimes(1);
+    expect(rpc.mock.calls[0]).toEqual(rpc.mock.calls[1]);
+  });
+});
+
+// =============================================================================
 // updateSelectedCalendars
 // =============================================================================
 
 describe('updateSelectedCalendars', () => {
-  it('選択を upsert し、sync_token をキーに含めない（残す行の cursor 保持）', async () => {
-    const { calls } = setupServiceRoleDb({
+  it('選択全体をgeneration/authority-bound commandへ渡す', async () => {
+    const { rpc } = setupServiceRoleDb({
       connection: { status: 'active', refresh_token_enc: 'enc' },
-      childRows: [{ provider_calendar_id: 'cal-a' }],
+      rpcResults: {
+        replace_selected_calendars_command_v1: [{ data: 'updated', error: null }],
+      },
     });
 
     await updateSelectedCalendars(USER_ID, CONNECTION_ID, [
       { providerCalendarId: 'cal-a', calendarName: 'A' },
     ]);
 
-    const upsert = findWith(calls, 'calendar_connection_calendars', 'upsert')!;
-    const [rows, options] = argsOf(upsert, 'upsert') as [
-      Array<Record<string, unknown>>,
-      { onConflict: string },
-    ];
-    expect(options.onConflict).toBe('connection_id,provider_calendar_id');
-    for (const row of rows) {
-      expect(Object.prototype.hasOwnProperty.call(row, 'sync_token')).toBe(false);
-    }
-  });
-
-  it('外したカレンダーの子行を delete し、そのミラーを即時掃除する', async () => {
-    const { calls } = setupServiceRoleDb({
-      connection: { status: 'active', refresh_token_enc: 'enc' },
-      childRows: [{ provider_calendar_id: 'cal-a' }, { provider_calendar_id: 'cal-b' }],
-    });
-
-    // cal-b を外す
-    await updateSelectedCalendars(USER_ID, CONNECTION_ID, [
-      { providerCalendarId: 'cal-a', calendarName: 'A' },
-    ]);
-
-    const childDelete = findWith(calls, 'calendar_connection_calendars', 'delete')!;
-    expect(argsOf(childDelete, 'in')).toEqual(['provider_calendar_id', ['cal-b']]);
-    expect(deleteUnreferencedEvents).toHaveBeenCalledWith({
-      userId: USER_ID,
-      connectionId: CONNECTION_ID,
-      scope: { kind: 'calendars', providerCalendarIds: ['cal-b'] },
+    expect(rpc).toHaveBeenCalledWith('replace_selected_calendars_command_v1', {
+      p_project_key: '123456789012',
+      p_user_id: USER_ID,
+      p_connection_id: CONNECTION_ID,
+      p_expected_generation: 3,
+      p_expected_authority_fence_id: '00000000-0000-4000-8000-0000000000f1',
+      p_expected_authority_epoch: 2,
+      p_selected_calendars: [{ providerCalendarId: 'cal-a', calendarName: 'A' }],
     });
   });
 
-  it('外した行が無ければミラー掃除を呼ばない', async () => {
+  it('superseded writerでは更新失敗にする', async () => {
     setupServiceRoleDb({
       connection: { status: 'active', refresh_token_enc: 'enc' },
-      childRows: [{ provider_calendar_id: 'cal-a' }],
+      rpcResults: {
+        replace_selected_calendars_command_v1: [{ data: 'superseded', error: null }],
+      },
+    });
+
+    await expect(
+      updateSelectedCalendars(USER_ID, CONNECTION_ID, [
+        { providerCalendarId: 'cal-a', calendarName: 'A' },
+      ]),
+    ).rejects.toMatchObject({ code: 'UPDATE_FAILED' });
+  });
+
+  it('response欠落後も同じselection snapshotで再試行する', async () => {
+    const { rpc } = setupServiceRoleDb({
+      connection: { status: 'active', refresh_token_enc: 'enc' },
+      rpcResults: {
+        replace_selected_calendars_command_v1: [
+          new Error('response lost'),
+          { data: 'updated', error: null },
+        ],
+      },
     });
 
     await updateSelectedCalendars(USER_ID, CONNECTION_ID, [
       { providerCalendarId: 'cal-a', calendarName: 'A' },
     ]);
 
-    expect(deleteUnreferencedEvents).not.toHaveBeenCalled();
+    const selectionCalls = rpc.mock.calls.filter(
+      ([name]) => name === 'replace_selected_calendars_command_v1',
+    );
+    expect(selectionCalls).toHaveLength(2);
+    expect(selectionCalls[0]).toEqual(selectionCalls[1]);
   });
 });
 
@@ -363,87 +455,56 @@ describe('updateSelectedCalendars', () => {
 // =============================================================================
 
 describe('disconnect', () => {
-  it('revoke → prune → connection 削除 の順で実行する', async () => {
-    const { calls } = setupServiceRoleDb({
-      connection: { status: 'active', refresh_token_enc: 'enc' },
-    });
-
-    let prunedBeforeConnectionDelete = false;
-    deleteUnreferencedEvents.mockImplementation(async () => {
-      // prune 呼び出し時点で connection の delete はまだ発行されていないはず（§8 順序）
-      prunedBeforeConnectionDelete = !calls.some(
-        (r) => r.table === 'calendar_connections' && r.chain.some((e) => e.method === 'delete'),
-      );
+  it('providerを直接呼ばずfenced commandへ委ねる', async () => {
+    const { rpc } = setupServiceRoleDb({
+      rpcResults: {
+        disconnect_calendar_connection_command_v1: [{ data: 'queued', error: null }],
+      },
     });
 
     await disconnect(USER_ID, CONNECTION_ID);
 
-    expect(revoke).toHaveBeenCalledWith('refresh-token');
-    expect(deleteUnreferencedEvents).toHaveBeenCalledWith({
-      userId: USER_ID,
-      connectionId: CONNECTION_ID,
-      scope: { kind: 'connection' },
+    expect(rpc).toHaveBeenCalledWith('disconnect_calendar_connection_command_v1', {
+      p_operation_id: expect.any(String),
+      p_project_key: '123456789012',
+      p_user_id: USER_ID,
+      p_connection_id: CONNECTION_ID,
     });
-    expect(prunedBeforeConnectionDelete).toBe(true);
-    expect(findWith(calls, 'calendar_connections', 'delete')).toBeDefined();
-  });
-
-  it('接続が既に無ければ冪等に何もしない', async () => {
-    setupServiceRoleDb({ connection: null });
-
-    await disconnect(USER_ID, CONNECTION_ID);
-
     expect(revoke).not.toHaveBeenCalled();
-    expect(deleteUnreferencedEvents).not.toHaveBeenCalled();
+    expect(decryptToken).not.toHaveBeenCalled();
   });
 
-  it('復号に失敗しても切断を続行する（revoke は諦める）', async () => {
-    const { calls } = setupServiceRoleDb({
-      connection: { status: 'active', refresh_token_enc: 'enc' },
-    });
-    decryptToken.mockImplementation(() => {
-      throw new Error('bad key');
+  it('接続が既に無ければ冪等に成功する', async () => {
+    setupServiceRoleDb({
+      rpcResults: {
+        disconnect_calendar_connection_command_v1: [{ data: 'missing', error: null }],
+      },
     });
 
-    await disconnect(USER_ID, CONNECTION_ID);
-
-    expect(revoke).not.toHaveBeenCalled();
-    expect(deleteUnreferencedEvents).toHaveBeenCalled();
-    expect(findWith(calls, 'calendar_connections', 'delete')).toBeDefined();
+    await expect(disconnect(USER_ID, CONNECTION_ID)).resolves.toBeUndefined();
   });
 
-  it('接続削除の DB 失敗は ExternalCalendarServiceError を投げる', async () => {
-    setupServiceRoleDb({ connection: { status: 'active', refresh_token_enc: 'enc' } });
-    // connection delete を失敗させるため resolve を差し替える必要があるが、ここでは
-    // deleteConnectionError を使わずに throw 経路の存在だけ確認する形にはできないので、
-    // 代わりに削除エラーを返す最小構成にする。
-    const failingFrom = vi.fn((table: string) => {
-      const chain: Record<string, unknown> = {};
-      const proxy: unknown = new Proxy(chain, {
-        get(_t, prop: string) {
-          if (prop === 'then') {
-            const isConnectionDelete = table === 'calendar_connections';
-            return (onF: (v: { data: unknown; error: unknown }) => unknown) =>
-              Promise.resolve(
-                isConnectionDelete
-                  ? { data: null, error: { code: '55000' } }
-                  : { data: null, error: null },
-              ).then(onF);
-          }
-          return (..._args: unknown[]) => {
-            if (prop === 'maybeSingle') {
-              return Promise.resolve({
-                data: { status: 'active', refresh_token_enc: 'enc' },
-                error: null,
-              });
-            }
-            return proxy;
-          };
-        },
+  it('response欠落後も同じoperation IDで再試行する', async () => {
+    const rpc = vi
+      .fn()
+      .mockReturnValueOnce({
+        abortSignal: vi.fn(() => Promise.reject(new Error('response lost'))),
+      })
+      .mockReturnValueOnce({
+        abortSignal: vi.fn(() => Promise.resolve({ data: 'queued', error: null })),
       });
-      return proxy;
-    });
-    createClient.mockReturnValue({ from: failingFrom });
+    createClient.mockReturnValue({ rpc });
+
+    await disconnect(USER_ID, CONNECTION_ID);
+
+    expect(rpc.mock.calls[0]).toEqual(rpc.mock.calls[1]);
+  });
+
+  it('DB outcomeを確定できなければExternalCalendarServiceErrorを投げる', async () => {
+    const rpc = vi.fn(() => ({
+      abortSignal: vi.fn(() => Promise.resolve({ data: null, error: { code: '08006' } })),
+    }));
+    createClient.mockReturnValue({ rpc });
 
     await expect(disconnect(USER_ID, CONNECTION_ID)).rejects.toBeInstanceOf(
       ExternalCalendarServiceError,

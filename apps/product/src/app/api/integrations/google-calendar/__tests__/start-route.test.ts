@@ -7,6 +7,7 @@ const createClient = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
+const beginCalendarOAuthAttempt = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: '123456789012-dayoptcalendar.apps.googleusercontent.com',
   GOOGLE_CALENDAR_PROJECT_NUMBER: '123456789012',
@@ -23,6 +24,9 @@ vi.mock('@/lib/rate-limit/upstash', () => ({
 }));
 vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
+vi.mock('@/features/external-calendar/server/oauth-attempt-service', () => ({
+  beginCalendarOAuthAttempt,
+}));
 
 import { GET } from '../start/route';
 
@@ -47,6 +51,7 @@ describe('google calendar start route', () => {
     createClient.mockResolvedValue({ auth: { getUser }, from });
     rateLimit.mockResolvedValue({ success: true });
     checkProAccessForUser.mockResolvedValue('allowed');
+    beginCalendarOAuthAttempt.mockResolvedValue(undefined);
   });
 
   it('env が未設定なら 503 で止まり Google へ飛ばさない', async () => {
@@ -141,6 +146,11 @@ describe('google calendar start route', () => {
     // verifier は cookie にだけ入り、URL には出ない
     expect(flowState.verifier).toBeTruthy();
     expect(location.searchParams.get('code_verifier')).toBeNull();
+    expect(beginCalendarOAuthAttempt).toHaveBeenCalledWith({
+      userId: USER_ID,
+      state: flowState.state,
+      verifier: flowState.verifier,
+    });
   });
 
   it('http の localhost では __Host- prefix を落とす', async () => {
@@ -184,5 +194,18 @@ describe('google calendar start route', () => {
 
     expect(response.status).toBe(500);
     expect(captureUnexpectedError).toHaveBeenCalled();
+  });
+
+  it('DBへOAuth attemptを保存できなければGoogleへ送らない', async () => {
+    beginCalendarOAuthAttempt.mockRejectedValue(new Error('database unavailable'));
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get('location')).toBeNull();
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'calendar OAuth attempt could not be started' }),
+      expect.objectContaining({ operation: 'begin_oauth_attempt' }),
+    );
   });
 });

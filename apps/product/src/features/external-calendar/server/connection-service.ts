@@ -8,9 +8,7 @@ import { env } from '@/env';
 import type { Database } from '@/lib/database';
 import { databaseTables } from '@/lib/database';
 
-import { logger } from '@/lib/logger';
-
-import { deleteUnreferencedEvents } from './event-pruning';
+import { resolveGoogleCalendarProjectKey } from './authority-config';
 import { ExternalCalendarServiceError } from './external-calendar-service-error';
 import { googleCalendarAdapter } from './providers/google';
 import { CalendarProviderError } from './providers/types';
@@ -37,7 +35,12 @@ type CalendarConnectionDatabase = {
       'calendar_connections' | 'calendar_connection_calendars'
     >;
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: Pick<
+      Database['public']['Functions'],
+      | 'disconnect_calendar_connection_command_v1'
+      | 'replace_selected_calendars_command_v1'
+      | 'save_calendar_connection_command_v2'
+    >;
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
@@ -59,8 +62,11 @@ function createCalendarConnectionDbClient(): CalendarConnectionClient {
 }
 
 const GOOGLE_PROVIDER = 'google';
+const DB_RPC_TIMEOUT_MS = 4_000;
+const DB_RPC_ATTEMPTS = 3;
 
 type SaveConnectionInput = {
+  attemptId: string;
   userId: string;
   /** Google の `sub`。email は可変・再利用可なので同定には使わない。 */
   providerAccountId: string;
@@ -70,6 +76,19 @@ type SaveConnectionInput = {
   encryptionKey: string;
 };
 
+export type SaveConnectionOutcome = 'saved' | 'enqueued';
+
+function resolveProjectKeyOrThrow(): string {
+  const projectKey = resolveGoogleCalendarProjectKey();
+  if (projectKey === null) {
+    throw new ExternalCalendarServiceError(
+      'UPDATE_FAILED',
+      'calendar authority project is not configured',
+    );
+  }
+  return projectKey;
+}
+
 /**
  * 接続を保存する。
  *
@@ -77,27 +96,34 @@ type SaveConnectionInput = {
  * `status='active'` に戻すと、失効済みの token を抱えた接続が UI 上「接続済み」に見え、
  * 再認証導線が二度と出なくなる（overview.md §5-4 の reauth_required 遷移が死ぬ）。
  */
-export async function saveConnection(input: SaveConnectionInput): Promise<void> {
-  const db = createCalendarConnectionDbClient();
+export async function saveConnection(input: SaveConnectionInput): Promise<SaveConnectionOutcome> {
+  // response欠落後も同じattempt/payloadで再試行できるよう、暗号化は一度だけ行う。
+  const refreshTokenEnc = encryptToken(input.refreshToken, input.encryptionKey);
+  const args = {
+    p_attempt_id: input.attemptId,
+    p_project_key: resolveProjectKeyOrThrow(),
+    p_user_id: input.userId,
+    p_provider: GOOGLE_PROVIDER,
+    p_provider_account_id: input.providerAccountId,
+    p_provider_account_email: input.providerAccountEmail as never,
+    p_granted_scopes: input.grantedScopes,
+    p_refresh_token_enc: refreshTokenEnc,
+  };
 
-  const { error } = await db.from(databaseTables.calendarConnections).upsert(
-    {
-      user_id: input.userId,
-      provider: GOOGLE_PROVIDER,
-      provider_account_id: input.providerAccountId,
-      provider_account_email: input.providerAccountEmail,
-      granted_scopes: input.grantedScopes,
-      refresh_token_enc: encryptToken(input.refreshToken, input.encryptionKey),
-      status: 'active',
-      last_sync_error: null,
-    },
-    { onConflict: 'user_id,provider,provider_account_id' },
-  );
+  for (let attempt = 0; attempt < DB_RPC_ATTEMPTS; attempt += 1) {
+    try {
+      const db = createCalendarConnectionDbClient();
+      const { data, error } = await db
+        .rpc('save_calendar_connection_command_v2', args)
+        .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS));
 
-  if (error) {
-    // error にトークンは含まれないが、message をそのまま外へ出さない。
-    throw new Error(`failed to save calendar connection: ${error.code ?? 'unknown'}`);
+      if (!error && (data === 'saved' || data === 'enqueued')) return data;
+    } catch {
+      // commit後のresponse欠落とrollbackを区別できない。同じciphertextで再試行する。
+    }
   }
+
+  throw new ExternalCalendarServiceError('UPDATE_FAILED', 'calendar connection save is unresolved');
 }
 
 // =============================================================================
@@ -211,10 +237,16 @@ async function loadConnectionSecret(
   db: CalendarConnectionClient,
   userId: string,
   connectionId: string,
-): Promise<{ dataGeneration: number; status: string; refreshTokenEnc: string } | null> {
+): Promise<{
+  authorityEpoch: number;
+  authorityFenceId: string;
+  dataGeneration: number;
+  status: string;
+  refreshTokenEnc: string;
+} | null> {
   const { data, error } = await db
     .from(databaseTables.calendarConnections)
-    .select('status, refresh_token_enc, data_generation')
+    .select('status, refresh_token_enc, data_generation, authority_fence_id, authority_epoch')
     .eq('id', connectionId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -225,7 +257,15 @@ async function loadConnectionSecret(
     });
   }
   if (!data) return null;
+  if (data.authority_fence_id === null || data.authority_epoch === null) {
+    throw new ExternalCalendarServiceError(
+      'UPDATE_FAILED',
+      'calendar connection authority is not ready',
+    );
+  }
   return {
+    authorityEpoch: data.authority_epoch,
+    authorityFenceId: data.authority_fence_id,
     dataGeneration: data.data_generation,
     status: data.status,
     refreshTokenEnc: data.refresh_token_enc,
@@ -293,6 +333,8 @@ export async function listProviderCalendars(
       const reauthOutcome = await markCalendarConnectionReauth({
         userId,
         connectionId,
+        expectedAuthorityFenceId: secret.authorityFenceId,
+        expectedAuthorityEpoch: secret.authorityEpoch,
         expectedGeneration: secret.dataGeneration,
         expectedRefreshTokenEnc: secret.refreshTokenEnc,
       });
@@ -311,6 +353,8 @@ export async function listProviderCalendars(
       operationId: rotationOperationId,
       userId,
       connectionId,
+      expectedAuthorityFenceId: secret.authorityFenceId,
+      expectedAuthorityEpoch: secret.authorityEpoch,
       expectedGeneration: secret.dataGeneration,
       expectedRefreshTokenEnc: secret.refreshTokenEnc,
       rotatedRefreshToken: session.rotatedRefreshToken,
@@ -354,6 +398,8 @@ export async function listProviderCalendars(
           ? await markCalendarConnectionReauth({
               userId,
               connectionId,
+              expectedAuthorityFenceId: secret.authorityFenceId,
+              expectedAuthorityEpoch: secret.authorityEpoch,
               expectedGeneration: secret.dataGeneration,
               expectedRefreshTokenEnc: secret.refreshTokenEnc,
             })
@@ -404,111 +450,81 @@ export async function updateSelectedCalendars(
     throw new ExternalCalendarServiceError('CONNECTION_NOT_FOUND', 'calendar connection not found');
   }
 
-  const { data: existingRows, error: existingError } = await db
-    .from(databaseTables.calendarConnectionCalendars)
-    .select('provider_calendar_id')
-    .eq('connection_id', connectionId)
-    .eq('user_id', userId);
+  const args = {
+    p_project_key: resolveProjectKeyOrThrow(),
+    p_user_id: userId,
+    p_connection_id: connectionId,
+    p_expected_generation: secret.dataGeneration,
+    p_expected_authority_fence_id: secret.authorityFenceId,
+    p_expected_authority_epoch: secret.authorityEpoch,
+    p_selected_calendars: selected.map((calendar) => ({
+      providerCalendarId: calendar.providerCalendarId,
+      calendarName: calendar.calendarName ?? null,
+    })),
+  };
 
-  if (existingError) {
-    throw new ExternalCalendarServiceError('FETCH_FAILED', 'failed to load selected calendars', {
-      cause: existingError,
-    });
-  }
+  for (let attempt = 0; attempt < DB_RPC_ATTEMPTS; attempt += 1) {
+    try {
+      const retryDb = createCalendarConnectionDbClient();
+      const { data, error } = await retryDb
+        .rpc('replace_selected_calendars_command_v1', args)
+        .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS));
 
-  const selectedIds = new Set(selected.map((calendar) => calendar.providerCalendarId));
-  const removedIds = (existingRows ?? [])
-    .map((row) => row.provider_calendar_id)
-    .filter((id) => !selectedIds.has(id));
-
-  if (selected.length > 0) {
-    // sync_token をキーに含めない → 残す行の cursor は保持され、新規行だけ NULL（= 次回 full sync）。
-    const { error: upsertError } = await db.from(databaseTables.calendarConnectionCalendars).upsert(
-      selected.map((calendar) => ({
-        user_id: userId,
-        connection_id: connectionId,
-        provider_calendar_id: calendar.providerCalendarId,
-        calendar_name: calendar.calendarName ?? null,
-      })),
-      { onConflict: 'connection_id,provider_calendar_id' },
-    );
-
-    if (upsertError) {
-      throw new ExternalCalendarServiceError('UPDATE_FAILED', 'failed to save selected calendars', {
-        cause: upsertError,
-      });
+      if (!error && data === 'updated') return;
+      if (!error && data === 'missing') {
+        throw new ExternalCalendarServiceError(
+          'CONNECTION_NOT_FOUND',
+          'calendar connection not found',
+        );
+      }
+      if (!error && data === 'superseded') {
+        throw new ExternalCalendarServiceError(
+          'UPDATE_FAILED',
+          'calendar selection was superseded',
+        );
+      }
+    } catch (error) {
+      if (error instanceof ExternalCalendarServiceError) throw error;
+      // commit後のresponse欠落なら同じselection snapshotを再送する。
     }
   }
 
-  if (removedIds.length > 0) {
-    const { error: deleteError } = await db
-      .from(databaseTables.calendarConnectionCalendars)
-      .delete()
-      .eq('user_id', userId)
-      .eq('connection_id', connectionId)
-      .in('provider_calendar_id', removedIds);
-
-    if (deleteError) {
-      throw new ExternalCalendarServiceError('DELETE_FAILED', 'failed to remove calendars', {
-        cause: deleteError,
-      });
-    }
-
-    // 外したカレンダーの未参照ミラー行を即時掃除する。
-    await deleteUnreferencedEvents({
-      userId,
-      connectionId,
-      scope: { kind: 'calendars', providerCalendarIds: removedIds },
-    });
-  }
+  throw new ExternalCalendarServiceError(
+    'UPDATE_FAILED',
+    'calendar selection replacement is unresolved',
+  );
 }
 
 /**
- * 接続を切断する（overview.md §8 の 3 段。順序が重要）。
+ * 接続を切断する。
  *
- * 1. provider の revoke を best-effort で呼ぶ（失敗しても続行）
- * 2. connection を消す前に、未参照ミラー行を anti-join で掃除する（削除後は FK が
- *    connection_id を NULL 化してスコープを失う）
- * 3. `calendar_connections` を hard delete（子は CASCADE、参照済みミラーは connection_id が
- *    SET NULL され歴史的アンカーとして残る）
- *
- * 解約済みユーザーも切断できるよう protectedProcedure から呼ぶ。接続が既に無ければ冪等に成功。
+ * DB commandがsubject fence、revoke outbox、未参照mirror削除、connection削除を一体化する。
+ * provider HTTPはdurable outboxをclaimするworkerだけが行う。
  */
 export async function disconnect(userId: string, connectionId: string): Promise<void> {
-  const db = createCalendarConnectionDbClient();
+  const operationId = randomUUID();
+  const args = {
+    p_operation_id: operationId,
+    p_project_key: resolveProjectKeyOrThrow(),
+    p_user_id: userId,
+    p_connection_id: connectionId,
+  };
 
-  const secret = await loadConnectionSecret(db, userId, connectionId);
-  if (!secret) return; // 既に切断済み。冪等。
+  for (let attempt = 0; attempt < DB_RPC_ATTEMPTS; attempt += 1) {
+    try {
+      const db = createCalendarConnectionDbClient();
+      const { data, error } = await db
+        .rpc('disconnect_calendar_connection_command_v1', args)
+        .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS));
 
-  // 1. revoke（best-effort）。復号に失敗しても切断自体は続行する。
-  try {
-    const refreshToken = decryptToken(
-      secret.refreshTokenEnc,
-      env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? '',
-    );
-    const revoked = await googleCalendarAdapter.revoke(refreshToken);
-    if (!revoked) logger.warn('[calendar-connection] provider revoke was not confirmed');
-  } catch {
-    logger.warn('[calendar-connection] could not revoke the provider grant; continuing disconnect');
+      if (!error && (data === 'queued' || data === 'missing')) return;
+    } catch {
+      // commit後のresponse欠落でも同じoperation IDを再送し、receiptをreplayする。
+    }
   }
 
-  // 2. connection 削除より先にミラーを掃除する。
-  await deleteUnreferencedEvents({ userId, connectionId, scope: { kind: 'connection' } });
-
-  // 3. connection を hard delete。子テーブルは CASCADE。
-  const { error } = await db
-    .from(databaseTables.calendarConnections)
-    .delete()
-    .eq('id', connectionId)
-    .eq('user_id', userId);
-
-  if (error) {
-    throw new ExternalCalendarServiceError(
-      'DELETE_FAILED',
-      'failed to delete calendar connection',
-      {
-        cause: error,
-      },
-    );
-  }
+  throw new ExternalCalendarServiceError(
+    'DELETE_FAILED',
+    'calendar connection disconnect is unresolved',
+  );
 }
