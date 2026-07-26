@@ -442,6 +442,21 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
   });
 
   describe('profiles billing column grants', () => {
+    it('ownerでもbilling identityを保持するprofileを直接削除できない', async () => {
+      const { error } = await supabaseB.from('profiles').delete().eq('id', TEST_USER_B_ID);
+
+      expect(error?.code).toBe('42501');
+
+      const { data, error: readError } = await adminSupabase
+        .from('profiles')
+        .select('id')
+        .eq('id', TEST_USER_B_ID)
+        .single();
+
+      expect(readError).toBeNull();
+      expect(data?.id).toBe(TEST_USER_B_ID);
+    });
+
     it('ownerでもbilling entitlement columnsを直接更新できない', async () => {
       const { error } = await supabaseB
         .from('profiles')
