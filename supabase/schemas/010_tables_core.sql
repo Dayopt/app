@@ -3,7 +3,7 @@
 -- ============================================================
 -- Dayopt のドメインモデルの中核テーブル
 -- 実際のマイグレーションは migrations/ を参照
--- 最終同期日: 2026-07-24
+-- 最終同期日: 2026-07-26
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -16,6 +16,8 @@
 --   - 20260723233814_add_calendar_connection_tables.sql
 --   - 20260724000416_enforce_external_event_connection_owner.sql
 --   - 20260726033000_expand_user_data_purge_generation.sql
+--   - 20260726060000_calendar_authority_fence_foundation.sql
+--   - 20260726060500_fenced_calendar_sync_writers.sql
 --
 -- カラム順序の規則:
 --   1. id (PK)
@@ -56,6 +58,9 @@ CREATE TABLE public.calendar_connections (
   refresh_token_enc TEXT NOT NULL,
   refresh_token_rotation_operation_id UUID,
   data_generation BIGINT NOT NULL DEFAULT 0,
+  authority_fence_id UUID,
+  authority_epoch BIGINT,
+  sync_sequence BIGINT NOT NULL DEFAULT 0,
   status TEXT NOT NULL,                   -- active / reauth_required
   last_synced_at TIMESTAMPTZ,
   last_sync_error TEXT,
@@ -69,7 +74,14 @@ CREATE TABLE public.calendar_connections (
 --   calendar_connections_id_user_id_unique        -> 子テーブルの複合 FK 参照先
 --   calendar_connections_provider_account_unique  -> user_id + provider + provider_account_id
 --   data_generation -> 接続保存時のuser data purge世代。古いcallback/syncの再作成を拒否する
+--   authority_fence_id / authority_epoch
+--     -> Google Cloud project + provider_account_id単位のrevoke authority世代
+--   sync_sequence -> DB発行の単調増加writer世代。古いsync runのmirror/cursor/status更新を拒否する
 --   refresh_token_rotation_operation_id -> response欠落時に同じrotationを安全に再試行するopaque ID
+--   calendar_connections_authority_fence_fkey
+--     -> private.calendar_authority_fences(id)（ON DELETE RESTRICT）
+--   calendar_connections_authority_shape
+--     -> authority_fence_id / authority_epochは両方NULLまたは両方非NULL
 --   trigger_update_calendar_connections_updated_at -> update_updated_at()
 
 -- calendar_connection_calendars: 取り込み対象として選択されたカレンダー

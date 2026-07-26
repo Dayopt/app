@@ -79,6 +79,8 @@ export type Database = {
       };
       calendar_connections: {
         Row: {
+          authority_epoch: number | null;
+          authority_fence_id: string | null;
           created_at: string;
           data_generation: number;
           granted_scopes: string[];
@@ -91,10 +93,13 @@ export type Database = {
           refresh_token_enc: string;
           refresh_token_rotation_operation_id: string | null;
           status: string;
+          sync_sequence: number;
           updated_at: string;
           user_id: string;
         };
         Insert: {
+          authority_epoch?: number | null;
+          authority_fence_id?: string | null;
           created_at?: string;
           data_generation?: number;
           granted_scopes: string[];
@@ -107,10 +112,13 @@ export type Database = {
           refresh_token_enc: string;
           refresh_token_rotation_operation_id?: string | null;
           status: string;
+          sync_sequence?: number;
           updated_at?: string;
           user_id: string;
         };
         Update: {
+          authority_epoch?: number | null;
+          authority_fence_id?: string | null;
           created_at?: string;
           data_generation?: number;
           granted_scopes?: string[];
@@ -123,6 +131,7 @@ export type Database = {
           refresh_token_enc?: string;
           refresh_token_rotation_operation_id?: string | null;
           status?: string;
+          sync_sequence?: number;
           updated_at?: string;
           user_id?: string;
         };
@@ -928,6 +937,17 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      abandon_calendar_account_delete_revoke_v1: {
+        Args: {
+          p_deletion_id: string;
+          p_lease_id: string;
+          p_operation_id: string;
+          p_project_key: string;
+          p_reason: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       apply_mcp_plan_create_v1: {
         Args: {
           p_access_token_id: string;
@@ -1132,11 +1152,98 @@ export type Database = {
         };
         Returns: number;
       };
+      begin_calendar_account_deletion_v1: {
+        Args: {
+          p_deletion_id: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: {
+          deletion_id: string;
+          item_id: string;
+          item_kind: string;
+        }[];
+      };
+      begin_calendar_oauth_attempt_v1: {
+        Args: {
+          p_project_key: string;
+          p_state_digest: string;
+          p_user_id: string;
+          p_verifier_digest: string;
+        };
+        Returns: {
+          attempt_id: string;
+          connection_id: string;
+          expires_at: string;
+          operation_id: string;
+        }[];
+      };
+      begin_calendar_sync_run_v1: {
+        Args: {
+          p_connection_id: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: {
+          authority_epoch: number;
+          authority_fence_id: string;
+          data_generation: number;
+          refresh_token_enc: string;
+          result: string;
+          run_started_at: string;
+          sync_sequence: number;
+        }[];
+      };
+      cancel_calendar_account_deletion_v1: {
+        Args: { p_deletion_id: string; p_user_id: string };
+        Returns: boolean;
+      };
+      claim_calendar_oauth_attempt_v1: {
+        Args: {
+          p_project_key: string;
+          p_state_digest: string;
+          p_user_id: string;
+          p_verifier_digest: string;
+        };
+        Returns: {
+          attempt_id: string;
+          claim_expires_at: string;
+          connection_id: string;
+          data_generation: number;
+          operation_id: string;
+          project_epoch: number;
+        }[];
+      };
+      claim_calendar_revoke_direct_attempt_v1: {
+        Args: {
+          p_operation_id: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: {
+          attempt_deadline_at: string;
+          lease_expires_at: string;
+          lease_id: string;
+        }[];
+      };
       claim_calendar_revoke_outbox_v1: {
         Args: { p_limit?: number };
         Returns: {
           attempt_count: number;
           expires_at: string;
+          lease_id: string;
+          outbox_id: string;
+          provider: string;
+          refresh_token_enc: string;
+        }[];
+      };
+      claim_calendar_revoke_outbox_v2: {
+        Args: { p_limit?: number; p_project_key: string };
+        Returns: {
+          attempt_count: number;
+          attempt_deadline_at: string;
+          expires_at: string;
+          lease_expires_at: string;
           lease_id: string;
           outbox_id: string;
           provider: string;
@@ -1150,6 +1257,18 @@ export type Database = {
           p_stale_before: string;
         };
         Returns: string;
+      };
+      cleanup_calendar_authority_retention_v1: {
+        Args: { p_limit?: number; p_project_key: string };
+        Returns: {
+          command_receipts_deleted: number;
+          oauth_attempts_deleted: number;
+          subject_fences_deleted: number;
+        }[];
+      };
+      cleanup_calendar_revoke_operations_v1: {
+        Args: { p_limit?: number; p_project_key: string };
+        Returns: number;
       };
       cleanup_integration_security_events_v1: {
         Args: { p_limit?: number };
@@ -1174,6 +1293,21 @@ export type Database = {
       cleanup_oauth_refresh_tokens_v1: {
         Args: { p_limit?: number };
         Returns: number;
+      };
+      clear_calendar_sync_cursor_command_v1: {
+        Args: {
+          p_calendar_selection_id: string;
+          p_connection_id: string;
+          p_expected_authority_epoch: number;
+          p_expected_authority_fence_id: string;
+          p_expected_generation: number;
+          p_expected_sync_sequence: number;
+          p_expected_sync_token: string;
+          p_project_key: string;
+          p_provider_calendar_id: string;
+          p_user_id: string;
+        };
+        Returns: string;
       };
       complete_calendar_revoke_outbox_v1: {
         Args: { p_lease_id: string; p_outbox_id: string };
@@ -1334,6 +1468,10 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: boolean;
       };
+      delete_all_user_data_command_v4: {
+        Args: { p_project_key: string; p_user_id: string };
+        Returns: boolean;
+      };
       delete_plan_command_v1: {
         Args: {
           p_expected_updated_at: string;
@@ -1422,6 +1560,15 @@ export type Database = {
         Args: { p_connection_id: string };
         Returns: string;
       };
+      disconnect_calendar_connection_command_v1: {
+        Args: {
+          p_connection_id: string;
+          p_operation_id: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       exchange_oauth_authorization_code_v2: {
         Args: {
           p_access_hash: string;
@@ -1443,9 +1590,76 @@ export type Database = {
           user_id: string;
         }[];
       };
+      expire_calendar_revoke_authority_v2: {
+        Args: { p_limit?: number; p_project_key: string };
+        Returns: {
+          ciphertexts_deleted: number;
+          guards_finalized: number;
+        }[];
+      };
+      expire_calendar_revoke_authority_v3: {
+        Args: { p_limit?: number; p_project_key: string };
+        Returns: {
+          ciphertexts_deferred: number;
+          ciphertexts_deleted: number;
+        }[];
+      };
       expire_calendar_revoke_outbox_v1: {
         Args: { p_limit?: number };
         Returns: number;
+      };
+      finalize_calendar_account_delete_revoke_v1: {
+        Args: {
+          p_deletion_id: string;
+          p_lease_id: string;
+          p_operation_id: string;
+          p_outcome: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
+      finalize_calendar_revoke_attempt_v2: {
+        Args: {
+          p_lease_id: string;
+          p_outbox_id: string;
+          p_outcome: string;
+          p_project_key: string;
+        };
+        Returns: string;
+      };
+      finalize_calendar_revoke_guards_v1: {
+        Args: { p_limit?: number; p_project_key: string };
+        Returns: number;
+      };
+      finish_calendar_sync_run_v1: {
+        Args: {
+          p_connection_id: string;
+          p_expected_authority_epoch: number;
+          p_expected_authority_fence_id: string;
+          p_expected_generation: number;
+          p_expected_sync_sequence: number;
+          p_last_sync_error: string;
+          p_not_after: string;
+          p_not_before: string;
+          p_project_key: string;
+          p_prune_window: boolean;
+          p_run_started_at: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
+      get_calendar_authority_readiness_v1: {
+        Args: { p_oauth_client_id: string; p_project_key: string };
+        Returns: {
+          activated: boolean;
+          oauth_client_id: string;
+          pending_operations: number;
+          project_epoch: number;
+          project_state: string;
+          unbound_connections: number;
+          unbound_outbox: number;
+        }[];
       };
       get_external_authority_maintenance_status_v1: {
         Args: never;
@@ -1508,6 +1722,13 @@ export type Database = {
           refresh_id: string;
         }[];
       };
+      list_expired_calendar_account_deletion_intents_v1: {
+        Args: { p_limit?: number; p_project_key: string };
+        Returns: {
+          deletion_id: string;
+          user_id: string;
+        }[];
+      };
       lock_recordable_plan_v1: {
         Args: { p_plan_id: string; p_user_id: string };
         Returns: {
@@ -1544,6 +1765,21 @@ export type Database = {
         };
         Returns: string;
       };
+      mark_calendar_connection_reauth_command_v3: {
+        Args: {
+          p_connection_id: string;
+          p_expected_authority_epoch: number;
+          p_expected_authority_fence_id: string;
+          p_expected_generation: number;
+          p_expected_refresh_token_enc: string;
+          p_last_synced_at?: string;
+          p_new_refresh_token_enc?: string;
+          p_operation_id?: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       merge_tags_with_hierarchy: {
         Args: {
           p_source_tag_id: string;
@@ -1551,6 +1787,51 @@ export type Database = {
           p_user_id: string;
         };
         Returns: Json;
+      };
+      normalize_calendar_account_deletion_intent_v1: {
+        Args: {
+          p_deletion_id: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
+      persist_calendar_sync_result_command_v1: {
+        Args: {
+          p_calendar_selection_id: string;
+          p_connection_id: string;
+          p_events: Json;
+          p_expected_authority_epoch: number;
+          p_expected_authority_fence_id: string;
+          p_expected_generation: number;
+          p_expected_sync_sequence: number;
+          p_next_cursor: string;
+          p_project_key: string;
+          p_provider_calendar_id: string;
+          p_run_started_at: string;
+          p_tombstone_event_ids: string[];
+          p_used_full_sync: boolean;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
+      prepare_calendar_account_delete_revoke_v1: {
+        Args: {
+          p_deletion_id: string;
+          p_item_id: string;
+          p_item_kind: string;
+          p_operation_id: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: {
+          attempt_deadline_at: string;
+          lease_expires_at: string;
+          lease_id: string;
+          operation_id: string;
+          refresh_token_enc: string;
+          result: string;
+        }[];
       };
       prepare_calendar_token_rotation_recovery_command_v1: {
         Args: {
@@ -1562,6 +1843,25 @@ export type Database = {
           p_operation_id: string;
           p_user_id: string;
         };
+        Returns: string;
+      };
+      prepare_calendar_token_rotation_recovery_command_v2: {
+        Args: {
+          p_connection_id: string;
+          p_expected_authority_epoch: number;
+          p_expected_authority_fence_id: string;
+          p_expected_generation: number;
+          p_expected_refresh_token_enc: string;
+          p_last_synced_at?: string;
+          p_new_refresh_token_enc?: string;
+          p_operation_id: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
+      provision_calendar_authority_project_v1: {
+        Args: { p_oauth_client_id: string; p_project_key: string };
         Returns: string;
       };
       provision_mcp_environment_identity_v1: {
@@ -1625,6 +1925,18 @@ export type Database = {
           isOneToOne: false;
           isSetofReturn: true;
         };
+      };
+      replace_selected_calendars_command_v1: {
+        Args: {
+          p_connection_id: string;
+          p_expected_authority_epoch: number;
+          p_expected_authority_fence_id: string;
+          p_expected_generation: number;
+          p_project_key: string;
+          p_selected_calendars: Json;
+          p_user_id: string;
+        };
+        Returns: string;
       };
       restore_plan: {
         Args: { p_plan_id: string; p_user_id: string };
@@ -1729,6 +2041,20 @@ export type Database = {
         };
         Returns: string;
       };
+      rotate_or_enqueue_calendar_refresh_token_command_v3: {
+        Args: {
+          p_connection_id: string;
+          p_expected_authority_epoch: number;
+          p_expected_authority_fence_id: string;
+          p_expected_generation: number;
+          p_expected_refresh_token_enc: string;
+          p_new_refresh_token_enc: string;
+          p_operation_id: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       save_calendar_connection_command_v1: {
         Args: {
           p_expected_generation: number;
@@ -1740,6 +2066,27 @@ export type Database = {
           p_user_id: string;
         };
         Returns: string;
+      };
+      save_calendar_connection_command_v2: {
+        Args: {
+          p_attempt_id: string;
+          p_granted_scopes: string[];
+          p_project_key: string;
+          p_provider: string;
+          p_provider_account_email: string;
+          p_provider_account_id: string;
+          p_refresh_token_enc: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
+      seal_calendar_account_deletion_v1: {
+        Args: {
+          p_deletion_id: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: boolean;
       };
       set_mcp_client_write_control_v1: {
         Args: {
@@ -1798,6 +2145,16 @@ export type Database = {
       soft_delete_record: {
         Args: { p_record_id: string; p_user_id: string };
         Returns: undefined;
+      };
+      start_calendar_account_delete_provider_attempt_v1: {
+        Args: {
+          p_deletion_id: string;
+          p_lease_id: string;
+          p_operation_id: string;
+          p_project_key: string;
+          p_user_id: string;
+        };
+        Returns: string;
       };
       trunc_week_tz: {
         Args: { ts: string; tz: string; week_start?: number };

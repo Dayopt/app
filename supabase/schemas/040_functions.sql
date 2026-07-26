@@ -29,6 +29,12 @@
 --   - 20260726040800_fix_calendar_reauth_timestamp.sql
 --   - 20260726040900_bind_calendar_reauth_to_rotation_operation.sql
 --   - 20260726052135_prepare_calendar_token_rotation_recovery.sql
+--   - 20260726060000_calendar_authority_fence_foundation.sql
+--   - 20260726060100_calendar_authority_fence_commands.sql
+--   - 20260726060200_fenced_calendar_authority_writers.sql
+--   - 20260726060300_fenced_calendar_revoke_worker.sql
+--   - 20260726060400_calendar_account_deletion_fence.sql
+--   - 20260726060500_fenced_calendar_sync_writers.sql
 -- ユーザー操作向け関数は authenticated、OAuth基盤関数はservice_roleへ
 -- 必要なsignatureだけ明示GRANT。PUBLIC/anonへのEXECUTEはrevoke済み。
 -- ============================================================
@@ -66,6 +72,31 @@
 --   cleanup_oauth_*_v1(...)                    — code/token/connectionの期限別bounded削除
 --   cleanup_integration_security_events_v1(...) — payload-free eventの90日削除
 --   get_external_authority_maintenance_status_v1() — IDを含まないbacklog集計
+--   provision_calendar_authority_project_v1(...) — Google project/client identityを一度だけ固定
+--   get_calendar_authority_readiness_v1(...)   — runtime identityとadditive rollout状態を照合
+--   begin/claim_calendar_oauth_attempt_v1(...) — state/PKCE digestとgeneration/epochをDBへ束縛
+--   save_calendar_connection_command_v2(...)   — claimed attemptからsaveまたはrevokeを原子的に確定
+--   rotate_or_enqueue_calendar_refresh_token_command_v3(...) — subject fence付きtoken rotation
+--   prepare_calendar_token_rotation_recovery_command_v2(...) — recoveryをsubject fenceへ束縛
+--   mark_calendar_connection_reauth_command_v3(...) — generation/subject epoch付きreauth遷移
+--   disconnect_calendar_connection_command_v1(...) — 接続削除とprovider revoke登録を一体化
+--   delete_all_user_data_command_v4(...)       — project/subject fence付き全データ削除
+--   claim_calendar_revoke_outbox_v2(...)       — project identityとexact lease付きrevoke claim
+--   claim_calendar_revoke_direct_attempt_v1(...) — ciphertextを永続化しないdirect revoke marker
+--   finalize_calendar_revoke_attempt_v2(...)   — confirmed/unconfirmedをexact leaseで確定
+--   expire_calendar_revoke_authority_v3(...)   — 100ms待ち上限で期限切れ暗号文だけを削除
+--   finalize_calendar_revoke_guards_v1(...)    — uncertainty guardを別transactionでsettle
+--   cleanup_calendar_revoke_operations_v1(...) — 90日経過したpayload-free receiptを削除
+--   cleanup_calendar_authority_retention_v1(...) — OAuth attempt/receipt/subject fenceをbounded削除
+--   begin/prepare/start/finalize/abandon/seal_calendar_account_*_v1(...)
+--     — auth.users削除前に各ciphertextの一回限りprovider attemptまたはnot-attemptedをseal
+--   cancel/list_expired/normalize_calendar_account_deletion_*_v1(...)
+--     — 未dispatch取消とuser単位の期限切れintent recovery
+--   begin_calendar_sync_run_v1(...)            — DB発行sync sequence/timestamp/token snapshot
+--   clear_calendar_sync_cursor_command_v1(...) — exact cursorを最新runだけclear
+--   persist_calendar_sync_result_command_v1(...) — mirror/cursorを最新runだけpublish
+--   finish_calendar_sync_run_v1(...)           — status/pruneを最新runだけpublish
+--   replace_selected_calendars_command_v1(...) — selection置換とin-flight sync supersede
 
 -- ■ 削除済み RPC
 --   get_tag_cumulative_time / get_tag_avg_fulfillment / get_tag_plan_rate /
