@@ -1,6 +1,7 @@
 ---
 status: frozen
 updated: 2026-07-10
+superseded_by: docs/engineering/log/2026-07-26-pr-granularity-actions-cost.md
 ---
 
 # 並行レーン orchestration の策定と refactor 凍結判断
