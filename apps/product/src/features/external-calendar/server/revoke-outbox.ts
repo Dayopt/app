@@ -4,27 +4,29 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database/generated/database.types';
 import { captureUnexpectedError } from '@/lib/sentry';
-import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { googleCalendarAdapter } from './providers/google';
-import { decryptToken, isValidEncryptionKey } from './token-crypto';
+import { decryptToken } from './token-crypto';
 
 /**
- * purge 後に残した revoke-only refresh token を provider で失効する worker。
+ * purge 後に残した revoke-only refresh token を provider で失効する。
  *
  * outbox の lease / retry / hard expiry は DB が正本。アプリは暗号文を claim した時だけ復号し、
  * token、outbox ID、lease ID、provider response をログや例外へ載せない。
+ *
+ * Provider HTTP 後・finalize 前の process crash で再試行されうるため、Google revoke の
+ * 冪等性を前提とする at-least-once dispatch である。
  */
 
 const CLAIM_BATCH_SIZE = 5;
 const MAX_CLAIMS_PER_RUN = 20;
-const EXPIRY_BATCH_SIZE = 250;
+const FINALIZE_RETRY_ATTEMPTS = 3;
 const DB_RPC_TIMEOUT_MS = 3_000;
 const PROVIDER_SETTLEMENT_BUDGET_MS = 19_000;
 
 /**
  * Google revoke の timeout は 15 秒。締切直前に claim して lease だけ残さないため、
- * provider request と completion RPC の余白を確保できる時だけ次の batch を取る。
+ * provider request と finalize RPC の余白を確保できる時だけ次の batch を取る。
  */
 const MIN_BATCH_BUDGET_MS = 23_000;
 
@@ -33,11 +35,26 @@ type ClaimedRevoke = {
   lease_id: string;
   provider: string;
   refresh_token_enc: string;
+  expires_at: string;
+  lease_expires_at: string;
+  attempt_deadline_at: string;
+  attempt_count: number;
 };
 
+type RevokeAttemptOutcome = 'confirmed' | 'not_started' | 'unconfirmed';
 type ItemOutcome = 'revoked' | 'retried' | 'expired' | 'alreadyGone';
 
+type ClaimSettlement = {
+  outcome: ItemOutcome;
+  deadlineReached: boolean;
+};
+
 type ProcessingFailureKind = 'decrypt_failed' | 'provider_failed' | 'unsupported_provider';
+
+type RpcResponse<T> = {
+  data: T;
+  error: unknown;
+};
 
 export type CalendarRevokeOutboxSummary = {
   claimed: number;
@@ -46,16 +63,15 @@ export type CalendarRevokeOutboxSummary = {
   expired: number;
   alreadyGone: number;
   deadlineReached: boolean;
-  encryptionAvailable: boolean;
 };
 
-class CalendarRevokeMaintenanceError extends Error {
+class CalendarRevokeOutboxError extends Error {
   readonly code: string;
 
   constructor(operation: string) {
-    super('Calendar revoke maintenance failed');
-    this.name = 'CalendarRevokeMaintenanceError';
-    this.code = `CALENDAR_REVOKE_${operation.toUpperCase()}_FAILED`;
+    super('Calendar revoke outbox processing failed');
+    this.name = 'CalendarRevokeOutboxError';
+    this.code = `CALENDAR_REVOKE_OUTBOX_${operation.toUpperCase()}_FAILED`;
   }
 }
 
@@ -69,12 +85,26 @@ class CalendarRevokeProcessingError extends Error {
   }
 }
 
-function maintenanceFailure(operation: string): CalendarRevokeMaintenanceError {
-  return new CalendarRevokeMaintenanceError(operation);
+function outboxFailure(operation: string): CalendarRevokeOutboxError {
+  return new CalendarRevokeOutboxError(operation);
+}
+
+async function callRpc<T>(
+  operation: string,
+  request: () => PromiseLike<RpcResponse<T>>,
+): Promise<T> {
+  try {
+    const { data, error } = await request();
+    if (error) throw outboxFailure(operation);
+    return data;
+  } catch (error) {
+    if (error instanceof CalendarRevokeOutboxError) throw error;
+    throw outboxFailure(operation);
+  }
 }
 
 /**
- * 同じ種類の payload failure は run ごとに 1 回だけ通知する。
+ * 同じ種類の payload failure は run ごとに1回だけ通知する。
  *
  * raw error を受け取らない形にして、暗号文や token を cause / message 経由で Sentry へ
  * 渡せない境界を作る。
@@ -91,88 +121,6 @@ function createProcessingFailureReporter(): (kind: ProcessingFailureKind) => voi
       operation: 'revoke_outbox_payload',
     });
   };
-}
-
-async function retryClaim(
-  db: SupabaseClient<Database>,
-  claim: ClaimedRevoke,
-): Promise<Exclude<ItemOutcome, 'revoked'>> {
-  let retryResult: string;
-  try {
-    const { data, error } = await db
-      .rpc('retry_calendar_revoke_outbox_v1', {
-        p_outbox_id: claim.outbox_id,
-        p_lease_id: claim.lease_id,
-      })
-      .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS));
-    if (error) throw maintenanceFailure('retry');
-    retryResult = data;
-  } catch (error) {
-    if (error instanceof CalendarRevokeMaintenanceError) throw error;
-    throw maintenanceFailure('retry');
-  }
-
-  switch (retryResult) {
-    case 'retried':
-      return 'retried';
-    case 'expired':
-      return 'expired';
-    case 'missing':
-      // provider revoke 未確認のまま hard-expiry cron が暗号文を消した可能性がある。
-      // 再投入はできないため expired として監査・monitoring 側へ残す。
-      return 'expired';
-    default:
-      throw maintenanceFailure('retry_result');
-  }
-}
-
-async function processClaim(
-  db: SupabaseClient<Database>,
-  claim: ClaimedRevoke,
-  encryptionKey: string,
-  reportProcessingFailure: (kind: ProcessingFailureKind) => void,
-): Promise<ItemOutcome> {
-  if (claim.provider !== 'google') {
-    reportProcessingFailure('unsupported_provider');
-    return await retryClaim(db, claim);
-  }
-
-  let refreshToken: string;
-  try {
-    refreshToken = decryptToken(claim.refresh_token_enc, encryptionKey);
-  } catch {
-    reportProcessingFailure('decrypt_failed');
-    return await retryClaim(db, claim);
-  }
-
-  let revoked: boolean;
-  try {
-    revoked = await googleCalendarAdapter.revoke(refreshToken);
-  } catch {
-    // adapter の既知の network / provider failure は false。throw は実装上の想定外だけを通知する。
-    reportProcessingFailure('provider_failed');
-    return await retryClaim(db, claim);
-  }
-
-  if (!revoked) return await retryClaim(db, claim);
-
-  let completed: boolean;
-  try {
-    const { data, error } = await db
-      .rpc('complete_calendar_revoke_outbox_v1', {
-        p_outbox_id: claim.outbox_id,
-        p_lease_id: claim.lease_id,
-      })
-      .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS));
-    if (error) throw maintenanceFailure('complete');
-    completed = data;
-  } catch (error) {
-    if (error instanceof CalendarRevokeMaintenanceError) throw error;
-    throw maintenanceFailure('complete');
-  }
-
-  // provider revoke 後に hard expiry / lease takeover が済んでいても安全な既処理として扱う。
-  return completed ? 'revoked' : 'alreadyGone';
 }
 
 function addOutcome(summary: CalendarRevokeOutboxSummary, outcome: ItemOutcome): void {
@@ -192,17 +140,131 @@ function addOutcome(summary: CalendarRevokeOutboxSummary, outcome: ItemOutcome):
   }
 }
 
+function classifyFinalizeResult(result: string, outcome: RevokeAttemptOutcome): ItemOutcome {
+  switch (result) {
+    case 'revoke_guarded':
+    case 'revoked':
+      return outcome === 'confirmed' ? 'revoked' : 'alreadyGone';
+    case 'retried':
+    case 'expiry_guarded':
+      return 'retried';
+    case 'expired':
+      return 'expired';
+    case 'missing':
+      throw outboxFailure('finalize_missing');
+    case 'superseded':
+      throw outboxFailure('finalize_superseded');
+    default:
+      throw outboxFailure('finalize_result');
+  }
+}
+
+/**
+ * Provider call はこの関数の外で最大1回だけ行う。response loss 時は同じ lease / outcome の
+ * finalize RPC だけを再送し、provider を再実行しない。
+ */
+async function finalizeClaim(
+  db: SupabaseClient<Database>,
+  projectKey: string,
+  claim: ClaimedRevoke,
+  outcome: RevokeAttemptOutcome,
+): Promise<ItemOutcome> {
+  const args = {
+    p_project_key: projectKey,
+    p_outbox_id: claim.outbox_id,
+    p_lease_id: claim.lease_id,
+    p_outcome: outcome,
+  } as const;
+
+  for (let attempt = 1; attempt <= FINALIZE_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      const result = await callRpc('finalize', () =>
+        db
+          .rpc('finalize_calendar_revoke_attempt_v2', args)
+          .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS)),
+      );
+      if (typeof result !== 'string') throw outboxFailure('finalize_result');
+      return classifyFinalizeResult(result, outcome);
+    } catch (error) {
+      if (attempt === FINALIZE_RETRY_ATTEMPTS) {
+        if (error instanceof CalendarRevokeOutboxError) throw error;
+        throw outboxFailure('finalize');
+      }
+    }
+  }
+
+  throw outboxFailure('finalize');
+}
+
+function hasProviderSettlementBudget(claim: ClaimedRevoke, deadlineAt: number): boolean {
+  const attemptDeadlineAt = Date.parse(claim.attempt_deadline_at);
+  if (!Number.isFinite(attemptDeadlineAt)) return false;
+
+  return Math.min(attemptDeadlineAt, deadlineAt) - Date.now() >= PROVIDER_SETTLEMENT_BUDGET_MS;
+}
+
+async function processClaim(
+  db: SupabaseClient<Database>,
+  projectKey: string,
+  claim: ClaimedRevoke,
+  encryptionKey: string,
+  deadlineAt: number,
+  reportProcessingFailure: (kind: ProcessingFailureKind) => void,
+): Promise<ClaimSettlement> {
+  if (!hasProviderSettlementBudget(claim, deadlineAt)) {
+    return {
+      outcome: await finalizeClaim(db, projectKey, claim, 'not_started'),
+      deadlineReached: true,
+    };
+  }
+
+  if (claim.provider !== 'google') {
+    reportProcessingFailure('unsupported_provider');
+    return {
+      outcome: await finalizeClaim(db, projectKey, claim, 'not_started'),
+      deadlineReached: false,
+    };
+  }
+
+  let refreshToken: string;
+  try {
+    refreshToken = decryptToken(claim.refresh_token_enc, encryptionKey);
+  } catch {
+    reportProcessingFailure('decrypt_failed');
+    return {
+      outcome: await finalizeClaim(db, projectKey, claim, 'not_started'),
+      deadlineReached: false,
+    };
+  }
+
+  let outcome: RevokeAttemptOutcome;
+  try {
+    outcome = (await googleCalendarAdapter.revoke(refreshToken)) ? 'confirmed' : 'unconfirmed';
+  } catch {
+    reportProcessingFailure('provider_failed');
+    outcome = 'unconfirmed';
+  }
+
+  return {
+    outcome: await finalizeClaim(db, projectKey, claim, outcome),
+    deadlineReached: false,
+  };
+}
+
+/**
+ * hard expiry 成功後に、最大20件の revoke lease を処理する。
+ *
+ * 1件の finalization failure が同batchの他leaseを中断しないよう、全settlementを待ってから
+ * 固定メッセージの error を返す。
+ */
 export async function processCalendarRevokeOutbox(params: {
-  encryptionKey: string | undefined;
+  db: SupabaseClient<Database>;
+  projectKey: string;
+  encryptionKey: string;
   deadlineAt: number;
 }): Promise<CalendarRevokeOutboxSummary> {
-  const { encryptionKey, deadlineAt } = params;
-  let db: SupabaseClient<Database>;
-  try {
-    db = createServiceRoleClient();
-  } catch {
-    throw maintenanceFailure('client');
-  }
+  const { db, projectKey, encryptionKey, deadlineAt } = params;
+  const reportProcessingFailure = createProcessingFailureReporter();
   const summary: CalendarRevokeOutboxSummary = {
     claimed: 0,
     revoked: 0,
@@ -210,24 +272,7 @@ export async function processCalendarRevokeOutbox(params: {
     expired: 0,
     alreadyGone: 0,
     deadlineReached: false,
-    encryptionAvailable: isValidEncryptionKey(encryptionKey),
   };
-
-  // key が壊れていても ciphertext の 24h 上限だけは必ず守る。
-  try {
-    const { data, error } = await db
-      .rpc('expire_calendar_revoke_outbox_v1', { p_limit: EXPIRY_BATCH_SIZE })
-      .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS));
-    if (error || typeof data !== 'number') throw maintenanceFailure('expire');
-    summary.expired = data;
-  } catch (error) {
-    if (error instanceof CalendarRevokeMaintenanceError) throw error;
-    throw maintenanceFailure('expire');
-  }
-
-  if (!summary.encryptionAvailable || encryptionKey === undefined) return summary;
-
-  const reportProcessingFailure = createProcessingFailureReporter();
 
   while (summary.claimed < MAX_CLAIMS_PER_RUN) {
     if (deadlineAt - Date.now() < MIN_BATCH_BUDGET_MS) {
@@ -236,54 +281,43 @@ export async function processCalendarRevokeOutbox(params: {
     }
 
     const limit = Math.min(CLAIM_BATCH_SIZE, MAX_CLAIMS_PER_RUN - summary.claimed);
-    let claims: ClaimedRevoke[];
-    try {
-      const { data, error } = await db
-        .rpc('claim_calendar_revoke_outbox_v1', { p_limit: limit })
-        .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS));
-      if (error) throw maintenanceFailure('claim');
-      claims = data ?? [];
-    } catch (error) {
-      if (error instanceof CalendarRevokeMaintenanceError) throw error;
-      throw maintenanceFailure('claim');
-    }
+    const claims = await callRpc('claim', () =>
+      db
+        .rpc('claim_calendar_revoke_outbox_v2', {
+          p_project_key: projectKey,
+          p_limit: limit,
+        })
+        .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS)),
+    );
+    if (!Array.isArray(claims)) throw outboxFailure('claim_result');
     if (claims.length === 0) break;
 
     summary.claimed += claims.length;
 
-    // claim 中の遅延で provider + settlement の余白を失った場合、provider を始めず全 lease を
-    // retry へ戻す。次回 cron が安全に再取得できる状態まで待ってから終了する。
-    if (deadlineAt - Date.now() < PROVIDER_SETTLEMENT_BUDGET_MS) {
-      summary.deadlineReached = true;
-      const releases = await Promise.allSettled(
-        claims.map(async (claim) => {
-          return await retryClaim(db, claim);
-        }),
-      );
-      let releaseFailed = false;
-      for (const release of releases) {
-        if (release.status === 'fulfilled') addOutcome(summary, release.value);
-        else releaseFailed = true;
-      }
-      if (releaseFailed) throw maintenanceFailure('deadline_release');
-      break;
-    }
-
-    // 1 件の settlement failure で Promise.all が早期 reject すると、同 batch の残りが
-    // serverless teardown で中断されうる。全 lease の complete/retry が終わるまで必ず待つ。
     const settlements = await Promise.allSettled(
       claims.map(async (claim) => {
-        return await processClaim(db, claim, encryptionKey, reportProcessingFailure);
+        return await processClaim(
+          db,
+          projectKey,
+          claim,
+          encryptionKey,
+          deadlineAt,
+          reportProcessingFailure,
+        );
       }),
     );
+
     let settlementFailed = false;
     for (const settlement of settlements) {
-      if (settlement.status === 'fulfilled') addOutcome(summary, settlement.value);
-      else settlementFailed = true;
+      if (settlement.status === 'fulfilled') {
+        addOutcome(summary, settlement.value.outcome);
+        summary.deadlineReached ||= settlement.value.deadlineReached;
+      } else {
+        settlementFailed = true;
+      }
     }
-    if (settlementFailed) throw maintenanceFailure('batch_settlement');
-
-    if (claims.length < limit) break;
+    if (settlementFailed) throw outboxFailure('batch_settlement');
+    if (summary.deadlineReached || claims.length < limit) break;
   }
 
   return summary;

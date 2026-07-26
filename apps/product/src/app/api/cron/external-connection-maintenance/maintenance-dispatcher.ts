@@ -2,18 +2,17 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { env } from '@/env';
 import {
-  processCalendarRevokeOutbox,
-  type CalendarRevokeOutboxSummary,
-} from '@/features/external-calendar/server/revoke-outbox';
+  processCalendarAuthorityMaintenance,
+  type CalendarAuthorityMaintenanceSummary,
+} from '@/features/external-calendar/server/authority-maintenance';
 import type { Database } from '@/lib/database/generated/database.types';
 import { logger } from '@/lib/logger';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 const CLEANUP_BATCH_SIZE = 250;
 const DB_RPC_TIMEOUT_MS = 3_000;
-const RETENTION_BUDGET_MS = 23_000;
+const RETENTION_BUDGET_MS = 10_000;
 
 type RetentionSummary = {
   authorizationCodesDeleted: number;
@@ -25,18 +24,32 @@ type RetentionSummary = {
   hasMore: boolean;
 };
 
-type PublicOutboxSummary = Omit<
-  CalendarRevokeOutboxSummary,
-  'encryptionAvailable' | 'deadlineReached'
-> & {
+type PublicOutboxSummary = {
+  claimed: number;
+  revoked: number;
+  retried: number;
+  expired: number;
+  alreadyGone: number;
+  guardsFinalized: number;
+  expiredIntentsFound: number;
+  expiredIntentsNormalized: number;
+  revokeOperationsDeleted: number;
+  commandReceiptsDeleted: number;
+  oauthAttemptsDeleted: number;
+  subjectFencesDeleted: number;
+  pendingOperations: number;
+  unboundConnections: number;
+  unboundOutbox: number;
+  activated: boolean;
   due: number;
   total: number;
   oldestDueAgeSeconds: number;
   deferred: number;
+  ciphertextsDeferred: number;
   revokeUnavailable: boolean;
 };
 
-type ExternalConnectionMaintenanceSummary = {
+export type ExternalConnectionMaintenanceSummary = {
   complete: boolean;
   outbox: PublicOutboxSummary;
   retention: RetentionSummary;
@@ -109,7 +122,7 @@ export async function dispatchExternalConnectionMaintenance(params: {
     throw new ExternalConnectionMaintenanceError('client');
   }
   let firstFailure: Error | null = null;
-  let outbox: CalendarRevokeOutboxSummary = {
+  let outbox: CalendarAuthorityMaintenanceSummary = {
     claimed: 0,
     revoked: 0,
     retried: 0,
@@ -117,11 +130,23 @@ export async function dispatchExternalConnectionMaintenance(params: {
     alreadyGone: 0,
     deadlineReached: false,
     encryptionAvailable: false,
+    ciphertextsDeferred: 0,
+    guardsFinalized: 0,
+    expiredIntentsFound: 0,
+    expiredIntentsNormalized: 0,
+    revokeOperationsDeleted: 0,
+    commandReceiptsDeleted: 0,
+    oauthAttemptsDeleted: 0,
+    subjectFencesDeleted: 0,
+    pendingOperations: 0,
+    unboundConnections: 0,
+    unboundOutbox: 0,
+    cleanupHasMore: false,
+    activated: false,
   };
 
   try {
-    outbox = await processCalendarRevokeOutbox({
-      encryptionKey: env.CALENDAR_TOKEN_ENCRYPTION_KEY,
+    outbox = await processCalendarAuthorityMaintenance({
       deadlineAt: params.deadlineAt - RETENTION_BUDGET_MS,
     });
   } catch {
@@ -157,12 +182,22 @@ export async function dispatchExternalConnectionMaintenance(params: {
     },
   ];
 
-  for (const step of cleanupSteps) {
-    try {
-      retention[step.key] = await cleanup(db, step.operation);
-    } catch (error) {
+  // 各tableのretentionは独立している。逐次6 RPCのworst-caseでcron予算を使い切らないよう
+  // 並列に開始し、全settlementを待ってから最初の安全化済みfailureを扱う。
+  const cleanupResults = await Promise.allSettled(
+    cleanupSteps.map(async (step) => ({
+      step,
+      deleted: await cleanup(db, step.operation),
+    })),
+  );
+  for (const result of cleanupResults) {
+    if (result.status === 'fulfilled') {
+      retention[result.value.step.key] = result.value.deleted;
+    } else {
       firstFailure ??=
-        error instanceof Error ? error : new ExternalConnectionMaintenanceError(step.operation);
+        result.reason instanceof ExternalConnectionMaintenanceError
+          ? result.reason
+          : new ExternalConnectionMaintenanceError('retention_cleanup');
     }
   }
 
@@ -184,11 +219,18 @@ export async function dispatchExternalConnectionMaintenance(params: {
     status.connections_due ||
     status.receipts_due ||
     status.security_events_due;
-  const revokeUnavailable = !outbox.encryptionAvailable && status.calendar_revoke_total > 0;
+  const revokeUnavailable =
+    !outbox.encryptionAvailable &&
+    (outbox.pendingOperations > 0 || outbox.unboundOutbox > 0 || status.calendar_revoke_total > 0);
   const complete =
     outbox.expired === 0 &&
-    outbox.retried === 0 &&
+    outbox.ciphertextsDeferred === 0 &&
     !outbox.deadlineReached &&
+    !outbox.cleanupHasMore &&
+    outbox.pendingOperations === 0 &&
+    outbox.unboundConnections === 0 &&
+    outbox.unboundOutbox === 0 &&
+    outbox.activated &&
     status.calendar_revoke_total === 0 &&
     !hasMore;
 
@@ -200,10 +242,22 @@ export async function dispatchExternalConnectionMaintenance(params: {
       retried: outbox.retried,
       expired: outbox.expired,
       alreadyGone: outbox.alreadyGone,
+      guardsFinalized: outbox.guardsFinalized,
+      expiredIntentsFound: outbox.expiredIntentsFound,
+      expiredIntentsNormalized: outbox.expiredIntentsNormalized,
+      revokeOperationsDeleted: outbox.revokeOperationsDeleted,
+      commandReceiptsDeleted: outbox.commandReceiptsDeleted,
+      oauthAttemptsDeleted: outbox.oauthAttemptsDeleted,
+      subjectFencesDeleted: outbox.subjectFencesDeleted,
+      pendingOperations: outbox.pendingOperations,
+      unboundConnections: outbox.unboundConnections,
+      unboundOutbox: outbox.unboundOutbox,
+      activated: outbox.activated,
       due: status.calendar_revoke_due,
       total: status.calendar_revoke_total,
       oldestDueAgeSeconds: status.oldest_due_age_seconds,
       deferred: status.calendar_revoke_due,
+      ciphertextsDeferred: outbox.ciphertextsDeferred,
       revokeUnavailable,
     },
     retention: {

@@ -1,19 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const processCalendarRevokeOutbox = vi.hoisted(() => vi.fn());
+const processCalendarAuthorityMaintenance = vi.hoisted(() => vi.fn());
 const rpc = vi.hoisted(() => vi.fn());
 const createServiceRoleClient = vi.hoisted(() => vi.fn(() => ({ rpc })));
 const loggerInfo = vi.hoisted(() => vi.fn());
-const envMock = vi.hoisted(
-  () =>
-    ({ CALENDAR_TOKEN_ENCRYPTION_KEY: 'test-key' }) as {
-      CALENDAR_TOKEN_ENCRYPTION_KEY?: string | undefined;
-    },
-);
 
-vi.mock('@/env', () => ({ env: envMock }));
-vi.mock('@/features/external-calendar/server/revoke-outbox', () => ({
-  processCalendarRevokeOutbox,
+vi.mock('@/features/external-calendar/server/authority-maintenance', () => ({
+  processCalendarAuthorityMaintenance,
 }));
 vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient }));
 vi.mock('@/lib/logger', () => ({
@@ -38,6 +31,19 @@ const OUTBOX_SUMMARY = {
   alreadyGone: 1,
   deadlineReached: false,
   encryptionAvailable: true,
+  ciphertextsDeferred: 0,
+  guardsFinalized: 2,
+  expiredIntentsFound: 1,
+  expiredIntentsNormalized: 1,
+  revokeOperationsDeleted: 3,
+  commandReceiptsDeleted: 4,
+  oauthAttemptsDeleted: 5,
+  subjectFencesDeleted: 6,
+  pendingOperations: 5,
+  unboundConnections: 0,
+  unboundOutbox: 0,
+  cleanupHasMore: false,
+  activated: false,
 };
 
 const STATUS = {
@@ -73,6 +79,8 @@ const CLEAN_OUTBOX = {
   expired: 0,
   alreadyGone: 0,
   deadlineReached: false,
+  pendingOperations: 0,
+  activated: true,
 };
 
 const CLEANUP_COUNTS: Record<string, number> = {
@@ -96,15 +104,14 @@ function setupRpc(status = STATUS): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  envMock.CALENDAR_TOKEN_ENCRYPTION_KEY = 'test-key';
-  processCalendarRevokeOutbox.mockResolvedValue(OUTBOX_SUMMARY);
+  processCalendarAuthorityMaintenance.mockResolvedValue(OUTBOX_SUMMARY);
   setupRpc();
 });
 
 describe('dispatchExternalConnectionMaintenance', () => {
   it('outbox後に全retention cleanupとaggregate statusを実行する', async () => {
     const sequence: string[] = [];
-    processCalendarRevokeOutbox.mockImplementation(async () => {
+    processCalendarAuthorityMaintenance.mockImplementation(async () => {
       sequence.push('outbox');
       return OUTBOX_SUMMARY;
     });
@@ -121,9 +128,8 @@ describe('dispatchExternalConnectionMaintenance', () => {
       deadlineAt: FAR_DEADLINE,
     });
 
-    expect(processCalendarRevokeOutbox).toHaveBeenCalledWith({
-      encryptionKey: 'test-key',
-      deadlineAt: FAR_DEADLINE - 23_000,
+    expect(processCalendarAuthorityMaintenance).toHaveBeenCalledWith({
+      deadlineAt: FAR_DEADLINE - 10_000,
     });
     expect(sequence).toEqual([
       'outbox',
@@ -143,10 +149,13 @@ describe('dispatchExternalConnectionMaintenance', () => {
         retried: 1,
         expired: 1,
         alreadyGone: 1,
+        guardsFinalized: 2,
+        pendingOperations: 5,
         due: 3,
         total: 5,
         oldestDueAgeSeconds: 45,
         deferred: 3,
+        ciphertextsDeferred: 0,
         revokeUnavailable: false,
       },
       retention: {
@@ -162,7 +171,7 @@ describe('dispatchExternalConnectionMaintenance', () => {
   });
 
   it('鍵が無効かつoutboxが残る場合だけrevokeUnavailableにする', async () => {
-    processCalendarRevokeOutbox.mockResolvedValue({
+    processCalendarAuthorityMaintenance.mockResolvedValue({
       ...OUTBOX_SUMMARY,
       encryptionAvailable: false,
     });
@@ -172,7 +181,22 @@ describe('dispatchExternalConnectionMaintenance', () => {
     });
     expect(withBacklog.outbox.revokeUnavailable).toBe(true);
 
+    setupRpc({ ...STATUS, calendar_revoke_due: 1, calendar_revoke_total: 1 });
+    processCalendarAuthorityMaintenance.mockResolvedValue({
+      ...CLEAN_OUTBOX,
+      encryptionAvailable: false,
+      unboundOutbox: 1,
+    });
+    const withUnboundCiphertext = await dispatchExternalConnectionMaintenance({
+      deadlineAt: FAR_DEADLINE,
+    });
+    expect(withUnboundCiphertext.outbox.revokeUnavailable).toBe(true);
+
     setupRpc({ ...STATUS, calendar_revoke_due: 0, calendar_revoke_total: 0 });
+    processCalendarAuthorityMaintenance.mockResolvedValue({
+      ...CLEAN_OUTBOX,
+      encryptionAvailable: false,
+    });
     const withoutBacklog = await dispatchExternalConnectionMaintenance({
       deadlineAt: FAR_DEADLINE,
     });
@@ -180,7 +204,7 @@ describe('dispatchExternalConnectionMaintenance', () => {
   });
 
   it('provider確認済みかつbacklogとretention dueがなければcomplete=trueにする', async () => {
-    processCalendarRevokeOutbox.mockResolvedValue({
+    processCalendarAuthorityMaintenance.mockResolvedValue({
       ...CLEAN_OUTBOX,
       claimed: 1,
       alreadyGone: 1,
@@ -195,9 +219,29 @@ describe('dispatchExternalConnectionMaintenance', () => {
   });
 
   it.each([
-    ['retry', { outbox: { ...CLEAN_OUTBOX, retried: 1 }, status: CLEAN_STATUS }],
+    [
+      'retry pending',
+      {
+        outbox: { ...CLEAN_OUTBOX, retried: 1, pendingOperations: 1 },
+        status: CLEAN_STATUS,
+      },
+    ],
     ['expiry', { outbox: { ...CLEAN_OUTBOX, expired: 1 }, status: CLEAN_STATUS }],
     ['deadline', { outbox: { ...CLEAN_OUTBOX, deadlineReached: true }, status: CLEAN_STATUS }],
+    [
+      'ciphertext deferred',
+      { outbox: { ...CLEAN_OUTBOX, ciphertextsDeferred: 1 }, status: CLEAN_STATUS },
+    ],
+    [
+      'calendar cleanup',
+      { outbox: { ...CLEAN_OUTBOX, cleanupHasMore: true }, status: CLEAN_STATUS },
+    ],
+    [
+      'unbound connection',
+      { outbox: { ...CLEAN_OUTBOX, unboundConnections: 1 }, status: CLEAN_STATUS },
+    ],
+    ['unbound outbox', { outbox: { ...CLEAN_OUTBOX, unboundOutbox: 1 }, status: CLEAN_STATUS }],
+    ['authority inactive', { outbox: { ...CLEAN_OUTBOX, activated: false }, status: CLEAN_STATUS }],
     [
       'calendar backlog',
       { outbox: CLEAN_OUTBOX, status: { ...CLEAN_STATUS, calendar_revoke_total: 1 } },
@@ -227,7 +271,7 @@ describe('dispatchExternalConnectionMaintenance', () => {
       { outbox: CLEAN_OUTBOX, status: { ...CLEAN_STATUS, security_events_due: true } },
     ],
   ])('%sが残る時はcomplete=falseにする', async (_name, scenario) => {
-    processCalendarRevokeOutbox.mockResolvedValue(scenario.outbox);
+    processCalendarAuthorityMaintenance.mockResolvedValue(scenario.outbox);
     setupRpc(scenario.status);
 
     const summary = await dispatchExternalConnectionMaintenance({
@@ -239,7 +283,7 @@ describe('dispatchExternalConnectionMaintenance', () => {
 
   it('outbox失敗後も全retentionとstatusを実行し、raw errorを再送出しない', async () => {
     const sensitive = 'v1.secret-ciphertext';
-    processCalendarRevokeOutbox.mockRejectedValue(new Error(sensitive));
+    processCalendarAuthorityMaintenance.mockRejectedValue(new Error(sensitive));
 
     const operation = dispatchExternalConnectionMaintenance({
       deadlineAt: FAR_DEADLINE,

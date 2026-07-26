@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ExternalConnectionMaintenanceSummary } from '../maintenance-dispatcher';
+
 const dispatchExternalConnectionMaintenance = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const loggerError = vi.hoisted(() => vi.fn());
@@ -34,10 +36,22 @@ const SUMMARY = {
     retried: 1,
     expired: 0,
     alreadyGone: 0,
+    guardsFinalized: 0,
+    expiredIntentsFound: 0,
+    expiredIntentsNormalized: 0,
+    revokeOperationsDeleted: 0,
+    commandReceiptsDeleted: 0,
+    oauthAttemptsDeleted: 0,
+    subjectFencesDeleted: 0,
+    pendingOperations: 2,
+    unboundConnections: 0,
+    unboundOutbox: 0,
+    activated: false,
     due: 1,
     total: 2,
     oldestDueAgeSeconds: 30,
     deferred: 1,
+    ciphertextsDeferred: 0,
     revokeUnavailable: false,
   },
   retention: {
@@ -50,7 +64,7 @@ const SUMMARY = {
     hasMore: false,
   },
   durationMs: 120,
-};
+} satisfies ExternalConnectionMaintenanceSummary;
 
 function request(authorization?: string): NextRequest {
   const headers = new Headers();
