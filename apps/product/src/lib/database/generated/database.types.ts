@@ -1129,6 +1129,17 @@ export type Database = {
         };
         Returns: number;
       };
+      claim_calendar_revoke_outbox_v1: {
+        Args: { p_limit?: number };
+        Returns: {
+          attempt_count: number;
+          expires_at: string;
+          lease_id: string;
+          outbox_id: string;
+          provider: string;
+          refresh_token_enc: string;
+        }[];
+      };
       claim_stripe_webhook_event: {
         Args: {
           p_event_id: string;
@@ -1137,9 +1148,33 @@ export type Database = {
         };
         Returns: string;
       };
+      cleanup_integration_security_events_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
       cleanup_mcp_mutation_receipts_v1: {
         Args: { p_limit?: number };
         Returns: number;
+      };
+      cleanup_oauth_access_tokens_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      cleanup_oauth_authorization_codes_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      cleanup_oauth_connections_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      cleanup_oauth_refresh_tokens_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      complete_calendar_revoke_outbox_v1: {
+        Args: { p_lease_id: string; p_outbox_id: string };
+        Returns: boolean;
       };
       confirm_day_plans_command_v1: {
         Args: {
@@ -1405,6 +1440,24 @@ export type Database = {
           user_id: string;
         }[];
       };
+      expire_calendar_revoke_outbox_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      get_external_authority_maintenance_status_v1: {
+        Args: never;
+        Returns: {
+          access_tokens_due: boolean;
+          authorization_codes_due: boolean;
+          calendar_revoke_due: number;
+          calendar_revoke_total: number;
+          connections_due: boolean;
+          oldest_due_age_seconds: number;
+          receipts_due: boolean;
+          refresh_tokens_due: boolean;
+          security_events_due: boolean;
+        }[];
+      };
       get_mcp_environment_identity_v1: {
         Args: never;
         Returns: {
@@ -1609,6 +1662,10 @@ export type Database = {
           isOneToOne: false;
           isSetofReturn: true;
         };
+      };
+      retry_calendar_revoke_outbox_v1: {
+        Args: { p_lease_id: string; p_outbox_id: string };
+        Returns: string;
       };
       revoke_oauth_connection: {
         Args: { p_connection_id: string };

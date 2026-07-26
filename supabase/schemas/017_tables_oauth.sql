@@ -12,6 +12,8 @@
 --   20260726013339_mcp_environment_identity.sql
 --   20260726015311_mcp_environment_authority_binding.sql
 --   20260726021453_fix_mcp_environment_legacy_binding.sql
+--   20260726033000_expand_user_data_purge_generation.sql
+--   20260726040100_add_external_authority_maintenance.sql
 --
 -- 最終同期日: 2026-07-26
 -- 正確なconstraint / index / privilegeは上記migrationとRLS snapshotを正とする。
@@ -127,3 +129,10 @@ CREATE TABLE public.oauth_audit_log (
 
 CREATE INDEX idx_oauth_audit_log_user_called
   ON public.oauth_audit_log(user_id, called_at DESC);
+
+-- Retention:
+--   authorization code / access token hash: terminal後24時間
+--   refresh token hash: expired / rotated / revoked後30日
+--   connection: revoked / reauth expiry後90日
+--   success mutation receipt: 90日。purge後はresource本文を持たないtombstone
+-- cleanupはservice-role限定RPCがDB時刻とbounded batchで実行する。

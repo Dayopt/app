@@ -15,6 +15,7 @@
 --   - 20260712213550_rename_record_constraint_triggers.sql
 --   - 20260723233814_add_calendar_connection_tables.sql
 --   - 20260724000416_enforce_external_event_connection_owner.sql
+--   - 20260726033000_expand_user_data_purge_generation.sql
 --
 -- カラム順序の規則:
 --   1. id (PK)
@@ -53,6 +54,7 @@ CREATE TABLE public.calendar_connections (
   provider_account_email TEXT,
   granted_scopes TEXT[] NOT NULL,
   refresh_token_enc TEXT NOT NULL,
+  data_generation BIGINT NOT NULL DEFAULT 0,
   status TEXT NOT NULL,                   -- active / reauth_required
   last_synced_at TIMESTAMPTZ,
   last_sync_error TEXT,
@@ -65,6 +67,7 @@ CREATE TABLE public.calendar_connections (
 --   calendar_connections_granted_scopes_not_empty -> cardinality > 0 かつ NULL 要素なし
 --   calendar_connections_id_user_id_unique        -> 子テーブルの複合 FK 参照先
 --   calendar_connections_provider_account_unique  -> user_id + provider + provider_account_id
+--   data_generation -> 接続保存時のuser data purge世代。古いcallback/syncの再作成を拒否する
 --   trigger_update_calendar_connections_updated_at -> update_updated_at()
 
 -- calendar_connection_calendars: 取り込み対象として選択されたカレンダー

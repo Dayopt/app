@@ -17,6 +17,12 @@
 --   - 20260726013339_mcp_environment_identity.sql
 --   - 20260726015311_mcp_environment_authority_binding.sql
 --   - 20260726021453_fix_mcp_environment_legacy_binding.sql
+--   - 20260726033000_expand_user_data_purge_generation.sql
+--   - 20260726033100_fix_user_data_purge_lock_order.sql
+--   - 20260726040100_add_external_authority_maintenance.sql
+--   - 20260726040200_harden_calendar_revoke_expiry.sql
+--   - 20260726040300_allow_multiple_calendar_revoke_tokens.sql
+--   - 20260726040400_align_external_authority_status.sql
 -- ユーザー操作向け関数は authenticated、OAuth基盤関数はservice_roleへ
 -- 必要なsignatureだけ明示GRANT。PUBLIC/anonへのEXECUTEはrevoke済み。
 -- ============================================================
@@ -43,6 +49,14 @@
 --   exchange_oauth_authorization_code_v2(...)  — code消費とtoken pair発行をatomic実行
 --   rotate_oauth_refresh_token_v2(...)         — connection-bound refresh rotation/reuse検知
 --   issue_oauth_token_pair(...)                — 旧caller drain中だけ残すread-only互換issuer
+--   get_user_data_generation_v1(...)           — 現在のaccount-preserving purge世代
+--   save_calendar_connection_command_v1(...)   — 世代再検証つきCalendar connection保存
+--   delete_all_user_data_command_v3(...)       — 世代更新、外部authority失効、全domain data削除
+--   claim/complete/retry_calendar_revoke_outbox_v1(...) — 暗号化tokenのlease付きprovider失効
+--   expire_calendar_revoke_outbox_v1(...)      — 期限切れ暗号文のbounded削除
+--   cleanup_oauth_*_v1(...)                    — code/token/connectionの期限別bounded削除
+--   cleanup_integration_security_events_v1(...) — payload-free eventの90日削除
+--   get_external_authority_maintenance_status_v1() — IDを含まないbacklog集計
 
 -- ■ 削除済み RPC
 --   get_tag_cumulative_time / get_tag_avg_fulfillment / get_tag_plan_rate /
