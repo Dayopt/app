@@ -39,6 +39,8 @@ AI 開発予算（$100-200/月）の配分を検討する中で、レビュー�
 
 ## 影響・やること
 
+- **導入直後は観察モード（`AI_REVIEW_ENFORCE` 未設定）**。P0 でも check を fail させず、コメントだけ残す。この gate は PR #1738 の時点で一度も end-to-end 実行されておらず（危険クラスを含む PR がまだ無い）、誤爆の実績が未知のため。実 migration PR で数回動かし、指摘の質を見てから `AI_REVIEW_ENFORCE=true` で blocking へ切り替える
+
 - ユーザー作業: Google AI Studio で課金有効の API key を発行し、repo secret `GEMINI_API_KEY` に登録する。未登録の間は warning を出して skip する（PR はブロックされない）
 - `prompt.md` の変更は専用 PR で行う。実装 PR の中で監査対象が自分の監査契約を書き換えない運用規律とする
 - 退場条件: 月次ガーデニングで「決定論ゲートと内部レビューが拾えなかった unique catch」を棚卸しし、3 ヶ月連続でゼロなら削除する。導入と同じ実測主義で退場も決める

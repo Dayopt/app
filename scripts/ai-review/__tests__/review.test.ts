@@ -285,6 +285,40 @@ describe('comment の描画', () => {
   });
 });
 
+describe('観察モードの表示', () => {
+  const p0 = {
+    summary: '要約',
+    findings: [
+      {
+        severity: 'P0' as const,
+        title: 'RLS 欠落',
+        file: 'a.sql',
+        failureScenario: '他ユーザーが読める',
+        evidence: 'policy なし',
+      },
+    ],
+  };
+
+  it('観察モードでは「fail している」と書かない', () => {
+    const body = renderComment(p0, { model: 'm', sha: 'abcdef1', enforce: false });
+    expect(body).toContain('観察モードのため check は落としていません');
+    expect(body).not.toContain('この check は fail しています');
+  });
+
+  it('enforce では従来どおり fail を明示する', () => {
+    const body = renderComment(p0, { model: 'm', sha: 'abcdef1', enforce: true });
+    expect(body).toContain('この check は fail しています');
+  });
+
+  it('カバレッジ不足の文言も観察モードで切り替わる', () => {
+    const body = renderComment(
+      { summary: '要約', findings: [] },
+      { model: 'm', sha: 'abcdef1', incompleteDangerous: ['a.sql'], enforce: false },
+    );
+    expect(body).toContain('観察モードのため check は落としていません');
+  });
+});
+
 describe('API 呼び出し', () => {
   it('構造化応答を返す', async () => {
     const result = await callGemini({

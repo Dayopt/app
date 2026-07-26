@@ -11,8 +11,9 @@
  *
  * 契約は scripts/ai-review/prompt.md（レビュー内容の正本）。本ファイルは配管だけを持つ。
  *
- * 判定:
- *   P0 あり     → exit 1（check fail → branch:finish の既存マージゲートが止める）
+ * 判定（既定は観察モード。AI_REVIEW_ENFORCE=true で blocking に切り替える）:
+ *   P0 あり     → 観察モードでは exit 0 + comment / enforce では exit 1（check fail →
+ *                 branch:finish の既存マージゲートが止める）
  *   P1 のみ     → exit 0 + PR に sticky comment
  *   findings 0  → exit 0（無言）
  *   API 障害等  → exit 0 + notice（インフラ障害では fail-open。所見では fail-closed）
@@ -334,7 +335,12 @@ export function hasBlockingFinding(result: ReviewResult): boolean {
 
 export function renderComment(
   result: ReviewResult,
-  meta: { model: string; sha: string; incompleteDangerous?: readonly string[] },
+  meta: {
+    model: string;
+    sha: string;
+    incompleteDangerous?: readonly string[];
+    enforce?: boolean;
+  },
 ): string {
   const lines = [COMMENT_MARKER, '## 🔍 ai-review', ''];
   lines.push(result.summary || '（要約なし）', '');
@@ -342,7 +348,9 @@ export function renderComment(
   const incomplete = meta.incompleteDangerous ?? [];
   if (incomplete.length > 0) {
     lines.push(
-      `**危険クラスの ${incomplete.length} ファイルを最後までレビューできていないため、この check は fail しています。**`,
+      meta.enforce === false
+        ? `**危険クラスの ${incomplete.length} ファイルを最後までレビューできていません**（観察モードのため check は落としていません）。`
+        : `**危険クラスの ${incomplete.length} ファイルを最後までレビューできていないため、この check は fail しています。**`,
       'diff が予算（180KB）を超えており、次のファイルは先頭部分しか見ていません。指摘が無いことは安全の根拠になりません:',
       '',
       ...incomplete.map((file) => `- \`${file}\``),
@@ -355,8 +363,12 @@ export function renderComment(
   const blocking = result.findings.filter((finding) => finding.severity === 'P0');
   if (blocking.length > 0) {
     lines.push(
-      `**P0 が ${blocking.length} 件あるため、この check は fail しています。**`,
-      '誤検出だと判断した場合は、根拠をこの PR に書いた上で `ai-review` の必須設定を外すか、指摘を解消してください。',
+      meta.enforce === false
+        ? `**P0 が ${blocking.length} 件あります**（観察モードのため check は落としていません）。内容を確認し、誤検出なら返信で指摘してください。`
+        : `**P0 が ${blocking.length} 件あるため、この check は fail しています。**`,
+      meta.enforce === false
+        ? '観察モード中の指摘の質が、blocking へ切り替える判断材料になります。'
+        : '誤検出だと判断した場合は、根拠をこの PR に書いた上で `ai-review` の必須設定を外すか、指摘を解消してください。',
       '',
     );
   }
@@ -623,6 +635,9 @@ async function main(): Promise<number> {
   // 手動 dispatch は「paths に当たらない PR を見せたい」ための入口なので、
   // 危険クラス判定で弾くと入口そのものが無意味な green になる。force で素通しする。
   const force = argv.includes('--force') || process.env.AI_REVIEW_FORCE === 'true';
+  // 既定は観察モード（所見を出すが check は落とさない）。実 PR で誤爆の実績を見てから
+  // AI_REVIEW_ENFORCE=true で blocking へ切り替える。未検証の gate で PR を止めない。
+  const enforce = process.env.AI_REVIEW_ENFORCE === 'true';
 
   const changedFiles = collectChangedFiles(base, head);
   const dangerous = changedFiles.filter(isDangerousPath);
@@ -677,7 +692,7 @@ async function main(): Promise<number> {
   }
 
   const clean = result.findings.length === 0 && incompleteDangerous.length === 0;
-  const body = renderComment(result, { model, sha: head, incompleteDangerous });
+  const body = renderComment(result, { model, sha: head, incompleteDangerous, enforce });
   const token = process.env.GITHUB_TOKEN;
   const repository = process.env.GITHUB_REPOSITORY;
   const prNumber = process.env.AI_REVIEW_PR_NUMBER;
@@ -701,17 +716,24 @@ async function main(): Promise<number> {
 
   // 危険クラスを最後まで見られていない run は、指摘の有無に関わらず通さない。
   // 「見ていないから指摘が無い」を green で表現すると偽の安心になる。
+  const shouldBlock = incompleteDangerous.length > 0 || hasBlockingFinding(result);
+
   if (incompleteDangerous.length > 0) {
     console.log(
       `::error title=ai-review::危険クラスの ${incompleteDangerous.length} ファイルを最後までレビューできていません（diff が ${MAX_DIFF_BYTES} bytes を超過）。`,
     );
-    return 1;
+  } else if (hasBlockingFinding(result)) {
+    console.log(`::error title=ai-review::P0 の指摘があります。PR の comment を確認してください。`);
   }
 
-  if (hasBlockingFinding(result)) {
-    console.log(`::error title=ai-review::P0 の指摘があります。PR の comment を確認してください。`);
-    return 1;
+  if (shouldBlock && !enforce) {
+    // 観察モード: 所見は出すが check は落とさない。導入直後の gate は誤爆の実績が
+    // 未知なので、まず実 PR で挙動と指摘の質を見てから blocking へ切り替える。
+    warn('観察モードのため、上記の指摘があってもこの check は fail させません。');
+    return 0;
   }
+  if (shouldBlock) return 1;
+
   notice(`P1 の指摘が ${result.findings.length} 件あります（マージはブロックしません）。`);
   return 0;
 }
