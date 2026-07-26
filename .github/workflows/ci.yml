@@ -111,8 +111,11 @@ jobs:
           pnpm --dir apps/web exec vitest run production-build-gate.test.mjs
 
       # coverage は計測しない。閾値 gate（vitest の coverage.thresholds）も
-      # artifact upload も無く、istanbul 計装に約 3.5 分かけて作ったレポートは
-      # runner 破棄とともに捨てられていた。実行するテストは同一（--project unit run）。
+      # artifact upload も無いため、istanbul 計装のコストをかけて作ったレポートは
+      # runner 破棄とともに捨てられていた。実行するテストは完全に同一
+      # （どちらも --project unit run。実測 243 files / 2278 tests で一致）。
+      # 計装のオーバーヘッドはローカル実測で 13 秒（9.5%）なので削減は 0-1 課金分。
+      # 主眼はコストより「誰も読まないレポートを作るのをやめる」こと。
       # coverage を見たい時はローカルで pnpm test:coverage を実行する。
       - name: Product unit tests
         run: pnpm --filter @dayopt/product test:run

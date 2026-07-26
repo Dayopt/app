@@ -35,10 +35,12 @@ repo は 2026-07-24 に private 化し（[#1732](https://github.com/Dayopt/dayop
 
 束ねた PR はレビュー負荷が上がるため、**複数 issue / 複数 Step を束ねた PR には merge 前の read-only subagent クロスレビューを必須**にした（人間の目視だけに依存しない）。
 
-あわせて CI 側で実測上効く 2 つを入れた:
+あわせて CI 側で 2 つ入れた:
 
-- **coverage 廃止**: `Product unit tests with coverage` は 215 秒で product job の過半を占めるが、`apps/product/vitest.config.ts` に `coverage.thresholds` が無く artifact upload も無いため、レポートは runner 破棄とともに捨てられていた。`--project unit run` で実行するテストは同一なので、検証内容を落とさず product job を 7 → 4 課金分にできる
-- **docs 専用 `paths-ignore`**: docs / rules のみの変更で 4 job を走らせない。公開 MDX（`apps/web/content/**`）や hooks の `.sh` を巻き込まないよう対象を最小限に絞った
+- **coverage 廃止**: `apps/product/vitest.config.ts` に `coverage.thresholds` が無く artifact upload も無いため、生成したレポートは runner 破棄とともに捨てられていた。実行するテストは完全に同一（どちらも `--project unit run`。ローカル実測で 243 files / 2278 tests が一致）。**ただし削減幅は当初の見積もりより小さい**: `Product unit tests with coverage` step が 215 秒だったため「その大半が計装コスト」と見積もっていたが、ローカルで両方を実測すると差は 13.4 秒（9.5%）でしかなかった。CI の 2-core では計装（`transform` が 11.7 → 40.6 秒）の並列化が効きにくいぶん多少大きく出るとしても、product job 6.1 分 → 5.3〜5.8 分、**課金 7 → 6 分で削減は 0〜1 分**にとどまる。採用理由はコスト削減より「誰も読まないレポートの生成をやめる」ことに置く（検証内容の損失はゼロなので、小さくても入れる価値はある）
+- **docs 専用 `paths-ignore`**: docs / rules のみの変更で 4 job を走らせない。公開 MDX（`apps/web/content/**`）や hooks の `.sh` を巻き込まないよう対象を最小限に絞った。直近 52 merge のうち docs / rules のみは 5 件（10%）だが、うち 1 件は `.sh` を含むため実効は 6〜10% 程度
+
+この 2 つを実測で詰めた結果、**CI 側の残り代は合計でも 1 割前後**しかないことが分かった。#1732 で job 統合を済ませた時点で粗い無駄は取り切れており、削減の主レバーは PR 本数（≈50%）であるという結論が補強された形になる。
 
 `paths-ignore` の前提として `scripts/git/finish-branch.sh` に **「成功した check が 1 件も無ければ停止」** のガードを追加した。既存の failure / pending 判定は `statusCheckRollup` が空だと両方 0 件になり、「CI が 1 本も走っていない PR」を green と区別できないまま素通りしていた。private + Free plan では GitHub 側の required check 強制が効かないため、このスクリプトが唯一の防波堤になる。job 名（絵文字入り）へのハードコードは rename に弱いので、名前に依存しない形にした。
 
@@ -50,11 +52,11 @@ repo は 2026-07-24 に private 化し（[#1732](https://github.com/Dayopt/dayop
 
 実測でコスト削減効果が無い / 小さいと分かったもの:
 
-| 案                        | 実測                                                                       | 却下理由                                              |
-| ------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Playwright ブラウザキャッシュ | install step は e2e 26 秒 / web 25 秒                                      | 復元コストと相殺し、1 分切り上げでは削減 0〜1 分      |
-| e2e + web job の統合      | 削減 ~1 分/run（全体の 4%）                                                | e2e が直列化し wall-clock 3.2 → 5.1 分。check 名も変わる |
-| `release.yml` の wait 短縮 | median 3.1 分（70 分は timeout 上限であって実測ではない）                  | そもそもコスト源ではない。production 経路なので別途     |
+| 案                            | 実測                                                      | 却下理由                                                 |
+| ----------------------------- | --------------------------------------------------------- | -------------------------------------------------------- |
+| Playwright ブラウザキャッシュ | install step は e2e 26 秒 / web 25 秒                     | 復元コストと相殺し、1 分切り上げでは削減 0〜1 分         |
+| e2e + web job の統合          | 削減 ~1 分/run（全体の 4%）                               | e2e が直列化し wall-clock 3.2 → 5.1 分。check 名も変わる |
+| `release.yml` の wait 短縮    | median 3.1 分（70 分は timeout 上限であって実測ではない） | そもそもコスト源ではない。production 経路なので別途      |
 
 **draft PR 運用**（`if: draft == false` + `types: ready_for_review`）は残り約 40% の効果が見込めるが見送った。理由は 3 つ: (a) draft にするだけでは `pull_request` は発火するため job-level `if` が必須、(b) job skip で作られる `conclusion: skipped` の check は上記ガードでも「成功 0 件」側に落ちるか素通りするかの設計判断が別途要る、(c) `Production Config Audit` は required status なので個別対応が要る。安全側の設計が固まってから再検討する。
 
