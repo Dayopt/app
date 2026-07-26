@@ -41,7 +41,7 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - Plan / Record commitと同じtransactionで進むuser revision、session用revision API、Calendar workspaceのvisible中10秒pollと復帰時の即時再確認、Inspectorの外部更新・削除transitionをrepo実装・検証済み。`tags.list`、`constraints.get`、`review.get`も最小projectionと独立read scopeで実装し、実MCP HTTP経由のPlan → Track → Learn flowとcross-tenant read isolationをlocal DBで検証済み。Persistent Stagingの3 client golden contractと実network / render込み20秒SLAは未検証
 - `claude-ai` / `chatgpt` / `cursor`の3 client IDを同じlocal integrationへ通し、actual token route、scope-filtered `tools/list`、Plan retry、global OFF時の非永続化、parallel refresh、target-only revokeを検証済み。client所有外のredirect origin/scheme/pathはruntimeとenv validationの両方で拒否する。authorize page、client固有UI、3 clientそれぞれのfull Plan → Track → LearnはPersistent Stagingで未検証
 
-Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / Learn tool、revision境界、Calendar同期、Inspector競合保護、local Plan → Track → Learn flowまで成立している。Step 6は[client beta verification](./step-6-client-beta.md)のrepo-side contractまで着手済みで、残りは顧客契約のcheckpoint、isolated Persistent Staging、3 clientの実UI/network証跡、20秒SLA、retention運用である。
+Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / Learn tool、revision境界、Calendar同期、Inspector競合保護、local Plan → Track → Learn flowまで成立している。Step 6は[client beta verification](./step-6-client-beta.md)のrepo-side contractと顧客契約の決定まで完了し、残りはdeleteAllData/retentionの実装、isolated Persistent Staging、3 clientの実UI/network証跡、20秒SLA、retention運用である。
 
 ## Minimum Viable Approach
 
@@ -122,14 +122,17 @@ Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / L
 
 - Step 4でSettings connection一覧/revoke、`plans.get` / `records.get` / trash、全read toolのstructured content、8 mutation handler、actual SDK contract、実HTTP対UI raceまでは完了した
 - 外部MCP mutation後のCalendar / Inspector cacheは、repo上ではvisible中の10秒user revision pollingと復帰時の即時再確認で再検証する。実networkとrenderを含む20秒SLAはPersistent Stagingで実測し、満たすまでwrite toolを列挙しない
-- `deleteAllData`後のconnection契約を下記checkpointで決め、Step 6で3 clientのschema、retry、confirmation UXをPersistent Staging検証する
+- `deleteAllData`後のconnection契約は[2026-07-26のdecision](../../product/log/2026-07-26-mcp-delete-all-data-retention.md)で固定した。Step 6で実装と競合試験を行い、3 clientのschema、retry、confirmation UXをPersistent Staging検証する
 
-Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializationはrepo上で完了した。writerが先なら後続purgeが削除し、purgeが先なら後続writerは成功できる。この技術契約とは別に、`deleteAllData`後もOAuth connection/token/receiptが残る現在仕様を公開前に決める。
+Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializationはrepo上で完了した。writerが先なら後続purgeが削除し、purgeが先なら後続writerは成功できる。現在の`deleteAllData`はOAuth connection/token/receiptとCalendar authorityを残すため、まだ固定済みの目標契約を満たさない。
 
-- **推奨**: local exclusive transactionで全MCP connectionとcode/tokenを失効し、Calendar connection/token/selection/cursorとユーザー所有のexternal event mirrorを削除する。local commit成功後だけprovider revokeをbest-effortで実行し、payload-free receiptは再作成を防ぐ最小audit/idempotency tombstoneとしてretention期間だけ残す
-- **代替**: 接続済みappは有効なままで再度データを追加できることをSettings文言で明示する
+- local exclusive transactionで全MCP connectionとcode/tokenを失効し、Calendar connection/token/selection/cursorとユーザー所有のexternal event mirrorを削除する
+- Plan、Record、tag、settingsに加えて週次・月次のAI生成reportを削除し、account維持に必要なprofile、課金状態、MFA recovery codeは残す
+- local transactionで暗号化済みtokenをrevoke-only outboxへ移し、commit成功後だけprovider revokeをretryする。outbox tokenは成功時または24時間後に削除する
+- payload-free receiptは再作成を防ぐ最小audit/idempotency tombstoneとして90日だけ残し、purge後のretryでは消えたresourceを成功として返さない
+- 削除開始前のCalendar OAuth stateをuser data generationで拒否し、進行中syncとMCP applyが削除後にデータを戻せないようにする
 
-この顧客契約が未決の間はwrite toolを列挙しない。
+この実装とPersistent Staging evidenceが完了するまでwrite toolを列挙しない。
 
 ### Product convergence
 

@@ -21,7 +21,7 @@ Dayopt の標準ルートは `local → PR Preview → production`。Vercel Prev
 | **PR Preview** | PR ごとの Supabase Preview Branch | Vercel Preview (`product`)      | `*.vercel.app`   |
 | **Production** | `dayopt` main                     | main merge で Production deploy | `app.dayopt.app` |
 
-persistent staging は常設しない。固定 URL が必要な Stripe / OAuth callback / closed beta 検証が出た時だけ、Vercel staging と Supabase persistent branch を追加する。
+persistent staging は常設しない。MCP closed betaでは固定URLが必要になったため、[2026-07-26のdecision](./log/2026-07-26-mcp-persistent-staging-topology.md)でVercel `product`のCustom Environment `staging`とSupabase persistent branch `staging`の追加を決めた。外部resourceは未作成であり、作成完了までは上表の3環境だけが存在する。
 
 ### テスト自動化の現在地
 
@@ -965,7 +965,7 @@ Dayopt の標準ルートは `local → PR Preview → production`。
 | **PR Preview** | PR ごとの Supabase Preview Branch | Vercel Preview URL (`product`) | migration / 機能の本番前検証 |
 | **Production** | `dayopt` main                     | Production deployment          | 実ユーザー                   |
 
-persistent staging は標準ルートでは使わない。固定 URL が必要な Stripe / OAuth / closed beta 検証が発生した時だけ、Vercel staging と Supabase persistent branch を追加する。
+persistent staging は標準ルートでは使わない。MCP closed betaでは固定URLが必要になったため、[2026-07-26のdecision](./log/2026-07-26-mcp-persistent-staging-topology.md)でVercel `product`のCustom Environment `staging`とSupabase persistent branch `staging`の追加を決めた。外部resourceは未作成であり、作成完了までは上表の3環境だけが存在する。
 
 ### Integration Setup
 

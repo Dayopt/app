@@ -25,8 +25,8 @@ Productionと認証・DB・secretを共有しないPersistent Stagingで、ChatG
 - 3 client共通のactual token route、scope-filtered`tools/list`、単一Plan mutation retry、global gate、parallel refresh、Settings revoke契約をlocal integrationで検証済み。authorize page、client自身のtoken保存/並列処理、client別Plan → Track → Learnは未検証
 - 2026-07-26のread-only external inventoryでは、Vercel projectは`product` / `web`、Supabase branchはdefault `main`だけであり、Persistent Stagingのproject/branch/固定originは存在しない
 - OAuth issuer、resource、Vercel host routingはProduction originへ固定されており、現在のままではisolated Stagingを構成できない
-- `deleteAllData`はPlan、Record、tag、settingsだけを削除する。MCP connection/token/receipt、Calendar connection/refresh token、calendar selection/sync cursor、external event mirrorは残るため、削除後に外部writeまたはcalendar syncでデータが再作成され得る
-- mutation receiptの90日cleanup RPCはあるが、定期callerは未実装。authorization code、token、connection、security auditのretention契約も未確定
+- `deleteAllData`はPlan、Record、tag、settingsだけを削除する。AI生成report、MCP connection/token/receipt、Calendar connection/refresh token、calendar selection/sync cursor、external event mirrorは残るため、削除後に外部writeまたはcalendar syncでデータが再作成され得る
+- mutation receiptの90日cleanup RPCはあるが、定期callerは未実装。authorization code、token、connection、security eventを含むretention期間はproduct decisionとして確定したが、cleanup実装と運用証跡は未完了
 - client別redirect URI overrideとMCP resource/write allowlistはrepoのenv schema、1Password field inventory、`.op-env.local.example`へ追加済み。`apps/product/.env.example`はsecret guardが書き込みを遮断したため未更新で、実1Password/Vercel fieldの存在も未確認
 
 global/client gateはfail-closedであり、上記blockerの解決まではOFFのまま維持する。Production migration、release、token失効、gate変更はこのStepのrepo作業に含めない。
@@ -59,22 +59,24 @@ durable client/connection/Pro gateとfull Plan → Track → Learnは既存integ
 
 schema testでは、3 clientのredirect URI overrideとMCP resource/write allowlistがstaging/productionの両inventoryにexactly once存在し、いずれもoptional public fieldであることを固定済み。environment markerとauthorization server URIはStaging identity設計の実装時にrequired条件を加える。
 
-### 3. Customer contractをCHECKPOINTで固定する
+### 3. Customer contractを固定する
 
-repo内の安全策だけでは決められない次の意味を、external Stagingを作る前に一度だけ固定する。
+2026-07-26に[全データ削除とretention](../../product/log/2026-07-26-mcp-delete-all-data-retention.md)、[Persistent Staging topology](../../engineering/log/2026-07-26-mcp-persistent-staging-topology.md)を固定した。ここで決めたのは目標契約であり、現在の`deleteAllData`が実装済みという意味ではない。
 
 1. **全データ削除**
-   - 推奨: `deleteAllData`と同じuser exclusive transaction境界で全MCP connectionをrevokeし、未消費authorization code、access/refresh tokenを無効化する。Calendar connection、暗号化済みtoken、calendar selection/sync cursor、ユーザー所有の`external_calendar_events`も削除する
-   - local DB purgeをexclusive transactionで先にcommitし、その成功後だけprovider revokeをtransaction外のbest-effort work itemとして実行する。DB purge失敗時はprovider revokeを呼ばないことをtestし、provider側が失敗してもlocal authority/dataは残さない
-   - receiptは再作成を防ぐidempotency tombstoneとしてretention期間だけ残す
+   - `deleteAllData`と同じuser exclusive transaction境界で週次・月次のAI生成reportを削除し、全MCP connectionをrevokeし、未消費authorization code、access/refresh tokenを無効化する。Calendar connection、暗号化済みtoken、calendar selection/sync cursor、ユーザー所有の`external_calendar_events`も削除する。account維持に必要なprofile、課金状態、MFA recovery codeは残す
+   - local DB purgeと同じtransactionで暗号化済みrefresh tokenをrevoke-only outboxへ移し、その成功後だけprovider revokeをretryする。DB purge失敗時はwork itemもprovider callも残さず、provider側が失敗してもlocal authority/dataは残さない
+   - receiptは再作成を防ぐidempotency tombstoneとしてretention期間だけ残し、purge後のretryでは消えたresourceの成功を返さない
    - 削除開始前に発行されたOAuth state/Calendar callbackや進行中syncが削除完了後にauthority/dataを戻せないよう、user data generationを開始時にbindしcommit直前に再検証する。MCP applyを含むrace integrationで固定する
 2. **Retention**
-   - 推奨候補: success mutation receipt 90日、consumed/expired authorization code 24時間、revoked/expired access token 24時間、rotated/revoked refresh token 30日、revoked connection 90日、payload-free security event 90日
+   - success mutation receipt 90日、consumed/expired authorization code 24時間、revoked/expired access token 24時間、rotated/revoked refresh token 30日、revoked connection 90日、payload-free security event 90日
+   - revoke-only outboxの暗号化済みtokenは成功時に即時削除し、失敗時も24時間で削除する
    - account削除では既存cascadeにより即時削除する
-   - read tool accessを新たに監査するかを決める。初期betaではpayloadを持たないaggregate metricを推奨し、本文単位のread auditは追加しない
+   - 初期betaはpayloadを持たないaggregate read metricだけを使い、本文単位のread auditは追加しない
 3. **Persistent Staging identity**
-   - Product authorization server originとMCP resource originをDayopt管理下の固定HTTPS hostとして決める
-   - ProductionとSupabase project/branch、OAuth connection、token、cookie、secret、client registrationを共有しない
+   - 既存`dayopt` projectのdata-less persistent branch `staging`と、既存Vercel `product` projectのCustom Environment `staging`を使う
+   - Product authorization serverを`https://staging.dayopt.app`、MCP resourceを`https://mcp.staging.dayopt.app`へ固定する
+   - ProductionとSupabase branch、OAuth connection、token、cookie、secret、client registrationを共有しない
    - 一度clientへ登録したissuer/resource URLは公開契約として変更しない
 
 ### 4. Environment-aware OAuth identityとretentionを実装する
@@ -93,7 +95,9 @@ DBにはservice-roleだけが設定できる環境identity singletonを置き、
 
 userinfo、query、fragment、非default port、transport pathを拒否する。Production defaultは現在の`https://mcp.dayopt.app` / `https://app.dayopt.app`を維持し、Staging値をProduction fallbackとして使わない。resource、authorization code、access token、refresh token、connectionのbindingを環境間で混ぜない。
 
-Vercel routingは決定した2 hostだけをexact matchし、Previewのephemeral hostnameをOAuth callback/resourceとして広告しない。
+Vercel routingは決定した2 hostだけをexact matchし、Previewのephemeral hostnameをOAuth callback/resourceとして広告しない。logical environmentは`VERCEL_TARGET_ENV=staging`を正とし、Production用Sentry/Resend secret、実メール送信、Production telemetryを流用しない。staging専用build/readiness gateでSupabase branch identity、MCP identity、Upstash、Calendar secretの整合を検証する。
+
+purge境界には専用user data generationを追加し、lock順を`user boundary → connection → code/token`へ統一する。Calendar callback/syncはgeneration確認とevent/cursor永続化を同じtransactionで行うtyped RPCへ移し、service-roleのcheck/write raceを残さない。Calendar削除順はconnectionを先に削除してからユーザー所有mirrorを削除し、`ON DELETE SET NULL`で競合eventが孤児化しないことをintegration testで固定する。receiptはpurge generationを記録し、purge後のretryを再作成なしのtombstone responseへ変える。
 
 retentionはservice-only cleanup RPCと定期callerを一組にし、DB時刻、bounded batch、payload-free metric、再実行可能性を持たせる。cleanup routeは既存Calendar cronのBearer照合、bounded execution、失敗観測を流用し、未認証、重複実行、backlog alertをtestする。cleanup失敗でauthorization/writeを開かない。read-only statusは件数、最古時刻、期限超過件数だけを返し、token、digest、operation ID、user ID、timeblock本文を出力しない。
 
@@ -101,14 +105,15 @@ retentionはservice-only cleanup RPCと定期callerを一組にし、DB時刻、
 
 外部変更は対象と費用を確認した後の明示権限で行う。
 
-1. Supabase persistent branchまたは独立projectを作る
-2. Vercel staging projectと固定Product/MCP hostを作る
-3. DNS、1Password master、Vercel/Supabase replica、3 clientのredirect URIを設定する
-4. writeをquiesceした状態で全migrationを適用し、command版appへ切り替える
-5. global/client/runtime gateを全てOFFのままread-only smokeを通す
-6. 1 clientずつdurable client gate → runtime allowlist → global controlの順に開く
-7. evidence matrixを通過したclientだけをbeta対象として維持する
-8. 異常時はglobal controlを先に閉じ、client connectionをdisableし、最後にruntime allowlistを閉じる
+1. `dayopt` projectにGit連携前のdata-less persistent branch `staging`を作り、branch refを取得する
+2. `[remotes.staging]`へbranch ref、seed無効、signup無効、staging exact Auth URLを固定してからGit deploymentへ接続する。repoの固定password seedは適用しない
+3. Vercel `product` projectにCustom Environment `staging`と固定Product/MCP hostを作る
+4. DNS、1Password master、Vercel/Supabase replica、3 clientのredirect URIを設定する
+5. writeをquiesceした状態で全migrationを適用し、command版appへ切り替える
+6. global/client/runtime gateを全てOFFのままread-only smokeを通す
+7. 1 clientずつdurable client gate → runtime allowlist → global controlの順に開く
+8. evidence matrixを通過したclientだけをbeta対象として維持する
+9. 異常時はglobal controlを先に閉じ、client connectionをdisableし、最後にruntime allowlistを閉じる
 
 Persistent Stagingで現在のmigration chain、逆GRANT、再cutoverもrehearseする。Productionへ同migration chainを自動適用しない。
 
@@ -198,7 +203,7 @@ issuer/resourceはtoken audienceと保存済みclient registrationの基準に�
 Step 6を`done`にできるのは、次をすべて満たした時だけとする。
 
 - 3 client共通local contract test、full integration、RLS snapshot、docs checkが通る
-- customer contractのCHECKPOINTが決まり、deleteAllData後の自動再生成がintegration testで拒否される
+- 固定済みcustomer contractが実装され、deleteAllData後の自動再生成がintegration testで拒否される
 - isolated Persistent Stagingのissuer/resource/DB/secrets/client registrationがProductionと分離されている
 - 3 clientのgolden evidence matrixが全項目passする
 - Calendar / Inspector / Reviewが各20秒以内に最終表示へ収束する
