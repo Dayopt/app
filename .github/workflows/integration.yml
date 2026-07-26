@@ -25,6 +25,8 @@ on:
       - 'apps/product/src/lib/test/trpc-test-helpers.ts'
       - 'apps/product/vitest.config.integration.ts'
       - 'scripts/generate-rls-snapshot.ts'
+      - 'scripts/verify-mcp-environment-identity.sh'
+      - 'supabase/seed.sql'
       - 'docs/engineering/data/db/rls-snapshot.md'
   push:
     branches: [main]
@@ -50,6 +52,8 @@ on:
       - 'apps/product/src/lib/test/trpc-test-helpers.ts'
       - 'apps/product/vitest.config.integration.ts'
       - 'scripts/generate-rls-snapshot.ts'
+      - 'scripts/verify-mcp-environment-identity.sh'
+      - 'supabase/seed.sql'
       - 'docs/engineering/data/db/rls-snapshot.md'
 
 env:
@@ -97,6 +101,9 @@ jobs:
           echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
           echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
           echo "db_url=$DB_URL" >> $GITHUB_OUTPUT
+
+      - name: Verify MCP environment identity provisioning
+        run: pnpm test:mcp-environment-identity
 
       - name: Run integration tests
         run: pnpm test:integration

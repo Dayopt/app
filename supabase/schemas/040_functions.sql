@@ -1,7 +1,7 @@
 -- ============================================================
 -- 関数一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
--- 最終同期日: 2026-07-13
+-- 最終同期日: 2026-07-26
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -14,8 +14,11 @@
 --   - 20260616000000_rename_duration_to_planned_duration.sql
 --   - 20260712212527_records_table_and_drop_entries.sql
 --   - 20260713120023_drop_time_model_compatibility_layer.sql
--- 全 app-facing 関数は authenticated に明示 GRANT。
--- PUBLIC/anon への関数 EXECUTE は revoke 済み。
+--   - 20260726013339_mcp_environment_identity.sql
+--   - 20260726015311_mcp_environment_authority_binding.sql
+--   - 20260726021453_fix_mcp_environment_legacy_binding.sql
+-- ユーザー操作向け関数は authenticated、OAuth基盤関数はservice_roleへ
+-- 必要なsignatureだけ明示GRANT。PUBLIC/anonへのEXECUTEはrevoke済み。
 -- ============================================================
 
 -- ■ トリガー関数
@@ -34,7 +37,12 @@
 --   soft_delete_plan / restore_plan            — Plan の soft delete / restore
 --   soft_delete_record / restore_record        — Record の soft delete / restore
 --   confirm_day_plans_to_records(...)          — 完了 Plan を Record として一括確定
---   issue_oauth_token_pair(...)               — refresh/access token pair を service-role 経由で発行
+--   get_mcp_environment_identity_v1()          — DB固有のOAuth/MCP identityをservice-roleへ返す
+--   provision_mcp_environment_identity_v1(...) — data-less DBのidentityを一度だけ固定
+--   create_oauth_authorization_grant_v2(...)   — identity-bound connection/codeをatomic発行
+--   exchange_oauth_authorization_code_v2(...)  — code消費とtoken pair発行をatomic実行
+--   rotate_oauth_refresh_token_v2(...)         — connection-bound refresh rotation/reuse検知
+--   issue_oauth_token_pair(...)                — 旧caller drain中だけ残すread-only互換issuer
 
 -- ■ 削除済み RPC
 --   get_tag_cumulative_time / get_tag_avg_fulfillment / get_tag_plan_rate /

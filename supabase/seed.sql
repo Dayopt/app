@@ -7,6 +7,39 @@
 -- テストユーザー + 2週間分のサンプルデータ → 統計・振り返り機能が即テスト可能
 -- ============================================================
 
+-- Local / generic Preview seed はProduction互換identityで固定する。
+-- Persistent Stagingではこのseedを無効化し、data-less DBにservice-role RPCで
+-- staging identityを先にprovisionする。既にstagingへ固定されたDBへ誤って
+-- このseedを流した場合は、sample userを作る前にfail closedする。
+INSERT INTO public.mcp_environment_identity (
+  singleton_key,
+  environment,
+  authorization_server_uri,
+  resource_uri
+) VALUES (
+  true,
+  'production',
+  'https://app.dayopt.app',
+  'https://mcp.dayopt.app'
+)
+ON CONFLICT (singleton_key) DO NOTHING;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.mcp_environment_identity AS identity
+    WHERE identity.singleton_key = true
+      AND identity.environment = 'production'
+      AND identity.authorization_server_uri = 'https://app.dayopt.app'
+      AND identity.resource_uri = 'https://mcp.dayopt.app'
+  ) THEN
+    RAISE EXCEPTION 'Default seed cannot run against a non-Production MCP identity'
+      USING ERRCODE = 'DI002';
+  END IF;
+END;
+$$;
+
 -- ============================================================
 -- テストユーザー
 -- ============================================================

@@ -211,6 +211,30 @@ export type Database = {
           },
         ];
       };
+      mcp_environment_identity: {
+        Row: {
+          authorization_server_uri: string;
+          environment: string;
+          provisioned_at: string;
+          resource_uri: string;
+          singleton_key: boolean;
+        };
+        Insert: {
+          authorization_server_uri: string;
+          environment: string;
+          provisioned_at?: string;
+          resource_uri: string;
+          singleton_key?: boolean;
+        };
+        Update: {
+          authorization_server_uri?: string;
+          environment?: string;
+          provisioned_at?: string;
+          resource_uri?: string;
+          singleton_key?: boolean;
+        };
+        Relationships: [];
+      };
       mcp_mutation_control: {
         Row: {
           changed_at: string;
@@ -372,7 +396,7 @@ export type Database = {
           created_at?: string;
           expires_at?: string;
           redirect_uri: string;
-          resource_uri?: string;
+          resource_uri: string;
           scopes: string[];
           user_id: string;
         };
@@ -397,6 +421,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: 'oauth_connections';
             referencedColumns: ['id', 'user_id', 'client_id', 'resource_uri'];
+          },
+          {
+            foreignKeyName: 'oauth_authorization_codes_environment_resource_fkey';
+            columns: ['resource_uri'];
+            isOneToOne: false;
+            referencedRelation: 'mcp_environment_identity';
+            referencedColumns: ['resource_uri'];
           },
         ];
       };
@@ -458,7 +489,15 @@ export type Database = {
           write_disabled_at?: string | null;
           write_enabled_at?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'oauth_connections_environment_resource_fkey';
+            columns: ['resource_uri'];
+            isOneToOne: false;
+            referencedRelation: 'mcp_environment_identity';
+            referencedColumns: ['resource_uri'];
+          },
+        ];
       };
       oauth_tokens: {
         Row: {
@@ -485,7 +524,7 @@ export type Database = {
           id?: string;
           last_used_at?: string | null;
           parent_token_id?: string | null;
-          resource_uri?: string;
+          resource_uri: string;
           revoked_at?: string | null;
           rotated_at?: string | null;
           scopes?: string[];
@@ -516,6 +555,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: 'oauth_connections';
             referencedColumns: ['id', 'user_id', 'client_id', 'resource_uri'];
+          },
+          {
+            foreignKeyName: 'oauth_tokens_environment_resource_fkey';
+            columns: ['resource_uri'];
+            isOneToOne: false;
+            referencedRelation: 'mcp_environment_identity';
+            referencedColumns: ['resource_uri'];
           },
           {
             foreignKeyName: 'oauth_tokens_parent_token_id_fkey';
@@ -1343,6 +1389,15 @@ export type Database = {
           user_id: string;
         }[];
       };
+      get_mcp_environment_identity_v1: {
+        Args: never;
+        Returns: {
+          authorization_server_uri: string;
+          environment: string;
+          provisioned_at: string;
+          resource_uri: string;
+        }[];
+      };
       get_timeblock_context_marker_v1: {
         Args: { p_user_id: string };
         Returns: {
@@ -1408,6 +1463,19 @@ export type Database = {
           p_user_id: string;
         };
         Returns: Json;
+      };
+      provision_mcp_environment_identity_v1: {
+        Args: {
+          p_authorization_server_uri: string;
+          p_environment: string;
+          p_resource_uri: string;
+        };
+        Returns: {
+          authorization_server_uri: string;
+          environment: string;
+          provisioned_at: string;
+          resource_uri: string;
+        }[];
       };
       record_plan_command_v1: {
         Args: {
