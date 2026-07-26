@@ -118,9 +118,22 @@ export function selectRuleAttachments(changedFiles: readonly string[]): RuleAtta
   );
 }
 
+/**
+ * UTF-8 のバイト数で切り詰める。`String.prototype.slice` は UTF-16 code unit 単位なので、
+ * バイト予算をそのまま渡すと日本語では意図より多く落ちる。マルチバイト文字の途中で
+ * 切って U+FFFD を作らないよう、continuation byte（10xxxxxx）の手前まで戻す。
+ */
+export function truncateToBytes(text: string, maxBytes: number): string {
+  const buffer = Buffer.from(text, 'utf8');
+  if (buffer.byteLength <= maxBytes) return text;
+  let end = Math.max(0, maxBytes);
+  while (end > 0 && (buffer[end] & 0xc0) === 0x80) end -= 1;
+  return buffer.subarray(0, end).toString('utf8');
+}
+
 function clamp(text: string, maxBytes: number, note: string): string {
   if (Buffer.byteLength(text, 'utf8') <= maxBytes) return text;
-  return `${text.slice(0, maxBytes)}\n\n…（${note}）`;
+  return `${truncateToBytes(text, maxBytes)}\n\n…（${note}）`;
 }
 
 /**
@@ -153,6 +166,8 @@ export interface PromptInput {
   changedFiles: readonly string[];
   attachments: readonly { label: string; body: string }[];
   truncated: boolean;
+  /** 危険クラスのうち diff 全量を載せられなかったファイル。 */
+  incompleteDangerous?: readonly string[];
 }
 
 export function buildPrompt(input: PromptInput): string {
@@ -175,6 +190,15 @@ export function buildPrompt(input: PromptInput): string {
   if (input.truncated) {
     parts.push(
       '\n\n**注意**: diff が長いため一部を省略しています。省略部分については推測で指摘しないでください。',
+    );
+  }
+
+  const incomplete = input.incompleteDangerous ?? [];
+  if (incomplete.length > 0) {
+    parts.push(
+      '\n\n**重要**: 次の危険クラスファイルは diff の先頭部分しか含まれていません。',
+      '見えている範囲だけで判断し、見えていない範囲を推測で指摘しないでください:\n',
+      incomplete.map((file) => `- ${file}`).join('\n'),
     );
   }
 
@@ -263,9 +287,25 @@ export function hasBlockingFinding(result: ReviewResult): boolean {
   return result.findings.some((finding) => finding.severity === 'P0');
 }
 
-export function renderComment(result: ReviewResult, meta: { model: string; sha: string }): string {
+export function renderComment(
+  result: ReviewResult,
+  meta: { model: string; sha: string; incompleteDangerous?: readonly string[] },
+): string {
   const lines = [COMMENT_MARKER, '## 🔍 ai-review', ''];
   lines.push(result.summary || '（要約なし）', '');
+
+  const incomplete = meta.incompleteDangerous ?? [];
+  if (incomplete.length > 0) {
+    lines.push(
+      `**危険クラスの ${incomplete.length} ファイルを最後までレビューできていないため、この check は fail しています。**`,
+      'diff が予算（180KB）を超えており、次のファイルは先頭部分しか見ていません。指摘が無いことは安全の根拠になりません:',
+      '',
+      ...incomplete.map((file) => `- \`${file}\``),
+      '',
+      'PR を分割するか、`MAX_DIFF_BYTES` の引き上げを検討してください。',
+      '',
+    );
+  }
 
   const blocking = result.findings.filter((finding) => finding.severity === 'P0');
   if (blocking.length > 0) {
@@ -310,35 +350,82 @@ export function collectChangedFiles(base: string, head: string): string[] {
 }
 
 /**
- * 危険クラスのファイルを先に、残りを後に載せる。上限で切れる時に落ちるのが
- * 「見なくていいファイル」側になるようにするため。
+ * 危険クラスのファイルを **1 ファイルずつ** 予算配分して載せる。
+ *
+ * 以前は危険クラスをまとめて 1 本の diff にして上限で切っていたため、先頭の巨大な
+ * migration 1 つが予算を食い尽くすと、後続の auth / RLS / server の変更がモデルに
+ * 一切届かないまま「指摘なし」で check が green になりえた。安全ゲートとしては
+ * 見落としが可視化されない方が危険なので、
+ *
+ * 1. 危険クラスの各ファイルに最低限の取り分を保証する（小さいファイルから確定させ、
+ *    余った予算を大きいファイルへ回す water-filling）
+ * 2. それでも全量を載せられなかったファイルを `incompleteDangerous` として返す
+ *
+ * の 2 点で「全ての危険ファイルがレビュアーに届く」ことを担保する。呼び出し側は
+ * `incompleteDangerous` が空でない場合、レビュー結果に関わらず check を fail させる。
  */
 export function collectDiff(
   base: string,
   head: string,
   files: readonly string[],
-): { diff: string; truncated: boolean } {
+  /** テスト用。既定は git 呼び出し（callGemini の fetchImpl と同じ DI 方針）。 */
+  diffImpl?: (file: string) => string,
+): { diff: string; truncated: boolean; incompleteDangerous: string[] } {
   const dangerous = files.filter(isDangerousPath);
   const rest = files.filter((file) => !isDangerousPath(file));
 
-  const chunks: string[] = [];
-  let truncated = false;
-  let size = 0;
+  const fileDiff =
+    diffImpl ??
+    ((file: string): string =>
+      git(['diff', '--no-color', '--unified=3', `${base}...${head}`, '--', file]));
 
-  for (const group of [dangerous, rest]) {
-    if (group.length === 0) continue;
-    const text = git(['diff', '--no-color', '--unified=3', `${base}...${head}`, '--', ...group]);
-    if (size + Buffer.byteLength(text, 'utf8') > MAX_DIFF_BYTES) {
-      const remaining = Math.max(0, MAX_DIFF_BYTES - size);
-      if (remaining > 0) chunks.push(text.slice(0, remaining));
+  const chunks: string[] = [];
+  const incompleteDangerous: string[] = [];
+  let truncated = false;
+
+  // 危険クラスには予算の全額を使わせる。非危険より先に配るので押し出される心配はなく、
+  // 逆に一定比率で予約すると「非危険が使わない余りがあるのに危険を切る」ことになる。
+  // incompleteDangerous は merge を止めるので、不要に立てない方が重要。
+  const dangerousBudget = MAX_DIFF_BYTES;
+
+  const sized = dangerous
+    .map((file) => ({ file, text: fileDiff(file) }))
+    .map((entry) => ({ ...entry, bytes: Buffer.byteLength(entry.text, 'utf8') }))
+    // 小さい順に確定させると、余剰が自動的に大きいファイルへ回る。
+    .sort((a, b) => a.bytes - b.bytes);
+
+  let remainingBudget = dangerousBudget;
+  let remainingCount = sized.length;
+
+  for (const entry of sized) {
+    const share = Math.floor(remainingBudget / Math.max(1, remainingCount));
+    if (entry.bytes <= share) {
+      chunks.push(entry.text);
+      remainingBudget -= entry.bytes;
+    } else {
+      // 取り分に収まらないファイルも、先頭 share バイトは必ずモデルに見せる。
+      if (share > 0) chunks.push(truncateToBytes(entry.text, share));
+      incompleteDangerous.push(entry.file);
       truncated = true;
-      break;
+      remainingBudget -= share;
     }
-    chunks.push(text);
-    size += Buffer.byteLength(text, 'utf8');
+    remainingCount -= 1;
   }
 
-  return { diff: chunks.join('\n'), truncated };
+  // 非危険ファイルは文脈でしかないので、余った分だけ載せて足りなければ落とす。
+  let contextBudget = MAX_DIFF_BYTES - (dangerousBudget - remainingBudget);
+  for (const file of rest) {
+    const text = fileDiff(file);
+    const bytes = Buffer.byteLength(text, 'utf8');
+    if (bytes <= contextBudget) {
+      chunks.push(text);
+      contextBudget -= bytes;
+    } else {
+      truncated = true;
+    }
+  }
+
+  return { diff: chunks.join('\n'), truncated, incompleteDangerous };
 }
 
 function loadAttachments(
@@ -437,7 +524,17 @@ interface CommentContext {
   fetchImpl?: typeof fetch;
 }
 
-async function upsertStickyComment(context: CommentContext, body: string): Promise<void> {
+/**
+ * @param updateOnly 既存の sticky comment があれば更新するが、無ければ新規作成しない。
+ *   指摘ゼロの run で使う。この tool は「沈黙をデフォルト」にする契約なので、クリーンな
+ *   PR に新しいコメントを生やさない。一方で、前の run が残した P0 コメントは
+ *   古い SHA のまま「fail しています」と表示し続けるため、更新は必要になる。
+ */
+async function upsertStickyComment(
+  context: CommentContext,
+  body: string,
+  updateOnly = false,
+): Promise<void> {
   const doFetch = context.fetchImpl ?? fetch;
   const headers = {
     accept: 'application/vnd.github+json',
@@ -452,6 +549,7 @@ async function upsertStickyComment(context: CommentContext, body: string): Promi
   if (!listed.ok) throw new Error(`comment 一覧の取得に失敗: HTTP ${listed.status}`);
   const comments = (await listed.json()) as { id: number; body?: string }[];
   const existing = comments.find((comment) => comment.body?.includes(COMMENT_MARKER));
+  if (updateOnly && !existing) return;
 
   const target = existing
     ? `${base}/issues/comments/${existing.id}`
@@ -484,7 +582,7 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  const { diff, truncated } = collectDiff(base, head, changedFiles);
+  const { diff, truncated, incompleteDangerous } = collectDiff(base, head, changedFiles);
   if (diff.trim() === '') {
     notice('diff が空のためレビューをスキップしました。');
     return 0;
@@ -492,13 +590,21 @@ async function main(): Promise<number> {
 
   const contract = readFileSync(resolve(ROOT, 'scripts/ai-review/prompt.md'), 'utf8');
   const attachments = loadAttachments(changedFiles, diff);
-  const prompt = buildPrompt({ contract, diff, changedFiles, attachments, truncated });
+  const prompt = buildPrompt({
+    contract,
+    diff,
+    changedFiles,
+    attachments,
+    truncated,
+    incompleteDangerous,
+  });
 
   if (dryRun) {
     console.log(`model: ${model}`);
     console.log(`危険クラスのファイル: ${dangerous.length} / ${changedFiles.length}`);
     console.log(`添付 rules: ${attachments.map((item) => item.label).join(', ') || 'なし'}`);
     console.log(`prompt bytes: ${Buffer.byteLength(prompt, 'utf8')} (truncated: ${truncated})`);
+    console.log(`全量を載せられなかった危険ファイル: ${incompleteDangerous.join(', ') || 'なし'}`);
     return 0;
   }
 
@@ -518,25 +624,37 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  if (result.findings.length === 0) {
-    notice(`指摘なし（${dangerous.length} 件の危険クラスファイルを確認）。`);
-    return 0;
-  }
-
-  const body = renderComment(result, { model, sha: head });
+  const clean = result.findings.length === 0 && incompleteDangerous.length === 0;
+  const body = renderComment(result, { model, sha: head, incompleteDangerous });
   const token = process.env.GITHUB_TOKEN;
   const repository = process.env.GITHUB_REPOSITORY;
   const prNumber = process.env.AI_REVIEW_PR_NUMBER;
+  // クリーンな run でも、既存の sticky comment があれば更新する。前の run の P0 コメントが
+  // 古い SHA のまま「fail しています」と残るのを防ぐ（新規作成はしない）。
   if (token && repository && prNumber) {
     try {
-      await upsertStickyComment({ token, repository, prNumber }, body);
+      await upsertStickyComment({ token, repository, prNumber }, body, clean);
     } catch (error) {
       // comment 失敗は gate の結果を変えない（gate は exit code 側）。
       warn(`comment を投稿できませんでした: ${String(error)}`);
     }
   }
 
+  if (clean) {
+    notice(`指摘なし（${dangerous.length} 件の危険クラスファイルを確認）。`);
+    return 0;
+  }
+
   console.log(body);
+
+  // 危険クラスを最後まで見られていない run は、指摘の有無に関わらず通さない。
+  // 「見ていないから指摘が無い」を green で表現すると偽の安心になる。
+  if (incompleteDangerous.length > 0) {
+    console.log(
+      `::error title=ai-review::危険クラスの ${incompleteDangerous.length} ファイルを最後までレビューできていません（diff が ${MAX_DIFF_BYTES} bytes を超過）。`,
+    );
+    return 1;
+  }
 
   if (hasBlockingFinding(result)) {
     console.log(`::error title=ai-review::P0 の指摘があります。PR の comment を確認してください。`);
