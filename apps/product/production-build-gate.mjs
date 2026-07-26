@@ -39,6 +39,8 @@ export const MCP_PRODUCTION_ORIGIN = 'https://mcp.dayopt.app';
 export const PRODUCT_STAGING_ORIGIN = 'https://staging.dayopt.app';
 export const MCP_STAGING_ORIGIN = 'https://mcp.staging.dayopt.app';
 const GOOGLE_CALENDAR_STAGING_CALLBACK = `${PRODUCT_STAGING_ORIGIN}/api/integrations/google-calendar/callback`;
+const GOOGLE_CALENDAR_CLIENT_ID_PATTERN =
+  /^([1-9][0-9]{5,29})-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/u;
 const PRODUCTION_SUPABASE_HOST = 'yvglwblxrnrenfifsnje.supabase.co';
 
 /**
@@ -175,6 +177,7 @@ export function assertProductStagingBuildEnv(env) {
 function assertStagingCalendarConfiguration(env) {
   const names = [
     'GOOGLE_CALENDAR_CLIENT_ID',
+    'GOOGLE_CALENDAR_PROJECT_NUMBER',
     'GOOGLE_CALENDAR_CLIENT_SECRET',
     'CALENDAR_TOKEN_ENCRYPTION_KEY',
     'GOOGLE_CALENDAR_REDIRECT_URIS',
@@ -187,6 +190,12 @@ function assertStagingCalendarConfiguration(env) {
   }
   if (env.GOOGLE_CALENDAR_REDIRECT_URIS !== GOOGLE_CALENDAR_STAGING_CALLBACK) {
     throw new Error('Product staging build requires the exact staging Calendar redirect URI');
+  }
+  const clientIdMatch = GOOGLE_CALENDAR_CLIENT_ID_PATTERN.exec(
+    env.GOOGLE_CALENDAR_CLIENT_ID,
+  );
+  if (!clientIdMatch || clientIdMatch[1] !== env.GOOGLE_CALENDAR_PROJECT_NUMBER) {
+    throw new Error('Product staging build requires a matching Google Calendar project number');
   }
 }
 

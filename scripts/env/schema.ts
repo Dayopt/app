@@ -79,6 +79,14 @@ export const envSchema: EnvSchemaEntry[] = [
 
   // 外部カレンダー取り込み用の専用 OAuth client（Supabase Auth の Google provider とは別物）
   envEntry('GOOGLE_CALENDAR_CLIENT_ID', false, 'public', 'staging', staging, 'google-calendar'),
+  envEntry(
+    'GOOGLE_CALENDAR_PROJECT_NUMBER',
+    false,
+    'public',
+    'staging',
+    staging,
+    'google-calendar',
+  ),
   envEntry('GOOGLE_CALENDAR_CLIENT_SECRET', false, 'secret', 'staging', staging, 'google-calendar'),
   envEntry('CALENDAR_TOKEN_ENCRYPTION_KEY', false, 'secret', 'staging', staging, 'google-calendar'),
   envEntry('GOOGLE_CALENDAR_REDIRECT_URIS', false, 'public', 'staging', staging, 'google-calendar'),
@@ -128,6 +136,14 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
 
   envEntry(
     'GOOGLE_CALENDAR_CLIENT_ID',
+    false,
+    'public',
+    'production',
+    production,
+    'google-calendar',
+  ),
+  envEntry(
+    'GOOGLE_CALENDAR_PROJECT_NUMBER',
     false,
     'public',
     'production',

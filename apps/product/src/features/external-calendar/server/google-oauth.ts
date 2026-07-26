@@ -29,6 +29,8 @@ import { isValidEncryptionKey } from './token-crypto';
 const GOOGLE_AUTHORIZE_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const GOOGLE_REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke';
+const GOOGLE_OAUTH_CLIENT_ID_PATTERN =
+  /^([1-9][0-9]{5,29})-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/;
 
 /** `lib/oauth-server/tokens.ts` の ENTROPY_BYTES と同値。独自の桁数を発明しない。 */
 const ENTROPY_BYTES = 32;
@@ -70,11 +72,29 @@ const USER_RECOVERABLE_PROVIDER_ERRORS = new Set(['invalid_grant']);
  */
 export function isGoogleCalendarConfigured(): boolean {
   return Boolean(
-    env.GOOGLE_CALENDAR_CLIENT_ID?.trim() &&
+    resolveGoogleCalendarProjectKey() &&
     env.GOOGLE_CALENDAR_CLIENT_SECRET?.trim() &&
     env.GOOGLE_CALENDAR_REDIRECT_URIS?.trim() &&
     isValidEncryptionKey(env.CALENDAR_TOKEN_ENCRYPTION_KEY),
   );
+}
+
+/**
+ * Calendar OAuth client が属する immutable Google Cloud project number。
+ *
+ * DB authority fence と provider credential の identity がずれると、別 project の revoke を
+ * 同じ fence で直列化したように見えてしまう。client ID の prefix と明示 env の両方を照合し、
+ * 片方でも不正なら integration 全体を fail-close する。
+ */
+export function resolveGoogleCalendarProjectKey(): string | null {
+  const clientId = env.GOOGLE_CALENDAR_CLIENT_ID?.trim();
+  const configuredProjectNumber = env.GOOGLE_CALENDAR_PROJECT_NUMBER?.trim();
+  if (!clientId || !configuredProjectNumber) return null;
+
+  const match = GOOGLE_OAUTH_CLIENT_ID_PATTERN.exec(clientId);
+  if (!match || match[1] !== configuredProjectNumber) return null;
+
+  return configuredProjectNumber;
 }
 
 /**

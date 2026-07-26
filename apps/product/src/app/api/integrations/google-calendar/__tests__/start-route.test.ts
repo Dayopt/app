@@ -8,7 +8,8 @@ const rateLimit = vi.hoisted(() => vi.fn());
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
-  GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
+  GOOGLE_CALENDAR_CLIENT_ID: '123456789012-dayoptcalendar.apps.googleusercontent.com',
+  GOOGLE_CALENDAR_PROJECT_NUMBER: '123456789012',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
   CALENDAR_TOKEN_ENCRYPTION_KEY: 'A'.repeat(43) + '=',
   GOOGLE_CALENDAR_REDIRECT_URIS:
@@ -35,7 +36,8 @@ describe('google calendar start route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Object.assign(envMock, {
-      GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
+      GOOGLE_CALENDAR_CLIENT_ID: '123456789012-dayoptcalendar.apps.googleusercontent.com',
+      GOOGLE_CALENDAR_PROJECT_NUMBER: '123456789012',
       GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
       CALENDAR_TOKEN_ENCRYPTION_KEY: 'A'.repeat(43) + '=',
       GOOGLE_CALENDAR_REDIRECT_URIS:
@@ -61,6 +63,24 @@ describe('google calendar start route', () => {
     // 保存に失敗するのを防ぐ。base64 リテラルを直書きすると gitleaks の
     // generic-api-key に引っかかるため式で組み立てる。
     envMock.CALENDAR_TOKEN_ENCRYPTION_KEY = 'A'.repeat(20);
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(503);
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it('明示project numberがOAuth client IDと一致しなければ503で止める', async () => {
+    envMock.GOOGLE_CALENDAR_PROJECT_NUMBER = '999999999999';
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(503);
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it('OAuth client IDの形式が不正なら503で止める', async () => {
+    envMock.GOOGLE_CALENDAR_CLIENT_ID = '123456789012-dayoptcalendar';
 
     const response = await GET(request());
 

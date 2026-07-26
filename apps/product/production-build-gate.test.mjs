@@ -37,7 +37,8 @@ function completeStagingEnv() {
     UPSTASH_REDIS_REST_TOKEN: 'safe-dummy-upstash-token',
     RECOVERY_CODE_PEPPER: 'safe-dummy-recovery-pepper',
     CRON_SECRET: 'safe-dummy-cron-secret',
-    GOOGLE_CALENDAR_CLIENT_ID: 'safe-dummy-calendar-client-id',
+    GOOGLE_CALENDAR_CLIENT_ID: '123456789012-dayoptcalendar.apps.googleusercontent.com',
+    GOOGLE_CALENDAR_PROJECT_NUMBER: '123456789012',
     GOOGLE_CALENDAR_CLIENT_SECRET: 'safe-dummy-calendar-client-secret',
     CALENDAR_TOKEN_ENCRYPTION_KEY: 'safe-dummy-calendar-encryption-key',
     GOOGLE_CALENDAR_REDIRECT_URIS:
@@ -156,6 +157,7 @@ describe('Product staging build gate', () => {
   it('allows Calendar to remain fully disabled during the initial bootstrap', () => {
     const stagingEnv = completeStagingEnv();
     delete stagingEnv.GOOGLE_CALENDAR_CLIENT_ID;
+    delete stagingEnv.GOOGLE_CALENDAR_PROJECT_NUMBER;
     delete stagingEnv.GOOGLE_CALENDAR_CLIENT_SECRET;
     delete stagingEnv.CALENDAR_TOKEN_ENCRYPTION_KEY;
     delete stagingEnv.GOOGLE_CALENDAR_REDIRECT_URIS;
@@ -171,6 +173,24 @@ describe('Product staging build gate', () => {
     expect(() => assertProductStagingBuildEnv(stagingEnv)).toThrow(
       'Product staging Calendar configuration requires:',
     );
+  });
+
+  it('rejects a Calendar client whose project number does not match', () => {
+    expect(() =>
+      assertProductStagingBuildEnv({
+        ...completeStagingEnv(),
+        GOOGLE_CALENDAR_PROJECT_NUMBER: '999999999999',
+      }),
+    ).toThrow('matching Google Calendar project number');
+  });
+
+  it('rejects a malformed Calendar OAuth client ID', () => {
+    expect(() =>
+      assertProductStagingBuildEnv({
+        ...completeStagingEnv(),
+        GOOGLE_CALENDAR_CLIENT_ID: '123456789012-dayoptcalendar',
+      }),
+    ).toThrow('matching Google Calendar project number');
   });
 
   it('requires the complete staging dependency set without printing values', () => {

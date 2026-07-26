@@ -8,7 +8,8 @@ const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
-  GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
+  GOOGLE_CALENDAR_CLIENT_ID: '123456789012-dayoptcalendar.apps.googleusercontent.com',
+  GOOGLE_CALENDAR_PROJECT_NUMBER: '123456789012',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
   CALENDAR_TOKEN_ENCRYPTION_KEY: 'A'.repeat(43) + '=',
   GOOGLE_CALENDAR_REDIRECT_URIS: 'https://app.dayopt.app/api/integrations/google-calendar/callback',
@@ -31,7 +32,7 @@ const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
 function idToken(overrides: Record<string, unknown> = {}): string {
   const payload = {
     iss: 'https://accounts.google.com',
-    aud: 'client-id.apps.googleusercontent.com',
+    aud: '123456789012-dayoptcalendar.apps.googleusercontent.com',
     sub: 'google-sub-123',
     email: 'user@example.com',
     exp: Math.floor(Date.now() / 1000) + 3600,
@@ -84,6 +85,14 @@ function reasonOf(response: Response): string | null {
 describe('google calendar callback route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.assign(envMock, {
+      GOOGLE_CALENDAR_CLIENT_ID: '123456789012-dayoptcalendar.apps.googleusercontent.com',
+      GOOGLE_CALENDAR_PROJECT_NUMBER: '123456789012',
+      GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
+      CALENDAR_TOKEN_ENCRYPTION_KEY: 'A'.repeat(43) + '=',
+      GOOGLE_CALENDAR_REDIRECT_URIS:
+        'https://app.dayopt.app/api/integrations/google-calendar/callback',
+    });
     getUser.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
     createClient.mockResolvedValue({ auth: { getUser } });
     saveConnection.mockResolvedValue(undefined);
@@ -101,7 +110,7 @@ describe('google calendar callback route', () => {
     const response = await GET(withCookie(request()));
 
     expect(response.status).toBe(503);
-    envMock.GOOGLE_CALENDAR_CLIENT_ID = 'client-id.apps.googleusercontent.com';
+    envMock.GOOGLE_CALENDAR_CLIENT_ID = '123456789012-dayoptcalendar.apps.googleusercontent.com';
   });
 
   it('未認証はログインへ redirect し、接続を保存しない', async () => {

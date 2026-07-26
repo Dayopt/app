@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const loggerWarn = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
-  GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
+  GOOGLE_CALENDAR_CLIENT_ID: '123456789012-dayoptcalendar.apps.googleusercontent.com',
+  GOOGLE_CALENDAR_PROJECT_NUMBER: '123456789012',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
 }));
 

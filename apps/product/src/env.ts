@@ -92,6 +92,12 @@ const serverSchema = z
     // Google Calendar 連携（external-calendar-import）。Supabase Auth の Google provider とは
     // 別の専用 OAuth client を使う。identity（誰か）と data-access（何を読めるか）を分離する。
     GOOGLE_CALENDAR_CLIENT_ID: z.string().optional(),
+    // Google authority fence の project identity。OAuth client ID の先頭に含まれる project
+    // number と一致する必要がある。local / Staging / Production は別 project を使う。
+    GOOGLE_CALENDAR_PROJECT_NUMBER: z
+      .string()
+      .regex(/^[1-9][0-9]{5,29}$/)
+      .optional(),
     GOOGLE_CALENDAR_CLIENT_SECRET: z.string().optional(),
     // refresh token の AES-256-GCM 暗号鍵。base64 で 32 バイト（`openssl rand -base64 32`）。
     // 長さを boot 時に検証する。壊れた鍵のまま起動すると、同意まで取ったあと保存だけが失敗する。
@@ -209,7 +215,7 @@ const serverSchema = z
     (data) => {
       if (!(data.NODE_ENV === 'production' && data.VERCEL_ENV === 'production')) return true;
 
-      // 「全部揃うか全部無いか」。4 変数のうち一部だけ入っている状態は、connect フローが
+      // 「全部揃うか全部無いか」。5 変数のうち一部だけ入っている状態は、connect フローが
       // 途中まで動いて失敗する最悪の中間状態になるので許さない。
       // 全部無い場合は route 側の config guard が 503 を返す。
       //
@@ -220,6 +226,7 @@ const serverSchema = z
       // 503 を返して静かに無効化されるので、そちらの degradation で足りる。
       const values = [
         data.GOOGLE_CALENDAR_CLIENT_ID,
+        data.GOOGLE_CALENDAR_PROJECT_NUMBER,
         data.GOOGLE_CALENDAR_CLIENT_SECRET,
         data.CALENDAR_TOKEN_ENCRYPTION_KEY,
         data.GOOGLE_CALENDAR_REDIRECT_URIS,
@@ -229,8 +236,24 @@ const serverSchema = z
     },
     {
       message:
-        'GOOGLE_CALENDAR_CLIENT_ID / GOOGLE_CALENDAR_CLIENT_SECRET / CALENDAR_TOKEN_ENCRYPTION_KEY / GOOGLE_CALENDAR_REDIRECT_URIS は本番環境ではまとめて設定してください',
+        'GOOGLE_CALENDAR_CLIENT_ID / GOOGLE_CALENDAR_PROJECT_NUMBER / GOOGLE_CALENDAR_CLIENT_SECRET / CALENDAR_TOKEN_ENCRYPTION_KEY / GOOGLE_CALENDAR_REDIRECT_URIS はまとめて設定してください',
       path: ['GOOGLE_CALENDAR_CLIENT_ID'],
+    },
+  )
+  .refine(
+    (data) => {
+      if (!data.GOOGLE_CALENDAR_CLIENT_ID || !data.GOOGLE_CALENDAR_PROJECT_NUMBER) {
+        return true;
+      }
+
+      return (
+        data.GOOGLE_CALENDAR_CLIENT_ID.split('-', 1)[0] === data.GOOGLE_CALENDAR_PROJECT_NUMBER
+      );
+    },
+    {
+      message:
+        'GOOGLE_CALENDAR_PROJECT_NUMBER は GOOGLE_CALENDAR_CLIENT_ID の project number と一致させてください',
+      path: ['GOOGLE_CALENDAR_PROJECT_NUMBER'],
     },
   );
 
