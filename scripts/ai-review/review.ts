@@ -632,9 +632,9 @@ async function main(): Promise<number> {
   const head = argValue(argv, '--head') || process.env.AI_REVIEW_HEAD_SHA || 'HEAD';
   const model = process.env.AI_REVIEW_MODEL || DEFAULT_MODEL;
 
-  // 手動 dispatch は「paths に当たらない PR を見せたい」ための入口なので、
-  // 危険クラス判定で弾くと入口そのものが無意味な green になる。force で素通しする。
-  const force = argv.includes('--force') || process.env.AI_REVIEW_FORCE === 'true';
+  // ローカルから「危険クラス外の PR も見せたい」時に使う。CI からは渡さない
+  // （workflow_dispatch は pull_request payload を持たず、結局 diff 0 件になるため廃止した）。
+  const force = argv.includes('--force');
   // 既定は観察モード（所見を出すが check は落とさない）。実 PR で誤爆の実績を見てから
   // AI_REVIEW_ENFORCE=true で blocking へ切り替える。未検証の gate で PR を止めない。
   const enforce = process.env.AI_REVIEW_ENFORCE === 'true';
