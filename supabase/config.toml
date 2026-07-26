@@ -135,11 +135,13 @@ enabled = true
 # in emails.
 site_url = "http://127.0.0.1:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-# Vercelプレビュー環境を許可（ワイルドカードパターン）
+# Vercelプレビュー環境を許可（ワイルドカードパターン）。
+# Vercel project 名は `product`（preview URL は product-*-dayopt.vercel.app）。
+# 旧 `app-*` パターンは project 改名前の残骸で、どの preview URL にも一致しなかった。
 additional_redirect_urls = [
   "https://127.0.0.1:3000",
-  "https://app-*-dayopt.vercel.app",
-  "https://app-git-*-dayopt.vercel.app"
+  "https://product-*-dayopt.vercel.app",
+  "https://product-git-*-dayopt.vercel.app"
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
