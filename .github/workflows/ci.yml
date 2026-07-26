@@ -3,6 +3,25 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    # コード実行に影響しない path だけの変更では CI を走らせない。
+    # paths-ignore は「変更ファイルが *全て* 該当した時だけ skip」なので、
+    # コードが 1 ファイルでも混ざれば通常どおり 4 job すべて走る。
+    #
+    # 意図的に含めていないもの:
+    # - apps/web/content/** … 公開 MDX。web build / E2E の検証対象
+    # - **/*.md のような広いパターン … 上を巻き込むため使わない
+    # - .claude/**, .codex/** の *.md 以外 … hooks の .sh や設定 JSON が含まれる
+    #
+    # docs のみの PR でも Docs Guard（gitleaks / secrets:check / docs:check）と
+    # Production Config Audit は paths フィルタを持たないので従来どおり走る。
+    paths-ignore:
+      - 'docs/**'
+      - '.claude/**/*.md'
+      - '.codex/**/*.md'
+      - '.agents/**/*.md'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - 'README.md'
   # main への push では走らせない。branch:finish が「branch が main 最新を
   # 含み、その状態で CI green」をマージ前に強制するため（up-to-date gate）、
   # マージ後の main は常に PR で検証済みの tree と一致する。
@@ -91,8 +110,16 @@ jobs:
           pnpm --dir apps/product exec vitest --project unit run production-build-gate.test.mjs
           pnpm --dir apps/web exec vitest run production-build-gate.test.mjs
 
-      - name: Product unit tests with coverage
-        run: pnpm test:coverage
+      # coverage は計測しない。閾値 gate（vitest の coverage.thresholds）も
+      # artifact upload も無いため、istanbul 計装のコストをかけて作ったレポートは
+      # runner 破棄とともに捨てられていた。実行するテストは完全に同一
+      # （どちらも --project unit run。実測 243 files / 2278 tests で一致）。
+      # コスト削減は期待しないこと。CI 実測では課金分に差が出ず（7 → 7 分）、step 時間も
+      # 215 → 259 秒と逆に増えた（runner 変動が計装コストを上回る）。
+      # 目的は「誰も読まないレポートを作るのをやめる」ことだけ。
+      # coverage を見たい時はローカルで pnpm test:coverage を実行する。
+      - name: Product unit tests
+        run: pnpm --filter @dayopt/product test:run
 
       - name: Web unit tests
         run: pnpm test:web

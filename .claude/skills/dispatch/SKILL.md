@@ -29,11 +29,12 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 ## 操作 A: dispatch — issue を worker に渡す
 
 1. tracking issue を読み、「今すぐ worker 可」から候補を選ぶ（ユーザー指定があればそれを優先）
-2. **衝突チェック**: 候補 issue が触るファイル・ディレクトリを、(a) 進行中 feature の設計書（例: `docs/projects/time-model-split/` の該当 Step）の対象、(b) 他の in-progress issue（`status:in-progress` ラベル）の対象、と突合する。重なれば渡さず次の候補へ
-3. **凍結チェック**: `status:blocked` が付いていないこと、tracking issue の凍結リストに載っていないことを確認
-4. issue 本文を **handoff-quality** に補強する（下記テンプレート）。worker が repo 探索なしで着手できる密度が基準
-5. `status:in-progress` ラベルを付け、tracking issue にコメントで dispatch 先（Sonnet / Codex / その他）を記録
-6. worker への指示は issue URL + 「本文の受け入れ条件と検証コマンドに従う」だけで済む状態にする
+2. **束ね**: 関連する issue（同一 area / 同一機能系統）は 1 worker セッション・1 branch・1 PR にまとめて渡すのを標準とする（`.claude/rules/workflow.md` §PR 粒度）。1 issue ずつ切り出さない
+3. **衝突チェック**: 候補 issue が触るファイル・ディレクトリを、(a) 進行中 feature の設計書（例: `docs/projects/time-model-split/` の該当 Step）の対象、(b) 他の in-progress issue（`status:in-progress` ラベル）の対象、と突合する。**重なる場合は同一 worker に束ねて直列で処理するのを第一候補**とする（並行させない理由が衝突回避なら、束ねる方が安全かつ安価）。束ねられない場合だけ次の候補へ
+4. **凍結チェック**: `status:blocked` が付いていないこと、tracking issue の凍結リストに載っていないことを確認（束ねた場合は全 issue について確認する。1 つでも凍結なら、その issue だけ束ねから外す）
+5. issue 本文を **handoff-quality** に補強する（下記テンプレート）。worker が repo 探索なしで着手できる密度が基準
+6. `status:in-progress` ラベルを付け、tracking issue にコメントで dispatch 先（Sonnet / Codex / その他）を記録
+7. worker への指示は issue URL + 「本文の受け入れ条件と検証コマンドに従う」だけで済む状態にする
 
 ### handoff-quality テンプレート（issue 本文に含める 4 要素）
 
@@ -49,8 +50,10 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 ### 規模別の渡し方
 
+size は**束ねた後の合計**で判定する。
+
 - size s/xs: 直接実装でよい。plan 不要
-- size m/l: worker に plan を先に出させ、`/plan-review` を通してから実装
+- size m/l: worker に plan を先に出させ、`/plan-review` を通してから実装。複数 issue を束ねた PR は merge 前の read-only subagent クロスレビューが必須（`.claude/rules/workflow.md` §PR 粒度）
 - spike / 設計判断を含む issue: worker に渡さない。最上位ティア（`.claude/rules/ai-behavior.md` のティア表参照）のセッションで実施
 
 ## 操作 B: intake — 新しい作業を issue 化する
