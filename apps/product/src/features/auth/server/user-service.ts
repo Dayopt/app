@@ -9,9 +9,10 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import type { EmailLocale } from '@/emails/i18n';
 import type { Database, PublicRecordRow, PublicUserSettingsRow, Row } from '@/lib/database';
 import { databaseTables, publicRecordSelect, publicUserSettingsSelect } from '@/lib/database';
-import { sendAccountDeletionEmail } from '@/lib/email/router';
+import { getUserLocale, sendAccountDeletionEmail } from '@/lib/email/router';
 import { logger } from '@/lib/logger';
 import {
   captureUnexpectedDatabaseError,
@@ -162,25 +163,13 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         // MFA も無い場合は、確認テキストの明示入力と削除通知メールで担保する
       }
 
-      // 削除の通知メール。auth.users を消したあとは送信経路が無くなるため先に送る。
-      // 送信失敗で削除を止めない（GDPR の削除要求を優先する）
+      // 通知メールの locale は user_settings 由来。削除で CASCADE 消滅するため先に引いておく
+      // （メール本文は「削除されました」と完了を伝えるので、送信自体は削除確定後に行う）
+      let emailLocale: EmailLocale = 'en';
       try {
-        await sendAccountDeletionEmail({
-          supabase,
-          userId,
-          email: userEmail,
-          userName,
-        });
-      } catch (emailError) {
-        const original =
-          emailError instanceof Error
-            ? emailError
-            : new Error('Account deletion email failed', { cause: emailError });
-        captureUnexpectedError(original, {
-          feature: 'account_deletion',
-          operation: 'send_deletion_email',
-          source: 'resend',
-        });
+        emailLocale = await getUserLocale(supabase, userId);
+      } catch {
+        // locale が引けなくても既定言語で送れるので削除は続ける
       }
 
       // Storage のアバター画像を削除
@@ -264,6 +253,26 @@ export function createUserService(supabase: SupabaseClient<Database>) {
       }
 
       logger.info('Account deleted successfully', { userId });
+
+      // 削除が確定してから通知する。送信失敗で削除をなかったことにはできないので、
+      // 記録だけ残して成功を返す（GDPR の削除要求を優先する）
+      try {
+        await sendAccountDeletionEmail({
+          email: userEmail,
+          userName,
+          locale: emailLocale,
+        });
+      } catch (emailError) {
+        const original =
+          emailError instanceof Error
+            ? emailError
+            : new Error('Account deletion email failed', { cause: emailError });
+        captureUnexpectedError(original, {
+          feature: 'account_deletion',
+          operation: 'send_deletion_email',
+          source: 'resend',
+        });
+      }
 
       return { success: true };
     },

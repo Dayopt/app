@@ -11,8 +11,9 @@ const adminFrom = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn());
 const sendAccountDeletionEmail = vi.hoisted(() => vi.fn());
+const getUserLocale = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/email/router', () => ({ sendAccountDeletionEmail }));
+vi.mock('@/lib/email/router', () => ({ sendAccountDeletionEmail, getUserLocale }));
 
 vi.mock('@/lib/stripe/client', () => ({ getStripe }));
 vi.mock('@/lib/supabase/oauth', () => ({
@@ -143,6 +144,7 @@ describe('createUserService', () => {
     vi.clearAllMocks();
     getStripe.mockReturnValue(null);
     sendAccountDeletionEmail.mockResolvedValue({ success: true });
+    getUserLocale.mockResolvedValue('ja');
     deleteUser.mockResolvedValue({ data: {}, error: null });
     adminFrom.mockImplementation(() => createChainableMock([], null));
     captureUnexpectedDatabaseError.mockImplementation((error: unknown) =>
@@ -246,15 +248,40 @@ describe('createUserService', () => {
       expect(deleteUser).not.toHaveBeenCalled();
     });
 
-    it('削除の前に通知メールを送る', async () => {
+    it('削除が確定してから通知メールを送る', async () => {
       const { service } = createSupabase();
 
       await service.deleteAccount(deleteOptions());
 
+      expect(sendAccountDeletionEmail).toHaveBeenCalledWith({
+        email: USER_EMAIL,
+        userName: 'Tomoya',
+        locale: 'ja',
+      });
+      // 本文が「削除されました」と完了を伝えるため、削除の後に送る必要がある
+      const [deleteOrder] = deleteUser.mock.invocationCallOrder;
+      const [emailOrder] = sendAccountDeletionEmail.mock.invocationCallOrder;
+      expect(deleteOrder).toBeDefined();
+      expect(emailOrder).toBeGreaterThan(deleteOrder!);
+    });
+
+    it('削除が中断されたら通知メールを送らない（誤報を出さない）', async () => {
+      const { service } = createSupabase({ storageError: new Error('storage unavailable') });
+
+      await expect(service.deleteAccount(deleteOptions())).rejects.toMatchObject({
+        code: 'DELETE_FAILED',
+      });
+      expect(sendAccountDeletionEmail).not.toHaveBeenCalled();
+    });
+
+    it('locale が引けなくても既定言語で送って削除を続ける', async () => {
+      getUserLocale.mockRejectedValueOnce(new Error('user_settings unavailable'));
+      const { service } = createSupabase();
+
+      await expect(service.deleteAccount(deleteOptions())).resolves.toEqual({ success: true });
       expect(sendAccountDeletionEmail).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: USER_ID, email: USER_EMAIL, userName: 'Tomoya' }),
+        expect.objectContaining({ locale: 'en' }),
       );
-      expect(deleteUser).toHaveBeenCalledWith(USER_ID);
     });
 
     it('通知メールの送信失敗では削除を止めない（削除要求を優先する）', async () => {

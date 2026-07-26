@@ -164,6 +164,7 @@
         "passwordLabel": "Confirm with Password",
         "passwordPlaceholder": "Enter your current password",
         "totpLabel": "Code from your authentication app",
+        "totpRequired": "Enter the code from your authentication app.",
         "invalidTotp": "That code is not correct.",
         "passwordRequired": "Please enter your password",
         "invalidPassword": "Invalid password",

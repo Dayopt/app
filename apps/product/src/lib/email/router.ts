@@ -45,7 +45,11 @@ const APP_URL = getAppUrl();
  * ユーザーの preferred_locale を user_settings から取得する
  * 未設定の場合は 'en' にフォールバック
  */
-async function getUserLocale(supabase: SupabaseClient, userId: string): Promise<EmailLocale> {
+/** メール文面の locale を user_settings から引く。削除処理は CASCADE 前に呼ぶ必要がある */
+export async function getUserLocale(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<EmailLocale> {
   const { data, error } = await supabase
     .from(databaseTables.userSettings)
     .select('*')
@@ -159,21 +163,19 @@ async function sendEmail({
  * アカウント削除の通知メールを送る
  *
  * 削除処理そのもの（`features/auth/server/user-service.ts`）からも呼ぶため、
- * procedure ではなく関数として公開する。auth.users を消したあとは認証が切れて
- * tRPC を呼べないので、削除の直前に送る必要がある。
+ * procedure ではなく関数として公開する。本文が「削除されました」と完了を伝えるので、
+ * 呼ぶのは削除が確定したあと。locale を引数で受けるのは、削除後には
+ * `user_settings` が CASCADE で消えていて引けないため。
  */
 export async function sendAccountDeletionEmail({
-  supabase,
-  userId,
   email,
   userName,
+  locale,
 }: {
-  supabase: SupabaseClient;
-  userId: string;
   email: string;
   userName: string;
+  locale: EmailLocale;
 }) {
-  const locale = await getUserLocale(supabase, userId);
   const t = createEmailTranslator(locale);
 
   const deletionDate = new Date().toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US', {
@@ -494,10 +496,9 @@ export const emailRouter = createTRPCRouter({
         logger.info('Sending account deletion email', { userId: ctx.userId });
 
         return await sendAccountDeletionEmail({
-          supabase: ctx.supabase,
-          userId: ctx.userId,
           email: input.email,
           userName: input.userName,
+          locale: await getUserLocale(ctx.supabase, ctx.userId),
         });
       } catch (error) {
         return handleServiceError(error);

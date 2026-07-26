@@ -164,6 +164,7 @@
         "passwordLabel": "パスワードで確認",
         "passwordPlaceholder": "現在のパスワードを入力",
         "totpLabel": "認証アプリのコード",
+        "totpRequired": "認証アプリのコードを入力してください。",
         "invalidTotp": "コードが正しくありません。",
         "passwordRequired": "パスワードを入力してください",
         "invalidPassword": "パスワードが正しくありません",

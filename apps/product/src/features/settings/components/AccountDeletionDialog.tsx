@@ -43,7 +43,8 @@ export function AccountDeletionDialog() {
   const user = useAuthStore((state) => state.user);
   // 再認証はユーザーが持っている手段で行う。Google のみのユーザーはパスワードを持たない
   const canUsePassword = hasPasswordIdentity(user);
-  const hasMFA = hasVerifiedMfaFactor(user);
+  const [needsTotp, setNeedsTotp] = useState(false);
+  const requiresTotp = hasVerifiedMfaFactor(user) || needsTotp;
 
   const deleteAccountMutation = api.user.deleteAccount.useMutation({
     onSuccess: async () => {
@@ -66,7 +67,17 @@ export function AccountDeletionDialog() {
         component: 'account-deletion-dialog',
       });
 
-      if (error.message.includes('Invalid password')) {
+      // user.factors がセッションに載っていないと MFA 有無を事前に判定できない。
+      // サーバーがコードを要求してきた時点で入力欄を出す
+      if (error.message.includes('Verification code is required')) {
+        setNeedsTotp(true);
+        toast.error(t('settings.account.deletion.totpRequired'));
+        return;
+      }
+
+      if (error.message.includes('Invalid verification code')) {
+        toast.error(t('settings.account.deletion.invalidTotp'));
+      } else if (error.message.includes('Invalid password')) {
         toast.error(t('settings.account.deletion.invalidPassword'));
       } else {
         toast.error(error.message || t('settings.account.deletion.error'));
@@ -140,7 +151,7 @@ export function AccountDeletionDialog() {
                   />
                 </div>
               ) : (
-                hasMFA && (
+                requiresTotp && (
                   <div className="space-y-2">
                     <label
                       htmlFor="delete-account-totp"
