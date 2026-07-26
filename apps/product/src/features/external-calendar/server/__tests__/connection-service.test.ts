@@ -13,6 +13,8 @@ const listCalendars = vi.hoisted(() => vi.fn());
 const revoke = vi.hoisted(() => vi.fn());
 const decryptToken = vi.hoisted(() => vi.fn());
 const encryptToken = vi.hoisted(() => vi.fn());
+const persistCalendarTokenRotation = vi.hoisted(() => vi.fn());
+const markCalendarConnectionReauth = vi.hoisted(() => vi.fn());
 const loggerWarn = vi.hoisted(() => vi.fn());
 
 vi.mock('@/env', () => ({
@@ -28,6 +30,10 @@ vi.mock('../providers/google', () => ({
   googleCalendarAdapter: { provider: 'google', startSession, listCalendars, revoke },
 }));
 vi.mock('../token-crypto', () => ({ decryptToken, encryptToken }));
+vi.mock('../token-rotation', () => ({
+  persistCalendarTokenRotation,
+  markCalendarConnectionReauth,
+}));
 vi.mock('@/lib/logger', () => ({
   logger: { log: vi.fn(), error: vi.fn(), warn: loggerWarn, info: vi.fn(), debug: vi.fn() },
 }));
@@ -46,7 +52,7 @@ const CONNECTION_ID = '00000000-0000-4000-8000-0000000000c1';
 type Recorder = { table: string; chain: Array<{ method: string; args: unknown[] }> };
 
 type Config = {
-  connection?: { status: string; refresh_token_enc: string } | null;
+  connection?: { data_generation?: number; status: string; refresh_token_enc: string } | null;
   childRows?: Array<{ provider_calendar_id: string }>;
 };
 
@@ -113,6 +119,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   decryptToken.mockReturnValue('refresh-token');
   encryptToken.mockReturnValue('enc');
+  persistCalendarTokenRotation.mockResolvedValue({
+    outcome: 'updated',
+    markReauthIfCurrent: null,
+  });
+  markCalendarConnectionReauth.mockResolvedValue('marked');
   startSession.mockResolvedValue({ accessToken: 'access', rotatedRefreshToken: null });
   listCalendars.mockResolvedValue([]);
   revoke.mockResolvedValue(true);
@@ -186,9 +197,9 @@ describe('listProviderCalendars', () => {
     expect(startSession).not.toHaveBeenCalled();
   });
 
-  it('startSession の invalid_grant で status を reauth_required にして弾く', async () => {
-    const { calls } = setupServiceRoleDb({
-      connection: { status: 'active', refresh_token_enc: 'enc' },
+  it('startSession の invalid_grant で観測authorityを reauth_required にして弾く', async () => {
+    setupServiceRoleDb({
+      connection: { data_generation: 3, status: 'active', refresh_token_enc: 'enc' },
     });
     const { CalendarProviderError } = await import('../providers/types');
     startSession.mockRejectedValue(new CalendarProviderError('revoked', 'reauth_required'));
@@ -196,23 +207,94 @@ describe('listProviderCalendars', () => {
     await expect(listProviderCalendars(USER_ID, CONNECTION_ID)).rejects.toMatchObject({
       code: 'REAUTH_REQUIRED',
     });
-    const update = findWith(calls, 'calendar_connections', 'update')!;
-    expect(argsOf(update, 'update')[0]).toMatchObject({ status: 'reauth_required' });
+    expect(markCalendarConnectionReauth).toHaveBeenCalledWith({
+      userId: USER_ID,
+      connectionId: CONNECTION_ID,
+      expectedGeneration: 3,
+      expectedRefreshTokenEnc: 'enc',
+    });
   });
 
-  it('rotation された refresh token を再暗号化して保存する', async () => {
-    const { calls } = setupServiceRoleDb({
-      connection: { status: 'active', refresh_token_enc: 'enc' },
+  it('rotation された refresh token をgeneration-bound RPCで保存する', async () => {
+    setupServiceRoleDb({
+      connection: { data_generation: 3, status: 'active', refresh_token_enc: 'enc' },
     });
     startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
 
     await listProviderCalendars(USER_ID, CONNECTION_ID);
 
-    expect(encryptToken).toHaveBeenCalledWith('rotated', expect.any(String));
-    const saved = recordersFor(calls, 'calendar_connections').find((r) =>
-      r.chain.some((e) => e.method === 'update' && 'refresh_token_enc' in (e.args[0] as object)),
+    expect(persistCalendarTokenRotation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: USER_ID,
+        connectionId: CONNECTION_ID,
+        expectedGeneration: 3,
+        expectedRefreshTokenEnc: 'enc',
+        rotatedRefreshToken: 'rotated',
+        provider: expect.any(Object),
+      }),
     );
-    expect(saved).toBeDefined();
+    expect(listCalendars).toHaveBeenCalled();
+  });
+
+  it('rotation更新後のprovider 401を同じ新authorityの証明で再認証へ収束する', async () => {
+    setupServiceRoleDb({
+      connection: { data_generation: 3, status: 'active', refresh_token_enc: 'enc' },
+    });
+    const markRotatedAuthority = vi.fn().mockResolvedValue('marked');
+    const { CalendarProviderError } = await import('../providers/types');
+    startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
+    persistCalendarTokenRotation.mockResolvedValue({
+      outcome: 'updated',
+      markReauthIfCurrent: markRotatedAuthority,
+    });
+    listCalendars.mockRejectedValue(
+      new CalendarProviderError('revoked', 'reauth_required', 'invalid_grant', 401),
+    );
+
+    await expect(listProviderCalendars(USER_ID, CONNECTION_ID)).rejects.toMatchObject({
+      code: 'REAUTH_REQUIRED',
+    });
+
+    expect(markRotatedAuthority).toHaveBeenCalledTimes(1);
+    expect(markCalendarConnectionReauth).not.toHaveBeenCalled();
+  });
+
+  it('purge後outboxへ退避したrotationではprovider一覧を返さない', async () => {
+    const { calls } = setupServiceRoleDb({
+      connection: { data_generation: 3, status: 'active', refresh_token_enc: 'enc' },
+    });
+    startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
+    persistCalendarTokenRotation.mockResolvedValue({
+      outcome: 'enqueued',
+      markReauthIfCurrent: null,
+    });
+
+    await expect(listProviderCalendars(USER_ID, CONNECTION_ID)).rejects.toMatchObject({
+      code: 'CONNECTION_NOT_FOUND',
+    });
+    expect(listCalendars).not.toHaveBeenCalled();
+    expect(recordersFor(calls, 'calendar_connection_calendars')).toHaveLength(0);
+  });
+
+  it.each([
+    ['reauth_required', 'REAUTH_REQUIRED'],
+    ['missing', 'CONNECTION_NOT_FOUND'],
+    ['superseded', 'PROVIDER_UNAVAILABLE'],
+    ['unresolved', 'UPDATE_FAILED'],
+  ] as const)('rotation結果が%sならprovider処理を止めて%sへ写像する', async (outcome, code) => {
+    setupServiceRoleDb({
+      connection: { data_generation: 3, status: 'active', refresh_token_enc: 'enc' },
+    });
+    startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
+    persistCalendarTokenRotation.mockResolvedValue({
+      outcome,
+      markReauthIfCurrent: null,
+    });
+
+    await expect(listProviderCalendars(USER_ID, CONNECTION_ID)).rejects.toMatchObject({
+      code,
+    });
+    expect(listCalendars).not.toHaveBeenCalled();
   });
 });
 

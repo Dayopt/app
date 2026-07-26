@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { randomUUID } from 'node:crypto';
+
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { env } from '@/env';
@@ -17,7 +19,8 @@ import {
   type ProviderSession,
   type SyncWindow,
 } from './providers/types';
-import { decryptToken, encryptToken } from './token-crypto';
+import { decryptToken } from './token-crypto';
+import { markCalendarConnectionReauth, persistCalendarTokenRotation } from './token-rotation';
 
 /**
  * 外部カレンダー同期エンジン（overview.md §6-2）。
@@ -104,6 +107,7 @@ function createSyncDbClient(): SyncClient {
 
 /** `refresh_token_enc` は column-scoped grant 外だが service_role なので読める。列は明示列挙する。 */
 type ConnectionRow = {
+  data_generation: number;
   id: string;
   user_id: string;
   status: string;
@@ -165,13 +169,22 @@ export async function syncConnection(params: {
     return { outcome: 'encryption_key_invalid', calendarsSynced: 0, calendarsFailed: 0 };
   }
 
+  // provider callの応答が失われても同じtoken acquisitionをDB側で同定できるよう、
+  // operation IDはrefresh開始前に一度だけ生成する。
+  const rotationOperationId = randomUUID();
   let session: ProviderSession;
   try {
     session = await adapter.startSession(refreshToken);
   } catch (error) {
     if (error instanceof CalendarProviderError && error.kind === 'reauth_required') {
-      await markReauthRequired(db, connectionId, userId, runStartedAtIso);
-      return { outcome: 'reauth_required', calendarsSynced: 0, calendarsFailed: 0 };
+      const reauthOutcome = await markCalendarConnectionReauth({
+        userId,
+        connectionId,
+        expectedGeneration: connection.data_generation,
+        expectedRefreshTokenEnc: connection.refresh_token_enc,
+        lastSyncedAt: runStartedAtIso,
+      });
+      return reauthResult(reauthOutcome, 0, 0);
     }
     captureProviderError(error, 'start_session');
     await writeConnectionError(db, connectionId, userId, providerErrorCode(error), runStartedAtIso);
@@ -179,8 +192,40 @@ export async function syncConnection(params: {
   }
 
   // Google が rotation した場合だけ保存し直す。黙って捨てると次回から死ぬ。
+  let markReauthAfterRotation: Awaited<
+    ReturnType<typeof persistCalendarTokenRotation>
+  >['markReauthIfCurrent'] = null;
   if (session.rotatedRefreshToken !== null) {
-    await persistRotatedToken(db, connectionId, userId, session.rotatedRefreshToken);
+    const rotationResult = await persistCalendarTokenRotation({
+      operationId: rotationOperationId,
+      userId,
+      connectionId,
+      expectedGeneration: connection.data_generation,
+      expectedRefreshTokenEnc: connection.refresh_token_enc,
+      rotatedRefreshToken: session.rotatedRefreshToken,
+      encryptionKey: env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? '',
+      provider: adapter,
+      lastSyncedAt: runStartedAtIso,
+    });
+    const { outcome: rotationOutcome } = rotationResult;
+    markReauthAfterRotation = rotationResult.markReauthIfCurrent;
+
+    if (rotationOutcome === 'enqueued' || rotationOutcome === 'missing') {
+      return { outcome: 'not_configured', calendarsSynced: 0, calendarsFailed: 0 };
+    }
+
+    if (rotationOutcome === 'reauth_required') {
+      return { outcome: 'reauth_required', calendarsSynced: 0, calendarsFailed: 0 };
+    }
+    if (rotationOutcome === 'superseded') {
+      return { outcome: 'partial_failure', calendarsSynced: 0, calendarsFailed: 0 };
+    }
+    if (rotationOutcome === 'unresolved') {
+      throw new ExternalCalendarServiceError(
+        'SYNC_FAILED',
+        'calendar token rotation is unresolved',
+      );
+    }
   }
 
   const calendars = await loadSelectedCalendars(db, connectionId, userId);
@@ -212,8 +257,19 @@ export async function syncConnection(params: {
   }
 
   if (reauthRequired) {
-    await markReauthRequired(db, connectionId, userId, runStartedAtIso);
-    return { outcome: 'reauth_required', calendarsSynced, calendarsFailed };
+    // rotation済みなら同じrunが保存した新ciphertextをclosure内のCAS証明でmarkする。
+    // 旧ciphertextで判定すると、正しい新authorityをsupersededと誤認する。
+    const reauthOutcome =
+      markReauthAfterRotation === null
+        ? await markCalendarConnectionReauth({
+            userId,
+            connectionId,
+            expectedGeneration: connection.data_generation,
+            expectedRefreshTokenEnc: connection.refresh_token_enc,
+            lastSyncedAt: runStartedAtIso,
+          })
+        : await markReauthAfterRotation();
+    return reauthResult(reauthOutcome, calendarsSynced, calendarsFailed);
   }
 
   // 参照されていない window 外行を掃除する。connection 単位で 1 回だけ（calendar ごとに
@@ -318,7 +374,7 @@ async function loadConnection(
   // 列は明示列挙する。column-scoped grant のため select('*') は 42501 になる。
   const { data, error } = await db
     .from(databaseTables.calendarConnections)
-    .select('id, user_id, status, refresh_token_enc')
+    .select('id, user_id, status, refresh_token_enc, data_generation')
     .eq('id', connectionId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -468,17 +524,24 @@ async function clearSyncToken(
 // connection 状態の更新
 // =============================================================================
 
-async function markReauthRequired(
-  db: SyncClient,
-  connectionId: string,
-  userId: string,
-  runStartedAtIso: string,
-): Promise<void> {
-  await updateConnection(db, connectionId, userId, {
-    status: 'reauth_required',
-    last_sync_error: 'reauth_required',
-    last_synced_at: runStartedAtIso,
-  });
+function reauthResult(
+  outcome: Awaited<ReturnType<typeof markCalendarConnectionReauth>>,
+  calendarsSynced: number,
+  calendarsFailed: number,
+): SyncConnectionResult {
+  if (outcome === 'marked') {
+    return { outcome: 'reauth_required', calendarsSynced, calendarsFailed };
+  }
+  if (outcome === 'missing') {
+    return { outcome: 'not_configured', calendarsSynced, calendarsFailed };
+  }
+  if (outcome === 'superseded') {
+    return { outcome: 'partial_failure', calendarsSynced, calendarsFailed };
+  }
+  throw new ExternalCalendarServiceError(
+    'SYNC_FAILED',
+    'calendar connection reauthorization is unresolved',
+  );
 }
 
 async function writeConnectionError(
@@ -504,25 +567,6 @@ async function writeConnectionSuccess(
     last_sync_error: null,
     last_synced_at: runStartedAtIso,
   });
-}
-
-async function persistRotatedToken(
-  db: SyncClient,
-  connectionId: string,
-  userId: string,
-  rotatedRefreshToken: string,
-): Promise<void> {
-  try {
-    await updateConnection(db, connectionId, userId, {
-      refresh_token_enc: encryptToken(rotatedRefreshToken, env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? ''),
-    });
-  } catch (error) {
-    // 保存に失敗しても今回の同期は続行する（access token は既に mint 済み）。
-    captureUnexpectedError(error instanceof Error ? error : new Error('rotate token failed'), {
-      feature: 'external_calendar',
-      operation: 'persist_rotated_token',
-    });
-  }
 }
 
 async function updateConnection(

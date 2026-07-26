@@ -28,6 +28,7 @@
 --   - 20260726040700_mark_calendar_connection_reauth_conditionally.sql
 --   - 20260726040800_fix_calendar_reauth_timestamp.sql
 --   - 20260726040900_bind_calendar_reauth_to_rotation_operation.sql
+--   - 20260726052135_prepare_calendar_token_rotation_recovery.sql
 -- ユーザー操作向け関数は authenticated、OAuth基盤関数はservice_roleへ
 -- 必要なsignatureだけ明示GRANT。PUBLIC/anonへのEXECUTEはrevoke済み。
 -- ============================================================
@@ -58,6 +59,7 @@
 --   save_calendar_connection_command_v1(...)   — 世代再検証つきCalendar connection保存
 --   rotate_or_enqueue_calendar_refresh_token_command_v2(...) — rotationを冪等CAS保存またはpurge後outboxへ退避
 --   mark_calendar_connection_reauth_command_v2(...) — 観測tokenまたは同一rotationだけ再認証へ遷移
+--   prepare_calendar_token_rotation_recovery_command_v1(...) — provider失効前に現authorityを停止しrotation tokenをoutboxへ退避
 --   delete_all_user_data_command_v3(...)       — 世代更新、外部authority失効、全domain data削除
 --   claim/complete/retry_calendar_revoke_outbox_v1(...) — 暗号化tokenのlease付きprovider失効
 --   expire_calendar_revoke_outbox_v1(...)      — 期限切れ暗号文のbounded削除

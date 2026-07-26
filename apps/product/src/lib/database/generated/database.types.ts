@@ -1552,6 +1552,18 @@ export type Database = {
         };
         Returns: Json;
       };
+      prepare_calendar_token_rotation_recovery_command_v1: {
+        Args: {
+          p_connection_id: string;
+          p_expected_generation: number;
+          p_expected_refresh_token_enc: string;
+          p_last_synced_at?: string;
+          p_new_refresh_token_enc?: string;
+          p_operation_id: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       provision_mcp_environment_identity_v1: {
         Args: {
           p_authorization_server_uri: string;

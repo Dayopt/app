@@ -797,6 +797,136 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
     });
   });
 
+  it('prepares provider recovery by fail-closing a superseding authority and durably queuing the rotated token', async () => {
+    const generation = await currentGeneration();
+    const observedCiphertext = `v1.observed-${crypto.randomUUID()}.ciphertext`;
+    const rotatedCiphertext = `v1.rotated-${crypto.randomUUID()}.ciphertext`;
+    const reconnectedCiphertext = `v1.reconnected-${crypto.randomUUID()}.ciphertext`;
+    const operationId = crypto.randomUUID();
+    const connectionId = await saveCalendarConnection(generation, userId, observedCiphertext);
+    const { error: reconnectError } = await admin
+      .from('calendar_connections')
+      .update({ refresh_token_enc: reconnectedCiphertext })
+      .eq('id', connectionId)
+      .eq('user_id', userId);
+    expect(reconnectError).toBeNull();
+
+    const args = {
+      p_operation_id: operationId,
+      p_user_id: userId,
+      p_connection_id: connectionId,
+      p_expected_generation: generation,
+      p_expected_refresh_token_enc: observedCiphertext,
+      p_new_refresh_token_enc: rotatedCiphertext,
+      p_last_synced_at: instant(),
+    };
+    const prepared = await admin.rpc('prepare_calendar_token_rotation_recovery_command_v1', args);
+    const replay = await admin.rpc('prepare_calendar_token_rotation_recovery_command_v1', args);
+    expect(prepared.error).toBeNull();
+    expect(prepared.data).toBe('marked');
+    expect(replay.error).toBeNull();
+    expect(replay.data).toBe('marked');
+
+    const { data: connection, error: connectionError } = await admin
+      .from('calendar_connections')
+      .select('status, last_sync_error, refresh_token_enc')
+      .eq('id', connectionId)
+      .eq('user_id', userId)
+      .single();
+    expect(connectionError).toBeNull();
+    expect(connection).toEqual({
+      status: 'reauth_required',
+      last_sync_error: 'reauth_required',
+      refresh_token_enc: reconnectedCiphertext,
+    });
+
+    const queued = runOwnerSql(`
+      SELECT pg_catalog.concat(id, '|', refresh_token_enc)
+      FROM private.calendar_revoke_outbox
+      WHERE id = '${operationId}'::UUID;
+    `);
+    expect(queued.status, queued.stderr).toBe(0);
+    expect(queued.stdout.trim()).toBe(`${operationId}|${rotatedCiphertext}`);
+
+    const reusedOperation = await admin.rpc('prepare_calendar_token_rotation_recovery_command_v1', {
+      ...args,
+      p_new_refresh_token_enc: `v1.reused-${crypto.randomUUID()}.ciphertext`,
+    });
+    expect(reusedOperation.error?.code).toBe('CA004');
+  });
+
+  it('queues the rotated token and reports missing when purge already advanced the generation', async () => {
+    const generation = await currentGeneration();
+    const observedCiphertext = `v1.observed-${crypto.randomUUID()}.ciphertext`;
+    const rotatedCiphertext = `v1.rotated-${crypto.randomUUID()}.ciphertext`;
+    const operationId = crypto.randomUUID();
+    const connectionId = await saveCalendarConnection(generation, userId, observedCiphertext);
+    await purge();
+
+    const recovery = await admin.rpc('prepare_calendar_token_rotation_recovery_command_v1', {
+      p_operation_id: operationId,
+      p_user_id: userId,
+      p_connection_id: connectionId,
+      p_expected_generation: generation,
+      p_expected_refresh_token_enc: observedCiphertext,
+      p_new_refresh_token_enc: rotatedCiphertext,
+      p_last_synced_at: instant(),
+    });
+    expect(recovery.error).toBeNull();
+    expect(recovery.data).toBe('missing');
+
+    const outboxTokens = runOwnerSql(`
+      SELECT refresh_token_enc
+      FROM private.calendar_revoke_outbox
+      WHERE user_id = '${userId}'::UUID
+        AND source_connection_id = '${connectionId}'::UUID
+        AND refresh_token_enc IN ('${observedCiphertext}', '${rotatedCiphertext}')
+      ORDER BY refresh_token_enc;
+    `);
+    expect(outboxTokens.status, outboxTokens.stderr).toBe(0);
+    expect(outboxTokens.stdout.trim().split('\n').sort()).toEqual(
+      [observedCiphertext, rotatedCiphertext].sort(),
+    );
+  });
+
+  it('fail-closes the current authority before direct compensation when encryption is unavailable', async () => {
+    const generation = await currentGeneration();
+    const observedCiphertext = `v1.observed-${crypto.randomUUID()}.ciphertext`;
+    const connectionId = await saveCalendarConnection(generation, userId, observedCiphertext);
+    const operationId = crypto.randomUUID();
+
+    const recovery = await admin.rpc('prepare_calendar_token_rotation_recovery_command_v1', {
+      p_operation_id: operationId,
+      p_user_id: userId,
+      p_connection_id: connectionId,
+      p_expected_generation: generation,
+      p_expected_refresh_token_enc: observedCiphertext,
+      p_last_synced_at: instant(),
+    });
+    expect(recovery.error).toBeNull();
+    expect(recovery.data).toBe('marked');
+
+    const { data: connection, error: connectionError } = await admin
+      .from('calendar_connections')
+      .select('status, last_sync_error')
+      .eq('id', connectionId)
+      .eq('user_id', userId)
+      .single();
+    expect(connectionError).toBeNull();
+    expect(connection).toEqual({
+      status: 'reauth_required',
+      last_sync_error: 'reauth_required',
+    });
+
+    const queued = runOwnerSql(`
+      SELECT pg_catalog.count(*)
+      FROM private.calendar_revoke_outbox
+      WHERE id = '${operationId}'::UUID;
+    `);
+    expect(queued.status, queued.stderr).toBe(0);
+    expect(queued.stdout.trim()).toBe('0');
+  });
+
   it('reports a Calendar reauth fallback as missing after purge advances the generation', async () => {
     const generation = await currentGeneration();
     const observedCiphertext = `v1.observed-${crypto.randomUUID()}.ciphertext`;
@@ -890,39 +1020,50 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
 
   it('keeps generation, save, and full purge RPCs unavailable to browser roles', async () => {
     const generation = await currentGeneration();
-    const [generationRead, save, rotate, markReauth, fullPurge] = await Promise.all([
-      authenticated.rpc('get_user_data_generation_v1', { p_user_id: userId }),
-      authenticated.rpc('save_calendar_connection_command_v1', {
-        p_user_id: userId,
-        p_expected_generation: generation,
-        p_provider: 'google',
-        p_provider_account_id: `forbidden-${crypto.randomUUID()}`,
-        p_provider_account_email: dbNull,
-        p_granted_scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
-        p_refresh_token_enc: 'forbidden-ciphertext',
-      }),
-      authenticated.rpc('rotate_or_enqueue_calendar_refresh_token_command_v2', {
-        p_operation_id: crypto.randomUUID(),
-        p_user_id: userId,
-        p_connection_id: crypto.randomUUID(),
-        p_expected_generation: generation,
-        p_expected_refresh_token_enc: 'forbidden-old-ciphertext',
-        p_new_refresh_token_enc: 'forbidden-new-ciphertext',
-      }),
-      authenticated.rpc('mark_calendar_connection_reauth_command_v2', {
-        p_user_id: userId,
-        p_connection_id: crypto.randomUUID(),
-        p_expected_generation: generation,
-        p_expected_refresh_token_enc: 'forbidden-ciphertext',
-        p_last_synced_at: instant(),
-      }),
-      authenticated.rpc('delete_all_user_data_command_v3', { p_user_id: userId }),
-    ]);
+    const [generationRead, save, rotate, markReauth, prepareRecovery, fullPurge] =
+      await Promise.all([
+        authenticated.rpc('get_user_data_generation_v1', { p_user_id: userId }),
+        authenticated.rpc('save_calendar_connection_command_v1', {
+          p_user_id: userId,
+          p_expected_generation: generation,
+          p_provider: 'google',
+          p_provider_account_id: `forbidden-${crypto.randomUUID()}`,
+          p_provider_account_email: dbNull,
+          p_granted_scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+          p_refresh_token_enc: 'forbidden-ciphertext',
+        }),
+        authenticated.rpc('rotate_or_enqueue_calendar_refresh_token_command_v2', {
+          p_operation_id: crypto.randomUUID(),
+          p_user_id: userId,
+          p_connection_id: crypto.randomUUID(),
+          p_expected_generation: generation,
+          p_expected_refresh_token_enc: 'forbidden-old-ciphertext',
+          p_new_refresh_token_enc: 'forbidden-new-ciphertext',
+        }),
+        authenticated.rpc('mark_calendar_connection_reauth_command_v2', {
+          p_user_id: userId,
+          p_connection_id: crypto.randomUUID(),
+          p_expected_generation: generation,
+          p_expected_refresh_token_enc: 'forbidden-ciphertext',
+          p_last_synced_at: instant(),
+        }),
+        authenticated.rpc('prepare_calendar_token_rotation_recovery_command_v1', {
+          p_operation_id: crypto.randomUUID(),
+          p_user_id: userId,
+          p_connection_id: crypto.randomUUID(),
+          p_expected_generation: generation,
+          p_expected_refresh_token_enc: 'forbidden-old-ciphertext',
+          p_new_refresh_token_enc: 'forbidden-new-ciphertext',
+          p_last_synced_at: instant(),
+        }),
+        authenticated.rpc('delete_all_user_data_command_v3', { p_user_id: userId }),
+      ]);
 
     expect(generationRead.error?.code).toBe('42501');
     expect(save.error?.code).toBe('42501');
     expect(rotate.error?.code).toBe('42501');
     expect(markReauth.error?.code).toBe('42501');
+    expect(prepareRecovery.error?.code).toBe('42501');
     expect(fullPurge.error?.code).toBe('42501');
   });
 });

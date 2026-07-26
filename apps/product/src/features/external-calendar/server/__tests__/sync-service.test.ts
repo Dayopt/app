@@ -12,7 +12,8 @@ import { CalendarProviderError } from '../providers/types';
 const startSession = vi.hoisted(() => vi.fn());
 const syncCalendar = vi.hoisted(() => vi.fn());
 const decryptToken = vi.hoisted(() => vi.fn());
-const encryptToken = vi.hoisted(() => vi.fn());
+const persistCalendarTokenRotation = vi.hoisted(() => vi.fn());
+const markCalendarConnectionReauth = vi.hoisted(() => vi.fn());
 const createClient = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn((error: unknown) => error));
@@ -30,7 +31,11 @@ vi.mock('@/lib/sentry', () => ({ captureUnexpectedError, captureUnexpectedDataba
 vi.mock('@/lib/logger', () => ({
   logger: { log: vi.fn(), error: vi.fn(), warn: loggerWarn, info: vi.fn(), debug: vi.fn() },
 }));
-vi.mock('../token-crypto', () => ({ decryptToken, encryptToken }));
+vi.mock('../token-crypto', () => ({ decryptToken }));
+vi.mock('../token-rotation', () => ({
+  persistCalendarTokenRotation,
+  markCalendarConnectionReauth,
+}));
 vi.mock('../providers/google', () => ({
   googleCalendarAdapter: { provider: 'google', startSession, syncCalendar },
 }));
@@ -166,7 +171,13 @@ function event(overrides: Record<string, unknown> = {}) {
 }
 
 function activeConnection() {
-  return { id: CONNECTION_ID, user_id: USER_ID, status: 'active', refresh_token_enc: 'enc' };
+  return {
+    data_generation: 3,
+    id: CONNECTION_ID,
+    user_id: USER_ID,
+    status: 'active',
+    refresh_token_enc: 'enc',
+  };
 }
 
 function oneCalendar(syncToken: string | null = 'existing-token') {
@@ -178,7 +189,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(RUN_ISO));
   decryptToken.mockReturnValue('refresh-token');
-  encryptToken.mockReturnValue('enc');
+  persistCalendarTokenRotation.mockResolvedValue({
+    outcome: 'updated',
+    markReauthIfCurrent: null,
+  });
+  markCalendarConnectionReauth.mockResolvedValue('marked');
   startSession.mockResolvedValue(session());
 });
 
@@ -379,8 +394,8 @@ describe('syncConnection — forceFullSync', () => {
 });
 
 describe('syncConnection — 認可と鍵', () => {
-  it('refresh の invalid_grant で status を reauth_required にする', async () => {
-    const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+  it('refresh の invalid_grant で観測authorityを reauth_required にする', async () => {
+    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
     startSession.mockRejectedValue(
       new CalendarProviderError('revoked', 'reauth_required', 'invalid_grant', 400),
     );
@@ -388,12 +403,46 @@ describe('syncConnection — 認可と鍵', () => {
     const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
 
     expect(result.outcome).toBe('reauth_required');
-    const update = findCall(calls, 'calendar_connections', 'update')!;
-    expect(argsOf(update, 'update')[0]).toMatchObject({
-      status: 'reauth_required',
-      last_sync_error: 'reauth_required',
+    expect(markCalendarConnectionReauth).toHaveBeenCalledWith({
+      userId: USER_ID,
+      connectionId: CONNECTION_ID,
+      expectedGeneration: 3,
+      expectedRefreshTokenEnc: 'enc',
+      lastSyncedAt: RUN_ISO,
     });
     // カレンダー同期は始めない
+    expect(syncCalendar).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['missing', 'not_configured'],
+    ['superseded', 'partial_failure'],
+  ] as const)(
+    'invalid_grantのreauth結果が%sなら%sへ写像する',
+    async (reauthOutcome, expectedOutcome) => {
+      setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+      startSession.mockRejectedValue(
+        new CalendarProviderError('revoked', 'reauth_required', 'invalid_grant', 400),
+      );
+      markCalendarConnectionReauth.mockResolvedValue(reauthOutcome);
+
+      const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+      expect(result.outcome).toBe(expectedOutcome);
+      expect(syncCalendar).not.toHaveBeenCalled();
+    },
+  );
+
+  it('invalid_grantのreauth結果が不明ならthrowしてretryへ委ねる', async () => {
+    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+    startSession.mockRejectedValue(
+      new CalendarProviderError('revoked', 'reauth_required', 'invalid_grant', 400),
+    );
+    markCalendarConnectionReauth.mockResolvedValue('unresolved');
+
+    await expect(
+      syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID }),
+    ).rejects.toMatchObject({ code: 'SYNC_FAILED' });
     expect(syncCalendar).not.toHaveBeenCalled();
   });
 
@@ -445,22 +494,110 @@ describe('syncConnection — 認可と鍵', () => {
 });
 
 describe('syncConnection — token rotation', () => {
-  it('rotation された refresh token を再暗号化して保存する', async () => {
-    const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+  it('rotation された refresh token をgeneration-bound RPCで保存する', async () => {
+    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
     startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
     syncCalendar.mockResolvedValue(syncResult());
 
     await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
 
-    expect(encryptToken).toHaveBeenCalledWith('rotated', expect.any(String));
-    const saved = recordersFor(calls, 'calendar_connections').find((recorder) =>
-      recorder.chain.some(
-        (entry) =>
-          entry.method === 'update' &&
-          'refresh_token_enc' in (entry.args[0] as Record<string, unknown>),
-      ),
+    expect(persistCalendarTokenRotation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: USER_ID,
+        connectionId: CONNECTION_ID,
+        expectedGeneration: 3,
+        expectedRefreshTokenEnc: 'enc',
+        rotatedRefreshToken: 'rotated',
+        provider: expect.any(Object),
+        lastSyncedAt: RUN_ISO,
+      }),
     );
-    expect(saved).toBeDefined();
+    expect(syncCalendar).toHaveBeenCalled();
+  });
+
+  it('rotation更新後の同run 401を同じ新authorityの証明で再認証へ収束する', async () => {
+    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+    const markRotatedAuthority = vi.fn().mockResolvedValue('marked');
+    startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
+    persistCalendarTokenRotation.mockResolvedValue({
+      outcome: 'updated',
+      markReauthIfCurrent: markRotatedAuthority,
+    });
+    syncCalendar.mockRejectedValue(
+      new CalendarProviderError('revoked', 'reauth_required', 'invalid_grant', 401),
+    );
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result).toEqual({
+      outcome: 'reauth_required',
+      calendarsSynced: 0,
+      calendarsFailed: 0,
+    });
+    expect(markRotatedAuthority).toHaveBeenCalledTimes(1);
+    expect(markCalendarConnectionReauth).not.toHaveBeenCalled();
+  });
+
+  it('purgeが先行してtokenをoutboxへ退避したら後続同期を止める', async () => {
+    const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+    startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
+    persistCalendarTokenRotation.mockResolvedValue({
+      outcome: 'enqueued',
+      markReauthIfCurrent: null,
+    });
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result).toEqual({
+      outcome: 'not_configured',
+      calendarsSynced: 0,
+      calendarsFailed: 0,
+    });
+    expect(syncCalendar).not.toHaveBeenCalled();
+    expect(recordersFor(calls, 'calendar_connection_calendars')).toHaveLength(0);
+    expect(recordersFor(calls, 'external_calendar_events')).toHaveLength(0);
+    const statusWrite = recordersFor(calls, 'calendar_connections').find((recorder) =>
+      recorder.chain.some((entry) => entry.method === 'update'),
+    );
+    expect(statusWrite).toBeUndefined();
+  });
+
+  it.each([
+    ['reauth_required', 'reauth_required'],
+    ['missing', 'not_configured'],
+    ['superseded', 'partial_failure'],
+  ] as const)(
+    'token rotation結果が%sなら%sで後続同期を止める',
+    async (outcome, expectedOutcome) => {
+      setupDb({
+        connection: activeConnection(),
+        calendars: oneCalendar(),
+      });
+      startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
+      persistCalendarTokenRotation.mockResolvedValue({
+        outcome,
+        markReauthIfCurrent: null,
+      });
+
+      const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+      expect(result.outcome).toBe(expectedOutcome);
+      expect(syncCalendar).not.toHaveBeenCalled();
+    },
+  );
+
+  it('token rotation結果を確定できなければ後続同期を止めてthrowする', async () => {
+    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+    startSession.mockResolvedValue({ accessToken: 'a', rotatedRefreshToken: 'rotated' });
+    persistCalendarTokenRotation.mockResolvedValue({
+      outcome: 'unresolved',
+      markReauthIfCurrent: null,
+    });
+
+    await expect(
+      syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID }),
+    ).rejects.toMatchObject({ code: 'SYNC_FAILED' });
+    expect(syncCalendar).not.toHaveBeenCalled();
   });
 });
 
