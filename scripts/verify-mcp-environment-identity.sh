@@ -26,14 +26,11 @@ echo "Resetting the local database without seed data..."
 supabase db reset --local --no-seed
 restore_required=true
 
-PGPASSWORD=postgres psql \
+psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
   -X \
   -q \
   -v ON_ERROR_STOP=1 \
-  -h 127.0.0.1 \
-  -p 54322 \
-  -U postgres \
-  -d postgres <<'SQL'
+  <<'SQL'
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM public.mcp_environment_identity) THEN
