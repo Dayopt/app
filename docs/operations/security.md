@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-23
+last_verified: 2026-07-27
 ---
 
 # セキュリティ方針
@@ -19,10 +19,13 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 .github/
   dependabot.yml              # 依存関係自動更新
   workflows/
-    ci.yml                    # lint + typecheck + unit + build + Playwright E2E
+    ci.yml                    # static + unit + build + client bundle secret 検査 + Playwright E2E
+    ai-review.yml             # 危険 path 限定の外部モデル diff レビュー
+    production-config-audit.yml  # Vercel environment metadata 監査
     docs-guard.yml            # docs整合性チェック
-    integration.yml           # Supabase 統合テスト（パスフィルター）
+    integration.yml           # Supabase 統合テスト + RLS snapshot drift 検査
     create-release.yml        # GitHub Release 作成
+    release.yml               # リリース処理
 ```
 
 ## 権限設計
@@ -153,182 +156,65 @@ grep -r "uses:" .github/workflows/ | grep -v "^#" | sort | uniq
 
 # 第2部: セキュリティ監視・レポート
 
-OWASP準拠のセキュリティ監視とレポート生成システム。
+OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence を定義する。
 
 **関連Issue**: [#487 - OWASP準拠のセキュリティ強化](https://github.com/Dayopt/dayopt/issues/487)
 
-## セキュリティレポート
+## レビュー体制の層マップ
 
-### 自動生成
+セキュリティレビューは 4 層で構成する。どの層も単独では完全でなく、コード変更起点（1・2）と時間経過起点（3・4）を組み合わせて成立させる。
 
-週次で自動的にセキュリティレポートが生成される。
+| 層         | タイミング          | 実体                                                                                                                                                                                         |
+| ---------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 実装中     | コード変更ごと      | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`AGENTS.md` §Read-only delegation）                                                                                      |
+| PR ごと    | CI                  | `ai-review.yml`（危険 path 限定の外部モデルレビュー）/ `integration.yml` の RLS snapshot drift 検査 / `ci.yml` の client bundle secret 検査・`secrets:check` / `production-config-audit.yml` |
+| 継続       | 常時・自動          | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                         |
+| 定期・随時 | 月次 + オンデマンド | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                    |
 
-**スケジュール**: 毎週月曜日 0:00 UTC（日本時間 9:00）
+**束ねた PR のレビュー**: 複数 issue / Step を束ねた PR は merge 前に read-only subagent のクロスレビューを必須とする（`.claude/rules/workflow.md` §PR 粒度）。
 
-**生成内容**:
+## 定期検査の cadence
 
-1. 依存関係の脆弱性スキャン（npm audit）
-2. セキュリティヘッダー検証
-3. OWASP Top 10チェックリスト
-4. CSP違反レポート
-5. レート制限統計
-6. 監査ログサマリー
-7. 推奨アクション
+定期検査の正本は `/gardening` §5.7（月次セキュリティ sweep）とする。実施内容:
 
-### 手動実行
+1. Supabase security advisors の確認（`mcp__supabase__get_advisors`、read-only）
+2. `pnpm security:check`（= `pnpm audit --audit-level=moderate`）
+3. `/claude-security` の全体スキャン実行をユーザーへ提案
 
-```bash
-# セキュリティレポート生成
-npm run security:report
+3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
 
-# レポートファイル: reports/security/security-report-YYYY-MM-DD.md
-```
+所見が出た場合は `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録し、修正が必要なものは `dispatch` skill の intake で起票する。
 
-### GitHub Actions（セキュリティレポート）
-
-```bash
-# 手動でワークフローをトリガー
-gh workflow run security-report.yml
-```
-
-**レポート保存先**:
-
-- Artifacts: 90日間保存
-- GitHub Issue: 自動的にサマリーをIssue化
+> 2026-07-27 以前は週次自動レポート（`security-report.yml` / `npm run security:report` / `reports/security/`）を定義していたが、workflow は PR #957 で削除済みで実体が無かった。上記の月次 sweep がその後継。
 
 ## 監査ログ（Audit Logging）
 
-### 記録されるイベント
+アプリ側の独自監査ログテーブルは持たない。`login_attempts` / `auth_audit_logs` は Supabase Auth の `auth.audit_log` との二重管理でありアプリコードからの参照も無かったため、`20260414150000_drop_login_attempts_and_auth_audit_logs.sql` で削除済み。
 
-#### 認証関連
+現在の記録先:
 
-- `LOGIN_SUCCESS` - ログイン成功
-- `LOGIN_FAILURE` - ログイン失敗
-- `LOGOUT` - ログアウト
-- `PASSWORD_CHANGE` - パスワード変更
-- `PASSWORD_RESET_REQUEST` - パスワードリセット要求
-- `PASSWORD_RESET_COMPLETE` - パスワードリセット完了
-- `MFA_ENABLED` - MFA有効化
-- `MFA_DISABLED` - MFA無効化
+| 対象                             | 記録先                                                                                  |
+| -------------------------------- | --------------------------------------------------------------------------------------- |
+| 認証イベント（ログイン・失敗等） | Supabase Auth の `auth.audit_log`（Supabase 側が管理。Dashboard / Auth log で参照）     |
+| OAuth token 操作                 | `public.oauth_audit_log` テーブル（RLS 境界は `rls-access.integration.test.ts` で検証） |
+| アプリ例外・セキュリティイベント | Sentry（CSP 違反は `csp-violation` として directive 単位の固定 fingerprint で送信）     |
+| rate limit 超過                  | Upstash Redis のメトリクス（raw identifier は保存しない）                               |
 
-#### 権限・アクセス制御
-
-- `PERMISSION_ESCALATION` - 権限昇格
-- `UNAUTHORIZED_ACCESS_ATTEMPT` - 不正アクセス試行
-- `ROLE_CHANGE` - ロール変更
-
-#### データアクセス
-
-- `SENSITIVE_DATA_ACCESS` - 機密データアクセス
-- `BULK_DATA_EXPORT` - 一括データエクスポート
-- `DATA_DELETION` - データ削除
-
-#### セキュリティイベント
-
-- `RATE_LIMIT_EXCEEDED` - レート制限超過
-- `SUSPICIOUS_ACTIVITY` - 不審なアクティビティ
-- `CSP_VIOLATION` - CSP違反
-- `CSRF_TOKEN_MISMATCH` - CSRFトークン不一致
-
-### 使用例（監査ログ）
-
-```typescript
-import {
-  logAuditEvent,
-  logLoginSuccess,
-  logLoginFailure,
-  logUnauthorizedAccess,
-  AuditEventType,
-  AuditSeverity,
-} from '@/lib/audit/logger';
-
-// ログイン成功
-await logLoginSuccess(user.id, request.headers.get('x-forwarded-for'));
-
-// ログイン失敗
-await logLoginFailure(email, 'Invalid password', request.headers.get('x-forwarded-for'));
-
-// 不正アクセス試行
-await logUnauthorizedAccess('/api/admin', userId, request.headers.get('x-forwarded-for'));
-
-// カスタムイベント
-await logAuditEvent(AuditEventType.SENSITIVE_DATA_ACCESS, AuditSeverity.INFO, {
-  userId: user.id,
-  resource: '/api/users/export',
-  action: 'EXPORT',
-  metadata: { recordCount: 1000 },
-  success: true,
-});
-```
-
-### データベース構造（監査ログ）
-
-```sql
-CREATE TABLE audit_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  event_type TEXT NOT NULL,
-  severity TEXT NOT NULL,
-  user_id UUID REFERENCES auth.users(id),
-  session_id TEXT,
-  ip_address INET,
-  user_agent TEXT,
-  resource TEXT,
-  action TEXT,
-  metadata JSONB,
-  success BOOLEAN NOT NULL DEFAULT true,
-  error_message TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-```
-
-**インデックス**:
-
-- `idx_audit_logs_timestamp` - タイムスタンプ降順
-- `idx_audit_logs_user_id` - ユーザーID
-- `idx_audit_logs_event_type` - イベント種別
-- `idx_audit_logs_severity` - 重要度
-- `idx_audit_logs_ip_address` - IPアドレス
-
-**保持期間**: 90日（自動削除）
+認証攻撃の調査は Supabase Auth log と rate limit analytics を併用する（[monitoring](./monitoring.md) / [runbook](./runbook.md)）。
 
 ## レート制限統計
 
-### Upstash Redis（Phase 3）
+### Upstash Redis
 
-**現在の状態**: 参照実装済み（デプロイ待ち）
+**現在の状態**: Production で稼働中。`@upstash/ratelimit` / `@upstash/redis` は導入済みで、実装は [`apps/product/src/lib/rate-limit/upstash.ts`](../../apps/product/src/lib/rate-limit/upstash.ts)。
 
-**セットアップ手順**:
+`UPSTASH_REDIS_REST_URL` と `UPSTASH_REDIS_REST_TOKEN` が両方設定されている場合のみ有効になる（`isUpstashEnabled`）。未設定の環境ではインメモリ実装にフォールバックする。値の注入は 1Password 経由で、手順は [secrets.md](./secrets.md) を正本とする。
 
-1. **Upstashアカウント作成**
-   - https://console.upstash.com/
-
-2. **Redisデータベース作成**
-   - Region: Tokyo（推奨）
-   - Type: Regional
-
-3. **環境変数設定**
-
-   ```env
-   UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
-   UPSTASH_REDIS_REST_TOKEN=op://Dayopt-Staging/upstash/UPSTASH_REDIS_REST_TOKEN
-   ```
-
-4. **パッケージインストール**
-
-   ```bash
-   npm install @upstash/ratelimit @upstash/redis
-   ```
-
-5. **実装有効化**
-   - `src/lib/rate-limit/upstash.ts` のコメント解除
-   - 既存のインメモリ実装を置換
-
-**コスト見積もり**:
+**コスト**:
 
 - 無料枠: 10,000リクエスト/日
 - Dayopt想定: 3,000,000リクエスト/月
-- 月額コスト: **約$6**
+- 月額コスト: 約$6
 
 ## CSP違反モニタリング
 
@@ -351,13 +237,14 @@ Sentry Issuesで`type:csp-violation`を指定し、directive、正規化済みbl
 
 - HSTSとCSP enforcementがproduction responseに付くこと
 - `/api/csp-report`のinvalid / oversized / rate-limited inputがSentry quotaを消費しないこと
-- npm auditとGitHub Actionsのsecurity checkが継続して成功すること
+- `pnpm security:check`とCIのsecurity checkが継続して成功すること
 - SentryのCSP IssueにURL query、cookie、authorization、user contentが含まれないこと
 
 ### ダッシュボード（セキュリティ）
 
-- GitHub Actions Security Audit（週次）
-- npm audit結果（CI/CD統合）
+- 月次セキュリティ sweep の結果（`/gardening` §5.7）
+- `pnpm security:check` 結果（CI の static lane に統合）
+- Dependabot alerts / Supabase security advisors
 - Upstash Redis request / latency / error metrics（Ratelimit Analyticsとraw identifier保存は無効）
 - Sentry Issues / quota / discarded event
 
