@@ -104,9 +104,12 @@ jobs:
       - name: Build packages
         run: pnpm build:packages
 
+      # scripts/ai-review をここに含める。ai-review.yml の paths filter と review.ts の
+      # DANGEROUS_PATH_PATTERNS の一致を固定する contract test で、CI で走らないと
+      # 「片方だけ広げて green のまま gate が消える」を検出できない。
       - name: Verify Product and Web Production contracts with safe dummy values
         run: |
-          pnpm exec vitest run --config vitest.scripts.config.ts scripts/production-config-audit.test.ts scripts/production-release.test.ts scripts/__tests__/release-workflow-contract.test.ts
+          pnpm exec vitest run --config vitest.scripts.config.ts scripts/production-config-audit.test.ts scripts/production-release.test.ts scripts/__tests__/release-workflow-contract.test.ts scripts/ai-review
           pnpm --dir apps/product exec vitest --project unit run production-build-gate.test.mjs
           pnpm --dir apps/web exec vitest run production-build-gate.test.mjs
 
