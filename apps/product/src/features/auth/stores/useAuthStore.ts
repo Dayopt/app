@@ -47,7 +47,10 @@ interface AuthState {
   ) => Promise<AuthResponse>;
   signInWithOAuth: (provider: 'google') => Promise<OAuthResponse>;
   signOut: () => Promise<{ error: AuthError | null }>;
-  resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
+  resetPassword: (
+    email: string,
+    options?: { captchaToken?: string },
+  ) => Promise<{ error: AuthError | null }>;
   // @supabase/auth-js 2.106.2 以降 updateUser は session を含まない UserResponse を返す
   updatePassword: (password: string) => Promise<UserResponse>;
   clearError: () => void;
@@ -289,13 +292,16 @@ export const useAuthStore = create<AuthState>()(
 
       // Reset password
       // OWASP: パスワードリセットはエラーでも成功メッセージを表示（メール存在の漏洩防止）
-      resetPassword: async (email) => {
+      resetPassword: async (email, options) => {
         set({ loading: true, error: null });
 
         try {
           const supabase = createClient();
           const result = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${window.location.origin}/auth/reset-password`,
+            // Supabase 側で Bot Protection が有効なため、token が無いと /recover は
+            // captcha_failed で 400 を返す（送信自体が成立しない）
+            ...(options?.captchaToken && { captchaToken: options.captchaToken }),
           });
 
           if (result.error) {
