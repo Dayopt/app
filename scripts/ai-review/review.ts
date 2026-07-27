@@ -798,10 +798,29 @@ export class ConfigurationError extends Error {
   override readonly name = 'ConfigurationError';
 }
 
-/** 1 attempt あたりの上限。job の timeout-minutes に到達させると red になり fail-open が壊れる。 */
-export const REQUEST_TIMEOUT_MS = 90_000;
-/** 出力上限。thinking も出力として数えるため、明示しないと途中で切れた JSON が返りうる。 */
-export const MAX_OUTPUT_TOKENS = 8192;
+/**
+ * 1 attempt あたりの上限。thinkingLevel=high では応答まで数分かかる（2026-07-27 の実測で
+ * 90 秒では足りなかった）。
+ */
+export const REQUEST_TIMEOUT_MS = 300_000;
+
+/**
+ * retry を含めた合計の締め切り。**per-attempt の上限だけでは足りない。**
+ * 4 attempt × 5 分 = 20 分は job の timeout-minutes を超え、job ごと kill されて
+ * check が red になる。それは「インフラ障害では PR を止めない」という設計の反転なので、
+ * job の上限より内側で自分から諦める。
+ */
+export const TOTAL_DEADLINE_MS = 480_000;
+/**
+ * 出力上限。**thinking も出力として数える**ため、findings の JSON だけを見積もると足りない。
+ *
+ * 2026-07-27 の初回実行（危険クラス 12 ファイル / prompt 約 25k tokens）は 8192 で
+ * `finishReason=MAX_TOKENS` になり、JSON が完成する前に切れた。thinkingLevel=high では
+ * 思考が数万トークンに達しうるので、実際に生成した分しか課金されないことを踏まえて
+ * 広く取る。ここを絞ると「切れた JSON = 壊れた応答」として fail-open に落ち、
+ * レビューが無音で消える。
+ */
+export const MAX_OUTPUT_TOKENS = 32_768;
 
 export async function callGemini(options: GeminiCallOptions): Promise<GeminiCallResult> {
   const doFetch = options.fetchImpl ?? fetch;
@@ -823,8 +842,12 @@ export async function callGemini(options: GeminiCallOptions): Promise<GeminiCall
     },
   });
 
+  const startedAt = Date.now();
   let lastError = '';
   for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (attempt > 0 && Date.now() - startedAt > TOTAL_DEADLINE_MS) {
+      throw new Error(`Gemini API 呼び出しが締め切りを超過: ${lastError}`);
+    }
     let response: Response;
     try {
       response = await doFetch(endpoint, {
