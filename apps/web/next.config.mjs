@@ -38,6 +38,21 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
+/**
+ * FAQ を `/docs/faq/<slug>` へ階層化する前の旧 slug（2026-07-27）。
+ * `content/docs/{en,ja}/faq/*.mdx` の index.mdx 以外と対にする。
+ * FAQ ページを追加・改名したらここも更新する。
+ */
+const FAQ_SLUGS = [
+  'comparison',
+  'features',
+  'general',
+  'philosophy',
+  'pricing',
+  'privacy-security',
+  'technical',
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -187,6 +202,22 @@ const nextConfig = {
         destination: '/:locale/blog/release',
         permanent: true,
       },
+      // FAQ を /docs/faq/<slug> へ階層化した分の旧 URL（2026-07-27）。
+      // FAQ は pricing / features のような一般名を docs のグローバル名前空間で
+      // 占有してしまい、`/docs/pricing` が料金ページに見えて実際は FAQ という
+      // 誤解を生んでいた。経緯は docs/marketing/log/2026-07-27-docs-faq-url-nesting.md
+      ...FAQ_SLUGS.flatMap((slug) => [
+        {
+          source: `/docs/${slug}`,
+          destination: `/docs/faq/${slug}`,
+          permanent: true,
+        },
+        {
+          source: `/:locale(en|ja)/docs/${slug}`,
+          destination: `/:locale/docs/faq/${slug}`,
+          permanent: true,
+        },
+      ]),
     ];
   },
 

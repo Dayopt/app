@@ -9,13 +9,21 @@ import { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
+// catch-all route。ほとんどの docs は 1 セグメント（/docs/plans）だが、
+// FAQ だけ 2 セグメント（/docs/faq/pricing）になる。理由は lib/mdx.ts の
+// NESTED_URL_CATEGORIES を参照。
 interface PageParams {
   locale: string;
-  slug: string;
+  slug: string[];
 }
 
 interface DocPageProps {
   params: Promise<PageParams>;
+}
+
+/** URL セグメントを ContentData.slug と同じ表現（`faq/pricing` 等）へ戻す */
+function toContentSlug(segments: string[]): string {
+  return segments.join('/');
 }
 
 // ISR: ドキュメント記事は1日ごとに再検証
@@ -37,7 +45,7 @@ export async function generateStaticParams(): Promise<PageParams[]> {
         ) {
           continue;
         }
-        params.push({ locale, slug: content.slug });
+        params.push({ locale, slug: content.slug.split('/') });
       }
     }
 
@@ -52,7 +60,8 @@ export async function generateStaticParams(): Promise<PageParams[]> {
 // Generate metadata
 export async function generateMetadata({ params }: DocPageProps): Promise<Metadata> {
   try {
-    const { locale, slug } = await params;
+    const { locale, slug: slugSegments } = await params;
+    const slug = toContentSlug(slugSegments);
     const allContent = await getAllContent(locale);
     const matched = allContent.find((content) => content.slug === slug);
 
@@ -115,7 +124,8 @@ function getAdjacentPages(
 
 // Main page component
 export default async function DocPage({ params }: DocPageProps) {
-  const { locale, slug } = await params;
+  const { locale, slug: slugSegments } = await params;
+  const slug = toContentSlug(slugSegments);
   // 静的レンダリングを有効にする（これがないと動的レンダリングにフォールバックする）
   setRequestLocale(locale);
   const tDocs = await getTranslations('docs');

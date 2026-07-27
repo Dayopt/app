@@ -2,7 +2,7 @@
 status: current
 last_verified: 2026-07-24
 public_docs:
-  - pricing
+  - faq/pricing
 lp: []
 ---
 
