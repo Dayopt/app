@@ -167,6 +167,10 @@ npm audit
 1. **全データアクセスは `userId` でフィルタ** - RLSだけに頼らない
 2. **Service層を経由** - ルーターに直接ロジックを書かない
 3. **`handleServiceError()` を使用** - 直接TRPCErrorをthrowしない
+4. **守るべき前提を作ったら `scripts/ai-review/invariants.md` を同じ PR で更新** - 新しい
+   Pro 限定機能、新しい公開エンドポイント種別、新しい table パターンなど。外部レビュアー
+   （ai-review）はこのカタログを基準に「あるべき検査の不在」を判定するため、更新を怠ると
+   新機能の穴が構造的に見えなくなる
 
 ## 関連エージェント
 
