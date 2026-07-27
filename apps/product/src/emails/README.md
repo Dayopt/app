@@ -3,12 +3,13 @@
 The deployed Supabase Auth email templates are the source of truth:
 
 - `supabase/functions/send-auth-email/ConfirmEmail.tsx`
+- `supabase/functions/send-auth-email/EmailChangeEmail.tsx`
 - `supabase/functions/send-auth-email/MagicLinkEmail.tsx`
 - `supabase/functions/send-auth-email/PasswordResetEmail.tsx`
 - `supabase/functions/send-auth-email/styles.tsx`
 
 The same source cannot be imported directly by both runtimes because the Edge Function and Product
-app resolve React Email through different package entry points. The three same-named files in this
+app resolve React Email through different package entry points. The four same-named files in this
 directory and `auth-email-styles.generated.ts` are generated Storybook/test artifacts. They are not
 used by the production delivery path and must not be edited directly.
 

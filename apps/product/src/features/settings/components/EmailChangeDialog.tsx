@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { getAuthErrorKey } from '@/lib/auth-error';
 import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -29,6 +30,7 @@ interface EmailChangeDialogProps {
 export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailChangeDialogProps) {
   const t = useTranslations('settings.account.emailChange');
   const tErrors = useTranslations('common.errors');
+  const tRoot = useTranslations();
   const [newEmail, setNewEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -53,17 +55,20 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
       }
 
       // 2. メールアドレス更新（確認メール送信）
+      // リンクは send-auth-email hook が /auth/confirm 経由の URL に変換し、
+      // verifyOtp 成功後にこの emailRedirectTo の path へ着地する
       const { error: updateError } = await observeAuthOperation('update_email', () =>
         supabase.auth.updateUser(
           { email: newEmail },
           {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${window.location.origin}/settings/account`,
           },
         ),
       );
 
       if (updateError) {
-        throw new Error(`${tErrors('auth.emailUpdateFailed')}: ${updateError.message}`);
+        // 生のエラーメッセージは出さず、OWASP 準拠のサニタイズ済みキーへ変換する
+        throw new Error(tRoot(getAuthErrorKey(updateError.message, 'signup')));
       }
 
       // 成功

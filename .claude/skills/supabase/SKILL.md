@@ -329,7 +329,19 @@ export function useEntityRealtime(onUpdate: () => void) {
 
 **方針**: preview branch には「PR検証に必要な function のみ」デプロイする。cron は preview で動いても意味がなく、Anthropic API 等のコスト要因になるため除外。
 
-### デプロイコマンド
+### Auth Hook を Edge Function で受ける時の verify_jwt
+
+**`verify_jwt = false` にする。** Auth の send_email hook は standardwebhooks の署名を付けて POST するが、**JWT は付けない**。`true` のままだと入口で弾かれ、GoTrue 側に `500: Hook requires authorization token` が返り、**認証メールが 1 通も送れない**。画面には汎用エラーしか出ないため、Auth ログを見るまで原因が分からない（2026-07-27 に本番で発生）。
+
+真正性は function 側の署名検証（`SEND_EMAIL_HOOK_SECRET`）で担保する。この設定は `scripts/auth-hook-config.test.ts` で固定している。
+
+### デプロイ経路
+
+**既定は config.toml 宣言による自動デプロイ。** `supabase/config.toml` に `[functions.<slug>]` を宣言した function だけが、Preview branch と production へ自動デプロイされる。宣言が無いと、function を変更した PR をマージしても本番に反映されない(手動デプロイ忘れの分だけ乖離する)。新しい function を追加したら宣言も同じ PR に含める。
+
+手動デプロイは、緊急時や宣言前の検証に限る。
+
+### デプロイコマンド(手動)
 
 **必須: `--use-api` フラグ**(この環境に Docker がないため、デフォルトの Docker ビルドは失敗する)
 
