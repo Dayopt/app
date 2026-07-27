@@ -176,6 +176,14 @@ export interface RuleAttachment {
  */
 export const RULE_ATTACHMENTS: readonly RuleAttachment[] = [
   {
+    // 常に添付する。「あるべき検査の不在」は、あるべき姿を知らないと見えない。
+    // 今日の空振り（callback の entitlement 検査漏れを見逃した）の主因は、この
+    // 比較基準が渡っていなかったこと。
+    path: 'scripts/ai-review/invariants.md',
+    when: /^/,
+    label: 'Dayopt 不変条件カタログ（守られているべきこと）',
+  },
+  {
     path: '.claude/skills/security/SKILL.md',
     when: /^(supabase\/|apps\/product\/src\/(features\/[^/]+\/server\/|features\/auth\/|lib\/(trpc|supabase|database)\/|app\/api\/))/,
     label: 'Dayopt security 規約',
@@ -406,9 +414,11 @@ export function buildPrompt(input: PromptInput): string {
   // 置いたうえで、判断直前にもう一度だけ要点を置く。
   parts.push(
     '\n---\n\n## 最後に\n\n',
+    '- 契約の手順どおりに: 棚卸し → 各入口への攻撃者シミュレーション（未認証 / 他ユーザー / Free）→ クラス別チェック → 反証 → 報告\n',
     '- 報告するのは「沈黙して失敗する」6 クラスだけです。型・テスト・style・整形・bundle は他層が担保済みです\n',
-    '- 各指摘に具体的な failure scenario を書けないなら、その指摘は捨ててください\n',
-    '- 最大 5 件。該当が無ければ findings を空配列にしてください。**それが正常な結果です**\n',
+    '- 「あるべき検査の不在」は最も価値の高い指摘です。diff 外で担保されているか確認できないなら、その旨を付記して P1 で出してください\n',
+    '- P0 は確実なものだけ。**迷ったら P1**。各指摘に具体的な failure scenario を書けないなら捨ててください\n',
+    '- 合計 8 件まで。該当が無ければ findings を空配列にし、summary に何を確認したかを書いてください\n',
   );
 
   return parts.join('');
@@ -421,10 +431,14 @@ export function buildPrompt(input: PromptInput): string {
 export const RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
-    summary: { type: 'string', description: 'この PR 全体の評価。日本語 1 文。' },
+    summary: {
+      type: 'string',
+      description:
+        '何を確認したか（棚卸しした入口・table の数と主要な確認結果）と全体評価。日本語 1〜2 文。指摘ゼロでも棚卸しは必須。',
+    },
     findings: {
       type: 'array',
-      maxItems: 5,
+      maxItems: 8,
       items: {
         type: 'object',
         properties: {
@@ -550,7 +564,7 @@ export function renderComment(
         : `**P0 が ${blocking.length} 件あるため、この check は fail しています。**`,
       meta.enforce === false
         ? '観察モード中の指摘の質が、blocking へ切り替える判断材料になります。'
-        : '誤検出だと判断した場合は、根拠をこの PR に書いた上で `ai-review` の必須設定を外すか、指摘を解消してください。',
+        : `誤検出だと判断した場合は、根拠をこの PR に書いた上で \`${OVERRIDE_LABEL}\` ラベルを付けてください（この PR に限り check を通します）。`,
       '',
     );
   }

@@ -136,8 +136,11 @@ describe('rules 添付の選択', () => {
     expect(selected.map((item) => item.path)).toContain('.claude/rules/temporal-constraints.md');
   });
 
-  it('関係ない変更では何も添付しない', () => {
-    expect(selectRuleAttachments(['docs/README.md'])).toHaveLength(0);
+  it('関係ない変更では不変条件カタログだけを添付する', () => {
+    // 不変条件は「あるべき検査の不在」の比較基準なので常に渡す。他の規約は条件付き。
+    expect(selectRuleAttachments(['docs/README.md']).map((item) => item.path)).toEqual([
+      'scripts/ai-review/invariants.md',
+    ]);
   });
 
   it('添付する rules は実在する', () => {
