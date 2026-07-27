@@ -181,6 +181,8 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 2. `pnpm security:check`（= `pnpm audit --audit-level=moderate`）
 3. `/claude-security` の全体スキャン実行をユーザーへ提案
 
+2 は **CI では実行しない**。依存脆弱性の継続検知は Dependabot alerts が担当し（security update は schedule と無関係に即時 PR が出る）、CI に `pnpm audit` を足すと新しい advisory が公開された瞬間に無関係な PR まで落ちる。Actions 課金が PR 本数に比例する構造（`.claude/rules/workflow.md` §PR 粒度）でもあるため、月次の手動実行に留める。CI が毎 PR で見るのは `secrets:check`（repo 内の literal secret）と client bundle への secret 混入の 2 つ。
+
 3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
 
 所見が出た場合は `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
@@ -205,14 +207,18 @@ marketplace が見つからない場合は先に `claude plugin marketplace add 
 
 現在の記録先:
 
-| 対象                             | 記録先                                                                                  |
-| -------------------------------- | --------------------------------------------------------------------------------------- |
-| 認証イベント（ログイン・失敗等） | Supabase Auth の `auth.audit_log`（Supabase 側が管理。Dashboard / Auth log で参照）     |
-| OAuth token 操作                 | `public.oauth_audit_log` テーブル（RLS 境界は `rls-access.integration.test.ts` で検証） |
-| アプリ例外・セキュリティイベント | Sentry（CSP 違反は `csp-violation` として directive 単位の固定 fingerprint で送信）     |
-| rate limit 超過                  | Upstash Redis のメトリクス（raw identifier は保存しない）                               |
+| 対象                             | 記録先                                                                                                                |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 認証イベント（ログイン・失敗等） | Supabase Auth の `auth.audit_log`（Supabase 側が管理。Dashboard / Auth log で参照）                                   |
+| MCP tool call                    | `public.oauth_audit_log` テーブル（`tool_name` / `called_at` を記録。**現状 production からの insert 経路は未実装**） |
+| アプリ例外・セキュリティイベント | Sentry（CSP 違反は `csp-violation` として directive 単位の固定 fingerprint で送信）                                   |
+| rate limit 超過                  | **専用の記録なし**（下記参照）                                                                                        |
 
-認証攻撃の調査は Supabase Auth log と rate limit analytics を併用する（[monitoring](./monitoring.md) / [runbook](./runbook.md)）。
+**OAuth token のライフサイクル（発行・更新・失効）を記録するテーブルは存在しない。** `oauth_audit_log` は名前に反して MCP tool call 用のスキーマ（`supabase/schemas/017_tables_oauth.sql`）で、token 操作の記録には使えない。インシデント対応時に「記録が残っているはず」と仮定しない。
+
+**rate limit の超過も記録されない。** `Ratelimit` は product / web とも `analytics: false` で構築しており（raw identifier を保存しないための意図的な設定）、Upstash の request metrics からは拒否されたリクエストを判別できない。
+
+したがって認証攻撃の調査は **Supabase Auth log を主 signal とする**（[monitoring](./monitoring.md) / [runbook](./runbook.md)）。rate limit の効き具合を継続的に見たい場合は、analytics 有効化か 429 応答の計測を別途設計する必要がある。
 
 ## レート制限統計
 
@@ -255,14 +261,14 @@ Sentry Issuesで`type:csp-violation`を指定し、directive、正規化済みbl
 ### ダッシュボード（セキュリティ）
 
 - 月次セキュリティ sweep の結果（`/gardening` §5.7）
-- `pnpm security:check` 結果（CI の static lane に統合）
-- Dependabot alerts / Supabase security advisors
+- `pnpm security:check` 結果（CI では実行しない。月次 sweep で手動実行する）
+- Dependabot alerts（依存脆弱性の継続検知はこちらが担当）/ Supabase security advisors
 - Upstash Redis request / latency / error metrics（Ratelimit Analyticsとraw identifier保存は無効）
 - Sentry Issues / quota / discarded event
 
 ## アラート（セキュリティ）
 
-Sentryの高優先度Issue通知はemailを正規channelとする。認証失敗やvalidation errorなどのexpected errorはIssue化せず、認証攻撃の調査はSupabase Auth logとrate limit analyticsを併用する。閾値と対応手順は[monitoring](./monitoring.md)と[runbook](./runbook.md)を正とする。
+Sentryの高優先度Issue通知はemailを正規channelとする。認証失敗やvalidation errorなどのexpected errorはIssue化せず、認証攻撃の調査はSupabase Auth logを主signalとする（rate limit analyticsは無効のため使えない。§監査ログ 参照）。閾値と対応手順は[monitoring](./monitoring.md)と[runbook](./runbook.md)を正とする。
 
 ## 関連ドキュメント（セキュリティ監視）
 

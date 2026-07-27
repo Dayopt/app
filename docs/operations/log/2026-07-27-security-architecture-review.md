@@ -36,6 +36,15 @@ Supabase security advisors は監査時点で **0 件**（`mcp__supabase__get_ad
 
 副次的に、`security.md` の監査ログ節が**実装ごと架空**であることも判明した。`@/lib/audit/logger` は存在せず、`audit_logs` テーブルも `20260414150000_drop_login_attempts_and_auth_audit_logs.sql` で削除済み。rate limit 節も「参照実装済み（デプロイ待ち）」のまま Production 稼働の実態と食い違っていた。いずれも現実に合わせた。
 
+## 監視の空白（記録として残す）
+
+現実に合わせる過程で、**インシデント対応時に「記録が残っている」と誤認しうる空白**が 2 つ確認された。今回は docs を実態に合わせるに留め、計装は行っていない。
+
+1. **OAuth token のライフサイクル（発行・更新・失効）を記録するテーブルが無い** — `oauth_audit_log` は名前に反して MCP tool call 用のスキーマ（`tool_name` / `called_at`）で、production からの insert 経路も未実装（参照は integration test のみ）
+2. **rate limit 超過が記録されない** — `Ratelimit` は product / web とも `analytics: false`。raw identifier を保存しないための意図的な設定だが、結果として拒否されたリクエストを事後に追跡できない
+
+いずれも認証攻撃の調査では Supabase Auth log を主 signal とすることで当面回避できる。計装が必要になった時点で、1 は insert 経路の実装、2 は analytics 有効化か 429 応答の計測を別途設計する。
+
 ## 採らなかった選択肢
 
 **`security-guidance` plugin の再導入**（常時 hook でのパターン警告 + Stop hook LLM diff レビュー + agentic commit レビュー）:
