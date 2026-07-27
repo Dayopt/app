@@ -152,7 +152,12 @@ const nextConfig = {
     ];
   },
 
-  // 旧ページ → ホームページセクションへ301リダイレクト
+  // 削除・移動した公開ページの 301。
+  //
+  // **実在したページだけを書く。** 2026-07-27 の棚卸しで、/pricing /features /about
+  // /changelog の 8 エントリがページとして一度も存在しなかったことを確認して削除した
+  // （git log --all --diff-filter=A に追加記録が無く、repo 内からのリンクも 0）。
+  // 慣習的な URL を先回りして書くと、実際に消したページ（/releases）の方が漏れる。
   //
   // `:locale` は必ず (en|ja) で制約する。無制約の `/:locale/pricing` は 1 セグメントなら
   // 何にでもマッチするため、`/docs/pricing` の `docs` を locale と誤認して公開中の
@@ -160,45 +165,15 @@ const nextConfig = {
   // なっていたのを確認）。locale の正本は @dayopt/config の SUPPORTED_LOCALES。
   async redirects() {
     return [
+      // /releases は実在したページ。712668015 でリリースノートを blog の release
+      // カテゴリへ統合した際に廃止され、redirect が無いまま本番で 404 になっていた。
       {
-        source: '/pricing',
-        destination: '/#pricing',
-        permanent: true,
-      },
-      {
-        source: '/:locale(en|ja)/pricing',
-        destination: '/:locale/#pricing',
-        permanent: true,
-      },
-      // LP に #features セクションは存在しない（実在するのは #how と #pricing）。
-      // 機能紹介にあたるのは HowSection なのでそちらへ送る。
-      {
-        source: '/features',
-        destination: '/#how',
-        permanent: true,
-      },
-      {
-        source: '/:locale(en|ja)/features',
-        destination: '/:locale/#how',
-        permanent: true,
-      },
-      {
-        source: '/about',
-        destination: '/',
-        permanent: true,
-      },
-      {
-        source: '/:locale(en|ja)/about',
-        destination: '/:locale',
-        permanent: true,
-      },
-      {
-        source: '/changelog',
+        source: '/releases',
         destination: '/blog/release',
         permanent: true,
       },
       {
-        source: '/:locale(en|ja)/changelog',
+        source: '/:locale(en|ja)/releases',
         destination: '/:locale/blog/release',
         permanent: true,
       },
