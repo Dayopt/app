@@ -84,10 +84,10 @@ export function TrackMock() {
           </div>
         </div>
 
-        {/* Accuracy */}
+        {/* 指標名は実在するものだけを出す（calendar.stats.overview.planAccuracy） */}
         <div className="border-border mt-3 border-t pt-3">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs">Accuracy</span>
+            <span className="text-muted-foreground text-xs">Plan accuracy</span>
             <div className="flex items-center gap-2">
               <span className="text-foreground text-lg font-medium">82%</span>
               <span className="bg-success-tint text-success rounded-full px-2 py-0.5 text-xs font-medium">

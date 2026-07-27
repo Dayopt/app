@@ -46,19 +46,20 @@ export function AppPreviewMockup() {
           <div className="bg-primary size-3 rounded-full" />
           <span className="text-foreground text-xs font-medium">Dayopt</span>
         </div>
+        {/* ナビ項目は product の実際のサイドバー（navigation.sidebar.navigation）に合わせる */}
         <div className="space-y-1">
-          {['Today', 'This Week', 'Projects', 'Tags', 'Stats'].map((item) => (
+          {['Calendar', 'Plan', 'Record', 'Tags', 'Review'].map((item) => (
             <div
               key={item}
-              className={`text-muted-foreground rounded px-2 py-1 text-xs ${item === 'Today' ? 'bg-state-active text-state-active-foreground font-medium' : ''}`}
+              className={`text-muted-foreground rounded px-2 py-1 text-xs ${item === 'Calendar' ? 'bg-state-active text-state-active-foreground font-medium' : ''}`}
             >
               {item}
             </div>
           ))}
         </div>
-        {/* Accuracy Score */}
+        {/* 指標名は実在するものだけを出す（calendar.stats.overview.planAccuracy） */}
         <div className="border-border mt-6 border-t pt-4">
-          <div className="text-muted-foreground mb-2 text-xs">Accuracy</div>
+          <div className="text-muted-foreground mb-2 text-xs">Plan accuracy</div>
           <div className="text-foreground text-2xl font-medium">87%</div>
           <div className="bg-container mt-2 h-1.5 w-full rounded-full">
             <div className="bg-primary h-1.5 rounded-full" style={{ width: '87%' }} />

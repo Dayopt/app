@@ -268,8 +268,23 @@ function checkRequiredLegalDocuments() {
 
 // ─── slug 契約チェック ──────────────────────────────────────
 
-// docs の公開 URL はフラット1階層（apps/web/src/lib/mdx.ts: slug = ファイル名、index.mdx はカテゴリ名）。
-// ロケール内でファイル名が重複すると同一 URL を取り合うため、エラーとして止める
+// URL を階層化するカテゴリ。apps/web/src/lib/mdx.ts の NESTED_URL_CATEGORIES と対にする
+// （片方だけ変えると validator と routing がずれるため、両方を同時に更新すること）
+const NESTED_URL_CATEGORIES = ['faq'];
+
+// ファイル配置から公開 URL の slug を導出する。mdx.ts の buildDocSlug と同じ規則。
+// 通常はファイル名（index.mdx はカテゴリ名）、NESTED_URL_CATEGORIES だけ `<category>/<name>`
+function routingSlugFor(rel) {
+  const parts = rel.split('/');
+  const category = parts[0];
+  const name = path.basename(rel, '.mdx');
+  if (name === 'index') return category;
+  if (NESTED_URL_CATEGORIES.includes(category)) return `${category}/${name}`;
+  return name;
+}
+
+// docs の公開 URL は原則フラット1階層（apps/web/src/lib/mdx.ts）。FAQ だけ /docs/faq/<name>。
+// ロケール内で slug が重複すると同一 URL を取り合うため、エラーとして止める
 function checkDocsSlugCollisions() {
   const errors = [];
   for (const locale of ['en', 'ja']) {
@@ -278,8 +293,7 @@ function checkDocsSlugCollisions() {
     const bySlug = new Map();
     for (const file of findMdxFiles(dir)) {
       const rel = path.relative(dir, file).replace(/\\/g, '/');
-      const name = path.basename(file, '.mdx');
-      const slug = name === 'index' ? rel.split('/')[0] : name;
+      const slug = routingSlugFor(rel);
       const existing = bySlug.get(slug);
       if (existing) {
         errors.push(
@@ -324,8 +338,7 @@ function checkDocsSlugMatchesRouting() {
     if (!fs.existsSync(dir)) continue;
     for (const file of findMdxFiles(dir)) {
       const rel = path.relative(dir, file).replace(/\\/g, '/');
-      const name = path.basename(file, '.mdx');
-      const routingSlug = name === 'index' ? rel.split('/')[0] : name;
+      const routingSlug = routingSlugFor(rel);
       const routingCategory = rel.split('/')[0];
       const { data: fm } = parseFrontMatter(fs.readFileSync(file, 'utf8'));
       if (fm.slug && fm.slug !== routingSlug) {
@@ -363,8 +376,7 @@ function checkDocsInternalLinks() {
     const unpublished = new Set();
     for (const file of files) {
       const rel = path.relative(dir, file).replace(/\\/g, '/');
-      const name = path.basename(file, '.mdx');
-      const slug = name === 'index' ? rel.split('/')[0] : name;
+      const slug = routingSlugFor(rel);
       const { data: fm } = parseFrontMatter(fs.readFileSync(file, 'utf8'));
       (fm.draft === true ? unpublished : published).add(slug);
     }

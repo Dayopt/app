@@ -34,14 +34,6 @@
     "recreateLine": "いつでも {appLink} から新しいアカウントを作成できます。",
     "thankYou": "Dayopt をご利用いただきありがとうございました。"
   },
-  "reminder": {
-    "subject": "リマインダー：{timeblockTitle}",
-    "heading": "Plan のリマインダー",
-    "body": "タイムブロックの開始時刻になりました：",
-    "labelPlan": "Plan",
-    "labelStartsAt": "開始時刻",
-    "ctaButton": "カレンダーを開く"
-  },
   "trialStart": {
     "subject": "7日間の Pro トライアルが始まりました",
     "heading": "7日間の Pro トライアルが始まりました",

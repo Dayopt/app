@@ -34,14 +34,6 @@
     "recreateLine": "You're welcome to create a new account at any time at {appLink}.",
     "thankYou": "Thank you for using Dayopt."
   },
-  "reminder": {
-    "subject": "Reminder: {timeblockTitle}",
-    "heading": "Plan Reminder",
-    "body": "Your timeblock is starting now:",
-    "labelPlan": "Plan",
-    "labelStartsAt": "Starts at",
-    "ctaButton": "View Calendar"
-  },
   "trialStart": {
     "subject": "Your 7-day Pro trial has started",
     "heading": "Your 7-day Pro trial has started",
