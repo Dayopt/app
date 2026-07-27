@@ -183,7 +183,19 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 
 3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
 
-所見が出た場合は `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録し、修正が必要なものは `dispatch` skill の intake で起票する。
+所見が出た場合は `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
+
+### 前提: `claude-security` plugin
+
+3 の深掘りスキャンは Claude Code の plugin に依存する。MCP サーバー（`.claude/rules/mcp-usage.md`）と同じく **user scope の設定に置き、repo には定義を持たない**。新しいマシン / 別プロファイルでは次を実行して導入する。
+
+```bash
+claude plugin install claude-security@claude-plugins-official
+```
+
+marketplace が見つからない場合は先に `claude plugin marketplace add anthropics/claude-plugins-official` を実行する。Python 3.9 以上が `PATH` に必要（差分スキャンと patch 生成には git checkout も要る）。
+
+**plugin が入っていない環境でも 1・2 は実行できる**。1 は Supabase MCP、2 は repo の `package.json` script で完結するため、深掘りスキャンだけが欠ける状態になる。sweep 時に plugin が未導入なら、上記コマンドを案内した上で 1・2 を実施する。
 
 > 2026-07-27 以前は週次自動レポート（`security-report.yml` / `npm run security:report` / `reports/security/`）を定義していたが、workflow は PR #957 で削除済みで実体が無かった。上記の月次 sweep がその後継。
 

@@ -55,10 +55,11 @@ feedback / incident の note は、対応がまだ `operations/` 側の手順に
 
 1. **Supabase security advisors** — `mcp__supabase__get_advisors`（type: `security`）で production の指摘を確認する（read-only）
 2. **依存の脆弱性** — `pnpm security:check`（= `pnpm audit --audit-level=moderate`）を実行する
-3. **深掘りスキャンの提案** — `/claude-security` の「Scan codebase」実行をユーザーに提案する。**このコマンドは `disable-model-invocation: true` のため AI 側からは起動できない**。提案のみ行い、実行はユーザーが自分で `/claude-security` を叩く。前回スキャンからの経過（`CLAUDE-SECURITY-*` ディレクトリの有無・日付）を添えて提案する
-4. **記録** — 1〜3 で所見が出たら `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録する。所見なしなら記録不要（件数だけステップ 6 に書く）
+3. **深掘りスキャンの提案** — `/claude-security` の「Scan codebase」実行をユーザーに提案する。**このコマンドは `disable-model-invocation: true` のため AI 側からは起動できない**。提案のみ行い、実行はユーザーが自分で `/claude-security` を叩く。前回スキャンからの経過（`CLAUDE-SECURITY-*` ディレクトリの有無・日付）を添えて提案する。plugin 未インストールの環境（新しいマシン / 別プロファイル）では代わりに導入手順を案内する（`docs/operations/security.md` 第2部 §定期検査の cadence の前提）
+4. **起票** — 1・2 で修正が必要な指摘を見つけたら、**このステップ内で** `dispatch` skill（`.agents/skills/dispatch/SKILL.md`）の intake を使って起票する。ステップ 5.5 はこの時点で終了しているため、そちらへ送らない
+5. **記録** — 1〜4 で所見が出たら `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録する。所見なしなら記録不要（件数だけステップ 6 に書く）
 
-1・2 で修正が必要な指摘を見つけた場合、起票はステップ 5.5 の dispatch skill intake に回す（ここでは検出と記録に留める）。実行件数・所見件数はステップ 6 のロールアップに記録する。
+実行件数・所見件数・起票件数はステップ 6 のロールアップに記録する。
 
 ### 6. 当月journalの作成
 
