@@ -49,6 +49,17 @@ feedback / incident の note は、対応がまだ `operations/` 側の手順に
 
 コンテンツの数字も同時に記録する。Search Console と Vercel Analytics から、指名検索（"dayopt"）の表示・クリック、docs / blog の流入、上位クエリをステップ 6 の journal に書く（`docs/marketing/strategy.md` の指標と対応）。Search Console が未設定ならユーザーに設定を依頼する（`GOOGLE_SITE_VERIFICATION` env はコード対応済み）。
 
+### 5.7. セキュリティ sweep（月次）
+
+定期セキュリティ検査の cadence はここが正本（体制の全体像は `docs/operations/security.md` 第2部）。以下を順に実施する。
+
+1. **Supabase security advisors** — `mcp__supabase__get_advisors`（type: `security`）で production の指摘を確認する（read-only）
+2. **依存の脆弱性** — `pnpm security:check`（= `pnpm audit --audit-level=moderate`）を実行する
+3. **深掘りスキャンの提案** — `/claude-security` の「Scan codebase」実行をユーザーに提案する。**このコマンドは `disable-model-invocation: true` のため AI 側からは起動できない**。提案のみ行い、実行はユーザーが自分で `/claude-security` を叩く。前回スキャンからの経過（`CLAUDE-SECURITY-*` ディレクトリの有無・日付）を添えて提案する
+4. **記録** — 1〜3 で所見が出たら `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録する。所見なしなら記録不要（件数だけステップ 6 に書く）
+
+1・2 で修正が必要な指摘を見つけた場合、起票はステップ 5.5 の dispatch skill intake に回す（ここでは検出と記録に留める）。実行件数・所見件数はステップ 6 のロールアップに記録する。
+
 ### 6. 当月journalの作成
 
 ステップ1の蒸留と、今回のガーデニング実施内容(蒸留したセッション件数、triageした上位10件の対応、昇格したnote、スモークテストの結果)をまとめ、当月`docs/engineering/log/YYYY-MM-01-journal.md`を新規作成して終了する。frontmatterは`status: frozen`と`date: YYYY-MM-01`を使う。
