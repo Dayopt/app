@@ -1131,6 +1131,8 @@ export type Database = {
         Args: { p_external_calendar_event_id: string; p_user_id: string };
         Returns: undefined;
       };
+      authorize_owned_storage_read_v1: { Args: never; Returns: boolean };
+      authorize_owned_storage_write_v1: { Args: never; Returns: boolean };
       batch_rename_tags: {
         Args: { p_new_names: string[]; p_tag_ids: string[]; p_user_id: string };
         Returns: number;
@@ -1151,6 +1153,15 @@ export type Database = {
           p_user_id: string;
         };
         Returns: number;
+      };
+      begin_account_deletion_v1: {
+        Args: { p_user_id: string };
+        Returns: {
+          billing_state: string;
+          calendar_state: string;
+          deletion_id: string;
+          storage_state: string;
+        }[];
       };
       begin_calendar_account_deletion_v1: {
         Args: {
@@ -1194,9 +1205,46 @@ export type Database = {
           sync_sequence: number;
         }[];
       };
+      bind_billing_account_deletion_v1: {
+        Args: { p_generic_deletion_id: string; p_user_id: string };
+        Returns: {
+          binding_state: string;
+          stripe_customer_id: string;
+        }[];
+      };
+      bind_calendar_account_deletion_v1: {
+        Args: { p_generic_deletion_id: string; p_user_id: string };
+        Returns: {
+          calendar_deletion_id: string;
+          calendar_required: boolean;
+        }[];
+      };
       cancel_calendar_account_deletion_v1: {
         Args: { p_deletion_id: string; p_user_id: string };
         Returns: boolean;
+      };
+      claim_account_deletion_step_v1: {
+        Args: { p_deletion_id: string; p_step: string; p_user_id: string };
+        Returns: {
+          lease_expires_at: string;
+          lease_id: string;
+          result: string;
+        }[];
+      };
+      claim_billing_mutation_v2: {
+        Args: {
+          p_mutation_kind: string;
+          p_operation_id: string;
+          p_request_digest: string;
+          p_user_id: string;
+        };
+        Returns: {
+          canonical_operation_id: string;
+          lease_expires_at: string;
+          lease_id: string;
+          provider_object_id: string;
+          result: string;
+        }[];
       };
       claim_calendar_oauth_attempt_v1: {
         Args: {
@@ -1258,6 +1306,10 @@ export type Database = {
         };
         Returns: string;
       };
+      cleanup_billing_mutation_claims_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
       cleanup_calendar_authority_retention_v1: {
         Args: { p_limit?: number; p_project_key: string };
         Returns: {
@@ -1308,6 +1360,15 @@ export type Database = {
           p_user_id: string;
         };
         Returns: string;
+      };
+      complete_account_deletion_step_v1: {
+        Args: {
+          p_deletion_id: string;
+          p_lease_id: string;
+          p_step: string;
+          p_user_id: string;
+        };
+        Returns: boolean;
       };
       complete_calendar_revoke_outbox_v1: {
         Args: { p_lease_id: string; p_outbox_id: string };
@@ -1658,6 +1719,13 @@ export type Database = {
         };
         Returns: string;
       };
+      get_account_deletion_readiness_v1: {
+        Args: never;
+        Returns: {
+          activated: boolean;
+          active_operations: number;
+        }[];
+      };
       get_calendar_authority_readiness_v1: {
         Args: { p_oauth_client_id: string; p_project_key: string };
         Returns: {
@@ -1893,6 +1961,16 @@ export type Database = {
           resource_uri: string;
         }[];
       };
+      reconcile_billing_mutation_v2: {
+        Args: {
+          p_operation_id: string;
+          p_outcome: string;
+          p_provider_customer_id: string;
+          p_provider_object_id: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       record_plan_command_v1: {
         Args: {
           p_expected_updated_at: string;
@@ -2096,6 +2174,18 @@ export type Database = {
         };
         Returns: string;
       };
+      seal_account_deletion_v1: {
+        Args: { p_deletion_id: string; p_user_id: string };
+        Returns: boolean;
+      };
+      seal_billing_account_deletion_v1: {
+        Args: {
+          p_generic_deletion_id: string;
+          p_provider_outcome: string;
+          p_user_id: string;
+        };
+        Returns: boolean;
+      };
       seal_calendar_account_deletion_v1: {
         Args: {
           p_deletion_id: string;
@@ -2161,6 +2251,15 @@ export type Database = {
       soft_delete_record: {
         Args: { p_record_id: string; p_user_id: string };
         Returns: undefined;
+      };
+      start_billing_mutation_v2: {
+        Args: {
+          p_lease_id: string;
+          p_operation_id: string;
+          p_provider_customer_id: string;
+          p_user_id: string;
+        };
+        Returns: string;
       };
       start_calendar_account_delete_provider_attempt_v1: {
         Args: {
