@@ -135,8 +135,9 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
   | `docs`     | ドキュメントのみの変更         |
   | `test`     | テストの追加・修正             |
   | `perf`     | パフォーマンス改善             |
+- PR は機能のまとまり単位で束ねる。サイズを理由に分割しない（`.claude/rules/workflow.md` §PR 粒度）
 - PR は枝分かれを履歴に残すため merge commit でマージする。**マージ〜掃除は同一セッション内で `pnpm branch:finish <PR番号>` をワンセットで実行する**（マージ→worktree削除→ローカル/リモート branch 削除→main 最新化まで。完了定義 5 点と手動フォールバックは `.claude/rules/workflow.md` §Worktree 運用）
-- branch 名は `{agent}/{domain}-{action}[-{issue番号}]` に統一する。Claude Code 自動生成のランダム名は最初の PR 作成前に `git branch -m` でリネームする（`.claude/rules/workflow.md` §命名規則）
+- branch 名は `{agent}/{domain}-{action}[-{issue番号}]` に統一する。複数 issue を束ねた場合は代表 issue または epic 番号を使う。Claude Code 自動生成のランダム名は最初の PR 作成前に `git branch -m` でリネームする（`.claude/rules/workflow.md` §命名規則）
 
 ## Coding Rules
 
@@ -191,7 +192,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 | ファイル | 使う場面 |
 | --- | --- |
 | `.claude/rules/ai-behavior.md` | plan の粒度、曖昧指示、AI 行動規範 |
-| `.claude/rules/workflow.md` | 作業規模、設計書、git / merge 運用 |
+| `.claude/rules/workflow.md` | 作業規模、設計書、PR 粒度、git / merge 運用 |
 | `.claude/rules/plan-format.md` | 実装 plan を提示する時 |
 | `.claude/rules/architecture.md` | tRPC、状態管理、ロジック配置 |
 | `.claude/rules/code-style.md` | 型、ログ、依存追加、eslint-disable |

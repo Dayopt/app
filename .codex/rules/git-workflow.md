@@ -6,6 +6,7 @@ Codex が Dayopt repo で branch / commit / PR / merge を扱う時の薄い ove
 
 - 新規作業は **`codex/{domain}-{action}[-{issue番号}]`** ブランチを切る（命名規則は共通。`.claude/rules/workflow.md` §命名規則 が canonical）
   - 良い例: `codex/i18n-audit-1705` / `codex/calendar-sync-fix`
+  - 複数 issue を束ねる場合は代表 issue または epic 番号を使う: `codex/external-calendar-1702`
   - 悪い例: 内容の読めないランダム名、`codex/work` のような action 不明の名前
 - 既存 dirty file はユーザー作業として扱い、関係ない限り触らない
 - `main` にいる時は作業前に branch を切る
@@ -26,7 +27,8 @@ Codex が Dayopt repo で branch / commit / PR / merge を扱う時の薄い ove
 - PR は最初から ready で作成する。
 - draft での作成は、ユーザーが明示的に要求した場合のみ許可する
 - PR body には変更点、理由、検証を入れる
-- issue 対応なら `Closes #NNNN` を本文に入れる
+- issue 対応なら `Closes #NNNN` を本文に入れる。**複数 issue を束ねた PR では 1 行ずつ全て列挙する**（`Closes #1534` / `Closes #1535`）
+- PR の粒度は機能のまとまり単位で束ねるのが標準。サイズを理由に分割しない（`.claude/rules/workflow.md` §PR 粒度 が canonical）
 
 ## Merge
 

@@ -102,6 +102,8 @@ flag するもの:
 - 「ついで」の refactor / directory 再編
 - 目的に無関係なファイルへの編集
 
+上 2 つは **1 plan の Goal に対するスコープ混入**だけを対象にする。独立した複数の plan / Step が同一 branch / PR に同居していること自体は flag しない（`.claude/rules/workflow.md` §PR 粒度 が「機能のまとまり単位で 1 PR」を標準としているため）。PR に載る変更の数ではなく、**1 plan の Goal から外れているか**で判断する。
+
 ### Under-engineering（不足）
 
 flag するもの:

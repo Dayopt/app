@@ -226,7 +226,7 @@ GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品�
 
 ### merge gate の required checks
 
-main ruleset の required status checks は `ci.yml` の 7 job に加えて次を含める。
+main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Checks` / `📦 Build & Test` / `🎭 E2E Tests` / `🌐 Web Build & E2E`）に加えて次を含める。
 
 | context                   | 発行元            | 目的                                                       |
 | ------------------------- | ----------------- | ---------------------------------------------------------- |
@@ -239,6 +239,7 @@ main ruleset の required status checks は `ci.yml` の 7 job に加えて次�
   全 PR が merge 不能になる。rename する場合は ruleset を先に更新する
 - 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。設定しない
 - `Production Release` は merge 後の証跡であり、required check にはしない
+- `ci.yml` は docs / rules のみの変更では `paths-ignore` で skip され、4 job の status 自体が付かない。private + Free plan では GitHub 側の required check 強制が効かず、マージ可否は `scripts/git/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）。ruleset の required 指定を強制できる plan へ移行する場合は、skip される job の扱いを先に設計する
 
 段階的導入案と当時の計測値は履歴であり、現行構成として複製しない。経緯は [ADR-016](./log/2026-03-19-ci-quality-gates-roadmap.md) に残す。
 
