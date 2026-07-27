@@ -138,6 +138,11 @@ const nextConfig = {
   },
 
   // 旧ページ → ホームページセクションへ301リダイレクト
+  //
+  // `:locale` は必ず (en|ja) で制約する。無制約の `/:locale/pricing` は 1 セグメントなら
+  // 何にでもマッチするため、`/docs/pricing` の `docs` を locale と誤認して公開中の
+  // docs ページを食う（2026-07-27 に本番で /docs/features と /docs/pricing が 308 に
+  // なっていたのを確認）。locale の正本は @dayopt/config の SUPPORTED_LOCALES。
   async redirects() {
     return [
       {
@@ -146,18 +151,20 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/:locale/pricing',
+        source: '/:locale(en|ja)/pricing',
         destination: '/:locale/#pricing',
         permanent: true,
       },
+      // LP に #features セクションは存在しない（実在するのは #how と #pricing）。
+      // 機能紹介にあたるのは HowSection なのでそちらへ送る。
       {
         source: '/features',
-        destination: '/#features',
+        destination: '/#how',
         permanent: true,
       },
       {
-        source: '/:locale/features',
-        destination: '/:locale/#features',
+        source: '/:locale(en|ja)/features',
+        destination: '/:locale/#how',
         permanent: true,
       },
       {
@@ -166,7 +173,7 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/:locale/about',
+        source: '/:locale(en|ja)/about',
         destination: '/:locale',
         permanent: true,
       },
@@ -176,7 +183,7 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/:locale/changelog',
+        source: '/:locale(en|ja)/changelog',
         destination: '/:locale/blog/release',
         permanent: true,
       },
