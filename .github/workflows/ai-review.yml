@@ -59,6 +59,12 @@ jobs:
           AI_REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           AI_REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           AI_REVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
+          # 「意図しない cascade delete」は意図が分からないと判定できない。作者の申告を
+          # 渡し、diff との食い違いを見せる。env 経由で渡すのは script 内へ直接展開しない
+          # ため（${{ }} を run の shell に置くと本文が command として解釈されうる）。
+          # prompt 側では「信頼できない参考情報」として明示的に区切る。
+          AI_REVIEW_PR_TITLE: ${{ github.event.pull_request.title }}
+          AI_REVIEW_PR_BODY: ${{ github.event.pull_request.body }}
           # 導入直後は観察モード（未設定 = 所見を出すが check は落とさない）。
           # 実 PR で誤爆の実績を見てから repo variable に true を入れて blocking にする。
           # ここで渡さないと script 側の enforce が常に false になり、切り替え不能になる。
