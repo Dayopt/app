@@ -81,7 +81,7 @@ blog まで両言語必須にすると solo 運用で執筆が止まる。書け
 
 ## SEO 方針
 
-- **docs = 機能リファレンス層。** 機能名・指名クエリを受ける。網羅・正確・更新が命。en/ja 両方必須
+- **docs = 機能リファレンス層。** 機能名・指名クエリを受ける。網羅・正確・更新が命。言語は上の[言語ポリシー](#言語ポリシー)に従う（ja 先行、en は後追い）
 - **blog = 課題起点層。** 非指名クエリ（例: "time blocking vs todo list"）で新規読者を獲得し、本文の内部リンクで docs へ送る（topical cluster 構造）
 - **AI クローラは全面許可**（2026-07-23 決定）。AI 検索・AI アシスタント経由の言及を獲得チャネルとして扱い、frontmatter の `ai.*` メタデータ（relatedQuestions / relatedDocs / chunkStrategy）を全コンテンツで整備する
 - 数より質。`docs/marketing/strategy.md` の禁止事項（煽らない・AI 大量生成を流さない）を上位とする
