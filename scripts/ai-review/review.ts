@@ -11,12 +11,13 @@
  *
  * 契約は scripts/ai-review/prompt.md（レビュー内容の正本）。本ファイルは配管だけを持つ。
  *
- * 判定（既定は観察モード。AI_REVIEW_ENFORCE=true で blocking に切り替える）:
- *   P0 あり     → 観察モードでは exit 0 + comment / enforce では exit 1（check fail →
- *                 branch:finish の既存マージゲートが止める）
+ * 判定（**既定は blocking**。AI_REVIEW_ENFORCE=false で観察モードへ戻す）:
+ *   P0 あり     → exit 1（check fail → branch:finish の既存マージゲートが止める）
  *   P1 のみ     → exit 0 + PR に sticky comment
- *   findings 0  → exit 0（無言）
- *   API 障害等  → exit 0 + notice（インフラ障害では fail-open。所見では fail-closed）
+ *   findings 0  → exit 0 + sticky comment を「指摘なし」で更新（走った証跡を残す）
+ *   override    → `ai-review:override` ラベルがあれば所見があっても exit 0
+ *   構成ミス    → exit 1（誤 model id / key 拒否 / 契約ファイル欠落。自然回復しない）
+ *   API 障害等  → exit 0 + notice（インフラ障害では fail-open）
  *
  * Usage:
  *   pnpm exec tsx scripts/ai-review/review.ts --dry-run
@@ -24,7 +25,8 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -38,12 +40,28 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
  */
 export const DEFAULT_MODEL = 'gemini-3.1-pro-preview';
 
-/** prompt に載せる diff の上限。超過分は落とし、落とした事実を prompt に明記する。 */
-export const MAX_DIFF_BYTES = 180_000;
+/**
+ * prompt に載せる diff の上限。超過分は落とし、落とした事実を prompt に明記する。
+ *
+ * 400KB（≒100k tokens）。180KB だと、実測で月 1 件ほど出る大きめの PR が「危険クラスを
+ * 見切れず check を落とす」状態になり、**事実上「分量が多い PR は分割せよ」** として
+ * 働いていた。これは workflow.md §PR 粒度 の「サイズを理由に分割しない」と正面から衝突する。
+ * 上限を上げれば両立するので、規約を曲げずに全量を見せる側へ倒す。Gemini 3.1 Pro の
+ * context には十分収まり、超過する規模の PR でも 1 回 $0.2 程度。
+ */
+export const MAX_DIFF_BYTES = 400_000;
 /** rules 添付 1 件あたりの上限。 */
 export const MAX_ATTACHMENT_BYTES = 24_000;
 /** sticky comment の同定に使う marker。人間のコメントと衝突しない形にする。 */
 export const COMMENT_MARKER = '<!-- dayopt:ai-review -->';
+
+/**
+ * 誤検出だと人間が判断した時に、この PR に限って check を落とさないためのラベル。
+ * blocking な gate には必ず逃げ道が要る。無いと、モデルが 1 度間違えただけで
+ * マージ経路が詰まり、`branch:finish` を迂回する習慣（= up-to-date gate ごと失う）
+ * を誘発する。判断を PR 上の痕跡として残すため、env ではなくラベルにする。
+ */
+export const OVERRIDE_LABEL = 'ai-review:override';
 
 export type Severity = 'P0' | 'P1';
 
@@ -64,17 +82,84 @@ export interface ReviewResult {
 }
 
 /**
- * レビュー対象にする危険クラス path。
- * .github/workflows/ai-review.yml の paths filter と対応させる（contract test で固定）。
+ * レビュー対象にする危険クラス path。**ここが唯一の正本**で、
+ * `.github/workflows/ai-review.yml` の paths は同じ glob を写す。contract test が
+ * YAML 側と集合として双方向で照合するので、片方だけ広げると落ちる。
+ *
+ * 範囲は prompt.md が報告対象と定めた 6 クラスに対応させる。gate は見ていない範囲に
+ * ついて何も言えず、しかも「起動しなかった」は check が 1 つも出ないだけなので誰にも
+ * 見えない。**範囲の狭さは沈黙として現れる。**
  */
-export const DANGEROUS_PATH_PATTERNS: readonly RegExp[] = [
-  /^supabase\/migrations\//,
-  /^supabase\/functions\//,
-  /^apps\/product\/src\/features\/[^/]+\/server\//,
-  /^apps\/product\/src\/features\/auth\//,
-  /^apps\/product\/src\/lib\/(database|supabase|trpc)\//,
-  /^apps\/product\/src\/app\/api\//,
+export const DANGEROUS_PATH_GLOBS: readonly string[] = [
+  // 1. 権限・データ分離 / 2. データ損失
+  'supabase/migrations/**',
+  'supabase/functions/**',
+  'apps/product/src/lib/database/**',
+  'apps/product/src/lib/supabase/**',
+  // 3. 認証・セッション
+  'apps/product/src/features/auth/**',
+  'apps/product/src/lib/auth/**',
+  'apps/product/src/lib/oauth-server/**',
+  'apps/product/src/lib/security/**',
+  'apps/product/src/lib/safe-redirect.ts',
+  // サーバー境界（1 と 3 の入口）
+  'apps/product/src/features/*/server/**',
+  'apps/product/src/lib/trpc/**',
+  'apps/product/src/lib/rate-limit/**',
+  'apps/product/src/app/api/**',
+  'apps/web/src/app/api/**',
+  // 4. 課金の不整合
+  'apps/product/src/lib/billing/**',
+  'apps/product/src/lib/stripe/**',
+  'packages/billing/**',
+  // 5. 時刻・タイムゾーンの契約違反
+  'apps/product/src/lib/time/**',
+  'apps/product/src/lib/date/**',
 ];
+
+/**
+ * GitHub Actions の paths filter と同じ意味論で glob を regex にする。
+ * 使うのは `**`（`/` を跨ぐ）と `*`（跨がない）だけに限定する。
+ */
+export function globToRegExp(glob: string): RegExp {
+  const escaped = glob
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    // 1 回の走査で置き換える。中間 sentinel を挟む方式は、その文字が path に
+    // 現れた時に壊れる。
+    .replace(/\*\*|\*/g, (match) => (match === '**' ? '.*' : '[^/]*'));
+  return new RegExp(`^${escaped}$`);
+}
+
+export const DANGEROUS_PATH_PATTERNS: readonly RegExp[] = DANGEROUS_PATH_GLOBS.map(globToRegExp);
+
+/**
+ * 「この危険クラス diff は既にレビュー済み」を判定する指紋。
+ *
+ * GitHub の paths filter は PR 全体（base..head）で評価されるため、一度でも危険クラスを
+ * 触った PR は以降のどの push でも再発火する。実測で 1 PR あたり 4 run あり、docs だけを
+ * 直す push でも migration を再レビューしていた。指紋が同じなら API を呼ばず、前回の
+ * 判定を再適用する。**skip ではなく判定のキャッシュ**にするのが要点で、単に skip すると
+ * P0 の出た PR が「無関係な再 push」だけで green になる。
+ */
+export function fingerprintDiff(dangerousFiles: readonly string[], diff: string): string {
+  // JSON にして境界を曖昧にしない（区切り文字を自前で挟むと、その文字が中身に
+  // 現れた時に別入力が同じ指紋になりうる）。
+  return createHash('sha256')
+    .update(JSON.stringify([[...dangerousFiles].sort(), diff]))
+    .digest('hex')
+    .slice(0, 16);
+}
+
+/** sticky comment に埋める機械可読な状態。HTML コメントなので PR 上では描画されない。 */
+export function renderState(state: { fingerprint: string; blocked: boolean }): string {
+  return `<!-- dayopt:ai-review:state fp=${state.fingerprint} blocked=${state.blocked ? '1' : '0'} -->`;
+}
+
+export function parseState(body: string): { fingerprint: string; blocked: boolean } | null {
+  const match = /<!-- dayopt:ai-review:state fp=([0-9a-f]+) blocked=([01]) -->/.exec(body);
+  if (!match) return null;
+  return { fingerprint: match[1], blocked: match[2] === '1' };
+}
 
 export interface RuleAttachment {
   /** repo-relative path */
@@ -105,7 +190,25 @@ export const RULE_ATTACHMENTS: readonly RuleAttachment[] = [
     when: /^apps\/product\/src\/features\//,
     label: 'Dayopt feature 境界',
   },
+  {
+    // service だけを変える PR では、その入口が protectedProcedure か publicProcedure か、
+    // pro 課金 gate の内側かが diff から分からない。契約は publicProcedure 誤用と課金の
+    // 不整合の報告を求めているので、判断材料として procedure の定義そのものを渡す。
+    path: 'apps/product/src/lib/trpc/procedures.ts',
+    when: /^(apps\/product\/src\/(features\/[^/]+\/server\/|lib\/trpc\/|app\/api\/)|packages\/billing\/)/,
+    label: 'Dayopt の tRPC procedure 定義（protectedProcedure / proProcedure の実体）',
+  },
 ];
+
+/** 現在の schema（列定義・制約・FK の ON DELETE・関数一覧）。migration の判断に要る。 */
+export const SCHEMA_DIR = 'supabase/schemas';
+
+/** schema ファイルが定義している table 名。 */
+export function listSchemaTables(sql: string): string[] {
+  return [...sql.matchAll(/^create table (?:if not exists )?public\.([a-z_][a-z0-9_]*)/gim)].map(
+    (match) => match[1].toLowerCase(),
+  );
+}
 
 /** migration を触る PR にだけ渡す、現在有効な RLS / GRANT の snapshot。 */
 export const RLS_SNAPSHOT_PATH = 'docs/engineering/data/db/rls-snapshot.md';
@@ -625,6 +728,28 @@ function loadAttachments(
     });
   }
 
+  // migration diff は差分しか写さない。既存列に NOT NULL を足す、型を変える、FK の
+  // ON DELETE を変える、のいずれも「現在どうなっているか」が無いと判断できない。
+  // 契約は「既存行を壊す DDL」「意図しない cascade delete」の報告を求めているので、
+  // 該当 table を定義している schema ファイルを渡す。
+  const schemaDir = resolve(ROOT, SCHEMA_DIR);
+  if (touchesMigrations && existsSync(schemaDir)) {
+    const haystack = diff.toLowerCase();
+    for (const file of readdirSync(schemaDir).filter((name) => name.endsWith('.sql'))) {
+      const body = readFileSync(resolve(schemaDir, file), 'utf8');
+      const tables = listSchemaTables(body);
+      // table を 1 つも定義していないファイル（関数・cron 等）は常に渡す。関数の
+      // SECURITY DEFINER や GRANT 方針は、呼び出し側だけを変える PR でも判断に要る。
+      const relevant = tables.length === 0 || tables.some((table) => haystack.includes(table));
+      if (relevant) {
+        attachments.push({
+          label: `現在の schema（${SCHEMA_DIR}/${file}）`,
+          body: clamp(body, MAX_ATTACHMENT_BYTES, '以降は省略'),
+        });
+      }
+    }
+  }
+
   return attachments;
 }
 
@@ -802,32 +927,47 @@ interface CommentContext {
   fetchImpl?: typeof fetch;
 }
 
-/**
- * @param updateOnly 既存の sticky comment があれば更新するが、無ければ新規作成しない。
- *   指摘ゼロの run で使う。この tool は「沈黙をデフォルト」にする契約なので、クリーンな
- *   PR に新しいコメントを生やさない。一方で、前の run が残した P0 コメントは
- *   古い SHA のまま「fail しています」と表示し続けるため、更新は必要になる。
- */
-async function upsertStickyComment(
-  context: CommentContext,
-  body: string,
-  updateOnly = false,
-): Promise<void> {
-  const doFetch = context.fetchImpl ?? fetch;
-  const headers = {
+function commentHeaders(context: CommentContext): Record<string, string> {
+  return {
     accept: 'application/vnd.github+json',
     authorization: `Bearer ${context.token}`,
     'content-type': 'application/json',
   };
-  const base = `https://api.github.com/repos/${context.repository}`;
+}
 
-  const listed = await doFetch(`${base}/issues/${context.prNumber}/comments?per_page=100`, {
-    headers,
-  });
+async function findStickyComment(
+  context: CommentContext,
+): Promise<{ id: number; body?: string } | undefined> {
+  const doFetch = context.fetchImpl ?? fetch;
+  const listed = await doFetch(
+    `https://api.github.com/repos/${context.repository}/issues/${context.prNumber}/comments?per_page=100`,
+    { headers: commentHeaders(context) },
+  );
   if (!listed.ok) throw new Error(`comment 一覧の取得に失敗: HTTP ${listed.status}`);
   const comments = (await listed.json()) as { id: number; body?: string }[];
-  const existing = comments.find((comment) => comment.body?.includes(COMMENT_MARKER));
-  if (updateOnly && !existing) return;
+  return comments.find((comment) => comment.body?.includes(COMMENT_MARKER));
+}
+
+/**
+ * 前回 run が sticky comment に残した判定を読む。取得に失敗しても gate は止めない
+ * （読めなければ普通にレビューし直すだけで、安全側に倒れる）。
+ */
+export async function readStickyState(
+  context: CommentContext,
+): Promise<{ fingerprint: string; blocked: boolean } | null> {
+  try {
+    const existing = await findStickyComment(context);
+    return existing?.body ? parseState(existing.body) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function upsertStickyComment(context: CommentContext, body: string): Promise<void> {
+  const doFetch = context.fetchImpl ?? fetch;
+  const headers = commentHeaders(context);
+  const base = `https://api.github.com/repos/${context.repository}`;
+  const existing = await findStickyComment(context);
 
   const target = existing
     ? `${base}/issues/comments/${existing.id}`
@@ -856,9 +996,17 @@ async function main(): Promise<number> {
   // ローカルから「危険クラス外の PR も見せたい」時に使う。CI からは渡さない
   // （workflow_dispatch は pull_request payload を持たず、結局 diff 0 件になるため廃止した）。
   const force = argv.includes('--force');
-  // 既定は観察モード（所見を出すが check は落とさない）。実 PR で誤爆の実績を見てから
-  // AI_REVIEW_ENFORCE=true で blocking へ切り替える。未検証の gate で PR を止めない。
-  const enforce = process.env.AI_REVIEW_ENFORCE === 'true';
+  // **既定を blocking にする。** 「P0 が出ても素通りする gate」は、緑を見て安心する
+  // 習慣だけを育てる。観察モードへ戻すには repo variable に AI_REVIEW_ENFORCE=false を
+  // 明示的に置く（安全側を既定にし、緩める側を明示操作にする）。
+  const enforce = process.env.AI_REVIEW_ENFORCE !== 'false';
+  // 誤検出で詰まないための逃げ道。PR に override ラベルを付けた run は、所見があっても
+  // check を落とさない。人間の判断を PR 上に痕跡として残す形にするため、env や
+  // 「もう一度 push する」ではなくラベルにしている。
+  const overrideLabel = (process.env.AI_REVIEW_PR_LABELS ?? '')
+    .split(',')
+    .map((label) => label.trim())
+    .includes(OVERRIDE_LABEL);
 
   const { files: changedFiles, status: changeStatus } = collectChanges(base, head);
   const dangerous = changedFiles.filter(isDangerousPath);
@@ -920,6 +1068,33 @@ async function main(): Promise<number> {
     return 0;
   }
 
+  const token = process.env.GITHUB_TOKEN;
+  const repository = process.env.GITHUB_REPOSITORY;
+  const prNumber = process.env.AI_REVIEW_PR_NUMBER;
+  const commentContext =
+    token && repository && prNumber ? { token, repository, prNumber } : undefined;
+
+  // 同じ危険クラス diff を何度もレビューしない。paths filter は PR 全体で評価されるため、
+  // docs だけを直す push でも migration が再発火して同じ判定に同じ金額を払っていた。
+  const fingerprint = fingerprintDiff(dangerous, diff);
+  if (commentContext) {
+    const previous = await readStickyState(commentContext);
+    if (previous && previous.fingerprint === fingerprint) {
+      notice(
+        `危険クラスの diff は前回から変わっていないため、レビュー済みの判定を再利用します（fp=${fingerprint}）。`,
+      );
+      if (!previous.blocked) return 0;
+      if (overrideLabel) {
+        warn(`${OVERRIDE_LABEL} ラベルがあるため、前回の所見があっても check は落としません。`);
+        return 0;
+      }
+      console.log(
+        `::error title=ai-review::前回のレビューで所見があります。PR の comment を確認してください。`,
+      );
+      return enforce ? 1 : 0;
+    }
+  }
+
   let call: GeminiCallResult;
   try {
     call = await callGemini({ apiKey, model, systemInstruction: contract, prompt });
@@ -948,20 +1123,19 @@ async function main(): Promise<number> {
   );
 
   const clean = result.findings.length === 0 && incompleteDangerous.length === 0;
-  const body = renderComment(result, {
-    model: servedModel,
-    sha: head,
-    incompleteDangerous,
-    enforce,
-  });
-  const token = process.env.GITHUB_TOKEN;
-  const repository = process.env.GITHUB_REPOSITORY;
-  const prNumber = process.env.AI_REVIEW_PR_NUMBER;
-  // クリーンな run でも、既存の sticky comment があれば更新する。前の run の P0 コメントが
-  // 古い SHA のまま「fail しています」と残るのを防ぐ（新規作成はしない）。
-  if (token && repository && prNumber) {
+  const shouldBlock = incompleteDangerous.length > 0 || hasBlockingFinding(result);
+  const body = [
+    renderComment(result, { model: servedModel, sha: head, incompleteDangerous, enforce }),
+    renderState({ fingerprint, blocked: shouldBlock }),
+  ].join('\n');
+
+  // **クリーンな run でも comment を残す。** 指紋の保存先であると同時に、
+  // 「レビューが実際に走った」証跡でもある。無言だと、走らなかった run と
+  // 区別が付かない（今回この pipeline が抱えていた問題そのもの）。
+  // sticky なので PR あたり 1 件に更新され、積み上がらない。
+  if (commentContext) {
     try {
-      await upsertStickyComment({ token, repository, prNumber }, body, clean);
+      await upsertStickyComment(commentContext, body);
     } catch (error) {
       // comment 失敗は gate の結果を変えない（gate は exit code 側）。
       warn(`comment を投稿できませんでした: ${String(error)}`);
@@ -977,8 +1151,6 @@ async function main(): Promise<number> {
 
   // 危険クラスを最後まで見られていない run は、指摘の有無に関わらず通さない。
   // 「見ていないから指摘が無い」を green で表現すると偽の安心になる。
-  const shouldBlock = incompleteDangerous.length > 0 || hasBlockingFinding(result);
-
   if (incompleteDangerous.length > 0) {
     console.log(
       `::error title=ai-review::危険クラスの ${incompleteDangerous.length} ファイルを最後までレビューできていません（diff が ${MAX_DIFF_BYTES} bytes を超過）。`,
@@ -987,9 +1159,13 @@ async function main(): Promise<number> {
     console.log(`::error title=ai-review::P0 の指摘があります。PR の comment を確認してください。`);
   }
 
+  if (shouldBlock && overrideLabel) {
+    warn(`${OVERRIDE_LABEL} ラベルがあるため、上記の指摘があっても check は落としません。`);
+    return 0;
+  }
+
   if (shouldBlock && !enforce) {
-    // 観察モード: 所見は出すが check は落とさない。導入直後の gate は誤爆の実績が
-    // 未知なので、まず実 PR で挙動と指摘の質を見てから blocking へ切り替える。
+    // 観察モードへ明示的に戻した時だけここへ来る（AI_REVIEW_ENFORCE=false）。
     warn('観察モードのため、上記の指摘があってもこの check は fail させません。');
     return 0;
   }

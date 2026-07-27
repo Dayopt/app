@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   COMMENT_MARKER,
   ConfigurationError,
+  DANGEROUS_PATH_GLOBS,
   DANGEROUS_PATH_PATTERNS,
   MAX_DIFF_BYTES,
   MAX_OUTPUT_TOKENS,
@@ -14,13 +15,16 @@ import {
   callGemini,
   collectDiff,
   extractRlsSections,
+  fingerprintDiff,
   hasBlockingFinding,
   isDangerousPath,
   isTestPath,
   listSnapshotTables,
   parseReviewResponse,
+  parseState,
   readCandidate,
   renderComment,
+  renderState,
   selectRuleAttachments,
   truncateToBytes,
 } from '../review';
@@ -61,37 +65,61 @@ describe('危険クラス path の判定', () => {
     expect(isDangerousPath('apps/web/src/app/page.tsx')).toBe(false);
   });
 
-  it('workflow の paths filter と script の判定が一致する', () => {
+  it('workflow の paths と script の glob 一覧が完全に一致する', () => {
     // 片方だけ広げると「workflow が走らないので何も見ない」か「走るが全 skip」になり、
-    // どちらも green のまま gate が消える。代表 path で両側を突き合わせる。
-    const cases: { glob: string; sample: string }[] = [
-      { glob: 'supabase/migrations/**', sample: 'supabase/migrations/20260725_x.sql' },
-      { glob: 'supabase/functions/**', sample: 'supabase/functions/cron/index.ts' },
-      {
-        glob: 'apps/product/src/features/*/server/**',
-        sample: 'apps/product/src/features/tags/server/router.ts',
-      },
-      {
-        glob: 'apps/product/src/features/auth/**',
-        sample: 'apps/product/src/features/auth/hooks/useSession.ts',
-      },
-      {
-        glob: 'apps/product/src/lib/database/**',
-        sample: 'apps/product/src/lib/database/client.ts',
-      },
-      {
-        glob: 'apps/product/src/lib/supabase/**',
-        sample: 'apps/product/src/lib/supabase/server.ts',
-      },
-      { glob: 'apps/product/src/lib/trpc/**', sample: 'apps/product/src/lib/trpc/procedures.ts' },
-      { glob: 'apps/product/src/app/api/**', sample: 'apps/product/src/app/api/health/route.ts' },
-    ];
+    // どちらも green のまま gate が消える。代表 path の抜き取りでは、列挙を更新し忘れた
+    // 時にすり抜けるので、**集合として双方向で**突き合わせる。
+    const inWorkflow = [...WORKFLOW.matchAll(/^ {6}- '([^']+)'$/gm)].map((match) => match[1]);
 
-    for (const { glob, sample } of cases) {
-      expect(WORKFLOW).toContain(`- '${glob}'`);
-      expect(isDangerousPath(sample)).toBe(true);
+    expect([...inWorkflow].sort()).toEqual([...DANGEROUS_PATH_GLOBS].sort());
+    expect(DANGEROUS_PATH_PATTERNS.length).toBe(DANGEROUS_PATH_GLOBS.length);
+  });
+
+  it('契約が名指しする 6 クラスに対応する範囲を持つ', () => {
+    // prompt.md が報告を求めている領域は、必ず発火対象に入っていること。
+    // gate は見ていない範囲について何も言えず、「起動しなかった」は誰にも見えない。
+    const mustCover = [
+      'apps/product/src/lib/oauth-server/authorize-validation.ts',
+      'apps/product/src/lib/auth/domain/access-policy.ts',
+      'apps/product/src/lib/safe-redirect.ts',
+      'apps/product/src/lib/billing/entitlement.ts',
+      'packages/billing/src/subscription.ts',
+      'apps/product/src/lib/date/format.ts',
+      'apps/web/src/app/api/contact/route.ts',
+    ];
+    for (const file of mustCover) {
+      expect(isDangerousPath(file), file).toBe(true);
     }
-    expect(DANGEROUS_PATH_PATTERNS.length).toBeGreaterThan(0);
+  });
+});
+
+describe('レビュー済み判定のキャッシュ', () => {
+  it('危険クラス diff が同じなら同じ指紋になる', () => {
+    const a = fingerprintDiff(['supabase/migrations/x.sql'], 'diff body');
+    const b = fingerprintDiff(['supabase/migrations/x.sql'], 'diff body');
+    expect(a).toBe(b);
+  });
+
+  it('ファイル一覧の順序では変わらないが、内容が変われば変わる', () => {
+    expect(fingerprintDiff(['a', 'b'], 'd')).toBe(fingerprintDiff(['b', 'a'], 'd'));
+    expect(fingerprintDiff(['a'], 'd')).not.toBe(fingerprintDiff(['a'], 'd2'));
+  });
+
+  // 区切り文字を自前で挟む実装だと、その文字が中身に出た時に別入力が衝突する。
+  it('境界を跨いだ入力が衝突しない', () => {
+    expect(fingerprintDiff(['a', 'b'], 'c')).not.toBe(fingerprintDiff(['a'], 'b\nc'));
+  });
+
+  it('判定を comment に往復できる', () => {
+    const state = { fingerprint: 'abc123', blocked: true };
+    expect(parseState(`本文\n${renderState(state)}`)).toEqual(state);
+    expect(parseState('状態なし')).toBeNull();
+  });
+
+  // 単に skip すると、P0 の出た PR が無関係な再 push だけで green になる。
+  it('blocked を保存できる', () => {
+    expect(parseState(renderState({ fingerprint: 'f', blocked: false }))?.blocked).toBe(false);
+    expect(parseState(renderState({ fingerprint: 'f', blocked: true }))?.blocked).toBe(true);
   });
 });
 
