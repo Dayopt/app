@@ -62,13 +62,15 @@ add a minimum of $10 of credits` と明示している。さらに
 
 実発火前の確認で 2 件見つけ、同じ変更に含めた。
 
-- `DEFAULT_MODEL` が `gemini-3-pro-preview` だった。**404 にはならない。** 2026-03-09 に
-  shutdown され、以降は `gemini-3.1-pro-preview` へ暗黙に alias されている（changelog 2026-03-09:
-  "The `gemini-3-pro-preview` now points to `gemini-3.1-pro-preview`"）。コードのコメントが約束する
-  「404 なら利用可能な id を notice に出す」は一度も発火せず、誰も選んでいないモデルが、期限の
-  告知もない alias 経由で黙って応答し続ける状態だった。id を現行の Pro に固定したうえで、応答の
-  `modelVersion` を読んで要求 id と違えば notice を出す。次の alias でも同じ見落としを繰り返さない
-  ための本体はこちら側で、id の固定は付随物
+- `DEFAULT_MODEL` が `gemini-3-pro-preview` だった。**2026-07-27 の実測で 404**
+  （`This model models/gemini-3-pro-preview is no longer available.`）。
+  経緯は 2 段階ある。2026-03-09 の changelog は
+  "The `gemini-3-pro-preview` now points to `gemini-3.1-pro-preview`" と書いており、一時期は
+  暗黙の alias で通っていた。その alias は現在は生きていない。**docs を読んだだけでは
+  どちらの状態かは判別できず、実際に叩くまで分からなかった**（この判断自体、一度 docs だけを
+  根拠に「alias だから 404 しない」と誤った）。
+  id を現行の Pro に固定したうえで、応答の `modelVersion` を読んで要求 id と違えば notice を
+  出す。alias 期に入っていれば黙って別モデルが応答するので、id の固定だけでは足りない
 - **`scripts/ai-review` のテストが CI で一度も走っていなかった**。`ci.yml` の script テスト step は
   対象ファイルを列挙する形で、ai-review が入っていない。2026-07-26 の決定ログが「paths filter と
   `DANGEROUS_PATH_PATTERNS` の一致は contract test で固定した」と書いた保証が、実際にはローカル実行
