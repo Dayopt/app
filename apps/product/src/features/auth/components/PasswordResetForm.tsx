@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+
+import { useParams } from 'next/navigation';
 
 import { Link } from '@dayopt/i18n/navigation';
+
+import { isTurnstileEnabled, Turnstile, type TurnstileInstance } from '@/lib/turnstile';
 
 import {
   Button,
@@ -30,6 +34,13 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const resetPassword = useAuthStore((state) => state.resetPassword);
+  const params = useParams();
+  const locale = (params?.locale as string) || 'ja';
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance | null>(null);
+  const turnstileEnabled = isTurnstileEnabled();
+  const turnstileLocale: 'ja' | 'en' | 'auto' =
+    locale === 'ja' ? 'ja' : locale === 'en' ? 'en' : 'auto';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,16 +48,24 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
     setError(null);
 
     try {
-      const { error } = await resetPassword(email);
+      const { error } = turnstileToken
+        ? await resetPassword(email, { captchaToken: turnstileToken })
+        : await resetPassword(email);
 
       if (error) {
         const errorKey = getAuthErrorKey(error.message, 'resetPassword');
         setError(t(errorKey));
+        // Turnstile token は single-use。失敗時は widget を reset して次の retry で
+        // 新しい challenge token を取得させる
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
       } else {
         setSuccess(true);
       }
     } catch {
       setError(t('auth.errors.unexpectedError'));
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     } finally {
       setLoading(false);
     }
@@ -119,11 +138,27 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
                   aria-describedby="email-support"
                 />
               </Field>
+
+              {turnstileEnabled && (
+                <Field>
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={turnstileRef}
+                      onSuccess={(token) => setTurnstileToken(token)}
+                      onError={() => setTurnstileToken(null)}
+                      onExpire={() => setTurnstileToken(null)}
+                      locale={turnstileLocale}
+                    />
+                  </div>
+                </Field>
+              )}
+
               <Field>
                 <Button
                   type="submit"
                   loading={loading}
                   loadingText={t('auth.passwordResetForm.sending')}
+                  disabled={turnstileEnabled && !turnstileToken}
                 >
                   {t('auth.passwordResetForm.sendResetLink')}
                 </Button>
