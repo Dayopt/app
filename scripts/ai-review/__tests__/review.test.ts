@@ -275,7 +275,7 @@ describe('comment の描画', () => {
           },
         ],
       },
-      { model: 'gemini-3-pro-preview', sha: 'abcdef1234567890' },
+      { model: 'gemini-3.1-pro-preview', sha: 'abcdef1234567890' },
     );
     // marker が無いと毎回新しい comment が積み上がる。
     expect(body).toContain(COMMENT_MARKER);
@@ -469,7 +469,7 @@ describe('危険クラスを見切れなかった時の扱い', () => {
     const body = renderComment(
       { summary: '要約', findings: [] },
       {
-        model: 'gemini-3-pro-preview',
+        model: 'gemini-3.1-pro-preview',
         sha: 'abcdef1234567890',
         incompleteDangerous: ['supabase/migrations/0001_huge.sql'],
       },

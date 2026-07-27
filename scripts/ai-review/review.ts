@@ -31,12 +31,12 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 /**
- * 既定モデル。Gemini 3 Pro を非 Anthropic 系の第三の目として使う（Copilot が OpenAI 系
+ * 既定モデル。Gemini 3 Pro 系を非 Anthropic 系の第三の目として使う（Copilot が OpenAI 系
  * なので、Google 系を選ぶと Anthropic が書き OpenAI と Google が見る三系統になる）。
- * model id は provider 側で改称されうるため env で差し替えられる。404 の時は
+ * preview 版は provider 側で改称されうるため env で差し替えられる。404 の時は
  * 利用可能な id を notice に出す。
  */
-export const DEFAULT_MODEL = 'gemini-3-pro-preview';
+export const DEFAULT_MODEL = 'gemini-3.1-pro-preview';
 
 /** prompt に載せる diff の上限。超過分は落とし、落とした事実を prompt に明記する。 */
 export const MAX_DIFF_BYTES = 180_000;
@@ -537,7 +537,9 @@ export async function callGemini(options: GeminiCallOptions): Promise<ReviewResu
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: RESPONSE_SCHEMA,
-      temperature: 0,
+      // temperature は既定（1.0）のまま渡さない。Gemini 3 系は既定前提で推論が最適化されて
+      // おり、公式ガイドが 1.0 未満へ下げると loop や性能劣化が起きうると明示している。
+      // ここは複雑な推論そのものなので、出力の再現性より検出力を優先する。
     },
   });
 
