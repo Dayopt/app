@@ -62,14 +62,24 @@ add a minimum of $10 of credits` と明示している。さらに
 
 実発火前の確認で 2 件見つけ、同じ変更に含めた。
 
-- `DEFAULT_MODEL` が `gemini-3-pro-preview` だった。現存しない id で、そのまま動かすと 404 に
-  なる。現行の Pro は `gemini-3.1-pro-preview`。`AI_REVIEW_MODEL` による上書きと 404 時の notice は
-  逃げ道として残す
+- `DEFAULT_MODEL` が `gemini-3-pro-preview` だった。**404 にはならない。** 2026-03-09 に
+  shutdown され、以降は `gemini-3.1-pro-preview` へ暗黙に alias されている（changelog 2026-03-09:
+  "The `gemini-3-pro-preview` now points to `gemini-3.1-pro-preview`"）。コードのコメントが約束する
+  「404 なら利用可能な id を notice に出す」は一度も発火せず、誰も選んでいないモデルが、期限の
+  告知もない alias 経由で黙って応答し続ける状態だった。id を現行の Pro に固定したうえで、応答の
+  `modelVersion` を読んで要求 id と違えば notice を出す。次の alias でも同じ見落としを繰り返さない
+  ための本体はこちら側で、id の固定は付随物
 - **`scripts/ai-review` のテストが CI で一度も走っていなかった**。`ci.yml` の script テスト step は
   対象ファイルを列挙する形で、ai-review が入っていない。2026-07-26 の決定ログが「paths filter と
   `DANGEROUS_PATH_PATTERNS` の一致は contract test で固定した」と書いた保証が、実際にはローカル実行
   頼みになっていた。同 step の列挙へ `scripts/ai-review` を追加した（新しい job は作らない。
   CI 課金は job 単位で切り上がるため、既存 job への step 追加が最も安い）
+- 構成ミスとインフラ障害を同じ経路で握り潰していた。404 / 401 / 403 / 400、契約や規約ファイルの
+  欠落はいずれも決定論的で自然回復しないのに、`warn` + `exit 0` に落ちて check は green のまま
+  だった。`ConfigurationError` として fail-closed に分ける
+- `fetch` に timeout が無かった。Node の fetch に既定 timeout は無いため、ハングは job の
+  `timeout-minutes` まで伸び、fail-open のはずの経路が red（= マージ不能）に反転する。ゲートの
+  設計意図とちょうど逆向きに壊れる唯一の経路だった
 - `generationConfig.temperature: 0` を渡していた。Gemini 3 系の公式ガイドは
   `we strongly recommend keeping the temperature parameter at its default value of 1.0` とし、
   1.0 未満は loop や性能劣化を招きうると明示している。再現性より検出力を優先して削除した
