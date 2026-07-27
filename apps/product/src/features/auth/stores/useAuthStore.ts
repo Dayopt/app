@@ -45,7 +45,7 @@ interface AuthState {
     password: string,
     options?: { captchaToken?: string },
   ) => Promise<AuthResponse>;
-  signInWithOAuth: (provider: 'google' | 'apple' | 'github') => Promise<OAuthResponse>;
+  signInWithOAuth: (provider: 'google') => Promise<OAuthResponse>;
   signOut: () => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   // @supabase/auth-js 2.106.2 以降 updateUser は session を含まない UserResponse を返す
@@ -151,17 +151,16 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const supabase = createClient();
-          const supabaseOptions =
-            options?.captchaToken || options?.metadata
-              ? {
-                  ...(options?.captchaToken && { captchaToken: options.captchaToken }),
-                  ...(options?.metadata && { data: options.metadata }),
-                }
-              : undefined;
           const result = await supabase.auth.signUp({
             email,
             password,
-            ...(supabaseOptions && { options: supabaseOptions }),
+            options: {
+              // 確認メールのリンク検証後の着地先。send-auth-email hook が
+              // origin + path を confirm route の next に変換する
+              emailRedirectTo: `${window.location.origin}/week`,
+              ...(options?.captchaToken && { captchaToken: options.captchaToken }),
+              ...(options?.metadata && { data: options.metadata }),
+            },
           });
 
           if (result.error) {

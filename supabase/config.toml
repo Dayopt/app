@@ -135,11 +135,13 @@ enabled = true
 # in emails.
 site_url = "http://127.0.0.1:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-# Vercelプレビュー環境を許可（ワイルドカードパターン）
+# Vercelプレビュー環境を許可（ワイルドカードパターン）。
+# Vercel project 名は `product`（preview URL は product-*-dayopt.vercel.app）。
+# 旧 `app-*` パターンは project 改名前の残骸で、どの preview URL にも一致しなかった。
 additional_redirect_urls = [
   "https://127.0.0.1:3000",
-  "https://app-*-dayopt.vercel.app",
-  "https://app-git-*-dayopt.vercel.app"
+  "https://product-*-dayopt.vercel.app",
+  "https://product-git-*-dayopt.vercel.app"
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
@@ -270,9 +272,11 @@ auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
+# 本番は Dashboard 管理（この設定は本番へ同期されない）。アプリは MFA(TOTP) を
+# フル実装しているため、ローカル / Preview branch でもフローを検証できるよう有効化する。
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]
@@ -287,23 +291,11 @@ max_frequency = "5s"
 # enroll_enabled = true
 # verify_enabled = true
 
-# Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
-# `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
-# `twitter`, `slack`, `spotify`, `workos`, `zoom`.
-[auth.external.apple]
-enabled = false
-client_id = ""
-# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
-secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
-# Overrides the default auth redirectUrl.
-redirect_uri = ""
-# Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
-# or any other third-party OIDC providers.
-url = ""
-# If enabled, the nonce check will be skipped. Required for local sign in with Google auth.
-skip_nonce_check = false
-# If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
-email_optional = false
+# External OAuth providers.
+# ソーシャルログインは Google のみ（Apple / Meta は不採用。2026-07 決定）。
+# 本番の Google provider 設定は Supabase Dashboard が正本（GitHub integration の
+# Deploy to production は Auth 設定を本番へ同期しない。migration / Edge Functions /
+# Storage buckets のみ）。config.toml の [auth.*] はローカル + Preview branch にだけ効く。
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
@@ -355,6 +347,19 @@ deno_version = 2
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
+
+# Edge Functions は config.toml に宣言したものだけが Preview branch / production へ
+# 自動デプロイされる。宣言が無いと、function を変更した PR をマージしても本番に反映されず、
+# 手動 `supabase functions deploy --use-api` を忘れた分だけ乖離する。
+# 値は production の現行設定（verify_jwt = true / import map は同ディレクトリの deno.json）に合わせる。
+[functions.send-auth-email]
+enabled = true
+# Auth の send_email hook から呼ばれる。ペイロードの真正性は standardwebhooks の
+# 署名検証（SEND_EMAIL_HOOK_SECRET）で担保しており、JWT 検証はその手前の入口ガード。
+verify_jwt = true
+# import map は functions/ 直下の共有 deno.json（各 function ディレクトリ内には無い）。
+# path は config.toml からの相対で解決される。
+import_map = "./functions/deno.json"
 
 [analytics]
 enabled = true

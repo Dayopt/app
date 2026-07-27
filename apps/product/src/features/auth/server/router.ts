@@ -14,10 +14,12 @@
 
 import { z } from 'zod';
 
+import { hasPasswordIdentity } from '@/lib/auth/domain';
 import { isValidRecoveryCodeFormat } from '@/lib/auth/recovery-codes';
 import { observeAuthOperation } from '@/lib/sentry';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
+import { getDisplayName } from '@/lib/user';
 import { createRecoveryService } from './recovery-service';
 import { createUserService, UserServiceError } from './user-service';
 
@@ -31,7 +33,10 @@ export const userRouter = createTRPCRouter({
     .meta({ description: 'アカウント即時削除（CASCADE DELETE）' })
     .input(
       z.object({
-        password: z.string().min(1),
+        // パスワードを持たないユーザー（Google のみ）は送らない
+        password: z.string().min(1).optional(),
+        // パスワードを持たず MFA が有効なユーザーの再認証コード
+        totpCode: z.string().min(6).max(10).optional(),
         confirmText: z.literal('DELETE'),
       }),
     )
@@ -53,7 +58,11 @@ export const userRouter = createTRPCRouter({
         const result = await service.deleteAccount({
           userId: ctx.userId!,
           userEmail: user.email,
+          userName: getDisplayName(user, 'there'),
           password: input.password,
+          totpCode: input.totpCode,
+          // クライアント申告ではなく server 側の identity から判定する
+          requiresPassword: hasPasswordIdentity(user),
           confirmText: input.confirmText,
         });
 
