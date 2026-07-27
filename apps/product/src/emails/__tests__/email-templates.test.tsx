@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { AccountDeletionEmail } from '../AccountDeletionEmail';
 import { CancellationConfirmEmail } from '../CancellationConfirmEmail';
 import { ConfirmEmail } from '../ConfirmEmail';
+import { EmailChangeEmail } from '../EmailChangeEmail';
 import { MagicLinkEmail } from '../MagicLinkEmail';
 import { PasswordChangedEmail } from '../PasswordChangedEmail';
 import { PasswordResetEmail } from '../PasswordResetEmail';
@@ -45,6 +46,26 @@ function createEmailFixtures(locale: 'en' | 'ja'): EmailFixture[] {
       element: PasswordResetEmail({
         userName: 'Tomoya',
         resetUrl: 'https://app.dayopt.app/auth/reset?token=test',
+        locale,
+      }),
+    },
+    {
+      name: `EmailChangeEmail current (${locale})`,
+      element: EmailChangeEmail({
+        userName: 'Tomoya',
+        confirmUrl: 'https://app.dayopt.app/auth/confirm?token_hash=test&type=email_change',
+        newEmail: 'new@example.com',
+        variant: 'current',
+        locale,
+      }),
+    },
+    {
+      name: `EmailChangeEmail new (${locale})`,
+      element: EmailChangeEmail({
+        userName: 'Tomoya',
+        confirmUrl: 'https://app.dayopt.app/auth/confirm?token_hash=test&type=email_change',
+        newEmail: 'new@example.com',
+        variant: 'new',
         locale,
       }),
     },
@@ -144,6 +165,41 @@ describe('React Email templates', () => {
       expect(html.match(/your settings/g)).toHaveLength(2);
       expect(html).toContain('href="https://app.dayopt.app/settings/profile"');
       expect(countHtmlOccurrences(html, resetUrl)).toBe(3);
+    });
+
+    it('現アドレス宛は変更先アドレスを本文に出し、変更されない旨を伝える', async () => {
+      const confirmUrl = 'https://app.dayopt.app/auth/confirm?token_hash=current&type=email_change';
+      const html = await render(
+        EmailChangeEmail({
+          userName: 'Tomoya',
+          confirmUrl,
+          newEmail: 'new@example.com',
+          variant: 'current',
+          locale: 'en',
+        }),
+      );
+
+      expect(html).toContain('new@example.com');
+      expect(html).toContain('Approve Email Change');
+      expect(html).toContain('Your email address will not change.');
+      expect(countHtmlOccurrences(html, confirmUrl)).toBe(3);
+    });
+
+    it('新アドレス宛は承認文言を含まず、確認用の文言だけを出す', async () => {
+      const confirmUrl = 'https://app.dayopt.app/auth/confirm?token_hash=new&type=email_change';
+      const html = await render(
+        EmailChangeEmail({
+          userName: 'Tomoya',
+          confirmUrl,
+          newEmail: 'new@example.com',
+          variant: 'new',
+          locale: 'en',
+        }),
+      );
+
+      expect(html).toContain('Confirm New Email Address');
+      expect(html).not.toContain('Approve Email Change');
+      expect(countHtmlOccurrences(html, confirmUrl)).toBe(3);
     });
 
     it('preserves the magic-link expiry and application link', async () => {

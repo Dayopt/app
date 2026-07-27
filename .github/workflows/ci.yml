@@ -104,9 +104,12 @@ jobs:
       - name: Build packages
         run: pnpm build:packages
 
+      # scripts 配下は個別列挙ではなく `pnpm test:scripts`（vitest.scripts.config.ts の
+      # include）で丸ごと実行する。名前を並べる形は「テストを足しても CI に載らない」を
+      # 既定にしてしまい、実際 scripts/ai-review の contract test は一度も走っていなかった。
       - name: Verify Product and Web Production contracts with safe dummy values
         run: |
-          pnpm exec vitest run --config vitest.scripts.config.ts scripts/production-config-audit.test.ts scripts/production-release.test.ts scripts/__tests__/release-workflow-contract.test.ts
+          pnpm test:scripts
           pnpm --dir apps/product exec vitest --project unit run production-build-gate.test.mjs
           pnpm --dir apps/web exec vitest run production-build-gate.test.mjs
 

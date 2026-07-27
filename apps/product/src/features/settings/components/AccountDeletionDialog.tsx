@@ -7,6 +7,7 @@ import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { LabeledRow } from '@/components/ui/display/LabeledRow';
+import { hasPasswordIdentity, hasVerifiedMfaFactor, useAuthStore } from '@/features/auth';
 import { logger } from '@/lib/logger';
 import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
@@ -37,7 +38,13 @@ export function AccountDeletionDialog() {
   const t = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
   const [confirmText, setConfirmText] = useState('');
+  const user = useAuthStore((state) => state.user);
+  // 再認証はユーザーが持っている手段で行う。Google のみのユーザーはパスワードを持たない
+  const canUsePassword = hasPasswordIdentity(user);
+  const [needsTotp, setNeedsTotp] = useState(false);
+  const requiresTotp = hasVerifiedMfaFactor(user) || needsTotp;
 
   const deleteAccountMutation = api.user.deleteAccount.useMutation({
     onSuccess: async () => {
@@ -60,7 +67,17 @@ export function AccountDeletionDialog() {
         component: 'account-deletion-dialog',
       });
 
-      if (error.message.includes('Invalid password')) {
+      // user.factors がセッションに載っていないと MFA 有無を事前に判定できない。
+      // サーバーがコードを要求してきた時点で入力欄を出す
+      if (error.message.includes('Verification code is required')) {
+        setNeedsTotp(true);
+        toast.error(t('settings.account.deletion.totpRequired'));
+        return;
+      }
+
+      if (error.message.includes('Invalid verification code')) {
+        toast.error(t('settings.account.deletion.invalidTotp'));
+      } else if (error.message.includes('Invalid password')) {
         toast.error(t('settings.account.deletion.invalidPassword'));
       } else {
         toast.error(error.message || t('settings.account.deletion.error'));
@@ -74,14 +91,16 @@ export function AccountDeletionDialog() {
       return;
     }
 
-    if (!password) {
+    if (canUsePassword && !password) {
       toast.error(t('settings.account.deletion.passwordRequired'));
       return;
     }
 
     deleteAccountMutation.mutate({
-      password,
       confirmText: 'DELETE',
+      // 再認証はユーザーが持っている手段で行う。持たない手段は送らない
+      ...(canUsePassword ? { password } : {}),
+      ...(!canUsePassword && totpCode ? { totpCode } : {}),
     });
   };
 
@@ -114,22 +133,45 @@ export function AccountDeletionDialog() {
             <AlertDialogDescription className="space-y-4">
               <p>{t('settings.account.deletion.dialogDescription')}</p>
 
-              <div className="space-y-2">
-                <label
-                  htmlFor="delete-account-password"
-                  className="text-foreground text-base font-normal md:text-sm"
-                >
-                  {t('settings.account.deletion.passwordLabel')}
-                </label>
-                <Input
-                  id="delete-account-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t('settings.account.deletion.passwordPlaceholder')}
-                  disabled={deleteAccountMutation.isPending}
-                />
-              </div>
+              {canUsePassword ? (
+                <div className="space-y-2">
+                  <label
+                    htmlFor="delete-account-password"
+                    className="text-foreground text-base font-normal md:text-sm"
+                  >
+                    {t('settings.account.deletion.passwordLabel')}
+                  </label>
+                  <Input
+                    id="delete-account-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={t('settings.account.deletion.passwordPlaceholder')}
+                    disabled={deleteAccountMutation.isPending}
+                  />
+                </div>
+              ) : (
+                requiresTotp && (
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="delete-account-totp"
+                      className="text-foreground text-base font-normal md:text-sm"
+                    >
+                      {t('settings.account.deletion.totpLabel')}
+                    </label>
+                    <Input
+                      id="delete-account-totp"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value)}
+                      placeholder="000000"
+                      maxLength={6}
+                      disabled={deleteAccountMutation.isPending}
+                    />
+                  </div>
+                )
+              )}
 
               <div className="space-y-2">
                 <label
@@ -161,7 +203,11 @@ export function AccountDeletionDialog() {
                 e.preventDefault();
                 handleDelete();
               }}
-              disabled={deleteAccountMutation.isPending || !password || confirmText !== 'DELETE'}
+              disabled={
+                deleteAccountMutation.isPending ||
+                confirmText !== 'DELETE' ||
+                (canUsePassword && !password)
+              }
               className="bg-destructive text-destructive-foreground hover:bg-destructive-hover"
             >
               {deleteAccountMutation.isPending

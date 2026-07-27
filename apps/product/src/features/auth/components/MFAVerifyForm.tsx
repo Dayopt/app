@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import Image from 'next/image';
 
 import {
   Button,
@@ -51,7 +50,7 @@ export function MFAVerifyForm({
   return (
     <div className="flex flex-col gap-6">
       <Card className="overflow-hidden p-0">
-        <CardContent className="grid p-0 md:grid-cols-2">
+        <CardContent className="p-0">
           <div className="p-6 md:p-8">
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
@@ -187,23 +186,8 @@ export function MFAVerifyForm({
               </FieldDescription>
             </FieldGroup>
           </div>
-          <div className="bg-surface-container relative hidden md:block">
-            <Image
-              src="/images/placeholder.svg"
-              alt="Decorative background"
-              fill
-              loading="lazy"
-              sizes="(min-width: 768px) 50vw, 0vw"
-              className="object-cover dark:brightness-20 dark:grayscale"
-            />
-          </div>
         </CardContent>
       </Card>
-      <FieldDescription className="px-6 text-center">
-        {t('auth.mfaVerify.termsAndPrivacy')} <a href="#">{t('auth.mfaVerify.termsOfService')}</a>{' '}
-        {t('auth.mfaVerify.and')} <a href="#">{t('auth.mfaVerify.privacyPolicy')}</a>
-        {t('auth.mfaVerify.agree')}
-      </FieldDescription>
     </div>
   );
 }

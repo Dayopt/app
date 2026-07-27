@@ -19,6 +19,7 @@
       "displayNameDesc": "他のユーザーに表示される名前",
       "displayNamePlaceholder": "例: Taro",
       "email": "メールアドレス",
+      "emailManagedByProvider": "Google アカウントのメールアドレスです。変更は Google 側で行ってください。",
       "noEmail": "未設定",
       "emailDesc": "アカウントに関連付けられたメールアドレス",
       "emailPlaceholder": "メールアドレスを入力",
@@ -120,13 +121,8 @@
           "description": "新しいコードを生成すると、既存のリカバリーコードはすべて無効になります。この操作は元に戻せません。"
         }
       },
-      "socialLogin": "ソーシャルログイン連携",
-      "socialLoginDesc": "ソーシャルログイン連携は今後のアップデートで利用可能になります",
-      "connect": "連携",
       "disconnect": "解除",
       "connected": "連携済み",
-      "notConnected": "未連携",
-      "comingSoon": "準備中",
       "session": "セッション",
       "dangerZone": "危険な操作",
       "dangerZoneDesc": "取り消すことのできない破壊的なアクション",
@@ -161,17 +157,15 @@
         "title": "アカウント削除",
         "warningTitle": "この操作は取り消すことができません。",
         "warningMessage": "アカウントとすべての関連データが削除されます。",
-        "consequence1": "すべてのタスクとプロジェクトが削除されます",
-        "consequence2": "プロフィールと設定が削除されます",
-        "consequence3": "30日後に完全削除されます（猶予期間）",
         "buttonText": "アカウント削除",
         "deleting": "削除中...",
         "dialogTitle": "アカウント削除の確認",
-        "dialogDescription": "本当にアカウントを削除しますか？この操作は30日後に完全に実行されます。それまでキャンセルできます。",
-        "gracePeriodTitle": "30日間の猶予期間",
-        "gracePeriodMessage": "削除リクエストから30日間、データは保持されます。その間であればアカウントを復元できます。",
+        "dialogDescription": "本当にアカウントを削除しますか？この操作は取り消せません。",
         "passwordLabel": "パスワードで確認",
         "passwordPlaceholder": "現在のパスワードを入力",
+        "totpLabel": "認証アプリのコード",
+        "totpRequired": "認証アプリのコードを入力してください。",
+        "invalidTotp": "コードが正しくありません。",
         "passwordRequired": "パスワードを入力してください",
         "invalidPassword": "パスワードが正しくありません",
         "confirmTextLabel": "確認のため「DELETE」と入力",
@@ -179,8 +173,12 @@
         "confirmTextError": "確認テキストが正しくありません",
         "cancel": "キャンセル",
         "confirm": "削除を実行",
-        "success": "アカウント削除をリクエストしました。30日後に完全削除されます。",
+        "success": "アカウントを削除しました。",
         "error": "アカウントを削除できませんでした。もう一度お試しください"
+      },
+      "loginMethod": {
+        "title": "ログイン方法",
+        "google": "Google"
       }
     },
     "calendar": {

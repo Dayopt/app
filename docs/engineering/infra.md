@@ -623,13 +623,15 @@ src/app/
 
 ### Auth 境界の確認
 
-- `(app)` 配下の page で auth check は **layout 経由で間接的に行われる**（Providers 内の `AuthStoreInitializer` で session 取得 → 未認証なら `/login` へ redirect）
+- `(app)` 配下の page で auth check は **proxy（`src/proxy.ts`）に一元化されている**（未認証で protected path → `/auth/login?redirect=`、MFA 未検証なら `/auth/mfa-verify`）。page / layout 単位の auth ガードは持たない
 - ページ単体での auth ガードは不要。新規 page を追加するときは `(app)` 配下に置けば自動的に認証必須となる
 - 認証スキップしたい page は `(auth)/` に置く（下記参照）
 
 ### (auth) Group: 認証フロー
 
 未認証ユーザー向けの login / signup / reset 系ページ。`AuthClientLayout` で軽量な `PublicProviders`（Theme + Tooltip のみ）を注入し、`AuthLayout` で UI を組み立てる。tRPC / TanStack Query などのデータ層は持たない（Supabase Auth Client SDK を直接利用）。
+
+認証済みユーザーが `(auth)` 配下へ来た場合は proxy が `/week` へ流すが、**セッションを持ったまま踏むのが正常系のパスは除外する**（`isAuthPathAllowedWhileAuthenticated`、`src/lib/auth/domain/access-policy.ts`）。対象は `/auth/mfa-verify`（aal2 への昇格）、`/auth/confirm`（メール内リンクの `token_hash` 検証。ログイン中のメールアドレス変更が通る）、`/auth/callback`（OAuth の code 交換）、`/auth/reset-password`（confirm でセッション確立後に着地）。
 
 #### Layout 系
 
@@ -640,15 +642,17 @@ src/app/
 
 #### Pages
 
-| Path                                  | Type          | 責務                                                           |
-| ------------------------------------- | ------------- | -------------------------------------------------------------- |
-| `(auth)/auth/page.tsx`                | page (server) | `/auth` ルートへの直接アクセス時の入口（リダイレクト or 案内） |
-| `(auth)/auth/login/page.tsx`          | page (server) | `LoginForm` を中央配置で render                                |
-| `(auth)/auth/signup/page.tsx`         | page (server) | `SignupForm`                                                   |
-| `(auth)/auth/password/page.tsx`       | page (server) | `PasswordResetForm`（リセットメール送信）                      |
-| `(auth)/auth/reset-password/page.tsx` | page (server) | `ResetPasswordForm`（リセットリンク経由の新パスワード設定）    |
-| `(auth)/auth/mfa-verify/page.tsx`     | page (server) | MFA TOTP コード検証                                            |
-| `(auth)/auth/mfa-verify/layout.tsx`   | layout        | MFA 専用 wrapper                                               |
+| Path                                  | Type          | 責務                                                                                                                            |
+| ------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `(auth)/auth/page.tsx`                | page (server) | `/auth` ルートへの直接アクセス時の入口（リダイレクト or 案内）                                                                  |
+| `(auth)/auth/login/page.tsx`          | page (server) | `LoginForm` を中央配置で render                                                                                                 |
+| `(auth)/auth/signup/page.tsx`         | page (server) | `SignupForm`                                                                                                                    |
+| `(auth)/auth/password/page.tsx`       | page (server) | `PasswordResetForm`（リセットメール送信）                                                                                       |
+| `(auth)/auth/reset-password/page.tsx` | page (server) | `ResetPasswordForm`（リセットリンク経由の新パスワード設定）                                                                     |
+| `(auth)/auth/mfa-verify/page.tsx`     | page (server) | MFA TOTP コード検証                                                                                                             |
+| `(auth)/auth/mfa-verify/layout.tsx`   | layout        | MFA 専用 wrapper                                                                                                                |
+| `(auth)/auth/confirm/route.ts`        | route handler | 認証メール内リンクの着地点。`token_hash` + `type` を `verifyOtp` し `next` へ redirect（signup / recovery / email_change 共通） |
+| `(auth)/auth/callback/route.ts`       | route handler | OAuth の `code` をセッションへ交換                                                                                              |
 
 ### [locale] 直下
 

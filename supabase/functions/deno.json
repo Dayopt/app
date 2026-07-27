@@ -1,4 +1,8 @@
 {
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
+  },
   "imports": {
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2.49.1",
     "react": "npm:react@18.3.1",

@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { dayoptDomains } from '@dayopt/config';
 
 import {
+  isAuthPathAllowedWhileAuthenticated,
   isAuthProductPath,
   isProtectedProductPath,
   isPublicProductPath,
@@ -239,10 +240,11 @@ export async function proxy(request: NextRequest) {
     }
 
     // 認証済みでauth系のパスにアクセスした場合
-    // MFA検証ページは除外
+    // MFA検証・メールリンク検証・OAuth callback はセッションを持ったまま通す必要がある
     const isMFAVerifyPath = pathWithoutLocale === '/auth/mfa-verify';
+    const isAllowedWhileAuthenticated = isAuthPathAllowedWhileAuthenticated(pathWithoutLocale);
 
-    if (user && isAuthPath && !isMFAVerifyPath) {
+    if (user && isAuthPath && !isAllowedWhileAuthenticated) {
       return redirectWithCsp(
         new URL(getLocalizedPath('/week', currentLocale), request.url),
         contentSecurityPolicy,
