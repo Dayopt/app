@@ -22,7 +22,9 @@ import { PasswordResetEmail } from './PasswordResetEmail.tsx';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
 const hookSecret = (Deno.env.get('SEND_EMAIL_HOOK_SECRET') as string).replace('v1,whsec_', '');
-const FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || 'auth@send.dayopt.app';
+// From は apex dayopt.app のみ（2026-07-21 incident で確定。send.dayopt.app は
+// Return-Path 用 DNS で、Resend の検証済み From domain ではなく 403 になる）
+const FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || 'noreply@dayopt.app';
 const APP_URL = Deno.env.get('NEXT_PUBLIC_APP_URL') || 'https://app.dayopt.app';
 
 type Locale = 'en' | 'ja';

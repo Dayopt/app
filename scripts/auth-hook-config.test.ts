@@ -49,6 +49,19 @@ describe('supabase/config.toml の send-auth-email', () => {
     expect(block).not.toMatch(/verify_jwt\s*=\s*true/);
   });
 
+  it('From の fallback が apex dayopt.app（send.dayopt.app は From に使えない）', () => {
+    // 2026-07-21 incident: send.dayopt.app は Return-Path 用 DNS subdomain で、
+    // Resend の検証済み From domain ではない（403 になる）。apps 側には同じ回帰テストが
+    // あるが Edge Function は網の外だったため、ここで固定する
+    const indexPath = resolve(
+      import.meta.dirname,
+      '../supabase/functions/send-auth-email/index.ts',
+    );
+    const source = readFileSync(indexPath, 'utf8');
+    expect(source).not.toContain("send.dayopt.app'");
+    expect(source).toMatch(/RESEND_FROM_EMAIL'\)\s*\|\|\s*'[a-z-]+@dayopt\.app'/);
+  });
+
   it('import map が実在する共有 deno.json を指している', () => {
     const block = readFunctionBlock('send-auth-email');
     const match = block.match(/import_map\s*=\s*"([^"]+)"/);
