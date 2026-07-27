@@ -22,7 +22,7 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
     ci.yml                    # static + unit + build + client bundle secret 検査 + Playwright E2E
     ai-review.yml             # 危険 path 限定の外部モデル diff レビュー
     production-config-audit.yml  # Vercel environment metadata 監査
-    docs-guard.yml            # docs整合性チェック
+    docs-guard.yml            # secret scan（gitleaks + secrets:check、全 PR）+ docs整合性チェック
     integration.yml           # Supabase 統合テスト + RLS snapshot drift 検査
     create-release.yml        # GitHub Release 作成
     release.yml               # リリース処理
@@ -164,12 +164,12 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 
 セキュリティレビューは 4 層で構成する。どの層も単独では完全でなく、コード変更起点（1・2）と時間経過起点（3・4）を組み合わせて成立させる。
 
-| 層         | タイミング          | 実体                                                                                                                                                                                         |
-| ---------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 実装中     | コード変更ごと      | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`AGENTS.md` §Read-only delegation）                                                                                      |
-| PR ごと    | CI                  | `ai-review.yml`（危険 path 限定の外部モデルレビュー）/ `integration.yml` の RLS snapshot drift 検査 / `ci.yml` の client bundle secret 検査・`secrets:check` / `production-config-audit.yml` |
-| 継続       | 常時・自動          | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                         |
-| 定期・随時 | 月次 + オンデマンド | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                    |
+| 層         | タイミング          | 実体                                                                                                                                                                                                                                       |
+| ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 実装中     | コード変更ごと      | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`AGENTS.md` §Read-only delegation）                                                                                                                                    |
+| PR ごと    | CI                  | `docs-guard.yml` の secret scan（gitleaks + `secrets:check`）/ `ai-review.yml`（危険 path 限定の外部モデルレビュー）/ `integration.yml` の RLS snapshot drift 検査 / `ci.yml` の client bundle secret 検査 / `production-config-audit.yml` |
+| 継続       | 常時・自動          | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                                                                       |
+| 定期・随時 | 月次 + オンデマンド | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                                                                  |
 
 **束ねた PR のレビュー**: 複数 issue / Step を束ねた PR は merge 前に read-only subagent のクロスレビューを必須とする（`.claude/rules/workflow.md` §PR 粒度）。
 
@@ -181,7 +181,9 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 2. `pnpm security:check`（= `pnpm audit --audit-level=moderate`）
 3. `/claude-security` の全体スキャン実行をユーザーへ提案
 
-2 は **CI では実行しない**。依存脆弱性の継続検知は Dependabot alerts が担当し（security update は schedule と無関係に即時 PR が出る）、CI に `pnpm audit` を足すと新しい advisory が公開された瞬間に無関係な PR まで落ちる。Actions 課金が PR 本数に比例する構造（`.claude/rules/workflow.md` §PR 粒度）でもあるため、月次の手動実行に留める。CI が毎 PR で見るのは `secrets:check`（repo 内の literal secret）と client bundle への secret 混入の 2 つ。
+2 は **CI では実行しない**。依存脆弱性の継続検知は Dependabot alerts が担当し（security update は schedule と無関係に即時 PR が出る）、CI に `pnpm audit` を足すと新しい advisory が公開された瞬間に無関係な PR まで落ちる。Actions 課金が PR 本数に比例する構造（`.claude/rules/workflow.md` §PR 粒度）でもあるため、月次の手動実行に留める。
+
+secret 検出はこれとは別で、**全 PR で自動実行される**。`docs-guard.yml`（job 名 `docs & secrets guard`、path filter なし）が gitleaks で base ref からの差分を、`pnpm secrets:check` で tracked tree 全体を見る。加えて `ci.yml` がビルド後の client bundle への混入を grep する。ローカルでは `pnpm check` に `secrets:check` が含まれる（CI 側は docs-guard の 1 回のみで、二重実行はしない）。
 
 3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
 
