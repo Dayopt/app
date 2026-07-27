@@ -38,21 +38,6 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
-/**
- * FAQ を `/docs/faq/<slug>` へ階層化する前の旧 slug（2026-07-27）。
- * `content/docs/{en,ja}/faq/*.mdx` の index.mdx 以外と対にする。
- * FAQ ページを追加・改名したらここも更新する。
- */
-const FAQ_SLUGS = [
-  'comparison',
-  'features',
-  'general',
-  'philosophy',
-  'pricing',
-  'privacy-security',
-  'technical',
-];
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -154,10 +139,16 @@ const nextConfig = {
 
   // 削除・移動した公開ページの 301。
   //
-  // **実在したページだけを書く。** 2026-07-27 の棚卸しで、/pricing /features /about
-  // /changelog の 8 エントリがページとして一度も存在しなかったことを確認して削除した
-  // （git log --all --diff-filter=A に追加記録が無く、repo 内からのリンクも 0）。
-  // 慣習的な URL を先回りして書くと、実際に消したページ（/releases）の方が漏れる。
+  // **本格公開前は URL 移動の redirect を持たない**（2026-07-27 決定）。まだ外部から
+  // 参照されていないため、旧 URL を延命すると設定だけが増える。FAQ を /docs/faq/<slug>
+  // へ移した分の 14 エントリはこの方針で入れずに済ませている。
+  //
+  // 公開後は前提が変わる。被リンクが付いた URL を動かす時は 301 を必ず用意する。
+  //
+  // 書くのは**実在したページ**だけにする。2026-07-27 の棚卸しで /pricing /features
+  // /about /changelog の 8 エントリがページとして一度も存在しなかったことを確認して
+  // 削除した（git log --all --diff-filter=A に追加記録が無く、repo 内からのリンクも 0）。
+  // 慣習的な URL を先回りして書くと、実際に消したページの方が漏れる。
   //
   // `:locale` は必ず (en|ja) で制約する。無制約の `/:locale/pricing` は 1 セグメントなら
   // 何にでもマッチするため、`/docs/pricing` の `docs` を locale と誤認して公開中の
@@ -177,22 +168,18 @@ const nextConfig = {
         destination: '/:locale/blog/release',
         permanent: true,
       },
-      // FAQ を /docs/faq/<slug> へ階層化した分の旧 URL（2026-07-27）。
-      // FAQ は pricing / features のような一般名を docs のグローバル名前空間で
-      // 占有してしまい、`/docs/pricing` が料金ページに見えて実際は FAQ という
-      // 誤解を生んでいた。経緯は docs/marketing/log/2026-07-27-docs-faq-url-nesting.md
-      ...FAQ_SLUGS.flatMap((slug) => [
-        {
-          source: `/docs/${slug}`,
-          destination: `/docs/faq/${slug}`,
-          permanent: true,
-        },
-        {
-          source: `/:locale(en|ja)/docs/${slug}`,
-          destination: `/:locale/docs/faq/${slug}`,
-          permanent: true,
-        },
-      ]),
+      // getting-started の overview は /docs 自体が表示するため、重複コンテンツを避けて寄せる。
+      // docs route は dynamicParams: false なのでページ側の redirect() は到達せず、ここで処理する。
+      {
+        source: '/docs/getting-started',
+        destination: '/docs',
+        permanent: true,
+      },
+      {
+        source: '/:locale(en|ja)/docs/getting-started',
+        destination: '/:locale/docs',
+        permanent: true,
+      },
     ];
   },
 

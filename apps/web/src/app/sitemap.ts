@@ -109,14 +109,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const locale of locales) {
       const allDocs = await getAllContent(locale);
       docPages.push(
-        ...allDocs.map((doc) => ({
-          url: localizedUrl(locale, `/docs/${doc.slug}`),
-          lastModified: doc.frontMatter.updatedAt
-            ? new Date(doc.frontMatter.updatedAt)
-            : new Date(),
-          changeFrequency: 'weekly' as const,
-          priority: doc.frontMatter.featured ? 0.8 : 0.6,
-        })),
+        // getting-started の overview は /docs へ 301 するため sitemap に載せない
+        // （redirect する URL を sitemap で宣言しない）。/docs 自体は上で追加済み
+        ...allDocs
+          .filter((doc) => doc.slug !== 'getting-started')
+          .map((doc) => ({
+            url: localizedUrl(locale, `/docs/${doc.slug}`),
+            lastModified: doc.frontMatter.updatedAt
+              ? new Date(doc.frontMatter.updatedAt)
+              : new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: doc.frontMatter.featured ? 0.8 : 0.6,
+          })),
       );
     }
     contentStatus.docs = true;

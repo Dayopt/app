@@ -1,5 +1,5 @@
 import { Heading, Text } from '@dayopt/components';
-import { Link, redirect } from '@dayopt/i18n/navigation';
+import { Link } from '@dayopt/i18n/navigation';
 import { StructuredData } from '@web/components/seo/StructuredData';
 import { DocArticle } from '@web/features/docs';
 import { getAllContent } from '@web/lib/mdx';
@@ -28,6 +28,12 @@ function toContentSlug(segments: string[]): string {
 
 // ISR: ドキュメント記事は1日ごとに再検証
 export const revalidate = 86400;
+
+// 公開 docs は content/docs 配下の mdx で全量がビルド時に確定する。dynamicParams を
+// 許すと未知の slug が on-demand レンダリングされ、not-found を **HTTP 200** で返す
+// （2026-07-27 に本番で /docs/nonexistent が 200 なのを確認。soft 404 として
+// インデックスされうる）。false にして未知の slug は routing 層で 404 にする。
+export const dynamicParams = false;
 
 // Generate static parameters (SEO optimization)
 export async function generateStaticParams(): Promise<PageParams[]> {
@@ -161,11 +167,8 @@ export default async function DocPage({ params }: DocPageProps) {
     notFound();
   }
 
-  // getting-started の overview (index.mdx) は /docs 自体に統一する。
-  // /docs/getting-started として直接アクセスされた場合は重複コンテンツを避けるため寄せる。
-  if (matched.frontMatter.category === 'getting-started' && matched.slug === 'getting-started') {
-    redirect({ href: '/docs', locale });
-  }
+  // /docs/getting-started → /docs は next.config.mjs の redirects で処理する。
+  // dynamicParams: false によりこの slug は routing 層で弾かれ、ここまで到達しない。
 
   const { previousPage, nextPage } = getAdjacentPages(allContent, slug);
 

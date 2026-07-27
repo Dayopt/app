@@ -55,7 +55,7 @@ FAQ ファイルは 2026-07-15 追加、カテゴリ再編は 7/24。SEO 資産�
 - route を `docs/[slug]` から `docs/[...slug]` へ変更。`generateStaticParams` は `content.slug.split('/')` を返す
 - 同じ規則を持つ独立実装が 3 つあるので合わせて更新した。`validate-content.js`（`routingSlugFor`）、`scripts/docs-coverage/collect.ts`、`apps/web/scripts/generate-search-index.ts`。**片方だけ変えると routing と validator がずれる**
 - `docs-guard` の `DOC_SLUG_RE` が 2 セグメントを許すようにした（`public_docs: faq/pricing` を書けるようにするため）
-- 旧 URL 14 本（en 7 + ja 7）から 301。`FAQ_SLUGS` を `next.config.mjs` に定数で持つ
+- **旧 URL からの 301 は用意しない。** 本格公開前で外部から参照されていないため、旧 URL を延命すると設定だけが増える（2026-07-27 決定）。`/docs/pricing` 等は 404 になる
 - `faq/index.mdx` を en / ja に新規作成（`/docs/faq` が 404 にならないように）
 
 ### FAQ index は `##` 見出しを使わない
@@ -66,14 +66,14 @@ FAQ カテゴリに index 以外の「見出しが質問でないページ」を
 
 ## 検証
 
-- 旧 URL の 301: `/docs/pricing` → `/docs/faq/pricing`、`/ja/docs/general` → `/ja/docs/faq/general`
-- 本来の redirect 維持: `/pricing` → `/#pricing`、`/features` → `/#how`
+- 旧 URL は 404 になる（301 を置かない方針のため）。`/docs/pricing` `/ja/docs/general` で確認
+- 実在ページの redirect は維持: `/releases` → `/blog/release`
 - prerender は 24 routes（`● /[locale]/docs/[...slug]`）。SSG を維持している
 - sitemap / 検索インデックス / docs サイドバー / `docs:coverage` がすべて新 URL を出す
 - `/docs/faq` に `FAQPage` が出ず、`/docs/faq/pricing` には正しい Q&A で出る
 
 ## 次に触る人へ
 
-FAQ ページを追加・改名したら、`next.config.mjs` の `FAQ_SLUGS`（旧 URL からの 301 用）も更新する。新規追加ページには旧 URL が無いので追記不要だが、改名時は必要。
+**公開後は前提が変わる。** 被リンクが付いた URL を動かす時は 301 を必ず用意する。今回 301 を省いたのは、本格公開前で外部参照が無いという前提に依存している。
 
 別カテゴリを階層化したくなったら `NESTED_URL_CATEGORIES` に足したうえで、上記の独立実装 3 箇所と `DOC_SLUG_RE` を必ず同時に更新する。
