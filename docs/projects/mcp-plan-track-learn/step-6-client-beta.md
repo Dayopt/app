@@ -16,6 +16,8 @@ code:
 
 Productionと認証・DB・secretを共有しないPersistent Stagingで、ChatGPT、Claude、CursorからDayoptのPlan → Track → Learnを完結し、clientごとのwrite gateを安全に開閉できる証拠を残す。
 
+外部作業時の入力、順序、証跡テンプレート、停止条件は[execution checklist](./step-6-execution-checklist.md)を使う。
+
 ## Current state
 
 2026-07-28時点ではStep 6は未完了であり、closed betaはHALTとする。
@@ -144,7 +146,7 @@ Production候補ではDB-firstを必須にする。OAuth writeをquiesceして�
 | Audit completeness         | 成功mutation件数とreceipt件数が一致し、payload-free statusの期限超過が0                     |
 | Delete all data            | 完了後にMCP writeとCalendar syncでデータが再生成されない                                    |
 
-repoへ保存するevidenceは、client/version、test case、開始/終了時刻、status、redacted observationだけのmanifestとする。synthetic title/note/test userを使い、raw HAR、OAuth code/token/verifier、cookie、Authorization header、callback query、service-role key、operation ID、user ID、ユーザー本文を保存しない。外部に保存する画面録画はbeta担当者だけに限定し、Step 6判定後30日以内に削除する。
+repoへ保存するevidenceは、client/version、test case、開始/終了時刻、status、redacted observationに加え、非secretのenvironment、issuer/resource、deployment SHA、DB identity、gate revision、synthetic fixture label、明示承認記録への参照だけを持つmanifestとする。synthetic title/note/test userを使い、raw HAR、OAuth code/token/verifier、cookie、Authorization header、callback query、service-role key、operation ID、user ID、ユーザー本文を保存しない。`deleteAllData`は対象synthetic user、Persistent Staging環境、削除操作を指定した個別承認後にだけ実行する。外部に保存する画面録画はbeta担当者だけに限定し、Step 6判定後30日以内に削除する。
 
 client固有の現在条件も証跡へ含める。
 
