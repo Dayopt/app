@@ -937,6 +937,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      abandon_billing_customer_provisioning_v1: {
+        Args: { p_operation_id: string; p_user_id: string };
+        Returns: boolean;
+      };
+      abandon_billing_customer_provisioning_v2: {
+        Args: { p_operation_id: string; p_user_id: string };
+        Returns: boolean;
+      };
       abandon_calendar_account_delete_revoke_v1: {
         Args: {
           p_deletion_id: string;
@@ -1231,6 +1239,34 @@ export type Database = {
           result: string;
         }[];
       };
+      claim_billing_customer_provisioning_v1: {
+        Args: {
+          p_email_digest: string;
+          p_operation_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          lease_expires_at: string;
+          lease_id: string;
+          provider_customer_id: string;
+          provider_retry_deadline_at: string;
+          result: string;
+        }[];
+      };
+      claim_billing_customer_provisioning_v2: {
+        Args: {
+          p_email_digest: string;
+          p_operation_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          lease_expires_at: string;
+          lease_id: string;
+          provider_customer_id: string;
+          provider_retry_deadline_at: string;
+          result: string;
+        }[];
+      };
       claim_billing_mutation_v2: {
         Args: {
           p_mutation_kind: string;
@@ -1394,6 +1430,22 @@ export type Database = {
           p_user_id: string;
         };
         Returns: boolean;
+      };
+      complete_billing_customer_provisioning_v1: {
+        Args: {
+          p_operation_id: string;
+          p_provider_customer_id: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
+      complete_billing_customer_provisioning_v2: {
+        Args: {
+          p_operation_id: string;
+          p_provider_customer_id: string;
+          p_user_id: string;
+        };
+        Returns: string;
       };
       complete_calendar_revoke_outbox_v1: {
         Args: { p_lease_id: string; p_outbox_id: string };
@@ -2298,6 +2350,14 @@ export type Database = {
       soft_delete_record: {
         Args: { p_record_id: string; p_user_id: string };
         Returns: undefined;
+      };
+      start_billing_customer_provisioning_v1: {
+        Args: { p_lease_id: string; p_operation_id: string; p_user_id: string };
+        Returns: string;
+      };
+      start_billing_customer_provisioning_v2: {
+        Args: { p_lease_id: string; p_operation_id: string; p_user_id: string };
+        Returns: string;
       };
       start_billing_mutation_v2: {
         Args: {
