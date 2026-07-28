@@ -1,11 +1,14 @@
 ---
 status: current
-last_verified: 2026-07-26
+last_verified: 2026-07-28
 code:
-  - apps/product/src/features/auth
+  - apps/product/src/app/api/trpc/_server/_composition/account-deletion-coordinator.ts
+  - apps/product/src/features/auth/server/user-service.ts
   - apps/product/src/features/external-calendar/server/account-deletion.ts
+  - apps/product/src/features/settings/server/account-deletion.ts
   - apps/product/src/lib/mcp/trpc-bridge.ts
   - apps/product/src/lib/trpc
+  - supabase/migrations/20260728110000_recover_customer_before_account_deletion.sql
 public_docs:
   - account-troubleshooting
 lp: []
@@ -26,17 +29,19 @@ Supabase Auth ベースの認証機能。
 
 ## アカウント削除
 
-`user.deleteAccount` は、server側で判定したログイン手段に応じた再認証の後、次の順序で処理する。
+`user.deleteAccount` は、server側で判定したログイン手段に応じた再認証の後、generic account-deletion operationを使う。gate無効中はdurable closing fenceが無いため、削除要求をfail closedにする。旧アプリをdrainし、gateを有効にした後だけ次へ進む。
 
-1. Calendar account-deletion intentを開始し、DBが返すcanonical deletion IDを採用する
-2. 各connection / revoke outbox itemをprepareする
-3. DBのprovider start markerが`started`を返した場合だけGoogle revokeを1回呼ぶ
-4. 同じoperation・lease・outcomeでfinalizeし、全itemのdurable receiptをsealする
-5. avatarを削除する
-6. Stripe subscriptionとCustomerをidempotency key付きで削除する
-7. `auth.users`を最後に削除する
+1. DBのglobal・user fence下でgeneric operationを開始する。Stripe Customer作成がprovider開始後なら、期限内は待つ。23時間を過ぎた不明応答は、`supabase_user_id` metadataでexact検索し、0件ならabandon、1件ならprofileへbind、複数なら停止する
+2. Billing targetをprofileからsnapshotする。設定済みのStripe account IDとlive/test modeを照合し、open Checkout Sessionを先にexpireする
+3. generic operationにbindしたCalendar deletion IDを変更せず使う。各connection / revoke outbox itemをprepareし、DBのprovider start markerが`started`を返した時だけGoogle revokeを1回呼ぶ。同じoperation・lease・outcomeでfinalizeし、全itemをsealする
+4. service roleで`avatars`と`attachments`を再帰列挙する。100件ずつ削除し、両bucketのuser prefixが空になったことを再確認する
+5. open Checkout Sessionを再列挙してexpireし、対象statusのsubscriptionをcancelする。bound Customerを削除し、Stripeが`DeletedCustomer`を返すことを確認してBilling receiptをsealする。`resource_missing`は成功扱いしない
+6. Calendar、Storage、Billingの3 stepを完了してgeneric operationをsealする
+7. `auth.users`を最後に削除する。応答消失時は同じuser IDを最大3回照合・再送し、存在不明ならfail closedにする
 
-provider startの応答が不明な場合はGoogleを再実行しない。finalizeの応答が不明な場合は同じ引数のfinalizerだけを再送する。Calendar sealに失敗した場合はStorage、Stripe、Authを変更しない。StorageまたはStripeの失敗時はAuth identityを残し、完了済みの削除を冪等に再確認できる。
+generic operation開始後は、同じuserへの新しいCalendar、Storage、Billing、Plan、Record writeをDB fenceが拒否する。Google provider startの応答が不明な場合はGoogleを再実行しない。finalizeの応答が不明な場合は同じ引数のfinalizerだけを再送する。どのstepが失敗してもAuth identityを残し、完了済みstepはdurable receiptから再開する。
+
+削除通知メールはAuth削除が今回確定した場合だけ送る。`user_not_found`を直接受けたreplayでは重複送信しない。完全なexactly-once配信ではなく、メール失敗で削除結果は戻さない。
 
 「すべてのデータを削除」はaccountを保持し、Calendar authorityとoperation IDにbindした`delete_all_user_data_command_v5`を使う。確認ダイアログを開く前にDBがoperation IDと現在のuser generationを発行し、同じダイアログ内のclient retry、tRPC retry、DB retryで両方を固定する。user generationを進め、Calendar tokenをrevoke outboxへ移し、Dayopt OAuthを失効し、MCP mutation receiptをpurged generationへ固定してから、Plan、Record、report、tag、user settings、Calendar mirrorを原子的に削除する。応答が失われても同じoperation IDを再送し、完了済みなら新しく作成されたデータを削除せず成功を返す。別の操作や古いgenerationは拒否する。
 

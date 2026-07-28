@@ -168,7 +168,8 @@ Proユーザー "プランを管理" クリック
 - Portal URLは5分、Checkout URLは10分で失効する。残り30秒未満のURLは返さない
 - URL失効後は同じ operation を再実行しない。明示的な次のクリックで新しい operation を開始する
 - provider requestが再送可能な間はアカウント削除開始を拒否する
-- アカウント削除開始後は既存URLを削除し、Checkout / Portal の作成・redirectを行わない
+- Customer作成の応答が不明なまま23時間を過ぎた場合は、アカウント削除側がuser metadataでexact検索してprofile bindまたはabandonを完了するまで削除開始を拒否する
+- アカウント削除開始後は既存URLを削除し、Checkout / Portal の作成・redirectを行わない。open Checkout SessionはCalendarやStorageより先にexpireし、最終Billing stepでも再列挙する
 
 ### 3. Webhook イベント処理
 
@@ -243,10 +244,12 @@ publicProcedure          ← 認証不要
 | 変数名                            | 用途                         | 設定場所                                        |
 | --------------------------------- | ---------------------------- | ----------------------------------------------- |
 | `STRIPE_SECRET_KEY`               | Stripe API シークレットキー  | サーバーサイドのみ (`src/env.ts`)               |
+| `STRIPE_ACCOUNT_ID`               | 固定するStripe account ID    | `acct_...`。削除前のprovider identity照合に使用 |
+| `STRIPE_LIVEMODE`                 | 固定するlive/test mode       | liveは`true`、testは`false`                     |
 | `STRIPE_WEBHOOK_SECRET`           | Webhook 署名検証シークレット | サーバーサイドのみ                              |
 | `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID` | Pro プランの Price ID        | サーバー側 Checkout 設定値。UI 表示制御にも使用 |
 
-**注意**: `STRIPE_SECRET_KEY` が未設定の場合、`getStripe()` は `null` を返す（graceful degradation）。課金が必須の処理では `requireStripe()` を使用し、未設定時にエラーをスローする。
+**注意**: `STRIPE_SECRET_KEY` が未設定の場合、`getStripe()` は `null` を返す（graceful degradation）。Stripeを使う環境では`STRIPE_SECRET_KEY`、`STRIPE_ACCOUNT_ID`、`STRIPE_LIVEMODE`をまとめて設定する。アカウント削除はAccount APIとBalance APIで両方を照合し、不一致または確認不能ならidentityを残す。
 
 ---
 
