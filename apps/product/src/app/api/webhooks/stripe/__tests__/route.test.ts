@@ -7,7 +7,7 @@ const envMock = vi.hoisted(() => ({
   SLACK_BILLING_WEBHOOK_URL: undefined,
   STRIPE_ACCOUNT_ID: 'acct_dayopt',
   STRIPE_LIVEMODE: 'false',
-  STRIPE_WEBHOOK_SECRET: 'whsec_test',
+  STRIPE_WEBHOOK_SECRET: 'fixture',
 }));
 const eventMock = vi.hoisted(() => ({
   account: null as string | null,
