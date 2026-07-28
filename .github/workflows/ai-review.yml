@@ -21,12 +21,16 @@ on:
       - 'apps/product/src/lib/oauth-server/**'
       - 'apps/product/src/lib/security/**'
       - 'apps/product/src/lib/safe-redirect.ts'
+      - 'apps/product/src/proxy.ts'
       # サーバー境界
       - 'apps/product/src/features/*/server/**'
       - 'apps/product/src/lib/trpc/**'
       - 'apps/product/src/lib/rate-limit/**'
       - 'apps/product/src/app/api/**'
       - 'apps/web/src/app/api/**'
+      # env 契約・送信境界
+      - 'apps/product/src/env.ts'
+      - 'apps/product/src/lib/email/**'
       # 課金
       - 'apps/product/src/lib/billing/**'
       - 'apps/product/src/lib/stripe/**'

@@ -159,6 +159,15 @@ commit 前に必ず `git diff --cached` で index 内容を確認する。Edit �
 - `pnpm lint:boundaries`
 - `pnpm build`（routing / layout 変更時）
 
+### push 前の敵対的セルフレビュー
+
+外部レビュー（Codex / ai-review）は push ごとに走るため、指摘 → 修正 push のラウンドがそのまま時間コストになる。effort で拾える層は push 前に自分で拾う:
+
+- `AGENTS.md` §Read-only delegation の自動委任条件に該当する diff（auth / RLS / billing / migration / 公開契約 / cross-feature）は、**初回 push 前に**該当 subagent（`risk-reviewer` / `behavior-verifier` / `architecture-guard`）へ反証レビューをかける
+- 観点は「反証」に固定する: 配線漏れ（workflow ↔ script の env 受け渡し等）、定数間の不等式（timeout / 予算）、直前の修正コミットが新たに開けた穴
+- 指摘対応の push 前にも同じ確認を行う。外部レビューの指摘を直すコミット自体が新しい回帰を作る事例が繰り返し起きている（PR #1712 / #1738）
+- §束ねた PR のレビュー の merge 前クロスレビューは別途維持する（あちらは束ね PR の最終確認、こちらは push ラウンド削減）
+
 ### Storybook 視覚確認
 
 UI 変更を含む作業では、関連 Story がある場合は Storybook を起動し、Main が視覚確認する。ユーザーと画面を共有できる provider では、同じ browser surface を優先する:
