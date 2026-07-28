@@ -35,6 +35,26 @@
       },
       "closing": "Dayopt is not a place to manage tasks. It is a place to operate how you use your time."
     },
+    "openByDesign": {
+      "label": "Open by design",
+      "title": "Your data, open by design",
+      "subtitle": "Your plans and records stay yours. Dayopt won\'t lock them in a closed box.",
+      "description": "Connect your time data without changing your workflow.",
+      "items": {
+        "mcp": {
+          "title": "MCP Server",
+          "description": "Your AI assistant can directly access your plans and records in Dayopt."
+        },
+        "ical": {
+          "title": "iCalendar feed",
+          "description": "You can subscribe to your Dayopt plans in Google Calendar and other tools."
+        },
+        "api": {
+          "title": "API first",
+          "description": "Data export and external integrations stay in your hands."
+        }
+      }
+    },
     "how": {
       "eyebrow": "How it works",
       "title": "Your time. Planned, tracked, and understood.",

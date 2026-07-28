@@ -35,6 +35,26 @@
       },
       "closing": "Dayopt は、タスクを管理する場所ではなく、時間の使い方を運用する場所です。"
     },
+    "openByDesign": {
+      "label": "Open by design",
+      "title": "あなたのデータは、開かれている",
+      "subtitle": "Dayopt の予定と実績は、あなたのものです。閉じたアプリに囲い込みません。",
+      "description": "あなたのワークフローを変えずに、データを外へ広げられます。",
+      "items": {
+        "mcp": {
+          "title": "MCP サーバー",
+          "description": "あなたが使う AI エージェントから、Dayopt の予定と実績を直接参照できます。"
+        },
+        "ical": {
+          "title": "iCalendar フィード",
+          "description": "Google カレンダーなどの外部ツールで Dayopt の予定を購読できます。"
+        },
+        "api": {
+          "title": "API ファースト",
+          "description": "データのエクスポートや外部ツール連携も、あなたの意思で進められます。"
+        }
+      }
+    },
     "how": {
       "eyebrow": "使い方",
       "title": "あなたの時間。計画し、記録し、理解する。",
