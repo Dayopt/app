@@ -1246,6 +1246,24 @@ export type Database = {
           result: string;
         }[];
       };
+      claim_billing_mutation_v3: {
+        Args: {
+          p_mutation_kind: string;
+          p_operation_id: string;
+          p_request_digest: string;
+          p_user_id: string;
+        };
+        Returns: {
+          canonical_operation_id: string;
+          lease_expires_at: string;
+          lease_id: string;
+          provider_object_id: string;
+          provider_response_expires_at: string;
+          provider_response_url: string;
+          provider_retry_deadline_at: string;
+          result: string;
+        }[];
+      };
       claim_calendar_oauth_attempt_v1: {
         Args: {
           p_project_key: string;
@@ -1309,6 +1327,13 @@ export type Database = {
       cleanup_billing_mutation_claims_v1: {
         Args: { p_limit?: number };
         Returns: number;
+      };
+      cleanup_billing_mutation_claims_v2: {
+        Args: { p_limit?: number };
+        Returns: {
+          claims_deleted: number;
+          provider_responses_redacted: number;
+        }[];
       };
       cleanup_calendar_authority_retention_v1: {
         Args: { p_limit?: number; p_project_key: string };
@@ -1967,6 +1992,28 @@ export type Database = {
           p_outcome: string;
           p_provider_customer_id: string;
           p_provider_object_id: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
+      reconcile_billing_mutation_v3: {
+        Args: {
+          p_operation_id: string;
+          p_outcome: string;
+          p_provider_customer_id: string;
+          p_provider_object_id: string;
+          p_provider_response_url: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
+      reconcile_billing_mutation_v4: {
+        Args: {
+          p_operation_id: string;
+          p_outcome: string;
+          p_provider_customer_id: string;
+          p_provider_object_id: string;
+          p_provider_response_url: string;
           p_user_id: string;
         };
         Returns: string;
