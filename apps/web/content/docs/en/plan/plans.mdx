@@ -1,10 +1,10 @@
 ---
 title: 'Create Plans'
-description: 'Learn how to create, manage, and organize your Plans in Dayopt. Plans are the building blocks of timeboxing — schedule tasks, set reminders, and track your intentions.'
+description: 'How to use Plans in Dayopt — create, edit, tag, complete or skip them, link them to Records, and use keyboard shortcuts.'
 tags: ['plans', 'timeboxing', 'tutorial', 'getting-started', 'productivity']
 author: 'Dayopt Team'
 publishedAt: '2026-02-19'
-updatedAt: '2026-02-19'
+updatedAt: '2026-07-27'
 order: 1
 featured: true
 category: 'plan'
@@ -13,15 +13,15 @@ slug: 'plans'
 ai:
   relatedQuestions:
     - 'How do I create a plan?'
-    - 'How do I set up recurring plans?'
+    - 'How do I mark a plan complete?'
     - 'Can I drag and drop plans on the calendar?'
     - 'What keyboard shortcuts work with plans?'
-    - 'How do I complete a plan and create a record?'
+    - 'How do I link a plan to a record?'
   prerequisites:
     - 'Signed up for a Dayopt account'
-    - 'Logged in to Dayopt'
+    - 'Signed in to Dayopt'
   relatedDocs:
-    - '/docs/records'
+    - '/docs/getting-started'
   chunkStrategy: 'h2'
   searchable: true
   difficulty: 'beginner'
@@ -30,120 +30,84 @@ ai:
 
 # Create Plans
 
-Plans are the core of Dayopt's timeboxing approach. A Plan represents something you intend to do — whether it's a meeting, a focused work session, or a personal task. By placing Plans on your calendar, you practice timeboxing: allocating specific time blocks to each task.
+Plans are the core of timeboxing in Dayopt. A Plan is something you intend to do — a meeting, a focused work session, an errand. You put it on the calendar first, so you can see how your day is spent.
 
 ## Creating a Plan
 
-There are several ways to create a Plan:
+There are four ways to create a Plan.
 
-| Method                    | How                                                                              |
-| ------------------------- | -------------------------------------------------------------------------------- |
-| **Click on the calendar** | Click any empty time slot to open the Inspector                                  |
-| **Drag on the calendar**  | Click and drag across a time range to pre-fill the start and end time            |
-| **Right-click**           | Right-click an empty area and select "New Plan"                                  |
-| **"+" button**            | Click the "+" button — Dayopt automatically finds the next available 1-hour slot |
-| **Keyboard shortcut**     | Press `N` to create a new Plan at the current time                               |
+| Method                    | How                                                    |
+| ------------------------- | ------------------------------------------------------ |
+| **Click on the calendar** | Click an empty time slot                               |
+| **Drag on the calendar**  | Drag across a time range to set the start and end time |
+| **`C`**                   | Create a block                                         |
+| **`Shift+C`**             | Create a 15-minute block starting at the current time  |
 
-Once created, fill in the title, adjust the time, add tags, and press `Cmd+Enter` (or `Ctrl+Enter`) to save.
+The Inspector opens when the Plan is created. Type a title and it saves as you go.
 
 ## Editing a Plan
 
-Click any Plan on the calendar or in the sidebar to open the **Inspector** — a detail panel where you can edit all fields:
+Click a Plan on the calendar to open the **Inspector**. You can edit these fields:
 
 - **Title** — saves automatically as you type
 - **Date** — move the Plan to a different date
-- **Start / End time** — adjust the time slot (duration is shown automatically)
-- **Tags** — add or remove tags to categorize your Plan
-- **Note** — add a rich text description
-- **Recurrence** — set the Plan to repeat (see below)
-- **Reminder** — get notified before the Plan starts
+- **Time** — adjust the start and end (duration is shown automatically)
+- **Tag** — one tag per block
+- **Note** — write down what the Plan is about
 
-Use `Arrow Up` / `k` and `Arrow Down` / `j` to navigate between Plans without closing the Inspector.
+Inside the Inspector, use `↑` / `k` and `↓` / `j` to move between blocks. Press `Escape` to close it.
 
 ## Drag and Drop
 
-Plans on the calendar support intuitive drag and drop:
-
 - **Move** — drag a Plan to a different time slot
 - **Resize** — drag the bottom edge to change the end time
-- **Schedule** — drag an unscheduled Plan from the sidebar onto the calendar
 
 Press `Escape` during a drag to cancel.
 
-## Recurring Plans
+## Tagging a Plan
 
-Set up Plans that repeat automatically. Click the repeat icon in the Inspector to choose from quick presets:
+Each Plan takes one tag. Sort your time by how you spend it — "Deep work", "Meeting", "Admin" — and you can see where the hours went when you review.
 
-| Pattern                | Example         |
-| ---------------------- | --------------- |
-| **Every day**          | Daily standup   |
-| **Every week**         | Weekly review   |
-| **Weekdays (Mon-Fri)** | Morning routine |
-| **Every month**        | Monthly report  |
-| **Every year**         | Annual review   |
-
-For more control, select **Custom** to configure:
-
-- Frequency and interval (e.g., every 2 weeks)
-- Specific days of the week (e.g., Monday, Wednesday, Friday)
-- End condition: never, until a date, or after N occurrences
-
-When editing a recurring Plan, you can choose to change:
-
-- **This instance only** — just this one occurrence
-- **This and future** — this and all upcoming occurrences
-- **All instances** — the entire series
+A block holds one tag. You cannot add more than one.
 
 ## Completing a Plan
 
-When you finish a task, mark the Plan as complete:
+When you finish, click **"Mark complete"** in the Inspector. **"Mark incomplete"** puts it back.
 
-- Click the **checkbox** on the Plan card directly
-- Or open the Inspector and click **"Mark as complete"**
+**"Complete + Create Timeblock"** marks the Plan done and creates another block with the same details.
 
-You can also use **"Complete + Create Record"** to mark the Plan done and simultaneously create a Record with the same title, time, and tags — linking your intention to your actual time spent.
+If you did not do it, use **"Skip"**. Skipped Plans drop out of your totals but stay in your history. You can **"Undo skip"** later.
 
-## Reminders
+## Linking a Record
 
-Set a reminder to get notified before a Plan starts:
+A Record is the time you actually spent. From the Inspector, use **"Link Record"** to pick an existing Record, or **"Add Record"** to create one.
 
-| Option            | When                 |
-| ----------------- | -------------------- |
-| At start time     | When the Plan begins |
-| 10 minutes before | Quick heads-up       |
-| 30 minutes before | Time to prepare      |
-| 1 hour before     | Advance notice       |
-| 1 day before      | Day-ahead reminder   |
-| 1 week before     | Week-ahead reminder  |
+Time you did not plan shows up as **"Unplanned"**. Use **"Restore plan"** in the Inspector to treat it as a Plan again.
 
-## Copy and Paste
+The Inspector shows the gap between plan and record under "Diff" and "Time progress".
 
-Copy a Plan from the right-click menu or with `Cmd+C`, then paste it at any position on the calendar with `Cmd+V`. The pasted Plan keeps the same title, duration, and tags.
+## Duplicating a Plan
 
-## Plan List Panel
+Open the Inspector menu and select **"Duplicate"** to create another Plan with the same details. The same menu can copy a link to the Plan.
 
-Toggle the sidebar panel from the header to see all your Plans in a list view. The panel supports:
+## Switching the sidebar
 
-- **Search** by title
-- **Filter** by status (open / closed), schedule (scheduled / unscheduled), tags
-- **Sort** by created date, updated date, or title
-- **Group** by tags or status
-
-Drag a Plan card from the list onto the calendar to schedule it.
+The sidebar has two tabs: **Calendar** and **List**. The List tab shows your Plans in a list.
 
 ## Keyboard Shortcuts
 
-| Shortcut            | Action                            |
-| ------------------- | --------------------------------- |
-| `N`                 | Create a new Plan                 |
-| `Cmd/Ctrl + Enter`  | Save the Plan                     |
-| `Escape`            | Close the Inspector / cancel drag |
-| `Arrow Up` or `k`   | Previous Plan                     |
-| `Arrow Down` or `j` | Next Plan                         |
-| `Cmd/Ctrl + V`      | Paste a copied Plan               |
+| Shortcut          | Action                              |
+| ----------------- | ----------------------------------- |
+| `C`               | Create a block                      |
+| `Shift+C`         | Create a block at the current time  |
+| `Escape`          | Close the Inspector / cancel a drag |
+| `↑` or `k`        | Previous block                      |
+| `↓` or `j`        | Next block                          |
+| `Cmd+C` / `Cmd+V` | Copy / paste                        |
+| `Delete`          | Delete the selected block           |
+
+On Windows and Linux, use `Ctrl` instead of `Cmd`. Press `Shift+?` to see the full list.
 
 ## Next Steps
 
-Now that you know how Plans work, explore these related features:
-
-1. **[What is Dayopt?](/docs/getting-started)** — See how Plans, Records, and Stats fit together
+1. **[What is Dayopt?](/docs/getting-started)** — how plans, records, and review fit together

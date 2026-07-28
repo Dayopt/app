@@ -134,8 +134,8 @@ const { data } = await supabase.rpc('search', {
 ### 6. [Low] 依存関係のセキュリティ
 
 ```bash
-# 脆弱性チェック
-npm audit
+# 脆弱性チェック（= pnpm audit --audit-level=moderate）
+pnpm security:check
 ```
 
 ## 出力形式
@@ -159,7 +159,7 @@ npm audit
 
 ### Low
 
-- [x] npm audit: 脆弱性なし
+- [x] pnpm security:check: 脆弱性なし
 ```
 
 ## Dayopt固有ルール
@@ -167,13 +167,17 @@ npm audit
 1. **全データアクセスは `userId` でフィルタ** - RLSだけに頼らない
 2. **Service層を経由** - ルーターに直接ロジックを書かない
 3. **`handleServiceError()` を使用** - 直接TRPCErrorをthrowしない
+4. **守るべき前提を作ったら `scripts/ai-review/invariants.md` を同じ PR で更新** - 新しい
+   Pro 限定機能、新しい公開エンドポイント種別、新しい table パターンなど。外部レビュアー
+   （ai-review）はこのカタログを基準に「あるべき検査の不在」を判定するため、更新を怠ると
+   新機能の穴が構造的に見えなくなる
 
 ## 関連エージェント
 
-- **security-auditor** — 既存コードの回帰スキャン（PASS/FAIL判定）。PR前・週次で実行
-- **red-team / blue-team** — 探索的な攻防監査。月次・大きな機能追加時
+- **risk-reviewer** — auth / RLS / service role / OAuth / webhook / billing / redirect / migration を扱う plan / diff で自動委任される read-only reviewer（`AGENTS.md` §Read-only delegation）
+- **`/claude-security`** — 既存コードの深掘りスキャン。月次 sweep（`/gardening` §5.7）と、auth 周りの大きな変更前にユーザーが手動起動する
 
-> このスキルは「実装時のガイド」、エージェントは「既存コードの検査」。新規コード実装時はこのスキルを、既存コードのスキャンはエージェントを使う。
+> このスキルは「実装時のガイド」、上記は「既存コードの検査」。新規コード実装時はこのスキルを、既存コードのスキャンはエージェント / `/claude-security` を使う。
 
 ## 関連スキル
 

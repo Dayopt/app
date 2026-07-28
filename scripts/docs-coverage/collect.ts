@@ -10,6 +10,9 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
 
 export const LOCALES = ['en', 'ja'] as const;
+
+/** URL を階層化するカテゴリ。apps/web/src/lib/mdx.ts の NESTED_URL_CATEGORIES と対にする */
+const NESTED_URL_CATEGORIES: readonly string[] = ['faq'];
 export type Locale = (typeof LOCALES)[number];
 
 /** 公開docsページの状態。placeholder は「ページはあるが本文が未執筆」。 */
@@ -128,8 +131,15 @@ export function collectDocs(docsDir: string): DocEntry[] {
     for (const file of listMarkdown(dir).sort()) {
       const rel = relative(dir, file).replaceAll('\\', '/');
       const name = basename(file, '.mdx');
-      // routing の slug はファイル名由来（index.mdx はカテゴリ名）。apps/web/src/lib/mdx.ts と同じ規則
-      const slug = name === 'index' ? (rel.split('/')[0] ?? name) : name;
+      // routing の slug はファイル名由来（index.mdx はカテゴリ名）。apps/web/src/lib/mdx.ts と同じ規則。
+      // NESTED_URL_CATEGORIES のカテゴリだけ `<category>/<name>` になる
+      const category = rel.split('/')[0] ?? name;
+      const slug =
+        name === 'index'
+          ? category
+          : NESTED_URL_CATEGORIES.includes(category)
+            ? `${category}/${name}`
+            : name;
       const fields = readFrontmatter(readFileSync(file, 'utf8'));
       const isDraft = fields.get('draft') === 'true';
       const isPlaceholder = fields.get('placeholder') === 'true';

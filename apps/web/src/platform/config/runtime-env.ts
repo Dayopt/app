@@ -14,6 +14,14 @@ export function getAppUrl(): string {
     return env.NEXT_PUBLIC_APP_URL;
   }
 
+  // VERCEL_URL は「そのデプロイ固有」のホスト名（web-k94imlgmq-dayopt.vercel.app 等）で、
+  // デプロイのたびに変わる。Production でこれを使うと canonical / sitemap / robots /
+  // OG 画像の絶対 URL がすべてデプロイ固有ホストになる（2026-07-27 に本番で確認）。
+  // Production は既知の正規ドメインを使い、VERCEL_URL は Preview の自己参照だけに使う。
+  if (env.VERCEL_ENV === 'production') {
+    return dayoptUrls.marketing;
+  }
+
   if (env.VERCEL_URL) {
     return `https://${env.VERCEL_URL}`;
   }

@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 
 import { ResetPasswordForm } from '@/features/auth';
+import { createClient } from '@/lib/supabase/server';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth.pageTitle');
@@ -10,21 +11,25 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 interface ResetPasswordPageProps {
-  searchParams: Promise<{ access_token?: string; refresh_token?: string }>;
   params: Promise<{ locale: string }>;
 }
 
-export default async function ResetPasswordPage({ searchParams, params }: ResetPasswordPageProps) {
-  const [{ access_token, refresh_token }, { locale }] = await Promise.all([searchParams, params]);
+export default async function ResetPasswordPage({ params }: ResetPasswordPageProps) {
+  const { locale } = await params;
 
-  // トークンが無い場合はサーバー側で即座にリダイレクト（client-side useEffectの8秒遅延を回避）
-  if (!access_token || !refresh_token) {
+  // recovery リンクは /auth/confirm の verifyOtp でセッション確立済みの状態で着地する。
+  // セッションが無い直接アクセスはサーバー側で即座にリダイレクトする
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
     redirect(`/${locale}/auth`);
   }
 
   return (
     <div className="bg-surface-container flex min-h-svh flex-col items-center justify-center p-4 md:p-8">
-      <div className="w-full md:max-w-5xl">
+      <div className="w-full max-w-sm">
         <ResetPasswordForm />
       </div>
     </div>

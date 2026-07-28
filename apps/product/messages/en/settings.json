@@ -19,6 +19,7 @@
       "displayNameDesc": "Name shown to other users",
       "displayNamePlaceholder": "Enter display name",
       "email": "Email Address",
+      "emailManagedByProvider": "This is the email address from your Google account. Change it in Google.",
       "noEmail": "Not set",
       "emailDesc": "Email address associated with your account",
       "emailPlaceholder": "Enter email address",
@@ -120,13 +121,8 @@
           "description": "Generating new codes will invalidate all existing recovery codes. This cannot be undone."
         }
       },
-      "socialLogin": "Social Login",
-      "socialLoginDesc": "Social login integration will be available in a future update",
-      "connect": "Connect",
       "disconnect": "Disconnect",
       "connected": "Connected",
-      "notConnected": "Not connected",
-      "comingSoon": "Coming Soon",
       "session": "Session",
       "dangerZone": "Danger Zone",
       "dangerZoneDesc": "Irreversible and destructive actions",
@@ -161,17 +157,15 @@
         "title": "Account Deletion",
         "warningTitle": "This action cannot be undone.",
         "warningMessage": "Your account and all associated data will be deleted.",
-        "consequence1": "All tasks and projects will be deleted",
-        "consequence2": "Profile and settings will be deleted",
-        "consequence3": "Permanent deletion after 30 days (grace period)",
         "buttonText": "Delete Account",
         "deleting": "Deleting...",
         "dialogTitle": "Confirm Account Deletion",
-        "dialogDescription": "Are you sure you want to delete your account? This action will be executed after 30 days, during which you can cancel.",
-        "gracePeriodTitle": "30-Day Grace Period",
-        "gracePeriodMessage": "Your data will be retained for 30 days from the deletion request. You can restore your account during this period.",
+        "dialogDescription": "Are you sure you want to delete your account? This cannot be undone.",
         "passwordLabel": "Confirm with Password",
         "passwordPlaceholder": "Enter your current password",
+        "totpLabel": "Code from your authentication app",
+        "totpRequired": "Enter the code from your authentication app.",
+        "invalidTotp": "That code is not correct.",
         "passwordRequired": "Please enter your password",
         "invalidPassword": "Invalid password",
         "confirmTextLabel": "Type 'DELETE' to confirm",
@@ -179,8 +173,12 @@
         "confirmTextError": "Confirmation text is incorrect",
         "cancel": "Cancel",
         "confirm": "Execute Deletion",
-        "success": "Account deletion requested. Permanent deletion in 30 days.",
+        "success": "Your account has been deleted.",
         "error": "Failed to delete account"
+      },
+      "loginMethod": {
+        "title": "Login method",
+        "google": "Google"
       }
     },
     "calendar": {

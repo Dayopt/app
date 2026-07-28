@@ -45,7 +45,11 @@ const APP_URL = getAppUrl();
  * ユーザーの preferred_locale を user_settings から取得する
  * 未設定の場合は 'en' にフォールバック
  */
-async function getUserLocale(supabase: SupabaseClient, userId: string): Promise<EmailLocale> {
+/** メール文面の locale を user_settings から引く。削除処理は CASCADE 前に呼ぶ必要がある */
+export async function getUserLocale(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<EmailLocale> {
   const { data, error } = await supabase
     .from(databaseTables.userSettings)
     .select('*')
@@ -153,6 +157,44 @@ async function sendEmail({
 
   logger.info(`${context} sent`, { emailId: data?.id });
   return { success: true as const, emailId: data?.id };
+}
+
+/**
+ * アカウント削除の通知メールを送る
+ *
+ * 削除処理そのもの（`features/auth/server/user-service.ts`）からも呼ぶため、
+ * procedure ではなく関数として公開する。本文が「削除されました」と完了を伝えるので、
+ * 呼ぶのは削除が確定したあと。locale を引数で受けるのは、削除後には
+ * `user_settings` が CASCADE で消えていて引けないため。
+ */
+export async function sendAccountDeletionEmail({
+  email,
+  userName,
+  locale,
+}: {
+  email: string;
+  userName: string;
+  locale: EmailLocale;
+}) {
+  const t = createEmailTranslator(locale);
+
+  const deletionDate = new Date().toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return sendEmail({
+    to: email,
+    subject: t('accountDeletion.subject'),
+    react: AccountDeletionEmail({
+      userName,
+      deletionDate,
+      locale,
+      appUrl: APP_URL,
+    }),
+    context: 'Account deletion email',
+  });
 }
 
 /** トランザクショナルメール送信（ウェルカム / Trial / Pro / 課金 / アカウント削除）を提供する tRPC ルーター */
@@ -453,25 +495,10 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending account deletion email', { userId: ctx.userId });
 
-        const locale = await getUserLocale(ctx.supabase, ctx.userId);
-        const t = createEmailTranslator(locale);
-
-        const deletionDate = new Date().toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        });
-
-        return sendEmail({
-          to: input.email,
-          subject: t('accountDeletion.subject'),
-          react: AccountDeletionEmail({
-            userName: input.userName,
-            deletionDate,
-            locale,
-            appUrl: APP_URL,
-          }),
-          context: 'Account deletion email',
+        return await sendAccountDeletionEmail({
+          email: input.email,
+          userName: input.userName,
+          locale: await getUserLocale(ctx.supabase, ctx.userId),
         });
       } catch (error) {
         return handleServiceError(error);

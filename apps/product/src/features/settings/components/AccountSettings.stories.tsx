@@ -95,8 +95,19 @@ export const Default: Story = {
 };
 
 /**
+ * Google でのみ登録したユーザー。パスワードを持たないため、
+ * 「ログイン方法: Google」が出て、メールは変更不可の表示になり、
+ * パスワードのセクションごと消えることを確認できる。
+ */
+export const GoogleAccount: Story = {
+  parameters: {
+    storeMocks: { useAuthStore: PRESET_AUTH.googleOnly },
+  },
+  render: () => <AccountSettings _MFASectionProps={{ _useMFAHook: () => createMockMFA() }} />,
+};
+
+/**
  * メールアドレス未設定のユーザー。
- * Googleなどソーシャルログインのみのユーザーを想定。
  * メール行のラベルが空欄になることを確認できる。
  */
 export const NoEmail: Story = {

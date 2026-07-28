@@ -165,6 +165,30 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     exit 1
   fi
 
+  # 検証が実際に行われたことを確認する。statusCheckRollup が空、または全ての
+  # check が skipped の場合、上の failure / pending 判定はどちらも 0 件になり
+  # 「CI が 1 本も走っていない PR」を green と区別できないまま素通りする。
+  # private repo + Free plan では GitHub 側の required check 強制が効かないため、
+  # ここが唯一の防波堤になる。
+  #
+  # ci.yml は docs のみの変更なら paths-ignore で skip されるので、「CI が
+  # 走らない PR」自体は異常ではない。ただし Docs Guard は paths フィルタを持たず
+  # 全 PR で走るため、success が 1 件も無い状態は構成の異常を意味する。
+  SUCCESS_CHECKS="$(printf '%s' "$PR_JSON" | jq -r '
+    (.statusCheckRollup // [])
+    | map(select(
+        ((.conclusion // "") | ascii_downcase | . == "success")
+        or ((.state // "") | ascii_downcase | . == "success")
+      ))
+    | length')"
+
+  if [[ "$SUCCESS_CHECKS" == "0" ]]; then
+    error "成功した check が 1 件もありません。マージを中止します。"
+    error "CI が未登録、全て skip、または check 登録前の可能性があります。"
+    error "gh pr checks $PR_NUMBER で状態を確認してください。"
+    exit 1
+  fi
+
   if [[ "$DRY_RUN" == true ]]; then
     echo "   [dry-run] gh pr merge $PR_NUMBER --merge --delete-branch" >&2
   else

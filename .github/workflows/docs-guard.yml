@@ -27,7 +27,7 @@ jobs:
       GITLEAKS_VERSION: '8.9.0'
       GITLEAKS_SHA256: '188d84394cfbb287e5acf789f313fca55a385ba738cb014e7a9bef6e6b0f4d69'
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # append-only guard と gitleaks が base ref との差分を見るため full history が必要
           fetch-depth: 0
@@ -88,6 +88,23 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # ── validate:content（公開 content に変更があるときだけ）──────────
+      # apps/web/content/ は docs/ とは別ツリーなので上の docs-changed では拾えない。
+      # 2026-07 の監査で、他プロダクトの雛形が公開されたまま放置されていた事故の
+      # 再発防止として書かれた validate-content.js が、どの workflow からも
+      # 呼ばれていないことが判明したため接続する。
+      - name: apps/web/content/ 変更の有無を確認
+        id: web-content-changed
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BASE"...HEAD -- apps/web/content/ | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # setup は secrets:check が常に必要とするため無条件に実行する
       - uses: ./.github/actions/setup
 
@@ -102,3 +119,7 @@ jobs:
         run: pnpm docs:check
         env:
           DOCS_GUARD_BASE_REF: origin/${{ github.event.pull_request.base.ref || 'main' }}
+
+      - name: pnpm validate:content
+        if: steps.web-content-changed.outputs.changed == 'true'
+        run: pnpm --filter @dayopt/web validate:content

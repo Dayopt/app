@@ -14,6 +14,7 @@ import matter from 'gray-matter';
 import path from 'path';
 
 import type { SearchIndexEntry } from '../src/features/search/lib/search-index';
+import { buildDocSlug } from '../src/lib/mdx';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content');
 const OUTPUT_PATH = path.join(process.cwd(), 'public', 'search-index.json');
@@ -117,7 +118,7 @@ function indexDocs(locale: string): SearchIndexEntry[] {
       const relativePath = path.relative(docsDir, filePath).replace(/\\/g, '/');
       const category = relativePath.split('/')[0] || 'general';
       const fileName = path.basename(filePath, '.mdx');
-      const slug = fileName === 'index' ? category : fileName;
+      const slug = buildDocSlug(category, fileName);
       const plainBody = stripMarkdown(body);
 
       entries.push({

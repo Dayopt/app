@@ -21,6 +21,35 @@ const CONTENT_PATH = path.join(process.cwd(), 'content/docs');
 const LOCALE_DIRS: readonly string[] = SUPPORTED_LOCALES;
 
 /**
+ * URL を階層化するカテゴリー。
+ *
+ * docs の公開 URL は原則フラット1階層で、ディレクトリはナビ構造だけを決める
+ * （ページを別カテゴリーへ移しても URL が変わらないという利点がある）。
+ * FAQ だけは例外にする。
+ *
+ * - FAQ は「タスク」ではなく「形式」なので、他カテゴリーへ移ることが構造上ない。
+ *   つまりフラット URL の利点がそもそも発生しない
+ * - FAQ が pricing / features / general のような最も一般的な slug を
+ *   グローバル名前空間で占有してしまう。`/docs/pricing` は料金ページに見えるが
+ *   実際は FAQ の 1 記事で、検索からの流入を誤解させる
+ *
+ * 経緯は docs/marketing/log/2026-07-27-docs-faq-url-nesting.md を参照。
+ */
+const NESTED_URL_CATEGORIES: readonly string[] = ['faq'];
+
+/**
+ * ファイル配置から公開 URL の slug（`/docs/<slug>`）を導出する。
+ *
+ * 通常はファイル名のみ（`index.mdx` はカテゴリー名そのもの）。
+ * `NESTED_URL_CATEGORIES` のカテゴリーだけ `<category>/<fileName>` になる。
+ */
+export function buildDocSlug(category: string, fileName: string): string {
+  if (fileName === 'index') return category;
+  if (NESTED_URL_CATEGORIES.includes(category)) return `${category}/${fileName}`;
+  return fileName;
+}
+
+/**
  * ロケールを考慮したコンテンツベースパスを取得
  */
 function getLocalizedContentPath(locale?: string): string {
@@ -90,13 +119,13 @@ export async function getMDXContent(
 
     const { data, content } = parsedMatter;
 
-    // カテゴリーをパスから抽出（ディレクトリ構造は維持するが、URLはフラットな1階層にする）
+    // カテゴリーをパスから抽出（ディレクトリ構造は維持するが、URLは原則フラットな1階層にする）
     const pathParts = filePath.replace(/\\/g, '/').split('/');
     const category = pathParts[0] || 'general';
 
     // 公開URLのスラッグはファイル名のみ（index.mdx はカテゴリー名そのものになる）
     const fileName = (pathParts[pathParts.length - 1] || '').replace(/\.mdx$/, '');
-    const slug = fileName === 'index' ? category : fileName;
+    const slug = buildDocSlug(category, fileName);
 
     const parsed = parseFrontMatter(docFrontMatterSchema, { ...data, slug, category }, filePath);
     const frontMatter: FrontMatter = parsed;

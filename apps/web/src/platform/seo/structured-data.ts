@@ -22,6 +22,7 @@ type StructuredDataInput = {
   tags?: string[];
   category?: string;
   articleType?: string;
+  proficiencyLevel?: string;
   dependencies?: string[];
   items?: Array<{ name: string; url: string }>;
   [key: string]: StructuredDataValue;
@@ -122,9 +123,10 @@ export function generateStructuredData(type: string, data: StructuredDataInput) 
           '@type': 'WebPage',
           '@id': `${baseUrl}${data.url}`,
         },
-        proficiencyLevel: 'Beginner',
-        dependencies: data.dependencies || [],
-        applicationCategory: 'DeveloperApplication',
+        proficiencyLevel: data.proficiencyLevel || 'Beginner',
+        // applicationCategory は SoftwareApplication の property で TechArticle には無い。
+        // dependencies は前提知識がある記事だけに出す（空配列を出しても意味を持たない）。
+        ...(data.dependencies?.length ? { dependencies: data.dependencies } : {}),
       };
 
     case 'SoftwareApplication':

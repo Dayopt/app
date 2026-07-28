@@ -1,0 +1,92 @@
+name: AI Review
+
+# 実装と相関しない外部モデル（非 Anthropic 系）に、危険クラスの diff だけを見せる。
+# 全 PR は対象にしない。style / 設計の好みは決定論ゲート（CI）と内部レビューの領分で、
+# ここが見るのは「沈黙して失敗する」クラスだけ。契約は scripts/ai-review/prompt.md。
+#
+# paths は scripts/ai-review/review.ts の DANGEROUS_PATH_PATTERNS と対応させる
+# （contract test で固定。片方だけ広げると、走らない or 走って何も見ない状態になる）。
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      # データ分離・データ損失
+      - 'supabase/migrations/**'
+      - 'supabase/functions/**'
+      - 'apps/product/src/lib/database/**'
+      - 'apps/product/src/lib/supabase/**'
+      # 認証・セッション・認可
+      - 'apps/product/src/features/auth/**'
+      - 'apps/product/src/lib/auth/**'
+      - 'apps/product/src/lib/oauth-server/**'
+      - 'apps/product/src/lib/security/**'
+      - 'apps/product/src/lib/safe-redirect.ts'
+      # サーバー境界
+      - 'apps/product/src/features/*/server/**'
+      - 'apps/product/src/lib/trpc/**'
+      - 'apps/product/src/lib/rate-limit/**'
+      - 'apps/product/src/app/api/**'
+      - 'apps/web/src/app/api/**'
+      # 課金
+      - 'apps/product/src/lib/billing/**'
+      - 'apps/product/src/lib/stripe/**'
+      - 'packages/billing/**'
+      # 時刻契約
+      - 'apps/product/src/lib/time/**'
+      - 'apps/product/src/lib/date/**'
+  # ここに scripts/ai-review/** や本ファイル自身を入れない。DANGEROUS_PATH_PATTERNS に
+  # 無いので workflow は起動するがスクリプトは即 return し、「走ったが何も見ていない」
+  # green が出るだけで課金だけかかる。reviewer 自身の変更は contract test が守る。
+  #
+  # workflow_dispatch は置かない。dispatch event は pull_request payload を持たないため
+  # base/head SHA も PR 番号も空になり、「起動するが diff 0 件・comment も出ない green」に
+  # しかならなかった。PR 番号入力と SHA 解決の配管を足せば直せるが、一度も使われて
+  # いない入口のために配管を増やさない。手動で見たい時はローカルで実行する:
+  #   pnpm exec tsx scripts/ai-review/review.ts --force --base <sha> --head <sha>
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: "\U0001F50D AI Review"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # base...head の diff を取るため、両端に到達できる履歴が要る。
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: Review dangerous-class diff
+        run: pnpm exec tsx scripts/ai-review/review.ts
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # model id は provider 側で改称されうるため repo variable で上書きできる。
+          AI_REVIEW_MODEL: ${{ vars.AI_REVIEW_MODEL }}
+          AI_REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          AI_REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          AI_REVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
+          # 「意図しない cascade delete」は意図が分からないと判定できない。作者の申告を
+          # 渡し、diff との食い違いを見せる。env 経由で渡すのは script 内へ直接展開しない
+          # ため（${{ }} を run の shell に置くと本文が command として解釈されうる）。
+          # prompt 側では「信頼できない参考情報」として明示的に区切る。
+          AI_REVIEW_PR_TITLE: ${{ github.event.pull_request.title }}
+          AI_REVIEW_PR_BODY: ${{ github.event.pull_request.body }}
+          # 誤検出だと人間が判断した時の逃げ道。`ai-review:override` ラベルが付いた PR は
+          # 所見があっても check を落とさない。blocking な gate には必ず逃げ道が要る。
+          AI_REVIEW_PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          # **既定は blocking**（script 側で AI_REVIEW_ENFORCE !== 'false' を既定にしている）。
+          # 観察モードへ戻すには repo variable に明示的に false を置く。安全側を既定にし、
+          # 緩める側を明示操作にする。ここで渡さないと切り替え不能になる。
+          AI_REVIEW_ENFORCE: ${{ vars.AI_REVIEW_ENFORCE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}

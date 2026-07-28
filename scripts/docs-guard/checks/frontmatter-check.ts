@@ -48,8 +48,11 @@ const PROJECT_STATUSES = new Set(['active', 'paused', 'done']);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SPECS_PREFIX = 'docs/product/specs/';
 // 公開docsのslug（= /docs/<slug>）。実在検証はしない。未作成のページを宣言できることが
-// レジストリの目的で、存在するかどうかは pnpm docs:coverage が報告する
-const DOC_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+// レジストリの目的で、存在するかどうかは pnpm docs:coverage が報告する。
+// FAQ だけ URL が階層化されているため 2 セグメント（faq/pricing）を許す
+// （apps/web/src/lib/mdx.ts の NESTED_URL_CATEGORIES を参照）。拡張子とパスは引き続き不可
+const DOC_SLUG_SEGMENT = '[a-z0-9]+(?:-[a-z0-9]+)*';
+const DOC_SLUG_RE = new RegExp(`^${DOC_SLUG_SEGMENT}(?:/${DOC_SLUG_SEGMENT})?$`);
 
 function stripScalar(value: string): string {
   const withoutComment = value.replace(/\s+#.*$/, '').trim();

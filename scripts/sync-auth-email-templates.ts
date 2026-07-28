@@ -42,6 +42,12 @@ export const AUTH_EMAIL_TEMPLATES: readonly AuthEmailTemplate[] = [
     ],
   },
   {
+    source: 'supabase/functions/send-auth-email/EmailChangeEmail.tsx',
+    destination: 'apps/product/src/emails/EmailChangeEmail.tsx',
+    componentName: 'EmailChangeEmail',
+    kind: 'template',
+  },
+  {
     source: 'supabase/functions/send-auth-email/MagicLinkEmail.tsx',
     destination: 'apps/product/src/emails/MagicLinkEmail.tsx',
     componentName: 'MagicLinkEmail',

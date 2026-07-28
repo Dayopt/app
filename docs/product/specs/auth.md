@@ -18,13 +18,15 @@ Supabase Auth ベースの認証機能。
 ## 現在の振る舞い
 
 - Supabase Auth によるセッション管理（メール/パスワード、MFA検証フローを含む）
+- ソーシャルログインは Google のみ。Apple（有料 Developer Program が必須）と Meta（アプリ審査コスト）は不採用（2026-07 決定、[ログ](../log/2026-07-24-social-login-google-only.md)）。本番の provider 設定は Supabase Dashboard が正本
+- 認証メール（signup 確認 / パスワードリセット / メールアドレス変更）は Auth send_email hook → Edge Function `send-auth-email` → Resend で送信する。メールアドレス変更は Secure Email Change により現・新両アドレスへ確認メールを 2 通送る
 - `protectedProcedure` で保護された tRPC procedure が `ctx.userId` でデータアクセスを制限する
 - MFA登録済みで session assurance level が `aal1` のブラウザセッションは、画面遷移だけでなく tRPC API 側でも protected procedure を拒否する
 - RLS（Row Level Security）によるDBレベルでの認可を併用する
 
 ## アカウント削除
 
-`user.deleteAccount` はパスワード再認証の後、次の順序で処理する。
+`user.deleteAccount` は、server側で判定したログイン手段に応じた再認証の後、次の順序で処理する。
 
 1. Calendar account-deletion intentを開始し、DBが返すcanonical deletion IDを採用する
 2. 各connection / revoke outbox itemをprepareする
@@ -37,6 +39,22 @@ Supabase Auth ベースの認証機能。
 provider startの応答が不明な場合はGoogleを再実行しない。finalizeの応答が不明な場合は同じ引数のfinalizerだけを再送する。Calendar sealに失敗した場合はStorage、Stripe、Authを変更しない。StorageまたはStripeの失敗時はAuth identityを残し、完了済みの削除を冪等に再確認できる。
 
 「すべてのデータを削除」はaccountを保持し、Calendar authorityとoperation IDにbindした`delete_all_user_data_command_v5`を使う。確認ダイアログを開く前にDBがoperation IDと現在のuser generationを発行し、同じダイアログ内のclient retry、tRPC retry、DB retryで両方を固定する。user generationを進め、Calendar tokenをrevoke outboxへ移し、Dayopt OAuthを失効し、MCP mutation receiptをpurged generationへ固定してから、Plan、Record、report、tag、user settings、Calendar mirrorを原子的に削除する。応答が失われても同じoperation IDを再送し、完了済みなら新しく作成されたデータを削除せず成功を返す。別の操作や古いgenerationは拒否する。
+
+## ログイン手段によるアカウント操作の分岐
+
+Google でのみ登録したユーザーはパスワードを持たない。これを異常扱いせず、**ユーザーが実際に持っている手段で再認証する**。判定は `hasPasswordIdentity`（`lib/auth/domain/login-method.ts`）が `app_metadata.providers` から行い、UI もサーバーも同じ関数を使う。
+
+| 操作               | パスワードあり                 | Google のみ                                          |
+| ------------------ | ------------------------------ | ---------------------------------------------------- |
+| ログイン方法の表示 | 出さない（自明なため）         | 「Google」を表示する                                 |
+| メールアドレス変更 | 現パスワードで再認証して変更   | **変更させない**。Google 側が正本である旨を案内する  |
+| パスワード変更     | 現パスワードで再認証して変更   | 項目ごと出さない                                     |
+| アカウント削除     | 現パスワード + `DELETE` の入力 | MFA があれば TOTP + `DELETE`、無ければ `DELETE` のみ |
+
+- 削除時の `requiresPassword` はクライアント申告ではなく server 側の `app_metadata` から判定する
+- MFA factor の一覧を取得できない場合は fail closed で削除を止める
+- 削除通知メールの locale は削除前に取得し、`auth.users` の削除確定後に送る。送信失敗では削除結果を戻さず、成功を返す
+- ログイン画面の「パスワードを忘れた」から Google ユーザーがリセットするとパスワードが新規設定される（Supabase の仕様）。サーバー側ではブロックせず、リセット画面の案内文で誘導する
 
 ## tRPC API auth policy
 
