@@ -105,6 +105,8 @@ run item create --category=apicredential --vault=Dayopt-Staging --title=upstash 
 run item create --category=apicredential --vault=Dayopt-Staging --title=stripe-test \
   --tags=dayopt,staging notesPlain="$NOTES" \
   'STRIPE_SECRET_KEY[concealed]=' \
+  'STRIPE_ACCOUNT_ID[text]=' \
+  'STRIPE_LIVEMODE[text]=' \
   'STRIPE_WEBHOOK_SECRET[concealed]=' \
   'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID[text]=' \
   'publishable-key[text]='
@@ -148,6 +150,8 @@ run item create --category=apicredential --vault=Dayopt-Production --title=upsta
 run item create --category=apicredential --vault=Dayopt-Production --title=stripe-live \
   --tags=dayopt,production notesPlain="$NOTES"$'\n⚠️ 本番 Stripe キー。ローカル .env.local からは参照しない' \
   'STRIPE_SECRET_KEY[concealed]=' \
+  'STRIPE_ACCOUNT_ID[text]=' \
+  'STRIPE_LIVEMODE[text]=' \
   'STRIPE_WEBHOOK_SECRET[concealed]=' \
   'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID[text]=' \
   'publishable-key[text]='
