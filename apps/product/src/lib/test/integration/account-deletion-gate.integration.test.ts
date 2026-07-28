@@ -279,6 +279,12 @@ WHERE user_id = :'user_id'::UUID;`,
     });
     expect(inactiveBeginError?.code).toBe('AD010');
 
+    const { error: authenticatedRecoveryError } = await lifecycleUserClient.rpc(
+      'get_account_deletion_customer_recovery_v1',
+      { p_user_id: lifecycleUserId },
+    );
+    expect(authenticatedRecoveryError?.code).toBe('42501');
+
     expectOwnerSqlFailure(`DELETE FROM private.account_deletion_control WHERE singleton;`, 'AD018');
     expectOwnerSqlFailure(`TRUNCATE private.account_deletion_control;`, 'AD018');
 
@@ -1115,6 +1121,16 @@ WHERE id = :'user_id'::UUID;`,
     expect(customerStartError).toBeNull();
     expect(customerStarted).toBe('started');
 
+    const { data: liveRecovery, error: liveRecoveryError } = await admin.rpc(
+      'get_account_deletion_customer_recovery_v1',
+      { p_user_id: customerProvisioningUserId },
+    );
+    expect(liveRecoveryError).toBeNull();
+    expect(liveRecovery?.[0]).toMatchObject({
+      operation_id: completedOperationId,
+      result: 'wait',
+    });
+
     const { error: liveProvisioningDeletionError } = await admin.rpc('begin_account_deletion_v1', {
       p_user_id: customerProvisioningUserId,
     });
@@ -1236,6 +1252,44 @@ WHERE operation_id = :'operation_id'::UUID;`,
       result: 'recover',
     });
 
+    const { data: expiredRecovery, error: expiredRecoveryError } = await admin.rpc(
+      'get_account_deletion_customer_recovery_v1',
+      { p_user_id: customerRecoveryUserId },
+    );
+    expect(expiredRecoveryError).toBeNull();
+    expect(expiredRecovery?.[0]).toMatchObject({
+      operation_id: recoveryOperationId,
+      result: 'recover',
+    });
+
+    const { error: unreconciledDeletionError } = await admin.rpc('begin_account_deletion_v1', {
+      p_user_id: customerRecoveryUserId,
+    });
+    expect(unreconciledDeletionError?.code).toBe('AD019');
+
+    const recoveredCustomerId = `cus_recovered_${customerRecoveryUserId.replaceAll('-', '')}`;
+    const { data: recoveredCustomer, error: recoveredCustomerError } = await admin.rpc(
+      'complete_billing_customer_provisioning_v2',
+      {
+        p_operation_id: recoveryOperationId,
+        p_provider_customer_id: recoveredCustomerId,
+        p_user_id: customerRecoveryUserId,
+      },
+    );
+    expect(recoveredCustomerError).toBeNull();
+    expect(recoveredCustomer).toBe(recoveredCustomerId);
+
+    const { data: completedRecovery, error: completedRecoveryError } = await admin.rpc(
+      'get_account_deletion_customer_recovery_v1',
+      { p_user_id: customerRecoveryUserId },
+    );
+    expect(completedRecoveryError).toBeNull();
+    expect(completedRecovery?.[0]).toEqual({
+      operation_id: null,
+      provider_retry_deadline_at: null,
+      result: 'none',
+    });
+
     await begin(customerRecoveryUserId);
     expect(
       ownerSql(
@@ -1244,7 +1298,7 @@ FROM private.billing_mutation_claims
 WHERE operation_id = :'operation_id'::UUID;`,
         { operation_id: recoveryOperationId },
       ).stdout,
-    ).toBe('abandoned:account_deletion_during_customer_recovery');
+    ).toBe('abandoned:account_deletion_before_provider_start');
     expect(
       ownerSql(
         `SELECT pg_catalog.count(*)::TEXT
@@ -1369,6 +1423,8 @@ WHERE operation_id = :'operation_id'::UUID;`,
       canonical_operation_id: freshOperationId,
       result: 'claimed',
     });
+
+    await begin(customerAbandonUserId);
   });
 
   it('blocks new Calendar, billing, and Storage writes once closing starts', async () => {

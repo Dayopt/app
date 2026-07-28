@@ -1803,6 +1803,14 @@ export type Database = {
           active_operations: number;
         }[];
       };
+      get_account_deletion_customer_recovery_v1: {
+        Args: { p_user_id: string };
+        Returns: {
+          operation_id: string | null;
+          provider_retry_deadline_at: string | null;
+          result: string;
+        }[];
+      };
       get_calendar_authority_readiness_v1: {
         Args: { p_oauth_client_id: string; p_project_key: string };
         Returns: {

@@ -25,6 +25,7 @@ const billingGateFirstUserId = crypto.randomUUID();
 const billingProviderStartFirstUserId = crypto.randomUUID();
 const customerStartFirstUserId = crypto.randomUUID();
 const customerGateFirstUserId = crypto.randomUUID();
+const customerRecoveryFirstUserId = crypto.randomUUID();
 const planWriterFirstUserId = crypto.randomUUID();
 const planGateFirstUserId = crypto.randomUUID();
 const recordGateFirstUserId = crypto.randomUUID();
@@ -36,6 +37,7 @@ const userIds = [
   billingProviderStartFirstUserId,
   customerStartFirstUserId,
   customerGateFirstUserId,
+  customerRecoveryFirstUserId,
   planWriterFirstUserId,
   planGateFirstUserId,
   recordGateFirstUserId,
@@ -720,6 +722,94 @@ WHERE operation_id = :'operation_id'::UUID;`,
     } finally {
       await holder.release(false);
       await startAttempt;
+    }
+  });
+
+  it('waits for exact expired Customer recovery before begin can commit', async () => {
+    const { leaseId, operationId } = await prepareCustomerProvisioning(customerRecoveryFirstUserId);
+    const customerId = `cus_race_${customerRecoveryFirstUserId.replaceAll('-', '')}`;
+    const { data: started, error: startError } = await admin.rpc(
+      'start_billing_customer_provisioning_v2',
+      {
+        p_lease_id: leaseId,
+        p_operation_id: operationId,
+        p_user_id: customerRecoveryFirstUserId,
+      },
+    );
+    expect(startError).toBeNull();
+    expect(started).toBe('started');
+
+    ownerSql(
+      `WITH timing AS (
+  SELECT pg_catalog.clock_timestamp() AS now
+)
+UPDATE private.billing_customer_provisioning_attempts
+SET provider_started_at = timing.now - INTERVAL '24 hours',
+    provider_retry_deadline_at = timing.now - INTERVAL '1 hour'
+FROM timing
+WHERE operation_id = :'operation_id'::UUID;`,
+      { operation_id: operationId },
+    );
+
+    const holder = await holdTransaction(
+      serviceRoleTransaction(
+        `SELECT public.complete_billing_customer_provisioning_v2(
+  :'operation_id'::UUID,
+  :'customer_id',
+  :'user_id'::UUID
+);`,
+      ).replace('COMMIT;', ''),
+      {
+        customer_id: customerId,
+        operation_id: operationId,
+        user_id: customerRecoveryFirstUserId,
+      },
+      'account-gate-customer-recovery-holder',
+    );
+    const waiterName = 'account-gate-customer-recovery-begin';
+    const beginAttempt = runSqlAsync(
+      serviceRoleTransaction(
+        `SELECT *
+FROM public.begin_account_deletion_v1(:'user_id'::UUID);`,
+      ),
+      { user_id: customerRecoveryFirstUserId },
+      waiterName,
+    );
+
+    try {
+      await waitForApplicationLock(waiterName);
+      const holderResult = await holder.release();
+      expect(holderResult.code).toBe(0);
+
+      const beginResult = await beginAttempt;
+      expect(beginResult.code).toBe(0);
+      expect(
+        ownerSql(
+          `SELECT stripe_customer_id
+FROM public.profiles
+WHERE id = :'user_id'::UUID;`,
+          { user_id: customerRecoveryFirstUserId },
+        ),
+      ).toBe(customerId);
+      expect(
+        ownerSql(
+          `SELECT pg_catalog.count(*)::TEXT
+FROM private.billing_customer_provisioning_attempts
+WHERE operation_id = :'operation_id'::UUID;`,
+          { operation_id: operationId },
+        ),
+      ).toBe('0');
+      expect(
+        ownerSql(
+          `SELECT pg_catalog.count(*)::TEXT
+FROM private.account_deletion_operations
+WHERE user_id = :'user_id'::UUID;`,
+          { user_id: customerRecoveryFirstUserId },
+        ),
+      ).toBe('1');
+    } finally {
+      await holder.release(false);
+      await beginAttempt;
     }
   });
 
