@@ -10,14 +10,14 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
 
-import { env } from '@/env';
-import { getAppUrl } from '@/lib/app-url';
 import type { Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { requireStripe } from '@/lib/stripe/client';
 import { ServiceError } from '@/lib/trpc/errors';
-import { dayoptProTrialDays, type SubscriptionStatus } from '@dayopt/billing';
+import type { SubscriptionStatus } from '@dayopt/billing';
+
+export { createCheckoutSession, createPortalSession } from './billing-mutation-service';
 
 // ===== Types =====
 
@@ -57,19 +57,6 @@ export class BillingServiceError extends ServiceError {
   }
 }
 
-function getConfiguredProPriceId(): string {
-  const priceId = env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID?.trim();
-
-  if (!priceId?.startsWith('price_')) {
-    throw new BillingServiceError(
-      'STRIPE_PRICE_NOT_CONFIGURED',
-      'Stripe Pro price is not configured',
-    );
-  }
-
-  return priceId;
-}
-
 // ===== Service =====
 
 /**
@@ -100,133 +87,6 @@ export async function getBillingInfo(
     stripeCustomerId: (profile.stripe_customer_id as string) ?? null,
     subscriptionId: (profile.subscription_id as string) ?? null,
   };
-}
-
-/**
- * Stripe Customer を取得または作成
- */
-async function getOrCreateCustomer(
-  stripe: Stripe,
-  supabase: SupabaseClient<Database>,
-  userId: string,
-  email: string,
-): Promise<string> {
-  // 既存の customer_id を確認
-  const { data, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-
-  if (profileError) {
-    const original = captureUnexpectedDatabaseError(profileError, {
-      feature: 'billing',
-      operation: 'get_stripe_customer',
-    });
-    throw new BillingServiceError('FETCH_FAILED', 'Failed to fetch Stripe customer', {
-      cause: original,
-    });
-  }
-
-  const existingCustomerId = (data as Record<string, unknown> | null)?.stripe_customer_id as
-    string | null;
-
-  if (existingCustomerId) {
-    return existingCustomerId;
-  }
-
-  // Stripe Customer 作成
-  const customer = await stripe.customers.create({
-    email,
-    metadata: {
-      supabase_user_id: userId,
-    },
-  });
-
-  // profiles に保存
-  const { error } = await supabase
-    .from('profiles')
-    .update({ stripe_customer_id: customer.id })
-    .eq('id', userId);
-
-  if (error) {
-    logger.error('Failed to save stripe_customer_id', { userId });
-    const original = captureUnexpectedDatabaseError(error, {
-      feature: 'billing',
-      operation: 'save_stripe_customer',
-    });
-    throw new BillingServiceError('UPDATE_FAILED', 'Failed to save Stripe customer', {
-      cause: original,
-    });
-  }
-
-  return customer.id;
-}
-
-/**
- * Stripe Checkout Session を作成
- */
-export async function createCheckoutSession(
-  supabase: SupabaseClient<Database>,
-  userId: string,
-  email: string,
-): Promise<string> {
-  const stripe = requireStripe();
-  const priceId = getConfiguredProPriceId();
-  const customerId = await getOrCreateCustomer(stripe, supabase, userId, email);
-
-  // 過去にサブスクリプション履歴がある場合はトライアルを付与しない
-  const existingSubs = await stripe.subscriptions.list({
-    customer: customerId,
-    status: 'all',
-    limit: 1,
-  });
-  const hasTrialHistory = existingSubs.data.length > 0;
-
-  const appUrl = getAppUrl();
-
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
-    subscription_data: hasTrialHistory ? {} : { trial_period_days: dayoptProTrialDays },
-    success_url: `${appUrl}/settings/subscription?success=true`,
-    cancel_url: `${appUrl}/settings/subscription?canceled=true`,
-    metadata: {
-      supabase_user_id: userId,
-    },
-  });
-
-  if (!session.url) {
-    throw new BillingServiceError('CREATE_FAILED', 'Failed to create checkout session');
-  }
-
-  return session.url;
-}
-
-/**
- * Stripe Customer Portal Session を作成
- */
-export async function createPortalSession(
-  supabase: SupabaseClient<Database>,
-  userId: string,
-): Promise<string> {
-  const stripe = requireStripe();
-
-  const billingInfo = await getBillingInfo(supabase, userId);
-
-  if (!billingInfo.stripeCustomerId) {
-    throw new BillingServiceError('NOT_FOUND', 'No Stripe customer found. Subscribe to Pro first.');
-  }
-
-  const appUrl = getAppUrl();
-
-  const session = await stripe.billingPortal.sessions.create({
-    customer: billingInfo.stripeCustomerId,
-    return_url: `${appUrl}/settings/subscription`,
-  });
-
-  return session.url;
 }
 
 /**

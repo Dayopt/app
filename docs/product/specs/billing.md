@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-24
+last_verified: 2026-07-28
 public_docs:
   - pricing
 lp: []
@@ -45,9 +45,8 @@ Router → Service → Stripe/Supabase の3層構造に準拠。
 └──────────────────────┬──────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────┐
-│  billing-service.ts (Service層)                     │
-│    getBillingInfo / createCheckoutSession            │
-│    createPortalSession / syncSubscriptionStatus      │
+│  billing-service.ts / billing-mutation-service.ts    │
+│    read + webhook / Checkout + Portal orchestration  │
 └────────┬─────────────────────────┬──────────────────┘
          │                         │
 ┌────────▼────────┐  ┌────────────▼─────────────────┐
@@ -121,14 +120,19 @@ Webhook で受け取る Stripe の `Subscription.Status` を Dayopt のステー
 ```
 ユーザー "Pro にアップグレード" クリック
   → BillingSettings.handleUpgrade()
-  → api.billing.createCheckoutSession.mutate()
-  → billing-service.createCheckoutSession()
-    → getOrCreateCustomer(): Stripe Customer 取得/作成 → profiles に保存
-    → stripe.checkout.sessions.create({
-        customer, mode: 'subscription',
-        trial_period_days: 7,
-        success_url, cancel_url
-      })
+  → client が同じ intent 用の operationId を生成
+  → api.billing.createCheckoutSession.mutate({ operationId })
+  → billing-mutation-service.createCheckoutSession()
+    → DB claim（request digest と operationId を固定）
+    → Customer が未作成なら Customer provisioning を durable start
+    → email で候補を絞り、metadata または同じ idempotency key で Customer を復旧
+    → profiles.stripe_customer_id を exact operation へ bind
+    → Customer の全 Subscription を確認
+    → live Subscription があれば open Checkout を失効して operation を終了
+    → Checkout provider mutation を durable start
+    → 古い open Checkout Session を expire
+    → 同じ namespaced idempotency key で Checkout Session を作成・復旧
+    → Session ID と短命 URL を DB で reconcile
   → ブラウザを Stripe Checkout ページへリダイレクト
   → 決済完了後 → success_url (/settings/subscription?success=true)
   → Stripe が Webhook を送信 → DB更新（次セクション参照）
@@ -138,13 +142,33 @@ Webhook で受け取る Stripe の `Subscription.Status` を Dayopt のステー
 
 ```
 Proユーザー "プランを管理" クリック
-  → api.billing.createPortalSession.mutate()
-  → billing-service.createPortalSession()
-    → stripe.billingPortal.sessions.create({ customer, return_url })
+  → client が同じ intent 用の operationId を生成
+  → api.billing.createPortalSession.mutate({ operationId })
+  → billing-mutation-service.createPortalSession()
+    → DB claim → provider mutation の durable start
+    → 同じ namespaced idempotency key で Portal Session を作成・復旧
+    → Session ID と短命 URL を DB で reconcile
   → ブラウザを Stripe Customer Portal へリダイレクト
   → ユーザーが支払い方法変更 / プラン変更 / 解約を実行
   → 変更は Webhook 経由で DB に反映
 ```
+
+### 再送とURLの契約
+
+- `operationId` はクライアントが intent ごとに生成する。同じ通信結果不明の手動再試行では再利用する
+- operation ID は component の生存期間で保持する。reload 後の明示操作は新しい intent とする
+- inputなしの旧ブラウザbundleは移行期間中だけserver-generated operation IDで受ける
+- Checkout と Portal は別の operation ID を使う。同期的な二重クリックは client-side lock で拒否する
+- Stripe POST の前に DB state を `provider_started` へ commit する
+- Customer / Checkout / Portal は用途別の namespaced idempotency key を使う
+- Provider response が不明な間だけ同じ key で再送する。DB の23時間 cutoff後は provider POST を行わない
+- cutoffの5分前から新しいprovider POSTを開始しない
+- redirect URL はHTTPS、Stripeの用途別host、default port、userinfoなしを必須とする
+- redirect URL は監査claimと分離した private tableに保存する
+- Portal URLは5分、Checkout URLは10分で失効する。残り30秒未満のURLは返さない
+- URL失効後は同じ operation を再実行しない。明示的な次のクリックで新しい operation を開始する
+- provider requestが再送可能な間はアカウント削除開始を拒否する
+- アカウント削除開始後は既存URLを削除し、Checkout / Portal の作成・redirectを行わない
 
 ### 3. Webhook イベント処理
 

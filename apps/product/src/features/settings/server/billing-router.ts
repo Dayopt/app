@@ -4,6 +4,7 @@
  */
 
 import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
 
 import { observeAuthOperation } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
@@ -18,6 +19,19 @@ import {
   getInvoices,
   getPaymentMethod,
 } from './billing-service';
+
+const billingOperationInput = z
+  .object({
+    operationId: z.string().uuid(),
+  })
+  .strict()
+  .optional();
+
+// Mixed-version bridge: one release may still have an open browser bundle
+// that calls these mutations without input. Remove after that release drains.
+function resolveBillingOperationId(input: z.infer<typeof billingOperationInput>): string {
+  return input?.operationId ?? crypto.randomUUID();
+}
 
 /** 課金管理のtRPCルーター（Stripeサブスクリプション・Checkout・Portal・請求書） */
 export const billingRouter = createTRPCRouter({
@@ -53,7 +67,8 @@ export const billingRouter = createTRPCRouter({
    */
   createCheckoutSession: protectedProcedure
     .meta({ description: 'Stripe Checkoutセッション作成' })
-    .mutation(async ({ ctx }) => {
+    .input(billingOperationInput)
+    .mutation(async ({ ctx, input }) => {
       try {
         // ユーザーのメールを取得
         const {
@@ -79,7 +94,12 @@ export const billingRouter = createTRPCRouter({
         }
 
         const serviceRoleSupabase = createServiceRoleClient();
-        const url = await createCheckoutSession(serviceRoleSupabase, ctx.userId, user.email);
+        const url = await createCheckoutSession(
+          serviceRoleSupabase,
+          ctx.userId,
+          user.email,
+          resolveBillingOperationId(input),
+        );
 
         return { url };
       } catch (error) {
@@ -116,9 +136,15 @@ export const billingRouter = createTRPCRouter({
    */
   createPortalSession: protectedProcedure
     .meta({ description: 'Stripe Customer Portalセッション作成' })
-    .mutation(async ({ ctx }) => {
+    .input(billingOperationInput)
+    .mutation(async ({ ctx, input }) => {
       try {
-        const url = await createPortalSession(ctx.supabase, ctx.userId);
+        const serviceRoleSupabase = createServiceRoleClient();
+        const url = await createPortalSession(
+          serviceRoleSupabase,
+          ctx.userId,
+          resolveBillingOperationId(input),
+        );
         return { url };
       } catch (error) {
         handleServiceError(error);
