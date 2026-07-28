@@ -928,6 +928,40 @@ WHERE operation_id = :'operation_id'::UUID;`,
     expect(closingInFlightStartError).toBeNull();
     expect(closingInFlightStarted).toBe('started');
 
+    const { error: liveProviderBeginError } = await admin.rpc('begin_account_deletion_v1', {
+      p_user_id: billingUserId,
+    });
+    expect(liveProviderBeginError?.code).toBe('AD019');
+
+    expect(
+      ownerSql(
+        `SELECT state || ':' || COALESCE(terminal_reason, '')
+FROM private.billing_mutation_claims
+WHERE operation_id = :'operation_id'::UUID;`,
+        { operation_id: closingInFlightOperationId },
+      ).stdout,
+    ).toBe('provider_started:');
+    expect(
+      ownerSql(
+        `SELECT pg_catalog.count(*)::TEXT
+FROM private.account_deletion_operations
+WHERE user_id = :'user_id'::UUID;`,
+        { user_id: billingUserId },
+      ).stdout,
+    ).toBe('0');
+
+    ownerSql(
+      `WITH timing AS (
+  SELECT pg_catalog.clock_timestamp() AS now
+)
+UPDATE private.billing_mutation_claims
+SET provider_started_at = timing.now - INTERVAL '24 hours',
+    provider_retry_deadline_at = timing.now - INTERVAL '1 hour'
+FROM timing
+WHERE operation_id = :'operation_id'::UUID;`,
+      { operation_id: closingInFlightOperationId },
+    );
+
     const deletion = await begin(billingUserId);
 
     expect(

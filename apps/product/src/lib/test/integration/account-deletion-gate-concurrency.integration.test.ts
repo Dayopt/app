@@ -22,6 +22,7 @@ const storageFirstUserId = crypto.randomUUID();
 const storageGateFirstUserId = crypto.randomUUID();
 const billingFirstUserId = crypto.randomUUID();
 const billingGateFirstUserId = crypto.randomUUID();
+const billingProviderStartFirstUserId = crypto.randomUUID();
 const customerStartFirstUserId = crypto.randomUUID();
 const customerGateFirstUserId = crypto.randomUUID();
 const planWriterFirstUserId = crypto.randomUUID();
@@ -32,6 +33,7 @@ const userIds = [
   storageGateFirstUserId,
   billingFirstUserId,
   billingGateFirstUserId,
+  billingProviderStartFirstUserId,
   customerStartFirstUserId,
   customerGateFirstUserId,
   planWriterFirstUserId,
@@ -528,6 +530,82 @@ WHERE operation_id = :'operation_id'::UUID;`,
     } finally {
       await holder.release(false);
       await billingAttempt;
+    }
+  });
+
+  it('rolls back begin after a Billing provider start commits first', async () => {
+    const operationId = crypto.randomUUID();
+    const customerId = `cus_test_${billingProviderStartFirstUserId.replaceAll('-', '')}`;
+    const { error: profileError } = await admin
+      .from('profiles')
+      .update({ stripe_customer_id: customerId })
+      .eq('id', billingProviderStartFirstUserId);
+    expect(profileError).toBeNull();
+
+    const { data: claimData, error: claimError } = await admin.rpc('claim_billing_mutation_v3', {
+      p_mutation_kind: 'checkout',
+      p_operation_id: operationId,
+      p_request_digest: REQUEST_DIGEST,
+      p_user_id: billingProviderStartFirstUserId,
+    });
+    expect(claimError).toBeNull();
+    const leaseId = claimData?.[0]?.lease_id;
+    if (!leaseId) throw new Error('Billing provider-start lease was not returned');
+
+    const holder = await holdTransaction(
+      serviceRoleTransaction(
+        `SELECT public.start_billing_mutation_v2(
+  :'operation_id'::UUID,
+  :'lease_id'::UUID,
+  :'customer_id',
+  :'user_id'::UUID
+);`,
+      ).replace('COMMIT;', ''),
+      {
+        customer_id: customerId,
+        lease_id: leaseId,
+        operation_id: operationId,
+        user_id: billingProviderStartFirstUserId,
+      },
+      'account-gate-billing-provider-start-holder',
+    );
+    const waiterName = 'account-gate-billing-provider-start-begin';
+    const beginAttempt = runSqlAsync(
+      serviceRoleTransaction(
+        `SELECT *
+FROM public.begin_account_deletion_v1(:'user_id'::UUID);`,
+      ),
+      { user_id: billingProviderStartFirstUserId },
+      waiterName,
+    );
+
+    try {
+      await waitForApplicationLock(waiterName);
+      const holderResult = await holder.release();
+      expect(holderResult.code).toBe(0);
+
+      const beginResult = await beginAttempt;
+      expect(beginResult.code).not.toBe(0);
+      expect(beginResult.stderr).toContain('AD019');
+      expect(
+        ownerSql(
+          `SELECT pg_catalog.count(*)::TEXT
+FROM private.account_deletion_operations
+WHERE user_id = :'user_id'::UUID;`,
+          { user_id: billingProviderStartFirstUserId },
+        ),
+      ).toBe('0');
+      expect(
+        ownerSql(
+          `SELECT state
+FROM private.billing_mutation_claims
+WHERE operation_id = :'operation_id'::UUID;`,
+          { operation_id: operationId },
+        ),
+      ).toBe('provider_started');
+    } finally {
+      await holder.release(false);
+      await beginAttempt;
     }
   });
 
