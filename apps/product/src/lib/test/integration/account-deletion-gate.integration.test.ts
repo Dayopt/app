@@ -455,6 +455,7 @@ WHERE user_id = :'user_id'::UUID;`,
 
     const customerId = `cus_test_${billingUserId.replaceAll('-', '')}`;
     const providerObjectId = `cs_test_${crypto.randomUUID().replaceAll('-', '')}`;
+    const providerResponseUrl = `https://checkout.stripe.com/${providerObjectId}`;
     const operationId = crypto.randomUUID();
     const adoptedOperationId = crypto.randomUUID();
 
@@ -465,7 +466,7 @@ WHERE user_id = :'user_id'::UUID;`,
     expect(profileError).toBeNull();
 
     const { data: firstClaimData, error: firstClaimError } = await admin.rpc(
-      'claim_billing_mutation_v2',
+      'claim_billing_mutation_v3',
       {
         p_mutation_kind: 'checkout',
         p_operation_id: operationId,
@@ -478,12 +479,14 @@ WHERE user_id = :'user_id'::UUID;`,
     expect(firstClaim).toMatchObject({
       canonical_operation_id: operationId,
       provider_object_id: null,
+      provider_response_expires_at: null,
+      provider_response_url: null,
       result: 'claimed',
     });
     const firstLeaseId = requireString(firstClaim?.lease_id, 'Billing mutation lease');
 
     const { data: adoptedClaimData, error: adoptedClaimError } = await admin.rpc(
-      'claim_billing_mutation_v2',
+      'claim_billing_mutation_v3',
       {
         p_mutation_kind: 'checkout',
         p_operation_id: adoptedOperationId,
@@ -498,7 +501,7 @@ WHERE user_id = :'user_id'::UUID;`,
       result: 'claimed',
     });
 
-    const { error: reusedOperationError } = await admin.rpc('claim_billing_mutation_v2', {
+    const { error: reusedOperationError } = await admin.rpc('claim_billing_mutation_v3', {
       p_mutation_kind: 'checkout',
       p_operation_id: operationId,
       p_request_digest: DIGEST_B,
@@ -536,7 +539,7 @@ WHERE user_id = :'user_id'::UUID;`,
     expect(startedReplay).toBe('reconcile');
 
     const { data: reconcileClaimData, error: reconcileClaimError } = await admin.rpc(
-      'claim_billing_mutation_v2',
+      'claim_billing_mutation_v3',
       {
         p_mutation_kind: 'checkout',
         p_operation_id: operationId,
@@ -552,12 +555,13 @@ WHERE user_id = :'user_id'::UUID;`,
     expect(reconcileClaimData?.[0]?.lease_id).toBeNull();
 
     const { data: reconciled, error: reconcileError } = await admin.rpc(
-      'reconcile_billing_mutation_v2',
+      'reconcile_billing_mutation_v4',
       {
         p_operation_id: operationId,
         p_outcome: 'completed',
         p_provider_customer_id: customerId,
         p_provider_object_id: providerObjectId,
+        p_provider_response_url: providerResponseUrl,
         p_user_id: billingUserId,
       },
     );
@@ -565,12 +569,13 @@ WHERE user_id = :'user_id'::UUID;`,
     expect(reconciled).toBe('completed');
 
     const { data: reconcileReplay, error: reconcileReplayError } = await admin.rpc(
-      'reconcile_billing_mutation_v2',
+      'reconcile_billing_mutation_v4',
       {
         p_operation_id: operationId,
         p_outcome: 'completed',
         p_provider_customer_id: customerId,
         p_provider_object_id: providerObjectId,
+        p_provider_response_url: providerResponseUrl,
         p_user_id: billingUserId,
       },
     );
@@ -578,7 +583,7 @@ WHERE user_id = :'user_id'::UUID;`,
     expect(reconcileReplay).toBe('completed');
 
     const { data: terminalClaimData, error: terminalClaimError } = await admin.rpc(
-      'claim_billing_mutation_v2',
+      'claim_billing_mutation_v3',
       {
         p_mutation_kind: 'checkout',
         p_operation_id: operationId,
@@ -591,12 +596,89 @@ WHERE user_id = :'user_id'::UUID;`,
       canonical_operation_id: operationId,
       lease_id: null,
       provider_object_id: providerObjectId,
+      provider_response_url: providerResponseUrl,
       result: 'completed',
     });
+    expect(
+      Date.parse(
+        requireString(terminalClaimData?.[0]?.provider_response_expires_at, 'Response TTL'),
+      ),
+    ).toBeGreaterThan(Date.now());
+
+    ownerSql(
+      `WITH timing AS (
+  SELECT pg_catalog.clock_timestamp() AS now
+)
+UPDATE private.billing_mutation_claims
+SET provider_started_at = timing.now - INTERVAL '31 minutes',
+    provider_retry_deadline_at = timing.now - INTERVAL '31 minutes'
+      + INTERVAL '23 hours',
+    completed_at = timing.now - INTERVAL '30 minutes',
+    delete_after = timing.now - INTERVAL '30 minutes'
+      + INTERVAL '90 days'
+FROM timing
+WHERE operation_id = :'operation_id'::UUID;
+
+WITH timing AS (
+  SELECT pg_catalog.clock_timestamp() AS now
+)
+UPDATE private.billing_mutation_responses
+SET created_at = timing.now - INTERVAL '30 minutes',
+    expires_at = timing.now - INTERVAL '15 minutes'
+FROM timing
+WHERE operation_id = :'operation_id'::UUID;`,
+      { operation_id: operationId },
+    );
+
+    const { data: cleanupData, error: cleanupError } = await admin.rpc(
+      'cleanup_billing_mutation_claims_v2',
+      { p_limit: 250 },
+    );
+    expect(cleanupError).toBeNull();
+    expect(cleanupData?.[0]).toMatchObject({
+      claims_deleted: 0,
+      provider_responses_redacted: 1,
+    });
+    const { error: nullCleanupLimitError } = await admin.rpc('cleanup_billing_mutation_claims_v2', {
+      p_limit: null as never,
+    });
+    expect(nullCleanupLimitError?.code).toBe('22023');
+
+    const { data: expiredResponseData, error: expiredResponseError } = await admin.rpc(
+      'claim_billing_mutation_v3',
+      {
+        p_mutation_kind: 'checkout',
+        p_operation_id: operationId,
+        p_request_digest: DIGEST_A,
+        p_user_id: billingUserId,
+      },
+    );
+    expect(expiredResponseError).toBeNull();
+    expect(expiredResponseData?.[0]).toMatchObject({
+      canonical_operation_id: operationId,
+      provider_object_id: providerObjectId,
+      provider_response_expires_at: null,
+      provider_response_url: null,
+      result: 'response_expired',
+    });
+
+    const { data: expiredReconcile, error: expiredReconcileError } = await admin.rpc(
+      'reconcile_billing_mutation_v4',
+      {
+        p_operation_id: operationId,
+        p_outcome: 'completed',
+        p_provider_customer_id: customerId,
+        p_provider_object_id: providerObjectId,
+        p_provider_response_url: providerResponseUrl,
+        p_user_id: billingUserId,
+      },
+    );
+    expect(expiredReconcileError).toBeNull();
+    expect(expiredReconcile).toBe('response_expired');
 
     const abandonedOperationId = crypto.randomUUID();
     const { data: abandonedClaimData, error: abandonedClaimError } = await admin.rpc(
-      'claim_billing_mutation_v2',
+      'claim_billing_mutation_v3',
       {
         p_mutation_kind: 'portal',
         p_operation_id: abandonedOperationId,
@@ -618,7 +700,7 @@ WHERE operation_id = :'operation_id'::UUID;`,
     );
 
     const { data: reclaimedBillingData, error: reclaimedBillingError } = await admin.rpc(
-      'claim_billing_mutation_v2',
+      'claim_billing_mutation_v3',
       {
         p_mutation_kind: 'portal',
         p_operation_id: abandonedOperationId,
@@ -658,12 +740,13 @@ WHERE operation_id = :'operation_id'::UUID;`,
     expect(abandonedStarted).toBe('started');
 
     const { data: abandoned, error: abandonError } = await admin.rpc(
-      'reconcile_billing_mutation_v2',
+      'reconcile_billing_mutation_v4',
       {
         p_operation_id: abandonedOperationId,
         p_outcome: 'not_created',
         p_provider_customer_id: customerId,
         p_provider_object_id: null as never,
+        p_provider_response_url: null as never,
         p_user_id: billingUserId,
       },
     );
@@ -671,7 +754,7 @@ WHERE operation_id = :'operation_id'::UUID;`,
     expect(abandoned).toBe('abandoned');
 
     const { data: abandonedReplayData, error: abandonedReplayError } = await admin.rpc(
-      'claim_billing_mutation_v2',
+      'claim_billing_mutation_v3',
       {
         p_mutation_kind: 'portal',
         p_operation_id: abandonedOperationId,
@@ -688,19 +771,207 @@ WHERE operation_id = :'operation_id'::UUID;`,
     });
 
     const { error: changedTerminalOutcomeError } = await admin.rpc(
-      'reconcile_billing_mutation_v2',
+      'reconcile_billing_mutation_v4',
       {
         p_operation_id: abandonedOperationId,
         p_outcome: 'completed',
         p_provider_customer_id: customerId,
         p_provider_object_id: `bps_test_${crypto.randomUUID().replaceAll('-', '')}`,
+        p_provider_response_url: `https://billing.stripe.com/${abandonedOperationId}`,
         p_user_id: billingUserId,
       },
     );
     expect(changedTerminalOutcomeError?.code).toBe('AD004');
 
+    const retryExpiredOperationId = crypto.randomUUID();
+    const { data: retryExpiredClaimData, error: retryExpiredClaimError } = await admin.rpc(
+      'claim_billing_mutation_v3',
+      {
+        p_mutation_kind: 'portal',
+        p_operation_id: retryExpiredOperationId,
+        p_request_digest: DIGEST_B,
+        p_user_id: billingUserId,
+      },
+    );
+    expect(retryExpiredClaimError).toBeNull();
+    const retryExpiredLeaseId = requireString(
+      retryExpiredClaimData?.[0]?.lease_id,
+      'Retry deadline lease',
+    );
+    const { data: retryExpiredStarted, error: retryExpiredStartError } = await admin.rpc(
+      'start_billing_mutation_v2',
+      {
+        p_lease_id: retryExpiredLeaseId,
+        p_operation_id: retryExpiredOperationId,
+        p_provider_customer_id: customerId,
+        p_user_id: billingUserId,
+      },
+    );
+    expect(retryExpiredStartError).toBeNull();
+    expect(retryExpiredStarted).toBe('started');
+
+    ownerSql(
+      `WITH timing AS (
+  SELECT pg_catalog.clock_timestamp() AS now
+)
+UPDATE private.billing_mutation_claims
+SET provider_started_at = timing.now - INTERVAL '24 hours',
+    provider_retry_deadline_at = timing.now - INTERVAL '1 hour'
+FROM timing
+WHERE operation_id = :'operation_id'::UUID;`,
+      { operation_id: retryExpiredOperationId },
+    );
+
+    const { data: retryExpiredData, error: retryExpiredError } = await admin.rpc(
+      'claim_billing_mutation_v3',
+      {
+        p_mutation_kind: 'portal',
+        p_operation_id: retryExpiredOperationId,
+        p_request_digest: DIGEST_B,
+        p_user_id: billingUserId,
+      },
+    );
+    expect(retryExpiredError).toBeNull();
+    expect(retryExpiredData?.[0]).toMatchObject({
+      canonical_operation_id: retryExpiredOperationId,
+      provider_response_expires_at: null,
+      provider_response_url: null,
+      result: 'abandoned',
+    });
+    expect(
+      ownerSql(
+        `SELECT state || ':' || terminal_reason
+FROM private.billing_mutation_claims
+WHERE operation_id = :'operation_id'::UUID;`,
+        { operation_id: retryExpiredOperationId },
+      ).stdout,
+    ).toBe('abandoned:provider_retry_expired');
+
+    const closingReplayOperationId = crypto.randomUUID();
+    const closingReplayUrl = `https://billing.stripe.com/${closingReplayOperationId}`;
+    const { data: closingReplayClaimData, error: closingReplayClaimError } = await admin.rpc(
+      'claim_billing_mutation_v3',
+      {
+        p_mutation_kind: 'portal',
+        p_operation_id: closingReplayOperationId,
+        p_request_digest: DIGEST_A,
+        p_user_id: billingUserId,
+      },
+    );
+    expect(closingReplayClaimError).toBeNull();
+    const closingReplayLeaseId = requireString(
+      closingReplayClaimData?.[0]?.lease_id,
+      'Closing replay lease',
+    );
+
+    const { data: closingReplayStarted, error: closingReplayStartError } = await admin.rpc(
+      'start_billing_mutation_v2',
+      {
+        p_lease_id: closingReplayLeaseId,
+        p_operation_id: closingReplayOperationId,
+        p_provider_customer_id: customerId,
+        p_user_id: billingUserId,
+      },
+    );
+    expect(closingReplayStartError).toBeNull();
+    expect(closingReplayStarted).toBe('started');
+
+    const { data: closingReplayReconciled, error: closingReplayReconcileError } = await admin.rpc(
+      'reconcile_billing_mutation_v4',
+      {
+        p_operation_id: closingReplayOperationId,
+        p_outcome: 'completed',
+        p_provider_customer_id: customerId,
+        p_provider_object_id: `bps_test_${closingReplayOperationId.replaceAll('-', '')}`,
+        p_provider_response_url: closingReplayUrl,
+        p_user_id: billingUserId,
+      },
+    );
+    expect(closingReplayReconcileError).toBeNull();
+    expect(closingReplayReconciled).toBe('completed');
+
+    const closingInFlightOperationId = crypto.randomUUID();
+    const { data: closingInFlightClaimData, error: closingInFlightClaimError } = await admin.rpc(
+      'claim_billing_mutation_v3',
+      {
+        p_mutation_kind: 'checkout',
+        p_operation_id: closingInFlightOperationId,
+        p_request_digest: DIGEST_B,
+        p_user_id: billingUserId,
+      },
+    );
+    expect(closingInFlightClaimError).toBeNull();
+    const closingInFlightLeaseId = requireString(
+      closingInFlightClaimData?.[0]?.lease_id,
+      'Closing in-flight lease',
+    );
+    const { data: closingInFlightStarted, error: closingInFlightStartError } = await admin.rpc(
+      'start_billing_mutation_v2',
+      {
+        p_lease_id: closingInFlightLeaseId,
+        p_operation_id: closingInFlightOperationId,
+        p_provider_customer_id: customerId,
+        p_user_id: billingUserId,
+      },
+    );
+    expect(closingInFlightStartError).toBeNull();
+    expect(closingInFlightStarted).toBe('started');
+
     const deletion = await begin(billingUserId);
-    const { error: postGateClaimError } = await admin.rpc('claim_billing_mutation_v2', {
+
+    expect(
+      ownerSql(
+        `SELECT state || ':' || terminal_reason
+FROM private.billing_mutation_claims
+WHERE operation_id = :'operation_id'::UUID;`,
+        { operation_id: closingInFlightOperationId },
+      ).stdout,
+    ).toBe('abandoned:account_deletion_after_provider_start');
+
+    const { data: closingInFlightReconciled, error: closingInFlightReconcileError } =
+      await admin.rpc('reconcile_billing_mutation_v4', {
+        p_operation_id: closingInFlightOperationId,
+        p_outcome: 'completed',
+        p_provider_customer_id: customerId,
+        p_provider_object_id: `cs_test_${closingInFlightOperationId.replaceAll('-', '')}`,
+        p_provider_response_url: `https://checkout.stripe.com/${closingInFlightOperationId}`,
+        p_user_id: billingUserId,
+      });
+    expect(closingInFlightReconcileError).toBeNull();
+    expect(closingInFlightReconciled).toBe('account_closing');
+    expect(
+      ownerSql(
+        `SELECT pg_catalog.count(*)::TEXT
+FROM private.billing_mutation_responses
+WHERE operation_id IN (
+  :'terminal_operation_id'::UUID,
+  :'in_flight_operation_id'::UUID
+);`,
+        {
+          in_flight_operation_id: closingInFlightOperationId,
+          terminal_operation_id: closingReplayOperationId,
+        },
+      ).stdout,
+    ).toBe('0');
+
+    const { data: closingReplayData, error: closingReplayError } = await admin.rpc(
+      'claim_billing_mutation_v3',
+      {
+        p_mutation_kind: 'portal',
+        p_operation_id: closingReplayOperationId,
+        p_request_digest: DIGEST_A,
+        p_user_id: billingUserId,
+      },
+    );
+    expect(closingReplayError).toBeNull();
+    expect(closingReplayData?.[0]).toMatchObject({
+      canonical_operation_id: closingReplayOperationId,
+      provider_response_expires_at: null,
+      provider_response_url: null,
+      result: 'account_closing',
+    });
+
+    const { error: postGateClaimError } = await admin.rpc('claim_billing_mutation_v3', {
       p_mutation_kind: 'portal',
       p_operation_id: crypto.randomUUID(),
       p_request_digest: DIGEST_B,
@@ -762,7 +1033,7 @@ WHERE operation_id = :'operation_id'::UUID;`,
 
     const gateFirstOperation = await begin(gateFirstUserId);
 
-    const { error: gateFirstBillingError } = await admin.rpc('claim_billing_mutation_v2', {
+    const { error: gateFirstBillingError } = await admin.rpc('claim_billing_mutation_v3', {
       p_mutation_kind: 'checkout',
       p_operation_id: crypto.randomUUID(),
       p_request_digest: DIGEST_A,

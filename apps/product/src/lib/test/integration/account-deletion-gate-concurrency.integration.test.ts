@@ -379,12 +379,12 @@ WHERE bucket_id = 'attachments'
     }
   });
 
-  it('lets an in-flight billing claim finish before begin and blocks billing binding', async () => {
+  it('terminalizes a pre-provider billing claim that finishes before begin', async () => {
     const billingOperationId = crypto.randomUUID();
     const holder = await holdTransaction(
       serviceRoleTransaction(
         `SELECT *
-FROM public.claim_billing_mutation_v2(
+FROM public.claim_billing_mutation_v3(
   'checkout',
   :'operation_id'::UUID,
   :'request_digest',
@@ -422,20 +422,26 @@ WHERE user_id = :'user_id'::UUID;`,
         { user_id: billingFirstUserId },
       );
 
-      const { error: bindingError } = await admin.rpc('bind_billing_account_deletion_v1', {
-        p_generic_deletion_id: deletionId,
-        p_user_id: billingFirstUserId,
+      const { data: bindingData, error: bindingError } = await admin.rpc(
+        'bind_billing_account_deletion_v1',
+        {
+          p_generic_deletion_id: deletionId,
+          p_user_id: billingFirstUserId,
+        },
+      );
+      expect(bindingError).toBeNull();
+      expect(bindingData?.[0]).toEqual({
+        binding_state: 'preparing',
+        stripe_customer_id: null,
       });
-      expect(bindingError?.code).toBe('AD019');
       expect(
         ownerSql(
-          `SELECT pg_catalog.count(*)::TEXT
+          `SELECT state || ':' || terminal_reason
 FROM private.billing_mutation_claims
-WHERE operation_id = :'operation_id'::UUID
-  AND state = 'active';`,
+WHERE operation_id = :'operation_id'::UUID;`,
           { operation_id: billingOperationId },
         ),
-      ).toBe('1');
+      ).toBe('abandoned:account_deletion_before_provider_start');
     } finally {
       await holder.release(false);
       await beginAttempt;
@@ -456,7 +462,7 @@ FROM public.begin_account_deletion_v1(:'user_id'::UUID);`,
     const billingAttempt = runSqlAsync(
       serviceRoleTransaction(
         `SELECT *
-FROM public.claim_billing_mutation_v2(
+FROM public.claim_billing_mutation_v3(
   'checkout',
   :'operation_id'::UUID,
   :'request_digest',
