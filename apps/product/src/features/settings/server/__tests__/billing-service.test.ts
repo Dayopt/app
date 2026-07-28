@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
-import { BillingServiceError, getBillingInfo, syncSubscriptionStatus } from '../billing-service';
+import {
+  BillingServiceError,
+  getBillingInfo,
+  syncDeletedSubscriptionStatus,
+  syncSubscriptionStatus,
+} from '../billing-service';
 
 const stripeMock = vi.hoisted(() => ({
   customers: {
@@ -174,6 +179,51 @@ describe('billing-service', () => {
       await expect(
         syncSubscriptionStatus(supabase, 'cus_test123', 'sub_test456', 'past_due'),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('syncDeletedSubscriptionStatus', () => {
+    it.each([
+      'updated',
+      'account_deleting',
+      'already_terminal',
+      'stale_subscription',
+      'account_deleted',
+    ] as const)('%sを安全なterminal outcomeとして返す', async (outcome) => {
+      const rpc = vi.fn().mockResolvedValue({ data: outcome, error: null });
+
+      await expect(
+        syncDeletedSubscriptionStatus({ rpc } as never, 'cus_test123', 'sub_test456'),
+      ).resolves.toBe(outcome);
+      expect(rpc).toHaveBeenCalledWith('sync_billing_subscription_deleted_v1', {
+        p_stripe_customer_id: 'cus_test123',
+        p_subscription_id: 'sub_test456',
+      });
+    });
+
+    it('unknown Customerはlive identity driftとして失敗する', async () => {
+      const rpc = vi.fn().mockResolvedValue({ data: 'unknown_customer', error: null });
+
+      await expect(
+        syncDeletedSubscriptionStatus({ rpc } as never, 'cus_unknown', 'sub_unknown'),
+      ).rejects.toMatchObject({
+        code: 'UPDATE_FAILED',
+        message: 'No live or deleted billing account matched the Stripe subscription',
+      });
+    });
+
+    it('DBエラーを安全化して失敗する', async () => {
+      const rpc = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST000', message: 'sensitive database error' },
+      });
+
+      await expect(
+        syncDeletedSubscriptionStatus({ rpc } as never, 'cus_test123', 'sub_test456'),
+      ).rejects.toMatchObject({
+        code: 'UPDATE_FAILED',
+        message: 'Failed to sync deleted subscription',
+      });
     });
   });
 

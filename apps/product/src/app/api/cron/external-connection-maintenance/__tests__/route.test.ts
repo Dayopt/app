@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ExternalConnectionMaintenanceSummary } from '../maintenance-dispatcher';
+import type { ExternalConnectionMaintenanceSummary } from '../_composition/maintenance-dispatcher';
 
 const dispatchExternalConnectionMaintenance = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
@@ -12,7 +12,9 @@ const envMock = vi.hoisted(
 );
 
 vi.mock('@/env', () => ({ env: envMock }));
-vi.mock('../maintenance-dispatcher', () => ({ dispatchExternalConnectionMaintenance }));
+vi.mock('../_composition/maintenance-dispatcher', () => ({
+  dispatchExternalConnectionMaintenance,
+}));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 vi.mock('@/lib/logger', () => ({
   logger: {
@@ -61,6 +63,7 @@ const SUMMARY = {
     connectionsDeleted: 4,
     receiptsDeleted: 5,
     securityEventsDeleted: 6,
+    billingDeletionReceiptsDeleted: 7,
     hasMore: false,
   },
   durationMs: 120,

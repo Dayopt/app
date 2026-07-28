@@ -12,6 +12,8 @@ import { getStripe } from '@/lib/stripe/client';
 const CUSTOMER_RECOVERY_RPC = 'get_account_deletion_customer_recovery_v1' as const;
 const COMPLETE_CUSTOMER_PROVISIONING_RPC = 'complete_billing_customer_provisioning_v2' as const;
 const ABANDON_CUSTOMER_PROVISIONING_RPC = 'abandon_billing_customer_provisioning_v2' as const;
+const CLEANUP_TERMINAL_RECEIPTS_RPC =
+  'cleanup_billing_account_deletion_terminal_receipts_v2' as const;
 const STRIPE_PAGE_LIMIT = 100;
 const DB_RPC_TIMEOUT_MS = 4_000;
 const CUSTOMER_ID_PATTERN = /^cus_[A-Za-z0-9_]+$/;
@@ -462,4 +464,32 @@ export async function deleteBoundBillingAccountData(input: {
   if (input.stripeCustomerId === null) return { providerOutcome: 'not_present' };
   const service = createBillingAccountDeletionService(readConfiguredStripeRuntime());
   return service.deleteBoundCustomer(input);
+}
+
+export async function cleanupBillingAccountDeletionTerminalReceipts(
+  db: BillingAccountDeletionDatabase,
+  input: { limit: number },
+): Promise<Readonly<{ deleted: number; hasMore: boolean }>> {
+  try {
+    const { data, error } = await db
+      .rpc(CLEANUP_TERMINAL_RECEIPTS_RPC, { p_limit: input.limit })
+      .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS));
+    const row = Array.isArray(data) && data.length === 1 ? data[0] : null;
+    if (
+      error ||
+      row == null ||
+      !Number.isInteger(row.deleted_count) ||
+      row.deleted_count < 0 ||
+      typeof row.has_more !== 'boolean'
+    ) {
+      throw deletionFailure('terminal_receipt_cleanup', error);
+    }
+    return {
+      deleted: row.deleted_count,
+      hasMore: row.has_more,
+    };
+  } catch (error) {
+    if (error instanceof BillingAccountDeletionError) throw error;
+    throw deletionFailure('terminal_receipt_cleanup', error);
+  }
 }

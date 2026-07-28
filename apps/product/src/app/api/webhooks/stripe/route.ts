@@ -26,7 +26,10 @@ import { PaymentRecoveredEmail } from '@/emails/PaymentRecoveredEmail';
 import { ProStartEmail } from '@/emails/ProStartEmail';
 import { TrialStartEmail } from '@/emails/TrialStartEmail';
 import { env } from '@/env';
-import { syncSubscriptionStatus } from '@/features/settings/server/billing-service';
+import {
+  syncDeletedSubscriptionStatus,
+  syncSubscriptionStatus,
+} from '@/features/settings/server/billing-service';
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
 import {
@@ -44,6 +47,7 @@ import {
   markStripeWebhookEventProcessed,
   releaseStripeWebhookEvent,
 } from './stripe-webhook-idempotency';
+import { parseStripeWebhookIdentity, verifyStripeWebhookIdentity } from './stripe-webhook-identity';
 
 // ─── Slack 通知 ──────────────────────────────────────
 
@@ -234,6 +238,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
+  const expectedIdentity = parseStripeWebhookIdentity({
+    accountId: env.STRIPE_ACCOUNT_ID,
+    livemode: env.STRIPE_LIVEMODE,
+  });
+  if (expectedIdentity === null) {
+    logger.error('Stripe webhook identity is not configured');
+    captureStripeWebhookFailure(new Error('Stripe webhook identity is not configured'), 'identity');
+    return NextResponse.json({ error: 'Webhook identity not configured' }, { status: 500 });
+  }
+  let providerEvent: Stripe.Event | null = null;
+  try {
+    providerEvent = await verifyStripeWebhookIdentity(stripe, event, expectedIdentity);
+  } catch (error) {
+    logger.error('Stripe webhook identity verification failed');
+    captureStripeWebhookFailure(error, 'identity_provider_verification', event);
+    return NextResponse.json({ error: 'Webhook identity unavailable' }, { status: 500 });
+  }
+  if (providerEvent === null) {
+    logger.error('Stripe webhook identity mismatch');
+    captureStripeWebhookFailure(new Error('Stripe webhook identity mismatch'), 'identity', event);
+    return NextResponse.json({ error: 'Webhook identity mismatch' }, { status: 500 });
+  }
+  // 署名payloadはprovider Eventのidentityを引くためだけに使い、以降の業務入力は
+  // configured API accountから再取得したimmutable Eventへ固定する。
+  event = providerEvent;
+
   // RLS バイパスの admin client（webhook はユーザーコンテキストなし）
   let supabase: ReturnType<typeof createServiceRoleClient>;
   try {
@@ -391,33 +421,40 @@ export async function POST(request: NextRequest) {
             ? subscription.customer
             : subscription.customer.id;
 
-        await syncSubscriptionStatus(supabase, customerId, null, 'canceled');
-        logger.info('Subscription deleted', { customerId });
-        await notifySlack(`⚠️ サブスクリプション解約\nCustomer: ${customerId}`);
+        const syncOutcome = await syncDeletedSubscriptionStatus(
+          supabase,
+          customerId,
+          subscription.id,
+        );
+        logger.info('Subscription deleted', { outcome: syncOutcome });
 
-        // 解約確認メール
-        const cancelUser = await getUserByCustomerId(supabase, customerId);
-        if (cancelUser) {
-          const t = createEmailTranslator(cancelUser.locale);
-          const rawPeriodEnd = (subscription as unknown as { current_period_end?: number })
-            .current_period_end;
-          const periodEnd = rawPeriodEnd
-            ? new Date(rawPeriodEnd * 1000).toLocaleDateString(
-                cancelUser.locale === 'ja' ? 'ja-JP' : 'en-US',
-                { year: 'numeric', month: 'long', day: 'numeric' },
-              )
-            : 'your current billing period';
-          await sendTransactionalEmail(
-            cancelUser.email,
-            t('cancellationConfirm.subject'),
-            CancellationConfirmEmail({
-              userName: cancelUser.userName,
-              periodEndDate: periodEnd,
-              locale: cancelUser.locale,
-              appUrl: APP_URL,
-            }),
-            'send_cancellation_email',
-          );
+        if (syncOutcome === 'updated') {
+          await notifySlack(`⚠️ サブスクリプション解約\nCustomer: ${customerId}`);
+
+          // 解約確認メール
+          const cancelUser = await getUserByCustomerId(supabase, customerId);
+          if (cancelUser) {
+            const t = createEmailTranslator(cancelUser.locale);
+            const rawPeriodEnd = (subscription as unknown as { current_period_end?: number })
+              .current_period_end;
+            const periodEnd = rawPeriodEnd
+              ? new Date(rawPeriodEnd * 1000).toLocaleDateString(
+                  cancelUser.locale === 'ja' ? 'ja-JP' : 'en-US',
+                  { year: 'numeric', month: 'long', day: 'numeric' },
+                )
+              : 'your current billing period';
+            await sendTransactionalEmail(
+              cancelUser.email,
+              t('cancellationConfirm.subject'),
+              CancellationConfirmEmail({
+                userName: cancelUser.userName,
+                periodEndDate: periodEnd,
+                locale: cancelUser.locale,
+                appUrl: APP_URL,
+              }),
+              'send_cancellation_email',
+            );
+          }
         }
         break;
       }

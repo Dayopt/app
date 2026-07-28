@@ -46,6 +46,9 @@ export interface InvoiceItem {
   hostedInvoiceUrl: string | null;
 }
 
+type DeletedSubscriptionSyncResult =
+  'account_deleted' | 'account_deleting' | 'already_terminal' | 'stale_subscription' | 'updated';
+
 // ===== Error Codes =====
 
 /** 課金サービス固有のエラークラス */
@@ -316,4 +319,51 @@ export async function syncSubscriptionStatus(
   }
 
   logger.info('Subscription status synced', { status, rowsUpdated });
+}
+
+/**
+ * Webhook: subscription.deleted を現在のsubscriptionへだけ反映する。
+ *
+ * Auth削除と同時transactionで残した短期receiptがある場合だけ、profile消滅後の
+ * terminal eventを成功として扱う。未知Customerはlive data driftを隠さないため失敗する。
+ */
+export async function syncDeletedSubscriptionStatus(
+  supabase: SupabaseClient<Database>,
+  stripeCustomerId: string,
+  subscriptionId: string,
+): Promise<DeletedSubscriptionSyncResult> {
+  const { data, error } = await supabase.rpc('sync_billing_subscription_deleted_v1', {
+    p_stripe_customer_id: stripeCustomerId,
+    p_subscription_id: subscriptionId,
+  });
+
+  if (error) {
+    logger.error('Failed to sync deleted subscription');
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'billing',
+      operation: 'sync_deleted_subscription_status',
+    });
+    throw new BillingServiceError('UPDATE_FAILED', 'Failed to sync deleted subscription', {
+      cause: original,
+    });
+  }
+
+  if (
+    data === 'updated' ||
+    data === 'account_deleting' ||
+    data === 'already_terminal' ||
+    data === 'stale_subscription' ||
+    data === 'account_deleted'
+  ) {
+    logger.info('Deleted subscription synchronized', { outcome: data });
+    return data;
+  }
+
+  throw new BillingServiceError(
+    'UPDATE_FAILED',
+    'No live or deleted billing account matched the Stripe subscription',
+    {
+      cause: new Error('Stripe subscription deletion matched no billing terminal state'),
+    },
+  );
 }

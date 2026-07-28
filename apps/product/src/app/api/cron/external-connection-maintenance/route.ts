@@ -6,7 +6,7 @@ import { env } from '@/env';
 import { logger } from '@/lib/logger';
 import { captureUnexpectedError } from '@/lib/sentry';
 
-import { dispatchExternalConnectionMaintenance } from './maintenance-dispatcher';
+import { dispatchExternalConnectionMaintenance } from './_composition/maintenance-dispatcher';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,7 +28,7 @@ function noStoreJson(body: unknown, status = 200): NextResponse {
 }
 
 /**
- * Calendar revoke outbox と MCP/OAuth authority retention の集約 cron。
+ * Calendar revoke、MCP/OAuth authority、Billing terminal receiptの集約cron。
  *
  * response / logs は件数と滞留時間だけを返し、token、connection ID、user ID を含めない。
  */

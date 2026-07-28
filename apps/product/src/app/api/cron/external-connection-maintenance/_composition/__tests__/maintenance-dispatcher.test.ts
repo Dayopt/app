@@ -4,11 +4,15 @@ const processCalendarAuthorityMaintenance = vi.hoisted(() => vi.fn());
 const rpc = vi.hoisted(() => vi.fn());
 const createServiceRoleClient = vi.hoisted(() => vi.fn(() => ({ rpc })));
 const loggerInfo = vi.hoisted(() => vi.fn());
+const cleanupBillingAccountDeletionTerminalReceipts = vi.hoisted(() => vi.fn());
 
 vi.mock('@/features/external-calendar/server/authority-maintenance', () => ({
   processCalendarAuthorityMaintenance,
 }));
 vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient }));
+vi.mock('@/features/settings/server/account-deletion', () => ({
+  cleanupBillingAccountDeletionTerminalReceipts,
+}));
 vi.mock('@/lib/logger', () => ({
   logger: {
     log: vi.fn(),
@@ -105,6 +109,10 @@ function setupRpc(status = STATUS): void {
 beforeEach(() => {
   vi.clearAllMocks();
   processCalendarAuthorityMaintenance.mockResolvedValue(OUTBOX_SUMMARY);
+  cleanupBillingAccountDeletionTerminalReceipts.mockResolvedValue({
+    deleted: 7,
+    hasMore: false,
+  });
   setupRpc();
 });
 
@@ -114,6 +122,10 @@ describe('dispatchExternalConnectionMaintenance', () => {
     processCalendarAuthorityMaintenance.mockImplementation(async () => {
       sequence.push('outbox');
       return OUTBOX_SUMMARY;
+    });
+    cleanupBillingAccountDeletionTerminalReceipts.mockImplementation(async () => {
+      sequence.push('cleanup_billing_account_deletion_terminal_receipts_v2');
+      return { deleted: 7, hasMore: false };
     });
     rpc.mockImplementation((operation: string) => {
       sequence.push(operation);
@@ -139,6 +151,7 @@ describe('dispatchExternalConnectionMaintenance', () => {
       'cleanup_mcp_mutation_receipts_v1',
       'cleanup_oauth_connections_v1',
       'cleanup_integration_security_events_v1',
+      'cleanup_billing_account_deletion_terminal_receipts_v2',
       'get_external_authority_maintenance_status_v1',
     ]);
     expect(summary).toMatchObject({
@@ -165,6 +178,7 @@ describe('dispatchExternalConnectionMaintenance', () => {
         connectionsDeleted: 4,
         receiptsDeleted: 5,
         securityEventsDeleted: 6,
+        billingDeletionReceiptsDeleted: 7,
         hasMore: true,
       },
     });
@@ -216,6 +230,31 @@ describe('dispatchExternalConnectionMaintenance', () => {
     });
 
     expect(summary.complete).toBe(true);
+  });
+
+  it('Billing terminal receipt cleanupが残件を返したら次回実行を要求する', async () => {
+    processCalendarAuthorityMaintenance.mockResolvedValue(CLEAN_OUTBOX);
+    rpc.mockImplementation((operation: string) => {
+      const result =
+        operation === 'get_external_authority_maintenance_status_v1'
+          ? { data: [CLEAN_STATUS], error: null }
+          : { data: 0, error: null };
+      return { abortSignal: vi.fn(async () => result) };
+    });
+    cleanupBillingAccountDeletionTerminalReceipts.mockResolvedValue({
+      deleted: 250,
+      hasMore: true,
+    });
+
+    const summary = await dispatchExternalConnectionMaintenance({
+      deadlineAt: FAR_DEADLINE,
+    });
+
+    expect(summary.complete).toBe(false);
+    expect(summary.retention).toMatchObject({
+      billingDeletionReceiptsDeleted: 250,
+      hasMore: true,
+    });
   });
 
   it.each([
@@ -295,6 +334,7 @@ describe('dispatchExternalConnectionMaintenance', () => {
     });
     await expect(operation).rejects.not.toThrow(sensitive);
     expect(rpc).toHaveBeenCalledTimes(7);
+    expect(cleanupBillingAccountDeletionTerminalReceipts).toHaveBeenCalledTimes(1);
   });
 
   it('1つのcleanup失敗でも残りのcleanupとstatusを続ける', async () => {
@@ -315,6 +355,7 @@ describe('dispatchExternalConnectionMaintenance', () => {
       message: 'External connection maintenance failed',
     });
     expect(rpc).toHaveBeenCalledTimes(7);
+    expect(cleanupBillingAccountDeletionTerminalReceipts).toHaveBeenCalledTimes(1);
   });
 
   it('ログと返却値はaggregateだけで秘密情報やIDを含まない', async () => {

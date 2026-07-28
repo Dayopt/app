@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   BillingAccountDeletionError,
+  cleanupBillingAccountDeletionTerminalReceipts,
   createBillingAccountDeletionService,
 } from '../account-deletion';
 
@@ -326,5 +327,24 @@ describe('Billing account deletion service', () => {
       code: 'BILLING_ACCOUNT_DELETION_CUSTOMER_RECOVERY_AMBIGUOUS_FAILED',
     });
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('terminal receipt cleanupをBilling境界で実行する', async () => {
+    const { db, rpc } = createDb([
+      {
+        data: [{ deleted_count: 7, has_more: true }],
+        error: null,
+      },
+    ]);
+
+    await expect(
+      cleanupBillingAccountDeletionTerminalReceipts(db, { limit: 250 }),
+    ).resolves.toEqual({
+      deleted: 7,
+      hasMore: true,
+    });
+    expect(rpc).toHaveBeenCalledWith('cleanup_billing_account_deletion_terminal_receipts_v2', {
+      p_limit: 250,
+    });
   });
 });

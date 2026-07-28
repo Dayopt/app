@@ -6,6 +6,7 @@ import {
   processCalendarAuthorityMaintenance,
   type CalendarAuthorityMaintenanceSummary,
 } from '@/features/external-calendar/server/authority-maintenance';
+import { cleanupBillingAccountDeletionTerminalReceipts } from '@/features/settings/server/account-deletion';
 import type { Database } from '@/lib/database/generated/database.types';
 import { logger } from '@/lib/logger';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
@@ -21,6 +22,7 @@ type RetentionSummary = {
   connectionsDeleted: number;
   receiptsDeleted: number;
   securityEventsDeleted: number;
+  billingDeletionReceiptsDeleted: number;
   hasMore: boolean;
 };
 
@@ -106,7 +108,8 @@ async function readStatus(db: SupabaseClient<Database>) {
 }
 
 /**
- * Calendar provider revoke と OAuth authority retention を 1 本の cron で実行する。
+ * Calendar provider revoke、OAuth authority、Billing terminal receipt retentionを
+ * 1本のcronで実行する。
  *
  * outbox 側が失敗しても retention は試す。逆も同様で、1 種類の cleanup failure が他の
  * 保持期限を無期限に延ばさないよう、最初の安全化済み error だけを最後に再送出する。
@@ -162,37 +165,79 @@ export async function dispatchExternalConnectionMaintenance(params: {
     connectionsDeleted: 0,
     receiptsDeleted: 0,
     securityEventsDeleted: 0,
+    billingDeletionReceiptsDeleted: 0,
   };
 
   const cleanupSteps: ReadonlyArray<{
     key: keyof typeof retention;
-    operation: CleanupFunction;
+    run: () => Promise<Readonly<{ deleted: number; hasMore: boolean }>>;
   }> = [
     {
       key: 'authorizationCodesDeleted',
-      operation: 'cleanup_oauth_authorization_codes_v1',
+      run: async () => ({
+        deleted: await cleanup(db, 'cleanup_oauth_authorization_codes_v1'),
+        hasMore: false,
+      }),
     },
-    { key: 'accessTokensDeleted', operation: 'cleanup_oauth_access_tokens_v1' },
-    { key: 'refreshTokensDeleted', operation: 'cleanup_oauth_refresh_tokens_v1' },
-    { key: 'receiptsDeleted', operation: 'cleanup_mcp_mutation_receipts_v1' },
-    { key: 'connectionsDeleted', operation: 'cleanup_oauth_connections_v1' },
+    {
+      key: 'accessTokensDeleted',
+      run: async () => ({
+        deleted: await cleanup(db, 'cleanup_oauth_access_tokens_v1'),
+        hasMore: false,
+      }),
+    },
+    {
+      key: 'refreshTokensDeleted',
+      run: async () => ({
+        deleted: await cleanup(db, 'cleanup_oauth_refresh_tokens_v1'),
+        hasMore: false,
+      }),
+    },
+    {
+      key: 'receiptsDeleted',
+      run: async () => ({
+        deleted: await cleanup(db, 'cleanup_mcp_mutation_receipts_v1'),
+        hasMore: false,
+      }),
+    },
+    {
+      key: 'connectionsDeleted',
+      run: async () => ({
+        deleted: await cleanup(db, 'cleanup_oauth_connections_v1'),
+        hasMore: false,
+      }),
+    },
     {
       key: 'securityEventsDeleted',
-      operation: 'cleanup_integration_security_events_v1',
+      run: async () => ({
+        deleted: await cleanup(db, 'cleanup_integration_security_events_v1'),
+        hasMore: false,
+      }),
+    },
+    {
+      key: 'billingDeletionReceiptsDeleted',
+      run: () =>
+        cleanupBillingAccountDeletionTerminalReceipts(db, {
+          limit: CLEANUP_BATCH_SIZE,
+        }),
     },
   ];
 
-  // 各tableのretentionは独立している。逐次6 RPCのworst-caseでcron予算を使い切らないよう
+  // 各tableのretentionは独立している。逐次7 RPCのworst-caseでcron予算を使い切らないよう
   // 並列に開始し、全settlementを待ってから最初の安全化済みfailureを扱う。
   const cleanupResults = await Promise.allSettled(
     cleanupSteps.map(async (step) => ({
       step,
-      deleted: await cleanup(db, step.operation),
+      result: await step.run(),
     })),
   );
+  let billingDeletionReceiptsHaveMore = false;
   for (const result of cleanupResults) {
     if (result.status === 'fulfilled') {
-      retention[result.value.step.key] = result.value.deleted;
+      retention[result.value.step.key] = result.value.result.deleted;
+      if (result.value.step.key === 'billingDeletionReceiptsDeleted') {
+        billingDeletionReceiptsHaveMore = result.value.result.hasMore;
+      }
     } else {
       firstFailure ??=
         result.reason instanceof ExternalConnectionMaintenanceError
@@ -218,7 +263,8 @@ export async function dispatchExternalConnectionMaintenance(params: {
     status.refresh_tokens_due ||
     status.connections_due ||
     status.receipts_due ||
-    status.security_events_due;
+    status.security_events_due ||
+    billingDeletionReceiptsHaveMore;
   const revokeUnavailable =
     !outbox.encryptionAvailable &&
     (outbox.pendingOperations > 0 || outbox.unboundOutbox > 0 || status.calendar_revoke_total > 0);
