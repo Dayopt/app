@@ -2,6 +2,8 @@
 paths:
   - 'apps/product/src/**/*.{ts,tsx}'
   - 'apps/product/src/**/*.test.{ts,tsx}'
+  - 'apps/web/src/app/api/**/*.{ts,tsx}'
+  - 'supabase/functions/**/*.{ts,tsx}'
 ---
 
 # 品質・テスト・パフォーマンス
@@ -16,6 +18,14 @@ pnpm test -- path  # 特定ファイル
 ```
 
 詳細: `.claude/skills/test/SKILL.md`
+
+## 外部 API 統合の検証
+
+外部 API（OAuth / provider API / webhook）との統合は、**mock テストが通っただけで完了扱いにしない**。mock は実装者の仮定を写すだけで、仮定そのものの誤り（レスポンスに入るフィールド、必要な scope、エラーの形）は検出できない。
+
+- 契約は一次資料で確認する: 公式 docs / Context7 で「このリクエストに対して実際に何が返るか」を確認してから schema と mock を書く
+- 可能なら実レスポンス（またはドキュメント記載の実例）を fixture 化し、自作 mock との乖離を残さない
+- 実例: Google OAuth は scope に `openid` が無いと `id_token` を返さないが、token レスポンスを丸ごと mock した unit test は 23/23 pass のまま「接続が 100% 失敗する」バグを見逃した（PR #1721）
 
 ## アクセシビリティ
 

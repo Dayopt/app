@@ -102,12 +102,16 @@ export const DANGEROUS_PATH_GLOBS: readonly string[] = [
   'apps/product/src/lib/oauth-server/**',
   'apps/product/src/lib/security/**',
   'apps/product/src/lib/safe-redirect.ts',
+  'apps/product/src/proxy.ts',
   // サーバー境界（1 と 3 の入口）
   'apps/product/src/features/*/server/**',
   'apps/product/src/lib/trpc/**',
   'apps/product/src/lib/rate-limit/**',
   'apps/product/src/app/api/**',
   'apps/web/src/app/api/**',
+  // env 契約・送信境界（secret 露出は 1、宛先誤り・認証メールは 1 / 3 に帰着。#1740）
+  'apps/product/src/env.ts',
+  'apps/product/src/lib/email/**',
   // 4. 課金の不整合
   'apps/product/src/lib/billing/**',
   'apps/product/src/lib/stripe/**',
