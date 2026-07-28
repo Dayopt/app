@@ -28,6 +28,11 @@ const opEnvExample = readFileSync(
   'utf8',
 );
 
+const productEnvExample = readFileSync(
+  fileURLToPath(new URL('../../apps/product/.env.example', import.meta.url)),
+  'utf8',
+);
+
 const setup1PasswordScript = readFileSync(
   fileURLToPath(new URL('../setup-1password.sh', import.meta.url)),
   'utf8',
@@ -82,6 +87,13 @@ describe('MCP OAuth env inventory', () => {
     }
   });
 
+  it('Product env exampleにMCPとStripe identityの空変数をexactly once置く', () => {
+    for (const envName of [...MCP_APP_ENV_NAMES, ...STRIPE_IDENTITY_ENV_NAMES]) {
+      const matches = productEnvExample.match(new RegExp(`^${envName}=$`, 'gmu'));
+      expect(matches, envName).toHaveLength(1);
+    }
+  });
+
   it.each([
     {
       environment: 'staging' as const,
@@ -128,6 +140,15 @@ describe('MCP OAuth env inventory', () => {
       expect(setupMatches, envName).toHaveLength(2);
       expect(stripeTestRow).toContain(envName);
       expect(stripeLiveRow).toContain(envName);
+    }
+  });
+
+  it('local 1Password referenceにStripe provider identityをexactly once置く', () => {
+    for (const envName of STRIPE_IDENTITY_ENV_NAMES) {
+      const matches = opEnvExample.match(
+        new RegExp(`^${envName}=op://Dayopt-Staging/stripe-test/${envName}$`, 'gmu'),
+      );
+      expect(matches, envName).toHaveLength(1);
     }
   });
 });

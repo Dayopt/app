@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-28
+last_verified: 2026-07-29
 code:
   - apps/product/src/app/api/health
   - apps/product/src/app/api/mcp
@@ -16,17 +16,17 @@ code:
 
 ## Repository-only preparation
 
-- [ ] Node.js 24.xで`pnpm check`が成功する
-- [ ] `pnpm docs:check`が成功する
-- [ ] `pnpm exec vitest run --config vitest.scripts.config.ts scripts/__tests__/mcp-env-schema.test.ts`が成功する
-- [ ] testでMCP OAuthのenv schemaとlocal 1Password reference、Stripe identityのenv schema、1Password setup、Secrets文書を確認する
-- [ ] Productの`.env.example`にMCP OAuthとStripe provider identityの変数名だけを追加する
-- [ ] rootの`.op-env.local.example`にStripe provider identityの1Password referenceを追加する
+- [x] Node.js 24.xで`pnpm check`が成功する
+- [x] `pnpm docs:check`が成功する
+- [x] `pnpm exec vitest run --config vitest.scripts.config.ts scripts/__tests__/mcp-env-schema.test.ts`が成功する
+- [x] testでMCP OAuthのenv schemaとlocal 1Password reference、Stripe identityのenv schema、1Password setup、Secrets文書を確認する
+- [x] Productの`.env.example`にMCP OAuthとStripe provider identityの変数名だけを追加する
+- [x] rootの`.op-env.local.example`にStripe provider identityの1Password referenceを追加する
 - [ ] `MCP_WRITE_ENABLED_CLIENTS`の値は空である
 - [ ] DBのglobal/client gateはOFFである
 - [ ] Productionへ接続するbranch、project、secret、cookie、OAuth connectionを使わない
 
-`.env`系ファイルはagentのPreToolUseで書き込みを禁止している。上記2ファイルは値を入れず、ユーザーが手動で更新する。追加する変数名は次のとおり。
+`.env`系ファイルはagentのPreToolUseで書き込みを禁止している。上記2ファイルは値を入れず、ユーザーが手動で更新した。追加した変数名は次のとおり。
 
 ```text
 OAUTH_CLAUDE_REDIRECT_URIS
@@ -47,7 +47,7 @@ STRIPE_ACCOUNT_ID=op://Dayopt-Staging/stripe-test/STRIPE_ACCOUNT_ID
 STRIPE_LIVEMODE=op://Dayopt-Staging/stripe-test/STRIPE_LIVEMODE
 ```
 
-Productの`.env.example`とrootの`.op-env.local.example`は現在の自動test対象外である。この2ファイルを手動更新した後、差分に値が含まれないことをreviewし、同じ変数名をexactly-once testへ追加するまで外部Step 6はHALTとする。
+Productの`.env.example`とrootの`.op-env.local.example`は自動test対象である。Product側は空の変数名、root側は許可した1Password referenceがexactly once存在することを確認する。
 
 `pnpm test:mcp-environment-identity`はlocal DBをdata-less resetしてから既定seedへ戻す。専用local stackで、破棄してよい状態だと確認した時だけ実行する。
 
