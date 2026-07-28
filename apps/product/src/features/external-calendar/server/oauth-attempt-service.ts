@@ -29,7 +29,7 @@ type CalendarOAuthAttemptDatabase = {
 
 type CalendarOAuthAttemptClient = SupabaseClient<CalendarOAuthAttemptDatabase>;
 
-export type ClaimedCalendarOAuthAttempt = {
+type ClaimedCalendarOAuthAttempt = {
   attemptId: string;
   claimExpiresAt: string;
 };

@@ -612,14 +612,6 @@ function createConfiguredCalendarAccountDeletionService() {
   });
 }
 
-export async function prepareCalendarBeforeIdentityDeletion(input: {
-  userId: string;
-}): Promise<AccountDeletionAdapterResult> {
-  return createCalendarAccountDeletionAdapter(
-    createConfiguredCalendarAccountDeletionService(),
-  ).beforeIdentityDeletion(input);
-}
-
 export async function prepareBoundCalendarBeforeIdentityDeletion(input: {
   deletionId: string;
   userId: string;

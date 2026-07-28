@@ -60,5 +60,3 @@ export function useStableBillingOperation(): StableBillingOperation {
 
   return { begin, isLocked, reset, settle };
 }
-
-export type { BillingOperationSettlement };

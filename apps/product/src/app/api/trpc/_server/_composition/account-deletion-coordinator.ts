@@ -54,7 +54,7 @@ type StorageObject = Readonly<{
   name: string;
 }>;
 
-export class AccountDeletionCoordinatorError extends Error {
+class AccountDeletionCoordinatorError extends Error {
   readonly code: string;
   readonly databaseCode: string | null;
 

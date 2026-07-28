@@ -76,7 +76,7 @@ type SaveConnectionInput = {
   encryptionKey: string;
 };
 
-export type SaveConnectionOutcome = 'saved' | 'enqueued';
+type SaveConnectionOutcome = 'saved' | 'enqueued';
 
 function resolveProjectKeyOrThrow(): string {
   const projectKey = resolveGoogleCalendarProjectKey();

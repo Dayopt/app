@@ -38,4 +38,3 @@ function getBillingOperationErrorDisposition(error: unknown): BillingOperationEr
 }
 
 export { BILLING_OPERATION_SERVICE_CODES, getBillingOperationErrorDisposition };
-export type { BillingOperationErrorDisposition };
