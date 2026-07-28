@@ -2,6 +2,8 @@
 paths:
   - 'apps/product/src/**/*.{ts,tsx}'
   - 'apps/product/src/**/*.test.{ts,tsx}'
+  - 'apps/web/src/app/api/**/*.{ts,tsx}'
+  - 'supabase/functions/**/*.{ts,tsx}'
 ---
 
 # 品質・テスト・パフォーマンス
