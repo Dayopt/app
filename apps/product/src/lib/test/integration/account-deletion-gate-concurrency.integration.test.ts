@@ -11,6 +11,7 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const RUN_LOCAL = process.env.USE_LOCAL_DB === 'true';
 const TEST_PASSWORD = 'account-gate-race-password';
 const REQUEST_DIGEST = 'c'.repeat(64);
+const CUSTOMER_EMAIL_DIGEST = 'd'.repeat(64);
 const STORAGE_OBJECT_NAME = 'storage-first.txt';
 
 const admin = createClient<Database>(LOCAL_DB_URL, SERVICE_ROLE_KEY, {
@@ -21,6 +22,8 @@ const storageFirstUserId = crypto.randomUUID();
 const storageGateFirstUserId = crypto.randomUUID();
 const billingFirstUserId = crypto.randomUUID();
 const billingGateFirstUserId = crypto.randomUUID();
+const customerStartFirstUserId = crypto.randomUUID();
+const customerGateFirstUserId = crypto.randomUUID();
 const planWriterFirstUserId = crypto.randomUUID();
 const planGateFirstUserId = crypto.randomUUID();
 const recordGateFirstUserId = crypto.randomUUID();
@@ -29,6 +32,8 @@ const userIds = [
   storageGateFirstUserId,
   billingFirstUserId,
   billingGateFirstUserId,
+  customerStartFirstUserId,
+  customerGateFirstUserId,
   planWriterFirstUserId,
   planGateFirstUserId,
   recordGateFirstUserId,
@@ -248,6 +253,33 @@ DELETE FROM private.billing_mutation_claims
 WHERE user_id = :'user_id'::UUID;`,
     { user_id: userId },
   );
+}
+
+async function prepareCustomerProvisioning(
+  userId: string,
+): Promise<{ leaseId: string; operationId: string }> {
+  const operationId = crypto.randomUUID();
+  const { error: mutationError } = await admin.rpc('claim_billing_mutation_v3', {
+    p_mutation_kind: 'checkout',
+    p_operation_id: operationId,
+    p_request_digest: REQUEST_DIGEST,
+    p_user_id: userId,
+  });
+  if (mutationError) throw mutationError;
+
+  const { data, error } = await admin.rpc('claim_billing_customer_provisioning_v2', {
+    p_email_digest: CUSTOMER_EMAIL_DIGEST,
+    p_operation_id: operationId,
+    p_user_id: userId,
+  });
+  if (error) throw error;
+
+  const leaseId = data?.[0]?.lease_id;
+  if (typeof leaseId !== 'string' || leaseId.length === 0) {
+    throw new Error('Customer provisioning lease was not returned');
+  }
+
+  return { leaseId, operationId };
 }
 
 describe.skipIf(!RUN_LOCAL)('account deletion source-writer races', () => {
@@ -496,6 +528,120 @@ WHERE operation_id = :'operation_id'::UUID;`,
     } finally {
       await holder.release(false);
       await billingAttempt;
+    }
+  });
+
+  it('rolls back begin after a Customer provider start commits first', async () => {
+    const { leaseId, operationId } = await prepareCustomerProvisioning(customerStartFirstUserId);
+    const holder = await holdTransaction(
+      serviceRoleTransaction(
+        `SELECT public.start_billing_customer_provisioning_v2(
+  :'lease_id'::UUID,
+  :'operation_id'::UUID,
+  :'user_id'::UUID
+);`,
+      ).replace('COMMIT;', ''),
+      {
+        lease_id: leaseId,
+        operation_id: operationId,
+        user_id: customerStartFirstUserId,
+      },
+      'account-gate-customer-start-holder',
+    );
+    const waiterName = 'account-gate-customer-start-begin';
+    const beginAttempt = runSqlAsync(
+      serviceRoleTransaction(
+        `SELECT *
+FROM public.begin_account_deletion_v1(:'user_id'::UUID);`,
+      ),
+      { user_id: customerStartFirstUserId },
+      waiterName,
+    );
+
+    try {
+      await waitForApplicationLock(waiterName);
+      const holderResult = await holder.release();
+      expect(holderResult.code).toBe(0);
+
+      const beginResult = await beginAttempt;
+      expect(beginResult.code).not.toBe(0);
+      expect(beginResult.stderr).toContain('AD019');
+      expect(
+        ownerSql(
+          `SELECT pg_catalog.count(*)::TEXT
+FROM private.account_deletion_operations
+WHERE user_id = :'user_id'::UUID;`,
+          { user_id: customerStartFirstUserId },
+        ),
+      ).toBe('0');
+      expect(
+        ownerSql(
+          `SELECT state
+FROM private.billing_customer_provisioning_attempts
+WHERE operation_id = :'operation_id'::UUID;`,
+          { operation_id: operationId },
+        ),
+      ).toBe('provider_started');
+    } finally {
+      await holder.release(false);
+      await beginAttempt;
+    }
+  });
+
+  it('rejects Customer provider start after begin commits first', async () => {
+    const { leaseId, operationId } = await prepareCustomerProvisioning(customerGateFirstUserId);
+    const holder = await holdTransaction(
+      serviceRoleTransaction(
+        `SELECT *
+FROM public.begin_account_deletion_v1(:'user_id'::UUID);`,
+      ).replace('COMMIT;', ''),
+      { user_id: customerGateFirstUserId },
+      'account-gate-customer-gate-holder',
+    );
+    const waiterName = 'account-gate-customer-gate-start';
+    const startAttempt = runSqlAsync(
+      serviceRoleTransaction(
+        `SELECT public.start_billing_customer_provisioning_v2(
+  :'lease_id'::UUID,
+  :'operation_id'::UUID,
+  :'user_id'::UUID
+);`,
+      ),
+      {
+        lease_id: leaseId,
+        operation_id: operationId,
+        user_id: customerGateFirstUserId,
+      },
+      waiterName,
+    );
+
+    try {
+      await waitForApplicationLock(waiterName);
+      const holderResult = await holder.release();
+      expect(holderResult.code).toBe(0);
+
+      const startResult = await startAttempt;
+      expect(startResult.code).not.toBe(0);
+      expect(startResult.stderr).toContain('AD019');
+      expect(
+        ownerSql(
+          `SELECT state || ':' || terminal_reason
+FROM private.billing_mutation_claims
+WHERE operation_id = :'operation_id'::UUID;`,
+          { operation_id: operationId },
+        ),
+      ).toBe('abandoned:account_deletion_before_provider_start');
+      expect(
+        ownerSql(
+          `SELECT pg_catalog.count(*)::TEXT
+FROM private.billing_customer_provisioning_attempts
+WHERE operation_id = :'operation_id'::UUID;`,
+          { operation_id: operationId },
+        ),
+      ).toBe('0');
+    } finally {
+      await holder.release(false);
+      await startAttempt;
     }
   });
 

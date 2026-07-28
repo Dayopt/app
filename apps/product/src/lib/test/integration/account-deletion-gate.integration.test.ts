@@ -12,6 +12,7 @@ const RUN_LOCAL = process.env.USE_LOCAL_DB === 'true';
 const TEST_PASSWORD = 'account-gate-password';
 const DIGEST_A = 'a'.repeat(64);
 const DIGEST_B = 'b'.repeat(64);
+const CUSTOMER_EMAIL_DIGEST = 'c'.repeat(64);
 
 const admin = createClient<Database>(LOCAL_DB_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -26,7 +27,17 @@ const gateFirstUserClient = createClient<Database>(LOCAL_DB_URL, ANON_KEY, {
 const lifecycleUserId = crypto.randomUUID();
 const billingUserId = crypto.randomUUID();
 const gateFirstUserId = crypto.randomUUID();
-const userIds = [lifecycleUserId, billingUserId, gateFirstUserId];
+const customerProvisioningUserId = crypto.randomUUID();
+const customerRecoveryUserId = crypto.randomUUID();
+const customerAbandonUserId = crypto.randomUUID();
+const userIds = [
+  lifecycleUserId,
+  billingUserId,
+  gateFirstUserId,
+  customerProvisioningUserId,
+  customerRecoveryUserId,
+  customerAbandonUserId,
+];
 
 function psqlArgs(variables: Record<string, string> = {}): string[] {
   return [
@@ -1004,6 +1015,326 @@ WHERE operation_id IN (
 
     const { error: deleteError } = await admin.auth.admin.deleteUser(billingUserId);
     expect(deleteError).toBeNull();
+  });
+
+  it('fences lazy Stripe Customer creation and recovers its bounded unknown response', async () => {
+    setGateActivation(true);
+
+    const completedOperationId = crypto.randomUUID();
+    const completedCustomerId = `cus_test_${customerProvisioningUserId.replaceAll('-', '')}`;
+    const { data: completedMutationData, error: completedMutationError } = await admin.rpc(
+      'claim_billing_mutation_v3',
+      {
+        p_mutation_kind: 'checkout',
+        p_operation_id: completedOperationId,
+        p_request_digest: DIGEST_A,
+        p_user_id: customerProvisioningUserId,
+      },
+    );
+    expect(completedMutationError).toBeNull();
+    expect(completedMutationData?.[0]?.result).toBe('claimed');
+
+    const { data: customerClaimData, error: customerClaimError } = await admin.rpc(
+      'claim_billing_customer_provisioning_v2',
+      {
+        p_email_digest: CUSTOMER_EMAIL_DIGEST,
+        p_operation_id: completedOperationId,
+        p_user_id: customerProvisioningUserId,
+      },
+    );
+    expect(customerClaimError).toBeNull();
+    expect(customerClaimData?.[0]).toMatchObject({
+      provider_customer_id: null,
+      result: 'claimed',
+    });
+    const customerLeaseId = requireString(
+      customerClaimData?.[0]?.lease_id,
+      'Customer provisioning lease',
+    );
+
+    const { error: completionBeforeStartError } = await admin.rpc(
+      'complete_billing_customer_provisioning_v2',
+      {
+        p_operation_id: completedOperationId,
+        p_provider_customer_id: completedCustomerId,
+        p_user_id: customerProvisioningUserId,
+      },
+    );
+    expect(completionBeforeStartError?.code).toBe('AD019');
+    expect(
+      ownerSql(
+        `SELECT stripe_customer_id IS NULL
+FROM public.profiles
+WHERE id = :'user_id'::UUID;`,
+        { user_id: customerProvisioningUserId },
+      ).stdout,
+    ).toBe('t');
+
+    const { data: customerStarted, error: customerStartError } = await admin.rpc(
+      'start_billing_customer_provisioning_v2',
+      {
+        p_lease_id: customerLeaseId,
+        p_operation_id: completedOperationId,
+        p_user_id: customerProvisioningUserId,
+      },
+    );
+    expect(customerStartError).toBeNull();
+    expect(customerStarted).toBe('started');
+
+    const { error: liveProvisioningDeletionError } = await admin.rpc('begin_account_deletion_v1', {
+      p_user_id: customerProvisioningUserId,
+    });
+    expect(liveProvisioningDeletionError?.code).toBe('AD019');
+    expect(
+      ownerSql(
+        `SELECT pg_catalog.count(*)::TEXT
+FROM private.account_deletion_operations
+WHERE user_id = :'user_id'::UUID;`,
+        { user_id: customerProvisioningUserId },
+      ).stdout,
+    ).toBe('0');
+
+    const { data: customerCompleted, error: customerCompletionError } = await admin.rpc(
+      'complete_billing_customer_provisioning_v2',
+      {
+        p_operation_id: completedOperationId,
+        p_provider_customer_id: completedCustomerId,
+        p_user_id: customerProvisioningUserId,
+      },
+    );
+    expect(customerCompletionError).toBeNull();
+    expect(customerCompleted).toBe(completedCustomerId);
+
+    const { data: customerCompletionReplay, error: customerCompletionReplayError } =
+      await admin.rpc('complete_billing_customer_provisioning_v2', {
+        p_operation_id: completedOperationId,
+        p_provider_customer_id: completedCustomerId,
+        p_user_id: customerProvisioningUserId,
+      });
+    expect(customerCompletionReplayError).toBeNull();
+    expect(customerCompletionReplay).toBe(completedCustomerId);
+
+    const { error: unrelatedCompletionReplayError } = await admin.rpc(
+      'complete_billing_customer_provisioning_v2',
+      {
+        p_operation_id: crypto.randomUUID(),
+        p_provider_customer_id: completedCustomerId,
+        p_user_id: customerProvisioningUserId,
+      },
+    );
+    expect(unrelatedCompletionReplayError?.code).toBe('AD012');
+
+    await begin(customerProvisioningUserId);
+    expect(
+      ownerSql(
+        `SELECT state || ':' || terminal_reason
+FROM private.billing_mutation_claims
+WHERE operation_id = :'operation_id'::UUID;`,
+        { operation_id: completedOperationId },
+      ).stdout,
+    ).toBe('abandoned:account_deletion_before_provider_start');
+    expect(
+      ownerSql(
+        `SELECT stripe_customer_id
+FROM public.profiles
+WHERE id = :'user_id'::UUID;`,
+        { user_id: customerProvisioningUserId },
+      ).stdout,
+    ).toBe(completedCustomerId);
+
+    const recoveryOperationId = crypto.randomUUID();
+    const { error: recoveryMutationError } = await admin.rpc('claim_billing_mutation_v3', {
+      p_mutation_kind: 'checkout',
+      p_operation_id: recoveryOperationId,
+      p_request_digest: DIGEST_B,
+      p_user_id: customerRecoveryUserId,
+    });
+    expect(recoveryMutationError).toBeNull();
+    const { data: recoveryClaimData, error: recoveryClaimError } = await admin.rpc(
+      'claim_billing_customer_provisioning_v2',
+      {
+        p_email_digest: CUSTOMER_EMAIL_DIGEST,
+        p_operation_id: recoveryOperationId,
+        p_user_id: customerRecoveryUserId,
+      },
+    );
+    expect(recoveryClaimError).toBeNull();
+    const recoveryLeaseId = requireString(
+      recoveryClaimData?.[0]?.lease_id,
+      'Customer recovery lease',
+    );
+    const { data: recoveryStarted, error: recoveryStartError } = await admin.rpc(
+      'start_billing_customer_provisioning_v2',
+      {
+        p_lease_id: recoveryLeaseId,
+        p_operation_id: recoveryOperationId,
+        p_user_id: customerRecoveryUserId,
+      },
+    );
+    expect(recoveryStartError).toBeNull();
+    expect(recoveryStarted).toBe('started');
+
+    ownerSql(
+      `WITH timing AS (
+  SELECT pg_catalog.clock_timestamp() AS now
+)
+UPDATE private.billing_customer_provisioning_attempts
+SET provider_started_at = timing.now - INTERVAL '24 hours',
+    provider_retry_deadline_at = timing.now - INTERVAL '1 hour'
+FROM timing
+WHERE operation_id = :'operation_id'::UUID;`,
+      { operation_id: recoveryOperationId },
+    );
+
+    const { data: recoveryReplayData, error: recoveryReplayError } = await admin.rpc(
+      'claim_billing_customer_provisioning_v2',
+      {
+        p_email_digest: CUSTOMER_EMAIL_DIGEST,
+        p_operation_id: recoveryOperationId,
+        p_user_id: customerRecoveryUserId,
+      },
+    );
+    expect(recoveryReplayError).toBeNull();
+    expect(recoveryReplayData?.[0]).toMatchObject({
+      lease_expires_at: null,
+      lease_id: null,
+      provider_customer_id: null,
+      result: 'recover',
+    });
+
+    await begin(customerRecoveryUserId);
+    expect(
+      ownerSql(
+        `SELECT state || ':' || terminal_reason
+FROM private.billing_mutation_claims
+WHERE operation_id = :'operation_id'::UUID;`,
+        { operation_id: recoveryOperationId },
+      ).stdout,
+    ).toBe('abandoned:account_deletion_during_customer_recovery');
+    expect(
+      ownerSql(
+        `SELECT pg_catalog.count(*)::TEXT
+FROM private.billing_customer_provisioning_attempts
+WHERE operation_id = :'operation_id'::UUID;`,
+        { operation_id: recoveryOperationId },
+      ).stdout,
+    ).toBe('0');
+  });
+
+  it('terminalizes an exhausted Customer recovery before allowing a fresh top-level intent', async () => {
+    setGateActivation(true);
+
+    const exhaustedOperationId = crypto.randomUUID();
+    const { error: mutationClaimError } = await admin.rpc('claim_billing_mutation_v3', {
+      p_mutation_kind: 'checkout',
+      p_operation_id: exhaustedOperationId,
+      p_request_digest: DIGEST_A,
+      p_user_id: customerAbandonUserId,
+    });
+    expect(mutationClaimError).toBeNull();
+
+    const { data: provisioningClaim, error: provisioningClaimError } = await admin.rpc(
+      'claim_billing_customer_provisioning_v2',
+      {
+        p_email_digest: CUSTOMER_EMAIL_DIGEST,
+        p_operation_id: exhaustedOperationId,
+        p_user_id: customerAbandonUserId,
+      },
+    );
+    expect(provisioningClaimError).toBeNull();
+    const leaseId = requireString(
+      provisioningClaim?.[0]?.lease_id,
+      'Exhausted Customer provisioning lease',
+    );
+
+    const { data: started, error: startError } = await admin.rpc(
+      'start_billing_customer_provisioning_v2',
+      {
+        p_lease_id: leaseId,
+        p_operation_id: exhaustedOperationId,
+        p_user_id: customerAbandonUserId,
+      },
+    );
+    expect(startError).toBeNull();
+    expect(started).toBe('started');
+
+    ownerSql(
+      `WITH timing AS (
+  SELECT pg_catalog.clock_timestamp() AS now
+)
+UPDATE private.billing_customer_provisioning_attempts
+SET provider_started_at = timing.now - INTERVAL '24 hours',
+    provider_retry_deadline_at = timing.now - INTERVAL '1 hour'
+FROM timing
+WHERE operation_id = :'operation_id'::UUID;`,
+      { operation_id: exhaustedOperationId },
+    );
+
+    const { data: abandoned, error: abandonError } = await admin.rpc(
+      'abandon_billing_customer_provisioning_v2',
+      {
+        p_operation_id: exhaustedOperationId,
+        p_user_id: customerAbandonUserId,
+      },
+    );
+    expect(abandonError).toBeNull();
+    expect(abandoned).toBe(true);
+
+    const { data: abandonReplay, error: abandonReplayError } = await admin.rpc(
+      'abandon_billing_customer_provisioning_v2',
+      {
+        p_operation_id: exhaustedOperationId,
+        p_user_id: customerAbandonUserId,
+      },
+    );
+    expect(abandonReplayError).toBeNull();
+    expect(abandonReplay).toBe(true);
+    expect(
+      ownerSql(
+        `SELECT state || ':' || terminal_reason
+FROM private.billing_mutation_claims
+WHERE operation_id = :'operation_id'::UUID;`,
+        { operation_id: exhaustedOperationId },
+      ).stdout,
+    ).toBe('abandoned:customer_provisioning_not_recovered');
+
+    const { data: sameOperationReplay, error: sameOperationReplayError } = await admin.rpc(
+      'claim_billing_mutation_v3',
+      {
+        p_mutation_kind: 'checkout',
+        p_operation_id: exhaustedOperationId,
+        p_request_digest: DIGEST_A,
+        p_user_id: customerAbandonUserId,
+      },
+    );
+    expect(sameOperationReplayError).toBeNull();
+    expect(sameOperationReplay?.[0]?.result).toBe('abandoned');
+
+    const { error: reopenedProvisioningError } = await admin.rpc(
+      'claim_billing_customer_provisioning_v2',
+      {
+        p_email_digest: CUSTOMER_EMAIL_DIGEST,
+        p_operation_id: exhaustedOperationId,
+        p_user_id: customerAbandonUserId,
+      },
+    );
+    expect(reopenedProvisioningError?.code).toBe('AD019');
+
+    const freshOperationId = crypto.randomUUID();
+    const { data: freshClaim, error: freshClaimError } = await admin.rpc(
+      'claim_billing_mutation_v3',
+      {
+        p_mutation_kind: 'checkout',
+        p_operation_id: freshOperationId,
+        p_request_digest: DIGEST_A,
+        p_user_id: customerAbandonUserId,
+      },
+    );
+    expect(freshClaimError).toBeNull();
+    expect(freshClaim?.[0]).toMatchObject({
+      canonical_operation_id: freshOperationId,
+      result: 'claimed',
+    });
   });
 
   it('blocks new Calendar, billing, and Storage writes once closing starts', async () => {
