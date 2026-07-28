@@ -85,7 +85,7 @@
         "pro": {
           "name": "Pro",
           "badge": "おすすめ",
-          "description": "すべての振り返り指標、無制限のタグ、開かれたデータアクセス",
+          "description": "すべての振り返り指標、無制限のタグ、API・MCP アクセス",
           "price": "$5",
           "period": "/月",
           "priceDaily": "1日あたり約20円",

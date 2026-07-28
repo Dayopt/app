@@ -85,7 +85,7 @@
         "pro": {
           "name": "Pro",
           "badge": "Recommended",
-          "description": "Every Review metric, unlimited tags, and open data access",
+          "description": "All review metrics, unlimited tags, and API and MCP access",
           "price": "$5",
           "period": "/month",
           "priceDaily": "About 15¢ a day",
