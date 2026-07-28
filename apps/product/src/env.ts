@@ -119,6 +119,11 @@ const serverSchema = z
 
     // Stripe
     STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_ACCOUNT_ID: z
+      .string()
+      .regex(/^acct_[A-Za-z0-9_]+$/)
+      .optional(),
+    STRIPE_LIVEMODE: z.enum(['true', 'false']).optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
     NEXT_PUBLIC_STRIPE_PRO_PRICE_ID: z.string().optional(),
 
@@ -162,6 +167,20 @@ const serverSchema = z
     message: 'RECOVERY_CODE_PEPPER は本番環境では必須です',
     path: ['RECOVERY_CODE_PEPPER'],
   })
+  .refine(
+    (data) => {
+      const identityValues = [
+        data.STRIPE_SECRET_KEY,
+        data.STRIPE_ACCOUNT_ID,
+        data.STRIPE_LIVEMODE,
+      ].map((value) => Boolean(value?.trim()));
+      return identityValues.every(Boolean) || !identityValues.some(Boolean);
+    },
+    {
+      message: 'STRIPE_SECRET_KEY / STRIPE_ACCOUNT_ID / STRIPE_LIVEMODE はまとめて設定してください',
+      path: ['STRIPE_ACCOUNT_ID'],
+    },
+  )
   .refine(
     (data) => {
       if (!(data.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production')) {

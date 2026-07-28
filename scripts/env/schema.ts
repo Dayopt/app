@@ -46,6 +46,8 @@ export const envSchema: EnvSchemaEntry[] = [
   envEntry('UPSTASH_REDIS_REST_TOKEN', false, 'secret', 'staging', staging, 'upstash'),
 
   envEntry('STRIPE_SECRET_KEY', false, 'secret', 'staging', staging, 'stripe-test'),
+  envEntry('STRIPE_ACCOUNT_ID', false, 'public', 'staging', staging, 'stripe-test'),
+  envEntry('STRIPE_LIVEMODE', false, 'public', 'staging', staging, 'stripe-test'),
   envEntry('STRIPE_WEBHOOK_SECRET', false, 'secret', 'staging', staging, 'stripe-test'),
   envEntry('NEXT_PUBLIC_STRIPE_PRO_PRICE_ID', false, 'public', 'staging', staging, 'stripe-test'),
 
@@ -103,6 +105,8 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
   envEntry('UPSTASH_REDIS_REST_URL', false, 'secret', 'production', production, 'upstash'),
   envEntry('UPSTASH_REDIS_REST_TOKEN', false, 'secret', 'production', production, 'upstash'),
   envEntry('STRIPE_SECRET_KEY', false, 'secret', 'production', production, 'stripe-live'),
+  envEntry('STRIPE_ACCOUNT_ID', false, 'public', 'production', production, 'stripe-live'),
+  envEntry('STRIPE_LIVEMODE', false, 'public', 'production', production, 'stripe-live'),
   envEntry('STRIPE_WEBHOOK_SECRET', false, 'secret', 'production', production, 'stripe-live'),
   envEntry(
     'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID',
