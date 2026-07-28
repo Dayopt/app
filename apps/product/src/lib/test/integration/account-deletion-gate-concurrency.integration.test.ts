@@ -29,6 +29,8 @@ const customerRecoveryFirstUserId = crypto.randomUUID();
 const planWriterFirstUserId = crypto.randomUUID();
 const planGateFirstUserId = crypto.randomUUID();
 const recordGateFirstUserId = crypto.randomUUID();
+const webhookFirstUserId = crypto.randomUUID();
+const deletionFirstUserId = crypto.randomUUID();
 const userIds = [
   storageFirstUserId,
   storageGateFirstUserId,
@@ -41,6 +43,8 @@ const userIds = [
   planWriterFirstUserId,
   planGateFirstUserId,
   recordGateFirstUserId,
+  webhookFirstUserId,
+  deletionFirstUserId,
 ];
 
 interface SqlResult {
@@ -286,6 +290,99 @@ async function prepareCustomerProvisioning(
   return { leaseId, operationId };
 }
 
+function requireRpcValue(value: null | string | undefined, label: string): string {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(`${label} was not returned`);
+  }
+  return value;
+}
+
+async function prepareReadyBillingAccountDeletion(
+  userId: string,
+): Promise<{ customerId: string; subscriptionId: string }> {
+  const customerId = `cus_race_${userId.replaceAll('-', '')}`;
+  const subscriptionId = `sub_race_${userId.replaceAll('-', '')}`;
+  const { error: profileError } = await admin
+    .from('profiles')
+    .update({
+      stripe_customer_id: customerId,
+      subscription_id: subscriptionId,
+      subscription_status: 'active',
+    })
+    .eq('id', userId);
+  if (profileError) throw profileError;
+
+  const { data: beginData, error: beginError } = await admin.rpc('begin_account_deletion_v1', {
+    p_user_id: userId,
+  });
+  if (beginError) throw beginError;
+  const deletionId = requireRpcValue(beginData?.[0]?.deletion_id, 'Account deletion id');
+
+  const { error: calendarBindingError } = await admin.rpc('bind_calendar_account_deletion_v1', {
+    p_generic_deletion_id: deletionId,
+    p_user_id: userId,
+  });
+  if (calendarBindingError) throw calendarBindingError;
+
+  for (const step of ['calendar', 'storage'] as const) {
+    const { data: claimData, error: claimError } = await admin.rpc(
+      'claim_account_deletion_step_v1',
+      {
+        p_deletion_id: deletionId,
+        p_step: step,
+        p_user_id: userId,
+      },
+    );
+    if (claimError) throw claimError;
+    const leaseId = requireRpcValue(claimData?.[0]?.lease_id, `${step} lease`);
+    const { error: completeError } = await admin.rpc('complete_account_deletion_step_v1', {
+      p_deletion_id: deletionId,
+      p_lease_id: leaseId,
+      p_step: step,
+      p_user_id: userId,
+    });
+    if (completeError) throw completeError;
+  }
+
+  const { error: billingBindingError } = await admin.rpc('bind_billing_account_deletion_v1', {
+    p_generic_deletion_id: deletionId,
+    p_user_id: userId,
+  });
+  if (billingBindingError) throw billingBindingError;
+  const { error: billingSealError } = await admin.rpc('seal_billing_account_deletion_v1', {
+    p_generic_deletion_id: deletionId,
+    p_provider_outcome: 'deleted',
+    p_user_id: userId,
+  });
+  if (billingSealError) throw billingSealError;
+
+  const { data: billingClaim, error: billingClaimError } = await admin.rpc(
+    'claim_account_deletion_step_v1',
+    {
+      p_deletion_id: deletionId,
+      p_step: 'billing',
+      p_user_id: userId,
+    },
+  );
+  if (billingClaimError) throw billingClaimError;
+  const billingLeaseId = requireRpcValue(billingClaim?.[0]?.lease_id, 'billing lease');
+  const { error: billingCompleteError } = await admin.rpc('complete_account_deletion_step_v1', {
+    p_deletion_id: deletionId,
+    p_lease_id: billingLeaseId,
+    p_step: 'billing',
+    p_user_id: userId,
+  });
+  if (billingCompleteError) throw billingCompleteError;
+
+  const { error: genericSealError } = await admin.rpc('seal_account_deletion_v1', {
+    p_deletion_id: deletionId,
+    p_user_id: userId,
+  });
+  if (genericSealError) throw genericSealError;
+
+  return { customerId, subscriptionId };
+}
+
 describe.skipIf(!RUN_LOCAL)('account deletion source-writer races', () => {
   beforeAll(async () => {
     setGateActivation(true);
@@ -319,6 +416,18 @@ COMMIT;`,
       cleanupUserState(userId);
       await admin.auth.admin.deleteUser(userId);
     }
+
+    ownerSql(
+      `DELETE FROM private.billing_account_deletion_terminal_receipts
+WHERE stripe_customer_id_digest IN (
+  pg_catalog.sha256(pg_catalog.convert_to(:'webhook_customer_id', 'UTF8')),
+  pg_catalog.sha256(pg_catalog.convert_to(:'deletion_customer_id', 'UTF8'))
+);`,
+      {
+        deletion_customer_id: `cus_race_${deletionFirstUserId.replaceAll('-', '')}`,
+        webhook_customer_id: `cus_race_${webhookFirstUserId.replaceAll('-', '')}`,
+      },
+    );
   });
 
   it('commits an authenticated Storage write that acquired the fence before begin', async () => {
@@ -946,5 +1055,144 @@ WHERE id = :'plan_id'::UUID
       await holder.release(false);
       await planAttempt;
     }
+  });
+
+  it('webhookがprofile lockを先に取ってもAuth削除が完了する', async () => {
+    const { customerId, subscriptionId } =
+      await prepareReadyBillingAccountDeletion(webhookFirstUserId);
+    const holder = await holdTransaction(
+      serviceRoleTransaction(
+        `SELECT public.sync_billing_subscription_deleted_v1(
+  :'customer_id',
+  :'subscription_id'
+);`,
+      ).replace('COMMIT;', ''),
+      {
+        customer_id: customerId,
+        subscription_id: subscriptionId,
+      },
+      'account-gate-webhook-first-holder',
+    );
+    const waiterName = 'account-gate-webhook-first-delete';
+    const deleteAttempt = runSqlAsync(
+      `BEGIN;
+DELETE FROM auth.users
+WHERE id = :'user_id'::UUID;
+COMMIT;`,
+      { user_id: webhookFirstUserId },
+      waiterName,
+    );
+
+    try {
+      await waitForApplicationLock(waiterName);
+      const holderResult = await holder.release();
+      expect(holderResult.code).toBe(0);
+      expect(holderResult.stdout).toContain('account_deleting');
+
+      const deleteResult = await deleteAttempt;
+      expect(deleteResult.code).toBe(0);
+      expect(
+        ownerSql(
+          `SELECT pg_catalog.count(*)::TEXT
+FROM auth.users
+WHERE id = :'user_id'::UUID;`,
+          { user_id: webhookFirstUserId },
+        ),
+      ).toBe('0');
+    } finally {
+      await holder.release(false);
+      await deleteAttempt;
+    }
+  });
+
+  it('Auth削除がprofile lockを先に取ったらwebhookをterminal receiptで終端する', async () => {
+    const { customerId, subscriptionId } =
+      await prepareReadyBillingAccountDeletion(deletionFirstUserId);
+    const holder = await holdTransaction(
+      `BEGIN;
+DELETE FROM auth.users
+WHERE id = :'user_id'::UUID;`,
+      { user_id: deletionFirstUserId },
+      'account-gate-delete-first-holder',
+    );
+    const waiterName = 'account-gate-delete-first-webhook';
+    const webhookAttempt = runSqlAsync(
+      serviceRoleTransaction(
+        `SELECT public.sync_billing_subscription_deleted_v1(
+  :'customer_id',
+  :'subscription_id'
+);`,
+      ),
+      {
+        customer_id: customerId,
+        subscription_id: subscriptionId,
+      },
+      waiterName,
+    );
+
+    try {
+      await waitForApplicationLock(waiterName);
+      const holderResult = await holder.release();
+      expect(holderResult.code).toBe(0);
+
+      const webhookResult = await webhookAttempt;
+      expect(webhookResult.code).toBe(0);
+      expect(webhookResult.stdout).toContain('account_deleted');
+    } finally {
+      await holder.release(false);
+      await webhookAttempt;
+    }
+  });
+
+  it('期限切れreceiptが別cleanupにlock中でもbacklogを報告する', async () => {
+    const customerId = `cus_locked_${crypto.randomUUID().replaceAll('-', '')}`;
+    ownerSql(
+      `INSERT INTO private.billing_account_deletion_terminal_receipts (
+  stripe_customer_id_digest,
+  recorded_at,
+  expires_at
+) VALUES (
+  pg_catalog.sha256(pg_catalog.convert_to(:'customer_id', 'UTF8')),
+  pg_catalog.clock_timestamp() - INTERVAL '2 days',
+  pg_catalog.clock_timestamp() - INTERVAL '1 day'
+);`,
+      { customer_id: customerId },
+    );
+
+    const holder = await holdTransaction(
+      `BEGIN;
+SELECT 1
+FROM private.billing_account_deletion_terminal_receipts
+WHERE stripe_customer_id_digest = pg_catalog.sha256(
+  pg_catalog.convert_to(:'customer_id', 'UTF8')
+)
+FOR UPDATE;`,
+      { customer_id: customerId },
+      'account-gate-billing-receipt-cleanup-holder',
+    );
+
+    try {
+      const { data, error } = await admin.rpc(
+        'cleanup_billing_account_deletion_terminal_receipts_v2',
+        { p_limit: 1 },
+      );
+      expect(error).toBeNull();
+      expect(data?.[0]).toEqual({
+        deleted_count: 0,
+        has_more: true,
+      });
+    } finally {
+      await holder.release();
+    }
+
+    const { data: cleanupData, error: cleanupError } = await admin.rpc(
+      'cleanup_billing_account_deletion_terminal_receipts_v2',
+      { p_limit: 1 },
+    );
+    expect(cleanupError).toBeNull();
+    expect(cleanupData?.[0]).toEqual({
+      deleted_count: 1,
+      has_more: false,
+    });
   });
 });

@@ -1360,6 +1360,13 @@ export type Database = {
         };
         Returns: string;
       };
+      cleanup_billing_account_deletion_terminal_receipts_v2: {
+        Args: { p_limit?: number };
+        Returns: {
+          deleted_count: number;
+          has_more: boolean;
+        }[];
+      };
       cleanup_billing_mutation_claims_v1: {
         Args: { p_limit?: number };
         Returns: number;
@@ -2384,6 +2391,10 @@ export type Database = {
           p_project_key: string;
           p_user_id: string;
         };
+        Returns: string;
+      };
+      sync_billing_subscription_deleted_v1: {
+        Args: { p_stripe_customer_id: string; p_subscription_id: string };
         Returns: string;
       };
       trunc_week_tz: {

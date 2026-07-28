@@ -471,6 +471,8 @@ WHERE user_id = :'user_id'::UUID;`,
     setGateActivation(true);
 
     const customerId = `cus_test_${billingUserId.replaceAll('-', '')}`;
+    const deletedSubscriptionId = `sub_deleted_${billingUserId.replaceAll('-', '')}`;
+    const replacementSubscriptionId = `sub_current_${billingUserId.replaceAll('-', '')}`;
     const providerObjectId = `cs_test_${crypto.randomUUID().replaceAll('-', '')}`;
     const providerResponseUrl = `https://checkout.stripe.com/${providerObjectId}`;
     const operationId = crypto.randomUUID();
@@ -478,9 +480,92 @@ WHERE user_id = :'user_id'::UUID;`,
 
     const { error: profileError } = await admin
       .from('profiles')
-      .update({ stripe_customer_id: customerId })
+      .update({
+        stripe_customer_id: customerId,
+        subscription_id: deletedSubscriptionId,
+        subscription_status: 'active',
+      })
       .eq('id', billingUserId);
     expect(profileError).toBeNull();
+
+    const { data: liveDeletedSync, error: liveDeletedSyncError } = await admin.rpc(
+      'sync_billing_subscription_deleted_v1',
+      {
+        p_stripe_customer_id: customerId,
+        p_subscription_id: deletedSubscriptionId,
+      },
+    );
+    expect(liveDeletedSyncError).toBeNull();
+    expect(liveDeletedSync).toBe('updated');
+    expect(
+      ownerSql(
+        `SELECT subscription_status || ':' || COALESCE(subscription_id, 'null')
+FROM public.profiles
+WHERE id = :'user_id'::UUID;`,
+        { user_id: billingUserId },
+      ).stdout,
+    ).toBe('canceled:null');
+
+    const { data: terminalReplay, error: terminalReplayError } = await admin.rpc(
+      'sync_billing_subscription_deleted_v1',
+      {
+        p_stripe_customer_id: customerId,
+        p_subscription_id: deletedSubscriptionId,
+      },
+    );
+    expect(terminalReplayError).toBeNull();
+    expect(terminalReplay).toBe('already_terminal');
+
+    const { error: replacementProfileError } = await admin
+      .from('profiles')
+      .update({
+        subscription_id: replacementSubscriptionId,
+        subscription_status: 'active',
+      })
+      .eq('id', billingUserId);
+    expect(replacementProfileError).toBeNull();
+
+    const { data: staleDeletedSync, error: staleDeletedSyncError } = await admin.rpc(
+      'sync_billing_subscription_deleted_v1',
+      {
+        p_stripe_customer_id: customerId,
+        p_subscription_id: deletedSubscriptionId,
+      },
+    );
+    expect(staleDeletedSyncError).toBeNull();
+    expect(staleDeletedSync).toBe('stale_subscription');
+    expect(
+      ownerSql(
+        `SELECT subscription_status || ':' || subscription_id
+FROM public.profiles
+WHERE id = :'user_id'::UUID;`,
+        { user_id: billingUserId },
+      ).stdout,
+    ).toBe(`active:${replacementSubscriptionId}`);
+
+    const { data: unknownDeletedSync, error: unknownDeletedSyncError } = await admin.rpc(
+      'sync_billing_subscription_deleted_v1',
+      {
+        p_stripe_customer_id: 'cus_unknown_terminal',
+        p_subscription_id: 'sub_unknown_terminal',
+      },
+    );
+    expect(unknownDeletedSyncError).toBeNull();
+    expect(unknownDeletedSync).toBe('unknown_customer');
+
+    const { error: authenticatedDeletedSyncError } = await gateFirstUserClient.rpc(
+      'sync_billing_subscription_deleted_v1',
+      {
+        p_stripe_customer_id: customerId,
+        p_subscription_id: replacementSubscriptionId,
+      },
+    );
+    expect(authenticatedDeletedSyncError?.code).toBe('42501');
+    const { error: authenticatedReceiptCleanupError } = await gateFirstUserClient.rpc(
+      'cleanup_billing_account_deletion_terminal_receipts_v2',
+      { p_limit: 1 },
+    );
+    expect(authenticatedReceiptCleanupError?.code).toBe('42501');
 
     const { data: firstClaimData, error: firstClaimError } = await admin.rpc(
       'claim_billing_mutation_v3',
@@ -1053,8 +1138,177 @@ WHERE operation_id IN (
     await completeBilling(billingUserId, deletion.deletion_id);
     await sealGeneric(billingUserId, deletion.deletion_id);
 
+    const { data: deletingAccountSync, error: deletingAccountSyncError } = await admin.rpc(
+      'sync_billing_subscription_deleted_v1',
+      {
+        p_stripe_customer_id: customerId,
+        p_subscription_id: replacementSubscriptionId,
+      },
+    );
+    expect(deletingAccountSyncError).toBeNull();
+    expect(deletingAccountSync).toBe('account_deleting');
+    expect(
+      ownerSql(
+        `SELECT subscription_status || ':' || COALESCE(subscription_id, 'null')
+FROM public.profiles
+WHERE id = :'user_id'::UUID;`,
+        { user_id: billingUserId },
+      ).stdout,
+    ).toBe('canceled:null');
+
+    const terminalRollbackObject = `${billingUserId}/terminal-rollback.txt`;
+    const { error: terminalRollbackUploadError } = await admin.storage
+      .from('attachments')
+      .upload(terminalRollbackObject, new TextEncoder().encode('rollback'), {
+        contentType: 'text/plain',
+        upsert: true,
+      });
+    expect(terminalRollbackUploadError).toBeNull();
+
+    expectOwnerSqlFailure(`DELETE FROM auth.users WHERE id = :'user_id'::UUID;`, 'AD015', {
+      user_id: billingUserId,
+    });
+    expect(
+      ownerSql(
+        `SELECT pg_catalog.count(*)::TEXT
+FROM private.billing_account_deletion_terminal_receipts
+WHERE stripe_customer_id_digest = pg_catalog.sha256(
+  pg_catalog.convert_to(:'customer_id', 'UTF8')
+);`,
+        { customer_id: customerId },
+      ).stdout,
+    ).toBe('0');
+
+    const { error: terminalRollbackRemoveError } = await admin.storage
+      .from('attachments')
+      .remove([terminalRollbackObject]);
+    expect(terminalRollbackRemoveError).toBeNull();
+
+    const explicitRollback = ownerSql(
+      `BEGIN;
+DELETE FROM auth.users
+WHERE id = :'user_id'::UUID;
+SELECT pg_catalog.count(*)::TEXT
+FROM private.billing_account_deletion_terminal_receipts
+WHERE stripe_customer_id_digest = pg_catalog.sha256(
+  pg_catalog.convert_to(:'customer_id', 'UTF8')
+);
+ROLLBACK;`,
+      {
+        customer_id: customerId,
+        user_id: billingUserId,
+      },
+    );
+    expect(explicitRollback.stdout).toBe('1');
+    expect(
+      ownerSql(
+        `SELECT pg_catalog.count(*)::TEXT
+FROM auth.users
+WHERE id = :'user_id'::UUID;`,
+        { user_id: billingUserId },
+      ).stdout,
+    ).toBe('1');
+    expect(
+      ownerSql(
+        `SELECT pg_catalog.count(*)::TEXT
+FROM private.billing_account_deletion_terminal_receipts
+WHERE stripe_customer_id_digest = pg_catalog.sha256(
+  pg_catalog.convert_to(:'customer_id', 'UTF8')
+);`,
+        { customer_id: customerId },
+      ).stdout,
+    ).toBe('0');
+
     const { error: deleteError } = await admin.auth.admin.deleteUser(billingUserId);
     expect(deleteError).toBeNull();
+
+    const { data: deletedAccountSync, error: deletedAccountSyncError } = await admin.rpc(
+      'sync_billing_subscription_deleted_v1',
+      {
+        p_stripe_customer_id: customerId,
+        p_subscription_id: replacementSubscriptionId,
+      },
+    );
+    expect(deletedAccountSyncError).toBeNull();
+    expect(deletedAccountSync).toBe('account_deleted');
+    expect(
+      ownerSql(
+        `SELECT pg_catalog.count(*)::TEXT
+FROM private.billing_account_deletion_terminal_receipts
+WHERE stripe_customer_id_digest = pg_catalog.sha256(
+  pg_catalog.convert_to(:'customer_id', 'UTF8')
+);`,
+        { customer_id: customerId },
+      ).stdout,
+    ).toBe('1');
+
+    const { data: freshCleanup, error: freshCleanupError } = await admin.rpc(
+      'cleanup_billing_account_deletion_terminal_receipts_v2',
+      { p_limit: 1 },
+    );
+    expect(freshCleanupError).toBeNull();
+    expect(freshCleanup?.[0]).toEqual({
+      deleted_count: 0,
+      has_more: false,
+    });
+
+    ownerSql(
+      `WITH timing AS (
+  SELECT pg_catalog.clock_timestamp() AS now
+)
+UPDATE private.billing_account_deletion_terminal_receipts
+SET recorded_at = timing.now - INTERVAL '31 days',
+    expires_at = timing.now - INTERVAL '1 day'
+FROM timing
+WHERE stripe_customer_id_digest = pg_catalog.sha256(
+  pg_catalog.convert_to(:'customer_id', 'UTF8')
+);`,
+      { customer_id: customerId },
+    );
+
+    const additionalExpiredCustomerId = `cus_expired_${crypto.randomUUID().replaceAll('-', '')}`;
+    ownerSql(
+      `INSERT INTO private.billing_account_deletion_terminal_receipts (
+  stripe_customer_id_digest,
+  recorded_at,
+  expires_at
+) VALUES (
+  pg_catalog.sha256(pg_catalog.convert_to(:'customer_id', 'UTF8')),
+  pg_catalog.clock_timestamp() - INTERVAL '2 days',
+  pg_catalog.clock_timestamp() - INTERVAL '1 day'
+);`,
+      { customer_id: additionalExpiredCustomerId },
+    );
+
+    const { data: expiredCleanup, error: expiredCleanupError } = await admin.rpc(
+      'cleanup_billing_account_deletion_terminal_receipts_v2',
+      { p_limit: 1 },
+    );
+    expect(expiredCleanupError).toBeNull();
+    expect(expiredCleanup?.[0]).toEqual({
+      deleted_count: 1,
+      has_more: true,
+    });
+
+    const { data: finalCleanup, error: finalCleanupError } = await admin.rpc(
+      'cleanup_billing_account_deletion_terminal_receipts_v2',
+      { p_limit: 1 },
+    );
+    expect(finalCleanupError).toBeNull();
+    expect(finalCleanup?.[0]).toEqual({
+      deleted_count: 1,
+      has_more: false,
+    });
+
+    const { data: afterRetentionSync, error: afterRetentionSyncError } = await admin.rpc(
+      'sync_billing_subscription_deleted_v1',
+      {
+        p_stripe_customer_id: customerId,
+        p_subscription_id: replacementSubscriptionId,
+      },
+    );
+    expect(afterRetentionSyncError).toBeNull();
+    expect(afterRetentionSync).toBe('unknown_customer');
   });
 
   it('fences lazy Stripe Customer creation and recovers its bounded unknown response', async () => {
