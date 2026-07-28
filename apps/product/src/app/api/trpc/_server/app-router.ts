@@ -9,7 +9,6 @@ import { createUserRouter } from '@/features/auth/server/router';
 import { contactRouter } from '@/features/contact/server/router';
 import {
   deleteAllUserDataWithCalendarAuthority,
-  prepareCalendarBeforeIdentityDeletion,
   prepareUserDataPurgeWithCalendarAuthority,
 } from '@/features/external-calendar/server/account-deletion';
 import { externalCalendarRouter } from '@/features/external-calendar/server/router';
@@ -23,8 +22,10 @@ import { timeblockContextRouter } from '@/features/timeblock/server/timeblock-co
 import { emailRouter } from '@/lib/email/router';
 import { createTRPCRouter } from '@/lib/trpc/router';
 
+import { prepareAccountDeletionBeforeIdentityDeletion } from './_composition/account-deletion-coordinator';
+
 const userRouter = createUserRouter({
-  beforeIdentityDeletion: prepareCalendarBeforeIdentityDeletion,
+  beforeIdentityDeletion: prepareAccountDeletionBeforeIdentityDeletion,
   deleteAllData: deleteAllUserDataWithCalendarAuthority,
   prepareDeleteAllData: prepareUserDataPurgeWithCalendarAuthority,
 });

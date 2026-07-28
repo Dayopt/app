@@ -155,6 +155,65 @@ describe('Calendar account deletion service', () => {
     });
   });
 
+  it('generic gateがbindしたCalendar deletion IDを変更せずに使う', async () => {
+    const { generateId, rpc, service } = createService({
+      begin_calendar_account_deletion_v1: [
+        success([
+          {
+            deletion_id: CANONICAL_DELETION_ID,
+            item_kind: 'none',
+            item_id: null,
+          },
+        ]),
+      ],
+      seal_calendar_account_deletion_v1: [success(true)],
+    });
+
+    await expect(
+      service.beforeBoundIdentityDeletion({
+        deletionId: CANONICAL_DELETION_ID,
+        userId: USER_ID,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(generateId).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith('begin_calendar_account_deletion_v1', {
+      p_deletion_id: CANONICAL_DELETION_ID,
+      p_project_key: '123456',
+      p_user_id: USER_ID,
+    });
+    expect(rpc).toHaveBeenCalledWith('seal_calendar_account_deletion_v1', {
+      p_deletion_id: CANONICAL_DELETION_ID,
+      p_project_key: '123456',
+      p_user_id: USER_ID,
+    });
+  });
+
+  it('generic gateがbindしたIDとDB canonical IDが違えばseal前で止める', async () => {
+    const { revoke, rpc, service } = createService({
+      begin_calendar_account_deletion_v1: [
+        success([
+          {
+            deletion_id: CANONICAL_DELETION_ID,
+            item_kind: 'none',
+            item_id: null,
+          },
+        ]),
+      ],
+    });
+
+    await expect(
+      service.beforeBoundIdentityDeletion({
+        deletionId: REQUESTED_DELETION_ID,
+        userId: USER_ID,
+      }),
+    ).rejects.toMatchObject({
+      code: 'CALENDAR_ACCOUNT_DELETION_BOUND_IDENTITY_FAILED',
+    });
+    expect(revoke).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('seal_calendar_account_deletion_v1', expect.anything());
+  });
+
   it('DB start marker後だけproviderを1回呼びcanonical operationをfinalizeする', async () => {
     const { revoke, rpc, service } = createService({
       begin_calendar_account_deletion_v1: [beginWithConnection()],
@@ -332,6 +391,7 @@ describe('Calendar account deletion service', () => {
 
   it('in-flight stateをfeature非依存のcontention resultへ変換する', async () => {
     const adapter = createCalendarAccountDeletionAdapter({
+      beforeBoundIdentityDeletion: vi.fn(),
       beforeIdentityDeletion: vi
         .fn()
         .mockRejectedValue(new CalendarAccountDeletionError('prepare_in_flight')),

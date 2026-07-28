@@ -7,8 +7,6 @@ import 'server-only';
  * tRPCルーターから呼び出されるサービス層
  */
 
-import { createHash } from 'node:crypto';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { EmailLocale } from '@/emails/i18n';
@@ -21,7 +19,6 @@ import {
   captureUnexpectedError,
   observeAuthOperation,
 } from '@/lib/sentry';
-import { getStripe } from '@/lib/stripe/client';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
 
@@ -137,84 +134,73 @@ interface OAuthConnectionSummary {
 const OAUTH_CONNECTION_SUMMARY_SELECT =
   'id, client_id, scopes, authorized_at, last_used_at' as const;
 
-const CANCELLABLE_SUBSCRIPTION_STATUSES = new Set([
-  'active',
-  'incomplete',
-  'past_due',
-  'paused',
-  'trialing',
-  'unpaid',
-]);
-
-function stripeDeletionIdempotencyKey(
-  userId: string,
-  resourceKind: 'customer' | 'subscription',
-  resourceId: string,
-): string {
-  const digest = createHash('sha256')
-    .update(`dayopt-account-deletion-v1:${userId}:${resourceKind}:${resourceId}`)
-    .digest('hex');
-  return `dayopt-account-deletion-v1-${resourceKind}-${digest}`;
+function readAuthErrorCode(error: unknown): string | null {
+  if (error === null || typeof error !== 'object' || !('code' in error)) return null;
+  return typeof error.code === 'string' ? error.code : null;
 }
 
-async function deleteAvatarFiles(
-  supabase: SupabaseClient<Database>,
+async function reconcileAuthUserDeletion(
+  adminClient: ReturnType<typeof createServiceRoleClient>,
   userId: string,
-): Promise<void> {
-  const { data: files, error: listError } = await supabase.storage.from('avatars').list(userId);
-  if (listError) throw new Error('Avatar listing failed');
-  if (!files || files.length === 0) return;
+  deleteError: unknown,
+): Promise<'deleted' | 'exists'> {
+  let lastLookupError: unknown;
 
-  const filePaths = files.map((file) => `${userId}/${file.name}`);
-  const { error: removeError } = await supabase.storage.from('avatars').remove(filePaths);
-  if (removeError) throw new Error('Avatar removal failed');
-}
-
-async function deleteStripeCustomer(
-  supabase: SupabaseClient<Database>,
-  userId: string,
-): Promise<void> {
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('stripe_customer_id')
-    .eq('id', userId)
-    .maybeSingle();
-  if (profileError) throw new Error('Billing profile lookup failed');
-
-  const stripeCustomerId = profile?.stripe_customer_id;
-  if (!stripeCustomerId) return;
-
-  const stripe = getStripe();
-  if (!stripe) throw new Error('Stripe is not configured for billing data deletion');
-
-  // Customer削除後のresponse lossではretrieveがDeletedCustomerを返すため、
-  // 後続のaccount deletion retryでprovider mutationを繰り返さず完了扱いにできる。
-  const customer = await stripe.customers.retrieve(stripeCustomerId);
-  if ('deleted' in customer && customer.deleted) return;
-
-  // listはauto-pagination対応のasync iterable。既にcancel済みのsubscriptionは
-  // default filterに含まれず、response loss時も同じidempotency keyで安全に再送できる。
-  for await (const subscription of stripe.subscriptions.list({
-    customer: stripeCustomerId,
-  })) {
-    if (!CANCELLABLE_SUBSCRIPTION_STATUSES.has(subscription.status)) continue;
-
-    await stripe.subscriptions.cancel(
-      subscription.id,
-      {},
-      {
-        idempotencyKey: stripeDeletionIdempotencyKey(userId, 'subscription', subscription.id),
-      },
-    );
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const { data, error } = await observeAuthOperation(
+        'delete_account_admin_reconcile_user',
+        () => adminClient.auth.admin.getUserById(userId),
+        { feature: 'account_deletion' },
+      );
+      if (readAuthErrorCode(error) === 'user_not_found') return 'deleted';
+      if (error) {
+        lastLookupError = error;
+        continue;
+      }
+      if (data.user?.id === userId) return 'exists';
+      throw new UserServiceError('DELETE_FAILED', 'Failed to reconcile account deletion', {
+        cause: deleteError,
+      });
+    } catch (error) {
+      if (error instanceof UserServiceError) throw error;
+      lastLookupError = error;
+    }
   }
 
-  await stripe.customers.del(
-    stripeCustomerId,
-    {},
-    {
-      idempotencyKey: stripeDeletionIdempotencyKey(userId, 'customer', stripeCustomerId),
-    },
-  );
+  throw new UserServiceError('DELETE_FAILED', 'Failed to reconcile account deletion', {
+    cause: lastLookupError ?? deleteError,
+  });
+}
+
+async function deleteAuthUser(
+  userId: string,
+): Promise<'already_absent' | 'deleted_now' | 'reconciled'> {
+  const adminClient = createServiceRoleClient();
+  let lastDeleteError: unknown;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const { error } = await observeAuthOperation(
+        'delete_account_admin_delete_user',
+        () => adminClient.auth.admin.deleteUser(userId),
+        { feature: 'account_deletion' },
+      );
+      if (!error) return 'deleted_now';
+      if (readAuthErrorCode(error) === 'user_not_found') return 'already_absent';
+      lastDeleteError = error;
+    } catch (error) {
+      lastDeleteError = error;
+    }
+
+    if ((await reconcileAuthUserDeletion(adminClient, userId, lastDeleteError)) === 'deleted') {
+      return 'reconciled';
+    }
+  }
+
+  throw new UserServiceError('DELETE_FAILED', 'Failed to delete account', {
+    cause: lastDeleteError,
+  });
 }
 
 /**
@@ -349,8 +335,8 @@ export function createUserService(
         // locale が引けなくても既定言語で送れるので削除は続ける
       }
 
-      // Calendarはauth.usersのBEFORE DELETE triggerでもsealを必須にする。
-      // Storage / Stripeより先にprovider attemptとdurable receiptを確定する。
+      // Composition layerがgate状態に応じてCalendar、Storage、Billingを完了する。
+      // Authはrollout modeを知らず、外部cleanup完了後だけidentityを削除する。
       try {
         const preparation = await dependencies.beforeIdentityDeletion({ userId });
         if (preparation.status === 'contention') {
@@ -358,81 +344,42 @@ export function createUserService(
         }
       } catch (error) {
         if (error instanceof UserServiceError) throw error;
-        const failure = new Error('Calendar account deletion preparation failed');
+        const failure = new Error('Account deletion preparation failed', { cause: error });
         captureUnexpectedError(failure, {
           feature: 'account_deletion',
           operation: 'prepare_identity_deletion',
           source: 'identity_deletion_dependency',
         });
-        throw new UserServiceError('DELETE_FAILED', 'Failed to prepare calendar deletion', {
-          cause: failure,
-        });
-      }
-
-      // Storage のアバター画像を削除
-      try {
-        await deleteAvatarFiles(supabase, userId);
-      } catch {
-        const failure = new Error('Avatar cleanup failed');
-        captureUnexpectedError(failure, {
-          feature: 'account_deletion',
-          operation: 'delete_avatar_files',
-          source: 'supabase_storage',
-        });
-        throw new UserServiceError('DELETE_FAILED', 'Failed to delete avatar files', {
-          cause: failure,
-        });
-      }
-
-      // Stripe サブスクリプション解約 + Customer 削除（GDPR対応）
-      try {
-        await deleteStripeCustomer(supabase, userId);
-      } catch {
-        const failure = new Error('Stripe cleanup failed');
-        captureUnexpectedError(failure, {
-          feature: 'account_deletion',
-          operation: 'delete_stripe_customer',
-          source: 'stripe',
-        });
-        throw new UserServiceError('DELETE_FAILED', 'Failed to delete billing data', {
+        throw new UserServiceError('DELETE_FAILED', 'Failed to prepare account deletion', {
           cause: failure,
         });
       }
 
       // auth.users を削除 → CASCADE DELETE により全テーブルのユーザーデータが自動削除される
-      const adminClient = createServiceRoleClient();
-      const { error: deleteError } = await observeAuthOperation(
-        'delete_account_admin_delete_user',
-        () => adminClient.auth.admin.deleteUser(userId),
-        { feature: 'account_deletion' },
-      );
-
-      if (deleteError) {
-        throw new UserServiceError('DELETE_FAILED', 'Failed to delete account', {
-          cause: deleteError,
-        });
-      }
+      const identityDeletion = await deleteAuthUser(userId);
 
       logger.info('Account deleted successfully', { userId });
 
       // 削除が確定してから通知する。送信失敗で削除をなかったことにはできないので、
       // 記録だけ残して成功を返す（GDPR の削除要求を優先する）
-      try {
-        await sendAccountDeletionEmail({
-          email: userEmail,
-          userName,
-          locale: emailLocale,
-        });
-      } catch (emailError) {
-        const original =
-          emailError instanceof Error
-            ? emailError
-            : new Error('Account deletion email failed', { cause: emailError });
-        captureUnexpectedError(original, {
-          feature: 'account_deletion',
-          operation: 'send_deletion_email',
-          source: 'resend',
-        });
+      if (identityDeletion !== 'already_absent') {
+        try {
+          await sendAccountDeletionEmail({
+            email: userEmail,
+            userName,
+            locale: emailLocale,
+          });
+        } catch (emailError) {
+          const original =
+            emailError instanceof Error
+              ? emailError
+              : new Error('Account deletion email failed', { cause: emailError });
+          captureUnexpectedError(original, {
+            feature: 'account_deletion',
+            operation: 'send_deletion_email',
+            source: 'resend',
+          });
+        }
       }
 
       return { success: true };

@@ -430,41 +430,68 @@ async function processInventoryItem(
   throw deletionFailure('prepare_attempts');
 }
 
+async function prepareIdentityDeletion(
+  runtime: CalendarAccountDeletionRuntime,
+  input: {
+    deletionId: string;
+    requireExactDeletionId: boolean;
+    userId: string;
+  },
+): Promise<void> {
+  await assertDatabaseIdentity(runtime);
+
+  const inventoryRows = await callRpc('begin', () =>
+    runtime.db
+      .rpc(BEGIN_DELETION_RPC, {
+        p_deletion_id: input.deletionId,
+        p_project_key: runtime.identity.projectKey,
+        p_user_id: input.userId,
+      })
+      .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS)),
+  );
+  const inventory = readCanonicalInventory(inventoryRows);
+  if (input.requireExactDeletionId && inventory.deletionId !== input.deletionId) {
+    throw deletionFailure('bound_identity');
+  }
+
+  for (const item of inventory.items) {
+    await processInventoryItem(runtime, {
+      deletionId: inventory.deletionId,
+      item,
+      userId: input.userId,
+    });
+  }
+
+  const sealed = await callRpc('seal', () =>
+    runtime.db
+      .rpc(SEAL_DELETION_RPC, {
+        p_deletion_id: inventory.deletionId,
+        p_project_key: runtime.identity.projectKey,
+        p_user_id: input.userId,
+      })
+      .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS)),
+  );
+  if (sealed !== true) throw deletionFailure('seal_result');
+}
+
 export function createCalendarAccountDeletionService(runtime: CalendarAccountDeletionRuntime) {
   return {
     async beforeIdentityDeletion(input: { userId: string }): Promise<void> {
-      await assertDatabaseIdentity(runtime);
+      return prepareIdentityDeletion(runtime, {
+        deletionId: runtime.generateId(),
+        requireExactDeletionId: false,
+        userId: input.userId,
+      });
+    },
 
-      const requestedDeletionId = runtime.generateId();
-      const inventoryRows = await callRpc('begin', () =>
-        runtime.db
-          .rpc(BEGIN_DELETION_RPC, {
-            p_deletion_id: requestedDeletionId,
-            p_project_key: runtime.identity.projectKey,
-            p_user_id: input.userId,
-          })
-          .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS)),
-      );
-      const inventory = readCanonicalInventory(inventoryRows);
-
-      for (const item of inventory.items) {
-        await processInventoryItem(runtime, {
-          deletionId: inventory.deletionId,
-          item,
-          userId: input.userId,
-        });
-      }
-
-      const sealed = await callRpc('seal', () =>
-        runtime.db
-          .rpc(SEAL_DELETION_RPC, {
-            p_deletion_id: inventory.deletionId,
-            p_project_key: runtime.identity.projectKey,
-            p_user_id: input.userId,
-          })
-          .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS)),
-      );
-      if (sealed !== true) throw deletionFailure('seal_result');
+    async beforeBoundIdentityDeletion(input: {
+      deletionId: string;
+      userId: string;
+    }): Promise<void> {
+      return prepareIdentityDeletion(runtime, {
+        ...input,
+        requireExactDeletionId: true,
+      });
     },
 
     async prepareDeleteAllData(input: {
@@ -525,7 +552,10 @@ export function createCalendarAccountDeletionService(runtime: CalendarAccountDel
 
 type CalendarAccountDeletionService = Pick<
   ReturnType<typeof createCalendarAccountDeletionService>,
-  'beforeIdentityDeletion' | 'deleteAllData' | 'prepareDeleteAllData'
+  | 'beforeBoundIdentityDeletion'
+  | 'beforeIdentityDeletion'
+  | 'deleteAllData'
+  | 'prepareDeleteAllData'
 >;
 
 export function createCalendarAccountDeletionAdapter(service: CalendarAccountDeletionService) {
@@ -540,6 +570,12 @@ export function createCalendarAccountDeletionAdapter(service: CalendarAccountDel
   }
 
   return {
+    beforeBoundIdentityDeletion(input: {
+      deletionId: string;
+      userId: string;
+    }): Promise<AccountDeletionAdapterResult> {
+      return run(() => service.beforeBoundIdentityDeletion(input));
+    },
     beforeIdentityDeletion(input: { userId: string }): Promise<AccountDeletionAdapterResult> {
       return run(() => service.beforeIdentityDeletion(input));
     },
@@ -582,6 +618,15 @@ export async function prepareCalendarBeforeIdentityDeletion(input: {
   return createCalendarAccountDeletionAdapter(
     createConfiguredCalendarAccountDeletionService(),
   ).beforeIdentityDeletion(input);
+}
+
+export async function prepareBoundCalendarBeforeIdentityDeletion(input: {
+  deletionId: string;
+  userId: string;
+}): Promise<AccountDeletionAdapterResult> {
+  return createCalendarAccountDeletionAdapter(
+    createConfiguredCalendarAccountDeletionService(),
+  ).beforeBoundIdentityDeletion(input);
 }
 
 export async function deleteAllUserDataWithCalendarAuthority(input: {
