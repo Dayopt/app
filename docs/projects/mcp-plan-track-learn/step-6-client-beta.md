@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-26
+last_verified: 2026-07-28
 code:
   - apps/product/src/app/api/mcp
   - apps/product/src/lib/oauth-server
@@ -18,7 +18,7 @@ Productionと認証・DB・secretを共有しないPersistent Stagingで、ChatG
 
 ## Current state
 
-2026-07-26時点ではStep 6は未完了であり、closed betaはHALTとする。
+2026-07-28時点ではStep 6は未完了であり、closed betaはHALTとする。
 
 - repo内では18 tool、OAuth connection、typed mutation、receipt、global/client/connection gate、3 clientのstatic registration、local Plan → Track → Learn flowまで実装済み
 - actual MCP HTTPのgolden flowはlocal DBと`chatgpt` client IDで検証済みだが、実clientのOAuth、confirmation UI、refresh token管理、実network/renderは未検証
@@ -26,8 +26,9 @@ Productionと認証・DB・secretを共有しないPersistent Stagingで、ChatG
 - 2026-07-26のread-only external inventoryでは、Vercel projectは`product` / `web`、Supabase branchはdefault `main`だけであり、Persistent Stagingのproject/branch/固定originは存在しない
 - repo内ではProduction/Stagingのexact OAuth identity、Vercel host routing、generic Preview無効化、operational build/readiness gateまで実装済み。外部のPersistent Staging、DNS、secret、client registrationは未作成
 - DB identity singleton、connection/code/tokenのresource FK、grant/exchange/refresh/applyのidentity検証、service-role限定provision/getterをmigrationとして実装済み。localではdata-less Staging provisionとwrong-resource拒否をrehearseしたが、Production/Stagingには未適用
-- `deleteAllData`はPlan、Record、tag、settingsだけを削除する。AI生成report、MCP connection/token/receipt、Calendar connection/refresh token、calendar selection/sync cursor、external event mirrorは残るため、削除後に外部writeまたはcalendar syncでデータが再作成され得る
-- mutation receiptの90日cleanup RPCはあるが、定期callerは未実装。authorization code、token、connection、security eventを含むretention期間はproduct decisionとして確定したが、cleanup実装と運用証跡は未完了
+- `deleteAllData`はuser data generation、Calendar authority、MCP connection/token、AI生成report、external event mirrorを同じtransaction境界へ含むv5へ移行済み。MCP apply、Calendar callback/sync、通常UI writeとのraceとresponse-loss replayをlocal integrationで検証済み
+- mutation receipt、authorization code、access/refresh token、connection、payload-free security event、Calendar revoke authorityのbounded cleanupと定期callerはrepo実装済み。account削除後の遅延Stripe event向けCustomer digest receiptも30日でcleanupし、並列cleanupでlock中の期限切れ行を残件として報告する。local integrationとaggregate-only unit contractは通過したが、Persistent Stagingでの定期実行、backlog 0、alert証跡は未確認
+- account削除はCustomer provisioning回収、Calendar / Storage / Billingのexact binding、Auth最終削除、遅延Stripe eventのterminal receiptまでrepo実装済み。Webhookはconfigured Accountとprovider EventをDB更新前に再取得し、platform accountだけを受け入れる。generic gateは初期OFFのため、historical Stripe orphan監査、Stripe identity env、実Webhook再取得の互換性、旧instance drain、forward-only activationを完了するまで削除要求をfail closedにする
 - client別redirect URI overrideとMCP resource/write allowlistはrepoのenv schema、1Password field inventory、`.op-env.local.example`へ追加済み。`apps/product/.env.example`はsecret guardが書き込みを遮断したため未更新で、実1Password/Vercel fieldの存在も未確認
 
 global/client gateはfail-closedであり、上記blockerの解決まではOFFのまま維持する。Production migration、release、token失効、gate変更はこのStepのrepo作業に含めない。
@@ -62,7 +63,7 @@ schema testでは、3 clientのredirect URI overrideとMCP resource/write allowl
 
 ### 3. Customer contractを固定する
 
-2026-07-26に[全データ削除とretention](../../product/log/2026-07-26-mcp-delete-all-data-retention.md)、[Persistent Staging topology](../../engineering/log/2026-07-26-mcp-persistent-staging-topology.md)を固定した。ここで決めたのは目標契約であり、現在の`deleteAllData`が実装済みという意味ではない。
+2026-07-26に[全データ削除とretention](../../product/log/2026-07-26-mcp-delete-all-data-retention.md)、[Persistent Staging topology](../../engineering/log/2026-07-26-mcp-persistent-staging-topology.md)を固定した。2026-07-28時点で全データ削除とretentionのrepo実装・local検証は完了し、Persistent Stagingと運用証跡は未完了である。
 
 1. **全データ削除**
    - `deleteAllData`と同じuser exclusive transaction境界で週次・月次のAI生成reportを削除し、全MCP connectionをrevokeし、未消費authorization code、access/refresh tokenを無効化する。Calendar connection、暗号化済みtoken、calendar selection/sync cursor、ユーザー所有の`external_calendar_events`も削除する。account維持に必要なprofile、課金状態、MFA recovery codeは残す
@@ -82,7 +83,7 @@ schema testでは、3 clientのredirect URI overrideとMCP resource/write allowl
 
 ### 4. Environment-aware OAuth identityとretentionを実装する
 
-OAuth identity側のrepo実装は2026-07-26時点で完了した。app config、host/path、metadata、operational build/readiness、DB singleton、resource FK、grant/exchange/refresh/apply、local staging rehearsalを含む。Production/Stagingへの適用とretention/deleteAllDataは未完了である。
+OAuth identity、retention、deleteAllDataのrepo実装は2026-07-28時点で完了した。app config、host/path、metadata、operational build/readiness、DB singleton、resource FK、grant/exchange/refresh/apply、bounded cleanup caller、purge generation、local rehearsalを含む。Production/Stagingへの適用と運用証跡は未完了である。
 
 `MCP_OAUTH_ENVIRONMENT`を`staging` / `production`の明示markerとし、CHECKPOINTで固定したexact originだけを環境変数から読む。Stagingではmarker、authorization server URI、resource URIのどれかが未設定、またはProduction値なら起動・provisionをfail closedする。Production defaultだけは現在の2 originを維持する。
 

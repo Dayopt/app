@@ -175,16 +175,21 @@ Proユーザー "プランを管理" クリック
 
 エンドポイント: `POST /api/webhooks/stripe`
 
-| イベント                        | 処理                                                              |
-| ------------------------------- | ----------------------------------------------------------------- |
-| `checkout.session.completed`    | `syncSubscriptionStatus(customerId, subscriptionId, 'active')`    |
-| `customer.subscription.updated` | `mapStripeStatus()` でステータス変換 → `syncSubscriptionStatus()` |
-| `customer.subscription.deleted` | `syncSubscriptionStatus(customerId, null, 'free')`                |
+| イベント                        | 処理                                                                                                                                                     |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checkout.session.completed`    | `syncSubscriptionStatus(customerId, subscriptionId, 'active')`                                                                                           |
+| `customer.subscription.updated` | `mapStripeStatus()` でステータス変換 → `syncSubscriptionStatus()`                                                                                        |
+| `customer.subscription.deleted` | exact Customer / subscriptionなら`canceled`へ更新。account削除中、stale subscription、削除済みaccountの短期receiptは通知なしで終端し、未知Customerは失敗 |
 
 **セキュリティ**:
 
 - `stripe-signature` ヘッダーを `stripe.webhooks.constructEvent()` で検証
+- 署名検証後、DB更新前にconfigured API keyで同じEventとcurrent AccountをStripeから5秒上限で取得する。event ID、type、作成時刻、live/test mode、Connect account、設定済みaccount IDを照合し、Webhook secretとAPI accountの取り違えをfail closedにする。以後の業務入力には署名payloadではなく、照合済みprovider Eventを使う
+- Dayoptはplatform accountのWebhookだけを扱う。Stripe Connect由来のeventは拒否し、Connect対応時はaccount contextを含む別契約を設計する
 - `createServiceRoleClient()` で RLS をバイパス（Webhook にはユーザーコンテキストがないため）
+- account削除のterminal receiptはCustomer IDのSHA-256、記録時刻、30日expiryだけをprivate schemaへ保持し、既存maintenance cronでbounded cleanupする。並列cleanupでlock中の期限切れ行も残件として報告する
+
+account削除フローはgeneric operationをcommitしてからStripe subscriptionをcancelするため、そのcancel eventは`account_deleting`となり通知されない。通常の解約eventがgeneric operationより先に確定した場合は通常解約として通知する。
 
 ---
 
@@ -291,14 +296,18 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 ## 関連ファイル
 
-| ファイル                                                            | 役割                                                       |
-| ------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `apps/product/src/lib/stripe/client.ts`                             | Stripe クライアント初期化（`getStripe` / `requireStripe`） |
-| `apps/product/src/features/settings/server/billing-service.ts`      | 課金ビジネスロジック（Service層）                          |
-| `apps/product/src/features/settings/server/billing-router.ts`       | tRPC Router（Router層）                                    |
-| `apps/product/src/app/api/webhooks/stripe/route.ts`                 | Webhook エンドポイント                                     |
-| `apps/product/src/lib/trpc/procedures.ts`                           | `proProcedure` 定義                                        |
-| `apps/product/src/features/settings/components/BillingSettings.tsx` | 課金設定UI                                                 |
-| `supabase/migrations/20260317120000_add_stripe_billing_columns.sql` | DBマイグレーション                                         |
-| `packages/billing/src/pricing.ts`                                   | Free / Pro の表示価格と7日トライアル                       |
-| `packages/billing/src/entitlement.ts`                               | `pro_access` entitlement                                   |
+| ファイル                                                                           | 役割                                                       |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `apps/product/src/lib/stripe/client.ts`                                            | Stripe クライアント初期化（`getStripe` / `requireStripe`） |
+| `apps/product/src/features/settings/server/billing-service.ts`                     | 課金ビジネスロジック（Service層）                          |
+| `apps/product/src/features/settings/server/billing-router.ts`                      | tRPC Router（Router層）                                    |
+| `apps/product/src/app/api/webhooks/stripe/route.ts`                                | Webhook エンドポイント                                     |
+| `apps/product/src/app/api/webhooks/stripe/stripe-webhook-identity.ts`              | Webhook secretとAPI accountのprovider照合                  |
+| `apps/product/src/lib/trpc/procedures.ts`                                          | `proProcedure` 定義                                        |
+| `apps/product/src/features/settings/components/BillingSettings.tsx`                | 課金設定UI                                                 |
+| `supabase/migrations/20260317120000_add_stripe_billing_columns.sql`                | DBマイグレーション                                         |
+| `supabase/migrations/20260728110100_preserve_billing_webhook_terminal_receipt.sql` | account削除後Webhookの短期receipt                          |
+| `supabase/migrations/20260728110200_close_billing_webhook_races.sql`               | 削除中通知抑止とcleanup残件判定                            |
+| `supabase/migrations/20260728110300_remove_legacy_billing_receipt_cleanup.sql`     | count-only cleanup RPCの撤去                               |
+| `packages/billing/src/pricing.ts`                                                  | Free / Pro の表示価格と7日トライアル                       |
+| `packages/billing/src/entitlement.ts`                                              | `pro_access` entitlement                                   |

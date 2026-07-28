@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-07-26
+last_verified: 2026-07-28
 code:
   - apps/product/src/app/api/mcp
   - apps/product/src/lib/oauth-server
@@ -40,8 +40,9 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - global controlとdurable client controlは初期OFFで、write/delete scopeはtoken検証時にeffective scopeから落ちるため、現在のMCPはwrite toolを列挙せず正規データを変更できない
 - Plan / Record commitと同じtransactionで進むuser revision、session用revision API、Calendar workspaceのvisible中10秒pollと復帰時の即時再確認、Inspectorの外部更新・削除transitionをrepo実装・検証済み。`tags.list`、`constraints.get`、`review.get`も最小projectionと独立read scopeで実装し、実MCP HTTP経由のPlan → Track → Learn flowとcross-tenant read isolationをlocal DBで検証済み。Persistent Stagingの3 client golden contractと実network / render込み20秒SLAは未検証
 - `claude-ai` / `chatgpt` / `cursor`の3 client IDを同じlocal integrationへ通し、actual token route、scope-filtered `tools/list`、Plan retry、global OFF時の非永続化、parallel refresh、target-only revokeを検証済み。client所有外のredirect origin/scheme/pathはruntimeとenv validationの両方で拒否する。authorize page、client固有UI、3 clientそれぞれのfull Plan → Track → LearnはPersistent Stagingで未検証
+- `deleteAllData`はMCP/Calendar authorityとuser data generationを同じtransactionへ含むv5へ移行済み。OAuth authority、mutation receipt、Calendar revoke、payload-free security eventのretention RPCと定期callerもrepo実装済み。account削除はCalendar / Storage / Billingのexact receiptと遅延Stripe eventの30日Customer digest receiptまでlocal検証済みだが、generic gateはProduction監査とforward-only activationまでOFFを維持する
 
-Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / Learn tool、revision境界、Calendar同期、Inspector競合保護、local Plan → Track → Learn flowまで成立している。Step 6は[client beta verification](./step-6-client-beta.md)のrepo-side contractと顧客契約の決定まで完了し、残りはdeleteAllData/retentionの実装、isolated Persistent Staging、3 clientの実UI/network証跡、20秒SLA、retention運用である。
+Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / Learn tool、revision境界、Calendar同期、Inspector競合保護、local Plan → Track → Learn flowまで成立している。Step 6は[client beta verification](./step-6-client-beta.md)のrepo-side contract、deleteAllData、retention caller、account削除の外部データ境界まで実装・local検証済みである。残りはisolated Persistent Staging、3 clientの実UI/network証跡、20秒SLA、retention backlog 0、account削除のStripe監査とactivationである。
 
 ## Minimum Viable Approach
 
@@ -124,7 +125,7 @@ Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / L
 - 外部MCP mutation後のCalendar / Inspector cacheは、repo上ではvisible中の10秒user revision pollingと復帰時の即時再確認で再検証する。実networkとrenderを含む20秒SLAはPersistent Stagingで実測し、満たすまでwrite toolを列挙しない
 - `deleteAllData`後のconnection契約は[2026-07-26のdecision](../../product/log/2026-07-26-mcp-delete-all-data-retention.md)で固定した。Step 6で実装と競合試験を行い、3 clientのschema、retry、confirmation UXをPersistent Staging検証する
 
-Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializationはrepo上で完了した。writerが先なら後続purgeが削除し、purgeが先なら後続writerは成功できる。現在の`deleteAllData`はOAuth connection/token/receiptとCalendar authorityを残すため、まだ固定済みの目標契約を満たさない。
+Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializationはrepo上で完了した。writerが先なら後続purgeが削除し、purgeが先なら後続writerは成功できる。`deleteAllData` v5はOAuth connection/token/receipt、Calendar authority、AI生成report、external event mirrorを固定済みのtransaction境界へ含める。
 
 - local exclusive transactionで全MCP connectionとcode/tokenを失効し、Calendar connection/token/selection/cursorとユーザー所有のexternal event mirrorを削除する
 - Plan、Record、tag、settingsに加えて週次・月次のAI生成reportを削除し、account維持に必要なprofile、課金状態、MFA recovery codeは残す
@@ -132,7 +133,7 @@ Settingsの`deleteBlocks` / `deleteAllData`とMCP applyのuser単位serializatio
 - payload-free receiptは再作成を防ぐ最小audit/idempotency tombstoneとして90日だけ残し、purge後のretryでは消えたresourceを成功として返さない
 - 削除開始前のCalendar OAuth stateをuser data generationで拒否し、進行中syncとMCP applyが削除後にデータを戻せないようにする
 
-この実装とPersistent Staging evidenceが完了するまでwrite toolを列挙しない。
+repo実装は完了した。Persistent Staging evidenceが完了するまでwrite toolを列挙しない。
 
 ### Product convergence
 

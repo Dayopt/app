@@ -9,6 +9,9 @@ code:
   - apps/product/src/lib/mcp/trpc-bridge.ts
   - apps/product/src/lib/trpc
   - supabase/migrations/20260728110000_recover_customer_before_account_deletion.sql
+  - supabase/migrations/20260728110100_preserve_billing_webhook_terminal_receipt.sql
+  - supabase/migrations/20260728110200_close_billing_webhook_races.sql
+  - supabase/migrations/20260728110300_remove_legacy_billing_receipt_cleanup.sql
 public_docs:
   - account-troubleshooting
 lp: []
@@ -40,6 +43,8 @@ Supabase Auth ベースの認証機能。
 7. `auth.users`を最後に削除する。応答消失時は同じuser IDを最大3回照合・再送し、存在不明ならfail closedにする
 
 generic operation開始後は、同じuserへの新しいCalendar、Storage、Billing、Plan、Record writeをDB fenceが拒否する。Google provider startの応答が不明な場合はGoogleを再実行しない。finalizeの応答が不明な場合は同じ引数のfinalizerだけを再送する。どのstepが失敗してもAuth identityを残し、完了済みstepはdurable receiptから再開する。
+
+Auth削除と同じtransactionでStripe Customer IDのSHA-256だけを30日保持する。遅れて届く`customer.subscription.deleted`は、現在のsubscription IDが一致するlive profileだけを更新する。generic operation開始後なら`account_deleting`として解約通知を抑止する。別subscriptionのeventはstaleとして無変更で終端し、profile消滅後はこの短期receiptが一致する場合だけ成功応答を返す。未知Customerはfail closedを維持する。
 
 削除通知メールはAuth削除が今回確定した場合だけ送る。`user_not_found`を直接受けたreplayでは重複送信しない。完全なexactly-once配信ではなく、メール失敗で削除結果は戻さない。
 
