@@ -9,6 +9,7 @@ type RecordRow = PublicRecordRow;
 
 interface MutationCallbacks<TData> {
   onSuccess?: (data: TData) => void;
+  retry?: boolean;
 }
 
 const mocks = vi.hoisted(() => ({
@@ -16,12 +17,16 @@ const mocks = vi.hoisted(() => ({
   confirmDayCallbacks: undefined as MutationCallbacks<RecordRow[]> | undefined,
   listSetData: vi.fn(),
   getByIdSetData: vi.fn(),
+  querySetData: vi.fn(),
 }));
 
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({
-    getQueriesData: vi.fn(() => []),
-    setQueryData: vi.fn(),
+    getQueriesData: vi.fn(({ predicate }) => {
+      const queryKey = [['records', 'list'], { input: {}, type: 'query' }];
+      return predicate({ queryKey }) ? [[queryKey, []]] : [];
+    }),
+    setQueryData: mocks.querySetData,
   }),
 }));
 
@@ -48,7 +53,7 @@ vi.mock('@/lib/trpc', () => ({
         },
       },
     }),
-    plans: {
+    planCommands: {
       record: {
         useMutation: (callbacks: MutationCallbacks<RecordRow>) => {
           mocks.recordCallbacks = callbacks;
@@ -94,9 +99,10 @@ describe('useTimeblockRecordMutations', () => {
     act(() => mocks.recordCallbacks?.onSuccess?.(record));
 
     expect(mocks.getByIdSetData).toHaveBeenCalledWith({ id: record.id }, record);
-    const listUpdater = mocks.listSetData.mock.calls[0]?.[1] as
-      ((old: RecordRow[] | undefined) => RecordRow[]) | undefined;
-    expect(listUpdater?.(undefined)).toEqual([record]);
+    expect(mocks.querySetData).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.arrayContaining([record]),
+    );
   });
 
   it('日次確定の返却行も詳細cacheへ反映する', () => {
@@ -107,5 +113,12 @@ describe('useTimeblockRecordMutations', () => {
 
     expect(mocks.getByIdSetData).toHaveBeenNthCalledWith(1, { id: record.id }, record);
     expect(mocks.getByIdSetData).toHaveBeenNthCalledWith(2, { id: secondRecord.id }, secondRecord);
+  });
+
+  it('記録commandも自動再送を無効にする', () => {
+    renderHook(() => useTimeblockRecordMutations());
+
+    expect(mocks.recordCallbacks?.retry).toBe(false);
+    expect(mocks.confirmDayCallbacks?.retry).toBe(false);
   });
 });

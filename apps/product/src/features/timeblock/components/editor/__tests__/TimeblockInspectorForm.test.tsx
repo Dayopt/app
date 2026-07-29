@@ -10,8 +10,11 @@ const mocks = vi.hoisted(() => ({
   enqueueSave: vi.fn(),
   flushSave: vi.fn(),
   toastError: vi.fn(),
+  toastSuccess: vi.fn(),
   createPlanMutate: vi.fn(),
   createRecordMutate: vi.fn(),
+  deletePlanMutateAsync: vi.fn(),
+  restorePlanMutateAsync: vi.fn(),
   onCreateTimeOverlap: undefined as (() => void) | undefined,
   onUpdateTimeOverlap: undefined as
     | ((input: {
@@ -45,7 +48,7 @@ vi.mock('@/features/tags', () => ({
 vi.mock('@/lib/toast', () => ({
   toast: {
     error: mocks.toastError,
-    success: vi.fn(),
+    success: mocks.toastSuccess,
   },
 }));
 
@@ -57,6 +60,8 @@ vi.mock('../../../hooks/useCoalescedTimeblockSave', () => ({
 }));
 
 vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
+  isTimeblockStaleError: () => false,
+  isTimeblockUncertainError: () => false,
   useTimeblockWriteMutations: (options?: {
     onCreateTimeOverlap?: () => void;
     onUpdateTimeOverlap?: (input: {
@@ -75,9 +80,11 @@ vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
       createRecord: { ...mutation, mutate: mocks.createRecordMutate },
       createPlan: { ...mutation, mutate: mocks.createPlanMutate },
       deleteRecord: mutation,
-      deletePlan: mutation,
+      deletePlan: { ...mutation, mutateAsync: mocks.deletePlanMutateAsync },
+      fetchPlanById: vi.fn(),
+      fetchRecordById: vi.fn(),
       restoreRecord: mutation,
-      restorePlan: mutation,
+      restorePlan: { ...mutation, mutateAsync: mocks.restorePlanMutateAsync },
       skipPlan: mutation,
       unskipPlan: mutation,
       updateRecord: mutation,
@@ -103,7 +110,7 @@ vi.mock('../TimeblockRecordActions', () => ({
     beforeRecord,
     onRecorded,
   }: {
-    beforeRecord: () => Promise<void>;
+    beforeRecord: () => Promise<string>;
     onRecorded?: (recordId: string) => void;
   }) => (
     <>
@@ -238,11 +245,46 @@ describe('TimeblockInspectorForm', () => {
     vi.clearAllMocks();
     mocks.createPlanMutate.mockReset();
     mocks.createRecordMutate.mockReset();
+    mocks.deletePlanMutateAsync.mockReset();
+    mocks.restorePlanMutateAsync.mockReset();
     mocks.onCreateTimeOverlap = undefined;
     mocks.onUpdateTimeOverlap = undefined;
     mocks.cachedPlans = [];
     mocks.cachedRecords = [];
     mocks.flushSave.mockResolvedValue(undefined);
+  });
+
+  it('削除結果の新しいversionでUndo復元する', async () => {
+    const deleted = {
+      ...futurePlan,
+      deleted_at: '2026-07-15T12:00:00.000Z',
+      updated_at: '2026-07-15T12:00:00.123456Z',
+    };
+    mocks.deletePlanMutateAsync.mockResolvedValue(deleted);
+    mocks.restorePlanMutateAsync.mockResolvedValue({
+      ...futurePlan,
+      updated_at: deleted.updated_at,
+    });
+    render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'delete' }));
+    await act(async () => undefined);
+
+    expect(mocks.deletePlanMutateAsync).toHaveBeenCalledWith({
+      id: futurePlan.id,
+      expectedUpdatedAt: futurePlan.updated_at,
+    });
+    const toastOptions = mocks.toastSuccess.mock.calls.find(
+      (call) => call[0] === 'timeblock.editor.toast.deleted',
+    )?.[1] as { action?: { onClick: () => void } } | undefined;
+    expect(toastOptions?.action).toBeDefined();
+
+    toastOptions?.action?.onClick();
+    await act(async () => undefined);
+    expect(mocks.restorePlanMutateAsync).toHaveBeenCalledWith({
+      id: futurePlan.id,
+      expectedUpdatedAt: deleted.updated_at,
+    });
   });
 
   afterEach(() => {

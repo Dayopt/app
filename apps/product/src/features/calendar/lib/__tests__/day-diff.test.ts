@@ -30,6 +30,7 @@ function entry(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     tagId: 'tag-1',
     createdAt: start,
     updatedAt: end,
+    version: '2026-07-15T00:00:00.000000Z',
     duration: 60,
     isMultiDay: false,
     origin: 'planned',
