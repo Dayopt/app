@@ -61,7 +61,8 @@ jobs:
   review:
     name: "\U0001F50D AI Review"
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # script側の8分deadlineに、checkout/setup/comment更新の余白を4分確保する。
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:

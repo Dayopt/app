@@ -20,7 +20,9 @@ import {
   isDangerousPath,
   isTestPath,
   listSnapshotTables,
+  mapWithConcurrency,
   mergeReviewResults,
+  parseNameStatus,
   parseReviewResponse,
   parseState,
   planReviewShards,
@@ -106,6 +108,15 @@ describe('レビュー済み判定のキャッシュ', () => {
   it('ファイル一覧の順序では変わらないが、内容が変われば変わる', () => {
     expect(fingerprintDiff(['a', 'b'], 'd')).toBe(fingerprintDiff(['b', 'a'], 'd'));
     expect(fingerprintDiff(['a'], 'd')).not.toBe(fingerprintDiff(['a'], 'd2'));
+  });
+
+  it('model・契約・reviewer入力が変われば古い判定を再利用しない', () => {
+    expect(fingerprintDiff(['a'], ['model-a', 'contract', 'reviewer'])).not.toBe(
+      fingerprintDiff(['a'], ['model-b', 'contract', 'reviewer']),
+    );
+    expect(fingerprintDiff(['a'], ['model-a', 'contract', 'reviewer'])).not.toBe(
+      fingerprintDiff(['a'], ['model-a', 'changed-contract', 'reviewer']),
+    );
   });
 
   // 区切り文字を自前で挟む実装だと、その文字が中身に出た時に別入力が衝突する。
@@ -715,6 +726,39 @@ describe('複数review shardの全量計画', () => {
     expect(result.findings).toEqual([finding]);
     expect(result.summary).toContain('[1] OAuthを確認');
     expect(result.summary).toContain('[2] MCPを確認');
+  });
+
+  it('一部shardが失敗しても他shardの結果を保持して残りを実行する', async () => {
+    const result = await mapWithConcurrency([0, 1, 2, 3], 2, async (value, index) => {
+      if (index === 1) throw new Error('temporary failure');
+      return value * 2;
+    });
+
+    expect(result.values).toEqual([0, undefined, 4, 6]);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.index).toBe(1);
+  });
+});
+
+describe('rename / copyの危険path判定', () => {
+  it('移動元と移動先の両方をreview対象にする', () => {
+    const changes = parseNameStatus(
+      [
+        'R100\tapps/product/src/lib/mcp/auth.ts\tdocs/auth.ts',
+        'C090\tsupabase/migrations/old.sql\tdocs/copied.sql',
+        'M\tREADME.md',
+      ].join('\n'),
+    );
+
+    expect(changes.files).toEqual([
+      'apps/product/src/lib/mcp/auth.ts',
+      'docs/auth.ts',
+      'supabase/migrations/old.sql',
+      'docs/copied.sql',
+      'README.md',
+    ]);
+    expect(changes.status['apps/product/src/lib/mcp/auth.ts']).toBe('R100');
+    expect(changes.status['docs/auth.ts']).toBe('R100');
   });
 });
 

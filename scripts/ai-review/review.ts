@@ -147,11 +147,15 @@ export const DANGEROUS_PATH_PATTERNS: readonly RegExp[] = DANGEROUS_PATH_GLOBS.m
  * 判定を再適用する。**skip ではなく判定のキャッシュ**にするのが要点で、単に skip すると
  * P0 の出た PR が「無関係な再 push」だけで green になる。
  */
-export function fingerprintDiff(dangerousFiles: readonly string[], diff: string): string {
+export function fingerprintDiff(
+  dangerousFiles: readonly string[],
+  reviewInputs: string | readonly string[],
+): string {
   // JSON にして境界を曖昧にしない（区切り文字を自前で挟むと、その文字が中身に
   // 現れた時に別入力が同じ指紋になりうる）。
+  const inputs = typeof reviewInputs === 'string' ? [reviewInputs] : reviewInputs;
   return createHash('sha256')
-    .update(JSON.stringify([[...dangerousFiles].sort(), diff]))
+    .update(JSON.stringify([[...dangerousFiles].sort(), inputs]))
     .digest('hex')
     .slice(0, 16);
 }
@@ -551,6 +555,7 @@ export function renderComment(
     model: string;
     sha: string;
     shardCount?: number;
+    incompleteShards?: readonly number[];
     incompleteDangerous?: readonly string[];
     enforce?: boolean;
   },
@@ -569,6 +574,15 @@ export function renderComment(
       ...incomplete.map((file) => `- \`${file}\``),
       '',
       'PR を分割するか、`MAX_DIFF_BYTES` の引き上げを検討してください。',
+      '',
+    );
+  }
+  if (meta.incompleteShards && meta.incompleteShards.length > 0) {
+    lines.push(
+      '### ⚠️ 一部のreview shardを確認できませんでした',
+      '',
+      `通信障害により shard ${meta.incompleteShards.join(', ')} の結果を取得できませんでした。`,
+      '取得済みshardの所見は保持していますが、このrunをレビュー済みとしてcacheしません。',
       '',
     );
   }
@@ -620,17 +634,29 @@ export function collectChanges(
   base: string,
   head: string,
 ): { files: string[]; status: Record<string, string> } {
+  return parseNameStatus(git(['diff', '--name-status', `${base}...${head}`]));
+}
+
+export function parseNameStatus(output: string): {
+  files: string[];
+  status: Record<string, string>;
+} {
   const files: string[] = [];
   const status: Record<string, string> = {};
 
-  for (const line of git(['diff', '--name-status', `${base}...${head}`]).split('\n')) {
+  for (const line of output.split('\n')) {
     const columns = line.trim().split('\t');
     const code = columns[0];
-    // rename / copy は `R100\told\tnew` の形になる。判定対象は新しい path。
-    const file = columns[columns.length - 1];
-    if (code === undefined || code === '' || file === undefined || file === '') continue;
-    files.push(file);
-    status[file] = code;
+    if (code === undefined || code === '') continue;
+
+    // old pathだけが危険クラスでも対象外へ移動して逃げられないよう、rename / copyは
+    // `R100\told\tnew` / `C090\told\tnew` の両側をreview対象に含める。
+    const changedPaths = /^[RC][0-9]+$/u.test(code) ? columns.slice(1, 3) : columns.slice(-1);
+    for (const file of changedPaths) {
+      if (file === undefined || file === '' || files.includes(file)) continue;
+      files.push(file);
+      status[file] = code;
+    }
   }
 
   return { files, status };
@@ -1197,24 +1223,29 @@ function argValue(argv: readonly string[], name: string): string | undefined {
 
 export const REVIEW_SHARD_CONCURRENCY = 3;
 
-async function mapWithConcurrency<T, U>(
+export interface ConcurrentMapResult<U> {
+  values: Array<U | undefined>;
+  errors: Array<{ index: number; error: unknown }>;
+}
+
+export async function mapWithConcurrency<T, U>(
   values: readonly T[],
   concurrency: number,
   mapper: (value: T, index: number) => Promise<U>,
-): Promise<U[]> {
-  const results = new Array<U>(values.length);
+): Promise<ConcurrentMapResult<U>> {
+  const results = new Array<U | undefined>(values.length);
+  const errors: Array<{ index: number; error: unknown }> = [];
   let nextIndex = 0;
-  let firstError: unknown;
 
   async function worker(): Promise<void> {
-    while (firstError === undefined) {
+    while (true) {
       const index = nextIndex;
       nextIndex += 1;
       if (index >= values.length) return;
       try {
         results[index] = await mapper(values[index]!, index);
       } catch (error) {
-        firstError = error;
+        errors.push({ index, error });
       }
     }
   }
@@ -1222,8 +1253,7 @@ async function mapWithConcurrency<T, U>(
   await Promise.all(
     Array.from({ length: Math.min(concurrency, values.length) }, async () => worker()),
   );
-  if (firstError !== undefined) throw firstError;
-  return results;
+  return { values: results, errors: errors.sort((a, b) => a.index - b.index) };
 }
 
 function sumDefined(values: readonly (number | undefined)[]): number | undefined {
@@ -1336,7 +1366,16 @@ async function main(): Promise<number> {
   // 同じ危険クラス diff を何度もレビューしない。paths filter は PR 全体で評価されるため、
   // docs だけを直す push でも migration が再発火して同じ判定に同じ金額を払っていた。
   const reviewedFiles = dangerous.length > 0 ? dangerous : changedFiles;
-  const fingerprint = fingerprintDiff(reviewedFiles, reviewPlan.fullDangerousDiff);
+  const reviewerVersion = createHash('sha256')
+    .update(readFileSync(fileURLToPath(import.meta.url)))
+    .digest('hex');
+  const fingerprint = fingerprintDiff(reviewedFiles, [
+    model,
+    reviewerVersion,
+    contract,
+    reviewPlan.fullDangerousDiff,
+    ...shardInputs.map((input) => input.prompt),
+  ]);
   if (commentContext) {
     const previous = await readStickyState(commentContext);
     if (previous && previous.fingerprint === fingerprint) {
@@ -1355,44 +1394,44 @@ async function main(): Promise<number> {
     }
   }
 
-  let calls: GeminiCallResult[];
-  try {
-    const deadlineAt = Date.now() + TOTAL_DEADLINE_MS;
-    calls = await mapWithConcurrency(
-      shardInputs,
-      REVIEW_SHARD_CONCURRENCY,
-      async (input, index) => {
-        const call = await callGemini({
-          apiKey,
-          model,
-          systemInstruction: contract,
-          prompt: input.prompt,
-          deadlineAt,
-        });
-        notice(
-          `shard ${index + 1}/${shardInputs.length}: model=${call.modelVersion ?? model} / 出力 ${
-            call.outputTokens ?? '?'
-          } tokens（うち thinking ${call.thoughtTokens ?? '?'}）。`,
-        );
-        return call;
-      },
-    );
-  } catch (error) {
-    // 構成ミスは fail-open にしない。決定論的で自然回復せず、握り潰すと gate が
-    // 死んだまま green を出し続ける。インフラ障害だけが PR を止めない対象。
-    if (error instanceof ConfigurationError) {
-      console.log(`::error title=ai-review::${error.message}`);
-      return 1;
-    }
-    warn(`レビューを実行できませんでした（PR はブロックしません）: ${String(error)}`);
-    return 0;
+  const deadlineAt = Date.now() + TOTAL_DEADLINE_MS;
+  const callBatch = await mapWithConcurrency(
+    shardInputs,
+    REVIEW_SHARD_CONCURRENCY,
+    async (input, index) => {
+      const call = await callGemini({
+        apiKey,
+        model,
+        systemInstruction: contract,
+        prompt: input.prompt,
+        deadlineAt,
+      });
+      notice(
+        `shard ${index + 1}/${shardInputs.length}: model=${call.modelVersion ?? model} / 出力 ${
+          call.outputTokens ?? '?'
+        } tokens（うち thinking ${call.thoughtTokens ?? '?'}）。`,
+      );
+      return call;
+    },
+  );
+  const configurationFailure = callBatch.errors.find(
+    ({ error }) => error instanceof ConfigurationError,
+  );
+  if (configurationFailure?.error instanceof ConfigurationError) {
+    console.log(`::error title=ai-review::${configurationFailure.error.message}`);
+    return 1;
   }
+  const incompleteShards = callBatch.errors.map(({ index }) => index + 1);
+  for (const { index, error } of callBatch.errors) {
+    warn(`shard ${index + 1}を実行できませんでした（PR は部分結果で判定します）: ${String(error)}`);
+  }
+  const calls = callBatch.values.filter((call): call is GeminiCallResult => call !== undefined);
 
   const result = mergeReviewResults(calls.map((call) => call.review));
   // 要求した id ではなく **実際に応答したモデル**を正とする。alias で別モデルに
   // 差し替わっていても、要求 id を記録していると誰も気づけない。
   const servedModels = [...new Set(calls.map((call) => call.modelVersion ?? model))];
-  const servedModel = servedModels.join(', ');
+  const servedModel = servedModels.join(', ') || model;
   for (const modelVersion of servedModels) {
     if (modelVersion === model) continue;
     notice(
@@ -1407,17 +1446,22 @@ async function main(): Promise<number> {
     }）。`,
   );
 
-  const clean = result.findings.length === 0;
+  const complete = incompleteShards.length === 0;
+  const clean = result.findings.length === 0 && complete;
   const shouldBlock = hasBlockingFinding(result);
-  const body = [
+  const commentParts = [
     renderComment(result, {
       model: servedModel,
       sha: head,
       shardCount: reviewPlan.shards.length,
+      incompleteShards,
       enforce,
     }),
-    renderState({ fingerprint, blocked: shouldBlock }),
-  ].join('\n');
+  ];
+  if (complete) {
+    commentParts.push(renderState({ fingerprint, blocked: shouldBlock }));
+  }
+  const body = commentParts.join('\n');
 
   // **クリーンな run でも comment を残す。** 指紋の保存先であると同時に、
   // 「レビューが実際に走った」証跡でもある。無言だと、走らなかった run と
@@ -1454,6 +1498,11 @@ async function main(): Promise<number> {
     return 0;
   }
   if (shouldBlock) return 1;
+
+  if (!complete) {
+    notice('一部shardが未確認のため、このrunはcacheせずfail-openにします。');
+    return 0;
+  }
 
   notice(`P1 の指摘が ${result.findings.length} 件あります（マージはブロックしません）。`);
   return 0;
