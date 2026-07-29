@@ -27,15 +27,20 @@ import { cn } from '@dayopt/components';
 
 // next/font による最適化されたフォント読み込み（Variable Font: wght軸のみ）
 // preload: true でLCP改善（デフォルトでtrueだが明示的に指定）
+//
 // 変数名は Tailwind 組み込みの theme キー（--font-sans / --font-mono）と衝突させない。
 // html 要素の class で注入されると :root の theme 値を上書きし、
 // font-sans utility が和文フォールバックを失うため。合成は foundations の typography.css で行う。
+//
+// fallback に generic family（sans-serif / system-ui 等）を入れない。next/font は
+// fallback の中身を font-family の末尾に連結するため、generic が --font-latin の中に入ると
+// stack 上で和文フォントより前に来てしまう。generic を含むシステムフォールバックの尾は
+// typography.css 側だけが持つ。
 const sourceSans = Source_Sans_3({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-latin',
   preload: true,
-  fallback: ['system-ui', 'sans-serif'],
 });
 
 // 日本語フォント（GAFA方針準拠: Google = Noto Sans JP）
@@ -46,7 +51,6 @@ const notoSansJP = Noto_Sans_JP({
   display: 'swap',
   variable: '--font-noto-jp',
   preload: true,
-  fallback: ['Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'sans-serif'],
 });
 
 // 等幅フォント（時刻・duration・統計の数字と、エラーID / MFAコード）
@@ -56,7 +60,6 @@ const sourceCodePro = Source_Code_Pro({
   display: 'swap',
   variable: '--font-code',
   preload: false,
-  fallback: ['ui-monospace', 'monospace'],
 });
 
 /**

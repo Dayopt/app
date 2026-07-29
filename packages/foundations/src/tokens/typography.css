@@ -10,7 +10,12 @@
  * theme 値を上書きすると、font-sans utility が和文フォールバックを失うため。
  *
  * var() のフォールバックに素の family 名を置いているので、next/font を通らない
- * 環境（apps/web の現状 / Storybook）でも stack が壊れず後段のシステムフォントへ落ちる。
+ * 環境（Storybook 等）でも stack が壊れず後段のシステムフォントへ落ちる。
+ *
+ * 不変条件: 和文フォントより前に generic family（sans-serif / system-ui）を置かない。
+ * generic は必ず解決するため、前に置くと和文がそこで拾われて Noto Sans JP に届かない。
+ * next/font 側の `fallback` に generic を入れると変数の中身の末尾に連結されて
+ * この不変条件が壊れるので、generic は本ファイルの stack 末尾だけが持つ。
  * ============================================ */
 :root {
   --font-stack-sans:

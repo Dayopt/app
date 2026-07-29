@@ -73,11 +73,13 @@ const config: StorybookConfig = {
     />
     <style>
       /* next/font を通らない環境なので、product 側の変数名に合わせて手動定義する。
-         product の variable 名を変えた時はここも必ず同時に直す（黙ってシステムフォントに落ちる）。 */
+         product の variable 名を変えた時はここも必ず同時に直す（黙ってシステムフォントに落ちる）。
+         generic family は入れない。stack 上で和文フォントより前に来てしまうため
+         （不変条件は foundations の tokens/typography.css に記載）。 */
       :root {
-        --font-latin: 'Source Sans 3', sans-serif;
-        --font-noto-jp: 'Noto Sans JP', sans-serif;
-        --font-code: 'Source Code Pro', monospace;
+        --font-latin: 'Source Sans 3';
+        --font-noto-jp: 'Noto Sans JP';
+        --font-code: 'Source Code Pro';
       }
     </style>
     <script>
