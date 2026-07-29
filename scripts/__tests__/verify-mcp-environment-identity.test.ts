@@ -20,9 +20,11 @@ function createTestEnvironment({
   invalidSeedRestoreStates = 0,
   invalidSeedStorageStates = 0,
   failBucketSeeds = 0,
+  failApiStarts = 0,
   unavailableApiChecks = 0,
   unavailableApiPath = '/auth/v1/health',
   unavailableApiAfterBucketSeed = false,
+  recoverUnavailableApiAfterStart = false,
 }: {
   failSeedlessResets?: number;
   failSeedRestores?: number;
@@ -30,9 +32,11 @@ function createTestEnvironment({
   invalidSeedRestoreStates?: number;
   invalidSeedStorageStates?: number;
   failBucketSeeds?: number;
+  failApiStarts?: number;
   unavailableApiChecks?: number;
   unavailableApiPath?: '/auth/v1/health' | '/rest/v1/' | '/storage/v1/status';
   unavailableApiAfterBucketSeed?: boolean;
+  recoverUnavailableApiAfterStart?: boolean;
 } = {}) {
   const temporaryDirectory = mkdtempSync(join(rootDir, '.mcp-environment-identity-test-'));
   const binDirectory = join(temporaryDirectory, 'bin');
@@ -43,6 +47,7 @@ function createTestEnvironment({
   const seedRestoreStateChecksPath = join(temporaryDirectory, 'seed-restore-state-checks');
   const seedStorageStateChecksPath = join(temporaryDirectory, 'seed-storage-state-checks');
   const bucketSeedAttemptsPath = join(temporaryDirectory, 'bucket-seed-attempts');
+  const apiStartAttemptsPath = join(temporaryDirectory, 'api-start-attempts');
   const apiChecksPath = join(temporaryDirectory, 'api-checks');
 
   temporaryDirectories.push(temporaryDirectory);
@@ -54,6 +59,7 @@ function createTestEnvironment({
   writeFileSync(seedRestoreStateChecksPath, '0');
   writeFileSync(seedStorageStateChecksPath, '0');
   writeFileSync(bucketSeedAttemptsPath, '0');
+  writeFileSync(apiStartAttemptsPath, '0');
   writeFileSync(apiChecksPath, '0');
 
   writeExecutable(
@@ -68,6 +74,18 @@ printf 'supabase/migrations/99999999999999_future.sql\\n'
     `#!/bin/bash
 set -euo pipefail
 printf 'supabase %s\\n' "$*" >> "$MCP_IDENTITY_TEST_CALLS"
+
+if [[ "$*" == "stop --yes" ]]; then
+  exit
+fi
+
+if [[ "$*" == "start --yes" ]]; then
+  attempts=$(<"$MCP_IDENTITY_TEST_API_START_ATTEMPTS")
+  attempts=$((attempts + 1))
+  printf '%s' "$attempts" > "$MCP_IDENTITY_TEST_API_START_ATTEMPTS"
+  ((attempts > MCP_IDENTITY_TEST_FAIL_API_STARTS))
+  exit
+fi
 
 if [[ "$*" == "seed buckets --local --yes" ]]; then
   attempts=$(<"$MCP_IDENTITY_TEST_BUCKET_SEED_ATTEMPTS")
@@ -155,6 +173,11 @@ if [[ "$MCP_IDENTITY_TEST_UNAVAILABLE_API_AFTER_BUCKET_SEED" == "true" ]] \
   && ((bucket_seed_attempts > 0)); then
   exit 1
 fi
+api_start_attempts=$(<"$MCP_IDENTITY_TEST_API_START_ATTEMPTS")
+if [[ "$MCP_IDENTITY_TEST_RECOVER_UNAVAILABLE_API_AFTER_START" == "true" ]] \
+  && ((api_start_attempts > 0)); then
+  exit 0
+fi
 if [[ "$url" != *"$MCP_IDENTITY_TEST_UNAVAILABLE_API_PATH" ]]; then
   exit 0
 fi
@@ -183,15 +206,20 @@ printf 'sleep %s\\n' "$*" >> "$MCP_IDENTITY_TEST_CALLS"
       MCP_IDENTITY_TEST_INVALID_SEED_RESTORE_STATES: String(invalidSeedRestoreStates),
       MCP_IDENTITY_TEST_INVALID_SEED_STORAGE_STATES: String(invalidSeedStorageStates),
       MCP_IDENTITY_TEST_FAIL_BUCKET_SEEDS: String(failBucketSeeds),
+      MCP_IDENTITY_TEST_FAIL_API_STARTS: String(failApiStarts),
       MCP_IDENTITY_TEST_UNAVAILABLE_API_CHECKS: String(unavailableApiChecks),
       MCP_IDENTITY_TEST_UNAVAILABLE_API_PATH: unavailableApiPath,
       MCP_IDENTITY_TEST_UNAVAILABLE_API_AFTER_BUCKET_SEED: String(unavailableApiAfterBucketSeed),
+      MCP_IDENTITY_TEST_RECOVER_UNAVAILABLE_API_AFTER_START: String(
+        recoverUnavailableApiAfterStart,
+      ),
       MCP_IDENTITY_TEST_SEEDLESS_ATTEMPTS: seedlessAttemptsPath,
       MCP_IDENTITY_TEST_SEED_RESTORE_ATTEMPTS: seedRestoreAttemptsPath,
       MCP_IDENTITY_TEST_SEEDLESS_STATE_CHECKS: seedlessStateChecksPath,
       MCP_IDENTITY_TEST_SEED_RESTORE_STATE_CHECKS: seedRestoreStateChecksPath,
       MCP_IDENTITY_TEST_SEED_STORAGE_STATE_CHECKS: seedStorageStateChecksPath,
       MCP_IDENTITY_TEST_BUCKET_SEED_ATTEMPTS: bucketSeedAttemptsPath,
+      MCP_IDENTITY_TEST_API_START_ATTEMPTS: apiStartAttemptsPath,
       MCP_IDENTITY_TEST_API_CHECKS: apiChecksPath,
       PATH: `${binDirectory}:${process.env.PATH ?? ''}`,
       USE_LOCAL_DB: 'true',
@@ -270,6 +298,74 @@ describe('verify-mcp-environment-identity.sh', () => {
     );
   });
 
+  it('CLIの再起動失敗でAPIが落ちてもDBを保ったままstackだけを回復する', () => {
+    const { callsPath, env } = createTestEnvironment({
+      failSeedRestores: 1,
+      unavailableApiChecks: 1,
+      recoverUnavailableApiAfterStart: true,
+    });
+
+    const result = spawnSync('bash', ['scripts/verify-mcp-environment-identity.sh'], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      env,
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain(
+      'Restarting the local Supabase stack while preserving its data...',
+    );
+    const calls = readFileSync(callsPath, 'utf8');
+    expect(calls.match(/supabase db reset --local --yes$/gm)).toHaveLength(1);
+    expect(calls.match(/supabase stop --yes/g)).toHaveLength(1);
+    expect(calls.match(/supabase start --yes/g)).toHaveLength(1);
+    expect(calls.match(/psql verify-seeded/g)).toHaveLength(2);
+  });
+
+  it('stack再起動CLIが失敗してもDBとAPIが揃えば成功扱いにする', () => {
+    const { callsPath, env } = createTestEnvironment({
+      failSeedRestores: 1,
+      failApiStarts: 1,
+      unavailableApiChecks: 1,
+      recoverUnavailableApiAfterStart: true,
+    });
+
+    const result = spawnSync('bash', ['scripts/verify-mcp-environment-identity.sh'], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      env,
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain(
+      'Supabase local stack restart returned an error after reaching the verified target state; continuing.',
+    );
+    const calls = readFileSync(callsPath, 'utf8');
+    expect(calls.match(/supabase db reset --local --yes$/gm)).toHaveLength(1);
+    expect(calls.match(/supabase start --yes/g)).toHaveLength(1);
+  });
+
+  it('reset成功後もAPIが起動しなければ待機後にstackだけを回復する', () => {
+    const { callsPath, env } = createTestEnvironment({
+      unavailableApiChecks: 16,
+      recoverUnavailableApiAfterStart: true,
+    });
+
+    const result = spawnSync('bash', ['scripts/verify-mcp-environment-identity.sh'], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      env,
+    });
+
+    expect(result.status).toBe(0);
+    const calls = readFileSync(callsPath, 'utf8');
+    expect(calls.match(/supabase db reset --local --yes$/gm)).toHaveLength(1);
+    expect(calls.match(/supabase stop --yes/g)).toHaveLength(1);
+    expect(calls.match(/supabase start --yes/g)).toHaveLength(1);
+    expect(calls.match(/curl http:\/\/127\.0\.0\.1:54321\/auth\/v1\/health/g)).toHaveLength(17);
+    expect(calls.match(/sleep 2/g)).toHaveLength(14);
+  });
+
   it('Storage seedが失敗しても設定が揃っていれば再試行しない', () => {
     const { callsPath, env } = createTestEnvironment({
       failBucketSeeds: 1,
@@ -331,7 +427,7 @@ describe('verify-mcp-environment-identity.sh', () => {
       expect(
         calls.match(new RegExp(`curl http://127\\.0\\.0\\.1:54321${unavailableApiPath}`, 'g')),
       ).toHaveLength(2);
-      expect(calls.match(/sleep 2/g)).toHaveLength(1);
+      expect(calls.match(/sleep 2/g)).toBeNull();
     },
   );
 
@@ -414,8 +510,8 @@ describe('verify-mcp-environment-identity.sh', () => {
     expect(calls.match(/supabase db reset --local --yes$/gm)).toHaveLength(2);
   });
 
-  it('通常seed後のAPIが起動しなければDBを一度だけ再構築して失敗する', () => {
-    const { callsPath, env } = createTestEnvironment({ unavailableApiChecks: 30 });
+  it('通常seed後のAPIとstack再起動が回復しなければDBを一度だけ再構築して失敗する', () => {
+    const { callsPath, env } = createTestEnvironment({ unavailableApiChecks: 100 });
 
     const result = spawnSync('bash', ['scripts/verify-mcp-environment-identity.sh'], {
       cwd: rootDir,
@@ -429,8 +525,10 @@ describe('verify-mcp-environment-identity.sh', () => {
     );
     const calls = readFileSync(callsPath, 'utf8');
     expect(calls.match(/supabase db reset --local --yes$/gm)).toHaveLength(2);
-    expect(calls.match(/curl http:\/\/127\.0\.0\.1:54321\/auth\/v1\/health/g)).toHaveLength(30);
-    expect(calls.match(/sleep 2/g)).toHaveLength(28);
+    expect(calls.match(/supabase stop --yes/g)).toHaveLength(2);
+    expect(calls.match(/supabase start --yes/g)).toHaveLength(2);
+    expect(calls.match(/curl http:\/\/127\.0\.0\.1:54321\/auth\/v1\/health/g)).toHaveLength(62);
+    expect(calls.match(/sleep 2/g)).toHaveLength(56);
   });
 
   it('Storage設定を復元できなければDBを一度だけ再構築して失敗する', () => {

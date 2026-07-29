@@ -166,6 +166,41 @@ wait_for_local_api_services() {
   return 1
 }
 
+recover_local_api_services() {
+  local reset_kind="$1"
+  local cli_succeeded=true
+
+  echo "Restarting the local Supabase stack while preserving its data..." >&2
+
+  if ! supabase stop --yes >/dev/null; then
+    cli_succeeded=false
+  fi
+
+  if ! supabase start --yes >/dev/null; then
+    cli_succeeded=false
+  fi
+
+  if ! database_matches_reset_kind "$reset_kind"; then
+    echo \
+      "Supabase local stack restart did not preserve the verified database state." \
+      >&2
+    return 1
+  fi
+
+  if ! wait_for_local_api_services; then
+    echo \
+      "Supabase local stack restart did not restore the required API services." \
+      >&2
+    return 1
+  fi
+
+  if [[ "$cli_succeeded" != "true" ]]; then
+    echo \
+      "Supabase local stack restart returned an error after reaching the verified target state; continuing." \
+      >&2
+  fi
+}
+
 restore_default_storage_bucket() {
   local max_attempts=2
   local attempt
@@ -204,6 +239,7 @@ restore_default_storage_bucket() {
 
 reset_target_matches() {
   local reset_kind="$1"
+  local reset_cli_succeeded="$2"
 
   if ! database_matches_reset_kind "$reset_kind"; then
     return 1
@@ -213,8 +249,14 @@ reset_target_matches() {
     return 0
   fi
 
-  if ! wait_for_local_api_services; then
-    return 1
+  if ! local_api_services_ready; then
+    if [[ "$reset_cli_succeeded" == "true" ]]; then
+      if ! wait_for_local_api_services; then
+        recover_local_api_services "$reset_kind" || return 1
+      fi
+    else
+      recover_local_api_services "$reset_kind" || return 1
+    fi
   fi
 
   if storage_bucket_matches_default_seed; then
@@ -243,7 +285,7 @@ reset_local_database() {
       cli_succeeded=false
     fi
 
-    if reset_target_matches "$reset_kind"; then
+    if reset_target_matches "$reset_kind" "$cli_succeeded"; then
       if [[ "$cli_succeeded" != "true" ]]; then
         echo \
           "Supabase local ${reset_kind} returned an error after reaching the verified target state; continuing." \
