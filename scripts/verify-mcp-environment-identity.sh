@@ -11,6 +11,142 @@ cd "$repo_root"
 
 restore_required=false
 restore_started=false
+local_database_url='postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+local_api_url='http://127.0.0.1:54321'
+latest_migration_path="$(
+  find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print \
+    | LC_ALL=C sort \
+    | tail -n 1
+)"
+latest_migration_version="$(basename "$latest_migration_path" | cut -d_ -f1)"
+
+if [[ ! "$latest_migration_version" =~ ^[0-9]{14}$ ]]; then
+  echo "Unable to determine the latest local migration version." >&2
+  exit 1
+fi
+
+database_matches_reset_kind() {
+  local reset_kind="$1"
+  local state_matches
+
+  case "$reset_kind" in
+    "seedless reset")
+      state_matches="$(
+        psql "$local_database_url" \
+          -X \
+          -A \
+          -t \
+          -q \
+          -v ON_ERROR_STOP=1 \
+          <<SQL
+-- MCP_RESET_STATE_SEEDLESS
+SELECT
+  EXISTS (
+    SELECT 1
+    FROM supabase_migrations.schema_migrations
+    WHERE version = '$latest_migration_version'
+  )
+  AND NOT EXISTS (SELECT 1 FROM public.mcp_environment_identity)
+  AND NOT EXISTS (SELECT 1 FROM auth.users);
+SQL
+      )" || return 1
+      ;;
+    "seed restore")
+      state_matches="$(
+        psql "$local_database_url" \
+          -X \
+          -A \
+          -t \
+          -q \
+          -v ON_ERROR_STOP=1 \
+          <<SQL
+-- MCP_RESET_STATE_SEEDED
+SELECT
+  EXISTS (
+    SELECT 1
+    FROM supabase_migrations.schema_migrations
+    WHERE version = '$latest_migration_version'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM public.mcp_environment_identity AS identity
+    WHERE identity.singleton_key = true
+      AND identity.environment = 'production'
+      AND identity.authorization_server_uri = 'https://app.dayopt.app'
+      AND identity.resource_uri = 'https://mcp.dayopt.app'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM auth.users
+    WHERE id = '00000000-0000-0000-0000-000000000001'
+  )
+  AND (
+    SELECT pg_catalog.count(*)
+    FROM public.tags
+    WHERE user_id = '00000000-0000-0000-0000-000000000001'
+  ) = 5
+  AND EXISTS (
+    SELECT 1
+    FROM public.plans
+    WHERE user_id = '00000000-0000-0000-0000-000000000001'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM storage.buckets AS bucket
+    WHERE bucket.id = 'avatars'
+      AND bucket.public
+      AND bucket.file_size_limit = 5242880
+      AND bucket.allowed_mime_types = ARRAY[
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp'
+      ]::TEXT[]
+  );
+SQL
+      )" || return 1
+      ;;
+    *)
+      echo "Unknown Supabase local reset kind: ${reset_kind}" >&2
+      return 1
+      ;;
+  esac
+
+  [[ "$state_matches" == "t" ]]
+}
+
+local_api_services_ready() {
+  local path
+
+  for path in '/auth/v1/health' '/rest/v1/' '/storage/v1/status'; do
+    if ! curl \
+      --fail \
+      --max-time 2 \
+      --silent \
+      --show-error \
+      "${local_api_url}${path}" \
+      >/dev/null 2>&1; then
+      return 1
+    fi
+  done
+}
+
+wait_for_local_api_services() {
+  local max_attempts=15
+  local attempt
+
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    if local_api_services_ready; then
+      return 0
+    fi
+
+    if ((attempt < max_attempts)); then
+      sleep 2
+    fi
+  done
+
+  return 1
+}
 
 reset_local_database() {
   local reset_kind="$1"
@@ -18,18 +154,36 @@ reset_local_database() {
 
   local max_attempts=2
   local attempt
+  local cli_succeeded
 
   for ((attempt = 1; attempt <= max_attempts; attempt++)); do
     if supabase db reset --local --yes "$@"; then
-      return 0
+      cli_succeeded=true
+    else
+      cli_succeeded=false
+    fi
+
+    if database_matches_reset_kind "$reset_kind"; then
+      if [[ "$reset_kind" != "seed restore" ]] || wait_for_local_api_services; then
+        if [[ "$cli_succeeded" != "true" ]]; then
+          echo \
+            "Supabase local ${reset_kind} returned an error after reaching the verified target state; continuing." \
+            >&2
+        fi
+        return 0
+      fi
     fi
 
     if ((attempt == max_attempts)); then
-      echo "Supabase local ${reset_kind} failed after ${max_attempts} attempts." >&2
+      echo \
+        "Supabase local ${reset_kind} did not reach its verified target state after ${max_attempts} attempts." \
+        >&2
       return 1
     fi
 
-    echo "Supabase local ${reset_kind} failed; retrying once..." >&2
+    echo \
+      "Supabase local ${reset_kind} did not reach its verified target state; retrying once..." \
+      >&2
   done
 }
 
@@ -49,7 +203,7 @@ echo "Resetting the local database without seed data..."
 restore_required=true
 reset_local_database "seedless reset" --no-seed
 
-psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
+psql "$local_database_url" \
   -X \
   -q \
   -v ON_ERROR_STOP=1 \
