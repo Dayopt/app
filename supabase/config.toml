@@ -15,6 +15,25 @@
 
 project_id = "dayopt"
 
+# PR #1760専用の一時Preview Branch。mainへ統合せず、PR終了時に削除する。
+# Productionとは別のproject refへだけ適用し、今後のseedとpublic signupを止める。
+[remotes.mcp_pr_1760]
+project_id = "yvimluegqlcppejgribx"
+
+[remotes.mcp_pr_1760.db.seed]
+enabled = false
+sql_paths = []
+
+[remotes.mcp_pr_1760.auth]
+site_url = "https://product-git-codex-mcp-plan-track-learn-dayopt.vercel.app"
+additional_redirect_urls = [
+  "https://product-git-codex-mcp-plan-track-learn-dayopt.vercel.app"
+]
+enable_signup = false
+
+[remotes.mcp_pr_1760.auth.email]
+enable_signup = false
+
 [api]
 enabled = true
 # Port to use for the API URL.
