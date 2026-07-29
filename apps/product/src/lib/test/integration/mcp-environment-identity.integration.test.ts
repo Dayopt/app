@@ -140,7 +140,7 @@ describe.skipIf(!RUN_LOCAL)('MCP environment identity integration', () => {
     expect(codeCount).toBe(0);
   });
 
-  it('provisions one exact seeded Preview identity and rejects unknown users or replacement', () => {
+  it('provisions empty or exact unused-seed Preview and rejects changed authority', () => {
     const previewRef = 'abcdefghijklmnopqrst';
     const previewUrl = 'https://product-git-mcp-safe-dayopt.vercel.app';
     const previewProof = runOwnerSql(`
@@ -171,55 +171,15 @@ describe.skipIf(!RUN_LOCAL)('MCP environment identity integration', () => {
       END;
       $$;
 
-      INSERT INTO auth.users (
-        id,
-        instance_id,
-        email,
-        encrypted_password,
-        email_confirmed_at,
-        raw_app_meta_data,
-        raw_user_meta_data,
-        created_at,
-        updated_at,
-        role,
-        aud,
-        confirmation_token,
-        recovery_token,
-        email_change_token_new,
-        email_change,
-        email_change_token_current,
-        phone,
-        phone_change,
-        phone_change_token,
-        reauthentication_token,
-        email_change_confirm_status
-      ) VALUES (
-        '00000000-0000-0000-0000-000000000002',
-        '00000000-0000-0000-0000-000000000000',
-        'unknown-preview-user@example.com',
-        '',
-        pg_catalog.now(),
-        '{"provider":"email","providers":["email"]}',
-        '{}',
-        pg_catalog.now(),
-        pg_catalog.now(),
-        'authenticated',
-        'authenticated',
-        '',
-        '',
-        '',
-        '',
-        '',
-        NULL,
-        NULL,
-        '',
-        '',
-        0
-      );
-
-      DO $$
+      CREATE FUNCTION pg_temp.assert_preview_provision_rejected(
+        p_expected_sqlstate TEXT
+      )
+      RETURNS VOID
+      LANGUAGE plpgsql
+      SET search_path = ''
+      AS $assert$
       DECLARE
-        v_unknown_user_rejected BOOLEAN := false;
+        v_actual_sqlstate TEXT;
       BEGIN
         BEGIN
           PERFORM *
@@ -228,64 +188,206 @@ describe.skipIf(!RUN_LOCAL)('MCP environment identity integration', () => {
             '${previewUrl}',
             '${previewRef}'
           );
-        EXCEPTION WHEN SQLSTATE 'DI005' THEN
-          v_unknown_user_rejected := true;
+        EXCEPTION WHEN OTHERS THEN
+          GET STACKED DIAGNOSTICS
+            v_actual_sqlstate = RETURNED_SQLSTATE;
+
+          IF v_actual_sqlstate IS DISTINCT FROM p_expected_sqlstate THEN
+            RAISE EXCEPTION
+              'Expected SQLSTATE %, received %',
+              p_expected_sqlstate,
+              v_actual_sqlstate;
+          END IF;
+
+          IF EXISTS (SELECT 1 FROM public.mcp_environment_identity) THEN
+            RAISE EXCEPTION
+              'Rejected Preview provisioning created an environment identity';
+          END IF;
+          RETURN;
         END;
 
-        IF NOT v_unknown_user_rejected THEN
-          RAISE EXCEPTION 'Unknown Preview user was not rejected';
-        END IF;
+        RAISE EXCEPTION
+          'Preview provisioning unexpectedly accepted SQLSTATE % case',
+          p_expected_sqlstate;
       END;
-      $$;
+      $assert$;
 
+      CREATE FUNCTION pg_temp.insert_preview_seed_shaped_user(
+        p_user_id UUID,
+        p_email TEXT,
+        p_phone TEXT
+      )
+      RETURNS VOID
+      LANGUAGE sql
+      SET search_path = ''
+      AS $fixture$
+        INSERT INTO auth.users (
+          id,
+          instance_id,
+          email,
+          encrypted_password,
+          email_confirmed_at,
+          raw_app_meta_data,
+          raw_user_meta_data,
+          created_at,
+          updated_at,
+          role,
+          aud,
+          confirmation_token,
+          recovery_token,
+          email_change_token_new,
+          email_change,
+          email_change_token_current,
+          phone,
+          phone_change,
+          phone_change_token,
+          reauthentication_token,
+          email_change_confirm_status
+        ) VALUES (
+          p_user_id,
+          '00000000-0000-0000-0000-000000000000',
+          p_email,
+          extensions.crypt(
+            'TestPassword123!',
+            extensions.gen_salt('bf')
+          ),
+          pg_catalog.now(),
+          '{"provider":"email","providers":["email"]}',
+          '{"full_name":"Test User"}',
+          pg_catalog.now(),
+          pg_catalog.now(),
+          'authenticated',
+          'authenticated',
+          '',
+          '',
+          '',
+          '',
+          '',
+          p_phone,
+          '',
+          '',
+          '',
+          0
+        );
+      $fixture$;
+
+      -- An actually empty Preview database remains a valid first-run case.
+      SELECT resource_uri
+      FROM public.provision_mcp_preview_environment_identity_v1(
+        '${previewUrl}',
+        '${previewUrl}',
+        '${previewRef}'
+      );
+
+      ALTER TABLE public.mcp_environment_identity
+        DISABLE TRIGGER trigger_prevent_mcp_environment_identity_change;
+      DELETE FROM public.mcp_environment_identity;
+      ALTER TABLE public.mcp_environment_identity
+        ENABLE TRIGGER trigger_prevent_mcp_environment_identity_change;
+
+      -- UUID and email are independently bound to the deterministic fixture.
+      SELECT pg_temp.insert_preview_seed_shaped_user(
+        '00000000-0000-0000-0000-000000000002'::UUID,
+        'test@dayopt.dev',
+        ''
+      );
+      SELECT pg_temp.assert_preview_provision_rejected('DI005');
+      TRUNCATE auth.users CASCADE;
+
+      SELECT pg_temp.insert_preview_seed_shaped_user(
+        '00000000-0000-0000-0000-000000000001'::UUID,
+        'wrong-preview-user@example.com',
+        ''
+      );
+      SELECT pg_temp.assert_preview_provision_rejected('DI005');
+      TRUNCATE auth.users CASCADE;
+
+      SELECT pg_temp.insert_preview_seed_shaped_user(
+        '00000000-0000-0000-0000-000000000001'::UUID,
+        'test@dayopt.dev',
+        ''
+      );
+
+      INSERT INTO auth.identities (
+        id,
+        user_id,
+        provider_id,
+        provider,
+        identity_data,
+        last_sign_in_at,
+        created_at,
+        updated_at
+      ) VALUES (
+        '00000000-0000-0000-0000-000000000001',
+        '00000000-0000-0000-0000-000000000001',
+        'test@dayopt.dev',
+        'email',
+        '{"sub":"00000000-0000-0000-0000-000000000001","email":"test@dayopt.dev"}',
+        pg_catalog.now(),
+        pg_catalog.now(),
+        pg_catalog.now()
+      );
+
+      -- An additional user cannot hide behind the valid seed user.
+      SELECT pg_temp.insert_preview_seed_shaped_user(
+        '00000000-0000-0000-0000-000000000002'::UUID,
+        'unknown-preview-user@example.com',
+        NULL
+      );
+      SELECT pg_temp.assert_preview_provision_rejected('DI005');
       DELETE FROM auth.users
       WHERE id = '00000000-0000-0000-0000-000000000002'::UUID;
 
-      INSERT INTO auth.users (
+      -- Changed credentials and any second provider identity are rejected.
+      UPDATE auth.users
+      SET encrypted_password = extensions.crypt(
+        'ChangedPassword123!',
+        extensions.gen_salt('bf')
+      )
+      WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
+      SELECT pg_temp.assert_preview_provision_rejected('DI005');
+      UPDATE auth.users
+      SET encrypted_password = extensions.crypt(
+        'TestPassword123!',
+        extensions.gen_salt('bf')
+      )
+      WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
+
+      INSERT INTO auth.identities (
         id,
-        instance_id,
-        email,
-        encrypted_password,
-        email_confirmed_at,
-        raw_app_meta_data,
-        raw_user_meta_data,
+        user_id,
+        provider_id,
+        provider,
+        identity_data,
+        last_sign_in_at,
         created_at,
-        updated_at,
-        role,
-        aud,
-        confirmation_token,
-        recovery_token,
-        email_change_token_new,
-        email_change,
-        email_change_token_current,
-        phone,
-        phone_change,
-        phone_change_token,
-        reauthentication_token,
-        email_change_confirm_status
+        updated_at
+      ) VALUES (
+        '00000000-0000-0000-0000-000000000002',
+        '00000000-0000-0000-0000-000000000001',
+        'preview-google-subject',
+        'google',
+        '{"sub":"preview-google-subject","email":"test@dayopt.dev"}',
+        pg_catalog.now(),
+        pg_catalog.now(),
+        pg_catalog.now()
+      );
+      SELECT pg_temp.assert_preview_provision_rejected('DI005');
+      DELETE FROM auth.identities
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID;
+
+      -- The exact seed fixture still fails closed after MCP OAuth authority.
+      INSERT INTO public.oauth_audit_log (
+        user_id,
+        client_id,
+        tool_name
       ) VALUES (
         '00000000-0000-0000-0000-000000000001',
-        '00000000-0000-0000-0000-000000000000',
-        'test@dayopt.dev',
-        '',
-        pg_catalog.now(),
-        '{"provider":"email","providers":["email"]}',
-        '{"full_name":"Test User"}',
-        pg_catalog.now(),
-        pg_catalog.now(),
-        'authenticated',
-        'authenticated',
-        '',
-        '',
-        '',
-        '',
-        '',
-        NULL,
-        NULL,
-        '',
-        '',
-        0
+        'chatgpt',
+        'entries.list'
       );
+      SELECT pg_temp.assert_preview_provision_rejected('DI006');
+      DELETE FROM public.oauth_audit_log;
 
       SELECT resource_uri
       FROM public.provision_mcp_preview_environment_identity_v1(
@@ -335,6 +437,10 @@ describe.skipIf(!RUN_LOCAL)('MCP environment identity integration', () => {
     `);
 
     expect(previewProof.status, previewProof.stderr).toBe(0);
-    expect(previewProof.stdout.trim().split('\n')).toEqual([previewUrl, previewUrl]);
+    expect(previewProof.stdout.trim().split('\n').filter(Boolean)).toEqual([
+      previewUrl,
+      previewUrl,
+      previewUrl,
+    ]);
   });
 });
