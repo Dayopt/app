@@ -20,7 +20,7 @@ export async function GET() {
   <title>Under Maintenance | Dayopt</title>
   <meta name="description" content="System is currently under maintenance">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500&display=swap');
 
     :root {
       --background: oklch(1 0 0);
@@ -51,7 +51,7 @@ export async function GET() {
     }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       background-color: var(--background);
@@ -106,7 +106,9 @@ export async function GET() {
     .title {
       color: var(--foreground);
       font-size: 1.5rem;
-      font-weight: 700;
+      /* デザインシステムのウェイトは 400 / 500 のみ（ページタイトル = text-2xl font-medium 相当）。
+         700 を残すと CDN で取得しないウェイトになり、ブラウザの擬似ボールドになる。 */
+      font-weight: 500;
       margin-bottom: 0.5rem;
     }
 

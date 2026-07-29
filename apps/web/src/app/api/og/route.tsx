@@ -65,7 +65,9 @@ export async function GET(request: NextRequest) {
           backgroundColor: brandColors.background,
           backgroundImage: `linear-gradient(135deg, ${brandColors.primary}08 0%, ${brandColors.secondary}08 100%)`,
           padding: '60px',
-          fontFamily: 'Inter, sans-serif',
+          // Satori に font データを渡していないため実描画は Satori 既定の書体になる。
+          // 指定は将来 font を埋め込む時の宣言として product の書体に合わせておく。
+          fontFamily: 'Source Sans 3, sans-serif',
         }}
       >
         {/* Header */}

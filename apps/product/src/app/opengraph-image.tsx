@@ -24,7 +24,9 @@ export default function OgImage() {
         alignItems: 'center',
         justifyContent: 'center',
         background: `linear-gradient(135deg, ${OG_COLORS.backgroundDark} 0%, ${OG_COLORS.backgroundMid} 40%, ${OG_COLORS.background} 100%)`,
-        fontFamily: 'Inter, system-ui, sans-serif',
+        // Satori に font データを渡していないため実描画は Satori 既定の書体になる。
+        // 指定は将来 font を埋め込む時の宣言として product の書体に合わせておく。
+        fontFamily: 'Source Sans 3, system-ui, sans-serif',
       }}
     >
       {/* Decorative circles */}
