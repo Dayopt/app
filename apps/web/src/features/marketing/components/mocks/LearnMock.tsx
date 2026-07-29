@@ -47,15 +47,15 @@ export function LearnMock() {
             <div className="flex items-baseline gap-3 text-xs">
               <div>
                 <span className="text-muted-foreground">Plan </span>
-                <span className="text-foreground font-medium">32h</span>
+                <span className="text-foreground font-mono font-medium tabular-nums">32h</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Record </span>
-                <span className="text-foreground font-medium">28.5h</span>
+                <span className="text-foreground font-mono font-medium tabular-nums">28.5h</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Difference </span>
-                <span className="text-destructive font-medium">-3.5h</span>
+                <span className="text-destructive font-mono font-medium tabular-nums">-3.5h</span>
               </div>
             </div>
             {/* Budget vs Actual stacked bar */}
@@ -97,7 +97,9 @@ export function LearnMock() {
                 const isLatest = i === weeks.length - 1;
                 return (
                   <div key={week.label} className="flex flex-1 flex-col items-center gap-1">
-                    <span className="text-muted-foreground text-[10px]">{week.value}%</span>
+                    <span className="text-muted-foreground font-mono text-[10px] tabular-nums">
+                      {week.value}%
+                    </span>
                     <div
                       className="bg-muted relative w-full overflow-hidden rounded"
                       style={{ height: 40 }}
@@ -114,7 +116,9 @@ export function LearnMock() {
             </div>
             {/* Insight */}
             <div className="mt-2 flex items-center gap-1 text-xs">
-              <span className="text-success font-medium">↑ 14%</span>
+              <span className="text-success font-medium">
+                ↑ <span className="font-mono tabular-nums">14%</span>
+              </span>
               <span className="text-muted-foreground">closer than 4 weeks ago</span>
             </div>
           </div>

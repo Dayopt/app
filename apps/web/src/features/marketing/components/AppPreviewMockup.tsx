@@ -60,7 +60,7 @@ export function AppPreviewMockup() {
         {/* 指標名は実在するものだけを出す（calendar.stats.overview.planAccuracy） */}
         <div className="border-border mt-6 border-t pt-4">
           <div className="text-muted-foreground mb-2 text-xs">Plan accuracy</div>
-          <div className="text-foreground text-2xl font-medium">87%</div>
+          <div className="text-foreground font-mono text-2xl font-medium tabular-nums">87%</div>
           <div className="bg-container mt-2 h-1.5 w-full rounded-full">
             <div className="bg-primary h-1.5 rounded-full" style={{ width: '87%' }} />
           </div>
@@ -91,7 +91,7 @@ export function AppPreviewMockup() {
             {hours.map((hour, i) => (
               <div
                 key={hour}
-                className="text-muted-foreground absolute right-2 text-xs"
+                className="text-muted-foreground absolute right-2 font-mono text-xs tabular-nums"
                 style={{ top: `${(i / hours.length) * 100}%` }}
               >
                 {hour}
