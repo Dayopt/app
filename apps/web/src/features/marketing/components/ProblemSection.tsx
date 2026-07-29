@@ -42,6 +42,10 @@ export async function ProblemSection({ locale }: ProblemSectionProps) {
             );
           })}
         </div>
+
+        <p className="text-muted-foreground mx-auto mt-8 max-w-5xl text-center text-sm leading-relaxed">
+          {t('problem.closing')}
+        </p>
       </Container>
     </section>
   );

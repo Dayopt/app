@@ -2,13 +2,15 @@
  * Home（トップ LP）ページの Storybook Story。
  *
  * 個別セクションではなく、セクションを並べた「ページ全体の流れ」を確認するための Page story。
- * 構成は実ページ apps/web/src/app/[locale]/(marketing)/page.tsx に合わせる（Hero → How → Pricing）。
+ * 構成は実ページ apps/web/src/app/[locale]/(marketing)/page.tsx に合わせる（Hero → Problem → How → Open by design → Pricing）。
  */
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { HeroSection } from './components/HeroSection';
 import { HowSection } from './components/HowSection';
+import { OpenByDesignSection } from './components/OpenByDesignSection';
 import { PricingSection } from './components/PricingSection';
+import { ProblemSection } from './components/ProblemSection';
 
 const meta = {
   title: 'Web/Pages/Home',
@@ -23,7 +25,9 @@ function HomeComposition({ locale }: { locale: string }) {
     <div className="bg-background">
       <div className="relative isolate">
         <HeroSection locale={locale} />
+        <ProblemSection locale={locale} />
         <HowSection locale={locale} />
+        <OpenByDesignSection locale={locale} />
         <PricingSection locale={locale} />
       </div>
     </div>
