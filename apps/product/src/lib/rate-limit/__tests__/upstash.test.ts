@@ -28,6 +28,8 @@ import {
   loginRateLimit,
   mcpPreAuthRateLimit,
   mcpUserRateLimit,
+  oauthTokenGlobalRateLimit,
+  oauthTokenIpRateLimit,
   passwordResetRateLimit,
   RATE_LIMIT_PRESETS,
   RATE_LIMIT_TIMEOUT_MS,
@@ -68,6 +70,8 @@ describe('Upstash Rate Limit', () => {
     expect(trpcUserRateLimit).toBeNull();
     expect(mcpPreAuthRateLimit).toBeNull();
     expect(mcpUserRateLimit).toBeNull();
+    expect(oauthTokenIpRateLimit).toBeNull();
+    expect(oauthTokenGlobalRateLimit).toBeNull();
     expect(timeblockCreateRateLimit).toBeNull();
     expect(icalFeedRateLimit).toBeNull();
     expect(calendarConnectRateLimit).toBeNull();
@@ -171,6 +175,8 @@ describe('Upstash Rate Limit', () => {
       'ratelimit:product:trpc:user',
       'ratelimit:product:mcp:pre-auth',
       'ratelimit:product:mcp:user',
+      'ratelimit:product:oauth-token:ip',
+      'ratelimit:product:oauth-token:global',
       'ratelimit:product:timeblock:create',
       'ratelimit:product:ical-feed',
       'ratelimit:product:calendar-connect',

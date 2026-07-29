@@ -236,6 +236,18 @@ marketplace が見つからない場合は先に `claude plugin marketplace add 
 - Dayopt想定: 3,000,000リクエスト/月
 - 月額コスト: 約$6
 
+### OAuth / MCP
+
+OAuth token endpointはhost検証後、request bodyやcode / refresh tokenのDB処理より前に
+rate limitを検査する。IP単位10回/分と全体120回/分を別bucketで持つ。超過時は429、
+Production / stagingでUpstashが未設定・timeout・障害の場合は503を返し、token処理へ
+進まない。identifierはraw IPを保存せず、既存のHMAC化したkeyを使う。
+
+MCP protected resourceはtoken検証前のIP単位上限と、検証後のuser単位上限を持つ。
+さらにread / writeを問わず、一般のbilling rollout flagとは独立したPro entitlementを
+共通入口で毎request確認する。Free / canceledはtool discovery前に403で拒否し、DBの
+判定不能は503へfail closedする。writeは同じtransaction内でも再検証する。
+
 ## CSP違反モニタリング
 
 Product / WebのCSPは各appのsecurity header設定で強制し、違反は各appの`/api/csp-report`へ送る。report endpointは公開入力境界として次を適用する。

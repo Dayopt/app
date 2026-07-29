@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-28
+last_verified: 2026-07-29
 public_docs:
   - faq/pricing
 lp: []
@@ -23,6 +23,11 @@ Dayoptの Stripe サブスクリプション課金システムの技術ドキュ
 | ステータス管理 | Supabase `profiles` テーブル                |
 
 現行 entitlement は `pro_access` の1種類。Free/Pro の最終的な機能境界は [#1336](https://github.com/tanakatomoya/dayopt/issues/1336) で確定する。`BILLING_ENFORCED` の既定値は `false` で、その間 `proProcedure` は認証後にゲートせず通過する。
+
+MCP/APIはこの一般flagの例外として、read / writeとも常にPro限定とする。protected resourceの
+共通入口で毎request `profiles.subscription_status`を確認し、`active` / `trialing` /
+`past_due`だけを許可する。`free` / `canceled`はtool discovery前に403で拒否し、判定不能は
+503へfail closedする。writeは同じDB transaction内でも再検証する。
 
 ---
 

@@ -26,6 +26,8 @@ interface VerifiedAccessToken {
   userId: string;
   clientId: OAuthClientId;
   scopes: SupportedScope[];
+  /** MCP is a Pro product surface independently of the general billing rollout flag. */
+  proEntitled: boolean;
   resourceUri: CanonicalResourceUri;
   /** Unix epoch seconds, matching MCP AuthInfo. */
   expiresAt: number;
@@ -123,20 +125,23 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
     client.id,
     connectionFilteredScopes,
   );
-  const activeScopes = await applyProWriteGate(db, row.user_id, durablyFilteredScopes);
 
-  if (activeScopes.length === 0) {
+  if (durablyFilteredScopes.length === 0) {
     throw new OAuthServerError('invalid_token', 'OAuth connection has no active scopes', 401);
   }
 
-  updateUsageTimestamps(db, row.id, connection.id);
+  const proEntitled = await checkMcpProEntitlement(db, row.user_id);
+
+  // 拒否されたFree accessをSettingsの「最終利用」として記録しない。
+  if (proEntitled) updateUsageTimestamps(db, row.id, connection.id);
 
   return {
     tokenId: row.id,
     connectionId: connection.id,
     userId: row.user_id,
     clientId: client.id,
-    scopes: activeScopes,
+    scopes: durablyFilteredScopes,
+    proEntitled,
     resourceUri: tokenResource,
     expiresAt: Math.floor(expiresAtMs / 1000),
   };
@@ -174,13 +179,10 @@ async function applyDurableWriteGate(
     : scopes.filter((scope) => !isWriteScope(scope));
 }
 
-async function applyProWriteGate(
+async function checkMcpProEntitlement(
   db: ReturnType<typeof createMcpAccessDbClient>,
   userId: string,
-  scopes: SupportedScope[],
-): Promise<SupportedScope[]> {
-  if (!scopes.some(isWriteScope)) return scopes;
-
+): Promise<boolean> {
   const { data: profile, error } = await db
     .from(databaseTables.profiles)
     .select('subscription_status')
@@ -191,9 +193,7 @@ async function applyProWriteGate(
     throwDatabaseVerificationError(error, 'verify_mcp_pro_entitlement');
   }
 
-  return profile && canAccessProFeatures(profile.subscription_status)
-    ? scopes
-    : scopes.filter((scope) => !isWriteScope(scope));
+  return Boolean(profile && canAccessProFeatures(profile.subscription_status));
 }
 
 function parseStoredScopes(scopes: string[]): SupportedScope[] | null {

@@ -231,6 +231,18 @@ export const mcpUserRateLimit = createRateLimiter(
   'ratelimit:product:mcp:user',
 );
 
+/** OAuth token endpoint用: 未認証IP単位のDB負荷上限。 */
+export const oauthTokenIpRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(10, '1 m'),
+  'ratelimit:product:oauth-token:ip',
+);
+
+/** OAuth token endpoint全体のDB負荷上限。 */
+export const oauthTokenGlobalRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(120, '1 m'),
+  'ratelimit:product:oauth-token:global',
+);
+
 /**
  * エントリ作成の日次上限
  * 500リクエスト / 24時間 per user

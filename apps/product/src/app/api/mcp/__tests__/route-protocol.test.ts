@@ -46,6 +46,7 @@ const auth = {
     'write:records',
     'delete:records',
   ],
+  proEntitled: true,
   resourceUri: 'https://mcp.dayopt.app' as const,
   expiresAt: 1_800_000_000,
 };

@@ -7,12 +7,9 @@ import { appRouter } from '@/lib/trpc/root';
 /**
  * MCP tool から tRPC procedure を呼ぶための薄い bridge。
  *
- * `proProcedure` の Pro gate と `protectedProcedure` の userId 注入を再利用するため、
- * MCP tool は service 層を直 import せずこの caller を経由する
- * (docs/projects/mcp-server/overview.md Decision 9)。
- *
- * 認証は `authMode: 'oauth'` でセットされるので proProcedure 側が毎リクエスト
- * profiles.subscription_status を DB lookup する (Decision 1)。
+ * protected procedureのuserId注入とfeature ownershipを再利用するため、MCP toolは
+ * service層を直importせずこのcallerを経由する。MCP全体のPro gateは、このbridgeより
+ * 前のprotected-resource境界で毎request検査する。
  */
 interface McpTrpcContextInput {
   userId: string;

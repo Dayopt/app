@@ -9,6 +9,10 @@ import {
   resolveRequestedResource,
 } from '@/lib/oauth-server';
 import { rejectUnexpectedOAuthHost } from '@/lib/oauth-server/request-host';
+import {
+  checkOAuthTokenRateLimit,
+  type OAuthTokenRateLimitState,
+} from '@/lib/oauth-server/token-rate-limit';
 import { captureUnexpectedError } from '@/lib/sentry';
 
 /**
@@ -28,6 +32,9 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   const hostRejection = rejectUnexpectedOAuthHost(request);
   if (hostRejection) return hostRejection;
+
+  const rateLimitState = await checkOAuthTokenRateLimit(request);
+  if (rateLimitState !== 'allowed') return rateLimitErrorResponse(rateLimitState);
 
   try {
     const form = await readFormBody(request);
@@ -155,6 +162,24 @@ function errorResponse(err: OAuthServerError) {
       headers: {
         'cache-control': 'no-store',
         pragma: 'no-cache',
+      },
+    },
+  );
+}
+
+function rateLimitErrorResponse(state: Exclude<OAuthTokenRateLimitState, 'allowed'>): NextResponse {
+  const unavailable = state === 'unavailable';
+  return NextResponse.json(
+    {
+      error: unavailable ? 'server_error' : 'temporarily_unavailable',
+      error_description: unavailable ? 'OAuth server error' : 'Too many requests',
+    },
+    {
+      status: unavailable ? 503 : 429,
+      headers: {
+        'cache-control': 'no-store',
+        pragma: 'no-cache',
+        'retry-after': unavailable ? '5' : '60',
       },
     },
   );

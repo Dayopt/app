@@ -169,8 +169,57 @@ describe('verifyAccessToken dependency failures', () => {
 
     await expect(verifyAccessToken('opaque-token')).resolves.toMatchObject({
       scopes: ['read:entries'],
+      proEntitled: true,
     });
   });
+
+  it.each(['active', 'trialing', 'past_due'])(
+    'accepts %s as a Pro entitlement for read-only MCP access',
+    async (subscriptionStatus) => {
+      createMcpAccessDbClient.mockReturnValue(
+        createAccessDb({
+          oauth_tokens: {
+            data: { ...validAccessTokenRow, scopes: ['read:entries'] },
+            error: null,
+          },
+          oauth_connections: {
+            data: { ...validConnectionRow, scopes: ['read:entries'] },
+            error: null,
+          },
+          profiles: { data: { subscription_status: subscriptionStatus }, error: null },
+        }),
+      );
+
+      await expect(verifyAccessToken('opaque-token')).resolves.toMatchObject({
+        scopes: ['read:entries'],
+        proEntitled: true,
+      });
+    },
+  );
+
+  it.each(['free', 'canceled'])(
+    'reports a %s entitlement without recording a rejected request as last used',
+    async (subscriptionStatus) => {
+      const db = createAccessDb({
+        oauth_tokens: {
+          data: { ...validAccessTokenRow, scopes: ['read:entries'] },
+          error: null,
+        },
+        oauth_connections: {
+          data: { ...validConnectionRow, scopes: ['read:entries'] },
+          error: null,
+        },
+        profiles: { data: { subscription_status: subscriptionStatus }, error: null },
+      });
+      createMcpAccessDbClient.mockReturnValue(db);
+
+      await expect(verifyAccessToken('opaque-token')).resolves.toMatchObject({
+        scopes: ['read:entries'],
+        proEntitled: false,
+      });
+      expect(db.from).toHaveBeenCalledTimes(3);
+    },
+  );
 });
 
 const validAccessTokenRow = {

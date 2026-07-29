@@ -26,6 +26,7 @@ const baseAuth = {
   userId: 'user-1',
   clientId: 'chatgpt' as const,
   scopes: ['read:entries'] as const,
+  proEntitled: true,
   resourceUri: 'https://mcp.dayopt.app' as const,
   expiresAt: 1_800_000_000,
 };
@@ -358,6 +359,39 @@ describe('MCP route scope preflight', () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { message: 'Too many requests' },
     });
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
+  });
+
+  it('rejects a Free user before parsing or dispatching any MCP operation', async () => {
+    verifyAccessToken.mockResolvedValueOnce({ ...baseAuth, proEntitled: false });
+    const requestInit = {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer opaque-token',
+        'content-type': 'application/json',
+      },
+      body: new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.enqueue(
+            new TextEncoder().encode('{"jsonrpc":"2.0","method":"tools/list","id":1}'),
+          );
+          controller.close();
+        },
+      }),
+      duplex: 'half',
+    } as const;
+    const request = new NextRequest('https://mcp.dayopt.app/mcp', requestInit);
+    const readBody = vi.spyOn(request.body!, 'getReader');
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('www-authenticate')).toBeNull();
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: -32001, message: 'Pro plan required' },
+    });
+    expect(readBody).not.toHaveBeenCalled();
     expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
   });
 

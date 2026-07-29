@@ -66,6 +66,8 @@ async function handle(request: NextRequest): Promise<Response> {
   const rateLimitState = await checkMcpUserRateLimit(auth.userId);
   if (rateLimitState !== 'allowed') return rateLimitErrorResponse(rateLimitState);
 
+  if (!auth.proEntitled) return proEntitlementErrorResponse();
+
   const parsedRequest = await parseMcpRequestBody(request);
   if (!parsedRequest.ok) return parsedRequest.response;
 
@@ -237,6 +239,25 @@ function rateLimitErrorResponse(state: Exclude<McpRateLimitState, 'allowed'>): R
       headers: {
         'cache-control': 'no-store',
         'retry-after': unavailable ? '5' : '60',
+      },
+    },
+  );
+}
+
+function proEntitlementErrorResponse(): Response {
+  return NextResponse.json(
+    {
+      jsonrpc: '2.0',
+      error: {
+        code: -32001,
+        message: 'Pro plan required',
+      },
+      id: null,
+    },
+    {
+      status: 403,
+      headers: {
+        'cache-control': 'no-store',
       },
     },
   );

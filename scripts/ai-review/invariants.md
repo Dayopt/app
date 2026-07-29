@@ -20,6 +20,9 @@ ai-review が「**あるべき検査の不在**」を判定するための正本
 
 - 外部カレンダー連携は **Pro 限定**。OAuth の開始・callback・cron 同期の**すべての入口**で
   entitlement を検査する（2026-07 に callback の検査漏れが実際に起きたクラス）
+- MCP/API は read・writeとも **Pro 限定**。protected resourceの共通入口で、一般の
+  `BILLING_ENFORCED` flagに依存せず毎request entitlementを検査する。mutationは同じ
+  transaction内でも再検証し、downgradeとのraceで正規データを変更しない
 - Pro 限定機能の server 入口は `proProcedure` を使うか、明示的に entitlement を検査する
 - Stripe webhook は署名を検証し、event id で冪等化する
   （`app/api/webhooks/stripe/stripe-webhook-idempotency.ts`）
@@ -27,6 +30,8 @@ ai-review が「**あるべき検査の不在**」を判定するための正本
 ## 公開 HTTP エンドポイント
 
 - 公開エンドポイント（OAuth callback / webhook / contact）は rate limit を持つ
+- OAuth token endpointはhost検証後・body/DB処理前にIP単位と全体のrate limitを検査し、
+  Production / stagingでbackend unavailableなら503へfail closedする
 - cron ルート（`app/api/cron/**`）は `CRON_SECRET` を検証する
 - redirect 先はユーザー入力をそのまま使わず、`lib/safe-redirect.ts` の検証を通す
 
