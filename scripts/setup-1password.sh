@@ -126,6 +126,8 @@ run item create --category=apicredential --vault=Dayopt-Staging --title=app \
   'MCP_OAUTH_ENVIRONMENT[text]=' \
   'OAUTH_AUTHORIZATION_SERVER_URI[text]=' \
   'MCP_CANONICAL_RESOURCE_URI[text]=' \
+  'MCP_OAUTH_PREVIEW_BRANCH[text]=' \
+  'MCP_OAUTH_PREVIEW_UPSTASH_HOST[text]=' \
   'MCP_WRITE_ENABLED_CLIENTS[text]='
 
 # ----- Dayopt-Production -----

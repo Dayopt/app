@@ -64,6 +64,8 @@ export const envSchema: EnvSchemaEntry[] = [
   envEntry('MCP_OAUTH_ENVIRONMENT', true, 'public', 'staging', staging, 'app'),
   envEntry('OAUTH_AUTHORIZATION_SERVER_URI', true, 'public', 'staging', staging, 'app'),
   envEntry('MCP_CANONICAL_RESOURCE_URI', true, 'public', 'staging', staging, 'app'),
+  envEntry('MCP_OAUTH_PREVIEW_BRANCH', false, 'public', 'staging', staging, 'app'),
+  envEntry('MCP_OAUTH_PREVIEW_UPSTASH_HOST', false, 'public', 'staging', staging, 'app'),
   envEntry('MCP_WRITE_ENABLED_CLIENTS', false, 'public', 'staging', staging, 'app'),
 
   envEntry('NEXT_PUBLIC_TURNSTILE_SITE_KEY', false, 'public', 'shared', shared, 'turnstile'),

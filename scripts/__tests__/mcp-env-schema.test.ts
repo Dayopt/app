@@ -15,6 +15,11 @@ const MCP_APP_ENV_NAMES = [
   'MCP_WRITE_ENABLED_CLIENTS',
 ] as const;
 
+const MCP_PREVIEW_ENV_NAMES = [
+  'MCP_OAUTH_PREVIEW_BRANCH',
+  'MCP_OAUTH_PREVIEW_UPSTASH_HOST',
+] as const;
+
 const REQUIRED_STAGING_IDENTITY_NAMES = new Set([
   'MCP_OAUTH_ENVIRONMENT',
   'OAUTH_AUTHORIZATION_SERVER_URI',
@@ -79,7 +84,7 @@ describe('MCP OAuth env inventory', () => {
   );
 
   it('local 1Password referenceにMCP app変数をexactly once置く', () => {
-    for (const envName of MCP_APP_ENV_NAMES) {
+    for (const envName of [...MCP_APP_ENV_NAMES, ...MCP_PREVIEW_ENV_NAMES]) {
       const matches = opEnvExample.match(
         new RegExp(`^${envName}=op://Dayopt-Staging/app/${envName}$`, 'gmu'),
       );
@@ -88,9 +93,31 @@ describe('MCP OAuth env inventory', () => {
   });
 
   it('Product env exampleにMCPとStripe identityの空変数をexactly once置く', () => {
-    for (const envName of [...MCP_APP_ENV_NAMES, ...STRIPE_IDENTITY_ENV_NAMES]) {
+    for (const envName of [
+      ...MCP_APP_ENV_NAMES,
+      ...MCP_PREVIEW_ENV_NAMES,
+      ...STRIPE_IDENTITY_ENV_NAMES,
+    ]) {
       const matches = productEnvExample.match(new RegExp(`^${envName}=$`, 'gmu'));
       expect(matches, envName).toHaveLength(1);
+    }
+  });
+
+  it('Preview専用変数をStagingのapp itemだけに登録する', () => {
+    for (const envName of MCP_PREVIEW_ENV_NAMES) {
+      expect(findExactEntry(envSchema, envName)).toEqual({
+        envName,
+        required: false,
+        visibility: 'public',
+        environment: 'staging',
+        vault: 'Dayopt-Staging',
+        item: 'app',
+        field: envName,
+      });
+      expect(productionEnvSchema.some((entry) => entry.envName === envName)).toBe(false);
+      expect(setup1PasswordScript.match(new RegExp(`'${envName}\\[text\\]='`, 'gu'))).toHaveLength(
+        1,
+      );
     }
   });
 
