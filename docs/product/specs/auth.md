@@ -1,7 +1,12 @@
 ---
 status: current
-last_verified: 2026-07-24
-code: apps/product/src/features/auth
+last_verified: 2026-07-30
+code:
+  - apps/product/src/app/api/trpc/_server/_composition/account-deletion-selector.ts
+  - apps/product/src/app/api/trpc/_server/_composition/account-deletion-coordinator.ts
+  - apps/product/src/features/auth/server/user-service.ts
+  - apps/product/src/features/external-calendar/server/account-deletion.ts
+  - apps/product/src/features/settings/server/account-deletion.ts
 public_docs:
   - account-troubleshooting
 lp: []
@@ -33,8 +38,26 @@ Google でのみ登録したユーザーはパスワードを持たない。こ�
 
 - 削除時の `requiresPassword` はクライアント申告ではなく server 側の `app_metadata` から判定する
 - MFA factor の一覧を取得できない場合は fail closed で削除を止める
-- 削除の通知メールは auth.users 削除の直前に送る（削除後は送信経路が無くなるため）。送信失敗では削除を止めない
+- 削除の通知メールは auth.users の削除が今回確定した後に送る。送信失敗では削除結果を戻さない
 - ログイン画面の「パスワードを忘れた」から Google ユーザーがリセットするとパスワードが新規設定される（Supabase の仕様）。サーバー側ではブロックせず、リセット画面の案内文で誘導する
+
+## アカウント削除
+
+Candidate 3は、新旧アプリが同時に動く期間の互換selectorを置く。DBのterminal markerが無い場合、またはaccount deletion gateが無効で進行中の削除が0件の場合は、従来のavatar、Stripe、Auth削除を使う。markerやgateの状態を確認できない場合は削除を止める。
+
+gateを有効にした後は、同じユーザーの操作をDB内で直列化し、次の順で進める。
+
+1. Billingの対象を固定し、open Checkout Sessionを失効する
+2. Google Calendar tokenを失効し、結果をDBへ記録する
+3. `avatars`と`attachments`を削除し、空になったことを確認する
+4. SubscriptionとStripe Customerを削除し、結果をDBへ記録する
+5. 3つの処理が完了した後にAuth identityを削除する
+
+途中で失敗した場合はAuth identityを残す。完了済みの処理はDBの記録から再開する。別ユーザーの削除や通常操作は止めない。
+
+このPRではgateを有効にしない。旧アプリが動いていないことと外部サービスのidentityをPreviewで確認した後、別の明示承認で有効にする。
+
+「すべてのデータを削除」の公開入力は、従来どおり`{ confirmText: 'DELETE' }`を維持する。世代番号を使う新しいDB処理は配置するが、このPRでは画面から使わない。
 
 ## tRPC API auth policy
 

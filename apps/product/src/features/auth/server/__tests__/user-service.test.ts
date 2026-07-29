@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { publicRecordSelect, publicUserSettingsSelect } from '@/lib/database';
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
-const getStripe = vi.hoisted(() => vi.fn());
 const deleteUser = vi.hoisted(() => vi.fn());
+const beforeIdentityDeletion = vi.hoisted(() => vi.fn());
 const loggerInfo = vi.hoisted(() => vi.fn());
 const loggerWarn = vi.hoisted(() => vi.fn());
 const adminFrom = vi.hoisted(() => vi.fn());
@@ -15,7 +15,6 @@ const getUserLocale = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/email/router', () => ({ sendAccountDeletionEmail, getUserLocale }));
 
-vi.mock('@/lib/stripe/client', () => ({ getStripe }));
 vi.mock('@/lib/supabase/oauth', () => ({
   createServiceRoleClient: () => ({ auth: { admin: { deleteUser } }, from: adminFrom }),
 }));
@@ -78,11 +77,14 @@ function createSupabase(options?: {
   });
 
   return {
-    service: createUserService({
-      from,
-      auth: { signInWithPassword, mfa: { listFactors, challengeAndVerify } },
-      storage: { from: vi.fn(() => ({ list, remove })) },
-    } as never),
+    service: createUserService(
+      {
+        from,
+        auth: { signInWithPassword, mfa: { listFactors, challengeAndVerify } },
+        storage: { from: vi.fn(() => ({ list, remove })) },
+      } as never,
+      { beforeIdentityDeletion },
+    ),
     from,
     list,
     remove,
@@ -142,7 +144,7 @@ function googleUserDeleteOptions(overrides?: Partial<{ totpCode: string; confirm
 describe('createUserService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getStripe.mockReturnValue(null);
+    beforeIdentityDeletion.mockResolvedValue({ status: 'completed' });
     sendAccountDeletionEmail.mockResolvedValue({ success: true });
     getUserLocale.mockResolvedValue('ja');
     deleteUser.mockResolvedValue({ data: {}, error: null });
@@ -179,72 +181,33 @@ describe('createUserService', () => {
       expect(deleteUser).not.toHaveBeenCalled();
     });
 
-    it('avatarを削除してからauth userを削除する', async () => {
-      const { service, remove } = createSupabase({
-        files: [{ name: 'avatar.png' }, { name: 'old.png' }],
-      });
+    it('外部データの準備を完了してからauth userを削除する', async () => {
+      const { service } = createSupabase();
 
       await expect(service.deleteAccount(deleteOptions())).resolves.toEqual({ success: true });
-      expect(remove).toHaveBeenCalledWith([`${USER_ID}/avatar.png`, `${USER_ID}/old.png`]);
+      expect(beforeIdentityDeletion).toHaveBeenCalledWith({ userId: USER_ID });
       expect(deleteUser).toHaveBeenCalledWith(USER_ID);
     });
 
-    it('Storage削除失敗時はfail closedでaccount削除を止める', async () => {
-      const storageError = new Error('storage unavailable');
-      const { service } = createSupabase({ storageError });
+    it('外部データの準備失敗時はfail closedでaccount削除を止める', async () => {
+      beforeIdentityDeletion.mockRejectedValueOnce(new Error('external cleanup unavailable'));
+      const { service } = createSupabase();
 
       await expect(service.deleteAccount(deleteOptions())).rejects.toMatchObject({
         code: 'DELETE_FAILED',
-        message: 'Failed to delete avatar files',
-        cause: storageError,
+        message: 'Failed to prepare account deletion',
       });
       expect(captureUnexpectedError).toHaveBeenCalledOnce();
       expect(deleteUser).not.toHaveBeenCalled();
     });
 
-    it('有効なStripe subscriptionを解約してcustomerを削除する', async () => {
-      const listSubscriptions = vi.fn().mockResolvedValue({
-        data: [
-          { id: 'sub-active', status: 'active' },
-          { id: 'sub-canceled', status: 'canceled' },
-          { id: 'sub-paused', status: 'paused' },
-        ],
-      });
-      const cancelSubscription = vi.fn().mockResolvedValue({});
-      const deleteCustomer = vi.fn().mockResolvedValue({});
-      getStripe.mockReturnValue({
-        subscriptions: { list: listSubscriptions, cancel: cancelSubscription },
-        customers: { del: deleteCustomer },
-      });
-      const { service } = createSupabase({
-        tables: { profiles: { data: { stripe_customer_id: 'cus_123' } } },
-      });
-
-      await service.deleteAccount(deleteOptions());
-
-      expect(listSubscriptions).toHaveBeenCalledWith({ customer: 'cus_123' });
-      expect(cancelSubscription).toHaveBeenCalledTimes(2);
-      expect(cancelSubscription).toHaveBeenCalledWith('sub-active');
-      expect(cancelSubscription).toHaveBeenCalledWith('sub-paused');
-      expect(deleteCustomer).toHaveBeenCalledWith('cus_123');
-    });
-
-    it('Stripe処理失敗時はfail closedでaccount削除を止める', async () => {
-      const stripeError = new Error('stripe unavailable');
-      getStripe.mockReturnValue({
-        subscriptions: { list: vi.fn().mockRejectedValue(stripeError) },
-        customers: { del: vi.fn() },
-      });
-      const { service } = createSupabase({
-        tables: { profiles: { data: { stripe_customer_id: 'cus_123' } } },
-      });
+    it('外部データの準備が競合中なら再試行可能なCONFLICTにする', async () => {
+      beforeIdentityDeletion.mockResolvedValueOnce({ status: 'contention' });
+      const { service } = createSupabase();
 
       await expect(service.deleteAccount(deleteOptions())).rejects.toMatchObject({
-        code: 'DELETE_FAILED',
-        message: 'Failed to delete billing data',
-        cause: stripeError,
+        code: 'CONFLICT',
       });
-      expect(captureUnexpectedError).toHaveBeenCalledOnce();
       expect(deleteUser).not.toHaveBeenCalled();
     });
 
@@ -266,7 +229,8 @@ describe('createUserService', () => {
     });
 
     it('削除が中断されたら通知メールを送らない（誤報を出さない）', async () => {
-      const { service } = createSupabase({ storageError: new Error('storage unavailable') });
+      beforeIdentityDeletion.mockRejectedValueOnce(new Error('cleanup unavailable'));
+      const { service } = createSupabase();
 
       await expect(service.deleteAccount(deleteOptions())).rejects.toMatchObject({
         code: 'DELETE_FAILED',
