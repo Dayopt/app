@@ -1,7 +1,7 @@
 -- ============================================================
 -- セキュリティ関連テーブル（読み物用 — CLIでは使用しない）
 -- ============================================================
--- 最終同期日: 2026-07-26
+-- 最終同期日: 2026-07-29
 -- 同期対象 migration:
 --   - 20260317022728_fix_security_definer_idor.sql
 --   - 20260414150000_drop_login_attempts_and_auth_audit_logs.sql
@@ -13,6 +13,11 @@
 --   - 20260726060200_fenced_calendar_authority_writers.sql
 --   - 20260726060300_fenced_calendar_revoke_worker.sql
 --   - 20260726060400_calendar_account_deletion_fence.sql
+--   - 20260726060700_bind_user_data_purge_generation.sql
+--   - 20260726060800_account_deletion_gate_foundation.sql
+--   - 20260726060850_neutralize_account_deletion_gate.sql
+--   - 20260726060860_bind_calendar_account_deletion.sql
+--   - 20260726060900_fail_closed_account_deletion_control.sql
 --
 
 -- login_attempts: 削除済み（20260414150000_drop_login_attempts_and_auth_audit_logs.sql）
@@ -34,8 +39,59 @@ CREATE TABLE public.mfa_recovery_codes (
 CREATE TABLE private.user_data_controls (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   generation BIGINT NOT NULL DEFAULT 0,
-  changed_at TIMESTAMPTZ NOT NULL DEFAULT pg_catalog.clock_timestamp()
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT pg_catalog.clock_timestamp(),
+  last_purge_operation_id UUID,
+  last_purge_expected_generation BIGINT,
+  last_purge_project_key TEXT,
+  last_purge_completed_at TIMESTAMPTZ
 );
+
+-- account削除の有効化状態。singletonはDELETE/TRUNCATE triggerで保護する。
+CREATE TABLE private.account_deletion_control (
+  singleton BOOLEAN PRIMARY KEY DEFAULT TRUE,
+  activation_version INTEGER NOT NULL DEFAULT 0, -- 0 / 1
+  activated_at TIMESTAMPTZ
+);
+
+-- auth.users削除前のgenericな3段階cleanup状態。
+-- provider固有targetはCalendar / Billingそれぞれのbinding tableが所有する。
+CREATE TABLE private.account_deletion_operations (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  deletion_id UUID NOT NULL UNIQUE,
+  state TEXT NOT NULL DEFAULT 'preparing', -- preparing / ready
+  started_at TIMESTAMPTZ NOT NULL DEFAULT pg_catalog.clock_timestamp(),
+  ready_at TIMESTAMPTZ,
+  UNIQUE (user_id, deletion_id)
+);
+
+CREATE TABLE private.account_deletion_steps (
+  user_id UUID NOT NULL,
+  deletion_id UUID NOT NULL,
+  step TEXT NOT NULL,                 -- calendar / storage / billing
+  state TEXT NOT NULL DEFAULT 'pending', -- pending / in_progress / completed
+  lease_id UUID,
+  lease_expires_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  PRIMARY KEY (user_id, step),
+  FOREIGN KEY (user_id, deletion_id)
+    REFERENCES private.account_deletion_operations(user_id, deletion_id)
+    ON DELETE CASCADE
+);
+
+-- generic account deletionとCalendar側の削除intentを束縛する。
+CREATE TABLE private.calendar_account_deletion_bindings (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  generic_deletion_id UUID NOT NULL UNIQUE,
+  calendar_deletion_id UUID NOT NULL UNIQUE,
+  calendar_required BOOLEAN NOT NULL,
+  bound_at TIMESTAMPTZ NOT NULL DEFAULT pg_catalog.clock_timestamp(),
+  FOREIGN KEY (user_id, generic_deletion_id)
+    REFERENCES private.account_deletion_operations(user_id, deletion_id)
+    ON DELETE CASCADE
+);
+
+-- private.user_data_purge_operationsは20260726060600で一時作成後、
+-- 20260726060700でuser_data_controlsのO(1) replay tupleへ置換して削除済み。
 
 -- このDBが所有するimmutableなGoogle Cloud project / OAuth client identity。
 -- activation_version=1は旧writer停止後の明示cutoverでのみ設定する。

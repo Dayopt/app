@@ -2,7 +2,7 @@
 -- RLS ポリシー一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
 -- 全ユーザーデータテーブルで RLS が有効
--- 最終同期日: 2026-07-24
+-- 最終同期日: 2026-07-29
 -- 同期対象 migration:
 --   - 20260318150000_add_entries_soft_delete.sql
 --   - 20260323000000_fix_entries_soft_delete_rls.sql
@@ -16,12 +16,17 @@
 --   - 20260713120023_drop_time_model_compatibility_layer.sql
 --   - 20260713121911_restore_baseline_table_grants.sql
 --   - 20260723233814_add_calendar_connection_tables.sql
+--   - 20260726060750_revoke_direct_profile_deletion.sql
+--   - 20260726060775_revoke_profile_truncate_privilege.sql
+--   - 20260726060840_fence_account_storage.sql
 --
 -- パターン:
 --   (select auth.uid()) でキャッシュ → auth.uid() 直呼びより 94-99% 高速
 -- ============================================================
 
--- ■ profiles: id = auth.uid()
+-- ■ profiles:
+--   SELECT/UPDATE: id = auth.uid()
+--   authenticatedの直接DELETE/TRUNCATEはrevoke済み。account削除commandだけを使う
 -- ■ plans / records:
 --   SELECT: user_id = auth.uid() AND deleted_at IS NULL
 --   INSERT/UPDATE/DELETE: user_id = auth.uid()
@@ -50,5 +55,9 @@
 --     service 層は列を明示指定すること
 -- ■ calendar_connection_calendars: SELECT のみ user_id = auth.uid()（table 単位）。
 --   mutation は service-role のみ。sync_token は provider cursor であり credential ではない
+-- ■ storage.objects（avatars / attachments）:
+--   folder先頭がauth.uid()と一致し、accountが削除中でない場合だけread/writeを許可する。
+--   INSERT/UPDATE/DELETEはauthorize_owned_storage_write_v1()、
+--   SELECTはauthorize_owned_storage_read_v1()を通す
 
 -- 詳細は baseline.sql の RLS Policies セクションを参照

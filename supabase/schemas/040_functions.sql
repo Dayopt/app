@@ -1,7 +1,7 @@
 -- ============================================================
 -- 関数一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
--- 最終同期日: 2026-07-26
+-- 最終同期日: 2026-07-29
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -35,6 +35,20 @@
 --   - 20260726060300_fenced_calendar_revoke_worker.sql
 --   - 20260726060400_calendar_account_deletion_fence.sql
 --   - 20260726060500_fenced_calendar_sync_writers.sql
+--   - 20260726060700_bind_user_data_purge_generation.sql
+--   - 20260726060800_account_deletion_gate_foundation.sql
+--   - 20260726060850_neutralize_account_deletion_gate.sql
+--   - 20260726060860_bind_calendar_account_deletion.sql
+--   - 20260726060870_repair_billing_mutation_claims.sql
+--   - 20260726060880_bind_billing_account_deletion.sql
+--   - 20260726060890_isolate_account_storage_boundary.sql
+--   - 20260726060900_fail_closed_account_deletion_control.sql
+--   - 20260728082600_isolate_billing_mutation_response.sql
+--   - 20260728082700_abort_billing_mutation_on_account_deletion.sql
+--   - 20260728083100_harden_billing_customer_provisioning.sql
+--   - 20260728110000_recover_customer_before_account_deletion.sql
+--   - 20260728110200_close_billing_webhook_races.sql
+--   - 20260728110300_remove_legacy_billing_receipt_cleanup.sql
 -- ユーザー操作向け関数は authenticated、OAuth基盤関数はservice_roleへ
 -- 必要なsignatureだけ明示GRANT。PUBLIC/anonへのEXECUTEはrevoke済み。
 -- ============================================================
@@ -66,7 +80,8 @@
 --   rotate_or_enqueue_calendar_refresh_token_command_v2(...) — rotationを冪等CAS保存またはpurge後outboxへ退避
 --   mark_calendar_connection_reauth_command_v2(...) — 観測tokenまたは同一rotationだけ再認証へ遷移
 --   prepare_calendar_token_rotation_recovery_command_v1(...) — provider失効前に現authorityを停止しrotation tokenをoutboxへ退避
---   delete_all_user_data_command_v3(...)       — 世代更新、外部authority失効、全domain data削除
+--   prepare_user_data_purge_v1(...)           — DB発行operation IDと現在generationを返す
+--   delete_all_user_data_command_v5(...)       — generation-bound replay-safe全domain data削除
 --   claim/complete/retry_calendar_revoke_outbox_v1(...) — 暗号化tokenのlease付きprovider失効
 --   expire_calendar_revoke_outbox_v1(...)      — 期限切れ暗号文のbounded削除
 --   cleanup_oauth_*_v1(...)                    — code/token/connectionの期限別bounded削除
@@ -97,6 +112,21 @@
 --   persist_calendar_sync_result_command_v1(...) — mirror/cursorを最新runだけpublish
 --   finish_calendar_sync_run_v1(...)           — status/pruneを最新runだけpublish
 --   replace_selected_calendars_command_v1(...) — selection置換とin-flight sync supersede
+--   begin/claim/complete/seal_account_deletion_v1(...) — genericなCalendar/Storage/Billing削除step
+--   get_account_deletion_readiness_v1()         — provider固有bindingを含む削除準備状態
+--   bind_calendar_account_deletion_v1(...)      — generic deletionとCalendar intentを束縛
+--   bind/seal_billing_account_deletion_v1(...)  — Stripe targetとterminal resultを束縛
+--   authorize_owned_storage_read/write_v1()     — live JWTとaccount-closing gateを検証
+--   claim_billing_mutation_v3(...)              — request-bound Checkout/Portal lease
+--   start_billing_mutation_v2(...)              — provider開始を23時間recoveryへ遷移
+--   reconcile_billing_mutation_v4(...)          — exact provider結果をterminal receiptへ確定
+--   cleanup_billing_mutation_claims_v2(...)     — 90日receiptと期限切れredirectをbounded削除
+--   claim/start/complete/abandon_billing_customer_provisioning_v2(...)
+--     — lazy Customer作成をaccount削除と直列化
+--   get_account_deletion_customer_recovery_v1(...) — provider response-loss中のCustomer回復情報
+--   sync_billing_subscription_deleted_v1(...)   — live bindingまたはterminal digestを照合
+--   cleanup_billing_account_deletion_terminal_receipts_v2(...)
+--     — 30日経過したpayload-free Stripe receiptをbounded削除
 
 -- ■ 削除済み RPC
 --   get_tag_cumulative_time / get_tag_avg_fulfillment / get_tag_plan_rate /
