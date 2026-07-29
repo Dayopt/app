@@ -38,7 +38,7 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - DB global control、durableなclient単位control、不可逆なconnection kill switch、payload-free receipt tableとreceipt-key serializationはrepo実装済み。client停止はcontrol row更新と既存write connectionのdisableを同一transactionで行い、grant、token検証、applyの3境界で再検証する。再有効化しても旧connectionは復活せず、再authorizationを必須とする。Plan / Recordのcreate/update/delete/restoreはtransaction内再認可、canonical digest、typed apply、receipt replayとserver-only adapterまでローカル実装・検証済み。Record createだけがcompleted Planへのlinkを受け、updateはPlan attribution・source・external provenanceを変更できない
 - authenticatedのPlan / Record権限を`SELECT`だけにするACL cutoverはrepo実装済み。全migrationのfresh適用、継承roleを含むeffective table / column write権限のfail-closed監査、authenticated直接write拒否、旧deployment compatibility、service-role recoveryをローカル検証済み。Production適用、旧wrapperのdrain後revoke、逆GRANT rehearsalは未実施
 - Plan / Recordのcreate/update/delete/restore/get/trash、全成功結果の`schemaVersion: 1` structured content、stable JSON text error、mutation receipt、strict public input、server-injected OAuth bindingはrepo実装・SDK contract test済み。trashのservice-role readはnarrow feature adapterへ閉じ、owner/deleted predicateと最小projectionを実DBのcross-tenant testで検証する
-- global controlとdurable client controlは初期OFFで、write/delete scopeはtoken検証時にeffective scopeから落ちるため、現在のMCPはwrite toolを列挙せず正規データを変更できない
+- global controlとdurable client controlのrepo defaultとlocal testはOFFで、write/delete scopeはtoken検証時にeffective scopeから落ちる。外部環境のlive gate値は未確認であり、Persistent Staging / Production適用前にrunbookで確認する
 - Plan / Record commitと同じtransactionで進むuser revision、session用revision API、Calendar workspaceのvisible中10秒pollと復帰時の即時再確認、Inspectorの外部更新・削除transitionをrepo実装・検証済み。`tags.list`、`constraints.get`、`review.get`も最小projectionと独立read scopeで実装し、実MCP HTTP経由のPlan → Track → Learn flowとcross-tenant read isolationをlocal DBで検証済み。Persistent Stagingの3 client golden contractと実network / render込み20秒SLAは未検証
 - `claude-ai` / `chatgpt` / `cursor`の3 client IDを同じlocal integrationへ通し、actual token route、scope-filtered `tools/list`、Plan retry、global OFF時の非永続化、parallel refresh、target-only revokeを検証済み。client所有外のredirect origin/scheme/pathはruntimeとenv validationの両方で拒否する。authorize page、client固有UI、3 clientそれぞれのfull Plan → Track → LearnはPersistent Stagingで未検証
 - `deleteAllData`はMCP/Calendar authorityとuser data generationを同じtransactionへ含むv5へ移行済み。OAuth authority、mutation receipt、Calendar revoke、payload-free security eventのretention RPCと定期callerもrepo実装済み。account削除はCalendar / Storage / Billingのexact receiptと遅延Stripe eventの30日Customer digest receiptまでlocal検証済みだが、generic gateはProduction監査とforward-only activationまでOFFを維持する
@@ -48,8 +48,8 @@ Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / L
 ## Minimum Viable Approach
 
 1. **MCP mutation transactionを完成させる** — connection/token/Pro entitlementをDB transaction内で再検証し、idempotency claim、typed command、成功mutation auditを兼ねる最小receiptを一括commitする。詳細は[Step 3設計](./step-3-mutation-envelope.md)を正本とする
-2. **Plan / Record CRUD toolを段階公開する** — Plan / Recordの8 mutation、get/trash、structured contract、Settings connection管理、実HTTP対UI race、Step 5の画面同期までrepo上で完了した。global/client gateはOFFのまま維持し、削除時の接続契約とStep 6の3 client検証後だけ段階公開する
-3. **public write境界をcommandへ収束する** — repo上では通常UI commandとACL cutoverまで実装済み。現在の未適用migration chainはrolling deploy中の全prefixを安全にしていないため、Productionでは書き込みquiescence下の一括cutover、または別のstaged compatibility chainを先にPersistent Stagingで実証する。service-owned一括処理は例外writerとして明示する
+2. **Plan / Record CRUD toolを段階公開する** — Plan / Recordの8 mutation、get/trash、structured contract、Settings connection管理、実HTTP対UI race、Step 5の画面同期までrepo上で完了した。repo default / local gateをOFFで維持し、外部環境ではlive値を再確認してから、削除時の接続契約とStep 6の3 client検証を通過したclientだけを段階公開する
+3. **public write境界をcommandへ収束する** — repo上では通常UI commandとACL cutoverまで実装済み。現在の未適用migration chainはrolling deploy中の全prefixを安全にしていないため、rolling-compatibleなstaged compatibility chainを先にPersistent Stagingで実証する。service-owned一括処理は例外writerとして明示する。一括maintenanceはrunbookの再承認例外とする
 4. **Track → Learnを接続する** — constraints/tags/review tool、user revision polling、Inspector競合保護、local MCP HTTPのgolden flowまでrepo上で完了した。実network / render込み20秒SLAはStep 6のPersistent Stagingで測定する
 5. **3 clientでclosed betaを検証する** — [Step 6計画](./step-6-client-beta.md)に従い、isolated Persistent Stagingで再authorization、retry、parallel refresh、revoke、UI対MCP raceを通し、client単位でwrite gateを開く
 
@@ -162,7 +162,7 @@ repo実装は完了した。Persistent Staging evidenceが完了するまでwrit
 - protected resourceがcredentialなし/unsupported scheme、malformed Bearer、invalid token、insufficient scope、認可依存障害を401/400/401/403/503へ分離し、write-only OAuth grantを全保存surfaceで拒否する
 - 外部MCP変更がCalendar / Inspector / Reviewへ20秒以内に反映される
 - Production cutover前のread-only preflightで、skip済みPlanにactive Recordが紐づく既存不整合が0件である
-- app deploy前にtimeblock command migrationが`20260723011200`まで、現行appが依存する全migrationが`20260728110300`まで適用済みであり、途中版だけで稼働しない
+- integration sourceではtimeblock command migrationが`20260723011200`まで、現行app依存が`20260728110300`まで必要である。Production候補では各段階PRのmanifestに対応appの必須migrationと期待terminalを固定し、途中版だけで稼働しない
 - `pnpm check`、integration tests、RLS snapshot、docs checkが通る
 
 ## Reversibility
@@ -225,22 +225,18 @@ repo実装は完了した。Persistent Staging evidenceが完了するまでwrit
 ## Rollout Checkpoints
 
 1. **Local** — 現行ブランチだけのfresh DBへ全migrationを適用し、RLS snapshotを一致させた。unit、MCP SDK contract、15 integration files / 207 tests、実MCP HTTPのPlan → Track → Learn flow、cross-tenant最小projectionを通し、RLS/effective privilege検査も維持する
-2. **PR Preview** — read-only regressionとOAuth metadataを確認し、current migration chainが`20260728110300`まで適用済みであることを確認する
-3. **Persistent Staging** — Draft PRのexact SHAを使い、current migration chainをUI/service write quiescence下で`20260728110300`まで完走する。data-less DBをStaging identityへ一度だけprovisionしてからcommand版appへ切り替えるmaintenance cutoverをrehearseする。別のrolling-compatible chainを作る場合は全prefixで旧/new bundle双方を試験する。その後、3 clientの再authorization、確認UI、retry、parallel refresh、revoke、UI対MCP race、逆GRANTと再cutoverのroll-forwardを確認する
-4. **Production preflight（read-only）** — skip済みPlanにactive Recordが紐づく件数、`read:entries`を欠くwrite/delete connection/code/tokenが0、既存user/authorityによるProduction identity backfill条件、3 OAuth tableのrow数とlock waiter、migrationが部分適用でないことを確認する。違反データは自動修復せず、OAuth rowはretention/consent判断を経た削除またはscope修復、timeblockは行単位のdomain判断を行う
-5. **Production maintenance cutover** — global control OFFを確認し、通常UIとservice-roleのtimeblock/tag/Settings/OAuth writeをquiesceして旧instanceをdrainする。3 OAuth tableのrow数とlock待ちを記録し、全migrationを`20260728110300`まで連続適用する。exact Production identity、3 resource FK、service-role function ACL、現行appが呼ぶuser purge / Calendar / account deletion / Billing RPCを確認してからcommand版appをdeployする。deployment SHAを固定してcreate/update/delete/restore/skip/record/confirm-day/tag/Settings purge/OAuth code exchangeをsmokeし、その後だけ通常writeを再開する
-6. **Production compatibility observation** — 強制reloadまたは同等の導線を維持し、旧RPC利用数、旧input、lock timeout、serialization failureが0であることを観測する。異常時はglobal MCP gateだけに頼らず通常writeを再quiesceし、Staging検証済みのforward bridgeを適用する
-7. **Production compatibility cleanup PR** — 旧instanceのdrainと旧RPC利用数0を確認してから、新timestamp migrationで一時compatibility wrapperのEXECUTEをrevokeする。適用済みmigrationは編集しない
-8. **Production tool PR** — 直前のACL schema versionを確認し、tool codeだけを全gate OFFでdeployする
-9. **Closed beta** — durable global controlをOFFのままmigrationとapp deployを完了し、旧instanceをdrainする。対象clientのdurable gate、runtime allowlist、global controlの順に開き、外部変更反映SLAと成功mutation audit欠損を監視する
-10. **Production authority** — Production migration、ACL contract、write有効化、旧token失効は証拠を分け、それぞれ対象と環境を示して明示権限を得る
+2. **PR Preview** — integration sourceのread-only regressionとOAuth metadataを確認し、source terminal `20260728110300`まで適用済みであることを確認する
+3. **Persistent Staging** — Productionへ切り出す各段階PRのexact SHAと期待terminalをmanifestへ固定し、旧/new bundle、逆GRANT、再cutover、3 clientのgolden evidenceを確認する。2026-07-29時点では環境作成を延期しており未実施
+4. **Production delivery** — [Step 6 rollout execution checklist](./step-6-execution-checklist.md)の段階PR、preflight、観測、cleanupだけを実行順の正本とする。#1760はintegration / rehearsal sourceとして直接mergeしない
+5. **Closed beta** — 対象clientの証跡が揃った後だけwrite gateを順に開き、外部変更反映SLAと成功mutation audit欠損を監視する
+6. **Production authority** — Production migration、ACL contract、write有効化、旧token失効は証拠を分け、それぞれ対象と環境を示して明示権限を得る
 
 `20260723123500`だけ成功し`20260723123600`以降が失敗した場合は、command版appとglobal gate OFFを維持し、code rollbackしない。lock blockerを確認して同migrationを再試行し、必要なら新timestampのforward bridgeを追加する。旧codeへ戻す必要がある場合だけ、先にStaging検証済みの逆GRANT migrationを適用する。
 
-`20260723130000`〜`20260723130700`には、一時的な旧RPC revoke、tag lock mode、table lockを後続migrationで置換するprefixがある。SupabaseとVercelのProduction deployにはDB先行を保証する単一transactionがないため、通常の無停止自動deployへこのchainをそのまま流さない。global MCP gate OFFだけではSettings/tagの旧writerを止められない。ProductionはHALTとし、書き込みをquiesceできるmaintenance手順、またはprefixごとに旧/new bundle双方が安全な別のstaged compatibility migration chainをPersistent Stagingで実証してから明示権限を得る。
+`20260723130000`〜`20260723130700`には、一時的な旧RPC revoke、tag lock mode、table lockを後続migrationで置換するprefixがある。SupabaseとVercelのProduction deployにはDB先行を保証する単一transactionがないため、通常の無停止自動deployへこのchainをそのまま流さない。global MCP gate OFFだけではSettings/tagの旧writerを止められない。ProductionはHALTとし、prefixごとに旧/new bundle双方が安全なstaged compatibility migration chainを作り、Persistent Stagingで実証してから明示権限を得る。
 
-Supabase GitHub integrationは`main`のmigrationをProductionへ反映するため、このProjectではPRの`main` merge自体をProduction migration境界として扱う。Draft PRの作成とPreview/Persistent Staging検証は進めてよいが、Production integrationを停止してmaintenance cutoverを実行できる状態にするか、全prefixがrolling-compatibleな別chainをPersistent Stagingで実証するまでPRをReadyまたはmergeしない。
+Supabase GitHub integrationは`main`のmigrationをProductionへ反映するため、このProjectではPRの`main` merge自体をProduction migration境界として扱う。Draft PR #1760はintegration / rehearsal sourceとして維持し、全prefixがrolling-compatibleな段階PRへ切り出してPersistent Stagingで実証するまでReadyまたはmergeしない。一括maintenance cutoverへ変更する場合は、標準手順の例外として停止、backup、roll-forward、監視の再レビューと明示承認を取り直す。
 
-`20260723131000`の通常`ADD CHECK`はconnection/code/tokenを検証する間table lockを取る。write-only rowがあれば`20260723130950`で先に停止し、revokeだけでは再試行しない。Production適用は3 tableのlive row数、write-only 0件、lock待ちとPersistent Stagingでの最大適用時間を証跡化し、OAuth writeをquiesceできるmaintenance境界を確保するまでHALTとする。無停止適用が必要なら、適用済みmigrationを編集せず`NOT VALID`追加と別transactionの`VALIDATE CONSTRAINT`へ分けたstaged chainを先に作る。
+`20260723131000`の通常`ADD CHECK`はconnection/code/tokenを検証する間table lockを取る。write-only rowがあれば`20260723130950`で先に停止し、revokeだけでは再試行しない。Production適用は3 tableのlive row数、write-only 0件、lock待ちとPersistent Stagingでの最大適用時間を証跡化し、適用済みmigrationを編集せず`NOT VALID`追加と別transactionの`VALIDATE CONSTRAINT`へ分けたstaged chainを先に作る。通常`ADD CHECK`を直接適用する一括maintenanceは標準手順の例外とする。
 
 逆GRANTはauthenticatedへ必要な`INSERT / UPDATE / DELETE`と旧3 RPCの`EXECUTE`だけを戻し、`PUBLIC` / `anon` / `TRUNCATE`等を戻さない。復旧後の再cutoverは適用済みmigrationを再利用せず、新timestampのREVOKE + effective assertion migrationを使う。逆GRANTと再cutoverは一組でPersistent Staging rehearsalを完了してからProduction候補にする。

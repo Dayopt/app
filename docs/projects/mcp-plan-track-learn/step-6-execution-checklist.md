@@ -10,9 +10,11 @@ code:
   - vercel.json
 ---
 
-# Step 6 — Persistent Staging execution checklist
+# Step 6 — rollout execution checklist
 
-この文書は、[client beta verification](./step-6-client-beta.md)を実行する時のチェックリストである。機能契約や合否条件は再定義しない。外部環境の作成、secret変更、migration適用、client登録、gate変更、データ削除、Production変更は、それぞれ対象を特定した明示承認後に行う。
+この文書をStep 6の唯一の実行runbookとする。[client beta verification](./step-6-client-beta.md)にある機能契約や合否条件は再定義しない。外部環境の作成、secret変更、migration適用、client登録、gate変更、データ削除、Production変更は、それぞれ対象を特定した明示承認後に行う。
+
+2026-07-29時点ではPersistent Stagingの作成を延期している。以下の外部checkpointは未実施のまま維持し、repo内の準備完了をStep 6完了またはProduction移行許可として扱わない。
 
 ## Repository-only preparation
 
@@ -56,12 +58,18 @@ Productの`.env.example`とrootの`.op-env.local.example`は自動test対象で�
 
 Supabase GitHub integrationは`main`のmigrationをProductionへ反映する。このbranchのmigration chainには書き込み停止を必要とするprefixがあるため、Persistent Stagingはmain統合後ではなくDraft PRのexact SHAで実行する。
 
-次のどちらかを満たすまでPRをReadyまたはmergeしない。
+Draft PR #1760はintegration / rehearsal sourceとして残し、そのままReadyまたはmergeしない。Productionへの反映は、全prefixで旧/new appの同時稼働が安全なrolling-compatible chainを作り、次の段階PRへ切り出して行う。
 
-- [ ] Production integrationを停止できることをread-onlyで確認し、通常UI、service-role、OAuth writeのquiescence、旧instance drain、`20260728110300`までの連続適用、catalog確認、app deploy、smoke、write再開を一つのmaintenance cutoverとして承認する
-- [ ] 全migration prefixで旧/new appの同時稼働が安全なrolling-compatible chainを新しいmigrationとして作り、Persistent Stagingで証明する
+1. [ ] additiveなDB expandとglobal gate OFF
+2. [ ] ACL適用前後で動く通常UI command app
+3. [ ] 旧input / 旧RPC利用数0の観測
+4. [ ] ACL cutoverとeffective privilege assertion
+5. [ ] MCP tool codeを全gate OFFで配置
+6. [ ] 互換cleanupを新timestamp migrationで適用
 
-どちらの経路でも、Production migration、integration設定変更、releaseは対象と環境を指定した明示承認が必要である。Draft PR作成、Preview、Productionと分離したPersistent Stagingはこの境界の手前で進められる。
+各PRは直前のProduction schema versionまたはdeployment SHAを開始条件にし、main最新化、current-head CI、read-only Production preflightをやり直す。全系列、逆GRANT、再cutoverをPersistent Stagingで証明するまで開始しない。
+
+やむを得ず一括maintenance cutoverへ変更する場合は、この標準手順の例外として顧客影響、停止方法、backup、roll-forward、監視、実行者を別途レビューし、対象と環境を指定した明示承認を取り直す。Production migration、integration設定変更、releaseはいずれの経路でも明示承認が必要である。
 
 ## Inputs for the external checkpoint
 
@@ -91,11 +99,12 @@ Supabase GitHub integrationは`main`のmigrationをProductionへ反映する。�
 
 ### 1. Data-less Supabase branch
 
-- [ ] Draft PRのexact SHAを記録する
+- [ ] #1760のintegration source SHAとsource terminal `20260728110300`を記録する
+- [ ] Productionへ切り出す各段階PRのexact SHAと期待terminalをmanifestへ固定する
 - [ ] Productionと異なるpersistent branchを作る
 - [ ] seedとsignupを無効にする
 - [ ] app、service-role writer、Git deploymentへまだ接続しない
-- [ ] current migration chainを`20260728110300`まで適用する
+- [ ] 各段階PRのcandidateをmanifest順に適用し、実terminalが期待値と一致する
 - [ ] user、OAuth、audit、receiptが0件である
 - [ ] global/client gateがOFFである
 - [ ] exact branch refを再確認する
@@ -130,7 +139,7 @@ Supabase GitHub integrationは`main`のmigrationをProductionへ反映する。�
 
 ### 4. Migration and rollback rehearsal
 
-- [ ] migration terminalが`20260728110300`である
+- [ ] migration terminalが最終段階PRのmanifestにある期待値と一致する
 - [ ] OAuth writeをquiesceする
 - [ ] 旧instanceをdrainする
 - [ ] OAuth 3 tableのrow数とlock waiterを記録する

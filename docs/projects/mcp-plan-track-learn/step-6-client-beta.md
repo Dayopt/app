@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-28
+last_verified: 2026-07-29
 code:
   - apps/product/src/app/api/mcp
   - apps/product/src/lib/oauth-server
@@ -20,7 +20,7 @@ Productionと認証・DB・secretを共有しないPersistent Stagingで、ChatG
 
 ## Current state
 
-2026-07-28時点ではStep 6は未完了であり、closed betaはHALTとする。
+2026-07-29時点ではStep 6は未完了であり、closed betaはHALTとする。
 
 - repo内では18 tool、OAuth connection、typed mutation、receipt、global/client/connection gate、3 clientのstatic registration、local Plan → Track → Learn flowまで実装済み
 - actual MCP HTTPのgolden flowはlocal DBと`chatgpt` client IDで検証済みだが、実clientのOAuth、confirmation UI、refresh token管理、実network/renderは未検証
@@ -107,32 +107,25 @@ purge境界には専用user data generationを追加し、lock順を`user bounda
 
 retentionはservice-only cleanup RPCと定期callerを一組にし、DB時刻、bounded batch、payload-free metric、再実行可能性を持たせる。cleanup routeは既存Calendar cronのBearer照合、bounded execution、失敗観測を流用し、未認証、重複実行、backlog alertをtestする。cleanup失敗でauthorization/writeを開かない。read-only statusは件数、最古時刻、期限超過件数だけを返し、token、digest、operation ID、user ID、timeblock本文を出力しない。
 
-### 5. Isolated Persistent Stagingをrehearseする
+### 5. Isolated Persistent Stagingの合格条件
 
 外部変更は対象と費用を確認した後の明示権限で行う。
 
-1. `dayopt` projectにGit連携前のdata-less persistent branch `staging`を作り、branch refを取得する
-2. `[remotes.staging]`へbranch ref、seed無効、signup無効、staging exact Auth URLを固定する。repoの固定password seedは適用せず、app、service-role writer、Git deploymentへまだ接続しない
-3. identity migrationまでのschema、user/OAuth/audit/receiptが0件、global/client gateがOFFであることをread-onlyで確認する
-4. branch refとexact tupleを再確認し、service-role RPCでStaging identityを一度だけprovisionする。getterのexact tuple、identity tableの直接権限なし、3 resource FKの`convalidated=true`を確認する
-5. Vercel `product` projectにCustom Environment `staging`と固定Product/MCP hostを作る
-6. DNS、1Password master、Vercel/Supabase replica、3 clientのredirect URIを設定する
-7. DB identity確認後にだけappをdeployし、global/client/runtime gateを全てOFFのままread-only smokeを通す
-8. 1 clientずつdurable client gate → runtime allowlist → global controlの順に開く
-9. evidence matrixを通過したclientだけをbeta対象として維持する
-10. 異常時はglobal controlを先に閉じ、client connectionをdisableし、最後にruntime allowlistを閉じる
+- Productionと異なるdata-less DB、固定host、secret、OAuth client registrationを使う
+- #1760のintegration source SHA / terminalと、Productionへ切り出す各段階PRのexact SHA / 期待terminalを区別してmanifestへ保存する
+- 各段階PRをmanifest順に適用し、旧/new appが同時稼働できること、逆GRANT、再cutoverを確認する
+- DB identity、user/OAuth/audit/receipt 0件、repo defaultとlive gate OFF、3 resource FK、最小function ACLを確認する
+- 3 clientのevidence matrixを通過したclientだけをbeta対象にする
 
-Persistent StagingではDraft PRのexact SHAを使い、現在のmigration chainを`20260728110300`まで適用して、逆GRANTと再cutoverもrehearseする。Productionへ同migration chainを自動適用しない。
+外部環境の作成順、deploy順、gate開閉、停止、rollbackは[rollout execution checklist](./step-6-execution-checklist.md)だけを正本とする。旧DBへ新appを先行するとhealth、MCP access、account deletion、maintenance cronが失敗するため、同一auto-deployへまとめない。
 
-Production候補ではDB-firstを必須にする。OAuth writeをquiesceして旧instanceをdrainし、3 OAuth tableの件数とlock waiterを記録してから、OAuth identityの`20260726013339`、`20260726015311`、`20260726021453`を含むcurrent migration chainを`20260728110300`まで連続適用する。`20260726015311`と`20260726021453`の間ではlegacy code insertが一時失敗し得るため、app write停止を解除しない。次のapp依存をcatalogで確認した後にだけ現行appをdeployする。旧DBへ新appを先行するとhealth、MCP access、account deletion、maintenance cronが失敗するため、同一auto-deployへまとめない。
+| App surface                    | DB-firstで確認する代表RPC                                                                                                                         | integration sourceの最低version |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| MCP OAuth identity             | connection / code / tokenのresource FK、grant / exchange / refresh / applyのidentity検証                                                          | `20260726021453`                |
+| User purge / account deletion  | `delete_all_user_data_command_v5`、Calendar revoke / seal、generic account deletion gate                                                          | `20260726060900`                |
+| Billing recovery / maintenance | `get_account_deletion_customer_recovery_v1`、`complete_billing_customer_provisioning_v2`、`cleanup_billing_account_deletion_terminal_receipts_v2` | `20260728110300`                |
 
-| App surface                    | DB-firstで確認する代表RPC                                                                                                                         | 必須migration終端 |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| MCP OAuth identity             | connection / code / tokenのresource FK、grant / exchange / refresh / applyのidentity検証                                                          | `20260726021453`  |
-| User purge / account deletion  | `delete_all_user_data_command_v5`、Calendar revoke / seal、generic account deletion gate                                                          | `20260726060900`  |
-| Billing recovery / maintenance | `get_account_deletion_customer_recovery_v1`、`complete_billing_customer_provisioning_v2`、`cleanup_billing_account_deletion_terminal_receipts_v2` | `20260728110300`  |
-
-Supabase GitHub integrationは`main`のmigrationをProductionへ反映する。したがってPersistent Stagingはmain統合の後工程にせず、Draft PRのexact SHAで先に実行する。Production integrationを停止してmaintenance cutoverを行う準備、または全prefixがrolling-compatibleな別chainの証拠が揃うまで、このPRをReadyまたはmergeしない。
+上表は現行integration sourceの依存関係であり、Production候補のterminalを固定しない。各段階PRでは追加したforward migrationを含む期待terminalをmanifestへ固定する。Supabase GitHub integrationは`main`のmigrationをProductionへ反映するため、#1760をReadyまたはmergeしない。一括maintenance cutoverへ変更する場合はexecution checklistの例外手続きを使う。
 
 ### 6. 3 clientのgolden evidenceを保存する
 
