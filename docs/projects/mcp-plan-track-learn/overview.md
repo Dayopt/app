@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-07-28
+last_verified: 2026-07-29
 code:
   - apps/product/src/app/api/mcp
   - apps/product/src/lib/oauth-server
@@ -30,6 +30,7 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - OAuth resource、stable connection、atomic code/refresh、DB connection revokeと古いaccess token拒否はローカル実装・検証済み。Settingsは同じclientの複数connectionを個別表示・revokeでき、revokeとwrite transactionをconnection row lockでlinearizeする
 - protected resourceはcredentialなし/unsupported schemeを空bodyの401 discovery、malformed Bearerを400 `invalid_request`、invalid/expired/revoked tokenを401 `invalid_token`、scope不足を403、認可依存障害をretryableな503へ分離済み。step-up challengeは既存grant、`read:entries`、不足scopeを保持する。write/delete scopeが`read:entries`を欠くconnection/code/tokenはDB CHECKとgrant RPCの双方で拒否する
 - `tools/list`は18 descriptorをeffective scopeでfilterし、cached tool callはroute前段で403 challengeを返す。MCP endpointはtoken検証前のcoarse IP ceilingと認証済みuser単位の専用rate limitを持ち、backend timeout時は再認証loopを起こさないretryable 503へfail closedする。[protocol revision 2025-06-18で廃止されたJSON-RPC batch](https://modelcontextprotocol.io/specification/2025-06-18/changelog)はrouteで一括拒否し、1 requestからのmutation増幅を許さない
+- MCP server runtimeをv2へ移し、`2026-07-28`のstateless protocolと2025-eraのJSON responseを同じ18 tool registryから提供する。official alpha conformanceは`server-stateless` 24 / 28 pass、diagnostic toolを必要とする4件だけexpected failure、`tools-list` 2 / 2 pass、warning 0で固定済み。詳細は[Step 6 conformance](./step-6-conformance.md)を正本とする
 - Plan / Record同種間の時間重複は既存GiST exclusion constraintで防止済み
 - Plan / Recordのtyped command、exact CAS、DB時刻のtemporal rule、skip/link整合性はローカル実装済み。Plan / Record双方のcreate/update/delete/restoreで、通常UI commandとMCP typed applyの同時実行、stale CAS、restore対createをDB integrationで検証済み。実session JWTのtRPC対実opaque tokenのMCP HTTP create raceもローカルでPlan / Record双方を検証済み。Persistent Stagingの3 clientでは未検証
 - repo上の通常UIはcreate/update/delete/restore/skip/record/confirm-dayをservice-owned commandへ切替済み。Calendar cacheもDBが返したraw `updated_at`をversionとして維持する。Production deployは未実施
@@ -42,7 +43,7 @@ MCP tool call自体は承認証明ではない。`confirmed: true`のような�
 - `claude-ai` / `chatgpt` / `cursor`の3 client IDを同じlocal integrationへ通し、actual token route、scope-filtered `tools/list`、Plan retry、global OFF時の非永続化、parallel refresh、target-only revokeを検証済み。client所有外のredirect origin/scheme/pathはruntimeとenv validationの両方で拒否する。authorize page、client固有UI、3 clientそれぞれのfull Plan → Track → LearnはPersistent Stagingで未検証
 - `deleteAllData`はMCP/Calendar authorityとuser data generationを同じtransactionへ含むv5へ移行済み。OAuth authority、mutation receipt、Calendar revoke、payload-free security eventのretention RPCと定期callerもrepo実装済み。account削除はCalendar / Storage / Billingのexact receiptと遅延Stripe eventの30日Customer digest receiptまでlocal検証済みだが、generic gateはProduction監査とforward-only activationまでOFFを維持する
 
-Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / Learn tool、revision境界、Calendar同期、Inspector競合保護、local Plan → Track → Learn flowまで成立している。Step 6は[client beta verification](./step-6-client-beta.md)のrepo-side contract、deleteAllData、retention caller、account削除の外部データ境界まで実装・local検証済みである。残りはisolated Persistent Staging、3 clientの実UI/network証跡、20秒SLA、retention backlog 0、account削除のStripe監査とactivationである。
+Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / Learn tool、revision境界、Calendar同期、Inspector競合保護、local Plan → Track → Learn flowまで成立している。Step 6は[client beta verification](./step-6-client-beta.md)のrepo-side contract、deleteAllData、retention caller、account削除の外部データ境界、`2026-07-28` conformanceまで実装・local検証済みである。残りはisolated Persistent Staging、3 clientの実UI/network証跡、20秒SLA、retention backlog 0、account削除のStripe監査とactivationである。
 
 ## Minimum Viable Approach
 

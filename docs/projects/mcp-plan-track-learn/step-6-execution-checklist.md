@@ -18,6 +18,7 @@ code:
 
 - [x] Node.js 24.xで`pnpm check`が成功する
 - [x] `pnpm docs:check`が成功する
+- [x] `pnpm test:mcp:conformance`がspec `2026-07-28`と固定済みexpected failureだけで成功する
 - [x] `pnpm exec vitest run --config vitest.scripts.config.ts scripts/__tests__/mcp-env-schema.test.ts`が成功する
 - [x] testでMCP OAuthのenv schemaとlocal 1Password reference、Stripe identityのenv schema、1Password setup、Secrets文書を確認する
 - [x] Productの`.env.example`にMCP OAuthとStripe provider identityの変数名だけを追加する
@@ -105,6 +106,7 @@ Productの`.env.example`とrootの`.op-env.local.example`は自動test対象で�
 
 ### 3. Read-only deployment
 
+- [ ] deployment candidateのexact SHAで`pnpm test:mcp:conformance`を再実行し、suite version、spec version、expected failure ID、結果をmanifestへ記録する
 - [ ] DB identity確認後にappをdeployする
 - [ ] build/readinessがStaging identityを確認する
 - [ ] OAuth metadataのissuer、endpoint、resourceを確認する

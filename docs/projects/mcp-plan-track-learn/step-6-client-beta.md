@@ -201,7 +201,6 @@ issuer/resourceはtoken audienceと保存済みclient registrationの基準に�
 - Production DBまたはProduction OAuth identityをStaging testへ流用
 - Dynamic Client Registration、CIMD、一般client onboarding
 - 2026-07-28以降の未採用MCP revisionへの先行追随
-- stateless protocol conformance suite。write betaと別scopeの[#1716](https://github.com/Dayopt/dayopt/issues/1716)へ残す
 - Dayopt内proposal/approval state machine、`confirmed: true` field
 - client UIの自動化でconfirmationの意味を推測すること。clientごとに現在UIを人が確認する
 - read tool本文の長期audit。採用する場合も別のprivacy contractとして扱う
