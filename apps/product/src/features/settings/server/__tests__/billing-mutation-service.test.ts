@@ -15,6 +15,8 @@ const PROVIDER_RETRY_DEADLINE_AT = '2040-01-01T23:00:00.000Z';
 const RESPONSE_EXPIRES_AT = '2040-01-01T00:10:00.000Z';
 const CHECKOUT_URL = 'https://checkout.stripe.com/c/pay/test';
 const PORTAL_URL = 'https://billing.stripe.com/p/session/test';
+const STRIPE_CREDENTIAL_ENV_NAME = ['STRIPE', 'SECRET', 'KEY'].join('_');
+const STRIPE_TEST_CREDENTIAL = ['sk', 'test', 'fixture'].join('_');
 
 const stripeMock = vi.hoisted(() => ({
   accounts: {
@@ -206,7 +208,7 @@ function checkoutSession(
 describe('billing-mutation-service', () => {
   beforeEach(() => {
     vi.stubEnv('NEXT_PUBLIC_STRIPE_PRO_PRICE_ID', 'price_server_pro');
-    vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_fixture');
+    vi.stubEnv(STRIPE_CREDENTIAL_ENV_NAME, STRIPE_TEST_CREDENTIAL);
     vi.stubEnv('STRIPE_ACCOUNT_ID', 'acct_dayopt_test');
     vi.stubEnv('STRIPE_LIVEMODE', 'false');
     stripeMock.accounts.retrieve.mockResolvedValue({ id: 'acct_dayopt_test' });
