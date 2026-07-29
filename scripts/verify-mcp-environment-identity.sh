@@ -89,19 +89,6 @@ SELECT
     SELECT 1
     FROM public.plans
     WHERE user_id = '00000000-0000-0000-0000-000000000001'
-  )
-  AND EXISTS (
-    SELECT 1
-    FROM storage.buckets AS bucket
-    WHERE bucket.id = 'avatars'
-      AND bucket.public
-      AND bucket.file_size_limit = 5242880
-      AND bucket.allowed_mime_types = ARRAY[
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp'
-      ]::TEXT[]
   );
 SQL
       )" || return 1
@@ -111,6 +98,37 @@ SQL
       return 1
       ;;
   esac
+
+  [[ "$state_matches" == "t" ]]
+}
+
+storage_bucket_matches_default_seed() {
+  local state_matches
+
+  state_matches="$(
+    psql "$local_database_url" \
+      -X \
+      -A \
+      -t \
+      -q \
+      -v ON_ERROR_STOP=1 \
+      <<'SQL'
+-- MCP_RESET_STORAGE_SEEDED
+SELECT EXISTS (
+  SELECT 1
+  FROM storage.buckets AS bucket
+  WHERE bucket.id = 'avatars'
+    AND bucket.public
+    AND bucket.file_size_limit = 5242880
+    AND bucket.allowed_mime_types = ARRAY[
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp'
+    ]::TEXT[]
+);
+SQL
+  )" || return 1
 
   [[ "$state_matches" == "t" ]]
 }
@@ -148,6 +166,68 @@ wait_for_local_api_services() {
   return 1
 }
 
+restore_default_storage_bucket() {
+  local max_attempts=2
+  local attempt
+  local cli_succeeded
+
+  echo "Restoring the default local Storage bucket configuration..." >&2
+
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    if supabase seed buckets --local --yes; then
+      cli_succeeded=true
+    else
+      cli_succeeded=false
+    fi
+
+    if storage_bucket_matches_default_seed; then
+      if [[ "$cli_succeeded" != "true" ]]; then
+        echo \
+          "Supabase local Storage bucket seed returned an error after reaching the verified target state; continuing." \
+          >&2
+      fi
+      return 0
+    fi
+
+    if ((attempt == max_attempts)); then
+      echo \
+        "Supabase local Storage bucket seed did not reach its verified target state after ${max_attempts} attempts." \
+        >&2
+      return 1
+    fi
+
+    echo \
+      "Supabase local Storage bucket seed did not reach its verified target state; retrying once..." \
+      >&2
+  done
+}
+
+reset_target_matches() {
+  local reset_kind="$1"
+
+  if ! database_matches_reset_kind "$reset_kind"; then
+    return 1
+  fi
+
+  if [[ "$reset_kind" != "seed restore" ]]; then
+    return 0
+  fi
+
+  if ! wait_for_local_api_services; then
+    return 1
+  fi
+
+  if storage_bucket_matches_default_seed; then
+    return 0
+  fi
+
+  if ! restore_default_storage_bucket; then
+    return 1
+  fi
+
+  wait_for_local_api_services
+}
+
 reset_local_database() {
   local reset_kind="$1"
   shift
@@ -163,15 +243,13 @@ reset_local_database() {
       cli_succeeded=false
     fi
 
-    if database_matches_reset_kind "$reset_kind"; then
-      if [[ "$reset_kind" != "seed restore" ]] || wait_for_local_api_services; then
-        if [[ "$cli_succeeded" != "true" ]]; then
-          echo \
-            "Supabase local ${reset_kind} returned an error after reaching the verified target state; continuing." \
-            >&2
-        fi
-        return 0
+    if reset_target_matches "$reset_kind"; then
+      if [[ "$cli_succeeded" != "true" ]]; then
+        echo \
+          "Supabase local ${reset_kind} returned an error after reaching the verified target state; continuing." \
+          >&2
       fi
+      return 0
     fi
 
     if ((attempt == max_attempts)); then
