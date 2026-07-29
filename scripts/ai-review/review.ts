@@ -633,33 +633,42 @@ function git(args: string[]): string {
 export function collectChanges(
   base: string,
   head: string,
-): { files: string[]; status: Record<string, string> } {
-  return parseNameStatus(git(['diff', '--name-status', `${base}...${head}`]));
+): { files: string[]; status: Record<string, string>; pathGroups: string[][] } {
+  // CI環境のgit configに左右されず、危険pathから外へ移したrenameを必ずpairで取る。
+  // copyは「新しい保存先のpath」で判定する。未変更sourceとの類似性まで検出対象にすると
+  // 全PRで重いcopy探索が必要になり、このpath-based gateの責務を越える。
+  return parseNameStatus(git(['diff', '--name-status', '--find-renames', `${base}...${head}`]));
 }
 
 export function parseNameStatus(output: string): {
   files: string[];
   status: Record<string, string>;
+  pathGroups: string[][];
 } {
   const files: string[] = [];
   const status: Record<string, string> = {};
+  const pathGroups: string[][] = [];
 
   for (const line of output.split('\n')) {
     const columns = line.trim().split('\t');
     const code = columns[0];
     if (code === undefined || code === '') continue;
 
-    // old pathだけが危険クラスでも対象外へ移動して逃げられないよう、rename / copyは
-    // `R100\told\tnew` / `C090\told\tnew` の両側をreview対象に含める。
-    const changedPaths = /^[RC][0-9]+$/u.test(code) ? columns.slice(1, 3) : columns.slice(-1);
+    // old pathだけが危険クラスでも対象外へ移動して逃げられないよう、renameは
+    // `R100\told\tnew` の両側をreview対象に含める。
+    const changedPaths = (/^R[0-9]+$/u.test(code) ? columns.slice(1, 3) : columns.slice(-1)).filter(
+      (file): file is string => file !== undefined && file !== '',
+    );
+    if (changedPaths.length === 0) continue;
+
+    pathGroups.push([...new Set(changedPaths)]);
     for (const file of changedPaths) {
-      if (file === undefined || file === '' || files.includes(file)) continue;
-      files.push(file);
       status[file] = code;
+      if (!files.includes(file)) files.push(file);
     }
   }
 
-  return { files, status };
+  return { files, status, pathGroups };
 }
 
 /**
@@ -770,7 +779,7 @@ export interface ReviewShardPlan {
 }
 
 interface ReviewFragment {
-  file: string;
+  files: string[];
   part: number;
   text: string;
   bytes: number;
@@ -788,29 +797,46 @@ export function planReviewShards(
   head: string,
   files: readonly string[],
   /** テスト用。既定はgit diff。 */
-  diffImpl?: (file: string) => string,
+  diffImpl?: (files: readonly string[]) => string,
+  /** renameは新旧pathを同じdiffへ含める。既定は各fileを独立groupとして扱う。 */
+  pathGroups?: readonly (readonly string[])[],
 ): ReviewShardPlan {
-  const dangerousTargets = files.filter(isDangerousPath);
-  const targets = dangerousTargets.length > 0 ? dangerousTargets : [...files];
-  const targetSet = new Set(targets);
+  const groups = pathGroups ?? files.map((file) => [file]);
+  const dangerousGroups = groups.filter((group) => group.some(isDangerousPath));
+  const targets = dangerousGroups.length > 0 ? dangerousGroups : groups;
+  const targetSet = new Set(targets.flatMap((group) => group));
   const omittedContext = files.filter((file) => !targetSet.has(file));
   const fileDiff =
     diffImpl ??
-    ((file: string): string =>
-      git(['diff', '--no-color', '--unified=3', `${base}...${head}`, '--', file]));
+    ((group: readonly string[]): string =>
+      git([
+        'diff',
+        '--no-color',
+        '--unified=3',
+        '--find-renames',
+        `${base}...${head}`,
+        '--',
+        ...group,
+      ]));
 
-  const entries = targets.map((file) => ({ file, text: fileDiff(file) }));
+  const entries = targets.map((group) => ({
+    files: [...group],
+    text: fileDiff(group),
+  }));
   const fullDangerousDiff = entries.map((entry) => entry.text).join('\n');
   const fragments = entries
     .flatMap((entry) =>
-      splitReviewDiff(entry.file, entry.text).map((text, part): ReviewFragment => ({
-        file: entry.file,
+      splitReviewDiff(entry.files.join(' -> '), entry.text).map((text, part): ReviewFragment => ({
+        files: entry.files,
         part,
         text,
         bytes: Buffer.byteLength(text, 'utf8'),
       })),
     )
-    .sort((a, b) => b.bytes - a.bytes || a.file.localeCompare(b.file) || a.part - b.part);
+    .sort(
+      (a, b) =>
+        b.bytes - a.bytes || (a.files[0] ?? '').localeCompare(b.files[0] ?? '') || a.part - b.part,
+    );
 
   const shards: Array<ReviewShard & { chunks: string[] }> = [];
   for (const fragment of fragments) {
@@ -820,14 +846,16 @@ export function planReviewShards(
     });
 
     if (shard) {
-      if (!shard.files.includes(fragment.file)) shard.files.push(fragment.file);
+      for (const file of fragment.files) {
+        if (!shard.files.includes(file)) shard.files.push(file);
+      }
       shard.chunks.push(fragment.text);
       shard.bytes += (shard.chunks.length === 1 ? 0 : 1) + fragment.bytes;
       continue;
     }
 
     shards.push({
-      files: [fragment.file],
+      files: [...fragment.files],
       chunks: [fragment.text],
       diff: '',
       bytes: fragment.bytes,
@@ -1286,8 +1314,10 @@ async function main(): Promise<number> {
     .map((label) => label.trim())
     .includes(OVERRIDE_LABEL);
 
-  const { files: changedFiles, status: changeStatus } = collectChanges(base, head);
-  const dangerous = changedFiles.filter(isDangerousPath);
+  const { files: changedFiles, status: changeStatus, pathGroups } = collectChanges(base, head);
+  const dangerous = [
+    ...new Set(pathGroups.filter((group) => group.some(isDangerousPath)).flatMap((group) => group)),
+  ];
   if (dangerous.length === 0 && !force) {
     notice('危険クラスの変更がないためレビューをスキップしました。');
     return 0;
@@ -1296,7 +1326,7 @@ async function main(): Promise<number> {
     notice(`force 指定のため、危険クラス外の ${changedFiles.length} ファイルをレビューします。`);
   }
 
-  const reviewPlan = planReviewShards(base, head, changedFiles);
+  const reviewPlan = planReviewShards(base, head, changedFiles, undefined, pathGroups);
   if (reviewPlan.fullDangerousDiff.trim() === '' || reviewPlan.shards.length === 0) {
     notice('diff が空のためレビューをスキップしました。');
     return 0;

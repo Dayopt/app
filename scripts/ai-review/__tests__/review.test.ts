@@ -663,9 +663,10 @@ describe('複数review shardの全量計画', () => {
       'supabase/migrations/0001_large.sql',
       'README.md',
     ];
-    const plan = planReviewShards('base', 'head', files, (file) =>
-      line(file, file === 'README.md' ? 100 : Math.floor(MAX_DIFF_BYTES * 0.6)),
-    );
+    const plan = planReviewShards('base', 'head', files, (group) => {
+      const file = group[0] ?? '';
+      return line(file, file === 'README.md' ? 100 : Math.floor(MAX_DIFF_BYTES * 0.6));
+    });
 
     expect(plan.shards.length).toBeGreaterThan(1);
     expect(new Set(plan.shards.flatMap((shard) => shard.files))).toEqual(
@@ -702,7 +703,8 @@ describe('複数review shardの全量計画', () => {
       'apps/product/src/lib/oauth-server/code-exchange.ts',
       'supabase/migrations/0001.sql',
     ];
-    const diff = (file: string) => line(file, Math.floor(MAX_DIFF_BYTES * 0.55));
+    const diff = (group: readonly string[]) =>
+      line(group[0] ?? '', Math.floor(MAX_DIFF_BYTES * 0.55));
 
     expect(planReviewShards('base', 'head', files, diff).shards).toEqual(
       planReviewShards('base', 'head', files, diff).shards,
@@ -740,25 +742,48 @@ describe('複数review shardの全量計画', () => {
   });
 });
 
-describe('rename / copyの危険path判定', () => {
+describe('renameの危険path判定', () => {
   it('移動元と移動先の両方をreview対象にする', () => {
     const changes = parseNameStatus(
-      [
-        'R100\tapps/product/src/lib/mcp/auth.ts\tdocs/auth.ts',
-        'C090\tsupabase/migrations/old.sql\tdocs/copied.sql',
-        'M\tREADME.md',
-      ].join('\n'),
+      ['R100\tapps/product/src/lib/mcp/auth.ts\tdocs/auth.ts', 'M\tREADME.md'].join('\n'),
     );
 
     expect(changes.files).toEqual([
       'apps/product/src/lib/mcp/auth.ts',
       'docs/auth.ts',
-      'supabase/migrations/old.sql',
-      'docs/copied.sql',
       'README.md',
     ]);
     expect(changes.status['apps/product/src/lib/mcp/auth.ts']).toBe('R100');
     expect(changes.status['docs/auth.ts']).toBe('R100');
+    expect(changes.pathGroups).toEqual([
+      ['apps/product/src/lib/mcp/auth.ts', 'docs/auth.ts'],
+      ['README.md'],
+    ]);
+  });
+
+  it('危険pathから通常pathへの移動を新旧一組のdiffとしてreviewする', () => {
+    const oldPath = 'apps/product/src/lib/mcp/auth.ts';
+    const newPath = 'apps/product/src/features/calendar/auth.ts';
+    const diff = [
+      `diff --git a/${oldPath} b/${newPath}`,
+      'similarity index 80%',
+      `rename from ${oldPath}`,
+      `rename to ${newPath}`,
+      '+export const movedAuth = true;',
+    ].join('\n');
+    const diffImpl = vi.fn(() => diff);
+
+    const plan = planReviewShards('base', 'head', [oldPath, newPath], diffImpl, [
+      [oldPath, newPath],
+    ]);
+
+    expect(diffImpl).toHaveBeenCalledOnce();
+    expect(diffImpl).toHaveBeenCalledWith([oldPath, newPath]);
+    expect(plan.shards).toHaveLength(1);
+    expect(plan.shards[0]?.files).toEqual([oldPath, newPath]);
+    expect(plan.fullDangerousDiff).toContain(`rename to ${newPath}`);
+    expect(plan.fullDangerousDiff).toContain('movedAuth');
+    expect(plan.omittedContext).toEqual([]);
   });
 });
 
