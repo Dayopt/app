@@ -1,12 +1,18 @@
 -- ============================================================
 -- 課金・メール関連テーブル（読み物用 — CLIでは使用しない）
 -- ============================================================
--- 最終同期日: 2026-07-16
+-- 最終同期日: 2026-07-30
 -- 同期対象 migration:
---   - 20260318091249_create_email_suppressions.sql
---   - 20260319090000_create_stripe_webhook_events.sql
---   - 20260604230607_harden_function_execute_privileges.sql
---   - 20260716031801_stripe_webhook_state_machine.sql
+--   - 20260730090000_expand_external_lifecycle_foundation.sql
+--   - 20260730090002_add_external_authority_maintenance.sql
+--   - 20260730090012_calendar_authority_fence_foundation.sql
+--   - 20260730090023_account_deletion_gate_foundation.sql
+--   - 20260730090031_bind_billing_account_deletion.sql
+--   - 20260730090042_fence_billing_customer_provisioning.sql
+--   - 20260730090049_preserve_billing_webhook_terminal_receipt.sql
+--   - 20260730090053_preserve_user_scoped_lifecycle_locking.sql
+--   - 20260730090055_report_billing_cleanup_backlog.sql
+--   - 20260730090056_mark_external_lifecycle_app_ready_v2.sql
 --
 
 -- stripe_webhook_events: Stripe Webhook 冪等性キー
@@ -91,4 +97,68 @@ CREATE TABLE public.email_suppressions (
   reason TEXT NOT NULL,            -- bounce/complaint
   source_event_id TEXT,            -- Resend のイベントID
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Checkout / Portalをaccount削除と直列化する90日receipt。
+-- redirect URLは別の短期tableへ分離し、provider retryは23時間に制限する。
+CREATE TABLE private.billing_mutation_claims (
+  operation_id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  mutation_kind TEXT NOT NULL,       -- checkout / portal
+  state TEXT NOT NULL DEFAULT 'active', -- active / provider_started / completed / abandoned
+  started_at TIMESTAMPTZ NOT NULL DEFAULT pg_catalog.clock_timestamp(),
+  completed_at TIMESTAMPTZ,
+  request_digest BYTEA NOT NULL,
+  lease_id UUID,
+  lease_expires_at TIMESTAMPTZ,
+  provider_started_at TIMESTAMPTZ,
+  provider_customer_id TEXT,
+  provider_object_id TEXT,
+  terminal_reason TEXT,
+  delete_after TIMESTAMPTZ,
+  provider_retry_deadline_at TIMESTAMPTZ
+);
+
+-- Stripe redirect capabilityだけを短期間保持する。
+CREATE TABLE private.billing_mutation_responses (
+  operation_id UUID PRIMARY KEY
+    REFERENCES private.billing_mutation_claims(operation_id) ON DELETE CASCADE,
+  response_url TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+-- generic account deletionへStripe Customer snapshotとterminal resultを束縛する。
+CREATE TABLE private.billing_account_deletion_bindings (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  generic_deletion_id UUID NOT NULL UNIQUE,
+  stripe_customer_id_snapshot TEXT,
+  state TEXT NOT NULL DEFAULT 'preparing', -- preparing / ready
+  provider_outcome TEXT,                   -- deleted / not_present
+  bound_at TIMESTAMPTZ NOT NULL DEFAULT pg_catalog.clock_timestamp(),
+  ready_at TIMESTAMPTZ,
+  FOREIGN KEY (user_id, generic_deletion_id)
+    REFERENCES private.account_deletion_operations(user_id, deletion_id)
+    ON DELETE CASCADE
+);
+
+-- lazy Stripe Customer作成のprovider response-lossを23時間だけ回復可能にする。
+CREATE TABLE private.billing_customer_provisioning_attempts (
+  operation_id UUID PRIMARY KEY
+    REFERENCES private.billing_mutation_claims(operation_id) ON DELETE CASCADE,
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  email_digest BYTEA NOT NULL,
+  state TEXT NOT NULL DEFAULT 'active', -- active / provider_started
+  lease_id UUID,
+  lease_expires_at TIMESTAMPTZ,
+  provider_started_at TIMESTAMPTZ,
+  provider_retry_deadline_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT pg_catalog.clock_timestamp()
+);
+
+-- account削除後に遅れて届くStripe webhook用のpayload-free receipt。
+CREATE TABLE private.billing_account_deletion_terminal_receipts (
+  stripe_customer_id_digest BYTEA PRIMARY KEY,
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT pg_catalog.clock_timestamp(),
+  expires_at TIMESTAMPTZ NOT NULL
 );

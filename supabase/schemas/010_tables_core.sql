@@ -64,6 +64,11 @@ CREATE TABLE public.calendar_connections (
   provider_account_email TEXT,
   granted_scopes TEXT[] NOT NULL,
   refresh_token_enc TEXT NOT NULL,
+  refresh_token_rotation_operation_id UUID,
+  data_generation BIGINT NOT NULL DEFAULT 0,
+  authority_fence_id UUID,
+  authority_epoch BIGINT,
+  sync_sequence BIGINT NOT NULL DEFAULT 0,
   status TEXT NOT NULL,                   -- active / reauth_required
   last_synced_at TIMESTAMPTZ,
   last_sync_error TEXT,
@@ -76,6 +81,11 @@ CREATE TABLE public.calendar_connections (
 --   calendar_connections_granted_scopes_not_empty -> cardinality > 0 かつ NULL 要素なし
 --   calendar_connections_id_user_id_unique        -> 子テーブルの複合 FK 参照先
 --   calendar_connections_provider_account_unique  -> user_id + provider + provider_account_id
+--   data_generation -> 接続保存時のuser data purge世代。古いcallback/syncの再作成を拒否する
+--   authority_fence_id / authority_epoch
+--     -> Google Cloud project + provider_account_id単位のrevoke authority世代
+--   sync_sequence -> DB発行の単調増加writer世代。古いsync runの更新を拒否する
+--   refresh_token_rotation_operation_id -> response欠落時のrotation再試行identity
 --   trigger_update_calendar_connections_updated_at -> update_updated_at()
 
 -- calendar_connection_calendars: 取り込み対象として選択されたカレンダー
