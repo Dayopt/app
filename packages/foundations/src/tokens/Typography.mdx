@@ -13,7 +13,38 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - **サイズの差**で重要度を表現（大きい = 重要）
 - **ウェイト**で強調（bold = 見出し、normal = 本文）
 - **色**で階層（`text-foreground` = 主要、`text-muted-foreground` = 補助）→ 詳細は [Colors](?path=/docs/foundations-colors--docs)
-- フォント: Inter（英語）+ Noto Sans JP（日本語）、next/font で最適化済み
+- **書体は Adobe Source ファミリーの3つだけ**（下記）、next/font で最適化済み
+
+---
+
+## フォントファミリー
+
+使うのは3書体だけ。Adobe Source ファミリーで統一している。
+
+| 役割     | 書体                | クラス      | next/font 変数   | 用途                                            |
+| -------- | ------------------- | ----------- | ---------------- | ----------------------------------------------- |
+| **欧文** | **Source Sans 3**   | `font-sans` | `--font-latin`   | 本文・UI テキスト全般（ラテン文字）             |
+| **和文** | **Noto Sans JP**    | `font-sans` | `--font-noto-jp` | 本文・UI テキスト全般（日本語）                 |
+| **等幅** | **Source Code Pro** | `font-mono` | `--font-code`    | 時刻・duration・統計の数字、エラーID、MFAコード |
+
+### なぜ Source ファミリーか
+
+Noto Sans JP は、Google が Noto ブランドで再配布している **Adobe Source Han Sans と同一**。
+そのため欧文を Source Sans 3 にすると、3書体すべてが同じ血筋になり、和欧混植の行に継ぎ目が出ない。
+実績のある和文の可読性は変えずに、ファミリーの一貫性だけを得られる。
+
+等幅も同じファミリーに揃えるのは、時刻・duration・統計の数字が Dayopt の主役だから。
+桁を揃えて読み比べるため `font-mono` と `tabular-nums` を併用する。
+
+### 読み込みの構成
+
+- 書体の実体は各アプリの **next/font** が読み込む。stack の合成は `packages/foundations/src/tokens/typography.css` が正本
+- Tailwind への接続は `tailwind-theme.css` の `@theme inline`。`font-sans` と `font-mono` だけを上書きしている
+- body と `font-sans` utility は同じ stack を参照する（stack を複製しない）
+- Source Code Pro は `preload: false`。本文に使わないので LCP を優先する
+- Storybook は next/font を通らないため `.storybook/main.ts` が同じ変数名を手動定義している。**変数名を変える時は両方直す**（片方だけだと黙ってシステムフォントに落ちる）
+
+> 実際の字面・和欧混植・数字の見本は Storybook の **FontFamily** ストーリーで確認できる。
 
 ---
 

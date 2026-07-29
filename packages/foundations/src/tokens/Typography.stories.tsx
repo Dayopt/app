@@ -37,8 +37,136 @@ export const Principles: Story = {
         <div className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 font-medium">フォント</h2>
           <p className="text-muted-foreground text-sm">
-            Inter（英語）+ Noto Sans JP（日本語）。 next/fontで最適化済み。
+            Adobe Source ファミリーの3書体だけを使う。欧文 Source Sans 3 / 和文 Noto Sans JP / 等幅
+            Source Code Pro。next/fontで最適化済み。詳細は FontFamily を参照。
           </p>
+        </div>
+      </div>
+    </div>
+  ),
+};
+
+const SPECIMENS = [
+  {
+    role: '欧文',
+    family: 'Source Sans 3',
+    className: 'font-[family-name:var(--font-latin)]',
+    variable: '--font-latin',
+    usage: '本文・UI テキスト全般（ラテン文字）',
+    sample: 'Plan the day, record what happened.',
+  },
+  {
+    role: '和文',
+    family: 'Noto Sans JP',
+    className: 'font-[family-name:var(--font-noto-jp)]',
+    variable: '--font-noto-jp',
+    usage: '本文・UI テキスト全般（日本語）',
+    sample: '計画した時間と、実際に使った時間。',
+  },
+  {
+    role: '等幅',
+    family: 'Source Code Pro',
+    className: 'font-mono',
+    variable: '--font-code',
+    usage: '時刻・duration・統計の数字、エラーID、MFAコード',
+    sample: '09:30–11:00 / 1h 30m',
+  },
+] as const;
+
+export const FontFamily: Story = {
+  render: () => (
+    <div>
+      <h1 className="mb-6 text-2xl font-medium">フォントファミリー</h1>
+      <p className="text-muted-foreground mb-8 text-sm">
+        Adobe Source ファミリーの3書体で統一する。和文の Noto Sans JP は Google が Noto
+        ブランドで再配布している Adobe Source Han Sans と同一なので、3書体すべてが同じ血筋になり、
+        和欧混植の行に継ぎ目が出ない。
+      </p>
+
+      <div className="mb-8 space-y-4">
+        {SPECIMENS.map(({ role, family, className, variable, usage, sample }) => (
+          <div key={family} className="bg-card border-border rounded-lg border p-6">
+            <div className="mb-4 flex flex-wrap items-baseline gap-2">
+              <span className="bg-container rounded-lg px-2 py-1 text-xs">{role}</span>
+              <h2 className="font-medium">{family}</h2>
+              <code className="text-muted-foreground text-xs">{variable}</code>
+            </div>
+            <p className={`mb-4 text-2xl ${className}`}>{sample}</p>
+            <table className="w-full text-sm">
+              <tbody className="divide-border divide-y">
+                <tr>
+                  <td className="w-32 py-2">用途</td>
+                  <td className="text-muted-foreground py-2">{usage}</td>
+                </tr>
+                <tr>
+                  <td className="w-32 py-2">ウェイト</td>
+                  <td className="text-muted-foreground py-2">
+                    <span className={`font-normal ${className}`}>400 Regular</span>
+                    {' / '}
+                    <span className={`font-medium ${className}`}>500 Medium</span>
+                    <span className="text-xs">（この2つだけ）</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-card border-border rounded-lg border p-6">
+          <h2 className="mb-2 font-medium">和欧混植</h2>
+          <p className="text-muted-foreground mb-4 text-sm">
+            欧文と和文が同じ血筋なので、1行に混ざっても骨格とウェイトの見え方が揃う。
+            <code className="text-xs">font-sans</code> が欧文 → 和文 →
+            システムフォントの順に解決する。
+          </p>
+          <p className="text-2xl">Dayopt は計画と実績を1つのタイムラインで並べる。</p>
+          <p className="text-base">
+            2週間、自分が触らなかった機能は削除候補にする — Simple Rules の5番目。
+          </p>
+        </div>
+
+        <div className="bg-card border-border rounded-lg border p-6">
+          <h2 className="mb-2 font-medium">数字（等幅 + tabular-nums）</h2>
+          <p className="text-muted-foreground mb-4 text-sm">
+            時刻や duration は桁が揃わないと読み比べられない。
+            <code className="text-xs">font-mono</code> と
+            <code className="text-xs">tabular-nums</code> を併用する。
+          </p>
+          <div className="space-y-1">
+            <p className="font-mono text-2xl tabular-nums">09:30 → 11:00</p>
+            <p className="font-mono text-2xl tabular-nums">11:00 → 11:45</p>
+            <p className="font-mono text-2xl tabular-nums">14:15 → 18:00</p>
+          </div>
+          <p className="text-muted-foreground mt-4 text-xs">
+            比較用（プロポーショナル）: <span className="text-base">09:30 → 11:00</span>
+          </p>
+        </div>
+
+        <div className="bg-card border-border rounded-lg border p-6">
+          <h2 className="mb-2 font-medium">読み込み</h2>
+          <ul className="text-muted-foreground space-y-2 text-sm">
+            <li>
+              • 書体の実体は各アプリの next/font が読み込む。stack の合成は foundations の
+              <code className="text-xs">tokens/typography.css</code>が正本
+            </li>
+            <li>
+              • Tailwind への接続は<code className="text-xs">tailwind-theme.css</code>の
+              <code className="text-xs">@theme inline</code>。
+              <code className="text-xs">font-sans</code>と<code className="text-xs">font-mono</code>
+              だけを上書きしている
+            </li>
+            <li>
+              • Source Code Pro は<code className="text-xs">preload: false</code>
+              。本文に使わないので LCP を優先する
+            </li>
+            <li>
+              • Storybook は next/font を通らないため
+              <code className="text-xs">.storybook/main.ts</code>
+              が同じ変数名を手動定義している。変数名を変える時は両方直す
+            </li>
+          </ul>
         </div>
       </div>
     </div>
