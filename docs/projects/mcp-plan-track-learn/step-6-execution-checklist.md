@@ -92,16 +92,20 @@ Productの`.env.example`とrootの`.op-env.local.example`は自動test対象で�
 
 Supabase GitHub integrationは`main`のmigrationをProductionへ反映する。このbranchのmigration chainには書き込み停止を必要とするprefixがあるため、検証はmain統合後ではなく、各段階PRのexact SHAと新しい一時Previewで実行する。
 
-Draft PR #1760はintegration / rehearsal sourceとして残し、そのままReadyまたはmergeしない。Productionへの反映は、全prefixで旧/new appの同時稼働が安全なrolling-compatible chainを作り、次の段階PRへ切り出して行う。
+Draft PR #1760はintegration / rehearsal sourceとして残し、そのままReadyまたはmergeしない。exact SHA `f4fe653ca491ddc48e249dd691ed66851f65a64f`は137 commit、459 file、95 migrationを含むため、既存commitの機械的なcherry-pickはしない。`origin/main`から次の8候補をforward-onlyで作る。
 
-1. [ ] additiveなDB expandとglobal gate OFF
-2. [ ] ACL適用前後で動く通常UI command app
-3. [ ] 旧input / 旧RPC利用数0の観測
-4. [ ] ACL cutoverとeffective privilege assertion
-5. [ ] MCP tool codeを全gate OFFで配置
-6. [ ] 互換cleanupを新timestamp migrationで適用
+1. [ ] additiveなDB expandを追加し、global/client/write gateをOFFに保つ
+2. [ ] ACL cutoverの前後で動くTimeblock通常UI command appを配置する
+3. [ ] retention、account削除、Webhookを含むexternal lifecycle compatibility appを配置する
+4. [ ] OAuthの新しい制約とFKを`NOT VALID`で追加し、互換GRANTを維持する
+5. [ ] preflightが0件であることを確認してOAuth制約を`VALIDATE CONSTRAINT`する
+6. [ ] Timeblock ACLをcutoverし、旧3 RPC wrapperは旧instanceのdrainまで残す
+7. [ ] MCP/OAuth appを全gate OFFのdark releaseとして配置する
+8. [ ] 旧input、旧RPC、旧connectionの利用が0になった後だけdestructive cleanupを行う
 
-各PRは直前のProduction schema versionまたはdeployment SHAを開始条件にし、main最新化、current-head CI、read-only Production preflightをやり直す。全系列、逆GRANT、再cutoverを同じ候補SHAの一時Previewで証明するまで開始しない。
+`20260723131150_disable_pre_client_gate_write_connections.sql`は既存write connectionを不可逆に無効化する。対象行がある場合は自動適用せず、件数と顧客影響を確認した別の明示承認境界にする。
+
+各PRは直前candidateのmerge commitとProduction schema versionを開始条件にし、main最新化、current-head CI、read-only Production preflightをやり直す。全系列、逆GRANT、再cutoverを同じ候補SHAの一時Previewで証明するまで開始しない。
 
 やむを得ず一括maintenance cutoverへ変更する場合は、この標準手順の例外として顧客影響、停止方法、backup、roll-forward、監視、実行者を別途レビューし、対象と環境を指定した明示承認を取り直す。Production migration、integration設定変更、releaseはいずれの経路でも明示承認が必要である。
 
@@ -129,11 +133,36 @@ Draft PR #1760はintegration / rehearsal sourceとして残し、そのままRea
 - operation ID、user ID、Customer ID
 - 実ユーザーのPlan、Record、review本文
 
+## Staged candidate manifest
+
+段階PRごとに次をappend-only logへ保存する。値が未確定のcandidateをPreviewやProductionへ進めない。
+
+```markdown
+- candidate:
+- predecessor_merge_sha:
+- candidate_head_sha:
+- expected_migration_terminal:
+- supabase_preview_project_ref:
+- vercel_deployment_id:
+- stable_branch_alias:
+- old_app_compatible: pass | fail
+- new_app_compatible: pass | fail
+- global_write_gate: "off"
+- enabled_client_ids: []
+- runtime_write_allowlist: ""
+- reverse_grant_rehearsal: pass | fail
+- recutover_rehearsal: pass | fail
+- roll_forward_owner:
+- verified_at:
+```
+
+各candidateは単独でmergeできる大きさにし、前段を飛ばさない。migrationの末尾だけでなく、旧appと新appの両方がそのDBで動くことを確認する。
+
 ## Ephemeral PR Preview sequence
 
 ### 1. Data-less Supabase branch
 
-- [ ] #1760のintegration source SHAとsource terminal `20260728110300`を記録する
+- [x] #1760のintegration source SHA `f4fe653ca491ddc48e249dd691ed66851f65a64f`とsource terminal `20260729061330`を記録する
 - [ ] Productionへ切り出す各段階PRのexact SHAと期待terminalをmanifestへ固定する
 - [ ] Productionと異なる新しいnon-persistent Preview branchを作る
 - [ ] migrationとuser作成より前にseedとsignupを無効にする
