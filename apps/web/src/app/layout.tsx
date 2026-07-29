@@ -4,11 +4,36 @@ import { generateEnhancedMetadata, StructuredData } from '@web/components/seo/En
 import { cn } from '@web/lib/class-names';
 import { ThemeProvider } from '@web/shell/providers/theme-provider';
 import type { Metadata } from 'next';
+import { Noto_Sans_JP, Source_Code_Pro, Source_Sans_3 } from 'next/font/google';
 import './globals.css';
 
-// NOTE: Google Fonts アクセスが制限されているビルド環境向けに一時的にシステムフォントを使用
-// 本番環境では next/font/google を使用することを推奨
-// TODO: ビルド環境でGoogle Fontsアクセスが可能になったら next/font/google に戻す
+// product（apps/product/src/app/layout.tsx）と同一のフォントスタック。
+// 変数名は foundations の tokens/typography.css が参照するものに合わせる。
+const sourceSans = Source_Sans_3({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-latin',
+  preload: true,
+  fallback: ['system-ui', 'sans-serif'],
+});
+
+const notoSansJP = Noto_Sans_JP({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  display: 'swap',
+  variable: '--font-noto-jp',
+  preload: true,
+  fallback: ['Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'sans-serif'],
+});
+
+// docs / blog のコードブロックで使う。本文には使わないので LCP を優先して遅延読み込み
+const sourceCodePro = Source_Code_Pro({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-code',
+  preload: false,
+  fallback: ['ui-monospace', 'monospace'],
+});
 
 export const metadata: Metadata = generateEnhancedMetadata({
   title: 'Dayopt - Modern SaaS Platform',
@@ -29,7 +54,11 @@ export const metadata: Metadata = generateEnhancedMetadata({
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${sourceSans.variable} ${notoSansJP.variable} ${sourceCodePro.variable}`}
+    >
       <head>
         <link
           rel="alternate"
