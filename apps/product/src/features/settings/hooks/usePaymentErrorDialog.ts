@@ -9,7 +9,7 @@ const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
 interface UsePaymentErrorDialogResult {
   open: boolean;
-  close: () => void;
+  close: () => Promise<void>;
 }
 
 /**
@@ -56,9 +56,15 @@ export function usePaymentErrorDialog(): UsePaymentErrorDialogResult {
     setOpen(shouldOpen);
   }, [billingQuery.data, settingsQuery.data]);
 
-  const close = useCallback(() => {
+  const close = useCallback(async () => {
     setOpen(false);
-    updateSettings.mutate({ paymentErrorDialogLastShownAt: new Date().toISOString() });
+    try {
+      await updateSettings.mutateAsync({
+        paymentErrorDialogLastShownAt: new Date().toISOString(),
+      });
+    } catch {
+      // useUpdateUserSettings owns the user-facing save error.
+    }
   }, [updateSettings]);
 
   return { open, close };

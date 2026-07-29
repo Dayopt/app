@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
 import {
   AlertDialog,
@@ -15,9 +16,12 @@ import {
   Button,
 } from '@dayopt/components';
 
+import { useStableBillingOperation } from '../hooks/useStableBillingOperation';
+import { getBillingOperationErrorDisposition } from '../lib/billing-operation';
+
 interface PaymentErrorDialogProps {
   open: boolean;
-  onClose: () => void;
+  onClose: () => Promise<void> | void;
 }
 
 /**
@@ -26,30 +30,67 @@ interface PaymentErrorDialogProps {
  * past_due 状態で1日1回表示。ESC/overlay/×では閉じられない。
  * 「支払い情報を確認」で Stripe Customer Portal へ遷移。
  */
-function PaymentErrorDialog({ open, onClose }: PaymentErrorDialogProps) {
-  const t = useTranslations('common.paymentError');
+function OpenPaymentErrorDialog({ onClose }: Pick<PaymentErrorDialogProps, 'onClose'>) {
+  const t = useTranslations();
   const checkPaymentRef = useRef<HTMLButtonElement>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [billingActionClosed, setBillingActionClosed] = useState(false);
+  const {
+    begin: beginPortalAttempt,
+    isLocked: isPortalAttemptLocked,
+    reset: resetPortalAttempt,
+    settle: settlePortalAttempt,
+  } = useStableBillingOperation();
 
   const createPortalSession = api.billing.createPortalSession.useMutation({
-    onSuccess: (data) => {
-      if (data?.url) {
-        window.location.href = data.url;
+    onSuccess: async (data, variables) => {
+      if (!variables) return;
+      if (data?.url && settlePortalAttempt(variables.operationId, 'terminal')) {
+        try {
+          await onClose();
+        } finally {
+          window.location.href = data.url;
+        }
       }
     },
-    onSettled: () => {
+    onError: (error, variables) => {
+      if (!variables) return;
+      const disposition = getBillingOperationErrorDisposition(error);
+      const isCurrent = settlePortalAttempt(
+        variables.operationId,
+        disposition === 'retryable' ? 'retryable' : 'terminal',
+      );
+      if (!isCurrent) return;
+
       setIsRedirecting(false);
+      if (disposition === 'account_closing') {
+        setBillingActionClosed(true);
+        toast.error(t('common.billingOperation.accountClosing'));
+      } else if (disposition === 'terminal') {
+        toast.error(t('common.billingOperation.restart'));
+      } else {
+        toast.error(t('common.billingOperation.retryable'));
+      }
     },
   });
 
   const handleCheckPayment = () => {
+    const operationId = beginPortalAttempt();
+    if (!operationId) return;
+
     setIsRedirecting(true);
-    onClose();
-    createPortalSession.mutate();
+    createPortalSession.mutate({ operationId });
   };
 
+  const handleClose = async () => {
+    resetPortalAttempt();
+    await onClose();
+  };
+
+  const isPending = isRedirecting || isPortalAttemptLocked;
+
   return (
-    <AlertDialog open={open}>
+    <AlertDialog open>
       <AlertDialogContent
         onOpenAutoFocus={(e) => {
           e.preventDefault();
@@ -57,20 +98,35 @@ function PaymentErrorDialog({ open, onClose }: PaymentErrorDialogProps) {
         }}
       >
         <AlertDialogHeader>
-          <AlertDialogTitle>{t('title')}</AlertDialogTitle>
-          <AlertDialogDescription>{t('description')}</AlertDialogDescription>
+          <AlertDialogTitle>{t('common.paymentError.title')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('common.paymentError.description')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isRedirecting}>
-            {t('later')}
+          <Button
+            variant="outline"
+            onClick={() => {
+              void handleClose();
+            }}
+            disabled={isPending}
+          >
+            {t('common.paymentError.later')}
           </Button>
-          <Button ref={checkPaymentRef} onClick={handleCheckPayment} disabled={isRedirecting}>
-            {t('checkPayment')}
+          <Button
+            ref={checkPaymentRef}
+            onClick={handleCheckPayment}
+            disabled={isPending || billingActionClosed}
+          >
+            {t('common.paymentError.checkPayment')}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
+}
+
+function PaymentErrorDialog({ open, onClose }: PaymentErrorDialogProps) {
+  if (!open) return null;
+  return <OpenPaymentErrorDialog onClose={onClose} />;
 }
 
 export { PaymentErrorDialog };

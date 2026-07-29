@@ -19,7 +19,6 @@ import {
   captureUnexpectedError,
   observeAuthOperation,
 } from '@/lib/sentry';
-import { getStripe } from '@/lib/stripe/client';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
 
@@ -34,7 +33,8 @@ export class UserServiceError extends ServiceError {
       | 'EXPORT_FAILED'
       | 'UNAUTHORIZED'
       | 'INVALID_PASSWORD'
-      | 'INVALID_INPUT',
+      | 'INVALID_INPUT'
+      | 'CONFLICT',
     message: string,
     options?: ErrorOptions,
   ) {
@@ -78,6 +78,12 @@ interface DeleteAccountResult {
   success: true;
 }
 
+export type UserServiceDependencies = Readonly<{
+  beforeIdentityDeletion: (input: {
+    userId: string;
+  }) => Promise<{ status: 'completed' | 'contention' }>;
+}>;
+
 /**
  * データエクスポートレスポンス
  */
@@ -96,7 +102,10 @@ interface ExportDataResult {
 /**
  * User Service ファクトリ
  */
-export function createUserService(supabase: SupabaseClient<Database>) {
+export function createUserService(
+  supabase: SupabaseClient<Database>,
+  dependencies: UserServiceDependencies,
+) {
   return {
     /**
      * アカウント即時削除
@@ -172,69 +181,23 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         // locale が引けなくても既定言語で送れるので削除は続ける
       }
 
-      // Storage のアバター画像を削除
+      // Composition layer が gate 状態に応じて現行互換経路または
+      // Calendar -> Storage -> Billing のdurable経路を選ぶ。
       try {
-        const { data: files, error: listError } = await supabase.storage
-          .from('avatars')
-          .list(userId);
-        if (listError) throw new Error('Avatar listing failed', { cause: listError });
-        if (files && files.length > 0) {
-          const filePaths = files.map((f) => `${userId}/${f.name}`);
-          const { error: removeError } = await supabase.storage.from('avatars').remove(filePaths);
-          if (removeError) throw new Error('Avatar removal failed', { cause: removeError });
+        const preparation = await dependencies.beforeIdentityDeletion({ userId });
+        if (preparation.status === 'contention') {
+          throw new UserServiceError('CONFLICT', 'Account deletion is busy. Try again.');
         }
-      } catch (storageError) {
-        const original =
-          storageError instanceof Error ? storageError : new Error('Avatar cleanup failed');
-        captureUnexpectedError(original, {
+      } catch (error) {
+        if (error instanceof UserServiceError) throw error;
+        const failure = new Error('Account deletion preparation failed', { cause: error });
+        captureUnexpectedError(failure, {
           feature: 'account_deletion',
-          operation: 'delete_avatar_files',
-          source: 'supabase_storage',
+          operation: 'prepare_identity_deletion',
+          source: 'account_deletion_dependency',
         });
-        throw new UserServiceError('DELETE_FAILED', 'Failed to delete avatar files', {
-          cause: original,
-        });
-      }
-
-      // Stripe サブスクリプション解約 + Customer 削除（GDPR対応）
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-        if (profileError) throw new Error('Billing profile lookup failed', { cause: profileError });
-
-        const stripeCustomerId = (profile as Record<string, unknown> | null)?.stripe_customer_id as
-          string | null;
-
-        if (stripeCustomerId) {
-          const stripe = getStripe();
-          if (!stripe) throw new Error('Stripe is not configured for billing data deletion');
-
-          // 全サブスクリプションを即時解約（active, trialing, past_due, paused）
-          const subscriptions = await stripe.subscriptions.list({
-            customer: stripeCustomerId,
-          });
-          for (const sub of subscriptions.data) {
-            if (['active', 'trialing', 'past_due', 'paused'].includes(sub.status)) {
-              await stripe.subscriptions.cancel(sub.id);
-            }
-          }
-
-          // Customer 削除（支払い情報・請求書も削除）
-          await stripe.customers.del(stripeCustomerId);
-        }
-      } catch (stripeError) {
-        const original =
-          stripeError instanceof Error ? stripeError : new Error('Stripe cleanup failed');
-        captureUnexpectedError(original, {
-          feature: 'account_deletion',
-          operation: 'delete_stripe_customer',
-          source: 'stripe',
-        });
-        throw new UserServiceError('DELETE_FAILED', 'Failed to delete billing data', {
-          cause: original,
+        throw new UserServiceError('DELETE_FAILED', 'Failed to prepare account deletion', {
+          cause: failure,
         });
       }
 

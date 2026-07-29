@@ -1,0 +1,120 @@
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const OPERATION_ID = '00000000-0000-4000-8000-000000000001';
+const beginPortalAttempt = vi.hoisted(() => vi.fn(() => OPERATION_ID));
+const portalMutate = vi.hoisted(() => vi.fn());
+const settlePortalAttempt = vi.hoisted(() => vi.fn(() => true));
+const toastError = vi.hoisted(() => vi.fn());
+const mutationOptions = vi.hoisted(
+  () =>
+    ({ current: null }) as {
+      current: null | {
+        onError: (error: unknown, variables: { operationId: string }) => void;
+        onSuccess: (data: { url: string }, variables: { operationId: string }) => void;
+      };
+    },
+);
+
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
+vi.mock('@/lib/toast', () => ({
+  toast: { error: toastError },
+}));
+
+vi.mock('@/lib/hooks/useInlineBanner', () => ({
+  useInlineBanner: () => ({ message: '', visible: false }),
+}));
+
+vi.mock('@/features/settings', () => ({
+  getBillingOperationErrorDisposition: (error: unknown) => {
+    const serviceCode =
+      typeof error === 'object' &&
+      error !== null &&
+      'data' in error &&
+      typeof error.data === 'object' &&
+      error.data !== null &&
+      'serviceCode' in error.data
+        ? error.data.serviceCode
+        : null;
+    if (serviceCode === 'BILLING_ACCOUNT_CLOSING') return 'account_closing';
+    if (serviceCode === 'BILLING_RESPONSE_EXPIRED') return 'terminal';
+    return 'retryable';
+  },
+  useStableBillingOperation: () => ({
+    begin: beginPortalAttempt,
+    isLocked: false,
+    settle: settlePortalAttempt,
+  }),
+}));
+
+vi.mock('@/lib/trpc', () => ({
+  api: {
+    billing: {
+      createPortalSession: {
+        useMutation: (options: NonNullable<typeof mutationOptions.current>) => {
+          mutationOptions.current = options;
+          return { isPending: false, mutate: portalMutate };
+        },
+      },
+      getOverview: {
+        useQuery: () => ({
+          data: { billingInfo: { subscriptionStatus: 'past_due' } },
+        }),
+      },
+    },
+  },
+}));
+
+import { useAppInlineBanner } from '../useAppInlineBanner';
+
+describe('useAppInlineBanner billing operation', () => {
+  beforeEach(() => {
+    beginPortalAttempt.mockReturnValue(OPERATION_ID);
+    settlePortalAttempt.mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+    vi.clearAllMocks();
+  });
+
+  it('passes the stable operation ID to the Portal mutation', () => {
+    const { result } = renderHook(() => useAppInlineBanner());
+
+    act(() => {
+      result.current.action?.onClick();
+    });
+
+    expect(portalMutate).toHaveBeenCalledWith({ operationId: OPERATION_ID });
+  });
+
+  it('disables the Portal action after account deletion closes billing', () => {
+    const { result } = renderHook(() => useAppInlineBanner());
+
+    act(() => {
+      result.current.action?.onClick();
+      mutationOptions.current?.onError(
+        { data: { serviceCode: 'BILLING_ACCOUNT_CLOSING' } },
+        { operationId: OPERATION_ID },
+      );
+    });
+
+    expect(result.current.action?.disabled).toBe(true);
+    expect(result.current.message).toBe('common.billingOperation.accountClosing');
+    expect(toastError).toHaveBeenCalledWith('common.billingOperation.accountClosing');
+  });
+
+  it('ignores a stale success callback instead of redirecting', () => {
+    settlePortalAttempt.mockReturnValue(false);
+    renderHook(() => useAppInlineBanner());
+
+    act(() => {
+      mutationOptions.current?.onSuccess({ url: '#portal' }, { operationId: OPERATION_ID });
+    });
+
+    expect(window.location.hash).toBe('');
+  });
+});

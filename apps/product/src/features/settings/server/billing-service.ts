@@ -19,6 +19,12 @@ import { requireStripe } from '@/lib/stripe/client';
 import { ServiceError } from '@/lib/trpc/errors';
 import { dayoptProTrialDays, type SubscriptionStatus } from '@dayopt/billing';
 
+import { resolveBillingLifecycleMode } from './billing-lifecycle-mode';
+import {
+  createCheckoutSession as createDurableCheckoutSession,
+  createPortalSession as createDurablePortalSession,
+} from './billing-mutation-service';
+
 // ===== Types =====
 
 /** ユーザーの課金情報（サブスクリプション状態・Stripe ID） */
@@ -45,6 +51,10 @@ export interface InvoiceItem {
   status: string;
   hostedInvoiceUrl: string | null;
 }
+
+type DeletedSubscriptionSyncResult =
+  'account_deleted' | 'account_deleting' | 'already_terminal' | 'stale_subscription' | 'updated';
+type BillingCustomerEventClassification = 'account_deleted' | 'live';
 
 // ===== Error Codes =====
 
@@ -102,58 +112,48 @@ export async function getBillingInfo(
   };
 }
 
-/**
- * Stripe Customer を取得または作成
- */
-async function getOrCreateCustomer(
+async function getOrCreateLegacyCustomer(
   stripe: Stripe,
   supabase: SupabaseClient<Database>,
   userId: string,
   email: string,
+  operationId: string,
 ): Promise<string> {
-  // 既存の customer_id を確認
   const { data, error: profileError } = await supabase
     .from('profiles')
-    .select('*')
+    .select('stripe_customer_id')
     .eq('id', userId)
     .single();
 
   if (profileError) {
     const original = captureUnexpectedDatabaseError(profileError, {
       feature: 'billing',
-      operation: 'get_stripe_customer',
+      operation: 'get_legacy_stripe_customer',
     });
     throw new BillingServiceError('FETCH_FAILED', 'Failed to fetch Stripe customer', {
       cause: original,
     });
   }
 
-  const existingCustomerId = (data as Record<string, unknown> | null)?.stripe_customer_id as
-    string | null;
+  if (data.stripe_customer_id) return data.stripe_customer_id;
 
-  if (existingCustomerId) {
-    return existingCustomerId;
-  }
-
-  // Stripe Customer 作成
-  const customer = await stripe.customers.create({
-    email,
-    metadata: {
-      supabase_user_id: userId,
+  const customer = await stripe.customers.create(
+    {
+      email,
+      metadata: { supabase_user_id: userId },
     },
-  });
+    { idempotencyKey: `dayopt-billing-customer-legacy-v1-${operationId}` },
+  );
 
-  // profiles に保存
   const { error } = await supabase
     .from('profiles')
     .update({ stripe_customer_id: customer.id })
     .eq('id', userId);
 
   if (error) {
-    logger.error('Failed to save stripe_customer_id', { userId });
     const original = captureUnexpectedDatabaseError(error, {
       feature: 'billing',
-      operation: 'save_stripe_customer',
+      operation: 'save_legacy_stripe_customer',
     });
     throw new BillingServiceError('UPDATE_FAILED', 'Failed to save Stripe customer', {
       cause: original,
@@ -163,70 +163,83 @@ async function getOrCreateCustomer(
   return customer.id;
 }
 
-/**
- * Stripe Checkout Session を作成
- */
-export async function createCheckoutSession(
+async function createLegacyCheckoutSession(
   supabase: SupabaseClient<Database>,
   userId: string,
   email: string,
+  operationId: string,
 ): Promise<string> {
   const stripe = requireStripe();
   const priceId = getConfiguredProPriceId();
-  const customerId = await getOrCreateCustomer(stripe, supabase, userId, email);
-
-  // 過去にサブスクリプション履歴がある場合はトライアルを付与しない
-  const existingSubs = await stripe.subscriptions.list({
+  const customerId = await getOrCreateLegacyCustomer(stripe, supabase, userId, email, operationId);
+  const existingSubscriptions = await stripe.subscriptions.list({
     customer: customerId,
-    status: 'all',
     limit: 1,
+    status: 'all',
   });
-  const hasTrialHistory = existingSubs.data.length > 0;
-
   const appUrl = getAppUrl();
-
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
-    subscription_data: hasTrialHistory ? {} : { trial_period_days: dayoptProTrialDays },
-    success_url: `${appUrl}/settings/subscription?success=true`,
-    cancel_url: `${appUrl}/settings/subscription?canceled=true`,
-    metadata: {
-      supabase_user_id: userId,
+  const session = await stripe.checkout.sessions.create(
+    {
+      cancel_url: `${appUrl}/settings/subscription?canceled=true`,
+      customer: customerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      metadata: { supabase_user_id: userId },
+      mode: 'subscription',
+      subscription_data:
+        existingSubscriptions.data.length > 0 ? {} : { trial_period_days: dayoptProTrialDays },
+      success_url: `${appUrl}/settings/subscription?success=true`,
     },
-  });
+    { idempotencyKey: `dayopt-billing-checkout-legacy-v1-${operationId}` },
+  );
 
   if (!session.url) {
     throw new BillingServiceError('CREATE_FAILED', 'Failed to create checkout session');
   }
-
   return session.url;
 }
 
-/**
- * Stripe Customer Portal Session を作成
- */
-export async function createPortalSession(
+async function createLegacyPortalSession(
   supabase: SupabaseClient<Database>,
   userId: string,
+  operationId: string,
 ): Promise<string> {
   const stripe = requireStripe();
-
   const billingInfo = await getBillingInfo(supabase, userId);
-
   if (!billingInfo.stripeCustomerId) {
     throw new BillingServiceError('NOT_FOUND', 'No Stripe customer found. Subscribe to Pro first.');
   }
 
-  const appUrl = getAppUrl();
-
-  const session = await stripe.billingPortal.sessions.create({
-    customer: billingInfo.stripeCustomerId,
-    return_url: `${appUrl}/settings/subscription`,
-  });
-
+  const session = await stripe.billingPortal.sessions.create(
+    {
+      customer: billingInfo.stripeCustomerId,
+      return_url: `${getAppUrl()}/settings/subscription`,
+    },
+    { idempotencyKey: `dayopt-billing-portal-legacy-v1-${operationId}` },
+  );
   return session.url;
+}
+
+export async function createCheckoutSession(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  email: string,
+  operationId: string,
+): Promise<string> {
+  const lifecycleMode = await resolveBillingLifecycleMode(supabase);
+  return lifecycleMode === 'durable'
+    ? createDurableCheckoutSession(supabase, userId, email, operationId)
+    : createLegacyCheckoutSession(supabase, userId, email, operationId);
+}
+
+export async function createPortalSession(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  operationId: string,
+): Promise<string> {
+  const lifecycleMode = await resolveBillingLifecycleMode(supabase);
+  return lifecycleMode === 'durable'
+    ? createDurablePortalSession(supabase, userId, operationId)
+    : createLegacyPortalSession(supabase, userId, operationId);
 }
 
 /**
@@ -456,4 +469,75 @@ export async function syncSubscriptionStatus(
   }
 
   logger.info('Subscription status synced', { status, rowsUpdated });
+}
+
+/**
+ * Webhook: subscription.deleted を現在のsubscriptionへだけ反映する。
+ *
+ * Auth削除と同時transactionで残した短期receiptがある場合だけ、profile消滅後の
+ * terminal eventを成功として扱う。未知Customerはlive data driftを隠さないため失敗する。
+ */
+export async function syncDeletedSubscriptionStatus(
+  supabase: SupabaseClient<Database>,
+  stripeCustomerId: string,
+  subscriptionId: string,
+): Promise<DeletedSubscriptionSyncResult> {
+  const { data, error } = await supabase.rpc('sync_billing_subscription_deleted_v1', {
+    p_stripe_customer_id: stripeCustomerId,
+    p_subscription_id: subscriptionId,
+  });
+
+  if (error) {
+    logger.error('Failed to sync deleted subscription');
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'billing',
+      operation: 'sync_deleted_subscription_status',
+    });
+    throw new BillingServiceError('UPDATE_FAILED', 'Failed to sync deleted subscription', {
+      cause: original,
+    });
+  }
+
+  if (
+    data === 'updated' ||
+    data === 'account_deleting' ||
+    data === 'already_terminal' ||
+    data === 'stale_subscription' ||
+    data === 'account_deleted'
+  ) {
+    logger.info('Deleted subscription synchronized', { outcome: data });
+    return data;
+  }
+
+  throw new BillingServiceError(
+    'UPDATE_FAILED',
+    'No live or deleted billing account matched the Stripe subscription',
+    {
+      cause: new Error('Stripe subscription deletion matched no billing terminal state'),
+    },
+  );
+}
+
+export async function classifyBillingCustomerEvent(
+  supabase: SupabaseClient<Database>,
+  stripeCustomerId: string,
+): Promise<BillingCustomerEventClassification> {
+  const { data, error } = await supabase.rpc('classify_billing_customer_event_v1', {
+    p_stripe_customer_id: stripeCustomerId,
+  });
+
+  if (error) {
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'billing',
+      operation: 'classify_customer_event',
+    });
+    throw new BillingServiceError('FETCH_FAILED', 'Failed to classify billing customer event', {
+      cause: original,
+    });
+  }
+  if (data === 'live' || data === 'account_deleted') return data;
+
+  throw new BillingServiceError('FETCH_FAILED', 'Stripe event Customer is unknown', {
+    cause: new Error('Stripe Customer matched no live or terminal billing state'),
+  });
 }
