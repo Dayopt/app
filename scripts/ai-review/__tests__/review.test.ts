@@ -668,6 +668,14 @@ describe('workflow の contract', () => {
     }
   });
 
+  it('同じ head SHA に 2 本目の run を積まない', () => {
+    // statusCheckRollup は同名 check を畳まず、finish-branch.sh は cancelled も failure と
+    // して数える。同一 SHA で 2 回走ると、あとから成功しても次の push までマージ不能になる。
+    // `ready_for_review` を購読するなら draft 中は job を skip して 1 回に収める。
+    expect(WORKFLOW).toContain('github.event.pull_request.draft == false');
+    expect(WORKFLOW).toMatch(/types:.*ready_for_review/);
+  });
+
   it('contract 変更に明示的な逃げ道がある', () => {
     // 束ねた PR を既定とする規約（workflow.md §PR 粒度）と衝突するため、
     // 人間が承認したことを示すラベルで通せる必要がある。

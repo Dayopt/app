@@ -104,6 +104,14 @@ Codex / Copilot / Vercel / Supabase など**任意の bot** が通り、marker �
 `ai-review:override`（所見の誤検出）と `ai-review:contract-reviewed`（監査契約の変更を承認）の
 2 ラベルを用意した。承認の対象が別なので分けている。
 
+同じ根（同一 head SHA に 2 本目の run が積まれると古い結果が数えられ続ける）を
+**draft PR でも踏む**。`opened`(draft) と `ready_for_review` の両方を素通しにすると、
+「draft で open → ready にする」で 2 本目が走り、`cancel-in-progress` により
+1 本目が `cancelled` になる。`finish-branch.sh` は `cancelled` も
+failure として数えるため、あとから成功した run があっても次の push までマージできない。
+job 側で `draft == false` を条件にし、draft 中は skip して ready の時に 1 回だけ走らせた。
+draft の反復 push に Gemini の課金を使わない副次効果もある。
+
 **どちらもラベル付与では再発火させない。** 一度 `labeled` を trigger に入れたが、同じ head SHA に
 2 本目の run が積まれると `statusCheckRollup` が同名 check を畳まないため、`finish-branch.sh` が
 古い run の failure を数え続けてラベルを付けても赤が消えない（2026-07-30 実測: PR #1765 は

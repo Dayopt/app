@@ -26,6 +26,11 @@ on:
     # に対し `gh pr checks` は 13 行）、`finish-branch.sh` は古い run の failure を
     # 数え続ける。つまりラベルを付けても赤が消えず、逃げ道として機能しない。
     # ラベルは**次の push の run**で効く（新しい SHA なら rollup が綺麗になる）。
+    #
+    # `ready_for_review` を入れる代わりに、job 側で draft を skip する。両方を素通しにすると
+    # 「draft で open → ready にする」で同じ head SHA に 2 本目の run が積まれ、上と同じ
+    # 経路で古い run が数えられ続ける。draft 中は skip し、ready になった時に 1 回だけ走る。
+    # draft の反復 push に Gemini の課金を使わない副次効果もある。
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       # データ分離・データ損失
@@ -86,6 +91,12 @@ permissions:
 jobs:
   review:
     name: "\U0001F50D AI Review"
+    # draft のうちは走らせない。`opened`(draft) と `ready_for_review` の両方で走ると、
+    # 同じ head SHA に 2 本目の run が積まれ、`cancel-in-progress` で 1 本目が cancelled に
+    # なる。`finish-branch.sh` は cancelled を failure として数えるため、あとから成功した
+    # run があっても次の push までマージできなくなる（trigger の types のコメント参照）。
+    # skip された job は failure / pending / success のどれにも数えられないので無害。
+    if: ${{ github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
