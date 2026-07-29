@@ -18,7 +18,7 @@
 import '@/lib/styles/globals.css';
 
 import type { Metadata, Viewport } from 'next';
-import { Noto_Sans_JP, Source_Sans_3 } from 'next/font/google';
+import { Noto_Sans_JP, Source_Code_Pro, Source_Sans_3 } from 'next/font/google';
 import { headers } from 'next/headers';
 import { Suspense } from 'react';
 
@@ -47,6 +47,16 @@ const notoSansJP = Noto_Sans_JP({
   variable: '--font-noto-jp',
   preload: true,
   fallback: ['Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'sans-serif'],
+});
+
+// 等幅フォント（時刻・duration・統計の数字と、エラーID / MFAコード）
+// preload: false — 本文には使わず font-mono 指定箇所だけなので、LCP を優先して遅延読み込みにする
+const sourceCodePro = Source_Code_Pro({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-code',
+  preload: false,
+  fallback: ['ui-monospace', 'monospace'],
 });
 
 /**
@@ -116,7 +126,7 @@ const RootLayout = async ({ children, params }: RootLayoutProps) => {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${sourceSans.variable} ${notoSansJP.variable}`}
+      className={`${sourceSans.variable} ${notoSansJP.variable} ${sourceCodePro.variable}`}
     >
       <head>
         {/* LCP改善: Supabase API への早期接続確立（preconnect + dns-prefetch） */}

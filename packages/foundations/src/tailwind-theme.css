@@ -137,9 +137,15 @@
 /* ============================================
  * タイポグラフィ
  * ============================================
- * Tailwindデフォルトを使用（CSS変数不要）
+ * フォントファミリーのみトークン化する（実体は tokens/typography.css）。
+ * font-sans / font-mono utility と body の stack を同一ソースにするため。
+ * それ以外は Tailwindデフォルトを使用（CSS変数不要）
  * - フォントサイズ: text-xs, text-sm, text-base, text-lg, text-xl, text-2xl...
  * - フォントウェイト: font-normal (400), font-medium (500)
  * - 行間: leading-tight, leading-normal, leading-relaxed
  * ダークモードで切り替える必要がないため、トークン化しない
  */
+@theme inline {
+  --font-sans: var(--font-stack-sans);
+  --font-mono: var(--font-stack-mono);
+}

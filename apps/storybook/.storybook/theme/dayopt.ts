@@ -18,7 +18,8 @@ export const dayoptLightTheme = create({
   // base.css body font-family と同一スタック
   fontBase:
     "'Source Sans 3', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-  fontCode: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace",
+  fontCode:
+    "'Source Code Pro', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace",
 
   // --primary: oklch(0.45 0.188 259.8145)
   colorPrimary: '#004bbb',
@@ -63,7 +64,8 @@ export const dayoptDarkTheme = create({
   // base.css body font-family と同一スタック
   fontBase:
     "'Source Sans 3', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-  fontCode: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace",
+  fontCode:
+    "'Source Code Pro', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace",
 
   // --primary dark: oklch(0.5 0.188 259.8145)
   colorPrimary: '#115bcc',
