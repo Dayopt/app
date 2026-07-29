@@ -76,11 +76,15 @@ job の check run なら cancel / timeout が `cancelled` / `timed_out` とし�
 - **`AI_REVIEW_HEAD_SHA` の fallback** — `github.sha` は base 先端を指すため、fallback が効くと
   `base...base` の空 diff を「危険クラス 0 件」と読んで緑になる。fallback を外し、
   head SHA が未解決・未到達なら `git cat-file -e` で fail-closed にする step を足した
-- **timeout の不等式** — `review.ts` の `TOTAL_DEADLINE_MS`(8 分) は attempt の入口でしか
-  評価されないため、`REQUEST_TIMEOUT_MS`(5 分) × 2 attempt で実効 ~10 分に届き、
-  job の `timeout-minutes: 10` を超えて job ごと kill されうる。「job の上限より内側で
-  自分から諦める」という script 側のコメントが、現在の定数では成立していなかった。
-  review step に step-level `timeout-minutes: 8` を付けて、後続の enforce が確実に走るようにした
+- **timeout の不等式** — `TOTAL_DEADLINE_MS`(8 分) は attempt の入口でしか評価されず、
+  per-attempt には固定の `REQUEST_TIMEOUT_MS`(5 分) を渡していた。締め切り直前に始まった
+  attempt がそのまま 5 分走れるため、合計は 8 分ではなく最大 13 分まで伸びる。
+  「job の上限より内側で自分から諦める」という script のコメントが定数として成立していなかった。
+  per-attempt の signal と backoff を**残り予算で clamp** し、合計が `TOTAL_DEADLINE_MS` で
+  止まるようにした。step timeout は 9 分（script の締め切りより外、job の 10 分より内）とし、
+  `TOTAL_DEADLINE_MS < step < job` の不等式を contract test で固定した。
+  最初は step timeout を 8 分にしたが、それは script が諦める瞬間と同時に step を kill するため
+  fail-open が red へ反転する。**定数を揃えずに step timeout だけ足すのは誤り**だった
 
 同時に、trigger 変更で前提が消えた fail-open を 1 つ塞いだ。`GEMINI_API_KEY` 未設定を
 `warn` + `exit 0` で通していたのは「fork PR には secret が渡らない」ことが理由だったが、
@@ -90,7 +94,41 @@ job の check run なら cancel / timeout が `cancelled` / `timed_out` とし�
 判定 cache の出所も絞った。sticky comment は fingerprint と blocked を保存する場所でもあるのに、
 `findStickyComment` が author を検証せず marker を含む最初の comment を採用していた。
 PR に comment できる者が `blocked=0` の state を先に置けば、model を呼ばずに green を作れる
-（fingerprint は repo 内の script で再計算できるので予測可能）。`user.type === 'Bot'` で絞った。
+（fingerprint は repo 内の script で再計算できるので予測可能）。`user.login` を
+`github-actions[bot]` に固定した。最初は `user.type === 'Bot'` で絞ったが、それでは
+Codex / Copilot / Vercel / Supabase など**任意の bot** が通り、marker を引用した本文を先に
+投稿されると `find`（最古の一致を返す）がそれを sticky と誤認して上書き先にしてしまう。
+
+## 逃げ道と、その効き方
+
+`ai-review:override`（所見の誤検出）と `ai-review:contract-reviewed`（監査契約の変更を承認）の
+2 ラベルを用意した。承認の対象が別なので分けている。
+
+**どちらもラベル付与では再発火させない。** 一度 `labeled` を trigger に入れたが、同じ head SHA に
+2 本目の run が積まれると `statusCheckRollup` が同名 check を畳まないため、`finish-branch.sh` が
+古い run の failure を数え続けてラベルを付けても赤が消えない（2026-07-30 実測: PR #1765 は
+check-runs 18 件中 8 名前が重複、rollup 21 件に対し `gh pr checks` は 13 行）。
+`gh pr checks` は畳むが `statusCheckRollup` は畳まない、という API の差が原因。
+**`finish-branch.sh` が最新 run へ畳んでいない**のが根で、そちらは本 PR の scope 外とした。
+現状はラベルを付けた後の push で効く（新しい SHA なら rollup が綺麗になる）。
+
+## 残余リスク
+
+- **contract 検出の範囲は「この job が実行するもの」に限った。** `scripts/ai-review/` /
+  `.github/actions/` / `ai-review.yml` / `pnpm-workspace.yaml`（`allowBuilds` allowlist）まで。
+  `pnpm-lock.yaml` と `package.json` は依存更新で頻繁に動き、危険クラスと同時に触る正当な PR が
+  多いため入れていない。lockfile 経由で install 時に走るコードを差し替える経路は残る
+- **`ai-review:contract-reviewed` は PR 単位で効き、diff に束縛されない。** 一度付けると、
+  その後の push で追加された契約変更まで自動承認される（`ai-review:override` 側は fingerprint が
+  変われば再評価される）
+- **`ConfigurationError` クラスには逃げ道が無い。** key 未設定 / 401 / 403 / 404 は
+  `AI_REVIEW_ENFORCE=false` でも override ラベルでも解除できない。構成ミスは人間が直すまで
+  回復しないため意図的にそうしている。復旧 PR は `scripts/ai-review/` だけを触れば
+  paths filter で発火しないので詰まらない
+- **run がそもそも起動しない経路は検出できない。** paths 不一致 / workflow 無効化 / Actions 障害では
+  check が 0 件になり、`finish-branch.sh` の「成功 1 件以上」は他 workflow の success で満たされる。
+  paths filter と `DANGEROUS_PATH_PATTERNS` の一致は contract test で固定しているが、
+  それ以外は構造的に見えない
 
 ## 却下した選択肢と、なぜ捨てたか
 

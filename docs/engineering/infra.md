@@ -251,6 +251,15 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   workflow でも、gate のために commit status を自分で publish する必要は無い。
   `Production Config Audit` という StatusContext が別に存在するのは、job 名から独立した固定 context を
   ruleset の required 指定に使うため
+- ai-review の逃げ道はラベル 2 種。`ai-review:override` は**所見の誤検出**を人間が判断した時に使い
+  （review.ts 側で exit code を 0 にする）、`ai-review:contract-reviewed` は**監査契約の変更**
+  （`scripts/ai-review/**` / `.github/actions/**` / `ai-review.yml` / `pnpm-workspace.yaml`）を
+  危険クラスと同一 PR に束ねると判断した時に使う。承認の対象が別なので分けている
+- **ラベルは付けた後の push で効く。** `labeled` での再発火は入れていない。同じ head SHA に
+  2 本目の run が積まれると、`gh pr view --json statusCheckRollup` が同名 check を畳まないため
+  （2026-07-30 実測: PR #1765 は check-runs 18 件中 8 名前が重複、rollup 21 件に対し
+  `gh pr checks` は 13 行）、`finish-branch.sh` が古い run の failure を数え続けてラベルを付けても
+  赤が消えない。**`finish-branch.sh` が最新 run へ畳んでいない**のが根であり、そちらは別途の課題
 - `🔍 AI Review`（`ai-review.yml` の job）は危険クラス path を含む PR でだけ発火するので、
   **ruleset の required には入れない**（発火しない PR では check 自体が付かず、required にすると
   全 PR が merge 不能になる）。`finish-branch.sh` は付いた check だけを見るうえ、

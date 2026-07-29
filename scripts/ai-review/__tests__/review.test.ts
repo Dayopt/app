@@ -10,7 +10,10 @@ import {
   DANGEROUS_PATH_PATTERNS,
   MAX_DIFF_BYTES,
   MAX_OUTPUT_TOKENS,
+  REQUEST_TIMEOUT_MS,
   RULE_ATTACHMENTS,
+  STICKY_COMMENT_AUTHOR,
+  TOTAL_DEADLINE_MS,
   buildPrompt,
   callGemini,
   collectDiff,
@@ -527,12 +530,12 @@ describe('判定 cache の出所', () => {
     }) as unknown as typeof fetch;
   }
 
-  it('bot が書いた sticky comment の判定は読む', async () => {
+  it('自分が書いた sticky comment の判定は読む', async () => {
     const result = await readStickyState({
       token: 't',
       repository: 'o/r',
       prNumber: '1',
-      fetchImpl: listing([{ id: 1, body: state, user: { type: 'Bot' } }]),
+      fetchImpl: listing([{ id: 1, body: state, user: { login: STICKY_COMMENT_AUTHOR } }]),
     });
     expect(result).toEqual({ fingerprint: 'abc123', blocked: false });
   });
@@ -544,9 +547,26 @@ describe('判定 cache の出所', () => {
       token: 't',
       repository: 'o/r',
       prNumber: '1',
-      fetchImpl: listing([{ id: 1, body: state, user: { type: 'User' } }]),
+      fetchImpl: listing([{ id: 1, body: state, user: { login: 'tomoya' } }]),
     });
     expect(result).toBeNull();
+  });
+
+  it('別の bot が投稿した同じ marker も採用しない', async () => {
+    // この PR には Codex / Copilot / Vercel / Supabase の bot が comment する。
+    // type === 'Bot' で絞るだけでは、marker を引用した本文を先に投稿されると
+    // find（最古の一致）がそれを sticky と誤認して上書き先にしてしまう。
+    const result = await readStickyState({
+      token: 't',
+      repository: 'o/r',
+      prNumber: '1',
+      fetchImpl: listing([
+        { id: 1, body: state, user: { login: 'chatgpt-codex-connector[bot]' } },
+        { id: 2, body: state, user: { login: STICKY_COMMENT_AUTHOR } },
+      ]),
+    });
+    // 自分の comment（id 2）だけを見るので、偽の判定は読まない。
+    expect(result).toEqual({ fingerprint: 'abc123', blocked: false });
   });
 });
 
@@ -603,30 +623,59 @@ describe('workflow の contract', () => {
     expect(WORKFLOW).not.toMatch(/steps\.review\.outputs\.exit_code\s*\|\|\s*'0'/);
   });
 
-  it('review step を job の timeout より内側で切る', () => {
-    // review.ts の TOTAL_DEADLINE_MS は attempt の入口でしか評価されないため、
-    // per-attempt timeout × 2 で job の timeout-minutes に届きうる。job ごと kill されると
-    // 後続 step が走らず、失敗の帰属も消える。
+  it('script の締め切りが step timeout より内側、step が job より内側', () => {
+    // **定数間の不等式を固定する。** script が自分から諦めて fail-open の exit 0 を
+    // 返す前に step が kill されると、「インフラ障害では PR を止めない」設計が
+    // red（= マージ不能）へ反転する。文字列ではなく実際の定数と比較する。
     const jobTimeout = Number(/^\s{4}timeout-minutes:\s*(\d+)/m.exec(WORKFLOW)?.[1]);
     const stepTimeout = Number(/^\s{8}timeout-minutes:\s*(\d+)/m.exec(WORKFLOW)?.[1]);
     expect(jobTimeout).toBeGreaterThan(0);
     expect(stepTimeout).toBeGreaterThan(0);
     expect(stepTimeout).toBeLessThan(jobTimeout);
+    expect(TOTAL_DEADLINE_MS).toBeLessThan(stepTimeout * 60_000);
+    // per-attempt を残り予算で clamp しているので、合計は TOTAL_DEADLINE_MS で止まる。
+    // clamp を外すと TOTAL_DEADLINE_MS + REQUEST_TIMEOUT_MS まで伸びるため、
+    // その値でも step timeout に収まっていることを併せて要求する（clamp 回帰の保険）。
+    expect(REQUEST_TIMEOUT_MS).toBeLessThanOrEqual(TOTAL_DEADLINE_MS);
+  });
+
+  it('per-attempt の timeout を残り予算で clamp する', () => {
+    // 入口だけの締め切り判定 + 固定 per-attempt timeout だと、締め切り直前に
+    // 始まった attempt がそのまま走り切って合計が予算を超える。
+    const source = readFileSync(join(process.cwd(), 'scripts/ai-review/review.ts'), 'utf8');
+    expect(source).toContain('AbortSignal.timeout(Math.min(REQUEST_TIMEOUT_MS, remaining))');
   });
 
   it('contract 変更の検出を外部 API に依存させない', () => {
     // gh api pulls/N/files は 3000 file 上限と API 障害を持ち、どちらも
     // 「検出できないまま素通り」に倒れる。base の working tree から git で取る。
-    expect(WORKFLOW).toContain('git diff --name-status "$BASE_SHA...$HEAD_SHA"');
+    expect(WORKFLOW).toContain('diff --name-status "$BASE_SHA...$HEAD_SHA"');
     expect(WORKFLOW).not.toContain('gh api --paginate');
+    // 非 ASCII path が quote されると anchor が外れて検出漏れになる。
+    expect(WORKFLOW).toContain('core.quotePath=false');
+  });
+
+  it('この job が実行するものを contract として保護する', () => {
+    // trusted base が守るのは「この run」だけで、マージ後の run は守らない。
+    // setup composite action と allowBuilds allowlist は次の run 以降の実行内容を変える。
+    for (const guarded of [
+      'scripts/ai-review/',
+      '\\.github/actions/',
+      '\\.github/workflows/ai-review\\.yml',
+      'pnpm-workspace\\.yaml',
+    ]) {
+      expect(WORKFLOW).toContain(guarded);
+    }
   });
 
   it('contract 変更に明示的な逃げ道がある', () => {
     // 束ねた PR を既定とする規約（workflow.md §PR 粒度）と衝突するため、
     // 人間が承認したことを示すラベルで通せる必要がある。
     expect(WORKFLOW).toContain('ai-review:contract-reviewed');
-    // ラベル付与で再発火しないと、逃げ道を使うのに空 commit が必要になる。
-    expect(WORKFLOW).toMatch(/types:.*labeled/);
+    // **labeled では再発火させない。** 同じ head SHA に 2 本目の run が積まれると、
+    // statusCheckRollup は同名 check を畳まないため finish-branch.sh が古い run の
+    // failure を数え続け、ラベルを付けても赤が消えない。
+    expect(WORKFLOW).not.toMatch(/types:.*labeled/);
   });
 
   it('PR ごとに concurrency group を分ける', () => {

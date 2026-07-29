@@ -20,12 +20,13 @@ name: AI Review
 on:
   pull_request_target:
     branches: [main]
-    # labeled を入れる。`ai-review:override` / `ai-review:contract-reviewed` は
-    # ラベルで逃げ道を作る設計なので、ラベル付与で再発火しないと空 commit を押す運用に
-    # なる（re-run は元の payload を replay するのでラベルが乗らない）。
-    # 無関係なラベルでも発火するが、review.ts の fingerprint cache が前回判定を
-    # 再利用するため model 呼び出しは 0 で済む。
-    types: [opened, synchronize, reopened, ready_for_review, labeled]
+    # **labeled は入れない。** ラベル付与で再発火させると、同じ head SHA に 2 本目の
+    # run が積まれる。`gh pr view --json statusCheckRollup` は同名 check を畳まないため
+    # （2026-07-30 に PR #1765 で実測: check-runs 18 件のうち 8 名前が重複、rollup 21 件
+    # に対し `gh pr checks` は 13 行）、`finish-branch.sh` は古い run の failure を
+    # 数え続ける。つまりラベルを付けても赤が消えず、逃げ道として機能しない。
+    # ラベルは**次の push の run**で効く（新しい SHA なら rollup が綺麗になる）。
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       # データ分離・データ損失
       - 'supabase/migrations/**'
@@ -127,14 +128,26 @@ jobs:
       # 3000 file 上限と API 障害という外部依存を持ち、どちらも「検出できないまま素通り」に
       # なる。`--name-status` の rename 行は `R100<TAB>old<TAB>new` なので、旧 path も
       # そのまま現れる（保護対象を移動して逃げられない）。
+      #
+      # 保護対象は「この job が実行するもの」に合わせる。reviewer 本体と workflow だけでは
+      # 足りない: `./.github/actions/setup` はこの job が実行する composite action で、
+      # `pnpm-workspace.yaml` の `allowBuilds` は install 時に走る build script の
+      # allowlist。trusted base は**この run** を守るが、マージ後の run は守らないため、
+      # 次の run 以降の実行内容を変える差分はここで人間の確認へ回す。
+      # `pnpm-lock.yaml` / `package.json` は依存更新で頻繁に動き、危険クラスと同時に
+      # 触られる正当な PR が多いので入れない（残余リスクは decision ログに記録した）。
+      #
+      # `core.quotePath=false` を付ける。既定では非 ASCII を含む path が
+      # `"scripts/ai-review/\346\227\245.md"` のように quote されて先頭が `"` になり、
+      # anchor が外れて検出漏れになる。
       - name: Detect reviewer contract changes
         id: contract
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          changed_files=$(git diff --name-status "$BASE_SHA...$HEAD_SHA")
-          if printf '%s\n' "$changed_files" | grep -Eq '(^|[[:space:]])(scripts/ai-review/|\.github/workflows/ai-review\.yml([[:space:]]|$))'; then
+          changed_files=$(git -c core.quotePath=false diff --name-status "$BASE_SHA...$HEAD_SHA")
+          if grep -Eq '(^|[[:space:]"])(scripts/ai-review/|\.github/actions/|\.github/workflows/ai-review\.yml([[:space:]"]|$)|pnpm-workspace\.yaml([[:space:]"]|$))' <<<"$changed_files"; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -144,11 +157,13 @@ jobs:
       # 危険クラス diff への所見は人間の確認材料としてそのまま有用。判定だけ下で上書きする。
       - name: Review dangerous-class diff
         id: review
-        # **job の timeout-minutes より内側で step を切る。** review.ts の
-        # TOTAL_DEADLINE_MS(8 分) は attempt の入口でしか評価されないため、
-        # REQUEST_TIMEOUT_MS(5 分) × 2 attempt で実効 ~10 分に届き、job ごと kill されうる。
-        # step timeout なら後続の Enforce step が確実に走り、失敗の帰属も明確になる。
-        timeout-minutes: 8
+        # **script の締め切りより外、job の timeout-minutes より内で切る。**
+        # review.ts は per-attempt の signal を残り予算で clamp するので、自分から
+        # TOTAL_DEADLINE_MS(8 分) 以内に諦めて fail-open の exit 0 を返す。
+        # ここを 8 にすると script が諦める瞬間と同時に step が kill され、
+        # 「インフラ障害では PR を止めない」設計が red へ反転する。1 分の余裕を置く。
+        # contract test が TOTAL_DEADLINE_MS < この値 < job timeout を固定している。
+        timeout-minutes: 9
         run: |
           set +e
           pnpm exec tsx scripts/ai-review/review.ts
@@ -197,6 +212,8 @@ jobs:
           # 監査契約を意図的に変更し、人間がレビュー済みだと判断した時の逃げ道。
           # `ai-review:override` は review.ts 側の「所見の誤検出」用なので分けている
           # （契約変更の承認と所見の棄却は別の判断）。
+          # **ラベルは付けた後の push で効く。** ラベル付与での再発火は入れていない
+          # （trigger の types のコメント参照）。
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         run: |
           if [ "$CONTRACT_CHANGED" = "true" ]; then
