@@ -2,7 +2,7 @@
 -- RLS ポリシー一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
 -- 全ユーザーデータテーブルで RLS が有効
--- 最終同期日: 2026-07-24
+-- 最終同期日: 2026-07-29
 -- 同期対象 migration:
 --   - 20260318150000_add_entries_soft_delete.sql
 --   - 20260323000000_fix_entries_soft_delete_rls.sql
@@ -16,6 +16,11 @@
 --   - 20260713120023_drop_time_model_compatibility_layer.sql
 --   - 20260713121911_restore_baseline_table_grants.sql
 --   - 20260723233814_add_calendar_connection_tables.sql
+--   - 20260729062428_mcp_oauth_connections_expand.sql
+--   - 20260729062445_mcp_mutation_envelope_foundation.sql
+--   - 20260729073124_mcp_stage1_revision_fence.sql
+--   - 20260729073125_mcp_environment_identity_client_fence.sql
+--   - 20260729073126_mcp_stage1_receipt_generation_lifecycle.sql
 --
 -- パターン:
 --   (select auth.uid()) でキャッシュ → auth.uid() 直呼びより 94-99% 高速
@@ -37,9 +42,17 @@
 -- ■ mfa_recovery_codes: SELECT/INSERT/DELETE は user_id = auth.uid()、UPDATE不可
 -- ■ reports: SELECT/DELETE は user_id = auth.uid()、INSERT は service_role のみ
 -- ■ oauth_tokens: SELECT のみ user_id = auth.uid()、UPDATE/INSERT/DELETE は service-role のみ
---   (column-level RLS が無いため user UPDATE は閉じている。revoke は service-role 経由)
+--   authenticated のSELECTはcolumn-scopedでtoken_hashを除外する。
+--   user UPDATE は閉じ、revokeはservice-role経由
 -- ■ oauth_authorization_codes: browser client は全拒否（service-role のみ）
 -- ■ oauth_audit_log: SELECT のみ user_id = auth.uid()、INSERT は service-role のみ
+-- ■ oauth_connections: SELECT のみ user_id = auth.uid()、mutation は typed RPC 経由
+-- ■ mcp_environment_identity / mcp_mutation_control / mcp_mutation_receipts:
+--   RLS 有効、browser policy なし。service_role も direct mutation は不可
+--   （identityはgetter/provision RPC、controlはCAS RPC、
+--     receiptはapply / cleanupと将来のpurge lifecycleだけが更新）
+-- ■ private.timeblock_user_revisions / transaction state / user_data_controls:
+--   Data APIへ公開せず、PUBLIC/anon/authenticated/service_roleのtable権限なし
 -- ■ stripe_webhook_events / email_suppressions: browser client は全拒否（service-role のみ）
 -- ■ calendar_connections: SELECT のみ user_id = auth.uid()。INSERT/UPDATE/DELETE は service-role のみ
 --   authenticated への SELECT は **column-scoped**（repo 初）。

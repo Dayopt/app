@@ -3,7 +3,7 @@
 -- ============================================================
 -- Dayopt のドメインモデルの中核テーブル
 -- 実際のマイグレーションは migrations/ を参照
--- 最終同期日: 2026-07-24
+-- 最終同期日: 2026-07-29
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -15,6 +15,17 @@
 --   - 20260712213550_rename_record_constraint_triggers.sql
 --   - 20260723233814_add_calendar_connection_tables.sql
 --   - 20260724000416_enforce_external_event_connection_owner.sql
+--   - 20260729062435_timeblock_atomic_commands.sql
+--   - 20260729062437_timeblock_command_hardening.sql
+--   - 20260729062439_timeblock_confirm_day_command.sql
+--   - 20260729062441_timeblock_confirm_day_serialization.sql
+--   - 20260729062443_timeblock_confirm_day_range_limit.sql
+--   - 20260729062458_recordable_plan_error_contract.sql
+--   - 20260729062500_recordable_plan_trigger_error_contract.sql
+--   - 20260729073122_mcp_stage1_user_write_serialization.sql
+--   - 20260729073123_mcp_stage1_legacy_writer_compatibility.sql
+--   - 20260729073124_mcp_stage1_revision_fence.sql
+--   - 20260729073127_legacy_linked_record_restore_compatibility.sql
 --
 -- カラム順序の規則:
 --   1. id (PK)
@@ -145,6 +156,12 @@ CREATE TABLE public.plans (
 --   prevent_plans_source_change         -> prevent_time_model_source_change()
 --   enforce_plan_tag_owner              -> enforce_plan_tag_owner()
 --   enforce_plan_external_event_owner   -> enforce_plan_external_event_owner()
+--   validate_plan_temporal_write_v1      -> 時刻順序、過去 Plan の時刻固定、future-only 作成
+--   enforce_plan_skip_record_invariant_v1
+--     -> active Record がある Plan の skip と future Plan の skip を拒否
+--   direct DML / command writer fence
+--     -> 旧UIのdirect DMLとtyped commandをglobal + user単位lockで直列化し、
+--        commit時のuser revisionをtransactionごとに1回だけ進める
 
 -- records: Dayopt 内の記録
 CREATE TABLE public.records (
@@ -169,6 +186,12 @@ CREATE TABLE public.records (
 --   enforce_record_tag_owner              -> enforce_record_tag_owner()
 --   enforce_record_plan_owner             -> enforce_record_plan_owner()
 --   enforce_record_external_event_owner   -> enforce_record_external_event_owner()
+--   validate_record_temporal_write_v1      -> 時刻順序、未来 Record を拒否
+--   enforce_active_record_plan_v1
+--     -> new link/relinkはactive / owner / 完了済み / non-skipped Planだけ。
+--        既存リンクを持つRecordのrestoreだけはPlan soft-delete後も現行UI互換で許可
+--   direct DML / command writer fence
+--     -> Planと同じuser binding、lock upgrade拒否、transaction単位revisionを適用
 
 -- tags: タグ（root -> child の最大2階層）
 -- 20260424000000 でコロン記法 "dev:api" から parent_id 階層へ移行済み

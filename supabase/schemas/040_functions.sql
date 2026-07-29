@@ -1,7 +1,7 @@
 -- ============================================================
 -- 関数一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
--- 最終同期日: 2026-07-13
+-- 最終同期日: 2026-07-29
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -14,8 +14,31 @@
 --   - 20260616000000_rename_duration_to_planned_duration.sql
 --   - 20260712212527_records_table_and_drop_entries.sql
 --   - 20260713120023_drop_time_model_compatibility_layer.sql
--- 全 app-facing 関数は authenticated に明示 GRANT。
--- PUBLIC/anon への関数 EXECUTE は revoke 済み。
+--   - 20260729062428_mcp_oauth_connections_expand.sql
+--   - 20260729062430_oauth_refresh_rotation_hardening.sql
+--   - 20260729062433_oauth_connection_cutover_hardening.sql
+--   - 20260729062435_timeblock_atomic_commands.sql
+--   - 20260729062437_timeblock_command_hardening.sql
+--   - 20260729062439_timeblock_confirm_day_command.sql
+--   - 20260729062441_timeblock_confirm_day_serialization.sql
+--   - 20260729062443_timeblock_confirm_day_range_limit.sql
+--   - 20260729062445_mcp_mutation_envelope_foundation.sql
+--   - 20260729062447_allow_mcp_receipt_connection_detach.sql
+--   - 20260729062449_mcp_plan_create_apply.sql
+--   - 20260729062451_fix_mcp_plan_create_helper_casts.sql
+--   - 20260729062453_mcp_plan_mutations_apply.sql
+--   - 20260729062456_recheck_mcp_plan_create_authority.sql
+--   - 20260729062458_recordable_plan_error_contract.sql
+--   - 20260729062500_recordable_plan_trigger_error_contract.sql
+--   - 20260729062502_mcp_record_mutations_apply.sql
+--   - 20260729073122_mcp_stage1_user_write_serialization.sql
+--   - 20260729073123_mcp_stage1_legacy_writer_compatibility.sql
+--   - 20260729073124_mcp_stage1_revision_fence.sql
+--   - 20260729073125_mcp_environment_identity_client_fence.sql
+--   - 20260729073126_mcp_stage1_receipt_generation_lifecycle.sql
+--   - 20260729073127_legacy_linked_record_restore_compatibility.sql
+-- Browser-facing 関数は authenticated、DB owner の command / OAuth / MCP apply は
+-- service_role にだけ明示 GRANT。PUBLIC/anon への EXECUTE は revoke 済み。
 -- ============================================================
 
 -- ■ トリガー関数
@@ -35,6 +58,39 @@
 --   soft_delete_record / restore_record        — Record の soft delete / restore
 --   confirm_day_plans_to_records(...)          — 完了 Plan を Record として一括確定
 --   issue_oauth_token_pair(...)               — refresh/access token pair を service-role 経由で発行
+--   create_oauth_authorization_grant_v2(...)   — connection-bound code を発行（service-role only）
+--   exchange_oauth_authorization_code_v2(...)  — code を一度だけ token family へ交換（service-role only）
+--   rotate_oauth_refresh_token_v2(...)         — rotation / reuse 検知（service-role only）
+--   revoke_oauth_connection(...)               — connection と token family を失効
+--   get_mcp_environment_identity_v1()          — DB-owned authority identity取得（service-role only）
+--   provision_mcp_preview_environment_identity_v1(...)
+--     — data-less PR PreviewのURL/project-ref/JWT-refをinsert-onceで固定
+--   create/update/delete/restore_plan_command_v1(...)
+--   set_plan_skipped_command_v1(...)
+--   create/update/delete/restore_record_command_v1(...)
+--   record_plan_command_v1(...)
+--   confirm_day_plans_command_v1(...)
+--     — Plan / Record の原子的 command。service-role only
+--   get_timeblock_context_marker_v1(...)       — user単位revision/DB時刻/timezone
+--   set_mcp_mutation_control_v1(...)           — revision CAS 付き global gate（service-role only）
+--   set_mcp_client_write_control_v1(...)       — revision CAS 付き client gate（service-role only）
+--   get_user_data_generation_v1(...)           — account-preserving purge世代（service-role only）
+--   apply_mcp_plan_create/update/delete/restore_v1(...)
+--   apply_mcp_record_create/update/delete/restore_v1(...)
+--     — authority再検証、domain write、receipt作成を同一transactionで行う（service-role only）
+--   cleanup_mcp_mutation_receipts_v1(...)      — 90日超receiptのbounded cleanup（service-role only）
+
+-- ■ private schema（Data API 非公開）
+--   authorize_mcp_mutation_v1(...)             — environment/global/client/user/connection/
+--                                                 token/scope/期限/Proを同一writer fence内で再検証
+--   digest_mcp_mutation_envelope_v1(...)       — typed args のcanonical digest
+--   lock_mcp_mutation_operation_v1(...)        — user/client/operation単位のadvisory lock
+--   lock_timeblock_user_write_shared/exclusive_v1(...)
+--                                               — user単位writer lockとrevision row lock
+--   bind_timeblock_supported_writer_lock_v1(...) — user/mode bindingとlock upgrade拒否
+--   resolve_mcp_mutation_replay_v1(...)        — digest/resource/generation replay判定
+--   enforce_mcp_mutation_receipt_lifecycle_v1() — receipt immutable / DB-authored generation
+--   get/require_mcp_environment_resource_v1(...) — DB identity先行resource fence
 
 -- ■ 削除済み RPC
 --   get_tag_cumulative_time / get_tag_avg_fulfillment / get_tag_plan_rate /
