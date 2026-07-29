@@ -1,5 +1,11 @@
 import { routing } from '@dayopt/i18n/routing';
-import { HeroSection, HowSection, PricingSection } from '@web/features/marketing';
+import {
+  HeroSection,
+  HowSection,
+  OpenByDesignSection,
+  PricingSection,
+  ProblemSection,
+} from '@web/features/marketing';
 import { generateSEOMetadata } from '@web/platform/seo/metadata';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
@@ -42,8 +48,14 @@ export default async function Home({ params }: PageProps) {
         {/* Hero Section */}
         <HeroSection locale={locale} />
 
+        {/* Problem Section */}
+        <ProblemSection locale={locale} />
+
         {/* How Section */}
         <HowSection locale={locale} />
+
+        {/* Open by design */}
+        <OpenByDesignSection locale={locale} />
 
         {/* Pricing Section */}
         <PricingSection locale={locale} />

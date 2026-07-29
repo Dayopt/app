@@ -18,19 +18,40 @@
       }
     },
     "problem": {
-      "title": "Sound familiar?",
+      "title": "You have a plan. You have a record. They just never meet.",
       "items": {
         "separateApps": {
-          "title": "Your plan lives in one app, your work in another",
-          "description": "Google Calendar for meetings, Todoist for tasks, Notion for notes. Nothing talks to each other."
+          "title": "Work is scattered and that's okay",
+          "description": "Your tasks live in GitHub or Linear, your plans in your calendar, and your conversations in Slack. That's okay. But there is nowhere you decide how to use your time."
         },
         "plansFallApart": {
-          "title": "By 10am, your morning plan is gone",
-          "description": "Slack pings, email, a 'quick sync' — your focused deep work block never stood a chance."
+          "title": "Plan and record are in different places",
+          "description": "Your calendar shows future commitments, your tracker shows what happened. If they never meet, the drift is lost."
         },
         "noReview": {
-          "title": "Friday comes and you can't name what you finished",
-          "description": "You were busy all week. But what did you actually accomplish? You're not sure."
+          "title": "Reviewing is too much to keep up with",
+          "description": "You know reflection matters, but if it requires a special ritual, you tend not to keep it up."
+        }
+      },
+      "closing": "Dayopt is not a place to manage tasks. It is a place to operate how you use your time."
+    },
+    "openByDesign": {
+      "label": "Open by design",
+      "title": "Your data, open by design",
+      "subtitle": "Your plans and records stay yours. Dayopt won't lock them in a closed box.",
+      "description": "Connect your time data without changing your workflow.",
+      "items": {
+        "mcp": {
+          "title": "MCP Server",
+          "description": "Your AI assistant can directly access your plans and records in Dayopt."
+        },
+        "ical": {
+          "title": "iCalendar feed",
+          "description": "You can subscribe to your Dayopt plans in Google Calendar and other tools."
+        },
+        "api": {
+          "title": "API first",
+          "description": "Data export and external integrations stay in your hands."
         }
       }
     },
@@ -85,7 +106,7 @@
         "pro": {
           "name": "Pro",
           "badge": "Recommended",
-          "description": "Every Review metric, unlimited tags, and open data access",
+          "description": "All review metrics, unlimited tags, and API and MCP access",
           "price": "$5",
           "period": "/month",
           "priceDaily": "About 15¢ a day",

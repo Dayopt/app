@@ -18,19 +18,40 @@
       }
     },
     "problem": {
-      "title": "こんな経験はありませんか？",
+      "title": "予定はある。記録もある。つながっていないだけ。",
       "items": {
         "separateApps": {
-          "title": "計画はカレンダー、タスクは別アプリ",
-          "description": "Googleカレンダーに予定、ToDoアプリにタスク、メモアプリにメモ。どれも連動していない。"
+          "title": "仕事は散らばっていていい",
+          "description": "タスクは GitHub や Linear に、予定はカレンダーに、連絡は Slack に。そうしているのは当然です。だけど、自分の時間をどう使うか決める場所が、どこにもない。"
         },
         "plansFallApart": {
-          "title": "10時には朝の計画が消えている",
-          "description": "Slackの通知、メール、「ちょっといい？」の声。集中ブロックは一度も守れなかった。"
+          "title": "計画と実績が別の場所にある",
+          "description": "カレンダーは未来の予定を見せ、トラッカーは過去の記録を残す。ズレはどちらにも残らない。"
         },
         "noReview": {
-          "title": "金曜日、今週何を終わらせたか言えない",
-          "description": "忙しかったのは確か。でも、何を達成したのか？はっきり思い出せない。"
+          "title": "振り返りが重すぎて続かない",
+          "description": "振り返りが大事なのは分かっている。専用の儀式が必要になると、続かなくなる。"
+        }
+      },
+      "closing": "Dayopt は、タスクを管理する場所ではなく、時間の使い方を運用する場所です。"
+    },
+    "openByDesign": {
+      "label": "Open by design",
+      "title": "あなたのデータは、開かれている",
+      "subtitle": "Dayopt の予定と実績は、あなたのものです。閉じたアプリに囲い込みません。",
+      "description": "あなたのワークフローを変えずに、データを外へ広げられます。",
+      "items": {
+        "mcp": {
+          "title": "MCP サーバー",
+          "description": "あなたが使う AI エージェントから、Dayopt の予定と実績を直接参照できます。"
+        },
+        "ical": {
+          "title": "iCalendar フィード",
+          "description": "Google カレンダーなどの外部ツールで Dayopt の予定を購読できます。"
+        },
+        "api": {
+          "title": "API ファースト",
+          "description": "データのエクスポートや外部ツール連携も、あなたの意思で進められます。"
         }
       }
     },
@@ -85,7 +106,7 @@
         "pro": {
           "name": "Pro",
           "badge": "おすすめ",
-          "description": "すべての振り返り指標、無制限のタグ、開かれたデータアクセス",
+          "description": "すべての振り返り指標、無制限のタグ、API・MCP アクセス",
           "price": "$5",
           "period": "/月",
           "priceDaily": "1日あたり約20円",
