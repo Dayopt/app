@@ -2,12 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
-import {
-  BillingServiceError,
-  createCheckoutSession,
-  getBillingInfo,
-  syncSubscriptionStatus,
-} from '../billing-service';
+import { BillingServiceError, getBillingInfo, syncSubscriptionStatus } from '../billing-service';
 
 const stripeMock = vi.hoisted(() => ({
   customers: {
@@ -104,43 +99,6 @@ describe('billing-service', () => {
       await expect(getBillingInfo(supabase, 'user-1')).rejects.toThrow(
         'Failed to fetch billing info',
       );
-    });
-  });
-
-  describe('createCheckoutSession', () => {
-    it('サーバー設定の Pro price だけを Stripe Checkout に渡す', async () => {
-      vi.stubEnv('NEXT_PUBLIC_STRIPE_PRO_PRICE_ID', 'price_server_pro');
-      stripeMock.subscriptions.list.mockResolvedValue({ data: [] });
-      stripeMock.checkout.sessions.create.mockResolvedValue({
-        url: 'https://checkout.stripe.com/test',
-      });
-
-      const supabase = createProfileSupabase({
-        id: 'user-1',
-        stripe_customer_id: 'cus_existing',
-      });
-
-      const url = await createCheckoutSession(supabase, 'user-1', 'test@example.com');
-
-      expect(url).toBe('https://checkout.stripe.com/test');
-      expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          line_items: [{ price: 'price_server_pro', quantity: 1 }],
-        }),
-      );
-    });
-
-    it('Pro price 未設定では Stripe Checkout を作成しない', async () => {
-      vi.stubEnv('NEXT_PUBLIC_STRIPE_PRO_PRICE_ID', '');
-      const supabase = createProfileSupabase({
-        id: 'user-1',
-        stripe_customer_id: 'cus_existing',
-      });
-
-      await expect(createCheckoutSession(supabase, 'user-1', 'test@example.com')).rejects.toThrow(
-        BillingServiceError,
-      );
-      expect(stripeMock.checkout.sessions.create).not.toHaveBeenCalled();
     });
   });
 

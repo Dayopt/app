@@ -33,6 +33,7 @@ export { UserSettingsInitializer } from './components/UserSettingsInitializer';
 // Hooks
 // =============================================================================
 export { usePaymentErrorDialog } from './hooks/usePaymentErrorDialog';
+export { useStableBillingOperation } from './hooks/useStableBillingOperation';
 export { useTrialEndedDialog } from './hooks/useTrialEndedDialog';
 export { useUserSettings } from './hooks/useUserSettings';
 
@@ -45,6 +46,8 @@ export { TrialEndedDialog } from './components/TrialEndedDialog';
 // =============================================================================
 // Utils
 // =============================================================================
+export { getBillingOperationErrorDisposition } from './lib/billing-operation';
+
 // タイムゾーン等のserver stateはuseUserPreferences経由でquery cacheから取得する。
 
 // ここにないものはfeature内部専用

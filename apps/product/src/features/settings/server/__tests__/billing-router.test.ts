@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createMockContext } from '@/lib/test/trpc-test-helpers';
 
@@ -7,6 +7,8 @@ import { createCallerFactory } from '@/lib/trpc/procedures';
 import { billingRouter } from '../billing-router';
 
 const serviceRoleSupabaseMock = vi.hoisted(() => ({ from: vi.fn() }));
+const OPERATION_ID = '00000000-0000-4000-8000-000000000001';
+const LEGACY_OPERATION_ID = '00000000-0000-4000-8000-000000000099';
 
 vi.mock('@/lib/supabase/oauth', () => ({
   createServiceRoleClient: vi.fn(() => serviceRoleSupabaseMock),
@@ -47,6 +49,11 @@ const billingServiceMock = await import('../billing-service');
 const createCaller = createCallerFactory(billingRouter);
 
 describe('billing-router', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
   describe('認証ガード', () => {
     it('未認証での getOverview は UNAUTHORIZED', async () => {
       const ctx = createMockContext({ userId: undefined });
@@ -70,7 +77,7 @@ describe('billing-router', () => {
       const ctx = createMockContext({ userId: undefined });
       const caller = createCaller(ctx);
 
-      await expect(caller.createCheckoutSession()).rejects.toThrow(
+      await expect(caller.createCheckoutSession({ operationId: OPERATION_ID })).rejects.toThrow(
         expect.objectContaining({ code: 'UNAUTHORIZED' }),
       );
     });
@@ -131,7 +138,7 @@ describe('billing-router', () => {
 
       const caller = createCaller(ctx);
 
-      await expect(caller.createCheckoutSession()).rejects.toThrow(
+      await expect(caller.createCheckoutSession({ operationId: OPERATION_ID })).rejects.toThrow(
         expect.objectContaining({ code: 'BAD_REQUEST' }),
       );
     });
@@ -150,12 +157,12 @@ describe('billing-router', () => {
 
       const caller = createCaller(ctx);
 
-      await expect(caller.createCheckoutSession()).rejects.toThrow(
+      await expect(caller.createCheckoutSession({ operationId: OPERATION_ID })).rejects.toThrow(
         expect.objectContaining({ code: 'UNAUTHORIZED' }),
       );
     });
 
-    it('caller supplied priceId を service に渡さずservice role経路でcheckoutを作成する', async () => {
+    it('caller supplied priceId を拒否する', async () => {
       vi.mocked(billingServiceMock.createCheckoutSession).mockResolvedValue(
         'https://checkout.stripe.com/test',
       );
@@ -168,13 +175,68 @@ describe('billing-router', () => {
       });
 
       const caller = createCaller(ctx);
-      const result = await caller.createCheckoutSession({ priceId: 'price_attacker' } as never);
+      await expect(
+        caller.createCheckoutSession({
+          operationId: OPERATION_ID,
+          priceId: 'price_attacker',
+        } as never),
+      ).rejects.toThrow();
+      expect(billingServiceMock.createCheckoutSession).not.toHaveBeenCalled();
+    });
+
+    it('不正な operationId を拒否する', async () => {
+      const ctx = createMockContext({ userId: 'user-1' });
+      const caller = createCaller(ctx);
+
+      await expect(caller.createCheckoutSession({ operationId: 'not-a-uuid' })).rejects.toThrow();
+      expect(billingServiceMock.createCheckoutSession).not.toHaveBeenCalled();
+    });
+
+    it('service role経路へoperationIdとserver-owned emailを渡す', async () => {
+      vi.mocked(billingServiceMock.createCheckoutSession).mockResolvedValue(
+        'https://checkout.stripe.com/test',
+      );
+
+      const ctx = createMockContext({ userId: 'user-1' });
+      const mockSupabase = ctx.supabase as unknown as Record<string, unknown>;
+      (mockSupabase.auth as Record<string, unknown>).getUser = vi.fn().mockResolvedValue({
+        data: { user: { id: 'user-1', email: 'test@example.com' } },
+        error: null,
+      });
+
+      const caller = createCaller(ctx);
+      const result = await caller.createCheckoutSession({ operationId: OPERATION_ID });
 
       expect(result?.url).toBe('https://checkout.stripe.com/test');
       expect(billingServiceMock.createCheckoutSession).toHaveBeenCalledWith(
         serviceRoleSupabaseMock,
         'user-1',
         'test@example.com',
+        OPERATION_ID,
+      );
+    });
+
+    it('旧bundleのinputなし呼び出しへserver operationIdを補う', async () => {
+      vi.spyOn(crypto, 'randomUUID').mockReturnValue(LEGACY_OPERATION_ID);
+      vi.mocked(billingServiceMock.createCheckoutSession).mockResolvedValue(
+        'https://checkout.stripe.com/test',
+      );
+
+      const ctx = createMockContext({ userId: 'user-1' });
+      const mockSupabase = ctx.supabase as unknown as Record<string, unknown>;
+      (mockSupabase.auth as Record<string, unknown>).getUser = vi.fn().mockResolvedValue({
+        data: { user: { id: 'user-1', email: 'test@example.com' } },
+        error: null,
+      });
+
+      const caller = createCaller(ctx);
+      await caller.createCheckoutSession();
+
+      expect(billingServiceMock.createCheckoutSession).toHaveBeenCalledWith(
+        serviceRoleSupabaseMock,
+        'user-1',
+        'test@example.com',
+        LEGACY_OPERATION_ID,
       );
     });
 
@@ -192,7 +254,7 @@ describe('billing-router', () => {
       });
 
       const caller = createCaller(ctx);
-      const result = await caller.createCheckoutSession();
+      const result = await caller.createCheckoutSession({ operationId: OPERATION_ID });
 
       expect(result?.url).toBe('https://checkout.stripe.com/test');
     });
@@ -207,8 +269,31 @@ describe('billing-router', () => {
       const ctx = createMockContext({ userId: 'user-1' });
       const caller = createCaller(ctx);
 
-      const result = await caller.createPortalSession();
+      const result = await caller.createPortalSession({ operationId: OPERATION_ID });
       expect(result?.url).toBe('https://billing.stripe.com/portal/test');
+      expect(billingServiceMock.createPortalSession).toHaveBeenCalledWith(
+        serviceRoleSupabaseMock,
+        'user-1',
+        OPERATION_ID,
+      );
+    });
+
+    it('旧bundleのinputなし呼び出しへserver operationIdを補う', async () => {
+      vi.spyOn(crypto, 'randomUUID').mockReturnValue(LEGACY_OPERATION_ID);
+      vi.mocked(billingServiceMock.createPortalSession).mockResolvedValue(
+        'https://billing.stripe.com/portal/test',
+      );
+
+      const ctx = createMockContext({ userId: 'user-1' });
+      const caller = createCaller(ctx);
+
+      await caller.createPortalSession();
+
+      expect(billingServiceMock.createPortalSession).toHaveBeenCalledWith(
+        serviceRoleSupabaseMock,
+        'user-1',
+        LEGACY_OPERATION_ID,
+      );
     });
 
     it('Stripe顧客なしでサービスエラー', async () => {
@@ -224,7 +309,9 @@ describe('billing-router', () => {
       const ctx = createMockContext({ userId: 'user-1' });
       const caller = createCaller(ctx);
 
-      await expect(caller.createPortalSession()).rejects.toThrow('No Stripe customer found');
+      await expect(caller.createPortalSession({ operationId: OPERATION_ID })).rejects.toThrow(
+        'No Stripe customer found',
+      );
     });
   });
 });

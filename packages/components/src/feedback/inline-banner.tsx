@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import { cn } from '../cn';
 
 interface InlineBannerAction {
+  disabled?: boolean;
   label: string;
   onClick: () => void;
 }
@@ -33,9 +34,10 @@ function InlineBanner({ visible, message, action }: InlineBannerProps) {
           {action && (
             <button
               type="button"
+              disabled={action.disabled}
               onClick={action.onClick}
-              tabIndex={visible ? undefined : -1}
-              className="text-foreground focus-visible:ring-ring shrink-0 text-sm underline outline-none focus-visible:outline-2"
+              tabIndex={visible && !action.disabled ? undefined : -1}
+              className="text-foreground focus-visible:ring-ring shrink-0 text-sm underline outline-none focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {action.label}
             </button>

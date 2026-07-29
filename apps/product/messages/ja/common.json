@@ -225,6 +225,11 @@
       "checkPayment": "支払い情報を確認",
       "later": "後で確認する"
     },
+    "billingOperation": {
+      "retryable": "支払いページを開けませんでした。もう一度お試しください。",
+      "restart": "前の支払い処理は終了しました。もう一度お試しください。",
+      "accountClosing": "アカウントを削除中のため、支払い情報は変更できません。"
+    },
     "inlineBanner": {
       "paymentError": "お支払いに問題があります",
       "checkPayment": "支払い情報を確認",
