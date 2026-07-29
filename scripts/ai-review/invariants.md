@@ -44,6 +44,30 @@ ai-review が「**あるべき検査の不在**」を判定するための正本
   （メールアドレスの一致で同定しない）
 - token 暗号化の鍵は起動時に長さを検証する（32 bytes 以上）
 
+## MCP の DB 書き込み境界
+
+- MCP mutation の global gate は DB 上で既定 `OFF`、`enabled_client_ids` は既定 `[]`。
+  両方が許可した client だけがwrite grant/applyを通る。各gateはrevision付きの
+  service-role-only RPC以外から変更しない
+- Candidate 1では `global OFF AND client list empty` をProductionの停止条件とする。
+  旧UI direct UPDATE、tag mergeのlock順、legacy confirm-dayとdirect Recordのraceは、
+  Stage 2のapp command移行と競合testが終わるまでMCP writeから到達不能にする
+- MCP apply RPC は `service_role` だけが実行できる。各 apply transaction 内で user、
+  connection、access token、DB-owned environment/resource、scope、期限、
+  connection/token の失効状態を共通writer fence内で再検証する
+- OAuth authorityのresourceは変更不可のDB environment identityへFKで結ぶ。PR Previewは
+  空または未使用の既知auth seed fixtureだけのDBでexact Vercel URLとSupabase project
+  ref/JWT refをservice-role RPCから一度だけ設定する。UUID/email/password/provider
+  identityを固定し、未知user、session、MFA、Auth OAuth state、既存OAuth authorityが
+  あれば拒否する。Persistent Staging identityは作らない
+- Plan / Record writerはtransaction内で一人のuserとlock modeへbindする。direct DMLと
+  typed commandを同じ境界へ入れ、sharedからexclusiveへのlock upgradeを即時拒否する。
+  user revisionはcommitしたtransactionごとに最大1回進み、rollbackでは進まない
+- mutation 本体とimmutable receiptは同じtransactionで確定し、失敗時はどちらも残さない。
+  receiptはDB-authored user-data generationに結び、削除世代を越えたreplayを拒否する
+- Plan / Record の同一lane重複は、通常UIのdirect DMLとMCP applyの両方に効く
+  PostgreSQL exclusion constraintを最終authorityとする
+
 ## 時刻
 
 - 保存は UTC。表示と日境界の判定はユーザーの timezone で行う

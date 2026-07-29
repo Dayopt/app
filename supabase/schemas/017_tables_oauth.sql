@@ -1,78 +1,166 @@
 -- ============================================================
--- OAuth 2.1 関連テーブル (読み物用 — CLIでは使用しない)
+-- OAuth 2.1 / MCP DB基盤（読み物用 — CLIでは使用しない）
 -- ============================================================
---
--- Phase 1 で MCP Remote Server 用に api_keys → oauth_tokens に rename + 拡張。
--- 詳細: apps/storybook/docs/product/projects/mcp-server/overview.mdx
---
--- Migration:
---   20260501000000_oauth_tokens_from_api_keys.sql  (rename + extend)
---   20260501000100_oauth_authorization_codes.sql   (PKCE code 中間 state)
---   20260514000918_mcp_phase_1_5.sql               (audit log + token issue RPC)
---   20260604230607_harden_function_execute_privileges.sql
---
--- 最終同期日: 2026-06-17
+-- Stage 1 は connection-bound OAuth と typed mutation のDB境界だけを追加する。
+-- MCP write tool はまだ公開せず、global gate OFF + client list empty が停止条件。
+-- 実際のマイグレーションは migrations/ を参照。
+-- 最終同期日: 2026-07-29
+-- Stage 1 terminal migration: 20260729073127_legacy_linked_record_restore_compatibility.sql
+-- 同期対象 migration:
+--   - 20260501000000_oauth_tokens_from_api_keys.sql
+--   - 20260501000100_oauth_authorization_codes.sql
+--   - 20260514000918_mcp_phase_1_5.sql
+--   - 20260604230607_harden_function_execute_privileges.sql
+--   - 20260729062428_mcp_oauth_connections_expand.sql
+--   - 20260729062430_oauth_refresh_rotation_hardening.sql
+--   - 20260729062433_oauth_connection_cutover_hardening.sql
+--   - 20260729062445_mcp_mutation_envelope_foundation.sql
+--   - 20260729062447_allow_mcp_receipt_connection_detach.sql
+--   - 20260729062449_mcp_plan_create_apply.sql
+--   - 20260729062453_mcp_plan_mutations_apply.sql
+--   - 20260729062502_mcp_record_mutations_apply.sql
+--   - 20260729073122_mcp_stage1_user_write_serialization.sql
+--   - 20260729073123_mcp_stage1_legacy_writer_compatibility.sql
+--   - 20260729073124_mcp_stage1_revision_fence.sql
+--   - 20260729073125_mcp_environment_identity_client_fence.sql
+--   - 20260729073126_mcp_stage1_receipt_generation_lifecycle.sql
+--   - 20260729073127_legacy_linked_record_restore_compatibility.sql
 -- ============================================================
 
--- ────────────────────────────────────────────────────────────
+-- mcp_environment_identity: DBが所有する一度きり・変更不可のauthority identity。
+-- 既存DBはProductionへbackfillする。データのないPR Previewだけがservice-role RPCで
+-- exact Vercel URL + Supabase project ref/JWT refを一度だけ設定できる。
+-- Persistent Stagingはこのモデルに含めない。
+CREATE TABLE public.mcp_environment_identity (
+  singleton_key BOOLEAN PRIMARY KEY DEFAULT true CHECK (singleton_key),
+  environment TEXT NOT NULL CHECK (environment IN ('production', 'preview')),
+  authorization_server_uri TEXT NOT NULL,
+  resource_uri TEXT NOT NULL UNIQUE,
+  supabase_project_ref TEXT,
+  provisioned_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- oauth_connections: 1回の承認と1つのrefresh familyを表す安定した接続
+CREATE TABLE public.oauth_connections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  client_id TEXT NOT NULL,              -- claude-ai / chatgpt / cursor / unknown
+  resource_uri TEXT NOT NULL REFERENCES public.mcp_environment_identity(resource_uri),
+  scopes TEXT[] NOT NULL,
+  consent_version INTEGER NOT NULL DEFAULT 1,
+  authorized_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_used_at TIMESTAMPTZ,
+  last_refreshed_at TIMESTAMPTZ,
+  reauth_required_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '90 days'),
+  write_enabled_at TIMESTAMPTZ,         -- connection作成時だけ設定できるclosed-beta marker
+  legacy_read_only BOOLEAN NOT NULL DEFAULT false,
+  revoked_at TIMESTAMPTZ,
+  revoked_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (id, user_id, client_id, resource_uri)
+);
+
 -- oauth_tokens: opaque access / refresh token storage
---
--- token_hash:      SHA-256 ハッシュ。生 token (dop_at_... / dop_rt_...) は DB 不在
--- token_type:      'access' (5min TTL) / 'refresh' (30day TTL, rotation あり)
--- client_id:       Phase 1 は static allowlist。Phase 2 で oauth_clients FK 化
--- scopes:          OAuth scope 配列。Phase 1 は ['read:entries']
--- expires_at:      token 失効時刻
--- revoked_at:      revoke 時刻 (Phase 1.5 webhook / user-initiated revoke)
--- parent_token_id: refresh で発行された access の親 refresh (chain 追跡)
--- last_used_at:    最後の Bearer 利用時刻 (security 衛生管理用)
--- ────────────────────────────────────────────────────────────
+-- 生tokenは保存せずSHA-256 hashだけを持つ。connection bindingは複合FKでowner/client/resourceも固定。
 CREATE TABLE public.oauth_tokens (
-  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  token_hash      TEXT        NOT NULL UNIQUE,
-  token_type      TEXT        NOT NULL CHECK (token_type IN ('access', 'refresh')),
-  client_id       TEXT        NOT NULL CHECK (client_id IN ('claude-ai', 'chatgpt', 'cursor', 'unknown')),
-  scopes          TEXT[]      NOT NULL DEFAULT ARRAY['read:entries']::TEXT[],
-  expires_at      TIMESTAMPTZ NOT NULL,
-  revoked_at      TIMESTAMPTZ,
-  parent_token_id UUID        REFERENCES public.oauth_tokens(id) ON DELETE SET NULL,
-  last_used_at    TIMESTAMPTZ,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  connection_id UUID,                   -- Insert互換のため型はnullable。CHECKでNULL行を禁止
+  token_hash TEXT NOT NULL UNIQUE,
+  token_type TEXT NOT NULL,             -- access / refresh
+  client_id TEXT NOT NULL,
+  resource_uri TEXT,                    -- bridgeがDB identityから補完。CHECKでNULL行を禁止
+  scopes TEXT[] NOT NULL DEFAULT ARRAY['read:entries']::TEXT[],
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  rotated_at TIMESTAMPTZ,
+  parent_token_id UUID REFERENCES public.oauth_tokens(id) ON DELETE SET NULL,
+  last_used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  FOREIGN KEY (connection_id, user_id, client_id, resource_uri)
+    REFERENCES public.oauth_connections (id, user_id, client_id, resource_uri)
+    ON DELETE CASCADE,
+  FOREIGN KEY (resource_uri)
+    REFERENCES public.mcp_environment_identity(resource_uri),
+  CHECK (connection_id IS NOT NULL AND resource_uri IS NOT NULL)
 );
 
--- ────────────────────────────────────────────────────────────
--- oauth_authorization_codes: PKCE code grant の中間 state
---
--- /oauth/authorize で発行 → /oauth/token で消費。TTL 60 秒、single use。
--- service_role 経由でのみ insert / select / update。browser client は RLS で拒否。
--- ────────────────────────────────────────────────────────────
+-- oauth_authorization_codes: PKCE authorization codeの一回限りの中間state
 CREATE TABLE public.oauth_authorization_codes (
-  code_hash             TEXT        PRIMARY KEY,
-  user_id               UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  client_id             TEXT        NOT NULL CHECK (client_id IN ('claude-ai', 'chatgpt', 'cursor', 'unknown')),
-  redirect_uri          TEXT        NOT NULL,
-  code_challenge        TEXT        NOT NULL,
-  code_challenge_method TEXT        NOT NULL CHECK (code_challenge_method = 'S256'),
-  scopes                TEXT[]      NOT NULL,
-  expires_at            TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '60 seconds'),
-  consumed_at           TIMESTAMPTZ,
-  created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+  code_hash TEXT PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  connection_id UUID,                   -- legacy Insert trigger後のCHECKでNULL行を禁止
+  client_id TEXT NOT NULL,
+  resource_uri TEXT,                    -- bridgeがDB identityから補完。CHECKでNULL行を禁止
+  redirect_uri TEXT NOT NULL,
+  code_challenge TEXT NOT NULL,
+  code_challenge_method TEXT NOT NULL CHECK (code_challenge_method = 'S256'),
+  scopes TEXT[] NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '60 seconds'),
+  consumed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  FOREIGN KEY (connection_id, user_id, client_id, resource_uri)
+    REFERENCES public.oauth_connections (id, user_id, client_id, resource_uri)
+    ON DELETE CASCADE,
+  FOREIGN KEY (resource_uri)
+    REFERENCES public.mcp_environment_identity(resource_uri),
+  CHECK (connection_id IS NOT NULL AND resource_uri IS NOT NULL)
 );
 
--- ────────────────────────────────────────────────────────────
--- oauth_audit_log: MCP tool call audit
---
--- user は自分の audit log の SELECT のみ可能。
--- INSERT は service_role 経由（tool call 記録）で行う。
--- ────────────────────────────────────────────────────────────
+-- 現行read-only appがconnection_idを送らない期間はBEFORE INSERT triggerで
+-- legacy_read_only connectionを作る。code consume後のroot refreshとchild accessは
+-- 同じconnection familyを継承する。bridgeはservice-role onlyで、resourceはDB identity
+-- から取得し、write/delete scopeを拒否する。
+
+-- oauth_audit_log: MCP tool call audit（payloadやtoken平文は保存しない）
 CREATE TABLE public.oauth_audit_log (
-  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id    UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  token_id   UUID        REFERENCES public.oauth_tokens(id) ON DELETE SET NULL,
-  client_id  TEXT        NOT NULL,
-  tool_name  TEXT        NOT NULL,
-  called_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  token_id UUID REFERENCES public.oauth_tokens(id) ON DELETE SET NULL,
+  client_id TEXT NOT NULL,
+  tool_name TEXT NOT NULL,
+  called_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_oauth_audit_log_user_called
-  ON public.oauth_audit_log(user_id, called_at DESC);
+-- mcp_mutation_control: global AND per-client の二重gate
+CREATE TABLE public.mcp_mutation_control (
+  singleton_key BOOLEAN PRIMARY KEY DEFAULT true CHECK (singleton_key),
+  writes_enabled BOOLEAN NOT NULL DEFAULT false,
+  enabled_client_ids TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+  revision BIGINT NOT NULL DEFAULT 0 CHECK (revision >= 0),
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- mcp_mutation_receipts: 成功したtyped mutationの90日idempotency/audit receipt
+-- request payloadは保存せず、DBが作ったcanonical digestだけを持つ。
+CREATE TABLE public.mcp_mutation_receipts (
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  client_id TEXT NOT NULL,
+  operation_id UUID NOT NULL,
+  origin_connection_id UUID REFERENCES public.oauth_connections(id) ON DELETE SET NULL,
+  envelope_version SMALLINT NOT NULL,
+  tool_name TEXT NOT NULL,
+  request_digest BYTEA NOT NULL CHECK (octet_length(request_digest) = 32),
+  resource_type TEXT NOT NULL CHECK (resource_type IN ('plan', 'record')),
+  resource_id UUID NOT NULL,
+  resource_version TIMESTAMPTZ NOT NULL,
+  resource_deleted_at TIMESTAMPTZ,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  data_generation BIGINT NOT NULL DEFAULT 0 CHECK (data_generation >= 0),
+  purged_generation BIGINT,
+  purged_at TIMESTAMPTZ,
+  PRIMARY KEY (user_id, client_id, operation_id)
+);
+
+-- private.user_data_controls はaccount-preserving purge世代をuser単位で保持する。
+-- receipt insert時にDBがdata_generationを固定し、purgeで世代を越えたreceiptは
+-- tombstoneとしてDM008を返す。Stage 3のpurge command本体はまだ含めない。
+--
+-- environment_identity / mutation_control / receiptsはRLS有効・browser policyなし。
+-- service_roleのdirect mutationも閉じ、typed SECURITY DEFINER RPCだけが変更する。
+--
+-- Candidate 1の停止条件:
+--   writes_enabled = false AND enabled_client_ids = []
+-- 旧UI direct UPDATE、tag merge lock順、legacy confirm-dayとの未解決raceはStage 2で
+-- app command移行と競合testを終えるまで到達不能にする。

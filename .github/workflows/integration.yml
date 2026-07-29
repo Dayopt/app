@@ -95,6 +95,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
           DATABASE_URL: ${{ steps.supabase.outputs.db_url }}
+          USE_LOCAL_DB: 'true'
           NODE_ENV: test
           CI: true
 
