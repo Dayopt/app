@@ -80,6 +80,10 @@ describe('危険クラス path の判定', () => {
     expect(DANGEROUS_PATH_PATTERNS.length).toBe(DANGEROUS_PATH_GLOBS.length);
   });
 
+  it('override labelの追加・解除時に新しいevent payloadで再評価する', () => {
+    expect(WORKFLOW).toContain('types: [opened, synchronize, reopened, labeled, unlabeled]');
+  });
+
   it('契約が名指しする 6 クラスに対応する範囲を持つ', () => {
     // prompt.md が報告を求めている領域は、必ず発火対象に入っていること。
     // gate は見ていない範囲について何も言えず、「起動しなかった」は誰にも見えない。

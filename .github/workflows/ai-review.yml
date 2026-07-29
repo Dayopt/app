@@ -8,6 +8,9 @@ name: AI Review
 # （contract test で固定。片方だけ広げると、走らない or 走って何も見ない状態になる）。
 on:
   pull_request:
+    # override labelの追加・解除を新しいevent payloadで再評価する。Actionsのrerunは元の
+    # payloadを再利用するため、後から付けたlabelを認識できない。
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches: [main]
     paths:
       # データ分離・データ損失
