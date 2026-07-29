@@ -56,8 +56,9 @@ ai-review が「**あるべき検査の不在**」を判定するための正本
   connection、access token、DB-owned environment/resource、scope、期限、
   connection/token の失効状態を共通writer fence内で再検証する
 - OAuth authorityのresourceは変更不可のDB environment identityへFKで結ぶ。PR Previewは
-  data-less DBでexact Vercel URLとSupabase project ref/JWT refをservice-role RPCから
-  一度だけ設定し、Persistent Staging identityは作らない
+  空または既知seed fixtureだけのDBでexact Vercel URLとSupabase project ref/JWT refを
+  service-role RPCから一度だけ設定する。未知userや既存OAuth authorityがあれば拒否し、
+  Persistent Staging identityは作らない
 - Plan / Record writerはtransaction内で一人のuserとlock modeへbindする。direct DMLと
   typed commandを同じ境界へ入れ、sharedからexclusiveへのlock upgradeを即時拒否する。
   user revisionはcommitしたtransactionごとに最大1回進み、rollbackでは進まない

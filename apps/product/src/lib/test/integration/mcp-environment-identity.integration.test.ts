@@ -140,7 +140,7 @@ describe.skipIf(!RUN_LOCAL)('MCP environment identity integration', () => {
     expect(codeCount).toBe(0);
   });
 
-  it('provisions one exact data-less Preview identity and rejects replacement', () => {
+  it('provisions one exact seeded Preview identity and rejects unknown users or replacement', () => {
     const previewRef = 'abcdefghijklmnopqrst';
     const previewUrl = 'https://product-git-mcp-safe-dayopt.vercel.app';
     const previewProof = runOwnerSql(`
@@ -170,6 +170,122 @@ describe.skipIf(!RUN_LOCAL)('MCP environment identity integration', () => {
         );
       END;
       $$;
+
+      INSERT INTO auth.users (
+        id,
+        instance_id,
+        email,
+        encrypted_password,
+        email_confirmed_at,
+        raw_app_meta_data,
+        raw_user_meta_data,
+        created_at,
+        updated_at,
+        role,
+        aud,
+        confirmation_token,
+        recovery_token,
+        email_change_token_new,
+        email_change,
+        email_change_token_current,
+        phone,
+        phone_change,
+        phone_change_token,
+        reauthentication_token,
+        email_change_confirm_status
+      ) VALUES (
+        '00000000-0000-0000-0000-000000000002',
+        '00000000-0000-0000-0000-000000000000',
+        'unknown-preview-user@example.com',
+        '',
+        pg_catalog.now(),
+        '{"provider":"email","providers":["email"]}',
+        '{}',
+        pg_catalog.now(),
+        pg_catalog.now(),
+        'authenticated',
+        'authenticated',
+        '',
+        '',
+        '',
+        '',
+        '',
+        NULL,
+        NULL,
+        '',
+        '',
+        0
+      );
+
+      DO $$
+      DECLARE
+        v_unknown_user_rejected BOOLEAN := false;
+      BEGIN
+        BEGIN
+          PERFORM *
+          FROM public.provision_mcp_preview_environment_identity_v1(
+            '${previewUrl}',
+            '${previewUrl}',
+            '${previewRef}'
+          );
+        EXCEPTION WHEN SQLSTATE 'DI005' THEN
+          v_unknown_user_rejected := true;
+        END;
+
+        IF NOT v_unknown_user_rejected THEN
+          RAISE EXCEPTION 'Unknown Preview user was not rejected';
+        END IF;
+      END;
+      $$;
+
+      DELETE FROM auth.users
+      WHERE id = '00000000-0000-0000-0000-000000000002'::UUID;
+
+      INSERT INTO auth.users (
+        id,
+        instance_id,
+        email,
+        encrypted_password,
+        email_confirmed_at,
+        raw_app_meta_data,
+        raw_user_meta_data,
+        created_at,
+        updated_at,
+        role,
+        aud,
+        confirmation_token,
+        recovery_token,
+        email_change_token_new,
+        email_change,
+        email_change_token_current,
+        phone,
+        phone_change,
+        phone_change_token,
+        reauthentication_token,
+        email_change_confirm_status
+      ) VALUES (
+        '00000000-0000-0000-0000-000000000001',
+        '00000000-0000-0000-0000-000000000000',
+        'test@dayopt.dev',
+        '',
+        pg_catalog.now(),
+        '{"provider":"email","providers":["email"]}',
+        '{"full_name":"Test User"}',
+        pg_catalog.now(),
+        pg_catalog.now(),
+        'authenticated',
+        'authenticated',
+        '',
+        '',
+        '',
+        '',
+        '',
+        NULL,
+        NULL,
+        '',
+        '',
+        0
+      );
 
       SELECT resource_uri
       FROM public.provision_mcp_preview_environment_identity_v1(
