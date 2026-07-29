@@ -10,21 +10,44 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
 restore_required=false
+restore_started=false
+
+reset_local_database() {
+  local reset_kind="$1"
+  shift
+
+  local max_attempts=2
+  local attempt
+
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    if supabase db reset --local --yes "$@"; then
+      return 0
+    fi
+
+    if ((attempt == max_attempts)); then
+      echo "Supabase local ${reset_kind} failed after ${max_attempts} attempts." >&2
+      return 1
+    fi
+
+    echo "Supabase local ${reset_kind} failed; retrying once..." >&2
+  done
+}
 
 restore_default_local_db() {
-  if [[ "$restore_required" != "true" ]]; then
+  if [[ "$restore_required" != "true" || "$restore_started" == "true" ]]; then
     return
   fi
 
+  restore_started=true
   echo "Restoring the default local database seed..." >&2
-  supabase db reset --local
+  reset_local_database "seed restore"
 }
 
 trap restore_default_local_db EXIT
 
 echo "Resetting the local database without seed data..."
-supabase db reset --local --no-seed
 restore_required=true
+reset_local_database "seedless reset" --no-seed
 
 psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
   -X \
@@ -268,8 +291,7 @@ END;
 $$;
 SQL
 
-echo "Restoring the default local database seed..."
-supabase db reset --local
+restore_default_local_db
 restore_required=false
 trap - EXIT
 
