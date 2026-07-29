@@ -79,6 +79,30 @@
 --   apply_mcp_record_create/update/delete/restore_v1(...)
 --     — authority再検証、domain write、receipt作成を同一transactionで行う（service-role only）
 --   cleanup_mcp_mutation_receipts_v1(...)      — 90日超receiptのbounded cleanup（service-role only）
+--   save_calendar_connection_command_v1(...)   — purge世代を再検証してCalendar接続を保存
+--   rotate_or_enqueue_calendar_refresh_token_command_v2(...)
+--     — token rotationを冪等保存し、purge後はrevoke outboxへ退避
+--   prepare_user_data_purge_v1(...) / delete_all_user_data_command_v5(...)
+--     — DB発行operationとgenerationで再送安全な全データ削除を行う
+--   claim/complete/retry/expire_calendar_revoke_outbox_v1(...)
+--     — 暗号化tokenをlease付きで失効し、24時間以内に必ず破棄する
+--   provision/get_calendar_authority_*_v1(...) — Google project identityとauthority状態を管理
+--   begin/prepare/start/finalize/seal_calendar_account_*_v1(...)
+--     — account削除前にCalendar provider結果をdurableに確定する
+--   begin/claim/complete/seal_account_deletion_v1(...)
+--     — Calendar / Storage / Billingの削除stepを再開可能に管理する
+--   claim/start/reconcile_billing_mutation_v2/v3/v4(...)
+--     — Checkout / Portalを同じ意図の再送で二重作成しない
+--   claim/start/complete_billing_customer_provisioning_v2(...)
+--     — Stripe Customer作成とaccount削除を直列化する
+--   sync_billing_subscription_deleted_v1(...) — liveまたは削除済みCustomerを終端する
+--   classify_billing_customer_event_v1(...)   — live / account_deleted / unknownを区別する
+--   cleanup_billing_mutation_claims_v2(...)   — 期限切れredirect URLとterminal claimを削除する
+--   cleanup_billing_account_deletion_terminal_receipts_v2(...)
+--     — 30日経過したCustomer digest receiptを削除する
+--   cleanup_integration_security_events_v1(...) — payload-free eventを90日で削除する
+--   get_external_authority_maintenance_status_v1() — IDを含まないbacklog集計
+--   get_external_lifecycle_app_version_v2() — Candidate 3 terminal schema marker
 
 -- ■ private schema（Data API 非公開）
 --   authorize_mcp_mutation_v1(...)             — environment/global/client/user/connection/
@@ -91,6 +115,8 @@
 --   resolve_mcp_mutation_replay_v1(...)        — digest/resource/generation replay判定
 --   enforce_mcp_mutation_receipt_lifecycle_v1() — receipt immutable / DB-authored generation
 --   get/require_mcp_environment_resource_v1(...) — DB identity先行resource fence
+--   lock_timeblock_global_supported_write_v1() — mixed-version用no-op。
+--     実際の排他はuser単位shared/exclusive lockが担う
 
 -- ■ 削除済み RPC
 --   get_tag_cumulative_time / get_tag_avg_fulfillment / get_tag_plan_rate /

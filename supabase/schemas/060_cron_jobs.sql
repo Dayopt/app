@@ -1,15 +1,19 @@
 -- ============================================================
 -- pg_cron ジョブ一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
--- 最終同期日: 2026-06-17
+-- 最終同期日: 2026-07-30
 -- 同期対象 migration:
 --   - 20260414100000_drop_entry_activities.sql
 --   - 20260414150000_drop_login_attempts_and_auth_audit_logs.sql
 --   - 20260421130516_drop_notifications_table.sql
 --   - 20260425000000_unschedule_removed_edge_function_cron_jobs.sql
+--   - 20260730090003_harden_calendar_revoke_expiry.sql
 --
 -- baseline.sql 由来の cleanup 系ジョブは、対象テーブル/関数の削除に合わせて unschedule 済み。
--- Edge Function の定期実行も現状なし。
+-- Vercel側のexternal connection maintenanceに加え、DB owner jobが暗号文のhard expiryを担う。
 -- ============================================================
 
--- 現行 active pg_cron job: なし
+-- 現行 active pg_cron job:
+--   expire-calendar-revoke-outbox
+--     * * * * *
+--     SELECT private.expire_calendar_revoke_outbox_internal_v1(1000)

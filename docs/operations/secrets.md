@@ -85,10 +85,10 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | `supabase`        | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET` | Supabase local / preview 相当の接続                   |
 | `upstash`         | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               | Redis rate limit / cache                              |
-| `stripe-test`     | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    | Stripe test mode                                      |
+| `stripe-test`     | `STRIPE_SECRET_KEY`, `STRIPE_ACCOUNT_ID`, `STRIPE_LIVEMODE`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                            | Stripe test mode                                      |
 | `resend`          | `RESEND_WEBHOOK_SECRET`                                                                                                                                                            | optional stagingのProduct webhook署名                 |
 | `app`             | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              | App URL / recovery code HMAC pepper                   |
-| `google-calendar` | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `CALENDAR_TOKEN_ENCRYPTION_KEY`, `GOOGLE_CALENDAR_REDIRECT_URIS`                                                     | 外部カレンダー取り込みの OAuth client（local dev 用） |
+| `google-calendar` | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_PROJECT_NUMBER`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `CALENDAR_TOKEN_ENCRYPTION_KEY`, `GOOGLE_CALENDAR_REDIRECT_URIS`                   | 外部カレンダー取り込みの OAuth client（local dev 用） |
 
 ### `Dayopt-Production`
 
@@ -98,21 +98,22 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `supabase`        | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET` |
 | `upstash`         | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                               |
-| `stripe-live`     | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                    |
+| `stripe-live`     | `STRIPE_SECRET_KEY`, `STRIPE_ACCOUNT_ID`, `STRIPE_LIVEMODE`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                            |
 | `resend`          | `RESEND_WEBHOOK_SECRET`（Product）                                                                                                                                                 |
 | `resend-web`      | `RESEND_WEBHOOK_SECRET`（Web、Productと別値）                                                                                                                                      |
 | `sentry`          | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`（Product）                                                                                                  |
 | `sentry-web`      | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`（Web）                                                                                                      |
 | `app`             | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`                                                                                                              |
-| `google-calendar` | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `CALENDAR_TOKEN_ENCRYPTION_KEY`, `GOOGLE_CALENDAR_REDIRECT_URIS`                                                     |
+| `google-calendar` | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_PROJECT_NUMBER`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `CALENDAR_TOKEN_ENCRYPTION_KEY`, `GOOGLE_CALENDAR_REDIRECT_URIS`                   |
 | `google-auth`     | `SUPABASE_AUTH_GOOGLE_CLIENT_ID`, `SUPABASE_AUTH_GOOGLE_SECRET`                                                                                                                    |
 
 `google-auth` は Supabase Auth の Google provider（ソーシャルログイン）用。**アプリの env には入らず、Supabase Dashboard だけが replica** になる（Dashboard Secrets 節を参照）。GCP project は `dayopt`（`dayopt-503623`）、client 名は `Dayopt Auth (Supabase)`、redirect URI は `https://yvglwblxrnrenfifsnje.supabase.co/auth/v1/callback` の 1 本だけ。
 
-`google-calendar` は外部カレンダー取り込み（[#1702](https://github.com/Dayopt/dayopt/issues/1702)）専用の OAuth client で、Supabase Auth の Google provider とは別 client として作る。Supabase 側の client secret を流用しない。
+`google-calendar` は外部カレンダー取り込み（[#1702](https://github.com/Dayopt/dayopt/issues/1702)）専用の OAuth client で、Supabase Auth の Google provider とは別 client として作る。Supabase 側の client secret を流用しない。`GOOGLE_CALENDAR_PROJECT_NUMBER` は client ID の先頭にある project number と一致させる。
 
 - `CALENDAR_TOKEN_ENCRYPTION_KEY` は保存する refresh token を AES-256-GCM で暗号化する鍵。base64 で 32 バイトに decode できる値だけを受け付ける（`openssl rand -base64 32`）。鍵を失うと既存接続の token は復号できず、全ユーザーが再接続になる
 - `GOOGLE_CALENDAR_REDIRECT_URIS` は comma 区切りの allowlist。callback は request host を allowlist と完全一致で引き、一致した文字列をそのまま Google へ渡す。Production には production origin だけを入れ、localhost を混ぜない（forwarded host 経由で allowlist を通過されうる）
+- `STRIPE_ACCOUNT_ID` と `STRIPE_LIVEMODE` は、正しいStripe accountとmodeだけを変更するための固定identity。durable Billing / account deletionを有効にする前に、`STRIPE_SECRET_KEY` と3項目をまとめて設定する。test modeは `false`、live modeは `true`
 - Preview は登録しない。ephemeral hostname は Google 側に事前登録できず、`__Host-` cookie も host 固定のため、Preview では接続開始時に明示エラーを返す
 
 ### `Dayopt-Shared`

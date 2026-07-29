@@ -35,6 +35,9 @@ import {
   Skeleton,
 } from '@dayopt/components';
 
+import { useStableBillingOperation } from '../hooks/useStableBillingOperation';
+import { getBillingOperationErrorDisposition } from '../lib/billing-operation';
+
 interface Plan {
   id: DayoptPlanId;
   nameKey: string;
@@ -81,6 +84,17 @@ export function BillingSettings() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [billingActionsClosed, setBillingActionsClosed] = useState(false);
+  const {
+    begin: beginCheckoutAttempt,
+    isLocked: isCheckoutAttemptLocked,
+    settle: settleCheckoutAttempt,
+  } = useStableBillingOperation();
+  const {
+    begin: beginPortalAttempt,
+    isLocked: isPortalAttemptLocked,
+    settle: settlePortalAttempt,
+  } = useStableBillingOperation();
 
   // チェックアウト結果のフィードバック（URL params処理、データfetchではない）
   useEffect(() => {
@@ -107,21 +121,57 @@ export function BillingSettings() {
 
   // Checkout Session 作成
   const createCheckout = api.billing.createCheckoutSession.useMutation({
-    onSuccess(data) {
-      window.location.href = data.url;
+    onSuccess(data, variables) {
+      if (!variables) return;
+      if (settleCheckoutAttempt(variables.operationId, 'terminal')) {
+        window.location.href = data.url;
+      }
     },
-    onError(error) {
-      toast.error(error.message);
+    onError(error, variables) {
+      if (!variables) return;
+      const disposition = getBillingOperationErrorDisposition(error);
+      const isCurrent = settleCheckoutAttempt(
+        variables.operationId,
+        disposition === 'retryable' ? 'retryable' : 'terminal',
+      );
+      if (!isCurrent) return;
+
+      if (disposition === 'account_closing') {
+        setBillingActionsClosed(true);
+        toast.error(t('common.billingOperation.accountClosing'));
+      } else if (disposition === 'terminal') {
+        toast.error(t('common.billingOperation.restart'));
+      } else {
+        toast.error(t('common.billingOperation.retryable'));
+      }
     },
   });
 
   // Portal Session 作成
   const createPortal = api.billing.createPortalSession.useMutation({
-    onSuccess(data) {
-      window.location.href = data.url;
+    onSuccess(data, variables) {
+      if (!variables) return;
+      if (settlePortalAttempt(variables.operationId, 'terminal')) {
+        window.location.href = data.url;
+      }
     },
-    onError(error) {
-      toast.error(error.message);
+    onError(error, variables) {
+      if (!variables) return;
+      const disposition = getBillingOperationErrorDisposition(error);
+      const isCurrent = settlePortalAttempt(
+        variables.operationId,
+        disposition === 'retryable' ? 'retryable' : 'terminal',
+      );
+      if (!isCurrent) return;
+
+      if (disposition === 'account_closing') {
+        setBillingActionsClosed(true);
+        toast.error(t('common.billingOperation.accountClosing'));
+      } else if (disposition === 'terminal') {
+        toast.error(t('common.billingOperation.restart'));
+      } else {
+        toast.error(t('common.billingOperation.retryable'));
+      }
     },
   });
 
@@ -130,17 +180,20 @@ export function BillingSettings() {
       toast.error(t('settings.subscription.stripeNotConfigured'));
       return;
     }
-    createCheckout.mutate();
-  }, [createCheckout, t]);
+    const operationId = beginCheckoutAttempt();
+    if (operationId) createCheckout.mutate({ operationId });
+  }, [beginCheckoutAttempt, createCheckout, t]);
 
   const handleManageSubscription = useCallback(() => {
-    createPortal.mutate();
-  }, [createPortal]);
+    const operationId = beginPortalAttempt();
+    if (operationId) createPortal.mutate({ operationId });
+  }, [beginPortalAttempt, createPortal]);
 
   const handleCancelConfirm = useCallback(() => {
     setCancelDialogOpen(false);
-    createPortal.mutate();
-  }, [createPortal]);
+    const operationId = beginPortalAttempt();
+    if (operationId) createPortal.mutate({ operationId });
+  }, [beginPortalAttempt, createPortal]);
 
   // Intl フォーマッターをメモ化
   const dateFormatter = useMemo(
@@ -162,6 +215,8 @@ export function BillingSettings() {
 
   const isStripeConfigured = STRIPE_PRICE_ID !== '';
   const isMutating = createCheckout.isPending || createPortal.isPending;
+  const areBillingActionsDisabled =
+    billingActionsClosed || isCheckoutAttemptLocked || isPortalAttemptLocked || isMutating;
 
   // ローディング状態（P0-2）
   if (overview.isLoading) {
@@ -230,7 +285,7 @@ export function BillingSettings() {
             <Button
               variant="outline"
               onClick={handleManageSubscription}
-              disabled={isMutating}
+              disabled={areBillingActionsDisabled}
               className="shrink-0"
             >
               {t('settings.subscription.adjustPlan')}
@@ -254,7 +309,7 @@ export function BillingSettings() {
               variant="outline"
               className="ml-auto shrink-0"
               onClick={handleManageSubscription}
-              disabled={isMutating}
+              disabled={areBillingActionsDisabled}
             >
               {t('settings.subscription.updatePayment')}
             </Button>
@@ -276,7 +331,7 @@ export function BillingSettings() {
             <Button
               variant="primary"
               className="ml-auto shrink-0"
-              disabled={!isStripeConfigured || isMutating}
+              disabled={!isStripeConfigured || areBillingActionsDisabled}
               onClick={handleUpgrade}
             >
               {isMutating
@@ -337,7 +392,7 @@ export function BillingSettings() {
                   <Button
                     className="w-full"
                     variant="primary"
-                    disabled={!isStripeConfigured || isMutating}
+                    disabled={!isStripeConfigured || areBillingActionsDisabled}
                     onClick={handleUpgrade}
                   >
                     {isMutating
@@ -376,7 +431,11 @@ export function BillingSettings() {
               )
             }
           >
-            <Button variant="outline" onClick={handleManageSubscription} disabled={isMutating}>
+            <Button
+              variant="outline"
+              onClick={handleManageSubscription}
+              disabled={areBillingActionsDisabled}
+            >
               {t('settings.subscription.updateCard')}
             </Button>
           </LabeledRow>
@@ -444,7 +503,7 @@ export function BillingSettings() {
           <LabeledRow label={t('settings.subscription.cancelDescription')}>
             <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" disabled={isMutating}>
+                <Button variant="destructive" disabled={areBillingActionsDisabled}>
                   {t('settings.subscription.cancelButton')}
                 </Button>
               </AlertDialogTrigger>

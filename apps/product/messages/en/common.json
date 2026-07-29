@@ -225,6 +225,11 @@
       "checkPayment": "Check payment info",
       "later": "Check later"
     },
+    "billingOperation": {
+      "retryable": "The billing page could not be opened. Try again.",
+      "restart": "The previous billing request ended. Try again.",
+      "accountClosing": "Billing changes are unavailable while account deletion is in progress."
+    },
     "inlineBanner": {
       "paymentError": "There is a payment issue",
       "checkPayment": "Check payment info",

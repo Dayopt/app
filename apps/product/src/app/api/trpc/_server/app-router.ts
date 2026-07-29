@@ -5,7 +5,7 @@
 
 import 'server-only';
 
-import { userRouter } from '@/features/auth/server/router';
+import { createUserRouter } from '@/features/auth/server/router';
 import { contactRouter } from '@/features/contact/server/router';
 import { externalCalendarRouter } from '@/features/external-calendar/server/router';
 import { billingRouter } from '@/features/settings/server/billing-router';
@@ -18,6 +18,12 @@ import { recordsRouter } from '@/features/timeblock/server/records-router';
 import { statisticsRouter } from '@/features/timeblock/server/router-index';
 import { emailRouter } from '@/lib/email/router';
 import { createTRPCRouter } from '@/lib/trpc/router';
+
+import { prepareAccountDeletionWithCompatibility } from './_composition/account-deletion-selector';
+
+const userRouter = createUserRouter({
+  beforeIdentityDeletion: prepareAccountDeletionWithCompatibility,
+});
 
 export const appRouter = createTRPCRouter({
   billing: billingRouter,
