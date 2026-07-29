@@ -144,9 +144,9 @@ WHERE record.deleted_at IS NULL
 ## Existing Code to Reuse
 
 - `apps/product/src/lib/mcp/auth.ts` — token/connection binding、runtime preflight、durable global/client gate
-- `apps/product/src/lib/mcp/mutation-contract.ts` — Plan / Record mutation input、最小receipt、stable error contract
-- `apps/product/src/lib/mcp/mutation-db.ts` — raw service-role capabilityを閉じ込めたoperation固有DB adapter
-- `apps/product/src/lib/mcp/mutation-client.ts` — deadlock retryとDB error正規化を担うserver-only client
+- `apps/product/src/features/timeblock/server/mcp-mutation-contract.ts` — Plan / Record mutation input、最小receipt、stable error contract
+- `apps/product/src/features/timeblock/server/mcp-mutation-db.ts` — raw service-role capabilityを閉じ込めたoperation固有DB adapter
+- `apps/product/src/features/timeblock/server/mcp-mutation-client.ts` — deadlock retryとDB error正規化を担うserver-only client。MCP routeは`service-index.ts`を通して利用する
 - `apps/product/src/app/api/mcp/_tools/registry.ts` — tool名、required scope、register callbackを一元化したruntime descriptor registry
 - `apps/product/src/features/timeblock/server/timeblock-command-client.ts` — typed RPC入力とdomain error mapping
 - `apps/product/src/features/tags/server/tag-association-strategy.ts` — command外に残るservice-owned一括writer

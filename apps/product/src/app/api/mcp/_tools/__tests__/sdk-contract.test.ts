@@ -2,7 +2,7 @@ import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
 import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { McpMutationError } from '@/lib/mcp/mutation-contract';
+import { McpMutationError } from '@/features/timeblock/server/service-index';
 
 const createPlan = vi.hoisted(() => vi.fn());
 const updatePlan = vi.hoisted(() => vi.fn());
@@ -23,19 +23,6 @@ const reviewGet = vi.hoisted(() => vi.fn());
 const createMcpTrpcCaller = vi.hoisted(() => vi.fn());
 const listDeletedPlans = vi.hoisted(() => vi.fn());
 const listDeletedRecords = vi.hoisted(() => vi.fn());
-
-vi.mock('@/lib/mcp/mutation-client', () => ({
-  McpMutationClient: class McpMutationClient {
-    createPlan = createPlan;
-    updatePlan = updatePlan;
-    deletePlan = deletePlan;
-    restorePlan = restorePlan;
-    createRecord = createRecord;
-    updateRecord = updateRecord;
-    deleteRecord = deleteRecord;
-    restoreRecord = restoreRecord;
-  },
-}));
 
 vi.mock('@/lib/mcp/tool-error', () => ({ captureUnexpectedMcpToolError }));
 
@@ -78,7 +65,27 @@ vi.mock('@/lib/mcp/trpc-bridge', () => ({ createMcpTrpcCaller }));
 
 vi.mock('@/features/timeblock/server/service-index', async () => {
   const { z } = await import('zod');
+  class MockMcpMutationError extends Error {
+    constructor(
+      public readonly code: string,
+      message: string,
+    ) {
+      super(message);
+      this.name = 'McpMutationError';
+    }
+  }
   return {
+    McpMutationClient: class McpMutationClient {
+      createPlan = createPlan;
+      updatePlan = updatePlan;
+      deletePlan = deletePlan;
+      restorePlan = restorePlan;
+      createRecord = createRecord;
+      updateRecord = updateRecord;
+      deleteRecord = deleteRecord;
+      restoreRecord = restoreRecord;
+    },
+    McpMutationError: MockMcpMutationError,
     createTimeblockTrashReadClient: () => ({ listDeletedPlans, listDeletedRecords }),
     TimeblockTrashReadError: class TimeblockTrashReadError extends Error {},
     TIMEBLOCK_CONTEXT_MAX_RANGE_MS: 31 * 24 * 60 * 60 * 1_000,

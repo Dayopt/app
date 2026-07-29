@@ -2,9 +2,12 @@ import 'server-only';
 
 import { z } from 'zod-v4';
 
+import {
+  McpMutationClient,
+  McpMutationError,
+  type McpMutationErrorCode,
+} from '@/features/timeblock/server/service-index';
 import { logger } from '@/lib/logger';
-import { McpMutationClient } from '@/lib/mcp/mutation-client';
-import { McpMutationError, type McpMutationErrorCode } from '@/lib/mcp/mutation-contract';
 import { captureUnexpectedMcpToolError } from '@/lib/mcp/tool-error';
 
 import type { CallToolResult, McpServer } from '@modelcontextprotocol/server';

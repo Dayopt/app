@@ -183,9 +183,9 @@ repo実装は完了した。Persistent Staging evidenceが完了するまでwrit
 
 - `apps/product/src/lib/oauth-server` — static clients、PKCE、opaque token、metadata
 - `apps/product/src/app/api/mcp` — stateless transportとcomposition layer
-- `apps/product/src/lib/mcp/mutation-contract.ts` — Plan / Record mutationのpublic input、最小receipt、stable error contract
-- `apps/product/src/lib/mcp/mutation-db.ts` — service-role DB applyをoperation単位に閉じ込めたadapter
-- `apps/product/src/lib/mcp/mutation-client.ts` — deadlock retryとDB error正規化を担うserver-only client
+- `apps/product/src/features/timeblock/server/mcp-mutation-contract.ts` — Plan / Record mutationのpublic input、最小receipt、stable error contract
+- `apps/product/src/features/timeblock/server/mcp-mutation-db.ts` — service-role DB applyをoperation単位に閉じ込めたadapter
+- `apps/product/src/features/timeblock/server/mcp-mutation-client.ts` — deadlock retryとDB error正規化を担うserver-only client。MCP routeは`service-index.ts`を通して利用する
 - `apps/product/src/features/timeblock/server/timeblock-command-client.ts` — service-roleを閉じ込めた通常UI用typed command adapter
 - `apps/product/src/features/timeblock/server` — Plan / Record guards、service、overlap/error mapping
 - `apps/product/src/features/tags/server/tag-association-strategy.ts` — command外に残るservice-owned一括writer

@@ -2,7 +2,7 @@ import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/cli
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { McpMutationError } from '@/lib/mcp/mutation-contract';
+import { McpMutationError } from '@/features/timeblock/server/service-index';
 
 const verifyAccessToken = vi.hoisted(() => vi.fn());
 const checkMcpPreAuthRateLimit = vi.hoisted(() => vi.fn());
@@ -20,7 +20,8 @@ vi.mock('@/lib/mcp/request-rate-limit', () => ({
   checkMcpUserRateLimit,
 }));
 vi.mock('@/lib/mcp/trpc-bridge', () => ({ createMcpTrpcCaller }));
-vi.mock('@/lib/mcp/mutation-client', () => ({
+vi.mock('@/features/timeblock/server/service-index', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/timeblock/server/service-index')>()),
   McpMutationClient: class McpMutationClient {
     createPlan = createPlan;
   },

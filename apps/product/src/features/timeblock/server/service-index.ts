@@ -5,6 +5,8 @@
  * routerやMCP adapterが使うnarrow factory / transformerだけを公開する。
  */
 
+export { McpMutationClient } from './mcp-mutation-client';
+export { McpMutationError, type McpMutationErrorCode } from './mcp-mutation-contract';
 export {
   TimeblockTrashReadError,
   createTimeblockTrashReadClient,

@@ -16,7 +16,7 @@ vi.mock('@/env', () => ({
   },
 }));
 
-import { createMcpMutationDb } from '../mutation-db';
+import { createMcpMutationDb } from '../mcp-mutation-db';
 
 const createArgs = {
   p_access_token_id: '00000000-0000-4000-8000-000000000001',

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { McpMutationClient } from '../mutation-client';
+import { McpMutationClient } from '../mcp-mutation-client';
 
 const mocks = vi.hoisted(() => ({
   applyPlanCreate: vi.fn(),
@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   ),
 }));
 
-vi.mock('../mutation-db', () => ({
+vi.mock('../mcp-mutation-db', () => ({
   createMcpMutationDb: () => ({
     applyPlanCreate: mocks.applyPlanCreate,
     applyPlanDelete: mocks.applyPlanDelete,

@@ -22,8 +22,8 @@ import {
   type McpRecordRestoreReceipt,
   type McpRecordUpdateInput,
   type McpRecordUpdateReceipt,
-} from './mutation-contract';
-import { createMcpMutationDb } from './mutation-db';
+} from './mcp-mutation-contract';
+import { createMcpMutationDb } from './mcp-mutation-db';
 
 interface MutationDatabaseError {
   code?: unknown;
