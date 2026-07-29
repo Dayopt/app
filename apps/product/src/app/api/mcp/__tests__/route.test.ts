@@ -4,9 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OAuthServerError } from '@/lib/oauth-server';
 
 const verifyAccessToken = vi.hoisted(() => vi.fn());
-const createMcpServer = vi.hoisted(() => vi.fn());
-const connect = vi.hoisted(() => vi.fn());
-const handleRequest = vi.hoisted(() => vi.fn());
+const handleMcpProtocolRequest = vi.hoisted(() => vi.fn());
 const checkMcpPreAuthRateLimit = vi.hoisted(() => vi.fn());
 const checkMcpUserRateLimit = vi.hoisted(() => vi.fn());
 
@@ -14,17 +12,10 @@ vi.mock('@/lib/mcp', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/mcp')>()),
   verifyAccessToken,
 }));
-vi.mock('../_server', () => ({ createMcpServer }));
+vi.mock('../_protocol-handler', () => ({ handleMcpProtocolRequest }));
 vi.mock('@/lib/mcp/request-rate-limit', () => ({
   checkMcpPreAuthRateLimit,
   checkMcpUserRateLimit,
-}));
-vi.mock('@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js', () => ({
-  WebStandardStreamableHTTPServerTransport: class {
-    handleRequest(request: Request, options: unknown) {
-      return handleRequest(request, options);
-    }
-  },
 }));
 
 import { POST } from '../route';
@@ -53,15 +44,26 @@ function createRequest(
   });
 }
 
+function createRawRequest(body: string, additionalHeaders: HeadersInit = {}) {
+  const headers = new Headers({
+    authorization: 'Bearer opaque-token',
+    'content-type': 'application/json',
+    ...Object.fromEntries(new Headers(additionalHeaders)),
+  });
+  return new NextRequest('https://mcp.dayopt.app/mcp', {
+    method: 'POST',
+    headers,
+    body,
+  });
+}
+
 describe('MCP route scope preflight', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     checkMcpPreAuthRateLimit.mockResolvedValue('allowed');
     verifyAccessToken.mockResolvedValue(baseAuth);
     checkMcpUserRateLimit.mockResolvedValue('allowed');
-    createMcpServer.mockReturnValue({ connect });
-    connect.mockResolvedValue(undefined);
-    handleRequest.mockResolvedValue(
+    handleMcpProtocolRequest.mockResolvedValue(
       Response.json({ jsonrpc: '2.0', result: {}, id: 1 }, { status: 200 }),
     );
   });
@@ -91,8 +93,7 @@ describe('MCP route scope preflight', () => {
       error: 'insufficient_scope',
       scope: 'read:tags read:entries',
     });
-    expect(createMcpServer).not.toHaveBeenCalled();
-    expect(handleRequest).not.toHaveBeenCalled();
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
   });
 
   it('read toolのstep-upはeffective scopeと不足scopeだけを要求する', async () => {
@@ -116,8 +117,7 @@ describe('MCP route scope preflight', () => {
       error: 'insufficient_scope',
       scope: 'read:tags read:constraints',
     });
-    expect(createMcpServer).not.toHaveBeenCalled();
-    expect(handleRequest).not.toHaveBeenCalled();
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
   });
 
   it('cached review.getはeffective scopeへread:statsだけを追加要求する', async () => {
@@ -141,8 +141,7 @@ describe('MCP route scope preflight', () => {
       error: 'insufficient_scope',
       scope: 'read:constraints read:stats',
     });
-    expect(createMcpServer).not.toHaveBeenCalled();
-    expect(handleRequest).not.toHaveBeenCalled();
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
   });
 
   it('rejects JSON-RPC batch before executing any call', async () => {
@@ -163,8 +162,96 @@ describe('MCP route scope preflight', () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { code: -32600, message: 'JSON-RPC batch is not supported' },
     });
-    expect(createMcpServer).not.toHaveBeenCalled();
-    expect(handleRequest).not.toHaveBeenCalled();
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
+  });
+
+  it('content-lengthが1 MiBを超えるrequestをbody読取前に413で拒否する', async () => {
+    const request = createRawRequest('{}');
+    const getHeader = request.headers.get.bind(request.headers);
+    vi.spyOn(request.headers, 'get').mockImplementation((name) =>
+      name.toLowerCase() === 'content-length' ? String(1024 * 1024 + 1) : getHeader(name),
+    );
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: -32000, message: 'Request body too large' },
+    });
+    expect(verifyAccessToken).not.toHaveBeenCalled();
+    expect(checkMcpUserRateLimit).not.toHaveBeenCalled();
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
+  });
+
+  it('content-lengthなしでも実bodyが1 MiBを超えれば413で拒否する', async () => {
+    const response = await POST(createRawRequest(`"${'a'.repeat(1024 * 1024)}"`));
+
+    expect(response.status).toBe(413);
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
+  });
+
+  it('content-lengthなしのstreamを1 MiB超過時点でcancelする', async () => {
+    let pullCount = 0;
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      type: 'bytes',
+      pull(controller) {
+        pullCount += 1;
+        controller.enqueue(new Uint8Array(600_000));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const requestInit = {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer opaque-token',
+        'content-type': 'application/json',
+      },
+      body,
+      duplex: 'half',
+    } as const;
+    const request = new NextRequest('https://mcp.dayopt.app/mcp', requestInit);
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(413);
+    expect(pullCount).toBe(2);
+    expect(cancelled).toBe(true);
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
+  });
+
+  it('multi-byte bodyをbyte数で測り1 MiB超過を413で拒否する', async () => {
+    const response = await POST(createRawRequest(`"${'あ'.repeat(349_526)}"`));
+
+    expect(response.status).toBe(413);
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
+  });
+
+  it('exactly 1 MiBの有効なJSON requestを受理する', async () => {
+    const baseBody = {
+      jsonrpc: '2.0',
+      method: 'tools/list',
+      id: 1,
+      padding: '',
+    };
+    const baseLength = new TextEncoder().encode(JSON.stringify(baseBody)).byteLength;
+    const body = JSON.stringify({
+      ...baseBody,
+      padding: 'a'.repeat(1024 * 1024 - baseLength),
+    });
+    expect(new TextEncoder().encode(body).byteLength).toBe(1024 * 1024);
+
+    const response = await POST(createRawRequest(body));
+
+    expect(response.status).toBe(200);
+    expect(handleMcpProtocolRequest).toHaveBeenCalledWith(
+      expect.any(NextRequest),
+      expect.objectContaining({
+        parsedBody: expect.objectContaining({ method: 'tools/list' }),
+      }),
+    );
   });
 
   it('challenges a cached trash call with base read and the missing delete scope', async () => {
@@ -179,7 +266,7 @@ describe('MCP route scope preflight', () => {
 
     expect(response.status).toBe(403);
     expect(response.headers.get('www-authenticate')).toContain('scope="read:entries delete:plans"');
-    expect(handleRequest).not.toHaveBeenCalled();
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
   });
 
   it('challenges a cached mutation call with the complete read and write grant', async () => {
@@ -194,7 +281,7 @@ describe('MCP route scope preflight', () => {
 
     expect(response.status).toBe(403);
     expect(response.headers.get('www-authenticate')).toContain('scope="read:entries write:plans"');
-    expect(handleRequest).not.toHaveBeenCalled();
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
   });
 
   it('passes a permitted call and the already parsed body to the SDK transport', async () => {
@@ -208,17 +295,23 @@ describe('MCP route scope preflight', () => {
     const response = await POST(createRequest(body));
 
     expect(response.status).toBe(200);
-    expect(createMcpServer).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tokenId: 'token-1',
-        connectionId: 'connection-1',
-        scopes: ['read:entries'],
-        resourceUri: 'https://mcp.dayopt.app',
-      }),
-    );
-    expect(handleRequest).toHaveBeenCalledWith(
+    expect(handleMcpProtocolRequest).toHaveBeenCalledWith(
       expect.any(NextRequest),
-      expect.objectContaining({ parsedBody: body }),
+      expect.objectContaining({
+        parsedBody: body,
+        authInfo: expect.objectContaining({
+          token: '<redacted>',
+          clientId: 'chatgpt',
+          scopes: ['read:entries'],
+          resource: new URL('https://mcp.dayopt.app'),
+          extra: {
+            tokenId: 'token-1',
+            connectionId: 'connection-1',
+            userId: 'user-1',
+            resourceUri: 'https://mcp.dayopt.app',
+          },
+        }),
+      }),
     );
     expect(checkMcpUserRateLimit).toHaveBeenCalledWith(baseAuth.userId);
     expect(checkMcpPreAuthRateLimit).toHaveBeenCalledWith(expect.any(NextRequest));
@@ -233,7 +326,7 @@ describe('MCP route scope preflight', () => {
     expect(response.headers.get('retry-after')).toBe('60');
     expect(verifyAccessToken).not.toHaveBeenCalled();
     expect(checkMcpUserRateLimit).not.toHaveBeenCalled();
-    expect(createMcpServer).not.toHaveBeenCalled();
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -265,8 +358,7 @@ describe('MCP route scope preflight', () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { message: 'Too many requests' },
     });
-    expect(createMcpServer).not.toHaveBeenCalled();
-    expect(handleRequest).not.toHaveBeenCalled();
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
   });
 
   it('returns retryable 503 without triggering reauthorization when rate limiting is unavailable', async () => {
@@ -281,12 +373,11 @@ describe('MCP route scope preflight', () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { message: 'Rate limit service unavailable' },
     });
-    expect(createMcpServer).not.toHaveBeenCalled();
-    expect(handleRequest).not.toHaveBeenCalled();
+    expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
   });
 
   it('does not issue a scope challenge for an unregistered candidate tool name', async () => {
-    handleRequest.mockResolvedValueOnce(
+    handleMcpProtocolRequest.mockResolvedValueOnce(
       Response.json(
         {
           jsonrpc: '2.0',
@@ -308,7 +399,7 @@ describe('MCP route scope preflight', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('www-authenticate')).toBeNull();
-    expect(handleRequest).toHaveBeenCalledOnce();
+    expect(handleMcpProtocolRequest).toHaveBeenCalledOnce();
   });
 
   it('returns a discovery challenge without an error when credentials are absent', async () => {

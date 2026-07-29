@@ -1,5 +1,4 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
 import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -82,7 +81,10 @@ vi.mock('@/features/timeblock/server/service-index', async () => {
   return {
     createTimeblockTrashReadClient: () => ({ listDeletedPlans, listDeletedRecords }),
     TimeblockTrashReadError: class TimeblockTrashReadError extends Error {},
+    TIMEBLOCK_CONTEXT_MAX_RANGE_MS: 31 * 24 * 60 * 60 * 1_000,
     TIMEBLOCK_REVIEW_MAX_TAGS: 1_000,
+    isTimeblockDateTime: (value: string) =>
+      z.string().datetime({ offset: true }).safeParse(value).success,
     timeblockContextRangeSchema: z
       .object({
         startDate: z.string().datetime({ offset: true }),

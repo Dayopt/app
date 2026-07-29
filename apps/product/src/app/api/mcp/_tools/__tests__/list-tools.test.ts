@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { McpRequestContext } from '../../_context';
@@ -29,7 +29,10 @@ vi.mock('@/features/timeblock/server/service-index', async () => {
   return {
     createTimeblockTrashReadClient: () => ({ listDeletedPlans, listDeletedRecords }),
     TimeblockTrashReadError: class TimeblockTrashReadError extends Error {},
+    TIMEBLOCK_CONTEXT_MAX_RANGE_MS: 31 * 24 * 60 * 60 * 1_000,
     TIMEBLOCK_REVIEW_MAX_TAGS: 1_000,
+    isTimeblockDateTime: (value: string) =>
+      z.string().datetime({ offset: true }).safeParse(value).success,
     timeblockContextRangeSchema: z
       .object({
         startDate: z.string().datetime({ offset: true }),
