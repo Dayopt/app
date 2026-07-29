@@ -334,8 +334,8 @@ describe.skipIf(SKIP_INTEGRATION)('Tags Router Integration', () => {
           title: 'Test Plan for Merge',
           source: 'manual',
           tag_id: sourceTag.id,
-          start_at: '2026-01-02T09:00:00Z',
-          end_at: '2026-01-02T10:00:00Z',
+          start_at: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
+          end_at: new Date(Date.now() + 25 * 60 * 60_000).toISOString(),
         })
         .select()
         .single();
@@ -395,8 +395,8 @@ describe.skipIf(SKIP_INTEGRATION)('Tags Router Integration', () => {
           title: 'Test Plan for Duplicate',
           source: 'manual',
           tag_id: sourceTag.id,
-          start_at: '2026-01-03T09:00:00Z',
-          end_at: '2026-01-03T10:00:00Z',
+          start_at: new Date(Date.now() + 26 * 60 * 60_000).toISOString(),
+          end_at: new Date(Date.now() + 27 * 60 * 60_000).toISOString(),
         })
         .select()
         .single();
