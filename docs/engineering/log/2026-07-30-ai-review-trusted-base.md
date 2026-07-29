@@ -84,7 +84,13 @@ job の check run なら cancel / timeout が `cancelled` / `timed_out` とし�
   止まるようにした。step timeout は 9 分（script の締め切りより外、job の 10 分より内）とし、
   `TOTAL_DEADLINE_MS < step < job` の不等式を contract test で固定した。
   最初は step timeout を 8 分にしたが、それは script が諦める瞬間と同時に step を kill するため
-  fail-open が red へ反転する。**定数を揃えずに step timeout だけ足すのは誤り**だった
+  fail-open が red へ反転する。**定数を揃えずに step timeout だけ足すのは誤り**だった。
+  さらに `step < job` だけでは足りない。job timeout は job 全体にかかるので、
+  checkout + setup が食った分だけ review step の予算が削られる。実測（2026-07-30、直近 5 run）で
+  前段は 31-34 秒、review step は 33-34 秒、job total は 66-72 秒だが、pnpm store cache が
+  miss すると install は分単位に伸びる。job を 13 分にして 4 分の余裕を確保し、
+  contract test で `job - step >= 4` を固定した。`timeout-minutes` は上限であって予約ではなく、
+  課金は実測時間なので広く取っても通常 run のコストは変わらない
 
 同時に、trigger 変更で前提が消えた fail-open を 1 つ塞いだ。`GEMINI_API_KEY` 未設定を
 `warn` + `exit 0` で通していたのは「fork PR には secret が渡らない」ことが理由だったが、

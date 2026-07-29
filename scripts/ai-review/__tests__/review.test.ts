@@ -631,8 +631,14 @@ describe('workflow の contract', () => {
     const stepTimeout = Number(/^\s{8}timeout-minutes:\s*(\d+)/m.exec(WORKFLOW)?.[1]);
     expect(jobTimeout).toBeGreaterThan(0);
     expect(stepTimeout).toBeGreaterThan(0);
-    expect(stepTimeout).toBeLessThan(jobTimeout);
     expect(TOTAL_DEADLINE_MS).toBeLessThan(stepTimeout * 60_000);
+    // **step < job だけでは足りない。** job timeout は job 全体にかかるので、
+    // checkout + setup が食った分だけ review step の予算が削られる。実測（2026-07-30）で
+    // 前段は 31-34 秒だが、pnpm store cache が miss すると分単位に伸びる。
+    // 前段のための余裕を明示的に要求する（ここが 1 分だと cache miss で job ごと
+    // timed_out になり、script の fail-open へ到達できない）。
+    const SETUP_HEADROOM_MINUTES = 4;
+    expect(jobTimeout - stepTimeout).toBeGreaterThanOrEqual(SETUP_HEADROOM_MINUTES);
     // per-attempt を残り予算で clamp しているので、合計は TOTAL_DEADLINE_MS で止まる。
     // clamp を外すと TOTAL_DEADLINE_MS + REQUEST_TIMEOUT_MS まで伸びるため、
     // その値でも step timeout に収まっていることを併せて要求する（clamp 回帰の保険）。

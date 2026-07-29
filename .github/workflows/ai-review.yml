@@ -98,7 +98,16 @@ jobs:
     # skip された job は failure / pending / success のどれにも数えられないので無害。
     if: ${{ github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # **review step の予算に加えて、その前段の時間を確保する。** job timeout は job 全体に
+    # かかるため、checkout + setup が食った分だけ review step の 9 分が削られる。
+    # 足りないと job ごと timed_out になり、`finish-branch.sh` は timed_out を failure として
+    # 数えるので、script の fail-open（インフラ障害では PR を止めない）へ到達できない。
+    #
+    # 実測（2026-07-30、直近 5 run）: Set up job + checkout + setup action = 31-34 秒。
+    # ただし pnpm store cache が miss すると install は分単位に伸びる。9 分 + 4 分の余裕を取る。
+    # timeout-minutes は上限であって予約ではなく、課金は実測時間（job ごと切り上げ）なので、
+    # 広く取っても通常 run のコストは変わらない（実測 total は 66-72 秒）。
+    timeout-minutes: 13
     steps:
       # pull_request_target must execute only the trusted base revision, never PR code.
       # working tree（reviewer 本体・contract・添付 rules・setup action・lockfile）は
