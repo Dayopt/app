@@ -1,6 +1,7 @@
 ---
 status: frozen
 date: 2026-07-26
+superseded_by: docs/engineering/log/2026-07-29-mcp-ephemeral-preview-oauth-identity.md
 ---
 
 # MCP closed betaはSupabase persistent branchとVercel Custom Environmentを使う

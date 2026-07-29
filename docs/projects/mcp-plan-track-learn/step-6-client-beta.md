@@ -14,7 +14,7 @@ code:
 
 ## Goal
 
-Productionと認証・DB・secretを共有しない検証環境で、ChatGPT、Claude、CursorからDayoptのPlan → Track → Learnを完結し、clientごとのwrite gateを安全に開閉できる証拠を残す。2026-07-29の判断により、現在はPersistent Stagingを作らず、Draft PR #1760の一時Previewを使う。
+Productionと認証・DB・secretを共有しない検証環境で、ChatGPT、Claude、CursorからDayoptのPlan → Track → Learnを完結し、clientごとのwrite gateを安全に開閉できる証拠を残す。2026-07-29の判断により、Persistent Stagingは作らず、段階PRごとに新しい空の一時Previewを使う。
 
 外部作業時の入力、順序、証跡テンプレート、停止条件は[execution checklist](./step-6-execution-checklist.md)を使う。
 
@@ -26,11 +26,11 @@ Productionと認証・DB・secretを共有しない検証環境で、ChatGPT、C
 - actual MCP HTTPのgolden flowはlocal DBと`chatgpt` client IDで検証済みだが、実clientのOAuth、confirmation UI、refresh token管理、実network/renderは未検証
 - 3 client共通のactual token route、scope-filtered`tools/list`、単一Plan mutation retry、global gate、parallel refresh、Settings revoke契約をlocal integrationで検証済み。authorize page、client自身のtoken保存/並列処理、client別Plan → Track → Learnは未検証
 - 2026-07-29のexternal inventoryで、PR #1760専用のSupabase Preview `yvimluegqlcppejgribx`とVercel Product Previewを確認した。Supabase branchは`persistent=false`、`with_data=false`であり、Production dataとcredentialを共有しない
-- #1760のremote overrideでpublic signupと今後のseedを無効にし、Supabase branch action logで反映を確認した。設定変更前の既定seed userは1年間banし、専用temporary test user 1件だけをlogin可能にした。credentialは1Passwordの`Dayopt-Staging`へ保存済み
-- repo内ではProduction/Stagingのexact OAuth identity、Vercel host routing、generic Preview無効化、operational build/readiness gateまで実装済み。現在のgeneric PreviewではMCP OAuth surfaceを公開しないため、固定issuer/resource、secret、client registrationは未作成
-- DB identity singleton、connection/code/tokenのresource FK、grant/exchange/refresh/applyのidentity検証、service-role限定provision/getterをmigrationとして実装済み。localではdata-less Staging provisionとwrong-resource拒否をrehearseしたが、Production/Stagingには未適用
+- #1760のremote overrideでpublic signupと今後のseedを無効にし、Supabase branch action logで反映を確認した。設定変更前の既定seed userは1年間banし、専用temporary test user 1件だけをlogin可能にした。credentialは1Passwordへ保存済み
+- repo内ではProduction/Stagingのexact OAuth identity、Vercel host routing、generic Preview無効化、operational build/readiness gateまで実装済み。Preview専用identityとbranch bindingは未実装であり、固定issuer/resource、secret、client registrationは未作成
+- DB identity singleton、connection/code/tokenのresource FK、grant/exchange/refresh/applyのidentity検証、service-role限定provision/getterをmigrationとして実装済み。localではdata-less Staging provisionとwrong-resource拒否をrehearseしたが、Preview/Productionには未適用
 - `deleteAllData`はuser data generation、Calendar authority、MCP connection/token、AI生成report、external event mirrorを同じtransaction境界へ含むv5へ移行済み。MCP apply、Calendar callback/sync、通常UI writeとのraceとresponse-loss replayをlocal integrationで検証済み
-- mutation receipt、authorization code、access/refresh token、connection、payload-free security event、Calendar revoke authorityのbounded cleanupと定期callerはrepo実装済み。account削除後の遅延Stripe event向けCustomer digest receiptも30日でcleanupし、並列cleanupでlock中の期限切れ行を残件として報告する。local integrationとaggregate-only unit contractは通過したが、Persistent Stagingでの定期実行、backlog 0、alert証跡は未確認
+- mutation receipt、authorization code、access/refresh token、connection、payload-free security event、Calendar revoke authorityのbounded cleanupと定期callerはrepo実装済み。account削除後の遅延Stripe event向けCustomer digest receiptも30日でcleanupし、並列cleanupでlock中の期限切れ行を残件として報告する。local integrationとaggregate-only unit contractは通過したが、一時Previewでの定期実行、backlog 0、alert証跡は未確認
 - account削除はCustomer provisioning回収、Calendar / Storage / Billingのexact binding、Auth最終削除、遅延Stripe eventのterminal receiptまでrepo実装済み。Webhookはconfigured Accountとprovider EventをDB更新前に再取得し、platform accountだけを受け入れる。generic gateは初期OFFのため、historical Stripe orphan監査、Stripe identity env、実Webhook再取得の互換性、旧instance drain、forward-only activationを完了するまで削除要求をfail closedにする
 - client別redirect URI override、MCP resource/write allowlist、Stripe provider identityの変数名はrepoのenv schema、`apps/product/.env.example`、1Password field inventory、`.op-env.local.example`へ追加済み。実1Password/Vercel fieldの存在は未確認
 
@@ -42,15 +42,15 @@ global/client gateはfail-closedであり、上記blockerの解決まではOFF�
 
 `apps/product/src/lib/test/integration/mcp-client-beta-contract.integration.test.ts`で、`claude-ai`、`chatgpt`、`cursor`を同じtable-driven testへ通す。
 
-- service-role fixtureでgrantを作り、actual authorization code exchange routeでPKCE S256、client ID、redirect URI、resource bindingを検証済み。authorize page自体は既存unitとPersistent Stagingで別に検証する
+- service-role fixtureでgrantを作り、actual authorization code exchange routeでPKCE S256、client ID、redirect URI、resource bindingを検証済み。authorize page自体は既存unitと一時Previewで別に検証する
 - actual opaque access tokenとMCP HTTP routeで`tools/list`を取得済み
 - write grant時、global gate停止時のtool集合とcached callの403を検証済み
 - same operation ID retry、different payload reuse、global OFF時の非永続化、actual parallel refresh winnerの継続利用、target-only revoke後のaccess/refresh拒否を検証済み
-- full context → Plan create/update → linked Record create → review → next Plan updateは既存local goldenを維持し、実clientごとの差はPersistent Stagingで検証する
+- full context → Plan create/update → linked Record create → review → next Plan updateは既存local goldenを維持し、実clientごとの差は一時Previewで検証する
 
-durable client/connection/Pro gateとfull Plan → Track → Learnは既存integrationで独立して維持する。新testはそれらを3 client分再実行したとは主張しない。また、実clientのconfirmation UI、client自身が送るparallel refresh、画面renderを証明しない。それらはPersistent Staging evidence matrixで別に確認する。
+durable client/connection/Pro gateとfull Plan → Track → Learnは既存integrationで独立して維持する。新testはそれらを3 client分再実行したとは主張しない。また、実clientのconfirmation UI、client自身が送るparallel refresh、画面renderを証明しない。それらは一時Previewのevidence matrixで別に確認する。
 
-### 2. Staging provisioningに必要なenv契約を正本へ追加する
+### 2. Preview provisioningに必要なenv契約を正本へ追加する
 
 - `OAUTH_CLAUDE_REDIRECT_URIS`
 - `OAUTH_CHATGPT_REDIRECT_URIS`
@@ -60,13 +60,13 @@ durable client/connection/Pro gateとfull Plan → Track → Learnは既存integ
 - `MCP_CANONICAL_RESOURCE_URI`
 - `MCP_WRITE_ENABLED_CLIENTS`
 
-上記をstaging/productionの`app` item、`.op-env.local.example`、Productの`.env.example`、Secrets運用docsへ揃える。client別redirect URIは完全なURIのcomma区切りだけを許可し、wildcard、userinfo、query、fragment、非default portを拒否する。Claude / ChatGPTは各社所有のHTTPS hostと既知path、Cursorは既知scheme・host・pathだけを許可し、値そのものはrepoへ保存しない。
+上記をpreview/productionの`app` item、`.op-env.local.example`、Productの`.env.example`、Secrets運用docsへ揃える。client別redirect URIは完全なURIのcomma区切りだけを許可し、wildcard、userinfo、query、fragment、非default portを拒否する。Claude / ChatGPTは各社所有のHTTPS hostと既知path、Cursorは既知scheme・host・pathだけを許可し、値そのものはrepoへ保存しない。
 
-schema testでは、3 clientのredirect URI overrideとMCP resource/write allowlistがstaging/productionの両inventoryにexactly once存在し、いずれもoptional public fieldであることを固定済み。environment markerとauthorization server URIはStaging identity設計の実装時にrequired条件を加える。
+schema testでは、3 clientのredirect URI overrideとMCP resource/write allowlistがstaging/productionの両inventoryにexactly once存在し、いずれもoptional public fieldであることを固定済み。Previewではenvironment marker、authorization server URI、対象branch、stable branch aliasを追加の必須条件にする。
 
 ### 3. Customer contractを固定する
 
-2026-07-26に[全データ削除とretention](../../product/log/2026-07-26-mcp-delete-all-data-retention.md)、[Persistent Staging topology](../../engineering/log/2026-07-26-mcp-persistent-staging-topology.md)を固定した。2026-07-28時点で全データ削除とretentionのrepo実装・local検証は完了し、Persistent Stagingと運用証跡は未完了である。
+2026-07-26に[全データ削除とretention](../../product/log/2026-07-26-mcp-delete-all-data-retention.md)を固定した。検証環境は2026-07-29の[一時PR Preview identity](../../engineering/log/2026-07-29-mcp-ephemeral-preview-oauth-identity.md)を正本とする。全データ削除とretentionのrepo実装・local検証は完了し、一時Previewの運用証跡は未完了である。
 
 1. **全データ削除**
    - `deleteAllData`と同じuser exclusive transaction境界で週次・月次のAI生成reportを削除し、全MCP connectionをrevokeし、未消費authorization code、access/refresh tokenを無効化する。Calendar connection、暗号化済みtoken、calendar selection/sync cursor、ユーザー所有の`external_calendar_events`も削除する。account維持に必要なprofile、課金状態、MFA recovery codeは残す
@@ -78,17 +78,17 @@ schema testでは、3 clientのredirect URI overrideとMCP resource/write allowl
    - revoke-only outboxの暗号化済みtokenは成功時に即時削除し、失敗時も24時間で削除する
    - account削除では既存cascadeにより即時削除する
    - 初期betaはpayloadを持たないaggregate read metricだけを使い、本文単位のread auditは追加しない
-3. **Persistent Staging identity**
-   - 既存`dayopt` projectのdata-less persistent branch `staging`と、既存Vercel `product` projectのCustom Environment `staging`を使う
-   - Product authorization serverを`https://staging.dayopt.app`、MCP resourceを`https://mcp.staging.dayopt.app`へ固定する
-   - ProductionとSupabase branch、OAuth connection、token、cookie、secret、client registrationを共有しない
-   - 一度clientへ登録したissuer/resource URLは公開契約として変更しない
+3. **Ephemeral Preview identity**
+   - Production dataをcopyしない新しいSupabase Previewと、対象branchのVercel stable branch aliasを使う
+   - authorization serverとMCP resourceを同じstable branch aliasへ固定する
+   - branch、Supabase project ref、DB identityを一致させ、ProductionとOAuth connection、token、cookie、secret、client registrationを共有しない
+   - 検証中はissuer/resourceを変更せず、終了時にconnection、token、Preview、Preview専用secretを破棄する
 
 ### 4. Environment-aware OAuth identityとretentionを実装する
 
-OAuth identity、retention、deleteAllDataのrepo実装は2026-07-28時点で完了した。app config、host/path、metadata、operational build/readiness、DB singleton、resource FK、grant/exchange/refresh/apply、bounded cleanup caller、purge generation、local rehearsalを含む。Production/Stagingへの適用と運用証跡は未完了である。
+OAuth identity、retention、deleteAllDataのProduction/Staging向けrepo実装は2026-07-28時点で完了した。app config、host/path、metadata、operational build/readiness、DB singleton、resource FK、grant/exchange/refresh/apply、bounded cleanup caller、purge generation、local rehearsalを含む。Preview identityのrepo実装と外部運用証跡は未完了である。
 
-`MCP_OAUTH_ENVIRONMENT`を`staging` / `production`の明示markerとし、CHECKPOINTで固定したexact originだけを環境変数から読む。Stagingではmarker、authorization server URI、resource URIのどれかが未設定、またはProduction値なら起動・provisionをfail closedする。Production defaultだけは現在の2 originを維持する。
+`MCP_OAUTH_ENVIRONMENT`を`preview` / `staging` / `production`の明示markerとし、CHECKPOINTで固定したexact originだけを環境変数から読む。Previewではmarker、authorization server URI、resource URI、対象branch、stable branch alias、Supabase project refのどれかが未設定または不一致なら起動・provisionをfail closedする。Production defaultだけは現在の2 originを維持する。
 
 DBにはservice-roleだけが設定できる環境identity singletonを置き、authorization server URIとresource URIを環境ごとに一度だけ固定する。connection/code/tokenと全grant/exchange/refresh/apply RPCはresourceをこのrowへbindする。app metadata/challengeとDB identityの不一致をreadiness checkで検出し、write gateを開かない。
 
@@ -100,19 +100,19 @@ DBにはservice-roleだけが設定できる環境identity singletonを置き、
 - token endpoint
 - protected resource metadata
 
-userinfo、query、fragment、非default port、transport pathを拒否する。Production defaultは現在の`https://mcp.dayopt.app` / `https://app.dayopt.app`を維持し、Staging値をProduction fallbackとして使わない。resource、authorization code、access token、refresh token、connectionのbindingを環境間で混ぜない。
+userinfo、query、fragment、非default port、transport pathを拒否する。Production defaultは現在の`https://mcp.dayopt.app` / `https://app.dayopt.app`を維持し、Preview値をProduction fallbackとして使わない。resource、authorization code、access token、refresh token、connectionのbindingを環境間で混ぜない。
 
-Vercel routingは決定した2 hostだけをexact matchし、Previewのephemeral hostnameをOAuth callback/resourceとして広告しない。logical environmentは`VERCEL_TARGET_ENV=staging`を正とし、Production用Sentry/Resend secret、実メール送信、Production telemetryを流用しない。staging専用build/readiness gateでSupabase branch identity、MCP identity、Upstash、Calendar secretの整合を検証する。
+Vercel routingは、Production/Stagingの既存hostに加えて、明示したPreview branchのstable branch aliasだけをexact matchする。対象branchと`VERCEL_GIT_COMMIT_REF`を完全一致させ、deployment固有URLや別branchではOAuth surfaceを公開しない。Preview専用build/readiness gateでSupabase project ref、DB identity、Preview専用Upstashを確認し、Production用Sentry/Resend/Stripe/Calendarの外部送信secretを拒否する。
 
 purge境界には専用user data generationを追加し、lock順を`user boundary → connection → code/token`へ統一する。Calendar callback/syncはgeneration確認とevent/cursor永続化を同じtransactionで行うtyped RPCへ移し、service-roleのcheck/write raceを残さない。Calendar削除順はconnectionを先に削除してからユーザー所有mirrorを削除し、`ON DELETE SET NULL`で競合eventが孤児化しないことをintegration testで固定する。receiptはpurge generationを記録し、purge後のretryを再作成なしのtombstone responseへ変える。
 
 retentionはservice-only cleanup RPCと定期callerを一組にし、DB時刻、bounded batch、payload-free metric、再実行可能性を持たせる。cleanup routeは既存Calendar cronのBearer照合、bounded execution、失敗観測を流用し、未認証、重複実行、backlog alertをtestする。cleanup失敗でauthorization/writeを開かない。read-only statusは件数、最古時刻、期限超過件数だけを返し、token、digest、operation ID、user ID、timeblock本文を出力しない。
 
-### 5. Isolated Persistent Stagingの合格条件
+### 5. Isolated ephemeral Previewの合格条件
 
 外部変更は対象と費用を確認した後の明示権限で行う。
 
-- Productionと異なるdata-less DB、固定host、secret、OAuth client registrationを使う
+- Productionと異なるfresh data-less DB、stable branch alias、Preview専用secret、OAuth client registrationを使う
 - #1760のintegration source SHA / terminalと、Productionへ切り出す各段階PRのexact SHA / 期待terminalを区別してmanifestへ保存する
 - 各段階PRをmanifest順に適用し、旧/new appが同時稼働できること、逆GRANT、再cutoverを確認する
 - DB identity、user/OAuth/audit/receipt 0件、repo defaultとlive gate OFF、3 resource FK、最小function ACLを確認する
@@ -148,7 +148,7 @@ retentionはservice-only cleanup RPCと定期callerを一組にし、DB時刻、
 | Audit completeness         | 成功mutation件数とreceipt件数が一致し、payload-free statusの期限超過が0                     |
 | Delete all data            | 完了後にMCP writeとCalendar syncでデータが再生成されない                                    |
 
-repoへ保存するevidenceは、client/version、test case、開始/終了時刻、status、redacted observationに加え、非secretのenvironment、issuer/resource、deployment SHA、DB identity、gate revision、synthetic fixture label、明示承認記録への参照だけを持つmanifestとする。synthetic title/note/test userを使い、raw HAR、OAuth code/token/verifier、cookie、Authorization header、callback query、service-role key、operation ID、user ID、ユーザー本文を保存しない。`deleteAllData`は対象synthetic user、Persistent Staging環境、削除操作を指定した個別承認後にだけ実行する。外部に保存する画面録画はbeta担当者だけに限定し、Step 6判定後30日以内に削除する。
+repoへ保存するevidenceは、client/version、test case、開始/終了時刻、status、redacted observationに加え、非secretのenvironment、issuer/resource、deployment SHA、DB identity、gate revision、synthetic fixture label、明示承認記録への参照だけを持つmanifestとする。synthetic title/note/test userを使い、raw HAR、OAuth code/token/verifier、cookie、Authorization header、callback query、service-role key、operation ID、user ID、ユーザー本文を保存しない。`deleteAllData`は対象synthetic user、一時Preview環境、削除操作を指定した個別承認後にだけ実行する。外部に保存する画面録画はbeta担当者だけに限定し、Step 6判定後30日以内に削除する。
 
 client固有の現在条件も証跡へ含める。
 
@@ -171,12 +171,12 @@ client固有の現在条件も証跡へ含める。
 | env schema/example/docs                   | [minutes]      | repo変更をrevertする。外部値はまだ作らない                                                            |
 | deleteAllData / retentionのcode・設定契約 | [hours]        | write gateを閉じ、forward migrationでcleanup対象または期限を狭める                                    |
 | deleteAllDataによるconnection/token破棄   | [irreversible] | 削除済みcredentialは復活させず、ユーザーの明示的な再authorizationだけを許可する                       |
-| Staging DB / Vercel project / secrets     | [hours]        | gateを閉じ、client connectionを失効し、固定hostを切り離す。データはbeta専用backup/retention契約に従う |
+| Preview DB / Vercel deployment / secrets  | [hours]        | gateを閉じ、client connectionを失効し、Previewと専用secretを破棄する                                  |
 | issuer/resource/redirect URI              | [irreversible] | 登録済みclientが保存するidentityなので既存URLを改名しない。新version/new connectionへadditive移行する |
 | client write gate                         | [minutes]      | globalまたはclient gateを閉じ、既存write connectionを不可逆disableする                                |
-| Production migration / release            | [hours]        | このStepでは実行しない。別の明示権限とStaging済みforward planを要求する                               |
+| Production migration / release            | [hours]        | このStepでは実行しない。別の明示権限とPreview検証済みforward planを要求する                           |
 
-issuer/resourceはtoken audienceと保存済みclient registrationの基準になるため、任意hostnameやPreview URLを使わず、Dayopt管理下の固定originだけを採用する。
+issuer/resourceはtoken audienceと保存済みclient registrationの基準になるため、deployment固有URLや未承認branchを使わず、検証中はstable branch aliasを固定する。
 
 ## Existing Code to Reuse
 
@@ -200,7 +200,7 @@ issuer/resourceはtoken audienceと保存済みclient registrationの基準に�
 ## What I'm Not Doing
 
 - Production migration、release、write gate有効化、既存token一斉失効
-- Production DBまたはProduction OAuth identityをStaging testへ流用
+- Production DBまたはProduction OAuth identityをPreview testへ流用
 - Dynamic Client Registration、CIMD、一般client onboarding
 - 2026-07-28以降の未採用MCP revisionへの先行追随
 - Dayopt内proposal/approval state machine、`confirmed: true` field
@@ -214,7 +214,7 @@ Step 6を`done`にできるのは、次をすべて満たした時だけとす�
 
 - 3 client共通local contract test、full integration、RLS snapshot、docs checkが通る
 - 固定済みcustomer contractが実装され、deleteAllData後の自動再生成がintegration testで拒否される
-- isolated Persistent Stagingのissuer/resource/DB/secrets/client registrationがProductionと分離されている
+- isolated ephemeral Previewのissuer/resource/DB/secrets/client registrationがProductionと分離されている
 - 3 clientのgolden evidence matrixが全項目passする
 - Calendar / Inspector / Reviewが各20秒以内に最終表示へ収束する
 - success mutationとreceiptに欠損がなく、retention cleanup backlogが0

@@ -14,7 +14,7 @@ code:
 
 この文書をStep 6の唯一の実行runbookとする。[client beta verification](./step-6-client-beta.md)にある機能契約や合否条件は再定義しない。外部環境の作成、secret変更、migration適用、client登録、gate変更、データ削除、Production変更は、それぞれ対象を特定した明示承認後に行う。
 
-2026-07-29の判断により、Persistent Stagingは作成せず、Draft PR #1760に既にある一時Previewを現在の検証環境として使う。まず下記の「PR Preview preparation」だけを実行する。固定OAuth hostや3 client接続を必要とする後続checkpointは、この一時環境向けのissuer/resource設計を固定するまで未実施とし、repo内の準備完了をStep 6完了またはProduction移行許可として扱わない。
+2026-07-29の[一時PR Preview identityの判断](../../engineering/log/2026-07-29-mcp-ephemeral-preview-oauth-identity.md)により、Persistent Stagingは作成しない。Draft PR #1760の既存Previewは準備記録だけに使い、OAuth検証には使わない。段階PRごとに新しい空の一時Previewを作り、exact SHA、branch alias、Supabase project refを一致させる。repo内の準備完了をStep 6完了またはProduction移行許可として扱わない。
 
 ## Repository-only preparation
 
@@ -56,7 +56,7 @@ Productの`.env.example`とrootの`.op-env.local.example`は自動test対象で�
 
 ## PR Preview preparation
 
-Persistent Stagingの代わりに、PR #1760と一緒に破棄される一時Previewだけを使う。このsectionは外部作業の1〜3番を扱う。後続のmigration rehearsal、OAuth接続、3 client検証、Production deliveryは含めない。
+#1760の既存Previewで、Productionから分離した一時環境の作成とtest user管理まで確認した。このsectionは完了済みの準備記録であり、後続のmigration rehearsal、OAuth接続、3 client検証、Production deliveryには使わない。
 
 ### 1. Inventory
 
@@ -86,11 +86,11 @@ Persistent Stagingの代わりに、PR #1760と一緒に破棄される一時Pre
 
 既存Previewには設定変更前のseedから、既定test user 1件、Plan 39件、Record 43件が残っている。seed無効化は今後の再投入を止めるが、既存行は削除しない。既定test userはsample dataを維持するため削除せず、Previewの寿命を超える1年間banした。専用temporary test userだけがlogin可能であり、credentialはrepo、Issue、実行logへ保存しない。
 
-この時点のgeneric Vercel PreviewはMCP OAuthの`staging`または`production` identityとして起動しない。したがって、上記3項目が完了してもOAuth metadata、実client接続、Plan → Track → Learnの外部証跡は未検証である。4番以降へ進む前に、一時branch aliasをissuer/resourceとして扱うか、Preview専用logical environmentを追加するかを別checkpointで固定する。
+このPreviewにはuserとsample dataがあり、Production向けDB identityが固定されている。identityは更新、削除、再分類しない。OAuth metadata、実client接続、Plan → Track → Learnの外部証跡は、新しい空のPreviewで別に確認する。
 
 ## Main merge boundary
 
-Supabase GitHub integrationは`main`のmigrationをProductionへ反映する。このbranchのmigration chainには書き込み停止を必要とするprefixがあるため、Persistent Stagingはmain統合後ではなくDraft PRのexact SHAで実行する。
+Supabase GitHub integrationは`main`のmigrationをProductionへ反映する。このbranchのmigration chainには書き込み停止を必要とするprefixがあるため、検証はmain統合後ではなく、各段階PRのexact SHAと新しい一時Previewで実行する。
 
 Draft PR #1760はintegration / rehearsal sourceとして残し、そのままReadyまたはmergeしない。Productionへの反映は、全prefixで旧/new appの同時稼働が安全なrolling-compatible chainを作り、次の段階PRへ切り出して行う。
 
@@ -101,7 +101,7 @@ Draft PR #1760はintegration / rehearsal sourceとして残し、そのままRea
 5. [ ] MCP tool codeを全gate OFFで配置
 6. [ ] 互換cleanupを新timestamp migrationで適用
 
-各PRは直前のProduction schema versionまたはdeployment SHAを開始条件にし、main最新化、current-head CI、read-only Production preflightをやり直す。全系列、逆GRANT、再cutoverをPersistent Stagingで証明するまで開始しない。
+各PRは直前のProduction schema versionまたはdeployment SHAを開始条件にし、main最新化、current-head CI、read-only Production preflightをやり直す。全系列、逆GRANT、再cutoverを同じ候補SHAの一時Previewで証明するまで開始しない。
 
 やむを得ず一括maintenance cutoverへ変更する場合は、この標準手順の例外として顧客影響、停止方法、backup、roll-forward、監視、実行者を別途レビューし、対象と環境を指定した明示承認を取り直す。Production migration、integration設定変更、releaseはいずれの経路でも明示承認が必要である。
 
@@ -111,14 +111,14 @@ Draft PR #1760はintegration / rehearsal sourceとして残し、そのままRea
 
 | Input            | Required evidence                                           |
 | ---------------- | ----------------------------------------------------------- |
-| Supabase         | organization、project、作成予定branch名、費用、region       |
-| Vercel           | team、`product` project、Custom Environment名、費用         |
-| DNS              | `staging.dayopt.app`と`mcp.staging.dayopt.app`の所有先      |
-| Secrets          | Staging専用1Password itemとVercel/Supabase同期先            |
+| Supabase         | organization、fresh Preview project ref、seed無効、region   |
+| Vercel           | team、`product` project、対象branch、stable branch alias    |
+| Rate limit       | Preview専用Upstash instanceの非secret識別子と費用上限       |
+| Secrets          | Preview専用1Password itemとVercel/Supabase同期先            |
 | OAuth clients    | client ID、現在version、clientが提示したexact callback      |
 | Stripe           | test account ID、test mode、Webhook endpointの所有先        |
 | Operators        | 実行者、監視者、停止判断者                                  |
-| Destructive test | Staging環境、synthetic userのopaque label、削除操作、承認者 |
+| Destructive test | Preview環境、synthetic userのopaque label、削除操作、承認者 |
 
 次の値は承認メッセージ、Issue、commit、logへ書かない。
 
@@ -129,32 +129,36 @@ Draft PR #1760はintegration / rehearsal sourceとして残し、そのままRea
 - operation ID、user ID、Customer ID
 - 実ユーザーのPlan、Record、review本文
 
-## Persistent Staging sequence
+## Ephemeral PR Preview sequence
 
 ### 1. Data-less Supabase branch
 
 - [ ] #1760のintegration source SHAとsource terminal `20260728110300`を記録する
 - [ ] Productionへ切り出す各段階PRのexact SHAと期待terminalをmanifestへ固定する
-- [ ] Productionと異なるpersistent branchを作る
-- [ ] seedとsignupを無効にする
+- [ ] Productionと異なる新しいnon-persistent Preview branchを作る
+- [ ] migrationとuser作成より前にseedとsignupを無効にする
 - [ ] app、service-role writer、Git deploymentへまだ接続しない
 - [ ] 各段階PRのcandidateをmanifest順に適用し、実terminalが期待値と一致する
 - [ ] user、OAuth、audit、receiptが0件である
 - [ ] global/client gateがOFFである
 - [ ] exact branch refを再確認する
-- [ ] service-role RPCでStaging identityを一度だけprovisionする
-- [ ] getterが`staging`、`https://staging.dayopt.app`、`https://mcp.staging.dayopt.app`を返す
+- [ ] service-role JWTにproject refがあり、Preview project refと一致することを値を出さず確認する
+- [ ] service-role RPCでPreview identityを一度だけprovisionする
+- [ ] getterが`preview`、同一originのstable branch alias、exact Supabase project refを返す
 - [ ] identity tableへ直接権限がない
 - [ ] connection、authorization code、tokenのresource FKがvalidatedである
 
-### 2. Vercel, DNS, and secrets
+### 2. Vercel branch and secrets
 
-- [ ] `product` projectにCustom Environment `staging`を作る
-- [ ] ProductとMCPの固定hostだけを割り当てる
-- [ ] Preview hostnameをissuer、resource、redirect URIに使わない
-- [ ] Staging専用secretだけを設定する
+- [ ] `product` projectのstandard Previewを使う
+- [ ] OAuthを有効にするbranchを1本だけ明示する
+- [ ] `VERCEL_GIT_COMMIT_REF`が対象branchと完全一致する
+- [ ] issuer、resource、redirect URIへ同じstable `VERCEL_BRANCH_URL`を使う
+- [ ] deployment固有URLをissuer、resource、redirect URIに使わない
+- [ ] Preview専用secretだけを設定する
+- [ ] Preview専用Upstashを設定し、Productionとcredentialを共有しない
 - [ ] Production用Sentry、Resend、Stripe live secretを流用しない
-- [ ] `MCP_OAUTH_ENVIRONMENT=staging`を設定する
+- [ ] `MCP_OAUTH_ENVIRONMENT=preview`を設定する
 - [ ] authorization serverとresourceをexact originで設定する
 - [ ] client redirect URIをexact allowlistで設定する
 - [ ] runtime write allowlistを空に保つ
@@ -163,7 +167,7 @@ Draft PR #1760はintegration / rehearsal sourceとして残し、そのままRea
 
 - [ ] deployment candidateのexact SHAで`pnpm test:mcp:conformance`を再実行し、suite version、spec version、expected failure ID、結果をmanifestへ記録する
 - [ ] DB identity確認後にappをdeployする
-- [ ] build/readinessがStaging identityを確認する
+- [ ] build/readinessがbranch、Supabase、DBのPreview identityを確認する
 - [ ] OAuth metadataのissuer、endpoint、resourceを確認する
 - [ ] credentialなしのMCP discoveryが正しい401 metadataを返す
 - [ ] read scopeだけのconnectionでread toolだけが列挙される
@@ -187,7 +191,7 @@ Draft PR #1760はintegration / rehearsal sourceとして残し、そのままRea
 
 ### 5. Destructive evidence checkpoint
 
-- [ ] 対象がPersistent Stagingであることをissuer、resource、DB identityで再確認する
+- [ ] 対象が承認済みPreviewであることをbranch、issuer、resource、DB identityで再確認する
 - [ ] Productionと衝突しないsynthetic userのopaque labelを決める
 - [ ] 対象synthetic user、環境、`deleteAllData`操作を指定した明示承認を得る
 - [ ] deployment SHAとDB identity tupleを記録する
@@ -210,11 +214,11 @@ code:
 
 - client: claude-ai | chatgpt | cursor
 - client_version:
-- environment: staging
-- authorization_server: https://staging.dayopt.app
-- resource: https://mcp.staging.dayopt.app
+- environment: preview
+- authorization_server: https://<stable-branch-alias>
+- resource: https://<stable-branch-alias>
 - deployment_sha:
-- db_identity: staging | https://staging.dayopt.app | https://mcp.staging.dayopt.app
+- db_identity: preview | https://<stable-branch-alias> | <supabase-project-ref>
 - gate_revision:
 - synthetic_subject_label:
 - destructive_test_authority:
@@ -271,6 +275,6 @@ code:
 2. durable client controlをOFFにし、対象clientの全write connectionを同じtransactionで不可逆disableする
 3. runtime allowlistから対象clientを除く
 
-Production credentialが混入した場合は、上記に加えてStaging appとcronを隔離する。影響credentialをrotateまたはrevokeし、Production側のtoken利用、OAuth connection、mutation、監査欠損をread-onlyで確認する。安全性を証明できるまでStagingを再接続しない。
+Production credentialが混入した場合は、上記に加えてPreview appとcronを隔離する。影響credentialをrotateまたはrevokeし、Production側のtoken利用、OAuth connection、mutation、監査欠損をread-onlyで確認する。安全性を証明できるまでPreviewを再接続しない。
 
 Production migration、release、gate変更、credential rotate/revokeはこのチェックリストの準備作業に含めない。
