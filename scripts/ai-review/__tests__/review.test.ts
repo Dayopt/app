@@ -20,8 +20,10 @@ import {
   isDangerousPath,
   isTestPath,
   listSnapshotTables,
+  mergeReviewResults,
   parseReviewResponse,
   parseState,
+  planReviewShards,
   readCandidate,
   renderComment,
   renderState,
@@ -55,6 +57,7 @@ describe('危険クラス path の判定', () => {
     expect(isDangerousPath('apps/product/src/features/tags/server/tags-service.ts')).toBe(true);
     expect(isDangerousPath('apps/product/src/features/auth/components/LoginForm.tsx')).toBe(true);
     expect(isDangerousPath('apps/product/src/lib/trpc/procedures.ts')).toBe(true);
+    expect(isDangerousPath('apps/product/src/lib/mcp/auth.ts')).toBe(true);
   });
 
   it('UI やドキュメントは対象にしない', () => {
@@ -635,6 +638,83 @@ describe('diff の予算配分', () => {
     expect(isDangerousPath(test)).toBe(true);
     expect(isTestPath(test)).toBe(true);
     expect(isTestPath('apps/product/src/features/auth/server/service.ts')).toBe(false);
+  });
+});
+
+describe('複数review shardの全量計画', () => {
+  const line = (file: string, bytes: number): string =>
+    `diff --git a/${file} b/${file}\n${'+'.repeat(Math.max(1, bytes - file.length * 2 - 20))}`;
+
+  it('危険クラスのproduction codeとtestを欠落なく複数shardへ収める', () => {
+    const files = [
+      'apps/product/src/lib/mcp/auth.ts',
+      'apps/product/src/lib/mcp/__tests__/auth.test.ts',
+      'supabase/migrations/0001_large.sql',
+      'README.md',
+    ];
+    const plan = planReviewShards('base', 'head', files, (file) =>
+      line(file, file === 'README.md' ? 100 : Math.floor(MAX_DIFF_BYTES * 0.6)),
+    );
+
+    expect(plan.shards.length).toBeGreaterThan(1);
+    expect(new Set(plan.shards.flatMap((shard) => shard.files))).toEqual(
+      new Set(files.filter((file) => file !== 'README.md')),
+    );
+    expect(plan.omittedContext).toEqual(['README.md']);
+    for (const shard of plan.shards) {
+      expect(shard.bytes).toBeLessThanOrEqual(MAX_DIFF_BYTES);
+      expect(Buffer.byteLength(shard.diff, 'utf8')).toBe(shard.bytes);
+    }
+    expect(plan.fullDangerousDiff).toContain('apps/product/src/lib/mcp/auth.ts');
+    expect(plan.fullDangerousDiff).toContain('auth.test.ts');
+    expect(plan.fullDangerousDiff).toContain('0001_large.sql');
+  });
+
+  it('1 fileが上限を超えても全partを同じfileへ紐づける', () => {
+    const file = 'supabase/migrations/0001_oversized.sql';
+    const ending = 'END_OF_OVERSIZED_DIFF';
+    const diff = `${line(file, MAX_DIFF_BYTES * 2)}\n${ending}`;
+    const plan = planReviewShards('base', 'head', [file], () => diff);
+
+    expect(plan.shards.length).toBeGreaterThan(1);
+    expect(plan.shards.every((shard) => shard.files.length === 1 && shard.files[0] === file)).toBe(
+      true,
+    );
+    expect(plan.shards.every((shard) => shard.bytes <= MAX_DIFF_BYTES)).toBe(true);
+    expect(plan.shards.at(-1)?.diff).toContain(ending);
+    expect(plan.fullDangerousDiff).toBe(diff);
+  });
+
+  it('同じ入力から同じshard構成を作る', () => {
+    const files = [
+      'apps/product/src/lib/mcp/auth.ts',
+      'apps/product/src/lib/oauth-server/code-exchange.ts',
+      'supabase/migrations/0001.sql',
+    ];
+    const diff = (file: string) => line(file, Math.floor(MAX_DIFF_BYTES * 0.55));
+
+    expect(planReviewShards('base', 'head', files, diff).shards).toEqual(
+      planReviewShards('base', 'head', files, diff).shards,
+    );
+  });
+
+  it('shard findingsを重複排除し、全要約を保持する', () => {
+    const finding = {
+      severity: 'P1' as const,
+      title: 'rate limit不足',
+      file: 'apps/product/src/app/api/oauth/token/route.ts',
+      line: 10,
+      failureScenario: '連打でDBが枯渇する',
+      evidence: '公開POSTに制限がない',
+    };
+    const result = mergeReviewResults([
+      { summary: 'OAuthを確認', findings: [finding] },
+      { summary: 'MCPを確認', findings: [finding] },
+    ]);
+
+    expect(result.findings).toEqual([finding]);
+    expect(result.summary).toContain('[1] OAuthを確認');
+    expect(result.summary).toContain('[2] MCPを確認');
   });
 });
 

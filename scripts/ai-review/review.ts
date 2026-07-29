@@ -41,7 +41,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 export const DEFAULT_MODEL = 'gemini-3.1-pro-preview';
 
 /**
- * prompt に載せる diff の上限。超過分は落とし、落とした事実を prompt に明記する。
+ * 1 review shardに載せるdiffの上限。PR全体が超える場合は、同じrun内で複数shardへ
+ * 分けて全危険ファイルをレビューする。
  *
  * 400KB（≒100k tokens）。180KB だと、実測で月 1 件ほど出る大きめの PR が「危険クラスを
  * 見切れず check を落とす」状態になり、**事実上「分量が多い PR は分割せよ」** として
@@ -99,6 +100,7 @@ export const DANGEROUS_PATH_GLOBS: readonly string[] = [
   // 3. 認証・セッション
   'apps/product/src/features/auth/**',
   'apps/product/src/lib/auth/**',
+  'apps/product/src/lib/mcp/**',
   'apps/product/src/lib/oauth-server/**',
   'apps/product/src/lib/security/**',
   'apps/product/src/lib/safe-redirect.ts',
@@ -347,6 +349,8 @@ export interface PromptInput {
   omittedContext?: readonly string[];
   /** 作者の申告。**信頼できない参考情報**として区切って渡す。 */
   pullRequest?: { title: string; body: string };
+  /** 大規模diffを全量確認するための分割位置。 */
+  reviewShard?: { index: number; total: number };
 }
 
 /**
@@ -355,6 +359,14 @@ export interface PromptInput {
  */
 export function buildPrompt(input: PromptInput): string {
   const parts: string[] = [];
+
+  if (input.reviewShard) {
+    parts.push(
+      `## Review shard ${input.reviewShard.index} / ${input.reviewShard.total}\n\n`,
+      'このPRの危険クラスdiffは同じrun内で複数shardへ分割されています。',
+      'このshardに含まれるdiffだけを根拠に報告し、他shardの内容を推測しないでください。\n\n',
+    );
+  }
 
   if (input.pullRequest) {
     // 意図が分からないと「意図しない cascade delete」と「意図的な破壊的変更」を区別できず、
@@ -538,6 +550,7 @@ export function renderComment(
   meta: {
     model: string;
     sha: string;
+    shardCount?: number;
     incompleteDangerous?: readonly string[];
     enforce?: boolean;
   },
@@ -582,7 +595,7 @@ export function renderComment(
 
   lines.push(
     '---',
-    `_${meta.model} による自動レビュー（危険クラス path のみ実行 / commit \`${meta.sha.slice(0, 7)}\`）。`,
+    `_${meta.model} による自動レビュー（危険クラス path のみ / ${meta.shardCount ?? 1} shard / commit \`${meta.sha.slice(0, 7)}\`）。`,
     `契約は \`scripts/ai-review/prompt.md\`。style・設計の好みは対象外です。_`,
   );
 
@@ -717,6 +730,154 @@ export function collectDiff(
   return { diff: chunks.join('\n'), truncated, incompleteDangerous, omittedContext };
 }
 
+export interface ReviewShard {
+  files: string[];
+  diff: string;
+  bytes: number;
+}
+
+export interface ReviewShardPlan {
+  shards: ReviewShard[];
+  /** Cache fingerprintはshard構成ではなく、全危険diffの内容へbindする。 */
+  fullDangerousDiff: string;
+  omittedContext: string[];
+}
+
+interface ReviewFragment {
+  file: string;
+  part: number;
+  text: string;
+  bytes: number;
+}
+
+/**
+ * 危険クラスdiffを欠落なく複数promptへ分ける。
+ *
+ * file単位のfirst-fit decreasingでshard数を抑える。1 fileだけで上限を超える場合は
+ * UTF-8と行境界を守って分割し、後続partへfile名を示すcontinuation headerを付ける。
+ * 非危険クラスは別の決定論gateが担当するため、AI reviewのcontext予算には含めない。
+ */
+export function planReviewShards(
+  base: string,
+  head: string,
+  files: readonly string[],
+  /** テスト用。既定はgit diff。 */
+  diffImpl?: (file: string) => string,
+): ReviewShardPlan {
+  const dangerousTargets = files.filter(isDangerousPath);
+  const targets = dangerousTargets.length > 0 ? dangerousTargets : [...files];
+  const targetSet = new Set(targets);
+  const omittedContext = files.filter((file) => !targetSet.has(file));
+  const fileDiff =
+    diffImpl ??
+    ((file: string): string =>
+      git(['diff', '--no-color', '--unified=3', `${base}...${head}`, '--', file]));
+
+  const entries = targets.map((file) => ({ file, text: fileDiff(file) }));
+  const fullDangerousDiff = entries.map((entry) => entry.text).join('\n');
+  const fragments = entries
+    .flatMap((entry) =>
+      splitReviewDiff(entry.file, entry.text).map((text, part): ReviewFragment => ({
+        file: entry.file,
+        part,
+        text,
+        bytes: Buffer.byteLength(text, 'utf8'),
+      })),
+    )
+    .sort((a, b) => b.bytes - a.bytes || a.file.localeCompare(b.file) || a.part - b.part);
+
+  const shards: Array<ReviewShard & { chunks: string[] }> = [];
+  for (const fragment of fragments) {
+    const shard = shards.find((candidate) => {
+      const separatorBytes = candidate.chunks.length === 0 ? 0 : 1;
+      return candidate.bytes + separatorBytes + fragment.bytes <= MAX_DIFF_BYTES;
+    });
+
+    if (shard) {
+      if (!shard.files.includes(fragment.file)) shard.files.push(fragment.file);
+      shard.chunks.push(fragment.text);
+      shard.bytes += (shard.chunks.length === 1 ? 0 : 1) + fragment.bytes;
+      continue;
+    }
+
+    shards.push({
+      files: [fragment.file],
+      chunks: [fragment.text],
+      diff: '',
+      bytes: fragment.bytes,
+    });
+  }
+
+  return {
+    shards: shards.map(({ files: shardFiles, chunks, bytes }) => ({
+      files: shardFiles,
+      diff: chunks.join('\n'),
+      bytes,
+    })),
+    fullDangerousDiff,
+    omittedContext,
+  };
+}
+
+function splitReviewDiff(file: string, diff: string): string[] {
+  if (Buffer.byteLength(diff, 'utf8') <= MAX_DIFF_BYTES) return [diff];
+
+  const continuationHeader = `diff --git a/${file} b/${file}\n# ai-review continuation\n`;
+  const continuationBytes = Buffer.byteLength(continuationHeader, 'utf8');
+  if (continuationBytes >= MAX_DIFF_BYTES) {
+    throw new ConfigurationError(`review shard headerが上限を超えた: ${file}`);
+  }
+
+  const parts: string[] = [];
+  let remaining = diff;
+  while (remaining.length > 0) {
+    const prefix = parts.length === 0 ? '' : continuationHeader;
+    const piece = takeReviewPrefix(remaining, MAX_DIFF_BYTES - Buffer.byteLength(prefix, 'utf8'));
+    if (piece.length === 0) {
+      throw new ConfigurationError(`review shardを前進できない: ${file}`);
+    }
+    parts.push(prefix + piece);
+    remaining = remaining.slice(piece.length);
+  }
+  return parts;
+}
+
+function takeReviewPrefix(text: string, maxBytes: number): string {
+  const candidate = truncateToBytes(text, maxBytes);
+  if (candidate.length === text.length) return candidate;
+  const newline = candidate.lastIndexOf('\n');
+  return newline > 0 ? candidate.slice(0, newline + 1) : candidate;
+}
+
+export function mergeReviewResults(results: readonly ReviewResult[]): ReviewResult {
+  const findings: Finding[] = [];
+  const seen = new Set<string>();
+
+  for (const result of results) {
+    for (const finding of result.findings) {
+      const key = JSON.stringify([
+        finding.severity,
+        finding.file,
+        finding.line ?? null,
+        finding.title,
+        finding.failureScenario,
+      ]);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      findings.push(finding);
+    }
+  }
+
+  return {
+    summary: clamp(
+      results.map((result, index) => `[${index + 1}] ${result.summary || '要約なし'}`).join(' '),
+      4_000,
+      'shard要約が長いため以降を省略',
+    ),
+    findings,
+  };
+}
+
 function loadAttachments(
   changedFiles: readonly string[],
   diff: string,
@@ -790,6 +951,8 @@ interface GeminiCallOptions {
   systemInstruction: string;
   prompt: string;
   fetchImpl?: typeof fetch;
+  /** 複数shardがworkflow全体のdeadlineを共有するための絶対時刻。 */
+  deadlineAt?: number;
 }
 
 export interface GeminiCallResult {
@@ -861,9 +1024,13 @@ export async function callGemini(options: GeminiCallOptions): Promise<GeminiCall
   });
 
   const startedAt = Date.now();
+  const deadlineAt = Math.min(
+    options.deadlineAt ?? Number.POSITIVE_INFINITY,
+    startedAt + TOTAL_DEADLINE_MS,
+  );
   let lastError = '';
   for (let attempt = 0; attempt < 4; attempt += 1) {
-    if (attempt > 0 && Date.now() - startedAt > TOTAL_DEADLINE_MS) {
+    if (Date.now() >= deadlineAt) {
       throw new Error(`Gemini API 呼び出しが締め切りを超過: ${lastError}`);
     }
     let response: Response;
@@ -874,12 +1041,14 @@ export async function callGemini(options: GeminiCallOptions): Promise<GeminiCall
         body,
         // Node の fetch に既定 timeout は無い。付けないとハングが job timeout まで伸び、
         // fail-open のはずの経路が red（= マージ不能）に反転する。
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(
+          Math.max(1, Math.min(REQUEST_TIMEOUT_MS, deadlineAt - Date.now())),
+        ),
       });
     } catch (error) {
       // ネットワーク断・タイムアウトは transient として retry に残す。
       lastError = `fetch 失敗: ${String(error)}`;
-      await sleep(backoffMs(attempt));
+      await sleep(Math.min(backoffMs(attempt), Math.max(0, deadlineAt - Date.now())));
       continue;
     }
 
@@ -903,7 +1072,7 @@ export async function callGemini(options: GeminiCallOptions): Promise<GeminiCall
     if (response.status !== 429 && response.status < 500) {
       throw new ConfigurationError(`request が拒否された。${lastError}`);
     }
-    await sleep(backoffMs(attempt));
+    await sleep(Math.min(backoffMs(attempt), Math.max(0, deadlineAt - Date.now())));
   }
 
   throw new Error(`Gemini API 呼び出しに失敗: ${lastError}`);
@@ -1026,6 +1195,44 @@ function argValue(argv: readonly string[], name: string): string | undefined {
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
+export const REVIEW_SHARD_CONCURRENCY = 3;
+
+async function mapWithConcurrency<T, U>(
+  values: readonly T[],
+  concurrency: number,
+  mapper: (value: T, index: number) => Promise<U>,
+): Promise<U[]> {
+  const results = new Array<U>(values.length);
+  let nextIndex = 0;
+  let firstError: unknown;
+
+  async function worker(): Promise<void> {
+    while (firstError === undefined) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= values.length) return;
+      try {
+        results[index] = await mapper(values[index]!, index);
+      } catch (error) {
+        firstError = error;
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, values.length) }, async () => worker()),
+  );
+  if (firstError !== undefined) throw firstError;
+  return results;
+}
+
+function sumDefined(values: readonly (number | undefined)[]): number | undefined {
+  const defined = values.filter((value): value is number => value !== undefined);
+  return defined.length === values.length
+    ? defined.reduce((sum, value) => sum + value, 0)
+    : undefined;
+}
+
 async function main(): Promise<number> {
   const argv = process.argv.slice(2);
   const dryRun = argv.includes('--dry-run');
@@ -1059,12 +1266,8 @@ async function main(): Promise<number> {
     notice(`force 指定のため、危険クラス外の ${changedFiles.length} ファイルをレビューします。`);
   }
 
-  const { diff, truncated, incompleteDangerous, omittedContext } = collectDiff(
-    base,
-    head,
-    changedFiles,
-  );
-  if (diff.trim() === '') {
+  const reviewPlan = planReviewShards(base, head, changedFiles);
+  if (reviewPlan.fullDangerousDiff.trim() === '' || reviewPlan.shards.length === 0) {
     notice('diff が空のためレビューをスキップしました。');
     return 0;
   }
@@ -1074,31 +1277,46 @@ async function main(): Promise<number> {
     throw new ConfigurationError(`レビュー契約が存在しない: ${contractPath}`);
   }
   const contract = readFileSync(contractPath, 'utf8');
-  const attachments = loadAttachments(changedFiles, diff);
   const prTitle = process.env.AI_REVIEW_PR_TITLE;
-  const prompt = buildPrompt({
-    diff,
-    changedFiles,
-    changeStatus,
-    attachments,
-    truncated,
-    incompleteDangerous,
-    omittedContext,
-    pullRequest: prTitle
-      ? { title: prTitle, body: process.env.AI_REVIEW_PR_BODY ?? '' }
-      : undefined,
+  const shardInputs = reviewPlan.shards.map((shard, index) => {
+    const attachments = loadAttachments(shard.files, shard.diff);
+    const prompt = buildPrompt({
+      diff: shard.diff,
+      changedFiles: shard.files,
+      changeStatus,
+      attachments,
+      truncated: false,
+      reviewShard: { index: index + 1, total: reviewPlan.shards.length },
+      pullRequest: prTitle
+        ? { title: prTitle, body: process.env.AI_REVIEW_PR_BODY ?? '' }
+        : undefined,
+    });
+    return { shard, attachments, prompt };
   });
 
   if (dryRun) {
     console.log(`model: ${model}`);
     console.log(`危険クラスのファイル: ${dangerous.length} / ${changedFiles.length}`);
-    console.log(`添付 rules: ${attachments.map((item) => item.label).join(', ') || 'なし'}`);
-    console.log(`PR の意図: ${prTitle ? '添付あり' : '添付なし'}`);
+    console.log(`review shards: ${reviewPlan.shards.length}`);
+    for (const [index, input] of shardInputs.entries()) {
+      console.log(
+        `shard ${index + 1}: diff=${input.shard.bytes} bytes / files=${input.shard.files.length} / prompt=${
+          Buffer.byteLength(input.prompt, 'utf8') + Buffer.byteLength(contract, 'utf8')
+        } bytes`,
+      );
+    }
+    const coveredFiles = new Set(reviewPlan.shards.flatMap((shard) => shard.files));
+    console.log(`reviewed dangerous files: ${coveredFiles.size} / ${dangerous.length}`);
     console.log(
-      `prompt bytes: ${Buffer.byteLength(prompt, 'utf8') + Buffer.byteLength(contract, 'utf8')} (truncated: ${truncated})`,
+      `添付 rules: ${
+        [
+          ...new Set(shardInputs.flatMap((input) => input.attachments.map((item) => item.label))),
+        ].join(', ') || 'なし'
+      }`,
     );
-    console.log(`全量を載せられなかった危険ファイル: ${incompleteDangerous.join(', ') || 'なし'}`);
-    console.log(`予算に載らなかった文脈ファイル: ${omittedContext.join(', ') || 'なし'}`);
+    console.log(`PR の意図: ${prTitle ? '添付あり' : '添付なし'}`);
+    console.log('全量を載せられなかった危険ファイル: なし');
+    console.log(`AI review対象外の文脈ファイル: ${reviewPlan.omittedContext.join(', ') || 'なし'}`);
     return 0;
   }
 
@@ -1117,7 +1335,8 @@ async function main(): Promise<number> {
 
   // 同じ危険クラス diff を何度もレビューしない。paths filter は PR 全体で評価されるため、
   // docs だけを直す push でも migration が再発火して同じ判定に同じ金額を払っていた。
-  const fingerprint = fingerprintDiff(dangerous, diff);
+  const reviewedFiles = dangerous.length > 0 ? dangerous : changedFiles;
+  const fingerprint = fingerprintDiff(reviewedFiles, reviewPlan.fullDangerousDiff);
   if (commentContext) {
     const previous = await readStickyState(commentContext);
     if (previous && previous.fingerprint === fingerprint) {
@@ -1136,9 +1355,28 @@ async function main(): Promise<number> {
     }
   }
 
-  let call: GeminiCallResult;
+  let calls: GeminiCallResult[];
   try {
-    call = await callGemini({ apiKey, model, systemInstruction: contract, prompt });
+    const deadlineAt = Date.now() + TOTAL_DEADLINE_MS;
+    calls = await mapWithConcurrency(
+      shardInputs,
+      REVIEW_SHARD_CONCURRENCY,
+      async (input, index) => {
+        const call = await callGemini({
+          apiKey,
+          model,
+          systemInstruction: contract,
+          prompt: input.prompt,
+          deadlineAt,
+        });
+        notice(
+          `shard ${index + 1}/${shardInputs.length}: model=${call.modelVersion ?? model} / 出力 ${
+            call.outputTokens ?? '?'
+          } tokens（うち thinking ${call.thoughtTokens ?? '?'}）。`,
+        );
+        return call;
+      },
+    );
   } catch (error) {
     // 構成ミスは fail-open にしない。決定論的で自然回復せず、握り潰すと gate が
     // 死んだまま green を出し続ける。インフラ障害だけが PR を止めない対象。
@@ -1150,23 +1388,34 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  const result = call.review;
+  const result = mergeReviewResults(calls.map((call) => call.review));
   // 要求した id ではなく **実際に応答したモデル**を正とする。alias で別モデルに
   // 差し替わっていても、要求 id を記録していると誰も気づけない。
-  const servedModel = call.modelVersion ?? model;
-  if (call.modelVersion && call.modelVersion !== model) {
+  const servedModels = [...new Set(calls.map((call) => call.modelVersion ?? model))];
+  const servedModel = servedModels.join(', ');
+  for (const modelVersion of servedModels) {
+    if (modelVersion === model) continue;
     notice(
-      `要求した model "${model}" に対して "${call.modelVersion}" が応答しました（alias の可能性）。DEFAULT_MODEL の見直しを検討してください。`,
+      `要求した model "${model}" に対して "${modelVersion}" が応答しました（alias の可能性）。DEFAULT_MODEL の見直しを検討してください。`,
     );
   }
+  const totalOutputTokens = sumDefined(calls.map((call) => call.outputTokens));
+  const totalThoughtTokens = sumDefined(calls.map((call) => call.thoughtTokens));
   notice(
-    `model=${servedModel} / 出力 ${call.outputTokens ?? '?'} tokens（うち thinking ${call.thoughtTokens ?? '?'}）。`,
+    `${calls.length} shard合計: 出力 ${totalOutputTokens ?? '?'} tokens（うち thinking ${
+      totalThoughtTokens ?? '?'
+    }）。`,
   );
 
-  const clean = result.findings.length === 0 && incompleteDangerous.length === 0;
-  const shouldBlock = incompleteDangerous.length > 0 || hasBlockingFinding(result);
+  const clean = result.findings.length === 0;
+  const shouldBlock = hasBlockingFinding(result);
   const body = [
-    renderComment(result, { model: servedModel, sha: head, incompleteDangerous, enforce }),
+    renderComment(result, {
+      model: servedModel,
+      sha: head,
+      shardCount: reviewPlan.shards.length,
+      enforce,
+    }),
     renderState({ fingerprint, blocked: shouldBlock }),
   ].join('\n');
 
@@ -1184,19 +1433,13 @@ async function main(): Promise<number> {
   }
 
   if (clean) {
-    notice(`指摘なし（${dangerous.length} 件の危険クラスファイルを確認）。`);
+    notice(`指摘なし（${reviewedFiles.length} 件を${reviewPlan.shards.length} shardで全量確認）。`);
     return 0;
   }
 
   console.log(body);
 
-  // 危険クラスを最後まで見られていない run は、指摘の有無に関わらず通さない。
-  // 「見ていないから指摘が無い」を green で表現すると偽の安心になる。
-  if (incompleteDangerous.length > 0) {
-    console.log(
-      `::error title=ai-review::危険クラスの ${incompleteDangerous.length} ファイルを最後までレビューできていません（diff が ${MAX_DIFF_BYTES} bytes を超過）。`,
-    );
-  } else if (hasBlockingFinding(result)) {
+  if (hasBlockingFinding(result)) {
     console.log(`::error title=ai-review::P0 の指摘があります。PR の comment を確認してください。`);
   }
 

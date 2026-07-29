@@ -18,6 +18,7 @@ on:
       # 認証・セッション・認可
       - 'apps/product/src/features/auth/**'
       - 'apps/product/src/lib/auth/**'
+      - 'apps/product/src/lib/mcp/**'
       - 'apps/product/src/lib/oauth-server/**'
       - 'apps/product/src/lib/security/**'
       - 'apps/product/src/lib/safe-redirect.ts'
