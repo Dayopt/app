@@ -234,7 +234,7 @@ afterEach(() => {
 });
 
 describe('verify-mcp-environment-identity.sh', () => {
-  it('通常はseedなしresetと通常seed復元を一度ずつ実行する', () => {
+  it('PreviewとStagingをseedなしresetで検証してから通常seedを復元する', () => {
     const { callsPath, env } = createTestEnvironment();
 
     const result = spawnSync('bash', ['scripts/verify-mcp-environment-identity.sh'], {
@@ -247,6 +247,9 @@ describe('verify-mcp-environment-identity.sh', () => {
     expect(result.stdout).toContain('MCP environment identity rehearsal passed.');
     expect(readFileSync(callsPath, 'utf8')).toBe(
       [
+        'supabase db reset --local --yes --no-seed',
+        'psql verify-seedless',
+        'psql rehearsal',
         'supabase db reset --local --yes --no-seed',
         'psql verify-seedless',
         'psql rehearsal',
@@ -279,6 +282,9 @@ describe('verify-mcp-environment-identity.sh', () => {
     );
     expect(readFileSync(callsPath, 'utf8')).toBe(
       [
+        'supabase db reset --local --yes --no-seed',
+        'psql verify-seedless',
+        'psql rehearsal',
         'supabase db reset --local --yes --no-seed',
         'psql verify-seedless',
         'psql rehearsal',
@@ -431,7 +437,7 @@ describe('verify-mcp-environment-identity.sh', () => {
     },
   );
 
-  it('CLIが失敗してもseedなしDBが揃っていれば再試行しない', () => {
+  it('CLIが失敗しても最初のseedなしDBが揃っていればそのresetは再試行しない', () => {
     const { callsPath, env } = createTestEnvironment({ failSeedlessResets: 1 });
 
     const result = spawnSync('bash', ['scripts/verify-mcp-environment-identity.sh'], {
@@ -446,10 +452,10 @@ describe('verify-mcp-environment-identity.sh', () => {
     );
     expect(
       readFileSync(callsPath, 'utf8').match(/supabase db reset --local --yes --no-seed/g),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
   });
 
-  it('seedなしDBが未完成なら一度だけ再試行する', () => {
+  it('最初のseedなしDBが未完成ならそのresetだけを一度再試行する', () => {
     const { callsPath, env } = createTestEnvironment({ invalidSeedlessStates: 1 });
 
     const result = spawnSync('bash', ['scripts/verify-mcp-environment-identity.sh'], {
@@ -464,7 +470,7 @@ describe('verify-mcp-environment-identity.sh', () => {
     );
     expect(
       readFileSync(callsPath, 'utf8').match(/supabase db reset --local --yes --no-seed/g),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   it('seedなしreset後のDBが二度とも未完成でもtrapで通常seedを復元する', () => {
