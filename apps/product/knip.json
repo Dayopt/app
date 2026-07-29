@@ -17,6 +17,7 @@
   ],
   "ignoreDependencies": [
     "@axe-core/react",
+    "@modelcontextprotocol/conformance",
     "@next/bundle-analyzer",
     "@storybook/*",
     "@vueless/storybook-dark-mode",

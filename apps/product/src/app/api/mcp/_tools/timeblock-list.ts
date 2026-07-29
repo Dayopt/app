@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import {
   transformPlanReadModel,
@@ -10,7 +10,7 @@ import { logger } from '@/lib/logger';
 import { captureUnexpectedMcpToolError } from '@/lib/mcp/tool-error';
 import { createMcpTrpcCaller } from '@/lib/mcp/trpc-bridge';
 
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 
 import type { McpRequestContext } from '../_context';
 import { MCP_PLAN_LIST_OUTPUT_SCHEMA, MCP_RECORD_LIST_OUTPUT_SCHEMA } from './timeblock-contract';

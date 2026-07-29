@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import type { AuthInfo } from '@modelcontextprotocol/server';
 
 import { logger } from '@/lib/logger';
 import { extractBearerToken, verifyAccessToken } from '@/lib/mcp';
@@ -14,7 +14,7 @@ import { getOAuthEnvironmentConfig } from '@/lib/oauth-server/identity-env';
 import { rejectUnexpectedOAuthHost } from '@/lib/oauth-server/request-host';
 import { captureUnexpectedError } from '@/lib/sentry';
 
-import { createMcpServer } from './_server';
+import { handleMcpProtocolRequest } from './_protocol-handler';
 import { getRequiredScopeForTool, mergeMcpChallengeScopes } from './_tools/registry';
 
 /**
@@ -52,6 +52,9 @@ async function handle(request: NextRequest): Promise<Response> {
   const preAuthRateLimitState = await checkMcpPreAuthRateLimit(request);
   if (preAuthRateLimitState !== 'allowed') return rateLimitErrorResponse(preAuthRateLimitState);
 
+  const declaredBodyRejection = rejectDeclaredOversizeBody(request);
+  if (declaredBodyRejection) return declaredBodyRejection;
+
   let auth;
   try {
     const token = extractBearerToken(request.headers.get('authorization'));
@@ -71,35 +74,23 @@ async function handle(request: NextRequest): Promise<Response> {
     return insufficientScopeResponse(auth.scopes, missingScopes);
   }
 
-  const server = createMcpServer({
-    tokenId: auth.tokenId,
-    connectionId: auth.connectionId,
-    userId: auth.userId,
-    clientId: auth.clientId,
-    scopes: auth.scopes,
-    resourceUri: auth.resourceUri,
-  });
-  // Phase 1: stateless mode (sessionIdGenerator omitted = stateless per SDK semantics)
-  const transport = new WebStandardStreamableHTTPServerTransport({
-    enableJsonResponse: true,
-  });
-
   try {
-    await server.connect(transport);
-    return await transport.handleRequest(request, {
-      ...(parsedRequest.body === undefined ? {} : { parsedBody: parsedRequest.body }),
-      authInfo: {
-        token: '<redacted>',
-        clientId: auth.clientId,
-        scopes: auth.scopes,
-        expiresAt: auth.expiresAt,
-        extra: {
-          userId: auth.userId,
-          tokenId: auth.tokenId,
-          connectionId: auth.connectionId,
-          resourceUri: auth.resourceUri,
-        },
+    const authInfo: AuthInfo = {
+      token: '<redacted>',
+      clientId: auth.clientId,
+      scopes: auth.scopes,
+      expiresAt: auth.expiresAt,
+      resource: new URL(auth.resourceUri),
+      extra: {
+        userId: auth.userId,
+        tokenId: auth.tokenId,
+        connectionId: auth.connectionId,
+        resourceUri: auth.resourceUri,
       },
+    };
+    return await handleMcpProtocolRequest(request, {
+      ...(parsedRequest.body === undefined ? {} : { parsedBody: parsedRequest.body }),
+      authInfo,
     });
   } catch (err) {
     const original =
@@ -122,13 +113,8 @@ type ParsedMcpRequest = { ok: true; body: unknown | undefined } | { ok: false; r
 async function parseMcpRequestBody(request: NextRequest): Promise<ParsedMcpRequest> {
   if (request.method !== 'POST') return { ok: true, body: undefined };
 
-  const contentLength = Number(request.headers.get('content-length'));
-  if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
-    return { ok: false, response: mcpRequestErrorResponse(413, -32000, 'Request body too large') };
-  }
-
-  const bodyText = await request.text();
-  if (new TextEncoder().encode(bodyText).byteLength > MAX_REQUEST_BODY_BYTES) {
+  const bodyText = await readLimitedRequestBody(request);
+  if (bodyText === null) {
     return { ok: false, response: mcpRequestErrorResponse(413, -32000, 'Request body too large') };
   }
 
@@ -144,6 +130,45 @@ async function parseMcpRequestBody(request: NextRequest): Promise<ParsedMcpReque
   } catch {
     return { ok: false, response: mcpRequestErrorResponse(400, -32700, 'Parse error') };
   }
+}
+
+function rejectDeclaredOversizeBody(request: NextRequest): Response | null {
+  if (request.method !== 'POST') return null;
+  const contentLength = Number(request.headers.get('content-length'));
+  return Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES
+    ? mcpRequestErrorResponse(413, -32000, 'Request body too large')
+    : null;
+}
+
+async function readLimitedRequestBody(request: NextRequest): Promise<string | null> {
+  if (!request.body) return '';
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_REQUEST_BODY_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bodyBytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bodyBytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bodyBytes);
 }
 
 function collectMissingToolScopes(

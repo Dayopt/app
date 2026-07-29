@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger';
 import { captureUnexpectedMcpToolError } from '@/lib/mcp/tool-error';
 import { createMcpTrpcCaller } from '@/lib/mcp/trpc-bridge';
 
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 
 import type { McpRequestContext } from '../_context';
 import { MCP_TAG_LIST_INPUT_SCHEMA, MCP_TAG_LIST_OUTPUT_SCHEMA } from './context-contract';
@@ -33,7 +33,7 @@ export function registerTagsListTool(server: McpServer, ctx: McpRequestContext) 
           userId: ctx.userId,
           clientId: ctx.clientId,
           scopes: ctx.scopes,
-          signal: extra.signal,
+          signal: extra.mcpReq.signal,
         });
         const result = await trpc.tags.list();
         const tags = result.data.map((tag) => ({

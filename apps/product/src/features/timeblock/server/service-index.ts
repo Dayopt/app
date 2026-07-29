@@ -13,5 +13,9 @@ export {
 } from './mcp-timeblock-read-client';
 export { createPlanService } from './plan-service';
 export { createRecordService } from './record-service';
-export { timeblockContextRangeSchema } from './timeblock-context-contract';
+export {
+  TIMEBLOCK_CONTEXT_MAX_RANGE_MS,
+  isTimeblockDateTime,
+  timeblockContextRangeSchema,
+} from './timeblock-context-contract';
 export { TIMEBLOCK_REVIEW_MAX_TAGS } from './timeblock-review-contract';

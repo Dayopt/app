@@ -1,13 +1,13 @@
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
-import { timeblockContextRangeSchema } from '@/features/timeblock/server/service-index';
-
+import { MCP_CONTEXT_RANGE_SCHEMA } from './context-range-schema';
+import { MCP_TIMEBLOCK_TIMESTAMP_SCHEMA } from './timeblock-timestamp-schema';
 import { MCP_TOOL_SCHEMA_VERSION } from './tool-result';
 
 const MCP_OCCUPANCY_SCHEMA = z
   .object({
-    startAt: z.string().datetime({ offset: true }),
-    endAt: z.string().datetime({ offset: true }),
+    startAt: MCP_TIMEBLOCK_TIMESTAMP_SCHEMA,
+    endAt: MCP_TIMEBLOCK_TIMESTAMP_SCHEMA,
   })
   .strict();
 
@@ -32,17 +32,17 @@ export const MCP_TAG_LIST_OUTPUT_SCHEMA = z
   })
   .strict();
 
-export const MCP_CONSTRAINTS_GET_INPUT_SCHEMA = timeblockContextRangeSchema;
+export const MCP_CONSTRAINTS_GET_INPUT_SCHEMA = MCP_CONTEXT_RANGE_SCHEMA;
 
 export const MCP_CONSTRAINTS_GET_OUTPUT_SCHEMA = z
   .object({
     schemaVersion: z.literal(MCP_TOOL_SCHEMA_VERSION),
-    asOf: z.string().datetime({ offset: true }),
+    asOf: MCP_TIMEBLOCK_TIMESTAMP_SCHEMA,
     timezone: z.string().min(1),
     range: z
       .object({
-        startDate: z.string().datetime({ offset: true }),
-        endDate: z.string().datetime({ offset: true }),
+        startDate: MCP_TIMEBLOCK_TIMESTAMP_SCHEMA,
+        endDate: MCP_TIMEBLOCK_TIMESTAMP_SCHEMA,
         endExclusive: z.literal(true),
       })
       .strict(),

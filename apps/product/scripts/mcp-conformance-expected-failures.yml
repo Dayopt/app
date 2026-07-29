@@ -1,0 +1,7 @@
+server:
+  # The official scenario can exercise these checks only when the server publishes
+  # suite-specific diagnostic tools. Dayopt does not expose test tools in production.
+  - server-stateless:sep-2575-server-rejects-undeclared-capability
+  - server-stateless:sep-2575-missing-capability-http-400
+  - server-stateless:sep-2575-http-server-no-independent-requests-on-stream
+  - server-stateless:sep-2575-server-no-log-without-loglevel

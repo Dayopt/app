@@ -1,21 +1,21 @@
 import 'server-only';
 
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
 import { logger } from '@/lib/logger';
 import { McpMutationClient } from '@/lib/mcp/mutation-client';
 import { McpMutationError, type McpMutationErrorCode } from '@/lib/mcp/mutation-contract';
 import { captureUnexpectedMcpToolError } from '@/lib/mcp/tool-error';
 
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult, McpServer } from '@modelcontextprotocol/server';
 
 import type { McpRequestContext } from '../_context';
+import { MCP_TIMEBLOCK_TIMESTAMP_SCHEMA } from './timeblock-timestamp-schema';
 import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
 
 const operationIdSchema = z.string().uuid();
 const resourceIdSchema = z.string().uuid();
-const timestampSchema = z.string().datetime({ offset: true });
+const timestampSchema = MCP_TIMEBLOCK_TIMESTAMP_SCHEMA;
 const titleSchema = z.string().min(1).max(200);
 const noteSchema = z.string().max(10_000).nullable().optional();
 const nullableIdSchema = z.string().uuid().nullable().optional();

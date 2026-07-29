@@ -2,11 +2,12 @@ import { z } from 'zod';
 
 export const TIMEBLOCK_CONTEXT_MAX_ITEMS_PER_LANE = 5_000;
 export const TIMEBLOCK_CONTEXT_MAX_RANGE_MS = 31 * 24 * 60 * 60 * 1_000;
+const timeblockContextDateTimeSchema = z.string().datetime({ offset: true });
 
 export const timeblockContextRangeSchema = z
   .object({
-    startDate: z.string().datetime({ offset: true }),
-    endDate: z.string().datetime({ offset: true }),
+    startDate: timeblockContextDateTimeSchema,
+    endDate: timeblockContextDateTimeSchema,
   })
   .strict()
   .superRefine((range, context) => {
@@ -31,6 +32,10 @@ export const timeblockContextRangeSchema = z
       });
     }
   });
+
+export function isTimeblockDateTime(value: string): boolean {
+  return timeblockContextDateTimeSchema.safeParse(value).success;
+}
 
 export type TimeblockContextRange = z.infer<typeof timeblockContextRangeSchema>;
 

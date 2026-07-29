@@ -71,6 +71,7 @@
     "test:diff-coverage": "pnpm --filter @dayopt/product test:diff-coverage",
     "test:watch": "pnpm --filter @dayopt/product test:watch",
     "test:integration": "pnpm --filter @dayopt/product test:integration",
+    "test:mcp:conformance": "pnpm --filter @dayopt/product test:mcp:conformance",
     "test:db": "supabase test db --local",
     "test:mcp-environment-identity": "USE_LOCAL_DB=true bash scripts/verify-mcp-environment-identity.sh",
     "db:reset": "pnpm --filter @dayopt/product db:reset",

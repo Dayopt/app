@@ -25,3 +25,6 @@ overrides:
   # upstream が修正版を取り込むまで、脆弱な間接依存だけを置換する (#1569)
   'js-yaml@3.14.2': '3.15.0'
   'uuid@8.3.2': '11.1.1'
+  # MCP SDKの旧constraintが修正版を許可するまで、該当test adapterだけを置換する (#1716)
+  '@modelcontextprotocol/node@2.0.0>@hono/node-server': '2.0.12'
+  '@modelcontextprotocol/sdk@1.29.0>@hono/node-server': '2.0.12'

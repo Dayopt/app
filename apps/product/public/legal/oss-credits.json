@@ -232,13 +232,6 @@
     "publisher": "Long Ho <holevietlong@gmail.com>"
   },
   {
-    "name": "@hono/node-server",
-    "version": "1.19.14",
-    "license": "MIT",
-    "repository": "https://github.com/honojs/node-server.git",
-    "publisher": "Yusuke Wada <yusuke@kamawada.com> (https://github.com/yusukebe)"
-  },
-  {
     "name": "@hookform/resolvers",
     "version": "3.10.0",
     "license": "MIT",
@@ -315,8 +308,15 @@
     "publisher": "Luis Marsiglia <marsiglia.business@gmail.com>"
   },
   {
-    "name": "@modelcontextprotocol/sdk",
-    "version": "1.29.0",
+    "name": "@modelcontextprotocol/core",
+    "version": "2.0.0",
+    "license": "MIT",
+    "repository": "https://github.com/modelcontextprotocol/typescript-sdk.git",
+    "publisher": "Anthropic, PBC (https://anthropic.com)"
+  },
+  {
+    "name": "@modelcontextprotocol/server",
+    "version": "2.0.0",
     "license": "MIT",
     "repository": "https://github.com/modelcontextprotocol/typescript-sdk.git",
     "publisher": "Anthropic, PBC (https://anthropic.com)"
@@ -1324,12 +1324,6 @@
     "repository": "jshttp/accepts"
   },
   {
-    "name": "accepts",
-    "version": "2.0.0",
-    "license": "MIT",
-    "repository": "jshttp/accepts"
-  },
-  {
     "name": "acorn",
     "version": "8.17.0",
     "license": "MIT",
@@ -1444,12 +1438,6 @@
     "repository": "https://github.com/web-platform-dx/baseline-browser-mapping.git"
   },
   {
-    "name": "body-parser",
-    "version": "2.3.0",
-    "license": "MIT",
-    "repository": "expressjs/body-parser"
-  },
-  {
     "name": "brace-expansion",
     "version": "5.0.7",
     "license": "MIT",
@@ -1467,27 +1455,6 @@
     "version": "1.1.2",
     "license": "MIT",
     "repository": "LinusU/buffer-from"
-  },
-  {
-    "name": "bytes",
-    "version": "3.1.2",
-    "license": "MIT",
-    "repository": "visionmedia/bytes.js",
-    "publisher": "TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com)"
-  },
-  {
-    "name": "call-bind-apply-helpers",
-    "version": "1.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/call-bind-apply-helpers.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
-  },
-  {
-    "name": "call-bound",
-    "version": "1.0.4",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/call-bound.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
   },
   {
     "name": "camelcase",
@@ -1607,27 +1574,6 @@
     "publisher": "Sindre Sorhus"
   },
   {
-    "name": "content-disposition",
-    "version": "1.1.0",
-    "license": "MIT",
-    "repository": "jshttp/content-disposition",
-    "publisher": "Douglas Christopher Wilson <doug@somethingdoug.com>"
-  },
-  {
-    "name": "content-type",
-    "version": "1.0.5",
-    "license": "MIT",
-    "repository": "jshttp/content-type",
-    "publisher": "Douglas Christopher Wilson <doug@somethingdoug.com>"
-  },
-  {
-    "name": "content-type",
-    "version": "2.0.0",
-    "license": "MIT",
-    "repository": "jshttp/content-type",
-    "publisher": "Douglas Christopher Wilson <doug@somethingdoug.com>"
-  },
-  {
     "name": "convert-source-map",
     "version": "2.0.0",
     "license": "MIT",
@@ -1649,13 +1595,6 @@
     "publisher": "Roman Shtylman <shtylman@gmail.com>"
   },
   {
-    "name": "cookie-signature",
-    "version": "1.2.2",
-    "license": "MIT",
-    "repository": "https://github.com/visionmedia/node-cookie-signature.git",
-    "publisher": "TJ Holowaychuk <tj@learnboost.com>"
-  },
-  {
     "name": "copy-anything",
     "version": "4.0.5",
     "license": "MIT",
@@ -1668,13 +1607,6 @@
     "license": "MIT",
     "repository": "expressjs/cors",
     "publisher": "Troy Goode <troygoode@gmail.com> (https://github.com/troygoode/)"
-  },
-  {
-    "name": "cross-spawn",
-    "version": "7.0.6",
-    "license": "MIT",
-    "repository": "git@github.com:moxystudio/node-cross-spawn.git",
-    "publisher": "André Cruz <andre@moxy.studio>"
   },
   {
     "name": "css-tree",
@@ -1828,13 +1760,6 @@
     "repository": "git://github.com/TehShrike/deepmerge.git"
   },
   {
-    "name": "depd",
-    "version": "2.0.0",
-    "license": "MIT",
-    "repository": "dougwilson/nodejs-depd",
-    "publisher": "Douglas Christopher Wilson <doug@somethingdoug.com>"
-  },
-  {
     "name": "detect-libc",
     "version": "2.1.2",
     "license": "Apache-2.0",
@@ -1896,20 +1821,6 @@
     "repository": "git://github.com/motdotla/dotenv.git"
   },
   {
-    "name": "dunder-proto",
-    "version": "1.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/es-shims/dunder-proto.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
-  },
-  {
-    "name": "ee-first",
-    "version": "1.1.1",
-    "license": "MIT",
-    "repository": "jonathanong/ee-first",
-    "publisher": "Jonathan Ong"
-  },
-  {
     "name": "electron-to-chromium",
     "version": "1.5.393",
     "license": "ISC",
@@ -1922,12 +1833,6 @@
     "license": "MIT",
     "repository": "https://github.com/mathiasbynens/emoji-regex.git",
     "publisher": "Mathias Bynens"
-  },
-  {
-    "name": "encodeurl",
-    "version": "2.0.0",
-    "license": "MIT",
-    "repository": "pillarjs/encodeurl"
   },
   {
     "name": "engine.io",
@@ -1964,32 +1869,11 @@
     "publisher": "Sindre Sorhus"
   },
   {
-    "name": "es-define-property",
-    "version": "1.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/es-define-property.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
-  },
-  {
-    "name": "es-errors",
-    "version": "1.3.0",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/es-errors.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
-  },
-  {
     "name": "es-module-lexer",
     "version": "2.3.1",
     "license": "MIT",
     "repository": "https://github.com/guybedford/es-module-lexer.git",
     "publisher": "Guy Bedford"
-  },
-  {
-    "name": "es-object-atoms",
-    "version": "1.1.2",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/es-object-atoms.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
   },
   {
     "name": "es-toolkit",
@@ -2009,12 +1893,6 @@
     "license": "MIT",
     "repository": "lukeed/escalade",
     "publisher": "Luke Edwards"
-  },
-  {
-    "name": "escape-html",
-    "version": "1.0.3",
-    "license": "MIT",
-    "repository": "component/escape-html"
   },
   {
     "name": "eslint-scope",
@@ -2055,12 +1933,6 @@
     "publisher": "Rich Harris"
   },
   {
-    "name": "etag",
-    "version": "1.8.1",
-    "license": "MIT",
-    "repository": "jshttp/etag"
-  },
-  {
     "name": "eventemitter3",
     "version": "5.0.4",
     "license": "MIT",
@@ -2073,34 +1945,6 @@
     "license": "MIT",
     "repository": "git://github.com/Gozala/events.git",
     "publisher": "Irakli Gozalishvili <rfobic@gmail.com> (http://jeditoolkit.com)"
-  },
-  {
-    "name": "eventsource",
-    "version": "3.0.7",
-    "license": "MIT",
-    "repository": "git://git@github.com/EventSource/eventsource.git",
-    "publisher": "Espen Hovlandsdal <espen@hovlandsdal.com>"
-  },
-  {
-    "name": "eventsource-parser",
-    "version": "3.1.0",
-    "license": "MIT",
-    "repository": "ssh://git@github.com/rexxars/eventsource-parser.git",
-    "publisher": "Espen Hovlandsdal <espen@hovlandsdal.com>"
-  },
-  {
-    "name": "express",
-    "version": "5.2.1",
-    "license": "MIT",
-    "repository": "expressjs/express",
-    "publisher": "TJ Holowaychuk <tj@vision-media.ca>"
-  },
-  {
-    "name": "express-rate-limit",
-    "version": "8.5.2",
-    "license": "MIT",
-    "repository": "https://github.com/express-rate-limit/express-rate-limit.git",
-    "publisher": "Nathan Friedly"
   },
   {
     "name": "fast-deep-equal",
@@ -2138,13 +1982,6 @@
     "publisher": "Roland Groza"
   },
   {
-    "name": "finalhandler",
-    "version": "2.1.1",
-    "license": "MIT",
-    "repository": "pillarjs/finalhandler",
-    "publisher": "Douglas Christopher Wilson <doug@somethingdoug.com>"
-  },
-  {
     "name": "find-up",
     "version": "4.1.0",
     "license": "MIT",
@@ -2159,19 +1996,6 @@
     "publisher": "Sindre Sorhus"
   },
   {
-    "name": "forwarded",
-    "version": "0.2.0",
-    "license": "MIT",
-    "repository": "jshttp/forwarded"
-  },
-  {
-    "name": "fresh",
-    "version": "2.0.0",
-    "license": "MIT",
-    "repository": "jshttp/fresh",
-    "publisher": "TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com)"
-  },
-  {
     "name": "fsevents",
     "version": "2.3.2",
     "license": "MIT",
@@ -2182,13 +2006,6 @@
     "version": "2.3.3",
     "license": "MIT",
     "repository": "https://github.com/fsevents/fsevents.git"
-  },
-  {
-    "name": "function-bind",
-    "version": "1.1.2",
-    "license": "MIT",
-    "repository": "https://github.com/Raynos/function-bind.git",
-    "publisher": "Raynos <raynos2@gmail.com>"
   },
   {
     "name": "gensync",
@@ -2205,25 +2022,11 @@
     "publisher": "Stefan Penner"
   },
   {
-    "name": "get-intrinsic",
-    "version": "1.3.0",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/get-intrinsic.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
-  },
-  {
     "name": "get-nonce",
     "version": "1.0.1",
     "license": "MIT",
     "repository": "git@github.com:theKashey/get-nonce.git",
     "publisher": "Anton Korzunov <thekashey@gmail.com>"
-  },
-  {
-    "name": "get-proto",
-    "version": "1.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/get-proto.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
   },
   {
     "name": "glob",
@@ -2240,13 +2043,6 @@
     "publisher": "Nick Fitzgerald <fitzgen@gmail.com>"
   },
   {
-    "name": "gopd",
-    "version": "1.2.0",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/gopd.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
-  },
-  {
     "name": "graceful-fs",
     "version": "4.2.11",
     "license": "ISC",
@@ -2258,27 +2054,6 @@
     "license": "MIT",
     "repository": "sindresorhus/has-flag",
     "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "has-symbols",
-    "version": "1.1.0",
-    "license": "MIT",
-    "repository": "git://github.com/inspect-js/has-symbols.git",
-    "publisher": "Jordan Harband"
-  },
-  {
-    "name": "hasown",
-    "version": "2.0.4",
-    "license": "MIT",
-    "repository": "https://github.com/inspect-js/hasOwn.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
-  },
-  {
-    "name": "hono",
-    "version": "4.12.30",
-    "license": "MIT",
-    "repository": "https://github.com/honojs/hono.git",
-    "publisher": "Yusuke Wada <yusuke@kamawada.com> (https://github.com/yusukebe)"
   },
   {
     "name": "html-to-text",
@@ -2302,13 +2077,6 @@
     "publisher": "Felix Boehm <me@feedic.com>"
   },
   {
-    "name": "http-errors",
-    "version": "2.0.1",
-    "license": "MIT",
-    "repository": "jshttp/http-errors",
-    "publisher": "Jonathan Ong <me@jongleberry.com> (http://jongleberry.com)"
-  },
-  {
     "name": "https-proxy-agent",
     "version": "5.0.1",
     "license": "MIT",
@@ -2321,13 +2089,6 @@
     "license": "MIT",
     "repository": "https://github.com/supabase/iceberg-js",
     "publisher": "mandarini"
-  },
-  {
-    "name": "iconv-lite",
-    "version": "0.7.3",
-    "license": "MIT",
-    "repository": "https://github.com/pillarjs/iconv-lite.git",
-    "publisher": "Alexander Shtuchkin <ashtuchkin@gmail.com>"
   },
   {
     "name": "icu-minify",
@@ -2351,12 +2112,6 @@
     "publisher": "Bryan English <bryan.english@datadoghq.com>"
   },
   {
-    "name": "inherits",
-    "version": "2.0.4",
-    "license": "ISC",
-    "repository": "git://github.com/isaacs/inherits"
-  },
-  {
     "name": "input-otp",
     "version": "1.4.2",
     "license": "MIT",
@@ -2378,20 +2133,6 @@
     "publisher": "Eric Ferraiuolo <eferraiuolo@gmail.com>"
   },
   {
-    "name": "ip-address",
-    "version": "10.2.0",
-    "license": "MIT",
-    "repository": "git://github.com/beaugunderson/ip-address.git",
-    "publisher": "Beau Gunderson <beau@beaugunderson.com> (https://beaugunderson.com/)"
-  },
-  {
-    "name": "ipaddr.js",
-    "version": "1.9.1",
-    "license": "MIT",
-    "repository": "git://github.com/whitequark/ipaddr.js",
-    "publisher": "whitequark <whitequark@whitequark.org>"
-  },
-  {
     "name": "is-extglob",
     "version": "2.1.1",
     "license": "MIT",
@@ -2411,13 +2152,6 @@
     "license": "MIT",
     "repository": "micromatch/is-glob",
     "publisher": "Jon Schlinkert (https://github.com/jonschlinkert)"
-  },
-  {
-    "name": "is-promise",
-    "version": "4.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/then/is-promise.git",
-    "publisher": "ForbesLindesay"
   },
   {
     "name": "is-reference",
@@ -2458,13 +2192,6 @@
     "version": "2.6.1",
     "license": "MIT",
     "repository": "unjs/jiti"
-  },
-  {
-    "name": "jose",
-    "version": "6.2.3",
-    "license": "MIT",
-    "repository": "panva/jose",
-    "publisher": "Filip Skokan <panva.ip@gmail.com>"
   },
   {
     "name": "js-tokens",
@@ -2586,31 +2313,11 @@
     "publisher": "Christopher Jeffrey"
   },
   {
-    "name": "math-intrinsics",
-    "version": "1.1.0",
-    "license": "MIT",
-    "repository": "https://github.com/es-shims/math-intrinsics.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
-  },
-  {
     "name": "mdn-data",
     "version": "2.27.1",
     "license": "CC0-1.0",
     "repository": "https://github.com/mdn/data.git",
     "publisher": "Mozilla Developer Network"
-  },
-  {
-    "name": "media-typer",
-    "version": "1.1.0",
-    "license": "MIT",
-    "repository": "jshttp/media-typer",
-    "publisher": "Douglas Christopher Wilson <doug@somethingdoug.com>"
-  },
-  {
-    "name": "merge-descriptors",
-    "version": "2.0.0",
-    "license": "MIT",
-    "repository": "sindresorhus/merge-descriptors"
   },
   {
     "name": "merge-stream",
@@ -2783,26 +2490,6 @@
     "publisher": "Sindre Sorhus"
   },
   {
-    "name": "object-inspect",
-    "version": "1.13.4",
-    "license": "MIT",
-    "repository": "git://github.com/inspect-js/object-inspect.git",
-    "publisher": "James Halliday"
-  },
-  {
-    "name": "on-finished",
-    "version": "2.4.1",
-    "license": "MIT",
-    "repository": "jshttp/on-finished"
-  },
-  {
-    "name": "once",
-    "version": "1.4.0",
-    "license": "ISC",
-    "repository": "git://github.com/isaacs/once",
-    "publisher": "Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)"
-  },
-  {
     "name": "p-limit",
     "version": "2.3.0",
     "license": "MIT",
@@ -2845,23 +2532,10 @@
     "publisher": "KillyMXI"
   },
   {
-    "name": "parseurl",
-    "version": "1.3.3",
-    "license": "MIT",
-    "repository": "pillarjs/parseurl"
-  },
-  {
     "name": "path-exists",
     "version": "4.0.0",
     "license": "MIT",
     "repository": "sindresorhus/path-exists",
-    "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "path-key",
-    "version": "3.1.1",
-    "license": "MIT",
-    "repository": "sindresorhus/path-key",
     "publisher": "Sindre Sorhus"
   },
   {
@@ -2870,12 +2544,6 @@
     "license": "BlueOak-1.0.0",
     "repository": "https://github.com/isaacs/path-scurry",
     "publisher": "Isaac Z. Schlueter <i@izs.me> (https://blog.izs.me)"
-  },
-  {
-    "name": "path-to-regexp",
-    "version": "8.4.2",
-    "license": "MIT",
-    "repository": "https://github.com/pillarjs/path-to-regexp.git"
   },
   {
     "name": "pathe",
@@ -2910,13 +2578,6 @@
     "license": "MIT",
     "repository": "https://github.com/PondWader/picospinner#readme",
     "publisher": "PondWader"
-  },
-  {
-    "name": "pkce-challenge",
-    "version": "5.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/crouchcd/pkce-challenge.git",
-    "publisher": "crouchcd"
   },
   {
     "name": "playwright",
@@ -3000,13 +2661,6 @@
     "repository": "facebook/prop-types"
   },
   {
-    "name": "proxy-addr",
-    "version": "2.0.7",
-    "license": "MIT",
-    "repository": "jshttp/proxy-addr",
-    "publisher": "Douglas Christopher Wilson <doug@somethingdoug.com>"
-  },
-  {
     "name": "proxy-from-env",
     "version": "1.1.0",
     "license": "MIT",
@@ -3019,26 +2673,6 @@
     "license": "MIT",
     "repository": "git://github.com/soldair/node-qrcode.git",
     "publisher": "Ryan Day <soldair@gmail.com>"
-  },
-  {
-    "name": "qs",
-    "version": "6.15.3",
-    "license": "BSD-3-Clause",
-    "repository": "https://github.com/ljharb/qs.git"
-  },
-  {
-    "name": "range-parser",
-    "version": "1.3.0",
-    "license": "MIT",
-    "repository": "jshttp/range-parser",
-    "publisher": "TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com)"
-  },
-  {
-    "name": "raw-body",
-    "version": "3.0.2",
-    "license": "MIT",
-    "repository": "stream-utils/raw-body",
-    "publisher": "Jonathan Ong <me@jongleberry.com> (http://jongleberry.com)"
   },
   {
     "name": "react",
@@ -3187,20 +2821,6 @@
     "publisher": "Rich Harris"
   },
   {
-    "name": "router",
-    "version": "2.2.0",
-    "license": "MIT",
-    "repository": "pillarjs/router",
-    "publisher": "Douglas Christopher Wilson <doug@somethingdoug.com>"
-  },
-  {
-    "name": "safer-buffer",
-    "version": "2.1.2",
-    "license": "MIT",
-    "repository": "https://github.com/ChALkeR/safer-buffer.git",
-    "publisher": "Nikita Skovoroda"
-  },
-  {
     "name": "scheduler",
     "version": "0.27.0",
     "license": "MIT",
@@ -3242,20 +2862,6 @@
     "publisher": "GitHub Inc."
   },
   {
-    "name": "send",
-    "version": "1.2.1",
-    "license": "MIT",
-    "repository": "pillarjs/send",
-    "publisher": "TJ Holowaychuk <tj@vision-media.ca>"
-  },
-  {
-    "name": "serve-static",
-    "version": "2.2.1",
-    "license": "MIT",
-    "repository": "expressjs/serve-static",
-    "publisher": "Douglas Christopher Wilson <doug@somethingdoug.com>"
-  },
-  {
     "name": "server-only",
     "version": "0.0.1",
     "license": "MIT",
@@ -3269,60 +2875,11 @@
     "publisher": "Ben Coe <ben@npmjs.com>"
   },
   {
-    "name": "setprototypeof",
-    "version": "1.2.0",
-    "license": "ISC",
-    "repository": "https://github.com/wesleytodd/setprototypeof.git",
-    "publisher": "Wes Todd"
-  },
-  {
     "name": "sharp",
     "version": "0.34.5",
     "license": "Apache-2.0",
     "repository": "git://github.com/lovell/sharp.git",
     "publisher": "Lovell Fuller <npm@lovell.info>"
-  },
-  {
-    "name": "shebang-command",
-    "version": "2.0.0",
-    "license": "MIT",
-    "repository": "kevva/shebang-command",
-    "publisher": "Kevin Mårtensson"
-  },
-  {
-    "name": "shebang-regex",
-    "version": "3.0.0",
-    "license": "MIT",
-    "repository": "sindresorhus/shebang-regex",
-    "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "side-channel",
-    "version": "1.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/side-channel.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
-  },
-  {
-    "name": "side-channel-list",
-    "version": "1.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/side-channel-list.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
-  },
-  {
-    "name": "side-channel-map",
-    "version": "1.0.1",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/side-channel-map.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
-  },
-  {
-    "name": "side-channel-weakmap",
-    "version": "1.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/ljharb/side-channel-weakmap.git",
-    "publisher": "Jordan Harband <ljharb@gmail.com>"
   },
   {
     "name": "sisteransi",
@@ -3389,12 +2946,6 @@
     "license": "MIT",
     "repository": "https://github.com/standard-webhooks/standard-webhooks",
     "publisher": "Standard Webhooks"
-  },
-  {
-    "name": "statuses",
-    "version": "2.0.2",
-    "license": "MIT",
-    "repository": "jshttp/statuses"
   },
   {
     "name": "string-width",
@@ -3512,13 +3063,6 @@
     "publisher": "James Garbutt (https://github.com/43081j)"
   },
   {
-    "name": "toidentifier",
-    "version": "1.0.1",
-    "license": "MIT",
-    "repository": "component/toidentifier",
-    "publisher": "Douglas Christopher Wilson <doug@somethingdoug.com>"
-  },
-  {
     "name": "tr46",
     "version": "0.0.3",
     "license": "MIT",
@@ -3554,12 +3098,6 @@
     "publisher": "Sindre Sorhus"
   },
   {
-    "name": "type-is",
-    "version": "2.1.0",
-    "license": "MIT",
-    "repository": "jshttp/type-is"
-  },
-  {
     "name": "typescript",
     "version": "5.9.3",
     "license": "Apache-2.0",
@@ -3584,13 +3122,6 @@
     "version": "7.18.2",
     "license": "MIT",
     "repository": "https://github.com/nodejs/undici.git"
-  },
-  {
-    "name": "unpipe",
-    "version": "1.0.0",
-    "license": "MIT",
-    "repository": "stream-utils/unpipe",
-    "publisher": "Douglas Christopher Wilson <doug@somethingdoug.com>"
   },
   {
     "name": "update-browserslist-db",
@@ -3717,13 +3248,6 @@
     "publisher": "Sindre Sorhus"
   },
   {
-    "name": "wrappy",
-    "version": "1.0.2",
-    "license": "ISC",
-    "repository": "https://github.com/npm/wrappy",
-    "publisher": "Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)"
-  },
-  {
     "name": "ws",
     "version": "8.21.1",
     "license": "MIT",
@@ -3773,17 +3297,17 @@
   },
   {
     "name": "zod",
-    "version": "3.25.76",
+    "version": "4.3.6",
     "license": "MIT",
     "repository": "https://github.com/colinhacks/zod.git",
     "publisher": "Colin McDonnell <zod@colinhacks.com>"
   },
   {
-    "name": "zod-to-json-schema",
-    "version": "3.25.2",
-    "license": "ISC",
-    "repository": "https://github.com/StefanTerdell/zod-to-json-schema",
-    "publisher": "Stefan Terdell"
+    "name": "zod",
+    "version": "4.4.3",
+    "license": "MIT",
+    "repository": "https://github.com/colinhacks/zod.git",
+    "publisher": "Colin McDonnell <zod@colinhacks.com>"
   },
   {
     "name": "zustand",

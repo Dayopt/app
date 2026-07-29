@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/server';
 
 import type { McpRequestContext } from './_context';
 import { MCP_TOOL_DESCRIPTORS } from './_tools/registry';
@@ -18,10 +18,17 @@ const SERVER_VERSION = '1.0.0';
  * 位置付け)。
  */
 export function createMcpServer(ctx: McpRequestContext): McpServer {
-  const server = new McpServer({
-    name: SERVER_NAME,
-    version: SERVER_VERSION,
-  });
+  const server = new McpServer(
+    {
+      name: SERVER_NAME,
+      version: SERVER_VERSION,
+    },
+    {
+      capabilities: {
+        tools: { listChanged: false },
+      },
+    },
+  );
 
   for (const descriptor of MCP_TOOL_DESCRIPTORS) {
     if (ctx.scopes.includes(descriptor.requiredScope)) {

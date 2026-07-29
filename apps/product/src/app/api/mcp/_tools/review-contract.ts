@@ -1,24 +1,23 @@
-import { z } from 'zod';
+import { z } from 'zod-v4';
 
-import {
-  TIMEBLOCK_REVIEW_MAX_TAGS,
-  timeblockContextRangeSchema,
-} from '@/features/timeblock/server/service-index';
+import { TIMEBLOCK_REVIEW_MAX_TAGS } from '@/features/timeblock/server/service-index';
 
+import { MCP_CONTEXT_RANGE_SCHEMA } from './context-range-schema';
+import { MCP_TIMEBLOCK_TIMESTAMP_SCHEMA } from './timeblock-timestamp-schema';
 import { MCP_TOOL_SCHEMA_VERSION } from './tool-result';
 
-export const MCP_REVIEW_GET_INPUT_SCHEMA = timeblockContextRangeSchema;
+export const MCP_REVIEW_GET_INPUT_SCHEMA = MCP_CONTEXT_RANGE_SCHEMA;
 
 const MCP_REVIEW_ACCURACY_STATUS_SCHEMA = z.enum(['excellent', 'good', 'fair', 'poor']);
 
 export const MCP_REVIEW_GET_OUTPUT_SCHEMA = z
   .object({
     schemaVersion: z.literal(MCP_TOOL_SCHEMA_VERSION),
-    asOf: z.string().datetime({ offset: true }),
+    asOf: MCP_TIMEBLOCK_TIMESTAMP_SCHEMA,
     period: z
       .object({
-        startDate: z.string().datetime({ offset: true }),
-        endDate: z.string().datetime({ offset: true }),
+        startDate: MCP_TIMEBLOCK_TIMESTAMP_SCHEMA,
+        endDate: MCP_TIMEBLOCK_TIMESTAMP_SCHEMA,
         endExclusive: z.literal(true),
         timezone: z.string().min(1),
       })

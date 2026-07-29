@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger';
 import { captureUnexpectedMcpToolError } from '@/lib/mcp/tool-error';
 import { createMcpTrpcCaller } from '@/lib/mcp/trpc-bridge';
 
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 
 import type { McpRequestContext } from '../_context';
 import { findMcpContextReadErrorCode } from './context-read-error';
@@ -35,7 +35,7 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
           userId: ctx.userId,
           clientId: ctx.clientId,
           scopes: ctx.scopes,
-          signal: extra.signal,
+          signal: extra.mcpReq.signal,
         });
         const result = await trpc.statistics.getMcpReview(input);
 
