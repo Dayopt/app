@@ -211,6 +211,119 @@ export type Database = {
           },
         ];
       };
+      mcp_environment_identity: {
+        Row: {
+          authorization_server_uri: string;
+          environment: string;
+          provisioned_at: string;
+          resource_uri: string;
+          singleton_key: boolean;
+          supabase_project_ref: string | null;
+        };
+        Insert: {
+          authorization_server_uri: string;
+          environment: string;
+          provisioned_at?: string;
+          resource_uri: string;
+          singleton_key?: boolean;
+          supabase_project_ref?: string | null;
+        };
+        Update: {
+          authorization_server_uri?: string;
+          environment?: string;
+          provisioned_at?: string;
+          resource_uri?: string;
+          singleton_key?: boolean;
+          supabase_project_ref?: string | null;
+        };
+        Relationships: [];
+      };
+      mcp_mutation_control: {
+        Row: {
+          changed_at: string;
+          enabled_client_ids: string[];
+          revision: number;
+          singleton_key: boolean;
+          writes_enabled: boolean;
+        };
+        Insert: {
+          changed_at?: string;
+          enabled_client_ids?: string[];
+          revision?: number;
+          singleton_key?: boolean;
+          writes_enabled?: boolean;
+        };
+        Update: {
+          changed_at?: string;
+          enabled_client_ids?: string[];
+          revision?: number;
+          singleton_key?: boolean;
+          writes_enabled?: boolean;
+        };
+        Relationships: [];
+      };
+      mcp_mutation_receipts: {
+        Row: {
+          applied_at: string;
+          client_id: string;
+          data_generation: number;
+          envelope_version: number;
+          operation_id: string;
+          origin_connection_id: string | null;
+          purged_at: string | null;
+          purged_generation: number | null;
+          request_digest: string;
+          resource_deleted_at: string | null;
+          resource_id: string;
+          resource_type: string;
+          resource_version: string;
+          tool_name: string;
+          user_id: string;
+        };
+        Insert: {
+          applied_at?: string;
+          client_id: string;
+          data_generation?: number;
+          envelope_version: number;
+          operation_id: string;
+          origin_connection_id?: string | null;
+          purged_at?: string | null;
+          purged_generation?: number | null;
+          request_digest: string;
+          resource_deleted_at?: string | null;
+          resource_id: string;
+          resource_type: string;
+          resource_version: string;
+          tool_name: string;
+          user_id: string;
+        };
+        Update: {
+          applied_at?: string;
+          client_id?: string;
+          data_generation?: number;
+          envelope_version?: number;
+          operation_id?: string;
+          origin_connection_id?: string | null;
+          purged_at?: string | null;
+          purged_generation?: number | null;
+          request_digest?: string;
+          resource_deleted_at?: string | null;
+          resource_id?: string;
+          resource_type?: string;
+          resource_version?: string;
+          tool_name?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'mcp_mutation_receipts_origin_connection_id_fkey';
+            columns: ['origin_connection_id'];
+            isOneToOne: false;
+            referencedRelation: 'oauth_connections';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       mfa_recovery_codes: {
         Row: {
           code_hash: string;
@@ -276,10 +389,12 @@ export type Database = {
           code_challenge: string;
           code_challenge_method: string;
           code_hash: string;
+          connection_id: string | null;
           consumed_at: string | null;
           created_at: string;
           expires_at: string;
           redirect_uri: string;
+          resource_uri: string | null;
           scopes: string[];
           user_id: string;
         };
@@ -288,10 +403,12 @@ export type Database = {
           code_challenge: string;
           code_challenge_method: string;
           code_hash: string;
+          connection_id?: string | null;
           consumed_at?: string | null;
           created_at?: string;
           expires_at?: string;
           redirect_uri: string;
+          resource_uri?: string | null;
           scopes: string[];
           user_id: string;
         };
@@ -300,24 +417,109 @@ export type Database = {
           code_challenge?: string;
           code_challenge_method?: string;
           code_hash?: string;
+          connection_id?: string | null;
           consumed_at?: string | null;
           created_at?: string;
           expires_at?: string;
           redirect_uri?: string;
+          resource_uri?: string | null;
           scopes?: string[];
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'oauth_authorization_codes_connection_binding_fkey';
+            columns: ['connection_id', 'user_id', 'client_id', 'resource_uri'];
+            isOneToOne: false;
+            referencedRelation: 'oauth_connections';
+            referencedColumns: ['id', 'user_id', 'client_id', 'resource_uri'];
+          },
+          {
+            foreignKeyName: 'oauth_authorization_codes_environment_resource_fkey';
+            columns: ['resource_uri'];
+            isOneToOne: false;
+            referencedRelation: 'mcp_environment_identity';
+            referencedColumns: ['resource_uri'];
+          },
+        ];
+      };
+      oauth_connections: {
+        Row: {
+          authorized_at: string;
+          client_id: string;
+          consent_version: number;
+          created_at: string;
+          id: string;
+          last_refreshed_at: string | null;
+          last_used_at: string | null;
+          legacy_read_only: boolean;
+          reauth_required_at: string;
+          resource_uri: string;
+          revoked_at: string | null;
+          revoked_reason: string | null;
+          scopes: string[];
+          updated_at: string;
+          user_id: string;
+          write_enabled_at: string | null;
+        };
+        Insert: {
+          authorized_at?: string;
+          client_id: string;
+          consent_version?: number;
+          created_at?: string;
+          id?: string;
+          last_refreshed_at?: string | null;
+          last_used_at?: string | null;
+          legacy_read_only?: boolean;
+          reauth_required_at?: string;
+          resource_uri: string;
+          revoked_at?: string | null;
+          revoked_reason?: string | null;
+          scopes: string[];
+          updated_at?: string;
+          user_id: string;
+          write_enabled_at?: string | null;
+        };
+        Update: {
+          authorized_at?: string;
+          client_id?: string;
+          consent_version?: number;
+          created_at?: string;
+          id?: string;
+          last_refreshed_at?: string | null;
+          last_used_at?: string | null;
+          legacy_read_only?: boolean;
+          reauth_required_at?: string;
+          resource_uri?: string;
+          revoked_at?: string | null;
+          revoked_reason?: string | null;
+          scopes?: string[];
+          updated_at?: string;
+          user_id?: string;
+          write_enabled_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'oauth_connections_environment_resource_fkey';
+            columns: ['resource_uri'];
+            isOneToOne: false;
+            referencedRelation: 'mcp_environment_identity';
+            referencedColumns: ['resource_uri'];
+          },
+        ];
       };
       oauth_tokens: {
         Row: {
           client_id: string;
+          connection_id: string | null;
           created_at: string;
           expires_at: string;
           id: string;
           last_used_at: string | null;
           parent_token_id: string | null;
+          resource_uri: string | null;
           revoked_at: string | null;
+          rotated_at: string | null;
           scopes: string[];
           token_hash: string;
           token_type: string;
@@ -325,12 +527,15 @@ export type Database = {
         };
         Insert: {
           client_id: string;
+          connection_id?: string | null;
           created_at?: string;
           expires_at: string;
           id?: string;
           last_used_at?: string | null;
           parent_token_id?: string | null;
+          resource_uri?: string | null;
           revoked_at?: string | null;
+          rotated_at?: string | null;
           scopes?: string[];
           token_hash: string;
           token_type: string;
@@ -338,18 +543,35 @@ export type Database = {
         };
         Update: {
           client_id?: string;
+          connection_id?: string | null;
           created_at?: string;
           expires_at?: string;
           id?: string;
           last_used_at?: string | null;
           parent_token_id?: string | null;
+          resource_uri?: string | null;
           revoked_at?: string | null;
+          rotated_at?: string | null;
           scopes?: string[];
           token_hash?: string;
           token_type?: string;
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'oauth_tokens_connection_binding_fkey';
+            columns: ['connection_id', 'user_id', 'client_id', 'resource_uri'];
+            isOneToOne: false;
+            referencedRelation: 'oauth_connections';
+            referencedColumns: ['id', 'user_id', 'client_id', 'resource_uri'];
+          },
+          {
+            foreignKeyName: 'oauth_tokens_environment_resource_fkey';
+            columns: ['resource_uri'];
+            isOneToOne: false;
+            referencedRelation: 'mcp_environment_identity';
+            referencedColumns: ['resource_uri'];
+          },
           {
             foreignKeyName: 'oauth_tokens_parent_token_id_fkey';
             columns: ['parent_token_id'];
@@ -568,7 +790,7 @@ export type Database = {
           event_type: string;
           id: string;
           processed_at: string | null;
-          status: 'processing' | 'processed' | 'failed';
+          status: string;
         };
         Insert: {
           claimed_at?: string;
@@ -576,7 +798,7 @@ export type Database = {
           event_type: string;
           id?: string;
           processed_at?: string | null;
-          status?: 'processing' | 'processed' | 'failed';
+          status?: string;
         };
         Update: {
           claimed_at?: string;
@@ -584,7 +806,7 @@ export type Database = {
           event_type?: string;
           id?: string;
           processed_at?: string | null;
-          status?: 'processing' | 'processed' | 'failed';
+          status?: string;
         };
         Relationships: [];
       };
@@ -700,6 +922,189 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      apply_mcp_plan_create_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_end_at: string;
+          p_note: string;
+          p_operation_id: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
+      apply_mcp_plan_delete_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_expected_updated_at: string;
+          p_operation_id: string;
+          p_plan_id: string;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
+      apply_mcp_plan_restore_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_expected_updated_at: string;
+          p_operation_id: string;
+          p_plan_id: string;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
+      apply_mcp_plan_update_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_end_at: string;
+          p_end_at_present: boolean;
+          p_expected_updated_at: string;
+          p_note: string;
+          p_note_present: boolean;
+          p_operation_id: string;
+          p_plan_id: string;
+          p_start_at: string;
+          p_start_at_present: boolean;
+          p_tag_id: string;
+          p_tag_id_present: boolean;
+          p_title: string;
+          p_title_present: boolean;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
+      apply_mcp_record_create_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_end_at: string;
+          p_note: string;
+          p_operation_id: string;
+          p_plan_id: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
+      apply_mcp_record_delete_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_expected_updated_at: string;
+          p_operation_id: string;
+          p_record_id: string;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
+      apply_mcp_record_restore_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_expected_updated_at: string;
+          p_operation_id: string;
+          p_record_id: string;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
+      apply_mcp_record_update_v1: {
+        Args: {
+          p_access_token_id: string;
+          p_connection_id: string;
+          p_end_at: string;
+          p_end_at_present: boolean;
+          p_expected_updated_at: string;
+          p_note: string;
+          p_note_present: boolean;
+          p_operation_id: string;
+          p_record_id: string;
+          p_start_at: string;
+          p_start_at_present: boolean;
+          p_tag_id: string;
+          p_tag_id_present: boolean;
+          p_title: string;
+          p_title_present: boolean;
+        };
+        Returns: {
+          deleted_at: string;
+          operation_id: string;
+          replayed: boolean;
+          resource_id: string;
+          resource_type: string;
+          schema_version: number;
+          version: string;
+        }[];
+      };
+      assert_active_timeblock_tag_v1: {
+        Args: { p_tag_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      assert_timeblock_content_v1: {
+        Args: { p_note: string; p_title: string };
+        Returns: undefined;
+      };
+      assert_timeblock_external_event_v1: {
+        Args: { p_external_calendar_event_id: string; p_user_id: string };
+        Returns: undefined;
+      };
       batch_rename_tags: {
         Args: { p_new_names: string[]; p_tag_ids: string[]; p_user_id: string };
         Returns: number;
@@ -728,6 +1133,39 @@ export type Database = {
           p_stale_before: string;
         };
         Returns: string;
+      };
+      cleanup_mcp_mutation_receipts_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      confirm_day_plans_command_v1: {
+        Args: {
+          p_confirmed_at?: string;
+          p_end_at: string;
+          p_start_at: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       confirm_day_plans_to_records: {
         Args: {
@@ -762,7 +1200,186 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: number;
       };
+      create_oauth_authorization_grant_v2: {
+        Args: {
+          p_client_id: string;
+          p_code_challenge: string;
+          p_code_hash: string;
+          p_redirect_uri: string;
+          p_resource_uri: string;
+          p_scopes: string[];
+          p_user_id: string;
+          p_write_enabled?: boolean;
+        };
+        Returns: string;
+      };
+      create_plan_command_v1: {
+        Args: {
+          p_end_at: string;
+          p_external_calendar_event_id: string;
+          p_note: string;
+          p_source: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      create_record_command_v1: {
+        Args: {
+          p_end_at: string;
+          p_external_calendar_event_id: string;
+          p_note: string;
+          p_plan_id: string;
+          p_source: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       custom_access_token_hook: { Args: { event: Json }; Returns: Json };
+      delete_plan_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_plan_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      delete_record_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_record_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      exchange_oauth_authorization_code_v2: {
+        Args: {
+          p_access_hash: string;
+          p_client_id: string;
+          p_code_challenge: string;
+          p_code_hash: string;
+          p_redirect_uri: string;
+          p_refresh_hash: string;
+          p_resource_uri: string;
+        };
+        Returns: {
+          access_expires_at: string;
+          access_id: string;
+          client_id: string;
+          connection_id: string;
+          refresh_id: string;
+          resource_uri: string;
+          scopes: string[];
+          user_id: string;
+        }[];
+      };
+      get_mcp_environment_identity_v1: {
+        Args: never;
+        Returns: {
+          authorization_server_uri: string;
+          environment: string;
+          provisioned_at: string;
+          resource_uri: string;
+          supabase_project_ref: string;
+        }[];
+      };
+      get_timeblock_context_marker_v1: {
+        Args: { p_user_id: string };
+        Returns: {
+          database_now: string;
+          revision: string;
+          timezone: string;
+        }[];
+      };
+      get_user_data_generation_v1: {
+        Args: { p_user_id: string };
+        Returns: number;
+      };
       get_user_timezone: { Args: { p_user_id: string }; Returns: string };
       get_vault_secret: { Args: { p_name: string }; Returns: string };
       increment_tag_sort_orders: {
@@ -789,6 +1406,30 @@ export type Database = {
           refresh_id: string;
         }[];
       };
+      lock_recordable_plan_v1: {
+        Args: { p_plan_id: string; p_user_id: string };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       merge_tags_with_hierarchy: {
         Args: {
           p_source_tag_id: string;
@@ -796,6 +1437,48 @@ export type Database = {
           p_user_id: string;
         };
         Returns: Json;
+      };
+      provision_mcp_preview_environment_identity_v1: {
+        Args: {
+          p_authorization_server_uri: string;
+          p_resource_uri: string;
+          p_supabase_project_ref: string;
+        };
+        Returns: {
+          authorization_server_uri: string;
+          environment: string;
+          provisioned_at: string;
+          resource_uri: string;
+          supabase_project_ref: string;
+        }[];
+      };
+      record_plan_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_plan_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       rename_tag_group: {
         Args: { p_new_prefix: string; p_old_prefix: string; p_user_id: string };
@@ -822,9 +1505,138 @@ export type Database = {
         Args: { p_plan_id: string; p_user_id: string };
         Returns: undefined;
       };
+      restore_plan_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_plan_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       restore_record: {
         Args: { p_record_id: string; p_user_id: string };
         Returns: undefined;
+      };
+      restore_record_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_record_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      revoke_oauth_connection: {
+        Args: { p_connection_id: string };
+        Returns: boolean;
+      };
+      rotate_oauth_refresh_token_v2: {
+        Args: {
+          p_client_id: string;
+          p_new_access_hash: string;
+          p_new_refresh_hash: string;
+          p_refresh_hash: string;
+          p_resource_uri: string;
+        };
+        Returns: {
+          access_expires_at: string;
+          access_id: string;
+          client_id: string;
+          connection_id: string;
+          refresh_id: string;
+          resource_uri: string;
+          scopes: string[];
+          status: string;
+          user_id: string;
+        }[];
+      };
+      set_mcp_client_write_control_v1: {
+        Args: {
+          p_client_id: string;
+          p_enabled: boolean;
+          p_expected_revision: number;
+        };
+        Returns: {
+          changed_at: string;
+          enabled_client_ids: string[];
+          revision: number;
+        }[];
+      };
+      set_mcp_mutation_control_v1: {
+        Args: { p_expected_revision: number; p_writes_enabled: boolean };
+        Returns: {
+          changed_at: string;
+          revision: number;
+          writes_enabled: boolean;
+        }[];
+      };
+      set_plan_skipped_command_v1: {
+        Args: {
+          p_expected_updated_at: string;
+          p_plan_id: string;
+          p_skipped: boolean;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       soft_delete_plan: {
         Args: { p_plan_id: string; p_user_id: string };
@@ -841,6 +1653,75 @@ export type Database = {
       update_personalization: {
         Args: { p_path: string; p_user_id: string; p_value: Json };
         Returns: undefined;
+      };
+      update_plan_command_v1: {
+        Args: {
+          p_end_at: string;
+          p_expected_updated_at: string;
+          p_external_calendar_event_id: string;
+          p_note: string;
+          p_plan_id: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      update_record_command_v1: {
+        Args: {
+          p_end_at: string;
+          p_expected_updated_at: string;
+          p_external_calendar_event_id: string;
+          p_note: string;
+          p_plan_id: string;
+          p_record_id: string;
+          p_start_at: string;
+          p_tag_id: string;
+          p_title: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          plan_id: string | null;
+          source: string;
+          start_at: string;
+          tag_id: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'records';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       use_recovery_code: {
         Args: { p_code_hash: string; p_user_id: string };
