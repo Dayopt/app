@@ -46,6 +46,8 @@ export const envSchema: EnvSchemaEntry[] = [
   envEntry('UPSTASH_REDIS_REST_TOKEN', false, 'secret', 'staging', staging, 'upstash'),
 
   envEntry('STRIPE_SECRET_KEY', false, 'secret', 'staging', staging, 'stripe-test'),
+  envEntry('STRIPE_ACCOUNT_ID', false, 'public', 'staging', staging, 'stripe-test'),
+  envEntry('STRIPE_LIVEMODE', false, 'public', 'staging', staging, 'stripe-test'),
   envEntry('STRIPE_WEBHOOK_SECRET', false, 'secret', 'staging', staging, 'stripe-test'),
   envEntry('NEXT_PUBLIC_STRIPE_PRO_PRICE_ID', false, 'public', 'staging', staging, 'stripe-test'),
 
@@ -72,6 +74,14 @@ export const envSchema: EnvSchemaEntry[] = [
 
   // 外部カレンダー取り込み用の専用 OAuth client（Supabase Auth の Google provider とは別物）
   envEntry('GOOGLE_CALENDAR_CLIENT_ID', false, 'public', 'staging', staging, 'google-calendar'),
+  envEntry(
+    'GOOGLE_CALENDAR_PROJECT_NUMBER',
+    false,
+    'public',
+    'staging',
+    staging,
+    'google-calendar',
+  ),
   envEntry('GOOGLE_CALENDAR_CLIENT_SECRET', false, 'secret', 'staging', staging, 'google-calendar'),
   envEntry('CALENDAR_TOKEN_ENCRYPTION_KEY', false, 'secret', 'staging', staging, 'google-calendar'),
   envEntry('GOOGLE_CALENDAR_REDIRECT_URIS', false, 'public', 'staging', staging, 'google-calendar'),
@@ -88,6 +98,8 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
   envEntry('UPSTASH_REDIS_REST_URL', false, 'secret', 'production', production, 'upstash'),
   envEntry('UPSTASH_REDIS_REST_TOKEN', false, 'secret', 'production', production, 'upstash'),
   envEntry('STRIPE_SECRET_KEY', false, 'secret', 'production', production, 'stripe-live'),
+  envEntry('STRIPE_ACCOUNT_ID', false, 'public', 'production', production, 'stripe-live'),
+  envEntry('STRIPE_LIVEMODE', false, 'public', 'production', production, 'stripe-live'),
   envEntry('STRIPE_WEBHOOK_SECRET', false, 'secret', 'production', production, 'stripe-live'),
   envEntry(
     'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID',
@@ -114,6 +126,14 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
 
   envEntry(
     'GOOGLE_CALENDAR_CLIENT_ID',
+    false,
+    'public',
+    'production',
+    production,
+    'google-calendar',
+  ),
+  envEntry(
+    'GOOGLE_CALENDAR_PROJECT_NUMBER',
     false,
     'public',
     'production',
