@@ -376,6 +376,21 @@ describe.skipIf(!RUN_LOCAL)('MCP environment identity integration', () => {
       DELETE FROM auth.identities
       WHERE id = '00000000-0000-0000-0000-000000000002'::UUID;
 
+      -- Supabase Auth OAuth state has no user FK, but still blocks identity.
+      INSERT INTO auth.oauth_client_states (
+        id,
+        provider_type,
+        code_verifier,
+        created_at
+      ) VALUES (
+        '00000000-0000-0000-0000-000000000003',
+        'google',
+        'preview-code-verifier',
+        pg_catalog.now()
+      );
+      SELECT pg_temp.assert_preview_provision_rejected('DI005');
+      DELETE FROM auth.oauth_client_states;
+
       -- The exact seed fixture still fails closed after MCP OAuth authority.
       INSERT INTO public.oauth_audit_log (
         user_id,

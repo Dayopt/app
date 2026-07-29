@@ -58,8 +58,8 @@ ai-review が「**あるべき検査の不在**」を判定するための正本
 - OAuth authorityのresourceは変更不可のDB environment identityへFKで結ぶ。PR Previewは
   空または未使用の既知auth seed fixtureだけのDBでexact Vercel URLとSupabase project
   ref/JWT refをservice-role RPCから一度だけ設定する。UUID/email/password/provider
-  identityを固定し、未知user、session、MFA、既存OAuth authorityがあれば拒否する。
-  Persistent Staging identityは作らない
+  identityを固定し、未知user、session、MFA、Auth OAuth state、既存OAuth authorityが
+  あれば拒否する。Persistent Staging identityは作らない
 - Plan / Record writerはtransaction内で一人のuserとlock modeへbindする。direct DMLと
   typed commandを同じ境界へ入れ、sharedからexclusiveへのlock upgradeを即時拒否する。
   user revisionはcommitしたtransactionごとに最大1回進み、rollbackでは進まない
