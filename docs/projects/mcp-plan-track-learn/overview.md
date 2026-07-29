@@ -214,7 +214,7 @@ repo実装は完了した。Persistent Staging evidenceが完了するまでwrit
 ## What I'm Not Doing
 
 - Dayopt内proposal、approval URL、承認状態機械
-- OAuth bearerからpublic tRPC write procedureを直接許可すること
+- OAuth bearerをpublic tRPCへ受理すること
 - タグ削除・mergeの一括処理をtimeblock単行commandへ置き換えること。例外writerとして別途競合保証する
 - batch changeset、hard delete、automatic tombstone purge
 - skip/unskip、confirm-day、`plans.record`専用toolの初期公開

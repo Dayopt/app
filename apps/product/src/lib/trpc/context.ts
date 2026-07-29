@@ -272,8 +272,19 @@ async function createTRPCContext(opts: {
 
 /** Fetch API用tRPCコンテキスト作成（App Router Route Handler向け） */
 export async function createFetchTRPCContext(opts: FetchCreateContextFnOptions): Promise<Context> {
+  const req = createRequestLike(opts.req);
+  if (detectAuthMode(req.headers as Record<string, string>) === 'oauth') {
+    // Dayopt発行のopaque tokenを受理する公開HTTP境界は /api/mcp だけに固定する。
+    // ここでDB lookupより前に拒否し、未認証Bearer連打でservice-role検証を増幅させない。
+    logger.warn('OAuth bearer rejected at public tRPC boundary');
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'OAuth tokens are accepted only through the MCP endpoint',
+    });
+  }
+
   return createTRPCContext({
-    req: createRequestLike(opts.req),
+    req,
     res: { headers: opts.resHeaders },
   });
 }

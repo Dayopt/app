@@ -172,5 +172,5 @@ WHERE record.deleted_at IS NULL
 - batch changeset、generic JSON mutation、hard delete
 - skip/unskip、confirm-day、ワンタップ記録のMCP初期公開
 - mutation失敗payloadの永続化
-- authenticated tRPC write procedureをOAuth bearerへ公開すること
+- OAuth bearerをpublic tRPCへ受理すること
 - タグ削除・mergeの一括処理をtimeblock単行commandへ置き換えること

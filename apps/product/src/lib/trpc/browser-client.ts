@@ -18,16 +18,6 @@ export function createAppTrpcClient() {
         transformer: superjson,
         // Query input(検索語を含む)をURL・proxy logへ残さない。
         methodOverride: 'POST',
-        headers() {
-          const headers: Record<string, string> = {};
-          if (typeof window !== 'undefined') {
-            const token = localStorage.getItem('auth_token');
-            if (token) {
-              headers.authorization = `Bearer ${token}`;
-            }
-          }
-          return headers;
-        },
       }),
     ],
   });

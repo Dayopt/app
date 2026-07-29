@@ -50,6 +50,8 @@ Auth削除と同じtransactionでStripe Customer IDのSHA-256だけを30日保�
 
 「すべてのデータを削除」はaccountを保持し、Calendar authorityとoperation IDにbindした`delete_all_user_data_command_v5`を使う。確認ダイアログを開く前にDBがoperation IDと現在のuser generationを発行し、同じダイアログ内のclient retry、tRPC retry、DB retryで両方を固定する。user generationを進め、Calendar tokenをrevoke outboxへ移し、Dayopt OAuthを失効し、MCP mutation receiptをpurged generationへ固定してから、Plan、Record、report、tag、user settings、Calendar mirrorを原子的に削除する。応答が失われても同じoperation IDを再送し、完了済みなら新しく作成されたデータを削除せず成功を返す。別の操作や古いgenerationは拒否する。
 
+Dayopt発行のOAuth bearerを受理する公開HTTP境界は`/api/mcp`だけとする。`/api/trpc`はtoken DB lookupより前にBearer requestを拒否し、MCP toolは検証済みcontextからin-process callerでtRPC procedureを呼ぶ。
+
 ## ログイン手段によるアカウント操作の分岐
 
 Google でのみ登録したユーザーはパスワードを持たない。これを異常扱いせず、**ユーザーが実際に持っている手段で再認証する**。判定は `hasPasswordIdentity`（`lib/auth/domain/login-method.ts`）が `app_metadata.providers` から行い、UI もサーバーも同じ関数を使う。
