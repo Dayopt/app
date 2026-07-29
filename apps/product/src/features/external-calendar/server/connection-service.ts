@@ -1,10 +1,13 @@
 import 'server-only';
 
+import { randomUUID } from 'node:crypto';
+
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { env } from '@/env';
 import type { Database } from '@/lib/database';
 import { databaseTables } from '@/lib/database';
+import { getConfiguredExternalLifecycleAppVersion } from '@/lib/database/external-lifecycle-version';
 
 import { logger } from '@/lib/logger';
 
@@ -13,6 +16,7 @@ import { ExternalCalendarServiceError } from './external-calendar-service-error'
 import { googleCalendarAdapter } from './providers/google';
 import { CalendarProviderError } from './providers/types';
 import { decryptToken, encryptToken } from './token-crypto';
+import { markCalendarConnectionReauth, persistCalendarTokenRotation } from './token-rotation';
 
 /**
  * `calendar_connections` への書き込み。
@@ -208,10 +212,32 @@ async function loadConnectionSecret(
   db: CalendarConnectionClient,
   userId: string,
   connectionId: string,
-): Promise<{ status: string; refreshTokenEnc: string } | null> {
+): Promise<{ dataGeneration: number; status: string; refreshTokenEnc: string } | null> {
+  const lifecycleVersion = await getConfiguredExternalLifecycleAppVersion();
+  if (lifecycleVersion === 0) {
+    const { data, error } = await db
+      .from(databaseTables.calendarConnections)
+      .select('status, refresh_token_enc')
+      .eq('id', connectionId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      throw new ExternalCalendarServiceError('FETCH_FAILED', 'failed to load calendar connection', {
+        cause: error,
+      });
+    }
+    if (!data) return null;
+    return {
+      dataGeneration: 0,
+      status: data.status,
+      refreshTokenEnc: data.refresh_token_enc,
+    };
+  }
+
   const { data, error } = await db
     .from(databaseTables.calendarConnections)
-    .select('status, refresh_token_enc')
+    .select('status, refresh_token_enc, data_generation')
     .eq('id', connectionId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -222,19 +248,38 @@ async function loadConnectionSecret(
     });
   }
   if (!data) return null;
-  return { status: data.status, refreshTokenEnc: data.refresh_token_enc };
+  return {
+    dataGeneration: data.data_generation,
+    status: data.status,
+    refreshTokenEnc: data.refresh_token_enc,
+  };
 }
 
-async function markReauthRequired(
-  db: CalendarConnectionClient,
-  userId: string,
-  connectionId: string,
-): Promise<void> {
-  await db
-    .from(databaseTables.calendarConnections)
-    .update({ status: 'reauth_required', last_sync_error: 'reauth_required' })
-    .eq('id', connectionId)
-    .eq('user_id', userId);
+function throwForReauthOutcome(
+  outcome: Awaited<ReturnType<typeof markCalendarConnectionReauth>>,
+  cause?: unknown,
+): never {
+  if (outcome === 'marked') {
+    throw new ExternalCalendarServiceError('REAUTH_REQUIRED', 'calendar connection needs reauth', {
+      cause,
+    });
+  }
+  if (outcome === 'missing') {
+    throw new ExternalCalendarServiceError(
+      'CONNECTION_NOT_FOUND',
+      'calendar connection no longer exists',
+    );
+  }
+  if (outcome === 'superseded') {
+    throw new ExternalCalendarServiceError(
+      'PROVIDER_UNAVAILABLE',
+      'calendar connection changed while reauthorization was required',
+    );
+  }
+  throw new ExternalCalendarServiceError(
+    'UPDATE_FAILED',
+    'calendar connection reauthorization is unresolved',
+  );
 }
 
 /**
@@ -262,30 +307,84 @@ export async function listProviderCalendars(
     env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? '',
   );
 
+  const rotationOperationId = randomUUID();
   let session;
   try {
     session = await googleCalendarAdapter.startSession(refreshToken);
   } catch (error) {
     if (error instanceof CalendarProviderError && error.kind === 'reauth_required') {
-      await markReauthRequired(db, userId, connectionId);
-      throw new ExternalCalendarServiceError(
-        'REAUTH_REQUIRED',
-        'calendar connection needs reauth',
-        {
-          cause: error,
-        },
-      );
+      const reauthOutcome = await markCalendarConnectionReauth({
+        userId,
+        connectionId,
+        expectedGeneration: secret.dataGeneration,
+        expectedRefreshTokenEnc: secret.refreshTokenEnc,
+      });
+      throwForReauthOutcome(reauthOutcome, error);
     }
     throw new ExternalCalendarServiceError('PROVIDER_UNAVAILABLE', 'failed to reach the provider', {
       cause: error,
     });
   }
 
+  let markReauthAfterRotation: Awaited<
+    ReturnType<typeof persistCalendarTokenRotation>
+  >['markReauthIfCurrent'] = null;
   if (session.rotatedRefreshToken !== null) {
-    await persistRotatedToken(db, userId, connectionId, session.rotatedRefreshToken);
+    const rotationResult = await persistCalendarTokenRotation({
+      operationId: rotationOperationId,
+      userId,
+      connectionId,
+      expectedGeneration: secret.dataGeneration,
+      expectedRefreshTokenEnc: secret.refreshTokenEnc,
+      rotatedRefreshToken: session.rotatedRefreshToken,
+      encryptionKey: env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? '',
+      provider: googleCalendarAdapter,
+    });
+    const { outcome: rotationOutcome } = rotationResult;
+    markReauthAfterRotation = rotationResult.markReauthIfCurrent;
+
+    if (rotationOutcome === 'enqueued' || rotationOutcome === 'missing') {
+      throw new ExternalCalendarServiceError(
+        'CONNECTION_NOT_FOUND',
+        'calendar connection no longer exists',
+      );
+    }
+
+    if (rotationOutcome === 'reauth_required') {
+      throw new ExternalCalendarServiceError('REAUTH_REQUIRED', 'calendar connection needs reauth');
+    }
+    if (rotationOutcome === 'superseded') {
+      throw new ExternalCalendarServiceError(
+        'PROVIDER_UNAVAILABLE',
+        'calendar connection changed while token rotation was recovered',
+      );
+    }
+    if (rotationOutcome === 'unresolved') {
+      throw new ExternalCalendarServiceError(
+        'UPDATE_FAILED',
+        'calendar token rotation is unresolved',
+      );
+    }
   }
 
-  const providerCalendars = await googleCalendarAdapter.listCalendars(session);
+  let providerCalendars;
+  try {
+    providerCalendars = await googleCalendarAdapter.listCalendars(session);
+  } catch (error) {
+    if (error instanceof CalendarProviderError && error.kind === 'reauth_required') {
+      const reauthOutcome =
+        markReauthAfterRotation === null
+          ? await markCalendarConnectionReauth({
+              userId,
+              connectionId,
+              expectedGeneration: secret.dataGeneration,
+              expectedRefreshTokenEnc: secret.refreshTokenEnc,
+            })
+          : await markReauthAfterRotation();
+      throwForReauthOutcome(reauthOutcome, error);
+    }
+    throw error;
+  }
 
   const { data: selectedRows, error: selectedError } = await db
     .from(databaseTables.calendarConnectionCalendars)
@@ -307,24 +406,6 @@ export async function listProviderCalendars(
     primary: calendar.primary,
     selected: selectedIds.has(calendar.id),
   }));
-}
-
-async function persistRotatedToken(
-  db: CalendarConnectionClient,
-  userId: string,
-  connectionId: string,
-  rotatedRefreshToken: string,
-): Promise<void> {
-  const { error } = await db
-    .from(databaseTables.calendarConnections)
-    .update({
-      refresh_token_enc: encryptToken(rotatedRefreshToken, env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? ''),
-    })
-    .eq('id', connectionId)
-    .eq('user_id', userId);
-
-  // 保存に失敗しても今回の一覧取得は続行する（access token は既に mint 済み）。
-  if (error) logger.warn('[calendar-connection] failed to persist a rotated refresh token');
 }
 
 /**
