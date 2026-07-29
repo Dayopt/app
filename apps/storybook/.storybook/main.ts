@@ -68,12 +68,14 @@ const config: StorybookConfig = {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=Noto+Sans+JP:wght@100..900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@200..900&family=Noto+Sans+JP:wght@100..900&display=swap"
       rel="stylesheet"
     />
     <style>
+      /* next/font を通らない環境なので、product 側の変数名に合わせて手動定義する。
+         product の variable 名を変えた時はここも必ず同時に直す（黙ってシステムフォントに落ちる）。 */
       :root {
-        --font-inter: 'Inter', sans-serif;
+        --font-latin: 'Source Sans 3', sans-serif;
         --font-noto-jp: 'Noto Sans JP', sans-serif;
       }
     </style>
@@ -86,7 +88,7 @@ const config: StorybookConfig = {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=Noto+Sans+JP:wght@100..900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@200..900&family=Noto+Sans+JP:wght@100..900&display=swap"
       rel="stylesheet"
     />
     <script>

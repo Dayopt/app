@@ -4,10 +4,12 @@
  * （スクロールバーは @dayopt/foundations/scrollbar.css に共通化）
  * ============================================ */
 
-/* next/font 最適化フォント適用（GAFA方針準拠フォールバックスタック） */
+/* next/font 最適化フォント適用（欧文 Source Sans 3 → 和文 Noto Sans JP = Source Han Sans）
+ * 旧 Inter 固有の font-feature-settings（'cv11' / 'ss01'）と
+ * font-variation-settings（'opsz'）は Source Sans 3 に該当機能・該当軸が無いため持ち込まない。 */
 body {
   font-family:
-    var(--font-inter),
+    var(--font-latin),
     var(--font-noto-jp),
     -apple-system,
     BlinkMacSystemFont,
@@ -19,8 +21,6 @@ body {
     'Hiragino Kaku Gothic ProN',
     Meiryo,
     sans-serif;
-  font-feature-settings: 'cv11', 'ss01';
-  font-variation-settings: 'opsz' 32;
 }
 
 /* ブラウザUI・タッチ最適化 */
