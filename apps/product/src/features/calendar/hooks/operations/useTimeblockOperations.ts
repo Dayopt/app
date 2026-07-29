@@ -15,6 +15,7 @@ interface TimeModelCacheRow {
   start_at: string;
   end_at: string;
   updated_at: string;
+  source: string;
 }
 
 function isLaneListQuery(lane: 'plans' | 'records') {
@@ -65,7 +66,12 @@ export const useTimeblockOperations = () => {
   const t = useTranslations();
 
   const showTimeChangeUndoToast = useCallback(
-    (id: string, kind: TimeblockDestination, previous: { start_at: string; end_at: string }) => {
+    (
+      id: string,
+      kind: TimeblockDestination,
+      previous: { start_at: string; end_at: string },
+      expectedUpdatedAt: string,
+    ) => {
       toast.success(t('timeblock.toast.updated'), {
         duration: 6000,
         action: {
@@ -73,9 +79,9 @@ export const useTimeblockOperations = () => {
           onClick: () => {
             const data = { start_at: previous.start_at, end_at: previous.end_at };
             if (kind === 'plan') {
-              updatePlan.mutate({ id, data });
+              updatePlan.mutate({ id, data, expectedUpdatedAt });
             } else {
-              updateRecord.mutate({ id, data });
+              updateRecord.mutate({ id, data, expectedUpdatedAt });
             }
           },
         },
@@ -86,18 +92,30 @@ export const useTimeblockOperations = () => {
 
   // Timeblock 削除ハンドラー（id のみ。kind はキャッシュから逆引きする）
   const handleTimeblockDelete = useCallback(
-    async (timeblockId: string) => {
+    async (timeblockId: string): Promise<boolean> => {
       const found = findTimeModelRowById(queryClient, timeblockId);
       if (!found) {
         logger.error('Timeblock の削除に失敗: id がキャッシュに見つかりません', {
           timeblockId,
         });
-        return;
+        return false;
       }
-      if (found.kind === 'plan') {
-        deletePlan.mutate({ id: timeblockId });
-      } else {
-        deleteRecord.mutate({ id: timeblockId });
+      if (found.row.source === 'auto_migrated') return false;
+      try {
+        if (found.kind === 'plan') {
+          await deletePlan.mutateAsync({
+            id: timeblockId,
+            expectedUpdatedAt: found.row.updated_at,
+          });
+        } else {
+          await deleteRecord.mutateAsync({
+            id: timeblockId,
+            expectedUpdatedAt: found.row.updated_at,
+          });
+        }
+        return true;
+      } catch {
+        return false;
       }
     },
     [queryClient, deletePlan, deleteRecord],
@@ -111,6 +129,7 @@ export const useTimeblockOperations = () => {
         startTime: Date;
         endTime: Date;
         resetActualTime?: boolean;
+        expectedUpdatedAt?: string;
       },
     ) => {
       const timeblockId =
@@ -135,6 +154,13 @@ export const useTimeblockOperations = () => {
       // previous 値は常にキャッシュ由来（渡された event 自身は更新後プレビューの可能性があるため）。
       const knownKind =
         typeof timeblockIdOrTimeblock !== 'string' ? timeblockIdOrTimeblock.kind : undefined;
+      const projectedVersion =
+        typeof timeblockIdOrTimeblock !== 'string' ? timeblockIdOrTimeblock.version : undefined;
+      const projectedSource =
+        typeof timeblockIdOrTimeblock !== 'string'
+          ? timeblockIdOrTimeblock.recordSource
+          : undefined;
+      const interactionVersion = updates?.expectedUpdatedAt;
       const found = knownKind
         ? {
             kind: knownKind,
@@ -150,6 +176,12 @@ export const useTimeblockOperations = () => {
         logger.error('Timeblock更新に失敗: id がキャッシュに見つかりません', { timeblockId });
         return;
       }
+      const expectedUpdatedAt = interactionVersion ?? projectedVersion ?? found.row?.updated_at;
+      if (!expectedUpdatedAt) {
+        logger.error('Timeblock更新に失敗: version が見つかりません', { timeblockId });
+        return;
+      }
+      if ((found.row?.source ?? projectedSource) === 'auto_migrated') return;
 
       // 過去 plan は時間変更不可（server も PLAN_TIME_LOCKED で拒否するが、無駄な往復を避ける）
       if (
@@ -170,14 +202,16 @@ export const useTimeblockOperations = () => {
         ? { start_at: found.row.start_at, end_at: found.row.end_at }
         : null;
       const data = { start_at: nextRange.start.toISOString(), end_at: nextRange.end.toISOString() };
-      const onSuccess = () => {
-        if (previous) showTimeChangeUndoToast(timeblockId, found.kind, previous);
+      const onSuccess = (updated: { updated_at: string }) => {
+        if (previous) {
+          showTimeChangeUndoToast(timeblockId, found.kind, previous, updated.updated_at);
+        }
       };
 
       if (found.kind === 'plan') {
-        updatePlan.mutate({ id: timeblockId, data }, { onSuccess });
+        updatePlan.mutate({ id: timeblockId, data, expectedUpdatedAt }, { onSuccess });
       } else {
-        updateRecord.mutate({ id: timeblockId, data }, { onSuccess });
+        updateRecord.mutate({ id: timeblockId, data, expectedUpdatedAt }, { onSuccess });
       }
     },
     [queryClient, updatePlan, updateRecord, showTimeChangeUndoToast, t],

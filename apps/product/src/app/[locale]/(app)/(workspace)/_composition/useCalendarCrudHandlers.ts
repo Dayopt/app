@@ -49,9 +49,14 @@ interface CalendarCrudHandlersResult {
   }) => void;
   onUpdateEntry: (
     timeblockIdOrTimeblock: string | CalendarEvent,
-    updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+    updates?: {
+      startTime: Date;
+      endTime: Date;
+      resetActualTime?: boolean;
+      expectedUpdatedAt?: string;
+    },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
-  onDeleteTimeblock: (timeblockId: string) => void;
+  onDeleteTimeblock: (timeblockId: string) => Promise<boolean>;
   onDeleteTimeblockConfirm: (entry: CalendarEvent) => void;
   onViewStats: (entry: CalendarEvent) => void;
   onCopy: (entry: CalendarEvent) => void;
@@ -132,9 +137,7 @@ export function useCalendarCrudHandlers({
   }, [currentDate]);
 
   const deleteTimeblockAsync = useCallback(
-    async (timeblockId: string) => {
-      deleteTimeblock(timeblockId);
-    },
+    (timeblockId: string) => deleteTimeblock(timeblockId),
     [deleteTimeblock],
   );
 

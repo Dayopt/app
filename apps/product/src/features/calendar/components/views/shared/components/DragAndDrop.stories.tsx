@@ -82,6 +82,7 @@ const basePlan: CalendarEvent = {
   color: 'var(--primary)',
   createdAt: new Date(),
   updatedAt: new Date(),
+  version: '2026-07-15T00:00:00.000000Z',
   displayStartDate: new Date('2024-01-15T10:00:00'),
   displayEndDate: new Date('2024-01-15T11:00:00'),
   duration: 60,

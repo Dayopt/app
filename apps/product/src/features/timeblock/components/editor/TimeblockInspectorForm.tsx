@@ -25,6 +25,8 @@ import {
   type TimeblockSavePatch,
 } from '../../hooks/useCoalescedTimeblockSave';
 import {
+  isTimeblockStaleError,
+  isTimeblockUncertainError,
   useTimeblockWriteMutations,
   type TimeblockOverlapUpdateInput,
 } from '../../hooks/useTimeblockWriteMutations';
@@ -163,6 +165,8 @@ export function TimeblockInspectorForm({
     createPlan,
     deleteRecord,
     deletePlan,
+    fetchPlanById,
+    fetchRecordById,
     restoreRecord,
     restorePlan,
     skipPlan,
@@ -196,6 +200,16 @@ export function TimeblockInspectorForm({
     ...(isDuplicateMode ? {} : { source: kind }),
   }));
   const [duplicateValidationNow] = useState(() => new Date());
+  const [isPreparingAction, setIsPreparingAction] = useState(false);
+  const [isRecoveringConflict, setIsRecoveringConflict] = useState(false);
+  const [hasUnresolvedWrite, setHasUnresolvedWrite] = useState(false);
+  const actionPreparingRef = useRef(false);
+  const conflictRecoveringRef = useRef(false);
+  const pendingNoteRef = useRef(value.note);
+  const noteDirtyRef = useRef(false);
+  const noteGenerationRef = useRef(0);
+  const saveInFlightRef = useRef(false);
+  const activeTargetIdRef = useRef(targetId);
 
   useEffect(() => {
     latestTimeValueRef.current = {
@@ -214,33 +228,93 @@ export function TimeblockInspectorForm({
     planRelationships?.status === 'success' && planRelationships.records.length > 0;
 
   useEffect(() => {
-    latestUpdatedAtRef.current = targetUpdatedAt;
-  }, [targetUpdatedAt]);
+    const targetChanged = activeTargetIdRef.current !== targetId;
+    activeTargetIdRef.current = targetId;
+    if (targetChanged) {
+      conflictRecoveringRef.current = false;
+      setHasUnresolvedWrite(false);
+    }
+    if (targetChanged || (!noteDirtyRef.current && !saveInFlightRef.current)) {
+      latestUpdatedAtRef.current = targetUpdatedAt;
+    }
+  }, [targetId, targetUpdatedAt]);
 
   const savePatch = useCallback(
     async (patch: TimeblockSavePatch) => {
       if (!targetId || isMigrated) return;
+      const expectedUpdatedAt = latestUpdatedAtRef.current;
+      if (!expectedUpdatedAt) throw new Error('Missing timeblock version');
       const input = {
         id: targetId,
         data: patch,
-        ...(latestUpdatedAtRef.current ? { expectedUpdatedAt: latestUpdatedAtRef.current } : {}),
+        expectedUpdatedAt,
       };
-      const updated =
-        kind === 'plan'
-          ? await updatePlan.mutateAsync(input)
-          : await updateRecord.mutateAsync(input);
-      if (updated) latestUpdatedAtRef.current = updated.updated_at;
+      saveInFlightRef.current = true;
+      try {
+        const updated =
+          kind === 'plan'
+            ? await updatePlan.mutateAsync(input)
+            : await updateRecord.mutateAsync(input);
+        latestUpdatedAtRef.current = updated.updated_at;
+      } catch (error) {
+        if (isTimeblockStaleError(error)) {
+          conflictRecoveringRef.current = true;
+          setIsRecoveringConflict(true);
+          noteGenerationRef.current += 1;
+          latestUpdatedAtRef.current = null;
+          try {
+            const latest =
+              kind === 'plan' ? await fetchPlanById(targetId) : await fetchRecordById(targetId);
+            latestUpdatedAtRef.current = latest.updated_at;
+            pendingNoteRef.current = latest.note ?? '';
+            noteDirtyRef.current = false;
+            setHasTimeConflict(false);
+            setValue((previous) => ({
+              ...previous,
+              note: latest.note ?? '',
+              tagId: latest.tag_id,
+              startAt: new Date(latest.start_at),
+              endAt: new Date(latest.end_at),
+            }));
+            setHasUnresolvedWrite(false);
+            conflictRecoveringRef.current = false;
+          } catch {
+            setHasUnresolvedWrite(true);
+          } finally {
+            noteGenerationRef.current += 1;
+            setIsRecoveringConflict(false);
+          }
+        } else if (isTimeblockUncertainError(error)) {
+          // 結果不明のwriteは自動再送しない。入力は残し、再度開くまで操作を止める。
+          latestUpdatedAtRef.current = null;
+          setHasUnresolvedWrite(true);
+        }
+        throw error;
+      } finally {
+        saveInFlightRef.current = false;
+      }
     },
-    [kind, targetId, isMigrated, updatePlan, updateRecord],
+    [kind, targetId, isMigrated, updatePlan, updateRecord, fetchPlanById, fetchRecordById],
   );
-  const { enqueue: enqueueSave, flush: flushSave } = useCoalescedTimeblockSave(savePatch);
+  const { enqueue: enqueueSave, flush: flushSave } = useCoalescedTimeblockSave(savePatch, {
+    shouldDiscardPending: isTimeblockStaleError,
+    shouldPausePending: isTimeblockUncertainError,
+  });
 
-  const pendingNoteRef = useRef(value.note);
-  const noteDirtyRef = useRef(false);
-  const [scheduleNoteSave, cancelScheduledNoteSave] = useDebouncedCallback((note: string) => {
-    noteDirtyRef.current = false;
-    enqueueSave({ note: normalizeNote(note) });
-  }, NOTE_SAVE_DELAY_MS);
+  const [scheduleNoteSave, cancelScheduledNoteSave] = useDebouncedCallback(
+    ({ generation, note }: { generation: number; note: string }) => {
+      if (generation !== noteGenerationRef.current) return;
+      noteDirtyRef.current = false;
+      enqueueSave({ note: normalizeNote(note) });
+    },
+    NOTE_SAVE_DELAY_MS,
+  );
+
+  const isWriteFrozen = isPreparingAction || isRecoveringConflict || hasUnresolvedWrite;
+  const setActionPreparing = useCallback((preparing: boolean) => {
+    actionPreparingRef.current = preparing;
+    setIsPreparingAction(preparing);
+  }, []);
 
   const flushNoteSave = useCallback(() => {
     cancelScheduledNoteSave();
@@ -257,7 +331,7 @@ export function TimeblockInspectorForm({
 
   const handleTagChange = useCallback(
     (tagId: string | null) => {
-      if (isMigrated) return;
+      if (isMigrated || actionPreparingRef.current || conflictRecoveringRef.current) return;
       setValue((prev) => ({ ...prev, tagId }));
       if (isDuplicateMode || !targetId) return;
       enqueueSave({ tagId });
@@ -290,6 +364,7 @@ export function TimeblockInspectorForm({
   // --- 日時・メモ（自動保存） ---
   const handleDateTimeChange = useCallback(
     (next: TimeModelEditorValue) => {
+      if (actionPreparingRef.current || conflictRecoveringRef.current) return;
       if (!isDuplicateMode && kind === 'plan' && !isPlanTimeEditable(next.endAt)) {
         toast.error(t('timeblock.editor.timeLocked'));
         return;
@@ -315,22 +390,27 @@ export function TimeblockInspectorForm({
 
   const handleNoteChange = useCallback(
     (note: string) => {
+      if (actionPreparingRef.current || conflictRecoveringRef.current) return;
       setValue((prev) => ({ ...prev, note }));
       if (isDuplicateMode) return;
       pendingNoteRef.current = note;
       noteDirtyRef.current = true;
-      scheduleNoteSave(note);
+      noteGenerationRef.current += 1;
+      scheduleNoteSave({ generation: noteGenerationRef.current, note });
     },
     [isDuplicateMode, scheduleNoteSave],
   );
 
-  const flushBeforeRecord = useCallback(() => {
+  const flushPendingEdits = useCallback(async (): Promise<string> => {
     cancelScheduledNoteSave();
     noteDirtyRef.current = false;
-    return flushSave({
+    await flushSave({
       note: normalizeNote(pendingNoteRef.current),
       tagId: value.tagId,
     });
+    const updatedAt = latestUpdatedAtRef.current;
+    if (!updatedAt) throw new Error('Missing timeblock version');
+    return updatedAt;
   }, [cancelScheduledNoteSave, flushSave, value.tagId]);
 
   const handleCopy = useCallback(() => {
@@ -398,48 +478,75 @@ export function TimeblockInspectorForm({
 
   // --- スキップ / 削除 ---
   const handleSkip = useCallback(() => {
-    if (!targetId) return;
-    skipPlan.mutate(
-      { id: targetId },
-      { onSuccess: () => toast.success(t('timeblock.editor.toast.skipped')) },
-    );
-  }, [targetId, skipPlan, t]);
+    if (!targetId || isWriteFrozen) return;
+    setActionPreparing(true);
+    void flushPendingEdits()
+      .then((expectedUpdatedAt) => skipPlan.mutateAsync({ id: targetId, expectedUpdatedAt }))
+      .then(() => toast.success(t('timeblock.editor.toast.skipped')))
+      .catch((error: unknown) => {
+        if (isTimeblockUncertainError(error)) setHasUnresolvedWrite(true);
+      })
+      .finally(() => setActionPreparing(false));
+  }, [targetId, isWriteFrozen, flushPendingEdits, skipPlan, setActionPreparing, t]);
 
   const handleUnskip = useCallback(() => {
-    if (!targetId) return;
-    unskipPlan.mutate(
-      { id: targetId },
-      { onSuccess: () => toast.success(t('timeblock.editor.toast.unskipped')) },
-    );
-  }, [targetId, unskipPlan, t]);
+    if (!targetId || isWriteFrozen) return;
+    setActionPreparing(true);
+    void flushPendingEdits()
+      .then((expectedUpdatedAt) => unskipPlan.mutateAsync({ id: targetId, expectedUpdatedAt }))
+      .then(() => toast.success(t('timeblock.editor.toast.unskipped')))
+      .catch((error: unknown) => {
+        if (isTimeblockUncertainError(error)) setHasUnresolvedWrite(true);
+      })
+      .finally(() => setActionPreparing(false));
+  }, [targetId, isWriteFrozen, flushPendingEdits, unskipPlan, setActionPreparing, t]);
 
   const handleDelete = useCallback(() => {
-    if (!targetId) return;
-    const deleteMutation = kind === 'plan' ? deletePlan : deleteRecord;
-    const restoreMutation = kind === 'plan' ? restorePlan : restoreRecord;
-    deleteMutation.mutate(
-      { id: targetId },
-      {
-        onSuccess: () => {
-          onDeleted();
-          toast.success(t('timeblock.editor.toast.deleted'), {
-            action: {
-              label: t('common.undo'),
-              onClick: () =>
-                restoreMutation.mutate(
-                  { id: targetId },
-                  { onSuccess: () => toast.success(t('timeblock.editor.toast.restored')) },
-                ),
+    if (!targetId || isWriteFrozen) return;
+    setActionPreparing(true);
+    void flushPendingEdits()
+      .then(async (expectedUpdatedAt) => {
+        const deleted =
+          kind === 'plan'
+            ? await deletePlan.mutateAsync({ id: targetId, expectedUpdatedAt })
+            : await deleteRecord.mutateAsync({ id: targetId, expectedUpdatedAt });
+        onDeleted();
+        toast.success(t('timeblock.editor.toast.deleted'), {
+          action: {
+            label: t('common.undo'),
+            onClick: () => {
+              const input = { id: targetId, expectedUpdatedAt: deleted.updated_at };
+              const restore =
+                kind === 'plan' ? restorePlan.mutateAsync(input) : restoreRecord.mutateAsync(input);
+              void restore
+                .then(() => toast.success(t('timeblock.editor.toast.restored')))
+                .catch(() => undefined);
             },
-          });
-        },
-      },
-    );
-  }, [kind, targetId, deletePlan, deleteRecord, restorePlan, restoreRecord, onDeleted, t]);
+          },
+        });
+      })
+      .catch((error: unknown) => {
+        if (isTimeblockUncertainError(error)) setHasUnresolvedWrite(true);
+      })
+      .finally(() => setActionPreparing(false));
+  }, [
+    kind,
+    targetId,
+    isWriteFrozen,
+    flushPendingEdits,
+    deletePlan,
+    deleteRecord,
+    restorePlan,
+    restoreRecord,
+    setActionPreparing,
+    onDeleted,
+    t,
+  ]);
 
   const menuItems = isDuplicateMode
     ? []
-    : getTimeblockMenuItems({
+    : // eslint-disable-next-line react-hooks/refs -- helperはcallbackを実行せずmenu itemへ格納するだけ
+      getTimeblockMenuItems({
         // time model では変換系（markUnplanned / restorePlanned）を出さないため
         // plan → planned / record → unplanned の対応で表示条件だけ流用する
         origin: kind === 'plan' ? 'planned' : 'unplanned',
@@ -481,10 +588,17 @@ export function TimeblockInspectorForm({
         onCreateAndSelect={handleCreateAndSelectTag}
         menuItems={menuItems}
         onCloseInspector={onCloseInspector}
+        disabled={isWriteFrozen}
       />
 
       {isMigrated ? (
         <p className="text-muted-foreground text-sm">{t('timeblock.editor.migratedLocked')}</p>
+      ) : null}
+
+      {hasUnresolvedWrite ? (
+        <p className="text-destructive text-sm" role="status">
+          {t('timeblock.editor.toast.writeUnresolved')}
+        </p>
       ) : null}
 
       <TimeblockEditor
@@ -498,6 +612,7 @@ export function TimeblockInspectorForm({
           deleteRecord.isPending ||
           createPlan.isPending ||
           createRecord.isPending ||
+          isWriteFrozen ||
           isMigrated
         }
       />
@@ -548,7 +663,11 @@ export function TimeblockInspectorForm({
         <div className="flex justify-start">
           <RecordPlanButton
             planId={targetId}
-            beforeRecord={flushBeforeRecord}
+            beforeRecord={flushPendingEdits}
+            onPreparingChange={setActionPreparing}
+            onError={(error) => {
+              if (isTimeblockUncertainError(error)) setHasUnresolvedWrite(true);
+            }}
             onRecorded={
               onOpenRelationship ? (recordId) => onOpenRelationship(recordId, 'record') : undefined
             }

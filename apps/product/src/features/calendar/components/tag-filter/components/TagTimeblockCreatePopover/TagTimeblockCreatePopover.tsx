@@ -225,9 +225,9 @@ export function TagTimeblockCreatePopover({
       start_at: startDate.toISOString(),
       end_at: endDate.toISOString(),
     };
-    const onSuccess = (created: { id: string } | undefined) => {
+    const onSuccess = (created: { id: string; updated_at: string } | undefined) => {
       if (created?.id) {
-        const deletePayload = { id: created.id };
+        const deletePayload = { id: created.id, expectedUpdatedAt: created.updated_at };
         toast.success(t('timeblock.toast.created', { title: displayTitle }), {
           duration: 5000,
           action: {

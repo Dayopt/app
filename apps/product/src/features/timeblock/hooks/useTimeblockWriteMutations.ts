@@ -1,6 +1,6 @@
 'use client';
 
-import { type QueryKey, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, type QueryKey, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { toast } from '@/lib/toast';
@@ -123,8 +123,74 @@ function sortAndLimitRows<T extends TimeModelListRow>(
   return filter.limit ? sorted.slice(0, filter.limit) : sorted;
 }
 
+export function insertTimeModelRowIntoMatchingLists<T extends TimeModelListRow>(
+  queryClient: QueryClient,
+  lane: 'plans' | 'records',
+  row: T,
+  replaceId?: string,
+): void {
+  const predicate = lane === 'plans' ? isPlansListQuery : isRecordsListQuery;
+  for (const [queryKey, data] of queryClient.getQueriesData<T[]>({ predicate })) {
+    if (getListFilter(queryKey).search) continue;
+    if (!doesTimeModelListQueryIncludeRow(queryKey, row, lane, 'create')) continue;
+    const old = data ?? [];
+    const next = old.filter((candidate) => candidate.id !== replaceId && candidate.id !== row.id);
+    queryClient.setQueryData(queryKey, sortAndLimitRows([...next, row], queryKey, lane));
+  }
+}
+
+/** DBが返した確定行を、現在保持している全list cacheへ反映する。 */
+function replaceTimeModelRowInMatchingLists<T extends TimeModelListRow>(
+  queryClient: QueryClient,
+  lane: 'plans' | 'records',
+  row: T,
+): void {
+  const predicate = lane === 'plans' ? isPlansListQuery : isRecordsListQuery;
+  for (const [queryKey, data] of queryClient.getQueriesData<T[]>({ predicate })) {
+    const filter = getListFilter(queryKey);
+    if (filter.search) continue;
+
+    const old = data ?? [];
+    const containsRow = old.some((candidate) => candidate.id === row.id);
+    const shouldInclude = doesTimeModelListQueryIncludeRow(queryKey, row, lane, 'update');
+
+    if (!shouldInclude) {
+      if (containsRow) {
+        queryClient.setQueryData(
+          queryKey,
+          old.filter((candidate) => candidate.id !== row.id),
+        );
+      }
+      continue;
+    }
+
+    if (!containsRow && (filter.offset ?? 0) > 0) continue;
+    const withoutRow = old.filter((candidate) => candidate.id !== row.id);
+    queryClient.setQueryData(queryKey, sortAndLimitRows([...withoutRow, row], queryKey, lane));
+  }
+}
+
+function getTimeblockServiceCode(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object' || !('data' in error)) return undefined;
+  const data = error.data;
+  if (!data || typeof data !== 'object' || !('serviceCode' in data)) return undefined;
+  return typeof data.serviceCode === 'string' ? data.serviceCode : undefined;
+}
+
 function isTimeOverlapError(error: { message: string }): boolean {
-  return error.message.includes('TIME_OVERLAP');
+  return (
+    getTimeblockServiceCode(error) === 'TIME_OVERLAP' || error.message.includes('TIME_OVERLAP')
+  );
+}
+
+export function isTimeblockStaleError(error: unknown): boolean {
+  const code = getTimeblockServiceCode(error);
+  return code === 'STALE_VERSION' || code === 'STALE_TARGET';
+}
+
+export function isTimeblockUncertainError(error: unknown): boolean {
+  const code = getTimeblockServiceCode(error);
+  return code === undefined || code === 'RETRYABLE_CONTENTION' || code === 'TEMPORARY_FAILURE';
 }
 
 interface MutationContext {
@@ -178,7 +244,13 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
   };
 
   const reportError = (error: { message: string }) => {
-    toast.error(isTimeOverlapError(error) ? t('toast.overlap') : t('toast.saveFailed'));
+    toast.error(
+      isTimeOverlapError(error)
+        ? t('toast.overlap')
+        : isTimeblockStaleError(error)
+          ? t('toast.conflict')
+          : t('toast.saveFailed'),
+    );
   };
 
   const reportCreateError = (error: { message: string }) => {
@@ -202,14 +274,11 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     row: T,
     replaceId?: string,
   ) => {
-    const predicate = lane === 'plans' ? isPlansListQuery : isRecordsListQuery;
-    for (const [queryKey, data] of queryClient.getQueriesData<T[]>({ predicate })) {
-      if (getListFilter(queryKey).search) continue;
-      if (!doesTimeModelListQueryIncludeRow(queryKey, row, lane, 'create')) continue;
-      const old = data ?? [];
-      const next = old.filter((candidate) => candidate.id !== replaceId && candidate.id !== row.id);
-      queryClient.setQueryData(queryKey, sortAndLimitRows([...next, row], queryKey, lane));
-    }
+    insertTimeModelRowIntoMatchingLists(queryClient, lane, row, replaceId);
+  };
+
+  const replaceServerRow = <T extends TimeModelListRow>(lane: 'plans' | 'records', row: T) => {
+    replaceTimeModelRowInMatchingLists(queryClient, lane, row);
   };
 
   const patchMatchingLists = <T extends TimeModelListRow>(
@@ -235,7 +304,8 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     void utils.records.invalidate();
   };
 
-  const createPlan = api.plans.create.useMutation({
+  const createPlan = api.planCommands.create.useMutation({
+    retry: false,
     onMutate: async (input): Promise<MutationContext> => {
       const context = await snapshot();
       const tempId = createTempId();
@@ -261,6 +331,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     onSuccess: (created, _input, context) => {
       if (!created) return;
       insertIntoMatchingLists('plans', created, context?.tempId);
+      utils.plans.getById.setData({ id: created.id }, created);
     },
     onError: (error, _input, context) => {
       restore(context);
@@ -269,7 +340,8 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     onSettled: invalidate,
   });
 
-  const createRecord = api.records.create.useMutation({
+  const createRecord = api.recordCommands.create.useMutation({
+    retry: false,
     onMutate: async (input): Promise<MutationContext> => {
       const context = await snapshot();
       const tempId = createTempId();
@@ -295,6 +367,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     onSuccess: (created, _input, context) => {
       if (!created) return;
       insertIntoMatchingLists('records', created, context?.tempId);
+      utils.records.getById.setData({ id: created.id }, created);
     },
     onError: (error, _input, context) => {
       restore(context);
@@ -303,7 +376,8 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     onSettled: invalidate,
   });
 
-  const updatePlan = api.plans.update.useMutation({
+  const updatePlan = api.planCommands.update.useMutation({
+    retry: false,
     onMutate: async (input): Promise<MutationContext> => {
       const context = await snapshot();
       const patch = (row: PlanListItem): PlanListItem => ({
@@ -318,6 +392,10 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
       utils.plans.getById.setData({ id: input.id }, (old) => (old ? patch(old) : old));
       return context;
     },
+    onSuccess: (updated) => {
+      replaceServerRow('plans', updated);
+      utils.plans.getById.setData({ id: updated.id }, updated);
+    },
     onError: (error, input, context) => {
       restore(context);
       reportUpdateError(error, input);
@@ -325,7 +403,8 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     onSettled: invalidate,
   });
 
-  const updateRecord = api.records.update.useMutation({
+  const updateRecord = api.recordCommands.update.useMutation({
+    retry: false,
     onMutate: async (input): Promise<MutationContext> => {
       const context = await snapshot();
       const patch = (row: RecordListItem): RecordListItem => ({
@@ -340,6 +419,10 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
       utils.records.getById.setData({ id: input.id }, (old) => (old ? patch(old) : old));
       return context;
     },
+    onSuccess: (updated) => {
+      replaceServerRow('records', updated);
+      utils.records.getById.setData({ id: updated.id }, updated);
+    },
     onError: (error, input, context) => {
       restore(context);
       reportUpdateError(error, input);
@@ -350,12 +433,14 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
   const reportDeleteError = () => toast.error(t('toast.deleteFailed'));
   const reportRestoreError = () => toast.error(t('toast.restoreFailed'));
 
-  const deletePlan = api.plans.delete.useMutation({
+  const deletePlan = api.planCommands.delete.useMutation({
+    retry: false,
     onMutate: async (input): Promise<MutationContext> => {
       const context = await snapshot();
       queryClient.setQueriesData<PlanListItem[]>({ predicate: isPlansListQuery }, (old) =>
         old?.filter((row) => row.id !== input.id),
       );
+      utils.plans.getById.setData({ id: input.id }, undefined);
       return context;
     },
     onError: (_error, _input, context) => {
@@ -365,12 +450,14 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     onSettled: invalidate,
   });
 
-  const deleteRecord = api.records.delete.useMutation({
+  const deleteRecord = api.recordCommands.delete.useMutation({
+    retry: false,
     onMutate: async (input): Promise<MutationContext> => {
       const context = await snapshot();
       queryClient.setQueriesData<RecordListItem[]>({ predicate: isRecordsListQuery }, (old) =>
         old?.filter((row) => row.id !== input.id),
       );
+      utils.records.getById.setData({ id: input.id }, undefined);
       return context;
     },
     onError: (_error, _input, context) => {
@@ -380,8 +467,13 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     onSettled: invalidate,
   });
 
-  const restorePlan = api.plans.restore.useMutation({
+  const restorePlan = api.planCommands.restore.useMutation({
+    retry: false,
     onMutate: snapshot,
+    onSuccess: (restored) => {
+      insertIntoMatchingLists('plans', restored);
+      utils.plans.getById.setData({ id: restored.id }, restored);
+    },
     onError: (_error, _input, context) => {
       restore(context);
       reportRestoreError();
@@ -389,8 +481,13 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     onSettled: invalidate,
   });
 
-  const restoreRecord = api.records.restore.useMutation({
+  const restoreRecord = api.recordCommands.restore.useMutation({
+    retry: false,
     onMutate: snapshot,
+    onSuccess: (restored) => {
+      insertIntoMatchingLists('records', restored);
+      utils.records.getById.setData({ id: restored.id }, restored);
+    },
     onError: (_error, _input, context) => {
       restore(context);
       reportRestoreError();
@@ -398,8 +495,13 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     onSettled: invalidate,
   });
 
-  const skipPlan = api.plans.skip.useMutation({
+  const skipPlan = api.planCommands.skip.useMutation({
+    retry: false,
     onMutate: snapshot,
+    onSuccess: (updated) => {
+      replaceServerRow('plans', updated);
+      utils.plans.getById.setData({ id: updated.id }, updated);
+    },
     onError: (_error, _input, context) => {
       restore(context);
       toast.error(t('toast.skipFailed'));
@@ -407,20 +509,36 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
     onSettled: invalidate,
   });
 
-  const unskipPlan = api.plans.unskip.useMutation({
+  const unskipPlan = api.planCommands.unskip.useMutation({
+    retry: false,
     onMutate: snapshot,
+    onSuccess: (updated) => {
+      replaceServerRow('plans', updated);
+      utils.plans.getById.setData({ id: updated.id }, updated);
+    },
     onError: (_error, _input, context) => {
       restore(context);
       toast.error(t('toast.skipFailed'));
     },
     onSettled: invalidate,
   });
+
+  const fetchPlanById = async (id: string) => {
+    await utils.plans.getById.invalidate({ id });
+    return utils.plans.getById.fetch({ id });
+  };
+  const fetchRecordById = async (id: string) => {
+    await utils.records.getById.invalidate({ id });
+    return utils.records.getById.fetch({ id });
+  };
 
   return {
     createRecord,
     createPlan,
     deleteRecord,
     deletePlan,
+    fetchPlanById,
+    fetchRecordById,
     restoreRecord,
     restorePlan,
     skipPlan,

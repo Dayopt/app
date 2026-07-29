@@ -27,10 +27,11 @@ export function useTimeblockContextActions() {
 
   const handleDeleteTimeblock = useCallback(
     (entry: CalendarEvent) => {
+      if (entry.recordSource === 'auto_migrated') return;
       if ((entry.kind ?? 'plan') === 'plan') {
-        deletePlan.mutate({ id: entry.id });
+        deletePlan.mutate({ id: entry.id, expectedUpdatedAt: entry.version });
       } else {
-        deleteRecord.mutate({ id: entry.id });
+        deleteRecord.mutate({ id: entry.id, expectedUpdatedAt: entry.version });
       }
     },
     [deletePlan, deleteRecord],
@@ -59,7 +60,7 @@ export function useTimeblockContextActions() {
     (entry: CalendarEvent) => {
       if (entry.kind !== 'plan') return;
       skipPlan.mutate(
-        { id: entry.id },
+        { id: entry.id, expectedUpdatedAt: entry.version },
         { onSuccess: () => toast.success(t('timeblock.editor.toast.skipped')) },
       );
     },
@@ -70,7 +71,7 @@ export function useTimeblockContextActions() {
     (entry: CalendarEvent) => {
       if (entry.kind !== 'plan') return;
       unskipPlan.mutate(
-        { id: entry.id },
+        { id: entry.id, expectedUpdatedAt: entry.version },
         { onSuccess: () => toast.success(t('timeblock.editor.toast.unskipped')) },
       );
     },

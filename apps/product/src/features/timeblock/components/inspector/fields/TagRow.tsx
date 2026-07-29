@@ -48,6 +48,7 @@ interface TagRowProps {
   menuItems?: TimeblockMenuItem[] | undefined;
   /** Inspector を閉じるコールバック（Mobile Drawer のみ渡す。set されたら「…」の右に × を出す） */
   onCloseInspector?: (() => void) | undefined;
+  disabled?: boolean | undefined;
 }
 
 /** Inspectorのタグ選択行（カラードット + タグ名、クリックでQuickSelector表示） */
@@ -61,6 +62,7 @@ export function TagRow({
   onCreateAndSelect,
   menuItems,
   onCloseInspector,
+  disabled = false,
 }: TagRowProps) {
   const t = useTranslations();
   const [selectorOpen, setSelectorOpen] = useState(false);
@@ -91,6 +93,7 @@ export function TagRow({
           ref={buttonRef}
           type="button"
           onClick={() => setSelectorOpen(true)}
+          disabled={disabled}
           className="hover:bg-state-hover -mt-1 -ml-2 flex min-w-0 items-center gap-2 rounded-lg py-1 pr-2 pl-2 text-lg font-medium transition-colors"
           aria-label={`${t('common.tags.change')}: ${tagName}`}
         >
@@ -111,6 +114,7 @@ export function TagRow({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
+                  disabled={disabled}
                   className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-11 items-center justify-center rounded-lg transition-colors"
                   aria-label={t('common.actions.more')}
                 >

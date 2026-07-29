@@ -139,7 +139,8 @@ export const EventContextMenu = ({
     onRestorePlanned: onRestorePlanned ? () => onRestorePlanned(entry) : undefined,
     onSkip: onSkip ? () => onSkip(entry) : undefined,
     onUnskip: onUnskip ? () => onUnskip(entry) : undefined,
-    onDelete: onDelete ? () => onDelete(entry) : undefined,
+    onDelete:
+      onDelete && entry.recordSource !== 'auto_migrated' ? () => onDelete(entry) : undefined,
   });
 
   if (menuItems.length === 0) return null;

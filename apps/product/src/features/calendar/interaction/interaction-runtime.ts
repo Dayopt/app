@@ -47,6 +47,7 @@ export interface UseInteractionProps {
       startTime: Date;
       endTime: Date;
       resetActualTime?: boolean;
+      expectedUpdatedAt?: string;
     },
   ) => Promise<void | { skipToast: true }> | void;
   /** Plan を Record レーンへdropした時の記録化 */
@@ -133,4 +134,6 @@ export interface InteractionRefs {
     source: 'plan' | 'record';
     target: 'plan' | 'record';
   } | null>;
+  /** drag / resize開始時にユーザーが見ていたraw DB version。 */
+  interactionVersionRef: React.MutableRefObject<string | null>;
 }
