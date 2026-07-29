@@ -14,7 +14,7 @@ code:
 
 ## Goal
 
-Productionと認証・DB・secretを共有しないPersistent Stagingで、ChatGPT、Claude、CursorからDayoptのPlan → Track → Learnを完結し、clientごとのwrite gateを安全に開閉できる証拠を残す。
+Productionと認証・DB・secretを共有しない検証環境で、ChatGPT、Claude、CursorからDayoptのPlan → Track → Learnを完結し、clientごとのwrite gateを安全に開閉できる証拠を残す。2026-07-29の判断により、現在はPersistent Stagingを作らず、Draft PR #1760の一時Previewを使う。
 
 外部作業時の入力、順序、証跡テンプレート、停止条件は[execution checklist](./step-6-execution-checklist.md)を使う。
 
@@ -25,8 +25,9 @@ Productionと認証・DB・secretを共有しないPersistent Stagingで、ChatG
 - repo内では18 tool、OAuth connection、typed mutation、receipt、global/client/connection gate、3 clientのstatic registration、local Plan → Track → Learn flowまで実装済み
 - actual MCP HTTPのgolden flowはlocal DBと`chatgpt` client IDで検証済みだが、実clientのOAuth、confirmation UI、refresh token管理、実network/renderは未検証
 - 3 client共通のactual token route、scope-filtered`tools/list`、単一Plan mutation retry、global gate、parallel refresh、Settings revoke契約をlocal integrationで検証済み。authorize page、client自身のtoken保存/並列処理、client別Plan → Track → Learnは未検証
-- 2026-07-26のread-only external inventoryでは、Vercel projectは`product` / `web`、Supabase branchはdefault `main`だけであり、Persistent Stagingのproject/branch/固定originは存在しない
-- repo内ではProduction/Stagingのexact OAuth identity、Vercel host routing、generic Preview無効化、operational build/readiness gateまで実装済み。外部のPersistent Staging、DNS、secret、client registrationは未作成
+- 2026-07-29のexternal inventoryで、PR #1760専用のSupabase Preview `yvimluegqlcppejgribx`とVercel Product Previewを確認した。Supabase branchは`persistent=false`、`with_data=false`であり、Production dataとcredentialを共有しない
+- #1760のremote overrideでpublic signupと今後のseedを無効にし、Supabase branch action logで反映を確認した。設定変更前の既定seed userと業務sample dataはまだ残るため、専用test userへの切替は未完了
+- repo内ではProduction/Stagingのexact OAuth identity、Vercel host routing、generic Preview無効化、operational build/readiness gateまで実装済み。現在のgeneric PreviewではMCP OAuth surfaceを公開しないため、固定issuer/resource、secret、client registrationは未作成
 - DB identity singleton、connection/code/tokenのresource FK、grant/exchange/refresh/applyのidentity検証、service-role限定provision/getterをmigrationとして実装済み。localではdata-less Staging provisionとwrong-resource拒否をrehearseしたが、Production/Stagingには未適用
 - `deleteAllData`はuser data generation、Calendar authority、MCP connection/token、AI生成report、external event mirrorを同じtransaction境界へ含むv5へ移行済み。MCP apply、Calendar callback/sync、通常UI writeとのraceとresponse-loss replayをlocal integrationで検証済み
 - mutation receipt、authorization code、access/refresh token、connection、payload-free security event、Calendar revoke authorityのbounded cleanupと定期callerはrepo実装済み。account削除後の遅延Stripe event向けCustomer digest receiptも30日でcleanupし、並列cleanupでlock中の期限切れ行を残件として報告する。local integrationとaggregate-only unit contractは通過したが、Persistent Stagingでの定期実行、backlog 0、alert証跡は未確認

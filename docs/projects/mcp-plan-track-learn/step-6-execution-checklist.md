@@ -14,7 +14,7 @@ code:
 
 この文書をStep 6の唯一の実行runbookとする。[client beta verification](./step-6-client-beta.md)にある機能契約や合否条件は再定義しない。外部環境の作成、secret変更、migration適用、client登録、gate変更、データ削除、Production変更は、それぞれ対象を特定した明示承認後に行う。
 
-2026-07-29時点ではPersistent Stagingの作成を延期している。以下の外部checkpointは未実施のまま維持し、repo内の準備完了をStep 6完了またはProduction移行許可として扱わない。
+2026-07-29の判断により、Persistent Stagingは作成せず、Draft PR #1760に既にある一時Previewを現在の検証環境として使う。まず下記の「PR Preview preparation」だけを実行する。固定OAuth hostや3 client接続を必要とする後続checkpointは、この一時環境向けのissuer/resource設計を固定するまで未実施とし、repo内の準備完了をStep 6完了またはProduction移行許可として扱わない。
 
 ## Repository-only preparation
 
@@ -53,6 +53,39 @@ STRIPE_LIVEMODE=op://Dayopt-Staging/stripe-test/STRIPE_LIVEMODE
 Productの`.env.example`とrootの`.op-env.local.example`は自動test対象である。Product側は空の変数名、root側は許可した1Password referenceがexactly once存在することを確認する。
 
 `pnpm test:mcp-environment-identity`はlocal DBをdata-less resetしてから既定seedへ戻す。専用local stackで、破棄してよい状態だと確認した時だけ実行する。
+
+## PR Preview preparation
+
+Persistent Stagingの代わりに、PR #1760と一緒に破棄される一時Previewだけを使う。このsectionは外部作業の1〜3番を扱う。後続のmigration rehearsal、OAuth接続、3 client検証、Production deliveryは含めない。
+
+### 1. Inventory
+
+- [x] Production Supabase refが`yvglwblxrnrenfifsnje`である
+- [x] PR #1760のSupabase refが`yvimluegqlcppejgribx`であり、Productionと異なる
+- [x] Supabase branchが`persistent=false`、`with_data=false`、`ACTIVE_HEALTHY`である
+- [x] Vercel Product Previewのbranch aliasが`product-git-codex-mcp-plan-track-learn-dayopt.vercel.app`である
+- [x] PreviewのDB、Auth、API credentialがProductionから分離されている
+
+### 2. Isolated PR Preview
+
+- [x] #1760のexact SHA `051b59e6ab58c54c9fb84f3fc626cd2570eade38`でSupabase Preview checkが成功した
+- [x] remote overrideをPR Previewのexact project refへbindした
+- [x] Preview branchへProduction dataがcopyされていない
+- [x] Production project、Production Auth、Production secret、DNSを変更していない
+- [x] PRをReady化またはmainへmergeしていない
+
+### 3. Closed test identity
+
+- [x] Preview固有のAuth URLとredirect URLをbranch aliasへ固定した
+- [x] public signupとemail signupを無効にした
+- [x] 今後の自動seedを無効にし、Supabase branch action logで適用を確認した
+- [ ] repo既定の既知credentialを持つseed userを検証対象から外す
+- [ ] 1Passwordで管理する専用test userを1件だけ作る
+- [ ] Auth user件数と専用test userだけが有効であることをaggregateで確認する
+
+既存Previewには設定変更前のseedから、既定test user 1件、Plan 39件、Record 43件が残っている。seed無効化は今後の再投入を止めるが、既存行は削除しない。既存userの削除またはcredential変更は明示確認後に行う。
+
+この時点のgeneric Vercel PreviewはMCP OAuthの`staging`または`production` identityとして起動しない。したがって、上記3項目が完了してもOAuth metadata、実client接続、Plan → Track → Learnの外部証跡は未検証である。4番以降へ進む前に、一時branch aliasをissuer/resourceとして扱うか、Preview専用logical environmentを追加するかを別checkpointで固定する。
 
 ## Main merge boundary
 
