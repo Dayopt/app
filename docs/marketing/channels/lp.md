@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-07-30
 ---
 
 # LP ビジュアルディレクション
@@ -25,7 +25,7 @@ Dayoptのマーケティングサイト・LPのビジュアル方向性を定義
 
 ### 書体
 
-**Inter + Noto Sans JP** を目標書体とする。プロダクトは `next/font` で適用済み。マーケティングサイトは現在 system font stack で、ビルド環境を整えるまではこの差分を許容する。
+**Source Sans 3 + Noto Sans JP**（等幅は Source Code Pro）を書体とする。Adobe Source ファミリーで統一しており、Noto Sans JP は Source Han Sans と同一なので和欧が同じ血筋になる。プロダクトとマーケティングサイトはどちらも `next/font` で同一スタックを適用済みで、スタックの正本は `packages/foundations/src/tokens/typography.css`。
 
 - サンセリフで静かに語る。装飾的な書体は使わない
 - ウェイト使い分け:
