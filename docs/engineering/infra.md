@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-21
+last_verified: 2026-07-30
 ---
 
 # インフラ・環境・API/Routing 総覧
@@ -239,6 +239,21 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   全 PR が merge 不能になる。rename する場合は ruleset を先に更新する
 - 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。設定しない
 - `Production Release` は merge 後の証跡であり、required check にはしない
+- **Storybook browser suite（`pnpm test-storybook` / `test-storybook:dark`）は CI に載っていない。**
+  `@dayopt/product` の vitest project（`--project storybook` / `storybook-dark`）として実体はあるが、
+  `ci.yml` にも `pnpm check` にも入っていないため、required check 以前に**そもそも実行されていない**。
+  除外の理由だった「light / dark とも既知 failure がある」は解消済みで、#1499 / #1586 は両方 closed、
+  2026-07-30 のローカル実測では light / dark とも 136 tests 全 pass（42 files pass / 33 skip）。
+  CI へ載せるかは job 数 = 課金分の判断（`.claude/rules/workflow.md` §PR 粒度）なので、別途決める
+- `AI Review` は `ai-review.yml` が危険クラス path を含む PR にだけ publish する commit status で、
+  **ruleset の required には入れない**（発火しない PR では status 自体が付かないため、required にすると
+  全 PR が merge 不能になる）。`finish-branch.sh` は付いた check だけを見るので、この形で gate として機能する。
+  `Production Config Audit` と同じく `pull_request_target` の trusted base 実行のため、run が base SHA に
+  紐づき、status を自分で publish しないと PR 上から消える
+- `ai-review.yml` を `pull_request_target` へ移した PR 自身では ai-review は走らない。`pull_request_target` の
+  workflow 定義は default branch から読まれ、旧 `pull_request` 定義は PR の merge commit から読まれるため、
+  移行 PR ではどちらの trigger も成立しない。**初回の trusted run は merge 後、次に危険クラス path を
+  触る PR で確認する**（`Production Config Audit` 導入時と同じ bootstrap）
 - `ci.yml` は docs / rules のみの変更では `paths-ignore` で skip され、4 job の status 自体が付かない。private + Free plan では GitHub 側の required check 強制が効かず、マージ可否は `scripts/git/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）。ruleset の required 指定を強制できる plan へ移行する場合は、skip される job の扱いを先に設計する
 
 段階的導入案と当時の計測値は履歴であり、現行構成として複製しない。経緯は [ADR-016](./log/2026-03-19-ci-quality-gates-roadmap.md) に残す。
