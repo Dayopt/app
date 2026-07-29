@@ -225,7 +225,7 @@ repo実装は完了した。Persistent Staging evidenceが完了するまでwrit
 ## Rollout Checkpoints
 
 1. **Local** — 現行ブランチだけのfresh DBへ全migrationを適用し、RLS snapshotを一致させた。unit、MCP SDK contract、15 integration files / 207 tests、実MCP HTTPのPlan → Track → Learn flow、cross-tenant最小projectionを通し、RLS/effective privilege検査も維持する
-2. **PR Preview preparation** — #1760の一時Supabase/Vercel PreviewをProductionから分離し、public signupと今後のseedを無効にする。既定seed userを専用test userへ切り替えるまで準備中
+2. **PR Preview preparation** — #1760の一時Supabase/Vercel PreviewをProductionから分離し、public signupと今後のseedを無効にした。既定seed userをbanし、専用temporary test userだけをlogin可能にした。credentialの1Password保存は未完了
 3. **PR Preview rehearsal** — Persistent Stagingは作らず、Productionへ切り出す各段階PRのexact SHAと期待terminalをmanifestへ固定する。一時Preview向けissuer/resource設計を固定した後、旧/new bundle、逆GRANT、再cutover、3 clientのgolden evidenceを確認する
 4. **Production delivery** — [Step 6 rollout execution checklist](./step-6-execution-checklist.md)の段階PR、preflight、観測、cleanupだけを実行順の正本とする。#1760はintegration / rehearsal sourceとして直接mergeしない
 5. **Closed beta** — 対象clientの証跡が揃った後だけwrite gateを順に開き、外部変更反映SLAと成功mutation audit欠損を監視する

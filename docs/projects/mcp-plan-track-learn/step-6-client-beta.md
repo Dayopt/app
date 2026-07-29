@@ -26,7 +26,7 @@ Productionと認証・DB・secretを共有しない検証環境で、ChatGPT、C
 - actual MCP HTTPのgolden flowはlocal DBと`chatgpt` client IDで検証済みだが、実clientのOAuth、confirmation UI、refresh token管理、実network/renderは未検証
 - 3 client共通のactual token route、scope-filtered`tools/list`、単一Plan mutation retry、global gate、parallel refresh、Settings revoke契約をlocal integrationで検証済み。authorize page、client自身のtoken保存/並列処理、client別Plan → Track → Learnは未検証
 - 2026-07-29のexternal inventoryで、PR #1760専用のSupabase Preview `yvimluegqlcppejgribx`とVercel Product Previewを確認した。Supabase branchは`persistent=false`、`with_data=false`であり、Production dataとcredentialを共有しない
-- #1760のremote overrideでpublic signupと今後のseedを無効にし、Supabase branch action logで反映を確認した。設定変更前の既定seed userと業務sample dataはまだ残るため、専用test userへの切替は未完了
+- #1760のremote overrideでpublic signupと今後のseedを無効にし、Supabase branch action logで反映を確認した。設定変更前の既定seed userは1年間banし、専用temporary test user 1件だけをlogin可能にした。credentialの1Password保存は未完了
 - repo内ではProduction/Stagingのexact OAuth identity、Vercel host routing、generic Preview無効化、operational build/readiness gateまで実装済み。現在のgeneric PreviewではMCP OAuth surfaceを公開しないため、固定issuer/resource、secret、client registrationは未作成
 - DB identity singleton、connection/code/tokenのresource FK、grant/exchange/refresh/applyのidentity検証、service-role限定provision/getterをmigrationとして実装済み。localではdata-less Staging provisionとwrong-resource拒否をrehearseしたが、Production/Stagingには未適用
 - `deleteAllData`はuser data generation、Calendar authority、MCP connection/token、AI生成report、external event mirrorを同じtransaction境界へ含むv5へ移行済み。MCP apply、Calendar callback/sync、通常UI writeとのraceとresponse-loss replayをlocal integrationで検証済み
