@@ -230,11 +230,17 @@ const userOwnedCases: UserOwnedRlsCase[] = [
   },
 ];
 
-const SERVICE_OWNED_USER_TABLE_MUTATIONS = new Set([
-  'oauth_tokens',
-  'oauth_audit_log',
-  'plans',
-  'records',
+type DirectMutationOperation = 'update' | 'delete';
+
+const TABLE_PERMISSION_DENIED_USER_MUTATIONS = new Map<
+  string,
+  ReadonlySet<DirectMutationOperation>
+>([
+  ['profiles', new Set<DirectMutationOperation>(['delete'])],
+  ['oauth_tokens', new Set<DirectMutationOperation>(['update', 'delete'])],
+  ['oauth_audit_log', new Set<DirectMutationOperation>(['update', 'delete'])],
+  ['plans', new Set<DirectMutationOperation>(['update', 'delete'])],
+  ['records', new Set<DirectMutationOperation>(['update', 'delete'])],
 ]);
 
 const serviceRoleCases = [
@@ -376,7 +382,10 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         }
 
         const { data, error } = await query;
-        if (operation !== 'select' && SERVICE_OWNED_USER_TABLE_MUTATIONS.has(testCase.table)) {
+        if (
+          operation !== 'select' &&
+          TABLE_PERMISSION_DENIED_USER_MUTATIONS.get(testCase.table)?.has(operation)
+        ) {
           expect(error?.code).toBe('42501');
           return;
         }
