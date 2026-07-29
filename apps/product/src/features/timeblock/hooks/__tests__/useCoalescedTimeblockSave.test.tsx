@@ -63,6 +63,65 @@ describe('useCoalescedTimeblockSave', () => {
     expect(onSave).toHaveBeenLastCalledWith({ note: '次の入力' });
   });
 
+  it('競合時は古いversionを前提にした待機中patchを破棄する', async () => {
+    const firstSave = createDeferred();
+    const conflict = Object.assign(new Error('conflict'), { kind: 'conflict' });
+    const onSave = vi
+      .fn<(patch: TimeblockSavePatch) => Promise<unknown>>()
+      .mockReturnValueOnce(firstSave.promise)
+      .mockResolvedValue(undefined);
+    const { result } = renderHook(() =>
+      useCoalescedTimeblockSave(onSave, {
+        shouldDiscardPending: (error) =>
+          error instanceof Error && 'kind' in error && error.kind === 'conflict',
+      }),
+    );
+
+    act(() => result.current.enqueue({ note: 'version 0 の保存' }));
+    let pendingFlush!: Promise<void>;
+    act(() => {
+      pendingFlush = result.current.flush({ tagId: 'version 0 の待機patch' });
+    });
+
+    const rejection = expect(pendingFlush).rejects.toBe(conflict);
+    firstSave.reject(conflict);
+    await rejection;
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    act(() => result.current.enqueue({ note: '最新versionでの次の編集' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(onSave).toHaveBeenLastCalledWith({ note: '最新versionでの次の編集' });
+  });
+
+  it('結果不明時は待機中patchを自動送信せずqueueを停止する', async () => {
+    const firstSave = createDeferred();
+    const uncertain = Object.assign(new Error('timeout'), { kind: 'uncertain' });
+    const onSave = vi
+      .fn<(patch: TimeblockSavePatch) => Promise<unknown>>()
+      .mockReturnValueOnce(firstSave.promise)
+      .mockResolvedValue(undefined);
+    const { result } = renderHook(() =>
+      useCoalescedTimeblockSave(onSave, {
+        shouldPausePending: (error) =>
+          error instanceof Error && 'kind' in error && error.kind === 'uncertain',
+      }),
+    );
+
+    act(() => result.current.enqueue({ note: '送信中' }));
+    let pendingFlush!: Promise<void>;
+    act(() => {
+      pendingFlush = result.current.flush({ tagId: '待機中' });
+    });
+
+    const rejection = expect(pendingFlush).rejects.toBe(uncertain);
+    firstSave.reject(uncertain);
+    await rejection;
+
+    act(() => result.current.enqueue({ note: '画面に残す入力' }));
+    await act(async () => Promise.resolve());
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
   it('進行中の保存後に最新snapshotを保存し、そのbatch完了までflushを待つ', async () => {
     const firstSave = createDeferred();
     const barrierSave = createDeferred();

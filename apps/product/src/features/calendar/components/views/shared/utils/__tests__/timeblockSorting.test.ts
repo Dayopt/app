@@ -19,6 +19,7 @@ function makeTimeblock(id: string, startDate: Date | null): CalendarEvent {
     color: '#000',
     createdAt: new Date(),
     updatedAt: new Date(),
+    version: '2026-07-15T00:00:00.000000Z',
     displayStartDate: startDate ?? new Date(),
     displayEndDate: startDate ? new Date(startDate.getTime() + 3600000) : new Date(),
     duration: 60,

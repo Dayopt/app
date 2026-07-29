@@ -24,6 +24,7 @@ function makeEvent(overrides: Partial<CalendarEvent> & { id: string }): Calendar
     color: '',
     createdAt: start,
     updatedAt: start,
+    version: '2026-07-15T00:00:00.000000Z',
     displayStartDate: start,
     displayEndDate: end,
     duration: 60,

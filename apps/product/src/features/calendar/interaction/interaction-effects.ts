@@ -29,7 +29,14 @@ export function processInteractionEffects(
   dispatchFn: (action: InteractionAction) => void,
   refs: InteractionRefs,
 ): void {
-  const { stateRef, timerRef, dayColumnsRef, pendingTargetLaneRef, dragLaneRef } = refs;
+  const {
+    stateRef,
+    timerRef,
+    dayColumnsRef,
+    pendingTargetLaneRef,
+    dragLaneRef,
+    interactionVersionRef,
+  } = refs;
 
   for (const effect of effects) {
     switch (effect.type) {
@@ -60,6 +67,7 @@ export function processInteractionEffects(
       case 'EVENT_CLICK': {
         pendingTargetLaneRef.current = null;
         dragLaneRef.current = null;
+        interactionVersionRef.current = null;
         const event = r.events.find((e) => e.id === effect.timeblockId);
         if (event) r.onEventClick?.(event);
         break;
@@ -79,20 +87,27 @@ export function processInteractionEffects(
           if (canCreateLinkedRecord) {
             r.onPlanRecord?.(effect.timeblockId, effect.time);
           }
+          interactionVersionRef.current = null;
           break;
         }
         // 過去PlanはRecordレーンへの記録dropだけ許可し、同一レーンの時間移動は無視する。
         if (event?.kind === 'plan' && event.endDate && event.endDate.getTime() <= Date.now()) {
+          interactionVersionRef.current = null;
           break;
         }
         r.onEventUpdate?.(effect.timeblockId, {
           startTime: effect.time.start,
           endTime: effect.time.end,
+          ...(interactionVersionRef.current
+            ? { expectedUpdatedAt: interactionVersionRef.current }
+            : {}),
         });
+        interactionVersionRef.current = null;
         break;
       }
 
       case 'DROP_REJECTED':
+        interactionVersionRef.current = null;
         // Snap-back animation handled by GhostRenderer
         break;
 
@@ -103,11 +118,16 @@ export function processInteractionEffects(
         r.onEventUpdate?.(effect.timeblockId, {
           startTime: effect.time.start,
           endTime: effect.time.end,
+          ...(interactionVersionRef.current
+            ? { expectedUpdatedAt: interactionVersionRef.current }
+            : {}),
         });
+        interactionVersionRef.current = null;
         break;
       }
 
       case 'RESIZE_REJECTED':
+        interactionVersionRef.current = null;
         // Visual feedback handled by state.isOverlapping
         break;
 

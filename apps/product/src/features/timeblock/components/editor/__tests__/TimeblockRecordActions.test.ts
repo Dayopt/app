@@ -19,9 +19,9 @@ vi.mock('../../../hooks/useTimeblockRecordMutations', () => ({
 }));
 
 function createDeferred() {
-  let resolve!: () => void;
+  let resolve!: (value: string) => void;
   let reject!: (reason?: unknown) => void;
-  const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+  const promise = new Promise<string>((resolvePromise, rejectPromise) => {
     resolve = resolvePromise;
     reject = rejectPromise;
   });
@@ -60,11 +60,14 @@ describe('TimeblockRecordActions', () => {
     expect(button).toHaveAttribute('aria-busy', 'true');
     expect(mocks.recordPlan).not.toHaveBeenCalled();
 
-    preparation.resolve();
+    preparation.resolve('2026-07-01T00:00:00.000001Z');
 
     await waitFor(() =>
       expect(mocks.recordPlan).toHaveBeenCalledWith(
-        { id: '00000000-0000-4000-8000-000000000001' },
+        {
+          id: '00000000-0000-4000-8000-000000000001',
+          expectedUpdatedAt: '2026-07-01T00:00:00.000001Z',
+        },
         expect.objectContaining({ onSettled: expect.any(Function) }),
       ),
     );
@@ -102,7 +105,7 @@ describe('TimeblockRecordActions', () => {
     render(
       createElement(RecordPlanButton, {
         planId: '00000000-0000-4000-8000-000000000001',
-        beforeRecord: vi.fn().mockResolvedValue(undefined),
+        beforeRecord: vi.fn().mockResolvedValue('2026-07-01T00:00:00.000001Z'),
       }),
     );
 

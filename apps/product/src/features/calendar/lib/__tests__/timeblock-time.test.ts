@@ -21,6 +21,7 @@ function makeTimeblock(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     color: 'blue',
     createdAt: start,
     updatedAt: start,
+    version: '2026-07-15T00:00:00.000000Z',
     duration: 60,
     isMultiDay: false,
     origin: 'planned',

@@ -16,6 +16,7 @@ function makeRecordEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent 
     color: '',
     createdAt: startDate,
     updatedAt: startDate,
+    version: '2026-07-15T00:00:00.000000Z',
     displayStartDate: startDate,
     displayEndDate: endDate,
     duration: 30,

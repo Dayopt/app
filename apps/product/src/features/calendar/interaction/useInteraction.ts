@@ -103,6 +103,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
   const pendingTargetLaneRef = useRef<'plan' | 'record' | null>(null);
   // machine は DRAG_STORE_END → DROP の順でeffectを出すため、drop判定用laneを別refに保持する。
   const dragLaneRef = useRef<{ source: 'plan' | 'record'; target: 'plan' | 'record' } | null>(null);
+  const interactionVersionRef = useRef<string | null>(null);
 
   const refs: InteractionRefs = {
     stateRef,
@@ -110,6 +111,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
     dayColumnsRef,
     pendingTargetLaneRef,
     dragLaneRef,
+    interactionVersionRef,
   };
 
   // ---- Build context for the reducer ----
@@ -160,6 +162,16 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
 
   const dispatch = useCallback(function stableDispatch(action: InteractionAction) {
     const r = latestRef.current;
+    if (
+      action.type === 'POINTER_DOWN' ||
+      action.type === 'TOUCH_START' ||
+      action.type === 'RESIZE_START'
+    ) {
+      interactionVersionRef.current =
+        r.events.find((event) => event.id === action.timeblockId)?.version ?? null;
+    } else if (action.type === 'CANCEL') {
+      interactionVersionRef.current = null;
+    }
     const ctx = buildContext(r);
     const { state: next, effects } = interactionReducer(stateRef.current, action, ctx);
     stateRef.current = next;
@@ -170,6 +182,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
       dayColumnsRef,
       pendingTargetLaneRef,
       dragLaneRef,
+      interactionVersionRef,
     });
   }, []);
 

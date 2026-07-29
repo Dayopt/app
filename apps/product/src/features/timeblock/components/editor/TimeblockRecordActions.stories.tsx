@@ -5,11 +5,11 @@ import { ConfirmDayButton, RecordPlanButton } from './TimeblockRecordActions';
 
 const planId = '00000000-0000-4000-8000-000000000001';
 
-function prepareRecord(): Promise<void> {
-  return Promise.resolve();
+function prepareRecord(): Promise<string> {
+  return Promise.resolve('2026-07-01T00:00:00.000001Z');
 }
 
-function waitForPreparation(): Promise<void> {
+function waitForPreparation(): Promise<string> {
   return new Promise(() => undefined);
 }
 

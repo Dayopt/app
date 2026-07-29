@@ -8,6 +8,7 @@ import { initTRPC } from '@trpc/server';
 import superjson from 'superjson';
 
 import { type ProductAccessLevel } from '@/lib/auth/domain';
+import { getClientSafeServiceCode } from '@/lib/trpc/client-safe-service-code';
 import type { Context } from '@/lib/trpc/context';
 
 /**
@@ -48,6 +49,7 @@ export const t = initTRPC
         message,
         data: {
           ...shape.data,
+          serviceCode: getClientSafeServiceCode(error.cause),
           // 開発環境でのみスタックトレースを含める
           stack: isProduction ? undefined : error.stack,
         },

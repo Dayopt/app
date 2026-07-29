@@ -16,6 +16,7 @@ function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     tagId: 'tag-reading',
     createdAt: new Date('2026-07-14T00:00:00.000Z'),
     updatedAt: new Date('2026-07-14T00:00:00.000Z'),
+    version: '2026-07-14T00:00:00.000000Z',
     displayStartDate: new Date(2026, 6, 14, 9, 15),
     displayEndDate: new Date(2026, 6, 14, 10, 45),
     duration: 90,

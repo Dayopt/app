@@ -114,6 +114,7 @@ interface CalendarGridContentProps {
           startTime: Date;
           endTime: Date;
           resetActualTime?: boolean;
+          expectedUpdatedAt?: string;
         },
       ) => Promise<void | { skipToast: true }> | void)
     | undefined;
@@ -204,6 +205,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
         startTime: Date;
         endTime: Date;
         resetActualTime?: boolean;
+        expectedUpdatedAt?: string;
       },
     ) => {
       return onEventUpdate?.(eventId, updates);

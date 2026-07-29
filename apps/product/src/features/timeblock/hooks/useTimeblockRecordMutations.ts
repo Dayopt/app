@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
 
+import { insertTimeModelRowIntoMatchingLists } from './useTimeblockWriteMutations';
+
 function isTimeModelListQuery(query: { queryKey: unknown }): boolean {
   const key = query.queryKey;
   return (
@@ -17,7 +19,11 @@ function isTimeModelListQuery(query: { queryKey: unknown }): boolean {
 }
 
 function isTimeOverlapError(error: { message: string }): boolean {
-  return error.message.includes('TIME_OVERLAP');
+  const serviceCode =
+    'data' in error && error.data && typeof error.data === 'object' && 'serviceCode' in error.data
+      ? error.data.serviceCode
+      : undefined;
+  return serviceCode === 'TIME_OVERLAP' || error.message.includes('TIME_OVERLAP');
 }
 
 /** Plan → Record の記録導線に共通の rollback / 再検証を提供する。 */
@@ -26,13 +32,14 @@ export function useTimeblockRecordMutations() {
   const queryClient = useQueryClient();
   const t = useTranslations('timeblock.editor');
 
-  const recordPlan = api.plans.record.useMutation({
+  const recordPlan = api.planCommands.record.useMutation({
+    retry: false,
     onMutate: async () => {
       await Promise.all([utils.plans.list.cancel(), utils.records.list.cancel()]);
       return { snapshots: queryClient.getQueriesData({ predicate: isTimeModelListQuery }) };
     },
     onSuccess: (record) => {
-      utils.records.list.setData(undefined, (old) => (old ? [...old, record] : [record]));
+      insertTimeModelRowIntoMatchingLists(queryClient, 'records', record);
       utils.records.getById.setData({ id: record.id }, record);
       toast.success(t('toast.recorded'));
     },
@@ -48,14 +55,15 @@ export function useTimeblockRecordMutations() {
     },
   });
 
-  const confirmDay = api.plans.confirmDay.useMutation({
+  const confirmDay = api.planCommands.confirmDay.useMutation({
+    retry: false,
     onMutate: async () => {
       await Promise.all([utils.plans.list.cancel(), utils.records.list.cancel()]);
       return { snapshots: queryClient.getQueriesData({ predicate: isTimeModelListQuery }) };
     },
     onSuccess: (records) => {
-      utils.records.list.setData(undefined, (old) => (old ? [...old, ...records] : records));
       for (const record of records) {
+        insertTimeModelRowIntoMatchingLists(queryClient, 'records', record);
         utils.records.getById.setData({ id: record.id }, record);
       }
       toast.success(t('toast.dayConfirmed'));

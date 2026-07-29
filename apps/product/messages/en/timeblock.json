@@ -175,6 +175,8 @@
         "recorded": "Recorded ✓",
         "dayConfirmed": "Day recorded ✓",
         "overlap": "This time slot is already taken",
+        "conflict": "This item changed elsewhere, so the latest version was loaded",
+        "writeUnresolved": "The save result could not be confirmed. Reopen this view to check the latest version",
         "saveFailed": "Could not save. Your changes are still here. Please try again",
         "recordFailed": "Could not record. Please try again",
         "confirmFailed": "Could not confirm the day. Please try again",

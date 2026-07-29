@@ -14,6 +14,8 @@ export interface CalendarEvent {
   tagId?: string | null | undefined;
   createdAt: Date;
   updatedAt: Date;
+  /** DB compare-and-swap用の生のupdated_at。Dateへ変換せずmutationへ渡す。 */
+  version: string;
   // Display-specific properties
   displayStartDate: Date;
   displayEndDate: Date;
