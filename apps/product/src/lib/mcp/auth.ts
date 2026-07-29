@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { env } from '@/env';
 import { canAccessProFeatures } from '@/lib/auth/domain';
 import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
@@ -14,7 +15,10 @@ import {
   type OAuthClientId,
   type SupportedScope,
 } from '@/lib/oauth-server';
-import { assertDatabaseOAuthIdentity } from '@/lib/oauth-server/database-identity';
+import {
+  assertDatabaseOAuthIdentity,
+  resolveDatabaseOAuthProjectRef,
+} from '@/lib/oauth-server/database-identity';
 import { getOAuthEnvironmentConfig } from '@/lib/oauth-server/identity-env';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 
@@ -45,8 +49,15 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
 
   try {
     const expectedIdentity = getOAuthEnvironmentConfig();
-    await assertDatabaseOAuthIdentity(expectedIdentity, () =>
-      db.rpc('get_mcp_environment_identity_v1'),
+    const expectedSupabaseProjectRef = resolveDatabaseOAuthProjectRef({
+      environment: expectedIdentity.environment,
+      supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    });
+    await assertDatabaseOAuthIdentity(
+      expectedIdentity,
+      () => db.rpc('get_mcp_environment_identity_v2'),
+      expectedSupabaseProjectRef,
     );
   } catch (error) {
     throwDatabaseVerificationError(error, 'verify_mcp_environment_identity');

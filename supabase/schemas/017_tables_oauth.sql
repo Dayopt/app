@@ -14,8 +14,9 @@
 --   20260726021453_fix_mcp_environment_legacy_binding.sql
 --   20260726033000_expand_user_data_purge_generation.sql
 --   20260726040100_add_external_authority_maintenance.sql
+--   20260729061330_mcp_preview_environment_identity.sql
 --
--- 最終同期日: 2026-07-26
+-- 最終同期日: 2026-07-29
 -- 正確なconstraint / index / privilegeは上記migrationとRLS snapshotを正とする。
 -- ============================================================
 
@@ -23,14 +24,17 @@
 -- mcp_environment_identity: DBが所有する不変のOAuth/MCP identity
 --
 -- 0行は未provision、1行は確定済み。UPDATE / DELETEはtriggerで拒否する。
--- exactなProductionまたはStaging tupleだけを許可し、resource_uriはUNIQUE。
+-- exactなProduction、Staging、またはPreview tupleだけを許可し、
+-- PreviewはSupabase project refも固定する。resource_uriはUNIQUE。
 -- connection / code / tokenはこのresource_uriへFKでbindされる。
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE public.mcp_environment_identity (
   singleton_key           BOOLEAN     PRIMARY KEY DEFAULT true CHECK (singleton_key),
-  environment             TEXT        NOT NULL CHECK (environment IN ('production', 'staging')),
+  environment             TEXT        NOT NULL
+    CHECK (environment IN ('production', 'staging', 'preview')),
   authorization_server_uri TEXT       NOT NULL,
   resource_uri            TEXT        NOT NULL UNIQUE,
+  supabase_project_ref     TEXT,
   provisioned_at          TIMESTAMPTZ NOT NULL DEFAULT pg_catalog.now()
 );
 

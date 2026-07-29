@@ -2,7 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 import { logger } from '@/lib/logger';
-import { assertDatabaseOAuthIdentity } from '@/lib/oauth-server/database-identity';
+import {
+  assertDatabaseOAuthIdentity,
+  resolveDatabaseOAuthProjectRef,
+} from '@/lib/oauth-server/database-identity';
 
 import { resolveHealthStatus, type OverallHealthStatus } from './health-status';
 
@@ -76,8 +79,15 @@ async function checkDatabase(): Promise<'ok' | 'error' | 'warning'> {
     if (isOperationalDeployment()) {
       const { getOAuthEnvironmentConfig } = await import('@/lib/oauth-server/identity-env');
       const expectedIdentity = getOAuthEnvironmentConfig();
-      await assertDatabaseOAuthIdentity(expectedIdentity, () =>
-        supabase.rpc('get_mcp_environment_identity_v1'),
+      const expectedSupabaseProjectRef = resolveDatabaseOAuthProjectRef({
+        environment: expectedIdentity.environment,
+        supabaseUrl: dbUrl,
+        serviceRoleKey,
+      });
+      await assertDatabaseOAuthIdentity(
+        expectedIdentity,
+        () => supabase.rpc('get_mcp_environment_identity_v2'),
+        expectedSupabaseProjectRef,
       );
     }
 
@@ -150,6 +160,13 @@ function getEnvironment(): string {
  */
 function isOperationalDeployment(): boolean {
   if (process.env.VERCEL_TARGET_ENV === 'staging') return true;
+  if (
+    process.env.VERCEL_ENV === 'preview' &&
+    process.env.VERCEL_TARGET_ENV === 'preview' &&
+    process.env.MCP_OAUTH_ENVIRONMENT === 'preview'
+  ) {
+    return true;
+  }
   if (process.env.VERCEL_ENV) return process.env.VERCEL_ENV === 'production';
 
   return process.env.NODE_ENV === 'production';

@@ -335,11 +335,107 @@ BEGIN
   END IF;
 
   IF EXISTS (SELECT 1 FROM auth.users) THEN
-    RAISE EXCEPTION 'Fresh staging rehearsal must not contain users';
+    RAISE EXCEPTION 'Fresh identity rehearsal must not contain users';
   END IF;
 END;
 $$;
 
+DO $$
+BEGIN
+  PERFORM pg_catalog.set_config(
+    'request.jwt.claims',
+    '{"role":"service_role"}',
+    false
+  );
+
+  BEGIN
+    PERFORM public.provision_mcp_preview_environment_identity_v2(
+      'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+      'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+      'abcdefghijklmnopqrst'
+    );
+    RAISE EXCEPTION 'Expected missing Preview project ref rejection';
+  EXCEPTION WHEN SQLSTATE 'DI007' THEN
+    NULL;
+  END;
+
+  PERFORM pg_catalog.set_config(
+    'request.jwt.claims',
+    '{"role":"service_role","ref":"abcdefghijklmnopqrst"}',
+    false
+  );
+
+  PERFORM public.provision_mcp_preview_environment_identity_v2(
+    'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+    'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+    'abcdefghijklmnopqrst'
+  );
+
+  -- Same-value retry is the only permitted repeat.
+  PERFORM public.provision_mcp_preview_environment_identity_v2(
+    'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+    'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+    'abcdefghijklmnopqrst'
+  );
+END;
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.mcp_environment_identity AS identity
+    WHERE identity.singleton_key = true
+      AND identity.environment = 'preview'
+      AND identity.authorization_server_uri
+        = 'https://product-git-codex-mcp-preview-dayopt.vercel.app'
+      AND identity.resource_uri
+        = 'https://product-git-codex-mcp-preview-dayopt.vercel.app'
+      AND identity.supabase_project_ref = 'abcdefghijklmnopqrst'
+  ) THEN
+    RAISE EXCEPTION 'Preview identity does not match the exact tuple';
+  END IF;
+
+  IF NOT pg_catalog.has_function_privilege(
+    'service_role',
+    'public.get_mcp_environment_identity_v2()',
+    'EXECUTE'
+  ) OR NOT pg_catalog.has_function_privilege(
+    'service_role',
+    'public.provision_mcp_preview_environment_identity_v2(text,text,text)',
+    'EXECUTE'
+  ) OR pg_catalog.has_function_privilege(
+    'anon',
+    'public.get_mcp_environment_identity_v2()',
+    'EXECUTE'
+  ) OR pg_catalog.has_function_privilege(
+    'authenticated',
+    'public.provision_mcp_preview_environment_identity_v2(text,text,text)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'Preview identity RPC privileges are not service-role-only';
+  END IF;
+
+  BEGIN
+    UPDATE public.mcp_environment_identity
+    SET supabase_project_ref = 'zyxwvutsrqponmlkjihg'
+    WHERE singleton_key = true;
+    RAISE EXCEPTION 'Expected Preview identity update rejection';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+END;
+$$;
+SQL
+
+echo "Resetting the local database for the established Staging identity rehearsal..."
+reset_local_database "seedless reset" --no-seed
+
+psql "$local_database_url" \
+  -X \
+  -q \
+  -v ON_ERROR_STOP=1 \
+  <<'SQL'
 DO $$
 BEGIN
   PERFORM pg_catalog.set_config(
@@ -444,7 +540,9 @@ BEGIN
     WHERE namespace_row.nspname = 'public'
       AND procedure_row.proname = ANY (ARRAY[
         'get_mcp_environment_identity_v1',
+        'get_mcp_environment_identity_v2',
         'provision_mcp_environment_identity_v1',
+        'provision_mcp_preview_environment_identity_v2',
         'issue_oauth_token_pair',
         'bind_legacy_oauth_insert_to_connection'
       ]::TEXT[])

@@ -65,19 +65,29 @@ describe('GET /api/health', () => {
     mocks.rpc.mockImplementation(() =>
       Promise.resolve({
         data: [
-          process.env.VERCEL_TARGET_ENV === 'staging'
+          process.env.MCP_OAUTH_ENVIRONMENT === 'preview'
             ? {
-                environment: 'staging',
-                authorization_server_uri: 'https://staging.dayopt.app',
-                resource_uri: 'https://mcp.staging.dayopt.app',
-                provisioned_at: '2026-07-26T00:00:00.000Z',
+                environment: 'preview',
+                authorization_server_uri: 'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+                resource_uri: 'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+                supabase_project_ref: 'abcdefghijklmnopqrst',
+                provisioned_at: '2026-07-29T00:00:00.000Z',
               }
-            : {
-                environment: 'production',
-                authorization_server_uri: 'https://app.dayopt.app',
-                resource_uri: 'https://mcp.dayopt.app',
-                provisioned_at: '2026-07-26T00:00:00.000Z',
-              },
+            : process.env.VERCEL_TARGET_ENV === 'staging'
+              ? {
+                  environment: 'staging',
+                  authorization_server_uri: 'https://staging.dayopt.app',
+                  resource_uri: 'https://mcp.staging.dayopt.app',
+                  supabase_project_ref: null,
+                  provisioned_at: '2026-07-26T00:00:00.000Z',
+                }
+              : {
+                  environment: 'production',
+                  authorization_server_uri: 'https://app.dayopt.app',
+                  resource_uri: 'https://mcp.dayopt.app',
+                  supabase_project_ref: null,
+                  provisioned_at: '2026-07-26T00:00:00.000Z',
+                },
         ],
         error: null,
       }),
@@ -147,6 +157,45 @@ describe('GET /api/health', () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: 'healthy' });
+  });
+
+  it('OAuth-enabled Previewをproject refと依存必須かつ詳細非公開として扱う', async () => {
+    stubPreviewOperationalEnvironment();
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://abcdefghijklmnopqrst.supabase.co');
+    vi.stubEnv(
+      'SUPABASE_SERVICE_ROLE_KEY',
+      createUnsignedTestJwt({
+        role: 'service_role',
+        ref: 'abcdefghijklmnopqrst',
+      }),
+    );
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://preview-example.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'preview-redis-token-sentinel');
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: 'healthy' });
+    expect(mocks.rpc).toHaveBeenCalledWith('get_mcp_environment_identity_v2');
+  });
+
+  it('OAuth-enabled PreviewはSupabase project ref driftをunhealthyにする', async () => {
+    stubPreviewOperationalEnvironment();
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://abcdefghijklmnopqrst.supabase.co');
+    vi.stubEnv(
+      'SUPABASE_SERVICE_ROLE_KEY',
+      createUnsignedTestJwt({
+        role: 'service_role',
+        ref: 'zyxwvutsrqponmlkjihg',
+      }),
+    );
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://preview-example.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'preview-redis-token-sentinel');
+
+    const response = await GET();
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ status: 'unhealthy' });
   });
 
   it('staging Custom EnvironmentはRedis未設定をunhealthyにする', async () => {
@@ -352,4 +401,29 @@ function stubStagingOperationalEnvironment(): void {
   vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'staging');
   vi.stubEnv('OAUTH_AUTHORIZATION_SERVER_URI', 'https://staging.dayopt.app');
   vi.stubEnv('MCP_CANONICAL_RESOURCE_URI', 'https://mcp.staging.dayopt.app');
+}
+
+function stubPreviewOperationalEnvironment(): void {
+  vi.stubEnv('VERCEL_ENV', 'preview');
+  vi.stubEnv('VERCEL_TARGET_ENV', 'preview');
+  vi.stubEnv('VERCEL_BRANCH_URL', 'product-git-codex-mcp-preview-dayopt.vercel.app');
+  vi.stubEnv('VERCEL_GIT_COMMIT_REF', 'codex/mcp-preview');
+  vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'preview');
+  vi.stubEnv('MCP_OAUTH_PREVIEW_BRANCH', 'codex/mcp-preview');
+  vi.stubEnv(
+    'OAUTH_AUTHORIZATION_SERVER_URI',
+    'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+  );
+  vi.stubEnv(
+    'MCP_CANONICAL_RESOURCE_URI',
+    'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+  );
+}
+
+function createUnsignedTestJwt(payload: Record<string, string>): string {
+  return [
+    Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url'),
+    Buffer.from(JSON.stringify(payload)).toString('base64url'),
+    'signature',
+  ].join('.');
 }

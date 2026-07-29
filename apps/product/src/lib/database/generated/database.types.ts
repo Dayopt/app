@@ -233,6 +233,7 @@ export type Database = {
           provisioned_at: string;
           resource_uri: string;
           singleton_key: boolean;
+          supabase_project_ref: string | null;
         };
         Insert: {
           authorization_server_uri: string;
@@ -240,6 +241,7 @@ export type Database = {
           provisioned_at?: string;
           resource_uri: string;
           singleton_key?: boolean;
+          supabase_project_ref?: string | null;
         };
         Update: {
           authorization_server_uri?: string;
@@ -247,6 +249,7 @@ export type Database = {
           provisioned_at?: string;
           resource_uri?: string;
           singleton_key?: boolean;
+          supabase_project_ref?: string | null;
         };
         Relationships: [];
       };
@@ -1853,6 +1856,16 @@ export type Database = {
           resource_uri: string;
         }[];
       };
+      get_mcp_environment_identity_v2: {
+        Args: never;
+        Returns: {
+          authorization_server_uri: string;
+          environment: string;
+          provisioned_at: string;
+          resource_uri: string;
+          supabase_project_ref: string;
+        }[];
+      };
       get_timeblock_context_marker_v1: {
         Args: { p_user_id: string };
         Returns: {
@@ -2051,6 +2064,20 @@ export type Database = {
           environment: string;
           provisioned_at: string;
           resource_uri: string;
+        }[];
+      };
+      provision_mcp_preview_environment_identity_v2: {
+        Args: {
+          p_authorization_server_uri: string;
+          p_resource_uri: string;
+          p_supabase_project_ref: string;
+        };
+        Returns: {
+          authorization_server_uri: string;
+          environment: string;
+          provisioned_at: string;
+          resource_uri: string;
+          supabase_project_ref: string;
         }[];
       };
       reconcile_billing_mutation_v2: {

@@ -15,6 +15,7 @@
 --   - 20260712212527_records_table_and_drop_entries.sql
 --   - 20260713120023_drop_time_model_compatibility_layer.sql
 --   - 20260726013339_mcp_environment_identity.sql
+--   - 20260729061330_mcp_preview_environment_identity.sql
 --   - 20260726015311_mcp_environment_authority_binding.sql
 --   - 20260726021453_fix_mcp_environment_legacy_binding.sql
 --   - 20260726033000_expand_user_data_purge_generation.sql
@@ -71,6 +72,9 @@
 --   confirm_day_plans_to_records(...)          — 完了 Plan を Record として一括確定
 --   get_mcp_environment_identity_v1()          — DB固有のOAuth/MCP identityをservice-roleへ返す
 --   provision_mcp_environment_identity_v1(...) — data-less DBのidentityを一度だけ固定
+--   get_mcp_environment_identity_v2()          — Preview project refを含むidentityを返す
+--   provision_mcp_preview_environment_identity_v2(...)
+--                                               — fresh Preview identityを一度だけ固定
 --   create_oauth_authorization_grant_v2(...)   — identity-bound connection/codeをatomic発行
 --   exchange_oauth_authorization_code_v2(...)  — code消費とtoken pair発行をatomic実行
 --   rotate_oauth_refresh_token_v2(...)         — connection-bound refresh rotation/reuse検知

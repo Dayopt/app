@@ -84,7 +84,7 @@ describe('verifyAccessToken dependency failures', () => {
     },
   ])('returns 503 before token lookup when DB identity is $name', async ({ result }) => {
     const db = createAccessDb({
-      get_mcp_environment_identity_v1: result,
+      get_mcp_environment_identity_v2: result,
     });
     createMcpAccessDbClient.mockReturnValue(db);
 
@@ -267,12 +267,13 @@ interface QueryResult {
 
 function createAccessDb(overrides: Partial<Record<string, QueryResult>>) {
   const defaults: Record<string, QueryResult> = {
-    get_mcp_environment_identity_v1: {
+    get_mcp_environment_identity_v2: {
       data: [
         {
           environment: 'production',
           authorization_server_uri: 'https://app.dayopt.app',
           resource_uri: 'https://mcp.dayopt.app',
+          supabase_project_ref: null,
           provisioned_at: '2026-07-26T00:00:00.000Z',
         },
       ],
