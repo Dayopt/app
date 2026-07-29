@@ -82,9 +82,9 @@ Persistent Stagingの代わりに、PR #1760と一緒に破棄される一時Pre
 - [x] repo既定の既知credentialを持つseed userを1年間banし、検証対象から外す
 - [x] 専用temporary test userを1件だけ作る
 - [x] Auth user 2件のうち、専用temporary test user 1件だけが有効であることをaggregateで確認する
-- [ ] temporary test userのcredentialを1Passwordへ保存する
+- [x] temporary test userのcredentialを1Passwordの`Dayopt-Staging`へ保存する
 
-既存Previewには設定変更前のseedから、既定test user 1件、Plan 39件、Record 43件が残っている。seed無効化は今後の再投入を止めるが、既存行は削除しない。既定test userはsample dataを維持するため削除せず、Previewの寿命を超える1年間banした。専用temporary test userだけがlogin可能である。
+既存Previewには設定変更前のseedから、既定test user 1件、Plan 39件、Record 43件が残っている。seed無効化は今後の再投入を止めるが、既存行は削除しない。既定test userはsample dataを維持するため削除せず、Previewの寿命を超える1年間banした。専用temporary test userだけがlogin可能であり、credentialはrepo、Issue、実行logへ保存しない。
 
 この時点のgeneric Vercel PreviewはMCP OAuthの`staging`または`production` identityとして起動しない。したがって、上記3項目が完了してもOAuth metadata、実client接続、Plan → Track → Learnの外部証跡は未検証である。4番以降へ進む前に、一時branch aliasをissuer/resourceとして扱うか、Preview専用logical environmentを追加するかを別checkpointで固定する。
 
