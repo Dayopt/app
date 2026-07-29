@@ -97,7 +97,7 @@ fi
 # ── 1. PR 状態を取得 ────────────────────────────────────────────────
 step "PR #$PR_NUMBER の状態を確認"
 
-PR_JSON="$(gh pr view "$PR_NUMBER" --json state,headRefName,mergeable,mergeStateStatus,statusCheckRollup 2>/dev/null || true)"
+PR_JSON="$(gh pr view "$PR_NUMBER" --json state,headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup 2>/dev/null || true)"
 
 if [[ -z "$PR_JSON" ]]; then
   error "PR #$PR_NUMBER を取得できませんでした。番号とネットワークを確認してください。"
@@ -106,9 +106,16 @@ fi
 
 PR_STATE="$(printf '%s' "$PR_JSON" | jq -r '.state')"
 BRANCH="$(printf '%s' "$PR_JSON" | jq -r '.headRefName')"
+HEAD_OID="$(printf '%s' "$PR_JSON" | jq -r '.headRefOid')"
+REPO="$(gh repo view --json nameWithOwner -q '.nameWithOwner')"
 
 if [[ -z "$BRANCH" || "$BRANCH" == "null" ]]; then
   error "PR #$PR_NUMBER の head branch を特定できませんでした。"
+  exit 1
+fi
+
+if ! [[ "$HEAD_OID" =~ ^[0-9a-f]{40}$ ]]; then
+  error "PR #$PR_NUMBER の head SHA を特定できませんでした。"
   exit 1
 fi
 
@@ -122,14 +129,60 @@ fi
 if [[ "$PR_STATE" == "OPEN" ]]; then
   step "PR #$PR_NUMBER をマージ"
 
-  # 失敗している check がないか確認する（CheckRun は .conclusion、StatusContext は .state を持つ）
-  FAILED_CHECKS="$(printf '%s' "$PR_JSON" | jq -r '
-    (.statusCheckRollup // [])
-    | map(select(
-        ((.conclusion // "") | ascii_downcase | . == "failure" or . == "cancelled" or . == "timed_out")
-        or ((.state // "") | ascii_downcase | . == "failure" or . == "error")
-      ))
-    | length')"
+  # contract変更時のtrusted audit CheckRunは意図的にfailureになる。exact headへ
+  # そのfailureより後のmetadata audit successが付いた場合だけ、その一件を上書き済みと扱う。
+  # timestamp、workflow/job名、status description、Actions URLの欠落・不一致はfail-closedにする。
+  COMMIT_STATUS_JSON="$(gh api "repos/$REPO/commits/$HEAD_OID/status" 2>/dev/null || true)"
+  if [[ -z "$COMMIT_STATUS_JSON" ]]; then
+    COMMIT_STATUS_JSON="null"
+  fi
+  TRUSTED_AUDIT_TARGET="$(
+    printf '%s' "$COMMIT_STATUS_JSON" \
+      | jq -r '
+          [
+            (.statuses // [])[]
+            | select(.context == "Production Config Audit")
+          ]
+          | sort_by(.created_at // "")
+          | last
+          | .target_url // ""
+        '
+  )"
+  AUDIT_RUN_JSON="null"
+  TRUSTED_AUDIT_PREFIX="https://github.com/$REPO/actions/runs/"
+  if [[ "$TRUSTED_AUDIT_TARGET" == "$TRUSTED_AUDIT_PREFIX"* ]]; then
+    AUDIT_RUN_ID="${TRUSTED_AUDIT_TARGET#"$TRUSTED_AUDIT_PREFIX"}"
+  else
+    AUDIT_RUN_ID=""
+  fi
+  if [[ "$AUDIT_RUN_ID" =~ ^[0-9]+$ ]]; then
+    AUDIT_RUN_JSON="$(
+      gh api "repos/$REPO/actions/runs/$AUDIT_RUN_ID" 2>/dev/null || printf 'null'
+    )"
+  fi
+  CHECK_SUMMARY="$(
+    jq -cn \
+      --arg repository "$REPO" \
+      --argjson pr "$PR_JSON" \
+      --argjson commitStatus "$COMMIT_STATUS_JSON" \
+      --argjson auditRun "$AUDIT_RUN_JSON" \
+      '{
+        repository: $repository,
+        pr: $pr,
+        commitStatus: $commitStatus,
+        auditRun: $auditRun
+      }' \
+      | node scripts/git/merge-check-status.mjs
+  )"
+
+  FAILED_CHECKS="$(printf '%s' "$CHECK_SUMMARY" | jq -r '.failedChecks')"
+  SUPERSEDED_AUDIT_FAILURES="$(
+    printf '%s' "$CHECK_SUMMARY" | jq -r '.supersededTrustedAuditFailures'
+  )"
+
+  if [[ "$SUPERSEDED_AUDIT_FAILURES" != "0" ]]; then
+    info "exact-head trusted auditで上書き済みのcheck: $SUPERSEDED_AUDIT_FAILURES 件"
+  fi
 
   if [[ "$FAILED_CHECKS" != "0" ]]; then
     error "失敗している check が $FAILED_CHECKS 件あります。マージを中止します。"
@@ -151,13 +204,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   # 実行中・待機中の check も待つ。private repo + Free plan では GitHub 側の
   # required check 強制が効かないため、ここで止めないと CI 完了前にマージできてしまう。
-  PENDING_CHECKS="$(printf '%s' "$PR_JSON" | jq -r '
-    (.statusCheckRollup // [])
-    | map(select(
-        ((.status // "") | ascii_downcase | . == "in_progress" or . == "queued" or . == "pending" or . == "waiting" or . == "requested")
-        or ((.state // "") | ascii_downcase | . == "pending")
-      ))
-    | length')"
+  PENDING_CHECKS="$(printf '%s' "$CHECK_SUMMARY" | jq -r '.pendingChecks')"
 
   if [[ "$PENDING_CHECKS" != "0" ]]; then
     error "実行中の check が $PENDING_CHECKS 件あります。完了を待ってから再実行してください。"
@@ -174,13 +221,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # ci.yml は docs のみの変更なら paths-ignore で skip されるので、「CI が
   # 走らない PR」自体は異常ではない。ただし Docs Guard は paths フィルタを持たず
   # 全 PR で走るため、success が 1 件も無い状態は構成の異常を意味する。
-  SUCCESS_CHECKS="$(printf '%s' "$PR_JSON" | jq -r '
-    (.statusCheckRollup // [])
-    | map(select(
-        ((.conclusion // "") | ascii_downcase | . == "success")
-        or ((.state // "") | ascii_downcase | . == "success")
-      ))
-    | length')"
+  SUCCESS_CHECKS="$(printf '%s' "$CHECK_SUMMARY" | jq -r '.successChecks')"
 
   if [[ "$SUCCESS_CHECKS" == "0" ]]; then
     error "成功した check が 1 件もありません。マージを中止します。"
@@ -190,15 +231,21 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   fi
 
   if [[ "$DRY_RUN" == true ]]; then
-    echo "   [dry-run] gh pr merge $PR_NUMBER --merge --delete-branch" >&2
+    echo "   [dry-run] gh pr merge $PR_NUMBER --merge --delete-branch --match-head-commit $HEAD_OID" >&2
   else
     # main が他 worktree で checkout 中だと gh pr merge が失敗しうる。
     # その場合は gh api で直接マージにフォールバックする。
-    if ! gh pr merge "$PR_NUMBER" --merge --delete-branch 2>/tmp/branch-finish-merge-err; then
+    if ! gh pr merge "$PR_NUMBER" \
+      --merge \
+      --delete-branch \
+      --match-head-commit "$HEAD_OID" \
+      2>/tmp/branch-finish-merge-err; then
       cat /tmp/branch-finish-merge-err >&2 || true
       info "gh pr merge が失敗しました。gh api での直接マージを試みます。"
-      REPO="$(gh repo view --json nameWithOwner -q '.nameWithOwner')"
-      gh api -X PUT "repos/$REPO/pulls/$PR_NUMBER/merge" -f merge_method=merge >/dev/null
+      gh api -X PUT "repos/$REPO/pulls/$PR_NUMBER/merge" \
+        -f merge_method=merge \
+        -f sha="$HEAD_OID" \
+        >/dev/null
       info "gh api でマージしました。リモート branch を削除します。"
       gh api -X DELETE "repos/$REPO/git/refs/heads/$BRANCH" >/dev/null 2>&1 || true
     fi
