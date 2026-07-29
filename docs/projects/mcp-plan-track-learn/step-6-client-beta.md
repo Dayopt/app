@@ -31,7 +31,7 @@ Productionと認証・DB・secretを共有しないPersistent Stagingで、ChatG
 - `deleteAllData`はuser data generation、Calendar authority、MCP connection/token、AI生成report、external event mirrorを同じtransaction境界へ含むv5へ移行済み。MCP apply、Calendar callback/sync、通常UI writeとのraceとresponse-loss replayをlocal integrationで検証済み
 - mutation receipt、authorization code、access/refresh token、connection、payload-free security event、Calendar revoke authorityのbounded cleanupと定期callerはrepo実装済み。account削除後の遅延Stripe event向けCustomer digest receiptも30日でcleanupし、並列cleanupでlock中の期限切れ行を残件として報告する。local integrationとaggregate-only unit contractは通過したが、Persistent Stagingでの定期実行、backlog 0、alert証跡は未確認
 - account削除はCustomer provisioning回収、Calendar / Storage / Billingのexact binding、Auth最終削除、遅延Stripe eventのterminal receiptまでrepo実装済み。Webhookはconfigured Accountとprovider EventをDB更新前に再取得し、platform accountだけを受け入れる。generic gateは初期OFFのため、historical Stripe orphan監査、Stripe identity env、実Webhook再取得の互換性、旧instance drain、forward-only activationを完了するまで削除要求をfail closedにする
-- client別redirect URI overrideとMCP resource/write allowlistはrepoのenv schema、1Password field inventory、`.op-env.local.example`へ追加済み。`apps/product/.env.example`はsecret guardが書き込みを遮断したため未更新で、実1Password/Vercel fieldの存在も未確認
+- client別redirect URI override、MCP resource/write allowlist、Stripe provider identityの変数名はrepoのenv schema、`apps/product/.env.example`、1Password field inventory、`.op-env.local.example`へ追加済み。実1Password/Vercel fieldの存在は未確認
 
 global/client gateはfail-closedであり、上記blockerの解決まではOFFのまま維持する。Production migration、release、token失効、gate変更はこのStepのrepo作業に含めない。
 
@@ -122,9 +122,17 @@ retentionはservice-only cleanup RPCと定期callerを一組にし、DB時刻、
 9. evidence matrixを通過したclientだけをbeta対象として維持する
 10. 異常時はglobal controlを先に閉じ、client connectionをdisableし、最後にruntime allowlistを閉じる
 
-Persistent Stagingで現在のmigration chain、逆GRANT、再cutoverもrehearseする。Productionへ同migration chainを自動適用しない。
+Persistent StagingではDraft PRのexact SHAを使い、現在のmigration chainを`20260728110300`まで適用して、逆GRANTと再cutoverもrehearseする。Productionへ同migration chainを自動適用しない。
 
-Production候補ではDB-firstを必須にする。OAuth writeをquiesceして旧instanceをdrainし、3 OAuth tableの件数とlock waiterを記録してから、`20260726013339`、`20260726015311`、`20260726021453`を連続適用する。2番目と3番目のmigration間ではlegacy code insertが一時失敗し得るため、app write停止を解除しない。exact Production identity、3 FK、function ACLを確認した後にだけidentity検証版appをdeployする。旧DBへ新appを先行するとhealthとMCP accessが503になるため、同一auto-deployへまとめない。
+Production候補ではDB-firstを必須にする。OAuth writeをquiesceして旧instanceをdrainし、3 OAuth tableの件数とlock waiterを記録してから、OAuth identityの`20260726013339`、`20260726015311`、`20260726021453`を含むcurrent migration chainを`20260728110300`まで連続適用する。`20260726015311`と`20260726021453`の間ではlegacy code insertが一時失敗し得るため、app write停止を解除しない。次のapp依存をcatalogで確認した後にだけ現行appをdeployする。旧DBへ新appを先行するとhealth、MCP access、account deletion、maintenance cronが失敗するため、同一auto-deployへまとめない。
+
+| App surface                    | DB-firstで確認する代表RPC                                                                                                                         | 必須migration終端 |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| MCP OAuth identity             | connection / code / tokenのresource FK、grant / exchange / refresh / applyのidentity検証                                                          | `20260726021453`  |
+| User purge / account deletion  | `delete_all_user_data_command_v5`、Calendar revoke / seal、generic account deletion gate                                                          | `20260726060900`  |
+| Billing recovery / maintenance | `get_account_deletion_customer_recovery_v1`、`complete_billing_customer_provisioning_v2`、`cleanup_billing_account_deletion_terminal_receipts_v2` | `20260728110300`  |
+
+Supabase GitHub integrationは`main`のmigrationをProductionへ反映する。したがってPersistent Stagingはmain統合の後工程にせず、Draft PRのexact SHAで先に実行する。Production integrationを停止してmaintenance cutoverを行う準備、または全prefixがrolling-compatibleな別chainの証拠が揃うまで、このPRをReadyまたはmergeしない。
 
 ### 6. 3 clientのgolden evidenceを保存する
 

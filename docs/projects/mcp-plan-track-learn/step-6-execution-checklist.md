@@ -52,6 +52,17 @@ Productの`.env.example`とrootの`.op-env.local.example`は自動test対象で�
 
 `pnpm test:mcp-environment-identity`はlocal DBをdata-less resetしてから既定seedへ戻す。専用local stackで、破棄してよい状態だと確認した時だけ実行する。
 
+## Main merge boundary
+
+Supabase GitHub integrationは`main`のmigrationをProductionへ反映する。このbranchのmigration chainには書き込み停止を必要とするprefixがあるため、Persistent Stagingはmain統合後ではなくDraft PRのexact SHAで実行する。
+
+次のどちらかを満たすまでPRをReadyまたはmergeしない。
+
+- [ ] Production integrationを停止できることをread-onlyで確認し、通常UI、service-role、OAuth writeのquiescence、旧instance drain、`20260728110300`までの連続適用、catalog確認、app deploy、smoke、write再開を一つのmaintenance cutoverとして承認する
+- [ ] 全migration prefixで旧/new appの同時稼働が安全なrolling-compatible chainを新しいmigrationとして作り、Persistent Stagingで証明する
+
+どちらの経路でも、Production migration、integration設定変更、releaseは対象と環境を指定した明示承認が必要である。Draft PR作成、Preview、Productionと分離したPersistent Stagingはこの境界の手前で進められる。
+
 ## Inputs for the external checkpoint
 
 値やsecretをrepoへ記録しない。承認時は対象名とopaque referenceだけを提示する。
@@ -80,10 +91,11 @@ Productの`.env.example`とrootの`.op-env.local.example`は自動test対象で�
 
 ### 1. Data-less Supabase branch
 
+- [ ] Draft PRのexact SHAを記録する
 - [ ] Productionと異なるpersistent branchを作る
 - [ ] seedとsignupを無効にする
 - [ ] app、service-role writer、Git deploymentへまだ接続しない
-- [ ] identity migrationまで適用する
+- [ ] current migration chainを`20260728110300`まで適用する
 - [ ] user、OAuth、audit、receiptが0件である
 - [ ] global/client gateがOFFである
 - [ ] exact branch refを再確認する
@@ -118,6 +130,7 @@ Productの`.env.example`とrootの`.op-env.local.example`は自動test対象で�
 
 ### 4. Migration and rollback rehearsal
 
+- [ ] migration terminalが`20260728110300`である
 - [ ] OAuth writeをquiesceする
 - [ ] 旧instanceをdrainする
 - [ ] OAuth 3 tableのrow数とlock waiterを記録する
