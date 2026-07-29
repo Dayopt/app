@@ -6,7 +6,7 @@ import {
   type CanonicalResourceUri,
 } from './origin';
 
-export type McpOAuthEnvironment = 'production' | 'staging';
+export type McpOAuthEnvironment = 'production' | 'staging' | 'preview';
 
 export interface OAuthEnvironmentConfig {
   environment: McpOAuthEnvironment;
@@ -26,6 +26,9 @@ interface OAuthEnvironmentInput {
   resourceUri?: string | undefined;
   vercelEnvironment?: string | undefined;
   vercelTargetEnvironment?: string | undefined;
+  vercelBranchUrl?: string | undefined;
+  vercelGitCommitRef?: string | undefined;
+  mcpOAuthPreviewBranch?: string | undefined;
 }
 
 const AUTHORIZATION_SERVER_PATHS = new Set([
@@ -73,7 +76,10 @@ export function resolveOAuthEnvironmentConfig(
   input: OAuthEnvironmentInput,
 ): OAuthEnvironmentConfig {
   const environment = resolveEnvironment(input.mcpOAuthEnvironment);
-  const expected = EXPECTED_IDENTITIES[environment];
+  const expected =
+    environment === 'preview'
+      ? resolvePreviewIdentity(input.vercelBranchUrl)
+      : EXPECTED_IDENTITIES[environment];
   const authorizationServerUri = normalizeAuthorizationServerUri(
     input.authorizationServerUri ??
       (environment === 'production' ? expected.authorizationServerUri : ''),
@@ -134,8 +140,14 @@ export function isOAuthRequestHostAllowed(input: {
     return false;
   }
 
+  const ownsAuthorizationSurface = hostname === identity.authorizationServerHost;
+  const ownsResourceSurface = hostname === identity.resourceHost;
+
   if (KNOWN_RESOURCE_HOSTS.has(hostname) && hostname !== identity.resourceHost) return false;
-  if (hostname === identity.resourceHost) {
+  if (ownsAuthorizationSurface && ownsResourceSurface) {
+    return true;
+  }
+  if (ownsResourceSurface) {
     return pathname === '/' || PROTECTED_RESOURCE_PATHS.has(pathname);
   }
   if (
@@ -146,7 +158,7 @@ export function isOAuthRequestHostAllowed(input: {
   }
   if (PROTECTED_RESOURCE_PATHS.has(pathname)) return false;
   if (AUTHORIZATION_SERVER_PATHS.has(pathname)) {
-    return hostname === identity.authorizationServerHost;
+    return ownsAuthorizationSurface;
   }
 
   return true;
@@ -155,7 +167,8 @@ export function isOAuthRequestHostAllowed(input: {
 function resolveEnvironment(value: string | undefined): McpOAuthEnvironment {
   if (value === undefined || value === '' || value === 'production') return 'production';
   if (value === 'staging') return 'staging';
-  throw new Error('MCP_OAUTH_ENVIRONMENT must be production or staging');
+  if (value === 'preview') return 'preview';
+  throw new Error('MCP_OAUTH_ENVIRONMENT must be production, staging, or preview');
 }
 
 function isLocalHostname(hostname: string): boolean {
@@ -181,6 +194,7 @@ function assertVercelEnvironmentBinding(
 ): void {
   const isVercelDeployment = Boolean(input.vercelEnvironment);
   const targetsStaging = input.vercelTargetEnvironment === 'staging';
+  const targetsPreview = input.vercelTargetEnvironment === 'preview';
 
   if (targetsStaging && environment !== 'staging') {
     throw new Error('VERCEL_TARGET_ENV=staging requires MCP_OAUTH_ENVIRONMENT=staging');
@@ -194,6 +208,23 @@ function assertVercelEnvironmentBinding(
   if (input.vercelEnvironment === 'production' && environment !== 'production') {
     throw new Error('A Vercel Production deployment must use the production OAuth identity');
   }
+  if (input.mcpOAuthPreviewBranch && environment !== 'preview') {
+    throw new Error('MCP_OAUTH_PREVIEW_BRANCH requires MCP_OAUTH_ENVIRONMENT=preview');
+  }
+  if (environment === 'preview') {
+    if (input.vercelEnvironment !== 'preview' || !targetsPreview) {
+      throw new Error(
+        'MCP preview identity requires VERCEL_ENV=preview and VERCEL_TARGET_ENV=preview',
+      );
+    }
+    if (
+      !input.mcpOAuthPreviewBranch ||
+      !input.vercelGitCommitRef ||
+      input.vercelGitCommitRef !== input.mcpOAuthPreviewBranch
+    ) {
+      throw new Error('MCP preview identity requires the exact configured Vercel branch');
+    }
+  }
 }
 
 function isOAuthSurfaceEnabled(
@@ -204,5 +235,37 @@ function isOAuthSurfaceEnabled(
   if (environment === 'staging') {
     return input.vercelEnvironment === 'preview' && input.vercelTargetEnvironment === 'staging';
   }
+  if (environment === 'preview') {
+    return (
+      input.vercelEnvironment === 'preview' &&
+      input.vercelTargetEnvironment === 'preview' &&
+      input.vercelGitCommitRef === input.mcpOAuthPreviewBranch
+    );
+  }
   return input.vercelEnvironment === 'production';
+}
+
+function resolvePreviewIdentity(vercelBranchUrl: string | undefined): {
+  authorizationServerUri: CanonicalAuthorizationServerUri;
+  resourceUri: CanonicalResourceUri;
+} {
+  if (!vercelBranchUrl || vercelBranchUrl !== vercelBranchUrl.trim()) {
+    throw new Error('MCP preview identity requires VERCEL_BRANCH_URL');
+  }
+  if (
+    !/^product-git-[a-z0-9-]+-dayopt\.vercel\.app$/u.test(vercelBranchUrl) ||
+    vercelBranchUrl.includes('..')
+  ) {
+    throw new Error('MCP preview identity requires the stable Product branch alias');
+  }
+
+  const origin = normalizeHttpsOrigin(`https://${vercelBranchUrl}`);
+  if (!origin) {
+    throw new Error('MCP preview identity requires a valid stable Product branch alias');
+  }
+
+  return {
+    authorizationServerUri: origin as CanonicalAuthorizationServerUri,
+    resourceUri: origin as CanonicalResourceUri,
+  };
 }

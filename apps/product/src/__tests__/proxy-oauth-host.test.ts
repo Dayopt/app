@@ -86,6 +86,67 @@ describe('proxy OAuth host boundary', () => {
     expect(updateSession).not.toHaveBeenCalled();
   });
 
+  it('allows both OAuth surfaces and Product paths only on the bound Preview branch alias', async () => {
+    vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'preview');
+    vi.stubEnv('MCP_OAUTH_PREVIEW_BRANCH', 'codex/mcp-preview');
+    vi.stubEnv(
+      'OAUTH_AUTHORIZATION_SERVER_URI',
+      'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+    );
+    vi.stubEnv(
+      'MCP_CANONICAL_RESOURCE_URI',
+      'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+    );
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'preview');
+    vi.stubEnv('VERCEL_BRANCH_URL', 'product-git-codex-mcp-preview-dayopt.vercel.app');
+    vi.stubEnv('VERCEL_GIT_COMMIT_REF', 'codex/mcp-preview');
+
+    for (const path of ['/oauth/authorize', '/api/oauth/token', '/mcp', '/api/mcp', '/week']) {
+      const response = await proxy(
+        new NextRequest(`https://product-git-codex-mcp-preview-dayopt.vercel.app${path}`),
+      );
+      expect(response.status, path).toBeLessThan(400);
+    }
+
+    for (const url of [
+      'https://product-a1b2c3-dayopt.vercel.app/oauth/authorize',
+      'https://product-a1b2c3-dayopt.vercel.app/mcp',
+      'https://product-git-codex-mcp-preview-dayopt.vercel.app.example.com/api/mcp',
+      'https://app.dayopt.app/oauth/authorize',
+      'https://mcp.dayopt.app/mcp',
+    ]) {
+      const response = await proxy(new NextRequest(url));
+      expect(response.status, url).toBe(404);
+    }
+    expect(updateSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails closed when the deployed Preview branch differs from the configured branch', async () => {
+    vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'preview');
+    vi.stubEnv('MCP_OAUTH_PREVIEW_BRANCH', 'codex/mcp-preview');
+    vi.stubEnv(
+      'OAUTH_AUTHORIZATION_SERVER_URI',
+      'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+    );
+    vi.stubEnv(
+      'MCP_CANONICAL_RESOURCE_URI',
+      'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+    );
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'preview');
+    vi.stubEnv('VERCEL_BRANCH_URL', 'product-git-codex-mcp-preview-dayopt.vercel.app');
+    vi.stubEnv('VERCEL_GIT_COMMIT_REF', 'codex/other-branch');
+
+    const response = await proxy(
+      new NextRequest('https://product-git-codex-mcp-preview-dayopt.vercel.app/mcp'),
+    );
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'service_unavailable' });
+    expect(updateSession).not.toHaveBeenCalled();
+  });
+
   it('fails closed on a known staging host when the staging identity is incomplete', async () => {
     vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'staging');
     vi.stubEnv('OAUTH_AUTHORIZATION_SERVER_URI', 'https://staging.dayopt.app');

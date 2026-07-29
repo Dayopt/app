@@ -11,5 +11,8 @@ export function getOAuthEnvironmentConfig(): OAuthEnvironmentConfig {
     resourceUri: env.MCP_CANONICAL_RESOURCE_URI,
     vercelEnvironment: env.VERCEL_ENV,
     vercelTargetEnvironment: env.VERCEL_TARGET_ENV,
+    vercelBranchUrl: env.VERCEL_BRANCH_URL,
+    vercelGitCommitRef: env.VERCEL_GIT_COMMIT_REF,
+    mcpOAuthPreviewBranch: env.MCP_OAUTH_PREVIEW_BRANCH,
   });
 }

@@ -51,12 +51,19 @@ describe('checkMcpUserRateLimit', () => {
     expect(JSON.stringify(loggerError.mock.calls)).not.toContain('private-user-id');
   });
 
-  it('requires a distributed limiter for Production and the staging Custom Environment', () => {
+  it('requires a distributed limiter for Production, staging, and OAuth-enabled Preview', () => {
     expect(requiresDistributedMcpRateLimit({ VERCEL_ENV: 'production' })).toBe(true);
     expect(
       requiresDistributedMcpRateLimit({
         VERCEL_ENV: 'preview',
         VERCEL_TARGET_ENV: 'staging',
+      }),
+    ).toBe(true);
+    expect(
+      requiresDistributedMcpRateLimit({
+        VERCEL_ENV: 'preview',
+        VERCEL_TARGET_ENV: 'preview',
+        MCP_OAUTH_ENVIRONMENT: 'preview',
       }),
     ).toBe(true);
     expect(requiresDistributedMcpRateLimit({ VERCEL_ENV: 'preview' })).toBe(false);

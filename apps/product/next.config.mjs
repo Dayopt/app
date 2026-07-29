@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 
 import {
   assertProductOperationalProductionBuildEnv,
+  assertProductPreviewBuildEnv,
   assertProductStagingBuildEnv,
   resolveProductPublicMcpResourceUri,
 } from './production-build-gate.mjs';
@@ -23,6 +24,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 assertProductStagingBuildEnv(process.env);
+assertProductPreviewBuildEnv(process.env);
 const isSentryProductionBuild = assertProductionSentryBuildEnv(process.env, 'Product');
 assertProductOperationalProductionBuildEnv(process.env);
 

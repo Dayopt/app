@@ -97,12 +97,19 @@ describe('OAuth token endpoint rate limit', () => {
     expect(loggerError).toHaveBeenCalledWith('OAuth token rate limit check failed');
   });
 
-  it('requires distributed limits for Production and the staging Custom Environment', () => {
+  it('requires distributed limits for Production, staging, and OAuth-enabled Preview', () => {
     expect(requiresDistributedOAuthTokenRateLimit({ VERCEL_ENV: 'production' })).toBe(true);
     expect(
       requiresDistributedOAuthTokenRateLimit({
         VERCEL_ENV: 'preview',
         VERCEL_TARGET_ENV: 'staging',
+      }),
+    ).toBe(true);
+    expect(
+      requiresDistributedOAuthTokenRateLimit({
+        VERCEL_ENV: 'preview',
+        VERCEL_TARGET_ENV: 'preview',
+        MCP_OAUTH_ENVIRONMENT: 'preview',
       }),
     ).toBe(true);
     expect(requiresDistributedOAuthTokenRateLimit({ VERCEL_ENV: 'preview' })).toBe(false);

@@ -321,6 +321,9 @@ function enforceOAuthHostBoundary(hostname: string, pathname: string): NextRespo
       resourceUri: process.env.MCP_CANONICAL_RESOURCE_URI,
       vercelEnvironment: process.env.VERCEL_ENV,
       vercelTargetEnvironment: process.env.VERCEL_TARGET_ENV,
+      vercelBranchUrl: process.env.VERCEL_BRANCH_URL,
+      vercelGitCommitRef: process.env.VERCEL_GIT_COMMIT_REF,
+      mcpOAuthPreviewBranch: process.env.MCP_OAUTH_PREVIEW_BRANCH,
     });
   } catch {
     if (!isOAuthSurfacePath(pathname) && !KNOWN_OAUTH_HOSTS.has(hostname)) return null;

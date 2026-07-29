@@ -81,7 +81,9 @@ const serverSchema = z
       .refine((value) => isValidOAuthRedirectUriList('cursor', value), {
         message: 'OAUTH_CURSOR_REDIRECT_URIS はCursor所有の登録済みcallbackだけを指定してください',
       }),
-    MCP_OAUTH_ENVIRONMENT: z.enum(['production', 'staging']).optional(),
+    MCP_OAUTH_ENVIRONMENT: z.enum(['production', 'staging', 'preview']).optional(),
+    MCP_OAUTH_PREVIEW_BRANCH: z.string().min(1).optional(),
+    MCP_OAUTH_PREVIEW_UPSTASH_HOST: z.string().min(1).optional(),
     OAUTH_AUTHORIZATION_SERVER_URI: z.string().url().optional(),
     MCP_CANONICAL_RESOURCE_URI: z.string().url().optional(),
     MCP_WRITE_ENABLED_CLIENTS: z.string().optional(),
@@ -140,6 +142,8 @@ const serverSchema = z
     VERCEL_URL: z.string().optional(),
     VERCEL_ENV: z.string().optional(),
     VERCEL_TARGET_ENV: z.string().optional(),
+    VERCEL_BRANCH_URL: z.string().optional(),
+    VERCEL_GIT_COMMIT_REF: z.string().optional(),
     SKIP_AUTH_IN_DEV: z.string().optional(),
   })
   .superRefine((data, context) => {
@@ -150,6 +154,9 @@ const serverSchema = z
         resourceUri: data.MCP_CANONICAL_RESOURCE_URI,
         vercelEnvironment: data.VERCEL_ENV,
         vercelTargetEnvironment: data.VERCEL_TARGET_ENV,
+        vercelBranchUrl: data.VERCEL_BRANCH_URL,
+        vercelGitCommitRef: data.VERCEL_GIT_COMMIT_REF,
+        mcpOAuthPreviewBranch: data.MCP_OAUTH_PREVIEW_BRANCH,
       });
     } catch (error) {
       context.addIssue({
@@ -198,16 +205,16 @@ const serverSchema = z
   .refine(
     (data) =>
       // Vercel preview deployment は NODE_ENV=production だが VERCEL_ENV=preview。
-      // preview は手動アクセスのみで rate limit 不要なので、VERCEL_ENV='production'
-      // (= production deployment) のときだけ Upstash を必須にする。
+      // generic Previewは手動アクセスのみだが、MCP OAuthを明示的に有効にするPreviewは
+      // 外部clientから到達するためdistributed rate limitを必須にする。
       !(
         data.NODE_ENV === 'production' &&
-        process.env.VERCEL_ENV === 'production' &&
+        (data.VERCEL_ENV === 'production' || data.MCP_OAUTH_ENVIRONMENT === 'preview') &&
         (!data.UPSTASH_REDIS_REST_URL || !data.UPSTASH_REDIS_REST_TOKEN)
       ),
     {
       message:
-        'UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN は本番環境では必須です（インメモリfallbackはmulti-replicaで歯抜けになる）',
+        'UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN はoperational環境では必須です（インメモリfallbackはmulti-replicaで歯抜けになる）',
       path: ['UPSTASH_REDIS_REST_URL'],
     },
   )

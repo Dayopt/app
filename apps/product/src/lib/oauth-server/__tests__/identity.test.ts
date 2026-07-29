@@ -101,6 +101,70 @@ describe('MCP OAuth environment identity', () => {
       }).surfacesEnabled,
     ).toBe(false);
   });
+
+  it('accepts one explicitly bound stable Preview branch identity', () => {
+    expect(
+      resolveOAuthEnvironmentConfig({
+        mcpOAuthEnvironment: 'preview',
+        mcpOAuthPreviewBranch: 'codex/mcp-preview',
+        authorizationServerUri: 'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+        resourceUri: 'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+        vercelEnvironment: 'preview',
+        vercelTargetEnvironment: 'preview',
+        vercelBranchUrl: 'product-git-codex-mcp-preview-dayopt.vercel.app',
+        vercelGitCommitRef: 'codex/mcp-preview',
+      }),
+    ).toEqual({
+      environment: 'preview',
+      surfacesEnabled: true,
+      authorizationServerUri: 'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+      authorizationServerHost: 'product-git-codex-mcp-preview-dayopt.vercel.app',
+      authorizationEndpoint:
+        'https://product-git-codex-mcp-preview-dayopt.vercel.app/oauth/authorize',
+      tokenEndpoint: 'https://product-git-codex-mcp-preview-dayopt.vercel.app/oauth/token',
+      resourceUri: 'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+      resourceHost: 'product-git-codex-mcp-preview-dayopt.vercel.app',
+      protectedResourceMetadataUri:
+        'https://product-git-codex-mcp-preview-dayopt.vercel.app/.well-known/oauth-protected-resource',
+    });
+  });
+
+  it.each([
+    {
+      name: 'missing explicit branch',
+      override: { mcpOAuthPreviewBranch: undefined },
+    },
+    {
+      name: 'different deployed branch',
+      override: { vercelGitCommitRef: 'codex/other-branch' },
+    },
+    {
+      name: 'deployment URL instead of stable branch alias',
+      override: { vercelBranchUrl: 'product-a1b2c3-dayopt.vercel.app' },
+    },
+    {
+      name: 'staging target instead of standard Preview',
+      override: { vercelTargetEnvironment: 'staging' },
+    },
+    {
+      name: 'different resource origin',
+      override: { resourceUri: 'https://mcp.dayopt.app' },
+    },
+  ])('rejects Preview identity drift: $name', ({ override }) => {
+    expect(() =>
+      resolveOAuthEnvironmentConfig({
+        mcpOAuthEnvironment: 'preview',
+        mcpOAuthPreviewBranch: 'codex/mcp-preview',
+        authorizationServerUri: 'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+        resourceUri: 'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+        vercelEnvironment: 'preview',
+        vercelTargetEnvironment: 'preview',
+        vercelBranchUrl: 'product-git-codex-mcp-preview-dayopt.vercel.app',
+        vercelGitCommitRef: 'codex/mcp-preview',
+        ...override,
+      }),
+    ).toThrow();
+  });
 });
 
 describe('MCP OAuth host boundary', () => {
@@ -109,6 +173,16 @@ describe('MCP OAuth host boundary', () => {
     mcpOAuthEnvironment: 'staging',
     authorizationServerUri: 'https://staging.dayopt.app',
     resourceUri: 'https://mcp.staging.dayopt.app',
+  });
+  const previewIdentity = resolveOAuthEnvironmentConfig({
+    mcpOAuthEnvironment: 'preview',
+    mcpOAuthPreviewBranch: 'codex/mcp-preview',
+    authorizationServerUri: 'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+    resourceUri: 'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+    vercelEnvironment: 'preview',
+    vercelTargetEnvironment: 'preview',
+    vercelBranchUrl: 'product-git-codex-mcp-preview-dayopt.vercel.app',
+    vercelGitCommitRef: 'codex/mcp-preview',
   });
 
   it.each([
@@ -208,6 +282,41 @@ describe('MCP OAuth host boundary', () => {
         allowLocalDevelopment: false,
       }),
     ).toBe(false);
+  });
+
+  it.each([
+    '/oauth/authorize',
+    '/oauth/token',
+    '/.well-known/oauth-authorization-server',
+    '/mcp',
+    '/api/mcp',
+    '/.well-known/oauth-protected-resource',
+    '/week',
+  ])('allows authorization, resource, and Product paths on the Preview origin: %s', (pathname) => {
+    expect(
+      isOAuthRequestHostAllowed({
+        identity: previewIdentity,
+        hostname: 'product-git-codex-mcp-preview-dayopt.vercel.app',
+        pathname,
+        allowLocalDevelopment: false,
+      }),
+    ).toBe(true);
+  });
+
+  it('rejects Preview OAuth paths on deployment and similar-suffix hosts', () => {
+    for (const hostname of [
+      'product-a1b2c3-dayopt.vercel.app',
+      'product-git-codex-mcp-preview-dayopt.vercel.app.example.com',
+    ]) {
+      expect(
+        isOAuthRequestHostAllowed({
+          identity: previewIdentity,
+          hostname,
+          pathname: '/oauth/authorize',
+          allowLocalDevelopment: false,
+        }),
+      ).toBe(false);
+    }
   });
 
   it('rejects all fixed OAuth hosts when a generic Preview is served on them', () => {

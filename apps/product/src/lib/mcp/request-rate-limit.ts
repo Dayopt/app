@@ -69,7 +69,11 @@ async function checkMcpRateLimit(
 export function requiresDistributedMcpRateLimit(
   environment: Readonly<Record<string, string | undefined>>,
 ): boolean {
-  return environment.VERCEL_ENV === 'production' || environment.VERCEL_TARGET_ENV === 'staging';
+  return (
+    environment.VERCEL_ENV === 'production' ||
+    environment.VERCEL_TARGET_ENV === 'staging' ||
+    environment.MCP_OAUTH_ENVIRONMENT === 'preview'
+  );
 }
 
 function checkLocalLimit(identifier: string, limit: number): boolean {
