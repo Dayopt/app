@@ -71,6 +71,7 @@ describe('OAuth token route host boundary', () => {
       expect(response.status).toBe(status);
       expect(response.headers.get('cache-control')).toBe('no-store');
       expect(response.headers.get('retry-after')).toBe(retryAfter);
+      expect(response.headers.get('www-authenticate')).toBeNull();
       await expect(response.json()).resolves.toMatchObject({ error });
       expect(readBody).not.toHaveBeenCalled();
       expect(exchangeAuthorizationCode).not.toHaveBeenCalled();

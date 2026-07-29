@@ -138,6 +138,20 @@ describe('verifyAccessToken dependency failures', () => {
     expect(captureUnexpectedDatabaseError).toHaveBeenCalledOnce();
   });
 
+  it('returns a retryable server error when the entitlement profile is missing', async () => {
+    createMcpAccessDbClient.mockReturnValue(
+      createAccessDb({
+        profiles: { data: null, error: null },
+      }),
+    );
+
+    await expect(verifyAccessToken('opaque-token')).rejects.toMatchObject({
+      code: 'server_error',
+      httpStatus: 503,
+    });
+    expect(captureUnexpectedDatabaseError).toHaveBeenCalledOnce();
+  });
+
   it('rejects a stored write grant that does not include the base read scope', async () => {
     vi.stubEnv('MCP_WRITE_ENABLED_CLIENTS', 'chatgpt');
     createMcpAccessDbClient.mockReturnValue(

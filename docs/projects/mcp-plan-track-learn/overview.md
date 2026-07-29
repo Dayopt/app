@@ -75,6 +75,7 @@ Delivery 6段階のうち5段階がrepo上で完了した。Step 5のcontext / L
 - authorization code consume + token pair issue、refresh rotation + token pair issueをそれぞれ単一transactionにする
 - scope/resourceはrefreshで拡大しない。不明scopeを一つでも含むrequestは全体を拒否する
 - Settings revoke、scope撤回、entitlement喪失、再認証期限、client無効化後は次のDB transactionから書き込み不能にする
+- Pro entitlementはMCP protected resourceで強制し、grant / token lifecycleではconnection familyを破壊しない。downgrade中のtoken exchange / refreshは成立してもtoolは403で拒否し、再upgrade後は有効なconnectionを再利用できる。FreeでもSettingsからrevokeできる
 
 ### Tool and scope contract
 

@@ -235,7 +235,7 @@ describe.skipIf(!RUN_LOCAL)('MCP mutation foundation integration', () => {
     },
   );
 
-  it('preserves read scopes while global and connection write gates change', async () => {
+  it('reports Pro entitlement independently while global and connection write gates change', async () => {
     vi.stubEnv('MCP_WRITE_ENABLED_CLIENTS', 'chatgpt');
     await setMutationControl(false);
 
@@ -276,11 +276,13 @@ describe.skipIf(!RUN_LOCAL)('MCP mutation foundation integration', () => {
 
     await expect(verifyAccessToken(access)).resolves.toMatchObject({
       scopes: ['read:entries'],
+      proEntitled: true,
     });
 
     await setMutationControl(true);
     await expect(verifyAccessToken(access)).resolves.toMatchObject({
       scopes: ['read:entries', 'write:plans'],
+      proEntitled: true,
     });
 
     const { error: downgradeError } = await admin
@@ -289,7 +291,8 @@ describe.skipIf(!RUN_LOCAL)('MCP mutation foundation integration', () => {
       .eq('id', userId);
     expect(downgradeError).toBeNull();
     await expect(verifyAccessToken(access)).resolves.toMatchObject({
-      scopes: ['read:entries'],
+      scopes: ['read:entries', 'write:plans'],
+      proEntitled: false,
     });
 
     const { error: restoreProError } = await admin
@@ -303,6 +306,7 @@ describe.skipIf(!RUN_LOCAL)('MCP mutation foundation integration', () => {
     expect(clientStopped.disabled_connection_count).toBeGreaterThanOrEqual(1);
     await expect(verifyAccessToken(access)).resolves.toMatchObject({
       scopes: ['read:entries'],
+      proEntitled: true,
     });
 
     const clientRestarted = await setClientWriteControl('chatgpt', true);

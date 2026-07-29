@@ -192,8 +192,14 @@ async function checkMcpProEntitlement(
   if (error) {
     throwDatabaseVerificationError(error, 'verify_mcp_pro_entitlement');
   }
+  if (!profile) {
+    throwDatabaseVerificationError(
+      new Error('MCP entitlement profile is missing'),
+      'verify_mcp_pro_entitlement',
+    );
+  }
 
-  return Boolean(profile && canAccessProFeatures(profile.subscription_status));
+  return canAccessProFeatures(profile.subscription_status);
 }
 
 function parseStoredScopes(scopes: string[]): SupportedScope[] | null {

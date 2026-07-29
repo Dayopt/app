@@ -462,9 +462,17 @@ function refreshClient(clientId: OAuthClientId, refreshToken: string) {
 }
 
 function tokenRequest(form: Record<string, string>): NextRequest {
+  const clientIp: Record<string, string> = {
+    'claude-ai': '203.0.113.10',
+    chatgpt: '203.0.113.11',
+    cursor: '203.0.113.12',
+  };
   return new NextRequest('https://app.dayopt.app/oauth/token', {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+      'x-real-ip': clientIp[form.client_id ?? ''] ?? '203.0.113.254',
+    },
     body: new URLSearchParams(form).toString(),
   });
 }

@@ -54,6 +54,20 @@ describe('OAuth token endpoint rate limit', () => {
     expect(globalLimit).not.toHaveBeenCalled();
   });
 
+  it('returns limited when the global budget is exhausted', async () => {
+    globalLimit.mockResolvedValueOnce({ success: false });
+
+    await expect(
+      checkOAuthTokenRateLimit(
+        new Request('https://app.dayopt.app/api/oauth/token', {
+          headers: { 'x-real-ip': '203.0.113.10' },
+        }),
+      ),
+    ).resolves.toBe('limited');
+    expect(ipLimit).toHaveBeenCalledOnce();
+    expect(globalLimit).toHaveBeenCalledOnce();
+  });
+
   it('fails closed without logging the client identifier when Redis is unavailable', async () => {
     ipLimit.mockRejectedValueOnce(new Error('redis unavailable'));
 
@@ -67,6 +81,20 @@ describe('OAuth token endpoint rate limit', () => {
     expect(captureUnexpectedError).toHaveBeenCalledOnce();
     expect(loggerError).toHaveBeenCalledWith('OAuth token rate limit check failed');
     expect(JSON.stringify(loggerError.mock.calls)).not.toContain('203.0.113.10');
+  });
+
+  it('fails closed when the global limiter is unavailable', async () => {
+    globalLimit.mockRejectedValueOnce(new Error('redis unavailable'));
+
+    await expect(
+      checkOAuthTokenRateLimit(
+        new Request('https://app.dayopt.app/api/oauth/token', {
+          headers: { 'x-real-ip': '203.0.113.10' },
+        }),
+      ),
+    ).resolves.toBe('unavailable');
+    expect(captureUnexpectedError).toHaveBeenCalledOnce();
+    expect(loggerError).toHaveBeenCalledWith('OAuth token rate limit check failed');
   });
 
   it('requires distributed limits for Production and the staging Custom Environment', () => {
