@@ -31,22 +31,27 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 ## 権限設計
 
 全ワークフローで最小権限の原則を適用。`pull-requests: write` を持つのは PR へ sticky comment を
-書く `ai-review.yml` だけで、それ以外は read のみ。
+書く `ai-review.yml` だけ（旧記述の「PRコメントbot は廃止済みのため不要」は 2026-07-26 の
+ai-review 導入で成立しなくなった）。
 
 ### ワークフロー別 permissions
 
-| ワークフロー                  | permissions                                                   | 理由                                                             |
-| ----------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `ci.yml`                      | `contents: read`                                              | コード読み取りのみ                                               |
-| `docs-guard.yml`              | `contents: read`                                              | docs読み取りのみ                                                 |
-| `integration.yml`             | `contents: read`                                              | コード読み取りのみ                                               |
-| `ai-review.yml`               | `contents: read` / `pull-requests: write` / `statuses: write` | sticky comment の upsert と、head SHA への commit status publish |
-| `production-config-audit.yml` | `contents: read` / `pull-requests: read` / `statuses: write`  | head SHA への commit status publish                              |
-| `create-release.yml`          | `contents: write`                                             | タグからリリース作成                                             |
+| ワークフロー                  | permissions                                                  | 理由                             |
+| ----------------------------- | ------------------------------------------------------------ | -------------------------------- |
+| `ci.yml`                      | `contents: read`                                             | コード読み取りのみ               |
+| `docs-guard.yml`              | `contents: read`                                             | docs読み取りのみ                 |
+| `integration.yml`             | `contents: read`                                             | コード読み取りのみ               |
+| `ai-review.yml`               | `contents: read` / `pull-requests: write`                    | PR への sticky comment の upsert |
+| `production-config-audit.yml` | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行  |
+| `create-release.yml`          | `contents: write`                                            | タグからリリース作成             |
 
-`ai-review.yml` / `production-config-audit.yml` が `statuses: write` を持つのは、
-どちらも `pull_request_target` で走り、run が base SHA に紐づくため PR の head SHA に
-check が付かないから。status を自分で publish しないと `branch:finish` の判定から gate が消える。
+`ai-review.yml` / `production-config-audit.yml` はどちらも `pull_request_target` で走るが、
+**`pull_request_target` でも job の check run は PR の `statusCheckRollup` に出る**
+（2026-07-30 に PR #1760 で実測。詳細は [infra.md §merge gate の required checks](../engineering/infra.md#merge-gate-の-required-checks)）。
+そのため gate 自体には status publish は不要で、`ai-review.yml` は持たない。
+`production-config-audit.yml` が `statuses: write` を持つのは、job 名から独立した固定 context
+（`Production Config Audit`）を ruleset の required 指定に使うため。
+
 どちらも `contents: write` は持たない（外部モデルの出力や外部 API の結果を受けて動く job に
 書き込み権限を与えない）。
 

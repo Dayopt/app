@@ -20,7 +20,12 @@ name: AI Review
 on:
   pull_request_target:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
+    # labeled を入れる。`ai-review:override` / `ai-review:contract-reviewed` は
+    # ラベルで逃げ道を作る設計なので、ラベル付与で再発火しないと空 commit を押す運用に
+    # なる（re-run は元の payload を replay するのでラベルが乗らない）。
+    # 無関係なラベルでも発火するが、review.ts の fingerprint cache が前回判定を
+    # 再利用するため model 呼び出しは 0 で済む。
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
     paths:
       # データ分離・データ損失
       - 'supabase/migrations/**'
@@ -70,12 +75,12 @@ concurrency:
 
 permissions:
   contents: read
-  # sticky comment の upsert に使う。
+  # sticky comment の upsert に使う。commit status を自分で publish する必要は無い
+  # （pull_request_target でも job の check run は PR の statusCheckRollup に出る。
+  # 2026-07-30 に PR #1760 で実測: production-config-audit の
+  # `Audit Vercel metadata (trusted)` が CheckRun として出ている）。
+  # したがって gate は job の exit code のままで、status publish 用の権限は不要。
   pull-requests: write
-  # pull_request_target の run は base SHA に紐づくため、PR の head SHA には check が
-  # 付かない。commit status を自分で publish しないと、branch:finish の
-  # 「失敗 0 件・実行中 0 件・成功 1 件以上」判定から ai-review が静かに消える。
-  statuses: write
 
 jobs:
   review:
@@ -118,16 +123,18 @@ jobs:
       # 監査契約が変わる**ため、危険クラスと同時に触られた場合は人間の確認を要求する。
       # docs/engineering/log/2026-07-26-ai-review-pipeline.md の「prompt.md の変更は
       # 専用 PR で行う」運用規律を機械化したもの。
+      # 判定は base の working tree から `git diff` で取る。`gh api pulls/N/files` は
+      # 3000 file 上限と API 障害という外部依存を持ち、どちらも「検出できないまま素通り」に
+      # なる。`--name-status` の rename 行は `R100<TAB>old<TAB>new` なので、旧 path も
+      # そのまま現れる（保護対象を移動して逃げられない）。
       - name: Detect reviewer contract changes
         id: contract
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Check both sides of a rename so a protected contract cannot evade
-          # the trusted-head checkpoint by moving to a new path.
-          changed_files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[] | .filename, (.previous_filename // empty)')
-          if printf '%s\n' "$changed_files" | grep -Eq '^scripts/ai-review/|^\.github/workflows/ai-review\.yml$'; then
+          changed_files=$(git diff --name-status "$BASE_SHA...$HEAD_SHA")
+          if printf '%s\n' "$changed_files" | grep -Eq '(^|[[:space:]])(scripts/ai-review/|\.github/workflows/ai-review\.yml([[:space:]]|$))'; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -137,6 +144,11 @@ jobs:
       # 危険クラス diff への所見は人間の確認材料としてそのまま有用。判定だけ下で上書きする。
       - name: Review dangerous-class diff
         id: review
+        # **job の timeout-minutes より内側で step を切る。** review.ts の
+        # TOTAL_DEADLINE_MS(8 分) は attempt の入口でしか評価されないため、
+        # REQUEST_TIMEOUT_MS(5 分) × 2 attempt で実効 ~10 分に届き、job ごと kill されうる。
+        # step timeout なら後続の Enforce step が確実に走り、失敗の帰属も明確になる。
+        timeout-minutes: 8
         run: |
           set +e
           pnpm exec tsx scripts/ai-review/review.ts
@@ -169,60 +181,30 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
 
-      # pull_request_target の run は base SHA に紐づくため、この status が無いと
-      # PR 上に ai-review の結果が 1 件も出ない（= branch:finish が gate を見失う）。
+      # gate は job の exit code。review step が skip された経路（checkout / head 到達性 /
+      # setup / contract 検出のいずれかが落ちた場合）では output が空になるため、既定を
+      # `1` にして fail-closed へ倒す。
       #
-      # always() ではなく !cancelled() にする。cancel-in-progress で打ち切られた run も
-      # always() なら実行され、下の head SHA は **実行時点の最新** を引くため、
-      # 新しい push の run が付けた success を古い run の failure が上書きしうる。
-      - name: Publish AI Review status
-        if: ${{ !cancelled() }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REVIEW_EXIT: ${{ steps.review.outputs.exit_code || '1' }}
-          CONTRACT_CHANGED: ${{ steps.contract.outputs.changed || 'false' }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          if [ "$CONTRACT_CHANGED" = "true" ]; then
-            state=failure
-            description="Reviewer contract changed; trusted head review is required"
-          elif [ "$REVIEW_EXIT" = "0" ]; then
-            state=success
-            description="No blocking findings in the dangerous-class diff"
-          else
-            state=failure
-            description="AI review reported blocking findings"
-          fi
-
-          shas=()
-          head_sha=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq '.head.sha')
-          merge_sha=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq '.merge_commit_sha // empty')
-          shas+=("$head_sha")
-          if [ -n "$merge_sha" ] && [ "$merge_sha" != "$head_sha" ]; then
-            shas+=("$merge_sha")
-          fi
-
-          for sha in "${shas[@]}"; do
-            if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
-              echo "::error::Refusing to publish status for an invalid commit SHA"
-              exit 1
-            fi
-            gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" \
-              -f state="$state" \
-              -f context="AI Review" \
-              -f description="$description" \
-              -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-              >/dev/null
-          done
-
+      # run の cancel と job timeout ではこの step ごと skip されるが、その場合は job の
+      # check run が cancelled として PR に出る。finish-branch.sh は cancelled / timed_out を
+      # failure として数えるため（scripts/git/finish-branch.sh の失敗判定）、
+      # 「痕跡が無いまま素通り」にはならない。
       - name: Enforce review result
         if: ${{ !cancelled() }}
         env:
           REVIEW_EXIT: ${{ steps.review.outputs.exit_code || '1' }}
           CONTRACT_CHANGED: ${{ steps.contract.outputs.changed || 'false' }}
+          # 監査契約を意図的に変更し、人間がレビュー済みだと判断した時の逃げ道。
+          # `ai-review:override` は review.ts 側の「所見の誤検出」用なので分けている
+          # （契約変更の承認と所見の棄却は別の判断）。
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         run: |
           if [ "$CONTRACT_CHANGED" = "true" ]; then
-            echo "::error title=ai-review::この PR は scripts/ai-review/ または ai-review.yml を変更しています。監査契約の変更は専用 PR で行ってください。"
-            exit 1
+            if printf '%s' "$PR_LABELS" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | grep -qx 'ai-review:contract-reviewed'; then
+              echo "::warning title=ai-review::ai-review:contract-reviewed ラベルがあるため、監査契約の変更を許容します。"
+            else
+              echo "::error title=ai-review::この PR は scripts/ai-review/ または .github/workflows/ai-review.yml を変更しています。監査契約の変更は専用 PR で行ってください。束ねる判断をした場合は ai-review:contract-reviewed ラベルを付けてください。"
+              exit 1
+            fi
           fi
           exit "$REVIEW_EXIT"

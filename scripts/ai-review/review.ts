@@ -985,8 +985,18 @@ async function findStickyComment(
     { headers: commentHeaders(context) },
   );
   if (!listed.ok) throw new Error(`comment 一覧の取得に失敗: HTTP ${listed.status}`);
-  const comments = (await listed.json()) as { id: number; body?: string }[];
-  return comments.find((comment) => comment.body?.includes(COMMENT_MARKER));
+  const comments = (await listed.json()) as {
+    id: number;
+    body?: string;
+    user?: { type?: string } | null;
+  }[];
+  // **author を検証する。** この comment は判定 cache（fingerprint + blocked）の保存先でも
+  // あるため、marker を含むだけで採用すると、PR に comment できる者が
+  // `blocked=0` の state を先に置いて「model を呼ばずに green」を作れる。
+  // fingerprint は repo 内の script で再計算できるので予測可能。
+  return comments.find(
+    (comment) => comment.user?.type === 'Bot' && comment.body?.includes(COMMENT_MARKER),
+  );
 }
 
 /**
@@ -1104,9 +1114,16 @@ async function main(): Promise<number> {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    // secret 未設定・fork PR ではレビューできないが、それは所見ではないので通す。
-    warn('GEMINI_API_KEY が未設定のためレビューをスキップしました。');
-    return 0;
+    // **fail-closed にする。** 旧実装は「fork PR には secret が渡らない」ことを理由に
+    // 通していたが、workflow が pull_request_target へ移り base revision を実行する
+    // 構成になった時点でその前提は消えた（secret は常に渡る）。残るのは secret の
+    // rename / 失効 / 未設定という決定論的な構成ミスだけで、これを通すと
+    // 「毎回 green の gate」が誰にも気づかれずに成立する。
+    // ローカル実行は --dry-run（この判定より前で return する）を使う。
+    console.log(
+      `::error title=ai-review::GEMINI_API_KEY が未設定です。repo secret を確認してください（構成ミスは fail-closed にします）。`,
+    );
+    return 1;
   }
 
   const token = process.env.GITHUB_TOKEN;

@@ -245,11 +245,16 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   除外の理由だった「light / dark とも既知 failure がある」は解消済みで、#1499 / #1586 は両方 closed、
   2026-07-30 のローカル実測では light / dark とも 136 tests 全 pass（42 files pass / 33 skip）。
   CI へ載せるかは job 数 = 課金分の判断（`.claude/rules/workflow.md` §PR 粒度）なので、別途決める
-- `AI Review` は `ai-review.yml` が危険クラス path を含む PR にだけ publish する commit status で、
-  **ruleset の required には入れない**（発火しない PR では status 自体が付かないため、required にすると
-  全 PR が merge 不能になる）。`finish-branch.sh` は付いた check だけを見るので、この形で gate として機能する。
-  `Production Config Audit` と同じく `pull_request_target` の trusted base 実行のため、run が base SHA に
-  紐づき、status を自分で publish しないと PR 上から消える
+- **`pull_request_target` の job でも check run は PR の `statusCheckRollup` に出る。**
+  2026-07-30 に PR #1760 で実測: `production-config-audit.yml`（`pull_request_target`）の job が
+  `Audit Vercel metadata (trusted)` という CheckRun として出ている。したがって trusted base 実行の
+  workflow でも、gate のために commit status を自分で publish する必要は無い。
+  `Production Config Audit` という StatusContext が別に存在するのは、job 名から独立した固定 context を
+  ruleset の required 指定に使うため
+- `🔍 AI Review`（`ai-review.yml` の job）は危険クラス path を含む PR でだけ発火するので、
+  **ruleset の required には入れない**（発火しない PR では check 自体が付かず、required にすると
+  全 PR が merge 不能になる）。`finish-branch.sh` は付いた check だけを見るうえ、
+  `cancelled` / `timed_out` を failure として数えるため、cancel や job timeout も merge を止める
 - `ai-review.yml` を `pull_request_target` へ移した PR 自身では ai-review は走らない。`pull_request_target` の
   workflow 定義は default branch から読まれ、旧 `pull_request` 定義は PR の merge commit から読まれるため、
   移行 PR ではどちらの trigger も成立しない。**初回の trusted run は merge 後、次に危険クラス path を

@@ -23,6 +23,7 @@ import {
   parseReviewResponse,
   parseState,
   readCandidate,
+  readStickyState,
   renderComment,
   renderState,
   selectRuleAttachments,
@@ -515,15 +516,49 @@ describe('応答の読み取り', () => {
   });
 });
 
+describe('判定 cache の出所', () => {
+  const state = `${COMMENT_MARKER}\n${renderState({ fingerprint: 'abc123', blocked: false })}`;
+
+  function listing(comments: unknown[]) {
+    return vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => comments,
+    }) as unknown as typeof fetch;
+  }
+
+  it('bot が書いた sticky comment の判定は読む', async () => {
+    const result = await readStickyState({
+      token: 't',
+      repository: 'o/r',
+      prNumber: '1',
+      fetchImpl: listing([{ id: 1, body: state, user: { type: 'Bot' } }]),
+    });
+    expect(result).toEqual({ fingerprint: 'abc123', blocked: false });
+  });
+
+  it('人間が投稿した同じ marker は判定として採用しない', async () => {
+    // 採用すると、PR に comment できる者が blocked=0 の state を先に置くだけで
+    // 「model を呼ばずに green」を作れる（fingerprint は repo 内の script で再計算可能）。
+    const result = await readStickyState({
+      token: 't',
+      repository: 'o/r',
+      prNumber: '1',
+      fetchImpl: listing([{ id: 1, body: state, user: { type: 'User' } }]),
+    });
+    expect(result).toBeNull();
+  });
+});
+
 describe('workflow の contract', () => {
-  it('comment と status を書くための権限だけを持つ', () => {
+  it('comment を書くための権限だけを持つ', () => {
     expect(WORKFLOW).toContain('contents: read');
     expect(WORKFLOW).toContain('pull-requests: write');
-    // pull_request_target の run は base SHA に紐づき PR に check が出ないため、
-    // commit status を自分で publish する。この権限が無いと gate が PR 上から消える。
-    expect(WORKFLOW).toContain('statuses: write');
     // 外部モデルの出力を受けて動く job に write 権限を持たせない。
     expect(WORKFLOW).not.toContain('contents: write');
+    // gate は job の exit code で足りる（pull_request_target でも job の check run は
+    // PR の statusCheckRollup に出る）。status を publish しないので権限も要らない。
+    expect(WORKFLOW).not.toContain('statuses: write');
   });
 
   it('PR の code を credential 付きで checkout しない', () => {
@@ -556,17 +591,42 @@ describe('workflow の contract', () => {
   it('reviewer 自身の変更を危険クラスと同時に通さない', () => {
     // trusted base 実行では PR 側の reviewer 変更はその run に影響しないが、
     // マージすれば以後の全 PR の監査契約が変わるため人間の確認を要求する。
-    expect(WORKFLOW).toContain('^scripts/ai-review/');
-    expect(WORKFLOW).toContain('.github/workflows/ai-review\\.yml$');
-    // rename で保護対象から逃げられないよう、旧 path も見る。
-    expect(WORKFLOW).toContain('previous_filename');
+    expect(WORKFLOW).toContain('scripts/ai-review/');
+    expect(WORKFLOW).toContain('\\.github/workflows/ai-review\\.yml');
+    expect(WORKFLOW).toContain('steps.contract.outputs.changed');
   });
 
-  it('PR の head SHA へ commit status を publish する', () => {
-    expect(WORKFLOW).toContain('repos/$GITHUB_REPOSITORY/statuses/$sha');
-    expect(WORKFLOW).toContain('-f context="AI Review"');
-    // 打ち切られた run が、新しい run の success を failure で上書きしないようにする。
-    expect(WORKFLOW).not.toContain('if: always()');
+  it('review step が skip された経路では fail-closed にする', () => {
+    // checkout / head 到達性 / setup / contract 検出のいずれかが落ちると review step は
+    // skip され output が空になる。既定を 0 にすると「走らなかった run が green」になる。
+    expect(WORKFLOW).toContain("steps.review.outputs.exit_code || '1'");
+    expect(WORKFLOW).not.toMatch(/steps\.review\.outputs\.exit_code\s*\|\|\s*'0'/);
+  });
+
+  it('review step を job の timeout より内側で切る', () => {
+    // review.ts の TOTAL_DEADLINE_MS は attempt の入口でしか評価されないため、
+    // per-attempt timeout × 2 で job の timeout-minutes に届きうる。job ごと kill されると
+    // 後続 step が走らず、失敗の帰属も消える。
+    const jobTimeout = Number(/^\s{4}timeout-minutes:\s*(\d+)/m.exec(WORKFLOW)?.[1]);
+    const stepTimeout = Number(/^\s{8}timeout-minutes:\s*(\d+)/m.exec(WORKFLOW)?.[1]);
+    expect(jobTimeout).toBeGreaterThan(0);
+    expect(stepTimeout).toBeGreaterThan(0);
+    expect(stepTimeout).toBeLessThan(jobTimeout);
+  });
+
+  it('contract 変更の検出を外部 API に依存させない', () => {
+    // gh api pulls/N/files は 3000 file 上限と API 障害を持ち、どちらも
+    // 「検出できないまま素通り」に倒れる。base の working tree から git で取る。
+    expect(WORKFLOW).toContain('git diff --name-status "$BASE_SHA...$HEAD_SHA"');
+    expect(WORKFLOW).not.toContain('gh api --paginate');
+  });
+
+  it('contract 変更に明示的な逃げ道がある', () => {
+    // 束ねた PR を既定とする規約（workflow.md §PR 粒度）と衝突するため、
+    // 人間が承認したことを示すラベルで通せる必要がある。
+    expect(WORKFLOW).toContain('ai-review:contract-reviewed');
+    // ラベル付与で再発火しないと、逃げ道を使うのに空 commit が必要になる。
+    expect(WORKFLOW).toMatch(/types:.*labeled/);
   });
 
   it('PR ごとに concurrency group を分ける', () => {

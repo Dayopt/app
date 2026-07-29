@@ -50,10 +50,22 @@ working tree を読まないため、head は git object として到達でき�
   check を落とす。rename で保護対象から逃げられないよう `previous_filename` も見る。
   trusted base 実行では PR 側の reviewer 変更はその run に影響しないが、マージすれば以後の
   全 PR の監査契約が変わる。2026-07-26 の「`prompt.md` の変更は専用 PR で行う」運用規律を機械化した
-- **commit status の手動 publish** — `pull_request_target` の run は base SHA に紐づくため、
-  PR の head SHA には check が付かない。`AI Review` という context で status を自分で POST しないと、
-  `finish-branch.sh` の「失敗 0 件・実行中 0 件・成功 1 件以上」判定から gate が静かに消える
-- **enforce の分離** — review の exit code を output に退避し、status publish 後に判定する
+- **enforce の分離** — review の exit code を output へ退避し、contract 判定と合わせて最後に落とす。
+  review step が skip された経路では output が空になるため、既定を `1` にして fail-closed へ倒す
+
+**commit status の手動 publish は移植しなかった。** 移植元がそれを持つ理由を
+「`pull_request_target` の run は base SHA に紐づくので PR に check が出ない」と推定して一度実装したが、
+これは誤りだった。2026-07-30 に [PR #1760](https://github.com/Dayopt/dayopt/pull/1760) の
+`statusCheckRollup` を実測すると、`production-config-audit.yml` の job が
+`Audit Vercel metadata (trusted)` という **CheckRun として出ていた**。`pull_request_target` でも
+job の check run は PR に出る。したがって gate は job の exit code のままで足り、
+`statuses: write` も status publish step も要らない。
+
+この確認をしたことで、逆に status publish 方式のほうが弱いことも分かった。status を唯一の痕跡にすると、
+run の cancel や job timeout で publish step 自体が skip され「PR 上に痕跡ゼロ」になる。
+job の check run なら cancel / timeout が `cancelled` / `timed_out` として PR に残り、
+`finish-branch.sh` はこれを failure として数える。**移植元より単純で、かつ fail-closed が強い。**
+`production-config-audit.yml` 側の status publish に同じ弱点が残っている点は別途の課題とする。
 
 移植の過程で、`pull_request_target` 特有の踏み抜きを 3 つ塞いだ。いずれも
 「レビューせずに green」に化けるクラスで、`pull_request` のままなら現れなかったもの。
@@ -64,9 +76,21 @@ working tree を読まないため、head は git object として到達でき�
 - **`AI_REVIEW_HEAD_SHA` の fallback** — `github.sha` は base 先端を指すため、fallback が効くと
   `base...base` の空 diff を「危険クラス 0 件」と読んで緑になる。fallback を外し、
   head SHA が未解決・未到達なら `git cat-file -e` で fail-closed にする step を足した
-- **`if: always()`** — 打ち切られた run も `always()` なら status publish が走り、
-  head SHA を**実行時点で引き直す**ため、新しい push の run が付けた success を古い run の
-  failure が上書きしうる。`!cancelled()` にした
+- **timeout の不等式** — `review.ts` の `TOTAL_DEADLINE_MS`(8 分) は attempt の入口でしか
+  評価されないため、`REQUEST_TIMEOUT_MS`(5 分) × 2 attempt で実効 ~10 分に届き、
+  job の `timeout-minutes: 10` を超えて job ごと kill されうる。「job の上限より内側で
+  自分から諦める」という script 側のコメントが、現在の定数では成立していなかった。
+  review step に step-level `timeout-minutes: 8` を付けて、後続の enforce が確実に走るようにした
+
+同時に、trigger 変更で前提が消えた fail-open を 1 つ塞いだ。`GEMINI_API_KEY` 未設定を
+`warn` + `exit 0` で通していたのは「fork PR には secret が渡らない」ことが理由だったが、
+`pull_request_target` では secret は常に渡る。残るのは rename / 失効 / 未設定という決定論的な
+構成ミスだけで、通すと「毎回 green の gate」が誰にも気づかれずに成立する。fail-closed にした。
+
+判定 cache の出所も絞った。sticky comment は fingerprint と blocked を保存する場所でもあるのに、
+`findStickyComment` が author を検証せず marker を含む最初の comment を採用していた。
+PR に comment できる者が `blocked=0` の state を先に置けば、model を呼ばずに green を作れる
+（fingerprint は repo 内の script で再計算できるので予測可能）。`user.type === 'Bot'` で絞った。
 
 ## 却下した選択肢と、なぜ捨てたか
 
