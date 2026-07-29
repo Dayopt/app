@@ -516,9 +516,12 @@ describe('応答の読み取り', () => {
 });
 
 describe('workflow の contract', () => {
-  it('comment を書くための権限だけを持つ', () => {
+  it('comment と status を書くための権限だけを持つ', () => {
     expect(WORKFLOW).toContain('contents: read');
     expect(WORKFLOW).toContain('pull-requests: write');
+    // pull_request_target の run は base SHA に紐づき PR に check が出ないため、
+    // commit status を自分で publish する。この権限が無いと gate が PR 上から消える。
+    expect(WORKFLOW).toContain('statuses: write');
     // 外部モデルの出力を受けて動く job に write 権限を持たせない。
     expect(WORKFLOW).not.toContain('contents: write');
   });
@@ -529,6 +532,47 @@ describe('workflow の contract', () => {
 
   it('base...head の diff が取れる履歴を取得する', () => {
     expect(WORKFLOW).toContain('fetch-depth: 0');
+  });
+
+  it('trusted base revision を checkout する', () => {
+    // pull_request だと workflow ファイル自体が PR の merge commit から読まれるため、
+    // 本ファイルを書き換えた PR が GEMINI_API_KEY を持ち出せる。
+    // pull_request_target + base.sha の組でしか「PR code を実行しない」は成立しない。
+    expect(WORKFLOW).toContain('pull_request_target:');
+    expect(WORKFLOW).not.toMatch(/^\s{2}pull_request:/m);
+    expect(WORKFLOW).toContain('ref: ${{ github.event.pull_request.base.sha }}');
+    // head を checkout したら trusted base の意味が消える。
+    expect(WORKFLOW).not.toMatch(/ref:\s*\$\{\{\s*github\.event\.pull_request\.head/);
+  });
+
+  it('head SHA が未解決・未到達なら fail-closed にする', () => {
+    // base...HEAD（= base...base）は「危険クラス 0 件」に見えるため、
+    // レビューせずに green を返す経路になる。ここが最悪の壊れ方。
+    expect(WORKFLOW).toContain('git cat-file -e "$HEAD_SHA^{commit}"');
+    // github.sha への fallback は pull_request_target では base 先端を指す。
+    expect(WORKFLOW).not.toMatch(/AI_REVIEW_HEAD_SHA:.*github\.sha/);
+  });
+
+  it('reviewer 自身の変更を危険クラスと同時に通さない', () => {
+    // trusted base 実行では PR 側の reviewer 変更はその run に影響しないが、
+    // マージすれば以後の全 PR の監査契約が変わるため人間の確認を要求する。
+    expect(WORKFLOW).toContain('^scripts/ai-review/');
+    expect(WORKFLOW).toContain('.github/workflows/ai-review\\.yml$');
+    // rename で保護対象から逃げられないよう、旧 path も見る。
+    expect(WORKFLOW).toContain('previous_filename');
+  });
+
+  it('PR の head SHA へ commit status を publish する', () => {
+    expect(WORKFLOW).toContain('repos/$GITHUB_REPOSITORY/statuses/$sha');
+    expect(WORKFLOW).toContain('-f context="AI Review"');
+    // 打ち切られた run が、新しい run の success を failure で上書きしないようにする。
+    expect(WORKFLOW).not.toContain('if: always()');
+  });
+
+  it('PR ごとに concurrency group を分ける', () => {
+    // pull_request_target では github.ref がどの PR でも base branch になるため、
+    // ref だけの group は PR をまたいで cancel し合う。
+    expect(WORKFLOW).toContain('github.event.pull_request.number || github.ref');
   });
 
   it('script が読む AI_REVIEW_* を workflow が全て渡している', () => {

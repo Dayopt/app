@@ -6,9 +6,21 @@ name: AI Review
 #
 # paths は scripts/ai-review/review.ts の DANGEROUS_PATH_PATTERNS と対応させる
 # （contract test で固定。片方だけ広げると、走らない or 走って何も見ない状態になる）。
+#
+# **pull_request ではなく pull_request_target を使う。** GEMINI_API_KEY（課金付き）と
+# pull-requests: write を持つ job で PR の code を実行しないため。pull_request は
+# workflow ファイル自体を PR の merge commit から読む（GitHub docs:
+# "runs the workflow file from the merge commit of the pull request"）ので、
+# 本ファイルを書き換えた PR は secret をそのまま持ち出せる。scripts/ai-review/ だけ
+# base 版に差し替えても 1 行で迂回される。pull_request_target なら workflow は
+# default branch のものが使われ（"the workflow file itself still comes from the
+# default branch"）、checkout も base revision に固定できる。
+# 同型の先行実装は production-config-audit.yml。経緯は
+# docs/engineering/log/2026-07-30-ai-review-trusted-base.md。
 on:
-  pull_request:
+  pull_request_target:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       # データ分離・データ損失
       - 'supabase/migrations/**'
@@ -40,7 +52,8 @@ on:
       - 'apps/product/src/lib/date/**'
   # ここに scripts/ai-review/** や本ファイル自身を入れない。DANGEROUS_PATH_PATTERNS に
   # 無いので workflow は起動するがスクリプトは即 return し、「走ったが何も見ていない」
-  # green が出るだけで課金だけかかる。reviewer 自身の変更は contract test が守る。
+  # green が出るだけで課金だけかかる。reviewer 自身の変更は contract test と、
+  # 危険クラスと同時に触られた場合の contract-change 検出 step が守る。
   #
   # workflow_dispatch は置かない。dispatch event は pull_request payload を持たないため
   # base/head SHA も PR 番号も空になり、「起動するが diff 0 件・comment も出ない green」に
@@ -48,13 +61,21 @@ on:
   # いない入口のために配管を増やさない。手動で見たい時はローカルで実行する:
   #   pnpm exec tsx scripts/ai-review/review.ts --force --base <sha> --head <sha>
 
+# pull_request_target では github.ref が **どの PR でも base branch**（refs/heads/main）に
+# なる。ref だけで group を作ると PR をまたいで cancel し合い、あとから走った PR だけが
+# レビューされる。PR 番号を group に入れる（production-config-audit.yml と同型）。
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
+  # sticky comment の upsert に使う。
   pull-requests: write
+  # pull_request_target の run は base SHA に紐づくため、PR の head SHA には check が
+  # 付かない。commit status を自分で publish しないと、branch:finish の
+  # 「失敗 0 件・実行中 0 件・成功 1 件以上」判定から ai-review が静かに消える。
+  statuses: write
 
 jobs:
   review:
@@ -62,22 +83,75 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      # pull_request_target must execute only the trusted base revision, never PR code.
+      # working tree（reviewer 本体・contract・添付 rules・setup action・lockfile）は
+      # すべて base 版になる。PR の diff は working tree ではなく git object から
+      # 「データ」として読む（review.ts の collectChanges が base...head しか見ない）。
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
           # base...head の diff を取るため、両端に到達できる履歴が要る。
           fetch-depth: 0
           persist-credentials: false
 
+      # head SHA が object store に無いと、review.ts は base...HEAD（= base...base）を
+      # 見て「危険クラス 0 件」で緑を返す。**レビューせずに green** が最悪の壊れ方なので
+      # ここで fail-closed にする。private repo で fork PR が無いため fetch-depth: 0 が
+      # PR の head branch も取るが、その前提が崩れた時に黙って通さない。
+      - name: Verify the PR head revision is reachable
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ -z "$HEAD_SHA" ]; then
+            echo "::error title=ai-review::PR の head SHA を解決できませんでした。"
+            exit 1
+          fi
+          if ! git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null; then
+            echo "::error title=ai-review::head SHA $HEAD_SHA に到達できません（diff を取得できないためレビューを中止します）。"
+            exit 1
+          fi
+
       - uses: ./.github/actions/setup
 
+      # 監査対象の PR が監査契約そのものを書き換えていないか見る。trusted base 実行では
+      # PR 側の reviewer 変更はこの run に影響しないが、**マージすれば以後の全 PR の
+      # 監査契約が変わる**ため、危険クラスと同時に触られた場合は人間の確認を要求する。
+      # docs/engineering/log/2026-07-26-ai-review-pipeline.md の「prompt.md の変更は
+      # 専用 PR で行う」運用規律を機械化したもの。
+      - name: Detect reviewer contract changes
+        id: contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Check both sides of a rename so a protected contract cannot evade
+          # the trusted-head checkpoint by moving to a new path.
+          changed_files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[] | .filename, (.previous_filename // empty)')
+          if printf '%s\n' "$changed_files" | grep -Eq '^scripts/ai-review/|^\.github/workflows/ai-review\.yml$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # contract が変わっていても reviewer 自体は実行する。動くのは base 版なので安全で、
+      # 危険クラス diff への所見は人間の確認材料としてそのまま有用。判定だけ下で上書きする。
       - name: Review dangerous-class diff
-        run: pnpm exec tsx scripts/ai-review/review.ts
+        id: review
+        run: |
+          set +e
+          pnpm exec tsx scripts/ai-review/review.ts
+          review_exit=$?
+          set -e
+          echo "exit_code=$review_exit" >> "$GITHUB_OUTPUT"
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           # model id は provider 側で改称されうるため repo variable で上書きできる。
           AI_REVIEW_MODEL: ${{ vars.AI_REVIEW_MODEL }}
           AI_REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          AI_REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          # github.sha への fallback を置かない。pull_request_target では github.sha が
+          # **base branch の先端**なので、fallback が効くと base...base の空 diff を
+          # 「危険クラス 0 件」と読んで緑になる。未解決なら上の step で落とす。
+          AI_REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           AI_REVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
           # 「意図しない cascade delete」は意図が分からないと判定できない。作者の申告を
           # 渡し、diff との食い違いを見せる。env 経由で渡すのは script 内へ直接展開しない
@@ -94,3 +168,61 @@ jobs:
           AI_REVIEW_ENFORCE: ${{ vars.AI_REVIEW_ENFORCE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+
+      # pull_request_target の run は base SHA に紐づくため、この status が無いと
+      # PR 上に ai-review の結果が 1 件も出ない（= branch:finish が gate を見失う）。
+      #
+      # always() ではなく !cancelled() にする。cancel-in-progress で打ち切られた run も
+      # always() なら実行され、下の head SHA は **実行時点の最新** を引くため、
+      # 新しい push の run が付けた success を古い run の failure が上書きしうる。
+      - name: Publish AI Review status
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVIEW_EXIT: ${{ steps.review.outputs.exit_code || '1' }}
+          CONTRACT_CHANGED: ${{ steps.contract.outputs.changed || 'false' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$CONTRACT_CHANGED" = "true" ]; then
+            state=failure
+            description="Reviewer contract changed; trusted head review is required"
+          elif [ "$REVIEW_EXIT" = "0" ]; then
+            state=success
+            description="No blocking findings in the dangerous-class diff"
+          else
+            state=failure
+            description="AI review reported blocking findings"
+          fi
+
+          shas=()
+          head_sha=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq '.head.sha')
+          merge_sha=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq '.merge_commit_sha // empty')
+          shas+=("$head_sha")
+          if [ -n "$merge_sha" ] && [ "$merge_sha" != "$head_sha" ]; then
+            shas+=("$merge_sha")
+          fi
+
+          for sha in "${shas[@]}"; do
+            if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::Refusing to publish status for an invalid commit SHA"
+              exit 1
+            fi
+            gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" \
+              -f state="$state" \
+              -f context="AI Review" \
+              -f description="$description" \
+              -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+              >/dev/null
+          done
+
+      - name: Enforce review result
+        if: ${{ !cancelled() }}
+        env:
+          REVIEW_EXIT: ${{ steps.review.outputs.exit_code || '1' }}
+          CONTRACT_CHANGED: ${{ steps.contract.outputs.changed || 'false' }}
+        run: |
+          if [ "$CONTRACT_CHANGED" = "true" ]; then
+            echo "::error title=ai-review::この PR は scripts/ai-review/ または ai-review.yml を変更しています。監査契約の変更は専用 PR で行ってください。"
+            exit 1
+          fi
+          exit "$REVIEW_EXIT"
