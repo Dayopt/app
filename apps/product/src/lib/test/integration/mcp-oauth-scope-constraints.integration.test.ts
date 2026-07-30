@@ -30,11 +30,83 @@ const candidateMigration = readFileSync(
   'utf8',
 );
 
+const validationMigration = readFileSync(
+  new URL(
+    '../../../../../../supabase/migrations/20260730090200_validate_mcp_oauth_scope_constraints.sql',
+    import.meta.url,
+  ),
+  'utf8',
+);
+
+const stagedTableNames = [
+  'oauth_connections',
+  'oauth_authorization_codes',
+  'oauth_tokens',
+] as const;
+
 const stagedConstraintNames = [
   'oauth_connections_write_requires_read_entries_check',
   'oauth_authorization_codes_write_requires_read_entries_check',
   'oauth_tokens_write_requires_read_entries_check',
 ] as const;
+
+/**
+ * Drops `--` comments so the guards below inspect executable SQL only. Both
+ * migrations narrate themselves heavily, and matching raw file text would make
+ * every comment rewording a false failure (`GRANT`, `NOT VALID` and the scope
+ * names all appear in prose).
+ */
+function stripSqlComments(sql: string): string {
+  return sql
+    .split('\n')
+    .map((line) => {
+      let quoted = false;
+      for (let index = 0; index < line.length; index += 1) {
+        if (line[index] === "'") quoted = !quoted;
+        else if (!quoted && line[index] === '-' && line[index + 1] === '-') {
+          return line.slice(0, index);
+        }
+      }
+      return line;
+    })
+    .join('\n');
+}
+
+const candidateSql = stripSqlComments(candidateMigration);
+const validationSql = stripSqlComments(validationMigration);
+
+function statementTimeoutSeconds(sql: string): number {
+  const seconds = sql.match(/SET LOCAL statement_timeout = '(\d+)s'/)?.[1];
+  expect(seconds).toBeDefined();
+  return Number(seconds);
+}
+
+/**
+ * The Candidate 4 CHECK body, as PostgreSQL will evaluate it. Candidate 4 is an
+ * applied migration and must never be edited, so anchoring on its exact shape is
+ * safe and makes any retro-edit fail loudly here.
+ */
+function stagedCheckExpression(): string {
+  const expression = candidateSql.match(/CHECK \(\n([\s\S]*?)\n {2}\)\n {2}NOT VALID;/)?.[1];
+  expect(expression).toBeDefined();
+  return String(expression);
+}
+
+/**
+ * The Candidate 5 preflight predicate with its PL/pgSQL locals inlined, so it can
+ * be evaluated as plain SQL alongside the Candidate 4 expression.
+ */
+function preflightPredicate(): string {
+  const writeScopes = validationSql.match(/v_write_scopes CONSTANT TEXT\[\] :=([\s\S]*?);/)?.[1];
+  const readScope = validationSql.match(/v_read_scope CONSTANT TEXT\[\] :=([\s\S]*?);/)?.[1];
+  const where = validationSql.match(/WHERE (scopes[\s\S]*?);/)?.[1];
+  expect(writeScopes).toBeDefined();
+  expect(readScope).toBeDefined();
+  expect(where).toBeDefined();
+  return String(where)
+    .replaceAll('v_write_scopes', `(${String(writeScopes)})`)
+    .replaceAll('v_read_scope', `(${String(readScope)})`);
+}
 
 const existingResourceConstraintNames = [
   'oauth_connections_environment_resource_fkey',
@@ -81,7 +153,7 @@ function expectConstraintViolation(
   expect(result.stderr).toContain(constraintName);
 }
 
-describe.skipIf(!RUN_LOCAL)('MCP Candidate 4 OAuth scope constraints', () => {
+describe.skipIf(!RUN_LOCAL)('MCP Candidate 4 and 5 OAuth scope constraints', () => {
   beforeAll(async () => {
     const { error } = await admin.auth.admin.createUser({
       id: userId,
@@ -201,7 +273,133 @@ describe.skipIf(!RUN_LOCAL)('MCP Candidate 4 OAuth scope constraints', () => {
     }
   });
 
-  it('leaves staged checks unvalidated and existing resource FKs validated', () => {
+  it('validates only the three staged checks and changes nothing else', () => {
+    expect(validationSql.match(/VALIDATE CONSTRAINT \w+;/g)).toHaveLength(3);
+    for (const constraintName of stagedConstraintNames) {
+      expect(validationSql).toContain(`VALIDATE CONSTRAINT ${constraintName};`);
+    }
+
+    // Candidate 1 already validated these, so Candidate 5 must not restate them.
+    for (const constraintName of existingResourceConstraintNames) {
+      expect(validationSql).not.toContain(constraintName);
+    }
+
+    // Candidate 5 only advances constraint state. No schema restructuring, no
+    // privilege change, no gate change, and above all no destructive
+    // "remediation" of the very rows the preflight exists to surface: deleting a
+    // write-only grant would destroy consent history instead of repairing it.
+    expect(validationSql).not.toMatch(/\bNOT VALID\b/i);
+    expect(validationSql).not.toMatch(/\bADD CONSTRAINT\b/i);
+    expect(validationSql).not.toMatch(/\bDROP CONSTRAINT\b/i);
+    expect(validationSql).not.toMatch(/\b(GRANT|REVOKE|TRUNCATE)\b/i);
+    expect(validationSql).not.toMatch(
+      /\b(DELETE\s+FROM|INSERT\s+INTO|UPDATE)\s+(public\.)?(oauth_|mcp_)/i,
+    );
+  });
+
+  it('runs the read-only preflight over all three tables before validating', () => {
+    // Order matters: with the scan first, validation fails on the same rows but
+    // with a generic PostgreSQL message and the actionable abort never runs.
+    const preflightIndex = validationSql.indexOf('DO $$');
+    const firstValidateIndex = validationSql.indexOf('VALIDATE CONSTRAINT');
+    expect(preflightIndex).toBeGreaterThan(-1);
+    expect(firstValidateIndex).toBeGreaterThan(preflightIndex);
+
+    // Each table is counted exactly once. Scanning one table three times is the
+    // likely defect in a hand-duplicated block, and no runtime test would catch it.
+    for (const table of stagedTableNames) {
+      expect(validationSql.match(new RegExp(`FROM public\\.${table}\\b`, 'g'))).toHaveLength(1);
+    }
+
+    // The abort must be a check violation, and every interpolated argument must
+    // be a plain count, so no row identity can reach the PostgreSQL log.
+    // Anchor on the terminator, not the first `;` — the message text contains one.
+    const raiseStatement = validationSql.match(
+      /RAISE EXCEPTION[\s\S]*?USING ERRCODE = 'check_violation';/,
+    )?.[0];
+    expect(raiseStatement).toBeDefined();
+    expect(raiseStatement).toContain('revocation alone is insufficient');
+    const raiseArguments = String(raiseStatement).slice(String(raiseStatement).indexOf("',") + 2);
+    expect(raiseArguments.match(/v_\w+_violations/g)).toHaveLength(3);
+    expect(raiseArguments).not.toMatch(/\b(scopes|_agg|user_id|client_id|token_hash|code_hash)\b/);
+    expect(
+      validationSql.match(/SELECT pg_catalog\.count\(\*\)\s+INTO v_\w+_violations\b/g),
+    ).toHaveLength(3);
+
+    // The scan reads every row, so it needs a larger budget than the
+    // metadata-only NOT VALID additions of Candidate 4. Assert the inequality
+    // rather than the literal, so raising Candidate 4 cannot silently invert it.
+    expect(statementTimeoutSeconds(validationSql)).toBeGreaterThan(
+      statementTimeoutSeconds(candidateSql),
+    );
+    expect(validationSql).toContain("SET LOCAL lock_timeout = '5s'");
+  });
+
+  it('preflights with the exact negation of the staged check expression', () => {
+    // Evaluate both expressions in PostgreSQL over a probe set instead of
+    // comparing source text. This catches an AND/OR inversion, a dropped NOT, a
+    // rewrite to `= ANY (scopes)`, and any scope-set drift — none of which a
+    // string match distinguishes. CHECK passes on TRUE or NULL; the preflight
+    // WHERE matches only on TRUE, so the two must be exact complements.
+    const result = runOwnerSql(`
+      WITH probe(scopes) AS (
+        VALUES
+          (ARRAY[]::TEXT[]),
+          (ARRAY['read:entries']::TEXT[]),
+          (ARRAY['write:plans']::TEXT[]),
+          (ARRAY['delete:records']::TEXT[]),
+          (ARRAY['read:entries', 'write:plans']::TEXT[]),
+          (ARRAY['read:entries', 'write:records', 'delete:plans']::TEXT[]),
+          (ARRAY['write:plans', NULL]::TEXT[]),
+          (ARRAY[NULL]::TEXT[])
+      )
+      SELECT pg_catalog.bool_and(
+        COALESCE((${preflightPredicate()}), false) = NOT COALESCE((${stagedCheckExpression()}), true)
+      )
+      FROM probe;
+    `);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe('t');
+  });
+
+  // Tautological once Candidate 5 has run: this re-evaluates the validated
+  // constraints' own predicate over the same tables, so it cannot fail unless a
+  // constraint is broken. It is kept as a cheap canary, not as evidence of data
+  // health — the real evidence is the read-only production count recorded in the
+  // Candidate 5 PR, plus the `convalidated` catalog assertion below.
+  it('leaves no stored grant that the validated checks would reject', () => {
+    const result = runOwnerSql(`
+      SELECT NOT EXISTS (
+        SELECT 1
+        FROM (
+          SELECT scopes FROM public.oauth_connections
+          UNION ALL
+          SELECT scopes FROM public.oauth_authorization_codes
+          UNION ALL
+          SELECT scopes FROM public.oauth_tokens
+        ) AS stored_grants
+        WHERE scopes && ARRAY[
+            'write:plans',
+            'delete:plans',
+            'write:records',
+            'delete:records'
+          ]::TEXT[]
+          AND NOT (scopes @> ARRAY['read:entries']::TEXT[])
+      );
+    `);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe('t');
+  });
+
+  // The preflight abort path has no runtime test. Once Candidate 5 has run, the
+  // validated CHECK rejects every violating row and a CHECK constraint cannot be
+  // deferred, so seeding a fixture that trips the preflight would mean dropping
+  // the constraint this migration exists to enforce. The static assertions above
+  // cover the preflight instead.
+
+  it('marks the staged checks and the existing resource FKs as validated', () => {
     const result = runOwnerSql(`
       SELECT c.conname || '|' || c.contype::TEXT || '|' || c.convalidated::TEXT
       FROM pg_constraint AS c
@@ -217,13 +415,14 @@ describe.skipIf(!RUN_LOCAL)('MCP Candidate 4 OAuth scope constraints', () => {
     `);
 
     expect(result.status).toBe(0);
-    const catalogRows = result.stdout.trim().split('\n');
+    // Sort both sides: SQL orders by conname, JS by the whole `name|type|valid`
+    // string, and the two only agree while no name is a prefix of another.
+    const catalogRows = result.stdout.trim().split('\n').sort();
     expect(catalogRows).toEqual(
-      [...existingResourceConstraintNames]
-        .sort()
-        .map((name) => `${name}|f|true`)
-        .concat([...stagedConstraintNames].sort().map((name) => `${name}|c|false`))
-        .sort(),
+      [
+        ...existingResourceConstraintNames.map((name) => `${name}|f|true`),
+        ...stagedConstraintNames.map((name) => `${name}|c|true`),
+      ].sort(),
     );
   });
 

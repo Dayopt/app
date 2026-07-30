@@ -1,11 +1,12 @@
 -- ============================================================
 -- OAuth 2.1 / MCP DB基盤（読み物用 — CLIでは使用しない）
 -- ============================================================
--- Candidate 4 は connection-bound OAuth のstored scope契約を追加する。
+-- Candidate 4 が connection-bound OAuth のstored scope契約を追加し、Candidate 5 が
+-- 既存行まで含めて検証済みにした。
 -- MCP write tool はまだ公開せず、global gate OFF + client list empty が停止条件。
 -- 実際のマイグレーションは migrations/ を参照。
 -- 最終同期日: 2026-07-30
--- Candidate 4 terminal migration: 20260730090100_mcp_oauth_scope_constraints_not_valid.sql
+-- Candidate 5 terminal migration: 20260730090200_validate_mcp_oauth_scope_constraints.sql
 -- 同期対象 migration:
 --   - 20260501000000_oauth_tokens_from_api_keys.sql
 --   - 20260501000100_oauth_authorization_codes.sql
@@ -26,9 +27,11 @@
 --   - 20260729073126_mcp_stage1_receipt_generation_lifecycle.sql
 --   - 20260729073127_legacy_linked_record_restore_compatibility.sql
 --   - 20260730090100_mcp_oauth_scope_constraints_not_valid.sql
+--   - 20260730090200_validate_mcp_oauth_scope_constraints.sql
 --
--- Candidate 4の実migrationは下記3 CHECKをNOT VALIDで追加する。
--- 既存行のpreflightとVALIDATE CONSTRAINTはCandidate 5で行う。
+-- 下記3 CHECKはCandidate 4がNOT VALIDで追加し、Candidate 5が読み取り専用preflightの後に
+-- VALIDATE CONSTRAINTで検証済みへ進めた。この宣言スキーマは読み物なので、
+-- 検証状態（convalidated）はmigrationだけが持つ。
 -- ============================================================
 
 -- mcp_environment_identity: DBが所有する一度きり・変更不可のauthority identity。
