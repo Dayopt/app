@@ -84,6 +84,10 @@ export const AllColors: Story = {
             accent
           </p>
           <p>
+            <span className="text-foreground font-medium">Light:</span> Surface — 紙 warm H75
+            C0.005。card も純白ではない（L0.99）。インク（テキスト）は無彩色のまま
+          </p>
+          <p>
             <span className="text-foreground font-medium">Dark:</span> Surface — warm H60 C0.008。
             テキストはオフホワイト L0.90（純白にしない）。Border — alpha-based（black/α, white/α）
           </p>
@@ -99,22 +103,22 @@ export const AllColors: Story = {
         <ColorSwatch
           tailwindClass="bg-container"
           description="沈む: sidebar, footer"
-          oklch="oklch(0.96 0 0) | oklch(0.15 0.008 60)"
+          oklch="oklch(0.95 0.005 75) | oklch(0.15 0.008 60)"
         />
         <ColorSwatch
           tailwindClass="bg-background"
           description="基準: page"
-          oklch="oklch(0.98 0 0) | oklch(0.18 0.008 60)"
+          oklch="oklch(0.97 0.005 75) | oklch(0.18 0.008 60)"
         />
         <ColorSwatch
           tailwindClass="bg-card"
           description="浮く: card, dialog"
-          oklch="oklch(1.00 0 0) | oklch(0.22 0.008 60)"
+          oklch="oklch(0.99 0.005 75) | oklch(0.22 0.008 60)"
         />
         <ColorSwatch
           tailwindClass="bg-muted"
           description="窪み: input, well"
-          oklch="oklch(0.95 0 0) | oklch(0.25 0.008 60)"
+          oklch="oklch(0.94 0.005 75) | oklch(0.25 0.008 60)"
         />
         <ColorSwatch
           tailwindClass="bg-overlay"
@@ -233,12 +237,15 @@ export const AllColors: Story = {
       <h2 className="text-muted-foreground mt-8 mb-6 text-xs font-medium tracking-widest uppercase">
         3. Primary — ブランドアクション
       </h2>
+      <p className="text-muted-foreground -mt-4 mb-6 text-xs">
+        紺（インク）。色相は --hue-brand 259.8145 で固定し、明度と彩度だけで調整する。
+      </p>
 
       <ColorGroup title="Primary">
         <ColorSwatch
           tailwindClass="bg-primary"
           description="主要アクションの背景"
-          oklch="oklch(0.45 0.14 260) | oklch(0.50 0.188 260)"
+          oklch="oklch(0.40 0.105 260) | oklch(0.55 0.13 260)"
         />
         <ColorSwatch
           tailwindClass="text-primary-foreground"
@@ -278,12 +285,12 @@ export const AllColors: Story = {
         <ColorSwatch
           tailwindClass="bg-state-active"
           description="選択中"
-          oklch="oklch(0.95 0.025 260) | oklch(0.45 0.14 260)"
+          oklch="oklch(0.95 0.019 260) | oklch(0.45 0.105 260)"
         />
         <ColorSwatch
           tailwindClass="text-state-active-foreground"
           description="アクティブ状態テキスト"
-          oklch="oklch(0.38 0.14 260) | oklch(0.88 0.06 260)"
+          oklch="oklch(0.38 0.105 260) | oklch(0.88 0.045 260)"
         />
       </ColorGroup>
 
@@ -413,7 +420,7 @@ export const Surface: Story = {
         token: 'container',
         role: '沈む',
         desc: 'サイドバー、セクション',
-        light: 'oklch(0.96 0 0)',
+        light: 'oklch(0.95 0.005 75)',
         dark: 'oklch(0.15 0.008 60)',
         bg: 'bg-container',
       },
@@ -421,7 +428,7 @@ export const Surface: Story = {
         token: 'background',
         role: '基準',
         desc: 'ページ背景',
-        light: 'oklch(0.98 0 0)',
+        light: 'oklch(0.97 0.005 75)',
         dark: 'oklch(0.18 0.008 60)',
         bg: 'bg-background',
       },
@@ -429,7 +436,7 @@ export const Surface: Story = {
         token: 'card',
         role: '浮く',
         desc: 'カード、ダイアログ',
-        light: 'oklch(1.00 0 0)',
+        light: 'oklch(0.99 0.005 75)',
         dark: 'oklch(0.22 0.008 60)',
         bg: 'bg-card',
       },
@@ -466,7 +473,12 @@ export const Surface: Story = {
       <div>
         <h2 className="mb-2 text-xl font-medium">Surface 体系</h2>
         <p className="text-muted-foreground mb-1 text-sm">
-          container(沈む) → background(基準) → card(浮く) + muted。Dark: warm H60 C=0.008。
+          container(沈む) → background(基準) → card(浮く) + muted。Light は「紙」warm H75 C=0.005、
+          Dark は warm H60 C=0.008。4面すべてが同じ温度を持つ。
+        </p>
+        <p className="text-muted-foreground mb-1 text-sm">
+          card は純白ではない（L=0.99）。L=1.00 では chroma を持てないため、card だけ純白に残すと
+          4面のうち1面で色温度が割れる。
         </p>
         <p className="text-muted-foreground mb-8 text-sm">
           テキストは純白にしない（dark foreground L=0.90 オフホワイト, C=0.005, H=70）。
@@ -540,7 +552,7 @@ export const Surface: Story = {
                   token: 'muted',
                   role: '控えめ',
                   desc: '入力欄',
-                  light: 'oklch(0.95 0 0)',
+                  light: 'oklch(0.94 0.005 75)',
                   dark: 'oklch(0.25 0.008 60)',
                   bg: 'bg-muted',
                 },
