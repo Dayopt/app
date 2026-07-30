@@ -2,13 +2,6 @@
 
 Dayopt で作業する coding agent の共通入口。Claude は `CLAUDE.md` から本ファイルを読み、Codex も本ファイルを project guidance として読む。詳細ルールは既存の `.claude/rules/` を canonical source とし、Codex 固有の運用差分だけ `.codex/rules/` に置く。同じ規約を provider 別に二重管理しない。
 
-## Product North Star
-
-- **Target**: 世界中の個人ユーザー。B2B ではない
-- **Differentiator**: タイムボクシング、時間記録、タスク、カレンダーの一体化
-- **Experience goal**: Google Calendar や Toggl と同等の、装飾のない基本体験
-- **Tone**: 寡黙な研究者。数字で示し、煽らず、ユーザーの知性を信頼する
-
 ## シンプルルール（判断層）
 
 迷った瞬間に戻る 5 箇条。**機能の追加・優先順位・出荷・削除を判断する時にだけ**使う。typo 修正や既存パターンへの追従で持ち出すと官僚化するので使わない。
@@ -23,7 +16,7 @@ Dayopt で作業する coding agent の共通入口。Claude は `CLAUDE.md` か
 
 根拠となった観測:
 
-1. Target が「世界中の個人ユーザー。B2B ではない」（本ファイル §Product North Star）。チーム共有や管理者向けの要望が来るたびに考え直さないための境界
+1. 市場は「世界中の個人。B2B ではない」（[strategy.md](docs/business/strategy.md) §3）。チーム共有や管理者向けの要望が来るたびに考え直さないための境界
 2. 「予定と実績が同じタイムラインで対になる設計」が変えないものの筆頭（[strategy.md](docs/business/strategy.md) §5-1）。単体機能はどれも既存ツールに勝てないが、並べて距離を見せる点だけは競合が持たない
 3. 「速度・起動の速さ・操作数・画面の少なさは機能要件」（strategy.md §4-9）。同等では乗り換え理由にならないので、手数で上回る必要がある
 4. `.claude/rules/plan-format.md` の Reversibility Table で既に実装済み。URL / public ID / schema 公開 / 外部 webhook の契約は後から変えられない
