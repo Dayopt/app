@@ -4,7 +4,7 @@ import { generateEnhancedMetadata, StructuredData } from '@web/components/seo/En
 import { cn } from '@web/lib/class-names';
 import { ThemeProvider } from '@web/shell/providers/theme-provider';
 import type { Metadata } from 'next';
-import { Noto_Sans_JP, Source_Code_Pro, Source_Sans_3 } from 'next/font/google';
+import { Noto_Sans_JP, Source_Sans_3 } from 'next/font/google';
 import './globals.css';
 
 // product（apps/product/src/app/layout.tsx）と同一のフォントスタック。
@@ -29,14 +29,6 @@ const notoSansJP = Noto_Sans_JP({
   preload: true,
 });
 
-// docs / blog のコードブロックで使う。本文には使わないので LCP を優先して遅延読み込み
-const sourceCodePro = Source_Code_Pro({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-code',
-  preload: false,
-});
-
 export const metadata: Metadata = generateEnhancedMetadata({
   title: 'Dayopt - Modern SaaS Platform',
   description:
@@ -59,7 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sourceSans.variable} ${notoSansJP.variable} ${sourceCodePro.variable}`}
+      className={`${sourceSans.variable} ${notoSansJP.variable}`}
     >
       <head>
         <link

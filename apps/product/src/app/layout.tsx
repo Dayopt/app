@@ -18,7 +18,7 @@
 import '@/lib/styles/globals.css';
 
 import type { Metadata, Viewport } from 'next';
-import { Noto_Sans_JP, Source_Code_Pro, Source_Sans_3 } from 'next/font/google';
+import { Noto_Sans_JP, Source_Sans_3 } from 'next/font/google';
 import { headers } from 'next/headers';
 import { Suspense } from 'react';
 
@@ -28,7 +28,7 @@ import { cn } from '@dayopt/components';
 // next/font による最適化されたフォント読み込み（Variable Font: wght軸のみ）
 // preload: true でLCP改善（デフォルトでtrueだが明示的に指定）
 //
-// 変数名は Tailwind 組み込みの theme キー（--font-sans / --font-mono）と衝突させない。
+// 変数名は Tailwind 組み込みの theme キー（--font-sans）と衝突させない。
 // html 要素の class で注入されると :root の theme 値を上書きし、
 // font-sans utility が和文フォールバックを失うため。合成は foundations の typography.css で行う。
 //
@@ -51,15 +51,6 @@ const notoSansJP = Noto_Sans_JP({
   display: 'swap',
   variable: '--font-noto-jp',
   preload: true,
-});
-
-// 等幅フォント（時刻・duration・統計の数字と、エラーID / MFAコード）
-// preload: false — 本文には使わず font-mono 指定箇所だけなので、LCP を優先して遅延読み込みにする
-const sourceCodePro = Source_Code_Pro({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-code',
-  preload: false,
 });
 
 /**
@@ -129,7 +120,7 @@ const RootLayout = async ({ children, params }: RootLayoutProps) => {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${sourceSans.variable} ${notoSansJP.variable} ${sourceCodePro.variable}`}
+      className={`${sourceSans.variable} ${notoSansJP.variable}`}
     >
       <head>
         {/* LCP改善: Supabase API への早期接続確立（preconnect + dns-prefetch） */}

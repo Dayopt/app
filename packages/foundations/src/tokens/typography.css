@@ -1,13 +1,18 @@
 /* ============================================
- * フォントスタック（Adobe Source ファミリーで統一）
+ * フォントスタック（欧文 Source Sans 3 + 和文 Noto Sans JP の 2 書体）
  *
- * 欧文 Source Sans 3 / 和文 Noto Sans JP（= Source Han Sans）/ 等幅 Source Code Pro。
+ * Noto Sans JP は Adobe Source Han Sans と同一なので、欧文を Source Sans 3 にすると
+ * 2 書体が同じ血筋になり、和欧混植の行に継ぎ目が出ない。
  * 書体の実体読み込みは各アプリの next/font が担い、ここは stack の合成だけを持つ。
- * Tailwind への接続は tailwind-theme.css の @theme inline（--font-sans / --font-mono）。
+ * Tailwind への接続は tailwind-theme.css の @theme inline（--font-sans）。
  *
- * next/font 側の変数（--font-latin / --font-noto-jp / --font-code）は Tailwind の
- * theme キーと衝突しない名前空間にしてある。html の class で注入される変数が
- * theme 値を上書きすると、font-sans utility が和文フォールバックを失うため。
+ * 等幅の webfont は配信しない。Source Sans 3 の数字は指定なしで既に等幅（全 10 桁が同幅）
+ * なので、桁揃えのために別書体を持ち込む必要がない。font-mono は Tailwind 既定の
+ * OS 等幅のままで、コード・エラーID・キーボードショートカットだけが使う。
+ *
+ * next/font 側の変数（--font-latin / --font-noto-jp）は Tailwind の theme キーと
+ * 衝突しない名前空間にしてある。html の class で注入される変数が theme 値を
+ * 上書きすると、font-sans utility が和文フォールバックを失うため。
  *
  * var() のフォールバックに素の family 名を置いているので、next/font を通らない
  * 環境（Storybook 等）でも stack が壊れず後段のシステムフォントへ落ちる。
@@ -22,10 +27,4 @@
     var(--font-latin, 'Source Sans 3'), var(--font-noto-jp, 'Noto Sans JP'), -apple-system,
     BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Hiragino Sans',
     'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
-
-  /* 時刻・duration・統計の数字が主役なので等幅も Source ファミリーで揃える。
-     tabular-nums は使用箇所側で個別指定する（ここでは強制しない）。 */
-  --font-stack-mono:
-    var(--font-code, 'Source Code Pro'), ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco,
-    Consolas, monospace;
 }

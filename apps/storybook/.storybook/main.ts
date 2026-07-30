@@ -68,7 +68,7 @@ const config: StorybookConfig = {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@200..900&family=Noto+Sans+JP:wght@100..900&family=Source+Code+Pro:wght@200..900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@200..900&family=Noto+Sans+JP:wght@100..900&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -79,7 +79,6 @@ const config: StorybookConfig = {
       :root {
         --font-latin: 'Source Sans 3';
         --font-noto-jp: 'Noto Sans JP';
-        --font-code: 'Source Code Pro';
       }
     </style>
     <script>
@@ -91,7 +90,7 @@ const config: StorybookConfig = {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@200..900&family=Noto+Sans+JP:wght@100..900&family=Source+Code+Pro:wght@200..900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@200..900&family=Noto+Sans+JP:wght@100..900&display=swap"
       rel="stylesheet"
     />
     <script>

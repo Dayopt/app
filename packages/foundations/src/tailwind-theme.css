@@ -137,8 +137,9 @@
 /* ============================================
  * タイポグラフィ
  * ============================================
- * フォントファミリーのみトークン化する（実体は tokens/typography.css）。
- * font-sans / font-mono utility と body の stack を同一ソースにするため。
+ * font-sans のみトークン化する（実体は tokens/typography.css）。
+ * font-sans utility と body の stack を同一ソースにするため。
+ * font-mono は Tailwind 既定（OS 等幅）のまま。独自の等幅 webfont は配信しない。
  * それ以外は Tailwindデフォルトを使用（CSS変数不要）
  * - フォントサイズ: text-xs, text-sm, text-base, text-lg, text-xl, text-2xl...
  * - フォントウェイト: font-normal (400), font-medium (500)
@@ -147,5 +148,4 @@
  */
 @theme inline {
   --font-sans: var(--font-stack-sans);
-  --font-mono: var(--font-stack-mono);
 }
