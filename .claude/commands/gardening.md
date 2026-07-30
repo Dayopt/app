@@ -48,7 +48,7 @@ feedback / incident の note は、対応がまだ `operations/` 側の手順に
 実行層（`.claude/rules/workflow.md` §Pause point の各発動点）:
 
 4. **各チェックは今月何かを捕まえたか。** 捕まえた項目と、1 度も引っかからなかった項目を分ける。後者は削る候補
-5. **無言でスキップされた pause point はないか。** push 前の confirm に答えず再実行した、`branch:finish` を使わず手動でマージした等。仕組みを迂回できたなら、機械強制へ昇格できないかを検討する
+5. **pause point の迂回の痕跡はないか。** 観察できるものだけを見る: `branch:finish` を使わない手動マージ（merge commit の作られ方で分かる）、pre-push を外した push、`--no-verify` のブロック履歴。痕跡があれば機械強制へ昇格できないかを検討する
 6. **機械へ昇格できる項目はないか。** 発話で担保している項目のうち、hooks / CI で止められるものは昇格させる（止まるのが最強。別 issue に切り出してよい）
 
 所見が出たら `docs/product/log/YYYY-MM-DD-simple-rules-review.md` に記録する。所見なしなら記録不要（件数だけステップ 10 に書く）。
