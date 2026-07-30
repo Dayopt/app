@@ -24,6 +24,7 @@ import { AuthMode, createServiceRoleClient, detectAuthMode } from '@/lib/supabas
 export interface TrpcRequestLike {
   headers: Record<string, string | undefined>;
   cookies: Record<string, string | undefined>;
+  signal?: AbortSignal | undefined;
   socket?: {
     remoteAddress?: string | undefined;
   };
@@ -53,6 +54,11 @@ export interface Context {
   oauthClientId?: OAuthClientId | undefined;
   /** 検証済み OAuth scopes（oauth modeの場合のみ） */
   oauthScopes?: SupportedScope[] | undefined;
+  /**
+   * In-process MCP bridgeだけが設定する実行境界。
+   * HTTP requestのheaderやbodyからは決して設定しない。
+   */
+  oauthExecution?: 'mcp_internal' | undefined;
   /** Supabase Auth MFA assurance level（session modeの場合のみ） */
   mfaAssurance?:
     | {
@@ -266,8 +272,19 @@ async function createTRPCContext(opts: {
 
 /** Fetch API用tRPCコンテキスト作成（App Router Route Handler向け） */
 export async function createFetchTRPCContext(opts: FetchCreateContextFnOptions): Promise<Context> {
+  const req = createRequestLike(opts.req);
+  if (detectAuthMode(req.headers as Record<string, string>) === 'oauth') {
+    // Dayopt発行のopaque tokenを受理する公開HTTP境界は /api/mcp だけに固定する。
+    // ここでDB lookupより前に拒否し、未認証Bearer連打でservice-role検証を増幅させない。
+    logger.warn('OAuth bearer rejected at public tRPC boundary');
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'OAuth tokens are accepted only through the MCP endpoint',
+    });
+  }
+
   return createTRPCContext({
-    req: createRequestLike(opts.req),
+    req,
     res: { headers: opts.resHeaders },
   });
 }
@@ -287,6 +304,7 @@ function createRequestLike(req: Request): TrpcRequestLike {
   return {
     headers,
     cookies: parseCookieHeader(req.headers.get('cookie')),
+    signal: req.signal,
   };
 }
 

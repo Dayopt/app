@@ -1,0 +1,170 @@
+import { describe, expect, it } from 'vitest';
+
+import { deriveTimePLReview, type TimePLReviewSourceRow } from '../time-pl-review';
+import { aggregateTimePLTags } from '../time-pl-tag-aggregation';
+
+const TAG_A = '00000000-0000-4000-8000-000000000001';
+const TAG_B = '00000000-0000-4000-8000-000000000002';
+const TAG_C = '00000000-0000-4000-8000-000000000003';
+
+function row(tagId: string, minutes: number, offsetMinutes = 0): TimePLReviewSourceRow {
+  const start = new Date(Date.UTC(2026, 6, 24, 0, offsetMinutes));
+  return {
+    tagId,
+    startAt: start.toISOString(),
+    endAt: new Date(start.getTime() + minutes * 60_000).toISOString(),
+  };
+}
+
+describe('deriveTimePLReview', () => {
+  it('Review UIとMCPが共有するtag集計でpresenceと0.1分丸めを保持する', () => {
+    expect(
+      aggregateTimePLTags(
+        [{ tagId: TAG_A, minutes: 0.04 }],
+        [
+          { tagId: TAG_A, minutes: 0.06 },
+          { tagId: TAG_B, minutes: 45 },
+        ],
+      ),
+    ).toEqual([
+      {
+        tagId: TAG_A,
+        plannedMinutes: 0,
+        recordedMinutes: 0.1,
+        hasPlan: true,
+        hasRecord: true,
+      },
+      {
+        tagId: TAG_B,
+        plannedMinutes: 0,
+        recordedMinutes: 45,
+        hasPlan: false,
+        hasRecord: true,
+      },
+    ]);
+  });
+
+  it('Planをbudget、Recordをactualとしてtag別・summary・accuracy・signalを導出する', () => {
+    const result = deriveTimePLReview(
+      [row(TAG_A, 120), row(TAG_B, 60)],
+      [row(TAG_A, 90), row(TAG_B, 90), row(TAG_C, 45)],
+    );
+
+    expect(result).toEqual({
+      hasData: true,
+      summary: {
+        plannedMinutes: 180,
+        recordedMinutes: 225,
+        varianceMinutes: -45,
+      },
+      accuracy: { rate: 0.75, status: 'fair' },
+      tags: [
+        {
+          tagId: TAG_A,
+          plannedMinutes: 120,
+          recordedMinutes: 90,
+          varianceMinutes: 30,
+          variancePercent: 25,
+        },
+        {
+          tagId: TAG_B,
+          plannedMinutes: 60,
+          recordedMinutes: 90,
+          varianceMinutes: -30,
+          variancePercent: -50,
+        },
+        {
+          tagId: TAG_C,
+          plannedMinutes: 0,
+          recordedMinutes: 45,
+          varianceMinutes: -45,
+          variancePercent: null,
+        },
+      ],
+      signals: [
+        { code: 'plan_accuracy', rate: 0.75, status: 'fair' },
+        {
+          code: 'largest_tag_variance',
+          tagId: TAG_C,
+          direction: 'recorded_more_than_planned',
+          absoluteMinutes: 45,
+        },
+      ],
+    });
+  });
+
+  it('tagを0.1分へ丸めてからsummaryを作り浮動小数の端数を返さない', () => {
+    const result = deriveTimePLReview([row(TAG_A, 0.06), row(TAG_B, 0.06)], []);
+
+    expect(result.tags.map(({ plannedMinutes }) => plannedMinutes)).toEqual([0.1, 0.1]);
+    expect(result.summary).toEqual({
+      plannedMinutes: 0.2,
+      recordedMinutes: 0,
+      varianceMinutes: 0.2,
+    });
+    expect(JSON.stringify(result)).not.toContain('00000000000000004');
+  });
+
+  it('丸め後0分でもPlan存在を保持しvariancePercentとhasDataを失わない', () => {
+    const result = deriveTimePLReview([row(TAG_A, 1 / 60)], []);
+
+    expect(result).toMatchObject({
+      hasData: true,
+      accuracy: { rate: 1, status: 'excellent' },
+      tags: [
+        {
+          tagId: TAG_A,
+          plannedMinutes: 0,
+          recordedMinutes: 0,
+          varianceMinutes: 0,
+          variancePercent: 0,
+        },
+      ],
+      signals: [{ code: 'plan_accuracy', rate: 1, status: 'excellent' }],
+    });
+  });
+
+  it('同じ絶対varianceはtagIdで決定し相殺時もlargest signalを返す', () => {
+    const result = deriveTimePLReview(
+      [row(TAG_B, 30), row(TAG_A, 60)],
+      [row(TAG_B, 60), row(TAG_A, 30)],
+    );
+
+    expect(result.summary.varianceMinutes).toBe(0);
+    expect(result.accuracy).toEqual({ rate: 1, status: 'excellent' });
+    expect(result.signals).toEqual([
+      { code: 'plan_accuracy', rate: 1, status: 'excellent' },
+      {
+        code: 'largest_tag_variance',
+        tagId: TAG_A,
+        direction: 'recorded_less_than_planned',
+        absoluteMinutes: 30,
+      },
+    ]);
+  });
+
+  it('公開rateだけを4桁へ丸めstatusはcanonicalな丸め前thresholdを保持する', () => {
+    const result = deriveTimePLReview([row(TAG_A, 10_000)], [row(TAG_A, 9_499.6)]);
+
+    expect(result.accuracy).toEqual({ rate: 0.95, status: 'good' });
+    expect(result.signals[0]).toEqual({
+      code: 'plan_accuracy',
+      rate: 0.95,
+      status: 'good',
+    });
+  });
+
+  it('対象rowがなければ明示的なempty reviewを返す', () => {
+    expect(deriveTimePLReview([], [])).toEqual({
+      hasData: false,
+      summary: {
+        plannedMinutes: 0,
+        recordedMinutes: 0,
+        varianceMinutes: 0,
+      },
+      accuracy: null,
+      tags: [],
+      signals: [],
+    });
+  });
+});
