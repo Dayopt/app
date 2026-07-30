@@ -39,7 +39,7 @@
 :root {
   --motion-loop-pulse: 1000ms; /* カーソル点滅。OS のカーソル周期に揃える */
   --motion-loop-shimmer: 1500ms; /* skeleton の光沢、不定進捗バー */
-  --motion-loop-breath: 2000ms; /* 実行中エントリの呼吸 */
+  --motion-loop-breath: 1600ms; /* 実行中エントリの呼吸（既存の実装値に合わせる） */
 }
 
 /* ============================================
