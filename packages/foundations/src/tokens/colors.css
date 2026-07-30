@@ -45,9 +45,9 @@
   --primary: oklch(0.45 0.14 var(--hue-brand));
   --primary-foreground: var(--white);
 
-  /* State: Active（選択中・アクティブ状態） H260統一 */
-  --state-active: oklch(0.95 0.025 260);
-  --state-active-foreground: oklch(0.38 0.14 260);
+  /* State: Active（選択中・アクティブ状態） brand hue 追従 */
+  --state-active: oklch(0.95 0.025 var(--hue-brand));
+  --state-active-foreground: oklch(0.38 0.14 var(--hue-brand));
 
   /* shadcn/ui互換エイリアス（accent → state-active） */
   --accent: var(--state-active);
@@ -90,7 +90,15 @@
   --heatmap-scale-3: oklch(from var(--primary) l c h / 60%);
   --heatmap-scale-4: oklch(from var(--primary) l c h / 80%);
 
-  /* Charts - Comparison（比較用、shadcn準拠） */
+  /* ============================================
+   * Charts - Comparison（比較用、shadcn準拠）
+   *
+   * chart-2〜5 の色相 literal は意図的に --hue-brand を参照しない。
+   * この高彩度（C≈0.18-0.22）の L/C は色相 262 付近から上でしか sRGB に収まらず、
+   * 259.8145 へ揃えると chart-3 / chart-4 が色域外に出て clip される。
+   * つまりオフセットは装飾ではなく色域を確保するための実装上の必然。
+   * --hue-brand を動かす時はこのランプを個別に再計算する。
+   * ============================================ */
   --chart-1: oklch(0.6231 0.14 var(--hue-brand));
   --chart-2: oklch(0.5461 0.2152 262.8809);
   --chart-3: oklch(0.4882 0.2172 264.3763);
@@ -99,6 +107,12 @@
 
   /* ============================================
    * Tag Colors — Base（borders / dots / accents）
+   *
+   * タグ色・badge 色・--entry-default はユーザーデータ側の色なので
+   * --hue-brand に追従させない。UI chrome とデータの色を分離する
+   * （色を持つのはユーザーの時間だけ、という原則）。
+   * gray 系が H250 なのも brand 追従ではなく単独の寒色グレー指定。
+   *
    * 均等OKLCH: L=0.65, C=0.18, Hのみ変化
    * Hue配置（最小25°間隔）:
    *   red(25) orange(55) amber(80) green(145) teal(185)
@@ -186,9 +200,9 @@
   --primary: oklch(0.5 0.188 var(--hue-brand));
   --primary-foreground: var(--white);
 
-  /* State: Active（WCAG 1.4.11: bg上3:1+） H260統一 */
-  --state-active: oklch(0.45 0.14 260);
-  --state-active-foreground: oklch(0.88 0.06 260);
+  /* State: Active（WCAG 1.4.11: bg上3:1+） brand hue 追従 */
+  --state-active: oklch(0.45 0.14 var(--hue-brand));
+  --state-active-foreground: oklch(0.88 0.06 var(--hue-brand));
 
   /* shadcn/ui互換エイリアス */
   --accent: var(--state-active);
