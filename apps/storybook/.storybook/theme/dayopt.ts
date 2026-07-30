@@ -20,38 +20,40 @@ export const dayoptLightTheme = create({
     "'Source Sans 3', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
   fontCode: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace",
 
-  // --primary: oklch(0.45 0.188 259.8145)
-  colorPrimary: '#004bbb',
-  // --ring: oklch(0.6231 0.188 259.8145)
-  colorSecondary: '#3b82f6',
+  // --primary: oklch(0.4 0.105 259.8145)
+  colorPrimary: '#23467f',
+  // --chart-1: oklch(0.6231 0.14 259.8145) — brand の明るい段
+  colorSecondary: '#5286da',
 
-  // --background: oklch(0.99 0 0)
-  appBg: '#fcfcfc',
-  appContentBg: '#ffffff',
-  appPreviewBg: '#fcfcfc',
+  // --background: oklch(0.97 0.005 75)
+  appBg: '#f7f5f1',
+  // --card: oklch(0.99 0.005 75)
+  appContentBg: '#fefbf8',
+  appPreviewBg: '#f7f5f1',
 
-  // --border: oklch(0.75 0.01 264.54)
-  appBorderColor: '#abaeb4',
+  // --border: oklch(0 0 0 / 0.12) の不透明相当
+  appBorderColor: '#d9d7d5',
   // --radius-md: 0.5rem (8px)
   appBorderRadius: 8,
 
-  // --foreground: oklch(0.25 0 0)
-  textColor: '#222222',
-  // --muted-foreground: oklch(0.35 0.02 264.54)
-  textMutedColor: '#353b45',
+  // --foreground: oklch(0.13 0 0)
+  textColor: '#070707',
+  // --muted-foreground: oklch(0.4 0 0)
+  textMutedColor: '#484848',
 
-  barTextColor: '#353b45',
-  // --ring: oklch(0.6231 0.188 259.8145)
-  barHoverColor: '#3b82f6',
-  // --primary: oklch(0.45 0.188 259.8145)
-  barSelectedColor: '#004bbb',
-  barBg: '#ffffff',
+  barTextColor: '#484848',
+  // --chart-1: oklch(0.6231 0.14 259.8145)
+  barHoverColor: '#5286da',
+  // --primary: oklch(0.4 0.105 259.8145)
+  barSelectedColor: '#23467f',
+  // --card: oklch(0.99 0.005 75)
+  barBg: '#fefbf8',
 
-  inputBg: '#ffffff',
-  // --border: oklch(0.75 0.01 264.54)
-  inputBorder: '#abaeb4',
-  // --foreground: oklch(0.25 0 0)
-  inputTextColor: '#222222',
+  inputBg: '#fefbf8',
+  // --border: oklch(0 0 0 / 0.12) の不透明相当
+  inputBorder: '#d9d7d5',
+  // --foreground: oklch(0.13 0 0)
+  inputTextColor: '#070707',
   inputBorderRadius: 8,
 });
 
@@ -65,10 +67,10 @@ export const dayoptDarkTheme = create({
     "'Source Sans 3', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
   fontCode: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace",
 
-  // --primary dark: oklch(0.5 0.188 259.8145)
-  colorPrimary: '#115bcc',
-  // --ring: oklch(0.6231 0.188 259.8145)
-  colorSecondary: '#3b82f6',
+  // --primary dark: oklch(0.55 0.13 259.8145)
+  colorPrimary: '#4270bc',
+  // --chart-1 dark: oklch(0.7137 0.1434 254.624) — brand の明るい段
+  colorSecondary: '#60a5fa',
 
   // --background dark: oklch(0.18 0.008 60)
   appBg: '#14110e',
@@ -87,10 +89,10 @@ export const dayoptDarkTheme = create({
   textMutedColor: '#9b9895',
 
   barTextColor: '#9b9895',
-  // --ring: oklch(0.6231 0.188 259.8145)
-  barHoverColor: '#3b82f6',
-  // --primary dark: oklch(0.5 0.188 259.8145)
-  barSelectedColor: '#115bcc',
+  // --chart-1 dark: oklch(0.7137 0.1434 254.624)
+  barHoverColor: '#60a5fa',
+  // --primary dark: oklch(0.55 0.13 259.8145)
+  barSelectedColor: '#4270bc',
   // --container dark: oklch(0.15 0.008 60)
   barBg: '#0e0a08',
 

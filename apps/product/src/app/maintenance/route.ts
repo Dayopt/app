@@ -22,25 +22,27 @@ export async function GET() {
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500&display=swap');
 
+    /* colors.css のトークン値をコピーする（近似で書かない）。
+       Next.js の外で配信される静的 HTML なので CSS 変数を共有できない */
     :root {
-      --background: oklch(1 0 0);
-      --foreground: oklch(0.3211 0 0);
-      --card: oklch(1 0 0);
-      --card-foreground: oklch(0.3211 0 0);
-      --muted: oklch(0.97 0.002 264.54);
-      --muted-foreground: oklch(0.45 0.02 264.54);
-      --border: oklch(0.9 0.006 264.54);
+      --background: oklch(0.97 0.005 75);
+      --foreground: oklch(0.13 0 0);
+      --card: oklch(0.99 0.005 75);
+      --card-foreground: oklch(0.13 0 0);
+      --muted: oklch(0.94 0.005 75);
+      --muted-foreground: oklch(0.4 0 0);
+      --border: oklch(0 0 0 / 0.12);
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --background: oklch(0.2046 0 0);
-        --foreground: oklch(0.9219 0 0);
-        --card: oklch(0.2046 0 0);
-        --card-foreground: oklch(0.9219 0 0);
-        --muted: oklch(0.25 0 0);
-        --muted-foreground: oklch(0.78 0 0);
-        --border: oklch(0.3715 0 0);
+        --background: oklch(0.18 0.008 60);
+        --foreground: oklch(0.9 0.005 70);
+        --card: oklch(0.22 0.008 60);
+        --card-foreground: oklch(0.9 0.005 70);
+        --muted: oklch(0.25 0.008 60);
+        --muted-foreground: oklch(0.68 0.005 60);
+        --border: oklch(1 0 0 / 0.12);
       }
     }
 

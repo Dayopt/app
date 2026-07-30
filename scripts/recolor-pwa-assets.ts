@@ -1,7 +1,7 @@
 /**
  * PWA アセット再着色スクリプト
  *
- * アイコン:  黒背景 → primary blue (#2051a1) に差し替え、白シンボル維持
+ * アイコン:  黒背景 → primary blue (#23467f) に差し替え、白シンボル維持
  * Maskable:  safe zone (80%) 内にシンボルを配置した版を新規作成
  * Splash:   既存スクリプトと同じロジックで再生成（再着色後アイコンを使用）
  *
@@ -22,11 +22,11 @@ const PRODUCT_PUBLIC_DIR = path.join(ROOT, 'apps', 'product', 'public');
 const ICONS_DIR = path.join(PRODUCT_PUBLIC_DIR, 'icons');
 const SPLASH_DIR = path.join(PRODUCT_PUBLIC_DIR, 'splash');
 
-// Primary blue: oklch(0.45 0.14 259.8145) → #2051a1
-const PRIMARY = { r: 32, g: 81, b: 161 };
+// Primary blue: oklch(0.4 0.105 259.8145) → #23467f
+const PRIMARY = { r: 35, g: 70, b: 127 };
 
-// bg-background light: oklch(0.98 0 0) → #f8f8f8
-const BG_COLOR = { r: 248, g: 248, b: 248 };
+// bg-background light: oklch(0.97 0.005 75) → #f7f5f1
+const BG_COLOR = { r: 247, g: 245, b: 241 };
 
 /**
  * 画像の暗い部分を primary blue に差し替え、白い部分は維持
