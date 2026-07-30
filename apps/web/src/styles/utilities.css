@@ -1,28 +1,4 @@
 /* ============================================
- * Surface Elevation ユーティリティ（app同期）
- * 物理照明を表現するグラデーション + シャドウの複合
- * ============================================ */
-
-@utility surface-sunken {
-  background-image: var(--elevation-gradient-sunken);
-  box-shadow: var(--elevation-sunken);
-}
-
-@utility surface-flat {
-  background-image: var(--elevation-gradient-card);
-}
-
-@utility surface-raised {
-  background-image: var(--elevation-gradient-card);
-  box-shadow: var(--elevation-raised);
-}
-
-@utility surface-raised-heavy {
-  background-image: var(--elevation-gradient-card);
-  box-shadow: var(--elevation-raised-heavy);
-}
-
-/* ============================================
  * 汎用ユーティリティ
  * ============================================ */
 

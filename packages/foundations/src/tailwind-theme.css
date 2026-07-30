@@ -26,11 +26,6 @@
   --color-tooltip: var(--tooltip);
   --color-tooltip-foreground: var(--tooltip-foreground);
 
-  /* Elevation（物理照明シャドウ） */
-  --shadow-elevation-sunken: var(--elevation-sunken);
-  --shadow-elevation-surface: var(--elevation-surface);
-  --shadow-elevation-raised: var(--elevation-raised);
-  --shadow-elevation-raised-heavy: var(--elevation-raised-heavy);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
