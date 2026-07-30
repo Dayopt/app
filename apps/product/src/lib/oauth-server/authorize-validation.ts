@@ -1,7 +1,13 @@
 import 'server-only';
 
-import { isAllowedRedirectUri, resolveClient, type OAuthClient } from './clients';
-import { parseRequestedScope, type SupportedScope } from './scopes';
+import {
+  isAllowedRedirectUri,
+  isRuntimeClientWriteEnabled,
+  resolveClient,
+  type OAuthClient,
+} from './clients';
+import { resolveRequestedResource, type CanonicalResourceUri } from './resource';
+import { hasWriteScope, parseRequestedScope, type SupportedScope } from './scopes';
 
 /**
  * `/oauth/authorize` の入力 (raw query string) を検証する。
@@ -17,6 +23,7 @@ interface AuthorizeInput {
   code_challenge_method?: string | undefined;
   scope?: string | undefined;
   state?: string | undefined;
+  resource?: string | undefined;
 }
 
 export type AuthorizeValidationError =
@@ -24,7 +31,8 @@ export type AuthorizeValidationError =
   | 'invalid_client'
   | 'invalid_redirect_uri'
   | 'missing_pkce'
-  | 'invalid_scope';
+  | 'invalid_scope'
+  | 'invalid_resource';
 
 type AuthorizeValidationResult =
   | {
@@ -34,6 +42,7 @@ type AuthorizeValidationResult =
       redirectUri: string;
       codeChallenge: string;
       state: string | null;
+      resourceUri: CanonicalResourceUri;
     }
   | { ok: false; error: AuthorizeValidationError };
 
@@ -48,11 +57,23 @@ export function validateAuthorizeInput(input: AuthorizeInput): AuthorizeValidati
   if (!input.redirect_uri || !isAllowedRedirectUri(client, input.redirect_uri)) {
     return { ok: false, error: 'invalid_redirect_uri' };
   }
-  if (!input.code_challenge || input.code_challenge_method !== 'S256') {
+  if (
+    !input.code_challenge ||
+    input.code_challenge_method !== 'S256' ||
+    !/^[A-Za-z0-9_-]{43}$/.test(input.code_challenge)
+  ) {
     return { ok: false, error: 'missing_pkce' };
   }
+  const resourceUri = resolveRequestedResource(input.resource);
+  if (!resourceUri) {
+    return { ok: false, error: 'invalid_resource' };
+  }
   const scopes = parseRequestedScope(input.scope);
-  if (scopes === null) {
+  const requestsWrite = scopes !== null && hasWriteScope(scopes);
+  if (
+    scopes === null ||
+    (requestsWrite && (!scopes.includes('read:entries') || !isRuntimeClientWriteEnabled(client.id)))
+  ) {
     return { ok: false, error: 'invalid_scope' };
   }
   return {
@@ -62,5 +83,6 @@ export function validateAuthorizeInput(input: AuthorizeInput): AuthorizeValidati
     redirectUri: input.redirect_uri,
     codeChallenge: input.code_challenge,
     state: input.state ?? null,
+    resourceUri,
   };
 }

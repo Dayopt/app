@@ -2,13 +2,15 @@
  * OAuth 2.1 Authorization Server barrel.
  * /authorize, /token endpoints, PKCE (S256), opaque token issue/verify, static client allowlist.
  *
- * See docs/projects/mcp-server/overview.md (Decision 1, 9).
+ * Write scopes / MCP mutation は DB gate (`mcp_mutation_control`) と runtime allowlist
+ * (`MCP_WRITE_ENABLED_CLIENTS`) の二重 gate で閉じている。
  */
 
 export { validateAuthorizeInput, type AuthorizeValidationError } from './authorize-validation';
-export { resolveClient, type OAuthClientId } from './clients';
+export { isRuntimeClientWriteEnabled, resolveClient, type OAuthClientId } from './clients';
 export { exchangeAuthorizationCode, refreshAccessToken } from './code-exchange';
 export { createOAuthDbClient } from './db';
 export { OAuthServerError } from './errors';
-export { type SupportedScope } from './scopes';
+export { resolveRequestedResource, type CanonicalResourceUri } from './resource';
+export { DEFAULT_SCOPES, hasWriteScope, isSupportedScope, type SupportedScope } from './scopes';
 export { generateAuthorizationCode, hashToken } from './tokens';

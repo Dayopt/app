@@ -1,8 +1,8 @@
 import 'server-only';
 
 /**
- * RFC 6749 §4.1.2.1 / §5.2 で規定された OAuth エラーコード。
- * Phase 1 で必要なものに絞っている。
+ * Authorization server errors (RFC 6749) and protected-resource errors
+ * (RFC 6750) used by the current OAuth surface.
  */
 type OAuthErrorCode =
   | 'invalid_request'
@@ -12,6 +12,8 @@ type OAuthErrorCode =
   | 'unsupported_response_type'
   | 'unsupported_grant_type'
   | 'invalid_scope'
+  | 'invalid_target'
+  | 'invalid_token'
   | 'access_denied'
   | 'server_error';
 
