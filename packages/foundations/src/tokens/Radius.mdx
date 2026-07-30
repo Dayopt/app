@@ -6,6 +6,8 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 4段階のみ。「modal/dialog だけ 16px、それ以外は 8px」が基本ルール。
 
+禁止クラス（`rounded-sm` / `-md` / `-xl` / bare `rounded`）は **theme をリセットしてあるので生成されない**。書いても角丸が付かないだけで、見た目が静かに崩れることはない。
+
 ---
 
 ## 基本トークン

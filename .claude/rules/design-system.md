@@ -29,7 +29,7 @@ paths:
   - Raised: ページと一緒にスクロールする要素
   - Overlay: ページの上に重なる要素。下のコンテンツを覆う
 - **入力系:** input, textarea, select, radio 等のフォームコントロールは `shadow-xs` を使用
-- **許可される shadow**: `shadow-xs`, `shadow-sm`, `shadow-card` の3種のみ
+- **許可される shadow**: `shadow-xs`, `shadow-sm`, `shadow-card` の3種のみ。**theme をリセットしてあるので `shadow-md` 等は生成されない**
   - `shadow-xs`: form control 専用（input, select, textarea, radio）
   - `shadow-sm`: Raised elevation（bg-card を使うカード・セクション）
   - `shadow-card`: Overlay elevation（dropdown, popover, dialog, modal）
@@ -61,7 +61,7 @@ paths:
 ## Border Radius
 
 - 4段階のみ: `rounded-none`(0), `rounded-lg`(8px), `rounded-2xl`(16px), `rounded-full`
-- `rounded-sm`, `rounded-md`, `rounded-xl`, bare `rounded` は禁止
+- `rounded-sm`, `rounded-md`, `rounded-xl`, bare `rounded` は禁止。**theme をリセットしてあるので、書いてもクラスが生成されず何も起きない**
 - 任意値 (`rounded-[Xpx]`) は禁止
 - **Elevation との対応:**
   - Sunken (sidebar, input) → `rounded-lg` (8px)
