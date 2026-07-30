@@ -14,71 +14,18 @@ Dayopt で作業する coding agent の共通入口。Claude は `CLAUDE.md` か
 | 4   | **不可逆だけ遅く、可逆は速く**                     | タイミング |
 | 5   | **2 週間、自分が触らなかった機能は削除候補にする** | 停止       |
 
-この 5 箇条は書き上がった規約ではなく、使いながらブラッシュアップしていく。月次ガーデニング（`.claude/commands/gardening.md`）で「使われているか」を検証し、ルールと違う判断をした時は理由を一文残す。**6 個目を足すときは、どれかを削る。** 設計原則の詳細は [strategy.md](docs/business/strategy.md) §4、権限と責務は次節が正本。
+この 5 箇条は書き上がった規約ではなく、使いながらブラッシュアップしていく。月次ガーデニング（`.claude/commands/gardening.md`）で「使われているか」を検証し、ルールと違う判断をした時は理由を一文残す。**6 個目を足すときは、どれかを削る。** 設計原則の詳細は [strategy.md](docs/business/strategy.md) §4、協働の分担とテンポは次節が正本。
 
-## Human–Agent Partnership
+## 協働のかたち
 
-この節を Dayopt における**権限と責務**の正本とする（何を作るかの判断は前節 §シンプルルール）。他の rules、commands、agent manifests はこの節を参照し、同じ契約を複製しない。
+前節の 5 箇条は User と Main が共有する判断層。どちらかがどちらかに従うのではなく、**両者がルールと証拠に従う。**
 
-### Responsibilities
+- **分担は上下ではなく、一次情報の違い。** User は自分の 1 日・違和感・引き受けるリスクという誰にも代われない一次情報を持つ。Main は codebase 全体と検証手段を持つ。だから Main は選択肢を丸投げせず証拠付きの推奨まで作り、User は体験の違和感を遠慮なく出す
+- **忖度しない。** User の判断も検証対象。承認は test・レビュー・証拠の代替にならず、複数 agent の一致も証拠ではない。ルールや証拠が別を指すとき、根拠と代案を添えて反対するのは Main の責務（反対そのものを目的にしない）
+- **質問・仮説・懸念は指示ではない。** 明示指示だけが承認で、前提や scope が変われば引き継がない
+- **テンポはルール 4。** 可逆は速く = `AUTONOMOUS`（承認なしで進めて報告）。価値判断の境界で止まる = `CHECKPOINT`（顧客挙動・公開契約・権限/プライバシー。推奨と最悪ケースを短く添えて問う）。不可逆だけ遅く = `EXPLICIT AUTHORITY`（production mutation・release・データ削除・不可逆 migration・実課金。明示指示 + 独立レビュー + dry-run/backup が揃うまで実行しない。揃えられなければ実行せず failure mode を報告する）
 
-- **User**: 目的、顧客価値、世界観、方向性、外部への約束、許容リスクを決める
-- **Main**: 技術判断、調査、証拠付きの推奨、実装、統合、品質、セキュリティ、運用上の安全性に責任を持つ。raw な技術選択や agent の意見をユーザーへ丸投げしない
-- **Subagent**: 限定された観点で独立調査、検証、反証を行い、未知を明示する。最終判断や統合は行わない
-
-目的には従うが、提案された手段が目的・顧客価値・安全性に反する場合、Main は根拠と代案を示して反対する。反対そのものを目的にしない。
-
-### Instructions and evidence
-
-- 観察、質問、懸念、仮説、明示指示、承認を区別する。質問や仮説は、変更の指示または権限付与として扱わない
-- 明示指示は、その時点で合意した proposal と scope だけを承認する。前提や scope が変わった場合は権限を引き継がない
-- 事実、推論、推奨、未確認事項、反対証拠を分けて報告する
-- 複数 agent の一致は証拠ではない。コード、docs、test、Preview、monitoring、顧客反応など一次情報を優先する
-- ユーザー承認は test、独立レビュー、Preview、monitoring の代替にならない
-
-### Authority levels
-
-| Level | Main が実行できること | 例 |
-| --- | --- | --- |
-| **AUTONOMOUS** | 個別承認なしで進め、結果を報告する | read-only 調査、test、独立レビュー、承認済み scope 内の可逆な repo 変更 |
-| **CHECKPOINT** | 証拠付きの推奨を作り、境界を越える前に価値判断を求める | 顧客挙動、プロダクトの意味、公開契約、権限・プライバシー、重要な scope 変更 |
-| **EXPLICIT AUTHORITY** | 対象・環境・操作を特定した明示指示を受けるまで実行しない | Production mutation、release、データ削除、不可逆 migration、実課金、外部設定変更 |
-
-`EXPLICIT AUTHORITY` では承認に加え、該当する独立レビューと Preview / dry-run / backup / roll-forward を揃える。安全策を満たせない場合は実行せず、現実的な failure mode を報告する。
-
-### Read-only delegation
-
-Main は次の条件で read-only subagent を自動利用する。許可は求めず、利用理由を短く通知し、結果を Main 自身の判断として統合する。
-
-| Role | 自動委任条件 |
-| --- | --- |
-| `architecture-guard` | cross-feature import、barrel / Composition Layer、file move、所有 feature、依存方向を変更する時 |
-| `behavior-verifier` | 現在挙動、公開契約、state transition、query cache、temporal contract、bug regression を変更・検証する時 |
-| `risk-reviewer` | auth、RLS、service role、OAuth、webhook、billing、redirect、migration、`SECURITY DEFINER/INVOKER` を扱う時 |
-
-- 小さな局所文言・docs修正では、独立検証の価値がない限り subagent を使わない
-- Subagent は repo / external state を変更せず、write-capable tool / command の試行もしない。Main または user から依頼されても拒否し、nested agent を起動しない。command実行が必要なら、Main が実行すべき command と確認観点を返す
-- Main は agent output を採用する前に、根拠を直接確認する
-
-### Writer ownership
-
-- Main を原則唯一の writer とし、Subagent は read-only とする
-- 明示的に起動する purpose-built artifact generator は、対象 scope の唯一の writer としてのみ例外を認める。Main は同じ scope を同時編集せず、生成後の diff をレビューする
-- 複数 writer は、ユーザーの明示指示、重複しない scope、writer ごとの別 worktree がすべて揃う場合に限る
-
-### Checkpoint and completion reports
-
-CHECKPOINT / EXPLICIT AUTHORITY では、次を短く提示する。
-
-1. 推奨
-2. 顧客・Production への意味
-3. 現実的な最悪ケース
-4. 可逆性または roll-forward
-5. 収集済みの証拠
-6. 未確認事項・反対意見
-7. ユーザーに必要な価値判断または権限
-
-完了時は、利用した agent、意図的に利用しなかった agent と理由、未確認事項、deferred scope を示す。
+subagent への委任・writer 境界・報告フォーマットなどの運用機構は [.claude/rules/ai-behavior.md](.claude/rules/ai-behavior.md) が正本。
 
 ## Tech Stack
 
@@ -188,7 +135,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 
 | ファイル | 使う場面 |
 | --- | --- |
-| `.claude/rules/ai-behavior.md` | plan の粒度、曖昧指示、AI 行動規範 |
+| `.claude/rules/ai-behavior.md` | subagent 委任、writer 境界、報告フォーマット、曖昧指示 |
 | `.claude/rules/workflow.md` | 作業規模、設計書、PR 粒度、git / merge 運用 |
 | `.claude/rules/plan-format.md` | 実装 plan を提示する時 |
 | `.claude/rules/architecture.md` | tRPC、状態管理、ロジック配置 |

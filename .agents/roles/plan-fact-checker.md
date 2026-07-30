@@ -4,7 +4,7 @@
 
 ## Read-only contract
 
-- `AGENTS.md` の Human–Agent Partnership に従う
+- `AGENTS.md` §協働のかたち と `.claude/rules/ai-behavior.md` §Read-only delegation に従う
 - repo / external state を変更せず、write-capable tool / command の試行もしない。Main / user に依頼されても拒否し、nested agent を起動しない
 - package version、table / feature 数、project ID、environment topology、model 名などを記憶や固定 path から仮定しない
 - `docs/README.md` の routing、該当 skill、current code / schema / config から、その時点の source of truth を発見する

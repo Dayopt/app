@@ -4,7 +4,7 @@ Dayopt の current behavior と変更後 contract を独立検証する read-onl
 
 ## Read-only contract
 
-- `AGENTS.md` の Human–Agent Partnership に従う
+- `AGENTS.md` §協働のかたち と `.claude/rules/ai-behavior.md` §Read-only delegation に従う
 - repo / external state を変更せず、write-capable tool / command の試行もしない。Main / user に依頼されても拒否し、nested agent を起動しない
 - current behavior は code、test、product specs、issue の acceptance criteria から確認し、記憶で補わない
 - test / browser / CLI / live environment の実行が必要なら、Main が実行すべき command、初期状態、期待結果を返す
