@@ -12,6 +12,7 @@ import { RecordService } from './record-service';
 import {
   createTimeblockCommandClient,
   type TimeblockCommandClient,
+  toTimeblockSource,
 } from './timeblock-command-client';
 import type { PlanRow, RecordRow } from './timeblock-types';
 import type { ServiceSupabaseClient } from './types';
@@ -31,16 +32,11 @@ interface VersionedUpdateOptions<TInput> extends VersionedTargetOptions {
   input: TInput;
 }
 
-function toSource(source: string): 'api' | 'external_calendar' | 'manual' {
-  if (source === 'api' || source === 'external_calendar') return source;
-  return 'manual';
-}
-
 /**
  * UI向けのversioned command service。
  *
- * 既存のPlanService / RecordServiceは旧clientのdrain期間中そのまま残し、
- * このserviceだけがCandidate 1の原子的commandを呼ぶ。
+ * legacy routeを支えるPlanService / RecordServiceも同じcommand boundaryへ移ったため、
+ * このserviceは「raw CAS tokenを呼び出し元から受け取るUI経路」という差分だけを持つ。
  */
 export class TimeblockCommandService {
   private readonly plans: PlanService;
@@ -50,8 +46,9 @@ export class TimeblockCommandService {
     supabase: ServiceSupabaseClient,
     private readonly commands: TimeblockCommandClient = createTimeblockCommandClient(),
   ) {
-    this.plans = new PlanService(supabase);
-    this.records = new RecordService(supabase);
+    // 同一requestで service-role client を作り直さないよう command client を共有する
+    this.plans = new PlanService(supabase, commands);
+    this.records = new RecordService(supabase, commands);
   }
 
   createPlan(options: UserCommandOptions<CreatePlanInput>): Promise<PlanRow> {
@@ -82,7 +79,7 @@ export class TimeblockCommandService {
         input.externalCalendarEventId === undefined
           ? existing.external_calendar_event_id
           : input.externalCalendarEventId,
-      source: toSource(existing.source),
+      source: toTimeblockSource(existing.source),
       startAt: input.start_at ?? existing.start_at,
       endAt: input.end_at ?? existing.end_at,
     });
@@ -159,7 +156,7 @@ export class TimeblockCommandService {
         input.externalCalendarEventId === undefined
           ? existing.external_calendar_event_id
           : input.externalCalendarEventId,
-      source: toSource(existing.source),
+      source: toTimeblockSource(existing.source),
       startAt: input.start_at ?? existing.start_at,
       endAt: input.end_at ?? existing.end_at,
     });
