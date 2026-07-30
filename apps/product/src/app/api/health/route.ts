@@ -2,6 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 import { logger } from '@/lib/logger';
+import {
+  assertDatabaseOAuthIdentity,
+  resolveDatabaseOAuthProjectRef,
+} from '@/lib/oauth-server/database-identity';
 
 import { resolveHealthStatus, type OverallHealthStatus } from './health-status';
 
@@ -35,8 +39,8 @@ const DB_CHECK_TIMEOUT_MS = 5_000;
  * production で必須の環境変数が揃っていることを確認する。
  * Preview では production 専用 secret を要求しない。
  */
-async function hasValidProductionEnvironment(): Promise<boolean> {
-  if (!isProduction()) {
+async function hasValidOperationalEnvironment(): Promise<boolean> {
+  if (!isOperationalDeployment()) {
     return true;
   }
 
@@ -55,12 +59,12 @@ async function hasValidProductionEnvironment(): Promise<boolean> {
 async function checkDatabase(): Promise<'ok' | 'error' | 'warning'> {
   const dbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const dbKey = isProduction()
+  const dbKey = isOperationalDeployment()
     ? serviceRoleKey
     : (serviceRoleKey ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   if (!dbUrl || !dbKey) {
-    return isProduction() ? 'error' : 'warning';
+    return isOperationalDeployment() ? 'error' : 'warning';
   }
 
   try {
@@ -71,6 +75,21 @@ async function checkDatabase(): Promise<'ok' | 'error' | 'warning'> {
           fetch(url, { ...options, signal: AbortSignal.timeout(DB_CHECK_TIMEOUT_MS) }),
       },
     });
+
+    if (isOperationalDeployment()) {
+      const { getOAuthEnvironmentConfig } = await import('@/lib/oauth-server/identity-env');
+      const expectedIdentity = getOAuthEnvironmentConfig();
+      const expectedSupabaseProjectRef = resolveDatabaseOAuthProjectRef({
+        environment: expectedIdentity.environment,
+        supabaseUrl: dbUrl,
+        serviceRoleKey,
+      });
+      await assertDatabaseOAuthIdentity(
+        expectedIdentity,
+        () => supabase.rpc('get_mcp_environment_identity_v1'),
+        expectedSupabaseProjectRef,
+      );
+    }
 
     const { error } = await supabase.from('profiles').select('id').limit(1);
 
@@ -89,7 +108,7 @@ async function checkRedis(): Promise<'ok' | 'error' | 'warning' | 'skipped'> {
   const isUpstashEnabled = Boolean(redisUrl && redisToken);
 
   if (!isUpstashEnabled) {
-    return isProduction() ? 'error' : 'skipped';
+    return isOperationalDeployment() ? 'error' : 'skipped';
   }
 
   try {
@@ -100,7 +119,8 @@ async function checkRedis(): Promise<'ok' | 'error' | 'warning' | 'skipped'> {
     });
 
     const pong = await redis.ping();
-    return pong === 'PONG' ? 'ok' : 'warning';
+    if (pong === 'PONG') return 'ok';
+    return isOperationalDeployment() ? 'error' : 'warning';
   } catch {
     return 'error';
   }
@@ -124,6 +144,10 @@ function getVersion(): string {
  * 環境名を取得
  */
 function getEnvironment(): string {
+  if (process.env.VERCEL_TARGET_ENV) {
+    return process.env.VERCEL_TARGET_ENV;
+  }
+
   if (process.env.VERCEL_ENV) {
     return process.env.VERCEL_ENV;
   }
@@ -134,10 +158,15 @@ function getEnvironment(): string {
 /**
  * 本番環境かどうかを判定
  */
-function isProduction(): boolean {
-  if (process.env.VERCEL_ENV) {
-    return process.env.VERCEL_ENV === 'production';
+function isOperationalDeployment(): boolean {
+  if (
+    process.env.VERCEL_ENV === 'preview' &&
+    process.env.VERCEL_TARGET_ENV === 'preview' &&
+    process.env.MCP_OAUTH_ENVIRONMENT === 'preview'
+  ) {
+    return true;
   }
+  if (process.env.VERCEL_ENV) return process.env.VERCEL_ENV === 'production';
 
   return process.env.NODE_ENV === 'production';
 }
@@ -152,18 +181,26 @@ export async function GET() {
   const startTime = Date.now();
 
   try {
-    // 各種チェックを並行実行
-    const [hasValidEnvironment, dbStatus, redisStatus] = await Promise.all([
-      hasValidProductionEnvironment(),
-      checkDatabase(),
-      checkRedis(),
-    ]);
+    const hasValidEnvironment = await hasValidOperationalEnvironment();
+    if (!hasValidEnvironment) {
+      logger.error('[health] environment check failed', {
+        status: 'unhealthy',
+        responseTimeMs: Date.now() - startTime,
+      });
+      return NextResponse.json(
+        { status: 'unhealthy' },
+        {
+          status: 503,
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+          },
+        },
+      );
+    }
 
-    const overallStatus = resolveHealthStatus([
-      hasValidEnvironment ? 'ok' : 'error',
-      dbStatus,
-      redisStatus,
-    ]);
+    const [dbStatus, redisStatus] = await Promise.all([checkDatabase(), checkRedis()]);
+
+    const overallStatus = resolveHealthStatus(['ok', dbStatus, redisStatus]);
 
     const httpStatus = overallStatus === 'healthy' ? 200 : overallStatus === 'degraded' ? 200 : 503;
     const responseTime = Date.now() - startTime;
@@ -185,7 +222,7 @@ export async function GET() {
     }
 
     // 本番環境ではステータスのみ返す（内部情報の露出を防止）
-    if (isProduction()) {
+    if (isOperationalDeployment()) {
       return NextResponse.json(
         { status: overallStatus },
         {
@@ -239,7 +276,7 @@ export async function GET() {
     });
 
     // 本番環境ではエラー詳細を隠す
-    if (isProduction()) {
+    if (isOperationalDeployment()) {
       return NextResponse.json({ status: 'unhealthy' }, { status: 503 });
     }
 

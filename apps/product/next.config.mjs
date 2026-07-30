@@ -5,7 +5,11 @@ import { withSentryConfig } from '@sentry/nextjs';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { fileURLToPath } from 'url';
 
-import { assertProductOperationalProductionBuildEnv } from './production-build-gate.mjs';
+import {
+  assertProductOperationalProductionBuildEnv,
+  assertProductPreviewBuildEnv,
+  resolveProductPublicMcpResourceUri,
+} from './production-build-gate.mjs';
 import { releaseVersion } from './release-version.mjs';
 
 const { loadEnvConfig } = nextEnv;
@@ -18,6 +22,7 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
+assertProductPreviewBuildEnv(process.env);
 const isSentryProductionBuild = assertProductionSentryBuildEnv(process.env, 'Product');
 assertProductOperationalProductionBuildEnv(process.env);
 
@@ -39,6 +44,7 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '',
     NEXT_PUBLIC_APP_VERSION: releaseVersion,
+    NEXT_PUBLIC_MCP_RESOURCE_URI: resolveProductPublicMcpResourceUri(process.env),
     // client 側で Vercel 環境を判別するため露出。preview は NODE_ENV=production だが
     // VERCEL_ENV=preview なので、Sentry を production のみ有効化する gate に必要。
     NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV || '',
