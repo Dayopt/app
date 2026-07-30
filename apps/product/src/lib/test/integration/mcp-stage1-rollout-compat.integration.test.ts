@@ -8,7 +8,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { plansRouter } from '@/features/timeblock/server/plans-router';
 import { recordsRouter } from '@/features/timeblock/server/records-router';
 import type { Database } from '@/lib/database';
-import { exchangeAuthorizationCode, refreshAccessToken } from '@/lib/oauth-server';
+import {
+  exchangeAuthorizationCode,
+  refreshAccessToken,
+  resolveRequestedResource,
+} from '@/lib/oauth-server';
 import { generateAuthorizationCode, hashToken } from '@/lib/oauth-server/tokens';
 import { createTestCaller } from '@/lib/test/trpc-test-helpers';
 import type { Context } from '@/lib/trpc/procedures';
@@ -376,6 +380,10 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
     const challenge = createHash('sha256').update(verifier).digest('base64url');
     const authorizationCode = generateAuthorizationCode();
     const redirectUri = 'https://chatgpt.com/connector_platform_oauth_redirect';
+    // Candidate 7 以降、exchange / rotation は resource indicator (RFC 8707) を
+    // 同一 transaction 内で照合する。grant 側の resource_uri も同じ origin に揃える。
+    const resourceUri = resolveRequestedResource('https://mcp.dayopt.app');
+    if (!resourceUri) throw new Error('Local MCP resource identity is unavailable');
     const { data: insertedCode, error: codeError } = await admin
       .from('oauth_authorization_codes')
       .insert({
@@ -385,6 +393,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
         code_challenge: challenge,
         code_challenge_method: 'S256',
         redirect_uri: redirectUri,
+        resource_uri: resourceUri,
         scopes: ['read:entries'],
       })
       .select('connection_id')
@@ -396,6 +405,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
       client_id: 'chatgpt',
       redirect_uri: redirectUri,
       code_verifier: verifier,
+      resource_uri: resourceUri,
     });
     const { data: firstRefresh, error: firstRefreshError } = await admin
       .from('oauth_tokens')
@@ -407,6 +417,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
     const rotatedPair = await refreshAccessToken({
       refresh_token: firstPair.refresh_token,
       client_id: 'chatgpt',
+      resource_uri: resourceUri,
     });
     const { data: rotatedRefresh, error: rotatedRefreshError } = await admin
       .from('oauth_tokens')

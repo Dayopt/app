@@ -449,28 +449,40 @@ describe('MCP route scope preflight', () => {
     await expect(response.text()).resolves.toBe('');
   });
 
-  it('staging challenge advertises only the fixed staging resource metadata URL', async () => {
-    vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'staging');
-    vi.stubEnv('OAUTH_AUTHORIZATION_SERVER_URI', 'https://staging.dayopt.app');
-    vi.stubEnv('MCP_CANONICAL_RESOURCE_URI', 'https://mcp.staging.dayopt.app');
+  it('Preview challengeは束縛されたbranch resource metadata URLだけを広告する', async () => {
+    const previewOrigin = 'https://product-git-codex-mcp-preview-dayopt.vercel.app';
+    vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'preview');
+    vi.stubEnv('MCP_OAUTH_PREVIEW_BRANCH', 'codex/mcp-preview');
+    vi.stubEnv('OAUTH_AUTHORIZATION_SERVER_URI', previewOrigin);
+    vi.stubEnv('MCP_CANONICAL_RESOURCE_URI', previewOrigin);
     vi.stubEnv('VERCEL_ENV', 'preview');
-    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'preview');
+    vi.stubEnv('VERCEL_BRANCH_URL', 'product-git-codex-mcp-preview-dayopt.vercel.app');
+    vi.stubEnv('VERCEL_GIT_COMMIT_REF', 'codex/mcp-preview');
 
     const response = await POST(
-      createRequest(
-        { jsonrpc: '2.0', method: 'tools/list', id: 1 },
-        null,
-        'https://mcp.staging.dayopt.app/mcp',
-      ),
+      createRequest({ jsonrpc: '2.0', method: 'tools/list', id: 1 }, null, `${previewOrigin}/mcp`),
     );
 
     expect(response.status).toBe(401);
     expect(response.headers.get('www-authenticate')).toContain(
-      'resource_metadata="https://mcp.staging.dayopt.app/.well-known/oauth-protected-resource"',
+      `resource_metadata="${previewOrigin}/.well-known/oauth-protected-resource"`,
     );
     expect(response.headers.get('www-authenticate')).not.toContain(
       'resource_metadata="https://mcp.dayopt.app/',
     );
+  });
+
+  it('MCP identityが不整合な環境ではtoken検証前に503へ縮退する', async () => {
+    vi.stubEnv('MCP_OAUTH_ENVIRONMENT', 'preview');
+
+    const response = await POST(
+      createRequest({ jsonrpc: '2.0', method: 'tools/list', id: 1 }, null),
+    );
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(verifyAccessToken).not.toHaveBeenCalled();
   });
 
   it('returns invalid_token for expired or revoked bearer credentials', async () => {
