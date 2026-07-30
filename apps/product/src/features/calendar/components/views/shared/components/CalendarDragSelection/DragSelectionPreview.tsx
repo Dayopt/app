@@ -82,6 +82,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   return (
     <div
       data-drag-selection-preview={kind}
+      // elevation-exempt: ドラッグ中の一時ゴースト。影は GhostRenderer 側が持つ
       className={cn(
         'text-foreground pointer-events-none absolute flex flex-col gap-1 overflow-hidden rounded-lg px-2 py-2 text-xs',
         isPlan ? 'border-border border-2 bg-transparent' : 'bg-card',

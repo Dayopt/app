@@ -9,7 +9,7 @@
  */
 export function InsightSlot({ text, detail }: { text: string; detail?: string | undefined }) {
   return (
-    <section className="border-border-subtle bg-card rounded-lg border p-4">
+    <section className="border-border-subtle bg-card rounded-lg border p-4 shadow-sm">
       <p className="text-foreground text-sm">{text}</p>
       {detail && <p className="text-muted-foreground mt-1 text-sm">{detail}</p>}
     </section>

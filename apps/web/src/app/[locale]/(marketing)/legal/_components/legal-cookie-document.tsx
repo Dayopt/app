@@ -66,7 +66,7 @@ export function CookieDocument({ data }: { data: LegalContentTree }) {
       </LegalSection>
 
       <LegalSection title={readLegalText(specificCookies, 'title')}>
-        <div className="bg-card border-border overflow-hidden rounded-2xl border">
+        <div className="bg-card border-border overflow-hidden rounded-2xl border shadow-sm">
           <table className="w-full">
             <thead>
               <tr className="bg-container border-border border-b">

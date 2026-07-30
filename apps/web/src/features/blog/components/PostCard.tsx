@@ -86,7 +86,7 @@ export function PostCard({
   if (layout === 'vertical') {
     // Vertical layout: image on top, content below
     return (
-      <article className="group bg-card overflow-hidden rounded-2xl">
+      <article className="group bg-card overflow-hidden rounded-2xl shadow-sm">
         {/* Cover image */}
         <Link href={`/blog/${post.slug}`} className="block">
           <BlogImage
@@ -123,7 +123,7 @@ export function PostCard({
 
   // Horizontal layout: image on left, content on right
   return (
-    <article className="group bg-card overflow-hidden rounded-2xl">
+    <article className="group bg-card overflow-hidden rounded-2xl shadow-sm">
       <div className="flex gap-6">
         {/* Left side: Cover image */}
         <Link href={`/blog/${post.slug}`} className="w-80 flex-shrink-0">

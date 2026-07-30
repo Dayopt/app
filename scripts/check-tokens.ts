@@ -16,6 +16,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 /** 走査するディレクトリ（repo ルートからの相対） */
 const SCAN_TARGETS = ['apps/product/src', 'apps/web/src', 'packages/components/src'];
@@ -224,8 +225,18 @@ for (const { pattern, message, suggestion, warnOnly, excludePattern } of FORBIDD
 }
 
 // ─── 共起チェック: bg-card には shadow が必要（Elevation ルール） ───
+//
+// className は複数行に分かれることがあるので、同一行だけを見ると誤検出する
+// （bg-card が 1 行目、shadow-card が 2 行目、というケースが実際にあった）。
+// 前後 2 行の窓で shadow を探す。
 {
   const violations: string[] = [];
+  /** ファイル内容のキャッシュ。窓を取るために元ファイルを読む */
+  const fileLines = new Map<string, string[]>();
+  const readLines = (path: string): string[] => {
+    if (!fileLines.has(path)) fileLines.set(path, readFileSync(path, 'utf8').split('\n'));
+    return fileLines.get(path) ?? [];
+  };
 
   for (const line of grepLines('bg-card')) {
     // 除外: stories, shadcn/ui プリミティブ, opacity 派生 (bg-card/)
@@ -233,15 +244,35 @@ for (const { pattern, message, suggestion, warnOnly, excludePattern } of FORBIDD
       continue;
     }
 
-    // shadow-xs / shadow-sm / shadow-card のいずれかが同一行にあれば OK
-    if (/shadow-(xs|sm|card)/.test(line)) continue;
+    // tint トークンのフォールバック（`colorClasses?.tint ?? 'bg-card'`）は
+    // カレンダー lane 内の面で elevation の対象ではない
+    if (/\?\?\s*'bg-card'/.test(line)) continue;
+
+    // FieldSeparator のラベル背景。区切り線を切り抜くためのもので面ではない
+    if (/data-\[slot=field-separator/.test(line)) continue;
+
+    const [path, lineNum] = line.split(':');
+    const all = readLines(path);
+    const idx = Number(lineNum) - 1;
+    const window = all.slice(Math.max(0, idx - 2), idx + 3).join('\n');
+
+    // shadow-xs / shadow-sm / shadow-card が前後 2 行以内にあれば OK
+    if (/shadow-(xs|sm|card)/.test(window)) continue;
+
+    // 個別の例外は現場に `elevation-exempt` コメントを置いて理由を書く。
+    // lint の設定に溜め込むより、なぜ例外なのかが読む人の目の前にある方がよい。
+    // 意図して書く注記なので、shadow の窓より広く（同じ JSX 要素の頭に置ける）取る
+    const exemptWindow = all.slice(Math.max(0, idx - 5), idx + 3).join('\n');
+    if (/elevation-exempt/.test(exemptWindow)) continue;
 
     violations.push(line);
   }
 
   if (violations.length > 0) {
-    hasWarnings = true;
-    console.log('⚠️  [warn] bg-card に shadow がない（Elevation ルール違反）');
+    // 全件解消したので error へ昇格した（2026-07-31）。個別の例外は
+    // 現場の `elevation-exempt` コメントで外す
+    hasViolations = true;
+    console.log('❌ bg-card に shadow がない（Elevation ルール違反）');
     console.log('   修正例: bg-card は shadow-sm (Raised) / shadow-card (Overlay) と併用');
     console.log(`   該当箇所（${violations.length} 件）:`);
     for (const v of violations) {

@@ -66,7 +66,7 @@ export function TokushohoDocument({ data }: { data: LegalContentTree }) {
         </div>
       </div>
 
-      <div className="bg-card border-border overflow-hidden rounded-2xl border">
+      <div className="bg-card border-border overflow-hidden rounded-2xl border shadow-sm">
         <table className="w-full">
           <tbody className="divide-border divide-y">
             {['seller', 'representative', 'address'].map((key) => {

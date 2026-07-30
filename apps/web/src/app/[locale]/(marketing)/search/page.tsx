@@ -188,7 +188,7 @@ function SearchResults() {
             {isLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="border-border bg-card rounded-lg border p-6">
+                  <div key={i} className="border-border bg-card rounded-lg border p-6 shadow-sm">
                     <div className="animate-shimmer mb-4 h-4 w-3/4 rounded-lg"></div>
                     <div className="animate-shimmer mb-2 h-3 w-full rounded-lg"></div>
                     <div className="animate-shimmer h-3 w-2/3 rounded-lg"></div>

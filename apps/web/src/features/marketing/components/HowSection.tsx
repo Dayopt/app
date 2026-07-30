@@ -52,7 +52,10 @@ export async function HowSection({ locale }: HowSectionProps) {
         {/* Pillars grid */}
         <div className="grid gap-6 md:grid-cols-3">
           {PILLARS.map(({ key, visual: Visual }) => (
-            <div key={key} className="bg-card border-border overflow-hidden rounded-2xl border">
+            <div
+              key={key}
+              className="bg-card border-border overflow-hidden rounded-2xl border shadow-sm"
+            >
               {/* Visual area */}
               <div className="h-[220px] overflow-hidden">
                 <Visual />

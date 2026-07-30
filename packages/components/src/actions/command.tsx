@@ -18,6 +18,7 @@ const Command = ({ className, ...props }: React.ComponentProps<typeof CommandPri
   return (
     <CommandPrimitive
       data-slot="command"
+      // elevation-exempt: Popover / Dialog の中身として使う primitive。影は親が持つ
       className={cn(
         'bg-card text-card-foreground flex h-full w-full flex-col overflow-hidden rounded-lg',
         className,
