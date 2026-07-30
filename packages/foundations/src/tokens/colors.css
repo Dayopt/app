@@ -41,13 +41,24 @@
   --secondary-foreground: var(--foreground);
   --muted-foreground: oklch(0.4 0 0);
 
-  /* Primary */
-  --primary: oklch(0.45 0.14 var(--hue-brand));
+  /* ============================================
+   * Primary — 瑠璃色から紺へ
+   *
+   * 旧値 oklch(0.45 0.14) は #2051a1 で、伝統色の瑠璃色 #1E50A2
+   * （L0.446 C0.143 H259.9）と誤差レベルで一致していた。瑠璃は宝石の青で、
+   * 「寡黙な研究者・実験ノートのインク」というトーンは紺（L0.36 C0.098）の側。
+   * 色相は動かさない。濃藍 H263.6 / 紺 H264.1 と、深い藍はむしろ現状の
+   * H259.8 より上に集まるため、下げると藍から遠ざかる上に
+   * tag-blue(H240) / entry-default(H220) と衝突してデータ色との区別が消える。
+   * 動かすのは明度と彩度だけ（C 0.14 → 0.105 で 25% 落とす）。
+   * ============================================ */
+  --primary: oklch(0.4 0.105 var(--hue-brand));
   --primary-foreground: var(--white);
 
-  /* State: Active（選択中・アクティブ状態） brand hue 追従 */
-  --state-active: oklch(0.95 0.025 var(--hue-brand));
-  --state-active-foreground: oklch(0.38 0.14 var(--hue-brand));
+  /* State: Active（選択中・アクティブ状態） brand hue 追従
+   * 彩度は primary の低下率（×0.75）に追従させ、accent 系の温度を揃える */
+  --state-active: oklch(0.95 0.019 var(--hue-brand));
+  --state-active-foreground: oklch(0.38 0.105 var(--hue-brand));
 
   /* shadcn/ui互換エイリアス（accent → state-active） */
   --accent: var(--state-active);
@@ -196,13 +207,19 @@
   --secondary-foreground: var(--foreground);
   --muted-foreground: oklch(0.68 0.005 60);
 
-  /* Primary */
-  --primary: oklch(0.5 0.188 var(--hue-brand));
+  /* Primary — light と同じく彩度を落とす（0.188 → 0.13）
+   * ただし明度は上げる（0.50 → 0.55）。dark では primary-foreground が白なので
+   * 白文字 4.5:1 の制約で L0.55 が上限、かつ暗い面から浮かせるには L を下げられない */
+  --primary: oklch(0.55 0.13 var(--hue-brand));
   --primary-foreground: var(--white);
 
-  /* State: Active（WCAG 1.4.11: bg上3:1+） brand hue 追従 */
-  --state-active: oklch(0.45 0.14 var(--hue-brand));
-  --state-active-foreground: oklch(0.88 0.06 var(--hue-brand));
+  /* State: Active brand hue 追従（彩度は primary の低下率 ×0.75 に追従）
+   * NOTE: dark の state-active は面との対比が 2.3〜2.6:1 で WCAG 1.4.11 の 3:1
+   * を満たしていない（この彩度低下より前から。実測値は下記）。3:1 に載せるには
+   * L を 0.45 → 0.52 へ上げる必要があり、選択行の見え方が変わるため別対応とする。
+   *   vs container L.15 2.62:1 / background L.18 2.50:1 / card L.22 2.30:1 */
+  --state-active: oklch(0.45 0.105 var(--hue-brand));
+  --state-active-foreground: oklch(0.88 0.045 var(--hue-brand));
 
   /* shadcn/ui互換エイリアス */
   --accent: var(--state-active);
