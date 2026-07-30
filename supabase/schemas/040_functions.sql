@@ -1,7 +1,7 @@
 -- ============================================================
 -- 関数一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
--- 最終同期日: 2026-07-29
+-- 最終同期日: 2026-07-30
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -37,6 +37,7 @@
 --   - 20260729073125_mcp_environment_identity_client_fence.sql
 --   - 20260729073126_mcp_stage1_receipt_generation_lifecycle.sql
 --   - 20260729073127_legacy_linked_record_restore_compatibility.sql
+--   - 20260730090301_harden_authenticated_timeblock_write_boundary.sql
 -- Browser-facing 関数は authenticated、DB owner の command / OAuth / MCP apply は
 -- service_role にだけ明示 GRANT。PUBLIC/anon への EXECUTE は revoke 済み。
 -- ============================================================
@@ -57,6 +58,14 @@
 --   soft_delete_plan / restore_plan            — Plan の soft delete / restore
 --   soft_delete_record / restore_record        — Record の soft delete / restore
 --   confirm_day_plans_to_records(...)          — 完了 Plan を Record として一括確定
+--     ↑ soft_delete_plan / soft_delete_record / confirm_day_plans_to_records の 3 つは
+--       **drain まで authenticated に残す互換 wrapper**。SECURITY DEFINER + auth.uid()
+--       照合付きで、内部は private.*_unserialized_v1 へ委譲する
+--       (20260729073123)。Candidate 6 で plans / records の直接 DML を剥がした後、
+--       旧 bundle に残る唯一の write 経路がこれ。旧 instance の drain 完了後に
+--       EXECUTE を revoke する（20260730090300 / 20260730090301 は EXECUTE が
+--       残っていることを assert するので、drain migration では assertion も反転させる）。
+--       restore_plan / restore_record は service_role のみ（authenticated は revoke 済み）
 --   issue_oauth_token_pair(...)               — refresh/access token pair を service-role 経由で発行
 --   create_oauth_authorization_grant_v2(...)   — connection-bound code を発行（service-role only）
 --   exchange_oauth_authorization_code_v2(...)  — code を一度だけ token family へ交換（service-role only）
