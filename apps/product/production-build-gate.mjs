@@ -107,7 +107,12 @@ function isVerifiedDayoptSender(value) {
 export function assertProductOperationalProductionBuildEnv(env) {
   if (env.VERCEL_ENV !== 'production') return false;
 
+  // Dayopt には staging 環境が無い（Persistent Staging を作らない決定）。存在しない
+  // 以上ここへは到達しないが、あとから staging 名の Vercel custom environment が
+  // 生えた場合に Production の OAuth identity をそのまま配ってしまう。sink ではなく
+  // 明示的な拒否にして、その時は build を止めて設計判断へ戻す。
   if (
+    env.VERCEL_TARGET_ENV === 'staging' ||
     hasNonEmptyValue(env, 'MCP_OAUTH_PREVIEW_BRANCH') ||
     hasNonEmptyValue(env, 'MCP_OAUTH_PREVIEW_UPSTASH_HOST') ||
     (hasNonEmptyValue(env, 'MCP_OAUTH_ENVIRONMENT') &&

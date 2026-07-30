@@ -80,6 +80,27 @@ describe('Product operational production build gate', () => {
     ).toThrow('Product production build cannot use a non-Production OAuth identity');
   });
 
+  // Dayopt に staging 環境は無いが、あとから staging 名の custom environment が
+  // 生えたときに Production の OAuth identity をそのまま配らないよう、sink ではなく
+  // 明示的な拒否にしている。MCP 変数が 1 つも無くても止まることを固定する。
+  it('rejects a staging deployment target even without MCP identity variables', () => {
+    expect(() =>
+      assertProductOperationalProductionBuildEnv({
+        ...completeProductionEnv(),
+        VERCEL_TARGET_ENV: 'staging',
+      }),
+    ).toThrow('Product production build cannot use a non-Production OAuth identity');
+  });
+
+  it('accepts a Production deployment target with no MCP identity variables', () => {
+    expect(
+      assertProductOperationalProductionBuildEnv({
+        ...completeProductionEnv(),
+        VERCEL_TARGET_ENV: 'production',
+      }),
+    ).toBe(true);
+  });
+
   it('lists missing names without printing values', () => {
     expect(() => assertProductOperationalProductionBuildEnv({ VERCEL_ENV: 'production' })).toThrow(
       `Product production build requires: ${REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV.join(', ')}`,
