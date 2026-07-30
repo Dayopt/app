@@ -363,6 +363,11 @@ describe.skipIf(!RUN_LOCAL)('MCP Candidate 4 and 5 OAuth scope constraints', () 
     expect(result.stdout.trim()).toBe('t');
   });
 
+  // Tautological once Candidate 5 has run: this re-evaluates the validated
+  // constraints' own predicate over the same tables, so it cannot fail unless a
+  // constraint is broken. It is kept as a cheap canary, not as evidence of data
+  // health — the real evidence is the read-only production count recorded in the
+  // Candidate 5 PR, plus the `convalidated` catalog assertion below.
   it('leaves no stored grant that the validated checks would reject', () => {
     const result = runOwnerSql(`
       SELECT NOT EXISTS (
