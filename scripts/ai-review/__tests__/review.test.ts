@@ -10,7 +10,10 @@ import {
   DANGEROUS_PATH_PATTERNS,
   MAX_DIFF_BYTES,
   MAX_OUTPUT_TOKENS,
+  REQUEST_TIMEOUT_MS,
   RULE_ATTACHMENTS,
+  STICKY_COMMENT_AUTHOR,
+  TOTAL_DEADLINE_MS,
   buildPrompt,
   callGemini,
   collectDiff,
@@ -23,6 +26,7 @@ import {
   parseReviewResponse,
   parseState,
   readCandidate,
+  readStickyState,
   renderComment,
   renderState,
   selectRuleAttachments,
@@ -515,12 +519,66 @@ describe('応答の読み取り', () => {
   });
 });
 
+describe('判定 cache の出所', () => {
+  const state = `${COMMENT_MARKER}\n${renderState({ fingerprint: 'abc123', blocked: false })}`;
+
+  function listing(comments: unknown[]) {
+    return vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => comments,
+    }) as unknown as typeof fetch;
+  }
+
+  it('自分が書いた sticky comment の判定は読む', async () => {
+    const result = await readStickyState({
+      token: 't',
+      repository: 'o/r',
+      prNumber: '1',
+      fetchImpl: listing([{ id: 1, body: state, user: { login: STICKY_COMMENT_AUTHOR } }]),
+    });
+    expect(result).toEqual({ fingerprint: 'abc123', blocked: false });
+  });
+
+  it('人間が投稿した同じ marker は判定として採用しない', async () => {
+    // 採用すると、PR に comment できる者が blocked=0 の state を先に置くだけで
+    // 「model を呼ばずに green」を作れる（fingerprint は repo 内の script で再計算可能）。
+    const result = await readStickyState({
+      token: 't',
+      repository: 'o/r',
+      prNumber: '1',
+      fetchImpl: listing([{ id: 1, body: state, user: { login: 'tomoya' } }]),
+    });
+    expect(result).toBeNull();
+  });
+
+  it('別の bot が投稿した同じ marker も採用しない', async () => {
+    // この PR には Codex / Copilot / Vercel / Supabase の bot が comment する。
+    // type === 'Bot' で絞るだけでは、marker を引用した本文を先に投稿されると
+    // find（最古の一致）がそれを sticky と誤認して上書き先にしてしまう。
+    const result = await readStickyState({
+      token: 't',
+      repository: 'o/r',
+      prNumber: '1',
+      fetchImpl: listing([
+        { id: 1, body: state, user: { login: 'chatgpt-codex-connector[bot]' } },
+        { id: 2, body: state, user: { login: STICKY_COMMENT_AUTHOR } },
+      ]),
+    });
+    // 自分の comment（id 2）だけを見るので、偽の判定は読まない。
+    expect(result).toEqual({ fingerprint: 'abc123', blocked: false });
+  });
+});
+
 describe('workflow の contract', () => {
   it('comment を書くための権限だけを持つ', () => {
     expect(WORKFLOW).toContain('contents: read');
     expect(WORKFLOW).toContain('pull-requests: write');
     // 外部モデルの出力を受けて動く job に write 権限を持たせない。
     expect(WORKFLOW).not.toContain('contents: write');
+    // gate は job の exit code で足りる（pull_request_target でも job の check run は
+    // PR の statusCheckRollup に出る）。status を publish しないので権限も要らない。
+    expect(WORKFLOW).not.toContain('statuses: write');
   });
 
   it('PR の code を credential 付きで checkout しない', () => {
@@ -529,6 +587,115 @@ describe('workflow の contract', () => {
 
   it('base...head の diff が取れる履歴を取得する', () => {
     expect(WORKFLOW).toContain('fetch-depth: 0');
+  });
+
+  it('trusted base revision を checkout する', () => {
+    // pull_request だと workflow ファイル自体が PR の merge commit から読まれるため、
+    // 本ファイルを書き換えた PR が GEMINI_API_KEY を持ち出せる。
+    // pull_request_target + base.sha の組でしか「PR code を実行しない」は成立しない。
+    expect(WORKFLOW).toContain('pull_request_target:');
+    expect(WORKFLOW).not.toMatch(/^\s{2}pull_request:/m);
+    expect(WORKFLOW).toContain('ref: ${{ github.event.pull_request.base.sha }}');
+    // head を checkout したら trusted base の意味が消える。
+    expect(WORKFLOW).not.toMatch(/ref:\s*\$\{\{\s*github\.event\.pull_request\.head/);
+  });
+
+  it('head SHA が未解決・未到達なら fail-closed にする', () => {
+    // base...HEAD（= base...base）は「危険クラス 0 件」に見えるため、
+    // レビューせずに green を返す経路になる。ここが最悪の壊れ方。
+    expect(WORKFLOW).toContain('git cat-file -e "$HEAD_SHA^{commit}"');
+    // github.sha への fallback は pull_request_target では base 先端を指す。
+    expect(WORKFLOW).not.toMatch(/AI_REVIEW_HEAD_SHA:.*github\.sha/);
+  });
+
+  it('reviewer 自身の変更を危険クラスと同時に通さない', () => {
+    // trusted base 実行では PR 側の reviewer 変更はその run に影響しないが、
+    // マージすれば以後の全 PR の監査契約が変わるため人間の確認を要求する。
+    expect(WORKFLOW).toContain('scripts/ai-review/');
+    expect(WORKFLOW).toContain('\\.github/workflows/ai-review\\.yml');
+    expect(WORKFLOW).toContain('steps.contract.outputs.changed');
+  });
+
+  it('review step が skip された経路では fail-closed にする', () => {
+    // checkout / head 到達性 / setup / contract 検出のいずれかが落ちると review step は
+    // skip され output が空になる。既定を 0 にすると「走らなかった run が green」になる。
+    expect(WORKFLOW).toContain("steps.review.outputs.exit_code || '1'");
+    expect(WORKFLOW).not.toMatch(/steps\.review\.outputs\.exit_code\s*\|\|\s*'0'/);
+  });
+
+  it('script の締め切りが step timeout より内側、step が job より内側', () => {
+    // **定数間の不等式を固定する。** script が自分から諦めて fail-open の exit 0 を
+    // 返す前に step が kill されると、「インフラ障害では PR を止めない」設計が
+    // red（= マージ不能）へ反転する。文字列ではなく実際の定数と比較する。
+    const jobTimeout = Number(/^\s{4}timeout-minutes:\s*(\d+)/m.exec(WORKFLOW)?.[1]);
+    const stepTimeout = Number(/^\s{8}timeout-minutes:\s*(\d+)/m.exec(WORKFLOW)?.[1]);
+    expect(jobTimeout).toBeGreaterThan(0);
+    expect(stepTimeout).toBeGreaterThan(0);
+    expect(TOTAL_DEADLINE_MS).toBeLessThan(stepTimeout * 60_000);
+    // **step < job だけでは足りない。** job timeout は job 全体にかかるので、
+    // checkout + setup が食った分だけ review step の予算が削られる。実測（2026-07-30）で
+    // 前段は 31-34 秒だが、pnpm store cache が miss すると分単位に伸びる。
+    // 前段のための余裕を明示的に要求する（ここが 1 分だと cache miss で job ごと
+    // timed_out になり、script の fail-open へ到達できない）。
+    const SETUP_HEADROOM_MINUTES = 4;
+    expect(jobTimeout - stepTimeout).toBeGreaterThanOrEqual(SETUP_HEADROOM_MINUTES);
+    // per-attempt を残り予算で clamp しているので、合計は TOTAL_DEADLINE_MS で止まる。
+    // clamp を外すと TOTAL_DEADLINE_MS + REQUEST_TIMEOUT_MS まで伸びるため、
+    // その値でも step timeout に収まっていることを併せて要求する（clamp 回帰の保険）。
+    expect(REQUEST_TIMEOUT_MS).toBeLessThanOrEqual(TOTAL_DEADLINE_MS);
+  });
+
+  it('per-attempt の timeout を残り予算で clamp する', () => {
+    // 入口だけの締め切り判定 + 固定 per-attempt timeout だと、締め切り直前に
+    // 始まった attempt がそのまま走り切って合計が予算を超える。
+    const source = readFileSync(join(process.cwd(), 'scripts/ai-review/review.ts'), 'utf8');
+    expect(source).toContain('AbortSignal.timeout(Math.min(REQUEST_TIMEOUT_MS, remaining))');
+  });
+
+  it('contract 変更の検出を外部 API に依存させない', () => {
+    // gh api pulls/N/files は 3000 file 上限と API 障害を持ち、どちらも
+    // 「検出できないまま素通り」に倒れる。base の working tree から git で取る。
+    expect(WORKFLOW).toContain('diff --name-status "$BASE_SHA...$HEAD_SHA"');
+    expect(WORKFLOW).not.toContain('gh api --paginate');
+    // 非 ASCII path が quote されると anchor が外れて検出漏れになる。
+    expect(WORKFLOW).toContain('core.quotePath=false');
+  });
+
+  it('この job が実行するものを contract として保護する', () => {
+    // trusted base が守るのは「この run」だけで、マージ後の run は守らない。
+    // setup composite action と allowBuilds allowlist は次の run 以降の実行内容を変える。
+    for (const guarded of [
+      'scripts/ai-review/',
+      '\\.github/actions/',
+      '\\.github/workflows/ai-review\\.yml',
+      'pnpm-workspace\\.yaml',
+    ]) {
+      expect(WORKFLOW).toContain(guarded);
+    }
+  });
+
+  it('同じ head SHA に 2 本目の run を積まない', () => {
+    // statusCheckRollup は同名 check を畳まず、finish-branch.sh は cancelled も failure と
+    // して数える。同一 SHA で 2 回走ると、あとから成功しても次の push までマージ不能になる。
+    // `ready_for_review` を購読するなら draft 中は job を skip して 1 回に収める。
+    expect(WORKFLOW).toContain('github.event.pull_request.draft == false');
+    expect(WORKFLOW).toMatch(/types:.*ready_for_review/);
+  });
+
+  it('contract 変更に明示的な逃げ道がある', () => {
+    // 束ねた PR を既定とする規約（workflow.md §PR 粒度）と衝突するため、
+    // 人間が承認したことを示すラベルで通せる必要がある。
+    expect(WORKFLOW).toContain('ai-review:contract-reviewed');
+    // **labeled では再発火させない。** 同じ head SHA に 2 本目の run が積まれると、
+    // statusCheckRollup は同名 check を畳まないため finish-branch.sh が古い run の
+    // failure を数え続け、ラベルを付けても赤が消えない。
+    expect(WORKFLOW).not.toMatch(/types:.*labeled/);
+  });
+
+  it('PR ごとに concurrency group を分ける', () => {
+    // pull_request_target では github.ref がどの PR でも base branch になるため、
+    // ref だけの group は PR をまたいで cancel し合う。
+    expect(WORKFLOW).toContain('github.event.pull_request.number || github.ref');
   });
 
   it('script が読む AI_REVIEW_* を workflow が全て渡している', () => {

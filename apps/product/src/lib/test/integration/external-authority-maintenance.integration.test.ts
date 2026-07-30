@@ -18,6 +18,16 @@ const authenticated = createClient<Database>(LOCAL_DB_URL, ANON_KEY, {
 });
 const anonymous = createClient<Database>(LOCAL_DB_URL, ANON_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
+  global: {
+    // New local Supabase projects expose asymmetric JWT keys. The legacy anon
+    // API key remains valid at the gateway, but must not also be presented as
+    // a Bearer JWT when this client intentionally exercises the anon DB role.
+    fetch: async (input, init) => {
+      const headers = new Headers(init?.headers);
+      headers.delete('Authorization');
+      return fetch(input, { ...init, headers });
+    },
+  },
 });
 
 const userId = crypto.randomUUID();

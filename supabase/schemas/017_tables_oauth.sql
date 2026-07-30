@@ -1,11 +1,12 @@
 -- ============================================================
 -- OAuth 2.1 / MCP DB基盤（読み物用 — CLIでは使用しない）
 -- ============================================================
--- Stage 1 は connection-bound OAuth と typed mutation のDB境界だけを追加する。
+-- Candidate 4 が connection-bound OAuth のstored scope契約を追加し、Candidate 5 が
+-- 既存行まで含めて検証済みにした。
 -- MCP write tool はまだ公開せず、global gate OFF + client list empty が停止条件。
 -- 実際のマイグレーションは migrations/ を参照。
--- 最終同期日: 2026-07-29
--- Stage 1 terminal migration: 20260729073127_legacy_linked_record_restore_compatibility.sql
+-- 最終同期日: 2026-07-30
+-- Candidate 5 terminal migration: 20260730090200_validate_mcp_oauth_scope_constraints.sql
 -- 同期対象 migration:
 --   - 20260501000000_oauth_tokens_from_api_keys.sql
 --   - 20260501000100_oauth_authorization_codes.sql
@@ -25,6 +26,12 @@
 --   - 20260729073125_mcp_environment_identity_client_fence.sql
 --   - 20260729073126_mcp_stage1_receipt_generation_lifecycle.sql
 --   - 20260729073127_legacy_linked_record_restore_compatibility.sql
+--   - 20260730090100_mcp_oauth_scope_constraints_not_valid.sql
+--   - 20260730090200_validate_mcp_oauth_scope_constraints.sql
+--
+-- 下記3 CHECKはCandidate 4がNOT VALIDで追加し、Candidate 5が読み取り専用preflightの後に
+-- VALIDATE CONSTRAINTで検証済みへ進めた。この宣言スキーマは読み物なので、
+-- 検証状態（convalidated）はmigrationだけが持つ。
 -- ============================================================
 
 -- mcp_environment_identity: DBが所有する一度きり・変更不可のauthority identity。
@@ -58,6 +65,17 @@ CREATE TABLE public.oauth_connections (
   revoked_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT oauth_connections_write_requires_read_entries_check CHECK (
+    NOT (
+      scopes && ARRAY[
+        'write:plans',
+        'delete:plans',
+        'write:records',
+        'delete:records'
+      ]::TEXT[]
+    )
+    OR scopes @> ARRAY['read:entries']::TEXT[]
+  ),
   UNIQUE (id, user_id, client_id, resource_uri)
 );
 
@@ -83,6 +101,17 @@ CREATE TABLE public.oauth_tokens (
     ON DELETE CASCADE,
   FOREIGN KEY (resource_uri)
     REFERENCES public.mcp_environment_identity(resource_uri),
+  CONSTRAINT oauth_tokens_write_requires_read_entries_check CHECK (
+    NOT (
+      scopes && ARRAY[
+        'write:plans',
+        'delete:plans',
+        'write:records',
+        'delete:records'
+      ]::TEXT[]
+    )
+    OR scopes @> ARRAY['read:entries']::TEXT[]
+  ),
   CHECK (connection_id IS NOT NULL AND resource_uri IS NOT NULL)
 );
 
@@ -105,6 +134,17 @@ CREATE TABLE public.oauth_authorization_codes (
     ON DELETE CASCADE,
   FOREIGN KEY (resource_uri)
     REFERENCES public.mcp_environment_identity(resource_uri),
+  CONSTRAINT oauth_authorization_codes_write_requires_read_entries_check CHECK (
+    NOT (
+      scopes && ARRAY[
+        'write:plans',
+        'delete:plans',
+        'write:records',
+        'delete:records'
+      ]::TEXT[]
+    )
+    OR scopes @> ARRAY['read:entries']::TEXT[]
+  ),
   CHECK (connection_id IS NOT NULL AND resource_uri IS NOT NULL)
 );
 

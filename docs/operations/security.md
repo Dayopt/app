@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-27
+last_verified: 2026-07-30
 ---
 
 # セキュリティ方針
@@ -30,16 +30,30 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 
 ## 権限設計
 
-全ワークフローで最小権限の原則を適用。PRコメントbot は廃止済みのため `pull-requests: write` は不要。
+全ワークフローで最小権限の原則を適用。`pull-requests: write` を持つのは PR へ sticky comment を
+書く `ai-review.yml` だけ（旧記述の「PRコメントbot は廃止済みのため不要」は 2026-07-26 の
+ai-review 導入で成立しなくなった）。
 
 ### ワークフロー別 permissions
 
-| ワークフロー         | permissions       | 理由                 |
-| -------------------- | ----------------- | -------------------- |
-| `ci.yml`             | `contents: read`  | コード読み取りのみ   |
-| `docs-guard.yml`     | `contents: read`  | docs読み取りのみ     |
-| `integration.yml`    | `contents: read`  | コード読み取りのみ   |
-| `create-release.yml` | `contents: write` | タグからリリース作成 |
+| ワークフロー                  | permissions                                                  | 理由                             |
+| ----------------------------- | ------------------------------------------------------------ | -------------------------------- |
+| `ci.yml`                      | `contents: read`                                             | コード読み取りのみ               |
+| `docs-guard.yml`              | `contents: read`                                             | docs読み取りのみ                 |
+| `integration.yml`             | `contents: read`                                             | コード読み取りのみ               |
+| `ai-review.yml`               | `contents: read` / `pull-requests: write`                    | PR への sticky comment の upsert |
+| `production-config-audit.yml` | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行  |
+| `create-release.yml`          | `contents: write`                                            | タグからリリース作成             |
+
+`ai-review.yml` / `production-config-audit.yml` はどちらも `pull_request_target` で走るが、
+**`pull_request_target` でも job の check run は PR の `statusCheckRollup` に出る**
+（2026-07-30 に PR #1760 で実測。詳細は [infra.md §merge gate の required checks](../engineering/infra.md#merge-gate-の-required-checks)）。
+そのため gate 自体には status publish は不要で、`ai-review.yml` は持たない。
+`production-config-audit.yml` が `statuses: write` を持つのは、job 名から独立した固定 context
+（`Production Config Audit`）を ruleset の required 指定に使うため。
+
+どちらも `contents: write` は持たない（外部モデルの出力や外部 API の結果を受けて動く job に
+書き込み権限を与えない）。
 
 ## リポジトリ設定
 
@@ -73,16 +87,9 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 
 **設定場所**: `Settings` → `Branches` → `main` → `Require status checks`
 
-```
-Required checks:
-  ✅ Lint
-  ✅ TypeScript
-  ✅ Unit Tests
-  ✅ Build
-  ✅ Supabase Preview Branch
-```
+どの context を required にするかは [infra.md §merge gate の required checks](../engineering/infra.md#merge-gate-の-required-checks) を正本とする。ここには複製しない（job 名を変えるたびに 2 箇所が乖離するため）。
 
-Storybook browser testはlight / darkとも既知failureがあるためrequiredから除外。#1499 / #1586 を解消し、両suiteが継続してgreenになってから昇格を再判断する。
+private + Free plan では GitHub 側の required check 強制自体が効かず、マージ可否は `scripts/git/finish-branch.sh` が判定する。ruleset の実状は API から確認できない（`gh api repos/Dayopt/dayopt/rulesets` は 403 `Upgrade to GitHub Pro` を返す）ため、この画面の設定は手動確認に依存する。
 
 ### Fork Pull Request
 
@@ -117,12 +124,21 @@ pin-github-action .github/workflows/*.yml
 
 ### 使用中の Secrets
 
-| Secret                          | 用途              | ワークフロー                   |
-| ------------------------------- | ----------------- | ------------------------------ |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase 接続     | ci, e2e                        |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名キー | ci, e2e                        |
-| `NEXT_PUBLIC_APP_URL`           | アプリ URL        | ci, e2e                        |
-| `SUPABASE_ACCESS_TOKEN`         | Supabase CLI 認証 | emergency only / local scripts |
+| Secret                          | 用途                     | ワークフロー                   |
+| ------------------------------- | ------------------------ | ------------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase 接続            | ci, e2e                        |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名キー        | ci, e2e                        |
+| `NEXT_PUBLIC_APP_URL`           | アプリ URL               | ci, e2e                        |
+| `SUPABASE_ACCESS_TOKEN`         | Supabase CLI 認証        | emergency only / local scripts |
+| `GEMINI_API_KEY`                | 外部モデル diff レビュー | ai-review                      |
+| `VERCEL_TOKEN`                  | Vercel API 監査          | production-config-audit        |
+| `VERCEL_ORG_ID`                 | Vercel team 特定         | production-config-audit        |
+
+`GEMINI_API_KEY` は CI 専用の secret で、1Password `Dayopt-Shared/gemini/GEMINI_API_KEY` を master、
+GitHub repo secret を replica とする。**`scripts/env/schema.ts` には登録しない**（app runtime が読む
+env ではないため、別ライフサイクルの secret を app の env 検証へ相乗りさせない）。
+この secret を持つ job は `pull_request_target` + base revision の checkout で走り、
+PR の code を実行しない（[2026-07-30 の決定](../engineering/log/2026-07-30-ai-review-trusted-base.md)）。
 
 Migration は Supabase GitHub integration が担当する。GitHub Actions から `supabase db push` は通常実行しない。
 

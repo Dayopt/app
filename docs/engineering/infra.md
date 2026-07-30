@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-21
+last_verified: 2026-07-30
 ---
 
 # インフラ・環境・API/Routing 総覧
@@ -239,7 +239,49 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   全 PR が merge 不能になる。rename する場合は ruleset を先に更新する
 - 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。設定しない
 - `Production Release` は merge 後の証跡であり、required check にはしない
+- **Storybook browser suite（`pnpm test-storybook` / `test-storybook:dark`）は CI に載っていない。**
+  `@dayopt/product` の vitest project（`--project storybook` / `storybook-dark`）として実体はあるが、
+  `ci.yml` にも `pnpm check` にも入っていないため、required check 以前に**そもそも実行されていない**。
+  除外の理由だった「light / dark とも既知 failure がある」は解消済みで、#1499 / #1586 は両方 closed、
+  2026-07-30 のローカル実測では light / dark とも 136 tests 全 pass（42 files pass / 33 skip）。
+  CI へ載せるかは job 数 = 課金分の判断（`.claude/rules/workflow.md` §PR 粒度）なので、別途決める
+- **`pull_request_target` の job でも check run は PR の `statusCheckRollup` に出る。**
+  2026-07-30 に PR #1760 で実測: `production-config-audit.yml`（`pull_request_target`）の job が
+  `Audit Vercel metadata (trusted)` という CheckRun として出ている。したがって trusted base 実行の
+  workflow でも、gate のために commit status を自分で publish する必要は無い。
+  `Production Config Audit` という StatusContext が別に存在するのは、job 名から独立した固定 context を
+  ruleset の required 指定に使うため
+- ai-review の逃げ道はラベル 2 種。`ai-review:override` は**所見の誤検出**を人間が判断した時に使い
+  （review.ts 側で exit code を 0 にする）、`ai-review:contract-reviewed` は**監査契約の変更**
+  （`scripts/ai-review/**` / `.github/actions/**` / `ai-review.yml` / `pnpm-workspace.yaml`）を
+  危険クラスと同一 PR に束ねると判断した時に使う。承認の対象が別なので分けている
+- **ラベルは付けた後の push で効く。** `labeled` での再発火は `ai-review.yml` の types に
+  入れていない。根にあった「同じ head SHA に 2 本目の run が積まれると
+  `finish-branch.sh` が古い run の failure を数え続ける」問題は #1768 で解消したので
+  （下記の畳み込み）、`labeled` を再度入れる余地はある。ai-review 側の再検証が要るため別作業とする
+- `🔍 AI Review`（`ai-review.yml` の job）は危険クラス path を含む PR でだけ発火するので、
+  **ruleset の required には入れない**（発火しない PR では check 自体が付かず、required にすると
+  全 PR が merge 不能になる）。`finish-branch.sh` は付いた check だけを見るうえ、
+  `cancelled` / `timed_out` を failure として数えるため、cancel や job timeout も merge を止める
+- `ai-review.yml` を `pull_request_target` へ移した PR 自身では ai-review は走らない。`pull_request_target` の
+  workflow 定義は default branch から読まれ、旧 `pull_request` 定義は PR の merge commit から読まれるため、
+  移行 PR ではどちらの trigger も成立しない。**初回の trusted run は merge 後、次に危険クラス path を
+  触る PR で確認する**（`Production Config Audit` 導入時と同じ bootstrap）
 - `ci.yml` は docs / rules のみの変更では `paths-ignore` で skip され、4 job の status 自体が付かない。private + Free plan では GitHub 側の required check 強制が効かず、マージ可否は `scripts/git/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）。ruleset の required 指定を強制できる plan へ移行する場合は、skip される job の扱いを先に設計する
+- **判定は `statusCheckRollup` を畳んでから行う。** rollup は同名 check を畳まないため
+  （`gh pr checks` は畳む）、同一 head SHA で 2 回 run が走ると古い run の failure / cancelled が
+  残り続け、再実行で解決してもマージ不能になる。畳む単位は `gh pr checks` に合わせて
+  **型 + workflow 名 + check 名**（name だけで畳むと別 workflow の同名 job の failure が隠れる）。
+  代表の選び方は「最新を採る」ではなく、次の優先順で決める:
+  1. **実行中が 1 つでもあれば実行中**（queued な run は `startedAt` を持たないことがあり、
+     単純な最新判定では実行中を見落として素通りする）
+  2. **判定を持つ entry**（`success` / `failure` / `cancelled` / `timed_out`）のうち `startedAt` 最大。
+     `skipped` / `neutral` / `stale` は失敗にも成功にも数えないため、これが代表になると同名の
+     古い failure が消える。**古い `failure` は新しい `skipped` より優先される**
+  3. どれも判定を持たなければ `startedAt` 最大
+
+  名前を特定できない entry は畳まず全件残す。契約は
+  `scripts/__tests__/finish-branch.test.ts` が固定する（#1768）
 
 段階的導入案と当時の計測値は履歴であり、現行構成として複製しない。経緯は [ADR-016](./log/2026-03-19-ci-quality-gates-roadmap.md) に残す。
 
