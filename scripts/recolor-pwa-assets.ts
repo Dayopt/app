@@ -1,14 +1,30 @@
 /**
  * PWA アセット再着色スクリプト
  *
- * アイコン:  黒背景 → primary blue (#23467f) に差し替え、白シンボル維持
+ * アイコン:  黒背景の原本 → primary blue (#23467f) に差し替え、白シンボル維持
  * Maskable:  safe zone (80%) 内にシンボルを配置した版を新規作成
- * Splash:   既存スクリプトと同じロジックで再生成（再着色後アイコンを使用）
+ * Splash:   再着色後アイコンと背景色から再生成
  *
  * 使用方法:
  *   npx tsx scripts/recolor-pwa-assets.ts
  *
  * 依存: sharp
+ *
+ * ── 入力は必ず原本（黒背景）である必要がある ──
+ *
+ * recolorIcon は「輝度 0 = primary、輝度 255 = 白」の線形ブレンドなので、
+ * 既に着色済みの画像を入力にすると二重に変換されて色が褪せる。
+ * 例: #2051a1（輝度 75.5）を再入力すると #647da5 になり、primary に戻らない。
+ *
+ * そのため原本は public/ ではなく apps/product/assets/pwa-icons/ に置き、
+ * 出力先の public/icons/ とは分離する。原本は書き換えないので、このスクリプトは
+ * 何度実行しても同じ結果になる。ブランドカラーを変えたら PRIMARY を更新して
+ * 再実行するだけでよい。
+ *
+ * 過去に出力先を入力として扱っていたため、maskable アイコンが劣化していた。
+ * createMaskableIcon の白シンボル抽出（alpha = 輝度）は黒背景を前提とするが、
+ * 着色済み（青地・輝度 66-75）を入力すると背景が alpha 26-30% の白になり、
+ * 面全体が色褪せた水色（#6184bc）になっていた。
  */
 
 import path from 'node:path';
@@ -18,7 +34,10 @@ import { generateSplashScreens } from './lib/pwa-splash';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const PRODUCT_PUBLIC_DIR = path.join(ROOT, 'apps', 'product', 'public');
+const PRODUCT_DIR = path.join(ROOT, 'apps', 'product');
+const PRODUCT_PUBLIC_DIR = path.join(PRODUCT_DIR, 'public');
+/** 黒背景の原本（入力・書き換えない） */
+const SOURCE_ICONS_DIR = path.join(PRODUCT_DIR, 'assets', 'pwa-icons');
 const ICONS_DIR = path.join(PRODUCT_PUBLIC_DIR, 'icons');
 const SPLASH_DIR = path.join(PRODUCT_PUBLIC_DIR, 'splash');
 
@@ -69,6 +88,9 @@ async function recolorIcon(
 /**
  * Maskable icon 生成: safe zone (80%) 内にコンテンツを配置
  * 背景は primary blue ベタ塗り
+ *
+ * sourceIconPath には**黒背景の原本**を渡す。白シンボルの抽出に
+ * alpha = 輝度 を使うため、着色済みを渡すと背景が透明にならず面が濁る。
  */
 async function createMaskableIcon(
   sharp: typeof import('sharp').default,
@@ -141,11 +163,8 @@ async function main() {
 
   const iconFiles = ['icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
   for (const file of iconFiles) {
-    const inputPath = path.join(ICONS_DIR, file);
-    // 元ファイルを直接上書き
-    const tmpPath = path.join(ICONS_DIR, `_tmp_${file}`);
-    await recolorIcon(sharp, inputPath, tmpPath);
-    await fs.rename(tmpPath, inputPath);
+    // 入力は原本（黒背景）、出力は public/icons/。原本は書き換えない
+    await recolorIcon(sharp, path.join(SOURCE_ICONS_DIR, file), path.join(ICONS_DIR, file));
     // eslint-disable-next-line no-console -- スクリプト用
     console.log(`✓ ${file} → primary blue`);
   }
@@ -160,10 +179,10 @@ async function main() {
   ];
 
   for (const { size, source, output } of maskableSizes) {
-    // 元の（再着色前の）アイコン形状が必要 → 再着色済みから白シンボルを抽出
+    // 白シンボルの抽出には黒背景が必要なので、原本を入力にする
     await createMaskableIcon(
       sharp,
-      path.join(ICONS_DIR, source),
+      path.join(SOURCE_ICONS_DIR, source),
       path.join(ICONS_DIR, output),
       size,
     );
