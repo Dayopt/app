@@ -35,7 +35,7 @@ export function LearnMock() {
         {/* Header */}
         <div className="mb-3 flex items-center justify-between">
           <span className="text-foreground text-sm font-medium">Weekly Review</span>
-          <span className="bg-container text-muted-foreground rounded px-2 py-0.5 text-xs">
+          <span className="bg-container text-muted-foreground rounded-[4px] px-2 py-0.5 text-xs">
             Mar 3 – 9
           </span>
         </div>
@@ -84,7 +84,10 @@ export function LearnMock() {
             {/* Heatmap grid */}
             <div className="grid grid-cols-7 gap-1">
               {heatmap.flat().map((intensity, i) => (
-                <div key={i} className={`aspect-square rounded-sm ${intensityClass(intensity)}`} />
+                <div
+                  key={i}
+                  className={`aspect-square rounded-[2px] ${intensityClass(intensity)}`}
+                />
               ))}
             </div>
           </div>
@@ -101,11 +104,11 @@ export function LearnMock() {
                       {week.value}%
                     </span>
                     <div
-                      className="bg-muted relative w-full overflow-hidden rounded"
+                      className="bg-muted relative w-full overflow-hidden rounded-[4px]"
                       style={{ height: 40 }}
                     >
                       <div
-                        className={`absolute inset-x-0 bottom-0 rounded ${isLatest ? 'bg-primary' : 'bg-primary/30'}`}
+                        className={`absolute inset-x-0 bottom-0 rounded-[4px] ${isLatest ? 'bg-primary' : 'bg-primary/30'}`}
                         style={{ height: `${week.value}%` }}
                       />
                     </div>

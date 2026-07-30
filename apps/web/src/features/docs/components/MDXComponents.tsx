@@ -100,7 +100,7 @@ const docsOverrides = {
       return <CodeBlock className={className}>{children}</CodeBlock>;
     }
     return (
-      <code className="bg-muted text-foreground rounded px-2 py-1 font-mono text-base">
+      <code className="bg-muted text-foreground rounded-lg px-2 py-1 font-mono text-base">
         {children}
       </code>
     );

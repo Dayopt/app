@@ -14,7 +14,7 @@ function TableHeader({ children }: { children: ReactNode }) {
 function PlaceholderCell({ data, item }: { data: LegalContentTree; item: LegalContentTree }) {
   return (
     <td className="text-foreground px-6 py-4 text-sm">
-      <span className="bg-muted text-warning-foreground rounded px-2 py-1 text-xs font-medium">
+      <span className="bg-muted text-warning-foreground rounded-lg px-2 py-1 text-xs font-medium">
         {readLegalText(data, 'placeholder')}
       </span>
       <span className="text-muted-foreground ml-2 text-xs">{readLegalText(item, 'hint')}</span>
@@ -91,7 +91,7 @@ export function TokushohoDocument({ data }: { data: LegalContentTree }) {
                     <span className="text-muted-foreground">
                       {readLegalText(items, 'contact', 'phoneLabel')}:
                     </span>{' '}
-                    <span className="bg-muted text-warning-foreground rounded px-2 py-1 text-xs font-medium">
+                    <span className="bg-muted text-warning-foreground rounded-lg px-2 py-1 text-xs font-medium">
                       {readLegalText(data, 'placeholder')}
                     </span>
                   </p>

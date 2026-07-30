@@ -51,7 +51,7 @@ export function PostCard({
   if (layout === 'list') {
     return (
       <article className="relative py-6 first:pt-0">
-        <div className="hover:bg-state-hover -m-4 flex items-center gap-4 rounded-xl p-4 transition-colors">
+        <div className="hover:bg-state-hover -m-4 flex items-center gap-4 rounded-2xl p-4 transition-colors">
           {/* カバー画像（控えめサイズ） */}
           <div className="w-56 flex-shrink-0">
             <BlogImage

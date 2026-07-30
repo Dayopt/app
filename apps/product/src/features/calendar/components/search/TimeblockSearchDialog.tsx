@@ -176,7 +176,7 @@ export function TimeblockSearchContent({
             >
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="border-border text-muted-foreground shrink-0 rounded border px-2 py-1 text-xs">
+                  <span className="border-border text-muted-foreground shrink-0 rounded-lg border px-2 py-1 text-xs">
                     {t(`calendar.search.kind.${result.kind}`)}
                   </span>
                   {result.isSkipped ? (

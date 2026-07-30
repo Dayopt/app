@@ -128,7 +128,7 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-popover border-border max-w-2xl gap-0 overflow-hidden p-0 shadow-2xl [&>button]:hidden">
+      <DialogContent className="bg-popover border-border shadow-card max-w-2xl gap-0 overflow-hidden p-0 [&>button]:hidden">
         {/* 検索ヘッダー */}
         <div className="border-border flex items-center gap-4 border-b p-4">
           <Search className="text-muted-foreground size-5 flex-shrink-0" />
@@ -256,13 +256,13 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1">
-                <kbd className="bg-muted border-border text-foreground rounded border px-2 py-1 font-mono text-xs">
+                <kbd className="bg-muted border-border text-foreground rounded-lg border px-2 py-1 font-mono text-xs">
                   Enter
                 </kbd>
                 <span>{t('toSelect')}</span>
               </div>
               <div className="flex items-center gap-1">
-                <kbd className="bg-muted border-border text-foreground rounded border px-2 py-1 font-mono text-xs">
+                <kbd className="bg-muted border-border text-foreground rounded-lg border px-2 py-1 font-mono text-xs">
                   Esc
                 </kbd>
                 <span>{t('toClose')}</span>

@@ -19,7 +19,7 @@ export function BlogCardSkeleton() {
   return (
     <div className="flex items-center gap-4 py-6 first:pt-0">
       {/* カバー画像スケルトン */}
-      <Skeleton className="h-32 w-56 flex-shrink-0 rounded-xl" />
+      <Skeleton className="h-32 w-56 flex-shrink-0 rounded-2xl" />
 
       {/* コンテンツスケルトン */}
       <div className="min-w-0 flex-1 space-y-3">

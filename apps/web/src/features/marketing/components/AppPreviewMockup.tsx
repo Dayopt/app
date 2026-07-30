@@ -51,7 +51,7 @@ export function AppPreviewMockup() {
           {['Calendar', 'Plan', 'Record', 'Tags', 'Review'].map((item) => (
             <div
               key={item}
-              className={`text-muted-foreground rounded px-2 py-1 text-xs ${item === 'Calendar' ? 'bg-state-active text-state-active-foreground font-medium' : ''}`}
+              className={`text-muted-foreground rounded-[4px] px-2 py-1 text-xs ${item === 'Calendar' ? 'bg-state-active text-state-active-foreground font-medium' : ''}`}
             >
               {item}
             </div>
@@ -76,7 +76,7 @@ export function AppPreviewMockup() {
             {['Day', 'Week'].map((view) => (
               <span
                 key={view}
-                className={`rounded px-2 py-0.5 text-xs ${view === 'Day' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                className={`rounded-[4px] px-2 py-0.5 text-xs ${view === 'Day' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
               >
                 {view}
               </span>

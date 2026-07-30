@@ -40,7 +40,7 @@ interface ForbiddenPattern {
   pattern: string;
   message: string;
   suggestion: string;
-  /** マッチ行のうち、これに当たるものは違反として数えない（ERE） */
+  /** マッチ行のうち、これに当たるものは違反として数えない（JS の RegExp で評価） */
   excludePattern?: string;
   /** true = 検出するが CI を block しない（段階移行中のルール） */
   warnOnly?: boolean;
@@ -108,6 +108,9 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
   // bare rounded 禁止（rounded-lg / rounded-2xl / rounded-full / rounded-none のみ）
   {
     pattern: '(^|[^a-z0-9-])rounded([^a-z0-9-]|$)',
+    // `const rounded = ...` のような識別子は Tailwind クラスではない。
+    // 宣言・代入・参照の形を除く（クラス名は文字列の中にしか現れない）
+    excludePattern: '(const|let|var)\\s+rounded|rounded\\s*[=/%)]',
     message: 'bare rounded は禁止。rounded-lg (8px) を使用',
     suggestion: 'rounded → rounded-lg',
   },
@@ -197,7 +200,7 @@ for (const { pattern, message, suggestion, warnOnly, excludePattern } of FORBIDD
   let lines = grepLines(pattern);
 
   if (excludePattern) {
-    const re = new RegExp(excludePattern.replace(/\\\\/g, '\\'));
+    const re = new RegExp(excludePattern);
     lines = lines.filter((line) => !re.test(line));
   }
 

@@ -125,7 +125,7 @@ export default async function OSSCreditsPage({ params }: PageProps) {
                       v{credit.version}
                     </span>
                   </h3>
-                  <span className="bg-muted text-primary w-fit rounded px-4 py-1 text-sm font-medium">
+                  <span className="bg-muted text-primary w-fit rounded-lg px-4 py-1 text-sm font-medium">
                     {credit.license}
                   </span>
                 </div>

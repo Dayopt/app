@@ -65,7 +65,7 @@ export function PlanMock() {
             {navItems.map((item) => (
               <div
                 key={item}
-                className={`rounded px-2 py-1 text-xs ${
+                className={`rounded-[4px] px-2 py-1 text-xs ${
                   item === 'Calendar'
                     ? 'bg-state-active text-state-active-foreground font-medium'
                     : 'text-muted-foreground'
