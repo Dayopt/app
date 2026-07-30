@@ -151,4 +151,14 @@ import { Meta } from '@storybook/addon-docs/blocks';
 <div style={{ transition: 'transform 200ms cubic-bezier(0.25, 0.1, 0.25, 1)' }} />
 ```
 
+---
+
+## 何が自動で守られるか
+
+`pnpm lint:tokens` が 4 つのモーション規約を検出する（禁止 duration / duration の任意値 / 生の easing / `cubic-bezier` 直書き）。
+
+**ただし検出範囲は `apps/product/src/**/\*.tsx`だけ。** CSS ファイルと`packages/components`は対象外なので、そちらはこの文書とレビューで担保する。実際、2026-07-30 に是正した違反の大半は CSS と`packages/components` にあり（`sheet.tsx`の`duration-500`、`calendar.css`の`cubic-bezier` 直書き）、lint では検出できなかった。範囲拡張は別途。
+
+---
+
 > 実際の動きは Storybook の **Motion** ストーリーで確認できる。

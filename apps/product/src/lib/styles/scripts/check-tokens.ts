@@ -101,6 +101,31 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     message: 'OFF-GRID スペーシング（禁止整数値）。8pxグリッド準拠の値を使用',
     suggestion: '*-3(12px) → *-2/*-4, *-5(20px) → *-4/*-6, *-7(28px) → *-6/*-8, *-9(36px) → *-8',
   },
+  // モーション（方針の正本: packages/foundations/src/tokens/Motion.mdx）
+  // NOTE: このスクリプトは apps/product の *.tsx だけを走査する。CSS と
+  // packages/components は対象外なので、そちらは Motion.mdx とレビューで担保する。
+  {
+    pattern: 'duration-(0|75|100|500|700|1000)([^0-9]|$)',
+    message: '禁止 duration。遷移は duration-150 / 200 / 300 の3段のみ',
+    suggestion: 'duration-500 → duration-300, duration-75 → duration-150',
+  },
+  {
+    pattern: 'duration-\\[',
+    message: 'duration の任意値は禁止。3段（150/200/300）から選ぶ',
+    suggestion: 'duration-[420ms] → duration-300',
+  },
+  {
+    pattern: '(^|[^a-z-])ease-(in-out|in|out)([^a-z-]|$)',
+    message:
+      '生の easing は禁止。ease-standard（その場で変わる）/ ease-settle（入る・着地する）を使用',
+    suggestion: 'ease-out → ease-settle, ease-in-out → ease-standard, ease-in → ease-standard',
+  },
+  {
+    pattern: 'cubic-bezier',
+    message:
+      'cubic-bezier の直書きは禁止。var(--motion-ease-standard) / var(--motion-ease-settle) を参照',
+    suggestion: 'cubic-bezier(0.25, 0.1, 0.25, 1) → var(--motion-ease-settle)',
+  },
 ];
 
 let hasViolations = false;
