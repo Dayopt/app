@@ -1,8 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 import { dayoptBrand, dayoptDomains } from '@dayopt/config';
-
-import { OG_COLORS } from './opengraph-colors';
+import { OG_COLORS } from '@dayopt/foundations/og-colors';
 
 export const runtime = 'edge';
 
