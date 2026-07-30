@@ -26,7 +26,12 @@ import { PaymentRecoveredEmail } from '@/emails/PaymentRecoveredEmail';
 import { ProStartEmail } from '@/emails/ProStartEmail';
 import { TrialStartEmail } from '@/emails/TrialStartEmail';
 import { env } from '@/env';
-import { syncSubscriptionStatus } from '@/features/settings/server/billing-service';
+import { resolveBillingLifecycleMode } from '@/features/settings/server/billing-lifecycle-mode';
+import {
+  classifyBillingCustomerEvent,
+  syncDeletedSubscriptionStatus,
+  syncSubscriptionStatus,
+} from '@/features/settings/server/billing-service';
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
 import {
@@ -44,6 +49,7 @@ import {
   markStripeWebhookEventProcessed,
   releaseStripeWebhookEvent,
 } from './stripe-webhook-idempotency';
+import { parseStripeWebhookIdentity, verifyStripeWebhookIdentity } from './stripe-webhook-identity';
 
 // ─── Slack 通知 ──────────────────────────────────────
 
@@ -244,6 +250,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook processing unavailable' }, { status: 500 });
   }
 
+  let lifecycleMode: 'durable' | 'legacy';
+  try {
+    lifecycleMode = await resolveBillingLifecycleMode(supabase);
+  } catch (error) {
+    logger.error('Stripe webhook lifecycle activation could not be verified');
+    captureStripeWebhookFailure(error, 'lifecycle_activation', event);
+    return NextResponse.json({ error: 'Webhook processing unavailable' }, { status: 500 });
+  }
+
+  if (lifecycleMode === 'durable') {
+    const expectedIdentity = parseStripeWebhookIdentity({
+      accountId: env.STRIPE_ACCOUNT_ID,
+      livemode: env.STRIPE_LIVEMODE,
+    });
+    if (expectedIdentity === null) {
+      logger.error('Stripe webhook identity is not configured');
+      captureStripeWebhookFailure(
+        new Error('Stripe webhook identity is not configured'),
+        'identity',
+      );
+      return NextResponse.json({ error: 'Webhook identity not configured' }, { status: 500 });
+    }
+    let providerEvent: Stripe.Event | null = null;
+    try {
+      providerEvent = await verifyStripeWebhookIdentity(stripe, event, expectedIdentity);
+    } catch (error) {
+      logger.error('Stripe webhook identity verification failed');
+      captureStripeWebhookFailure(error, 'identity_provider_verification', event);
+      return NextResponse.json({ error: 'Webhook identity unavailable' }, { status: 500 });
+    }
+    if (providerEvent === null) {
+      logger.error('Stripe webhook identity mismatch');
+      captureStripeWebhookFailure(new Error('Stripe webhook identity mismatch'), 'identity', event);
+      return NextResponse.json({ error: 'Webhook identity mismatch' }, { status: 500 });
+    }
+    // durable有効化後は署名payloadをidentity確認だけに使い、業務入力をprovider Eventへ固定する。
+    event = providerEvent;
+  }
+
   // ─── 冪等性ガード ───────────────────────────────────
   // 同一 event.id の重複処理を防止（Stripe はリトライする）
   try {
@@ -391,33 +436,42 @@ export async function POST(request: NextRequest) {
             ? subscription.customer
             : subscription.customer.id;
 
-        await syncSubscriptionStatus(supabase, customerId, null, 'canceled');
-        logger.info('Subscription deleted', { customerId });
-        await notifySlack(`⚠️ サブスクリプション解約\nCustomer: ${customerId}`);
+        let syncOutcome: Awaited<ReturnType<typeof syncDeletedSubscriptionStatus>>;
+        if (lifecycleMode === 'durable') {
+          syncOutcome = await syncDeletedSubscriptionStatus(supabase, customerId, subscription.id);
+        } else {
+          await syncSubscriptionStatus(supabase, customerId, null, 'canceled');
+          syncOutcome = 'updated';
+        }
+        logger.info('Subscription deleted', { outcome: syncOutcome });
 
-        // 解約確認メール
-        const cancelUser = await getUserByCustomerId(supabase, customerId);
-        if (cancelUser) {
-          const t = createEmailTranslator(cancelUser.locale);
-          const rawPeriodEnd = (subscription as unknown as { current_period_end?: number })
-            .current_period_end;
-          const periodEnd = rawPeriodEnd
-            ? new Date(rawPeriodEnd * 1000).toLocaleDateString(
-                cancelUser.locale === 'ja' ? 'ja-JP' : 'en-US',
-                { year: 'numeric', month: 'long', day: 'numeric' },
-              )
-            : 'your current billing period';
-          await sendTransactionalEmail(
-            cancelUser.email,
-            t('cancellationConfirm.subject'),
-            CancellationConfirmEmail({
-              userName: cancelUser.userName,
-              periodEndDate: periodEnd,
-              locale: cancelUser.locale,
-              appUrl: APP_URL,
-            }),
-            'send_cancellation_email',
-          );
+        if (syncOutcome === 'updated') {
+          await notifySlack(`⚠️ サブスクリプション解約\nCustomer: ${customerId}`);
+
+          // 解約確認メール
+          const cancelUser = await getUserByCustomerId(supabase, customerId);
+          if (cancelUser) {
+            const t = createEmailTranslator(cancelUser.locale);
+            const rawPeriodEnd = (subscription as unknown as { current_period_end?: number })
+              .current_period_end;
+            const periodEnd = rawPeriodEnd
+              ? new Date(rawPeriodEnd * 1000).toLocaleDateString(
+                  cancelUser.locale === 'ja' ? 'ja-JP' : 'en-US',
+                  { year: 'numeric', month: 'long', day: 'numeric' },
+                )
+              : 'your current billing period';
+            await sendTransactionalEmail(
+              cancelUser.email,
+              t('cancellationConfirm.subject'),
+              CancellationConfirmEmail({
+                userName: cancelUser.userName,
+                periodEndDate: periodEnd,
+                locale: cancelUser.locale,
+                appUrl: APP_URL,
+              }),
+              'send_cancellation_email',
+            );
+          }
         }
         break;
       }
@@ -426,30 +480,44 @@ export async function POST(request: NextRequest) {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId =
           typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
+        if (!customerId && lifecycleMode === 'durable') {
+          throw new Error('Stripe invoice event has no Customer identity');
+        }
+        if (customerId && lifecycleMode === 'durable') {
+          const classification = await classifyBillingCustomerEvent(supabase, customerId);
+          if (classification === 'account_deleted') {
+            logger.info('Payment failure ignored for deleted account');
+            break;
+          }
+        }
         logger.warn('Payment failed', { customerId });
         await notifySlack(`🚨 支払い失敗\nCustomer: ${customerId ?? 'unknown'}`);
 
         // 支払い失敗メール
-        if (customerId) {
-          const paymentUser = await getUserByCustomerId(supabase, customerId);
-          if (paymentUser) {
-            const t = createEmailTranslator(paymentUser.locale);
-            await sendTransactionalEmail(
-              paymentUser.email,
-              t('paymentFailed.subject'),
-              PaymentFailedEmail({
-                userName: paymentUser.userName,
-                locale: paymentUser.locale,
-                appUrl: APP_URL,
-              }),
-              'send_payment_failed_email',
-            );
-          }
+        const paymentUser = customerId ? await getUserByCustomerId(supabase, customerId) : null;
+        if (!paymentUser && lifecycleMode === 'durable') {
+          throw new Error('Live Stripe Customer has no application user');
+        }
+        if (paymentUser) {
+          const t = createEmailTranslator(paymentUser.locale);
+          await sendTransactionalEmail(
+            paymentUser.email,
+            t('paymentFailed.subject'),
+            PaymentFailedEmail({
+              userName: paymentUser.userName,
+              locale: paymentUser.locale,
+              appUrl: APP_URL,
+            }),
+            'send_payment_failed_email',
+          );
         }
         break;
       }
 
       default:
+        if (lifecycleMode === 'durable') {
+          throw new Error('Unsupported Stripe webhook event');
+        }
         logger.info('Stripe webhook event (unhandled)', { type: event.type });
     }
 

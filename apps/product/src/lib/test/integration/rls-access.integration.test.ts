@@ -373,7 +373,10 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         }
 
         const { data, error } = await query;
-        if (operation !== 'select' && SERVICE_OWNED_USER_TABLE_MUTATIONS.has(testCase.table)) {
+        const isPrivilegeDeniedMutation =
+          (operation !== 'select' && SERVICE_OWNED_USER_TABLE_MUTATIONS.has(testCase.table)) ||
+          (operation === 'delete' && testCase.table === 'profiles');
+        if (isPrivilegeDeniedMutation) {
           expect(error?.code).toBe('42501');
           return;
         }
@@ -381,6 +384,27 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         expect(data).toEqual([]);
       },
     );
+  });
+
+  describe('profiles deletion grants', () => {
+    it('ownerでもprofileを直接deleteできない', async () => {
+      const { error } = await supabaseB
+        .from('profiles')
+        .delete()
+        .eq('id', TEST_USER_B_ID)
+        .select('id');
+
+      expect(error?.code).toBe('42501');
+
+      const { data: profile, error: profileError } = await adminSupabase
+        .from('profiles')
+        .select('id')
+        .eq('id', TEST_USER_B_ID)
+        .single();
+
+      expect(profileError).toBeNull();
+      expect(profile?.id).toBe(TEST_USER_B_ID);
+    });
   });
 
   describe('OAuth token column grants', () => {

@@ -3,7 +3,7 @@ import 'server-only';
 import { checkProAccessForUser, isBillingEnforced } from '@/lib/billing/enforcement';
 import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
-import { captureUnexpectedDatabaseError } from '@/lib/sentry';
+import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { DUE_STALENESS_MS, isDailyFullSyncSlot } from './sync-schedule';
@@ -29,6 +29,8 @@ type DispatchSummary = {
   due: number;
   /** 実際に syncConnection を呼んだ接続数。 */
   processed: number;
+  /** 接続単位で隔離し、後続接続の処理を継続した失敗数。 */
+  failed: number;
   /** 非 Pro（BILLING_ENFORCED 有効時）で skip した数。 */
   skippedNonPro: number;
   /** 時間予算切れで今回処理せず次回に回した数。 */
@@ -75,6 +77,7 @@ export async function dispatchCalendarSync(params: {
   const summary: DispatchSummary = {
     due: dueConnections.length,
     processed: 0,
+    failed: 0,
     skippedNonPro: 0,
     deferred: 0,
   };
@@ -100,19 +103,30 @@ export async function dispatchCalendarSync(params: {
 
     const forceFullSync = isDailyFullSyncSlot(connection.id, now);
 
-    // syncConnection は内部で自分の client を作り、reauth_required は自ら skip、
-    // provider / DB 失敗は throw せず last_sync_error に記録する。
-    await syncConnection({
-      connectionId: connection.id,
-      userId: connection.user_id,
-      forceFullSync,
-    });
-    summary.processed += 1;
+    try {
+      await syncConnection({
+        connectionId: connection.id,
+        userId: connection.user_id,
+        forceFullSync,
+      });
+    } catch {
+      // token authorityやDB応答が未確定でも、1接続で後続due接続をstarveさせない。
+      // raw errorにはprovider/DB情報が入り得るため固定messageだけを通知する。
+      summary.failed += 1;
+      captureUnexpectedError(new Error('calendar connection sync was isolated'), {
+        feature: 'external_calendar',
+        operation: 'dispatch_sync_connection',
+      });
+      logger.warn('[calendar-cron] connection sync failed; continuing dispatch');
+    } finally {
+      summary.processed += 1;
+    }
   }
 
   logger.info('[calendar-cron] dispatch finished', {
     due: summary.due,
     processed: summary.processed,
+    failed: summary.failed,
     skippedNonPro: summary.skippedNonPro,
     deferred: summary.deferred,
   });

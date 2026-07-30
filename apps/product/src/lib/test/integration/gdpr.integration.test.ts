@@ -18,7 +18,7 @@ import { createClient } from '@supabase/supabase-js';
 import { TRPCError } from '@trpc/server';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { userRouter } from '@/features/auth/server/router';
+import { createUserRouter } from '@/features/auth/server/router';
 import type { Database } from '@/lib/database';
 import { createTestCaller } from '@/lib/test/trpc-test-helpers';
 import type { Context } from '@/lib/trpc/procedures';
@@ -41,6 +41,9 @@ const TEST_USER_ID = crypto.randomUUID();
 
 // テストをスキップするかどうか（CI環境でSupabaseが起動していない場合）
 const SKIP_INTEGRATION = process.env.SKIP_INTEGRATION_TESTS === 'true';
+const userRouter = createUserRouter({
+  beforeIdentityDeletion: async () => ({ status: 'completed' }),
+});
 
 describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
   let adminSupabase: ReturnType<typeof createClient<Database>>;

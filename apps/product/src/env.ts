@@ -75,6 +75,12 @@ const serverSchema = z
     // Google Calendar 連携（external-calendar-import）。Supabase Auth の Google provider とは
     // 別の専用 OAuth client を使う。identity（誰か）と data-access（何を読めるか）を分離する。
     GOOGLE_CALENDAR_CLIENT_ID: z.string().optional(),
+    // Calendar authority を有効化する時だけ必須。OAuth client ID の project number と照合する。
+    // Candidate 3 では gate を OFF のまま配置するため、既存環境との互換性を保って optional とする。
+    GOOGLE_CALENDAR_PROJECT_NUMBER: z
+      .string()
+      .regex(/^[1-9][0-9]{5,29}$/)
+      .optional(),
     GOOGLE_CALENDAR_CLIENT_SECRET: z.string().optional(),
     // refresh token の AES-256-GCM 暗号鍵。base64 で 32 バイト（`openssl rand -base64 32`）。
     // 長さを boot 時に検証する。壊れた鍵のまま起動すると、同意まで取ったあと保存だけが失敗する。
@@ -96,6 +102,12 @@ const serverSchema = z
 
     // Stripe
     STRIPE_SECRET_KEY: z.string().optional(),
+    // Billing lifecycle のactive経路でprovider identityを固定する。未設定時はactive経路を拒否する。
+    STRIPE_ACCOUNT_ID: z
+      .string()
+      .regex(/^acct_[A-Za-z0-9_]+$/)
+      .optional(),
+    STRIPE_LIVEMODE: z.enum(['true', 'false']).optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
     NEXT_PUBLIC_STRIPE_PRO_PRICE_ID: z.string().optional(),
 

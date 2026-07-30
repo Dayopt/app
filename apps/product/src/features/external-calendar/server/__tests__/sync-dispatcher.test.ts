@@ -6,10 +6,11 @@ const isBillingEnforced = vi.hoisted(() => vi.fn(() => false));
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const isDailyFullSyncSlot = vi.hoisted(() => vi.fn((_connectionId: string, _now: Date) => false));
 const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn((error: unknown) => error));
+const captureUnexpectedError = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient }));
 vi.mock('@/lib/billing/enforcement', () => ({ isBillingEnforced, checkProAccessForUser }));
-vi.mock('@/lib/sentry', () => ({ captureUnexpectedDatabaseError }));
+vi.mock('@/lib/sentry', () => ({ captureUnexpectedDatabaseError, captureUnexpectedError }));
 vi.mock('@/lib/logger', () => ({
   logger: { log: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
@@ -108,7 +109,30 @@ describe('dispatchCalendarSync — 逐次同期', () => {
       userId: connections(1)[0]!.user_id,
       forceFullSync: false,
     });
-    expect(summary).toMatchObject({ due: 3, processed: 3, skippedNonPro: 0, deferred: 0 });
+    expect(summary).toMatchObject({
+      due: 3,
+      processed: 3,
+      failed: 0,
+      skippedNonPro: 0,
+      deferred: 0,
+    });
+  });
+
+  it('1接続の未確定失敗を隔離し、後続due接続を処理する', async () => {
+    setupDb({ data: connections(3), error: null });
+    syncConnection.mockRejectedValueOnce(new Error('provider-secret-detail'));
+
+    const summary = await dispatchCalendarSync({ now: NOW, deadlineAt: FAR_DEADLINE });
+
+    expect(syncConnection).toHaveBeenCalledTimes(3);
+    expect(summary).toMatchObject({ due: 3, processed: 3, failed: 1, deferred: 0 });
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'calendar connection sync was isolated' }),
+      expect.objectContaining({ operation: 'dispatch_sync_connection' }),
+    );
+    expect(JSON.stringify(captureUnexpectedError.mock.calls)).not.toContain(
+      'provider-secret-detail',
+    );
   });
 
   it('full resync スロットに当たった接続だけ forceFullSync=true で呼ぶ', async () => {
