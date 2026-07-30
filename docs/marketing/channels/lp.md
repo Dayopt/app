@@ -25,7 +25,7 @@ Dayoptのマーケティングサイト・LPのビジュアル方向性を定義
 
 ### 書体
 
-**Source Sans 3 + Noto Sans JP**（等幅は Source Code Pro）を書体とする。Adobe Source ファミリーで統一しており、Noto Sans JP は Source Han Sans と同一なので和欧が同じ血筋になる。プロダクトとマーケティングサイトはどちらも `next/font` で同一スタックを適用済みで、スタックの正本は `packages/foundations/src/tokens/typography.css`。
+**Source Sans 3 + Noto Sans JP** の2書体を書体とする。Noto Sans JP は Source Han Sans と同一なので和欧が同じ血筋になる。数字も本文と同じ書体で扱い、等幅フォントは配信しない（Source Sans 3 の数字は指定なしで既に等幅）。プロダクトとマーケティングサイトはどちらも `next/font` で同一スタックを適用済みで、スタックの正本は `packages/foundations/src/tokens/typography.css`。
 
 - サンセリフで静かに語る。装飾的な書体は使わない
 - ウェイト使い分け:

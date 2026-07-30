@@ -37,8 +37,8 @@ export const Principles: Story = {
         <div className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 font-medium">フォント</h2>
           <p className="text-muted-foreground text-sm">
-            Adobe Source ファミリーの3書体だけを使う。欧文 Source Sans 3 / 和文 Noto Sans JP / 等幅
-            Source Code Pro。next/fontで最適化済み。詳細は FontFamily を参照。
+            欧文 Source Sans 3 と和文 Noto Sans JP の2書体だけを使う。next/fontで最適化済み。
+            数字も本文と同じ書体で扱う。詳細は FontFamily を参照。
           </p>
         </div>
       </div>
@@ -63,14 +63,6 @@ const SPECIMENS = [
     usage: '本文・UI テキスト全般（日本語）',
     sample: '計画した時間と、実際に使った時間。',
   },
-  {
-    role: '等幅',
-    family: 'Source Code Pro',
-    className: 'font-mono',
-    variable: '--font-code',
-    usage: '時刻・duration・統計の数字、エラーID、MFAコード',
-    sample: '09:30–11:00 / 1h 30m',
-  },
 ] as const;
 
 export const FontFamily: Story = {
@@ -78,9 +70,9 @@ export const FontFamily: Story = {
     <div>
       <h1 className="mb-6 text-2xl font-medium">フォントファミリー</h1>
       <p className="text-muted-foreground mb-8 text-sm">
-        Adobe Source ファミリーの3書体で統一する。和文の Noto Sans JP は Google が Noto
-        ブランドで再配布している Adobe Source Han Sans と同一なので、3書体すべてが同じ血筋になり、
-        和欧混植の行に継ぎ目が出ない。
+        欧文 Source Sans 3 と和文 Noto Sans JP の2書体だけを使う。Noto Sans JP は Google が Noto
+        ブランドで再配布している Adobe Source Han Sans と同一なので、2書体が同じ血筋になり、
+        和欧混植の行に継ぎ目が出ない。等幅の webfont は配信しない。
       </p>
 
       <div className="mb-8 space-y-4">
@@ -128,19 +120,22 @@ export const FontFamily: Story = {
         </div>
 
         <div className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-2 font-medium">数字（等幅 + tabular-nums）</h2>
+          <h2 className="mb-2 font-medium">数字</h2>
           <p className="text-muted-foreground mb-4 text-sm">
-            時刻や duration は桁が揃わないと読み比べられない。
-            <code className="text-xs">font-mono</code> と
-            <code className="text-xs">tabular-nums</code> を併用する。
+            数字も本文と同じ Source Sans 3 で扱う。等幅フォントには差し替えない。Source Sans 3 は
+            <strong className="text-foreground font-medium">
+              指定なしで数字が既に等幅（0〜9 の全桁が同じ送り幅）
+            </strong>
+            なので、桁を揃えるために別の書体を持ち込む必要がない。
           </p>
           <div className="space-y-1">
-            <p className="font-mono text-2xl tabular-nums">09:30 → 11:00</p>
-            <p className="font-mono text-2xl tabular-nums">11:00 → 11:45</p>
-            <p className="font-mono text-2xl tabular-nums">14:15 → 18:00</p>
+            <p className="text-2xl tabular-nums">09:30 → 11:00</p>
+            <p className="text-2xl tabular-nums">11:00 → 11:45</p>
+            <p className="text-2xl tabular-nums">14:15 → 18:00</p>
           </div>
           <p className="text-muted-foreground mt-4 text-xs">
-            比較用（プロポーショナル）: <span className="text-base">09:30 → 11:00</span>
+            <code className="text-xs">tabular-nums</code>は Source Sans 3
+            では実質何も変えないが、意図の宣言として付ける。将来書体を替えた時の保険。
           </p>
         </div>
 
@@ -154,12 +149,16 @@ export const FontFamily: Story = {
             <li>
               • Tailwind への接続は<code className="text-xs">tailwind-theme.css</code>の
               <code className="text-xs">@theme inline</code>。
-              <code className="text-xs">font-sans</code>と<code className="text-xs">font-mono</code>
-              だけを上書きしている
+              <code className="text-xs">font-sans</code>だけを上書きしている
             </li>
             <li>
-              • Source Code Pro は<code className="text-xs">preload: false</code>
-              。本文に使わないので LCP を優先する
+              • <code className="text-xs">font-mono</code>は Tailwind 既定の OS 等幅のまま。
+              コード・エラーID・キーボードショートカットだけが使う。数値表示には使わない
+            </li>
+            <li>
+              • 和文フォントより前に generic family（<code className="text-xs">sans-serif</code>／
+              <code className="text-xs">system-ui</code>）を置かない。generic は必ず解決するため、
+              前にあると和文がそこで拾われて Noto Sans JP に届かない
             </li>
             <li>
               • Storybook は next/font を通らないため

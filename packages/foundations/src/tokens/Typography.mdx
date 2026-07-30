@@ -13,35 +13,39 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - **サイズの差**で重要度を表現（大きい = 重要）
 - **ウェイト**で強調（bold = 見出し、normal = 本文）
 - **色**で階層（`text-foreground` = 主要、`text-muted-foreground` = 補助）→ 詳細は [Colors](?path=/docs/foundations-colors--docs)
-- **書体は Adobe Source ファミリーの3つだけ**（下記）、next/font で最適化済み
+- **書体は2つだけ**（下記）、next/font で最適化済み
 
 ---
 
 ## フォントファミリー
 
-使うのは3書体だけ。Adobe Source ファミリーで統一している。
+配信する webfont は2書体だけ。
 
-| 役割     | 書体                | クラス      | next/font 変数   | 用途                                            |
-| -------- | ------------------- | ----------- | ---------------- | ----------------------------------------------- |
-| **欧文** | **Source Sans 3**   | `font-sans` | `--font-latin`   | 本文・UI テキスト全般（ラテン文字）             |
-| **和文** | **Noto Sans JP**    | `font-sans` | `--font-noto-jp` | 本文・UI テキスト全般（日本語）                 |
-| **等幅** | **Source Code Pro** | `font-mono` | `--font-code`    | 時刻・duration・統計の数字、エラーID、MFAコード |
+| 役割     | 書体              | クラス      | next/font 変数   | 用途                                |
+| -------- | ----------------- | ----------- | ---------------- | ----------------------------------- |
+| **欧文** | **Source Sans 3** | `font-sans` | `--font-latin`   | 本文・UI テキスト全般（ラテン文字） |
+| **和文** | **Noto Sans JP**  | `font-sans` | `--font-noto-jp` | 本文・UI テキスト全般（日本語）     |
 
-### なぜ Source ファミリーか
+### なぜこの2つか
 
 Noto Sans JP は、Google が Noto ブランドで再配布している **Adobe Source Han Sans と同一**。
-そのため欧文を Source Sans 3 にすると、3書体すべてが同じ血筋になり、和欧混植の行に継ぎ目が出ない。
+そのため欧文を Source Sans 3 にすると、2書体が同じ血筋になり、和欧混植の行に継ぎ目が出ない。
 実績のある和文の可読性は変えずに、ファミリーの一貫性だけを得られる。
 
-等幅も同じファミリーに揃えるのは、時刻・duration・統計の数字が Dayopt の主役だから。
-桁を揃えて読み比べるため `font-mono` と `tabular-nums` を併用する。
+### 数字も同じ書体で扱う
+
+**数値表示に等幅フォントを使わない。** Source Sans 3 は指定なしで数字が既に等幅（0〜9 の全桁が同じ送り幅）なので、桁を揃えるために別書体を持ち込む必要がない。
+
+`tabular-nums` は Source Sans 3 では実質何も変えないが、意図の宣言として付ける（将来書体を替えた時の保険）。
+
+`font-mono` は **Tailwind 既定の OS 等幅**のままで、専用の webfont は配信しない。使うのはコード・エラーID・キーボードショートカットだけで、数値表示には使わない。
 
 ### 読み込みの構成
 
 - 書体の実体は各アプリの **next/font** が読み込む。stack の合成は `packages/foundations/src/tokens/typography.css` が正本
-- Tailwind への接続は `tailwind-theme.css` の `@theme inline`。`font-sans` と `font-mono` だけを上書きしている
+- Tailwind への接続は `tailwind-theme.css` の `@theme inline`。`font-sans` だけを上書きしている
 - body と `font-sans` utility は同じ stack を参照する（stack を複製しない）
-- Source Code Pro は `preload: false`。本文に使わないので LCP を優先する
+- **和文フォントより前に generic family（`sans-serif` / `system-ui`）を置かない。** generic は必ず解決するため、前にあると和文がそこで拾われて Noto Sans JP に届かない。next/font の `fallback` に generic を渡すと変数の中身の末尾に連結されてこれが壊れる
 - Storybook は next/font を通らないため `.storybook/main.ts` が同じ変数名を手動定義している。**変数名を変える時は両方直す**（片方だけだと黙ってシステムフォントに落ちる）
 
 > 実際の字面・和欧混植・数字の見本は Storybook の **FontFamily** ストーリーで確認できる。
