@@ -244,7 +244,24 @@ gh pr merge <PR番号> --merge --delete-branch
 
 **原則: 1 worktree = 1 branch = 1 PR。役目（PR の merge / close）を終えた worktree はその場で削除する。** 放置すると worktree・ブランチ・孤児ディレクトリが積み上がり、どれが生きている作業か判別できなくなる。
 
-これは**掃除の規律であって PR のサイズの話ではない**。1 PR に何 issue・何 Step を入れるかは §PR 粒度 が決める。
+これは**掃除の規律であって PR のサイズの話ではない**。1 PR に何 issue・何 Step を入れるかは §PR 粒度 が決める。言い換えると、worktree は **PR の寿命と運命を共にする使い捨ての作業机**で、PR が閉じたら机ごと捨てる。
+
+### main checkout の役割（指揮台モデル）
+
+策定日: 2026-07-30
+
+**repo 直下の checkout（`~/Desktop/dayopt`）は常に main に置く指揮台とし、そこでは branch を切らない・コードを変えない。** コード変更は規模によらず worktree（= branch = PR）で行う。AI セッションだけでなく、ユーザー自身の手作業も同じ扱いにする。
+
+- **指揮台でやること**: セッション起動、レビュー、マージ（`pnpm branch:finish`）、read-only の調査・docs 閲覧
+- **worktree でやること**: コードと docs の変更すべて。1 行の typo 修正も worktree で行う（規模で例外を作らない）
+
+理由:
+
+- `pnpm branch:finish` は main checkout で `git checkout main` → `git pull --ff-only` を無条件に実行する（`scripts/git/finish-branch.sh`）。指揮台が feature branch や未コミット差分で占有されていると、**並行セッションの merge と掃除が詰まる**か、他作業の差分を main へ持ち越す
+- §マージ手順 に書いた「main が他 worktree で checkout 中だと `gh pr merge` が失敗する」も同じ衝突の別の顔。指揮台を main に固定すればどちらも起きない
+- 「生きている作業 = `git worktree list` = open PR 一覧」が常に一致し、どれが進行中かを判別する手間が消える
+
+この規律の副作用として、**「いつ worktree を使うか」を毎回判断する必要がなくなる**。コードを変えるなら常に worktree、変えないなら指揮台、の二択に畳める。
 
 ### 概念整理（branch と worktree の違い）
 
