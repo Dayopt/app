@@ -14,20 +14,7 @@ Dayopt で作業する coding agent の共通入口。Claude は `CLAUDE.md` か
 | 4   | **不可逆だけ遅く、可逆は速く**                     | タイミング |
 | 5   | **2 週間、自分が触らなかった機能は削除候補にする** | 停止       |
 
-この 5 箇条は書き上がった規約ではなく、使いながらブラッシュアップしていく。月次ガーデニング（`.claude/commands/gardening.md`）で「使われているか」を検証し、ルールと違う判断をした時は理由を一文残す。**6 個目を足すときは、どれかを削る。**
-
-### 他の層との関係
-
-同じ規約を層をまたいで複製しない。迷ったらこの表でどの層を読むか決める。
-
-| 層           | 何を決めるか            | 正本                                       |
-| ------------ | ----------------------- | ------------------------------------------ |
-| **判断層**   | 何を作るか / 作らないか | 本節（5 箇条）                             |
-| **権限層**   | 誰が決めるか            | 次節 §Human–Agent Partnership              |
-| **設計原則** | どう設計するか（詳細）  | [strategy.md](docs/business/strategy.md) §4 |
-| **手続き層** | どう作るか（正確さ）    | `.claude/rules/` / `.agents/skills/`       |
-
-本節は strategy.md §4 の要約ではない。10 個の設計原則は**参照する**もの、5 箇条は**暗記して判断の瞬間に使う**もの。迷いが生じてから 10 個を読み直すのでは遅いので、繰り返し現れる判断だけを 5 個に絞ってある。
+この 5 箇条は書き上がった規約ではなく、使いながらブラッシュアップしていく。月次ガーデニング（`.claude/commands/gardening.md`）で「使われているか」を検証し、ルールと違う判断をした時は理由を一文残す。**6 個目を足すときは、どれかを削る。** 設計原則の詳細は [strategy.md](docs/business/strategy.md) §4、権限と責務は次節が正本。
 
 ## Human–Agent Partnership
 
@@ -144,17 +131,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 - `git add .` は避ける。必ず path-limited add で scope を固定する
 - コミット前に `git diff --cached` を確認する
 - コード変更後は `pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries` を通す
-- コミットメッセージは日本語 Conventional Commits 形式にする
-
-  | prefix     | 用途                           |
-  | ---------- | ------------------------------ |
-  | `feat`     | 新機能追加                     |
-  | `fix`      | バグ修正                       |
-  | `refactor` | 機能変更なしのコード改善       |
-  | `chore`    | ビルド、CI、依存関係、設定変更 |
-  | `docs`     | ドキュメントのみの変更         |
-  | `test`     | テストの追加・修正             |
-  | `perf`     | パフォーマンス改善             |
+- コミットメッセージは日本語 Conventional Commits 形式にする（type は commitlint が強制。subject を Latin 大文字語で始めると `subject-case` で弾かれるため日本語で始める）
 - PR は機能のまとまり単位で束ねる。サイズを理由に分割しない（`.claude/rules/workflow.md` §PR 粒度）
 - PR は枝分かれを履歴に残すため merge commit でマージする。**マージ〜掃除は同一セッション内で `pnpm branch:finish <PR番号>` をワンセットで実行する**（マージ→worktree削除→ローカル/リモート branch 削除→main 最新化まで。完了定義 5 点と手動フォールバックは `.claude/rules/workflow.md` §Worktree 運用）
 - branch 名は `{agent}/{domain}-{action}[-{issue番号}]` に統一する。複数 issue を束ねた場合は代表 issue または epic 番号を使う。Claude Code 自動生成のランダム名は最初の PR 作成前に `git branch -m` でリネームする（`.claude/rules/workflow.md` §命名規則）
@@ -178,11 +155,11 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 ユーザー向けの Docs / Blog / Release notes を書く・編集する前に、次の 3 ファイルを読む:
 
-- `docs/ai/writing-style.md` — 日本語・英語ともに B1 相当の読みやすさ。短文・具体語・能動態。曖昧な SaaS 語（empower / leverage / seamless / robust / optimize 等）を使わない
-- `docs/ai/docs-policy.md` — Docs は usage、Blog は context / product thinking、Release notes は changes。役割を混ぜない
+- `docs/ai/writing-style.md` — 文体（B1 相当の読みやすさ）
+- `docs/ai/docs-policy.md` — Docs / Blog / Release notes の役割分担
 - `docs/ai/review-checklist.md` — 生成直後・PR レビュー時の最終チェック
 
-アプリ内 UI 文言（トースト・ボタン・エラー・空状態・CTA）を書く時は `docs/ai/copywriting.md` を読む。
+アプリ内 UI 文言を書く時は `docs/ai/copywriting.md` を読む。
 
 公開コンテンツの運用フロー（いつ何を書くか）は `docs/marketing/content-operations.md` を正本とする。
 
@@ -205,7 +182,7 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 | `/plan-review`  | 直前の実装 plan を plan-fact-checker / plan-critic の 2 agent で並列レビュー |
 | `/note`         | 各ドメインの `log/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応） |
 | `/session-end`  | 当日の作業を `docs/engineering/log/YYYY-MM-DD-session.md` に記録                         |
-| `/gardening`    | 月次: セッションログ→月次ロールアップ蒸留、ストック鮮度triage、notes昇格、スモークテスト |
+| `/gardening`    | 月次の docs / ルール / セキュリティ保守（手順 10 ステップは同ファイルが正本） |
 
 ## Rule Map
 
@@ -231,14 +208,6 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 Project skills は `.agents/skills/` を参照する。該当する作業では `SKILL.md` を先に読む。実体は `.claude/skills/` が正本で、`.agents/skills/` は各 skill への symlink（二重管理しない）。
 
 error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / audit-ai-config / dispatch / blog-ideas / docs-audit
-
-## Workflow
-
-1. **Explore**: 既存コード、rules、skills、関連 issue / PR を確認する
-2. **Plan**: 大きい変更は `.claude/rules/plan-format.md` に沿って plan を出す。必要なら `/plan-review`
-3. **Code**: 既存パターンに寄せて最小の変更を入れる
-4. **Verify**: 変更種別に応じて必須コマンドを実行する
-5. **Commit / PR**: path-limited add、`git diff --cached`、日本語 Conventional Commit
 
 ## Deploy / Release
 
