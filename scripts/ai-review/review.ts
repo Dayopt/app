@@ -56,6 +56,12 @@ export const MAX_ATTACHMENT_BYTES = 24_000;
 export const COMMENT_MARKER = '<!-- dayopt:ai-review -->';
 
 /**
+ * sticky comment の author。`GITHUB_TOKEN` で投稿した comment はこの login になる。
+ * 判定 cache の出所をここに固定する（marker だけを頼りにすると偽造できる）。
+ */
+export const STICKY_COMMENT_AUTHOR = 'github-actions[bot]';
+
+/**
  * 誤検出だと人間が判断した時に、この PR に限って check を落とさないためのラベル。
  * blocking な gate には必ず逃げ道が要る。無いと、モデルが 1 度間違えただけで
  * マージ経路が詰まり、`branch:finish` を迂回する習慣（= up-to-date gate ごと失う）
@@ -861,9 +867,16 @@ export async function callGemini(options: GeminiCallOptions): Promise<GeminiCall
   });
 
   const startedAt = Date.now();
+  const deadline = startedAt + TOTAL_DEADLINE_MS;
   let lastError = '';
   for (let attempt = 0; attempt < 4; attempt += 1) {
-    if (attempt > 0 && Date.now() - startedAt > TOTAL_DEADLINE_MS) {
+    // **残り予算を毎 attempt で見る。** 入口だけで判定して per-attempt に固定の
+    // REQUEST_TIMEOUT_MS を渡すと、締め切り直前に始まった attempt がそのまま
+    // 5 分走れてしまい、合計は TOTAL_DEADLINE_MS ではなく
+    // TOTAL_DEADLINE_MS + REQUEST_TIMEOUT_MS まで伸びる。それは step / job の
+    // timeout を超え、fail-open のはずの経路が red（= マージ不能）へ反転する。
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
       throw new Error(`Gemini API 呼び出しが締め切りを超過: ${lastError}`);
     }
     let response: Response;
@@ -872,14 +885,15 @@ export async function callGemini(options: GeminiCallOptions): Promise<GeminiCall
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-goog-api-key': options.apiKey },
         body,
-        // Node の fetch に既定 timeout は無い。付けないとハングが job timeout まで伸び、
-        // fail-open のはずの経路が red（= マージ不能）に反転する。
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        // Node の fetch に既定 timeout は無い。付けないとハングが job timeout まで伸びる。
+        // 残り予算で clamp して、合計が TOTAL_DEADLINE_MS を越えないようにする。
+        signal: AbortSignal.timeout(Math.min(REQUEST_TIMEOUT_MS, remaining)),
       });
     } catch (error) {
       // ネットワーク断・タイムアウトは transient として retry に残す。
       lastError = `fetch 失敗: ${String(error)}`;
-      await sleep(backoffMs(attempt));
+      // backoff も締め切りを越えない範囲に収める。
+      await sleep(Math.max(0, Math.min(backoffMs(attempt), deadline - Date.now())));
       continue;
     }
 
@@ -903,7 +917,7 @@ export async function callGemini(options: GeminiCallOptions): Promise<GeminiCall
     if (response.status !== 429 && response.status < 500) {
       throw new ConfigurationError(`request が拒否された。${lastError}`);
     }
-    await sleep(backoffMs(attempt));
+    await sleep(Math.max(0, Math.min(backoffMs(attempt), deadline - Date.now())));
   }
 
   throw new Error(`Gemini API 呼び出しに失敗: ${lastError}`);
@@ -985,8 +999,24 @@ async function findStickyComment(
     { headers: commentHeaders(context) },
   );
   if (!listed.ok) throw new Error(`comment 一覧の取得に失敗: HTTP ${listed.status}`);
-  const comments = (await listed.json()) as { id: number; body?: string }[];
-  return comments.find((comment) => comment.body?.includes(COMMENT_MARKER));
+  const comments = (await listed.json()) as {
+    id: number;
+    body?: string;
+    user?: { login?: string } | null;
+  }[];
+  // **author を検証する。** この comment は判定 cache（fingerprint + blocked）の保存先でも
+  // あるため、marker を含むだけで採用すると、PR に comment できる者が
+  // `blocked=0` の state を先に置いて「model を呼ばずに green」を作れる。
+  // fingerprint は repo 内の script で再計算できるので予測可能。
+  //
+  // `user.type === 'Bot'` では**任意の bot** が通る。この PR には Codex / Copilot /
+  // Vercel / Supabase の bot が comment しており、marker を引用した本文を先に投稿されると
+  // `find`（最古の一致を返す）がそれを sticky と誤認して上書き先にしてしまう。
+  // 自分が書いた comment だけを見るため login で固定する。
+  return comments.find(
+    (comment) =>
+      comment.user?.login === STICKY_COMMENT_AUTHOR && comment.body?.includes(COMMENT_MARKER),
+  );
 }
 
 /**
@@ -1104,9 +1134,16 @@ async function main(): Promise<number> {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    // secret 未設定・fork PR ではレビューできないが、それは所見ではないので通す。
-    warn('GEMINI_API_KEY が未設定のためレビューをスキップしました。');
-    return 0;
+    // **fail-closed にする。** 旧実装は「fork PR には secret が渡らない」ことを理由に
+    // 通していたが、workflow が pull_request_target へ移り base revision を実行する
+    // 構成になった時点でその前提は消えた（secret は常に渡る）。残るのは secret の
+    // rename / 失効 / 未設定という決定論的な構成ミスだけで、これを通すと
+    // 「毎回 green の gate」が誰にも気づかれずに成立する。
+    // ローカル実行は --dry-run（この判定より前で return する）を使う。
+    console.log(
+      `::error title=ai-review::GEMINI_API_KEY が未設定です。repo secret を確認してください（構成ミスは fail-closed にします）。`,
+    );
+    return 1;
   }
 
   const token = process.env.GITHUB_TOKEN;
