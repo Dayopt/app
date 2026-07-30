@@ -30,6 +30,14 @@ const candidateMigration = readFileSync(
   'utf8',
 );
 
+const validationMigration = readFileSync(
+  new URL(
+    '../../../../../../supabase/migrations/20260730090200_validate_mcp_oauth_scope_constraints.sql',
+    import.meta.url,
+  ),
+  'utf8',
+);
+
 const stagedConstraintNames = [
   'oauth_connections_write_requires_read_entries_check',
   'oauth_authorization_codes_write_requires_read_entries_check',
@@ -81,7 +89,7 @@ function expectConstraintViolation(
   expect(result.stderr).toContain(constraintName);
 }
 
-describe.skipIf(!RUN_LOCAL)('MCP Candidate 4 OAuth scope constraints', () => {
+describe.skipIf(!RUN_LOCAL)('MCP Candidate 4 and 5 OAuth scope constraints', () => {
   beforeAll(async () => {
     const { error } = await admin.auth.admin.createUser({
       id: userId,
@@ -201,7 +209,94 @@ describe.skipIf(!RUN_LOCAL)('MCP Candidate 4 OAuth scope constraints', () => {
     }
   });
 
-  it('leaves staged checks unvalidated and existing resource FKs validated', () => {
+  it('validates only the three staged checks after a read-only preflight', () => {
+    expect(validationMigration.match(/VALIDATE CONSTRAINT \w+;/g)).toHaveLength(3);
+    expect(validationMigration).not.toMatch(/NOT VALID\s*;/);
+    expect(validationMigration).not.toContain('ADD CONSTRAINT');
+    expect(validationMigration).not.toContain('DROP CONSTRAINT');
+    expect(validationMigration).not.toContain('GRANT ');
+    expect(validationMigration).not.toContain('REVOKE ');
+    expect(validationMigration).not.toContain('UPDATE public.mcp_mutation_control');
+
+    for (const constraintName of stagedConstraintNames) {
+      expect(validationMigration).toContain(`VALIDATE CONSTRAINT ${constraintName};`);
+    }
+
+    // Candidate 1 already validated these, so Candidate 5 must not restate them.
+    for (const constraintName of existingResourceConstraintNames) {
+      expect(validationMigration).not.toContain(constraintName);
+    }
+
+    // The preflight must abort the whole migration instead of letting the
+    // validation scan report a generic failure, and the scan needs more than the
+    // 30s Candidate 4 used for its metadata-only NOT VALID additions.
+    expect(validationMigration).toContain("USING ERRCODE = 'check_violation'");
+    expect(validationMigration).toContain("SET LOCAL statement_timeout = '60s'");
+
+    // The abort reports per-table counts only: no row identity reaches the log.
+    const exceptionMessage = validationMigration.match(/RAISE EXCEPTION\s+'([^']*)'/)?.[1];
+    expect(exceptionMessage).toContain('revocation alone is insufficient');
+    expect(exceptionMessage?.match(/%/g)).toHaveLength(3);
+    for (const identifier of ['user_id', 'client_id', 'token_hash', 'code_hash', 'scopes']) {
+      expect(exceptionMessage).not.toContain(identifier);
+    }
+  });
+
+  it('preflights with the same scope predicate as the staged checks', () => {
+    const normalize = (sql: string): string => sql.replace(/\s+/g, ' ');
+    const writeScopeArray =
+      "ARRAY[ 'write:plans', 'delete:plans', 'write:records', 'delete:records' ]::TEXT[]";
+    const readScopeArray = "ARRAY['read:entries']::TEXT[]";
+
+    // Candidate 4 spells its check with && for the write scopes and @> for
+    // read:entries. The preflight negates that exact expression, so it must not
+    // drift back to the `= ANY (scopes)` spelling of the earlier draft.
+    expect(normalize(candidateMigration)).toContain(writeScopeArray);
+    expect(normalize(validationMigration)).toContain(writeScopeArray);
+    expect(normalize(candidateMigration)).toContain(readScopeArray);
+    expect(normalize(validationMigration)).toContain(readScopeArray);
+    expect(validationMigration).not.toContain('= ANY (scopes)');
+
+    expect(validationMigration.match(/scopes && v_write_scopes/g)).toHaveLength(3);
+    expect(validationMigration.match(/NOT \(scopes @> v_read_scope\)/g)).toHaveLength(3);
+
+    for (const scope of ['write:plans', 'delete:plans', 'write:records', 'delete:records']) {
+      expect(validationMigration.match(new RegExp(`'${scope}'`, 'g'))).toHaveLength(1);
+    }
+  });
+
+  it('leaves no stored grant that the validated checks would reject', () => {
+    const result = runOwnerSql(`
+      SELECT NOT EXISTS (
+        SELECT 1
+        FROM (
+          SELECT scopes FROM public.oauth_connections
+          UNION ALL
+          SELECT scopes FROM public.oauth_authorization_codes
+          UNION ALL
+          SELECT scopes FROM public.oauth_tokens
+        ) AS stored_grants
+        WHERE scopes && ARRAY[
+            'write:plans',
+            'delete:plans',
+            'write:records',
+            'delete:records'
+          ]::TEXT[]
+          AND NOT (scopes @> ARRAY['read:entries']::TEXT[])
+      );
+    `);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe('t');
+  });
+
+  // The preflight abort path has no runtime test. Once Candidate 5 has run, the
+  // validated CHECK rejects every violating row and a CHECK constraint cannot be
+  // deferred, so seeding a fixture that trips the preflight would mean dropping
+  // the constraint this migration exists to enforce. The static assertions above
+  // cover the preflight instead.
+
+  it('marks the staged checks and the existing resource FKs as validated', () => {
     const result = runOwnerSql(`
       SELECT c.conname || '|' || c.contype::TEXT || '|' || c.convalidated::TEXT
       FROM pg_constraint AS c
@@ -219,11 +314,10 @@ describe.skipIf(!RUN_LOCAL)('MCP Candidate 4 OAuth scope constraints', () => {
     expect(result.status).toBe(0);
     const catalogRows = result.stdout.trim().split('\n');
     expect(catalogRows).toEqual(
-      [...existingResourceConstraintNames]
-        .sort()
-        .map((name) => `${name}|f|true`)
-        .concat([...stagedConstraintNames].sort().map((name) => `${name}|c|false`))
-        .sort(),
+      [
+        ...existingResourceConstraintNames.map((name) => `${name}|f|true`),
+        ...stagedConstraintNames.map((name) => `${name}|c|true`),
+      ].sort(),
     );
   });
 
