@@ -1,6 +1,6 @@
 ---
-status: active
-last_verified: 2026-07-23
+status: done
+last_verified: 2026-07-30
 code:
   - packages/observability
   - apps/product
@@ -39,9 +39,9 @@ Product と Web の Sentry を別 project で運用し、予期しない障害�
 - 検証用surfaceと一時envを撤去し、canonical URLと記録済み旧deployment URLが404になる
 - `pnpm test:run`、`pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries`、`pnpm lint:i18n`、`pnpm check`、`pnpm docs:check` が通る
 
-## Current status
+## 結果
 
-Production browserを含むevent証跡とprovider権限制限は完了した。cleanup release後24時間の再発確認、Sentry issue resolve、GitHub #1566/#1599のcloseを完了条件として追跡する。
+完了済み。達成した内容と追跡 issue の帰結は [summary](./summary.md) を参照する。
 
 ## Reversibility
 

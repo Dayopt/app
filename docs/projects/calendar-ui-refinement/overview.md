@@ -1,6 +1,6 @@
 ---
-status: active
-last_verified: 2026-07-15
+status: done
+last_verified: 2026-07-30
 code:
   - apps/product/src/app/[locale]/(app)/(workspace)/_composition
   - apps/product/src/app/[locale]/(app)/_shell
