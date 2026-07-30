@@ -51,12 +51,19 @@ svg {
   height: auto;
 }
 
-/* Accessibility - focus states */
+/* Accessibility - focus states
+ *
+ * border-radius は指定しない。以前 calc(var(--radius-lg) - 2px) を置いていたが、
+ * これは outline の形ではなく**要素自身の角丸**を上書きするため、キーボード
+ * フォーカスした瞬間に rounded-lg のボタンが 8px → 6px に変形していた
+ * （セレクタ特異度 0,1,1 が Tailwind の .rounded-lg 0,1,0 に勝つ）。
+ * 6px は 4 段のスケールにも無い値だった。outline の角丸はブラウザが要素の
+ * border-radius から自動で導くので、こちらで触る必要がない。
+ */
 a:focus-visible,
 button:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
-  border-radius: calc(var(--radius-lg) - 2px);
 }
 
 /* High contrast mode */
