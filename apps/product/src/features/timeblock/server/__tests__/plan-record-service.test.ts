@@ -4,6 +4,7 @@ import { publicRecordSelect } from '@/lib/database';
 import { createChainableMock, createMockSupabase } from '@/lib/test/trpc-test-helpers';
 import { PlanService } from '../plan-service';
 import { RecordService } from '../record-service';
+import type { TimeblockCommandClient } from '../timeblock-command-client';
 import { TimeblockServiceError } from '../timeblock-service-error';
 import type { PlanRow, RecordRow } from '../timeblock-types';
 import type { ServiceSupabaseClient } from '../types';
@@ -28,17 +29,45 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function createPlanService(mockSupabase = createMockSupabase()) {
+/**
+ * Candidate 6 以降、plans / records への write は service-owned command client だけを通る。
+ * unit test も直接 DML の mock ではなく command client の mock で境界を固定する。
+ */
+function createCommandsMock() {
   return {
-    mockSupabase,
-    service: new PlanService(mockSupabase as unknown as ServiceSupabaseClient),
+    createPlan: vi.fn(),
+    updatePlan: vi.fn(),
+    deletePlan: vi.fn(),
+    restorePlan: vi.fn(),
+    setPlanSkipped: vi.fn(),
+    recordPlan: vi.fn(),
+    confirmDay: vi.fn(),
+    createRecord: vi.fn(),
+    updateRecord: vi.fn(),
+    deleteRecord: vi.fn(),
+    restoreRecord: vi.fn(),
   };
 }
 
-function createRecordService(mockSupabase = createMockSupabase()) {
+function createPlanService(mockSupabase = createMockSupabase(), commands = createCommandsMock()) {
   return {
     mockSupabase,
-    service: new RecordService(mockSupabase as unknown as ServiceSupabaseClient),
+    commands,
+    service: new PlanService(
+      mockSupabase as unknown as ServiceSupabaseClient,
+      commands as unknown as TimeblockCommandClient,
+    ),
+  };
+}
+
+function createRecordService(mockSupabase = createMockSupabase(), commands = createCommandsMock()) {
+  return {
+    mockSupabase,
+    commands,
+    service: new RecordService(
+      mockSupabase as unknown as ServiceSupabaseClient,
+      commands as unknown as TimeblockCommandClient,
+    ),
   };
 }
 
@@ -258,7 +287,7 @@ describe('RecordService.list', () => {
 
 describe('PlanService.create', () => {
   it('過去に完了する plan 作成を拒否する', async () => {
-    const { service, mockSupabase } = createPlanService();
+    const { service, mockSupabase, commands } = createPlanService();
 
     await expect(
       service.create({
@@ -272,20 +301,14 @@ describe('PlanService.create', () => {
     ).rejects.toMatchObject({ code: 'PLAN_IN_PAST' });
 
     expect(mockSupabase.from).not.toHaveBeenCalled();
+    expect(commands.createPlan).not.toHaveBeenCalled();
   });
 
-  it('DB exclusion violation を TIME_OVERLAP に変換する', async () => {
-    const { service, mockSupabase } = createPlanService();
-    const overlapMock = createChainableMock([]);
-    const insertMock = createChainableMock(null, {
-      code: '23P01',
-      message: 'conflicting key value violates exclusion constraint',
-    });
-    let callCount = 0;
-    mockSupabase.from.mockImplementation(() => {
-      callCount++;
-      return callCount === 1 ? overlapMock : insertMock;
-    });
+  it('command boundary経由でplanを作る', async () => {
+    const plan = createPlan({ title: 'Future plan' });
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock([]));
+    commands.createPlan.mockResolvedValue(plan);
 
     await expect(
       service.create({
@@ -296,7 +319,39 @@ describe('PlanService.create', () => {
           end_at: '2030-03-17T11:00:00.000Z',
         },
       }),
-    ).rejects.toMatchObject({ code: 'TIME_OVERLAP' });
+    ).resolves.toEqual(plan);
+
+    expect(commands.createPlan).toHaveBeenCalledWith({
+      userId: USER_ID,
+      title: 'Future plan',
+      note: null,
+      tagId: null,
+      externalCalendarEventId: null,
+      source: 'manual',
+      startAt: '2030-03-17T10:00:00.000Z',
+      endAt: '2030-03-17T11:00:00.000Z',
+    });
+  });
+
+  it('重複はapp guardのTIME_OVERLAP文言を維持し、commandへ到達させない', async () => {
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock([{ id: 'plan-existing' }]));
+
+    await expect(
+      service.create({
+        userId: USER_ID,
+        input: {
+          title: 'Future plan',
+          start_at: '2030-03-17T10:00:00.000Z',
+          end_at: '2030-03-17T11:00:00.000Z',
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'TIME_OVERLAP',
+      message: 'Plan time overlaps with existing plans (1)',
+    });
+
+    expect(commands.createPlan).not.toHaveBeenCalled();
   });
 });
 
@@ -368,14 +423,13 @@ describe('PlanService.update', () => {
       start_at: '2030-03-17T12:00:00.000Z',
       end_at: '2030-03-17T13:00:00.000Z',
     };
-    const { service, mockSupabase } = createPlanService();
+    const { service, mockSupabase, commands } = createPlanService();
     let callCount = 0;
     mockSupabase.from.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return createChainableMock(existing);
-      if (callCount === 2) return createChainableMock([]);
-      return createChainableMock(updated);
+      return callCount === 1 ? createChainableMock(existing) : createChainableMock([]);
     });
+    commands.updatePlan.mockResolvedValue(updated);
 
     await expect(
       service.update({
@@ -392,12 +446,9 @@ describe('PlanService.update', () => {
       start_at: '2026-03-17T10:00:00.000Z',
     });
     const updated = { ...existing, note: 'Updated note', tag_id: 'tag-1' };
-    const { service, mockSupabase } = createPlanService();
-    let callCount = 0;
-    mockSupabase.from.mockImplementation(() => {
-      callCount++;
-      return createChainableMock(callCount === 1 ? existing : updated);
-    });
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+    commands.updatePlan.mockResolvedValue(updated);
 
     await expect(
       service.update({
@@ -406,11 +457,73 @@ describe('PlanService.update', () => {
         input: { note: 'Updated note', tagId: 'tag-1' },
       }),
     ).resolves.toMatchObject({ note: 'Updated note', tag_id: 'tag-1' });
+
+    // 部分更新は現在行で補完し、未指定fieldを取り落とさない
+    expect(commands.updatePlan).toHaveBeenCalledWith({
+      userId: USER_ID,
+      planId: existing.id,
+      expectedUpdatedAt: existing.updated_at,
+      title: existing.title,
+      note: 'Updated note',
+      tagId: 'tag-1',
+      externalCalendarEventId: existing.external_calendar_event_id,
+      source: 'manual',
+      startAt: existing.start_at,
+      endAt: existing.end_at,
+    });
+  });
+
+  // legacy route の input は ms 精度の token しか持たない。DB の CAS は microsecond 単位で
+  // 比較するため、command へ渡すのは「いま読んだ行の raw updated_at」でなければならない
+  it('caller指定のexpectedUpdatedAtではなく現在行のraw tokenをcommandへ渡す', async () => {
+    const existing = createPlan({ updated_at: '2026-07-01T00:00:00.123456Z' });
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+    commands.updatePlan.mockResolvedValue(existing);
+
+    await service.update({
+      userId: USER_ID,
+      planId: existing.id,
+      input: { title: 'Renamed' },
+      expectedUpdatedAt: '2026-07-01T00:00:00.123Z',
+    });
+
+    expect(commands.updatePlan).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedUpdatedAt: '2026-07-01T00:00:00.123456Z' }),
+    );
+  });
+
+  it('caller指定のexpectedUpdatedAtが古い時はCONFLICTでcommandを呼ばない', async () => {
+    const existing = createPlan();
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+
+    await expect(
+      service.update({
+        userId: USER_ID,
+        planId: existing.id,
+        input: { title: 'Renamed' },
+        expectedUpdatedAt: '2026-06-01T00:00:00.000Z',
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    expect(commands.updatePlan).not.toHaveBeenCalled();
+  });
+
+  it('存在しないplanはcommandへ降りる前にNOT_FOUNDにする', async () => {
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(null));
+
+    await expect(
+      service.update({ userId: USER_ID, planId: 'missing-plan', input: { title: 'Renamed' } }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    expect(commands.updatePlan).not.toHaveBeenCalled();
   });
 });
 
 describe('PlanService.record', () => {
-  it('past plan の range を from_plan record としてコピーする', async () => {
+  it('past plan を versioned record command へ渡す', async () => {
     const plan = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       external_calendar_event_id: 'external-event-1',
@@ -418,6 +531,7 @@ describe('PlanService.record', () => {
       start_at: '2026-03-17T10:00:00.000Z',
       tag_id: 'tag-1',
       title: 'Recorded plan',
+      updated_at: '2026-07-01T00:00:00.654321Z',
     });
     const record = createRecord({
       end_at: plan.end_at,
@@ -428,33 +542,22 @@ describe('PlanService.record', () => {
       tag_id: plan.tag_id,
       title: plan.title,
     });
-    const { service, mockSupabase } = createPlanService();
-    let recordsCallCount = 0;
-    let recordInsertQuery: ReturnType<typeof createChainableMock> | undefined;
-    mockSupabase.from.mockImplementation((table: string) => {
-      if (table === 'plans') return createChainableMock(plan);
-      recordsCallCount++;
-      if (recordsCallCount <= 2) return createChainableMock([]);
-      recordInsertQuery = createChainableMock(record);
-      return recordInsertQuery;
-    });
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockImplementation((table: string) =>
+      createChainableMock(table === 'plans' ? plan : []),
+    );
+    commands.recordPlan.mockResolvedValue(record);
 
     await expect(service.record({ userId: USER_ID, planId: plan.id })).resolves.toMatchObject({
       plan_id: plan.id,
       source: 'from_plan',
     });
-    expect(recordInsertQuery?.insert).toHaveBeenCalledWith({
-      user_id: USER_ID,
-      title: plan.title,
-      note: plan.note,
-      tag_id: plan.tag_id,
-      plan_id: plan.id,
-      external_calendar_event_id: null,
-      source: 'from_plan',
-      start_at: plan.start_at,
-      end_at: plan.end_at,
+    // Record の内容は DB 側 command が Plan から複製する。app は user と CAS token だけを渡す
+    expect(commands.recordPlan).toHaveBeenCalledWith({
+      userId: USER_ID,
+      planId: plan.id,
+      expectedUpdatedAt: plan.updated_at,
     });
-    expect(recordInsertQuery?.select).toHaveBeenCalledWith(publicRecordSelect);
   });
 
   it('active record が紐づく plan の再記録を拒否する', async () => {
@@ -467,7 +570,7 @@ describe('PlanService.record', () => {
       plan_id: plan.id,
       start_at: '2026-03-17T12:00:00.000Z',
     });
-    const { service, mockSupabase } = createPlanService();
+    const { service, mockSupabase, commands } = createPlanService();
     mockSupabase.from.mockImplementation((table: string) =>
       createChainableMock(table === 'plans' ? plan : [existingRecord]),
     );
@@ -477,38 +580,30 @@ describe('PlanService.record', () => {
     });
 
     expect(mockSupabase.from).toHaveBeenCalledTimes(2);
+    expect(commands.recordPlan).not.toHaveBeenCalled();
   });
 
-  it('同時記録による from_plan 一意制約違反を再記録エラーに変換する', async () => {
-    const plan = createPlan({
-      end_at: '2026-03-17T11:00:00.000Z',
-      start_at: '2026-03-17T10:00:00.000Z',
-    });
-    const { service, mockSupabase } = createPlanService();
-    let recordsCallCount = 0;
-    mockSupabase.from.mockImplementation((table: string) => {
-      if (table === 'plans') return createChainableMock(plan);
-      recordsCallCount++;
-      if (recordsCallCount <= 2) return createChainableMock([]);
-      return createChainableMock(null, {
-        code: '23505',
-        message: 'duplicate key value violates unique constraint',
-      });
-    });
+  it('存在しないplanはcommandへ降りる前にNOT_FOUNDにする', async () => {
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(null));
 
-    await expect(service.record({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
-      code: 'ALREADY_RECORDED',
-    });
+    await expect(service.record({ userId: USER_ID, planId: 'missing-plan' })).rejects.toMatchObject(
+      {
+        code: 'NOT_FOUND',
+      },
+    );
+
+    expect(commands.recordPlan).not.toHaveBeenCalled();
   });
 });
 
-describe('PlanService.skip', () => {
+describe('PlanService.skip / unskip', () => {
   it('active record が紐づく plan の skip を拒否する', async () => {
     const plan = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
     });
-    const { service, mockSupabase } = createPlanService();
+    const { service, mockSupabase, commands } = createPlanService();
     mockSupabase.from.mockImplementation((table: string) =>
       createChainableMock(table === 'plans' ? plan : [createRecord({ plan_id: plan.id })]),
     );
@@ -516,6 +611,69 @@ describe('PlanService.skip', () => {
     await expect(service.skip({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
       code: 'ALREADY_RECORDED',
     });
+
+    expect(commands.setPlanSkipped).not.toHaveBeenCalled();
+  });
+
+  it('past plan の skip を versioned command へ渡す', async () => {
+    const plan = createPlan({
+      end_at: '2026-03-17T11:00:00.000Z',
+      start_at: '2026-03-17T10:00:00.000Z',
+    });
+    const skipped = { ...plan, skipped_at: '2026-07-15T12:00:00.000Z' };
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockImplementation((table: string) =>
+      createChainableMock(table === 'plans' ? plan : []),
+    );
+    commands.setPlanSkipped.mockResolvedValue(skipped);
+
+    await expect(service.skip({ userId: USER_ID, planId: plan.id })).resolves.toEqual(skipped);
+
+    expect(commands.setPlanSkipped).toHaveBeenCalledWith({
+      userId: USER_ID,
+      planId: plan.id,
+      expectedUpdatedAt: plan.updated_at,
+      skipped: true,
+    });
+  });
+
+  it('未来 plan の skip は command へ降りる前に SKIP_IN_FUTURE にする', async () => {
+    const plan = createPlan();
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(plan));
+
+    await expect(service.skip({ userId: USER_ID, planId: plan.id })).rejects.toMatchObject({
+      code: 'SKIP_IN_FUTURE',
+    });
+
+    expect(commands.setPlanSkipped).not.toHaveBeenCalled();
+  });
+
+  it('unskipはskipped planだけをcommandへ渡す', async () => {
+    const skipped = createPlan({ skipped_at: '2026-07-14T00:00:00.000Z' });
+    const restored = { ...skipped, skipped_at: null };
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock(skipped));
+    commands.setPlanSkipped.mockResolvedValue(restored);
+
+    await expect(service.unskip({ userId: USER_ID, planId: skipped.id })).resolves.toEqual(
+      restored,
+    );
+    expect(commands.setPlanSkipped).toHaveBeenCalledWith({
+      userId: USER_ID,
+      planId: skipped.id,
+      expectedUpdatedAt: skipped.updated_at,
+      skipped: false,
+    });
+
+    const notSkipped = createPlan();
+    const second = createPlanService();
+    second.mockSupabase.from.mockReturnValue(createChainableMock(notSkipped));
+
+    await expect(
+      second.service.unskip({ userId: USER_ID, planId: notSkipped.id }),
+    ).resolves.toEqual(notSkipped);
+    expect(second.commands.setPlanSkipped).not.toHaveBeenCalled();
   });
 });
 
@@ -589,7 +747,7 @@ describe('PlanService.confirmDay', () => {
 
 describe('RecordService.create', () => {
   it('未来に完了する record 作成を拒否する', async () => {
-    const { service, mockSupabase } = createRecordService();
+    const { service, mockSupabase, commands } = createRecordService();
 
     await expect(
       service.create({
@@ -603,6 +761,7 @@ describe('RecordService.create', () => {
     ).rejects.toBeInstanceOf(TimeblockServiceError);
 
     expect(mockSupabase.from).not.toHaveBeenCalled();
+    expect(commands.createRecord).not.toHaveBeenCalled();
   });
 
   it('past plan には複数の manual record を紐づけられる', async () => {
@@ -611,13 +770,11 @@ describe('RecordService.create', () => {
       start_at: '2026-03-17T10:00:00.000Z',
     });
     const record = createRecord({ plan_id: plan.id });
-    const { service, mockSupabase } = createRecordService();
-    let recordsCallCount = 0;
-    mockSupabase.from.mockImplementation((table: string) => {
-      if (table === 'plans') return createChainableMock(plan);
-      recordsCallCount++;
-      return createChainableMock(recordsCallCount === 1 ? [] : record);
-    });
+    const { service, mockSupabase, commands } = createRecordService();
+    mockSupabase.from.mockImplementation((table: string) =>
+      createChainableMock(table === 'plans' ? plan : []),
+    );
+    commands.createRecord.mockResolvedValue(record);
 
     await expect(
       service.create({
@@ -630,6 +787,19 @@ describe('RecordService.create', () => {
         },
       }),
     ).resolves.toMatchObject({ plan_id: plan.id });
+
+    // planId 付きでも source は manual のまま。from_plan は one-tap 記録専用
+    expect(commands.createRecord).toHaveBeenCalledWith({
+      userId: USER_ID,
+      title: 'Second segment',
+      note: null,
+      tagId: null,
+      planId: plan.id,
+      externalCalendarEventId: null,
+      source: 'manual',
+      startAt: '2026-03-17T12:00:00.000Z',
+      endAt: '2026-03-17T13:00:00.000Z',
+    });
   });
 
   it('future plan への紐づけを拒否する', async () => {
@@ -680,7 +850,7 @@ describe('RecordService.create', () => {
 
   it('plan 紐づけの update でも future plan を拒否する', async () => {
     const existing = createRecord();
-    const { service, mockSupabase } = createRecordService();
+    const { service, mockSupabase, commands } = createRecordService();
     mockSupabase.from.mockImplementation((table: string) =>
       createChainableMock(table === 'records' ? existing : createPlan()),
     );
@@ -692,6 +862,74 @@ describe('RecordService.create', () => {
         input: { planId: 'plan-1' },
       }),
     ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
+
+    expect(commands.updateRecord).not.toHaveBeenCalled();
+  });
+});
+
+describe('RecordService.update', () => {
+  it('部分更新を現在行で補い、raw CAS tokenをcommandへ渡す', async () => {
+    const existing = createRecord({
+      note: 'old note',
+      plan_id: 'plan-1',
+      tag_id: TAG_ID,
+      updated_at: '2026-07-01T00:00:00.654321Z',
+    });
+    const updated = { ...existing, title: 'Renamed' };
+    const { service, mockSupabase, commands } = createRecordService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+    commands.updateRecord.mockResolvedValue(updated);
+
+    await expect(
+      service.update({
+        userId: USER_ID,
+        recordId: existing.id,
+        input: { title: 'Renamed' },
+        expectedUpdatedAt: '2026-07-01T00:00:00.654Z',
+      }),
+    ).resolves.toEqual(updated);
+
+    expect(commands.updateRecord).toHaveBeenCalledWith({
+      userId: USER_ID,
+      recordId: existing.id,
+      expectedUpdatedAt: existing.updated_at,
+      title: 'Renamed',
+      note: existing.note,
+      tagId: existing.tag_id,
+      planId: existing.plan_id,
+      externalCalendarEventId: existing.external_calendar_event_id,
+      source: 'manual',
+      startAt: existing.start_at,
+      endAt: existing.end_at,
+    });
+  });
+
+  it('存在しないrecordはcommandへ降りる前にNOT_FOUNDにする', async () => {
+    const { service, mockSupabase, commands } = createRecordService();
+    mockSupabase.from.mockReturnValue(createChainableMock(null));
+
+    await expect(
+      service.update({ userId: USER_ID, recordId: 'missing-record', input: { title: 'Renamed' } }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    expect(commands.updateRecord).not.toHaveBeenCalled();
+  });
+
+  it('caller指定のexpectedUpdatedAtが古い時はCONFLICTでcommandを呼ばない', async () => {
+    const existing = createRecord();
+    const { service, mockSupabase, commands } = createRecordService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+
+    await expect(
+      service.update({
+        userId: USER_ID,
+        recordId: existing.id,
+        input: { title: 'Renamed' },
+        expectedUpdatedAt: '2026-06-01T00:00:00.000Z',
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    expect(commands.updateRecord).not.toHaveBeenCalled();
   });
 });
 

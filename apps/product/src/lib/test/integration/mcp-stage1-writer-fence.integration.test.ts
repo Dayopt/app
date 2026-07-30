@@ -24,6 +24,27 @@ function runServiceRoleSql(sql: string): string {
   `);
 }
 
+/**
+ * 直接 DML を行う writer の role preamble。
+ *
+ * Candidate 6 (20260730090300 / 20260730090301) で authenticated から plans / records の
+ * 直接 DML を剥がしたため、direct writer として残るのは service_role だけ。この suite が
+ * 検証するのは writer fence の lock 順序と revision 意味論であり、どちらも role に依存
+ * しないので、persona だけを差し替える。
+ */
+const DIRECT_WRITER_PREAMBLE = `
+  SET LOCAL ROLE service_role;
+  SET LOCAL request.jwt.claims TO '{"role":"service_role"}';
+`;
+
+/** 旧 bundle 互換の 3 RPC は drain まで authenticated で動く。owner 照合に sub が要る。 */
+function legacyWriterPreamble(targetUserId: string): string {
+  return `
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims TO '{"role":"authenticated","sub":"${targetUserId}"}';
+  `;
+}
+
 async function runSqlAsync(sql: string, applicationName: string): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const child = spawn('psql', [DATABASE_URL, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
@@ -296,8 +317,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 writer revision and fence', () => {
     const committed = readRevision(userId);
     runSql(`
       BEGIN;
-      SET LOCAL ROLE authenticated;
-      SET LOCAL request.jwt.claims TO '{"role":"authenticated","sub":"${userId}"}';
+      ${DIRECT_WRITER_PREAMBLE}
       INSERT INTO public.plans (
         user_id, title, source, start_at, end_at
       ) VALUES (
@@ -339,8 +359,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 writer revision and fence', () => {
     const unrelatedUserId = crypto.randomUUID();
     createUser(unrelatedUserId);
     const directHolder = await holdTransaction(`
-      SET LOCAL ROLE authenticated;
-      SET LOCAL request.jwt.claims TO '{"role":"authenticated","sub":"${userId}"}';
+      ${DIRECT_WRITER_PREAMBLE}
       INSERT INTO public.plans (
         user_id, title, source, start_at, end_at
       ) VALUES (
@@ -354,8 +373,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 writer revision and fence', () => {
     const unrelatedWrite = runSqlAsync(
       `
         BEGIN;
-        SET LOCAL ROLE authenticated;
-        SET LOCAL request.jwt.claims TO '{"role":"authenticated","sub":"${unrelatedUserId}"}';
+        ${DIRECT_WRITER_PREAMBLE}
         INSERT INTO public.plans (
           user_id, title, source, start_at, end_at
         ) VALUES (
@@ -400,8 +418,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 writer revision and fence', () => {
       const targetId = create(userId);
       readRevision(userId);
       const directUpdate = await holdTransaction(`
-        SET LOCAL ROLE authenticated;
-        SET LOCAL request.jwt.claims TO '{"role":"authenticated","sub":"${userId}"}';
+        ${DIRECT_WRITER_PREAMBLE}
         UPDATE public.${table}
         SET title = title || ' updated'
         WHERE id = '${targetId}';
@@ -409,8 +426,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 writer revision and fence', () => {
       const legacyDelete = runSqlAsync(
         `
           BEGIN;
-          SET LOCAL ROLE authenticated;
-          SET LOCAL request.jwt.claims TO '{"role":"authenticated","sub":"${userId}"}';
+          ${legacyWriterPreamble(userId)}
           SELECT public.${deleteRpc}(
             ${idArgument} => '${targetId}',
             p_user_id => '${userId}'
@@ -447,8 +463,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 writer revision and fence', () => {
       WHERE user_id = '${deletingUserId}';
     `);
     const directUpdate = await holdTransaction(`
-      SET LOCAL ROLE authenticated;
-      SET LOCAL request.jwt.claims TO '{"role":"authenticated","sub":"${deletingUserId}"}';
+      ${DIRECT_WRITER_PREAMBLE}
       UPDATE public.plans
       SET title = title || ' updated'
       WHERE id = '${targetPlanId}';
