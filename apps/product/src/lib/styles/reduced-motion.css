@@ -1,41 +1,25 @@
 /* ============================================
- * prefers-reduced-motion 対応
+ * prefers-reduced-motion — product 固有の代替表現
  *
- * アニメーション・トランジションを減らす設定の尊重
+ * 全体規則（animation / transition の無効化、smooth scroll の切り替え）は
+ * @dayopt/foundations の tokens/motion.css にある。product と web で
+ * 同じ規則を二重に持たないため、こちらには置かない。
+ *
+ * ここに書くのは「止めると中途半端な見た目で固まるもの」への静的な代替だけ。
+ * 個別クラスの列挙で animation を止める必要はない（全体規則が
+ * animation-iteration-count: 1 と duration 0.01ms で無限ループも潰す）。
+ *
  * WCAG 2.1 Success Criterion 2.3.3 準拠
- *
- * @see https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion
- * @see https://www.w3.org/WAI/WCAG21/Understanding/animation-from-interactions.html
  * ============================================ */
 
-/* スムーズスクロール（reduced-motionでない場合のみ） */
-@media (prefers-reduced-motion: no-preference) {
-  html {
-    scroll-behavior: smooth;
-  }
-}
-
-/* reduced-motion: アニメーション・トランジションを最小化 */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    /* アニメーションを無効化（必要最小限の0.01sに短縮） */
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    /* トランジションを無効化 */
-    transition-duration: 0.01ms !important;
-    /* スクロールを即時に */
-    scroll-behavior: auto !important;
-  }
-
-  /* Shimmerアニメーションを静的な背景に置換 */
+  /* Shimmer は止めるとグラデーションの途中で固まるので単色に置換する */
   .animate-shimmer {
     animation: none !important;
     background: var(--container) !important;
   }
 
-  /* フェード・スライドアニメーションを無効化 */
+  /* フェード・スライドは止めると透明のまま残りうるので可視に固定する */
   .animate-in,
   .animate-out,
   .fade-in,

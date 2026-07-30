@@ -149,3 +149,19 @@
 @theme inline {
   --font-sans: var(--font-stack-sans);
 }
+
+/* ============================================
+ * モーション
+ * ============================================
+ * easing だけトークン化する（実体は tokens/motion.css）。
+ * Tailwind v4 には --duration-* の theme namespace が無い（v4.3.3 で実測）ため、
+ * 遷移の長さは組み込みの数値ユーティリティ（duration-150/200/300）を使う。
+ * 持続（loop）は keyframes と一体なので CSS変数のまま参照する。
+ *
+ * 使用例: transition-colors duration-150 ease-standard
+ *         transition-transform duration-200 ease-settle
+ */
+@theme inline {
+  --ease-standard: var(--motion-ease-standard);
+  --ease-settle: var(--motion-ease-settle);
+}

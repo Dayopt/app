@@ -18,4 +18,5 @@
 @import './tokens/z-index.css';
 @import './tokens/states.css';
 @import './tokens/elevation.css';
+@import './tokens/motion.css';
 @import './tailwind-theme.css';
