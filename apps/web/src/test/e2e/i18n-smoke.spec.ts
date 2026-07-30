@@ -100,10 +100,8 @@ test('LP の en/ja × desktop/mobile を表示できる', async ({ page }, testI
     await page.goto(pattern.path);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(pattern.headline);
     await expect(page.locator('#pricing')).toBeVisible();
-    await page.addStyleTag({
-      content:
-        '.hero-animate { opacity: 1 !important; animation: none !important; filter: none !important; transform: none !important; }',
-    });
+    // hero のスタガードフェードを打ち消す addStyleTag は不要になった
+    // （2026-07-30 に hero のアニメーションを廃止したため）
     await testInfo.attach(`lp-${pattern.name}`, {
       body: await page.screenshot({ fullPage: true }),
       contentType: 'image/png',

@@ -8,11 +8,8 @@
 /* product / web 共通スクロールバー（product を正解として一本化） */
 @import '@dayopt/foundations/scrollbar.css';
 
-/* Utilities */
+/* Utilities（hero の静的装飾とローディング表示を含む） */
 @import '../styles/utilities.css';
-
-/* Hero Animations */
-@import '../styles/hero-animations.css';
 
 /* Tailwind Plugins */
 @plugin '@tailwindcss/typography';

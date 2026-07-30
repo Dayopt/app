@@ -105,7 +105,46 @@
 }
 
 /* ============================================
- * アニメーション（Storybook Motion準拠）
+ * Hero の静的な装飾
+ *
+ * 呼吸するグロー・スタガードフェード・CTA の注目パルスは廃止した
+ * （hero-animations.css ごと削除）。ここに残すのは動かないものだけ。
+ * ============================================ */
+
+/* 見出し背後のグロー。静止（以前は 4s で拡縮していた） */
+.hero-ambient-glow {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    oklch(from var(--primary) l c h / 0.08) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* モックカルーセルのスクロールバー非表示。アニメーションではない */
+.hero-carousel-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hero-carousel-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================
+ * ローディング表示
+ *
+ * shimmer だけ残す。これは装飾ではなく「読み込み中」という状態表示。
+ * shake は apps/web では未使用だったので削除した。
  * ============================================ */
 
 @keyframes shimmer {
@@ -127,28 +166,4 @@
   background: linear-gradient(90deg, var(--container) 0%, var(--card) 50%, var(--container) 100%);
   background-size: 200% 100%;
   animation: shimmer var(--motion-loop-shimmer) var(--motion-ease-standard) infinite;
-}
-
-@keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  10%,
-  30%,
-  50%,
-  70%,
-  90% {
-    transform: translateX(-4px);
-  }
-  20%,
-  40%,
-  60%,
-  80% {
-    transform: translateX(4px);
-  }
-}
-
-.animate-shake {
-  animation: shake var(--motion-oneshot-shake) var(--motion-ease-standard);
 }
