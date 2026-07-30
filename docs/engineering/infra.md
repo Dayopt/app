@@ -255,11 +255,10 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   （review.ts 側で exit code を 0 にする）、`ai-review:contract-reviewed` は**監査契約の変更**
   （`scripts/ai-review/**` / `.github/actions/**` / `ai-review.yml` / `pnpm-workspace.yaml`）を
   危険クラスと同一 PR に束ねると判断した時に使う。承認の対象が別なので分けている
-- **ラベルは付けた後の push で効く。** `labeled` での再発火は入れていない。同じ head SHA に
-  2 本目の run が積まれると、`gh pr view --json statusCheckRollup` が同名 check を畳まないため
-  （2026-07-30 実測: PR #1765 は check-runs 18 件中 8 名前が重複、rollup 21 件に対し
-  `gh pr checks` は 13 行）、`finish-branch.sh` が古い run の failure を数え続けてラベルを付けても
-  赤が消えない。**`finish-branch.sh` が最新 run へ畳んでいない**のが根であり、そちらは別途の課題
+- **ラベルは付けた後の push で効く。** `labeled` での再発火は `ai-review.yml` の types に
+  入れていない。根にあった「同じ head SHA に 2 本目の run が積まれると
+  `finish-branch.sh` が古い run の failure を数え続ける」問題は #1768 で解消したので
+  （下記の畳み込み）、`labeled` を再度入れる余地はある。ai-review 側の再検証が要るため別作業とする
 - `🔍 AI Review`（`ai-review.yml` の job）は危険クラス path を含む PR でだけ発火するので、
   **ruleset の required には入れない**（発火しない PR では check 自体が付かず、required にすると
   全 PR が merge 不能になる）。`finish-branch.sh` は付いた check だけを見るうえ、
@@ -269,6 +268,12 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   移行 PR ではどちらの trigger も成立しない。**初回の trusted run は merge 後、次に危険クラス path を
   触る PR で確認する**（`Production Config Audit` 導入時と同じ bootstrap）
 - `ci.yml` は docs / rules のみの変更では `paths-ignore` で skip され、4 job の status 自体が付かない。private + Free plan では GitHub 側の required check 強制が効かず、マージ可否は `scripts/git/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）。ruleset の required 指定を強制できる plan へ移行する場合は、skip される job の扱いを先に設計する
+- **判定は `statusCheckRollup` を name / context ごとに畳んでから行う。** rollup は同名 check を
+  畳まないため（`gh pr checks` は畳む）、同一 head SHA で 2 回 run が走ると古い run の
+  failure / cancelled が残り続け、再実行で解決してもマージ不能になる。畳み方は非対称で、
+  **実行中が 1 つでもあれば実行中**として扱い（queued な run は `startedAt` を持たないことがあり、
+  単純な「最新」判定では実行中を見落として素通りする）、完了済みだけなら `startedAt` が最大のものを採る。
+  契約は `scripts/__tests__/finish-branch.test.ts` が固定する（#1768）
 
 段階的導入案と当時の計測値は履歴であり、現行構成として複製しない。経緯は [ADR-016](./log/2026-03-19-ci-quality-gates-roadmap.md) に残す。
 

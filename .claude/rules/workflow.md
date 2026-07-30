@@ -278,6 +278,7 @@ pnpm branch:finish <PR番号> --dry-run  # 実行せず予定アクションだ�
 スクリプトが内部で行うこと（= 手動フォールバック時にたどる手順）:
 
 1. PR 状態を取得。OPEN かつ失敗 check が無ければ `gh pr merge <N> --merge --delete-branch`（main が他 worktree で checkout 中で失敗する場合は `gh api` の直接マージにフォールバック）
+   - check 判定は **`statusCheckRollup` を name / context ごとに 1 件へ畳んでから**行う。rollup は同名 check を畳まないため（`gh pr checks` は畳む）、同一 head SHA で 2 回 run が走ると古い run の failure / cancelled を数え続けてマージ不能になる。畳み方は非対称で、**実行中が 1 つでもあれば実行中**として扱う（queued な run は `startedAt` を持たないことがあり、単純な「最新」判定では実行中を見落として素通りする）。契約は `scripts/__tests__/finish-branch.test.ts` が固定する
 2. 該当 branch の worktree を特定し、`status --porcelain` が空であることを確認（**dirty なら停止**してユーザーに委ねる）
 3. `git worktree remove --force <path>` で worktree を解除
 4. `git fetch --prune` → main を checkout して `git pull --ff-only origin main`（**branch 削除より先に main を最新化する**）
