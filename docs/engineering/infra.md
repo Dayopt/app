@@ -268,12 +268,20 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   移行 PR ではどちらの trigger も成立しない。**初回の trusted run は merge 後、次に危険クラス path を
   触る PR で確認する**（`Production Config Audit` 導入時と同じ bootstrap）
 - `ci.yml` は docs / rules のみの変更では `paths-ignore` で skip され、4 job の status 自体が付かない。private + Free plan では GitHub 側の required check 強制が効かず、マージ可否は `scripts/git/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）。ruleset の required 指定を強制できる plan へ移行する場合は、skip される job の扱いを先に設計する
-- **判定は `statusCheckRollup` を name / context ごとに畳んでから行う。** rollup は同名 check を
-  畳まないため（`gh pr checks` は畳む）、同一 head SHA で 2 回 run が走ると古い run の
-  failure / cancelled が残り続け、再実行で解決してもマージ不能になる。畳み方は非対称で、
-  **実行中が 1 つでもあれば実行中**として扱い（queued な run は `startedAt` を持たないことがあり、
-  単純な「最新」判定では実行中を見落として素通りする）、完了済みだけなら `startedAt` が最大のものを採る。
-  契約は `scripts/__tests__/finish-branch.test.ts` が固定する（#1768）
+- **判定は `statusCheckRollup` を畳んでから行う。** rollup は同名 check を畳まないため
+  （`gh pr checks` は畳む）、同一 head SHA で 2 回 run が走ると古い run の failure / cancelled が
+  残り続け、再実行で解決してもマージ不能になる。畳む単位は `gh pr checks` に合わせて
+  **型 + workflow 名 + check 名**（name だけで畳むと別 workflow の同名 job の failure が隠れる）。
+  代表の選び方は「最新を採る」ではなく、次の優先順で決める:
+  1. **実行中が 1 つでもあれば実行中**（queued な run は `startedAt` を持たないことがあり、
+     単純な最新判定では実行中を見落として素通りする）
+  2. **判定を持つ entry**（`success` / `failure` / `cancelled` / `timed_out`）のうち `startedAt` 最大。
+     `skipped` / `neutral` / `stale` は失敗にも成功にも数えないため、これが代表になると同名の
+     古い failure が消える。**古い `failure` は新しい `skipped` より優先される**
+  3. どれも判定を持たなければ `startedAt` 最大
+
+  名前を特定できない entry は畳まず全件残す。契約は
+  `scripts/__tests__/finish-branch.test.ts` が固定する（#1768）
 
 段階的導入案と当時の計測値は履歴であり、現行構成として複製しない。経緯は [ADR-016](./log/2026-03-19-ci-quality-gates-roadmap.md) に残す。
 
