@@ -57,8 +57,9 @@
   --primary: oklch(0.4 0.105 var(--hue-brand));
   --primary-foreground: var(--white);
 
-  /* State: Active（選択中・アクティブ状態） brand hue 追従
-   * 彩度は primary の低下率（×0.75）に追従させ、accent 系の温度を揃える */
+  /* State: Active brand hue 追従
+   * 彩度は primary の低下率（×0.75）に追従させ、accent 系の温度を揃える。
+   * 用途と「text-primary を上に載せない」制約は .dark 側のコメントを参照 */
   --state-active: oklch(0.95 0.019 var(--hue-brand));
   --state-active-foreground: oklch(0.38 0.105 var(--hue-brand));
 
@@ -216,10 +217,17 @@
   --primary-foreground: var(--white);
 
   /* State: Active brand hue 追従（彩度は primary の低下率 ×0.75 に追従）
-   * NOTE: dark の state-active は面との対比が 2.3〜2.6:1 で WCAG 1.4.11 の 3:1
-   * を満たしていない（この彩度低下より前から。実測値は下記）。3:1 に載せるには
-   * L を 0.45 → 0.52 へ上げる必要があり、選択行の見え方が変わるため別対応とする。
-   *   vs container L.15 2.62:1 / background L.18 2.50:1 / card L.22 2.30:1 */
+   *
+   * この 2 つは必ずペアで使う。bg-state-active の上に載せる文字・アイコンは
+   * text-state-active-foreground を使い、text-primary を使わない。
+   * dark では primary(#4270bc) と state-active(#30548f) の対比が 1.53:1 しかなく、
+   * アイコンがほぼ見えなくなる（実際に avatar-upload と BillingSettings で起きていた）。
+   *
+   * state-active は「選択行の地色」ではない。選択行・hover は foreground ベースの
+   * 半透明 state layer（--state-selected / --state-hover）が担う。こちらは
+   * 装飾アイコン容器と、border-primary を伴う状態表示の補強に使う。
+   * そのため面との対比（dark で 2.3〜2.6:1）は WCAG 1.4.11 の 3:1 対象にならない。
+   * 単独で状態を示す用途に使い始めるなら、その時点で L を上げる必要がある。 */
   --state-active: oklch(0.45 0.105 var(--hue-brand));
   --state-active-foreground: oklch(0.88 0.045 var(--hue-brand));
 

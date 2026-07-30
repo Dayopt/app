@@ -187,7 +187,7 @@ function AvatarUpload({
             )}
           >
             {isDragActive ? (
-              <Upload className="text-primary h-8 w-8" />
+              <Upload className="text-state-active-foreground h-8 w-8" />
             ) : (
               <User className="text-muted-foreground h-8 w-8" />
             )}

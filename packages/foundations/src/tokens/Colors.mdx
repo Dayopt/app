@@ -184,10 +184,16 @@ Container系・不透明度ハードコードからの移行ルール。
 
 ## State（状態）
 
-| トークン                       | 用途                                 |
-| ------------------------------ | ------------------------------------ |
-| `bg-state-active`              | 選択中・アクティブ状態（塗りつぶし） |
-| `text-state-active-foreground` | アクティブ状態のテキスト             |
+| トークン                       | Light                 | Dark                  | 用途                                              |
+| ------------------------------ | --------------------- | --------------------- | ------------------------------------------------- |
+| `bg-state-active`              | `oklch(0.95 0.019 H)` | `oklch(0.45 0.105 H)` | 装飾アイコン容器、`border-primary` を伴う状態補強 |
+| `text-state-active-foreground` | `oklch(0.38 0.105 H)` | `oklch(0.88 0.045 H)` | `bg-state-active` の上の文字・アイコン            |
+
+**この2つは必ずペアで使う。`bg-state-active` の上に `text-primary` を載せない。** dark では primary（`#4270bc`）と state-active（`#30548f`）の対比が 1.53:1 しかなく、アイコンがほぼ見えない。
+
+`bg-state-active` は**選択行の地色ではない**。選択行と hover は foreground ベースの半透明 state layer（`bg-state-selected` / `bg-state-hover`）が担う。`state-active` は塗りの強い装飾容器と、`border-primary` で状態が伝わっている箇所の補強に使う。
+
+そのため面との対比（dark で 2.3〜2.6:1）は WCAG 1.4.11 の 3:1 対象にならない。単独で状態を示す用途に使い始めるなら、その時点で明度を上げる必要がある（dark は L0.52 で card 比 3.14:1、ただし foreground 側を L0.94 まで上げないと 4.5:1 を割る窓の狭い領域）。
 
 ---
 
