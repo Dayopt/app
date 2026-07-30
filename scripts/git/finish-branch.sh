@@ -78,7 +78,7 @@ if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-for bin in git gh; do
+for bin in git gh jq; do
   if ! command -v "$bin" >/dev/null 2>&1; then
     error "$bin が見つかりません。"
     exit 1
@@ -122,10 +122,57 @@ fi
 if [[ "$PR_STATE" == "OPEN" ]]; then
   step "PR #$PR_NUMBER をマージ"
 
+  # ── statusCheckRollup を name / context ごとに 1 件へ畳む ──────────
+  #
+  # **同一 head SHA で 2 回以上 run が走ると、古い run の entry が残り続ける。**
+  # `gh pr checks` は同名を畳むが `gh pr view --json statusCheckRollup` は畳まない
+  # （2026-07-30 実測: PR #1765 は check-runs 18 件のうち 8 名前が重複し、
+  # rollup 21 件に対して `gh pr checks` は 13 行）。畳まずに数えると、再実行で
+  # 解決済みの failure / cancelled を永久に数え続けてマージ不能になる。
+  # 同一 SHA で 2 回走る経路は現実にある: ラベル付与での再発火、draft → ready、
+  # ready → draft → ready、手動 re-run、reopened。
+  #
+  # 畳み方には 2 つの非対称性を持たせる。どちらも「緩む側へ倒れない」ためのもの。
+  #
+  # ① **pending は「どれか 1 つでも実行中なら実行中」** として扱う。queued な run は
+  #    startedAt を持たないことがあり、単純な「最新」判定では古い完了 run が勝つ
+  #    （= 実行中の run を見落として素通りする fail-open）。
+  # ② **完了済みの代表は「判定を持つ entry」を優先する。** `skipped` / `neutral` /
+  #    `stale` は失敗にも成功にも数えないため、これが代表になると同じ名前の古い
+  #    failure が消える。job-level `if:` で skip された run は同一 SHA に
+  #    `conclusion: skipped` の check run を作るので、これは実在する経路
+  #    （例: ai-review は draft PR で skip する。ready で FAILURE → draft へ戻して
+  #    reopen すると skipped が後から積まれ、blocking な赤が消えてしまう）。
+  #
+  # 畳む単位は `gh pr checks` の dedupe に合わせ、型 + workflow 名 + check 名。
+  # 名前を特定できない entry は畳まず全件残す（identity 不明を fail-closed 側へ倒す）。
+  ROLLUP="$(printf '%s' "$PR_JSON" | jq -c '
+    def is_pending:
+      ((.status // "") | ascii_downcase
+        | . == "in_progress" or . == "queued" or . == "pending" or . == "waiting" or . == "requested")
+      or ((.state // "") | ascii_downcase | . == "pending");
+    def is_decisive:
+      ((.conclusion // "") | ascii_downcase
+        | . == "success" or . == "failure" or . == "cancelled" or . == "timed_out")
+      or ((.state // "") | ascii_downcase | . == "success" or . == "failure" or . == "error");
+    def check_name: (.name // .context // "");
+    [ (.statusCheckRollup // [])
+      | group_by([(.__typename // ""), (.workflowName // ""), check_name])
+      | .[]
+      | if (.[0] | check_name) == "" then .[]
+        elif any(.[]; is_pending) then (map(select(is_pending)) | .[0])
+        else ((map(select(is_decisive)) | max_by(.startedAt // "")) // max_by(.startedAt // ""))
+        end
+    ]')"
+
+  if [[ -z "$ROLLUP" ]]; then
+    error "check 一覧を解析できませんでした。gh pr checks $PR_NUMBER で状態を確認してください。"
+    exit 1
+  fi
+
   # 失敗している check がないか確認する（CheckRun は .conclusion、StatusContext は .state を持つ）
-  FAILED_CHECKS="$(printf '%s' "$PR_JSON" | jq -r '
-    (.statusCheckRollup // [])
-    | map(select(
+  FAILED_CHECKS="$(printf '%s' "$ROLLUP" | jq -r '
+    map(select(
         ((.conclusion // "") | ascii_downcase | . == "failure" or . == "cancelled" or . == "timed_out")
         or ((.state // "") | ascii_downcase | . == "failure" or . == "error")
       ))
@@ -151,9 +198,8 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   # 実行中・待機中の check も待つ。private repo + Free plan では GitHub 側の
   # required check 強制が効かないため、ここで止めないと CI 完了前にマージできてしまう。
-  PENDING_CHECKS="$(printf '%s' "$PR_JSON" | jq -r '
-    (.statusCheckRollup // [])
-    | map(select(
+  PENDING_CHECKS="$(printf '%s' "$ROLLUP" | jq -r '
+    map(select(
         ((.status // "") | ascii_downcase | . == "in_progress" or . == "queued" or . == "pending" or . == "waiting" or . == "requested")
         or ((.state // "") | ascii_downcase | . == "pending")
       ))
@@ -174,9 +220,8 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # ci.yml は docs のみの変更なら paths-ignore で skip されるので、「CI が
   # 走らない PR」自体は異常ではない。ただし Docs Guard は paths フィルタを持たず
   # 全 PR で走るため、success が 1 件も無い状態は構成の異常を意味する。
-  SUCCESS_CHECKS="$(printf '%s' "$PR_JSON" | jq -r '
-    (.statusCheckRollup // [])
-    | map(select(
+  SUCCESS_CHECKS="$(printf '%s' "$ROLLUP" | jq -r '
+    map(select(
         ((.conclusion // "") | ascii_downcase | . == "success")
         or ((.state // "") | ascii_downcase | . == "success")
       ))

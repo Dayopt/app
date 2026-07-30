@@ -20,12 +20,12 @@ name: AI Review
 on:
   pull_request_target:
     branches: [main]
-    # **labeled は入れない。** ラベル付与で再発火させると、同じ head SHA に 2 本目の
-    # run が積まれる。`gh pr view --json statusCheckRollup` は同名 check を畳まないため
-    # （2026-07-30 に PR #1765 で実測: check-runs 18 件のうち 8 名前が重複、rollup 21 件
-    # に対し `gh pr checks` は 13 行）、`finish-branch.sh` は古い run の failure を
-    # 数え続ける。つまりラベルを付けても赤が消えず、逃げ道として機能しない。
-    # ラベルは**次の push の run**で効く（新しい SHA なら rollup が綺麗になる）。
+    # **labeled は今は入れていない。** 元の理由は「同じ head SHA に 2 本目の run が積まれると
+    # `finish-branch.sh` が古い run の failure を数え続け、ラベルを付けても赤が消えない」
+    # だったが、その集計は #1768 で畳み込みを入れて解消済み。したがって labeled を足す
+    # 余地はある。ただし ai-review 側の再検証（無関係ラベルでの発火コスト、
+    # fingerprint cache の効き方）が要るため別作業とする。
+    # 現状ラベルは**次の push の run**で効く。
     #
     # `ready_for_review` を入れる代わりに、job 側で draft を skip する。両方を素通しにすると
     # 「draft で open → ready にする」で同じ head SHA に 2 本目の run が積まれ、上と同じ
@@ -91,11 +91,16 @@ permissions:
 jobs:
   review:
     name: "\U0001F50D AI Review"
-    # draft のうちは走らせない。`opened`(draft) と `ready_for_review` の両方で走ると、
-    # 同じ head SHA に 2 本目の run が積まれ、`cancel-in-progress` で 1 本目が cancelled に
-    # なる。`finish-branch.sh` は cancelled を failure として数えるため、あとから成功した
-    # run があっても次の push までマージできなくなる（trigger の types のコメント参照）。
-    # skip された job は failure / pending / success のどれにも数えられないので無害。
+    # draft のうちは走らせない。理由は 2 つあった。
+    # ① 同じ head SHA に 2 本目の run が積まれ、cancel された 1 本目が merge を止める
+    #    → #1768 の畳み込みで解消済み（もう merge は止まらない）
+    # ② draft の反復 push に Gemini の課金を使わない → **こちらは今も有効**
+    # ② が残るので guard は維持する。
+    #
+    # なお skip された job は `conclusion: skipped` の check run を作る。skipped は
+    # failure / success のどちらにも数えないため、畳み込みでは「判定を持つ entry」を
+    # 優先して代表に選ぶ必要がある（そうしないと同名の古い failure が skipped に
+    # 上書きされて消える）。その扱いは finish-branch.sh 側で固定済み。
     if: ${{ github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     # **review step の予算に加えて、その前段の時間を確保する。** job timeout は job 全体に

@@ -1,0 +1,205 @@
+{
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T13:52:51Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30457980757/job/90596405942",
+      "name": "🔍 AI Review",
+      "startedAt": "2026-07-29T13:51:44Z",
+      "status": "COMPLETED",
+      "workflowName": "AI Review"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T14:00:34Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30458614953/job/90598561447",
+      "name": "🔍 AI Review",
+      "startedAt": "2026-07-29T13:59:26Z",
+      "status": "COMPLETED",
+      "workflowName": "AI Review"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T13:54:27Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30457981157/job/90596407329",
+      "name": "🔍 Static Checks",
+      "startedAt": "2026-07-29T13:51:35Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T14:03:06Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30458615403/job/90598631807",
+      "name": "🔍 Static Checks",
+      "startedAt": "2026-07-29T13:59:32Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T13:52:25Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30457981116/job/90596406807",
+      "name": "🛡️ docs & secrets guard",
+      "startedAt": "2026-07-29T13:51:44Z",
+      "status": "COMPLETED",
+      "workflowName": "Docs Guard"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T13:59:54Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30458615042/job/90598561706",
+      "name": "🛡️ docs & secrets guard",
+      "startedAt": "2026-07-29T13:59:17Z",
+      "status": "COMPLETED",
+      "workflowName": "Docs Guard"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T13:56:10Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30457980945/job/90596406376",
+      "name": "Integration Tests",
+      "startedAt": "2026-07-29T13:51:42Z",
+      "status": "COMPLETED",
+      "workflowName": "Integration Tests"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T14:03:56Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30458614856/job/90598561197",
+      "name": "Integration Tests",
+      "startedAt": "2026-07-29T13:59:17Z",
+      "status": "COMPLETED",
+      "workflowName": "Integration Tests"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T13:51:45Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30457977084/job/90596391930",
+      "name": "Audit Vercel metadata (trusted)",
+      "startedAt": "2026-07-29T13:51:31Z",
+      "status": "COMPLETED",
+      "workflowName": "Production Config Audit"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T13:59:39Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30458622235/job/90598586999",
+      "name": "Audit Vercel metadata (trusted)",
+      "startedAt": "2026-07-29T13:59:23Z",
+      "status": "COMPLETED",
+      "workflowName": "Production Config Audit"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T13:59:28Z",
+      "conclusion": "CANCELLED",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30457981157/job/90596407200",
+      "name": "📦 Build & Test",
+      "startedAt": "2026-07-29T13:51:44Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T14:07:22Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30458615403/job/90598631869",
+      "name": "📦 Build & Test",
+      "startedAt": "2026-07-29T13:59:33Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T13:54:20Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30457981157/job/90596407450",
+      "name": "🎭 E2E Tests",
+      "startedAt": "2026-07-29T13:51:43Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T14:02:15Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30458615403/job/90598631791",
+      "name": "🎭 E2E Tests",
+      "startedAt": "2026-07-29T13:59:33Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T13:55:04Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30457981157/job/90596407181",
+      "name": "🌐 Web Build & E2E",
+      "startedAt": "2026-07-29T13:51:37Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T14:02:47Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Dayopt/dayopt/actions/runs/30458615403/job/90598631743",
+      "name": "🌐 Web Build & E2E",
+      "startedAt": "2026-07-29T13:59:32Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "StatusContext",
+      "context": "Production Config Audit",
+      "startedAt": "2026-07-29T13:59:35Z",
+      "state": "SUCCESS",
+      "targetUrl": "https://github.com/Dayopt/dayopt/actions/runs/30458622235"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T14:01:24Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://supabase.com/dashboard/project/gdnlxfvggfeugcsvlatr",
+      "name": "Supabase Preview",
+      "startedAt": "2026-07-29T13:59:54Z",
+      "status": "COMPLETED",
+      "workflowName": ""
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-07-29T14:01:19Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://vercel.com/github",
+      "name": "Vercel Preview Comments",
+      "startedAt": "2026-07-29T14:01:19Z",
+      "status": "COMPLETED",
+      "workflowName": ""
+    },
+    {
+      "__typename": "StatusContext",
+      "context": "Vercel – product",
+      "startedAt": "2026-07-29T14:01:15Z",
+      "state": "SUCCESS",
+      "targetUrl": "https://vercel.com/dayopt/product/Ah6SEFCf4trCf4sUPcvhJQJT6Xho"
+    },
+    {
+      "__typename": "StatusContext",
+      "context": "Vercel – web",
+      "startedAt": "2026-07-29T13:53:30Z",
+      "state": "SUCCESS",
+      "targetUrl": "https://vercel.com/dayopt/web/2pgvVAAvrdUZpPpn8CeX1K9beG1W"
+    }
+  ]
+}
