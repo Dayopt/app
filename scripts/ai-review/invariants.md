@@ -71,6 +71,16 @@ ai-review が「**あるべき検査の不在**」を判定するための正本
   receiptはDB-authored user-data generationに結び、削除世代を越えたreplayを拒否する
 - Plan / Record の同一lane重複は、通常UIのdirect DMLとMCP applyの両方に効く
   PostgreSQL exclusion constraintを最終authorityとする
+- `public.plans` / `public.records` へのdirect DMLは `service_role` だけが持つ。
+  `authenticated` は `SELECT` のみで、`TRUNCATE` を含む書き込み系privilegeを一切
+  持たない（Candidate 6）。INSERT/UPDATE/DELETE policyはgrant層で到達不能になり、
+  effective境界の正本は `private.timeblock_effective_write_privileges_v1`。
+  旧3 RPC (`soft_delete_plan` / `soft_delete_record` /
+  `confirm_day_plans_to_records`) だけは旧bundleのdrainまで `authenticated` に残す
+- timeblock commandの `p_user_id` は必ず `ctx.userId` 由来で、client inputから
+  渡ってはならない。RLSが第2の防波堤として効かなくなったため、これが唯一のowner
+  境界になる。router では `{ ...input, userId: ctx.userId }` の順を守る（spreadを
+  後ろに置くと同名fieldの追加で境界が無言で反転し、typecheckも通る）
 
 ## 時刻
 

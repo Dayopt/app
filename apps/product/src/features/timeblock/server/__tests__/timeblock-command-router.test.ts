@@ -104,6 +104,30 @@ describe('timeblock command routers', () => {
     });
   });
 
+  // p_user_id は Plan / Record の owner 境界そのもので、authenticated の直接 DML を
+  // 剥がした後は RLS が第2の防波堤として効かない。守りは 2 段（zod の unknown key
+  // strip と router の spread 順）で、この test は「2 段とも外れた時だけ落ちる」形で
+  // その合成を固定する。片方だけ残っていれば pass する点は意図通り。
+  it('client入力のuserIdはsession userを上書きしない', async () => {
+    const forgedUserId = '00000000-0000-4000-8000-0000000000ff';
+
+    await recordCaller().delete({
+      id: RECORD_ID,
+      expectedUpdatedAt: VERSION,
+      userId: forgedUserId,
+    } as never);
+    expect(methods.deleteRecord).toHaveBeenCalledWith(expect.objectContaining({ userId: USER_ID }));
+
+    await planCaller().skip({
+      id: PLAN_ID,
+      expectedUpdatedAt: VERSION,
+      userId: forgedUserId,
+    } as never);
+    expect(methods.setPlanSkipped).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: USER_ID, skipped: true }),
+    );
+  });
+
   it('confirm dayはDSTの25時間を許可し、26時間超を拒否する', async () => {
     await expect(
       planCaller().confirmDay({

@@ -59,12 +59,22 @@
 --   soft_delete_record / restore_record        — Record の soft delete / restore
 --   confirm_day_plans_to_records(...)          — 完了 Plan を Record として一括確定
 --     ↑ soft_delete_plan / soft_delete_record / confirm_day_plans_to_records の 3 つは
---       **drain まで authenticated に残す互換 wrapper**。SECURITY DEFINER + auth.uid()
---       照合付きで、内部は private.*_unserialized_v1 へ委譲する
---       (20260729073123)。Candidate 6 で plans / records の直接 DML を剥がした後、
---       旧 bundle に残る唯一の write 経路がこれ。旧 instance の drain 完了後に
---       EXECUTE を revoke する（20260730090300 / 20260730090301 は EXECUTE が
---       残っていることを assert するので、drain migration では assertion も反転させる）。
+--       **drain まで authenticated に残す互換 wrapper**。SECURITY DEFINER で、内部は
+--       private.*_unserialized_v1 へ委譲する (20260729073123)。Candidate 6 で
+--       plans / records の直接 DML を剥がした後、旧 bundle に残る唯一の write 経路。
+--       旧 instance の drain 完了後に EXECUTE を revoke する
+--       （20260730090300 / 20260730090301 は EXECUTE が残っていることを assert する
+--       ので、drain migration では assertion も反転させる）。
+--
+--       **owner 境界は caller 依存**。「常に auth.uid() 照合される」と読まないこと。
+--       3 関数は `auth.jwt() ->> 'role'` で分岐する:
+--         - browser session caller (authenticated): p_user_id が auth.uid() と
+--           一致しなければ 42501。JWT が境界。
+--         - service_role caller: auth.uid() 照合を skip し、p_user_id 自体が境界。
+--           tRPC の oauth / service-role auth mode はどちらも ctx.supabase に
+--           service-role client を入れる (apps/product/src/lib/trpc/context.ts) ため、
+--           app 側が ctx.userId を渡し続けることが前提になる
+--           （scripts/ai-review/invariants.md の不変条件）
 --       restore_plan / restore_record は service_role のみ（authenticated は revoke 済み）
 --   issue_oauth_token_pair(...)               — refresh/access token pair を service-role 経由で発行
 --   create_oauth_authorization_grant_v2(...)   — connection-bound code を発行（service-role only）
