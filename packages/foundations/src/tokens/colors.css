@@ -11,17 +11,19 @@
    * container(沈む) → background(基準) → card(浮く)
    * muted は入力欄・well 用の控えめな面
    *
-   *   container   L=0.96  サイドバー、セクション
-   *   background  L=0.98  ページ背景（基準）
-   *   card        L=1.00  カード、ダイアログ、ポップオーバー
-   *   muted       L=0.95  入力欄、well
+   * 面は「紙」（微暖色 H75 C0.005）。値の根拠は primitives.css の Paper scale
+   *
+   *   container   L=0.95  サイドバー、セクション
+   *   background  L=0.97  ページ背景（基準）
+   *   card        L=0.99  カード、ダイアログ、ポップオーバー
+   *   muted       L=0.94  入力欄、well
    * ============================================ */
-  --background: var(--neutral-98); /* ページ背景（基準） */
+  --background: var(--paper-97); /* ページ背景（基準） */
   --foreground: var(--neutral-13);
 
-  --container: var(--neutral-96); /* サイドバー、セクション（沈む） */
-  --card: var(--white); /* カード、ダイアログ、ポップオーバー（浮く） */
-  --muted: var(--neutral-95); /* 入力欄、well */
+  --container: var(--paper-95); /* サイドバー、セクション（沈む） */
+  --card: var(--paper-99); /* カード、ダイアログ、ポップオーバー（浮く） */
+  --muted: var(--paper-94); /* 入力欄、well */
 
   /* Overlay（MD3 scrim準拠・モーダル背景用） */
   --overlay: var(--black-32);
