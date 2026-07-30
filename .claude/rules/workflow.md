@@ -222,9 +222,13 @@ PR は **merge commit** でマージする。GitHub リポジトリ設定で squ
 
 ### マージ手順
 
+標準は `pnpm branch:finish <PR番号>`（§Worktree 運用）。素の `gh` を使う場合は merge commit を明示する:
+
 ```bash
 gh pr merge <PR番号> --merge --delete-branch
 ```
+
+ただし `gh pr merge --delete-branch` は **削除対象 branch を checkout している worktree を main へ切り替える**。worktree の中から実行しない（[#1771](https://github.com/Dayopt/dayopt/issues/1771)）。`branch:finish` はこれを避けるため REST を直叩きする。
 
 `--squash` / `--rebase` は使わない。GitHub 設定でハード無効化済みで、`--admin` でも merge method 制限は迂回できない。**release 手順も merge commit に統一**（[releases/process.mdx](../../apps/storybook/docs/operations/releases/process.mdx)）。squash が必要になる稀なケースでは repo 設定の変更が前提になる。
 
@@ -271,21 +275,23 @@ branch 名は **`{agent}/{domain}-{action}[-{issue番号}]`** で統一する（
 **標準は `pnpm branch:finish <PR番号>` のワンセット実行。** マージ〜掃除〜main 最新化までを 1 コマンドで行う（`scripts/git/finish-branch.sh`。Claude / Codex / 人間で共通）。
 
 ```bash
-pnpm branch:finish <PR番号>            # マージ→worktree削除→branch削除→リモート確認→main最新化
+pnpm branch:finish <PR番号>            # マージ→worktree削除→main ref 更新→branch削除→リモート確認
 pnpm branch:finish <PR番号> --dry-run  # 実行せず予定アクションだけ確認
 ```
 
 スクリプトが内部で行うこと（= 手動フォールバック時にたどる手順）:
 
-1. PR 状態を取得。OPEN かつ失敗 check が無ければ `gh pr merge <N> --merge --delete-branch`（main が他 worktree で checkout 中で失敗する場合は `gh api` の直接マージにフォールバック）
+1. PR 状態を取得。OPEN かつ失敗 check が無ければ `gh api -X PUT repos/{owner}/{repo}/pulls/<N>/merge -f merge_method=merge -f sha=<head SHA>` でマージし、`gh api -X DELETE .../git/refs/heads/<branch>` でリモート branch を削除する。**`gh pr merge` は使わない**（削除対象 branch が current だと実行元 worktree を main へ切り替えてしまう）。REST 直叩きなら構造的にローカル git へ触れない。`sha` は check 判定後に積まれた未検証 commit ごとマージするのを防ぐ
    - check 判定は **`statusCheckRollup` を畳んでから**行う。rollup は同名 check を畳まないため（`gh pr checks` は畳む）、同一 head SHA で 2 回 run が走ると古い run の failure / cancelled を数え続けてマージ不能になる。代表は「最新を採る」ではなく **① 実行中があれば実行中 → ② 判定を持つ entry の最新 → ③ それも無ければ最新** の順で選ぶ。②が要るのは `skipped` が失敗にも成功にも数えられないためで、**古い `failure` は新しい `skipped` より優先される**。詳細と根拠は [infra.md §merge gate の required checks](../../docs/engineering/infra.md#merge-gate-の-required-checks)、契約は `scripts/__tests__/finish-branch.test.ts` が固定する
 2. 該当 branch の worktree を特定し、`status --porcelain` が空であることを確認（**dirty なら停止**してユーザーに委ねる）
 3. `git worktree remove --force <path>` で worktree を解除
-4. `git fetch --prune` → main を checkout して `git pull --ff-only origin main`（**branch 削除より先に main を最新化する**）
-5. `git -C <main> branch -d <branch>`（**`-d` のみ。not fully merged なら停止**）
+4. `git fetch --prune` → ローカル `main` を最新化する（**branch 削除より先に**）。**`checkout` は使わない**（main checkout が別セッションの branch にいる場合、それを奪ってしまう）。main を checkout 中の worktree があればその場で `git pull --ff-only origin main`、どこも checkout していなければ `git fetch origin main:main` で ref だけ fast-forward する。失敗しても停止しない（判定は次の手順が担保する）
+5. `git -C <main> branch -d <branch>`。失敗した場合は `git merge-base --is-ancestor <branch> main` で main への到達を確認し、**真なら `-d` の偽陰性なので `-D` で削除、偽なら停止**
 6. リモートに `origin/<branch>` が残っていれば `git push origin --delete <branch>` → `git worktree prune`
 
-順序に意味がある: ① **worktree が参照する branch を先に解除しないと branch 削除が不可能**なため `worktree remove` を先に行う。② **`branch -d` の前に main を pull する**（`gh pr merge` はリモートしか更新しないので、pull 前だと branch 先端がローカル main から辿れず、追跡設定の無い branch は誤って not fully merged 扱いになる）。スクリプトが途中で停止した場合（dirty / not fully merged）は、下記「削除時の安全確認」に従って手動で判断する。
+順序に意味がある: ① **worktree が参照する branch を先に解除しないと branch 削除が不可能**なため `worktree remove` を先に行う。② **branch 削除の前にローカル main を最新化する**（マージは REST 経由でリモートしか更新しないので、更新前だと branch 先端がローカル main から辿れず「未マージ」と判定される）。スクリプトが途中で停止した場合（dirty / main 未到達）は、下記「削除時の安全確認」に従って手動で判断する。
+
+手順 4・5 が「**どの worktree の HEAD も切り替えない**」設計なのは、並行 worktree 環境で main checkout が別セッションの branch にいるのが常態だから（[#1771](https://github.com/Dayopt/dayopt/issues/1771)）。`branch -d` は **HEAD 基準**でマージ済みを判定するため、HEAD が別 branch だと main へ完全にマージ済みの branch でも拒否される。この偽陰性を main 基準の判定で訂正する。なお main を checkout 中の worktree では ff pull がその作業ツリーのファイルを更新する（branch は切り替えない）。
 
 ### 完了定義（ワンセット）
 
@@ -295,7 +301,7 @@ pnpm branch:finish <PR番号> --dry-run  # 実行せず予定アクションだ�
 2. worktree が削除済み
 3. ローカル branch が削除済み
 4. リモート branch が消滅（`git fetch --prune` 後に `origin/<branch>` が無い）
-5. main checkout が最新（`git pull --ff-only` 済み）
+5. ローカル `main` ref が `origin/main` と一致（main checkout がどの branch にいるかは問わない。別セッションの作業を切り替えてまで main を checkout させない）
 
 `pnpm branch:finish` はこの 5 点を満たすと完了サマリーを出す。手動で進めた場合も同じ 5 点を自分で確認する。
 
@@ -304,7 +310,7 @@ pnpm branch:finish <PR番号> --dry-run  # 実行せず予定アクションだ�
 - 削除前に `git -C <worktree-path> status --porcelain` が空であることを確認する。未コミット差分が残る worktree はユーザー作業として扱うため、消去前に確認を取る
 - **`rm -rf` で worktree を直接消さない**。git の管理情報が残って孤児化する。必ず `git worktree remove` を使う
 - gitignore された生成物（`.next/` 等）だけが残って `remove` が拒否される場合は、tracked ファイル差分がないことを確認した上で `git worktree remove --force`
-- `git branch -d <branch>` が `not fully merged` で失敗したら、原則 `-D` は使わずユーザー確認を取る（保留/close の再確認、必要なら別 PR 化）
+- `git branch -d <branch>` が `not fully merged` で失敗したら、原則 `-D` は使わずユーザー確認を取る（保留/close の再確認、必要なら別 PR 化）。例外は `git merge-base --is-ancestor <branch> main` で **main への完全マージを検証済み**の場合だけ（`branch:finish` の手順 5）。この条件下の `-D` は強制削除ではなく、HEAD 基準判定の偽陰性の訂正にあたる
 
 ### 定期掃除（月次 sweep で実施）
 
