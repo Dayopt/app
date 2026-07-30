@@ -70,7 +70,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
             </CardHeader>
             <CardContent className="flex-1">
               <div className="mb-8 text-center">
-                <span className="text-foreground font-mono text-4xl font-medium tabular-nums">
+                <span className="text-foreground text-4xl font-medium tabular-nums">
                   {dayoptPricing[freePlan.id].displayPrice}
                 </span>
               </div>
@@ -103,7 +103,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
             </CardHeader>
             <CardContent className="flex-1">
               <div className="mb-2 text-center">
-                <span className="text-foreground font-mono text-4xl font-medium tabular-nums">
+                <span className="text-foreground text-4xl font-medium tabular-nums">
                   {dayoptPricing[proPlan.id].displayPrice}
                 </span>
                 <span className="text-muted-foreground">{t('pricing.plans.pro.period')}</span>

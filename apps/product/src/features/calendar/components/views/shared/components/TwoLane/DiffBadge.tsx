@@ -30,7 +30,7 @@ export function DiffBadge({ diffMinutes, className }: DiffBadgeProps) {
     <span
       data-record-diff-badge
       className={cn(
-        'bg-container text-muted-foreground border-border-subtle inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs tabular-nums',
+        'bg-container text-muted-foreground border-border-subtle inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-xs tabular-nums',
         className,
       )}
     >

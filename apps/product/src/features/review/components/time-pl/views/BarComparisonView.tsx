@@ -51,7 +51,7 @@ function ComparisonRow({ row, maxMinutes }: { row: BarComparisonRow; maxMinutes:
           <TagIcon icon={row.tagIcon ?? null} color={row.tagColor} size="sm" />
           <span className="text-foreground truncate">{row.tagName}</span>
         </span>
-        <span className={cn('font-mono text-xs tabular-nums', varianceColor)}>
+        <span className={cn('text-xs tabular-nums', varianceColor)}>
           {row.variancePercent !== null ? formatVariance(row.varianceMinutes) : t('unplanned')}
         </span>
       </div>
@@ -83,7 +83,7 @@ function Bar({
       </div>
       <span
         className={cn(
-          'w-14 text-right font-mono text-xs tabular-nums',
+          'w-14 text-right text-xs tabular-nums',
           variant === 'budget' ? 'text-muted-foreground' : 'text-foreground',
         )}
       >

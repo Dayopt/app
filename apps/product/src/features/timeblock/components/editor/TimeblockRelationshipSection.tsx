@@ -82,13 +82,11 @@ export function TimeblockRelationshipSection(props: TimeblockRelationshipSection
         <TagIcon icon={item.tagIcon} color={item.tagColor} size="sm" className="shrink-0" />
         <span className="min-w-0 flex-1">
           <span className="text-foreground block truncate text-sm">{item.tagName}</span>
-          <span className="text-muted-foreground block truncate font-mono text-xs tabular-nums">
+          <span className="text-muted-foreground block truncate text-xs tabular-nums">
             {dateTime}
           </span>
         </span>
-        <span className="text-muted-foreground shrink-0 font-mono text-xs tabular-nums">
-          {duration}
-        </span>
+        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">{duration}</span>
         <ChevronRight className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
       </button>
     );
@@ -101,7 +99,7 @@ export function TimeblockRelationshipSection(props: TimeblockRelationshipSection
           {heading}
         </h2>
         {props.kind === 'plan' && props.status === 'success' ? (
-          <span className="text-muted-foreground shrink-0 font-mono text-xs tabular-nums">
+          <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
             {t('recordSummary', {
               count: props.records.length,
               duration: formatDurationMinutes(

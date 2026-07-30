@@ -79,7 +79,7 @@ export function PlanMock() {
           {/* 指標名は実在するものだけを出す（calendar.stats.overview.planAccuracy） */}
           <div className="border-border mt-auto border-t pt-3">
             <div className="text-muted-foreground mb-1 text-xs">Plan accuracy</div>
-            <div className="text-foreground font-mono text-xl font-medium tabular-nums">87%</div>
+            <div className="text-foreground text-xl font-medium tabular-nums">87%</div>
             <div className="bg-muted mt-1.5 h-1.5 w-full overflow-hidden rounded-full">
               <div className="bg-primary h-full rounded-full" style={{ width: '87%' }} />
             </div>
@@ -112,7 +112,7 @@ export function PlanMock() {
               {hours.map((hour, i) => (
                 <div
                   key={hour}
-                  className="text-muted-foreground absolute right-2 font-mono text-xs tabular-nums"
+                  className="text-muted-foreground absolute right-2 text-xs tabular-nums"
                   style={{ top: `${(i / hours.length) * 100}%` }}
                 >
                   {hour}

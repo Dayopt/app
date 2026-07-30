@@ -63,13 +63,13 @@ export function EstimationAccuracyList({
           <div key={row.tagId} className="flex min-h-11 min-w-0 items-center gap-3 px-2 py-2">
             <TagIcon icon={null} color={resolveTagColor(row.tagColor)} size="sm" />
             <span className="text-foreground min-w-0 flex-1 truncate text-sm">{row.tagName}</span>
-            <span className="text-muted-foreground font-mono text-sm tabular-nums">
+            <span className="text-muted-foreground text-sm tabular-nums">
               {formatDurationMinutes(Math.round(row.avgPlannedMinutes))} →{' '}
               {formatDurationMinutes(Math.round(row.avgActualMinutes))}
             </span>
             <span
               className={cn(
-                'w-14 text-right font-mono text-sm tabular-nums',
+                'w-14 text-right text-sm tabular-nums',
                 deviation > 0 ? 'text-destructive' : 'text-muted-foreground',
               )}
             >
