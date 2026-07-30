@@ -28,7 +28,7 @@
   }
 
   .animate-shake {
-    animation: shake 0.4s ease-in-out;
+    animation: shake var(--motion-oneshot-shake) var(--motion-ease-standard);
   }
 
   /* ============================================
@@ -52,7 +52,7 @@
       var(--container) 100%
     );
     background-size: 200% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
+    animation: shimmer var(--motion-loop-shimmer) var(--motion-ease-standard) infinite;
   }
 
   .dark .animate-shimmer {
@@ -71,6 +71,6 @@
   }
 
   .animate-indeterminate {
-    animation: indeterminate 1.5s ease-in-out infinite;
+    animation: indeterminate var(--motion-loop-shimmer) var(--motion-ease-standard) infinite;
   }
 }
