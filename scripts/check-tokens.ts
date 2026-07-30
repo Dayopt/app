@@ -12,29 +12,36 @@
  *
  * 除外は EXCLUDE_PATHS。プロダクト UI のミニチュアを描くマーケの
  * イラスト層は、縮尺のために UI 用スケールの外に出る必要があるので
- * 任意値ルールから外す（本物の UI ではなく絵）。
+ * 全ルールから外す（本物の UI ではなく絵）。
  */
 
-import { execSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 
 /** 走査するディレクトリ（repo ルートからの相対） */
 const SCAN_TARGETS = ['apps/product/src', 'apps/web/src', 'packages/components/src'];
 
 /**
- * 任意値ルールの適用外。grep -v で除外する。
- * マーケの mocks / *Visual.tsx はプロダクト画面の縮小イラストで、
- * text-[10px] のような UI スケール外の値が絵として必要になる。
+ * 全ルールの適用外パス（一部ルールだけではなく一律で外れる）。
+ *
+ * マーケの mocks / *Visual.tsx / AppPreviewMockup.tsx はプロダクト画面の
+ * 縮小イラストで、縮尺のために UI 用スケールの外に出る必要がある（絵であって
+ * 本物の UI ではない）。logo.tsx は size-5 のブランドタイルで、8px 角丸だと
+ * 丸すぎるため 4px の任意値を持つ。
  */
 const EXCLUDE_PATHS = [
   'apps/web/src/features/marketing/components/mocks/',
   'Visual.tsx',
   'AppPreviewMockup.tsx',
+  'packages/components/src/identity/logo.tsx',
 ];
 
 interface ForbiddenPattern {
+  /** grep -E（ERE）で解釈できる正規表現。lookahead / lookbehind は使えない */
   pattern: string;
   message: string;
   suggestion: string;
+  /** マッチ行のうち、これに当たるものは違反として数えない（ERE） */
+  excludePattern?: string;
   /** true = 検出するが CI を block しない（段階移行中のルール） */
   warnOnly?: boolean;
 }
@@ -47,12 +54,13 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     suggestion: 'text-[10px] → text-xs',
   },
   {
-    pattern: 'rounded-\\[[0-9]+px\\]',
+    pattern: 'rounded(-[a-z]+)?-\\[',
     message: '角丸の任意値は禁止。rounded-lg (8px) / rounded-2xl (16px) を使用',
-    suggestion: 'rounded-[8px] → rounded-lg',
+    suggestion: 'rounded-[8px] → rounded-lg, rounded-[0.25rem] → rounded-lg',
   },
   {
-    pattern: '(?<![a-z0-9-])rounded(?:-sm|-md|-xl|-xs|-3xl)(?![a-z0-9-])',
+    pattern:
+      '(^|[^a-z0-9-])rounded(-(t|r|b|l|tl|tr|br|bl|s|e|ss|se|es|ee))?-(sm|md|xl|xs|3xl)([^a-z0-9-]|$)',
     message: '廃止された角丸クラス。rounded-lg (8px) / rounded-2xl (16px) を使用',
     suggestion: 'rounded-sm → rounded-lg, rounded-xl → rounded-2xl',
   },
@@ -73,8 +81,9 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     suggestion: 'border-black/[0.04] → border-border-subtle',
   },
   {
-    // shadow-[var(--...)] は token 参照なので許可する（誤検出だった）
-    pattern: 'shadow-\\[(?!var\\()',
+    pattern: 'shadow-\\[',
+    // shadow-[var(--...)] は token 参照なので違反にしない
+    excludePattern: 'shadow-\\[var\\(',
     message: '任意 shadow 値は禁止。shadow-sm / shadow-card を使用',
     suggestion: 'shadow-[0_1px_2px_...] → shadow-card',
   },
@@ -92,20 +101,20 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
   },
   // フォントウェイト準拠（font-normal / font-medium のみ）
   {
-    pattern: '(?<![a-z0-9-])font-(?:bold|semibold|extrabold|black|light|thin)(?![a-z0-9-])',
+    pattern: '(^|[^a-z0-9-])font-(bold|semibold|extrabold|black|light|thin)([^a-z0-9-]|$)',
     message: '禁止フォントウェイト。font-normal (400) / font-medium (500) のみ使用可',
     suggestion: 'font-bold → font-medium, font-semibold → font-medium',
   },
   // bare rounded 禁止（rounded-lg / rounded-2xl / rounded-full / rounded-none のみ）
   {
-    pattern: '(?<![a-z0-9-])rounded(?![a-z0-9-])',
+    pattern: '(^|[^a-z0-9-])rounded([^a-z0-9-]|$)',
     message: 'bare rounded は禁止。rounded-lg (8px) を使用',
     suggestion: 'rounded → rounded-lg',
   },
   // 直接カラークラス禁止（semantic token を使用）
   {
     pattern:
-      '(?:text|bg|border)-(?:gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]',
+      '(text|bg|border)-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]',
     message: '直接カラークラスは禁止。semantic token を使用',
     suggestion: 'text-gray-500 → text-muted-foreground, bg-blue-500 → bg-primary',
     warnOnly: true, // stories のドキュメント例を含むため段階移行
@@ -153,81 +162,92 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
 let hasViolations = false;
 let hasWarnings = false;
 
+/**
+ * grep をシェルを介さず実行し、マッチ行を "path:line:content" で返す。
+ *
+ * exit code の扱いがこのスクリプトの要。grep は 0=ヒット / 1=ヒットなし /
+ * 2=エラー（不正な正規表現、対象ディレクトリ不在など）を返す。以前は
+ * `2>/dev/null || true` で 2 を 0 に化かしていたため、ERE が解釈できない
+ * パターン（lookahead / lookbehind を含むもの）が即死しても「違反ゼロ」として
+ * 静かに通り、4 ルールが導入以来一度も発火していなかった。
+ * ここでは 2 を握り潰さず throw して、壊れたルールを気づける形にする。
+ */
+function grepLines(pattern: string): string[] {
+  const res = spawnSync('grep', ['-rEn', pattern, '--include=*.tsx', ...SCAN_TARGETS], {
+    encoding: 'utf8',
+  });
+
+  if (res.error) throw res.error;
+  if (res.status === 2) {
+    throw new Error(
+      `grep がパターンを解釈できませんでした（ERE では lookahead / lookbehind を使えない）\n` +
+        `  pattern: ${pattern}\n  stderr: ${(res.stderr || '').trim()}`,
+    );
+  }
+
+  return (res.stdout || '')
+    .split('\n')
+    .filter(Boolean)
+    .filter((line) => !EXCLUDE_PATHS.some((p) => line.includes(p)));
+}
+
 console.log('🔍 Tailwind トークン違反をチェック中...\n');
 
-const TARGETS = SCAN_TARGETS.join(' ');
-const EXCLUDE_FILTER = EXCLUDE_PATHS.map((p) => `| grep -v "${p}"`).join(' ');
+for (const { pattern, message, suggestion, warnOnly, excludePattern } of FORBIDDEN_PATTERNS) {
+  let lines = grepLines(pattern);
 
-for (const { pattern, message, suggestion, warnOnly } of FORBIDDEN_PATTERNS) {
-  try {
-    const result = execSync(
-      `grep -rE "${pattern}" ${TARGETS} --include="*.tsx" -l 2>/dev/null ${EXCLUDE_FILTER} || true`,
-      { encoding: 'utf8' },
-    ).trim();
-
-    if (result) {
-      if (warnOnly) {
-        hasWarnings = true;
-        console.log(`⚠️  [warn] ${message}`);
-      } else {
-        hasViolations = true;
-        console.log(`❌ ${message}`);
-      }
-      console.log(`   修正例: ${suggestion}`);
-      console.log(`   該当ファイル:`);
-      result.split('\n').forEach((file) => {
-        console.log(`     - ${file}`);
-      });
-      console.log('');
-    }
-  } catch {
-    // grep エラーは無視
+  if (excludePattern) {
+    const re = new RegExp(excludePattern.replace(/\\\\/g, '\\'));
+    lines = lines.filter((line) => !re.test(line));
   }
+
+  if (lines.length === 0) continue;
+
+  const files = [...new Set(lines.map((line) => line.split(':')[0]))];
+
+  if (warnOnly) {
+    hasWarnings = true;
+    console.log(`⚠️  [warn] ${message}`);
+  } else {
+    hasViolations = true;
+    console.log(`❌ ${message}`);
+  }
+  console.log(`   修正例: ${suggestion}`);
+  console.log(`   該当ファイル（${lines.length} 箇所 / ${files.length} ファイル）:`);
+  files.forEach((file) => {
+    console.log(`     - ${file}`);
+  });
+  console.log('');
 }
 
 // ─── 共起チェック: bg-card には shadow が必要（Elevation ルール） ───
-try {
-  const bgCardLines = execSync(
-    `grep -rn "bg-card" ${TARGETS} --include="*.tsx" 2>/dev/null || true`,
-    {
-      encoding: 'utf8',
-    },
-  ).trim();
+{
+  const violations: string[] = [];
 
-  if (bgCardLines) {
-    const violations: string[] = [];
-
-    for (const line of bgCardLines.split('\n')) {
-      if (!line) continue;
-
-      // 除外: stories, shadcn/ui プリミティブ, opacity 派生 (bg-card/)
-      if (line.includes('.stories.') || line.includes('components/ui/') || /bg-card\//.test(line)) {
-        continue;
-      }
-
-      // shadow-xs / shadow-sm / shadow-card のいずれかが同一行にあれば OK
-      if (/shadow-(xs|sm|card)/.test(line)) continue;
-
-      violations.push(line);
+  for (const line of grepLines('bg-card')) {
+    // 除外: stories, shadcn/ui プリミティブ, opacity 派生 (bg-card/)
+    if (line.includes('.stories.') || line.includes('components/ui/') || /bg-card\//.test(line)) {
+      continue;
     }
 
-    if (violations.length > 0) {
-      hasWarnings = true;
-      console.log('⚠️  [warn] bg-card に shadow がない（Elevation ルール違反）');
-      console.log('   修正例: bg-card は shadow-sm (Raised) / shadow-card (Overlay) と併用');
-      console.log('   該当箇所:');
-      for (const v of violations) {
-        // "src/path:line: content" → 見やすく整形
-        const [loc, ...rest] = v.split(':');
-        const lineNum = rest[0];
-        const content = rest.slice(1).join(':').trim();
-        console.log(`     - ${loc}:${lineNum}: ${content.slice(0, 80)}`);
-      }
-      console.log('');
-    }
+    // shadow-xs / shadow-sm / shadow-card のいずれかが同一行にあれば OK
+    if (/shadow-(xs|sm|card)/.test(line)) continue;
+
+    violations.push(line);
   }
-} catch {
-  // grep エラーは無視
+
+  if (violations.length > 0) {
+    hasWarnings = true;
+    console.log('⚠️  [warn] bg-card に shadow がない（Elevation ルール違反）');
+    console.log('   修正例: bg-card は shadow-sm (Raised) / shadow-card (Overlay) と併用');
+    console.log(`   該当箇所（${violations.length} 件）:`);
+    for (const v of violations) {
+      // "path:line:content" → 見やすく整形
+      const [loc, lineNum, ...rest] = v.split(':');
+      console.log(`     - ${loc}:${lineNum}: ${rest.join(':').trim().slice(0, 80)}`);
+    }
+    console.log('');
+  }
 }
 
 if (hasViolations) {
