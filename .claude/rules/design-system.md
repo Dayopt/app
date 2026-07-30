@@ -100,30 +100,18 @@ paths:
 **禁止**: `size-3`(12px), `size-7`(28px), `size-9`(36px) 等、上記以外のサイズ
 **注**: `size-8`, `size-9` 等がボタン/コンテナのサイズとして使われる場合はアイコンサイズ規約の対象外
 
-## Transition
+## Motion / Transition
 
-- **デフォルト**: `transition-colors duration-150` — ホバー、フォーカス、状態変化の色切り替え。迷ったらこれ
-- ease は指定しない（Tailwind デフォルトの `ease-in-out` で十分）
-- `duration-150` を標準とし、ほぼ全てのインタラクションに使う
+**正本は `packages/foundations/src/tokens/Motion.mdx`**（Storybook の Shared/Foundations/Motion）。段階表をここに複製しない。
 
-**用途別:**
+覚えておく最小限:
 
-| クラス                              | 用途               |
-| ----------------------------------- | ------------------ |
-| `transition-colors duration-150`    | 色のみ変化（標準） |
-| `transition-all duration-150`       | サイズ変化を含む   |
-| `transition-transform duration-200` | transform のみ     |
+- **デフォルト**: `transition-colors duration-150 ease-standard` — 迷ったらこれ
+- duration は `150` / `200` / `300` の 3 段のみ。任意値と `cubic-bezier` 直書きは禁止
+- easing は `ease-standard`（その場で変わる）と `ease-settle`（入る・着地する）の 2 種のみ
+- どれを使うかは「その操作が 4 層のどれか」で決まる。層と禁止リスト（confetti / バウンス / バッジ等）は Motion.mdx を読む
 
-**duration 推奨値:**
-
-| duration       | 用途                                         |
-| -------------- | -------------------------------------------- |
-| `duration-75`  | 即座のフィードバック（active 押下など）      |
-| `duration-150` | **標準（デフォルト）** — ほぼ全てこれを使う  |
-| `duration-200` | transform、やや重い要素の移動                |
-| `duration-300` | 大きな面積の展開・折りたたみ（accordion 等） |
-
-上記4つ以外の duration は禁止
+> 旧規約の「ease は指定しない」と `duration-75` は撤回した。前者は実コード約 10 ファイルと矛盾しており、着地の質感を失っていた。後者は使用実績がゼロだった。
 
 ## Z-Index
 
