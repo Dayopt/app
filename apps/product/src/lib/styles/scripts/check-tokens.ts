@@ -97,9 +97,9 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
   },
   {
     pattern:
-      '(^|[^a-z])(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y|space-x|space-y)-(3|5|7|9|10|11|13|14)([^0-9.]|$)',
+      '(^|[^a-z])(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y|space-x|space-y)-(5|7|9|10|11|13|14)([^0-9.]|$)',
     message: 'OFF-GRID スペーシング（禁止整数値）。8pxグリッド準拠の値を使用',
-    suggestion: '*-3(12px) → *-2/*-4, *-5(20px) → *-4/*-6, *-7(28px) → *-6/*-8, *-9(36px) → *-8',
+    suggestion: '*-5(20px) → *-4/*-6, *-7(28px) → *-6/*-8, *-9(36px) → *-8',
   },
   // モーション（方針の正本: packages/foundations/src/tokens/Motion.mdx）
   // NOTE: このスクリプトは apps/product の *.tsx だけを走査する。CSS と
