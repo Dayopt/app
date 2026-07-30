@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import { validateAuthorizeInput, type AuthorizeValidationError } from '@/lib/oauth-server';
+import { assertOAuthAuthorizationRequestHost } from '@/lib/oauth-server/authorization-request-host';
 import { redirect } from '@dayopt/i18n/navigation';
 import type { routing } from '@dayopt/i18n/routing';
 
@@ -34,9 +35,12 @@ const ERROR_MESSAGE_KEY: Record<AuthorizeValidationError, string> = {
   invalid_redirect_uri: 'invalidRedirectUri',
   missing_pkce: 'missingPkce',
   invalid_scope: 'invalidScope',
+  invalid_resource: 'invalidResource',
 };
 
 export default async function AuthorizePage({ searchParams }: AuthorizePageProps) {
+  await assertOAuthAuthorizationRequestHost();
+
   const params = await searchParams;
   const stringParam = (key: string): string | undefined => {
     const v = params[key];
@@ -51,6 +55,7 @@ export default async function AuthorizePage({ searchParams }: AuthorizePageProps
     code_challenge_method: stringParam('code_challenge_method'),
     scope: stringParam('scope'),
     state: stringParam('state'),
+    resource: stringParam('resource'),
   });
 
   if (!validation.ok) {
@@ -67,6 +72,7 @@ export default async function AuthorizePage({ searchParams }: AuthorizePageProps
     redirect_uri: validation.redirectUri,
     code_challenge: validation.codeChallenge,
     scope: validation.scopes.join(' '),
+    resource: validation.resourceUri,
   });
   if (validation.state) consentQuery.set('state', validation.state);
 
