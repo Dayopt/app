@@ -15,7 +15,7 @@ export default function NotFound() {
   return (
     <div className="bg-background flex min-h-[60vh] items-center justify-center">
       <div className="mx-auto max-w-md text-center">
-        <div className="text-muted-foreground/20 mb-4 text-9xl font-medium">404</div>
+        <div className="text-muted-foreground mb-4 text-sm tabular-nums">404</div>
 
         <Heading as="h2" size="xl" className="mb-4">
           {t('notFound.title')}

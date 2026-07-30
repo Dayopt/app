@@ -17,7 +17,7 @@ export function BlogSkeleton({ className }: BlogSkeletonProps) {
 
 export function BlogCardSkeleton() {
   return (
-    <div className="flex items-center gap-5 py-6 first:pt-0">
+    <div className="flex items-center gap-4 py-6 first:pt-0">
       {/* カバー画像スケルトン */}
       <Skeleton className="h-32 w-56 flex-shrink-0 rounded-xl" />
 

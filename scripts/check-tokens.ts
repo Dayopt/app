@@ -1,13 +1,35 @@
 #!/usr/bin/env node
 
 /**
- * Tailwind トークン違反チェッカー
+ * Tailwind トークン違反チェッカー（repo 横断）
  *
- * トークン化すべき任意値を検出し、修正を促す。
- * npm run lint:tokens で実行。
+ * トークン化すべき任意値・規約外の値を検出し、修正を促す。
+ * pnpm lint:tokens で実行。
+ *
+ * 走査対象は SCAN_TARGETS。以前は apps/product の tsx だけだったため、
+ * apps/web と packages/components が未統治のまま規約外の値を溜めていた
+ * （motion / spacing の監査で 2 回続けて同じ穴に当たった）。
+ *
+ * 除外は EXCLUDE_PATHS。プロダクト UI のミニチュアを描くマーケの
+ * イラスト層は、縮尺のために UI 用スケールの外に出る必要があるので
+ * 任意値ルールから外す（本物の UI ではなく絵）。
  */
 
 import { execSync } from 'node:child_process';
+
+/** 走査するディレクトリ（repo ルートからの相対） */
+const SCAN_TARGETS = ['apps/product/src', 'apps/web/src', 'packages/components/src'];
+
+/**
+ * 任意値ルールの適用外。grep -v で除外する。
+ * マーケの mocks / *Visual.tsx はプロダクト画面の縮小イラストで、
+ * text-[10px] のような UI スケール外の値が絵として必要になる。
+ */
+const EXCLUDE_PATHS = [
+  'apps/web/src/features/marketing/components/mocks/',
+  'Visual.tsx',
+  'AppPreviewMockup.tsx',
+];
 
 interface ForbiddenPattern {
   pattern: string;
@@ -51,9 +73,10 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     suggestion: 'border-black/[0.04] → border-border-subtle',
   },
   {
-    pattern: 'shadow-\\[',
+    // shadow-[var(--...)] は token 参照なので許可する（誤検出だった）
+    pattern: 'shadow-\\[(?!var\\()',
     message: '任意 shadow 値は禁止。shadow-sm / shadow-card を使用',
-    suggestion: 'shadow-[...] → shadow-card',
+    suggestion: 'shadow-[0_1px_2px_...] → shadow-card',
   },
   {
     pattern: 'bg-(primary|success|warning|destructive|info)/[0-9]',
@@ -97,13 +120,12 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
   },
   {
     pattern:
-      '(^|[^a-z])(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y|space-x|space-y)-(5|7|9|10|11|13|14)([^0-9.]|$)',
-    message: 'OFF-GRID スペーシング（禁止整数値）。8pxグリッド準拠の値を使用',
+      '(^|[^a-z])(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y|space-x|space-y)-(5|7|9|11|13)([^0-9.]|$)',
+    message: 'OFF-GRID スペーシング（禁止整数値: 20/28/36/44/52px）。8pxグリッド準拠の値を使用',
     suggestion: '*-5(20px) → *-4/*-6, *-7(28px) → *-6/*-8, *-9(36px) → *-8',
   },
   // モーション（方針の正本: packages/foundations/src/tokens/Motion.mdx）
-  // NOTE: このスクリプトは apps/product の *.tsx だけを走査する。CSS と
-  // packages/components は対象外なので、そちらは Motion.mdx とレビューで担保する。
+  // NOTE: 走査対象は *.tsx のみ。CSS ファイル内の値は Motion.mdx とレビューで担保する。
   {
     pattern: 'duration-(0|75|100|500|700|1000)([^0-9]|$)',
     message: '禁止 duration。遷移は duration-150 / 200 / 300 の3段のみ',
@@ -133,11 +155,15 @@ let hasWarnings = false;
 
 console.log('🔍 Tailwind トークン違反をチェック中...\n');
 
+const TARGETS = SCAN_TARGETS.join(' ');
+const EXCLUDE_FILTER = EXCLUDE_PATHS.map((p) => `| grep -v "${p}"`).join(' ');
+
 for (const { pattern, message, suggestion, warnOnly } of FORBIDDEN_PATTERNS) {
   try {
-    const result = execSync(`grep -rE "${pattern}" src --include="*.tsx" -l 2>/dev/null || true`, {
-      encoding: 'utf8',
-    }).trim();
+    const result = execSync(
+      `grep -rE "${pattern}" ${TARGETS} --include="*.tsx" -l 2>/dev/null ${EXCLUDE_FILTER} || true`,
+      { encoding: 'utf8' },
+    ).trim();
 
     if (result) {
       if (warnOnly) {
@@ -161,9 +187,12 @@ for (const { pattern, message, suggestion, warnOnly } of FORBIDDEN_PATTERNS) {
 
 // ─── 共起チェック: bg-card には shadow が必要（Elevation ルール） ───
 try {
-  const bgCardLines = execSync('grep -rn "bg-card" src --include="*.tsx" 2>/dev/null || true', {
-    encoding: 'utf8',
-  }).trim();
+  const bgCardLines = execSync(
+    `grep -rn "bg-card" ${TARGETS} --include="*.tsx" 2>/dev/null || true`,
+    {
+      encoding: 'utf8',
+    },
+  ).trim();
 
   if (bgCardLines) {
     const violations: string[] = [];

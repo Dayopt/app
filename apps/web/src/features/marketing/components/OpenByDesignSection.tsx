@@ -53,7 +53,7 @@ export async function OpenByDesignSection({ locale }: OpenByDesignSectionProps) 
           {t('openByDesign.description')}
         </p>
 
-        <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
+        <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
           {openByDesignKeys.map(({ key, icon: Icon }) => (
             <Card key={key} className="border-border bg-card rounded-2xl border">
               <CardHeader>

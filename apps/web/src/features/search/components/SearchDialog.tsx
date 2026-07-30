@@ -227,7 +227,7 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
                             <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                               {result.breadcrumbs?.[0] || typeLabel(result.type)}
                             </span>
-                            <span className="text-muted-foreground/50 text-xs">•</span>
+                            <span className="text-muted-foreground text-xs">•</span>
                             <span className="text-muted-foreground text-xs">
                               {result.breadcrumbs?.[1] || result.category || 'General'}
                             </span>
@@ -268,7 +268,7 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
                 <span>{t('toClose')}</span>
               </div>
             </div>
-            <span className="text-muted-foreground/70">{t('poweredBy')}</span>
+            <span className="text-muted-foreground">{t('poweredBy')}</span>
           </div>
         </div>
       </DialogContent>

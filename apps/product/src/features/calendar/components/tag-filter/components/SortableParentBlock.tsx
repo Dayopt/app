@@ -187,7 +187,7 @@ export function SortableParentBlock({
             id={childContainerId(node.tag.id)}
             className={cn(
               'ml-4 space-y-1 rounded-lg border border-dashed border-transparent px-1 py-1',
-              activeDragId && canDropChildHere && 'bg-muted/30',
+              activeDragId && canDropChildHere && 'bg-state-dragged',
             )}
           >
             {!collapsed

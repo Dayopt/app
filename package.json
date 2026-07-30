@@ -27,7 +27,7 @@
     "lint:product": "pnpm --filter @dayopt/product lint",
     "lint:boundaries": "tsx scripts/boundaries/check.ts",
     "lint:boundaries:update": "tsx scripts/boundaries/check.ts --update",
-    "lint:tokens": "pnpm --filter @dayopt/product lint:tokens",
+    "lint:tokens": "tsx scripts/check-tokens.ts",
     "lint:fix": "pnpm --filter @dayopt/product lint:fix",
     "typecheck": "turbo run typecheck",
     "typecheck:product": "pnpm --filter @dayopt/product typecheck",

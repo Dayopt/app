@@ -100,7 +100,7 @@ export function RecordLaneCard({
         'text-foreground',
         'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
         isActive && 'ring-ring ring-2',
-        showDayDiffMarker && 'pr-7',
+        showDayDiffMarker && 'pr-8',
         interactive && 'cursor-pointer',
         className,
       )}

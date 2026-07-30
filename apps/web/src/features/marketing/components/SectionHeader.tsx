@@ -23,7 +23,7 @@ export function SectionHeader({
   return (
     <div className="mx-auto mb-12 text-center sm:mb-[80px]">
       {/* Badge */}
-      <div className={`mb-5 inline-flex items-center gap-2 ${color}`}>
+      <div className={`mb-4 inline-flex items-center gap-2 ${color}`}>
         <span className="flex size-6 items-center justify-center">{icon}</span>
         <span className="text-2xl font-medium">{label}</span>
       </div>

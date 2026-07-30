@@ -26,7 +26,7 @@ export function BarComparisonView({ rows }: BarComparisonViewProps) {
       ))}
       <div className="mt-2 flex justify-center gap-4">
         <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-          <span className="bg-primary/30 inline-block h-2 w-4 rounded-lg" />
+          <span className="bg-chart-1 inline-block h-2 w-4 rounded-lg" />
           {t('planned')}
         </span>
         <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
@@ -47,7 +47,7 @@ function ComparisonRow({ row, maxMinutes }: { row: BarComparisonRow; maxMinutes:
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
-        <span className="inline-flex items-center gap-1.5 text-sm">
+        <span className="inline-flex items-center gap-1 text-sm">
           <TagIcon icon={row.tagIcon ?? null} color={row.tagColor} size="sm" />
           <span className="text-foreground truncate">{row.tagName}</span>
         </span>
@@ -71,12 +71,12 @@ function Bar({
   variant: 'budget' | 'actual';
 }) {
   return (
-    <div className="mb-0.5 flex items-center gap-2">
+    <div className="mb-1 flex items-center gap-2">
       <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
         <div
           className={cn(
             'h-full rounded-full transition-all',
-            variant === 'budget' ? 'bg-primary/30' : 'bg-primary',
+            variant === 'budget' ? 'bg-chart-1' : 'bg-primary',
           )}
           style={{ width: `${Math.max(pct, 1)}%` }}
         />

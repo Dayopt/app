@@ -264,7 +264,7 @@ export function SortableTagItem({
             id={childContainerId(tag.id)}
             className={cn(
               'ml-4 h-4 rounded-lg border border-dashed border-transparent',
-              canAcceptChildren ? 'bg-muted/30' : 'hidden',
+              canAcceptChildren ? 'bg-state-dragged' : 'hidden',
             )}
           />
         ) : null}

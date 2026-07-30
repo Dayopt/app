@@ -128,7 +128,7 @@ export const faqMdxComponents: MDXComponents = createMDXComponents({
     return (
       <h2
         id={id}
-        className="border-border bg-container mt-10 flex items-baseline gap-3 rounded-lg border px-5 py-4 text-xl font-medium first:mt-0"
+        className="border-border bg-container mt-10 flex items-baseline gap-3 rounded-lg border px-4 py-4 text-xl font-medium first:mt-0"
       >
         <span className="text-primary flex-shrink-0 text-base font-medium tracking-wide">Q.</span>
         <span className="text-foreground">{props.children}</span>

@@ -18,7 +18,6 @@
     "start": "next start",
     "check": "pnpm typecheck && pnpm lint && pnpm test:run",
     "lint": "eslint . --max-warnings 0",
-    "lint:tokens": "tsx src/lib/styles/scripts/check-tokens.ts",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "lint:i18n": "tsx ../../scripts/check-i18n-integrity.ts",
