@@ -162,6 +162,22 @@ describe('plansToICal', () => {
       const ical = plansToICal([makeTimeblock({ id: 'e1', description: null })]);
       expect(ical).not.toContain('DESCRIPTION:');
     });
+
+    it('裸の CR を含む title は \\n として正規化される（生の \\r は出力に残らない）', () => {
+      const ical = plansToICal([makeTimeblock({ id: 'e1', title: 'line1\rline2' })]);
+      const summaryStart = ical.indexOf('SUMMARY:');
+      const summaryLine = ical.slice(summaryStart, ical.indexOf('\r\n', summaryStart));
+      expect(summaryLine).toBe('SUMMARY:line1\\nline2');
+      expect(summaryLine).not.toMatch(/\r/);
+    });
+
+    it('CRLF ペアを含む title も二重エスケープなしで \\n 1 個に正規化される', () => {
+      const ical = plansToICal([makeTimeblock({ id: 'e1', title: 'line1\r\nline2' })]);
+      const summaryStart = ical.indexOf('SUMMARY:');
+      const summaryLine = ical.slice(summaryStart, ical.indexOf('\r\n', summaryStart));
+      expect(summaryLine).toBe('SUMMARY:line1\\nline2');
+      expect(summaryLine).not.toMatch(/\r/);
+    });
   });
 
   describe('foldLine（75 オクテット折返）', () => {
