@@ -15,42 +15,6 @@
     border: 0;
   }
 
-  /* Responsive text */
-  .text-responsive-sm {
-    @apply text-sm sm:text-base;
-  }
-  .text-responsive-base {
-    @apply text-base sm:text-lg;
-  }
-  .text-responsive-lg {
-    @apply text-lg sm:text-xl;
-  }
-  .text-responsive-xl {
-    @apply text-xl sm:text-2xl;
-  }
-  .text-responsive-2xl {
-    @apply text-2xl sm:text-3xl;
-  }
-  .text-responsive-3xl {
-    @apply text-3xl sm:text-4xl lg:text-5xl;
-  }
-
-  /* 8px Grid spacing */
-  .space-responsive {
-    @apply space-y-4 sm:space-y-6 lg:space-y-8;
-  }
-  .gap-responsive {
-    @apply gap-4 sm:gap-6 lg:gap-8;
-  }
-  .p-responsive {
-    @apply p-4 sm:p-6 lg:p-8;
-  }
-
-  /* Touch targets */
-  .touch-target {
-    @apply flex min-h-[48px] min-w-[48px] items-center justify-center;
-  }
-
   /* Visibility */
   .mobile-only {
     @apply block sm:hidden;
