@@ -78,7 +78,6 @@
     "@hookform/resolvers": "^3.10.0",
     "@marsidev/react-turnstile": "^1.5.3",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@radix-ui/react-visually-hidden": "^1.2.8",
     "@sentry/nextjs": "^10.66.0",
     "@supabase/auth-js": "^2.110.7",
     "@supabase/ssr": "^0.12.3",
