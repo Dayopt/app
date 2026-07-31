@@ -76,7 +76,7 @@
  * 全体規則で animation-duration と transition-duration を潰し、
  * animation-iteration-count: 1 で無限ループも止める。個別クラスの列挙は不要。
  * 例外は「止めると中途半端な見た目で固まる」もので、その場合だけ
- * アプリ側で静的な代替を当てる（例: shimmer → 単色背景）。
+ * 静的な代替を当てる（例: shimmer → 単色背景。tokens/animations.css 内で定義）。
  * ============================================ */
 @media (prefers-reduced-motion: no-preference) {
   html {

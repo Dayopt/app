@@ -193,7 +193,9 @@ export const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     suggestion: 'duration-[420ms] → duration-300',
   },
   {
-    pattern: '(^|[^a-zA-Z-])ease-(in-out|in|out)([^a-zA-Z-]|$)',
+    // ease-linear は CSS キーワード直付けの組み込み utility で theme reset の
+    // 影響外（--ease-* を参照しない）。lint だけが防波堤なのでここで検出する
+    pattern: '(^|[^a-zA-Z-])ease-(in-out|in|out|linear)([^a-zA-Z-]|$)',
     message:
       '生の easing は禁止。ease-standard（その場で変わる）/ ease-settle（入る・着地する）を使用',
     suggestion: 'ease-out → ease-settle, ease-in-out → ease-standard, ease-in → ease-standard',
