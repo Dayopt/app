@@ -28,8 +28,8 @@ const STATIC_ASSETS = [
   '/offline',
   '/manifest.json',
   '/favicon.ico',
-  '/icon-192.png',
-  '/icon-512.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
 ];
 
 // キャッシュ対象のパターン
@@ -58,7 +58,18 @@ self.addEventListener('install', (event) => {
       .open(STATIC_CACHE_NAME)
       .then((cache) => {
         swLog('[SW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        // addAll は 1 つでも 404 だと全体が reject し、install が完了しない。
+        // すると skipWaiting に到達せず activate の旧キャッシュ削除も走らないため、
+        // precache の URL が 1 つ腐っただけで SW 全体が永久に更新されなくなる
+        // （実際 /icon-192.png の path 誤りで長期間この状態だった）。
+        // precache は best-effort とし、個別の失敗は握って install を通す。
+        return Promise.all(
+          STATIC_ASSETS.map((asset) =>
+            cache.add(asset).catch((error) => {
+              swLog('[SW] Failed to precache:', asset, error);
+            }),
+          ),
+        );
       })
       .then(() => self.skipWaiting()),
   );

@@ -6,6 +6,7 @@
 
 ZERO=0000000000000000000000000000000000000000
 HAS_BRANCH_UPDATE=0
+PUSHED_SHAS=''
 
 while read -r _local_ref local_sha remote_ref _remote_sha; do
   # main への直接 push を禁止する。マージは PR + pnpm branch:finish 経由に限定する。
@@ -20,7 +21,14 @@ while read -r _local_ref local_sha remote_ref _remote_sha; do
   # branch:finish の掃除 push を巻き込まないため）
   case "$remote_ref" in
     refs/heads/*)
-      [ "$local_sha" != "$ZERO" ] && HAS_BRANCH_UPDATE=1
+      if [ "$local_sha" != "$ZERO" ]; then
+        HAS_BRANCH_UPDATE=1
+        # marker の鍵は「実際に push される ref の集合」から作る。HEAD を使うと、
+        # checkout していない branch の push や複数 ref の push で鍵がずれ、
+        # 別の commit set が pause を素通りする（あるいは誤った鍵で 1 回止まる）
+        PUSHED_SHAS="$PUSHED_SHAS$remote_ref $local_sha
+"
+      fi
       ;;
   esac
 done
@@ -32,10 +40,10 @@ done
 # .claude/rules/workflow.md §push 前の敵対的セルフレビュー。
 # 検証は /gardening のステップ 5。項目を 1 つ足すときは 1 つ削る。
 if [ "$HAS_BRANCH_UPDATE" = "1" ]; then
-  HEAD_SHA=$(git rev-parse HEAD 2>/dev/null || echo unknown)
+  PUSH_KEY=$(printf '%s' "$PUSHED_SHAS" | git hash-object --stdin 2>/dev/null || echo unknown)
   MARKER_DIR="$(git rev-parse --git-dir 2>/dev/null || echo .git)/dayopt-push-confirm"
-  if [ ! -f "$MARKER_DIR/$HEAD_SHA" ]; then
-    mkdir -p "$MARKER_DIR" && : > "$MARKER_DIR/$HEAD_SHA"
+  if [ ! -f "$MARKER_DIR/$PUSH_KEY" ]; then
+    mkdir -p "$MARKER_DIR" && : > "$MARKER_DIR/$PUSH_KEY"
     find "$MARKER_DIR" -type f -mtime +30 -delete 2>/dev/null
     cat >&2 <<'CONFIRM'
 PAUSE: push 前の確認（この commit set では初回。4 点に答えてから再実行する。
