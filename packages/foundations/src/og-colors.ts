@@ -55,3 +55,26 @@ export const OG_COLORS = {
   /** 面の区切り線 */
   border: 'rgba(255,255,255,0.12)',
 } as const;
+
+/**
+ * PWA / ブラウザ UI 用カラー定数
+ *
+ * manifest の theme_color / background_color と meta theme-color 系は
+ * CSS 変数を参照できないため、デザイントークンを hex に換算して定義する。
+ *
+ * hex は必ず oklch から換算した実値を書く（近似で書かない）。
+ * トークンを変えたらここも換算し直す。
+ *
+ * **手動ミラー箇所（静的 JSON なので import 不可。値変更時はここと同期する）:**
+ * - `apps/product/public/manifest.json`
+ * - `apps/web/public/manifest.json`
+ *
+ * @see ./tokens/colors.css
+ */
+export const PWA_COLORS = {
+  /** ブランドPrimary（--primary light: oklch(0.4 0.105 259.8145)） */
+  themeColor: '#23467f',
+
+  /** ページ背景（--background light: oklch(0.97 0.005 75)） */
+  backgroundColor: '#f7f5f1',
+} as const;
