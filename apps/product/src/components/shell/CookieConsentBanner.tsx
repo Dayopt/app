@@ -72,7 +72,7 @@ export function CookieConsentBanner() {
 
   return (
     <div
-      className="border-border bg-card shadow-card fixed inset-x-0 bottom-0 z-50 border-t p-4 backdrop-blur-sm sm:p-6"
+      className="border-border-subtle bg-card shadow-card fixed inset-x-0 bottom-0 z-50 border-t p-4 backdrop-blur-sm sm:p-6"
       role="dialog"
       aria-labelledby="cookie-consent-title"
       aria-describedby="cookie-consent-description"

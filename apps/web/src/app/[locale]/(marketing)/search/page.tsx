@@ -188,7 +188,10 @@ function SearchResults() {
             {isLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="border-border bg-card rounded-lg border p-6 shadow-sm">
+                  <div
+                    key={i}
+                    className="border-border-subtle bg-card rounded-lg border p-6 shadow-sm"
+                  >
                     <div className="animate-shimmer mb-4 h-4 w-3/4 rounded-lg"></div>
                     <div className="animate-shimmer mb-2 h-3 w-full rounded-lg"></div>
                     <div className="animate-shimmer h-3 w-2/3 rounded-lg"></div>
@@ -200,7 +203,7 @@ function SearchResults() {
                 {filteredResults.map((result) => (
                   <div
                     key={result.id}
-                    className="border-border bg-card hover:shadow-card rounded-lg border p-6 shadow-sm transition-shadow"
+                    className="border-border-subtle bg-card hover:shadow-card rounded-lg border p-6 shadow-sm transition-shadow"
                   >
                     <div className="mb-4 flex items-start gap-4">
                       {getTypeIcon(result.type)}

@@ -92,7 +92,7 @@ export default async function OSSCreditsPage({ params }: PageProps) {
       {!loadError && (
         <div className="mb-8">
           <h2 className="mb-4 text-xl font-medium">{t('ossCredits.licenseDistribution')}</h2>
-          <div className="bg-card border-border grid grid-cols-2 gap-4 rounded-2xl border p-6 shadow-sm md:grid-cols-4">
+          <div className="bg-card border-border-subtle grid grid-cols-2 gap-4 rounded-2xl border p-6 shadow-sm md:grid-cols-4">
             {Object.entries(licenseStats)
               .sort(([, a], [, b]) => b - a)
               .slice(0, 8)
@@ -116,7 +116,7 @@ export default async function OSSCreditsPage({ params }: PageProps) {
             {credits.map((credit) => (
               <div
                 key={`${credit.name}-${credit.version}`}
-                className="bg-card border-border hover:border-primary rounded-2xl border p-6 shadow-sm transition-colors"
+                className="bg-card border-border-subtle hover:border-primary rounded-2xl border p-6 shadow-sm transition-colors"
               >
                 <div className="mb-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <h3 className="text-foreground text-lg font-medium">

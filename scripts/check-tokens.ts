@@ -21,6 +21,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 import {
+  ALLOW_MARKER,
   FORBIDDEN_PATTERNS,
   SCAN_TARGETS,
   findRuleViolations,
@@ -151,12 +152,14 @@ for (const rule of FORBIDDEN_PATTERNS) {
   }
 }
 
-// ─── 共起チェック（warn）: bg-card と素の border-border の併用（Elevation の border 表記） ───
+// ─── 共起チェック: bg-card と素の border-border の併用（Elevation の border 表記） ───
 //
 // Elevation の面（bg-card）の輪郭線は border-border-subtle が正で、
 // 素の border-border（後続に `-` が続かない形）との共起は濃い輪郭の名残り。
 // shadow 共起チェックと同じ ±2 行の窓方式・同じ行単位の除外規則で検出する。
-// border を持たない bg-card は対象外。全件解消（W5）までは warnOnly。
+// border を持たない bg-card は対象外。
+// 面ではない共起（ドラッグ枠、Button outline 系のボタン風要素）は現場の
+// ALLOW_MARKER コメントで理由付きで外す。全 16 件を解消して error へ昇格（2026-07-31）。
 {
   const violations: string[] = [];
   // 素の border-border のみ。border-border-subtle 等の派生トークンは正当
@@ -182,12 +185,16 @@ for (const rule of FORBIDDEN_PATTERNS) {
 
     if (!bareBorderBorder.test(window)) continue;
 
+    // 意図して書く注記なので、shadow 共起の elevation-exempt と同じ広さの窓で見る
+    const allowWindow = all.slice(Math.max(0, idx - 5), idx + 3).join('\n');
+    if (allowWindow.includes(ALLOW_MARKER)) continue;
+
     violations.push(line);
   }
 
   if (violations.length > 0) {
-    hasWarnings = true;
-    console.log('⚠️  [warn] bg-card に素の border-border が併用されている（Elevation ルール）');
+    hasViolations = true;
+    console.log('❌ bg-card に素の border-border が併用されている（Elevation ルール違反）');
     console.log('   修正例: bg-card の輪郭線は border-border-subtle を使用');
     console.log(`   該当箇所（${violations.length} 件）:`);
     for (const v of violations) {
