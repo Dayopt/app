@@ -240,5 +240,5 @@ react-hook-form + Zod + Field コンポーネント。
 | ドロップ拒否 | 200ms ease-out スナップバック            | GhostRenderer 内蔵                                                                           |
 
 - カーソル: 通常 `cursor-grab`、ドラッグ中 `cursor-grabbing`（`document.body` に直接設定）
-- z-index: `z-calendar-drag` (1000)
+- z-index: ゴーストは `9999`（`z-tooltip` 層）。`createPortal` + `position: fixed` で body 直下に描画され、ドラッグ中も開いたままの Inspector / Overlay（1050〜1400）を越える必要があるため。`z-calendar-drag` (1000) に下げると Inspector の裏へ消える
 - 過去ブロックへのドラッグは UI + ロジックの二重拒否（`temporal-constraints.md` 参照）
