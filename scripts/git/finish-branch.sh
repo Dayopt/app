@@ -270,12 +270,17 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   #
   # sha を渡して check gate 通過後の push を弾く（`gh pr merge --match-head-commit` 相当）。
   # 渡さないと、gate を見てからマージするまでの間に積まれた未検証 commit ごとマージしうる。
+  # dry-run の表示と実行を同じ配列から作る。手書きで二重に持つと、実行側から
+  # `sha=` が落ちても dry-run 側が残っている限り test が pass してしまう。
+  MERGE_ARGS=(-X PUT "repos/{owner}/{repo}/pulls/$PR_NUMBER/merge"
+    -f merge_method=merge -f "sha=$HEAD_SHA")
+  DELETE_REF_ARGS=(-X DELETE "repos/{owner}/{repo}/git/refs/heads/$BRANCH")
+
   if [[ "$DRY_RUN" == true ]]; then
-    echo "   [dry-run] gh api -X PUT repos/{owner}/{repo}/pulls/$PR_NUMBER/merge -f merge_method=merge -f sha=$HEAD_SHA" >&2
-    echo "   [dry-run] gh api -X DELETE repos/{owner}/{repo}/git/refs/heads/$BRANCH" >&2
+    echo "   [dry-run] gh api ${MERGE_ARGS[*]}" >&2
+    echo "   [dry-run] gh api ${DELETE_REF_ARGS[*]}" >&2
   else
-    if ! gh api -X PUT "repos/{owner}/{repo}/pulls/$PR_NUMBER/merge" \
-      -f merge_method=merge -f "sha=$HEAD_SHA" >/dev/null; then
+    if ! gh api "${MERGE_ARGS[@]}" >/dev/null; then
       error "PR #$PR_NUMBER のマージに失敗しました。"
       error "gh pr view $PR_NUMBER で状態を確認してください（head が更新された可能性があります）。"
       exit 1
@@ -284,7 +289,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     # repo 設定は deleteBranchOnMerge: true だが、設定変更で掃除が静かに止まらないよう
     # 明示的にも削除する。既に消えていれば 422 になるので失敗は無視してよい
     # （残存した場合は step 8 が fetch --prune 後に検証する）。
-    gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/$BRANCH" >/dev/null 2>&1 || true
+    gh api "${DELETE_REF_ARGS[@]}" >/dev/null 2>&1 || true
   fi
 else
   info "PR は既にクローズ済みのためマージ手順はスキップします。"
