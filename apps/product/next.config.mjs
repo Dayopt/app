@@ -129,13 +129,18 @@ const nextConfig = {
           },
         ],
       },
-      // アイコン・マニフェスト等の静的アセット（1年キャッシュ）
+      // アイコン・マニフェスト（1日キャッシュ + 再検証）
+      //
+      // immutable にしない。immutable が正しいのは内容ハッシュを URL に持つ
+      // アセット（上の _next/static）だけで、これらは URL が固定のまま中身が
+      // 変わりうる。ブランド変更でアイコンのバイト列と manifest の色を差し替えた
+      // 時（#1757）、immutable だと既存訪問者に最大 1 年間旧ブランドが残る。
       {
         source: '/:path(icons/icon-*.png|icons/apple-touch-icon.png|manifest.json)',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: 'public, max-age=86400, must-revalidate',
           },
         ],
       },

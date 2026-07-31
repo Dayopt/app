@@ -14,7 +14,10 @@ const __SW_DEBUG__ = typeof location !== 'undefined' && location.hostname === 'l
 const swLog = __SW_DEBUG__ ? console.log.bind(console) : () => {};
 
 // キャッシュバージョン: 破壊的変更時のみインクリメント
-const CACHE_VERSION = '3';
+// 4: primary を紺へ変更しアイコン / splash / manifest を作り直した（#1757）。
+//    STATIC_ASSETS に manifest.json とアイコンが含まれるため、上げないと
+//    既存インストールに旧ブランドが残り続ける
+const CACHE_VERSION = '4';
 const CACHE_NAME = `dayopt-v${CACHE_VERSION}`;
 const STATIC_CACHE_NAME = `dayopt-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE_NAME = `dayopt-dynamic-v${CACHE_VERSION}`;
