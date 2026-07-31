@@ -90,11 +90,11 @@ export const DesignSystem: Story = {
     ] as const;
 
     const dontRules = [
-      'bg-red-500 text-white のような直接指定',
+      'bg-red-500 text-white のような直接指定', // lint-tokens-allow: 禁止例の提示
       '意味なく画面をカラフルにする',
       'accent 色をセクション全体の背景に使う',
       'dark:bg-[oklch(...)] と値を直接書く',
-      'z-[200] のような任意値',
+      'z-[200] のような任意値', // lint-tokens-allow: 禁止例の提示
     ] as const;
 
     return (

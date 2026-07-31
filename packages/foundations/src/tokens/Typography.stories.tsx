@@ -501,11 +501,22 @@ export const DosDonts: Story = {
             <div className="border-destructive space-y-2 border-l-4 pl-4">
               <h3 className="text-destructive font-medium">Don&apos;t</h3>
               <div className="space-y-2">
-                <p className="font-black">font-black</p>
-                <p className="font-extrabold">font-extrabold</p>
-                <p className="font-medium">font-medium</p>
-                <p className="font-medium">font-medium</p>
-                <p className="font-light">font-light</p>
+                {/*
+                 * 禁止ウェイトの見本。--font-weight-* を theme で reset しているため
+                 * 禁止ウェイトの Tailwind クラスは CSS を生成せず全行同じ太さに
+                 * なる。見本としての太さの違いは inline style で描画する。
+                 */}
+                {[
+                  { label: 'font-black', weight: 900 }, // lint-tokens-allow: 禁止例の提示
+                  { label: 'font-extrabold', weight: 800 }, // lint-tokens-allow: 禁止例の提示
+                  { label: 'font-bold', weight: 700 }, // lint-tokens-allow: 禁止例の提示
+                  { label: 'font-semibold', weight: 600 }, // lint-tokens-allow: 禁止例の提示
+                  { label: 'font-light', weight: 300 }, // lint-tokens-allow: 禁止例の提示
+                ].map(({ label, weight }) => (
+                  <p key={label} style={{ fontWeight: weight }}>
+                    {label}（{weight}）
+                  </p>
+                ))}
               </div>
             </div>
           </div>
@@ -528,6 +539,7 @@ export const DosDonts: Story = {
             <div className="border-destructive space-y-2 border-l-4 pl-4">
               <h3 className="text-destructive font-medium">Don&apos;t</h3>
               <div className="space-y-2">
+                {/* lint-tokens-allow: 禁止例の提示（文言として言及するだけで実クラスではない） */}
                 <p className="text-muted-foreground">text-gray-600（直接色指定）</p>
                 <p className="text-muted-foreground">
                   text-muted-foreground（透明度の代わりにセマンティックトークン）

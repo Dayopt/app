@@ -26,7 +26,7 @@ export async function HowSection({ locale }: HowSectionProps) {
   const t = await getTranslations({ locale, namespace: 'marketing' });
 
   return (
-    <section id="how" className="pt-20 pb-24 sm:pt-[140px] sm:pb-32">
+    <section id="how" className="pt-20 pb-24 sm:pt-36 sm:pb-32">
       <Container>
         <SectionHeader
           icon={

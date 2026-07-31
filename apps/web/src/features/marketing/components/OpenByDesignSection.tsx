@@ -25,7 +25,7 @@ export async function OpenByDesignSection({ locale }: OpenByDesignSectionProps) 
   const t = await getTranslations({ locale, namespace: 'marketing' });
 
   return (
-    <section className="pt-20 pb-24 sm:pt-[140px] sm:pb-32">
+    <section className="pt-20 pb-24 sm:pt-36 sm:pb-32">
       <Container>
         <SectionHeader
           icon={

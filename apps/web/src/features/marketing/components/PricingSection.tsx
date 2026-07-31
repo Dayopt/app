@@ -29,7 +29,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
   const proHighlights = t.raw('pricing.plans.pro.highlights') as string[];
 
   return (
-    <section id="pricing" className="pt-20 pb-24 sm:pt-[140px] sm:pb-32">
+    <section id="pricing" className="pt-20 pb-24 sm:pt-36 sm:pb-32">
       <Container>
         <SectionHeader
           icon={

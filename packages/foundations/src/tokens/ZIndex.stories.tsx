@@ -211,6 +211,7 @@ export const UsageGuide: Story = {
               など
             </li>
             <li>
+              {/* lint-tokens-allow: 禁止例の提示 */}
               <strong>任意値は避ける</strong>: <code>z-[200]</code> ではなく <code>z-modal</code>
             </li>
             <li>

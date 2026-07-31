@@ -193,6 +193,7 @@ data-[state=closed]:animate-out`}
             />
           </div>
           <p className="text-muted-foreground mt-4 text-xs">
+            {/* lint-tokens-allow: 「直書きしない」という注意書き自体での言及 */}
             退出も standard を使う。exit 専用の easing は持たない。<code>cubic-bezier</code>{' '}
             をコード側に直書きしない。
           </p>
@@ -294,7 +295,7 @@ function TransitionDemo({
       <div className="text-sm font-medium">{name}</div>
       <button
         type="button"
-        className={`bg-primary text-primary-foreground hover:bg-primary/80 flex h-12 w-full items-center justify-center rounded-lg text-xs font-medium ${className}`}
+        className={`bg-primary text-primary-foreground hover:bg-primary-hover flex h-12 w-full items-center justify-center rounded-lg text-xs font-medium ${className}`}
       >
         hover me
       </button>
@@ -346,7 +347,7 @@ function EasingDemo({
       <div className="text-sm font-medium">{label}</div>
       <div className="bg-muted relative h-12 overflow-hidden rounded-lg">
         <div
-          className={`bg-primary absolute top-1 bottom-1 left-1 rounded-lg transition-transform duration-500 ${easing} ${active ? 'translate-x-[calc(100%-3rem)]' : ''}`}
+          className={`bg-primary absolute top-1 bottom-1 left-1 rounded-lg transition-transform duration-300 ${easing} ${active ? 'translate-x-[calc(100%-3rem)]' : ''}`}
           style={{ width: '2.5rem' }}
         />
       </div>

@@ -21,7 +21,7 @@ export function SectionHeader({
   subtitle,
 }: SectionHeaderProps) {
   return (
-    <div className="mx-auto mb-12 text-center sm:mb-[80px]">
+    <div className="mx-auto mb-12 text-center sm:mb-20">
       {/* Badge */}
       <div className={`mb-4 inline-flex items-center gap-2 ${color}`}>
         <span className="flex size-6 items-center justify-center">{icon}</span>

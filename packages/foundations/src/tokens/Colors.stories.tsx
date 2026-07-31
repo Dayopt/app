@@ -878,14 +878,19 @@ export const Text: Story = {
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
               <p className="text-destructive font-medium">Don&apos;t</p>
-              <pre className="text-muted-foreground text-xs leading-relaxed">{`// ❌ 直接カラー
-<h1 className="text-gray-900">見出し</h1>
-
-// ❌ opacity で階層を作る
-<p className="text-foreground opacity-50">説明</p>
-
-// ❌ 意味なく semantic を使う
-<p className="text-success">普通のテキスト</p>`}</pre>
+              {/* 表示テキストにマーカーを混ぜないため、禁止例の行だけ配列へ出して行単位で許可する */}
+              <pre className="text-muted-foreground text-xs leading-relaxed">
+                {[
+                  '// ❌ 直接カラー',
+                  '<h1 className="text-gray-900">見出し</h1>', // lint-tokens-allow: 禁止例の提示
+                  '',
+                  '// ❌ opacity で階層を作る',
+                  '<p className="text-foreground opacity-50">説明</p>',
+                  '',
+                  '// ❌ 意味なく semantic を使う',
+                  '<p className="text-success">普通のテキスト</p>',
+                ].join('\n')}
+              </pre>
             </div>
           </div>
         </div>
@@ -1015,7 +1020,7 @@ export const DosDonts: Story = {
       {
         title: '1. セマンティックトークンを使う',
         doCode: 'bg-destructive text-destructive-foreground',
-        dontCode: 'bg-red-500 text-white',
+        dontCode: 'bg-red-500 text-white', // lint-tokens-allow: 禁止例の提示
         reason:
           'oklch の値を直接書かない。トークン経由で使う。直接指定するとダークモード切替、将来の色調整が全部壊れる。',
       },
