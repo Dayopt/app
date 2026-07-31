@@ -127,7 +127,7 @@ container(沈む) → background(基準) → card(浮く)。**Light は「紙」
 | `bg-primary`              | `oklch(0.40 0.105 H)` | `oklch(0.55 0.13 H)` | 主要アクションの背景 |
 | `text-primary-foreground` | `oklch(1 0 0)`        | `oklch(1 0 0)`       | Primary 上のテキスト |
 
-H = `--hue-brand` (259.8145)。`ring` と `heatmap-scale-*` は primary 派生で自動追従する。
+H = `--hue-brand` (259.8145)。`ring` は primary 派生で自動追従する。
 
 > Primary = 「ユーザーアクションを促す要素」にのみ使用する。
 > ✅ CTA ボタン、リンク、フォーカスリング
@@ -296,7 +296,7 @@ hover:bg-state-hover
 
 | ボタン種別        | クラス                                              |
 | ----------------- | --------------------------------------------------- |
-| Primary Ghost     | `text-primary hover:bg-primary-state-hover`         |
+| Primary Ghost     | `text-primary hover:bg-state-hover`                 |
 | Destructive Ghost | `text-destructive hover:bg-destructive-state-hover` |
 
 ### フォーカスリング（MD3 スタイル）

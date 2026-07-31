@@ -20,11 +20,9 @@
   --color-overlay: var(--overlay);
   --color-entry-default: var(--entry-default);
 
-  /* Popover / Tooltip */
+  /* Popover */
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --color-tooltip: var(--tooltip);
-  --color-tooltip-foreground: var(--tooltip-foreground);
 
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -67,12 +65,6 @@
   --color-chart-destructive: var(--destructive);
   --color-chart-info: var(--info);
   --color-chart-muted: var(--muted-foreground);
-
-  /* Heatmap Scale（primary α段階 — SVG/セル背景用） */
-  --color-heatmap-scale-1: var(--heatmap-scale-1);
-  --color-heatmap-scale-2: var(--heatmap-scale-2);
-  --color-heatmap-scale-3: var(--heatmap-scale-3);
-  --color-heatmap-scale-4: var(--heatmap-scale-4);
 
   /* ============================================
    * Shadow トークン（3段のみ）
@@ -122,17 +114,6 @@
   --color-now-indicator: var(--now-indicator);
   --color-now-indicator-foreground: var(--now-indicator-foreground);
   --color-now-indicator-muted: var(--now-indicator-muted);
-
-  /* Badge — Rank */
-  --color-badge-bronze: var(--badge-bronze);
-  --color-badge-silver: var(--badge-silver);
-  --color-badge-gold: var(--badge-gold);
-
-  /* Badge — Category */
-  --color-badge-growth: var(--badge-growth);
-  --color-badge-exploration: var(--badge-exploration);
-  --color-badge-pattern: var(--badge-pattern);
-  --color-badge-loyalty: var(--badge-loyalty);
 }
 
 /* ============================================
