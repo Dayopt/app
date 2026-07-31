@@ -1,7 +1,6 @@
-import { Toaster } from '@dayopt/components';
+import { cn, Toaster } from '@dayopt/components';
 import { dayoptBrand, dayoptContact } from '@dayopt/config';
 import { generateEnhancedMetadata, StructuredData } from '@web/components/seo/EnhancedSEO';
-import { cn } from '@web/lib/class-names';
 import { ThemeProvider } from '@web/shell/providers/theme-provider';
 import type { Metadata } from 'next';
 import { Noto_Sans_JP, Source_Sans_3 } from 'next/font/google';

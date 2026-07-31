@@ -1,5 +1,4 @@
-import { Skeleton } from '@dayopt/components';
-import { cn } from '@web/lib/class-names';
+import { cn, Skeleton } from '@dayopt/components';
 
 interface BlogSkeletonProps {
   className?: string;
