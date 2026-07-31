@@ -206,16 +206,19 @@ data-[state=closed]:animate-out`}
             motion-reduce対応で、ユーザー設定に応じてアニメーションを無効化
           </p>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-xs">
-            {`// motion-reduceでアニメーション無効化
-className="animate-in fade-in motion-reduce:animate-none"
+            {`// 個別の打ち消しは基本不要。tokens/motion.css の全体規則が
+// animation-duration / transition-duration / iteration-count を潰す
+*, *::before, *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
 
-// reduced-motion.cssで自動適用済み
-.animate-in,
-.animate-out,
+// 例外は「止めると中途半端な見た目で固まる」もの。
+// shimmer は tokens/animations.css が単色へ置換する
 .animate-shimmer {
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
+  animation: none !important;
+  background: var(--container) !important;
 }`}
           </pre>
         </section>
