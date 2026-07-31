@@ -6,6 +6,8 @@ import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext } from '@dnd-kit/sortable';
 
+import { cn, overlaySurface } from '@dayopt/components';
+
 import type { Tag, TagTreeNode } from '@/features/tags';
 import {
   TagIcon,
@@ -191,7 +193,7 @@ export function TagFlatList({
 
       <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
         {activeTreeTag ? (
-          <div className="bg-card text-foreground border-border-subtle shadow-card inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-sm">
+          <div className={cn(overlaySurface(), 'inline-flex items-center gap-2 px-2 py-1 text-sm')}>
             <TagIcon
               icon={activeTreeTag.tag.icon}
               color={resolveTagColor(activeTreeTag.tag.color)}

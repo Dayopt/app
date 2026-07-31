@@ -141,4 +141,5 @@ export { ScrollArea, ScrollBar } from './layout/scroll-area';
 export { Separator } from './layout/separator';
 
 // utilities
+export { overlaySurface, type OverlaySurfaceVariants } from './utilities/surface';
 export { VisuallyHidden, type VisuallyHiddenProps } from './utilities/visually-hidden';
