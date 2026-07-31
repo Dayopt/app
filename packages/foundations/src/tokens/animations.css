@@ -1,0 +1,38 @@
+/* ============================================
+ * 共有アニメーション
+ *
+ * なぜ foundations に置くか: `packages/components/src/feedback/skeleton.tsx`
+ * （共有 Skeleton）が `.animate-shimmer` を使うため、クラス定義も
+ * product / web で共有する必要がある。以前は両アプリの CSS に同じ
+ * keyframes が二重定義され、light の中間色（--overlay / --muted）まで
+ * 食い違っていた。ここに一本化する。
+ *
+ * .animate-shimmer は light / dark 共通の 1 規則。--container / --card は
+ * theme で切り替わるため .dark 上書きは作らない。
+ *
+ * prefers-reduced-motion の代替もここに持つ。無いと motion.css の全体規則
+ * （duration 0.01ms）でグラデーションの途中に固まるため、単色に置換する。
+ * ============================================ */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--container) 0%, var(--card) 50%, var(--container) 100%);
+  background-size: 200% 100%;
+  animation: shimmer var(--motion-loop-shimmer) var(--motion-ease-standard) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Shimmer は止めるとグラデーションの途中で固まるので単色に置換する */
+  .animate-shimmer {
+    animation: none !important;
+    background: var(--container) !important;
+  }
+}

@@ -115,31 +115,3 @@
 .hero-carousel-scroll::-webkit-scrollbar {
   display: none;
 }
-
-/* ============================================
- * ローディング表示
- *
- * shimmer だけ残す。これは装飾ではなく「読み込み中」という状態表示。
- * shake は apps/web では未使用だったので削除した。
- * ============================================ */
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.animate-shimmer {
-  background: linear-gradient(90deg, var(--container) 0%, var(--muted) 50%, var(--container) 100%);
-  background-size: 200% 100%;
-  animation: shimmer var(--motion-loop-shimmer) var(--motion-ease-standard) infinite;
-}
-
-.dark .animate-shimmer {
-  background: linear-gradient(90deg, var(--container) 0%, var(--card) 50%, var(--container) 100%);
-  background-size: 200% 100%;
-  animation: shimmer var(--motion-loop-shimmer) var(--motion-ease-standard) infinite;
-}

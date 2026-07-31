@@ -13,12 +13,6 @@
  * ============================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  /* Shimmer は止めるとグラデーションの途中で固まるので単色に置換する */
-  .animate-shimmer {
-    animation: none !important;
-    background: var(--container) !important;
-  }
-
   /* フェード・スライドは止めると透明のまま残りうるので可視に固定する */
   .animate-in,
   .animate-out,
