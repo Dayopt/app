@@ -272,8 +272,9 @@ gh pr merge <PR番号> --merge --delete-branch
 
 理由:
 
-- `pnpm branch:finish` は main checkout で `git checkout main` → `git pull --ff-only` を無条件に実行する（`scripts/git/finish-branch.sh`）。指揮台が feature branch や未コミット差分で占有されていると、**並行セッションの merge と掃除が詰まる**か、他作業の差分を main へ持ち越す
-- §マージ手順 に書いた「main が他 worktree で checkout 中だと `gh pr merge` が失敗する」も同じ衝突の別の顔。指揮台を main に固定すればどちらも起きない
+- 指揮台が main にあると、`pnpm branch:finish` の main 最新化がその場の `git pull --ff-only` で済み、**指揮台の作業ツリーが常に最新に保たれる**（§Worktree 運用 手順 4）。feature branch を checkout 中でもローカル main の ref は更新されるため script は止まらないが、指揮台のファイルは古いまま取り残される
+- 指揮台に未コミット差分を溜めなければ、その ff pull が失敗しない。失敗しても script は続行するため気づかないまま指揮台だけが古くなる
+- 手作業で `gh pr merge --delete-branch` を使う場合、削除対象 branch を checkout している worktree が main へ切り替えられる（§マージ手順）。指揮台を main に固定し、マージを指揮台から行えばこれを踏まない
 - 「生きている作業 = `git worktree list` = open PR 一覧」が常に一致し、どれが進行中かを判別する手間が消える
 
 この規律の副作用として、**「いつ worktree を使うか」を毎回判断する必要がなくなる**。コードを変えるなら常に worktree、変えないなら指揮台、の二択に畳める。
