@@ -1,0 +1,50 @@
+export type CalendarCallbackError =
+  | 'access_denied'
+  | 'account_mismatch'
+  | 'pro_required'
+  | 'rate_limited'
+  | 'reconnect_target_invalid'
+  | 'unavailable'
+  | 'generic';
+
+type CalendarCallbackResult =
+  { type: 'connected' } | { type: 'error'; error: CalendarCallbackError };
+
+type SearchParamsReader = Pick<URLSearchParams, 'get'>;
+
+const CALLBACK_ERROR_GROUPS: Readonly<Record<string, CalendarCallbackError>> = {
+  access_denied: 'access_denied',
+  account_mismatch: 'account_mismatch',
+  pro_required: 'pro_required',
+  rate_limited: 'rate_limited',
+  reconnect_target_invalid: 'reconnect_target_invalid',
+  unsupported_environment: 'unavailable',
+  token_endpoint_unreachable: 'unavailable',
+  token_exchange_rejected: 'unavailable',
+};
+
+/**
+ * OAuth callback の query を、UI に表示してよい固定コードだけへ畳み込む。
+ * provider 由来や未知の reason をそのまま表示しない。
+ */
+export function parseCalendarCallbackResult(
+  searchParams: SearchParamsReader,
+): CalendarCallbackResult | null {
+  const calendar = searchParams.get('calendar');
+  if (calendar === 'connected') return { type: 'connected' };
+  if (calendar !== 'error') return null;
+
+  const reason = searchParams.get('reason');
+  return {
+    type: 'error',
+    error: reason ? (CALLBACK_ERROR_GROUPS[reason] ?? 'generic') : 'generic',
+  };
+}
+
+/** OAuth callback 専用の query だけを除き、returnTo など他の query は保持する。 */
+export function removeCalendarCallbackParams(searchParams: URLSearchParams): URLSearchParams {
+  const next = new URLSearchParams(searchParams);
+  next.delete('calendar');
+  next.delete('reason');
+  return next;
+}

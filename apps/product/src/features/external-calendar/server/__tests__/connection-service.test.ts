@@ -44,9 +44,11 @@ vi.mock('@/lib/logger', () => ({
 
 import {
   disconnect,
+  getReconnectTarget,
   getSyncStatus,
   listConnections,
   listProviderCalendars,
+  reconnectExistingConnection,
   updateSelectedCalendars,
 } from '../connection-service';
 
@@ -57,6 +59,8 @@ type Recorder = { table: string; chain: Array<{ method: string; args: unknown[] 
 
 type Config = {
   connection?: { data_generation?: number; status: string; refresh_token_enc: string } | null;
+  reconnectTarget?: { id: string; provider_account_id: string } | null;
+  reconnectUpdate?: { id: string } | null;
   childRows?: Array<{ provider_calendar_id: string }>;
 };
 
@@ -66,7 +70,15 @@ function setupServiceRoleDb(config: Config) {
   function resolve(recorder: Recorder): { data: unknown; error: unknown } {
     const methods = recorder.chain.map((entry) => entry.method);
     if (recorder.table === 'calendar_connections') {
-      if (methods.includes('maybeSingle')) return { data: config.connection ?? null, error: null };
+      if (methods.includes('maybeSingle')) {
+        if (methods.includes('update'))
+          return { data: config.reconnectUpdate ?? null, error: null };
+        const select = recorder.chain.find((entry) => entry.method === 'select')?.args[0];
+        if (select === 'id, provider_account_id') {
+          return { data: config.reconnectTarget ?? null, error: null };
+        }
+        return { data: config.connection ?? null, error: null };
+      }
       return { data: null, error: null }; // update / delete
     }
     if (recorder.table === 'calendar_connection_calendars') {
@@ -167,6 +179,84 @@ describe('getSyncStatus', () => {
     await expect(getSyncStatus(supabase, USER_ID, CONNECTION_ID)).rejects.toMatchObject({
       code: 'CONNECTION_NOT_FOUND',
     });
+  });
+});
+
+describe('reconnect contract', () => {
+  it('対象読取を id / user / provider / reauth_required で限定する', async () => {
+    const { calls } = setupServiceRoleDb({
+      reconnectTarget: { id: CONNECTION_ID, provider_account_id: 'google-sub-123' },
+    });
+
+    await expect(getReconnectTarget(USER_ID, CONNECTION_ID)).resolves.toEqual({
+      id: CONNECTION_ID,
+      providerAccountId: 'google-sub-123',
+    });
+
+    const query = findWith(calls, 'calendar_connections', 'maybeSingle');
+    if (!query) throw new Error('reconnect target query not found');
+    expect(query.chain.filter((entry) => entry.method === 'eq').map((entry) => entry.args)).toEqual(
+      [
+        ['id', CONNECTION_ID],
+        ['user_id', USER_ID],
+        ['provider', 'google'],
+        ['status', 'reauth_required'],
+      ],
+    );
+  });
+
+  it('再接続は安定 sub を含む条件付き UPDATE だけを実行する', async () => {
+    const { calls } = setupServiceRoleDb({ reconnectUpdate: { id: CONNECTION_ID } });
+
+    await expect(
+      reconnectExistingConnection({
+        connectionId: CONNECTION_ID,
+        userId: USER_ID,
+        providerAccountId: 'google-sub-123',
+        providerAccountEmail: 'user@example.com',
+        grantedScopes: ['calendar.readonly'],
+        refreshToken: 'new-refresh-token',
+        encryptionKey: 'encryption-key',
+      }),
+    ).resolves.toBe('updated');
+
+    const update = findWith(calls, 'calendar_connections', 'update');
+    if (!update) throw new Error('reconnect update not found');
+    expect(argsOf(update, 'update')[0]).toEqual({
+      provider_account_email: 'user@example.com',
+      granted_scopes: ['calendar.readonly'],
+      refresh_token_enc: 'enc',
+      status: 'active',
+      last_sync_error: null,
+    });
+    expect(
+      update.chain.filter((entry) => entry.method === 'eq').map((entry) => entry.args),
+    ).toEqual([
+      ['id', CONNECTION_ID],
+      ['user_id', USER_ID],
+      ['provider', 'google'],
+      ['provider_account_id', 'google-sub-123'],
+      ['status', 'reauth_required'],
+    ]);
+    expect(findWith(calls, 'calendar_connections', 'upsert')).toBeUndefined();
+  });
+
+  it('切断との競合で更新行が無ければ missing とし、新規行を作らない', async () => {
+    const { calls } = setupServiceRoleDb({ reconnectUpdate: null });
+
+    await expect(
+      reconnectExistingConnection({
+        connectionId: CONNECTION_ID,
+        userId: USER_ID,
+        providerAccountId: 'google-sub-123',
+        providerAccountEmail: null,
+        grantedScopes: ['calendar.readonly'],
+        refreshToken: 'new-refresh-token',
+        encryptionKey: 'encryption-key',
+      }),
+    ).resolves.toBe('missing');
+
+    expect(findWith(calls, 'calendar_connections', 'upsert')).toBeUndefined();
   });
 });
 

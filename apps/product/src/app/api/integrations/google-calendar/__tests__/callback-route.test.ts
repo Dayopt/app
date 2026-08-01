@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const getUser = vi.hoisted(() => vi.fn());
 const createClient = vi.hoisted(() => vi.fn());
 const saveConnection = vi.hoisted(() => vi.fn());
+const getReconnectTarget = vi.hoisted(() => vi.fn());
+const reconnectExistingConnection = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
@@ -19,7 +21,11 @@ vi.mock('@/lib/supabase/server', () => ({ createClient }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
 vi.mock('@/lib/rate-limit/upstash', () => ({ calendarConnectRateLimit: { limit: rateLimit } }));
-vi.mock('@/features/external-calendar/server/connection-service', () => ({ saveConnection }));
+vi.mock('@/features/external-calendar/server/connection-service', () => ({
+  saveConnection,
+  getReconnectTarget,
+  reconnectExistingConnection,
+}));
 
 import { GET } from '../callback/route';
 
@@ -87,6 +93,11 @@ describe('google calendar callback route', () => {
     getUser.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
     createClient.mockResolvedValue({ auth: { getUser } });
     saveConnection.mockResolvedValue(undefined);
+    getReconnectTarget.mockResolvedValue({
+      id: '00000000-0000-4000-8000-0000000000c1',
+      providerAccountId: 'google-sub-123',
+    });
+    reconnectExistingConnection.mockResolvedValue('updated');
     checkProAccessForUser.mockResolvedValue('allowed');
     rateLimit.mockResolvedValue({ success: true });
     vi.stubGlobal(
@@ -314,7 +325,7 @@ describe('google calendar callback route', () => {
     );
 
     const location = new URL(response.headers.get('location') ?? '');
-    expect(location.pathname).toBe('/ja/settings/account');
+    expect(location.pathname).toBe('/ja/settings/integrations');
     expect(location.searchParams.get('calendar')).toBe('connected');
   });
 
@@ -344,7 +355,7 @@ describe('google calendar callback route', () => {
 
     const location = new URL(response.headers.get('location') ?? '');
     expect(location.host).toBe('app.dayopt.app');
-    expect(location.pathname).toBe('/en/settings/account');
+    expect(location.pathname).toBe('/en/settings/integrations');
   });
 
   it('token 交換が拒否されたら接続を保存しない', async () => {
@@ -367,5 +378,50 @@ describe('google calendar callback route', () => {
 
     const failure = await GET(withCookie(request({ state: 'forged-state' })));
     expect(failure.cookies.get('__Host-dayopt-calendar-connect')?.maxAge).toBe(0);
+  });
+
+  it('再接続は同じ Google sub の既存行だけを条件付き更新する', async () => {
+    const connectionId = '00000000-0000-4000-8000-0000000000c1';
+    const response = await GET(withCookie(request(), { reconnectConnectionId: connectionId }));
+
+    expect(reasonOf(response)).toBeNull();
+    expect(getReconnectTarget).toHaveBeenCalledWith(USER_ID, connectionId);
+    expect(reconnectExistingConnection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionId,
+        userId: USER_ID,
+        providerAccountId: 'google-sub-123',
+      }),
+    );
+    expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  it('別の Google sub を選んだ再接続は保存しない', async () => {
+    const connectionId = '00000000-0000-4000-8000-0000000000c1';
+    getReconnectTarget.mockResolvedValue({ id: connectionId, providerAccountId: 'expected-sub' });
+
+    const response = await GET(withCookie(request(), { reconnectConnectionId: connectionId }));
+
+    expect(reasonOf(response)).toBe('account_mismatch');
+    expect(reconnectExistingConnection).not.toHaveBeenCalled();
+    expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['対象が削除済み', null, 'updated'],
+    [
+      '条件付き UPDATE が 0 行',
+      { id: '00000000-0000-4000-8000-0000000000c1', providerAccountId: 'google-sub-123' },
+      'missing',
+    ],
+  ])('%s なら接続を新規作成しない', async (_label, target, updateOutcome) => {
+    const connectionId = '00000000-0000-4000-8000-0000000000c1';
+    getReconnectTarget.mockResolvedValue(target);
+    reconnectExistingConnection.mockResolvedValue(updateOutcome);
+
+    const response = await GET(withCookie(request(), { reconnectConnectionId: connectionId }));
+
+    expect(reasonOf(response)).toBe('reconnect_target_invalid');
+    expect(saveConnection).not.toHaveBeenCalled();
   });
 });

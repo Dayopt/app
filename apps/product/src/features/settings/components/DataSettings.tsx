@@ -36,45 +36,11 @@ import {
 
 import { LabeledRow } from '@/components/ui/display/LabeledRow';
 import { SectionCard } from '@/components/ui/display/SectionCard';
+import { timeblockRowsToCsv } from '../lib/timeblock-csv-export';
 import { InfoBox } from './InfoBox';
 
 type ExportFormat = 'json' | 'csv';
 type ExportRange = 'all' | 'custom';
-
-const CSV_COLUMNS = [
-  'kind',
-  'id',
-  'title',
-  'note',
-  'tag_id',
-  'plan_id',
-  'start_at',
-  'end_at',
-  'source',
-  'skipped_at',
-  'created_at',
-  'updated_at',
-  'deleted_at',
-] as const;
-
-/**
- * plans / recordsをCSV文字列に変換
- * RFC 4180準拠: ダブルクォートでフィールドをエスケープ
- */
-function timeblockRowsToCsv(rows: Record<string, unknown>[]): string {
-  const escapeCsvField = (value: unknown): string => {
-    if (value == null) return '';
-    const str = String(value);
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
-
-  const header = CSV_COLUMNS.join(',');
-  const csvRows = rows.map((row) => CSV_COLUMNS.map((col) => escapeCsvField(row[col])).join(','));
-  return [header, ...csvRows].join('\n');
-}
 
 /**
  * データ管理設定コンポーネント

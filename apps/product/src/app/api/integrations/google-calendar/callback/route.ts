@@ -10,7 +10,11 @@ import {
   normalizeLocale,
   parseConnectFlowCookie,
 } from '@/features/external-calendar/server/connect-flow';
-import { saveConnection } from '@/features/external-calendar/server/connection-service';
+import {
+  getReconnectTarget,
+  reconnectExistingConnection,
+  saveConnection,
+} from '@/features/external-calendar/server/connection-service';
 import {
   exchangeAuthorizationCode,
   GoogleOAuthError,
@@ -33,15 +37,14 @@ export const dynamic = 'force-dynamic';
 /**
  * Settings への戻り先。
  *
- * `integrations` カテゴリは Step 6 まで存在せず、未知カテゴリは空ページになるため
- * 当面は `account` へ返す。PC では settings ページが query を落とすので、この query を
- * Step 6 の UI トリガに使わないこと。
+ * locale-aware な Integrations 設定へ返す。PC / mobile の query 処理は設定ページの
+ * Composition Layer が一元管理する。
  */
 function settingsRedirect(requestUrl: URL, locale: string, result: string, reason?: string): URL {
   const query = new URLSearchParams({ calendar: result });
   if (reason) query.set('reason', reason);
 
-  const path = getSafeRedirectPath(`/${locale}/settings/account?${query.toString()}`, '/week');
+  const path = getSafeRedirectPath(`/${locale}/settings/integrations?${query.toString()}`, '/week');
   return new URL(path, requestUrl);
 }
 
@@ -186,14 +189,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const idToken = parseIdToken(tokens.id_token);
 
-    await saveConnection({
+    const connectionInput = {
       userId: user.id,
       providerAccountId: idToken.sub,
       providerAccountEmail: idToken.email ?? null,
       grantedScopes,
       refreshToken: tokens.refresh_token,
       encryptionKey: env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? '',
-    });
+    };
+
+    if (flowState.reconnectConnectionId) {
+      const target = await getReconnectTarget(user.id, flowState.reconnectConnectionId);
+      if (!target) return fail('reconnect_target_invalid');
+      if (target.providerAccountId !== idToken.sub) return fail('account_mismatch');
+
+      const outcome = await reconnectExistingConnection({
+        ...connectionInput,
+        connectionId: flowState.reconnectConnectionId,
+      });
+      if (outcome === 'missing') return fail('reconnect_target_invalid');
+    } else {
+      await saveConnection(connectionInput);
+    }
   } catch (error) {
     if (error instanceof GoogleOAuthError) {
       logger.warn('[calendar-callback] google oauth exchange failed');
