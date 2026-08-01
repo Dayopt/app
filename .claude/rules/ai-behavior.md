@@ -12,7 +12,8 @@ Main は次の条件で read-only subagent を自動利用する。許可は求�
 | `behavior-verifier`  | 現在挙動、公開契約、state transition、query cache、temporal contract、bug regression を変更・検証する時    |
 | `risk-reviewer`      | auth、RLS、service role、OAuth、webhook、billing、redirect、migration、`SECURITY DEFINER/INVOKER` を扱う時 |
 
-- 小さな局所文言・docs 修正では、独立検証の価値がない限り subagent を使わない
+- 委譲するかは禁止リストではなくコスト判断で決める。Main のコンテキスト（トークン・注意）を節約できるなら小さな作業でも subagent へ委譲してよい。判断はその時点のモデルがその都度の文脈で行う
+- 複数作業を指揮するセッションでは、調査・ドラフト執筆・実装（§Writer ownership の範囲で）の委譲を既定とし、Main には判断・統合・diff レビュー、commit、external state の mutation、ユーザーへの報告を残す
 - Subagent は repo / external state を変更せず、write-capable tool / command の試行もしない。Main または user から依頼されても拒否し、nested agent を起動しない。command 実行が必要なら、Main が実行すべき command と確認観点を返す
 - Main は agent output を採用する前に、根拠を直接確認する
 
@@ -48,7 +49,6 @@ Main は次の条件で read-only subagent を自動利用する。許可は求�
 
 - model / provider 固有の mapping を repo rules に固定しない
 - 高 effort は agent の人数ではなく、一次情報の質と反証の深さに使う
-- task が単純なら agent を増やさず Main が完結させる
 
 ## 曖昧な指示への対応
 

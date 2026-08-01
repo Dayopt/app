@@ -24,6 +24,7 @@ interface ICalEntry {
  */
 function escapeICalText(text: string): string {
   return text
+    .replace(/\r\n|\r/g, '\n')
     .replace(/\\/g, '\\\\')
     .replace(/;/g, '\\;')
     .replace(/,/g, '\\,')
