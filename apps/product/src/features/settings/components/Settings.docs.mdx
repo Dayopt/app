@@ -4,17 +4,18 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Settings
 
-profile、display、data、billing、accountを扱うsettings dialog component群。Storybookではcategory navigation、desktop / mobile layout、form stateを確認する。
+profile、display、data、integrations、billing、accountを扱うsettings dialog component群。Storybookではcategory navigation、desktop / mobile layout、form stateを確認する。
 
 ## Categories
 
-| Category | 主な表示                        |
-| -------- | ------------------------------- |
-| Profile  | profileとidentity               |
-| Display  | theme、timezone、日付・時間表示 |
-| Data     | exportとdata control            |
-| Billing  | Free / Pro、Checkout、Portal    |
-| Account  | password、MFA、account deletion |
+| Category     | 主な表示                              |
+| ------------ | ------------------------------------- |
+| Profile      | profileとidentity                     |
+| Display      | theme、timezone、日付・時間表示       |
+| Data         | exportとdata control                  |
+| Integrations | Google Calendar importとiCal feed URL |
+| Billing      | Free / Pro、Checkout、Portal          |
+| Account      | password、MFA、account deletion       |
 
 ## Visual states
 
@@ -22,6 +23,8 @@ profile、display、data、billing、accountを扱うsettings dialog component�
 - category list / selected category
 - loading / saved / validation error
 - billingのFree / trialing / active / past_due / canceled
+- Google Calendarの未接続 / 複数接続 / 再認証 / 同期エラー / 接続不可
+- iCal feed URLの有無 / loading / error
 - destructive account actionのconfirmation
 
 category定義の正本は`features/settings/constants.ts`、外部挙動はroot `docs/product/specs/settings.md`を参照する。router、DB、feature DAGはStorybookへ複製しない。
