@@ -1,7 +1,6 @@
 'use client';
 
-import { Button, Input } from '@dayopt/components';
-import { cn } from '@web/lib/class-names';
+import { Button, cn, Input } from '@dayopt/components';
 import { Search, X } from 'lucide-react';
 
 interface SearchInputProps {

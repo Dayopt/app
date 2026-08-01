@@ -19,7 +19,7 @@ description: 直前の実装 plan を fact-checker と critic で並列レビュ
 3. 修正が plan の前提または approach を変えた場合は、修正版を再レビューする。局所的な事実訂正だけなら Main の再確認でよい。
 4. 未解決事項を authority level で分類する。
    - `AUTONOMOUS`: Main が推奨を採用して plan を完成させる
-   - `CHECKPOINT` / `EXPLICIT AUTHORITY`: `AGENTS.md` の checkpoint report を作り、必要な価値判断または権限だけを user に求める
+   - `CHECKPOINT` / `EXPLICIT AUTHORITY`: `.claude/rules/ai-behavior.md` の checkpoint report を作り、必要な価値判断または権限だけを user に求める
 5. user decision が不要なら、統合済みの完成 plan を提示する。
 
 ## 出力

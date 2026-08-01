@@ -30,11 +30,11 @@ describe('getVarianceColor', () => {
 
 describe('getAccuracyColors', () => {
   it('maps status to bg/text classes', () => {
-    expect(getAccuracyColors('excellent')).toEqual({ bg: 'bg-success/10', text: 'text-success' });
-    expect(getAccuracyColors('good')).toEqual({ bg: 'bg-success/10', text: 'text-success' });
-    expect(getAccuracyColors('fair')).toEqual({ bg: 'bg-warning/10', text: 'text-warning' });
+    expect(getAccuracyColors('excellent')).toEqual({ bg: 'bg-success-tint', text: 'text-success' });
+    expect(getAccuracyColors('good')).toEqual({ bg: 'bg-success-tint', text: 'text-success' });
+    expect(getAccuracyColors('fair')).toEqual({ bg: 'bg-warning-tint', text: 'text-warning' });
     expect(getAccuracyColors('poor')).toEqual({
-      bg: 'bg-destructive/10',
+      bg: 'bg-destructive-tint',
       text: 'text-destructive',
     });
   });

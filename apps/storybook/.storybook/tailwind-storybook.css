@@ -10,3 +10,7 @@
 
 /* apps/web の component が使う utility class を生成対象に含める */
 @source '../../web/src';
+
+/* foundations の story（Colors 等）が swatch に直接使う utility class を生成対象に含める。
+ * scan base は Vite root（apps/storybook）なので、明示しないと story 内の literal が拾われない */
+@source '../../../packages/foundations/src';

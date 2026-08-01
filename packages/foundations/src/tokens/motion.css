@@ -1,0 +1,96 @@
+/* ============================================
+ * モーショントークン
+ *
+ * 方針の正本は Motion.mdx（4層の応答方針）。ここは値だけを持つ。
+ *
+ * 構成:
+ *   1. 遷移・一過性 — A から B へ変わる／一度だけ合図する。Tailwind の数値を使う
+ *   2. 持続（loop）— 状態を示し続ける。CSS の animation から参照する
+ *   3. Easing — 2種だけ
+ *   4. prefers-reduced-motion の契約
+ *
+ * ★ 遷移と持続を混ぜない
+ * 以前は単一の duration スケールで語っていたため、shimmer や実行中エントリの呼吸
+ * （1.5〜1.6s）が「規約外の遅い duration」に見えていた。あれは A→B の遷移ではなく
+ * 状態を示し続けるループで、遅いこと自体が正しい。性質が違うので別スケールにする。
+ * ============================================ */
+
+/* ============================================
+ * 1. 遷移・一過性
+ *
+ * Tailwind v4 には --duration-* の theme namespace が無い（v4.3.3 で実測確認）。
+ * --ease-* はあるが duration は無いため、長さは Tailwind 組み込みの
+ * 数値ユーティリティをそのまま使う。spacing / font-size と同じ扱い。
+ *
+ *   duration-150  色・状態の変化（既定。ほぼ全てこれ）
+ *   duration-200  transform・位置の変化、一過性の着地（entry-settle）
+ *   duration-300  大きい面の開閉（sheet, accordion）
+ *
+ * この 3 段以外は使わない。任意値（duration-[420ms]）も使わない。
+ * どれを使うかは「その操作がどの層か」で決まる（Motion.mdx 参照）。
+ *
+ * 例外は shake だけ。振動を振動として知覚させるには往復が要るので
+ * 3 段には収まらない。下の --motion-oneshot-shake を使う。
+ * ============================================ */
+:root {
+  --motion-oneshot-shake: 400ms; /* エラー時の振動。往復するため 3 段に収まらない */
+}
+
+/* ============================================
+ * 2. 持続（loop）
+ *
+ * 状態を示し続けるループ。CSS の animation プロパティから参照する。
+ * Tailwind ユーティリティにはしない（keyframes と一体で使うものなので）。
+ *
+ * カーソル点滅は tw-animate-css の animate-caret-blink（1.25s）が持っているので
+ * ここには置かない。使われないトークンを作らない。
+ * ============================================ */
+:root {
+  --motion-loop-shimmer: 1500ms; /* skeleton の光沢、不定進捗バー */
+  --motion-loop-breath: 1600ms; /* 実行中エントリの呼吸（既存の実装値に合わせる） */
+}
+
+/* ============================================
+ * 3. Easing
+ *
+ * 2種だけ。3種目を足す前に Motion.mdx の判断基準を読む。
+ *
+ * standard は「その場で変わるもの」に使う（色、状態、不透明度）。
+ * settle は「入ってくる・着地するもの」に使う。減速して止まるのが物理で、
+ * 紙のスケジュール帳の質感に合う。等速で止まると機械的に見える。
+ *
+ * bounce / spring / overshoot は使わない（Motion.mdx の禁止リスト）。
+ * cubic-bezier をコード側に直書きしない。ここの 2 つを参照する。
+ * ============================================ */
+:root {
+  --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-ease-settle: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* ============================================
+ * 4. prefers-reduced-motion
+ *
+ * WCAG 2.1 SC 2.3.3。product と web の両方がこの定義を共有する
+ * （以前は両アプリの globals.css に同じ全体規則が重複していた）。
+ *
+ * 全体規則で animation-duration と transition-duration を潰し、
+ * animation-iteration-count: 1 で無限ループも止める。個別クラスの列挙は不要。
+ * 例外は「止めると中途半端な見た目で固まる」もので、その場合だけ
+ * 静的な代替を当てる（例: shimmer → 単色背景。tokens/animations.css 内で定義）。
+ * ============================================ */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -187,9 +187,7 @@ export function ReviewMetricRow({
   return (
     <div className="flex min-h-11 min-w-0 items-center gap-2 px-3 py-2">
       <dt className="text-muted-foreground min-w-0 flex-1 text-xs">{label}</dt>
-      <dd className={cn('shrink-0 font-mono text-sm font-medium tabular-nums', valueClassName)}>
-        {value}
-      </dd>
+      <dd className={cn('shrink-0 text-sm font-medium tabular-nums', valueClassName)}>{value}</dd>
     </div>
   );
 }
@@ -206,13 +204,13 @@ function TimePLRow({
       <TagIcon icon={row.tagIcon ?? null} color={row.tagColor} size="sm" />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{row.tagName}</span>
-        <span className="text-muted-foreground mt-1 block font-mono text-xs tabular-nums">
+        <span className="text-muted-foreground mt-1 block text-xs tabular-nums">
           {formatDurationMinutes(row.budgetMinutes)} / {formatDurationMinutes(row.actualMinutes)}
         </span>
       </span>
       <span
         className={cn(
-          'shrink-0 font-mono text-xs font-medium tabular-nums',
+          'shrink-0 text-xs font-medium tabular-nums',
           getVarianceColor(row.variancePercent),
         )}
       >
@@ -243,13 +241,13 @@ function EstimationBiasRow({ row }: { row: WeeklyReflectionEstimationRow }) {
     <div className="flex min-h-11 min-w-0 items-center gap-2 px-2 py-2">
       <TagIcon icon={null} color={resolveTagColor(row.tagColor)} size="sm" />
       <span className="text-foreground min-w-0 flex-1 truncate text-sm">{row.tagName}</span>
-      <span className="text-muted-foreground shrink-0 font-mono text-xs tabular-nums">
+      <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
         {formatDurationMinutes(Math.round(row.avgPlannedMinutes))} /{' '}
         {formatDurationMinutes(Math.round(row.avgActualMinutes))}
       </span>
       <span
         className={cn(
-          'w-14 shrink-0 text-right font-mono text-xs font-medium tabular-nums',
+          'w-14 shrink-0 text-right text-xs font-medium tabular-nums',
           deviation > 0 ? 'text-destructive' : 'text-muted-foreground',
         )}
       >
@@ -276,9 +274,7 @@ function CompactSignal({
         <Icon className="size-3.5 shrink-0" aria-hidden="true" />
         <span className="truncate">{label}</span>
       </div>
-      <div className="text-foreground mt-2 truncate font-mono text-sm font-medium tabular-nums">
-        {value}
-      </div>
+      <div className="text-foreground mt-2 truncate text-sm font-medium tabular-nums">{value}</div>
       <p className="text-muted-foreground mt-1 truncate text-xs">{detail}</p>
     </section>
   );

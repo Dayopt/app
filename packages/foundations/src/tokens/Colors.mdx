@@ -93,15 +93,17 @@ tokens/colors.css のセマンティックトークン一覧。Tailwind クラ�
 
 ## Surface（3段階 + muted）
 
-container(沈む) → background(基準) → card(浮く)。Dark: warm H60, C=0.008。
+container(沈む) → background(基準) → card(浮く)。**Light は「紙」（warm H75, C=0.005）、Dark は warm H60, C=0.008。** 面はすべて同じ温度を持つ。
 
-| トークン        | 役割   | Light             | Dark (H60 C.008)       |
-| --------------- | ------ | ----------------- | ---------------------- |
-| `bg-container`  | 沈む   | `oklch(0.96 0 0)` | `oklch(0.15 0.008 60)` |
-| `bg-background` | 基準   | `oklch(0.98 0 0)` | `oklch(0.18 0.008 60)` |
-| `bg-card`       | 浮く   | `oklch(1.00 0 0)` | `oklch(0.22 0.008 60)` |
-| `bg-muted`      | 控えめ | `oklch(0.95 0 0)` | `oklch(0.25 0.008 60)` |
-| `bg-overlay`    | —      | `black / 0.32`    | `black / 0.50`         |
+| トークン        | 役割   | Light (H75 C.005)      | Dark (H60 C.008)       |
+| --------------- | ------ | ---------------------- | ---------------------- |
+| `bg-container`  | 沈む   | `oklch(0.95 0.005 75)` | `oklch(0.15 0.008 60)` |
+| `bg-background` | 基準   | `oklch(0.97 0.005 75)` | `oklch(0.18 0.008 60)` |
+| `bg-card`       | 浮く   | `oklch(0.99 0.005 75)` | `oklch(0.22 0.008 60)` |
+| `bg-muted`      | 控えめ | `oklch(0.94 0.005 75)` | `oklch(0.25 0.008 60)` |
+| `bg-overlay`    | —      | `black / 0.32`         | `black / 0.50`         |
+
+`bg-card` は純白ではない。L=1.00 では chroma を持てないため、card だけ純白に残すと 4 面のうち 1 面で色温度が割れる。純白が必要なのは「色地の上の文字」（`primary-foreground` 等）と QR コードのように読み取り精度が要るものだけ。
 
 ---
 
@@ -118,16 +120,26 @@ container(沈む) → background(基準) → card(浮く)。Dark: warm H60, C=0.
 
 ---
 
-## Primary
+## Primary — 紺（インク）
 
-| トークン                  | 用途                 |
-| ------------------------- | -------------------- |
-| `bg-primary`              | 主要アクションの背景 |
-| `text-primary-foreground` | Primary 上のテキスト |
+| トークン                  | Light                 | Dark                 | 用途                 |
+| ------------------------- | --------------------- | -------------------- | -------------------- |
+| `bg-primary`              | `oklch(0.40 0.105 H)` | `oklch(0.55 0.13 H)` | 主要アクションの背景 |
+| `text-primary-foreground` | `oklch(1 0 0)`        | `oklch(1 0 0)`       | Primary 上のテキスト |
+
+H = `--hue-brand` (259.8145)。`ring` は primary 派生で自動追従する。
 
 > Primary = 「ユーザーアクションを促す要素」にのみ使用する。
 > ✅ CTA ボタン、リンク、フォーカスリング
 > ❌ 装飾、待機状態の背景、大面積の背景
+
+### なぜ紺なのか
+
+旧値 `oklch(0.45 0.14)` = `#2051a1` は、伝統色の**瑠璃色** `#1E50A2`（L0.446 C0.143 H259.9）と誤差レベルで一致していた。瑠璃は宝石の青で、Dayopt が掲げるトーン（寡黙な研究者・実験ノートのインク）は**紺**（L0.36 C0.098）の側にある。そこで彩度を 25% 落とした。
+
+**色相は動かさない。** 濃藍 H263.6 / 紺 H264.1 / 鉄紺 H276.3 と、深い藍はむしろ現状の H259.8 より上に集まる（H236.8 の藍色は明るい藍染めの色で例外）。色相を下げると藍から遠ざかる上に、`tag-blue`(H240) と `entry-default`(H220) に衝突して UI chrome とユーザーデータの色の区別が消える。
+
+Dark で明度を上げている（0.50 → 0.55）のは、`primary-foreground` が白で白文字 4.5:1 を満たす上限が L0.55 だから。
 
 ---
 
@@ -137,9 +149,9 @@ destructive / warning / success は同じ L/C 構造で hue のみ変化。info 
 
 | 色          | Hue     | Light accent           | Light bg                | Dark accent            | Dark bg                |
 | ----------- | ------- | ---------------------- | ----------------------- | ---------------------- | ---------------------- |
-| destructive | 25      | `oklch(0.58 0.16 25)`  | `oklch(0.96 0.015 25)`  | `oklch(0.62 0.14 25)`  | `oklch(0.22 0.03 25)`  |
-| warning     | 70      | `oklch(0.68 0.16 70)`  | `oklch(0.97 0.015 70)`  | `oklch(0.72 0.14 70)`  | `oklch(0.22 0.03 70)`  |
-| success     | 150     | `oklch(0.60 0.14 150)` | `oklch(0.95 0.02 150)`  | `oklch(0.65 0.12 150)` | `oklch(0.22 0.03 150)` |
+| destructive | 25      | `oklch(0.54 0.18 25)`  | `oklch(0.96 0.015 25)`  | `oklch(0.65 0.14 25)`  | `oklch(0.22 0.03 25)`  |
+| warning     | 70      | `oklch(0.55 0.16 70)`  | `oklch(0.97 0.015 70)`  | `oklch(0.72 0.14 70)`  | `oklch(0.22 0.03 70)`  |
+| success     | 150     | `oklch(0.5 0.15 150)`  | `oklch(0.95 0.02 150)`  | `oklch(0.65 0.12 150)` | `oklch(0.22 0.03 150)` |
 | info        | neutral | `oklch(0.55 0.02 260)` | `oklch(0.96 0.005 260)` | `oklch(0.65 0.02 260)` | `oklch(0.22 0.01 260)` |
 
 クラス: accent → `text-{name}` / `bg-{name}`, tint → `bg-{name}-tint`
@@ -172,10 +184,16 @@ Container系・不透明度ハードコードからの移行ルール。
 
 ## State（状態）
 
-| トークン                       | 用途                                 |
-| ------------------------------ | ------------------------------------ |
-| `bg-state-active`              | 選択中・アクティブ状態（塗りつぶし） |
-| `text-state-active-foreground` | アクティブ状態のテキスト             |
+| トークン                       | Light                 | Dark                  | 用途                                              |
+| ------------------------------ | --------------------- | --------------------- | ------------------------------------------------- |
+| `bg-state-active`              | `oklch(0.95 0.019 H)` | `oklch(0.45 0.105 H)` | 装飾アイコン容器、`border-primary` を伴う状態補強 |
+| `text-state-active-foreground` | `oklch(0.38 0.105 H)` | `oklch(0.88 0.045 H)` | `bg-state-active` の上の文字・アイコン            |
+
+**この2つは必ずペアで使う。`bg-state-active` の上に `text-primary` を載せない。** dark では primary（`#4270bc`）と state-active（`#30548f`）の対比が 1.53:1 しかなく、アイコンがほぼ見えない。
+
+`bg-state-active` は**選択行の地色ではない**。選択行と hover は foreground ベースの半透明 state layer（`bg-state-selected` / `bg-state-hover`）が担う。`state-active` は塗りの強い装飾容器と、`border-primary` で状態が伝わっている箇所の補強に使う。
+
+そのため面との対比（dark で 2.3〜2.6:1）は WCAG 1.4.11 の 3:1 対象にならない。単独で状態を示す用途に使い始めるなら、その時点で明度を上げる必要がある（dark は L0.52 で card 比 3.14:1、ただし foreground 側を L0.94 まで上げないと 4.5:1 を割る窓の狭い領域）。
 
 ---
 
@@ -278,7 +296,7 @@ hover:bg-state-hover
 
 | ボタン種別        | クラス                                              |
 | ----------------- | --------------------------------------------------- |
-| Primary Ghost     | `text-primary hover:bg-primary-state-hover`         |
+| Primary Ghost     | `text-primary hover:bg-state-hover`                 |
 | Destructive Ghost | `text-destructive hover:bg-destructive-state-hover` |
 
 ### フォーカスリング（MD3 スタイル）

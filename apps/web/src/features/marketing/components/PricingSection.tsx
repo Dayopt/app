@@ -29,7 +29,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
   const proHighlights = t.raw('pricing.plans.pro.highlights') as string[];
 
   return (
-    <section id="pricing" className="pt-20 pb-24 sm:pt-[140px] sm:pb-32">
+    <section id="pricing" className="pt-20 pb-24 sm:pt-36 sm:pb-32">
       <Container>
         <SectionHeader
           icon={
@@ -70,7 +70,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
             </CardHeader>
             <CardContent className="flex-1">
               <div className="mb-8 text-center">
-                <span className="text-foreground text-4xl font-medium">
+                <span className="text-foreground text-4xl font-medium tabular-nums">
                   {dayoptPricing[freePlan.id].displayPrice}
                 </span>
               </div>
@@ -91,7 +91,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
           </Card>
 
           {/* Pro Card (Highlighted) */}
-          <Card className="border-primary ring-primary/20 surface-raised relative flex flex-col rounded-2xl ring-2 md:scale-105">
+          <Card className="border-primary ring-primary/20 bg-card relative flex flex-col rounded-2xl shadow-sm ring-2 md:scale-105">
             <Badge className="bg-primary text-primary-foreground absolute -top-3 left-1/2 -translate-x-1/2">
               {t('pricing.plans.pro.badge')}
             </Badge>
@@ -103,7 +103,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
             </CardHeader>
             <CardContent className="flex-1">
               <div className="mb-2 text-center">
-                <span className="text-foreground text-4xl font-medium">
+                <span className="text-foreground text-4xl font-medium tabular-nums">
                   {dayoptPricing[proPlan.id].displayPrice}
                 </span>
                 <span className="text-muted-foreground">{t('pricing.plans.pro.period')}</span>

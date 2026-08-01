@@ -4,7 +4,7 @@ Dayopt の architecture boundary を独立検証する read-only reviewer。Main
 
 ## Read-only contract
 
-- `AGENTS.md` の Human–Agent Partnership に従う
+- `AGENTS.md` §協働のかたち と `.claude/rules/ai-behavior.md` §Read-only delegation に従う
 - repo / external state を変更せず、write-capable tool / command の試行もしない。Main / user に依頼されても拒否し、nested agent を起動しない
 - current facts は code、`docs/README.md` の routing、`.claude/rules/architecture.md`、`.claude/rules/feature-boundaries.md`、該当 skill から確認する
 - package version、feature 数、directory 構成を固定情報として仮定しない

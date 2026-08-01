@@ -6,22 +6,24 @@ MCP サーバーの定義は **global 設定に一本化する**（Claude: `~/.c
 
 全 9 サーバーの登録内容。新しいマシンではこの表を元に global へ登録する:
 
-| Server             | 種別         | 登録内容                                                                                                                                                                                                                   |
-| ------------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `eagle`            | http         | `http://127.0.0.1:41596/mcp`（Codex は Dayopt.library 内の自作 server を使う）                                                                                                                                             |
-| `supabase-local`   | http         | `http://127.0.0.1:54321/mcp`                                                                                                                                                                                               |
-| `storybook`        | http         | `http://localhost:6006/mcp`                                                                                                                                                                                                |
-| `sentry`           | http (OAuth) | `https://mcp.sentry.dev/mcp`                                                                                                                                                                                               |
-| `vercel`           | http (OAuth) | `https://mcp.vercel.com`                                                                                                                                                                                                   |
-| `context7`         | stdio        | `npx -y @upstash/context7-mcp@latest`（Codex は hosted `https://mcp.context7.com/mcp`）                                                                                                                                    |
-| `playwright`       | stdio        | `npx -y @playwright/mcp@latest`                                                                                                                                                                                            |
-| `supabase` (cloud) | stdio        | `op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje` / env `SUPABASE_ACCESS_TOKEN=op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN`（Codex は supabase plugin で代替） |
-| `github`           | stdio        | `op run -- github-mcp-server stdio` / env `GITHUB_PERSONAL_ACCESS_TOKEN=op://Dayopt-Shared/github-mcp-pat/credential`                                                                                                      |
+| Server             | 種別         | 登録内容                                                                                                                                                                                                                                                                                                         |
+| ------------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eagle`            | http         | `http://127.0.0.1:41596/mcp`（Codex は Dayopt.library 内の自作 server を使う）                                                                                                                                                                                                                                   |
+| `supabase-local`   | http         | `http://127.0.0.1:54321/mcp`                                                                                                                                                                                                                                                                                     |
+| `storybook`        | http         | `http://localhost:6006/mcp`                                                                                                                                                                                                                                                                                      |
+| `sentry`           | http (OAuth) | `https://mcp.sentry.dev/mcp`                                                                                                                                                                                                                                                                                     |
+| `vercel`           | http (OAuth) | `https://mcp.vercel.com`                                                                                                                                                                                                                                                                                         |
+| `context7`         | stdio        | `npx -y @upstash/context7-mcp@latest`（Codex は hosted `https://mcp.context7.com/mcp`）                                                                                                                                                                                                                          |
+| `playwright`       | stdio        | `npx -y @playwright/mcp@latest`                                                                                                                                                                                                                                                                                  |
+| `supabase` (cloud) | stdio        | **常駐登録しない**（使う時だけ登録。下記 §`supabase`(cloud) はオンデマンド登録する）。`op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje` / env `SUPABASE_ACCESS_TOKEN=op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN`（Codex は supabase plugin で代替） |
+| `github`           | stdio        | `op run -- github-mcp-server stdio` / env `GITHUB_PERSONAL_ACCESS_TOKEN=op://Dayopt-Shared/github-mcp-pat/credential`                                                                                                                                                                                            |
 
 認証方式はサーバーごとに 2 通り（#1142 → 2026-06-16 整理）:
 
 1. **OAuth 承認方式**（`/mcp` で承認、トークン管理不要）: `sentry` / `vercel`。`sentry` は `https://mcp.sentry.dev/mcp` を直叩きする hosted MCP。
 2. **global 設定内 `op run` 自己解決方式**: `supabase`(cloud) / `github`。MCP プロセスの起動コマンド自体を `op run -- <bin>` でラップし、spawn 時に 1Password が `op://` 参照を解決する。**Claude 本体の起動経路に依存しない**（desktop アプリ起動でも動く）。token 系 MCP はこの方式を標準とする。
+
+**`op run` 方式のサーバーは常駐登録を 1 つに保つ。** spawn ごとに 1Password の承認が要求されるため、常駐登録が N 個あるとロック状態からの起動時に承認が N 回出る。常時使う `github` だけを常駐させ、それ以外はオンデマンド登録にする（2026-07-31、承認が 2 回出ていた実測に基づく）。
 
 **トークンを平文でハードコードしない**。env 注入を要する MCP はもう無いため、**Claude 起動に zsh の `op run` ラッパーは不要**（過去の `.op-env.mcp` / wrapper 方式は廃止）。前提は `op` CLI + 1Password desktop 統合が使えること。`op run` は stdout / stderr の secret masking が既定で有効なので、MCP server へ env token を渡す用途では `--no-masking` を付けない。
 
@@ -36,6 +38,20 @@ MCP サーバーの定義は **global 設定に一本化する**（Claude: `~/.c
 - `supabase-local` は migration / RLS / schema 確認時だけ Docker Desktop と `supabase start` を起動する。通常のレビュー・実装ではローカル DB が落ちていても異常扱いしない。
 - `eagle` はローカル Eagle app が起動している時だけ使う。Eagle app が落ちている場合は MCP 接続失敗を異常扱いしない。
 - `~/.claude/settings.json` に残る未定義 MCP 権限（例: `lighthouse`）は過去の許可履歴として扱い、必要になった時に別途棚卸しする。`storybook` は公式アドオン方式で global 設定に正式登録済み（過去の third-party `storybook-mcp` 履歴とは別物）。
+
+### `supabase`(cloud) はオンデマンド登録する
+
+`op run` 方式のため、常駐させるとセッション起動ごとに 1Password 承認が 1 回増える。production schema を実際に見る時だけ登録し、終わったら外す。
+
+```bash
+# 使う時
+claude mcp add supabase -s user -- op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje
+
+# 使い終わったら
+claude mcp remove supabase -s user
+```
+
+登録後は再起動して `list_tables` で疎通確認する。`supabase-local`（http、`op` 不要）は常駐のままでよい。
 
 ## 接続済み MCP サーバー
 
@@ -66,7 +82,7 @@ MCP サーバーの定義は **global 設定に一本化する**（Claude: `~/.c
   - ローカルを起動せずに本番テーブル構成を素早く参照したい時
 - **Before use**:
   - `supabase-local`: Docker Desktop 起動後に `npx supabase status`、`nc -vz 127.0.0.1 54321` で待ち受け確認。`list_tables` が通れば利用可
-  - `supabase`(cloud): global 設定の起動コマンドが `op run -- npx ...` でラップされ、spawn 時に `op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN` を自己解決する（zsh ラッパー起動に依存しない）。`op` CLI + 1Password desktop 統合が前提。`list_tables` で疎通確認。失敗時は 1Password 未起動 or `op` が PATH に無いことを疑う
+  - `supabase`(cloud): **既定では登録されていない**。§`supabase`(cloud) はオンデマンド登録する の `claude mcp add` で登録し、再起動してから使う。起動コマンドが `op run -- npx ...` でラップされ、spawn 時に `op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN` を自己解決する（zsh ラッパー起動に依存しない）。`op` CLI + 1Password desktop 統合が前提。`list_tables` で疎通確認。失敗時は 1Password 未起動 or `op` が PATH に無いことを疑う
 - **絶対ルール**: `supabase`(cloud) は global 設定で `--read-only` + `--project-ref=yvglwblxrnrenfifsnje`（production）に固定。**cloud 経由で書き込み・migration はしない**。schema 変更は `supabase-local` → PR Preview → production の既存フロー（`supabase` skill）で行う。
 - **境界ケース**: `pnpm types:generate` を走らせる前に、スキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。現在は単一 project 運用のため dev / preview / production すべて同じ Production project を参照する。
 

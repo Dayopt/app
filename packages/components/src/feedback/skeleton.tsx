@@ -24,8 +24,10 @@ function Skeleton({ className, variant = 'pulse', ...props }: SkeletonProps) {
       data-slot="skeleton"
       className={cn(
         'rounded-lg',
+        // shimmer の reduced-motion 代替（単色置換）は foundations の
+        // tokens/animations.css が !important で持つ。ここで重ねても効かない
         variant === 'shimmer'
-          ? 'animate-shimmer motion-reduce:bg-surface-container motion-reduce:animate-none'
+          ? 'animate-shimmer'
           : 'bg-surface-container animate-pulse motion-reduce:animate-none',
         className,
       )}

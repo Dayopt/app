@@ -20,7 +20,7 @@ export function TrackMock() {
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <span className="text-foreground text-sm font-medium">Plan vs Actual</span>
-          <span className="bg-container text-muted-foreground rounded px-2 py-0.5 text-xs">
+          <span className="bg-container text-muted-foreground rounded-[4px] px-2 py-0.5 text-xs">
             This Week
           </span>
         </div>
@@ -89,7 +89,7 @@ export function TrackMock() {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs">Plan accuracy</span>
             <div className="flex items-center gap-2">
-              <span className="text-foreground text-lg font-medium">82%</span>
+              <span className="text-foreground text-lg font-medium tabular-nums">82%</span>
               <span className="bg-success-tint text-success rounded-full px-2 py-0.5 text-xs font-medium">
                 Good
               </span>

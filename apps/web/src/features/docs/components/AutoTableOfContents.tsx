@@ -70,7 +70,7 @@ function TocList({ items, level = 0, activeId, onItemClick }: TocListProps) {
           >
             {activeId === item.id && (
               <span
-                className="bg-foreground absolute inset-y-0 left-0 w-[2px] rounded-full"
+                className="bg-foreground absolute inset-y-0 left-0 w-0.5 rounded-full"
                 aria-hidden="true"
               />
             )}
@@ -233,7 +233,7 @@ export function AutoTableOfContents({
 
       <nav className="relative">
         <span
-          className="bg-border absolute inset-y-0 left-0 w-[2px] rounded-full"
+          className="bg-border absolute inset-y-0 left-0 w-0.5 rounded-full"
           aria-hidden="true"
         />
         <TocList items={toc} activeId={activeId} onItemClick={handleItemClick} />

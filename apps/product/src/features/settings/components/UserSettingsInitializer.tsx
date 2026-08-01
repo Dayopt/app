@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { Button } from '@dayopt/components';
+
 import { useUserSettings } from '../hooks/useUserSettings';
 
 interface UserSettingsInitializerProps {
@@ -53,13 +55,9 @@ export function UserSettingsInitializer({ children }: UserSettingsInitializerPro
             {error.message}
           </p>
         )}
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium"
-        >
+        <Button type="button" onClick={() => window.location.reload()}>
           {t('actions.retry')}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -72,13 +70,9 @@ export function UserSettingsInitializer({ children }: UserSettingsInitializerPro
         className="bg-background text-foreground flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center"
       >
         <p className="text-sm">{t('offline.description')}</p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium"
-        >
+        <Button type="button" onClick={() => window.location.reload()}>
           {t('offline.reload')}
-        </button>
+        </Button>
       </div>
     );
   }

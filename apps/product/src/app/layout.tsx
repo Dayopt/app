@@ -7,7 +7,7 @@
  *
  * 責務:
  * - グローバルCSS読み込み
- * - フォント設定（Inter, Noto Sans JP）
+ * - フォント設定（Source Sans 3, Noto Sans JP）
  * - HTML/body構造
  * - Vercel Analytics/SpeedInsights
  *
@@ -18,22 +18,29 @@
 import '@/lib/styles/globals.css';
 
 import type { Metadata, Viewport } from 'next';
-import { Inter, Noto_Sans_JP } from 'next/font/google';
+import { Noto_Sans_JP, Source_Sans_3 } from 'next/font/google';
 import { headers } from 'next/headers';
 import { Suspense } from 'react';
 
 import { DeferredAnalytics } from '@/lib/analytics/DeferredAnalytics';
 import { cn } from '@dayopt/components';
 
-// next/font による最適化されたフォント読み込み（Variable Font: optical size軸有効）
+// next/font による最適化されたフォント読み込み（Variable Font: wght軸のみ）
 // preload: true でLCP改善（デフォルトでtrueだが明示的に指定）
-const inter = Inter({
+//
+// 変数名は Tailwind 組み込みの theme キー（--font-sans）と衝突させない。
+// html 要素の class で注入されると :root の theme 値を上書きし、
+// font-sans utility が和文フォールバックを失うため。合成は foundations の typography.css で行う。
+//
+// fallback に generic family（sans-serif / system-ui 等）を入れない。next/font は
+// fallback の中身を font-family の末尾に連結するため、generic が --font-latin の中に入ると
+// stack 上で和文フォントより前に来てしまう。generic を含むシステムフォールバックの尾は
+// typography.css 側だけが持つ。
+const sourceSans = Source_Sans_3({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter',
-  axes: ['opsz'],
+  variable: '--font-latin',
   preload: true,
-  fallback: ['system-ui', 'sans-serif'],
 });
 
 // 日本語フォント（GAFA方針準拠: Google = Noto Sans JP）
@@ -44,7 +51,6 @@ const notoSansJP = Noto_Sans_JP({
   display: 'swap',
   variable: '--font-noto-jp',
   preload: true,
-  fallback: ['Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'sans-serif'],
 });
 
 /**
@@ -114,7 +120,7 @@ const RootLayout = async ({ children, params }: RootLayoutProps) => {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${inter.variable} ${notoSansJP.variable}`}
+      className={`${sourceSans.variable} ${notoSansJP.variable}`}
     >
       <head>
         {/* LCP改善: Supabase API への早期接続確立（preconnect + dns-prefetch） */}

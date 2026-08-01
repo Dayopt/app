@@ -77,7 +77,7 @@ blog まで両言語必須にすると solo 運用で執筆が止まる。書け
 
 ## 月次ガーデニング
 
-`/gardening` の Step 5.6 で `docs-audit` skill を実行し、機能 ↔ 公開 docs のギャップ・鮮度乖離・en/ja 非対称を Issue 化する。ギャップと非対称の一次情報は `pnpm docs:coverage` の出力を使い、目視の棚卸しから始めない。翌月のコンテンツバックログはここから補充する。あわせて Search Console / Vercel Analytics の数字（指名検索・docs/blog 流入・上位クエリ）を月次 journal に記録し、書きっぱなしを防ぐ。
+`/gardening` の「公開コンテンツ監査」ステップで `docs-audit` skill を実行し、機能 ↔ 公開 docs のギャップ・鮮度乖離・en/ja 非対称を Issue 化する。ギャップと非対称の一次情報は `pnpm docs:coverage` の出力を使い、目視の棚卸しから始めない。翌月のコンテンツバックログはここから補充する。あわせて Search Console / Vercel Analytics の数字（指名検索・docs/blog 流入・上位クエリ）を月次 journal に記録し、書きっぱなしを防ぐ。
 
 ## SEO 方針
 

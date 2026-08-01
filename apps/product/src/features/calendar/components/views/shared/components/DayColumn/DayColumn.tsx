@@ -116,7 +116,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
               hourHeight={hourHeight}
               onClick={onEventClick}
               onContextMenu={onEventContextMenu}
-              className={isNewTimeblock(entry.id) ? 'animate-entry-pop' : undefined}
+              className={isNewTimeblock(entry.id) ? 'animate-entry-settle' : undefined}
             />
           );
         })}

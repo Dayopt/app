@@ -1,10 +1,9 @@
 'use client';
 
-import { Button, Logo } from '@dayopt/components';
+import { Button, cn, Logo } from '@dayopt/components';
 import { dayoptProductUrls } from '@dayopt/config';
 import { Link, usePathname } from '@dayopt/i18n/navigation';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { cn } from '@web/lib/class-names';
 import { Menu, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
@@ -46,7 +45,7 @@ export function Header() {
     <header
       className={cn(
         'bg-background/95 supports-[backdrop-filter]:bg-background/60 border-border z-dropdown sticky top-0 w-full border-b backdrop-blur transition-shadow',
-        isScrolled && 'shadow-elevation-raised',
+        isScrolled && 'shadow-sm',
       )}
     >
       <nav

@@ -61,189 +61,47 @@
 }
 
 .calendar-slide-next {
-  animation: calendar-slide-from-right 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  animation: calendar-slide-from-right 200ms var(--motion-ease-settle) forwards;
   will-change: transform, opacity;
 }
 
 .calendar-slide-prev {
-  animation: calendar-slide-from-left 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  animation: calendar-slide-from-left 200ms var(--motion-ease-settle) forwards;
   will-change: transform, opacity;
 }
 
 .calendar-zoom-in {
-  animation: calendar-zoom-in 0.2s ease-out forwards;
+  animation: calendar-zoom-in 200ms var(--motion-ease-settle) forwards;
 }
 
 .calendar-zoom-out {
-  animation: calendar-zoom-out 0.2s ease-out forwards;
+  animation: calendar-zoom-out 200ms var(--motion-ease-settle) forwards;
 }
 
 .calendar-slide-in {
-  animation: calendar-slide-in 0.2s ease-out forwards;
+  animation: calendar-slide-in 200ms var(--motion-ease-settle) forwards;
 }
 
-/* エントリ作成: 花びらパーティクル（カード本体はアニメーションなし） */
-.entry-petals {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  overflow: visible;
-  z-index: 50;
-}
-
-.entry-petal {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-radius: 50% 50% 50% 0;
-  background-color: var(--petal-color, var(--entry-default));
-  opacity: 0;
-}
-
-@keyframes petal-scatter-1 {
+/* ============================================
+ * エントリ作成: 層1 の確認
+ *
+ * 以前は花びら 8 枚を 550-620ms 散らしていた。実質 confetti で、層1 の予算
+ * 150-250ms を 2.5 倍超えており、毎回の作成で発火していた（層4 の「1 日 1 回程度の
+ * 揃った瞬間」ではない）。褒めずに「受け取った」とだけ応える短い着地に置き換えた。
+ * ============================================ */
+@keyframes entry-settle {
   0% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  100% {
     opacity: 1;
-    transform: translate(0, 0) rotate(0deg) scale(1);
-  }
-  60% {
-    opacity: 0.8;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(48px, -44px) rotate(220deg) scale(0.2);
-  }
-}
-@keyframes petal-scatter-2 {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) rotate(0deg) scale(1.1);
-  }
-  60% {
-    opacity: 0.7;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-40px, -48px) rotate(-180deg) scale(0.15);
-  }
-}
-@keyframes petal-scatter-3 {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) rotate(0deg) scale(1.2);
-  }
-  60% {
-    opacity: 0.8;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(56px, 16px) rotate(280deg) scale(0.2);
-  }
-}
-@keyframes petal-scatter-4 {
-  0% {
-    opacity: 0.9;
-    transform: translate(0, 0) rotate(0deg) scale(1);
-  }
-  60% {
-    opacity: 0.7;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-32px, 36px) rotate(-240deg) scale(0.15);
-  }
-}
-@keyframes petal-scatter-5 {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) rotate(0deg) scale(1.1);
-  }
-  60% {
-    opacity: 0.8;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(24px, -56px) rotate(160deg) scale(0.2);
-  }
-}
-@keyframes petal-scatter-6 {
-  0% {
-    opacity: 0.9;
-    transform: translate(0, 0) rotate(0deg) scale(1.2);
-  }
-  60% {
-    opacity: 0.7;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-52px, -16px) rotate(-200deg) scale(0.15);
-  }
-}
-@keyframes petal-scatter-7 {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) rotate(0deg) scale(1);
-  }
-  60% {
-    opacity: 0.8;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(44px, 32px) rotate(300deg) scale(0.2);
-  }
-}
-@keyframes petal-scatter-8 {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) rotate(0deg) scale(1.1);
-  }
-  60% {
-    opacity: 0.7;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-16px, -52px) rotate(-140deg) scale(0.15);
+    transform: none;
   }
 }
 
-.animate-entry-pop .entry-petal:nth-child(1) {
-  top: 20%;
-  left: 15%;
-  animation: petal-scatter-1 600ms ease-out both;
-}
-.animate-entry-pop .entry-petal:nth-child(2) {
-  top: 15%;
-  left: 55%;
-  animation: petal-scatter-2 550ms 30ms ease-out both;
-}
-.animate-entry-pop .entry-petal:nth-child(3) {
-  top: 45%;
-  left: 85%;
-  animation: petal-scatter-3 580ms 15ms ease-out both;
-}
-.animate-entry-pop .entry-petal:nth-child(4) {
-  top: 65%;
-  left: 25%;
-  animation: petal-scatter-4 620ms 50ms ease-out both;
-}
-.animate-entry-pop .entry-petal:nth-child(5) {
-  top: 10%;
-  left: 40%;
-  animation: petal-scatter-5 560ms 20ms ease-out both;
-}
-.animate-entry-pop .entry-petal:nth-child(6) {
-  top: 75%;
-  left: 70%;
-  animation: petal-scatter-6 590ms 40ms ease-out both;
-}
-.animate-entry-pop .entry-petal:nth-child(7) {
-  top: 35%;
-  left: 10%;
-  animation: petal-scatter-7 610ms 10ms ease-out both;
-}
-.animate-entry-pop .entry-petal:nth-child(8) {
-  top: 50%;
-  left: 50%;
-  animation: petal-scatter-8 570ms 35ms ease-out both;
+.animate-entry-settle {
+  animation: entry-settle 200ms var(--motion-ease-settle) both;
 }
 
 /* 現在進行中エントリ: 左アクセントだけを呼吸させ、実行中のリアル感を出す */
@@ -260,7 +118,7 @@
 }
 
 .entry-live-accent {
-  animation: entry-live-accent-pulse 1.6s ease-in-out infinite;
+  animation: entry-live-accent-pulse var(--motion-loop-breath) var(--motion-ease-standard) infinite;
   will-change: opacity, filter;
 }
 
@@ -322,14 +180,10 @@
     transform: none !important;
   }
 
-  .entry-petal {
+  .animate-entry-settle {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
-  }
-
-  .entry-petals {
-    display: none !important;
   }
 
   .entry-live-accent {

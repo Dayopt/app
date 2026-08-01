@@ -7,6 +7,8 @@
 
 import { Component, ErrorInfo, ReactNode } from 'react';
 
+import { Button } from '@dayopt/components';
+
 import { handleReactError } from '@/lib/sentry';
 import { useTranslations } from 'next-intl';
 
@@ -47,18 +49,10 @@ export function DefaultErrorFallback({
           {t('error.boundary.autoReport')}
         </p>
         <div className="flex justify-center gap-2">
-          <button
-            onClick={onRetry}
-            className="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 transition-colors"
-          >
-            {t('error.boundary.retry')}
-          </button>
-          <button
-            onClick={onReload}
-            className="bg-surface-container text-muted-foreground hover:bg-state-hover rounded-lg px-4 py-2 transition-colors"
-          >
+          <Button onClick={onRetry}>{t('error.boundary.retry')}</Button>
+          <Button variant="outline" onClick={onReload}>
             {t('error.boundary.reload')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -95,12 +89,9 @@ export function FeatureErrorFallback({ featureName }: { featureName: string }) {
       <p className="text-foreground text-center">
         {t('error.boundary.featureError', { feature: featureName })}
       </p>
-      <button
-        onClick={() => window.location.reload()}
-        className="bg-primary text-primary-foreground hover:bg-primary-hover mx-auto mt-2 block rounded-lg px-4 py-1 text-sm transition-colors"
-      >
+      <Button size="sm" onClick={() => window.location.reload()} className="mx-auto mt-2 flex">
         {t('error.boundary.reload')}
-      </button>
+      </Button>
     </div>
   );
 }

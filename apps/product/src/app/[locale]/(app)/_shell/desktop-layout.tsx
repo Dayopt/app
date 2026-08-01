@@ -11,7 +11,7 @@ import { Sidebar } from '@/components/shell/sidebar';
 import { useAuthStore } from '@/features/auth';
 import { isCalendarViewPath } from '@/features/calendar';
 import { getAvatarUrl, getDisplayName } from '@/lib/user';
-import { InlineBanner } from '@dayopt/components';
+import { Button, InlineBanner } from '@dayopt/components';
 
 import { useShellStore } from '@/lib/stores/useShellStore';
 
@@ -55,14 +55,16 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
 
   // サイドバーが閉じているときに表示するトグルボタン
   const sidebarToggle = !sidebar.open ? (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      icon
+      size="sm"
       onClick={toggleSidebar}
-      className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg transition-colors"
       aria-label="Open sidebar"
     >
       <PanelLeft className="size-4" />
-    </button>
+    </Button>
   ) : null;
 
   return (

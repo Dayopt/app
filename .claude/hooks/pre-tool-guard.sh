@@ -41,6 +41,17 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     echo "BLOCKED: git reset --hard は危険です。確認してください" >&2
     exit 2
   fi
+
+  # push 前の pause point は .husky/pre-push が担う（git レベルなので
+  # Claude / Codex / 人間 / wrapper script のすべてに効く）。ここでは
+  # その hook を外して push する抜け道だけを塞ぐ。人間が意識的に使うのは
+  # 「理由付き override」として許容するが、agent は使わない。
+  # コマンド位置（先頭 or セパレータ直後）に限定する。部分一致だと
+  # grep / echo で言及しただけで発火してしまう。
+  if echo "$COMMAND" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*git[[:space:]]+push[^;&|]*--no-verify'; then
+    echo "BLOCKED: git push --no-verify は禁止です。pre-push の pause point に答えてから push してください" >&2
+    exit 2
+  fi
 fi
 
 exit 0

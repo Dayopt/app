@@ -42,7 +42,7 @@ function NavigationItemComponent({ item, level, currentPath }: NavigationItemPro
           >
             <span className="flex-1">{item.title}</span>
             {item.badge && (
-              <span className="bg-muted text-primary border-primary ml-2 rounded border px-2 py-1 text-xs font-medium">
+              <span className="bg-muted text-primary border-primary ml-2 rounded-lg border px-2 py-1 text-xs font-medium">
                 {item.badge}
               </span>
             )}
@@ -108,7 +108,7 @@ export function ClientSidebar({ navigation }: ClientSidebarProps) {
       <button
         type="button"
         onClick={() => setSearchOpen(true)}
-        className="border-input bg-background text-muted-foreground hover:bg-state-hover hover:text-foreground mb-6 flex h-8 w-full items-center gap-2 rounded-md border px-3 text-sm transition-colors"
+        className="border-input bg-background text-muted-foreground hover:bg-state-hover hover:text-foreground mb-6 flex h-8 w-full items-center gap-2 rounded-lg border px-3 text-sm transition-colors"
       >
         <Search className="size-4 flex-shrink-0" />
         <span className="flex-1 text-left">{t('actions.search')}</span>

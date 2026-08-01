@@ -128,7 +128,7 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-popover border-border max-w-2xl gap-0 overflow-hidden p-0 shadow-2xl [&>button]:hidden">
+      <DialogContent className="bg-popover border-border shadow-card max-w-2xl gap-0 overflow-hidden p-0 [&>button]:hidden">
         {/* 検索ヘッダー */}
         <div className="border-border flex items-center gap-4 border-b p-4">
           <Search className="text-muted-foreground size-5 flex-shrink-0" />
@@ -195,7 +195,9 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
                 variant="ghost"
                 className="bg-state-active border-primary hover:bg-state-hover flex h-auto w-full items-center justify-start gap-4 border p-4"
               >
-                <Search className="text-primary size-4" />
+                {/* state-active の上の accent は text-state-active-foreground。
+                    text-primary は dark で背景と 1.5:1 まで落ちて消える（Colors.mdx） */}
+                <Search className="text-state-active-foreground size-4" />
                 <div className="text-left">
                   <div className="text-foreground text-sm font-medium">
                     {t('searchFor')} &ldquo;
@@ -227,7 +229,7 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
                             <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                               {result.breadcrumbs?.[0] || typeLabel(result.type)}
                             </span>
-                            <span className="text-muted-foreground/50 text-xs">•</span>
+                            <span className="text-muted-foreground text-xs">•</span>
                             <span className="text-muted-foreground text-xs">
                               {result.breadcrumbs?.[1] || result.category || 'General'}
                             </span>
@@ -256,19 +258,19 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1">
-                <kbd className="bg-muted border-border text-foreground rounded border px-2 py-1 font-mono text-xs">
+                <kbd className="bg-muted border-border text-foreground rounded-lg border px-2 py-1 font-mono text-xs">
                   Enter
                 </kbd>
                 <span>{t('toSelect')}</span>
               </div>
               <div className="flex items-center gap-1">
-                <kbd className="bg-muted border-border text-foreground rounded border px-2 py-1 font-mono text-xs">
+                <kbd className="bg-muted border-border text-foreground rounded-lg border px-2 py-1 font-mono text-xs">
                   Esc
                 </kbd>
                 <span>{t('toClose')}</span>
               </div>
             </div>
-            <span className="text-muted-foreground/70">{t('poweredBy')}</span>
+            <span className="text-muted-foreground">{t('poweredBy')}</span>
           </div>
         </div>
       </DialogContent>

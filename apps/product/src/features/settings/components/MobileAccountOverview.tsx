@@ -155,7 +155,7 @@ export function MobileAccountOverview({
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-base font-bold">{displayName}</p>
+                <p className="truncate text-base font-medium">{displayName}</p>
                 {user?.email && (
                   <p className="text-muted-foreground truncate text-xs">{user.email}</p>
                 )}
@@ -180,7 +180,7 @@ export function MobileAccountOverview({
               >
                 <Crown className="text-primary size-5 shrink-0" />
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="text-base font-bold">{t('navigation.navUser.upgradePlan')}</p>
+                  <p className="text-base font-medium">{t('navigation.navUser.upgradePlan')}</p>
                   <p className="text-muted-foreground text-xs">
                     {t('settings.subscription.proPlanDescription')}
                   </p>
