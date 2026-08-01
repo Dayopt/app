@@ -51,6 +51,16 @@ ai-review が「**あるべき検査の不在**」を判定するための正本
 - 外部 OAuth では `openid` scope を要求し、ユーザーの同定は id_token 側で行う
   （メールアドレスの一致で同定しない）
 - token 暗号化の鍵は起動時に長さを検証する（32 bytes 以上）
+- 外部カレンダーの再接続は、callback で検証した Google `sub` が保存済み
+  `provider_account_id` と一致する既存の `reauth_required` 行だけを条件付き更新する。
+  generic upsert で削除済み接続を復活させず、切断との競合では切断を勝たせる
+- iCal feed token は URL を知るだけで購読できる bearer-style credential として扱い、client query を
+  永続 cache へ保存しない。Settings を開く時と focus 復帰時は再取得し、取得中の cached URL は操作させない
+
+## Export
+
+- CSV に出す外部入力由来の文字列は、先頭が `=` / `+` / `-` / `@` / tab / carriage return
+  の場合に文字列として neutralize してから CSV field escaping を行う
 
 ## MCP の DB 書き込み境界
 
