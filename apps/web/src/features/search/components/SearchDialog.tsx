@@ -195,7 +195,9 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
                 variant="ghost"
                 className="bg-state-active border-primary hover:bg-state-hover flex h-auto w-full items-center justify-start gap-4 border p-4"
               >
-                <Search className="text-primary size-4" />
+                {/* state-active の上の accent は text-state-active-foreground。
+                    text-primary は dark で背景と 1.5:1 まで落ちて消える（Colors.mdx） */}
+                <Search className="text-state-active-foreground size-4" />
                 <div className="text-left">
                   <div className="text-foreground text-sm font-medium">
                     {t('searchFor')} &ldquo;
