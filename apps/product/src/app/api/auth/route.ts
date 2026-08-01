@@ -3,7 +3,9 @@
  * @description Supabase 認証の管理（Route Handler）
  *
  * レート制限:
- * - POST（signin/signup/reset）: 10回/分
+ * - signin: IP + emailごとに5回/15分
+ * - signup: IPごとに5回/15分
+ * - reset-password: IP + emailごとに3回/1時間
  * - GET（session/user）: 制限なし
  *
  * @see Issue #531 - Supabase × Vercel × Next.js 認証チェックリスト
@@ -50,8 +52,12 @@ const authPostSchema = z.discriminatedUnion('action', [
 /**
  * レート制限チェック用ヘルパー
  */
-async function checkRateLimit(request: NextRequest, rateLimit: typeof loginRateLimit) {
-  const result = await withUpstashRateLimit(request, rateLimit);
+async function checkRateLimit(
+  request: NextRequest,
+  rateLimit: typeof loginRateLimit,
+  additionalIdentifier?: string,
+) {
+  const result = await withUpstashRateLimit(request, rateLimit, additionalIdentifier);
 
   if (result.state === 'unavailable') {
     return NextResponse.json(
@@ -76,6 +82,10 @@ async function checkRateLimit(request: NextRequest, rateLimit: typeof loginRateL
   }
 
   return null;
+}
+
+function getEmailRateLimitIdentifier(email: string): string {
+  return `email:${email.trim().toLowerCase()}`;
 }
 
 function expectedAuthErrorResponse(error: unknown): NextResponse {
@@ -158,15 +168,28 @@ export async function POST(request: NextRequest) {
 
     switch (validated.action) {
       case 'signin':
+        // ログイン: IPとemailの独立bucketで各5回/15分
+        rateLimitResponse = await checkRateLimit(
+          request,
+          loginRateLimit,
+          getEmailRateLimitIdentifier(validated.email),
+        );
+        if (rateLimitResponse) return rateLimitResponse;
+        break;
+
       case 'signup':
-        // ログイン/サインアップ: 5回/15分（厳格）
+        // サインアップ: 既存どおりIPのみ5回/15分
         rateLimitResponse = await checkRateLimit(request, loginRateLimit);
         if (rateLimitResponse) return rateLimitResponse;
         break;
 
       case 'reset-password':
-        // パスワードリセット: 3回/1時間（より厳格）
-        rateLimitResponse = await checkRateLimit(request, passwordResetRateLimit);
+        // パスワードリセット: IPとemailの独立bucketで各3回/1時間
+        rateLimitResponse = await checkRateLimit(
+          request,
+          passwordResetRateLimit,
+          getEmailRateLimitIdentifier(validated.email),
+        );
         if (rateLimitResponse) return rateLimitResponse;
         break;
 
