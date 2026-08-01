@@ -102,6 +102,10 @@ export function createMockContext(options: MockContextOptions = {}): Context {
   } = options;
 
   const mockSupabase = createMockSupabase(supabaseOverrides);
+  const resolvedMfaAssurance =
+    authMode === 'session' && userId && mfaAssurance === undefined
+      ? { currentLevel: 'aal1' as const, nextLevel: 'aal1' as const }
+      : mfaAssurance;
 
   return {
     req: {
@@ -117,7 +121,7 @@ export function createMockContext(options: MockContextOptions = {}): Context {
     sessionId,
     oauthClientId,
     oauthScopes,
-    mfaAssurance,
+    mfaAssurance: resolvedMfaAssurance,
     supabase: mockSupabase as unknown as SupabaseClient<Database>,
     authMode,
   };
