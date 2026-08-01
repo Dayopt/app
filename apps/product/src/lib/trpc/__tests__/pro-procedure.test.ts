@@ -42,6 +42,7 @@ function createProTestContext(
     res: { setHeader: () => {}, end: () => {} },
     userId,
     sessionId: 'test-session',
+    mfaAssurance: { currentLevel: 'aal1' as const, nextLevel: 'aal1' as const },
     supabase,
     authMode: 'session' as const,
   };
@@ -108,6 +109,7 @@ describe('proProcedure', () => {
         res: { setHeader: () => {}, end: () => {} },
         userId: 'test-user-id',
         sessionId: 'test-session',
+        mfaAssurance: { currentLevel: 'aal1' as const, nextLevel: 'aal1' as const },
         supabase,
         authMode: 'session' as const,
       };

@@ -96,6 +96,7 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
       } as unknown as Context['res'],
       userId: TEST_USER_ID,
       sessionId: 'test-session-id',
+      mfaAssurance: { currentLevel: 'aal1', nextLevel: 'aal1' },
       supabase: supabase,
       authMode: 'session' as const,
     };

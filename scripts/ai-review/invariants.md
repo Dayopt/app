@@ -27,8 +27,16 @@ ai-review が「**あるべき検査の不在**」を判定するための正本
 ## 公開 HTTP エンドポイント
 
 - 公開エンドポイント（OAuth callback / webhook / contact）は rate limit を持つ
+- `/api/auth` のIP rate limitはVercel由来の`X-Real-IP`だけを使い、`X-Forwarded-For`へfallbackしない。欠落・不正値は共有`ip:unknown`でfail closedにする
+- `/api/auth` のsignin / resetはIP-firstで、正規化emailの独立bucketも同じquotaで確認する。IP / emailはpurpose prefix付きでHMAC化し、生値を保存・記録しない。signupはIP-onlyを維持する
 - cron ルート（`app/api/cron/**`）は `CRON_SECRET` を検証する
 - redirect 先はユーザー入力をそのまま使わず、`lib/safe-redirect.ts` の検証を通す
+
+## 認証・MFA
+
+- Session認証のHTTP / RSC tRPC contextは共通resolverでverified user、session token、MFA assuranceを解決する。session token取得失敗でMFA lookupを抑止しない
+- 認証済みsessionでMFA lookupがerror / throw、未知・不正遷移、またはassurance欠落なら`protectedProcedure`はfail closedで拒否する。AAL claimなしはSupabase契約どおりAAL1へ正規化する
+- proxyのMFA redirectをprocedure backstop追加と引き換えに弱めない
 
 ## データ分離（RLS）
 

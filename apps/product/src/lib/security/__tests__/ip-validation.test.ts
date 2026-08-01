@@ -2,7 +2,7 @@
  * IP Validation Unit Tests
  *
  * IPアドレス検証ユーティリティのテスト
- * OWASP推奨のX-Forwarded-Forヘッダー検証
+ * Vercel由来IPの検証
  */
 
 import { describe, expect, it } from 'vitest';
@@ -65,62 +65,37 @@ describe('IP Validation', () => {
   });
 
   describe('extractClientIp', () => {
-    describe('X-Real-IP priority', () => {
-      it('should prefer X-Real-IP when valid', () => {
-        const result = extractClientIp('192.168.1.1, 10.0.0.1', '8.8.8.8');
-        expect(result).toBe('8.8.8.8');
+    describe('Vercel X-Real-IP', () => {
+      it('should accept valid IPv4 and IPv6 addresses', () => {
+        expect(extractClientIp('8.8.8.8')).toBe('8.8.8.8');
+        expect(extractClientIp('2001:db8:85a3::8a2e:370:7334')).toBe(
+          '2001:db8:85a3::8a2e:370:7334',
+        );
       });
 
-      it('should ignore invalid X-Real-IP', () => {
-        const result = extractClientIp('192.168.1.1', 'invalid');
-        expect(result).toBe('192.168.1.1');
-      });
-    });
-
-    describe('X-Forwarded-For parsing', () => {
-      it('should extract first valid IP from X-Forwarded-For', () => {
-        const result = extractClientIp('203.0.113.195, 70.41.3.18, 150.172.238.178', null);
-        expect(result).toBe('203.0.113.195');
-      });
-
-      it('should skip invalid IPs in chain', () => {
-        const result = extractClientIp('invalid, 192.168.1.1, 10.0.0.1', null);
-        expect(result).toBe('192.168.1.1');
-      });
-
-      it('should handle single IP', () => {
-        const result = extractClientIp('192.168.1.100', null);
-        expect(result).toBe('192.168.1.100');
-      });
-
-      it('should handle extra whitespace', () => {
-        const result = extractClientIp('  192.168.1.1  ,  10.0.0.1  ', null);
-        expect(result).toBe('192.168.1.1');
+      it('should trim a valid platform IP', () => {
+        expect(extractClientIp(' 203.0.113.195 ')).toBe('203.0.113.195');
       });
     });
 
     describe('Edge cases', () => {
-      it('should return unknown for null/undefined inputs', () => {
-        expect(extractClientIp(null, null)).toBe('unknown');
-        expect(extractClientIp(undefined, undefined)).toBe('unknown');
+      it('should return unknown for null, undefined, and empty values', () => {
+        expect(extractClientIp(null)).toBe('unknown');
+        expect(extractClientIp(undefined)).toBe('unknown');
+        expect(extractClientIp('')).toBe('unknown');
       });
 
-      it('should return unknown for empty string', () => {
-        expect(extractClientIp('', '')).toBe('unknown');
-      });
-
-      it('should return unknown when all IPs are invalid', () => {
-        expect(extractClientIp('invalid1, invalid2', 'also-invalid')).toBe('unknown');
+      it('should reject invalid and comma-separated values', () => {
+        expect(extractClientIp('invalid')).toBe('unknown');
+        expect(extractClientIp('203.0.113.195, 70.41.3.18')).toBe('unknown');
       });
     });
 
     describe('Security: Header injection prevention', () => {
       it('should reject malicious header values', () => {
-        // 攻撃者がヘッダーを偽装しようとするケース
-        expect(extractClientIp('"><script>alert(1)</script>', null)).toBe('unknown');
-        expect(extractClientIp("'; DROP TABLE users;--", null)).toBe('unknown');
-        // 改行を含む文字列は有効なIPとして認識しない（セキュリティ上正しい動作）
-        expect(extractClientIp('192.168.1.1\r\nX-Injected: malicious', null)).toBe('unknown');
+        expect(extractClientIp('"><script>alert(1)</script>')).toBe('unknown');
+        expect(extractClientIp("'; DROP TABLE users;--")).toBe('unknown');
+        expect(extractClientIp('192.168.1.1\r\nX-Injected: malicious')).toBe('unknown');
       });
     });
   });
@@ -223,27 +198,16 @@ describe('IP Validation', () => {
   });
 
   describe('Integration: Common usage patterns', () => {
-    it('should handle typical proxy chain', () => {
-      // クライアント -> プロキシ1 -> プロキシ2 -> サーバー
-      const xff = '203.0.113.195, 70.41.3.18, 150.172.238.178';
-
-      const clientIp = extractClientIp(xff, null);
-      expect(clientIp).toBe('203.0.113.195');
+    it('should handle the Vercel platform IP', () => {
+      const realIp = '203.0.113.195';
+      const clientIp = extractClientIp(realIp);
+      expect(clientIp).toBe(realIp);
       expect(isValidIpAddress(clientIp)).toBe(true);
       expect(isPrivateIp(clientIp)).toBe(false);
     });
 
-    it('should handle Cloudflare/CDN setup', () => {
-      // CDNが設定するX-Real-IP
-      const realIp = '203.0.113.195';
-      const xff = 'internal-proxy, 10.0.0.1';
-
-      const clientIp = extractClientIp(xff, realIp);
-      expect(clientIp).toBe(realIp);
-    });
-
     it('should handle local development', () => {
-      const clientIp = extractClientIp(null, '127.0.0.1');
+      const clientIp = extractClientIp('127.0.0.1');
       expect(clientIp).toBe('127.0.0.1');
       expect(isPrivateIp(clientIp)).toBe(true);
     });

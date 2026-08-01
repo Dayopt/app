@@ -314,18 +314,21 @@ type RateLimitCheckResult =
 export async function withUpstashRateLimit(
   request: Request,
   rateLimit: ProductRateLimiter | null,
+  additionalIdentifier?: string,
 ): Promise<RateLimitCheckResult> {
   if (!rateLimit) {
     return { state: 'disabled' };
   }
 
-  // クライアント識別子取得
-  const identifier = getClientIdentifier(request);
+  const ipIdentifier = getClientIdentifier(request);
 
   try {
-    // レート制限チェック
-    const { success, limit, remaining, reset, pending } = await rateLimit.limit(identifier);
-    return { state: 'checked', success, limit, remaining, reset, pending };
+    // IPを先に評価し、遮断済みIPからaccount bucketを消費させない。
+    const ipResult = toCheckedRateLimitResult(await rateLimit.limit(ipIdentifier));
+    if (!ipResult.success || additionalIdentifier === undefined) return ipResult;
+
+    // IPとaccount/emailは結合せず、独立したbucketとして同じquotaを適用する。
+    return toCheckedRateLimitResult(await rateLimit.limit(additionalIdentifier));
   } catch (error) {
     logger.error('[RateLimit] Upstash rate limit check failed');
     const original = error instanceof Error ? error : new Error('Upstash rate limit check failed');
@@ -338,16 +341,20 @@ export async function withUpstashRateLimit(
   }
 }
 
+function toCheckedRateLimitResult(
+  result: RatelimitResponse,
+): Extract<RateLimitCheckResult, { state: 'checked' }> {
+  const { success, limit, remaining, reset, pending } = result;
+  return { state: 'checked', success, limit, remaining, reset, pending };
+}
+
 /**
  * クライアント識別子の取得
- * 公開requestは検証済みIPを使い、limiter factory内でSHA-256化する。
+ * 公開requestは検証済みIPを使い、limiter factory内でHMAC-SHA-256化する。
  */
 function getClientIdentifier(request: Request): string {
-  // IPアドレスをフォールバック
-  const ip = extractClientIp(
-    request.headers.get('x-forwarded-for'),
-    request.headers.get('x-real-ip'),
-  );
+  // Vercelが上書きするX-Real-IPだけを信頼する。別CDNを追加する場合は再評価する。
+  const ip = extractClientIp(request.headers.get('x-real-ip'));
 
   return `ip:${ip}`;
 }

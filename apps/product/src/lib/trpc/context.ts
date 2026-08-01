@@ -15,8 +15,9 @@ import { type Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { extractBearerToken, verifyAccessToken } from '@/lib/mcp/auth';
 import { OAuthServerError, type OAuthClientId, type SupportedScope } from '@/lib/oauth-server';
-import { captureUnexpectedError, observeAuthOperation } from '@/lib/sentry';
+import { captureUnexpectedError } from '@/lib/sentry';
 import { AuthMode, createServiceRoleClient, detectAuthMode } from '@/lib/supabase/oauth';
+import { resolveSessionAuthContext, type MfaAssurance } from '@/lib/trpc/session-auth-context';
 
 /**
  * リクエストコンテキストの型定義
@@ -36,8 +37,6 @@ export interface TrpcResponseLike {
   end?: (...args: unknown[]) => void;
 }
 
-type MfaAssuranceLevel = 'aal1' | 'aal2';
-
 /** tRPCプロシージャのコンテキスト型 */
 export interface Context {
   req: TrpcRequestLike;
@@ -54,13 +53,7 @@ export interface Context {
   /** 検証済み OAuth scopes（oauth modeの場合のみ） */
   oauthScopes?: SupportedScope[] | undefined;
   /** Supabase Auth MFA assurance level（session modeの場合のみ） */
-  mfaAssurance?:
-    | {
-        currentLevel: MfaAssuranceLevel | null;
-        nextLevel: MfaAssuranceLevel | null;
-        lookupFailed?: boolean | undefined;
-      }
-    | undefined;
+  mfaAssurance?: MfaAssurance | undefined;
   /** JWTカスタムクレームから取得したサブスクリプション状態（custom_access_token hook） */
   subscriptionStatus?: string | undefined;
 }
@@ -181,51 +174,10 @@ async function createTRPCContext(opts: {
       },
     );
 
-    try {
-      // getUser()はSupabase Authサーバーに問い合わせてJWTを検証する（getSession()は署名未検証）
-      const {
-        data: { user },
-      } = await observeAuthOperation('trpc_context_get_user', () => supabase.auth.getUser());
-
-      if (user) {
-        userId = user.id;
-        // セッションからアクセストークンを取得（ログ・追跡用）
-        try {
-          const {
-            data: { session },
-          } = await observeAuthOperation('trpc_context_get_session', () =>
-            supabase.auth.getSession(),
-          );
-          sessionId = session?.access_token;
-        } catch {
-          logger.warn('Session token lookup failed');
-        }
-
-        try {
-          const { data: aalData, error: aalError } = await observeAuthOperation(
-            'trpc_context_get_authenticator_assurance_level',
-            () => supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
-          );
-          mfaAssurance = {
-            currentLevel: normalizeMfaAssuranceLevel(aalData?.currentLevel),
-            nextLevel: normalizeMfaAssuranceLevel(aalData?.nextLevel),
-            lookupFailed: Boolean(aalError),
-          };
-          if (aalError) {
-            logger.warn('MFA assurance lookup failed');
-          }
-        } catch {
-          mfaAssurance = {
-            currentLevel: null,
-            nextLevel: null,
-            lookupFailed: true,
-          };
-          logger.warn('MFA assurance lookup threw');
-        }
-      }
-    } catch {
-      // 認証エラーは無視（ゲストユーザーとして扱う）
-    }
+    const sessionAuthContext = await resolveSessionAuthContext(supabase, 'trpc_context');
+    userId = sessionAuthContext.userId;
+    sessionId = sessionAuthContext.sessionId;
+    mfaAssurance = sessionAuthContext.mfaAssurance;
   }
 
   // JWTカスタムクレームからsubscription_statusを取得（custom_access_token hook）
@@ -309,8 +261,4 @@ function parseCookieHeader(cookieHeader: string | null): Record<string, string> 
   }
 
   return cookies;
-}
-
-function normalizeMfaAssuranceLevel(level: unknown): MfaAssuranceLevel | null {
-  return level === 'aal1' || level === 'aal2' ? level : null;
 }
