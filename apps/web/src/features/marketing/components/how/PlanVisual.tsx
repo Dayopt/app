@@ -58,7 +58,7 @@ export function PlanVisual() {
           {blocks.map((block, i) => (
             <div
               key={i}
-              className={`flex items-center justify-between rounded-md px-2.5 text-xs font-medium ${block.color}`}
+              className={`flex items-center justify-between rounded-[6px] px-2.5 text-xs font-medium ${block.color}`}
               style={{ height: block.height }}
             >
               <span className="text-foreground">{block.label}</span>

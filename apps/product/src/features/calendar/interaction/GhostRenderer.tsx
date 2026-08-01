@@ -147,7 +147,7 @@ export function GhostRenderer({ state, renderGhost, timeFormat }: GhostRendererP
       height: Math.max(snapBack.height, minGhostHeight),
       zIndex: 9999,
       transform: `translate(${snapBack.originalLeft}px, ${snapBack.originalTop}px)`,
-      transition: `transform ${SNAP_BACK_DURATION}ms ease-out, opacity ${SNAP_BACK_DURATION}ms ease-out`,
+      transition: `transform ${SNAP_BACK_DURATION}ms var(--motion-ease-settle), opacity ${SNAP_BACK_DURATION}ms var(--motion-ease-settle)`,
       opacity: 0,
       willChange: 'transform, opacity',
     };
@@ -189,7 +189,10 @@ export function GhostRenderer({ state, renderGhost, timeFormat }: GhostRendererP
     height: Math.max(state.originalPosition.height, minGhostHeight),
     zIndex: 9999,
     transform: `translate(${columnRect.left}px, ${viewportTop}px)`,
-    transition: 'transform 50ms ease-out',
+    // 50ms はモーショントークンの 3 段（150/200/300）の例外。これは状態遷移ではなく
+    // ポインタへの追従を滑らかにするための平滑化で、伸ばすとドラッグが遅れて感じる。
+    // 追従は別枠として扱う（packages/foundations/src/tokens/Motion.mdx 参照）。
+    transition: 'transform 50ms var(--motion-ease-settle)',
     willChange: 'transform',
   };
 

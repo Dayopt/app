@@ -26,7 +26,7 @@ export function CopyCodeButton({ code }: CopyCodeButtonProps) {
     <Button
       variant="ghost"
       size="sm"
-      className="bg-container text-muted-foreground hover:bg-muted hover:text-foreground h-auto rounded px-2 py-1 text-xs"
+      className="bg-container text-muted-foreground hover:bg-muted hover:text-foreground h-auto rounded-lg px-2 py-1 text-xs"
       onClick={handleCopy}
     >
       {copied ? t('copied') : t('copy')}

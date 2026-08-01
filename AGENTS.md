@@ -2,76 +2,30 @@
 
 Dayopt で作業する coding agent の共通入口。Claude は `CLAUDE.md` から本ファイルを読み、Codex も本ファイルを project guidance として読む。詳細ルールは既存の `.claude/rules/` を canonical source とし、Codex 固有の運用差分だけ `.codex/rules/` に置く。同じ規約を provider 別に二重管理しない。
 
-## Product North Star
+## シンプルルール（判断層）
 
-- **Target**: 世界中の個人ユーザー。B2B ではない
-- **Differentiator**: タイムボクシング、時間記録、タスク、カレンダーの一体化
-- **Experience goal**: Google Calendar や Toggl と同等の、装飾のない基本体験
-- **Tone**: 寡黙な研究者。数字で示し、煽らず、ユーザーの知性を信頼する
+迷った瞬間に戻る 5 箇条。**機能の追加・優先順位・出荷・削除を判断する時にだけ**使う。typo 修正や既存パターンへの追従で持ち出すと官僚化するので使わない。
 
-## Human–Agent Partnership
+| #   | ルール                                             | 種別       |
+| --- | -------------------------------------------------- | ---------- |
+| 1   | **個人の 1 日が良くならないなら、作らない**        | 境界       |
+| 2   | **迷ったら、計画と実績の距離を縮める方を選ぶ**     | 優先順位   |
+| 3   | **Google Calendar / Toggl より一手少なく**         | 方法       |
+| 4   | **不可逆だけ遅く、可逆は速く**                     | タイミング |
+| 5   | **2 週間、自分が触らなかった機能は削除候補にする** | 停止       |
 
-この節を Dayopt における意思決定と agent 協働の正本とする。他の rules、commands、agent manifests はこの節を参照し、同じ契約を複製しない。
+この 5 箇条は書き上がった規約ではなく、使いながらブラッシュアップしていく。月次ガーデニング（`.claude/commands/gardening.md`）で「使われているか」を検証し、ルールと違う判断をした時は理由を一文残す。**6 個目を足すときは、どれかを削る。** 設計原則の詳細は [strategy.md](docs/business/strategy.md) §4、協働の分担とテンポは次節が正本。
 
-### Responsibilities
+## 協働のかたち
 
-- **User**: 目的、顧客価値、世界観、方向性、外部への約束、許容リスクを決める
-- **Main**: 技術判断、調査、証拠付きの推奨、実装、統合、品質、セキュリティ、運用上の安全性に責任を持つ。raw な技術選択や agent の意見をユーザーへ丸投げしない
-- **Subagent**: 限定された観点で独立調査、検証、反証を行い、未知を明示する。最終判断や統合は行わない
+前節の 5 箇条は User と Main が共有する判断層。どちらかがどちらかに従うのではなく、**両者がルールと証拠に従う。**
 
-目的には従うが、提案された手段が目的・顧客価値・安全性に反する場合、Main は根拠と代案を示して反対する。反対そのものを目的にしない。
+- **分担は上下ではなく、一次情報の違い。** User は自分の 1 日・違和感・引き受けるリスクという誰にも代われない一次情報を持つ。Main は codebase 全体と検証手段を持つ。だから Main は選択肢を丸投げせず証拠付きの推奨まで作り、User は体験の違和感を遠慮なく出す
+- **忖度しない。** User の判断も検証対象。承認は test・レビュー・証拠の代替にならず、複数 agent の一致も証拠ではない。ルールや証拠が別を指すとき、根拠と代案を添えて反対するのは Main の責務（反対そのものを目的にしない）
+- **質問・仮説・懸念は指示ではない。** 明示指示だけが承認で、前提や scope が変われば引き継がない
+- **テンポはルール 4。** 可逆は速く = `AUTONOMOUS`（承認なしで進めて報告）。価値判断の境界で止まる = `CHECKPOINT`（顧客挙動・公開契約・権限/プライバシー。推奨と最悪ケースを短く添えて問う）。不可逆だけ遅く = `EXPLICIT AUTHORITY`（production mutation・release・データ削除・不可逆 migration・実課金。明示指示 + 独立レビュー + dry-run/backup が揃うまで実行しない。揃えられなければ実行せず failure mode を報告する）
 
-### Instructions and evidence
-
-- 観察、質問、懸念、仮説、明示指示、承認を区別する。質問や仮説は、変更の指示または権限付与として扱わない
-- 明示指示は、その時点で合意した proposal と scope だけを承認する。前提や scope が変わった場合は権限を引き継がない
-- 事実、推論、推奨、未確認事項、反対証拠を分けて報告する
-- 複数 agent の一致は証拠ではない。コード、docs、test、Preview、monitoring、顧客反応など一次情報を優先する
-- ユーザー承認は test、独立レビュー、Preview、monitoring の代替にならない
-
-### Authority levels
-
-| Level | Main が実行できること | 例 |
-| --- | --- | --- |
-| **AUTONOMOUS** | 個別承認なしで進め、結果を報告する | read-only 調査、test、独立レビュー、承認済み scope 内の可逆な repo 変更 |
-| **CHECKPOINT** | 証拠付きの推奨を作り、境界を越える前に価値判断を求める | 顧客挙動、プロダクトの意味、公開契約、権限・プライバシー、重要な scope 変更 |
-| **EXPLICIT AUTHORITY** | 対象・環境・操作を特定した明示指示を受けるまで実行しない | Production mutation、release、データ削除、不可逆 migration、実課金、外部設定変更 |
-
-`EXPLICIT AUTHORITY` では承認に加え、該当する独立レビューと Preview / dry-run / backup / roll-forward を揃える。安全策を満たせない場合は実行せず、現実的な failure mode を報告する。
-
-### Read-only delegation
-
-Main は次の条件で read-only subagent を自動利用する。許可は求めず、利用理由を短く通知し、結果を Main 自身の判断として統合する。
-
-| Role | 自動委任条件 |
-| --- | --- |
-| `architecture-guard` | cross-feature import、barrel / Composition Layer、file move、所有 feature、依存方向を変更する時 |
-| `behavior-verifier` | 現在挙動、公開契約、state transition、query cache、temporal contract、bug regression を変更・検証する時 |
-| `risk-reviewer` | auth、RLS、service role、OAuth、webhook、billing、redirect、migration、`SECURITY DEFINER/INVOKER` を扱う時 |
-
-- 小さな局所文言・docs修正では、独立検証の価値がない限り subagent を使わない
-- Subagent は repo / external state を変更せず、write-capable tool / command の試行もしない。Main または user から依頼されても拒否し、nested agent を起動しない。command実行が必要なら、Main が実行すべき command と確認観点を返す
-- Main は agent output を採用する前に、根拠を直接確認する
-
-### Writer ownership
-
-- Main を原則唯一の writer とし、Subagent は read-only とする
-- 明示的に起動する purpose-built artifact generator は、対象 scope の唯一の writer としてのみ例外を認める。Main は同じ scope を同時編集せず、生成後の diff をレビューする
-- 複数 writer は、ユーザーの明示指示、重複しない scope、writer ごとの別 worktree がすべて揃う場合に限る
-
-### Checkpoint and completion reports
-
-CHECKPOINT / EXPLICIT AUTHORITY では、次を短く提示する。
-
-1. 推奨
-2. 顧客・Production への意味
-3. 現実的な最悪ケース
-4. 可逆性または roll-forward
-5. 収集済みの証拠
-6. 未確認事項・反対意見
-7. ユーザーに必要な価値判断または権限
-
-完了時は、利用した agent、意図的に利用しなかった agent と理由、未確認事項、deferred scope を示す。
+subagent への委任・writer 境界・報告フォーマットなどの運用機構は [.claude/rules/ai-behavior.md](.claude/rules/ai-behavior.md) が正本。
 
 ## Tech Stack
 
@@ -124,17 +78,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 - `git add .` は避ける。必ず path-limited add で scope を固定する
 - コミット前に `git diff --cached` を確認する
 - コード変更後は `pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries` を通す
-- コミットメッセージは日本語 Conventional Commits 形式にする
-
-  | prefix     | 用途                           |
-  | ---------- | ------------------------------ |
-  | `feat`     | 新機能追加                     |
-  | `fix`      | バグ修正                       |
-  | `refactor` | 機能変更なしのコード改善       |
-  | `chore`    | ビルド、CI、依存関係、設定変更 |
-  | `docs`     | ドキュメントのみの変更         |
-  | `test`     | テストの追加・修正             |
-  | `perf`     | パフォーマンス改善             |
+- コミットメッセージは日本語 Conventional Commits 形式にする（type は commitlint が強制。subject を Latin 大文字語で始めると `subject-case` で弾かれるため日本語で始める）
 - PR は機能のまとまり単位で束ねる。サイズを理由に分割しない（`.claude/rules/workflow.md` §PR 粒度）
 - PR は枝分かれを履歴に残すため merge commit でマージする。**マージ〜掃除は同一セッション内で `pnpm branch:finish <PR番号>` をワンセットで実行する**（マージ→worktree削除→ローカル/リモート branch 削除→main 最新化まで。完了定義 5 点と手動フォールバックは `.claude/rules/workflow.md` §Worktree 運用）
 - branch 名は `{agent}/{domain}-{action}[-{issue番号}]` に統一する。複数 issue を束ねた場合は代表 issue または epic 番号を使う。Claude Code 自動生成のランダム名は最初の PR 作成前に `git branch -m` でリネームする（`.claude/rules/workflow.md` §命名規則）
@@ -158,11 +102,11 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 ユーザー向けの Docs / Blog / Release notes を書く・編集する前に、次の 3 ファイルを読む:
 
-- `docs/ai/writing-style.md` — 日本語・英語ともに B1 相当の読みやすさ。短文・具体語・能動態。曖昧な SaaS 語（empower / leverage / seamless / robust / optimize 等）を使わない
-- `docs/ai/docs-policy.md` — Docs は usage、Blog は context / product thinking、Release notes は changes。役割を混ぜない
+- `docs/ai/writing-style.md` — 文体（B1 相当の読みやすさ）
+- `docs/ai/docs-policy.md` — Docs / Blog / Release notes の役割分担
 - `docs/ai/review-checklist.md` — 生成直後・PR レビュー時の最終チェック
 
-アプリ内 UI 文言（トースト・ボタン・エラー・空状態・CTA）を書く時は `docs/ai/copywriting.md` を読む。
+アプリ内 UI 文言を書く時は `docs/ai/copywriting.md` を読む。
 
 公開コンテンツの運用フロー（いつ何を書くか）は `docs/marketing/content-operations.md` を正本とする。
 
@@ -185,13 +129,13 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 | `/plan-review`  | 直前の実装 plan を plan-fact-checker / plan-critic の 2 agent で並列レビュー |
 | `/note`         | 各ドメインの `log/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応） |
 | `/session-end`  | 当日の作業を `docs/engineering/log/YYYY-MM-DD-session.md` に記録                         |
-| `/gardening`    | 月次: セッションログ→月次ロールアップ蒸留、ストック鮮度triage、notes昇格、スモークテスト |
+| `/gardening`    | 月次の docs / ルール / セキュリティ保守（手順 10 ステップは同ファイルが正本） |
 
 ## Rule Map
 
 | ファイル | 使う場面 |
 | --- | --- |
-| `.claude/rules/ai-behavior.md` | plan の粒度、曖昧指示、AI 行動規範 |
+| `.claude/rules/ai-behavior.md` | subagent 委任、writer 境界、報告フォーマット、曖昧指示 |
 | `.claude/rules/workflow.md` | 作業規模、設計書、PR 粒度、git / merge 運用 |
 | `.claude/rules/plan-format.md` | 実装 plan を提示する時 |
 | `.claude/rules/architecture.md` | tRPC、状態管理、ロジック配置 |
@@ -211,14 +155,6 @@ Claude Code は `Skill` tool、Codex は該当ファイルを直接読んで手�
 Project skills は `.agents/skills/` を参照する。該当する作業では `SKILL.md` を先に読む。実体は `.claude/skills/` が正本で、`.agents/skills/` は各 skill への symlink（二重管理しない）。
 
 error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / audit-ai-config / dispatch / blog-ideas / docs-audit
-
-## Workflow
-
-1. **Explore**: 既存コード、rules、skills、関連 issue / PR を確認する
-2. **Plan**: 大きい変更は `.claude/rules/plan-format.md` に沿って plan を出す。必要なら `/plan-review`
-3. **Code**: 既存パターンに寄せて最小の変更を入れる
-4. **Verify**: 変更種別に応じて必須コマンドを実行する
-5. **Commit / PR**: path-limited add、`git diff --cached`、日本語 Conventional Commit
 
 ## Deploy / Release
 

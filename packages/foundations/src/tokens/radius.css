@@ -1,7 +1,20 @@
 /* ============================================
  * ボーダー半径（4段階: 0 / 8 / 16 / full）
+ *
+ * `--radius-*: initial` で Tailwind 既定の段（sm/md/xl/3xl 等）を消してから
+ * 4 段だけを再宣言する。こうすると rounded-md のような禁止クラスは
+ * **そもそも生成されない**ので、書いても何も起きない。
+ *
+ * lint（scripts/check-tokens.ts）は「書いたことに気づかせる」層で、
+ * ここは「書いても効かない」層。実際に禁止 radius の lint ルールは長らく
+ * 壊れていて機能していなかったので、見た目を守る層を別に持つ。
+ *
+ * rounded-none は Tailwind の組み込みで theme のリセットに影響されない。
+ * 任意値（rounded-[4px] 等）はマーケの縮小イラストだけが使う。
  * ============================================ */
 @theme {
+  --radius-*: initial;
+
   --radius-lg: 0.5rem; /* 8px  — 標準 */
   --radius-2xl: 1rem; /* 16px — modal, dialog */
   --radius-full: 9999px;

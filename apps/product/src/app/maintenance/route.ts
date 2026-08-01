@@ -20,27 +20,29 @@ export async function GET() {
   <title>Under Maintenance | Dayopt</title>
   <meta name="description" content="System is currently under maintenance">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500&display=swap');
 
+    /* colors.css のトークン値をコピーする（近似で書かない）。
+       Next.js の外で配信される静的 HTML なので CSS 変数を共有できない */
     :root {
-      --background: oklch(1 0 0);
-      --foreground: oklch(0.3211 0 0);
-      --card: oklch(1 0 0);
-      --card-foreground: oklch(0.3211 0 0);
-      --muted: oklch(0.97 0.002 264.54);
-      --muted-foreground: oklch(0.45 0.02 264.54);
-      --border: oklch(0.9 0.006 264.54);
+      --background: oklch(0.97 0.005 75);
+      --foreground: oklch(0.13 0 0);
+      --card: oklch(0.99 0.005 75);
+      --card-foreground: oklch(0.13 0 0);
+      --muted: oklch(0.94 0.005 75);
+      --muted-foreground: oklch(0.4 0 0);
+      --border: oklch(0 0 0 / 0.12);
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --background: oklch(0.2046 0 0);
-        --foreground: oklch(0.9219 0 0);
-        --card: oklch(0.2046 0 0);
-        --card-foreground: oklch(0.9219 0 0);
-        --muted: oklch(0.25 0 0);
-        --muted-foreground: oklch(0.78 0 0);
-        --border: oklch(0.3715 0 0);
+        --background: oklch(0.18 0.008 60);
+        --foreground: oklch(0.9 0.005 70);
+        --card: oklch(0.22 0.008 60);
+        --card-foreground: oklch(0.9 0.005 70);
+        --muted: oklch(0.25 0.008 60);
+        --muted-foreground: oklch(0.68 0.005 60);
+        --border: oklch(1 0 0 / 0.12);
       }
     }
 
@@ -51,7 +53,7 @@ export async function GET() {
     }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       background-color: var(--background);
@@ -106,7 +108,9 @@ export async function GET() {
     .title {
       color: var(--foreground);
       font-size: 1.5rem;
-      font-weight: 700;
+      /* デザインシステムのウェイトは 400 / 500 のみ（ページタイトル = text-2xl font-medium 相当）。
+         700 を残すと CDN で取得しないウェイトになり、ブラウザの擬似ボールドになる。 */
+      font-weight: 500;
       margin-bottom: 0.5rem;
     }
 

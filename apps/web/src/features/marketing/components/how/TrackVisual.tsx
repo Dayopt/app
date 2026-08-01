@@ -45,13 +45,13 @@ export function TrackVisual() {
           <div key={row.label} className="flex flex-col gap-0.5">
             <span className="text-muted-foreground text-[10px]">{row.label}</span>
             <div
-              className="bg-primary/20 text-primary flex h-4 items-center rounded-sm px-1.5 text-[9px] font-medium"
+              className="bg-primary/20 text-primary flex h-4 items-center rounded-[2px] px-1.5 text-[9px] font-medium"
               style={{ width: row.planW }}
             >
               {row.planT}
             </div>
             <div
-              className="border-success/30 bg-success/12 text-success flex h-4 items-center rounded-sm border border-dashed px-1.5 text-[9px] font-medium"
+              className="border-success/30 bg-success/12 text-success flex h-4 items-center rounded-[2px] border border-dashed px-1.5 text-[9px] font-medium"
               style={{ width: row.actualW }}
             >
               {row.actualT}

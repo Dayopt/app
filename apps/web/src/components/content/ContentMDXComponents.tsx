@@ -144,7 +144,10 @@ export const contentMDXComponents: MDXComponents = {
 
   // Code
   code: (props: CodeProps) => (
-    <code className="bg-muted text-foreground rounded px-2 py-1 font-mono text-base" {...props} />
+    <code
+      className="bg-muted text-foreground rounded-lg px-2 py-1 font-mono text-base"
+      {...props}
+    />
   ),
   pre: (props: PreProps) => (
     <pre
@@ -166,7 +169,7 @@ export const contentMDXComponents: MDXComponents = {
   img: (props: ImageProps) => (
     <div className="relative my-6 overflow-hidden rounded-lg">
       <Image
-        className="rounded-lg shadow-lg"
+        className="rounded-lg shadow-sm"
         loading="lazy"
         width={800}
         height={600}

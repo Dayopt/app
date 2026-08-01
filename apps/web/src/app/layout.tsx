@@ -1,14 +1,32 @@
-import { Toaster } from '@dayopt/components';
+import { cn, Toaster } from '@dayopt/components';
 import { dayoptBrand, dayoptContact } from '@dayopt/config';
 import { generateEnhancedMetadata, StructuredData } from '@web/components/seo/EnhancedSEO';
-import { cn } from '@web/lib/class-names';
 import { ThemeProvider } from '@web/shell/providers/theme-provider';
 import type { Metadata } from 'next';
+import { Noto_Sans_JP, Source_Sans_3 } from 'next/font/google';
 import './globals.css';
 
-// NOTE: Google Fonts アクセスが制限されているビルド環境向けに一時的にシステムフォントを使用
-// 本番環境では next/font/google を使用することを推奨
-// TODO: ビルド環境でGoogle Fontsアクセスが可能になったら next/font/google に戻す
+// product（apps/product/src/app/layout.tsx）と同一のフォントスタック。
+// 変数名は foundations の tokens/typography.css が参照するものに合わせる。
+//
+// fallback に generic family（sans-serif / system-ui 等）を入れない。next/font は
+// fallback の中身を font-family の末尾に連結するため、generic が --font-latin の中に入ると
+// stack 上で和文フォントより前に来てしまう。generic を含むシステムフォールバックの尾は
+// typography.css 側だけが持つ。
+const sourceSans = Source_Sans_3({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-latin',
+  preload: true,
+});
+
+const notoSansJP = Noto_Sans_JP({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  display: 'swap',
+  variable: '--font-noto-jp',
+  preload: true,
+});
 
 export const metadata: Metadata = generateEnhancedMetadata({
   title: 'Dayopt - Modern SaaS Platform',
@@ -29,7 +47,11 @@ export const metadata: Metadata = generateEnhancedMetadata({
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${sourceSans.variable} ${notoSansJP.variable}`}
+    >
       <head>
         <link
           rel="alternate"

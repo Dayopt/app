@@ -31,10 +31,10 @@ export function getAccuracyColors(status: AccuracyStatus): { bg: string; text: s
   switch (status) {
     case 'excellent':
     case 'good':
-      return { bg: 'bg-success/10', text: 'text-success' };
+      return { bg: 'bg-success-tint', text: 'text-success' };
     case 'fair':
-      return { bg: 'bg-warning/10', text: 'text-warning' };
+      return { bg: 'bg-warning-tint', text: 'text-warning' };
     case 'poor':
-      return { bg: 'bg-destructive/10', text: 'text-destructive' };
+      return { bg: 'bg-destructive-tint', text: 'text-destructive' };
   }
 }

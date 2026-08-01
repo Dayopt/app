@@ -1,4 +1,4 @@
-import { Heading, Text } from '@dayopt/components';
+import { Button, Heading, Text } from '@dayopt/components';
 import { Link } from '@dayopt/i18n/navigation';
 import { StructuredData } from '@web/components/seo/StructuredData';
 import { DocArticle } from '@web/features/docs';
@@ -150,12 +150,9 @@ export default async function DocPage({ params }: DocPageProps) {
           <Text variant="muted" className="mb-6">
             {tDocs('error.description')}
           </Text>
-          <Link
-            href="/docs"
-            className="bg-primary text-primary-foreground hover:bg-primary-hover inline-flex items-center rounded-lg px-4 py-2 transition-colors"
-          >
-            {tDocs('error.backToDocs')}
-          </Link>
+          <Button asChild>
+            <Link href="/docs">{tDocs('error.backToDocs')}</Link>
+          </Button>
         </div>
       </div>
     );

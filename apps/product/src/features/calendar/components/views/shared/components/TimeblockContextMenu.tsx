@@ -5,7 +5,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { getTimeblockMenuItems } from '@/features/timeblock';
-import { cn } from '@dayopt/components';
+import { cn, overlaySurface } from '@dayopt/components';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
 interface TimeblockContextMenuProps {
@@ -150,7 +150,10 @@ export const EventContextMenu = ({
       ref={menuRef}
       role="menu"
       aria-label={t('calendar.contextMenu.title')}
-      className="bg-card text-card-foreground border-border-subtle animate-in fade-in-0 zoom-in-95 z-context-menu shadow-card fixed min-w-48 rounded-lg border p-1 motion-reduce:animate-none"
+      className={cn(
+        overlaySurface(),
+        'animate-in fade-in-0 zoom-in-95 z-context-menu fixed min-w-48 p-1 motion-reduce:animate-none',
+      )}
       style={{
         left: adjustedPosition.x,
         top: adjustedPosition.y,

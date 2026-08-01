@@ -31,7 +31,7 @@ export function SummaryCard({
   return (
     <div
       className={cn(
-        'border-border-subtle bg-card flex min-h-32 flex-col justify-between rounded-lg border p-4',
+        'border-border-subtle bg-card flex min-h-32 flex-col justify-between rounded-lg border p-4 shadow-sm',
         className,
       )}
     >

@@ -27,14 +27,6 @@ interface ComponentEntry {
 
 const components: ComponentEntry[] = [
   {
-    name: 'ActionFooter',
-    variant: null,
-    size: null,
-    disabled: false,
-    loading: false,
-    className: true,
-  },
-  {
     name: 'AlertDialog',
     variant: null,
     size: null,
@@ -78,14 +70,6 @@ const components: ComponentEntry[] = [
   },
   { name: 'Card', variant: null, size: null, disabled: false, loading: false, className: true },
   { name: 'Checkbox', variant: null, size: null, disabled: true, loading: false, className: true },
-  {
-    name: 'Collapsible',
-    variant: null,
-    size: null,
-    disabled: false,
-    loading: false,
-    className: true,
-  },
   {
     name: 'ColorPalettePicker',
     variant: null,
@@ -184,7 +168,6 @@ const components: ComponentEntry[] = [
     note: 'md → default',
   },
   { name: 'Switch', variant: null, size: null, disabled: true, loading: false, className: true },
-  { name: 'Tabs', variant: null, size: null, disabled: false, loading: false, className: true },
   { name: 'Textarea', variant: null, size: null, disabled: true, loading: false, className: true },
   { name: 'Toast', variant: null, size: null, disabled: false, loading: false, className: false },
   { name: 'Tooltip', variant: null, size: null, disabled: true, loading: false, className: true },

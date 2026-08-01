@@ -17,7 +17,11 @@ export const Overview: Story = {
     <div>
       <h1 className="mb-2 text-2xl font-medium">Motion</h1>
       <p className="text-muted-foreground mb-8">
-        アニメーションとトランジションのトークン（Material Design 3準拠）
+        実際の動きを触って確かめる見本。方針と段階の定義は{' '}
+        <a href="?path=/docs/shared-foundations-motion--docs" className="underline">
+          Motion 方針
+        </a>{' '}
+        が正本。
       </p>
 
       <div className="grid max-w-5xl gap-8">
@@ -146,7 +150,7 @@ data-[state=closed]:animate-out`}
 // transform のみ
 <div className="transition-transform duration-200 hover:-translate-y-1">
 
-// ease は指定しない（Tailwind デフォルトの ease-in-out で十分）`}
+// easing は ease-standard / ease-settle の2種から選ぶ`}
           </pre>
         </section>
 
@@ -154,74 +158,45 @@ data-[state=closed]:animate-out`}
         <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-medium">Duration（継続時間）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
-            <code>duration-150</code> をデフォルトとし、ほぼ全てこれを使う。他は例外的な場面のみ。
+            <code>duration-150</code> をデフォルトとし、ほぼ全てこれを使う。3段以外は使わない。
           </p>
-          <div className="grid gap-4 sm:grid-cols-4">
-            <DurationDemo duration="75" />
+          <div className="grid gap-4 sm:grid-cols-3">
             <DurationDemo duration="150" />
             <DurationDemo duration="200" />
             <DurationDemo duration="300" />
           </div>
-          <div className="bg-container mt-4 rounded-lg p-4">
-            <h3 className="mb-2 text-sm font-medium">推奨値</h3>
-            <ul className="text-muted-foreground space-y-1 text-xs">
-              <li>
-                <code>duration-75</code> - 即座のフィードバック（active 押下など）
-              </li>
-              <li>
-                <code>duration-150</code> - <strong>標準（デフォルト）</strong> — ほぼ全てこれを使う
-              </li>
-              <li>
-                <code>duration-200</code> - transform、やや重い要素の移動
-              </li>
-              <li>
-                <code>duration-300</code> - 大きな面積の展開・折りたたみ（accordion 等）
-              </li>
-            </ul>
-          </div>
+          <p className="text-muted-foreground mt-4 text-xs">
+            どれを使うかは「その操作が4層のどれか」で決まる。段階の定義・持続（loop）・例外は{' '}
+            <a href="?path=/docs/shared-foundations-motion--docs" className="underline">
+              Motion 方針
+            </a>{' '}
+            を参照（この story に表を複製しない）。
+          </p>
         </section>
 
         {/* Easing */}
         <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-medium">Easing（イージング）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
-            Material Design 3準拠。要素の動きに自然さを与える。
+            2種だけ。実体は <code>tokens/motion.css</code>。
           </p>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <EasingDemo
-              easing="ease-out"
-              label="ease-out（推奨）"
-              description="減速。画面に入る要素に使用"
+              easing="ease-standard"
+              label="ease-standard"
+              description="その場で変わるもの（色、状態、退出）"
             />
             <EasingDemo
-              easing="ease-in"
-              label="ease-in"
-              description="加速。画面から出る要素に使用"
+              easing="ease-settle"
+              label="ease-settle"
+              description="入ってくる・着地するもの"
             />
-            <EasingDemo
-              easing="ease-in-out"
-              label="ease-in-out"
-              description="対称。トグル切り替え等"
-            />
-            <EasingDemo easing="ease-linear" label="linear" description="等速。プログレスバー等" />
           </div>
-          <div className="bg-container mt-4 rounded-lg p-4">
-            <h3 className="mb-2 text-sm font-medium">使い分け（Material Design 3）</h3>
-            <ul className="text-muted-foreground space-y-1 text-xs">
-              <li>
-                <code>ease-out</code> - デフォルト。ほとんどの場合これを使う
-              </li>
-              <li>
-                <code>ease-in</code> - 要素が画面外に出るとき
-              </li>
-              <li>
-                <code>ease-in-out</code> - 画面内で位置が変わるとき
-              </li>
-              <li>
-                <code>linear</code> - 継続的な動き（スピナー、プログレス）
-              </li>
-            </ul>
-          </div>
+          <p className="text-muted-foreground mt-4 text-xs">
+            {/* lint-tokens-allow: 「直書きしない」という注意書き自体での言及 */}
+            退出も standard を使う。exit 専用の easing は持たない。<code>cubic-bezier</code>{' '}
+            をコード側に直書きしない。
+          </p>
         </section>
 
         {/* motion-reduce */}
@@ -231,16 +206,19 @@ data-[state=closed]:animate-out`}
             motion-reduce対応で、ユーザー設定に応じてアニメーションを無効化
           </p>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-xs">
-            {`// motion-reduceでアニメーション無効化
-className="animate-in fade-in motion-reduce:animate-none"
+            {`// 個別の打ち消しは基本不要。tokens/motion.css の全体規則が
+// animation-duration / transition-duration / iteration-count を潰す
+*, *::before, *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
 
-// reduced-motion.cssで自動適用済み
-.animate-in,
-.animate-out,
+// 例外は「止めると中途半端な見た目で固まる」もの。
+// shimmer は tokens/animations.css が単色へ置換する
 .animate-shimmer {
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
+  animation: none !important;
+  background: var(--container) !important;
 }`}
           </pre>
         </section>
@@ -320,7 +298,7 @@ function TransitionDemo({
       <div className="text-sm font-medium">{name}</div>
       <button
         type="button"
-        className={`bg-primary text-primary-foreground hover:bg-primary/80 flex h-12 w-full items-center justify-center rounded-lg text-xs font-medium ${className}`}
+        className={`bg-primary text-primary-foreground hover:bg-primary-hover flex h-12 w-full items-center justify-center rounded-lg text-xs font-medium ${className}`}
       >
         hover me
       </button>
@@ -372,7 +350,7 @@ function EasingDemo({
       <div className="text-sm font-medium">{label}</div>
       <div className="bg-muted relative h-12 overflow-hidden rounded-lg">
         <div
-          className={`bg-primary absolute top-1 bottom-1 left-1 rounded-lg transition-transform duration-500 ${easing} ${active ? 'translate-x-[calc(100%-3rem)]' : ''}`}
+          className={`bg-primary absolute top-1 bottom-1 left-1 rounded-lg transition-transform duration-300 ${easing} ${active ? 'translate-x-[calc(100%-3rem)]' : ''}`}
           style={{ width: '2.5rem' }}
         />
       </div>

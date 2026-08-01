@@ -50,10 +50,10 @@ export function TagBalancePanel({
           >
             <TagIcon icon={tag.tagIcon ?? null} color={tag.tagColor} size="sm" />
             <span className="text-foreground min-w-0 flex-1 truncate text-sm">{tag.tagName}</span>
-            <span className="text-foreground font-mono text-sm tabular-nums">
+            <span className="text-foreground text-sm tabular-nums">
               {formatDurationMinutes(tag.minutes)}
             </span>
-            <span className="text-muted-foreground w-10 text-right font-mono text-sm tabular-nums">
+            <span className="text-muted-foreground w-10 text-right text-sm tabular-nums">
               {tag.percentage}%
             </span>
           </button>

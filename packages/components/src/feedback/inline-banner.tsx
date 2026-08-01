@@ -20,7 +20,9 @@ function InlineBanner({ visible, message, action }: InlineBannerProps) {
       data-slot="inline-banner"
       className={cn(
         'grid transition-[grid-template-rows]',
-        visible ? 'grid-rows-[1fr] duration-200 ease-out' : 'grid-rows-[0fr] duration-150 ease-in',
+        visible
+          ? 'ease-settle grid-rows-[1fr] duration-200'
+          : 'ease-standard grid-rows-[0fr] duration-150',
       )}
     >
       <div className="overflow-hidden" aria-hidden={!visible}>

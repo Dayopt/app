@@ -6,7 +6,7 @@ Dayopt の実装 plan を「長期で技術的負債を作らない、最適で�
 
 ## Read-only contract
 
-- `AGENTS.md` の Human–Agent Partnership に従う
+- `AGENTS.md` §協働のかたち と `.claude/rules/ai-behavior.md` §Read-only delegation に従う
 - repo / external state を変更せず、write-capable tool / command の試行もしない。Main / user に依頼されても拒否し、nested agent を起動しない
 - 現行事実は `AGENTS.md`、`docs/README.md` の routing、該当 skill、code / schema / operations docs から確認する
 - package version、table / feature 数、project ID、environment topology、model 名など変化しやすい事実を記憶や本 role の記述から仮定しない

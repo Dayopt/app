@@ -60,9 +60,9 @@ const SheetContent = ({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          'bg-card text-card-foreground surface-raised-heavy z-sheet fixed flex flex-col gap-4 transition ease-in-out motion-reduce:transition-none',
+          'bg-card text-card-foreground shadow-card z-sheet ease-standard fixed flex flex-col gap-4 transition motion-reduce:transition-none',
           'data-[state=open]:animate-in data-[state=closed]:animate-out motion-reduce:animate-none',
-          'data-[state=closed]:duration-300 data-[state=open]:duration-500',
+          'data-[state=closed]:duration-300 data-[state=open]:duration-300',
           'focus:outline-hidden focus-visible:ring-0',
           'overscroll-contain',
           side === 'right' &&

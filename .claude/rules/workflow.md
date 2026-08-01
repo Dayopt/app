@@ -148,6 +148,26 @@ docs/projects/{project-name}/
 
 ただし feature 単位の長期設計（ARCHITECTURE.md 相当）は feature 内コロケーションの選択肢あり。これは Project 設計書とは別物。
 
+## Pause point（どこで止まって確認するか）
+
+『アナタはなぜチェックリストを使わないのか』の実行層。判断層（`AGENTS.md` §シンプルルール）が「どちらへ行くか分からない」に対処するのに対し、こちらは**正解を知っているのに複雑さの中でやり損なう**方に対処する。
+
+**confirm リストは発動点の中に置く。この表はその地図で、リストの複製は持たない。** 参照文書（本ファイルや `plan-format.md`）は「なぜそうするか」の正本のまま維持する。
+
+| Pause point | 発動する仕組み                                     | 強制力                                     |
+| ----------- | -------------------------------------------------- | ------------------------------------------ |
+| plan 提示前 | `plan-format.md` の必須セクション + `/plan-review` | 書かないと plan が成立しない               |
+| push 前     | `.husky/pre-push`                                  | commit set ごとに 1 回止まる（下記の注意） |
+| merge 前    | `pnpm branch:finish`                               | 機械。完了定義 5 点を満たさないと止まる    |
+| session end | `/session-end`                                     | ユーザー起動                               |
+| commit 前   | husky `pre-commit` / `commit-msg`                  | 機械                                       |
+
+push 前の pause は git レベルの hook なので Claude / Codex / 人間 / wrapper script のすべてに効く。ただし**スピードバンプであってゲートではない** — 機械が強制できるのは「観点を提示して 1 回止める」までで、答えたかどうかは検証できない。黙って再実行すれば通ってしまうことを前提に、答えを発話してから再実行するのは規律の側で守る。`--no-verify` での迂回は agent には禁止（`.claude/hooks/pre-tool-guard.sh` がブロック）、人間が使う場合は理由を一言残す。
+
+規律は 3 つ。**①機械で強制できるものは機械へ**（止まるのが最強）。**②機械化できないものだけ発動点で明示発話する**。「該当なし」も言い切り、黙って通さない。**③項目を 1 つ足すときは 1 つ削る**。長いチェックリストは形骸化するのが最悪の失敗モードなので、各点 5〜9 項目に収める。
+
+項目に入れてよいのは**実際に抜けて事故になり、かつ再発性があるもの**だけ。仮想の心配事と一回きりの事故は入れない（一回きりは再発したら昇格させる）。各項目が何を捕まえたかの検証は `/gardening` のステップ 5。
+
 ## 共通ゲート（規模によらず）
 
 ### path-limited add
@@ -178,7 +198,7 @@ commit 前に必ず `git diff --cached` で index 内容を確認する。Edit �
 
 外部レビュー（Codex / ai-review）は push ごとに走るため、指摘 → 修正 push のラウンドがそのまま時間コストになる。effort で拾える層は push 前に自分で拾う:
 
-- `AGENTS.md` §Read-only delegation の自動委任条件に該当する diff（auth / RLS / billing / migration / 公開契約 / cross-feature）は、**初回 push 前に**該当 subagent（`risk-reviewer` / `behavior-verifier` / `architecture-guard`）へ反証レビューをかける
+- `.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件に該当する diff（auth / RLS / billing / migration / 公開契約 / cross-feature）は、**初回 push 前に**該当 subagent（`risk-reviewer` / `behavior-verifier` / `architecture-guard`）へ反証レビューをかける
 - 観点は「反証」に固定する: 配線漏れ（workflow ↔ script の env 受け渡し等）、定数間の不等式（timeout / 予算）、直前の修正コミットが新たに開けた穴
 - 指摘対応の push 前にも同じ確認を行う。外部レビューの指摘を直すコミット自体が新しい回帰を作る事例が繰り返し起きている（PR #1712 / #1738）
 - §束ねた PR のレビュー の merge 前クロスレビューは別途維持する（あちらは束ね PR の最終確認、こちらは push ラウンド削減）
@@ -208,7 +228,7 @@ UI 変更を含む作業では、関連 Story がある場合は Storybook を�
 
 ### 束ねた PR のレビュー
 
-複数 issue / 複数 Step を束ねた PR は、**merge 前に read-only subagent のクロスレビューを必須**とする。対象は `AGENTS.md` §Read-only delegation の自動委任条件に該当するもの（`architecture-guard` / `behavior-verifier` / `risk-reviewer`）。PR が大きい分、人間の目視レビューだけに依存しない。
+複数 issue / 複数 Step を束ねた PR は、**merge 前に read-only subagent のクロスレビューを必須**とする。対象は `.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件に該当するもの（`architecture-guard` / `behavior-verifier` / `risk-reviewer`）。PR が大きい分、人間の目視レビューだけに依存しない。
 
 ### なぜ束ねるか
 

@@ -259,7 +259,7 @@ export function BillingSettings() {
       <SectionCard title={t('settings.subscription.currentPlan')}>
         <div className="flex items-center gap-4 py-2">
           <div className="bg-state-active flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
-            <Crown className="text-primary h-6 w-6" />
+            <Crown className="text-state-active-foreground h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">

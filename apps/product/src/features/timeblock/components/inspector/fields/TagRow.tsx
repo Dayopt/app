@@ -19,6 +19,7 @@ import type { TagColorEntry } from '@/features/tags';
 import { TagIcon, TagQuickSelector } from '@/features/tags';
 import type { TimeblockMenuItem } from '@/features/timeblock/lib/timeblock-menu-items';
 import {
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -112,14 +113,17 @@ export function TagRow({
           {hasMenuItems && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  icon
+                  size="lg"
                   disabled={disabled}
-                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-11 items-center justify-center rounded-lg transition-colors"
                   aria-label={t('common.actions.more')}
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <MoreHorizontal className="size-5" />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {menuItems.map((item, index) => {
@@ -143,14 +147,17 @@ export function TagRow({
             </DropdownMenu>
           )}
           {onCloseInspector && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              icon
+              size="lg"
               onClick={onCloseInspector}
-              className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-11 items-center justify-center rounded-lg transition-colors"
               aria-label={t('common.actions.close')}
+              className="text-muted-foreground hover:text-foreground"
             >
               <X className="size-5" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
