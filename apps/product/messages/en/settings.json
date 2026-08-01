@@ -311,7 +311,7 @@
         "dataControls": "Data Controls",
         "dataControlsDesc": "Export, import, and backup settings",
         "integrations": "Integrations",
-        "integrationsDesc": "AI providers and external service connections",
+        "integrationsDesc": "Google Calendar and iCal feeds",
         "profile": "Profile",
         "profileDesc": "Name and email",
         "display": "Display",
@@ -427,17 +427,90 @@
         "description": "Issue API keys and configure Webhooks from the developer portal.",
         "openPortal": "Open Developer Portal (Coming Soon)"
       },
+      "googleCalendar": {
+        "title": "Google Calendar",
+        "description": "Choose which Google calendars to import into Dayopt. You can connect more than one Google account.",
+        "connect": "Connect Google account",
+        "addAccount": "Add Google account",
+        "checkingAvailability": "Checking...",
+        "unavailable": "Google Calendar connection is not available in this environment.",
+        "loading": "Loading Google Calendar connections",
+        "loadError": "Google Calendar connections could not be loaded",
+        "empty": "Connect a Google account to choose calendars for import.",
+        "unknownAccount": "Google account",
+        "lastSync": "Last sync: {value}",
+        "neverSynced": "Never",
+        "calendars": "Calendars to import",
+        "loadingCalendars": "Loading calendars",
+        "calendarLoadError": "Calendars could not be loaded",
+        "noCalendars": "No calendars are available for this account.",
+        "unnamedCalendar": "Unnamed calendar",
+        "primary": "Primary",
+        "apply": "Apply",
+        "applying": "Applying...",
+        "syncNow": "Sync now",
+        "syncing": "Syncing...",
+        "reconnect": "Reconnect",
+        "reconnectToChoose": "Reconnect this account before choosing calendars.",
+        "disconnect": "Disconnect",
+        "disconnecting": "Disconnecting...",
+        "disconnectSuccess": "Google account disconnected",
+        "disconnectFailed": "Google account could not be disconnected",
+        "status": {
+          "connected": "Connected",
+          "reauthRequired": "Reconnect required",
+          "issue": "Needs attention"
+        },
+        "errors": {
+          "reauthRequired": "Google access has expired. Reconnect the same Google account.",
+          "rateLimited": "Google Calendar is temporarily rate limited. Try again later.",
+          "providerUnavailable": "Google Calendar is temporarily unavailable. Try again later.",
+          "encryptionKeyInvalid": "This connection cannot be read securely. Reconnect the account.",
+          "partialFailure": "Some calendars could not be synced. Review the selection and try again.",
+          "generic": "This connection has a sync issue. Try again or reconnect it."
+        },
+        "outcomes": {
+          "synced": "Google Calendar synced",
+          "reauthRequired": "Reconnect this Google account before syncing",
+          "encryptionKeyInvalid": "This connection cannot be read securely. Reconnect it.",
+          "partialFailure": "Some calendars could not be synced",
+          "notConfigured": "Google Calendar connection is not configured",
+          "updateFailed": "Calendar selection could not be applied",
+          "syncFailed": "Google Calendar could not be synced"
+        },
+        "disconnectDialog": {
+          "title": "Disconnect this Google account?",
+          "description": "Dayopt will try to revoke Google access, then permanently delete its local token and connection. Referenced historical timeblocks will remain."
+        },
+        "callback": {
+          "connected": "Google account connected",
+          "accessDenied": "Google Calendar access was not granted",
+          "accountMismatch": "Choose the same Google account that needs to be reconnected",
+          "proRequired": "A Pro plan is required to connect Google Calendar",
+          "rateLimited": "Too many connection attempts. Try again later.",
+          "reconnectTargetInvalid": "This connection can no longer be reconnected. Refresh and try again.",
+          "unavailable": "Google Calendar connection is temporarily unavailable",
+          "genericError": "Google Calendar could not be connected"
+        }
+      },
       "icalFeed": {
         "title": "iCal Feed",
         "description": "Add this URL to Google Calendar or Apple Calendar to view your Dayopt schedule as read-only.",
         "feedUrl": "Feed URL",
         "copy": "Copy",
-        "copied": "Copied!",
+        "copied": "Copied",
+        "copyFailed": "Feed URL could not be copied",
+        "loading": "Loading iCal feed URL",
+        "loadError": "iCal feed URL could not be loaded",
+        "generate": "Generate URL",
+        "generating": "Generating...",
         "regenerate": "Regenerate URL",
+        "regenerating": "Regenerating...",
         "regenerateConfirmTitle": "Regenerate feed URL?",
         "regenerateConfirmDescription": "The current URL will stop working. Any calendars using it will need to be updated.",
         "regenerateSuccess": "New feed URL generated",
-        "noToken": "Click \"Regenerate URL\" to generate a feed URL"
+        "regenerateFailed": "Feed URL could not be generated",
+        "noToken": "Generate a private feed URL to subscribe from another calendar app."
       }
     },
     "legal": {

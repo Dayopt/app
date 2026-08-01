@@ -1,17 +1,24 @@
 'use client';
 
 import { useParams, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { AppHeader } from '@/components/shell/AppHeader';
+import {
+  parseCalendarCallbackResult,
+  removeCalendarCallbackParams,
+  type CalendarCallbackError,
+} from '@/features/external-calendar';
 import { isValidCategory, SETTINGS_CATEGORIES, SettingsContent } from '@/features/settings';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { toast } from '@/lib/toast';
+import { api } from '@/lib/trpc';
 import { Button } from '@dayopt/components';
 import { Link, useRouter } from '@dayopt/i18n/navigation';
 
@@ -31,6 +38,8 @@ export default function SettingsCategoryPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const openSettings = useShellStore((s) => s.openSettings);
+  const utils = api.useUtils();
+  const processedCallback = useRef<string | null>(null);
 
   const category = params?.category ?? 'general';
   const isValid = isValidCategory(category);
@@ -38,14 +47,62 @@ export default function SettingsCategoryPage() {
   const settingsIndexHref = rawReturnTo
     ? `/settings${buildSettingsReturnQuery(normalizeSettingsReturnPath(rawReturnTo))}`
     : '/settings';
+  const calendarParam = searchParams.get('calendar');
+  const reasonParam = searchParams.get('reason');
+  const searchParamsString = searchParams.toString();
+  const callbackResult = useMemo(() => {
+    const callbackParams = new URLSearchParams();
+    if (calendarParam) callbackParams.set('calendar', calendarParam);
+    if (reasonParam) callbackParams.set('reason', reasonParam);
+    return parseCalendarCallbackResult(callbackParams);
+  }, [calendarParam, reasonParam]);
 
-  // PC: ホームにリダイレクトし、設定モーダルを開く
+  // OAuth callback の feedback / cache 更新を PC redirect より先に一元処理する。
   useEffect(() => {
-    if (hasMounted && !isMobile && isValid) {
+    if (!hasMounted || !isValid) return;
+
+    if (callbackResult) {
+      const callbackKey = `${calendarParam ?? ''}:${reasonParam ?? ''}`;
+      if (processedCallback.current === callbackKey) return;
+      processedCallback.current = callbackKey;
+
+      if (callbackResult.type === 'connected') {
+        toast.success(t('settings.integrations.googleCalendar.callback.connected'));
+      } else {
+        toast.error(calendarCallbackErrorMessage(t, callbackResult.error));
+      }
+      void utils.externalCalendar.listConnections.invalidate();
+
+      if (!isMobile) {
+        openSettings('integrations');
+        router.replace('/');
+        return;
+      }
+
+      const cleanParams = removeCalendarCallbackParams(new URLSearchParams(searchParamsString));
+      const query = cleanParams.size > 0 ? `?${cleanParams.toString()}` : '';
+      router.replace(`/settings/integrations${query}`);
+      return;
+    }
+
+    if (!isMobile) {
       openSettings(category);
       router.replace('/');
     }
-  }, [hasMounted, isMobile, isValid, category, openSettings, router]);
+  }, [
+    callbackResult,
+    calendarParam,
+    category,
+    hasMounted,
+    isMobile,
+    isValid,
+    openSettings,
+    reasonParam,
+    router,
+    searchParamsString,
+    t,
+    utils.externalCalendar.listConnections,
+  ]);
 
   if (!isValid) {
     return null;
@@ -75,4 +132,26 @@ export default function SettingsCategoryPage() {
       <SettingsContent category={category} />
     </>
   );
+}
+
+function calendarCallbackErrorMessage(
+  t: ReturnType<typeof useTranslations>,
+  error: CalendarCallbackError,
+): string {
+  switch (error) {
+    case 'access_denied':
+      return t('settings.integrations.googleCalendar.callback.accessDenied');
+    case 'account_mismatch':
+      return t('settings.integrations.googleCalendar.callback.accountMismatch');
+    case 'pro_required':
+      return t('settings.integrations.googleCalendar.callback.proRequired');
+    case 'rate_limited':
+      return t('settings.integrations.googleCalendar.callback.rateLimited');
+    case 'reconnect_target_invalid':
+      return t('settings.integrations.googleCalendar.callback.reconnectTargetInvalid');
+    case 'unavailable':
+      return t('settings.integrations.googleCalendar.callback.unavailable');
+    case 'generic':
+      return t('settings.integrations.googleCalendar.callback.genericError');
+  }
 }

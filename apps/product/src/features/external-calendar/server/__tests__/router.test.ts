@@ -11,6 +11,8 @@ const disconnect = vi.hoisted(() => vi.fn());
 const syncConnection = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
 const isBillingEnforced = vi.hoisted(() => vi.fn(() => false));
+const isGoogleCalendarConfigured = vi.hoisted(() => vi.fn());
+const resolveRedirectUri = vi.hoisted(() => vi.fn());
 
 vi.mock('../connection-service', () => ({
   listConnections,
@@ -20,6 +22,7 @@ vi.mock('../connection-service', () => ({
   disconnect,
 }));
 vi.mock('../sync-service', () => ({ syncConnection }));
+vi.mock('../google-oauth', () => ({ isGoogleCalendarConfigured, resolveRedirectUri }));
 vi.mock('@/lib/rate-limit/upstash', () => ({
   calendarSyncNowRateLimit: { limit: rateLimit },
   // protectedProcedure が毎リクエスト参照する。ここでは常に成功させる。
@@ -48,6 +51,10 @@ beforeEach(() => {
   listProviderCalendars.mockResolvedValue([]);
   updateSelectedCalendars.mockResolvedValue(undefined);
   disconnect.mockResolvedValue(undefined);
+  isGoogleCalendarConfigured.mockReturnValue(true);
+  resolveRedirectUri.mockReturnValue(
+    'https://app.dayopt.app/api/integrations/google-calendar/callback',
+  );
 });
 
 describe('externalCalendarRouter — 認可', () => {
@@ -63,6 +70,38 @@ describe('externalCalendarRouter — 認可', () => {
   it('未認証（userId なし）は listConnections で弾かれる', async () => {
     const unauth = createCaller(createMockContext({}));
     await expect(unauth.listConnections()).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+});
+
+describe('externalCalendarRouter — connection availability', () => {
+  it('設定と redirect origin が一致すると available=true', async () => {
+    await expect(
+      caller().getConnectionAvailability({ origin: 'https://app.dayopt.app' }),
+    ).resolves.toEqual({ available: true });
+  });
+
+  it('設定不足または protocol の違う redirect は available=false', async () => {
+    isGoogleCalendarConfigured.mockReturnValue(false);
+    await expect(
+      caller().getConnectionAvailability({ origin: 'https://app.dayopt.app' }),
+    ).resolves.toEqual({ available: false });
+
+    isGoogleCalendarConfigured.mockReturnValue(true);
+    resolveRedirectUri.mockReturnValue(
+      'http://app.dayopt.app/api/integrations/google-calendar/callback',
+    );
+    await expect(
+      caller().getConnectionAvailability({ origin: 'https://app.dayopt.app' }),
+    ).resolves.toEqual({ available: false });
+  });
+
+  it('origin 以外や http(s) 以外は BAD_REQUEST', async () => {
+    await expect(
+      caller().getConnectionAvailability({ origin: 'https://app.dayopt.app/path' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      caller().getConnectionAvailability({ origin: 'ftp://app.dayopt.app' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 });
 

@@ -5,6 +5,7 @@ import {
   normalizeLocale,
   setConnectFlowCookie,
 } from '@/features/external-calendar/server/connect-flow';
+import { getReconnectTarget } from '@/features/external-calendar/server/connection-service';
 import {
   buildAuthorizationUrl,
   generatePkcePair,
@@ -17,6 +18,7 @@ import { logger } from '@/lib/logger';
 import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
+import { z } from 'zod';
 
 /** AES-256-GCM に node:crypto が要る。Edge では動かない。 */
 export const runtime = 'nodejs';
@@ -98,6 +100,32 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
   }
 
+  const reconnectParam = requestUrl.searchParams.get('reconnectConnectionId');
+  const reconnectConnectionId = reconnectParam ? z.string().uuid().safeParse(reconnectParam) : null;
+
+  if (reconnectConnectionId && !reconnectConnectionId.success) {
+    return NextResponse.json({ error: 'Reconnect target is invalid' }, { status: 400 });
+  }
+
+  if (reconnectConnectionId?.success) {
+    try {
+      const target = await getReconnectTarget(user.id, reconnectConnectionId.data);
+      if (!target) {
+        return NextResponse.json({ error: 'Reconnect target is invalid' }, { status: 400 });
+      }
+    } catch (error) {
+      captureUnexpectedError(
+        error instanceof Error ? error : new Error('failed to load reconnect target'),
+        {
+          feature: 'external_calendar',
+          operation: 'load_reconnect_target',
+          route: '/api/integrations/google-calendar/start',
+        },
+      );
+      return NextResponse.json({ error: 'Failed to start reconnection' }, { status: 500 });
+    }
+  }
+
   const state = generateState();
   const { verifier, challenge } = generatePkcePair();
   const locale = normalizeLocale(requestUrl.searchParams.get('locale') ?? undefined);
@@ -106,7 +134,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     buildAuthorizationUrl({ redirectUri, state, codeChallenge: challenge }),
   );
 
-  setConnectFlowCookie(response, { state, verifier, locale, userId: user.id }, secure);
+  setConnectFlowCookie(
+    response,
+    {
+      state,
+      verifier,
+      locale,
+      userId: user.id,
+      ...(reconnectConnectionId?.success
+        ? { reconnectConnectionId: reconnectConnectionId.data }
+        : {}),
+    },
+    secure,
+  );
 
   return response;
 }

@@ -7,6 +7,7 @@ const createClient = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
+const getReconnectTarget = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
@@ -22,6 +23,7 @@ vi.mock('@/lib/rate-limit/upstash', () => ({
 }));
 vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
+vi.mock('@/features/external-calendar/server/connection-service', () => ({ getReconnectTarget }));
 
 import { GET } from '../start/route';
 
@@ -45,6 +47,10 @@ describe('google calendar start route', () => {
     createClient.mockResolvedValue({ auth: { getUser }, from });
     rateLimit.mockResolvedValue({ success: true });
     checkProAccessForUser.mockResolvedValue('allowed');
+    getReconnectTarget.mockResolvedValue({
+      id: '00000000-0000-4000-8000-0000000000c1',
+      providerAccountId: 'google-sub-123',
+    });
   });
 
   it('env が未設定なら 503 で止まり Google へ飛ばさない', async () => {
@@ -101,7 +107,7 @@ describe('google calendar start route', () => {
       'openid email https://www.googleapis.com/auth/calendar.readonly',
     );
     expect(location.searchParams.get('access_type')).toBe('offline');
-    expect(location.searchParams.get('prompt')).toBe('consent');
+    expect(location.searchParams.get('prompt')).toBe('consent select_account');
     expect(location.searchParams.get('code_challenge_method')).toBe('S256');
     expect(location.searchParams.get('code_challenge')).toBeTruthy();
     // allowlist の文字列がそのまま渡り、request から組み立て直されていない
@@ -121,6 +127,35 @@ describe('google calendar start route', () => {
     // verifier は cookie にだけ入り、URL には出ない
     expect(flowState.verifier).toBeTruthy();
     expect(location.searchParams.get('code_verifier')).toBeNull();
+  });
+
+  it('本人の reauth_required 接続だけを再接続 cookie に保存する', async () => {
+    const connectionId = '00000000-0000-4000-8000-0000000000c1';
+    const response = await GET(
+      request(
+        `https://app.dayopt.app/api/integrations/google-calendar/start?locale=ja&reconnectConnectionId=${connectionId}`,
+      ),
+    );
+
+    expect(getReconnectTarget).toHaveBeenCalledWith(USER_ID, connectionId);
+    const cookie = response.cookies.get('__Host-dayopt-calendar-connect');
+    const flowState = JSON.parse(decodeURIComponent(cookie?.value ?? '{}'));
+    expect(flowState).toMatchObject({ locale: 'ja', reconnectConnectionId: connectionId });
+  });
+
+  it.each([
+    ['not-a-uuid', false],
+    ['00000000-0000-4000-8000-0000000000c1', true],
+  ])('不正または存在しない再接続対象 %s は 400', async (connectionId, validUuid) => {
+    if (validUuid) getReconnectTarget.mockResolvedValue(null);
+
+    const response = await GET(
+      request(
+        `https://app.dayopt.app/api/integrations/google-calendar/start?reconnectConnectionId=${connectionId}`,
+      ),
+    );
+
+    expect(response.status).toBe(400);
   });
 
   it('http の localhost では __Host- prefix を落とす', async () => {

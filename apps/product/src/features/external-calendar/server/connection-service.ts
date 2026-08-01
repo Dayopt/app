@@ -71,6 +71,15 @@ type SaveConnectionInput = {
   encryptionKey: string;
 };
 
+type ReconnectTarget = {
+  id: string;
+  providerAccountId: string;
+};
+
+type ReconnectExistingConnectionInput = SaveConnectionInput & {
+  connectionId: string;
+};
+
 /**
  * 接続を保存する。
  *
@@ -99,6 +108,71 @@ export async function saveConnection(input: SaveConnectionInput): Promise<void> 
     // error にトークンは含まれないが、message をそのまま外へ出さない。
     throw new Error(`failed to save calendar connection: ${error.code ?? 'unknown'}`);
   }
+}
+
+/**
+ * 再接続対象を本人・provider・状態まで限定して読む。
+ *
+ * `provider_account_id` は Google の安定識別子であり、callback で検証済み `sub` と比較する
+ * ためだけに server 内で扱う。UI や cookie には載せない。
+ */
+export async function getReconnectTarget(
+  userId: string,
+  connectionId: string,
+): Promise<ReconnectTarget | null> {
+  const db = createCalendarConnectionDbClient();
+  const { data, error } = await db
+    .from(databaseTables.calendarConnections)
+    .select('id, provider_account_id')
+    .eq('id', connectionId)
+    .eq('user_id', userId)
+    .eq('provider', GOOGLE_PROVIDER)
+    .eq('status', 'reauth_required')
+    .maybeSingle();
+
+  if (error) {
+    throw new ExternalCalendarServiceError('FETCH_FAILED', 'failed to load reconnect target', {
+      cause: error,
+    });
+  }
+  if (!data) return null;
+  return { id: data.id, providerAccountId: data.provider_account_id };
+}
+
+/**
+ * 既存の再接続対象だけを更新する。
+ *
+ * generic upsert を使うと、callback と切断が競合した際に削除済み接続を再作成できてしまう。
+ * そのため id / owner / provider / Google sub / reauth 状態を一つの UPDATE で guard し、
+ * 更新行が無ければ再接続失敗として扱う。これにより切断が常に最終的に勝つ。
+ */
+export async function reconnectExistingConnection(
+  input: ReconnectExistingConnectionInput,
+): Promise<'updated' | 'missing'> {
+  const db = createCalendarConnectionDbClient();
+  const { data, error } = await db
+    .from(databaseTables.calendarConnections)
+    .update({
+      provider_account_email: input.providerAccountEmail,
+      granted_scopes: input.grantedScopes,
+      refresh_token_enc: encryptToken(input.refreshToken, input.encryptionKey),
+      status: 'active',
+      last_sync_error: null,
+    })
+    .eq('id', input.connectionId)
+    .eq('user_id', input.userId)
+    .eq('provider', GOOGLE_PROVIDER)
+    .eq('provider_account_id', input.providerAccountId)
+    .eq('status', 'reauth_required')
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    throw new ExternalCalendarServiceError('UPDATE_FAILED', 'failed to reconnect calendar', {
+      cause: error,
+    });
+  }
+  return data ? 'updated' : 'missing';
 }
 
 // =============================================================================

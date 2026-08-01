@@ -121,7 +121,7 @@ export function generateState(): string {
   return randomBytes(ENTROPY_BYTES).toString('base64url');
 }
 
-/** 同意画面の URL。`prompt=consent` で refresh token を確実に取りに行く。 */
+/** 同意画面の URL。refresh token を取り直し、接続する Google アカウントを毎回選ばせる。 */
 export function buildAuthorizationUrl(params: {
   redirectUri: string;
   state: string;
@@ -134,7 +134,7 @@ export function buildAuthorizationUrl(params: {
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', GOOGLE_AUTHORIZATION_SCOPES.join(' '));
   url.searchParams.set('access_type', 'offline');
-  url.searchParams.set('prompt', 'consent');
+  url.searchParams.set('prompt', 'consent select_account');
   // `include_granted_scopes` は付けない。付けると、この client が過去にそのユーザーへ
   // 得ていた scope まで今回の認可へ畳み込まれ、保存する refresh token が本機能に必要な
   // 範囲を超えた権限を持ちうる。callback は calendar.readonly の有無しか見ないので、

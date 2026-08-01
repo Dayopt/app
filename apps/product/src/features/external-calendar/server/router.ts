@@ -12,17 +12,31 @@ import {
   listProviderCalendars,
   updateSelectedCalendars,
 } from './connection-service';
+import { isGoogleCalendarConfigured, resolveRedirectUri } from './google-oauth';
 import { syncConnection } from './sync-service';
 
 /**
  * 外部カレンダー接続の tRPC router（overview.md §7-2）。
  *
- * 読み取り 3 本は protectedProcedure、provider を叩く / 書き込む 3 本は proProcedure
+ * 読み取り 4 本は protectedProcedure、provider を叩く / 書き込む 3 本は proProcedure
  * （課金ゲート。`BILLING_ENFORCED` off の間は素通り）。ghost 用 `listEvents` / `dismiss` は
  * 次 project の予約席なのでここには置かない。
  */
 
 const connectionIdInput = z.object({ connectionId: z.string().uuid() });
+
+const connectionAvailabilityInput = z.object({
+  origin: z
+    .string()
+    .url()
+    .refine(
+      (value) => {
+        const url = new URL(value);
+        return (url.protocol === 'http:' || url.protocol === 'https:') && url.origin === value;
+      },
+      { message: 'origin must be an http(s) origin without a path' },
+    ),
+});
 
 const updateSelectedCalendarsInput = z.object({
   connectionId: z.string().uuid(),
@@ -60,6 +74,19 @@ async function enforceSyncNowRateLimit(userId: string): Promise<void> {
 }
 
 export const externalCalendarRouter = createTRPCRouter({
+  getConnectionAvailability: protectedProcedure
+    .meta({ description: '現在の origin で Google カレンダー接続を開始できるか' })
+    .input(connectionAvailabilityInput)
+    .query(({ input }) => {
+      if (!isGoogleCalendarConfigured()) return { available: false };
+
+      const requestUrl = new URL(input.origin);
+      const redirectUri = resolveRedirectUri(requestUrl);
+      return {
+        available: redirectUri !== null && new URL(redirectUri).origin === requestUrl.origin,
+      };
+    }),
+
   listConnections: protectedProcedure
     .meta({ description: '外部カレンダー接続一覧' })
     .query(async ({ ctx }) => {

@@ -10,6 +10,11 @@ const mockReplace = vi.fn();
 const mockPush = vi.fn();
 const mockOpenSettings = vi.fn();
 const mockLogout = vi.fn();
+const { mockInvalidateConnections, mockToastSuccess, mockToastError } = vi.hoisted(() => ({
+  mockInvalidateConnections: vi.fn(),
+  mockToastSuccess: vi.fn(),
+  mockToastError: vi.fn(),
+}));
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ category: mockCategory }),
@@ -38,13 +43,18 @@ vi.mock('@dayopt/i18n/navigation', async () => {
 vi.mock('@/features/settings/constants', () => ({
   SETTINGS_CATEGORIES: [
     { id: 'profile', labelKey: 'settings.category.profile', icon: () => <span>icon</span> },
+    {
+      id: 'integrations',
+      labelKey: 'settings.category.integrations',
+      icon: () => <span>icon</span>,
+    },
     { id: 'billing', labelKey: 'settings.category.billing', icon: () => <span>icon</span> },
   ],
 }));
 
 vi.mock('@/features/settings', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/settings')>()),
-  isValidCategory: (category: string) => ['profile', 'billing'].includes(category),
+  isValidCategory: (category: string) => ['profile', 'integrations', 'billing'].includes(category),
   SettingsContent: ({ category }: { category: string }) => <div>{category}</div>,
 }));
 
@@ -91,12 +101,21 @@ vi.mock('@dayopt/components', async (importOriginal) => ({
 
 vi.mock('@/lib/trpc', () => ({
   api: {
+    useUtils: () => ({
+      externalCalendar: {
+        listConnections: { invalidate: mockInvalidateConnections },
+      },
+    }),
     billing: {
       getOverview: {
         useQuery: () => ({ data: null, isLoading: false }),
       },
     },
   },
+}));
+
+vi.mock('@/lib/toast', () => ({
+  toast: { success: mockToastSuccess, error: mockToastError },
 }));
 
 vi.mock('@/components/shell/AppHeader', () => ({
@@ -182,6 +201,39 @@ describe('settings route hydration guards', () => {
 
     expect(mockOpenSettings).toHaveBeenCalledWith('billing');
     expect(mockReplace).toHaveBeenCalledWith('/');
+  });
+
+  it('handles a desktop calendar callback before opening Integrations', () => {
+    mockHasMounted = true;
+    mockCategory = 'integrations';
+    mockSearchParams = new URLSearchParams('calendar=connected');
+
+    render(<SettingsCategoryPage />);
+
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'settings.integrations.googleCalendar.callback.connected',
+    );
+    expect(mockInvalidateConnections).toHaveBeenCalled();
+    expect(mockOpenSettings).toHaveBeenCalledWith('integrations');
+    expect(mockReplace).toHaveBeenCalledWith('/');
+  });
+
+  it('cleans only calendar callback params on mobile', () => {
+    mockHasMounted = true;
+    mockIsMobile = true;
+    mockCategory = 'integrations';
+    mockSearchParams = new URLSearchParams(
+      'returnTo=%2Fweek%3Fdate%3D2026-08-01&calendar=error&reason=account_mismatch&panel=review',
+    );
+
+    render(<SettingsCategoryPage />);
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      'settings.integrations.googleCalendar.callback.accountMismatch',
+    );
+    expect(mockReplace).toHaveBeenCalledWith(
+      '/settings/integrations?returnTo=%2Fweek%3Fdate%3D2026-08-01&panel=review',
+    );
   });
 
   it('preserves the mobile settings return path from category pages', () => {
