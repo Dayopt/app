@@ -9,13 +9,14 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { McpRequestContext } from '../_context';
 import { MCP_TAG_LIST_INPUT_SCHEMA, MCP_TAG_LIST_OUTPUT_SCHEMA } from './context-contract';
 import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
+import { MCP_UNTRUSTED_CONTENT_NOTICE } from './untrusted-data-serialization';
 
 export function registerTagsListTool(server: McpServer, ctx: McpRequestContext) {
   server.registerTool(
     'tags.list',
     {
       title: 'List Dayopt tags',
-      description: "List the authenticated user's active Dayopt tags in hierarchy order.",
+      description: `List the authenticated user's active Dayopt tags in hierarchy order. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
       inputSchema: MCP_TAG_LIST_INPUT_SCHEMA,
       outputSchema: MCP_TAG_LIST_OUTPUT_SCHEMA,
       annotations: { readOnlyHint: true, idempotentHint: true },

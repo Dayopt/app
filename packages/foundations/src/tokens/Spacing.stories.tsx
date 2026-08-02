@@ -551,6 +551,7 @@ export const QuickReference: Story = {
             <li className="flex items-start gap-2">
               <span className="text-destructive">✗</span>
               <span>
+                {/* lint-tokens-allow: 禁止例の提示 */}
                 任意値 <code className="text-xs">p-[13px]</code>
               </span>
             </li>

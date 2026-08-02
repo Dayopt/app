@@ -13,10 +13,7 @@ const localRequests = new Map<string, number[]>();
 export type McpRateLimitState = 'allowed' | 'limited' | 'unavailable';
 
 export async function checkMcpPreAuthRateLimit(request: Request): Promise<McpRateLimitState> {
-  const ip = extractClientIp(
-    request.headers.get('x-forwarded-for'),
-    request.headers.get('x-real-ip'),
-  );
+  const ip = extractClientIp(request.headers.get('x-real-ip'));
   return checkMcpRateLimit(
     mcpPreAuthRateLimit,
     `ip:${ip}`,

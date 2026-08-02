@@ -8,6 +8,7 @@ import 'server-only';
 import { createUserRouter } from '@/features/auth/server/router';
 import { contactRouter } from '@/features/contact/server/router';
 import { externalCalendarRouter } from '@/features/external-calendar/server/router';
+import { reviewRouter } from '@/features/review/server/router';
 import { billingRouter } from '@/features/settings/server/billing-router';
 import { userSettingsRouter } from '@/features/settings/server/router';
 import { tagsRouter } from '@/features/tags/server/router';
@@ -34,6 +35,7 @@ export const appRouter = createTRPCRouter({
   planCommands: planCommandsRouter,
   recordCommands: recordCommandsRouter,
   records: recordsRouter,
+  review: reviewRouter,
   plans: plansRouter,
   statistics: statisticsRouter,
   tags: tagsRouter,

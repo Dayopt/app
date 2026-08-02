@@ -5,14 +5,17 @@ const mocks = vi.hoisted(() => ({
   withUpstashRateLimit: vi.fn(),
   createClient: vi.fn(),
   signInWithPassword: vi.fn(),
+  signUp: vi.fn(),
+  signOut: vi.fn(),
+  resetPasswordForEmail: vi.fn(),
   captureUnexpectedAuthError: vi.fn(),
 }));
 
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn() } }));
 
 vi.mock('@/lib/rate-limit/upstash', () => ({
-  loginRateLimit: {},
-  passwordResetRateLimit: {},
+  loginRateLimit: { kind: 'login' },
+  passwordResetRateLimit: { kind: 'password-reset' },
   withUpstashRateLimit: mocks.withUpstashRateLimit,
 }));
 
@@ -24,17 +27,22 @@ vi.mock('@/lib/sentry', () => ({
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: mocks.createClient }));
 
+import { loginRateLimit, passwordResetRateLimit } from '@/lib/rate-limit/upstash';
 import { POST } from '../route';
 
-function signInRequest(): NextRequest {
+function authRequest(body: unknown): NextRequest {
   return new NextRequest('https://app.dayopt.app/api/auth', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-real-ip': '203.0.113.10' },
-    body: JSON.stringify({
-      action: 'signin',
-      email: 'person@example.com',
-      password: 'not-a-real-password',
-    }),
+    body: JSON.stringify(body),
+  });
+}
+
+function signInRequest(email = 'person@example.com'): NextRequest {
+  return authRequest({
+    action: 'signin',
+    email,
+    password: 'not-a-real-password',
   });
 }
 
@@ -45,9 +53,79 @@ describe('POST /api/auth rate-limit boundary', () => {
       data: { user: { id: 'user-123' }, session: { access_token: 'test-session' } },
       error: null,
     });
-    mocks.createClient.mockResolvedValue({
-      auth: { signInWithPassword: mocks.signInWithPassword },
+    mocks.signUp.mockResolvedValue({
+      data: { user: { id: 'user-123' }, session: null },
+      error: null,
     });
+    mocks.signOut.mockResolvedValue({ error: null });
+    mocks.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
+    mocks.withUpstashRateLimit.mockResolvedValue({ state: 'disabled' });
+    mocks.createClient.mockResolvedValue({
+      auth: {
+        signInWithPassword: mocks.signInWithPassword,
+        signUp: mocks.signUp,
+        signOut: mocks.signOut,
+        resetPasswordForEmail: mocks.resetPasswordForEmail,
+      },
+    });
+  });
+
+  it('checks independent IP and normalized email buckets for signin', async () => {
+    const response = await POST(signInRequest('Person@Example.COM'));
+
+    expect(response.status).toBe(200);
+    expect(mocks.withUpstashRateLimit).toHaveBeenCalledWith(
+      expect.any(NextRequest),
+      loginRateLimit,
+      'email:person@example.com',
+    );
+    expect(mocks.signInWithPassword).toHaveBeenCalledWith({
+      email: 'Person@Example.COM',
+      password: 'not-a-real-password',
+    });
+  });
+
+  it('checks independent IP and normalized email buckets for password reset', async () => {
+    const response = await POST(
+      authRequest({ action: 'reset-password', email: 'Person@Example.COM' }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.withUpstashRateLimit).toHaveBeenCalledWith(
+      expect.any(NextRequest),
+      passwordResetRateLimit,
+      'email:person@example.com',
+    );
+    expect(mocks.resetPasswordForEmail).toHaveBeenCalledWith('Person@Example.COM', {
+      redirectTo: 'http://localhost:3000/auth/reset-password',
+    });
+  });
+
+  it('keeps signup on the existing IP-only limiter', async () => {
+    const response = await POST(
+      authRequest({
+        action: 'signup',
+        email: 'person@example.com',
+        password: 'not-a-real-password',
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.withUpstashRateLimit).toHaveBeenCalledWith(
+      expect.any(NextRequest),
+      loginRateLimit,
+      undefined,
+    );
+    expect(mocks.withUpstashRateLimit).toHaveBeenCalledOnce();
+  });
+
+  it('does not rate limit signout or invalid request bodies', async () => {
+    const signoutResponse = await POST(authRequest({ action: 'signout' }));
+    const invalidResponse = await POST(authRequest({ action: 'signin', email: 'invalid' }));
+
+    expect(signoutResponse.status).toBe(200);
+    expect(invalidResponse.status).toBe(400);
+    expect(mocks.withUpstashRateLimit).not.toHaveBeenCalled();
   });
 
   it('fails closed with 503 and never reaches Supabase when Upstash is unavailable', async () => {

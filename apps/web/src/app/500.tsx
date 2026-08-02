@@ -15,7 +15,7 @@ export default function InternalServerError() {
     <div className="bg-background flex min-h-screen items-center justify-center">
       <Container>
         <div className="mx-auto max-w-md text-center">
-          <div className="text-muted-foreground/20 mb-4 text-9xl font-medium">500</div>
+          <div className="text-muted-foreground mb-4 text-sm tabular-nums">500</div>
 
           <Heading as="h2" size="xl" className="mb-4">
             Internal Server Error

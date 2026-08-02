@@ -1,4 +1,5 @@
 import { createDayoptUrl, dayoptBrand, dayoptUrls } from '@dayopt/config';
+import { PWA_COLORS } from '@dayopt/foundations/og-colors';
 import { env, getAppUrl } from '@web/platform/config/env';
 import type { Metadata } from 'next';
 
@@ -97,7 +98,7 @@ export function generateEnhancedMetadata({
 
     // Additional meta tags
     other: {
-      'theme-color': '#171717',
+      'theme-color': PWA_COLORS.themeColor,
       'color-scheme': 'light dark',
       'format-detection': 'telephone=no',
       'mobile-web-app-capable': 'yes',
@@ -105,7 +106,7 @@ export function generateEnhancedMetadata({
       'apple-mobile-web-app-status-bar-style': 'default',
       'apple-mobile-web-app-title': siteTitle,
       'application-name': siteTitle,
-      'msapplication-TileColor': '#171717',
+      'msapplication-TileColor': PWA_COLORS.themeColor,
       'msapplication-config': '/browserconfig.xml',
     },
 
@@ -129,7 +130,7 @@ export function generateEnhancedMetadata({
         { url: '/favicon.ico', sizes: 'any' },
       ],
       apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
-      other: [{ rel: 'mask-icon', url: '/safari-pinned-tab.svg', color: '#171717' }],
+      other: [{ rel: 'mask-icon', url: '/safari-pinned-tab.svg', color: PWA_COLORS.themeColor }],
     },
 
     // Manifest

@@ -12,7 +12,7 @@ paths:
 - 許可されるクラス: `bg-primary`, `text-foreground`, `border-border`, `bg-tag-blue` 等、`packages/foundations/src/tailwind-theme.css` で定義済みのもの
 - **例外**:
   - メールテンプレート (`apps/product/src/emails/`): CSS変数が使えない環境のためhex許容。`apps/product/src/emails/styles.ts` に集約
-  - OG画像 (`apps/product/src/app/opengraph-image.tsx`): Satori制約のため `apps/product/src/lib/og-colors.ts` の定数を参照
+  - OG画像 (`apps/product/src/app/opengraph-image.tsx` / `apps/web/src/app/api/og/route.tsx`): Satori制約のため `@dayopt/foundations/og-colors` の定数を参照。product と marketing で palette を複製しない
 
 ## Elevation / Shadow
 
@@ -29,7 +29,7 @@ paths:
   - Raised: ページと一緒にスクロールする要素
   - Overlay: ページの上に重なる要素。下のコンテンツを覆う
 - **入力系:** input, textarea, select, radio 等のフォームコントロールは `shadow-xs` を使用
-- **許可される shadow**: `shadow-xs`, `shadow-sm`, `shadow-card` の3種のみ
+- **許可される shadow**: `shadow-xs`, `shadow-sm`, `shadow-card` の3種のみ。**theme をリセットしてあるので `shadow-md` 等は生成されない**
   - `shadow-xs`: form control 専用（input, select, textarea, radio）
   - `shadow-sm`: Raised elevation（bg-card を使うカード・セクション）
   - `shadow-card`: Overlay elevation（dropdown, popover, dialog, modal）
@@ -41,24 +41,27 @@ paths:
 - 任意値 (`p-[Xpx]`) は禁止。やむを得ない場合はデザイントークンとして定義してから使用
 - **`border-l-[3px]`**: 左ボーダーインジケータとして `--border-indicator` トークンで定義済み
 
-| Tailwind | px   | 用途例                        |
-| -------- | ---- | ----------------------------- |
-| 0        | 0    | リセット                      |
-| 1        | 4px  | アイコン-テキスト間、最小間隔 |
-| 2        | 8px  | コンパクト間隔                |
-| 4        | 16px | 標準間隔、カード内パディング  |
-| 6        | 24px | セクション間                  |
-| 8        | 32px | 大間隔                        |
-| 12       | 48px | ページ間隔                    |
-| 16       | 64px | ヒーロー間隔                  |
-| 24       | 96px | 最大間隔                      |
+レイアウトの間隔（gap / セクション間）は 8 の倍数を基本にし、コンポーネント内側の padding は 4px 刻みまで使える。12px は密な UI の内側専用（text-sm + py-3 = 44px で、タッチターゲット最小値 min-h-11 に一致する唯一の padding。行高 20px は 8 の倍数でないため、text-sm の高さはどの padding でも 8 の倍数にならない）。
 
-**禁止**: `*-0.5`(2px), `*-1.5`(6px), `*-2.5`(10px), `*-3`(12px), `*-3.5`(14px), `*-5`(20px), `*-7`(28px), `*-9`(36px)
+| Tailwind | px   | 用途例                                      |
+| -------- | ---- | ------------------------------------------- |
+| 0        | 0    | リセット                                    |
+| 1        | 4px  | アイコン-テキスト間、最小間隔               |
+| 2        | 8px  | コンパクト間隔                              |
+| 3        | 12px | チップ・バッジ・密な行の内側（44px タッチ） |
+| 4        | 16px | 標準間隔、カード内パディング                |
+| 6        | 24px | セクション間                                |
+| 8        | 32px | 大間隔                                      |
+| 12       | 48px | ページ間隔                                  |
+| 16       | 64px | ヒーロー間隔                                |
+| 24       | 96px | 最大間隔                                    |
+
+**禁止**: `*-0.5`(2px), `*-1.5`(6px), `*-2.5`(10px), `*-3.5`(14px) — 4px サブグリッド外。`*-5`(20px), `*-7`(28px), `*-9`(36px) — サブグリッド上だが、段を増やすほど選択が迷いになるので採らない。必要になったら 12px と同じく「その値でしか満たせない制約」を根拠に昇格させる
 
 ## Border Radius
 
 - 4段階のみ: `rounded-none`(0), `rounded-lg`(8px), `rounded-2xl`(16px), `rounded-full`
-- `rounded-sm`, `rounded-md`, `rounded-xl`, bare `rounded` は禁止
+- `rounded-sm`, `rounded-md`, `rounded-xl`, bare `rounded` は禁止。**theme をリセットしてあるので、書いてもクラスが生成されず何も起きない**
 - 任意値 (`rounded-[Xpx]`) は禁止
 - **Elevation との対応:**
   - Sunken (sidebar, input) → `rounded-lg` (8px)
@@ -100,30 +103,18 @@ paths:
 **禁止**: `size-3`(12px), `size-7`(28px), `size-9`(36px) 等、上記以外のサイズ
 **注**: `size-8`, `size-9` 等がボタン/コンテナのサイズとして使われる場合はアイコンサイズ規約の対象外
 
-## Transition
+## Motion / Transition
 
-- **デフォルト**: `transition-colors duration-150` — ホバー、フォーカス、状態変化の色切り替え。迷ったらこれ
-- ease は指定しない（Tailwind デフォルトの `ease-in-out` で十分）
-- `duration-150` を標準とし、ほぼ全てのインタラクションに使う
+**正本は `packages/foundations/src/tokens/Motion.mdx`**（Storybook の Shared/Foundations/Motion）。段階表をここに複製しない。
 
-**用途別:**
+覚えておく最小限:
 
-| クラス                              | 用途               |
-| ----------------------------------- | ------------------ |
-| `transition-colors duration-150`    | 色のみ変化（標準） |
-| `transition-all duration-150`       | サイズ変化を含む   |
-| `transition-transform duration-200` | transform のみ     |
+- **デフォルト**: `transition-colors duration-150 ease-standard` — 迷ったらこれ
+- duration は `150` / `200` / `300` の 3 段のみ。任意値と `cubic-bezier` 直書きは禁止
+- easing は `ease-standard`（その場で変わる）と `ease-settle`（入る・着地する）の 2 種のみ
+- どれを使うかは「その操作が 4 層のどれか」で決まる。層と禁止リスト（confetti / バウンス / バッジ等）は Motion.mdx を読む
 
-**duration 推奨値:**
-
-| duration       | 用途                                         |
-| -------------- | -------------------------------------------- |
-| `duration-75`  | 即座のフィードバック（active 押下など）      |
-| `duration-150` | **標準（デフォルト）** — ほぼ全てこれを使う  |
-| `duration-200` | transform、やや重い要素の移動                |
-| `duration-300` | 大きな面積の展開・折りたたみ（accordion 等） |
-
-上記4つ以外の duration は禁止
+> 旧規約の「ease は指定しない」と `duration-75` は撤回した。前者は実コード約 10 ファイルと矛盾しており、着地の質感を失っていた。後者は使用実績がゼロだった。
 
 ## Z-Index
 
@@ -249,5 +240,5 @@ react-hook-form + Zod + Field コンポーネント。
 | ドロップ拒否 | 200ms ease-out スナップバック            | GhostRenderer 内蔵                                                                           |
 
 - カーソル: 通常 `cursor-grab`、ドラッグ中 `cursor-grabbing`（`document.body` に直接設定）
-- z-index: `z-calendar-drag` (1000)
+- z-index: ゴーストは `9999`（`z-tooltip` 層）。`createPortal` + `position: fixed` で body 直下に描画され、ドラッグ中も開いたままの Inspector / Overlay（1050〜1400）を越える必要があるため。`z-calendar-drag` (1000) に下げると Inspector の裏へ消える
 - 過去ブロックへのドラッグは UI + ロジックの二重拒否（`temporal-constraints.md` 参照）

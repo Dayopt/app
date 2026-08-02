@@ -10,6 +10,7 @@ export const databaseTables = {
   oauthConnections: 'oauth_connections',
   oauthTokens: 'oauth_tokens',
   plans: 'plans',
+  productEvents: 'product_events',
   profiles: 'profiles',
   reports: 'reports',
   stripeWebhookEvents: 'stripe_webhook_events',

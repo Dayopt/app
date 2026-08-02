@@ -144,9 +144,74 @@ describe('StatisticsService.getTimeByTag', () => {
     const result = await service.getTimeByTag(USER_ID);
 
     expect(result).toEqual([
-      { tagId: 'tag-2', name: 'Meeting', color: 'red', hours: 3 },
-      { tagId: 'tag-1', name: 'Deep Work', color: 'blue', hours: 1 },
+      {
+        tagId: 'tag-2',
+        name: 'Meeting',
+        color: 'red',
+        hours: 3,
+        isUncategorized: false,
+      },
+      {
+        tagId: 'tag-1',
+        name: 'Deep Work',
+        color: 'blue',
+        hours: 1,
+        isUncategorized: false,
+      },
     ]);
+  });
+
+  it('未設定と削除済みタグを同じ未分類 bucket にまとめ、内訳合計を総記録時間と一致させる', async () => {
+    const records = [
+      {
+        id: 'known-tag',
+        tag_id: 'tag-1',
+        plan_id: null,
+        source: 'manual',
+        start_at: '2026-07-01T00:00:00Z',
+        end_at: '2026-07-01T01:00:00Z',
+      },
+      {
+        id: 'unset-tag',
+        tag_id: null,
+        plan_id: null,
+        source: 'manual',
+        start_at: '2026-07-01T01:00:00Z',
+        end_at: '2026-07-01T01:30:00Z',
+      },
+      {
+        id: 'deleted-tag',
+        tag_id: 'deleted-tag-id',
+        plan_id: null,
+        source: 'manual',
+        start_at: '2026-07-01T02:00:00Z',
+        end_at: '2026-07-01T02:45:00Z',
+      },
+    ];
+    const { service } = createService({
+      records: createChainableMock(records),
+      tags: createChainableMock([{ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: null }]),
+    });
+
+    const result = await service.getTimeByTag(USER_ID);
+
+    expect(result).toEqual([
+      {
+        tagId: null,
+        name: null,
+        color: null,
+        hours: 1.25,
+        isUncategorized: true,
+      },
+      {
+        tagId: 'tag-1',
+        name: 'Deep Work',
+        color: 'blue',
+        hours: 1,
+        isUncategorized: false,
+      },
+    ]);
+    expect(result.reduce((sum, row) => sum + row.hours * 60, 0)).toBe(135);
   });
 });
 
@@ -252,12 +317,96 @@ describe('StatisticsService Review visible days', () => {
         budgetMinutes: 105,
         actualMinutes: 105,
         isPlanned: true,
+        isUncategorized: false,
       },
     ]);
     expect(result.prevTags).toEqual([
       expect.objectContaining({ budgetMinutes: 30, actualMinutes: 30 }),
     ]);
     expect(result.availableMinutes).toBe(3 * 16 * 60);
+  });
+
+  it('Time P/L は未設定と削除済みタグの Plan / Record を同じ未分類 bucket に含める', async () => {
+    const { service } = createService({
+      user_settings: createChainableMock({ timezone: 'UTC' }),
+      tags: createChainableMock([{ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: 'brain' }]),
+      plans: createChainableMock([
+        {
+          id: 'plan-known',
+          tag_id: 'tag-1',
+          start_at: '2026-01-15T09:00:00Z',
+          end_at: '2026-01-15T10:00:00Z',
+        },
+        {
+          id: 'plan-unset',
+          tag_id: null,
+          start_at: '2026-01-15T10:00:00Z',
+          end_at: '2026-01-15T10:30:00Z',
+        },
+        {
+          id: 'plan-deleted',
+          tag_id: 'deleted-tag-id',
+          start_at: '2026-01-15T11:00:00Z',
+          end_at: '2026-01-15T11:45:00Z',
+        },
+      ]),
+      records: createChainableMock([
+        {
+          id: 'record-known',
+          tag_id: 'tag-1',
+          plan_id: null,
+          source: 'manual',
+          start_at: '2026-01-15T09:00:00Z',
+          end_at: '2026-01-15T09:50:00Z',
+        },
+        {
+          id: 'record-unset',
+          tag_id: null,
+          plan_id: null,
+          source: 'manual',
+          start_at: '2026-01-15T10:00:00Z',
+          end_at: '2026-01-15T10:20:00Z',
+        },
+        {
+          id: 'record-deleted',
+          tag_id: 'deleted-tag-id',
+          plan_id: null,
+          source: 'manual',
+          start_at: '2026-01-15T11:00:00Z',
+          end_at: '2026-01-15T11:40:00Z',
+        },
+      ]),
+    });
+
+    const result = await service.getTimePLData(USER_ID, {
+      startDate: '2026-01-15T00:00:00.000Z',
+      endDate: '2026-01-15T23:59:59.999Z',
+      wakeHour: 7,
+      sleepHour: 23,
+    });
+
+    expect(result.tags).toEqual([
+      {
+        tagId: null,
+        tagName: null,
+        tagColor: null,
+        tagIcon: null,
+        budgetMinutes: 75,
+        actualMinutes: 60,
+        isPlanned: true,
+        isUncategorized: true,
+      },
+      {
+        tagId: 'tag-1',
+        tagName: 'Deep Work',
+        tagColor: 'blue',
+        tagIcon: 'brain',
+        budgetMinutes: 60,
+        actualMinutes: 50,
+        isPlanned: true,
+        isUncategorized: false,
+      },
+    ]);
   });
 
   it('Review summary は非表示の週末をoverviewとblank rateから除外する', async () => {

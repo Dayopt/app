@@ -1,3 +1,4 @@
+import { PRESET_USER_SETTINGS } from '@dayopt/storybook/mocks/presets';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import type { StatsPageData } from '../../types/metrics.types';
@@ -60,7 +61,19 @@ const MOCK_PAGE_DATA: StatsPageData = {
 };
 
 const MOCK_TIME_PL_RESPONSE = {
-  tags: MOCK_WEEK_GOOD.tags,
+  tags: [
+    ...MOCK_WEEK_GOOD.tags,
+    {
+      tagId: null,
+      tagName: null,
+      tagColor: null,
+      tagIcon: null,
+      budgetMinutes: 540,
+      actualMinutes: 600,
+      isPlanned: true,
+      isUncategorized: true,
+    },
+  ],
   prevTags: MOCK_WEEK_GOOD.prevTags ?? [],
   availableMinutes: MOCK_WEEK_GOOD.availableMinutes,
 };
@@ -73,6 +86,7 @@ const meta = {
     trpcMocks: {
       'statistics.getStatsPageData': MOCK_PAGE_DATA,
       'statistics.getTimePL': MOCK_TIME_PL_RESPONSE,
+      'userSettings.get': PRESET_USER_SETTINGS.default,
     },
   },
   tags: ['autodocs'],
@@ -83,6 +97,18 @@ type Story = StoryObj<typeof meta>;
 
 /** Calendar panel slot に表示される Review。 */
 export const Default: Story = {
+  args: {
+    currentDate: new Date(2026, 3, 1),
+    displayRange: DISPLAY_RANGE,
+    selectedTagId: null,
+    onSelectedTagIdChange: noop,
+    onClose: noop,
+    className: 'border-border-subtle h-[560px] w-64 border',
+  },
+};
+
+/** 未設定・削除済みタグの時間を neutral な「未分類」行として表示する。 */
+export const UncategorizedBucket: Story = {
   args: {
     currentDate: new Date(2026, 3, 1),
     displayRange: DISPLAY_RANGE,

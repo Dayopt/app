@@ -8,7 +8,6 @@
   --color-state-pressed: oklch(from var(--foreground) l c h / 12%);
   --color-state-selected: oklch(from var(--foreground) l c h / 12%);
   --color-state-dragged: oklch(from var(--foreground) l c h / 16%);
-  --color-state-focus: oklch(from var(--foreground) l c h / 12%);
   --color-state-active: var(--state-active);
   --color-state-active-foreground: var(--state-active-foreground);
 
@@ -23,7 +22,6 @@
    * Primaryベースのステートレイヤー
    * 「新規追加」ボタン等、primary強調したい要素用
    * ============================================ */
-  --color-primary-state-hover: oklch(from var(--primary) l c h / 10%);
   --color-primary-state-selected: oklch(from var(--primary) l c h / 12%);
 
   /* ============================================

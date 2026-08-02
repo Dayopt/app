@@ -68,6 +68,7 @@ function toRows(
     tagName: t.tagName,
     tagColor: t.tagColor,
     tagIcon: t.tagIcon,
+    isUncategorized: t.isUncategorized,
     minutes: t.minutes,
     percentage: total > 0 ? Math.round((t.minutes / total) * 100) : 0,
   }));
@@ -94,6 +95,7 @@ export function deriveStatement(input: TimePLInput): StatementViewData {
       tagName: tag.tagName,
       tagColor: tag.tagColor,
       tagIcon: tag.tagIcon,
+      isUncategorized: tag.isUncategorized,
       varianceMinutes,
       variancePercent,
     });
@@ -126,6 +128,7 @@ export function deriveBarComparison(input: TimePLInput): BarComparisonRow[] {
         tagName: t.tagName,
         tagColor: t.tagColor,
         tagIcon: t.tagIcon,
+        isUncategorized: t.isUncategorized,
         budgetMinutes: t.budgetMinutes,
         actualMinutes: t.actualMinutes,
         varianceMinutes,

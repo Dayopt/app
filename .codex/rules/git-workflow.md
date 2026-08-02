@@ -32,14 +32,15 @@ Codex が Dayopt repo で branch / commit / PR / merge を扱う時の薄い ove
 
 ## Merge
 
-- ユーザーが単に「マージして」と言った場合は `gh pr merge --merge --delete-branch` を使う
+- ユーザーが単に「マージして」と言った場合は `pnpm branch:finish <PR番号>` を使う（マージ〜掃除がワンセット）
+- 素の `gh pr merge --merge --delete-branch` は **worktree の中から実行しない**。削除対象 branch を checkout している worktree を main へ切り替えてしまう（[#1771](https://github.com/Dayopt/dayopt/issues/1771)）。Codex は `~/.codex/worktrees/` で作業するため常に該当する
 - 理由: main の履歴に branch の分岐と合流を残すため
 - `--squash` / `--rebase` は GitHub 設定でハード無効化済み（`--admin` でも迂回不可）。release 運用も merge commit に統一されている。squash が必要な稀なケースは repo 設定変更が前提
 - merge 前に PR が mergeable で、required checks が成功していることを確認する
 
 ## Branch cleanup（マージ後）
 
-- 標準は **`pnpm branch:finish <PR番号>`** のワンセット実行（マージ→worktree削除→branch削除→リモート確認→main最新化）。Claude / Codex / 人間で共通のスクリプト（`scripts/git/finish-branch.sh`）
+- 標準は **`pnpm branch:finish <PR番号>`** のワンセット実行（マージ→worktree削除→main ref 更新→branch削除→リモート確認）。Claude / Codex / 人間で共通のスクリプト（`scripts/git/finish-branch.sh`）
 - 事前確認したい時は `pnpm branch:finish <PR番号> --dry-run`
-- スクリプトが dirty / not fully merged で停止したら、手動フォールバックは `.claude/rules/workflow.md` §Worktree 運用 の手順に従う。`git branch -d` が `not fully merged` で失敗したときは `-D` は原則禁止で、ユーザー判断を仰ぐ
-- 完了定義（5点）: ① PR マージ済み ② worktree 削除 ③ ローカル branch 削除 ④ リモート branch 消滅 ⑤ main 最新化。すべて満たして初めて作業終了
+- スクリプトが dirty / main 未到達で停止したら、手動フォールバックは `.claude/rules/workflow.md` §Worktree 運用 の手順に従う。`git branch -d` が `not fully merged` で失敗したときは `-D` は原則禁止で、ユーザー判断を仰ぐ（例外は `git merge-base --is-ancestor <branch> refs/heads/main` で main への到達を確認済みの場合だけ）
+- 完了定義（5点）: ① PR マージ済み ② worktree 削除 ③ ローカル branch 削除 ④ リモート branch 消滅 ⑤ ローカル `main` ref が `origin/main` と一致。すべて満たして初めて作業終了

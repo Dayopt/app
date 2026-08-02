@@ -4,6 +4,8 @@
  * tw-animate-css が提供しないプロジェクト固有のアニメーション。
  * animate-in/out, fade-in/out, slide-in-from-*, zoom-in/out 等は
  * tw-animate-css（globals.css でインポート済み）が提供。
+ * shimmer は product / web 共有のため @dayopt/foundations の
+ * tokens/animations.css に移設済み。
  * ============================================ */
 @layer utilities {
   /* Shake animation for error feedback (Apple HIG style) */
@@ -28,36 +30,7 @@
   }
 
   .animate-shake {
-    animation: shake 0.4s ease-in-out;
-  }
-
-  /* ============================================
-   * ローディングアニメーション（GAFA準拠）
-   * shimmer: 左→右の波アニメーション（Facebook/LinkedIn方式）
-   * ============================================ */
-  @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
-  }
-
-  .animate-shimmer {
-    background: linear-gradient(
-      90deg,
-      var(--container) 0%,
-      var(--overlay) 50%,
-      var(--container) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
-  }
-
-  .dark .animate-shimmer {
-    background: linear-gradient(90deg, var(--container) 0%, var(--card) 50%, var(--container) 100%);
-    background-size: 200% 100%;
+    animation: shake var(--motion-oneshot-shake) var(--motion-ease-standard);
   }
 
   /* Indeterminate Progress Bar */
@@ -71,6 +44,6 @@
   }
 
   .animate-indeterminate {
-    animation: indeterminate 1.5s ease-in-out infinite;
+    animation: indeterminate var(--motion-loop-shimmer) var(--motion-ease-standard) infinite;
   }
 }

@@ -21,7 +21,7 @@ import {
   isCalendarDiffView,
   useCalendarNavigation,
 } from '@/features/calendar';
-import { CalendarReviewPanel, ReviewDiffPanel } from '@/features/review';
+import { CalendarReviewPanel, ReviewDiffPanel, useReviewOpenedTracking } from '@/features/review';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button, HoverTooltip } from '@dayopt/components';
 import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
@@ -75,14 +75,17 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
 
   // Sidebar は desktop 専用。mobile は header action と tag footer だけにする。
   const sidebarToggle = !sidebar.open ? (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      icon
+      size="sm"
       onClick={toggleSidebar}
-      className="hover:bg-state-hover hidden size-8 items-center justify-center rounded-lg transition-colors md:flex"
       aria-label="Open sidebar"
+      className="hidden md:inline-flex"
     >
       <PanelLeft className="size-4" />
-    </button>
+    </Button>
   ) : null;
   const handleReviewPanelToggle = useCallback(() => {
     setPanelKind(panelKind === 'review' || panelKind === 'analytics' ? null : 'review');
@@ -106,6 +109,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   );
   const isReviewPanelActive = panelKind === 'review' || panelKind === 'analytics';
   const isDiffPanelActive = panelKind === 'diff';
+  useReviewOpenedTracking(isReviewPanelActive);
   const reviewDisplayRange = useMemo(
     () => ({
       ...composition.viewDateRange,
@@ -192,12 +196,9 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
                   {translations.errorTitle}
                 </h2>
                 <p className="text-muted-foreground mb-4 text-sm">{translations.errorMessage}</p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 transition-colors"
-                >
+                <Button onClick={() => window.location.reload()}>
                   {translations.reloadButton}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

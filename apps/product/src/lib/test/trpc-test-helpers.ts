@@ -38,6 +38,8 @@ interface MockContextOptions {
   authMode?: Context['authMode'];
   oauthClientId?: OAuthClientId | undefined;
   oauthScopes?: SupportedScope[] | undefined;
+  /** MCP endpoint 内部からの実行だけが OAuth token を tRPC へ通せる。 */
+  oauthExecution?: Context['oauthExecution'];
   mfaAssurance?: Context['mfaAssurance'];
   supabaseOverrides?: Partial<MockSupabaseClient>;
 }
@@ -97,11 +99,16 @@ export function createMockContext(options: MockContextOptions = {}): Context {
     authMode = 'session',
     oauthClientId,
     oauthScopes,
+    oauthExecution,
     mfaAssurance,
     supabaseOverrides,
   } = options;
 
   const mockSupabase = createMockSupabase(supabaseOverrides);
+  const resolvedMfaAssurance =
+    authMode === 'session' && userId && mfaAssurance === undefined
+      ? { currentLevel: 'aal1' as const, nextLevel: 'aal1' as const }
+      : mfaAssurance;
 
   return {
     req: {
@@ -117,7 +124,8 @@ export function createMockContext(options: MockContextOptions = {}): Context {
     sessionId,
     oauthClientId,
     oauthScopes,
-    mfaAssurance,
+    oauthExecution,
+    mfaAssurance: resolvedMfaAssurance,
     supabase: mockSupabase as unknown as SupabaseClient<Database>,
     authMode,
   };

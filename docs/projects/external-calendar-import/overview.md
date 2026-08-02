@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-07-24
+last_verified: 2026-08-02
 code: apps/product/src/features/external-calendar/server/sync-service.ts
 ---
 
@@ -35,7 +35,7 @@ Phase 1 から継承する拘束（本書で再決定しない）:
 4. Vercel cron + 手動 syncNow で実行
 5. Settings に Integrations カテゴリ（接続・カレンダー選択・状態表示・切断）
 
-骨格に含めないもの: ghost 表示・変換 UX（次 project、§12 にスケッチ）、Outlook 実装（adapter interface だけ切る、§7-4）、webhook push channel、iCal export の URL 表示 UI。
+骨格に含めないもの: ghost 表示・変換 UX（次 project、§12 にスケッチ）、Outlook 実装（adapter interface だけ切る、§7-4）、webhook push channel。Step 6 の Settings 出荷面には、既存 iCal export URL の管理 UI と CSV export の安全化も同じ機能まとまりとして含める。
 
 ## 3. スコープ — 「連携ができる」の定義
 
@@ -137,8 +137,8 @@ Supabase Auth の Google provider に scope を足す案は却下する。理由
 ### 5-2. Connect フロー
 
 - Route handler 2 本: `apps/product/src/app/api/integrations/google-calendar/start/route.ts` / `.../callback/route.ts`。redirect flow は tRPC 化できないため、`/api/auth/*` と同列の「REST 維持」例外として `.claude/rules/architecture.md` の一覧に追記する
-- `start`: session 必須 + billing gate（`canAccessProFeatures` + `isBillingEnforced` を route 内で適用）。`state`（random）と PKCE `code_verifier` を signed HTTP-only cookie（10 分 TTL）に保存して Google へ redirect。confidential client なので token 交換には client_secret を併用し、PKCE は上乗せ防御
-- Auth URL params: `access_type=offline`・`prompt=consent`（refresh token を確実に取得）。**`include_granted_scopes` は付けない** — 付けると同一 client が過去に得ていた scope まで畳み込まれ、保存する refresh token が本機能に必要な範囲を超えた権限を持ちうる。callback は `calendar.readonly` の有無しか検査しないため余分な scope は素通りする。必要な scope は最初から全部要求しており incremental auth は使わない（Step 2 レビュー指摘）
+- `start`: session 必須 + billing gate（`canAccessProFeatures` + `isBillingEnforced` を route 内で適用）。`state`（random）と PKCE `code_verifier` を `__Host-` HTTP-only cookie（10 分 TTL）に保存して Google へ redirect。confidential client なので token 交換には client_secret を併用し、PKCE は上乗せ防御
+- Auth URL params: `access_type=offline`・`prompt=consent select_account`（refresh token を確実に取得し、接続する Google アカウントを毎回選ばせる）。**`include_granted_scopes` は付けない** — 付けると同一 client が過去に得ていた scope まで畳み込まれ、保存する refresh token が本機能に必要な範囲を超えた権限を持ちうる。callback は `calendar.readonly` の有無しか検査しないため余分な scope は素通りする。必要な scope は最初から全部要求しており incremental auth は使わない（Step 2 レビュー指摘）
 - `callback`: state/PKCE 検証 → code 交換 → id_token から `sub` / `email` を取得 → `calendar_connections` を upsert → 初回はカレンダー選択へ誘導する Settings へ redirect
 - API client は **googleapis SDK を入れず素の `fetch` + zod パース**。必要な endpoint は token / calendarList.list / events.list / revoke の 4 つだけで、依存追加規律（1 機能のために大きなライブラリを入れない）に従う
 
@@ -148,7 +148,7 @@ Supabase Auth の Google provider に scope を足す案は却下する。理由
 
 ### 5-4. 再認証
 
-token 交換・API 呼び出しで `invalid_grant` を検知したら `status = 'reauth_required'` に更新し、同期対象から外す。Settings UI に再接続バナーを出し、connect フローの再実行で `active` に戻す。
+token 交換・API 呼び出しで `invalid_grant` を検知したら `status = 'reauth_required'` に更新し、同期対象から外す。Settings UI に再接続バナーを出す。再接続は connection id を HttpOnly flow cookie に保持し、callback で検証済み Google `sub` が保存済み `provider_account_id` と一致する場合だけ、既存行を条件付き UPDATE して `active` に戻す。generic upsert は使わず、切断との競合で更新行が無ければ失敗させる。
 
 ### 5-5. Operational TODO（コードの blocker にしない）
 
@@ -214,21 +214,24 @@ features/external-calendar/
 
 ### 7-2. tRPC surface（Router → Service の 3 層、`handleServiceError`）
 
-| procedure                 | gate               | 内容                                           |
-| ------------------------- | ------------------ | ---------------------------------------------- |
-| `listConnections`         | protectedProcedure | 接続一覧。解約後も自分の接続状態は見える       |
-| `getSyncStatus`           | protectedProcedure | connection + calendars の last_synced / error  |
-| `listProviderCalendars`   | **proProcedure**   | オンデマンドで provider の calendarList を取得 |
-| `updateSelectedCalendars` | **proProcedure**   | child table 差し替え + 即時 sync kick          |
-| `syncNow`                 | **proProcedure**   | rate-limited、sync-service 直呼び              |
-| `disconnect`              | protectedProcedure | 解約済みユーザーも必ず切断できる               |
+| procedure                   | gate               | 内容                                           |
+| --------------------------- | ------------------ | ---------------------------------------------- |
+| `getConnectionAvailability` | protectedProcedure | 現在の origin が設定済み redirect と一致するか |
+| `listConnections`           | protectedProcedure | 接続一覧。解約後も自分の接続状態は見える       |
+| `getSyncStatus`             | protectedProcedure | connection + calendars の last_synced / error  |
+| `listProviderCalendars`     | **proProcedure**   | オンデマンドで provider の calendarList を取得 |
+| `updateSelectedCalendars`   | **proProcedure**   | child table 差し替え + 即時 sync kick          |
+| `syncNow`                   | **proProcedure**   | rate-limited、sync-service 直呼び              |
+| `disconnect`                | protectedProcedure | 解約済みユーザーも必ず切断できる               |
 
 connect start/callback は route handler（§5-2）。ghost 用の `listEvents` / `dismiss` は次 project で追加する（予約席としてここに記す）。ルーターは `lib/trpc/root.ts` に集約。
 
 ### 7-3. Settings UI
 
 - `features/settings/constants.ts` の `SETTINGS_CATEGORIES` に第 6 カテゴリ `integrations` を追加し、`SettingsContent.tsx` に `IntegrationsSettings` を合成する。settings は composition feature なので external-calendar の **barrel** から import する（deep import 禁止）
-- コンポーネント実体は `features/external-calendar/components/`: 未接続 = connect ボタン（`/api/integrations/google-calendar/start` へ）。接続済み = アカウント email・カレンダー checklist・最終同期 + status/error・今すぐ同期・切断・`reauth_required` 時の再接続バナー
+- コンポーネント実体は `features/external-calendar/components/`: 未接続 = connect ボタン（`/api/integrations/google-calendar/start` へ）。接続済み = 複数アカウントの email・カレンダー checklist・最終同期 + status/error・今すぐ同期・切断・`reauth_required` 時の同一アカウント再接続バナー
+- `getConnectionAvailability` は設定値を返さず boolean だけを返す。現在の origin が redirect URI allowlist と一致しない Preview や、credentials 未設定環境では接続・追加・再接続 CTA を無効にする
+- Settings 所有の iCal セクションは既存 token から feed URL を表示・コピーし、再生成時だけ確認する。CSV export は危険な数式 prefix を文字列化する。iCal route の query/window と JSON restore の仕様は変えない
 - i18n: **orphan 状態の `settings.integrations` キー（en/ja）を接続し、不足分を追加**する（i18n skill / glossary 準拠）
 - Storybook: AllPatterns story 必須（未接続 / 接続済み / reauth_required / エラー）
 
@@ -328,12 +331,12 @@ disconnect は次の 3 段で行う:
 | 1    | Migration: 新 2 テーブル + RLS/GRANT/trigger 一式、`supabase/schemas` 宣言ミラー、`pnpm rls:snapshot` 再生成                                                                    | [hours]       | 1-2     |
 | 2    | OAuth connect: env 4 変数（redirect URI allowlist を含む）、token 暗号 helper、start/callback route、feature scaffold + eslint.config.mjs DAG 追加。GCP 設定は operational TODO | [hours]       | 4-6     |
 | 3    | Provider adapter（google）+ sync-service（full/incremental/410/tombstone/prune）+ Vitest（dismissed 不可侵・prune anti-join の regression test 必須）                           | [minutes]     | 2       |
-| 4    | tRPC router + service（§7-2 の 6 procedure、proProcedure 付与）                                                                                                                 | [minutes]     | 1       |
+| 4    | tRPC router + service（§7-2 の 7 procedure、proProcedure 付与）                                                                                                                 | [minutes]     | 1       |
 | 5    | Vercel cron: vercel.json + `/api/cron/calendar-sync`（CRON_SECRET 検証・時間予算・課金フィルタ hook）                                                                           | [hours]       | 1       |
-| 6    | Settings UI: integrations カテゴリ + コンポーネント + i18n（orphan キー接続）+ Storybook                                                                                        | [minutes]     | 1-2     |
-| 7    | Hardening + 完了処理: reauth_required UX、Sentry capture 整備、`summary.md` + `status: done`、user docs は docs-writing skill で提案                                            | [minutes]     | 1       |
+| 6    | Settings UI: integrations カテゴリ + Google 接続/再接続 UI + iCal URL 管理 + CSV export 安全化 + i18n + Storybook                                                               | [minutes]     | 3       |
+| 7    | Hardening + 完了処理: Sentry capture 整備、`summary.md` + `status: done`、user docs は docs-writing skill で提案                                                                | [minutes]     | 1       |
 
-計 10-11 commits。マイルストーン「連携ができる」は Step 6 で到達し、Step 7 で締める。auth / RLS / OAuth / cron を扱うため、Step 1・2・5 は `risk-reviewer`、挙動変更は `behavior-verifier` の自動委任対象。
+計 11-12 commits。マイルストーン「連携ができる」は Step 6 で到達し、Step 7 で締める。auth / RLS / OAuth / cron を扱うため、Step 1・2・5 は `risk-reviewer`、挙動変更は `behavior-verifier` の自動委任対象。
 
 ## 14. 完了条件（Definition of Done）
 

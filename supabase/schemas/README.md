@@ -25,17 +25,18 @@
 
 ## ファイル構成
 
-| 番号  | ファイル              | 範囲                            |
-| ----- | --------------------- | ------------------------------- |
-| `010` | `tables_core.sql`     | ドメインモデル中核テーブル      |
-| `012` | `tables_ai.sql`       | AI 関連（すべて削除済みの記録） |
-| `013` | `tables_security.sql` | セキュリティ関連                |
-| `014` | `tables_billing.sql`  | 課金・メール関連                |
-| `016` | `tables_reports.sql`  | レポート                        |
-| `017` | `tables_oauth.sql`    | OAuth 2.1 / MCP Remote Server   |
-| `030` | `rls_policies.sql`    | RLS ポリシー一覧                |
-| `040` | `functions.sql`       | 関数一覧                        |
-| `060` | `cron_jobs.sql`       | pg_cron ジョブ一覧              |
+| 番号  | ファイル               | 範囲                            |
+| ----- | ---------------------- | ------------------------------- |
+| `010` | `tables_core.sql`      | ドメインモデル中核テーブル      |
+| `012` | `tables_ai.sql`        | AI 関連（すべて削除済みの記録） |
+| `013` | `tables_security.sql`  | セキュリティ関連                |
+| `014` | `tables_billing.sql`   | 課金・メール関連                |
+| `016` | `tables_reports.sql`   | レポート                        |
+| `017` | `tables_oauth.sql`     | OAuth 2.1 / MCP Remote Server   |
+| `018` | `tables_analytics.sql` | プロダクト分析                  |
+| `030` | `rls_policies.sql`     | RLS ポリシー一覧                |
+| `040` | `functions.sql`        | 関数一覧                        |
+| `060` | `cron_jobs.sql`        | pg_cron ジョブ一覧              |
 
 番号は「テーブル → ポリシー → 関数 → ジョブ」の読む順序を示すだけで、実行順序ではない。
 新カテゴリを足す時は既存の番号帯の間に入れ、欠番は詰めない。

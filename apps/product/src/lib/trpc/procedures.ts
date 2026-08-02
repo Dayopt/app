@@ -16,6 +16,7 @@ import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
 import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 import { ServiceError } from '@/lib/trpc/errors';
 import { createCallerFactory, createTRPCRouter, mergeRouters, t } from '@/lib/trpc/router';
+import { isValidMfaAssuranceTransition } from '@/lib/trpc/session-auth-context';
 export type { Context } from '@/lib/trpc/context';
 const USER_RATE_LIMIT = 100;
 const USER_RATE_WINDOW_MS = 60 * 1000;
@@ -107,7 +108,12 @@ export const protectedProcedure = t.procedure
     }
 
     if (ctx.authMode === 'session') {
-      if (ctx.mfaAssurance?.lookupFailed) {
+      const mfaAssurance = ctx.mfaAssurance;
+      if (
+        !mfaAssurance ||
+        mfaAssurance.lookupFailed ||
+        !isValidMfaAssuranceTransition(mfaAssurance.currentLevel, mfaAssurance.nextLevel)
+      ) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'MFA verification required',
@@ -117,8 +123,8 @@ export const protectedProcedure = t.procedure
 
       if (
         !MFA_CHALLENGE_TRPC_PATHS.has(path) &&
-        ctx.mfaAssurance?.currentLevel === 'aal1' &&
-        ctx.mfaAssurance.nextLevel === 'aal2'
+        mfaAssurance.currentLevel === 'aal1' &&
+        mfaAssurance.nextLevel === 'aal2'
       ) {
         throw new TRPCError({
           code: 'FORBIDDEN',

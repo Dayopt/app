@@ -51,9 +51,11 @@ export function RelatedPosts({
 
           {/* View all articles link */}
           <div className="mt-12 text-center">
+            {/* lint-tokens-allow: ボタン風リンク。Button の outline variant と同じく
+                素の border-border を使い、hover で border-foreground へ遷移する */}
             <Link
               href="/blog"
-              className="border-border bg-card text-foreground hover:border-foreground hover:bg-muted inline-flex items-center rounded-lg border px-6 py-4 text-sm font-medium transition-colors"
+              className="border-border bg-card text-foreground hover:border-foreground hover:bg-muted inline-flex items-center rounded-lg border px-6 py-4 text-sm font-medium shadow-sm transition-colors"
             >
               {t('viewAll')}
               <ArrowRight className="ml-2 size-4" />

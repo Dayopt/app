@@ -2,10 +2,10 @@
 
 import { useTranslations } from 'next-intl';
 
-import { TagIcon } from '@/features/tags';
 import { formatDurationMinutes } from '@/lib/date';
 import { cn } from '@dayopt/components';
 
+import { TimePLTagMarker } from '../TimePLTagMarker';
 import { formatVariance, getVarianceColor } from '../data/timePL.presentation';
 
 import type { BarComparisonRow } from '@/features/review/domain/timePL/types';
@@ -22,11 +22,11 @@ export function BarComparisonView({ rows }: BarComparisonViewProps) {
   return (
     <div className="flex flex-col gap-4">
       {rows.map((row) => (
-        <ComparisonRow key={row.tagId} row={row} maxMinutes={maxMinutes} />
+        <ComparisonRow key={row.tagId ?? 'uncategorized'} row={row} maxMinutes={maxMinutes} />
       ))}
       <div className="mt-2 flex justify-center gap-4">
         <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-          <span className="bg-primary/30 inline-block h-2 w-4 rounded-lg" />
+          <span className="bg-chart-1 inline-block h-2 w-4 rounded-lg" />
           {t('planned')}
         </span>
         <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
@@ -43,15 +43,20 @@ function ComparisonRow({ row, maxMinutes }: { row: BarComparisonRow; maxMinutes:
   const budgetPct = (row.budgetMinutes / maxMinutes) * 100;
   const actualPct = (row.actualMinutes / maxMinutes) * 100;
   const varianceColor = getVarianceColor(row.variancePercent);
+  const tagName = row.isUncategorized ? t('uncategorized') : row.tagName;
 
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
-        <span className="inline-flex items-center gap-1.5 text-sm">
-          <TagIcon icon={row.tagIcon ?? null} color={row.tagColor} size="sm" />
-          <span className="text-foreground truncate">{row.tagName}</span>
+        <span className="inline-flex items-center gap-1 text-sm">
+          <TimePLTagMarker
+            isUncategorized={row.isUncategorized}
+            tagIcon={row.tagIcon}
+            tagColor={row.tagColor}
+          />
+          <span className="text-foreground truncate">{tagName}</span>
         </span>
-        <span className={cn('font-mono text-xs tabular-nums', varianceColor)}>
+        <span className={cn('text-xs tabular-nums', varianceColor)}>
           {row.variancePercent !== null ? formatVariance(row.varianceMinutes) : t('unplanned')}
         </span>
       </div>
@@ -71,19 +76,19 @@ function Bar({
   variant: 'budget' | 'actual';
 }) {
   return (
-    <div className="mb-0.5 flex items-center gap-2">
+    <div className="mb-1 flex items-center gap-2">
       <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
         <div
           className={cn(
             'h-full rounded-full transition-all',
-            variant === 'budget' ? 'bg-primary/30' : 'bg-primary',
+            variant === 'budget' ? 'bg-chart-1' : 'bg-primary',
           )}
           style={{ width: `${Math.max(pct, 1)}%` }}
         />
       </div>
       <span
         className={cn(
-          'w-14 text-right font-mono text-xs tabular-nums',
+          'w-14 text-right text-xs tabular-nums',
           variant === 'budget' ? 'text-muted-foreground' : 'text-foreground',
         )}
       >

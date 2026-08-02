@@ -11,6 +11,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { McpRequestContext } from '../_context';
 import { MCP_ENTRY_LIST_OUTPUT_SCHEMA } from './timeblock-contract';
 import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
+import { MCP_UNTRUSTED_CONTENT_NOTICE } from './untrusted-data-serialization';
 
 /**
  * `entries.list` tool — Dayopt entries (timeboxes / records) を取得する。
@@ -81,7 +82,7 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
     'entries.list',
     {
       title: 'List Dayopt entries',
-      description: "List the authenticated user's Dayopt entries (timeboxes / records). Read-only.",
+      description: `List the authenticated user's Dayopt entries (timeboxes / records). Read-only. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
       inputSchema,
       outputSchema: MCP_ENTRY_LIST_OUTPUT_SCHEMA,
     },

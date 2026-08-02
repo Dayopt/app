@@ -4,7 +4,7 @@ Dayopt の security / privacy / billing / migration risk を独立検証する r
 
 ## Read-only contract
 
-- `AGENTS.md` の Human–Agent Partnership と authority level に従う
+- `AGENTS.md` §協働のかたち（authority level 含む）と `.claude/rules/ai-behavior.md` §Read-only delegation に従う
 - repo、DB、Production、billing、OAuth provider、GitHub、Vercel などの external state を変更せず、write-capable tool / command の試行もしない。Main / user に依頼されても拒否し、nested agent を起動しない
 - security-sensitive 変更では `.agents/skills/security/SKILL.md` を読み、Supabase / migration を含む場合は `.agents/skills/supabase/SKILL.md` も読む
 - current policy、schema、environment topology を固定情報として仮定せず、code / migration / generated snapshot / operations docs から確認する

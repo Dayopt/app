@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { trackProductEvent, trackProductEvents } from '@/lib/analytics/product-events';
+
 import type {
   ConfirmDayInput,
   CreatePlanInput,
@@ -51,9 +53,9 @@ export class TimeblockCommandService {
     this.records = new RecordService(supabase, commands);
   }
 
-  createPlan(options: UserCommandOptions<CreatePlanInput>): Promise<PlanRow> {
+  async createPlan(options: UserCommandOptions<CreatePlanInput>): Promise<PlanRow> {
     const { userId, input } = options;
-    return this.commands.createPlan({
+    const plan = await this.commands.createPlan({
       userId,
       title: input.title,
       note: input.note ?? null,
@@ -63,6 +65,8 @@ export class TimeblockCommandService {
       startAt: input.start_at,
       endAt: input.end_at,
     });
+    await trackProductEvent({ eventName: 'plan_created', userId });
+    return plan;
   }
 
   async updatePlan(options: VersionedUpdateOptions<UpdatePlanInput>): Promise<PlanRow> {
@@ -110,25 +114,31 @@ export class TimeblockCommandService {
     });
   }
 
-  recordPlan(options: VersionedTargetOptions): Promise<RecordRow> {
-    return this.commands.recordPlan({
+  async recordPlan(options: VersionedTargetOptions): Promise<RecordRow> {
+    const record = await this.commands.recordPlan({
       userId: options.userId,
       planId: options.id,
       expectedUpdatedAt: options.expectedUpdatedAt,
     });
+    await trackProductEvent({ eventName: 'record_created', userId: options.userId });
+    return record;
   }
 
-  confirmDay(options: UserCommandOptions<ConfirmDayInput>): Promise<RecordRow[]> {
-    return this.commands.confirmDay({
+  async confirmDay(options: UserCommandOptions<ConfirmDayInput>): Promise<RecordRow[]> {
+    const records = await this.commands.confirmDay({
       userId: options.userId,
       startAt: options.input.start_at,
       endAt: options.input.end_at,
     });
+    await trackProductEvents(
+      records.map(() => ({ eventName: 'record_created' as const, userId: options.userId })),
+    );
+    return records;
   }
 
-  createRecord(options: UserCommandOptions<CreateRecordInput>): Promise<RecordRow> {
+  async createRecord(options: UserCommandOptions<CreateRecordInput>): Promise<RecordRow> {
     const { userId, input } = options;
-    return this.commands.createRecord({
+    const record = await this.commands.createRecord({
       userId,
       title: input.title,
       note: input.note ?? null,
@@ -139,6 +149,8 @@ export class TimeblockCommandService {
       startAt: input.start_at,
       endAt: input.end_at,
     });
+    await trackProductEvent({ eventName: 'record_created', userId });
+    return record;
   }
 
   async updateRecord(options: VersionedUpdateOptions<UpdateRecordInput>): Promise<RecordRow> {

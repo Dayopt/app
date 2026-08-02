@@ -185,7 +185,7 @@ export function ReviewDiffPanel({
                         </span>
                       </span>
                       <span className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
-                        <span className="font-mono tabular-nums">
+                        <span className="tabular-nums">
                           {rangeStart
                             ? timeFormatter.format(rangeStart)
                             : t('calendar.event.noTimeSet')}
@@ -221,7 +221,7 @@ function SummaryMetric({
       <dt className="text-muted-foreground text-sm">{label}</dt>
       <dd
         className={cn(
-          'text-right font-mono text-sm font-medium tabular-nums',
+          'text-right text-sm font-medium tabular-nums',
           emphasis && 'text-base',
           valueClassName,
         )}
@@ -246,7 +246,7 @@ function DiffBadge({ item }: { item: ReviewDiffItem }) {
   return (
     <span
       data-review-diff-badge
-      className="bg-container text-muted-foreground border-border-subtle mt-1 flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs tabular-nums"
+      className="bg-container text-muted-foreground border-border-subtle mt-1 flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-xs tabular-nums"
     >
       <Icon className="size-3.5" aria-hidden="true" />
       {content}

@@ -2,6 +2,7 @@ import {
   CreditCard,
   Database,
   Monitor,
+  Plug,
   Settings as SettingsIcon,
   User,
   type LucideIcon,
@@ -21,7 +22,7 @@ interface SettingsCategoryMeta {
 }
 
 /**
- * 設定カテゴリの定義（5カテゴリ）
+ * 設定カテゴリの定義（6カテゴリ）
  */
 export const SETTINGS_CATEGORIES: readonly SettingsCategoryMeta[] = [
   {
@@ -41,6 +42,12 @@ export const SETTINGS_CATEGORIES: readonly SettingsCategoryMeta[] = [
     icon: Database,
     labelKey: 'settings.dialog.categories.data',
     descKey: 'settings.dialog.categories.dataDesc',
+  },
+  {
+    id: 'integrations',
+    icon: Plug,
+    labelKey: 'settings.dialog.categories.integrations',
+    descKey: 'settings.dialog.categories.integrationsDesc',
   },
   {
     id: 'billing',

@@ -160,7 +160,7 @@ export const TimeblockCardContent = memo<TimeblockCardContentProps>(function Tim
       </div>
 
       {showTime != null && (
-        <div className="event-time pointer-events-none flex flex-shrink-0 flex-col items-start gap-0.5 text-xs leading-tight">
+        <div className="event-time pointer-events-none flex flex-shrink-0 flex-col items-start gap-1 text-xs leading-tight">
           {timeRows.map((row) => (
             <div
               key={row.key}

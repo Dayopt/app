@@ -167,7 +167,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
         <div
           className={cn(
             // eslint-disable-next-line tailwindcss/no-arbitrary-value -- grid-template-rows の transition はトークンで表現不可
-            'grid transition-[grid-template-rows] duration-200 ease-in-out',
+            'ease-standard grid transition-[grid-template-rows] duration-200',
             isExpanded ? 'grid-rows-expanded' : 'grid-rows-collapsed',
           )}
         >

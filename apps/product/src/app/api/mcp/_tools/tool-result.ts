@@ -1,13 +1,23 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
+import { serializeUntrustedMcpData } from './untrusted-data-serialization';
+
 export const MCP_TOOL_SCHEMA_VERSION = 1 as const;
 
+/**
+ * 成功結果の legacy text は必ず untrusted data として枠付けする。
+ *
+ * title / note / tag 名など、返す payload はすべてユーザーが書いた自由テキストを
+ * 含みうる。枠付けを個々の tool 側に置くと read tool を足すたび漏れるので、
+ * 唯一の成功経路であるここに寄せる。structuredContent は outputSchema 検証を
+ * 通す機械可読チャネルなので枠を付けず生のまま返す。
+ */
 export function createMcpToolSuccess(structuredContent: Record<string, unknown>): CallToolResult {
   return {
     content: [
       {
         type: 'text',
-        text: JSON.stringify(structuredContent, null, 2),
+        text: serializeUntrustedMcpData(structuredContent),
       },
     ],
     structuredContent,

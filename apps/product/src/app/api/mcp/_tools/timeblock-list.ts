@@ -15,6 +15,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { McpRequestContext } from '../_context';
 import { MCP_PLAN_LIST_OUTPUT_SCHEMA, MCP_RECORD_LIST_OUTPUT_SCHEMA } from './timeblock-contract';
 import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
+import { MCP_UNTRUSTED_CONTENT_NOTICE } from './untrusted-data-serialization';
 
 const inputSchema = z
   .object({
@@ -43,7 +44,7 @@ function registerTimeblockListTool(
     `${model}.list`,
     {
       title: `List Dayopt ${model}`,
-      description: `List authenticated user's ${model}.`,
+      description: `List authenticated user's ${model}. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
       inputSchema,
       outputSchema: model === 'plans' ? MCP_PLAN_LIST_OUTPUT_SCHEMA : MCP_RECORD_LIST_OUTPUT_SCHEMA,
     },

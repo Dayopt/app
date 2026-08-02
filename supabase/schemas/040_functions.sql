@@ -1,7 +1,7 @@
 -- ============================================================
 -- 関数一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
--- 最終同期日: 2026-07-30
+-- 最終同期日: 2026-08-02
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -38,6 +38,7 @@
 --   - 20260729073126_mcp_stage1_receipt_generation_lifecycle.sql
 --   - 20260729073127_legacy_linked_record_restore_compatibility.sql
 --   - 20260730090301_harden_authenticated_timeblock_write_boundary.sql
+--   - 20260802013954_add_product_events.sql
 -- Browser-facing 関数は authenticated、DB owner の command / OAuth / MCP apply は
 -- service_role にだけ明示 GRANT。PUBLIC/anon への EXECUTE は revoke 済み。
 -- ============================================================
@@ -45,6 +46,7 @@
 -- ■ トリガー関数
 --   update_updated_at()                       — 汎用 updated_at 自動更新
 --   handle_new_user()                         — auth.users INSERT → profiles 自動作成
+--   private.track_product_user_signup_v1()    — auth.users INSERT → payload-free signup event
 --   check_tag_hierarchy()                     — tags の root -> child 最大2階層を強制
 --   check_tag_has_children()                  — active child を持つ tag の child 化を禁止
 -- ■ RPC 関数
@@ -122,6 +124,7 @@
 --   cleanup_integration_security_events_v1(...) — payload-free eventを90日で削除する
 --   get_external_authority_maintenance_status_v1() — IDを含まないbacklog集計
 --   get_external_lifecycle_app_version_v2() — Candidate 3 terminal schema marker
+--   private.cleanup_product_events_v1(...) — 90日超eventのbounded cleanup（DB owner only）
 
 -- ■ private schema（Data API 非公開）
 --   authorize_mcp_mutation_v1(...)             — environment/global/client/user/connection/

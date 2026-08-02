@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./tokens.css": "./src/tokens.css",
-    "./scrollbar.css": "./src/scrollbar.css"
+    "./scrollbar.css": "./src/scrollbar.css",
+    "./og-colors": "./src/og-colors.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",

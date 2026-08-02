@@ -20,7 +20,15 @@ import { useTranslations } from 'next-intl';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { cn, Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@dayopt/components';
+import {
+  Button,
+  cn,
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  overlaySurface,
+} from '@dayopt/components';
 import { useTags } from '../hooks/useTagsQuery';
 import { TagBadgeList } from './TagBadgeList';
 import { TagIcon } from './TagIcon';
@@ -300,8 +308,9 @@ export function TagQuickSelector({
       role="dialog"
       aria-label={t('tagSelector.title')}
       className={cn(
+        overlaySurface(),
         // eslint-disable-next-line tailwindcss/no-arbitrary-value -- セレクタ高は viewport 単位 70vh が必要でトークン化不可
-        'bg-card border-border-subtle shadow-card z-overlay-popover fixed flex max-h-[70vh] w-80 flex-col rounded-lg border',
+        'z-overlay-popover fixed flex max-h-[70vh] w-80 flex-col',
         'animate-in fade-in duration-150',
       )}
       style={position ? { top: position.top, left: position.left } : { visibility: 'hidden' }}
@@ -311,14 +320,17 @@ export function TagQuickSelector({
           <h2 className="font-medium">{t('tagSelector.title')}</h2>
           {timeLabel && <p className="text-muted-foreground truncate text-sm">{timeLabel}</p>}
         </div>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          icon
+          size="lg"
           onClick={() => onOpenChange(false)}
-          className="text-foreground hover:bg-state-hover flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors"
           aria-label={t('actions.close')}
+          className="shrink-0"
         >
           <X className="size-4" />
-        </button>
+        </Button>
       </div>
 
       <TagQuickSelectorContent

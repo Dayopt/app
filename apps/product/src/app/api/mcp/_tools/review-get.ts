@@ -10,14 +10,14 @@ import type { McpRequestContext } from '../_context';
 import { findMcpContextReadErrorCode } from './context-read-error';
 import { MCP_REVIEW_GET_INPUT_SCHEMA, MCP_REVIEW_GET_OUTPUT_SCHEMA } from './review-contract';
 import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
+import { MCP_UNTRUSTED_CONTENT_NOTICE } from './untrusted-data-serialization';
 
 export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext) {
   server.registerTool(
     'review.get',
     {
       title: 'Get Dayopt Plan and Record review',
-      description:
-        'Get deterministic Plan versus Record totals, tag variances, and accuracy signals.',
+      description: `Get deterministic Plan versus Record totals, tag variances, and accuracy signals. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
       inputSchema: MCP_REVIEW_GET_INPUT_SCHEMA,
       outputSchema: MCP_REVIEW_GET_OUTPUT_SCHEMA,
       annotations: { readOnlyHint: true, idempotentHint: true },

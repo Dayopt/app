@@ -15,10 +15,7 @@ export type OAuthTokenRateLimitState = 'allowed' | 'limited' | 'unavailable';
 export async function checkOAuthTokenRateLimit(
   request: Request,
 ): Promise<OAuthTokenRateLimitState> {
-  const ip = extractClientIp(
-    request.headers.get('x-forwarded-for'),
-    request.headers.get('x-real-ip'),
-  );
+  const ip = extractClientIp(request.headers.get('x-real-ip'));
   const ipState = await checkRateLimit(
     oauthTokenIpRateLimit,
     `ip:${ip}`,

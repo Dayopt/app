@@ -311,7 +311,7 @@
         "dataControls": "データ管理",
         "dataControlsDesc": "エクスポート、インポート、バックアップ設定",
         "integrations": "連携",
-        "integrationsDesc": "AIプロバイダーと外部サービス連携",
+        "integrationsDesc": "Google CalendarとiCalフィード",
         "profile": "プロフィール",
         "profileDesc": "名前、メール",
         "display": "表示",
@@ -427,17 +427,90 @@
         "description": "APIキーの発行やWebhookの設定は開発者ポータルから行える。",
         "openPortal": "開発者ポータルを開く（準備中）"
       },
+      "googleCalendar": {
+        "title": "Google カレンダー",
+        "description": "Dayoptに取り込むGoogle カレンダーを選べます。複数のGoogle アカウントを接続できます。",
+        "connect": "Google アカウントを接続",
+        "addAccount": "Google アカウントを追加",
+        "checkingAvailability": "確認中...",
+        "unavailable": "この環境ではGoogle カレンダーに接続できません。",
+        "loading": "Google カレンダーの接続を読み込み中",
+        "loadError": "Google カレンダーの接続を読み込めませんでした",
+        "empty": "Google アカウントを接続すると、取り込むカレンダーを選べます。",
+        "unknownAccount": "Google アカウント",
+        "lastSync": "最終同期: {value}",
+        "neverSynced": "未同期",
+        "calendars": "取り込むカレンダー",
+        "loadingCalendars": "カレンダーを読み込み中",
+        "calendarLoadError": "カレンダーを読み込めませんでした",
+        "noCalendars": "このアカウントで利用できるカレンダーはありません。",
+        "unnamedCalendar": "名前のないカレンダー",
+        "primary": "メイン",
+        "apply": "適用",
+        "applying": "適用中...",
+        "syncNow": "今すぐ同期",
+        "syncing": "同期中...",
+        "reconnect": "再接続",
+        "reconnectToChoose": "カレンダーを選ぶ前に、このアカウントを再接続してください。",
+        "disconnect": "接続を解除",
+        "disconnecting": "解除中...",
+        "disconnectSuccess": "Google アカウントの接続を解除しました",
+        "disconnectFailed": "Google アカウントの接続を解除できませんでした",
+        "status": {
+          "connected": "接続済み",
+          "reauthRequired": "再接続が必要",
+          "issue": "確認が必要"
+        },
+        "errors": {
+          "reauthRequired": "Googleへのアクセスが期限切れです。同じGoogle アカウントを再接続してください。",
+          "rateLimited": "Google カレンダーの利用が一時的に制限されています。時間をおいてお試しください。",
+          "providerUnavailable": "Google カレンダーを一時的に利用できません。時間をおいてお試しください。",
+          "encryptionKeyInvalid": "この接続を安全に読み取れません。アカウントを再接続してください。",
+          "partialFailure": "一部のカレンダーを同期できませんでした。選択を確認して、もう一度お試しください。",
+          "generic": "この接続で同期の問題が発生しています。もう一度試すか、再接続してください。"
+        },
+        "outcomes": {
+          "synced": "Google カレンダーを同期しました",
+          "reauthRequired": "同期する前にGoogle アカウントを再接続してください",
+          "encryptionKeyInvalid": "この接続を安全に読み取れません。再接続してください。",
+          "partialFailure": "一部のカレンダーを同期できませんでした",
+          "notConfigured": "Google カレンダー接続が設定されていません",
+          "updateFailed": "カレンダーの選択を適用できませんでした",
+          "syncFailed": "Google カレンダーを同期できませんでした"
+        },
+        "disconnectDialog": {
+          "title": "このGoogle アカウントの接続を解除しますか？",
+          "description": "Googleへのアクセス解除を試みた後、Dayopt内のトークンと接続を完全に削除します。参照済みの過去のタイムブロックは残ります。"
+        },
+        "callback": {
+          "connected": "Google アカウントを接続しました",
+          "accessDenied": "Google カレンダーへのアクセスが許可されませんでした",
+          "accountMismatch": "再接続が必要なものと同じGoogle アカウントを選んでください",
+          "proRequired": "Google カレンダーとの接続にはProプランが必要です",
+          "rateLimited": "接続の試行回数が多すぎます。時間をおいてお試しください。",
+          "reconnectTargetInvalid": "この接続は再接続できなくなりました。更新して、もう一度お試しください。",
+          "unavailable": "Google カレンダーに一時的に接続できません",
+          "genericError": "Google カレンダーに接続できませんでした"
+        }
+      },
       "icalFeed": {
         "title": "iCalフィード",
         "description": "このURLをGoogle CalendarやApple Calendarに追加すると、Dayoptのスケジュールを読み取り専用で表示できます。",
         "feedUrl": "フィードURL",
         "copy": "コピー",
         "copied": "コピーしました",
+        "copyFailed": "フィードURLをコピーできませんでした",
+        "loading": "iCalフィードURLを読み込み中",
+        "loadError": "iCalフィードURLを読み込めませんでした",
+        "generate": "URLを生成",
+        "generating": "生成中...",
         "regenerate": "URLを再生成",
+        "regenerating": "再生成中...",
         "regenerateConfirmTitle": "フィードURLを再生成しますか？",
         "regenerateConfirmDescription": "現在のURLは無効になります。このURLを使用しているカレンダーは更新が必要です。",
         "regenerateSuccess": "新しいフィードURLを生成しました",
-        "noToken": "フィードURLを生成するには「URLを再生成」をクリックしてください"
+        "regenerateFailed": "フィードURLを生成できませんでした",
+        "noToken": "他のカレンダーアプリから購読するための非公開フィードURLを生成できます。"
       }
     },
     "legal": {

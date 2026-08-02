@@ -13,14 +13,14 @@ import {
 } from './context-contract';
 import { findMcpContextReadErrorCode } from './context-read-error';
 import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
+import { MCP_UNTRUSTED_CONTENT_NOTICE } from './untrusted-data-serialization';
 
 export function registerConstraintsGetTool(server: McpServer, ctx: McpRequestContext) {
   server.registerTool(
     'constraints.get',
     {
       title: 'Get Dayopt scheduling constraints',
-      description:
-        'Get scheduling rules and occupied Plan / Record intervals for the authenticated user.',
+      description: `Get scheduling rules and occupied Plan / Record intervals for the authenticated user. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
       inputSchema: MCP_CONSTRAINTS_GET_INPUT_SCHEMA,
       outputSchema: MCP_CONSTRAINTS_GET_OUTPUT_SCHEMA,
       annotations: { readOnlyHint: true, idempotentHint: true },

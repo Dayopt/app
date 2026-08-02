@@ -16,6 +16,8 @@ import type MiniSearch from 'minisearch';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 
+export const maxDuration = 30;
+
 // ビルド時に生成されたインデックスから構築した MiniSearch を locale ごとにキャッシュする
 const indexCache = new Map<string, MiniSearch<SearchIndexEntry>>();
 let rawIndexCache: Record<string, SearchIndexEntry[]> | null = null;

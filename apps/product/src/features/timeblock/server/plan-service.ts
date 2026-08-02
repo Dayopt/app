@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { trackProductEvent, trackProductEvents } from '@/lib/analytics/product-events';
 import { toPublicRecordRow } from '@/lib/database';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
@@ -163,7 +164,7 @@ export class PlanService {
       await ensureNoPlanOverlap(this.overlapService, userId, input.start_at, input.end_at);
     }
 
-    return this.commands.createPlan({
+    const plan = await this.commands.createPlan({
       userId,
       title: input.title,
       note: input.note ?? null,
@@ -173,6 +174,9 @@ export class PlanService {
       startAt: input.start_at,
       endAt: input.end_at,
     });
+
+    await trackProductEvent({ eventName: 'plan_created', userId });
+    return plan;
   }
 
   async update(options: UpdatePlanOptions): Promise<PlanRow> {
@@ -313,11 +317,14 @@ export class PlanService {
     await ensurePlanNotRecorded(this.supabase, userId, planId);
     await ensureNoRecordOverlap(this.overlapService, userId, plan.start_at, plan.end_at);
 
-    return this.commands.recordPlan({
+    const record = await this.commands.recordPlan({
       userId,
       planId,
       expectedUpdatedAt: plan.updated_at,
     });
+
+    await trackProductEvent({ eventName: 'record_created', userId });
+    return record;
   }
 
   async confirmDay(options: ConfirmDayPlansOptions): Promise<RecordRow[]> {
@@ -335,7 +342,9 @@ export class PlanService {
       handleRecordMutationError(error, 'Failed to confirm day plans');
     }
 
-    return (data ?? []).map(toPublicRecordRow);
+    const records = (data ?? []).map(toPublicRecordRow);
+    await trackProductEvents(records.map(() => ({ eventName: 'record_created' as const, userId })));
+    return records;
   }
 }
 

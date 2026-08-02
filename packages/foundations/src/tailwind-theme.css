@@ -20,17 +20,10 @@
   --color-overlay: var(--overlay);
   --color-entry-default: var(--entry-default);
 
-  /* Popover / Tooltip */
+  /* Popover */
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --color-tooltip: var(--tooltip);
-  --color-tooltip-foreground: var(--tooltip-foreground);
 
-  /* Elevation（物理照明シャドウ） */
-  --shadow-elevation-sunken: var(--elevation-sunken);
-  --shadow-elevation-surface: var(--elevation-surface);
-  --shadow-elevation-raised: var(--elevation-raised);
-  --shadow-elevation-raised-heavy: var(--elevation-raised-heavy);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -73,18 +66,18 @@
   --color-chart-info: var(--info);
   --color-chart-muted: var(--muted-foreground);
 
-  /* Heatmap Scale（primary α段階 — SVG/セル背景用） */
-  --color-heatmap-scale-1: var(--heatmap-scale-1);
-  --color-heatmap-scale-2: var(--heatmap-scale-2);
-  --color-heatmap-scale-3: var(--heatmap-scale-3);
-  --color-heatmap-scale-4: var(--heatmap-scale-4);
-
   /* ============================================
-   * Shadow トークン
-   * sm: 軽いエレベーション（ボタン、入力欄）
-   * card: カード・ポップオーバー用
+   * Shadow トークン（3段のみ）
+   * xs:   form control（input, select, textarea）
+   * sm:   Raised（card, section）
+   * card: Overlay（dropdown, popover, dialog）
    * ダークモードは colors.css の CSS変数で切替
+   *
+   * `--shadow-*: initial` で Tailwind 既定（md/lg/xl/2xl/inner）を消す。
+   * 禁止 shadow は書いても生成されない。理由は tokens/radius.css を参照
    * ============================================ */
+  --shadow-*: initial;
+
   --shadow-xs: var(--shadow-xs);
   --shadow-sm: var(--shadow-sm);
   --shadow-card: var(--shadow-card);
@@ -121,25 +114,50 @@
   --color-now-indicator: var(--now-indicator);
   --color-now-indicator-foreground: var(--now-indicator-foreground);
   --color-now-indicator-muted: var(--now-indicator-muted);
-
-  /* Badge — Rank */
-  --color-badge-bronze: var(--badge-bronze);
-  --color-badge-silver: var(--badge-silver);
-  --color-badge-gold: var(--badge-gold);
-
-  /* Badge — Category */
-  --color-badge-growth: var(--badge-growth);
-  --color-badge-exploration: var(--badge-exploration);
-  --color-badge-pattern: var(--badge-pattern);
-  --color-badge-loyalty: var(--badge-loyalty);
 }
 
 /* ============================================
  * タイポグラフィ
  * ============================================
- * Tailwindデフォルトを使用（CSS変数不要）
- * - フォントサイズ: text-xs, text-sm, text-base, text-lg, text-xl, text-2xl...
- * - フォントウェイト: font-normal (400), font-medium (500)
- * - 行間: leading-tight, leading-normal, leading-relaxed
- * ダークモードで切り替える必要がないため、トークン化しない
+ * font-sans のみトークン化する（実体は tokens/typography.css）。
+ * font-sans utility と body の stack を同一ソースにするため。
+ * font-mono は Tailwind 既定（OS 等幅）のまま。独自の等幅 webfont は配信しない。
+ * フォントサイズと行間は Tailwind デフォルトを使う（CSS変数不要）。
+ *
+ * ウェイトは 400 / 500 だけを残す。`--font-weight-*: initial` で
+ * Tailwind 既定（bold / semibold / light 等）を消すので、禁止ウェイトは
+ * 書いても生成されない。理由は tokens/radius.css を参照
  */
+@theme inline {
+  --font-sans: var(--font-stack-sans);
+}
+
+@theme {
+  --font-weight-*: initial;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+}
+
+/* ============================================
+ * モーション
+ * ============================================
+ * easing だけトークン化する（実体は tokens/motion.css）。
+ * Tailwind v4 には --duration-* の theme namespace が無い（v4.3.3 で実測）ため、
+ * 遷移の長さは組み込みの数値ユーティリティ（duration-150/200/300）を使う。
+ * 持続（loop）は keyframes と一体なので CSS変数のまま参照する。
+ *
+ * `--ease-*: initial` で Tailwind 既定（in/out/in-out）を消す。
+ * 禁止 easing は書いても生成されない。理由は tokens/radius.css を参照。
+ * ease-linear は Tailwind の組み込み（CSS キーワード linear）で
+ * theme のリセットに影響されない（rounded-none と同じ扱い）
+ *
+ * 使用例: transition-colors duration-150 ease-standard
+ *         transition-transform duration-200 ease-settle
+ */
+@theme inline {
+  --ease-*: initial;
+
+  --ease-standard: var(--motion-ease-standard);
+  --ease-settle: var(--motion-ease-settle);
+}
