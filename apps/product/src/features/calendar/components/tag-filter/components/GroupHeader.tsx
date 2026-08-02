@@ -13,7 +13,6 @@ import {
   Plus,
   Smile,
   Trash2,
-  Unlink,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -47,7 +46,6 @@ interface GroupHeaderProps {
   currentIcon?: string | null | undefined;
   onAddTagToGroup?: (() => void) | undefined;
   onRenameGroup?: (() => void) | undefined;
-  onUngroupTags?: (() => void) | undefined;
   onViewStats?: (() => void) | undefined;
   onDeleteGroup?: (() => void) | undefined;
   /**
@@ -80,7 +78,6 @@ export function GroupHeader({
   currentIcon,
   onAddTagToGroup,
   onRenameGroup,
-  onUngroupTags,
   onViewStats,
   onDeleteGroup,
   onRowClick,
@@ -242,12 +239,6 @@ export function GroupHeader({
               {/* --- アクション --- */}
               <DropdownMenuSeparator />
 
-              {onUngroupTags && (
-                <DropdownMenuItem onClick={onUngroupTags}>
-                  <Unlink className="mr-2 size-4" />
-                  {t('calendar.filter.ungroupTags')}
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onClick={onShowOnlyGroup}>
                 <Eye className="mr-2 size-4" />
                 {t('calendar.filter.showOnlyThis')}

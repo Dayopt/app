@@ -211,7 +211,6 @@
     "filter": {
       "type": "Type",
       "tags": "Tags",
-      "ungrouped": "Ungrouped",
       "untagged": "Untagged",
       "noTags": "Give your time a name with tags, and patterns will start to show. Create your first tag.",
       "comingSoon": "Coming soon",
@@ -251,20 +250,6 @@
       "tagMenu": "Tag menu",
       "expand": "Expand",
       "collapse": "Collapse",
-      "ungroupTags": "Ungroup",
-      "ungroupTagsFailed": "Failed to ungroup tags",
-      "ungroupTagsSuccess": "Ungrouped \"{name}\" ({count} tags)",
-      "ungroupConflict": {
-        "title": "Tags with the same name already exist",
-        "description": "\"{names}\" already exists. It will be merged with the existing tag."
-      },
-      "deleteGroup": {
-        "label": "Delete group",
-        "title": "Delete group \"{name}\"",
-        "description": "{count} tags will be deleted. Timeblocks themselves will not be deleted.",
-        "success": "Deleted group \"{name}\" ({count} tags)",
-        "failed": "Failed to delete group"
-      },
       "createDialog": {
         "title": "Create a new tag",
         "name": "Tag name",

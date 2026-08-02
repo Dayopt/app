@@ -9,7 +9,7 @@ import { createTagDatabaseError, TagServiceError } from './tag-service-error';
 import { getNextSortOrder } from './tag-sort-order';
 
 /**
- * タグ削除（単体 / グループ一括）のビジネスロジック
+ * タグ削除のビジネスロジック
  */
 export class TagDeleteService {
   constructor(
@@ -109,88 +109,5 @@ export class TagDeleteService {
     }
 
     return tag;
-  }
-
-  /**
-   * グループ削除（コロン記法プレフィックスのタグを一括削除）
-   *
-   * 例: prefix="開発" の場合
-   *   "開発:api", "開発:frontend" を全削除
-   *   関連する entries も処理
-   *
-   * @param options - userId, prefix, strategy（任意）, targetTagId（reassign時必須）
-   * @returns 削除されたタグ数
-   */
-  async deleteGroup(options: {
-    userId: string;
-    prefix: string;
-    strategy?: TagDeleteStrategy;
-    targetTagId?: string;
-  }): Promise<{ deletedCount: number }> {
-    const { userId, prefix, strategy, targetTagId } = options;
-
-    // prefix: で始まるタグを全取得
-    const { data: matchingTags, error: fetchError } = await this.supabase
-      .from('tags')
-      .select('id')
-      .eq('user_id', userId)
-      .like('name', `${prefix}:%`);
-
-    if (fetchError) {
-      throw createTagDatabaseError(
-        fetchError,
-        'FETCH_FAILED',
-        'Failed to fetch group tags',
-        'fetch_group_tags_for_deletion',
-      );
-    }
-
-    if (!matchingTags || matchingTags.length === 0) {
-      return { deletedCount: 0 };
-    }
-
-    const tagIds = matchingTags.map((t) => t.id);
-
-    // 関連 Plan / Record がある場合は strategy 必須（暗黙削除させない）
-    if (!strategy) {
-      const associationCount = await countTagAssociations(this.supabase, userId, tagIds);
-      if (associationCount > 0) {
-        throw new TagServiceError(
-          'INVALID_INPUT',
-          'Tags in this group have associated blocks. Specify a strategy: "delete_blocks" or "reassign"',
-        );
-      }
-    }
-
-    if (strategy === 'reassign') {
-      if (!targetTagId) {
-        throw new TagServiceError('INVALID_INPUT', 'targetTagId is required for reassign strategy');
-      }
-      await this.queryService.getById({ userId, tagId: targetTagId });
-    }
-    await applyTagStrategy({
-      userId,
-      tagIds,
-      strategy: strategy ?? 'delete_blocks',
-      ...(targetTagId ? { targetTagId } : {}),
-    });
-
-    // タグを一括削除
-    const { error: deleteError } = await this.supabase
-      .from('tags')
-      .delete()
-      .in('id', tagIds)
-      .eq('user_id', userId);
-
-    if (deleteError) {
-      throw createTagDatabaseError(
-        deleteError,
-        'DELETE_FAILED',
-        'Failed to delete tag group',
-        'delete_tag_group',
-      );
-    }
-
-    return { deletedCount: tagIds.length };
   }
 }

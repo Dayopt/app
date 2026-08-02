@@ -46,7 +46,6 @@ const meta = {
     onIconChange: fn(),
     onAddTagToGroup: fn(),
     onRenameGroup: fn(),
-    onUngroupTags: fn(),
     onViewStats: fn(),
     onDeleteGroup: fn(),
   },
@@ -167,7 +166,6 @@ export const AllPatterns: Story = {
         onIconChange={fn()}
         onAddTagToGroup={fn()}
         onRenameGroup={fn()}
-        onUngroupTags={fn()}
         onDeleteGroup={fn()}
       />
       <GroupHeader
@@ -182,7 +180,6 @@ export const AllPatterns: Story = {
         onColorChange={fn()}
         onAddTagToGroup={fn()}
         onRenameGroup={fn()}
-        onUngroupTags={fn()}
         onDeleteGroup={fn()}
       />
       <GroupHeader
@@ -197,7 +194,6 @@ export const AllPatterns: Story = {
         onColorChange={fn()}
         onAddTagToGroup={fn()}
         onRenameGroup={fn()}
-        onUngroupTags={fn()}
         onDeleteGroup={fn()}
       />
     </div>
