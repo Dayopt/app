@@ -20,22 +20,24 @@ import { useReviewFilterStore } from '../stores/useReviewFilterStore';
 /** get_time_pl_data RPC のレスポンス型 */
 interface TimePLRpcResponse {
   tags: Array<{
-    tagId: string;
-    tagName: string;
-    tagColor: string;
+    tagId: string | null;
+    tagName: string | null;
+    tagColor: string | null;
     tagIcon: string | null;
     budgetMinutes: number;
     actualMinutes: number;
     isPlanned: boolean;
+    isUncategorized: boolean;
   }>;
   prevTags: Array<{
-    tagId: string;
-    tagName: string;
-    tagColor: string;
+    tagId: string | null;
+    tagName: string | null;
+    tagColor: string | null;
     tagIcon: string | null;
     budgetMinutes: number;
     actualMinutes: number;
     isPlanned: boolean;
+    isUncategorized: boolean;
   }>;
   availableMinutes: number;
 }
@@ -96,22 +98,24 @@ export function useTimePLData(displayRange?: ReviewDisplayRange | undefined) {
       tags: data.tags.map((t) => ({
         tagId: t.tagId,
         tagName: t.tagName,
-        tagColor: resolveTagColor(t.tagColor),
+        tagColor: t.isUncategorized ? null : resolveTagColor(t.tagColor),
         tagIcon: t.tagIcon,
         budgetMinutes: t.budgetMinutes,
         actualMinutes: t.actualMinutes,
         isPlanned: t.isPlanned,
+        isUncategorized: t.isUncategorized,
       })),
       prevTags:
         data.prevTags.length > 0
           ? data.prevTags.map((t) => ({
               tagId: t.tagId,
               tagName: t.tagName,
-              tagColor: resolveTagColor(t.tagColor),
+              tagColor: t.isUncategorized ? null : resolveTagColor(t.tagColor),
               tagIcon: t.tagIcon,
               budgetMinutes: t.budgetMinutes,
               actualMinutes: t.actualMinutes,
               isPlanned: t.isPlanned,
+              isUncategorized: t.isUncategorized,
             }))
           : undefined,
     };

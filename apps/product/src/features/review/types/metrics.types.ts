@@ -93,10 +93,11 @@ export interface StatsPageData {
     blankRate: number;
   };
   timeByTag: Array<{
-    tagId: string;
-    name: string;
-    color: string;
+    tagId: string | null;
+    name: string | null;
+    color: string | null;
     hours: number;
+    isUncategorized: boolean;
   }>;
   hourly: Array<{
     hour: number;

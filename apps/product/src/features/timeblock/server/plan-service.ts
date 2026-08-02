@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { trackProductEvent, trackProductEvents } from '@/lib/analytics/product-events';
 import { databaseTables, publicRecordSelect, toPublicRecordRow } from '@/lib/database';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
@@ -160,6 +161,7 @@ export class PlanService {
       handleMutationError(error, 'CREATE_FAILED', 'Failed to create plan');
     }
 
+    await trackProductEvent({ eventName: 'plan_created', userId });
     return data;
   }
 
@@ -342,6 +344,7 @@ export class PlanService {
       handleRecordMutationError(error, 'Failed to record plan');
     }
 
+    await trackProductEvent({ eventName: 'record_created', userId });
     return data;
   }
 
@@ -360,7 +363,9 @@ export class PlanService {
       handleRecordMutationError(error, 'Failed to confirm day plans');
     }
 
-    return (data ?? []).map(toPublicRecordRow);
+    const records = (data ?? []).map(toPublicRecordRow);
+    await trackProductEvents(records.map(() => ({ eventName: 'record_created' as const, userId })));
+    return records;
   }
 }
 

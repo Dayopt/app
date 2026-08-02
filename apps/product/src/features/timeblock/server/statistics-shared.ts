@@ -89,10 +89,11 @@ export interface StatsPageData {
     blankRate: number;
   };
   timeByTag: Array<{
-    tagId: string;
-    name: string;
-    color: string;
+    tagId: string | null;
+    name: string | null;
+    color: string | null;
     hours: number;
+    isUncategorized: boolean;
   }>;
   hourly: Array<{
     hour: number;
@@ -145,22 +146,24 @@ export interface StatsPageData {
 /** get_time_pl_data DB関数のレスポンス型 */
 export interface TimePLResponse {
   tags: Array<{
-    tagId: string;
-    tagName: string;
-    tagColor: string;
+    tagId: string | null;
+    tagName: string | null;
+    tagColor: string | null;
     tagIcon: string | null;
     budgetMinutes: number;
     actualMinutes: number;
     isPlanned: boolean;
+    isUncategorized: boolean;
   }>;
   prevTags: Array<{
-    tagId: string;
-    tagName: string;
-    tagColor: string;
+    tagId: string | null;
+    tagName: string | null;
+    tagColor: string | null;
     tagIcon: string | null;
     budgetMinutes: number;
     actualMinutes: number;
     isPlanned: boolean;
+    isUncategorized: boolean;
   }>;
   availableMinutes: number;
 }

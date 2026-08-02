@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { trackProductEvent } from '@/lib/analytics/product-events';
 import { databaseTables, publicRecordSelect } from '@/lib/database';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
@@ -155,6 +156,7 @@ export class RecordService {
       this.handleMutationError(error, 'CREATE_FAILED', 'Failed to create record');
     }
 
+    await trackProductEvent({ eventName: 'record_created', userId });
     return data;
   }
 

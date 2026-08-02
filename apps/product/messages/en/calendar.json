@@ -342,6 +342,7 @@
         "planAccuracy": "Plan accuracy",
         "planAccuracyDesc": "How closely actuals matched the plan",
         "unplanned": "Unplanned",
+        "uncategorized": "Uncategorized",
         "recordedDays": "Days recorded",
         "recordedDaysDesc": "Days with at least one record",
         "daysValue": "{count} days",

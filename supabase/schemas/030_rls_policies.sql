@@ -2,7 +2,7 @@
 -- RLS ポリシー一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
 -- 全ユーザーデータテーブルで RLS が有効
--- 最終同期日: 2026-07-29
+-- 最終同期日: 2026-08-02
 -- 同期対象 migration:
 --   - 20260318150000_add_entries_soft_delete.sql
 --   - 20260323000000_fix_entries_soft_delete_rls.sql
@@ -21,6 +21,7 @@
 --   - 20260729073124_mcp_stage1_revision_fence.sql
 --   - 20260729073125_mcp_environment_identity_client_fence.sql
 --   - 20260729073126_mcp_stage1_receipt_generation_lifecycle.sql
+--   - 20260802013954_add_product_events.sql
 --
 -- パターン:
 --   (select auth.uid()) でキャッシュ → auth.uid() 直呼びより 94-99% 高速
@@ -63,5 +64,7 @@
 --     service 層は列を明示指定すること
 -- ■ calendar_connection_calendars: SELECT のみ user_id = auth.uid()（table 単位）。
 --   mutation は service-role のみ。sync_token は provider cursor であり credential ではない
+-- ■ product_events: browser client は明示 deny。service_role は INSERT のみ。
+--   SELECT / UPDATE / DELETE は DB owner の運用 query / retention job に限定する
 
 -- 詳細は baseline.sql の RLS Policies セクションを参照

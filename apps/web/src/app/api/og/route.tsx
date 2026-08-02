@@ -3,6 +3,7 @@ import { OG_COLORS } from '@dayopt/foundations/og-colors';
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
+export const maxDuration = 25;
 export const runtime = 'edge';
 
 /**
