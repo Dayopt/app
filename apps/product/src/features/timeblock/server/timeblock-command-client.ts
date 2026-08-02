@@ -6,7 +6,7 @@ import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { TimeblockServiceError } from './timeblock-service-error';
 import type { PlanRow, RecordRow } from './timeblock-types';
 
-export type TimeblockSource = 'api' | 'external_calendar' | 'manual';
+type TimeblockSource = 'api' | 'external_calendar' | 'manual';
 
 /**
  * 既存行の `source` を command の入力語彙へ丸める。
