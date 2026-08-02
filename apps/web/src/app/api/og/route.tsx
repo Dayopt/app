@@ -1,7 +1,31 @@
+import { dayoptBrand, dayoptDomains } from '@dayopt/config';
+import { OG_COLORS } from '@dayopt/foundations/og-colors';
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
+export const maxDuration = 25;
 export const runtime = 'edge';
+
+/**
+ * マーケティングサイトの OG 画像
+ *
+ * apps/product/src/app/opengraph-image.tsx と同じ顔にする。SNS のフィードで
+ * ブログ記事とプロダクトのリンクが別ブランドに見えないようにするため、
+ * 地色・グロー・ロゴタイルの構成を揃え、色は @dayopt/foundations/og-colors
+ * だけを参照する。
+ *
+ * 以前は白地 + 絵文字タイル + type 別の配色（blog=emerald / release=violet /
+ * docs=blue）で、ブランドの紺と無関係な3色が出ていた。type による色分けは廃止し、
+ * ラベル文字だけで種別を示す。
+ */
+
+/** 種別ラベル。色は変えない（アクセントは紺1色） */
+const TYPE_LABELS: Record<string, string> = {
+  blog: 'Blog Post',
+  docs: 'Documentation',
+  release: 'Release Notes',
+  default: dayoptBrand.name,
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,42 +40,7 @@ export async function GET(request: NextRequest) {
     const author = searchParams.get('author');
     const date = searchParams.get('date');
 
-    // Brand colors
-    const brandColors = {
-      primary: '#2563eb', // blue-600
-      secondary: '#7c3aed', // violet-600
-      accent: '#059669', // emerald-600
-      text: '#1f2937', // gray-800
-      textLight: '#6b7280', // gray-500
-      background: '#ffffff',
-      gradient: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-    };
-
-    // Type-specific configurations
-    const typeConfig = {
-      blog: {
-        icon: '📝',
-        color: brandColors.accent,
-        label: 'Blog Post',
-      },
-      docs: {
-        icon: '📚',
-        color: brandColors.primary,
-        label: 'Documentation',
-      },
-      release: {
-        icon: '🚀',
-        color: brandColors.secondary,
-        label: 'Release Notes',
-      },
-      default: {
-        icon: '📦',
-        color: brandColors.primary,
-        label: 'Dayopt',
-      },
-    };
-
-    const config = typeConfig[type as keyof typeof typeConfig] || typeConfig.default;
+    const typeLabel = TYPE_LABELS[type] ?? TYPE_LABELS.default;
 
     return new ImageResponse(
       <div
@@ -60,90 +49,104 @@ export async function GET(request: NextRequest) {
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'flex-start',
           justifyContent: 'space-between',
-          backgroundColor: brandColors.background,
-          backgroundImage: `linear-gradient(135deg, ${brandColors.primary}08 0%, ${brandColors.secondary}08 100%)`,
+          background: `linear-gradient(135deg, ${OG_COLORS.backgroundDark} 0%, ${OG_COLORS.backgroundMid} 40%, ${OG_COLORS.background} 100%)`,
           padding: '60px',
-          fontFamily: 'Inter, sans-serif',
+          // Satori に font データを渡していないため実描画は Satori 既定の書体になる。
+          // 指定は将来 font を埋め込む時の宣言として product の書体に合わせておく。
+          fontFamily: 'Source Sans 3, system-ui, sans-serif',
         }}
       >
-        {/* Header */}
+        {/* 装飾グロー（product の OG と同じ位置・大きさ） */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginBottom: '40px',
+            position: 'absolute',
+            top: -80,
+            right: -80,
+            width: 400,
+            height: 400,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${OG_COLORS.primaryGlow15} 0%, transparent 70%)`,
           }}
-        >
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: -120,
+            left: -60,
+            width: 500,
+            height: 500,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${OG_COLORS.primaryGlow10} 0%, transparent 70%)`,
+          }}
+        />
+
+        {/* ヘッダー: ロゴタイル + ブランド名 + 種別 */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <div
             style={{
-              width: '60px',
-              height: '60px',
-              borderRadius: '12px',
-              backgroundColor: config.color,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '28px',
-              marginRight: '20px',
+              width: 64,
+              height: 64,
+              borderRadius: 16,
+              background: `linear-gradient(135deg, ${OG_COLORS.primary} 0%, ${OG_COLORS.primaryLight} 100%)`,
+              boxShadow: `0 8px 32px ${OG_COLORS.primaryGlow30}`,
+              marginRight: 20,
             }}
           >
-            {config.icon}
+            <svg
+              width={38}
+              height={38}
+              viewBox="0 0 24 24"
+              fill={OG_COLORS.foreground}
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M12 3.5c4.69 0 8.5 3.81 8.5 8.5s-3.81 8.5-8.5 8.5S3.5 16.69 3.5 12 7.31 3.5 12 3.5Zm0 3.2A5.31 5.31 0 0 0 6.7 12c0 2.92 2.38 5.3 5.3 5.3s5.3-2.38 5.3-5.3h-3.1a2.2 2.2 0 1 1-2.2-2.2V6.7Z" />
+            </svg>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div
               style={{
-                fontSize: '24px',
-                fontWeight: '700',
-                color: brandColors.text,
-                lineHeight: '1.2',
+                fontSize: 26,
+                fontWeight: 500,
+                color: OG_COLORS.foreground,
+                letterSpacing: '-0.01em',
+                lineHeight: 1.2,
               }}
             >
-              Dayopt
+              {dayoptBrand.name}
             </div>
-            <div
-              style={{
-                fontSize: '16px',
-                color: brandColors.textLight,
-                fontWeight: '500',
-              }}
-            >
-              {config.label}
+            <div style={{ fontSize: 16, color: OG_COLORS.mutedSubtle, letterSpacing: '0.05em' }}>
+              {typeLabel}
             </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            width: '100%',
-          }}
-        >
-          <h1
+        {/* 本文 */}
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          <div
             style={{
-              fontSize: title.length > 60 ? '48px' : '56px',
-              fontWeight: '800',
-              color: brandColors.text,
-              lineHeight: '1.1',
-              marginBottom: '24px',
+              fontSize: title.length > 60 ? 48 : 56,
+              fontWeight: 500,
+              color: OG_COLORS.foreground,
+              letterSpacing: '-0.02em',
+              lineHeight: 1.15,
+              marginBottom: 24,
               maxWidth: '100%',
-              wordWrap: 'break-word',
             }}
           >
             {title}
-          </h1>
+          </div>
 
           {description && (
-            <p
+            <div
               style={{
-                fontSize: '24px',
-                color: brandColors.textLight,
-                lineHeight: '1.4',
-                margin: '0',
+                fontSize: 24,
+                color: OG_COLORS.muted,
+                lineHeight: 1.4,
+                letterSpacing: '-0.01em',
                 maxWidth: '90%',
                 display: '-webkit-box',
                 WebkitLineClamp: 3,
@@ -152,96 +155,68 @@ export async function GET(request: NextRequest) {
               }}
             >
               {description}
-            </p>
+            </div>
           )}
         </div>
 
-        {/* Footer */}
+        {/* フッター: カテゴリ / 著者 / 日付 / ドメイン */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             width: '100%',
-            marginTop: '40px',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center' }}>
             {category && (
               <div
                 style={{
-                  backgroundColor: `${config.color}15`,
-                  color: config.color,
+                  display: 'flex',
+                  backgroundColor: OG_COLORS.primaryChip,
+                  color: OG_COLORS.foreground,
                   padding: '8px 16px',
-                  borderRadius: '20px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  marginRight: '16px',
+                  borderRadius: 20,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  marginRight: 16,
                 }}
               >
                 {category}
               </div>
             )}
+            {/* display:flex は Satori の要件。子が複数ある div に無いと描画が失敗する */}
             {author && (
-              <div
-                style={{
-                  color: brandColors.textLight,
-                  fontSize: '16px',
-                  fontWeight: '500',
-                }}
-              >
-                By {author}
+              <div style={{ display: 'flex', color: OG_COLORS.muted, fontSize: 16 }}>
+                {`By ${author}`}
               </div>
             )}
           </div>
 
-          {date && (
-            <div
-              style={{
-                color: brandColors.textLight,
-                fontSize: '16px',
-                fontWeight: '500',
-              }}
-            >
-              {new Date(date).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            {date && (
+              <div style={{ display: 'flex', color: OG_COLORS.muted, fontSize: 16 }}>
+                {new Date(date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </div>
+            )}
+            {!date && (
+              <div
+                style={{
+                  display: 'flex',
+                  fontSize: 14,
+                  color: OG_COLORS.mutedSubtle,
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {dayoptDomains.marketing}
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* Decorative Elements */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '0',
-            right: '0',
-            width: '400px',
-            height: '400px',
-            background: `linear-gradient(135deg, ${brandColors.primary}20, ${brandColors.secondary}20)`,
-            borderRadius: '50%',
-            filter: 'blur(100px)',
-            opacity: '0.5',
-            transform: 'translate(50%, -50%)',
-          }}
-        />
-
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '0',
-            left: '0',
-            width: '300px',
-            height: '300px',
-            background: `linear-gradient(135deg, ${brandColors.secondary}15, ${brandColors.accent}15)`,
-            borderRadius: '50%',
-            filter: 'blur(80px)',
-            opacity: '0.6',
-            transform: 'translate(-50%, 50%)',
-          }}
-        />
       </div>,
       {
         width: 1200,

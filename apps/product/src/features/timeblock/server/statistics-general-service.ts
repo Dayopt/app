@@ -18,12 +18,12 @@ import {
 
 import type { DateRangeInput } from './statistics-fetchers';
 import { fetchRecords, fetchTagsById } from './statistics-fetchers';
+import { buildTimeByTagRows } from './statistics-row-builders';
 import {
   groupHoursByDay,
   groupHoursByMonth,
   groupMinutesByDow,
   groupMinutesByHour,
-  minutesBetween,
 } from './statistics-service-grouping';
 import { transformTimeByTagResponse } from './statistics-time-by-tag-transform';
 import type { ServiceSupabaseClient } from './types';
@@ -61,29 +61,7 @@ export class StatisticsGeneralService {
       fetchTagsById(this.supabase, userId),
     ]);
 
-    const minutesByTag = new Map<string, number>();
-    for (const record of records) {
-      if (record.tag_id == null) continue;
-      minutesByTag.set(
-        record.tag_id,
-        (minutesByTag.get(record.tag_id) ?? 0) + minutesBetween(record.start_at, record.end_at),
-      );
-    }
-
-    const rows = Array.from(minutesByTag.entries())
-      .filter(([, minutes]) => minutes > 0)
-      .map(([tagId, minutes]) => {
-        const tag = tagsById.get(tagId);
-        return {
-          tag_id: tagId,
-          tag_name: tag?.name ?? '',
-          tag_color: tag?.color ?? 'indigo',
-          hours: minutes / 60,
-        };
-      })
-      .sort((a, b) => b.hours - a.hours);
-
-    return transformTimeByTagResponse(rows);
+    return transformTimeByTagResponse(buildTimeByTagRows(records, tagsById));
   }
 
   /** `get_daily_hours` 相当。指定年の日別実績時間（ヒートマップ用）。 */

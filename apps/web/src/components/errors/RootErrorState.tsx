@@ -34,7 +34,7 @@ export function RootErrorState({ error, onRetry, showDetails = false }: RootErro
           <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-sm">
             Error details (dev only)
           </summary>
-          <pre className="bg-muted text-destructive mt-2 overflow-auto rounded p-4 text-xs">
+          <pre className="bg-muted text-destructive mt-2 overflow-auto rounded-lg p-4 text-xs">
             {error.message}
             {error.stack && (
               <>

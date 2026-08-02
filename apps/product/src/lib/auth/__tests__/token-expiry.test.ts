@@ -63,6 +63,27 @@ describe('トークン期限切れ・セッション検証', () => {
       expect(result.userId).toBe('user-1');
     });
 
+    it('session context にMFA assuranceがない場合はfail closedでFORBIDDEN', async () => {
+      const ctx = createMockContext({ userId: 'user-1' });
+      ctx.mfaAssurance = undefined;
+      const caller = createCaller(ctx as never);
+
+      await expect(caller.whoami()).rejects.toThrow(expect.objectContaining({ code: 'FORBIDDEN' }));
+      await expect(caller.user.verifyRecoveryCode()).rejects.toThrow(
+        expect.objectContaining({ code: 'FORBIDDEN' }),
+      );
+    });
+
+    it('不正なMFA assurance組み合わせはfail closedでFORBIDDEN', async () => {
+      const ctx = createMockContext({
+        userId: 'user-1',
+        mfaAssurance: { currentLevel: 'aal2', nextLevel: 'aal1' },
+      });
+      const caller = createCaller(ctx as never);
+
+      await expect(caller.whoami()).rejects.toThrow(expect.objectContaining({ code: 'FORBIDDEN' }));
+    });
+
     it('MFA登録済みAAL1セッションはFORBIDDEN', async () => {
       const ctx = createMockContext({
         userId: 'user-1',

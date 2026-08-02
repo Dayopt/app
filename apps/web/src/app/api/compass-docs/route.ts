@@ -4,6 +4,8 @@ import { glob } from 'glob';
 import { NextRequest } from 'next/server';
 import { join } from 'path';
 
+export const maxDuration = 30;
+
 export interface CompassDoc {
   id: string;
   title: string;

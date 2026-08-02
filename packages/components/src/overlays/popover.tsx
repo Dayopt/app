@@ -5,6 +5,7 @@ import * as React from 'react';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 
 import { cn } from '../cn';
+import { overlaySurface } from '../utilities/surface';
 
 const Popover = PopoverPrimitive.Root;
 
@@ -22,7 +23,8 @@ const PopoverContent = React.forwardRef<
       align={align}
       sideOffset={sideOffset}
       className={cn(
-        'bg-card text-card-foreground border-border-subtle z-overlay-popover shadow-card w-72 rounded-lg border p-4 outline-none',
+        overlaySurface(),
+        'z-overlay-popover w-72 p-4 outline-none',
         'data-[state=open]:animate-in data-[state=closed]:animate-out motion-reduce:animate-none',
         'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',

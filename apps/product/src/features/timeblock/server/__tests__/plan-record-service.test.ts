@@ -10,6 +10,10 @@ import type { PlanRow, RecordRow } from '../timeblock-types';
 import type { ServiceSupabaseClient } from '../types';
 
 const adminRpc = vi.hoisted(() => vi.fn());
+const trackProductEvent = vi.hoisted(() => vi.fn());
+const trackProductEvents = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/analytics/product-events', () => ({ trackProductEvent, trackProductEvents }));
 
 vi.mock('@/lib/supabase/oauth', () => ({
   createServiceRoleClient: () => ({ rpc: adminRpc }),
@@ -23,6 +27,8 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
   vi.clearAllMocks();
   adminRpc.mockResolvedValue({ data: null, error: null });
+  trackProductEvent.mockResolvedValue(undefined);
+  trackProductEvents.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -286,6 +292,29 @@ describe('RecordService.list', () => {
 });
 
 describe('PlanService.create', () => {
+  it('作成成功後にplan_createdを記録する', async () => {
+    const plan = createPlan();
+    const { service, mockSupabase, commands } = createPlanService();
+    mockSupabase.from.mockReturnValue(createChainableMock([]));
+    commands.createPlan.mockResolvedValue(plan);
+
+    await expect(
+      service.create({
+        userId: USER_ID,
+        input: {
+          title: plan.title,
+          start_at: plan.start_at,
+          end_at: plan.end_at,
+        },
+      }),
+    ).resolves.toEqual(plan);
+
+    expect(trackProductEvent).toHaveBeenCalledWith({
+      eventName: 'plan_created',
+      userId: USER_ID,
+    });
+  });
+
   it('過去に完了する plan 作成を拒否する', async () => {
     const { service, mockSupabase, commands } = createPlanService();
 
@@ -558,6 +587,10 @@ describe('PlanService.record', () => {
       planId: plan.id,
       expectedUpdatedAt: plan.updated_at,
     });
+    expect(trackProductEvent).toHaveBeenCalledWith({
+      eventName: 'record_created',
+      userId: USER_ID,
+    });
   });
 
   it('active record が紐づく plan の再記録を拒否する', async () => {
@@ -724,6 +757,9 @@ describe('PlanService.confirmDay', () => {
         p_user_id: USER_ID,
       }),
     );
+    expect(trackProductEvents).toHaveBeenCalledWith([
+      { eventName: 'record_created', userId: USER_ID },
+    ]);
   });
 
   it('同時確定による from_plan 一意制約違反を再記録エラーに変換する', async () => {
@@ -799,6 +835,10 @@ describe('RecordService.create', () => {
       source: 'manual',
       startAt: '2026-03-17T12:00:00.000Z',
       endAt: '2026-03-17T13:00:00.000Z',
+    });
+    expect(trackProductEvent).toHaveBeenCalledWith({
+      eventName: 'record_created',
+      userId: USER_ID,
     });
   });
 

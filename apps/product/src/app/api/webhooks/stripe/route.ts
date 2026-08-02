@@ -32,6 +32,7 @@ import {
   syncDeletedSubscriptionStatus,
   syncSubscriptionStatus,
 } from '@/features/settings/server/billing-service';
+import { trackProductEvent } from '@/lib/analytics/product-events';
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
 import {
@@ -103,13 +104,16 @@ function captureStripeWebhookFailure(
   return original;
 }
 
-/**
- * stripe_customer_id からユーザーのメールアドレス・名前・ロケールを取得
- */
-async function getUserByCustomerId(
+interface BillingProfileIdentity {
+  id: string;
+  fullName: string | null;
+}
+
+/** Resolve the trusted application user independently from transactional email delivery. */
+async function getBillingProfileByCustomerId(
   supabase: ReturnType<typeof createServiceRoleClient>,
   stripeCustomerId: string,
-): Promise<{ email: string; userName: string; locale: EmailLocale } | null> {
+): Promise<BillingProfileIdentity | null> {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name')
@@ -117,11 +121,11 @@ async function getUserByCustomerId(
     .maybeSingle();
 
   if (error || !data) {
-    logger.warn('Failed to look up user for transactional email');
+    logger.warn('Failed to look up billing profile');
     if (error) {
       captureUnexpectedDatabaseError(error, {
         feature: 'billing',
-        operation: 'lookup_transactional_email_user',
+        operation: 'lookup_billing_profile',
         route: '/api/webhooks/stripe',
         source: 'supabase_database',
       });
@@ -129,8 +133,13 @@ async function getUserByCustomerId(
     return null;
   }
 
-  const profile = data;
+  return { id: data.id, fullName: data.full_name };
+}
 
+async function getTransactionalEmailUser(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  profile: BillingProfileIdentity,
+): Promise<{ email: string; userName: string; locale: EmailLocale } | null> {
   // Supabase Auth からメールアドレスを取得
   const {
     data: { user },
@@ -161,7 +170,16 @@ async function getUserByCustomerId(
   const rawLocale = (settingsData as Record<string, unknown> | null)?.preferred_locale;
   const locale: EmailLocale = (rawLocale as EmailLocale) ?? 'en';
 
-  return { email: user.email, userName: profile.full_name || 'there', locale };
+  return { email: user.email, userName: profile.fullName || 'there', locale };
+}
+
+/** stripe_customer_id からトランザクションメール宛先を取得する。 */
+async function getUserByCustomerId(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  stripeCustomerId: string,
+): Promise<{ email: string; userName: string; locale: EmailLocale } | null> {
+  const profile = await getBillingProfileByCustomerId(supabase, stripeCustomerId);
+  return profile ? getTransactionalEmailUser(supabase, profile) : null;
 }
 
 /**
@@ -309,6 +327,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook processing unavailable' }, { status: 500 });
   }
 
+  let subscriptionStartedUserId: string | null = null;
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -332,8 +352,11 @@ export async function POST(request: NextRequest) {
             `🎉 新規サブスクリプション開始\nCustomer: ${customerId}\nStatus: ${status}`,
           );
 
+          const profile = await getBillingProfileByCustomerId(supabase, customerId);
+          subscriptionStartedUserId = profile?.id ?? null;
+
           // トランザクションメール送信
-          const user = await getUserByCustomerId(supabase, customerId);
+          const user = profile ? await getTransactionalEmailUser(supabase, profile) : null;
           if (user) {
             const t = createEmailTranslator(user.locale);
             if (status === 'trialing') {
@@ -522,6 +545,12 @@ export async function POST(request: NextRequest) {
     }
 
     await markStripeWebhookEventProcessed(supabase, event.id);
+    if (subscriptionStartedUserId) {
+      await trackProductEvent({
+        eventName: 'subscription_started',
+        userId: subscriptionStartedUserId,
+      });
+    }
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
     // 元障害を先にcaptureし、cleanup失敗がstackを隠さないようにする。

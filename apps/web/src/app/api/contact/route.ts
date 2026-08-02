@@ -14,6 +14,8 @@ import { z } from 'zod';
 
 import { sendContactEmail } from './contact-email';
 
+export const maxDuration = 30;
+
 const MAX_CONTACT_BODY_BYTES = 16 * 1024;
 
 class ContactBodyTooLargeError extends Error {

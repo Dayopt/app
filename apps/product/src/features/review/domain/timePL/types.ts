@@ -15,9 +15,9 @@ export type AccuracyStatus = 'excellent' | 'good' | 'fair' | 'poor';
 
 /** タグ別の予実データ（正規化された入力） */
 export interface TimePLTagTimeblock {
-  tagId: string;
-  tagName: string;
-  tagColor: TagColorName;
+  tagId: string | null;
+  tagName: string | null;
+  tagColor: TagColorName | null;
   tagIcon?: string | null | undefined;
   /** 予定時間（分） */
   budgetMinutes: number;
@@ -25,6 +25,8 @@ export interface TimePLTagTimeblock {
   actualMinutes: number;
   /** 予算があったか（false = 計画外のみのタグ） */
   isPlanned: boolean;
+  /** 削除済み・未設定のタグをまとめた synthetic bucket */
+  isUncategorized: boolean;
 }
 
 /** 全ビュー共通の入力型 */
@@ -54,20 +56,22 @@ export interface TimePLAccuracy {
 
 /** Statement / Section 用の行 */
 export interface TimePLRow {
-  tagId: string;
-  tagName: string;
-  tagColor: TagColorName;
+  tagId: string | null;
+  tagName: string | null;
+  tagColor: TagColorName | null;
   tagIcon?: string | null | undefined;
+  isUncategorized: boolean;
   minutes: number;
   percentage: number;
 }
 
 /** Statement 用の差異行 */
 export interface TimePLVarianceRow {
-  tagId: string;
-  tagName: string;
-  tagColor: TagColorName;
+  tagId: string | null;
+  tagName: string | null;
+  tagColor: TagColorName | null;
   tagIcon?: string | null | undefined;
+  isUncategorized: boolean;
   varianceMinutes: number;
   /** 乖離率。予算0のタグは null */
   variancePercent: number | null;
@@ -85,10 +89,11 @@ export interface StatementViewData {
 
 /** BarComparison の行 */
 export interface BarComparisonRow {
-  tagId: string;
-  tagName: string;
-  tagColor: TagColorName;
+  tagId: string | null;
+  tagName: string | null;
+  tagColor: TagColorName | null;
   tagIcon?: string | null | undefined;
+  isUncategorized: boolean;
   budgetMinutes: number;
   actualMinutes: number;
   varianceMinutes: number;

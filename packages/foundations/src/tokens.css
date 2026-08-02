@@ -12,9 +12,11 @@
 
 @import './tokens/primitives.css';
 @import './tokens/colors.css';
+@import './tokens/typography.css';
 @import './tokens/spacing.css';
 @import './tokens/radius.css';
 @import './tokens/z-index.css';
 @import './tokens/states.css';
-@import './tokens/elevation.css';
+@import './tokens/motion.css';
+@import './tokens/animations.css';
 @import './tailwind-theme.css';

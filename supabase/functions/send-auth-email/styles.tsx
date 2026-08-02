@@ -3,22 +3,30 @@
  * 全メールテンプレートで使用する共通スタイル定義
  *
  * メールクライアントは CSS変数(var(--xxx)) や OKLCH をサポートしないため、
- * src/lib/styles/tokens/colors.css のセマンティックトークンを hex に変換して定義。
+ * packages/foundations/src/tokens/colors.css のセマンティックトークンを hex に変換して定義。
  *
  * トークンマッピング (tokens/colors.css :root → hex):
- *   --background    oklch(0.99 0 0)             → #fafafa
- *   --foreground    oklch(0.25 0 0)             → #1c1c1c
- *   --container     oklch(0.93 0 0)             → #e5e5e5
- *   --primary       oklch(0.45 0.14 259.8145)   → #2b4acb
+ *   --background    oklch(0.97 0.005 75)        → #f7f5f1
+ *   --foreground    oklch(0.13 0 0)             → #070707
+ *   --container     oklch(0.95 0.005 75)        → #f0eeeb
+ *   --card          oklch(0.99 0.005 75)        → #fefbf8
+ *   --primary       oklch(0.40 0.105 259.8145)  → #23467f
  *   --primary-fg    oklch(1 0 0)                → #ffffff
- *   --muted-fg      oklch(0.35 0.02 264.54)     → #464655
- *   --border        oklch(0.75 0.01 264.54)     → #b3b3ba
- *   --destructive   oklch(0.52 0.22 25.33)      → #c90018
- *   --success       oklch(0.47 0.17 149.2)      → #007218
- *   --warning       oklch(0.48 0.16 68.04)      → #954400
- *   --info          oklch(0.48 0.17 250)        → #005db8
+ *   --muted-fg      oklch(0.40 0 0)             → #484848
+ *   --border        oklch(0.88 0.004 75)        → #d9d7d5
+ *   --destructive   oklch(0.54 0.18 25)         → #c13234
+ *   --success       oklch(0.50 0.15 150)        → #00792f
+ *   --warning       oklch(0.55 0.16 70)         → #aa5b00
+ *   --info          oklch(0.55 0.02 260)        → #6b727e
  *
- * NOTE: src/emails/styles.ts と同一の値を維持すること
+ * この表は「トークンの現在値の換算結果」であって近似の目安ではない。
+ * 値を変える時は oklch から換算し直す。過去にこの表が 1 世代前のトークンを
+ * 指したまま放置されていた。
+ *
+ * --border はトークンが半透明（oklch(0 0 0 / 0.12)）でメールでは使えないため、
+ * background 上に重ねた時の不透明相当色を置く。
+ *
+ * NOTE: apps/product/src/emails/styles.ts と同一の値を維持すること
  */
 
 import type { CSSProperties } from 'react';
@@ -30,29 +38,29 @@ import type { CSSProperties } from 'react';
  */
 export const colors = {
   /** --background: ページ背景 */
-  background: '#fafafa',
+  background: '#f7f5f1',
   /** --foreground: 通常テキスト */
-  foreground: '#1c1c1c',
+  foreground: '#070707',
   /** --container: セクション背景 */
-  container: '#e5e5e5',
-  /** --card: カード背景（メールではコンテナ白背景に対応） */
-  card: '#ffffff',
+  container: '#f0eeeb',
+  /** --card: カード背景（メールではコンテナ面に対応） */
+  card: '#fefbf8',
   /** --primary: 主要アクション */
-  primary: '#2b4acb',
+  primary: '#23467f',
   /** --primary-foreground: Primary上のテキスト */
   primaryForeground: '#ffffff',
   /** --muted-foreground: 補助テキスト */
-  mutedForeground: '#464655',
-  /** --border: ボーダー */
-  border: '#b3b3ba',
+  mutedForeground: '#484848',
+  /** --border: ボーダー（半透明トークンの不透明相当） */
+  border: '#d9d7d5',
   /** --destructive: エラー・削除 */
-  destructive: '#c90018',
+  destructive: '#c13234',
   /** --success: 成功・完了 */
-  success: '#007218',
+  success: '#00792f',
   /** --warning: 警告・注意 */
-  warning: '#954400',
+  warning: '#aa5b00',
   /** --info: 情報・ヒント */
-  info: '#005db8',
+  info: '#6b727e',
 } as const;
 
 export const fontFamily =

@@ -8,6 +8,7 @@ export const databaseTables = {
   oauthAuthorizationCodes: 'oauth_authorization_codes',
   oauthTokens: 'oauth_tokens',
   plans: 'plans',
+  productEvents: 'product_events',
   profiles: 'profiles',
   reports: 'reports',
   stripeWebhookEvents: 'stripe_webhook_events',

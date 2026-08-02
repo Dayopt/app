@@ -54,14 +54,14 @@ UI/UX で迷ったら文脈に合う Google 製品を開いて観察する（GAF
 
 ## 📁 構成
 
-| カテゴリ        | 内容                                          | 例                                               |
-| --------------- | --------------------------------------------- | ------------------------------------------------ |
-| **Docs**        | ガイドライン・アーキテクチャ                  | Accessibility                                    |
-| **Foundations** | デザイントークン・設計基盤                    | Colors, Typography, Spacing, Elevation           |
-| **Primitives**  | 単体UIコンポーネント                          | Button, Badge, Input, Dialog                     |
-| **Recipes**     | 2つ以上の Primitive を組み合わせた複合UI      | ActionFooter, Field, ConfirmDialog, Inspector/\* |
-| **Features**    | ドメインロジックを含む Feature コンポーネント | Timeblock/_, Calendar/_, Tags/\*                 |
-| **Patterns**    | 実装パターンのカタログ                        | Forms, Feedback, Loading                         |
+| カテゴリ        | 内容                                          | 例                                     |
+| --------------- | --------------------------------------------- | -------------------------------------- |
+| **Docs**        | ガイドライン・アーキテクチャ                  | Accessibility                          |
+| **Foundations** | デザイントークン・設計基盤                    | Colors, Typography, Spacing, Elevation |
+| **Primitives**  | 単体UIコンポーネント                          | Button, Badge, Input, Dialog           |
+| **Recipes**     | 2つ以上の Primitive を組み合わせた複合UI      | Field, ConfirmDialog, Inspector/\*     |
+| **Features**    | ドメインロジックを含む Feature コンポーネント | Timeblock/_, Calendar/_, Tags/\*       |
+| **Patterns**    | 実装パターンのカタログ                        | Forms, Feedback, Loading               |
 
 ## 🎨 カラートークン
 

@@ -82,7 +82,6 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
   });
 
   const {
-    accentColor,
     colorClasses,
     isDraft,
     isActiveEntry,
@@ -168,24 +167,6 @@ export const TimeblockCard = memo<TimeblockCardProps>(function TimeblockCard({
       tabIndex={0}
       aria-label={isDraft ? `draft: ${tagName ?? entry.title}` : `entry: ${tagName ?? entry.title}`}
     >
-      {/* 花びらパーティクル（新規作成アニメーション時のみ表示） */}
-      {className?.includes('animate-entry-pop') && (
-        <div
-          className="entry-petals"
-          aria-hidden
-          style={{ '--petal-color': accentColor } as React.CSSProperties}
-        >
-          <div className="entry-petal" />
-          <div className="entry-petal" />
-          <div className="entry-petal" />
-          <div className="entry-petal" />
-          <div className="entry-petal" />
-          <div className="entry-petal" />
-          <div className="entry-petal" />
-          <div className="entry-petal" />
-        </div>
-      )}
-
       {/* Layer 1: planned — Google Calendar 風の薄い背景だけ。
           planned layer は左端を罫線にピタッと載せるため左角を直角にする
           （記録ブロックの左アクセント帯と同じく左辺をまっすぐ揃える）。 */}

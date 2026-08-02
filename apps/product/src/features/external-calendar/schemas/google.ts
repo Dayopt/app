@@ -70,6 +70,7 @@ export const connectFlowStateSchema = z.object({
   verifier: z.string().min(1).max(255),
   locale: z.string().min(1).max(16),
   userId: z.string().uuid(),
+  reconnectConnectionId: z.string().uuid().optional(),
 });
 
 export type ConnectFlowState = z.infer<typeof connectFlowStateSchema>;

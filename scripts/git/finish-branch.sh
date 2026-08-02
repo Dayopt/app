@@ -10,7 +10,7 @@
 #   ② worktree 削除
 #   ③ ローカル branch 削除
 #   ④ リモート branch 消滅（fetch --prune で確認）
-#   ⑤ main checkout が最新
+#   ⑤ ローカル main ref が origin/main と一致
 #
 # 詳細な設計と手動フォールバックは .claude/rules/workflow.md §Worktree 運用 を参照。
 
@@ -45,6 +45,11 @@ EOF
       ;;
   esac
 done
+
+# `branch -d` の stderr を退避する一時ファイル。固定パスにすると並行実行で
+# 互いに上書きし合い、共有 /tmp では symlink 差し替えの的にもなる。
+BRANCH_ERR_FILE="$(mktemp "${TMPDIR:-/tmp}/branch-finish-err.XXXXXX")"
+trap 'rm -f "$BRANCH_ERR_FILE"' EXIT
 
 error() {
   echo "❌ $1" >&2
@@ -90,6 +95,11 @@ done
 GIT_COMMON_DIR="$(git rev-parse --git-common-dir)"
 MAIN_ROOT="$(cd "$(dirname "$GIT_COMMON_DIR")" && pwd)"
 
+# feature worktree の中から実行された場合、後段の worktree remove が自分の cwd を
+# 消して以降の git 操作が壊れる。先頭で main checkout へ移動して基準を揃える
+# （bash は script の fd を開いたまま読むため、実行元 worktree の削除後も安全）。
+cd "$MAIN_ROOT"
+
 if [[ "$DRY_RUN" == true ]]; then
   info "dry-run モード: 変更は行いません"
 fi
@@ -97,7 +107,7 @@ fi
 # ── 1. PR 状態を取得 ────────────────────────────────────────────────
 step "PR #$PR_NUMBER の状態を確認"
 
-PR_JSON="$(gh pr view "$PR_NUMBER" --json state,headRefName,mergeable,mergeStateStatus,statusCheckRollup 2>/dev/null || true)"
+PR_JSON="$(gh pr view "$PR_NUMBER" --json state,isDraft,headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup 2>/dev/null || true)"
 
 if [[ -z "$PR_JSON" ]]; then
   error "PR #$PR_NUMBER を取得できませんでした。番号とネットワークを確認してください。"
@@ -105,7 +115,9 @@ if [[ -z "$PR_JSON" ]]; then
 fi
 
 PR_STATE="$(printf '%s' "$PR_JSON" | jq -r '.state')"
+IS_DRAFT="$(printf '%s' "$PR_JSON" | jq -r '.isDraft // false')"
 BRANCH="$(printf '%s' "$PR_JSON" | jq -r '.headRefName')"
+HEAD_SHA="$(printf '%s' "$PR_JSON" | jq -r '.headRefOid // ""')"
 
 if [[ -z "$BRANCH" || "$BRANCH" == "null" ]]; then
   error "PR #$PR_NUMBER の head branch を特定できませんでした。"
@@ -121,6 +133,19 @@ fi
 # ── 2. 未マージなら checks を確認してマージ ──────────────────────────
 if [[ "$PR_STATE" == "OPEN" ]]; then
   step "PR #$PR_NUMBER をマージ"
+
+  # `gh pr merge` はクライアント側で draft を拒否するが、REST 直叩きにはその防御が無い。
+  # draft では skip される check がある（ai-review）ため、ここで明示的に止める。
+  if [[ "$IS_DRAFT" == "true" ]]; then
+    error "PR #$PR_NUMBER は draft です。ready にしてから再実行してください。"
+    exit 1
+  fi
+
+  # head SHA は check 判定と compare gate の基準に使う。取れなければ何も判定できない。
+  if [[ -z "$HEAD_SHA" || "$HEAD_SHA" == "null" ]]; then
+    error "PR #$PR_NUMBER の head SHA を取得できませんでした。マージを中止します。"
+    exit 1
+  fi
 
   # ── statusCheckRollup を name / context ごとに 1 件へ畳む ──────────
   #
@@ -188,7 +213,11 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # CI は PR 側でしか走らせないため、古い main ベースのままマージすると
   # 「A・B 単体では green だが合わせると壊れる」マージ順衝突を検知できない。
   # branch protection の strict mode 相当をここで代替する。
-  BASE_STATUS="$(gh api "repos/{owner}/{repo}/compare/main...$BRANCH" --jq '.status' 2>/dev/null || echo unknown)"
+  #
+  # 比較対象は branch 名ではなく **実際にマージする SHA** に固定する。branch 名で見ると、
+  # 判定とマージの間に main 取り込みが push された場合に「新しい tip は ahead」と判定して
+  # 「main を含まない古い SHA」をマージしてしまい、gate だけがすり抜ける。
+  BASE_STATUS="$(gh api "repos/{owner}/{repo}/compare/main...$HEAD_SHA" --jq '.status' 2>/dev/null || echo unknown)"
   if [[ "$BASE_STATUS" != "ahead" && "$BASE_STATUS" != "identical" ]]; then
     error "branch が main の最新を含んでいません（compare status: $BASE_STATUS）。"
     error "main を取り込んで push し、CI green を待ってから再実行してください:"
@@ -234,20 +263,33 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     exit 1
   fi
 
+  # マージは REST を直叩きする。`gh pr merge` は「削除対象 branch が current」だと
+  # **実行元の worktree を main へ切り替えてから** ローカル branch を削除するため、
+  # 並行セッション環境では実行元の足元と main checkout を壊す（#1771 の症状①）。
+  # gh api なら構造的にローカル git へ触れない。
+  #
+  # sha を渡して check gate 通過後の push を弾く（`gh pr merge --match-head-commit` 相当）。
+  # 渡さないと、gate を見てからマージするまでの間に積まれた未検証 commit ごとマージしうる。
+  # dry-run の表示と実行を同じ配列から作る。手書きで二重に持つと、実行側から
+  # `sha=` が落ちても dry-run 側が残っている限り test が pass してしまう。
+  MERGE_ARGS=(-X PUT "repos/{owner}/{repo}/pulls/$PR_NUMBER/merge"
+    -f merge_method=merge -f "sha=$HEAD_SHA")
+  DELETE_REF_ARGS=(-X DELETE "repos/{owner}/{repo}/git/refs/heads/$BRANCH")
+
   if [[ "$DRY_RUN" == true ]]; then
-    echo "   [dry-run] gh pr merge $PR_NUMBER --merge --delete-branch" >&2
+    echo "   [dry-run] gh api ${MERGE_ARGS[*]}" >&2
+    echo "   [dry-run] gh api ${DELETE_REF_ARGS[*]}" >&2
   else
-    # main が他 worktree で checkout 中だと gh pr merge が失敗しうる。
-    # その場合は gh api で直接マージにフォールバックする。
-    if ! gh pr merge "$PR_NUMBER" --merge --delete-branch 2>/tmp/branch-finish-merge-err; then
-      cat /tmp/branch-finish-merge-err >&2 || true
-      info "gh pr merge が失敗しました。gh api での直接マージを試みます。"
-      REPO="$(gh repo view --json nameWithOwner -q '.nameWithOwner')"
-      gh api -X PUT "repos/$REPO/pulls/$PR_NUMBER/merge" -f merge_method=merge >/dev/null
-      info "gh api でマージしました。リモート branch を削除します。"
-      gh api -X DELETE "repos/$REPO/git/refs/heads/$BRANCH" >/dev/null 2>&1 || true
+    if ! gh api "${MERGE_ARGS[@]}" >/dev/null; then
+      error "PR #$PR_NUMBER のマージに失敗しました。"
+      error "gh pr view $PR_NUMBER で状態を確認してください（head が更新された可能性があります）。"
+      exit 1
     fi
-    rm -f /tmp/branch-finish-merge-err
+    info "マージしました。リモート branch を削除します。"
+    # repo 設定は deleteBranchOnMerge: true だが、設定変更で掃除が静かに止まらないよう
+    # 明示的にも削除する。既に消えていれば 422 になるので失敗は無視してよい
+    # （残存した場合は step 8 が fetch --prune 後に検証する）。
+    gh api "${DELETE_REF_ARGS[@]}" >/dev/null 2>&1 || true
   fi
 else
   info "PR は既にクローズ済みのためマージ手順はスキップします。"
@@ -295,34 +337,77 @@ if [[ -n "$WORKTREE_PATH" ]]; then
   run git worktree remove --force "$WORKTREE_PATH"
 fi
 
+# 孤児化した worktree 管理情報をここで掃除する（step 6 より前に行う）。
+# 次の step は worktree list から main の checkout 先を探すため、ディレクトリが
+# 消えた worktree の entry が残っていると、存在しない path へ pull を試みて
+# main を更新できなくなる。
+run git -C "$MAIN_ROOT" worktree prune
+
 # ── 6. main を最新化（branch 削除より先に行う） ─────────────────────
-# gh pr merge はリモートのみ更新するため、この時点ではローカル main に
-# マージコミットが無い。先に fetch + pull して main を最新化しておくと、
-# マージコミットの第2親 = branch 先端がローカル main から辿れるようになり、
-# 続く `git branch -d` が「マージ済み」と判定して確実に成功する。
-# （Claude Code の worktree branch は upstream 追跡が無いことが多く、
-#  pull 前に -d すると not fully merged で誤って失敗する）
+# マージは REST 経由なので、この時点ではローカル main にマージコミットが無い。
+# 先に main を最新化しておくと、マージコミットの第2親 = branch 先端がローカル main
+# から辿れるようになり、続く step 7 の判定が「マージ済み」を正しく返す。
+#
+# **checkout は使わない。** main checkout が別セッションの branch にいる場合、
+# `checkout main` はそれを奪って切り替えてしまう（#1771 の症状②）。
+# 代わりに main を checkout 中の worktree を探し、その場で ff pull する。
+# どこも checkout していなければローカル ref だけを fast-forward する。
 step "main を最新化"
 
-run git -C "$MAIN_ROOT" fetch --prune origin
-run git -C "$MAIN_ROOT" checkout main
-run git -C "$MAIN_ROOT" pull --ff-only origin main
+# fetch も止めない。ここで落ちると worktree を消した直後の中途半端な状態で終わる。
+run git -C "$MAIN_ROOT" fetch --prune origin ||
+  info "origin の fetch に失敗しました（続行します）。"
+
+# main を checkout している worktree を探す（step 3 と同じ porcelain 解析）
+MAIN_WORKTREE="$(git -C "$MAIN_ROOT" worktree list --porcelain | awk '
+  /^worktree / { path = substr($0, 10) }
+  /^branch / && $2 == "refs/heads/main" { print path; exit }
+')"
+
+# 更新に失敗しても止めない。ここは掃除の前準備であってマージゲートではなく、
+# main が古いままなら step 7 の ancestor 判定が偽になって fail-closed に停止する。
+if [[ -n "$MAIN_WORKTREE" ]]; then
+  info "main は $MAIN_WORKTREE が checkout 中です。その worktree で fast-forward します。"
+  run git -C "$MAIN_WORKTREE" pull --ff-only origin main ||
+    info "main の pull に失敗しました（続行します）。"
+else
+  # checkout 中の branch には fetch できないため、この分岐でのみ ref 直更新が使える。
+  # force refspec（+main:main）は使わない。diverge した異常系を握り潰さないため。
+  info "main はどの worktree でも checkout されていません。ローカル ref のみ更新します。"
+  run git -C "$MAIN_ROOT" fetch origin main:main ||
+    info "main ref の更新に失敗しました（続行します）。"
+fi
 
 # ── 7. ローカル branch を削除 ───────────────────────────────────────
 step "ローカル branch を削除"
 
 if git -C "$MAIN_ROOT" show-ref --verify --quiet "refs/heads/$BRANCH"; then
-  # -d は merge 済みなら成功する。not fully merged なら失敗させて停止する（-D は使わない）。
+  # -d は merge 済みなら成功する。まずこれを試し、通常系の挙動は変えない。
   if [[ "$DRY_RUN" == true ]]; then
-    echo "   [dry-run] git -C \"$MAIN_ROOT\" branch -d $BRANCH" >&2
-  elif ! git -C "$MAIN_ROOT" branch -d "$BRANCH" 2>/tmp/branch-finish-branch-err; then
-    cat /tmp/branch-finish-branch-err >&2 || true
-    rm -f /tmp/branch-finish-branch-err
-    error "branch '$BRANCH' は未マージ扱いで削除できませんでした。"
-    error "main を pull 済みか、本当にマージ済みかを確認してください（-D 強制は避ける）。"
-    exit 1
+    echo "   [dry-run] git -C \"$MAIN_ROOT\" branch -d $BRANCH（失敗時は main への到達を確認）" >&2
+  elif ! git -C "$MAIN_ROOT" branch -d "$BRANCH" 2>"$BRANCH_ERR_FILE"; then
+    # `branch -d` は **HEAD に対して** マージ済みかを見る。main checkout が別 branch に
+    # いると、main へ完全にマージ済みの branch でも not fully merged で拒否される
+    # （#1771 の症状③）。main を基準に直接判定し直す。
+    #
+    # ref は完全修飾する（`main` だけだと同名 tag が branch より先に解決される）。
+    # ローカル main と origin/main の両方を見るのは、step 6 の main 更新が非致命だから。
+    # origin/main は fetch 済みで、どちらから到達できてもマージ済みの証明になる。
+    if git -C "$MAIN_ROOT" merge-base --is-ancestor "refs/heads/$BRANCH" refs/heads/main 2>/dev/null ||
+      git -C "$MAIN_ROOT" merge-base --is-ancestor "refs/heads/$BRANCH" refs/remotes/origin/main 2>/dev/null; then
+      # branch の全 commit が main から辿れる = 「main へ完全にマージ済み」の直接証明。
+      # -d の HEAD 基準ヒューリスティックより強い条件を確認済みなので、この -D は
+      # 未マージ branch の強制削除ではなく -d の偽陰性の訂正にあたる。
+      info "HEAD 基準では未マージ扱いですが、main への到達を確認しました。削除します。"
+      git -C "$MAIN_ROOT" branch -D "$BRANCH"
+    else
+      cat "$BRANCH_ERR_FILE" >&2 || true
+      error "branch '$BRANCH' は main に到達しておらず削除できません。"
+      error "ローカル main が origin/main より古い可能性があります。step 6 の出力を確認してください。"
+      error "本当にマージ済みかを確認してから対処してください（-D 強制は避ける）。"
+      exit 1
+    fi
   fi
-  rm -f /tmp/branch-finish-branch-err
 else
   info "ローカル branch '$BRANCH' は既にありません。"
 fi
@@ -332,29 +417,65 @@ fi
 # 万一 --delete-branch が効かず残っていれば明示的に削除する。
 step "リモート branch を確認"
 
+REMOTE_BRANCH_REMAINS=false
+
 if [[ "$DRY_RUN" == false ]]; then
   if git -C "$MAIN_ROOT" show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
     info "リモートに origin/$BRANCH が残っています。削除します。"
-    git -C "$MAIN_ROOT" push origin --delete "$BRANCH" || \
-      error "リモート branch の削除に失敗しました。手動で確認してください。"
+    git -C "$MAIN_ROOT" push origin --delete "$BRANCH" ||
+      error "リモート branch の削除に失敗しました。"
+  fi
+
+  # 削除コマンドの成否ではなく、実際に消えたかをリモートへ問い合わせて確認する
+  # （完了定義④）。確認自体に失敗した場合は「未確認」ではなく「残存」に倒す。
+  if REMOTE_HEADS="$(git -C "$MAIN_ROOT" ls-remote --heads origin "$BRANCH" 2>/dev/null)"; then
+    if [[ -n "$REMOTE_HEADS" ]]; then
+      REMOTE_BRANCH_REMAINS=true
+    else
+      info "リモート branch は消滅済みです。"
+    fi
   else
-    info "リモート branch は消滅済みです。"
+    error "リモート branch の消滅を確認できませんでした。"
+    REMOTE_BRANCH_REMAINS=true
   fi
 fi
 
-# ── 9. 孤児化した worktree 管理情報を掃除 ───────────────────────────
-run git -C "$MAIN_ROOT" worktree prune
-
-# ── 10. サマリー ────────────────────────────────────────────────────
+# ── 9. サマリー ─────────────────────────────────────────────────────
 step "完了"
 
 if [[ "$DRY_RUN" == true ]]; then
   info "dry-run のため実際の変更は行っていません。"
 else
+  # 完了していない項目があるなら ✅ を出さない。この出力は AI / 人間が
+  # 「作業終了」の判定に使うため、未達を伏せると積み残しがそのまま流れる。
+  if [[ "$REMOTE_BRANCH_REMAINS" == true ]]; then
+    error "リモート branch origin/$BRANCH が残っています（完了定義④が未達）。"
+    error "手動で削除してください: git -C \"$MAIN_ROOT\" push origin --delete $BRANCH"
+    exit 1
+  fi
+
   echo "✅ PR #$PR_NUMBER を片付けました:" >&2
   echo "   - branch: $BRANCH（ローカル / リモートとも削除）" >&2
   [[ -n "$WORKTREE_PATH" ]] && echo "   - worktree: $WORKTREE_PATH（削除）" >&2
-  echo "   - main HEAD: $(git -C "$MAIN_ROOT" rev-parse --short main)" >&2
+
+  # 完了定義⑤: ローカル main ref が origin/main と一致していること。
+  # main checkout がどの branch にいるかは問わない（別セッションの作業を尊重する）。
+  # ref は完全修飾する（同名 tag があると `main` は branch より先にそちらを指す）。
+  LOCAL_MAIN="$(git -C "$MAIN_ROOT" rev-parse --verify --quiet refs/heads/main || echo unknown)"
+  REMOTE_MAIN="$(git -C "$MAIN_ROOT" rev-parse --verify --quiet refs/remotes/origin/main || echo unknown)"
+  echo "   - main HEAD: ${LOCAL_MAIN:0:7}" >&2
+
+  if [[ "$LOCAL_MAIN" == "$REMOTE_MAIN" && "$LOCAL_MAIN" != "unknown" ]]; then
+    echo "   - ローカル main は origin/main と一致しています" >&2
+  else
+    info "ローカル main が origin/main と一致していません（local: ${LOCAL_MAIN:0:7} / remote: ${REMOTE_MAIN:0:7}）。"
+    if [[ -n "$MAIN_WORKTREE" ]]; then
+      # main が checkout 中の branch には fetch できないため、pull を案内する。
+      info "取り込んでください: git -C \"$MAIN_WORKTREE\" pull --ff-only origin main"
+    else
+      info "取り込んでください: git -C \"$MAIN_ROOT\" fetch origin main:main"
+    fi
+  fi
 fi
 
 echo "" >&2

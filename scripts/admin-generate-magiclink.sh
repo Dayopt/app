@@ -37,17 +37,23 @@ REQUEST_BODY=$(jq -n \
   --arg email "$USER_EMAIL" \
   '{type: "magiclink", email: $email}')
 
-HTTP_STATUS=$(curl -sS -o /tmp/admin-generate-magiclink-response.json -w "%{http_code}" \
+# mktemp は mkstemp(3) 経由でファイルを 0600 (owner のみ読み書き) で作成するため、
+# curl が書き込む前の隙間なく world-readable な固定パスを避けられる。hashed_token は
+# single-use の live login token なので、抽出後は trap で確実に削除する。
+RESPONSE_FILE=$(mktemp "${TMPDIR:-/tmp}/admin-generate-magiclink-response.XXXXXX")
+trap 'rm -f "$RESPONSE_FILE"' EXIT
+
+HTTP_STATUS=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
   -X POST \
   "${NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/generate_link" \
   "${AUTH_HEADERS[@]}" \
   -d "$REQUEST_BODY")
 
 if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
-  HASHED_TOKEN=$(jq -r '.hashed_token // .properties.hashed_token // empty' /tmp/admin-generate-magiclink-response.json)
+  HASHED_TOKEN=$(jq -r '.hashed_token // .properties.hashed_token // empty' "$RESPONSE_FILE")
   if [[ -z "$HASHED_TOKEN" ]]; then
     echo "エラー: hashed_token が response に含まれていません" >&2
-    cat /tmp/admin-generate-magiclink-response.json >&2
+    cat "$RESPONSE_FILE" >&2
     exit 1
   fi
 
@@ -75,7 +81,7 @@ if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
   echo "   ことがあります。その場合は op run を外して同じ env で再実行してください。"
 else
   echo "エラー: magic link 生成に失敗しました (HTTP $HTTP_STATUS)" >&2
-  cat /tmp/admin-generate-magiclink-response.json >&2
+  cat "$RESPONSE_FILE" >&2
   echo "" >&2
   exit 1
 fi

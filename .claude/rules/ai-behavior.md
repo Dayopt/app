@@ -1,6 +1,41 @@
 # AI行動規範
 
-Human–Agent Partnership、権限境界、read-only delegation、writer ownership の正本は `AGENTS.md` とする。本ファイルは、Main がタスクの負荷と進行方法を決めるための補足だけを定義する。
+協働の関係と判断のテンポ（authority level）の正本は `AGENTS.md` §協働のかたち。本ファイルはその運用機構 — subagent への委任、writer 境界、報告フォーマット、タスク進行の決め方 — の正本。
+
+## Read-only delegation
+
+Main は次の条件で read-only subagent を自動利用する。許可は求めず、利用理由を短く通知し、結果を Main 自身の判断として統合する。
+
+| Role                 | 自動委任条件                                                                                               |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `architecture-guard` | cross-feature import、barrel / Composition Layer、file move、所有 feature、依存方向を変更する時            |
+| `behavior-verifier`  | 現在挙動、公開契約、state transition、query cache、temporal contract、bug regression を変更・検証する時    |
+| `risk-reviewer`      | auth、RLS、service role、OAuth、webhook、billing、redirect、migration、`SECURITY DEFINER/INVOKER` を扱う時 |
+
+- 委譲するかは禁止リストではなくコスト判断で決める。Main のコンテキスト（トークン・注意）を節約できるなら小さな作業でも subagent へ委譲してよい。判断はその時点のモデルがその都度の文脈で行う
+- 複数作業を指揮するセッションでは、調査・ドラフト執筆・実装（§Writer ownership の範囲で）の委譲を既定とし、Main には判断・統合・diff レビュー、commit、external state の mutation、ユーザーへの報告を残す
+- Subagent は repo / external state を変更せず、write-capable tool / command の試行もしない。Main または user から依頼されても拒否し、nested agent を起動しない。command 実行が必要なら、Main が実行すべき command と確認観点を返す
+- Main は agent output を採用する前に、根拠を直接確認する
+
+## Writer ownership
+
+- Main を原則唯一の writer とし、Subagent は read-only とする
+- 明示的に起動する purpose-built artifact generator は、対象 scope の唯一の writer としてのみ例外を認める。Main は同じ scope を同時編集せず、生成後の diff をレビューする
+- 複数 writer は、ユーザーの明示指示、重複しない scope、writer ごとの別 worktree がすべて揃う場合に限る
+
+## Checkpoint / 完了報告
+
+事実、推論、推奨、未確認事項、反対証拠を分けて報告する。`CHECKPOINT` / `EXPLICIT AUTHORITY` では次を短く提示する。
+
+1. 推奨
+2. 顧客・Production への意味
+3. 現実的な最悪ケース
+4. 可逆性または roll-forward
+5. 収集済みの証拠
+6. 未確認事項・反対意見
+7. ユーザーに必要な価値判断または権限
+
+完了時は、利用した agent、意図的に利用しなかった agent と理由、未確認事項、deferred scope を示す。
 
 ## Reasoning effort
 
@@ -14,7 +49,6 @@ Human–Agent Partnership、権限境界、read-only delegation、writer ownersh
 
 - model / provider 固有の mapping を repo rules に固定しない
 - 高 effort は agent の人数ではなく、一次情報の質と反証の深さに使う
-- task が単純なら agent を増やさず Main が完結させる
 
 ## 曖昧な指示への対応
 

@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react';
+
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta = {
@@ -11,34 +13,71 @@ const meta = {
 export default meta;
 type Story = StoryObj;
 
-// Tailwindクラスからトークン名を抽出（bg-background → background）
-function extractToken(tailwindClass: string): string {
-  const match = tailwindClass.match(/^(?:bg|text|border|ring)-(.+)$/);
-  return match?.[1] ?? tailwindClass;
-}
-
-// カラースウォッチコンポーネント
+/**
+ * カラースウォッチコンポーネント
+ *
+ * Tailwind クラスをそのまま swatch 要素に適用する（bg-* は背景、text-* は
+ * 文字サンプル、border-* は太枠）。以前は class 名から `var(--X)` を組み立てて
+ * いたため、生 token を持たない state-hover 系が無背景になっていた。
+ *
+ * oklch 注釈は手書きせず、getComputedStyle の解決値を表示する
+ * （手書き注釈が colors.css とのドリフト源だったため。現テーマの値のみ表示）。
+ */
 function ColorSwatch({
   tailwindClass,
   description,
-  oklch,
+  on,
 }: {
   tailwindClass: string;
   description?: string;
-  /** "light | dark" 形式の oklch 値 */
-  oklch?: string;
+  /** text-* サンプルの下に敷く背景クラス（例: text-*-foreground には accent 面） */
+  on?: string;
 }) {
-  const token = extractToken(tailwindClass);
+  const ref = useRef<HTMLDivElement>(null);
+  const [resolved, setResolved] = useState('');
+  const kind = tailwindClass.startsWith('text-')
+    ? 'text'
+    : tailwindClass.startsWith('border-')
+      ? 'border'
+      : 'bg';
+
+  // deps なし: テーマ切替による再レンダー後に解決値を読み直す（同値なら bail out）
+  useEffect(() => {
+    if (!ref.current) return;
+    const style = getComputedStyle(ref.current);
+    setResolved(
+      kind === 'text'
+        ? style.color
+        : kind === 'border'
+          ? style.borderTopColor
+          : style.backgroundColor,
+    );
+  });
+
   return (
     <div className="flex items-center gap-4 py-2">
-      <div
-        className="border-border size-12 shrink-0 rounded-lg border"
-        style={{ backgroundColor: `var(--${token})` }}
-      />
+      {kind === 'text' ? (
+        <div
+          ref={ref}
+          className={`${tailwindClass} ${on ?? 'bg-background'} border-border flex size-12 shrink-0 items-center justify-center rounded-lg border text-lg font-medium`}
+        >
+          Aa
+        </div>
+      ) : kind === 'border' ? (
+        <div
+          ref={ref}
+          className={`${tailwindClass} bg-background size-12 shrink-0 rounded-lg border-4`}
+        />
+      ) : (
+        <div
+          ref={ref}
+          className={`${tailwindClass} border-border size-12 shrink-0 rounded-lg border`}
+        />
+      )}
       <div className="min-w-0 flex-1">
         <code className="text-sm font-medium">{tailwindClass}</code>
         {description && <p className="text-muted-foreground mt-1 text-xs">{description}</p>}
-        {oklch && <p className="mt-1 font-mono text-xs opacity-40">{oklch}</p>}
+        {resolved && <p className="mt-1 font-mono text-xs opacity-40">{resolved}</p>}
       </div>
     </div>
   );
@@ -84,6 +123,10 @@ export const AllColors: Story = {
             accent
           </p>
           <p>
+            <span className="text-foreground font-medium">Light:</span> Surface — 紙 warm H75
+            C0.005。card も純白ではない（L0.99）。インク（テキスト）は無彩色のまま
+          </p>
+          <p>
             <span className="text-foreground font-medium">Dark:</span> Surface — warm H60 C0.008。
             テキストはオフホワイト L0.90（純白にしない）。Border — alpha-based（black/α, white/α）
           </p>
@@ -96,56 +139,26 @@ export const AllColors: Story = {
       </h2>
 
       <ColorGroup title="Surface">
-        <ColorSwatch
-          tailwindClass="bg-container"
-          description="沈む: sidebar, footer"
-          oklch="oklch(0.96 0 0) | oklch(0.15 0.008 60)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-background"
-          description="基準: page"
-          oklch="oklch(0.98 0 0) | oklch(0.18 0.008 60)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-card"
-          description="浮く: card, dialog"
-          oklch="oklch(1.00 0 0) | oklch(0.22 0.008 60)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-muted"
-          description="窪み: input, well"
-          oklch="oklch(0.95 0 0) | oklch(0.25 0.008 60)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-overlay"
-          description="scrim: modal背景"
-          oklch="oklch(0 0 0 / 0.32) | oklch(0 0 0 / 0.50)"
-        />
+        <ColorSwatch tailwindClass="bg-container" description="沈む: sidebar, footer" />
+        <ColorSwatch tailwindClass="bg-background" description="基準: page" />
+        <ColorSwatch tailwindClass="bg-card" description="浮く: card, dialog" />
+        <ColorSwatch tailwindClass="bg-muted" description="窪み: input, well" />
+        <ColorSwatch tailwindClass="bg-overlay" description="scrim: modal背景" />
       </ColorGroup>
 
       <ColorGroup title="Text">
-        <ColorSwatch
-          tailwindClass="text-foreground"
-          description="主要"
-          oklch="oklch(0.13 0 0) | oklch(0.90 0.005 70)"
-        />
-        <ColorSwatch
-          tailwindClass="text-muted-foreground"
-          description="補助"
-          oklch="oklch(0.40 0 0) | oklch(0.68 0.005 60)"
-        />
+        <ColorSwatch tailwindClass="text-foreground" description="主要" />
+        <ColorSwatch tailwindClass="text-muted-foreground" description="補助" />
       </ColorGroup>
 
       <ColorGroup title="Border">
         <ColorSwatch
           tailwindClass="border-border"
           description="構造的な区切り（sidebar, input, divider）"
-          oklch="oklch(0 0 0 / 0.12) | oklch(1 0 0 / 0.12)"
         />
         <ColorSwatch
           tailwindClass="border-border-subtle"
           description="Raised/Overlayの縁（card, dialog, popover）"
-          oklch="oklch(0 0 0 / 0.06) | oklch(1 0 0 / 0.07)"
         />
       </ColorGroup>
 
@@ -158,74 +171,42 @@ export const AllColors: Story = {
       </p>
 
       <ColorGroup title="Destructive (H25)">
-        <ColorSwatch
-          tailwindClass="bg-destructive-tint"
-          description="tint"
-          oklch="oklch(0.96 0.015 25) | oklch(0.22 0.03 25)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-destructive"
-          description="accent"
-          oklch="oklch(0.58 0.16 25) | oklch(0.62 0.14 25)"
-        />
+        <ColorSwatch tailwindClass="bg-destructive-tint" description="tint" />
+        <ColorSwatch tailwindClass="bg-destructive" description="accent" />
         <ColorSwatch
           tailwindClass="text-destructive-foreground"
           description="accent面上の文字"
-          oklch="oklch(1 0 0) | oklch(0.15 0 0)"
+          on="bg-destructive"
         />
       </ColorGroup>
 
       <ColorGroup title="Warning (H70)">
-        <ColorSwatch
-          tailwindClass="bg-warning-tint"
-          description="tint"
-          oklch="oklch(0.97 0.015 70) | oklch(0.22 0.03 70)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-warning"
-          description="accent"
-          oklch="oklch(0.68 0.16 70) | oklch(0.72 0.14 70)"
-        />
+        <ColorSwatch tailwindClass="bg-warning-tint" description="tint" />
+        <ColorSwatch tailwindClass="bg-warning" description="accent" />
         <ColorSwatch
           tailwindClass="text-warning-foreground"
           description="accent面上の文字"
-          oklch="oklch(1 0 0) | oklch(0.15 0 0)"
+          on="bg-warning"
         />
       </ColorGroup>
 
       <ColorGroup title="Success (H150)">
-        <ColorSwatch
-          tailwindClass="bg-success-tint"
-          description="tint"
-          oklch="oklch(0.95 0.02 150) | oklch(0.22 0.03 150)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-success"
-          description="accent"
-          oklch="oklch(0.60 0.14 150) | oklch(0.65 0.12 150)"
-        />
+        <ColorSwatch tailwindClass="bg-success-tint" description="tint" />
+        <ColorSwatch tailwindClass="bg-success" description="accent" />
         <ColorSwatch
           tailwindClass="text-success-foreground"
           description="accent面上の文字"
-          oklch="oklch(1 0 0) | oklch(0.15 0 0)"
+          on="bg-success"
         />
       </ColorGroup>
 
       <ColorGroup title="Info (neutral)">
-        <ColorSwatch
-          tailwindClass="bg-info-tint"
-          description="tint（neutral）"
-          oklch="oklch(0.96 0.005 260) | oklch(0.22 0.01 260)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-info"
-          description="accent（neutral）"
-          oklch="oklch(0.55 0.02 260) | oklch(0.65 0.02 260)"
-        />
+        <ColorSwatch tailwindClass="bg-info-tint" description="tint（neutral）" />
+        <ColorSwatch tailwindClass="bg-info" description="accent（neutral）" />
         <ColorSwatch
           tailwindClass="text-info-foreground"
           description="accent面上の文字"
-          oklch="oklch(1 0 0) | oklch(0.15 0 0)"
+          on="bg-info"
         />
       </ColorGroup>
 
@@ -233,17 +214,16 @@ export const AllColors: Story = {
       <h2 className="text-muted-foreground mt-8 mb-6 text-xs font-medium tracking-widest uppercase">
         3. Primary — ブランドアクション
       </h2>
+      <p className="text-muted-foreground -mt-4 mb-6 text-xs">
+        紺（インク）。色相は --hue-brand 259.8145 で固定し、明度と彩度だけで調整する。
+      </p>
 
       <ColorGroup title="Primary">
-        <ColorSwatch
-          tailwindClass="bg-primary"
-          description="主要アクションの背景"
-          oklch="oklch(0.45 0.14 260) | oklch(0.50 0.188 260)"
-        />
+        <ColorSwatch tailwindClass="bg-primary" description="主要アクションの背景" />
         <ColorSwatch
           tailwindClass="text-primary-foreground"
           description="Primary上のテキスト"
-          oklch="oklch(1 0 0)"
+          on="bg-primary"
         />
       </ColorGroup>
 
@@ -256,63 +236,27 @@ export const AllColors: Story = {
       </p>
 
       <ColorGroup title="State Layer（半透明）">
-        <ColorSwatch tailwindClass="bg-state-hover" description="hover" oklch="foreground / 10%" />
-        <ColorSwatch
-          tailwindClass="bg-state-pressed"
-          description="pressed"
-          oklch="foreground / 12%"
-        />
-        <ColorSwatch
-          tailwindClass="bg-state-selected"
-          description="selected"
-          oklch="foreground / 12%"
-        />
-        <ColorSwatch
-          tailwindClass="bg-state-dragged"
-          description="dragged"
-          oklch="foreground / 16%"
-        />
+        <ColorSwatch tailwindClass="bg-state-hover" description="hover" />
+        <ColorSwatch tailwindClass="bg-state-pressed" description="pressed" />
+        <ColorSwatch tailwindClass="bg-state-selected" description="selected" />
+        <ColorSwatch tailwindClass="bg-state-dragged" description="dragged" />
       </ColorGroup>
 
       <ColorGroup title="State Active（塗りつぶし）">
-        <ColorSwatch
-          tailwindClass="bg-state-active"
-          description="選択中"
-          oklch="oklch(0.95 0.025 260) | oklch(0.45 0.14 260)"
-        />
+        <ColorSwatch tailwindClass="bg-state-active" description="選択中" />
         <ColorSwatch
           tailwindClass="text-state-active-foreground"
           description="アクティブ状態テキスト"
-          oklch="oklch(0.38 0.14 260) | oklch(0.88 0.06 260)"
+          on="bg-state-active"
         />
       </ColorGroup>
 
       <ColorGroup title="塗りボタン用ホバー（accent / 90%）">
-        <ColorSwatch
-          tailwindClass="bg-primary-hover"
-          description="primary"
-          oklch="oklch(from primary l c h / 90%)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-destructive-hover"
-          description="destructive"
-          oklch="oklch(from destructive l c h / 90%)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-warning-hover"
-          description="warning"
-          oklch="oklch(from warning l c h / 90%)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-success-hover"
-          description="success"
-          oklch="oklch(from success l c h / 90%)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-info-hover"
-          description="info"
-          oklch="oklch(from info l c h / 90%)"
-        />
+        <ColorSwatch tailwindClass="bg-primary-hover" description="primary" />
+        <ColorSwatch tailwindClass="bg-destructive-hover" description="destructive" />
+        <ColorSwatch tailwindClass="bg-warning-hover" description="warning" />
+        <ColorSwatch tailwindClass="bg-success-hover" description="success" />
+        <ColorSwatch tailwindClass="bg-info-hover" description="info" />
       </ColorGroup>
 
       {/* ━━ 5. Domain ━━ */}
@@ -322,74 +266,41 @@ export const AllColors: Story = {
 
       <ColorGroup title="Tag Colors（oklch統一 L/C、Hのみ変化）">
         {/* Base: L=0.65 C=0.18 / Dark: L=0.78 C=0.15（例外: teal, gray） */}
+        {/* Tailwind 静的抽出用 safelist（下の bg-tag-${name} は動的クラスのため）:
+            bg-tag-red bg-tag-orange bg-tag-amber bg-tag-green bg-tag-teal
+            bg-tag-blue bg-tag-indigo bg-tag-violet bg-tag-pink bg-tag-gray */}
         {[
           { name: 'red', hue: 25 },
           { name: 'orange', hue: 55 },
           { name: 'amber', hue: 80 },
           { name: 'green', hue: 145 },
-          { name: 'teal', hue: 185, lightC: 0.13, darkC: 0.11, note: 'sRGB色域制限' },
+          { name: 'teal', hue: 185, note: 'sRGB色域制限' },
           { name: 'blue', hue: 240, note: 'デフォルト' },
           { name: 'indigo', hue: 280 },
           { name: 'violet', hue: 310 },
           { name: 'pink', hue: 350 },
-          {
-            name: 'gray',
-            hue: 250,
-            lightL: 0.55,
-            lightC: 0.02,
-            darkL: 0.7,
-            darkC: 0.02,
-            note: 'achromatic',
-          },
-        ].map(({ name, hue, note, lightL = 0.65, lightC = 0.18, darkL = 0.78, darkC = 0.15 }) => (
+          { name: 'gray', hue: 250, note: 'achromatic' },
+        ].map(({ name, note }) => (
           <ColorSwatch
             key={name}
             tailwindClass={`bg-tag-${name}`}
             description={`${name}${note ? `（${note}）` : ''}`}
-            oklch={`oklch(${lightL} ${lightC} ${hue}) | oklch(${darkL} ${darkC} ${hue})`}
           />
         ))}
       </ColorGroup>
 
       <ColorGroup title="Temporal（現在時刻）">
-        <ColorSwatch
-          tailwindClass="bg-now-indicator"
-          description="now line, now 時刻バッジ背景"
-          oklch="oklch(0.55 0.17 25) | oklch(0.65 0.15 25)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-now-indicator-foreground"
-          description="foreground"
-          oklch="oklch(1 0 0) | oklch(1 0 0)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-now-indicator-muted"
-          description="other days line"
-          oklch="oklch(0.55 0.17 25 / 0.3) | oklch(0.65 0.15 25 / 0.3)"
-        />
+        <ColorSwatch tailwindClass="bg-now-indicator" description="now line, now 時刻バッジ背景" />
+        <ColorSwatch tailwindClass="bg-now-indicator-foreground" description="foreground" />
+        <ColorSwatch tailwindClass="bg-now-indicator-muted" description="other days line" />
       </ColorGroup>
 
       <ColorGroup title="Chart（比較用5色）">
-        <ColorSwatch
-          tailwindClass="bg-chart-1"
-          oklch="oklch(0.6231 0.14 260) | oklch(0.7137 0.1434 254.624)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-chart-2"
-          oklch="oklch(0.5461 0.2152 262.8809) | oklch(0.6231 0.188 260)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-chart-3"
-          oklch="oklch(0.4882 0.2172 264.3763) | oklch(0.5461 0.2152 262.8809)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-chart-4"
-          oklch="oklch(0.4244 0.1809 265.6377) | oklch(0.55 0.2 264.38)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-chart-5"
-          oklch="oklch(0.3791 0.1378 265.5222) | oklch(0.5 0.16 265.64)"
-        />
+        <ColorSwatch tailwindClass="bg-chart-1" />
+        <ColorSwatch tailwindClass="bg-chart-2" />
+        <ColorSwatch tailwindClass="bg-chart-3" />
+        <ColorSwatch tailwindClass="bg-chart-4" />
+        <ColorSwatch tailwindClass="bg-chart-5" />
       </ColorGroup>
 
       {/* ━━ 6. Aliases ━━ */}
@@ -413,7 +324,7 @@ export const Surface: Story = {
         token: 'container',
         role: '沈む',
         desc: 'サイドバー、セクション',
-        light: 'oklch(0.96 0 0)',
+        light: 'oklch(0.95 0.005 75)',
         dark: 'oklch(0.15 0.008 60)',
         bg: 'bg-container',
       },
@@ -421,7 +332,7 @@ export const Surface: Story = {
         token: 'background',
         role: '基準',
         desc: 'ページ背景',
-        light: 'oklch(0.98 0 0)',
+        light: 'oklch(0.97 0.005 75)',
         dark: 'oklch(0.18 0.008 60)',
         bg: 'bg-background',
       },
@@ -429,7 +340,7 @@ export const Surface: Story = {
         token: 'card',
         role: '浮く',
         desc: 'カード、ダイアログ',
-        light: 'oklch(1.00 0 0)',
+        light: 'oklch(0.99 0.005 75)',
         dark: 'oklch(0.22 0.008 60)',
         bg: 'bg-card',
       },
@@ -466,7 +377,12 @@ export const Surface: Story = {
       <div>
         <h2 className="mb-2 text-xl font-medium">Surface 体系</h2>
         <p className="text-muted-foreground mb-1 text-sm">
-          container(沈む) → background(基準) → card(浮く) + muted。Dark: warm H60 C=0.008。
+          container(沈む) → background(基準) → card(浮く) + muted。Light は「紙」warm H75 C=0.005、
+          Dark は warm H60 C=0.008。4面すべてが同じ温度を持つ。
+        </p>
+        <p className="text-muted-foreground mb-1 text-sm">
+          card は純白ではない（L=0.99）。L=1.00 では chroma を持てないため、card だけ純白に残すと
+          4面のうち1面で色温度が割れる。
         </p>
         <p className="text-muted-foreground mb-8 text-sm">
           テキストは純白にしない（dark foreground L=0.90 オフホワイト, C=0.005, H=70）。
@@ -540,7 +456,7 @@ export const Surface: Story = {
                   token: 'muted',
                   role: '控えめ',
                   desc: '入力欄',
-                  light: 'oklch(0.95 0 0)',
+                  light: 'oklch(0.94 0.005 75)',
                   dark: 'oklch(0.25 0.008 60)',
                   bg: 'bg-muted',
                 },
@@ -688,9 +604,9 @@ export const Semantic: Story = {
         text: 'text-destructive',
         fg: 'text-destructive-foreground',
         desc: '削除、エラー',
-        lightAccent: 'oklch(0.58 0.16 25)',
+        lightAccent: 'oklch(0.54 0.18 25)',
         lightBg: 'oklch(0.96 0.015 25)',
-        darkAccent: 'oklch(0.62 0.14 25)',
+        darkAccent: 'oklch(0.65 0.14 25)',
         darkBg: 'oklch(0.22 0.03 25)',
       },
       {
@@ -701,7 +617,7 @@ export const Semantic: Story = {
         text: 'text-warning',
         fg: 'text-warning-foreground',
         desc: '警告、注意',
-        lightAccent: 'oklch(0.68 0.16 70)',
+        lightAccent: 'oklch(0.55 0.16 70)',
         lightBg: 'oklch(0.97 0.015 70)',
         darkAccent: 'oklch(0.72 0.14 70)',
         darkBg: 'oklch(0.22 0.03 70)',
@@ -714,7 +630,7 @@ export const Semantic: Story = {
         text: 'text-success',
         fg: 'text-success-foreground',
         desc: '成功、完了',
-        lightAccent: 'oklch(0.60 0.14 150)',
+        lightAccent: 'oklch(0.5 0.15 150)',
         lightBg: 'oklch(0.95 0.02 150)',
         darkAccent: 'oklch(0.65 0.12 150)',
         darkBg: 'oklch(0.22 0.03 150)',
@@ -962,14 +878,19 @@ export const Text: Story = {
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
               <p className="text-destructive font-medium">Don&apos;t</p>
-              <pre className="text-muted-foreground text-xs leading-relaxed">{`// ❌ 直接カラー
-<h1 className="text-gray-900">見出し</h1>
-
-// ❌ opacity で階層を作る
-<p className="text-foreground opacity-50">説明</p>
-
-// ❌ 意味なく semantic を使う
-<p className="text-success">普通のテキスト</p>`}</pre>
+              {/* 表示テキストにマーカーを混ぜないため、禁止例の行だけ配列へ出して行単位で許可する */}
+              <pre className="text-muted-foreground text-xs leading-relaxed">
+                {[
+                  '// ❌ 直接カラー',
+                  '<h1 className="text-gray-900">見出し</h1>', // lint-tokens-allow: 禁止例の提示
+                  '',
+                  '// ❌ opacity で階層を作る',
+                  '<p className="text-foreground opacity-50">説明</p>',
+                  '',
+                  '// ❌ 意味なく semantic を使う',
+                  '<p className="text-success">普通のテキスト</p>',
+                ].join('\n')}
+              </pre>
             </div>
           </div>
         </div>
@@ -1099,7 +1020,7 @@ export const DosDonts: Story = {
       {
         title: '1. セマンティックトークンを使う',
         doCode: 'bg-destructive text-destructive-foreground',
-        dontCode: 'bg-red-500 text-white',
+        dontCode: 'bg-red-500 text-white', // lint-tokens-allow: 禁止例の提示
         reason:
           'oklch の値を直接書かない。トークン経由で使う。直接指定するとダークモード切替、将来の色調整が全部壊れる。',
       },

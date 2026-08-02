@@ -1,6 +1,6 @@
 ---
-status: active
-last_verified: 2026-07-21
+status: done
+last_verified: 2026-07-30
 code:
   - apps/product/src/features/contact
   - apps/product/src/app/api/webhooks/resend
@@ -19,18 +19,9 @@ Product / Web の問い合わせを削除済みの private GitHub repository か
 - `support@dayopt.app`宛の通常メールをCloudflare Email Routingで既存Gmailへ転送し、GmailからResend SMTP経由で同じ差出人として返信できるようにする
 - Preview / Developmentからの実配送、問い合わせPIIのログ記録、重複送信、署名されていないwebhook処理を拒否する
 
-## 現在地
+## 結果
 
-| 領域       | 状態    | 証拠・残作業                                                                                                                        |
-| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Code       | 実装中  | Product / WebのResend配送、入力保持、idempotency、timeout、global rate limit、app別webhookを本branchで検証する                      |
-| CI         | 実装中  | safe dummy値だけでbuild gateを検査する`Production Contract`と、Vercel env metadataだけを検査する`Production Config Audit`を導入する |
-| 受信       | blocked | Cloudflare Active、`support@dayopt.app`のGmail転送成功が未確認                                                                      |
-| 返信       | blocked | GmailのSend mail asから`support@dayopt.app`で返信し、個人Gmail非表示・DKIM passが未確認                                             |
-| Production | blocked | Product / Webの必要env、app別webhook、同一SHA Ready、各フォーム1通のsmokeが未確認                                                   |
-| Release    | blocked | Production smoke後30分の観察、tag、GitHub Release、旧credential cleanupが未実施                                                     |
-
-Issue [#1646](https://github.com/Dayopt/dayopt/issues/1646) の`status:blocked`は、ユーザーから「Cloudflare Active・受信成功・support@返信成功」の3点が共有されるまで解除しない。
+完了済み。達成した内容は [summary](./summary.md)、実際の受信・返信経路は [contact-email.md](../../operations/contact-email.md) を参照する。
 
 ## Delivery
 

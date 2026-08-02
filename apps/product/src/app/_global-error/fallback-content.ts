@@ -20,18 +20,20 @@ export const ERROR_TEXT = {
 /**
  * デザインシステム準拠のフォールバックCSS変数
  *
- * primitives.css / colors.css のOKLCH値をそのまま使用。
+ * colors.css の .dark のOKLCH値をそのまま使用（エラー画面はダーク固定）。
  * Root Layout のCSSが読めない場合でもデザインシステムと一貫した色を提供する。
+ *
+ * トークンを変えたらここも直す。値は colors.css からコピーする（近似で書かない）。
  */
 export const FALLBACK_STYLES = `
   :root {
-    --ge-background: oklch(0.12 0 0);
-    --ge-foreground: oklch(0.99 0 0);
-    --ge-card: oklch(0.24 0 0);
-    --ge-card-inset: oklch(0.16 0 0);
-    --ge-border: oklch(0.3715 0 0);
-    --ge-muted: oklch(0.78 0 0);
-    --ge-primary: oklch(0.5 0.188 259.8145);
-    --ge-destructive: oklch(0.65 0.24 25.33);
+    --ge-background: oklch(0.18 0.008 60);
+    --ge-foreground: oklch(0.9 0.005 70);
+    --ge-card: oklch(0.22 0.008 60);
+    --ge-card-inset: oklch(0.15 0.008 60);
+    --ge-border: oklch(1 0 0 / 0.12);
+    --ge-muted: oklch(0.68 0.005 60);
+    --ge-primary: oklch(0.55 0.13 259.8145);
+    --ge-destructive: oklch(0.65 0.14 25);
   }
 `;

@@ -1,6 +1,6 @@
 # Codex Rules Overlay
 
-`AGENTS.md` は Dayopt で作業する coding agent の共通入口であり、Human–Agent Partnership と authority level の正本。詳細ルールは `.claude/rules/` を共通の canonical source とする。`.codex/rules/` には Codex 固有の運用差分だけを薄く置く。
+`AGENTS.md` は Dayopt で作業する coding agent の共通入口であり、協働のかたち（authority level 含む）の正本。詳細ルールは `.claude/rules/` を共通の canonical source とする。`.codex/rules/` には Codex 固有の運用差分だけを薄く置く。
 
 ## Policy
 
@@ -33,7 +33,7 @@ Codex review agent は `sandbox_mode = "read-only"`、`approval_policy = "never"
 
 ## Canonical References
 
-- `AGENTS.md` — 全 coding agent の共通入口と Human–Agent Partnership
+- `AGENTS.md` — 全 coding agent の共通入口と協働のかたち
 - `.agents/roles/` — provider-neutral review role 本文
 - `.claude/rules/workflow.md` — Dayopt 共通の作業・git 運用
 - `.claude/rules/plan-format.md` — plan 出力形式

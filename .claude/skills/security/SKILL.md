@@ -174,7 +174,7 @@ pnpm security:check
 
 ## 関連エージェント
 
-- **risk-reviewer** — auth / RLS / service role / OAuth / webhook / billing / redirect / migration を扱う plan / diff で自動委任される read-only reviewer（`AGENTS.md` §Read-only delegation）
+- **risk-reviewer** — auth / RLS / service role / OAuth / webhook / billing / redirect / migration を扱う plan / diff で自動委任される read-only reviewer（`.claude/rules/ai-behavior.md` §Read-only delegation）
 - **`/claude-security`** — 既存コードの深掘りスキャン。月次 sweep（`/gardening` §5.7）と、auth 周りの大きな変更前にユーザーが手動起動する
 
 > このスキルは「実装時のガイド」、上記は「既存コードの検査」。新規コード実装時はこのスキルを、既存コードのスキャンはエージェント / `/claude-security` を使う。

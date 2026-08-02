@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
-import { cn } from '@dayopt/components';
+import { cn, overlaySurface } from '@dayopt/components';
 import type { AnchorRect } from '../../stores/useTimeblockInspectorStore';
 
 const INSPECTOR_MAX_WIDTH = 480;
@@ -136,8 +136,8 @@ export function FloatingPopover({ children, onClose, title, anchorRect }: Floati
         ref={panelRef}
         style={{ left: position.x, top: position.y }}
         className={cn(
-          'bg-card text-card-foreground z-inspector',
-          'border-border-subtle shadow-card rounded-2xl border',
+          overlaySurface({ radius: '2xl' }),
+          'z-inspector',
           // eslint-disable-next-line tailwindcss/no-arbitrary-value -- popover サイズは viewport 連動の min()/dvh/vw が必要でトークン化不可
           'fixed flex max-h-[min(40rem,calc(100dvh-2rem))] w-[95vw] max-w-[30rem] flex-col gap-0 overflow-hidden p-0',
           'animate-in slide-in-from-bottom-2 duration-150 motion-reduce:animate-none',

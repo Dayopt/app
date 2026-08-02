@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { trackProductEvent } from '@/lib/analytics/product-events';
 import { databaseTables, publicRecordSelect } from '@/lib/database';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
@@ -154,7 +155,7 @@ export class RecordService {
       await this.ensureNoRecordOverlap(userId, input.start_at, input.end_at);
     }
 
-    return this.commands.createRecord({
+    const record = await this.commands.createRecord({
       userId,
       title: input.title,
       note: input.note ?? null,
@@ -165,6 +166,9 @@ export class RecordService {
       startAt: input.start_at,
       endAt: input.end_at,
     });
+
+    await trackProductEvent({ eventName: 'record_created', userId });
+    return record;
   }
 
   async update(options: UpdateRecordOptions): Promise<RecordRow> {

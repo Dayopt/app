@@ -34,9 +34,9 @@ import superjson from 'superjson';
 
 import { env } from '@/env';
 import type { Database } from '@/lib/database';
-import { observeAuthOperation } from '@/lib/sentry';
 import type { Context } from '@/lib/trpc/context';
 import { appRouter } from '@/lib/trpc/root';
+import { resolveSessionAuthContext } from '@/lib/trpc/session-auth-context';
 
 // Re-export for convenience
 export { dehydrate, HydrationBoundary };
@@ -74,26 +74,7 @@ async function createSupabaseServerClient() {
  */
 async function createServerContext(): Promise<Context> {
   const supabase = await createSupabaseServerClient();
-
-  let userId: string | undefined;
-  let sessionId: string | undefined;
-
-  try {
-    // getUser()はSupabase Authサーバーに問い合わせてJWTを検証する
-    const {
-      data: { user },
-    } = await observeAuthOperation('rsc_trpc_get_user', () => supabase.auth.getUser());
-
-    if (user) {
-      userId = user.id;
-      const {
-        data: { session },
-      } = await observeAuthOperation('rsc_trpc_get_session', () => supabase.auth.getSession());
-      sessionId = session?.access_token;
-    }
-  } catch {
-    // Server Component での認証エラーは無視
-  }
+  const { userId, sessionId, mfaAssurance } = await resolveSessionAuthContext(supabase, 'rsc_trpc');
 
   // Server Componentではreq/resは不要なのでダミーを渡す
   return {
@@ -101,6 +82,7 @@ async function createServerContext(): Promise<Context> {
     res: {} as Context['res'],
     userId,
     sessionId,
+    mfaAssurance,
     supabase,
     authMode: 'session' as const, // Server Componentは常にsession認証
   };

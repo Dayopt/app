@@ -133,7 +133,7 @@ export function HeroProductMocks({ labels }: HeroProductMocksProps) {
             ref={(el) => {
               cardRefs.current[i] = el;
             }}
-            className="bg-card border-border hover:border-primary/30 w-full shrink-0 snap-center overflow-hidden rounded-2xl border transition-[border-color,box-shadow] duration-200 hover:shadow-[var(--shadow-card)]"
+            className="bg-card border-border-subtle hover:border-primary/30 w-full shrink-0 snap-center overflow-hidden rounded-2xl border transition-[border-color,box-shadow] duration-200 hover:shadow-[var(--shadow-card)]"
           >
             <div className="aspect-[4/3]">
               <mock.component />

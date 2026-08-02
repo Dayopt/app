@@ -26,7 +26,7 @@ export async function HowSection({ locale }: HowSectionProps) {
   const t = await getTranslations({ locale, namespace: 'marketing' });
 
   return (
-    <section id="how" className="pt-20 pb-24 sm:pt-[140px] sm:pb-32">
+    <section id="how" className="pt-20 pb-24 sm:pt-36 sm:pb-32">
       <Container>
         <SectionHeader
           icon={
@@ -50,9 +50,12 @@ export async function HowSection({ locale }: HowSectionProps) {
         />
 
         {/* Pillars grid */}
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3">
           {PILLARS.map(({ key, visual: Visual }) => (
-            <div key={key} className="bg-card border-border overflow-hidden rounded-2xl border">
+            <div
+              key={key}
+              className="bg-card border-border-subtle overflow-hidden rounded-2xl border shadow-sm"
+            >
               {/* Visual area */}
               <div className="h-[220px] overflow-hidden">
                 <Visual />

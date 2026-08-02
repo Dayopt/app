@@ -363,7 +363,9 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
         </div>
       </CalendarDragSelection>
 
-      {/* エントリ表示エリア */}
+      {/* エントリ表示エリア。この absolute + z-20 が stacking context の境界で、
+          内側の zIndex（grid.constants.ts の Z_INDEX: 10-40）はグローバルな
+          z-index トークン（z-dropdown: 50 等）と数値空間が別になる。意図的な分離 */}
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
         {visibleEntries.map((entry) => {
           const position = twoLaneStyles[entry.id];

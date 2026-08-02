@@ -1,7 +1,10 @@
 ---
 status: current
-last_verified: 2026-07-30
+last_verified: 2026-08-01
 code:
+  - apps/product/src/app/api/auth/route.ts
+  - apps/product/src/lib/trpc/session-auth-context.ts
+  - apps/product/src/lib/trpc/procedures.ts
   - apps/product/src/app/api/trpc/_server/_composition/account-deletion-selector.ts
   - apps/product/src/app/api/trpc/_server/_composition/account-deletion-coordinator.ts
   - apps/product/src/features/auth/server/user-service.ts
@@ -22,7 +25,7 @@ Supabase Auth ベースの認証機能。
 - ソーシャルログインは Google のみ。Apple（有料 Developer Program が必須）と Meta（アプリ審査コスト）は不採用（2026-07 決定、[ログ](../log/2026-07-24-social-login-google-only.md)）。本番の provider 設定は Supabase Dashboard が正本
 - 認証メール（signup 確認 / パスワードリセット / メールアドレス変更）は Auth send_email hook → Edge Function `send-auth-email` → Resend で送信する。メールアドレス変更は Secure Email Change により現・新両アドレスへ確認メールを 2 通送る
 - `protectedProcedure` で保護された tRPC procedure が `ctx.userId` でデータアクセスを制限する
-- MFA登録済みで session assurance level が `aal1` のブラウザセッションは、画面遷移だけでなく tRPC API 側でも protected procedure を拒否する
+- MFA登録済みで session assurance level が `aal1` のブラウザセッションは、画面遷移だけでなく HTTP / RSC の両 tRPC context でも protected procedure を拒否する
 - RLS（Row Level Security）によるDBレベルでの認可を併用する
 
 ## ログイン手段によるアカウント操作の分岐
@@ -59,12 +62,25 @@ gateを有効にした後は、同じユーザーの操作をDB内で直列化�
 
 「すべてのデータを削除」の公開入力は、従来どおり`{ confirmText: 'DELETE' }`を維持する。世代番号を使う新しいDB処理は配置するが、このPRでは画面から使わない。
 
+## Auth REST API rate limit
+
+公開 `/api/auth` route は、signin / signup に 5 回 / 15 分、reset-password に 3 回 / 1 時間の制限を持つ。
+
+- 接続元は Vercel edge が上書きする `X-Real-IP` だけを検証して使い、`X-Forwarded-For` は解析しない。Vercel IP が欠落・不正なら全 request を共有 `ip:unknown` bucket に入れて fail closed にする
+- signin と reset-password は IP bucket を先に確認し、通過後に `trim().toLowerCase()` した email の独立 bucket を確認する。IP と email の結合キーにはしない
+- signup は既存どおり IP bucket だけを使う
+- Redis key は `ip:` / `email:` の purpose prefix を付けて HMAC 化し、raw IP / email を保存・記録しない
+- email bucket は同一アカウントへの攻撃を絞る一方、第三者が signin を 15 分、reset を 1 時間制限できる。IP-first の短絡で遮断済み IP から多数の email bucket を消費する攻撃を抑える
+
+Product の通常 UI は現在この route を使わず Supabase Auth を直接呼ぶため、この制限は公開 route の defense-in-depth であり UI 全体の app-side rate limit ではない。Supabase Auth 自身の project-level rate limit は別の backstop として働く。
+
 ## tRPC API auth policy
 
 `/api/trpc` は middleware/proxy を通らないため、API gate 自体で認証状態を再評価する。
 
-- Session cookie mode: Supabase Auth の `getUser()` でユーザーを検証し、MFA登録済み `aal1 -> aal2` の状態なら `FORBIDDEN` を返す
-- MFA AAL 取得に失敗した session cookie mode は fail closed として `FORBIDDEN` を返す
+- Session cookie mode: HTTP / RSC の両 context が共通 resolver を使い、Supabase Auth の `getUser()` でユーザーを検証してから session token と MFA AAL を独立して取得する。session token 取得に失敗しても MFA lookup は続行する
+- AAL claim がない有効な従来 session は Supabase の契約どおり `aal1` として扱う。API error / throw、未知値、不正な AAL 遷移、または認証済み context で assurance 自体が欠けた場合は fail closed として `FORBIDDEN` を返す
+- MFA登録済み `aal1 -> aal2` の状態は `FORBIDDEN`、MFA未登録 `aal1 -> aal1` と検証済み `aal2 -> aal2` は通過する
 - `user.verifyRecoveryCode` は recovery-code 検証により MFA factor を解除するため、既知の `aal1 -> aal2` 状態でも通過を許可する
 - OAuth bearer mode: token を `oauth_tokens` で検証し、`client_id` と `scopes` を tRPC context に保持する
 - OAuth bearer mode の汎用 tRPC 呼び出しは、procedure path ごとの allowlist と scope が一致した場合だけ許可する

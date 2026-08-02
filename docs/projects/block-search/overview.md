@@ -1,6 +1,6 @@
 ---
-status: active
-last_verified: 2026-07-16
+status: done
+last_verified: 2026-07-30
 code:
   - apps/product/src/components/shell/sidebar
   - apps/product/src/features/calendar

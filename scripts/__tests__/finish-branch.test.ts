@@ -1,5 +1,14 @@
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -53,7 +62,10 @@ function statusContext(context: string, state: string, startedAt: string): Rollu
   };
 }
 
-function runScript(rollup: RollupEntry[]): { status: number | null; stderr: string } {
+function runScript(
+  rollup: RollupEntry[],
+  options: { compare?: string; isDraft?: boolean } = {},
+): { status: number | null; stderr: string } {
   // repo 直下ではなく os の temp に作る。プロセスが afterEach 前に落ちると untracked な
   // ディレクトリが repo に残り、まさにこのスクリプトの dirty ゲートが以後の掃除を止める。
   const temporaryDirectory = mkdtempSync(join(tmpdir(), 'finish-branch-test-'));
@@ -67,7 +79,9 @@ function runScript(rollup: RollupEntry[]): { status: number | null; stderr: stri
     payloadPath,
     JSON.stringify({
       state: 'OPEN',
+      isDraft: options.isDraft ?? false,
       headRefName: BRANCH,
+      headRefOid: '0'.repeat(40),
       mergeable: 'MERGEABLE',
       mergeStateStatus: 'CLEAN',
       statusCheckRollup: rollup,
@@ -91,7 +105,7 @@ case "$1" in
   api)
     # up-to-date gate: compare の .status だけを返す
     case "\${2:-}" in
-      *compare*) echo ahead ;;
+      *compare*) echo "$FINISH_BRANCH_COMPARE" ;;
       *) exit 2 ;;
     esac
     ;;
@@ -118,10 +132,168 @@ esac
       ...process.env,
       PATH: `${binDirectory}:${process.env.PATH ?? ''}`,
       FINISH_BRANCH_PR_JSON: payloadPath,
+      FINISH_BRANCH_COMPARE: options.compare ?? 'ahead',
     },
   });
 
   return { status: result.status, stderr: result.stderr ?? '' };
+}
+
+/**
+ * 実 git 上で step 3-9 を動かす harness（`--dry-run` なし）。
+ *
+ * 上の `runScript` は check ゲートの分岐を見るためのもので、掃除本体は dry-run のまま
+ * 素通りする。#1771 の 3 症状（gh が実行元 worktree を切り替える / `checkout main` が
+ * 別セッションの作業を奪う / `branch -d` が HEAD 基準で偽陰性を出す）は **実 git の
+ * worktree 構成でしか再現しない**ため、bare origin + 複数 worktree を組んで実挙動を固定する。
+ *
+ * PR state は MERGED / CLOSED を返してマージ手順ごと skip させる。ここで見たいのは
+ * マージ判定ではなく掃除側の挙動で、`gh api` が呼ばれたら stub が落ちて気づける。
+ */
+type RepoScenario = {
+  /** MERGED ならマージ済み、CLOSED なら「未マージのまま閉じた」経路、OPEN ならマージから走る */
+  prState: 'OPEN' | 'MERGED' | 'CLOSED';
+  /** OPEN のとき、マージ API を失敗させる */
+  mergeFails?: boolean;
+  /** origin/main に feature を merge --no-ff 済みにするか */
+  mergeIntoMain: boolean;
+  /** MAIN_ROOT の HEAD。'other' は別セッションが作業中の状態を表す */
+  mainRootHead: 'main' | 'other';
+  /** main を MAIN_ROOT 以外の worktree が checkout している状態にする */
+  addMainWorktree?: boolean;
+  /** feature branch の worktree を作る */
+  addFeatureWorktree?: boolean;
+  /** script の実行位置 */
+  runFrom?: 'main-root' | 'feature-worktree';
+};
+
+function runScriptOnRepo(scenario: RepoScenario) {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'finish-branch-repo-')));
+  temporaryDirectories.push(root);
+
+  const originPath = join(root, 'origin.git');
+  const seeder = join(root, 'seeder');
+  const mainRoot = join(root, 'mainroot');
+  const mainWorktree = join(root, 'wt-main');
+  const featureWorktree = join(root, 'wt-feature');
+
+  const git = (cwd: string, ...args: string[]) => {
+    const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
+    if (result.status !== 0) {
+      throw new Error(`git ${args.join(' ')} @ ${cwd}\n${result.stderr}`);
+    }
+    return (result.stdout ?? '').trim();
+  };
+  const gitStatus = (cwd: string, ...args: string[]) =>
+    spawnSync('git', args, { cwd, encoding: 'utf8' }).status;
+
+  git(root, 'init', '--bare', '--initial-branch=main', originPath);
+
+  git(root, 'clone', originPath, seeder);
+  git(seeder, 'config', 'user.email', 'test@example.com');
+  git(seeder, 'config', 'user.name', 'test');
+  writeFileSync(join(seeder, 'seed.txt'), 'seed\n');
+  git(seeder, 'add', 'seed.txt');
+  git(seeder, 'commit', '-m', 'seed');
+  git(seeder, 'push', 'origin', 'main');
+
+  git(seeder, 'checkout', '-b', BRANCH);
+  writeFileSync(join(seeder, 'feature.txt'), 'feature\n');
+  git(seeder, 'add', 'feature.txt');
+  git(seeder, 'commit', '-m', 'feature');
+  git(seeder, 'push', 'origin', BRANCH);
+  git(seeder, 'checkout', 'main');
+
+  // MAIN_ROOT はマージ前に clone する。「リモートはマージ済みだがローカル main は古い」
+  // という実運用の状態を作るため。
+  git(root, 'clone', originPath, mainRoot);
+  git(mainRoot, 'config', 'user.email', 'test@example.com');
+  git(mainRoot, 'config', 'user.name', 'test');
+  // Claude Code が作る worktree branch は upstream 追跡を持たないことが多い。同じ形にする。
+  git(mainRoot, 'fetch', 'origin', `${BRANCH}:${BRANCH}`);
+
+  if (scenario.mainRootHead === 'other') {
+    git(mainRoot, 'checkout', '-b', 'other');
+  }
+  if (scenario.addMainWorktree) {
+    git(mainRoot, 'worktree', 'add', mainWorktree, 'main');
+  }
+  if (scenario.addFeatureWorktree) {
+    git(mainRoot, 'worktree', 'add', featureWorktree, BRANCH);
+  }
+
+  if (scenario.mergeIntoMain) {
+    git(seeder, 'merge', '--no-ff', BRANCH, '-m', `Merge pull request #123 from ${BRANCH}`);
+    git(seeder, 'push', 'origin', 'main');
+  }
+
+  const binDirectory = join(root, 'bin');
+  mkdirSync(binDirectory);
+  const payloadPath = join(root, 'pr.json');
+  writeFileSync(
+    payloadPath,
+    JSON.stringify({
+      state: scenario.prState,
+      isDraft: false,
+      headRefName: BRANCH,
+      headRefOid: git(seeder, 'rev-parse', BRANCH),
+      mergeable: 'MERGEABLE',
+      mergeStateStatus: 'CLEAN',
+      statusCheckRollup:
+        scenario.prState === 'OPEN' ? [checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z')] : [],
+    }),
+  );
+
+  // OPEN 以外ではマージ手順が skip される。gh api が呼ばれたら失敗させて気づけるようにする。
+  const ghStub = join(binDirectory, 'gh');
+  writeFileSync(
+    ghStub,
+    `#!/bin/bash
+set -euo pipefail
+case "$1" in
+  pr) cat "$FINISH_BRANCH_PR_JSON" ;;
+  api)
+    if [[ "\${FINISH_BRANCH_EXPECT_MERGE:-0}" != "1" ]]; then
+      echo "unexpected gh api call: $*" >&2
+      exit 2
+    fi
+    case "$*" in
+      *compare*) echo ahead ;;
+      */merge*) exit "\${FINISH_BRANCH_MERGE_EXIT:-0}" ;;
+      *) exit 0 ;;
+    esac
+    ;;
+  *) echo "unexpected gh call: $*" >&2; exit 2 ;;
+esac
+`,
+  );
+  chmodSync(ghStub, 0o755);
+
+  const result = spawnSync('bash', [scriptPath, '123'], {
+    cwd: scenario.runFrom === 'feature-worktree' ? featureWorktree : mainRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: `${binDirectory}:${process.env.PATH ?? ''}`,
+      FINISH_BRANCH_PR_JSON: payloadPath,
+      FINISH_BRANCH_EXPECT_MERGE: scenario.prState === 'OPEN' ? '1' : '0',
+      FINISH_BRANCH_MERGE_EXIT: scenario.mergeFails ? '1' : '0',
+    },
+  });
+
+  return {
+    status: result.status,
+    stderr: result.stderr ?? '',
+    mainRoot,
+    mainWorktree,
+    featureWorktree,
+    branchExists: () =>
+      gitStatus(mainRoot, 'show-ref', '--verify', '--quiet', `refs/heads/${BRANCH}`) === 0,
+    currentBranch: (cwd: string) => git(cwd, 'branch', '--show-current'),
+    localMainMatchesRemote: () =>
+      git(mainRoot, 'rev-parse', 'main') === git(mainRoot, 'rev-parse', 'origin/main'),
+    remoteBranchExists: () => git(mainRoot, 'ls-remote', '--heads', 'origin', BRANCH) !== '',
+  };
 }
 
 afterEach(() => {
@@ -283,5 +455,149 @@ describe('畳み込みで緩めてはいけない判定', () => {
     ]);
     expect(stderr).toContain('失敗している check');
     expect(status).toBe(1);
+  });
+});
+
+describe('gate は REST 直叩きでも緩まない', () => {
+  it('branch が main の最新を含んでいなければ止める', () => {
+    // up-to-date gate。マージ対象 SHA を compare に pin した後も判定が生きていること。
+    const { status, stderr } = runScript([checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z')], {
+      compare: 'behind',
+    });
+    expect(stderr).toContain('branch が main の最新を含んでいません');
+    expect(status).toBe(1);
+  });
+
+  it('diverged でも止める', () => {
+    const { status } = runScript([checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z')], {
+      compare: 'diverged',
+    });
+    expect(status).toBe(1);
+  });
+
+  it('draft PR は止める', () => {
+    // `gh pr merge` のクライアント側 draft ガードを REST 直叩きで失わないこと。
+    const { status, stderr } = runScript([checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z')], {
+      isDraft: true,
+    });
+    expect(stderr).toContain('draft です');
+    expect(status).toBe(1);
+  });
+});
+
+describe('マージ経路（#1771 症状①）', () => {
+  it('gh pr merge ではなく gh api でマージする', () => {
+    // `gh pr merge --delete-branch` は「削除対象 branch が current」だと実行元 worktree を
+    // main へ切り替える。REST 直叩きならローカル git に触れない。
+    const { status, stderr } = runScript([checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z')]);
+    expect(status).toBe(0);
+    expect(stderr).toContain('gh api -X PUT');
+    expect(stderr).not.toContain('gh pr merge 123');
+  });
+
+  it('head SHA を指定してマージする（gate 通過後の push を弾く）', () => {
+    const { stderr } = runScript([checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z')]);
+    expect(stderr).toContain(`-f sha=${'0'.repeat(40)}`);
+  });
+});
+
+describe('main checkout に触らない掃除（#1771）', () => {
+  it('通常系（MAIN_ROOT が main）は従来どおり branch -d で削除する', () => {
+    const repo = runScriptOnRepo({
+      prState: 'MERGED',
+      mergeIntoMain: true,
+      mainRootHead: 'main',
+    });
+
+    expect(repo.status).toBe(0);
+    expect(repo.branchExists()).toBe(false);
+    expect(repo.localMainMatchesRemote()).toBe(true);
+    // rescue に落ちず -d で成功していること（通常系の挙動を変えていない）
+    expect(repo.stderr).not.toContain('main への到達を確認');
+    // step 8 の backstop がリモート branch を消していること
+    expect(repo.remoteBranchExists()).toBe(false);
+  });
+
+  it('MAIN_ROOT の HEAD が別 branch でも branch を削除でき、HEAD を奪わない', () => {
+    // 症状②③。`branch -d` は HEAD 基準でマージ済みを見るため、main へ完全に
+    // マージ済みでも not fully merged になる。main 基準の判定で救う。
+    const repo = runScriptOnRepo({
+      prState: 'MERGED',
+      mergeIntoMain: true,
+      mainRootHead: 'other',
+    });
+
+    expect(repo.status).toBe(0);
+    expect(repo.branchExists()).toBe(false);
+    expect(repo.stderr).toContain('main への到達を確認');
+    // 別セッションの作業（other）を奪っていないこと
+    expect(repo.currentBranch(repo.mainRoot)).toBe('other');
+    expect(repo.localMainMatchesRemote()).toBe(true);
+  });
+
+  it('main が別 worktree で checkout 中でも失敗せず、その worktree で fast-forward する', () => {
+    // 症状①②。従来は `checkout main` が
+    // 「main is already used by worktree」で落ちるか、別セッションの HEAD を奪っていた。
+    const repo = runScriptOnRepo({
+      prState: 'MERGED',
+      mergeIntoMain: true,
+      mainRootHead: 'other',
+      addMainWorktree: true,
+    });
+
+    expect(repo.status).toBe(0);
+    expect(repo.stderr).toContain('checkout 中です');
+    expect(repo.branchExists()).toBe(false);
+    expect(repo.localMainMatchesRemote()).toBe(true);
+    // main を持つ worktree も MAIN_ROOT も checkout 先が変わっていないこと
+    expect(repo.currentBranch(repo.mainWorktree)).toBe('main');
+    expect(repo.currentBranch(repo.mainRoot)).toBe('other');
+  });
+
+  it('feature worktree の中から実行しても完走する', () => {
+    // 症状①の実環境。自分が立っている worktree を削除しても後続が壊れないこと。
+    const repo = runScriptOnRepo({
+      prState: 'MERGED',
+      mergeIntoMain: true,
+      mainRootHead: 'other',
+      addFeatureWorktree: true,
+      runFrom: 'feature-worktree',
+    });
+
+    expect(repo.status).toBe(0);
+    expect(existsSync(repo.featureWorktree)).toBe(false);
+    expect(repo.branchExists()).toBe(false);
+  });
+});
+
+describe('掃除で緩めてはいけない判定（#1771）', () => {
+  it('マージに失敗したら掃除へ進まない', () => {
+    // REST 直叩きは失敗しても fallback しない。worktree も branch も残ること。
+    const repo = runScriptOnRepo({
+      prState: 'OPEN',
+      mergeFails: true,
+      mergeIntoMain: false,
+      mainRootHead: 'other',
+      addFeatureWorktree: true,
+    });
+
+    expect(repo.status).toBe(1);
+    expect(repo.stderr).toContain('マージに失敗しました');
+    expect(existsSync(repo.featureWorktree)).toBe(true);
+    expect(repo.branchExists()).toBe(true);
+  });
+
+  it('main に到達していない branch は rescue せず停止する', () => {
+    // main 基準の判定を入れたことで「未マージでも -D で消える」方向へ倒れていないこと。
+    // HEAD が別 branch = -d の偽陰性が起きる条件そのもので確認する。
+    const repo = runScriptOnRepo({
+      prState: 'CLOSED',
+      mergeIntoMain: false,
+      mainRootHead: 'other',
+    });
+
+    expect(repo.status).toBe(1);
+    expect(repo.stderr).toContain('main に到達しておらず');
+    expect(repo.branchExists()).toBe(true);
   });
 });

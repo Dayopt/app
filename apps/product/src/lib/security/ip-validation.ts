@@ -1,8 +1,7 @@
 /**
  * IP Address Validation Utilities
  *
- * X-Forwarded-Forヘッダーインジェクション対策
- * OWASP推奨のIP検証を実装
+ * プラットフォーム由来IPの検証を実装
  *
  * @see https://owasp.org/www-community/attacks/Web_Parameter_Tampering
  */
@@ -34,36 +33,16 @@ export function isValidIpAddress(ip: string): boolean {
 }
 
 /**
- * X-Forwarded-Forヘッダーから安全にクライアントIPを抽出
+ * Vercel edgeが上書きするX-Real-IPだけを接続元IPとして採用する。
+ * X-Forwarded-Forはプロキシ構成によって攻撃者入力を含み得るため解析しない。
+ * この信頼境界はVercel単独topologyが前提であり、別CDN追加時は再評価が必要。
  *
- * X-Forwarded-For形式: "client, proxy1, proxy2"
- * - 最初のIPがクライアントIPだが、偽装可能
- * - 各IPを検証し、最初の有効なIPを返す
- * - 無効なIPは除外
- *
- * @param forwardedFor X-Forwarded-Forヘッダー値
- * @param realIp X-Real-IPヘッダー値（フォールバック）
+ * @param realIp Vercel由来のX-Real-IPヘッダー値
  * @returns 検証済みIPアドレス、または 'unknown'
  */
-export function extractClientIp(
-  forwardedFor: string | null | undefined,
-  realIp?: string | null,
-): string {
-  // X-Real-IPを優先（単一IP、プロキシ設定済み）
+export function extractClientIp(realIp?: string | null): string {
   if (realIp && isValidIpAddress(realIp)) {
     return realIp.trim();
-  }
-
-  // X-Forwarded-Forを解析
-  if (forwardedFor) {
-    const ips = forwardedFor.split(',').map((ip) => ip.trim());
-
-    // 最初の有効なIPを返す
-    for (const ip of ips) {
-      if (isValidIpAddress(ip)) {
-        return ip;
-      }
-    }
   }
 
   return 'unknown';

@@ -5,8 +5,13 @@ import { useTranslations } from 'next-intl';
 import { XIcon } from 'lucide-react';
 
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { Dialog, DialogClose, DialogContent, DialogTitle } from '@dayopt/components';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+  VisuallyHidden,
+} from '@dayopt/components';
 
 import { SettingsContent } from './SettingsContent';
 import { SettingsSidebar } from './SettingsSidebar';

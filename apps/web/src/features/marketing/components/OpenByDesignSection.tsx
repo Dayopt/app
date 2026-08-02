@@ -25,7 +25,7 @@ export async function OpenByDesignSection({ locale }: OpenByDesignSectionProps) 
   const t = await getTranslations({ locale, namespace: 'marketing' });
 
   return (
-    <section className="pt-20 pb-24 sm:pt-[140px] sm:pb-32">
+    <section className="pt-20 pb-24 sm:pt-36 sm:pb-32">
       <Container>
         <SectionHeader
           icon={
@@ -53,9 +53,9 @@ export async function OpenByDesignSection({ locale }: OpenByDesignSectionProps) 
           {t('openByDesign.description')}
         </p>
 
-        <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
+        <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
           {openByDesignKeys.map(({ key, icon: Icon }) => (
-            <Card key={key} className="border-border bg-card rounded-2xl border">
+            <Card key={key} className="border-border-subtle bg-card rounded-2xl border shadow-sm">
               <CardHeader>
                 <div className="bg-muted inline-flex size-10 items-center justify-center rounded-lg">
                   <Icon className="text-primary size-5" />

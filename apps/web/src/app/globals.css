@@ -8,11 +8,8 @@
 /* product / web 共通スクロールバー（product を正解として一本化） */
 @import '@dayopt/foundations/scrollbar.css';
 
-/* Utilities */
+/* Utilities（hero の静的装飾とローディング表示を含む） */
 @import '../styles/utilities.css';
-
-/* Hero Animations */
-@import '../styles/hero-animations.css';
 
 /* Tailwind Plugins */
 @plugin '@tailwindcss/typography';
@@ -34,9 +31,8 @@ html.dark {
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Hiragino Sans',
-    'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  /* stack の正本は @dayopt/foundations の tokens/typography.css。product と同一 */
+  font-family: var(--font-stack-sans);
   font-size: 1rem;
   line-height: 1.6;
   margin: 0;
@@ -55,12 +51,19 @@ svg {
   height: auto;
 }
 
-/* Accessibility - focus states */
+/* Accessibility - focus states
+ *
+ * border-radius は指定しない。以前 calc(var(--radius-lg) - 2px) を置いていたが、
+ * これは outline の形ではなく**要素自身の角丸**を上書きするため、キーボード
+ * フォーカスした瞬間に rounded-lg のボタンが 8px → 6px に変形していた
+ * （セレクタ特異度 0,1,1 が Tailwind の .rounded-lg 0,1,0 に勝つ）。
+ * 6px は 4 段のスケールにも無い値だった。outline の角丸はブラウザが要素の
+ * border-radius から自動で導くので、こちらで触る必要がない。
+ */
 a:focus-visible,
 button:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
-  border-radius: calc(var(--radius-lg) - 2px);
 }
 
 /* High contrast mode */
@@ -79,17 +82,8 @@ button:focus-visible {
   }
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+/* Reduced motion の全体規則は @dayopt/foundations の tokens/motion.css にある。
+   product と同じ規則を二重に持たないため、ここには置かない。 */
 
 /* ============================================
  * Syntax Highlighting（highlight.js）

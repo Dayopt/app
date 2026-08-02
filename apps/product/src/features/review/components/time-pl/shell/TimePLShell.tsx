@@ -92,7 +92,7 @@ function AccuracyBadge({ accuracy }: { accuracy: TimePLAccuracy }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
+        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium',
         colors.bg,
         colors.text,
       )}

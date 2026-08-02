@@ -11,8 +11,22 @@ const meta = {
 export default meta;
 type Story = StoryObj;
 
-// z-index定義（tokens/z-index.css @theme と同期）
+// z-index定義（tokens/z-index.css @theme と同期。
+// 同期は scripts/__tests__/z-index-sync.test.ts が機械検証する —
+// 手書き配列が CSS から 2 層ドリフトした前科への再発ロック）
 const zIndexLayers = [
+  {
+    name: 'bottom-tab',
+    value: 40,
+    tailwind: 'z-bottom-tab',
+    description: 'モバイル下部の固定バー（タグチップ列）',
+  },
+  {
+    name: 'bottom-strip',
+    value: 45,
+    tailwind: 'z-bottom-strip',
+    description: '下部バーの上に載る帯',
+  },
   {
     name: 'dropdown',
     value: 50,
@@ -211,6 +225,7 @@ export const UsageGuide: Story = {
               など
             </li>
             <li>
+              {/* lint-tokens-allow: 禁止例の提示 */}
               <strong>任意値は避ける</strong>: <code>z-[200]</code> ではなく <code>z-modal</code>
             </li>
             <li>

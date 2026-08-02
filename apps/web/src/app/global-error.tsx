@@ -21,8 +21,6 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
         <div className="bg-background flex min-h-screen items-center justify-center">
           <Container>
             <div className="mx-auto max-w-md text-center">
-              <div className="text-muted-foreground/20 mb-4 text-9xl font-medium">!</div>
-
               <Heading as="h2" size="xl" className="mb-4">
                 Something went wrong
               </Heading>

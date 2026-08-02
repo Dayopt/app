@@ -1,3 +1,5 @@
+export const maxDuration = 5;
+
 function retiredSystemApiNotFound(): Response {
   return new Response(null, { status: 404 });
 }

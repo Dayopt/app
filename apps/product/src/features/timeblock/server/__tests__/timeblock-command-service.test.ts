@@ -7,6 +7,11 @@ import { TimeblockCommandService } from '../timeblock-command-service';
 import type { PlanRow, RecordRow } from '../timeblock-types';
 import type { ServiceSupabaseClient } from '../types';
 
+const trackProductEvent = vi.hoisted(() => vi.fn());
+const trackProductEvents = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/analytics/product-events', () => ({ trackProductEvent, trackProductEvents }));
+
 const USER_ID = '00000000-0000-4000-8000-0000000000a1';
 const PLAN_ID = '00000000-0000-4000-8000-0000000000b1';
 const RECORD_ID = '00000000-0000-4000-8000-0000000000c1';
@@ -62,6 +67,64 @@ function createCommands() {
 describe('TimeblockCommandService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    trackProductEvent.mockResolvedValue(undefined);
+    trackProductEvents.mockResolvedValue(undefined);
+  });
+
+  it('successful create/record commands emit payload-free events after the command', async () => {
+    const supabase = createMockSupabase();
+    const commands = createCommands();
+    commands.createPlan.mockResolvedValue(plan);
+    commands.recordPlan.mockResolvedValue(record);
+    commands.createRecord.mockResolvedValue(record);
+    commands.confirmDay.mockResolvedValue([record, { ...record, id: `${RECORD_ID}-2` }]);
+    const service = new TimeblockCommandService(
+      supabase as unknown as ServiceSupabaseClient,
+      commands as unknown as TimeblockCommandClient,
+    );
+
+    await service.createPlan({
+      userId: USER_ID,
+      input: {
+        title: 'Plan',
+        start_at: plan.start_at,
+        end_at: plan.end_at,
+      },
+    });
+    await service.recordPlan({
+      userId: USER_ID,
+      id: PLAN_ID,
+      expectedUpdatedAt: plan.updated_at,
+    });
+    await service.createRecord({
+      userId: USER_ID,
+      input: {
+        title: 'Record',
+        start_at: record.start_at,
+        end_at: record.end_at,
+      },
+    });
+    await service.confirmDay({
+      userId: USER_ID,
+      input: { start_at: record.start_at, end_at: record.end_at },
+    });
+
+    expect(trackProductEvent).toHaveBeenNthCalledWith(1, {
+      eventName: 'plan_created',
+      userId: USER_ID,
+    });
+    expect(trackProductEvent).toHaveBeenNthCalledWith(2, {
+      eventName: 'record_created',
+      userId: USER_ID,
+    });
+    expect(trackProductEvent).toHaveBeenNthCalledWith(3, {
+      eventName: 'record_created',
+      userId: USER_ID,
+    });
+    expect(trackProductEvents).toHaveBeenCalledWith([
+      { eventName: 'record_created', userId: USER_ID },
+      { eventName: 'record_created', userId: USER_ID },
+    ]);
   });
 
   it('partial Plan updateをuser内の現在行で補い、raw CAS tokenを保持する', async () => {

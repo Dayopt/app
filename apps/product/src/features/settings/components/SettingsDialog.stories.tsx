@@ -40,6 +40,9 @@ const DIALOG_MOCKS = {
   'profile.get': MOCK_PROFILE,
   'tags.list': { data: [] },
   'statistics.getTagStats': { counts: {} },
+  'externalCalendar.getConnectionAvailability': { available: false },
+  'externalCalendar.listConnections': [],
+  'userSettings.getICalToken': { token: null },
 };
 
 // ─────────────────────────────────────────────────────────
@@ -125,6 +128,16 @@ export const DisplayCategory: Story = {
 export const DataCategory: Story = {
   render: () => {
     useShellStore.setState({ activeSheet: { type: 'settings', category: 'data' } });
+    return <SettingsDialog />;
+  },
+};
+
+/**
+ * 連携設定カテゴリ
+ */
+export const IntegrationsCategory: Story = {
+  render: () => {
+    useShellStore.setState({ activeSheet: { type: 'settings', category: 'integrations' } });
     return <SettingsDialog />;
   },
 };
