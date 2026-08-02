@@ -159,6 +159,7 @@ function legacyContext(): Context {
     } as unknown as Context['res'],
     userId,
     sessionId: 'mcp-stage1-compat-session',
+    mfaAssurance: { currentLevel: 'aal1', nextLevel: 'aal1' },
     supabase: userClient,
     authMode: 'session' as const,
   };
