@@ -16,7 +16,7 @@ const eventMock = vi.hoisted(() => ({
     object: {
       customer: 'cus_test123',
       id: 'sub_test456',
-    },
+    } as Record<string, unknown>,
   },
   id: 'evt_test123',
   livemode: false,
@@ -25,6 +25,7 @@ const eventMock = vi.hoisted(() => ({
 const constructEvent = vi.hoisted(() => vi.fn(() => eventMock));
 const retrieveAccount = vi.hoisted(() => vi.fn());
 const retrieveEvent = vi.hoisted(() => vi.fn());
+const retrieveSubscription = vi.hoisted(() => vi.fn());
 const syncDeletedSubscriptionStatus = vi.hoisted(() => vi.fn());
 const syncSubscriptionStatus = vi.hoisted(() => vi.fn());
 const classifyBillingCustomerEvent = vi.hoisted(() => vi.fn());
@@ -34,6 +35,8 @@ const markStripeWebhookEventProcessed = vi.hoisted(() => vi.fn());
 const releaseStripeWebhookEvent = vi.hoisted(() => vi.fn());
 const rpc = vi.hoisted(() => vi.fn());
 const profileMaybeSingle = vi.hoisted(() => vi.fn());
+const getUserById = vi.hoisted(() => vi.fn());
+const trackProductEvent = vi.hoisted(() => vi.fn());
 const from = vi.hoisted(() =>
   vi.fn(() => ({
     select: vi.fn(() => ({
@@ -50,16 +53,18 @@ vi.mock('@/lib/stripe/client', () => ({
   requireStripe: () => ({
     accounts: { retrieve: retrieveAccount },
     events: { retrieve: retrieveEvent },
+    subscriptions: { retrieve: retrieveSubscription },
     webhooks: { constructEvent },
   }),
 }));
 vi.mock('@/lib/supabase/oauth', () => ({
   createServiceRoleClient: () => ({
-    auth: { admin: { getUserById: vi.fn() } },
+    auth: { admin: { getUserById } },
     from,
     rpc,
   }),
 }));
+vi.mock('@/lib/analytics/product-events', () => ({ trackProductEvent }));
 vi.mock('@/features/settings/server/billing-service', () => ({
   classifyBillingCustomerEvent,
   syncDeletedSubscriptionStatus,
@@ -80,7 +85,7 @@ vi.mock('@/lib/logger', () => ({
 vi.mock('@/lib/sentry', () => ({
   captureUnexpectedDatabaseError: vi.fn(),
   captureUnexpectedError: vi.fn(),
-  observeAuthOperation: vi.fn(),
+  observeAuthOperation: vi.fn((_name: string, operation: () => unknown) => operation()),
 }));
 vi.mock('../stripe-webhook-idempotency', () => ({
   claimStripeWebhookEvent,
@@ -109,10 +114,13 @@ beforeEach(() => {
   };
   retrieveAccount.mockResolvedValue({ id: 'acct_dayopt' });
   retrieveEvent.mockImplementation(async () => ({ ...eventMock }));
+  retrieveSubscription.mockResolvedValue({ status: 'trialing', trial_end: null });
   claimStripeWebhookEvent.mockResolvedValue('claimed');
   markStripeWebhookEventProcessed.mockResolvedValue(undefined);
   releaseStripeWebhookEvent.mockResolvedValue(undefined);
   profileMaybeSingle.mockResolvedValue({ data: null, error: null });
+  getUserById.mockResolvedValue({ data: { user: null }, error: null });
+  trackProductEvent.mockResolvedValue(undefined);
   classifyBillingCustomerEvent.mockResolvedValue('live');
   syncSubscriptionStatus.mockResolvedValue(undefined);
   resolveBillingLifecycleMode.mockResolvedValue('durable');
@@ -122,6 +130,44 @@ beforeEach(() => {
 });
 
 describe('Stripe webhook route', () => {
+  it('subscription checkoutをprocessedにした後で一度だけ記録し、duplicateでは再記録しない', async () => {
+    eventMock.type = 'checkout.session.completed';
+    eventMock.data.object = {
+      customer: 'cus_test123',
+      id: 'cs_test456',
+      mode: 'subscription',
+      subscription: 'sub_test456',
+    };
+    profileMaybeSingle.mockResolvedValueOnce({
+      data: { id: 'user-1', full_name: 'Test User' },
+      error: null,
+    });
+
+    const firstResponse = await POST(request());
+
+    expect(firstResponse.status).toBe(200);
+    expect(syncSubscriptionStatus).toHaveBeenCalledWith(
+      expect.anything(),
+      'cus_test123',
+      'sub_test456',
+      'trialing',
+    );
+    expect(markStripeWebhookEventProcessed).toHaveBeenCalledWith(expect.anything(), 'evt_test123');
+    expect(trackProductEvent).toHaveBeenCalledWith({
+      eventName: 'subscription_started',
+      userId: 'user-1',
+    });
+    expect(markStripeWebhookEventProcessed.mock.invocationCallOrder[0]).toBeLessThan(
+      trackProductEvent.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+    );
+
+    claimStripeWebhookEvent.mockResolvedValueOnce('already_processed');
+    const duplicateResponse = await POST(request());
+
+    expect(duplicateResponse.status).toBe(200);
+    expect(trackProductEvent).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     'account_deleted',
     'account_deleting',

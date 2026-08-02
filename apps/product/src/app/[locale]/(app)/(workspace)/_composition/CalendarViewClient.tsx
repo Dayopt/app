@@ -21,7 +21,7 @@ import {
   isCalendarDiffView,
   useCalendarNavigation,
 } from '@/features/calendar';
-import { CalendarReviewPanel, ReviewDiffPanel } from '@/features/review';
+import { CalendarReviewPanel, ReviewDiffPanel, useReviewOpenedTracking } from '@/features/review';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button, HoverTooltip } from '@dayopt/components';
 import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
@@ -109,6 +109,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   );
   const isReviewPanelActive = panelKind === 'review' || panelKind === 'analytics';
   const isDiffPanelActive = panelKind === 'diff';
+  useReviewOpenedTracking(isReviewPanelActive);
   const reviewDisplayRange = useMemo(
     () => ({
       ...composition.viewDateRange,

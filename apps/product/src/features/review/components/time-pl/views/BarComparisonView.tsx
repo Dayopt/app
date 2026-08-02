@@ -2,10 +2,10 @@
 
 import { useTranslations } from 'next-intl';
 
-import { TagIcon } from '@/features/tags';
 import { formatDurationMinutes } from '@/lib/date';
 import { cn } from '@dayopt/components';
 
+import { TimePLTagMarker } from '../TimePLTagMarker';
 import { formatVariance, getVarianceColor } from '../data/timePL.presentation';
 
 import type { BarComparisonRow } from '@/features/review/domain/timePL/types';
@@ -22,7 +22,7 @@ export function BarComparisonView({ rows }: BarComparisonViewProps) {
   return (
     <div className="flex flex-col gap-4">
       {rows.map((row) => (
-        <ComparisonRow key={row.tagId} row={row} maxMinutes={maxMinutes} />
+        <ComparisonRow key={row.tagId ?? 'uncategorized'} row={row} maxMinutes={maxMinutes} />
       ))}
       <div className="mt-2 flex justify-center gap-4">
         <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
@@ -43,13 +43,18 @@ function ComparisonRow({ row, maxMinutes }: { row: BarComparisonRow; maxMinutes:
   const budgetPct = (row.budgetMinutes / maxMinutes) * 100;
   const actualPct = (row.actualMinutes / maxMinutes) * 100;
   const varianceColor = getVarianceColor(row.variancePercent);
+  const tagName = row.isUncategorized ? t('uncategorized') : row.tagName;
 
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
         <span className="inline-flex items-center gap-1 text-sm">
-          <TagIcon icon={row.tagIcon ?? null} color={row.tagColor} size="sm" />
-          <span className="text-foreground truncate">{row.tagName}</span>
+          <TimePLTagMarker
+            isUncategorized={row.isUncategorized}
+            tagIcon={row.tagIcon}
+            tagColor={row.tagColor}
+          />
+          <span className="text-foreground truncate">{tagName}</span>
         </span>
         <span className={cn('text-xs tabular-nums', varianceColor)}>
           {row.variancePercent !== null ? formatVariance(row.varianceMinutes) : t('unplanned')}

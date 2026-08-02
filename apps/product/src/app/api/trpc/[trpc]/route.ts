@@ -11,8 +11,11 @@
  * @see https://trpc.io/docs/server/adapters/fetch
  */
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
+import { after } from 'next/server';
 
+import { countSuccessfulCheckoutStarts } from '@/app/api/trpc/_server/_composition/checkout-product-events';
 import { appRouter } from '@/app/api/trpc/_server/app-router';
+import { trackProductEvents } from '@/lib/analytics/product-events';
 import { logger } from '@/lib/logger';
 import { createFetchTRPCContext } from '@/lib/trpc/context';
 import { captureUnexpectedTrpcAdapterError } from '@/lib/trpc/errors';
@@ -35,8 +38,25 @@ function handler(req: Request) {
         code: error.code,
       });
     },
-    responseMeta: ({ ctx }) => {
+    responseMeta: ({ ctx, data, eagerGeneration, paths }) => {
       const isAuthenticated = !!ctx?.userId;
+      const checkoutStartedCount = countSuccessfulCheckoutStarts({
+        data,
+        eagerGeneration,
+        paths,
+      });
+
+      if (ctx?.userId && checkoutStartedCount > 0) {
+        const userId = ctx.userId;
+        after(() =>
+          trackProductEvents(
+            Array.from({ length: checkoutStartedCount }, () => ({
+              eventName: 'checkout_started' as const,
+              userId,
+            })),
+          ),
+        );
+      }
 
       return {
         headers: {

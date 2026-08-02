@@ -13,4 +13,9 @@
 export { ReviewDiffPanel } from './components/diff/ReviewDiffPanel';
 export { CalendarReviewPanel } from './components/panel/CalendarReviewPanel';
 
+// =============================================================================
+// Hooks
+// =============================================================================
+export { useReviewOpenedTracking } from './hooks/useReviewOpenedTracking';
+
 // ここにないものはfeature内部専用

@@ -342,6 +342,7 @@
         "planAccuracy": "計画達成率",
         "planAccuracyDesc": "予定と実績の一致度",
         "unplanned": "予定外",
+        "uncategorized": "未分類",
         "recordedDays": "記録した日数",
         "recordedDaysDesc": "記録が1件以上ある日",
         "daysValue": "{count}日",

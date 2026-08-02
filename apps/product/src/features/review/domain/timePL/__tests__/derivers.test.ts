@@ -48,6 +48,7 @@ describe('deriveAccuracy', () => {
           budgetMinutes: 0,
           actualMinutes: 0,
           isPlanned: true,
+          isUncategorized: false,
         },
       ],
     });

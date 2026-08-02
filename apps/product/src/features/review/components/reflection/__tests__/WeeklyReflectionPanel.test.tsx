@@ -18,6 +18,7 @@ const timePLRows: BarComparisonRow[] = [
     actualMinutes: 150,
     varianceMinutes: 30,
     variancePercent: 25,
+    isUncategorized: false,
   },
 ];
 
@@ -92,5 +93,39 @@ describe('WeeklyReflectionPanel', () => {
     await user.click(screen.getByRole('button', { name: /Deep Work/ }));
 
     expect(onTagClick).toHaveBeenCalledWith('tag-1');
+  });
+
+  it('未分類を neutral marker で表示し、実体タグの選択操作にはしない', () => {
+    const onTagClick = vi.fn();
+    const uncategorizedRow: BarComparisonRow = {
+      tagId: null,
+      tagName: null,
+      tagColor: null,
+      tagIcon: null,
+      budgetMinutes: 60,
+      actualMinutes: 45,
+      varianceMinutes: 15,
+      variancePercent: 25,
+      isUncategorized: true,
+    };
+
+    const { container } = render(
+      <WeeklyReflectionPanel
+        trackedMinutes={45}
+        planAccuracyRate={0.75}
+        plannedMinutes={60}
+        diffMinutes={15}
+        timePLRows={[uncategorizedRow]}
+        onTagClick={onTagClick}
+      />,
+    );
+
+    expect(screen.getByText('uncategorized')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="uncategorized-tag-marker"]')).toHaveClass(
+      'bg-muted',
+      'text-muted-foreground',
+    );
+    expect(screen.queryByRole('button', { name: /uncategorized/ })).not.toBeInTheDocument();
+    expect(onTagClick).not.toHaveBeenCalled();
   });
 });

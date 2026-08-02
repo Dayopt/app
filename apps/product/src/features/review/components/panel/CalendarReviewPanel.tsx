@@ -68,7 +68,8 @@ export function CalendarReviewPanel({
   const accuracy = useMemo(() => (timePLData ? deriveAccuracy(timePLData) : null), [timePLData]);
   const barRows = useMemo(() => (timePLData ? deriveBarComparison(timePLData) : []), [timePLData]);
   const selectedRow = useMemo(
-    () => barRows.find((row) => row.tagId === selectedTagId) ?? null,
+    () =>
+      selectedTagId == null ? null : (barRows.find((row) => row.tagId === selectedTagId) ?? null),
     [barRows, selectedTagId],
   );
 

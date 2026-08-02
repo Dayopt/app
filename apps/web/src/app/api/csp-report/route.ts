@@ -11,6 +11,8 @@ import {
   hashRateLimitIdentifier,
 } from '@web/platform/security/rate-limit';
 
+export const maxDuration = 30;
+
 const MAX_REPORT_BYTES = 16 * 1024;
 const MAX_URI_LENGTH = 4096;
 const MAX_POLICY_LENGTH = 12_000;

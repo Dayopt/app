@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 42 件 / RLS 対象テーブル 19 件 / GRANT 214 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 43 件 / RLS 対象テーブル 20 件 / GRANT 215 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -24,6 +24,7 @@
 | oauth_connections             | ✅          | —      |
 | oauth_tokens                  | ✅          | —      |
 | plans                         | ✅          | —      |
+| product_events                | ✅          | —      |
 | profiles                      | ✅          | —      |
 | records                       | ✅          | —      |
 | reports                       | ✅          | —      |
@@ -102,6 +103,12 @@
 | Users can insert own plans            | INSERT | PERMISSIVE | {authenticated} | —                                                                                                                                                     | (( SELECT auth.uid() AS uid) = user_id) |
 | Users can view own plans              | SELECT | PERMISSIVE | {authenticated} | ((( SELECT auth.uid() AS uid) = user_id) AND ((deleted_at IS NULL) OR (current_setting('dayopt.soft_delete_user_id'::text, true) = (user_id)::text))) | —                                       |
 | Users can update own plans            | UPDATE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id)                                                                                                               | (( SELECT auth.uid() AS uid) = user_id) |
+
+### product_events
+
+| policy                             | cmd | permissive  | roles                | USING | WITH CHECK |
+| ---------------------------------- | --- | ----------- | -------------------- | ----- | ---------- |
+| product_events_deny_browser_access | ALL | RESTRICTIVE | {anon,authenticated} | false | false      |
 
 ### profiles
 
@@ -356,6 +363,7 @@
 | table       | public.oauth_tokens                                                                                                                                                                                                                                                                                                                                                                                                                              | service_role        | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.plans                                                                                                                                                                                                                                                                                                                                                                                                                                     | authenticated       | DELETE, INSERT, SELECT, UPDATE |
 | table       | public.plans                                                                                                                                                                                                                                                                                                                                                                                                                                     | service_role        | DELETE, INSERT, SELECT, UPDATE |
+| table       | public.product_events                                                                                                                                                                                                                                                                                                                                                                                                                            | service_role        | INSERT                         |
 | table       | public.profiles                                                                                                                                                                                                                                                                                                                                                                                                                                  | anon                | SELECT                         |
 | table       | public.profiles                                                                                                                                                                                                                                                                                                                                                                                                                                  | authenticated       | SELECT                         |
 | table       | public.profiles                                                                                                                                                                                                                                                                                                                                                                                                                                  | service_role        | DELETE, INSERT, SELECT, UPDATE |

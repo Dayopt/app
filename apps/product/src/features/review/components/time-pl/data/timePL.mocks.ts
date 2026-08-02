@@ -24,6 +24,7 @@ export const MOCK_WEEK_GOOD: TimePLInput = {
       budgetMinutes: 960,
       actualMinutes: 1020,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '2',
@@ -33,6 +34,7 @@ export const MOCK_WEEK_GOOD: TimePLInput = {
       budgetMinutes: 480,
       actualMinutes: 420,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '3',
@@ -42,6 +44,7 @@ export const MOCK_WEEK_GOOD: TimePLInput = {
       budgetMinutes: 240,
       actualMinutes: 180,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '4',
@@ -51,6 +54,7 @@ export const MOCK_WEEK_GOOD: TimePLInput = {
       budgetMinutes: 360,
       actualMinutes: 300,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '5',
@@ -60,6 +64,7 @@ export const MOCK_WEEK_GOOD: TimePLInput = {
       budgetMinutes: 360,
       actualMinutes: 300,
       isPlanned: true,
+      isUncategorized: false,
     },
   ],
   prevTags: [
@@ -70,6 +75,7 @@ export const MOCK_WEEK_GOOD: TimePLInput = {
       budgetMinutes: 900,
       actualMinutes: 780,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '2',
@@ -78,6 +84,7 @@ export const MOCK_WEEK_GOOD: TimePLInput = {
       budgetMinutes: 480,
       actualMinutes: 540,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '3',
@@ -86,6 +93,7 @@ export const MOCK_WEEK_GOOD: TimePLInput = {
       budgetMinutes: 240,
       actualMinutes: 120,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '4',
@@ -94,6 +102,7 @@ export const MOCK_WEEK_GOOD: TimePLInput = {
       budgetMinutes: 360,
       actualMinutes: 420,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '5',
@@ -102,6 +111,7 @@ export const MOCK_WEEK_GOOD: TimePLInput = {
       budgetMinutes: 360,
       actualMinutes: 300,
       isPlanned: true,
+      isUncategorized: false,
     },
   ],
 };
@@ -124,6 +134,7 @@ export const MOCK_DAY_EXCELLENT: TimePLInput = {
       budgetMinutes: 240,
       actualMinutes: 235,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '2',
@@ -133,6 +144,7 @@ export const MOCK_DAY_EXCELLENT: TimePLInput = {
       budgetMinutes: 120,
       actualMinutes: 115,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '3',
@@ -142,6 +154,7 @@ export const MOCK_DAY_EXCELLENT: TimePLInput = {
       budgetMinutes: 120,
       actualMinutes: 120,
       isPlanned: true,
+      isUncategorized: false,
     },
   ],
 };
@@ -164,6 +177,7 @@ export const MOCK_WITH_UNPLANNED: TimePLInput = {
       budgetMinutes: 960,
       actualMinutes: 900,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '2',
@@ -173,6 +187,7 @@ export const MOCK_WITH_UNPLANNED: TimePLInput = {
       budgetMinutes: 480,
       actualMinutes: 540,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '3',
@@ -182,6 +197,7 @@ export const MOCK_WITH_UNPLANNED: TimePLInput = {
       budgetMinutes: 480,
       actualMinutes: 360,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '4',
@@ -191,6 +207,7 @@ export const MOCK_WITH_UNPLANNED: TimePLInput = {
       budgetMinutes: 480,
       actualMinutes: 300,
       isPlanned: true,
+      isUncategorized: false,
     },
     {
       tagId: '6',
@@ -200,6 +217,7 @@ export const MOCK_WITH_UNPLANNED: TimePLInput = {
       budgetMinutes: 0,
       actualMinutes: 360,
       isPlanned: false,
+      isUncategorized: false,
     },
     {
       tagId: '7',
@@ -209,6 +227,7 @@ export const MOCK_WITH_UNPLANNED: TimePLInput = {
       budgetMinutes: 0,
       actualMinutes: 180,
       isPlanned: false,
+      isUncategorized: false,
     },
   ],
 };
@@ -231,6 +250,7 @@ export const MOCK_MINIMAL: TimePLInput = {
       budgetMinutes: 120,
       actualMinutes: 110,
       isPlanned: true,
+      isUncategorized: false,
     },
   ],
 };

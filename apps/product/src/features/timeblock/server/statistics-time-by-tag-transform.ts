@@ -11,18 +11,20 @@
 
 /** RPC `get_time_by_tag` が返す snake_case 行 */
 interface TimeByTagRpcRow {
-  tag_id: string;
-  tag_name: string;
-  tag_color: string;
+  tag_id: string | null;
+  tag_name: string | null;
+  tag_color: string | null;
   hours: number;
+  is_uncategorized: boolean;
 }
 
 /** tRPC response item (tag_ 接頭辞除去 + camelCase) */
 interface TimeByTagItem {
-  tagId: string;
-  name: string;
-  color: string;
+  tagId: string | null;
+  name: string | null;
+  color: string | null;
   hours: number;
+  isUncategorized: boolean;
 }
 
 /**
@@ -41,5 +43,6 @@ export function transformTimeByTagResponse(data: unknown): TimeByTagItem[] {
     name: row.tag_name,
     color: row.tag_color,
     hours: row.hours,
+    isUncategorized: row.is_uncategorized,
   }));
 }
