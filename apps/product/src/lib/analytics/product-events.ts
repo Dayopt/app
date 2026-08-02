@@ -13,9 +13,9 @@ export const PRODUCT_EVENT_NAMES = [
   'subscription_started',
 ] as const;
 
-export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];
+type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];
 
-export interface ProductEventInput {
+interface ProductEventInput {
   eventName: ProductEventName;
   userId: string;
 }
