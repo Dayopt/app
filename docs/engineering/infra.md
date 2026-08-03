@@ -614,8 +614,7 @@ src/app/
     │   ├── layout.tsx          ← IntlProvider (auth namespace) + AuthClientLayout
     │   ├── loading.tsx
     │   └── auth/{login,signup,password,reset-password,mfa-verify}/page.tsx
-    ├── playground/             ← dev playground（locale 直下）
-    └── test-email/             ← email template preview
+    └── playground/             ← dev playground（locale 直下）
 ```
 
 ### (app) Group: 認証必須ページ
@@ -717,7 +716,6 @@ locale ルーティングの境界。HTML lang / dir、metadata、redirect を�
 | `[locale]/page.tsx`                        | page (server)   | `/{locale}` → `/{locale}/week` redirect。`force-dynamic`                                      |
 | `[locale]/error.tsx`                       | error boundary  | locale 全体のエラー（IntlProvider 未マウントケース含む）                                      |
 | `[locale]/playground/dnd-multi-container/` | dev             | dnd-kit Multiple Containers の検証用                                                          |
-| `[locale]/test-email/`                     | dev             | email template の preview ページ                                                              |
 
 ### ルート直下（src/app/）
 
