@@ -6,7 +6,13 @@ import {
   exchangeAuthorizationCode,
   refreshAccessToken,
   resolveClient,
+  resolveRequestedResource,
 } from '@/lib/oauth-server';
+import { rejectUnexpectedOAuthHost } from '@/lib/oauth-server/request-host';
+import {
+  checkOAuthTokenRateLimit,
+  type OAuthTokenRateLimitState,
+} from '@/lib/oauth-server/token-rate-limit';
 import { captureUnexpectedError } from '@/lib/sentry';
 
 /**
@@ -19,11 +25,18 @@ import { captureUnexpectedError } from '@/lib/sentry';
  *   - refresh_token (rotation あり、旧 refresh は revoke)
  *
  * 認証は不要 (public client only — token endpoint auth method = "none")。
- * Vercel rewrite で product host の `/oauth/token` から到達する。
+ * canonical public path は filesystem route の `/oauth/token`（`app/oauth/token/route.ts`
+ * が本 handler を re-export）。この `/api/oauth/token` は互換のため残す。
  */
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const hostRejection = rejectUnexpectedOAuthHost(request);
+  if (hostRejection) return hostRejection;
+
+  const rateLimitState = await checkOAuthTokenRateLimit(request);
+  if (rateLimitState !== 'allowed') return rateLimitErrorResponse(rateLimitState);
+
   try {
     const form = await readFormBody(request);
     const get = (key: string): string | undefined => form.get(key) ?? undefined;
@@ -34,6 +47,7 @@ export async function POST(request: NextRequest) {
       const clientId = required(get('client_id'), 'client_id');
       const redirectUri = required(get('redirect_uri'), 'redirect_uri');
       const codeVerifier = required(get('code_verifier'), 'code_verifier');
+      const resource = requiredResource(get('resource'));
 
       const client = resolveClient(clientId);
       if (!client) {
@@ -45,6 +59,7 @@ export async function POST(request: NextRequest) {
         client_id: client.id,
         redirect_uri: redirectUri,
         code_verifier: codeVerifier,
+        resource_uri: resource,
       });
       return tokenResponse(tokens);
     }
@@ -52,6 +67,7 @@ export async function POST(request: NextRequest) {
     if (grantType === 'refresh_token') {
       const refreshToken = required(get('refresh_token'), 'refresh_token');
       const clientId = required(get('client_id'), 'client_id');
+      const resource = requiredResource(get('resource'));
 
       const client = resolveClient(clientId);
       if (!client) {
@@ -61,6 +77,7 @@ export async function POST(request: NextRequest) {
       const tokens = await refreshAccessToken({
         refresh_token: refreshToken,
         client_id: client.id,
+        resource_uri: resource,
       });
       return tokenResponse(tokens);
     }
@@ -116,6 +133,15 @@ function required(value: string | undefined, name: string): string {
   return value;
 }
 
+function requiredResource(value: string | undefined) {
+  const raw = required(value, 'resource');
+  const resource = resolveRequestedResource(raw);
+  if (!resource) {
+    throw new OAuthServerError('invalid_target', 'The requested resource is not supported');
+  }
+  return resource;
+}
+
 function tokenResponse(body: unknown) {
   return NextResponse.json(body, {
     status: 200,
@@ -137,6 +163,24 @@ function errorResponse(err: OAuthServerError) {
       headers: {
         'cache-control': 'no-store',
         pragma: 'no-cache',
+      },
+    },
+  );
+}
+
+function rateLimitErrorResponse(state: Exclude<OAuthTokenRateLimitState, 'allowed'>): NextResponse {
+  const unavailable = state === 'unavailable';
+  return NextResponse.json(
+    {
+      error: unavailable ? 'server_error' : 'temporarily_unavailable',
+      error_description: unavailable ? 'OAuth server error' : 'Too many requests',
+    },
+    {
+      status: unavailable ? 503 : 429,
+      headers: {
+        'cache-control': 'no-store',
+        pragma: 'no-cache',
+        'retry-after': unavailable ? '5' : '60',
       },
     },
   );

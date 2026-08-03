@@ -4,10 +4,14 @@ import { redirect } from 'next/navigation';
 
 import { logger } from '@/lib/logger';
 import {
+  assertTokenIssuanceDatabaseIdentity,
   createOAuthDbClient,
   generateAuthorizationCode,
+  hasWriteScope,
+  isRuntimeClientWriteEnabled,
   validateAuthorizeInput,
 } from '@/lib/oauth-server';
+import { assertOAuthAuthorizationRequestHost } from '@/lib/oauth-server/authorization-request-host';
 import { captureUnexpectedDatabaseError, observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
@@ -20,6 +24,8 @@ import { createClient } from '@/lib/supabase/server';
  * Defense in depth: hidden field の改ざんに備え、validateAuthorizeInput を再実行する。
  */
 export async function processConsent(formData: FormData) {
+  await assertOAuthAuthorizationRequestHost();
+
   const get = (key: string): string | undefined => {
     const v = formData.get(key);
     return typeof v === 'string' ? v : undefined;
@@ -33,6 +39,7 @@ export async function processConsent(formData: FormData) {
     code_challenge_method: 'S256',
     scope: get('scope'),
     state: get('state'),
+    resource: get('resource'),
   });
 
   if (!validation.ok) {
@@ -61,16 +68,31 @@ export async function processConsent(formData: FormData) {
     redirect(redirectUrl.toString());
   }
 
-  const { code, hash } = generateAuthorizationCode();
   const dbClient = createOAuthDbClient();
-  const { error: insertError } = await dbClient.from('oauth_authorization_codes').insert({
-    code_hash: hash,
-    user_id: user.id,
-    client_id: validation.client.id,
-    redirect_uri: validation.redirectUri,
-    code_challenge: validation.codeChallenge,
-    code_challenge_method: 'S256',
-    scopes: validation.scopes,
+
+  // Preview branch 再作成などで DB identity が deploy とずれている場合、
+  // grant を書き込んでも token endpoint 側の同じ検証で必ず拒否される。
+  // 不一致 DB への service-role 書き込み自体を grant RPC の前で止める。
+  // Sentry capture は assertTokenIssuanceDatabaseIdentity 内で済んでいる。
+  try {
+    await assertTokenIssuanceDatabaseIdentity(dbClient);
+  } catch {
+    logger.error('[oauth] consent grant blocked by database identity mismatch');
+    redirectUrl.searchParams.set('error', 'server_error');
+    redirect(redirectUrl.toString());
+  }
+
+  const { code, hash } = generateAuthorizationCode();
+  const { error: insertError } = await dbClient.rpc('create_oauth_authorization_grant_v2', {
+    p_code_hash: hash,
+    p_user_id: user.id,
+    p_client_id: validation.client.id,
+    p_resource_uri: validation.resourceUri,
+    p_redirect_uri: validation.redirectUri,
+    p_code_challenge: validation.codeChallenge,
+    p_scopes: validation.scopes,
+    p_write_enabled:
+      hasWriteScope(validation.scopes) && isRuntimeClientWriteEnabled(validation.client.id),
   });
 
   if (insertError) {

@@ -9,6 +9,8 @@ import 'server-only';
 
 import { z } from 'zod';
 
+import { isValidOAuthRedirectUriList } from '@/lib/oauth-server/redirect-uris';
+
 function isDayoptEmailAddress(value: string): boolean {
   const normalized = value.trim().toLowerCase();
   const domain = normalized.slice(normalized.lastIndexOf('@') + 1);
@@ -59,15 +61,36 @@ const serverSchema = z
 
     // Auth
     RECOVERY_CODE_PEPPER: z.string().optional(),
-    OAUTH_CLAUDE_REDIRECT_URIS: z.string().optional().refine(isRedirectUriList, {
-      message: 'OAUTH_CLAUDE_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
-    }),
-    OAUTH_CHATGPT_REDIRECT_URIS: z.string().optional().refine(isRedirectUriList, {
-      message: 'OAUTH_CHATGPT_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
-    }),
-    OAUTH_CURSOR_REDIRECT_URIS: z.string().optional().refine(isRedirectUriList, {
-      message: 'OAUTH_CURSOR_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
-    }),
+    OAUTH_CLAUDE_REDIRECT_URIS: z
+      .string()
+      .optional()
+      .refine((value) => isValidOAuthRedirectUriList('claude-ai', value), {
+        message: 'OAUTH_CLAUDE_REDIRECT_URIS はClaude所有の登録済みcallbackだけを指定してください',
+      }),
+    OAUTH_CHATGPT_REDIRECT_URIS: z
+      .string()
+      .optional()
+      .refine((value) => isValidOAuthRedirectUriList('chatgpt', value), {
+        message:
+          'OAUTH_CHATGPT_REDIRECT_URIS はChatGPT所有の登録済みcallbackだけを指定してください',
+      }),
+    OAUTH_CURSOR_REDIRECT_URIS: z
+      .string()
+      .optional()
+      .refine((value) => isValidOAuthRedirectUriList('cursor', value), {
+        message: 'OAUTH_CURSOR_REDIRECT_URIS はCursor所有の登録済みcallbackだけを指定してください',
+      }),
+    // MCP / OAuth の deployment identity。env.ts は宣言だけを持ち、値の整合は
+    // `lib/oauth-server/identity-env.ts` が呼ばれた時点で検証する。ここで
+    // superRefine すると build phase / CI で skip される Proxy を通り抜け、
+    // production cold start で MCP と無関係な全ページが 500 になる。
+    MCP_OAUTH_ENVIRONMENT: z.enum(['production', 'preview']).optional(),
+    MCP_OAUTH_PREVIEW_BRANCH: z.string().min(1).optional(),
+    MCP_OAUTH_PREVIEW_UPSTASH_HOST: z.string().min(1).optional(),
+    OAUTH_AUTHORIZATION_SERVER_URI: z.string().url().optional(),
+    MCP_CANONICAL_RESOURCE_URI: z.string().url().optional(),
+    /** MCP write の runtime allowlist。未設定 = 全 client の write を拒否する。 */
+    MCP_WRITE_ENABLED_CLIENTS: z.string().optional(),
 
     // Google
     GOOGLE_SITE_VERIFICATION: z.string().optional(),
@@ -123,6 +146,9 @@ const serverSchema = z
     BILLING_ENFORCED: z.enum(['true', 'false']).optional(),
     VERCEL_URL: z.string().optional(),
     VERCEL_ENV: z.string().optional(),
+    VERCEL_TARGET_ENV: z.string().optional(),
+    VERCEL_BRANCH_URL: z.string().optional(),
+    VERCEL_GIT_COMMIT_REF: z.string().optional(),
     SKIP_AUTH_IN_DEV: z.string().optional(),
   })
   .refine((data) => !(data.NODE_ENV === 'production' && data.SKIP_AUTH_IN_DEV === 'true'), {
@@ -150,16 +176,16 @@ const serverSchema = z
   .refine(
     (data) =>
       // Vercel preview deployment は NODE_ENV=production だが VERCEL_ENV=preview。
-      // preview は手動アクセスのみで rate limit 不要なので、VERCEL_ENV='production'
-      // (= production deployment) のときだけ Upstash を必須にする。
+      // generic Preview は手動アクセスのみだが、MCP OAuth を明示的に有効にする Preview は
+      // 外部 client から到達するため distributed rate limit を必須にする。
       !(
         data.NODE_ENV === 'production' &&
-        process.env.VERCEL_ENV === 'production' &&
+        (process.env.VERCEL_ENV === 'production' || data.MCP_OAUTH_ENVIRONMENT === 'preview') &&
         (!data.UPSTASH_REDIS_REST_URL || !data.UPSTASH_REDIS_REST_TOKEN)
       ),
     {
       message:
-        'UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN は本番環境では必須です（インメモリfallbackはmulti-replicaで歯抜けになる）',
+        'UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN はoperational環境では必須です（インメモリfallbackはmulti-replicaで歯抜けになる）',
       path: ['UPSTASH_REDIS_REST_URL'],
     },
   )
