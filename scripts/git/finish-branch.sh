@@ -195,12 +195,64 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     exit 1
   fi
 
-  # 失敗している check がないか確認する（CheckRun は .conclusion、StatusContext は .state を持つ）
-  FAILED_CHECKS="$(printf '%s' "$ROLLUP" | jq -r '
-    map(select(
-        ((.conclusion // "") | ascii_downcase | . == "failure" or . == "cancelled" or . == "timed_out")
-        or ((.state // "") | ascii_downcase | . == "failure" or . == "error")
-      ))
+  # 失敗している check がないか確認する（CheckRun は .conclusion、StatusContext は .state を持つ）。
+  #
+  # ── 唯一の免除: trusted dispatch で解除済みの audit guard ──────────
+  #
+  # production-config-audit.yml は audit contract 保護対象（audit script /
+  # production-build-gate / workflow 自身）を変更する PR で、pull_request_target の
+  # check run「Audit Vercel metadata (trusted)」を**設計として必ず failure にする**
+  # （PR code に contract 変更を自己検証させないため）。解除経路は
+  # `gh workflow run production-config-audit.yml --ref <branch>` の trusted dispatch で、
+  # 成功すると commit status「Production Config Audit」が head SHA へ success で
+  # 発行される。しかし workflow_dispatch run の check run は PR の rollup に
+  # 紐づかないため、rollup には pull_request_target 側の failure だけが残り続け、
+  # 畳み込みでは解消できない（別 run が rollup に存在しないので代表になれない）。
+  #
+  # そこで status「Production Config Audit」が success の時に限り、この 1 check の
+  # failure を数えから除外する。fail-closed の根拠:
+  #   (a) audit が本当に落ちた PR では status も failure になる → 免除は発動しない
+  #   (b) contract 変更 PR で dispatch 未実行なら status は
+  #       「trusted head audit is required」の failure のまま → 発動しない
+  #   (c) status は SHA ごとに発行されるため、新しい push では guard の failure だけが
+  #       付き直り、免除は自動的にリセットされる（push ごとに dispatch が要る）
+  # 照合は 型 + workflow 名 + check 名 / context の**完全一致のみ**。
+  # 他の check の failure はこの免除では消えない。
+  #
+  # 免除対象は guard の `conclusion: failure` **だけ**に絞る。設計上の意図的 failure は
+  # enforce step の exit 1 が作る failure のみで、cancelled / timed_out は「監査が
+  # 完走していない」状態にすぎない。これらまで免除すると、古い run の success status が
+  # 残ったまま再発火 run が publish 前に cancel された時に、監査されていない commit が
+  # 素通りする（fail-open）。cancelled / timed_out は従来どおり停止し、再実行を強制する。
+  JQ_GATE_DEFS='
+    def is_failed:
+      ((.conclusion // "") | ascii_downcase | . == "failure" or . == "cancelled" or . == "timed_out")
+      or ((.state // "") | ascii_downcase | . == "failure" or . == "error");
+    def trusted_audit_cleared:
+      any(.[];
+        (.__typename // "") == "StatusContext"
+        and (.context // "") == "Production Config Audit"
+        and ((.state // "") | ascii_downcase) == "success");
+    def is_trusted_audit_guard_failure:
+      (.__typename // "") == "CheckRun"
+      and (.workflowName // "") == "Production Config Audit"
+      and (.name // "") == "Audit Vercel metadata (trusted)"
+      and ((.conclusion // "") | ascii_downcase) == "failure";
+  '
+
+  TRUSTED_AUDIT_EXEMPTED="$(printf '%s' "$ROLLUP" | jq -r "$JQ_GATE_DEFS"'
+    if trusted_audit_cleared
+    then map(select(is_trusted_audit_guard_failure)) | length
+    else 0 end')"
+
+  if [[ "$TRUSTED_AUDIT_EXEMPTED" != "0" ]]; then
+    info "check「Audit Vercel metadata (trusted)」の failure は trusted dispatch により解除済みです（status「Production Config Audit」= success）。失敗数から除外します。"
+  fi
+
+  FAILED_CHECKS="$(printf '%s' "$ROLLUP" | jq -r "$JQ_GATE_DEFS"'
+    (if trusted_audit_cleared
+     then map(select(is_failed and (is_trusted_audit_guard_failure | not)))
+     else map(select(is_failed)) end)
     | length')"
 
   if [[ "$FAILED_CHECKS" != "0" ]]; then
