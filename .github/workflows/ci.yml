@@ -38,6 +38,15 @@ permissions:
 # private repo の Actions 課金は job ごとに 1 分単位で切り上げられるため、
 # job 数を絞り checkout + setup の重複を減らす構成にしている。
 # 実行コマンドは旧 11 job 構成と同一で、検証内容は減らしていない。
+#
+# 2 段階 CI（2026-08-03）: 実測で CI 38 run / 15 PR、つまり push 2.5 回に対して
+# merge 前に必要な検証は 1 回だった。draft の間は軽量層（Static / Unit）だけを
+# 走らせ、重量層（Build & Bundle / E2E / Web E2E）は ready 後に走らせる。
+# PR は `gh pr create --draft` で作り、merge 直前に ready 化する
+# （.claude/rules/workflow.md §2 段階 CI）。`branch:finish` は draft を拒否し、
+# skipped check の畳み込みも織り込み済みなので、merge gate はこの guard に依存できる。
+# 重量 job の guard は `draft != true` で書く: workflow_dispatch では
+# pull_request context が無く null になるため、この形なら全 job が走る。
 jobs:
   static:
     name: "\U0001F50D Static Checks"
@@ -92,10 +101,10 @@ jobs:
             exit 1
           fi
 
-  product:
-    name: "\U0001F4E6 Build & Test"
+  unit:
+    name: "\U0001F4E6 Unit Tests"
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -132,6 +141,23 @@ jobs:
 
       - name: Shared observability unit tests
         run: pnpm --filter @dayopt/observability test:run
+
+  build:
+    name: "\U0001F3D7 Build & Bundle"
+    # 重量層: draft の間は走らせない（ready 後 + workflow_dispatch で実行）。
+    # build の env 契約検証自体は next.config.mjs 経由で Vercel の preview build
+    # でも毎 push 走っている。この job の固有価値は bundle への secret 漏洩チェック、
+    # JS bundle budget、CSS size の 3 検査。
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup
+
+      - name: Build packages
+        run: pnpm build:packages
 
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.0.0
         with:
@@ -184,6 +210,8 @@ jobs:
 
   e2e:
     name: "\U0001F3AD E2E Tests"
+    # 重量層: draft の間は走らせない（ready 後 + workflow_dispatch で実行）
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     environment: development
     timeout-minutes: 15
@@ -220,6 +248,8 @@ jobs:
 
   web:
     name: "\U0001F310 Web Build & E2E"
+    # 重量層: draft の間は走らせない（ready 後 + workflow_dispatch で実行）
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

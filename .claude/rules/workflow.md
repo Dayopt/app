@@ -244,6 +244,22 @@ Actions 課金は **PR ごとの固定費が支配的**（2026-07-25 実測）:
 
 [PR #1657](https://github.com/Dayopt/dayopt/pull/1657) は #1534 / #1535 を 1 PR に束ねた。当時は「1 issue = 1 PR の意図的な例外」としてユーザーの明示指示を根拠にしていた。本節はこの例外を既定に反転させたもの。
 
+## 2 段階 CI（draft 運用）
+
+策定日: 2026-08-03
+
+**PR は `gh pr create --draft` で作成し、ready 化は merge 直前に 1 回だけ行う。**
+
+- **draft 中に走る軽量層**: Static Checks / Unit Tests / Docs Guard。修正ラウンドの手応え確認はこれで足りる
+- **ready 後に走る重量層**: Build & Bundle / E2E / Web E2E / AI Review / Production Config Audit
+- flow は「draft で push を重ねる（軽量層のみ）→ ready 化 → 重量層 green を確認 → `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）
+- ready 後にさらに push すると重量層も再走する。レビュー指摘の対応が続くなら `gh pr ready --undo` で draft に戻してから積む
+- draft を忘れて ready で作っても機能的な regression は無い（全 push で全層が走る従来挙動に戻り、課金だけ増える）
+
+### なぜ 2 段階か
+
+2026-08-03 実測: 3 日間で CI 38 run / 15 PR。push 2.5 回に対して merge 前に必要な全量検証は 1 回で、全 push で重量層まで走らせると月 ~11,000 課金分ペース（Free 枠 2,000 分の 5 倍超）だった。検証の量は減らさず、走るタイミングを merge 前 1 回に寄せる。同じ原理で Integration Tests の push:main トリガー（up-to-date gate により PR 検証と同一 tree の再検証だった）を廃止し、Production Config Audit（Vercel 側 drift の検査で PR diff と無関係）を draft skip + 日次 cron に変えた。
+
 ## マージ方式
 
 策定日: 2026-06-17

@@ -26,8 +26,12 @@ on:
       - 'apps/product/vitest.config.integration.ts'
       - 'scripts/generate-rls-snapshot.ts'
       - 'docs/engineering/data/db/rls-snapshot.md'
-  push:
-    branches: [main]
+  # main への push では走らせない（ci.yml と同じ根拠）。branch:finish が
+  # 「branch が main 最新を含み、その状態で green」をマージ前に強制するため、
+  # マージ後の main は常に PR で検証済みの tree と一致する。旧 push トリガーは
+  # paths フィルタも持たず全 merge で走っていた（2026-08-03 実測: 3 日で 16 回 × 5 分）。
+  # 手動で main を検証したい時は workflow_dispatch を使う。
+  workflow_dispatch:
     paths:
       - '.nvmrc'
       - 'package.json'
