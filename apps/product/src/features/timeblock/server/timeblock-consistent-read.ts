@@ -3,7 +3,7 @@ import { UserCancellationError } from '@dayopt/observability';
 import type { TimeblockContextMarker } from './timeblock-context-client';
 import { TimeblockServiceError } from './timeblock-service-error';
 
-export const TIMEBLOCK_CONSISTENT_READ_DEADLINE_MS = 20_000;
+const TIMEBLOCK_CONSISTENT_READ_DEADLINE_MS = 20_000;
 
 interface StableTimeblockReadOptions<T> {
   userId: string;

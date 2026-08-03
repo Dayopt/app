@@ -1,7 +1,6 @@
 import {
   readCompleteTimeblockPages,
   readStableTimeblockSnapshot,
-  TIMEBLOCK_CONSISTENT_READ_DEADLINE_MS,
 } from './timeblock-consistent-read';
 import {
   createTimeblockContextClient,
@@ -19,9 +18,8 @@ import {
 import { TimeblockServiceError } from './timeblock-service-error';
 
 const TIMEBLOCK_CONTEXT_PAGE_SIZE = 1_000;
-export const TIMEBLOCK_CONTEXT_READ_DEADLINE_MS = TIMEBLOCK_CONSISTENT_READ_DEADLINE_MS;
 
-export class TimeblockContextService {
+class TimeblockContextService {
   constructor(private readonly contextClient: TimeblockContextReadClient) {}
 
   getMarker(userId: string, signal?: AbortSignal): Promise<TimeblockContextMarker> {

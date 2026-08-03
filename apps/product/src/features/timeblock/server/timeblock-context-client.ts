@@ -13,7 +13,7 @@ export interface TimeblockContextMarker {
   timezone: string;
 }
 
-export type TimeblockContextLane = 'plans' | 'records';
+type TimeblockContextLane = 'plans' | 'records';
 
 export interface TimeblockContextOccupancyRow {
   id: string;
@@ -47,7 +47,7 @@ export interface TimeblockContextReadClient {
  * Contains service-role access behind one tenant-scoped marker operation.
  * Callers cannot obtain or reuse the administrative Supabase client.
  */
-export class TimeblockContextClient implements TimeblockContextReadClient {
+class TimeblockContextClient implements TimeblockContextReadClient {
   private readonly admin = createServiceRoleClient();
 
   async getMarker(userId: string, signal?: AbortSignal): Promise<TimeblockContextMarker> {

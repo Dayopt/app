@@ -11,7 +11,7 @@ import {
 import type { TimeblockContextRange } from './timeblock-context-contract';
 import { TimeblockServiceError } from './timeblock-service-error';
 
-export type TimeblockReviewLane = 'plans' | 'records';
+type TimeblockReviewLane = 'plans' | 'records';
 
 export interface TimeblockReviewRow {
   id: string;
@@ -41,7 +41,7 @@ export interface TimeblockReviewReadClient {
 }
 
 /** MCP reviewのservice-role readをverified userと最小projectionへ固定する。 */
-export class TimeblockReviewClient implements TimeblockReviewReadClient {
+class TimeblockReviewClient implements TimeblockReviewReadClient {
   private readonly admin = createServiceRoleClient();
 
   getMarker(userId: string, signal?: AbortSignal): Promise<TimeblockContextMarker> {

@@ -3,7 +3,6 @@ import { deriveTimePLReview } from '../domain';
 import {
   readCompleteTimeblockPages,
   readStableTimeblockSnapshot,
-  TIMEBLOCK_CONSISTENT_READ_DEADLINE_MS,
 } from './timeblock-consistent-read';
 import {
   TIMEBLOCK_CONTEXT_MAX_ITEMS_PER_LANE,
@@ -22,9 +21,8 @@ import {
 import { TimeblockServiceError } from './timeblock-service-error';
 
 const TIMEBLOCK_REVIEW_PAGE_SIZE = 1_000;
-export const TIMEBLOCK_REVIEW_READ_DEADLINE_MS = TIMEBLOCK_CONSISTENT_READ_DEADLINE_MS;
 
-export class TimeblockReviewService {
+class TimeblockReviewService {
   constructor(private readonly reviewClient: TimeblockReviewReadClient) {}
 
   async getMcpReview(

@@ -18,8 +18,6 @@ import { captureUnexpectedError } from '@/lib/sentry';
 import type { McpRequestContext } from './_context';
 import { createMcpServer } from './_server';
 
-export type McpHandlerRequestOptions = HandleRequestOptions;
-
 /**
  * MCP Streamable HTTP の単一経路。
  *
@@ -29,7 +27,7 @@ export type McpHandlerRequestOptions = HandleRequestOptions;
  */
 export async function handleMcpProtocolRequest(
   request: Request,
-  options: McpHandlerRequestOptions,
+  options: HandleRequestOptions,
 ): Promise<Response> {
   const context = resolveMcpRequestContext(options.authInfo);
   if (!context) return invalidMcpRequestContextResponse();

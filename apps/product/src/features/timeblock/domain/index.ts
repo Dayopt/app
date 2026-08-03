@@ -11,4 +11,3 @@ export { calculateStreak } from './streak-calculator';
 export { aggregateTagStats } from './tag-stats';
 export { deriveTimePLReview } from './time-pl-review';
 export type { TimePLReview } from './time-pl-review';
-export { aggregateTimePLTags } from './time-pl-tag-aggregation';
