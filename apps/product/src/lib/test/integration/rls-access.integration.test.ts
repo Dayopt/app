@@ -229,7 +229,16 @@ const userOwnedCases: UserOwnedRlsCase[] = [
   },
 ];
 
-const SERVICE_OWNED_USER_TABLE_MUTATIONS = new Set(['oauth_tokens', 'oauth_audit_log']);
+/**
+ * owner でも直接 mutation できず、service-owned な経路（typed RPC / command）だけが
+ * 書けるユーザーデータ table。plans / records は Candidate 6 の ACL cutover で加わった。
+ */
+const SERVICE_OWNED_USER_TABLE_MUTATIONS = new Set([
+  'oauth_tokens',
+  'oauth_audit_log',
+  'plans',
+  'records',
+]);
 
 const serviceRoleCases = [
   {
@@ -384,6 +393,62 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         expect(data).toEqual([]);
       },
     );
+  });
+
+  // Candidate 6: plans / records の authenticated 直接 DML を剥がし、SELECT だけ残した。
+  // RLS policy は残っているが grant 層で到達不能になるため、insert/update/delete は
+  // policy 評価より前に 42501 で落ちる。
+  it('authenticatedはown Plan / Recordをreadできるが直接writeできない', async () => {
+    const [planInsert, recordInsert, planUpdate, recordUpdate, planDelete, recordDelete] =
+      await Promise.all([
+        supabaseB.from('plans').insert({
+          id: crypto.randomUUID(),
+          user_id: TEST_USER_B_ID,
+          title: 'Forbidden direct Plan',
+          source: 'manual',
+          start_at: isoAtRpcOffset(48 * 60 * 60_000),
+          end_at: isoAtRpcOffset(49 * 60 * 60_000),
+        }),
+        supabaseB.from('records').insert({
+          id: crypto.randomUUID(),
+          user_id: TEST_USER_B_ID,
+          title: 'Forbidden direct Record',
+          source: 'manual',
+          start_at: '2026-01-20T00:00:00.000Z',
+          end_at: '2026-01-20T01:00:00.000Z',
+        }),
+        supabaseB
+          .from('plans')
+          .update({ title: 'Forbidden Plan update' })
+          .eq('id', TEST_USER_B_PLAN_ID),
+        supabaseB
+          .from('records')
+          .update({ title: 'Forbidden Record update' })
+          .eq('id', TEST_USER_B_RECORD_ID),
+        supabaseB.from('plans').delete().eq('id', TEST_USER_B_PLAN_ID),
+        supabaseB.from('records').delete().eq('id', TEST_USER_B_RECORD_ID),
+      ]);
+
+    for (const result of [
+      planInsert,
+      recordInsert,
+      planUpdate,
+      recordUpdate,
+      planDelete,
+      recordDelete,
+    ]) {
+      expect(result.error?.code).toBe('42501');
+    }
+
+    const [{ data: plan, error: planReadError }, { data: record, error: recordReadError }] =
+      await Promise.all([
+        supabaseB.from('plans').select('title').eq('id', TEST_USER_B_PLAN_ID).single(),
+        supabaseB.from('records').select('title').eq('id', TEST_USER_B_RECORD_ID).single(),
+      ]);
+    expect(planReadError).toBeNull();
+    expect(recordReadError).toBeNull();
+    expect(plan?.title).toBe('RLS plan');
+    expect(record?.title).toBe('RLS record');
   });
 
   describe('profiles deletion grants', () => {
@@ -985,7 +1050,7 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         ]);
     });
 
-    it('8つのinvoker RPCはcross-userのp_user_idを拒否し対象を変更しない', async () => {
+    it('5つの継続invoker RPCはcross-userのp_user_idを拒否し対象を変更しない', async () => {
       const calls = [
         () =>
           supabaseA.rpc('batch_rename_tags', {
@@ -1006,29 +1071,12 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
             p_old_prefix: 'RPC Old',
             p_user_id: TEST_USER_B_ID,
           }),
-        () =>
-          supabaseA.rpc('confirm_day_plans_to_records', {
-            p_confirmed_at: rpcConfirmedAt,
-            p_end_at: rpcConfirmRangeEndAt,
-            p_start_at: rpcConfirmRangeStartAt,
-            p_user_id: TEST_USER_B_ID,
-          }),
         () => supabaseA.rpc('count_unused_recovery_codes', { p_user_id: TEST_USER_B_ID }),
         () =>
           supabaseA.rpc('update_personalization', {
             p_path: 'rpcCrossUser',
             p_user_id: TEST_USER_B_ID,
             p_value: { blocked: true },
-          }),
-        () =>
-          supabaseA.rpc('soft_delete_plan', {
-            p_plan_id: RPC_SOFT_DELETE_PLAN_ID,
-            p_user_id: TEST_USER_B_ID,
-          }),
-        () =>
-          supabaseA.rpc('soft_delete_record', {
-            p_record_id: RPC_SOFT_DELETE_RECORD_ID,
-            p_user_id: TEST_USER_B_ID,
           }),
       ];
 
@@ -1037,24 +1085,11 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         expect(error?.message).toContain(ACCESS_DENIED_MESSAGE);
       }
 
-      const [
-        { data: tags },
-        { data: plan },
-        { data: record },
-        { data: confirmed },
-        { data: settings },
-      ] = await Promise.all([
+      const [{ data: tags }, { data: settings }] = await Promise.all([
         adminSupabase
           .from('tags')
           .select('id, name, parent_id, sort_order')
           .in('id', [RPC_BATCH_TAG_ID, RPC_REORDER_TAG_ID, RPC_GROUP_TAG_ID]),
-        adminSupabase.from('plans').select('deleted_at').eq('id', RPC_SOFT_DELETE_PLAN_ID).single(),
-        adminSupabase
-          .from('records')
-          .select('deleted_at')
-          .eq('id', RPC_SOFT_DELETE_RECORD_ID)
-          .single(),
-        adminSupabase.from('records').select('id').eq('plan_id', RPC_CONFIRM_PLAN_ID),
         adminSupabase
           .from('user_settings')
           .select('personalization')
@@ -1069,13 +1104,10 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
           expect.objectContaining({ id: RPC_GROUP_TAG_ID, name: 'RPC Old:Child' }),
         ]),
       );
-      expect(plan?.deleted_at).toBeNull();
-      expect(record?.deleted_at).toBeNull();
-      expect(confirmed).toEqual([]);
       expect(JSON.stringify(settings?.personalization ?? {})).not.toContain('rpcCrossUser');
     });
 
-    it('8つのinvoker RPCはowner経路で成功する', async () => {
+    it('5つの継続invoker RPCはowner経路で成功する', async () => {
       const { data: renamed, error: renameError } = await supabaseB.rpc('batch_rename_tags', {
         p_new_names: ['RPC Batch Renamed'],
         p_tag_ids: [RPC_BATCH_TAG_ID],
@@ -1103,19 +1135,6 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       });
       expect(groupError).toBeNull();
 
-      const { data: confirmed, error: confirmError } = await supabaseB.rpc(
-        'confirm_day_plans_to_records',
-        {
-          p_confirmed_at: rpcConfirmedAt,
-          p_end_at: rpcConfirmRangeEndAt,
-          p_start_at: rpcConfirmRangeStartAt,
-          p_user_id: TEST_USER_B_ID,
-        },
-      );
-      expect(confirmError).toBeNull();
-      expect(confirmed).toHaveLength(1);
-      expect(confirmed?.[0]).not.toHaveProperty('fulfillment_score');
-
       const { data: count, error: countError } = await supabaseB.rpc(
         'count_unused_recovery_codes',
         { p_user_id: TEST_USER_B_ID },
@@ -1129,6 +1148,66 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         p_value: { allowed: true },
       });
       expect(personalizationError).toBeNull();
+    });
+
+    // Candidate 6 は plans / records の直接 DML だけを剥がし、旧 bundle が呼ぶ 3 RPC の
+    // authenticated EXECUTE は残す。EXECUTE を落とすのは旧 instance の drain 後。
+    // 実行できた上で owner 照合が働くことを、message で区別して固定する。
+    it('旧bundle向け3 RPCはcross-user実行をowner照合で拒否し対象を変更しない', async () => {
+      const calls = [
+        () =>
+          supabaseA.rpc('confirm_day_plans_to_records', {
+            p_confirmed_at: rpcConfirmedAt,
+            p_end_at: rpcConfirmRangeEndAt,
+            p_start_at: rpcConfirmRangeStartAt,
+            p_user_id: TEST_USER_B_ID,
+          }),
+        () =>
+          supabaseA.rpc('soft_delete_plan', {
+            p_plan_id: RPC_SOFT_DELETE_PLAN_ID,
+            p_user_id: TEST_USER_B_ID,
+          }),
+        () =>
+          supabaseA.rpc('soft_delete_record', {
+            p_record_id: RPC_SOFT_DELETE_RECORD_ID,
+            p_user_id: TEST_USER_B_ID,
+          }),
+      ];
+
+      for (const call of calls) {
+        const { error } = await call();
+        // EXECUTE 権限不足 (42501 permission denied for function) ではなく、
+        // 関数内の auth.uid() 照合で落ちていることを message で証明する
+        expect(error?.message).toContain(ACCESS_DENIED_MESSAGE);
+      }
+
+      const [{ data: plan }, { data: record }, { data: confirmed }] = await Promise.all([
+        adminSupabase.from('plans').select('deleted_at').eq('id', RPC_SOFT_DELETE_PLAN_ID).single(),
+        adminSupabase
+          .from('records')
+          .select('deleted_at')
+          .eq('id', RPC_SOFT_DELETE_RECORD_ID)
+          .single(),
+        adminSupabase.from('records').select('id').eq('plan_id', RPC_CONFIRM_PLAN_ID),
+      ]);
+      expect(plan?.deleted_at).toBeNull();
+      expect(record?.deleted_at).toBeNull();
+      expect(confirmed).toEqual([]);
+    });
+
+    it('旧bundle向け3 RPCはauthenticated owner互換をdrainまで維持する', async () => {
+      const { data: confirmed, error: confirmError } = await supabaseB.rpc(
+        'confirm_day_plans_to_records',
+        {
+          p_confirmed_at: rpcConfirmedAt,
+          p_end_at: rpcConfirmRangeEndAt,
+          p_start_at: rpcConfirmRangeStartAt,
+          p_user_id: TEST_USER_B_ID,
+        },
+      );
+      expect(confirmError).toBeNull();
+      expect(confirmed).toHaveLength(1);
+      expect(confirmed?.[0]).not.toHaveProperty('fulfillment_score');
 
       const { error: planError } = await supabaseB.rpc('soft_delete_plan', {
         p_plan_id: RPC_SOFT_DELETE_PLAN_ID,
@@ -1142,6 +1221,7 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       });
       expect(recordError).toBeNull();
 
+      // SELECT は残っているので、RPC の効果を browser client から確認できる
       const [{ data: deletedPlans }, { data: deletedRecords }] = await Promise.all([
         supabaseB.from('plans').select('id').eq('id', RPC_SOFT_DELETE_PLAN_ID),
         supabaseB.from('records').select('id').eq('id', RPC_SOFT_DELETE_RECORD_ID),
@@ -1306,6 +1386,28 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
     ).toHaveLength(serviceRoleCases.length);
     expect(snapshot).not.toContain('### user_badges');
     expect(snapshot).not.toContain('### api_keys');
+  });
+
+  it('I-16 snapshotがPlan / Recordのwrite境界を記録する', () => {
+    const snapshot = readFileSync(
+      resolve(process.cwd(), '../../docs/engineering/data/db/rls-snapshot.md'),
+      'utf8',
+    );
+
+    expect(snapshot).toContain('## Plan / Record effective write境界');
+    expect(snapshot).toContain(
+      '✅ `anon` / `authenticated`のeffective table / column write権限なし',
+    );
+
+    // table 権限は SELECT だけ。TRUNCATE / MAINTAIN を含む privilege も snapshot に
+    // 出るようフィルタを外してあるので、混入すればこの行が変わる
+    for (const table of ['plans', 'records']) {
+      expect(snapshot).toMatch(
+        new RegExp(`\\| table\\s+\\| public\\.${table}\\s+\\| authenticated\\s+\\| SELECT\\s+\\|`),
+      );
+    }
+    expect(snapshot).not.toMatch(/\| (table|column)\s+\| public\.plans\S*\s+\| anon\s+\|/);
+    expect(snapshot).not.toMatch(/\| (table|column)\s+\| public\.records\S*\s+\| anon\s+\|/);
   });
 
   it('I-16 snapshotがcalendar_connectionsのcolumn grantを列単位で記録する', () => {

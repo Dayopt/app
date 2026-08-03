@@ -6,6 +6,11 @@ import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
+import {
+  createTimeblockCommandClient,
+  type TimeblockCommandClient,
+  toTimeblockSource,
+} from './timeblock-command-client';
 import { TimeblockOverlapService } from './timeblock-overlap-service';
 import { buildTimeblockSearchFilter } from './timeblock-search-query';
 import { TimeblockServiceError } from './timeblock-service-error';
@@ -14,7 +19,6 @@ import type {
   DeleteRecordOptions,
   GetRecordByIdOptions,
   ListRecordsOptions,
-  RecordInsert,
   RecordRow,
   RecordUpdate,
   UpdateRecordOptions,
@@ -23,9 +27,26 @@ import type { ServiceSupabaseClient } from './types';
 
 export class RecordService {
   private readonly overlapService: TimeblockOverlapService;
+  private commandClient: TimeblockCommandClient | undefined;
 
-  constructor(private readonly supabase: ServiceSupabaseClient) {
+  constructor(
+    private readonly supabase: ServiceSupabaseClient,
+    commands?: TimeblockCommandClient,
+  ) {
     this.overlapService = new TimeblockOverlapService(supabase);
+    this.commandClient = commands;
+  }
+
+  /**
+   * Record の write は service-owned command 経由に限る。
+   *
+   * `authenticated` から records の直接 DML を剥がしたため、この service に残る
+   * 書き込み経路はすべてここを通る。read 専用の呼び出しで service-role client を
+   * 作らないよう遅延生成する。
+   */
+  private get commands(): TimeblockCommandClient {
+    this.commandClient ??= createTimeblockCommandClient();
+    return this.commandClient;
   }
 
   async list(options: ListRecordsOptions): Promise<RecordRow[]> {
@@ -134,30 +155,20 @@ export class RecordService {
       await this.ensureNoRecordOverlap(userId, input.start_at, input.end_at);
     }
 
-    const insertData: RecordInsert = {
-      user_id: userId,
+    const record = await this.commands.createRecord({
+      userId,
       title: input.title,
       note: input.note ?? null,
-      tag_id: input.tagId ?? null,
-      plan_id: input.planId ?? null,
-      external_calendar_event_id: input.externalCalendarEventId ?? null,
+      tagId: input.tagId ?? null,
+      planId: input.planId ?? null,
+      externalCalendarEventId: input.externalCalendarEventId ?? null,
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
-      start_at: input.start_at,
-      end_at: input.end_at,
-    };
-
-    const { data, error } = await this.supabase
-      .from(databaseTables.records)
-      .insert(insertData)
-      .select(publicRecordSelect)
-      .single();
-
-    if (error) {
-      this.handleMutationError(error, 'CREATE_FAILED', 'Failed to create record');
-    }
+      startAt: input.start_at,
+      endAt: input.end_at,
+    });
 
     await trackProductEvent({ eventName: 'record_created', userId });
-    return data;
+    return record;
   }
 
   async update(options: UpdateRecordOptions): Promise<RecordRow> {
@@ -190,19 +201,25 @@ export class RecordService {
     const updateData = this.toRecordUpdate(input);
     if (Object.keys(updateData).length === 0) return existing;
 
-    const { data, error } = await this.supabase
-      .from(databaseTables.records)
-      .update(updateData)
-      .eq('id', recordId)
-      .eq('user_id', userId)
-      .select(publicRecordSelect)
-      .single();
-
-    if (error) {
-      this.handleMutationError(error, 'UPDATE_FAILED', 'Failed to update record');
-    }
-
-    return data;
+    // legacy route の input は raw CAS token を持たないため、いま読んだ行の
+    // `updated_at` をそのまま command へ渡す read-then-write にする。
+    // 呼び出し元が渡した expectedUpdatedAt は上の assertOptimisticLock が見る。
+    return this.commands.updateRecord({
+      userId,
+      recordId,
+      expectedUpdatedAt: existing.updated_at,
+      title: input.title ?? existing.title,
+      note: input.note === undefined ? existing.note : input.note,
+      tagId: input.tagId === undefined ? existing.tag_id : input.tagId,
+      planId: input.planId === undefined ? existing.plan_id : input.planId,
+      externalCalendarEventId:
+        input.externalCalendarEventId === undefined
+          ? existing.external_calendar_event_id
+          : input.externalCalendarEventId,
+      source: toTimeblockSource(existing.source),
+      startAt: nextStartAt,
+      endAt: nextEndAt,
+    });
   }
 
   async delete(options: DeleteRecordOptions): Promise<{ success: boolean }> {
@@ -340,26 +357,11 @@ export class RecordService {
       throw new TimeblockServiceError('INVALID_INPUT', 'Skipped plans cannot have linked records.');
     }
   }
-
-  private handleMutationError(
-    error: { code?: string; message: string },
-    code: string,
-    prefix: string,
-  ): never {
-    if (error.code === '23P01') {
-      throw new TimeblockServiceError(
-        'TIME_OVERLAP',
-        'This time range overlaps with an existing item.',
-      );
-    }
-    const original = captureUnexpectedDatabaseError(error, {
-      feature: 'timeblock',
-      operation: code.toLowerCase(),
-    });
-    throw new TimeblockServiceError(code, prefix, { cause: original });
-  }
 }
 
-export function createRecordService(supabase: ServiceSupabaseClient): RecordService {
-  return new RecordService(supabase);
+export function createRecordService(
+  supabase: ServiceSupabaseClient,
+  commands?: TimeblockCommandClient,
+): RecordService {
+  return new RecordService(supabase, commands);
 }

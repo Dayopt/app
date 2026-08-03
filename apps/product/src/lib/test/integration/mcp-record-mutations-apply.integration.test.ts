@@ -861,17 +861,11 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
         startAt: createStart,
         endAt: createEnd,
       }),
-      userClient
-        .from('records')
-        .insert({
-          user_id: userId,
-          title: 'UI create',
-          source: 'manual',
-          start_at: createStart,
-          end_at: createEnd,
-        })
-        .select()
-        .single(),
+      // 通常 UI の write は Candidate 6 以降 service-owned command boundary を通る
+      // （authenticated の直接 DML は剥がした）
+      createRecord({ title: 'UI create', startAt: createStart, endAt: createEnd })
+        .then((data) => ({ data, error: null }))
+        .catch((error: { code?: string }) => ({ data: null, error })),
     ]);
     expect(createAttempts.filter(({ error }) => error === null)).toHaveLength(1);
     expect(

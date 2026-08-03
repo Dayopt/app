@@ -5,9 +5,13 @@ import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { plansRouter } from '@/features/timeblock/server/plans-router';
+import { recordsRouter } from '@/features/timeblock/server/records-router';
 import type { Database } from '@/lib/database';
 import { exchangeAuthorizationCode, refreshAccessToken } from '@/lib/oauth-server';
 import { generateAuthorizationCode, hashToken } from '@/lib/oauth-server/tokens';
+import { createTestCaller } from '@/lib/test/trpc-test-helpers';
+import type { Context } from '@/lib/trpc/procedures';
 
 const LOCAL_DB_URL = 'http://127.0.0.1:54321';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -134,6 +138,31 @@ async function createHistoricalPlan(input: {
   const { data, error } = await admin.from('plans').select().eq('id', planId).single();
   if (error) throw error;
   return data;
+}
+
+/**
+ * legacy tRPC route と同じ context を作る。
+ *
+ * `ctx.supabase` は authenticated client のまま（read と旧 3 RPC はここを通る）で、
+ * write だけが service-owned command boundary へ降りることを確認するための土台。
+ */
+function legacyContext(): Context {
+  return {
+    req: {
+      headers: {},
+      cookies: {},
+      socket: { remoteAddress: '127.0.0.1' },
+    } as Context['req'],
+    res: {
+      setHeader: () => {},
+      end: () => {},
+    } as unknown as Context['res'],
+    userId,
+    sessionId: 'mcp-stage1-compat-session',
+    mfaAssurance: { currentLevel: 'aal1', nextLevel: 'aal1' },
+    supabase: userClient,
+    authMode: 'session' as const,
+  };
 }
 
 describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
@@ -391,28 +420,108 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
     expect(rotatedRefresh?.connection_id).toBe(insertedCode?.connection_id);
   });
 
-  it('keeps every current Plan and Record write path available', async () => {
-    const { data: plan, error: createPlanError } = await userClient
-      .from('plans')
+  // Candidate 6: authenticated から plans / records の直接 DML を剥がした。旧 bundle の
+  // 直接 DML はここで止まり、旧 3 RPC だけが drain まで動く。
+  it('rejects every authenticated direct Plan and Record DML', async () => {
+    const existingPlan = await createHistoricalPlan({
+      title: 'Direct DML target Plan',
+      startAt: hoursAgo(20),
+      endAt: hoursAgo(19),
+    });
+    const { data: existingRecord, error: seedRecordError } = await admin
+      .from('records')
       .insert({
         user_id: userId,
-        title: 'Legacy Plan',
+        title: 'Direct DML target Record',
         source: 'manual',
-        start_at: hoursAgo(-1),
-        end_at: hoursAgo(-2),
+        start_at: hoursAgo(18),
+        end_at: hoursAgo(17),
       })
-      .select()
+      .select('id, title')
       .single();
-    if (createPlanError) throw createPlanError;
+    if (seedRecordError) throw seedRecordError;
 
-    const { data: updatedPlan, error: updatePlanError } = await userClient
-      .from('plans')
-      .update({ title: 'Legacy Plan updated' })
-      .eq('id', plan.id)
-      .select()
-      .single();
-    expect(updatePlanError).toBeNull();
-    expect(updatedPlan?.title).toBe('Legacy Plan updated');
+    const [planInsert, recordInsert, planUpdate, recordUpdate, planDelete, recordDelete] =
+      await Promise.all([
+        userClient.from('plans').insert({
+          user_id: userId,
+          title: 'Forbidden direct Plan',
+          source: 'manual',
+          start_at: hoursAgo(-1),
+          end_at: hoursAgo(-2),
+        }),
+        userClient.from('records').insert({
+          user_id: userId,
+          title: 'Forbidden direct Record',
+          source: 'manual',
+          start_at: hoursAgo(16),
+          end_at: hoursAgo(15),
+        }),
+        userClient
+          .from('plans')
+          .update({ title: 'Forbidden direct Plan update' })
+          .eq('id', existingPlan.id),
+        userClient
+          .from('records')
+          .update({ title: 'Forbidden direct Record update' })
+          .eq('id', existingRecord.id),
+        userClient.from('plans').delete().eq('id', existingPlan.id),
+        userClient.from('records').delete().eq('id', existingRecord.id),
+      ]);
+
+    for (const result of [
+      planInsert,
+      recordInsert,
+      planUpdate,
+      recordUpdate,
+      planDelete,
+      recordDelete,
+    ]) {
+      expect(result.error?.code).toBe('42501');
+    }
+
+    // SELECT は残しているので旧 bundle の read は壊れない
+    const [{ data: plan, error: planReadError }, { data: record, error: recordReadError }] =
+      await Promise.all([
+        userClient.from('plans').select('title').eq('id', existingPlan.id).single(),
+        userClient.from('records').select('title').eq('id', existingRecord.id).single(),
+      ]);
+    expect(planReadError).toBeNull();
+    expect(recordReadError).toBeNull();
+    expect(plan?.title).toBe('Direct DML target Plan');
+    expect(record?.title).toBe('Direct DML target Record');
+
+    // 旧 bundle が残す 3 RPC は drain まで authenticated から動く
+    const { error: legacyDeletePlanError } = await userClient.rpc('soft_delete_plan', {
+      p_plan_id: existingPlan.id,
+      p_user_id: userId,
+    });
+    expect(legacyDeletePlanError).toBeNull();
+
+    const { error: legacyDeleteRecordError } = await userClient.rpc('soft_delete_record', {
+      p_record_id: existingRecord.id,
+      p_user_id: userId,
+    });
+    expect(legacyDeleteRecordError).toBeNull();
+  });
+
+  it('keeps every current Plan and Record write path available', async () => {
+    const ctx = legacyContext();
+    const plans = createTestCaller(plansRouter, ctx);
+    const records = createTestCaller(recordsRouter, ctx);
+
+    const plan = await plans.create({
+      title: 'Legacy Plan',
+      start_at: hoursAgo(-1),
+      end_at: hoursAgo(-2),
+    });
+    expect(plan.user_id).toBe(userId);
+
+    const updatedPlan = await plans.update({
+      id: plan.id,
+      data: { title: 'Legacy Plan updated' },
+    });
+    expect(updatedPlan.title).toBe('Legacy Plan updated');
 
     const historicalPlan = await createHistoricalPlan({
       title: 'Existing past Plan',
@@ -420,69 +529,30 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
       endAt: hoursAgo(7),
     });
 
-    const { data: skippedPlan, error: skipError } = await userClient
-      .from('plans')
-      .update({ skipped_at: new Date().toISOString() })
-      .eq('id', historicalPlan.id)
-      .select()
-      .single();
-    expect(skipError).toBeNull();
-    expect(skippedPlan?.skipped_at).not.toBeNull();
+    const skippedPlan = await plans.skip({ id: historicalPlan.id });
+    expect(skippedPlan.skipped_at).not.toBeNull();
 
-    const { data: unskippedPlan, error: unskipError } = await userClient
-      .from('plans')
-      .update({ skipped_at: null })
-      .eq('id', historicalPlan.id)
-      .select()
-      .single();
-    expect(unskipError).toBeNull();
-    expect(unskippedPlan?.skipped_at).toBeNull();
+    const unskippedPlan = await plans.unskip({ id: historicalPlan.id });
+    expect(unskippedPlan.skipped_at).toBeNull();
 
-    const { error: deletePlanError } = await userClient.rpc('soft_delete_plan', {
-      p_plan_id: plan.id,
-      p_user_id: userId,
+    await expect(plans.delete({ id: plan.id })).resolves.toEqual({ success: true });
+    await expect(plans.restore({ id: plan.id })).resolves.toEqual({ success: true });
+
+    const record = await records.create({
+      title: 'Legacy Record',
+      start_at: hoursAgo(6),
+      end_at: hoursAgo(5),
     });
-    expect(deletePlanError).toBeNull();
+    expect(record.source).toBe('manual');
 
-    const { error: restorePlanError } = await admin.rpc('restore_plan', {
-      p_plan_id: plan.id,
-      p_user_id: userId,
+    const updatedRecord = await records.update({
+      id: record.id,
+      data: { title: 'Legacy Record updated' },
     });
-    expect(restorePlanError).toBeNull();
+    expect(updatedRecord.title).toBe('Legacy Record updated');
 
-    const { data: record, error: createRecordError } = await userClient
-      .from('records')
-      .insert({
-        user_id: userId,
-        title: 'Legacy Record',
-        source: 'manual',
-        start_at: hoursAgo(6),
-        end_at: hoursAgo(5),
-      })
-      .select()
-      .single();
-    if (createRecordError) throw createRecordError;
-
-    const { data: updatedRecord, error: updateRecordError } = await userClient
-      .from('records')
-      .update({ title: 'Legacy Record updated' })
-      .eq('id', record.id)
-      .select()
-      .single();
-    expect(updateRecordError).toBeNull();
-    expect(updatedRecord?.title).toBe('Legacy Record updated');
-
-    const { error: deleteRecordError } = await userClient.rpc('soft_delete_record', {
-      p_record_id: record.id,
-      p_user_id: userId,
-    });
-    expect(deleteRecordError).toBeNull();
-
-    const { error: restoreRecordError } = await admin.rpc('restore_record', {
-      p_record_id: record.id,
-      p_user_id: userId,
-    });
-    expect(restoreRecordError).toBeNull();
+    await expect(records.delete({ id: record.id })).resolves.toEqual({ success: true });
+    await expect(records.restore({ id: record.id })).resolves.toEqual({ success: true });
 
     const recordablePlan = await createHistoricalPlan({
       title: 'Legacy recordable Plan',
@@ -490,96 +560,50 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
       endAt: hoursAgo(3),
     });
 
-    const { data: linkedRecord, error: linkedRecordError } = await userClient
-      .from('records')
-      .insert({
-        user_id: userId,
-        title: recordablePlan.title,
-        plan_id: recordablePlan.id,
-        source: 'from_plan',
-        start_at: recordablePlan.start_at,
-        end_at: recordablePlan.end_at,
-      })
-      .select()
-      .single();
-    expect(linkedRecordError).toBeNull();
-    expect(linkedRecord?.plan_id).toBe(recordablePlan.id);
-
-    const { error: deleteLinkedPlanError } = await userClient.rpc('soft_delete_plan', {
-      p_plan_id: recordablePlan.id,
-      p_user_id: userId,
+    const linkedRecord = await records.create({
+      title: recordablePlan.title,
+      planId: recordablePlan.id,
+      start_at: recordablePlan.start_at,
+      end_at: recordablePlan.end_at,
     });
-    expect(deleteLinkedPlanError).toBeNull();
+    expect(linkedRecord.plan_id).toBe(recordablePlan.id);
 
-    const { data: activeLinkedRecord, error: activeLinkedRecordError } = await userClient
-      .from('records')
-      .select('deleted_at, plan_id')
-      .eq('id', linkedRecord!.id)
-      .single();
-    expect(activeLinkedRecordError).toBeNull();
-    expect(activeLinkedRecord).toEqual({
-      deleted_at: null,
-      plan_id: recordablePlan.id,
+    await expect(plans.delete({ id: recordablePlan.id })).resolves.toEqual({ success: true });
+
+    const activeLinkedRecord = await records.getById({ id: linkedRecord.id });
+    expect(activeLinkedRecord.deleted_at).toBeNull();
+    expect(activeLinkedRecord.plan_id).toBe(recordablePlan.id);
+
+    await expect(records.delete({ id: linkedRecord.id })).resolves.toEqual({ success: true });
+    await expect(records.restore({ id: linkedRecord.id })).resolves.toEqual({ success: true });
+
+    const restoredLinkedRecord = await records.getById({ id: linkedRecord.id });
+    expect(restoredLinkedRecord.deleted_at).toBeNull();
+    expect(restoredLinkedRecord.plan_id).toBe(recordablePlan.id);
+
+    // 削除済み Plan への新規リンクは app guard が先に落とす（NOT_FOUND）。
+    // DB 側 trigger の DT001 は下の direct-writer テストが固定する。
+    await expect(
+      records.create({
+        title: 'New link to deleted Plan',
+        planId: recordablePlan.id,
+        start_at: hoursAgo(12),
+        end_at: hoursAgo(11),
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    await expect(
+      records.update({ id: record.id, data: { planId: recordablePlan.id } }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    const recordFromPlan = await createHistoricalPlan({
+      title: 'Legacy one-tap recordable Plan',
+      startAt: hoursAgo(30),
+      endAt: hoursAgo(29),
     });
-
-    const { error: deleteLinkedRecordError } = await userClient.rpc('soft_delete_record', {
-      p_record_id: linkedRecord!.id,
-      p_user_id: userId,
-    });
-    expect(deleteLinkedRecordError).toBeNull();
-
-    const { error: restoreLinkedRecordError } = await admin.rpc('restore_record', {
-      p_record_id: linkedRecord!.id,
-      p_user_id: userId,
-    });
-    expect(restoreLinkedRecordError).toBeNull();
-
-    const { data: restoredLinkedRecord, error: restoredLinkedRecordError } = await userClient
-      .from('records')
-      .select('deleted_at, plan_id')
-      .eq('id', linkedRecord!.id)
-      .single();
-    expect(restoredLinkedRecordError).toBeNull();
-    expect(restoredLinkedRecord).toEqual({
-      deleted_at: null,
-      plan_id: recordablePlan.id,
-    });
-
-    const { error: newLinkError } = await userClient.from('records').insert({
-      user_id: userId,
-      title: 'New link to deleted Plan',
-      plan_id: recordablePlan.id,
-      source: 'from_plan',
-      start_at: hoursAgo(12),
-      end_at: hoursAgo(11),
-    });
-    expect(newLinkError?.code).toBe('DT001');
-
-    const { error: deletedNewLinkError } = await userClient.from('records').insert({
-      user_id: userId,
-      title: 'Deleted new link to deleted Plan',
-      plan_id: recordablePlan.id,
-      source: 'from_plan',
-      start_at: hoursAgo(14),
-      end_at: hoursAgo(13),
-      deleted_at: new Date().toISOString(),
-    });
-    expect(deletedNewLinkError?.code).toBe('DT001');
-
-    const { error: deletedRelinkError } = await userClient
-      .from('records')
-      .update({
-        plan_id: recordablePlan.id,
-        deleted_at: new Date().toISOString(),
-      })
-      .eq('id', record.id);
-    expect(deletedRelinkError?.code).toBe('DT001');
-
-    const { error: relinkError } = await userClient
-      .from('records')
-      .update({ plan_id: recordablePlan.id })
-      .eq('id', record.id);
-    expect(relinkError?.code).toBe('DT001');
+    const oneTapRecord = await plans.record({ id: recordFromPlan.id });
+    expect(oneTapRecord.plan_id).toBe(recordFromPlan.id);
+    expect(oneTapRecord.source).toBe('from_plan');
 
     const confirmablePlan = await createHistoricalPlan({
       title: 'Legacy confirm-day Plan',
@@ -587,17 +611,11 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
       endAt: hoursAgo(1),
     });
 
-    const { data: confirmedRecords, error: confirmError } = await userClient.rpc(
-      'confirm_day_plans_to_records',
-      {
-        p_user_id: userId,
-        p_start_at: hoursAgo(2.5),
-        p_end_at: hoursAgo(0.5),
-        p_confirmed_at: new Date().toISOString(),
-      },
-    );
-    expect(confirmError).toBeNull();
-    expect(confirmedRecords?.some((item) => item.plan_id === confirmablePlan.id)).toBe(true);
+    const confirmedRecords = await plans.confirmDay({
+      start_at: hoursAgo(2.5),
+      end_at: hoursAgo(0.5),
+    });
+    expect(confirmedRecords.some((item) => item.plan_id === confirmablePlan.id)).toBe(true);
 
     const { data: tags, error: tagError } = await userClient
       .from('tags')
@@ -611,11 +629,8 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
 
     const sourceTag = tags.find((tag) => tag.name === 'Legacy source')!;
     const targetTag = tags.find((tag) => tag.name === 'Legacy target')!;
-    const { error: tagPlanError } = await userClient
-      .from('plans')
-      .update({ tag_id: sourceTag.id })
-      .eq('id', plan.id);
-    expect(tagPlanError).toBeNull();
+    const retagged = await plans.update({ id: plan.id, data: { tagId: sourceTag.id } });
+    expect(retagged.tag_id).toBe(sourceTag.id);
 
     const { error: mergeError } = await admin.rpc('merge_tags_with_hierarchy', {
       p_source_tag_id: sourceTag.id,
@@ -624,13 +639,72 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
     });
     expect(mergeError).toBeNull();
 
-    const { data: retaggedPlan, error: retagError } = await userClient
-      .from('plans')
-      .select('tag_id')
-      .eq('id', plan.id)
+    const mergedPlan = await plans.getById({ id: plan.id });
+    expect(mergedPlan.tag_id).toBe(targetTag.id);
+  });
+
+  // 直接 DML の残る writer は service_role だけになった。linked-Record invariant は
+  // app guard ではなく DB trigger が担保しているので、その writer で固定する。
+  it('still enforces linked-Record invariants for the remaining direct writer', async () => {
+    const deletedPlan = await createHistoricalPlan({
+      title: 'Direct writer deleted Plan',
+      startAt: hoursAgo(26),
+      endAt: hoursAgo(25),
+    });
+    const { error: deletePlanError } = await admin.rpc('soft_delete_plan', {
+      p_plan_id: deletedPlan.id,
+      p_user_id: userId,
+    });
+    expect(deletePlanError).toBeNull();
+
+    const { data: standaloneRecord, error: standaloneRecordError } = await admin
+      .from('records')
+      .insert({
+        user_id: userId,
+        title: 'Direct writer standalone Record',
+        source: 'manual',
+        start_at: hoursAgo(24),
+        end_at: hoursAgo(23),
+      })
+      .select('id')
       .single();
-    expect(retagError).toBeNull();
-    expect(retaggedPlan?.tag_id).toBe(targetTag.id);
+    if (standaloneRecordError) throw standaloneRecordError;
+
+    const { error: newLinkError } = await admin.from('records').insert({
+      user_id: userId,
+      title: 'New link to deleted Plan',
+      plan_id: deletedPlan.id,
+      source: 'from_plan',
+      start_at: hoursAgo(22),
+      end_at: hoursAgo(21),
+    });
+    expect(newLinkError?.code).toBe('DT001');
+
+    const { error: deletedNewLinkError } = await admin.from('records').insert({
+      user_id: userId,
+      title: 'Deleted new link to deleted Plan',
+      plan_id: deletedPlan.id,
+      source: 'from_plan',
+      start_at: hoursAgo(22),
+      end_at: hoursAgo(21),
+      deleted_at: new Date().toISOString(),
+    });
+    expect(deletedNewLinkError?.code).toBe('DT001');
+
+    const { error: deletedRelinkError } = await admin
+      .from('records')
+      .update({
+        plan_id: deletedPlan.id,
+        deleted_at: new Date().toISOString(),
+      })
+      .eq('id', standaloneRecord.id);
+    expect(deletedRelinkError?.code).toBe('DT001');
+
+    const { error: relinkError } = await admin
+      .from('records')
+      .update({ plan_id: deletedPlan.id })
+      .eq('id', standaloneRecord.id);
+    expect(relinkError?.code).toBe('DT001');
   });
 
   it('still rejects restoring links to skipped or future Plans', async () => {
@@ -639,7 +713,9 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
       startAt: hoursAgo(10),
       endAt: hoursAgo(9),
     });
-    const { data: skippedRecord, error: skippedRecordError } = await userClient
+    // authenticated の直接 DML は Candidate 6 で閉じたので、fixture は
+    // 残る direct writer（service_role）で作る
+    const { data: skippedRecord, error: skippedRecordError } = await admin
       .from('records')
       .insert({
         user_id: userId,
@@ -657,10 +733,11 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
       p_record_id: skippedRecord.id,
       p_user_id: userId,
     });
-    await userClient
+    const { error: skipError } = await admin
       .from('plans')
       .update({ skipped_at: new Date().toISOString() })
       .eq('id', skippedPlan.id);
+    expect(skipError).toBeNull();
 
     const { error: skippedRestoreError } = await admin.rpc('restore_record', {
       p_record_id: skippedRecord.id,

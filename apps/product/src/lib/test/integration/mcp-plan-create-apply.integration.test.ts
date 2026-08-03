@@ -467,17 +467,18 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan create apply integration', () => {
         startAt,
         endAt,
       }),
-      userClient
-        .from('plans')
-        .insert({
-          user_id: userId,
-          title: 'UI writer',
-          source: 'manual',
-          start_at: startAt,
-          end_at: endAt,
-        })
-        .select()
-        .single(),
+      // 通常 UI の write は Candidate 6 以降 service-owned command boundary を通る
+      // （authenticated の直接 DML は剥がした）
+      admin.rpc('create_plan_command_v1', {
+        p_user_id: userId,
+        p_title: 'UI writer',
+        p_note: dbNull,
+        p_tag_id: dbNull,
+        p_external_calendar_event_id: dbNull,
+        p_source: 'manual',
+        p_start_at: startAt,
+        p_end_at: endAt,
+      }),
     ]);
 
     expect(attempts.filter(({ error }) => error === null)).toHaveLength(1);
