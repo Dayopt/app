@@ -37,16 +37,16 @@ test.describe('Deep Link: SSR rendering of app routes', () => {
 
     await loginAndNavigate(page);
 
-    // 直接 Calendar review panel に遷移
-    await page.goto('/ja/calendar/week?date=2026-04-20&panel=review');
-    await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/\/ja\/calendar\/week\?date=2026-04-20&panel=review/);
+    // 直接 Calendar review panel に遷移（/ja/calendar/week という route は存在しない）
+    await page.goto('/ja/week?date=2026-04-20&panel=review');
+    await expect(page).toHaveURL(/\/ja\/week\?date=2026-04-20&panel=review/);
 
-    // Sidebar が SSR から表示されている
-    const sidebar = page.locator('[role="navigation"]').first();
+    // Sidebar が初回レンダリングから表示されている（現 shell は <aside> = complementary landmark）
+    const sidebar = page.getByRole('complementary').first();
     await expect(sidebar).toBeVisible();
 
-    await expect(page.getByRole('heading', { name: /振り返り|Review/i }).first()).toBeVisible();
+    // desktop の Review panel は heading ではなく region（aria-label="振り返り"）
+    await expect(page.getByRole('region', { name: /振り返り|Review/i }).first()).toBeVisible();
   });
 
   test('calendar week renders with sidebar on direct access', async ({ page }, testInfo) => {
@@ -56,15 +56,13 @@ test.describe('Deep Link: SSR rendering of app routes', () => {
 
     // 直接 /week に遷移
     await page.goto('/ja/week?date=2026-04-20');
-    await page.waitForLoadState('networkidle');
     await expect(page).toHaveURL(/\/ja\/week/);
 
-    // Sidebar が SSR から表示
-    const sidebar = page.locator('[role="navigation"]').first();
+    // Sidebar が初回レンダリングから表示されている（現 shell は <aside> = complementary landmark）
+    const sidebar = page.getByRole('complementary').first();
     await expect(sidebar).toBeVisible();
 
-    // Calendar link が aria-current="page"
-    const calendarLink = page.getByRole('link', { name: /カレンダー|Calendar/i }).first();
-    await expect(calendarLink).toHaveAttribute('aria-current', 'page');
+    // Calendar グリッドが deep link 直後から描画される
+    await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
   });
 });

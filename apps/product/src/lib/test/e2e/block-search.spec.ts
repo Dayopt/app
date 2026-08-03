@@ -3,10 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database';
 
+import { resolveServiceRoleTarget } from './service-role-target-guard';
+import { suppressConsentBanner } from './suppress-consent-banner';
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const HAS_SUPABASE_ENV = Boolean(SUPABASE_URL && SUPABASE_SERVICE_KEY);
-const describeWithEnv = HAS_SUPABASE_ENV ? test.describe : test.describe.skip;
+// service role で auth user / plan / record を作って消すため、実行先が安全な時だけ有効にする
+const SERVICE_ROLE_TARGET = resolveServiceRoleTarget(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const describeWithEnv = SERVICE_ROLE_TARGET.safe ? test.describe : test.describe.skip;
 
 const TIMEZONE = 'Asia/Tokyo';
 const TEST_RUN_ID = crypto.randomUUID();
@@ -22,17 +26,22 @@ const RECORD_COMPATIBILITY_TITLE = `Legacy record ${SEARCH_TOKEN}`;
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
-function formatDateParam(date: Date): string {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+/**
+ * 日付は必ず TIMEZONE 基準で決める。`test.use({ timezoneId })` は browser context
+ * にしか効かず、Node 側の `Date` は runner の host TZ（CI では UTC）を返すため。
+ * ここは ±14 日の余裕があるので 1 日のズレでは壊れないが、同じ helper が
+ * critical-path.spec.ts では ±1 日で使われるので基準を揃えておく。
+ */
+const DATE_PARAM_FORMAT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
 
 function offsetDateParam(offsetDays: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  return formatDateParam(date);
+  // Asia/Tokyo は DST を持たないため、24h 加算と暦日加算が一致する
+  return DATE_PARAM_FORMAT.format(new Date(Date.now() + offsetDays * 86_400_000));
 }
 
 function isoAt(dateParam: string, hhmm: string): string {
@@ -40,11 +49,16 @@ function isoAt(dateParam: string, hhmm: string): string {
 }
 
 async function login(page: Page) {
+  await suppressConsentBanner(page);
   await page.goto('/ja/auth/login');
   await page.locator('input[type="email"], input[name="email"]').first().fill(TEST_EMAIL);
   await page.locator('input[type="password"]').first().fill(TEST_PASSWORD);
   await page.locator('button[type="submit"]').first().click();
   await page.waitForURL(/\/ja\/(day|week)/i, { timeout: 15_000 });
+  // URL 遷移だけでは hydration 完了を保証しない。ショートカットは mount 時の
+  // useEffect で registry へ登録されるため、grid の描画を待たずに Ctrl+K を
+  // 押すとイベントが誰にも拾われず検索ダイアログが開かない。
+  await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
 }
 
 describeWithEnv('Block search', () => {
@@ -160,6 +174,11 @@ describeWithEnv('Block search', () => {
       .toBe(`record:${recordId}`);
     expect(new URL(page.url()).searchParams.get('date')).toBe(recordDate);
     await expect(page.getByRole('dialog', { name: TAG_NAME })).toBeVisible();
+
+    // Inspector は modal dialog なので、開いたまま背後の検索ボタンは押せない。
+    // 実際の導線どおり一度閉じてから次の検索を開く。
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: TAG_NAME })).toHaveCount(0);
 
     await page.getByRole('button', { name: 'ブロックを検索' }).first().click();
     await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(TAG_NAME);
