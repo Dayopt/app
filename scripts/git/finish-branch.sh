@@ -176,7 +176,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     def is_pending:
       ((.status // "") | ascii_downcase
         | . == "in_progress" or . == "queued" or . == "pending" or . == "waiting" or . == "requested")
-      or ((.state // "") | ascii_downcase | . == "pending");
+      or ((.state // "") | ascii_downcase | . == "pending" or . == "expected");
     def is_decisive:
       ((.conclusion // "") | ascii_downcase
         | . == "success" or . == "failure" or . == "cancelled" or . == "timed_out")
@@ -280,10 +280,13 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   # 実行中・待機中の check も待つ。private repo + Free plan では GitHub 側の
   # required check 強制が効かないため、ここで止めないと CI 完了前にマージできてしまう。
+  # 畳み込み側の is_pending（§ROLLUP）と同じ集合にする。片方だけ直すと
+  # 「代表は pending だが件数は 0」のようなズレが出る。`expected` は
+  # StatusState の「status 到着待ち」で、failure でも success でもない。
   PENDING_CHECKS="$(printf '%s' "$ROLLUP" | jq -r '
     map(select(
         ((.status // "") | ascii_downcase | . == "in_progress" or . == "queued" or . == "pending" or . == "waiting" or . == "requested")
-        or ((.state // "") | ascii_downcase | . == "pending")
+        or ((.state // "") | ascii_downcase | . == "pending" or . == "expected")
       ))
     | length')"
 
@@ -329,15 +332,31 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # 「あるはずの context が無い」ことをここで能動的に検出する。
   #
   # 区切り文字は en dash（U+2013）。hyphen ではない。
+  # **存在だけでなく success を要求する。** GitHub の StatusState には `EXPECTED`
+  # （status の到着待ち）があり、これは上の is_failed にも is_pending にも該当しない。
+  # 「context はあるが EXPECTED のまま」を通すと、build 未完了のまま merge できる。
   REQUIRED_CONTEXTS=("Vercel – product" "Vercel – web")
   for required in "${REQUIRED_CONTEXTS[@]}"; do
-    found="$(printf '%s' "$ROLLUP" | jq -r --arg name "$required" '
-      map(select(((.name // .context // "")) == $name))
+    succeeded="$(printf '%s' "$ROLLUP" | jq -r --arg name "$required" '
+      map(select(
+          ((.name // .context // "")) == $name
+          and (
+            ((.conclusion // "") | ascii_downcase | . == "success")
+            or ((.state // "") | ascii_downcase | . == "success")
+          )
+        ))
       | length')"
-    if [[ "$found" == "0" ]]; then
-      error "必須 check「$required」が 1 件も見つかりません。マージを中止します。"
+    if [[ "$succeeded" == "0" ]]; then
+      present="$(printf '%s' "$ROLLUP" | jq -r --arg name "$required" '
+        map(select(((.name // .context // "")) == $name)) | length')"
+      if [[ "$present" == "0" ]]; then
+        error "必須 check「$required」が 1 件も見つかりません。マージを中止します。"
+        error "Vercel integration の接続、Ignored Build Step の有無、project 名を確認してください。"
+      else
+        error "必須 check「$required」が success ではありません。マージを中止します。"
+        error "EXPECTED（status 到着待ち）のまま放置されている可能性があります。"
+      fi
       error "product / web の build はこの check でしか検証されません（Actions 側の build は撤去済み）。"
-      error "Vercel integration の接続、Ignored Build Step の有無、project 名を確認してください。"
       exit 1
     fi
   done

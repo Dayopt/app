@@ -574,6 +574,29 @@ describe('畳み込みで緩めてはいけない判定', () => {
     expect(status).toBe(1);
   });
 
+  it('Vercel – product が EXPECTED のままなら止める（存在だけでは通さない）', () => {
+    // GitHub の StatusState には EXPECTED（status 到着待ち）があり、これは
+    // is_failed にも is_pending にも該当しない。存在だけを見る実装だと
+    // 「context はあるが build 未完了」で merge できてしまう。
+    const { status, stderr } = runScript([
+      checkRun('CI', 'SUCCESS', '2026-08-03T10:00:00Z'),
+      statusContext('Vercel – product', 'EXPECTED', '2026-08-03T10:03:00Z'),
+      statusContext('Vercel – web', 'SUCCESS', '2026-08-03T10:03:00Z'),
+    ]);
+    expect(stderr).toContain('実行中の check');
+    expect(status).toBe(1);
+  });
+
+  it('Vercel – product が FAILURE なら止める', () => {
+    const { status, stderr } = runScript([
+      checkRun('CI', 'SUCCESS', '2026-08-03T10:00:00Z'),
+      statusContext('Vercel – product', 'FAILURE', '2026-08-03T10:03:00Z'),
+      statusContext('Vercel – web', 'SUCCESS', '2026-08-03T10:03:00Z'),
+    ]);
+    expect(stderr).toContain('失敗している check');
+    expect(status).toBe(1);
+  });
+
   it('Vercel – web の status が無ければ止める', () => {
     const { status, stderr } = runScript([
       checkRun('🔍 Static Checks', 'SUCCESS', '2026-08-03T10:00:00Z'),
