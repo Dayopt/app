@@ -11,6 +11,7 @@ import type {
 } from '../schemas/timeblock';
 import { PlanService } from './plan-service';
 import { RecordService } from './record-service';
+import { assertTagAssignable } from './tag-assignment-guard';
 import {
   createTimeblockCommandClient,
   type TimeblockCommandClient,
@@ -49,7 +50,7 @@ export class TimeblockCommandService {
   private readonly records: RecordService;
 
   constructor(
-    supabase: ServiceSupabaseClient,
+    private readonly supabase: ServiceSupabaseClient,
     private readonly commands: TimeblockCommandClient = createTimeblockCommandClient(),
   ) {
     this.plans = new PlanService(supabase);
@@ -58,6 +59,7 @@ export class TimeblockCommandService {
 
   async createPlan(options: UserCommandOptions<CreatePlanInput>): Promise<PlanRow> {
     const { userId, input } = options;
+    await assertTagAssignable(this.supabase, userId, input.tagId);
     const plan = await this.commands.createPlan({
       userId,
       title: input.title,
@@ -75,6 +77,10 @@ export class TimeblockCommandService {
   async updatePlan(options: VersionedUpdateOptions<UpdatePlanInput>): Promise<PlanRow> {
     const { userId, id, input, expectedUpdatedAt } = options;
     const existing = await this.plans.getById({ userId, planId: id });
+    // 後からアーカイブされたタグを保持したままの編集は許可し、付け替えだけ拒否する
+    if (input.tagId !== undefined && input.tagId !== existing.tag_id) {
+      await assertTagAssignable(this.supabase, userId, input.tagId);
+    }
     return this.commands.updatePlan({
       userId,
       planId: id,
@@ -141,6 +147,7 @@ export class TimeblockCommandService {
 
   async createRecord(options: UserCommandOptions<CreateRecordInput>): Promise<RecordRow> {
     const { userId, input } = options;
+    await assertTagAssignable(this.supabase, userId, input.tagId);
     const record = await this.commands.createRecord({
       userId,
       title: input.title,
@@ -159,6 +166,10 @@ export class TimeblockCommandService {
   async updateRecord(options: VersionedUpdateOptions<UpdateRecordInput>): Promise<RecordRow> {
     const { userId, id, input, expectedUpdatedAt } = options;
     const existing = await this.records.getById({ userId, recordId: id });
+    // 後からアーカイブされたタグを保持したままの編集は許可し、付け替えだけ拒否する
+    if (input.tagId !== undefined && input.tagId !== existing.tag_id) {
+      await assertTagAssignable(this.supabase, userId, input.tagId);
+    }
     return this.commands.updateRecord({
       userId,
       recordId: id,

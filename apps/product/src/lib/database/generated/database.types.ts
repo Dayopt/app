@@ -846,6 +846,7 @@ export type Database = {
       };
       tags: {
         Row: {
+          archived_at: string | null;
           color: string | null;
           created_at: string | null;
           icon: string | null;
@@ -858,6 +859,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          archived_at?: string | null;
           color?: string | null;
           created_at?: string | null;
           icon?: string | null;
@@ -870,6 +872,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          archived_at?: string | null;
           color?: string | null;
           created_at?: string | null;
           icon?: string | null;
@@ -2088,6 +2091,7 @@ export type Database = {
       rename_tag_group: {
         Args: { p_new_prefix: string; p_old_prefix: string; p_user_id: string };
         Returns: {
+          archived_at: string | null;
           color: string | null;
           created_at: string | null;
           icon: string | null;

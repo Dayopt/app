@@ -6,6 +6,7 @@ import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
+import { assertTagAssignable } from './tag-assignment-guard';
 import { TimeblockOverlapService } from './timeblock-overlap-service';
 import { buildTimeblockSearchFilter } from './timeblock-search-query';
 import { TimeblockServiceError } from './timeblock-service-error';
@@ -125,6 +126,7 @@ export class RecordService {
 
     this.validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
     this.ensureRecordCanBeCreated(input.end_at);
+    await assertTagAssignable(this.supabase, userId, input.tagId);
 
     if (input.planId) {
       await this.ensureRecordablePlan(userId, input.planId);
@@ -178,6 +180,10 @@ export class RecordService {
 
     this.validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
     if (updatesTime) this.ensureRecordCanBeCreated(nextEndAt);
+    // 後からアーカイブされたタグを保持したままの編集は許可し、付け替えだけ拒否する
+    if (input.tagId !== undefined && input.tagId !== existing.tag_id) {
+      await assertTagAssignable(this.supabase, userId, input.tagId);
+    }
 
     if (input.planId) {
       await this.ensureRecordablePlan(userId, input.planId);

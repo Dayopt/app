@@ -17,6 +17,7 @@ export function transformDbTag(dbTag: DbTagRow): Tag {
     color: dbTag.color,
     icon: dbTag.icon,
     is_active: dbTag.is_active,
+    archived_at: dbTag.archived_at,
     parent_id: dbTag.parent_id ?? null,
     sort_order: dbTag.sort_order,
     created_at: dbTag.created_at,

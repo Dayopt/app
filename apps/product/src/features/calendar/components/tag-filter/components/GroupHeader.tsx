@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import {
+  Archive,
   BarChart3,
   ChevronRight,
   Eye,
@@ -47,6 +48,7 @@ interface GroupHeaderProps {
   onAddTagToGroup?: (() => void) | undefined;
   onRenameGroup?: (() => void) | undefined;
   onViewStats?: (() => void) | undefined;
+  onArchiveGroup?: (() => void) | undefined;
   onDeleteGroup?: (() => void) | undefined;
   /**
    * 行（名前部分）クリック時のハンドラ。指定なしは `onToggleCollapse` にフォールバック。
@@ -79,6 +81,7 @@ export function GroupHeader({
   onAddTagToGroup,
   onRenameGroup,
   onViewStats,
+  onArchiveGroup,
   onDeleteGroup,
   onRowClick,
   highlighted = false,
@@ -247,6 +250,14 @@ export function GroupHeader({
                 <DropdownMenuItem onClick={onViewStats}>
                   <BarChart3 className="mr-2 size-4" />
                   {t('calendar.filter.viewStats')}
+                </DropdownMenuItem>
+              )}
+
+              {/* アーカイブ（子タグも道連れ。可逆なので確認なし） */}
+              {onArchiveGroup && (
+                <DropdownMenuItem onClick={onArchiveGroup}>
+                  <Archive className="mr-2 size-4" />
+                  {t('calendar.filter.archive')}
                 </DropdownMenuItem>
               )}
 

@@ -5,13 +5,16 @@
  * REST API（src/app/api/tags/route.ts）をtRPC化
  *
  * エンドポイント:
- * - tags.list: タグ一覧取得（フラット）
- * - tags.listHierarchy: タグ階層取得
+ * - tags.list: タグ一覧取得（フラット、アーカイブ済みを除く）
+ * - tags.listHierarchy: タグ階層取得（アーカイブ済みを除く）
+ * - tags.listArchived: アーカイブ済みタグ一覧
  * - tags.getById: タグID指定で取得
  * - tags.create: タグ作成
  * - tags.update: タグ更新
  * - tags.merge: タグマージ
- * - tags.delete: タグ削除
+ * - tags.archive: タグアーカイブ（親は子タグを道連れ）
+ * - tags.restore: アーカイブ済みタグの復元
+ * - tags.delete: タグ削除（関連 Plan / Record は未分類化）
  * - tags.reorder: タグ並び替え（sort_order更新）
  */
 
@@ -68,6 +71,17 @@ export const tagsRouter = createTRPCRouter({
       return handleServiceError(error);
     }
   }),
+
+  listArchived: protectedProcedure
+    .meta({ description: 'アーカイブ済みタグ一覧' })
+    .query(async ({ ctx }) => {
+      try {
+        const service = createTagService(ctx.supabase);
+        return await service.listArchived({ userId: ctx.userId });
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
 
   /**
    * タグID指定で取得
@@ -252,25 +266,65 @@ export const tagsRouter = createTRPCRouter({
     }),
 
   /**
-   * タグ削除
+   * タグアーカイブ（親タグは未アーカイブの子タグを道連れにする）
+   */
+  archive: protectedProcedure
+    .meta({ description: 'タグアーカイブ（親は子タグも同時にアーカイブ）' })
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const service = createTagService(ctx.supabase);
+        const result = await service.archive({ userId: ctx.userId, tagId: input.id });
+
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
+
+        return result;
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
+  /**
+   * アーカイブ済みタグの復元
+   */
+  restore: protectedProcedure
+    .meta({ description: 'アーカイブ済みタグの復元' })
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const service = createTagService(ctx.supabase);
+        const result = await service.restore({ userId: ctx.userId, tagId: input.id });
+
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
+
+        return result;
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
+  /**
+   * タグ削除（関連 Plan / Record は FK で未分類化される）
    */
   delete: protectedProcedure
-    .meta({ description: 'タグ削除（エントリ削除/再割当て選択可）' })
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        strategy: z.enum(['delete_blocks', 'reassign']).optional(),
-        targetTagId: z.string().uuid().optional(),
-      }),
-    )
+    .meta({ description: 'タグ削除（Plan / Record は未分類化して残す）' })
+    .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       try {
         const service = createTagService(ctx.supabase);
         const deletedTag = await service.delete({
           userId: ctx.userId,
           tagId: input.id,
-          ...(input.strategy != null ? { strategy: input.strategy } : {}),
-          ...(input.targetTagId != null ? { targetTagId: input.targetTagId } : {}),
         });
 
         // サーバーサイドキャッシュを無効化

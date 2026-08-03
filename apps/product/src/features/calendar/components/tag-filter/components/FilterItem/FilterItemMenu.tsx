@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Archive,
   BarChart3,
   Check,
   Eye,
@@ -57,6 +58,7 @@ interface FilterItemMenuProps {
   onOpenMergeModal: () => void;
   onShowOnlyTag: () => void;
   onViewStats?: (() => void) | undefined;
+  onArchiveTag?: (() => void) | undefined;
   onDeleteTag: (() => void) | undefined;
 }
 
@@ -76,6 +78,7 @@ export function FilterItemMenu({
   onOpenMergeModal,
   onShowOnlyTag,
   onViewStats,
+  onArchiveTag,
   onDeleteTag,
 }: FilterItemMenuProps) {
   const t = useTranslations();
@@ -204,6 +207,14 @@ export function FilterItemMenu({
         <DropdownMenuItem onClick={onViewStats}>
           <BarChart3 className="mr-2 size-4" />
           {t('calendar.filter.viewStats')}
+        </DropdownMenuItem>
+      )}
+
+      {/* アーカイブ（可逆なので確認なし） */}
+      {onArchiveTag && (
+        <DropdownMenuItem onClick={onArchiveTag}>
+          <Archive className="mr-2 size-4" />
+          {t('calendar.filter.archive')}
         </DropdownMenuItem>
       )}
 

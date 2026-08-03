@@ -15,6 +15,7 @@ vi.mock('@/lib/analytics/product-events', () => ({ trackProductEvent, trackProdu
 const USER_ID = '00000000-0000-4000-8000-0000000000a1';
 const PLAN_ID = '00000000-0000-4000-8000-0000000000b1';
 const RECORD_ID = '00000000-0000-4000-8000-0000000000c1';
+const TAG_ID = '00000000-0000-4000-8000-0000000000d1';
 
 const plan: PlanRow = {
   created_at: '2026-07-29T00:00:00.000001Z',
@@ -185,5 +186,56 @@ describe('TimeblockCommandService', () => {
         planId: PLAN_ID,
       }),
     );
+  });
+
+  it('createPlanでarchivedタグを付与しようとするとTAG_ARCHIVEDで拒否し、RPCを呼ばない', async () => {
+    const tagQuery = createChainableMock({ archived_at: '2026-07-20T00:00:00.000000Z' });
+    const supabase = createMockSupabase({ from: vi.fn(() => tagQuery) });
+    const commands = createCommands();
+    const service = new TimeblockCommandService(
+      supabase as unknown as ServiceSupabaseClient,
+      commands as unknown as TimeblockCommandClient,
+    );
+
+    await expect(
+      service.createPlan({
+        userId: USER_ID,
+        input: {
+          title: 'Plan',
+          tagId: TAG_ID,
+          start_at: plan.start_at,
+          end_at: plan.end_at,
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'TAG_ARCHIVED' });
+
+    expect(commands.createPlan).not.toHaveBeenCalled();
+  });
+
+  it('updatePlanでtagIdを変更しない編集は、既にarchive済みのタグでもguardを呼ばず通す', async () => {
+    const archivedPlan: PlanRow = { ...plan, tag_id: TAG_ID };
+    const planQuery = createChainableMock(archivedPlan);
+    const tagQuery = createChainableMock({ archived_at: '2026-07-20T00:00:00.000000Z' });
+    const supabase = createMockSupabase({
+      from: vi.fn((table: string) => (table === 'tags' ? tagQuery : planQuery)),
+    });
+    const commands = createCommands();
+    const expectedUpdatedAt = archivedPlan.updated_at;
+    const service = new TimeblockCommandService(
+      supabase as unknown as ServiceSupabaseClient,
+      commands as unknown as TimeblockCommandClient,
+    );
+
+    await expect(
+      service.updatePlan({
+        userId: USER_ID,
+        id: PLAN_ID,
+        expectedUpdatedAt,
+        input: { title: 'Changed' },
+      }),
+    ).resolves.toEqual(plan);
+
+    expect(tagQuery.select).not.toHaveBeenCalled();
+    expect(commands.updatePlan).toHaveBeenCalledWith(expect.objectContaining({ tagId: TAG_ID }));
   });
 });

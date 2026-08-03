@@ -250,6 +250,9 @@
       "tagMenu": "タグメニュー",
       "expand": "展開",
       "collapse": "折りたたむ",
+      "archive": "アーカイブ",
+      "archivedSection": "アーカイブ済み",
+      "restore": "復元",
       "createDialog": {
         "title": "新しいタグを作成",
         "name": "タグ名",

@@ -13,8 +13,9 @@ import { useIsFetching } from '@tanstack/react-query';
 import { SidebarSection } from '@/components/shell/sidebar';
 import {
   flattenTagTree,
-  TagDeleteStrategyDialog,
+  TagDeleteConfirmDialog,
   tagKeys,
+  useArchiveTag,
   useDeleteTag,
   useTagsHierarchy,
 } from '@/features/tags';
@@ -22,6 +23,7 @@ import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { api } from '@/lib/trpc';
 import { Button, HoverTooltip, Skeleton } from '@dayopt/components';
 
+import { ArchivedTagList } from './components/ArchivedTagList';
 import { TagFlatList } from './components/TagFlatList';
 
 /**
@@ -46,6 +48,7 @@ export function CalendarFilterList() {
   );
 
   const deleteTagMutation = useDeleteTag();
+  const archiveTagMutation = useArchiveTag();
 
   const openTagCreateModal = useShellStore.use.openTagCreateModal();
 
@@ -80,7 +83,8 @@ export function CalendarFilterList() {
     recordCount: number;
   } | null>(null);
 
-  // 削除ハンドラー: stats未取得/エラー時は安全側に倒して常に確認ダイアログを表示
+  // 削除ハンドラー: 未使用タグは即削除、使用済みは未分類化の説明つき確認を挟む。
+  // stats未取得/エラー時は安全側に倒して常に確認ダイアログを表示
   const handleDeleteTag = useCallback(
     (tagId: string, tagName: string) => {
       const recordCount = tagPlanCounts === null ? 1 : (tagPlanCounts[tagId] ?? 0);
@@ -93,28 +97,21 @@ export function CalendarFilterList() {
     [tagPlanCounts, deleteTagMutation],
   );
 
-  // 削除確認後のハンドラー（ストラテジー付き）
-  const handleConfirmDelete = async (
-    strategy: 'delete_blocks' | 'reassign',
-    targetTagId?: string,
-  ) => {
+  const handleArchiveTag = useCallback(
+    (tagId: string) => {
+      archiveTagMutation.mutate({ id: tagId });
+    },
+    [archiveTagMutation],
+  );
+
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await deleteTagMutation.mutateAsync({
-        id: deleteTarget.id,
-        strategy,
-        targetTagId,
-      });
+      await deleteTagMutation.mutateAsync({ id: deleteTarget.id });
     } finally {
       setDeleteTarget(null);
     }
   };
-
-  // ダイアログに渡す付け替え先タグ一覧（削除対象を除外）
-  const availableTagsForReassign = useMemo(
-    () => (tags ?? []).filter((tag) => tag.id !== deleteTarget?.id),
-    [tags, deleteTarget?.id],
-  );
 
   return (
     <>
@@ -149,6 +146,7 @@ export function CalendarFilterList() {
               allTags={tags}
               visibleTagIds={visibleTagIds}
               onToggleTag={toggleTag}
+              onArchiveTag={handleArchiveTag}
               onDeleteTag={handleDeleteTag}
               onShowOnlyTag={showOnlyTag}
               onToggleGroupTags={toggleGroupTags}
@@ -162,16 +160,18 @@ export function CalendarFilterList() {
             </div>
           )}
         </SidebarSection>
+
+        {/* アーカイブ済みタグ（参照・復元・完全削除の入口） */}
+        <ArchivedTagList onDeleteTag={handleDeleteTag} />
       </div>
 
-      {/* タグ削除ストラテジーダイアログ */}
-      <TagDeleteStrategyDialog
+      {/* タグ完全削除の確認ダイアログ（関連 Plan / Record は未分類化） */}
+      <TagDeleteConfirmDialog
         open={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleConfirmDelete}
         tagName={deleteTarget?.name ?? ''}
         recordCount={deleteTarget?.recordCount ?? 0}
-        availableTags={availableTagsForReassign}
       />
     </>
   );

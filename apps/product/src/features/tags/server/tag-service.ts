@@ -7,6 +7,7 @@ import 'server-only';
  * - 取得系: `tag-query-service.ts`
  * - 作成・更新: `tag-mutation-service.ts`
  * - マージ: `tag-merge-service.ts`
+ * - アーカイブ / 復元: `tag-archive-service.ts`
  * - 削除: `tag-delete-service.ts`
  * - 並び替え: `tag-reorder-service.ts`
  *
@@ -18,7 +19,8 @@ import 'server-only';
 
 import type { Database } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Tag, TagDeleteStrategy, TagTreeNode } from '../types';
+import type { Tag, TagTreeNode } from '../types';
+import { TagArchiveService } from './tag-archive-service';
 import { TagDeleteService } from './tag-delete-service';
 import { TagMergeService, type MergeTagsOptions, type MergeTagsResult } from './tag-merge-service';
 import {
@@ -46,6 +48,7 @@ export class TagService {
   private readonly reorderService: TagReorderService;
   private readonly mutationService: TagMutationService;
   private readonly mergeService: TagMergeService;
+  private readonly archiveService: TagArchiveService;
   private readonly deleteService: TagDeleteService;
 
   constructor(supabase: SupabaseClient<Database>) {
@@ -53,6 +56,7 @@ export class TagService {
     this.reorderService = new TagReorderService(supabase);
     this.mutationService = new TagMutationService(supabase, this.queryService);
     this.mergeService = new TagMergeService(supabase, this.queryService);
+    this.archiveService = new TagArchiveService(supabase, this.queryService);
     this.deleteService = new TagDeleteService(supabase, this.queryService);
   }
 
@@ -120,17 +124,38 @@ export class TagService {
   }
 
   /**
-   * タグ削除
-   *
-   * @param options - userId, tagId, strategy（任意）, targetTagId（reassign時必須）
-   * @returns 削除されたタグ
+   * アーカイブ済みタグの一覧
    */
-  async delete(options: {
+  async listArchived(options: { userId: string }): Promise<Tag[]> {
+    return this.queryService.listArchived(options.userId);
+  }
+
+  /**
+   * タグをアーカイブする（親タグは子タグを道連れにする）
+   */
+  async archive(options: {
     userId: string;
     tagId: string;
-    strategy?: TagDeleteStrategy;
-    targetTagId?: string;
-  }): Promise<Tag> {
+  }): Promise<{ tag: Tag; archivedChildCount: number }> {
+    return this.archiveService.archive(options);
+  }
+
+  /**
+   * アーカイブ済みタグを復元する
+   */
+  async restore(options: {
+    userId: string;
+    tagId: string;
+  }): Promise<{ tag: Tag; restoredChildCount: number }> {
+    return this.archiveService.restore(options);
+  }
+
+  /**
+   * タグ削除（関連 Plan / Record は FK で未分類化される）
+   *
+   * @returns 削除されたタグ
+   */
+  async delete(options: { userId: string; tagId: string }): Promise<Tag> {
     return this.deleteService.delete(options);
   }
 

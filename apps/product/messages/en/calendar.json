@@ -250,6 +250,9 @@
       "tagMenu": "Tag menu",
       "expand": "Expand",
       "collapse": "Collapse",
+      "archive": "Archive",
+      "archivedSection": "Archived",
+      "restore": "Restore",
       "createDialog": {
         "title": "Create a new tag",
         "name": "Tag name",
