@@ -63,6 +63,21 @@ jobs:
 
       - uses: ./.github/actions/setup
 
+      # Impact Resolver（scripts/ci/impact.mjs）の判定結果を Step Summary に出す。
+      # merge gate（branch:finish）が同じ判定で必須 Vercel context を決めるため、
+      # PR 上で「何が affected と判定されたか」を可視化する（#1813）。
+      # 表示専用で gate ではないので、失敗しても static job は落とさない。
+      # job を新設しないのは課金が job 単位で切り上げられるため（本 workflow 冒頭コメント）。
+      - name: Impact summary
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].filename' \
+            | node scripts/ci/impact.mjs --stdin --summary >> "$GITHUB_STEP_SUMMARY"
+
       # 独立した static チェックを 1 step 内の shell background lane で並列実行する（#1422）。
       # 2026-06-25 GA の native `parallel` 構文は hosted runner 未対応（workflow parse error）
       # だったため、確実に動く `&` / `wait` 方式を採用。install は共有し、重い ESLint / knip /
