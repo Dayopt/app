@@ -18,7 +18,7 @@ const PRODUCTION_PROJECT_REF = 'yvglwblxrnrenfifsnje';
 
 const LOCAL_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
 
-export type ServiceRoleTarget = { safe: true } | { safe: false; reason: string };
+type ServiceRoleTarget = { safe: true } | { safe: false; reason: string };
 
 export function resolveServiceRoleTarget(
   supabaseUrl: string | undefined,
