@@ -3,10 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database';
 
+import { resolveServiceRoleTarget } from './service-role-target-guard';
+import { suppressConsentBanner } from './suppress-consent-banner';
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const HAS_SUPABASE_ENV = Boolean(SUPABASE_URL && SUPABASE_SERVICE_KEY);
-const describeWithEnv = HAS_SUPABASE_ENV ? test.describe : test.describe.skip;
+// service role で auth user / plan / record を作って消すため、実行先が安全な時だけ有効にする
+const SERVICE_ROLE_TARGET = resolveServiceRoleTarget(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const describeWithEnv = SERVICE_ROLE_TARGET.safe ? test.describe : test.describe.skip;
 
 const TIMEZONE = 'Asia/Tokyo';
 const TEST_RUN_ID = crypto.randomUUID();
@@ -42,6 +46,7 @@ function isoAt(dateParam: string, hhmm: string): string {
 }
 
 async function login(page: Page) {
+  await suppressConsentBanner(page);
   await page.goto('/ja/auth/login');
   await page.waitForLoadState('networkidle');
   await page.locator('input[type="email"], input[name="email"]').first().fill(TEST_EMAIL);
