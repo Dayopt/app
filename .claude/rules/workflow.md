@@ -256,6 +256,16 @@ Actions 課金は **PR ごとの固定費が支配的**（2026-07-25 実測）:
 - ready 後にさらに push すると重量層も再走する。レビュー指摘の対応が続くなら `gh pr ready --undo` で draft に戻してから積む
 - draft を忘れて ready で作っても機能的な regression は無い（全 push で全層が走る従来挙動に戻り、課金だけ増える）
 
+### build と bundle 検査は Vercel 側で走る
+
+product の `next build` と bundle 検査（client bundle への secret 混入 / JS route budget / CSS budget）は **Actions ではなく Vercel の build** で走る。配線は `apps/product/vercel.json` の `buildCommand` → apps/product の `verify:bundle`。
+
+- Actions 側で同じ build を回すのは、Vercel の preview deploy と二重実行だった（実測 9 課金分/run）
+- secret 混入検査は Vercel の方が強い。Actions の build env は placeholder しか持たないため「ハードコードされた literal」しか検出できなかった。Vercel の build は実 env を持つので、値プレフィックス（`sk_live_` 等）が実際に client へ漏れた場合も捕まる
+- merge gate は維持される。build 失敗は commit status `Vercel – product` として PR の rollup に載り、`branch:finish` の失敗判定が数える
+- bundle budget は報告のみだったのを `--fail` で強制に変えた。閾値は現状値に対して余裕がある（route 652/960 KB、CSS 87.5/95 KB）ので、発火するのは実際の regression の時だけ
+- CSS budget の強制は `size-limit` から `check-bundle-budget.ts` へ移した。`@size-limit/preset-app` は headless Chrome を起動する（CSS に実行時間の測定は無意味で、Vercel の build 環境で browser が使える保証も無い）。`pnpm size` はローカル調査用に残っている
+
 ### なぜ 2 段階か
 
 2026-08-03 実測: 3 日間で CI 38 run / 15 PR。push 2.5 回に対して merge 前に必要な全量検証は 1 回で、全 push で重量層まで走らせると月 ~11,000 課金分ペース（Free 枠 2,000 分の 5 倍超）だった。検証の量は減らさず、走るタイミングを merge 前 1 回に寄せる。同じ原理で Integration Tests の push:main トリガー（up-to-date gate により PR 検証と同一 tree の再検証だった）を廃止し、Production Config Audit（Vercel 側 drift の検査で PR diff と無関係）を draft skip + 日次 cron に変えた。

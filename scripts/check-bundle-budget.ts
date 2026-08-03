@@ -263,8 +263,17 @@ function main(): void {
   }
 
   // 終了コード
-  if (failOnBudget && overCount > 0) {
-    console.log(`\nBudget exceeded: ${overCount} route(s) over budget.`);
+  // CSS も route と同じく --fail の対象にする。CSS 予算はかつて size-limit が
+  // 別途強制していたが、あれは @size-limit/preset-app 経由で headless Chrome を
+  // 起動する（CSS に実行時間の測定は無意味で、Vercel の build 環境で browser が
+  // 使える保証も無い）。強制はここへ寄せ、size-limit はローカル調査用に残す。
+  if (failOnBudget && (overCount > 0 || cssStatus === 'over')) {
+    if (overCount > 0) {
+      console.log(`\nBudget exceeded: ${overCount} route(s) over budget.`);
+    }
+    if (cssStatus === 'over') {
+      console.log(`\nBudget exceeded: CSS ${cssGzipKB} KB > ${BUDGETS.CSS_WARN_KB} KB.`);
+    }
     process.exit(1);
   }
 }
