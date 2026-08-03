@@ -236,8 +236,18 @@ function McpApiSection() {
   const subStatus = billingOverview.data?.billingInfo.subscriptionStatus;
   const currentPlan = getPlanIdForSubscriptionStatus(subStatus);
   const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
+  // この deploy の canonical MCP resource URI（next.config.mjs の
+  // resolveProductPublicMcpResourceUri が build 時に解決）。production は
+  // mcp.dayopt.app、Preview identity 有効時は branch origin、MCP 資格のない
+  // deploy（generic Preview 等）は空文字。
+  const mcpResourceUri = process.env.NEXT_PUBLIC_MCP_RESOURCE_URI ?? '';
   // OAuth 接続のため client (Claude.ai etc.) に渡すのはこの URL のみ。
-  const mcpServerUrl = dayoptUrls.mcp;
+  // production は mcp host の `/` が transport になるため origin をそのまま、
+  // Preview は branch origin の `/mcp` filesystem route が transport になる。
+  const mcpServerUrl =
+    mcpResourceUri === '' || mcpResourceUri === dayoptUrls.mcp
+      ? mcpResourceUri
+      : `${mcpResourceUri}/mcp`;
 
   const handleCopy = useCallback(
     (text: string, type: 'url') => {
@@ -248,6 +258,9 @@ function McpApiSection() {
     },
     [t],
   );
+
+  // MCP 資格のない deploy では接続導線を出さない（Production へ誤接続させない）。
+  if (!mcpServerUrl) return null;
 
   if (!canAccessPro) {
     return (

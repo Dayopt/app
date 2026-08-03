@@ -129,8 +129,11 @@ export function handleServiceError(error: unknown): never {
     const trpcCode = ERROR_CODE_MAP[error.code] ?? 'INTERNAL_SERVER_ERROR';
     const original = getOriginalError(error);
 
-    // サーバー側の異常（INTERNAL_SERVER_ERROR）のみSentryに報告
-    if (trpcCode === 'INTERNAL_SERVER_ERROR' && !isExpectedAuthError(original)) {
+    // サーバー側の異常とtimeoutをSentryに報告
+    if (
+      (trpcCode === 'INTERNAL_SERVER_ERROR' || trpcCode === 'TIMEOUT') &&
+      !isExpectedAuthError(original)
+    ) {
       captureUnexpectedError(original, {
         errorCode: error.code,
         source: 'trpc_service',

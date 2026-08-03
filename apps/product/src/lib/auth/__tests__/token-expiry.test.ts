@@ -133,6 +133,7 @@ describe('トークン期限切れ・セッション検証', () => {
         userId: 'user-1',
         authMode: 'oauth',
         oauthClientId: 'claude-ai',
+        oauthExecution: 'mcp_internal',
         oauthScopes: ['read:entries'],
       });
       const caller = createCaller(ctx as never);
@@ -144,11 +145,31 @@ describe('トークン期限切れ・セッション検証', () => {
       );
     });
 
+    // OAuth token は MCP endpoint 経由でしか受け付けない。公開 tRPC endpoint へ
+    // 同じ token を投げても scope 判定より手前で落ちる。
+    it('OAuth token は MCP endpoint 以外から公開 tRPC を通過できない', async () => {
+      const ctx = createMockContext({
+        userId: 'user-1',
+        authMode: 'oauth',
+        oauthClientId: 'claude-ai',
+        oauthScopes: ['read:entries'],
+      });
+      const caller = createCaller(ctx as never);
+
+      await expect(caller.plans.list()).rejects.toThrow(
+        expect.objectContaining({ code: 'FORBIDDEN' }),
+      );
+      await expect(caller.records.list()).rejects.toThrow(
+        expect.objectContaining({ code: 'FORBIDDEN' }),
+      );
+    });
+
     it('OAuth token は scope なしで plans.list / records.list を通過できない', async () => {
       const ctx = createMockContext({
         userId: 'user-1',
         authMode: 'oauth',
         oauthClientId: 'claude-ai',
+        oauthExecution: 'mcp_internal',
         oauthScopes: ['read:tags'],
       });
       const caller = createCaller(ctx as never);

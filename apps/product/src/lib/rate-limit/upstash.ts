@@ -219,6 +219,30 @@ export const trpcUserRateLimit = createRateLimiter(
   'ratelimit:product:trpc:user',
 );
 
+/** MCP token検証前のcoarse IP ceiling。認証後は別のuser limitで絞る。 */
+export const mcpPreAuthRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(1_200, '1 m'),
+  'ratelimit:product:mcp:pre-auth',
+);
+
+/** MCP protected resource用: tool discovery/read/writeをuser単位でまとめて制限する。 */
+export const mcpUserRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(120, '1 m'),
+  'ratelimit:product:mcp:user',
+);
+
+/** OAuth token endpoint用: 未認証IP単位のDB負荷上限。 */
+export const oauthTokenIpRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(10, '1 m'),
+  'ratelimit:product:oauth-token:ip',
+);
+
+/** OAuth token endpoint全体のDB負荷上限。 */
+export const oauthTokenGlobalRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(120, '1 m'),
+  'ratelimit:product:oauth-token:global',
+);
+
 /**
  * エントリ作成の日次上限
  * 500リクエスト / 24時間 per user

@@ -3,14 +3,20 @@
     "consent": {
       "pageTitle": "Authorize connection",
       "heading": "Connect {clientName} to Dayopt",
-      "description": "{clientName} will be able to read your Dayopt records.",
+      "description": "Review the Dayopt access requested by {clientName}.",
       "scopesLabel": "Access scope",
       "scope": {
         "read:entries": "Read timeblocks",
         "read:tags": "Read tags",
-        "read:stats": "Read stats"
+        "read:constraints": "Read Plan and Record occupancy times and scheduling constraints",
+        "read:stats": "Read review statistics",
+        "write:plans": "Create and update plans",
+        "delete:plans": "Delete and restore plans",
+        "write:records": "Create and update records",
+        "delete:records": "Delete and restore records"
       },
       "readOnlyNotice": "Read-only. {clientName} cannot modify your records.",
+      "writeNotice": "{clientName} can change the selected Dayopt data directly. You can disconnect it from Settings.",
       "approve": "Authorize",
       "deny": "Cancel",
       "userLabel": "Connecting as {email}"
@@ -21,6 +27,7 @@
       "invalidRedirectUri": "redirect_uri is not allowed.",
       "missingPkce": "PKCE parameters are missing.",
       "invalidScope": "The requested scope is not supported.",
+      "invalidResource": "The requested Dayopt resource is not supported.",
       "unsupportedResponseType": "Only response_type=code is supported.",
       "consentDenied": "Authorization was not granted."
     }

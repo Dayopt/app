@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
+import { dayoptUrls } from '@dayopt/config';
+
 import {
   assertProductOperationalProductionBuildEnv,
+  assertProductPreviewBuildEnv,
+  FORBIDDEN_PRODUCT_PREVIEW_BUILD_ENV,
+  MCP_PRODUCTION_ORIGIN,
+  PRODUCT_PRODUCTION_ORIGIN,
   REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV,
+  REQUIRED_PRODUCT_PREVIEW_BUILD_ENV,
+  resolveProductPublicMcpResourceUri,
 } from './production-build-gate.mjs';
 
 function completeProductionEnv() {
@@ -16,7 +24,40 @@ function completeProductionEnv() {
   };
 }
 
+function completePreviewEnv() {
+  const branchUrl = 'product-git-codex-mcp-preview-dayopt.vercel.app';
+  return {
+    VERCEL_ENV: 'preview',
+    VERCEL_TARGET_ENV: 'preview',
+    VERCEL_BRANCH_URL: branchUrl,
+    VERCEL_GIT_COMMIT_REF: 'codex/mcp-preview',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://previewbranchref.supabase.co',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'safe-dummy-anon-key',
+    SUPABASE_SERVICE_ROLE_KEY: 'safe-dummy-service-role-key',
+    UPSTASH_REDIS_REST_URL: 'https://preview-example.upstash.io',
+    UPSTASH_REDIS_REST_TOKEN: 'safe-dummy-upstash-token',
+    RECOVERY_CODE_PEPPER: 'safe-dummy-recovery-pepper',
+    MCP_OAUTH_ENVIRONMENT: 'preview',
+    MCP_OAUTH_PREVIEW_BRANCH: 'codex/mcp-preview',
+    MCP_OAUTH_PREVIEW_UPSTASH_HOST: 'preview-example.upstash.io',
+    OAUTH_AUTHORIZATION_SERVER_URI: `https://${branchUrl}`,
+    MCP_CANONICAL_RESOURCE_URI: `https://${branchUrl}`,
+    NEXT_PUBLIC_APP_URL: `https://${branchUrl}`,
+    MCP_WRITE_ENABLED_CLIENTS: '',
+  };
+}
+
 describe('Product operational production build gate', () => {
+  it('uses the shared canonical Product and MCP origins', () => {
+    expect({
+      productProduction: PRODUCT_PRODUCTION_ORIGIN,
+      mcpProduction: MCP_PRODUCTION_ORIGIN,
+    }).toEqual({
+      productProduction: dayoptUrls.product,
+      mcpProduction: dayoptUrls.mcp,
+    });
+  });
+
   it('skips Preview and non-Vercel CI', () => {
     expect(assertProductOperationalProductionBuildEnv({ VERCEL_ENV: 'preview' })).toBe(false);
     expect(assertProductOperationalProductionBuildEnv({ CI: 'true' })).toBe(false);
@@ -28,6 +69,36 @@ describe('Product operational production build gate', () => {
     ).toThrow(
       `Product production build requires: ${REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV.join(', ')}`,
     );
+  });
+
+  it('rejects a non-Production identity on a Vercel Production deployment', () => {
+    expect(() =>
+      assertProductOperationalProductionBuildEnv({
+        ...completeProductionEnv(),
+        MCP_OAUTH_ENVIRONMENT: 'staging',
+      }),
+    ).toThrow('Product production build cannot use a non-Production OAuth identity');
+  });
+
+  // Dayopt に staging 環境は無いが、あとから staging 名の custom environment が
+  // 生えたときに Production の OAuth identity をそのまま配らないよう、sink ではなく
+  // 明示的な拒否にしている。MCP 変数が 1 つも無くても止まることを固定する。
+  it('rejects a staging deployment target even without MCP identity variables', () => {
+    expect(() =>
+      assertProductOperationalProductionBuildEnv({
+        ...completeProductionEnv(),
+        VERCEL_TARGET_ENV: 'staging',
+      }),
+    ).toThrow('Product production build cannot use a non-Production OAuth identity');
+  });
+
+  it('accepts a Production deployment target with no MCP identity variables', () => {
+    expect(
+      assertProductOperationalProductionBuildEnv({
+        ...completeProductionEnv(),
+        VERCEL_TARGET_ENV: 'production',
+      }),
+    ).toBe(true);
   });
 
   it('lists missing names without printing values', () => {
@@ -82,5 +153,113 @@ describe('Product operational production build gate', () => {
         UPSTASH_REDIS_REST_URL: 'not-a-url',
       }),
     ).toThrow('Product production build requires a valid UPSTASH_REDIS_REST_URL');
+  });
+});
+
+describe('Product MCP Preview build gate', () => {
+  it('skips generic Preview deployments without the explicit marker', () => {
+    expect(
+      assertProductPreviewBuildEnv({
+        VERCEL_ENV: 'preview',
+        VERCEL_TARGET_ENV: 'preview',
+        VERCEL_BRANCH_URL: 'product-git-other-dayopt.vercel.app',
+      }),
+    ).toBe(false);
+  });
+
+  it('accepts one isolated stable Preview branch identity', () => {
+    expect(assertProductPreviewBuildEnv(completePreviewEnv())).toBe(true);
+  });
+
+  it('requires the complete Preview dependency set without printing values', () => {
+    const missingNames = REQUIRED_PRODUCT_PREVIEW_BUILD_ENV.filter(
+      (name) => name !== 'MCP_OAUTH_ENVIRONMENT',
+    );
+    expect(() =>
+      assertProductPreviewBuildEnv({
+        VERCEL_ENV: 'preview',
+        VERCEL_TARGET_ENV: 'preview',
+        MCP_OAUTH_ENVIRONMENT: 'preview',
+      }),
+    ).toThrow(`Product MCP preview build requires: ${missingNames.join(', ')}`);
+  });
+
+  it('fails closed when only the Preview Upstash marker is configured', () => {
+    expect(() =>
+      assertProductPreviewBuildEnv({
+        VERCEL_ENV: 'preview',
+        VERCEL_TARGET_ENV: 'preview',
+        MCP_OAUTH_PREVIEW_UPSTASH_HOST: 'preview-example.upstash.io',
+      }),
+    ).toThrow('Product MCP preview build requires:');
+  });
+
+  it.each([
+    ['VERCEL_GIT_COMMIT_REF', 'codex/other-branch'],
+    ['VERCEL_TARGET_ENV', 'staging'],
+    ['VERCEL_BRANCH_URL', 'product-a1b2c3-dayopt.vercel.app'],
+    ['OAUTH_AUTHORIZATION_SERVER_URI', 'https://app.dayopt.app'],
+    ['MCP_CANONICAL_RESOURCE_URI', 'https://mcp.dayopt.app'],
+    ['NEXT_PUBLIC_APP_URL', 'https://app.dayopt.app'],
+    ['MCP_OAUTH_PREVIEW_UPSTASH_HOST', 'production-example.upstash.io'],
+  ])('rejects Preview identity drift in %s', (name, value) => {
+    expect(() =>
+      assertProductPreviewBuildEnv({
+        ...completePreviewEnv(),
+        [name]: value,
+      }),
+    ).toThrow();
+  });
+
+  it('rejects the Production Supabase project', () => {
+    expect(() =>
+      assertProductPreviewBuildEnv({
+        ...completePreviewEnv(),
+        NEXT_PUBLIC_SUPABASE_URL: 'https://yvglwblxrnrenfifsnje.supabase.co',
+      }),
+    ).toThrow('Product MCP preview build requires a non-Production Supabase branch API origin');
+  });
+
+  it.each(FORBIDDEN_PRODUCT_PREVIEW_BUILD_ENV)(
+    'rejects inherited Production-capable configuration: %s',
+    (name) => {
+      expect(() =>
+        assertProductPreviewBuildEnv({
+          ...completePreviewEnv(),
+          [name]: 'must-not-be-printed',
+        }),
+      ).toThrow(`Product MCP preview build forbids: ${name}`);
+    },
+  );
+
+  it('keeps all write clients disabled', () => {
+    expect(() =>
+      assertProductPreviewBuildEnv({
+        ...completePreviewEnv(),
+        MCP_WRITE_ENABLED_CLIENTS: 'chatgpt',
+      }),
+    ).toThrow('MCP_WRITE_ENABLED_CLIENTS to be empty');
+  });
+});
+
+describe('Product public MCP resource', () => {
+  it('advertises only the resource owned by Production or the bound Preview', () => {
+    expect(resolveProductPublicMcpResourceUri(completeProductionEnv())).toBe(MCP_PRODUCTION_ORIGIN);
+    expect(resolveProductPublicMcpResourceUri(completePreviewEnv())).toBe(
+      'https://product-git-codex-mcp-preview-dayopt.vercel.app',
+    );
+  });
+
+  it.each([
+    { VERCEL_ENV: 'preview' },
+    { VERCEL_ENV: 'preview', VERCEL_TARGET_ENV: 'staging' },
+    { VERCEL_ENV: 'preview', VERCEL_TARGET_ENV: 'qa' },
+    { VERCEL_ENV: 'development' },
+  ])('does not advertise a fixed resource from an inactive Vercel environment', (env) => {
+    expect(resolveProductPublicMcpResourceUri(env)).toBe('');
+  });
+
+  it('keeps the established Production default for local development', () => {
+    expect(resolveProductPublicMcpResourceUri({})).toBe(MCP_PRODUCTION_ORIGIN);
   });
 });

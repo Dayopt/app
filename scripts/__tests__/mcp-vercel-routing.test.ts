@@ -1,0 +1,86 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+import { describe, expect, it } from 'vitest';
+
+import { dayoptDomains } from '../../packages/config/src/constants';
+
+type HostCondition = {
+  type: 'host';
+  value: {
+    eq: string;
+  };
+};
+
+type Rewrite = {
+  source: string;
+  destination: string;
+  has: HostCondition[];
+};
+
+type VercelConfig = {
+  rewrites: Rewrite[];
+};
+
+// Vercel product project の Root Directory は apps/product（2026-08-01 flip）。
+// 読まれるのは apps/product/vercel.json だけで、repo root の vercel.json は
+// dead config として編集の罠になったため削除済み（PR #1799 の Codex P1）。
+const configPath = fileURLToPath(new URL('../../apps/product/vercel.json', import.meta.url));
+const config = JSON.parse(readFileSync(configPath, 'utf8')) as VercelConfig;
+
+const EXPECTED_REWRITES = [
+  ['/', '/api/mcp', dayoptDomains.mcp],
+  ['/mcp', '/api/mcp', dayoptDomains.mcp],
+] as const;
+
+describe('MCP Vercel routing contract', () => {
+  it('does not resurrect the inactive root vercel.json', () => {
+    // root に vercel.json を戻すと「編集しても効かない config」が復活し、
+    // active 側との drift 事故（well-known 404）を再演する。
+    expect(existsSync(fileURLToPath(new URL('../../vercel.json', import.meta.url)))).toBe(false);
+  });
+
+  it('uses only exact fixed-host rewrites for Product and MCP aliases', () => {
+    expect(
+      config.rewrites.map((rewrite) => [
+        rewrite.source,
+        rewrite.destination,
+        rewrite.has[0]?.value.eq,
+      ]),
+    ).toEqual(EXPECTED_REWRITES);
+
+    expect(JSON.stringify(config.rewrites)).not.toMatch(/\*|vercel\.app/u);
+  });
+
+  it('serves reserved .well-known paths from filesystem routes instead of rewrites', () => {
+    expect(config.rewrites.some((rewrite) => rewrite.source.startsWith('/.well-known'))).toBe(
+      false,
+    );
+
+    for (const path of [
+      '../../apps/product/src/app/.well-known/oauth-authorization-server/route.ts',
+      '../../apps/product/src/app/.well-known/oauth-protected-resource/route.ts',
+    ]) {
+      expect(existsSync(fileURLToPath(new URL(path, import.meta.url)))).toBe(true);
+    }
+
+    for (const path of [
+      '../../apps/product/src/app/api/well-known/oauth-authorization-server/route.ts',
+      '../../apps/product/src/app/api/well-known/oauth-protected-resource/route.ts',
+    ]) {
+      expect(existsSync(fileURLToPath(new URL(path, import.meta.url)))).toBe(false);
+    }
+  });
+
+  it('serves the token endpoint from a filesystem route instead of a rewrite', () => {
+    // Preview host には rewrite が効かないため、rewrite 依存だと advertised
+    // tokenEndpoint が 404 になる（PR #1799 の Codex P1-a）。
+    expect(config.rewrites.some((rewrite) => rewrite.source === '/oauth/token')).toBe(false);
+
+    expect(
+      existsSync(
+        fileURLToPath(new URL('../../apps/product/src/app/oauth/token/route.ts', import.meta.url)),
+      ),
+    ).toBe(true);
+  });
+});
