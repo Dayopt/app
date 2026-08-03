@@ -404,6 +404,104 @@ describe('畳み込みが失敗を消さないこと', () => {
   });
 });
 
+describe('trusted dispatch で解除された audit guard の免除', () => {
+  // production-config-audit.yml は audit contract 保護対象を変更する PR で
+  // check run「Audit Vercel metadata (trusted)」を設計として必ず failure にする。
+  // 解除は trusted dispatch（workflow_dispatch）で、成功すると commit status
+  // 「Production Config Audit」だけが head SHA へ success で発行される。
+  // dispatch run の check run は rollup に紐づかないため、畳み込みでは解消できない。
+  const guardFailure = () =>
+    checkRun(
+      'Audit Vercel metadata (trusted)',
+      'FAILURE',
+      '2026-08-03T00:25:00Z',
+      'COMPLETED',
+      'Production Config Audit',
+    );
+
+  it('status「Production Config Audit」が success なら guard の failure を免除する', () => {
+    // PR #1799 で実測した形: guard の FAILURE と status の SUCCESS が共存する。
+    const { status, stderr } = runScript([
+      guardFailure(),
+      statusContext('Production Config Audit', 'SUCCESS', '2026-08-03T00:25:36Z'),
+      checkRun('CI', 'SUCCESS', '2026-08-03T00:20:00Z'),
+    ]);
+    expect(stderr).toContain('trusted dispatch により解除済み');
+    expect(stderr).not.toContain('失敗している check');
+    expect(status).toBe(0);
+  });
+
+  it('status が failure なら免除しない（dispatch 未実行 / audit 実失敗）', () => {
+    // (a) audit が本当に落ちた PR も (b) dispatch 未実行の contract 変更 PR も、
+    // status は failure のまま。免除は発動せず従来どおり止まる。
+    const { status, stderr } = runScript([
+      guardFailure(),
+      statusContext('Production Config Audit', 'FAILURE', '2026-08-03T00:25:36Z'),
+      checkRun('CI', 'SUCCESS', '2026-08-03T00:20:00Z'),
+    ]);
+    expect(stderr).toContain('失敗している check');
+    expect(status).toBe(1);
+  });
+
+  it('別名の check run の failure は status success があっても免除しない', () => {
+    // 免除が「guard 1 check の完全一致」に閉じていること。status success を
+    // 見ただけで他の failure まで握りつぶす実装だとここで緩む。
+    const { status, stderr } = runScript([
+      checkRun('E2E', 'FAILURE', '2026-08-03T00:25:00Z'),
+      statusContext('Production Config Audit', 'SUCCESS', '2026-08-03T00:25:36Z'),
+      checkRun('CI', 'SUCCESS', '2026-08-03T00:20:00Z'),
+    ]);
+    expect(stderr).toContain('失敗している check');
+    expect(status).toBe(1);
+  });
+
+  it('同名 check でも workflow が違えば免除しない', () => {
+    // 照合は 型 + workflow 名 + check 名。name だけの一致で免除すると、
+    // 別 workflow が同名 job を持った時に本物の failure が消える。
+    const { status, stderr } = runScript([
+      checkRun(
+        'Audit Vercel metadata (trusted)',
+        'FAILURE',
+        '2026-08-03T00:25:00Z',
+        'COMPLETED',
+        'CI',
+      ),
+      statusContext('Production Config Audit', 'SUCCESS', '2026-08-03T00:25:36Z'),
+    ]);
+    expect(stderr).toContain('失敗している check');
+    expect(status).toBe(1);
+  });
+
+  it('guard が cancelled なら status success があっても免除しない', () => {
+    // 免除対象は設計上の意図的 failure（enforce step の exit 1）だけ。cancelled /
+    // timed_out は「監査が完走していない」状態で、古い run の success status が残った
+    // まま再発火 run が publish 前に cancel された場合に免除すると fail-open になる。
+    const { status, stderr } = runScript([
+      checkRun(
+        'Audit Vercel metadata (trusted)',
+        'CANCELLED',
+        '2026-08-03T00:25:00Z',
+        'COMPLETED',
+        'Production Config Audit',
+      ),
+      statusContext('Production Config Audit', 'SUCCESS', '2026-08-03T00:24:00Z'),
+      checkRun('CI', 'SUCCESS', '2026-08-03T00:20:00Z'),
+    ]);
+    expect(stderr).toContain('失敗している check');
+    expect(status).toBe(1);
+  });
+
+  it('免除が効いても、同居する他の failure は止める', () => {
+    const { status, stderr } = runScript([
+      guardFailure(),
+      statusContext('Production Config Audit', 'SUCCESS', '2026-08-03T00:25:36Z'),
+      checkRun('CI', 'FAILURE', '2026-08-03T00:20:00Z'),
+    ]);
+    expect(stderr).toContain('失敗している check');
+    expect(status).toBe(1);
+  });
+});
+
 describe('実データの rollup（PR #1765）', () => {
   it('gh pr checks と同じ件数まで畳み、失敗ゼロと判定する', () => {
     // 2026-07-30 に実測した本物の rollup。21 件・8 名前が重複し、gh pr checks は 13 行。
