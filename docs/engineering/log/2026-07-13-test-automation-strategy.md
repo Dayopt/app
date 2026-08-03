@@ -1,6 +1,7 @@
 ---
 status: current
 updated: 2026-07-13
+superseded_by: docs/engineering/log/2026-08-03-playwright-test-agents-retirement.md
 ---
 
 # E2EはChromiumをCIの正とし、Test Agentsはplanner / generatorだけを限定採用する
