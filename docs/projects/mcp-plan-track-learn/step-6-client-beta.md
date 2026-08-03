@@ -98,8 +98,8 @@ AIが安全に後続操作へつなげられるよう、3 clientで次を確認�
 clientごとに`docs/engineering/log/YYYY-MM-DD-mcp-beta-<client>-<run>.md`を作る。結果はappend-onlyとし、再試験は新しいrunへ分ける。
 
 ```yaml
-status: current
-last_verified: YYYY-MM-DD
+status: frozen
+date: YYYY-MM-DD
 client: claude-ai | chatgpt | cursor
 client_version: '<version>'
 environment: preview
@@ -117,6 +117,8 @@ started_at: 'YYYY-MM-DDTHH:MM:SSZ'
 ended_at: 'YYYY-MM-DDTHH:MM:SSZ'
 result: pass | fail | blocked
 ```
+
+`date`はfilenameの日付と一致させる（未来日付は不可）。`status: frozen`はlogのappend-only凍結flagであり、run合否ではない。合否は`result`が持つ。
 
 manifest本文には、test matrix各行のstatusと、HTTP status、件数、時刻、最終画面状態だけを書く。次は保存しない。
 
