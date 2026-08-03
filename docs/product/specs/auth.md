@@ -83,8 +83,18 @@ Product の通常 UI は現在この route を使わず Supabase Auth を直接�
 - MFA登録済み `aal1 -> aal2` の状態は `FORBIDDEN`、MFA未登録 `aal1 -> aal1` と検証済み `aal2 -> aal2` は通過する
 - `user.verifyRecoveryCode` は recovery-code 検証により MFA factor を解除するため、既知の `aal1 -> aal2` 状態でも通過を許可する
 - OAuth bearer mode: token を `oauth_tokens` で検証し、`client_id` と `scopes` を tRPC context に保持する
-- OAuth bearer mode の汎用 tRPC 呼び出しは、procedure path ごとの allowlist と scope が一致した場合だけ許可する
-- Phase 1 で OAuth bearer mode から許可する tRPC procedure は `plans.list` / `records.list` の read-only 2 本だけ。互換 MCP tool `entries.list` も同じ `read:entries` scope を使う
+- OAuth token は **MCP endpoint（`/api/mcp`）内部からの実行だけ**が tRPC に到達できる。公開 tRPC endpoint（`/api/trpc`）へ同じ token を投げても、scope 判定より手前で `FORBIDDEN` になる（context の `oauthExecution: 'mcp_internal'` が無いため）
+- MCP 内部実行でも、procedure path ごとの allowlist（`MCP_TRPC_SCOPE_REQUIREMENTS`、`apps/product/src/lib/trpc/procedures.ts`）と scope が一致した場合だけ許可する。現在の集合:
+
+  | procedure                          | scope              |
+  | ---------------------------------- | ------------------ |
+  | `plans.list` / `plans.getById`     | `read:entries`     |
+  | `records.list` / `records.getById` | `read:entries`     |
+  | `statistics.getMcpReview`          | `read:stats`       |
+  | `tags.list`                        | `read:tags`        |
+  | `timeblockContext.getConstraints`  | `read:constraints` |
+
+  互換 MCP tool `entries.list` も `read:entries` scope を使う。write / delete は tRPC を経由せず、MCP mutation 経路（`private.authorize_mcp_mutation_v1` + 三重 write gate）だけが扱う
 
 ## OAuth / MCP redirect URI policy
 
