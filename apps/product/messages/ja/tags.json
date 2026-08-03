@@ -313,6 +313,7 @@
         "archived": "「{name}」をアーカイブしました",
         "archivedWithChildren": "「{name}」と子タグ{count}件をアーカイブしました",
         "restored": "「{name}」を復元しました",
+        "restoredWithConflicts": "「{name}」を復元しました。同じ名前のタグがあるため、子タグ{count}件はアーカイブに残っています",
         "undo": "元に戻す"
       }
     },

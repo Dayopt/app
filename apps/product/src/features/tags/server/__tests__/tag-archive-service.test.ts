@@ -73,13 +73,18 @@ describe('TagArchiveService', () => {
   describe('restore', () => {
     it('should restore an archived root tag with its batch-archived children', async () => {
       const restoreUpdateMock = createChainableMock(null);
-      const childrenRestoreMock = createChainableMock([{ id: 'child-1' }, { id: 'child-2' }]);
+      const childrenSelectMock = createChainableMock([{ id: 'child-1' }, { id: 'child-2' }]);
+      const child1UpdateMock = createChainableMock(null);
+      const child2UpdateMock = createChainableMock(null);
 
-      // 1: getById → archived root, 2: restore update, 3: children restore（同一 archived_at）
+      // 1: getById → archived root, 2: restore update, 3: children select（同一 archived_at）,
+      // 4-5: per-child restore update（単一 UPDATE だと 1 件の衝突で全滅するため 1 件ずつ実行する）
       mockSupabase.from
         .mockReturnValueOnce(mockSingleResponse(makeTag({ archived_at: ARCHIVED_AT })))
         .mockReturnValueOnce(restoreUpdateMock)
-        .mockReturnValueOnce(childrenRestoreMock);
+        .mockReturnValueOnce(childrenSelectMock)
+        .mockReturnValueOnce(child1UpdateMock)
+        .mockReturnValueOnce(child2UpdateMock);
 
       const result = await service.restore({ userId, tagId: 'tag-1' });
 
@@ -87,10 +92,39 @@ describe('TagArchiveService', () => {
         archived_at: null,
         parent_id: null,
       });
-      expect(childrenRestoreMock.update).toHaveBeenCalledWith({ archived_at: null });
-      expect(childrenRestoreMock.eq).toHaveBeenCalledWith('archived_at', ARCHIVED_AT);
+      expect(childrenSelectMock.select).toHaveBeenCalledWith('id');
+      expect(childrenSelectMock.eq).toHaveBeenCalledWith('archived_at', ARCHIVED_AT);
+      expect(child1UpdateMock.update).toHaveBeenCalledWith({ archived_at: null });
+      expect(child1UpdateMock.eq).toHaveBeenCalledWith('id', 'child-1');
+      expect(child2UpdateMock.update).toHaveBeenCalledWith({ archived_at: null });
+      expect(child2UpdateMock.eq).toHaveBeenCalledWith('id', 'child-2');
       expect(result.tag.archived_at).toBeNull();
       expect(result.restoredChildCount).toBe(2);
+      expect(result.conflictedChildCount).toBe(0);
+    });
+
+    it('should skip a child on 23505 conflict and keep restoring the rest without throwing', async () => {
+      const restoreUpdateMock = createChainableMock(null);
+      const childrenSelectMock = createChainableMock([{ id: 'child-1' }, { id: 'child-2' }]);
+      const child1UpdateMock = createChainableMock(null, {
+        message: 'duplicate key value violates unique constraint',
+        code: '23505',
+      });
+      const child2UpdateMock = createChainableMock(null);
+
+      // child-1 は同名衝突でスキップし、child-2 は正常に復元する。statement 全体は失敗しない
+      mockSupabase.from
+        .mockReturnValueOnce(mockSingleResponse(makeTag({ archived_at: ARCHIVED_AT })))
+        .mockReturnValueOnce(restoreUpdateMock)
+        .mockReturnValueOnce(childrenSelectMock)
+        .mockReturnValueOnce(child1UpdateMock)
+        .mockReturnValueOnce(child2UpdateMock);
+
+      const result = await service.restore({ userId, tagId: 'tag-1' });
+
+      expect(result.tag.archived_at).toBeNull();
+      expect(result.restoredChildCount).toBe(1);
+      expect(result.conflictedChildCount).toBe(1);
     });
 
     it('should restore a child as root when its parent is archived', async () => {
@@ -119,6 +153,7 @@ describe('TagArchiveService', () => {
       });
       // 子タグの個別復元では兄弟の巻き戻しをしない
       expect(result.restoredChildCount).toBe(0);
+      expect(result.conflictedChildCount).toBe(0);
       expect(result.tag.parent_id).toBeNull();
     });
 
@@ -144,6 +179,7 @@ describe('TagArchiveService', () => {
 
       expect(result.tag.archived_at).toBeNull();
       expect(result.restoredChildCount).toBe(0);
+      expect(result.conflictedChildCount).toBe(0);
       expect(mockSupabase.from).toHaveBeenCalledTimes(1);
     });
   });

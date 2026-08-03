@@ -76,12 +76,12 @@ export class TagArchiveService {
   async restore(options: {
     userId: string;
     tagId: string;
-  }): Promise<{ tag: Tag; restoredChildCount: number }> {
+  }): Promise<{ tag: Tag; restoredChildCount: number; conflictedChildCount: number }> {
     const { userId, tagId } = options;
     const tag = await this.queryService.getById({ userId, tagId });
 
     if (!tag.archived_at) {
-      return { tag, restoredChildCount: 0 };
+      return { tag, restoredChildCount: 0, conflictedChildCount: 0 };
     }
 
     let parentId = tag.parent_id;
@@ -132,32 +132,55 @@ export class TagArchiveService {
     }
 
     let restoredChildCount = 0;
+    let conflictedChildCount = 0;
     if (!tag.parent_id) {
-      const { data: restoredChildren, error: childrenError } = await this.supabase
+      const { data: childRows, error: childrenSelectError } = await this.supabase
         .from('tags')
-        .update({ archived_at: null })
+        .select('id')
         .eq('user_id', userId)
         .eq('parent_id', tagId)
-        .eq('archived_at', tag.archived_at)
-        .select('id');
-      if (childrenError) {
-        // 親の復元自体は完了している。子の同名衝突などでは親だけ復元された状態で返す
-        if (childrenError.code !== '23505') {
+        .eq('archived_at', tag.archived_at);
+
+      if (childrenSelectError) {
+        throw createTagDatabaseError(
+          childrenSelectError,
+          'FETCH_FAILED',
+          'Failed to inspect child tags',
+          'inspect_restore_children',
+        );
+      }
+
+      // 単一 UPDATE だと子 1 件の同名衝突で statement 全体が失敗し、
+      // 道連れになった子タグ全員が黙ってアーカイブに残ってしまう。
+      // 子タグ数は小さい前提で 1 件ずつ復元し、衝突した子だけスキップする。
+      for (const child of childRows ?? []) {
+        const { error: childUpdateError } = await this.supabase
+          .from('tags')
+          .update({ archived_at: null })
+          .eq('user_id', userId)
+          .eq('id', child.id);
+
+        if (childUpdateError) {
+          // 親の復元自体は完了している。同名衝突はその子だけアーカイブに残す
+          if (childUpdateError.code === '23505') {
+            conflictedChildCount += 1;
+            continue;
+          }
           throw createTagDatabaseError(
-            childrenError,
+            childUpdateError,
             'UPDATE_FAILED',
             'Failed to restore child tags',
             'restore_child_tags',
           );
         }
-      } else {
-        restoredChildCount = restoredChildren?.length ?? 0;
+        restoredChildCount += 1;
       }
     }
 
     return {
       tag: { ...tag, archived_at: null, parent_id: parentId },
       restoredChildCount,
+      conflictedChildCount,
     };
   }
 }

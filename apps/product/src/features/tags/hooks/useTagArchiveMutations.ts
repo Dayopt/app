@@ -110,9 +110,12 @@ export function useRestoreTag() {
       return { archivedSnapshot, restoredTagName: restoredTag?.name };
     },
     onSuccess: (data, _input, context) => {
-      toast.success(
-        t('archive.toast.restored', { name: context?.restoredTagName ?? data.tag.name }),
-      );
+      const name = context?.restoredTagName ?? data.tag.name;
+      if (data.conflictedChildCount > 0) {
+        toast(t('archive.toast.restoredWithConflicts', { name, count: data.conflictedChildCount }));
+        return;
+      }
+      toast.success(t('archive.toast.restored', { name }));
     },
     onError: (err, _input, context) => {
       context?.archivedSnapshot?.restore();

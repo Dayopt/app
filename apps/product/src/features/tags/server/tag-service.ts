@@ -146,7 +146,7 @@ export class TagService {
   async restore(options: {
     userId: string;
     tagId: string;
-  }): Promise<{ tag: Tag; restoredChildCount: number }> {
+  }): Promise<{ tag: Tag; restoredChildCount: number; conflictedChildCount: number }> {
     return this.archiveService.restore(options);
   }
 

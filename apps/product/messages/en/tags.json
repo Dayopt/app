@@ -313,6 +313,7 @@
         "archived": "Archived \"{name}\"",
         "archivedWithChildren": "Archived \"{name}\" and {count, plural, one {1 child tag} other {# child tags}}",
         "restored": "Restored \"{name}\"",
+        "restoredWithConflicts": "Restored \"{name}\". {count, plural, one {1 child tag} other {# child tags}} stayed archived because a tag with the same name exists",
         "undo": "Undo"
       }
     },
