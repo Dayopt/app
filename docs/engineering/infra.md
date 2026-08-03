@@ -213,7 +213,8 @@ GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品�
 
 - Required checksはrepository rulesetと`.github/workflows/ci.yml`を正とし、Code Quality由来のcheckを追加しない
 - セキュリティ静的解析はGitHub CodeQLを継続する
-- **自動の外部レビューは Codex（`chatgpt-codex-connector[bot]`）だけが実働している。** Copilot の automatic first review は workflow としては active だが、2026-08-03 に直近マージ 10 PR を実測したところ review も comment も 1 件も出していない。Gemini の ai-review は同日撤去済み。したがって「外部の目」は Codex の 1 系統だけで、実装・テスト・内部レビューはすべて Claude 系という前提で品質設計する
+- **自動の外部レビューは Codex（`chatgpt-codex-connector[bot]`）だけにする。** 2026-08-03 に Gemini の ai-review を撤去し、Copilot も外した（直近マージ 10 PR の実測で review / comment がともに 0 件。原因は org の Copilot seat が 0 で、automatic review が実際には機能していなかったこと）。したがって「外部の目」は Codex の 1 系統だけで、実装・テスト・内部レビューはすべて Claude 系という前提で品質設計する
+- Copilot を再開する場合は、org の Copilot seat 割り当てから必要（Settings → Copilot → Access）。seat が 0 のままでは workflow が登録されていてもレビューは出ない
 - カバレッジ閾値が必要になった場合はVitest / CIで直接管理する
 - Code Qualityを再評価する場合は、有効化前にbilling impactと既存品質ゲートとの差分を確認する
 
