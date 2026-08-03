@@ -193,6 +193,7 @@ export function CalendarController({
   const openDuplicateInspector = useTimeblockInspectorStore((state) => state.openDuplicate);
   const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
   const visibleTagIds = useCalendarFilterStore((state) => state.visibleTagIds);
+  const showUntagged = useCalendarFilterStore((state) => state.showUntagged);
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
@@ -251,6 +252,7 @@ export function CalendarController({
   );
   const calendarDiffPlans = useMemo(() => {
     void visibleTagIds;
+    void showUntagged;
     if (!calendarDiffEnabled) return [];
     return allTimeblocks
       .filter((entry) => entry.kind === 'plan')
@@ -270,7 +272,14 @@ export function CalendarController({
             entry.endDate ?? entry.displayEndDate,
           ),
       }));
-  }, [allTimeblocks, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds, visibleTagIds]);
+  }, [
+    allTimeblocks,
+    calendarDiffEnabled,
+    isEntryVisible,
+    isWithinVisibleDayBounds,
+    showUntagged,
+    visibleTagIds,
+  ]);
   const calendarDiffRecords = useMemo(() => {
     if (!calendarDiffEnabled) return [];
     return allTimeblocks

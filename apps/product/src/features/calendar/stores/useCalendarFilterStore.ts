@@ -17,12 +17,18 @@ interface CalendarFilterState {
 
   /** 初期化済みフラグ（タグ一覧取得後に初期化） */
   initialized: boolean;
+
+  /** 未分類（tag_id=null）ブロックの表示設定（デフォルト: 表示） */
+  showUntagged: boolean;
 }
 
 /** カレンダーフィルターのアクションインターフェース */
 interface CalendarFilterActions {
   /** タグの表示切替 */
   toggleTag: (tagId: string) => void;
+
+  /** 未分類（タグなし）ブロックの表示切替 */
+  toggleShowUntagged: () => void;
 
   /** すべてのタグを表示 */
   showAllTags: (tagIds: string[]) => void;
@@ -54,6 +60,9 @@ interface CalendarFilterActions {
   /** このタグだけ表示（他を全てOFF） */
   showOnlyTag: (tagId: string) => void;
 
+  /** 未分類ブロックだけ表示（タグを全てOFF） */
+  showOnlyUntagged: () => void;
+
   /** 指定タグだけ表示（グループ用） */
   showOnlyGroupTags: (tagIds: string[]) => void;
 
@@ -76,6 +85,7 @@ type CalendarFilterStore = CalendarFilterState & CalendarFilterActions;
 interface SerializedCalendarFilterState {
   visibleTagIds: string[];
   initialized: boolean;
+  showUntagged: boolean;
 }
 
 // カスタムシリアライザー（Setの永続化対応）
@@ -83,14 +93,16 @@ const setSerializer = {
   serialize: (state: CalendarFilterState): SerializedCalendarFilterState => ({
     visibleTagIds: Array.from(state.visibleTagIds),
     initialized: state.initialized,
+    showUntagged: state.showUntagged,
   }),
   deserialize: (state: unknown): CalendarFilterState => {
     if (typeof state !== 'object' || state === null) {
-      return { visibleTagIds: new Set<string>(), initialized: false };
+      return { visibleTagIds: new Set<string>(), initialized: false, showUntagged: true };
     }
 
     const rawVisibleTagIds = Reflect.get(state, 'visibleTagIds');
     const rawInitialized = Reflect.get(state, 'initialized');
+    const rawShowUntagged = Reflect.get(state, 'showUntagged');
     const visibleTagIds = Array.isArray(rawVisibleTagIds)
       ? rawVisibleTagIds.filter((tagId): tagId is string => typeof tagId === 'string')
       : [];
@@ -98,6 +110,8 @@ const setSerializer = {
     return {
       visibleTagIds: new Set(visibleTagIds),
       initialized: rawInitialized === true,
+      // 追加以前(v5以前)の永続化データにはキーが無いため、その場合は表示(true)をデフォルトにする
+      showUntagged: typeof rawShowUntagged === 'boolean' ? rawShowUntagged : true,
     };
   },
 };
@@ -107,11 +121,12 @@ export function migrateCalendarFilterState(
   version: number,
 ): CalendarFilterState {
   if (version < 5 || typeof persistedState !== 'object' || persistedState === null) {
-    return { visibleTagIds: new Set<string>(), initialized: false };
+    return { visibleTagIds: new Set<string>(), initialized: false, showUntagged: true };
   }
 
   const rawVisibleTagIds = Reflect.get(persistedState, 'visibleTagIds');
   const rawInitialized = Reflect.get(persistedState, 'initialized');
+  const rawShowUntagged = Reflect.get(persistedState, 'showUntagged');
   const visibleTagIds =
     rawVisibleTagIds instanceof Set
       ? Array.from(rawVisibleTagIds).filter((tagId): tagId is string => typeof tagId === 'string')
@@ -120,6 +135,8 @@ export function migrateCalendarFilterState(
   return {
     visibleTagIds: new Set(visibleTagIds),
     initialized: rawInitialized === true,
+    // v6以前(showUntaggedキーが無い状態)からの移行は表示(true)をデフォルトにする
+    showUntagged: typeof rawShowUntagged === 'boolean' ? rawShowUntagged : true,
   };
 }
 
@@ -131,6 +148,7 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         // 初期状態
         visibleTagIds: new Set<string>(),
         initialized: false,
+        showUntagged: true,
 
         // アクション
 
@@ -144,6 +162,8 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
             }
             return { visibleTagIds: newSet };
           }),
+
+        toggleShowUntagged: () => set((state) => ({ showUntagged: !state.showUntagged })),
 
         showAllTags: (tagIds) =>
           set(() => ({
@@ -218,6 +238,12 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
             visibleTagIds: new Set([tagId]),
           })),
 
+        showOnlyUntagged: () =>
+          set(() => ({
+            visibleTagIds: new Set(),
+            showUntagged: true,
+          })),
+
         showOnlyGroupTags: (tagIds) =>
           set(() => ({
             visibleTagIds: new Set(tagIds),
@@ -237,9 +263,10 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         matchesTagFilter: (tagId) => {
           const state = get();
 
-          // タグなし → 常に表示（タグなしフィルター廃止）
+          // タグなし(未分類) → showUntagged フラグに従う
+          // (#1576: タグ削除で未分類化したブロックをフィルターできるようにshowUntagged復活)
           if (tagId === null) {
-            return true;
+            return state.showUntagged;
           }
 
           return state.visibleTagIds.has(tagId);
@@ -255,13 +282,19 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         // v2: visibleTagIds競合問題の修正に伴いリセット
         // v3: showUntagged削除、matchesTagFilter/isPlanVisible単一タグ対応
         // v4: ItemType ('plan'|'record') → TimeblockOrigin ('planned'|'unplanned') に変更
-        version: 5,
+        version: 6,
         storage: createPlatformStorage<CalendarFilterState>({
           serialize: setSerializer.serialize,
           deserialize: setSerializer.deserialize,
         }),
-        partialize: ({ visibleTagIds, initialized }) => ({ visibleTagIds, initialized }),
+        partialize: ({ visibleTagIds, initialized, showUntagged }) => ({
+          visibleTagIds,
+          initialized,
+          showUntagged,
+        }),
         // v5: visibleTypes (origin filter) を削除 — unplanned origin 廃止
+        // v6: showUntagged 復活。未分類(tag_id=null)ブロックのフィルター対応（#1576）。
+        //     既存ユーザーはキーが無いため migrate で表示(true)をデフォルトにする
         migrate: migrateCalendarFilterState,
       },
     ),

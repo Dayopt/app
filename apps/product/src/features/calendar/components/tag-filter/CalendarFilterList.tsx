@@ -14,6 +14,7 @@ import { SidebarSection } from '@/components/shell/sidebar';
 import {
   flattenTagTree,
   TagDeleteConfirmDialog,
+  TagIcon,
   tagKeys,
   useArchiveTag,
   useDeleteTag,
@@ -24,6 +25,7 @@ import { api } from '@/lib/trpc';
 import { Button, HoverTooltip, Skeleton } from '@dayopt/components';
 
 import { ArchivedTagList } from './components/ArchivedTagList';
+import { FilterItem } from './components/FilterItem/FilterItem';
 import { TagFlatList } from './components/TagFlatList';
 
 /**
@@ -60,6 +62,9 @@ export function CalendarFilterList() {
   const toggleGroupTags = useCalendarFilterStore((s) => s.toggleGroupTags);
   const showOnlyGroupTags = useCalendarFilterStore((s) => s.showOnlyGroupTags);
   const getGroupVisibility = useCalendarFilterStore((s) => s.getGroupVisibility);
+  const showUntagged = useCalendarFilterStore((s) => s.showUntagged);
+  const toggleShowUntagged = useCalendarFilterStore((s) => s.toggleShowUntagged);
+  const showOnlyUntagged = useCalendarFilterStore((s) => s.showOnlyUntagged);
 
   // hierarchy フェッチ中はフィルター初期化をスキップ（Race Condition防止）
   const isTagsFetching = useIsFetching({ queryKey: tagKeys.hierarchy() }) > 0;
@@ -140,23 +145,36 @@ export function CalendarFilterList() {
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
             </div>
-          ) : nodes && nodes.length > 0 ? (
-            <TagFlatList
-              nodes={nodes}
-              allTags={tags}
-              visibleTagIds={visibleTagIds}
-              onToggleTag={toggleTag}
-              onArchiveTag={handleArchiveTag}
-              onDeleteTag={handleDeleteTag}
-              onShowOnlyTag={showOnlyTag}
-              onToggleGroupTags={toggleGroupTags}
-              onShowOnlyGroupTags={showOnlyGroupTags}
-              getGroupVisibility={getGroupVisibility}
-              isMobile={isMobile}
-            />
           ) : (
-            <div className="text-muted-foreground px-2 py-2 text-xs">
-              {t('calendar.filter.noTags')}
+            <div className="space-y-1">
+              {nodes && nodes.length > 0 ? (
+                <TagFlatList
+                  nodes={nodes}
+                  allTags={tags}
+                  visibleTagIds={visibleTagIds}
+                  onToggleTag={toggleTag}
+                  onArchiveTag={handleArchiveTag}
+                  onDeleteTag={handleDeleteTag}
+                  onShowOnlyTag={showOnlyTag}
+                  onToggleGroupTags={toggleGroupTags}
+                  onShowOnlyGroupTags={showOnlyGroupTags}
+                  getGroupVisibility={getGroupVisibility}
+                  isMobile={isMobile}
+                />
+              ) : (
+                <div className="text-muted-foreground px-2 py-2 text-xs">
+                  {t('calendar.filter.noTags')}
+                </div>
+              )}
+              {/* 未分類（tag_id=null）ブロックの表示切替。タグ削除でSET NULLされたブロックを
+                  絞り込めるようにする（#1576）。件数は集計対象外のため表示しない */}
+              <FilterItem
+                label={t('calendar.filter.untagged')}
+                checked={showUntagged}
+                onCheckedChange={toggleShowUntagged}
+                onShowOnlyThis={showOnlyUntagged}
+                icon={<TagIcon icon={null} color={null} size="sm" isUncategorized />}
+              />
             </div>
           )}
         </SidebarSection>

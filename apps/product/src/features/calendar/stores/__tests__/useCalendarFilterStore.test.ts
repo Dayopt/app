@@ -8,6 +8,7 @@ describe('useCalendarFilterStore', () => {
     useCalendarFilterStore.setState({
       visibleTagIds: new Set<string>(),
       initialized: false,
+      showUntagged: true,
     });
   });
 
@@ -26,8 +27,9 @@ describe('useCalendarFilterStore', () => {
         state: {
           visibleTagIds: ['tag-1', 'tag-2'],
           initialized: true,
+          showUntagged: true,
         },
-        version: 5,
+        version: 6,
       });
     });
 
@@ -37,7 +39,30 @@ describe('useCalendarFilterStore', () => {
           { visibleTagIds: new Set(['tag-1']), initialized: true, visibleTypes: ['planned'] },
           4,
         ),
-      ).toEqual({ visibleTagIds: new Set<string>(), initialized: false });
+      ).toEqual({ visibleTagIds: new Set<string>(), initialized: false, showUntagged: true });
+    });
+
+    it('v5からの移行はvisibleTagIds/initializedを保持しつつshowUntaggedをtrueにデフォルトする', () => {
+      expect(
+        migrateCalendarFilterState({ visibleTagIds: new Set(['tag-1']), initialized: true }, 5),
+      ).toEqual({
+        visibleTagIds: new Set(['tag-1']),
+        initialized: true,
+        showUntagged: true,
+      });
+    });
+
+    it('showUntaggedが既に永続化されていればその値を保持する', () => {
+      expect(
+        migrateCalendarFilterState(
+          { visibleTagIds: new Set(['tag-1']), initialized: true, showUntagged: false },
+          5,
+        ),
+      ).toEqual({
+        visibleTagIds: new Set(['tag-1']),
+        initialized: true,
+        showUntagged: false,
+      });
     });
   });
 
@@ -169,6 +194,57 @@ describe('useCalendarFilterStore', () => {
       const state = useCalendarFilterStore.getState();
       expect(state.visibleTagIds.size).toBe(2);
     });
+
+    it('showOnlyUntagged: 未分類だけ表示（他のタグは全てOFF）', () => {
+      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().toggleShowUntagged(); // 一旦 false にしておく
+      useCalendarFilterStore.getState().showOnlyUntagged();
+      const state = useCalendarFilterStore.getState();
+      expect(state.visibleTagIds.size).toBe(0);
+      expect(state.showUntagged).toBe(true);
+    });
+  });
+
+  describe('showUntagged（未分類ブロックの表示切替、#1576）', () => {
+    it('デフォルトはtrue（表示）', () => {
+      expect(useCalendarFilterStore.getState().showUntagged).toBe(true);
+    });
+
+    it('toggleShowUntagged: falseへ切り替えられる', () => {
+      useCalendarFilterStore.getState().toggleShowUntagged();
+      expect(useCalendarFilterStore.getState().showUntagged).toBe(false);
+    });
+
+    it('toggleShowUntagged: 2回呼ぶと元に戻る', () => {
+      useCalendarFilterStore.getState().toggleShowUntagged();
+      useCalendarFilterStore.getState().toggleShowUntagged();
+      expect(useCalendarFilterStore.getState().showUntagged).toBe(true);
+    });
+
+    it('toggleShowUntaggedは visibleTagIds に影響しない', () => {
+      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().toggleShowUntagged();
+      expect(useCalendarFilterStore.getState().visibleTagIds.size).toBe(2);
+    });
+
+    it('matchesTagFilter(null) はshowUntaggedの値をそのまま返す', () => {
+      expect(useCalendarFilterStore.getState().matchesTagFilter(null)).toBe(true);
+      useCalendarFilterStore.getState().toggleShowUntagged();
+      expect(useCalendarFilterStore.getState().matchesTagFilter(null)).toBe(false);
+    });
+
+    it('isEntryVisible(null) はshowUntaggedの値をそのまま返す', () => {
+      expect(useCalendarFilterStore.getState().isEntryVisible(null)).toBe(true);
+      useCalendarFilterStore.getState().toggleShowUntagged();
+      expect(useCalendarFilterStore.getState().isEntryVisible(null)).toBe(false);
+    });
+
+    it('showUntaggedがfalseでもタグ付きアイテムの判定には影響しない', () => {
+      useCalendarFilterStore.getState().showAllTags(['tag-1']);
+      useCalendarFilterStore.getState().toggleShowUntagged();
+      expect(useCalendarFilterStore.getState().matchesTagFilter('tag-1')).toBe(true);
+      expect(useCalendarFilterStore.getState().isEntryVisible(null)).toBe(false);
+    });
   });
 
   describe('クエリ系', () => {
@@ -193,7 +269,7 @@ describe('useCalendarFilterStore', () => {
       expect(useCalendarFilterStore.getState().getGroupVisibility([])).toBe('none');
     });
 
-    it('matchesTagFilter: タグなしアイテムは常に表示', () => {
+    it('matchesTagFilter: タグなしアイテムはshowUntagged(デフォルトtrue)に従う', () => {
       expect(useCalendarFilterStore.getState().matchesTagFilter(null)).toBe(true);
     });
 
