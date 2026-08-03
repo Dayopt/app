@@ -3,6 +3,12 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    # **`ready_for_review` を明示的に含める。** 既定の types は
+    # `opened / synchronize / reopened` だけで ready_for_review を含まないため、
+    # これが無いと draft → ready の変換で CI が再発火せず、draft 時に skip した
+    # 重量 job（§2 段階 CI）が skipped のまま残る。「ready にしたのに E2E が
+    # 一度も走らないまま merge できる」状態になる（2026-08-03、PR #1810 で実測）。
+    types: [opened, synchronize, reopened, ready_for_review]
     # コード実行に影響しない path だけの変更では CI を走らせない。
     # paths-ignore は「変更ファイルが *全て* 該当した時だけ skip」なので、
     # コードが 1 ファイルでも混ざれば通常どおり 4 job すべて走る。
@@ -38,6 +44,15 @@ permissions:
 # private repo の Actions 課金は job ごとに 1 分単位で切り上げられるため、
 # job 数を絞り checkout + setup の重複を減らす構成にしている。
 # 実行コマンドは旧 11 job 構成と同一で、検証内容は減らしていない。
+#
+# 2 段階 CI（2026-08-03）: 実測で CI 38 run / 15 PR、つまり push 2.5 回に対して
+# merge 前に必要な検証は 1 回だった。draft の間は軽量層（Static / Unit）だけを
+# 走らせ、重量層（Build & Bundle / E2E / Web E2E）は ready 後に走らせる。
+# PR は `gh pr create --draft` で作り、merge 直前に ready 化する
+# （.claude/rules/workflow.md §2 段階 CI）。`branch:finish` は draft を拒否し、
+# skipped check の畳み込みも織り込み済みなので、merge gate はこの guard に依存できる。
+# 重量 job の guard は `draft != true` で書く: workflow_dispatch では
+# pull_request context が無く null になるため、この形なら全 job が走る。
 jobs:
   static:
     name: "\U0001F50D Static Checks"
@@ -92,10 +107,10 @@ jobs:
             exit 1
           fi
 
-  product:
-    name: "\U0001F4E6 Build & Test"
+  unit:
+    name: "\U0001F4E6 Unit Tests"
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -133,57 +148,22 @@ jobs:
       - name: Shared observability unit tests
         run: pnpm --filter @dayopt/observability test:run
 
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.0.0
-        with:
-          path: apps/product/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/product/src/**/*.{ts,tsx}') }}
-          restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-
-      - name: Build
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder' }}
-          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
-
-      - name: Check for leaked secrets in client bundle
-        run: |
-          PATTERN="SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY|RECOVERY_CODE_PEPPER|SENTRY_AUTH_TOKEN|UPSTASH_REDIS_REST_TOKEN|RESEND_API_KEY|RECAPTCHA_SECRET_KEY|SLACK_BILLING_WEBHOOK|GITHUB_TOKEN|sk_live_|sk_test_|whsec_|ghp_"
-          if grep -rqE "$PATTERN" apps/product/.next/static/ --include="*.js" 2>/dev/null; then
-            echo "::error::Secret pattern found in client bundle!"
-            grep -rE "$PATTERN" apps/product/.next/static/ --include="*.js"
-            exit 1
-          fi
-          echo "✓ No secrets found in client bundle"
-
-      - name: Compute bundle budget
-        run: pnpm exec tsx scripts/check-bundle-budget.ts --output=.next/diagnostics/budget-result.json
-
-      - name: Report JS bundle budget
-        run: |
-          if [ -f apps/product/.next/diagnostics/budget-result.json ]; then
-            echo "## 📦 Bundle Size Budget Report" >> "$GITHUB_STEP_SUMMARY"
-            node -e "
-              const r = require('./apps/product/.next/diagnostics/budget-result.json');
-              const s = r.summary;
-              console.log('| Metric | Value |');
-              console.log('|--------|-------|');
-              console.log('| Login page (gzip) | ' + s.loginGzipKB + ' KB |');
-              console.log('| Smallest route (gzip) | ' + s.smallestGzipKB + ' KB |');
-              console.log('| Largest route (gzip) | ' + s.largestGzipKB + ' KB |');
-              console.log('| CSS total (gzip) | ' + r.css.gzipKB + ' KB |');
-              console.log('| Routes over budget | ' + s.overCount + ' / ' + s.totalRoutes + ' |');
-            " >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "## 📦 Bundle Size" >> "$GITHUB_STEP_SUMMARY"
-            echo "budget-result.json not found" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Check CSS bundle size
-        run: pnpm size
-
+  # product の build と bundle 検査（secret 混入 / JS budget / CSS size）は
+  # Vercel の build へ移設した（apps/product/vercel.json の buildCommand →
+  # apps/product の `verify:bundle`）。理由は 2 つ。
+  #
+  # ① 同じ build が Vercel の preview deploy で毎 push どのみち走っており、
+  #    ここで走らせるのは二重実行だった（実測 9 課金分/run）。
+  # ② secret 混入検査は Vercel の方が強い。ここでは build env に placeholder
+  #    しか無く、実 secret が存在しないので「ハードコードされた literal」しか
+  #    検出できなかった。Vercel の build は実 env を持つ。
+  #
+  # merge gate は維持される: build 失敗は commit status `Vercel – product` として
+  # PR の rollup に載り、`branch:finish` の失敗判定がそれを数える。
   e2e:
     name: "\U0001F3AD E2E Tests"
+    # 重量層: draft の間は走らせない（ready 後 + workflow_dispatch で実行）
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     environment: development
     timeout-minutes: 15
@@ -220,6 +200,8 @@ jobs:
 
   web:
     name: "\U0001F310 Web Build & E2E"
+    # 重量層: draft の間は走らせない（ready 後 + workflow_dispatch で実行）
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

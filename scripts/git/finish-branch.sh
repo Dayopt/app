@@ -135,7 +135,8 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   step "PR #$PR_NUMBER をマージ"
 
   # `gh pr merge` はクライアント側で draft を拒否するが、REST 直叩きにはその防御が無い。
-  # draft では skip される check がある（ai-review）ため、ここで明示的に止める。
+  # draft では skip される check がある（ci.yml の重量 job、production-config-audit）
+  # ため、ここで明示的に止める。
   if [[ "$IS_DRAFT" == "true" ]]; then
     error "PR #$PR_NUMBER は draft です。ready にしてから再実行してください。"
     exit 1
@@ -166,7 +167,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   #    `stale` は失敗にも成功にも数えないため、これが代表になると同じ名前の古い
   #    failure が消える。job-level `if:` で skip された run は同一 SHA に
   #    `conclusion: skipped` の check run を作るので、これは実在する経路
-  #    （例: ai-review は draft PR で skip する。ready で FAILURE → draft へ戻して
+  #    （例: ci.yml の重量 job は draft PR で skip する。ready で FAILURE → draft へ戻して
   #    reopen すると skipped が後から積まれ、blocking な赤が消えてしまう）。
   #
   # 畳む単位は `gh pr checks` の dedupe に合わせ、型 + workflow 名 + check 名。
@@ -175,7 +176,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     def is_pending:
       ((.status // "") | ascii_downcase
         | . == "in_progress" or . == "queued" or . == "pending" or . == "waiting" or . == "requested")
-      or ((.state // "") | ascii_downcase | . == "pending");
+      or ((.state // "") | ascii_downcase | . == "pending" or . == "expected");
     def is_decisive:
       ((.conclusion // "") | ascii_downcase
         | . == "success" or . == "failure" or . == "cancelled" or . == "timed_out")
@@ -279,10 +280,13 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   # 実行中・待機中の check も待つ。private repo + Free plan では GitHub 側の
   # required check 強制が効かないため、ここで止めないと CI 完了前にマージできてしまう。
+  # 畳み込み側の is_pending（§ROLLUP）と同じ集合にする。片方だけ直すと
+  # 「代表は pending だが件数は 0」のようなズレが出る。`expected` は
+  # StatusState の「status 到着待ち」で、failure でも success でもない。
   PENDING_CHECKS="$(printf '%s' "$ROLLUP" | jq -r '
     map(select(
         ((.status // "") | ascii_downcase | . == "in_progress" or . == "queued" or . == "pending" or . == "waiting" or . == "requested")
-        or ((.state // "") | ascii_downcase | . == "pending")
+        or ((.state // "") | ascii_downcase | . == "pending" or . == "expected")
       ))
     | length')"
 
@@ -314,6 +318,48 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     error "gh pr checks $PR_NUMBER で状態を確認してください。"
     exit 1
   fi
+
+  # **product の build は Vercel でしか検証されない。** Actions 側の無条件 build は
+  # 2026-08-03 に撤去し、Next build と bundle 検査（secret 混入 / JS budget /
+  # CSS budget）は `apps/product/vercel.json` の buildCommand へ移した
+  # （`.claude/rules/workflow.md` §build と bundle 検査は Vercel 側で走る）。
+  #
+  # このため `Vercel – product` の status が **付かなかった場合**、上の「成功 1 件
+  # 以上」は Static / Unit / Docs Guard だけで満たされ、build が一度も走らないまま
+  # merge できてしまう（fail-open）。status が付かない経路は実在する: Vercel
+  # integration の切断・障害、Ignored Build Step の設定、project rename。
+  # private repo + Free plan では ruleset の required check を強制できないので、
+  # 「あるはずの context が無い」ことをここで能動的に検出する。
+  #
+  # 区切り文字は en dash（U+2013）。hyphen ではない。
+  # **存在だけでなく success を要求する。** GitHub の StatusState には `EXPECTED`
+  # （status の到着待ち）があり、これは上の is_failed にも is_pending にも該当しない。
+  # 「context はあるが EXPECTED のまま」を通すと、build 未完了のまま merge できる。
+  REQUIRED_CONTEXTS=("Vercel – product" "Vercel – web")
+  for required in "${REQUIRED_CONTEXTS[@]}"; do
+    succeeded="$(printf '%s' "$ROLLUP" | jq -r --arg name "$required" '
+      map(select(
+          ((.name // .context // "")) == $name
+          and (
+            ((.conclusion // "") | ascii_downcase | . == "success")
+            or ((.state // "") | ascii_downcase | . == "success")
+          )
+        ))
+      | length')"
+    if [[ "$succeeded" == "0" ]]; then
+      present="$(printf '%s' "$ROLLUP" | jq -r --arg name "$required" '
+        map(select(((.name // .context // "")) == $name)) | length')"
+      if [[ "$present" == "0" ]]; then
+        error "必須 check「$required」が 1 件も見つかりません。マージを中止します。"
+        error "Vercel integration の接続、Ignored Build Step の有無、project 名を確認してください。"
+      else
+        error "必須 check「$required」が success ではありません。マージを中止します。"
+        error "EXPECTED（status 到着待ち）のまま放置されている可能性があります。"
+      fi
+      error "product / web の build はこの check でしか検証されません（Actions 側の build は撤去済み）。"
+      exit 1
+    fi
+  done
 
   # マージは REST を直叩きする。`gh pr merge` は「削除対象 branch が current」だと
   # **実行元の worktree を main へ切り替えてから** ローカル branch を削除するため、

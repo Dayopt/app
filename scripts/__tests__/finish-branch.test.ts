@@ -62,6 +62,18 @@ function statusContext(context: string, state: string, startedAt: string): Rollu
   };
 }
 
+/**
+ * merge gate は Vercel の 2 context が **存在すること** を要求する（Actions 側の
+ * 無条件 build を撤去し、product / web の build 検証が Vercel にしか無いため）。
+ * 合格を期待するケースの rollup には必ず足す。
+ */
+function vercelChecks(): RollupEntry[] {
+  return [
+    statusContext('Vercel – product', 'SUCCESS', '2026-07-30T10:00:00Z'),
+    statusContext('Vercel – web', 'SUCCESS', '2026-07-30T10:00:00Z'),
+  ];
+}
+
 function runScript(
   rollup: RollupEntry[],
   options: { compare?: string; isDraft?: boolean } = {},
@@ -240,7 +252,9 @@ function runScriptOnRepo(scenario: RepoScenario) {
       mergeable: 'MERGEABLE',
       mergeStateStatus: 'CLEAN',
       statusCheckRollup:
-        scenario.prState === 'OPEN' ? [checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z')] : [],
+        scenario.prState === 'OPEN'
+          ? [checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z'), ...vercelChecks()]
+          : [],
     }),
   );
 
@@ -310,6 +324,7 @@ describe('同一 SHA に積まれた重複 check の畳み込み', () => {
     const { status, stderr } = runScript([
       checkRun('CI', 'FAILURE', '2026-07-30T10:00:00Z'),
       checkRun('CI', 'SUCCESS', '2026-07-30T10:10:00Z'),
+      ...vercelChecks(),
     ]);
     expect(stderr).not.toContain('失敗している check');
     expect(status).toBe(0);
@@ -320,6 +335,7 @@ describe('同一 SHA に積まれた重複 check の畳み込み', () => {
     const { status, stderr } = runScript([
       checkRun('CI', 'CANCELLED', '2026-07-30T10:00:00Z'),
       checkRun('CI', 'SUCCESS', '2026-07-30T10:10:00Z'),
+      ...vercelChecks(),
     ]);
     expect(stderr).not.toContain('失敗している check');
     expect(status).toBe(0);
@@ -350,6 +366,7 @@ describe('同一 SHA に積まれた重複 check の畳み込み', () => {
       checkRun('CI', 'FAILURE', '2026-07-30T10:00:00Z'),
       checkRun('CI', 'SUCCESS', '2026-07-30T10:10:00Z'),
       statusContext('Vercel – product', 'SUCCESS', '2026-07-30T10:11:00Z'),
+      statusContext('Vercel – web', 'SUCCESS', '2026-07-30T10:11:00Z'),
     ]);
     expect(stderr).not.toContain('失敗している check');
     expect(status).toBe(0);
@@ -359,12 +376,12 @@ describe('同一 SHA に積まれた重複 check の畳み込み', () => {
 describe('畳み込みが失敗を消さないこと', () => {
   it('後から積まれた skipped で古い failure を消さない', () => {
     // job-level `if:` で skip された run は同一 SHA に conclusion: skipped の check run を
-    // 作る（ai-review は draft PR で skip する）。skipped は失敗にも成功にも数えないため、
+    // 作る（ci.yml の重量 job は draft PR で skip する）。skipped は失敗にも成功にも数えないため、
     // これを代表に選ぶと blocking な赤が消える。実在する経路:
     // ready で FAILURE → draft へ戻す → close → reopen（draft なので skip）。
     const { status, stderr } = runScript([
-      checkRun('🔍 AI Review', 'FAILURE', '2026-07-30T10:00:00Z', 'COMPLETED', 'AI Review'),
-      checkRun('🔍 AI Review', 'SKIPPED', '2026-07-30T10:10:00Z', 'COMPLETED', 'AI Review'),
+      checkRun('🎭 E2E Tests', 'FAILURE', '2026-07-30T10:00:00Z', 'COMPLETED', 'CI'),
+      checkRun('🎭 E2E Tests', 'SKIPPED', '2026-07-30T10:10:00Z', 'COMPLETED', 'CI'),
       checkRun('docs guard', 'SUCCESS', '2026-07-30T10:01:00Z'),
     ]);
     expect(stderr).toContain('失敗している check');
@@ -374,8 +391,9 @@ describe('畳み込みが失敗を消さないこと', () => {
   it('後から積まれた skipped で古い success も消さない', () => {
     // 逆方向。skipped を代表にすると「成功 1 件以上」を割って別の理由で止まる。
     const { status, stderr } = runScript([
-      checkRun('🔍 AI Review', 'SUCCESS', '2026-07-30T10:00:00Z', 'COMPLETED', 'AI Review'),
-      checkRun('🔍 AI Review', 'SKIPPED', '2026-07-30T10:10:00Z', 'COMPLETED', 'AI Review'),
+      checkRun('🎭 E2E Tests', 'SUCCESS', '2026-07-30T10:00:00Z', 'COMPLETED', 'CI'),
+      checkRun('🎭 E2E Tests', 'SKIPPED', '2026-07-30T10:10:00Z', 'COMPLETED', 'CI'),
+      ...vercelChecks(),
     ]);
     expect(stderr).not.toContain('成功した check が 1 件もありません');
     expect(status).toBe(0);
@@ -425,6 +443,7 @@ describe('trusted dispatch で解除された audit guard の免除', () => {
       guardFailure(),
       statusContext('Production Config Audit', 'SUCCESS', '2026-08-03T00:25:36Z'),
       checkRun('CI', 'SUCCESS', '2026-08-03T00:20:00Z'),
+      ...vercelChecks(),
     ]);
     expect(stderr).toContain('trusted dispatch により解除済み');
     expect(stderr).not.toContain('失敗している check');
@@ -540,6 +559,65 @@ describe('畳み込みで緩めてはいけない判定', () => {
     expect(status).toBe(1);
   });
 
+  it('Vercel – product の status が無ければ止める', () => {
+    // Actions 側の無条件 build を撤去したため、product の build 検証は Vercel の
+    // status にしか存在しない。status が付かない経路（integration 切断・障害、
+    // Ignored Build Step、project rename）では「成功 1 件以上」を Static / Unit /
+    // Docs Guard だけで満たしてしまい、build を一度も走らせず merge できる。
+    const { status, stderr } = runScript([
+      checkRun('🔍 Static Checks', 'SUCCESS', '2026-08-03T10:00:00Z'),
+      checkRun('📦 Unit Tests', 'SUCCESS', '2026-08-03T10:01:00Z'),
+      checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-03T10:02:00Z'),
+      statusContext('Vercel – web', 'SUCCESS', '2026-08-03T10:03:00Z'),
+    ]);
+    expect(stderr).toContain('必須 check「Vercel – product」');
+    expect(status).toBe(1);
+  });
+
+  it('Vercel – product が EXPECTED のままなら止める（存在だけでは通さない）', () => {
+    // GitHub の StatusState には EXPECTED（status 到着待ち）があり、これは
+    // is_failed にも is_pending にも該当しない。存在だけを見る実装だと
+    // 「context はあるが build 未完了」で merge できてしまう。
+    const { status, stderr } = runScript([
+      checkRun('CI', 'SUCCESS', '2026-08-03T10:00:00Z'),
+      statusContext('Vercel – product', 'EXPECTED', '2026-08-03T10:03:00Z'),
+      statusContext('Vercel – web', 'SUCCESS', '2026-08-03T10:03:00Z'),
+    ]);
+    expect(stderr).toContain('実行中の check');
+    expect(status).toBe(1);
+  });
+
+  it('Vercel – product が FAILURE なら止める', () => {
+    const { status, stderr } = runScript([
+      checkRun('CI', 'SUCCESS', '2026-08-03T10:00:00Z'),
+      statusContext('Vercel – product', 'FAILURE', '2026-08-03T10:03:00Z'),
+      statusContext('Vercel – web', 'SUCCESS', '2026-08-03T10:03:00Z'),
+    ]);
+    expect(stderr).toContain('失敗している check');
+    expect(status).toBe(1);
+  });
+
+  it('Vercel – web の status が無ければ止める', () => {
+    const { status, stderr } = runScript([
+      checkRun('🔍 Static Checks', 'SUCCESS', '2026-08-03T10:00:00Z'),
+      statusContext('Vercel – product', 'SUCCESS', '2026-08-03T10:03:00Z'),
+    ]);
+    expect(stderr).toContain('必須 check「Vercel – web」');
+    expect(status).toBe(1);
+  });
+
+  it('Vercel の context は en dash で照合する（hyphen では一致させない）', () => {
+    // context 名は project 名由来で、区切りは U+2013。hyphen を許すと
+    // 別名の check を必須扱いしてしまい、検出の意味が消える。
+    const { status, stderr } = runScript([
+      checkRun('CI', 'SUCCESS', '2026-08-03T10:00:00Z'),
+      statusContext('Vercel - product', 'SUCCESS', '2026-08-03T10:03:00Z'),
+      statusContext('Vercel - web', 'SUCCESS', '2026-08-03T10:03:00Z'),
+    ]);
+    expect(stderr).toContain('必須 check「Vercel – product」');
+    expect(status).toBe(1);
+  });
+
   it('rollup が空でも止める', () => {
     const { status, stderr } = runScript([]);
     expect(stderr).toContain('成功した check が 1 件もありません');
@@ -587,14 +665,20 @@ describe('マージ経路（#1771 症状①）', () => {
   it('gh pr merge ではなく gh api でマージする', () => {
     // `gh pr merge --delete-branch` は「削除対象 branch が current」だと実行元 worktree を
     // main へ切り替える。REST 直叩きならローカル git に触れない。
-    const { status, stderr } = runScript([checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z')]);
+    const { status, stderr } = runScript([
+      checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z'),
+      ...vercelChecks(),
+    ]);
     expect(status).toBe(0);
     expect(stderr).toContain('gh api -X PUT');
     expect(stderr).not.toContain('gh pr merge 123');
   });
 
   it('head SHA を指定してマージする（gate 通過後の push を弾く）', () => {
-    const { stderr } = runScript([checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z')]);
+    const { stderr } = runScript([
+      checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z'),
+      ...vercelChecks(),
+    ]);
     expect(stderr).toContain(`-f sha=${'0'.repeat(40)}`);
   });
 });

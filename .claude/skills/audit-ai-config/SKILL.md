@@ -47,6 +47,7 @@ Role は次の対応も確認する。
 - Claude review adapter が read-only tool allowlist を持つ
 - Codex review adapter が read-only sandbox / no-approval / apps無効化を持ち、親から継承するMCPの制約とconstrained parentでの検証方法をoverlayに明記している
 - purpose-built writer 例外が明示起動・単独 writer・限定 scope になっている
+- 実装委譲の writer 例外が 4 条件（Main と同一 worktree、非重複 scope、commit 前に Main が `git diff` をレビュー、commit / push / external state mutation は Main に残す）を満たしている。とくに diff レビューと commit 境界を省いた運用になっていないか
 
 ## Review Questions
 
@@ -75,4 +76,4 @@ Role は次の対応も確認する。
 - repo 内の `.claude/settings.local.json` のような local state は、削除提案前に git 管理対象かを確認する。
 - 「無効化して様子見」を基本方針にしない。git 管理対象で不要と判断できるものは削除候補にし、必要なら履歴から復元する。
 - parent session の live permission が child の既定値を上書きし得る platform では、manifestだけを security boundary と表現しない。
-- purpose-built writer を review role へ一般化しない。Main-only writer の例外は `AGENTS.md` の条件をすべて満たすものだけにする。
+- purpose-built writer を review role へ一般化しない。writer 例外は `.claude/rules/ai-behavior.md` §Writer ownership の条件をすべて満たすものだけにする。
