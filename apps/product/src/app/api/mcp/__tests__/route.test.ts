@@ -443,7 +443,12 @@ describe('MCP route scope preflight', () => {
 
     expect(response.status).toBe(401);
     expect(response.headers.get('cache-control')).toBe('no-store');
-    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries"');
+    // 初回 challenge は広告済み read scope 一式 (write 系は step-up 専用で含めない)
+    expect(response.headers.get('www-authenticate')).toContain(
+      'scope="read:entries read:tags read:constraints read:stats"',
+    );
+    expect(response.headers.get('www-authenticate')).not.toContain('write:');
+    expect(response.headers.get('www-authenticate')).not.toContain('delete:');
     expect(response.headers.get('www-authenticate')).toContain('resource_metadata=');
     expect(response.headers.get('www-authenticate')).not.toContain('error=');
     await expect(response.text()).resolves.toBe('');
@@ -496,6 +501,11 @@ describe('MCP route scope preflight', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(response.headers.get('www-authenticate')).toContain('error="invalid_token"');
     expect(response.headers.get('www-authenticate')).toContain('resource_metadata=');
+    // 3 経路ある challenge のうちこの経路だけ scope が未固定だった。再認可で
+    // read 4 種へ広がる契約を discovery 経路と同じ exact 文字列で守る
+    expect(response.headers.get('www-authenticate')).toContain(
+      'scope="read:entries read:tags read:constraints read:stats"',
+    );
     await expect(response.json()).resolves.toEqual({
       error: 'invalid_token',
       error_description: 'Access token is invalid or expired',
@@ -510,7 +520,9 @@ describe('MCP route scope preflight', () => {
     expect(response.status).toBe(400);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(response.headers.get('www-authenticate')).toContain('Bearer error="invalid_request"');
-    expect(response.headers.get('www-authenticate')).toContain('scope="read:entries"');
+    expect(response.headers.get('www-authenticate')).toContain(
+      'scope="read:entries read:tags read:constraints read:stats"',
+    );
     await expect(response.json()).resolves.toEqual({
       error: 'invalid_request',
       error_description: 'Authorization header must be "Bearer <token>"',

@@ -10,16 +10,7 @@ import {
 } from '@dayopt/billing';
 import { Button as SharedButton } from '@dayopt/components';
 import { dayoptUrls } from '@dayopt/config';
-import {
-  AlertTriangle,
-  Check,
-  Copy,
-  Crown,
-  Download,
-  ExternalLink,
-  Trash2,
-  Upload,
-} from 'lucide-react';
+import { AlertTriangle, Check, Copy, Crown, Download, Trash2, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
@@ -239,7 +230,7 @@ function McpApiSection() {
   // この deploy の canonical MCP resource URI（next.config.mjs の
   // resolveProductPublicMcpResourceUri が build 時に解決）。production は
   // mcp.dayopt.app、Preview identity 有効時は branch origin、MCP 資格のない
-  // deploy（generic Preview 等）は空文字。
+  // deploy（generic Preview / local dev 等）は空文字。
   const mcpResourceUri = process.env.NEXT_PUBLIC_MCP_RESOURCE_URI ?? '';
   // OAuth 接続のため client (Claude.ai etc.) に渡すのはこの URL のみ。
   // production は mcp host の `/` が transport になるため origin をそのまま、
@@ -293,18 +284,9 @@ function McpApiSection() {
           />
         </div>
       </LabeledRow>
-      {/* Connection guide */}
+      {/* Connection guide（公開 docs の MCP ガイドは未執筆のためリンクは張らない） */}
       <InfoBox className="mt-4 p-4">
-        <p className="text-muted-foreground text-base md:text-sm">
-          {t('connectionGuide')}
-          <a
-            href="#"
-            className="text-muted-foreground hover:text-foreground ml-1 inline-flex items-center gap-1 underline transition-colors"
-          >
-            {t('viewDocs')}
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </p>
+        <p className="text-muted-foreground text-base md:text-sm">{t('connectionGuide')}</p>
       </InfoBox>
     </SectionCard>
   );

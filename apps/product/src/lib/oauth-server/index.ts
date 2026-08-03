@@ -16,5 +16,11 @@ export {
 export { createOAuthDbClient } from './db';
 export { OAuthServerError } from './errors';
 export { resolveRequestedResource, type CanonicalResourceUri } from './resource';
-export { DEFAULT_SCOPES, hasWriteScope, isSupportedScope, type SupportedScope } from './scopes';
+export {
+  ADVERTISED_SCOPES,
+  DEFAULT_SCOPES,
+  hasWriteScope,
+  isSupportedScope,
+  type SupportedScope,
+} from './scopes';
 export { generateAuthorizationCode, hashToken } from './tokens';

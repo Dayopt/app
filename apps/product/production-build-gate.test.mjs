@@ -259,7 +259,10 @@ describe('Product public MCP resource', () => {
     expect(resolveProductPublicMcpResourceUri(env)).toBe('');
   });
 
-  it('keeps the established Production default for local development', () => {
-    expect(resolveProductPublicMcpResourceUri({})).toBe(MCP_PRODUCTION_ORIGIN);
+  it('does not advertise the Production resource from local development', () => {
+    // 旧挙動は Production URL を default にしていたが、これはローカル開発の
+    // Settings を Production MCP への接続導線にしてしまう。ローカル build は
+    // どの MCP resource も所有しないため、Preview と同じく何も advertise しない。
+    expect(resolveProductPublicMcpResourceUri({})).toBe('');
   });
 });

@@ -59,11 +59,12 @@ const PRODUCT_PREVIEW_BRANCH_HOST_PATTERN = /^product-git-[a-z0-9-]+-dayopt\.ver
  * Expose only the MCP resource owned by this deploy to client components.
  *
  * Generic Preview and other Vercel environments do not own a stable OAuth
- * surface, so they must not advertise the Production URL.
+ * surface, so they must not advertise the Production URL. Local development
+ * (no VERCEL_ENV) does not own any MCP resource either, so it advertises
+ * nothing and the Settings connection section stays hidden.
  * The build assertions run before this resolver in next.config.mjs.
  */
 export function resolveProductPublicMcpResourceUri(env) {
-  if (!env.VERCEL_ENV) return MCP_PRODUCTION_ORIGIN;
   if (env.VERCEL_ENV === 'production') return MCP_PRODUCTION_ORIGIN;
   if (
     env.VERCEL_ENV === 'preview' &&
