@@ -379,7 +379,6 @@
         "serverUrl": "MCP Server URL",
         "copied": "Copied to clipboard",
         "connectionGuide": "Add the URL to your Claude Desktop settings.",
-        "viewDocs": "View documentation",
         "proRequired": "MCP / API access requires a Pro plan.",
         "upgrade": "Upgrade to Pro"
       },
