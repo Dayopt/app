@@ -132,12 +132,12 @@ export async function refreshAccessToken(input: RefreshAccessTokenInput): Promis
 /**
  * Fail closed before any service-role token issuance write. A Preview Supabase
  * branch can be recreated under the same Vercel resource URI with a different
- * project ref; the exchange/rotation RPCs only match resource_uri, so without
- * this gate the token endpoint would write into a mismatched database and mint
- * tokens the MCP resource side immediately rejects (mcp/auth.ts runs the same
- * assertion on verification).
+ * project ref; the grant/exchange/rotation RPCs only match resource_uri, so
+ * without this gate the consent action and token endpoint would write into a
+ * mismatched database and mint grants/tokens the MCP resource side immediately
+ * rejects (mcp/auth.ts runs the same assertion on verification).
  */
-async function assertTokenIssuanceDatabaseIdentity(
+export async function assertTokenIssuanceDatabaseIdentity(
   db: ReturnType<typeof createOAuthDbClient>,
 ): Promise<void> {
   try {

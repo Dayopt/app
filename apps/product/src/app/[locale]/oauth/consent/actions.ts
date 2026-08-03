@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 
 import { logger } from '@/lib/logger';
 import {
+  assertTokenIssuanceDatabaseIdentity,
   createOAuthDbClient,
   generateAuthorizationCode,
   hasWriteScope,
@@ -67,8 +68,21 @@ export async function processConsent(formData: FormData) {
     redirect(redirectUrl.toString());
   }
 
-  const { code, hash } = generateAuthorizationCode();
   const dbClient = createOAuthDbClient();
+
+  // Preview branch 再作成などで DB identity が deploy とずれている場合、
+  // grant を書き込んでも token endpoint 側の同じ検証で必ず拒否される。
+  // 不一致 DB への service-role 書き込み自体を grant RPC の前で止める。
+  // Sentry capture は assertTokenIssuanceDatabaseIdentity 内で済んでいる。
+  try {
+    await assertTokenIssuanceDatabaseIdentity(dbClient);
+  } catch {
+    logger.error('[oauth] consent grant blocked by database identity mismatch');
+    redirectUrl.searchParams.set('error', 'server_error');
+    redirect(redirectUrl.toString());
+  }
+
+  const { code, hash } = generateAuthorizationCode();
   const { error: insertError } = await dbClient.rpc('create_oauth_authorization_grant_v2', {
     p_code_hash: hash,
     p_user_id: user.id,

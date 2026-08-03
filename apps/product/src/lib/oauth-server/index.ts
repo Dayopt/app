@@ -8,7 +8,11 @@
 
 export { validateAuthorizeInput, type AuthorizeValidationError } from './authorize-validation';
 export { isRuntimeClientWriteEnabled, resolveClient, type OAuthClientId } from './clients';
-export { exchangeAuthorizationCode, refreshAccessToken } from './code-exchange';
+export {
+  assertTokenIssuanceDatabaseIdentity,
+  exchangeAuthorizationCode,
+  refreshAccessToken,
+} from './code-exchange';
 export { createOAuthDbClient } from './db';
 export { OAuthServerError } from './errors';
 export { resolveRequestedResource, type CanonicalResourceUri } from './resource';
