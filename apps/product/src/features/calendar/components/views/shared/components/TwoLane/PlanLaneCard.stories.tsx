@@ -125,16 +125,15 @@ export const Skipped: Story = {
   ),
 };
 
-/** タグ未設定。title は表示へフォールバックしない。 */
+/**
+ * タグ未設定（未分類）。title は表示へフォールバックしない。
+ * 実際のカレンダーは tagName=null と同時に tagColor/tagIcon も null になるため、
+ * ここでも両方 null にして中立表示（枠線・アイコンとも中立）を確認する。
+ */
 export const NoTag: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard
-        event={makeEvent('upcoming')}
-        position={basePosition}
-        tagName={null}
-        tagColor="violet"
-      />
+      <PlanLaneCard event={makeEvent('upcoming')} position={basePosition} tagName={null} />
     </Slot>
   ),
 };
