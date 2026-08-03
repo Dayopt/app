@@ -129,8 +129,9 @@ pin-github-action .github/workflows/*.yml
 | `VERCEL_ORG_ID`                 | Vercel team 特定  | production-config-audit        |
 
 `GEMINI_API_KEY` は外部モデル diff レビュー（ai-review）専用だったが、2026-08-03 の撤去に
-合わせて GitHub repo secret を削除した。1Password `Dayopt-Shared/gemini` の項目は master として
-残しているため、再導入する場合はそこから replica を作り直す。
+合わせて **key 自体を失効させた**。GitHub repo secret の削除に加え、Google AI Studio 側の
+project と API key を削除済みで、1Password の項目もアーカイブした。**再導入する場合は
+key の再発行から必要**で、既存の参照を復元する経路は残っていない。
 
 Migration は Supabase GitHub integration が担当する。GitHub Actions から `supabase db push` は通常実行しない。
 
