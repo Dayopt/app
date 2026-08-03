@@ -9,7 +9,7 @@ import {
   checkMcpUserRateLimit,
   type McpRateLimitState,
 } from '@/lib/mcp/request-rate-limit';
-import { DEFAULT_SCOPES, OAuthServerError, type SupportedScope } from '@/lib/oauth-server';
+import { ADVERTISED_SCOPES, OAuthServerError, type SupportedScope } from '@/lib/oauth-server';
 import { getOAuthEnvironmentConfig } from '@/lib/oauth-server/identity-env';
 import { rejectUnexpectedOAuthHost } from '@/lib/oauth-server/request-host';
 import { captureUnexpectedError } from '@/lib/sentry';
@@ -291,7 +291,11 @@ function authErrorResponse(err: unknown): Response {
       ...(isOAuthErr && err.code === 'invalid_request' && status === 400
         ? ['error="invalid_request"']
         : []),
-      `scope="${DEFAULT_SCOPES.join(' ')}"`,
+      // 初回認可 (pre-auth challenge) では広告済み read scope 一式を要求する。
+      // token の granted scopes に無い tool は tools/list に出ないため、ここを
+      // read:entries だけにすると tags/review/constraints が初回接続で不可視になる
+      // (発見できない tool は step-up も発火しない)。write 系は step-up 専用。
+      `scope="${ADVERTISED_SCOPES.join(' ')}"`,
       `resource_metadata="${getResourceMetadataUrl()}"`,
     ];
     headers['www-authenticate'] = `Bearer ${challengeParameters.join(', ')}`;
