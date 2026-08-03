@@ -213,7 +213,6 @@
       "selectedCount": "{count}件選択中",
       "group": "グループ",
       "all": "すべて",
-      "uncategorized": "未分類",
       "usage": "使用状況",
       "unused": "未使用",
       "frequentlyUsed": "よく使う",
@@ -233,7 +232,6 @@
     },
     "sidebar": {
       "allTags": "すべてのタグ",
-      "uncategorized": "未分類",
       "archive": "アーカイブ",
       "groups": "グループ",
       "noGroups": "まだグループがありません",

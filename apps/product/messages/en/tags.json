@@ -213,7 +213,6 @@
       "selectedCount": "{count} tag(s) selected",
       "group": "Group",
       "all": "All",
-      "uncategorized": "Uncategorized",
       "usage": "Usage",
       "unused": "Unused",
       "frequentlyUsed": "Frequently Used",
@@ -233,7 +232,6 @@
     },
     "sidebar": {
       "allTags": "All Tags",
-      "uncategorized": "Uncategorized",
       "archive": "Archive",
       "groups": "Groups",
       "noGroups": "No groups",
