@@ -300,6 +300,22 @@ gh pr merge <PR番号> --merge --delete-branch
 - revert は対象を見極める。マージコミット自体を戻す場合は `git revert -m 1 <merge-sha>`、個別コミットを戻す場合は通常の `git revert <sha>`
 - マージ済みブランチは GitHub が自動削除（`deleteBranchOnMerge: true`）。ローカルでは `git branch -d` がマージを検出して安全に削除できる（squash 時代の `-D` 強制は不要になる）
 
+### レビュー指摘の必須解決
+
+策定日: 2026-08-04
+
+**PR の review thread は全件 resolve してから merge する。** `branch:finish` が機械的に強制する: GraphQL `reviewThreads` の `isResolved=false` が 1 件でもあれば merge を停止し、取得失敗・100 件超も停止に倒す（fail closed）。
+
+「解決」は次の 3 択のいずれか。いずれの場合も thread を resolve して閉じる:
+
+1. **fix を積む** — 指摘どおり修正コミットを push して resolve
+2. **反論を reply** — 採用しない根拠を thread に書いて resolve（黙って resolve しない）
+3. **issue 化** — エッジケース等を別 issue へ切り出し、issue 番号を reply して resolve
+
+外部レビュー（Codex）の指摘は的中率が高い実績があるため、既定は 1。2 を選ぶ時は根拠を必ず書く（後から「なぜ見送ったか」を thread だけで追えるようにする）。3 は P2 のエッジケースや scope 外の改善が対象で、起票は dispatch skill の規約に従う。
+
+このルールの狙いは「指摘の黙殺を構造的に不可能にする」こと。resolve の作業自体を目的化しない — 中身のない「対応済み」reply で resolve するのは 2 の違反にあたる。
+
 ## Worktree 運用
 
 策定日: 2026-07-10
