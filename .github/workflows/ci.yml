@@ -3,6 +3,12 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    # **`ready_for_review` を明示的に含める。** 既定の types は
+    # `opened / synchronize / reopened` だけで ready_for_review を含まないため、
+    # これが無いと draft → ready の変換で CI が再発火せず、draft 時に skip した
+    # 重量 job（§2 段階 CI）が skipped のまま残る。「ready にしたのに E2E が
+    # 一度も走らないまま merge できる」状態になる（2026-08-03、PR #1810 で実測）。
+    types: [opened, synchronize, reopened, ready_for_review]
     # コード実行に影響しない path だけの変更では CI を走らせない。
     # paths-ignore は「変更ファイルが *全て* 該当した時だけ skip」なので、
     # コードが 1 ファイルでも混ざれば通常どおり 4 job すべて走る。
