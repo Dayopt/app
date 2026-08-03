@@ -9,6 +9,40 @@
 -- ============================================================
 
 -- ============================================================
+-- MCP environment identity（ローカル開発 stack 限定）
+-- ============================================================
+-- OAuth token 発行前の assertDatabaseOAuthIdentity は
+-- public.mcp_environment_identity の singleton 行と deployment の
+-- identity tuple の一致を要求する（fail-closed）。ローカル開発は
+-- MCP_OAUTH_ENVIRONMENT 未設定 = production identity で動くため、
+-- production tuple（app.dayopt.app / mcp.dayopt.app / ref NULL）を入れる。
+--
+-- Supabase Preview Branch でもこの seed.sql は実行されるが、Preview の
+-- identity は provision_mcp_preview_environment_identity_v1 が後から
+-- bind する契約なので、ここで行を入れると DI002 で provisioning が壊れる。
+-- そのため Supabase CLI のローカル stack だけが持つ `_supabase` database
+-- （_analytics 等の内部 schema 置き場。hosted project には無い）の存在を
+-- ゲートにして、ローカル以外では何もしない。
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_database WHERE datname = '_supabase') THEN
+    INSERT INTO public.mcp_environment_identity (
+      singleton_key,
+      environment,
+      authorization_server_uri,
+      resource_uri
+    ) VALUES (
+      true,
+      'production',
+      'https://app.dayopt.app',
+      'https://mcp.dayopt.app'
+    )
+    ON CONFLICT (singleton_key) DO NOTHING;
+  END IF;
+END $$;
+
+-- ============================================================
 -- テストユーザー
 -- ============================================================
 
