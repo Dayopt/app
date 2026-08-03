@@ -144,6 +144,18 @@ describe('app とその依存', () => {
     });
   });
 
+  it('.npmrc は両方を要求する（pnpm の依存解決設定は install 結果を変える）', () => {
+    // auto-install-peers / strict-peer-dependencies は両 app の install 結果＝build
+    // 対象を左右する。lockfile の diff を伴わない単独変更がありうるため、中立に倒すと
+    // install 起因の build 失敗を検証しないまま merge できる。
+    expectImpact(['.npmrc'], {
+      product: true,
+      web: true,
+      productJourney: true,
+      webPreviewSmoke: true,
+    });
+  });
+
   it('docs と product の混在は docsOnly=false', () => {
     expectImpact(['docs/README.md', 'apps/product/src/app/layout.tsx'], {
       product: true,

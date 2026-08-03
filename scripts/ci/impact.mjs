@@ -108,6 +108,10 @@ function isIntegrationPath(file) {
 
 // ─── root 設定（両 app の build に影響する）──────────────────────────
 // turbo.json の globalDependencies と install / toolchain の入力を含める。
+// `.npmrc` は pnpm の依存解決設定（auto-install-peers / strict-peer-dependencies）を
+// 持ち、両 app の install 結果＝build 対象を左右する。lockfile の diff を伴わない
+// 単独変更がありうるため、中立に倒すと install 起因の build 失敗を検証しないまま
+// merge できてしまう（product の build は Actions に無く Vercel だけが持つ）。
 const ROOT_BUILD_FILES = new Set([
   'package.json',
   'pnpm-lock.yaml',
@@ -115,6 +119,7 @@ const ROOT_BUILD_FILES = new Set([
   'turbo.json',
   'tsconfig.base.json',
   '.nvmrc',
+  '.npmrc',
   'eslint.config.packages.mjs',
 ]);
 
@@ -150,7 +155,6 @@ function isNeutralPath(file) {
   const rootNeutral = new Set([
     '.gitignore',
     '.gitattributes',
-    '.npmrc',
     '.prettierrc',
     '.prettierignore',
     'commitlint.config.mjs',
