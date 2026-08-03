@@ -72,7 +72,7 @@ export function CalendarAnalyticsPanel({
               icon
               className="text-muted-foreground hover:text-foreground -mr-2"
               onClick={onClose}
-              aria-label={t('actions.close')}
+              aria-label={t('common.actions.close')}
             >
               <X className="size-4" aria-hidden="true" />
             </Button>

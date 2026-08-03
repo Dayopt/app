@@ -126,7 +126,7 @@ export function CalendarReviewPanel({
               isSheet && 'min-h-11 min-w-11',
             )}
             onClick={onClose}
-            aria-label={tAll('actions.close')}
+            aria-label={tAll('common.actions.close')}
           >
             <X className="size-4" aria-hidden="true" />
           </Button>

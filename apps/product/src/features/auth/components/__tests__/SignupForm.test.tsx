@@ -88,6 +88,20 @@ describe('SignupForm', () => {
       // DADS準拠: ボタンは常に有効で、バリデーションは送信時に行う
       expect(submitButton).not.toBeDisabled();
     });
+
+    it('短すぎるパスワードで送信するとバリデーションエラーが表示され signUp を呼ばない', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<SignupForm />);
+
+      await user.type(screen.getByLabelText(/auth\.signupForm\.email/), 'test@example.com');
+      await user.type(screen.getByLabelText(/auth\.signupForm\.password/), 'short');
+      await user.click(screen.getByRole('button', { name: 'auth.signupForm.createAccountButton' }));
+
+      // signupSchema の .min(8, 'auth.errors.weakPassword') が発火する
+      // FieldError は ＊ prefix を付与するため部分一致で照合する
+      expect(await screen.findByText(/auth\.errors\.weakPassword/)).toBeInTheDocument();
+      expect(mockSignUp).not.toHaveBeenCalled();
+    });
   });
 
   describe('フォーム送信', () => {

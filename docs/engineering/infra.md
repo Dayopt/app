@@ -31,9 +31,8 @@ persistent staging は常設しない。固定 URL が必要な Stripe / OAuth c
 | Playwright `chromium`          | required | `apps/product/src/lib/test/e2e` の全specを実行                           |
 | Playwright `Mobile Chrome`     | local    | `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` を持つ環境でmobile shellを確認  |
 | Storybook browser light / dark | local    | interaction / a11yの既知failureを #1499 / #1586 で解消後にCI昇格を再判断 |
-| Playwright Test Agents         | opt-in   | planner / generatorだけを単一フローの計画・生成支援に使う                |
 
-Mobile ChromeをCIで実行すると、認証必須testは環境変数不足でskipされ、残る未認証testだけがchromiumと重複する。認証fixtureまたはCI専用test userを安全に用意するまではlocal専用とする。Test Agentsのhealerは、失敗を`test.fixme()`へ変えてgreenにできるため採用しない。判断の根拠は [2026-07-13-test-automation-strategy.md](./log/2026-07-13-test-automation-strategy.md) に記録する。
+Mobile ChromeをCIで実行すると、認証必須testは環境変数不足でskipされ、残る未認証testだけがchromiumと重複する。認証fixtureまたはCI専用test userを安全に用意するまではlocal専用とする。Playwright Test Agents（planner / generator の opt-in 採用、healer は不採用）は 2026-07-13 に限定採用したが、3週間利用ゼロのまま E2E 追加が手書きで行われたため 2026-08-03 に撤去した。再導入する場合は Playwright に定義を再生成させ、リポジトリ固有制約（healer 不採用、単一フロー限定、`test.skip()` / 固定 wait / `networkidle` 禁止）を planner / generator へ戻す。healer 不採用と CI の正を `chromium` とする判断は撤去後も有効で、根拠は [2026-08-03-playwright-test-agents-retirement.md](./log/2026-08-03-playwright-test-agents-retirement.md) に引き継いだ。
 
 ### Supabase Project
 

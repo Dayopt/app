@@ -26,14 +26,16 @@ async function login(page: import('@playwright/test').Page) {
 test.describe('Smoke: Calendar Review Panel', () => {
   test.skip(SKIP_AUTH_TESTS, 'TEST_USER_EMAIL / TEST_USER_PASSWORD が未設定');
 
-  test('panel=review deep link restores the review panel', async ({ page }) => {
+  test('panel=review deep link restores the review panel', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only（mobile は sheet 表示）');
     await login(page);
 
-    await page.goto('/ja/calendar/week?date=2026-04-20&panel=review');
-    await page.waitForLoadState('networkidle');
+    // review panel を持つ route は /ja/week（/ja/calendar/week は存在しない）
+    await page.goto('/ja/week?date=2026-04-20&panel=review');
 
-    await expect(page).toHaveURL(/\/ja\/calendar\/week\?date=2026-04-20&panel=review/);
-    await expect(page.getByRole('heading', { name: /振り返り|Review/i }).first()).toBeVisible({
+    await expect(page).toHaveURL(/\/ja\/week\?date=2026-04-20&panel=review/);
+    // desktop の Review panel は heading ではなく region（aria-label="振り返り"）
+    await expect(page.getByRole('region', { name: /振り返り|Review/i }).first()).toBeVisible({
       timeout: 15000,
     });
   });
