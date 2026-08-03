@@ -22,7 +22,10 @@ type VercelConfig = {
   rewrites: Rewrite[];
 };
 
-const configPath = fileURLToPath(new URL('../../vercel.json', import.meta.url));
+// Vercel product project の Root Directory は apps/product（2026-08-01 flip）。
+// 読まれるのは apps/product/vercel.json だけで、repo root の vercel.json は
+// dead config として編集の罠になったため削除済み（PR #1799 の Codex P1）。
+const configPath = fileURLToPath(new URL('../../apps/product/vercel.json', import.meta.url));
 const config = JSON.parse(readFileSync(configPath, 'utf8')) as VercelConfig;
 
 const EXPECTED_REWRITES = [
@@ -32,6 +35,12 @@ const EXPECTED_REWRITES = [
 ] as const;
 
 describe('MCP Vercel routing contract', () => {
+  it('does not resurrect the inactive root vercel.json', () => {
+    // root に vercel.json を戻すと「編集しても効かない config」が復活し、
+    // active 側との drift 事故（well-known 404）を再演する。
+    expect(existsSync(fileURLToPath(new URL('../../vercel.json', import.meta.url)))).toBe(false);
+  });
+
   it('uses only exact fixed-host rewrites for Product and MCP aliases', () => {
     expect(
       config.rewrites.map((rewrite) => [
