@@ -29,32 +29,12 @@ on:
   # main への push では走らせない（ci.yml と同じ根拠）。branch:finish が
   # 「branch が main 最新を含み、その状態で green」をマージ前に強制するため、
   # マージ後の main は常に PR で検証済みの tree と一致する。旧 push トリガーは
-  # paths フィルタも持たず全 merge で走っていた（2026-08-03 実測: 3 日で 16 回 × 5 分）。
-  # 手動で main を検証したい時は workflow_dispatch を使う。
+  # pull_request と同じ paths を持っていたので、走る時は必ず同一 tree の再検証
+  # だった（2026-08-03 実測: 3 日で 32 run のうち push 由来が 5 分 × 複数回）。
+  #
+  # workflow_dispatch に paths は書けない（inputs しか受け付けない）。手動実行は
+  # 常に全実行になる。
   workflow_dispatch:
-    paths:
-      - '.nvmrc'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'apps/product/package.json'
-      - '.github/actions/setup/action.yml'
-      - '.github/workflows/integration.yml'
-      - 'apps/product/src/features/*/domain/**'
-      - 'apps/product/src/features/*/server/**'
-      - 'packages/domain/**'
-      - 'apps/product/src/lib/database/**'
-      - 'apps/product/src/lib/mcp/**'
-      - 'apps/product/src/lib/oauth-server/**'
-      - 'apps/product/src/lib/supabase/**'
-      - 'apps/product/src/lib/trpc/**'
-      - 'apps/product/src/app/api/mcp/**'
-      - 'supabase/migrations/**'
-      - 'apps/product/src/lib/test/integration/**'
-      - 'apps/product/src/lib/test/integration-setup.ts'
-      - 'apps/product/src/lib/test/trpc-test-helpers.ts'
-      - 'apps/product/vitest.config.integration.ts'
-      - 'scripts/generate-rls-snapshot.ts'
-      - 'docs/engineering/data/db/rls-snapshot.md'
 
 env:
   SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

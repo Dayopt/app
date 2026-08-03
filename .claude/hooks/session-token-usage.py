@@ -95,7 +95,14 @@ def collect():
 
             try:
                 with open(path, "r", encoding="utf-8", errors="replace") as handle:
-                    for line in handle:
+                    for lineno, line in enumerate(handle):
+                        # ファイル単位の判定だけでは budget を守れない。1 本の
+                        # session log が上限を超えて育つと、そのファイルを読み切る
+                        # まで戻れず SessionStart を待たせる。行ループの中でも見る。
+                        # 毎行 monotonic() を呼ぶと本末転倒なので間引く。
+                        if lineno % 2000 == 0 and time.monotonic() > deadline:
+                            return stats, True
+
                         # 全行を JSON parse すると遅いので、usage を持つ行だけ通す。
                         if '"output_tokens"' not in line:
                             continue
