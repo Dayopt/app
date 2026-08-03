@@ -198,6 +198,7 @@ describe('MCP OAuth host boundary', () => {
   it.each([
     ['app.dayopt.app', '/api/mcp'],
     ['app.dayopt.app', '/api/mcp/'],
+    ['mcp.dayopt.app', '/oauth/token'],
     ['mcp.dayopt.app', '/api/oauth/token'],
     ['mcp.dayopt.app', '/week'],
     ['preview-product.vercel.app', '/api/mcp'],

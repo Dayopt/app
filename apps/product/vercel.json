@@ -36,18 +36,6 @@
           }
         }
       ]
-    },
-    {
-      "source": "/oauth/token",
-      "destination": "/api/oauth/token",
-      "has": [
-        {
-          "type": "host",
-          "value": {
-            "eq": "app.dayopt.app"
-          }
-        }
-      ]
     }
   ]
 }

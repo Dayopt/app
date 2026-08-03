@@ -25,7 +25,8 @@ import { captureUnexpectedError } from '@/lib/sentry';
  *   - refresh_token (rotation あり、旧 refresh は revoke)
  *
  * 認証は不要 (public client only — token endpoint auth method = "none")。
- * Vercel rewrite で product host の `/oauth/token` から到達する。
+ * canonical public path は filesystem route の `/oauth/token`（`app/oauth/token/route.ts`
+ * が本 handler を re-export）。この `/api/oauth/token` は互換のため残す。
  */
 export const dynamic = 'force-dynamic';
 

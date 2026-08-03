@@ -31,7 +31,6 @@ const config = JSON.parse(readFileSync(configPath, 'utf8')) as VercelConfig;
 const EXPECTED_REWRITES = [
   ['/', '/api/mcp', dayoptDomains.mcp],
   ['/mcp', '/api/mcp', dayoptDomains.mcp],
-  ['/oauth/token', '/api/oauth/token', dayoptDomains.product],
 ] as const;
 
 describe('MCP Vercel routing contract', () => {
@@ -71,5 +70,17 @@ describe('MCP Vercel routing contract', () => {
     ]) {
       expect(existsSync(fileURLToPath(new URL(path, import.meta.url)))).toBe(false);
     }
+  });
+
+  it('serves the token endpoint from a filesystem route instead of a rewrite', () => {
+    // Preview host には rewrite が効かないため、rewrite 依存だと advertised
+    // tokenEndpoint が 404 になる（PR #1799 の Codex P1-a）。
+    expect(config.rewrites.some((rewrite) => rewrite.source === '/oauth/token')).toBe(false);
+
+    expect(
+      existsSync(
+        fileURLToPath(new URL('../../apps/product/src/app/oauth/token/route.ts', import.meta.url)),
+      ),
+    ).toBe(true);
   });
 });
