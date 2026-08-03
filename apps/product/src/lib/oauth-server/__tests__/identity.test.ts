@@ -196,6 +196,7 @@ describe('MCP OAuth host boundary', () => {
   });
 
   it.each([
+    ['app.dayopt.app', '/mcp'],
     ['app.dayopt.app', '/api/mcp'],
     ['app.dayopt.app', '/api/mcp/'],
     ['mcp.dayopt.app', '/oauth/token'],
@@ -258,6 +259,7 @@ describe('MCP OAuth host boundary', () => {
   it('rejects Production OAuth hosts while the Preview identity owns the surface', () => {
     for (const [hostname, pathname] of [
       ['app.dayopt.app', '/oauth/authorize'],
+      ['mcp.dayopt.app', '/mcp'],
       ['mcp.dayopt.app', '/api/mcp'],
     ] as const) {
       expect(
