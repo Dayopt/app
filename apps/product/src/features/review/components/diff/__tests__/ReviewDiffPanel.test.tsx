@@ -257,7 +257,7 @@ describe('ReviewDiffPanel', () => {
 
     render(<ReviewDiffPanel diff={diff()} onClose={onClose} />);
 
-    await user.click(screen.getByRole('button', { name: 'actions.close' }));
+    await user.click(screen.getByRole('button', { name: 'common.actions.close' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });

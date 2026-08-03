@@ -30,17 +30,25 @@ const TAG_NAME = `Journey ${TEST_RUN_ID.slice(0, 8)}`;
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
-function formatDateParam(date: Date): string {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+/**
+ * 日付は必ず TIMEZONE 基準で決める。
+ *
+ * `test.use({ timezoneId })` が効くのは browser context だけで、Node 側の
+ * `Date` の getFullYear / getMonth / getDate は runner の host TZ を返す。
+ * CI runner は UTC なので、Tokyo の 00:00-09:00（UTC では前日 15:00-24:00）に
+ * 実行すると host 日付が Tokyo より 1 日前になり、`tomorrow` が当日へ落ちて
+ * 09:00 が過去になる = Plan ではなく Record が作られて assertion が壊れる。
+ */
+const DATE_PARAM_FORMAT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
 
 function offsetDateParam(offsetDays: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  return formatDateParam(date);
+  // Asia/Tokyo は DST を持たないため、24h 加算と暦日加算が一致する
+  return DATE_PARAM_FORMAT.format(new Date(Date.now() + offsetDays * 86_400_000));
 }
 
 async function login(page: Page) {

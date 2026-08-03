@@ -19,17 +19,22 @@ const RECORD_TITLE = `Record ${TEST_RUN_ID.slice(0, 8)}`;
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
-function formatDateParam(date: Date): string {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+/**
+ * 日付は必ず TIMEZONE 基準で決める。`test.use({ timezoneId })` は browser context
+ * にしか効かず、Node 側の `Date` は runner の host TZ（CI では UTC）を返すため。
+ * ここは ±14 日の余裕があるので 1 日のズレでは壊れないが、同じ helper が
+ * critical-path.spec.ts では ±1 日で使われるので基準を揃えておく。
+ */
+const DATE_PARAM_FORMAT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
 
 function offsetDateParam(offsetDays: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  return formatDateParam(date);
+  // Asia/Tokyo は DST を持たないため、24h 加算と暦日加算が一致する
+  return DATE_PARAM_FORMAT.format(new Date(Date.now() + offsetDays * 86_400_000));
 }
 
 function isoAt(dateParam: string, hhmm: string): string {
