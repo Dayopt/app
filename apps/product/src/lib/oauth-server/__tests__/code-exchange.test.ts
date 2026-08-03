@@ -13,6 +13,37 @@ import type { CanonicalResourceUri } from '../resource';
 const resourceUri = 'https://mcp.dayopt.app' as CanonicalResourceUri;
 const verifier = 'v'.repeat(43);
 
+interface QueryResult {
+  data: unknown;
+  error: unknown;
+}
+
+const validIdentityRow = {
+  environment: 'production',
+  authorization_server_uri: 'https://app.dayopt.app',
+  resource_uri: 'https://mcp.dayopt.app',
+  supabase_project_ref: null,
+  provisioned_at: '2026-07-26T00:00:00.000Z',
+};
+
+/**
+ * rpc は関数名で dispatch する。issuance RPC の前に必ず
+ * `get_mcp_environment_identity_v1` の identity 検証が走る契約を前提とする。
+ */
+function createOAuthDb(overrides: Partial<Record<string, QueryResult>> = {}) {
+  const defaults: Record<string, QueryResult> = {
+    get_mcp_environment_identity_v1: { data: [validIdentityRow], error: null },
+  };
+
+  return {
+    rpc: vi.fn((functionName: string) =>
+      Promise.resolve(
+        overrides[functionName] ?? defaults[functionName] ?? { data: null, error: null },
+      ),
+    ),
+  };
+}
+
 describe('connection-bound OAuth token exchange', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -28,16 +59,18 @@ describe('connection-bound OAuth token exchange', () => {
   });
 
   it('exchanges a code through the atomic RPC and derives expires_in from DB time', async () => {
-    const rpc = vi.fn().mockResolvedValue({
-      data: [
-        {
-          access_expires_at: '2026-07-23T00:05:00.000Z',
-          scopes: ['read:entries', 'write:plans'],
-        },
-      ],
-      error: null,
+    const db = createOAuthDb({
+      exchange_oauth_authorization_code_v2: {
+        data: [
+          {
+            access_expires_at: '2026-07-23T00:05:00.000Z',
+            scopes: ['read:entries', 'write:plans'],
+          },
+        ],
+        error: null,
+      },
     });
-    createOAuthDbClient.mockReturnValue({ rpc });
+    createOAuthDbClient.mockReturnValue(db);
 
     const result = await exchangeAuthorizationCode({
       code: 'opaque-code',
@@ -47,7 +80,7 @@ describe('connection-bound OAuth token exchange', () => {
       resource_uri: resourceUri,
     });
 
-    expect(rpc).toHaveBeenCalledWith(
+    expect(db.rpc).toHaveBeenCalledWith(
       'exchange_oauth_authorization_code_v2',
       expect.objectContaining({
         p_client_id: 'chatgpt',
@@ -65,8 +98,8 @@ describe('connection-bound OAuth token exchange', () => {
   });
 
   it('rejects malformed verifiers before consuming the code', async () => {
-    const rpc = vi.fn();
-    createOAuthDbClient.mockReturnValue({ rpc });
+    const db = createOAuthDb();
+    createOAuthDbClient.mockReturnValue(db);
 
     await expect(
       exchangeAuthorizationCode({
@@ -77,14 +110,16 @@ describe('connection-bound OAuth token exchange', () => {
         resource_uri: resourceUri,
       }),
     ).rejects.toMatchObject({ code: 'invalid_grant' });
-    expect(rpc).not.toHaveBeenCalled();
+    expect(db.rpc).not.toHaveBeenCalled();
   });
 
   it('captures a database failure once and preserves its cause', async () => {
     const dbError = { message: 'database unavailable', code: 'PGRST000' };
-    createOAuthDbClient.mockReturnValue({
-      rpc: vi.fn().mockResolvedValue({ data: null, error: dbError }),
-    });
+    createOAuthDbClient.mockReturnValue(
+      createOAuthDb({
+        exchange_oauth_authorization_code_v2: { data: null, error: dbError },
+      }),
+    );
 
     const promise = exchangeAuthorizationCode({
       code: 'opaque-code',
@@ -109,9 +144,11 @@ describe('connection-bound OAuth token exchange', () => {
   });
 
   it('maps an already consumed code to expected invalid_grant without capture', async () => {
-    createOAuthDbClient.mockReturnValue({
-      rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
-    });
+    createOAuthDbClient.mockReturnValue(
+      createOAuthDb({
+        exchange_oauth_authorization_code_v2: { data: [], error: null },
+      }),
+    );
 
     await expect(
       exchangeAuthorizationCode({
@@ -131,12 +168,14 @@ describe('connection-bound OAuth token exchange', () => {
   });
 
   it('does not turn a grace-window duplicate refresh into a token response', async () => {
-    createOAuthDbClient.mockReturnValue({
-      rpc: vi.fn().mockResolvedValue({
-        data: [{ status: 'retryable_duplicate', access_expires_at: null, scopes: null }],
-        error: null,
+    createOAuthDbClient.mockReturnValue(
+      createOAuthDb({
+        rotate_oauth_refresh_token_v2: {
+          data: [{ status: 'retryable_duplicate', access_expires_at: null, scopes: null }],
+          error: null,
+        },
       }),
-    });
+    );
 
     await expect(
       refreshAccessToken({
@@ -147,4 +186,83 @@ describe('connection-bound OAuth token exchange', () => {
     ).rejects.toMatchObject({ code: 'invalid_grant' });
     expect(captureUnexpectedDatabaseError).not.toHaveBeenCalled();
   });
+});
+
+describe('token issuance database identity gate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    captureUnexpectedDatabaseError.mockImplementation((error: unknown) =>
+      error instanceof Error ? error : new Error('Unexpected database failure', { cause: error }),
+    );
+  });
+
+  const identityFailures = [
+    { name: 'missing', result: { data: [], error: null } },
+    {
+      name: 'mismatched',
+      result: {
+        data: [
+          {
+            ...validIdentityRow,
+            environment: 'preview',
+            authorization_server_uri: 'https://product-git-other-dayopt.vercel.app',
+            resource_uri: 'https://product-git-other-dayopt.vercel.app',
+          },
+        ],
+        error: null,
+      },
+    },
+    { name: 'unavailable', result: { data: null, error: { code: 'PGRST000' } } },
+  ];
+
+  it.each(identityFailures)(
+    'refuses a code exchange before the issuance RPC when DB identity is $name',
+    async ({ result }) => {
+      const db = createOAuthDb({ get_mcp_environment_identity_v1: result });
+      createOAuthDbClient.mockReturnValue(db);
+
+      await expect(
+        exchangeAuthorizationCode({
+          code: 'opaque-code',
+          client_id: 'chatgpt',
+          redirect_uri: 'https://chatgpt.com/connector_platform_oauth_redirect',
+          code_verifier: verifier,
+          resource_uri: resourceUri,
+        }),
+      ).rejects.toMatchObject({
+        name: 'OAuthServerError',
+        code: 'server_error',
+        httpStatus: 503,
+        message: 'OAuth token issuance is unavailable',
+      });
+      expect(db.rpc).not.toHaveBeenCalledWith(
+        'exchange_oauth_authorization_code_v2',
+        expect.anything(),
+      );
+      expect(captureUnexpectedDatabaseError).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(identityFailures)(
+    'refuses a refresh rotation before the issuance RPC when DB identity is $name',
+    async ({ result }) => {
+      const db = createOAuthDb({ get_mcp_environment_identity_v1: result });
+      createOAuthDbClient.mockReturnValue(db);
+
+      await expect(
+        refreshAccessToken({
+          refresh_token: 'dop_rt_previous',
+          client_id: 'claude-ai',
+          resource_uri: resourceUri,
+        }),
+      ).rejects.toMatchObject({
+        name: 'OAuthServerError',
+        code: 'server_error',
+        httpStatus: 503,
+        message: 'OAuth token issuance is unavailable',
+      });
+      expect(db.rpc).not.toHaveBeenCalledWith('rotate_oauth_refresh_token_v2', expect.anything());
+      expect(captureUnexpectedDatabaseError).toHaveBeenCalledOnce();
+    },
+  );
 });

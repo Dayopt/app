@@ -1,9 +1,12 @@
 import 'server-only';
 
+import { env } from '@/env';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import type { OAuthClientId } from './clients';
+import { assertDatabaseOAuthIdentity, resolveDatabaseOAuthProjectRef } from './database-identity';
 import { createOAuthDbClient } from './db';
 import { OAuthServerError } from './errors';
+import { getOAuthEnvironmentConfig } from './identity-env';
 import type { CanonicalResourceUri } from './resource';
 import type { SupportedScope } from './scopes';
 import {
@@ -46,6 +49,7 @@ export async function exchangeAuthorizationCode(
   const access = generateOpaqueToken('access');
   const refresh = generateOpaqueToken('refresh');
   const db = createOAuthDbClient();
+  await assertTokenIssuanceDatabaseIdentity(db);
   const { data: rows, error } = await db.rpc('exchange_oauth_authorization_code_v2', {
     p_code_hash: hashToken(input.code),
     p_client_id: input.client_id,
@@ -93,6 +97,7 @@ export async function refreshAccessToken(input: RefreshAccessTokenInput): Promis
   const access = generateOpaqueToken('access');
   const refresh = generateOpaqueToken('refresh');
   const db = createOAuthDbClient();
+  await assertTokenIssuanceDatabaseIdentity(db);
   const { data: rows, error } = await db.rpc('rotate_oauth_refresh_token_v2', {
     p_refresh_hash: hashToken(input.refresh_token),
     p_client_id: input.client_id,
@@ -122,6 +127,40 @@ export async function refreshAccessToken(input: RefreshAccessTokenInput): Promis
     accessExpiresAt: row.access_expires_at,
     scopes: row.scopes as SupportedScope[],
   });
+}
+
+/**
+ * Fail closed before any service-role token issuance write. A Preview Supabase
+ * branch can be recreated under the same Vercel resource URI with a different
+ * project ref; the exchange/rotation RPCs only match resource_uri, so without
+ * this gate the token endpoint would write into a mismatched database and mint
+ * tokens the MCP resource side immediately rejects (mcp/auth.ts runs the same
+ * assertion on verification).
+ */
+async function assertTokenIssuanceDatabaseIdentity(
+  db: ReturnType<typeof createOAuthDbClient>,
+): Promise<void> {
+  try {
+    const expectedIdentity = getOAuthEnvironmentConfig();
+    const expectedSupabaseProjectRef = resolveDatabaseOAuthProjectRef({
+      environment: expectedIdentity.environment,
+      supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    });
+    await assertDatabaseOAuthIdentity(
+      expectedIdentity,
+      () => db.rpc('get_mcp_environment_identity_v1'),
+      expectedSupabaseProjectRef,
+    );
+  } catch (error) {
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'oauth',
+      operation: 'verify_token_issuance_identity',
+    });
+    throw new OAuthServerError('server_error', 'OAuth token issuance is unavailable', 503, {
+      cause: original,
+    });
+  }
 }
 
 interface BuildTokenResponseInput {
