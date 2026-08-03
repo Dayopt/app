@@ -19,8 +19,7 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 .github/
   dependabot.yml              # 依存関係自動更新
   workflows/
-    ci.yml                    # static + unit + build + client bundle secret 検査 + Playwright E2E
-    ai-review.yml             # 危険 path 限定の外部モデル diff レビュー
+    ci.yml                    # static + unit + Playwright E2E
     production-config-audit.yml  # Vercel environment metadata 監査
     docs-guard.yml            # secret scan（gitleaks + secrets:check、全 PR）+ docs整合性チェック
     integration.yml           # Supabase 統合テスト + RLS snapshot drift 検査
@@ -30,30 +29,26 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 
 ## 権限設計
 
-全ワークフローで最小権限の原則を適用。`pull-requests: write` を持つのは PR へ sticky comment を
-書く `ai-review.yml` だけ（旧記述の「PRコメントbot は廃止済みのため不要」は 2026-07-26 の
-ai-review 導入で成立しなくなった）。
+全ワークフローで最小権限の原則を適用。`pull-requests: write` を持つワークフローは無い
+（唯一持っていた `ai-review.yml` は 2026-08-03 に撤去した）。
 
 ### ワークフロー別 permissions
 
-| ワークフロー                  | permissions                                                  | 理由                             |
-| ----------------------------- | ------------------------------------------------------------ | -------------------------------- |
-| `ci.yml`                      | `contents: read`                                             | コード読み取りのみ               |
-| `docs-guard.yml`              | `contents: read`                                             | docs読み取りのみ                 |
-| `integration.yml`             | `contents: read`                                             | コード読み取りのみ               |
-| `ai-review.yml`               | `contents: read` / `pull-requests: write`                    | PR への sticky comment の upsert |
-| `production-config-audit.yml` | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行  |
-| `create-release.yml`          | `contents: write`                                            | タグからリリース作成             |
+| ワークフロー                  | permissions                                                  | 理由                            |
+| ----------------------------- | ------------------------------------------------------------ | ------------------------------- |
+| `ci.yml`                      | `contents: read`                                             | コード読み取りのみ              |
+| `docs-guard.yml`              | `contents: read`                                             | docs読み取りのみ                |
+| `integration.yml`             | `contents: read`                                             | コード読み取りのみ              |
+| `production-config-audit.yml` | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行 |
+| `create-release.yml`          | `contents: write`                                            | タグからリリース作成            |
 
-`ai-review.yml` / `production-config-audit.yml` はどちらも `pull_request_target` で走るが、
+`production-config-audit.yml` は `pull_request_target` で走るが、
 **`pull_request_target` でも job の check run は PR の `statusCheckRollup` に出る**
 （2026-07-30 に PR #1760 で実測。詳細は [infra.md §merge gate の required checks](../engineering/infra.md#merge-gate-の-required-checks)）。
-そのため gate 自体には status publish は不要で、`ai-review.yml` は持たない。
-`production-config-audit.yml` が `statuses: write` を持つのは、job 名から独立した固定 context
+それでも `statuses: write` を持つのは、job 名から独立した固定 context
 （`Production Config Audit`）を ruleset の required 指定に使うため。
 
-どちらも `contents: write` は持たない（外部モデルの出力や外部 API の結果を受けて動く job に
-書き込み権限を与えない）。
+`contents: write` は持たない（外部 API の結果を受けて動く job に書き込み権限を与えない）。
 
 ## リポジトリ設定
 
@@ -124,21 +119,18 @@ pin-github-action .github/workflows/*.yml
 
 ### 使用中の Secrets
 
-| Secret                          | 用途                     | ワークフロー                   |
-| ------------------------------- | ------------------------ | ------------------------------ |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase 接続            | ci, e2e                        |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名キー        | ci, e2e                        |
-| `NEXT_PUBLIC_APP_URL`           | アプリ URL               | ci, e2e                        |
-| `SUPABASE_ACCESS_TOKEN`         | Supabase CLI 認証        | emergency only / local scripts |
-| `GEMINI_API_KEY`                | 外部モデル diff レビュー | ai-review                      |
-| `VERCEL_TOKEN`                  | Vercel API 監査          | production-config-audit        |
-| `VERCEL_ORG_ID`                 | Vercel team 特定         | production-config-audit        |
+| Secret                          | 用途              | ワークフロー                   |
+| ------------------------------- | ----------------- | ------------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase 接続     | ci, e2e                        |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名キー | ci, e2e                        |
+| `NEXT_PUBLIC_APP_URL`           | アプリ URL        | ci, e2e                        |
+| `SUPABASE_ACCESS_TOKEN`         | Supabase CLI 認証 | emergency only / local scripts |
+| `VERCEL_TOKEN`                  | Vercel API 監査   | production-config-audit        |
+| `VERCEL_ORG_ID`                 | Vercel team 特定  | production-config-audit        |
 
-`GEMINI_API_KEY` は CI 専用の secret で、1Password `Dayopt-Shared/gemini/GEMINI_API_KEY` を master、
-GitHub repo secret を replica とする。**`scripts/env/schema.ts` には登録しない**（app runtime が読む
-env ではないため、別ライフサイクルの secret を app の env 検証へ相乗りさせない）。
-この secret を持つ job は `pull_request_target` + base revision の checkout で走り、
-PR の code を実行しない（[2026-07-30 の決定](../engineering/log/2026-07-30-ai-review-trusted-base.md)）。
+`GEMINI_API_KEY` は外部モデル diff レビュー（ai-review）専用だったが、2026-08-03 の撤去に
+合わせて GitHub repo secret を削除した。1Password `Dayopt-Shared/gemini` の項目は master として
+残しているため、再導入する場合はそこから replica を作り直す。
 
 Migration は Supabase GitHub integration が担当する。GitHub Actions から `supabase db push` は通常実行しない。
 
@@ -180,12 +172,12 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 
 セキュリティレビューは 4 層で構成する。どの層も単独では完全でなく、コード変更起点（1・2）と時間経過起点（3・4）を組み合わせて成立させる。
 
-| 層         | タイミング          | 実体                                                                                                                                                                                                                                       |
-| ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 実装中     | コード変更ごと      | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`.claude/rules/ai-behavior.md` §Read-only delegation）                                                                                                                 |
-| PR ごと    | CI                  | `docs-guard.yml` の secret scan（gitleaks + `secrets:check`）/ `ai-review.yml`（危険 path 限定の外部モデルレビュー）/ `integration.yml` の RLS snapshot drift 検査 / `ci.yml` の client bundle secret 検査 / `production-config-audit.yml` |
-| 継続       | 常時・自動          | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                                                                       |
-| 定期・随時 | 月次 + オンデマンド | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                                                                  |
+| 層         | タイミング          | 実体                                                                                                                                                                                                                       |
+| ---------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 実装中     | コード変更ごと      | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`.claude/rules/ai-behavior.md` §Read-only delegation）                                                                                                 |
+| PR ごと    | CI                  | `docs-guard.yml` の secret scan（gitleaks + `secrets:check`）/ `integration.yml` の RLS snapshot drift 検査 / Vercel build の client bundle secret 検査（`verify:bundle`）/ `production-config-audit.yml` / Codex レビュー |
+| 継続       | 常時・自動          | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                                                       |
+| 定期・随時 | 月次 + オンデマンド | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                                                  |
 
 **束ねた PR のレビュー**: 複数 issue / Step を束ねた PR は merge 前に read-only subagent のクロスレビューを必須とする（`.claude/rules/workflow.md` §PR 粒度）。
 

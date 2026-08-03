@@ -80,7 +80,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 - コード変更後は `pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries` を通す
 - コミットメッセージは日本語 Conventional Commits 形式にする（type は commitlint が強制。subject を Latin 大文字語で始めると `subject-case` で弾かれるため日本語で始める）
 - PR は機能のまとまり単位で束ねる。サイズを理由に分割しない（`.claude/rules/workflow.md` §PR 粒度）
-- PR は draft で作成する（`gh pr create --draft`）。ready 化は merge 直前に 1 回だけ行い、重量 CI（build / E2E / AI review）を merge 前 1 回に寄せる（`.claude/rules/workflow.md` §2 段階 CI）
+- PR は draft で作成する（`gh pr create --draft`）。ready 化は merge 直前に 1 回だけ行い、重量 CI（E2E / Web E2E / Production Config Audit）を merge 前 1 回に寄せる（`.claude/rules/workflow.md` §2 段階 CI）
 - PR は枝分かれを履歴に残すため merge commit でマージする。**マージ〜掃除は同一セッション内で `pnpm branch:finish <PR番号>` をワンセットで実行する**（マージ→worktree削除→ローカル/リモート branch 削除→main 最新化まで。完了定義 5 点と手動フォールバックは `.claude/rules/workflow.md` §Worktree 運用）
 - branch 名は `{agent}/{domain}-{action}[-{issue番号}]` に統一する。複数 issue を束ねた場合は代表 issue または epic 番号を使う。Claude Code 自動生成のランダム名は最初の PR 作成前に `git branch -m` でリネームする（`.claude/rules/workflow.md` §命名規則）
 

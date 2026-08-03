@@ -135,7 +135,8 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   step "PR #$PR_NUMBER をマージ"
 
   # `gh pr merge` はクライアント側で draft を拒否するが、REST 直叩きにはその防御が無い。
-  # draft では skip される check がある（ai-review）ため、ここで明示的に止める。
+  # draft では skip される check がある（ci.yml の重量 job、production-config-audit）
+  # ため、ここで明示的に止める。
   if [[ "$IS_DRAFT" == "true" ]]; then
     error "PR #$PR_NUMBER は draft です。ready にしてから再実行してください。"
     exit 1
@@ -166,7 +167,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   #    `stale` は失敗にも成功にも数えないため、これが代表になると同じ名前の古い
   #    failure が消える。job-level `if:` で skip された run は同一 SHA に
   #    `conclusion: skipped` の check run を作るので、これは実在する経路
-  #    （例: ai-review は draft PR で skip する。ready で FAILURE → draft へ戻して
+  #    （例: ci.yml の重量 job は draft PR で skip する。ready で FAILURE → draft へ戻して
   #    reopen すると skipped が後から積まれ、blocking な赤が消えてしまう）。
   #
   # 畳む単位は `gh pr checks` の dedupe に合わせ、型 + workflow 名 + check 名。

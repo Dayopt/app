@@ -359,12 +359,12 @@ describe('同一 SHA に積まれた重複 check の畳み込み', () => {
 describe('畳み込みが失敗を消さないこと', () => {
   it('後から積まれた skipped で古い failure を消さない', () => {
     // job-level `if:` で skip された run は同一 SHA に conclusion: skipped の check run を
-    // 作る（ai-review は draft PR で skip する）。skipped は失敗にも成功にも数えないため、
+    // 作る（ci.yml の重量 job は draft PR で skip する）。skipped は失敗にも成功にも数えないため、
     // これを代表に選ぶと blocking な赤が消える。実在する経路:
     // ready で FAILURE → draft へ戻す → close → reopen（draft なので skip）。
     const { status, stderr } = runScript([
-      checkRun('🔍 AI Review', 'FAILURE', '2026-07-30T10:00:00Z', 'COMPLETED', 'AI Review'),
-      checkRun('🔍 AI Review', 'SKIPPED', '2026-07-30T10:10:00Z', 'COMPLETED', 'AI Review'),
+      checkRun('🎭 E2E Tests', 'FAILURE', '2026-07-30T10:00:00Z', 'COMPLETED', 'CI'),
+      checkRun('🎭 E2E Tests', 'SKIPPED', '2026-07-30T10:10:00Z', 'COMPLETED', 'CI'),
       checkRun('docs guard', 'SUCCESS', '2026-07-30T10:01:00Z'),
     ]);
     expect(stderr).toContain('失敗している check');
@@ -374,8 +374,8 @@ describe('畳み込みが失敗を消さないこと', () => {
   it('後から積まれた skipped で古い success も消さない', () => {
     // 逆方向。skipped を代表にすると「成功 1 件以上」を割って別の理由で止まる。
     const { status, stderr } = runScript([
-      checkRun('🔍 AI Review', 'SUCCESS', '2026-07-30T10:00:00Z', 'COMPLETED', 'AI Review'),
-      checkRun('🔍 AI Review', 'SKIPPED', '2026-07-30T10:10:00Z', 'COMPLETED', 'AI Review'),
+      checkRun('🎭 E2E Tests', 'SUCCESS', '2026-07-30T10:00:00Z', 'COMPLETED', 'CI'),
+      checkRun('🎭 E2E Tests', 'SKIPPED', '2026-07-30T10:10:00Z', 'COMPLETED', 'CI'),
     ]);
     expect(stderr).not.toContain('成功した check が 1 件もありません');
     expect(status).toBe(0);

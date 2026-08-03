@@ -196,7 +196,7 @@ commit 前に必ず `git diff --cached` で index 内容を確認する。Edit �
 
 ### push 前の敵対的セルフレビュー
 
-外部レビュー（Codex / ai-review）は push ごとに走るため、指摘 → 修正 push のラウンドがそのまま時間コストになる。effort で拾える層は push 前に自分で拾う:
+外部レビュー（Codex）は push ごとに走るため、指摘 → 修正 push のラウンドがそのまま時間コストになる。effort で拾える層は push 前に自分で拾う:
 
 - `.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件に該当する diff（auth / RLS / billing / migration / 公開契約 / cross-feature）は、**初回 push 前に**該当 subagent（`risk-reviewer` / `behavior-verifier` / `architecture-guard`）へ反証レビューをかける
 - 観点は「反証」に固定する: 配線漏れ（workflow ↔ script の env 受け渡し等）、定数間の不等式（timeout / 予算）、直前の修正コミットが新たに開けた穴
@@ -251,7 +251,7 @@ Actions 課金は **PR ごとの固定費が支配的**（2026-07-25 実測）:
 **PR は `gh pr create --draft` で作成し、ready 化は merge 直前に 1 回だけ行う。**
 
 - **draft 中に走る軽量層**: Static Checks / Unit Tests / Docs Guard。修正ラウンドの手応え確認はこれで足りる
-- **ready 後に走る重量層**: Build & Bundle / E2E / Web E2E / AI Review / Production Config Audit
+- **ready 後に走る重量層**: E2E / Web E2E / Production Config Audit
 - flow は「draft で push を重ねる（軽量層のみ）→ ready 化 → 重量層 green を確認 → `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）
 - ready 後にさらに push すると重量層も再走する。レビュー指摘の対応が続くなら `gh pr ready --undo` で draft に戻してから積む
 - draft を忘れて ready で作っても機能的な regression は無い（全 push で全層が走る従来挙動に戻り、課金だけ増える）
