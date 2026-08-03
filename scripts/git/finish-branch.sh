@@ -107,7 +107,7 @@ fi
 # ── 1. PR 状態を取得 ────────────────────────────────────────────────
 step "PR #$PR_NUMBER の状態を確認"
 
-PR_JSON="$(gh pr view "$PR_NUMBER" --json state,isDraft,headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup 2>/dev/null || true)"
+PR_JSON="$(gh pr view "$PR_NUMBER" --json state,isDraft,headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,changedFiles 2>/dev/null || true)"
 
 if [[ -z "$PR_JSON" ]]; then
   error "PR #$PR_NUMBER を取得できませんでした。番号とネットワークを確認してください。"
@@ -345,13 +345,41 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   IMPACT_PRODUCT="true"
   IMPACT_WEB="true"
+
+  # **rename では移動元（previous_filename）も影響範囲に含める。** 移動先だけを見ると
+  # `apps/product/foo.ts` → `docs/foo.ts` の rename が docs-only と判定され、ファイルが
+  # 消えた側の app の build を検証しないまま merge できる（fail-open）。
+  #
+  # 行頭マーカーで「ファイル本体（F）」と「rename 元（P）」を区別する。F の件数を
+  # PR の changedFiles と突き合わせ、取得漏れ（後述）を検出するために要る。
+  #
   # `|| true` で握り潰さない。`gh api --paginate` はページごとに stdout へ流すため、
   # 2 ページ目以降の失敗では「部分的なファイル一覧 + 非 0 終了」になる。終了コード
   # だけ潰すと不完全な一覧が「取得成功」として通り、後半ページにだけ含まれる
-  # app の context を要求しないまま merge できてしまう（fail-open）。
+  # app の context を要求しないまま merge できてしまう。
   # 失敗時は空へ明示リセットし、「取得不能 → 両方必須」の経路に合流させる。
-  if ! CHANGED_FILES="$(gh api --paginate "repos/{owner}/{repo}/pulls/$PR_NUMBER/files" --jq '.[].filename' 2>/dev/null)"; then
-    CHANGED_FILES=""
+  if ! CHANGED_FILES_RAW="$(gh api --paginate "repos/{owner}/{repo}/pulls/$PR_NUMBER/files" \
+    --jq '.[] | "F\t\(.filename)", (if .previous_filename then "P\t\(.previous_filename)" else empty end)' 2>/dev/null)"; then
+    CHANGED_FILES_RAW=""
+  fi
+
+  # **files endpoint は `--paginate` でも 3,000 件で打ち切られ、その状態で成功終了する。**
+  # 打ち切りを「完全な一覧」と扱うと、3,000 件目以降にだけ現れる app の context を
+  # 要求しないまま merge できる。PR の申告件数と取得件数の一致を要求し、ズレたら
+  # fail closed に倒す（3,000 件上限に限らず、あらゆる silent truncation を捕まえる）。
+  if [[ -n "$CHANGED_FILES_RAW" ]]; then
+    RETRIEVED_FILE_COUNT="$(printf '%s\n' "$CHANGED_FILES_RAW" | grep -c "$(printf '^F\t')" || true)"
+    PR_CHANGED_FILES="$(printf '%s' "$PR_JSON" | jq -r '.changedFiles // ""' 2>/dev/null || echo "")"
+    if ! [[ "$PR_CHANGED_FILES" =~ ^[0-9]+$ ]] || [[ "$RETRIEVED_FILE_COUNT" != "$PR_CHANGED_FILES" ]]; then
+      info "変更ファイル一覧が PR の申告件数と一致しません（取得 $RETRIEVED_FILE_COUNT / 申告 ${PR_CHANGED_FILES:-不明}）。truncation の可能性があるため fail closed にします。"
+      CHANGED_FILES_RAW=""
+    fi
+  fi
+
+  # マーカーを外して resolver へ渡す（先頭は "F<TAB>" / "P<TAB>" の 2 文字）
+  CHANGED_FILES=""
+  if [[ -n "$CHANGED_FILES_RAW" ]]; then
+    CHANGED_FILES="$(printf '%s\n' "$CHANGED_FILES_RAW" | sed "s/^[FP]$(printf '\t')//")"
   fi
   IMPACT_JSON=""
   if [[ -n "$CHANGED_FILES" ]] && command -v node >/dev/null 2>&1; then

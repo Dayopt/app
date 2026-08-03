@@ -106,6 +106,10 @@ function runScript(
     isDraft?: boolean;
     /** PR の変更ファイル一覧。省略時は product / web 両方に触れる形（従来テストの前提を維持） */
     files?: string[];
+    /** rename の移動元（previous_filename）。API は移動先を filename で返す */
+    previousFiles?: string[];
+    /** PR の changedFiles 申告値。省略時は files の件数（= 一致して gate を通る） */
+    changedFilesCount?: number;
     /** 変更ファイル一覧 API を失敗させる（fail closed 経路の検証） */
     filesUnavailable?: boolean;
     /** 一覧を部分的に出力した後で失敗させる（pagination 途中失敗の再現） */
@@ -126,6 +130,9 @@ function runScript(
   const binDirectory = join(temporaryDirectory, 'bin');
   mkdirSync(binDirectory);
 
+  const changedFiles = options.files ?? ['apps/product/src/app.ts', 'apps/web/src/page.tsx'];
+  const previousFiles = options.previousFiles ?? [];
+
   const payloadPath = join(temporaryDirectory, 'pr.json');
   writeFileSync(
     payloadPath,
@@ -137,16 +144,22 @@ function runScript(
       mergeable: 'MERGEABLE',
       mergeStateStatus: 'CLEAN',
       statusCheckRollup: rollup,
+      changedFiles: options.changedFilesCount ?? changedFiles.length,
     }),
   );
 
   // PR の変更ファイル一覧（impact 判定の入力）。既定は product / web 両方に触れる形。
+  // 実際の gh は `F<TAB>filename` / `P<TAB>previous_filename` の形で出す（rename の
+  // 移動元を落とさず、かつ「ファイル件数」を数えられるようにするため）。
   const filesPath = join(temporaryDirectory, 'files.txt');
   writeFileSync(
     filesPath,
     options.filesUnavailable
       ? ''
-      : `${(options.files ?? ['apps/product/src/app.ts', 'apps/web/src/page.tsx']).join('\n')}\n`,
+      : `${[
+          ...changedFiles.map((file) => `F\t${file}`),
+          ...previousFiles.map((file) => `P\t${file}`),
+        ].join('\n')}\n`,
   );
 
   // レビュー thread の GraphQL レスポンス。threadsUnavailable は実在しない path を
@@ -325,6 +338,7 @@ function runScriptOnRepo(scenario: RepoScenario) {
         scenario.prState === 'OPEN'
           ? [checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z'), ...vercelChecks()]
           : [],
+      changedFiles: 2,
     }),
   );
 
@@ -344,7 +358,7 @@ case "$1" in
     case "$*" in
       *graphql*) echo '{"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false},"nodes":[]}}}}}' ;;
       *full_name*) echo "Dayopt/dayopt" ;;
-      *pulls/123/files*) printf 'apps/product/src/x.ts\napps/web/src/y.ts\n' ;;
+      *pulls/123/files*) printf 'F\\tapps/product/src/x.ts\\nF\\tapps/web/src/y.ts\\n' ;;
       *compare*) echo ahead ;;
       */merge*) exit "\${FINISH_BRANCH_MERGE_EXIT:-0}" ;;
       *) exit 0 ;;
@@ -775,6 +789,51 @@ describe('affected-aware な Vercel context 要求（Impact Resolver 連携）',
     );
     expect(stderr).toContain('影響判定を実行できませんでした');
     expect(stderr).toContain('必須 check「Vercel – web」');
+    expect(status).toBe(1);
+  });
+
+  it('rename では移動元の app の context も必須にする', () => {
+    // API は移動先を filename、移動元を previous_filename で返す。移動先だけを見ると
+    // apps/product → docs の rename が docs-only 判定になり、ファイルが消えた側の
+    // build を検証しないまま merge できてしまう。
+    const { status, stderr } = runScript([checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z')], {
+      files: ['docs/moved.md'],
+      previousFiles: ['apps/product/src/moved.ts'],
+    });
+    expect(stderr).toContain('必須 check「Vercel – product」');
+    expect(status).toBe(1);
+  });
+
+  it('rename の移動元は件数に数えない（changedFiles と一致させる）', () => {
+    // previous_filename を件数に含めると申告件数と食い違い、正常な rename PR が
+    // truncation 扱いで止まる（fail closed の過剰発動）。
+    const { status, stderr } = runScript(
+      [
+        checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        statusContext('Vercel – product', 'SUCCESS', '2026-08-04T10:01:00Z'),
+      ],
+      {
+        files: ['apps/product/src/moved.ts'],
+        previousFiles: ['apps/product/src/old.ts'],
+        changedFilesCount: 1,
+      },
+    );
+    expect(stderr).not.toContain('truncation');
+    expect(status).toBe(0);
+  });
+
+  it('取得件数が PR の申告件数に足りなければ両方を必須にする（3,000 件上限などの truncation）', () => {
+    // files endpoint は --paginate でも 3,000 件で打ち切られ、その状態で成功終了する。
+    // 打ち切りを完全な一覧と扱うと、後半にだけ現れる app の context が要求されない。
+    const { status, stderr } = runScript(
+      [
+        checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        statusContext('Vercel – web', 'SUCCESS', '2026-08-04T10:01:00Z'),
+      ],
+      { files: ['apps/web/src/page.tsx'], changedFilesCount: 3000 },
+    );
+    expect(stderr).toContain('truncation');
+    expect(stderr).toContain('必須 check「Vercel – product」');
     expect(status).toBe(1);
   });
 

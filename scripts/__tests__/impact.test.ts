@@ -1,11 +1,17 @@
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
 // @ts-expect-error -- .mjs に型定義は無いが、contract test は実装そのものを読む
-import { formatSummary, readWorkspaceGraph, resolveImpact } from '../ci/impact.mjs';
+import {
+  PRODUCT_BUILD_SCRIPTS,
+  formatSummary,
+  readWorkspaceGraph,
+  resolveImpact,
+} from '../ci/impact.mjs';
 
 /**
  * Impact Resolver は merge gate / release / CI が共有する影響判定の正本。
@@ -160,6 +166,53 @@ describe('中立 path（app 成果物に影響しない）', () => {
 
   it('.github の integration 対象（setup action）は integration を要求する', () => {
     expectImpact(['.github/actions/setup/action.yml'], { integration: true });
+  });
+});
+
+describe('Vercel の build が実行する root script', () => {
+  it.each([['scripts/check-client-bundle-secrets.mjs'], ['scripts/check-bundle-budget.ts']])(
+    '%s は product を要求する（scripts/ の中立扱いより優先）',
+    (file) => {
+      // これらは apps/product/vercel.json の buildCommand（verify:bundle）が直接実行する。
+      // 中立に倒すと product=false になり、変更した当の検証を走らせないまま merge できる。
+      expectImpact([file], { product: true, productJourney: true });
+    },
+  );
+
+  it('build に関与しない scripts/ は従来どおり中立', () => {
+    expectImpact(['scripts/git/finish-branch.sh'], {});
+  });
+
+  it('PRODUCT_BUILD_SCRIPTS が product の build 定義と一致する（drift 検出）', () => {
+    // 手で書いた集合は、buildCommand や verify:bundle に script が足された時に腐る。
+    // manifest から導出した実際の参照集合と突き合わせて、追加漏れを機械的に捕まえる。
+    const vercelConfig = JSON.parse(
+      readFileSync(join(rootDir, 'apps/product/vercel.json'), 'utf8'),
+    ) as { buildCommand: string };
+    const packageJson = JSON.parse(
+      readFileSync(join(rootDir, 'apps/product/package.json'), 'utf8'),
+    ) as { scripts: Record<string, string> };
+
+    // buildCommand から `pnpm <script>` を再帰展開し、root scripts/ への参照を集める
+    const expandCommand = (command: string, seen = new Set<string>()): string[] => {
+      const expanded = [command];
+      for (const [, name] of command.matchAll(/pnpm\s+([\w:-]+)/g)) {
+        if (seen.has(name)) continue;
+        seen.add(name);
+        const script = packageJson.scripts[name];
+        if (script) expanded.push(...expandCommand(script, seen));
+      }
+      return expanded;
+    };
+
+    const referenced = new Set(
+      expandCommand(vercelConfig.buildCommand)
+        .flatMap((command) => [...command.matchAll(/\.\.\/\.\.\/(scripts\/[\w./-]+)/g)])
+        .map(([, path]) => path),
+    );
+
+    expect(referenced.size).toBeGreaterThan(0);
+    expect([...referenced].sort()).toEqual([...(PRODUCT_BUILD_SCRIPTS as Set<string>)].sort());
   });
 });
 

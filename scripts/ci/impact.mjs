@@ -118,6 +118,20 @@ const ROOT_BUILD_FILES = new Set([
   'eslint.config.packages.mjs',
 ]);
 
+// ─── Vercel の build が実行する root script ───────────────────────────
+// `apps/product/vercel.json` の buildCommand が `pnpm verify:bundle` を呼び、それが
+// root の `scripts/` を直接実行する。`scripts/` 全体を中立に倒すと、この検証スクリプト
+// 自体を変更した PR が product=false になり、**変更した当の検証を一度も走らせないまま**
+// merge できてしまう（Vercel build がその PR で走らないため）。
+// 追加漏れ（drift）は `scripts/__tests__/impact.test.ts` が manifest から導出して検査する。
+export const PRODUCT_BUILD_SCRIPTS = new Set([
+  'scripts/check-client-bundle-secrets.mjs',
+  'scripts/check-bundle-budget.ts',
+]);
+
+// web の buildCommand（`pnpm generate:search-index && pnpm build`）が呼ぶのは
+// `apps/web/scripts/generate-search-index.ts` で、`apps/web/` prefix で既に拾える。
+
 // ─── 中立（appの成果物に影響しない既知の path）──────────────────────
 // ここに入れてよいのは「app の build 成果物・runtime 挙動を変えない」ものだけ。
 // 迷ったら入れない（未知扱い = fail closed の側に倒れる）。
@@ -302,6 +316,12 @@ export function resolveImpact(changedFiles, options = {}) {
       web = true;
       mark('product', file);
       mark('web', file);
+      continue;
+    }
+    // isNeutralPath より先に見る（どちらも scripts/ に該当するため）
+    if (PRODUCT_BUILD_SCRIPTS.has(file)) {
+      product = true;
+      mark('product', file);
       continue;
     }
     if (isNeutralPath(file)) continue;

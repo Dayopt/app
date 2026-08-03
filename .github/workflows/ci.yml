@@ -79,8 +79,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # rename は移動元（previous_filename）も影響範囲に含める（finish-branch.sh と同じ規則）
           gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            --jq '.[].filename' \
+            --jq '.[] | .filename, (.previous_filename // empty)' \
             | node scripts/ci/impact.mjs --stdin --summary >> "$GITHUB_STEP_SUMMARY"
 
       # 独立した static チェックを 1 step 内の shell background lane で並列実行する（#1422）。
