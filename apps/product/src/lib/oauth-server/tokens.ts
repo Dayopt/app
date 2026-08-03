@@ -40,11 +40,11 @@ export function generateAuthorizationCode(): IssuedAuthorizationCode {
   return { code, hash: hashToken(code) };
 }
 
-/**
- * RFC 7636 §4.6 PKCE S256 verification:
- *   challenge === BASE64URL(SHA256(verifier))
- */
-export function verifyPkceS256(verifier: string, challenge: string): boolean {
-  const computed = createHash('sha256').update(verifier).digest('base64url');
-  return computed === challenge;
+export function derivePkceS256Challenge(verifier: string): string {
+  return createHash('sha256').update(verifier).digest('base64url');
+}
+
+/** RFC 7636 section 4.1: 43-128 unreserved ASCII characters. */
+export function isValidPkceVerifier(verifier: string): boolean {
+  return /^[A-Za-z0-9\-._~]{43,128}$/.test(verifier);
 }

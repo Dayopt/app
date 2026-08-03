@@ -1,41 +1,103 @@
 ---
-title: 'API と MCP でつなぐ'
-description: '自分のツールから Dayopt のデータを読み書きする。MCP で AI アシスタントを接続することもできる。'
-tags: ['api', 'mcp', 'integration', 'pro']
+title: 'MCP で AI アシスタントとつなぐ'
+description: 'Claude・ChatGPT・Cursor から Dayopt のデータを読めるようにする MCP 接続のガイド。'
+tags: ['mcp', 'api', 'integration', 'pro']
 author: 'Dayopt Team'
 publishedAt: '2026-07-24'
+updatedAt: '2026-08-03'
 order: 6
 category: 'data'
 slug: 'api-mcp'
 draft: true
-placeholder: true
 
 ai:
   relatedQuestions:
-    - 'Dayopt に API はある？'
     - 'AI アシスタントを Dayopt に接続するには？'
-    - '外部アプリにデータアクセスを許可するには？'
+    - 'MCP サーバーの URL はどこにある？'
+    - 'AI アシスタントは Dayopt のデータを書き換えられる？'
+    - 'MCP 接続は無料で使える？'
+  prerequisites:
+    - 'Dayopt アカウントを作成済み'
+    - 'Pro プランに加入済み'
   relatedDocs:
     - '/docs/plans'
     - '/docs/records'
   chunkStrategy: 'h2'
   searchable: true
-  difficulty: 'advanced'
-  contentType: 'reference'
+  difficulty: 'intermediate'
+  contentType: 'guide'
 ---
 
-# API と MCP でつなぐ
+# MCP で AI アシスタントとつなぐ
 
-**このページはダミーです。本文は未執筆で、公開もされていません。**
+Claude や ChatGPT などの AI アシスタントから、あなたの Dayopt データを読めるようにできます。接続すると、「今週の記録を見て、来週の予定を考えて」のような相談が、実際の時間の使い方をもとにできるようになります。MCP 接続は Pro プランの機能です。
 
-料金ページは「API and MCP access」を Pro の機能として売っています。実装は存在します（`apps/product/src/app/api/v1`、`apps/product/src/app/api/mcp`、`apps/product/src/lib/oauth-server`）が、内部 spec がまだ無いため、まず spec を書く必要があります。
+## MCP とは
 
-## このページに書くこと
+MCP（Model Context Protocol）は、AI アシスタントを外部のアプリにつなぐための共通の仕組みです。Dayopt は MCP サーバーを公開しています。AI アシスタント側に URL を 1 つ登録するだけで、あなたのアカウントのデータへ安全に接続できます。
 
-- API で読み書きできるもの
-- アプリの認可（OAuth）の手順と、スコープの種類
-- MCP エンドポイントが公開する機能と、クライアントの接続方法
-- レート制限とエラーレスポンス
-- どちらも Pro 機能であること
+## AI アシスタントが読めるデータ
 
-振る舞いの正本: まだ無い。`docs/product/specs/` に API・MCP の spec を作ることが先。
+接続した AI アシスタントは、次のデータを読めます。
+
+| データ   | 内容                                             |
+| -------- | ------------------------------------------------ |
+| 予定     | これからやる時間の一覧と詳細                     |
+| 記録     | 実際に使った時間の一覧と詳細                     |
+| タグ     | ブロックの分類に使うタグの一覧                   |
+| 振り返り | 予定と記録の比較などの統計                       |
+| 制約     | すでに埋まっている時間帯と、予定を置く時のルール |
+
+**現在の接続は読み取り専用です。** AI アシスタントが予定や記録を作成・変更・削除することはありません。書き込み機能はクローズドベータとして開発中です。
+
+## 接続手順
+
+どのクライアントでも流れは同じです。
+
+1. Dayopt の設定を開き、「データ管理」の「MCP / API」で MCP サーバー URL をコピーする
+2. AI アシスタント側の設定に URL を追加する
+3. Dayopt のサインインと許可画面が開くので、内容を確認して許可する
+
+Pro プランでない場合、「MCP / API」にはアップグレードの案内が表示されます。
+
+### Claude
+
+1. claude.ai または Claude アプリで Settings を開く
+2. Connectors で「Add custom connector」を選ぶ
+3. 名前（例: Dayopt）とコピーした URL を入力して追加する
+4. 接続時に開く Dayopt の許可画面で承認する
+
+### ChatGPT
+
+1. ChatGPT の Settings で Connectors を開く（設定によっては開発者モードの有効化が必要です）
+2. 新しいコネクタとしてコピーした URL を追加する
+3. 接続時に開く Dayopt の許可画面で承認する
+
+### Cursor
+
+1. Cursor の Settings で MCP の設定を開く
+2. 新しい MCP サーバーとしてコピーした URL を追加する。設定ファイルに書く場合は次のようにします
+
+```json
+{
+  "mcpServers": {
+    "dayopt": {
+      "url": "https://mcp.dayopt.app"
+    }
+  }
+}
+```
+
+3. Cursor に表示されるサインインの案内に従い、Dayopt の許可画面で承認する
+
+## 接続できない時
+
+| 症状                             | 確認すること                                                               |
+| -------------------------------- | -------------------------------------------------------------------------- |
+| 設定に MCP サーバー URL が出ない | Pro プランかどうかを確認します。無料プランでは接続できません               |
+| クライアントが接続に失敗する     | URL を設定からコピーし直します。前後に余分な文字が入っていないか確認します |
+| 許可画面でエラーになる           | 同じブラウザで Dayopt にサインインしてから、もう一度接続します             |
+| 許可した後も動かない             | クライアント側で接続をいったん削除し、最初からやり直します                 |
+| タグや振り返りが読めない         | 以前に接続した場合は、接続を作り直すと読める範囲が最新になります           |
+
+上記で解決しない場合は、[お問い合わせ](/contact)からサポートチームにご連絡ください。

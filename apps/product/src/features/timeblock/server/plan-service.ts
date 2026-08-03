@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { trackProductEvent, trackProductEvents } from '@/lib/analytics/product-events';
-import { databaseTables, publicRecordSelect, toPublicRecordRow } from '@/lib/database';
+import { toPublicRecordRow } from '@/lib/database';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
@@ -11,7 +11,6 @@ import {
   ensureNoRecordOverlap,
   ensurePlanCanBeCreated,
   ensurePlanNotRecorded,
-  handleMutationError,
   handleRecordMutationError,
   isPastPlan,
   toPlanUpdate,
@@ -19,6 +18,11 @@ import {
 } from './plan-guards';
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
 import { assertTagAssignable } from './tag-assignment-guard';
+import {
+  createTimeblockCommandClient,
+  type TimeblockCommandClient,
+  toTimeblockSource,
+} from './timeblock-command-client';
 import { TimeblockOverlapService } from './timeblock-overlap-service';
 import { buildTimeblockSearchFilter } from './timeblock-search-query';
 import { TimeblockServiceError } from './timeblock-service-error';
@@ -28,7 +32,6 @@ import type {
   DeletePlanOptions,
   GetPlanByIdOptions,
   ListPlansOptions,
-  PlanInsert,
   PlanRow,
   RecordPlanOptions,
   RecordRow,
@@ -38,9 +41,26 @@ import type { ServiceSupabaseClient } from './types';
 
 export class PlanService {
   private readonly overlapService: TimeblockOverlapService;
+  private commandClient: TimeblockCommandClient | undefined;
 
-  constructor(private readonly supabase: ServiceSupabaseClient) {
+  constructor(
+    private readonly supabase: ServiceSupabaseClient,
+    commands?: TimeblockCommandClient,
+  ) {
     this.overlapService = new TimeblockOverlapService(supabase);
+    this.commandClient = commands;
+  }
+
+  /**
+   * Plan / Record の write は service-owned command 経由に限る。
+   *
+   * `authenticated` から plans / records の直接 DML を剥がしたため、この service に
+   * 残る書き込み経路はすべてここを通る。read 専用の呼び出しで service-role client を
+   * 作らないよう遅延生成する。
+   */
+  private get commands(): TimeblockCommandClient {
+    this.commandClient ??= createTimeblockCommandClient();
+    return this.commandClient;
   }
 
   async list(options: ListPlansOptions): Promise<PlanRow[]> {
@@ -146,25 +166,19 @@ export class PlanService {
       await ensureNoPlanOverlap(this.overlapService, userId, input.start_at, input.end_at);
     }
 
-    const insertData: PlanInsert = {
-      user_id: userId,
+    const plan = await this.commands.createPlan({
+      userId,
       title: input.title,
       note: input.note ?? null,
-      tag_id: input.tagId ?? null,
-      external_calendar_event_id: input.externalCalendarEventId ?? null,
+      tagId: input.tagId ?? null,
+      externalCalendarEventId: input.externalCalendarEventId ?? null,
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
-      start_at: input.start_at,
-      end_at: input.end_at,
-    };
-
-    const { data, error } = await this.supabase.from('plans').insert(insertData).select().single();
-
-    if (error) {
-      handleMutationError(error, 'CREATE_FAILED', 'Failed to create plan');
-    }
+      startAt: input.start_at,
+      endAt: input.end_at,
+    });
 
     await trackProductEvent({ eventName: 'plan_created', userId });
-    return data;
+    return plan;
   }
 
   async update(options: UpdatePlanOptions): Promise<PlanRow> {
@@ -198,19 +212,24 @@ export class PlanService {
     const updateData = toPlanUpdate(input);
     if (Object.keys(updateData).length === 0) return existing;
 
-    const { data, error } = await this.supabase
-      .from('plans')
-      .update(updateData)
-      .eq('id', planId)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) {
-      handleMutationError(error, 'UPDATE_FAILED', 'Failed to update plan');
-    }
-
-    return data;
+    // legacy route の input は raw CAS token を持たないため、いま読んだ行の
+    // `updated_at` をそのまま command へ渡す read-then-write にする。
+    // 呼び出し元が渡した expectedUpdatedAt は上の assertOptimisticLock が見る。
+    return this.commands.updatePlan({
+      userId,
+      planId,
+      expectedUpdatedAt: existing.updated_at,
+      title: input.title ?? existing.title,
+      note: input.note === undefined ? existing.note : input.note,
+      tagId: input.tagId === undefined ? existing.tag_id : input.tagId,
+      externalCalendarEventId:
+        input.externalCalendarEventId === undefined
+          ? existing.external_calendar_event_id
+          : input.externalCalendarEventId,
+      source: toTimeblockSource(existing.source),
+      startAt: nextStartAt,
+      endAt: nextEndAt,
+    });
   }
 
   async delete(options: DeletePlanOptions): Promise<{ success: boolean }> {
@@ -267,25 +286,12 @@ export class PlanService {
 
     await ensurePlanNotRecorded(this.supabase, userId, planId);
 
-    const { data, error } = await this.supabase
-      .from('plans')
-      .update({ skipped_at: new Date().toISOString() })
-      .eq('id', planId)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) {
-      const original = captureUnexpectedDatabaseError(error, {
-        feature: 'timeblock',
-        operation: 'skip_plan',
-      });
-      throw new TimeblockServiceError('UPDATE_FAILED', 'Failed to skip plan', {
-        cause: original,
-      });
-    }
-
-    return data;
+    return this.commands.setPlanSkipped({
+      userId,
+      planId,
+      expectedUpdatedAt: existing.updated_at,
+      skipped: true,
+    });
   }
 
   async unskip(options: DeletePlanOptions): Promise<PlanRow> {
@@ -294,25 +300,12 @@ export class PlanService {
 
     if (!existing.skipped_at) return existing;
 
-    const { data, error } = await this.supabase
-      .from('plans')
-      .update({ skipped_at: null })
-      .eq('id', planId)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) {
-      const original = captureUnexpectedDatabaseError(error, {
-        feature: 'timeblock',
-        operation: 'unskip_plan',
-      });
-      throw new TimeblockServiceError('UPDATE_FAILED', 'Failed to unskip plan', {
-        cause: original,
-      });
-    }
-
-    return data;
+    return this.commands.setPlanSkipped({
+      userId,
+      planId,
+      expectedUpdatedAt: existing.updated_at,
+      skipped: false,
+    });
   }
 
   async record(options: RecordPlanOptions): Promise<RecordRow> {
@@ -330,28 +323,14 @@ export class PlanService {
     await ensurePlanNotRecorded(this.supabase, userId, planId);
     await ensureNoRecordOverlap(this.overlapService, userId, plan.start_at, plan.end_at);
 
-    const { data, error } = await this.supabase
-      .from(databaseTables.records)
-      .insert({
-        user_id: userId,
-        title: plan.title,
-        note: plan.note,
-        tag_id: plan.tag_id,
-        plan_id: plan.id,
-        external_calendar_event_id: null,
-        source: 'from_plan',
-        start_at: plan.start_at,
-        end_at: plan.end_at,
-      })
-      .select(publicRecordSelect)
-      .single();
-
-    if (error) {
-      handleRecordMutationError(error, 'Failed to record plan');
-    }
+    const record = await this.commands.recordPlan({
+      userId,
+      planId,
+      expectedUpdatedAt: plan.updated_at,
+    });
 
     await trackProductEvent({ eventName: 'record_created', userId });
-    return data;
+    return record;
   }
 
   async confirmDay(options: ConfirmDayPlansOptions): Promise<RecordRow[]> {
@@ -375,6 +354,9 @@ export class PlanService {
   }
 }
 
-export function createPlanService(supabase: ServiceSupabaseClient): PlanService {
-  return new PlanService(supabase);
+export function createPlanService(
+  supabase: ServiceSupabaseClient,
+  commands?: TimeblockCommandClient,
+): PlanService {
+  return new PlanService(supabase, commands);
 }

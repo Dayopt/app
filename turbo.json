@@ -4,7 +4,37 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "storybook-static/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "storybook-static/**", "dist/**"],
+      "env": [
+        "ANALYZE",
+        "ANTHROPIC_API_KEY",
+        "BILLING_ENFORCED",
+        "CALENDAR_TOKEN_ENCRYPTION_KEY",
+        "CI",
+        "CRON_SECRET",
+        "GOOGLE_CALENDAR_*",
+        "GOOGLE_SITE_VERIFICATION",
+        "MCP_*",
+        "OAUTH_*",
+        "PRIVACY_PROTECTION_MODE",
+        "RECOVERY_CODE_PEPPER",
+        "RESEND_*",
+        "SENTRY_*",
+        "SKIP_AUTH_IN_DEV",
+        "SLACK_*",
+        "STRIPE_*",
+        "SUPABASE_*",
+        "TURNSTILE_*",
+        "UPSTASH_*",
+        "VERCEL_BRANCH_URL",
+        "VERCEL_ENV",
+        "VERCEL_GIT_COMMIT_REF",
+        "VERCEL_GIT_COMMIT_SHA",
+        "VERCEL_TARGET_ENV",
+        "VERCEL_URL",
+        "YAHOO_VERIFICATION",
+        "YANDEX_VERIFICATION"
+      ]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"],

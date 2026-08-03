@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { calculateStreak } from '../domain';
@@ -11,6 +12,8 @@ import {
   getUserTimezone,
   handleStatsError,
 } from './statistics-shared';
+import { timeblockContextRangeSchema } from './timeblock-context-contract';
+import { createTimeblockReviewService } from './timeblock-review-service';
 
 const reviewDateKeyInput = z.string().refine(
   (value) => {
@@ -105,6 +108,18 @@ export const statisticsSummaryRouter = createTRPCRouter({
         return await new StatisticsService(ctx.supabase).getTimePLData(ctx.userId, input);
       } catch (error) {
         handleStatsError('getTimePL', error);
+      }
+    }),
+
+  /** 外部AI向けの最小・決定論的なPlan / Record review */
+  getMcpReview: protectedProcedure
+    .meta({ description: 'MCP Time P/L review取得' })
+    .input(timeblockContextRangeSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await createTimeblockReviewService().getMcpReview(ctx.userId, input, ctx.req.signal);
+      } catch (error) {
+        handleServiceError(error);
       }
     }),
 

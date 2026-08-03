@@ -21,6 +21,8 @@
 --   - 20260729073124_mcp_stage1_revision_fence.sql
 --   - 20260729073125_mcp_environment_identity_client_fence.sql
 --   - 20260729073126_mcp_stage1_receipt_generation_lifecycle.sql
+--   - 20260730090300_revoke_authenticated_timeblock_dml.sql
+--   - 20260730090301_harden_authenticated_timeblock_write_boundary.sql
 --   - 20260802013954_add_product_events.sql
 --
 -- パターン:
@@ -30,7 +32,15 @@
 -- ■ profiles: id = auth.uid()
 -- ■ plans / records:
 --   SELECT: user_id = auth.uid() AND deleted_at IS NULL
---   INSERT/UPDATE/DELETE: user_id = auth.uid()
+--   INSERT/UPDATE/DELETE policy は **grant 層で到達不能**。
+--     Candidate 6 (20260730090300 / 20260730090301) で authenticated の table 権限を
+--     SELECT だけに絞ったため、policy 評価より前に 42501 になる。policy は
+--     drain 完了後の掃除まで残すが、有効な write 境界は grant 側。
+--     TRUNCATE / MAINTAIN も同時に剥がした（どちらも RLS を迂回する）。
+--   write は service-owned な *_command_v1 と、drain までの互換 3 RPC
+--     (soft_delete_plan / soft_delete_record / confirm_day_plans_to_records) だけ。
+--   effective 権限の canonical audit は private.timeblock_effective_write_privileges_v1
+--     （`pnpm rls:snapshot` が読み、1 行でも返れば生成を止める）
 --   records の auto_migrated 行は authenticated から変更不可
 -- ■ tags:
 --   SELECT/INSERT/DELETE: user_id = auth.uid()

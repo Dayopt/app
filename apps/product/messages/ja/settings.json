@@ -379,7 +379,6 @@
         "serverUrl": "MCPサーバーURL",
         "copied": "クリップボードにコピーしました",
         "connectionGuide": "上記のURLをClaude Desktopの設定に追加してください。",
-        "viewDocs": "ドキュメントを見る",
         "proRequired": "MCP / APIアクセスにはProプランが必要です。",
         "upgrade": "Proにアップグレード"
       },

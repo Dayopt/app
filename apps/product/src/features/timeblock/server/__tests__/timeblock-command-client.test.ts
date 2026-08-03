@@ -140,6 +140,38 @@ describe('TimeblockCommandClient', () => {
     expect(rpc).toHaveBeenCalledOnce();
   });
 
+  // 直接 DML を剥がしたので、exclusion / unique violation の公開語彙はこの adapter が
+  // 唯一の変換点になった（旧 PlanService / RecordService の handleMutationError の後継）
+  it('exclusion constraint違反をTIME_OVERLAPへ変換する', async () => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: '23P01', message: 'conflicting key value violates exclusion constraint' },
+    });
+
+    await expect(new TimeblockCommandClient().createPlan(createPlanInput())).rejects.toMatchObject({
+      code: 'TIME_OVERLAP',
+    });
+  });
+
+  it('from_plan一意制約違反はrecord_planだけALREADY_RECORDEDへ変換する', async () => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: '23505', message: 'duplicate key value violates unique constraint' },
+    });
+
+    await expect(
+      new TimeblockCommandClient().recordPlan({
+        userId: plan.user_id,
+        planId: plan.id,
+        expectedUpdatedAt: plan.updated_at,
+      }),
+    ).rejects.toMatchObject({ code: 'ALREADY_RECORDED' });
+
+    await expect(new TimeblockCommandClient().createPlan(createPlanInput())).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+  });
+
   it('recordable Plan triggerの拒否を公開用codeへ変換する', async () => {
     rpc.mockResolvedValue({ data: null, error: { code: 'DT013', message: 'trigger detail' } });
 

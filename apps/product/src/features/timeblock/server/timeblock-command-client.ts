@@ -8,6 +8,17 @@ import type { PlanRow, RecordRow } from './timeblock-types';
 
 type TimeblockSource = 'api' | 'external_calendar' | 'manual';
 
+/**
+ * 既存行の `source` を command の入力語彙へ丸める。
+ *
+ * `records.source` は `auto_migrated` / `from_plan` も取りうるが、update command は
+ * source を変更しないため既存値の丸めで十分。
+ */
+export function toTimeblockSource(source: string): TimeblockSource {
+  if (source === 'api' || source === 'external_calendar') return source;
+  return 'manual';
+}
+
 interface CommandError {
   code?: string | undefined;
   message: string;

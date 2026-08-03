@@ -1,14 +1,21 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
-import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 
 import { logger } from '@/lib/logger';
 import { extractBearerToken, verifyAccessToken } from '@/lib/mcp';
-import { OAuthServerError } from '@/lib/oauth-server';
+import {
+  checkMcpPreAuthRateLimit,
+  checkMcpUserRateLimit,
+  type McpRateLimitState,
+} from '@/lib/mcp/request-rate-limit';
+import { ADVERTISED_SCOPES, OAuthServerError, type SupportedScope } from '@/lib/oauth-server';
+import { getOAuthEnvironmentConfig } from '@/lib/oauth-server/identity-env';
+import { rejectUnexpectedOAuthHost } from '@/lib/oauth-server/request-host';
 import { captureUnexpectedError } from '@/lib/sentry';
 
-import { createMcpServer } from './_server';
+import { handleMcpProtocolRequest } from './_protocol-handler';
+import { getRequiredScopeForTool, mergeMcpChallengeScopes } from './_tools/registry';
 
 /**
  * MCP Streamable HTTP endpoint.
@@ -22,12 +29,9 @@ import { createMcpServer } from './_server';
  * `/.well-known/oauth-protected-resource` を辿れるようにする (MCP spec 2025-03)。
  */
 
-const RESOURCE_METADATA_URL = createDayoptUrl(
-  dayoptUrls.mcp,
-  '/.well-known/oauth-protected-resource',
-);
-
 export const dynamic = 'force-dynamic';
+
+const MAX_REQUEST_BODY_BYTES = 1024 * 1024;
 
 export async function POST(request: NextRequest) {
   return handle(request);
@@ -42,6 +46,15 @@ export async function DELETE(request: NextRequest) {
 }
 
 async function handle(request: NextRequest): Promise<Response> {
+  const hostRejection = rejectUnexpectedOAuthHost(request);
+  if (hostRejection) return hostRejection;
+
+  const preAuthRateLimitState = await checkMcpPreAuthRateLimit(request);
+  if (preAuthRateLimitState !== 'allowed') return rateLimitErrorResponse(preAuthRateLimitState);
+
+  const declaredBodyRejection = rejectDeclaredOversizeBody(request);
+  if (declaredBodyRejection) return declaredBodyRejection;
+
   let auth;
   try {
     const token = extractBearerToken(request.headers.get('authorization'));
@@ -50,26 +63,36 @@ async function handle(request: NextRequest): Promise<Response> {
     return authErrorResponse(err);
   }
 
-  const server = createMcpServer({
-    userId: auth.userId,
-    clientId: auth.clientId,
-    scopes: auth.scopes,
-  });
-  // Phase 1: stateless mode (sessionIdGenerator omitted = stateless per SDK semantics)
-  const transport = new WebStandardStreamableHTTPServerTransport({
-    enableJsonResponse: true,
-  });
+  const rateLimitState = await checkMcpUserRateLimit(auth.userId);
+  if (rateLimitState !== 'allowed') return rateLimitErrorResponse(rateLimitState);
+
+  if (!auth.proEntitled) return proEntitlementErrorResponse();
+
+  const parsedRequest = await parseMcpRequestBody(request);
+  if (!parsedRequest.ok) return parsedRequest.response;
+
+  const missingScopes = collectMissingToolScopes(parsedRequest.body, auth.scopes);
+  if (missingScopes.length > 0) {
+    return insufficientScopeResponse(auth.scopes, missingScopes);
+  }
 
   try {
-    await server.connect(transport);
-    return await transport.handleRequest(request, {
-      authInfo: {
-        token: '<redacted>',
-        clientId: auth.clientId,
-        scopes: auth.scopes,
-        expiresAt: auth.expiresAt,
-        extra: { userId: auth.userId, tokenId: auth.tokenId },
+    const authInfo: AuthInfo = {
+      token: '<redacted>',
+      clientId: auth.clientId,
+      scopes: auth.scopes,
+      expiresAt: auth.expiresAt,
+      resource: new URL(auth.resourceUri),
+      extra: {
+        userId: auth.userId,
+        tokenId: auth.tokenId,
+        connectionId: auth.connectionId,
+        resourceUri: auth.resourceUri,
       },
+    };
+    return await handleMcpProtocolRequest(request, {
+      ...(parsedRequest.body === undefined ? {} : { parsedBody: parsedRequest.body }),
+      authInfo,
     });
   } catch (err) {
     const original =
@@ -87,9 +110,162 @@ async function handle(request: NextRequest): Promise<Response> {
   }
 }
 
+type ParsedMcpRequest = { ok: true; body: unknown | undefined } | { ok: false; response: Response };
+
+async function parseMcpRequestBody(request: NextRequest): Promise<ParsedMcpRequest> {
+  if (request.method !== 'POST') return { ok: true, body: undefined };
+
+  const bodyText = await readLimitedRequestBody(request);
+  if (bodyText === null) {
+    return { ok: false, response: mcpRequestErrorResponse(413, -32000, 'Request body too large') };
+  }
+
+  try {
+    const body = JSON.parse(bodyText) as unknown;
+    if (Array.isArray(body)) {
+      return {
+        ok: false,
+        response: mcpRequestErrorResponse(400, -32600, 'JSON-RPC batch is not supported'),
+      };
+    }
+    return { ok: true, body };
+  } catch {
+    return { ok: false, response: mcpRequestErrorResponse(400, -32700, 'Parse error') };
+  }
+}
+
+function rejectDeclaredOversizeBody(request: NextRequest): Response | null {
+  if (request.method !== 'POST') return null;
+  const contentLength = Number(request.headers.get('content-length'));
+  return Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES
+    ? mcpRequestErrorResponse(413, -32000, 'Request body too large')
+    : null;
+}
+
+async function readLimitedRequestBody(request: NextRequest): Promise<string | null> {
+  if (!request.body) return '';
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_REQUEST_BODY_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bodyBytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bodyBytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bodyBytes);
+}
+
+function collectMissingToolScopes(
+  body: unknown,
+  grantedScopes: readonly SupportedScope[],
+): SupportedScope[] {
+  const missing = new Set<SupportedScope>();
+
+  if (!isRecord(body) || body.method !== 'tools/call' || !isRecord(body.params)) return [];
+  const toolName = body.params.name;
+  if (typeof toolName !== 'string') return [];
+  const requiredScope = getRequiredScopeForTool(toolName);
+  if (requiredScope && !grantedScopes.includes(requiredScope)) missing.add(requiredScope);
+
+  return [...missing];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function insufficientScopeResponse(
+  effectiveScopes: readonly SupportedScope[],
+  missingScopes: readonly SupportedScope[],
+): Response {
+  const requiredScopes = mergeMcpChallengeScopes(effectiveScopes, missingScopes);
+  const required = requiredScopes.join(' ');
+  return NextResponse.json(
+    {
+      error: 'insufficient_scope',
+      error_description: 'Additional authorization is required',
+      scope: required,
+    },
+    {
+      status: 403,
+      headers: {
+        'cache-control': 'no-store',
+        'www-authenticate':
+          `Bearer error="insufficient_scope", scope="${required}", ` +
+          `resource_metadata="${getResourceMetadataUrl()}"`,
+      },
+    },
+  );
+}
+
+function mcpRequestErrorResponse(status: number, code: number, message: string): Response {
+  return NextResponse.json(
+    { jsonrpc: '2.0', error: { code, message }, id: null },
+    { status, headers: { 'cache-control': 'no-store' } },
+  );
+}
+
+function rateLimitErrorResponse(state: Exclude<McpRateLimitState, 'allowed'>): Response {
+  const unavailable = state === 'unavailable';
+  return NextResponse.json(
+    {
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message: unavailable ? 'Rate limit service unavailable' : 'Too many requests',
+      },
+      id: null,
+    },
+    {
+      status: unavailable ? 503 : 429,
+      headers: {
+        'cache-control': 'no-store',
+        'retry-after': unavailable ? '5' : '60',
+      },
+    },
+  );
+}
+
+function proEntitlementErrorResponse(): Response {
+  return NextResponse.json(
+    {
+      jsonrpc: '2.0',
+      error: {
+        code: -32001,
+        message: 'Pro plan required',
+      },
+      id: null,
+    },
+    {
+      status: 403,
+      headers: {
+        'cache-control': 'no-store',
+      },
+    },
+  );
+}
+
 function authErrorResponse(err: unknown): Response {
   const isOAuthErr = err instanceof OAuthServerError;
-  // OAuthServerError は err.httpStatus を尊重 (auth failure=401 / server_error=500 を保つ)。
+  // OAuthServerError は err.httpStatus を尊重 (auth failure=401 / dependency failure=503)。
   // 5xx を 401 に丸めると client が再認証ループに入って真の障害が観測できない。
   const status = isOAuthErr ? err.httpStatus : 500;
   if (status >= 500) {
@@ -107,21 +283,52 @@ function authErrorResponse(err: unknown): Response {
     logger.error('MCP request authentication failed');
   }
 
-  // WWW-Authenticate は client が再認証へ進めるサインなので 401 のときだけ付ける。
-  const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (status === 401) {
-    headers['www-authenticate'] = `Bearer resource_metadata="${RESOURCE_METADATA_URL}"`;
+  // 401 discovery/invalid token と 400 invalid_request はBearer challengeを返す。
+  const headers: Record<string, string> = { 'cache-control': 'no-store' };
+  if (status === 401 || (status === 400 && isOAuthErr && err.code === 'invalid_request')) {
+    const challengeParameters = [
+      ...(isOAuthErr && err.code === 'invalid_token' ? ['error="invalid_token"'] : []),
+      ...(isOAuthErr && err.code === 'invalid_request' && status === 400
+        ? ['error="invalid_request"']
+        : []),
+      // 初回認可 (pre-auth challenge) では広告済み read scope 一式を要求する。
+      // token の granted scopes に無い tool は tools/list に出ないため、ここを
+      // read:entries だけにすると tags/review/constraints が初回接続で不可視になる
+      // (発見できない tool は step-up も発火しない)。write 系は step-up 専用。
+      `scope="${ADVERTISED_SCOPES.join(' ')}"`,
+      `resource_metadata="${getResourceMetadataUrl()}"`,
+    ];
+    headers['www-authenticate'] = `Bearer ${challengeParameters.join(', ')}`;
   }
+  if (status === 503) {
+    headers['retry-after'] = '5';
+  }
+
+  // RFC 6750 §3.1: credentialなし / unsupported auth scheme の401では、
+  // discovery challenge以外のerror情報を返さない。
+  if (status === 401 && isOAuthErr && err.code === 'invalid_request') {
+    return new Response(null, { status, headers });
+  }
+
+  headers['content-type'] = 'application/json';
 
   return new Response(
     JSON.stringify({
       error: isOAuthErr ? err.code : 'server_error',
       error_description:
-        isOAuthErr && status < 500 ? err.message : 'Authentication service unavailable',
+        isOAuthErr && err.code === 'invalid_token'
+          ? 'Access token is invalid or expired'
+          : isOAuthErr && status < 500
+            ? err.message
+            : 'Authentication service unavailable',
     }),
     {
       status,
       headers,
     },
   );
+}
+
+function getResourceMetadataUrl(): string {
+  return getOAuthEnvironmentConfig().protectedResourceMetadataUri;
 }
