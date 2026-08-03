@@ -108,6 +108,8 @@ function runScript(
     files?: string[];
     /** 変更ファイル一覧 API を失敗させる（fail closed 経路の検証） */
     filesUnavailable?: boolean;
+    /** 一覧を部分的に出力した後で失敗させる（pagination 途中失敗の再現） */
+    filesPartialFailure?: boolean;
     /** レビュー thread の状態。省略時は 0 件（gate を通す） */
     threads?: Array<{ isResolved: boolean; path?: string; author?: string }>;
     /** thread 取得 API を失敗させる（fail closed 経路の検証） */
@@ -173,7 +175,10 @@ case "$1" in
     shift
     case "$*" in
       graphql*) cat "$FINISH_BRANCH_THREADS_JSON" ;;
-      *pulls/123/files*) cat "$FINISH_BRANCH_PR_FILES" ;;
+      *pulls/123/files*)
+        cat "$FINISH_BRANCH_PR_FILES"
+        if [[ "\${FINISH_BRANCH_FILES_EXIT:-0}" != "0" ]]; then exit 1; fi
+        ;;
       *compare*) echo "$FINISH_BRANCH_COMPARE" ;;
       *full_name*) echo "Dayopt/dayopt" ;;
       *) exit 2 ;;
@@ -209,6 +214,7 @@ esac
       FINISH_BRANCH_THREADS_JSON: options.threadsUnavailable
         ? join(temporaryDirectory, 'missing-threads.json')
         : threadsPath,
+      FINISH_BRANCH_FILES_EXIT: options.filesPartialFailure ? '1' : '0',
     },
   });
 
@@ -769,6 +775,22 @@ describe('affected-aware な Vercel context 要求（Impact Resolver 連携）',
     );
     expect(stderr).toContain('影響判定を実行できませんでした');
     expect(stderr).toContain('必須 check「Vercel – web」');
+    expect(status).toBe(1);
+  });
+
+  it('一覧が部分的に取れて失敗した場合も両方を必須にする（pagination 途中失敗）', () => {
+    // `gh api --paginate` はページごとに stdout へ流すため、後半ページの失敗は
+    // 「部分的な一覧 + 非 0 終了」になる。部分出力を「取得成功」と扱うと、
+    // 後半ページにだけ含まれる app の context を要求しないまま merge できてしまう。
+    const { status, stderr } = runScript(
+      [
+        checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        statusContext('Vercel – web', 'SUCCESS', '2026-08-04T10:01:00Z'),
+      ],
+      { files: ['apps/web/src/app/page.tsx'], filesPartialFailure: true },
+    );
+    expect(stderr).toContain('影響判定を実行できませんでした');
+    expect(stderr).toContain('必須 check「Vercel – product」');
     expect(status).toBe(1);
   });
 

@@ -18,7 +18,11 @@
  * - **未知の path は fail closed（全 affected）**。判定漏れが検証漏れに化けるのを防ぐ。
  *   新しい root ファイルを足した時は本ファイルの分類へ明示的に追加する
  * - workspace 依存グラフは pnpm manifest（dependencies / devDependencies の @dayopt/*）
- *   から実行時に解決する。package 追加時に判定が自動追従し、対応表の腐りを防ぐ
+ *   から実行時に解決する。package 追加時に判定が自動追従し、対応表の腐りを防ぐ。
+ *   読むのは**本ファイルを実行している checkout の manifest**（merge gate では通常
+ *   main checkout）。PR 側の manifest 変更は直接見ないが、新しい依存 edge を作る
+ *   変更は manifest ファイル自体（apps/** または packages/**）に触れるため、その
+ *   ファイルの分類で当該 app が affected になり、判定漏れにはならない
  * - 変更ファイルが 1 件も無い入力は判定不能として fail closed（全 affected）に倒す
  */
 

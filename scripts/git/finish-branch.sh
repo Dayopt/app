@@ -345,7 +345,14 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   IMPACT_PRODUCT="true"
   IMPACT_WEB="true"
-  CHANGED_FILES="$(gh api --paginate "repos/{owner}/{repo}/pulls/$PR_NUMBER/files" --jq '.[].filename' 2>/dev/null || true)"
+  # `|| true` で握り潰さない。`gh api --paginate` はページごとに stdout へ流すため、
+  # 2 ページ目以降の失敗では「部分的なファイル一覧 + 非 0 終了」になる。終了コード
+  # だけ潰すと不完全な一覧が「取得成功」として通り、後半ページにだけ含まれる
+  # app の context を要求しないまま merge できてしまう（fail-open）。
+  # 失敗時は空へ明示リセットし、「取得不能 → 両方必須」の経路に合流させる。
+  if ! CHANGED_FILES="$(gh api --paginate "repos/{owner}/{repo}/pulls/$PR_NUMBER/files" --jq '.[].filename' 2>/dev/null)"; then
+    CHANGED_FILES=""
+  fi
   IMPACT_JSON=""
   if [[ -n "$CHANGED_FILES" ]] && command -v node >/dev/null 2>&1; then
     IMPACT_JSON="$(printf '%s\n' "$CHANGED_FILES" | node "$IMPACT_RESOLVER" --stdin 2>/dev/null || true)"
@@ -450,8 +457,12 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   UNRESOLVED_THREADS="${THREAD_STATS%% *}"
   THREADS_TRUNCATED="${THREAD_STATS##* }"
 
-  if [[ "$THREADS_TRUNCATED" != "false" ]]; then
+  if [[ "$THREADS_TRUNCATED" == "true" ]]; then
     error "レビュー thread が 100 件を超えており全件を確認できません。マージを中止します。"
+    exit 1
+  elif [[ "$THREADS_TRUNCATED" != "false" ]]; then
+    # hasNextPage が欠落した等、想定外の形。停止はするが誤診断のメッセージを出さない。
+    error "レビュー thread の取得結果が想定外の形です。マージを中止します（fail closed）。"
     exit 1
   fi
 

@@ -38,8 +38,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# pull-requests: read は Impact summary step（static job）が PR の変更ファイル一覧を
+# 取得するために要る。permissions を明示宣言すると未宣言スコープは none になるため、
+# contents: read だけだと files API が 403 で静かに落ちる（continue-on-error のため
+# job は成功し、summary だけが出ない）。
 permissions:
   contents: read
+  pull-requests: read
 
 # private repo の Actions 課金は job ごとに 1 分単位で切り上げられるため、
 # job 数を絞り checkout + setup の重複を減らす構成にしている。

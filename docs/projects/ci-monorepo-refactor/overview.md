@@ -104,6 +104,8 @@ Phase 1 の Step Summary 表示は既存 static job 内の 1 step に相乗り�
 Impact Resolver → merge gate 対応 → Production Release 対応 → Vercel skip 有効化 → CI / E2E 整理
 ```
 
+補足（2026-08-04 リスクレビューでの検出）: product の Vercel project は 2026-08-01 から標準機能の **Skip deployments（Root Directory 外の変更で skip）が Enabled** のまま（[当時のログ](../../engineering/log/2026-08-01-vercel-root-directory-flip-product.md)の残タスク未消化）。この機能は workspace 依存グラフを見ないため、`packages/**` のみの PR では Impact Resolver が `product=true` で context を要求する一方、Vercel は deployment を skip して context が付かず、**fail closed で merge が止まりうる**（安全側だが可用性の問題）。merge gate の affected-aware 化が main に入った後、最初の `packages/**` 限定 PR で `Vercel – product` context が付くかを確認し、付かなければ同トグルを Disabled に戻す。
+
 ## 9. 非目標
 
 - CI をすべて 1 workflow へ統合すること
