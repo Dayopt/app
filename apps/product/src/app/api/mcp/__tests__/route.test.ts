@@ -501,6 +501,11 @@ describe('MCP route scope preflight', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(response.headers.get('www-authenticate')).toContain('error="invalid_token"');
     expect(response.headers.get('www-authenticate')).toContain('resource_metadata=');
+    // 3 経路ある challenge のうちこの経路だけ scope が未固定だった。再認可で
+    // read 4 種へ広がる契約を discovery 経路と同じ exact 文字列で守る
+    expect(response.headers.get('www-authenticate')).toContain(
+      'scope="read:entries read:tags read:constraints read:stats"',
+    );
     await expect(response.json()).resolves.toEqual({
       error: 'invalid_token',
       error_description: 'Access token is invalid or expired',
