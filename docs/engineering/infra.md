@@ -283,6 +283,22 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   名前を特定できない entry は畳まず全件残す。契約は
   `scripts/__tests__/finish-branch.test.ts` が固定する（#1768）
 
+- **audit contract 変更 PR の guard failure は trusted dispatch で解除する。**
+  `production-config-audit.yml` は audit contract 保護対象（`scripts/production-config-audit.mjs` /
+  各 `production-build-gate.mjs` / workflow 自身）を変更する PR で、`pull_request_target` の check run
+  `Audit Vercel metadata (trusted)` を設計として必ず failure にする（PR code に contract 変更を
+  自己検証させないため）。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
+  の trusted dispatch を実行する。成功すると commit status `Production Config Audit` が head SHA へ
+  success で発行される。workflow_dispatch run の check run は PR の `statusCheckRollup` に紐づかないため
+  畳み込みでは解消できず、`finish-branch.sh` は **status `Production Config Audit` が success の時に限り**
+  guard check run の failure を失敗数から除外する（照合は 型 + workflow 名 + check 名 / context の完全一致のみ）。
+  fail-closed: audit が本当に落ちた PR も dispatch 未実行の contract 変更 PR も status は failure のまま
+  免除は発動せず、status は SHA ごとの発行なので新しい push で自動的にリセットされる。免除対象は
+  guard の `conclusion: failure` だけで、`cancelled` / `timed_out`（監査が完走していない状態）は
+  従来どおり停止する。**dispatch は branch 側の workflow 定義と audit script に `VERCEL_TOKEN` を
+  渡して実行される**ため、contract 変更 PR の diff をレビューした後に、ユーザーの明示指示で実行する。
+  契約は同じく `scripts/__tests__/finish-branch.test.ts` が固定する
+
 段階的導入案と当時の計測値は履歴であり、現行構成として複製しない。経緯は [ADR-016](./log/2026-03-19-ci-quality-gates-roadmap.md) に残す。
 
 ---
