@@ -145,23 +145,24 @@ describeWithEnv('Plan / Record Timeblock flow', () => {
     await login(page);
   });
 
+  // lane カード（TwoLane/PlanLaneCard / RecordLaneCard）は title ではなくタグ名を表示する
   test('Plan と Record をそれぞれの Calendar 日付に表示する', async ({ page }) => {
     await openDay(page, offsetDateParam(14));
     await expect(
-      page.locator('[data-timeblock-card]', { hasText: PLAN_TITLE }).first(),
+      page.locator('[data-plan-lane-card]', { hasText: TEST_TAG_NAME }).first(),
     ).toBeVisible({
       timeout: 10_000,
     });
 
     await openDay(page, offsetDateParam(-14));
     await expect(
-      page.locator('[data-timeblock-card]', { hasText: RECORD_TITLE }).first(),
+      page.locator('[data-record-lane-card]', { hasText: TEST_TAG_NAME }).first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
   test('Record の Inspector URL は record prefix を使う', async ({ page }) => {
     await openDay(page, offsetDateParam(-14));
-    await page.locator('[data-timeblock-card]', { hasText: RECORD_TITLE }).first().click();
+    await page.locator('[data-record-lane-card]', { hasText: TEST_TAG_NAME }).first().click();
     await expect
       .poll(() => new URL(page.url()).searchParams.get('timeblock'))
       .toBe(`record:${recordId}`);
