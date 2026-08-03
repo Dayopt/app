@@ -101,6 +101,20 @@ EOF
     '
   }
 
+  # ローカル OAuth token flow に必要な MCP environment identity を冪等に投入する
+  # （supabase/local/mcp-identity-seed.sql。接続先は 127.0.0.1:54322 固定で
+  # hosted では実行不能）。seed が無くても困るのは OAuth route（503）だけ
+  # なので、失敗時は警告して dev は止めない。
+  if command -v psql >/dev/null 2>&1; then
+    if ! psql postgresql://postgres:postgres@127.0.0.1:54322/postgres \
+        -v ON_ERROR_STOP=1 -q \
+        -f "$ROOT_DIR/supabase/local/mcp-identity-seed.sql" >/dev/null 2>&1; then
+      echo "⚠️  MCP environment identity seed を適用できませんでした。ローカルの OAuth token 発行は 503 になります（pnpm db:seed:identity で再試行）" >&2
+    fi
+  else
+    echo "⚠️  psql が見つからないため MCP environment identity seed をスキップしました。ローカルの OAuth token 発行は 503 になります（pnpm db:seed:identity で適用）" >&2
+  fi
+
   LOCAL_SUPABASE_URL="$(get_local_supabase_env API_URL)"
   LOCAL_SUPABASE_ANON_KEY="$(get_local_supabase_env ANON_KEY)"
   LOCAL_SUPABASE_SERVICE_ROLE_KEY="$(get_local_supabase_env SERVICE_ROLE_KEY)"

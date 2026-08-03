@@ -8,6 +8,13 @@
 -- app-only PR の command 検証もこの決定的なユーザーを使い、追加の Auth user は作らない。
 -- ============================================================
 
+-- NOTE: MCP environment identity はこの seed では入れない。seed.sql は
+-- Supabase Preview Branch でも実行され、Preview の identity は
+-- provision_mcp_preview_environment_identity_v1 が後から bind する契約の
+-- ため。ローカル開発用の identity 投入は supabase/local/mcp-identity-seed.sql
+-- を `pnpm db:fresh`（または `pnpm db:seed:identity`）が 127.0.0.1 固定で
+-- 適用する。
+
 -- ============================================================
 -- テストユーザー
 -- ============================================================
