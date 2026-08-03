@@ -121,7 +121,7 @@ jobs:
 
       # scripts 配下は個別列挙ではなく `pnpm test:scripts`（vitest.scripts.config.ts の
       # include）で丸ごと実行する。名前を並べる形は「テストを足しても CI に載らない」を
-      # 既定にしてしまい、実際 scripts/ai-review の contract test は一度も走っていなかった。
+      # 既定にしてしまい、実際に contract test が一度も走っていなかった前例がある。
       - name: Verify Product and Web Production contracts with safe dummy values
         run: |
           pnpm test:scripts

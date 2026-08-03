@@ -29,7 +29,7 @@ jobs:
   audit:
     name: Audit Vercel metadata (trusted)
     # draft の間は走らせない。skip は conclusion: skipped の check run になり、
-    # finish-branch.sh の畳み込みが「判定を持つ entry を優先」で処理する（ai-review と同型）。
+    # finish-branch.sh の畳み込みが「判定を持つ entry を優先」で処理する（ci.yml の重量 job と同型）。
     if: github.event_name != 'pull_request_target' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 5
