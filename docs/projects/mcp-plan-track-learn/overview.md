@@ -36,20 +36,9 @@ Dayopt内にproposal、approval URL、承認状態機械は作らない。`confi
 
 ## Current state
 
-2026-08-03時点で、段階導入8候補のうち候補1〜7が`main`へ入っている。MCP / OAuth endpoint、read tool、write tool、安全なDB command、retention用DB RPC、外部接続maintenance routeまでdark release済みである。
+段階導入8候補のうち候補1〜7が`main`へ入り、MCP / OAuth endpoint、read tool、write tool、安全なDB command、retention用DB RPC、外部接続maintenance routeまでをdark releaseした。closed betaはまだ完了していない。
 
-ただし、closed betaはまだ完了していない。
-
-- #1754の最新manifestではProductionのglobal write gateはOFF、enabled clientは空。外部操作前にはlive値を再確認する
-- ChatGPT、Claude、Cursorの実機Plan → Track → Learnは未検証
-- 候補8の旧経路cleanupは未実施
-- 現在の`main`には公式conformance suiteの再実行commandがない
-- SettingsはMCP URLの表示だけで、connection一覧とuser-facing revoke導線がない
-- client gateはwrite scopeを一時的に隠すだけで、既存connection / token familyをrevokeしない。gateを再び開くと古い接続がwrite能力を取り戻し得る
-- maintenance dispatcherはOAuth code、access / refresh token、connection、mutation receiptのdue flagを完了判定へ含めていない
-- Productionでwriteを有効にしたclientはまだない
-
-実行状況のappend-only ledgerは[#1754](https://github.com/Dayopt/dayopt/issues/1754)、残りの手順は[Step 6 execution checklist](./step-6-execution-checklist.md)を正本とする。
+gate値、enabled client、未検証項目、未実装blockerといった実行状態はこのファイルに持たない。append-only ledgerは[#1754](https://github.com/Dayopt/dayopt/issues/1754)、残りの手順と閉じるべきblockerは[Step 6 execution checklist](./step-6-execution-checklist.md)を正本とする。外部操作の前にはliveの値を再確認する。
 
 ## Public tool and scope contract
 
