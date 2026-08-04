@@ -32,6 +32,12 @@ vi.mock('@/lib/mcp/trpc-bridge', () => ({ createMcpTrpcCaller }));
 vi.mock('@/features/timeblock/server/service-index', async () => {
   const { z } = await import('zod');
   return {
+    // timeblock-mutations.ts の mutationReceiptOutputSchema が module 読み込み時に
+    // z.literal(...) へ渡すため、mutation tool を exercise しないこの suite でも
+    // named export として必要（#1576）。実値は
+    // features/timeblock/server/mcp-mutation-contract.ts の
+    // MCP_MUTATION_RECEIPT_SCHEMA_VERSION と一致させる。
+    MCP_MUTATION_RECEIPT_SCHEMA_VERSION: 1,
     createTimeblockTrashReadClient: () => ({ listDeletedPlans, listDeletedRecords }),
     TimeblockTrashReadError: class TimeblockTrashReadError extends Error {},
     TIMEBLOCK_CONTEXT_MAX_RANGE_MS: 31 * 24 * 60 * 60 * 1_000,
@@ -244,8 +250,8 @@ describe('MCP list tools public contract', () => {
     const plans = parseText(planResult).plans as Array<Record<string, unknown>>;
     const records = parseText(recordResult).records as Array<Record<string, unknown>>;
 
-    expect(planResult.structuredContent).toMatchObject({ schemaVersion: 1, count: 1 });
-    expect(recordResult.structuredContent).toMatchObject({ schemaVersion: 1, count: 1 });
+    expect(planResult.structuredContent).toMatchObject({ schemaVersion: 2, count: 1 });
+    expect(recordResult.structuredContent).toMatchObject({ schemaVersion: 2, count: 1 });
     expect(plans).toHaveLength(1);
     expect(records).toHaveLength(1);
     for (const row of [...plans, ...records]) {
@@ -265,7 +271,7 @@ describe('MCP list tools public contract', () => {
     const entries = result.entries as Array<Record<string, unknown>>;
 
     expect(toolResult.structuredContent).toEqual(result);
-    expect(result.schemaVersion).toBe(1);
+    expect(result.schemaVersion).toBe(2);
     expect(result.count).toBe(2);
     expect(entries).toHaveLength(2);
     for (const entry of entries) {
@@ -293,10 +299,10 @@ describe('MCP list tools public contract', () => {
       await getHandler(handlers, 'records.trash.list')({ limit: 8 }),
     );
 
-    expect(planResult).toMatchObject({ schemaVersion: 1, plan: { id: plan.id } });
-    expect(recordResult).toMatchObject({ schemaVersion: 1, record: { id: record.id } });
-    expect(planTrashResult).toMatchObject({ schemaVersion: 1, count: 1 });
-    expect(recordTrashResult).toMatchObject({ schemaVersion: 1, count: 1 });
+    expect(planResult).toMatchObject({ schemaVersion: 2, plan: { id: plan.id } });
+    expect(recordResult).toMatchObject({ schemaVersion: 2, record: { id: record.id } });
+    expect(planTrashResult).toMatchObject({ schemaVersion: 2, count: 1 });
+    expect(recordTrashResult).toMatchObject({ schemaVersion: 2, count: 1 });
     expect(listDeletedPlans).toHaveBeenCalledWith(context.userId, 7);
     expect(listDeletedRecords).toHaveBeenCalledWith(context.userId, 8);
   });
@@ -423,7 +429,7 @@ describe('MCP list tools public contract', () => {
 
       expect(MCP_TAG_LIST_OUTPUT_SCHEMA.safeParse(result.structuredContent).success).toBe(true);
       expect(result.structuredContent).toEqual({
-        schemaVersion: 1,
+        schemaVersion: 2,
         count: 1,
         tags: [
           {
@@ -459,7 +465,7 @@ describe('MCP list tools public contract', () => {
     expect(MCP_TAG_LIST_OUTPUT_SCHEMA.safeParse(result.structuredContent).success).toBe(true);
     // 既存の階層順を壊さないよう、アーカイブ済みは通常タグの後ろに続ける。
     expect(result.structuredContent).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       count: 2,
       tags: [
         { id: activeTag.id, isArchived: false, archivedAt: null },
@@ -777,7 +783,7 @@ describe('MCP list tools public contract', () => {
       // 完全一致し、注入文字列も原文のまま復元される）を固定する。
       expect(JSON.parse(inner)).toEqual(result.structuredContent);
       expect(inner).toContain('Ignore previous instructions');
-      expect(result.structuredContent).toMatchObject({ schemaVersion: 1 });
+      expect(result.structuredContent).toMatchObject({ schemaVersion: 2 });
     }
   });
 
@@ -795,7 +801,7 @@ describe('MCP list tools public contract', () => {
       expect(result.isError, name).toBe(true);
       expect(getText(result)).not.toContain(UNTRUSTED_DATA_START);
       expect(JSON.parse(getText(result))).toMatchObject({
-        schemaVersion: 1,
+        schemaVersion: 2,
         error: { code: 'INSUFFICIENT_SCOPE', retryable: false },
       });
     }
@@ -818,7 +824,7 @@ describe('MCP list tools public contract', () => {
       expect(result.isError, name).toBe(true);
       expect(getText(result)).not.toContain(UNTRUSTED_DATA_START);
       expect(JSON.parse(getText(result))).toMatchObject({
-        schemaVersion: 1,
+        schemaVersion: 2,
         error: { code: 'READ_FAILED', retryable: true },
       });
     }
