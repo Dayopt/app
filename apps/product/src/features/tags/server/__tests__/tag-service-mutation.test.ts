@@ -170,6 +170,27 @@ describe('TagService', () => {
         code: 'DUPLICATE_NAME',
       });
     });
+
+    it('should throw TAG_ARCHIVED and skip the insert when parentId is an archived tag', async () => {
+      const archivedParent = {
+        id: 'parent-1',
+        name: 'Parent',
+        user_id: userId,
+        parent_id: null,
+        archived_at: '2026-01-01T00:00:00.000Z',
+      };
+      const mockQuery = setupMockSingleQuery(mockSupabase.from, archivedParent);
+
+      await expect(
+        service.create({ userId, input: { name: 'Child', parentId: 'parent-1' } }),
+      ).rejects.toMatchObject({ code: 'TAG_ARCHIVED' });
+
+      // insert（DB書き込み）が実行されない
+      expect(mockQuery.insert).not.toHaveBeenCalled();
+      // makeRoomAtTop にも進まない（from は親の getById 1 回のみ）
+      expect(mockSupabase.from).toHaveBeenCalledTimes(1);
+      expect(mockSupabase.rpc).not.toHaveBeenCalled();
+    });
   });
 
   describe('update', () => {
@@ -230,6 +251,32 @@ describe('TagService', () => {
           updates: { name: 'New Name' },
         }),
       ).rejects.toThrow(TagServiceError);
+    });
+
+    it('should throw TAG_ARCHIVED and skip the update when moving a tag under an archived parent', async () => {
+      const archivedParent = {
+        id: 'parent-1',
+        name: 'Parent',
+        user_id: userId,
+        parent_id: null,
+        archived_at: '2026-01-01T00:00:00.000Z',
+      };
+
+      // 1: getById(tagId) → 更新対象自身, 2: getById(parentId) → 新親候補（アーカイブ済み）
+      mockSupabase.from
+        .mockReturnValueOnce(createChainableMock(existingTag))
+        .mockReturnValueOnce(createChainableMock(archivedParent));
+
+      await expect(
+        service.update({
+          userId,
+          tagId: 'tag-1',
+          updates: { parentId: 'parent-1' },
+        }),
+      ).rejects.toMatchObject({ code: 'TAG_ARCHIVED' });
+
+      // 子タグ件数チェックにも update（DB書き込み）にも進まない（from は getById 2 回のみ）
+      expect(mockSupabase.from).toHaveBeenCalledTimes(2);
     });
   });
 });
