@@ -1697,6 +1697,47 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(web).toMatchObject({ action: 'promoted', previousDeploymentId: 'dpl_web_old' });
   });
 
+  it('sweeps again after accepting a move during final verification', async () => {
+    // 検証が許した移動でも、その promote は auto-assign を戻している。掃きと検証を
+    // 交互に回して両方が満たされた状態で success を出す。
+    // 1回目=before、2回目以降=別 deployment（同一 SHA なので受理される）。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_hotfix'],
+    });
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+    });
+
+    expect(result.status).toBe('promoted');
+    // 受理した移動の promote が戻した設定を掃き直している。
+    expect(world.autoAssign).toEqual({ web: false, product: false });
+    expect(world.patches).toContainEqual({ project: 'web', value: false });
+    // manifest は最後に観測した deployment を載せる。
+    expect(result.manifest.projects).toContainEqual(
+      expect.objectContaining({ name: 'web', deploymentId: 'dpl_web_hotfix' }),
+    );
+  });
+
+  it('drops an accepted move that reverts before the final read', async () => {
+    // 一時的に動いただけの deployment を live として載せ続けない。
+    // 2回目=別 deployment（受理・記録）、3回目以降=run 開始時点へ戻る。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_hotfix', 'dpl_web_old'],
+    });
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+    });
+
+    expect(result.status).toBe('promoted');
+    expect(result.manifest.projects).toContainEqual(
+      expect.objectContaining({ name: 'web', action: 'skipped', deploymentId: 'dpl_web_old' }),
+    );
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。

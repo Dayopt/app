@@ -83,6 +83,12 @@ const DEFINITIVE_REJECTIONS = new Set([400, 401, 403, 404, 429]);
 const AMBIGUOUS_SETTLE_MS = ASSIGN_TIMEOUT_MS;
 
 /**
+ * 設定の掃きと live 状態の検証を交互に回す上限。外部 actor が promote を続ける限り
+ * 収束しないので有限で打ち切り、最後の検証が通った時点の観測を根拠にする。
+ */
+const STABILIZE_ATTEMPTS = 3;
+
+/**
  * この script が費やしうる最悪時間。workflow の `timeout-minutes` がこれを
  * 下回ると、rollback の途中で job が kill され、片方だけ promote された
  * production が手動 rollback の手掛かりごと失われる。
@@ -768,6 +774,9 @@ export function buildManifest({
       // 外部 actor が先に promote した分。この run は動かしていないが live ではある。
       const external = entry ? null : (externallyLive.get(project.name) ?? null);
 
+      // 最終的に「今 live」と判断した記録。action も ID もここから導く。
+      const effective = moved ?? serving ?? restored ?? external ?? live;
+
       const action = moved
         ? moved.id
           ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
@@ -776,7 +785,7 @@ export function buildManifest({
           ? rolled
             ? 'rolled-back'
             : 'promoted'
-          : external || live?.sha === sha
+          : effective?.sha === sha
             ? 'already-serving'
             : decision?.affected
               ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
@@ -788,8 +797,8 @@ export function buildManifest({
         affected: decision?.affected ?? null,
         reason: decision?.reason ?? null,
         action,
-        deploymentId: (moved ?? serving ?? restored ?? external ?? live)?.id ?? null,
-        sourceSha: (moved ?? serving ?? restored ?? external ?? live)?.sha ?? null,
+        deploymentId: effective?.id ?? null,
+        sourceSha: effective?.sha ?? null,
         // 未割当の時は「戻す先」が manifest から消えないよう、run 開始時点の deployment を
         // 復旧先として残す（promote entry があればそちらが優先）。
         previousDeploymentId: entry?.previous?.id ?? (moved && !moved.id ? live?.id : null) ?? null,
@@ -919,10 +928,6 @@ export async function runProductionRelease({
   // 待機中や gate 実行中に外部 actor が同じ candidate を promote した場合に入る。
   const externallyLive = new Map();
 
-  // 最終検証で使う candidate 一覧。promote 経路に入らなかった run では空のままで、
-  // その場合 verifyLiveState は「全 project が判定時の SHA を配信しているか」を見る。
-  let finalCandidates = [];
-
   // この run が promote した後に他者が別 deployment を live にした project。
   // rollback せず残すため、manifest には観測した live を載せる（我々の candidate を
   // 配信中と誤記すると、runbook の手順で「戻す」対象に見えてしまう）。
@@ -990,6 +995,9 @@ export async function runProductionRelease({
     const expectedId = new Map(
       candidateEntries.map(({ project, deployment }) => [project.name, deployment.id]),
     );
+    // 受理した移動の件数。呼び出し側は「受理があった = 設定が飛んでいるかもしれない」
+    // として掃き直しの判断に使う。
+    let accepted = 0;
 
     for (const project of projects) {
       const live = await getLiveProduction({
@@ -1020,8 +1028,13 @@ export async function runProductionRelease({
         : (before.get(project.name)?.sha ?? null);
       // 許した移動（target SHA の別 deployment）も manifest へ反映する。run 開始時点の
       // ID を残すと、成功した run の manifest が既に live でない deployment を指す。
+      // 検証は複数回走るので、**run 開始時点へ戻っていたら記録を消す**（消さないと
+      // 一時的に動いただけの deployment を live として載せ続ける）。
       if (live && live.id !== before.get(project.name)?.id) {
         externallyLive.set(project.name, { id: live.id, sha: live.sha });
+        accepted += 1;
+      } else if (!expectedId.has(project.name)) {
+        externallyLive.delete(project.name);
       }
 
       // 基準 SHA が観測できていない project は affected へ倒っているのでここには来ない。
@@ -1035,6 +1048,34 @@ export async function runProductionRelease({
         );
       }
     }
+
+    return accepted;
+  };
+
+  /**
+   * **sweep と verify を、両方が同時に満たされるまで交互に回す。**
+   *
+   * 片方を直すともう片方が崩れうる（promote は auto-assign を戻し、alias も動かす）。
+   * 「検証してから掃く」「掃いてから検証する」のどちらでも、その後に起きた promote を
+   * 見逃す隙間が残る。有限回のループで「最後に見た時点で両方満たされている」ことを
+   * 確かめ、それを success の主張の根拠にする。
+   *
+   * verify が不受理の移動を見つけたら throw する。**この関数は rollback で保護された
+   * 領域の中から呼ぶ**こと（呼び出し側の catch が rollback と manifest を担う）。
+   *
+   * @returns 残っている drift（空でなければ設定復元が失敗している）
+   */
+  const stabilize = async (candidateEntries) => {
+    let drift = [];
+    for (let attempt = 1; attempt <= STABILIZE_ATTEMPTS; attempt += 1) {
+      drift = await sweepSettings();
+      const accepted = await verifyLiveState(candidateEntries);
+      if (drift.length === 0 && accepted === 0) return drift;
+      if (attempt < STABILIZE_ATTEMPTS) {
+        logger.log(`Production state moved during verification; re-checking (attempt ${attempt}).`);
+      }
+    }
+    return drift;
   };
 
   // **この関数のどの出口も、抜ける前に auto-assign を掃く。** 外部の promote は
@@ -1107,17 +1148,17 @@ export async function runProductionRelease({
         }
 
         // promote していなくても「この commit が live」を主張する以上、前提を確認する。
-        await verifyLiveState([]);
+        // 掃きと検証は安定するまで交互に回す（§stabilize）。
+        const residual = await stabilize([]);
+        if (residual.length > 0) {
+          throw Object.assign(driftError(sha, residual), {
+            manifest: manifestFor('settings-drift'),
+          });
+        }
       } catch (error) {
         reportSweepDrift(await sweepSettings());
-        throw Object.assign(error, { manifest: manifestFor('failed') });
-      }
-
-      const sweptAfterGates = await sweepSettings();
-      if (sweptAfterGates.length > 0) {
-        throw Object.assign(driftError(sha, sweptAfterGates), {
-          manifest: manifestFor('settings-drift'),
-        });
+        if (!error.manifest) Object.assign(error, { manifest: manifestFor('failed') });
+        throw error;
       }
 
       return {
@@ -1143,7 +1184,6 @@ export async function runProductionRelease({
     }).catch((error) => {
       throw Object.assign(error, { manifest: manifestFor('failed') });
     });
-    finalCandidates = candidates;
 
     // 待機は最大 25 分ブロックする。その間に人が Instant Rollback や手動 promote を
     // 行いうるため、判定は待機後の実状態で行う。unaffected な project は promote 対象で
@@ -1272,6 +1312,8 @@ export async function runProductionRelease({
 
     const promoted = [];
     const driftedProjects = [];
+    /** stabilize が最後に観測した設定 drift。空でなければ run を失敗させる。 */
+    let residualDrift = [];
     try {
       for (const { project, deployment } of pending) {
         assertSimulationPoint(simulateFailure, `promote:${project.name}`);
@@ -1417,7 +1459,10 @@ export async function runProductionRelease({
       // 全 project について「判定の前提が今も成り立つか」を確認する（§verifyLiveState）。
       // force でも実行する。Force Promote が免除するのは health / config の gate であって、
       // 「promote した SHA が今も live」という主張そのものではない。
-      await verifyLiveState(candidates);
+      //
+      // 掃きと検証は安定するまで交互に回す。**rollback 保護の内側**で行うので、ここで
+      // 不受理の移動を見つけた場合はこの run が promote した分が巻き戻る。
+      residualDrift = await stabilize(candidates);
     } catch (error) {
       // promote 済みの側を戻す。対象は **この run が promote した project だけ**で、
       // 前から target を配信していた側（preexistingSplit）には戻し先が無い。
@@ -1463,7 +1508,6 @@ export async function runProductionRelease({
     // **判定はこの最新の掃きだけで行う。** ループ内の復元が一時的に失敗しても、ここで
     // 復元できていれば設定は正しい。過去の失敗を積み上げると、既に直っている状態で
     // release を止めて tag を打てなくする。
-    const swept = await sweepSettings();
     if (driftedProjects.length > 0) {
       logger.log(
         `Earlier restore attempts failed for ${driftedProjects.join(', ')}; the final sweep decides.`,
@@ -1472,11 +1516,11 @@ export async function runProductionRelease({
 
     // production は正しい SHA を配信している。設定復元の失敗で巻き戻す理由はないが、
     // 放置すると次の merge が gate を迂回するため run は失敗させる。
-    if (swept.length > 0) {
+    if (residualDrift.length > 0) {
       // production は正しい SHA を配信している。失敗の理由は設定の復元だけなので、
       // manifest の status を分ける。'failed' のままだと runbook の「失敗した run の
       // promoted は戻す」に従って、健全な deployment が不要に巻き戻される。
-      throw Object.assign(driftError(sha, swept), {
+      throw Object.assign(driftError(sha, residualDrift), {
         manifest: manifestFor('settings-drift', { promoted }),
       });
     }
@@ -1504,32 +1548,6 @@ export async function runProductionRelease({
     reportSweepDrift(finalDrift);
     throw Object.assign(driftError(sha, finalDrift), {
       manifest: manifestFor('settings-drift', { promoted: result.promoted ?? [] }),
-    });
-  }
-
-  // **掃きの後にもう一度 alias を見る。** 検証 → 掃き の順のままだと、その間に起きた
-  // 外部 promote を誰も見ない（掃きは設定を直せてしまうので、失敗としては現れない）。
-  // 「この commit が live」という主張を出す直前の観測にする。
-  // superseded は promote 0 件で失敗を publish する経路なので、ここで別の失敗へ
-  // すり替えない（診断が変わってしまう）。
-  if (result.status !== 'superseded') {
-    try {
-      await verifyLiveState(finalCandidates);
-    } catch (error) {
-      // ここは sweep で包んだ本体の外側。外部 promote は auto-assign を戻すので、
-      // 掃かずに抜けると次の main merge が gate を迂回する。
-      reportSweepDrift(await sweepSettings());
-      throw Object.assign(error, {
-        manifest: manifestFor('failed', { promoted: result.promoted ?? [] }),
-      });
-    }
-
-    // 検証が許した移動（target SHA の別 deployment）は externallyLive に反映されている。
-    // manifest は検証より前に作られているため、ここで作り直さないと run 開始時点の
-    // deployment ID を載せた artifact を上げてしまう。
-    result.manifest = manifestFor(result.status, {
-      promoted: result.promoted ?? [],
-      rolledBack: result.rolledBack ?? [],
     });
   }
 
