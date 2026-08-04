@@ -1398,7 +1398,11 @@ describe('runProductionRelease (affected-aware)', () => {
       return world.fetchImpl(input, init);
     });
 
-    await expect(release({ fetchImpl })).rejects.toThrow(/promote\(web\) failed with status 502/);
+    // 着地待ちの窓（ASSIGN_TIMEOUT_MS）を進めるため clock を動かす。
+    let clock = 0;
+    await expect(release({ fetchImpl, nowImpl: () => (clock += 60_000) })).rejects.toThrow(
+      /promote\(web\) failed with status 502/,
+    );
     // 空振りでも previous へ戻しに行く（何も起きていなければ実質 no-op）。
     expect(world.rolledBack()).toEqual(['web']);
   });

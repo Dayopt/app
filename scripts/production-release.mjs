@@ -71,12 +71,16 @@ const TERMINAL_FAILURE_STATES = new Set(['ERROR', 'CANCELED', 'DELETED']);
 const DEFINITIVE_REJECTIONS = new Set([400, 401, 403, 404, 429]);
 
 /**
- * promote の受理が不確かな時、その反映を待つ猶予。POST が 5xx / transport で失敗しても
+ * promote の受理が不確かな時、その反映を待つ窓。POST が 5xx / transport で失敗しても
  * Vercel 側が受理していることがあり、alias の変化は非同期に遅れて現れる。rollback 直後に
  * 「previous のままだから戻った」と即断すると、その後に元の promote が着地して
  * gate を通っていない deployment が live になる。
+ *
+ * 窓は `ASSIGN_TIMEOUT_MS` と同じにする。**この script 自身が assignment の反映に
+ * その時間まで許しているのだから、遅れて着地する promote も同じ時間まで有効**。
+ * これより短い窓にすると、その差の時間帯に着地する promote を必ず見逃す。
  */
-const AMBIGUOUS_SETTLE_MS = 30 * 1000;
+const AMBIGUOUS_SETTLE_MS = ASSIGN_TIMEOUT_MS;
 
 /**
  * この script が費やしうる最悪時間。workflow の `timeout-minutes` がこれを
@@ -89,10 +93,11 @@ const WORST_CASE_SMOKE_MS =
   RELEASE_PROJECTS.reduce((total, project) => total + project.smokeChecks.length, 0) *
   (SMOKE_ATTEMPTS * SMOKE_TIMEOUT_MS + (SMOKE_ATTEMPTS - 1) * SMOKE_RETRY_DELAY_MS);
 
+// project あたりの反映待ちは最大 2 回分。promote の確認 + rollback の確認、または
+// promote の受理が不確かな場合の「着地待ち + rollback の確認」のどちらか。
+// 受理が不確かな経路では promote の確認を行わずに抜けるので、3 つが重なることはない。
 export const WORST_CASE_RELEASE_MS =
-  READY_TIMEOUT_MS +
-  WORST_CASE_SMOKE_MS * 2 +
-  RELEASE_PROJECTS.length * (ASSIGN_TIMEOUT_MS * 2 + AMBIGUOUS_SETTLE_MS);
+  READY_TIMEOUT_MS + WORST_CASE_SMOKE_MS * 2 + RELEASE_PROJECTS.length * ASSIGN_TIMEOUT_MS * 2;
 
 export class ReleaseError extends Error {
   constructor(message, { manualRollback } = {}) {
@@ -1007,6 +1012,12 @@ export async function runProductionRelease({
       const wantedSha = alreadyServingNames.has(project.name)
         ? sha
         : (before.get(project.name)?.sha ?? null);
+      // 許した移動（target SHA の別 deployment）も manifest へ反映する。run 開始時点の
+      // ID を残すと、成功した run の manifest が既に live でない deployment を指す。
+      if (live && live.id !== before.get(project.name)?.id) {
+        externallyLive.set(project.name, { id: live.id, sha: live.sha });
+      }
+
       // 基準 SHA が観測できていない project は affected へ倒っているのでここには来ない。
       // target SHA へ動いていた場合は許す（判定より進んだだけで、success の主張は
       // むしろ強くなる）。それ以外の SHA は判定の前提が崩れている。
@@ -1170,7 +1181,9 @@ export async function runProductionRelease({
       // 「未着手（pending）」に見え、復旧手順が実際の live を取り違える。
       for (const { project } of movedElsewhere) {
         const now = current.get(project.name);
-        if (now) movedAway.set(project.name, { id: now.id, sha: now.sha });
+        // now が null（alias 未割当）も観測結果。落とすと manifest が run 開始時点の
+        // deployment を「未着手」として残す。
+        movedAway.set(project.name, { id: now?.id ?? null, sha: now?.sha ?? null });
       }
 
       // 外部の promote は auto-assign を true へ戻す（vercel/vercel#15095）。
@@ -1557,19 +1570,32 @@ async function rollbackPromoted({
       // 見直す。ここで target が現れたら、run 終了後に着地するのと同じ状態なので
       // 手動確認へ回す。
       if (entry.ambiguous) {
-        await sleepImpl(AMBIGUOUS_SETTLE_MS);
-        const settled = await getLiveProduction({
-          projectName: entry.project.name,
-          productionDomain: entry.project.productionDomain,
-          projectId: entry.projectId,
-          token,
-          teamId,
-          fetchImpl,
-        }).catch(() => null);
-        if (settled?.id !== entry.previous.id) {
+        const deadline = nowImpl() + AMBIGUOUS_SETTLE_MS;
+        let landed = null;
+        while (nowImpl() < deadline) {
+          await sleepImpl(ASSIGN_POLL_MS);
+          let settled;
+          try {
+            settled = await getLiveProduction({
+              projectName: entry.project.name,
+              productionDomain: entry.project.productionDomain,
+              projectId: entry.projectId,
+              token,
+              teamId,
+              fetchImpl,
+            });
+          } catch {
+            continue; // 読めない回で判断しない。窓の残りで見直す
+          }
+          if (settled?.id !== entry.previous.id) {
+            landed = settled ?? { id: null };
+            break;
+          }
+        }
+        if (landed) {
           stranded.push(
             `${entry.project.name} -> ${entry.previous.id} ` +
-              `(a delayed promote landed on ${settled?.id ?? 'an unreadable deployment'})`,
+              `(a delayed promote landed on ${landed.id ?? 'no deployment'})`,
           );
           continue;
         }
