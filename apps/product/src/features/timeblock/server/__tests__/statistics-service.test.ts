@@ -97,20 +97,103 @@ describe('StatisticsService.getTagStats', () => {
           end_at: '2026-07-01T01:00:00Z',
         },
       ]),
+      plans: createChainableMock([]),
     });
 
     const result = await service.getTagStats(USER_ID);
 
+    // counts は records のみの実績件数（サイドバー等の「実績件数」表示用途の契約は不変）
     expect(result.counts).toEqual({ 'tag-1': 2, 'tag-2': 1 });
     expect(result.lastUsed).toEqual({
       'tag-1': '2026-07-02T00:00:00Z',
       'tag-2': '2026-07-01T00:00:00Z',
     });
+    expect(result.planCounts).toEqual({});
   });
 
-  it('record が無い場合は空の counts/lastUsed を返す', async () => {
-    const { service } = createService({ records: createChainableMock([]) });
-    expect(await service.getTagStats(USER_ID)).toEqual({ counts: {}, lastUsed: {} });
+  it('record が無い場合は空の counts/lastUsed/planCounts を返す', async () => {
+    const { service } = createService({
+      records: createChainableMock([]),
+      plans: createChainableMock([]),
+    });
+    expect(await service.getTagStats(USER_ID)).toEqual({
+      counts: {},
+      lastUsed: {},
+      planCounts: {},
+    });
+  });
+
+  it('Plan のみ（record 無し）のタグは counts=0 のまま、planCounts に件数が反映される（#1576フォローアップ）', async () => {
+    const { service } = createService({
+      records: createChainableMock([]),
+      plans: createChainableMock([
+        {
+          id: 'p1',
+          tag_id: 'tag-future',
+          start_at: '2026-08-10T00:00:00Z',
+          end_at: '2026-08-10T01:00:00Z',
+        },
+      ]),
+    });
+
+    const result = await service.getTagStats(USER_ID);
+
+    // records が無いタグは counts に現れない（0 扱い） — 削除確認の合計判定は呼び出し側が
+    // counts + planCounts を合算する（apps/product/src/features/calendar/components/
+    // tag-filter/tag-delete-counts.ts の mergeTagDeleteCounts）
+    expect(result.counts['tag-future']).toBeUndefined();
+    expect(result.planCounts).toEqual({ 'tag-future': 1 });
+  });
+
+  it('records と plans 両方を持つタグは counts/planCounts がそれぞれ独立して反映される', async () => {
+    const { service } = createService({
+      records: createChainableMock([
+        {
+          id: 'l1',
+          tag_id: 'tag-1',
+          plan_id: 'p1',
+          source: 'from_plan',
+          start_at: '2026-07-01T00:00:00Z',
+          end_at: '2026-07-01T01:00:00Z',
+        },
+      ]),
+      plans: createChainableMock([
+        {
+          id: 'p1',
+          tag_id: 'tag-1',
+          start_at: '2026-07-01T00:00:00Z',
+          end_at: '2026-07-01T01:00:00Z',
+        },
+        {
+          id: 'p2',
+          tag_id: 'tag-1',
+          start_at: '2026-07-08T00:00:00Z',
+          end_at: '2026-07-08T01:00:00Z',
+        },
+      ]),
+    });
+
+    const result = await service.getTagStats(USER_ID);
+
+    expect(result.counts).toEqual({ 'tag-1': 1 });
+    expect(result.planCounts).toEqual({ 'tag-1': 2 });
+  });
+
+  it('tag_id が null の Plan（未分類）は planCounts に含めない', async () => {
+    const { service } = createService({
+      records: createChainableMock([]),
+      plans: createChainableMock([
+        {
+          id: 'p1',
+          tag_id: null,
+          start_at: '2026-07-01T00:00:00Z',
+          end_at: '2026-07-01T01:00:00Z',
+        },
+      ]),
+    });
+
+    const result = await service.getTagStats(USER_ID);
+    expect(result.planCounts).toEqual({});
   });
 });
 

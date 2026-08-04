@@ -28,6 +28,7 @@ import { Button, HoverTooltip, Skeleton } from '@dayopt/components';
 import { ArchivedTagList } from './components/ArchivedTagList';
 import { FilterItem } from './components/FilterItem/FilterItem';
 import { TagFlatList } from './components/TagFlatList';
+import { mergeTagDeleteCounts } from './tag-delete-counts';
 
 /**
  * カレンダーフィルターリスト
@@ -46,10 +47,13 @@ export function CalendarFilterList() {
   // syncWithTags にアーカイブ済み ID も含めるための取得（表示は従来どおり nodes/tags のみ使う）。
   const { data: archivedTags } = useArchivedTags();
 
-  // エラー時は null にすることで、削除確認ダイアログを常に表示（誤削除防止）
-  const tagPlanCounts = useMemo(
-    () => (isTagStatsError ? null : (tagStats?.counts ?? {})),
-    [tagStats?.counts, isTagStatsError],
+  // 削除判定・確認ダイアログ用: records + plans の合計件数。
+  // tagStats.counts（records のみの実績件数）自体は変更しない — 実績件数を表示する
+  // 用途では引き続きそちらを直接参照する。エラー時は null にすることで、削除確認
+  // ダイアログを常に表示する（誤削除防止）。
+  const tagDeleteCounts = useMemo(
+    () => mergeTagDeleteCounts(tagStats, isTagStatsError),
+    [tagStats, isTagStatsError],
   );
 
   const deleteTagMutation = useDeleteTag();
@@ -95,18 +99,18 @@ export function CalendarFilterList() {
     recordCount: number;
   } | null>(null);
 
-  // 削除ハンドラー: 未使用タグは即削除、使用済みは未分類化の説明つき確認を挟む。
-  // stats未取得/エラー時は安全側に倒して常に確認ダイアログを表示
+  // 削除ハンドラー: 未使用タグ（Plan/Record 合計 0 件）は即削除、使用済みは
+  // 未分類化の説明つき確認を挟む。stats未取得/エラー時は安全側に倒して常に確認ダイアログを表示
   const handleDeleteTag = useCallback(
     (tagId: string, tagName: string) => {
-      const recordCount = tagPlanCounts === null ? 1 : (tagPlanCounts[tagId] ?? 0);
-      if (recordCount === 0) {
+      const affectedCount = tagDeleteCounts === null ? 1 : (tagDeleteCounts[tagId] ?? 0);
+      if (affectedCount === 0) {
         deleteTagMutation.mutate({ id: tagId });
       } else {
-        setDeleteTarget({ id: tagId, name: tagName, recordCount });
+        setDeleteTarget({ id: tagId, name: tagName, recordCount: affectedCount });
       }
     },
-    [tagPlanCounts, deleteTagMutation],
+    [tagDeleteCounts, deleteTagMutation],
   );
 
   const handleArchiveTag = useCallback(
