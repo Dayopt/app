@@ -571,6 +571,7 @@ export function TimeblockInspectorForm({
       tagName: tag?.name ?? t('common.tags.noTag'),
       tagColor: tag?.color ?? null,
       tagIcon: tag?.icon ?? null,
+      isUncategorized: row.tag_id == null,
       startAt: new Date(row.start_at),
       endAt: new Date(row.end_at),
     };

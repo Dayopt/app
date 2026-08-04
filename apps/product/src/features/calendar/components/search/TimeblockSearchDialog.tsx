@@ -186,7 +186,12 @@ export function TimeblockSearchContent({
                   ) : null}
                 </div>
                 <p className="flex min-w-0 items-center gap-1 text-sm font-medium">
-                  {tag ? <TagIcon icon={tag.icon} color={tag.color} size="sm" /> : null}
+                  <TagIcon
+                    icon={tag?.icon ?? null}
+                    color={tag?.color ?? null}
+                    size="sm"
+                    isUncategorized={!tag}
+                  />
                   <span className="truncate">{displayName}</span>
                 </p>
                 {result.note ? (

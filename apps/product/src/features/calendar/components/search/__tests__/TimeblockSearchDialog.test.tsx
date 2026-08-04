@@ -36,7 +36,9 @@ function successfulQuery(data: unknown[]) {
 const MOCK_PLAN_ROWS = [PLAN_ROW];
 
 vi.mock('@/features/tags', () => ({
-  TagIcon: () => <span data-testid="tag-icon" />,
+  TagIcon: ({ isUncategorized }: { isUncategorized?: boolean }) => (
+    <span data-testid="tag-icon" data-uncategorized={String(!!isUncategorized)} />
+  ),
   useTags: () => ({
     data: [
       {
@@ -245,15 +247,17 @@ describe('TimeblockSearchContent', () => {
     expect(screen.getByText('Calendar search states')).toBeInTheDocument();
     expect(screen.getByText(/2026/)).toBeInTheDocument();
     expect(screen.queryByText('record-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('tag-icon')).toHaveAttribute('data-uncategorized', 'false');
   });
 
-  it('タグを解決できない結果はタグなしを表示名にする', () => {
+  it('タグを解決できない結果はタグなしを表示名にし、中立マーカーのTagIconを描画する', () => {
     renderContent({
       results: [{ ...result, tagId: null }],
       tagsById: new Map(),
     });
 
     expect(screen.getByText('common.tags.noTag')).toBeInTheDocument();
+    expect(screen.getByTestId('tag-icon')).toHaveAttribute('data-uncategorized', 'true');
   });
 
   it('エラー時に再試行できる', () => {
