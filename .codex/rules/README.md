@@ -13,7 +13,6 @@
 - `.agents/roles/*.md`: provider-neutral な review role 本文の正本
 - `.codex/agents/*.toml`: Codex custom agent の metadata、権限制約、正本への thin pointer
 - `.claude/agents/*.md`: Claude subagent の metadata、tool allowlist、正本への thin pointer
-- `playwright_test_planner` / `playwright_test_generator`: 明示的に起動する purpose-built writer 例外。Main と同じ output scope を同時編集しない
 
 Review role の adapter に role 本文や変化しやすい project facts を複製しない。確認 command の実行が必要なら review role は Main へ返し、Main が実行する。
 

@@ -1,11 +1,19 @@
 name: Production Config Audit
 
+# この audit が見るのは Vercel 側の状態（env 構成の drift）であって PR の diff では
+# ない。よって発火は「merge 前（ready 後の PR）・merge 時（push:main）・日次 cron」で
+# 足りる。draft の反復 push で毎回 Vercel API を叩く必要はない（2026-08-03、
+# 実測 3 日 74 run の削減）。contract 変更検出は ready_for_review でも発火するため、
+# draft の間に contract を書き換えても ready 化の時点で必ず捕まる。
 on:
   pull_request_target:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
+  schedule:
+    # 06:00 JST。merge が無い日でも dashboard 手動変更の drift を 1 日以内に検出する
+    - cron: '0 21 * * *'
   workflow_dispatch:
 
 permissions:
@@ -20,6 +28,9 @@ concurrency:
 jobs:
   audit:
     name: Audit Vercel metadata (trusted)
+    # draft の間は走らせない。skip は conclusion: skipped の check run になり、
+    # finish-branch.sh の畳み込みが「判定を持つ entry を優先」で処理する（ci.yml の重量 job と同型）。
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -31,9 +31,8 @@ persistent staging は常設しない。固定 URL が必要な Stripe / OAuth c
 | Playwright `chromium`          | required | `apps/product/src/lib/test/e2e` の全specを実行                           |
 | Playwright `Mobile Chrome`     | local    | `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` を持つ環境でmobile shellを確認  |
 | Storybook browser light / dark | local    | interaction / a11yの既知failureを #1499 / #1586 で解消後にCI昇格を再判断 |
-| Playwright Test Agents         | opt-in   | planner / generatorだけを単一フローの計画・生成支援に使う                |
 
-Mobile ChromeをCIで実行すると、認証必須testは環境変数不足でskipされ、残る未認証testだけがchromiumと重複する。認証fixtureまたはCI専用test userを安全に用意するまではlocal専用とする。Test Agentsのhealerは、失敗を`test.fixme()`へ変えてgreenにできるため採用しない。判断の根拠は [2026-07-13-test-automation-strategy.md](./log/2026-07-13-test-automation-strategy.md) に記録する。
+Mobile ChromeをCIで実行すると、認証必須testは環境変数不足でskipされ、残る未認証testだけがchromiumと重複する。認証fixtureまたはCI専用test userを安全に用意するまではlocal専用とする。Playwright Test Agents（planner / generator の opt-in 採用、healer は不採用）は 2026-07-13 に限定採用したが、3週間利用ゼロのまま E2E 追加が手書きで行われたため 2026-08-03 に撤去した。再導入する場合は Playwright に定義を再生成させ、リポジトリ固有制約（healer 不採用、単一フロー限定、`test.skip()` / 固定 wait / `networkidle` 禁止）を planner / generator へ戻す。healer 不採用と CI の正を `chromium` とする判断は撤去後も有効で、根拠は [2026-08-03-playwright-test-agents-retirement.md](./log/2026-08-03-playwright-test-agents-retirement.md) に引き継いだ。
 
 ### Supabase Project
 
@@ -213,7 +212,8 @@ GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品�
 
 - Required checksはrepository rulesetと`.github/workflows/ci.yml`を正とし、Code Quality由来のcheckを追加しない
 - セキュリティ静的解析はGitHub CodeQLを継続する
-- Copilotのautomatic first reviewとCodex reviewを継続する
+- **自動の外部レビューは Codex（`chatgpt-codex-connector[bot]`）だけにする。** 2026-08-03 に Gemini の ai-review を撤去し、Copilot も外した（直近マージ 10 PR の実測で review / comment がともに 0 件。原因は org の Copilot seat が 0 で、automatic review が実際には機能していなかったこと）。したがって「外部の目」は Codex の 1 系統だけで、実装・テスト・内部レビューはすべて Claude 系という前提で品質設計する
+- Copilot を再開する場合は、org の Copilot seat 割り当てから必要（Settings → Copilot → Access）。seat が 0 のままでは workflow が登録されていてもレビューは出ない
 - カバレッジ閾値が必要になった場合はVitest / CIで直接管理する
 - Code Qualityを再評価する場合は、有効化前にbilling impactと既存品質ゲートとの差分を確認する
 
@@ -226,7 +226,7 @@ GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品�
 
 ### merge gate の required checks
 
-main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Checks` / `📦 Build & Test` / `🎭 E2E Tests` / `🌐 Web Build & E2E`）に加えて次を含める。
+main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Checks` / `📦 Unit Tests` / `🎭 E2E Tests` / `🌐 Web Build & E2E`）に加えて次を含める。`🎭` / `🌐` は draft PR では skip される（`.claude/rules/workflow.md` §2 段階 CI）。
 
 | context                   | 発行元            | 目的                                                       |
 | ------------------------- | ----------------- | ---------------------------------------------------------- |
@@ -235,9 +235,19 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
 | `Vercel – web`            | Vercel GitHub App | Web の Preview build が成功すること                        |
 
 - `Vercel – product` / `Vercel – web` の区切り文字は en dash（U+2013）で、hyphen ではない
+- **`branch:finish` はこの 2 context を無条件には要求しない（2026-08-04、#1813）。**
+  `scripts/ci/impact.mjs`（Impact Resolver）が PR の変更ファイルから affected な app を判定し、
+  affected な project の context だけを success 必須にする。unaffected な project の context
+  欠落は正常。変更ファイル一覧の取得失敗・未知 path・判定不能は両方必須へ倒す（fail closed）。
+  判定仕様は [ci-monorepo-refactor overview §5](../projects/ci-monorepo-refactor/overview.md)
 - Vercel の check context は **project 名に由来する**。project を rename すると required check が一致しなくなり、
   全 PR が merge 不能になる。rename する場合は ruleset を先に更新する
-- 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。設定しない
+- 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。**現時点では設定しない**。
+  merge gate と Production Release の affected-aware 化が完了した後、#1817（Phase 4）で
+  Impact Resolver を呼ぶ形に限って解禁する
+- **未解決の review thread が 1 件でもあると `branch:finish` は停止する**（2026-08-04）。
+  GraphQL `reviewThreads` の `isResolved` を数え、取得失敗・100 件超も停止に倒す。
+  解決の 3 択は `.claude/rules/workflow.md` §レビュー指摘の必須解決
 - `Production Release` は merge 後の証跡であり、required check にはしない
 - **Storybook browser suite（`pnpm test-storybook` / `test-storybook:dark`）は CI に載っていない。**
   `@dayopt/product` の vitest project（`--project storybook` / `storybook-dark`）として実体はあるが、
@@ -251,22 +261,10 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   workflow でも、gate のために commit status を自分で publish する必要は無い。
   `Production Config Audit` という StatusContext が別に存在するのは、job 名から独立した固定 context を
   ruleset の required 指定に使うため
-- ai-review の逃げ道はラベル 2 種。`ai-review:override` は**所見の誤検出**を人間が判断した時に使い
-  （review.ts 側で exit code を 0 にする）、`ai-review:contract-reviewed` は**監査契約の変更**
-  （`scripts/ai-review/**` / `.github/actions/**` / `ai-review.yml` / `pnpm-workspace.yaml`）を
-  危険クラスと同一 PR に束ねると判断した時に使う。承認の対象が別なので分けている
-- **ラベルは付けた後の push で効く。** `labeled` での再発火は `ai-review.yml` の types に
-  入れていない。根にあった「同じ head SHA に 2 本目の run が積まれると
-  `finish-branch.sh` が古い run の failure を数え続ける」問題は #1768 で解消したので
-  （下記の畳み込み）、`labeled` を再度入れる余地はある。ai-review 側の再検証が要るため別作業とする
-- `🔍 AI Review`（`ai-review.yml` の job）は危険クラス path を含む PR でだけ発火するので、
-  **ruleset の required には入れない**（発火しない PR では check 自体が付かず、required にすると
-  全 PR が merge 不能になる）。`finish-branch.sh` は付いた check だけを見るうえ、
-  `cancelled` / `timed_out` を failure として数えるため、cancel や job timeout も merge を止める
-- `ai-review.yml` を `pull_request_target` へ移した PR 自身では ai-review は走らない。`pull_request_target` の
-  workflow 定義は default branch から読まれ、旧 `pull_request` 定義は PR の merge commit から読まれるため、
-  移行 PR ではどちらの trigger も成立しない。**初回の trusted run は merge 後、次に危険クラス path を
-  触る PR で確認する**（`Production Config Audit` 導入時と同じ bootstrap）
+- **外部モデルの自動 diff レビュー（ai-review / Gemini）は 2026-08-03 に撤去した。** レビューは
+  Codex レビューと Claude の内部レビュー（`.claude/rules/ai-behavior.md` §Read-only delegation の
+  `risk-reviewer` / `behavior-verifier` / `architecture-guard`）に一本化する。判定基準だった
+  不変条件カタログは [invariants.md](./invariants.md) に残っている
 - `ci.yml` は docs / rules のみの変更では `paths-ignore` で skip され、4 job の status 自体が付かない。private + Free plan では GitHub 側の required check 強制が効かず、マージ可否は `scripts/git/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）。ruleset の required 指定を強制できる plan へ移行する場合は、skip される job の扱いを先に設計する
 - **判定は `statusCheckRollup` を畳んでから行う。** rollup は同名 check を畳まないため
   （`gh pr checks` は畳む）、同一 head SHA で 2 回 run が走ると古い run の failure / cancelled が

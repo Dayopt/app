@@ -107,7 +107,7 @@ fi
 # ── 1. PR 状態を取得 ────────────────────────────────────────────────
 step "PR #$PR_NUMBER の状態を確認"
 
-PR_JSON="$(gh pr view "$PR_NUMBER" --json state,isDraft,headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup 2>/dev/null || true)"
+PR_JSON="$(gh pr view "$PR_NUMBER" --json state,isDraft,headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,changedFiles 2>/dev/null || true)"
 
 if [[ -z "$PR_JSON" ]]; then
   error "PR #$PR_NUMBER を取得できませんでした。番号とネットワークを確認してください。"
@@ -135,7 +135,8 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   step "PR #$PR_NUMBER をマージ"
 
   # `gh pr merge` はクライアント側で draft を拒否するが、REST 直叩きにはその防御が無い。
-  # draft では skip される check がある（ai-review）ため、ここで明示的に止める。
+  # draft では skip される check がある（ci.yml の重量 job、production-config-audit）
+  # ため、ここで明示的に止める。
   if [[ "$IS_DRAFT" == "true" ]]; then
     error "PR #$PR_NUMBER は draft です。ready にしてから再実行してください。"
     exit 1
@@ -166,7 +167,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   #    `stale` は失敗にも成功にも数えないため、これが代表になると同じ名前の古い
   #    failure が消える。job-level `if:` で skip された run は同一 SHA に
   #    `conclusion: skipped` の check run を作るので、これは実在する経路
-  #    （例: ai-review は draft PR で skip する。ready で FAILURE → draft へ戻して
+  #    （例: ci.yml の重量 job は draft PR で skip する。ready で FAILURE → draft へ戻して
   #    reopen すると skipped が後から積まれ、blocking な赤が消えてしまう）。
   #
   # 畳む単位は `gh pr checks` の dedupe に合わせ、型 + workflow 名 + check 名。
@@ -175,7 +176,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     def is_pending:
       ((.status // "") | ascii_downcase
         | . == "in_progress" or . == "queued" or . == "pending" or . == "waiting" or . == "requested")
-      or ((.state // "") | ascii_downcase | . == "pending");
+      or ((.state // "") | ascii_downcase | . == "pending" or . == "expected");
     def is_decisive:
       ((.conclusion // "") | ascii_downcase
         | . == "success" or . == "failure" or . == "cancelled" or . == "timed_out")
@@ -279,10 +280,13 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   # 実行中・待機中の check も待つ。private repo + Free plan では GitHub 側の
   # required check 強制が効かないため、ここで止めないと CI 完了前にマージできてしまう。
+  # 畳み込み側の is_pending（§ROLLUP）と同じ集合にする。片方だけ直すと
+  # 「代表は pending だが件数は 0」のようなズレが出る。`expected` は
+  # StatusState の「status 到着待ち」で、failure でも success でもない。
   PENDING_CHECKS="$(printf '%s' "$ROLLUP" | jq -r '
     map(select(
         ((.status // "") | ascii_downcase | . == "in_progress" or . == "queued" or . == "pending" or . == "waiting" or . == "requested")
-        or ((.state // "") | ascii_downcase | . == "pending")
+        or ((.state // "") | ascii_downcase | . == "pending" or . == "expected")
       ))
     | length')"
 
@@ -314,6 +318,193 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     error "gh pr checks $PR_NUMBER で状態を確認してください。"
     exit 1
   fi
+
+  # **product / web の build は Vercel でしか検証されない。** Actions 側の無条件
+  # build は 2026-08-03 に撤去し、Next build と bundle 検査（secret 混入 /
+  # JS budget / CSS budget）は `apps/product/vercel.json` の buildCommand へ移した
+  # （`.claude/rules/workflow.md` §build と bundle 検査は Vercel 側で走る）。
+  #
+  # このため affected な project の context が **付かなかった場合**、上の「成功 1 件
+  # 以上」は Static / Unit / Docs Guard だけで満たされ、build が一度も走らないまま
+  # merge できてしまう（fail-open）。status が付かない経路は実在する: Vercel
+  # integration の切断・障害、Ignored Build Step の設定、project rename。
+  # private repo + Free plan では ruleset の required check を強制できないので、
+  # 「あるはずの context が無い」ことをここで能動的に検出する。
+  #
+  # **どの context を「あるはず」とするかは Impact Resolver が決める**
+  # （scripts/ci/impact.mjs。docs/projects/ci-monorepo-refactor/overview.md §5）。
+  # PR の変更ファイルから affected な app を判定し、affected な project の context
+  # だけを必須にする。unaffected な project の context 欠落は正常（Vercel の
+  # Skip deployment 導入後はこれが通常状態になる）。判定に失敗した場合
+  # （files API 不通 / node 不在 / 出力が解釈不能）は従来どおり両方を必須にする
+  # （fail closed。Vercel の判定ではなく Dayopt 側の判定を正とする設計原則）。
+  step "影響範囲を判定"
+
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  IMPACT_RESOLVER="$SCRIPT_DIR/../ci/impact.mjs"
+
+  IMPACT_PRODUCT="true"
+  IMPACT_WEB="true"
+
+  # **rename では移動元（previous_filename）も影響範囲に含める。** 移動先だけを見ると
+  # `apps/product/foo.ts` → `docs/foo.ts` の rename が docs-only と判定され、ファイルが
+  # 消えた側の app の build を検証しないまま merge できる（fail-open）。
+  #
+  # 行頭マーカーで「ファイル本体（F）」と「rename 元（P）」を区別する。F の件数を
+  # PR の changedFiles と突き合わせ、取得漏れ（後述）を検出するために要る。
+  #
+  # `|| true` で握り潰さない。`gh api --paginate` はページごとに stdout へ流すため、
+  # 2 ページ目以降の失敗では「部分的なファイル一覧 + 非 0 終了」になる。終了コード
+  # だけ潰すと不完全な一覧が「取得成功」として通り、後半ページにだけ含まれる
+  # app の context を要求しないまま merge できてしまう。
+  # 失敗時は空へ明示リセットし、「取得不能 → 両方必須」の経路に合流させる。
+  if ! CHANGED_FILES_RAW="$(gh api --paginate "repos/{owner}/{repo}/pulls/$PR_NUMBER/files" \
+    --jq '.[] | "F\t\(.filename)", (if .previous_filename then "P\t\(.previous_filename)" else empty end)' 2>/dev/null)"; then
+    CHANGED_FILES_RAW=""
+  fi
+
+  # **files endpoint は `--paginate` でも 3,000 件で打ち切られ、その状態で成功終了する。**
+  # 打ち切りを「完全な一覧」と扱うと、3,000 件目以降にだけ現れる app の context を
+  # 要求しないまま merge できる。PR の申告件数と取得件数の一致を要求し、ズレたら
+  # fail closed に倒す（3,000 件上限に限らず、あらゆる silent truncation を捕まえる）。
+  if [[ -n "$CHANGED_FILES_RAW" ]]; then
+    RETRIEVED_FILE_COUNT="$(printf '%s\n' "$CHANGED_FILES_RAW" | grep -c "$(printf '^F\t')" || true)"
+    PR_CHANGED_FILES="$(printf '%s' "$PR_JSON" | jq -r '.changedFiles // ""' 2>/dev/null || echo "")"
+    if ! [[ "$PR_CHANGED_FILES" =~ ^[0-9]+$ ]] || [[ "$RETRIEVED_FILE_COUNT" != "$PR_CHANGED_FILES" ]]; then
+      info "変更ファイル一覧が PR の申告件数と一致しません（取得 $RETRIEVED_FILE_COUNT / 申告 ${PR_CHANGED_FILES:-不明}）。truncation の可能性があるため fail closed にします。"
+      CHANGED_FILES_RAW=""
+    fi
+  fi
+
+  # マーカーを外して resolver へ渡す（先頭は "F<TAB>" / "P<TAB>" の 2 文字）
+  CHANGED_FILES=""
+  if [[ -n "$CHANGED_FILES_RAW" ]]; then
+    CHANGED_FILES="$(printf '%s\n' "$CHANGED_FILES_RAW" | sed "s/^[FP]$(printf '\t')//")"
+  fi
+  IMPACT_JSON=""
+  if [[ -n "$CHANGED_FILES" ]] && command -v node >/dev/null 2>&1; then
+    IMPACT_JSON="$(printf '%s\n' "$CHANGED_FILES" | node "$IMPACT_RESOLVER" --stdin 2>/dev/null || true)"
+  fi
+  if [[ -n "$IMPACT_JSON" ]]; then
+    IMPACT_PRODUCT="$(printf '%s' "$IMPACT_JSON" | jq -r '.product' 2>/dev/null || echo true)"
+    IMPACT_WEB="$(printf '%s' "$IMPACT_JSON" | jq -r '.web' 2>/dev/null || echo true)"
+  else
+    info "影響判定を実行できませんでした。fail closed で両方の Vercel context を必須にします。"
+  fi
+  # Resolver の出力が想定外（jq のエラー文字列・null 等）なら fail closed に倒す。
+  # 明示的な "false" だけが必須 context を外せる。
+  if [[ "$IMPACT_PRODUCT" != "false" ]]; then IMPACT_PRODUCT="true"; fi
+  if [[ "$IMPACT_WEB" != "false" ]]; then IMPACT_WEB="true"; fi
+
+  # 区切り文字は en dash（U+2013）。hyphen ではない。
+  # **存在だけでなく success を要求する。** GitHub の StatusState には `EXPECTED`
+  # （status の到着待ち）があり、これは上の is_failed にも is_pending にも該当しない。
+  # 「context はあるが EXPECTED のまま」を通すと、build 未完了のまま merge できる。
+  REQUIRED_CONTEXTS=()
+  if [[ "$IMPACT_PRODUCT" == "true" ]]; then REQUIRED_CONTEXTS+=("Vercel – product"); fi
+  if [[ "$IMPACT_WEB" == "true" ]]; then REQUIRED_CONTEXTS+=("Vercel – web"); fi
+
+  if [[ ${#REQUIRED_CONTEXTS[@]} -eq 0 ]]; then
+    info "app へ影響しない変更のため Vercel context は要求しません（docs / scripts / CI 設定等）。"
+  else
+    info "必須 Vercel context: ${REQUIRED_CONTEXTS[*]}"
+  fi
+
+  for required in ${REQUIRED_CONTEXTS[@]+"${REQUIRED_CONTEXTS[@]}"}; do
+    succeeded="$(printf '%s' "$ROLLUP" | jq -r --arg name "$required" '
+      map(select(
+          ((.name // .context // "")) == $name
+          and (
+            ((.conclusion // "") | ascii_downcase | . == "success")
+            or ((.state // "") | ascii_downcase | . == "success")
+          )
+        ))
+      | length')"
+    if [[ "$succeeded" == "0" ]]; then
+      present="$(printf '%s' "$ROLLUP" | jq -r --arg name "$required" '
+        map(select(((.name // .context // "")) == $name)) | length')"
+      if [[ "$present" == "0" ]]; then
+        error "必須 check「$required」が 1 件も見つかりません。マージを中止します。"
+        error "Vercel integration の接続、Ignored Build Step の有無、project 名を確認してください。"
+      else
+        error "必須 check「$required」が success ではありません。マージを中止します。"
+        error "EXPECTED（status 到着待ち）のまま放置されている可能性があります。"
+      fi
+      error "product / web の build はこの check でしか検証されません（Actions 側の build は撤去済み）。"
+      exit 1
+    fi
+  done
+
+  # ── レビュー thread の解決を要求する ────────────────────────────────
+  #
+  # 外部レビュー（Codex 等）の指摘 thread が未解決のまま merge できると、指摘の
+  # 黙殺が構造的に可能になる。「解決」は 3 択のいずれか: ① fix を積んで resolve、
+  # ② 反論・根拠を reply して resolve、③ 別 issue へ切り出し番号を reply して
+  # resolve（`.claude/rules/workflow.md` §レビュー指摘の必須解決）。
+  #
+  # thread の resolve 状態は GraphQL の reviewThreads にしか無い（REST には出ない）。
+  # 取得に失敗した場合は「未確認のまま通す」ではなく停止に倒す（fail closed）。
+  # first: 100 を超える場合も全件を確認できないため停止する。
+  step "レビュー thread の解決状態を確認"
+
+  NAME_WITH_OWNER="$(gh api "repos/{owner}/{repo}" --jq '.full_name' 2>/dev/null || true)"
+  THREADS_JSON=""
+  if [[ "$NAME_WITH_OWNER" == */* ]]; then
+    THREADS_JSON="$(gh api graphql \
+      -f query='query($owner: String!, $name: String!, $number: Int!) {
+        repository(owner: $owner, name: $name) {
+          pullRequest(number: $number) {
+            reviewThreads(first: 100) {
+              pageInfo { hasNextPage }
+              nodes {
+                isResolved
+                path
+                comments(first: 1) { nodes { author { login } } }
+              }
+            }
+          }
+        }
+      }' \
+      -f owner="${NAME_WITH_OWNER%%/*}" \
+      -f name="${NAME_WITH_OWNER##*/}" \
+      -F number="$PR_NUMBER" 2>/dev/null || true)"
+  fi
+
+  # 「未解決件数」と「100 件超フラグ」を 1 回の jq で取り出す。JSON が想定形で
+  # なければ（pullRequest が null 等）ここが空になり、fail closed で停止する。
+  THREAD_STATS="$(printf '%s' "$THREADS_JSON" | jq -r '
+    .data.repository.pullRequest.reviewThreads
+    | "\([.nodes[] | select(.isResolved | not)] | length) \(.pageInfo.hasNextPage)"' 2>/dev/null || true)"
+
+  if [[ -z "$THREAD_STATS" ]]; then
+    error "レビュー thread の状態を取得できませんでした。マージを中止します（fail closed）。"
+    error "gh の認証とネットワークを確認して再実行してください。"
+    exit 1
+  fi
+
+  UNRESOLVED_THREADS="${THREAD_STATS%% *}"
+  THREADS_TRUNCATED="${THREAD_STATS##* }"
+
+  if [[ "$THREADS_TRUNCATED" == "true" ]]; then
+    error "レビュー thread が 100 件を超えており全件を確認できません。マージを中止します。"
+    exit 1
+  elif [[ "$THREADS_TRUNCATED" != "false" ]]; then
+    # hasNextPage が欠落した等、想定外の形。停止はするが誤診断のメッセージを出さない。
+    error "レビュー thread の取得結果が想定外の形です。マージを中止します（fail closed）。"
+    exit 1
+  fi
+
+  if [[ "$UNRESOLVED_THREADS" != "0" ]]; then
+    error "未解決のレビュー thread が $UNRESOLVED_THREADS 件あります。マージを中止します。"
+    printf '%s' "$THREADS_JSON" | jq -r '
+      .data.repository.pullRequest.reviewThreads.nodes[]
+      | select(.isResolved | not)
+      | "    - \(.path // "(general)")（\(.comments.nodes[0].author.login // "unknown")）"' >&2 || true
+    error "解決は 3 択: fix を積む / 反論を reply / issue 化して番号を reply。いずれも thread を resolve してから再実行してください。"
+    exit 1
+  fi
+
+  info "未解決のレビュー thread はありません。"
 
   # マージは REST を直叩きする。`gh pr merge` は「削除対象 branch が current」だと
   # **実行元の worktree を main へ切り替えてから** ローカル branch を削除するため、

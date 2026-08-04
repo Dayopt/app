@@ -196,7 +196,7 @@ commit 前に必ず `git diff --cached` で index 内容を確認する。Edit �
 
 ### push 前の敵対的セルフレビュー
 
-外部レビュー（Codex / ai-review）は push ごとに走るため、指摘 → 修正 push のラウンドがそのまま時間コストになる。effort で拾える層は push 前に自分で拾う:
+外部レビュー（Codex）は push ごとに走るため、指摘 → 修正 push のラウンドがそのまま時間コストになる。effort で拾える層は push 前に自分で拾う:
 
 - `.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件に該当する diff（auth / RLS / billing / migration / 公開契約 / cross-feature）は、**初回 push 前に**該当 subagent（`risk-reviewer` / `behavior-verifier` / `architecture-guard`）へ反証レビューをかける
 - 観点は「反証」に固定する: 配線漏れ（workflow ↔ script の env 受け渡し等）、定数間の不等式（timeout / 予算）、直前の修正コミットが新たに開けた穴
@@ -244,6 +244,34 @@ Actions 課金は **PR ごとの固定費が支配的**（2026-07-25 実測）:
 
 [PR #1657](https://github.com/Dayopt/dayopt/pull/1657) は #1534 / #1535 を 1 PR に束ねた。当時は「1 issue = 1 PR の意図的な例外」としてユーザーの明示指示を根拠にしていた。本節はこの例外を既定に反転させたもの。
 
+## 2 段階 CI（draft 運用）
+
+策定日: 2026-08-03
+
+**PR は `gh pr create --draft` で作成し、ready 化は merge 直前に 1 回だけ行う。**
+
+- **draft 中に走る軽量層**: Static Checks / Unit Tests / Docs Guard。修正ラウンドの手応え確認はこれで足りる
+- **ready 後に走る重量層**: E2E / Web E2E / Production Config Audit
+- flow は「draft で push を重ねる（軽量層のみ）→ ready 化 → 重量層 green を確認 → `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）
+- ready 後にさらに push すると重量層も再走する。レビュー指摘の対応が続くなら `gh pr ready --undo` で draft に戻してから積む
+- **外部レビューは draft のまま `@codex review` コメントで回す**（2026-08-04 に PR #1818 で実測）。Codex の自動レビューは「review 用に open」「draft を ready 化」で発火するため、これを待つとレビュー 1 ラウンドごとに ready 化が要り、そのたびに重量層が丸ごと再走する。`@codex review` は PR の状態に依存しない独立トリガーで、draft のまま 👀 → レビュー投稿まで通る。指摘が尽きてから ready 化すれば、重量層は merge 前の 1 回に収まる
+- **draft skip を使う workflow は `types` に `ready_for_review` を明示する。** `pull_request` / `pull_request_target` の既定 types は `opened / synchronize / reopened` だけで、これが無いと ready 化で再発火せず、draft 時の `skipped` が残ったまま「重量層を一度も走らせずに merge できる」状態になる（2026-08-03、PR #1810 で実測）
+- draft を忘れて ready で作っても機能的な regression は無い（全 push で全層が走る従来挙動に戻り、課金だけ増える）
+
+### build と bundle 検査は Vercel 側で走る
+
+product の `next build` と bundle 検査（client bundle への secret 混入 / JS route budget / CSS budget）は **Actions ではなく Vercel の build** で走る。配線は `apps/product/vercel.json` の `buildCommand` → apps/product の `verify:bundle`。
+
+- Actions 側で同じ build を回すのは、Vercel の preview deploy と二重実行だった（実測 9 課金分/run）
+- secret 混入検査は Vercel の方が強い。Actions の build env は placeholder しか持たないため「ハードコードされた literal」しか検出できなかった。Vercel の build は実 env を持つので、値プレフィックス（`sk_live_` 等）が実際に client へ漏れた場合も捕まる
+- merge gate は維持される。build 失敗は commit status `Vercel – product` として PR の rollup に載り、`branch:finish` の失敗判定が数える
+- bundle budget は報告のみだったのを `--fail` で強制に変えた。閾値は現状値に対して余裕がある（route 652/960 KB、CSS 87.5/95 KB）ので、発火するのは実際の regression の時だけ
+- CSS budget の強制は `size-limit` から `check-bundle-budget.ts` へ移した。`@size-limit/preset-app` は headless Chrome を起動する（CSS に実行時間の測定は無意味で、Vercel の build 環境で browser が使える保証も無い）。`pnpm size` はローカル調査用に残っている
+
+### なぜ 2 段階か
+
+2026-08-03 実測: 3 日間で CI 38 run / 15 PR。push 2.5 回に対して merge 前に必要な全量検証は 1 回で、全 push で重量層まで走らせると月 ~11,000 課金分ペース（Free 枠 2,000 分の 5 倍超）だった。検証の量は減らさず、走るタイミングを merge 前 1 回に寄せる。同じ原理で Integration Tests の push:main トリガー（up-to-date gate により PR 検証と同一 tree の再検証だった）を廃止し、Production Config Audit（Vercel 側 drift の検査で PR diff と無関係）を draft skip + 日次 cron に変えた。
+
 ## マージ方式
 
 策定日: 2026-06-17
@@ -272,6 +300,24 @@ gh pr merge <PR番号> --merge --delete-branch
 - merge commit では**ブランチ上の各コミットがそのまま main に残る**。WIP / typo コミットを main に持ち込まないよう、1 コミット単位で意味の通る粒度・Conventional Commits 形式を守る
 - revert は対象を見極める。マージコミット自体を戻す場合は `git revert -m 1 <merge-sha>`、個別コミットを戻す場合は通常の `git revert <sha>`
 - マージ済みブランチは GitHub が自動削除（`deleteBranchOnMerge: true`）。ローカルでは `git branch -d` がマージを検出して安全に削除できる（squash 時代の `-D` 強制は不要になる）
+
+### レビュー指摘の必須解決
+
+策定日: 2026-08-04
+
+**PR の review thread は全件 resolve してから merge する。** `branch:finish` が機械的に強制する: GraphQL `reviewThreads` の `isResolved=false` が 1 件でもあれば merge を停止し、取得失敗・100 件超も停止に倒す（fail closed）。
+
+「解決」は次の 3 択のいずれか。いずれの場合も thread を resolve して閉じる:
+
+1. **fix を積む** — 指摘どおり修正コミットを push して resolve
+2. **反論を reply** — 採用しない根拠を thread に書いて resolve（黙って resolve しない）
+3. **issue 化** — エッジケース等を別 issue へ切り出し、issue 番号を reply して resolve
+
+レビューを起こすタイミングは §2 段階 CI の `@codex review`（draft のまま回す）に従う。
+
+外部レビュー（Codex）の指摘は的中率が高い実績があるため、既定は 1。2 を選ぶ時は根拠を必ず書く（後から「なぜ見送ったか」を thread だけで追えるようにする）。3 は P2 のエッジケースや scope 外の改善が対象で、起票は dispatch skill の規約に従う。
+
+このルールの狙いは「指摘の黙殺を構造的に不可能にする」こと。resolve の作業自体を目的化しない — 中身のない「対応済み」reply で resolve するのは 2 の違反にあたる。
 
 ## Worktree 運用
 
@@ -337,6 +383,7 @@ pnpm branch:finish <PR番号> --dry-run  # 実行せず予定アクションだ�
 1. PR 状態を取得。OPEN かつ失敗 check が無ければ `gh api -X PUT repos/{owner}/{repo}/pulls/<N>/merge -f merge_method=merge -f sha=<head SHA>` でマージし、`gh api -X DELETE .../git/refs/heads/<branch>` でリモート branch を削除する。**`gh pr merge` は使わない**（削除対象 branch が current だと実行元 worktree を main へ切り替えてしまう）。REST 直叩きなら構造的にローカル git へ触れない。`sha` は check 判定後に積まれた未検証 commit ごとマージするのを防ぐ
    - check 判定は **`statusCheckRollup` を畳んでから**行う。rollup は同名 check を畳まないため（`gh pr checks` は畳む）、同一 head SHA で 2 回 run が走ると古い run の failure / cancelled を数え続けてマージ不能になる。代表は「最新を採る」ではなく **① 実行中があれば実行中 → ② 判定を持つ entry の最新 → ③ それも無ければ最新** の順で選ぶ。②が要るのは `skipped` が失敗にも成功にも数えられないためで、**古い `failure` は新しい `skipped` より優先される**。詳細と根拠は [infra.md §merge gate の required checks](../../docs/engineering/infra.md#merge-gate-の-required-checks)、契約は `scripts/__tests__/finish-branch.test.ts` が固定する
    - audit contract 保護対象（`scripts/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）を変更する PR では、check run「Audit Vercel metadata (trusted)」が**設計として必ず failure になる**。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>` の trusted dispatch を実行する（branch 側の code に `VERCEL_TOKEN` を渡すため、diff レビュー後にユーザーの明示指示で実行する）。成功すると commit status「Production Config Audit」が head SHA へ success で発行され、`branch:finish` は **この status が success の時に限り** guard の failure を失敗数から除外する（dispatch run の check run は PR の rollup に紐づかず、畳み込みでは解消できないため）。status が failure のまま（dispatch 未実行 / audit 実失敗）なら従来どおり停止する
+   - **dispatch は「push で起動した `pull_request_target` の audit run が完了してから」実行する。** 両者は同じ commit status context（`Production Config Audit`）へ書き込むため、先に dispatch を流すと後から完了した PR 側 run の failure に上書きされる（2026-08-03、PR #1810 で実測。success の 5 秒後に failure が上書きした）。順序を守れば PR 側 run の failure を dispatch の success が上書きする
 2. 該当 branch の worktree を特定し、`status --porcelain` が空であることを確認（**dirty なら停止**してユーザーに委ねる）
 3. `git worktree remove --force <path>` で worktree を解除
 4. `git fetch --prune` → ローカル `main` を最新化する（**branch 削除より先に**）。**`checkout` は使わない**（main checkout が別セッションの branch にいる場合、それを奪ってしまう）。main を checkout 中の worktree があればその場で `git pull --ff-only origin main`、どこも checkout していなければ `git fetch origin main:main` で ref だけ fast-forward する。失敗しても停止しない（判定は次の手順が担保する）

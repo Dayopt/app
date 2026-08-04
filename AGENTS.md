@@ -72,6 +72,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 ## Non-Negotiables
 
 - 既存コードを検索してから変更する。`rg` / `rg --files` を優先する
+- **repo 全体を洗う検索は `rg --hidden --glob '!.git/**'` で実行する。** `rg` は既定で dot ディレクトリを飛ばすため、`.claude/` `.codex/` `.agents/` `.github/` が丸ごと検索対象から外れる。撤去・改名の残存参照を探す時にこれを忘れると、AI 設定と workflow の参照だけが取り残される（2026-08-03 に実際に発生）。`--hidden` は `.git/` も対象に含めるため、glob 除外を同時に付ける（付けないと git のメタデータを拾う）
 - issue の起票・worker への作業依頼・`status:blocked` issue への着手判断は `dispatch` skill（`.agents/skills/dispatch/SKILL.md`）の規約に従う。凍結 issue には着手しない
 - 既存の未コミット差分はユーザー作業として扱い、勝手に revert / stage しない
 - env ファイルの読み書き境界は provider 共通で `docs/operations/secrets.md` §AI エージェントの env ファイル境界 に従う。`.env.example` / `.op-env.local` は触ってよく、実値が入りうる `.env` / `.env.local` 系は読みも書きもしない
@@ -80,6 +81,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 - コード変更後は `pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries` を通す
 - コミットメッセージは日本語 Conventional Commits 形式にする（type は commitlint が強制。subject を Latin 大文字語で始めると `subject-case` で弾かれるため日本語で始める）
 - PR は機能のまとまり単位で束ねる。サイズを理由に分割しない（`.claude/rules/workflow.md` §PR 粒度）
+- PR は draft で作成する（`gh pr create --draft`）。ready 化は merge 直前に 1 回だけ行い、重量 CI（E2E / Web E2E / Production Config Audit）を merge 前 1 回に寄せる（`.claude/rules/workflow.md` §2 段階 CI）
 - PR は枝分かれを履歴に残すため merge commit でマージする。**マージ〜掃除は同一セッション内で `pnpm branch:finish <PR番号>` をワンセットで実行する**（マージ→worktree削除→ローカル/リモート branch 削除→main 最新化まで。完了定義 5 点と手動フォールバックは `.claude/rules/workflow.md` §Worktree 運用）
 - branch 名は `{agent}/{domain}-{action}[-{issue番号}]` に統一する。複数 issue を束ねた場合は代表 issue または epic 番号を使う。Claude Code 自動生成のランダム名は最初の PR 作成前に `git branch -m` でリネームする（`.claude/rules/workflow.md` §命名規則）
 

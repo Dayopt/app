@@ -14,14 +14,29 @@ Main は次の条件で read-only subagent を自動利用する。許可は求�
 
 - 委譲するかは禁止リストではなくコスト判断で決める。Main のコンテキスト（トークン・注意）を節約できるなら小さな作業でも subagent へ委譲してよい。判断はその時点のモデルがその都度の文脈で行う
 - 複数作業を指揮するセッションでは、調査・ドラフト執筆・実装（§Writer ownership の範囲で）の委譲を既定とし、Main には判断・統合・diff レビュー、commit、external state の mutation、ユーザーへの報告を残す
-- Subagent は repo / external state を変更せず、write-capable tool / command の試行もしない。Main または user から依頼されても拒否し、nested agent を起動しない。command 実行が必要なら、Main が実行すべき command と確認観点を返す
+- **read-only subagent**（上表の 3 role と `.agents/roles/` の reviewer）は repo / external state を変更せず、write-capable tool / command の試行もしない。Main または user から依頼されても拒否し、nested agent を起動しない。command 実行が必要なら、Main が実行すべき command と確認観点を返す。実装を委譲する write 可能な subagent は §Writer ownership の条件下で別扱いとする
 - Main は agent output を採用する前に、根拠を直接確認する
 
 ## Writer ownership
 
-- Main を原則唯一の writer とし、Subagent は read-only とする
+- Main を既定の writer とし、read-only subagent は repo / external state を変更しない
 - 明示的に起動する purpose-built artifact generator は、対象 scope の唯一の writer としてのみ例外を認める。Main は同じ scope を同時編集せず、生成後の diff をレビューする
-- 複数 writer は、ユーザーの明示指示、重複しない scope、writer ごとの別 worktree がすべて揃う場合に限る
+- 実装は write 可能な subagent へ委譲してよい。次の 4 条件をすべて満たす場合に限る: (a) Main と同一 worktree、(b) Main が同時編集しない非重複 scope、(c) commit 前に Main が `git diff` をレビュー、(d) commit / push / external state の mutation は Main に残す。狙いは品質境界を下げることではなく、**ファイル内容を subagent の文脈に閉じ、Main には diff だけを入れる**こと。(c) を省いた委譲はこの例外に当たらない
+- **並行**する複数 writer（Main と subagent が同時に書く、writer subagent を複数走らせる）は、ユーザーの明示指示、重複しない scope、writer ごとの別 worktree がすべて揃う場合に限る
+
+## 委譲時の model 指定
+
+委譲（`Agent` tool / worker dispatch）では **model を必ず明示する**。省略すると Main と同じ tier が既定で継承され、階層が実運用されない（2026-08-03 実測: haiku は全 output token の 0.2%）。
+
+| Tier                     | 担当                                                            |
+| ------------------------ | --------------------------------------------------------------- |
+| **Haiku**                | rename、一括置換、ログ蒸留、test 実行と結果要約などの機械的作業 |
+| **Sonnet**               | 通常の実装、調査                                                |
+| **Main**（Opus / Fable） | 判断、統合、diff レビュー、commit、ユーザーへの報告             |
+
+- 迷ったら 1 tier 下から始める。足りずに上げ直す方が、最初から上位 tier を使うより安い
+- provider / model 名が変わったら tier の役割定義を正とし、名前を読み替える
+- 実際の構成比は SessionStart hook（`.claude/hooks/session-token-usage.py`）が毎回出す。下位 tier の比率が上がらないなら委譲が機能していない
 
 ## Checkpoint / 完了報告
 
@@ -47,7 +62,7 @@ Main は次の条件で read-only subagent を自動利用する。許可は求�
 | **標準** | 通常の実装、bug fix、複数候補の比較、既存 contract の検証                                        |
 | **高**   | architecture、security、migration、複数 feature の統合、不可逆または Production-sensitive な判断 |
 
-- model / provider 固有の mapping を repo rules に固定しない
+- reasoning effort を model / provider 名に固定しない（委譲先 model の選び方は §委譲時の model 指定 が定める）
 - 高 effort は agent の人数ではなく、一次情報の質と反証の深さに使う
 
 ## 曖昧な指示への対応

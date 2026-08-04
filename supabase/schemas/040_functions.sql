@@ -76,7 +76,7 @@
 --           tRPC の oauth / service-role auth mode はどちらも ctx.supabase に
 --           service-role client を入れる (apps/product/src/lib/trpc/context.ts) ため、
 --           app 側が ctx.userId を渡し続けることが前提になる
---           （scripts/ai-review/invariants.md の不変条件）
+--           （docs/engineering/invariants.md の不変条件）
 --       restore_plan / restore_record は service_role のみ（authenticated は revoke 済み）
 --   issue_oauth_token_pair(...)               — refresh/access token pair を service-role 経由で発行
 --   create_oauth_authorization_grant_v2(...)   — connection-bound code を発行（service-role only）
