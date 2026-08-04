@@ -743,8 +743,8 @@ export function writeReleaseManifest(manifest, { env = process.env, logger = con
  * merge 済み SHA を、その merge の影響を受ける project の production domain へ公開する。
  *
  * 影響を受けない project は candidate を待たず promote もしない（Vercel が
- * deployment 自体を作らないため、待てば必ず timeout する）。promote した project が
- * 1 つでもある run は、最後に**全 project の production domain**を smoke する。
+ * deployment 自体を作らないため、待てば必ず timeout する）。production を動かす
+ * 意図があった run は、最後に**全 project の production domain**を smoke する。
  * 片側だけ進んだ production は、その組み合わせが初めて世に出る状態だから。
  */
 export async function runProductionRelease({
