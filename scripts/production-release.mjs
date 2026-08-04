@@ -1273,8 +1273,16 @@ export async function runProductionRelease({
         }
       } catch (error) {
         reportSweepDrift((await sweepSettings()).drifted);
+        const movedBefore = movedAway.size;
         await refreshObservedLive();
-        if (!error.manifest) Object.assign(error, { manifest: manifestFor('failed') });
+        // **refresh の結果は manifest へ必ず反映する。** 既に付いている manifest
+        // （settings-drift 等）をそのまま返すと、cleanup 中に alias が動いた事実が
+        // 落ちる。settings-drift は「production は正しい」を意味するので、動いていたら
+        // その主張自体が成り立たない → `failed` へ落とす。
+        const aliasMoved = movedAway.size !== movedBefore;
+        if (!error.manifest || aliasMoved) {
+          Object.assign(error, { manifest: manifestFor('failed') });
+        }
         throw error;
       }
 
@@ -1776,42 +1784,101 @@ async function rollbackPromoted({
     return { observed, last };
   };
 
-  for (const entry of [...promoted].reverse()) {
-    if (!entry.previous?.id) {
-      // 戻し先が無い（run 開始時点で未割当）。rollback はできないが、**受理が不確かな
-      // promote は後から着地しうる**ので窓は見届ける。見届けずに「未割当」と報告すると、
-      // その後に gate 未通過の candidate が live になったことを誰も知らない。
-      if (entry.ambiguous) {
-        const { observed, last } = await observeUntilSettled(entry);
-        if (!observed) {
-          stranded.push(
-            `${entry.project.name} (no previous deployment; live state unreadable during the settle window)`,
-          );
-          continue;
-        }
-        const finalState = last ?? { id: null, sha: null };
-        observedLive.push({ entry, live: finalState });
-        stranded.push(
-          finalState.id
-            ? `${entry.project.name} (no previous deployment; ${finalState.id} is live and ungated)`
-            : `${entry.project.name} (no previous deployment; the domain is unassigned)`,
-        );
-        continue;
+  /**
+   * **受理が不確かな promote は 1 本の経路で扱う。**
+   *
+   * 分岐ごとに着地待ちを足すと必ず適用漏れが出る（実際 6 巡続けて別の経路が
+   * 見つかった）。ここでは「戻せるなら POST を撃つ → いずれの場合も窓を見届ける →
+   * 最終状態だけで分類する」に統一する。
+   *
+   * POST を撃たないのは、他者の deployment が domain を握っている時だけ（撃つと
+   * それを上書きする）。窓は必ず見る — 受理済みの promote は後から着地しうるので、
+   * 見届けないと gate 未通過の deployment が live になったことを誰も知らない。
+   */
+  const settleAmbiguous = async (entry) => {
+    const initial = await getLiveProduction({
+      projectName: entry.project.name,
+      productionDomain: entry.project.productionDomain,
+      projectId: entry.projectId,
+      token,
+      teamId,
+      fetchImpl,
+    }).catch(() => undefined);
+
+    // 戻し先があり、domain を握っているのが我々の candidate か previous なら戻しに行く。
+    const initialId = initial === undefined ? undefined : (initial?.id ?? null);
+    const holdsOurs =
+      initialId !== undefined &&
+      (initialId === entry.deployment.id || initialId === entry.previous?.id);
+    if (entry.previous?.id && holdsOurs) {
+      try {
+        const { autoAssignDrifted } = await rollbackDeployment({
+          projectName: entry.project.name,
+          productionDomain: entry.project.productionDomain,
+          projectId: entry.projectId,
+          autoAssignCustomDomains: entry.autoAssignCustomDomains,
+          logger,
+          deploymentId: entry.previous.id,
+          token,
+          teamId,
+          fetchImpl,
+          sleepImpl,
+          nowImpl,
+        });
+        if (autoAssignDrifted) drifted.push(entry.project.name);
+      } catch {
+        // 反映確認の成否はここでは問わない。判断は窓の最終状態に委ねる。
       }
+    }
+
+    const { observed, last } = await observeUntilSettled(entry);
+    const target = entry.previous?.id ?? null;
+
+    if (!observed) {
+      stranded.push(
+        `${entry.project.name}${target ? ` -> ${target}` : ''} (live state unreadable throughout the settle window)`,
+      );
+      return;
+    }
+
+    const finalState = last ?? { id: null, sha: null };
+
+    if (target && finalState.id === target) {
+      logger.log(`${entry.project.name}: rolled back to ${target} (settled)`);
+      rolledBack.push(entry);
+      return;
+    }
+
+    if (finalState.id === entry.deployment.id) {
+      // 我々の candidate が live。**observedLive へは入れない** — manifest で
+      // `moved-externally`（= 戻すな）になると、同じ run のエラーと矛盾する。
+      stranded.push(
+        target
+          ? `${entry.project.name} -> ${target} (a delayed promote landed on ${finalState.id})`
+          : `${entry.project.name} (no previous deployment; ${finalState.id} is live and ungated)`,
+      );
+      return;
+    }
+
+    // 第三の deployment / 未割当。戻すと他者の選択を上書きするので触らない。
+    movedExternally.push({ entry, live: finalState });
+    observedLive.push({ entry, live: finalState });
+    logger.log(
+      `${entry.project.name}: production settled on ${finalState.id ?? 'no deployment'}; leaving it alone`,
+    );
+  };
+
+  for (const entry of [...promoted].reverse()) {
+    if (entry.ambiguous) {
+      await settleAmbiguous(entry);
+      continue;
+    }
+
+    if (!entry.previous?.id) {
       stranded.push(`${entry.project.name} (no previous production deployment recorded)`);
       continue;
     }
 
-    // **外部が先に production を動かしていたら触らない。** 我々が promote した後に
-    // 人が hotfix を promote した場合、ここで entry.previous を promote すると
-    // その hotfix を古い deployment で上書きすることになる。rollback は
-    // 「この run が置いた deployment を戻す」操作であって、production を
-    // 我々の想定へ強制する操作ではない。
-    //
-    // 判定は「candidate でも previous でもない第三の deployment か」。previous の
-    // ままなのは外部の介入ではなく **promote が反映されなかった**場合で、そこでは
-    // rollback を撃つ（POST は受理済みなので後から反映されうる。観測ではなく
-    // 意図した終端状態を明示する）。
     // **読めなかった時は触らない。** 失敗を「競合なし」と同一視すると、まさに守ろうと
     // している hotfix を上書きしうる。production を変更するより、人の確認へ回す。
     let live;
@@ -1834,36 +1901,6 @@ async function rollbackPromoted({
     // しまう。release run にその判断の権限は無い。
     const isKnown = live && (live.id === entry.deployment.id || live.id === entry.previous.id);
     if (!isKnown) {
-      // **受理が不確かな promote は、他者の deployment が見えていても窓を見る。**
-      // ここで抜けると「hotfix は触らない」と記録した後に、受理済みの promote が
-      // 着地してその hotfix を ungated な candidate で置き換える。POST は撃たない
-      // （撃てば我々が上書きすることになる）が、着地するかどうかは見届ける。
-      if (entry.ambiguous) {
-        const { observed: settledObserved, last: settledLive } = await observeUntilSettled(entry);
-        // **窓の間 1 度も読めなければ、窓に入る前の値で判断しない。** 読めない間に
-        // 受理済みの promote が着地していても分からないので、「他者の deployment を
-        // 触らなかった」と報告すると gate 未通過の candidate を見逃す。
-        if (!settledObserved) {
-          stranded.push(
-            `${entry.project.name} -> ${entry.previous.id} (live state unreadable during the settle window)`,
-          );
-          continue;
-        }
-        const finalState = settledLive ?? { id: null, sha: null };
-        if (finalState.id === entry.deployment.id) {
-          stranded.push(
-            `${entry.project.name} -> ${entry.previous.id} (a delayed promote landed on ${finalState.id})`,
-          );
-          continue;
-        }
-        movedExternally.push({ entry, live: finalState });
-        observedLive.push({ entry, live: finalState });
-        logger.log(
-          `${entry.project.name}: production settled on ${finalState.id ?? 'no deployment'}; leaving it alone`,
-        );
-        continue;
-      }
-
       const observedState = live ?? { id: null, sha: null };
       movedExternally.push({ entry, live: observedState });
       observedLive.push({ entry, live: observedState });
@@ -1888,75 +1925,19 @@ async function rollbackPromoted({
         nowImpl,
       });
       if (autoAssignDrifted) drifted.push(entry.project.name);
-
-      // **受理が不確かな promote では「previous のままだった」は戻った証拠にならない。**
-      // POST が届いていた場合、alias の変化は非同期に遅れて現れる。assignment の確認は
-      // previous が一度も live を外れていなければ即座に通ってしまうので、猶予を置いて
-      // 見直す。ここで target が現れたら、run 終了後に着地するのと同じ状態なので
-      // 手動確認へ回す。
-      if (entry.ambiguous) {
-        const { observed, last } = await observeUntilSettled(entry);
-        let landed = null; // 我々の candidate が遅れて着地した
-        let foreign = null; // 第三の deployment / alias 未割当
-        if (last) {
-          if (last.id === entry.deployment.id) landed = last;
-          else if (last.id !== entry.previous.id) foreign = last;
-        }
-
-        // 自分の candidate は manifest に記録しない（`moved-externally` になると
-        // runbook が「戻さない」と案内するのに、エラーは MANUAL ROLLBACK REQUIRED を
-        // 出す矛盾になる）。第三の deployment と alias 未割当だけを載せる。
-        if (foreign) observedLive.push({ entry, live: foreign });
-
-        // 窓の間 1 度も読めなかった場合、「previous のままだった」は観測に基づかない。
-        // 読めない間に遅れた promote が着地していても分からないので、戻ったと宣言しない。
-        if (!observed) {
-          stranded.push(
-            `${entry.project.name} -> ${entry.previous.id} ` +
-              `(live deployment unreadable throughout the settle window)`,
-          );
-          continue;
-        }
-
-        // 自分の promote が着地していたら手動確認へ。窓の最後まで見た上での判断なので、
-        // 第三の deployment より優先する（後から上書きしているため）。
-        if (landed) {
-          stranded.push(
-            `${entry.project.name} -> ${entry.previous.id} (a delayed promote landed on ${landed.id})`,
-          );
-          continue;
-        }
-
-        // 窓の終わりに残っていたのが他者の選択（典型は緊急 hotfix）や未割当なら、
-        // 戻すと上書きになるので触らず名指しする。
-        if (foreign) {
-          movedExternally.push({ entry, live: foreign });
-          logger.log(
-            `${entry.project.name}: production moved to ${foreign.id ?? 'no deployment'} during the settle window; leaving it alone`,
-          );
-          continue;
-        }
-      }
-
       logger.log(`${entry.project.name}: rolled back to ${entry.previous.id}`);
       rolledBack.push(entry);
     } catch {
       // rollback の POST は受理されたが反映が確認できない。**rollback も promote と同じ
-      // 非同期 endpoint なので、後から着地しうる。** 1 回読んで分類すると、その後に
-      // 着地した rollback が他者の hotfix を上書きしても「触っていない」と報告する。
-      // 窓いっぱい観測し、最後に読めた状態で分類する。
+      // 非同期 endpoint なので、後から着地しうる。** 窓いっぱい観測し、最後に読めた
+      // 状態で分類する。
       const { observed: afterObserved, last: after } = await observeUntilSettled(entry);
-
       const afterId = after?.id ?? null;
       if (afterObserved && afterId === entry.previous.id) {
-        // 遅れて着地した。戻し切れている。
         logger.log(`${entry.project.name}: rolled back to ${entry.previous.id} (settled late)`);
         rolledBack.push(entry);
         continue;
       }
-
-      // 自分の candidate のままなら rollback が効かなかっただけ。手動 rollback が要る。
-      // 第三の deployment / 未割当だけを「他者の選択」として扱う。
       const isThirdParty = afterObserved && afterId !== entry.deployment.id;
       if (isThirdParty) {
         const observedState = after ?? { id: null, sha: null };
@@ -1967,7 +1948,6 @@ async function rollbackPromoted({
         );
         continue;
       }
-
       stranded.push(`${entry.project.name} -> ${entry.previous.id}`);
     }
   }
