@@ -74,9 +74,53 @@ function vercelChecks(): RollupEntry[] {
   ];
 }
 
+/** レビュー thread の GraphQL レスポンスを組み立てる（shape は gh api graphql の実出力） */
+function threadsPayload(
+  threads: Array<{ isResolved: boolean; path?: string; author?: string }>,
+  hasNextPage = false,
+): unknown {
+  return {
+    data: {
+      repository: {
+        pullRequest: {
+          reviewThreads: {
+            pageInfo: { hasNextPage },
+            nodes: threads.map((thread) => ({
+              isResolved: thread.isResolved,
+              path: thread.path ?? 'src/example.ts',
+              comments: {
+                nodes: [{ author: { login: thread.author ?? 'chatgpt-codex-connector' } }],
+              },
+            })),
+          },
+        },
+      },
+    },
+  };
+}
+
 function runScript(
   rollup: RollupEntry[],
-  options: { compare?: string; isDraft?: boolean } = {},
+  options: {
+    compare?: string;
+    isDraft?: boolean;
+    /** PR の変更ファイル一覧。省略時は product / web 両方に触れる形（従来テストの前提を維持） */
+    files?: string[];
+    /** rename の移動元（previous_filename）。API は移動先を filename で返す */
+    previousFiles?: string[];
+    /** PR の changedFiles 申告値。省略時は files の件数（= 一致して gate を通る） */
+    changedFilesCount?: number;
+    /** 変更ファイル一覧 API を失敗させる（fail closed 経路の検証） */
+    filesUnavailable?: boolean;
+    /** 一覧を部分的に出力した後で失敗させる（pagination 途中失敗の再現） */
+    filesPartialFailure?: boolean;
+    /** レビュー thread の状態。省略時は 0 件（gate を通す） */
+    threads?: Array<{ isResolved: boolean; path?: string; author?: string }>;
+    /** thread 取得 API を失敗させる（fail closed 経路の検証） */
+    threadsUnavailable?: boolean;
+    /** reviewThreads が 100 件を超えている状態にする */
+    threadsTruncated?: boolean;
+  } = {},
 ): { status: number | null; stderr: string } {
   // repo 直下ではなく os の temp に作る。プロセスが afterEach 前に落ちると untracked な
   // ディレクトリが repo に残り、まさにこのスクリプトの dirty ゲートが以後の掃除を止める。
@@ -85,6 +129,9 @@ function runScript(
 
   const binDirectory = join(temporaryDirectory, 'bin');
   mkdirSync(binDirectory);
+
+  const changedFiles = options.files ?? ['apps/product/src/app.ts', 'apps/web/src/page.tsx'];
+  const previousFiles = options.previousFiles ?? [];
 
   const payloadPath = join(temporaryDirectory, 'pr.json');
   writeFileSync(
@@ -97,7 +144,30 @@ function runScript(
       mergeable: 'MERGEABLE',
       mergeStateStatus: 'CLEAN',
       statusCheckRollup: rollup,
+      changedFiles: options.changedFilesCount ?? changedFiles.length,
     }),
+  );
+
+  // PR の変更ファイル一覧（impact 判定の入力）。既定は product / web 両方に触れる形。
+  // 実際の gh は `F<TAB>filename` / `P<TAB>previous_filename` の形で出す（rename の
+  // 移動元を落とさず、かつ「ファイル件数」を数えられるようにするため）。
+  const filesPath = join(temporaryDirectory, 'files.txt');
+  writeFileSync(
+    filesPath,
+    options.filesUnavailable
+      ? ''
+      : `${[
+          ...changedFiles.map((file) => `F\t${file}`),
+          ...previousFiles.map((file) => `P\t${file}`),
+        ].join('\n')}\n`,
+  );
+
+  // レビュー thread の GraphQL レスポンス。threadsUnavailable は実在しない path を
+  // 指させて cat を失敗させる（API 不通の再現）。
+  const threadsPath = join(temporaryDirectory, 'threads.json');
+  writeFileSync(
+    threadsPath,
+    JSON.stringify(threadsPayload(options.threads ?? [], options.threadsTruncated ?? false)),
   );
 
   // `gh` だけ差し替える。git は temp repo 上で本物を動かす（worktree / show-ref の判定を
@@ -115,9 +185,15 @@ case "$1" in
     esac
     ;;
   api)
-    # up-to-date gate: compare の .status だけを返す
-    case "\${2:-}" in
+    shift
+    case "$*" in
+      graphql*) cat "$FINISH_BRANCH_THREADS_JSON" ;;
+      *pulls/123/files*)
+        cat "$FINISH_BRANCH_PR_FILES"
+        if [[ "\${FINISH_BRANCH_FILES_EXIT:-0}" != "0" ]]; then exit 1; fi
+        ;;
       *compare*) echo "$FINISH_BRANCH_COMPARE" ;;
+      *full_name*) echo "Dayopt/dayopt" ;;
       *) exit 2 ;;
     esac
     ;;
@@ -145,6 +221,13 @@ esac
       PATH: `${binDirectory}:${process.env.PATH ?? ''}`,
       FINISH_BRANCH_PR_JSON: payloadPath,
       FINISH_BRANCH_COMPARE: options.compare ?? 'ahead',
+      FINISH_BRANCH_PR_FILES: options.filesUnavailable
+        ? join(temporaryDirectory, 'missing-files.txt')
+        : filesPath,
+      FINISH_BRANCH_THREADS_JSON: options.threadsUnavailable
+        ? join(temporaryDirectory, 'missing-threads.json')
+        : threadsPath,
+      FINISH_BRANCH_FILES_EXIT: options.filesPartialFailure ? '1' : '0',
     },
   });
 
@@ -255,6 +338,7 @@ function runScriptOnRepo(scenario: RepoScenario) {
         scenario.prState === 'OPEN'
           ? [checkRun('CI', 'SUCCESS', '2026-07-30T10:00:00Z'), ...vercelChecks()]
           : [],
+      changedFiles: 2,
     }),
   );
 
@@ -272,6 +356,9 @@ case "$1" in
       exit 2
     fi
     case "$*" in
+      *graphql*) echo '{"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false},"nodes":[]}}}}}' ;;
+      *full_name*) echo "Dayopt/dayopt" ;;
+      *pulls/123/files*) printf 'F\\tapps/product/src/x.ts\\nF\\tapps/web/src/y.ts\\n' ;;
       *compare*) echo ahead ;;
       */merge*) exit "\${FINISH_BRANCH_MERGE_EXIT:-0}" ;;
       *) exit 0 ;;
@@ -630,6 +717,195 @@ describe('畳み込みで緩めてはいけない判定', () => {
       statusContext('Vercel – product', 'FAILURE', '2026-07-30T10:01:00Z'),
     ]);
     expect(stderr).toContain('失敗している check');
+    expect(status).toBe(1);
+  });
+});
+
+describe('affected-aware な Vercel context 要求（Impact Resolver 連携）', () => {
+  it('product のみの変更なら Vercel – web が無くても merge へ進む', () => {
+    // Vercel skip 導入後の通常状態。unaffected な project の context 欠落は正常。
+    const { status, stderr } = runScript(
+      [
+        checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        statusContext('Vercel – product', 'SUCCESS', '2026-08-04T10:01:00Z'),
+      ],
+      { files: ['apps/product/src/features/tags/ui/TagList.tsx'] },
+    );
+    expect(stderr).toContain('必須 Vercel context: Vercel – product');
+    expect(stderr).not.toContain('必須 check「Vercel – web」');
+    expect(status).toBe(0);
+  });
+
+  it('product のみの変更でも Vercel – product の欠落は止める', () => {
+    // affected な project の context 欠落は従来どおり fail closed。
+    const { status, stderr } = runScript([checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z')], {
+      files: ['apps/product/src/features/tags/ui/TagList.tsx'],
+    });
+    expect(stderr).toContain('必須 check「Vercel – product」');
+    expect(status).toBe(1);
+  });
+
+  it('web のみの変更なら Vercel – product が無くても merge へ進む', () => {
+    const { status, stderr } = runScript(
+      [
+        checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        statusContext('Vercel – web', 'SUCCESS', '2026-08-04T10:01:00Z'),
+      ],
+      { files: ['apps/web/src/app/page.tsx'] },
+    );
+    expect(stderr).toContain('必須 Vercel context: Vercel – web');
+    expect(status).toBe(0);
+  });
+
+  it('docs のみの変更なら Vercel context を要求しない', () => {
+    const { status, stderr } = runScript(
+      [checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-04T10:00:00Z')],
+      { files: ['docs/product/specs/calendar.md', 'AGENTS.md'] },
+    );
+    expect(stderr).toContain('Vercel context は要求しません');
+    expect(status).toBe(0);
+  });
+
+  it('共通 package の変更は両方の context を要求する', () => {
+    const { status, stderr } = runScript(
+      [
+        checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        statusContext('Vercel – product', 'SUCCESS', '2026-08-04T10:01:00Z'),
+      ],
+      { files: ['packages/config/src/env.ts'] },
+    );
+    expect(stderr).toContain('必須 check「Vercel – web」');
+    expect(status).toBe(1);
+  });
+
+  it('変更ファイル一覧を取得できなければ両方を必須にする（fail closed）', () => {
+    // files API 不通で「影響なし」に倒れると、build 未検証のまま merge できてしまう。
+    const { status, stderr } = runScript(
+      [
+        checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        statusContext('Vercel – product', 'SUCCESS', '2026-08-04T10:01:00Z'),
+      ],
+      { filesUnavailable: true },
+    );
+    expect(stderr).toContain('影響判定を実行できませんでした');
+    expect(stderr).toContain('必須 check「Vercel – web」');
+    expect(status).toBe(1);
+  });
+
+  it('rename では移動元の app の context も必須にする', () => {
+    // API は移動先を filename、移動元を previous_filename で返す。移動先だけを見ると
+    // apps/product → docs の rename が docs-only 判定になり、ファイルが消えた側の
+    // build を検証しないまま merge できてしまう。
+    const { status, stderr } = runScript([checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z')], {
+      files: ['docs/moved.md'],
+      previousFiles: ['apps/product/src/moved.ts'],
+    });
+    expect(stderr).toContain('必須 check「Vercel – product」');
+    expect(status).toBe(1);
+  });
+
+  it('rename の移動元は件数に数えない（changedFiles と一致させる）', () => {
+    // previous_filename を件数に含めると申告件数と食い違い、正常な rename PR が
+    // truncation 扱いで止まる（fail closed の過剰発動）。
+    const { status, stderr } = runScript(
+      [
+        checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        statusContext('Vercel – product', 'SUCCESS', '2026-08-04T10:01:00Z'),
+      ],
+      {
+        files: ['apps/product/src/moved.ts'],
+        previousFiles: ['apps/product/src/old.ts'],
+        changedFilesCount: 1,
+      },
+    );
+    expect(stderr).not.toContain('truncation');
+    expect(status).toBe(0);
+  });
+
+  it('取得件数が PR の申告件数に足りなければ両方を必須にする（3,000 件上限などの truncation）', () => {
+    // files endpoint は --paginate でも 3,000 件で打ち切られ、その状態で成功終了する。
+    // 打ち切りを完全な一覧と扱うと、後半にだけ現れる app の context が要求されない。
+    const { status, stderr } = runScript(
+      [
+        checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        statusContext('Vercel – web', 'SUCCESS', '2026-08-04T10:01:00Z'),
+      ],
+      { files: ['apps/web/src/page.tsx'], changedFilesCount: 3000 },
+    );
+    expect(stderr).toContain('truncation');
+    expect(stderr).toContain('必須 check「Vercel – product」');
+    expect(status).toBe(1);
+  });
+
+  it('一覧が部分的に取れて失敗した場合も両方を必須にする（pagination 途中失敗）', () => {
+    // `gh api --paginate` はページごとに stdout へ流すため、後半ページの失敗は
+    // 「部分的な一覧 + 非 0 終了」になる。部分出力を「取得成功」と扱うと、
+    // 後半ページにだけ含まれる app の context を要求しないまま merge できてしまう。
+    const { status, stderr } = runScript(
+      [
+        checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        statusContext('Vercel – web', 'SUCCESS', '2026-08-04T10:01:00Z'),
+      ],
+      { files: ['apps/web/src/app/page.tsx'], filesPartialFailure: true },
+    );
+    expect(stderr).toContain('影響判定を実行できませんでした');
+    expect(stderr).toContain('必須 check「Vercel – product」');
+    expect(status).toBe(1);
+  });
+
+  it('未知の path は両方を必須にする（fail closed）', () => {
+    const { status, stderr } = runScript(
+      [
+        checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        statusContext('Vercel – product', 'SUCCESS', '2026-08-04T10:01:00Z'),
+      ],
+      { files: ['mystery.config.xyz'] },
+    );
+    expect(stderr).toContain('必須 check「Vercel – web」');
+    expect(status).toBe(1);
+  });
+});
+
+describe('レビュー thread の必須解決 gate', () => {
+  const greenRollup = () => [checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'), ...vercelChecks()];
+
+  it('未解決 thread が 1 件でもあれば止め、一覧を表示する', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [
+        { isResolved: true, path: 'src/resolved.ts' },
+        {
+          isResolved: false,
+          path: 'scripts/git/finish-branch.sh',
+          author: 'chatgpt-codex-connector',
+        },
+      ],
+    });
+    expect(stderr).toContain('未解決のレビュー thread が 1 件');
+    expect(stderr).toContain('scripts/git/finish-branch.sh');
+    expect(status).toBe(1);
+  });
+
+  it('全 thread が resolve 済みなら merge へ進む', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [{ isResolved: true }, { isResolved: true }],
+    });
+    expect(stderr).toContain('未解決のレビュー thread はありません');
+    expect(status).toBe(0);
+  });
+
+  it('thread の取得に失敗したら止める（fail closed）', () => {
+    // 「未確認のまま通す」を許すと、API 障害のたびに gate が消える。
+    const { status, stderr } = runScript(greenRollup(), { threadsUnavailable: true });
+    expect(stderr).toContain('レビュー thread の状態を取得できませんでした');
+    expect(status).toBe(1);
+  });
+
+  it('thread が 100 件を超えていたら止める（全件確認できないため）', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [{ isResolved: true }],
+      threadsTruncated: true,
+    });
+    expect(stderr).toContain('100 件を超えて');
     expect(status).toBe(1);
   });
 });

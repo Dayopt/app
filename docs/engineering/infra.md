@@ -235,9 +235,19 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
 | `Vercel – web`            | Vercel GitHub App | Web の Preview build が成功すること                        |
 
 - `Vercel – product` / `Vercel – web` の区切り文字は en dash（U+2013）で、hyphen ではない
+- **`branch:finish` はこの 2 context を無条件には要求しない（2026-08-04、#1813）。**
+  `scripts/ci/impact.mjs`（Impact Resolver）が PR の変更ファイルから affected な app を判定し、
+  affected な project の context だけを success 必須にする。unaffected な project の context
+  欠落は正常。変更ファイル一覧の取得失敗・未知 path・判定不能は両方必須へ倒す（fail closed）。
+  判定仕様は [ci-monorepo-refactor overview §5](../projects/ci-monorepo-refactor/overview.md)
 - Vercel の check context は **project 名に由来する**。project を rename すると required check が一致しなくなり、
   全 PR が merge 不能になる。rename する場合は ruleset を先に更新する
-- 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。設定しない
+- 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。**現時点では設定しない**。
+  merge gate と Production Release の affected-aware 化が完了した後、#1817（Phase 4）で
+  Impact Resolver を呼ぶ形に限って解禁する
+- **未解決の review thread が 1 件でもあると `branch:finish` は停止する**（2026-08-04）。
+  GraphQL `reviewThreads` の `isResolved` を数え、取得失敗・100 件超も停止に倒す。
+  解決の 3 択は `.claude/rules/workflow.md` §レビュー指摘の必須解決
 - `Production Release` は merge 後の証跡であり、required check にはしない
 - **Storybook browser suite（`pnpm test-storybook` / `test-storybook:dark`）は CI に載っていない。**
   `@dayopt/product` の vitest project（`--project storybook` / `storybook-dark`）として実体はあるが、
