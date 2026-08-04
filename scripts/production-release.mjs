@@ -765,7 +765,7 @@ export function buildManifest({
         // この run が観測していない project の値は run 開始時点のもの。candidate 待機
         // （最大 25 分）の間に人が Instant Rollback していれば実態とズレる。復旧時に
         // 「いつ観測した値か」を取り違えないよう、出所を値と一緒に残す。
-        observedAt: entry || external ? 'this-run' : 'run-start',
+        observedAt: moved || entry || external ? 'this-run' : 'run-start',
       };
     }),
   };
@@ -992,45 +992,341 @@ export async function runProductionRelease({
     }
   };
 
-  // 前回 run が中断して片側だけ公開された状態。既に配信中の側は戻し先を持たないので
-  // 自動 rollback の対象にはできない。せめて名指しして人が判断できるようにする。
-  // promote する予定が無い run には rollback scope 自体が無いので警告しない。
-  const preexistingSplit =
-    alreadyServing.length > 0 && targets.length > 0
-      ? alreadyServing.map((project) => project.name)
-      : [];
-  if (preexistingSplit.length > 0) {
-    const message =
-      `Pre-existing split: ${preexistingSplit.join(', ')} already serve ${sha} from an earlier run. ` +
-      `They are outside this run's rollback scope; check them by hand if this run fails.`;
-    logger.log(message);
-    writeStepSummary(['', `> ${message}`]);
-  }
+  // **この関数のどの出口も、抜ける前に auto-assign を掃く。** 外部の promote は
+  // 設定を true へ戻す（vercel/vercel#15095）。掃き忘れた出口が 1 つでもあると、
+  // その run は正しく失敗したのに次の main merge が gate を通らず直接公開される。
+  // 出口ごとに書くと必ず取り残しが出るため（実際 3 巡続けて別の出口が見つかった）、
+  // finally で一括して掃く。restoreAll は差分がある時だけ PATCH するので、
+  // 既に掃いた経路で重ねて呼んでも副作用は無い。
+  try {
+    // 前回 run が中断して片側だけ公開された状態。既に配信中の側は戻し先を持たないので
+    // 自動 rollback の対象にはできない。せめて名指しして人が判断できるようにする。
+    // promote する予定が無い run には rollback scope 自体が無いので警告しない。
+    const preexistingSplit =
+      alreadyServing.length > 0 && targets.length > 0
+        ? alreadyServing.map((project) => project.name)
+        : [];
+    if (preexistingSplit.length > 0) {
+      const message =
+        `Pre-existing split: ${preexistingSplit.join(', ')} already serve ${sha} from an earlier run. ` +
+        `They are outside this run's rollback scope; check them by hand if this run fails.`;
+      logger.log(message);
+      writeStepSummary(['', `> ${message}`]);
+    }
 
-  if (targets.length === 0) {
-    const status = alreadyServing.length === projects.length ? 'already-released' : 'unaffected';
-    logger.log(
-      status === 'already-released'
-        ? `All projects already serve ${sha}; nothing to promote.`
-        : `No project is affected by ${sha}; nothing to promote.`,
+    if (targets.length === 0) {
+      const status = alreadyServing.length === projects.length ? 'already-released' : 'unaffected';
+      logger.log(
+        status === 'already-released'
+          ? `All projects already serve ${sha}; nothing to promote.`
+          : `No project is affected by ${sha}; nothing to promote.`,
+      );
+      // 前回 run が復元に失敗して終わっている可能性があるため、設定だけは見に行く。
+      const drifted = await sweepSettings();
+      if (drifted.length > 0)
+        throw Object.assign(driftError(sha, drifted), { manifest: manifestFor('failed') });
+
+      // **promote が 0 件でも、この run が success を出せば「その build は live」として
+      // tag gate を通る**（create-release.yml）。既に target を配信している project は
+      // Auto-assign や中断した run が gate を通さずに live にした可能性があるため、
+      // 認証する前に実際の production domain を見る。ここを素通りさせると、
+      // smoke も audit も一度も通っていない build に tag を打ててしまう。
+      //
+      // gate の実行中に外部の promote が起きると auto-assign が再び true へ戻る。
+      // 上の復元は gate より前なので、**抜ける経路すべてで掃き直す**（finally）。
+      // 掃き忘れると次の main merge が gate を迂回して直接公開される。
+      try {
+        if (!force && alreadyServing.length > 0) {
+          for (const project of alreadyServing) {
+            assertSimulationPoint(simulateFailure, `production-smoke:${project.name}`);
+            await smokeDeployment({
+              projectName: `${project.name} production`,
+              deploymentUrl: project.productionDomain,
+              checks: project.smokeChecks,
+              fetchImpl,
+              sleepImpl,
+              logger,
+            });
+          }
+          await runProductionConfigAudit({ token, teamId, fetchImpl });
+          logger.log('Production Config Audit passed against live Vercel metadata.');
+        }
+
+        // promote していなくても「この commit が live」を主張する以上、前提を確認する。
+        await verifyLiveState([]);
+      } catch (error) {
+        reportSweepDrift(await sweepSettings());
+        throw Object.assign(error, { manifest: manifestFor('failed') });
+      }
+
+      const sweptAfterGates = await sweepSettings();
+      if (sweptAfterGates.length > 0) {
+        throw Object.assign(driftError(sha, sweptAfterGates), { manifest: manifestFor('failed') });
+      }
+
+      return {
+        status,
+        sha,
+        promoted: [],
+        rolledBack: [],
+        preexistingSplit,
+        gateChecksRan: !force && alreadyServing.length > 0,
+        manifest: manifestFor(status),
+      };
+    }
+
+    const candidates = await waitForReadyCandidates({
+      projects: targets,
+      sha,
+      token,
+      teamId,
+      fetchImpl,
+      sleepImpl,
+      nowImpl,
+      logger,
+    }).catch((error) => {
+      throw Object.assign(error, { manifest: manifestFor('failed') });
+    });
+
+    // 待機は最大 25 分ブロックする。その間に人が Instant Rollback や手動 promote を
+    // 行いうるため、判定は待機後の実状態で行う。unaffected な project は promote 対象で
+    // ないので読み直さない（この run が動かさない先の状態は before で足りる）。
+    const current = new Map();
+    for (const project of targets) {
+      const state = await getLiveProduction({
+        projectName: project.name,
+        productionDomain: project.productionDomain,
+        projectId: projectIds.get(project.name),
+        token,
+        teamId,
+        fetchImpl,
+      });
+      current.set(project.name, state);
+    }
+
+    // 待機中に Auto-assign や人が candidate を live にした分をここで拾う。promote loop の
+    // 記録だけに頼ると、この後の `pending` filter で除外されて loop に届かず、live なのに
+    // manifest 上「未着手（pending）」として復旧手順に出てしまう。
+    for (const { project, deployment } of candidates) {
+      if (current.get(project.name)?.id === deployment.id) {
+        externallyLive.set(project.name, { id: deployment.id, sha });
+      }
+    }
+
+    const movedElsewhere = candidates.filter(({ project, deployment }) => {
+      const now = current.get(project.name);
+      const wasId = before.get(project.name)?.id ?? null;
+      // 同じ candidate を人が先に promote した場合は競合ではない。
+      return now?.id !== wasId && now?.id !== deployment.id;
+    });
+    if (movedElsewhere.length > 0) {
+      const detail = movedElsewhere
+        .map(({ project, deployment }) => {
+          const now = current.get(project.name);
+          return (
+            `${project.name}: was ${before.get(project.name)?.id ?? 'none'}, ` +
+            `now ${now?.id ?? 'none'}, candidate ${deployment.id}`
+          );
+        })
+        .join('; ');
+
+      // 観測した実 deployment を manifest へ載せる。run 開始時点の値のままだと
+      // 「未着手（pending）」に見え、復旧手順が実際の live を取り違える。
+      for (const { project } of movedElsewhere) {
+        const now = current.get(project.name);
+        if (now) movedAway.set(project.name, { id: now.id, sha: now.sha });
+      }
+
+      // 外部の promote は auto-assign を true へ戻す（vercel/vercel#15095）。
+      // ここで掃かずに抜けると、次の main merge が gate を通らず直接公開される。
+      reportSweepDrift(await sweepSettings());
+
+      throw Object.assign(
+        new ReleaseError(
+          `Production moved while waiting for candidates; refusing to promote over it (${detail})`,
+        ),
+        { manifest: manifestFor('failed') },
+      );
+    }
+
+    // 以降の判定はすべて待機後の実状態を使う。movedElsewhere を抜けている時点で
+    // current は before か candidate のどちらかに一致している。
+    const superseded = candidates.filter(({ project, deployment }) => {
+      const live = current.get(project.name);
+      return (
+        live !== null &&
+        live.createdAt !== null &&
+        deployment.createdAt !== null &&
+        live.createdAt > deployment.createdAt
+      );
+    });
+    if (superseded.length > 0) {
+      const names = superseded.map(({ project }) => project.name).join(', ');
+      logger.log(`Skipping promote: a newer production deployment already serves ${names}.`);
+      return {
+        status: 'superseded',
+        sha,
+        promoted: [],
+        rolledBack: [],
+        preexistingSplit,
+        manifest: manifestFor('superseded'),
+      };
+    }
+
+    // 既に production へ出ている build は公開済みなので、gate の対象から外す。
+    // 待機中に人が同じ candidate を promote していた場合もここで除外される。
+    const pending = candidates.filter(
+      ({ project, deployment }) => current.get(project.name)?.id !== deployment.id,
     );
-    // 前回 run が復元に失敗して終わっている可能性があるため、設定だけは見に行く。
-    const drifted = await sweepSettings();
-    if (drifted.length > 0)
-      throw Object.assign(driftError(sha, drifted), { manifest: manifestFor('failed') });
 
-    // **promote が 0 件でも、この run が success を出せば「その build は live」として
-    // tag gate を通る**（create-release.yml）。既に target を配信している project は
-    // Auto-assign や中断した run が gate を通さずに live にした可能性があるため、
-    // 認証する前に実際の production domain を見る。ここを素通りさせると、
-    // smoke も audit も一度も通っていない build に tag を打ててしまう。
-    //
-    // gate の実行中に外部の promote が起きると auto-assign が再び true へ戻る。
-    // 上の復元は gate より前なので、**抜ける経路すべてで掃き直す**（finally）。
-    // 掃き忘れると次の main merge が gate を迂回して直接公開される。
+    if (force) {
+      logger.log('Force Promote: skipping smoke and Production Config Audit.');
+    } else {
+      // smoke は promote 対象（pending）ではなく全 candidate に対して走らせる。
+      // Auto-assign が有効な段階適用中は candidate が待機中に自動割当されて
+      // pending が空になるため、pending だけを対象にすると smoke のコードパスが
+      // 一度も実行されないまま cutover を迎えてしまう。全 candidate に走らせる
+      // ことで、毎 merge が smoke と bypass secret の実働テストを兼ねる。
+      try {
+        for (const { project, deployment } of candidates) {
+          assertSimulationPoint(simulateFailure, `smoke:${project.name}`);
+          await smokeDeployment({
+            projectName: project.name,
+            deploymentUrl: deployment.url,
+            checks: project.smokeChecks,
+            bypassSecret: bypassSecrets[project.name],
+            fetchImpl,
+            sleepImpl,
+            logger,
+          });
+        }
+
+        await runProductionConfigAudit({ token, teamId, fetchImpl });
+        logger.log('Production Config Audit passed against live Vercel metadata.');
+      } catch (error) {
+        // 外部の promote が待機中に auto-assign を飛ばしていた場合、ここで抜けると
+        // 誰も設定を戻さない。掃いてから失敗させる。
+        reportSweepDrift(await sweepSettings());
+        throw Object.assign(error, { manifest: manifestFor('failed') });
+      }
+    }
+
+    const promoted = [];
+    const driftedProjects = [];
     try {
-      if (!force && alreadyServing.length > 0) {
-        for (const project of alreadyServing) {
+      for (const { project, deployment } of pending) {
+        assertSimulationPoint(simulateFailure, `promote:${project.name}`);
+
+        // smoke と audit で数分経っている。その間に人が Instant Rollback や手動
+        // promote を行いうるので、rollback 先は promote の直前に取り直す。
+        const live = await getLiveProduction({
+          projectName: project.name,
+          productionDomain: project.productionDomain,
+          projectId: projectIds.get(project.name),
+          token,
+          teamId,
+          fetchImpl,
+        });
+
+        if (live?.id === deployment.id) {
+          logger.log(`${project.name}: another actor already promoted ${deployment.id}; skipping`);
+          // この run は動かしていないが live ではある。manifest で「未着手」に見えないよう
+          // 記録する（rollback 対象には入れない。戻し先を観測していないため）。
+          externallyLive.set(project.name, { id: deployment.id, sha });
+          continue;
+        }
+
+        if (live?.id !== current.get(project.name)?.id) {
+          throw new ReleaseError(
+            `${project.name}: production moved to ${live?.id ?? 'none'} while the gate was ` +
+              `running; refusing to promote ${deployment.id} over it`,
+          );
+        }
+
+        const entry = {
+          project,
+          projectId: projectIds.get(project.name),
+          autoAssignCustomDomains: expectedFor(project.name),
+          deployment,
+          previous: live,
+        };
+        logger.log(
+          `${project.name}: promoting ${deployment.id} over ${entry.previous?.id ?? 'none'}`,
+        );
+
+        try {
+          await requestProductionPointer({
+            projectName: project.name,
+            projectId: entry.projectId,
+            deploymentId: deployment.id,
+            token,
+            teamId,
+            fetchImpl,
+            action: 'promote',
+          });
+        } catch (error) {
+          // POST が届いたかどうか分からない。実状態を 1 回だけ見て、実際に動いて
+          // いた時だけ rollback 対象へ入れる。無条件に入れると、何も起きていない
+          // project へ rollback promote を撃ってしまい auto-assign を壊す。
+          const state = await getLiveProduction({
+            projectName: project.name,
+            productionDomain: project.productionDomain,
+            projectId: projectIds.get(project.name),
+            token,
+            teamId,
+            fetchImpl,
+          }).catch(() => null);
+          if (state?.id === deployment.id) promoted.push(entry);
+          throw error;
+        }
+
+        // POST が受理された時点で production は動きうる。反映確認が timeout しても
+        // rollback 対象から漏らさないよう、確認を待つ前に記録する。
+        promoted.push(entry);
+
+        await waitForProductionAssignment({
+          projectName: project.name,
+          productionDomain: project.productionDomain,
+          projectId: projectIds.get(project.name),
+          deploymentId: deployment.id,
+          token,
+          teamId,
+          fetchImpl,
+          sleepImpl,
+          nowImpl,
+          action: 'promote',
+        });
+
+        // promote は auto-assign を true に戻す。次の project の確認を待つ間ずっと
+        // 片側だけ auto-assign が有効な窓を作らないよう、ここで即座に戻す。
+        // 復元の失敗は rollback を誘発させず、drifted に積んで最後に報告する。
+        driftedProjects.push(
+          ...(await restoreAll({ entries: [entry], token, teamId, fetchImpl, logger })),
+        );
+        logger.log(`${project.name}: promoted ${deployment.id}`);
+      }
+
+      // promote 後の production domain smoke。candidate smoke は各 deployment を単体で
+      // 見るが、affected な側だけを進めた production は **その組み合わせが初めて世に出る
+      // 状態**なので、実際に配信している両 domain を最後に確認する。
+      //
+      // 検出できるのは smokeChecks に載っている経路だけ。cross-app のリンク切れ一般は
+      // 見ない。web から product への唯一の入口である signup CTA は product の check に
+      // 入れてあるので、その 1 本だけが「片側 promote で web の導線が落ちる」を捕まえる。
+      // bypass secret は送らない。production domain に Deployment Protection が付く
+      // 設定事故（利用者に SSO 画面が出る）を、この smoke で捕まえたいため。
+      //
+      // 条件は promote 件数ではなく targets。Auto-assign が有効な段階適用中は candidate が
+      // 待機中に自動割当されて promote 件数が 0 になるため、promote 件数で分岐すると
+      // cutover までこの smoke が一度も走らない（candidate smoke と同じ理由）。
+      //
+      // **promote していない側の失敗でも rollback する**（catch へ落ちる）。この smoke が
+      // 守りたいのは「product を進めたら web が壊れた」型の cross-app 破損で、そこでは
+      // rollback が唯一の復旧手段になる。代償として、無関係な既存障害が正常な promote を
+      // 巻き戻しうるが、production は数分前の既知状態へ戻るだけで、run は失敗として残る。
+      // 「壊れたまま success で終える」より安全な側へ倒す。
+      if (!force && targets.length > 0) {
+        for (const project of projects) {
           assertSimulationPoint(simulateFailure, `production-smoke:${project.name}`);
           await smokeDeployment({
             projectName: `${project.name} production`,
@@ -1041,363 +1337,77 @@ export async function runProductionRelease({
             logger,
           });
         }
-        await runProductionConfigAudit({ token, teamId, fetchImpl });
-        logger.log('Production Config Audit passed against live Vercel metadata.');
       }
 
-      // promote していなくても「この commit が live」を主張する以上、前提を確認する。
-      await verifyLiveState([]);
+      // smoke は「domain が健全か」しか見ず、**どの deployment が応答したかは見ない**。
+      // 全 project について「判定の前提が今も成り立つか」を確認する（§verifyLiveState）。
+      // force でも実行する。Force Promote が免除するのは health / config の gate であって、
+      // 「promote した SHA が今も live」という主張そのものではない。
+      await verifyLiveState(candidates);
     } catch (error) {
-      reportSweepDrift(await sweepSettings());
-      throw Object.assign(error, { manifest: manifestFor('failed') });
-    }
-
-    const sweptAfterGates = await sweepSettings();
-    if (sweptAfterGates.length > 0) {
-      throw Object.assign(driftError(sha, sweptAfterGates), { manifest: manifestFor('failed') });
-    }
-
-    return {
-      status,
-      sha,
-      promoted: [],
-      rolledBack: [],
-      preexistingSplit,
-      gateChecksRan: !force && alreadyServing.length > 0,
-      manifest: manifestFor(status),
-    };
-  }
-
-  const candidates = await waitForReadyCandidates({
-    projects: targets,
-    sha,
-    token,
-    teamId,
-    fetchImpl,
-    sleepImpl,
-    nowImpl,
-    logger,
-  }).catch((error) => {
-    throw Object.assign(error, { manifest: manifestFor('failed') });
-  });
-
-  // 待機は最大 25 分ブロックする。その間に人が Instant Rollback や手動 promote を
-  // 行いうるため、判定は待機後の実状態で行う。unaffected な project は promote 対象で
-  // ないので読み直さない（この run が動かさない先の状態は before で足りる）。
-  const current = new Map();
-  for (const project of targets) {
-    const state = await getLiveProduction({
-      projectName: project.name,
-      productionDomain: project.productionDomain,
-      projectId: projectIds.get(project.name),
-      token,
-      teamId,
-      fetchImpl,
-    });
-    current.set(project.name, state);
-  }
-
-  // 待機中に Auto-assign や人が candidate を live にした分をここで拾う。promote loop の
-  // 記録だけに頼ると、この後の `pending` filter で除外されて loop に届かず、live なのに
-  // manifest 上「未着手（pending）」として復旧手順に出てしまう。
-  for (const { project, deployment } of candidates) {
-    if (current.get(project.name)?.id === deployment.id) {
-      externallyLive.set(project.name, { id: deployment.id, sha });
-    }
-  }
-
-  const movedElsewhere = candidates.filter(({ project, deployment }) => {
-    const now = current.get(project.name);
-    const wasId = before.get(project.name)?.id ?? null;
-    // 同じ candidate を人が先に promote した場合は競合ではない。
-    return now?.id !== wasId && now?.id !== deployment.id;
-  });
-  if (movedElsewhere.length > 0) {
-    const detail = movedElsewhere
-      .map(({ project, deployment }) => {
-        const now = current.get(project.name);
-        return (
-          `${project.name}: was ${before.get(project.name)?.id ?? 'none'}, ` +
-          `now ${now?.id ?? 'none'}, candidate ${deployment.id}`
-        );
-      })
-      .join('; ');
-
-    // 観測した実 deployment を manifest へ載せる。run 開始時点の値のままだと
-    // 「未着手（pending）」に見え、復旧手順が実際の live を取り違える。
-    for (const { project } of movedElsewhere) {
-      const now = current.get(project.name);
-      if (now) movedAway.set(project.name, { id: now.id, sha: now.sha });
-    }
-
-    // 外部の promote は auto-assign を true へ戻す（vercel/vercel#15095）。
-    // ここで掃かずに抜けると、次の main merge が gate を通らず直接公開される。
-    reportSweepDrift(await sweepSettings());
-
-    throw Object.assign(
-      new ReleaseError(
-        `Production moved while waiting for candidates; refusing to promote over it (${detail})`,
-      ),
-      { manifest: manifestFor('failed') },
-    );
-  }
-
-  // 以降の判定はすべて待機後の実状態を使う。movedElsewhere を抜けている時点で
-  // current は before か candidate のどちらかに一致している。
-  const superseded = candidates.filter(({ project, deployment }) => {
-    const live = current.get(project.name);
-    return (
-      live !== null &&
-      live.createdAt !== null &&
-      deployment.createdAt !== null &&
-      live.createdAt > deployment.createdAt
-    );
-  });
-  if (superseded.length > 0) {
-    const names = superseded.map(({ project }) => project.name).join(', ');
-    logger.log(`Skipping promote: a newer production deployment already serves ${names}.`);
-    return {
-      status: 'superseded',
-      sha,
-      promoted: [],
-      rolledBack: [],
-      preexistingSplit,
-      manifest: manifestFor('superseded'),
-    };
-  }
-
-  // 既に production へ出ている build は公開済みなので、gate の対象から外す。
-  // 待機中に人が同じ candidate を promote していた場合もここで除外される。
-  const pending = candidates.filter(
-    ({ project, deployment }) => current.get(project.name)?.id !== deployment.id,
-  );
-
-  if (force) {
-    logger.log('Force Promote: skipping smoke and Production Config Audit.');
-  } else {
-    // smoke は promote 対象（pending）ではなく全 candidate に対して走らせる。
-    // Auto-assign が有効な段階適用中は candidate が待機中に自動割当されて
-    // pending が空になるため、pending だけを対象にすると smoke のコードパスが
-    // 一度も実行されないまま cutover を迎えてしまう。全 candidate に走らせる
-    // ことで、毎 merge が smoke と bypass secret の実働テストを兼ねる。
-    try {
-      for (const { project, deployment } of candidates) {
-        assertSimulationPoint(simulateFailure, `smoke:${project.name}`);
-        await smokeDeployment({
-          projectName: project.name,
-          deploymentUrl: deployment.url,
-          checks: project.smokeChecks,
-          bypassSecret: bypassSecrets[project.name],
-          fetchImpl,
-          sleepImpl,
-          logger,
-        });
-      }
-
-      await runProductionConfigAudit({ token, teamId, fetchImpl });
-      logger.log('Production Config Audit passed against live Vercel metadata.');
-    } catch (error) {
-      // 外部の promote が待機中に auto-assign を飛ばしていた場合、ここで抜けると
-      // 誰も設定を戻さない。掃いてから失敗させる。
-      reportSweepDrift(await sweepSettings());
-      throw Object.assign(error, { manifest: manifestFor('failed') });
-    }
-  }
-
-  const promoted = [];
-  const driftedProjects = [];
-  try {
-    for (const { project, deployment } of pending) {
-      assertSimulationPoint(simulateFailure, `promote:${project.name}`);
-
-      // smoke と audit で数分経っている。その間に人が Instant Rollback や手動
-      // promote を行いうるので、rollback 先は promote の直前に取り直す。
-      const live = await getLiveProduction({
-        projectName: project.name,
-        productionDomain: project.productionDomain,
-        projectId: projectIds.get(project.name),
-        token,
-        teamId,
-        fetchImpl,
-      });
-
-      if (live?.id === deployment.id) {
-        logger.log(`${project.name}: another actor already promoted ${deployment.id}; skipping`);
-        // この run は動かしていないが live ではある。manifest で「未着手」に見えないよう
-        // 記録する（rollback 対象には入れない。戻し先を観測していないため）。
-        externallyLive.set(project.name, { id: deployment.id, sha });
-        continue;
-      }
-
-      if (live?.id !== current.get(project.name)?.id) {
-        throw new ReleaseError(
-          `${project.name}: production moved to ${live?.id ?? 'none'} while the gate was ` +
-            `running; refusing to promote ${deployment.id} over it`,
-        );
-      }
-
-      const entry = {
-        project,
-        projectId: projectIds.get(project.name),
-        autoAssignCustomDomains: expectedFor(project.name),
-        deployment,
-        previous: live,
-      };
-      logger.log(
-        `${project.name}: promoting ${deployment.id} over ${entry.previous?.id ?? 'none'}`,
-      );
-
+      // promote 済みの側を戻す。対象は **この run が promote した project だけ**で、
+      // 前から target を配信していた側（preexistingSplit）には戻し先が無い。
+      let failure = error;
+      let rolledBack = [];
       try {
-        await requestProductionPointer({
-          projectName: project.name,
-          projectId: entry.projectId,
-          deploymentId: deployment.id,
+        rolledBack = await rollbackPromoted({
+          promoted,
           token,
           teamId,
-          fetchImpl,
-          action: 'promote',
-        });
-      } catch (error) {
-        // POST が届いたかどうか分からない。実状態を 1 回だけ見て、実際に動いて
-        // いた時だけ rollback 対象へ入れる。無条件に入れると、何も起きていない
-        // project へ rollback promote を撃ってしまい auto-assign を壊す。
-        const state = await getLiveProduction({
-          projectName: project.name,
-          productionDomain: project.productionDomain,
-          projectId: projectIds.get(project.name),
-          token,
-          teamId,
-          fetchImpl,
-        }).catch(() => null);
-        if (state?.id === deployment.id) promoted.push(entry);
-        throw error;
-      }
-
-      // POST が受理された時点で production は動きうる。反映確認が timeout しても
-      // rollback 対象から漏らさないよう、確認を待つ前に記録する。
-      promoted.push(entry);
-
-      await waitForProductionAssignment({
-        projectName: project.name,
-        productionDomain: project.productionDomain,
-        projectId: projectIds.get(project.name),
-        deploymentId: deployment.id,
-        token,
-        teamId,
-        fetchImpl,
-        sleepImpl,
-        nowImpl,
-        action: 'promote',
-      });
-
-      // promote は auto-assign を true に戻す。次の project の確認を待つ間ずっと
-      // 片側だけ auto-assign が有効な窓を作らないよう、ここで即座に戻す。
-      // 復元の失敗は rollback を誘発させず、drifted に積んで最後に報告する。
-      driftedProjects.push(
-        ...(await restoreAll({ entries: [entry], token, teamId, fetchImpl, logger })),
-      );
-      logger.log(`${project.name}: promoted ${deployment.id}`);
-    }
-
-    // promote 後の production domain smoke。candidate smoke は各 deployment を単体で
-    // 見るが、affected な側だけを進めた production は **その組み合わせが初めて世に出る
-    // 状態**なので、実際に配信している両 domain を最後に確認する。
-    //
-    // 検出できるのは smokeChecks に載っている経路だけ。cross-app のリンク切れ一般は
-    // 見ない。web から product への唯一の入口である signup CTA は product の check に
-    // 入れてあるので、その 1 本だけが「片側 promote で web の導線が落ちる」を捕まえる。
-    // bypass secret は送らない。production domain に Deployment Protection が付く
-    // 設定事故（利用者に SSO 画面が出る）を、この smoke で捕まえたいため。
-    //
-    // 条件は promote 件数ではなく targets。Auto-assign が有効な段階適用中は candidate が
-    // 待機中に自動割当されて promote 件数が 0 になるため、promote 件数で分岐すると
-    // cutover までこの smoke が一度も走らない（candidate smoke と同じ理由）。
-    //
-    // **promote していない側の失敗でも rollback する**（catch へ落ちる）。この smoke が
-    // 守りたいのは「product を進めたら web が壊れた」型の cross-app 破損で、そこでは
-    // rollback が唯一の復旧手段になる。代償として、無関係な既存障害が正常な promote を
-    // 巻き戻しうるが、production は数分前の既知状態へ戻るだけで、run は失敗として残る。
-    // 「壊れたまま success で終える」より安全な側へ倒す。
-    if (!force && targets.length > 0) {
-      for (const project of projects) {
-        assertSimulationPoint(simulateFailure, `production-smoke:${project.name}`);
-        await smokeDeployment({
-          projectName: `${project.name} production`,
-          deploymentUrl: project.productionDomain,
-          checks: project.smokeChecks,
           fetchImpl,
           sleepImpl,
+          nowImpl,
           logger,
+          cause: error,
+          preexistingSplit,
+          preexistingDrift: driftedProjects,
         });
+      } catch (rollbackError) {
+        // 手動 rollback の指示を持つ方を投げる。元の失敗理由は cause として本文に入る。
+        failure = rollbackError;
+        // 一部だけ戻して throw した場合、戻せた分はエラー側にしか残らない。
+        rolledBack = rollbackError.rolledBack ?? [];
+        for (const { entry, live } of rollbackError.movedExternally ?? []) {
+          movedAway.set(entry.project.name, { id: live.id, sha: live.sha });
+        }
+      } finally {
+        // rollback の成否に関わらず、promote しなかった project の設定も掃く。
+        reportSweepDrift(await sweepSettings());
       }
-    }
-
-    // smoke は「domain が健全か」しか見ず、**どの deployment が応答したかは見ない**。
-    // 全 project について「判定の前提が今も成り立つか」を確認する（§verifyLiveState）。
-    // force でも実行する。Force Promote が免除するのは health / config の gate であって、
-    // 「promote した SHA が今も live」という主張そのものではない。
-    await verifyLiveState(candidates);
-  } catch (error) {
-    // promote 済みの側を戻す。対象は **この run が promote した project だけ**で、
-    // 前から target を配信していた側（preexistingSplit）には戻し先が無い。
-    let failure = error;
-    let rolledBack = [];
-    try {
-      rolledBack = await rollbackPromoted({
-        promoted,
-        token,
-        teamId,
-        fetchImpl,
-        sleepImpl,
-        nowImpl,
-        logger,
-        cause: error,
-        preexistingSplit,
-        preexistingDrift: driftedProjects,
+      throw Object.assign(failure, {
+        rolledBack,
+        manifest: manifestFor('failed', { promoted, rolledBack }),
       });
-    } catch (rollbackError) {
-      // 手動 rollback の指示を持つ方を投げる。元の失敗理由は cause として本文に入る。
-      failure = rollbackError;
-      // 一部だけ戻して throw した場合、戻せた分はエラー側にしか残らない。
-      rolledBack = rollbackError.rolledBack ?? [];
-      for (const { entry, live } of rollbackError.movedExternally ?? []) {
-        movedAway.set(entry.project.name, { id: live.id, sha: live.sha });
-      }
-    } finally {
-      // rollback の成否に関わらず、promote しなかった project の設定も掃く。
-      reportSweepDrift(await sweepSettings());
     }
-    throw Object.assign(failure, {
-      rolledBack,
-      manifest: manifestFor('failed', { promoted, rolledBack }),
-    });
-  }
 
-  // promote しなかった project も掃く。pending から除外された側や、外部の promote で
-  // skip した側も、その promote の副作用で設定が飛んでいることがある。
-  // ループ内の復元は「窓を作らない」ため、この掃きは「取りこぼさない」ためにある。
-  const swept = await sweepSettings();
-  for (const name of swept) {
-    if (!driftedProjects.includes(name)) driftedProjects.push(name);
-  }
+    // promote しなかった project も掃く。pending から除外された側や、外部の promote で
+    // skip した側も、その promote の副作用で設定が飛んでいることがある。
+    // ループ内の復元は「窓を作らない」ため、この掃きは「取りこぼさない」ためにある。
+    const swept = await sweepSettings();
+    for (const name of swept) {
+      if (!driftedProjects.includes(name)) driftedProjects.push(name);
+    }
 
-  // production は正しい SHA を配信している。設定復元の失敗で巻き戻す理由はないが、
-  // 放置すると次の merge が gate を迂回するため run は失敗させる。
-  if (driftedProjects.length > 0) {
-    throw Object.assign(driftError(sha, driftedProjects), {
-      manifest: manifestFor('failed', { promoted }),
-    });
-  }
+    // production は正しい SHA を配信している。設定復元の失敗で巻き戻す理由はないが、
+    // 放置すると次の merge が gate を迂回するため run は失敗させる。
+    if (driftedProjects.length > 0) {
+      throw Object.assign(driftError(sha, driftedProjects), {
+        manifest: manifestFor('failed', { promoted }),
+      });
+    }
 
-  return {
-    status: 'promoted',
-    sha,
-    promoted,
-    rolledBack: [],
-    preexistingSplit,
-    gateChecksRan: !force,
-    manifest: manifestFor('promoted', { promoted }),
-  };
+    return {
+      status: 'promoted',
+      sha,
+      promoted,
+      rolledBack: [],
+      preexistingSplit,
+      gateChecksRan: !force,
+      manifest: manifestFor('promoted', { promoted }),
+    };
+  } finally {
+    reportSweepDrift(await sweepSettings());
+  }
 }
 
 async function rollbackPromoted({

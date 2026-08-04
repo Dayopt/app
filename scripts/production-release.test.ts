@@ -1327,6 +1327,62 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(world.autoAssign).toEqual({ web: false, product: false });
   });
 
+  it('sweeps auto-assign when the candidate wait fails', async () => {
+    // 25 分の待機中に人が promote すると auto-assign が true へ戻る。その後に
+    // 別 candidate が ERROR になっても掃かずに抜けると、次の main merge が
+    // gate を通らず直接公開される。
+    const world = createReleaseWorld();
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/v7/deployments') && url.includes('projectId=product')) {
+        // 待機中に外部 promote があったことにしてから、build を失敗させる。
+        world.autoAssign.web = true;
+        return Response.json({
+          deployments: [
+            {
+              uid: 'dpl_product_new',
+              url: 'x',
+              readyState: 'ERROR',
+              target: 'production',
+              created: 2000,
+              meta: { githubCommitSha: SHA },
+            },
+          ],
+        });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    await expect(release({ fetchImpl })).rejects.toThrow(/ended in ERROR/);
+    expect(world.patches).toContainEqual({ project: 'web', value: false });
+    expect(world.autoAssign).toEqual({ web: false, product: false });
+  });
+
+  it('sweeps auto-assign before returning superseded', async () => {
+    // 古い SHA の再試行で、より新しい deployment が既に live のケース。その手動
+    // promote が auto-assign を戻していると、release は正しく失敗するのに
+    // 次の main deployment が自動で live になる。
+    const { fetchImpl: base } = createVercelMock({
+      '/v7/deployments': () => ({ deployments: [deployment('dpl_new', SHA, 'READY', 1000)] }),
+      '/v4/aliases/': () => ({ deploymentId: 'dpl_newer' }),
+      '/v13/deployments/': () => deploymentRecord('dpl_newer', OLD_SHA, 5000),
+      '/v9/projects/': () => ({ id: 'prj_test', autoAssignCustomDomains: true }),
+    });
+    const patches: unknown[] = [];
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') {
+        patches.push(JSON.parse(String(init?.body ?? '{}')));
+        return new Response(null, { status: 200 });
+      }
+      return base(input, init);
+    });
+
+    const result = await release({ fetchImpl, expectedAutoAssign: false });
+
+    expect(result.status).toBe('superseded');
+    expect(patches).toContainEqual({ autoAssignCustomDomains: false });
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。
