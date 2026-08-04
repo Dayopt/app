@@ -1237,6 +1237,9 @@ export async function runProductionRelease({
         }
 
         if (live?.id !== current.get(project.name)?.id) {
+          // 観測した実 deployment を manifest へ載せてから抜ける。run 開始時点の値の
+          // ままだと「未着手（pending）」に見え、復旧手順が live を取り違える。
+          if (live) movedAway.set(project.name, { id: live.id, sha: live.sha });
           throw new ReleaseError(
             `${project.name}: production moved to ${live?.id ?? 'none'} while the gate was ` +
               `running; refusing to promote ${deployment.id} over it`,
@@ -1265,18 +1268,20 @@ export async function runProductionRelease({
             action: 'promote',
           });
         } catch (error) {
-          // POST が届いたかどうか分からない。実状態を 1 回だけ見て、実際に動いて
-          // いた時だけ rollback 対象へ入れる。無条件に入れると、何も起きていない
-          // project へ rollback promote を撃ってしまい auto-assign を壊す。
-          const state = await getLiveProduction({
-            projectName: project.name,
-            productionDomain: project.productionDomain,
-            projectId: projectIds.get(project.name),
-            token,
-            teamId,
-            fetchImpl,
-          }).catch(() => null);
-          if (state?.id === deployment.id) promoted.push(entry);
+          // **POST が届いたかどうか分からない状態は「何も起きていない」ではない。**
+          // response を失っただけで Vercel 側は受理しているかもしれず、alias が
+          // まだ前の deployment を返すのは反映待ちとも区別がつかない（読み取り自体が
+          // 失敗することもある）。ここで rollback 対象から外すと、この run が終わった
+          // 後に target が live になり、戻す先を誰も知らないまま片側公開が残る。
+          //
+          // 迷ったら rollback 対象に入れる。何も起きていなかった場合の代償は
+          // 「previous を previous へ promote する空振り」だけで、auto-assign は
+          // rollback 側の復元と関数末尾の掃きが戻す。rollbackPromoted は実行前に
+          // live を読み直し、第三の deployment が居れば触らない。
+          logger.log(
+            `${project.name}: promote request outcome is unknown; keeping it in the rollback scope`,
+          );
+          promoted.push(entry);
           throw error;
         }
 

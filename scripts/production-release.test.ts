@@ -1383,6 +1383,47 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(patches).toContainEqual({ autoAssignCustomDomains: false });
   });
 
+  it('keeps a promote whose request outcome is unknown in the rollback scope', async () => {
+    // POST の response を失っただけで Vercel が受理していることがある。
+    // rollback 対象から外すと、run 終了後に target が live になり、戻す先を
+    // 誰も知らないまま片側公開が残る。
+    const world = createReleaseWorld();
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        // 受理されたが response を失ったケース（production は動かないまま観測される）。
+        return new Response(null, { status: 502 });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    await expect(release({ fetchImpl })).rejects.toThrow(/promote\(web\) failed with status 502/);
+    // 空振りでも previous へ戻しに行く（何も起きていなければ実質 no-op）。
+    expect(world.rolledBack()).toEqual(['web']);
+  });
+
+  it('records a move detected just before promoting', async () => {
+    // 待機後 snapshot と promote の間（smoke と audit の数分）に動かされた場合。
+    // 1回目=before, 2回目=待機後, 3回目=promote 直前。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_old', 'dpl_web_hotfix'],
+    });
+
+    const error = await release({ fetchImpl: world.fetchImpl }).catch(
+      (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
+    );
+
+    expect(error.message).toMatch(/production moved to dpl_web_hotfix/);
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'web',
+        action: 'moved-externally',
+        deploymentId: 'dpl_web_hotfix',
+        observedAt: 'this-run',
+      }),
+    );
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。
