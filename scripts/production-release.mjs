@@ -796,21 +796,26 @@ export function buildManifest({
       const uncertified =
         !entry && !moved && effective?.sha === sha && !gatesPassed.has(project.name);
 
-      const action = moved
-        ? moved.id
-          ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
-          : 'unassigned' // production domain にどの deployment も割り当たっていない
-        : entry
-          ? rolled
-            ? 'rolled-back'
-            : 'promoted'
-          : uncertified
-            ? 'uncertified' // gate を通らずに live。**手動で戻す判断が要る**
-            : effective?.sha === sha
-              ? 'already-serving'
-              : decision?.affected
-                ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
-                : 'skipped';
+      const action = !effective?.id
+        ? // どの経路でも deployment を観測できていない = domain が配信されていない。
+          // run 開始時点から未割当だった場合もここに入る（`pending` と書くと
+          // 既知の outage を「未着手」として隠すことになる）。
+          'unassigned'
+        : moved
+          ? moved.id
+            ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
+            : 'unassigned' // production domain にどの deployment も割り当たっていない
+          : entry
+            ? rolled
+              ? 'rolled-back'
+              : 'promoted'
+            : uncertified
+              ? 'uncertified' // gate を通らずに live。**手動で戻す判断が要る**
+              : effective?.sha === sha
+                ? 'already-serving'
+                : decision?.affected
+                  ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
+                  : 'skipped';
 
       return {
         name: project.name,

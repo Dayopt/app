@@ -2084,6 +2084,21 @@ describe('buildManifest', () => {
     expect(gated.projects[0]).toMatchObject({ action: 'already-serving' });
   });
 
+  it('reports a run-start unassigned domain as unassigned, not pending', () => {
+    // 既知の outage を「未着手」として隠さない。復旧手順（unassigned）へ導く。
+    const manifest = buildManifest({
+      ...base,
+      before: new Map([[project.name, null]]),
+      decisions: new Map([[project.name, { affected: true, reason: 'changed' }]]),
+    });
+    expect(manifest.projects[0]).toMatchObject({
+      action: 'unassigned',
+      deploymentId: null,
+      // 戻し先が manifest に無いので、runbook 側で deployment 履歴を辿る。
+      previousDeploymentId: null,
+    });
+  });
+
   it('distinguishes an unassigned domain from another actor deployment', () => {
     const unassigned = buildManifest({
       ...base,
