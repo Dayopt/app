@@ -783,7 +783,7 @@ export function buildManifest({
   rolledBack,
   externallyLive = new Map(),
   movedAway = new Map(),
-  gatesPassed = new Set(),
+  gatesPassed = new Map(),
 }) {
   const promotedBy = new Map(promoted.map((entry) => [entry.project.name, entry]));
   const rolledBackNames = new Set(rolledBack.map((entry) => entry.project.name));
@@ -808,17 +808,28 @@ export function buildManifest({
       // 観測した移動は rollback の記録より優先する。戻した後に別 deployment が
       // live になっていれば、`rolled-back`（= previous を配信中）は事実と違う。
       const moved = movedAway.get(project.name) ?? null;
-      // 外部 actor が先に promote した分。この run は動かしていないが live ではある。
-      const external = entry ? null : (externallyLive.get(project.name) ?? null);
+      // 外部 actor が置いた / 我々の操作の後に動いた分。**promote entry があっても
+      // 捨てない。** 観測した ID が「promote した candidate」でも「戻した previous」でも
+      // ないなら、それが今 live なので、rollback 記録より優先する。
+      const observed = externallyLive.get(project.name) ?? null;
+      const external =
+        observed && observed.id !== entry?.deployment?.id && observed.id !== entry?.previous?.id
+          ? observed
+          : entry
+            ? null
+            : observed;
 
-      // 最終的に「今 live」と判断した記録。action も ID もここから導く。
-      const effective = moved ?? serving ?? restored ?? external ?? live;
+      // **最終的に「今 live」と判断した記録。観測が最優先。** 我々が置いたつもりの
+      // 値（serving / restored）より、後から観測した実状態を信じる。
+      const effective = moved ?? external ?? serving ?? restored ?? live;
 
-      // **target が live なのに、この run の gate を通っていない状態。** 待機中の
-      // Auto-assign や他者の promote で live になり、その後 gate が落ちた場合に起きる。
-      // `already-serving`（= 触るな）と書くと、認証されていない build が放置される。
-      const uncertified =
-        !entry && !moved && effective?.sha === sha && !gatesPassed.has(project.name);
+      // 観測が「我々の操作の結果」と食い違っている = この run が置いたものは live で
+      // ない。promote / rollback の記録より観測を優先して分類する。
+      const overridesOurRecord = Boolean(entry && external);
+
+      // **認証は deployment 単位。** 同じ commit の別 deployment は gate を通っていない
+      // ので、project 名だけで「認証済み」と扱ってはいけない。
+      const certified = gatesPassed.get(project.name) === (effective?.id ?? null);
 
       const action = !effective?.id
         ? // どの経路でも deployment を観測できていない = domain が配信されていない。
@@ -826,17 +837,17 @@ export function buildManifest({
           // 既知の outage を「未着手」として隠すことになる）。
           'unassigned'
         : moved
-          ? moved.id
-            ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
-            : 'unassigned' // production domain にどの deployment も割り当たっていない
-          : entry
+          ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
+          : entry && !overridesOurRecord
             ? rolled
               ? 'rolled-back'
               : 'promoted'
-            : uncertified
-              ? 'uncertified' // gate を通らずに live。**手動で戻す判断が要る**
-              : effective?.sha === sha
+            : effective.sha === sha
+              ? certified
                 ? 'already-serving'
+                : 'uncertified' // gate を通らずに live。**手動で戻す判断が要る**
+              : entry || externallyLive.has(project.name)
+                ? 'moved-externally' // 我々の記録とも target とも違う deployment が live
                 : decision?.affected
                   ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
                   : 'skipped';
@@ -849,17 +860,16 @@ export function buildManifest({
         action,
         deploymentId: effective?.id ?? null,
         sourceSha: effective?.sha ?? null,
-        // 未割当の時は「戻す先」が manifest から消えないよう、run 開始時点の deployment を
-        // 復旧先として残す（promote entry があればそちらが優先）。
-        // 復旧先。promote entry があればその previous、`uncertified` / `unassigned` では
-        // run 開始時点の deployment（それが唯一の戻し先）。
-        // 復旧先。**今 live なものと同じ ID は戻し先にならない。** run 開始時点で既に
+        // 復旧先。promote entry があればその previous。それ以外（`uncertified` /
+        // `unassigned`）では run 開始時点の deployment が唯一の手掛かりになる。
+        // ただし **今 live なものと同じ ID は戻し先にならない** — run 開始時点で既に
         // target が live だった project が gate に落ちた場合、run 開始時点の deployment は
-        // まさにその落ちた deployment なので、戻し先としては使えない（null にして
-        // runbook 側で deployment 履歴を辿らせる）。
+        // まさにその落ちた deployment なので、null にして runbook 側で履歴を辿らせる。
         previousDeploymentId:
           entry?.previous?.id ??
-          ((uncertified || (moved && !moved.id)) && live?.id && live.id !== effective?.id
+          ((action === 'uncertified' || action === 'unassigned') &&
+          live?.id &&
+          live.id !== effective?.id
             ? live.id
             : null),
         // この run が観測していない project の値は run 開始時点のもの。candidate 待機
@@ -998,7 +1008,9 @@ export async function runProductionRelease({
    * gate を通った後の設定失敗（settings-drift）もあり、どちらも「認証されたか」とは
    * 独立だから。
    */
-  const gatesPassed = new Set();
+  const gatesPassed = new Map();
+  /** verifyLiveState が最後に確認した live ID（project 名 → ID）。 */
+  const verifiedIds = new Map();
 
   // この run が promote した後に他者が別 deployment を live にした project。
   // rollback せず残すため、manifest には観測した live を載せる（我々の candidate を
@@ -1116,6 +1128,10 @@ export async function runProductionRelease({
         teamId,
         fetchImpl,
       });
+
+      // gate を通した時に「どの deployment を確認したか」を残す。認証は deployment
+      // 単位で判断する（同じ commit の別 deployment は gate を通っていない）。
+      verifiedIds.set(project.name, live?.id ?? null);
 
       const wanted = expectedId.get(project.name);
       if (wanted) {
@@ -1265,7 +1281,7 @@ export async function runProductionRelease({
         const residual = await stabilize([]);
         // ここまで来れば smoke / audit / live 検証を通っている。設定復元が失敗しても
         // 「認証された」事実は変わらないので、drift 判定より前に記録する。
-        for (const project of projects) gatesPassed.add(project.name);
+        for (const [name, id] of verifiedIds) gatesPassed.set(name, id);
         if (residual.length > 0) {
           throw Object.assign(driftError(sha, residual), {
             manifest: manifestFor('settings-drift'),
@@ -1273,14 +1289,26 @@ export async function runProductionRelease({
         }
       } catch (error) {
         reportSweepDrift((await sweepSettings()).drifted);
-        const movedBefore = movedAway.size;
+        // **観測した deployment ID の変化で判断する。** 同じ commit の別 deployment へ
+        // 動いた場合は `externallyLive` 側が書き換わるので、`movedAway` の件数だけを
+        // 見ていると取りこぼす。
+        const snapshot = () =>
+          projects
+            .map((project) => {
+              const seen =
+                movedAway.get(project.name) ??
+                externallyLive.get(project.name) ??
+                before.get(project.name);
+              return `${project.name}:${seen?.id ?? 'none'}`;
+            })
+            .join('|');
+        const beforeRefresh = snapshot();
         await refreshObservedLive();
-        // **refresh の結果は manifest へ必ず反映する。** 既に付いている manifest
+        // refresh の結果は manifest へ必ず反映する。既に付いている manifest
         // （settings-drift 等）をそのまま返すと、cleanup 中に alias が動いた事実が
         // 落ちる。settings-drift は「production は正しい」を意味するので、動いていたら
         // その主張自体が成り立たない → `failed` へ落とす。
-        const aliasMoved = movedAway.size !== movedBefore;
-        if (!error.manifest || aliasMoved) {
+        if (!error.manifest || snapshot() !== beforeRefresh) {
           Object.assign(error, { manifest: manifestFor('failed') });
         }
         throw error;
@@ -1632,7 +1660,7 @@ export async function runProductionRelease({
       // 不受理の移動を見つけた場合はこの run が promote した分が巻き戻る。
       residualDrift = await stabilize(candidates);
       // gate を通した事実を記録する（status ではなく実績で manifest を分類するため）。
-      for (const project of projects) gatesPassed.add(project.name);
+      for (const [name, id] of verifiedIds) gatesPassed.set(name, id);
     } catch (error) {
       // promote 済みの側を戻す。対象は **この run が promote した project だけ**で、
       // 前から target を配信していた側（preexistingSplit）には戻し先が無い。

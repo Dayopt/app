@@ -2214,7 +2214,7 @@ describe('buildManifest', () => {
       decisions: new Map([[project.name, { affected: false, reason: 'already serving' }]]),
     };
 
-    const ungated = buildManifest({ ...atTarget, gatesPassed: new Set() });
+    const ungated = buildManifest({ ...atTarget, gatesPassed: new Map() });
     expect(ungated.projects[0]).toMatchObject({
       action: 'uncertified',
       deploymentId: 'dpl_web_new',
@@ -2228,7 +2228,7 @@ describe('buildManifest', () => {
       ...base,
       before: new Map([[project.name, { id: 'dpl_web_old', sha: OLD_SHA }]]),
       externallyLive: new Map([[project.name, { id: 'dpl_web_new', sha: SHA }]]),
-      gatesPassed: new Set(),
+      gatesPassed: new Map(),
     });
     expect(midRun.projects[0]).toMatchObject({
       action: 'uncertified',
@@ -2236,7 +2236,11 @@ describe('buildManifest', () => {
       previousDeploymentId: 'dpl_web_old',
     });
 
-    const gated = buildManifest({ ...atTarget, gatesPassed: new Set([project.name]) });
+    // 認証は deployment 単位。同じ commit の別 deployment では認証済みにならない。
+    const gated = buildManifest({
+      ...atTarget,
+      gatesPassed: new Map([[project.name, 'dpl_web_new']]),
+    });
     expect(gated.projects[0]).toMatchObject({ action: 'already-serving' });
   });
 
@@ -2252,6 +2256,27 @@ describe('buildManifest', () => {
       deploymentId: null,
       // 戻し先が manifest に無いので、runbook 側で deployment 履歴を辿る。
       previousDeploymentId: null,
+    });
+  });
+
+  it('lets a post-rollback observation override the rollback record', () => {
+    // 戻した後に別 deployment が live になっていれば、`rolled-back`（= previous を
+    // 配信中）は事実と違う。同じ commit の別 deployment でも同じ。
+    const entry = {
+      project,
+      deployment: { id: 'dpl_web_new' },
+      previous: { id: 'dpl_web_old', sha: OLD_SHA },
+    };
+    const manifest = buildManifest({
+      ...base,
+      promoted: [entry],
+      rolledBack: [entry],
+      externallyLive: new Map([[project.name, { id: 'dpl_web_other', sha: SHA }]]),
+      gatesPassed: new Map(),
+    });
+    expect(manifest.projects[0]).toMatchObject({
+      deploymentId: 'dpl_web_other',
+      action: 'uncertified', // target SHA だが gate を通していない deployment
     });
   });
 
