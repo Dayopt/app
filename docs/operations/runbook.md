@@ -1128,7 +1128,9 @@ npm run analytics:stats
 
 #### 2. ロールバック実行
 
-Vercel Dashboard から Product / Web **両方**を同じ SHA の deployment へ戻す。戻し先は `Production Release` run summary の `previous` deployment id が最も確実。
+**壊れている project だけを戻す。Product / Web を同じ SHA へ揃えようとしない。** release は変更の影響を受ける project だけを進めるため、両者の live SHA が違うのは正常な定常状態であり、揃える先の deployment がそもそも存在しないこともある。
+
+戻し先は `Production Release` run の **`release-manifest` artifact**（保持 90 日）が一次情報。project ごとに `action`（promoted / rolled-back / skipped / already-serving）と `deploymentId` / `previousDeploymentId` が入っている。`action: promoted` の project の `previousDeploymentId` が戻し先で、`skipped` / `already-serving` の project はこの release が触っていないので巻き添えで戻さない。artifact が無い古い run では run summary の `previous` deployment id を使う。
 
 - https://vercel.com/dayopt/product/deployments
 - https://vercel.com/dayopt/web/deployments

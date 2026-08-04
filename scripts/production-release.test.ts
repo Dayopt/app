@@ -1122,6 +1122,24 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(smoked).toContain('https://app.dayopt.app/api/health');
   });
 
+  it('refuses to report a SHA as live when the domain moved off the candidate', async () => {
+    // 待機中に auto-assign された candidate は promote loop を通らないため、その後
+    // 誰かが rollback しても ID を確認する経路が無かった。smoke は health しか見ないので
+    // 健全な別 deployment が応答すれば通り、live でない SHA に success が付く。
+    // 1回目=before, 2回目=待機後（自動割当）, 3回目=最終確認（別 deployment へ移動）。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new', 'dpl_web_hotfix'],
+    });
+
+    await expect(release({ fetchImpl: world.fetchImpl })).rejects.toThrow(
+      /web: production serves dpl_web_hotfix, not the released dpl_web_new/,
+    );
+
+    // この run が promote したのは product だけ。戻すのもそれだけ。
+    expect(world.promoted()).toEqual(['product']);
+    expect(world.rolledBack()).toEqual(['product']);
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。

@@ -1244,6 +1244,27 @@ export async function runProductionRelease({
           logger,
         });
       }
+
+      // smoke は「domain が健全か」しか見ない。**どの deployment が応答したかは見ない**。
+      // 待機中に自動割当された candidate は promote loop を通らないため、その後に
+      // 誰かが rollback しても誰も気づかず、health だけ通って success になる。
+      // それは「live でない SHA に tag を打てる」を意味するので、最後に ID を突き合わせる。
+      for (const { project, deployment } of candidates) {
+        const live = await getLiveProduction({
+          projectName: project.name,
+          productionDomain: project.productionDomain,
+          projectId: projectIds.get(project.name),
+          token,
+          teamId,
+          fetchImpl,
+        });
+        if (live?.id !== deployment.id) {
+          throw new ReleaseError(
+            `${project.name}: production serves ${live?.id ?? 'none'}, not the released ` +
+              `${deployment.id}; refusing to report ${sha} as live`,
+          );
+        }
+      }
     }
   } catch (error) {
     // promote 済みの側を戻す。対象は **この run が promote した project だけ**で、
