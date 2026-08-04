@@ -37,7 +37,7 @@ interface GroupHeaderProps {
   indeterminate: boolean;
   collapsed: boolean;
   displayColor: string;
-  /** モバイル時: メニュー項目を簡略化（このグループだけ表示のみ） */
+  /** モバイル時: メニュー項目を簡略化（このグループだけ表示 + アーカイブのみ） */
   isMobile?: boolean;
   onCheckedChange: () => void;
   onToggleCollapse: () => void;
@@ -198,10 +198,18 @@ export function GroupHeader({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="right">
           {isMobile ? (
-            <DropdownMenuItem onClick={onShowOnlyGroup}>
-              <Eye className="mr-2 size-4" />
-              {t('calendar.filter.showOnlyThis')}
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem onClick={onShowOnlyGroup}>
+                <Eye className="mr-2 size-4" />
+                {t('calendar.filter.showOnlyThis')}
+              </DropdownMenuItem>
+              {onArchiveGroup && (
+                <DropdownMenuItem onClick={onArchiveGroup}>
+                  <Archive className="mr-2 size-4" />
+                  {t('calendar.filter.archive')}
+                </DropdownMenuItem>
+              )}
+            </>
           ) : (
             <>
               {onAddTagToGroup && (

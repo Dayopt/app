@@ -19,8 +19,10 @@ import { GroupHeader } from './GroupHeader';
  * | グループを解除       |    ○    |   ×    |
  * | このグループだけ表示  |    ○    |   ○    |
  * | 統計を見る          |    ○    |   ×    |
+ * | アーカイブ           |    ○    |   ○    |
  * | グループを削除       |    ○    |   ×    |
  *
+ * アーカイブはこのメニューが唯一の呼び出し元のため、モバイルでも省略しない（#1576）。
  * 子タグ（グループ内タグ）のメニューは `FilterItemMenu` 参照。
  */
 const meta = {
@@ -125,12 +127,14 @@ export const WithMenuOpen: Story = {
 };
 
 /**
- * モバイル簡略版。「このグループだけ表示」のみ。
- * 管理操作は設定画面に委譲。
+ * モバイル簡略版。「このグループだけ表示」+「アーカイブ」のみ。
+ * 管理操作は設定画面に委譲。アーカイブはこのメニューが唯一の呼び出し元のため
+ * モバイルでも省略しない（#1576）。
  */
 export const WithMenuOpenMobile: Story = {
   args: {
     isMobile: true,
+    onArchiveGroup: fn(),
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -139,6 +143,7 @@ export const WithMenuOpenMobile: Story = {
 
     const body = within(document.body);
     await expect(body.getByText('このグループだけ表示')).toBeInTheDocument();
+    await expect(body.getByText('アーカイブ')).toBeInTheDocument();
     await expect(body.queryByText('名前を変更')).not.toBeInTheDocument();
     await expect(body.queryByText('グループを削除')).not.toBeInTheDocument();
   },
