@@ -345,9 +345,7 @@
         "dayOfWeek": "By day of week",
         "dayOfWeekDesc": "Which days your time gathered on",
         "hourly": "By hour",
-        "hourlyDesc": "Which hours your time gathered in",
-        "currentPeriod": "This period",
-        "previousPeriod": "Previous period"
+        "hourlyDesc": "Which hours your time gathered in"
       },
       "daily": {
         "timelineDesc": "See where the day diverged from the plan",
