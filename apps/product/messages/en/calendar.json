@@ -24,13 +24,6 @@
     },
     "title": "Calendar",
     "shortcuts": {
-      "title": "Keyboard shortcuts",
-      "groups": {
-        "general": "General",
-        "navigation": "Navigation",
-        "views": "Views",
-        "blocks": "Blocks"
-      },
       "actions": {
         "open": "Open keyboard shortcuts",
         "openSearch": "Search blocks",

@@ -11,7 +11,7 @@ export const GLOBAL_SHORTCUT_CATALOG: ShortcutCatalog = {
   groups: [
     {
       id: 'general',
-      labelKey: 'calendar.shortcuts.groups.general',
+      labelKey: 'shortcuts.groups.general',
       scope: 'global',
       order: 0,
     },

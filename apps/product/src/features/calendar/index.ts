@@ -11,7 +11,6 @@
 // Main Controller
 // =============================================================================
 export { CalendarController } from './components/CalendarController';
-export { ShortcutCheatSheetDialog } from './components/ShortcutCheatSheetDialog';
 
 // =============================================================================
 // Layout Components

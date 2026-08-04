@@ -11,19 +11,19 @@ export const CALENDAR_SHORTCUT_CATALOG: ShortcutCatalog = {
   groups: [
     {
       id: 'navigation',
-      labelKey: 'calendar.shortcuts.groups.navigation',
+      labelKey: 'shortcuts.groups.navigation',
       scope: 'calendar',
       order: 10,
     },
     {
       id: 'views',
-      labelKey: 'calendar.shortcuts.groups.views',
+      labelKey: 'shortcuts.groups.views',
       scope: 'calendar',
       order: 20,
     },
     {
       id: 'blocks',
-      labelKey: 'calendar.shortcuts.groups.blocks',
+      labelKey: 'shortcuts.groups.blocks',
       scope: 'calendar',
       order: 30,
     },

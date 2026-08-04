@@ -6,9 +6,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
 
 import { Toaster } from '@/components/ui/feedback/toast';
+import { ShortcutCheatSheetDialog } from '@/components/ui/overlays/shortcut-cheat-sheet-dialog';
 import {
   CalendarViewType,
-  ShortcutCheatSheetDialog,
   buildCalendarReviewPanelPath,
   buildTimeblockSearchResultPath,
   isCalendarViewPath,
@@ -82,6 +82,11 @@ export function GlobalOverlays() {
   const settingsOpen = activeSheet?.type === 'settings';
   const timeblockSearchOpen = activeSheet?.type === 'timeblockSearch';
   const shortcutCheatSheetOpen = activeSheet?.type === 'shortcutCheatSheet';
+  // ShortcutCheatSheetDialog は components/ 配下のため features/calendar の
+  // isCalendarViewPath を直接importできない（依存方向違反）。ここで判定して渡す。
+  const shortcutActiveScope = isCalendarViewPath(pathname?.replace(/^\/(ja|en)/, '') ?? '')
+    ? 'calendar'
+    : 'global';
   const isInspectorOpen = useTimeblockInspectorStore((s) => s.isOpen);
   const closeInspector = useTimeblockInspectorStore((s) => s.closeInspector);
   const copyTimeblock = useTimeblockClipboardStore((state) => state.copyTimeblock);
@@ -186,6 +191,7 @@ export function GlobalOverlays() {
           if (!open) closeSheet();
         }}
         catalog={APP_SHORTCUT_CATALOG}
+        activeScope={shortcutActiveScope}
       />
       <TimeblockInspector onViewStats={handleViewStats} onCopy={handleCopy} />
       <Toaster />

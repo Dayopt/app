@@ -24,13 +24,6 @@
     },
     "title": "カレンダー",
     "shortcuts": {
-      "title": "キーボードショートカット",
-      "groups": {
-        "general": "基本",
-        "navigation": "移動",
-        "views": "表示",
-        "blocks": "ブロック"
-      },
       "actions": {
         "open": "キーボードショートカットを開く",
         "openSearch": "ブロックを検索",
