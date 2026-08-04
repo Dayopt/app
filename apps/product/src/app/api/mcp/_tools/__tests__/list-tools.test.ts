@@ -12,6 +12,7 @@ import {
   MCP_TOOL_DESCRIPTORS,
   mergeMcpChallengeScopes,
 } from '../registry';
+import { MCP_REVIEW_GET_OUTPUT_SCHEMA } from '../review-contract';
 import { registerReviewGetTool } from '../review-get';
 import { registerTagsListTool } from '../tags-list';
 import {
@@ -88,7 +89,10 @@ interface ToolConfig {
   description?: string;
 }
 
-type ToolHandler = (input: ListInput & Record<string, unknown>) => Promise<TextToolResult>;
+type ToolHandler = (
+  input: ListInput & Record<string, unknown>,
+  extra?: { signal: AbortSignal },
+) => Promise<TextToolResult>;
 
 const context: McpRequestContext = {
   tokenId: 'token-1',
@@ -379,6 +383,85 @@ describe('MCP list tools public contract', () => {
       error: { code: 'INSUFFICIENT_SCOPE', retryable: false },
     });
     expect(createMcpTrpcCaller).not.toHaveBeenCalled();
+  });
+
+  it('review.getは未分類バケットをtagId null + isUncategorizedとして公開契約に載せる', async () => {
+    const getMcpReview = vi.fn().mockResolvedValue({
+      asOf: '2026-07-27T00:00:00.000Z',
+      period: {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+        endExclusive: true,
+        timezone: 'Asia/Tokyo',
+      },
+      // タグ有無で絞らなくなったので rowFilter も tagged を名乗らない
+      basis: {
+        planMeaning: 'budget',
+        recordMeaning: 'actual',
+        rowFilter: 'active_start_in_period',
+        durationBoundary: 'full_row_not_clipped',
+        periodBoundary: '[)',
+        varianceConvention: 'planned_minus_recorded',
+      },
+      hasData: true,
+      summary: { plannedMinutes: 180, recordedMinutes: 210, varianceMinutes: -30 },
+      accuracy: { rate: 0.8333, status: 'fair' },
+      tags: [
+        {
+          tagId: '00000000-0000-4000-8000-000000000009',
+          isUncategorized: false,
+          plannedMinutes: 120,
+          recordedMinutes: 120,
+          varianceMinutes: 0,
+          variancePercent: 0,
+        },
+        {
+          tagId: null,
+          isUncategorized: true,
+          plannedMinutes: 60,
+          recordedMinutes: 90,
+          varianceMinutes: -30,
+          variancePercent: -50,
+        },
+      ],
+      signals: [
+        { code: 'plan_accuracy', rate: 0.8333, status: 'fair' },
+        {
+          code: 'largest_tag_variance',
+          tagId: null,
+          isUncategorized: true,
+          direction: 'recorded_more_than_planned',
+          absoluteMinutes: 30,
+        },
+      ],
+    });
+    createMcpTrpcCaller.mockReturnValue({ statistics: { getMcpReview } });
+
+    const { handlers, server } = createServerDouble();
+    registerReviewGetTool(server, { ...context, scopes: ['read:stats'] });
+    const result = await getHandler(handlers, 'review.get')(
+      {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+      },
+      { signal: new AbortController().signal },
+    );
+
+    // structuredContent が outputSchema を通ること自体を固定する。null tagId を
+    // 弾く schema へ戻すと、未分類を含む review が client 側で検証エラーになる。
+    expect(MCP_REVIEW_GET_OUTPUT_SCHEMA.safeParse(result.structuredContent).success).toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      basis: { rowFilter: 'active_start_in_period' },
+      tags: [
+        { tagId: '00000000-0000-4000-8000-000000000009', isUncategorized: false },
+        { tagId: null, isUncategorized: true },
+      ],
+      signals: [
+        { code: 'plan_accuracy' },
+        { code: 'largest_tag_variance', tagId: null, isUncategorized: true },
+      ],
+    });
+    expect(parseText(result)).toEqual(result.structuredContent);
   });
 
   it('read step-up challengeは既存grantと不足scopeだけを保持する', () => {

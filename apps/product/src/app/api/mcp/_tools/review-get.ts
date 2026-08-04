@@ -17,7 +17,7 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
     'review.get',
     {
       title: 'Get Dayopt Plan and Record review',
-      description: `Get deterministic Plan versus Record totals, tag variances, and accuracy signals. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
+      description: `Get deterministic Plan versus Record totals, tag variances, and accuracy signals. Time on blocks with no tag is included as a single uncategorized row with tagId null and isUncategorized true, so totals cover every block in the period. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
       inputSchema: MCP_REVIEW_GET_INPUT_SCHEMA,
       outputSchema: MCP_REVIEW_GET_OUTPUT_SCHEMA,
       annotations: { readOnlyHint: true, idempotentHint: true },
@@ -70,6 +70,7 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
             : null,
           tags: result.tags.map((tag) => ({
             tagId: tag.tagId,
+            isUncategorized: tag.isUncategorized,
             plannedMinutes: tag.plannedMinutes,
             recordedMinutes: tag.recordedMinutes,
             varianceMinutes: tag.varianceMinutes,
@@ -85,6 +86,7 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
               : {
                   code: signal.code,
                   tagId: signal.tagId,
+                  isUncategorized: signal.isUncategorized,
                   direction: signal.direction,
                   absoluteMinutes: signal.absoluteMinutes,
                 },

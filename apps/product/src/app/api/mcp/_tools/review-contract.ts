@@ -26,7 +26,7 @@ export const MCP_REVIEW_GET_OUTPUT_SCHEMA = z
       .object({
         planMeaning: z.literal('budget'),
         recordMeaning: z.literal('actual'),
-        rowFilter: z.literal('active_tagged_start_in_period'),
+        rowFilter: z.literal('active_start_in_period'),
         durationBoundary: z.literal('full_row_not_clipped'),
         periodBoundary: z.literal('[)'),
         varianceConvention: z.literal('planned_minus_recorded'),
@@ -47,11 +47,15 @@ export const MCP_REVIEW_GET_OUTPUT_SCHEMA = z
       })
       .strict()
       .nullable(),
+    // 未分類（タグなし）は tagId: null / isUncategorized: true の 1 行として返る。
+    // tags.list はアーカイブ済みタグを含まないため、client が解決できない tagId と
+    // 未分類を取り違えないよう、未分類側は明示 flag で識別できる形にする。
     tags: z
       .array(
         z
           .object({
-            tagId: z.string().uuid(),
+            tagId: z.string().uuid().nullable(),
+            isUncategorized: z.boolean(),
             plannedMinutes: z.number().nonnegative(),
             recordedMinutes: z.number().nonnegative(),
             varianceMinutes: z.number(),
@@ -72,7 +76,8 @@ export const MCP_REVIEW_GET_OUTPUT_SCHEMA = z
         z
           .object({
             code: z.literal('largest_tag_variance'),
-            tagId: z.string().uuid(),
+            tagId: z.string().uuid().nullable(),
+            isUncategorized: z.boolean(),
             direction: z.enum(['recorded_less_than_planned', 'recorded_more_than_planned']),
             absoluteMinutes: z.number().positive(),
           })
