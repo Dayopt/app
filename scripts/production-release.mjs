@@ -10,6 +10,15 @@ const API_ORIGIN = 'https://api.vercel.com';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
+ * 並行性モデル（保証の境界）: single-writer 前提。CI は concurrency group で直列化され、
+ * run 中の手動 Vercel 操作は runbook が禁じる。Vercel API にトランザクションが無い以上、
+ * read と write の間の TOCTOU 窓はゼロにできない。この script が守るのは
+ * 「知らない deployment を上書きしない / 読めない時は書かない / 観測した外部変更は
+ * fail + manifest 報告」まで。窓を狭めるための再読み込みはこれ以上追加しない。
+ * 正本: docs/engineering/infra.md §release の並行性モデル。
+ */
+
+/**
  * promote 順序 = 配列順。web を先に promote するため、2 つ目(product)が失敗した時に
  * rollback 対象になるのは web 側だけになる。
  *

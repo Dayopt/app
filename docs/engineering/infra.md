@@ -217,6 +217,30 @@ scope でこの 2 つを読む。environment secret へ移すと Production Conf
 
 Deployment Policies による強制は [判断ログ](./log/2026-07-14-vercel-github-only-deployment-policy.md) を参照する。
 
+### release の並行性モデル
+
+策定日: 2026-08-05（PR #1820 のレビュー 30 ラウンド超を受けて保証境界を確定）
+
+release script は Vercel API への read-modify-write で、API にトランザクションは無い。「読んでから書くまでに状態が変わる」窓（TOCTOU）は原理的にゼロにできないため、窓を潰し続けるのではなく **single-writer 前提 + fail-safe** で守る。
+
+前提（運用で守る）:
+
+- **書き手は同時に 1 つ。** CI は `release.yml` の `concurrency: production-release`（cancel なし）で直列化される
+- **release run の実行中に、人手で Vercel の promote / rollback / alias 操作をしない。** 緊急時も run の完了（または cancel の完了）を待ってから [runbook](../operations/runbook.md) Playbook 2 に従う
+
+script が保証すること（コードで守る）:
+
+- **自分が知らない deployment を上書きしない。** live が「この run の candidate」でも「記録済みの previous」でもなければ `moved-externally` として触らずに fail する。alias 未割当（live なし）も「他者が意図的に外した」として同じ扱いにする
+- **読めない状態では書かない。** live の読み取りに失敗したら rollback せず、人の確認へ回す（fail closed）
+- **観測した外部変更は manifest に載せる。** 分類は単一の観測 map（`observedLive`）から導く
+
+保証しないこと:
+
+- **外部変更の検出の完全性。** 最後の read と write / return の間に起きた変更は検出できない。再読み込みを何回足してもこの窓は消えず 1 段深くなるだけなので、検出のための再読み込みはこれ以上追加しない
+- **manifest の最終正確性。** manifest はベストエフォートの観測記録であって production の正ではない。実態は常に Vercel Dashboard を正とする
+
+この境界の内側（「窓をもう 1 段狭めよ」型）のレビュー指摘は個別対応せず、本節を根拠に見送る。境界そのものを破る指摘（知らない deployment を上書きする、読めないのに書く、観測したのに manifest に載せない）は従来どおり修正する。打ち切りの一般規約は [workflow.md §レビュー指摘の必須解決](../../.claude/rules/workflow.md#レビュー指摘の必須解決) を参照。
+
 ### トラブルシューティング
 
 | 症状                                    | 対処                                                                           |

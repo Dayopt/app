@@ -129,7 +129,7 @@ production deployment がどの SHA かを Vercel Dashboard で確認する（HT
 
 ### 初動
 
-- [ ] `gh run list --workflow=release.yml --limit 3` で直近の release run を確認
+- [ ] `gh run list --workflow=release.yml --limit 3` で直近の release run を確認。**in_progress の run がある間は、手動の promote / rollback / alias 操作をしない**。release は single-writer 前提で、run 中の手動操作は run の観測・rollback と衝突する（[infra.md §release の並行性モデル](../engineering/infra.md#release-の並行性モデル)）。完了（または cancel の完了）を待ってから以降へ進む
 - [ ] run summary で「どこで止まったか」を特定: candidate build / smoke / audit / promote
 - [ ] 本番 domain が正常応答しているか確認
 
