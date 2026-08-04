@@ -11,7 +11,13 @@ const MCP_OCCUPANCY_SCHEMA = z
   })
   .strict();
 
-export const MCP_TAG_LIST_INPUT_SCHEMA = z.object({}).strict();
+export const MCP_TAG_LIST_INPUT_SCHEMA = z
+  .object({
+    // 既定は false のまま。既定でアーカイブ済みを混ぜると、新規付与の候補として
+    // 選ばれてサービス層の `TAG_ARCHIVED` で弾かれる無駄な試行が増える。
+    includeArchived: z.boolean().default(false),
+  })
+  .strict();
 
 export const MCP_TAG_LIST_OUTPUT_SCHEMA = z
   .object({
@@ -26,6 +32,17 @@ export const MCP_TAG_LIST_OUTPUT_SCHEMA = z
           icon: z.string().nullable(),
           parentId: z.string().uuid().nullable(),
           sortOrder: z.number().int(),
+          // includeArchived の値によらず常に返す。false 固定になる既定応答でも
+          // 行の形を変えないことで、client 側の解釈を 1 通りに保つ。
+          isArchived: z.boolean(),
+          // アーカイブした日時。通常タグは null。isArchived と冗長だが、
+          // review.get 側の isArchived（archivedTagIds との突き合わせのみで日時を持たない）
+          // と形を揃えたまま、tags.list はいつアーカイブしたかも解決できるようにする。
+          // timeblock-contract.ts の deletedAt と同じ「passthrough な nullable audit
+          // timestamp」の流儀で plain string を使う（MCP_TIMEBLOCK_TIMESTAMP_SCHEMA は
+          // 使わない。あちらは境界演算に使う入力/契約用の厳密書式で、archivedAt は
+          // DB 値をそのまま返すだけの出力専用フィールドのため）。
+          archivedAt: z.string().nullable(),
         })
         .strict(),
     ),

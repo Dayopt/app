@@ -3,4 +3,4 @@
  */
 
 // Modals & Dialogs
-export { TagDeleteStrategyDialog } from './TagDeleteStrategyDialog';
+export { TagDeleteConfirmDialog } from './TagDeleteConfirmDialog';

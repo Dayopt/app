@@ -16,6 +16,9 @@ export { useTags, useTagsHierarchy } from './useTagsQuery';
 // Tags Mutation Hooks (CRUD)
 export { useCreateTag, useDeleteTag, useReorderTags, useUpdateTag } from './useTagCrudMutations';
 
+// Tags Mutation Hooks (Archive / Restore)
+export { useArchiveTag, useArchivedTags, useRestoreTag } from './useTagArchiveMutations';
+
 // Tags Mutation Hooks (Merge)
 export { useMergeTag } from './useTagMergeMutation';
 

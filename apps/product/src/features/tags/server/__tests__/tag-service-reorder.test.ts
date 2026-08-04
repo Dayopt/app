@@ -109,5 +109,65 @@ describe('TagService', () => {
 
       expect(result).toEqual({ count: 2 });
     });
+
+    it('should throw TAG_ARCHIVED when a reorder target tag is itself archived', async () => {
+      setupMockQuery(mockSupabase.from, [
+        { id: 'tag-1', parent_id: null, archived_at: '2026-01-01T00:00:00.000Z' },
+      ]);
+
+      await expect(
+        service.reorder({ userId, updates: [{ id: 'tag-1', parent_id: null, sort_order: 0 }] }),
+      ).rejects.toMatchObject({ code: 'TAG_ARCHIVED' });
+
+      // RPC は呼ばれない（検証で早期 throw、PL/pgSQL 側の batch RPC には手を入れない）
+      expect(mockSupabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('should throw TAG_ARCHIVED when moving a tag under an archived parent (stale drag payload)', async () => {
+      // parent-1 は別タブで既にアーカイブ済み。ドラッグ元のツリースナップショットは
+      // アーカイブ前に取得されているため、古い payload は tag-1 を parent-1 の子として
+      // 送ってしまう（#1576 の回帰シナリオ）。tag-1（非アーカイブ）の検証が先に走るよう
+      // 配列順を「子 → 親」にして、parent_id 経由の archived 判定を狙って踏む。
+      setupMockQuery(mockSupabase.from, [
+        { id: 'tag-1', parent_id: null, archived_at: null },
+        { id: 'parent-1', parent_id: null, archived_at: '2026-01-01T00:00:00.000Z' },
+      ]);
+
+      await expect(
+        service.reorder({
+          userId,
+          updates: [
+            { id: 'tag-1', parent_id: 'parent-1', sort_order: 0 },
+            { id: 'parent-1', parent_id: null, sort_order: 0 },
+          ],
+        }),
+      ).rejects.toMatchObject({ code: 'TAG_ARCHIVED' });
+
+      expect(mockSupabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('should allow normal reorder when no tags are archived (regression)', async () => {
+      setupMockQuery(mockSupabase.from, [
+        { id: 'tag-1', parent_id: null, archived_at: null },
+        { id: 'tag-2', parent_id: null, archived_at: null },
+      ]);
+      mockSupabase.rpc.mockResolvedValueOnce({ data: 2, error: null });
+
+      const result = await service.reorder({
+        userId,
+        updates: [
+          { id: 'tag-1', parent_id: null, sort_order: 0 },
+          { id: 'tag-2', parent_id: 'tag-1', sort_order: 0 },
+        ],
+      });
+
+      expect(result).toEqual({ count: 2 });
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('batch_reorder_tags_hierarchy', {
+        p_user_id: userId,
+        p_tag_ids: ['tag-1', 'tag-2'],
+        p_parent_ids: [null, 'tag-1'],
+        p_sort_orders: [0, 0],
+      });
+    });
   });
 });

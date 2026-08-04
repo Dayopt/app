@@ -90,7 +90,7 @@ export function mockArrayResponse(data: unknown[]) {
 }
 
 /** `await ...select(.., { count, head: true })` で count を返すモック */
-export function mockCountResponse(count: number) {
+function mockCountResponse(count: number) {
   const mock = createChainableMock(null);
   mock.then = vi
     .fn()

@@ -7,7 +7,8 @@ export const TIMEBLOCK_REVIEW_MAX_TAGS = 1_000;
 export const TIMEBLOCK_REVIEW_BASIS = {
   planMeaning: 'budget',
   recordMeaning: 'actual',
-  rowFilter: 'active_tagged_start_in_period',
+  // タグ有無で絞らない。未分類の行も単一バケットとして集計に含める（#1576）
+  rowFilter: 'active_start_in_period',
   durationBoundary: 'full_row_not_clipped',
   periodBoundary: '[)',
   varianceConvention: 'planned_minus_recorded',

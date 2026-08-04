@@ -56,7 +56,7 @@ function authedCaller() {
 beforeEach(() => {
   vi.clearAllMocks();
   for (const method of Object.values(serviceMethods)) method.mockResolvedValue([]);
-  serviceMethods.getTagStats.mockResolvedValue({ counts: {}, lastUsed: {} });
+  serviceMethods.getTagStats.mockResolvedValue({ counts: {}, planCounts: {}, lastUsed: {} });
   serviceMethods.getBlankRate.mockResolvedValue({
     availableMinutes: 0,
     scheduledMinutes: 0,

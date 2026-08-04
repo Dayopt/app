@@ -73,12 +73,17 @@ export function FilterItem({
     [tagId, onShowOnlyThis, disabled],
   );
 
-  // Checkbox color — inline style で border/bg を直接上書き（CSS変数上書きでは効かないため）
+  // Checkbox color — inline style で border/bg を直接上書き（CSS変数上書きでは効かないため）。
+  // tagId が無い行（タグなし/未分類の合成行）は実タグの色を持たないため、
+  // useFilterItemEdit の displayColor フォールバック（blue）に流されず
+  // Checkbox 自体のデフォルト意匠（border-primary / bg-primary）に委ねる。
   const colorClasses = getTagColorClasses(displayColor);
-  const checkboxColorStyle: React.CSSProperties = {
-    borderColor: colorClasses.cssVar,
-    backgroundColor: checked ? colorClasses.cssVar : undefined,
-  };
+  const checkboxColorStyle: React.CSSProperties | undefined = tagId
+    ? {
+        borderColor: colorClasses.cssVar,
+        backgroundColor: checked ? colorClasses.cssVar : undefined,
+      }
+    : undefined;
 
   // 行クリックでチェック切り替え
   const handleRowClick = useCallback(

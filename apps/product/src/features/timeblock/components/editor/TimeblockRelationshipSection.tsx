@@ -18,6 +18,12 @@ export interface TimeblockRelationshipItem {
   tagName: string;
   tagColor: string | null;
   tagIcon: string | null;
+  /**
+   * true ならタグ自体が存在しない（未分類）。tagName は表示用に
+   * `common.tags.noTag` へ潰れているため、実在シグナルは別途この
+   * フィールドで保持する（呼び出し元が tag_id の null 判定から算出）。
+   */
+  isUncategorized: boolean;
   startAt: Date;
   endAt: Date;
 }
@@ -79,7 +85,13 @@ export function TimeblockRelationshipSection(props: TimeblockRelationshipSection
         aria-label={openLabel}
         onClick={() => props.onOpen(item.id, kind)}
       >
-        <TagIcon icon={item.tagIcon} color={item.tagColor} size="sm" className="shrink-0" />
+        <TagIcon
+          icon={item.tagIcon}
+          color={item.tagColor}
+          size="sm"
+          className="shrink-0"
+          isUncategorized={item.isUncategorized}
+        />
         <span className="min-w-0 flex-1">
           <span className="text-foreground block truncate text-sm">{item.tagName}</span>
           <span className="text-muted-foreground block truncate text-xs tabular-nums">

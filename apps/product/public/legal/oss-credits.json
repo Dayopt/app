@@ -698,13 +698,6 @@
     "repository": "https://github.com/resend/react-email.git"
   },
   {
-    "name": "@reduxjs/toolkit",
-    "version": "2.12.0",
-    "license": "MIT",
-    "repository": "https://github.com/reduxjs/redux-toolkit.git",
-    "publisher": "Mark Erikson <mark@isquaredsoftware.com>"
-  },
-  {
     "name": "@rollup/plugin-commonjs",
     "version": "28.0.1",
     "license": "MIT",
@@ -884,20 +877,6 @@
     "publisher": "Dmitry Chestnykh"
   },
   {
-    "name": "@standard-schema/spec",
-    "version": "1.1.0",
-    "license": "MIT",
-    "repository": "https://github.com/standard-schema/standard-schema",
-    "publisher": "Colin McDonnell"
-  },
-  {
-    "name": "@standard-schema/utils",
-    "version": "0.3.0",
-    "license": "MIT",
-    "repository": "https://github.com/standard-schema/standard-schema",
-    "publisher": "Fabian Hiller"
-  },
-  {
     "name": "@supabase/auth-js",
     "version": "2.110.7",
     "license": "MIT",
@@ -1050,60 +1029,6 @@
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
   },
   {
-    "name": "@types/d3-array",
-    "version": "3.2.2",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-  },
-  {
-    "name": "@types/d3-color",
-    "version": "3.1.3",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-  },
-  {
-    "name": "@types/d3-ease",
-    "version": "3.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-  },
-  {
-    "name": "@types/d3-interpolate",
-    "version": "3.0.4",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-  },
-  {
-    "name": "@types/d3-path",
-    "version": "3.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-  },
-  {
-    "name": "@types/d3-scale",
-    "version": "4.0.9",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-  },
-  {
-    "name": "@types/d3-shape",
-    "version": "3.1.8",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-  },
-  {
-    "name": "@types/d3-time",
-    "version": "3.0.4",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-  },
-  {
-    "name": "@types/d3-timer",
-    "version": "3.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-  },
-  {
     "name": "@types/eslint",
     "version": "9.6.1",
     "license": "MIT",
@@ -1142,12 +1067,6 @@
   {
     "name": "@types/react-dom",
     "version": "19.2.3",
-    "license": "MIT",
-    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-  },
-  {
-    "name": "@types/use-sync-external-store",
-    "version": "0.0.6",
     "license": "MIT",
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
   },
@@ -1686,83 +1605,6 @@
     "publisher": "Fredrik Nicol <fredrik.nicol@gmail.com>"
   },
   {
-    "name": "d3-array",
-    "version": "3.2.4",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-array.git",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-color",
-    "version": "3.1.0",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-color.git",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-ease",
-    "version": "3.0.1",
-    "license": "BSD-3-Clause",
-    "repository": "https://github.com/d3/d3-ease.git",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-format",
-    "version": "3.1.2",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-format.git",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-interpolate",
-    "version": "3.0.1",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-interpolate.git",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-path",
-    "version": "3.1.0",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-path.git",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-scale",
-    "version": "4.0.2",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-scale.git",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-shape",
-    "version": "3.2.0",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-shape.git",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-time",
-    "version": "3.1.0",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-time.git",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-time-format",
-    "version": "4.1.0",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-time-format.git",
-    "publisher": "Mike Bostock"
-  },
-  {
-    "name": "d3-timer",
-    "version": "3.0.1",
-    "license": "ISC",
-    "repository": "https://github.com/d3/d3-timer.git",
-    "publisher": "Mike Bostock"
-  },
-  {
     "name": "date-fns",
     "version": "4.4.0",
     "license": "MIT",
@@ -1801,13 +1643,6 @@
     "license": "MIT",
     "repository": "sindresorhus/decamelize",
     "publisher": "Sindre Sorhus"
-  },
-  {
-    "name": "decimal.js-light",
-    "version": "2.5.1",
-    "license": "MIT",
-    "repository": "https://github.com/MikeMcl/decimal.js-light.git",
-    "publisher": "Michael Mclaughlin"
   },
   {
     "name": "deepmerge",
@@ -1980,12 +1815,6 @@
     "publisher": "Jordan Harband <ljharb@gmail.com>"
   },
   {
-    "name": "es-toolkit",
-    "version": "1.49.0",
-    "license": "MIT",
-    "repository": "https://github.com/toss/es-toolkit.git"
-  },
-  {
     "name": "esbuild",
     "version": "0.28.1",
     "license": "MIT",
@@ -2047,13 +1876,6 @@
     "version": "1.8.1",
     "license": "MIT",
     "repository": "jshttp/etag"
-  },
-  {
-    "name": "eventemitter3",
-    "version": "5.0.4",
-    "license": "MIT",
-    "repository": "git://github.com/primus/eventemitter3.git",
-    "publisher": "Arnout Kazemier"
   },
   {
     "name": "events",
@@ -2325,13 +2147,6 @@
     "publisher": "Jan Amann <jan@amann.work>"
   },
   {
-    "name": "immer",
-    "version": "11.1.11",
-    "license": "MIT",
-    "repository": "https://github.com/immerjs/immer.git",
-    "publisher": "Michel Weststrate <info@michel.codes>"
-  },
-  {
     "name": "import-in-the-middle",
     "version": "3.3.1",
     "license": "Apache-2.0",
@@ -2350,13 +2165,6 @@
     "license": "MIT",
     "repository": "https://github.com/guilhermerodz/input-otp.git",
     "publisher": "Guilherme Rodz <g@rodz.dev>"
-  },
-  {
-    "name": "internmap",
-    "version": "2.0.3",
-    "license": "ISC",
-    "repository": "https://github.com/mbostock/internmap.git",
-    "publisher": "Mike Bostock"
   },
   {
     "name": "intl-messageformat",
@@ -3067,19 +2875,6 @@
     "repository": "https://github.com/facebook/react.git"
   },
   {
-    "name": "react-is",
-    "version": "17.0.2",
-    "license": "MIT",
-    "repository": "https://github.com/facebook/react.git"
-  },
-  {
-    "name": "react-redux",
-    "version": "9.3.0",
-    "license": "MIT",
-    "repository": "github:reduxjs/react-redux",
-    "publisher": "Dan Abramov <dan.abramov@me.com> (https://github.com/gaearon)"
-  },
-  {
     "name": "react-remove-scroll",
     "version": "2.7.2",
     "license": "MIT",
@@ -3108,26 +2903,6 @@
     "publisher": "Thorsten Lorenz <thlorenz@gmx.de> (thlorenz.com)"
   },
   {
-    "name": "recharts",
-    "version": "3.9.2",
-    "license": "MIT",
-    "repository": "https://github.com/recharts/recharts.git",
-    "publisher": "recharts group"
-  },
-  {
-    "name": "redux",
-    "version": "5.0.1",
-    "license": "MIT",
-    "repository": "github:reduxjs/redux"
-  },
-  {
-    "name": "redux-thunk",
-    "version": "3.1.0",
-    "license": "MIT",
-    "repository": "github:reduxjs/redux-thunk",
-    "publisher": "Dan Abramov <dan.abramov@me.com>"
-  },
-  {
     "name": "require-directory",
     "version": "2.1.1",
     "license": "MIT",
@@ -3154,12 +2929,6 @@
     "license": "ISC",
     "repository": "ssh://git@github.com/yargs/require-main-filename.git",
     "publisher": "Ben Coe <ben@npmjs.com>"
-  },
-  {
-    "name": "reselect",
-    "version": "5.2.0",
-    "license": "MIT",
-    "repository": "https://github.com/reduxjs/reselect.git"
   },
   {
     "name": "resend",
@@ -3486,13 +3255,6 @@
     "publisher": "webpack Contrib Team"
   },
   {
-    "name": "tiny-invariant",
-    "version": "1.3.3",
-    "license": "MIT",
-    "repository": "https://github.com/alexreardon/tiny-invariant.git",
-    "publisher": "Alex Reardon <alexreardon@gmail.com>"
-  },
-  {
     "name": "tinyexec",
     "version": "1.2.4",
     "license": "MIT",
@@ -3634,13 +3396,6 @@
     "license": "MIT",
     "repository": "https://github.com/emilkowalski/vaul.git",
     "publisher": "Emil Kowalski <e@emilkowal.ski>"
-  },
-  {
-    "name": "victory-vendor",
-    "version": "37.3.6",
-    "license": "MIT AND ISC",
-    "repository": "https://github.com/FormidableLabs/victory",
-    "publisher": "Formidable"
   },
   {
     "name": "watchpack",

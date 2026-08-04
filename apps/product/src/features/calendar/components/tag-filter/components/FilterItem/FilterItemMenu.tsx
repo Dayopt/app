@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Archive,
   BarChart3,
   Check,
   Eye,
@@ -46,7 +47,7 @@ interface FilterItemMenuProps {
   groupOptions?: GroupOption[] | undefined;
   /** グループに属するタグか（色変更はグループ単位のため個別無効） */
   isGrouped?: boolean | undefined;
-  /** モバイル時: メニュー項目を簡略化（このタグだけ表示 + 削除のみ） */
+  /** モバイル時: メニュー項目を簡略化（このタグだけ表示 + アーカイブ + 削除のみ） */
   isMobile?: boolean | undefined;
 
   // Handlers
@@ -57,6 +58,7 @@ interface FilterItemMenuProps {
   onOpenMergeModal: () => void;
   onShowOnlyTag: () => void;
   onViewStats?: (() => void) | undefined;
+  onArchiveTag?: (() => void) | undefined;
   onDeleteTag: (() => void) | undefined;
 }
 
@@ -76,6 +78,7 @@ export function FilterItemMenu({
   onOpenMergeModal,
   onShowOnlyTag,
   onViewStats,
+  onArchiveTag,
   onDeleteTag,
 }: FilterItemMenuProps) {
   const t = useTranslations();
@@ -83,7 +86,9 @@ export function FilterItemMenu({
   // 自分自身を親候補から除外
   const parentOptions = (groupOptions ?? []).filter((group) => group.id !== currentTagId);
 
-  // モバイル: 「このタグだけ表示」+「削除」のみ。管理系は設定画面へ委譲
+  // モバイル: 「このタグだけ表示」+「アーカイブ」+「削除」のみ。管理系は設定画面へ委譲。
+  // アーカイブはこのサイドバーメニューが唯一の UI 呼び出し元のため、ここに出さないと
+  // モバイルユーザーはアーカイブを一切使えない（#1576）。
   if (isMobile) {
     return (
       <DropdownMenuContent align="start" side="right">
@@ -91,6 +96,12 @@ export function FilterItemMenu({
           <Eye className="mr-2 size-4" />
           {t('calendar.filter.showOnlyThis')}
         </DropdownMenuItem>
+        {onArchiveTag && (
+          <DropdownMenuItem onClick={onArchiveTag}>
+            <Archive className="mr-2 size-4" />
+            {t('calendar.filter.archive')}
+          </DropdownMenuItem>
+        )}
         {onDeleteTag && (
           <>
             <DropdownMenuSeparator />
@@ -204,6 +215,14 @@ export function FilterItemMenu({
         <DropdownMenuItem onClick={onViewStats}>
           <BarChart3 className="mr-2 size-4" />
           {t('calendar.filter.viewStats')}
+        </DropdownMenuItem>
+      )}
+
+      {/* アーカイブ（可逆なので確認なし） */}
+      {onArchiveTag && (
+        <DropdownMenuItem onClick={onArchiveTag}>
+          <Archive className="mr-2 size-4" />
+          {t('calendar.filter.archive')}
         </DropdownMenuItem>
       )}
 

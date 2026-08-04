@@ -164,7 +164,10 @@
       "updateFailed": "タグを更新できませんでした。もう一度お試しください",
       "deleteFailed": "タグを削除できませんでした。もう一度お試しください",
       "duplicateName": "この名前のタグは既に存在します",
-      "groupNameConflict": "この名前は既存のグループまたはタグと競合しています"
+      "groupNameConflict": "この名前は既存のグループまたはタグと競合しています",
+      "archiveFailed": "タグをアーカイブできませんでした。もう一度お試しください",
+      "restoreFailed": "タグを復元できませんでした。もう一度お試しください",
+      "restoreDuplicateName": "同じ名前のタグが既にあります。名前を変えてから復元してください"
     },
     "delete": {
       "confirmTitle": "タグを削除しますか？",
@@ -186,14 +189,8 @@
       "willBeRemovedFromStats": "統計情報からタグが削除されます",
       "confirmInputLabel": "削除を確定するには「{name}」と入力してください",
       "deleting": "削除中...",
-      "permanentDelete": "完全に削除"
-    },
-    "deleteStrategy": {
-      "usedByTimeblocks": "このタグは{count}件のタイムブロックに使用されています",
-      "deleteTimeblocks": "タグと一緒にタイムブロックも削除",
-      "reassign": "タイムブロックを別のタグに付け替え",
-      "selectTarget": "付け替え先のタグを選択",
-      "searchTags": "タグを検索..."
+      "permanentDelete": "完全に削除",
+      "unclassifyDescription": "関連する{count}件の予定・記録は削除されず、未分類になります。この操作は取り消せません。"
     },
     "validation": {
       "nameRequired": "タグ名は必須です",
@@ -216,7 +213,6 @@
       "selectedCount": "{count}件選択中",
       "group": "グループ",
       "all": "すべて",
-      "uncategorized": "未分類",
       "usage": "使用状況",
       "unused": "未使用",
       "frequentlyUsed": "よく使う",
@@ -236,7 +232,6 @@
     },
     "sidebar": {
       "allTags": "すべてのタグ",
-      "uncategorized": "未分類",
       "archive": "アーカイブ",
       "groups": "グループ",
       "noGroups": "まだグループがありません",
@@ -312,35 +307,13 @@
       "confirm": "統合"
     },
     "archive": {
-      "confirmTitle": "タグ「{name}」をアーカイブしますか？",
-      "warning": "アーカイブされたタグは新規のタグ付けには使用できません",
-      "currentUsage": "現在の使用状況:",
-      "afterArchive": "アーカイブすると:",
-      "noNewTagging": "新規のタグ付けには使用できなくなります",
-      "existingItemsStillShown": "既存のアイテムには引き続き表示されます",
-      "statsStillIncluded": "統計データにも引き続き含まれます",
-      "canRestoreAnytime": "アーカイブページからいつでも復元できます",
-      "archiving": "アーカイブ中...",
-      "archiveButton": "アーカイブ",
-      "restoreConfirm": "タグ「{name}」を復元しますか？\n\n復元されたタグは再び新規のタグ付けに使用できます。",
-      "restoreConfirmTitle": "タグ「{name}」を復元しますか？",
-      "restoreConfirmDescription": "復元されたタグは再び新規のタグ付けに使用できます。",
-      "restoreSuccess": "タグ「{name}」を復元しました",
-      "restoreFailed": "タグを復元できませんでした。もう一度お試しください",
-      "deleteSuccess": "タグ「{name}」を完全に削除しました",
-      "deleteFailed": "タグを削除できませんでした。もう一度お試しください",
-      "bulkDeleteConfirm": "選択した{count}件のタグを完全に削除しますか？",
-      "bulkDeleteConfirmTitle": "{count}件のタグを完全に削除しますか？",
-      "bulkDeleteConfirmDescription": "選択した{count}件のタグは完全に削除されます。取り消せません。",
-      "noArchivedTags": "まだアーカイブされたタグがありません",
-      "restore": "復元",
-      "permanentDelete": "完全に削除",
-      "view": "表示",
-      "showing": "{start}〜{end}件 / 全{total}件",
-      "noItems": "0件",
-      "previousPage": "前のページ",
-      "nextPage": "次のページ",
-      "pageOf": "ページ {current} / {total}"
+      "toast": {
+        "archived": "「{name}」をアーカイブしました",
+        "archivedWithChildren": "「{name}」と子タグ{count}件をアーカイブしました",
+        "restored": "「{name}」を復元しました",
+        "restoredWithConflicts": "「{name}」を復元しました。同じ名前のタグがあるため、子タグ{count}件はアーカイブに残っています",
+        "undo": "元に戻す"
+      }
     },
     "detail": {
       "description": "説明",

@@ -12,6 +12,7 @@ const relatedRecords: TimeblockRelationshipItem[] = [
     tagName: 'API開発',
     tagColor: 'blue',
     tagIcon: 'code-2',
+    isUncategorized: false,
     startAt: new Date('2026-07-14T09:05:00'),
     endAt: new Date('2026-07-14T09:35:00'),
   },
@@ -20,10 +21,22 @@ const relatedRecords: TimeblockRelationshipItem[] = [
     tagName: 'レビュー',
     tagColor: 'green',
     tagIcon: 'search',
+    isUncategorized: false,
     startAt: new Date('2026-07-14T10:10:00'),
     endAt: new Date('2026-07-14T10:55:00'),
   },
 ];
+
+/** タグ削除で未分類化した(#1576) Record。アイコンは中立マーカー(bg-muted + Minus)。 */
+const uncategorizedRecord: TimeblockRelationshipItem = {
+  id: '00000000-0000-4000-8000-000000000103',
+  tagName: 'タグなし',
+  tagColor: null,
+  tagIcon: null,
+  isUncategorized: true,
+  startAt: new Date('2026-07-14T11:00:00'),
+  endAt: new Date('2026-07-14T11:20:00'),
+};
 
 const meta = {
   title: 'Product/Features/Timeblock/TimeblockRelationshipSection',
@@ -52,6 +65,17 @@ export const PlanMultiple: Story = {
     kind: 'plan',
     status: 'success',
     records: relatedRecords,
+    onOpen: fn(),
+    onRetry: fn(),
+  },
+};
+
+/** タグ削除で未分類化したRecordが混じるPlan。当該行だけ中立マーカーを表示する。 */
+export const PlanWithUncategorizedRecord: Story = {
+  args: {
+    kind: 'plan',
+    status: 'success',
+    records: [...relatedRecords, uncategorizedRecord],
     onOpen: fn(),
     onRetry: fn(),
   },
@@ -164,6 +188,13 @@ export const AllPatterns: Story = {
         kind="plan"
         status="success"
         records={relatedRecords}
+        onOpen={fn()}
+        onRetry={fn()}
+      />
+      <TimeblockRelationshipSection
+        kind="plan"
+        status="success"
+        records={[...relatedRecords, uncategorizedRecord]}
         onOpen={fn()}
         onRetry={fn()}
       />

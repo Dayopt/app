@@ -3,6 +3,7 @@ import 'server-only';
 import { z } from 'zod';
 
 import {
+  MCP_MUTATION_RECEIPT_SCHEMA_VERSION,
   McpMutationClient,
   McpMutationError,
   type McpMutationErrorCode,
@@ -15,7 +16,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 import type { McpRequestContext } from '../_context';
 import { MCP_TIMEBLOCK_TIMESTAMP_SCHEMA } from './timeblock-timestamp-schema';
-import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
+import { createMcpToolError, createMcpToolSuccess } from './tool-result';
 
 const operationIdSchema = z.string().uuid();
 const resourceIdSchema = z.string().uuid();
@@ -92,7 +93,13 @@ const recordVersionedInputSchema = z
 function mutationReceiptOutputSchema(resourceType: 'plan' | 'record', deleted: boolean) {
   return z
     .object({
-      schemaVersion: z.literal(MCP_TOOL_SCHEMA_VERSION),
+      // mutation receipt の schemaVersion は読み取り tool の MCP_TOOL_SCHEMA_VERSION とは
+      // 別系統。DB (mcp_mutation_receipts.envelope_version) に冪等性 replay 用として
+      // 永続化された値を apply RPC (apply_mcp_*_v1) がそのまま返すため、
+      // MCP_TOOL_SCHEMA_VERSION を上げても DB 側は追従しない。ここで
+      // MCP_TOOL_SCHEMA_VERSION を使うと SDK の outputSchema 検証が実際の DB 返却値と
+      // 食い違い、全 mutation tool が壊れる。
+      schemaVersion: z.literal(MCP_MUTATION_RECEIPT_SCHEMA_VERSION),
       operationId: operationIdSchema,
       resourceType: z.literal(resourceType),
       resourceId: resourceIdSchema,
@@ -125,6 +132,7 @@ export function registerPlansCreateTool(server: McpServer, ctx: McpRequestContex
           ...input,
           note: input.note ?? null,
           tagId: input.tagId ?? null,
+          userId: ctx.userId,
           connectionId: ctx.connectionId,
           accessTokenId: ctx.tokenId,
         }),
@@ -155,6 +163,7 @@ export function registerPlansUpdateTool(server: McpServer, ctx: McpRequestContex
           ...(input.tagId !== undefined ? { tagId: input.tagId } : {}),
           ...(input.startAt !== undefined ? { startAt: input.startAt } : {}),
           ...(input.endAt !== undefined ? { endAt: input.endAt } : {}),
+          userId: ctx.userId,
           connectionId: ctx.connectionId,
           accessTokenId: ctx.tokenId,
         }),
@@ -227,6 +236,7 @@ export function registerRecordsCreateTool(server: McpServer, ctx: McpRequestCont
           note: input.note ?? null,
           tagId: input.tagId ?? null,
           planId: input.planId ?? null,
+          userId: ctx.userId,
           connectionId: ctx.connectionId,
           accessTokenId: ctx.tokenId,
         }),
@@ -257,6 +267,7 @@ export function registerRecordsUpdateTool(server: McpServer, ctx: McpRequestCont
           ...(input.tagId !== undefined ? { tagId: input.tagId } : {}),
           ...(input.startAt !== undefined ? { startAt: input.startAt } : {}),
           ...(input.endAt !== undefined ? { endAt: input.endAt } : {}),
+          userId: ctx.userId,
           connectionId: ctx.connectionId,
           accessTokenId: ctx.tokenId,
         }),
@@ -329,7 +340,9 @@ async function handleMutation(
 }
 
 interface PublicMutationReceipt {
-  schemaVersion: 1;
+  // MCP_MUTATION_RECEIPT_SCHEMA_VERSION 参照。mutationReceiptOutputSchema と同じ理由で
+  // MCP_TOOL_SCHEMA_VERSION とは独立に保つ。
+  schemaVersion: typeof MCP_MUTATION_RECEIPT_SCHEMA_VERSION;
   operationId: string;
   resourceType: 'plan' | 'record';
   resourceId: string;

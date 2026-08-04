@@ -1,10 +1,11 @@
 interface TimePLDurationRow {
-  tagId: string;
+  /** 未分類（タグ削除で `tag_id = NULL` になった行）は null */
+  tagId: string | null;
   minutes: number;
 }
 
 interface TimePLTagAggregate {
-  tagId: string;
+  tagId: string | null;
   plannedMinutes: number;
   recordedMinutes: number;
   hasPlan: boolean;
@@ -18,12 +19,17 @@ interface TimePLAccumulator {
   hasRecord: boolean;
 }
 
-/** Plan / Record durationをtag別に加算し、各laneを0.1分へ丸める。 */
+/**
+ * Plan / Record durationをtag別に加算し、各laneを0.1分へ丸める。
+ *
+ * `tagId` が null の行は単一の未分類バケットへ畳む（#1576: タグ削除で
+ * Plan / Record が未分類化されるため、集計から落とさない）。
+ */
 export function aggregateTimePLTags(
   plans: ReadonlyArray<TimePLDurationRow>,
   records: ReadonlyArray<TimePLDurationRow>,
 ): TimePLTagAggregate[] {
-  const totalsByTag = new Map<string, TimePLAccumulator>();
+  const totalsByTag = new Map<string | null, TimePLAccumulator>();
   accumulateRows(totalsByTag, plans, 'plannedMinutes', 'hasPlan');
   accumulateRows(totalsByTag, records, 'recordedMinutes', 'hasRecord');
 
@@ -37,7 +43,7 @@ export function aggregateTimePLTags(
 }
 
 function accumulateRows(
-  totalsByTag: Map<string, TimePLAccumulator>,
+  totalsByTag: Map<string | null, TimePLAccumulator>,
   rows: ReadonlyArray<TimePLDurationRow>,
   minutesField: 'plannedMinutes' | 'recordedMinutes',
   presenceField: 'hasPlan' | 'hasRecord',

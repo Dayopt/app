@@ -164,7 +164,10 @@
       "updateFailed": "Failed to update tag",
       "deleteFailed": "Failed to delete tag",
       "duplicateName": "A tag with this name already exists",
-      "groupNameConflict": "This name conflicts with an existing group or tag"
+      "groupNameConflict": "This name conflicts with an existing group or tag",
+      "archiveFailed": "Couldn't archive the tag. Please try again",
+      "restoreFailed": "Couldn't restore the tag. Please try again",
+      "restoreDuplicateName": "A tag with the same name already exists. Rename it before restoring"
     },
     "delete": {
       "confirmTitle": "Delete this tag?",
@@ -186,14 +189,8 @@
       "willBeRemovedFromStats": "Tag will be removed from statistics",
       "confirmInputLabel": "Type \"{name}\" to confirm deletion",
       "deleting": "Deleting...",
-      "permanentDelete": "Permanently Delete"
-    },
-    "deleteStrategy": {
-      "usedByTimeblocks": "This tag is used by {count, plural, one {1 timeblock} other {# timeblocks}}",
-      "deleteTimeblocks": "Delete timeblocks along with the tag",
-      "reassign": "Reassign timeblocks to another tag",
-      "selectTarget": "Select target tag",
-      "searchTags": "Search tags..."
+      "permanentDelete": "Permanently Delete",
+      "unclassifyDescription": "{count, plural, one {The 1 related plan or record} other {The # related plans and records}} will be kept and become uncategorized. This action cannot be undone."
     },
     "validation": {
       "nameRequired": "Tag name is required",
@@ -216,7 +213,6 @@
       "selectedCount": "{count} tag(s) selected",
       "group": "Group",
       "all": "All",
-      "uncategorized": "Uncategorized",
       "usage": "Usage",
       "unused": "Unused",
       "frequentlyUsed": "Frequently Used",
@@ -236,7 +232,6 @@
     },
     "sidebar": {
       "allTags": "All Tags",
-      "uncategorized": "Uncategorized",
       "archive": "Archive",
       "groups": "Groups",
       "noGroups": "No groups",
@@ -312,35 +307,13 @@
       "confirm": "Merge"
     },
     "archive": {
-      "confirmTitle": "Archive tag \"{name}\"?",
-      "warning": "Archived tags cannot be used for new tagging",
-      "currentUsage": "Current usage:",
-      "afterArchive": "After archiving:",
-      "noNewTagging": "Cannot be used for new tagging",
-      "existingItemsStillShown": "Will still appear on existing items",
-      "statsStillIncluded": "Will still be included in statistics",
-      "canRestoreAnytime": "Can be restored anytime from archive page",
-      "archiving": "Archiving...",
-      "archiveButton": "Archive",
-      "restoreConfirm": "Restore tag \"{name}\"?\n\nRestored tags can be used for tagging again.",
-      "restoreConfirmTitle": "Restore tag \"{name}\"?",
-      "restoreConfirmDescription": "Restored tags can be used for tagging again.",
-      "restoreSuccess": "Tag \"{name}\" has been restored",
-      "restoreFailed": "Failed to restore tag",
-      "deleteSuccess": "Tag \"{name}\" has been permanently deleted",
-      "deleteFailed": "Failed to delete tag",
-      "bulkDeleteConfirm": "Permanently delete {count} selected tag(s)?",
-      "bulkDeleteConfirmTitle": "Permanently delete {count} tag(s)?",
-      "bulkDeleteConfirmDescription": "This will permanently delete the selected {count} tag(s). This action cannot be undone.",
-      "noArchivedTags": "No archived tags",
-      "restore": "Restore",
-      "permanentDelete": "Delete permanently",
-      "view": "View",
-      "showing": "{start}-{end} of {total} items",
-      "noItems": "0 items",
-      "previousPage": "Previous page",
-      "nextPage": "Next page",
-      "pageOf": "Page {current} / {total}"
+      "toast": {
+        "archived": "Archived \"{name}\"",
+        "archivedWithChildren": "Archived \"{name}\" and {count, plural, one {1 child tag} other {# child tags}}",
+        "restored": "Restored \"{name}\"",
+        "restoredWithConflicts": "Restored \"{name}\". {count, plural, one {1 child tag} other {# child tags}} stayed archived because a tag with the same name exists",
+        "undo": "Undo"
+      }
     },
     "detail": {
       "description": "Description",

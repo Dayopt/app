@@ -10,7 +10,7 @@
 // Components
 export {
   // Modals & Dialogs
-  TagDeleteStrategyDialog,
+  TagDeleteConfirmDialog,
 } from './components';
 export { ColorPaletteMenuItems } from './components/ColorPaletteMenuItems';
 export { IconPickerDropdownItems } from './components/IconPicker';
@@ -25,10 +25,13 @@ export type { TagColorEntry, TagColorName } from './lib/tag-colors';
 // Hooks
 export {
   tagKeys,
+  useArchiveTag,
+  useArchivedTags,
   useCreateTag,
   useDeleteTag,
   useMergeTag,
   useReorderTags,
+  useRestoreTag,
 
   // Tags CRUD
   useTags,
