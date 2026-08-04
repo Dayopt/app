@@ -781,8 +781,7 @@ export function buildManifest({
   before,
   promoted,
   rolledBack,
-  externallyLive = new Map(),
-  movedAway = new Map(),
+  observedLive = new Map(),
   gatesPassed = new Map(),
 }) {
   const promotedBy = new Map(promoted.map((entry) => [entry.project.name, entry]));
@@ -802,55 +801,39 @@ export function buildManifest({
       const restored = rolled
         ? { id: entry.previous?.id ?? null, sha: entry.previous?.sha ?? null }
         : null;
-      // **この run が置いたのではない deployment が live** と観測された分。待機中の
-      // 外部 promote でも、我々の promote 後の hotfix でも入る。実際に配信している
-      // ものを載せるのが目的なので、他のどの推定よりも優先する。
-      // 観測した移動は rollback の記録より優先する。戻した後に別 deployment が
-      // live になっていれば、`rolled-back`（= previous を配信中）は事実と違う。
-      const moved = movedAway.get(project.name) ?? null;
-      // 外部 actor が置いた / 我々の操作の後に動いた分。**promote entry があっても
-      // 捨てない。** 観測した ID が「promote した candidate」でも「戻した previous」でも
-      // ないなら、それが今 live なので、rollback 記録より優先する。
-      const observed = externallyLive.get(project.name) ?? null;
-      const external =
-        observed && observed.id !== entry?.deployment?.id && observed.id !== entry?.previous?.id
-          ? observed
-          : entry
-            ? null
-            : observed;
+      // **観測は 1 本に統一する。** どの経路で読んだかを問わず「最後に観測した live」
+      // だけを持ち、分類はそこから導く。2 つの map（同一 SHA の入れ替わり用と
+      // それ以外用）に分けていた頃は、経路ごとに拾い漏れが出続けた。
+      const observed = observedLive.get(project.name) ?? null;
 
-      // **最終的に「今 live」と判断した記録。観測が最優先。** 我々が置いたつもりの
-      // 値（serving / restored）より、後から観測した実状態を信じる。
-      const effective = moved ?? external ?? serving ?? restored ?? live;
+      // 我々が置いたつもりの値。観測が無い時のみ使う。
+      const placed = serving ?? restored ?? null;
+      const effective = observed ?? placed ?? live;
 
-      // 観測が「我々の操作の結果」と食い違っている = この run が置いたものは live で
-      // ない。promote / rollback の記録より観測を優先して分類する。
-      const overridesOurRecord = Boolean(entry && external);
-
-      // **認証は deployment 単位。** 同じ commit の別 deployment は gate を通っていない
-      // ので、project 名だけで「認証済み」と扱ってはいけない。
+      // **認証は deployment 単位。** 同じ commit の別 deployment は gate を通っていない。
       const certified = gatesPassed.get(project.name) === (effective?.id ?? null);
 
-      const action = !effective?.id
-        ? // どの経路でも deployment を観測できていない = domain が配信されていない。
-          // run 開始時点から未割当だった場合もここに入る（`pending` と書くと
-          // 既知の outage を「未着手」として隠すことになる）。
-          'unassigned'
-        : moved
-          ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
-          : entry && !overridesOurRecord
-            ? rolled
-              ? 'rolled-back'
-              : 'promoted'
-            : effective.sha === sha
-              ? certified
-                ? 'already-serving'
-                : 'uncertified' // gate を通らずに live。**手動で戻す判断が要る**
-              : entry || externallyLive.has(project.name)
-                ? 'moved-externally' // 我々の記録とも target とも違う deployment が live
-                : decision?.affected
-                  ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
-                  : 'skipped';
+      /**
+       * 分類の決定表。**観測が我々の記録より強い**（実際に配信しているものを載せる）。
+       */
+      const classify = () => {
+        if (!effective?.id) return 'unassigned';
+
+        const isOurCandidate = effective.id === entry?.deployment?.id;
+        const isOurPrevious = entry?.previous?.id && effective.id === entry.previous.id;
+
+        if (entry && isOurCandidate && !rolled) return 'promoted';
+        if (entry && isOurPrevious && rolled) return 'rolled-back';
+
+        // ここから先は「我々の操作の結果ではないものが live」。
+        if (effective.sha === sha) return certified ? 'already-serving' : 'uncertified';
+        if (effective.id === (live?.id ?? null) && !entry) {
+          return decision?.affected ? 'pending' : 'skipped';
+        }
+        return 'moved-externally';
+      };
+
+      const action = classify();
 
       return {
         name: project.name,
@@ -875,7 +858,7 @@ export function buildManifest({
         // この run が観測していない project の値は run 開始時点のもの。candidate 待機
         // （最大 25 分）の間に人が Instant Rollback していれば実態とズレる。復旧時に
         // 「いつ観測した値か」を取り違えないよう、出所を値と一緒に残す。
-        observedAt: moved || entry || external ? 'this-run' : 'run-start',
+        observedAt: observed || entry ? 'this-run' : 'run-start',
       };
     }),
   };
@@ -997,7 +980,14 @@ export async function runProductionRelease({
 
   // この run が promote していないのに target SHA が live になった project。
   // 待機中や gate 実行中に外部 actor が同じ candidate を promote した場合に入る。
-  const externallyLive = new Map();
+  /**
+   * **この run が最後に観測した live（project 名 → {id, sha}）。**
+   *
+   * どの経路（待機後の再取得 / promote 直前 / rollback / 最終 refresh）で読んだかを
+   * 問わず、ここへ上書きする。manifest の分類はこの 1 本から導く。観測用途で map を
+   * 分けていた頃は、経路ごとに拾い漏れが出続けた。
+   */
+  const observedLive = new Map();
 
   /**
    * **この run の gate（production smoke + config audit + live 検証）を実際に通した
@@ -1015,7 +1005,6 @@ export async function runProductionRelease({
   // この run が promote した後に他者が別 deployment を live にした project。
   // rollback せず残すため、manifest には観測した live を載せる（我々の candidate を
   // 配信中と誤記すると、runbook の手順で「戻す」対象に見えてしまう）。
-  const movedAway = new Map();
 
   /**
    * 失敗 manifest を作る前に、全 project の live を読み直して観測を反映する。
@@ -1032,7 +1021,7 @@ export async function runProductionRelease({
       // その後に動いた場合、`rolled-back` のまま古い deployment を案内してしまう）。
       const expected = overrides.has(project.name)
         ? overrides.get(project.name)
-        : (externallyLive.get(project.name)?.id ?? before.get(project.name)?.id ?? null);
+        : (observedLive.get(project.name)?.id ?? before.get(project.name)?.id ?? null);
       const live = await getLiveProduction({
         projectName: project.name,
         productionDomain: project.productionDomain,
@@ -1046,11 +1035,9 @@ export async function runProductionRelease({
 
       if (live?.sha === sha) {
         // target を配信している。gate を通っていなければ `uncertified` になる。
-        externallyLive.set(project.name, { id: live.id, sha: live.sha });
-        movedAway.delete(project.name);
+        observedLive.set(project.name, { id: live.id, sha: live.sha });
       } else {
-        movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
-        externallyLive.delete(project.name);
+        observedLive.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
       }
     }
   };
@@ -1064,8 +1051,7 @@ export async function runProductionRelease({
       before,
       promoted,
       rolledBack,
-      externallyLive,
-      movedAway,
+      observedLive,
       gatesPassed,
     });
 
@@ -1138,7 +1124,7 @@ export async function runProductionRelease({
         if (live?.id !== wanted) {
           // live が null（alias 未割当）も観測結果。落とすと manifest が
           // 「我々の candidate を配信中」のまま残る。
-          movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
+          observedLive.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
           throw new ReleaseError(
             `${project.name}: production serves ${live?.id ?? 'none'}, not the released ` +
               `${wanted}; refusing to report ${sha} as live`,
@@ -1153,7 +1139,7 @@ export async function runProductionRelease({
       // 証明している内容ではないので、「SHA が同じなら受理」は認証の穴になる。
       const startId = before.get(project.name)?.id ?? null;
       if (live?.id !== startId) {
-        movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
+        observedLive.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
         throw new ReleaseError(
           `${project.name}: production moved to ${live?.id ?? 'no deployment'} after the gates ran; ` +
             `that deployment was never smoked or audited, so ${sha} is not certified`,
@@ -1165,7 +1151,7 @@ export async function runProductionRelease({
         ? sha
         : (before.get(project.name)?.sha ?? null);
       if (wantedSha && live?.sha !== wantedSha) {
-        movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
+        observedLive.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
         throw new ReleaseError(
           `${project.name}: production moved to ${live?.sha ?? 'an unknown commit'} while the ` +
             `gate was running; refusing to report ${sha} as live`,
@@ -1289,16 +1275,12 @@ export async function runProductionRelease({
         }
       } catch (error) {
         reportSweepDrift((await sweepSettings()).drifted);
-        // **観測した deployment ID の変化で判断する。** 同じ commit の別 deployment へ
-        // 動いた場合は `externallyLive` 側が書き換わるので、`movedAway` の件数だけを
-        // 見ていると取りこぼす。
+        // **観測した deployment ID の変化で判断する。** 件数では同一 SHA の
+        // 入れ替わりを取りこぼす。
         const snapshot = () =>
           projects
             .map((project) => {
-              const seen =
-                movedAway.get(project.name) ??
-                externallyLive.get(project.name) ??
-                before.get(project.name);
+              const seen = observedLive.get(project.name) ?? before.get(project.name);
               return `${project.name}:${seen?.id ?? 'none'}`;
             })
             .join('|');
@@ -1353,7 +1335,7 @@ export async function runProductionRelease({
       const candidate = candidates.find((c) => c.project.name === project.name);
       if (!candidate) return;
       if (current.get(project.name)?.id === candidate.deployment.id) {
-        externallyLive.set(project.name, { id: candidate.deployment.id, sha });
+        observedLive.set(project.name, { id: candidate.deployment.id, sha });
       }
     };
     for (const project of targets) {
@@ -1401,8 +1383,12 @@ export async function runProductionRelease({
         const now = current.get(project.name);
         // now が null（alias 未割当）も観測結果。落とすと manifest が run 開始時点の
         // deployment を「未着手」として残す。
-        movedAway.set(project.name, { id: now?.id ?? null, sha: now?.sha ?? null });
+        observedLive.set(project.name, { id: now?.id ?? null, sha: now?.sha ?? null });
       }
+
+      // skip した project の alias が待機中に動いていても、ここまで誰も読み直して
+      // いない（待機後の再取得は targets だけ）。manifest を作る前に揃える。
+      await refreshObservedLive();
 
       // 外部の promote は auto-assign を true へ戻す（vercel/vercel#15095）。
       // ここで掃かずに抜けると、次の main merge が gate を通らず直接公開される。
@@ -1522,7 +1508,7 @@ export async function runProductionRelease({
           // 入らないため）。復旧先は run 開始時点の deployment。
           // この run は動かしていないが live ではある。manifest で「未着手」に見えないよう
           // 記録する（rollback 対象には入れない。戻し先を観測していないため）。
-          externallyLive.set(project.name, { id: deployment.id, sha });
+          observedLive.set(project.name, { id: deployment.id, sha });
           continue;
         }
 
@@ -1530,7 +1516,7 @@ export async function runProductionRelease({
           // 観測した実 deployment を manifest へ載せてから抜ける。run 開始時点の値の
           // ままだと「未着手（pending）」に見え、復旧手順が live を取り違える。
           // live が null（alias 未割当）も観測結果なので落とさない。
-          movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
+          observedLive.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
           throw new ReleaseError(
             `${project.name}: production moved to ${live?.id ?? 'none'} while the gate was ` +
               `running; refusing to promote ${deployment.id} over it`,
@@ -1687,7 +1673,7 @@ export async function runProductionRelease({
         for (const { entry, live } of rollbackError.observedLive ??
           rollbackError.movedExternally ??
           []) {
-          movedAway.set(entry.project.name, { id: live.id ?? null, sha: live.sha ?? null });
+          observedLive.set(entry.project.name, { id: live.id ?? null, sha: live.sha ?? null });
         }
       } finally {
         // rollback の成否に関わらず、promote しなかった project の設定も掃く。

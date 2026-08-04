@@ -2227,7 +2227,7 @@ describe('buildManifest', () => {
     const midRun = buildManifest({
       ...base,
       before: new Map([[project.name, { id: 'dpl_web_old', sha: OLD_SHA }]]),
-      externallyLive: new Map([[project.name, { id: 'dpl_web_new', sha: SHA }]]),
+      observedLive: new Map([[project.name, { id: 'dpl_web_new', sha: SHA }]]),
       gatesPassed: new Map(),
     });
     expect(midRun.projects[0]).toMatchObject({
@@ -2271,7 +2271,7 @@ describe('buildManifest', () => {
       ...base,
       promoted: [entry],
       rolledBack: [entry],
-      externallyLive: new Map([[project.name, { id: 'dpl_web_other', sha: SHA }]]),
+      observedLive: new Map([[project.name, { id: 'dpl_web_other', sha: SHA }]]),
       gatesPassed: new Map(),
     });
     expect(manifest.projects[0]).toMatchObject({
@@ -2283,7 +2283,7 @@ describe('buildManifest', () => {
   it('distinguishes an unassigned domain from another actor deployment', () => {
     const unassigned = buildManifest({
       ...base,
-      movedAway: new Map([[project.name, { id: null, sha: null }]]),
+      observedLive: new Map([[project.name, { id: null, sha: null }]]),
     });
     expect(unassigned.projects[0]).toMatchObject({
       action: 'unassigned',
@@ -2293,7 +2293,7 @@ describe('buildManifest', () => {
 
     const moved = buildManifest({
       ...base,
-      movedAway: new Map([[project.name, { id: 'dpl_web_hotfix', sha: OLD_SHA }]]),
+      observedLive: new Map([[project.name, { id: 'dpl_web_hotfix', sha: OLD_SHA }]]),
     });
     expect(moved.projects[0]).toMatchObject({
       action: 'moved-externally',

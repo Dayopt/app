@@ -1136,7 +1136,7 @@ npm run analytics:stats
 
 **壊れている project だけを戻す。Product / Web を同じ SHA へ揃えようとしない。** release は変更の影響を受ける project だけを進めるため、両者の live SHA が違うのは正常な定常状態であり、揃える先の deployment がそもそも存在しないこともある。
 
-戻し先は `Production Release` run の **`release-manifest` artifact**（保持 90 日）が一次情報。project ごとに `action`（promoted / rolled-back / skipped / already-serving / moved-externally）と `deploymentId` / `previousDeploymentId` が入っている。`action: promoted` の project の `previousDeploymentId` が戻し先。`skipped` / `already-serving` はこの release が触っていないので巻き添えで戻さず、`moved-externally` は他者が置いた deployment が live なので**戻さずに本人へ確認する**。artifact が無い古い run では run summary の `previous` deployment id を使う。
+戻し先は `Production Release` run の **`release-manifest` artifact**（保持 90 日）が一次情報。project ごとに `action`（promoted / rolled-back / skipped / already-serving / moved-externally）と `deploymentId` / `previousDeploymentId` が入っている。**まず manifest の `status` を見る**（`settings-drift` なら production は正しい SHA を配信しており、deployment は戻さない。判断表は Playbook 2 ケース0-B が正本）。`status: failed` の場合、`action: promoted` の project の `previousDeploymentId` が戻し先。`skipped` / `already-serving` はこの release が触っていないので巻き添えで戻さず、`moved-externally` は他者が置いた deployment が live なので**戻さずに本人へ確認する**。artifact が無い古い run では run summary の `previous` deployment id を使う。
 
 - https://vercel.com/dayopt/product/deployments
 - https://vercel.com/dayopt/web/deployments
