@@ -154,10 +154,15 @@ smoke と bypass secret の実働テストになる。**bypass secret を登録�
 status が failure になるため、その間は tag を打てない）。
 
 promote 後は **両 production domain** を smoke する。片側だけ進んだ production はその組み合わせが
-初めて世に出る状態で、cross-app の破損（web の CTA が product の消えた route を指す等）は
-candidate 単体の smoke では出ないため。この smoke には bypass secret を送らない（production domain に
-Deployment Protection が付く設定事故そのものを捕まえる）。失敗した場合は **この run が promote した
-project だけ**を rollback する。
+初めて世に出る状態で、実際に配信している domain の健全性は candidate 単体の smoke では出ないため。
+この smoke には bypass secret を送らない（production domain に Deployment Protection が付く設定事故
+そのものを捕まえる）。失敗した場合は **この run が promote した project だけ**を rollback する。
+promote していない側の失敗でも rollback する — cross-app 破損ではそれが唯一の復旧手段だから。
+
+**検出できるのは smoke check に載っている経路だけ**で、cross-app の破損一般ではない。web から
+product への唯一の入口である signup CTA（`app.dayopt.app/auth/signup`）は product の check に含めて
+あるが、それ以外のリンク切れは検出しない。Force Promote ではこの smoke も skip される（break-glass は
+gate を全て飛ばす）。
 
 promote 順は web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
 この run が promote していない project（前の run から対象 SHA を配信している側など）は戻し先を持たない

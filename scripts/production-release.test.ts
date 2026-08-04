@@ -31,6 +31,7 @@ const MATCHED_PATHS: Record<string, string> = {
   '/ja': '/ja',
   '/api/health': '/api/health',
   '/auth/login': '/[locale]/auth/login',
+  '/auth/signup': '/[locale]/auth/signup',
   '/ja/auth/login': '/[locale]/auth/login',
 };
 
@@ -1138,6 +1139,58 @@ describe('runProductionRelease (affected-aware)', () => {
         previousDeploymentId: 'dpl_product_old',
       }),
     ]);
+  });
+
+  it('keeps rolled-back projects out of the surviving list when a rollback strands one', async () => {
+    // 両方 promote 後に失敗し、web の rollback だけが失敗する。戻せた product を
+    // 「新 SHA 配信中」と記録すると、復旧の担当者が触る必要のない側を触る。
+    const world = createReleaseWorld();
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if (String(input).includes('/promote/dpl_web_old'))
+        return new Response(null, { status: 500 });
+      return world.fetchImpl(input, init);
+    });
+
+    const error = await release({
+      fetchImpl,
+      simulateFailure: 'production-smoke:web',
+    }).catch(
+      (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
+    );
+
+    expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
+    expect(world.rolledBack()).toEqual(['product']);
+    expect(error.manifest?.projects).toEqual([
+      // 戻せなかった側だけが新 SHA を配信している。
+      expect.objectContaining({ name: 'web', action: 'promoted', deploymentId: 'dpl_web_new' }),
+      expect.objectContaining({
+        name: 'product',
+        action: 'rolled-back',
+        deploymentId: 'dpl_product_old',
+      }),
+    ]);
+  });
+
+  it('records a candidate another actor promoted as live, not pending', async () => {
+    // gate 実行中に外部 actor が同じ candidate を promote した場合。この run は
+    // 動かしていないが live ではあるので、未着手に見せない。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_old', 'dpl_web_new'],
+    });
+
+    const result = await release({ fetchImpl: world.fetchImpl });
+
+    expect(result.status).toBe('promoted');
+    expect(world.promoted()).toEqual(['product']);
+    expect(result.manifest.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'web',
+        action: 'already-serving',
+        deploymentId: 'dpl_web_new',
+        sourceSha: SHA,
+        observedAt: 'this-run',
+      }),
+    );
   });
 
   it('records the surviving deployment when the run fails after a promote', async () => {

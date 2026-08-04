@@ -42,6 +42,9 @@ export const RELEASE_PROJECTS = [
       // health は degraded でも 200 を返すので、本文で healthy を確認する。
       { path: '/api/health', matchedPath: '/api/health', contains: '"status":"healthy"' },
       { path: '/auth/login', matchedPath: '/[locale]/auth/login' },
+      // web の hero / header / pricing の CTA がここへ入る（app.dayopt.app/auth/signup）。
+      // product 側だけを進めた release で消えると、web からの唯一の入口が落ちる。
+      { path: '/auth/signup', matchedPath: '/[locale]/auth/signup' },
       // ja message bundle のロードまで通す。namespace 欠落は既知の事故モード。
       { path: '/ja/auth/login', matchedPath: '/[locale]/auth/login' },
     ],
@@ -140,33 +143,35 @@ export function resolveProjectImpact({
     return { affected: false, reason: `already serving ${short(targetSha)}` };
   }
 
-  let files;
+  // この関数は throw しない。判定に関わるあらゆる失敗（git・workspace manifest の
+  // 読み取り・分類）を affected へ倒す。呼び出し側は decisions を組み立てる前に
+  // manifest を作れないので、ここで抜けると失敗経路だけ manifest を失う。
   try {
-    files = diffFilesImpl(baseSha, targetSha);
+    const files = diffFilesImpl(baseSha, targetSha);
+
+    // git が正常終了して 0 件を返したのは「差分が無い」という確定的な答え。
+    // 変更ファイル一覧の取得失敗（resolveImpact 側の fail closed 対象）とは別物なので、
+    // resolveImpact へ空配列を渡さずここで unaffected を確定させる。
+    if (files.length === 0) {
+      return { affected: false, reason: `no file changes since ${short(baseSha)}` };
+    }
+
+    const impact = resolveImpact(files);
+    // 未知キー（impactKey の改名事故）も affected へ倒す。
+    const affected = impact[project.impactKey] !== false;
+    const trigger = impact.reasons?.[project.impactKey] ?? impact.unknown?.[0];
+    return {
+      affected,
+      reason: affected
+        ? `changed since ${short(baseSha)}${trigger ? ` (${trigger})` : ''}`
+        : `no ${project.impactKey} impact since ${short(baseSha)}`,
+    };
   } catch {
     return {
       affected: true,
-      reason: `cannot diff ${short(baseSha)}..${short(targetSha)} (fail closed)`,
+      reason: `cannot resolve impact for ${short(baseSha)}..${short(targetSha)} (fail closed)`,
     };
   }
-
-  // git が正常終了して 0 件を返したのは「差分が無い」という確定的な答え。
-  // 変更ファイル一覧の取得失敗（resolveImpact 側の fail closed 対象）とは別物なので、
-  // resolveImpact へ空配列を渡さずここで unaffected を確定させる。
-  if (files.length === 0) {
-    return { affected: false, reason: `no file changes since ${short(baseSha)}` };
-  }
-
-  const impact = resolveImpact(files);
-  // 未知キー（impactKey の改名事故）も affected へ倒す。
-  const affected = impact[project.impactKey] !== false;
-  const trigger = impact.reasons?.[project.impactKey] ?? impact.unknown?.[0];
-  return {
-    affected,
-    reason: affected
-      ? `changed since ${short(baseSha)}${trigger ? ` (${trigger})` : ''}`
-      : `no ${project.impactKey} impact since ${short(baseSha)}`,
-  };
 }
 
 function apiUrl(path, teamId, params = {}) {
@@ -677,7 +682,16 @@ function assertSimulationPoint(simulateFailure, point) {
  * ログを読まないと production の実態が分からない状態を避ける。部分失敗の
  * 復旧では、これが手動 rollback 先の一次情報になる。
  */
-export function buildManifest({ sha, status, projects, decisions, before, promoted, rolledBack }) {
+export function buildManifest({
+  sha,
+  status,
+  projects,
+  decisions,
+  before,
+  promoted,
+  rolledBack,
+  externallyLive = new Map(),
+}) {
   const promotedBy = new Map(promoted.map((entry) => [entry.project.name, entry]));
   const rolledBackNames = new Set(rolledBack.map((entry) => entry.project.name));
 
@@ -695,15 +709,17 @@ export function buildManifest({ sha, status, projects, decisions, before, promot
       const restored = rolled
         ? { id: entry.previous?.id ?? null, sha: entry.previous?.sha ?? null }
         : null;
+      // 外部 actor が先に promote した分。この run は動かしていないが live ではある。
+      const external = entry ? null : (externallyLive.get(project.name) ?? null);
 
       const action = entry
         ? rolled
           ? 'rolled-back'
           : 'promoted'
-        : decision?.affected
-          ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
-          : live?.sha === sha
-            ? 'already-serving'
+        : external || live?.sha === sha
+          ? 'already-serving'
+          : decision?.affected
+            ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
             : 'skipped';
 
       return {
@@ -712,13 +728,13 @@ export function buildManifest({ sha, status, projects, decisions, before, promot
         affected: decision?.affected ?? null,
         reason: decision?.reason ?? null,
         action,
-        deploymentId: (serving ?? restored ?? live)?.id ?? null,
-        sourceSha: (serving ?? restored ?? live)?.sha ?? null,
+        deploymentId: (serving ?? restored ?? external ?? live)?.id ?? null,
+        sourceSha: (serving ?? restored ?? external ?? live)?.sha ?? null,
         previousDeploymentId: entry?.previous?.id ?? null,
-        // この run が動かしていない project の値は run 開始時点の観測。candidate 待機
+        // この run が観測していない project の値は run 開始時点のもの。candidate 待機
         // （最大 25 分）の間に人が Instant Rollback していれば実態とズレる。復旧時に
         // 「いつ観測した値か」を取り違えないよう、出所を値と一緒に残す。
-        observedAt: entry ? 'this-run' : 'run-start',
+        observedAt: entry || external ? 'this-run' : 'run-start',
       };
     }),
   };
@@ -828,8 +844,21 @@ export async function runProductionRelease({
   const alreadyServing = projects.filter((project) => before.get(project.name)?.sha === sha);
   const targets = projects.filter((project) => decisions.get(project.name).affected);
 
+  // この run が promote していないのに target SHA が live になった project。
+  // 待機中や gate 実行中に外部 actor が同じ candidate を promote した場合に入る。
+  const externallyLive = new Map();
+
   const manifestFor = (status, { promoted = [], rolledBack = [] } = {}) =>
-    buildManifest({ sha, status, projects, decisions, before, promoted, rolledBack });
+    buildManifest({
+      sha,
+      status,
+      projects,
+      decisions,
+      before,
+      promoted,
+      rolledBack,
+      externallyLive,
+    });
 
   // 前回 run が中断して片側だけ公開された状態。既に配信中の側は戻し先を持たないので
   // 自動 rollback の対象にはできない。せめて名指しして人が判断できるようにする。
@@ -1038,6 +1067,9 @@ export async function runProductionRelease({
 
       if (live?.id === deployment.id) {
         logger.log(`${project.name}: another actor already promoted ${deployment.id}; skipping`);
+        // この run は動かしていないが live ではある。manifest で「未着手」に見えないよう
+        // 記録する（rollback 対象には入れない。戻し先を観測していないため）。
+        externallyLive.set(project.name, { id: deployment.id, sha });
         continue;
       }
 
@@ -1114,6 +1146,10 @@ export async function runProductionRelease({
     // promote 後の production domain smoke。candidate smoke は各 deployment を単体で
     // 見るが、affected な側だけを進めた production は **その組み合わせが初めて世に出る
     // 状態**なので、実際に配信している両 domain を最後に確認する。
+    //
+    // 検出できるのは smokeChecks に載っている経路だけ。cross-app のリンク切れ一般は
+    // 見ない。web から product への唯一の入口である signup CTA は product の check に
+    // 入れてあるので、その 1 本だけが「片側 promote で web の導線が落ちる」を捕まえる。
     // bypass secret は送らない。production domain に Deployment Protection が付く
     // 設定事故（利用者に SSO 画面が出る）を、この smoke で捕まえたいため。
     //
@@ -1160,6 +1196,8 @@ export async function runProductionRelease({
     } catch (rollbackError) {
       // 手動 rollback の指示を持つ方を投げる。元の失敗理由は cause として本文に入る。
       failure = rollbackError;
+      // 一部だけ戻して throw した場合、戻せた分はエラー側にしか残らない。
+      rolledBack = rollbackError.rolledBack ?? [];
     } finally {
       // rollback の成否に関わらず、promote しなかった project の設定も掃く。
       reportSweepDrift(await sweepSettings());
@@ -1258,7 +1296,11 @@ async function rollbackPromoted({
       );
     }
     // manualRollback は「production pointer が動かせていない」ものだけを指す。
-    throw new ReleaseError(lines.join(' '), { manualRollback: stranded });
+    // rolledBack も載せる。ここで throw すると呼び出し側の代入が完了せず、
+    // 戻し済みの project まで「新 SHA を配信中」として manifest に載ってしまう。
+    throw Object.assign(new ReleaseError(lines.join(' '), { manualRollback: stranded }), {
+      rolledBack,
+    });
   }
 
   return rolledBack;
