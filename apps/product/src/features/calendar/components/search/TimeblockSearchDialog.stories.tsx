@@ -158,6 +158,16 @@ const STATIC_RESULT: TimeblockSearchResult = {
   endAt: '2026-07-15T01:00:00.000Z',
   isSkipped: false,
 };
+/** タグ削除で未分類化した(#1576) 結果。アイコンは中立マーカー(bg-muted + Minus)になる。 */
+const STATIC_RESULT_UNCATEGORIZED: TimeblockSearchResult = {
+  kind: 'record',
+  id: 'record-uncategorized',
+  note: 'Tag was deleted after this record was made',
+  tagId: null,
+  startAt: '2026-07-15T02:00:00.000Z',
+  endAt: '2026-07-15T02:45:00.000Z',
+  isSkipped: false,
+};
 const STATIC_TAGS = new Map(TAGS.map((tag) => [tag.id, tag]));
 const STATIC_CALLBACKS = {
   onOpenResult: fn(),
@@ -219,7 +229,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="grid gap-6 lg:grid-cols-2">
       <StaticPattern query="" results={[]} />
-      <StaticPattern query="work" results={[STATIC_RESULT]} hasMore />
+      <StaticPattern query="work" results={[STATIC_RESULT, STATIC_RESULT_UNCATEGORIZED]} hasMore />
       <StaticPattern query="work" results={[]} isLoading />
       <StaticPattern query="work" results={[]} />
       <StaticPattern query="work" results={[]} isError />

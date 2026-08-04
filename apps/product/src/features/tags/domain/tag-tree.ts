@@ -5,7 +5,7 @@ function compareTags(a: Tag, b: Tag): number {
 }
 
 export function buildTagTree(tags: Tag[]): TagTreeNode[] {
-  const activeTags = tags.filter((tag) => tag.is_active !== false);
+  const activeTags = tags.filter((tag) => tag.is_active !== false && !tag.archived_at);
   const activeIds = new Set(activeTags.map((tag) => tag.id));
   const childrenByParent = new Map<string, Tag[]>();
   const roots: Tag[] = [];

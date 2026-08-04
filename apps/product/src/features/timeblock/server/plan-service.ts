@@ -17,6 +17,7 @@ import {
   validateRange,
 } from './plan-guards';
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
+import { assertTagAssignable } from './tag-assignment-guard';
 import {
   createTimeblockCommandClient,
   type TimeblockCommandClient,
@@ -159,6 +160,7 @@ export class PlanService {
 
     validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
     ensurePlanCanBeCreated(input.end_at);
+    await assertTagAssignable(this.supabase, userId, input.tagId);
 
     if (preventOverlappingPlans) {
       await ensureNoPlanOverlap(this.overlapService, userId, input.start_at, input.end_at);
@@ -198,6 +200,10 @@ export class PlanService {
 
     validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
     if (updatesTime) ensurePlanCanBeCreated(nextEndAt);
+    // 後からアーカイブされたタグを保持したままの編集は許可し、付け替えだけ拒否する
+    if (input.tagId !== undefined && input.tagId !== existing.tag_id) {
+      await assertTagAssignable(this.supabase, userId, input.tagId);
+    }
 
     if (preventOverlappingPlans && updatesTime) {
       await ensureNoPlanOverlap(this.overlapService, userId, nextStartAt, nextEndAt, planId);

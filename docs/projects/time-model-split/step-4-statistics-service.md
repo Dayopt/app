@@ -4,7 +4,6 @@ last_verified: 2026-07-09
 code:
   - apps/product/src/features/timeblock/server/statistics.ts
   - apps/product/src/features/timeblock/server/tag-statistics.ts
-  - apps/product/src/features/tags/server/tag-statistics-service.ts
 ---
 
 # Step 4: 統計 TS service

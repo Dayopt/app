@@ -12,12 +12,13 @@ import {
   aggregateDayOfWeekDistribution,
   aggregateHourlyDistribution,
   aggregateMonthlyTrend,
+  aggregateTagPlanCounts,
   aggregateTagStats,
   getMonthlyStartDate,
 } from '../domain';
 
 import type { DateRangeInput } from './statistics-fetchers';
-import { fetchRecords, fetchTagsById } from './statistics-fetchers';
+import { fetchPlans, fetchRecords, fetchTagsById } from './statistics-fetchers';
 import { buildTimeByTagRows } from './statistics-row-builders';
 import {
   groupHoursByDay,
@@ -31,12 +32,25 @@ import type { ServiceSupabaseClient } from './types';
 export class StatisticsGeneralService {
   constructor(private readonly supabase: ServiceSupabaseClient) {}
 
-  /** `get_tag_stats` 相当。実績（records）ベースのタグ別件数・最終使用日。 */
+  /**
+   * `get_tag_stats` 相当。実績（records）ベースのタグ別件数・最終使用日 + Plan 側の件数。
+   *
+   * `counts` は records ベースで従来どおり（実績件数の表示用途に使う契約は変更しない）。
+   * `planCounts` は Plan 側の件数を別 Record で返す。タグ削除は Plan / Record 両方を
+   * 未分類化するため、呼び出し側（削除確認ダイアログ等）は両方の合計を「削除で
+   * 未分類になる件数」として扱う（#1576 フォローアップ: Plan のみのタグが 0 件と
+   * 誤判定され、確認ダイアログなしで即削除されてしまう不具合の修正）。
+   */
   async getTagStats(userId: string): Promise<{
     counts: Record<string, number>;
+    planCounts: Record<string, number>;
     lastUsed: Record<string, string>;
   }> {
-    const records = await fetchRecords(this.supabase, userId);
+    const [records, plans] = await Promise.all([
+      fetchRecords(this.supabase, userId),
+      fetchPlans(this.supabase, userId),
+    ]);
+
     const byTag = new Map<string, { count: number; lastUsed: string | null }>();
     for (const record of records) {
       if (record.tag_id == null) continue;
@@ -51,7 +65,12 @@ export class StatisticsGeneralService {
       record_count: v.count,
       last_used: v.lastUsed,
     }));
-    return aggregateTagStats(rows);
+
+    const planRows = plans
+      .filter((plan): plan is typeof plan & { tag_id: string } => plan.tag_id != null)
+      .map((plan) => ({ tag_id: plan.tag_id }));
+
+    return { ...aggregateTagStats(rows), planCounts: aggregateTagPlanCounts(planRows) };
   }
 
   /** `get_time_by_tag` 相当。実績（records）のタグ別合計時間。 */

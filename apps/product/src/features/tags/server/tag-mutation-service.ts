@@ -64,6 +64,10 @@ export class TagMutationService {
           'Cannot create a child under a tag that already has a parent',
         );
       }
+
+      if (parentTag.archived_at) {
+        throw new TagServiceError('TAG_ARCHIVED', 'Cannot create a child under an archived tag');
+      }
     }
 
     await makeRoomAtTop(this.supabase, userId, parentId);
@@ -134,12 +138,17 @@ export class TagMutationService {
           );
         }
 
+        if (nextParent.archived_at) {
+          throw new TagServiceError('TAG_ARCHIVED', 'Cannot move a tag under an archived tag');
+        }
+
         const { count: childCount, error: childCountError } = await this.supabase
           .from('tags')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
           .eq('parent_id', tagId)
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .is('archived_at', null);
 
         if (childCountError) {
           throw createTagDatabaseError(

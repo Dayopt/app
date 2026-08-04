@@ -15,7 +15,8 @@ type TimeblockReviewLane = 'plans' | 'records';
 
 export interface TimeblockReviewRow {
   id: string;
-  tagId: string;
+  /** 未分類（タグ削除で `tag_id = NULL` になった行）は null */
+  tagId: string | null;
   startAt: string;
   endAt: string;
 }
@@ -58,10 +59,11 @@ class TimeblockReviewClient implements TimeblockReviewReadClient {
       input.offset === 0
         ? tableQuery.select('id,tag_id,start_at,end_at', { count: 'exact' })
         : tableQuery.select('id,tag_id,start_at,end_at');
+    // tag_id が null の行も読む。タグ削除で Plan / Record は未分類化されるため、
+    // 絞ると削除のたびに過去の時間が review から目減りする（#1576）
     query
       .eq('user_id', input.userId)
       .is('deleted_at', null)
-      .not('tag_id', 'is', null)
       .gte('start_at', input.startDate)
       .lt('start_at', input.endDate)
       .order('start_at', { ascending: true })
@@ -84,20 +86,12 @@ class TimeblockReviewClient implements TimeblockReviewReadClient {
     }
 
     return {
-      rows: data.map((row) => {
-        if (row.tag_id == null) {
-          throw new TimeblockServiceError(
-            'FETCH_FAILED',
-            'Timeblock review query returned an untagged row',
-          );
-        }
-        return {
-          id: row.id,
-          tagId: row.tag_id,
-          startAt: row.start_at,
-          endAt: row.end_at,
-        };
-      }),
+      rows: data.map((row) => ({
+        id: row.id,
+        tagId: row.tag_id,
+        startAt: row.start_at,
+        endAt: row.end_at,
+      })),
       totalCount: count,
     };
   }

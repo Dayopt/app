@@ -10,9 +10,11 @@
  */
 
 export interface EstimationAccuracyDbRow {
-  tag_id: string;
-  tag_name: string;
-  tag_color: string;
+  tag_id: string | null;
+  tag_name: string | null;
+  tag_color: string | null;
+  /** タグ削除等で `tag_id` が未分類バケットに畳まれた行かどうか */
+  is_uncategorized: boolean;
   avg_planned_minutes: number;
   avg_actual_minutes: number;
   avg_deviation_minutes: number;
@@ -20,10 +22,11 @@ export interface EstimationAccuracyDbRow {
 }
 
 interface EstimationAccuracyItem {
-  tagId: string;
-  tagName: string;
-  /** 空文字の場合は 'indigo' にフォールバック */
-  tagColor: string;
+  tagId: string | null;
+  tagName: string | null;
+  /** 未分類なら null。空文字の場合は 'indigo' にフォールバック */
+  tagColor: string | null;
+  isUncategorized: boolean;
   avgPlannedMinutes: number;
   avgActualMinutes: number;
   avgDeviationMinutes: number;
@@ -34,7 +37,7 @@ interface EstimationAccuracyItem {
  * DB RPC 行配列を tRPC response 用に変換する。
  *
  * - snake_case → camelCase
- * - `tag_color` が空文字なら `'indigo'` にフォールバック
+ * - `tag_color` が空文字なら `'indigo'` にフォールバック（未分類行は null のまま）
  */
 export function transformEstimationAccuracy(
   rows: ReadonlyArray<EstimationAccuracyDbRow>,
@@ -42,7 +45,8 @@ export function transformEstimationAccuracy(
   return rows.map((row) => ({
     tagId: row.tag_id,
     tagName: row.tag_name,
-    tagColor: row.tag_color || 'indigo',
+    tagColor: row.is_uncategorized ? null : row.tag_color || 'indigo',
+    isUncategorized: row.is_uncategorized,
     avgPlannedMinutes: row.avg_planned_minutes,
     avgActualMinutes: row.avg_actual_minutes,
     avgDeviationMinutes: row.avg_deviation_minutes,
@@ -58,6 +62,12 @@ export function transformEstimationAccuracy(
  * ではないため合算から除外する（overview.md §8 未決 4、Step 2 決定）。
  * 除外した結果、紐づく実績が 1 件も無い plan は estimation accuracy の分母から外れる
  * （旧 RPC の `actual_start_time/end_time IS NOT NULL` 条件と同じ効果）。
+ *
+ * `tag_id` が null の plan、および `tag_id` はあるが `tagsById` に存在しない
+ * （タグ削除済み参照）plan は、どちらも単一の未分類バケット（`tag_id: null`）へ
+ * 畳んで集計する。Time P/L の `buildTagPL`（`statistics-row-builders.ts`）と同じ扱い
+ * （#1576: タグ削除時に Plan / Record を未分類化する仕様のため、見積もり精度からも
+ * 除外しない）。
  *
  * 出力は `transformEstimationAccuracy` にそのまま渡せる DB-row 互換 shape。
  */
@@ -98,21 +108,24 @@ export function aggregatePlanRecordEstimationAccuracy(
   }
 
   interface TagAccumulator {
-    tagId: string;
+    tagId: string | null;
     plannedSum: number;
     actualSum: number;
     deviationSum: number;
     count: number;
   }
-  const byTag = new Map<string, TagAccumulator>();
+  const byTag = new Map<string | null, TagAccumulator>();
 
   for (const plan of plans) {
-    if (plan.tag_id == null || plan.planned_minutes <= 0) continue;
+    if (plan.planned_minutes <= 0) continue;
     const actualMinutes = actualMinutesByPlanId.get(plan.id);
     if (actualMinutes == null) continue;
 
-    const acc = byTag.get(plan.tag_id) ?? {
-      tagId: plan.tag_id,
+    // tag_id はあるが tagsById に無い（削除済みタグ参照）場合も未分類バケットへ畳む
+    const tagId = plan.tag_id != null && tagsById.has(plan.tag_id) ? plan.tag_id : null;
+
+    const acc = byTag.get(tagId) ?? {
+      tagId,
       plannedSum: 0,
       actualSum: 0,
       deviationSum: 0,
@@ -122,18 +135,21 @@ export function aggregatePlanRecordEstimationAccuracy(
     acc.actualSum += actualMinutes;
     acc.deviationSum += Math.abs(actualMinutes - plan.planned_minutes);
     acc.count += 1;
-    byTag.set(plan.tag_id, acc);
+    byTag.set(tagId, acc);
   }
 
   return Array.from(byTag.values())
     .filter((acc) => acc.count >= MIN_ENTRY_COUNT)
     .sort((a, b) => b.count - a.count)
     .map((acc) => {
-      const tag = tagsById.get(acc.tagId);
+      const { tagId } = acc;
+      const tag = tagId == null ? undefined : tagsById.get(tagId);
+      const isUncategorized = tag == null;
       return {
-        tag_id: acc.tagId,
-        tag_name: tag?.name ?? '',
-        tag_color: tag?.color ?? '',
+        tag_id: isUncategorized ? null : tagId,
+        tag_name: isUncategorized ? null : (tag?.name ?? ''),
+        tag_color: isUncategorized ? null : (tag?.color ?? ''),
+        is_uncategorized: isUncategorized,
         avg_planned_minutes: acc.plannedSum / acc.count,
         avg_actual_minutes: acc.actualSum / acc.count,
         avg_deviation_minutes: acc.deviationSum / acc.count,

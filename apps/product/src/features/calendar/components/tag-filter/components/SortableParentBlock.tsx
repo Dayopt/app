@@ -33,6 +33,7 @@ interface SortableParentBlockProps {
   activeDragId: string | null;
   isMobile: boolean;
   onToggleTag: (tagId: string) => void;
+  onArchiveTag: (tagId: string) => void;
   onDeleteTag: (tagId: string, tagName: string) => void;
   onToggleGroupTags: (tagIds: string[]) => void;
   onShowOnlyGroupTags: (tagIds: string[]) => void;
@@ -52,6 +53,7 @@ export function SortableParentBlock({
   activeDragId,
   isMobile,
   onToggleTag,
+  onArchiveTag,
   onDeleteTag,
   onToggleGroupTags,
   onShowOnlyGroupTags,
@@ -157,6 +159,7 @@ export function SortableParentBlock({
 
               router.push(buildCalendarReviewPanelPath(locale, reviewDate, node.tag.id));
             }}
+            onArchiveGroup={() => onArchiveTag(node.tag.id)}
             onDeleteGroup={() => onDeleteTag(node.tag.id, node.tag.name)}
             onRowClick={() => onOpenPopover(node.tag.id)}
             highlighted={isPopoverOpen}
@@ -204,6 +207,7 @@ export function SortableParentBlock({
                     activeDragId={activeDragId}
                     canAcceptChildren={false}
                     onToggle={() => onToggleTag(child.id)}
+                    onArchiveTag={() => onArchiveTag(child.id)}
                     onDeleteTag={() => onDeleteTag(child.id, child.name)}
                     onShowOnlyTag={() => onShowOnlyGroupTags([child.id])}
                     openPopoverTagId={openPopoverTagId}

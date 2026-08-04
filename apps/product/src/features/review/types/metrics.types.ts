@@ -109,18 +109,20 @@ export interface StatsPageData {
   }>;
   energyMap: EnergyMapRow[];
   estimationAccuracy: Array<{
-    tagId: string;
-    tagName: string;
-    tagColor: string;
+    tagId: string | null;
+    tagName: string | null;
+    tagColor: string | null;
+    isUncategorized: boolean;
     avgPlannedMinutes: number;
     avgActualMinutes: number;
     avgDeviationMinutes: number;
     recordCount: number;
   }>;
   prevEstimationAccuracy: Array<{
-    tagId: string;
-    tagName: string;
-    tagColor: string;
+    tagId: string | null;
+    tagName: string | null;
+    tagColor: string | null;
+    isUncategorized: boolean;
     avgPlannedMinutes: number;
     avgActualMinutes: number;
     avgDeviationMinutes: number;

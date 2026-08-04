@@ -27,6 +27,7 @@ const estimationRows: WeeklyReflectionEstimationRow[] = [
     tagId: 'tag-1',
     tagName: 'Deep Work',
     tagColor: 'blue',
+    isUncategorized: false,
     avgPlannedMinutes: 120,
     avgActualMinutes: 150,
     avgDeviationMinutes: 30,
@@ -127,5 +128,35 @@ describe('WeeklyReflectionPanel', () => {
     );
     expect(screen.queryByRole('button', { name: /uncategorized/ })).not.toBeInTheDocument();
     expect(onTagClick).not.toHaveBeenCalled();
+  });
+
+  it('見積もり精度の未分類を neutral marker と翻訳ラベルで表示する（#1576）', () => {
+    const uncategorizedEstimationRow: WeeklyReflectionEstimationRow = {
+      tagId: null,
+      tagName: null,
+      tagColor: null,
+      isUncategorized: true,
+      avgPlannedMinutes: 60,
+      avgActualMinutes: 65,
+      avgDeviationMinutes: 5,
+      recordCount: 3,
+    };
+
+    const { container } = render(
+      <WeeklyReflectionPanel
+        trackedMinutes={180}
+        planAccuracyRate={0.83}
+        plannedMinutes={120}
+        diffMinutes={-60}
+        timePLRows={timePLRows}
+        estimationRows={[uncategorizedEstimationRow]}
+      />,
+    );
+
+    expect(screen.getByText('uncategorized')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="tag-icon-uncategorized"]')).toHaveClass(
+      'bg-muted',
+      'text-muted-foreground',
+    );
   });
 });

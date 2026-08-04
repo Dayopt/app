@@ -35,6 +35,7 @@ interface SortableTagItemProps {
   activeDragId: string | null;
   canAcceptChildren: boolean;
   onToggle: () => void;
+  onArchiveTag: () => void;
   onDeleteTag: () => void;
   onShowOnlyTag: () => void;
   openPopoverTagId: string | null;
@@ -52,6 +53,7 @@ export function SortableTagItem({
   activeDragId,
   canAcceptChildren,
   onToggle,
+  onArchiveTag,
   onDeleteTag,
   onShowOnlyTag,
   openPopoverTagId,
@@ -244,6 +246,7 @@ export function SortableTagItem({
 
                   router.push(buildCalendarReviewPanelPath(locale, reviewDate, tag.id));
                 }}
+                onArchiveTag={onArchiveTag}
                 onDeleteTag={onDeleteTag}
               />
             </DropdownMenu>

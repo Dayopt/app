@@ -6,7 +6,11 @@
  */
 
 export { McpMutationClient } from './mcp-mutation-client';
-export { McpMutationError, type McpMutationErrorCode } from './mcp-mutation-contract';
+export {
+  MCP_MUTATION_RECEIPT_SCHEMA_VERSION,
+  McpMutationError,
+  type McpMutationErrorCode,
+} from './mcp-mutation-contract';
 export {
   TimeblockTrashReadError,
   createTimeblockTrashReadClient,

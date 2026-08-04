@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-21
+last_verified: 2026-08-04
 code: apps/product/src/features
 ---
 
@@ -318,83 +318,91 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 
 #### TagService
 
-- file: `src/features/tags/server/tag-service.ts`
+- file: `src/features/tags/server/tag-service.ts`（facade。実装は `tag-query-service.ts` / `tag-mutation-service.ts` / `tag-merge-service.ts` / `tag-archive-service.ts` / `tag-delete-service.ts` / `tag-reorder-service.ts` に分割）
 - 構造: `class TagService` + `createTagService(supabase)` factory
 - error: `TagServiceError extends ServiceError`
 - skins: tRPC のみ
 - **pagination 全 method 不要**（Dayopt の tag 数は数十オーダー、UI も全件 render 前提）。"全件返却" を仕様として明記。
 
-##### `listHierarchy(options)` — L165
+##### `listHierarchy(options)` — L63
 
 - input: `{ userId }`
 - output: `Promise<TagTreeNode[]>`（hierarchy tree、全件）
 - error: `TagServiceError(FETCH_FAILED)`
 - pagination: N/A（全件仕様）
 
-##### `list(options)` — L181
+##### `list(options)` — L78
 
 - input: `ListTagsOptions { userId, sortField?, sortOrder? }`
 - output: `Promise<Tag[]>`（flat list、全件）
 - pagination: N/A（全件仕様）
 
-##### `getById(options)` — L213
+##### `getById(options)` — L88
 
 - input: `{ userId, tagId }` → `Promise<Tag>` / `TagServiceError(NOT_FOUND)`
 
-##### `create(options)` — L236
+##### `create(options)` — L102
 
 - input: `{ userId, input: CreateTagInput { name, color?, icon?, parentId? } }`
 - output: `Promise<Tag>`
 - error: `TagServiceError(CREATE_FAILED | DUPLICATE_NAME | INVALID_INPUT)`
 - side effect: DB write + parent validation
 
-##### `update(options)` — L294
+##### `update(options)` — L112
 
 - input: `{ userId, tagId, updates: UpdateTagInput }`
 - output: `Promise<Tag>`
 - error: `TagServiceError(UPDATE_FAILED | DUPLICATE_NAME | INVALID_INPUT)`
 
-##### `renameGroup(options)` — L387
-
-- input: `{ userId, oldPrefix, newPrefix }` → `Promise<Tag[]>` / `TagServiceError(UPDATE_FAILED | DUPLICATE_NAME)`
-- side effect: DB write（RPC batch rename）
-
-##### `ungroupTags(options)` — L431
-
-- input: `{ userId, prefix, mergeConflicts? }`
-- output: `Promise<{ count, mergedCount }>`
-- error: `TagServiceError(UPDATE_FAILED | FETCH_FAILED | UNGROUP_CONFLICTS | INVALID_INPUT | CREATE_FAILED | DELETE_FAILED)`
-
-##### `deleteGroup(options)` — L562
-
-- input: `{ userId, prefix, strategy?, targetTagId? }`
-- output: `Promise<{ deletedCount }>`
-- error: `TagServiceError(DELETE_FAILED | FETCH_FAILED | INVALID_INPUT | UPDATE_FAILED)`
-
-##### `merge(options)` — L665
+##### `merge(options)` — L122
 
 - input: `MergeTagsOptions { userId, sourceTagId, targetTagId }`
 - output: `Promise<MergeTagsResult { success, mergedAssociations, targetTag }>`
 - error: `TagServiceError(MERGE_FAILED | SAME_TAG_MERGE | INVALID_INPUT | FETCH_FAILED)`
 - side effect: DB write（RPC `merge_tags_with_hierarchy`）
 
-##### `delete(options)` — L730
+##### `listArchived(options)` — L129
 
-- input: `{ userId, tagId, strategy?, targetTagId? }`
+- input: `{ userId }`
+- output: `Promise<Tag[]>`（アーカイブ済み一覧、`archived_at` 降順、全件）
+- error: `TagServiceError(FETCH_FAILED)`
+- pagination: N/A（全件仕様）
+- 注: `is_active = false`（マージ済みの墓標）は含まない
+
+##### `archive(options)` — L136
+
+- input: `{ userId, tagId }`
+- output: `Promise<{ tag: Tag; archivedChildCount: number }>`
+- error: `TagServiceError(UPDATE_FAILED | NOT_FOUND)`
+- side effect: DB write。親タグの場合は未アーカイブの子タグも同一 timestamp でアーカイブする（道連れ）。`archivedChildCount` は道連れになった子タグの件数。既にアーカイブ済みの場合は no-op で `archivedChildCount: 0` を返す
+
+##### `restore(options)` — L146
+
+- input: `{ userId, tagId }`
+- output: `Promise<{ tag: Tag; restoredChildCount: number; conflictedChildCount: number }>`
+- error: `TagServiceError(FETCH_FAILED | DUPLICATE_NAME | UPDATE_FAILED)`
+- side effect: DB write。親タグの復元は同一 timestamp でアーカイブされた子タグも道連れで復元する。子タグを個別復元する時、親がアーカイブ中・マージ済み・消滅済みなら root タグとして復元する。復元先と同名のアクティブなタグが既に存在する場合は `DUPLICATE_NAME` で拒否する。道連れ復元時の子タグの同名衝突は個別にスキップし `conflictedChildCount` でカウントする（親の復元自体は継続）
+
+##### `delete(options)` — L158
+
+- input: `{ userId, tagId }`（`strategy` / `targetTagId` は廃止済み。#1576 で `delete_blocks` / `reassign` の 2 strategy を撤去し、タグ行の DELETE のみに簡素化）
 - output: `Promise<Tag>`
-- error: `TagServiceError(DELETE_FAILED | FETCH_FAILED | INVALID_INPUT | UPDATE_FAILED)`
+- error: `TagServiceError(DELETE_FAILED | FETCH_FAILED | UPDATE_FAILED)`
+- side effect: DB write。関連 Plan / Record は `plans.tag_id` / `records.tag_id` の FK（`ON DELETE SET NULL`）で未分類化（時間データは消えない）。通常の子タグは root へ昇格、アーカイブ済みの子タグは FK で `parent_id` が NULL になり root 化した状態でアーカイブに残る
 
-##### `reorder(options)` — L840
+##### `reorder(options)` — L171
 
 - input: `{ userId, updates: ReorderTagUpdate[] }`
 - output: `Promise<{ count }>`
 - error: `TagServiceError(UPDATE_FAILED | FETCH_FAILED | INVALID_INPUT | NOT_FOUND)`
 - side effect: DB write（RPC `batch_reorder_tags_hierarchy`）
 
-##### `getStats(options)` — L906
+##### 削除済みの method（#1576）
 
-- input: `{ userId }` → `Promise<TagStatsRow[]>` / `TagServiceError(FETCH_FAILED)`
-- side effect: DB read（RPC `get_tag_stats`）
+`renameGroup` / `ungroupTags` / `deleteGroup`（コロン記法グループ操作）と `getStats`（router 非露出の未使用コード）はコロン記法から `parent_id` 階層への移行後、呼び出し元ゼロのまま残っていたため削除した（コミット `bb05cec66`）。代替:
+
+- グループの rename/ungroup 相当の操作は無い。親タグの改名は通常の `update`、階層の組み替えも `parentId` を含む `update` で行う
+- タグ別の集計は `TagService` の外、`features/timeblock/server/statistics-service.ts`（`StatisticsService.getStatsOverview` / `getStatsPageData`、tRPC `statistics.getStatsPageData` 等）と pure reducer `features/timeblock/domain/tag-stats.ts` が担う
 
 #### UserService
 

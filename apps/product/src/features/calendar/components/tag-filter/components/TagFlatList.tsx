@@ -33,6 +33,7 @@ interface TagFlatListProps {
   allTags: Tag[];
   visibleTagIds: Set<string>;
   onToggleTag: (tagId: string) => void;
+  onArchiveTag: (tagId: string) => void;
   onDeleteTag: (tagId: string, tagName: string) => void;
   onShowOnlyTag: (tagId: string) => void;
   onToggleGroupTags: (tagIds: string[]) => void;
@@ -46,6 +47,7 @@ export function TagFlatList({
   allTags,
   visibleTagIds,
   onToggleTag,
+  onArchiveTag,
   onDeleteTag,
   onShowOnlyTag,
   onToggleGroupTags,
@@ -139,6 +141,7 @@ export function TagFlatList({
             activeDragId={null}
             isMobile
             onToggleTag={onToggleTag}
+            onArchiveTag={onArchiveTag}
             onDeleteTag={onDeleteTag}
             onShowOnlyTag={onShowOnlyTag}
             onToggleGroupTags={onToggleGroupTags}
@@ -175,6 +178,7 @@ export function TagFlatList({
               activeDragId={activeId}
               isMobile={false}
               onToggleTag={onToggleTag}
+              onArchiveTag={onArchiveTag}
               onDeleteTag={onDeleteTag}
               onShowOnlyTag={onShowOnlyTag}
               onToggleGroupTags={onToggleGroupTags}
@@ -217,6 +221,7 @@ interface TagTreeItemProps {
   activeDragId: string | null;
   isMobile: boolean;
   onToggleTag: (tagId: string) => void;
+  onArchiveTag: (tagId: string) => void;
   onDeleteTag: (tagId: string, tagName: string) => void;
   onShowOnlyTag: (tagId: string) => void;
   onToggleGroupTags: (tagIds: string[]) => void;
@@ -237,6 +242,7 @@ function TagTreeItem({
   activeDragId,
   isMobile,
   onToggleTag,
+  onArchiveTag,
   onDeleteTag,
   onShowOnlyTag,
   onToggleGroupTags,
@@ -264,6 +270,7 @@ function TagTreeItem({
           canBecomeChild(activeTreeTag)
         }
         onToggle={() => onToggleTag(node.tag.id)}
+        onArchiveTag={() => onArchiveTag(node.tag.id)}
         onDeleteTag={() => onDeleteTag(node.tag.id, node.tag.name)}
         onShowOnlyTag={() => onShowOnlyTag(node.tag.id)}
         openPopoverTagId={openPopoverTagId}
@@ -283,6 +290,7 @@ function TagTreeItem({
       activeDragId={activeDragId}
       isMobile={isMobile}
       onToggleTag={onToggleTag}
+      onArchiveTag={onArchiveTag}
       onDeleteTag={onDeleteTag}
       onToggleGroupTags={onToggleGroupTags}
       onShowOnlyGroupTags={onShowOnlyGroupTags}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { aggregateTagStats } from '../tag-stats';
+import { aggregateTagPlanCounts, aggregateTagStats } from '../tag-stats';
 
 describe('aggregateTagStats', () => {
   it('空配列 → 空 Record 2 つ', () => {
@@ -63,5 +63,37 @@ describe('aggregateTagStats', () => {
     ]);
     expect(result.counts).toEqual({ 'tag-1': 0 });
     expect(result.lastUsed).toEqual({ 'tag-1': '2026-04-20' });
+  });
+});
+
+describe('aggregateTagPlanCounts', () => {
+  it('空配列 → 空 Record', () => {
+    expect(aggregateTagPlanCounts([])).toEqual({});
+  });
+
+  it('null 入力 → 空 Record', () => {
+    expect(aggregateTagPlanCounts(null)).toEqual({});
+  });
+
+  it('undefined 入力 → 空 Record', () => {
+    expect(aggregateTagPlanCounts(undefined)).toEqual({});
+  });
+
+  it('1 Plan = 1 行として tag_id ごとに件数を数える', () => {
+    const result = aggregateTagPlanCounts([
+      { tag_id: 'tag-1' },
+      { tag_id: 'tag-2' },
+      { tag_id: 'tag-1' },
+    ]);
+    expect(result).toEqual({ 'tag-1': 2, 'tag-2': 1 });
+  });
+
+  it('aggregateTagStats と異なり、同 tag_id の複数行は加算する（後勝ちではない）', () => {
+    const result = aggregateTagPlanCounts([
+      { tag_id: 'tag-1' },
+      { tag_id: 'tag-1' },
+      { tag_id: 'tag-1' },
+    ]);
+    expect(result).toEqual({ 'tag-1': 3 });
   });
 });

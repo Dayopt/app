@@ -29,6 +29,9 @@ const MCP_TRPC_SCOPE_REQUIREMENTS: Partial<Record<string, SupportedScope>> = {
   'records.getById': 'read:entries',
   'statistics.getMcpReview': 'read:stats',
   'tags.list': 'read:tags',
+  // 過去の Plan / Record が保持するアーカイブ済み tagId を名前へ解決するため、
+  // tags.list tool が includeArchived で呼ぶ。read:tags の読み取り範囲に収まる。
+  'tags.listArchived': 'read:tags',
   'timeblockContext.getConstraints': 'read:constraints',
 };
 

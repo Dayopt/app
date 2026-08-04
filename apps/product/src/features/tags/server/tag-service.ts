@@ -7,10 +7,9 @@ import 'server-only';
  * - 取得系: `tag-query-service.ts`
  * - 作成・更新: `tag-mutation-service.ts`
  * - マージ: `tag-merge-service.ts`
- * - 削除（単体 / グループ）: `tag-delete-service.ts`
- * - グループ操作（リネーム / 解除）: `tag-group-service.ts`
+ * - アーカイブ / 復元: `tag-archive-service.ts`
+ * - 削除: `tag-delete-service.ts`
  * - 並び替え: `tag-reorder-service.ts`
- * - 統計: `tag-statistics-service.ts`
  *
  * キャッシュ戦略:
  * - [一時的に無効化] unstable_cache()によるサーバーサイドキャッシュ
@@ -20,9 +19,9 @@ import 'server-only';
 
 import type { Database } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Tag, TagDeleteStrategy, TagTreeNode } from '../types';
+import type { Tag, TagTreeNode } from '../types';
+import { TagArchiveService } from './tag-archive-service';
 import { TagDeleteService } from './tag-delete-service';
-import { TagGroupService } from './tag-group-service';
 import { TagMergeService, type MergeTagsOptions, type MergeTagsResult } from './tag-merge-service';
 import {
   TagMutationService,
@@ -31,7 +30,6 @@ import {
 } from './tag-mutation-service';
 import { TagQueryService } from './tag-query-service';
 import { TagReorderService, type ReorderTagUpdate } from './tag-reorder-service';
-import { TagStatisticsService, type TagStatsRow } from './tag-statistics-service';
 
 export { TagServiceError } from './tag-service-error';
 
@@ -48,20 +46,18 @@ interface ListTagsOptions {
 export class TagService {
   private readonly queryService: TagQueryService;
   private readonly reorderService: TagReorderService;
-  private readonly statisticsService: TagStatisticsService;
   private readonly mutationService: TagMutationService;
   private readonly mergeService: TagMergeService;
+  private readonly archiveService: TagArchiveService;
   private readonly deleteService: TagDeleteService;
-  private readonly groupService: TagGroupService;
 
   constructor(supabase: SupabaseClient<Database>) {
     this.queryService = new TagQueryService(supabase);
     this.reorderService = new TagReorderService(supabase);
-    this.statisticsService = new TagStatisticsService(supabase);
     this.mutationService = new TagMutationService(supabase, this.queryService);
     this.mergeService = new TagMergeService(supabase, this.queryService);
+    this.archiveService = new TagArchiveService(supabase, this.queryService);
     this.deleteService = new TagDeleteService(supabase, this.queryService);
-    this.groupService = new TagGroupService(supabase, this.mergeService);
   }
 
   async listHierarchy(options: { userId: string }): Promise<TagTreeNode[]> {
@@ -118,49 +114,6 @@ export class TagService {
   }
 
   /**
-   * グループ（コロン記法プレフィックス）の一括リネーム
-   *
-   * @param options - userId, oldPrefix, newPrefix
-   * @returns 更新されたタグ配列
-   */
-  async renameGroup(options: {
-    userId: string;
-    oldPrefix: string;
-    newPrefix: string;
-  }): Promise<Tag[]> {
-    return this.groupService.renameGroup(options);
-  }
-
-  /**
-   * グループ解除（コロン記法プレフィックスを除去）
-   *
-   * @param options - userId, prefix, mergeConflicts
-   * @returns 更新されたタグ数とマージされたタグ数
-   */
-  async ungroupTags(options: {
-    userId: string;
-    prefix: string;
-    mergeConflicts?: boolean;
-  }): Promise<{ count: number; mergedCount: number }> {
-    return this.groupService.ungroupTags(options);
-  }
-
-  /**
-   * グループ削除（コロン記法プレフィックスのタグを一括削除）
-   *
-   * @param options - userId, prefix, strategy（任意）, targetTagId（reassign時必須）
-   * @returns 削除されたタグ数
-   */
-  async deleteGroup(options: {
-    userId: string;
-    prefix: string;
-    strategy?: TagDeleteStrategy;
-    targetTagId?: string;
-  }): Promise<{ deletedCount: number }> {
-    return this.deleteService.deleteGroup(options);
-  }
-
-  /**
    * タグマージ（atomic）
    *
    * @param options - マージオプション
@@ -171,17 +124,38 @@ export class TagService {
   }
 
   /**
-   * タグ削除
-   *
-   * @param options - userId, tagId, strategy（任意）, targetTagId（reassign時必須）
-   * @returns 削除されたタグ
+   * アーカイブ済みタグの一覧
    */
-  async delete(options: {
+  async listArchived(options: { userId: string }): Promise<Tag[]> {
+    return this.queryService.listArchived(options.userId);
+  }
+
+  /**
+   * タグをアーカイブする（親タグは子タグを道連れにする）
+   */
+  async archive(options: {
     userId: string;
     tagId: string;
-    strategy?: TagDeleteStrategy;
-    targetTagId?: string;
-  }): Promise<Tag> {
+  }): Promise<{ tag: Tag; archivedChildCount: number }> {
+    return this.archiveService.archive(options);
+  }
+
+  /**
+   * アーカイブ済みタグを復元する
+   */
+  async restore(options: {
+    userId: string;
+    tagId: string;
+  }): Promise<{ tag: Tag; restoredChildCount: number; conflictedChildCount: number }> {
+    return this.archiveService.restore(options);
+  }
+
+  /**
+   * タグ削除（関連 Plan / Record は FK で未分類化される）
+   *
+   * @returns 削除されたタグ
+   */
+  async delete(options: { userId: string; tagId: string }): Promise<Tag> {
     return this.deleteService.delete(options);
   }
 
@@ -199,18 +173,6 @@ export class TagService {
     updates: ReorderTagUpdate[];
   }): Promise<{ count: number }> {
     return this.reorderService.reorder(options);
-  }
-
-  /**
-   * タグ使用統計取得
-   *
-   * Record を正としてタグ使用数・最終利用日時を集計する
-   *
-   * @param options - userId
-   * @returns タグ統計の配列
-   */
-  async getStats(options: { userId: string }): Promise<TagStatsRow[]> {
-    return this.statisticsService.getStatsFromRecords(options.userId);
   }
 }
 

@@ -15,6 +15,7 @@ const PARENT: Tag = {
   parent_id: null,
   sort_order: 0,
   is_active: true,
+  archived_at: null,
   created_at: '2026-07-14T00:00:00.000Z',
   updated_at: '2026-07-14T00:00:00.000Z',
 };

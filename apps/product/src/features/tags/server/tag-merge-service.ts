@@ -57,6 +57,15 @@ export class TagMergeService {
       this.queryService.getById({ userId, tagId: targetTagId }),
     ]);
 
+    // target がアーカイブ済みなら拒否する。アーカイブは「選択候補から隠す」状態なので、
+    // 新規タグ付与だけでなくマージ先としての利用も拒否する（別タブでアーカイブされた後の
+    // 古いマージダイアログや直接の tags.merge 呼び出しで全 Plan / Record が
+    // アーカイブ済みタグへ移ってしまうのを防ぐ）。source がアーカイブ済みなのは許可する
+    // （アーカイブ済みタグをアクティブなタグへ統合する正当な操作のため）。
+    if (targetTag.archived_at) {
+      throw new TagServiceError('TAG_ARCHIVED', 'Cannot merge into an archived tag');
+    }
+
     const { count: sourceChildrenCount, error: sourceChildrenError } = await this.supabase
       .from('tags')
       .select('id', { count: 'exact', head: true })
