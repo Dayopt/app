@@ -72,9 +72,7 @@ const WORST_CASE_SMOKE_MS =
   (SMOKE_ATTEMPTS * SMOKE_TIMEOUT_MS + (SMOKE_ATTEMPTS - 1) * SMOKE_RETRY_DELAY_MS);
 
 export const WORST_CASE_RELEASE_MS =
-  READY_TIMEOUT_MS +
-  WORST_CASE_SMOKE_MS * 2 +
-  RELEASE_PROJECTS.length * ASSIGN_TIMEOUT_MS * 2;
+  READY_TIMEOUT_MS + WORST_CASE_SMOKE_MS * 2 + RELEASE_PROJECTS.length * ASSIGN_TIMEOUT_MS * 2;
 
 export class ReleaseError extends Error {
   constructor(message, { manualRollback } = {}) {
@@ -861,7 +859,8 @@ export async function runProductionRelease({
       fetchImpl,
       logger,
     });
-    if (drifted.length > 0) throw Object.assign(driftError(sha, drifted), { manifest: manifestFor('failed') });
+    if (drifted.length > 0)
+      throw Object.assign(driftError(sha, drifted), { manifest: manifestFor('failed') });
     return {
       status,
       sha,
@@ -1323,7 +1322,14 @@ function summarize(result) {
     );
   }
   if (result.manifest) {
-    lines.push('', '### Release manifest', '', '```json', JSON.stringify(result.manifest, null, 2), '```');
+    lines.push(
+      '',
+      '### Release manifest',
+      '',
+      '```json',
+      JSON.stringify(result.manifest, null, 2),
+      '```',
+    );
   }
   return lines;
 }
@@ -1359,7 +1365,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       // 部分失敗の復旧では「今どの project が何を配信しているか」が一次情報になる。
       // 失敗時こそ manifest を残す。
       if (error?.manifest) {
-        lines.push('', '### Release manifest', '', '```json', JSON.stringify(error.manifest, null, 2), '```');
+        lines.push(
+          '',
+          '### Release manifest',
+          '',
+          '```json',
+          JSON.stringify(error.manifest, null, 2),
+          '```',
+        );
         writeReleaseManifest(error.manifest);
       }
       writeStepSummary(lines);
