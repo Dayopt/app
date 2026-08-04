@@ -86,6 +86,12 @@ const DEFINITIVE_REJECTIONS = new Set([400, 401, 403, 404, 429]);
 const AMBIGUOUS_SETTLE_MS = ASSIGN_TIMEOUT_MS;
 
 /**
+ * 掃きと検証を交互に回す上限。外部 actor が promote を続ける限り収束しないので
+ * 有限で打ち切り、最後の検証が通った時点の観測を根拠にする。
+ */
+const STABILIZE_ATTEMPTS = 3;
+
+/**
  * この script が費やしうる最悪時間。workflow の `timeout-minutes` がこれを
  * 下回ると、rollback の途中で job が kill され、片方だけ promote された
  * production が手動 rollback の手掛かりごと失われる。
@@ -693,12 +699,20 @@ async function rollbackDeployment({
   return { production, autoAssignDrifted };
 }
 
-/** 復元をまとめて試し、失敗した project 名だけを返す。個別失敗は throw しない。 */
+/**
+ * 復元をまとめて試し、`drifted`（失敗した project）と `restored`（実際に直した
+ * project）を返す。個別失敗は throw しない。
+ *
+ * `restored` が空でないことは「直前に外部の promote があった」証拠になる。alias を
+ * 動かさない再 promote（同じ deployment を promote し直す）は設定だけを飛ばすので、
+ * これが唯一の検出手段。
+ */
 async function restoreAll({ entries, token, teamId, fetchImpl, logger }) {
   const drifted = [];
+  const restored = [];
   for (const entry of entries) {
     try {
-      await restoreAutoAssignCustomDomains({
+      const didRestore = await restoreAutoAssignCustomDomains({
         projectName: entry.project.name,
         projectId: entry.projectId,
         expected: entry.autoAssignCustomDomains,
@@ -707,11 +721,12 @@ async function restoreAll({ entries, token, teamId, fetchImpl, logger }) {
         fetchImpl,
         logger,
       });
+      if (didRestore) restored.push(entry.project.name);
     } catch {
       drifted.push(entry.project.name);
     }
   }
-  return drifted;
+  return { drifted, restored };
 }
 
 function driftError(sha, drifted) {
@@ -960,6 +975,35 @@ export async function runProductionRelease({
   // 配信中と誤記すると、runbook の手順で「戻す」対象に見えてしまう）。
   const movedAway = new Map();
 
+  /**
+   * 失敗 manifest を作る前に、全 project の live を読み直して観測を反映する。
+   *
+   * gate（smoke / audit）が落ちた時点では、その project の live が run 開始時点から
+   * 動いていても誰も記録していない。manifest が run 開始時点の deployment を
+   * `skipped` / `already-serving` として載せると、runbook が「触るな」と案内して
+   * unhealthy な domain を放置させる。読めない project は黙って飛ばす（best effort）。
+   */
+  const refreshObservedLive = async ({ skip = new Set() } = {}) => {
+    for (const project of projects) {
+      // この run が説明を持つ project は触らない（promote / rollback / 待機中の
+      // 自動割当は、それぞれの経路が既に正しい記録を作っている）。
+      if (skip.has(project.name) || externallyLive.has(project.name)) continue;
+      const startId = before.get(project.name)?.id ?? null;
+      const live = await getLiveProduction({
+        projectName: project.name,
+        productionDomain: project.productionDomain,
+        projectId: projectIds.get(project.name),
+        token,
+        teamId,
+        fetchImpl,
+      }).catch(() => undefined);
+      if (live === undefined) continue; // 読めなかった
+      if ((live?.id ?? null) !== startId) {
+        movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
+      }
+    }
+  };
+
   const manifestFor = (status, { promoted = [], rolledBack = [] } = {}) =>
     buildManifest({
       sha,
@@ -1085,13 +1129,22 @@ export async function runProductionRelease({
    * @returns 残っている drift（空でなければ設定復元が失敗している）
    */
   const stabilize = async (candidateEntries) => {
-    const drift = await sweepSettings();
-    // 検証を掃きの**後**に置く。逆順だと、掃きが設定を直せてしまうために、その間に
-    // 起きた promote が失敗として現れない。verifyLiveState は run 開始時点から
-    // deployment が変わっていれば throw するので、反復は要らない（動いていたら
-    // 認証せず失敗させる）。
-    await verifyLiveState(candidateEntries);
-    return drift;
+    let sweep = await sweepSettings();
+    for (let attempt = 1; attempt <= STABILIZE_ATTEMPTS; attempt += 1) {
+      // 検証を掃きの**後**に置く。逆順だと、掃きが設定を直せてしまうために、その間に
+      // 起きた promote が失敗として現れない。
+      await verifyLiveState(candidateEntries);
+
+      // 検証の後にもう一度掃く。**同じ deployment を promote し直す操作は alias を
+      // 動かさないので検証は通るが、auto-assign だけが飛ぶ。** 掃きが「直した」なら
+      // その間に promote があったということなので、もう一周して検証し直す。
+      sweep = await sweepSettings();
+      if (sweep.restored.length === 0) return sweep.drifted;
+      logger.log(
+        `Auto-assign was re-enabled during verification; re-checking (attempt ${attempt}).`,
+      );
+    }
+    return sweep.drifted;
   };
 
   // **この関数のどの出口も、抜ける前に auto-assign を掃く。** 外部の promote は
@@ -1130,7 +1183,7 @@ export async function runProductionRelease({
       // 前回 run が復元に失敗して終わっている可能性があるため、設定だけは見に行く。
       // **ここでは失敗にしない。** 一時的な失敗なら stabilize の掃きで直る。判定を
       // 最初の観測で確定させると、既に直っている状態で tag を打てなくする。
-      const drifted = await sweepSettings();
+      const { drifted } = await sweepSettings();
       if (drifted.length > 0) {
         logger.log(`Initial restore failed for ${drifted.join(', ')}; stabilization decides.`);
       }
@@ -1176,7 +1229,8 @@ export async function runProductionRelease({
           });
         }
       } catch (error) {
-        reportSweepDrift(await sweepSettings());
+        reportSweepDrift((await sweepSettings()).drifted);
+        await refreshObservedLive();
         if (!error.manifest) Object.assign(error, { manifest: manifestFor('failed') });
         throw error;
       }
@@ -1262,7 +1316,7 @@ export async function runProductionRelease({
 
       // 外部の promote は auto-assign を true へ戻す（vercel/vercel#15095）。
       // ここで掃かずに抜けると、次の main merge が gate を通らず直接公開される。
-      reportSweepDrift(await sweepSettings());
+      reportSweepDrift((await sweepSettings()).drifted);
 
       throw Object.assign(
         new ReleaseError(
@@ -1290,7 +1344,7 @@ export async function runProductionRelease({
       // **drift があっても superseded のままにする。** ここは「より新しい deployment が
       // live」と証明した経路で、settings-drift（= 正しい SHA が live）へ塗り替えると
       // 復旧手順が矛盾する。設定の問題は報告として別に出す。
-      reportSweepDrift(await sweepSettings());
+      reportSweepDrift((await sweepSettings()).drifted);
       return {
         status: 'superseded',
         sha,
@@ -1334,7 +1388,8 @@ export async function runProductionRelease({
       } catch (error) {
         // 外部の promote が待機中に auto-assign を飛ばしていた場合、ここで抜けると
         // 誰も設定を戻さない。掃いてから失敗させる。
-        reportSweepDrift(await sweepSettings());
+        reportSweepDrift((await sweepSettings()).drifted);
+        await refreshObservedLive();
         throw Object.assign(error, { manifest: manifestFor('failed') });
       }
     }
@@ -1448,7 +1503,7 @@ export async function runProductionRelease({
         // 片側だけ auto-assign が有効な窓を作らないよう、ここで即座に戻す。
         // 復元の失敗は rollback を誘発させず、drifted に積んで最後に報告する。
         driftedProjects.push(
-          ...(await restoreAll({ entries: [entry], token, teamId, fetchImpl, logger })),
+          ...(await restoreAll({ entries: [entry], token, teamId, fetchImpl, logger })).drifted,
         );
         logger.log(`${project.name}: promoted ${deployment.id}`);
       }
@@ -1526,8 +1581,11 @@ export async function runProductionRelease({
         }
       } finally {
         // rollback の成否に関わらず、promote しなかった project の設定も掃く。
-        reportSweepDrift(await sweepSettings());
+        reportSweepDrift((await sweepSettings()).drifted);
       }
+      // rollback は promote した project しか読み直さない。それ以外の live が
+      // 動いていた場合も manifest へ反映してから失敗させる。
+      await refreshObservedLive({ skip: new Set(promoted.map((e) => e.project.name)) });
       throw Object.assign(failure, {
         rolledBack,
         manifest: manifestFor('failed', { promoted, rolledBack }),
@@ -1569,7 +1627,7 @@ export async function runProductionRelease({
     };
   })().catch(async (error) => {
     // 失敗経路。元の失敗理由を優先し、掃きの結果は報告だけにする。
-    reportSweepDrift(await sweepSettings());
+    reportSweepDrift((await sweepSettings()).drifted);
     throw error;
   });
 

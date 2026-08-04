@@ -1820,6 +1820,30 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(world.rolledBack()).toEqual([]);
   });
 
+  it('records a skipped project that moved before its production smoke failed', async () => {
+    // gate が落ちた時点で、その project の live が run 開始時点から動いていても
+    // 誰も記録していなかった。manifest が run 開始時点の deployment を skipped として
+    // 載せると、runbook が「触るな」と案内して unhealthy な domain を放置させる。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_hotfix'],
+      smokeBody: '{"status":"degraded"}', // product の smoke を落とす
+    });
+
+    const error = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+    }).catch((thrown: Error & { manifest?: { projects: { name: string }[] } }) => thrown);
+
+    expect(error.message).toMatch(/without the expected content/);
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'web',
+        action: 'moved-externally',
+        deploymentId: 'dpl_web_hotfix',
+      }),
+    );
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。
