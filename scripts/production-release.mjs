@@ -1288,7 +1288,8 @@ export async function runProductionRelease({
         if (live?.id !== current.get(project.name)?.id) {
           // 観測した実 deployment を manifest へ載せてから抜ける。run 開始時点の値の
           // ままだと「未着手（pending）」に見え、復旧手順が live を取り違える。
-          if (live) movedAway.set(project.name, { id: live.id, sha: live.sha });
+          // live が null（alias 未割当）も観測結果なので落とさない。
+          movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
           throw new ReleaseError(
             `${project.name}: production moved to ${live?.id ?? 'none'} while the gate was ` +
               `running; refusing to promote ${deployment.id} over it`,
@@ -1572,6 +1573,7 @@ async function rollbackPromoted({
       if (entry.ambiguous) {
         const deadline = nowImpl() + AMBIGUOUS_SETTLE_MS;
         let landed = null;
+        let observed = false;
         while (nowImpl() < deadline) {
           await sleepImpl(ASSIGN_POLL_MS);
           let settled;
@@ -1587,11 +1589,33 @@ async function rollbackPromoted({
           } catch {
             continue; // 読めない回で判断しない。窓の残りで見直す
           }
+          observed = true;
           if (settled?.id !== entry.previous.id) {
-            landed = settled ?? { id: null };
+            landed = settled ?? { id: null, sha: null };
             break;
           }
         }
+
+        // 窓の間 1 度も読めなかった場合、「previous のままだった」は観測に基づかない。
+        // 読めない間に遅れた promote が着地していても分からないので、戻ったと宣言しない。
+        if (!observed) {
+          stranded.push(
+            `${entry.project.name} -> ${entry.previous.id} ` +
+              `(live deployment unreadable throughout the settle window)`,
+          );
+          continue;
+        }
+
+        // 窓の間に現れたのが **我々の candidate でない** なら、それは他者の選択
+        // （典型は緊急 hotfix）。戻すと上書きになるので触らず、名指しだけする。
+        if (landed?.id && landed.id !== entry.deployment.id) {
+          movedExternally.push({ entry, live: landed });
+          logger.log(
+            `${entry.project.name}: production moved to ${landed.id} during the settle window; leaving it alone`,
+          );
+          continue;
+        }
+
         if (landed) {
           stranded.push(
             `${entry.project.name} -> ${entry.previous.id} ` +

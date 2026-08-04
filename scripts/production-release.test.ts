@@ -1554,6 +1554,76 @@ describe('runProductionRelease (affected-aware)', () => {
     );
   });
 
+  it('does not claim rollback when the settle window is unreadable throughout', async () => {
+    // 読めない間に遅れた promote が着地していても分からない。「previous のままだった」
+    // は観測に基づかないので、戻ったと宣言しない。
+    const world = createReleaseWorld();
+    let rolledBackWeb = false;
+    let readsAfterRollback = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        return new Response(null, { status: 503 });
+      }
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_old')) {
+        rolledBackWeb = true;
+        return new Response(null, { status: 202 });
+      }
+      // rollback の反映確認は通し、その後の着地待ちの読み取りだけ落とす。
+      if (rolledBackWeb && url.includes('/v4/aliases/dayopt.app')) {
+        readsAfterRollback += 1;
+        if (readsAfterRollback === 1) return Response.json({ deploymentId: 'dpl_web_old' });
+        return new Response(null, { status: 500 });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    let clock = 0;
+    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+      (thrown: Error) => thrown,
+    );
+
+    expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
+    expect(error.message).toMatch(/unreadable throughout the settle window/);
+  });
+
+  it('leaves a hotfix that appears during the settle window alone', async () => {
+    // 着地待ちの間に現れたのが我々の candidate でないなら他者の選択。戻すと上書き。
+    const world = createReleaseWorld();
+    let rolledBackWeb = false;
+    let readsAfterRollback = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        return new Response(null, { status: 503 });
+      }
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_old')) {
+        rolledBackWeb = true;
+        return new Response(null, { status: 202 });
+      }
+      if (rolledBackWeb && url.includes('/v4/aliases/dayopt.app')) {
+        readsAfterRollback += 1;
+        if (readsAfterRollback === 1) return Response.json({ deploymentId: 'dpl_web_old' });
+        return Response.json({ deploymentId: 'dpl_web_hotfix' });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    let clock = 0;
+    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+      (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
+    );
+
+    expect(error.message).toMatch(/Left alone because another actor moved production first: web/);
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'web',
+        action: 'moved-externally',
+        deploymentId: 'dpl_web_hotfix',
+      }),
+    );
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。
