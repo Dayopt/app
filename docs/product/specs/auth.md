@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-01
+last_verified: 2026-08-04
 code:
   - apps/product/src/app/api/auth/route.ts
   - apps/product/src/lib/trpc/session-auth-context.ts
@@ -91,7 +91,7 @@ Product の通常 UI は現在この route を使わず Supabase Auth を直接�
   | `plans.list` / `plans.getById`     | `read:entries`     |
   | `records.list` / `records.getById` | `read:entries`     |
   | `statistics.getMcpReview`          | `read:stats`       |
-  | `tags.list`                        | `read:tags`        |
+  | `tags.list` / `tags.listArchived`  | `read:tags`        |
   | `timeblockContext.getConstraints`  | `read:constraints` |
 
   互換 MCP tool `entries.list` も `read:entries` scope を使う。write / delete は tRPC を経由せず、MCP mutation 経路（`private.authorize_mcp_mutation_v1` + 三重 write gate）だけが扱う

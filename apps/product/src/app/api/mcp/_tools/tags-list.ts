@@ -11,17 +11,45 @@ import { MCP_TAG_LIST_INPUT_SCHEMA, MCP_TAG_LIST_OUTPUT_SCHEMA } from './context
 import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
 import { MCP_UNTRUSTED_CONTENT_NOTICE } from './untrusted-data-serialization';
 
+interface TagRow {
+  id: string;
+  name: string;
+  color: string | null;
+  icon: string | null;
+  parent_id: string | null;
+  sort_order: number;
+}
+
+function toMcpTag(tag: TagRow, isArchived: boolean) {
+  return {
+    id: tag.id,
+    name: tag.name,
+    color: tag.color,
+    icon: tag.icon,
+    parentId: tag.parent_id,
+    sortOrder: tag.sort_order,
+    isArchived,
+  };
+}
+
 export function registerTagsListTool(server: McpServer, ctx: McpRequestContext) {
   server.registerTool(
     'tags.list',
     {
       title: 'List Dayopt tags',
-      description: `List the authenticated user's active Dayopt tags in hierarchy order. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
+      description: [
+        "List the authenticated user's Dayopt tags in hierarchy order.",
+        'Archived tags are excluded by default, so the default response is the set of tags that can still be assigned to a Plan or Record.',
+        'Past Plans and Records keep the tag they were given, so a tagId returned by entries.list, plans.list, records.list, or review.get can be missing from that default response.',
+        'Pass includeArchived true to resolve those tagIds: archived tags are then appended after the active ones.',
+        'Every tag carries isArchived, which is always present and is true only for archived tags.',
+        MCP_UNTRUSTED_CONTENT_NOTICE,
+      ].join(' '),
       inputSchema: MCP_TAG_LIST_INPUT_SCHEMA,
       outputSchema: MCP_TAG_LIST_OUTPUT_SCHEMA,
       annotations: { readOnlyHint: true, idempotentHint: true },
     },
-    async (_input, extra) => {
+    async (input, extra) => {
       if (!ctx.scopes.includes('read:tags')) {
         return createMcpToolError(
           'INSUFFICIENT_SCOPE',
@@ -36,15 +64,17 @@ export function registerTagsListTool(server: McpServer, ctx: McpRequestContext) 
           scopes: ctx.scopes,
           signal: extra.signal,
         });
-        const result = await trpc.tags.list();
-        const tags = result.data.map((tag) => ({
-          id: tag.id,
-          name: tag.name,
-          color: tag.color,
-          icon: tag.icon,
-          parentId: tag.parent_id,
-          sortOrder: tag.sort_order,
-        }));
+        // アーカイブ済みは tags.listArchived が持つ。tRPC の公開契約を変えずに
+        // MCP 側で 2 本を束ねる。両者は archived_at の有無で排他なので重複しない。
+        const [activeResult, archivedRows] = await Promise.all([
+          trpc.tags.list(),
+          input.includeArchived === true ? trpc.tags.listArchived() : [],
+        ]);
+        // 通常タグの並び（階層順）は既定のまま。アーカイブ済みはその後ろへ足す。
+        const tags = [
+          ...activeResult.data.map((tag) => toMcpTag(tag, false)),
+          ...archivedRows.map((tag) => toMcpTag(tag, true)),
+        ];
 
         return createMcpToolSuccess({
           schemaVersion: MCP_TOOL_SCHEMA_VERSION,

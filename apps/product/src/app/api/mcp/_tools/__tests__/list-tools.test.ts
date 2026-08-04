@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { McpRequestContext } from '../../_context';
 import { registerConstraintsGetTool } from '../constraints-get';
+import { MCP_TAG_LIST_OUTPUT_SCHEMA } from '../context-contract';
 import { registerEntriesListTool } from '../entries-list';
 import {
   getRequiredScopeForTool,
@@ -133,6 +134,26 @@ const record = {
   title: 'Record',
   updated_at: '2026-07-01T00:00:00.000Z',
   user_id: context.userId,
+};
+
+const activeTag = {
+  id: '33333333-3333-4333-8333-333333333333',
+  name: 'Work',
+  color: 'blue',
+  icon: 'briefcase',
+  parent_id: null,
+  sort_order: 0,
+  archived_at: null,
+};
+
+const archivedTag = {
+  id: '44444444-4444-4444-8444-444444444444',
+  name: 'Old project',
+  color: 'gray',
+  icon: null,
+  parent_id: null,
+  sort_order: 1,
+  archived_at: '2026-07-30T00:00:00.000Z',
 };
 
 function createServerDouble() {
@@ -383,6 +404,69 @@ describe('MCP list tools public contract', () => {
       error: { code: 'INSUFFICIENT_SCOPE', retryable: false },
     });
     expect(createMcpTrpcCaller).not.toHaveBeenCalled();
+  });
+
+  it('tags.listは既定でアーカイブ済みを読まず、通常タグをisArchived falseで返す', async () => {
+    // 既定でアーカイブ済みを混ぜると、AI が新規付与の候補として選んで
+    // mutation 側の TAG_ARCHIVED で弾かれる。既定の候補集合は変えない。
+    const list = vi.fn().mockResolvedValue({ data: [activeTag], count: 1 });
+    const listArchived = vi.fn().mockResolvedValue([archivedTag]);
+    createMcpTrpcCaller.mockReturnValue({ tags: { list, listArchived } });
+
+    const { handlers, server } = createServerDouble();
+    registerTagsListTool(server, { ...context, scopes: ['read:tags'] });
+    const handler = getHandler(handlers, 'tags.list');
+    const extra = { signal: new AbortController().signal };
+
+    for (const input of [{}, { includeArchived: false }]) {
+      const result = await handler(input, extra);
+
+      expect(MCP_TAG_LIST_OUTPUT_SCHEMA.safeParse(result.structuredContent).success).toBe(true);
+      expect(result.structuredContent).toEqual({
+        schemaVersion: 1,
+        count: 1,
+        tags: [
+          {
+            id: activeTag.id,
+            name: activeTag.name,
+            color: activeTag.color,
+            icon: activeTag.icon,
+            parentId: null,
+            sortOrder: 0,
+            // includeArchived を渡さなくても isArchived は必ず載る
+            isArchived: false,
+          },
+        ],
+      });
+      expect(parseText(result)).toEqual(result.structuredContent);
+    }
+    expect(listArchived).not.toHaveBeenCalled();
+  });
+
+  it('tags.listはincludeArchivedで過去データのtagIdを解決でき、通常タグの後ろへ並べる', async () => {
+    const list = vi.fn().mockResolvedValue({ data: [activeTag], count: 1 });
+    const listArchived = vi.fn().mockResolvedValue([archivedTag]);
+    createMcpTrpcCaller.mockReturnValue({ tags: { list, listArchived } });
+
+    const { handlers, server } = createServerDouble();
+    registerTagsListTool(server, { ...context, scopes: ['read:tags'] });
+    const result = await getHandler(handlers, 'tags.list')(
+      { includeArchived: true },
+      { signal: new AbortController().signal },
+    );
+
+    expect(MCP_TAG_LIST_OUTPUT_SCHEMA.safeParse(result.structuredContent).success).toBe(true);
+    // 既存の階層順を壊さないよう、アーカイブ済みは通常タグの後ろに続ける。
+    expect(result.structuredContent).toMatchObject({
+      schemaVersion: 1,
+      count: 2,
+      tags: [
+        { id: activeTag.id, isArchived: false },
+        { id: archivedTag.id, name: archivedTag.name, isArchived: true },
+      ],
+    });
+    expect(listArchived).toHaveBeenCalledOnce();
+    expect(parseText(result)).toEqual(result.structuredContent);
   });
 
   it('review.getは未分類バケットをtagId null + isUncategorizedとして公開契約に載せる', async () => {
