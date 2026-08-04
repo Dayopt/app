@@ -624,9 +624,13 @@ describe('runProductionRelease', () => {
       return world.fetchImpl(input, init);
     });
 
-    const error = await release({ fetchImpl, simulateFailure: 'promote:product' }).catch(
-      (thrown: Error) => thrown,
-    );
+    // rollback POST が 5xx = 受理されたか不明なので着地待ちへ入る。窓を進める。
+    let clock = 0;
+    const error = await release({
+      fetchImpl,
+      nowImpl: () => (clock += 60_000),
+      simulateFailure: 'promote:product',
+    }).catch((thrown: Error) => thrown);
 
     expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
     expect(error.message).toContain('dpl_web_old');
@@ -1916,6 +1920,42 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(error.message).not.toMatch(/MANUAL ROLLBACK REQUIRED/);
   });
 
+  it('invalidates a rollback record when the domain moves afterwards', async () => {
+    // rollback を確認した後、次の project を処理している間に他者が動かした場合。
+    // `rolled-back`（= previous を配信中）のままだと、復旧手順が実態を取り違える。
+    const world = createReleaseWorld();
+    let rolledBackWeb = false;
+    let readsAfterRollback = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_old')) {
+        rolledBackWeb = true;
+        return world.fetchImpl(input, init);
+      }
+      // 1 回目 = rollback の反映確認、2 回目以降（最終 refresh）= 他者が動かした後。
+      if (rolledBackWeb && url.includes('/v4/aliases/dayopt.app')) {
+        readsAfterRollback += 1;
+        if (readsAfterRollback > 1) return Response.json({ deploymentId: 'dpl_web_hotfix' });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const error = await release({
+      fetchImpl,
+      simulateFailure: 'promote:product',
+    }).catch(
+      (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
+    );
+
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'web',
+        action: 'moved-externally',
+        deploymentId: 'dpl_web_hotfix',
+      }),
+    );
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。
@@ -2004,8 +2044,10 @@ describe('runProductionRelease (affected-aware)', () => {
       return world.fetchImpl(input, init);
     });
 
+    let clock = 0;
     const error = await release({
       fetchImpl,
+      nowImpl: () => (clock += 60_000),
       simulateFailure: 'production-smoke:web',
     }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
@@ -2055,7 +2097,12 @@ describe('runProductionRelease (affected-aware)', () => {
       return world.fetchImpl(input, init);
     });
 
-    const error = await release({ fetchImpl, simulateFailure: 'promote:product' }).catch(
+    let clock = 0;
+    const error = await release({
+      fetchImpl,
+      nowImpl: () => (clock += 60_000),
+      simulateFailure: 'promote:product',
+    }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
     );
 

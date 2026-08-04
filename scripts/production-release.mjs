@@ -102,11 +102,14 @@ const WORST_CASE_SMOKE_MS =
   RELEASE_PROJECTS.reduce((total, project) => total + project.smokeChecks.length, 0) *
   (SMOKE_ATTEMPTS * SMOKE_TIMEOUT_MS + (SMOKE_ATTEMPTS - 1) * SMOKE_RETRY_DELAY_MS);
 
-// project あたりの反映待ちは最大 2 回分。promote の確認 + rollback の確認、または
-// promote の受理が不確かな場合の「着地待ち + rollback の確認」のどちらか。
-// 受理が不確かな経路では promote の確認を行わずに抜けるので、3 つが重なることはない。
+// project あたりの反映待ちは最大 3 回分。**promote の反映確認が timeout した場合**、
+// その entry は受理が不確かなものとして扱われるので、
+// 「promote の確認（timeout）+ rollback の確認 + 着地待ち」の 3 窓を連続で使う。
+// transport 失敗で抜けた場合は promote の確認を行わないので 2 窓に収まる。
 export const WORST_CASE_RELEASE_MS =
-  READY_TIMEOUT_MS + WORST_CASE_SMOKE_MS * 2 + RELEASE_PROJECTS.length * ASSIGN_TIMEOUT_MS * 2;
+  READY_TIMEOUT_MS +
+  WORST_CASE_SMOKE_MS * 2 +
+  RELEASE_PROJECTS.length * (ASSIGN_TIMEOUT_MS * 2 + AMBIGUOUS_SETTLE_MS);
 
 export class ReleaseError extends Error {
   constructor(message, { manualRollback } = {}) {
@@ -783,7 +786,9 @@ export function buildManifest({
       // **この run が置いたのではない deployment が live** と観測された分。待機中の
       // 外部 promote でも、我々の promote 後の hotfix でも入る。実際に配信している
       // ものを載せるのが目的なので、他のどの推定よりも優先する。
-      const moved = rolled ? null : (movedAway.get(project.name) ?? null);
+      // 観測した移動は rollback の記録より優先する。戻した後に別 deployment が
+      // live になっていれば、`rolled-back`（= previous を配信中）は事実と違う。
+      const moved = movedAway.get(project.name) ?? null;
       // 外部 actor が先に promote した分。この run は動かしていないが live ではある。
       const external = entry ? null : (externallyLive.get(project.name) ?? null);
 
@@ -988,15 +993,14 @@ export async function runProductionRelease({
    * `skipped` / `already-serving` として載せると、runbook が「触るな」と案内して
    * unhealthy な domain を放置させる。読めない project は黙って飛ばす（best effort）。
    */
-  const refreshObservedLive = async ({ skip = new Set() } = {}) => {
+  const refreshObservedLive = async ({ expected: overrides = new Map() } = {}) => {
     for (const project of projects) {
-      // rollback など、この run の経路が既に正しい記録を作った project は触らない。
-      if (skip.has(project.name)) continue;
-
-      // 比較対象は「今わかっている期待値」。待機中の自動割当を記録済みなら
-      // その ID で、無ければ run 開始時点の ID。**記録済みだからと飛ばさない**
-      // （そこから更に動いていた場合、古い観測を載せ続けることになる）。
-      const expected = externallyLive.get(project.name)?.id ?? before.get(project.name)?.id ?? null;
+      // 比較対象は「今わかっている期待値」。rollback / promote を行った project は
+      // 呼び出し側がその結果を渡す。**飛ばさない**（rollback 済みの project が
+      // その後に動いた場合、`rolled-back` のまま古い deployment を案内してしまう）。
+      const expected = overrides.has(project.name)
+        ? overrides.get(project.name)
+        : (externallyLive.get(project.name)?.id ?? before.get(project.name)?.id ?? null);
       const live = await getLiveProduction({
         projectName: project.name,
         productionDomain: project.productionDomain,
@@ -1286,6 +1290,16 @@ export async function runProductionRelease({
     // 行いうるため、判定は待機後の実状態で行う。unaffected な project は promote 対象で
     // ないので読み直さない（この run が動かさない先の状態は before で足りる）。
     const current = new Map();
+    // **1 project ごとに分類まで終える。** 後続 project の API が失敗した時、
+    // 先に観測した分が manifest へ入らないまま失敗すると、live な candidate が
+    // `pending` として載る（= runbook が「production は無傷」と案内する）。
+    const classifyCurrent = (project) => {
+      const candidate = candidates.find((c) => c.project.name === project.name);
+      if (!candidate) return;
+      if (current.get(project.name)?.id === candidate.deployment.id) {
+        externallyLive.set(project.name, { id: candidate.deployment.id, sha });
+      }
+    };
     for (const project of targets) {
       // 25 分待った後の失敗。ここで manifest を付けずに抜けると、artifact が
       // 1 つも残らない（run 開始時点の状態すら読めなくなる）。
@@ -1300,15 +1314,9 @@ export async function runProductionRelease({
         throw Object.assign(error, { manifest: manifestFor('failed') });
       });
       current.set(project.name, state);
-    }
-
-    // 待機中に Auto-assign や人が candidate を live にした分をここで拾う。promote loop の
-    // 記録だけに頼ると、この後の `pending` filter で除外されて loop に届かず、live なのに
-    // manifest 上「未着手（pending）」として復旧手順に出てしまう。
-    for (const { project, deployment } of candidates) {
-      if (current.get(project.name)?.id === deployment.id) {
-        externallyLive.set(project.name, { id: deployment.id, sha });
-      }
+      // 待機中に Auto-assign や人が candidate を live にした分をここで拾う。promote loop の
+      // 記録だけに頼ると、この後の `pending` filter で除外されて loop に届かない。
+      classifyCurrent(project);
     }
 
     const movedElsewhere = candidates.filter(({ project, deployment }) => {
@@ -1618,7 +1626,17 @@ export async function runProductionRelease({
       }
       // rollback は promote した project しか読み直さない。それ以外の live が
       // 動いていた場合も manifest へ反映してから失敗させる。
-      await refreshObservedLive({ skip: new Set(promoted.map((e) => e.project.name)) });
+      // rollback 済みは previous、戻せず残った分は candidate が期待値。
+      const rolledBackNames = new Set(rolledBack.map((e) => e.project.name));
+      const expectedAfterRollback = new Map(
+        promoted.map((entry) => [
+          entry.project.name,
+          rolledBackNames.has(entry.project.name)
+            ? (entry.previous?.id ?? null)
+            : entry.deployment.id,
+        ]),
+      );
+      await refreshObservedLive({ expected: expectedAfterRollback });
       throw Object.assign(failure, {
         rolledBack,
         manifest: manifestFor('failed', { promoted, rolledBack }),
@@ -1693,6 +1711,38 @@ async function rollbackPromoted({
   const observedLive = [];
   const drifted = [...preexistingDrift];
 
+  /**
+   * 猶予いっぱい alias を観測し、最後に読めた状態を返す。
+   *
+   * promote も rollback も同じ非同期 endpoint を使うので、「受理されたが反映が
+   * 確認できない」状態では**どちらの操作も後から着地しうる**。途中の観測で分類すると
+   * 誤った手動操作を促すため、窓の最後の状態だけで判断する。
+   */
+  const observeUntilSettled = async (entry) => {
+    const deadline = nowImpl() + AMBIGUOUS_SETTLE_MS;
+    let last;
+    let observed = false;
+    while (nowImpl() < deadline) {
+      await sleepImpl(ASSIGN_POLL_MS);
+      let settled;
+      try {
+        settled = await getLiveProduction({
+          projectName: entry.project.name,
+          productionDomain: entry.project.productionDomain,
+          projectId: entry.projectId,
+          token,
+          teamId,
+          fetchImpl,
+        });
+      } catch {
+        continue; // 読めない回で判断しない。窓の残りで見直す
+      }
+      observed = true;
+      last = settled ?? { id: null, sha: null };
+    }
+    return { observed, last };
+  };
+
   for (const entry of [...promoted].reverse()) {
     if (!entry.previous?.id) {
       stranded.push(`${entry.project.name} (no previous production deployment recorded)`);
@@ -1762,33 +1812,9 @@ async function rollbackPromoted({
       // 見直す。ここで target が現れたら、run 終了後に着地するのと同じ状態なので
       // 手動確認へ回す。
       if (entry.ambiguous) {
-        const deadline = nowImpl() + AMBIGUOUS_SETTLE_MS;
+        const { observed, last } = await observeUntilSettled(entry);
         let landed = null; // 我々の candidate が遅れて着地した
         let foreign = null; // 第三の deployment / alias 未割当
-        let last = null; // 窓の中で最後に読めた状態
-        let observed = false;
-        while (nowImpl() < deadline) {
-          await sleepImpl(ASSIGN_POLL_MS);
-          let settled;
-          try {
-            settled = await getLiveProduction({
-              projectName: entry.project.name,
-              productionDomain: entry.project.productionDomain,
-              projectId: entry.projectId,
-              token,
-              teamId,
-              fetchImpl,
-            });
-          } catch {
-            continue; // 読めない回で判断しない。窓の残りで見直す
-          }
-          observed = true;
-          // **どの観測でも打ち切らない。** 受理済みの promote も rollback の POST も
-          // 非同期に着地するので、途中の状態で分類すると誤った手動操作を促す。
-          // 窓の最後まで見て、最後に読めた状態だけで判断する。
-          last = settled ?? { id: null, sha: null };
-        }
-
         if (last) {
           if (last.id === entry.deployment.id) landed = last;
           else if (last.id !== entry.previous.id) foreign = last;
@@ -1832,29 +1858,29 @@ async function rollbackPromoted({
       logger.log(`${entry.project.name}: rolled back to ${entry.previous.id}`);
       rolledBack.push(entry);
     } catch {
-      // rollback の POST は受理されたが反映が確認できない。待っている間に他者が
-      // hotfix を promote した可能性があるので、実状態を読んでから分類する。
-      // 第三の deployment / 未割当なら「戻せ」と指示してはいけない（上書きになる）。
-      const after = await getLiveProduction({
-        projectName: entry.project.name,
-        productionDomain: entry.project.productionDomain,
-        projectId: entry.projectId,
-        token,
-        teamId,
-        fetchImpl,
-      }).catch(() => undefined);
+      // rollback の POST は受理されたが反映が確認できない。**rollback も promote と同じ
+      // 非同期 endpoint なので、後から着地しうる。** 1 回読んで分類すると、その後に
+      // 着地した rollback が他者の hotfix を上書きしても「触っていない」と報告する。
+      // 窓いっぱい観測し、最後に読めた状態で分類する。
+      const { observed: afterObserved, last: after } = await observeUntilSettled(entry);
+
+      const afterId = after?.id ?? null;
+      if (afterObserved && afterId === entry.previous.id) {
+        // 遅れて着地した。戻し切れている。
+        logger.log(`${entry.project.name}: rolled back to ${entry.previous.id} (settled late)`);
+        rolledBack.push(entry);
+        continue;
+      }
 
       // 自分の candidate のままなら rollback が効かなかっただけ。手動 rollback が要る。
       // 第三の deployment / 未割当だけを「他者の選択」として扱う。
-      const afterId = after?.id ?? null;
-      const isThirdParty =
-        after !== undefined && afterId !== entry.previous.id && afterId !== entry.deployment.id;
+      const isThirdParty = afterObserved && afterId !== entry.deployment.id;
       if (isThirdParty) {
-        const observed = after ?? { id: null, sha: null };
-        movedExternally.push({ entry, live: observed });
-        observedLive.push({ entry, live: observed });
+        const observedState = after ?? { id: null, sha: null };
+        movedExternally.push({ entry, live: observedState });
+        observedLive.push({ entry, live: observedState });
         logger.log(
-          `${entry.project.name}: production is on ${observed.id ?? 'no deployment'} after the failed rollback; leaving it alone`,
+          `${entry.project.name}: production is on ${observedState.id ?? 'no deployment'} after the failed rollback; leaving it alone`,
         );
         continue;
       }
