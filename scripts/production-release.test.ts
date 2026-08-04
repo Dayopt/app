@@ -21,6 +21,20 @@ import {
 const SHA = 'a'.repeat(40);
 const OLD_SHA = 'b'.repeat(40);
 const OTHER_SHA = 'c'.repeat(40);
+/** target より新しい（子孫の）commit。supersession の判定に使う。 */
+const NEWER_SHA = 'd'.repeat(40);
+
+/**
+ * 架空の履歴。OLD_SHA → SHA → NEWER_SHA の直線で、OTHER_SHA は分岐（判定不能）。
+ * 実 git は架空 SHA を知らないので、祖先判定は注入する。
+ */
+const ANCESTRY: Record<string, number> = { [OLD_SHA]: 1, [SHA]: 2, [NEWER_SHA]: 3 };
+const isAncestorImpl = (a: string, b: string) => {
+  const ra = ANCESTRY[a];
+  const rb = ANCESTRY[b];
+  if (ra === undefined || rb === undefined) return null; // 分岐 / 未知は判定不能
+  return ra < rb;
+};
 const TOKEN = 'vercel-token-must-not-appear';
 const BYPASS = 'bypass-secret-must-not-appear';
 
@@ -240,6 +254,7 @@ function release(overrides: Record<string, unknown> = {}) {
     // 既定は「checkout = release 対象」。実 repo の HEAD は SHA と一致しないので、
     // 注入しないと全 test が fail closed 経路（常に両方 affected）に落ちる。
     headShaImpl: () => SHA,
+    isAncestorImpl,
     ...overrides,
   });
 }
@@ -542,7 +557,7 @@ describe('runProductionRelease', () => {
     const { fetchImpl } = createVercelMock({
       '/v7/deployments': () => ({ deployments: [deployment('dpl_new', SHA, 'READY', 1000)] }),
       '/v4/aliases/': () => ({ deploymentId: 'dpl_newer' }),
-      '/v13/deployments/': () => deploymentRecord('dpl_newer', OLD_SHA, 5000),
+      '/v13/deployments/': () => deploymentRecord('dpl_newer', NEWER_SHA, 5000),
       '/v9/projects/': () => ({ id: 'prj_test', autoAssignCustomDomains: false }),
     });
 
@@ -1359,7 +1374,7 @@ describe('runProductionRelease (affected-aware)', () => {
     const { fetchImpl: base } = createVercelMock({
       '/v7/deployments': () => ({ deployments: [deployment('dpl_new', SHA, 'READY', 1000)] }),
       '/v4/aliases/': () => ({ deploymentId: 'dpl_newer' }),
-      '/v13/deployments/': () => deploymentRecord('dpl_newer', OLD_SHA, 5000),
+      '/v13/deployments/': () => deploymentRecord('dpl_newer', NEWER_SHA, 5000),
       '/v9/projects/': () => ({ id: 'prj_test', autoAssignCustomDomains: true }),
     });
     const patches: unknown[] = [];
@@ -1711,7 +1726,7 @@ describe('runProductionRelease (affected-aware)', () => {
     const { fetchImpl: base } = createVercelMock({
       '/v7/deployments': () => ({ deployments: [deployment('dpl_new', SHA, 'READY', 1000)] }),
       '/v4/aliases/': () => ({ deploymentId: 'dpl_newer' }),
-      '/v13/deployments/': () => deploymentRecord('dpl_newer', OLD_SHA, 5000),
+      '/v13/deployments/': () => deploymentRecord('dpl_newer', NEWER_SHA, 5000),
       '/v9/projects/': () => ({ id: 'prj_test', autoAssignCustomDomains: true }),
     });
     const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
@@ -1954,6 +1969,41 @@ describe('runProductionRelease (affected-aware)', () => {
         deploymentId: 'dpl_web_hotfix',
       }),
     );
+  });
+
+  it('watches an ambiguous promote even when a hotfix is already visible', async () => {
+    // 受理が不確かな promote は、他者の deployment が見えていても窓を見る。
+    // ここで抜けると「hotfix は触らない」と記録した後に promote が着地し、
+    // その hotfix を ungated な candidate で置き換える。
+    const world = createReleaseWorld();
+    let webPromoteFailed = false;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        webPromoteFailed = true;
+        return new Response(null, { status: 503 }); // 受理されたが response を失った
+      }
+      // rollback 直前は他者の hotfix、窓の中で自分の promote が着地する。
+      if (webPromoteFailed && url.includes('/v4/aliases/dayopt.app')) {
+        return Response.json({
+          deploymentId: world.live.settled ? 'dpl_web_new' : 'dpl_web_hotfix',
+        });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    let clock = 0;
+    const error = await release({
+      fetchImpl,
+      nowImpl: () => {
+        clock += 60_000;
+        if (clock > 120_000) world.live.settled = 'yes'; // 窓の途中で着地
+        return clock;
+      },
+    }).catch((thrown: Error) => thrown);
+
+    // hotfix を「触らない」で終わらせず、着地した candidate を手動確認へ回す。
+    expect(error.message).toMatch(/a delayed promote landed on dpl_web_new/);
   });
 
   it('sends no bypass secret to the production domains', async () => {

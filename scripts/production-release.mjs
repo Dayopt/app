@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -152,6 +152,25 @@ export function gitDiffFiles(baseSha, targetSha, { cwd = ROOT } = {}) {
     },
   );
   return stdout.split('\0').filter(Boolean);
+}
+
+/**
+ * `a` が `b` の祖先か。判定できなければ null（呼び出し側で fail closed に倒す）。
+ *
+ * `git merge-base --is-ancestor` は祖先なら exit 0、そうでなければ exit 1 を返す。
+ * object が無い（shallow / gc 済み）場合は 128 前後で落ちるため、exit 1 と区別するには
+ * stderr ではなく status を見る必要がある。
+ */
+export function gitIsAncestor(a, b, { cwd = ROOT } = {}) {
+  const result = spawnSync('git', ['merge-base', '--is-ancestor', a, b], {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'ignore', 'ignore'],
+  });
+  if (result.error || result.status === null) return null;
+  if (result.status === 0) return true;
+  if (result.status === 1) return false;
+  return null; // object が無い / 想定外
 }
 
 /** checkout の HEAD SHA。取れなければ null（fail closed 経路へ落とす）。 */
@@ -896,6 +915,7 @@ export async function runProductionRelease({
   nowImpl = () => Date.now(),
   diffFilesImpl = gitDiffFiles,
   headShaImpl = gitHeadSha,
+  isAncestorImpl = gitIsAncestor,
   logger = console,
 }) {
   if (!token) throw new ReleaseError('VERCEL_TOKEN is required for Production Release');
@@ -1362,18 +1382,28 @@ export async function runProductionRelease({
 
     // 以降の判定はすべて待機後の実状態を使う。movedElsewhere を抜けている時点で
     // current は before か candidate のどちらかに一致している。
-    const superseded = candidates.filter(({ project, deployment }) => {
+    // **supersession は deployment の作成時刻では決まらない。** 古い SHA を後から
+    // 再 build すると candidate の方が新しく見えるが、内容は live より古い。
+    // `workflow_dispatch` は main に含まれる古い SHA を明示的に受け付けるので、
+    // 時刻で判定すると **新しい app 変更を古い commit で上書きできてしまう**。
+    // commit の祖先関係で判定し、判定不能（divergent / 履歴が読めない / live の SHA が
+    // 不明）は promote しない側へ倒す。
+    const superseded = candidates.filter(({ project }) => {
       const live = current.get(project.name);
-      return (
-        live !== null &&
-        live.createdAt !== null &&
-        deployment.createdAt !== null &&
-        live.createdAt > deployment.createdAt
-      );
+      if (live === null) return false; // 何も配信していない。downgrade にならない
+      if (live.sha === sha) return false; // 同じ commit
+      // target が live の祖先 = live の方が新しい内容を配信している。
+      const targetIsAncestor = live.sha ? isAncestorImpl(sha, live.sha) : null;
+      if (targetIsAncestor === true) return true;
+      // live が target の祖先 = target の方が新しい。promote してよい。
+      const liveIsAncestor = live.sha ? isAncestorImpl(live.sha, sha) : null;
+      return liveIsAncestor !== true;
     });
     if (superseded.length > 0) {
       const names = superseded.map(({ project }) => project.name).join(', ');
-      logger.log(`Skipping promote: a newer production deployment already serves ${names}.`);
+      logger.log(
+        `Skipping promote: production already serves ${names} from a commit that is not an ancestor of ${sha}.`,
+      );
       // 外部の promote が auto-assign を戻している可能性があるため、抜ける前に掃く。
       // **drift があっても superseded のままにする。** ここは「より新しい deployment が
       // live」と証明した経路で、settings-drift（= 正しい SHA が live）へ塗り替えると
@@ -1781,6 +1811,27 @@ async function rollbackPromoted({
     // しまう。release run にその判断の権限は無い。
     const isKnown = live && (live.id === entry.deployment.id || live.id === entry.previous.id);
     if (!isKnown) {
+      // **受理が不確かな promote は、他者の deployment が見えていても窓を見る。**
+      // ここで抜けると「hotfix は触らない」と記録した後に、受理済みの promote が
+      // 着地してその hotfix を ungated な candidate で置き換える。POST は撃たない
+      // （撃てば我々が上書きすることになる）が、着地するかどうかは見届ける。
+      if (entry.ambiguous) {
+        const { observed: settledObserved, last: settledLive } = await observeUntilSettled(entry);
+        const finalState = settledObserved ? (settledLive ?? { id: null, sha: null }) : live;
+        if (settledObserved && finalState.id === entry.deployment.id) {
+          stranded.push(
+            `${entry.project.name} -> ${entry.previous.id} (a delayed promote landed on ${finalState.id})`,
+          );
+          continue;
+        }
+        movedExternally.push({ entry, live: finalState });
+        observedLive.push({ entry, live: finalState });
+        logger.log(
+          `${entry.project.name}: production settled on ${finalState.id ?? 'no deployment'}; leaving it alone`,
+        );
+        continue;
+      }
+
       const observedState = live ?? { id: null, sha: null };
       movedExternally.push({ entry, live: observedState });
       observedLive.push({ entry, live: observedState });
