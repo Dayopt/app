@@ -1,12 +1,21 @@
-import { appendFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { appendFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+import { resolveImpact } from './ci/impact.mjs';
 import { runProductionConfigAudit } from './production-config-audit.mjs';
 
 const API_ORIGIN = 'https://api.vercel.com';
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
  * promote 順序 = 配列順。web を先に promote するため、2 つ目(product)が失敗した時に
  * rollback 対象になるのは web 側だけになる。
+ *
+ * `impactKey` は Impact Resolver（scripts/ci/impact.mjs）の出力キー。project 名と
+ * 同じ文字列だが、判定側のキー名と release 側の project 名を別々に変えられるよう
+ * 明示的に持つ。
  *
  * smoke は status だけでは足りない。product は未知 path でも 200 を返し
  * （`/[locale]/[nday]` が任意の 1 segment に一致する）、Next.js は streaming 中の
@@ -16,6 +25,7 @@ const API_ORIGIN = 'https://api.vercel.com';
 export const RELEASE_PROJECTS = [
   {
     name: 'web',
+    impactKey: 'web',
     bypassEnv: 'VERCEL_BYPASS_WEB',
     productionDomain: 'dayopt.app',
     smokeChecks: [
@@ -25,6 +35,7 @@ export const RELEASE_PROJECTS = [
   },
   {
     name: 'product',
+    impactKey: 'product',
     bypassEnv: 'VERCEL_BYPASS_PRODUCT',
     productionDomain: 'app.dayopt.app',
     smokeChecks: [
@@ -54,11 +65,15 @@ const TERMINAL_FAILURE_STATES = new Set(['ERROR', 'CANCELED', 'DELETED']);
  * 下回ると、rollback の途中で job が kill され、片方だけ promote された
  * production が手動 rollback の手掛かりごと失われる。
  * 内訳: candidate 待機 + 全 smoke の retry + promote 反映待ち + rollback 反映待ち。
+ * smoke は candidate（promote 前）と production domain（promote 後）で 2 巡する。
  */
+const WORST_CASE_SMOKE_MS =
+  RELEASE_PROJECTS.reduce((total, project) => total + project.smokeChecks.length, 0) *
+  (SMOKE_ATTEMPTS * SMOKE_TIMEOUT_MS + (SMOKE_ATTEMPTS - 1) * SMOKE_RETRY_DELAY_MS);
+
 export const WORST_CASE_RELEASE_MS =
   READY_TIMEOUT_MS +
-  RELEASE_PROJECTS.reduce((total, project) => total + project.smokeChecks.length, 0) *
-    (SMOKE_ATTEMPTS * SMOKE_TIMEOUT_MS + (SMOKE_ATTEMPTS - 1) * SMOKE_RETRY_DELAY_MS) +
+  WORST_CASE_SMOKE_MS * 2 +
   RELEASE_PROJECTS.length * ASSIGN_TIMEOUT_MS * 2;
 
 export class ReleaseError extends Error {
@@ -67,6 +82,91 @@ export class ReleaseError extends Error {
     this.name = 'ReleaseError';
     this.manualRollback = manualRollback ?? null;
   }
+}
+
+// ─── 影響判定（Impact Resolver の release 側 consumer）──────────────────
+
+const SHA_PATTERN = /^[0-9a-f]{40}$/;
+
+const short = (sha) => (typeof sha === 'string' ? sha.slice(0, 7) : 'unknown');
+
+/**
+ * 2 commit 間の変更ファイル一覧を返す。
+ *
+ * - `--no-renames` … rename 検出を切り、移動元の path も一覧へ残す。有効なままだと
+ *   `apps/product/foo.ts` → `docs/foo.ts` の rename が新 path だけになり、ファイルが
+ *   消えた側の app を unaffected と誤判定する（merge gate 側の previous_filename と同じ穴）
+ * - `-z` … `core.quotePath` による非 ASCII path のエスケープを避ける
+ *
+ * 対象 commit が checkout に無い（shallow clone / gc 済み）場合は git が非 0 で終了し、
+ * 呼び出し側の fail closed 経路へ落ちる。
+ */
+function gitDiffFiles(baseSha, targetSha) {
+  const stdout = execFileSync(
+    'git',
+    ['diff', '--name-only', '--no-renames', '-z', baseSha, targetSha],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      maxBuffer: 32 * 1024 * 1024,
+      // 失敗は戻り値（throw）で扱う。stderr をそのまま親へ流すと、fail closed の
+      // 正常な分岐が run のログでは事故のように見える。
+      stdio: ['ignore', 'pipe', 'ignore'],
+    },
+  );
+  return stdout.split('\0').filter(Boolean);
+}
+
+/**
+ * 「この project の production を target SHA へ進める必要があるか」を判定する。
+ *
+ * 基準は **その project が今配信している deployment の source SHA**。project ごとに
+ * 基準が違うのが要点で、web が 3 commit 遅れていても product だけが進んでいれば、
+ * web の判定は web の live SHA から見た差分で行う。
+ *
+ * 判定不能はすべて affected（fail closed）へ倒す。Vercel の skip 判定ではなく
+ * Dayopt 側の判定を正とする設計原則（overview.md §4-2）に従う。
+ */
+export function resolveProjectImpact({
+  project,
+  baseSha,
+  targetSha,
+  diffFilesImpl = gitDiffFiles,
+}) {
+  if (!SHA_PATTERN.test(baseSha ?? '')) {
+    return { affected: true, reason: 'current production SHA is unknown (fail closed)' };
+  }
+  if (baseSha === targetSha) {
+    return { affected: false, reason: `already serving ${short(targetSha)}` };
+  }
+
+  let files;
+  try {
+    files = diffFilesImpl(baseSha, targetSha);
+  } catch {
+    return {
+      affected: true,
+      reason: `cannot diff ${short(baseSha)}..${short(targetSha)} (fail closed)`,
+    };
+  }
+
+  // git が正常終了して 0 件を返したのは「差分が無い」という確定的な答え。
+  // 変更ファイル一覧の取得失敗（resolveImpact 側の fail closed 対象）とは別物なので、
+  // resolveImpact へ空配列を渡さずここで unaffected を確定させる。
+  if (files.length === 0) {
+    return { affected: false, reason: `no file changes since ${short(baseSha)}` };
+  }
+
+  const impact = resolveImpact(files);
+  // 未知キー（impactKey の改名事故）も affected へ倒す。
+  const affected = impact[project.impactKey] !== false;
+  const trigger = impact.reasons?.[project.impactKey] ?? impact.unknown?.[0];
+  return {
+    affected,
+    reason: affected
+      ? `changed since ${short(baseSha)}${trigger ? ` (${trigger})` : ''}`
+      : `no ${project.impactKey} impact since ${short(baseSha)}`,
+  };
 }
 
 function apiUrl(path, teamId, params = {}) {
@@ -568,9 +668,84 @@ function assertSimulationPoint(simulateFailure, point) {
   }
 }
 
+// ─── release manifest ───────────────────────────────────────────────
+
 /**
- * merge 済み SHA を両 project の production domain へ公開する。
- * 片方だけ promote された状態は残さない。
+ * 「この run の後、どの project が何を配信しているか」を機械可読で残す。
+ *
+ * affected-aware 化で project ごとに live SHA が別々になりうるため、run の
+ * ログを読まないと production の実態が分からない状態を避ける。部分失敗の
+ * 復旧では、これが手動 rollback 先の一次情報になる。
+ */
+export function buildManifest({ sha, status, projects, decisions, before, promoted, rolledBack }) {
+  const promotedBy = new Map(promoted.map((entry) => [entry.project.name, entry]));
+  const rolledBackNames = new Set(rolledBack.map((entry) => entry.project.name));
+
+  return {
+    sha,
+    status,
+    projects: projects.map((project) => {
+      const decision = decisions.get(project.name);
+      const live = before.get(project.name) ?? null;
+      const entry = promotedBy.get(project.name);
+      const rolled = entry && rolledBackNames.has(project.name);
+      // promote 済みで rollback していない = その deployment が今も live。run が
+      // 失敗している場合、これがそのまま手動 rollback の対象になる。
+      const serving = entry && !rolled ? { id: entry.deployment.id, sha } : null;
+      const restored = rolled
+        ? { id: entry.previous?.id ?? null, sha: entry.previous?.sha ?? null }
+        : null;
+
+      const action = entry
+        ? rolled
+          ? 'rolled-back'
+          : 'promoted'
+        : decision?.affected
+          ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
+          : live?.sha === sha
+            ? 'already-serving'
+            : 'skipped';
+
+      return {
+        name: project.name,
+        productionDomain: project.productionDomain,
+        affected: decision?.affected ?? null,
+        reason: decision?.reason ?? null,
+        action,
+        deploymentId: (serving ?? restored ?? live)?.id ?? null,
+        sourceSha: (serving ?? restored ?? live)?.sha ?? null,
+        previousDeploymentId: entry?.previous?.id ?? null,
+      };
+    }),
+  };
+}
+
+/**
+ * manifest を run の artifact として残す。path 未設定なら何もしない。
+ *
+ * 書き込み失敗で run の合否を変えない。manifest は診断用で、ここで throw すると
+ * promote 済みの正常な release を artifact の都合で失敗扱いにしてしまう。
+ */
+export function writeReleaseManifest(manifest, { env = process.env, logger = console } = {}) {
+  if (!manifest) return false;
+  const path = env.RELEASE_MANIFEST_PATH;
+  if (!path) return false;
+  try {
+    writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`);
+    return true;
+  } catch (error) {
+    logger.error?.(`Could not write the release manifest (${error?.name ?? 'WriteFailed'})`);
+    return false;
+  }
+}
+
+/**
+ * merge 済み SHA を、その merge の影響を受ける project の production domain へ公開する。
+ *
+ * 影響を受けない project は candidate を待たず promote もしない（Vercel が
+ * deployment 自体を作らないため、待てば必ず timeout する）。promote した project が
+ * 1 つでもある run は、最後に**全 project の production domain**を smoke する。
+ * 片側だけ進んだ production は、その組み合わせが初めて世に出る状態だから。
  */
 export async function runProductionRelease({
   sha,
@@ -587,6 +762,7 @@ export async function runProductionRelease({
   fetchImpl = fetch,
   sleepImpl = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   nowImpl = () => Date.now(),
+  diffFilesImpl = gitDiffFiles,
   logger = console,
 }) {
   if (!token) throw new ReleaseError('VERCEL_TOKEN is required for Production Release');
@@ -626,12 +802,36 @@ export async function runProductionRelease({
   const expectedFor = (name) =>
     typeof expectedAutoAssign === 'boolean' ? expectedAutoAssign : autoAssign.get(name);
 
+  // project ごとに「今配信している SHA → target SHA」の差分で影響を判定する。
+  // 既に target を配信している project は差分が空になるため affected にならない
+  // （alreadyServing と targets は排他）。
+  const decisions = new Map();
+  const decisionLines = [];
+  for (const project of projects) {
+    const decision = resolveProjectImpact({
+      project,
+      baseSha: before.get(project.name)?.sha ?? null,
+      targetSha: sha,
+      diffFilesImpl,
+    });
+    decisions.set(project.name, decision);
+    const line = `- ${project.name}: ${decision.affected ? 'affected' : 'skip'} — ${decision.reason}`;
+    decisionLines.push(line);
+    logger.log(line.slice(2));
+  }
+  writeStepSummary(['', '### Impact', '', ...decisionLines]);
+
   const alreadyServing = projects.filter((project) => before.get(project.name)?.sha === sha);
+  const targets = projects.filter((project) => decisions.get(project.name).affected);
+
+  const manifestFor = (status, { promoted = [], rolledBack = [] } = {}) =>
+    buildManifest({ sha, status, projects, decisions, before, promoted, rolledBack });
 
   // 前回 run が中断して片側だけ公開された状態。既に配信中の側は戻し先を持たないので
   // 自動 rollback の対象にはできない。せめて名指しして人が判断できるようにする。
+  // promote する予定が無い run には rollback scope 自体が無いので警告しない。
   const preexistingSplit =
-    alreadyServing.length > 0 && alreadyServing.length < projects.length
+    alreadyServing.length > 0 && targets.length > 0
       ? alreadyServing.map((project) => project.name)
       : [];
   if (preexistingSplit.length > 0) {
@@ -642,8 +842,13 @@ export async function runProductionRelease({
     writeStepSummary(['', `> ${message}`]);
   }
 
-  if (alreadyServing.length === projects.length) {
-    logger.log(`All projects already serve ${sha}; nothing to promote.`);
+  if (targets.length === 0) {
+    const status = alreadyServing.length === projects.length ? 'already-released' : 'unaffected';
+    logger.log(
+      status === 'already-released'
+        ? `All projects already serve ${sha}; nothing to promote.`
+        : `No project is affected by ${sha}; nothing to promote.`,
+    );
     // 前回 run が復元に失敗して終わっている可能性があるため、設定だけは見に行く。
     const drifted = await restoreAll({
       entries: projects.map((project) => ({
@@ -656,12 +861,19 @@ export async function runProductionRelease({
       fetchImpl,
       logger,
     });
-    if (drifted.length > 0) throw driftError(sha, drifted);
-    return { status: 'already-released', sha, promoted: [], rolledBack: [], preexistingSplit };
+    if (drifted.length > 0) throw Object.assign(driftError(sha, drifted), { manifest: manifestFor('failed') });
+    return {
+      status,
+      sha,
+      promoted: [],
+      rolledBack: [],
+      preexistingSplit,
+      manifest: manifestFor(status),
+    };
   }
 
   const candidates = await waitForReadyCandidates({
-    projects,
+    projects: targets,
     sha,
     token,
     teamId,
@@ -669,12 +881,15 @@ export async function runProductionRelease({
     sleepImpl,
     nowImpl,
     logger,
+  }).catch((error) => {
+    throw Object.assign(error, { manifest: manifestFor('failed') });
   });
 
   // 待機は最大 25 分ブロックする。その間に人が Instant Rollback や手動 promote を
-  // 行いうるため、判定は待機後の実状態で行う。
+  // 行いうるため、判定は待機後の実状態で行う。unaffected な project は promote 対象で
+  // ないので読み直さない（この run が動かさない先の状態は before で足りる）。
   const current = new Map();
-  for (const project of projects) {
+  for (const project of targets) {
     const state = await getLiveProduction({
       projectName: project.name,
       productionDomain: project.productionDomain,
@@ -702,8 +917,11 @@ export async function runProductionRelease({
         );
       })
       .join('; ');
-    throw new ReleaseError(
-      `Production moved while waiting for candidates; refusing to promote over it (${detail})`,
+    throw Object.assign(
+      new ReleaseError(
+        `Production moved while waiting for candidates; refusing to promote over it (${detail})`,
+      ),
+      { manifest: manifestFor('failed') },
     );
   }
 
@@ -721,7 +939,14 @@ export async function runProductionRelease({
   if (superseded.length > 0) {
     const names = superseded.map(({ project }) => project.name).join(', ');
     logger.log(`Skipping promote: a newer production deployment already serves ${names}.`);
-    return { status: 'superseded', sha, promoted: [], rolledBack: [], preexistingSplit };
+    return {
+      status: 'superseded',
+      sha,
+      promoted: [],
+      rolledBack: [],
+      preexistingSplit,
+      manifest: manifestFor('superseded'),
+    };
   }
 
   // 既に production へ出ている build は公開済みなので、gate の対象から外す。
@@ -785,7 +1010,7 @@ export async function runProductionRelease({
       // 外部の promote が待機中に auto-assign を飛ばしていた場合、ここで抜けると
       // 誰も設定を戻さない。掃いてから失敗させる。
       reportSweepDrift(await sweepSettings());
-      throw error;
+      throw Object.assign(error, { manifest: manifestFor('failed') });
     }
   }
 
@@ -880,7 +1105,33 @@ export async function runProductionRelease({
       );
       logger.log(`${project.name}: promoted ${deployment.id}`);
     }
+
+    // promote 後の production domain smoke。candidate smoke は各 deployment を単体で
+    // 見るが、affected な側だけを進めた production は **その組み合わせが初めて世に出る
+    // 状態**なので、実際に配信している両 domain を最後に確認する。
+    // bypass secret は送らない。production domain に Deployment Protection が付く
+    // 設定事故（利用者に SSO 画面が出る）を、この smoke で捕まえたいため。
+    //
+    // 条件は promote 件数ではなく targets。Auto-assign が有効な段階適用中は candidate が
+    // 待機中に自動割当されて promote 件数が 0 になるため、promote 件数で分岐すると
+    // cutover までこの smoke が一度も走らない（candidate smoke と同じ理由）。
+    if (!force && targets.length > 0) {
+      for (const project of projects) {
+        assertSimulationPoint(simulateFailure, `production-smoke:${project.name}`);
+        await smokeDeployment({
+          projectName: `${project.name} production`,
+          deploymentUrl: project.productionDomain,
+          checks: project.smokeChecks,
+          fetchImpl,
+          sleepImpl,
+          logger,
+        });
+      }
+    }
   } catch (error) {
+    // promote 済みの側を戻す。対象は **この run が promote した project だけ**で、
+    // 前から target を配信していた側（preexistingSplit）には戻し先が無い。
+    let failure = error;
     let rolledBack = [];
     try {
       rolledBack = await rollbackPromoted({
@@ -895,11 +1146,17 @@ export async function runProductionRelease({
         preexistingSplit,
         preexistingDrift: driftedProjects,
       });
+    } catch (rollbackError) {
+      // 手動 rollback の指示を持つ方を投げる。元の失敗理由は cause として本文に入る。
+      failure = rollbackError;
     } finally {
       // rollback の成否に関わらず、promote しなかった project の設定も掃く。
       reportSweepDrift(await sweepSettings());
     }
-    throw Object.assign(error, { rolledBack });
+    throw Object.assign(failure, {
+      rolledBack,
+      manifest: manifestFor('failed', { promoted, rolledBack }),
+    });
   }
 
   // promote しなかった project も掃く。pending から除外された側や、外部の promote で
@@ -912,7 +1169,11 @@ export async function runProductionRelease({
 
   // production は正しい SHA を配信している。設定復元の失敗で巻き戻す理由はないが、
   // 放置すると次の merge が gate を迂回するため run は失敗させる。
-  if (driftedProjects.length > 0) throw driftError(sha, driftedProjects);
+  if (driftedProjects.length > 0) {
+    throw Object.assign(driftError(sha, driftedProjects), {
+      manifest: manifestFor('failed', { promoted }),
+    });
+  }
 
   return {
     status: 'promoted',
@@ -921,6 +1182,7 @@ export async function runProductionRelease({
     rolledBack: [],
     preexistingSplit,
     gateChecksRan: !force,
+    manifest: manifestFor('promoted', { promoted }),
   };
 }
 
@@ -998,7 +1260,13 @@ function writeStepSummary(lines) {
 }
 
 /** workflow が status publish と run の合否を別々に決められるようにする。 */
-export const RELEASE_STATUSES = new Set(['already-released', 'promoted', 'superseded', 'failed']);
+export const RELEASE_STATUSES = new Set([
+  'already-released',
+  'promoted',
+  'superseded',
+  'unaffected',
+  'failed',
+]);
 
 export function writeReleaseStatus(status, { env = process.env } = {}) {
   const path = env.GITHUB_OUTPUT;
@@ -1047,6 +1315,16 @@ function summarize(result) {
       'and this commit is **not** live. Do not tag it.',
     );
   }
+  if (result.status === 'unaffected') {
+    lines.push(
+      '',
+      'This commit changes nothing that either app serves, so Production was left as it is.',
+      'The build behind each domain is unchanged and equivalent to this commit.',
+    );
+  }
+  if (result.manifest) {
+    lines.push('', '### Release manifest', '', '```json', JSON.stringify(result.manifest, null, 2), '```');
+  }
   return lines;
 }
 
@@ -1071,12 +1349,20 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   })
     .then((result) => {
       writeStepSummary(summarize(result));
+      writeReleaseManifest(result.manifest);
       writeReleaseStatus(result.status);
       console.log(`Production Release finished: ${result.status}`);
     })
     .catch((error) => {
       const message = error instanceof Error ? error.message : 'Production Release failed';
-      writeStepSummary(['## Production Release', '', `- Failed: ${message}`]);
+      const lines = ['## Production Release', '', `- Failed: ${message}`];
+      // 部分失敗の復旧では「今どの project が何を配信しているか」が一次情報になる。
+      // 失敗時こそ manifest を残す。
+      if (error?.manifest) {
+        lines.push('', '### Release manifest', '', '```json', JSON.stringify(error.manifest, null, 2), '```');
+        writeReleaseManifest(error.manifest);
+      }
+      writeStepSummary(lines);
       writeReleaseStatus('failed');
       console.error(message);
       process.exitCode = 1;

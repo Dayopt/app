@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -5,10 +6,13 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  RELEASE_PROJECTS,
   findDeploymentForSha,
+  resolveProjectImpact,
   runProductionRelease,
   smokeDeployment,
   waitForReadyCandidates,
+  writeReleaseManifest,
   writeReleaseStatus,
 } from './production-release.mjs';
 
@@ -213,6 +217,9 @@ function createReleaseWorld(
   return { fetchImpl, pointCalls, promoted, rolledBack, patches, autoAssign, live, store, DOMAINS };
 }
 
+/** 両 app に影響する差分（root 設定）。project 別の影響は各 test で上書きする。 */
+const AFFECTS_BOTH = () => ['pnpm-lock.yaml'];
+
 function release(overrides: Record<string, unknown> = {}) {
   return runProductionRelease({
     sha: SHA,
@@ -222,6 +229,7 @@ function release(overrides: Record<string, unknown> = {}) {
     nowImpl: () => 0,
     logger: noop,
     bypassSecrets: { web: BYPASS, product: BYPASS },
+    diffFilesImpl: AFFECTS_BOTH,
     ...overrides,
   });
 }
@@ -823,13 +831,279 @@ describe('runProductionRelease', () => {
   });
 });
 
+describe('resolveProjectImpact', () => {
+  const web = RELEASE_PROJECTS.find((project) => project.name === 'web')!;
+  const product = RELEASE_PROJECTS.find((project) => project.name === 'product')!;
+
+  it('treats an unknown production SHA as affected', () => {
+    // GitHub 連携以外で作られた deployment には commit SHA が無い。
+    // 基準が取れないまま skip すると、変更が production へ出ないまま success になる。
+    expect(resolveProjectImpact({ project: product, baseSha: null, targetSha: SHA }).affected).toBe(
+      true,
+    );
+  });
+
+  it('treats an unreadable git history as affected', () => {
+    // shallow clone / gc 済みで基準 commit が無い場合。Vercel の判定ではなく
+    // Dayopt 側の判定を正とする以上、判定不能は必ず fail closed へ倒す。
+    const decision = resolveProjectImpact({
+      project: product,
+      baseSha: OLD_SHA,
+      targetSha: SHA,
+      diffFilesImpl: () => {
+        throw new Error('bad object');
+      },
+    });
+    expect(decision).toMatchObject({ affected: true });
+    expect(decision.reason).toMatch(/fail closed/);
+  });
+
+  it('treats an empty diff as unaffected', () => {
+    // git が正常終了して 0 件を返したのは「差分なし」の確定的な答えであって、
+    // 一覧の取得失敗ではない。
+    expect(
+      resolveProjectImpact({
+        project: web,
+        baseSha: OLD_SHA,
+        targetSha: SHA,
+        diffFilesImpl: () => [],
+      }).affected,
+    ).toBe(false);
+  });
+
+  it('separates product-only changes from web', () => {
+    const diffFilesImpl = () => ['apps/product/src/app/page.tsx'];
+    expect(
+      resolveProjectImpact({ project: product, baseSha: OLD_SHA, targetSha: SHA, diffFilesImpl })
+        .affected,
+    ).toBe(true);
+    expect(
+      resolveProjectImpact({ project: web, baseSha: OLD_SHA, targetSha: SHA, diffFilesImpl })
+        .affected,
+    ).toBe(false);
+  });
+
+  it('reads real git history through the default implementation', () => {
+    // 既定の diff 実装（引数の綴り・-z 分割）が実際の git で動くことを確認する。
+    // ここが壊れても injection 付きの test は全て通ってしまう。
+    const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    const parent = execFileSync('git', ['rev-parse', 'HEAD~1'], { encoding: 'utf8' }).trim();
+
+    const decision = resolveProjectImpact({ project: product, baseSha: parent, targetSha: head });
+    expect(decision.reason).not.toMatch(/fail closed/);
+  });
+});
+
+describe('runProductionRelease (affected-aware)', () => {
+  it('promotes only product when web is untouched', async () => {
+    const world = createReleaseWorld();
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+    });
+
+    expect(result.status).toBe('promoted');
+    expect(world.promoted()).toEqual(['product']);
+    // web の candidate は待たない。Vercel が deployment を作らないので待てば timeout する。
+    const webCandidateLookups = world.fetchImpl.mock.calls
+      .map((call) => String(call[0]))
+      .filter((url) => url.includes('/v7/deployments') && url.includes('projectId=web'));
+    expect(webCandidateLookups).toEqual([]);
+  });
+
+  it('promotes only web when product is untouched', async () => {
+    const world = createReleaseWorld();
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/web/src/app/page.tsx'],
+    });
+
+    expect(result.status).toBe('promoted');
+    expect(world.promoted()).toEqual(['web']);
+  });
+
+  it('promotes both when a shared package changes', async () => {
+    const world = createReleaseWorld();
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['packages/ui/src/button.tsx'],
+    });
+
+    expect(result.status).toBe('promoted');
+    expect(world.promoted()).toEqual(['web', 'product']);
+  });
+
+  it('is a no-op success when the merge affects no app', async () => {
+    const world = createReleaseWorld();
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['docs/engineering/infra.md', '.github/workflows/docs-guard.yml'],
+    });
+
+    expect(result.status).toBe('unaffected');
+    expect(world.pointCalls).toEqual([]);
+    // production が動いていない以上、この commit を tag できてよい。
+    expect(result.manifest.projects.map((entry: { action: string }) => entry.action)).toEqual([
+      'skipped',
+      'skipped',
+    ]);
+  });
+
+  it('smokes both production domains after a one-sided promote', async () => {
+    // 片側だけ進んだ production は、その組み合わせが初めて世に出る状態になる。
+    const world = createReleaseWorld();
+
+    await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+    });
+
+    const smoked = world.fetchImpl.mock.calls
+      .map((call) => String(call[0]))
+      .filter(
+        (url) => url.startsWith('https://dayopt.app') || url.startsWith('https://app.dayopt.app'),
+      );
+    expect(smoked).toContain('https://dayopt.app/');
+    expect(smoked).toContain('https://app.dayopt.app/api/health');
+  });
+
+  it('smokes the production domains even when Vercel auto-assigned the candidate', async () => {
+    // Auto-assign が有効な段階適用中は promote 件数が 0 になる。promote 件数で
+    // 分岐すると cutover までこの smoke が一度も走らない。
+    const world = createReleaseWorld({ webAliasSequence: ['dpl_web_old', 'dpl_web_new'] });
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/web/src/app/page.tsx'],
+    });
+
+    expect(result.status).toBe('promoted');
+    expect(world.promoted()).toEqual([]);
+    const smoked = world.fetchImpl.mock.calls.map((call) => String(call[0]));
+    expect(smoked).toContain('https://dayopt.app/');
+    expect(smoked).toContain('https://app.dayopt.app/api/health');
+  });
+
+  it('sends no bypass secret to the production domains', async () => {
+    // production domain に Deployment Protection が付く設定事故を捕まえるための
+    // smoke なので、bypass header で迂回してはいけない。
+    const world = createReleaseWorld();
+    const headers: (HeadersInit | undefined)[] = [];
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if (String(input).startsWith('https://dayopt.app')) headers.push(init?.headers);
+      return world.fetchImpl(input, init);
+    });
+
+    await release({ fetchImpl });
+
+    expect(headers.length).toBeGreaterThan(0);
+    for (const header of headers) {
+      expect(JSON.stringify(header)).not.toContain(BYPASS);
+      expect(header).not.toHaveProperty('x-vercel-protection-bypass');
+    }
+  });
+
+  it('rolls back this run own promote when the production smoke fails', async () => {
+    const world = createReleaseWorld();
+
+    await expect(
+      release({
+        fetchImpl: world.fetchImpl,
+        diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+        simulateFailure: 'production-smoke:web',
+      }),
+    ).rejects.toThrow(/Simulated failure at production-smoke:web/);
+
+    // web は promote していないので rollback 対象外。product だけ戻す。
+    expect(world.promoted()).toEqual(['product']);
+    expect(world.rolledBack()).toEqual(['product']);
+  });
+
+  it('keeps a project it did not promote out of the rollback scope', async () => {
+    // web は前の run から対象 SHA を配信している。戻し先が無いので rollback せず、
+    // 名指しだけして人の判断に委ねる。
+    const world = createReleaseWorld({ webAlreadyAtTarget: true });
+
+    const error = await release({
+      fetchImpl: world.fetchImpl,
+      simulateFailure: 'promote:product',
+    }).catch((thrown: Error) => thrown);
+
+    expect(error.message).toMatch(/Simulated failure at promote:product/);
+    expect(world.rolledBack()).toEqual([]);
+    expect(error.message).toMatch(/Outside this run's rollback scope: web/);
+  });
+
+  it('records each project deployment id and source SHA in the manifest', async () => {
+    const world = createReleaseWorld();
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+    });
+
+    expect(result.manifest).toMatchObject({ sha: SHA, status: 'promoted' });
+    expect(result.manifest.projects).toEqual([
+      expect.objectContaining({
+        name: 'web',
+        affected: false,
+        action: 'skipped',
+        deploymentId: 'dpl_web_old',
+        sourceSha: OLD_SHA,
+      }),
+      expect.objectContaining({
+        name: 'product',
+        affected: true,
+        action: 'promoted',
+        deploymentId: 'dpl_product_new',
+        sourceSha: SHA,
+        previousDeploymentId: 'dpl_product_old',
+      }),
+    ]);
+  });
+
+  it('records the surviving deployment when the run fails after a promote', async () => {
+    // 部分失敗の復旧では、手動 rollback 先が manifest から読めることが要件。
+    const world = createReleaseWorld();
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if (String(input).includes('/promote/dpl_web_old'))
+        return new Response(null, { status: 500 });
+      return world.fetchImpl(input, init);
+    });
+
+    const error = await release({ fetchImpl, simulateFailure: 'promote:product' }).catch(
+      (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
+    );
+
+    expect(error.manifest?.status).toBe('failed');
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({ name: 'web', action: 'promoted', deploymentId: 'dpl_web_new' }),
+    );
+  });
+});
+
+describe('writeReleaseManifest', () => {
+  it('writes the manifest only when a path is configured', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'release-manifest-')), 'manifest.json');
+    const manifest = { sha: SHA, status: 'promoted', projects: [] };
+
+    expect(writeReleaseManifest(manifest, { env: {} })).toBe(false);
+    expect(writeReleaseManifest(manifest, { env: { RELEASE_MANIFEST_PATH: path } })).toBe(true);
+    expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual(manifest);
+  });
+});
+
 describe('writeReleaseStatus', () => {
   function outputFile() {
     return join(mkdtempSync(join(tmpdir(), 'release-status-')), 'output.txt');
   }
 
   it('writes each known status for the workflow to branch on', () => {
-    for (const status of ['already-released', 'promoted', 'superseded', 'failed']) {
+    for (const status of ['already-released', 'promoted', 'superseded', 'unaffected', 'failed']) {
       const path = outputFile();
       writeReleaseStatus(status, { env: { GITHUB_OUTPUT: path } });
       expect(readFileSync(path, 'utf8')).toBe(`release_status=${status}\n`);
