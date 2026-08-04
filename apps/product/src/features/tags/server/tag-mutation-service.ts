@@ -66,7 +66,7 @@ export class TagMutationService {
       }
 
       if (parentTag.archived_at) {
-        throw new TagServiceError('INVALID_INPUT', 'Cannot create a child under an archived tag');
+        throw new TagServiceError('TAG_ARCHIVED', 'Cannot create a child under an archived tag');
       }
     }
 
@@ -139,7 +139,7 @@ export class TagMutationService {
         }
 
         if (nextParent.archived_at) {
-          throw new TagServiceError('INVALID_INPUT', 'Cannot move a tag under an archived tag');
+          throw new TagServiceError('TAG_ARCHIVED', 'Cannot move a tag under an archived tag');
         }
 
         const { count: childCount, error: childCountError } = await this.supabase

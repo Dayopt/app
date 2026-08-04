@@ -252,6 +252,7 @@
       "collapse": "Collapse",
       "archive": "Archive",
       "archivedSection": "Archived",
+      "archivedLoadFailed": "Could not load archived tags",
       "restore": "Restore",
       "createDialog": {
         "title": "Create a new tag",

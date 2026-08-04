@@ -252,6 +252,7 @@
       "collapse": "折りたたむ",
       "archive": "アーカイブ",
       "archivedSection": "アーカイブ済み",
+      "archivedLoadFailed": "アーカイブ済みタグを読み込めませんでした",
       "restore": "復元",
       "createDialog": {
         "title": "新しいタグを作成",

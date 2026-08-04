@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ArchiveRestore, ChevronRight, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { TagIcon, useArchivedTags, useRestoreTag } from '@/features/tags';
 import {
   cn,
@@ -24,13 +25,29 @@ interface ArchivedTagListProps {
  * サイドバー末尾の「アーカイブ済み」折りたたみセクション
  *
  * アーカイブ済みタグの参照・復元・完全削除の入口。アーカイブ済みタグが
- * 1 件も無ければ何も描画しない。
+ * 1 件も無ければ何も描画しない。取得失敗時はこれらの唯一の UI が消えて
+ * しまわないよう、0 件（空）とは区別して ErrorState + リトライを表示する。
  */
 export function ArchivedTagList({ onDeleteTag }: ArchivedTagListProps) {
   const t = useTranslations();
   const [expanded, setExpanded] = useState(false);
-  const { data: archivedTags } = useArchivedTags();
+  const { data: archivedTags, isError, refetch } = useArchivedTags();
   const restoreTagMutation = useRestoreTag();
+
+  if (isError) {
+    return (
+      <div className="w-full min-w-0">
+        <div className="text-muted-foreground flex h-8 w-full items-center gap-1 px-2 text-xs">
+          {t('calendar.filter.archivedSection')}
+        </div>
+        <ErrorState
+          title={t('calendar.filter.archivedLoadFailed')}
+          onRetry={() => refetch()}
+          size="sm"
+        />
+      </div>
+    );
+  }
 
   if (!archivedTags || archivedTags.length === 0) return null;
 
@@ -65,7 +82,8 @@ export function ArchivedTagList({ onDeleteTag }: ArchivedTagListProps) {
                   <button
                     type="button"
                     aria-label={t('calendar.filter.tagMenu')}
-                    className="text-muted-foreground hover:text-foreground hover:bg-state-hover mr-1 flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+                    // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の 44px ヒットエリアに空 content が必要
+                    className="text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative mr-1 flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 after:absolute after:inset-0 after:m-auto after:size-11 after:content-[''] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(hover:none)]:opacity-100"
                   >
                     <MoreHorizontal className="size-4" />
                   </button>
