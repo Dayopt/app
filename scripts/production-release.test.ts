@@ -1887,6 +1887,35 @@ describe('runProductionRelease (affected-aware)', () => {
     );
   });
 
+  it('leaves a hotfix alone when the rollback confirmation fails', async () => {
+    // rollback の POST は受理されたが反映確認の間に他者が hotfix を promote した場合。
+    // 「previous へ戻せ」と指示すると、その hotfix を上書きさせることになる。
+    const world = createReleaseWorld();
+    let rolledBackWeb = false;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_old')) {
+        rolledBackWeb = true;
+        return new Response(null, { status: 202 });
+      }
+      // 反映確認は他者の hotfix を返し続けるので timeout する。
+      if (rolledBackWeb && url.includes('/v4/aliases/dayopt.app')) {
+        return Response.json({ deploymentId: 'dpl_web_hotfix' });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    let clock = 0;
+    const error = await release({
+      fetchImpl,
+      nowImpl: () => (clock += 60_000),
+      simulateFailure: 'promote:product',
+    }).catch((thrown: Error) => thrown);
+
+    expect(error.message).toMatch(/Left alone because another actor moved production first: web/);
+    expect(error.message).not.toMatch(/MANUAL ROLLBACK REQUIRED/);
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。

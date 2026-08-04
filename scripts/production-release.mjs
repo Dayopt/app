@@ -1523,6 +1523,13 @@ export async function runProductionRelease({
           sleepImpl,
           nowImpl,
           action: 'promote',
+        }).catch((error) => {
+          // **POST は受理されたのに反映が確認できない = 遅れて着地しうる。**
+          // transport 失敗の経路と同じ扱いにしないと、rollback 側が「previous のまま
+          // だから戻った」と即断し、その後に着地した candidate が gate を通らないまま
+          // live になる。`promoted` に入れた entry を書き換える（同一参照）。
+          entry.ambiguous = true;
+          throw error;
         });
 
         // promote は auto-assign を true に戻す。次の project の確認を待つ間ずっと
@@ -1825,6 +1832,33 @@ async function rollbackPromoted({
       logger.log(`${entry.project.name}: rolled back to ${entry.previous.id}`);
       rolledBack.push(entry);
     } catch {
+      // rollback の POST は受理されたが反映が確認できない。待っている間に他者が
+      // hotfix を promote した可能性があるので、実状態を読んでから分類する。
+      // 第三の deployment / 未割当なら「戻せ」と指示してはいけない（上書きになる）。
+      const after = await getLiveProduction({
+        projectName: entry.project.name,
+        productionDomain: entry.project.productionDomain,
+        projectId: entry.projectId,
+        token,
+        teamId,
+        fetchImpl,
+      }).catch(() => undefined);
+
+      // 自分の candidate のままなら rollback が効かなかっただけ。手動 rollback が要る。
+      // 第三の deployment / 未割当だけを「他者の選択」として扱う。
+      const afterId = after?.id ?? null;
+      const isThirdParty =
+        after !== undefined && afterId !== entry.previous.id && afterId !== entry.deployment.id;
+      if (isThirdParty) {
+        const observed = after ?? { id: null, sha: null };
+        movedExternally.push({ entry, live: observed });
+        observedLive.push({ entry, live: observed });
+        logger.log(
+          `${entry.project.name}: production is on ${observed.id ?? 'no deployment'} after the failed rollback; leaving it alone`,
+        );
+        continue;
+      }
+
       stranded.push(`${entry.project.name} -> ${entry.previous.id}`);
     }
   }
