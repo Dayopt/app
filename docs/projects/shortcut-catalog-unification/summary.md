@@ -3,8 +3,7 @@ status: current
 last_verified: 2026-08-04
 code:
   - apps/product/src/lib/keyboard/shortcut-catalog.ts
-  - apps/product/src/lib/keyboard/global-shortcut-catalog.ts
-  - apps/product/src/features/calendar/keyboard/calendar-shortcut-catalog.ts
+  - apps/product/src/features/calendar/lib/calendar-shortcut-catalog.ts
   - apps/product/src/components/ui/overlays/shortcut-cheat-sheet-dialog.tsx
   - apps/product/src/app/[locale]/(app)/_overlays/app-shortcut-catalog.ts
 ---
@@ -18,6 +17,8 @@ code:
 **registry とカタログを分離した。** registry は「キーとハンドラの結び付け」だけを持ち、カタログが「何が存在するか」を宣言する。以前は registry が両方を兼ねていたため、一覧に出せるのは今 mount されているショートカットだけだった。設定やタグの画面で一覧を開くと、自分自身を指す 1 行しか並ばない状態になっていた。
 
 **どの feature からでも宣言できる器になった。** `lib/keyboard/shortcut-catalog.ts` が型と合成関数を持ち、feature 側が自分のカタログを宣言する。合成は Composition Layer（`app/[locale]/(app)/_overlays/app-shortcut-catalog.ts`）が行う。`lib/` は `features/` を import できないため、合成点をここに置くことで依存方向を保っている。
+
+**`lib/keyboard/` は機構だけを持つ。** 型・合成関数・キー処理だけを置き、翻訳キーのリテラルは 1 つも持たない。global なショートカットの宣言も Composition Layer 側に置いた。lib に置くと import は無くても lib が feature の翻訳 namespace へ依存し、キー名の変更が実行時にしか露見しなくなるため。
 
 **一覧が「どこで効くか」を示すようになった。** group が `scope` を持ち、現在ページの group を先に並べ、他ページ専用の group には使える場所の但し書きを付けて淡色にする。現在ページの判定は dialog ではなく Composition Layer が行い、prop で渡す。dialog を `components/ui/overlays/` へ移した以上、そこから feature を参照すると逆流になるため。
 
