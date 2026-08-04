@@ -48,14 +48,19 @@ export const MCP_REVIEW_GET_OUTPUT_SCHEMA = z
       .strict()
       .nullable(),
     // 未分類（タグなし）は tagId: null / isUncategorized: true の 1 行として返る。
-    // tags.list はアーカイブ済みタグを含まないため、client が解決できない tagId と
+    // tags.list はアーカイブ済みタグを既定で含まないため、client が解決できない tagId と
     // 未分類を取り違えないよう、未分類側は明示 flag で識別できる形にする。
+    // isArchived は review.get 自身が tags.listArchived と突き合わせて解決する。
+    // 解決に失敗した場合は安全側（誤って archived 扱いしない）に false へ degrade する
+    // ため、client 側は isArchived を「確実に archived」という肯定シグナルとして扱い、
+    // false を「確実に非 archived」とは解釈しない（#1576）。
     tags: z
       .array(
         z
           .object({
             tagId: z.string().uuid().nullable(),
             isUncategorized: z.boolean(),
+            isArchived: z.boolean(),
             plannedMinutes: z.number().nonnegative(),
             recordedMinutes: z.number().nonnegative(),
             varianceMinutes: z.number(),
@@ -78,6 +83,8 @@ export const MCP_REVIEW_GET_OUTPUT_SCHEMA = z
             code: z.literal('largest_tag_variance'),
             tagId: z.string().uuid().nullable(),
             isUncategorized: z.boolean(),
+            // tags[] の同じ tagId と判定を一貫させる（同じ resolveIsArchived を通す）。
+            isArchived: z.boolean(),
             direction: z.enum(['recorded_less_than_planned', 'recorded_more_than_planned']),
             absoluteMinutes: z.number().positive(),
           })

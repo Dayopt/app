@@ -519,7 +519,8 @@ describe('MCP list tools public contract', () => {
         },
       ],
     });
-    createMcpTrpcCaller.mockReturnValue({ statistics: { getMcpReview } });
+    const listArchived = vi.fn().mockResolvedValue([]);
+    createMcpTrpcCaller.mockReturnValue({ statistics: { getMcpReview }, tags: { listArchived } });
 
     const { handlers, server } = createServerDouble();
     registerReviewGetTool(server, { ...context, scopes: ['read:stats'] });
@@ -537,14 +538,165 @@ describe('MCP list tools public contract', () => {
     expect(result.structuredContent).toMatchObject({
       basis: { rowFilter: 'active_start_in_period' },
       tags: [
-        { tagId: '00000000-0000-4000-8000-000000000009', isUncategorized: false },
-        { tagId: null, isUncategorized: true },
+        {
+          tagId: '00000000-0000-4000-8000-000000000009',
+          isUncategorized: false,
+          isArchived: false,
+        },
+        { tagId: null, isUncategorized: true, isArchived: false },
       ],
       signals: [
         { code: 'plan_accuracy' },
-        { code: 'largest_tag_variance', tagId: null, isUncategorized: true },
+        {
+          code: 'largest_tag_variance',
+          tagId: null,
+          isUncategorized: true,
+          isArchived: false,
+        },
       ],
     });
+    expect(parseText(result)).toEqual(result.structuredContent);
+  });
+
+  it('review.getはtags.listArchivedと突き合わせてタグ行とlargest_tag_variance signalにisArchivedを立てる', async () => {
+    const getMcpReview = vi.fn().mockResolvedValue({
+      asOf: '2026-07-27T00:00:00.000Z',
+      period: {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+        endExclusive: true,
+        timezone: 'Asia/Tokyo',
+      },
+      basis: {
+        planMeaning: 'budget',
+        recordMeaning: 'actual',
+        rowFilter: 'active_start_in_period',
+        durationBoundary: 'full_row_not_clipped',
+        periodBoundary: '[)',
+        varianceConvention: 'planned_minus_recorded',
+      },
+      hasData: true,
+      summary: { plannedMinutes: 240, recordedMinutes: 200, varianceMinutes: 40 },
+      accuracy: { rate: 0.8333, status: 'fair' },
+      tags: [
+        {
+          tagId: activeTag.id,
+          isUncategorized: false,
+          plannedMinutes: 60,
+          recordedMinutes: 60,
+          varianceMinutes: 0,
+          variancePercent: 0,
+        },
+        {
+          tagId: archivedTag.id,
+          isUncategorized: false,
+          plannedMinutes: 120,
+          recordedMinutes: 80,
+          varianceMinutes: 40,
+          variancePercent: 33,
+        },
+        {
+          tagId: null,
+          isUncategorized: true,
+          plannedMinutes: 60,
+          recordedMinutes: 60,
+          varianceMinutes: 0,
+          variancePercent: 0,
+        },
+      ],
+      signals: [
+        { code: 'plan_accuracy', rate: 0.8333, status: 'fair' },
+        {
+          code: 'largest_tag_variance',
+          tagId: archivedTag.id,
+          isUncategorized: false,
+          direction: 'recorded_less_than_planned',
+          absoluteMinutes: 40,
+        },
+      ],
+    });
+    const listArchived = vi.fn().mockResolvedValue([archivedTag]);
+    createMcpTrpcCaller.mockReturnValue({ statistics: { getMcpReview }, tags: { listArchived } });
+
+    const { handlers, server } = createServerDouble();
+    registerReviewGetTool(server, { ...context, scopes: ['read:stats'] });
+    const result = await getHandler(handlers, 'review.get')(
+      {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+      },
+      { signal: new AbortController().signal },
+    );
+
+    expect(MCP_REVIEW_GET_OUTPUT_SCHEMA.safeParse(result.structuredContent).success).toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      tags: [
+        { tagId: activeTag.id, isArchived: false },
+        { tagId: archivedTag.id, isArchived: true },
+        { tagId: null, isUncategorized: true, isArchived: false },
+      ],
+      signals: [
+        { code: 'plan_accuracy' },
+        { code: 'largest_tag_variance', tagId: archivedTag.id, isArchived: true },
+      ],
+    });
+    expect(listArchived).toHaveBeenCalledOnce();
+    expect(parseText(result)).toEqual(result.structuredContent);
+  });
+
+  it('review.getはtags.listArchived失敗時もisArchivedをfalseへdegradeして成功する', async () => {
+    // read:tags scope が無い接続や一時的な読み取り失敗を想定。review 本体は落とさず、
+    // 誤って archived と表示しない安全な向きへ degrade する。
+    const getMcpReview = vi.fn().mockResolvedValue({
+      asOf: '2026-07-27T00:00:00.000Z',
+      period: {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+        endExclusive: true,
+        timezone: 'Asia/Tokyo',
+      },
+      basis: {
+        planMeaning: 'budget',
+        recordMeaning: 'actual',
+        rowFilter: 'active_start_in_period',
+        durationBoundary: 'full_row_not_clipped',
+        periodBoundary: '[)',
+        varianceConvention: 'planned_minus_recorded',
+      },
+      hasData: true,
+      summary: { plannedMinutes: 60, recordedMinutes: 60, varianceMinutes: 0 },
+      accuracy: { rate: 1, status: 'excellent' },
+      tags: [
+        {
+          tagId: archivedTag.id,
+          isUncategorized: false,
+          plannedMinutes: 60,
+          recordedMinutes: 60,
+          varianceMinutes: 0,
+          variancePercent: 0,
+        },
+      ],
+      signals: [{ code: 'plan_accuracy', rate: 1, status: 'excellent' }],
+    });
+    const listArchived = vi.fn().mockRejectedValue(new Error('archived tags read failed'));
+    createMcpTrpcCaller.mockReturnValue({ statistics: { getMcpReview }, tags: { listArchived } });
+
+    const { handlers, server } = createServerDouble();
+    registerReviewGetTool(server, { ...context, scopes: ['read:stats'] });
+    const result = await getHandler(handlers, 'review.get')(
+      {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+      },
+      { signal: new AbortController().signal },
+    );
+
+    expect(result.isError).toBeFalsy();
+    expect(MCP_REVIEW_GET_OUTPUT_SCHEMA.safeParse(result.structuredContent).success).toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      tags: [{ tagId: archivedTag.id, isUncategorized: false, isArchived: false }],
+    });
+    expect(listArchived).toHaveBeenCalledOnce();
     expect(parseText(result)).toEqual(result.structuredContent);
   });
 
