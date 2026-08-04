@@ -1513,7 +1513,11 @@ describe('runProductionRelease (affected-aware)', () => {
       return world.fetchImpl(input, init);
     });
 
-    const error = await release({ fetchImpl }).catch((thrown: Error) => thrown);
+    // 着地待ちは窓の最後まで見るので clock を進める。
+    let clock = 0;
+    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+      (thrown: Error) => thrown,
+    );
 
     expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
     expect(error.message).toMatch(/a delayed promote landed on dpl_web_new/);
@@ -1762,6 +1766,58 @@ describe('runProductionRelease (affected-aware)', () => {
     // hotfix で打ち切らず、最後に着地した自分の candidate を手動確認へ回す。
     expect(error.message).toMatch(/a delayed promote landed on dpl_web_new/);
     expect(error.message).not.toMatch(/Left alone because another actor/);
+  });
+
+  it('marks a mid-wait assignment that failed the gates as uncertified', async () => {
+    // 待機中に Auto-assign で live になった candidate は promote していないので自動
+    // rollback の対象外。gate が落ちた場合「already-serving（= 触るな）」と書くと、
+    // 認証を通っていない build が live のまま放置される。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new'],
+      smokeBody: '{"status":"degraded"}', // product の smoke を落とす
+    });
+
+    const error = await release({ fetchImpl: world.fetchImpl }).catch(
+      (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
+    );
+
+    expect(error.message).toMatch(/without the expected content/);
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'web',
+        action: 'uncertified',
+        deploymentId: 'dpl_web_new',
+        previousDeploymentId: 'dpl_web_old',
+      }),
+    );
+  });
+
+  it('does not restore an alias an operator removed before the rollback', async () => {
+    // 人が意図して外した domain に traffic を戻す判断は release run の権限ではない。
+    const world = createReleaseWorld();
+    let promotedWeb = false;
+    let readsAfterPromote = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        promotedWeb = true;
+        return world.fetchImpl(input, init);
+      }
+      // promote の反映確認は通し、その後（rollback 直前の読み取り）で外れている。
+      if (promotedWeb && url.includes('/v4/aliases/dayopt.app')) {
+        readsAfterPromote += 1;
+        if (readsAfterPromote > 1) return Response.json({});
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const error = await release({ fetchImpl, simulateFailure: 'promote:product' }).catch(
+      (thrown: Error) => thrown,
+    );
+
+    expect(error.message).toMatch(/Left alone because another actor moved production first: web/);
+    // 未割当の domain へ promote を撃っていない。
+    expect(world.rolledBack()).toEqual([]);
   });
 
   it('sends no bypass secret to the production domains', async () => {

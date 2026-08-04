@@ -73,6 +73,9 @@ const TERMINAL_FAILURE_STATES = new Set(['ERROR', 'CANCELED', 'DELETED']);
  */
 const DEFINITIVE_REJECTIONS = new Set([400, 401, 403, 404, 429]);
 
+/** production が認証済みと言える status。これ以外は「gate を通っていない」扱い。 */
+const CERTIFIED_STATUSES = new Set(['promoted', 'already-released', 'unaffected', 'superseded']);
+
 /**
  * promote の受理が不確かな時、その反映を待つ窓。POST が 5xx / transport で失敗しても
  * Vercel 側が受理していることがあり、alias の変化は非同期に遅れて現れる。rollback 直後に
@@ -746,6 +749,7 @@ export function buildManifest({
   rolledBack,
   externallyLive = new Map(),
   movedAway = new Map(),
+  uncertifiedLive = new Map(),
 }) {
   const promotedBy = new Map(promoted.map((entry) => [entry.project.name, entry]));
   const rolledBackNames = new Set(rolledBack.map((entry) => entry.project.name));
@@ -774,6 +778,14 @@ export function buildManifest({
       // 最終的に「今 live」と判断した記録。action も ID もここから導く。
       const effective = moved ?? serving ?? restored ?? external ?? live;
 
+      // run が失敗した状態で「この run が promote していないのに target が live」なのは、
+      // 待機中の Auto-assign / 他者の promote で live になった candidate。gate を通って
+      // いないので `already-serving`（= 触るな）と書いてはいけない。
+      const uncertified =
+        !entry && !moved && CERTIFIED_STATUSES.has(status) === false
+          ? (uncertifiedLive.get(project.name) ?? null)
+          : null;
+
       const action = moved
         ? moved.id
           ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
@@ -782,11 +794,13 @@ export function buildManifest({
           ? rolled
             ? 'rolled-back'
             : 'promoted'
-          : effective?.sha === sha
-            ? 'already-serving'
-            : decision?.affected
-              ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
-              : 'skipped';
+          : uncertified
+            ? 'uncertified' // gate を通らずに live。**手動で戻す判断が要る**
+            : effective?.sha === sha
+              ? 'already-serving'
+              : decision?.affected
+                ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
+                : 'skipped';
 
       return {
         name: project.name,
@@ -798,7 +812,12 @@ export function buildManifest({
         sourceSha: effective?.sha ?? null,
         // 未割当の時は「戻す先」が manifest から消えないよう、run 開始時点の deployment を
         // 復旧先として残す（promote entry があればそちらが優先）。
-        previousDeploymentId: entry?.previous?.id ?? (moved && !moved.id ? live?.id : null) ?? null,
+        // 復旧先。promote entry があればその previous、`uncertified` / `unassigned` では
+        // run 開始時点の deployment（それが唯一の戻し先）。
+        previousDeploymentId:
+          entry?.previous?.id ??
+          (uncertified || (moved && !moved.id) ? (live?.id ?? null) : null) ??
+          null,
         // この run が観測していない project の値は run 開始時点のもの。candidate 待機
         // （最大 25 分）の間に人が Instant Rollback していれば実態とズレる。復旧時に
         // 「いつ観測した値か」を取り違えないよう、出所を値と一緒に残す。
@@ -925,6 +944,14 @@ export async function runProductionRelease({
   // 待機中や gate 実行中に外部 actor が同じ candidate を promote した場合に入る。
   const externallyLive = new Map();
 
+  /**
+   * 待機中に（この run ではなく Auto-assign や他者の手で）live になった candidate。
+   * gate が落ちた場合、production は **認証を通っていない build を配信したまま**になる。
+   * `promoted` には入らないので自動 rollback の対象外だが、復旧先（run 開始時点の
+   * deployment）を manifest へ残して手動復旧できるようにする。
+   */
+  const uncertifiedLive = new Map();
+
   // この run が promote した後に他者が別 deployment を live にした project。
   // rollback せず残すため、manifest には観測した live を載せる（我々の candidate を
   // 配信中と誤記すると、runbook の手順で「戻す」対象に見えてしまう）。
@@ -941,6 +968,7 @@ export async function runProductionRelease({
       rolledBack,
       externallyLive,
       movedAway,
+      uncertifiedLive,
     });
 
   // 全 project の auto-assign を期待値へ戻す。外部の promote が待機中に設定を
@@ -1197,6 +1225,9 @@ export async function runProductionRelease({
     for (const { project, deployment } of candidates) {
       if (current.get(project.name)?.id === deployment.id) {
         externallyLive.set(project.name, { id: deployment.id, sha });
+        // gate がこの後落ちた場合、認証を通っていない build が live のまま残る。
+        // 復旧先を控えて manifest から辿れるようにする。
+        uncertifiedLive.set(project.name, { id: deployment.id, sha });
       }
     }
 
@@ -1597,11 +1628,17 @@ async function rollbackPromoted({
       continue;
     }
 
+    // **alias 未割当（live=null）も「他者が意図的に外した」状態として扱う。** ここで
+    // previous を promote すると、人が意図して切り離した domain に traffic を戻して
+    // しまう。release run にその判断の権限は無い。
     const isKnown = live && (live.id === entry.deployment.id || live.id === entry.previous.id);
-    if (live && !isKnown) {
-      movedExternally.push({ entry, live });
-      observedLive.push({ entry, live });
-      logger.log(`${entry.project.name}: production already moved to ${live.id}; leaving it alone`);
+    if (!isKnown) {
+      const observedState = live ?? { id: null, sha: null };
+      movedExternally.push({ entry, live: observedState });
+      observedLive.push({ entry, live: observedState });
+      logger.log(
+        `${entry.project.name}: production is on ${observedState.id ?? 'no deployment'}; leaving it alone`,
+      );
       continue;
     }
 
@@ -1630,6 +1667,7 @@ async function rollbackPromoted({
         const deadline = nowImpl() + AMBIGUOUS_SETTLE_MS;
         let landed = null; // 我々の candidate が遅れて着地した
         let foreign = null; // 第三の deployment / alias 未割当
+        let last = null; // 窓の中で最後に読めた状態
         let observed = false;
         while (nowImpl() < deadline) {
           await sleepImpl(ASSIGN_POLL_MS);
@@ -1647,19 +1685,15 @@ async function rollbackPromoted({
             continue; // 読めない回で判断しない。窓の残りで見直す
           }
           observed = true;
+          // **どの観測でも打ち切らない。** 受理済みの promote も rollback の POST も
+          // 非同期に着地するので、途中の状態で分類すると誤った手動操作を促す。
+          // 窓の最後まで見て、最後に読めた状態だけで判断する。
+          last = settled ?? { id: null, sha: null };
+        }
 
-          // **第三の deployment を見ても打ち切らない。** 受理済みの promote は同じ窓の
-          // 中でまだ着地しうる。ここで抜けると、その後に自分の candidate が hotfix を
-          // 上書きしても「他者が動かしたので触らない」と記録したまま run が終わる。
-          if (settled?.id === entry.deployment.id) {
-            landed = settled;
-            break; // 自分の promote が着地した。これは決定的
-          }
-          if (settled?.id !== entry.previous.id) {
-            foreign = settled ?? { id: null, sha: null };
-          } else {
-            foreign = null; // previous へ戻っている
-          }
+        if (last) {
+          if (last.id === entry.deployment.id) landed = last;
+          else if (last.id !== entry.previous.id) foreign = last;
         }
 
         // 自分の candidate は manifest に記録しない（`moved-externally` になると

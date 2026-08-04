@@ -162,6 +162,7 @@ promote は行われていないので、**Production domain は現行 SHA の�
 - [ ] `status: failed` の場合、`action: promoted` の project が手動 rollback の対象。戻し先は同じ entry の `previousDeploymentId`
 - [ ] `action: skipped` / `already-serving` の project はこの run が触っていない。**巻き添えで戻さない**
 - [ ] `action: moved-externally` は「この run の promote 後に**別の誰か**が production を動かし、release がそれを尊重して手を引いた」状態。`deploymentId` は他者が置いた deployment。**戻さない。** その deployment が意図したものかを本人に確認する（多くは緊急 hotfix）
+- [ ] `action: uncertified` は「この run が promote していないのに target が live」状態。待機中に Vercel の Auto-assign か他者の promote が先に live にし、その後 gate（smoke / audit）が落ちた場合に出る。**production は認証を通っていない build を配信している。** 自動 rollback の対象外なので、run summary のエラーを読んで戻すかどうかを判断する（戻す場合の先は `previousDeploymentId`）
 - [ ] `action: unassigned` は「production domain にどの deployment も割り当たっていない」状態（= その domain は配信されていない）。**最優先で復旧する。** `previousDeploymentId` が割り当て直す先で、Vercel Dashboard → Deployments → その deployment の "..." → Promote to Production。`deploymentId` は null なので戻し先の判断には使えない
 - [ ] **手で Promote / Instant Rollback したら、その project の Auto-assign Custom Production Domains を無効へ戻す。** Vercel の promote は毎回この設定を有効化する（[vercel/vercel#15095](https://github.com/vercel/vercel/issues/15095)）。release script は自動で戻すが、手動操作の分は戻らない。放置すると**次の main merge が release gate を通らず直接公開される**。Settings → Git で確認する
 
