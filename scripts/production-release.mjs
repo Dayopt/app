@@ -1015,6 +1015,7 @@ export async function runProductionRelease({
    * unhealthy な domain を放置させる。読めない project は黙って飛ばす（best effort）。
    */
   const refreshObservedLive = async ({ expected: overrides = new Map() } = {}) => {
+    const deviated = [];
     for (const project of projects) {
       // 比較対象は「今わかっている期待値」。rollback / promote を行った project は
       // 呼び出し側がその結果を渡す。**飛ばさない**（rollback 済みの project が
@@ -1033,13 +1034,29 @@ export async function runProductionRelease({
       if (live === undefined) continue; // 読めなかった
       if ((live?.id ?? null) === expected) continue;
 
-      if (live?.sha === sha) {
-        // target を配信している。gate を通っていなければ `uncertified` になる。
-        observedLive.set(project.name, { id: live.id, sha: live.sha });
-      } else {
-        observedLive.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
-      }
+      // 期待と違う deployment を観測した。target を配信していても gate を通って
+      // いなければ `uncertified`、別 SHA なら `moved-externally` に分類される。
+      observedLive.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
+      deviated.push(project.name);
     }
+    return deviated;
+  };
+
+  /**
+   * この run の promote / rollback を踏まえた「今 live であるべき deployment」。
+   * refresh の期待値に渡す。渡さないと、自分が promote した deployment を
+   * 「外部が動かした」と誤って記録してしまう。
+   */
+  const expectedLiveIds = ({ promoted = [], rolledBack = [] } = {}) => {
+    const rolledBackNames = new Set(rolledBack.map((entry) => entry.project.name));
+    return new Map(
+      promoted.map((entry) => [
+        entry.project.name,
+        rolledBackNames.has(entry.project.name)
+          ? (entry.previous?.id ?? null)
+          : entry.deployment.id,
+      ]),
+    );
   };
 
   const manifestFor = (status, { promoted = [], rolledBack = [] } = {}) =>
@@ -1202,6 +1219,12 @@ export async function runProductionRelease({
   // finally ではなく catch + 後処理にしているのは、**最後の掃きで見つかった drift を
   // 失敗として扱う**ため。finally で throw すると実行中の例外を握り潰すので、
   // 失敗経路では報告だけに留め、成功経路でだけ settings-drift へ倒す。
+  // 「この run が何を promote / rollback したか」。**wrapper の最終 cleanup も読む**ため
+  // IIFE の外に置く。throw ごとに載せ直す方式だと、載せ忘れた経路で cleanup が自分の
+  // promote を「外部が動かした」と誤認する（= 復旧手順が健全な deployment を戻す）。
+  const promoted = [];
+  let rolledBack = [];
+
   const result = await (async () => {
     // 前回 run が中断して片側だけ公開された状態。既に配信中の側は戻し先を持たないので
     // 自動 rollback の対象にはできない。せめて名指しして人が判断できるようにする。
@@ -1275,22 +1298,11 @@ export async function runProductionRelease({
         }
       } catch (error) {
         reportSweepDrift((await sweepSettings()).drifted);
-        // **観測した deployment ID の変化で判断する。** 件数では同一 SHA の
-        // 入れ替わりを取りこぼす。
-        const snapshot = () =>
-          projects
-            .map((project) => {
-              const seen = observedLive.get(project.name) ?? before.get(project.name);
-              return `${project.name}:${seen?.id ?? 'none'}`;
-            })
-            .join('|');
-        const beforeRefresh = snapshot();
-        await refreshObservedLive();
         // refresh の結果は manifest へ必ず反映する。既に付いている manifest
         // （settings-drift 等）をそのまま返すと、cleanup 中に alias が動いた事実が
         // 落ちる。settings-drift は「production は正しい」を意味するので、動いていたら
         // その主張自体が成り立たない → `failed` へ落とす。
-        if (!error.manifest || snapshot() !== beforeRefresh) {
+        if (!error.manifest || (await refreshObservedLive()).length > 0) {
           Object.assign(error, { manifest: manifestFor('failed') });
         }
         throw error;
@@ -1483,7 +1495,6 @@ export async function runProductionRelease({
       }
     }
 
-    const promoted = [];
     const driftedProjects = [];
     /** stabilize が最後に観測した設定 drift。空でなければ run を失敗させる。 */
     let residualDrift = [];
@@ -1651,7 +1662,6 @@ export async function runProductionRelease({
       // promote 済みの側を戻す。対象は **この run が promote した project だけ**で、
       // 前から target を配信していた側（preexistingSplit）には戻し先が無い。
       let failure = error;
-      let rolledBack = [];
       try {
         rolledBack = await rollbackPromoted({
           promoted,
@@ -1682,18 +1692,8 @@ export async function runProductionRelease({
       // rollback は promote した project しか読み直さない。それ以外の live が
       // 動いていた場合も manifest へ反映してから失敗させる。
       // rollback 済みは previous、戻せず残った分は candidate が期待値。
-      const rolledBackNames = new Set(rolledBack.map((e) => e.project.name));
-      const expectedAfterRollback = new Map(
-        promoted.map((entry) => [
-          entry.project.name,
-          rolledBackNames.has(entry.project.name)
-            ? (entry.previous?.id ?? null)
-            : entry.deployment.id,
-        ]),
-      );
-      await refreshObservedLive({ expected: expectedAfterRollback });
+      await refreshObservedLive({ expected: expectedLiveIds({ promoted, rolledBack }) });
       throw Object.assign(failure, {
-        rolledBack,
         manifest: manifestFor('failed', { promoted, rolledBack }),
       });
     }
@@ -1734,6 +1734,17 @@ export async function runProductionRelease({
   })().catch(async (error) => {
     // 失敗経路。元の失敗理由を優先し、掃きの結果は報告だけにする。
     reportSweepDrift((await sweepSettings()).drifted);
+
+    // **この掃きの間にも alias は動きうる。** manifest は内側の経路で既に作られている
+    // ので、ここで読み直して作り直さないと、掃き中に promote された hotfix を
+    // 「この run の candidate」として案内してしまう（= 復旧手順が上書きを促す）。
+    const deviated = await refreshObservedLive({
+      expected: expectedLiveIds({ promoted, rolledBack }),
+    });
+    if (!error.manifest || deviated.length > 0) {
+      // 動いていたなら settings-drift の「production は正しい」も成り立たない。
+      Object.assign(error, { manifest: manifestFor('failed', { promoted, rolledBack }) });
+    }
     throw error;
   });
 

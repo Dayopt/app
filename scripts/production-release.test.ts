@@ -1471,6 +1471,52 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(world.rolledBack()).toEqual([]);
   });
 
+  it('rebuilds the failure manifest when an alias moves during the final cleanup', async () => {
+    // 失敗経路の最後に走る掃きの間にも alias は動きうる。manifest は内側で既に
+    // 作られているため、ここで読み直さないと「掃き中に promote された hotfix」を
+    // この run の candidate として案内し、復旧手順が hotfix を巻き戻してしまう。
+    //
+    // web の alias 読み取り: 1-3 回目=promote 前、4 回目=promote の反映待ち、
+    // 5 回目=stabilize の検証、6 回目=cleanup 後の読み直し。
+    const world = createReleaseWorld({
+      webAliasSequence: [
+        'dpl_web_old',
+        'dpl_web_old',
+        'dpl_web_old',
+        'dpl_web_new',
+        'dpl_web_new',
+        'dpl_web_hotfix',
+      ],
+    });
+    // 設定復元だけを失敗させ、内側に settings-drift の manifest を作らせる。
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') return new Response(null, { status: 500 });
+      return world.fetchImpl(input, init);
+    });
+
+    const error = await release({ fetchImpl }).catch(
+      (
+        thrown: Error & {
+          manifest?: { status: string; projects: { name: string; action: string }[] };
+        },
+      ) => thrown,
+    );
+
+    // production が動いた以上「設定だけの失敗」ではない。
+    expect(error.manifest?.status).toBe('failed');
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'web',
+        action: 'moved-externally',
+        deploymentId: 'dpl_web_hotfix',
+      }),
+    );
+    // product は掃きの間も動いていないので、この run の promote として残る。
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({ name: 'product', action: 'promoted' }),
+    );
+  });
+
   it('records a move that only the final check observes', async () => {
     // 最終確認で検出した移動も manifest へ載せる。載せないと復旧手順が
     // run 開始時点の deployment を live と誤認する。
