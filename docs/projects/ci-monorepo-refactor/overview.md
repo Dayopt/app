@@ -70,6 +70,33 @@ code: scripts/ci
 
 依存グラフは pnpm workspace の manifest（`dependencies` / `devDependencies` の `@dayopt/*`）から実行時に解決する。ハードコードした対応表は持たない（package 追加時に判定が自動追従する）。
 
+### consumer ごとの変更ファイル一覧の取り方
+
+Resolver の規則は共有し、**入力の作り方だけが consumer で違う**。
+
+| consumer                                                                                | 変更ファイル一覧                                                               | 判定不能時                    |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------- |
+| merge gate（[finish-branch.sh](../../../scripts/git/finish-branch.sh)）                 | PR の files API（rename 元も含む。件数不一致は truncation として棄却）         | 両 project の context を必須  |
+| Production Release（[production-release.mjs](../../../scripts/production-release.mjs)） | **project ごとに** `git diff --no-renames <その project の live SHA> <target>` | その project を affected 扱い |
+
+release の基準が project ごとに違うのが要点。web が 3 commit 遅れた状態で product だけ進んでいれば、web の判定は「web が今配信している SHA から target まで」で行う。merge 単位で判定すると、前の run で取りこぼした変更が二度と release されない。
+
+`git diff` が空（0 件）で正常終了したのは「差分なし」の確定的な答えなので unaffected とする。一覧が取れなかった場合（shallow clone、gc 済み、source SHA 不明）とは区別する。前者は skip してよく、後者は fail closed。
+
+### Production Release の状態
+
+| status             | 意味                                          | commit status |
+| ------------------ | --------------------------------------------- | ------------- |
+| `promoted`         | affected な project を promote した           | success       |
+| `already-released` | 全 project が既に target を配信している       | success       |
+| `unaffected`       | どの app にも影響しない merge（promote 0 件） | success       |
+| `superseded`       | より新しい deployment が既に live             | failure       |
+| `failed`           | gate 失敗 / rollback 実施                     | failure       |
+
+`unaffected` を success にするのは、production の artifact がその commit と等価だから（docs / CI 設定の merge に tag を打てなくする理由が無い）。`superseded` との違いは「production が古いままか、新しくなっているか」ではなく「**この commit の内容が live か**」で決まる。
+
+promote 後は `dayopt.app` と `app.dayopt.app` の**両方**を smoke する。片側だけ進んだ production はその組み合わせが初めて世に出る状態で、cross-app の破損は candidate 単体の smoke では出ない。この smoke は bypass secret を送らず、production domain 側の Deployment Protection 設定事故も同時に見る。rollback 対象は **この run が promote した project だけ**とする。
+
 ## 6. Phase 構成と PR の対応
 
 Step 分割は作業単位、PR は機能のまとまり（[workflow.md §PR 粒度](../../../.claude/rules/workflow.md)）。
@@ -103,6 +130,16 @@ Phase 1 の Step Summary 表示は既存 static job 内の 1 step に相乗り�
 ```text
 Impact Resolver → merge gate 対応 → Production Release 対応 → Vercel skip 有効化 → CI / E2E 整理
 ```
+
+### Phase 4 への制約: skip の基準は「その project の live SHA」でなければならない
+
+Phase 3 の release は影響を **live SHA からの累積** で測る。merge 単位で測ると、失敗した release の変更が二度と拾われなくなるため（§5）。この性質が Vercel の skip 判定に条件を課す。
+
+例: commit A が product を変え、その release run が失敗する。次の commit B は web だけを変える。product の live SHA は A より前なので、B の release で product は正しく affected になる。ところが Vercel の skip が **merge 単位**（B の diff に product が無い）で判断すると、**SHA B の product deployment が存在しない**。release は B の product candidate を 25 分待って timeout し、B 以降の release が全て止まる。
+
+したがって Phase 4（#1817）の Ignored Build Step は、**その project の最後の production deployment の SHA を基準に diff を取る**必要がある（`turbo-ignore` の既定に近い挙動）。merge の親との diff で判断してはならない。この一致は #1817 の受け入れ条件とする。
+
+なお現状（skip 未有効）ではこの問題は起きない。Vercel が毎 merge で全 project を build するため、target SHA の candidate は常に存在する。timeout は fail closed（未検証の build を出さない）なので安全性の問題ではなく、可用性の問題。
 
 補足（2026-08-04 リスクレビューでの検出）: product の Vercel project は 2026-08-01 から標準機能の **Skip deployments（Root Directory 外の変更で skip）が Enabled** のまま（[当時のログ](../../engineering/log/2026-08-01-vercel-root-directory-flip-product.md)の残タスク未消化）。この機能は workspace 依存グラフを見ないため、`packages/**` のみの PR では Impact Resolver が `product=true` で context を要求する一方、Vercel は deployment を skip して context が付かず、**fail closed で merge が止まりうる**（安全側だが可用性の問題）。merge gate の affected-aware 化が main に入った後、最初の `packages/**` 限定 PR で `Vercel – product` context が付くかを確認し、付かなければ同トグルを Disabled に戻す。
 

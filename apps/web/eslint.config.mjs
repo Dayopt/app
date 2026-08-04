@@ -1,7 +1,7 @@
 // Dayopt Web ESLint - シンプル設定
-import nextPlugin from '@next/eslint-plugin-next'
-import tsPlugin from '@typescript-eslint/eslint-plugin'
-import tsParser from '@typescript-eslint/parser'
+import nextPlugin from '@next/eslint-plugin-next';
+import tsPlugin from '@typescript-eslint/eslint-plugin';
+import tsParser from '@typescript-eslint/parser';
 
 export default [
   {
@@ -59,4 +59,4 @@ export default [
       },
     },
   },
-]
+];
