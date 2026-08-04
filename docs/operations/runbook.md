@@ -113,7 +113,7 @@ supabase functions deploy --use-api
 
 ### 前提: mergeとProduction公開は分離されている
 
-main へ merge しても Production domain は切り替わらない。Product / Web は Auto-assign Custom Production Domains を無効化してあり、merge が作るのは **domain 未割当の Production build（candidate）** だけである。`Production Release` workflow が同一 merge SHA の両 candidate を READY まで待ち、smoke と Production Config Audit を通してから promote する。
+main へ merge しても Production domain は切り替わらない。Product / Web は Auto-assign Custom Production Domains を無効化してあり、merge が作るのは **domain 未割当の Production build（candidate）** だけである。`Production Release` workflow が、**その merge の影響を受ける project**の candidate を READY まで待ち、smoke と Production Config Audit を通してから promote する。影響を受けない project は待たずに skip し、どの app にも影響しない merge は promote 0 件の success（`unaffected`）で終わる。判定仕様は [infra.md](../engineering/infra.md)。
 
 このため「本番が新しくならない」ことは、それ自体では障害ではない。**現行 Production は既知の正常 deployment のまま応答し続けている**。復旧の緊急度は「本番が壊れたか」ではなく「本番が古いままか」で判断する。
 
@@ -151,11 +151,15 @@ promote は行われていないので、**Production domain は現行 SHA の�
 
 #### ケース0-B: 片方だけ promote された（部分リリース）
 
-release workflow は promote 順を web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
+**前提: Product / Web の live SHA が違うこと自体は異常ではない。** release は変更の影響を受ける project だけを promote するため（[infra.md](../engineering/infra.md)）、片方が数 commit 遅れているのは正常な定常状態。「揃っていない」ことを異常と判断しない。
 
+異常なのは「この run が promote を始めて、途中で失敗した」状態。release workflow は promote 順を web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
+
+- [ ] **run の `release-manifest` artifact を先に見る**（run の Artifacts、保持 90 日）。project ごとに「今どの deployment / どの SHA を配信しているか」「この run が動かしたか（`observedAt`）」が入っている。ここが復旧判断の一次情報
 - [ ] run log で `rolled back to <deployment id>` を確認する
 - [ ] `MANUAL ROLLBACK REQUIRED` が出ている場合は自動 rollback も失敗している。メッセージ中の deployment id へ手動で戻す（ケースC の手順）
-- [ ] run summary の `previous` deployment id が手動 rollback の戻し先になる
+- [ ] manifest の `action: promoted` かつ run が失敗している project が、手動 rollback の対象。戻し先は同じ entry の `previousDeploymentId`
+- [ ] `action: skipped` / `already-serving` の project はこの run が触っていない。**巻き添えで戻さない**
 
 #### ケースA: CI失敗（lint / typecheck）
 
@@ -188,8 +192,8 @@ promote 済みの deployment に問題があった場合だけ使う。
 - [ ] 正常に動作していた直前のデプロイを見つける（release run summary の `previous` deployment id が最も確実）
 - [ ] **"..." → "Instant Rollback"（または "Promote to Production"）** で2クリックロールバック
 - [ ] CLI / REST API / Redeploy で新しいProduction buildを作らない
-- [ ] Product / Web の片方だけ戻すと SHA が食い違う。**両方を同じ SHA へ揃える**
-- [ ] ロールバック後: 本番サイトで動作確認
+- [ ] **壊れている project だけを戻す。** Product / Web の SHA を揃えようとしない（release は影響を受ける project だけを進めるので、SHA が違うのは正常）。無関係な側を戻すと、検証済みの build を理由なく巻き戻すことになる
+- [ ] ロールバック後: 本番サイトで動作確認。**両 domain を見る**（`dayopt.app` と `app.dayopt.app`）。web の signup CTA から product へ入れるかは片側だけ戻した時の典型的な壊れ方
 - [ ] 落ち着いて原因調査 → 修正 → 再デプロイ
 
 Vercel の rollback はビルド成果物だけを戻す。**DB migration と変更済み環境変数は戻らない**。migration を含むリリースでは、直前 deployment がそのまま動く後方互換期間（expand/contract）を事前に確保しておく。

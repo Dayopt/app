@@ -120,6 +120,19 @@ export function gitDiffFiles(baseSha, targetSha, { cwd = ROOT } = {}) {
   return stdout.split('\0').filter(Boolean);
 }
 
+/** checkout の HEAD SHA。取れなければ null（fail closed 経路へ落とす）。 */
+export function gitHeadSha({ cwd = ROOT } = {}) {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
 /**
  * 「この project の production を target SHA へ進める必要があるか」を判定する。
  *
@@ -129,11 +142,19 @@ export function gitDiffFiles(baseSha, targetSha, { cwd = ROOT } = {}) {
  *
  * 判定不能はすべて affected（fail closed）へ倒す。Vercel の skip 判定ではなく
  * Dayopt 側の判定を正とする設計原則（overview.md §4-2）に従う。
+ *
+ * `checkoutAtTarget` は「checkout の tree が target SHA そのものか」。workspace 依存
+ * グラフは **checkout の manifest** から解決するため、これが false だと target 当時と
+ * 違うグラフで分類することになる。`workflow_dispatch` で古い SHA を再試行した時に
+ * 起きる（release.yml は main 包含だけを要求し、checkout は dispatch した ref のまま）。
+ * 例えば target の後で web が package への依存を外していると、その package の変更が
+ * 「web に consumer 無し」と判定され、live でない build に success が付く。
  */
 export function resolveProjectImpact({
   project,
   baseSha,
   targetSha,
+  checkoutAtTarget = true,
   diffFilesImpl = gitDiffFiles,
 }) {
   if (!SHA_PATTERN.test(baseSha ?? '')) {
@@ -141,6 +162,9 @@ export function resolveProjectImpact({
   }
   if (baseSha === targetSha) {
     return { affected: false, reason: `already serving ${short(targetSha)}` };
+  }
+  if (!checkoutAtTarget) {
+    return { affected: true, reason: 'checkout is not the release target (fail closed)' };
   }
 
   // この関数は throw しない。判定に関わるあらゆる失敗（git・workspace manifest の
@@ -783,6 +807,7 @@ export async function runProductionRelease({
   sleepImpl = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   nowImpl = () => Date.now(),
   diffFilesImpl = gitDiffFiles,
+  headShaImpl = gitHeadSha,
   logger = console,
 }) {
   if (!token) throw new ReleaseError('VERCEL_TOKEN is required for Production Release');
@@ -825,6 +850,13 @@ export async function runProductionRelease({
   // project ごとに「今配信している SHA → target SHA」の差分で影響を判定する。
   // 既に target を配信している project は差分が空になるため affected にならない
   // （alreadyServing と targets は排他）。
+  // 依存グラフも diff も checkout の tree から読む。target と違う tree で分類すると
+  // 当時と違うグラフで判定することになるため、一致しない run は fail closed に倒す。
+  const checkoutAtTarget = headShaImpl() === sha;
+  if (!checkoutAtTarget) {
+    logger.log(`Checkout is not ${sha}; classifying every project as affected (fail closed).`);
+  }
+
   const decisions = new Map();
   const decisionLines = [];
   for (const project of projects) {
@@ -832,6 +864,7 @@ export async function runProductionRelease({
       project,
       baseSha: before.get(project.name)?.sha ?? null,
       targetSha: sha,
+      checkoutAtTarget,
       diffFilesImpl,
     });
     decisions.set(project.name, decision);
@@ -896,12 +929,40 @@ export async function runProductionRelease({
     });
     if (drifted.length > 0)
       throw Object.assign(driftError(sha, drifted), { manifest: manifestFor('failed') });
+
+    // **promote が 0 件でも、この run が success を出せば「その build は live」として
+    // tag gate を通る**（create-release.yml）。既に target を配信している project は
+    // Auto-assign や中断した run が gate を通さずに live にした可能性があるため、
+    // 認証する前に実際の production domain を見る。ここを素通りさせると、
+    // smoke も audit も一度も通っていない build に tag を打ててしまう。
+    if (!force && alreadyServing.length > 0) {
+      try {
+        for (const project of alreadyServing) {
+          assertSimulationPoint(simulateFailure, `production-smoke:${project.name}`);
+          await smokeDeployment({
+            projectName: `${project.name} production`,
+            deploymentUrl: project.productionDomain,
+            checks: project.smokeChecks,
+            fetchImpl,
+            sleepImpl,
+            logger,
+          });
+        }
+        await runProductionConfigAudit({ token, teamId, fetchImpl });
+        logger.log('Production Config Audit passed against live Vercel metadata.');
+      } catch (error) {
+        // promote していないので戻す先は無い。設定は上で復元済み。
+        throw Object.assign(error, { manifest: manifestFor('failed') });
+      }
+    }
+
     return {
       status,
       sha,
       promoted: [],
       rolledBack: [],
       preexistingSplit,
+      gateChecksRan: !force && alreadyServing.length > 0,
       manifest: manifestFor(status),
     };
   }
@@ -933,6 +994,15 @@ export async function runProductionRelease({
       fetchImpl,
     });
     current.set(project.name, state);
+  }
+
+  // 待機中に Auto-assign や人が candidate を live にした分をここで拾う。promote loop の
+  // 記録だけに頼ると、この後の `pending` filter で除外されて loop に届かず、live なのに
+  // manifest 上「未着手（pending）」として復旧手順に出てしまう。
+  for (const { project, deployment } of candidates) {
+    if (current.get(project.name)?.id === deployment.id) {
+      externallyLive.set(project.name, { id: deployment.id, sha });
+    }
   }
 
   const movedElsewhere = candidates.filter(({ project, deployment }) => {

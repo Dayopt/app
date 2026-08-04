@@ -232,6 +232,9 @@ function release(overrides: Record<string, unknown> = {}) {
     logger: noop,
     bypassSecrets: { web: BYPASS, product: BYPASS },
     diffFilesImpl: AFFECTS_BOTH,
+    // 既定は「checkout = release 対象」。実 repo の HEAD は SHA と一致しないので、
+    // 注入しないと全 test が fail closed 経路（常に両方 affected）に落ちる。
+    headShaImpl: () => SHA,
     ...overrides,
   });
 }
@@ -1026,6 +1029,62 @@ describe('runProductionRelease (affected-aware)', () => {
       expect.objectContaining({ name: 'web', observedAt: 'run-start' }),
       expect.objectContaining({ name: 'product', observedAt: 'this-run' }),
     ]);
+  });
+
+  it('classifies everything as affected when the checkout is not the release target', async () => {
+    // workflow_dispatch で古い SHA を再試行した場合。依存グラフは checkout の
+    // manifest から解決するため、target 当時と違うグラフで分類しかねない
+    // （target の後で依存を外していると「consumer 無し」と誤判定する）。
+    const world = createReleaseWorld();
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      headShaImpl: () => OLD_SHA,
+      diffFilesImpl: () => ['docs/engineering/infra.md'],
+    });
+
+    expect(result.status).toBe('promoted');
+    expect(world.promoted()).toEqual(['web', 'product']);
+  });
+
+  it('verifies a build that is already live before calling the commit released', async () => {
+    // Auto-assign や中断した run が gate を通さずに live にした build を、
+    // promote 0 件の success で「live として認証」してしまわないこと。
+    const world = createReleaseWorld({ productionSha: SHA, smokeBody: '{"status":"degraded"}' });
+
+    await expect(
+      release({ fetchImpl: world.fetchImpl, diffFilesImpl: () => ['docs/x.md'] }),
+    ).rejects.toThrow(/without the expected content/);
+  });
+
+  it('runs the audit against a build that is already live', async () => {
+    const world = createReleaseWorld({ productionSha: SHA });
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if (String(input).includes('/env')) return Response.json({ envs: [] }); // 契約違反の metadata
+      return world.fetchImpl(input, init);
+    });
+
+    await expect(release({ fetchImpl, diffFilesImpl: () => ['docs/x.md'] })).rejects.toThrow(
+      /Production Config Audit failed/,
+    );
+  });
+
+  it('records a candidate that goes live during the wait as live, not pending', async () => {
+    // 待機中に Auto-assign が candidate を live にすると pending filter で除外され、
+    // promote loop に届かない。manifest 上「未着手」に見せない。
+    const world = createReleaseWorld({ webAliasSequence: ['dpl_web_old', 'dpl_web_new'] });
+
+    const result = await release({ fetchImpl: world.fetchImpl });
+
+    expect(world.promoted()).toEqual(['product']);
+    expect(result.manifest.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'web',
+        action: 'already-serving',
+        deploymentId: 'dpl_web_new',
+        observedAt: 'this-run',
+      }),
+    );
   });
 
   it('smokes both production domains after a one-sided promote', async () => {

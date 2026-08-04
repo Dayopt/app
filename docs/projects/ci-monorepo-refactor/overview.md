@@ -131,6 +131,16 @@ Phase 1 の Step Summary 表示は既存 static job 内の 1 step に相乗り�
 Impact Resolver → merge gate 対応 → Production Release 対応 → Vercel skip 有効化 → CI / E2E 整理
 ```
 
+### Phase 4 への制約: skip の基準は「その project の live SHA」でなければならない
+
+Phase 3 の release は影響を **live SHA からの累積** で測る。merge 単位で測ると、失敗した release の変更が二度と拾われなくなるため（§5）。この性質が Vercel の skip 判定に条件を課す。
+
+例: commit A が product を変え、その release run が失敗する。次の commit B は web だけを変える。product の live SHA は A より前なので、B の release で product は正しく affected になる。ところが Vercel の skip が **merge 単位**（B の diff に product が無い）で判断すると、**SHA B の product deployment が存在しない**。release は B の product candidate を 25 分待って timeout し、B 以降の release が全て止まる。
+
+したがって Phase 4（#1817）の Ignored Build Step は、**その project の最後の production deployment の SHA を基準に diff を取る**必要がある（`turbo-ignore` の既定に近い挙動）。merge の親との diff で判断してはならない。この一致は #1817 の受け入れ条件とする。
+
+なお現状（skip 未有効）ではこの問題は起きない。Vercel が毎 merge で全 project を build するため、target SHA の candidate は常に存在する。timeout は fail closed（未検証の build を出さない）なので安全性の問題ではなく、可用性の問題。
+
 補足（2026-08-04 リスクレビューでの検出）: product の Vercel project は 2026-08-01 から標準機能の **Skip deployments（Root Directory 外の変更で skip）が Enabled** のまま（[当時のログ](../../engineering/log/2026-08-01-vercel-root-directory-flip-product.md)の残タスク未消化）。この機能は workspace 依存グラフを見ないため、`packages/**` のみの PR では Impact Resolver が `product=true` で context を要求する一方、Vercel は deployment を skip して context が付かず、**fail closed で merge が止まりうる**（安全側だが可用性の問題）。merge gate の affected-aware 化が main に入った後、最初の `packages/**` 限定 PR で `Vercel – product` context が付くかを確認し、付かなければ同トグルを Disabled に戻す。
 
 ## 9. 非目標
