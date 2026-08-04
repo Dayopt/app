@@ -73,9 +73,6 @@ const TERMINAL_FAILURE_STATES = new Set(['ERROR', 'CANCELED', 'DELETED']);
  */
 const DEFINITIVE_REJECTIONS = new Set([400, 401, 403, 404, 429]);
 
-/** production が認証済みと言える status。これ以外は「gate を通っていない」扱い。 */
-const CERTIFIED_STATUSES = new Set(['promoted', 'already-released', 'unaffected', 'superseded']);
-
 /**
  * promote の受理が不確かな時、その反映を待つ窓。POST が 5xx / transport で失敗しても
  * Vercel 側が受理していることがあり、alias の変化は非同期に遅れて現れる。rollback 直後に
@@ -749,7 +746,7 @@ export function buildManifest({
   rolledBack,
   externallyLive = new Map(),
   movedAway = new Map(),
-  uncertifiedLive = new Map(),
+  gatesPassed = new Set(),
 }) {
   const promotedBy = new Map(promoted.map((entry) => [entry.project.name, entry]));
   const rolledBackNames = new Set(rolledBack.map((entry) => entry.project.name));
@@ -778,13 +775,11 @@ export function buildManifest({
       // 最終的に「今 live」と判断した記録。action も ID もここから導く。
       const effective = moved ?? serving ?? restored ?? external ?? live;
 
-      // run が失敗した状態で「この run が promote していないのに target が live」なのは、
-      // 待機中の Auto-assign / 他者の promote で live になった candidate。gate を通って
-      // いないので `already-serving`（= 触るな）と書いてはいけない。
+      // **target が live なのに、この run の gate を通っていない状態。** 待機中の
+      // Auto-assign や他者の promote で live になり、その後 gate が落ちた場合に起きる。
+      // `already-serving`（= 触るな）と書くと、認証されていない build が放置される。
       const uncertified =
-        !entry && !moved && CERTIFIED_STATUSES.has(status) === false
-          ? (uncertifiedLive.get(project.name) ?? null)
-          : null;
+        !entry && !moved && effective?.sha === sha && !gatesPassed.has(project.name);
 
       const action = moved
         ? moved.id
@@ -945,12 +940,15 @@ export async function runProductionRelease({
   const externallyLive = new Map();
 
   /**
-   * 待機中に（この run ではなく Auto-assign や他者の手で）live になった candidate。
-   * gate が落ちた場合、production は **認証を通っていない build を配信したまま**になる。
-   * `promoted` には入らないので自動 rollback の対象外だが、復旧先（run 開始時点の
-   * deployment）を manifest へ残して手動復旧できるようにする。
+   * **この run の gate（production smoke + config audit + live 検証）を実際に通した
+   * project 名。** 「target が live なのに gate を通っていない」を manifest で
+   * `uncertified` として区別するために使う。
+   *
+   * run の status から推測しない。status は gate の前に返る経路（superseded）もあれば、
+   * gate を通った後の設定失敗（settings-drift）もあり、どちらも「認証されたか」とは
+   * 独立だから。
    */
-  const uncertifiedLive = new Map();
+  const gatesPassed = new Set();
 
   // この run が promote した後に他者が別 deployment を live にした project。
   // rollback せず残すため、manifest には観測した live を載せる（我々の candidate を
@@ -968,7 +966,7 @@ export async function runProductionRelease({
       rolledBack,
       externallyLive,
       movedAway,
-      uncertifiedLive,
+      gatesPassed,
     });
 
   // 全 project の auto-assign を期待値へ戻す。外部の promote が待機中に設定を
@@ -1164,6 +1162,9 @@ export async function runProductionRelease({
         // promote していなくても「この commit が live」を主張する以上、前提を確認する。
         // 掃きと検証は安定するまで交互に回す（§stabilize）。
         const residual = await stabilize([]);
+        // ここまで来れば smoke / audit / live 検証を通っている。設定復元が失敗しても
+        // 「認証された」事実は変わらないので、drift 判定より前に記録する。
+        for (const project of projects) gatesPassed.add(project.name);
         if (residual.length > 0) {
           throw Object.assign(driftError(sha, residual), {
             manifest: manifestFor('settings-drift'),
@@ -1225,9 +1226,6 @@ export async function runProductionRelease({
     for (const { project, deployment } of candidates) {
       if (current.get(project.name)?.id === deployment.id) {
         externallyLive.set(project.name, { id: deployment.id, sha });
-        // gate がこの後落ちた場合、認証を通っていない build が live のまま残る。
-        // 復旧先を控えて manifest から辿れるようにする。
-        uncertifiedLive.set(project.name, { id: deployment.id, sha });
       }
     }
 
@@ -1357,6 +1355,8 @@ export async function runProductionRelease({
 
         if (live?.id === deployment.id) {
           logger.log(`${project.name}: another actor already promoted ${deployment.id}; skipping`);
+          // gate をこの後通せなければ manifest は `uncertified` になる（gatesPassed に
+          // 入らないため）。復旧先は run 開始時点の deployment。
           // この run は動かしていないが live ではある。manifest で「未着手」に見えないよう
           // 記録する（rollback 対象には入れない。戻し先を観測していないため）。
           externallyLive.set(project.name, { id: deployment.id, sha });
@@ -1489,6 +1489,8 @@ export async function runProductionRelease({
       // 掃きと検証は安定するまで交互に回す。**rollback 保護の内側**で行うので、ここで
       // 不受理の移動を見つけた場合はこの run が promote した分が巻き戻る。
       residualDrift = await stabilize(candidates);
+      // gate を通した事実を記録する（status ではなく実績で manifest を分類するため）。
+      for (const project of projects) gatesPassed.add(project.name);
     } catch (error) {
       // promote 済みの側を戻す。対象は **この run が promote した project だけ**で、
       // 前から target を配信していた側（preexistingSplit）には戻し先が無い。

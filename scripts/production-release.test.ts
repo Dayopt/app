@@ -1982,6 +1982,27 @@ describe('buildManifest', () => {
     rolledBack: [],
   };
 
+  it('labels a live target as uncertified unless this run gated it', () => {
+    // 「gate を通ったか」は run の status から推測しない。status は gate の前に返る
+    // 経路（superseded）もあれば、gate 通過後の設定失敗（settings-drift）もある。
+    const atTarget = {
+      ...base,
+      before: new Map([[project.name, { id: 'dpl_web_new', sha: SHA }]]),
+      decisions: new Map([[project.name, { affected: false, reason: 'already serving' }]]),
+    };
+
+    const ungated = buildManifest({ ...atTarget, gatesPassed: new Set() });
+    expect(ungated.projects[0]).toMatchObject({
+      action: 'uncertified',
+      deploymentId: 'dpl_web_new',
+      // 戻し先を残す（自動 rollback の対象外なので手動復旧の手掛かりになる）。
+      previousDeploymentId: 'dpl_web_new',
+    });
+
+    const gated = buildManifest({ ...atTarget, gatesPassed: new Set([project.name]) });
+    expect(gated.projects[0]).toMatchObject({ action: 'already-serving' });
+  });
+
   it('distinguishes an unassigned domain from another actor deployment', () => {
     const unassigned = buildManifest({
       ...base,
